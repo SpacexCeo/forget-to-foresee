@@ -897,16 +897,24 @@ def compose_stone(res, size):
     joint = ftf.smoothstep(0.012, 0.035, e)
     bev = np.sqrt(np.clip(e / 0.10, 0, 1))
     h = bev * 0.6 + n * 0.22 + m * 0.07 + cell * 0.12
-    lo, mid, hi = np.array([0.20, 0.21, 0.20]), np.array([0.30, 0.31, 0.29]), np.array([0.40, 0.40, 0.37])
+    # weathered warm limestone (style addendum: ancient, eroded, desaturated)
+    lo, mid, hi = np.array([0.21, 0.205, 0.19]), np.array([0.31, 0.30, 0.275]), np.array([0.41, 0.395, 0.355])
     t = cell[..., None]
     tint = np.where(t < 0.5, lo + (mid - lo) * (t / 0.5), mid + (hi - mid) * ((t - 0.5) / 0.5))
     c = tint * (0.78 + 0.40 * np.clip((n[..., None] - 0.3) / 0.4, 0, 1))
     wr = ftf.smoothstep(0.55, 0.7, wear)[..., None] * 0.35
     c = c * (1 - wr) + np.array([0.42, 0.42, 0.39]) * wr
-    ms = ftf.smoothstep(0.45, 0.6, moss)[..., None]
-    jc = np.array([0.05, 0.05, 0.045]) * (1 - ms) + np.array([0.07, 0.10, 0.035]) * ms
+    ms = ftf.smoothstep(0.38, 0.55, moss)[..., None]
+    jc = np.array([0.05, 0.05, 0.045]) * (1 - ms) + np.array([0.06, 0.095, 0.03]) * ms
     j = joint[..., None]
     c = c * j + jc * (1 - j)
+    # moss creeping out of the joints onto the stone edges
+    creep = (ftf.smoothstep(0.035, 0.0, e - 0.035) * ftf.smoothstep(0.5, 0.65, moss))[..., None] * 0.55
+    c = c * (1 - creep) + np.array([0.075, 0.105, 0.04]) * creep
+    # hairline cracks (worn, ancient paving)
+    cr = ftf.smoothstep(0.62, 0.66, res["warp"]) * ftf.smoothstep(0.70, 0.66, res["warp"])
+    c = c * (1 - 0.45 * cr[..., None])
+    h = h - 0.05 * cr
     rough = 0.92 - 0.2 * joint - 0.12 * ftf.smoothstep(0.55, 0.7, wear)
     return c, rough, h
 
