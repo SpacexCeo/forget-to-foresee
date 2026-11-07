@@ -11,6 +11,9 @@ export class CharacterController {
     this.world = world;
     this.radius = radius; this.height = height;
     this.walkSpeed = walkSpeed; this.gravity = gravity; this.maxFall = maxFall;
+    // Optional smoothing (off by default so the collision tests stay exact): `accel` is the response rate
+    // (1/s) of the horizontal velocity toward the wish; `run` scales the speed (Shift = run in the client).
+    this.accel = Infinity; this.run = false; this.runMultiplier = 2.1; this.vel = [0, 0];
     this.spawn = spawn.slice();
     this.killY = killY;
     this.lastSafe = spawn.slice();   // last position standing on solid ground with the center supported
@@ -31,7 +34,14 @@ export class CharacterController {
     this.prevPos = this.pos.slice();
     const l = Math.hypot(wish[0], wish[1]);
     const k = l > 1 ? 1 / l : 1;
-    const hx = wish[0] * k * this.walkSpeed * dt, hz = wish[1] * k * this.walkSpeed * dt;
+    const speed = this.walkSpeed * (this.run ? this.runMultiplier : 1);
+    const tx = wish[0] * k * speed, tz = wish[1] * k * speed;
+    if (Number.isFinite(this.accel)) {
+      const a = 1 - Math.exp(-this.accel * dt);
+      this.vel[0] += (tx - this.vel[0]) * a; this.vel[1] += (tz - this.vel[1]) * a;
+      if (!tx && !tz && Math.hypot(this.vel[0], this.vel[1]) < 0.02) this.vel = [0, 0];
+    } else this.vel = [tx, tz];
+    const hx = this.vel[0] * dt, hz = this.vel[1] * dt;
     let dy;
     if (this.grounded) {
       // Stick to the ground while walking down slopes; the solver lifts us back on flat ground.

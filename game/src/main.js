@@ -42,6 +42,7 @@ const systemReduced = (() => { try { return matchMedia('(prefers-reduced-motion:
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
+player.accel = 8; // smooth start/stop instead of instant velocity changes
 const lookdev = new LookDev({
   renderer, scene, camera,
   cloudLevel: world3d.cloudLevel, grassPatches: world3d.grassPatches, lanterns: world3d.lanterns,
@@ -196,6 +197,7 @@ function frame() {
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
+  player.run = input.down('ShiftLeft', 'ShiftRight');
   for (let i = 0; live && i < f.steps; i++) {
     const wish = wishVector();
     if (wish[0] || wish[1]) moving = true;
