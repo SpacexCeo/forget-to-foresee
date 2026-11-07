@@ -129,15 +129,26 @@ export async function fetchGltf(name, { onProgress } = {}) {
 }
 
 export class AssetLibrary {
-  constructor({ available = MODEL_FILES } = {}) {
+  /**
+   * @param {{available?:Record<string,number>, onTemplate?:(name:string, scene:THREE.Object3D)=>void}} o
+   *   onTemplate: look-dev hook run once per parsed template (material upgrades), before instances clone it.
+   */
+  constructor({ available = MODEL_FILES, onTemplate = null } = {}) {
     this.entries = new Map();
+    this.onTemplate = onTemplate;
     for (const def of ASSETS) {
       const bytes = available[def.name];
       this.entries.set(def.name, { name: def.name, def, bytes: bytes || 0, state: bytes ? 'idle' : 'absent', template: null, stats: null, error: null, loadMs: 0, progress: 0 });
+      // Optional separate close-up file <name>_inspect.glb, streamed only while the player inspects.
+      const ib = available[def.name + '_inspect'];
+      if (ib) this.entries.set(def.name + '_inspect', { name: def.name + '_inspect', def, bytes: ib, state: 'idle', template: null, stats: null, error: null, loadMs: 0, progress: 0, inspectOf: def.name });
     }
   }
 
   get(name) { return this.entries.get(name); }
+
+  /** Name of the separate inspect file for an asset, if the build lists one. */
+  inspectName(name) { return this.entries.has(name + '_inspect') ? name + '_inspect' : null; }
 
   async load(name) {
     const e = this.entries.get(name);
@@ -151,6 +162,7 @@ export class AssetLibrary {
         if (!o.isMesh) return;
         o.castShadow = true; o.receiveShadow = true;
       });
+      if (this.onTemplate) this.onTemplate(e.inspectOf || name, scene);
       e.template = scene;
       e.stats = analyzeAssetScene(scene);
       e.bytes = bytes;
@@ -211,6 +223,7 @@ export class PropInstance {
 
     this.real = null;
     this.parts = null;
+    this.inspectReal = null;
     this.sockets = this.greySockets;
     this.inspecting = false;
     this.socketListeners = [];
@@ -256,6 +269,7 @@ export class PropInstance {
   /** Back to the greybox (asset released or evicted). */
   showGreybox() {
     if (!this.real) return;
+    if (this.inspectReal) { this.root.remove(this.inspectReal); this.inspectReal = null; }
     this.world.removeOwner(this.id + ':col');
     this.world.removeOwner(this.id + ':grey');
     this.addColliders('grey', this.greyColliders);
@@ -271,9 +285,31 @@ export class PropInstance {
   setInspect(on, force = false) {
     if (!force && on === this.inspecting) return;
     this.inspecting = on;
-    if (!this.parts || !this.parts.inspect.length) return;
+    if (!on && this.inspectReal) this.hideInspectFile();
+    if (!this.parts) return;
+    const hasInspect = this.parts.inspect.length > 0 || !!this.inspectReal;
+    if (!hasInspect) return;
     for (const m of this.parts.runtime) m.visible = !on;
     for (const m of this.parts.inspect) m.visible = on;
+  }
+
+  /** Shows a streamed <name>_inspect.glb template in place of the runtime meshes (streamer-driven). */
+  showInspectFile(template) {
+    if (this.inspectReal || !this.real) return;
+    const real = template.clone(true);
+    real.name = this.name + '_inspect_file';
+    real.traverse((o) => { if (o.isMesh && classifyPath(namePath(real, o)) === 'collision') o.visible = false; });
+    this.root.add(real);
+    this.inspectReal = real;
+    for (const m of this.parts.runtime) m.visible = false;
+    for (const m of this.parts.inspect) m.visible = false;
+  }
+
+  hideInspectFile() {
+    if (!this.inspectReal) return;
+    this.root.remove(this.inspectReal);
+    this.inspectReal = null;
+    if (this.parts) this.setInspect(this.inspecting, true);
   }
 
   /** Runtime <-> _inspect by camera distance, with hysteresis. */
@@ -344,11 +380,30 @@ export class AssetStreamer {
       this.unwanted.set(name, u);
       rows.push({ name, state: e.state, priority: p, unwantedFor: u });
     }
+    // Separate <name>_inspect.glb files: wanted only while an instance of the asset is being
+    // inspected (close camera), released like any other asset once nobody inspects it.
+    for (const [name, list] of this.byAsset) {
+      const iname = this.library.inspectName(name);
+      if (!iname) continue;
+      const e = this.library.get(iname);
+      const wanted = list.some((inst) => inst.inspecting && inst.real);
+      const u = wanted ? 0 : (this.unwanted.get(iname) || 0) + this.interval;
+      this.unwanted.set(iname, u);
+      this.priority.set(iname, wanted ? 1000 : -1); // hero close-ups jump the queue
+      rows.push({ name: iname, state: e.state, priority: wanted ? 1000 : -1, unwantedFor: u });
+    }
     const plan = planStreaming(rows, { maxConcurrent: this.maxConcurrent, releaseAfter: this.releaseAfter });
     for (const name of plan.load) this.startLoad(name);
     for (const name of plan.attach) this.attach(name);
     for (const name of plan.release) this.release(name);
     for (const name of this.lru.evict()) { this.library.dispose(name); this.log('evicted ' + name); }
+  }
+
+  /** Instances that an entry attaches to: the asset's own, or (for an _inspect file) the inspecting ones. */
+  targets(name) {
+    const e = this.library.get(name);
+    if (e && e.inspectOf) return (this.byAsset.get(e.inspectOf) || []).filter((inst) => inst.inspecting && inst.real);
+    return this.byAsset.get(name) || [];
   }
 
   startLoad(name) {
@@ -364,14 +419,14 @@ export class AssetStreamer {
   attach(name) {
     const e = this.library.get(name);
     if (!e || !e.template) return;
-    for (const inst of this.byAsset.get(name) || []) inst.showReal(e.template);
+    for (const inst of this.targets(name)) { if (e.inspectOf) inst.showInspectFile(e.template); else inst.showReal(e.template); }
     e.state = 'loaded';
     this.lru.touch(name, e.bytes);
   }
 
   release(name) {
     const e = this.library.get(name);
-    for (const inst of this.byAsset.get(name) || []) inst.showGreybox();
+    for (const inst of (e && e.inspectOf ? this.byAsset.get(e.inspectOf) : this.byAsset.get(name)) || []) { if (e && e.inspectOf) inst.hideInspectFile(); else inst.showGreybox(); }
     if (e) e.state = 'cold';
     this.lru.cool(name);
     this.log('released ' + name);
@@ -379,7 +434,9 @@ export class AssetStreamer {
 
   stats() {
     const s = { absent: 0, idle: 0, loading: 0, loaded: 0, cold: 0, failed: 0, cachedBytes: this.lru.bytes, list: [] };
-    for (const name of this.byAsset.keys()) {
+    const names = [...this.byAsset.keys()];
+    for (const name of [...names]) { const i = this.library.inspectName(name); if (i) names.push(i); }
+    for (const name of names) {
       const e = this.library.get(name);
       s[e.state] = (s[e.state] || 0) + 1;
       s.list.push({ name, state: e.state, progress: e.progress, priority: this.priority.get(name) ?? -1, error: e.error });

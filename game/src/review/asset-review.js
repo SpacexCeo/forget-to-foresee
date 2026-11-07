@@ -8,6 +8,7 @@ import { MODEL_FILES } from 'virtual:model-list';
 import { ASSETS, TRIANGLE_BUDGET, assetByName, isValidModelName } from '../render/asset-catalog.js';
 import { fetchGltf, splitAssetScene, analyzeAssetScene } from '../render/assets.js';
 import { buildGreybox, makeLabel } from '../render/greybox.js';
+import { LAYER_OVERLAY } from '../render/layers.js';
 import { PadDecals } from '../render/decals.js';
 
 const $ = (id) => document.getElementById(id);
@@ -44,6 +45,7 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 pmrem.dispose();
 const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.01, 500);
 camera.position.set(2.4, 1.8, 3.2);
+camera.layers.enable(LAYER_OVERLAY); // labels and markers live on the overlay layer
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 

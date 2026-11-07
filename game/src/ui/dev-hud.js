@@ -43,6 +43,7 @@ export class DevHud {
       `<div>geometries ${m.geometries} \u00b7 textures ${m.textures}</div>`,
       `<div>physics 30 Hz \u00b7 ${s.physics.steps} step(s) this frame \u00b7 ${s.physics.substeps} substeps \u00b7 ${s.physics.colliders} collider tris \u00b7 ${s.physics.grounded ? 'grounded' : 'airborne'}</div>`,
       `<div>camera sweep ${(s.camera.lastSweep * 100).toFixed(0)}%${s.camera.inspect ? ' \u00b7 inspect' : ''}</div>`,
+      s.lookdev ? `<div>quality ${esc(s.lookdev.tier)} \u00b7 pixel ratio ${s.lookdev.pixelRatio.toFixed(2)} \u00b7 post ${s.lookdev.post ? 'on' : 'off'}${s.lookdev.reducedMotion ? ' \u00b7 reduced motion' : ''}</div>` : '',
       `<div>assets: ${st.loaded} loaded \u00b7 ${st.loading} loading \u00b7 ${st.cold} cached \u00b7 ${st.absent} no file (greybox) \u00b7 ${st.failed} failed \u00b7 cache ${(st.cachedBytes / 1048576).toFixed(1)} MB</div>`,
       `<div class="assets">${rows}</div>`,
       s.events.length ? `<div class="events">${s.events.map((e) => esc(e.msg)).join('<br>')}</div>` : '',
