@@ -15,6 +15,7 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | Headless game engine: all prototype rules | **works**, matches the 2D prototype move for move on 60 seasons | `game/src/game/engine.js` |
 | Rules v2: 32-byte CSPRNG salts with domain separation, approved defect fixes | **works**, proven not to change gameplay | `game/src/game/engine.js` |
 | 3D game (Three.js): clan island + scene inside a Shell | **in progress** | `game/` |
+| 3D art: Scroll table, memory shard, four Shell exteriors (glTF, procedural Blender sources, GPU-baked PBR) | **models exported, owner review pending**; not loaded by the game yet | `game/public/assets/models/`, `art/`, QA renders in `docs/art/qa/` |
 | NEAR contract (commit-reveal, NEP-171 fragment NFTs, escrow) | **not started** | — |
 
 ### Real / mock
