@@ -38,4 +38,17 @@ jobs:
       - name: Build wasm
         run: cargo near build non-reproducible-wasm --no-abi
       - name: Unit, mocked-blockchain and sandbox tests
-        run: cargo test -- --test-threads=2
+        shell: bash
+        run: |
+          set +e
+          cargo test -- --test-threads=2 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          # Surface results as check-run annotations (readable without downloading logs).
+          enc() { sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g'; }
+          results=$(grep -E "^test result:|Running " test.log | enc)
+          echo "::notice title=cargo test results::$results"
+          if [ "$status" -ne 0 ]; then
+            details=$(grep -nE "^error|panicked|FAILED|left:|right:|-->|^failures:|^    [a-z_]+::" test.log | head -150 | enc)
+            echo "::error title=cargo test failed::$details"
+          fi
+          exit $status

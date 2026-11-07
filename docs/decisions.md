@@ -60,6 +60,8 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 07.11 | NEAR contract: **Rust + near-sdk** (Rust and cargo-near may be installed; consent given 07.11). The user creates the testnet account for deployment. |
 | 07.11 | R0 answers: **CSPRNG salts + RNG compatibility**; **UI-only guards move into the engine**; **defects fixed in a separate commit** as rules v2. |
 | 07.11 | **Strict rule: the repository and the game are English-only.** Russian only as the second UI language (spec requires RU/EN). Chat with the user stays Russian. |
+| 07.11 | NEAR contract `contracts/season-commit` (Rust, near-sdk 5.30, testnet only): coordinator commits the season's schedule root (immutable), anyone submits a leaf + salt + crypto.js path and the contract recomputes the v2 leaf byte for byte and verifies the path on-chain; Ash's phrase has its own salted commit-reveal. `leaf_count` is part of the commitment so a proof binds exactly one position; the Ash key commit closes once the first leaf is revealed. Storage is paid by the caller's attached deposit, the rest is refunded. Cross-implementation vectors come from the real engine (`npm run vectors`). |
+| 07.11 | Contract tests: pure verification tests run everywhere (on Windows as wasm32-wasip1 under Node WASI, because near-sdk's mocked blockchain needs a C toolchain); mocked-blockchain and near-workspaces sandbox tests run on Linux in GitHub Actions (`.github/workflows/contracts.yml`); the NEAR sandbox has no Windows build. The owner deploys to testnet with one `cargo near deploy` command (contract README). |
 
 ## 5. Status
 - `prototype-2d/index.html` — the full 2D loop, playable. UI is still Russian; it is the frozen parity reference.
