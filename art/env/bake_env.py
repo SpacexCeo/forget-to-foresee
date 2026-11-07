@@ -15,7 +15,7 @@ ap.add_argument('--res', type=int, default=2048)
 ap.add_argument('--samples', type=int, default=256)
 ap.add_argument('--sun-disc', action='store_true')
 # Sun: must match SUN preset 'golden' in game/src/render/sky.js (elevation, azimuth from -Z toward -X in three.js space).
-ap.add_argument('--elev', type=float, default=15.0)
+ap.add_argument('--elev', type=float, default=13.0)
 ap.add_argument('--azim', type=float, default=34.0)
 a = ap.parse_args(argv)
 
@@ -58,14 +58,14 @@ sky.sun_elevation = el
 sky.sun_rotation = math.atan2(bx, by) % (2 * math.pi)
 sky.altitude = 1800.0
 sky.air_density = 1.0
-sky.dust_density = 3.2   # golden haze (Mie)
+sky.dust_density = 5.0   # golden haze (Mie)
 sky.ozone_density = 1.4
 bg = nt.nodes.new('ShaderNodeBackground'); bg.inputs['Strength'].default_value = 0.22
 out = nt.nodes.new('ShaderNodeOutputWorld')
 nt.links.new(sky.outputs['Color'], bg.inputs['Color']); nt.links.new(bg.outputs['Background'], out.inputs['Surface'])
 
 # Warm sun lamp (lights the cloud slab; invisible to the camera).
-sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 4.2; sun.color = (1.0, 0.80, 0.56); sun.angle = math.radians(1.2)
+sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 4.2; sun.color = (1.0, 0.74, 0.46); sun.angle = math.radians(1.2)
 so = bpy.data.objects.new('sun', sun); sc.collection.objects.link(so)
 import mathutils
 so.rotation_euler = mathutils.Vector((bx, by, bz)).to_track_quat('Z', 'Y').to_euler()
@@ -83,10 +83,11 @@ tc = mn.new('ShaderNodeTexCoord'); sep = mn.new('ShaderNodeSeparateXYZ')
 ml.new(tc.outputs['Object'], sep.inputs['Vector'])
 noise = mn.new('ShaderNodeTexNoise'); noise.noise_dimensions = '3D'
 noise.inputs['Scale'].default_value = 6.0; noise.inputs['Detail'].default_value = 8.0; noise.inputs['Roughness'].default_value = 0.55
-mapn = mn.new('ShaderNodeMapping'); mapn.inputs['Scale'].default_value = (60, 60, 1)  # undo the slab's xy stretch
+mapn = mn.new('ShaderNodeMapping'); mapn.inputs['Scale'].default_value = (15, 15, 0.6)  # ~70 m billows across, 100 m tall cells
 ml.new(tc.outputs['Object'], mapn.inputs['Vector']); ml.new(mapn.outputs['Vector'], noise.inputs['Vector'])
-# height profile: z in object space -0.5..0.5 -> dense at the bottom, ragged top
-zr = mn.new('ShaderNodeMapRange'); zr.inputs['From Min'].default_value = 0.5; zr.inputs['From Max'].default_value = -0.5
+# height profile: z in object space -0.5..0.5 -> height fraction 0..0.85; density = noise - height (dense bottom, billowy top)
+zr = mn.new('ShaderNodeMapRange'); zr.inputs['From Min'].default_value = -0.5; zr.inputs['From Max'].default_value = 0.5
+zr.inputs['To Max'].default_value = 0.85
 ml.new(sep.outputs['Z'], zr.inputs['Value'])
 add = mn.new('ShaderNodeMath'); add.operation = 'SUBTRACT'
 ml.new(noise.outputs['Fac'], add.inputs[0]); ml.new(zr.outputs['Result'], add.inputs[1])
@@ -94,7 +95,6 @@ add.inputs[1].default_value = 0.0
 gain = mn.new('ShaderNodeMapRange'); gain.inputs['From Min'].default_value = -0.35; gain.inputs['From Max'].default_value = 0.1
 gain.inputs['To Min'].default_value = 0.0; gain.inputs['To Max'].default_value = 0.09
 ml.new(add.outputs['Value'], gain.inputs['Value'])
-# shift so the top of the slab is wispy: density = noise - (1 - height)
 ml.new(gain.outputs['Result'], vol.inputs['Density'])
 ml.new(vol.outputs['Volume'], mo.inputs['Volume'])
 slab.data.materials.append(mat)

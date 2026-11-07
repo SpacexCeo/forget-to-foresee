@@ -295,11 +295,11 @@ class Part:
         self.name = name
         self.bm = bmesh.new()
         self.uv = self.bm.loops.layers.uv.new("UVMap")
-        self.w = {}
+        self.w = []
 
     def vert(self, co, w):
         v = self.bm.verts.new(co)
-        self.w[v] = top4(w)
+        self.w.append(top4(w))
         return v
 
     def face(self, vs, uvs=None):
@@ -501,7 +501,7 @@ def part_object(P, col, mat, group_names):
     me = bpy.data.meshes.new(P.name)
     dl = P.bm.verts.layers.deform.verify()
     idx = {n: i for i, n in enumerate(group_names)}
-    for v, w in P.w.items():
+    for v, w in zip(P.bm.verts, P.w):
         for k, val in w.items():
             v[dl][idx[k]] = val
     bmesh.ops.recalc_face_normals(P.bm, faces=P.bm.faces[:])

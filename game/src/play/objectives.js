@@ -46,7 +46,7 @@ function onboardingGoal(id, obs, flags) {
     case 'forget': return { ...base, target: null };
     case 'anchor': {
       const v = firstVision(obs);
-      if (!v) return { ...base, key: 'goal.anchor.any', target: 'anchor_zone:1' };
+      if (!v) return { ...base, key: 'goal.anchor.any', hintKey: 'goal.anchor.any.hint', target: 'anchor_zone:1' };
       const c = meanConfidence(v);
       return { ...base, args: { shell: ROMAN[v.impliedAnchor.shell - 1], tick: v.impliedAnchor.tick }, hintKey: c < 0.6 ? 'goal.anchor.hintGuess' : 'goal.anchor.hint', hintArgs: { confidence: pct(c) }, target: 'anchor_zone:' + v.impliedAnchor.shell };
     }

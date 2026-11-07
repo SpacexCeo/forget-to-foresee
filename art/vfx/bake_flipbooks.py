@@ -49,21 +49,21 @@ def use_gpu(sc):
 # beyond Mantaflow's fixed noise), so re-running reproduces the atlas.
 CFG = {
     # A billowing puff that grows and thins out: general smoke, burnt-stake wisps, mist.
-    "smoke": dict(res=96, frames=(4, 90), inflow=(1, 14), flow_pos=(0, 0, 0.55), flow_r=0.28,
-                  buoy=0.35, heat=0.4, vort=0.35, dissolve=70, init_vel=(0, 0, 0.6), normal_vel=0.6,
-                  flow_type="SMOKE", emission=False, density=6.0),
+    "smoke": dict(res=110, frames=(3, 72), inflow=(1, 9), flow_pos=(0, 0, 0.5), flow_r=0.36,
+                  buoy=0.5, heat=0.4, vort=0.5, dissolve=55, init_vel=(0, 0, 0.8), normal_vel=1.1,
+                  flow_type="SMOKE", emission=False, density=7.0),
     # A low, heavy ground burst that spreads sideways and settles: anchor plant dust.
-    "dust": dict(res=96, frames=(2, 66), inflow=(1, 4), flow_pos=(0, 0, 0.35), flow_r=0.3,
-                 buoy=-0.25, heat=0.05, vort=0.5, dissolve=45, init_vel=(0, 0, 0.3), normal_vel=2.6,
-                 flow_type="SMOKE", emission=False, density=5.0),
-    # A flare that licks upward and burns out: storm ignition, burnt stake, embers' birth.
-    "fire": dict(res=96, frames=(3, 67), inflow=(1, 26), flow_pos=(0, 0, 0.3), flow_r=0.25,
+    "dust": dict(res=110, frames=(2, 52), inflow=(1, 3), flow_pos=(0, 0, 0.3), flow_r=0.3,
+                 buoy=-0.6, heat=0.0, vort=0.7, dissolve=60, init_vel=(0, 0, 0.6), normal_vel=5.0,
+                 flow_type="SMOKE", emission=False, density=6.0, cam_tilt=22),
+    # A flare that licks upward and burns out (flames only; smoke comes from the smoke atlas).
+    "fire": dict(res=110, frames=(3, 46), inflow=(1, 30), flow_pos=(0, 0, 0.3), flow_r=0.25,
                  buoy=0.4, heat=1.6, vort=0.6, dissolve=30, init_vel=(0, 0, 0.8), normal_vel=0.4,
-                 flow_type="BOTH", emission=True, density=3.0),
+                 flow_type="FIRE", emission=True, density=0.0),
     # Thin, curling wisps from a source circling fast: vision memories, gift glow, shimmer.
-    "magic": dict(res=96, frames=(10, 74), inflow=(1, 60), flow_pos=(0, 0, 0.7), flow_r=0.1,
-                  buoy=0.15, heat=0.6, vort=1.4, dissolve=18, init_vel=(0, 0, 0.4), normal_vel=0.2,
-                  flow_type="SMOKE", emission=True, density=4.0, orbit=0.35),
+    "magic": dict(res=110, frames=(6, 69), inflow=(1, 50), flow_pos=(0, 0, 0.75), flow_r=0.1,
+                  buoy=0.15, heat=0.6, vort=1.2, dissolve=22, init_vel=(0, 0, 0.4), normal_vel=0.2,
+                  flow_type="SMOKE", emission=True, density=0.0, orbit=0.3),
 }[KIND]
 
 
@@ -116,10 +116,10 @@ def build(sc):
                  "use_collision_border_left", "use_collision_border_top", "use_collision_border_bottom"):
         if hasattr(d, side):
             setattr(d, side, side.endswith("bottom"))
-    if CFG["flow_type"] == "BOTH":
+    if CFG["flow_type"] in ("BOTH", "FIRE"):
         d.flame_vorticity = 0.8
         d.burning_rate = 0.85
-        d.flame_smoke = 0.6
+        d.flame_smoke = 0.0
 
     bpy.ops.mesh.primitive_uv_sphere_add(radius=CFG["flow_r"], location=CFG["flow_pos"], segments=24, ring_count=12)
     flow = bpy.context.active_object; flow.name = "Flow"
@@ -133,7 +133,7 @@ def build(sc):
     f.velocity_normal = CFG["normal_vel"]
     f.velocity_coord = CFG["init_vel"]
     f.density = 1.0
-    if CFG["flow_type"] == "BOTH":
+    if CFG["flow_type"] in ("BOTH", "FIRE"):
         f.fuel_amount = 1.4
     # Inflow only during the configured window (a burst rather than a steady source).
     a, b = CFG["inflow"]
@@ -167,17 +167,16 @@ def build(sc):
         mid2 = el.new(0.65); mid2.color = (1.0, 0.62, 0.18, 1)
         nt.links.new(fl.outputs["Fac"], ramp.inputs["Fac"])
         nt.links.new(ramp.outputs["Color"], vol.inputs["Emission Color"])
-        em = nt.nodes.new("ShaderNodeMath"); em.operation = "MULTIPLY"; em.inputs[1].default_value = 14.0
+        em = nt.nodes.new("ShaderNodeMath"); em.operation = "MULTIPLY"; em.inputs[1].default_value = 6.0
         nt.links.new(fl.outputs["Fac"], em.inputs[0])
         nt.links.new(em.outputs[0], vol.inputs["Emission Strength"])
         vol.inputs["Color"].default_value = (0.08, 0.07, 0.07, 1)
     elif CFG["emission"]:
         nt.links.new(den.outputs["Fac"], vol.inputs["Emission Strength"])
         vol.inputs["Emission Color"].default_value = (1, 1, 1, 1)
-        em = nt.nodes.new("ShaderNodeMath"); em.operation = "MULTIPLY"; em.inputs[1].default_value = 9.0
+        em = nt.nodes.new("ShaderNodeMath"); em.operation = "MULTIPLY"; em.inputs[1].default_value = 2.2
         nt.links.new(den.outputs["Fac"], em.inputs[0])
         nt.links.new(em.outputs[0], vol.inputs["Emission Strength"])
-        mul.inputs[1].default_value = CFG["density"] * 0.35
     nt.links.new(vol.outputs[0], out.inputs["Volume"])
     dom.data.materials.append(mat)
 
@@ -191,7 +190,8 @@ def build(sc):
 
     cam = bpy.data.cameras.new("cam"); cam.type = "ORTHO"; cam.ortho_scale = 2.0
     co = bpy.data.objects.new("cam", cam); sc.collection.objects.link(co)
-    co.location = (0, -6, 1); co.rotation_euler = (math.radians(90), 0, 0)
+    tilt = math.radians(CFG.get("cam_tilt", 0))
+    co.location = (0, -6 * math.cos(tilt), 1 + 6 * math.sin(tilt)); co.rotation_euler = (math.radians(90) - tilt, 0, 0)
     sc.camera = co
     return dom
 
@@ -238,7 +238,10 @@ def pack(paths):
             im[..., 3] = np.maximum(im[..., 3], im[..., :3].max(-1)) * edge
         r, c = divmod(i, GRID)
         atlas[r * CELL:(r + 1) * CELL, c * CELL:(c + 1) * CELL] = im
-    if KIND != "fire":
+    if KIND == "magic":
+        atlas[..., :3] = 1.0 - np.exp(-2.2 * atlas[..., :3])
+        atlas[..., 3] = np.minimum(atlas[..., 3], atlas[..., :3].max(-1))
+    elif KIND != "fire":
         peak = max(1e-3, float(np.percentile(atlas[..., 0][atlas[..., 3] > 0.05], 99.5)) if (atlas[..., 3] > 0.05).any() else 1.0)
         atlas[..., :3] = np.clip(atlas[..., :3] / peak, 0, 1)
     img = Image.fromarray((np.clip(atlas, 0, 1) * 255 + 0.5).astype(np.uint8), "RGBA")
