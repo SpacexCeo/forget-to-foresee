@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asset review (dev)</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { --ink: #e9efe9; --panel: rgba(20, 24, 22, 0.82); --muted: #a9b5ae; --amber: #d9a441; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #2f3532; color: var(--ink); font: 13px/1.45 system-ui, sans-serif; }
+    #app, #app canvas { position: fixed; inset: 0; display: block; }
+    .panel { position: fixed; background: var(--panel); border-radius: 8px; padding: 10px 12px; }
+    #controls { top: 12px; left: 12px; }
+    #controls label { display: inline-block; margin: 4px 10px 0 0; }
+    #stats { top: 12px; right: 12px; width: min(440px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; }
+    #stats h2 { margin: 0 0 6px; font-size: 15px; } #stats small { color: var(--muted); font-weight: 400; }
+    #stats table { border-collapse: collapse; width: 100%; } #stats th { text-align: left; color: var(--muted); font-weight: 500; vertical-align: top; padding: 2px 10px 2px 0; white-space: nowrap; }
+    #stats td { font: 12px ui-monospace, Consolas, monospace; padding: 2px 0; }
+    .bad { color: #ff8a7a; } .ok { color: #9fd89a; } .warn { color: #ffb36b; padding-left: 18px; margin: 8px 0 0; }
+    #status { bottom: 12px; left: 12px; color: var(--muted); }
+    #draw { bottom: 12px; right: 12px; color: var(--muted); font: 12px ui-monospace, Consolas, monospace; }
+    select { font: inherit; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="controls" class="panel">
+    <b>Asset review</b> (dev only) &middot; model <select id="model"></select><br>
+    <label><input type="checkbox" id="t-runtime"> runtime</label>
+    <label><input type="checkbox" id="t-inspect"> _inspect</label>
+    <label><input type="checkbox" id="t-col"> _col</label>
+    <label><input type="checkbox" id="t-sockets"> sockets</label>
+    <label><input type="checkbox" id="t-decals"> pad decals (II / 7)</label>
+    <label><input type="checkbox" id="t-greybox"> greybox</label>
+    <label><input type="checkbox" id="t-wireframe"> wireframe</label>
+  </div>
+  <div id="stats" class="panel">Loading&hellip;</div>
+  <div id="status" class="panel"></div>
+  <div id="draw" class="panel"></div>
+  <script type="module" src="/src/review/asset-review.js"></script>
+</body>
+</html>
