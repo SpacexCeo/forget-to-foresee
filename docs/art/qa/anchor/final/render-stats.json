@@ -1,0 +1,24 @@
+{
+  "device": "OPTIX",
+  "resolution": 1600,
+  "samples": 512,
+  "seconds_per_render": {
+    "anchor_front": 3.16,
+    "anchor_side": 3.1,
+    "anchor_three_quarter": 3.44,
+    "anchor_top": 4.44,
+    "anchor_close_pads": 3.42,
+    "anchor_close_lantern": 3.51,
+    "anchor_close_base": 3.88,
+    "anchor_inspect_close_pads": 3.42,
+    "anchor_inspect_close_lantern": 3.53,
+    "anchor_inspect_close_base": 3.89,
+    "anchor_collision_three_quarter": 3.74
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 39.73
+    }
+  ]
+}

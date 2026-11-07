@@ -10,3 +10,5 @@ Thumbs.db
 
 # Blender auto-backups
 *.blend1
+art/anchor/anchor.blend
+art/anchor/textures/
