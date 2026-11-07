@@ -83,9 +83,11 @@ Three tiers, all driven by `tests/vectors.json`:
 | Contract on near-sdk's mocked blockchain: views, events, storage deposits, re-commit, unauthorized commit, reveal before commit, double reveal, Ash key rules | `src/tests.rs` | Linux, macOS (needs a C compiler for near-sdk's `unit-testing` dependencies) |
 | Real wasm on a local NEAR sandbox node (near-workspaces): full season, all forgeries and unauthorized calls | `tests/sandbox.rs` | Linux, macOS (the NEAR sandbox has no Windows build) |
 
-Linux / macOS (all tiers; the sandbox binary is downloaded on first run):
+Linux / macOS (all tiers; the sandbox tests deploy `target/near/season_commit.wasm`, and the sandbox node
+binary is downloaded on first run):
 ```bash
 cd contracts/season-commit
+cargo near build non-reproducible-wasm --no-abi
 cargo test
 ```
 

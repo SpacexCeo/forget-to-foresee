@@ -23,7 +23,9 @@ struct Env {
 }
 
 async fn init() -> anyhow::Result<Env> {
-    let wasm = near_workspaces::compile_project("./").await?;
+    // Built by `cargo near build non-reproducible-wasm --no-abi` (CI runs it before the tests).
+    let path = std::env::var("SEASON_COMMIT_WASM").unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/target/near/season_commit.wasm").to_string());
+    let wasm = std::fs::read(&path).map_err(|e| anyhow::anyhow!("{path}: {e}; run `cargo near build non-reproducible-wasm --no-abi` first"))?;
     let worker = near_workspaces::sandbox().await?;
     let contract = worker.dev_deploy(&wasm).await?;
     let owner = worker.dev_create_account().await?;
