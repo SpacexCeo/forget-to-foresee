@@ -35,10 +35,11 @@ cd game
 npm install
 npm test
 ```
-**See:** `tests 75 · pass 75`.
+**See:** `tests 78 · pass 78`.
 - 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
 - 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
 - 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
+- 3 tests pin the Monte Carlo harness (`npm run sim -- --quick`): deterministic records, zero rejected intents, balanced silk ledger. Results and analysis: [docs/math/economy-report.md](docs/math/economy-report.md).
 
 The engine rules are documented in [docs/rules-baseline.md](docs/rules-baseline.md).
 
