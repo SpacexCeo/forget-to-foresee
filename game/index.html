@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forget to Foresee</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { --ink: #e9efe9; --panel: rgba(20, 24, 22, 0.72); --amber: #d9a441; --muted: #a9b5ae; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #c9d3d0; font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
+    #app, #app canvas { position: fixed; inset: 0; display: block; }
+    .panel { position: fixed; background: var(--panel); border-radius: 8px; padding: 8px 12px; pointer-events: none; }
+    #objective { position: fixed; top: 14px; left: 18px; font: 500 18px/1.3 Georgia, 'Times New Roman', serif; color: #f4f6f2; text-shadow: 0 1px 6px rgba(20, 24, 22, 0.6); pointer-events: none; }
+    #hud { top: 48px; left: 12px; font: 12px/1.45 ui-monospace, Consolas, monospace; max-width: min(560px, calc(100vw - 48px)); }
+    #hud .over { color: #ff8a7a; }
+    #hud .assets { margin-top: 6px; columns: 2; column-gap: 18px; color: var(--muted); }
+    #hud .st-loaded { color: #9fd89a; } #hud .st-loading { color: var(--amber); } #hud .st-failed { color: #ff8a7a; }
+    #hud .events { margin-top: 6px; color: var(--muted); }
+    #help { top: 12px; right: 12px; font-size: 12px; color: var(--muted); max-width: 260px; }
+    #help b { color: var(--ink); }
+    #prompt { bottom: 28px; left: 50%; transform: translateX(-50%); font-size: 16px; white-space: nowrap; background: rgba(20, 24, 22, 0.45); }
+    #prompt kbd { font-size: 14px; padding: 1px 7px; margin-right: 6px; }
+    #toast { bottom: 76px; left: 50%; transform: translateX(-50%); color: var(--muted); }
+    kbd { border: 1px solid #6c7a72; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font: 12px ui-monospace, Consolas, monospace; color: var(--ink); }
+    #badge { bottom: 12px; left: 12px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="objective"></div>
+  <div id="hud" class="panel" hidden></div>
+  <div id="help" class="panel">
+    <b>Forget to Foresee</b> &middot; island skeleton<br>
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &middot; click to walk<br>
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd> / right-drag rotate &middot; <kbd>&uarr;</kbd><kbd>&darr;</kbd> / wheel zoom<br>
+    <kbd>E</kbd> context / inspect &middot; <kbd>Esc</kbd> leave &middot; <kbd>F3</kbd> dev HUD
+  </div>
+  <div id="prompt" class="panel" hidden></div>
+  <div id="toast" class="panel" hidden></div>
+  <div id="badge" class="panel">Local greybox demo &middot; labeled objects are not final art</div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
