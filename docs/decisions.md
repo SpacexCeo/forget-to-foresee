@@ -57,6 +57,10 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 07.11 | The drive is **not reformatted** (stays exFAT). Windows write caching disabled ("Quick removal"); repeat on the laptop. |
 | 07.11 | Unified spec received (summary: `docs/spec.md`). **G0 granted** — start with R0. |
 | 07.11 | Art: **there is an artist / Blender** — hero objects arrive as glTF and code loads them; until then a labeled greybox. Brief and asset manifest: `docs/art/`. |
+| 07.11 | **Art direction: hybrid.** Silhouettes and large facets read from the isometric camera; materials stay detailed PBR for close inspection. |
+| 07.11 | **Target concept (owner's favourite):** a floating archipelago above a sea of clouds — central round plaza with a gold-inlaid Scroll medallion, six camp plateaus on rock pillars linked by arched bridges (Salt crystal colonnade, Iris violet canopy, Frost glass pavilion, Ash dark pagoda roof, Moss overgrown dome, Amber warm pavilion), a stone balcony spawn, four iridescent nacre ammonite Shells that **levitate** (IV cracked open), a floating glyph above the plaza. This supersedes the brief's flat 70×70 m island layout. |
+| 07.11 | Inside a Shell: a spiralling hall of nacre growth ribs, dark cracked stone floor with amber floor lights, a huge glass wall with three translucent Guests behind it (sail/fin membranes, nacre-crystal bodies; no Arrival heptapods). New assets on owner request: `guest.glb`, clan agent costumes `agent_<clan>.glb`, Shell-entry suit `agent_suit.glb`. |
+| 07.11 | Camera: isometric 3/4 by default; zooming in lowers it to a close third-person view behind the character (never first person). |
 | 07.11 | NEAR contract: **Rust + near-sdk** (Rust and cargo-near may be installed; consent given 07.11). The user creates the testnet account for deployment. |
 | 07.11 | R0 answers: **CSPRNG salts + RNG compatibility**; **UI-only guards move into the engine**; **defects fixed in a separate commit** as rules v2. |
 | 07.11 | **Strict rule: the repository and the game are English-only.** Russian only as the second UI language (spec requires RU/EN). Chat with the user stays Russian. |
