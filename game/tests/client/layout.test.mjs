@@ -1,7 +1,7 @@
 // Island layout against the art brief (src/scenes/layout.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMPS, ANCHOR_ZONES, CAMP_RING_RADIUS, ANCHOR_RING_RADIUS, ISLAND_RADIUS, CAMP_PLOT_SIZE, PLAZA_RADIUS, SPAWN, groundDistance, pathSegments } from '../../src/scenes/layout.js';
+import { CAMPS, ANCHOR_ZONES, CAMP_RING_RADIUS, ANCHOR_RING_RADIUS, ISLAND_RADIUS, CAMP_PLOT_SIZE, PLAZA_RADIUS, SPAWN, groundDistance, pathSegments, shellHover, SHELL_HOVER } from '../../src/scenes/layout.js';
 
 const center = [0, 0, 0];
 
@@ -41,6 +41,16 @@ test('assets face the plaza: local +Z rotated by rotationY points to the center'
   }
 });
 
-test('paths: one spoke per camp and per anchor zone', () => {
-  assert.equal(pathSegments().length, 10);
+test('Shell hover stays inside the collision margin (visual only)', () => {
+  let maxDy = 0, maxYaw = 0;
+  for (let t = 0; t < 300; t += 0.05) for (let i = 0; i < 4; i++) { const h = shellHover(t, i); maxDy = Math.max(maxDy, Math.abs(h.dy)); maxYaw = Math.max(maxYaw, Math.abs(h.yaw)); }
+  assert.ok(maxDy <= SHELL_HOVER.bob + 1e-12 && maxDy > SHELL_HOVER.bob * 0.9);
+  assert.ok(maxDy <= 0.25 && maxYaw * 6 <= 0.25, 'each part inside the greybox collider margin');
+  assert.ok(maxDy + maxYaw * 6 < 0.35, 'surface offset at a 6 m radius stays under the camera radius');
+});
+
+test('paths: hexagonal camp ring, one spoke per camp and per anchor zone', () => {
+  const segs = pathSegments();
+  assert.equal(segs.length, 6 + 6 + 4);
+  for (const [a, b] of segs.slice(0, 6)) assert.ok(Math.abs(groundDistance(a, b) - (CAMP_RING_RADIUS - CAMP_PLOT_SIZE + 0.4)) < 1e-9, 'ring links plot edges');
 });

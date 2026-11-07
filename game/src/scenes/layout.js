@@ -2,7 +2,7 @@
 // table on a central plaza, six camp plots on a ring of radius ~13 m, four anchor zones on the
 // diagonals at radius ~25 m with a floating Shell above each, and paths between them.
 // Pure data so the layout rules are checked by node tests. +Y is up; the default camera looks
-// from +X/+Z toward the center, so the player's camp (Iris) faces the camera.
+// from +Z toward the center, so the player's camp (Iris) faces the camera.
 // Convention for every placed asset: local +Z is the front and faces the plaza.
 
 export const ISLAND_RADIUS = 35;      // walkable terrain edge (70 m across)
@@ -60,12 +60,37 @@ export const SHARD = Object.freeze({
 /** Player spawn: on the plaza side of the Iris camp. */
 export const SPAWN = Object.freeze(onRing(CAMP_RING_RADIUS - 4.5, 90));
 
-/** Straight path segments [from, to] on the ground (centerlines). */
+/**
+ * Straight path segments [from, to] on the ground (centerlines): a hexagonal ring linking the six
+ * camps (owner concept 07.11), spokes from the plaza to each camp, and spokes to each anchor zone.
+ */
 export function pathSegments() {
   const segs = [];
-  for (const c of CAMPS) segs.push([onRing(PLAZA_RADIUS, c.angle), onRing(CAMP_RING_RADIUS - CAMP_PLOT_SIZE / 2 + 1, c.angle)]);
+  const edge = CAMP_PLOT_SIZE / 2 - 0.2;
+  for (let i = 0; i < CAMPS.length; i++) {
+    const a = CAMPS[i].position, b = CAMPS[(i + 1) % CAMPS.length].position;
+    const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz);
+    segs.push([[a[0] + (dx / l) * edge, 0, a[2] + (dz / l) * edge], [b[0] - (dx / l) * edge, 0, b[2] - (dz / l) * edge]]);
+  }
+  for (const c of CAMPS) segs.push([onRing(PLAZA_RADIUS, c.angle), onRing(CAMP_RING_RADIUS - CAMP_PLOT_SIZE / 2 + 0.2, c.angle)]);
   for (const z of ANCHOR_ZONES) segs.push([onRing(PLAZA_RADIUS, z.angle), onRing(ANCHOR_RING_RADIUS - ANCHOR_ZONE_RADIUS, z.angle)]);
   return segs;
+}
+
+/**
+ * Idle hover of a levitating Shell (owner 07.11: no ground contact, slow bob and rotation).
+ * Visual only, never game state. Colliders stay at the rest pose, so the motion is bounded:
+ * bob <= 0.12 m and a yaw sway <= 1.5 degrees (<= 0.16 m at a 6 m radius) keep any surface point
+ * within 0.28 m of its rest position, inside the 0.35 m camera collision sphere; each part alone
+ * stays inside the 0.25 m margin of the greybox colliders.
+ */
+export const SHELL_HOVER = Object.freeze({ bob: 0.12, bobPeriod: 9, sway: (1.5 * Math.PI) / 180, swayPeriod: 23 });
+export function shellHover(t, index) {
+  const ph = index * 1.7;
+  return {
+    dy: SHELL_HOVER.bob * Math.sin((2 * Math.PI * t) / SHELL_HOVER.bobPeriod + ph),
+    yaw: SHELL_HOVER.sway * Math.sin((2 * Math.PI * t) / SHELL_HOVER.swayPeriod + ph * 0.6),
+  };
 }
 
 /** Distance between two ground points. */
