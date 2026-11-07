@@ -20,6 +20,8 @@ const doc = await io.read(process.argv[2]);
 const root = doc.getRoot();
 
 const fails = [];
+// meshopt quantization moves the walk collision by up to one grid step (~2 mm) in the shipped file
+const TOL = Number(process.argv[3] || 1e-3);
 const report = {};
 const check = (ok, msg) => { if (!ok) fails.push(msg); };
 
@@ -100,7 +102,7 @@ function mustWalk(x, z, what) {
   walkSamples++;
   if (y === null) { fails.push(`no ground at ${what} (${x.toFixed(2)}, ${z.toFixed(2)})`); return; }
   walkMaxErr = Math.max(walkMaxErr, Math.abs(y));
-  check(Math.abs(y) < 1e-3, `ground at ${what} is ${y}`);
+  check(Math.abs(y) < TOL, `ground at ${what} is ${y}`);
 }
 for (const p of L.platforms()) {
   mustWalk(p.center[0], p.center[2], p.id);

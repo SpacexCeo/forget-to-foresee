@@ -1141,7 +1141,7 @@ def render_sheets(sc, rig, key, out_dir, samples=24):
     os.makedirs(out_dir, exist_ok=True)
     sc.cycles.samples = samples
     sc.render.resolution_x, sc.render.resolution_y = SHEET_CELL
-    tmp = os.path.join(out_dir, "_cell.jpg")
+    tmp = os.path.join(out_dir, f"_cell_{key}.jpg")
     cams = {}
     for vn, (loc, tgt, ortho, lens) in SHEET_VIEWS.items():
         cams[vn] = add_camera(f"SheetCam_{vn}", loc, tgt, ortho, lens or 70)

@@ -211,7 +211,7 @@ export const EFFECTS = Object.freeze({
   logogram: {
     duration: 9.5, desc: "A Guest's round sign drawn stroke by stroke: gold-nacre ink glows, then settles dark.",
     layers: [
-      { at: 0, kind: 'logogram', draw: 4.2, hold: 1.4, settle: 2.6, radius: 1.2 },
+      { at: 0, kind: 'logogram', dur: 9.5, draw: 4.2, hold: 1.4, settle: 2.6, radius: 1.2 },
       { at: 0, kind: 'light', color: P.paleGold, intensity: 6, distance: 6, dur: 6.5, attack: 0.6, release: 2.5, offset: [0, 0, 0.6] },
       { at: 5.6, kind: 'burst', emitter: 'ink_bloom' },
     ],
