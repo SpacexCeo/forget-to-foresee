@@ -4,7 +4,7 @@ Status: `greybox` (code placeholder) → `wip` → `review` → `approved`. Only
 
 | File | Object | Author | Source / license | Triangles | Textures | Status |
 |---|---|---|---|---|---|---|
-| anchor.glb | Anchor (hero) | Claude Code (procedural, `art/anchor/build_anchor.py`) | own, MIT; built with Blender 4.5.3 | runtime 11,488 · `_inspect` 46,204 · `_col` 148 (6 hulls) | embedded: base colour 4096² JPEG, ORM 4096² JPEG, normal 4096² PNG ×2 (runtime + inspect); file 36.7 MB | review |
+| anchor.glb | Anchor (hero) | Claude Code (procedural, `art/anchor/build_anchor.py`, v3) | own, MIT; built with Blender 4.5.3 | runtime 12,340 · `_inspect` 49,936 · `_col` 148 (6 hulls) | KTX2: base colour + ORM 4096² ETC1S, runtime normal 2048² UASTC, `_inspect` normal 4096² UASTC; meshopt; file 19.8 MB | review |
 | scroll_table.glb | Scroll table (hero) | Claude Code (procedural, `art/scroll_table/build_scroll_table.py`) | own, MIT | runtime 13,772; `_inspect` 54,874; `_col` 184 (2 convex prisms) | 4096² basecolor JPEG, 4096² ORM JPEG, 2× 4096² normal PNG (runtime + _inspect); 3 materials per mesh; .glb 46.0 MB | review |
 | shard.glb | Memory shard (hero) | Claude Code (procedural, `art/shard/build_shard.py`) | own, MIT | runtime 7,048; `_inspect` 30,853; `_col` 56 (1 convex hull) | 2048² basecolor JPEG, 2048² ORM JPEG, 2× 2048² normal PNG (runtime + _inspect); crystal uses KHR_materials_transmission + volume; 3 materials per mesh; .glb 8.7 MB | review |
 | shell_1.glb | Shell exterior I, elongated (uncoiled hook) | Claude Code (procedural, `art/shells/build_shells.py`) | own, MIT | runtime 21,456; `_col` 148 (2 convex hulls) | 4096² basecolor JPEG, 4096² ORM JPEG, 1× 4096² normal PNG; 2 materials (exterior, nacre); .glb 18.0 MB | review |
