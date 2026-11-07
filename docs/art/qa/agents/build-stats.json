@@ -40,31 +40,31 @@
       "master_triangles": 4751424,
       "bakes": {
         "ao": {
-          "seconds": 32.49,
+          "seconds": 11.18,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 22.25,
+          "seconds": 5.79,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 28.41,
+          "seconds": 8.02,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 28.98,
+          "seconds": 9.0,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 18.0,
+          "seconds": 5.16,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -77,7 +77,7 @@
             2048,
             2048
           ],
-          "bytes": 659891
+          "bytes": 659882
         },
         "orm": {
           "file": "agent_iris_orm.jpg",
@@ -85,7 +85,7 @@
             2048,
             2048
           ],
-          "bytes": 1429431
+          "bytes": 1429432
         },
         "normal": {
           "file": "agent_iris_normal.jpg",
@@ -93,8 +93,69 @@
             2048,
             2048
           ],
-          "bytes": 1208297
+          "bytes": 1208403
         }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "head": "head",
+          "tunic": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "boot_-1": "fit",
+          "boot_1": "fit",
+          "belt": "fit",
+          "bracer_-1": "fit",
+          "bracer_1": "fit",
+          "hair": "hair",
+          "cloak": "cloak",
+          "cape": "cloak:0.35",
+          "hood_down": "fit",
+          "scarf": "fit",
+          "scarf_tail": "chain:scarf",
+          "scarf_front": "fit",
+          "pin": "fit"
+        },
+        "bones_used": [
+          "chest",
+          "cloak_0",
+          "cloak_1",
+          "cloak_2",
+          "cloak_L_0",
+          "cloak_L_1",
+          "cloak_R_0",
+          "cloak_R_1",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "neck",
+          "pelvis",
+          "scarf_0",
+          "scarf_1",
+          "scarf_2",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
       },
       "collision": {
         "name": "agent_iris_col",
@@ -102,16 +163,80 @@
         "height_m": 1.763,
         "triangles": 144
       },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0315,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0779,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 40,
       "sockets_gltf": {
         "socket_head": [
           0.0,
-          1.636,
-          0.008
+          0.003,
+          0.114
         ],
         "socket_hand_r": [
-          -0.2818,
-          0.8209,
-          -0.0
+          0.0,
+          -0.0,
+          0.1
         ]
       },
       "materials": [
@@ -121,17 +246,18 @@
       ],
       "bounds_gltf_yup": {
         "min": [
-          5.658,
+          -0.356,
           0.001,
           -0.333
         ],
         "max": [
-          107.989,
+          0.356,
           1.763,
           0.257
         ]
       },
-      "glb_bytes": 4522184,
+      "raw_glb_bytes": 6115964,
+      "glb_bytes": 5016340,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -140,30 +266,42 @@
       "stages": [
         {
           "stage": "iris:model",
-          "seconds": 0.99
+          "seconds": 0.12
         },
         {
           "stage": "iris:uv",
-          "seconds": 4.55
+          "seconds": 0.98
         },
         {
           "stage": "iris:master",
-          "seconds": 9.6
+          "seconds": 1.41
         },
         {
           "stage": "iris:bake_gpu",
-          "seconds": 130.68
+          "seconds": 39.45
         },
         {
           "stage": "iris:textures",
-          "seconds": 5.17
+          "seconds": 2.25
         },
         {
           "stage": "iris:export",
-          "seconds": 0.12
+          "seconds": 0.0
+        },
+        {
+          "stage": "iris:rig",
+          "seconds": 0.2
+        },
+        {
+          "stage": "iris:anim",
+          "seconds": 0.65
+        },
+        {
+          "stage": "iris:export",
+          "seconds": 5.85
         }
       ],
-      "total_seconds": 151.26
+      "total_seconds": 50.91
     },
     "sol": {
       "clan": "Salt",
@@ -209,31 +347,31 @@
       "master_triangles": 6316576,
       "bakes": {
         "ao": {
-          "seconds": 12.1,
+          "seconds": 10.41,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 8.43,
+          "seconds": 8.08,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 11.9,
+          "seconds": 8.3,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 10.66,
+          "seconds": 9.64,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 12.58,
+          "seconds": 5.88,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -246,7 +384,7 @@
             2048,
             2048
           ],
-          "bytes": 1098103
+          "bytes": 1098157
         },
         "orm": {
           "file": "agent_sol_orm.jpg",
@@ -254,7 +392,7 @@
             2048,
             2048
           ],
-          "bytes": 1584543
+          "bytes": 1584523
         },
         "normal": {
           "file": "agent_sol_normal.jpg",
@@ -262,8 +400,66 @@
             2048,
             2048
           ],
-          "bytes": 1531608
+          "bytes": 1531571
         }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "head": "head",
+          "robe": "skirt",
+          "tier_0": "skirt",
+          "tier_1": "skirt",
+          "tier_2": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "belt": "fit",
+          "hood": "hood",
+          "veil": "head",
+          "shoulder_plates": "fit",
+          "crystals": "comp",
+          "balance": "rigid:prop_L",
+          "pans": "rigid:prop_L",
+          "cords": "rigid:prop_L",
+          "satchel_strap": "fit",
+          "satchel": "comp",
+          "clasp": "comp",
+          "pouch_0": "comp",
+          "pouch_1": "comp",
+          "pouch_2": "comp"
+        },
+        "bones_used": [
+          "chest",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "hood_0",
+          "hood_1",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
       },
       "collision": {
         "name": "agent_sol_col",
@@ -271,16 +467,80 @@
         "height_m": 1.859,
         "triangles": 144
       },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0365,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0645,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 40,
       "sockets_gltf": {
         "socket_head": [
           0.0,
-          1.636,
-          0.008
+          0.003,
+          0.114
         ],
         "socket_hand_r": [
-          -0.2818,
-          0.8209,
-          -0.0
+          0.0,
+          -0.0,
+          0.1
         ]
       },
       "materials": [
@@ -290,17 +550,18 @@
       ],
       "bounds_gltf_yup": {
         "min": [
-          5.658,
+          -0.412,
           0.001,
           -0.258
         ],
         "max": [
-          131.939,
+          0.405,
           1.859,
           0.293
         ]
       },
-      "glb_bytes": 5472408,
+      "raw_glb_bytes": 7076752,
+      "glb_bytes": 4858632,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -309,30 +570,42 @@
       "stages": [
         {
           "stage": "sol:model",
-          "seconds": 0.15
+          "seconds": 0.11
         },
         {
           "stage": "sol:uv",
-          "seconds": 1.72
+          "seconds": 0.91
         },
         {
           "stage": "sol:master",
-          "seconds": 6.15
+          "seconds": 2.94
         },
         {
           "stage": "sol:bake_gpu",
-          "seconds": 56.1
+          "seconds": 42.69
         },
         {
           "stage": "sol:textures",
-          "seconds": 2.13
+          "seconds": 1.98
         },
         {
           "stage": "sol:export",
-          "seconds": 0.16
+          "seconds": 0.0
+        },
+        {
+          "stage": "sol:rig",
+          "seconds": 0.14
+        },
+        {
+          "stage": "sol:anim",
+          "seconds": 0.6
+        },
+        {
+          "stage": "sol:export",
+          "seconds": 4.33
         }
       ],
-      "total_seconds": 66.42
+      "total_seconds": 53.7
     },
     "pepel": {
       "clan": "Ash",
@@ -371,31 +644,31 @@
       "master_triangles": 5404000,
       "bakes": {
         "ao": {
-          "seconds": 17.19,
+          "seconds": 7.77,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 11.91,
+          "seconds": 5.9,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 13.18,
+          "seconds": 6.72,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 7.64,
+          "seconds": 6.35,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 5.42,
+          "seconds": 4.53,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -416,7 +689,7 @@
             2048,
             2048
           ],
-          "bytes": 1632246
+          "bytes": 1632294
         },
         "normal": {
           "file": "agent_pepel_normal.jpg",
@@ -424,8 +697,57 @@
             2048,
             2048
           ],
-          "bytes": 1691974
+          "bytes": 1691972
         }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "head": "head",
+          "tunic": "skirt",
+          "coat": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "wraps_-1": "fit",
+          "wraps_1": "fit",
+          "belt": "fit",
+          "hood": "hood",
+          "scarf": "fit",
+          "palisade": "comp",
+          "binding": "fit",
+          "shield": "rigid:forearm_L",
+          "shield_bars": "rigid:forearm_L"
+        },
+        "bones_used": [
+          "chest",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "hood_0",
+          "neck",
+          "pelvis",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
       },
       "collision": {
         "name": "agent_pepel_col",
@@ -433,16 +755,80 @@
         "height_m": 1.864,
         "triangles": 144
       },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.029,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0845,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 40,
       "sockets_gltf": {
         "socket_head": [
           0.0,
-          1.636,
-          0.008
+          0.003,
+          0.114
         ],
         "socket_hand_r": [
-          -0.2818,
-          0.8209,
-          -0.0
+          0.0,
+          -0.0,
+          0.1
         ]
       },
       "materials": [
@@ -452,17 +838,18 @@
       ],
       "bounds_gltf_yup": {
         "min": [
-          5.658,
+          -0.468,
           0.001,
           -0.482
         ],
         "max": [
-          90.45,
+          0.45,
           1.864,
           0.258
         ]
       },
-      "glb_bytes": 5056276,
+      "raw_glb_bytes": 6561592,
+      "glb_bytes": 5114788,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -471,30 +858,42 @@
       "stages": [
         {
           "stage": "pepel:model",
-          "seconds": 0.28
+          "seconds": 0.12
         },
         {
           "stage": "pepel:uv",
-          "seconds": 1.09
+          "seconds": 0.9
         },
         {
           "stage": "pepel:master",
-          "seconds": 2.56
+          "seconds": 1.52
         },
         {
           "stage": "pepel:bake_gpu",
-          "seconds": 55.82
+          "seconds": 31.6
         },
         {
           "stage": "pepel:textures",
-          "seconds": 2.22
+          "seconds": 2.0
         },
         {
           "stage": "pepel:export",
-          "seconds": 0.09
+          "seconds": 0.0
+        },
+        {
+          "stage": "pepel:rig",
+          "seconds": 0.11
+        },
+        {
+          "stage": "pepel:anim",
+          "seconds": 0.61
+        },
+        {
+          "stage": "pepel:export",
+          "seconds": 4.0
         }
       ],
-      "total_seconds": 62.07
+      "total_seconds": 40.85
     },
     "moh": {
       "clan": "Moss",
@@ -535,31 +934,31 @@
       "master_triangles": 5061184,
       "bakes": {
         "ao": {
-          "seconds": 12.78,
+          "seconds": 13.2,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 9.43,
+          "seconds": 6.71,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 6.91,
+          "seconds": 6.51,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 6.32,
+          "seconds": 6.66,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 4.55,
+          "seconds": 5.4,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -572,7 +971,7 @@
             2048,
             2048
           ],
-          "bytes": 1003253
+          "bytes": 1003239
         },
         "orm": {
           "file": "agent_moh_orm.jpg",
@@ -580,7 +979,7 @@
             2048,
             2048
           ],
-          "bytes": 1604612
+          "bytes": 1604596
         },
         "normal": {
           "file": "agent_moh_normal.jpg",
@@ -588,8 +987,66 @@
             2048,
             2048
           ],
-          "bytes": 1413781
+          "bytes": 1413737
         }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "head": "head",
+          "tunic": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "belt": "fit",
+          "cloak": "cloak",
+          "capelet": "cloak:0.35",
+          "hood_down": "fit",
+          "hair": "hair",
+          "moss": "follow",
+          "mushroom_caps": "follow_comp",
+          "mushroom_stems": "follow_comp",
+          "leaves": "follow",
+          "cauldron": "rigid:prop_L",
+          "bail": "rigid:prop_L",
+          "ladle": "comp"
+        },
+        "bones_used": [
+          "chest",
+          "cloak_0",
+          "cloak_1",
+          "cloak_2",
+          "cloak_L_0",
+          "cloak_L_1",
+          "cloak_R_0",
+          "cloak_R_1",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
       },
       "collision": {
         "name": "agent_moh_col",
@@ -597,16 +1054,80 @@
         "height_m": 1.763,
         "triangles": 144
       },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0368,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0698,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 40,
       "sockets_gltf": {
         "socket_head": [
           0.0,
-          1.636,
-          0.008
+          0.003,
+          0.114
         ],
         "socket_hand_r": [
-          -0.2818,
-          0.8209,
-          -0.0
+          0.0,
+          -0.0,
+          0.1
         ]
       },
       "materials": [
@@ -616,17 +1137,18 @@
       ],
       "bounds_gltf_yup": {
         "min": [
-          5.658,
+          -0.414,
           0.001,
           -0.326
         ],
         "max": [
-          101.965,
+          0.437,
           1.763,
           0.252
         ]
       },
-      "glb_bytes": 5181828,
+      "raw_glb_bytes": 6743528,
+      "glb_bytes": 5148136,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -635,30 +1157,42 @@
       "stages": [
         {
           "stage": "moh:model",
-          "seconds": 0.15
+          "seconds": 0.12
         },
         {
           "stage": "moh:uv",
-          "seconds": 1.09
+          "seconds": 1.71
         },
         {
           "stage": "moh:master",
-          "seconds": 1.99
+          "seconds": 2.59
         },
         {
           "stage": "moh:bake_gpu",
-          "seconds": 40.31
+          "seconds": 38.8
         },
         {
           "stage": "moh:textures",
-          "seconds": 1.97
+          "seconds": 2.33
         },
         {
           "stage": "moh:export",
-          "seconds": 0.07
+          "seconds": 0.0
+        },
+        {
+          "stage": "moh:rig",
+          "seconds": 0.21
+        },
+        {
+          "stage": "moh:anim",
+          "seconds": 1.06
+        },
+        {
+          "stage": "moh:export",
+          "seconds": 5.26
         }
       ],
-      "total_seconds": 45.58
+      "total_seconds": 52.08
     },
     "yantar": {
       "clan": "Amber",
@@ -702,31 +1236,31 @@
       "master_triangles": 5348080,
       "bakes": {
         "ao": {
-          "seconds": 8.45,
+          "seconds": 10.89,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 6.27,
+          "seconds": 9.46,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 11.06,
+          "seconds": 8.08,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 10.4,
+          "seconds": 7.06,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 5.78,
+          "seconds": 8.07,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -739,7 +1273,7 @@
             2048,
             2048
           ],
-          "bytes": 1215180
+          "bytes": 1215169
         },
         "orm": {
           "file": "agent_yantar_orm.jpg",
@@ -747,7 +1281,7 @@
             2048,
             2048
           ],
-          "bytes": 1577281
+          "bytes": 1577416
         },
         "normal": {
           "file": "agent_yantar_normal.jpg",
@@ -755,8 +1289,62 @@
             2048,
             2048
           ],
-          "bytes": 1587032
+          "bytes": 1587060
         }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "head": "head",
+          "robe": "skirt",
+          "coat": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "cuff_-1": "fit",
+          "cuff_1": "fit",
+          "belt": "fit",
+          "collar": "fit",
+          "hat": "head",
+          "hat_band": "head",
+          "chest": "rigid:chest",
+          "chest_bands": "rigid:chest",
+          "strap_-1": "fit",
+          "strap_1": "fit",
+          "padlocks": "follow_comp",
+          "shackles": "follow_comp",
+          "keys": "rigid:prop_L",
+          "gems": "follow_comp"
+        },
+        "bones_used": [
+          "chest",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
       },
       "collision": {
         "name": "agent_yantar_col",
@@ -764,16 +1352,80 @@
         "height_m": 1.781,
         "triangles": 144
       },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0222,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0862,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 40,
       "sockets_gltf": {
         "socket_head": [
           0.0,
-          1.636,
-          0.008
+          0.003,
+          0.114
         ],
         "socket_hand_r": [
-          -0.2818,
-          0.8209,
-          -0.0
+          0.0,
+          -0.0,
+          0.1
         ]
       },
       "materials": [
@@ -783,17 +1435,18 @@
       ],
       "bounds_gltf_yup": {
         "min": [
-          5.658,
+          -0.396,
           0.001,
           -0.419
         ],
         "max": [
-          120.047,
+          0.404,
           1.781,
           0.29
         ]
       },
-      "glb_bytes": 5381004,
+      "raw_glb_bytes": 6883284,
+      "glb_bytes": 5223400,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -802,30 +1455,42 @@
       "stages": [
         {
           "stage": "yantar:model",
-          "seconds": 0.11
+          "seconds": 0.12
         },
         {
           "stage": "yantar:uv",
-          "seconds": 1.0
+          "seconds": 1.17
         },
         {
           "stage": "yantar:master",
-          "seconds": 1.67
+          "seconds": 2.09
         },
         {
           "stage": "yantar:bake_gpu",
-          "seconds": 42.28
+          "seconds": 43.95
         },
         {
           "stage": "yantar:textures",
-          "seconds": 1.96
+          "seconds": 2.0
         },
         {
           "stage": "yantar:export",
-          "seconds": 0.07
+          "seconds": 0.0
+        },
+        {
+          "stage": "yantar:rig",
+          "seconds": 0.11
+        },
+        {
+          "stage": "yantar:anim",
+          "seconds": 0.64
+        },
+        {
+          "stage": "yantar:export",
+          "seconds": 4.32
         }
       ],
-      "total_seconds": 47.09
+      "total_seconds": 54.41
     },
     "iney": {
       "clan": "Frost",
@@ -866,31 +1531,31 @@
       "master_triangles": 4633888,
       "bakes": {
         "ao": {
-          "seconds": 7.6,
+          "seconds": 7.44,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 5.71,
+          "seconds": 5.59,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 6.78,
+          "seconds": 6.14,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 6.29,
+          "seconds": 5.73,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 4.79,
+          "seconds": 4.2,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -903,7 +1568,7 @@
             2048,
             2048
           ],
-          "bytes": 1152827
+          "bytes": 1152837
         },
         "orm": {
           "file": "agent_iney_orm.jpg",
@@ -911,7 +1576,7 @@
             2048,
             2048
           ],
-          "bytes": 1567594
+          "bytes": 1567551
         },
         "normal": {
           "file": "agent_iney_normal.jpg",
@@ -919,8 +1584,67 @@
             2048,
             2048
           ],
-          "bytes": 1431909
+          "bytes": 1431787
         }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "head": "head",
+          "robe": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "belt": "fit",
+          "mantle": "cloak:0.45",
+          "hood": "hood",
+          "lens_frame": "head",
+          "staff": "rigid:prop_L",
+          "armillary": "rigid:prop_L",
+          "glass": "pick:head,prop_L",
+          "tablet": "follow_comp",
+          "signs": "follow_comp",
+          "tablet_cord": "follow_comp",
+          "vials": "follow_comp",
+          "vial_caps": "follow_comp"
+        },
+        "bones_used": [
+          "chest",
+          "cloak_0",
+          "cloak_1",
+          "cloak_L_0",
+          "cloak_L_1",
+          "cloak_R_0",
+          "cloak_R_1",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "hood_0",
+          "hood_1",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
       },
       "collision": {
         "name": "agent_iney_col",
@@ -928,16 +1652,80 @@
         "height_m": 2.02,
         "triangles": 144
       },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0389,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0723,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0012,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 40,
       "sockets_gltf": {
         "socket_head": [
           0.0,
-          1.636,
-          0.008
+          0.003,
+          0.114
         ],
         "socket_hand_r": [
-          -0.2818,
-          0.8209,
-          -0.0
+          0.0,
+          -0.0,
+          0.1
         ]
       },
       "materials": [
@@ -947,17 +1735,18 @@
       ],
       "bounds_gltf_yup": {
         "min": [
-          5.658,
-          0.0,
+          -0.424,
+          -0.0,
           -0.297
         ],
         "max": [
-          102.384,
+          0.428,
           2.02,
           0.297
         ]
       },
-      "glb_bytes": 5288092,
+      "raw_glb_bytes": 6838684,
+      "glb_bytes": 5061468,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -966,30 +1755,42 @@
       "stages": [
         {
           "stage": "iney:model",
-          "seconds": 0.11
+          "seconds": 0.12
         },
         {
           "stage": "iney:uv",
-          "seconds": 0.85
+          "seconds": 0.86
         },
         {
           "stage": "iney:master",
-          "seconds": 1.59
+          "seconds": 1.79
         },
         {
           "stage": "iney:bake_gpu",
-          "seconds": 31.48
+          "seconds": 29.4
         },
         {
           "stage": "iney:textures",
-          "seconds": 2.03
+          "seconds": 1.95
         },
         {
           "stage": "iney:export",
-          "seconds": 0.07
+          "seconds": 0.0
+        },
+        {
+          "stage": "iney:rig",
+          "seconds": 0.11
+        },
+        {
+          "stage": "iney:anim",
+          "seconds": 0.57
+        },
+        {
+          "stage": "iney:export",
+          "seconds": 4.17
         }
       ],
-      "total_seconds": 36.13
+      "total_seconds": 38.97
     },
     "suit": {
       "clan": "Suit",
@@ -1186,7 +1987,7 @@
   },
   "blender": "4.5.3 LTS",
   "budgets": {
-    "runtime_triangles": 24000,
+    "runtime_triangles": 16000,
     "materials": 3,
     "texture_px": 2048,
     "bake_px": 4096
@@ -1197,46 +1998,46 @@
       "resolution": 1400,
       "samples": 256,
       "seconds_per_render": {
-        "agent_iris_front": 2.05,
-        "agent_iris_side": 1.66,
-        "agent_iris_back": 2.77,
-        "agent_iris_three_quarter": 2.01,
-        "agent_iris_iso": 2.21,
-        "agent_sol_front": 2.09,
-        "agent_sol_side": 2.06,
-        "agent_sol_back": 1.84,
-        "agent_sol_three_quarter": 2.11,
-        "agent_sol_iso": 2.88,
-        "agent_pepel_front": 1.8,
-        "agent_pepel_side": 1.62,
-        "agent_pepel_back": 1.65,
-        "agent_pepel_three_quarter": 1.86,
-        "agent_pepel_iso": 2.15,
-        "agent_moh_front": 1.77,
-        "agent_moh_side": 1.7,
-        "agent_moh_back": 1.74,
-        "agent_moh_three_quarter": 1.97,
-        "agent_moh_iso": 2.19,
+        "agent_iris_front": 1.82,
+        "agent_iris_side": 1.73,
+        "agent_iris_back": 1.75,
+        "agent_iris_three_quarter": 1.9,
+        "agent_iris_iso": 2.12,
+        "agent_sol_front": 1.85,
+        "agent_sol_side": 1.79,
+        "agent_sol_back": 1.87,
+        "agent_sol_three_quarter": 3.94,
+        "agent_sol_iso": 3.9,
+        "agent_pepel_front": 2.05,
+        "agent_pepel_side": 4.09,
+        "agent_pepel_back": 3.13,
+        "agent_pepel_three_quarter": 4.92,
+        "agent_pepel_iso": 3.6,
+        "agent_moh_front": 2.23,
+        "agent_moh_side": 4.56,
+        "agent_moh_back": 1.79,
+        "agent_moh_three_quarter": 1.93,
+        "agent_moh_iso": 2.16,
         "agent_yantar_front": 1.76,
-        "agent_yantar_side": 1.7,
-        "agent_yantar_back": 1.75,
-        "agent_yantar_three_quarter": 1.95,
-        "agent_yantar_iso": 2.21,
+        "agent_yantar_side": 1.77,
+        "agent_yantar_back": 1.77,
+        "agent_yantar_three_quarter": 1.9,
+        "agent_yantar_iso": 2.15,
         "agent_iney_front": 1.86,
-        "agent_iney_side": 1.74,
-        "agent_iney_back": 1.81,
-        "agent_iney_three_quarter": 2.01,
-        "agent_iney_iso": 2.21,
-        "agent_iris_collision_front": 0.74,
-        "agent_sol_collision_front": 0.77,
-        "agent_pepel_collision_front": 0.75,
-        "agent_moh_collision_front": 0.72,
-        "agent_yantar_collision_front": 0.69,
-        "agent_iney_collision_front": 0.73,
-        "lineup_front": 3.02,
-        "lineup_iso": 4.62
+        "agent_iney_side": 1.88,
+        "agent_iney_back": 1.82,
+        "agent_iney_three_quarter": 1.97,
+        "agent_iney_iso": 2.2,
+        "agent_iris_collision_front": 0.71,
+        "agent_sol_collision_front": 0.73,
+        "agent_pepel_collision_front": 0.71,
+        "agent_moh_collision_front": 0.73,
+        "agent_yantar_collision_front": 0.71,
+        "agent_iney_collision_front": 0.75,
+        "lineup_front": 3.23,
+        "lineup_iso": 4.16
       },
-      "total_seconds": 71.45
+      "total_seconds": 85.08
     },
     "suit": {
       "device": "OPTIX",
