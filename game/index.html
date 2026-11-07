@@ -63,6 +63,24 @@
     .pl-info { bottom: 180px; left: 50%; transform: translateX(-50%); padding: 8px 14px; font-size: 14px; }
     .pl-badge { top: 14px; right: 12px; max-width: 250px; padding: 6px 10px; font-size: 11px; color: var(--muted); background: rgba(20, 24, 22, 0.5); }
     @media (max-width: 900px) { .pl-bar { max-width: none; left: 12px; } .pl-chronicle { display: none; } .pl-badge { display: none; } }
+
+    /* Phones: miniature HUD so the world stays visible (owner 07.11). */
+    @media (max-width: 640px), (pointer: coarse) and (max-height: 900px) {
+      .pl-goal { top: calc(6px + env(safe-area-inset-top, 0px)); width: min(340px, calc(100vw - 132px)); left: auto; right: 8px; transform: none; padding: 5px 9px 6px; border-top-width: 2px; border-radius: 8px; }
+      .pl-goal-head { font-size: 9px; } .pl-goal-title { font-size: 13px; margin: 2px 0; } .pl-goal-hint { display: none; }
+      .pl-row { gap: 4px; margin-top: 3px; }
+      .pl-btn { font-size: 11px; padding: 4px 7px; border-radius: 5px; } .pl-small { font-size: 10px; padding: 2px 6px; }
+      .pl-bar { left: 6px; right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); padding: 4px; gap: 4px; max-width: none; justify-content: center; border-radius: 8px; }
+      .pl-context { bottom: calc(46px + env(safe-area-inset-bottom, 0px)); min-width: 0; width: calc(100vw - 16px); padding: 5px 8px; }
+      .pl-context h3 { font-size: 12px; margin-bottom: 3px; } .pl-opt { font-size: 12px; padding: 3px 4px; }
+      .pl-panel { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); right: 8px; left: 8px; width: auto; max-height: 50vh; padding: 8px 10px; font-size: 12px; }
+      .pl-panel h2 { font-size: 14px; } .pl-panel h3 { font-size: 12px; } .pl-muted { font-size: 11px; }
+      .pl-help { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); left: 8px; width: calc(100vw - 16px); font-size: 11px; padding: 6px 10px; }
+      .pl-info { bottom: calc(50px + env(safe-area-inset-bottom, 0px)); font-size: 12px; padding: 5px 10px; max-width: calc(100vw - 24px); }
+      .pl-chronicle, .pl-badge, #badge, #prompt { display: none !important; }
+      #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
+      #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
+    }
   </style>
 </head>
 <body>
