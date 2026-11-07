@@ -44,12 +44,13 @@ cd game
 npm install
 npm test
 ```
-**See:** `tests 139 · pass 139`.
+**See:** `tests 142 · pass 142`.
 - 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
 - 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
 - 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
 - 31 tests cover the 3D client's pure logic: swept capsule collision (no tunneling through a zero-thickness wall at 15 m/s or in a single 20 m move, same end point at 10 and 144 FPS), camera sphere sweep, ray cast, fixed 30 Hz step, respawn at the last safe point, streaming priority / load plan / LRU, asset naming conventions, and the world layout (walk times, bridges, Shell hover bounds).
 - 33 tests cover the UI layer: ICU formatting, en/ru key parity and no raw keys, the engine-text adapter over 120 scripted seasons, the language switch mid-season, recipe hash stability (save → reload → low tier → reset), idempotent tournament enrollment, onboarding order, palette contrast and colour-independent tells.
+- 3 tests pin the Monte Carlo harness (`npm run sim -- --quick`): deterministic records, zero rejected intents, balanced silk ledger. Results and analysis: [docs/math/economy-report.md](docs/math/economy-report.md).
 
 The engine rules are documented in [docs/rules-baseline.md](docs/rules-baseline.md).
 

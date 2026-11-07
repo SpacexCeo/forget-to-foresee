@@ -82,6 +82,9 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
   - `npm test` — 75 tests green: 60 parity seasons, 8 edge cases, 7 v2 tests. `npm run fixtures` regenerates fixtures from the prototype.
   - **3D client skeleton** (branch `client/3d-skeleton`): `game/index.html` (archipelago greybox scene, camera, player, streaming, F3 HUD) and `game/review.html` (dev asset review). `npm test` now also runs 31 client tests (106 total). Not yet: the Shell interior scene, pathfinding for click-to-move, KTX2/Draco decoders, wiring the engine and i18n into the 3D UI.
   - UI shell (`src/ui/`, `src/locales/`): lobby, onboarding, settings, hologram constructor, tournament card (simulation), HUD with localized chronicle and subtitles; runs standalone at `/ui-preview.html`; integration lines for `main.js` in `docs/ui.md`. `npm test` — 108 tests.
+  - `npm test` — 78 tests green: 60 parity seasons, 8 edge cases, 7 v2 tests, 3 simulation-harness tests. `npm run fixtures` regenerates fixtures from the prototype.
+  - **Economy simulation done (07.11):** `game/scripts/sim/` (`npm run sim`, `--quick`), report `docs/math/economy-report.md`. Verdict: all six commercial-review findings reproduce; holding the fragment beats contributing by +11.5 silk (paired, 3000 seeds); every active honest strategy ends below a passive player; defecting is the silk-dominant trust strategy. Rules v2 unchanged; v3 proposals in the report.
+  - 3D scenes and UI not started yet.
 - Engine game strings (logs, memory texts, offers) are still Russian, as in the prototype. **Planned in the localization step:** events carry i18n keys + args, English is the base locale, Russian is the second; the prototype's UI text gets translated and fixtures regenerated at the same time so parity holds.
 - GitHub: https://github.com/SpacexCeo/forget-to-foresee (public, branch main, tag pre-hackathon). Push after every commit.
 
