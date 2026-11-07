@@ -1,0 +1,24 @@
+{
+  "device": "OPTIX",
+  "resolution": 1600,
+  "samples": 768,
+  "seconds_per_render": {
+    "shard_front": 3.8,
+    "shard_side": 3.58,
+    "shard_three_quarter": 4.07,
+    "shard_top": 9.46,
+    "shard_close_tip": 7.01,
+    "shard_close_veins": 9.34,
+    "shard_close_base": 9.55,
+    "shard_inspect_close_tip": 7.06,
+    "shard_inspect_close_veins": 11.57,
+    "shard_inspect_close_base": 10.32,
+    "shard_collision_three_quarter": 5.56
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 81.4
+    }
+  ]
+}
