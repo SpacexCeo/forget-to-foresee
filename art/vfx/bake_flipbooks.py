@@ -151,7 +151,7 @@ def build(sc):
     mat = bpy.data.materials.new("Vol"); mat.use_nodes = True
     nt = mat.node_tree; nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
-    vol = nt.nodes.new("ShaderNodePrincipledVolume")
+    vol = nt.nodes.new("ShaderNodeVolumePrincipled")
     den = nt.nodes.new("ShaderNodeAttribute"); den.attribute_name = "density"
     mul = nt.nodes.new("ShaderNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = CFG["density"]
     nt.links.new(den.outputs["Fac"], mul.inputs[0])
