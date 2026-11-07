@@ -17,6 +17,10 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | 3D client skeleton (Three.js): floating-archipelago scene, isometric camera that zooms down to third person, WASD and click-to-move, kinematic capsule with swept collision at a fixed 30 Hz, `.glb` streaming with labeled greybox stand-ins, F3 dev HUD | **works** as a greybox skeleton; game rules are not wired into it yet | `game/index.html`, `game/src/` |
 | Asset review page (dev): one model by name, runtime / `_inspect` / `_col` / sockets toggles, budgets and measurements | **works** | `game/review.html` |
 | Scene inside a Shell | **not started** | — |
+| UI shell: lobby, guest demo onboarding (synthetic entitlement → tutorial → hologram → first contact), settings, HUD with chronicle and subtitles | **works** in the UI preview page; not yet wired into the 3D client | `game/src/ui/`, `game/ui-preview.html` |
+| English and Russian UI, language switch mid-season; every engine line rendered through i18n keys | **works** (engine still emits Russian; an adapter maps it, see [docs/i18n-migration.md](docs/i18n-migration.md)) | `game/src/locales/`, `game/src/ui/i18n/` |
+| Hologram constructor with canonical recipe hash | **works**, cosmetic only | `game/src/ui/hologram/` |
+| Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
 | NEAR contract (commit-reveal, NEP-171 fragment NFTs, escrow) | **not started** | — |
 
 ### Real / mock
@@ -28,6 +32,8 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | Hashes and Merkle proofs | real SHA-256 (**real**, but local) |
 | Money | in-game "silk", no real tokens |
 | 3D art | labeled greybox placeholders ("not final art") until each `.glb` from `docs/art/brief.md` is in `game/public/assets/models/` (**mock art**) |
+| Paid access check | **mock**: a free synthetic demo entitlement stored in the browser, clearly labeled |
+| Weekly tournament | **mock**: synthetic schedule, enrollment and results on the device, labeled "simulation" |
 | Season generator | 32-bit seed (mulberry32): fine for a demo, not brute-force resistant; production needs a 128-bit seed and a CSPRNG stream |
 
 ## Run
@@ -38,11 +44,12 @@ cd game
 npm install
 npm test
 ```
-**See:** `tests 106 · pass 106`.
+**See:** `tests 139 · pass 139`.
 - 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
 - 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
 - 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
 - 31 tests cover the 3D client's pure logic: swept capsule collision (no tunneling through a zero-thickness wall at 15 m/s or in a single 20 m move, same end point at 10 and 144 FPS), camera sphere sweep, ray cast, fixed 30 Hz step, respawn at the last safe point, streaming priority / load plan / LRU, asset naming conventions, and the world layout (walk times, bridges, Shell hover bounds).
+- 33 tests cover the UI layer: ICU formatting, en/ru key parity and no raw keys, the engine-text adapter over 120 scripted seasons, the language switch mid-season, recipe hash stability (save → reload → low tier → reset), idempotent tournament enrollment, onboarding order, palette contrast and colour-independent tells.
 
 The engine rules are documented in [docs/rules-baseline.md](docs/rules-baseline.md).
 
@@ -51,7 +58,17 @@ Open `prototype-2d/index.html` in a browser.
 **Do:** enter any Key phrase → "Начать сезон" (start season) → pick the reading rule "Начало задают точки в ядре" (dots set the start) → end ticks.
 **See:** Iris's dictionary becomes confident, anchors on a Gift pay silk, and from tick 3 the "Контракт" (contract) panel shows "✓ сверен" (verified): the event reveal matched the Merkle root published before the season began.
 
-### 3D client skeleton
+### UI shell (lobby, onboarding, HUD)
+```bash
+cd game
+npm install
+npm run dev
+```
+Open `http://localhost:5173/ui-preview.html`.
+**Do:** ENTER THE WORLD → Continue as guest → read the four tutorial pages → change the hologram → Begin first contact → Step onto the island → "Auto-play one tick" a few times → switch EN/RU.
+**See:** the chronicle and subtitles fill with real engine events and re-render in the other language without losing the season. Details and integration notes: [docs/ui.md](docs/ui.md).
+
+### 3D game
 ```bash
 cd game
 npm install
