@@ -60,6 +60,7 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 07.11 | NEAR contract: **Rust + near-sdk** (Rust and cargo-near may be installed; consent given 07.11). The user creates the testnet account for deployment. |
 | 07.11 | R0 answers: **CSPRNG salts + RNG compatibility**; **UI-only guards move into the engine**; **defects fixed in a separate commit** as rules v2. |
 | 07.11 | **Strict rule: the repository and the game are English-only.** Russian only as the second UI language (spec requires RU/EN). Chat with the user stays Russian. |
+| 07.11 | **Clan agent costumes** (owner addition): six agents + a Shell suit as procedural glbs on branch `art/agent-costumes` (`art/agents/`). Shared humanoid base in a **relaxed stance** (arms 14°) instead of an A-pose, because the holograms are static and code-animated (no skinning): a cloak over A-pose arms reads as a poncho. Iris follows the owner's concept (charcoal hooded cloak, violet scarf); Salt carries the brass balance from the Salt camp concept; Amber keeps chests, locks and keys. Hybrid art direction (faceted silhouettes, baked PBR). Bakes are **exploded** (parts moved apart) so colours never bleed between touching layers; normal maps ship as JPEG q95 to keep glbs at 3-5.5 MB. The second GPU server (port 1436) failed SSH host-key verification, so all jobs ran on port 3018. |
 
 ## 5. Status
 - `prototype-2d/index.html` — the full 2D loop, playable. UI is still Russian; it is the frozen parity reference.

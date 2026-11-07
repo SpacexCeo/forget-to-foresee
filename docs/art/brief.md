@@ -66,3 +66,19 @@ Do **one hero object completely** first (I suggest `anchor.glb`): it measures th
 1. Put the `.glb` into `game/public/assets/models/` (or send the file and I will place it).
 2. Add a row to `docs/art/manifest.md`: file, author, source (own / purchased + license), triangles, texture sizes.
 3. The code swaps the greybox for the model. We check close inspection together.
+
+## Clan agent costumes (owner addition 07.11)
+The six clan agents (and a Shell suit) are shown in game as holograms: code renders these meshes through the hologram shader and the player's constructor recipe, so readable silhouettes and clean topology come first; colour may be overridden by code.
+- Files in `game/public/assets/models/`: `agent_iris.glb`, `agent_sol.glb` (Salt), `agent_pepel.glb` (Ash), `agent_moh.glb` (Moss), `agent_yantar.glb` (Amber), `agent_iney.glb` (Frost), plus `agent_suit.glb` (the protective suit worn inside a Shell).
+- One shared parametric humanoid base: 1.75 m, relaxed stance (arms 14° from vertical; the meshes are never skinned in game), Y-up metres, origin on the ground between the feet, front +Z. Quad-based body from a skeleton (loops at the joints), separate head.
+- Budget per agent: ≤24,000 runtime triangles, ≤3 materials, textures up to 2048², tangents exported, no animation, a capsule-like convex `_col`.
+- Material slots by name: `M_<Clan>_Body` (under-layer, head, hair, visor), `M_<Clan>_Garment` (clothing and armour), `M_<Clan>_Ornament` (props). The suit replaces the ornament slot with `M_Suit_Light`, the emissive status strip, so code can recolour it per clan.
+- Sockets (empties): `socket_head` (head centre; `head_top_m` in extras), `socket_hand_r` (right palm grip point; arm direction and palm normal in extras); the suit also has `socket_backpack_light`.
+- Costume language (hybrid direction: bold faceted shapes from the isometric camera, detailed baked PBR close up):
+  - **Iris**: owner concept: long charcoal hooded wool cloak with a frayed hem and shoulder cape, long violet scarf wrapped over the shoulders and hanging down the back, dark layers, leather bracers and boots, dark shoulder-length hair, a small iris pin.
+  - **Salt**: tiered pale robe with scalloped "scale" hems, deep hood and veil (something hidden), white quartz clusters on the shoulders, brass balance, sealed satchel, salt pouches.
+  - **Ash**: soot-black ragged layers, a palisade collar of charred stakes, a stake shield on the forearm, wrapped arms, masked face.
+  - **Moss**: soft two-layer green cloak with a lumpy hem, moss, mushrooms and leaves on the shoulders, hood down, a cauldron in hand and a ladle.
+  - **Amber**: warm merchant coat with a high collar, flat-brimmed hat, a strong-box chest on the back, padlocks on the belt, a ring of keys, amber gems.
+  - **Frost**: tall pointed hood, icicle-hem mantle, pleated robe, armillary staff with glass rings, a lens arm, a slate tablet of 4-slot signs, glass vials.
+- Source and QA: `art/agents/build_agents.py` (+ `agent_geometry.py`, `agent_costumes.py`); renders in `docs/art/qa/agents/<clan>/` and the lineups `docs/art/qa/agents/lineup_*.jpg`; measured values in `docs/art/qa/agents/build-stats.json`.
