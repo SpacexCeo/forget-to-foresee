@@ -351,10 +351,7 @@ function island(b) {
   }
 }
 
-/** Builds the greybox for a catalog asset by exact name. */
-export function buildGreybox(name) {
-  const def = assetByName(name);
-  const b = new Builder();
+function fill(b, name) {
   if (name === 'anchor') anchor(b);
   else if (name === 'scroll_table') scrollTable(b);
   else if (name === 'shard') shard(b);
@@ -363,6 +360,25 @@ export function buildGreybox(name) {
   else if (name.startsWith('camp_')) camp(b, name.slice(5));
   else if (name === 'island') island(b);
   else b.box([1, 1, 1], 0xff00ff, { position: [0, 0.5, 0] });
+}
+
+/**
+ * Only the colliders of a greybox (local space), with no mesh, material or label sprite. Runs under
+ * node: the authoritative room (game/src/net/world-map.js) builds its collision world from these, so
+ * the server validates movement against exactly the colliders the client walks on.
+ */
+export function greyboxColliders(name) {
+  const b = new Builder();
+  fill(b, name);
+  for (const g of b.parts) g.dispose();
+  return b.colliders;
+}
+
+/** Builds the greybox for a catalog asset by exact name. */
+export function buildGreybox(name) {
+  const def = assetByName(name);
+  const b = new Builder();
+  fill(b, name);
   const built = b.build(name);
   const labelY = name === 'island' ? 1.6 : /^shell_/.test(name) ? -0.6 : (def ? def.height : 1) + 0.35;
   const label = makeLabel((def ? def.label : name) + ' \u00b7 not final art', def && def.kind === 'hero' ? 0.015 : 0.019);
