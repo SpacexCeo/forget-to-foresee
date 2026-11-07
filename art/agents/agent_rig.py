@@ -126,6 +126,7 @@ def capture(ag):
     proxy.name = f"{ag.key}_heatproxy"
     proxy.modifiers.clear()
     link(proxy, ag.col)
+    proxy.hide_render = True              # never seen by the bakes
     hco = np.array([v.co[:] for v in head.data.vertices])
     return {"names": names, "proxy": proxy, "head_co": hco}
 

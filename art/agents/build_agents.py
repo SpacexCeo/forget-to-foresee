@@ -1059,7 +1059,7 @@ def stage_render(keys, res=1400, samples=256):
     for key in keys:
         col = new_collection(f"agent_{key}")
         before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=os.path.join(MODEL_DIR, f"agent_{key}.glb"))
+        bpy.ops.import_scene.gltf(filepath=os.path.join(RAW_DIR, f"agent_{key}.glb"))
         for o in [o for o in bpy.data.objects if o not in before]:
             for c in list(o.users_collection):
                 c.objects.unlink(o)
@@ -1103,9 +1103,144 @@ def stage_render(keys, res=1400, samples=256):
     save_stats(stats)
 
 
+# ============================================================ animation QA
+
+SHEET_CELL = (300, 420)
+SHEET_FRAMES = {
+    "walk": ("side", [0, 3, 6, 9, 12, 15, 18, 21]),
+    "idle": ("three_quarter", [0, 20, 40, 60, 80, 100]),
+    "clips": ("three_quarter", [("idle", 0), ("walk", 6), ("run", 5), ("talk", 22),
+                                ("think", 60), ("gesture_offer", 30), ("celebrate", 15),
+                                ("defeat", 75)]),
+}
+SHEET_VIEWS = {
+    "side": ((7, 0, 0.95), (0, 0, 0.95), 2.5, None),
+    "three_quarter": (tuple(iso_loc((0, 0, 0.95), 7, 12, 35)), (0, 0, 0.95), 2.5, None),
+}
+
+
+def find_action(name):
+    for a in bpy.data.actions:
+        if a.name == name or a.name.startswith(name + "_") or a.name.startswith(name + "."):
+            return a
+    return None
+
+
+def set_action(rig, name):
+    ad = rig.animation_data or rig.animation_data_create()
+    act = find_action(name)
+    ad.action = act
+    if hasattr(ad, "action_slot") and act is not None and len(act.slots):
+        ad.action_slot = act.slots[0]
+    return act
+
+
+def render_sheets(sc, rig, key, out_dir, samples=24):
+    """Contact sheets (walk side view, idle three-quarter, one frame of every clip)."""
+    from PIL import Image
+    os.makedirs(out_dir, exist_ok=True)
+    sc.cycles.samples = samples
+    sc.render.resolution_x, sc.render.resolution_y = SHEET_CELL
+    tmp = os.path.join(out_dir, "_cell.jpg")
+    cams = {}
+    for vn, (loc, tgt, ortho, lens) in SHEET_VIEWS.items():
+        cams[vn] = add_camera(f"SheetCam_{vn}", loc, tgt, ortho, lens or 70)
+        cams[vn].data.sensor_fit = "VERTICAL"
+    paths = {}
+    for sheet, (view, frames) in SHEET_FRAMES.items():
+        sc.camera = cams[view]
+        cells = []
+        for item in frames:
+            clip, f = item if isinstance(item, tuple) else (sheet, item)
+            if set_action(rig, clip) is None:
+                continue
+            sc.frame_set(f)
+            sc.render.filepath = tmp
+            bpy.ops.render.render(write_still=True)
+            cells.append((Image.open(tmp).convert("RGB").copy(), f"{clip} {f}"))
+        if not cells:
+            continue
+        W, H = SHEET_CELL
+        img = Image.new("RGB", (W * len(cells), H), (20, 22, 22))
+        from PIL import ImageDraw
+        dr = ImageDraw.Draw(img)
+        for i, (c, label) in enumerate(cells):
+            img.paste(c, (i * W, 0))
+            dr.text((i * W + 6, 6), label, fill=(235, 235, 225))
+        path = os.path.join(out_dir, f"agent_{key}_{sheet}.jpg")
+        img.save(path, quality=84)
+        paths[sheet] = os.path.relpath(path, REPO)
+        log("sheet", paths[sheet])
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    set_action(rig, "idle")
+    return paths
+
+
+def review_scene(res=None):
+    sc = reset_scene()
+    setup_render(sc, res=600, samples=24)
+    sc.render.film_transparent = False
+    device = use_gpu(sc)
+    env = new_collection("ReviewEnv")
+    add_lights(env)
+    add_ground_and_ruler(env, radius=6.0, ruler_xy=None)
+    sc.render.fps = agent_anim.FPS
+    return sc, device
+
+
+def stage_anim(keys):
+    """Fast iteration: runtime mesh with part colours, rig, clips, raw glb, sheets."""
+    report = {}
+    for key in keys:
+        sc, device = review_scene()
+        work = new_collection("Work")
+        ag = build_agent(key, work)
+        cap = agent_rig.capture(ag)
+        rt = join(list(ag.parts), f"agent_{key}")
+        triangulate_ngons(rt)
+        rt.data.shade_flat()
+        pm = preview_material()
+        rt.data.materials.clear()
+        rt.data.materials.append(pm)
+        rig = agent_rig.build_armature(work)
+        st = {"tris": mesh_tris(rt), "skin": agent_rig.skin(rt, cap, rig, key, log=log)}
+        t = time.time()
+        st["clips"], _ = agent_anim.bake_clips(rig, key, log=log)
+        st["bake_s"] = round(time.time() - t, 1)
+        st["walk_foot_check"] = agent_anim.foot_slip(agent_anim.Solver(rig), key)
+        export_rigged(rig, rt, [], key, os.path.join(RAW_DIR, f"anim_{key}.glb"))
+        st["sheets"] = render_sheets(sc, rig, key, os.path.join(RAW_DIR, "sheets"))
+        report[key] = st
+        log(key, json.dumps({k: v for k, v in st.items() if k != "skin"}))
+        with open(os.path.join(RAW_DIR, f"anim_{key}.json"), "w") as fh:
+            json.dump(st, fh, indent=1)
+    return report
+
+
+def stage_sheets(keys):
+    """Final QA: contact sheets from the shipped (raw, pre-KTX2) rigged glbs."""
+    stats = load_stats()
+    for key in keys:
+        sc, device = review_scene()
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(RAW_DIR, f"agent_{key}.glb"))
+        new = [o for o in bpy.data.objects if o not in before]
+        rig = next(o for o in new if o.type == "ARMATURE")
+        for o in new:
+            if o.name.endswith("_col"):
+                o.hide_render = True
+        out = os.path.join(REPO, "docs", "art", "qa", f"agent_{key}")
+        paths = render_sheets(sc, rig, key, out)
+        stats.setdefault("agents", {}).setdefault(key, {})["qa_sheets"] = paths
+        stats["agents"][key]["qa_device"] = device
+        save_stats(stats)
+
+
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     stage = argv[0] if argv else "preview"
     keys = argv[1:] or [k for k, _, _ in CLANS]
     {"preview": stage_preview, "build": stage_build, "render": stage_render,
+     "anim": stage_anim, "sheets": stage_sheets,
      "all": lambda ks: (stage_build(ks), stage_render(ks))}[stage](keys)

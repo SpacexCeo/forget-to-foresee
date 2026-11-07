@@ -105,9 +105,11 @@ def smooth_random(n, rate_hz, rng, lo=0.0, hi=1.0):
     """Slowly wandering control signal in [lo, hi] (random knots, cosine-smoothed)."""
     k = max(int(n / SR * rate_hz) + 3, 4)
     knots = rng.random(k)
-    xk = np.linspace(0, n, k)
-    v = np.interp(np.arange(n), xk, knots)
-    v = gaussian_filter1d(v, sigma=SR / rate_hz * 0.35, mode="wrap")
+    cr = 200.0  # smooth at a 200 Hz control rate, then interpolate to audio rate
+    m = max(int(n / SR * cr) + 2, 8)
+    v = np.interp(np.linspace(0, k - 1, m), np.arange(k), knots)
+    v = gaussian_filter1d(v, sigma=cr / rate_hz * 0.35, mode="nearest")
+    v = np.interp(np.linspace(0, m - 1, n), np.arange(m), v)
     v = (v - v.min()) / max(v.max() - v.min(), 1e-9)
     return lo + (hi - lo) * v
 

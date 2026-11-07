@@ -1,0 +1,16 @@
+{
+  "device": "OPTIX",
+  "samples": 96,
+  "seconds_per_render": {
+    "front": 2.35,
+    "three_quarter": 2.32,
+    "back_three_quarter": 2.4
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 14.46
+    }
+  ],
+  "note": "Review lighting (golden key, blue rim, thin haze, 1.75 m proxy) is render-only."
+}
