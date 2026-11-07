@@ -1,6 +1,6 @@
-/** v3 proposal, payoff-only counterfactual. Re-prices the fragment decision on simulated v2 seasons
- * without re-simulating behaviour (AI clans never read V or the finale bonus, so their play and the
- * vote are unchanged; only Iris's silk is re-priced). Rules are NOT changed in the engine.
+/** v3 proposal, payoff-only counterfactuals. Re-prices Iris's finale on simulated v2 seasons without
+ * re-simulating behaviour (AI clans never read V or the finale bonus, so their play and the vote are
+ * unchanged; only Iris's silk is re-priced). Rules are NOT changed in the engine.
  *
  *   node scripts/sim/proposal.mjs [--quick] [--seasons N] [--seed0 N]
  *
@@ -8,6 +8,7 @@
  * D: the own prize is paid at the finale, and only if the message succeeded without the holder
  *    (outcome gift or survived); lost, weapon and gone pay the holder nothing.
  * A+D: both.
+ * E: the Shells leaving (outcome gone) costs silk: everyone keeps 0 (E0) or half (E50) instead of everything.
  */
 import { runSeason } from './lib/season.mjs';
 import { STRATEGIES } from './lib/strategies.mjs';
@@ -18,7 +19,7 @@ const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] :
 const N = +opt('--seasons', args.includes('--quick') ? 300 : 3000), seed0 = +opt('--seed0', 1);
 const seeds = Array.from({ length: N }, (_, i) => seed0 + i);
 
-export function proposalTable(seeds, print = console.log) {
+export function fragmentTable(seeds, print = console.log) {
   const coop = seeds.map((s) => runSeason(s, STRATEGIES['coop-honest-none']));
   const hold = seeds.map((s) => runSeason(s, STRATEGIES['hold-honest-none']));
   const finaleA = (r) => (r.final.outcome === 'gift' ? 60 : r.final.outcome === 'survived' ? 30 : r.final.outcome === 'weapon' ? -r.final.silk[0] : 0);
@@ -40,10 +41,26 @@ export function proposalTable(seeds, print = console.log) {
   });
   const md = table(['payoff rule', 'coop final silk', 'hold final silk', 'hold − coop (paired)', 'P(hold wins)', 'E[finale given contribute]', 'E[prize given hold]'], rows);
   print(md);
-  return { md, rows };
+  return md;
+}
+
+export function goneTable(seeds, print = console.log) {
+  const rows = [];
+  for (const name of ['hold-defect-none', 'late-defect-none', 'coop-defect-none', 'hold-honest-none', 'coop-honest-none', 'passive']) {
+    const recs = seeds.map((s) => runSeason(s, STRATEGIES[name]));
+    const v2 = recs.map((r) => r.final.silk[0]);
+    const e0 = recs.map((r) => (r.final.outcome === 'gone' ? 0 : r.final.silk[0]));
+    const e50 = recs.map((r) => (r.final.outcome === 'gone' ? Math.round(r.final.silk[0] / 2) : r.final.silk[0]));
+    rows.push([name, pct(share(recs, (r) => r.final.outcome === 'gone')), f1(mean(v2)), f1(mean(e50)), f1(mean(e0))]);
+  }
+  const md = table(['strategy', 'P(gone)', 'v2 final silk', 'E50: gone keeps half', 'E0: gone keeps nothing'], rows);
+  print(md);
+  return md;
 }
 
 if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('scripts/sim/proposal.mjs')) {
-  console.log(`v3 payoff counterfactual on ${N} seeds (${seed0}..${seed0 + N - 1}), honest Iris without market play:`);
-  proposalTable(seeds);
+  console.log(`v3 payoff counterfactuals on ${N} seeds (${seed0}..${seed0 + N - 1}).\n\nFragment decision, honest Iris without market play:`);
+  fragmentTable(seeds);
+  console.log(`\nThe Shells leaving costs silk:`);
+  goneTable(seeds);
 }
