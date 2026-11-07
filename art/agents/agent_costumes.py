@@ -637,6 +637,135 @@ def costume_iney(ag):
     ag.add("vial_caps", vc, "ornament", "metal", "silver", rough=0.3, metal=1.0, collide=())
 
 
+PALETTES["suit"] = {
+    "suit": (0.040, 0.041, 0.045), "skin": (0.40, 0.34, 0.31), "armor": (0.520, 0.530, 0.530),
+    "armor2": (0.400, 0.410, 0.415), "joint": (0.070, 0.072, 0.078), "visor": (0.020, 0.024, 0.030),
+    "pack": (0.300, 0.310, 0.310), "strap": (0.060, 0.060, 0.065), "light": (0.550, 0.200, 1.000),
+}
+
+
+def costume_suit(ag):
+    """Shell suit (owner addition 07.11): worn when entering a Shell. Light-grey
+    segmented armour over a dark under-layer, rounded helmet with a dark visor,
+    compact backpack with a thin status light strip. The strip is its own
+    emissive material (M_Suit_Light) so code can recolour it per clan."""
+    build_body(ag)
+    ag.emissive = {"slot": "ornament", "name": "Light", "color": ag.pal["light"], "strength": 4.0}
+
+    def plate(name, S, W, r0, r1, n=12, rows=3, color="armor", clear=0.012, thick=0.014):
+        axis_tube(ag, name, S, W, r0, r1, n=n, rows=rows, bell=1.0, kind="armor",
+                  color=color, rough=0.45, thick=thick, clear=clear)
+
+    # Torso: chest and back plates, three abdomen bands with gaps between them.
+    P, A = vloft(20, 4, lambda t, th: lerp(1.43, 1.13, t), lambda t, th: 0.05, 0.9,
+                 th0=math.radians(-90 - 75), span=math.radians(150), closed=False)
+    garment(ag, "chest_plate", P, A, kind="armor", color="armor", rough=0.45, thick=0.018,
+            clear=0.014, push=0.20, closed=False)
+    P, A = vloft(20, 4, lambda t, th: lerp(1.43, 1.10, t), lambda t, th: 0.05, 0.9,
+                 th0=math.radians(90 - 70), span=math.radians(140), closed=False)
+    garment(ag, "back_plate", P, A, kind="armor", color="armor2", rough=0.45, thick=0.018,
+            clear=0.014, push=0.20, closed=False)
+    for k, (z0, z1) in enumerate(((1.035, 1.085), (0.98, 1.025), (0.90, 0.965))):
+        band(ag, f"abdomen_{k}", z0, z1, n=24, color="armor2" if k == 2 else "armor",
+             kind="armor", rough=0.45, thick=0.014, clear=0.010, slot="garment")
+    # Limbs: segmented plates with dark joints showing between them.
+    for side in (-1, 1):
+        Ar = arm(side)
+        S, E, W = Ar["S"], Ar["E"], Ar["W"]
+        plate(f"upper_arm_{side}", S + (E - S) * 0.30, S + (E - S) * 0.85, 0.060, 0.056)
+        plate(f"forearm_{side}", E + (W - E) * 0.18, W + (W - E) * 0.02, 0.054, 0.048, rows=4)
+        bm = bmesh.new()
+        ico(bm, E + Vector((0, 0.02, 0)) + Vector((side * 0.012, 0, 0)), 0.05, 1, (1.0, 1.1, 1.0))
+        ag.add(f"elbow_{side}", bm, "garment", "armor", "armor2", rough=0.45, collide=("all",))
+        bm = bmesh.new()
+        placed(bm, frame(S + Vector((side * 0.025, 0, 0.035)), (side * 0.55, 0, 1.0)),
+               lambda b: revolve(b, [(0.088, -0.045), (0.092, -0.01), (0.084, 0.025),
+                                     (0.062, 0.05), (0.03, 0.064), (0.0, 0.067)], 14,
+                                 cap_bottom=True, sy=0.95))
+        gb = bmesh.new()
+        placed(gb, frame(Ar["palm"] + Ar["dir"] * 0.02, Ar["dir"], xhint=Ar["inward"]),
+               lambda b: ico(b, (0, 0, 0), 1.0, 1, (0.028, 0.050, 0.075)))
+        ag.add(f"glove_{side}", gb, "body", "leather", "joint", rough=0.6, collide=())
+        ag.add(f"pauldron_{side}", bm, "garment", "armor", "armor", rough=0.45,
+               collide=("all",))
+        L = leg(side)
+        H, K, Ak = L["H"], L["K"], L["A"]
+        plate(f"thigh_{side}", H + (K - H) * 0.18, H + (K - H) * 0.82, 0.098, 0.074, rows=4)
+        plate(f"shin_{side}", K + (Ak - K) * 0.12, K + (Ak - K) * 0.72, 0.074, 0.060, rows=4)
+        plate(f"boot_{side}", K + (Ak - K) * 0.76, Ak + Vector((0, 0, -0.06)), 0.066, 0.072,
+              rows=3, color="armor2", thick=0.016)
+        bm = bmesh.new()
+        box(bm, (0, 0, 0), (0.105, 0.17, 0.07),
+            basis((1, 0, 0), (0, 1, 0), (0, 0, 1), Vector((side * 0.12, -0.075, 0.035))))
+        ag.add(f"boot_toe_{side}", bm, "garment", "armor", "armor2", rough=0.45, collide=())
+        bm = bmesh.new()
+        ico(bm, K + Vector((0, -0.065, 0.0)), 0.058, 1, (1.0, 0.65, 1.15))
+        ag.add(f"knee_{side}", bm, "garment", "armor", "armor2", rough=0.45, collide=("all",))
+    band(ag, "belt", 0.86, 0.90, n=28, color="strap", kind="leather", rough=0.6, thick=0.016,
+         slot="garment")      # the ornament slot is reserved for the light strip
+    for k, th in enumerate((math.radians(-55), math.radians(-125), math.radians(-20),
+                            math.radians(200))):
+        p, d = surface_point(ag, 0.86, th)
+        bm = bmesh.new()
+        box(bm, (0, 0, 0), (0.08, 0.045, 0.085),
+            basis(Vector((-d.y, d.x, 0)), d, (0, 0, 1), p + d * 0.024 + Vector((0, 0, -0.01))))
+        ag.add(f"pouch_{k}", bm, "garment", "leather", "strap", rough=0.6, collide=())
+    # Helmet: rounded shell, dark visor band, neck ring.
+    hc = Vector(BODY["head_c"]) + Vector((0, 0.008, 0.012))
+    bm = bmesh.new()
+    vs = ico(bm, hc, 1.0, 3, (0.128, 0.142, 0.150))
+    cut = [f for f in bm.faces if f.calc_center_median().z < hc.z - 0.085]
+    bmesh.ops.delete(bm, geom=cut, context="FACES")
+    ag.add("helmet", bm, "garment", "armor", "armor", rough=0.4, solid=0.012, collide=("all",))
+    bm = bmesh.new()
+    rows = []
+    for v in range(5):
+        phi = math.radians(lerp(68, 112, v / 4))
+        row = []
+        for i in range(13):
+            th = math.radians(-90 - 62 + 124 * i / 12)
+            d = Vector((math.sin(phi) * math.cos(th), math.sin(phi) * math.sin(th), math.cos(phi)))
+            row.append(bm.verts.new(hc + Vector((d.x * 0.134, d.y * 0.150, d.z * 0.155))))
+        rows.append(row)
+    grid_faces(bm, rows, False)
+    orient_outward(bm, lambda c: hc)
+    ag.add("visor", bm, "body", "glass", "visor", rough=0.08, solid=0.008, collide=())
+    bm = bmesh.new()
+    torus(bm, Vector((0, 0.004, 1.505)), 0.082, 0.018, n=20, m=6)
+    ag.add("neck_ring", bm, "garment", "armor", "armor2", rough=0.45, collide=())
+    # Backpack: compact rounded box, side canisters, handle, shoulder straps.
+    pc = Vector((0, 0.235, 1.215))
+    bm = bmesh.new()
+    box(bm, pc, (0.30, 0.15, 0.36))
+    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.022, segments=2, affect="EDGES")
+    ag.add("backpack", bm, "garment", "armor", "pack", rough=0.5, collide=("all",))
+    bm = bmesh.new()
+    for s in (-1, 1):
+        placed(bm, Matrix.Translation(pc + Vector((s * 0.172, 0.0, -0.02))), lambda b: revolve(
+            b, [(0.0, -0.13), (0.032, -0.125), (0.036, -0.10), (0.036, 0.10), (0.032, 0.125),
+                (0.0, 0.13)], 10))
+    tube(bm, [pc + Vector((-0.07, 0.0, 0.18)), pc + Vector((-0.06, 0.0, 0.215)),
+              pc + Vector((0.06, 0.0, 0.215)), pc + Vector((0.07, 0.0, 0.18))], 0.009, 6)
+    box(bm, pc + Vector((0, 0.081, -0.07)), (0.20, 0.016, 0.12))
+    ag.add("backpack_parts", bm, "garment", "armor", "armor2", rough=0.45, collide=())
+    for side in (-1, 1):
+        pts = [surface_point(ag, lerp(1.40, 1.13, k / 8),
+                             math.radians(lerp(90 - 55 * side, -90 + 62 * side, k / 8)),
+                             out=0.008)[0] + Vector((0, 0, 0.11 * math.sin(math.pi * k / 8)))
+               for k in range(9)]
+        bm = bmesh.new()
+        tube(bm, pts, 0.013, 4, phase=math.pi / 4)
+        ag.add(f"strap_{side}", bm, "garment", "leather", "strap", rough=0.6, collide=())
+    # Status light strip: its own emissive primitive and a socket at its centre.
+    lc = pc + Vector((0, 0.079, 0.085))
+    bm = bmesh.new()
+    box(bm, lc, (0.20, 0.010, 0.020))
+    ag.add("light_strip", bm, "ornament", "glass", "light", rough=0.2, collide=())
+    ag.sockets["socket_backpack_light"] = (lc + Vector((0, 0.006, 0)), {
+        "socket": "backpack_light", "note": "centre of the emissive status strip",
+        "material": "M_Suit_Light", "strip_size_m": [0.20, 0.02]})
+
+
 CLANS = [
     # key (file stem = camp name), English name, costume builder
     ("iris", "Iris", costume_iris),
@@ -648,8 +777,14 @@ CLANS = [
 ]
 
 
+EXTRA = [
+    ("suit", "Suit", costume_suit),     # Shell suit, owner addition 07.11
+]
+ALL = CLANS + EXTRA
+
+
 def build_agent(key, col):
-    title, fn = next((t, f) for k, t, f in CLANS if k == key)
+    title, fn = next((t, f) for k, t, f in ALL if k == key)
     ag = Agent(key, title, PALETTES[key], col)
     fn(ag)
     return ag

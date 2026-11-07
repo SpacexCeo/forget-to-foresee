@@ -990,6 +990,198 @@
         }
       ],
       "total_seconds": 36.13
+    },
+    "suit": {
+      "clan": "Suit",
+      "file": "game/public/assets/models/agent_suit.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "chest_plate": 416,
+        "back_plate": 416,
+        "abdomen_0": 192,
+        "abdomen_1": 192,
+        "abdomen_2": 192,
+        "upper_arm_-1": 192,
+        "forearm_-1": 240,
+        "elbow_-1": 20,
+        "glove_-1": 20,
+        "pauldron_-1": 152,
+        "thigh_-1": 240,
+        "shin_-1": 240,
+        "boot_-1": 192,
+        "boot_toe_-1": 12,
+        "knee_-1": 20,
+        "upper_arm_1": 192,
+        "forearm_1": 240,
+        "elbow_1": 20,
+        "glove_1": 20,
+        "pauldron_1": 152,
+        "thigh_1": 240,
+        "shin_1": 240,
+        "boot_1": 192,
+        "boot_toe_1": 12,
+        "knee_1": 20,
+        "belt": 224,
+        "pouch_0": 12,
+        "pouch_1": 12,
+        "pouch_2": 12,
+        "pouch_3": 12,
+        "helmet": 540,
+        "visor": 256,
+        "neck_ring": 240,
+        "backpack": 60,
+        "backpack_parts": 256,
+        "strap_-1": 68,
+        "strap_1": 68,
+        "light_strip": 12
+      },
+      "ngons_triangulated": 4,
+      "runtime_triangles": 8120,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 490.0,
+          "p10": 470.3,
+          "p90": 502.1
+        },
+        "uv_anisotropy": {
+          "median": 1.056,
+          "p95": 1.178
+        }
+      },
+      "master_triangles": 2928480,
+      "bakes": {
+        "ao": {
+          "seconds": 10.45,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 7.34,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 7.0,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 6.96,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 5.81,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_suit_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 743879
+        },
+        "orm": {
+          "file": "agent_suit_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1307789
+        },
+        "normal": {
+          "file": "agent_suit_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 367730
+        }
+      },
+      "collision": {
+        "name": "agent_suit_col",
+        "radius_m": 0.311,
+        "height_m": 1.798,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ],
+        "socket_backpack_light": [
+          0.0,
+          1.3,
+          -0.32
+        ]
+      },
+      "materials": [
+        "M_Suit_Body",
+        "M_Suit_Garment",
+        "M_Suit_Light"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.0,
+          -0.324
+        ],
+        "max": [
+          240.1,
+          1.798,
+          0.16
+        ]
+      },
+      "glb_bytes": 3278728,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "suit:model",
+          "seconds": 0.11
+        },
+        {
+          "stage": "suit:uv",
+          "seconds": 1.03
+        },
+        {
+          "stage": "suit:master",
+          "seconds": 1.79
+        },
+        {
+          "stage": "suit:bake_gpu",
+          "seconds": 37.8
+        },
+        {
+          "stage": "suit:textures",
+          "seconds": 4.69
+        },
+        {
+          "stage": "suit:export",
+          "seconds": 0.08
+        }
+      ],
+      "total_seconds": 45.52
     }
   },
   "blender": "4.5.3 LTS",
@@ -1000,49 +1192,65 @@
     "bake_px": 4096
   },
   "qa_render": {
-    "device": "OPTIX",
-    "resolution": 1400,
-    "samples": 256,
-    "seconds_per_render": {
-      "agent_iris_front": 1.73,
-      "agent_iris_side": 1.83,
-      "agent_iris_back": 1.86,
-      "agent_iris_three_quarter": 1.87,
-      "agent_iris_iso": 2.08,
-      "agent_sol_front": 1.95,
-      "agent_sol_side": 1.89,
-      "agent_sol_back": 1.71,
-      "agent_sol_three_quarter": 2.06,
-      "agent_sol_iso": 2.15,
-      "agent_pepel_front": 1.67,
-      "agent_pepel_side": 1.62,
-      "agent_pepel_back": 1.96,
-      "agent_pepel_three_quarter": 3.28,
-      "agent_pepel_iso": 2.16,
-      "agent_moh_front": 1.7,
-      "agent_moh_side": 1.62,
-      "agent_moh_back": 1.64,
-      "agent_moh_three_quarter": 1.87,
-      "agent_moh_iso": 2.5,
-      "agent_yantar_front": 2.45,
-      "agent_yantar_side": 1.64,
-      "agent_yantar_back": 1.69,
-      "agent_yantar_three_quarter": 1.89,
-      "agent_yantar_iso": 2.13,
-      "agent_iney_front": 1.76,
-      "agent_iney_side": 1.67,
-      "agent_iney_back": 1.7,
-      "agent_iney_three_quarter": 1.91,
-      "agent_iney_iso": 2.14,
-      "agent_iris_collision_front": 1.59,
-      "agent_sol_collision_front": 0.84,
-      "agent_pepel_collision_front": 1.24,
-      "agent_moh_collision_front": 1.62,
-      "agent_yantar_collision_front": 0.81,
-      "agent_iney_collision_front": 0.78,
-      "lineup_front": 3.1,
-      "lineup_iso": 4.25
+    "iris+sol+pepel+moh+yantar+iney": {
+      "device": "OPTIX",
+      "resolution": 1400,
+      "samples": 256,
+      "seconds_per_render": {
+        "agent_iris_front": 2.05,
+        "agent_iris_side": 1.66,
+        "agent_iris_back": 2.77,
+        "agent_iris_three_quarter": 2.01,
+        "agent_iris_iso": 2.21,
+        "agent_sol_front": 2.09,
+        "agent_sol_side": 2.06,
+        "agent_sol_back": 1.84,
+        "agent_sol_three_quarter": 2.11,
+        "agent_sol_iso": 2.88,
+        "agent_pepel_front": 1.8,
+        "agent_pepel_side": 1.62,
+        "agent_pepel_back": 1.65,
+        "agent_pepel_three_quarter": 1.86,
+        "agent_pepel_iso": 2.15,
+        "agent_moh_front": 1.77,
+        "agent_moh_side": 1.7,
+        "agent_moh_back": 1.74,
+        "agent_moh_three_quarter": 1.97,
+        "agent_moh_iso": 2.19,
+        "agent_yantar_front": 1.76,
+        "agent_yantar_side": 1.7,
+        "agent_yantar_back": 1.75,
+        "agent_yantar_three_quarter": 1.95,
+        "agent_yantar_iso": 2.21,
+        "agent_iney_front": 1.86,
+        "agent_iney_side": 1.74,
+        "agent_iney_back": 1.81,
+        "agent_iney_three_quarter": 2.01,
+        "agent_iney_iso": 2.21,
+        "agent_iris_collision_front": 0.74,
+        "agent_sol_collision_front": 0.77,
+        "agent_pepel_collision_front": 0.75,
+        "agent_moh_collision_front": 0.72,
+        "agent_yantar_collision_front": 0.69,
+        "agent_iney_collision_front": 0.73,
+        "lineup_front": 3.02,
+        "lineup_iso": 4.62
+      },
+      "total_seconds": 71.45
     },
-    "total_seconds": 72.6
+    "suit": {
+      "device": "OPTIX",
+      "resolution": 1400,
+      "samples": 256,
+      "seconds_per_render": {
+        "agent_suit_front": 1.98,
+        "agent_suit_side": 1.75,
+        "agent_suit_back": 3.01,
+        "agent_suit_three_quarter": 2.94,
+        "agent_suit_iso": 3.36,
+        "agent_suit_collision_front": 1.08
+      },
+      "total_seconds": 14.27
+    }
   }
 }

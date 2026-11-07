@@ -45,7 +45,7 @@ if HERE not in sys.path:
 from agent_geometry import (  # noqa: E402
     KINDS, SLOTS, apply_modifiers, link, mat_simple, mesh_tris, revolve, select_only,
 )
-from agent_costumes import CLANS, build_agent  # noqa: E402
+from agent_costumes import ALL, CLANS, build_agent  # noqa: E402
 
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 MODEL_DIR = os.path.join(REPO, "game", "public", "assets", "models")
@@ -324,7 +324,14 @@ AGENT_VIEWS = {
 
 def render_views(sc, out_dir, prefix, views, res=1200, timings=None):
     os.makedirs(out_dir, exist_ok=True)
+    labels = [o for o in bpy.data.objects if o.name.startswith("RulerLabel")]
     for name, (loc, tgt, ortho, lens) in views.items():
+        for o in labels:                 # keep the ruler text readable from behind
+            x0 = o.get("x0", o.location.x)
+            o["x0"] = x0
+            back = name == "back"
+            o.rotation_euler = (math.radians(90), 0, math.pi if back else 0)
+            o.location.x = x0 + 0.66 if back else x0
         cam = add_camera(f"Cam_{prefix}_{name}", loc, tgt, ortho, lens or 70)
         sc.camera = cam
         sc.render.resolution_x = sc.render.resolution_y = res
@@ -495,6 +502,7 @@ KIND_SHADING = {
     "moss": dict(var=(18.0, 0.45), bump="moss", bs=0.65),
     "resin": dict(var=(6.0, 0.25), bump="soft", bs=0.03),
     "stone": dict(var=(10.0, 0.30), bump="grain", bs=0.35),
+    "armor": dict(var=(8.0, 0.10), bump="armor", bs=0.12),
 }
 
 # displacement on the master: (texture, noise scale, strength, props, vertical folds)
@@ -564,6 +572,11 @@ def master_material(kind):
     elif bump == "moss":
         h = k.math("ADD", k.noise(co, 520.0, 8.0, 0.75), k.math("MULTIPLY", k.noise(co, 60.0), 0.6))
         c = k.mix(k.maprange(k.noise(co, 40.0, 4.0), 0.45, 0.62), c, (0.22, 0.30, 0.05))
+    elif bump == "armor":
+        # moulded composite: fine orange-peel plus sparse scuffs
+        scuff = k.maprange(k.noise(co, 30.0, 6.0, 0.7), 0.62, 0.72, 0.0, 1.0)
+        h = k.math("ADD", k.math("MULTIPLY", k.noise(co, 220.0, 3.0, 0.5), 0.4), scuff)
+        c = k.mix(k.math("MULTIPLY", scuff, 0.35), c, (0.18, 0.18, 0.18))
     else:  # soft
         h = k.noise(co, 60.0, 3.0, 0.5)
     # cavity darkening and edge highlights
@@ -838,7 +851,7 @@ def explode(obj, sign):
 def build_one(key, clock):
     """Build, bake and export one agent. Returns its stats dict."""
     import numpy as np
-    title = next(t for k, t, f in CLANS if k == key)
+    title = next(t for k, t, f in ALL if k == key)
     st = {"clan": title, "file": f"game/public/assets/models/agent_{key}.glb"}
     clock.start(f"{key}:model")
     sc = reset_scene()
@@ -906,8 +919,16 @@ def build_one(key, clock):
     loaded = {k_: bpy.data.images.load(v) for k_, v in paths.items()}
     for k_ in ("orm", "normal"):
         loaded[k_].colorspace_settings.name = "Non-Color"
-    finals = [final_material(f"M_{title}_{s.capitalize()}", loaded["base"], loaded["orm"],
-                             loaded["normal"]) for s in SLOTS]
+    em = ag.emissive or {}
+    finals = []
+    for s in SLOTS:
+        m = final_material(f"M_{title}_{em['name'] if em.get('slot') == s else s.capitalize()}",
+                           loaded["base"], loaded["orm"], loaded["normal"])
+        if em.get("slot") == s:          # separate emissive primitive code can recolour
+            bsdf = m.node_tree.nodes["Principled BSDF"]
+            bsdf.inputs["Emission Color"].default_value = (*em["color"], 1.0)
+            bsdf.inputs["Emission Strength"].default_value = em["strength"]
+        finals.append(m)
     for i, slot in enumerate(rt.material_slots):
         slot.material = finals[i]
     bpy.data.objects.remove(master)
@@ -1037,7 +1058,7 @@ def stage_render(keys, res=1400, samples=256):
     out = {"device": device, "resolution": res, "samples": samples,
            "seconds_per_render": timings, "total_seconds": round(time.time() - t0, 2)}
     stats = load_stats()
-    stats["qa_render"] = out
+    stats.setdefault("qa_render", {})["+".join(keys)] = out
     save_stats(stats)
 
 

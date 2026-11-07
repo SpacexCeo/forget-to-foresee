@@ -18,7 +18,7 @@ THICK = 0.008                 # default garment thickness (m); CLEAR - THICK > b
 
 SLOTS = ("body", "garment", "ornament")
 KINDS = ("skin", "cloth", "metal", "wood", "crystal", "glass", "leather", "moss",
-         "resin", "stone", "felt", "wool")
+         "resin", "stone", "felt", "wool", "armor")
 
 
 # ================================================================ utilities
@@ -335,6 +335,7 @@ class Agent:
         self._bvh = {}
         self.sockets = {}
         self.part_tris = {}
+        self.emissive = None      # optional {"slot", "name", "color", "strength"}
 
     def bvh(self, which="all"):
         if which not in self._bvh:
