@@ -15,3 +15,6 @@ Thumbs.db
 # textures ship embedded in the .glb files
 art/*/textures/
 art/*/*.blend
+# Agent costume build intermediates (textures are embedded in the glbs)
+art/agents/textures/
+__pycache__/
