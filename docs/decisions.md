@@ -60,6 +60,9 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 07.11 | NEAR contract: **Rust + near-sdk** (Rust and cargo-near may be installed; consent given 07.11). The user creates the testnet account for deployment. |
 | 07.11 | R0 answers: **CSPRNG salts + RNG compatibility**; **UI-only guards move into the engine**; **defects fixed in a separate commit** as rules v2. |
 | 07.11 | **Strict rule: the repository and the game are English-only.** Russian only as the second UI language (spec requires RU/EN). Chat with the user stays Russian. |
+| 07.11 | UI shell (branch `ui/lobby-i18n`): **own ICU MessageFormat subset** instead of a dependency; locale files are JS modules (`src/locales/en.js`, `ru.js`). The engine stays untouched: an **adapter parses its Russian strings into `{key, args}`** with ID arguments; the engine-side migration is planned in `docs/i18n-migration.md` so the parity fixtures stay valid. |
+| 07.11 | Hackathon onboarding = guest demo: **synthetic entitlement** (free, testnet, labeled) → tutorial → hologram → first contact; enforced by `src/ui/flow.js`. Weekly tournament = **local simulation** (schedule, idempotent enrollment, sealed results), no server yet. |
+| 07.11 | Owner picked the target concept: a floating archipelago over a sea of clouds, four iridescent nacre ammonite Shells (IV cracked open), a gold-inlaid central plaza, six camp plateaus on rock pillars. The lobby background (canvas 2D) evokes it until the 3D client replaces it; the concept image is a reference only and is not shipped. |
 
 ## 5. Status
 - `prototype-2d/index.html` — the full 2D loop, playable. UI is still Russian; it is the frozen parity reference.
@@ -67,7 +70,7 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
   - **R0 done:** `docs/rules-baseline.md` (prototype rules with line references, discrepancies, answered questions).
   - **G1 done:** `src/game/engine.js` — headless engine, actions return `{ok, reason}`. Rule modes: `baseline-2d-1` (bit-exact with 2D), `v2` (default: CSPRNG commitments + fixes), `v2-crypto` (test only).
   - `npm test` — 75 tests green: 60 parity seasons, 8 edge cases, 7 v2 tests. `npm run fixtures` regenerates fixtures from the prototype.
-  - 3D scenes and UI not started yet.
+  - UI shell (`src/ui/`, `src/locales/`): lobby, onboarding, settings, hologram constructor, tournament card (simulation), HUD with localized chronicle and subtitles; runs standalone at `/ui-preview.html`; integration lines for `main.js` in `docs/ui.md`. `npm test` — 108 tests.
 - Engine game strings (logs, memory texts, offers) are still Russian, as in the prototype. **Planned in the localization step:** events carry i18n keys + args, English is the base locale, Russian is the second; the prototype's UI text gets translated and fixtures regenerated at the same time so parity holds.
 - GitHub: https://github.com/SpacexCeo/forget-to-foresee (public, branch main, tag pre-hackathon). Push after every commit.
 
