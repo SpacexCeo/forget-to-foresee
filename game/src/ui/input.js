@@ -1,5 +1,5 @@
 // World input. Mouse look uses right drag, so menus and keyboard focus need no pointer lock.
-import { GamepadInput } from './gamepad.js';
+import { GamepadInput, readGamepads } from './gamepad.js';
 
 const WORLD_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'F3',
@@ -25,7 +25,9 @@ export class Input {
         this.device = 'keyboard';
         return;
       }
-      if (!WORLD_KEYS.has(e.code) || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
+      if (['Tab', 'Enter', 'Space'].includes(e.code)) this.device = 'keyboard';
+      if (!WORLD_KEYS.has(e.code)) return;
       e.preventDefault();
       if (e.repeat && !this.keys.has(e.code)) return;
       this.device = 'keyboard';
@@ -41,8 +43,8 @@ export class Input {
       if (this.pad.index === null) this.device = 'keyboard';
     });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('pointerdown', () => { this.device = 'keyboard'; });
     target.addEventListener('pointerdown', (e) => {
-      this.device = 'keyboard';
       if (e.button === 2) {
         this.dragPointer = e.pointerId;
         target.setPointerCapture(e.pointerId);
@@ -80,7 +82,7 @@ export class Input {
     if (this.suspended || document.hidden) return;
     const wasConnected = this.pad.index !== null;
     const { move, look } = this.pad;
-    const active = this.pad.poll(navigator.getGamepads?.() ?? []);
+    const active = this.pad.poll(readGamepads());
     const changed = (before, after) => Math.hypot(after[0] - before[0], after[1] - before[1]) > 0.15
       || (!before.some(Boolean) && after.some(Boolean));
     if (active && (this.pad.pressed.size || changed(move, this.pad.move) || changed(look, this.pad.look))) {

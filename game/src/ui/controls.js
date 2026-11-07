@@ -21,5 +21,5 @@ export function contextCue({ title, detail, keycap = 'E', device = 'keyboard', s
   },
     icon(symbol),
     h('span', { class: 'ftf-cue-copy' }, h('strong', { text: title }), detail ? h('span', { text: detail }) : null),
-    h('kbd', { class: 'ftf-keycap', dataset: { device }, attrs: { 'aria-hidden': 'true' }, text: keycap }));
+    h('kbd', { class: 'ftf-keycap', dataset: { device }, attrs: onClick ? { 'aria-hidden': 'true' } : {}, text: keycap }));
 }

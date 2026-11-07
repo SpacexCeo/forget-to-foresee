@@ -7,7 +7,6 @@ import { createOnboardingFlow, FLOW_STEPS } from './flow.js';
 import { issueDemoEntitlement, getEntitlement } from './entitlement.js';
 import { mountConstructor } from './hologram/constructor.js';
 import { mountBackground } from './background.js';
-import { buildLangToggle } from './settings.js';
 import { saveRecipe, loadRecipe, recipeHash, DEFAULT_RECIPE } from './hologram/recipe.js';
 import { actionButton } from './controls.js';
 
@@ -63,8 +62,8 @@ export function mountOnboarding(root, opts = {}) {
   const bg = mountBackground(bgEl, { reducedMotion: true, tier: prefs.tier() });
   const stepper = h('ol', { class: 'ftf-stepper', i18nAttrs: { 'aria-label': 'flow.progress' } });
   const stage = h('div', { class: 'ftf-step' });
-  const top = h('div', { class: 'ftf-spread' }, stepper, h('div', { class: 'ftf-row' }, buildLangToggle(ctx),
-    h('button', { class: 'ftf-btn ftf-btn-small', i18n: 'flow.toLobby', attrs: { type: 'button' }, on: { click: () => { flow.toLobby(); if (opts.onExit) opts.onExit(); } } })));
+  const top = h('div', { class: 'ftf-spread' }, stepper,
+    h('button', { class: 'ftf-btn ftf-btn-small', i18n: 'flow.toLobby', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => { flow.toLobby(); if (opts.onExit) opts.onExit(); } } }));
   const wrap = h('div', { class: 'ftf-root' }, bgEl, h('main', { class: 'ftf-screen' }, top, stage));
   root.appendChild(wrap);
   let child = null;
@@ -95,7 +94,7 @@ export function mountOnboarding(root, opts = {}) {
   function viewTutorial() {
     const page = tutPage;
     const nav = h('div', { class: 'ftf-row' },
-      page > 1 ? h('button', { class: 'ftf-btn', i18n: 'common.back', attrs: { type: 'button' }, on: { click: () => { tutPage--; render(); } } }) : null,
+      page > 1 ? h('button', { class: 'ftf-btn', i18n: 'common.back', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => { tutPage--; render(); } } }) : null,
       page < 4 ? primary('common.next', () => { tutPage++; render(); }) : primary('tut.finish', () => flow.complete('tutorial')));
     const readout = page === 3 ? h('ol', { class: 'ftf-example' }, TUTORIAL_SIGN.read.map(([slot, form, m], k) =>
       h('li', { i18n: 'tut.readLine', args: () => ({ slot: i18n.t('slot.' + slot), form: i18n.t('form.' + form), meaning: i18n.t(`meaning.${slot}.${m}`) }) }))) : null;

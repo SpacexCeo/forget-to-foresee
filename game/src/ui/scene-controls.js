@@ -30,9 +30,9 @@ export function mountSceneControls(root, { onContext, onTransition }) {
   const bindings = h('div', {});
   const resume = actionButton({ label: 'Resume exploration', variant: 'primary', symbol: 'arrow', trailing: true, onClick: () => dialog.close() });
   const dialog = h('dialog', { class: 'ftf-dialog ftf-scene-dialog', attrs: { 'aria-labelledby': 'ftf-scene-controls-title' } },
-    h('div', { class: 'ftf-dialog-head' }, h('div', {}, source,
-      h('h2', { text: 'Exploration controls', attrs: { id: 'ftf-scene-controls-title' } }))),
-    h('div', { class: 'ftf-dialog-body' }, bindings,
+    h('div', { class: 'ftf-dialog-head' },
+      h('h2', { text: 'Exploration controls', attrs: { id: 'ftf-scene-controls-title' } })),
+    h('div', { class: 'ftf-dialog-body' }, source, bindings,
       h('p', { class: 'ftf-muted', text: 'Gamepad labels describe button positions. Menu opens this reference.' }),
       resume));
   const cue = h('div', { class: 'ftf-scene-cue', attrs: { hidden: true } });

@@ -8,6 +8,11 @@ const DEADZONE = 0.2;
 const NAV_THRESHOLD = 0.55;
 const MENU_DIRECTIONS = [PAD.up, PAD.down, PAD.left, PAD.right];
 
+export function readGamepads() {
+  try { return globalThis.navigator?.getGamepads?.() ?? []; }
+  catch { return []; } // Embedded previews can deny the Gamepad API through permissions policy.
+}
+
 export function stickAxes(x, y) {
   if (!Number.isFinite(x) || !Number.isFinite(y)) return [0, 0];
   const magnitude = Math.hypot(x, y);
