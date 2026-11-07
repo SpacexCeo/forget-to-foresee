@@ -288,6 +288,62 @@ def smart_uv(obj, margin=0.004, angle=52):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
+def seam_unwrap(obj, seam_fn=None, sharp_deg=45.0, margin=0.0015, scale_faces=None):
+    """Angle-based unwrap with explicit seams (sharp edges, open borders and the
+    edges selected by seam_fn(edge)), equalised island scale, concave packing.
+    Smart Project keeps flat rings and bands as single annular islands, which
+    wastes most of the atlas; cutting them into arcs roughly doubles the fill.
+    scale_faces: optional (predicate(face), factor) to shrink some islands
+    (e.g. hidden interiors) before packing."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    lim = math.radians(sharp_deg)
+    n = 0
+    for e in bm.edges:
+        cut = (not e.is_manifold) or e.calc_face_angle(0.0) > lim or (seam_fn is not None and seam_fn(e))
+        e.seam = cut
+        n += cut
+    bm.to_mesh(obj.data)
+    bm.free()
+    select_only([obj], obj)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.unwrap(method="ANGLE_BASED", margin=0.0)
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.object.mode_set(mode="OBJECT")
+    if scale_faces:
+        pred, factor = scale_faces
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        uvl = bm.loops.layers.uv.active
+        for f in bm.faces:
+            if pred(f):
+                for lp in f.loops:
+                    lp[uvl].uv *= factor
+        bm.to_mesh(obj.data)
+        bm.free()
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.pack_islands(rotate=True, margin_method="FRACTION", margin=margin,
+                            shape_method="CONCAVE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return n
+
+
+def uv_fill(obj):
+    """Share of the 0..1 UV square covered by triangles (atlas efficiency)."""
+    me = obj.data
+    me.calc_loop_triangles()
+    uv = me.uv_layers.active.data
+    a = 0.0
+    for t in me.loop_triangles:
+        p = [uv[i].uv for i in t.loops]
+        a += abs((p[1].x - p[0].x) * (p[2].y - p[0].y) - (p[2].x - p[0].x) * (p[1].y - p[0].y)) / 2
+    return round(a, 4)
+
+
 def triangulate_ngons(obj):
     """MikkTSpace tangents (bake and glTF export) need tris/quads only."""
     bm = bmesh.new()
@@ -830,6 +886,7 @@ def uv_metrics(obj, tex_size, material_indices=None):
                           "p95": round(float(np.percentile(an, 95)), 3),
                           "share_over_1_5": round(float((an > 1.5).mean()), 4)},
         "triangles_measured": int(len(d)),
+        "uv_fill": uv_fill(obj),
     }
 
 

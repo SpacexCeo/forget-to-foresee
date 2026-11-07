@@ -76,6 +76,19 @@ def lobe(th, z, r):
     return r * (1.0 + LOBE_AMP * math.cos(6 * (th - sector_angle(1))) * smoothstep(1.25, 1.38, r))
 
 
+def radial_seam(e):
+    """UV seam on the radial lines every 30 deg (dividers and sector centres), so
+    the rings and bands of the medallion unwrap as arcs that pack densely."""
+    angs = []
+    for v in e.verts:
+        if math.hypot(v.co.x, v.co.y) < 0.05:
+            return False
+        angs.append(math.degrees(math.atan2(v.co.y, v.co.x)))
+    if abs(((angs[0] - angs[1]) + 180) % 360 - 180) > 0.01:
+        return False
+    return abs(((angs[0] + 90.0) + 15.0) % 30.0 - 15.0) < 0.01
+
+
 def lin(z, z0, z1, r0, r1):
     return r0 + (r1 - r0) * (z - z0) / (z1 - z0)
 
@@ -166,7 +179,7 @@ def build_parts(col, m_stone, m_bronze, m_socket, m_amber):
             (1.553, 0.232), (1.548, 0.288), (1.588, 0.308), (1.604, 0.315), (1.600, 0.328),
             (1.628, 0.336), (1.644, 0.350), (1.650, 0.372), (1.644, 0.396), (1.628, 0.413),
             (1.600, 0.420), (1.285, 0.420)]
-    part("body", m_stone, lambda bm: P.revolve(bm, prof, 112, rfunc=lobe,
+    part("body", m_stone, lambda bm: P.revolve(bm, prof, 120, rfunc=lobe,
                                                phase=sector_angle(1)), angle=30)
 
     # Top with the six sockets (stone + socket floor faces in one object).
@@ -194,11 +207,11 @@ def build_parts(col, m_stone, m_bronze, m_socket, m_amber):
         (0.354, TOP_Z - 0.010), (0.362, TOP_Z - 0.014), (0.372, TOP_Z - 0.008)], 48))
     part("inlay_ring", m_bronze, lambda bm: P.revolve(bm, [
         (1.348, TOP_Z - 0.002), (1.349, TOP_Z + 0.002), (1.343, TOP_Z + 0.005),
-        (1.267, TOP_Z + 0.005), (1.261, TOP_Z + 0.002), (1.262, TOP_Z - 0.002)], 112,
+        (1.267, TOP_Z + 0.005), (1.261, TOP_Z + 0.002), (1.262, TOP_Z - 0.002)], 120,
         rfunc=lobe, phase=sector_angle(1)))
     part("inlay_ring_outer", m_bronze, lambda bm: P.revolve(bm, [
         (1.538, TOP_Z - 0.002), (1.539, TOP_Z + 0.0015), (1.535, TOP_Z + 0.0035),
-        (1.517, TOP_Z + 0.0035), (1.513, TOP_Z + 0.0015), (1.514, TOP_Z - 0.002)], 112,
+        (1.517, TOP_Z + 0.0035), (1.513, TOP_Z + 0.0015), (1.514, TOP_Z - 0.002)], 120,
         rfunc=lobe, phase=sector_angle(1)))
 
     # Bronze strips along the six dividers, running out to the outer inlay ring.
@@ -325,7 +338,7 @@ def stage_build():
     P.log("runtime body tris", stats["runtime_body_triangles"])
 
     clock.start("uv_unwrap")
-    P.smart_uv(body, margin=0.003)
+    stats["uv_seams"] = P.seam_unwrap(body, radial_seam, sharp_deg=35, margin=0.0012)
     P.smart_uv(amber, margin=0.02)
     stats["uv"] = P.uv_metrics(body, TEX_SIZE)
     P.log("uv", json.dumps(stats["uv"]))
