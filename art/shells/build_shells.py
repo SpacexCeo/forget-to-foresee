@@ -71,18 +71,19 @@ SPECS = {
     1: dict(numeral="I", kind="helix", whorls=6.5, W=1.24, ribs=15, sides=20, p=0.84,
             a_end=1.0, t_ratio=1.12, rh=1.12, pitch=2.05, rib_amp=0.16, tub=0.10, bend=0.22,
             hook=dict(r1=1.25, straight=0.6, r3=1.35, up_deg=20.0, grow=1.12),
-            target_h=18.0, yaw=0.0, living=0.42, septa=1),
+            target_h=18.0, yaw=0.0, living=0.25, septa_back=(0.23,)),
     2: dict(numeral="II", kind="coil", W=3.0, a_ratio=0.66, t_ratio=0.98, whorls=3.4, ribs=22,
             sides=24, p=0.80, rib_amp=0.15, tub=0.12, bend=0.30, target_h=17.5,
-            theta_end=-math.pi / 2, yaw=-32.0, living=0.38, septa=1),
+            theta_end=-math.pi / 2, yaw=-32.0, living=0.21, septa_back=(0.20,)),
     3: dict(numeral="III", kind="coil", W=2.6, a_ratio=0.58, t_ratio=0.72, whorls=3.4, ribs=22,
             sides=24, p=0.82, rib_amp=0.13, tub=0.0, bend=0.36, target_h=17.0,
             theta_end=-math.pi * 0.35, troch=0.62, oval=0.24, flare=0.80,
             tilt=(math.radians(24), 0.0, math.radians(38)), mirror=True, yaw=0.0,
-            living=0.38, septa=1),
+            living=0.21, septa_back=(0.20,)),
     4: dict(numeral="IV", kind="coil", W=2.8, a_ratio=0.62, t_ratio=0.88, whorls=3.4, ribs=22,
             sides=24, p=0.80, rib_amp=0.14, tub=0.10, bend=0.30, target_h=17.5,
-            theta_end=-math.pi / 2, yaw=-28.0, living=1.05, septa=5, broken=True),
+            theta_end=-math.pi / 2, yaw=-28.0, living=0.84, septa_back=(0.83, 0.74, 0.645, 0.55),
+            broken=True, break_back=0.62, break_half=0.17),
 }
 
 RUNTIME_RINGS = (0.0, 0.33, 0.415, 0.5, 0.585, 0.67)   # per rib: trough, base, shoulder, crest...
@@ -324,39 +325,50 @@ def th_of_u(tab, U):
 # ------------------------------------------------------------ mesh builder
 
 class MeshAcc:
-    """Accumulates vertices / faces / per-face material / per-vertex attributes."""
+    """Accumulates vertices / faces / per-face material / per-vertex attributes.
+    Attributes: crest (rib profile), spiral (warped u in whorls, for the tint),
+    gu (grid u in whorls, for seams), gs (grid s in turns, -1 off-grid)."""
+
+    NAMES = ("crest", "spiral", "gu", "gs")
 
     def __init__(self):
         self.V, self.F, self.M = [], [], []
-        self.attr = {"crest": [], "spiral": []}
+        self.attr = {k: [] for k in self.NAMES}
         self.nv = 0
 
-    def add_verts(self, P, crest=None, spiral=None):
-        P = P.reshape(-1, 3)
-        n = len(P)
-        self.V.append(P)
-        self.attr["crest"].append(np.zeros(n) if crest is None else np.asarray(crest).reshape(-1))
-        self.attr["spiral"].append(np.zeros(n) if spiral is None else np.asarray(spiral).reshape(-1))
+    def add_verts(self, Pp, **attrs):
+        Pp = np.asarray(Pp, dtype=np.float64).reshape(-1, 3)
+        n = len(Pp)
+        self.V.append(Pp)
+        for k in self.NAMES:
+            v = attrs.get(k)
+            if v is None:
+                v = np.full(n, -1.0 if k == "gs" else 0.0)
+            self.attr[k].append(np.broadcast_to(np.asarray(v, dtype=np.float64), Pp.shape[:1] if np.ndim(v) == 0
+                                                else np.shape(v)).reshape(-1))
         base = self.nv
         self.nv += n
         return base
 
+    def allV(self):
+        return np.concatenate(self.V)
+
     def add_faces(self, faces, mat):
-        faces = np.asarray(faces)
-        if len(faces) == 0:
+        faces = np.asarray(faces, dtype=np.int64)
+        if faces.size == 0:
             return
         self.F.append(faces)
         self.M.append(np.full(len(faces), mat, dtype=np.int32))
 
     def build(self, name, mats, col):
         V = np.concatenate(self.V)
-        quads = [f for f in self.F if f.shape[1] == 4]
-        tris = [f for f in self.F if f.shape[1] == 3]
+        Fq = [f for f in self.F if f.shape[1] == 4]
+        Ft = [f for f in self.F if f.shape[1] == 3]
         Mq = [m for f, m in zip(self.F, self.M) if f.shape[1] == 4]
         Mt = [m for f, m in zip(self.F, self.M) if f.shape[1] == 3]
-        Fq = np.concatenate(quads) if quads else np.zeros((0, 4), int)
-        Ft = np.concatenate(tris) if tris else np.zeros((0, 3), int)
-        Mall = np.concatenate((Mq or [np.zeros(0, np.int32)]) + (Mt or [np.zeros(0, np.int32)]))
+        Fq = np.concatenate(Fq) if Fq else np.zeros((0, 4), np.int64)
+        Ft = np.concatenate(Ft) if Ft else np.zeros((0, 3), np.int64)
+        Mall = np.concatenate(Mq + Mt)
         used = np.unique(np.concatenate([Fq.ravel(), Ft.ravel()]))
         remap = np.full(len(V), -1, dtype=np.int64)
         remap[used] = np.arange(len(used))
@@ -364,72 +376,92 @@ class MeshAcc:
         Fq, Ft = remap[Fq], remap[Ft]
         attrs = {k: np.concatenate(v)[used] for k, v in self.attr.items()}
         me = bpy.data.meshes.new(name)
-        faces = [tuple(f) for f in Fq.tolist()] + [tuple(f) for f in Ft.tolist()]
-        me.from_pydata(V.tolist(), [], faces)
+        me.vertices.add(len(V))
+        me.vertices.foreach_set("co", V.astype(np.float32).ravel())
+        nl = Fq.size + Ft.size
+        me.loops.add(nl)
+        me.loops.foreach_set("vertex_index", np.concatenate([Fq.ravel(), Ft.ravel()]).astype(np.int32))
+        npoly = len(Fq) + len(Ft)
+        me.polygons.add(npoly)
+        starts = np.concatenate([np.arange(len(Fq)) * 4, Fq.size + np.arange(len(Ft)) * 3]).astype(np.int32)
+        me.polygons.foreach_set("loop_start", starts)
         me.polygons.foreach_set("material_index", Mall.astype(np.int32))
+        me.update(calc_edges=True)
+        me.validate(clean_customdata=False)
         for k, arr in attrs.items():
             at = me.attributes.new(k, "FLOAT", "POINT")
             at.data.foreach_set("value", arr.astype(np.float32))
-        me.update()
         for m in mats:
             me.materials.append(m)
-        obj = P.link(bpy.data.objects.new(name, me), col)
-        return obj
+        return P.link(bpy.data.objects.new(name, me), col)
 
 
-def grid_faces(base, nu, ns, keep=None, flip=False):
-    """Quads of a (nu x ns) grid closed in s. keep: bool (nu-1, ns) cell mask."""
-    i, j = np.meshgrid(np.arange(nu - 1), np.arange(ns), indexing="ij")
+def grid_quads(base, Pg, ref, closed=True, keep=None):
+    """Quads of a grid of points Pg (nu, ns, 3) whose normals follow ref (nu, ns, 3).
+    keep: optional bool cell mask (nu-1, ns or ns-1)."""
+    nu, ns = Pg.shape[:2]
+    nj = ns if closed else ns - 1
+    i, j = np.meshgrid(np.arange(nu - 1), np.arange(nj), indexing="ij")
     jj = (j + 1) % ns
-    q = np.stack([base + i * ns + j, base + (i + 1) * ns + j,
-                  base + (i + 1) * ns + jj, base + i * ns + jj], -1)
-    if flip:
-        q = q[..., ::-1]
+    p0, p1, p2, p3 = Pg[i, j], Pg[i + 1, j], Pg[i + 1, jj], Pg[i, jj]
+    n = np.cross(p2 - p0, p3 - p1)
+    r = ref[i, j] + ref[i + 1, jj]
+    q = np.stack([base + i * ns + j, base + (i + 1) * ns + j, base + (i + 1) * ns + jj, base + i * ns + jj], -1)
+    bad = (n * r).sum(-1) < 0
+    q[bad] = q[bad][:, ::-1]
     if keep is not None:
         q = q[keep]
     return q.reshape(-1, 4)
 
 
-def orient(faces, V, ref_dir_fn):
-    """Flip faces whose geometric normal opposes ref_dir_fn(centroids)."""
-    if len(faces) == 0:
+def orient(faces, V, ref):
+    """Flip faces whose normal opposes ref (array (n,3) or callable(centroids))."""
+    faces = np.asarray(faces, dtype=np.int64)
+    if faces.size == 0:
         return faces
     p = V[faces]
-    n = np.cross(p[:, 2] - p[:, 0], p[:, 3 if faces.shape[1] == 4 else 2] - p[:, 1]
-                 if faces.shape[1] == 4 else p[:, 1] - p[:, 0])
-    if faces.shape[1] == 3:
+    if faces.shape[1] == 4:
+        n = np.cross(p[:, 2] - p[:, 0], p[:, 3] - p[:, 1])
+    else:
         n = np.cross(p[:, 1] - p[:, 0], p[:, 2] - p[:, 0])
-    cen = p.mean(1)
-    bad = (n * ref_dir_fn(cen)).sum(-1) < 0
+    r = ref(p.mean(1)) if callable(ref) else ref
+    bad = (n * r).sum(-1) < 0
     faces = faces.copy()
     faces[bad] = faces[bad][:, ::-1]
     return faces
 
 
-def ring_u(spec, tab, sc_world, master):
-    """u values of the grid rings: rib key points (runtime) or uniform (master)."""
-    nrib = int(round(tab.u[-1]))
+def ring_u(spec, tab, master):
+    """u values of the grid rings: rib key points (runtime, density by rib size) or
+    uniform (master)."""
     if master:
         return np.linspace(0, tab.u[-1], int(tab.u[-1] * MASTER_RINGS_PER_RIB) + 1)
     us = []
     for kq in range(int(math.ceil(tab.u[-1]))):
         fr = tab.at(np.array([kq + 0.5]))
-        spacing = fr["a"][0] * 2.6 * TAU / max(spec["ribs"], 1)    # ~ rib spacing on the venter
-        if spacing > 0.95:
+        width = 2 * RIB_HALF * rib_spacing(spec, fr)          # rib width on the venter, metres
+        if width > 0.55:
             keys = RUNTIME_RINGS
-        elif spacing > 0.45:
-            keys = (0.0, 0.33, 0.5, 0.67)
+        elif width > 0.22:
+            keys = (0.0, 0.36, 0.5, 0.64)
         else:
             keys = (0.0, 0.5)
         us.extend(kq + x for x in keys)
     us.append(tab.u[-1])
-    us = np.array(sorted(set(round(x, 6) for x in us if x <= tab.u[-1] + 1e-9)))
-    del nrib
-    return us
+    return np.array(sorted(set(round(x, 6) for x in us if x <= tab.u[-1] + 1e-9)))
+
+
+def rib_spacing(spec, fr):
+    """Distance between rib crests on the venter (m) at a frame."""
+    if spec["kind"] == "helix":
+        rad = fr["a"][0] * (spec["rh"] + 1.0)
+    else:
+        rad = fr["a"][0] * (1.0 / spec["a_ratio"] + 1.0)
+    return TAU * rad / spec["ribs"]
 
 
 def detail_fn(seed):
-    """Master displacement: growth lines, broad weathering, fine pitting (metres)."""
+    """Master displacement (m): growth lines across the ribs, broad weathering."""
     rng = np.random.default_rng(seed)
     dirs = _norm(rng.normal(size=(14, 3)))
     freqs = np.geomspace(0.35, 6.0, 14)
@@ -444,277 +476,249 @@ def detail_fn(seed):
     return fn
 
 
-def build_body(spec, tab, acc, master, rng, info):
-    """Main tube (outer surface, culled), living chamber wall + septa, IV's break."""
+def build_body(spec, tab, acc, master, info):
+    """Main tube (outer surface, culled), hollow part (inner nacre wall, aperture rim,
+    septa) and, for IV, the break with its wall-thickness rims."""
     ns = spec["sides"] * (MASTER_SIDES_MULT if master else 1)
-    us = ring_u(spec, tab, 1.0, master)
+    us = ring_u(spec, tab, master)
     S = TAU * np.arange(ns) / ns
     UU, SS = np.meshgrid(us, S, indexing="ij")
     det = detail_fn(11) if master else None
     Po, at = section(spec, tab, UU, SS, detail=det)
     th_ring = th_of_u(tab, at["ueff"])
     u_end = tab.u[-1]
-    whorl_ribs = spec["ribs"]
-    in0 = u_end - spec["living"] * whorl_ribs          # start of the hollow (inner wall) part
-    # --- cull outer cells buried inside the neighbouring whorls
+    nr = spec["ribs"]
+    in0 = u_end - spec["living"] * nr                 # start of the hollow part
     inside = (inside_tube(spec, tab, Po, th_ring, TAU, in0) |
               inside_tube(spec, tab, Po, th_ring, -TAU, in0))
-    cell_in = (inside[:-1] & inside[1:] & np.roll(inside[:-1], -1, 1) & np.roll(inside[1:], -1, 1))
+    cell_in = inside[:-1] & inside[1:] & np.roll(inside[:-1], -1, 1) & np.roll(inside[1:], -1, 1)
     keep = ~cell_in
-    # --- IV: the break, stepped along rib lines through the venter
     hole = np.zeros_like(keep)
     if spec.get("broken"):
-        hole = break_mask(spec, us, S, u_end, rng, info)
+        hole = break_mask(spec, us, S, u_end, info)
         keep &= ~hole
-    spiral = (at["ueff"] / whorl_ribs)
-    base = acc.add_verts(Po, at["crest"], spiral)
-    q = grid_faces(base, len(us), ns, keep)
-    V = np.concatenate(acc.V)
-    cen_all = at["c"].reshape(-1, 3)
-    q = orient(q, V, lambda cen: cen - _closest_centre(cen, Po, cen_all, base, q))
-    acc.add_faces(q, 0)
+    gu = UU / nr
+    gs = SS / TAU
+    base = acc.add_verts(Po, crest=at["crest"], spiral=at["ueff"] / nr, gu=gu, gs=gs)
+    acc.add_faces(grid_quads(base, Po, Po - at["c"], True, keep), 0)
     info["outer_cells_culled"] = int(cell_in.sum())
-    # --- inner wall of the hollow part (living chamber + IV chambers)
+    info["outer_cells_total"] = int(cell_in.size)
+    # hollow part: inner wall from in0 to the aperture
     iin = int(np.searchsorted(us, in0))
     ui = us[iin:]
-    UUi, SSi = UU[iin:], SS[iin:]
-    Pi, ati = section(spec, tab, UUi, SSi, inner=True)
+    Pi, ati = section(spec, tab, UU[iin:], SS[iin:], inner=True)
     th_i = th_of_u(tab, ati["ueff"])
-    inside_i = inside_tube(spec, tab, Pi, th_i, -TAU, in0, margin=-0.02)
-    celli = (inside_i[:-1] & inside_i[1:] & np.roll(inside_i[:-1], -1, 1) & np.roll(inside_i[1:], -1, 1))
+    ins_i = inside_tube(spec, tab, Pi, th_i, -TAU, in0, margin=-0.02)
+    celli = ins_i[:-1] & ins_i[1:] & np.roll(ins_i[:-1], -1, 1) & np.roll(ins_i[1:], -1, 1)
     keep_i = ~celli & ~hole[iin:]
-    base_i = acc.add_verts(Pi, ati["crest"] * 0.2, ui[:, None].repeat(ns, 1) / whorl_ribs)
-    qi = grid_faces(base_i, len(ui), ns, keep_i)
-    V = np.concatenate(acc.V)
-    ci = ati["c"].reshape(-1, 3)
-    qi = orient(qi, V, lambda cen: -(cen - _nearest(cen, ci)))
-    acc.add_faces(qi, 1)
-    # --- aperture rim (outer last ring -> inner last ring)
-    lo = base + (len(us) - 1) * ns
-    li = base_i + (len(ui) - 1) * ns
+    base_i = acc.add_verts(Pi, crest=ati["crest"] * 0.2, spiral=ati["ueff"] / nr, gu=gu[iin:], gs=gs[iin:])
+    acc.add_faces(grid_quads(base_i, Pi, ati["c"] - Pi, True, keep_i), 1)
+    # aperture rim
+    V = acc.allV()
     j = np.arange(ns)
     jj = (j + 1) % ns
+    lo = base + (len(us) - 1) * ns
+    li = base_i + (len(ui) - 1) * ns
     rim = np.stack([lo + j, lo + jj, li + jj, li + j], -1)
-    tan_end = tab.tan[-1]
-    V = np.concatenate(acc.V)
-    rim = orient(rim, V, lambda cen: np.broadcast_to(tan_end, cen.shape))
-    acc.add_faces(rim, 0)
-    # --- hole rims (IV): wall thickness along the break
+    tan_end = at["tan"][-1].mean(0)
+    acc.add_faces(orient(rim, V, np.broadcast_to(tan_end, (ns, 3))), 0)
+    # IV: rims along the break (the 0.32 m wall shows)
     if spec.get("broken"):
-        hr = hole_rims(hole[iin:], base + iin * ns, base_i, ns)
-        if len(hr):
-            V = np.concatenate(acc.V)
-            hole_cen = _hole_centres(hole[iin:], V, base + iin * ns, ns)
-            hr = orient(np.array(hr), V, lambda cen: hole_cen(cen) - cen)
-            acc.add_faces(hr, 0)
-        info["hole_rim_faces"] = int(len(hr))
-    # --- septa: domes across the inner section, concave toward the aperture
-    sept_u = septa_positions(spec, in0, u_end)
-    nsep = 0
-    for k, su in enumerate(sept_u):
+        rims, hc = hole_rims(hole[iin:], base + iin * ns, base_i, ns, V)
+        if len(rims):
+            rims = orient(rims, V, hc - V[rims].mean(1))
+            acc.add_faces(rims, 0)
+        info["hole_rim_faces"] = int(len(rims))
+    # septa
+    V = acc.allV()
+    for su in septa_positions(spec, u_end):
         ii = int(np.argmin(np.abs(ui - su)))
-        ring = base_i + ii * ns
-        build_septum(acc, V, ring, ns, ati, ii, tab, master, spec, glow=True)
-        nsep += 1
-    info["septa"] = nsep
-    # --- start cap (umbilical plug; mostly buried)
-    cap_c = acc.add_verts(tab.c[0][None, :] - tab.tan[0] * tab.a[0] * 0.3)
-    fan = np.stack([np.full(ns, cap_c), base + (j + 1) % ns, base + j], -1)
-    V = np.concatenate(acc.V)
-    fan = orient(fan, V, lambda cen: np.broadcast_to(-tab.tan[0], cen.shape))
-    acc.add_faces(fan, 0)
-    return dict(us=us, S=S, Po=Po, base=base, ns=ns, in0=in0, ui=ui, hole=hole)
+        build_septum(acc, V, base_i + ii * ns, ns, ati, ii, master)
+    info["septa"] = len(septa_positions(spec, u_end))
+    # start cap (umbilical plug, mostly buried)
+    tan0 = at["tan"][0].mean(0)
+    cap_c = acc.add_verts((at["c"][0].mean(0) - tan0 * tab.a[0] * 0.3)[None, :])
+    fan = np.stack([np.full(ns, cap_c), base + jj, base + j], -1)
+    V = acc.allV()
+    acc.add_faces(orient(fan, V, np.broadcast_to(-tan0, (ns, 3))), 0)
+    return dict(us=us, S=S, base=base, ns=ns, in0=in0)
 
 
-def _nearest(cen, centres):
-    """Nearest centre-line point for each centroid (coarse KD via sampling)."""
-    sub = centres[:: max(1, len(centres) // 4000)]
-    out = np.empty_like(cen)
-    for s0 in range(0, len(cen), 20000):
-        c = cen[s0:s0 + 20000]
-        d = ((c[:, None, :] - sub[None, :, :]) ** 2).sum(-1)
-        out[s0:s0 + 20000] = sub[np.argmin(d, 1)]
-    return out
+def septa_positions(spec, u_end):
+    nr = spec["ribs"]
+    return [u_end - b * nr for b in spec["septa_back"]]
 
 
-def _closest_centre(cen, Po, cen_all, base, q):
-    return _nearest(cen, cen_all)
-
-
-def septa_positions(spec, in0, u_end):
-    if spec.get("broken"):
-        # living chamber back wall plus chamber septa through the broken region
-        nr = spec["ribs"]
-        return [in0 + 0.02 * nr] + [in0 + f * nr for f in (0.12, 0.24, 0.36, 0.48)]
-    return [in0 + 0.02 * spec["ribs"]]
-
-
-def build_septum(acc, V, ring, ns, ati, ii, tab, master, spec, glow):
+def build_septum(acc, V, ring, ns, ati, ii, master):
+    """Dome across the inner section, concave toward the aperture, fluted suture."""
     j = np.arange(ns)
     rv = V[ring + j]
-    c = ati["c"][ii].mean(0) if ati["c"].ndim == 3 else ati["c"][ii]
+    c = ati["c"][ii].mean(0)
     tan = ati["tan"][ii].mean(0)
     tan = tan / np.linalg.norm(tan)
     rad = np.linalg.norm(rv - c, axis=1).mean()
-    nrings = 6 if master else 2
+    nrings = 8 if master else 2
     layers = [ring + j]
     for r in range(1, nrings + 1):
         f = 1.0 - r / (nrings + 1)
-        depth = rad * 0.32 * (1.0 - f * f)
-        # fluted suture: the dome rim waves with 8 lobes
-        flute = 1.0 + 0.04 * np.sin(8 * TAU * j / ns) * f
+        depth = rad * 0.30 * (1.0 - f * f)
+        flute = 1.0 + 0.05 * np.sin(8 * TAU * j / ns) * f * (1 - f) * 4
         pts = c + (rv - c) * (f * flute)[:, None] - tan * depth
         layers.append(acc.add_verts(pts) + j)
-    centre = acc.add_verts((c - tan * rad * 0.32)[None, :])
-    faces = []
-    for a, b in zip(layers[:-1], layers[1:]):
-        faces.append(np.stack([a, np.roll(a, -1), np.roll(b, -1), b], -1))
+    centre = acc.add_verts((c - tan * rad * 0.30)[None, :])
+    quads = np.concatenate([np.stack([a, np.roll(a, -1), np.roll(b, -1), b], -1)
+                            for a, b in zip(layers[:-1], layers[1:])])
     last = layers[-1]
     tri = np.stack([last, np.roll(last, -1), np.full(ns, centre)], -1)
-    Vn = np.concatenate(acc.V)
-    fq = orient(np.concatenate(faces), Vn, lambda cen: np.broadcast_to(tan, cen.shape))
-    ft = orient(tri, Vn, lambda cen: np.broadcast_to(tan, cen.shape))
-    acc.add_faces(fq, 2 if glow else 1)
-    acc.add_faces(ft, 2 if glow else 1)
+    Vn = acc.allV()
+    acc.add_faces(orient(quads, Vn, np.broadcast_to(tan, (len(quads), 3))), 2)
+    acc.add_faces(orient(tri, Vn, np.broadcast_to(tan, (len(tri), 3))), 2)
 
 
 # ----------------------------------------------------------------- IV break
 
-def break_mask(spec, us, S, u_end, rng, info):
-    """Cells removed by the break: whole rib cells (trough to trough) so the edge
-    steps along rib lines; the s-extent changes per rib (jagged, stepped)."""
+def break_mask(spec, us, S, u_end, info):
+    """Cells removed by the break: whole rib cells (trough to trough), so the edge
+    steps along rib lines; the s-extent changes per rib (stepped, jagged), through the
+    venter and down both flanks, deepest on the front (-Y) flank."""
     nr = spec["ribs"]
-    u_mid = u_end - 0.62 * nr            # around the top of the last whorl (venter up)
-    half = 0.17 * nr
+    u_mid = u_end - spec["break_back"] * nr
+    half = spec["break_half"] * nr
     rib0, rib1 = int(math.floor(u_mid - half)), int(math.ceil(u_mid + half))
     r = random.Random(4004)
     ext = {}
-    for kq in range(rib0, rib1 + 1):
-        fall = 1.0 - abs((kq + 0.5) - u_mid) / (half + 0.6)
-        fall = max(0.0, fall) ** 0.6
-        lo = -(0.35 + 1.35 * fall) - r.uniform(0.0, 0.35)      # toward the -Y (front) flank
-        hi = (0.20 + 1.05 * fall) + r.uniform(0.0, 0.30)       # toward the +Y flank
+    for kq in range(rib0, rib1):
+        fall = 1.0 - abs((kq + 0.5) - u_mid) / (half + 0.8)
+        fall = max(0.0, fall) ** 0.55
+        lo = -(0.30 + 1.45 * fall) - r.uniform(0.0, 0.40)
+        hi = (0.15 + 1.10 * fall) + r.uniform(0.0, 0.35)
         ext[kq] = (lo, hi)
     cu = 0.5 * (us[:-1] + us[1:])
-    cs = TAU * (np.arange(len(S)) + 0.5) / len(S)
-    cs = np.angle(np.exp(1j * cs))                              # -pi..pi, venter = 0
+    cs = np.angle(np.exp(1j * TAU * (np.arange(len(S)) + 0.5) / len(S)))
     m = np.zeros((len(cu), len(S)), bool)
     rib_of = np.floor(cu).astype(int)
     for kq, (lo, hi) in ext.items():
         rows = rib_of == kq
-        # jag inside the rib: shoulder cells step back a little on alternate sides
-        m[rows] = (cs[None, :] > lo) & (cs[None, :] < hi)
+        # inside a rib the crest half breaks a little further than the trough half
+        fr = (cu[rows] % 1.0)[:, None]
+        grow = np.where(fr > 0.5, 0.12, 0.0)
+        m[rows] = (cs[None, :] > lo - grow) & (cs[None, :] < hi + grow * 0.5)
     info["break_ribs"] = [rib0, rib1]
     info["break_extent_rad"] = {str(k): [round(a, 2), round(b, 2)] for k, (a, b) in ext.items()}
     return m
 
 
-def hole_rims(hole, base_o, base_i, ns):
-    """Quads joining outer and inner grid edges on the border of the hole."""
-    out = []
+def hole_rims(hole, base_o, base_i, ns, V):
+    """Quads joining outer and inner grid edges on the border of the hole; also the
+    centre of the hole cell each rim belongs to (for orientation)."""
     nu1 = hole.shape[0]
-    for i in range(nu1):
-        for j in range(ns):
-            if not hole[i, j]:
+    hi, hj = np.nonzero(hole)
+    rims, cen = [], []
+
+    def vid(i, j):
+        return i * ns + (j % ns)
+    for i, j in zip(hi.tolist(), hj.tolist()):
+        cell = [vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)]
+        c = V[[base_o + x for x in cell]].mean(0)
+        for (a, b), (v0, v1) in (((i - 1, j), (vid(i, j), vid(i, j + 1))),
+                                 ((i + 1, j), (vid(i + 1, j), vid(i + 1, j + 1))),
+                                 ((i, j - 1), (vid(i, j), vid(i + 1, j))),
+                                 ((i, j + 1), (vid(i, j + 1), vid(i + 1, j + 1)))):
+            if a < 0 or a >= nu1 or hole[a, b % ns]:
                 continue
-            jj = (j + 1) % ns
-            nb = (((i - 1, j), (i * ns + j, i * ns + jj)), ((i + 1, j), ((i + 1) * ns + j, (i + 1) * ns + jj)),
-                  ((i, j - 1), (i * ns + j, (i + 1) * ns + j)), ((i, (j + 1) % ns), (i * ns + jj, (i + 1) * ns + jj)))
-            for (a, b), (v0, v1) in nb:
-                if a < 0 or a >= nu1:
-                    continue
-                if hole[a, b % ns]:
-                    continue
-                out.append((base_o + v0, base_o + v1, base_i + v1, base_i + v0))
-    return out
+            rims.append((base_o + v0, base_o + v1, base_i + v1, base_i + v0))
+            cen.append(c)
+    return np.array(rims, dtype=np.int64).reshape(-1, 4), np.array(cen).reshape(-1, 3)
 
 
-def _hole_centres(hole, V, base_o, ns):
-    idx = np.argwhere(hole)
-    pts = V[base_o + idx[:, 0] * ns + idx[:, 1]]
-
-    def fn(cen):
-        d = ((cen[:, None, :] - pts[None, :, :]) ** 2).sum(-1)
-        return pts[np.argmin(d, 1)]
-    return fn
-
-
-def fragment_specs(spec, body, rng_seed=77):
-    """Ten pieces of wall: (u0, u1, s0, s1, offset, rotation, pivot-kind)."""
+def fragment_specs(spec, rng_seed=77):
+    """Ten curved wall pieces from the break: (u0, u1, s0, s1, outline, motion)."""
     r = random.Random(rng_seed)
     nr = spec["ribs"]
-    u_end = body["us"][-1]
-    u_mid = u_end - 0.62 * nr
     out = []
     for n in range(10):
-        ribs = r.choice((1, 1, 2, 2, 3))
-        u0 = math.floor(u_mid + r.uniform(-3.2, 2.2))
-        s0 = r.uniform(-1.4, 0.6)
-        ds = r.uniform(0.35, 0.75) * ribs ** 0.4
+        ribs = r.choice((1, 1, 2, 2, 2))
+        u_off = r.uniform(-spec["break_half"] * nr, spec["break_half"] * nr - ribs)
+        s0 = r.uniform(-1.5, 0.7)
+        ds = r.uniform(0.38, 0.72)
         attached = n < 2
-        out.append(dict(u0=u0, u1=u0 + ribs, s0=s0, s1=s0 + ds, attached=attached,
-                        dist=(r.uniform(0.25, 0.6) if attached else r.uniform(1.2, 6.0)),
-                        rot=(r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-1, 1)),
-                        ang=(r.uniform(0.18, 0.32) if attached else r.uniform(0.4, 2.6)),
-                        lift=r.uniform(-1.0, 1.6)))
+        out.append(dict(u_off=u_off, ribs=ribs, s0=s0, s1=s0 + ds, attached=attached,
+                        lobes=[r.uniform(0.62, 1.0) for _ in range(7)], lobe_phase=r.uniform(0, TAU),
+                        dist=(r.uniform(0.3, 0.6) if attached else r.uniform(1.2, 6.0)),
+                        axis=(r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-1, 1)),
+                        ang=(r.uniform(0.20, 0.35) if attached else r.uniform(0.5, 2.6)),
+                        lift=r.uniform(-1.0, 2.0), side=r.choice((-1.0, 1.0))))
     return out
 
 
 def build_fragments(spec, tab, acc, frags, master):
-    """Solid curved wall pieces: ribbed exterior, nacre inside, rims all round."""
-    nsu = 12 if master else 1
+    """Solid curved wall pieces with irregular outlines: ribbed exterior, nacre
+    inside, a 0.32 m rim all round."""
+    nr = spec["ribs"]
+    u_mid = tab.u[-1] - spec["break_back"] * nr
     for fs in frags:
-        nu_r = int((fs["u1"] - fs["u0"]) * (MASTER_RINGS_PER_RIB if master else 6)) + 1
+        u0 = math.floor(u_mid + fs["u_off"])
+        u1 = u0 + fs["ribs"]
         if master:
-            uu = np.linspace(fs["u0"], fs["u1"], nu_r)
+            uu = np.linspace(u0, u1, fs["ribs"] * MASTER_RINGS_PER_RIB + 1)
+            nsg = int((fs["s1"] - fs["s0"]) / (TAU / (spec["sides"] * MASTER_SIDES_MULT))) + 2
         else:
-            keys = []
-            for kq in range(int(fs["u0"]), int(fs["u1"])):
-                keys.extend(kq + x for x in RUNTIME_RINGS)
-            keys.append(fs["u1"])
-            uu = np.array(keys)
-        nsg = max(3, int(round((fs["s1"] - fs["s0"]) / (TAU / spec["sides"])))) * nsu + 1
+            uu = np.array([kq + x for kq in range(u0, u1) for x in RUNTIME_RINGS] + [u1], float)
+            nsg = int((fs["s1"] - fs["s0"]) / (TAU / (spec["sides"] * 2))) + 2
         ss = np.linspace(fs["s0"], fs["s1"], nsg)
         UU, SS = np.meshgrid(uu, ss, indexing="ij")
-        # ragged edges: jitter the patch border along u/s (same seed for both meshes)
         Po, at = section(spec, tab, UU, SS, detail=detail_fn(11) if master else None)
         Pi, _ = section(spec, tab, UU, SS, inner=True)
-        Pi = Pi + (Po - Pi) * 0.0
-        cen = Po.reshape(-1, 3).mean(0)
-        normal_out = _norm(Po - at["c"]).reshape(-1, 3).mean(0)
-        normal_out /= np.linalg.norm(normal_out)
-        axis = Vector(fs["rot"]).normalized()
-        Rm = np.array(Matrix.Rotation(fs["ang"], 3, axis))
-        move = normal_out * fs["dist"] + np.array([0, 0, fs["lift"] if not fs["attached"] else 0.0])
-        pivot = cen if not fs["attached"] else Po[0].mean(0)
+        # irregular outline in patch space (lobed polygon), evaluated per cell
+        cu = (0.5 * (uu[:-1] + uu[1:]) - u0) / (u1 - u0) - 0.5
+        cs_ = (0.5 * (ss[:-1] + ss[1:]) - fs["s0"]) / (fs["s1"] - fs["s0"]) - 0.5
+        CU, CS = np.meshgrid(cu, cs_, indexing="ij")
+        ang = np.arctan2(CS, CU) + fs["lobe_phase"]
+        lob = np.array(fs["lobes"])
+        k = (ang % TAU) / TAU * len(lob)
+        i0 = np.floor(k).astype(int) % len(lob)
+        rr = lob[i0] * 0.5                       # stepped lobes: a broken, angular outline
+        keep = np.hypot(CU, CS) < rr
+        if keep.sum() < 2:
+            continue
+        cen = Po[:-1, :-1][keep].reshape(-1, 3).mean(0)
+        nout = _norm((Po - at["c"])[:-1, :-1][keep].reshape(-1, 3).mean(0)[None])[0]
+        Rm = np.array(Matrix.Rotation(fs["ang"], 3, Vector(fs["axis"]).normalized()))
+        if fs["attached"]:
+            # hinge on the patch edge nearest the hole border, swing outward a little
+            pivot = Po[0, :].mean(0)
+            move = nout * fs["dist"]
+        else:
+            pivot = cen
+            tang = _norm(at["tan"].reshape(-1, 3).mean(0)[None])[0]
+            move = nout * fs["dist"] + tang * fs["side"] * fs["dist"] * 0.5 + np.array([0, 0, fs["lift"]])
 
         def tf(X):
             return (X.reshape(-1, 3) - pivot) @ Rm.T + pivot + move
         nu, nsv = UU.shape
-        bo = acc.add_verts(tf(Po), at["crest"], UU / spec["ribs"])
-        bi = acc.add_verts(tf(Pi), at["crest"] * 0.2, UU / spec["ribs"])
-        i, j = np.meshgrid(np.arange(nu - 1), np.arange(nsv - 1), indexing="ij")
-        qo = np.stack([bo + i * nsv + j, bo + (i + 1) * nsv + j, bo + (i + 1) * nsv + j + 1,
-                       bo + i * nsv + j + 1], -1).reshape(-1, 4)
-        qi = qo - bo + bi
-        V = np.concatenate(acc.V)
-        c_t = tf(at["c"])
-        qo = orient(qo, V, lambda c_: c_ - _nearest(c_, c_t))
-        qi = orient(qi, V, lambda c_: _nearest(c_, c_t) - c_)
-        acc.add_faces(qo, 0)
-        acc.add_faces(qi, 1)
-        # rims on the four borders
-        border = []
-        for a_ in range(nu - 1):
-            border.append((a_ * nsv, (a_ + 1) * nsv))
-            border.append((a_ * nsv + nsv - 1, (a_ + 1) * nsv + nsv - 1))
-        for b_ in range(nsv - 1):
-            border.append((b_, b_ + 1))
-            border.append(((nu - 1) * nsv + b_, (nu - 1) * nsv + b_ + 1))
-        rims = np.array([(bo + x, bo + y, bi + y, bi + x) for x, y in border])
-        pc = tf(Po).mean(0)
-        rims = orient(rims, V, lambda c_: c_ - pc)
-        acc.add_faces(rims, 0)
+        Pg_o = tf(Po).reshape(nu, nsv, 3)
+        Pg_i = tf(Pi).reshape(nu, nsv, 3)
+        Cg = tf(at["c"]).reshape(nu, nsv, 3)
+        bo = acc.add_verts(Pg_o, crest=at["crest"], spiral=at["ueff"] / nr)
+        bi = acc.add_verts(Pg_i, crest=at["crest"] * 0.2, spiral=at["ueff"] / nr)
+        acc.add_faces(grid_quads(bo, Pg_o, Pg_o - Cg, False, keep), 0)
+        acc.add_faces(grid_quads(bi, Pg_i, Cg - Pg_i, False, keep), 1)
+        # rims where a kept cell borders a dropped cell or the patch edge
+        rims, rc = [], []
+        H, Wd = keep.shape
+        for i, jx in zip(*np.nonzero(keep)):
+            cell_c = Pg_o[i:i + 2, jx:jx + 2].reshape(-1, 3).mean(0)
+            for (a, b), (v0, v1) in (((i - 1, jx), (i * nsv + jx, i * nsv + jx + 1)),
+                                     ((i + 1, jx), ((i + 1) * nsv + jx, (i + 1) * nsv + jx + 1)),
+                                     ((i, jx - 1), (i * nsv + jx, (i + 1) * nsv + jx)),
+                                     ((i, jx + 1), (i * nsv + jx + 1, (i + 1) * nsv + jx + 1))):
+                if 0 <= a < H and 0 <= b < Wd and keep[a, b]:
+                    continue
+                rims.append((bo + v0, bo + v1, bi + v1, bi + v0))
+                rc.append(cell_c)
+        V = acc.allV()
+        rims = np.array(rims, dtype=np.int64)
+        acc.add_faces(orient(rims, V, V[rims].mean(1) - np.array(rc)), 0)
 
 
 # -------------------------------------------------------------- transform
@@ -740,7 +744,7 @@ def apply_tf(acc, R, sc, shift):
 
 # -------------------------------------------------------------- shading
 
-def master_material(name, kind):
+def master_material(name, kind, nr):
     """kind: 'ext' | 'nacre' | 'glow'. Uses mesh attributes crest / spiral."""
     m, k, out = P.new_procedural(name)
     co = k.coord()
@@ -755,16 +759,8 @@ def master_material(name, kind):
     tint_b = k.maprange(ph2, -1, 1, 0, 1)
     fine = k.noise(co, 2.2, 6.0, 0.6)
     pits = k.voronoi(co, 9.0)
-    growth = k.new("ShaderNodeTexWave", wave_type="BANDS", bands_direction="X", wave_profile="SIN")
-    # growth lines: bands across the spiral attribute (~40 per rib)
-    comb = k.new("ShaderNodeCombineXYZ")
-    k.link(k.math("MULTIPLY", spiral, 1.0), comb.inputs["X"])
-    k.link(growth.inputs["Vector"].links[0].from_socket if growth.inputs["Vector"].links else comb.outputs[0],
-           growth.inputs["Vector"])
-    growth.inputs["Scale"].default_value = 22.0 * 40 / 6.2832   # spiral is whorls; 22 ribs/whorl
-    growth.inputs["Distortion"].default_value = 0.8
-    growth.inputs["Detail"].default_value = 2.0
-    gl = growth.outputs["Fac"]
+    # growth lines: ~40 fine lines per rib across the spiral (spiral is in whorls)
+    gl = k.maprange(k.math("SINE", k.math("MULTIPLY", spiral, TAU * nr * 40.0)), -1.0, 1.0)
     if kind == "ext":
         base = k.mix(tint_a, (0.80, 0.775, 0.785), (0.775, 0.80, 0.785))
         base = k.mix(k.math("MULTIPLY", tint_b, 0.6), base, (0.77, 0.785, 0.82))
@@ -864,32 +860,22 @@ def build_collision(col, runtime, n, spec, split_z=None):
     return objs
 
 
-def flipped_faces(obj):
-    """Faces whose normal points into the closed body (ray from just outside hits
-    the same mesh's front within 2 cm). Cheap proxy: outer faces facing the axis."""
-    me = obj.data
-    me.calc_loop_triangles()
-    return None
-
-
 # ---------------------------------------------------------------- build
 
-def generate(n, master, R, sc, shift, tab, frags=None, rng_seed=0):
+def generate(n, master, tab, frags=None):
     spec = SPECS[n]
     acc = MeshAcc()
     info = {}
-    body = build_body(spec, tab, acc, master, random.Random(rng_seed), info)
+    body = build_body(spec, tab, acc, master, info)
     if spec.get("broken"):
         if frags is None:
-            frags = fragment_specs(spec, body)
+            frags = fragment_specs(spec)
         build_fragments(spec, tab, acc, frags, master)
         info["fragments"] = len(frags)
-    if sc is not None:
-        apply_tf(acc, R, sc, shift)
     return acc, body, info, frags
 
 
-def stage_build(n):
+def stage_build(n, geo_only=False):
     pa = paths(n)
     P.set_tag(pa["asset"])
     spec = SPECS[n]
@@ -909,7 +895,7 @@ def stage_build(n):
     ext = ext @ R.T
     sc0 = spec["target_h"] / (ext[:, 2].max() - ext[:, 2].min())
     tab.scale(sc0)
-    acc, body, info, frags = generate(n, False, R, None, None, tab)
+    acc, body, info, frags = generate(n, False, tab)
     Vr = np.concatenate(acc.V) @ R.T
     nbody = body["base"] + len(body["us"]) * body["ns"]
     vb = Vr[:nbody]
@@ -928,6 +914,9 @@ def stage_build(n):
     stats["runtime_triangles"] = P.mesh_tris(shell)
     stats["nonmanifold_edges"] = P.nonmanifold_edges(shell)
     P.log("runtime tris", stats["runtime_triangles"], json.dumps(info))
+    if geo_only:
+        preview(n, shell, sc_)
+        return
 
     # aperture socket from the last frame
     c_end = (tab.c[-1] @ R.T) * sc1 - shift
@@ -936,15 +925,16 @@ def stage_build(n):
 
     clock.start("uv_unwrap")
     nr = spec["ribs"]
-    bm = bmesh.new(); bm.from_mesh(shell.data)
-    sp = bm.verts.layers.float.get("spiral")
-    seams = set()
-    K = 4 if spec["kind"] == "coil" else 5
-    for e in bm.edges:
-        u0, u1 = e.verts[0][sp] * nr, e.verts[1][sp] * nr
-        if abs(u0 - u1) < 1e-4 and abs(u0 / K - round(u0 / K)) < 0.02:
-            seams.add(e.index)
-    bm.free()
+    me = shell.data
+    gu = np.empty(len(me.vertices), np.float32); me.attributes["gu"].data.foreach_get("value", gu)
+    gs = np.empty(len(me.vertices), np.float32); me.attributes["gs"].data.foreach_get("value", gs)
+    K = 3 if spec["kind"] == "coil" else 4
+    ev = np.empty(len(me.edges) * 2, np.int32); me.edges.foreach_get("vertices", ev)
+    ev = ev.reshape(-1, 2)
+    ua, ub = gu[ev[:, 0]] * nr, gu[ev[:, 1]] * nr
+    ring = (np.abs(ua - ub) < 1e-4) & (np.abs(ua / K - np.round(ua / K)) < 1e-3) & (gs[ev[:, 0]] >= 0)
+    dors = (np.abs(gs[ev[:, 0]] - 0.5) < 1e-4) & (np.abs(gs[ev[:, 1]] - 0.5) < 1e-4)
+    seams = set(np.nonzero(ring | dors)[0].tolist())
     shell.data.uv_layers.new(name="UVMap")
     stats["uv_seams"] = P.seam_unwrap(shell, lambda e: e.index in seams, sharp_deg=42, margin=0.0012,
                                       scale_faces=(lambda f: f.material_index == 1, 0.55))
@@ -953,13 +943,13 @@ def stage_build(n):
     P.log("uv", json.dumps(stats["uv_exterior"]))
 
     clock.start("master_highpoly")
-    macc, _, minfo, _ = generate(n, True, R, None, None, tab, frags=frags)
+    macc, _, minfo, _ = generate(n, True, tab, frags=frags)
     macc.V = [(v @ R.T) * sc1 - shift for v in macc.V]
     if np.linalg.det(R) < 0:
         macc.F = [f[:, ::-1] for f in macc.F]
-    h_ext, kit_e = master_material("H_Exterior", "ext")
-    h_nac, kit_n = master_material("H_Nacre", "nacre")
-    h_glw, kit_g = master_material("H_Glow", "glow")
+    h_ext, kit_e = master_material("H_Exterior", "ext", nr)
+    h_nac, kit_n = master_material("H_Nacre", "nacre", nr)
+    h_glw, kit_g = master_material("H_Glow", "glow", nr)
     master = macc.build(f"{pa['asset']}_master", [h_ext, h_nac, h_glw], work)
     master.data.shade_smooth()
     stats["master_triangles"] = P.mesh_tris(master)
@@ -987,7 +977,7 @@ def stage_build(n):
             final_material("M_Shell_Glow", tex)]
     for sl, mat in zip(shell.material_slots, mats):
         sl.material = mat
-    for a in ("crest", "spiral"):
+    for a in ("crest", "spiral", "gu", "gs"):
         if a in shell.data.attributes:
             shell.data.attributes.remove(shell.data.attributes[a])
     master.hide_render = True
@@ -1027,6 +1017,25 @@ def stage_build(n):
     with open(pa["stats"], "w") as fh:
         json.dump(stats, fh, indent=2)
     P.log("stats", json.dumps({k: v for k, v in stats.items() if k not in ("glb",)})[:3000])
+
+
+def preview(n, obj, sc):
+    """Fast shape check of the runtime mesh (flat materials, 24 spp)."""
+    P.setup_render(sc, res=900, samples=24)
+    golden_world(sc)
+    sc.render.image_settings.file_format = "JPEG"
+    lo, hi = P.world_bounds([obj])
+    cz = (lo.z + hi.z) / 2
+    out = os.path.join(HERE, "preview")
+    os.makedirs(out, exist_ok=True)
+    for name, loc, lens in (("tq", (30, -36, 25), 40), ("front", (0, -60, cz), 40),
+                            ("top", (0.1, -0.1, 60), 40), ("ap", None, 40)):
+        if loc is None:
+            continue
+        cam = P.add_camera("Cam" + name, loc, (0, 0, cz), None, lens)
+        sc.camera = cam
+        sc.render.filepath = os.path.join(out, f"shell_{n}_{name}.jpg")
+        bpy.ops.render.render(write_still=True)
 
 
 def inward_faces(obj):
@@ -1285,6 +1294,8 @@ if __name__ == "__main__":
         sys.exit(0)
     nums = [int(x) for x in argv[1:]] or [1, 2, 3, 4]
     for num in nums:
+        if stage == "geo":
+            stage_build(num, geo_only=True)
         if stage in ("build", "all"):
             stage_build(num)
         if stage in ("render", "all"):

@@ -1,15 +1,12 @@
-// i18n for the play layer: the UI shell's context (storage, prefs, guest id, tournament) with the
-// game messages (src/locales) plus the play strings (src/play/locales) in one i18n instance, so the
-// lobby, onboarding, HUD and the 3D play UI switch language together and mid-season.
-import { MESSAGES } from '../locales/index.js';
-import { createI18n, detectLocale, BASE_LOCALE } from '../ui/i18n/i18n.js';
-import { resolveArg } from '../ui/i18n/engine-adapter.js';
-import { createSafeStorage } from '../ui/storage.js';
-import { createPrefs, applyPrefsToDocument } from '../ui/prefs.js';
-import { getGuestId } from '../ui/entitlement.js';
-import { createTournamentStore } from '../ui/tournament.js';
+// i18n for the play layer: the game messages (src/locales) plus the play strings
+// (src/play/locales) in one i18n instance.
+// Only the public UI API (src/ui/index.js, docs/ui.md) is used: the UI shell is owned by another
+// agent (docs/collab.md).
+import { createUiContext, i18n as uiI18n } from '../ui/index.js';
 import playEn from './locales/en.js';
 import playRu from './locales/ru.js';
+
+const { MESSAGES, createI18n, detectLocale, BASE_LOCALE, resolveArg } = uiI18n;
 
 export const PLAY_MESSAGES = { en: playEn, ru: playRu };
 export const MERGED_MESSAGES = { en: { ...MESSAGES.en, ...playEn }, ru: { ...MESSAGES.ru, ...playRu } };
@@ -19,17 +16,17 @@ export function createPlayI18n(locale, { onMissing } = {}) {
   return createI18n({ messages: MERGED_MESSAGES, locale: preferred, onMissing: onMissing || ((key, loc) => { if (typeof console !== 'undefined') console.warn(`[i18n] missing ${loc}:${key}`); }) });
 }
 
-/** Same shape as src/ui/context.js createUiContext(), with the merged messages. */
+/**
+ * The UI shell's context (createUiContext: storage, prefs, guest id, tournament) with its i18n
+ * replaced by one that also knows the play strings. Locale changes stay in sync both ways with the
+ * prefs, so the lobby, onboarding, HUD and play UI switch language together and mid-season.
+ */
 export function createPlayContext({ storage, locale } = {}) {
-  const st = storage || createSafeStorage();
-  const prefs = createPrefs(st);
-  const i18n = createPlayI18n(locale || prefs.get().locale || undefined);
-  const sync = () => applyPrefsToDocument(prefs);
-  prefs.subscribe((p) => { if (p.locale && p.locale !== i18n.locale) i18n.setLocale(p.locale); sync(); });
-  i18n.subscribe((l) => { if (prefs.get().locale !== l) prefs.set({ locale: l }); });
-  try { globalThis.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', sync); } catch { /* old browsers */ }
-  sync();
-  return { storage: st, prefs, i18n, guestId: getGuestId(st), tournament: createTournamentStore({ storage: st }) };
+  const base = createUiContext({ storage, locale });
+  const i18n = createPlayI18n(base.i18n.locale);
+  base.prefs.subscribe((p) => { if (p.locale && p.locale !== i18n.locale) i18n.setLocale(p.locale); });
+  i18n.subscribe((l) => { if (base.prefs.get().locale !== l) base.prefs.set({ locale: l }); if (base.i18n.locale !== l) base.i18n.setLocale(l); });
+  return { ...base, i18n };
 }
 
 /**

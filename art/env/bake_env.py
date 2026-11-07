@@ -65,7 +65,7 @@ out = nt.nodes.new('ShaderNodeOutputWorld')
 nt.links.new(sky.outputs['Color'], bg.inputs['Color']); nt.links.new(bg.outputs['Background'], out.inputs['Surface'])
 
 # Warm sun lamp (lights the cloud slab; invisible to the camera).
-sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 4.2; sun.color = (1.0, 0.74, 0.46); sun.angle = math.radians(1.2)
+sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 6.0; sun.color = (1.0, 0.70, 0.42); sun.angle = math.radians(1.2)
 so = bpy.data.objects.new('sun', sun); sc.collection.objects.link(so)
 import mathutils
 so.rotation_euler = mathutils.Vector((bx, by, bz)).to_track_quat('Z', 'Y').to_euler()

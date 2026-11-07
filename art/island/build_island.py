@@ -338,8 +338,9 @@ def pillar(B, node, seed):
         n, wall, ter, depth, second = 20, 0.7, 0.25, 24.0, None
     prof = [(Rt, z0, 0.0, None)]
     prof.append((Rt, z0 - wall, 0.0, "stone"))
-    prof.append((Rt + ter, z0 - wall, 0.0, "foliage"))
-    prof.append((Rt + ter + 0.25, z0 - wall - 0.35, 0.04, "rock"))
+    t_amp = 0.0 if kind == "pier" else min(0.9, ter * 0.4)
+    prof.append((Rt + ter, z0 - wall, t_amp, "foliage"))
+    prof.append((Rt + ter + 0.25, z0 - wall - 0.35, t_amp, "rock"))
     z = z0 - wall - 0.35
     r_lip = Rt + ter + 0.25
     terraces = [(Rt + ter, z0 - wall)]
@@ -353,10 +354,14 @@ def pillar(B, node, seed):
         r_lip = r_lip + t2 + 0.1
     rest = depth - (z0 - z)
     base = r_lip
-    for f, rf, amp in ((0.025, 1.04, 0.35), (0.06, 1.03, 0.75), (0.11, 0.97, 1.0), (0.17, 0.92, 1.15),
-                       (0.24, 0.86, 1.25), (0.32, 0.78, 1.3), (0.41, 0.69, 1.3), (0.51, 0.59, 1.25),
-                       (0.62, 0.47, 1.1), (0.74, 0.35, 0.95), (0.86, 0.23, 0.7), (0.95, 0.12, 0.4)):
-        prof.append((base * rf * rng.uniform(0.93, 1.07), z - f * rest, amp * 0.11 * base, "rock"))
+    # eroded body: bulges under the lip, then a long leaning spire into the clouds
+    for f, rf, amp in ((0.02, 1.03, 0.4), (0.05, 0.99, 0.8), (0.09, 0.91, 1.1), (0.14, 0.81, 1.3),
+                       (0.20, 0.71, 1.4), (0.27, 0.62, 1.45), (0.35, 0.54, 1.4), (0.44, 0.46, 1.3),
+                       (0.54, 0.38, 1.15), (0.65, 0.30, 1.0), (0.76, 0.22, 0.85), (0.87, 0.14, 0.6),
+                       (0.95, 0.08, 0.35)):
+        prof.append((base * rf * rng.uniform(0.93, 1.07), z - f * rest, amp * 0.12 * base, "rock"))
+    lean = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)) * (0.22 * base)
+    z_body = z
     tip_z = z - rest
     rings = []
     for j, (r, zz, amp, _m) in enumerate(prof):
@@ -368,7 +373,9 @@ def pillar(B, node, seed):
             th = TAU * i / n + (0.35 * TAU / n * math.sin(i * 2.7 + j * 1.3) if amp > 0.2 else 0.0)
             rr = r + (amp * noise(th, zz) if amp else 0.0)
             z_ = zz + dz_lim * math.sin(i * 1.9 + j * 3.1 + seed)
-            ring.append((cx + rr * math.cos(th), cy + rr * math.sin(th), z_))
+            f_ = max(0.0, (z_body - zz) / rest)
+            ox, oy = lean.x * f_ ** 1.6, lean.y * f_ ** 1.6
+            ring.append((cx + ox + rr * math.cos(th), cy + oy + rr * math.sin(th), z_))
         rings.append(ring)
     vcum = [0.0]
     for (r0, z0_, _, _), (r1, z1_, _, _) in zip(prof, prof[1:]):
@@ -394,7 +401,7 @@ def pillar(B, node, seed):
             geo.face(idx, uvs)
     geo = B.g(grp, "rock")
     last = [geo.vert(p) for p in rings[-1]]
-    tip = geo.vert((cx + rng.uniform(-1, 1), cy + rng.uniform(-1, 1), tip_z - 3.0))
+    tip = geo.vert((cx + lean.x + rng.uniform(-1, 1), cy + lean.y + rng.uniform(-1, 1), tip_z - 3.0))
     reps = max(1, round(TAU * prof[-1][0] / TILE["rock"]))
     for i in range(n):
         k = (i + 1) % n
@@ -402,7 +409,35 @@ def pillar(B, node, seed):
         geo.face([last[i], tip, last[k]], [(u0, -vcum[-1]), ((u0 + u1) / 2, -vcum[-1] - 4), (u1, -vcum[-1])])
     if kind == "pier":
         add_disc(B.g(grp, "stone"), cx, cy, z0, Rt, n, (0.8, 0.8, 0.78))
+    else:
+        nsp = {"plaza": 4, "camp": 2, "balcony": 1}[kind]
+        for k in range(nsp):
+            a = rng.uniform(0, TAU)
+            zt = z - rest * rng.uniform(0.08, 0.2)
+            rad = base * rng.uniform(0.18, 0.28)
+            off = base * 0.62
+            hanging_spire(B, grp, (cx + off * math.cos(a), cy + off * math.sin(a), zt), rad,
+                          rest * rng.uniform(0.3, 0.5), rng)
     return terraces, tip_z - 3.0, grp
+
+
+def hanging_spire(B, grp, top, rad, length, rng):
+    """A secondary stalactite of rock hanging beside the main pillar body."""
+    geo = B.g(grp, "rock")
+    n = 12
+    noise = RockNoise(int(rng.random() * 1e6))
+    secs = []
+    for t, rf in ((0.0, 0.8), (0.12, 1.0), (0.35, 0.8), (0.6, 0.5), (0.85, 0.22)):
+        zz = top[2] - length * t
+        secs.append([Vector((top[0] + rad * rf * (1 + 0.5 * noise(TAU * k / n, zz)) * math.cos(TAU * k / n),
+                             top[1] + rad * rf * (1 + 0.5 * noise(TAU * k / n, zz)) * math.sin(TAU * k / n), zz))
+                     for k in range(n)])
+    ftf.loft(geo, secs, closed_section=True, flip=True)
+    tipv = Vector((top[0], top[1], top[2] - length))
+    for k in range(n):
+        a_, b_ = secs[-1][k], secs[-1][(k + 1) % n]
+        oriented_poly(geo, [a_, b_, tipv], [(0, 0), (0.5, 0), (0.25, 1)],
+                      ((a_ + b_) / 2 - Vector((top[0], top[1], a_.z))).normalized() + Vector((0, 0, -0.5)))
 
 
 # -------- parapets
@@ -741,7 +776,7 @@ def column_ruin(B, grp, p, rng, r=0.42, h=None, lying=False, axis=0.0):
 
 
 def floating_rock(B, p, size, rng):
-    verts, faces = B.ico[1]
+    verts, faces = B.ico[2]
     grp = group_of(p[0], p[1])
     geo = B.g(grp, "rock")
     seed = rng.random() * 100
