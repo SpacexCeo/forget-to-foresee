@@ -40,6 +40,15 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 | NEAR season commit-reveal contract (Rust, near-sdk), JS↔Rust vectors, CI | agent / `contracts/season-commit` | review |
 | Testnet deploy | owner (account) | blocked on owner |
 
+## Agent API and quality
+| Task | Owner / branch | Status |
+|---|---|---|
+| Agent-playable API: OpenAPI, server room, per-viewer redaction, idempotency, example agent, tests | agent / `api/agent-play` | doing |
+| Rules v3 mode (P1, P3, P4, P5, P6, P7, P9) + re-run Monte Carlo | agent (Fable) / `rules/v3` | doing |
+| Rendering look-dev to match the target concepts, quality tiers, measured FPS | agent (Fable) / `render/lookdev` | doing |
+| Art direction QA: per-asset reviews against the references | agent (Fable) / `art/review` | doing |
+| KTX2 + meshopt for models (anchor 36.7 → 16.2 MB) | lead / `main` | done |
+
 ## Submission
 | Task | Owner / branch | Status |
 |---|---|---|
