@@ -1,0 +1,41 @@
+# Builds the season-commit contract and runs every test tier on Linux:
+# vectors vs engine.js, pure tests, near-sdk mocked-blockchain tests, sandbox integration tests.
+name: contracts
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - 'game/src/game/**'
+      - 'game/scripts/gen-contract-vectors.mjs'
+      - 'game/tests/contract-vectors.test.mjs'
+      - '.github/workflows/contracts.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'game/src/game/**'
+      - '.github/workflows/contracts.yml'
+
+jobs:
+  season-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: contracts/season-commit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vectors match engine.js and crypto.js
+        working-directory: game
+        run: node --test tests/contract-vectors.test.mjs
+      - name: Rust toolchain
+        run: rustup show && rustc --version
+      - name: Install cargo-near
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh
+      - name: Build wasm
+        run: cargo near build non-reproducible-wasm --no-abi
+      - name: Unit, mocked-blockchain and sandbox tests
+        run: cargo test -- --test-threads=2
