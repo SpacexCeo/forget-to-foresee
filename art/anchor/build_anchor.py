@@ -452,11 +452,11 @@ def tube(bm, pts, radius, sides, closed=False, cap=True):
 
 
 def prism(bm, outline_xz, half_thick, angle):
-    """Extrude a convex-or-not (x=radial, z) outline by +-half_thick(z) and rotate."""
+    """Extrude a convex-or-not (x=radial, z) outline by +-half_thick(x, z) and rotate."""
     rot = Matrix.Rotation(angle, 3, "Z")
     front, back = [], []
     for x, z in outline_xz:
-        h = half_thick(z) if callable(half_thick) else half_thick
+        h = half_thick(x, z) if callable(half_thick) else half_thick
         front.append(bm.verts.new(rot @ Vector((x, -h, z))))
         back.append(bm.verts.new(rot @ Vector((x, h, z))))
     n = len(outline_xz)
@@ -587,29 +587,36 @@ def build_parts(col, m_stone, m_bronze, m_pad, m_lens):
         (0.300, 0.000), (0.300, 0.058), (0.291, 0.072), (0.274, 0.078), (0.274, 0.094),
         (0.263, 0.110), (0.170, 0.110)], 64))
 
-    # Three curved buttress fins (one to the back, two framing the front).
+    # Three curved buttresses (one to the back, two framing the front). Wedge section:
+    # thick where they meet the shaft, a narrow spine at the outer curve.
     fin_outline = [(0.12, 0.0), (0.445, 0.0)]
     for k in range(13):
         ph = math.radians(90 * k / 12)
         fin_outline.append((0.445 - 0.29 * math.sin(ph), 0.45 - 0.42 * math.cos(ph)))
     fin_outline.append((0.12, 0.45))
+
+    def fin_half(x, z):
+        t = (x - 0.12) / (0.445 - 0.12)
+        return 0.048 - 0.034 * t - 0.006 * z / 0.45
+
+    shoe_outline = [(0.372, 0.0), (0.468, 0.0), (0.468, 0.026), (0.452, 0.040), (0.388, 0.088)]
     for i, deg in enumerate((90, 210, 330)):
         a = math.radians(deg)
-        part(f"fin_{i}", m_stone,
-             lambda bm, a=a: prism(bm, fin_outline, lambda z: 0.025 - 0.0075 * z / 0.45, a),
-             bevel=(0.006, 1))
+        part(f"fin_{i}", m_stone, lambda bm, a=a: prism(bm, fin_outline, fin_half, a),
+             bevel=(0.006, 2))
         part(f"fin_shoe_{i}", m_bronze,
-             lambda bm, a=a: box(bm, Matrix.Rotation(a, 3, "Z") @ Vector((0.4235, 0, 0.035)),
-                                 (0.057, 0.062, 0.070), a), bevel=(0.004, 1))
+             lambda bm, a=a: prism(bm, shoe_outline, lambda x, z: 0.024 - 0.05 * max(z - 0.03, 0), a),
+             bevel=(0.003, 2))
 
-    # Lower shaft with three asymmetric growth ribs (sharp lower edge, soft upper).
+    # Lower shaft with four growth ribs like a shell's: sharp lower edge, soft upper edge,
+    # spacing growing and relief shrinking towards the top.
     def rs(z):
         return lin(z, 0.10, 0.53, 0.172, 0.130)
     prof = [(rs(0.10), 0.10)]
-    for zc in (0.20, 0.31, 0.42):
+    for zc, amp in ((0.165, 0.016), (0.235, 0.013), (0.335, 0.010), (0.465, 0.0075)):
         r0 = rs(zc - 0.016)
-        prof += [(r0, zc - 0.016), (r0 + 0.013, zc - 0.003), (r0 + 0.012, zc + 0.002),
-                 (rs(zc + 0.022) + 0.002, zc + 0.022)]
+        prof += [(r0, zc - 0.016), (r0 + amp, zc - 0.003), (r0 + amp * 0.92, zc + 0.002),
+                 (rs(zc + 0.024) + 0.0015, zc + 0.024)]
     prof.append((rs(0.53), 0.53))
     part("shaft", m_stone, lambda bm: revolve(bm, prof, 48))
 
@@ -710,11 +717,23 @@ def build_parts(col, m_stone, m_bronze, m_pad, m_lens):
     part("finial", m_bronze, lambda bm: revolve(bm, [
         (0.016, 1.578), (0.018, 1.587), (0.010, 1.595), (0.002, 1.600)], 16, cap_top=True))
 
-    # Amber lens: faceted ellipsoid (flat shaded for sparkle).
+    # Amber lens: an elongated cut gem (pavilion, girdle, crown, table), facets offset ring
+    # by ring so it sparkles; flat shaded.
     bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=3, radius=1.0)
-    bmesh.ops.transform(bm, verts=bm.verts, matrix=Matrix.Translation((0, 0, 1.226)) @
-                        Matrix.Diagonal((0.085, 0.085, 0.130, 1)))
+    gem = [(0.004, 1.098), (0.040, 1.118), (0.072, 1.160), (0.086, 1.205), (0.086, 1.248),
+           (0.070, 1.300), (0.044, 1.338), (0.030, 1.352)]
+    rings = []
+    for k, (r, z) in enumerate(gem):
+        ph = (k % 2) * math.pi / 12
+        rings.append([bm.verts.new((r * math.cos(ph + 2 * math.pi * i / 12),
+                                    r * math.sin(ph + 2 * math.pi * i / 12), z)) for i in range(12)])
+    for a, b in zip(rings, rings[1:]):
+        for i in range(12):
+            j = (i + 1) % 12
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    bm.faces.new(list(reversed(rings[0])))
+    bm.faces.new(rings[-1])
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
     lens = bm_object("lens", bm, m_lens, col)
     finish_shading(lens, flat=True)
 
@@ -983,8 +1002,10 @@ def bake(sc, kind, target, sources, image, samples, **kw):
     select_only(sources + [target], target)
     sc.cycles.samples = samples
     t = time.time()
-    bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=0.010,
-                        max_ray_distance=0.030, margin=16, margin_type="EXTEND",
+    # Cage pushed out 18 mm and a 32 px margin at 8k (16 px after the 2x downsample): rays
+    # that start inside the master or miss it no longer leave black fringes at rims and steps.
+    bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=0.018,
+                        max_ray_distance=0.045, margin=32, margin_type="EXTEND",
                         target="IMAGE_TEXTURES", **kw)
     log(f"bake {kind:8s} -> {image.name} ({image.size[0]}px, {samples} spp) {time.time() - t:.1f}s")
 
@@ -1114,7 +1135,7 @@ def stage_build():
     m_bronze_tmp = mat_simple("tmp_bronze", COL_BRONZE)
     m_pad = mat_simple("M_Anchor_Pad", COL_PAD, rough=0.6)
     m_lens = mat_simple("M_Anchor_Lens", (0.55, 0.16, 0.02), rough=0.05,
-                        emit=(1.0, 0.38, 0.06), emit_strength=0.35)
+                        emit=(1.0, 0.38, 0.06), emit_strength=2.5)
     stone, bronze, lens, pads = build_parts(work, m_stone_tmp, m_bronze_tmp, m_pad, m_lens)
     body = join(stone + bronze, "anchor_body")
     stats["ngons_triangulated"] = triangulate_ngons(body)
@@ -1277,6 +1298,8 @@ def stage_build():
     stats["materials"] = sorted({s.material.name for o in (anchor, inspect) for s in o.material_slots})
     lo, hi = world_bounds([anchor])
     stats["bounds_blender_zup"] = {"min": [round(v, 4) for v in lo], "max": [round(v, 4) for v in hi]}
+    for m in {s.material for o in (anchor, inspect) for s in o.material_slots}:
+        m.use_backface_culling = True   # closed meshes: export single-sided materials
     select_only([anchor, inspect] + cols + sockets, anchor)
     bpy.ops.export_scene.gltf(filepath=GLB_PATH, export_format="GLB", use_selection=True,
                               export_apply=True, export_yup=True, export_tangents=True,
