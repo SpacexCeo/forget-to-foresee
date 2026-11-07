@@ -21,6 +21,7 @@ Written 2026-11-07 by Claude Code at the owner's request to stop and hand over. 
 | Art docs translated to English | Done, requirements + exact filenames + existing attribution preserved | `docs/art/brief.md`, `docs/art/manifest.md` (commit `473913a`) |
 | Blender on CPU | `bpy` 4.5.15 LTS installed in 6 s into a Python 3.11 venv (`uv venv -p python3.11; uv pip install "bpy==4.5.*" numpy`); Cycles CPU + OpenImageDenoise render OK | session log |
 | Existing tests | `cd game && npm install && npm test` → **68/68 pass** (baseline before any change) | session log |
+| Lockfile | `npm install` rewrites `game/package-lock.json` (name `raen-dvenadtsat-3d` → `forget-to-foresee`, drops some platform fields). Left uncommitted on purpose; commit it deliberately if wanted | `git diff` after install |
 | Existing build | `npx vite build` **fails at baseline**: no `game/index.html` entry exists. Pre-existing, not caused by this work | session log |
 | Blockout + scale check | Height **1.600 m**; footprint 0.79 × 0.72 m (three fins); pivot at base centre (min Z = 0) | `docs/art/qa/anchor/blockout/blockout-dimensions.json` |
 | Blockout references | Front, side (orthographic), three-quarter, top renders with a 2 m ruler (0.1 m segments) and a 1.75 m human proxy | `docs/art/qa/anchor/blockout/*.png`, `anchor_blockout.blend` |
