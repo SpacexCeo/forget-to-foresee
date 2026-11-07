@@ -1,9 +1,10 @@
-// Forget to Foresee: 3D client entry (vertical slice skeleton). Island scene, isometric camera,
-// kinematic player at a fixed 30 Hz, streamed assets with greybox fallbacks, look-dev stack with
-// quality tiers, dev HUD on F3. No game rules run here yet; the engine (src/game/engine.js) gets
-// wired in by the game UI step.
+// Forget to Foresee: 3D client entry. Lobby and onboarding (src/ui) → the island with the play layer
+// (src/play): the authoritative room runs in the browser through the same code as the agent API,
+// the UI only sends commands and renders observations. Isometric camera, kinematic player at a
+// fixed 30 Hz, streamed assets with greybox fallbacks, look-dev stack with quality tiers, F3 dev HUD.
 // Dev URL parameters (harmless in production): ?tier=ultra|high|low, ?motion=reduce,
-// ?view=overview|camp|close (camera presets for screenshots and measurements).
+// ?view=overview|camp|close (camera presets), ?play=direct (skip the lobby), ?seed=<32 hex> (fixed
+// test season), ?lang=en|ru.
 import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
@@ -15,9 +16,13 @@ import { Input } from './ui/input.js';
 import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport } from './render/assets.js';
 import { CAMPS } from './scenes/layout.js';
+import { mountShell } from './ui/index.js';
+import { createPlayContext } from './play/i18n.js';
+import { startPlay } from './play/game.js';
 
 const params = new URLSearchParams(location.search);
 const app = document.getElementById('app');
+// ---- render setup (owned by the look-dev agent) ----
 // MSAA comes from the post stack's render target on ultra/high; the low tier renders directly with
 // the context's own antialiasing.
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -36,7 +41,6 @@ const systemReduced = (() => { try { return matchMedia('(prefers-reduced-motion:
 
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
-document.getElementById('objective').textContent = world3d.objective;
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
 const lookdev = new LookDev({
   renderer, scene, camera,
@@ -44,6 +48,7 @@ const lookdev = new LookDev({
   tier: params.get('tier') || detectedTier, autoTier: !params.has('tier'), preset: params.get('tod') || undefined,
   reducedMotion: params.get('motion') === 'reduce' || systemReduced,
 });
+// ---- end of render setup ----
 // Shells between the camera and Iris dither down instead of hiding her (visual only).
 for (const s of shells) {
   lookdev.trackOccluder({ sphere: () => new THREE.Sphere(s.instance.center, s.instance.radius), roots: () => [s.instance.real || s.instance.greybox], pad: 0.5 });
@@ -53,6 +58,21 @@ const input = new Input(renderer.domElement);
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
 const toastEl = document.getElementById('toast');
+const uiRoot = document.getElementById('ui');
+
+// Lobby → onboarding → first contact, then the play layer. ?play=direct goes straight in (dev, QA).
+const ctx = createPlayContext({ locale: params.get('lang') || undefined });
+let play = null, shellUi = null;
+async function enterWorld() {
+  if (shellUi) { shellUi.destroy(); shellUi = null; }
+  document.body.classList.add('in-world');
+  try {
+    play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: { seedHex: /^[0-9a-f]{32}$/.test(params.get('seed') || '') ? params.get('seed') : undefined } });
+    window.__ftf.play = play;
+  } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
+}
+if (params.get('play') === 'direct') enterWorld();
+else shellUi = mountShell(uiRoot, { ctx, onFirstContact: () => enterWorld() });
 
 window.addEventListener('resize', () => lookdev.setSize(window.innerWidth, window.innerHeight));
 
@@ -87,25 +107,26 @@ function nearestInteractable() {
   return best;
 }
 
-function handleContext() {
+/** I: close inspection orbit of a hero object (E belongs to the play layer's context actions). */
+function handleInspect() {
   if (inspecting) { leaveInspect(); return; }
-  const it = nearestInteractable();
-  if (!it) return;
-  if (it.inspect && it.instance) {
-    inspecting = it;
-    moveTarget = null; marker.visible = false;
-    rig.enterInspect(it.instance.center, it.instance.radius);
-  } else {
-    toast(it.label + ': conversations arrive with the game UI step.');
-  }
+  const it = play && play.zone === 'shell' ? null : nearestInteractable();
+  if (!it || !it.inspect || !it.instance) return;
+  inspecting = it;
+  moveTarget = null; marker.visible = false;
+  if (play) play.cancelRoute();
+  rig.enterInspect(it.instance.center, it.instance.radius);
 }
+const PLAY_KEYS = ['KeyE', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
 
 function leaveInspect() { inspecting = null; rig.exitInspect(); }
 
 function handleInput(dt) {
   if (input.hit('F3')) hud.toggle();
-  if (input.hit('KeyE')) handleContext();
+  if (!play) { input.endFrame(); return false; }
+  if (input.hit('KeyI')) handleInspect();
   if (input.hit('Escape') && inspecting) leaveInspect();
+  else if (!inspecting) for (const k of PLAY_KEYS) if (input.hit(k)) play.handleKey(k);
   const rot = (input.down('ArrowLeft') ? 1 : 0) - (input.down('ArrowRight') ? 1 : 0);
   if (rot) rig.rotate(rot * dt * 1.6);
   if (input.dragX) rig.rotate(-input.dragX * 0.005);
@@ -128,7 +149,7 @@ function handleInput(dt) {
       const o = raycaster.ray.origin, d = raycaster.ray.direction;
       const hit = rayCast(world, [o.x, o.y, o.z], [d.x, d.y, d.z], 300, MASK_PLAYER);
       if (hit && hit.normal[1] > 0.7) {
-        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity;
+        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; play.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
       }
@@ -140,10 +161,12 @@ function wishVector() {
   if (inspecting) return [0, 0];
   const [ax, ay] = input.moveAxes();
   if (ax || ay) {
-    moveTarget = null; marker.visible = false;
+    moveTarget = null; marker.visible = false; if (play) play.cancelRoute();
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
+  const rw = play && play.routeWish();
+  if (rw) return rw;
   if (!moveTarget) return [0, 0];
   const w = steerTo(player.pos, moveTarget);
   if (!w) { moveTarget = null; marker.visible = false; return [0, 0]; }
@@ -167,13 +190,15 @@ function perf() {
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.25);
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
-  handleInput(dt);
+  const live = handleInput(dt) !== false;
 
   const f = fixedSteps(accumulator, dt, PHYSICS_DT, 8);
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
-  for (let i = 0; i < f.steps; i++) {
+  let moving = false;
+  for (let i = 0; live && i < f.steps; i++) {
     const wish = wishVector();
+    if (wish[0] || wish[1]) moving = true;
     player.step(wish, PHYSICS_DT);
     physics.substeps += player.lastSubsteps;
     if (moveTarget) {
@@ -199,15 +224,16 @@ function frame() {
   rig.update(dt, focus);
   streamer.update(dt, focus);
   lookdev.update(dt, focus, rig.actualDist);
+  if (play) play.update(dt, { focus, moving });
 
-  const near = inspecting ? null : nearestInteractable();
+  const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
   promptEl.innerHTML = inspecting
-    ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>E</kbd>/<kbd>Esc</kbd> to leave`
-    : near ? `<kbd>E</kbd> ${near.verb} <b>${near.label}</b>` : '';
+    ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>I</kbd>/<kbd>Esc</kbd> to leave`
+    : near && near.inspect ? `<kbd>I</kbd> inspect <b>${near.label}</b> up close` : '';
   promptEl.hidden = !promptEl.innerHTML;
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
-  lookdev.render();
+  if (play || !shellUi) lookdev.render(); // the lobby covers the canvas: no GPU work behind it
   hud.frame(dt);
   hud.update(dt, { info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
   input.endFrame();
