@@ -15,14 +15,16 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | Headless game engine: all prototype rules | **works**, matches the 2D prototype move for move on 60 seasons | `game/src/game/engine.js` |
 | Rules v2: 32-byte CSPRNG salts with domain separation, approved defect fixes | **works**, proven not to change gameplay | `game/src/game/engine.js` |
 | 3D game (Three.js): clan island + scene inside a Shell | **in progress** | `game/` |
-| NEAR contract (commit-reveal, NEP-171 fragment NFTs, escrow) | **not started** | — |
+| NEAR contract `season-commit`: season schedule root commitment, **on-chain verification** of each revealed event's Merkle proof, Ash's key commit-reveal | **builds and passes tests** (pure vector tests on any OS; mocked-chain and local sandbox tests in CI); **not deployed to testnet yet** (owner deploys with one command) | `contracts/season-commit/` |
+| NEAR NEP-171 fragment NFTs, escrow | **not started** | — |
 
 ### Real / mock
 
 | What | Now |
 |---|---|
 | AI clans | deterministic heuristics, not an LLM (**mock**) |
-| On-chain commitments, NFTs, escrow | simulated locally (**mock**) |
+| On-chain commitments | contract ready and tested on a local NEAR sandbox, not deployed yet; the game still verifies reveals in the browser against its own root (**mock** until deployed and wired) |
+| NFTs, escrow | simulated locally (**mock**) |
 | Hashes and Merkle proofs | real SHA-256 (**real**, but local) |
 | Money | in-game "silk", no real tokens |
 | Season generator | 32-bit seed (mulberry32): fine for a demo, not brute-force resistant; production needs a 128-bit seed and a CSPRNG stream |
@@ -35,12 +37,22 @@ cd game
 npm install
 npm test
 ```
-**See:** `tests 75 · pass 75`.
+**See:** `tests 77 · pass 77`.
 - 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
 - 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
 - 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
+- 2 tests check that the NEAR contract's test vectors (`contracts/season-commit/tests/vectors.json`) still match the engine.
 
 The engine rules are documented in [docs/rules-baseline.md](docs/rules-baseline.md).
+
+### NEAR contract
+Build, test and testnet deploy commands: [contracts/season-commit/README.md](contracts/season-commit/README.md).
+```bash
+cd contracts/season-commit
+cargo near build non-reproducible-wasm --no-abi   # -> target/near/season_commit.wasm
+cargo test                                         # Linux/macOS: 56 unit + 2 sandbox tests
+cargo test --lib --target wasm32-wasip1            # Windows: 13 pure vector tests (needs Node.js)
+```
 
 ### 2D prototype (no install)
 Open `prototype-2d/index.html` in a browser.
@@ -59,7 +71,7 @@ Requires Node.js 20+.
 
 - All code was written **after 19.10.2026**, during the hackathon. There is no earlier code.
 - Tag `pre-hackathon` is an empty root commit. Tag `hackathon-submission` will mark the submitted version; the diff between them is the whole work.
-- Libraries: [three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT). Google Fonts (OFL).
+- Libraries: [three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT). Google Fonts (OFL). Contract: [near-sdk](https://github.com/near/near-sdk-rs), [near-workspaces](https://github.com/near/near-workspaces-rs) (tests), [cargo-near](https://github.com/near/cargo-near) (build), all MIT/Apache-2.0.
 - **Code and design were made with AI assistance:** Claude Code (Claude Opus 5.5); game-design review by Claude Fable 5.1 and independent reviewer agents.
 - The theme is inspired by the film *Arrival* (2016). No names, characters or visuals from the film are used.
 

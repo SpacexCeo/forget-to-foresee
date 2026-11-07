@@ -80,8 +80,8 @@ Three tiers, all driven by `tests/vectors.json`:
 | Tier | File | Runs on |
 |---|---|---|
 | Pure verification: every vector leaf, root, path and Ash commitment; tampered event/salt/path, wrong season, wrong index, malformed input | `src/vector_tests.rs` (13 tests) | everywhere |
-| Contract on near-sdk's mocked blockchain: views, events, storage deposits, re-commit, unauthorized commit, reveal before commit, double reveal, Ash key rules | `src/tests.rs` | Linux, macOS (needs a C compiler for near-sdk's `unit-testing` dependencies) |
-| Real wasm on a local NEAR sandbox node (near-workspaces): full season, all forgeries and unauthorized calls | `tests/sandbox.rs` | Linux, macOS (the NEAR sandbox has no Windows build) |
+| Contract on near-sdk's mocked blockchain: views, events, storage deposits, re-commit, unauthorized commit, reveal before commit, double reveal, Ash key rules | `src/tests.rs` (43 tests) | Linux, macOS (needs a C compiler for near-sdk's `unit-testing` dependencies) |
+| Real wasm on a local NEAR sandbox node (near-workspaces): full season, all forgeries and unauthorized calls | `tests/sandbox.rs` (2 tests, about 60 transactions) | Linux, macOS (the NEAR sandbox has no Windows build) |
 
 Linux / macOS (all tiers; the sandbox tests deploy `target/near/season_commit.wasm`, and the sandbox node
 binary is downloaded on first run):
@@ -98,6 +98,9 @@ rustup target add wasm32-wasip1
 cargo test --lib --target wasm32-wasip1
 ```
 **See:** `test result: ok. 13 passed`.
+
+On Linux the expected output is `test result: ok. 56 passed` (13 pure + 43 mocked-chain) for `src/lib.rs` and
+`test result: ok. 2 passed` for `tests/sandbox.rs`.
 
 CI: `.github/workflows/contracts.yml` builds the wasm and runs `cargo test` (all tiers) on Ubuntu for every push that
 touches the contract or the engine.
