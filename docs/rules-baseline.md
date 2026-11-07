@@ -157,7 +157,7 @@ Plus `gone` — tension ≥ 100 at any moment. The Heir choice appears only on `
 
 ## 14. Rules v3 (approved by the owner 07.11.2026, implemented in `engine.js` behind `rules: 'v3'`)
 
-Source: `docs/math/economy-report.md` §4 (proposals P1–P9). The owner approved P1, P3, P4, P5, P6, P7 and P9; P2 (learning sinks) and P8 (the Shells leaving costs silk) are **not** adopted for now. `baseline-2d-1` and `v2` are unchanged; `v2` stays the engine default. The commitment schema (`ftf:leaf:v2|…`, `ftf:key:v2|…`, `ftf:seed:v2|…`) is unchanged, so the `season-commit` contract and its test vectors need no update.
+Source: `docs/math/economy-report.md` §4 (proposals P1–P9). The owner approved P1, P3, P4, P5, P6, P7 and P9 first, then (later on 07.11) P2 (learning sinks) and P8 (the Shells leaving costs silk) as well; all nine are in `v3`. `baseline-2d-1` and `v2` are unchanged; `v2` stays the engine default. The commitment schema (`ftf:leaf:v2|…`, `ftf:key:v2|…`, `ftf:seed:v2|…`) is unchanged, so the `season-commit` contract and its test vectors need no update.
 
 | # | Rule in v2 | Rule in v3 | Where |
 |---|---|---|---|
@@ -168,5 +168,7 @@ Source: `docs/math/economy-report.md` §4 (proposals P1–P9). The owner approve
 | P6 | If the top bidder cannot pay at closing, the shard burns even when funded bids exist. | The highest bid that is still covered wins. | `resolveShards` |
 | P7 | A debt can be forgotten on any tick; a claim bought after the due date never settles (`due === tick` only). | `forget` rejects a debt memory with `due < tick + 2` (reason **`debt_due`**): the auction closes on or before the due tick. Claims with `due <= tick` settle in `startTick`. | `forget`, `startTick` |
 | P9 | "Accept" needs ≥ 4 of 6; a 3:3 tie means reject. | ≥ 4 of 6, or exactly 3 **with Iris among the yes votes** (`tally`). | `tally`, `castVote` |
+| P2 (approved later on 07.11) | A question costs 5 silk whatever the answer; mediation burns 15 silk; Frost sells a word for 12. | A "no" from the Guests **refunds the 5 silk** (the question still costs attention); mediation costs **10, paid 5 + 5 to the two reconciled clans** (a transfer, nothing burned); Frost's word costs **8**. Salt (7) and Amber (10) unchanged. | `V3.askRefundOnNo / mediateCost / frostWord`, `askGuests`, `mediate`, `offSell` |
+| P8 (approved later on 07.11) | Outcome `gone` (tension ≥ 100) ends the season and everyone keeps their silk. | Every clan keeps `round(silk · V3.goneKeep)` with **goneKeep = 0**: the Shells leaving wipes the silk of the world exactly like the weapon does; the loss per clan is recorded in `S.goneLoss`. Size chosen from the counterfactual in `docs/math/economy-report.md` §9: keeping 1/2 or 1/4 still left `late-defect-none` above the honest cooperator. | `V3.goneKeep`, `finish` |
 
 New identifiers that need UI text: outcome `proof_failed`, rejection reason `debt_due` (added to `src/locales/en.js` and `ru.js`). Tests: `game/tests/v3.test.mjs` (13 tests, one or more per proposal, each of the six review findings replayed under v3). Simulation under v3: `npm run sim -- --rules v3 --no-findings --out docs/math/v3` (the findings script's brute-force replica is written for the v2 RNG and is not applicable to v3).

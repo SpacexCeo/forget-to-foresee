@@ -14,7 +14,7 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | SHA-256, Merkle root of the season's events, verification of every reveal | **works**, covered by test vectors | `game/src/game/crypto.js` |
 | Headless game engine: all prototype rules | **works**, matches the 2D prototype move for move on 60 seasons | `game/src/game/engine.js` |
 | Rules v2: 32-byte CSPRNG salts with domain separation, approved defect fixes | **works**, proven not to change gameplay | `game/src/game/engine.js` |
-| Rules v3 (owner-approved 07.11): success-conditional deferred prizes and 60/30 finale bonus, exact Gift split, proof-bound reveal (void on mismatch), 128-bit CSPRNG seed + secret-free client projection, funded-bid fallback, debt/claim timing, Iris breaks 3:3 | **works**, opt-in `rules: 'v3'` (engine default stays v2); 13 tests replay the six review findings | `game/src/game/engine.js`, `docs/rules-baseline.md` §14 |
+| Rules v3 (owner-approved 07.11): success-conditional deferred prizes and 60/30 finale bonus, learning without silk sinks, the Shells leaving wipes silk, exact Gift split, proof-bound reveal (void on mismatch), 128-bit CSPRNG seed + secret-free client projection, funded-bid fallback, debt/claim timing, Iris breaks 3:3 | **works**, opt-in `rules: 'v3'` (engine default stays v2); 13 tests replay the six review findings | `game/src/game/engine.js`, `docs/rules-baseline.md` §14 |
 | 3D client skeleton (Three.js): floating-archipelago scene, isometric camera that zooms down to third person, WASD and click-to-move, kinematic capsule with swept collision at a fixed 30 Hz, `.glb` streaming with labeled greybox stand-ins, F3 dev HUD | **works** as a greybox skeleton; game rules are not wired into it yet | `game/index.html`, `game/src/` |
 | Asset review page (dev): one model by name, runtime / `_inspect` / `_col` / sockets toggles, budgets and measurements | **works** | `game/review.html` |
 | Scene inside a Shell | **not started** | — |
@@ -47,11 +47,11 @@ cd game
 npm install
 npm test
 ```
-**See:** `tests 157 · pass 157`.
+**See:** `tests 162 · pass 162`.
 - 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
 - 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
 - 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
-- 13 tests cover rules v3: each approved proposal (P1, P3, P4, P5, P6, P7, P9) and each of the six commercial-review findings replayed and neutralised; v2 and baseline pinned unchanged alongside.
+- 18 tests cover rules v3: each approved proposal (P1–P9: prizes, learning sinks, Gift split, proof-bound reveal, 128-bit seed, funded-bid fallback, debt timing, the Shells leaving costs silk, tie-break) and each of the six commercial-review findings replayed and neutralised; v2 and baseline pinned unchanged alongside.
 - 31 tests cover the 3D client's pure logic: swept capsule collision (no tunneling through a zero-thickness wall at 15 m/s or in a single 20 m move, same end point at 10 and 144 FPS), camera sphere sweep, ray cast, fixed 30 Hz step, respawn at the last safe point, streaming priority / load plan / LRU, asset naming conventions, and the world layout (walk times, bridges, Shell hover bounds).
 - 33 tests cover the UI layer: ICU formatting, en/ru key parity and no raw keys, the engine-text adapter over 120 scripted seasons, the language switch mid-season, recipe hash stability (save → reload → low tier → reset), idempotent tournament enrollment, onboarding order, palette contrast and colour-independent tells.
 - 3 tests pin the Monte Carlo harness (`npm run sim -- --quick`): deterministic records, zero rejected intents, balanced silk ledger. Results and analysis: [docs/math/economy-report.md](docs/math/economy-report.md).
