@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs",
-    "fixtures": "node scripts/gen-fixtures.mjs"
+    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs tests/sim.test.mjs",
+    "fixtures": "node scripts/gen-fixtures.mjs",
+    "sim": "node scripts/sim/run.mjs",
+    "sim:quick": "node scripts/sim/run.mjs --quick --out docs/math"
   },
   "dependencies": {
     "three": "^0.170.0"
