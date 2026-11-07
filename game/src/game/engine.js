@@ -8,9 +8,18 @@ import { sha256, merkle, proofFor, verifyProof, short } from './crypto.js';
  *  'v2' (default) adds CSPRNG salts with domain separation and the defect fixes
  *  approved on 07.11 (docs/rules-baseline.md §12–13). 'v2-crypto' = v2 salts
  *  without the fixes; it exists to prove the salts do not change gameplay. */
-export const RULES_VERSIONS = ['baseline-2d-1', 'v2', 'v2-crypto'];
-const strong = () => S.rulesVersion === 'v2' || S.rulesVersion === 'v2-crypto';
-const fixes = () => S.rulesVersion === 'v2';
+/** 'v3' = v2 plus the economy changes approved on 07.11 (docs/rules-baseline.md §14): deferred,
+ *  success-conditional prizes with a larger finale bonus (P1), exact Gift apportionment (P3), the
+ *  reveal recomputes the leaf and voids the season on mismatch (P4), a 128-bit CSPRNG seed and a
+ *  hash-based game RNG (P5), auctions fall back to the next funded bid (P6), debts cannot be
+ *  forgotten within one tick of their due date and overdue claims settle (P7), Iris breaks a 3:3 vote (P9).
+ *  The commitment schema (leaf, key and seed preimages) stays 'v2', so the contract vectors hold. */
+export const RULES_VERSIONS = ['baseline-2d-1', 'v2', 'v2-crypto', 'v3'];
+const strong = () => S.rulesVersion === 'v2' || S.rulesVersion === 'v2-crypto' || S.rulesVersion === 'v3';
+const fixes = () => S.rulesVersion === 'v2' || S.rulesVersion === 'v3';
+const v3 = () => S.rulesVersion === 'v3';
+/** v3 economy constants (P1). */
+export const V3 = { finaleGift: 60, finaleSurvived: 30, prizeScale: 2 / 3, debtForgetGap: 2 };
 const defaultRandomBytes = (n) => { const a = new Uint8Array(n); globalThis.crypto.getRandomValues(a); return a; };
 let randomBytes = defaultRandomBytes;
 const rhex = (bytes) => Array.from(randomBytes(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -41,7 +50,18 @@ export const DEFAULT_PHRASE = 'я помню то, чего ещё не было
 export let S = null;
 
 /* ---------- rng (state lives in S.rs, so snapshots replay exactly) ---------- */
-function rnd() { S.rs = (S.rs + 0x6D2B79F5) | 0; let t = S.rs; t = Math.imul(t ^ t >>> 15, 1 | t); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+function rnd() {
+  if (S.rng) return rnd3();
+  S.rs = (S.rs + 0x6D2B79F5) | 0; let t = S.rs; t = Math.imul(t ^ t >>> 15, 1 | t); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+/** v3 game RNG (P5): SHA-256 in counter mode over the 128-bit seed; 8 draws of 32 bits per block.
+ *  The state {ctr, i, block} lives in S.rng so snapshots replay exactly. */
+function rnd3() {
+  const r = S.rng;
+  if (r.i >= 8) { r.block = sha256(`ftf:rng:v3|${S.seed}|${r.ctr++}`); r.i = 0; }
+  const x = parseInt(r.block.slice(r.i * 8, r.i * 8 + 8), 16); r.i++;
+  return x / 4294967296;
+}
 const ri = (n) => Math.floor(rnd() * n);
 function pickW(ws) { const s = ws.reduce((a, b) => a + b, 0); let r = rnd() * s; for (let i = 0; i < ws.length; i++) { r -= ws[i]; if (r < 0) return i; } return ws.length - 1; }
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = ri(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -67,6 +87,11 @@ export function newSeason(seed, opts = {}) {
   if (!RULES_VERSIONS.includes(S.rulesVersion)) throw new Error('unknown rules ' + S.rulesVersion);
   randomBytes = opts.randomBytes || defaultRandomBytes;
   if (strong()) { S.seasonId = rhex(8); S.seedSalt = rhex(32); }
+  if (v3()) {
+    // P5: the numeric seed is ignored; the season runs on a 128-bit seed from the CSPRNG (or opts.seedHex), never brute-forceable from reveals.
+    if (opts.seedHex != null && !/^[0-9a-f]{32}$/.test(opts.seedHex)) throw new Error('seedHex must be 32 lowercase hex characters');
+    S.seed = opts.seedHex || rhex(16); delete S.rs; S.rng = { ctr: 0, i: 8, block: '' };
+  }
   for (let i = 0; i < 6; i++) S.T.push([50, 50, 50, 50, 50, 50]);
   S.perm = [0, 1, 2, 3].map(() => shuffle([0, 1, 2, 3]));
   S.events = [];
@@ -81,7 +106,7 @@ export function newSeason(seed, opts = {}) {
   }
   S.levels = merkle(S.events.map((e) => e.leaf));
   S.root = S.levels[S.levels.length - 1][0];
-  S.seedCommit = strong() ? sha256(`ftf:seed:v2|${S.seasonId}|${seed}|${S.seedSalt}`) : sha256('seed:' + seed);
+  S.seedCommit = strong() ? sha256(`ftf:seed:v2|${S.seasonId}|${S.seed}|${S.seedSalt}`) : sha256('seed:' + seed);
   S.truthGift = rnd() < .6;
   S.keyHolder = rnd() < .6 ? 2 : 4;
   S.frag = NAMES.map((_, i) => {
@@ -89,6 +114,7 @@ export function newSeason(seed, opts = {}) {
     return { owner: i, m, dots, forms: encodeForms(m, dots), key: i === S.keyHolder, st: 'held', at: null };
   });
   S.V = [[30, 40, 50, 60][ri(4)], 20 + ri(4) * 10, 30 + ri(3) * 10, 20 + ri(3) * 10, 80, 20 + ri(3) * 10];
+  if (v3()) S.V = S.V.map((v) => Math.round(v * V3.prizeScale)); // P1 "A": 30..60 -> 20..40 for Iris, Amber 80 -> 53
   S.tV = [11 + ri(5), 17, 18, 18, 15, 13 + ri(5)];
   const pp = PEPEL_PHRASES[ri(PEPEL_PHRASES.length)], ps = saltFor(8);
   S.pepelKey = { phrase: pp, salt: ps, hash: keyCommit(pp, ps) };
@@ -190,8 +216,10 @@ function startTick() {
     if (rnd() < PERS[X].h) { const a = fixes() ? Math.min(m.data.amount, Math.max(0, S.silk[X])) : m.data.amount; S.silk[X] -= a; S.silk[0] += a; trustAdd(0, X, 10); log(`${NAMES[X]} вернул долг: +${a} шёлка.`, 'good'); fx('walk', { from: X, to: 0, kind: 'silk' }); }
     else { addMem({ kind: 'betrayal', about: X, w: 3, text: `${NAMES[X]} не вернул долг ${m.data.amount}` }); trustAdd(0, X, -40); addH(6); breakEdge(0, X); log(`${NAMES[X]} не вернул долг. Ирис порвала с ним.`, 'bad'); }
   }
-  for (const c of S.claims.filter((c) => c.due === t)) { if (rnd() < PERS[c.debtor].h) { if (fixes()) c.amount = Math.min(c.amount, Math.max(0, S.silk[c.debtor])); S.silk[c.debtor] -= c.amount; S.silk[c.holder] += c.amount; log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`, 'muted'); } }
-  S.claims = S.claims.filter((c) => c.due !== t);
+  // P7 (v3): a claim whose due date has passed settles now instead of lingering forever.
+  const claimDue = (c) => (v3() ? c.due <= t : c.due === t);
+  for (const c of S.claims.filter(claimDue)) { if (rnd() < PERS[c.debtor].h) { if (fixes()) c.amount = Math.min(c.amount, Math.max(0, S.silk[c.debtor])); S.silk[c.debtor] -= c.amount; S.silk[c.holder] += c.amount; log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`, 'muted'); } }
+  S.claims = S.claims.filter((c) => !claimDue(c));
   const pm = S.mem.find((m) => m.kind === 'promise');
   if (pm && pm.data.by === t && S.frag[0].st === 'held') contribute(0, `Ирис держит слово перед ${NAMES[pm.about]} и вносит фрагмент.`);
   for (const [k, by] of Object.entries(S.aiPact)) {
@@ -213,8 +241,10 @@ function startTick() {
 
 function tickPrizesAndSocial(t) {
   for (let i = 0; i < 6; i++) if (S.frag[i].st === 'held' && S.tV[i] === t) {
-    S.frag[i].st = 'dark'; S.silk[i] += S.V[i];
-    log(i === 0 ? `Вы удержали фрагмент и получили ${S.V[i]} шёлка. Ваша часть послания погасла.` : `${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}). Его часть послания погасла.`, i === 0 ? 'good' : 'bad');
+    S.frag[i].st = 'dark';
+    // P1 "D" (v3): the prize is only promised here; it is paid at the finale, and only if the message succeeds without the holder.
+    if (v3()) { S.frag[i].prize = S.V[i]; log(i === 0 ? `Вы удержали фрагмент: приз ${S.V[i]} ждёт финала — если послание прочтут без вас.` : `${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}, выплата в финале). Его часть послания погасла.`, i === 0 ? 'good' : 'bad'); }
+    else { S.silk[i] += S.V[i]; log(i === 0 ? `Вы удержали фрагмент и получили ${S.V[i]} шёлка. Ваша часть послания погасла.` : `${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}). Его часть послания погасла.`, i === 0 ? 'good' : 'bad'); }
     fx('dark', { i });
     if (i !== 0) for (let j = 1; j < 6; j++) if (j !== i) S.T[j][i] = clamp(S.T[j][i] - 10, 0, 100);
   }
@@ -259,6 +289,7 @@ function crisis() {
 export function endTick() {
   if (S.phase !== 'play') return false;
   resolveEvent(S.tick);
+  if (S.phase === 'end') { bump(); return true; } // v3: the reveal failed its proof, the season is void
   S.offers = [];
   addH(-2);
   if (S.H >= 100) { finish('gone'); return true; }
@@ -274,13 +305,17 @@ function resolveEvent(t) {
   const e = S.events[idx], truth = [e.place, e.action, e.power, e.delay - 1];
   const rd = readGlyph(e.forms, e.dots);
   const ok = truth.filter((v, s) => rd.sl[s].m === v).length;
-  const verified = verifyProof(e.leaf, proofFor(S.levels, idx), S.root);
+  // P4 (v3): the leaf is recomputed from the very fields that are about to be paid out; a mismatch
+  // (edited field, wrong path or root) voids the season before any silk moves. v2 only logs the result.
+  const verified = (!v3() || leafHash(e, idx) === e.leaf) && verifyProof(e.leaf, proofFor(S.levels, idx), S.root);
+  if (v3() && !verified) { log(`Лист №${idx} не сходится с корнем. Сезон недействителен.`, 'bad'); fx('event', { place: null, action: null, power: null, idx, verified: false }); finish('proof_failed'); return; }
   const here = S.anchors.filter((a) => a.t === t), hit = here.filter((a) => a.place === e.place);
   here.filter((a) => a.place !== e.place).forEach((a) => { S.silk[a.c] += a.stake; });
   const pot = [10, 20, 40, 80][e.power];
   if (e.action === 0) {
     const W = hit.reduce((s, a) => s + (t - a.at + 1), 0);
-    hit.forEach((a) => { const g = Math.round(pot * (t - a.at + 1) / W); S.silk[a.c] += a.stake + g; if (a.c === 0) log(`Дар на Раковине ${SHORT[0][e.place]}: вам ${g} шёлка и залог.`, 'good'); });
+    const shares = v3() ? apportion(pot, hit.map((a) => t - a.at + 1)) : hit.map((a) => Math.round(pot * (t - a.at + 1) / W)); // P3: exact split in v3
+    hit.forEach((a, k) => { const g = shares[k]; S.silk[a.c] += a.stake + g; if (a.c === 0) log(`Дар на Раковине ${SHORT[0][e.place]}: вам ${g} шёлка и залог.`, 'good'); });
     if (hit.length && !hit.some((a) => a.c === 0)) log(`Дар забрали: ${[...new Set(hit.map((a) => NAMES[a.c]))].join(', ')}.`, 'muted');
   } else if (e.action === 1) {
     hit.forEach((a) => { if (a.c === 0) log(`Буря на Раковине ${SHORT[0][e.place]} сожгла ваш залог.`, 'bad'); });
@@ -297,6 +332,18 @@ function resolveEvent(t) {
   log(`Тик ${t} · Раковина ${SHORT[0][e.place]}: ${MEAN[1][e.action]}, сила ${pot}. Лист №${idx} сверен с корнем ${verified ? '✓' : '✗'}`);
   fx('event', { place: e.place, action: e.action, power: e.power, idx, verified });
   checkBought();
+}
+
+/** Largest-remainder apportionment (P3): integer shares proportional to weights that sum exactly to `pot`.
+ *  Ties in the fractional part go to the earlier entry (the earlier anchor). */
+export function apportion(pot, weights) {
+  const W = weights.reduce((a, b) => a + b, 0);
+  if (!weights.length || W <= 0) return weights.map(() => 0);
+  const exact = weights.map((w) => pot * w / W), shares = exact.map(Math.floor);
+  let left = pot - shares.reduce((a, b) => a + b, 0);
+  const order = exact.map((x, i) => i).sort((a, b) => (exact[b] - shares[b]) - (exact[a] - shares[a]) || a - b);
+  for (let k = 0; left > 0; k = (k + 1) % order.length, left--) shares[order[k]]++;
+  return shares;
 }
 
 function aiAnchors() {
@@ -386,6 +433,8 @@ function resolveShards() {
     sh.done = true; sh.doneAt = S.tick;
     let top = topBid(sh);
     if (top && S.silk[top.c] < top.amt) top = null;
+    // P6 (v3): an unfunded top bid no longer burns the sale; the highest bid that is still covered wins.
+    if (!top && v3()) top = [...sh.bids].sort((a, b) => b.amt - a.amt).find((b) => S.silk[b.c] >= b.amt) || null;
     if (!top) { sh.result = 'Никто не купил. Осколок сгорел, этого больше нет в истории мира.'; if (sh.from === 0) S.forgot[sh.fg].fate = 'сгорело'; log(`Осколок «${sh.title}» сгорел.`, 'muted'); continue; }
     S.silk[top.c] -= top.amt; S.silk[sh.from] += top.amt; sh.winner = top.c;
     if (sh.from === 0) S.forgot[sh.fg].fate = `купил ${NAMES[top.c]} за ${top.amt}`;
@@ -477,6 +526,8 @@ export function forget(id, purpose = 'vision') {
   if (!m) return no('no_memory');
   if (S.ap < 1) return no('no_ap');
   if (purpose === 'key') { const k = keyVisionStatus(); if (!k.open) return no('key_closed'); if (!k.enoughCells) return no('need_language'); if (m.w < 3) return no('memory_too_light'); }
+  // P7 (v3): a debt whose auction would close after its due date cannot be forgotten (the claim would be overdue, hence worthless).
+  if (v3() && m.kind === 'debt' && m.data.due < S.tick + V3.debtForgetGap) return no('debt_due');
   S.mem = S.mem.filter((x) => x !== m); S.ap--;
   if (m.kind === 'betrayal') { S.T[0][m.about] = 50; if (isBroken(0, m.about)) { restoreEdge(0, m.about); log(`Ирис забыла обиду и снова говорит с ${NAMES[m.about]}.`); } }
   if (m.kind === 'gift') S.T[0][m.about] = clamp(S.T[0][m.about] - 15, 0, 100);
@@ -595,6 +646,7 @@ export function contributeMine() {
 export function castVote(acceptMine) {
   if (S.phase !== 'vote') return no('phase');
   resolveEvent(S.tick);
+  if (S.phase === 'end') { bump(); return OK; } // v3: the tick-17 reveal failed its proof, the season is void
   const key = S.frag[S.keyHolder], keyIn = key.st === 'scroll';
   const votes = [acceptMine];
   for (let i = 1; i < 6; i++) {
@@ -604,20 +656,48 @@ export function castVote(acceptMine) {
     votes.push(g);
   }
   S.votes = votes;
-  const accept = votes.filter(Boolean).length >= 4;
+  const accept = tally(votes);
   const contrib = S.frag.filter((f) => f.st === 'scroll').map((f) => f.owner);
+  const bonusGift = v3() ? V3.finaleGift : 40, bonusSurvived = v3() ? V3.finaleSurvived : 15;
   let o;
-  if (S.truthGift && accept) { contrib.forEach((i) => (S.silk[i] += 40)); o = 'gift'; }
+  if (S.truthGift && accept) { contrib.forEach((i) => (S.silk[i] += bonusGift)); o = 'gift'; }
   else if (!S.truthGift && accept) { S.silk = S.silk.map(() => 0); o = 'weapon'; }
-  else if (!S.truthGift && !accept) { contrib.forEach((i) => (S.silk[i] += 15)); o = 'survived'; }
+  else if (!S.truthGift && !accept) { contrib.forEach((i) => (S.silk[i] += bonusSurvived)); o = 'survived'; }
   else o = 'lost';
+  // P1 "D" (v3): deferred prizes are paid only when the message succeeded without the holder.
+  if (v3() && (o === 'gift' || o === 'survived')) for (const f of S.frag) if (f.prize) { S.silk[f.owner] += f.prize; f.prizePaid = true; log(`${NAMES[f.owner]} получает отложенный приз ${f.prize} шёлка: послание прочли без него.`, 'muted'); }
   finish(o); bump();
   return OK;
+}
+/** Vote outcome: "accept" needs 4 of 6; in v3 a 3:3 tie follows Iris's vote (P9), otherwise a tie means reject. */
+export function tally(votes) {
+  const yes = votes.filter(Boolean).length;
+  return yes >= 4 || (v3() && yes === 3 && !!votes[0]);
 }
 
 export function setHeir(v) { if (S.phase !== 'end') return no('phase'); S.heir = v; bump(); return OK; }
 
 /** Drains queued visual effects for the 3D layer. */
 export function takeFx() { const q = S.fx; S.fx = []; return q; }
+
+/** What the player's client may see (P5): a deep copy of the state without the seed, the RNG state, the
+ *  truth, other clans' prizes, Ash's phrase, unpublished events, unresolved meanings, held fragments'
+ *  glyphs, offer honesty and AI valuations. Any transport to a client must send this, never `S`. */
+export function clientProjection(src = S) {
+  const p = JSON.parse(JSON.stringify(src));
+  for (const k of ['rs', 'rng', 'seed', 'seedSalt', 'truthGift', 'keyHolder', 'fx', 'aiSeen']) delete p[k];
+  p.V = p.V.map((v, i) => (i === 0 ? v : null)); p.tV = p.tV.map((v, i) => (i === 0 ? v : null));
+  p.pepelKey = { hash: p.pepelKey.hash };
+  p.events = p.events.map((e, i) => {
+    if (e.t < src.tick || (e.t === src.tick && src.chron.some((c) => c.idx === i))) return e; // revealed: everything, salt included
+    if (e.pub <= src.tick || src.visions.includes(i)) return { pub: e.pub, forms: e.forms, dots: e.dots, leaf: e.leaf }; // published: the sign, not its meaning
+    return { leaf: e.leaf };
+  });
+  p.frag = p.frag.map((f) => (f.owner === 0 || f.st === 'scroll' ? f : { owner: f.owner, st: f.st, at: f.at, prize: f.prize ?? undefined, prizePaid: f.prizePaid ?? undefined }));
+  p.offers = p.offers.map(({ honest, ...o }) => o);
+  p.bought = p.bought.map((b) => (b.revealed ? b : (({ honest, ...rest }) => rest)(b)));
+  p.shards = p.shards.map(({ vals, ...sh }) => sh);
+  return p;
+}
 
 export { sha256, short, verifyProof, proofFor };

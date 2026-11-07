@@ -37,6 +37,8 @@ function weakestCell(S, api) {
   return best;
 }
 const mem = (S, kind) => S.mem.find((m) => m.kind === kind);
+// Debt dumping: forget the debt as late as the rules allow (v3 forbids forgetting within two ticks of the due date).
+const dumpGap = (S) => (S.rulesVersion === 'v3' ? 2 : 1);
 
 /** Builds one factorial strategy. `ctx` is per-tick scratch space owned by the harness (ctx.n = anchors placed this tick). */
 export function makeStrategy({ frag, trust, market }, extra = {}) {
@@ -74,7 +76,7 @@ export function makeStrategy({ frag, trust, market }, extra = {}) {
         if (S.pepelKeyKnown && S.isolated[2]) return { type: 'speak' };
       } else {
         const pm = mem(S, 'promise'); if (pm && S.tick >= pm.data.by - 6) return { type: 'forget', id: pm.id, purpose: 'vision' };
-        const dm = S.mem.find((x) => x.kind === 'debt' && x.data.due === S.tick + 1); if (dm) return { type: 'forget', id: dm.id, purpose: 'vision' }; /* debt dumping */
+        const dm = S.mem.find((x) => x.kind === 'debt' && x.data.due === S.tick + dumpGap(S)); if (dm) return { type: 'forget', id: dm.id, purpose: 'vision' }; /* debt dumping */
         const bm = mem(S, 'betrayal'); if (bm) return { type: 'forget', id: bm.id, purpose: 'vision' };
       }
       /* fragment dimension */
@@ -123,7 +125,7 @@ export const oracle = {
 export const debtdump = makeStrategy({ frag: 'coop', trust: 'honest', market: 'none' }, { name: 'debtdump' });
 const dumpInner = debtdump.act;
 debtdump.act = function (S, api, pr, ctx) {
-  if (S.phase === 'play' && S.ap >= 1) { const dm = S.mem.find((x) => x.kind === 'debt' && x.data.due === S.tick + 1); if (dm) return { type: 'forget', id: dm.id, purpose: 'vision' }; }
+  if (S.phase === 'play' && S.ap >= 1) { const dm = S.mem.find((x) => x.kind === 'debt' && x.data.due === S.tick + dumpGap(S)); if (dm) return { type: 'forget', id: dm.id, purpose: 'vision' }; }
   return dumpInner.call(this, S, api, pr, ctx);
 };
 

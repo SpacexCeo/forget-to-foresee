@@ -239,6 +239,7 @@ export default {
   'outcome.survived': 'оружие отвергнуто',
   'outcome.lost': 'дар отвергнут',
   'outcome.gone': 'Раковины ушли',
+  'outcome.proof_failed': 'сезон аннулирован: раскрытие не совпало с коммитом',
 
   'reason.phase': 'не в этой фазе',
   'reason.no_ap': 'внимание на этот тик закончилось',
@@ -263,6 +264,7 @@ export default {
   'reason.already_leading': 'ваша ставка и так первая',
   'reason.too_late': 'вносить уже поздно',
   'reason.no_fragment': 'фрагмент уже не у вас',
+  'reason.debt_due': 'долг слишком скоро к оплате, чтобы его забыть',
 
   'agent.iris': 'Ирис',
   'agent.salt': 'Соль',
