@@ -1152,7 +1152,6 @@ VIEWS = {
     "front": ((0, -17.5, 3.6), (0, 0, 3.4), 45),
     "three_quarter": ((11.0, -13.0, 5.4), (0, 0, 3.4), 45),
     "back_three_quarter": ((-10.5, 12.0, 6.5), (0, 0, 3.6), 45),
-    "close_crown": ((2.2, -4.6, 6.4), (0, -0.4, 5.6), 50),
 }
 
 
@@ -1172,7 +1171,7 @@ def assign_action(rig, name):
     return act
 
 
-def stage_render(samples=192):
+def stage_render(samples=96):
     from PIL import Image
     clock = K.StageClock()
     clock.start("qa_renders")
@@ -1182,7 +1181,9 @@ def stage_render(samples=192):
     sc.render.fps = FPS
     env = K.new_collection("Review")
     studio(sc, env)
-    bpy.ops.import_scene.gltf(filepath=GLB_PATH)
+    # Blender's importer cannot decode EXT_meshopt_compression: render the uncompressed export
+    # (identical geometry, skin and clips; textures before KTX2 encoding).
+    bpy.ops.import_scene.gltf(filepath=GLB_RAW if os.path.exists(GLB_RAW) else GLB_PATH)
     rig = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
     out = os.path.join(QA_DIR, "final")
     os.makedirs(out, exist_ok=True)
@@ -1199,7 +1200,7 @@ def stage_render(samples=192):
     tiles = []
     cam = K.add_camera("Cam_sheet", (9.0, -12.5, 5.0), (0, -0.6, 3.6), lens=40)
     sc.render.resolution_x = sc.render.resolution_y = 520
-    sc.cycles.samples = 96
+    sc.cycles.samples = 48
     tmp = os.path.join(out, "_tile.jpg")
     rows = []
     for clip, frames in (("idle", (0, 60, 120, 180)), ("draw", (0, 30, 60, 90)), ("react", (0, 6, 14, 40))):
