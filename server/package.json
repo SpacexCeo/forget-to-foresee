@@ -1,0 +1,14 @@
+{
+  "name": "forget-to-foresee-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Agent-playable API: authoritative rooms over the game engine (no dependencies; reuses ../game modules).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test tests/room.test.mjs tests/http.test.mjs tests/security.test.mjs tests/equivalence.test.mjs tests/demo.test.mjs tests/world.test.mjs"
+  }
+}
