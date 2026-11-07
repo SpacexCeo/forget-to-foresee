@@ -9,6 +9,7 @@ import { mountConstructor } from './hologram/constructor.js';
 import { mountBackground } from './background.js';
 import { buildLangToggle } from './settings.js';
 import { saveRecipe, loadRecipe, recipeHash, DEFAULT_RECIPE } from './hologram/recipe.js';
+import { actionButton } from './controls.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const s = (tag, attrs = {}, ...kids) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); kids.forEach((c) => el.appendChild(c)); return el; };
@@ -80,7 +81,7 @@ export function mountOnboarding(root, opts = {}) {
   }
 
   const heading = (key) => h('h1', { i18n: key, attrs: { tabindex: '-1' } });
-  const primary = (key, fn) => h('button', { class: 'ftf-btn ftf-btn-primary', i18n: key, attrs: { type: 'button' }, on: { click: fn } });
+  const primary = (key, fn) => actionButton({ key, variant: 'primary', symbol: 'arrow', trailing: true, onClick: fn });
 
   function viewEntitlement() {
     return h('section', { class: 'ftf-card' },

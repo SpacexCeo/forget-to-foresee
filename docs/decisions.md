@@ -3,6 +3,14 @@
 This file carries context between machines and sessions. New session: read it in full, then `docs/spec.md`, `docs/hackathon-rules.md` and `README.md`.
 Last updated: 07.11.2026.
 
+## Current UI continuation (07.11.2026)
+
+- Owner requested preservation of the premium visual identity, reusable buttons and visual cues, with Impeccable as the design workflow.
+- Owner then requested **Dark Souls-style controls** and explicitly selected **keyboard/mouse plus gamepad**. This direction supersedes the earlier input/camera preference where the two conflict; preserve collision, the noncombat mechanics, and the never-first-person constraint.
+- Work continues on `codex/premium-ui`, isolated from Claude's active scene, UI, art and engine branches. The owner requested a cloud continuation so work can proceed while the local PC is off.
+- The initial button/icon refinement is a checkpoint, not the completed feature. Input support, scene integration, visual verification and the UI reference remain pending. Exact continuation scope and ownership notes: `docs/ui-cloud-handoff.md`.
+- All new work and communication are English, per `AGENTS.md`; historical language requirements below are superseded.
+
 ## 1. Hackathon
 - NEAR Hackathon, 1–14 November 2026. **Submission deadline: 15.11.2026 01:59 Kyiv.** Rules and checklist: `docs/hackathon-rules.md`.
 - Team: RAEN Computers. RAEN's core product is an NFT agent with its own wallet (an "NFT computer with an agent").
