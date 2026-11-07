@@ -227,3 +227,44 @@ npm test                               # 78 tests incl. 3 harness tests
 ```
 
 Options: `--seasons N`, `--seed0 N`, `--strategies a,b`, `--rules v2|baseline-2d-1|v2-crypto`, `--no-findings`.
+## 8. Rules v3 (implemented 07.11) versus v2
+
+The owner approved P1, P3, P4, P5, P6, P7 and P9 (not P2, not P8); they are implemented in `engine.js` as rule mode `v3` (`docs/rules-baseline.md` §14) with 13 tests in `game/tests/v3.test.mjs`. The same harness was run under v3: `npm run sim -- --rules v3 --no-findings --out docs/math/v3` (seeds 1..10000 per strategy, 17 strategies, 305 s, 1.79 ms per season; 0 rejected intents, 0 unexplained silk). Tables: `docs/math/v3/sim-tables.md`. Seeds are not paired across v2 and v3: v3 runs on a 128-bit seed drawn from the seeded byte source, so the same seed number produces a different season; all comparisons below are between means with 95% CIs. The findings script (`findings.mjs`) is v2-only (its brute-force replica is the mulberry32 RNG); under v3 the six findings are covered by the tests.
+
+### 8.1 What changed, honestly
+
+| measure | v2 | v3 | verdict |
+| --- | --- | --- | --- |
+| hold − coop, honest Iris without market play (final silk) | 95.8 − 84.3 = **+11.5** | 85.9 − 103.0 = **−17.1** | contributing now wins; `hold` loses in all four trust × market contexts (76–129 vs 92–140) |
+| best fragment response | hold in 3 of 4 contexts | `late` (contribute at tV−1) in 4 of 4, `coop` within 0.1–7 silk of it | fragment dimension flipped; late ≈ coop because the finale bonus does not depend on timing |
+| best trust response | defect in 6 of 6 (+10…+65) | defect in 6 of 6 (+9…+44) | **unchanged**: P2/P8 were not adopted, so breaking trust still pays and `gone` still keeps silk |
+| best market response | none in 6 of 6 | none in 6 of 6 | **unchanged**: questions, words and mediation remain net sinks (P2 not adopted) |
+| passive final silk | 138.0 ± 1.0 | 105.0 ± 1.1 | passive lost its guaranteed prize: V is 2/3 and paid only on gift/survived (its prize column fell from 44.5 to 19.0) |
+| coop-honest-none vs passive | −53.7 ± 1.0 | **−2.0 ± 1.1** | an honest cooperator is now at par with doing nothing; not yet above it |
+| coop-honest-anchor vs passive | −61.9 ± 1.1 | −12.7 ± 1.1 | the anchoring cooperator still loses to passive because of the learning sinks |
+| hold-defect-none vs passive | +23.0 | +24.4 | the best exploit is unchanged in size; it is now beaten by `late-defect-none` (+35.1) |
+| finale bonus collected by coop-honest-none | 23.2 | 42.0 | 60/30 bonus; P(gift) 47.5% → 57.1% |
+| outcome mix, coop-honest-none (gift / lost / survived / weapon / gone) | 47.5 / 10.9 / 38.7 / 2.4 / 0.4 % | 57.1 / 2.8 / 35.2 / 4.5 / 0.3 % | P9: Iris's vote breaks 3:3 ties, so `lost` collapses (−8 pp) and `weapon` doubles (+2 pp) — the tie-break cuts both ways |
+| 3:3 ties | 11–27% | 12–28% | frequency unchanged; they are now decided by Iris |
+| Gift pool drift | +0.2% minted, 24% of events misround | **0 / 0** over 58 357 claimed events | P3 holds |
+| shards burned with a funded second bidder (`bidder`) | 426 (2 885 silk) | **0** | P6 holds; `bidder` still buys 95% of Frost's shards |
+| overdue claims transferred (`debtdump`) | 214 (2 996 silk paid for nothing) | **0** | P7: debts are now forgotten two ticks before due and the claim settles on the due tick; debtors still buy back their own debt (19 338 ×) |
+| tension, P(gone) | honest 0.2–2.5%, defect 16–33% | honest 0.3–2.3%, defect 16–34% | unchanged (P8 not adopted) |
+| Gini (all clans) | 0.10–0.16 | 0.08–0.14 | Amber's guaranteed 80 became a conditional 53; the richest clan is now Frost or Amber depending on the strategy |
+| oracle vs honest anchorer | +165 | 259.7 vs 92.3 = +167 | the oracle strategy reads `S.events` directly; under v3 the seed is unguessable, so this is now the server-leak ceiling, not a brute-force result |
+
+### 8.2 Reading
+
+- P1 does what the counterfactual predicted (§4 said −23.6 for A+D on re-priced v2 seasons; the full re-simulation gives −17.1, because deferred prizes also change the AI clans' silk and therefore their bids and anchors). Holding is no longer a dominant or even a good fragment strategy for Iris, and Amber's prize is no longer a free 80.
+- The remaining dominant strategy is still "break trust and do not play the market" (`late-defect-none`, 140.1; +35 over passive). That is the expected consequence of leaving P2 and P8 out: the price of betrayal is paid by the world (P(gone) 30%) while the betrayer keeps the silk, and every learning action is still a sink. Those two levers are the next decision for the owner.
+- P9 trades `lost` for `weapon`: with Iris as the tie-breaker, a cooperative Iris who misreads the key sign now accepts a weapon in 4.5% of seasons (2.4% in v2). If that is undesirable, the alternative is an odd electorate or abstention without the key sign, not a return to "tie = reject".
+- Integrity (P4, P5, P6, P7) changes no distribution except where it should: 0 pool drift, 0 burned funded sales, 0 overdue claims, and tampered reveals end the season (`proof_failed`) instead of paying out.
+
+### 8.3 Reproduce v3
+
+```bash
+cd game
+npm test                                                   # 157 tests incl. 13 for v3
+npm run sim -- --rules v3 --quick --no-findings             # 300 seasons per strategy
+npm run sim -- --rules v3 --no-findings --out docs/math/v3  # 10000 seasons per strategy, ~5 min
+```
