@@ -100,7 +100,8 @@ export function runSeason(seed, strategy, opts = {}) {
       rec.actions[it.type] = (rec.actions[it.type] || 0) + 1;
       if (it.type === 'anchor') { ctx.n++; rec.anchors.placed++; }
       if (it.type === 'forget') { rec.forgot++; if (it.purpose !== 'key') rec.visions++; }
-      const d = before - S.silk[0];
+      let d = before - S.silk[0];
+      if (S.outcome === 'gone' && S.goneLoss) { d -= S.goneLoss[0]; rec.in.finale -= S.goneLoss[0]; } // v3 P8: the world-loss is a finale item, not an action cost
       if (d > 0) {
         if (it.type === 'anchor') rec.out.anchor += d;
         else if (it.type === 'ask') rec.out.ask += d;
@@ -125,7 +126,9 @@ export function runSeason(seed, strategy, opts = {}) {
     const prizeNow = heldPrize && S.frag[0].st === 'dark' && rules !== 'v3' ? S.V[0] : 0; // v3 defers the prize to the finale
     rec.in.prize += prizeNow;
     const known = (rec.in.stakeBack - stakeBefore) + (rec.in.giftShare - giftBefore) + (rec.in.shardSale - saleBefore) - (rec.out.bids - bidsBefore) + prizeNow;
-    const residual = S.silk[0] - before - (advanced ? 3 : 0) - known;
+    const goneLoss = S.outcome === 'gone' && S.goneLoss ? S.goneLoss[0] : 0; // v3 P8
+    rec.in.finale -= goneLoss;
+    const residual = S.silk[0] - before - (advanced ? 3 : 0) - known + goneLoss;
     if (residual > 0) rec.in.repay += residual; else if (residual < 0) rec.in.other += residual;
     rec.H.push(S.H);
     if (advanced && S.tick === E.CRISIS) rec.crisis = { Hbefore, Hafter: S.H, edgesBroken: S.broken.length - brokenBefore, ashIsolated: S.isolated[2] };
@@ -138,7 +141,7 @@ export function runSeason(seed, strategy, opts = {}) {
     dark: S.frag.filter((f) => f.st === 'dark').length, irisFrag: S.frag[0].st, votes: accepts, tie: accepts === 3,
     keySpoken: S.pepelKeyKnown && !S.isolated[2], ashIsolated: S.isolated[2], ashFrag: S.frag[2].st, amberFrag: S.frag[4].st,
     broken: S.broken.length, irisBroken: S.broken.filter((k) => k.startsWith('0-')).length, wild: S.wild,
-    firstBuyer: S.firstBuyer, trustInIris: [1, 2, 3, 4, 5].map((i) => S.T[i][0]),
+    firstBuyer: S.firstBuyer, trustInIris: [1, 2, 3, 4, 5].map((i) => S.T[i][0]), goneLoss: S.goneLoss ? S.goneLoss[0] : 0,
   };
   rec.totals = { out: sum(rec.out), in: sum(rec.in) };
   return rec;

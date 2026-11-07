@@ -19,7 +19,14 @@ const strong = () => S.rulesVersion === 'v2' || S.rulesVersion === 'v2-crypto' |
 const fixes = () => S.rulesVersion === 'v2' || S.rulesVersion === 'v3';
 const v3 = () => S.rulesVersion === 'v3';
 /** v3 economy constants (P1). */
-export const V3 = { finaleGift: 60, finaleSurvived: 30, prizeScale: 2 / 3, debtForgetGap: 2 };
+export const V3 = {
+  finaleGift: 60, finaleSurvived: 30, prizeScale: 2 / 3, debtForgetGap: 2,
+  // P2 (approved 07.11): learning is no longer a silk sink. A "no" from the Guests refunds the question,
+  // mediation costs 10 paid to the two reconciled clans (a transfer, not a burn), Frost's word costs 8.
+  askRefundOnNo: true, mediateCost: 10, frostWord: 8,
+  // P8 (approved 07.11): when the Shells leave, every clan keeps this fraction of its silk (0 = all lost, like the weapon).
+  goneKeep: 0,
+};
 const defaultRandomBytes = (n) => { const a = new Uint8Array(n); globalThis.crypto.getRandomValues(a); return a; };
 let randomBytes = defaultRandomBytes;
 const rhex = (bytes) => Array.from(randomBytes(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -375,7 +382,7 @@ function offSell(from) {
   if (!c.length) return null;
   const [s, f] = c[ri(c.length)], tm = S.perm[s][f], honest = rnd() < PERS[from].h;
   let m = tm; if (!honest) { do { m = ri(4); } while (m === tm); }
-  return { from, kind: 'sell', s, f, m, honest, price: from === 5 ? 12 : from === 4 ? 10 : 7 };
+  return { from, kind: 'sell', s, f, m, honest, price: from === 5 ? (v3() ? V3.frostWord : 12) : from === 4 ? 10 : 7 };
 }
 function genOffers() {
   const t = S.tick; S.offers = [];
@@ -460,7 +467,11 @@ function applyShard(sh, w) {
   } else S.mast[w] = Math.min(.95, S.mast[w] + .05);
 }
 
-function finish(outcome) { S.outcome = outcome; S.phase = 'end'; fx('end', { outcome }); }
+function finish(outcome) {
+  // P8 (v3): the Shells leaving is a loss for everyone in silk, not only in story.
+  if (outcome === 'gone' && v3()) { S.goneLoss = S.silk.map((s) => s - Math.round(s * V3.goneKeep)); S.silk = S.silk.map((s, i) => s - S.goneLoss[i]); log('Раковины ушли. Шёлк мира обесценился.', 'bad'); }
+  S.outcome = outcome; S.phase = 'end'; fx('end', { outcome });
+}
 
 /* ======================= player actions =======================
  * Each action returns { ok: true } or { ok: false, reason }.
@@ -499,6 +510,7 @@ export function askGuests(s, f, m) {
     const b = S.bought.find((x) => x.s === s && x.f === f && !x.honest && !x.revealed); if (b) revealLie(b);
   } else {
     (S.no[k] = S.no[k] || []).push(m); log(`Гости: нет, это не «${MEAN[s][m]}».`, 'muted');
+    if (v3() && V3.askRefundOnNo) { S.silk[0] += 5; log('Гости вернули шёлк за вопрос без ответа.', 'muted'); } // P2: a "no" costs attention, not silk
     const b = S.bought.find((x) => x.s === s && x.f === f && x.m === m && !x.revealed); if (b) revealLie(b);
     const left = [0, 1, 2, 3].filter((x) => !S.no[k].includes(x)); if (left.length === 1) S.pins[k] = { m: left[0], src: 'Гости' };
   }
@@ -593,8 +605,10 @@ export function mediate(i, j) {
   if (S.isolated[i] || S.isolated[j]) return no('isolated');
   if (S.T[i][0] < 40 || S.T[j][0] < 40) return no('no_trust');
   if (S.ap < 1) return no('no_ap');
-  if (S.silk[0] < 15) return no('no_silk');
-  S.ap--; S.silk[0] -= 15; restoreEdge(i, j);
+  const cost = v3() ? V3.mediateCost : 15;
+  if (S.silk[0] < cost) return no('no_silk');
+  S.ap--; S.silk[0] -= cost; restoreEdge(i, j);
+  if (v3()) { S.silk[i] += cost / 2; S.silk[j] += cost / 2; } // P2: the fee goes to the two clans, nothing is burned
   S.T[i][j] = S.T[j][i] = 45; if (fixes()) { S.T[i][0] = clamp(S.T[i][0] + 5, 0, 100); S.T[j][0] = clamp(S.T[j][0] + 5, 0, 100); } else { S.T[i][0] += 5; S.T[j][0] += 5; } // baseline: no clamp (rules-baseline §12)
   log(`Ирис помирила ${NAMES[i]} и ${NAMES[j]}.`, 'good');
   return done();
