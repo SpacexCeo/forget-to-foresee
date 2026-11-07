@@ -75,7 +75,7 @@ test('no raw keys: every static key referenced from src/ui exists in en', () => 
     if (!(m[1] in en)) missing.push(`${m[1]} (${file.split(/[\\/]/).slice(-2).join('/')})`);
   }
   assert.deepEqual(missing, []);
-  assert.ok(count >= 0, `expected the scan to find UI keys, found ${count}`);
+  assert.ok(count > 50, `expected the scan to find UI keys, found ${count}`);
 });
 
 test('no raw keys: dynamic key families are complete', () => {
