@@ -162,7 +162,8 @@ export function planRoute(fromPos, placeName) {
   if (!dest || dest.zone !== 'island') return null;
   const { nodes } = walkGraph();
   const start = nearestNodeOnSameRegion(fromPos);
-  const goal = nodes.has(placeName) ? placeName : null;
+  const alias = placeName === 'plaza' ? 'scroll' : placeName; // the plaza's standing spot is the Scroll's
+  const goal = nodes.has(alias) ? alias : null;
   if (!goal) return null;
   const ids = dijkstra(start, goal);
   if (!ids) return null;

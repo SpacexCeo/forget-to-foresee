@@ -1,0 +1,445 @@
+openapi: 3.1.0
+info:
+  title: Forget to Foresee agent API
+  version: 1.0.0
+  summary: Play a full Forget to Foresee season as an autonomous agent, without a browser.
+  description: |
+    Every player-facing mechanic is exposed here. The HTTP server (`server/`) and the browser run
+    the same authoritative room code (`game/src/net/room.js`), which calls the game engine for every
+    rules outcome; there is no second rules implementation.
+
+    * **Test sessions only.** No real accounts, no wallet, no signing, no transfers. Silk is an
+      in-game number. Minting the final card is a voluntary human wallet action and is never exposed.
+    * **Discover, then act.** `GET /v1/actions` is the machine-readable catalog (JSON Schema params,
+      preconditions, costs, rejection reasons, implemented vs planned). For a session,
+      `GET .../actions` lists concrete argument sets with `available` and the failing preconditions.
+    * **Commands** are envelopes `{actionId, expectedVersion, type, args}`. `actionId` is an
+      idempotency key: a retry with the same key returns the stored result (header
+      `Idempotent-Replayed: true`), reusing it for another command is `409 idempotency_key_reused`.
+      `expectedVersion` must equal `observation.version`, else `409 version_conflict` and nothing
+      is applied.
+    * **Observations are per viewer.** The controller (guiding Iris) sees Iris's inventory,
+      memories, offers, auctions and visions; helpers see public state only. Hidden engine state
+      (seed, salts, truth, AI valuations, unpublished events) is never sent.
+    * **World rules.** In `proximity` sessions rules actions need the avatar in the right place
+      (Scroll, camp, anchor zone, glass wall). `move` walks along the navigation graph and takes
+      simulated time (`timeScale` simulated seconds per real second).
+    * **Limits.** Commands 20/s (burst 40) per token, reads 50/s (burst 100), session creation
+      0.5/s (burst 10) per address; `429` carries `Retry-After`. Bodies are at most 16 KiB.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://127.0.0.1:8787
+    description: Local server (`node server/src/main.js`)
+security:
+  - bearer: []
+tags:
+  - name: discovery
+  - name: sessions
+  - name: play
+  - name: audit
+paths:
+  /v1/health:
+    get:
+      tags: [discovery]
+      security: []
+      summary: Liveness check
+      responses:
+        '200':
+          description: Server is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  service: { type: string }
+                  apiVersion: { type: string, const: v1 }
+  /v1/openapi.yaml:
+    get:
+      tags: [discovery]
+      security: []
+      summary: This document
+      responses:
+        '200':
+          description: OpenAPI 3.1 YAML
+          content:
+            application/yaml: {}
+  /v1/actions:
+    get:
+      tags: [discovery]
+      security: []
+      summary: Action catalog
+      description: Every action with its JSON Schema parameters, preconditions, costs, rejection reasons and status (`implemented` or `planned`). Planned actions answer `501`.
+      responses:
+        '200':
+          description: Catalog
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Catalog' }
+  /v1/sessions:
+    post:
+      tags: [sessions]
+      security: []
+      summary: Create a test session; the caller becomes the controller (Iris)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSession' }
+      responses:
+        '201':
+          description: Created. Keep `token` secret; share `inviteCode` with helpers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Joined' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}/join:
+    post:
+      tags: [sessions]
+      security: []
+      summary: Join as a helper with the invite code (at most 4 members)
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inviteCode]
+              additionalProperties: false
+              properties:
+                inviteCode: { type: string, pattern: '^[0-9a-f]{16}$' }
+                name: { type: string, maxLength: 32 }
+      responses:
+        '201':
+          description: Joined
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Joined' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}/leave:
+    post:
+      tags: [sessions]
+      summary: Leave the session and revoke this token
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      responses:
+        '200': { description: Left }
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}:
+    get:
+      tags: [sessions]
+      summary: Session info and your role
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      responses:
+        '200': { description: Session info }
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}/observation:
+    get:
+      tags: [play]
+      summary: Everything this player may see now
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      responses:
+        '200':
+          description: Per-viewer observation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  observation: { $ref: '#/components/schemas/Observation' }
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}/actions:
+    get:
+      tags: [play]
+      summary: Concrete actions for this player now, with failing preconditions
+      description: Engine guards are evaluated by a dry run of the real engine action on a copy of the state.
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      responses:
+        '200':
+          description: Candidate actions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  version: { type: integer }
+                  actions:
+                    type: array
+                    items: { $ref: '#/components/schemas/CandidateAction' }
+  /v1/sessions/{sessionId}/commands:
+    post:
+      tags: [play]
+      summary: Run one action
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Command' }
+      responses:
+        '200':
+          description: Applied. `events` holds what this player saw happen as a result.
+          headers:
+            Idempotent-Replayed:
+              description: '"true" when this is the stored result of an earlier identical command'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+        '422':
+          description: Rejected by a precondition, the world layer or an engine guard; nothing applied. Stored under the actionId.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rejected' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '501': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}/events:
+    get:
+      tags: [play]
+      summary: Events visible to this player after a sequence number
+      parameters:
+        - { $ref: '#/components/parameters/sessionId' }
+        - { name: after, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        '200':
+          description: Events in sequence order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  lastSeq: { type: integer }
+                  events: { type: array, items: { $ref: '#/components/schemas/Event' } }
+  /v1/sessions/{sessionId}/events/stream:
+    get:
+      tags: [play]
+      summary: Server-sent events (resume with Last-Event-ID or ?after=)
+      parameters:
+        - { $ref: '#/components/parameters/sessionId' }
+        - { name: after, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: Last-Event-ID, in: header, schema: { type: integer } }
+      responses:
+        '200':
+          description: '`text/event-stream`; each message has `id` (seq), `event` (type) and `data` (an Event as JSON). Heartbeat comments every 15 s.'
+          content:
+            text/event-stream: {}
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/sessions/{sessionId}/history:
+    get:
+      tags: [audit]
+      summary: Auditable command history (others' commands without private details)
+      parameters: [{ $ref: '#/components/parameters/sessionId' }]
+      responses:
+        '200': { description: History entries in order }
+  /v1/sessions/{sessionId}/proofs/{index}:
+    get:
+      tags: [audit]
+      summary: Merkle proof of a revealed event against the committed season root
+      parameters:
+        - { $ref: '#/components/parameters/sessionId' }
+        - { name: index, in: path, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          description: Proof (canonical event, salt, leaf, path, root, verified)
+        '403':
+          description: Not revealed yet
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: Per-session test token (`ftf_` + 64 hex) from create or join. Authorizes game actions in that session only.
+  parameters:
+    sessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^s-[0-9a-f]{16}$' }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: { const: false }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [invalid_request, invalid_params, unknown_action, unknown_rules, unauthorized, forbidden, not_found, version_conflict, idempotency_key_reused, action_rejected, not_implemented, rate_limited, payload_too_large, session_full, capacity, not_revealed, internal]
+            message: { type: string }
+            errors:
+              type: array
+              items: { type: object, properties: { path: { type: string }, message: { type: string } } }
+            currentVersion: { type: integer }
+            retryAfterSeconds: { type: integer }
+    CreateSession:
+      type: object
+      additionalProperties: false
+      properties:
+        rules: { type: string, description: 'Engine rules mode; one of `rulesVersions` in the catalog. Default v3.' }
+        worldRules: { type: string, enum: [proximity, free], default: proximity }
+        timeScale: { type: number, minimum: 0.1, maximum: 1000, default: 1 }
+        name: { type: string, maxLength: 32 }
+        label: { type: string, maxLength: 64 }
+        seed: { type: integer, minimum: 0, maximum: 4294967295, description: 'Test servers only (legacy modes). Marked clientChoseSeed.' }
+        seedHex: { type: string, pattern: '^[0-9a-f]{32}$', description: 'Test servers only (v3). Marked clientChoseSeed.' }
+    Joined:
+      type: object
+      properties:
+        ok: { type: boolean }
+        sessionId: { type: string }
+        playerId: { type: string }
+        role: { type: string, enum: [controller, helper] }
+        token: { type: string }
+        inviteCode: { type: string, description: Only on create }
+        session: { $ref: '#/components/schemas/SessionInfo' }
+        version: { type: integer }
+    SessionInfo:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        rules: { type: string }
+        worldRules: { type: string }
+        timeScale: { type: number }
+        clientChoseSeed: { type: boolean }
+        testSession: { const: true }
+        realMoney: { const: false }
+    Command:
+      type: object
+      required: [actionId, expectedVersion, type]
+      properties:
+        actionId: { type: string, pattern: '^[A-Za-z0-9._:-]{8,128}$', description: Idempotency key, unique per command }
+        expectedVersion: { type: integer, description: observation.version this command is based on }
+        type: { type: string, description: Action type from the catalog }
+        args: { type: object, description: Must match the action's params schema }
+    CommandResult:
+      type: object
+      properties:
+        ok: { const: true }
+        actionId: { type: string }
+        type: { type: string }
+        version: { type: integer }
+        result: { type: object }
+        events: { type: array, items: { $ref: '#/components/schemas/Event' } }
+        replayed: { type: boolean }
+    Rejected:
+      type: object
+      properties:
+        ok: { const: false }
+        actionId: { type: string }
+        type: { type: string }
+        version: { type: integer }
+        events: { type: array, items: { $ref: '#/components/schemas/Event' } }
+        error:
+          type: object
+          properties:
+            code: { const: action_rejected }
+            reason: { type: string, description: 'e.g. not_near, in_transit, phase, no_ap, no_silk, too_late' }
+            source: { type: string, enum: [precondition, world, rules] }
+            message: { type: string }
+            failed: { type: array, items: { $ref: '#/components/schemas/Failure' } }
+    Failure:
+      type: object
+      properties:
+        id: { type: string, description: Precondition id from the catalog, or engine_guards / world }
+        source: { type: string, enum: [precondition, world, rules, permission] }
+        reason: { type: string }
+        message: { type: string }
+    CandidateAction:
+      type: object
+      properties:
+        type: { type: string }
+        args: { type: object }
+        available: { type: boolean }
+        failed: { type: array, items: { $ref: '#/components/schemas/Failure' } }
+    Event:
+      type: object
+      properties:
+        seq: { type: integer }
+        type: { type: string, description: 'e.g. action.result, fx, iris.log, world.arrived, world.zone_changed, member.joined' }
+        simTime: { type: number }
+        tick: { type: integer }
+        visibility: { type: string, enum: [public, private] }
+        data: { type: object }
+    Observation:
+      type: object
+      description: Per-viewer projection. Controller-only fields are marked.
+      properties:
+        apiVersion: { const: v1 }
+        session: { $ref: '#/components/schemas/SessionInfo' }
+        version: { type: integer }
+        simTime: { type: number }
+        you: { type: object, description: 'playerId, role, zone, shell, position [x,y,z], walking {to, arriveAt} or null, place' }
+        members: { type: array, items: { type: object } }
+        season: { type: object, description: 'seasonId, rules, merkleRoot, commitments, tick, ticks, phase (intro|play|vote|end), tension, outcome, votes' }
+        scroll: { type: array, items: { type: object } }
+        chronicle: { type: array, items: { type: object } }
+        proofs: { type: array, items: { type: object } }
+        prophecies: { type: array, items: { type: object } }
+        relationships: { type: object }
+        iris: { type: object, description: Controller only }
+        inventory: { type: object, description: Controller only }
+        memories: { type: array, description: Controller only }
+        dictionary: { type: object, description: Controller only }
+        offers: { type: array, description: Controller only }
+        auctions: { type: array, description: Controller only }
+        logograms: { type: array, description: Controller only }
+        log: { type: array, description: Controller only }
+        clues: { type: array }
+        availableActions: { type: array, items: { type: object, properties: { type: { type: string }, args: { type: object } } } }
+    Catalog:
+      type: object
+      properties:
+        apiVersion: { type: string }
+        catalogVersion: { type: string }
+        rulesVersions: { type: array, items: { type: string } }
+        defaultRules: { type: string }
+        preconditions: { type: object }
+        commonErrors: { type: object }
+        enums: { type: object }
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              kind: { type: string, enum: [rules, world, chain] }
+              status: { type: string, enum: [implemented, planned] }
+              roles: { type: array, items: { type: string } }
+              summary: { type: string }
+              params: { type: object, description: JSON Schema }
+              preconditions: { type: array, items: { type: string } }
+              costs: { type: object }
+              errors: { type: object }
+              backedBy: { type: [string, 'null'] }

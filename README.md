@@ -23,6 +23,7 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | Hologram constructor with canonical recipe hash | **works**, cosmetic only | `game/src/ui/hologram/` |
 | Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
 | NEAR contract `season-commit`: season schedule root commitment, **on-chain verification** of each revealed event's Merkle proof, Ash's key commit-reveal | **builds and passes tests** (pure vector tests on any OS; mocked-chain and local sandbox tests in CI); **not deployed to testnet yet** (owner deploys with one command) | `contracts/season-commit/` |
+| Agent-playable API: every player action over HTTP (OpenAPI 3.1, action catalog with JSON Schemas, idempotent version-checked commands, per-viewer observations, navigation-bound movement, SSE events, audit history, Merkle proofs) and an example agent that plays a full season | **works** locally (`npm start` in `server/`); 28 tests; the 3D client does not use it yet | `server/`, `game/src/net/`, [docs/api/](docs/api/README.md) |
 | NEAR NEP-171 fragment NFTs, escrow | **not started** | — |
 | 3D art: Scroll table, memory shard, four Shell exteriors (glTF, procedural Blender sources, GPU-baked PBR) | **models exported, owner review pending**; loaded by the game by filename (streaming, KTX2) | `game/public/assets/models/`, `art/`, QA renders in `docs/art/qa/` |
 
@@ -38,9 +39,19 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | 3D art | labeled greybox placeholders ("not final art") until each `.glb` from `docs/art/brief.md` is in `game/public/assets/models/` (**mock art**) |
 | Paid access check | **mock**: a free synthetic demo entitlement stored in the browser, clearly labeled |
 | Weekly tournament | **mock**: synthetic schedule, enrollment and results on the device, labeled "simulation" |
+| Agent API sessions | **real** server logic, but test sessions only: in-memory, per-session tokens, no accounts or money |
 | Season generator | 32-bit seed (mulberry32): fine for a demo, not brute-force resistant; production needs a 128-bit seed and a CSPRNG stream |
 
 ## Run
+
+### Agent API
+```bash
+cd game && npm install
+cd ../server && npm start          # API on http://127.0.0.1:8787/v1
+node examples/agent.mjs --time-scale 1000   # second terminal
+npm test
+```
+**See:** the agent walks, contributes, anchors and votes, then prints the season outcome; `tests 28 · pass 28`. Details: [docs/api/README.md](docs/api/README.md).
 
 ### Engine tests
 ```bash
