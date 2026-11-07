@@ -1,7 +1,7 @@
 // Canonical, comparable view of a season: drops UI-only and presentation fields.
 import { createHash } from 'node:crypto';
 
-const DROP = new Set(['feed', 'ui', 'fx', 'version']);
+const DROP = new Set(['feed', 'ui', 'fx', 'version', 'rulesVersion']);
 
 function canon(v) {
   if (Array.isArray(v)) return v.map(canon);

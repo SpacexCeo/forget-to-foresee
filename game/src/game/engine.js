@@ -4,7 +4,24 @@
 // visual side effects are queued in S.fx for the 3D scenes.
 import { sha256, merkle, proofFor, verifyProof, short } from './crypto.js';
 
-export const RULES_VERSION = 'baseline-2d-1';
+/** 'baseline-2d-1' reproduces the 2D prototype bit for bit (parity tests).
+ *  'v2' (default) adds CSPRNG salts with domain separation and the defect fixes
+ *  approved on 07.11 (docs/rules-baseline.md §12–13). 'v2-crypto' = v2 salts
+ *  without the fixes; it exists to prove the salts do not change gameplay. */
+export const RULES_VERSIONS = ['baseline-2d-1', 'v2', 'v2-crypto'];
+const strong = () => S.rulesVersion === 'v2' || S.rulesVersion === 'v2-crypto';
+const fixes = () => S.rulesVersion === 'v2';
+const defaultRandomBytes = (n) => { const a = new Uint8Array(n); globalThis.crypto.getRandomValues(a); return a; };
+let randomBytes = defaultRandomBytes;
+const rhex = (bytes) => Array.from(randomBytes(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
+/** Keeps the game RNG sequence identical to the prototype: the legacy salt is still drawn, then replaced. */
+function saltFor(legacyHexLen) { const legacy = hex(legacyHexLen); return strong() ? rhex(32) : legacy; }
+function leafHash(e, idx) {
+  const body = JSON.stringify({ t: e.t, place: e.place, action: e.action, power: e.power, delay: e.delay, dots: e.dots });
+  return strong() ? sha256(`ftf:leaf:v2|${S.seasonId}|${idx}|${body}|${e.salt}`) : sha256(body + e.salt);
+}
+/** Commitment to a secret phrase (the player's or Пепел's key). */
+export function keyCommit(phrase, salt) { return strong() ? sha256(`ftf:key:v2|${S.seasonId}|${phrase}|${salt}`) : sha256(phrase + salt); }
 export const TICKS = 17, DEADLINE = 16, CRISIS = 13;
 export const NAMES = ['Ирис', 'Соль', 'Пепел', 'Мох', 'Янтарь', 'Иней'];
 export const PERS = [null,
@@ -38,7 +55,7 @@ function encodeForms(m, dots) {
 }
 
 /* ---------- season ---------- */
-export function newSeason(seed) {
+export function newSeason(seed, opts = {}) {
   S = {
     seed, rs: seed, tick: 1, phase: 'intro', uid: 0, H: 10, ap: 3, wild: false, rule: 'unknown',
     silk: [60, 60, 60, 60, 60, 60], mast: [0, .12, .1, .08, .1, .18], T: [], broken: [], isolated: [false, false, false, false, false, false],
@@ -46,6 +63,10 @@ export function newSeason(seed) {
     aiSeen: {}, aiPact: {}, pPromise: null, escrow: 0, claims: [], rumor: false, pepelKeyKnown: false, firstBuyer: null,
     outcome: null, heir: null, votes: null, fx: [], version: 0,
   };
+  S.rulesVersion = opts.rules || 'v2';
+  if (!RULES_VERSIONS.includes(S.rulesVersion)) throw new Error('unknown rules ' + S.rulesVersion);
+  randomBytes = opts.randomBytes || defaultRandomBytes;
+  if (strong()) { S.seasonId = rhex(8); S.seedSalt = rhex(32); }
   for (let i = 0; i < 6; i++) S.T.push([50, 50, 50, 50, 50, 50]);
   S.perm = [0, 1, 2, 3].map(() => shuffle([0, 1, 2, 3]));
   S.events = [];
@@ -53,14 +74,14 @@ export function newSeason(seed) {
     const action = T === 3 ? 0 : pickW([40, 24, 16, 20]);
     const power = T === 3 ? 1 : pickW([34, 36, 22, 8]);
     const delay = 1 + ri(Math.min(4, T - 1));
-    const e = { t: T, place: ri(4), action, power, delay, pub: T - delay, dots: ri(4), salt: hex(12) };
+    const e = { t: T, place: ri(4), action, power, delay, pub: T - delay, dots: ri(4), salt: saltFor(12) };
     e.forms = encodeForms([e.place, e.action, e.power, e.delay - 1], e.dots);
-    e.leaf = sha256(JSON.stringify({ t: e.t, place: e.place, action: e.action, power: e.power, delay: e.delay, dots: e.dots }) + e.salt);
+    e.leaf = leafHash(e, S.events.length);
     S.events.push(e);
   }
   S.levels = merkle(S.events.map((e) => e.leaf));
   S.root = S.levels[S.levels.length - 1][0];
-  S.seedCommit = sha256('seed:' + seed);
+  S.seedCommit = strong() ? sha256(`ftf:seed:v2|${S.seasonId}|${seed}|${S.seedSalt}`) : sha256('seed:' + seed);
   S.truthGift = rnd() < .6;
   S.keyHolder = rnd() < .6 ? 2 : 4;
   S.frag = NAMES.map((_, i) => {
@@ -69,8 +90,8 @@ export function newSeason(seed) {
   });
   S.V = [[30, 40, 50, 60][ri(4)], 20 + ri(4) * 10, 30 + ri(3) * 10, 20 + ri(3) * 10, 80, 20 + ri(3) * 10];
   S.tV = [11 + ri(5), 17, 18, 18, 15, 13 + ri(5)];
-  const pp = PEPEL_PHRASES[ri(PEPEL_PHRASES.length)], ps = hex(8);
-  S.pepelKey = { phrase: pp, salt: ps, hash: sha256(pp + ps) };
+  const pp = PEPEL_PHRASES[ri(PEPEL_PHRASES.length)], ps = saltFor(8);
+  S.pepelKey = { phrase: pp, salt: ps, hash: keyCommit(pp, ps) };
   S.pKey = null;
   addMem({ kind: 'first', w: 4, text: 'Первое слово: Ключ владельца, который знает только Ирис' });
   addMem({ kind: 'call', w: 2, text: 'Зов Раковин в ночь прибытия' });
@@ -86,8 +107,8 @@ export function loadState(state) { S = state; if (!S.fx) S.fx = []; if (S.versio
 export function startGame(phrase) {
   if (S.phase !== 'intro') return;
   const v = (phrase || '').trim() || DEFAULT_PHRASE;
-  const salt = hex(8);
-  S.pKey = { phrase: v, salt, hash: sha256(v + salt) };
+  const salt = saltFor(8);
+  S.pKey = { phrase: v, salt, hash: keyCommit(v, salt) };
   S.phase = S.tick === TICKS ? 'vote' : 'play';
   log(`Ключ владельца закоммичен: ${short(S.pKey.hash)}.`, 'key');
   bump();
@@ -166,10 +187,10 @@ function startTick() {
   resolveShards();
   for (const m of S.mem.filter((m) => m.kind === 'debt' && m.data.due === t)) {
     const X = m.about; S.mem = S.mem.filter((x) => x !== m);
-    if (rnd() < PERS[X].h) { const a = m.data.amount; S.silk[X] -= a; S.silk[0] += a; trustAdd(0, X, 10); log(`${NAMES[X]} вернул долг: +${a} шёлка.`, 'good'); fx('walk', { from: X, to: 0, kind: 'silk' }); }
+    if (rnd() < PERS[X].h) { const a = fixes() ? Math.min(m.data.amount, Math.max(0, S.silk[X])) : m.data.amount; S.silk[X] -= a; S.silk[0] += a; trustAdd(0, X, 10); log(`${NAMES[X]} вернул долг: +${a} шёлка.`, 'good'); fx('walk', { from: X, to: 0, kind: 'silk' }); }
     else { addMem({ kind: 'betrayal', about: X, w: 3, text: `${NAMES[X]} не вернул долг ${m.data.amount}` }); trustAdd(0, X, -40); addH(6); breakEdge(0, X); log(`${NAMES[X]} не вернул долг. Ирис порвала с ним.`, 'bad'); }
   }
-  for (const c of S.claims.filter((c) => c.due === t)) { if (rnd() < PERS[c.debtor].h) { S.silk[c.debtor] -= c.amount; S.silk[c.holder] += c.amount; log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`, 'muted'); } }
+  for (const c of S.claims.filter((c) => c.due === t)) { if (rnd() < PERS[c.debtor].h) { if (fixes()) c.amount = Math.min(c.amount, Math.max(0, S.silk[c.debtor])); S.silk[c.debtor] -= c.amount; S.silk[c.holder] += c.amount; log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`, 'muted'); } }
   S.claims = S.claims.filter((c) => c.due !== t);
   const pm = S.mem.find((m) => m.kind === 'promise');
   if (pm && pm.data.by === t && S.frag[0].st === 'held') contribute(0, `Ирис держит слово перед ${NAMES[pm.about]} и вносит фрагмент.`);
@@ -203,7 +224,7 @@ function tickPrizesAndSocial(t) {
     const ais = [1, 2, 3, 4, 5], b = ais[pickW(ais.map((i) => 1 - PERS[i].h))];
     const others = ais.filter((i) => i !== b && !isBroken(i, b));
     if (others.length) {
-      const v = others[ri(others.length)], amt = 8 + ri(10);
+      const v = others[ri(others.length)], drawn = 8 + ri(10), amt = fixes() ? Math.min(drawn, Math.max(0, S.silk[v])) : drawn;
       S.silk[v] -= amt; S.silk[b] += amt; S.T[v][b] = clamp(S.T[v][b] - 35, 0, 100); addH(6);
       log(`${NAMES[b]} обманул ${NAMES[v]} на ${amt} шёлка.`, 'bad');
       fx('walk', { from: b, to: v, kind: 'betray' });
@@ -436,10 +457,10 @@ export function askGuests(s, f, m) {
   return done();
 }
 
-/** Changing the reading rule is free. Like the 2D change handler, it does not settle tension. */
+/** Changing the reading rule is free. Baseline mirrors the 2D change handler (no settle); v2 settles. */
 export function setRule(r) {
   if (!['unknown', 'top', 'dots'].includes(r)) return no('bad_rule');
-  S.rule = r; checkBought(); bump();
+  S.rule = r; checkBought(); if (fixes()) settle(); bump();
   return OK;
 }
 
@@ -490,7 +511,7 @@ export function speakKey() {
   if (!S.pepelKeyKnown || !S.isolated[2]) return no('key_unavailable');
   if (S.ap < 1) return no('no_ap');
   S.ap--;
-  const h = sha256(S.pepelKey.phrase + S.pepelKey.salt);
+  const h = keyCommit(S.pepelKey.phrase, S.pepelKey.salt);
   if (h !== S.pepelKey.hash) { log('Ключ не совпал с коммитом.', 'bad'); return done(); }
   log(`Ирис произносит: «${S.pepelKey.phrase}». Хэш совпал с коммитом Пепла ✓`, 'key');
   S.isolated[2] = false;
@@ -523,7 +544,7 @@ export function mediate(i, j) {
   if (S.ap < 1) return no('no_ap');
   if (S.silk[0] < 15) return no('no_silk');
   S.ap--; S.silk[0] -= 15; restoreEdge(i, j);
-  S.T[i][j] = S.T[j][i] = 45; S.T[i][0] += 5; S.T[j][0] += 5; // baseline: no clamp (rules-baseline §12)
+  S.T[i][j] = S.T[j][i] = 45; if (fixes()) { S.T[i][0] = clamp(S.T[i][0] + 5, 0, 100); S.T[j][0] = clamp(S.T[j][0] + 5, 0, 100); } else { S.T[i][0] += 5; S.T[j][0] += 5; } // baseline: no clamp (rules-baseline §12)
   log(`Ирис помирила ${NAMES[i]} и ${NAMES[j]}.`, 'good');
   return done();
 }

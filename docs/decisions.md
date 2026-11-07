@@ -1,4 +1,14 @@
-# Forget to Foresee — журнал решений и контекст
+# Forget to Foresee — decisions and context
+
+## Current owner requirements — 7 November 2026
+
+- **Strict English-only rule:** all communication, new or changed documentation, UI, dialogue, game content, comments, and public materials must be in English. This supersedes earlier Russian communication and RU/EN delivery requirements. Historical notes below remain source material; untranslated player-facing text must not ship.
+- The current assessment targets a full commercial game, rather than only the hackathon demo.
+- Development hardware: **two RTX 5090 GPUs**. Their host layout and CPU/RAM/network specifications are not yet confirmed. Older three-GPU plans must be revised.
+- Tournament prizes are to be funded by **entry fees**. Earlier no-cash-prize scope is superseded as a product requirement; no live payments or deployments were requested in this assessment.
+- The intended market is international; the operator's country and initial eligible markets have not been selected.
+
+The remaining entries are historical context and may contain superseded requirements.
 
 Файл для переноса контекста между компьютерами и сессиями. Новая сессия: прочитай целиком, затем `docs/hackathon-rules.md` и `README.md`.
 Последнее обновление: 07.11.2026.

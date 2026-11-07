@@ -27,7 +27,7 @@ assert.ok(files.length >= 60, 'expected at least 60 parity fixtures');
 for (const f of files) {
   test(`parity ${f}`, () => {
     const fx = JSON.parse(readFileSync(DIR + f, 'utf8'));
-    E.newSeason(fx.seed);
+    E.newSeason(fx.seed, { rules: 'baseline-2d-1' });
     assert.equal(stateHash(E.S), fx.intents[0].h, 'initial state differs');
     fx.intents.slice(1).forEach((it, k) => {
       const r = applyToEngine(it);

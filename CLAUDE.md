@@ -1,10 +1,10 @@
 # Forget to Foresee
 
-Игра RAEN Computers для NEAR Hackathon (дедлайн 15.11.2026 01:59 по Киеву).
+A RAEN Computers game originating from the NEAR Hackathon. The recorded hackathon deadline is 15 November 2026, 01:59 Kyiv time; verify official requirements before submission.
 
-- В начале каждой сессии прочитай `docs/decisions.md` (контекст и решения) и `docs/hackathon-rules.md` (чек-лист подачи).
-- Общение с пользователем — на русском.
-- Принятые решения и смену курса записывай в `docs/decisions.md`.
-- Коммить маленькими шагами после каждого законченного куска и сразу пушь. Никаких секретов в репозитории.
-- README не обещает того, что не запускается; таблица real/mock держится актуальной.
-- Диск exFAT: git-команды запускай с `-c safe.directory=<путь к репо>`, если глобальное исключение не настроено.
+- At the beginning of each session, read `docs/decisions.md` for context and decisions, and `docs/hackathon-rules.md` for the submission checklist.
+- English only is a strict owner requirement: communication, documentation, UI, dialogue, game content, comments, and public materials must be in English. See `AGENTS.md`; this supersedes older Russian and RU/EN requirements.
+- Record accepted decisions and changes of direction in `docs/decisions.md`.
+- Make small commits after each completed implementation step and push immediately. Never include secrets in the repository.
+- Do not claim functionality in README that cannot be run; keep the real/mock table accurate.
+- The drive uses exFAT. Run Git with `-c safe.directory=<repository-path>` if no global exception is configured.
