@@ -1,0 +1,86 @@
+{
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_boundary",
+      "seconds": 0.48
+    },
+    {
+      "stage": "split_parts",
+      "seconds": 0.07
+    },
+    {
+      "stage": "collision_sockets",
+      "seconds": 0.02
+    },
+    {
+      "stage": "preview_renders",
+      "seconds": 13.5
+    }
+  ],
+  "hall": {
+    "rows": 215,
+    "ribs": 14,
+    "pitches": [
+      1.542,
+      1.167,
+      1.354,
+      1.313,
+      1.066,
+      1.206,
+      1.472,
+      1.453,
+      1.346,
+      1.291,
+      1.164,
+      1.086,
+      1.569,
+      1.371
+    ],
+    "rib_heights": [
+      0.923,
+      0.643,
+      0.829,
+      0.551,
+      0.802,
+      0.894,
+      0.8,
+      0.813,
+      0.687,
+      0.619,
+      0.759,
+      0.905,
+      0.872,
+      0.771
+    ],
+    "wall_faces": 34240,
+    "floor_faces": 5992
+  },
+  "closure_generated": {
+    "non_manifold_edges": 0,
+    "boundary_edges": 0,
+    "loose_verts": 0,
+    "signed_volume_m3": -6772.72,
+    "normals": "inward",
+    "euler_characteristic": 2,
+    "faces": 51700
+  },
+  "ray_escape_generated": {
+    "points": 98,
+    "directions": 2562,
+    "rays": 251076,
+    "escaped": 0,
+    "back_face_hits": 10,
+    "escaping_points": []
+  },
+  "triangles_by_object": {
+    "shell_interior_walls": 86048,
+    "shell_interior_floor": 16976,
+    "shell_interior_stairs": 740,
+    "floor_light_bezels": 1012,
+    "floor_lights": 46,
+    "chamber_pillars": 12580,
+    "logogram_glass": 2
+  },
+  "triangles_runtime": 117404
+}

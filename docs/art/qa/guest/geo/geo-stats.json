@@ -1,0 +1,38 @@
+{
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.03
+    },
+    {
+      "stage": "preview",
+      "seconds": 9.23
+    }
+  ],
+  "feet_reach_m": 2.12,
+  "triangles_by_object": {
+    "guest_body": 32400,
+    "guest_arm_draw": 800,
+    "guest_tip_crystal": 8,
+    "guest_core": 960,
+    "guest_sail_l": 1040,
+    "guest_sail_r": 1040,
+    "guest_sail_dorsal": 780,
+    "guest_fin_l": 288,
+    "guest_fin_r": 288
+  },
+  "triangles_total": 37604,
+  "bounds": {
+    "min": [
+      -3.917,
+      -3.035,
+      -1.653
+    ],
+    "max": [
+      3.918,
+      2.688,
+      6.89
+    ]
+  }
+}
