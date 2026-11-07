@@ -1,0 +1,1494 @@
+{
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "textures_bake",
+      "seconds": 76.79
+    },
+    {
+      "stage": "layout_geometry",
+      "seconds": 0.22
+    },
+    {
+      "stage": "materials_objects",
+      "seconds": 0.22
+    },
+    {
+      "stage": "sockets_export",
+      "seconds": 0.25
+    }
+  ],
+  "bridge_spans_m": {
+    "bridge_iris": 15.3,
+    "bridge_sol": 15.3,
+    "bridge_pepel": 15.3,
+    "bridge_moh": 15.3,
+    "bridge_yantar": 15.3,
+    "bridge_iney": 15.3,
+    "link_moh_yantar": 17.8,
+    "link_iris_iney": 17.8,
+    "link_sol_pepel": 17.8,
+    "bridge_balcony": 32.8
+  },
+  "materials": [
+    "M_Island_Foliage",
+    "M_Island_Gold",
+    "M_Island_Lantern",
+    "M_Island_Rock",
+    "M_Island_Stone"
+  ],
+  "objects": {
+    "island_balcony": 4687,
+    "island_iney": 7540,
+    "island_iris": 7752,
+    "island_moh": 10744,
+    "island_pepel": 7762,
+    "island_plaza": 12441,
+    "island_sol": 7990,
+    "island_yantar": 7782
+  },
+  "runtime_triangles_blender": 66698,
+  "collision_triangles_blender": {
+    "island_walk_col": 1176,
+    "island_wall_col": 2076
+  },
+  "lanterns": 40,
+  "bounds_blender_zup": {
+    "min": [
+      -45.07,
+      -49.76,
+      -49.0
+    ],
+    "max": [
+      39.95,
+      51.69,
+      5.36
+    ]
+  },
+  "layout": {
+    "platforms": {
+      "balcony": {
+        "center_client_xz": [
+          -23.0,
+          39.837
+        ],
+        "radius_m": 5.0
+      },
+      "camp_iney": {
+        "center_client_xz": [
+          25.981,
+          -15.0
+        ],
+        "radius_m": 6.5
+      },
+      "camp_iris": {
+        "center_client_xz": [
+          -0.0,
+          -30.0
+        ],
+        "radius_m": 6.5
+      },
+      "camp_moh": {
+        "center_client_xz": [
+          0.0,
+          30.0
+        ],
+        "radius_m": 6.5
+      },
+      "camp_pepel": {
+        "center_client_xz": [
+          -25.981,
+          15.0
+        ],
+        "radius_m": 6.5
+      },
+      "camp_sol": {
+        "center_client_xz": [
+          -25.981,
+          -15.0
+        ],
+        "radius_m": 6.5
+      },
+      "camp_yantar": {
+        "center_client_xz": [
+          25.981,
+          15.0
+        ],
+        "radius_m": 6.5
+      },
+      "plaza": {
+        "center_client_xz": [
+          0.0,
+          -0.0
+        ],
+        "radius_m": 9.0
+      }
+    },
+    "bridges": {
+      "bridge_iris": {
+        "from_client_xz": [
+          -0.0,
+          -8.6
+        ],
+        "to_client_xz": [
+          -0.0,
+          -23.9
+        ],
+        "length_m": 15.3,
+        "width_m": 2.4
+      },
+      "bridge_sol": {
+        "from_client_xz": [
+          -7.448,
+          -4.3
+        ],
+        "to_client_xz": [
+          -20.698,
+          -11.95
+        ],
+        "length_m": 15.3,
+        "width_m": 2.4
+      },
+      "bridge_pepel": {
+        "from_client_xz": [
+          -7.448,
+          4.3
+        ],
+        "to_client_xz": [
+          -20.698,
+          11.95
+        ],
+        "length_m": 15.3,
+        "width_m": 2.4
+      },
+      "bridge_moh": {
+        "from_client_xz": [
+          0.0,
+          8.6
+        ],
+        "to_client_xz": [
+          0.0,
+          23.9
+        ],
+        "length_m": 15.3,
+        "width_m": 2.4
+      },
+      "bridge_yantar": {
+        "from_client_xz": [
+          7.448,
+          4.3
+        ],
+        "to_client_xz": [
+          20.698,
+          11.95
+        ],
+        "length_m": 15.3,
+        "width_m": 2.4
+      },
+      "bridge_iney": {
+        "from_client_xz": [
+          7.448,
+          -4.3
+        ],
+        "to_client_xz": [
+          20.698,
+          -11.95
+        ],
+        "length_m": 15.3,
+        "width_m": 2.4
+      },
+      "link_moh_yantar": {
+        "from_client_xz": [
+          5.283,
+          26.95
+        ],
+        "to_client_xz": [
+          20.698,
+          18.05
+        ],
+        "length_m": 17.8,
+        "width_m": 2.4
+      },
+      "link_iris_iney": {
+        "from_client_xz": [
+          5.283,
+          -26.95
+        ],
+        "to_client_xz": [
+          20.698,
+          -18.05
+        ],
+        "length_m": 17.8,
+        "width_m": 2.4
+      },
+      "link_sol_pepel": {
+        "from_client_xz": [
+          -25.981,
+          -8.9
+        ],
+        "to_client_xz": [
+          -25.981,
+          8.9
+        ],
+        "length_m": 17.8,
+        "width_m": 2.4
+      },
+      "bridge_balcony": {
+        "from_client_xz": [
+          -4.3,
+          7.448
+        ],
+        "to_client_xz": [
+          -20.7,
+          35.853
+        ],
+        "length_m": 32.8,
+        "width_m": 2.4
+      }
+    },
+    "anchor_zones": {
+      "socket_anchor_zone_1": {
+        "center_client_xz": [
+          4.667,
+          4.667
+        ],
+        "angle_deg": 45,
+        "radius_m": 1.5
+      },
+      "socket_anchor_zone_2": {
+        "center_client_xz": [
+          -4.667,
+          4.667
+        ],
+        "angle_deg": 135,
+        "radius_m": 1.5
+      },
+      "socket_anchor_zone_3": {
+        "center_client_xz": [
+          -4.667,
+          -4.667
+        ],
+        "angle_deg": 225,
+        "radius_m": 1.5
+      },
+      "socket_anchor_zone_4": {
+        "center_client_xz": [
+          4.667,
+          -4.667
+        ],
+        "angle_deg": 315,
+        "radius_m": 1.5
+      }
+    },
+    "walks_s_at_1_7": {
+      "plaza_center-camp_center_s": 17.6,
+      "camp-neighbour_via_plaza_s": 35.3,
+      "camp-neighbour_via_link_s": 17.6,
+      "balcony_center-plaza_center_s": 27.1
+    }
+  },
+  "glb_raw_bytes": 13322476,
+  "glb": {
+    "bytes": 13322476,
+    "nodes": {
+      "island_balcony": {
+        "triangles": 4687,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Gold",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_iney": {
+        "triangles": 7540,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_iris": {
+        "triangles": 7752,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_moh": {
+        "triangles": 10744,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_pepel": {
+        "triangles": 7762,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_plaza": {
+        "triangles": 12441,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Gold",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_sol": {
+        "triangles": 7990,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_yantar": {
+        "triangles": 7782,
+        "materials": [
+          "M_Island_Foliage",
+          "M_Island_Lantern",
+          "M_Island_Rock",
+          "M_Island_Stone"
+        ],
+        "attributes": [
+          "COLOR_0",
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "island_walk_col": {
+        "triangles": 1176,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      },
+      "island_wall_col": {
+        "triangles": 2076,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Island_Foliage",
+        "doubleSided": true,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Island_Gold",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Island_Lantern",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Island_Rock",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Island_Stone",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      }
+    ],
+    "images": [
+      {
+        "name": "island_foliage_normal",
+        "mime": "image/jpeg",
+        "bytes": 1520217,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_foliage_orm",
+        "mime": "image/jpeg",
+        "bytes": 326109,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_foliage_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 323045,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_rock_normal",
+        "mime": "image/jpeg",
+        "bytes": 1538381,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_rock_orm",
+        "mime": "image/jpeg",
+        "bytes": 416668,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_rock_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 292215,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_stone_normal",
+        "mime": "image/jpeg",
+        "bytes": 1171279,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_stone_orm",
+        "mime": "image/jpeg",
+        "bytes": 430777,
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "name": "island_stone_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 339389,
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_scroll": {
+        "translation_gltf": [
+          0,
+          0,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "scroll_table",
+          "clear_radius_m": 2.0
+        }
+      },
+      "socket_camp_iris": {
+        "translation_gltf": [
+          0,
+          0,
+          -30
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "camp",
+          "clan": "iris",
+          "label": "Iris",
+          "angle_deg": 270,
+          "plateau_radius_m": 6.5,
+          "front": "local +Z (glTF) faces the plaza"
+        }
+      },
+      "socket_camp_sol": {
+        "translation_gltf": [
+          -25.981,
+          0,
+          -15
+        ],
+        "rotation_gltf": [
+          0,
+          0.5,
+          0,
+          0.866
+        ],
+        "extras": {
+          "socket": "camp",
+          "clan": "sol",
+          "label": "Salt",
+          "angle_deg": 210,
+          "plateau_radius_m": 6.5,
+          "front": "local +Z (glTF) faces the plaza"
+        }
+      },
+      "socket_camp_pepel": {
+        "translation_gltf": [
+          -25.981,
+          0,
+          15
+        ],
+        "rotation_gltf": [
+          0,
+          0.866,
+          0,
+          0.5
+        ],
+        "extras": {
+          "socket": "camp",
+          "clan": "pepel",
+          "label": "Ash",
+          "angle_deg": 150,
+          "plateau_radius_m": 6.5,
+          "front": "local +Z (glTF) faces the plaza"
+        }
+      },
+      "socket_camp_moh": {
+        "translation_gltf": [
+          0,
+          0,
+          30
+        ],
+        "rotation_gltf": [
+          0,
+          1,
+          0,
+          0.0
+        ],
+        "extras": {
+          "socket": "camp",
+          "clan": "moh",
+          "label": "Moss",
+          "angle_deg": 90,
+          "plateau_radius_m": 6.5,
+          "front": "local +Z (glTF) faces the plaza"
+        }
+      },
+      "socket_camp_yantar": {
+        "translation_gltf": [
+          25.981,
+          0,
+          15
+        ],
+        "rotation_gltf": [
+          0,
+          -0.866,
+          0,
+          0.5
+        ],
+        "extras": {
+          "socket": "camp",
+          "clan": "yantar",
+          "label": "Amber",
+          "angle_deg": 30,
+          "plateau_radius_m": 6.5,
+          "front": "local +Z (glTF) faces the plaza"
+        }
+      },
+      "socket_camp_iney": {
+        "translation_gltf": [
+          25.981,
+          0,
+          -15
+        ],
+        "rotation_gltf": [
+          0,
+          -0.5,
+          0,
+          0.866
+        ],
+        "extras": {
+          "socket": "camp",
+          "clan": "iney",
+          "label": "Frost",
+          "angle_deg": 330,
+          "plateau_radius_m": 6.5,
+          "front": "local +Z (glTF) faces the plaza"
+        }
+      },
+      "socket_anchor_zone_1": {
+        "translation_gltf": [
+          4.667,
+          0,
+          4.667
+        ],
+        "rotation_gltf": [
+          0,
+          -0.9239,
+          0,
+          0.3827
+        ],
+        "extras": {
+          "socket": "anchor_zone",
+          "shell": 1,
+          "index": 0,
+          "angle_deg": 45,
+          "zone_radius_m": 1.5
+        }
+      },
+      "socket_anchor_zone_2": {
+        "translation_gltf": [
+          -4.667,
+          0,
+          4.667
+        ],
+        "rotation_gltf": [
+          0,
+          0.9239,
+          0,
+          0.3827
+        ],
+        "extras": {
+          "socket": "anchor_zone",
+          "shell": 2,
+          "index": 1,
+          "angle_deg": 135,
+          "zone_radius_m": 1.5
+        }
+      },
+      "socket_anchor_zone_3": {
+        "translation_gltf": [
+          -4.667,
+          0,
+          -4.667
+        ],
+        "rotation_gltf": [
+          0,
+          0.3827,
+          0,
+          0.9239
+        ],
+        "extras": {
+          "socket": "anchor_zone",
+          "shell": 3,
+          "index": 2,
+          "angle_deg": 225,
+          "zone_radius_m": 1.5
+        }
+      },
+      "socket_anchor_zone_4": {
+        "translation_gltf": [
+          4.667,
+          0,
+          -4.667
+        ],
+        "rotation_gltf": [
+          0,
+          -0.3827,
+          0,
+          0.9239
+        ],
+        "extras": {
+          "socket": "anchor_zone",
+          "shell": 4,
+          "index": 3,
+          "angle_deg": 315,
+          "zone_radius_m": 1.5
+        }
+      },
+      "socket_spawn": {
+        "translation_gltf": [
+          -22.31,
+          0,
+          38.642
+        ],
+        "rotation_gltf": [
+          0,
+          0.9659,
+          0,
+          0.2588
+        ],
+        "extras": {
+          "socket": "spawn",
+          "facing": "local +Z (glTF) looks toward the plaza"
+        }
+      },
+      "socket_lantern_00": {
+        "translation_gltf": [
+          -21.816,
+          1.66,
+          35.16
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_01": {
+        "translation_gltf": [
+          -19.542,
+          1.66,
+          36.473
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_02": {
+        "translation_gltf": [
+          19.969,
+          1.61,
+          -16.965
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_03": {
+        "translation_gltf": [
+          19.969,
+          1.61,
+          -13.035
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_04": {
+        "translation_gltf": [
+          21.273,
+          1.61,
+          -10.776
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_05": {
+        "translation_gltf": [
+          21.273,
+          1.61,
+          -19.224
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_06": {
+        "translation_gltf": [
+          1.304,
+          1.61,
+          -23.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_07": {
+        "translation_gltf": [
+          4.708,
+          1.61,
+          -25.776
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_08": {
+        "translation_gltf": [
+          6.012,
+          1.61,
+          -28.035
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_09": {
+        "translation_gltf": [
+          -1.304,
+          1.61,
+          -23.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_10": {
+        "translation_gltf": [
+          4.708,
+          1.61,
+          25.776
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_11": {
+        "translation_gltf": [
+          1.304,
+          1.61,
+          23.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_12": {
+        "translation_gltf": [
+          -1.304,
+          1.61,
+          23.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_13": {
+        "translation_gltf": [
+          6.012,
+          1.61,
+          28.035
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_14": {
+        "translation_gltf": [
+          -21.273,
+          1.61,
+          10.776
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_15": {
+        "translation_gltf": [
+          -24.677,
+          1.61,
+          8.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_16": {
+        "translation_gltf": [
+          -27.285,
+          1.61,
+          8.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_17": {
+        "translation_gltf": [
+          -19.969,
+          1.61,
+          13.035
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_18": {
+        "translation_gltf": [
+          -24.677,
+          1.61,
+          -8.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_19": {
+        "translation_gltf": [
+          -21.273,
+          1.61,
+          -10.776
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_20": {
+        "translation_gltf": [
+          -19.969,
+          1.61,
+          -13.035
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_21": {
+        "translation_gltf": [
+          -27.285,
+          1.61,
+          -8.811
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_22": {
+        "translation_gltf": [
+          19.969,
+          1.61,
+          13.035
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_23": {
+        "translation_gltf": [
+          19.969,
+          1.61,
+          16.965
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_24": {
+        "translation_gltf": [
+          21.273,
+          1.61,
+          19.224
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_25": {
+        "translation_gltf": [
+          21.273,
+          1.61,
+          10.776
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_26": {
+        "translation_gltf": [
+          6.912,
+          1.61,
+          -5.486
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_27": {
+        "translation_gltf": [
+          1.295,
+          1.61,
+          -8.729
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_28": {
+        "translation_gltf": [
+          -1.295,
+          1.61,
+          -8.729
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_29": {
+        "translation_gltf": [
+          -6.912,
+          1.61,
+          -5.486
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_30": {
+        "translation_gltf": [
+          -8.207,
+          1.61,
+          -3.243
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_31": {
+        "translation_gltf": [
+          -8.207,
+          1.61,
+          3.243
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_32": {
+        "translation_gltf": [
+          -6.912,
+          1.61,
+          5.486
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_33": {
+        "translation_gltf": [
+          -5.486,
+          1.61,
+          6.912
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_34": {
+        "translation_gltf": [
+          -3.243,
+          1.61,
+          8.207
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_35": {
+        "translation_gltf": [
+          -1.295,
+          1.61,
+          8.729
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_36": {
+        "translation_gltf": [
+          1.295,
+          1.61,
+          8.729
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_37": {
+        "translation_gltf": [
+          6.912,
+          1.61,
+          5.486
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_38": {
+        "translation_gltf": [
+          8.207,
+          1.61,
+          3.243
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      },
+      "socket_lantern_39": {
+        "translation_gltf": [
+          8.207,
+          1.61,
+          -3.243
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "lantern"
+        }
+      }
+    },
+    "triangles_render": 66698,
+    "triangles_collision": 3252,
+    "max_materials_per_node": 5
+  },
+  "runtime_triangles": 66698,
+  "budget_ok": {
+    "triangles": true
+  },
+  "textures": {
+    "rock": {
+      "basecolor": {
+        "file": "art/island/textures/island_rock_basecolor.jpg",
+        "bytes": 292215,
+        "size": 2048
+      },
+      "orm": {
+        "file": "art/island/textures/island_rock_orm.jpg",
+        "bytes": 416668,
+        "size": 2048
+      },
+      "normal": {
+        "file": "art/island/textures/island_rock_normal.jpg",
+        "bytes": 1538381,
+        "size": 2048
+      }
+    },
+    "stone": {
+      "basecolor": {
+        "file": "art/island/textures/island_stone_basecolor.jpg",
+        "bytes": 339389,
+        "size": 2048
+      },
+      "orm": {
+        "file": "art/island/textures/island_stone_orm.jpg",
+        "bytes": 430777,
+        "size": 2048
+      },
+      "normal": {
+        "file": "art/island/textures/island_stone_normal.jpg",
+        "bytes": 1171279,
+        "size": 2048
+      }
+    },
+    "foliage": {
+      "basecolor": {
+        "file": "art/island/textures/island_foliage_basecolor.jpg",
+        "bytes": 323045,
+        "size": 2048
+      },
+      "orm": {
+        "file": "art/island/textures/island_foliage_orm.jpg",
+        "bytes": 326109,
+        "size": 2048
+      },
+      "normal": {
+        "file": "art/island/textures/island_foliage_normal.jpg",
+        "bytes": 1520217,
+        "size": 2048
+      }
+    }
+  }
+}

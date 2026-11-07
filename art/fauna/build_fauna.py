@@ -267,7 +267,6 @@ class MB:
             v[self.tag] = self.tag_id(tag)
         if w:
             self.explicit.add(v)
-            v._w = w  # noqa (stored after index)
             self._pending = getattr(self, "_pending", [])
             self._pending.append((v, w))
         return v
