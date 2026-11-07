@@ -16,12 +16,12 @@ import { drawLogogram } from './logogram.js';
 import { createShellScene } from '../scenes/shell.js';
 import { planRoute, placePosition } from '../net/world-map.js';
 import { steerTo } from '../physics/character.js';
-import { CAMPS, ANCHOR_ZONES } from '../scenes/layout.js';
+import { CAMPS, ANCHOR_ZONES, SHARD } from '../scenes/layout.js';
 import { CLAN_ASSET } from './behaviour.js';
 
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
-const AUDIO_MODULES = import.meta.glob('../audio/index.js');
+const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
 
 /**
  * @param {object} o
@@ -70,8 +70,18 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   session.on('zone', (res) => { if (res.zone === 'shell') enterShell(res.shell); else exitShell(res.position); });
   session.on('result', (r) => { if (!r.ok && !r.silent) hooks.play('rejected', { kind: 'iris' }, { reason: r.reason }); });
 
-  loadOptional(VFX_MODULES, ['createVfx', 'default'], { renderer, scene, camera, tier: lookdev.tier, reducedMotion: lookdev.reducedMotion, quality: lookdev.tier }).then((v) => v && hooks.attachVfx(v));
-  loadOptional(AUDIO_MODULES, ['createAudio', 'createAudioEngine', 'default'], { camera, scene, reducedMotion: lookdev.reducedMotion }).then((a) => a && hooks.attachAudio(a));
+  // VFX (src/vfx, createVfx(scene, camera, renderer, opts)) and audio (src/audio, createAudio()).
+  let audio = null;
+  loadModule(VFX_MODULES).then((m) => { if (m && m.createVfx) hooks.attachVfx(m.createVfx(scene, camera, renderer, { tier: lookdev.tier, reducedMotion: lookdev.reducedMotion })); }).catch((e) => console.warn('[play] vfx unavailable', e));
+  loadModule(AUDIO_MODULES).then((m) => {
+    if (!m || !m.createAudio) return;
+    audio = m.createAudio();
+    hooks.attachAudio(audio);
+    // WebAudio starts only from a user gesture.
+    const unlock = () => { audio.unlock().catch(() => {}); window.removeEventListener('keydown', unlock); window.removeEventListener('pointerdown', unlock); };
+    window.addEventListener('keydown', unlock); window.addEventListener('pointerdown', unlock);
+  }).catch((e) => console.warn('[play] audio unavailable', e));
+  let lastStrokes = '';
 
   function resolvePlace(at) {
     switch (at.kind) {
@@ -79,6 +89,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
       case 'scroll': return new THREE.Vector3(0, 0.8, 0);
       case 'anchor': { const z = ANCHOR_ZONES[(at.shell || 1) - 1]; return new THREE.Vector3(z.position[0], 1.2, z.position[2]); }
       case 'iris': return avatar.position.clone().setY(avatar.position.y + 1.2);
+      case 'pedestal': return new THREE.Vector3(SHARD.position[0], 1.3, SHARD.position[2]);
       case 'glass': return new THREE.Vector3(shell.origin[0], shell.origin[1] + 4, shell.origin[2] - 10);
       case 'sky': default: return new THREE.Vector3(0, 9, 0);
     }
@@ -151,6 +162,15 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     // The Guest draws the newest sign Iris can see (a vision first: it is hers alone).
     const vis = (o.prophecies || []).slice().sort((a, b) => (b.vision - a.vision) || (b.publishedAt - a.publishedAt))[0];
     shell.setSign(vis ? { forms: vis.forms, dots: vis.dots } : null, state.now);
+    if (audio) {
+      try {
+        audio.setTension(o.season.tension);
+        // The Guest "speaks" the strokes of the sign it draws while Iris stands inside.
+        const sk = vis && state.zone === 'shell' ? vis.forms.join() + vis.dots : '';
+        if (sk && sk !== lastStrokes) audio.speakStrokes([0, 1, 2, 3].map((k) => ['arc', 'spike', 'loop', 'drop'][vis.forms[(vis.dots + k) % 4]]));
+        lastStrokes = sk;
+      } catch { /* audio is optional */ }
+    }
   }
   session.on('obs', syncVisuals);
   syncVisuals();
@@ -171,6 +191,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     agents.updateIris(dt, moving, avatar, state.now);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
+    if (audio) { try { const sp = session.spot; audio.setZone(inShell ? 'shell' : sp && sp.kind === 'camp' ? CLAN_ASSET[sp.clan] : sp ? 'plaza' : 'bridge'); } catch { /* optional */ } }
   }
 
   /** Keyboard for the play UI; returns true when used. */
@@ -179,12 +200,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   return { session, transport, ui, hud, agents, shell, hooks, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
-async function loadOptional(mods, names, args) {
+async function loadModule(mods) {
   const loader = Object.values(mods)[0];
-  if (!loader) return null;
-  try {
-    const m = await loader();
-    for (const n of names) if (typeof m[n] === 'function') return await m[n](args);
-    return null;
-  } catch (e) { console.warn('[play] optional module failed', e); return null; }
+  return loader ? loader() : null;
 }

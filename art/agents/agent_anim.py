@@ -569,10 +569,10 @@ def clip_talk(key, S, u):
         P.twist["hand_R"] = 40
         P.r("chest", 4, 0, -6).r("head", 0, 8, 6)
     else:                       # iris / suit: firm chops
-        tgt = keys(u, [(0.0, V((-0.20, -0.30, 1.12))), (0.12, V((-0.18, -0.36, 1.20))),
-                       (0.20, V((-0.18, -0.34, 1.04))), (0.36, V((-0.18, -0.36, 1.20))),
-                       (0.44, V((-0.18, -0.34, 1.04))), (0.62, V((-0.24, -0.30, 1.10))),
-                       (0.80, V((-0.12, -0.34, 1.16))), (1.0, V((-0.20, -0.30, 1.12)))])
+        tgt = keys(u, [(0.0, V((-0.20, -0.34, 1.18))), (0.12, V((-0.16, -0.38, 1.28))),
+                       (0.20, V((-0.16, -0.38, 1.12))), (0.36, V((-0.16, -0.38, 1.28))),
+                       (0.44, V((-0.16, -0.38, 1.12))), (0.62, V((-0.26, -0.32, 1.18))),
+                       (0.80, V((-0.12, -0.38, 1.24))), (1.0, V((-0.20, -0.34, 1.18)))])
         P.twist["hand_R"] = 70
         P.r("hand_R", -15, 0, 0)
     P.ik[-1] = (tgt, pole)
@@ -622,7 +622,7 @@ def clip_offer(key, S, u):
         a *= 1.0 - 0.45 * env(u, 0.32, 0.40, 0.46, 0.56)
     rest_ik = clip_idle(key, S, 0.0).ik.get(-1)
     start, pole0 = rest_ik if rest_ik else (REST_WRIST_R, POLE_R)
-    out = V((-0.10, -0.46, 1.12))
+    out = V((-0.10, -0.40, 1.22))
     if start.y > 0.05:                    # hand behind the back: come round the side
         tgt = keys(a, [(0.0, start), (0.45, V((-0.34, 0.02, 1.00))), (1.0, out)])
     else:
@@ -737,10 +737,10 @@ CLIP_FN = {
 # chain: stiffness (1/s^2) at the root joint, damping (1/s), air drag (1/s),
 # per-joint stiffness falloff, max deviation (deg), collides with legs
 CHAIN_PARAMS = {
-    "cloak": (70.0, 7.0, 3.2, 0.62, 55.0, True),
+    "cloak": (70.0, 7.0, 2.6, 0.62, 50.0, True),
     "cloak_L": (80.0, 7.5, 2.6, 0.65, 45.0, True),
     "cloak_R": (80.0, 7.5, 2.6, 0.65, 45.0, True),
-    "scarf": (45.0, 4.5, 4.0, 0.60, 70.0, True),
+    "scarf": (55.0, 5.5, 1.5, 0.62, 55.0, True),
     "hood": (140.0, 9.0, 1.2, 0.75, 30.0, False),
     "skirt_F": (110.0, 9.0, 1.6, 0.70, 40.0, True),
     "skirt_B": (100.0, 8.5, 2.0, 0.70, 45.0, True),
