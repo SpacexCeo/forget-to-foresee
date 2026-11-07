@@ -15,7 +15,7 @@ export class CameraRig {
     // Camera sits on the +Z side looking toward -Z: the Iris camp is in front and the four Shells
     // (on the diagonals) frame the view instead of blocking it.
     this.baseYaw = opts.baseYaw ?? 0;
-    this.yawLimit = opts.yawLimit ?? 50 * DEG;   // limited rotation around the base yaw
+    this.yawLimit = opts.yawLimit ?? Infinity;   // full 360° orbit (owner 07.11); pass a number to limit
     this.minDist = opts.minDist ?? 4.5;   // low third-person view, never first person
     this.maxDist = opts.maxDist ?? 90;     // far enough for the whole-archipelago view
     this.radius = opts.radius ?? 0.35;           // camera collision sphere
@@ -43,7 +43,9 @@ export class CameraRig {
 
   rotate(delta) {
     if (this.inspect) { this.inspect.yaw += delta; return; }
-    this.yaw = Math.min(this.baseYaw + this.yawLimit, Math.max(this.baseYaw - this.yawLimit, this.yaw + delta));
+    this.yaw = Number.isFinite(this.yawLimit)
+      ? Math.min(this.baseYaw + this.yawLimit, Math.max(this.baseYaw - this.yawLimit, this.yaw + delta))
+      : this.yaw + delta;
   }
 
   tilt(delta) { if (this.inspect) this.inspect.pitch = Math.min(70 * DEG, Math.max(5 * DEG, this.inspect.pitch + delta)); }
@@ -92,8 +94,10 @@ export class CameraRig {
     const f = sweepSphere(this.world, from.toArray(), desired.toArray(), this.radius, MASK_CAMERA);
     this.lastSweep = f;
     const safe = Math.max(start + 0.3, start + f * (dist - start) - 0.05);
-    // Pull in at once (never clip), ease back out.
-    this.actualDist = safe < this.actualDist ? safe : this.actualDist + (safe - this.actualDist) * (1 - Math.exp(-dt * 4));
+    // Pull in fast but smoothly (a hard snap on every thin collider made the view jitter), ease back out slowly.
+    // A large jump inward (a wall right behind the camera) still snaps so the view never ends up inside geometry.
+    if (safe < this.actualDist) this.actualDist = this.actualDist - safe > 2 ? safe : this.actualDist + (safe - this.actualDist) * (1 - Math.exp(-dt * 25));
+    else this.actualDist += (safe - this.actualDist) * (1 - Math.exp(-dt * 3));
     this.camera.position.copy(center).addScaledVector(dir, this.actualDist);
     this.camera.lookAt(center);
   }
