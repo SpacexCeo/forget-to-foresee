@@ -12,7 +12,7 @@ Status: `greybox` (code placeholder) → `wip` → `review` → `approved`. Only
 | shell_3.glb | Shell exterior III, asymmetric | Claude Code (procedural, `art/shells/build_shells.py`) | own, MIT | runtime 19,680; `_col` 120 (1 convex hull) | 4096² basecolor JPEG, 4096² ORM JPEG, 1× 4096² normal PNG; 2 materials (exterior, nacre); .glb 16.9 MB | review |
 | shell_4.glb | Shell exterior IV, cracked open | Claude Code (procedural, `art/shells/build_shells.py`) | own, MIT | runtime 19,120; `_col` 136 (1 convex hull) | 4096² basecolor JPEG, 4096² ORM JPEG, 1× 4096² normal PNG; 2 materials (exterior, nacre); .glb 18.3 MB | review |
 | shell_interior.glb | Shell interior | — | — | — | — | greybox |
-| camp_*.glb (6) | Clan camps | — | — | — | — | greybox |
+| camp_*.glb (6) | Clan camps: Iris violet canopy, Salt crystal colonnade, Ash dark pagoda + palisade, Moss overgrown arbour + cauldron, Amber wooden pavilion + chests, Frost glass pavilion | Claude Code (procedural, `art/camps/build_camps.py`, shared `art/common/ftf.py`) | own, MIT; Blender 4.5.3, GPU bake on RTX 5090 | ~9-12k runtime each (budget 24k) + `_col` | KTX2: basecolor/ORM ETC1S 4096², normal UASTC 2048²; meshopt; glb 6.5-7.7 MB | **exported, owner review pending**; QA in `docs/art/qa/camp_*/` |
 | island.glb | Island | — | — | — | — | greybox |
 | agent_iris.glb | Iris clan agent (player): hooded wool cloak, violet scarf | Claude Code (procedural, `art/agents/`) | own, MIT | 12,164 (`_col` 144) | 3 mats sharing 2048² base/ORM/normal; glb 4.52 MB | review |
 | agent_sol.glb | Salt clan agent: quartz shoulder scales, hood and veil, balance | Claude Code (procedural, `art/agents/`) | own, MIT | 12,172 (`_col` 144) | 3 mats sharing 2048² base/ORM/normal; glb 5.47 MB | review |

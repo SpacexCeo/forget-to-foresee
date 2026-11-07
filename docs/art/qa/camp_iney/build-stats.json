@@ -1,0 +1,204 @@
+{
+  "asset": "camp_iney.glb",
+  "clan": "Frost",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.35
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.39
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 68.96
+    },
+    {
+      "stage": "textures",
+      "seconds": 2.01
+    },
+    {
+      "stage": "materials_assemble",
+      "seconds": 0.26
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 21,
+  "kinds": [
+    "brass",
+    "iron",
+    "pale_metal",
+    "paving_frost",
+    "slate",
+    "stone_light",
+    "wood"
+  ],
+  "bakes": {
+    "normal": {
+      "seconds": 9.79,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 7.9,
+      "samples": 16,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 6.74,
+      "samples": 8,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 4.6,
+      "samples": 8,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 39.86,
+      "samples": 256,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/camps/textures/iney/camp_iney_basecolor.jpg",
+      "bytes": 2975111,
+      "size": 4096
+    },
+    "orm": {
+      "file": "art/camps/textures/iney/camp_iney_orm.jpg",
+      "bytes": 6002020,
+      "size": 4096
+    },
+    "normal": {
+      "file": "art/camps/textures/iney/camp_iney_normal.jpg",
+      "bytes": 1899229,
+      "size": 4096
+    }
+  },
+  "runtime_triangles_blender": 9117,
+  "collision_triangles_blender": 444,
+  "bounds_blender_zup": {
+    "min": [
+      -4.35,
+      -4.35,
+      -0.061
+    ],
+    "max": [
+      4.35,
+      4.35,
+      3.53
+    ]
+  },
+  "details": [
+    "blue glass pavilion on a pale metal frame (glass = special material, alpha blended)",
+    "long table with three slate tablets of ring signs",
+    "big easel board with a 3 x 2 table of signs facing the hologram circle",
+    "armillary sphere on a stone pedestal",
+    "brass telescope on a tripod aimed at the sky",
+    "frost crystal clusters and an instrument chest"
+  ],
+  "glb_bytes": 11640120,
+  "glb": {
+    "bytes": 11640120,
+    "nodes": {
+      "camp_iney": {
+        "triangles": 9117,
+        "materials": [
+          "M_Frost_Atlas",
+          "M_Frost_Glass"
+        ],
+        "attributes": [
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "camp_iney_col": {
+        "triangles": 444,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Frost_Atlas",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Frost_Glass",
+        "doubleSided": true,
+        "alphaMode": "BLEND"
+      }
+    ],
+    "images": [
+      {
+        "name": "camp_iney_normal",
+        "mime": "image/jpeg",
+        "bytes": 1899229,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_iney_orm",
+        "mime": "image/jpeg",
+        "bytes": 6002020,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_iney_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 2975111,
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_agent": {
+        "translation_gltf": [
+          0,
+          0.12,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "agent_hologram",
+          "free_radius_m": 1.0
+        }
+      }
+    },
+    "triangles_render": 9117,
+    "triangles_collision": 444,
+    "max_materials_per_node": 2
+  },
+  "runtime_triangles": 9117,
+  "materials": [
+    "M_Frost_Atlas",
+    "M_Frost_Glass"
+  ],
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "agent_circle_free": true
+  }
+}

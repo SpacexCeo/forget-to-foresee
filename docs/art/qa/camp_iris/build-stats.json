@@ -1,0 +1,236 @@
+{
+  "asset": "camp_iris.glb",
+  "clan": "Iris",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.35
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.51
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 64.38
+    },
+    {
+      "stage": "textures",
+      "seconds": 2.18
+    },
+    {
+      "stage": "materials_assemble",
+      "seconds": 0.26
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 208,
+  "kinds": [
+    "brass",
+    "clay",
+    "cloth_cream",
+    "cloth_violet",
+    "iron",
+    "leaf",
+    "moss",
+    "paper",
+    "paving_grey",
+    "petal_violet",
+    "rope",
+    "rug",
+    "slate",
+    "stone",
+    "stone_light",
+    "wood"
+  ],
+  "bakes": {
+    "normal": {
+      "seconds": 8.92,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 6.7,
+      "samples": 16,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 6.13,
+      "samples": 8,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 5.6,
+      "samples": 8,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 36.93,
+      "samples": 256,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/camps/textures/iris/camp_iris_basecolor.jpg",
+      "bytes": 3234510,
+      "size": 4096
+    },
+    "orm": {
+      "file": "art/camps/textures/iris/camp_iris_orm.jpg",
+      "bytes": 5376900,
+      "size": 4096
+    },
+    "normal": {
+      "file": "art/camps/textures/iris/camp_iris_normal.jpg",
+      "bytes": 1883781,
+      "size": 4096
+    }
+  },
+  "runtime_triangles_blender": 9247,
+  "collision_triangles_blender": 400,
+  "bounds_blender_zup": {
+    "min": [
+      -4.35,
+      -4.35,
+      -0.02
+    ],
+    "max": [
+      4.35,
+      4.35,
+      3.194
+    ]
+  },
+  "details": [
+    "violet canopy tent with valance, back curtain and tied side drapes",
+    "four lanterns (two hanging, one on a post, one on the crate)",
+    "pottery stand: amphora, lidded jar, jars and a bowl",
+    "two stone beds of iris flowers",
+    "stone pedestal for the memory shard (socket_shard)",
+    "rug, writing table with book and inkwell, cushions, bedroll"
+  ],
+  "glb_bytes": 11131868,
+  "glb": {
+    "bytes": 11131868,
+    "nodes": {
+      "camp_iris": {
+        "triangles": 9247,
+        "materials": [
+          "M_Iris_Atlas",
+          "M_Iris_AtlasDS",
+          "M_Iris_Glow"
+        ],
+        "attributes": [
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "camp_iris_col": {
+        "triangles": 400,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Iris_Atlas",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Iris_AtlasDS",
+        "doubleSided": true,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Iris_Glow",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      }
+    ],
+    "images": [
+      {
+        "name": "camp_iris_normal",
+        "mime": "image/jpeg",
+        "bytes": 1883781,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_iris_orm",
+        "mime": "image/jpeg",
+        "bytes": 5376900,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_iris_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 3234510,
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_agent": {
+        "translation_gltf": [
+          0,
+          0.12,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "agent_hologram",
+          "free_radius_m": 1.0
+        }
+      },
+      "socket_shard": {
+        "translation_gltf": [
+          2.55,
+          1.11,
+          -0.95
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "shard_rest"
+        }
+      }
+    },
+    "triangles_render": 9247,
+    "triangles_collision": 400,
+    "max_materials_per_node": 3
+  },
+  "runtime_triangles": 9247,
+  "materials": [
+    "M_Iris_Atlas",
+    "M_Iris_AtlasDS",
+    "M_Iris_Glow"
+  ],
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "agent_circle_free": true
+  }
+}
