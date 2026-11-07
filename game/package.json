@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs",
-    "fixtures": "node scripts/gen-fixtures.mjs"
+    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs tests/contract-vectors.test.mjs",
+    "fixtures": "node scripts/gen-fixtures.mjs",
+    "vectors": "node scripts/gen-contract-vectors.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"
