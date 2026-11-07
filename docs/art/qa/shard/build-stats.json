@@ -1,0 +1,233 @@
+{
+  "asset": "shard",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.19
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.01
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 19.12
+    },
+    {
+      "stage": "inspect_mesh",
+      "seconds": 1.43
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 48.49
+    },
+    {
+      "stage": "textures",
+      "seconds": 6.9
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.18
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 8,
+  "vein_lines": 54,
+  "runtime_body_triangles": 1990,
+  "uv": {
+    "texture_size": 2048,
+    "texel_density_px_per_m": {
+      "median": 4071.9,
+      "p10": 3834.0,
+      "p90": 4182.3,
+      "coefficient_of_variation": 0.034
+    },
+    "uv_anisotropy": {
+      "median": 1.058,
+      "p95": 1.218,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 1990
+  },
+  "master_densify": {
+    "max_edge_m": 0.0005,
+    "passes": 8,
+    "triangles": 4480658
+  },
+  "master_triangles": 4480658,
+  "vein_lines_inspect": 138,
+  "bakes": {
+    "normal": {
+      "seconds": 8.88,
+      "samples": 64,
+      "size": 4096
+    },
+    "normal_inspect": {
+      "seconds": 8.76,
+      "samples": 64,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 8.93,
+      "samples": 32,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 8.66,
+      "samples": 32,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 3.79,
+      "samples": 16,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 9.4,
+      "samples": 1024,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/shard/textures/shard_basecolor.jpg",
+      "bytes": 651170
+    },
+    "orm": {
+      "file": "art/shard/textures/shard_orm.jpg",
+      "bytes": 1518217
+    },
+    "normal": {
+      "file": "art/shard/textures/shard_normal.png",
+      "bytes": 2141705
+    },
+    "normal_inspect": {
+      "file": "art/shard/textures/shard_inspect_normal.png",
+      "bytes": 2170982
+    }
+  },
+  "ngons_triangulated_export": {
+    "shard": 0,
+    "shard_inspect": 276
+  },
+  "runtime_triangles": 7048,
+  "inspect_triangles": 30853,
+  "collision_triangles": {
+    "shard_hull_col": 56
+  },
+  "materials_runtime": [
+    "M_Shard_Crystal",
+    "M_Shard_Bronze",
+    "M_Shard_Veins"
+  ],
+  "materials_inspect": [
+    "M_Shard_Crystal_Inspect",
+    "M_Shard_Bronze_Inspect",
+    "M_Shard_Veins"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -0.0634,
+      -0.0625,
+      0.0
+    ],
+    "max": [
+      0.0733,
+      0.0884,
+      0.3978
+    ]
+  },
+  "glb_bytes": 8743848,
+  "glb": {
+    "extensionsUsed": [
+      "KHR_materials_transmission",
+      "KHR_materials_volume"
+    ],
+    "nodes": [
+      "shard",
+      "shard_inspect",
+      "shard_hull_col",
+      "socket_core"
+    ],
+    "materials": [
+      {
+        "name": "M_Shard_Crystal",
+        "extensions": {
+          "KHR_materials_transmission": {
+            "transmissionFactor": 1
+          },
+          "KHR_materials_volume": {
+            "attenuationColor": [
+              0.6600000262260437,
+              0.8399999737739563,
+              0.7799999713897705
+            ],
+            "attenuationDistance": 0.14000000133514406,
+            "thicknessFactor": 0.05999999865889549
+          }
+        }
+      },
+      {
+        "name": "M_Shard_Bronze",
+        "extensions": {}
+      },
+      {
+        "name": "M_Shard_Veins",
+        "extensions": {}
+      },
+      {
+        "name": "M_Shard_Crystal_Inspect",
+        "extensions": {
+          "KHR_materials_transmission": {
+            "transmissionFactor": 1
+          },
+          "KHR_materials_volume": {
+            "attenuationColor": [
+              0.6600000262260437,
+              0.8399999737739563,
+              0.7799999713897705
+            ],
+            "attenuationDistance": 0.14000000133514406,
+            "thicknessFactor": 0.05999999865889549
+          }
+        }
+      },
+      {
+        "name": "M_Shard_Bronze_Inspect",
+        "extensions": {}
+      }
+    ],
+    "images": [
+      {
+        "name": "shard_normal",
+        "mime": "image/png",
+        "bytes": 2141705
+      },
+      {
+        "name": "shard_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 651170
+      },
+      {
+        "name": "shard_orm",
+        "mime": "image/jpeg",
+        "bytes": 1518217
+      },
+      {
+        "name": "shard_inspect_normal",
+        "mime": "image/png",
+        "bytes": 2170982
+      }
+    ]
+  },
+  "budget_ok": {
+    "runtime": true,
+    "inspect": true,
+    "materials_per_object": true
+  }
+}

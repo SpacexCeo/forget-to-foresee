@@ -1,0 +1,24 @@
+{
+  "device": "OPTIX",
+  "resolution": 1600,
+  "samples": 512,
+  "seconds_per_render": {
+    "scroll_table_front": 3.03,
+    "scroll_table_side": 2.99,
+    "scroll_table_three_quarter": 3.45,
+    "scroll_table_top": 4.13,
+    "scroll_table_close_socket": 3.64,
+    "scroll_table_close_center": 3.86,
+    "scroll_table_close_base": 3.6,
+    "scroll_table_inspect_close_socket": 3.68,
+    "scroll_table_inspect_close_center": 3.88,
+    "scroll_table_inspect_close_base": 3.64,
+    "scroll_table_collision_three_quarter": 4.63
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 40.73
+    }
+  ]
+}

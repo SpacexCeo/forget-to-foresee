@@ -1,0 +1,187 @@
+{
+  "asset": "shell_2",
+  "numeral": "II",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.07
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 8.15
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 36.1
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 117.44
+    },
+    {
+      "stage": "textures",
+      "seconds": 20.95
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.29
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "geometry": {
+    "aperture": [
+      1.3587422370910645,
+      0.0,
+      4.76914119720459
+    ],
+    "forward": [
+      0.9592570662498474,
+      0.0,
+      -0.282534658908844
+    ],
+    "aperture_radius": 4.498352888553866,
+    "frames": 183,
+    "scale": 6.2979
+  },
+  "runtime_triangles": 17568,
+  "nonmanifold_edges": 0,
+  "uv_seams": 3635,
+  "uv_exterior": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 132.7,
+      "p10": 99.4,
+      "p90": 145.9,
+      "coefficient_of_variation": 0.146
+    },
+    "uv_anisotropy": {
+      "median": 1.048,
+      "p95": 1.148,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 8808,
+    "uv_fill": 0.5541
+  },
+  "uv_nacre": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 59.7,
+      "p10": 50.6,
+      "p90": 69.4,
+      "coefficient_of_variation": 0.111
+    },
+    "uv_anisotropy": {
+      "median": 1.042,
+      "p95": 1.163,
+      "share_over_1_5": 0.0022
+    },
+    "triangles_measured": 8760,
+    "uv_fill": 0.5541
+  },
+  "master_densify": {
+    "max_edge_m": 0.03,
+    "passes": 8,
+    "triangles": 7747028
+  },
+  "master_triangles": 7747028,
+  "bakes": {
+    "normal": {
+      "seconds": 33.02,
+      "samples": 32,
+      "size": 8192
+    },
+    "color": {
+      "seconds": 28.84,
+      "samples": 32,
+      "size": 8192
+    },
+    "rough": {
+      "seconds": 17.02,
+      "samples": 16,
+      "size": 8192
+    },
+    "ao": {
+      "seconds": 38.4,
+      "samples": 512,
+      "size": 8192
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/shells/textures/shell_2_basecolor.jpg",
+      "bytes": 1610715
+    },
+    "orm": {
+      "file": "art/shells/textures/shell_2_orm.jpg",
+      "bytes": 2434040
+    },
+    "normal": {
+      "file": "art/shells/textures/shell_2_normal.png",
+      "bytes": 10670881
+    }
+  },
+  "collision_triangles": {
+    "shell_2_hull_col": 130
+  },
+  "materials": [
+    "M_Shell_Exterior",
+    "M_Shell_Nacre"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -6.691,
+      -4.31,
+      0.0
+    ],
+    "max": [
+      6.691,
+      4.31,
+      17.5
+    ]
+  },
+  "glb_bytes": 15506700,
+  "glb": {
+    "extensionsUsed": [],
+    "nodes": [
+      "shell_2",
+      "shell_2_hull_col",
+      "socket_aperture"
+    ],
+    "materials": [
+      {
+        "name": "M_Shell_Exterior",
+        "extensions": {}
+      },
+      {
+        "name": "M_Shell_Nacre",
+        "extensions": {}
+      }
+    ],
+    "images": [
+      {
+        "name": "shell_2_normal",
+        "mime": "image/png",
+        "bytes": 10670881
+      },
+      {
+        "name": "shell_2_orm",
+        "mime": "image/jpeg",
+        "bytes": 2434040
+      },
+      {
+        "name": "shell_2_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 1610715
+      }
+    ]
+  },
+  "budget_ok": {
+    "runtime": true,
+    "materials_per_object": true
+  }
+}

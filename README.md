@@ -24,6 +24,7 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
 | NEAR contract `season-commit`: season schedule root commitment, **on-chain verification** of each revealed event's Merkle proof, Ash's key commit-reveal | **builds and passes tests** (pure vector tests on any OS; mocked-chain and local sandbox tests in CI); **not deployed to testnet yet** (owner deploys with one command) | `contracts/season-commit/` |
 | NEAR NEP-171 fragment NFTs, escrow | **not started** | — |
+| 3D art: Scroll table, memory shard, four Shell exteriors (glTF, procedural Blender sources, GPU-baked PBR) | **models exported, owner review pending**; loaded by the game by filename (streaming, KTX2) | `game/public/assets/models/`, `art/`, QA renders in `docs/art/qa/` |
 
 ### Real / mock
 

@@ -1,0 +1,208 @@
+{
+  "asset": "scroll_table",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.07
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.56
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 57.58
+    },
+    {
+      "stage": "inspect_mesh",
+      "seconds": 1.95
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 179.01
+    },
+    {
+      "stage": "textures",
+      "seconds": 24.54
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.61
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 13,
+  "runtime_body_triangles": 13486,
+  "uv_seams": 5712,
+  "uv": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 643.3,
+      "p10": 639.5,
+      "p90": 644.4,
+      "coefficient_of_variation": 0.014
+    },
+    "uv_anisotropy": {
+      "median": 1.0,
+      "p95": 1.031,
+      "share_over_1_5": 0.0018
+    },
+    "triangles_measured": 13486,
+    "uv_fill": 0.4466
+  },
+  "master_densify": {
+    "max_edge_m": 0.004,
+    "passes": 8,
+    "triangles": 12755114
+  },
+  "master_triangles": 12755114,
+  "bakes": {
+    "normal": {
+      "seconds": 31.95,
+      "samples": 64,
+      "size": 8192
+    },
+    "normal_inspect": {
+      "seconds": 32.07,
+      "samples": 64,
+      "size": 8192
+    },
+    "color": {
+      "seconds": 33.3,
+      "samples": 64,
+      "size": 8192
+    },
+    "rough": {
+      "seconds": 28.85,
+      "samples": 32,
+      "size": 8192
+    },
+    "metal": {
+      "seconds": 17.14,
+      "samples": 32,
+      "size": 8192
+    },
+    "ao": {
+      "seconds": 35.5,
+      "samples": 1024,
+      "size": 8192
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/scroll_table/textures/scroll_table_basecolor.jpg",
+      "bytes": 2992612
+    },
+    "orm": {
+      "file": "art/scroll_table/textures/scroll_table_orm.jpg",
+      "bytes": 10372206
+    },
+    "normal": {
+      "file": "art/scroll_table/textures/scroll_table_normal.png",
+      "bytes": 15301230
+    },
+    "normal_inspect": {
+      "file": "art/scroll_table/textures/scroll_table_inspect_normal.png",
+      "bytes": 15132031
+    }
+  },
+  "runtime_triangles": 13772,
+  "inspect_triangles": 54874,
+  "collision_triangles": {
+    "scroll_table_foot_col": 92,
+    "scroll_table_body_col": 92
+  },
+  "materials_runtime": [
+    "M_ScrollTable_Body",
+    "M_ScrollTable_Socket",
+    "M_ScrollTable_Amber"
+  ],
+  "materials_inspect": [
+    "M_ScrollTable_Body_Inspect",
+    "M_ScrollTable_Socket_Inspect",
+    "M_ScrollTable_Amber"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -1.7,
+      -1.7,
+      0.0
+    ],
+    "max": [
+      1.7,
+      1.7,
+      0.43
+    ]
+  },
+  "glb_bytes": 45985232,
+  "glb": {
+    "extensionsUsed": [],
+    "nodes": [
+      "scroll_table",
+      "scroll_table_inspect",
+      "scroll_table_foot_col",
+      "scroll_table_body_col",
+      "socket_sector_1",
+      "socket_sector_2",
+      "socket_sector_3",
+      "socket_sector_4",
+      "socket_sector_5",
+      "socket_sector_6",
+      "socket_center"
+    ],
+    "materials": [
+      {
+        "name": "M_ScrollTable_Body",
+        "extensions": {}
+      },
+      {
+        "name": "M_ScrollTable_Socket",
+        "extensions": {}
+      },
+      {
+        "name": "M_ScrollTable_Amber",
+        "extensions": {}
+      },
+      {
+        "name": "M_ScrollTable_Body_Inspect",
+        "extensions": {}
+      },
+      {
+        "name": "M_ScrollTable_Socket_Inspect",
+        "extensions": {}
+      }
+    ],
+    "images": [
+      {
+        "name": "scroll_table_normal",
+        "mime": "image/png",
+        "bytes": 15301230
+      },
+      {
+        "name": "scroll_table_orm",
+        "mime": "image/jpeg",
+        "bytes": 10372206
+      },
+      {
+        "name": "scroll_table_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 2992612
+      },
+      {
+        "name": "scroll_table_inspect_normal",
+        "mime": "image/png",
+        "bytes": 15132031
+      }
+    ]
+  },
+  "budget_ok": {
+    "runtime": true,
+    "inspect": true,
+    "materials_per_object": true
+  }
+}
