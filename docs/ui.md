@@ -24,10 +24,10 @@ Open `http://localhost:5173/ui-preview.html` (Vite prints the port).
 The preview uses the real engine (`src/game/engine.js`, read only) in the
 browser and is labeled "local demo". There is no 3D scene on this page.
 
-The lobby background (`src/ui/background.js`) evokes the owner's target concept: a
-cloud sea drifting below, four nacre ammonite Shells hovering (IV cracked open), a
-faint archipelago with a gold-ringed plaza, soft breathing light. It is canvas 2D,
-uses no image assets, and is replaced by the 3D scene later.
+The lobby uses the owner-supplied background at `public/assets/ui/lobby_bg.jpg`
+(recorded in `docs/art/manifest.md`) with slow image drift and two mist layers.
+Reduced motion disables both. The left hero follows `docs/ui/lobby-reference.jpg`;
+the top-right language switch offers EN | UA | RU | IT | 中文.
 
 ## Mount API (`game/src/ui/index.js`)
 
@@ -88,8 +88,7 @@ Rules for the integration:
 - `src/ui/i18n/icu.js`: dependency-free ICU MessageFormat subset (`{x}`,
   `number`, `plural` with `=n`/`#`, `select`, `selectordinal`, ICU apostrophes).
   Plural categories and numbers come from `Intl`.
-- `src/locales/en.js` (base) and `src/locales/ru.js`. Keys mirror each other
-  exactly (tested). A missing key renders `…` and is reported, never the raw key.
+- `src/locales/en.js` (base), `uk.js`, `ru.js`, `it.js`, `zh.js` have identical keys (tested). Ukrainian, Italian and Chinese override translated labels over the English base. The play context registers all five locales too; untranslated gameplay text remains English. Unknown keys render `…`, never the key. Noto Serif SC is loaded on both entry pages for Chinese, with system CJK fallbacks.
 - `src/ui/i18n/engine-adapter.js`: maps every Russian engine string to
   `{key, args}` with ID arguments and renders it in the active locale; also
   agent lines from `S.fx` (speaker + key + args) for subtitles. Hashes and secret
@@ -131,9 +130,34 @@ contain only rank, a label and an outcome. No money, no prizes, no entry fee.
 
 ## Known gaps
 
-- No 3D integration yet (needs the lines above in main.js).
+- The game mounts the lobby and onboarding before starting the play layer; the integration example above is the standalone engine-store pattern.
 - The tournament has no server, coordinator or fixture season; the card and
   enrollment are local UI state labeled "simulation".
 - CLAN and MEMORIES open "not in this build" panels.
 - The hologram preview is canvas 2D; the in-world hologram is up to the scene owner.
 - Russian agent names are not declined (same as the prototype).
+
+## Integration handoff — 7 November 2026
+
+`codex/premium-ui` is rebased onto integration commit `dde129f`.
+The owner-requested conflict resolution preserves the play layer, all `.pl-*` styles,
+`#prompt` and `#ui`, smooth camera collision pull-in and `pitchOverride`. It adds
+controller/menu handling, stop-steering on blur, manual tilt/reset, toast status,
+and both `vfx` and `uiPreview` build entries. No engine or physics rules changed.
+
+Bindings: E / South = gameplay context action; I / left-stick press = inspect;
+R / right-stick press = reset camera; Esc / East closes inspection or the current
+play panel, cancels routing, then opens controls when idle. Menu opens controls.
+Keyboard play actions and Shift-to-run remain available. The controls overlay
+pauses world input while a modal is open. The original inspection prompt remains;
+the clickable inspection-exit cue replaces it only during inspection.
+
+The five-language requirement required one small bridge change in
+`src/play/i18n.js`: register every UI locale with English gameplay fallback.
+Future gameplay or camera hooks should go through `docs/collab-requests.md`.
+
+Validation: 203 game tests pass; production builds all four HTML entries.
+Chromium checks covered all five lobby languages, settings, desktop and mobile
+layout, memory-panel keyboard input and controls-dialog dismissal with no page
+errors. Controller input logic is covered by automated tests; a physical gamepad
+was not tested.

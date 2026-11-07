@@ -13,6 +13,7 @@ import { createTournamentStore, weeklySchedule, tournamentPhase, isoWeek, splitD
 import { createOnboardingFlow, FLOW_STEPS } from '../src/ui/flow.js';
 import { getGuestId, issueDemoEntitlement, getEntitlement } from '../src/ui/entitlement.js';
 import { createPrefs } from '../src/ui/prefs.js';
+import { createUiContext } from '../src/ui/context.js';
 import { makeChooser } from './lib/policies.mjs';
 
 /** A storage whose every call throws (private mode / blocked site data). */
@@ -216,4 +217,20 @@ test('prefs: validated, persisted, and resolved against the system', () => {
   const broken = createPrefs(createSafeStorage(throwing));
   broken.set({ subtitles: false });
   assert.equal(broken.get().subtitles, false, 'works without storage');
+});
+
+test('player-facing context preserves the saved locale and offers five languages', () => {
+  const storage = createSafeStorage(memoryStorage());
+  const guest = getGuestId(storage);
+  saveRecipe(storage, DEFAULT_RECIPE);
+  storage.setJSON(STORAGE_KEYS.prefs, { locale: 'ru', quality: 'low' });
+  const before = storage.getItem(STORAGE_KEYS.hologram);
+  const ctx = createUiContext({ storage });
+  assert.equal(ctx.i18n.locale, 'ru');
+  assert.deepEqual(ctx.i18n.locales, ['en', 'uk', 'ru', 'it', 'zh']);
+  assert.equal(ctx.i18n.setLocale('ru'), false);
+  assert.equal(ctx.prefs.tier(), 'low');
+  assert.equal(ctx.guestId, guest);
+  assert.equal(storage.getItem(STORAGE_KEYS.hologram), before);
+  assert.equal(storage.getJSON(STORAGE_KEYS.prefs).locale, 'ru');
 });

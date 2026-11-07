@@ -3,6 +3,14 @@
 This file carries context between machines and sessions. New session: read it in full, then `docs/spec.md`, `docs/hackathon-rules.md` and `README.md`.
 Last updated: 07.11.2026.
 
+## Current UI continuation (07.11.2026)
+
+- Owner requested preservation of the premium visual identity, reusable buttons and visual cues, with Impeccable as the design workflow.
+- Owner then requested **Dark Souls-style controls** and explicitly selected **keyboard/mouse plus gamepad**. This direction supersedes the earlier input/camera preference where the two conflict; preserve collision, the noncombat mechanics, and the never-first-person constraint.
+- Work continues on `codex/premium-ui`, isolated from Claude's active scene, UI, art and engine branches. The owner requested a cloud continuation so work can proceed while the local PC is off.
+- The initial button/icon refinement is a checkpoint, not the completed feature. Input support, scene integration, visual verification and the UI reference remain pending. Exact continuation scope and ownership notes: `docs/ui-cloud-handoff.md`.
+- All new work and communication are English, per `AGENTS.md`; historical language requirements below are superseded.
+
 ## 1. Hackathon
 - NEAR Hackathon, 1–14 November 2026. **Submission deadline: 15.11.2026 01:59 Kyiv.** Rules and checklist: `docs/hackathon-rules.md`.
 - Team: RAEN Computers. RAEN's core product is an NFT agent with its own wallet (an "NFT computer with an agent").
@@ -123,3 +131,5 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 07.11 | **Team of 10 agents** (island, guests + Shell interior, character rig/animation, hero round 2, props + relics, alien fauna, VFX, rendering look-dev, gameplay integration, audio) works in disjoint paths; GPU jobs run on the rented RTX 5090 through its Jupyter (HTTPS) from the cloud session; the lead reviews and commits. |
 | 07.11 | **Lobby rebuilt by the Claude lead (owner override of the Codex UI ownership for today)** to match the owner reference one to one: owner-supplied background art with drifting mist, FORGET / TO FORESEE, gold rule, THE FUTURE COSTS A MEMORY, ENTER THE WORLD, SETTINGS, EXIT, Guest demo pill. **UI languages: EN, UA, RU, IT, 中文** (`uk`, `it`, `zh` cover the lobby and core labels; other keys fall back to English until translated). |
 | 07.11 | **Owner: characters must be AAA-animated (legs, arms) and get faces.** State at 20:05 UTC: six clan agents have a skinned armature and 8 procedural clips (idle, walk with a foot-slip check, run, talk, think, gesture_offer, celebrate, defeat); no faces (hooded figures, no face geometry, no facial rig); no animation contact sheets were rendered, only static QA views (`docs/art/qa/agents/`). Next session: face geometry + simple facial rig (blink, jaw, brows) per clan, hand/finger bones, animation review renders (walk/idle contact sheets and short turntable clips), then polish keys. |
+
+| 07.11 | **Codex integration handoff:** rebased `codex/premium-ui` onto `integration/slice-frkc4d` at `dde129f`; preserved gameplay actions and smooth 360° camera behavior, combined controller controls and all test/build entries. The owner's latest request explicitly requires five UI languages (EN/UA/RU/IT/中文), superseding the earlier English-only presentation configuration. All locale keys have English fallback parity; the play context now exposes all five. 203 game tests and the production build pass; Chromium verified language switching and modal input. |

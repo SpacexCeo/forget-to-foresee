@@ -1,48 +1,123 @@
-// Keyboard and mouse input. Every action has a keyboard path (spec 5): WASD move, arrows rotate
-// and zoom, E context, Esc leaves inspection, F3 dev HUD. Mouse: left click to move, right drag to
-// rotate, wheel to zoom.
+// World input. Mouse look uses right drag, so menus and keyboard focus need no pointer lock.
+import { GamepadInput, readGamepads } from './gamepad.js';
+
+const WORLD_KEYS = new Set([
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'F3',
+  'KeyI', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'ShiftLeft', 'ShiftRight',
+  ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1)),
+  'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract',
+]);
+
 export class Input {
   constructor(target) {
     this.keys = new Set();
-    this.pressed = new Set();      // keys pressed since the last frame (edge-triggered)
-    this.clicks = [];              // left clicks {x, y} in client pixels
-    this.wheel = 0;
-    this.dragX = 0; this.dragY = 0;
-    this.dragging = false;
-    let downAt = null;
-    const typing = (e) => e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+    this.pressed = new Set();
+    this.clicks = [];
+    this.pad = new GamepadInput();
+    this.device = 'keyboard';
+    this.suspended = false;
+    this.endFrame();
+
     window.addEventListener('keydown', (e) => {
-      if (typing(e)) return;
-      if (e.code === 'F3' || e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+      if (e.target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), dialog[open]')) {
+        if (e.code === 'Escape' && e.repeat) e.preventDefault();
+        this.device = 'keyboard';
+        return;
+      }
+      if (e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
+      if (['Tab', 'Enter', 'Space'].includes(e.code)) this.device = 'keyboard';
+      if (!WORLD_KEYS.has(e.code)) return;
+      e.preventDefault();
+      if (e.repeat && !this.keys.has(e.code)) return;
+      this.device = 'keyboard';
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
       this.keys.add(e.code);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
-    window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('blur', () => { this.suspended = true; this.clear(); });
+    window.addEventListener('focus', () => { this.suspended = false; });
+    document.addEventListener('visibilitychange', () => this.clear());
+    window.addEventListener('gamepaddisconnected', (e) => {
+      this.pad.disconnect(e.gamepad.index);
+      if (this.pad.index === null) this.device = 'keyboard';
+    });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('pointerdown', () => { this.device = 'keyboard'; });
     target.addEventListener('pointerdown', (e) => {
-      if (e.button === 2) { this.dragging = true; target.setPointerCapture(e.pointerId); }
-      if (e.button === 0) downAt = { x: e.clientX, y: e.clientY };
+      if (e.button === 2) {
+        this.dragPointer = e.pointerId;
+        target.setPointerCapture(e.pointerId);
+      }
+      if (e.button === 0 && e.isPrimary) this.downAt = { id: e.pointerId, x: e.clientX, y: e.clientY };
     });
-    target.addEventListener('pointermove', (e) => { if (this.dragging) { this.dragX += e.movementX; this.dragY += e.movementY; } });
+    target.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== this.dragPointer) return;
+      this.device = 'keyboard';
+      this.dragX += e.movementX;
+      this.dragY += e.movementY;
+    });
     target.addEventListener('pointerup', (e) => {
-      if (e.button === 2) this.dragging = false;
-      if (e.button === 0 && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) this.clicks.push({ x: e.clientX, y: e.clientY });
-      downAt = null;
+      if (e.button === 2 && e.pointerId === this.dragPointer) this.dragPointer = null;
+      if (e.button !== 0 || e.pointerId !== this.downAt?.id) return;
+      if (Math.hypot(e.clientX - this.downAt.x, e.clientY - this.downAt.y) < 6) this.clicks.push({ x: e.clientX, y: e.clientY });
+      this.downAt = null;
     });
-    target.addEventListener('wheel', (e) => { e.preventDefault(); this.wheel += Math.sign(e.deltaY); }, { passive: false });
+    const cancelPointer = (e) => {
+      if (e.pointerId === this.dragPointer) this.dragPointer = null;
+      if (e.pointerId === this.downAt?.id) this.downAt = null;
+    };
+    target.addEventListener('pointercancel', cancelPointer);
+    target.addEventListener('lostpointercapture', cancelPointer);
+    target.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (!e.deltaY) return;
+      this.device = 'keyboard';
+      this.wheel += Math.sign(e.deltaY);
+    }, { passive: false });
+    this.target = target;
   }
 
-  down(...codes) { return codes.some((c) => this.keys.has(c)); }
+  poll() {
+    if (this.suspended || document.hidden) return;
+    const wasConnected = this.pad.index !== null;
+    const { move, look } = this.pad;
+    const active = this.pad.poll(readGamepads());
+    const changed = (before, after) => Math.hypot(after[0] - before[0], after[1] - before[1]) > 0.15
+      || (!before.some(Boolean) && after.some(Boolean));
+    if (active && (this.pad.pressed.size || changed(move, this.pad.move) || changed(look, this.pad.look))) {
+      this.device = 'gamepad';
+    } else if (wasConnected && this.pad.index === null) this.device = 'keyboard';
+  }
+
+  clear() {
+    if (this.dragPointer != null && this.target.hasPointerCapture(this.dragPointer)) {
+      this.target.releasePointerCapture(this.dragPointer);
+    }
+    this.dragPointer = null;
+    this.downAt = null;
+    this.keys.clear();
+    this.pad.clear();
+    this.endFrame();
+  }
+
+  down(...codes) { return codes.some((code) => this.keys.has(code)); }
   hit(code) { return this.pressed.has(code); }
 
-  /** WASD as [right, forward] in -1..1. */
+  /** Movement as [right, forward], with unit diagonals and analog magnitude preserved. */
   moveAxes() {
-    const x = (this.down('KeyD') ? 1 : 0) - (this.down('KeyA') ? 1 : 0);
-    const y = (this.down('KeyW') ? 1 : 0) - (this.down('KeyS') ? 1 : 0);
-    return [x, y];
+    const x = Number(this.down('KeyD')) - Number(this.down('KeyA'));
+    const y = Number(this.down('KeyW')) - Number(this.down('KeyS'));
+    const magnitude = Math.hypot(x, y);
+    return magnitude ? [x / magnitude, y / magnitude] : this.pad.move;
   }
 
   /** Call once at the end of every frame. */
-  endFrame() { this.pressed.clear(); this.clicks.length = 0; this.wheel = 0; this.dragX = 0; this.dragY = 0; }
+  endFrame() {
+    this.pressed.clear();
+    this.clicks.length = 0;
+    this.wheel = 0;
+    this.dragX = 0;
+    this.dragY = 0;
+  }
 }

@@ -1,5 +1,8 @@
 // zh: lobby and core labels; every other key falls back to English (src/ui/i18n/i18n.js).
+import en from './en.js';
+
 export default {
+  ...en,
   'app.title.line1': 'FORGET',
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',

@@ -13,6 +13,10 @@ import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo } from './physics/character.js';
 import { Input } from './ui/input.js';
+import { PAD } from './ui/gamepad.js';
+import { navigateGamepadMenu } from './ui/gamepad-menu.js';
+import { mountSceneControls } from './ui/scene-controls.js';
+import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport } from './render/assets.js';
 import { CAMPS } from './scenes/layout.js';
@@ -58,6 +62,7 @@ const rig = new CameraRig(camera, world);
 const input = new Input(renderer.domElement);
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
+const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput });
 const toastEl = document.getElementById('toast');
 const uiRoot = document.getElementById('ui');
 
@@ -108,40 +113,67 @@ function nearestInteractable() {
   return best;
 }
 
+function stopSteering() {
+  moveTarget = null;
+  marker.visible = false;
+  if (play) play.cancelRoute();
+}
+
+function clearWorldInput() {
+  input.clear();
+  stopSteering();
+}
+window.addEventListener('blur', stopSteering);
+document.addEventListener('visibilitychange', stopSteering);
+
 /** I: close inspection orbit of a hero object (E belongs to the play layer's context actions). */
 function handleInspect() {
   if (inspecting) { leaveInspect(); return; }
   const it = play && play.zone === 'shell' ? null : nearestInteractable();
   if (!it || !it.inspect || !it.instance) return;
+  clearWorldInput();
   inspecting = it;
-  moveTarget = null; marker.visible = false;
-  if (play) play.cancelRoute();
   rig.enterInspect(it.instance.center, it.instance.radius);
 }
 const PLAY_KEYS = ['KeyE', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
 
-function leaveInspect() { inspecting = null; rig.exitInspect(); }
+function leaveInspect() { clearWorldInput(); inspecting = null; rig.exitInspect(); }
 
 function handleInput(dt) {
+  input.poll();
+  const { pad } = input;
   if (input.hit('F3')) hud.toggle();
-  if (!play) { input.endFrame(); return false; }
-  if (input.hit('KeyI')) handleInspect();
-  if (input.hit('Escape') && inspecting) leaveInspect();
-  else if (!inspecting) for (const k of PLAY_KEYS) if (input.hit(k)) play.handleKey(k);
-  const rot = (input.down('ArrowLeft') ? 1 : 0) - (input.down('ArrowRight') ? 1 : 0);
-  if (rot) rig.rotate(rot * dt * 1.6);
-  if (input.dragX) rig.rotate(-input.dragX * 0.005);
-  if (inspecting) {
-    const tilt = (input.down('ArrowUp') ? 1 : 0) - (input.down('ArrowDown') ? 1 : 0);
-    if (tilt) rig.tilt(tilt * dt * 1.2);
-    if (input.dragY) rig.tilt(input.dragY * 0.005);
-  } else {
-    if (input.down('ArrowUp')) rig.zoom(Math.pow(0.5, dt));
-    if (input.down('ArrowDown')) rig.zoom(Math.pow(2, dt));
+  const modal = document.querySelector('dialog[open]');
+  if (modal) { navigateGamepadMenu(modal, pad); return false; }
+  if (!play) { navigateGamepadMenu(uiRoot, pad); return false; }
+  if (pad.hit(PAD.menu)) { controls.open(); return false; }
+  if (input.hit('Escape') || pad.hit(PAD.cancel)) {
+    if (inspecting) leaveInspect();
+    else if (play.handleKey('Escape')) clearWorldInput();
+    else if (moveTarget || play.routeActive) stopSteering();
+    else controls.open();
+    return false;
   }
+  if (input.hit('KeyI') || pad.hit(PAD.inspect)) handleInspect();
+  if (!inspecting) {
+    for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
+    if (play.ui.panel) {
+      navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
+      stopSteering();
+      return false;
+    }
+    if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
+  }
+  if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
+  const [lookX, lookY] = pad.look;
+  const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
+  const tilt = Number(input.down('ArrowUp')) - Number(input.down('ArrowDown')) + lookY;
+  const lookDt = Math.min(dt, 0.05);
+  if (rot || input.dragX) rig.rotate(rot * lookDt * 1.8 - input.dragX * 0.005);
+  if (tilt || input.dragY) rig.tilt(tilt * lookDt * 1.35 + input.dragY * 0.005);
   if (input.wheel) rig.zoom(Math.pow(1.12, input.wheel));
-  if (input.down('Equal', 'NumpadAdd')) rig.zoom(Math.pow(0.5, dt));
-  if (input.down('Minus', 'NumpadSubtract')) rig.zoom(Math.pow(2, dt));
+  if (input.down('Equal', 'NumpadAdd') || pad.down(PAD.zoomIn)) rig.zoom(Math.pow(0.5, lookDt));
+  if (input.down('Minus', 'NumpadSubtract') || pad.down(PAD.zoomOut)) rig.zoom(Math.pow(2, lookDt));
 
   if (!inspecting) {
     for (const c of input.clicks) {
@@ -159,10 +191,10 @@ function handleInput(dt) {
 }
 
 function wishVector() {
-  if (inspecting) return [0, 0];
+  if (inspecting || controls.dialog.open) return [0, 0];
   const [ax, ay] = input.moveAxes();
   if (ax || ay) {
-    moveTarget = null; marker.visible = false; if (play) play.cancelRoute();
+    stopSteering();
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
@@ -228,11 +260,12 @@ function frame() {
   lookdev.update(dt, focus, rig.actualDist);
   if (play) play.update(dt, { focus, moving });
 
+  controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
   promptEl.innerHTML = inspecting
     ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>I</kbd>/<kbd>Esc</kbd> to leave`
     : near && near.inspect ? `<kbd>I</kbd> inspect <b>${near.label}</b> up close` : '';
-  promptEl.hidden = !promptEl.innerHTML;
+  promptEl.hidden = !promptEl.innerHTML || !!inspecting;
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
   if (play || !shellUi) lookdev.render(); // the lobby covers the canvas: no GPU work behind it

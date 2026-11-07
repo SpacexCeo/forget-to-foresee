@@ -19,8 +19,8 @@ export class CameraRig {
     this.minDist = opts.minDist ?? 4.5;   // low third-person view, never first person
     this.maxDist = opts.maxDist ?? 90;     // far enough for the whole-archipelago view
     this.radius = opts.radius ?? 0.35;           // camera collision sphere
-    this.yaw = this.baseYaw;
-    this.dist = opts.dist ?? 30;
+    this.defaultDist = opts.dist ?? 30;
+    this.reset();
     this.focus = new THREE.Vector3();
     this.smoothFocus = new THREE.Vector3();
     this.actualDist = this.dist;
@@ -43,12 +43,32 @@ export class CameraRig {
 
   rotate(delta) {
     if (this.inspect) { this.inspect.yaw += delta; return; }
-    this.yaw = Number.isFinite(this.yawLimit)
-      ? Math.min(this.baseYaw + this.yawLimit, Math.max(this.baseYaw - this.yawLimit, this.yaw + delta))
-      : this.yaw + delta;
+    const yaw = this.yaw + delta - this.baseYaw;
+    this.yaw = this.baseYaw + (this.yawLimit < Math.PI
+      ? THREE.MathUtils.clamp(yaw, -this.yawLimit, this.yawLimit)
+      : Math.atan2(Math.sin(yaw), Math.cos(yaw)));
   }
 
-  tilt(delta) { if (this.inspect) this.inspect.pitch = Math.min(70 * DEG, Math.max(5 * DEG, this.inspect.pitch + delta)); }
+  tilt(delta) {
+    if (this.inspect) {
+      this.inspect.pitch = THREE.MathUtils.clamp(this.inspect.pitch + delta, 5 * DEG, 70 * DEG);
+      return;
+    }
+    const base = this.pitchFor(this.dist);
+    this.pitchOffset = THREE.MathUtils.clamp(base + this.pitchOffset + delta, 8 * DEG, 75 * DEG) - base;
+  }
+
+  reset(heading = this.baseYaw) {
+    if (this.inspect) {
+      const { center, radius } = this.inspect;
+      this.enterInspect(center, radius / 1.05);
+      return;
+    }
+    this.yaw = this.baseYaw;
+    this.rotate(heading - this.baseYaw);
+    this.dist = this.defaultDist;
+    this.pitchOffset = 0;
+  }
 
   zoom(factor) {
     if (this.inspect) { const i = this.inspect; i.dist = Math.min(i.maxDist, Math.max(i.minDist, i.dist * factor)); return; }
@@ -81,7 +101,7 @@ export class CameraRig {
       const k = 1 - Math.exp(-dt * 10);
       this.smoothFocus.lerp(this.focus, this.smoothFocus.lengthSq() === 0 ? 1 : k);
       center = this.smoothFocus.clone().add(new THREE.Vector3(0, this.focusHeightFor(this.dist), 0));
-      yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? this.pitchFor(dist);
+      yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? THREE.MathUtils.clamp(this.pitchFor(dist) + this.pitchOffset, 8 * DEG, 75 * DEG);
       const fov = this.fovFor(dist);
       if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     }
@@ -93,7 +113,7 @@ export class CameraRig {
     const desired = center.clone().addScaledVector(dir, dist);
     const f = sweepSphere(this.world, from.toArray(), desired.toArray(), this.radius, MASK_CAMERA);
     this.lastSweep = f;
-    const safe = Math.max(start + 0.3, start + f * (dist - start) - 0.05);
+    const safe = start + Math.max(0, f * (dist - start) - 0.05);
     // Pull in fast but smoothly (a hard snap on every thin collider made the view jitter), ease back out slowly.
     // A large jump inward (a wall right behind the camera) still snaps so the view never ends up inside geometry.
     if (safe < this.actualDist) this.actualDist = this.actualDist - safe > 2 ? safe : this.actualDist + (safe - this.actualDist) * (1 - Math.exp(-dt * 25));
