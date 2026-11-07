@@ -1,0 +1,224 @@
+{
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.16
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.35
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 2.01
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 60.07
+    },
+    {
+      "stage": "textures",
+      "seconds": 40.25
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.18
+    }
+  ],
+  "feet_reach_m": 2.12,
+  "cycles_device": "OPTIX",
+  "master_triangles": 9155392,
+  "bakes": {
+    "normal": {
+      "seconds": 8.41,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 18.72,
+      "samples": 32,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 20.1,
+      "samples": 16,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 12.78,
+      "samples": 384,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/guest/textures/guest_basecolor.jpg",
+      "bytes": 1397224
+    },
+    "orm": {
+      "file": "art/guest/textures/guest_orm.jpg",
+      "bytes": 1930449
+    },
+    "normal": {
+      "file": "art/guest/textures/guest_normal.png",
+      "bytes": 3678907
+    },
+    "membrane": {
+      "file": "art/guest/textures/guest_membrane.png",
+      "bytes": 2121701
+    }
+  },
+  "triangles_by_object": {
+    "guest_body": 32400,
+    "guest_arm_draw": 808,
+    "guest_core": 960,
+    "guest_sail_l": 1040,
+    "guest_sail_r": 1040,
+    "guest_sail_dorsal": 780,
+    "guest_fin_l": 288,
+    "guest_fin_r": 288
+  },
+  "triangles_total": 37604,
+  "materials": [
+    "M_Guest_Body",
+    "M_Guest_Core",
+    "M_Guest_Membrane.001"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -3.917,
+      -3.035,
+      -0.003
+    ],
+    "max": [
+      3.918,
+      2.688,
+      6.89
+    ]
+  },
+  "height_m": 6.893,
+  "sockets_gltf": {
+    "socket_draw_tip": [
+      0.3487,
+      5.1646,
+      3.0349
+    ],
+    "socket_head": [
+      0.0,
+      6.0114,
+      0.7704
+    ],
+    "socket_core": [
+      0.0,
+      3.6,
+      0.15
+    ]
+  },
+  "glb_patched_extensions": {
+    "M_Guest_Body": [
+      "KHR_materials_iridescence"
+    ]
+  },
+  "glb_bytes": 10913680,
+  "glb_summary": {
+    "meshes": {
+      "guest_arm_draw": 808,
+      "guest_body": 32400,
+      "guest_core": 960,
+      "guest_fin_l": 288,
+      "guest_fin_r": 288,
+      "guest_sail_dorsal": 780,
+      "guest_sail_l": 1040,
+      "guest_sail_r": 1040
+    },
+    "materials": [
+      {
+        "name": "M_Guest_Body",
+        "alphaMode": "OPAQUE",
+        "doubleSided": true,
+        "extensions": [
+          "KHR_materials_iridescence"
+        ],
+        "texCoord": {
+          "baseColor": 0,
+          "metallicRoughness": 0,
+          "normal": 0,
+          "occlusion": 0
+        }
+      },
+      {
+        "name": "M_Guest_Core",
+        "alphaMode": "OPAQUE",
+        "doubleSided": true,
+        "extensions": [
+          "KHR_materials_emissive_strength"
+        ],
+        "texCoord": {}
+      },
+      {
+        "name": "M_Guest_Membrane.001",
+        "alphaMode": "BLEND",
+        "doubleSided": true,
+        "extensions": [],
+        "texCoord": {
+          "baseColor": 0,
+          "emissive": 0
+        }
+      }
+    ],
+    "images": [
+      {
+        "name": "guest_normal",
+        "mime": "image/png",
+        "bytes": 3678907
+      },
+      {
+        "name": "guest_orm",
+        "mime": "image/jpeg",
+        "bytes": 1930449
+      },
+      {
+        "name": "guest_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 1397224
+      },
+      {
+        "name": "guest_membrane",
+        "mime": "image/png",
+        "bytes": 2121701
+      }
+    ],
+    "nodes": [
+      "socket_draw_tip",
+      "guest_arm_draw",
+      "guest_body",
+      "guest_core",
+      "guest_fin_l",
+      "guest_fin_r",
+      "guest_sail_dorsal",
+      "guest_sail_l",
+      "guest_sail_r",
+      "socket_core",
+      "socket_head",
+      "guest"
+    ],
+    "extensionsUsed": [
+      "KHR_materials_emissive_strength",
+      "KHR_materials_iridescence"
+    ],
+    "glb_bytes": 10913680,
+    "has_tangents": true,
+    "animations": 0
+  },
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "height_5_to_7_m": true,
+    "no_animations": true
+  }
+}
