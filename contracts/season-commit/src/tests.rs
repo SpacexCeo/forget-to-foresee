@@ -130,24 +130,28 @@ fn check_leaf_and_compute_leaf_are_read_only_dry_runs() {
 
 #[test]
 fn storage_deposit_is_charged_and_the_rest_refunded() {
+    // Each testing_env! starts a fresh storage_usage counter, so measure inside one context.
     let (mut c, v) = setup();
     let s = &v.seasons[0];
+    set(coord(), DEPOSIT);
     let before = env::storage_usage();
-    commit(&mut c, s);
-    let used = env::storage_usage() - before;
-    assert!(used > 0);
-    let cost = env::storage_byte_cost().saturating_mul(u128::from(used));
-    // exact cost is accepted
-    let l = &s.leaves[0];
-    let before = env::storage_usage();
-    reveal(&mut c, s, l);
-    let reveal_cost = env::storage_byte_cost().saturating_mul(u128::from(env::storage_usage() - before));
-    assert!(reveal_cost < DEPOSIT && cost < DEPOSIT, "0.01 NEAR covers commit ({cost}) and reveal ({reveal_cost})");
-    set(player(), reveal_cost);
-    let l1 = &s.leaves[1];
-    c.reveal_leaf(s.season_id.clone(), l1.index, l1.canonical_event.clone(), l1.salt.clone(), l1.path.clone());
-}
+    c.commit_season(s.season_id.clone(), s.schedule_root.clone(), s.schema_version.clone(), s.leaf_count);
+    let commit_cost = env::storage_byte_cost().saturating_mul(u128::from(env::storage_usage() - before));
 
+    let l = &s.leaves[0];
+    set(player(), DEPOSIT);
+    let before = env::storage_usage();
+    c.reveal_leaf(s.season_id.clone(), l.index, l.canonical_event.clone(), l.salt.clone(), l.path.clone());
+    let reveal_cost = env::storage_byte_cost().saturating_mul(u128::from(env::storage_usage() - before));
+    assert!(commit_cost > ZERO && reveal_cost > ZERO);
+    assert!(commit_cost < DEPOSIT && reveal_cost < DEPOSIT, "0.01 NEAR covers commit ({commit_cost}) and reveal ({reveal_cost})");
+
+    // Attaching exactly the storage cost is enough (leaf records have equal size).
+    let l1 = &s.leaves[1];
+    set(player(), reveal_cost);
+    c.reveal_leaf(s.season_id.clone(), l1.index, l1.canonical_event.clone(), l1.salt.clone(), l1.path.clone());
+    assert_eq!(c.get_season(s.season_id.clone()).unwrap().revealed_count, 2);
+}
 #[test]
 fn owner_manages_coordinators() {
     let (mut c, v) = setup();
