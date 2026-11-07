@@ -83,3 +83,6 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 - The drive letter may differ on the laptop — pin it to F: in Disk Management.
 - `node_modules` is not committed: after moving run `cd game && npm install`.
 - On the main PC npm could not write logs to its default cache; the `--cache` and `--logs-dir` flags pointing to a temp folder help.
+| 07.11 | **Art workflow:** GitHub is the single source of truth (commit + push after every step). The rented RTX 5090 (Clore) is compute only (Blender bake/renders); results are pulled into git right away. SSH to it uses a dedicated key, never a password in chat. |
+| 07.11 | Anchor work continues on branch **`art/anchor-first`** cut from current `main`; the art files from `claude/adoring-darwin-r9mu72` (script, blockout, handoff) were carried over, because that branch predates rules v2 and the docs translation. |
+| 07.11 | Owner: use the GPU fully and make the objects highly detailed. Runtime budgets from the brief still apply (anchor ≤8k tris, `_inspect` ≤30k); detail goes into multi-million-triangle masters, supersampled bakes and textures. |
