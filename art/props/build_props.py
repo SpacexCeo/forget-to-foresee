@@ -1140,6 +1140,9 @@ def build(name):
     os.makedirs(os.path.join(BUILD, "stats"), exist_ok=True)
     with open(os.path.join(BUILD, "stats", f"prop_{name}.json"), "w") as fh:
         json.dump(stats, fh, indent=2)
+    if name == "scroll_fragment":
+        with open(os.path.join(BUILD, "fragment_variants.json"), "w") as fh:
+            json.dump(FRAGMENT_VARIANTS, fh, indent=2)
     return stats
 
 

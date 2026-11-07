@@ -284,34 +284,14 @@ class MB:
             lp[self.uv].uv = uv
         return f
 
-    def grid(self, P, U, mat=0, tag=None, closed=False, flip=False, w=None):
-        """P[i][j] points (rows i, columns j); U[i][j] uvs. closed: column n wraps to 0
-        (a seam column is duplicated with its own uv and welded later)."""
-        rows = len(P)
-        cols = len(P[0])
-        V = []
-        for i in range(rows):
-            row = []
-            for j in range(cols + (1 if closed else 0)):
-                jj = j % cols
-                v = self.vert(P[i][jj], tag, w(i, jj) if w else None)
-                if closed and (j == 0 or j == cols):
-                    self.weld.append(v)
-                row.append(v)
-            V.append(row)
-        ncol = cols + (1 if closed else 0)
-        for i in range(rows - 1):
-            for j in range(ncol - 1):
-                if closed:
-                    uv = [U[i][j] if j < cols else (1.0 + U[i][0][0] if False else U[i][j % cols]) for _ in ()]
-                u0 = U[i][j % cols] if j < cols else (U[i][0][0] + 1.0 * self._usp, U[i][0][1])
-                u1 = U[i][(j + 1) % cols] if j + 1 < cols else (U[i][0][0] + 1.0 * self._usp, U[i][0][1])
-                u2 = U[i + 1][(j + 1) % cols] if j + 1 < cols else (U[i + 1][0][0] + 1.0 * self._usp, U[i + 1][0][1])
-                u3 = U[i + 1][j % cols] if j < cols else (U[i + 1][0][0] + 1.0 * self._usp, U[i + 1][0][1])
-                self.face([V[i][j], V[i][j + 1], V[i + 1][j + 1], V[i + 1][j]], [u0, u1, u2, u3], mat, flip)
+    def grid(self, P, U, mat=0, tag=None, flip=False, w=None):
+        """Open quad grid: P[i][j] points (rows i, columns j), U[i][j] uvs."""
+        V = [[self.vert(P[i][j], tag, w(i, j) if w else None) for j in range(len(P[0]))] for i in range(len(P))]
+        for i in range(len(P) - 1):
+            for j in range(len(P[0]) - 1):
+                self.face([V[i][j], V[i][j + 1], V[i + 1][j + 1], V[i + 1][j]],
+                          [U[i][j], U[i][j + 1], U[i + 1][j + 1], U[i + 1][j]], mat, flip)
         return V
-
-    _usp = 1.0
 
     def rings(self, R, mat=0, tag=None, v_of=None, u_span=1.0, flip=False, w=None, cap0=None, cap1=None):
         """Closed loft through rings R[i] (lists of points). UV u = around * u_span, v = v_of(i)."""

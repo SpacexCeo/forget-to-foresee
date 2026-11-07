@@ -3,7 +3,8 @@
 // bridges, a viewing balcony where the player starts, four levitating Shells, a hovering glyph.
 // Every catalog object is a PropInstance: greybox first, real art when its .glb streams in.
 // Lighting, sky, clouds, foliage and post-processing live in render/lookdev.js; this file only
-// places geometry, props and physics. No game rules here: the values on the anchor pads are demo labels.
+// places geometry, props and physics. No game rules here: anchor pads and the plaza sign are set by
+// the play layer from the room's observation.
 import * as THREE from 'three';
 import { CollisionWorld } from '../physics/collision.js';
 import { CharacterController } from '../physics/character.js';
@@ -75,7 +76,6 @@ export function createIslandScene(renderer, camera) {
   for (const c of CAMPS) {
     const inst = place(c.asset, c.position, c.rotationY);
     camps.push({ clan: c, instance: inst });
-    if (c.id !== 'iris') interactables.push({ label: c.label, verb: 'Talk to', position: new THREE.Vector3(...c.position), radius: PLATEAU_RADIUS - 1, inspect: false });
   }
 
   const anchors = [], shells = [];
@@ -92,8 +92,8 @@ export function createIslandScene(renderer, camera) {
     scene.add(mistDisc, mistHaze);
     shells.push({ instance: shellInst, restY: shy, restYaw: z.shellRotationY, index: z.index, mistDisc });
     const a = place('anchor', z.anchorPosition, z.anchorRotationY);
-    // Demo label values only: the room snapshot will drive the real Shell number and tick.
-    const decals = new PadDecals(a, { shell_number: ROMAN[z.index], tick: String(3 + z.index * 2) });
+    // The Shell number is fixed; the tick pad shows Iris's next anchor here (setAnchorTicks, from the room).
+    const decals = new PadDecals(a, { shell_number: ROMAN[z.index], tick: '·' });
     anchors.push({ instance: a, decals, zone: z });
     interactables.push({ label: 'Anchor (Shell ' + ROMAN[z.index] + ')', verb: 'Inspect', instance: a, position: new THREE.Vector3(...z.anchorPosition), radius: 1.8, inspect: true });
   }
@@ -101,6 +101,14 @@ export function createIslandScene(renderer, camera) {
   const glyph = glyphObject();
   glyph.position.set(0, 9, 0);
   scene.add(glyph);
+  // The newest visible Guest sign hangs inside the glyph ring (drawn by play/logogram.js via setPlazaSign).
+  const signCanvas = document.createElement('canvas');
+  signCanvas.width = signCanvas.height = 256;
+  const signTex = new THREE.CanvasTexture(signCanvas);
+  signTex.colorSpace = THREE.SRGBColorSpace;
+  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7), new THREE.MeshBasicMaterial({ map: signTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide }));
+  signMesh.name = 'plaza_sign'; signMesh.visible = false;
+  glyph.add(signMesh);
 
   // Shard on a pedestal at the Iris camp. The pedestal is scene dressing with its own collider.
   const [sx, , sz] = SHARD.position, [pw, ph, pd] = SHARD.pedestal.size;
@@ -130,8 +138,18 @@ export function createIslandScene(renderer, camera) {
     }
   }
 
-  // Objective text shown top-left; the game UI step will drive it from the season state.
+  // Objective text shown top-left until the play layer (src/play/) drives it from the room.
   const objective = 'Explore the island';
+  /** Tick pad per anchor zone: {1: 5, 3: 7} → Iris's next anchor tick at that Shell ('·' when none). */
+  function setAnchorTicks(map) {
+    for (const a of anchors) { const t = map[a.zone.shell]; const txt = t == null ? '·' : String(t); if (a.decals.values.tick !== txt) a.decals.set({ tick: txt }); }
+  }
+  /** Draws a sign into the plaza glyph with fn(ctx2d); null hides it. */
+  function setPlazaSign(draw) {
+    if (!draw) { signMesh.visible = false; return; }
+    draw(signCanvas.getContext('2d'));
+    signTex.needsUpdate = true; signMesh.visible = true;
+  }
   /** Visual-only animation (never touches game state): Shell hover and drifting mist. */
   function update(t) {
     for (const s of shells) {
@@ -144,5 +162,5 @@ export function createIslandScene(renderer, camera) {
     glyph.position.y = 9 + Math.sin(t * 0.7) * 0.15;
   }
 
-  return { scene, world, library, streamer, interactables, anchors, shells, camps, player, avatar, marker, objective, grassPatches, lanterns, cloudLevel: CLOUD_LEVEL, update };
+  return { scene, world, library, streamer, interactables, anchors, shells, camps, player, avatar, marker, objective, grassPatches, lanterns, cloudLevel: CLOUD_LEVEL, update, setAnchorTicks, setPlazaSign };
 }

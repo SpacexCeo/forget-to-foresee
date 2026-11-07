@@ -432,7 +432,7 @@ def hanging_spire(B, grp, top, rad, length, rng):
         secs.append([Vector((top[0] + rad * rf * (1 + 0.5 * noise(TAU * k / n, zz)) * math.cos(TAU * k / n),
                              top[1] + rad * rf * (1 + 0.5 * noise(TAU * k / n, zz)) * math.sin(TAU * k / n), zz))
                      for k in range(n)])
-    ftf.loft(geo, secs, closed_section=True, flip=True)
+    ftf.loft(geo, secs, closed_section=True, flip=False)  # descending sections: normals face out
     tipv = Vector((top[0], top[1], top[2] - length))
     for k in range(n):
         a_, b_ = secs[-1][k], secs[-1][(k + 1) % n]
@@ -469,7 +469,7 @@ def lantern(B, grp, p, rng=None, scale=1.0):
     bm_secs = []
     for zz, r in ((z + 0.06 * s, 0.13 * s), (z + 0.42 * s, 0.13 * s)):
         bm_secs.append([Vector((x + r * math.cos(TAU * k / 6), y + r * math.sin(TAU * k / 6), zz)) for k in range(6)])
-    ftf.loft(glass, bm_secs, closed_section=True, cols=[[(1, 1, 1)] * 6, [(1, 1, 1)] * 6])
+    ftf.loft(glass, bm_secs, closed_section=True, cols=[[(1, 1, 1)] * 6, [(1, 1, 1)] * 6], flip=True)
     for k in range(6):  # corner bars
         a = TAU * k / 6
         add_box(geo, (x + 0.14 * s * math.cos(a), y + 0.14 * s * math.sin(a), z + 0.24 * s),
@@ -659,7 +659,7 @@ def tree(B, grp, p, rng, h=None):
         secs.append([q + Vector((r * math.cos(TAU * k / 6), r * math.sin(TAU * k / 6), 0)) for k in range(6)])
     bark = (0.72, 0.56, 0.42)
     ftf.loft(geo, secs, closed_section=True, cols=[[bark] * 6 for _ in secs],
-             flip=False)
+             flip=True)  # rising sections with CCW rings: flip so the normals face out
     top = pts[-1]
     for _ in range(rng.randint(3, 5)):
         o = Vector((rng.uniform(-1.1, 1.1), rng.uniform(-1.1, 1.1), rng.uniform(-0.6, 0.6)))
@@ -688,7 +688,7 @@ def menhir(B, grp, p, h, r, rng):
         secs.append([c + Vector((r * rf * (1 + 0.15 * math.sin(k * 2.3 + t * 3)) * math.cos(TAU * k / 5 + 0.3),
                                  r * rf * 0.75 * math.sin(TAU * k / 5 + 0.3), 0)) for k in range(5)])
     col = (1.15, 1.15, 1.1)
-    ftf.loft(geo, secs, closed_section=True, cols=[[col] * 5 for _ in secs])
+    ftf.loft(geo, secs, closed_section=True, cols=[[col] * 5 for _ in secs], flip=True)
     tip = Vector(p) + lean * h * 0.3 + Vector((0, 0, h - 0.3 + 0.25))
     last = secs[-1]
     for k in range(5):
@@ -766,7 +766,7 @@ def column_ruin(B, grp, p, rng, r=0.42, h=None, lying=False, axis=0.0):
     # broken top: tilt the last ring
     tilt = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized() * 0.35
     secs[-1] = [v + Vector((0, 0, (v - Vector((p[0], p[1], v.z))).dot(tilt))) for v in secs[-1]]
-    ftf.loft(geo, secs, closed_section=True, cols=[[col] * n for _ in secs])
+    ftf.loft(geo, secs, closed_section=True, cols=[[col] * n for _ in secs], flip=True)
     cen = sum(secs[-1], Vector()) / n + Vector((0, 0, -0.08))
     for k in range(n):
         oriented_poly(geo, [secs[-1][k], secs[-1][(k + 1) % n], cen], [(0, 0), (0.3, 0), (0.15, 0.3)],
@@ -1279,28 +1279,31 @@ def cloud_sea(col):
     """Render-only cloud sea: stacked noise-alpha layers and an opaque floor.
     Not exported; the game draws its own fog/cloud layer."""
     S = 1400.0
-    for i, (z, scale, lo, hi) in enumerate(((-9.0, 0.014, 0.60, 0.78), (-13.0, 0.011, 0.52, 0.72),
-                                            (-17.0, 0.016, 0.46, 0.66), (-22.0, 0.010, 0.40, 0.60),
-                                            (-27.0, 0.013, 0.34, 0.54), (-32.0, 0.009, 0.28, 0.48))):
+    layers = [(CLOUD_LEVEL + 7.0, 0.014, 0.62, 0.80), (CLOUD_LEVEL + 4.5, 0.011, 0.56, 0.76),
+              (CLOUD_LEVEL + 2.0, 0.016, 0.50, 0.70), (CLOUD_LEVEL, 0.010, 0.44, 0.64),
+              (CLOUD_LEVEL - 2.5, 0.013, 0.38, 0.58), (CLOUD_LEVEL - 5.0, 0.009, 0.32, 0.52),
+              (CLOUD_LEVEL - 8.0, 0.012, 0.26, 0.46), (CLOUD_LEVEL - 11.0, 0.010, 0.20, 0.40)]
+    for i, (z, scale, lo, hi) in enumerate(layers):
         m = bpy.data.materials.new(f"Cloud{i}")
         m.use_nodes = True
         k = ftf.NodeKit(m)
         b = k.n["Principled BSDF"]
-        b.inputs["Base Color"].default_value = (0.48, 0.55, 0.60, 1)
+        b.inputs["Base Color"].default_value = (0.62, 0.62, 0.62, 1)
         b.inputs["Roughness"].default_value = 1.0
         co = k.coord("Object")
         n = k.noise(k.vmath("SCALE", co, scale=scale), 1.0, 6.0, 0.6, w=float(i * 3.7), distortion=0.3)
-        k.link(k.maprange(n, lo, hi, 0.0, 0.85), b.inputs["Alpha"])
-        b.inputs["Emission Color"].default_value = (0.40, 0.48, 0.54, 1)
+        k.link(k.maprange(n, lo, hi, 0.0, 0.6), b.inputs["Alpha"])
+        b.inputs["Emission Color"].default_value = (0.50, 0.50, 0.52, 1)
         b.inputs["Emission Strength"].default_value = 0.12
         me = bpy.data.meshes.new(f"cloud{i}")
         me.from_pydata([(-S, -S, z), (S, -S, z), (S, S, z), (-S, S, z)], [], [(0, 1, 2, 3)])
         me.materials.append(m)
         ftf.link(bpy.data.objects.new(f"cloud{i}", me), col)
-    m = ftf.simple_material("CloudFloor", (0.40, 0.47, 0.52), 1.0, emit=(0.34, 0.42, 0.48), emit_strength=0.3)
+    m = ftf.simple_material("CloudFloor", (0.50, 0.52, 0.55), 1.0, emit=(0.46, 0.48, 0.52), emit_strength=0.3)
     me = bpy.data.meshes.new("cloud_floor")
     S = 3000.0
-    me.from_pydata([(-S, -S, -36), (S, -S, -36), (S, S, -36), (-S, S, -36)], [], [(0, 1, 2, 3)])
+    zf = CLOUD_LEVEL - 16.0
+    me.from_pydata([(-S, -S, zf), (S, -S, zf), (S, S, zf), (-S, S, zf)], [], [(0, 1, 2, 3)])
     me.materials.append(m)
     ftf.link(bpy.data.objects.new("cloud_floor", me), col)
 
@@ -1451,6 +1454,18 @@ def stage_render(samples=128, res=(1600, 900)):
         shot("balcony_start", spawn - dvec * 4.6 + Vector((0, 0, 2.6)), spawn + dvec * 20 + Vector((0, 0, -1.0)), fov=48)
     if want("top_layout"):
         shot("top_layout", Vector((0, -4, 300)), Vector((0, -4, 0)), ortho=104)
+    if "backface_check" in which.split(","):   # debug only: back faces in red
+        bf = bpy.data.materials.new("BackfaceCheck")
+        bf.use_nodes = True
+        k = ftf.NodeKit(bf)
+        geo_n = k.new("ShaderNodeNewGeometry")
+        mixc = k.mix(geo_n.outputs["Backfacing"], (0.6, 0.6, 0.6), (1.0, 0.0, 0.0))
+        k.link(mixc, k.n["Principled BSDF"].inputs["Base Color"])
+        for o in island:
+            if o.type == "MESH" and not o.name.endswith("_col"):
+                for i in range(len(o.data.materials)):
+                    o.data.materials[i] = bf
+        iso("backface_check", (0, -6, 0), 60, yaw_deg=25)
     if want("collision_overlay"):
         cm = ftf.collision_overlay_material()
         for c in cols:
