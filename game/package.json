@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs tests/client/collision.test.mjs tests/client/streaming.test.mjs tests/client/layout.test.mjs tests/ui-i18n.test.mjs tests/ui-logic.test.mjs tests/ui-a11y.test.mjs tests/sim.test.mjs tests/contract-vectors.test.mjs",
+    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs tests/v3.test.mjs tests/client/collision.test.mjs tests/client/streaming.test.mjs tests/client/layout.test.mjs tests/ui-i18n.test.mjs tests/ui-logic.test.mjs tests/ui-a11y.test.mjs tests/sim.test.mjs tests/contract-vectors.test.mjs",
     "fixtures": "node scripts/gen-fixtures.mjs",
     "sim": "node scripts/sim/run.mjs",
     "sim:quick": "node scripts/sim/run.mjs --quick --out docs/math",

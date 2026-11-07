@@ -8,6 +8,8 @@ import { applyToEngine } from '../../../tests/lib/engine-apply.mjs';
 import { makeChooser, makeRandomBytes } from './rng.mjs';
 
 const POT = [10, 20, 40, 80];
+/** The engine's own split: largest-remainder in v3, independent rounding before. */
+const splitPot = (S, pot, weights) => (S.rulesVersion === 'v3' ? E.apportion(pot, weights) : weights.map((w) => Math.round(pot * w / weights.reduce((a, b) => a + b, 0))));
 const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
 
 /** Gift-pool bookkeeping for the event revealed at tick t (all clans), plus Iris's own anchor returns. */
@@ -18,8 +20,7 @@ function preReveal(S, t, rec) {
   if (e.action === 0) {
     rec.pool.giftEvents++; rec.pool.pot += pot;
     if (hit.length) {
-      const W = hit.reduce((s, a) => s + (t - a.at + 1), 0);
-      const paid = hit.reduce((s, a) => s + Math.round(pot * (t - a.at + 1) / W), 0);
+      const paid = splitPot(S, pot, hit.map((a) => t - a.at + 1)).reduce((s, g) => s + g, 0);
       rec.pool.paid += paid; rec.pool.claimedEvents++;
       if (paid !== pot) { rec.pool.driftEvents++; rec.pool.drift += paid - pot; if (paid > pot) rec.pool.minted += paid - pot; else rec.pool.burned += pot - paid; }
     } else rec.pool.unclaimed += pot;
@@ -28,7 +29,7 @@ function preReveal(S, t, rec) {
   for (const a of here.filter((a) => a.c === 0)) {
     rec.anchors.resolved++;
     if (a.place !== e.place) { rec.in.stakeBack += a.stake; rec.anchors.miss++; continue; }
-    if (e.action === 0) { const W = hit.reduce((s, x) => s + (t - x.at + 1), 0); rec.in.stakeBack += a.stake; rec.in.giftShare += Math.round(pot * (t - a.at + 1) / W); rec.anchors.gift++; }
+    if (e.action === 0) { const shares = splitPot(S, pot, hit.map((x) => t - x.at + 1)); rec.in.stakeBack += a.stake; rec.in.giftShare += shares[hit.indexOf(a)]; rec.anchors.gift++; }
     else if (e.action === 1) { rec.anchors.storm++; rec.anchors.stormLost += a.stake; }
     else { rec.in.stakeBack += a.stake; rec.anchors.quiet++; }
   }
@@ -86,7 +87,8 @@ export function runSeason(seed, strategy, opts = {}) {
       preReveal(S, S.tick, rec);
       const before = S.silk[0], it = { type: 'vote', v: strategy.vote(S, E, pr) };
       note(it, applyToEngine(it));
-      rec.in.finale = S.silk[0] - before;
+      const deferred = S.frag[0].prizePaid ? S.frag[0].prize : 0; // v3: the own prize is paid at the finale
+      rec.in.prize += deferred; rec.in.finale = S.silk[0] - before - deferred;
       break;
     }
     ctx.n = 0; let step = 0, it;
@@ -120,8 +122,9 @@ export function runSeason(seed, strategy, opts = {}) {
     E.takeFx();
     const advanced = S.tick === t + 1;
     if (advanced) postShards(S, S.tick, rec);
-    if (heldPrize && S.frag[0].st === 'dark') rec.in.prize += S.V[0];
-    const known = (rec.in.stakeBack - stakeBefore) + (rec.in.giftShare - giftBefore) + (rec.in.shardSale - saleBefore) - (rec.out.bids - bidsBefore) + (heldPrize && S.frag[0].st === 'dark' ? S.V[0] : 0);
+    const prizeNow = heldPrize && S.frag[0].st === 'dark' && rules !== 'v3' ? S.V[0] : 0; // v3 defers the prize to the finale
+    rec.in.prize += prizeNow;
+    const known = (rec.in.stakeBack - stakeBefore) + (rec.in.giftShare - giftBefore) + (rec.in.shardSale - saleBefore) - (rec.out.bids - bidsBefore) + prizeNow;
     const residual = S.silk[0] - before - (advanced ? 3 : 0) - known;
     if (residual > 0) rec.in.repay += residual; else if (residual < 0) rec.in.other += residual;
     rec.H.push(S.H);

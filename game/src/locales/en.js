@@ -255,6 +255,7 @@ export default {
   'outcome.survived': 'the weapon was refused',
   'outcome.lost': 'a gift was refused',
   'outcome.gone': 'the Shells left',
+  'outcome.proof_failed': 'the season was voided: a reveal did not match the commitment',
 
   // ---- engine rejection reasons ----
   'reason.phase': 'not in this phase',
@@ -280,6 +281,7 @@ export default {
   'reason.already_leading': 'you already lead the bidding',
   'reason.too_late': 'too late to contribute',
   'reason.no_fragment': 'your fragment is no longer held',
+  'reason.debt_due': 'the debt is due too soon to be forgotten',
 
   // ---- world vocabulary ----
   'agent.iris': 'Iris',

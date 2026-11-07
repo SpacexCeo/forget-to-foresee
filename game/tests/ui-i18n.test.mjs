@@ -84,7 +84,7 @@ test('no raw keys: dynamic key families are complete', () => {
     ...ADAPTER_KEYS, ...LINE_KEYS, ...reasons,
     ...AGENT_IDS.map((a) => 'agent.' + a), 'agent.guests', 'agent.unknown',
     ...[0, 1, 2, 3].flatMap((i) => ['shell.' + i, 'slot.' + i, 'form.' + i, ...[0, 1, 2, 3].map((m) => `meaning.${i}.${m}`)]),
-    ...['gift', 'weapon', 'survived', 'lost', 'gone'].map((o) => 'outcome.' + o),
+    ...['gift', 'weapon', 'survived', 'lost', 'gone', 'proof_failed'].map((o) => 'outcome.' + o),
     ...['sell', 'loan', 'gift', 'pact', 'escrow', 'unknown'].map((o) => 'offer.' + o),
     ...['first', 'call', 'gift', 'betrayal', 'debt', 'promise', 'unknown'].map((o) => 'effect.' + o),
   ];
