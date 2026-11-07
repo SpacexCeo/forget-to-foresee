@@ -1,0 +1,4 @@
+# `cargo test --lib --target wasm32-wasip1` runs the pure tests under Node's WASI
+# (works on Windows without a C toolchain). See README.md.
+[target.wasm32-wasip1]
+runner = ["node", "wasi-runner.mjs"]

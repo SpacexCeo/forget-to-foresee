@@ -21,14 +21,16 @@ Shells have appeared over a world of agents. The Guests speak in round signs. Ea
 | English and Russian UI, language switch mid-season; every engine line rendered through i18n keys | **works** (engine still emits Russian; an adapter maps it, see [docs/i18n-migration.md](docs/i18n-migration.md)) | `game/src/locales/`, `game/src/ui/i18n/` |
 | Hologram constructor with canonical recipe hash | **works**, cosmetic only | `game/src/ui/hologram/` |
 | Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
-| NEAR contract (commit-reveal, NEP-171 fragment NFTs, escrow) | **not started** | — |
+| NEAR contract `season-commit`: season schedule root commitment, **on-chain verification** of each revealed event's Merkle proof, Ash's key commit-reveal | **builds and passes tests** (pure vector tests on any OS; mocked-chain and local sandbox tests in CI); **not deployed to testnet yet** (owner deploys with one command) | `contracts/season-commit/` |
+| NEAR NEP-171 fragment NFTs, escrow | **not started** | — |
 
 ### Real / mock
 
 | What | Now |
 |---|---|
 | AI clans | deterministic heuristics, not an LLM (**mock**) |
-| On-chain commitments, NFTs, escrow | simulated locally (**mock**) |
+| On-chain commitments | contract ready and tested on a local NEAR sandbox, not deployed yet; the game still verifies reveals in the browser against its own root (**mock** until deployed and wired) |
+| NFTs, escrow | simulated locally (**mock**) |
 | Hashes and Merkle proofs | real SHA-256 (**real**, but local) |
 | Money | in-game "silk", no real tokens |
 | 3D art | labeled greybox placeholders ("not final art") until each `.glb` from `docs/art/brief.md` is in `game/public/assets/models/` (**mock art**) |
@@ -44,15 +46,25 @@ cd game
 npm install
 npm test
 ```
-**See:** `tests 142 · pass 142`.
+**See:** `tests 144 · pass 144`.
 - 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
 - 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
 - 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
 - 31 tests cover the 3D client's pure logic: swept capsule collision (no tunneling through a zero-thickness wall at 15 m/s or in a single 20 m move, same end point at 10 and 144 FPS), camera sphere sweep, ray cast, fixed 30 Hz step, respawn at the last safe point, streaming priority / load plan / LRU, asset naming conventions, and the world layout (walk times, bridges, Shell hover bounds).
 - 33 tests cover the UI layer: ICU formatting, en/ru key parity and no raw keys, the engine-text adapter over 120 scripted seasons, the language switch mid-season, recipe hash stability (save → reload → low tier → reset), idempotent tournament enrollment, onboarding order, palette contrast and colour-independent tells.
 - 3 tests pin the Monte Carlo harness (`npm run sim -- --quick`): deterministic records, zero rejected intents, balanced silk ledger. Results and analysis: [docs/math/economy-report.md](docs/math/economy-report.md).
+- 2 tests check that the NEAR contract's test vectors (`contracts/season-commit/tests/vectors.json`) still match the engine.
 
 The engine rules are documented in [docs/rules-baseline.md](docs/rules-baseline.md).
+
+### NEAR contract
+Build, test and testnet deploy commands: [contracts/season-commit/README.md](contracts/season-commit/README.md).
+```bash
+cd contracts/season-commit
+cargo near build non-reproducible-wasm --no-abi   # -> target/near/season_commit.wasm
+cargo test                                         # Linux/macOS: 56 unit + 2 sandbox tests
+cargo test --lib --target wasm32-wasip1            # Windows: 13 pure vector tests (needs Node.js)
+```
 
 ### 2D prototype (no install)
 Open `prototype-2d/index.html` in a browser.
@@ -89,7 +101,7 @@ No game rules run in the 3D client yet: the pad numbers and prompts are demo lab
 
 - All code was written **after 19.10.2026**, during the hackathon. There is no earlier code.
 - Tag `pre-hackathon` is an empty root commit. Tag `hackathon-submission` will mark the submitted version; the diff between them is the whole work.
-- Libraries: [three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT). Google Fonts (OFL).
+- Libraries: [three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT). Google Fonts (OFL). Contract: [near-sdk](https://github.com/near/near-sdk-rs), [near-workspaces](https://github.com/near/near-workspaces-rs) (tests), [cargo-near](https://github.com/near/cargo-near) (build), all MIT/Apache-2.0.
 - **Code and design were made with AI assistance:** Claude Code (Claude Opus 5.5); game-design review by Claude Fable 5.1 and independent reviewer agents.
 - The theme is inspired by the film *Arrival* (2016). No names, characters or visuals from the film are used.
 
