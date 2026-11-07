@@ -5,7 +5,7 @@ export default {
   'app.title.line1': 'FORGET',
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
-  'app.tagline': 'THE FUTURE COSTS A MEMORY.',
+  'app.tagline': 'THE FUTURE COSTS A MEMORY',
 
   // ---- common ----
   'common.close': 'Close',
@@ -25,6 +25,15 @@ export default {
   'lang.ru': 'Русский',
   'lang.short.en': 'EN',
   'lang.short.ru': 'RU',
+  'lang.uk': 'Українська',
+  'lang.it': 'Italiano',
+  'lang.zh': '中文',
+  'lang.short.uk': 'UA',
+  'lang.short.it': 'IT',
+  'lang.short.zh': '中文',
+  'lobby.exit': 'EXIT',
+  'lobby.exitHint': 'You can close this tab now.',
+  'lobby.guestDemo': 'Guest demo',
   'lang.changed': 'Language: {name}',
 
   // ---- lobby ----

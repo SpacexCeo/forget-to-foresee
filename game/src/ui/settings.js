@@ -14,7 +14,7 @@ export function buildLangToggle(ctx) {
     attrs: { type: 'button', lang: loc }, on: { click: () => { ctx.prefs.set({ locale: loc }); i18n.setLocale(loc); } },
   }));
   const sync = () => buttons.forEach((b, k) => b.setAttribute('aria-pressed', String(i18n.locales[k] === i18n.locale)));
-  group.append(...buttons);
+  buttons.forEach((b, k) => { if (k) group.append(h('span', { class: 'ftf-lang-sep', text: '|', attrs: { 'aria-hidden': 'true' } })); group.append(b); });
   sync();
   i18n.subscribe(sync);
   return group;

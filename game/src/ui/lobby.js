@@ -2,9 +2,8 @@
 // CLAN · MEMORIES · TOURNAMENTS, SETTINGS, profile; animated background that never
 // blocks input; full keyboard navigation; stacks at narrow widths.
 import { h, bindI18n, ensureStyles, createDialog, rovingArrows, tx } from './dom.js';
-import { mountBackground } from './background.js';
 import { buildSettings, buildLangToggle } from './settings.js';
-import { mountTournamentCard } from './tournament-card.js';
+import { mountTournamentCard } from './tournament-card.js'; // used by the tournaments dialog
 import { getUiContext } from './context.js';
 import { getEntitlement } from './entitlement.js';
 import { loadRecipe, recipeHash } from './hologram/recipe.js';
@@ -20,8 +19,11 @@ export function mountLobby(root, opts = {}) {
   const { i18n, prefs } = ctx;
   ensureStyles();
 
-  const bgEl = h('div', { class: 'ftf-bg', attrs: { 'aria-hidden': 'true' } });
-  const bg = mountBackground(bgEl, { reducedMotion: prefs.reducedMotion(), tier: prefs.tier() });
+  // Owner reference art (docs/ui/lobby-reference.jpg) as a full-bleed backdrop with drifting mist layers on top.
+  const bgEl = h('div', { class: 'ftf-bg ftf-bg-art', attrs: { 'aria-hidden': 'true' } },
+    h('div', { class: 'ftf-bg-image' }), h('div', { class: 'ftf-mist ftf-mist-a' }), h('div', { class: 'ftf-mist ftf-mist-b' }), h('div', { class: 'ftf-bg-vignette' }));
+  const bg = { setReduced: (on) => bgEl.classList.toggle('ftf-still', !!on), setTier() {}, destroy() {} };
+  bg.setReduced(prefs.reducedMotion());
 
   const enter = h('button', { class: 'ftf-btn ftf-btn-primary', i18n: 'lobby.enter', attrs: { type: 'button', id: 'ftf-enter' } });
   enter.addEventListener('click', () => { if (opts.onEnter) opts.onEnter(); });
@@ -75,33 +77,31 @@ export function mountLobby(root, opts = {}) {
     panels[name].open(e && e.currentTarget);
   };
   const profileChip = h('button', {
-    class: 'ftf-btn ftf-profile-chip', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: open('profile') },
+    class: 'ftf-btn ftf-pill', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: open('profile') },
     i18nAttrs: { 'aria-label': 'lobby.profile.aria' }, attrArgs: () => ({ name: i18n.t('profile.guest'), mode: i18n.t('profile.mode.demo') }),
-  }, h('span', { class: 'ftf-avatar', text: 'G', attrs: { 'aria-hidden': 'true' } }),
-    h('span', {}, h('span', { i18n: 'profile.guest' }), ' · ', h('span', { class: 'ftf-muted', i18n: 'profile.mode.demo' })));
+  }, h('span', { i18n: 'lobby.guestDemo' }));
 
-  const navBtn = (key, panel) => h('li', {}, h('button', { class: 'ftf-btn ftf-btn-ghost', i18n: key, attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: open(panel) } }));
-  const sep = () => h('li', { class: 'ftf-sep', text: '·', attrs: { 'aria-hidden': 'true' } });
+  const exitStatus = h('p', { class: 'ftf-exit-status', attrs: { role: 'status' } });
+  const exit = () => { try { window.close(); } catch { /* browsers only close script-opened tabs */ } setTimeout(() => tx(exitStatus, i18n, 'lobby.exitHint'), 150); };
+  const item = (key, onClick, extra = {}) => h('li', {}, h('button', { class: 'ftf-menu-item', i18n: key, attrs: { type: 'button', ...extra }, on: { click: onClick } }));
   const menu = h('nav', { class: 'ftf-menu', i18nAttrs: { 'aria-label': 'lobby.nav.label' } },
     enter,
-    h('p', { class: 'ftf-enter-hint', i18n: 'lobby.enterHint' }),
-    h('ul', { class: 'ftf-secondary' }, navBtn('lobby.nav.clan', 'clan'), sep(), navBtn('lobby.nav.memories', 'memories'), sep(), navBtn('lobby.nav.tournaments', 'tournaments')),
-    h('button', { class: 'ftf-btn ftf-btn-ghost', i18n: 'lobby.settings', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: open('settings') } }));
+    h('ul', { class: 'ftf-menu-list' }, item('lobby.settings', open('settings'), { 'aria-haspopup': 'dialog' }), item('lobby.exit', exit)),
+    exitStatus);
   rovingArrows(menu);
 
-  const aside = h('aside', { class: 'ftf-aside' });
-  const card = mountTournamentCard(aside, ctx);
+  const card = { destroy() {} }; // the weekly tournament lives in its dialog; the lobby itself matches the owner reference
 
-  const main = h('main', { class: 'ftf-lobby' },
-    h('div', { class: 'ftf-topbar' }, buildLangToggle(ctx), profileChip),
+  const main = h('main', { class: 'ftf-lobby ftf-lobby-ref' },
+    h('div', { class: 'ftf-topbar' }, buildLangToggle(ctx), h('span', { class: 'ftf-topbar-sep', attrs: { 'aria-hidden': 'true' } }), profileChip),
     h('section', { class: 'ftf-hero', attrs: { 'aria-labelledby': 'ftf-title' } },
       h('h1', { class: 'ftf-title', attrs: { id: 'ftf-title' } },
         h('span', { class: 'ftf-title-1', i18n: 'app.title.line1' }), h('span', { class: 'ftf-title-2', i18n: 'app.title.line2' }),
         h('span', { class: 'sr-only', text: ' ' })),
+      h('div', { class: 'ftf-rule', attrs: { 'aria-hidden': 'true' } }, h('span'), h('i'), h('span')),
       h('p', { class: 'ftf-tagline', i18n: 'app.tagline' }),
       menu),
-    aside,
-    h('footer', { class: 'ftf-footer' }, h('span', { class: 'ftf-badge ftf-badge-demo', i18n: 'common.demo' }), h('span', { i18n: 'lobby.demoNotice' })));
+    h('footer', { class: 'sr-only' }, h('span', { i18n: 'lobby.demoNotice' })));
 
   const skip = h('a', { class: 'ftf-skip', i18n: 'common.skipToContent', attrs: { href: '#ftf-enter' }, on: { click: (e) => { e.preventDefault(); enter.focus(); } } });
   const wrap = h('div', { class: 'ftf-root' }, skip, bgEl, main, Object.values(panels).map((p) => p.el));

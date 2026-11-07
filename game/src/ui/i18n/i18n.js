@@ -3,7 +3,7 @@
 // is recorded in `missing` (tests assert that set stays empty).
 import { format } from './icu.js';
 
-export const SUPPORTED_LOCALES = ['en', 'ru'];
+export const SUPPORTED_LOCALES = ['en', 'uk', 'ru', 'it', 'zh'];
 export const BASE_LOCALE = 'en';
 /** Shown instead of a raw key when a message is missing everywhere. */
 export const MISSING_TEXT = '…';

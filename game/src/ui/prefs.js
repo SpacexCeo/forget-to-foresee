@@ -6,7 +6,7 @@ export const PREF_OPTIONS = Object.freeze({
   motion: ['system', 'reduce', 'full'],
   subtitleSize: ['s', 'm', 'l'],
   quality: ['auto', 'high', 'low'],
-  locale: ['en', 'ru'],
+  locale: ['en', 'uk', 'ru', 'it', 'zh'],
 });
 
 function clean(p) {

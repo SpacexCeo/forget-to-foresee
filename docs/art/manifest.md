@@ -23,3 +23,4 @@ Status: `greybox` (code placeholder) → `wip` → `review` → `approved`. Only
 | agent_suit.glb | Shell suit (any clan): armour, helmet, backpack with emissive strip `M_Suit_Light` | Claude Code (procedural, `art/agents/`) | own, MIT | 8,120 (`_col` 144) | 3 mats sharing 2048² base/ORM/normal; glb 3.28 MB | review |
 | (code) | Agent holograms, logograms, VFX | Claude Code | own, MIT | — | — | in progress |
 | assets/audio/*.ogg (60) | Ambience, adaptive music stems, Guest voice, UI, footsteps, SFX, stingers | Claude Code (procedural synthesis, `art/audio/build_audio.py` + `synth.py`, numpy/scipy, Opus via ffmpeg/libopus) | own, MIT; no samples, no third-party audio | — | 5.77 MB Ogg Opus 48 kHz | review |
+| assets/ui/lobby_bg.jpg | Lobby background (floating archipelago, nacre Shells) | owner-supplied image (07.11) | supplied by the project owner for the lobby | — | 1280×610 JPEG q90, 155 KB | in use |
