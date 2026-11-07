@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, socketRole } from './asset-catalog.js';
 import { instancePriority, assetPriority, planStreaming, LruCache } from './streaming.js';
@@ -104,8 +105,21 @@ export function meshesToTriangles(meshes) {
 /* ---------- library ---------- */
 
 let sharedLoader = null;
+let ktx2Loader = null;
+
+/** Enables KTX2 (Basis Universal) textures; call once with the renderer before loading models. */
+export function configureTextureSupport(renderer) {
+  if (!ktx2Loader) ktx2Loader = new KTX2Loader().setTranscoderPath(`${BASE}basis/`);
+  ktx2Loader.detectSupport(renderer);
+  if (sharedLoader) sharedLoader.setKTX2Loader(ktx2Loader);
+}
+
 function loader() {
-  if (!sharedLoader) { sharedLoader = new GLTFLoader(); sharedLoader.setMeshoptDecoder(MeshoptDecoder); }
+  if (!sharedLoader) {
+    sharedLoader = new GLTFLoader();
+    sharedLoader.setMeshoptDecoder(MeshoptDecoder);
+    if (ktx2Loader) sharedLoader.setKTX2Loader(ktx2Loader);
+  }
   return sharedLoader;
 }
 

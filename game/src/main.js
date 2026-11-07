@@ -9,6 +9,7 @@ import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo } from './physics/character.js';
 import { Input } from './ui/input.js';
 import { DevHud } from './ui/dev-hud.js';
+import { configureTextureSupport } from './render/assets.js';
 
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -20,6 +21,7 @@ renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 app.appendChild(renderer.domElement);
+configureTextureSupport(renderer);
 
 // Tuned so the walkable tops (y = 0) stay readable from the top zoom while the pillars sink into
 // dense fog toward the cloud sea (y = -28).

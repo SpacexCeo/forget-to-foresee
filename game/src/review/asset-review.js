@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { ASSETS, TRIANGLE_BUDGET, assetByName, isValidModelName } from '../render/asset-catalog.js';
-import { fetchGltf, splitAssetScene, analyzeAssetScene } from '../render/assets.js';
+import { fetchGltf, splitAssetScene, analyzeAssetScene, configureTextureSupport } from '../render/assets.js';
 import { buildGreybox, makeLabel } from '../render/greybox.js';
 import { PadDecals } from '../render/decals.js';
 
@@ -36,6 +36,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 $('app').appendChild(renderer.domElement);
+configureTextureSupport(renderer);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x2f3532);
