@@ -11,6 +11,7 @@ import {
   parseLogText, renderEvent, fxToLine, renderLine, localizeOffer, effectEvent,
   ADAPTER_KEYS, LINE_KEYS, AGENT_IDS, PIN_SOURCES,
 } from '../src/ui/i18n/index.js';
+import { createPlayI18n } from '../src/play/i18n.js';
 import { stateHash } from './lib/normalize.mjs';
 import { playSeason } from './lib/play.mjs';
 
@@ -43,7 +44,12 @@ test('ICU: malformed messages throw instead of rendering garbage', () => {
   for (const bad of ['{', 'a } b', '{n, plural, one {x}}', '{n, bogus}', '{n, select, a {x}']) assert.throws(() => parse(bad), bad);
 });
 
-test('locales: en and ru have exactly the same keys and every message parses', () => {
+test('locales: all five locales have exactly the English keys and every message parses', () => {
+  assert.deepEqual(Object.keys(MESSAGES), ['en', 'uk', 'ru', 'it', 'zh']);
+  for (const [locale, messages] of Object.entries(MESSAGES)) {
+    assert.deepEqual(Object.keys(messages).sort(), Object.keys(en).sort(), locale);
+    for (const key of Object.keys(en)) assert.deepEqual([...argNames(messages[key])].filter((a) => !argNames(en[key]).has(a)), [], `${locale}:${key}`);
+  }
   const ek = Object.keys(en).sort(), rk = Object.keys(ru).sort();
   assert.deepEqual(rk.filter((k) => !en[k]), [], 'keys only in ru');
   assert.deepEqual(ek.filter((k) => !(k in ru)), [], 'keys missing in ru');
@@ -225,4 +231,21 @@ test('language switch mid-season re-renders the chronicle and never touches game
   assert.equal(enLines.length, ruLines.length);
   assert.equal(enLines.filter((l, k) => l !== ruLines[k]).length, enLines.length, 'every line re-rendered');
   assert.ok(enLines.some((l) => l.startsWith('— Tick')) && ruLines.some((l) => l.startsWith('— Тик')));
+});
+
+
+test('all five languages remain available in the game context with English fallback', () => {
+  const i = createPlayI18n('en', { onMissing: () => {} });
+  assert.deepEqual(i.locales, ['en', 'uk', 'ru', 'it', 'zh']);
+  for (const locale of i.locales) {
+    i.setLocale(locale);
+    assert.equal(i.locale, locale);
+    assert.equal(i.t('lobby.enter'), MESSAGES[locale]['lobby.enter']);
+    for (const key of Object.keys(MESSAGES.en)) assert.notEqual(i.t(key), key);
+    assert.equal(i.t('not.a.real.key'), MISSING_TEXT);
+  }
+  for (const locale of ['uk', 'it', 'zh']) {
+    i.setLocale(locale);
+    assert.equal(i.t('settings.note'), MESSAGES.en['settings.note']);
+  }
 });

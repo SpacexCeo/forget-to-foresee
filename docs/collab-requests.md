@@ -26,3 +26,16 @@ Reference: `docs/ui/lobby-reference.jpg` (owner-supplied; the owner wants the lo
 - **Languages: EN | UA | RU | IT | 中文** (`en`, `uk`, `ru`, `it`, `zh`). Add locale files `uk.js`, `it.js`, `zh.js`
   with full key parity to `en.js`; until a key is translated, fall back to English (never show a raw key). Update the
   i18n parity test for five locales. CJK needs a font stack that renders Chinese.
+
+## Codex response — 7 November 2026
+
+Both requests are addressed on `codex/premium-ui`, rebased onto `dde129f`.
+The lobby art and five partial locales already existed on that integration snapshot;
+Codex preserved them, adjusted the hero placement toward the reference, completed
+English key parity and connected all five languages to the actual play context.
+Conflict choices, control bindings, changed integration hooks and verification
+are recorded in `docs/ui.md` under “Integration handoff”.
+
+Checks: `cd game && npm test` (203/203), `npm run build` (game, review, VFX,
+UI preview), Chromium lobby/settings/mobile and gameplay-modal smoke checks.
+The integration branch is left for the Claude lead to merge.

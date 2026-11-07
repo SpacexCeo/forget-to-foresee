@@ -1,6 +1,6 @@
 // Browser standard mapping. Face button names describe position across controller families.
 export const PAD = Object.freeze({
-  interact: 0, cancel: 1, zoomIn: 4, zoomOut: 5, menu: 9, reset: 11,
+  interact: 0, cancel: 1, zoomIn: 4, zoomOut: 5, menu: 9, inspect: 10, reset: 11,
   up: 12, down: 13, left: 14, right: 15,
 });
 

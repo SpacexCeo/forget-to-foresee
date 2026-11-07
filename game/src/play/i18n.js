@@ -9,7 +9,8 @@ import playRu from './locales/ru.js';
 const { MESSAGES, createI18n, detectLocale, BASE_LOCALE, resolveArg } = uiI18n;
 
 export const PLAY_MESSAGES = { en: playEn, ru: playRu };
-export const MERGED_MESSAGES = { en: { ...MESSAGES.en, ...playEn }, ru: { ...MESSAGES.ru, ...playRu } };
+export const MERGED_MESSAGES = Object.fromEntries(Object.entries(MESSAGES).map(([locale, messages]) =>
+  [locale, { ...playEn, ...messages, ...(PLAY_MESSAGES[locale] || {}) }]));
 
 export function createPlayI18n(locale, { onMissing } = {}) {
   const preferred = locale || (typeof navigator !== 'undefined' ? detectLocale(navigator.languages || [navigator.language]) : BASE_LOCALE);

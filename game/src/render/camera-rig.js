@@ -113,7 +113,7 @@ export class CameraRig {
     const desired = center.clone().addScaledVector(dir, dist);
     const f = sweepSphere(this.world, from.toArray(), desired.toArray(), this.radius, MASK_CAMERA);
     this.lastSweep = f;
-    const safe = Math.max(start + 0.3, start + f * (dist - start) - 0.05);
+    const safe = start + Math.max(0, f * (dist - start) - 0.05);
     // Pull in fast but smoothly (a hard snap on every thin collider made the view jitter), ease back out slowly.
     // A large jump inward (a wall right behind the camera) still snaps so the view never ends up inside geometry.
     if (safe < this.actualDist) this.actualDist = this.actualDist - safe > 2 ? safe : this.actualDist + (safe - this.actualDist) * (1 - Math.exp(-dt * 25));

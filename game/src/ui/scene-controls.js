@@ -4,7 +4,8 @@ import { actionButton, contextCue } from './controls.js';
 const BINDINGS = [
   ['Move', 'W A S D or click the ground', 'Left stick'],
   ['Orbit and tilt', 'Right-drag or arrow keys', 'Right stick'],
-  ['Inspect or interact', 'E or select the cue', 'South button'],
+  ['Interact', 'E', 'South button'],
+  ['Inspect', 'I or select the cue', 'Press left stick'],
   ['Back or open controls', 'Esc', 'East button'],
   ['Zoom', 'Mouse wheel or + / −', 'Left / right bumper'],
   ['Reset camera', 'R', 'Press right stick'],
@@ -12,7 +13,7 @@ const BINDINGS = [
 ];
 
 export const sceneKeycap = (device, action) => {
-  const keys = { interact: ['E', 'South'], cancel: ['Esc', 'East'], menu: ['Esc', 'Menu'] };
+  const keys = { interact: ['I', 'Left stick'], cancel: ['Esc', 'East'], menu: ['Esc', 'Menu'] };
   return keys[action][Number(device === 'gamepad')];
 };
 

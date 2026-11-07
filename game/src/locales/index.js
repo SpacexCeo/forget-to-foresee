@@ -1,4 +1,4 @@
-// Locale registry. English is the base; Russian is the second UI language.
+// Locale registry. English is the base for all five UI languages.
 import en from './en.js';
 import ru from './ru.js';
 import uk from './uk.js';

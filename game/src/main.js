@@ -154,17 +154,17 @@ function handleInput(dt) {
     else controls.open();
     return false;
   }
-  if (input.hit('KeyI') || pad.hit(PAD.reset)) handleInspect();
+  if (input.hit('KeyI') || pad.hit(PAD.inspect)) handleInspect();
   if (!inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
-    if (pad.hit(PAD.interact)) play.handleKey('KeyE');
     if (play.ui.panel) {
       navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
       stopSteering();
       return false;
     }
+    if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
   }
-  if (input.hit('KeyR')) rig.reset();
+  if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
   const [lookX, lookY] = pad.look;
   const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
   const tilt = Number(input.down('ArrowUp')) - Number(input.down('ArrowDown')) + lookY;
