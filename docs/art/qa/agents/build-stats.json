@@ -1,0 +1,1048 @@
+{
+  "agents": {
+    "iris": {
+      "clan": "Iris",
+      "file": "game/public/assets/models/agent_iris.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "tunic": 1408,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "boot_-1": 240,
+        "boot_1": 240,
+        "belt": 256,
+        "bracer_-1": 200,
+        "bracer_1": 200,
+        "hair": 968,
+        "cloak": 2936,
+        "cape": 1564,
+        "hood_down": 136,
+        "scarf": 672,
+        "scarf_tail": 152,
+        "scarf_front": 80,
+        "pin": 60
+      },
+      "ngons_triangulated": 2,
+      "runtime_triangles": 12164,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 420.2,
+          "p10": 398.4,
+          "p90": 432.5
+        },
+        "uv_anisotropy": {
+          "median": 1.073,
+          "p95": 1.264
+        }
+      },
+      "master_triangles": 4751424,
+      "bakes": {
+        "ao": {
+          "seconds": 32.49,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 22.25,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 28.41,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 28.98,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 18.0,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_iris_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 659891
+        },
+        "orm": {
+          "file": "agent_iris_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1429431
+        },
+        "normal": {
+          "file": "agent_iris_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1208297
+        }
+      },
+      "collision": {
+        "name": "agent_iris_col",
+        "radius_m": 0.313,
+        "height_m": 1.763,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ]
+      },
+      "materials": [
+        "M_Iris_Body",
+        "M_Iris_Garment",
+        "M_Iris_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.001,
+          -0.333
+        ],
+        "max": [
+          107.989,
+          1.763,
+          0.257
+        ]
+      },
+      "glb_bytes": 4522184,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "iris:model",
+          "seconds": 0.99
+        },
+        {
+          "stage": "iris:uv",
+          "seconds": 4.55
+        },
+        {
+          "stage": "iris:master",
+          "seconds": 9.6
+        },
+        {
+          "stage": "iris:bake_gpu",
+          "seconds": 130.68
+        },
+        {
+          "stage": "iris:textures",
+          "seconds": 5.17
+        },
+        {
+          "stage": "iris:export",
+          "seconds": 0.12
+        }
+      ],
+      "total_seconds": 151.26
+    },
+    "sol": {
+      "clan": "Salt",
+      "file": "game/public/assets/models/agent_sol.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "robe": 2400,
+        "tier_0": 960,
+        "tier_1": 960,
+        "tier_2": 960,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "belt": 256,
+        "hood": 1372,
+        "veil": 140,
+        "shoulder_plates": 264,
+        "crystals": 880,
+        "balance": 192,
+        "pans": 280,
+        "cords": 48,
+        "satchel_strap": 84,
+        "satchel": 24,
+        "clasp": 12,
+        "pouch_0": 96,
+        "pouch_1": 96,
+        "pouch_2": 96
+      },
+      "ngons_triangulated": 38,
+      "runtime_triangles": 12172,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 317.2,
+          "p10": 304.7,
+          "p90": 325.7
+        },
+        "uv_anisotropy": {
+          "median": 1.061,
+          "p95": 1.191
+        }
+      },
+      "master_triangles": 6316576,
+      "bakes": {
+        "ao": {
+          "seconds": 12.1,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 8.43,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 11.9,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 10.66,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 12.58,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_sol_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1098103
+        },
+        "orm": {
+          "file": "agent_sol_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1584543
+        },
+        "normal": {
+          "file": "agent_sol_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1531608
+        }
+      },
+      "collision": {
+        "name": "agent_sol_col",
+        "radius_m": 0.323,
+        "height_m": 1.859,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ]
+      },
+      "materials": [
+        "M_Salt_Body",
+        "M_Salt_Garment",
+        "M_Salt_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.001,
+          -0.258
+        ],
+        "max": [
+          131.939,
+          1.859,
+          0.293
+        ]
+      },
+      "glb_bytes": 5472408,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "sol:model",
+          "seconds": 0.15
+        },
+        {
+          "stage": "sol:uv",
+          "seconds": 1.72
+        },
+        {
+          "stage": "sol:master",
+          "seconds": 6.15
+        },
+        {
+          "stage": "sol:bake_gpu",
+          "seconds": 56.1
+        },
+        {
+          "stage": "sol:textures",
+          "seconds": 2.13
+        },
+        {
+          "stage": "sol:export",
+          "seconds": 0.16
+        }
+      ],
+      "total_seconds": 66.42
+    },
+    "pepel": {
+      "clan": "Ash",
+      "file": "game/public/assets/models/agent_pepel.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "tunic": 1664,
+        "coat": 1316,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "wraps_-1": 384,
+        "wraps_1": 384,
+        "belt": 256,
+        "hood": 1264,
+        "scarf": 288,
+        "palisade": 468,
+        "binding": 306,
+        "shield": 260,
+        "shield_bars": 24
+      },
+      "ngons_triangulated": 16,
+      "runtime_triangles": 9666,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 388.5,
+          "p10": 372.4,
+          "p90": 400.1
+        },
+        "uv_anisotropy": {
+          "median": 1.067,
+          "p95": 1.19
+        }
+      },
+      "master_triangles": 5404000,
+      "bakes": {
+        "ao": {
+          "seconds": 17.19,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 11.91,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 13.18,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 7.64,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 5.42,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_pepel_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 734594
+        },
+        "orm": {
+          "file": "agent_pepel_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1632246
+        },
+        "normal": {
+          "file": "agent_pepel_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1691974
+        }
+      },
+      "collision": {
+        "name": "agent_pepel_col",
+        "radius_m": 0.328,
+        "height_m": 1.864,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ]
+      },
+      "materials": [
+        "M_Ash_Body",
+        "M_Ash_Garment",
+        "M_Ash_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.001,
+          -0.482
+        ],
+        "max": [
+          90.45,
+          1.864,
+          0.258
+        ]
+      },
+      "glb_bytes": 5056276,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "pepel:model",
+          "seconds": 0.28
+        },
+        {
+          "stage": "pepel:uv",
+          "seconds": 1.09
+        },
+        {
+          "stage": "pepel:master",
+          "seconds": 2.56
+        },
+        {
+          "stage": "pepel:bake_gpu",
+          "seconds": 55.82
+        },
+        {
+          "stage": "pepel:textures",
+          "seconds": 2.22
+        },
+        {
+          "stage": "pepel:export",
+          "seconds": 0.09
+        }
+      ],
+      "total_seconds": 62.07
+    },
+    "moh": {
+      "clan": "Moss",
+      "file": "game/public/assets/models/agent_moh.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "tunic": 1664,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "belt": 256,
+        "cloak": 1920,
+        "capelet": 1152,
+        "hood_down": 116,
+        "hair": 968,
+        "moss": 440,
+        "mushroom_caps": 352,
+        "mushroom_stems": 96,
+        "leaves": 416,
+        "cauldron": 336,
+        "bail": 250,
+        "ladle": 80
+      },
+      "ngons_triangulated": 16,
+      "runtime_triangles": 11098,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 416.2,
+          "p10": 389.8,
+          "p90": 430.1
+        },
+        "uv_anisotropy": {
+          "median": 1.084,
+          "p95": 1.297
+        }
+      },
+      "master_triangles": 5061184,
+      "bakes": {
+        "ao": {
+          "seconds": 12.78,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 9.43,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 6.91,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 6.32,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 4.55,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_moh_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1003253
+        },
+        "orm": {
+          "file": "agent_moh_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1604612
+        },
+        "normal": {
+          "file": "agent_moh_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1413781
+        }
+      },
+      "collision": {
+        "name": "agent_moh_col",
+        "radius_m": 0.333,
+        "height_m": 1.763,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ]
+      },
+      "materials": [
+        "M_Moss_Body",
+        "M_Moss_Garment",
+        "M_Moss_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.001,
+          -0.326
+        ],
+        "max": [
+          101.965,
+          1.763,
+          0.252
+        ]
+      },
+      "glb_bytes": 5181828,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "moh:model",
+          "seconds": 0.15
+        },
+        {
+          "stage": "moh:uv",
+          "seconds": 1.09
+        },
+        {
+          "stage": "moh:master",
+          "seconds": 1.99
+        },
+        {
+          "stage": "moh:bake_gpu",
+          "seconds": 40.31
+        },
+        {
+          "stage": "moh:textures",
+          "seconds": 1.97
+        },
+        {
+          "stage": "moh:export",
+          "seconds": 0.07
+        }
+      ],
+      "total_seconds": 45.58
+    },
+    "yantar": {
+      "clan": "Amber",
+      "file": "game/public/assets/models/agent_yantar.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "robe": 2016,
+        "coat": 1772,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "cuff_-1": 140,
+        "cuff_1": 140,
+        "belt": 256,
+        "collar": 460,
+        "hat": 192,
+        "hat_band": 128,
+        "chest": 56,
+        "chest_bands": 288,
+        "strap_-1": 68,
+        "strap_1": 68,
+        "padlocks": 60,
+        "shackles": 478,
+        "keys": 464,
+        "gems": 60
+      },
+      "ngons_triangulated": 18,
+      "runtime_triangles": 9698,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 409.6,
+          "p10": 382.9,
+          "p90": 421.5
+        },
+        "uv_anisotropy": {
+          "median": 1.067,
+          "p95": 1.316
+        }
+      },
+      "master_triangles": 5348080,
+      "bakes": {
+        "ao": {
+          "seconds": 8.45,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 6.27,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 11.06,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 10.4,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 5.78,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_yantar_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1215180
+        },
+        "orm": {
+          "file": "agent_yantar_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1577281
+        },
+        "normal": {
+          "file": "agent_yantar_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1587032
+        }
+      },
+      "collision": {
+        "name": "agent_yantar_col",
+        "radius_m": 0.332,
+        "height_m": 1.781,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ]
+      },
+      "materials": [
+        "M_Amber_Body",
+        "M_Amber_Garment",
+        "M_Amber_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.001,
+          -0.419
+        ],
+        "max": [
+          120.047,
+          1.781,
+          0.29
+        ]
+      },
+      "glb_bytes": 5381004,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "yantar:model",
+          "seconds": 0.11
+        },
+        {
+          "stage": "yantar:uv",
+          "seconds": 1.0
+        },
+        {
+          "stage": "yantar:master",
+          "seconds": 1.67
+        },
+        {
+          "stage": "yantar:bake_gpu",
+          "seconds": 42.28
+        },
+        {
+          "stage": "yantar:textures",
+          "seconds": 1.96
+        },
+        {
+          "stage": "yantar:export",
+          "seconds": 0.07
+        }
+      ],
+      "total_seconds": 47.09
+    },
+    "iney": {
+      "clan": "Frost",
+      "file": "game/public/assets/models/agent_iney.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "robe": 2400,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "belt": 256,
+        "mantle": 1600,
+        "hood": 1436,
+        "lens_frame": 148,
+        "staff": 52,
+        "armillary": 876,
+        "glass": 176,
+        "tablet": 12,
+        "signs": 696,
+        "tablet_cord": 20,
+        "vials": 144,
+        "vial_caps": 114
+      },
+      "ngons_triangulated": 5,
+      "runtime_triangles": 10982,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 417.9,
+          "p10": 394.7,
+          "p90": 430.6
+        },
+        "uv_anisotropy": {
+          "median": 1.073,
+          "p95": 1.26
+        }
+      },
+      "master_triangles": 4633888,
+      "bakes": {
+        "ao": {
+          "seconds": 7.6,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 5.71,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 6.78,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 6.29,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 4.79,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_iney_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1152827
+        },
+        "orm": {
+          "file": "agent_iney_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1567594
+        },
+        "normal": {
+          "file": "agent_iney_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1431909
+        }
+      },
+      "collision": {
+        "name": "agent_iney_col",
+        "radius_m": 0.319,
+        "height_m": 2.02,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ]
+      },
+      "materials": [
+        "M_Frost_Body",
+        "M_Frost_Garment",
+        "M_Frost_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.0,
+          -0.297
+        ],
+        "max": [
+          102.384,
+          2.02,
+          0.297
+        ]
+      },
+      "glb_bytes": 5288092,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "iney:model",
+          "seconds": 0.11
+        },
+        {
+          "stage": "iney:uv",
+          "seconds": 0.85
+        },
+        {
+          "stage": "iney:master",
+          "seconds": 1.59
+        },
+        {
+          "stage": "iney:bake_gpu",
+          "seconds": 31.48
+        },
+        {
+          "stage": "iney:textures",
+          "seconds": 2.03
+        },
+        {
+          "stage": "iney:export",
+          "seconds": 0.07
+        }
+      ],
+      "total_seconds": 36.13
+    }
+  },
+  "blender": "4.5.3 LTS",
+  "budgets": {
+    "runtime_triangles": 24000,
+    "materials": 3,
+    "texture_px": 2048,
+    "bake_px": 4096
+  },
+  "qa_render": {
+    "device": "OPTIX",
+    "resolution": 1400,
+    "samples": 256,
+    "seconds_per_render": {
+      "agent_iris_front": 1.73,
+      "agent_iris_side": 1.83,
+      "agent_iris_back": 1.86,
+      "agent_iris_three_quarter": 1.87,
+      "agent_iris_iso": 2.08,
+      "agent_sol_front": 1.95,
+      "agent_sol_side": 1.89,
+      "agent_sol_back": 1.71,
+      "agent_sol_three_quarter": 2.06,
+      "agent_sol_iso": 2.15,
+      "agent_pepel_front": 1.67,
+      "agent_pepel_side": 1.62,
+      "agent_pepel_back": 1.96,
+      "agent_pepel_three_quarter": 3.28,
+      "agent_pepel_iso": 2.16,
+      "agent_moh_front": 1.7,
+      "agent_moh_side": 1.62,
+      "agent_moh_back": 1.64,
+      "agent_moh_three_quarter": 1.87,
+      "agent_moh_iso": 2.5,
+      "agent_yantar_front": 2.45,
+      "agent_yantar_side": 1.64,
+      "agent_yantar_back": 1.69,
+      "agent_yantar_three_quarter": 1.89,
+      "agent_yantar_iso": 2.13,
+      "agent_iney_front": 1.76,
+      "agent_iney_side": 1.67,
+      "agent_iney_back": 1.7,
+      "agent_iney_three_quarter": 1.91,
+      "agent_iney_iso": 2.14,
+      "agent_iris_collision_front": 1.59,
+      "agent_sol_collision_front": 0.84,
+      "agent_pepel_collision_front": 1.24,
+      "agent_moh_collision_front": 1.62,
+      "agent_yantar_collision_front": 0.81,
+      "agent_iney_collision_front": 0.78,
+      "lineup_front": 3.1,
+      "lineup_iso": 4.25
+    },
+    "total_seconds": 72.6
+  }
+}
