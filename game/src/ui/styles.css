@@ -87,7 +87,7 @@ html[data-subtitle-size="l"] { --ftf-sub-size: 1.45rem; }
 .ftf-cue-copy strong { font-weight: 500; letter-spacing: .04em; }
 .ftf-cue-copy > span { font-size: .86rem; color: var(--ftf-mist); }
 .ftf-keycap { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding-inline: 6px; border: 1px solid var(--ftf-mist); border-bottom-width: 2px; border-radius: 3px; background: var(--ftf-panel); color: var(--ftf-pearl); font: 500 .85rem var(--ftf-font); }
-.ftf-keycap[data-device="gamepad"] { border-radius: 50%; }
+.ftf-keycap[data-device="gamepad"] { border-radius: 999px; }
 .ftf-notice { display: flex; align-items: flex-start; gap: 12px; padding-block: 16px; border-block: 1px solid var(--ftf-line); }
 .ftf-notice .ftf-icon { color: var(--ftf-amber); }
 .ftf-notice[data-tone="danger"] .ftf-icon { color: var(--ftf-bad); }
@@ -328,3 +328,31 @@ html[data-motion="reduce"] .ftf-root *, html[data-motion="reduce"] .ftf-root *::
 .ftf-lobby-ref .ftf-btn-primary:focus-visible { outline: 1px solid rgba(255,208,138,.9); outline-offset: 4px; }
 .ftf-lobby-ref .ftf-btn-primary:focus:not(:focus-visible) { outline: none; }
 .ftf-bg-vignette { background: linear-gradient(90deg, rgba(12,12,16,.78) 0%, rgba(12,12,16,.5) 30%, rgba(12,12,16,.08) 52%, rgba(12,12,16,0) 60%), linear-gradient(180deg, rgba(10,10,14,.35) 0%, transparent 30%), radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(8,8,10,.5) 100%); }
+/* In-world controls leave the view and click-to-walk unobstructed. */
+.ftf-root.ftf-scene-controls {
+  position: fixed; inset: 0; min-height: 0; background: transparent; pointer-events: none;
+}
+.ftf-scene-tools { position: absolute; top: 12px; right: 12px; }
+.ftf-scene-tools .ftf-btn { pointer-events: auto; min-height: 44px; padding: .35em .65em; font-size: .85rem; }
+.ftf-scene-hint { color: var(--ftf-mist); font: .75rem var(--ftf-mono); }
+.ftf-scene-controls .ftf-dialog { pointer-events: auto; }
+.ftf-scene-cue {
+  position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: min(400px, calc(100% - 24px));
+}
+.ftf-scene-cue .ftf-context-cue { padding: 9px 12px; }
+button.ftf-context-cue { pointer-events: auto; cursor: pointer; color: inherit; font: inherit; text-align: left; }
+button.ftf-context-cue:hover { background: var(--ftf-panel); border-color: var(--ftf-amber); }
+.ftf-overline { margin: 0 0 4px; color: var(--ftf-amber); font-size: .74rem; letter-spacing: .18em; text-transform: uppercase; }
+.ftf-bindings { display: grid; margin: 0; }
+.ftf-bindings > div {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--ftf-line);
+}
+.ftf-bindings dt { color: var(--ftf-pearl); }
+.ftf-bindings dd { margin: 0; color: var(--ftf-mist); }
+.ftf-scene-dialog .ftf-dialog-body > .ftf-muted { font-size: .88rem; }
+@media (max-width: 600px) {
+  .ftf-scene-tools { top: 8px; right: 8px; }
+  .ftf-scene-tools .ftf-icon { width: 17px; height: 17px; flex-basis: 17px; }
+}

@@ -12,10 +12,14 @@ export function actionButton({ label, key, variant = 'secondary', symbol, traili
   }, trailing ? caption : drawing, trailing ? drawing : caption);
 }
 
-/** A descriptive cue. Callers supply localized labels and bind any action themselves. */
-export function contextCue({ title, detail, keycap = 'E', device = 'keyboard', symbol = 'eye' }) {
-  return h('div', { class: 'ftf-context-cue' },
+/** A descriptive cue, or a native action when an activation callback is supplied. */
+export function contextCue({ title, detail, keycap = 'E', device = 'keyboard', symbol = 'eye', onClick }) {
+  return h(onClick ? 'button' : 'div', {
+    class: 'ftf-context-cue',
+    attrs: onClick ? { type: 'button' } : {},
+    on: onClick ? { click: onClick } : {},
+  },
     icon(symbol),
-    h('div', { class: 'ftf-cue-copy' }, h('strong', { text: title }), detail ? h('span', { text: detail }) : null),
-    h('kbd', { class: 'ftf-keycap', dataset: { device }, text: keycap }));
+    h('span', { class: 'ftf-cue-copy' }, h('strong', { text: title }), detail ? h('span', { text: detail }) : null),
+    h('kbd', { class: 'ftf-keycap', dataset: { device }, attrs: { 'aria-hidden': 'true' }, text: keycap }));
 }
