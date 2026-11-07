@@ -46,17 +46,21 @@ from agent_geometry import (  # noqa: E402
     KINDS, SLOTS, apply_modifiers, link, mat_simple, mesh_tris, revolve, select_only,
 )
 from agent_costumes import ALL, CLANS, build_agent  # noqa: E402
+import agent_anim  # noqa: E402
+import agent_rig  # noqa: E402
 
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 MODEL_DIR = os.path.join(REPO, "game", "public", "assets", "models")
 QA_DIR = os.path.join(REPO, "docs", "art", "qa", "agents")
 TEX_DIR = os.path.join(HERE, "textures")
 STATS_PATH = os.path.join(QA_DIR, "build-stats.json")
+RAW_DIR = os.environ.get("FTF_RAW_DIR", os.path.join(HERE, "_raw"))   # uncompressed glbs
+COMPRESS = os.environ.get("FTF_COMPRESS", "/root/tools/compress-glb.sh")
 
 AGENT_HEIGHT = 1.75
 TEX_SIZE = 2048               # brief: agent textures up to 2048
 BAKE_SIZE = 4096              # baked at 4k and box-downsampled (supersampling)
-RUNTIME_TRI_BUDGET = 24000
+RUNTIME_TRI_BUDGET = 16000     # rigged characters (brief: characters <= 16k)
 MAX_MATERIALS = 3
 NORMAL_FORMAT = "jpg"         # "jpg" q95 (half the size of png, no visible loss) or "png"
 
@@ -860,6 +864,7 @@ def build_one(key, clock):
     work = new_collection("Work")
     ag = build_agent(key, work)
     st["part_triangles"] = ag.part_tris
+    cap = agent_rig.capture(ag)
     rt = join(list(ag.parts), f"agent_{key}")
     st["ngons_triangulated"] = triangulate_ngons(rt)
     rt.data.shade_flat()
@@ -932,10 +937,13 @@ def build_one(key, clock):
     for i, slot in enumerate(rt.material_slots):
         slot.material = finals[i]
     bpy.data.objects.remove(master)
+    out = new_collection("Export")
+    clock.start(f"{key}:rig")
+    rig = agent_rig.build_armature(out)
+    st["skin"] = agent_rig.skin(rt, cap, rig, key, log=log)
     for an in ("kind", "part", "Col", "Prm"):
         if an in rt.data.attributes:
             rt.data.attributes.remove(rt.data.attributes[an])
-    out = new_collection("Export")
     work.objects.unlink(rt)
     out.objects.link(rt)
     rt["clan"] = title
@@ -953,6 +961,14 @@ def build_one(key, clock):
         for kk, vv in extras.items():
             e[kk] = vv
         socks.append(e)
+    bpy.context.view_layer.update()
+    agent_rig.parent_sockets(socks, rig)
+    clock.start(f"{key}:anim")
+    st["clips"], _ = agent_anim.bake_clips(rig, key, log=log)
+    st["walk_foot_check"] = agent_anim.foot_slip(agent_anim.Solver(rig), key)
+    st["bones"] = len(rig.data.bones)
+    rig["clips"] = list(agent_anim.CLIPS)
+    clock.start(f"{key}:export")
     st["sockets_gltf"] = {s.name: [round(s.location.x, 4), round(s.location.z, 4),
                                    round(-s.location.y, 4)] for s in socks}
     st["materials"] = [s.material.name for s in rt.material_slots]
@@ -960,19 +976,44 @@ def build_one(key, clock):
     st["bounds_gltf_yup"] = {"min": [round(lo.x, 3), round(lo.z, 3), round(-hi.y, 3)],
                              "max": [round(hi.x, 3), round(hi.z, 3), round(-lo.y, 3)]}
     os.makedirs(MODEL_DIR, exist_ok=True)
+    raw = export_rigged(rig, rt, [colo] + socks, key)
     glb = os.path.join(MODEL_DIR, f"agent_{key}.glb")
-    select_only([rt, colo] + socks, rt)
-    bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", use_selection=True,
-                              export_apply=True, export_yup=True, export_tangents=True,
-                              export_extras=True, export_image_format="AUTO",
-                              export_animations=False, export_cameras=False,
-                              export_lights=False)
+    st["raw_glb_bytes"] = os.path.getsize(raw)
+    compress(raw, glb, f"agent_{key}")
     st["glb_bytes"] = os.path.getsize(glb)
     st["budget_ok"] = {"triangles": st["runtime_triangles"] <= RUNTIME_TRI_BUDGET,
                        "materials": len(set(st["materials"])) <= MAX_MATERIALS,
                        "textures": TEX_SIZE <= 2048}
     clock.stop()
     return st
+
+
+def export_rigged(rig, rt, extra, key, path=None):
+    os.makedirs(RAW_DIR, exist_ok=True)
+    path = path or os.path.join(RAW_DIR, f"agent_{key}.glb")
+    select_only([rig, rt] + list(extra), rig)
+    bpy.ops.export_scene.gltf(
+        filepath=path, export_format="GLB", use_selection=True, export_apply=True,
+        export_yup=True, export_tangents=True, export_extras=True, export_image_format="AUTO",
+        export_cameras=False, export_lights=False, export_skins=True, export_all_influences=False,
+        export_def_bones=False, export_animations=True, export_animation_mode="ACTIONS",
+        export_force_sampling=True, export_frame_step=1, export_anim_single_armature=True,
+        export_reset_pose_bones=True, export_optimize_animation_size=False,
+        export_rest_position_armature=True)
+    return path
+
+
+def compress(raw, glb, name):
+    import shutil
+    import subprocess
+    if os.path.exists(COMPRESS):
+        r = subprocess.run(["bash", COMPRESS, raw, glb, name], capture_output=True, text=True)
+        log("compress", name, r.returncode, r.stdout[-300:], r.stderr[-600:])
+        if r.returncode == 0:
+            return True
+    log("compress unavailable/failed: shipping the uncompressed glb", name)
+    shutil.copyfile(raw, glb)
+    return False
 
 
 def load_stats():

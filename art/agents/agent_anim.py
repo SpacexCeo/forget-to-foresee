@@ -251,7 +251,7 @@ class Solver:
         # pelvis + reach clamp so planted feet stay planted
         hips = P.hips.copy()
         clamp = 0.0
-        for _ in range(2):
+        for _ in range(3):
             self.rot_arm(pose, basis, "pelvis", P.hips_rot, loc_arm=hips)
             dz = 0.0
             for side, sfx in ((1, "L"), (-1, "R")):
@@ -265,6 +265,7 @@ class Solver:
                 break
             hips.z -= dz
             clamp += dz
+        self.rot_arm(pose, basis, "pelvis", P.hips_rot, loc_arm=hips)
         # legs
         for side, sfx in ((1, "L"), (-1, "R")):
             F = P.feet[side]
@@ -467,11 +468,9 @@ def clip_idle(key, S, u):
             keys(u, [(0, 0), (0.15, 0), (0.35, 18), (0.55, 18), (0.75, -10), (0.9, -10),
                      (1.0, 0)]))
     elif key in ("iris", "suit"):
-        a = env(u, 0.50, 0.60, 0.78, 0.90)                   # adjusts the scarf
-        P.ik[-1] = (REST_WRIST_R.lerp(V((-0.07, -0.16, 1.36)), a)
-                    + V((0, 0, 0.01 * wave(u, 4) * a)), POLE_R) if key == "iris" else P.ik.get(-1)
-        if P.ik[-1] is None:
-            del P.ik[-1]
+        a = env(u, 0.50, 0.60, 0.78, 0.90)                   # adjusts the scarf / strap
+        tgt = V((-0.07, -0.16, 1.36)) if key == "iris" else V((-0.10, -0.15, 1.30))
+        P.ik[-1] = (REST_WRIST_R.lerp(tgt, a) + V((0, 0, 0.01 * wave(u, 4) * a)), POLE_R)
         P.r("hand_R", -40 * a, 0, 0)
         P.r("head", 4 * a, 0, -6 * a + 5 * keys(u, [(0, 0), (0.15, 1), (0.4, 1), (0.5, 0),
                                                      (1, 0)]))
@@ -510,13 +509,12 @@ def clip_locomotion(key, S, u, run=False):
     flex = 85 if run else 18
     for side, sfx, sgn in ((1, "L", 1), (-1, "R", -1)):
         sw_a = A * cl * sgn                    # + = backwards
-        P.r(f"upperarm_{sfx}", sw_a - (8 if run else 2), 0, -side * (6 if run else 2))
+        P.r(f"upperarm_{sfx}", sw_a - (8 if run else 2), -side * (8 if run else 3), 0)
         P.r(f"forearm_{sfx}", -flex - (0.4 * A * max(0.0, -cl * sgn) if not run else 10 * cl * sgn),
             0, -side * (25 if run else 0))
     P.r("hand_L", 0, 0, 0)
     # clan overrides of the arms
     if key == "iney":
-        P.rot.pop("upperarm_R", None), P.rot.pop("forearm_R", None)
         right_rest(key, P)
         P.ik[1] = (V((0.27, -0.22 - 0.05 * cl, 1.04 + 0.02 * s2)), POLE_L)
         P.prop[1] = {"mode": "upright", "ground": "above"}
@@ -535,6 +533,8 @@ def clip_locomotion(key, S, u, run=False):
         P.r("forearm_L", 8, 0, 0)          # cauldron arm straighter, heavy
     if key == "pepel" and run:
         left_hold(key, P)
+    if 1 in P.prop and P.prop[1]["mode"] == "upright":
+        P.prop[1] = {"mode": "upright", "ground": "above"}
     return P
 
 
@@ -620,15 +620,14 @@ def clip_offer(key, S, u):
     a = env(u, *reach_t)
     if key == "yantar":                   # greedy: pulls back once before giving
         a *= 1.0 - 0.45 * env(u, 0.32, 0.40, 0.46, 0.56)
-    start = REST_WRIST_R if key not in ("iney", "yantar", "pepel") else P.ik.get(-1, (REST_WRIST_R,))[0]
     rest_ik = clip_idle(key, S, 0.0).ik.get(-1)
-    start = rest_ik[0] if rest_ik else REST_WRIST_R
+    start, pole0 = rest_ik if rest_ik else (REST_WRIST_R, POLE_R)
     out = V((-0.10, -0.46, 1.12))
-    if rest_ik:
-        P.ik[-1] = (start.lerp(out, a), rest_ik[1].lerp(POLE_R, a))
+    if start.y > 0.05:                    # hand behind the back: come round the side
+        tgt = keys(a, [(0.0, start), (0.45, V((-0.34, 0.02, 1.00))), (1.0, out)])
     else:
-        P.ik[-1] = (start.lerp(out, a), POLE_R)
-        P.ik[-1] = (P.ik[-1][0], POLE_R)
+        tgt = start.lerp(out, a)
+    P.ik[-1] = (tgt, pole0.lerp(POLE_R, a))
     P.twist["hand_R"] = 90 * a
     P.r("hand_R", -10 * a, 0, 0)
     P.r("chest", 6 * a, 0, -4 * a).r("head", 6 * a, (8 if key == "sol" else 0) * a, 0)
@@ -975,25 +974,27 @@ def _fcurves(act):
 
 
 def foot_slip(solver, key):
-    """Walk QA: drift of each planted foot's contact point in ground space (m)."""
+    """Walk QA: drift of the planted contact point (heel or ball, whichever is on the
+    ground) in ground space during each stance, and the lowest contact height."""
     frames_out, _ = evaluate_clip(solver, key, "walk")
     T = WALK_FRAMES / FPS
     res = {}
-    for sfx, side in (("L", 1), ("R", -1)):
-        pts = []
-        for f, (pose, _) in enumerate(frames_out[:-1]):
-            m = pose[f"foot_{sfx}"]
-            heel = m.translation + (m.to_quaternion() @ (solver.rest_q[f"foot_{sfx}"].inverted() @ HEEL))
-            ball = m.translation + (m.to_quaternion() @ (solver.rest_q[f"foot_{sfx}"].inverted() @ BALL))
-            low = min(heel.z, ball.z)
-            # body moves forward (-Y) at speed: ground position = body pos + travel
-            travel = -WALK_SPEED * f / FPS
-            pts.append((f, heel, ball, low, travel))
-        flat = [(f, (h.y + b.y) / 2 + tr) for f, h, b, low, tr in pts
-                if abs(h.z) < 0.004 and abs(b.z) < 0.004]
-        ys = [y for _, y in flat]
-        res[sfx] = {"flat_frames": len(flat),
-                    "planted_drift_m": round(max(ys) - min(ys), 4) if ys else None,
-                    "min_contact_z_m": round(min(p[3] for p in pts), 4)}
+    for sfx, side, ph0 in (("L", 1, 0.0), ("R", -1, 0.5)):
+        A = ankle_rest(side)
+        M0 = solver.rest[f"foot_{sfx}"].inverted()
+        drift, lowest, n_planted = 0.0, 1.0, 0
+        for pt in (HEEL, BALL):
+            ys = []
+            for f, (pose, _) in enumerate(frames_out[:-1]):
+                ph = (f / WALK_FRAMES + ph0) % 1.0
+                w = pose[f"foot_{sfx}"] @ M0 @ (A + pt)
+                lowest = min(lowest, w.z)
+                if abs(w.z) < 0.003:
+                    ys.append(w.y - WALK_SPEED * ph * T)     # ground space
+            if len(ys) > 1:
+                drift = max(drift, max(ys) - min(ys))
+                n_planted += len(ys)
+        res[sfx] = {"planted_samples": n_planted, "planted_drift_m": round(drift, 4),
+                    "lowest_contact_z_m": round(lowest, 4)}
     res["stride_m"] = round(WALK_SPEED * T, 4)
     return res
