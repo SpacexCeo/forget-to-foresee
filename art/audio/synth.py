@@ -42,7 +42,7 @@ def place(buf, x, at, gain=1.0, wrap=False):
     m = x.shape[-1]
     if wrap:
         idx = (at + np.arange(m)) % n
-        np.add.at(buf, (..., idx) if buf.ndim == 1 else (slice(None), idx), x * gain)
+        np.add.at(buf, idx if buf.ndim == 1 else (slice(None), idx), x * gain)
         return buf
     if at >= n or at + m <= 0:
         return buf

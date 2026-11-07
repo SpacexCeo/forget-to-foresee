@@ -7,19 +7,27 @@ Run headless with Blender 4.5 LTS:
     blender -b -P art/island/build_island.py -- render     # QA renders of the exported .glb
     blender -b -P art/island/build_island.py -- all        # textures + build + render
 
-Layout (Blender Z-up, -Y faces the default game camera; glTF converts to Y-up):
-a round plaza plateau with the Scroll in the centre, six camp plateaus on a ring,
-arched bridges with parapets (plaza -> waypoint islet -> camp, and camp -> ring islet
--> camp), four anchor islets beyond the ring where the Shells hover, and a viewing
-balcony behind the Iris camp where the player spawns. Distances follow the brief's
-30-45 s walk between neighbouring points at 4 m/s (see walk table in build-stats).
+The geometry follows game/src/scenes/layout.js exactly (the gameplay and collision truth):
+a round plaza (r 9) with the Scroll medallion in the centre and four gold-inlaid anchor zones
+(r 1.5) on its diagonals at ring radius 6.6; six camp plateaus (r 6.5) on a 30 m ring at the
+clan angles; straight railed bridges (deck 2.4 m, rails 1.0 m) from the plaza to every camp,
+three neighbour links and the balcony bridge (balcony at 120 deg / 46 m, r 5); rock pillars
+that sink ~42 m toward the cloud sea at -28 m. Every walkable top is at height 0.
 
-Materials (three, tiling + vertex colour, no unique atlas):
-  M_Island_Rock     cliffs, pillars, menhirs, tree trunks      (tile 8 m)
-  M_Island_Stone    paving, walls, parapets, bridges, medallion (tile 4 m)
-  M_Island_Foliage  grass, bushes, vines, tree crowns, flowers  (tile 3 m, double sided)
-Vertex colour (COLOR_0) multiplies the base colour: moss on ledges, fade toward
-the cloud sea, inlays of the Scroll medallion, per-bush tints.
+Coordinates: Blender is Z-up and the glTF export converts to Y-up with
+(x, y, z)_blender -> (x, z, -y)_gltf. A client ground point at angle a (layout.js: 0 = +X,
+90 = +Z toward the default camera) is therefore Blender (r cos a, -r sin a); a client
+rotation about +Y by t is a Blender rotation about +Z by the same t.
+
+Materials: three tiling PBR sets with vertex colour (no unique atlas) plus two untextured ones.
+  M_Island_Rock     cliffs, pillars, menhirs, tree trunks, ruins   (tile 10 m)
+  M_Island_Stone    paving, walls, parapets, bridges, flowers       (tile 4 m)
+  M_Island_Foliage  grass, bushes, vines, tree crowns               (tile 3 m, double sided)
+  M_Island_Gold     inlays of the medallion, anchor zones, glyphs   (metallic, no texture)
+  M_Island_Lantern  lantern glass (emissive, no texture)
+Vertex colour multiplies the base colour: moss on ledges, the fade toward the cloud sea,
+per-bush tints. Style (owner addendum 07.11): monumental weathered stone, moss in crevices,
+ruined grandeur (broken columns, toppled drums), restrained palette with gold accents.
 """
 
 import json
@@ -44,6 +52,8 @@ QA_DIR = os.path.join(REPO, "docs", "art", "qa", "island")
 TEX_DIR = os.path.join(HERE, "textures")
 MODELS = os.path.join(REPO, "game", "public", "assets", "models")
 GLB_PATH = os.path.join(MODELS, "island.glb")
+RAW_GLB = os.environ.get("ISLAND_RAW_GLB", GLB_PATH)   # uncompressed export (renders read it)
+PLAIN_DIR = os.environ.get("ISLAND_PLAIN_DIR", MODELS)  # decompressed camps etc. for renders
 BLEND_PATH = os.path.join(HERE, "island.blend")
 STATS_PATH = os.path.join(QA_DIR, "build-stats.json")
 
@@ -52,42 +62,35 @@ def log(*a):
     ftf.log("island", *a)
 
 
-# ------------------------------------------------------------------ layout
+# ------------------------------------------------------------------ layout (= layout.js)
 
-WALK_SPEED = 4.0            # m/s used for the 30-45 s rule (task brief)
-TRI_BUDGET = 120000         # owner 07.11: brief x2
-R_CAMP = 128.0              # plaza centre -> camp centre (= camp -> neighbour camp)
-PLAZA_R = 18.0
-CAMP_R = 11.0
-SPOKE_AT = 66.0             # waypoint islet on each plaza -> camp spoke
-ISLET_R = 6.0
-ANCHOR_AT = 170.0           # anchor islet centre (beyond the ring islets)
-ANCHOR_R = 12.0
-ANCHOR_ZONE_OFFSET = 4.0    # zone centre sits this far outward of the islet centre
-ANCHOR_ZONE_R = 3.5
-SHELL_FLOAT = 7.0
-BALCONY_AT = 154.0
-BALCONY_R = 7.5
-DECK_HALF = 1.8             # walkable deck half width (3.6 m between parapets)
-BRIDGE_HALF = 2.3           # outer half width incl. coping
+WALK_SPEED = 1.7
+PLAZA_R = 9.0
+RING_R = 30.0
+PLATEAU_R = 6.5
+BRIDGE_W = 2.4
+RAIL_H = 1.0
+ANCHOR_RING_R = 6.6
+ANCHOR_ZONE_R = 1.5
+BALCONY_ANGLE, BALCONY_RADIUS, BALCONY_SIZE = 120.0, 46.0, 5.0
+PILLAR_DEPTH = 42.0
+CLOUD_LEVEL = -28.0
+INSET = 0.4                 # bridge decks overlap the plateau edges (layout.js bridges())
+TRI_BUDGET = 120000
+
+# (stem, label, client angle) in engine order (layout.js CLANS)
+CAMPS = [("iris", "Iris", 270), ("sol", "Salt", 210), ("pepel", "Ash", 150),
+         ("moh", "Moss", 90), ("yantar", "Amber", 30), ("iney", "Frost", 330)]
+NEIGHBOR_LINKS = [("moh", "yantar"), ("iris", "iney"), ("sol", "pepel")]
+ANCHOR_ZONES = [(i + 1, a) for i, a in enumerate((45, 135, 225, 315))]   # (shell, angle)
+
+HALF_W = BRIDGE_W / 2       # 1.2: outer edge of the deck
+RAIL_IN = 1.0               # inner face of the rails (greybox: 0.2 m rail centred at 1.1)
+PARAPET_T = 0.35
 PARAPET_H = 0.95
-PARAPET_T = 0.45
+DECK_Z = 0.008              # visual deck lift against z-fighting with the plateau tops
 
-# stem, label, client angle (deg; game/src/scenes/layout.js: 0 = +X, 90 = +Z toward
-# the default camera), plateau height (m). Engine order = ring order.
-CAMPS = [
-    ("iris", "Iris", 90, -1.5),
-    ("sol", "Salt", 150, 1.0),
-    ("pepel", "Ash", 210, -1.0),
-    ("moh", "Moss", 270, 2.0),
-    ("yantar", "Amber", 330, 0.5),
-    ("iney", "Frost", 30, 1.5),
-]
-# Shell number by the client angle of its ring islet (layout.js zones on the
-# diagonals 45/135/225/315 move to 60/120/240/300 so they sit between two camps).
-ANCHOR_BY_CLIENT_ANGLE = {60: 1, 120: 2, 240: 3, 300: 4}
-
-TILE = {"rock": 10.0, "stone": 4.0, "foliage": 3.0}
+TILE = {"rock": 10.0, "stone": 4.0, "foliage": 3.0, "gold": 2.0, "lantern": 1.0}
 TEX_SIZE = 2048
 
 
@@ -95,91 +98,79 @@ def client_to_blender_angle(deg):
     return -math.radians(deg)
 
 
-def blender_to_client_deg(phi):
-    return round(-math.degrees(phi)) % 360
+def ring_xy(r, deg):
+    """Blender ground point of layout.js onRing(r, deg)."""
+    return (r * math.cos(math.radians(deg)), -r * math.sin(math.radians(deg)))
+
+
+def face_plaza(deg):
+    """layout.js facePlaza(): rotation about +Y (client) = about +Z (Blender)."""
+    return -math.radians(deg) - math.pi / 2
 
 
 def make_layout():
-    nodes, edges = {}, []
+    nodes = {}
 
-    def node(name, xy, z, r, kind, **kw):
-        nodes[name] = dict(name=name, x=xy[0], y=xy[1], z=z, r=r, kind=kind, entries=[], **kw)
+    def node(name, xy, r, kind, **kw):
+        nodes[name] = dict(name=name, x=xy[0], y=xy[1], z=0.0, r=r, kind=kind, entries=[], **kw)
         return nodes[name]
 
-    node("plaza", (0.0, 0.0), 0.0, PLAZA_R, "plaza")
-    for stem, label, a, z in CAMPS:
-        phi = client_to_blender_angle(a)
-        c, s = math.cos(phi), math.sin(phi)
-        node(f"camp_{stem}", (R_CAMP * c, R_CAMP * s), z, CAMP_R, "camp", stem=stem,
-             label=label, phi=phi)
-        node(f"spoke_{stem}", (SPOKE_AT * c, SPOKE_AT * s), round(z * SPOKE_AT / R_CAMP + 0.6, 2),
-             ISLET_R, "islet")
-        edges += [("plaza", f"spoke_{stem}"), (f"spoke_{stem}", f"camp_{stem}")]
-    for i in range(len(CAMPS)):
-        a, b = CAMPS[i], CAMPS[(i + 1) % len(CAMPS)]
-        na, nb = nodes[f"camp_{a[0]}"], nodes[f"camp_{b[0]}"]
-        mx, my = (na["x"] + nb["x"]) / 2, (na["y"] + nb["y"]) / 2
-        rn = node(f"ring_{a[0]}_{b[0]}", (mx, my), round((a[3] + b[3]) / 2 + 0.5, 2),
-                  ISLET_R, "islet")
-        edges += [(na["name"], rn["name"]), (rn["name"], nb["name"])]
-        phi = math.atan2(my, mx)
-        num = ANCHOR_BY_CLIENT_ANGLE.get(blender_to_client_deg(phi))
-        if num:
-            c, s = math.cos(phi), math.sin(phi)
-            an = node(f"anchor_{num}", (ANCHOR_AT * c, ANCHOR_AT * s), rn["z"] - 1.5, ANCHOR_R,
-                      "anchor", shell=num, phi=phi,
-                      zone=((ANCHOR_AT + ANCHOR_ZONE_OFFSET) * c, (ANCHOR_AT + ANCHOR_ZONE_OFFSET) * s))
-            edges.append((rn["name"], an["name"]))
-    iris = nodes["camp_iris"]
-    c, s = math.cos(iris["phi"]), math.sin(iris["phi"])
-    node("balcony", (BALCONY_AT * c, BALCONY_AT * s), -2.0, BALCONY_R, "balcony", phi=iris["phi"])
-    edges.append(("camp_iris", "balcony"))
-    for a, b in edges:
-        A, B = nodes[a], nodes[b]
-        ang = math.atan2(B["y"] - A["y"], B["x"] - A["x"])
+    node("plaza", (0.0, 0.0), PLAZA_R, "plaza")
+    for stem, label, a in CAMPS:
+        node(f"camp_{stem}", ring_xy(RING_R, a), PLATEAU_R, "camp", stem=stem, label=label, angle=a)
+    node("balcony", ring_xy(BALCONY_RADIUS, BALCONY_ANGLE), BALCONY_SIZE, "balcony", angle=BALCONY_ANGLE)
+
+    bridges = []
+    for stem, _l, a in CAMPS:
+        bridges.append(dict(id=f"bridge_{stem}", a="plaza", b=f"camp_{stem}",
+                            p0=ring_xy(PLAZA_R - INSET, a), p1=ring_xy(RING_R - PLATEAU_R + INSET, a)))
+    for sa, sb in NEIGHBOR_LINKS:
+        A, Bn = nodes[f"camp_{sa}"], nodes[f"camp_{sb}"]
+        dx, dy = Bn["x"] - A["x"], Bn["y"] - A["y"]
+        L = math.hypot(dx, dy)
+        e = PLATEAU_R - INSET
+        bridges.append(dict(id=f"link_{sa}_{sb}", a=A["name"], b=Bn["name"],
+                            p0=(A["x"] + dx / L * e, A["y"] + dy / L * e),
+                            p1=(Bn["x"] - dx / L * e, Bn["y"] - dy / L * e)))
+    bridges.append(dict(id="bridge_balcony", a="plaza", b="balcony",
+                        p0=ring_xy(PLAZA_R - INSET, BALCONY_ANGLE),
+                        p1=ring_xy(BALCONY_RADIUS - BALCONY_SIZE + INSET, BALCONY_ANGLE)))
+    for br in bridges:
+        A, Bn = nodes[br["a"]], nodes[br["b"]]
+        ang = math.atan2(Bn["y"] - A["y"], Bn["x"] - A["x"])
         A["entries"].append(ang)
-        B["entries"].append(ang + math.pi)
-    return nodes, edges
-
-
-def axial_start(n):
-    """Distance from a plateau centre where a bridge deck begins (just inside the
-    rim, so the deck corners never leave a gap against the round plateau)."""
-    return math.sqrt(max(n["r"] ** 2 - BRIDGE_HALF ** 2, 1.0)) - 0.08
-
-
-def bridge_curve(A, B):
-    """Deck centre line stations (x, y, z_top) and the span length."""
-    ax, ay, bx, by = A["x"], A["y"], B["x"], B["y"]
-    d = Vector((bx - ax, by - ay, 0))
-    L_cc = d.length
-    d.normalize()
-    sa, sb = axial_start(A), axial_start(B)
-    p0 = Vector((ax, ay, 0)) + d * sa
-    p1 = Vector((bx, by, 0)) - d * sb
-    span = (p1 - p0).length
-    camber = 0.012 * span
-    n = max(12, int(span / 3.0))
-    st = []
-    for i in range(n + 1):
-        s = 0.5 - 0.5 * math.cos(math.pi * i / n)
-        p = p0.lerp(p1, s)
-        z = A["z"] + (B["z"] - A["z"]) * s + camber * math.sin(math.pi * s) + 0.015
-        st.append((s, Vector((p.x, p.y, z))))
-    return st, span, d, L_cc
+        Bn["entries"].append(ang + math.pi)
+    return nodes, bridges
 
 
 def angle_diff(a, b):
     return abs((a - b + math.pi) % TAU - math.pi)
 
 
-def free_angle(node, th, clearance):
-    """True if direction th (from the node centre) is clear of every bridge entry."""
+def free_angle(node, th, clearance, r_at=None):
+    """True if direction th (from the node centre) is clear of every bridge by `clearance` m
+    laterally, measured at radius r_at (default 0.75 r)."""
+    ra = max(r_at or node["r"] * 0.75, 1.0)
     for e in node["entries"]:
-        lim = math.asin(min(0.99, clearance / max(node["r"] * 0.75, 1.0)))
-        if angle_diff(th, e) < lim:
+        if angle_diff(th, e) < math.asin(min(0.99, clearance / ra)):
             return False
     return True
+
+
+def group_of(x, y):
+    """Sector grouping for frustum culling: plaza core, balcony, one sector per camp."""
+    if math.hypot(x, y) < 15.0:
+        return "plaza"
+    bx, by = ring_xy(BALCONY_RADIUS, BALCONY_ANGLE)
+    if math.hypot(x - bx, y - by) < 14.0:
+        return "balcony"
+    phi = math.atan2(y, x) + 1e-4
+    best, bd = None, 1e9
+    for stem, _l, a in CAMPS:
+        d = angle_diff(phi, client_to_blender_angle(a))
+        if d < bd:
+            best, bd = stem, d
+    return best
 
 
 # ------------------------------------------------------------------ noise
@@ -242,18 +233,6 @@ class Builder:
             self.geos[key] = Geo()
         return self.geos[key]
 
-
-def group_of(x, y):
-    """Sector grouping for frustum culling: plaza core plus one sector per camp."""
-    if math.hypot(x, y) < 40.0:
-        return "plaza"
-    phi = math.atan2(y, x) + 1e-4
-    best, bd = None, 1e9
-    for stem, _l, a, _z in CAMPS:
-        d = angle_diff(phi, client_to_blender_angle(a))
-        if d < bd:
-            best, bd = stem, d
-    return best
 
 
 def planar_uv(p):
@@ -337,24 +316,26 @@ def oriented_poly(geo, pts, uvs, want, col=(1, 1, 1)):
     geo.poly(pts, uvs, col)
 
 
+
 # -------- pillars
 
 def pillar(B, node, seed):
+    """Rock pillar under a plateau: a dressed retaining wall, a planted terrace (two on the
+    plaza), then eroded columnar rock tapering down into the cloud sea."""
     kind = node["kind"]
     cx, cy, z0, Rt = node["x"], node["y"], node["z"], node["r"]
     rng = random.Random(seed)
     noise = RockNoise(seed)
     grp = group_of(cx, cy)
     if kind == "plaza":
-        n, wall, ter, depth, second = 72, 2.4, 2.6, 78.0, (3.2, 2.4)
+        n, wall, ter, depth, second = 84, 2.6, 2.8, PILLAR_DEPTH + 4.0, (3.4, 2.4)
     elif kind == "camp":
-        n, wall, ter, depth, second = 44, 2.2, 2.2, rng.uniform(55, 68), None
-    elif kind == "anchor":
-        n, wall, ter, depth, second = 44, 1.8, 1.8, rng.uniform(50, 60), None
+        n, wall, ter, depth = 56, 2.2, 2.0, PILLAR_DEPTH + rng.uniform(-2.0, 2.0)
+        second = (2.8, 1.3) if rng.random() < 0.5 else None
     elif kind == "balcony":
-        n, wall, ter, depth, second = 30, 1.5, 1.2, 50.0, None
-    else:
-        n, wall, ter, depth, second = 24, 1.6, 1.2, rng.uniform(48, 56), None
+        n, wall, ter, depth, second = 40, 1.6, 1.1, 30.0, None
+    else:  # bridge pier
+        n, wall, ter, depth, second = 20, 0.7, 0.25, 24.0, None
     prof = [(Rt, z0, 0.0, None)]
     prof.append((Rt, z0 - wall, 0.0, "stone"))
     prof.append((Rt + ter, z0 - wall, 0.0, "foliage"))
@@ -364,7 +345,7 @@ def pillar(B, node, seed):
     terraces = [(Rt + ter, z0 - wall)]
     if second:
         w2, t2 = second
-        prof.append((r_lip - 0.15, z - w2, 0.0, "stone"))
+        prof.append((r_lip - 0.15, z - w2, 0.0, "rock"))
         prof.append((r_lip - 0.15 + t2, z - w2, 0.0, "foliage"))
         prof.append((r_lip + t2 + 0.1, z - w2 - 0.35, 0.04, "rock"))
         terraces.append((r_lip - 0.15 + t2, z - w2))
@@ -372,12 +353,11 @@ def pillar(B, node, seed):
         r_lip = r_lip + t2 + 0.1
     rest = depth - (z0 - z)
     base = r_lip
-    for f, rf, amp in ((0.025, 1.04, 0.35), (0.07, 1.02, 0.75), (0.14, 0.95, 1.0),
-                       (0.23, 0.86, 1.2), (0.34, 0.74, 1.3), (0.47, 0.60, 1.25), (0.62, 0.45, 1.1),
-                       (0.78, 0.30, 0.9), (0.92, 0.14, 0.5)):
+    for f, rf, amp in ((0.025, 1.04, 0.35), (0.06, 1.03, 0.75), (0.11, 0.97, 1.0), (0.17, 0.92, 1.15),
+                       (0.24, 0.86, 1.25), (0.32, 0.78, 1.3), (0.41, 0.69, 1.3), (0.51, 0.59, 1.25),
+                       (0.62, 0.47, 1.1), (0.74, 0.35, 0.95), (0.86, 0.23, 0.7), (0.95, 0.12, 0.4)):
         prof.append((base * rf * rng.uniform(0.93, 1.07), z - f * rest, amp * 0.11 * base, "rock"))
     tip_z = z - rest
-    # ring vertices
     rings = []
     for j, (r, zz, amp, _m) in enumerate(prof):
         ring = []
@@ -390,7 +370,6 @@ def pillar(B, node, seed):
             z_ = zz + dz_lim * math.sin(i * 1.9 + j * 3.1 + seed)
             ring.append((cx + rr * math.cos(th), cy + rr * math.sin(th), z_))
         rings.append(ring)
-    # v coordinate: cumulative slant length down the nominal profile
     vcum = [0.0]
     for (r0, z0_, _, _), (r1, z1_, _, _) in zip(prof, prof[1:]):
         vcum.append(vcum[-1] + math.hypot(r1 - r0, z1_ - z0_))
@@ -413,7 +392,6 @@ def pillar(B, node, seed):
                 u0, u1 = ulen * i / n, ulen * (i + 1) / n
                 uvs = [(u0, -vcum[j - 1]), (u0, -vcum[j]), (u1, -vcum[j]), (u1, -vcum[j - 1])]
             geo.face(idx, uvs)
-    # tip fan
     geo = B.g(grp, "rock")
     last = [geo.vert(p) for p in rings[-1]]
     tip = geo.vert((cx + rng.uniform(-1, 1), cy + rng.uniform(-1, 1), tip_z - 3.0))
@@ -422,27 +400,56 @@ def pillar(B, node, seed):
         k = (i + 1) % n
         u0, u1 = reps * TILE["rock"] * i / n, reps * TILE["rock"] * (i + 1) / n
         geo.face([last[i], tip, last[k]], [(u0, -vcum[-1]), ((u0 + u1) / 2, -vcum[-1] - 4), (u1, -vcum[-1])])
-    return terraces, (prof[3][0], prof[3][1]), grp
+    if kind == "pier":
+        add_disc(B.g(grp, "stone"), cx, cy, z0, Rt, n, (0.8, 0.8, 0.78))
+    return terraces, tip_z - 3.0, grp
 
 
 # -------- parapets
 
-def parapet_runs(node, r_mid, half_w=DECK_HALF):
+def parapet_runs(node, r_in):
+    """Arcs of the parapet ring between bridge openings. An opening ends where the wall's
+    inner face is 1.0 m from the bridge axis, so it meets the rail inner face exactly."""
     if not node["entries"]:
         return [(0.0, TAU, True)]
-    gaps = sorted(((e % TAU), math.asin(min(0.99, half_w / r_mid))) for e in node["entries"])
+    g = math.asin(min(0.99, RAIL_IN / (r_in - 0.06)))
+    gaps = sorted(e % TAU for e in node["entries"])
     runs = []
-    for i, (a, g) in enumerate(gaps):
-        b, gb = gaps[(i + 1) % len(gaps)]
+    for i, a in enumerate(gaps):
+        b = gaps[(i + 1) % len(gaps)]
         start = a + g
-        end = b - gb if i + 1 < len(gaps) else b - gb + TAU
+        end = b - g if i + 1 < len(gaps) else b - g + TAU
         if end - start > 0.05:
             runs.append((start, end, False))
     return runs
 
 
+def lantern(B, grp, p, rng=None, scale=1.0):
+    """Iron-framed lantern with a warm emissive glass (stands on a post top at p)."""
+    geo, glass = B.g(grp, "stone"), B.g(grp, "lantern")
+    iron = (0.22, 0.20, 0.18)
+    x, y, z = p
+    s = scale
+    add_box(geo, (x, y, z + 0.03 * s), (0.30 * s, 0.30 * s, 0.06 * s), 0.0, iron)
+    bm_secs = []
+    for zz, r in ((z + 0.06 * s, 0.13 * s), (z + 0.42 * s, 0.13 * s)):
+        bm_secs.append([Vector((x + r * math.cos(TAU * k / 6), y + r * math.sin(TAU * k / 6), zz)) for k in range(6)])
+    ftf.loft(glass, bm_secs, closed_section=True, cols=[[(1, 1, 1)] * 6, [(1, 1, 1)] * 6])
+    for k in range(6):  # corner bars
+        a = TAU * k / 6
+        add_box(geo, (x + 0.14 * s * math.cos(a), y + 0.14 * s * math.sin(a), z + 0.24 * s),
+                (0.035 * s, 0.035 * s, 0.38 * s), a, iron, skip_bottom=True)
+    top = [Vector((x + 0.2 * s * math.cos(TAU * k / 6), y + 0.2 * s * math.sin(TAU * k / 6), z + 0.44 * s)) for k in range(6)]
+    tipv = Vector((x, y, z + 0.66 * s))
+    for k in range(6):
+        a_, b_ = top[k], top[(k + 1) % 6]
+        oriented_poly(geo, [a_, b_, tipv], [(0, 0), (0.2, 0), (0.1, 0.2)],
+                      ((a_ + b_) / 2 - Vector((x, y, z))).normalized() + Vector((0, 0, 1)), iron)
+    B.lanterns.append((x, y, z + 0.24 * s))
+
+
 def ring_wall(B, grp, cx, cy, z0, r_in, r_out, h, runs, post=True, cap_col=(1, 1, 1),
-              col_bm=None):
+              col_bm=None, lanterns=False):
     geo = B.g(grp, "stone")
     prof = [(r_in, z0), (r_in, z0 + h - 0.14), (r_in - 0.07, z0 + h - 0.12), (r_in - 0.07, z0 + h),
             (r_out + 0.07, z0 + h), (r_out + 0.07, z0 + h - 0.12), (r_out, z0 + h - 0.14), (r_out, z0)]
@@ -451,7 +458,7 @@ def ring_wall(B, grp, cx, cy, z0, r_in, r_out, h, runs, post=True, cap_col=(1, 1
         vper.append(vper[-1] + math.hypot(c - a, d - b))
     r_mid = (r_in + r_out) / 2
     for a0, a1, closed in runs:
-        m = max(2, int(math.ceil((a1 - a0) * r_out / 1.8)))
+        m = max(2, int(math.ceil((a1 - a0) * r_out / 1.5)))
         rings = []
         cnt = m if closed else m + 1
         for i in range(cnt):
@@ -470,70 +477,101 @@ def ring_wall(B, grp, cx, cy, z0, r_in, r_out, h, runs, post=True, cap_col=(1, 1
                 uvs = [(r, z) for r, z in prof]
                 oriented_poly(geo, pts, uvs, t)
                 if post:
-                    pa = a - sign * 0.32 / r_mid
-                    add_box(geo, (cx + r_mid * math.cos(pa), cy + r_mid * math.sin(pa), z0 + (h + 0.3) / 2),
-                            (0.62, 0.62, h + 0.3), pa, cap_col)
-                    add_box(geo, (cx + r_mid * math.cos(pa), cy + r_mid * math.sin(pa), z0 + h + 0.36),
-                            (0.72, 0.72, 0.12), pa, cap_col)
-                    add_box(geo, (cx + r_mid * math.cos(pa), cy + r_mid * math.sin(pa), z0 + h + 0.52),
-                            (0.34, 0.34, 0.22), pa + 0.785, cap_col)
-        # collision: chord boxes
+                    pa = a - sign * 0.27 / r_mid
+                    pc = (cx + r_mid * math.cos(pa), cy + r_mid * math.sin(pa))
+                    add_box(geo, (pc[0], pc[1], z0 + (h + 0.3) / 2), (0.5, 0.5, h + 0.3), pa, cap_col)
+                    add_box(geo, (pc[0], pc[1], z0 + h + 0.36), (0.62, 0.62, 0.12), pa, cap_col)
+                    if lanterns:
+                        lantern(B, grp, (pc[0], pc[1], z0 + h + 0.42))
+                    else:
+                        add_box(geo, (pc[0], pc[1], z0 + h + 0.52), (0.30, 0.30, 0.22), pa + 0.785, cap_col)
         cb = col_bm if col_bm is not None else B.col_wall
-        mc = max(1, int(math.ceil((a1 - a0) * r_mid / 2.5)))
+        mc = max(1, int(math.ceil((a1 - a0) * r_mid / 2.0)))
         for i in range(mc):
             aa = a0 + (a1 - a0) * i / mc
             ab = a0 + (a1 - a0) * (i + 1) / mc
-            pa = Vector((cx + r_mid * math.cos(aa), cy + r_mid * math.sin(aa), z0 - 0.1))
-            pb = Vector((cx + r_mid * math.cos(ab), cy + r_mid * math.sin(ab), z0 - 0.1))
-            ftf.beam(cb, pa + Vector((0, 0, 0.7)), pb + Vector((0, 0, 0.7)), r_out - r_in + 0.12, 1.4)
+            pa_ = Vector((cx + r_mid * math.cos(aa), cy + r_mid * math.sin(aa), z0 + 0.45))
+            pb_ = Vector((cx + r_mid * math.cos(ab), cy + r_mid * math.sin(ab), z0 + 0.45))
+            ftf.beam(cb, pa_, pb_, r_out - r_in + 0.1, 1.1)
 
 
 # -------- bridges
 
-def bridge(B, A, Bn, seed):
-    st, span, d, _ = bridge_curve(A, Bn)
+def bridge(B, nodes, br, seed):
+    """Straight deck from layout.js `from` to `to` (top at 0), arched underside (two arches
+    and a rock pier on long spans), stone balustrades of rail height 1.0 on both sides."""
+    rng = random.Random(seed)
+    p0 = Vector((br["p0"][0], br["p0"][1], 0.0))
+    p1 = Vector((br["p1"][0], br["p1"][1], 0.0))
+    d = (p1 - p0)
+    span = d.length
+    d.normalize()
     lat = Vector((-d.y, d.x, 0))
-    grp = group_of((A["x"] + Bn["x"]) / 2, (A["y"] + Bn["y"]) / 2)
+    ang = math.atan2(d.y, d.x)
+    grp = group_of((p0.x + p1.x) / 2, (p0.y + p1.y) / 2)
     geo = B.g(grp, "stone")
-    D = min(8.5, max(3.5, 0.16 * span))
-    tc = 1.15
-    sec_uw = lambda wb: [(-1.80, 0.0), (-1.80, 0.80), (-1.87, 0.88), (-2.30, 0.88), (-2.30, 0.74),
-                         (-2.20, 0.68), (-2.20, -0.28), (-2.29, -0.33), (-2.29, -0.52), (-2.20, -0.57),
-                         (-2.20, wb), (2.20, wb), (2.20, -0.57), (2.29, -0.52), (2.29, -0.33),
-                         (2.20, -0.28), (2.20, 0.68), (2.30, 0.74), (2.30, 0.88), (1.87, 0.88),
-                         (1.80, 0.80), (1.80, 0.0)]
+    n_arch = 2 if span > 24 else 1
+    seg = span / n_arch
+    D = min(5.5, max(3.0, 0.24 * seg))
+    tc = 0.8
+    sts = []
+    for k in range(n_arch):
+        m = max(10, int(seg / 1.6))
+        for i in range(0 if k == 0 else 1, m + 1):
+            s = 0.5 - 0.5 * math.cos(math.pi * i / m)
+            e = 2 * s - 1
+            wb = -(tc + (D - tc) * (1 - math.sqrt(max(0.0, 1 - e * e))))
+            sts.append(((k + s) / n_arch, wb))
+    sec_uw = lambda wb: [(-1.24, DECK_Z), (1.24, DECK_Z), (1.24, -0.10), (1.32, -0.14), (1.32, -0.30),
+                         (1.22, -0.34), (1.22, wb), (-1.22, wb), (-1.22, -0.34), (-1.32, -0.30),
+                         (-1.32, -0.14), (-1.24, -0.10)]
     sections = []
-    for s, p in st:
-        e = 2 * s - 1
-        wb = -(tc + (D - tc) * (1 - math.sqrt(max(0.0, 1 - e * e))))
-        sections.append([p + lat * u + Vector((0, 0, w)) for u, w in sec_uw(wb)])
-    # orientation: first face normal must point away from the section centre
+    for t, wb in sts:
+        c = p0 + d * (span * t)
+        sections.append([c + lat * u + Vector((0, 0, w)) for u, w in sec_uw(wb)])
     sec0, sec1 = sections[0], sections[1]
     c0 = sum((Vector(p) for p in sec0), Vector()) / len(sec0)
-    q = [Vector(sec0[10]), Vector(sec1[10]), Vector(sec1[11]), Vector(sec0[11])]  # underside face
+    q = [Vector(sec0[6]), Vector(sec1[6]), Vector(sec1[7]), Vector(sec0[7])]
     nrm = (q[1] - q[0]).cross(q[3] - q[0])
-    mid = (q[0] + q[3]) / 2
-    flip = nrm.dot(mid - c0) < 0
+    flip = nrm.dot((q[0] + q[3]) / 2 - c0) < 0
     ftf.loft(geo, sections, closed_section=True, flip=flip)
-    mid = st[len(st) // 2][1]
-    ang = math.atan2(d.y, d.x)
+    # balustrades: plinth, balusters, handrail, posts every ~4.5 m
     for side in (-1, 1):
-        c = mid + lat * side * 2.05
-        add_box(geo, (c.x, c.y, c.z + 0.88 + 0.32), (0.66, 0.66, 0.64), ang)
-        add_box(geo, (c.x, c.y, c.z + 0.88 + 0.70), (0.78, 0.78, 0.12), ang)
-        add_box(geo, (c.x, c.y, c.z + 0.88 + 0.88), (0.36, 0.36, 0.26), ang + 0.785)
-    # collision: deck slabs and parapet walls per pair of stations
-    step = max(1, len(st) // 9)
-    idx = list(range(0, len(st), step))
-    if idx[-1] != len(st) - 1:
-        idx.append(len(st) - 1)
-    for i0, i1 in zip(idx, idx[1:]):
-        pa, pb = st[i0][1], st[i1][1]
-        ftf.beam(B.col_walk, pa - Vector((0, 0, 0.25)), pb - Vector((0, 0, 0.25)), 2 * BRIDGE_HALF, 0.5)
+        off = lat * side * (RAIL_IN + 0.115)
+        mid = p0 + d * (span / 2) + off
+        add_box(geo, (mid.x, mid.y, DECK_Z + 0.10), (span, 0.25, 0.2), ang)
+        add_box(geo, (mid.x, mid.y, RAIL_H - 0.065), (span, 0.29, 0.13), ang, skip_bottom=False)
+        npost = max(2, int(round(span / 4.5)))
+        posts = [span * i / npost for i in range(npost + 1)]
+        for t in posts:
+            c = p0 + d * t + off
+            add_box(geo, (c.x, c.y, (RAIL_H + 0.12) / 2), (0.34, 0.34, RAIL_H + 0.12), ang)
+            add_box(geo, (c.x, c.y, RAIL_H + 0.17), (0.42, 0.42, 0.1), ang)
+        for a_, b_ in zip(posts, posts[1:]):
+            nb = max(2, int((b_ - a_ - 0.34) / 0.42))
+            for i in range(nb):
+                t = a_ + 0.17 + (b_ - a_ - 0.34) * (i + 0.5) / nb
+                if rng.random() < 0.04:   # a lost baluster: old, not neglected
+                    continue
+                c = p0 + d * t + off
+                add_box(geo, (c.x, c.y, 0.2 + (RAIL_H - 0.33) / 2), (0.10, 0.10, RAIL_H - 0.33), ang + 0.785)
+        # collision: one rail box per side (inner face 1.0 m from the axis, top at 1.0)
+        ftf.beam(B.col_wall, p0 + lat * side * 1.1 + Vector((0, 0, RAIL_H / 2)),
+                 p1 + lat * side * 1.1 + Vector((0, 0, RAIL_H / 2)), 0.2, RAIL_H)
+    # collision: deck slab, top exactly at 0
+    ftf.beam(B.col_walk, p0 - Vector((0, 0, 0.25)), p1 - Vector((0, 0, 0.25)), BRIDGE_W, 0.5)
+    piers = []
+    if n_arch == 2:
+        c = p0 + d * (span / 2)
+        piers.append(dict(name=br["id"] + "_pier", x=c.x, y=c.y, z=-D + 0.05, r=1.15, kind="pier", entries=[]))
+    # moss and hanging roots under the arch crowns
+    for k in range(n_arch):
+        c = p0 + d * (seg * (k + 0.5))
         for side in (-1, 1):
-            o = lat * side * 2.02 + Vector((0, 0, 0.6))
-            ftf.beam(B.col_wall, pa + o, pb + o, 0.56, 1.4)
-    return span, st
+            if rng.random() < 0.7:
+                top = c + lat * side * 1.3 + Vector((0, 0, -0.3))
+                vine(B, grp, top, (lat * side).xy, rng.uniform(1.2, 2.6), rng.uniform(0.35, 0.55), rng)
+    return span, piers
 
 
 # -------- vegetation and props
@@ -592,7 +630,6 @@ def tree(B, grp, p, rng, h=None):
         o = Vector((rng.uniform(-1.1, 1.1), rng.uniform(-1.1, 1.1), rng.uniform(-0.6, 0.6)))
         tint = (rng.uniform(0.85, 1.1), rng.uniform(0.9, 1.15), rng.uniform(0.8, 1.0))
         bush(B, grp, top + o, rng.uniform(1.1, 1.7), rng, tint=tint, squash=0.8, sub=2)
-    ftf.prism_ngon(B.col_wall, 6, 0.35, 0.3, p[2], p[2] + h, center=(p[0], p[1]))
 
 
 def vine(B, grp, top, outward, length, width, rng):
@@ -623,7 +660,6 @@ def menhir(B, grp, p, h, r, rng):
         a, b = last[k], last[(k + 1) % 5]
         oriented_poly(geo, [a, b, tip], [(0, 0), (1, 0), (0.5, 0.6)],
                       ((a + b) / 2 - Vector(p) - lean * h * 0.3).normalized() + Vector((0, 0, 0.6)), col)
-    ftf.prism_ngon(B.col_wall, 5, r * 0.9, r * 0.6, p[2] - 0.3, p[2] + h, center=(p[0], p[1]))
 
 
 GOLD = (1.0, 0.80, 0.52)
@@ -634,7 +670,7 @@ def glyph(B, grp, cx, cy, z, size, seed, col=GOLD):
     """A round sign of the Guests' language: a ring of four slots (one stroke form
     each: arc, spike, loop or drop) and reading dots in the core. Raised inlay."""
     rng = random.Random(seed)
-    geo = B.g(grp, "stone")
+    geo = B.g(grp, "gold")
     zz = z + 0.008
     rot = rng.uniform(0, TAU)
     for k in range(4):
@@ -663,148 +699,217 @@ def glyph(B, grp, cx, cy, z, size, seed, col=GOLD):
         add_disc(geo, cx + 0.16 * size * math.cos(a), cy + 0.16 * size * math.sin(a), zz, 0.05 * size, 6, col)
 
 
-# -------- plateaus
 
-def plateau_top(B, node, rng):
-    cx, cy, z, R = node["x"], node["y"], node["z"], node["r"]
+def column_ruin(B, grp, p, rng, r=0.42, h=None, lying=False, axis=0.0):
+    """Fluted (16-sided) column: a broken standing stump or a toppled drum."""
+    geo = B.g(grp, "rock")
+    n = 16
+    col = (1.18, 1.16, 1.08)
+    if lying:
+        L = h or rng.uniform(1.2, 2.2)
+        dv = Vector((math.cos(axis), math.sin(axis), 0))
+        up = Vector((0, 0, 1))
+        side = dv.cross(up)
+        secs = []
+        for t in (0.0, 1.0):
+            c = Vector(p) + dv * (L * (t - 0.5)) + Vector((0, 0, r * 0.9))
+            secs.append([c + (side * math.cos(TAU * k / n) + up * math.sin(TAU * k / n)) *
+                         (r * (0.93 if k % 2 else 1.0)) for k in range(n)])
+        ftf.loft(geo, secs, closed_section=True, cols=[[col] * n, [col] * n])
+        for i, sgn in ((0, -1), (1, 1)):
+            cen = sum(secs[i], Vector()) / n
+            for k in range(n):
+                oriented_poly(geo, [secs[i][k], secs[i][(k + 1) % n], cen], [(0, 0), (0.3, 0), (0.15, 0.3)],
+                              dv * sgn, col)
+        return
+    h = h or rng.uniform(0.8, 2.2)
+    secs = []
+    for zt in (0.0, h * 0.5, h):
+        secs.append([Vector((p[0] + r * (0.93 if k % 2 else 1.0) * math.cos(TAU * k / n),
+                             p[1] + r * (0.93 if k % 2 else 1.0) * math.sin(TAU * k / n), p[2] + zt))
+                     for k in range(n)])
+    # broken top: tilt the last ring
+    tilt = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized() * 0.35
+    secs[-1] = [v + Vector((0, 0, (v - Vector((p[0], p[1], v.z))).dot(tilt))) for v in secs[-1]]
+    ftf.loft(geo, secs, closed_section=True, cols=[[col] * n for _ in secs])
+    cen = sum(secs[-1], Vector()) / n + Vector((0, 0, -0.08))
+    for k in range(n):
+        oriented_poly(geo, [secs[-1][k], secs[-1][(k + 1) % n], cen], [(0, 0), (0.3, 0), (0.15, 0.3)],
+                      (0, 0, 1), col)
+    # base plinth
+    add_box(B.g(grp, "stone"), (p[0], p[1], p[2] + 0.12), (r * 2.6, r * 2.6, 0.24), rng.uniform(0, 1), (0.85, 0.84, 0.8))
+
+
+def floating_rock(B, p, size, rng):
+    verts, faces = B.ico[1]
+    grp = group_of(p[0], p[1])
+    geo = B.g(grp, "rock")
+    seed = rng.random() * 100
+    pts = []
+    for v in verts:
+        k = 1.0 + 0.35 * (hash01(v.x * 2 + seed, v.y * 2, v.z * 2) - 0.5) * 2
+        q = Vector((v.x * k, v.y * k, v.z * k * (0.55 if v.z > 0 else 1.25)))
+        pts.append(Vector(p) + q * size)
+    idx = [geo.vert(q) for q in pts]
+    for f in faces:
+        fp = [pts[i] for i in f]
+        n = (fp[1] - fp[0]).cross(fp[2] - fp[0])
+        geo.face([idx[i] for i in f], [box_uv(q, n) for q in fp])
+    if size > 1.2:
+        bush(B, grp, Vector(p) + Vector((0, 0, size * 0.5)), size * 0.55, rng, squash=0.5, sub=1)
+
+
+# -------- plateau tops
+
+def plaza_top(B, node, rng):
+    z = 0.0
+    grp = "plaza"
+    stone, gold = B.g(grp, "stone"), B.g(grp, "gold")
+    R = node["r"]
+    r_in = R - PARAPET_T
+    # Scroll medallion area: scroll_table.glb (3.4 m across) sits on the plain centre disc
+    add_disc(stone, 0, 0, z, 2.0, 32, (0.96, 0.95, 0.91))
+    add_annulus(gold, 0, 0, z, 2.0, 2.14, 64)
+    add_annulus(stone, 0, 0, z, 2.14, 3.0, 64, (0.84, 0.85, 0.82))
+    add_annulus(gold, 0, 0, z, 3.0, 3.08, 64)
+    band = [(0.74, 0.75, 0.72) if i % 2 else (0.92, 0.91, 0.87) for i in range(36)]
+    add_annulus(stone, 0, 0, z, 3.08, 5.0, 36, cols=band)
+    add_annulus(gold, 0, 0, z, 5.0, 5.12, 72)
+    add_annulus(stone, 0, 0, z, 5.12, 8.3, 72, (0.88, 0.88, 0.85))
+    add_annulus(gold, 0, 0, z, 8.3, 8.4, 84)
+    add_annulus(stone, 0, 0, z, 8.4, R, 84, (0.80, 0.80, 0.77))
+    for k in range(6):  # six round signs between the bridge axes
+        a = math.radians(60 * k)
+        glyph(B, grp, 4.04 * math.cos(a), 4.04 * math.sin(a), z + 0.004, 0.95, 4001 + k * 37)
+    for e in node["entries"]:  # gold rays toward every bridge
+        add_strip(gold, (5.12 * math.cos(e), 5.12 * math.sin(e)), (8.3 * math.cos(e), 8.3 * math.sin(e)),
+                  0.06, z + 0.006)
+    # anchor zones: gold-inlaid circles r 1.5 on the diagonals (ring radius 6.6)
+    for shell, a in ANCHOR_ZONES:
+        zx, zy = ring_xy(ANCHOR_RING_R, a)
+        add_disc(stone, zx, zy, z + 0.012, ANCHOR_ZONE_R - 0.12, 40, (0.97, 0.95, 0.90))
+        add_annulus(gold, zx, zy, z + 0.014, ANCHOR_ZONE_R - 0.12, ANCHOR_ZONE_R, 48)
+        add_annulus(gold, zx, zy, z + 0.014, 0.98, 1.04, 40)
+        for k in range(4):  # four short ticks toward the Shell's quarter
+            ta = client_to_blender_angle(a) + math.radians(90 * k)
+            add_strip(gold, (zx + 1.08 * math.cos(ta), zy + 1.08 * math.sin(ta)),
+                      (zx + 1.32 * math.cos(ta), zy + 1.32 * math.sin(ta)), 0.035, z + 0.016)
+    ring_wall(B, grp, 0, 0, z, r_in, R, PARAPET_H, parapet_runs(node, r_in), lanterns=True)
+    ftf.prism_ngon(B.col_walk, 48, R, R, z - 3.0, z)
+
+
+def camp_top(B, node, rng):
+    cx, cy, z, R = node["x"], node["y"], 0.0, node["r"]
     grp = group_of(cx, cy)
-    kind = node["kind"]
     stone, fol = B.g(grp, "stone"), B.g(grp, "foliage")
-    n = 72 if kind == "plaza" else (44 if R > 9 else 28)
-    r_par_in = R - PARAPET_T
-    if kind == "plaza":
-        add_disc(stone, cx, cy, z, 2.2, 24, PALE)
-        add_annulus(stone, cx, cy, z, 2.2, 2.45, 48, GOLD)
-        add_annulus(stone, cx, cy, z, 2.45, 5.2, 48, (0.86, 0.88, 0.86))
-        add_annulus(stone, cx, cy, z, 5.2, 5.42, 48, GOLD)
-        band = [(0.74, 0.77, 0.75) if i % 2 else (0.90, 0.91, 0.88) for i in range(48)]
-        add_annulus(stone, cx, cy, z, 5.42, 8.2, 48, cols=band)
-        add_annulus(stone, cx, cy, z, 8.2, 8.45, 64, GOLD)
-        add_annulus(stone, cx, cy, z, 8.45, R, n, (0.88, 0.90, 0.88))
-        for stem, _l, a, _z in CAMPS:
-            phi = client_to_blender_angle(a)
-            add_strip(stone, (2.5 * math.cos(phi), 2.5 * math.sin(phi)),
-                      (8.15 * math.cos(phi), 8.15 * math.sin(phi)), 0.07, z + 0.006, GOLD)
-            for off in (-0.26, 0.26):
-                gph = phi + off
-                glyph(B, grp, 6.8 * math.cos(gph), 6.8 * math.sin(gph), z, 1.05, sid(stem) % 9973 + int(off * 100))
-        # planters between the spokes
-        for i, (stem, _l, a, _z) in enumerate(CAMPS):
-            mid = client_to_blender_angle(a) - math.radians(30)
-            a0, a1 = mid - math.radians(15), mid + math.radians(15)
-            ring_wall(B, grp, cx, cy, z, 13.9, 14.25, 0.5, [(a0, a1, False)], post=False)
-            ring_wall(B, grp, cx, cy, z, 16.35, 16.7, 0.5, [(a0, a1, False)], post=False)
-            for aa in (a0, a1):
-                add_box(stone, (15.3 * math.cos(aa), 15.3 * math.sin(aa), z + 0.25), (2.2, 0.35, 0.5), aa)
-                ftf.beam(B.col_wall, Vector((13.9 * math.cos(aa), 13.9 * math.sin(aa), z + 0.3)),
-                         Vector((16.7 * math.cos(aa), 16.7 * math.sin(aa), z + 0.3)), 0.4, 0.9)
-            add_annulus(fol, cx, cy, z + 0.40, 14.25, 16.35, 10, (0.95, 1.0, 0.9), a0=a0, a1=a1)
-            for t in (0.25, 0.75):
-                aa = a0 + (a1 - a0) * t
-                tree(B, grp, (15.3 * math.cos(aa), 15.3 * math.sin(aa), z + 0.40), rng, h=rng.uniform(3.5, 4.6))
-            for _ in range(6):
-                aa = rng.uniform(a0 + 0.03, a1 - 0.03)
-                rr = rng.uniform(14.6, 16.0)
-                bush(B, grp, (rr * math.cos(aa), rr * math.sin(aa), z + 0.40), rng.uniform(0.5, 0.8), rng)
-            for _ in range(3):
-                aa = rng.uniform(a0 + 0.03, a1 - 0.03)
-                rr = rng.uniform(14.6, 16.0)
-                flowers(B, grp, (rr * math.cos(aa), rr * math.sin(aa), z + 0.40), rng, 5, 0.5)
-    elif kind == "camp":
-        add_disc(stone, cx, cy, z, 5.9, n, (0.90, 0.92, 0.90))
-        add_annulus(fol, cx, cy, z, 5.9, R, n, (1.0, 1.0, 0.95))
-        for e in node["entries"]:
-            add_strip(stone, (cx + 5.6 * math.cos(e), cy + 5.6 * math.sin(e)),
-                      (cx + (R - 0.12) * math.cos(e), cy + (R - 0.12) * math.sin(e)), 1.4, z + 0.02,
-                      (0.82, 0.84, 0.80))
-        for _ in range(26):
-            th = rng.uniform(0, TAU)
-            if not free_angle(node, th, 2.4):
-                continue
-            rr = rng.uniform(7.0, 9.9)
-            p = (cx + rr * math.cos(th), cy + rr * math.sin(th), z)
-            if rng.random() < 0.55:
-                bush(B, grp, p, rng.uniform(0.45, 0.95), rng,
-                     tint=(rng.uniform(0.85, 1.1), rng.uniform(0.9, 1.15), rng.uniform(0.8, 1.0)))
-            else:
-                flowers(B, grp, p, rng, rng.randint(3, 5), 0.6)
-        placed = 0
-        for _ in range(30):
-            if placed >= 2:
-                break
-            th = rng.uniform(0, TAU)
-            if free_angle(node, th, 3.4):
-                tree(B, grp, (cx + 8.9 * math.cos(th), cy + 8.9 * math.sin(th), z), rng)
-                placed += 1
-    elif kind == "anchor":
-        zx, zy = node["zone"]
-        add_disc(stone, cx, cy, z, R, n, (0.84, 0.86, 0.84))
-        add_annulus(stone, zx, zy, z + 0.01, ANCHOR_ZONE_R, ANCHOR_ZONE_R + 0.22, 40, GOLD)
-        add_annulus(stone, zx, zy, z + 0.01, ANCHOR_ZONE_R + 0.5, ANCHOR_ZONE_R + 0.6, 40, GOLD)
-        glyph(B, grp, zx, zy, z + 0.002, 1.6, node["shell"] * 31, col=GOLD)
-        phi = node["phi"]
-        for k, da in enumerate((-1.0, 0.0, 1.0)):
-            a = phi + da * 0.95
-            menhir(B, grp, (zx + 5.0 * math.cos(a), zy + 5.0 * math.sin(a), z),
-                   rng.uniform(2.6, 3.6), rng.uniform(0.45, 0.6), rng)
-        for _ in range(8):
-            th = rng.uniform(0, TAU)
-            if not free_angle(node, th, 2.6):
-                continue
-            rr = rng.uniform(8.5, 10.6)
-            bush(B, grp, (cx + rr * math.cos(th), cy + rr * math.sin(th), z), rng.uniform(0.5, 0.9), rng)
-    else:  # islet or balcony
-        add_disc(stone, cx, cy, z, R, n, (0.86, 0.88, 0.86))
-        if kind == "balcony":
-            # flagstone ring and planters with Iris flowers along the balustrade
-            add_annulus(stone, cx, cy, z + 0.004, 2.0, 2.2, 36, GOLD)
-            for _ in range(12):
-                th = rng.uniform(0, TAU)
-                if not free_angle(node, th, 2.6):
-                    continue
-                rr = R - 0.9
-                flowers(B, grp, (cx + rr * math.cos(th), cy + rr * math.sin(th), z), rng, 6, 0.45,
-                        palette=[(0.55, 0.35, 1.0), (0.75, 0.55, 1.0), (1.0, 1.0, 0.95)])
-                bush(B, grp, (cx + rr * math.cos(th + 0.1), cy + rr * math.sin(th + 0.1), z), 0.45, rng)
+    r_in = R - PARAPET_T
+    add_disc(stone, cx, cy, z, 5.0, 48, (0.90, 0.89, 0.85))
+    add_annulus(fol, cx, cy, z, 5.0, R, 56, (1.0, 1.0, 0.95))
+    for e in node["entries"]:
+        add_strip(stone, (cx + 4.7 * math.cos(e), cy + 4.7 * math.sin(e)),
+                  (cx + (R - 0.05) * math.cos(e), cy + (R - 0.05) * math.sin(e)), 1.0, z + 0.012,
+                  (0.84, 0.83, 0.79))
+    for _ in range(22):  # flowers and tufts at the parapet foot (no collision, below knee)
+        th = rng.uniform(0, TAU)
+        if not free_angle(node, th, 1.9, r_at=5.8):
+            continue
+        p = (cx + 5.75 * math.cos(th), cy + 5.75 * math.sin(th), z)
+        if rng.random() < 0.5:
+            bush(B, grp, p, rng.uniform(0.22, 0.32), rng, tint=(0.9, 1.05, 0.85), squash=0.7, sub=1)
         else:
-            placed = False
-            for _ in range(16):
-                th = rng.uniform(0, TAU)
-                if free_angle(node, th, 2.8):
-                    if not placed:
-                        tree(B, grp, (cx + 3.9 * math.cos(th), cy + 3.9 * math.sin(th), z), rng)
-                        placed = True
-                    else:
-                        bush(B, grp, (cx + 4.3 * math.cos(th), cy + 4.3 * math.sin(th), z),
-                             rng.uniform(0.4, 0.75), rng)
-    h = PARAPET_H + (0.1 if kind == "balcony" else 0.0)
-    ring_wall(B, grp, cx, cy, z, r_par_in, R, h, parapet_runs(node, R - PARAPET_T / 2))
-    ftf.prism_ngon(B.col_walk, 32 if R > 9 else 20, R, R, z - 1.0, z, center=(cx, cy))
+            flowers(B, grp, p, rng, rng.randint(3, 5), 0.35)
+    ring_wall(B, grp, cx, cy, z, r_in, R, PARAPET_H, parapet_runs(node, r_in), lanterns=True)
+    ftf.prism_ngon(B.col_walk, 32, R, R, z - 3.0, z, center=(cx, cy))
 
 
-def greenery_on_pillar(B, node, terraces, rng):
+def balcony_top(B, node, rng):
+    cx, cy, z, R = node["x"], node["y"], 0.0, node["r"]
+    grp = "balcony"
+    stone, gold = B.g(grp, "stone"), B.g(grp, "gold")
+    r_in = R - PARAPET_T
+    add_disc(stone, cx, cy, z, 1.9, 24, (0.95, 0.94, 0.90))
+    add_annulus(gold, cx, cy, z, 1.9, 2.0, 40)
+    add_annulus(stone, cx, cy, z, 2.0, R, 40, (0.86, 0.86, 0.83))
+    glyph(B, grp, cx, cy, z + 0.004, 1.5, 120)
+    for _ in range(14):
+        th = rng.uniform(0, TAU)
+        if not free_angle(node, th, 2.2, r_at=4.2):
+            continue
+        p = (cx + 4.25 * math.cos(th), cy + 4.25 * math.sin(th), z)
+        flowers(B, grp, p, rng, 5, 0.35, palette=[(0.55, 0.35, 1.0), (0.75, 0.55, 1.0), (1.0, 1.0, 0.95)])
+        bush(B, grp, (p[0] * 1.0, p[1], z), 0.3, rng, sub=1)
+    ring_wall(B, grp, cx, cy, z, r_in, R, PARAPET_H + 0.05, parapet_runs(node, r_in), lanterns=True)
+    ftf.prism_ngon(B.col_walk, 32, R, R, z - 3.0, z, center=(cx, cy))
+
+
+def terrace_dressing(B, node, terraces, rng):
+    """Greenery, vines, trees, menhirs and ruins on the pillar terraces (below the walkable
+    top, outside the parapets: decoration only, no collision needed)."""
     cx, cy = node["x"], node["y"]
     grp = group_of(cx, cy)
-    for r_t, z_t in terraces:
-        nb = int(r_t * 0.9)
+    kind = node["kind"]
+    for ti, (r_t, z_t) in enumerate(terraces):
+        nb = int(r_t * (1.0 if kind != "plaza" else 1.3))
         for _ in range(nb):
             th = rng.uniform(0, TAU)
+            if not free_angle(node, th, 1.7, r_at=r_t):
+                continue
             rr = r_t - rng.uniform(0.4, 1.0)
             p = (cx + rr * math.cos(th), cy + rr * math.sin(th), z_t)
             if rng.random() < 0.8:
-                bush(B, grp, p, rng.uniform(0.5, 1.0), rng,
+                bush(B, grp, p, rng.uniform(0.45, 0.95), rng,
                      tint=(rng.uniform(0.8, 1.05), rng.uniform(0.9, 1.15), rng.uniform(0.75, 0.95)))
             else:
                 flowers(B, grp, p, rng, 5, 0.5)
-        nv = int(r_t * 0.55)
+        nv = int(r_t * 0.6)
         for _ in range(nv):
             th = rng.uniform(0, TAU)
+            if not free_angle(node, th, 1.7, r_at=r_t):
+                continue
             top = (cx + (r_t + 0.2) * math.cos(th), cy + (r_t + 0.2) * math.sin(th), z_t + 0.1)
-            vine(B, grp, top, (math.cos(th), math.sin(th)), rng.uniform(2.5, 6.5), rng.uniform(0.6, 1.0), rng)
-    if node["kind"] in ("camp", "plaza", "anchor") and rng.random() < 0.9:
-        r_t, z_t = terraces[0]
+            vine(B, grp, top, (math.cos(th), math.sin(th)), rng.uniform(2.5, 7.0), rng.uniform(0.6, 1.0), rng)
+    if kind == "pier":
+        return
+    r_t, z_t = terraces[0]
+    # trees only on the far side (+Y in Blender = away from the default camera) so the
+    # isometric view keeps the camps readable
+    ntree = {"plaza": 5, "camp": 2, "balcony": 1}[kind]
+    placed, tries = 0, 0
+    while placed < ntree and tries < 60:
+        tries += 1
         th = rng.uniform(0, TAU)
-        tree(B, grp, (cx + (r_t - 0.9) * math.cos(th), cy + (r_t - 0.9) * math.sin(th), z_t), rng, h=rng.uniform(3, 4))
+        if math.sin(th) < 0.25 or not free_angle(node, th, 2.8, r_at=r_t):
+            continue
+        rr = r_t - 0.9
+        tree(B, grp, (cx + rr * math.cos(th), cy + rr * math.sin(th), z_t), rng, h=rng.uniform(3.4, 5.2))
+        placed += 1
+    if kind == "camp":
+        for _ in range(2):
+            for _t in range(20):
+                th = rng.uniform(0, TAU)
+                if free_angle(node, th, 2.4, r_at=r_t):
+                    rr = r_t - 0.8
+                    menhir(B, grp, (cx + rr * math.cos(th), cy + rr * math.sin(th), z_t),
+                           rng.uniform(2.0, 3.0), rng.uniform(0.35, 0.5), rng)
+                    break
+    if kind == "plaza":
+        # ruined colonnade on the upper terrace: broken stumps and toppled drums
+        for k in range(16):
+            th = TAU * k / 16 + 0.1
+            if not free_angle(node, th, 2.2, r_at=r_t):
+                continue
+            rr = r_t - 1.1
+            p = (rr * math.cos(th), rr * math.sin(th), z_t)
+            if k % 3 == 2:
+                column_ruin(B, grp, (p[0], p[1], z_t), rng, lying=True, axis=th + math.pi / 2 + rng.uniform(-0.4, 0.4))
+            else:
+                column_ruin(B, grp, p, rng, h=rng.uniform(0.7, 2.1))
+        r2, z2 = terraces[1]
+        for k in range(6):
+            th = TAU * k / 6 + 0.45
+            if free_angle(node, th, 2.6, r_at=r2):
+                menhir(B, grp, ((r2 - 0.9) * math.cos(th), (r2 - 0.9) * math.sin(th), z2),
+                       rng.uniform(2.6, 3.8), rng.uniform(0.45, 0.6), rng)
 
 
 # ------------------------------------------------------------------ colours
@@ -827,7 +932,7 @@ def color_fn_for(mat):
         rr, gg, bb = r * v, g * v, b * v
         rr, gg, bb = (rr * (1 - moss) + 0.62 * moss * rr, gg * (1 - moss) + 0.80 * moss * gg,
                       bb * (1 - moss) + 0.42 * moss * bb)
-        fade = max(0.0, min(1.0, (-10.0 - z) / 26.0))
+        fade = max(0.0, min(1.0, (-14.0 - z) / 22.0))
         return (rr * (1 - fade) + 1.15 * fade, gg * (1 - fade) + 1.30 * fade, bb * (1 - fade) + 1.42 * fade)
 
     def stone(p, n, c):
@@ -979,37 +1084,28 @@ def stage_textures():
         json.dump(out, fh, indent=2)
 
 
-# ------------------------------------------------------------------ walk table
 
-def walk_table(nodes, edges, spans):
-    """Path lengths between neighbouring gameplay points along the walkable route."""
-    def edge_len(a, b):
-        st = spans[(a, b)] if (a, b) in spans else list(reversed(spans[(b, a)]))
-        A, B = nodes[a], nodes[b]
-        pts = [Vector((A["x"], A["y"], A["z"]))] + [p for _s, p in st] + [Vector((B["x"], B["y"], B["z"]))]
-        return sum((q - p).length for p, q in zip(pts, pts[1:]))
+# ------------------------------------------------------------------ stats
 
-    rows = []
-
-    def row(name, path, extra=0.0):
-        L = sum(edge_len(a, b) for a, b in zip(path, path[1:])) + extra
-        rows.append({"pair": name, "path": path, "metres": round(L, 1),
-                     "seconds_at_4mps": round(L / WALK_SPEED, 1),
-                     "seconds_at_2_2mps": round(L / 2.2, 1)})
-    for stem, *_ in CAMPS:
-        row(f"scroll-camp_{stem}", ["plaza", f"spoke_{stem}", f"camp_{stem}"])
-    for i in range(len(CAMPS)):
-        a, b = CAMPS[i][0], CAMPS[(i + 1) % len(CAMPS)][0]
-        row(f"camp_{a}-camp_{b}", [f"camp_{a}", f"ring_{a}_{b}", f"camp_{b}"])
-    for name, n in nodes.items():
-        if n["kind"] != "anchor":
-            continue
-        ring = [a for a, b in edges if b == name][0]
-        camps = [x for x, y in edges if y == ring] + [y for x, y in edges if x == ring and y.startswith("camp")]
-        for c in camps:
-            row(f"{c}-{name}_zone", [c, ring, name], ANCHOR_ZONE_OFFSET)
-    row("spawn-camp_iris", ["balcony", "camp_iris"])
-    return rows
+def layout_report(nodes, bridges, spans):
+    """Centres and bridge endpoints in client coordinates (x, z) for the build stats."""
+    def cl(x, y):
+        return [round(x, 3), round(-y, 3)]
+    out = {"platforms": {k: {"center_client_xz": cl(v["x"], v["y"]), "radius_m": v["r"]}
+                         for k, v in sorted(nodes.items())},
+           "bridges": {br["id"]: {"from_client_xz": cl(*br["p0"]), "to_client_xz": cl(*br["p1"]),
+                                  "length_m": round(spans[br["id"]], 2), "width_m": BRIDGE_W}
+                       for br in bridges},
+           "anchor_zones": {f"socket_anchor_zone_{s}": {"center_client_xz": cl(*ring_xy(ANCHOR_RING_R, a)),
+                                                        "angle_deg": a, "radius_m": ANCHOR_ZONE_R}
+                            for s, a in ANCHOR_ZONES}}
+    # walk distances along the centre lines (WALK_SPEED 1.7 m/s)
+    walks = {"plaza_center-camp_center_m": RING_R,
+             "camp-neighbour_via_plaza_m": 2 * RING_R,
+             "camp-neighbour_via_link_m": RING_R,
+             "balcony_center-plaza_center_m": BALCONY_RADIUS}
+    out["walks_s_at_1_7"] = {k.replace("_m", "_s"): round(v / WALK_SPEED, 1) for k, v in walks.items()}
+    return out
 
 
 # ------------------------------------------------------------------ build
@@ -1018,51 +1114,71 @@ def stage_build():
     clock = ftf.StageClock("island")
     stats = {"blender": bpy.app.version_string, "stages": clock.stages}
     clock.start("layout_geometry")
-    sc = ftf.reset_scene()
-    nodes, edges = make_layout()
+    ftf.reset_scene()
+    nodes, bridges = make_layout()
     B = Builder()
-    rng = random.Random(1107)
+    B.lanterns = []
+    spans, piers = {}, []
+    for i, br in enumerate(bridges):
+        span, pr = bridge(B, nodes, br, 500 + i)
+        spans[br["id"]] = span
+        piers += pr
     terr = {}
     for i, (name, n) in enumerate(sorted(nodes.items())):
-        terraces, _lip, _g = pillar(B, n, 100 + i)
-        terr[name] = terraces
+        terr[name], _tip, _g = pillar(B, n, 100 + i)
+    for j, pn in enumerate(piers):
+        t, _tip, _g = pillar(B, pn, 300 + j)
+        terrace_dressing(B, pn, t, random.Random(77 + j))
     for name, n in sorted(nodes.items()):
-        plateau_top(B, n, random.Random(sid(name) % 100000))
-        greenery_on_pillar(B, n, terr[name], random.Random(sid(name) % 100000 + 7))
-    spans = {}
-    span_len = {}
-    for i, (a, b) in enumerate(edges):
-        span, st = bridge(B, nodes[a], nodes[b], 500 + i)
-        spans[(a, b)] = st
-        span_len[f"{a}->{b}"] = round(span, 1)
-    stats["bridge_spans_m"] = span_len
+        rng = random.Random(sid(name) % 100000)
+        {"plaza": plaza_top, "camp": camp_top, "balcony": balcony_top}[n["kind"]](B, n, rng)
+        terrace_dressing(B, n, terr[name], random.Random(sid(name) % 100000 + 7))
+    # floating rocks drifting below the archipelago
+    rr = random.Random(2026)
+    placed = 0
+    for _ in range(400):
+        if placed >= 16:
+            break
+        a = rr.uniform(0, TAU)
+        r = rr.uniform(12, 52)
+        p = (r * math.cos(a), r * math.sin(a), rr.uniform(-20.0, -4.0))
+        size = rr.uniform(0.6, 2.2)
+        ok = all(math.hypot(p[0] - n["x"], p[1] - n["y"]) > n["r"] + 5.0 + size for n in nodes.values())
+        for br in bridges:
+            a0, b0 = Vector((*br["p0"], 0)), Vector((*br["p1"], 0))
+            t = max(0.0, min(1.0, (Vector((p[0], p[1], 0)) - a0).dot(b0 - a0) / (b0 - a0).length_squared))
+            if (a0.lerp(b0, t) - Vector((p[0], p[1], 0))).length < 4.0 + size and p[2] > -9:
+                ok = False
+        if ok:
+            floating_rock(B, p, size, rr)
+            placed += 1
+    stats["bridge_spans_m"] = {k: round(v, 2) for k, v in spans.items()}
 
     clock.start("materials_objects")
     imgs = {}
     for mat in ("rock", "stone", "foliage"):
         for ch in ("basecolor", "orm", "normal"):
-            p = os.path.join(TEX_DIR, f"island_{mat}_{ch}.jpg")
-            im = bpy.data.images.load(p)
+            im = bpy.data.images.load(os.path.join(TEX_DIR, f"island_{mat}_{ch}.jpg"))
             if ch != "basecolor":
                 im.colorspace_settings.name = "Non-Color"
             imgs[(mat, ch)] = im
     mats = {m: ftf.pbr_material(f"M_Island_{m.capitalize()}", imgs[(m, "basecolor")], imgs[(m, "orm")],
                                 imgs[(m, "normal")], vertex_color=True, double_sided=(m == "foliage"))
             for m in ("rock", "stone", "foliage")}
+    mats["gold"] = ftf.simple_material("M_Island_Gold", (0.80, 0.58, 0.26), 0.32, metal=1.0)
+    mats["lantern"] = ftf.simple_material("M_Island_Lantern", (1.0, 0.72, 0.38), 0.4,
+                                          emit=(1.0, 0.62, 0.26), emit_strength=6.0)
     out = ftf.new_collection("Export")
     work = ftf.new_collection("Work")
     groups = {}
+    shade = {"rock": 24, "foliage": 85, "stone": 32, "gold": 40, "lantern": 20}
     for (grp, mat), geo in sorted(B.geos.items()):
         if not geo.f:
             continue
-        o = geo.to_object(f"tmp_{grp}_{mat}", mats[mat], work, uv_tile=TILE[mat], color_fn=color_fn_for(mat))
+        cf = color_fn_for(mat) if mat in ("rock", "stone", "foliage") else None
+        o = geo.to_object(f"tmp_{grp}_{mat}", mats[mat], work, uv_tile=TILE[mat], color_fn=cf)
         ftf.triangulate_ngons(o)
-        if mat == "rock":
-            ftf.finish_shading(o, angle=24)
-        elif mat == "foliage":
-            ftf.finish_shading(o, angle=85)
-        else:
-            ftf.finish_shading(o, angle=32)
+        ftf.finish_shading(o, angle=shade[mat])
         groups.setdefault(grp, []).append(o)
     sectors = []
     for grp, objs in sorted(groups.items()):
@@ -1078,52 +1194,36 @@ def stage_build():
         cols.append(o)
 
     clock.start("sockets_export")
-    sockets = []
-    sockets.append(ftf.add_empty("socket_scroll", (0, 0, 0), out, 0.0,
-                                 {"socket": "scroll_table", "clear_radius_m": 2.2}))
-    for stem, label, a, z in CAMPS:
+    sockets = [ftf.add_empty("socket_scroll", (0, 0, 0), out, 0.0,
+                             {"socket": "scroll_table", "clear_radius_m": 2.0})]
+    for stem, label, a in CAMPS:
         n = nodes[f"camp_{stem}"]
-        sockets.append(ftf.add_empty(f"socket_camp_{stem}", (n["x"], n["y"], n["z"]), out,
-                                     n["phi"] - math.pi / 2,
-                                     {"socket": "camp", "clan": stem, "label": label,
-                                      "build_area_m": [8, 8], "front": "local +Z (glTF) faces the plaza"}))
-    for name, n in sorted(nodes.items()):
-        if n["kind"] == "anchor":
-            zx, zy = n["zone"]
-            sockets.append(ftf.add_empty(f"socket_anchor_{n['shell']}", (zx, zy, n["z"]), out,
-                                         n["phi"] - math.pi / 2,
-                                         {"socket": "anchor_zone", "shell": n["shell"],
-                                          "zone_radius_m": ANCHOR_ZONE_R,
-                                          "shell_float_height_m": SHELL_FLOAT}))
-    bal = nodes["balcony"]
-    iris = nodes["camp_iris"]
-    d = Vector((iris["x"] - bal["x"], iris["y"] - bal["y"], 0)).normalized()
-    sp = Vector((bal["x"], bal["y"], bal["z"])) - d * 1.5
-    sockets.append(ftf.add_empty("socket_spawn", tuple(sp), out, math.atan2(d.y, d.x) + math.pi / 2,
-                                 {"socket": "spawn", "facing": "local +Z (glTF) looks toward the Iris camp"}))
+        sockets.append(ftf.add_empty(f"socket_camp_{stem}", (n["x"], n["y"], 0.0), out, face_plaza(a),
+                                     {"socket": "camp", "clan": stem, "label": label, "angle_deg": a,
+                                      "plateau_radius_m": PLATEAU_R,
+                                      "front": "local +Z (glTF) faces the plaza"}))
+    for shell, a in ANCHOR_ZONES:
+        sockets.append(ftf.add_empty(f"socket_anchor_zone_{shell}", (*ring_xy(ANCHOR_RING_R, a), 0.0), out,
+                                     face_plaza(a), {"socket": "anchor_zone", "shell": shell, "index": shell - 1,
+                                                     "angle_deg": a, "zone_radius_m": ANCHOR_ZONE_R}))
+    bx, by = ring_xy(BALCONY_RADIUS, BALCONY_ANGLE)
+    sockets.append(ftf.add_empty("socket_spawn", (bx * 0.97, by * 0.97, 0.0), out, face_plaza(BALCONY_ANGLE),
+                                 {"socket": "spawn", "facing": "local +Z (glTF) looks toward the plaza"}))
+    for i, p in enumerate(B.lanterns):
+        sockets.append(ftf.add_empty(f"socket_lantern_{i:02d}", p, out, 0.0, {"socket": "lantern"}, 0.15))
     stats["materials"] = sorted(m.name for m in mats.values())
     stats["objects"] = {o.name: ftf.mesh_tris(o) for o in sectors}
     stats["runtime_triangles_blender"] = sum(stats["objects"].values())
     stats["collision_triangles_blender"] = {o.name: ftf.mesh_tris(o) for o in cols}
+    stats["lanterns"] = len(B.lanterns)
     lo, hi = ftf.world_bounds(sectors)
     stats["bounds_blender_zup"] = {"min": [round(v, 2) for v in lo], "max": [round(v, 2) for v in hi]}
-    stats["layout"] = {
-        "walk_speed_mps": WALK_SPEED, "ring_radius_m": R_CAMP, "plaza_radius_m": PLAZA_R,
-        "camp_plateau_radius_m": CAMP_R, "anchor_islet_centre_radius_m": ANCHOR_AT,
-        "nodes": {k: {"kind": v["kind"], "centre_blender": [round(v["x"], 2), round(v["y"], 2), v["z"]],
-                      "radius_m": v["r"]} for k, v in sorted(nodes.items())},
-        "edges": edges,
-    }
-    stats["walk_table"] = walk_table(nodes, edges, spans)
-    sec = [r["seconds_at_4mps"] for r in stats["walk_table"] if not r["pair"].startswith("spawn")]
-    stats["walk_seconds_range_at_4mps"] = [min(sec), max(sec)]
-    size = ftf.export_glb(GLB_PATH, sectors + cols + sockets)
-    stats["glb_bytes"] = size
-    stats["glb"] = ftf.inspect_glb(GLB_PATH)
+    stats["layout"] = layout_report(nodes, bridges, spans)
+    size = ftf.export_glb(RAW_GLB, sectors + cols + sockets)
+    stats["glb_raw_bytes"] = size
+    stats["glb"] = ftf.inspect_glb(RAW_GLB)
     stats["runtime_triangles"] = stats["glb"]["triangles_render"]
-    stats["budget_ok"] = {"triangles": stats["runtime_triangles"] <= TRI_BUDGET,
-                          "materials": len(mats) <= 3,
-                          "walk_30_45s": 30.0 <= min(sec) and max(sec) <= 45.0}
+    stats["budget_ok"] = {"triangles": stats["runtime_triangles"] <= TRI_BUDGET}
     clock.stop()
     tex_stats = os.path.join(QA_DIR, "texture-stats.json")
     if os.path.exists(tex_stats):
@@ -1135,7 +1235,7 @@ def stage_build():
     os.makedirs(QA_DIR, exist_ok=True)
     with open(STATS_PATH, "w") as fh:
         json.dump(stats, fh, indent=2)
-    log("runtime tris", stats["runtime_triangles"], "glb", size, "walk", stats["walk_seconds_range_at_4mps"])
+    log("runtime tris", stats["runtime_triangles"], "raw glb", size)
 
 
 # ------------------------------------------------------------------ render
@@ -1168,6 +1268,7 @@ def cloud_sea(col):
     me.from_pydata([(-S, -S, -36), (S, -S, -36), (S, S, -36), (-S, S, -36)], [], [(0, 1, 2, 3)])
     me.materials.append(m)
     ftf.link(bpy.data.objects.new("cloud_floor", me), col)
+
 
 
 def import_glb(path):
@@ -1225,96 +1326,110 @@ def shell_proxy(col, loc):
     ftf.finish_shading(o, 60)
 
 
-def stage_render(samples=160, res=(1600, 900)):
+
+def stage_render(samples=128, res=(1600, 900)):
     clock = ftf.StageClock("island")
     clock.start("qa_renders")
     sc = ftf.reset_scene()
     ftf.setup_cycles(sc, res[0], res[1], samples)
+    sc.render.image_settings.quality = 84
     dev = ftf.use_gpu(sc, "island")
     env = ftf.new_collection("Env")
-    sc.world = ftf.sky_world(zenith=(0.10, 0.15, 0.18), horizon=(0.42, 0.48, 0.50),
-                             ground=(0.34, 0.40, 0.43), strength=1.0)
-    ftf.add_sun(env, energy=3.6, color=(1.0, 0.88, 0.72), elev=24, azim=-140)
+    # golden hour (style addendum): warm low sun from the game's sun azimuth, cool shadows
+    sc.world = ftf.sky_world(zenith=(0.11, 0.16, 0.22), horizon=(0.60, 0.50, 0.38),
+                             ground=(0.40, 0.40, 0.40), strength=0.9)
+    ftf.add_sun(env, energy=4.2, color=(1.0, 0.80, 0.58), elev=24, azim=-132, angle=2)
     cloud_sea(env)
-    island = import_glb(GLB_PATH)
-    objs = {o.name: o for o in island}
+    island = import_glb(RAW_GLB)
     cols = [o for o in island if o.name.endswith("_col")]
     for c in cols:
         c.hide_render = True
     socks = {o.name: o for o in island if o.name.startswith("socket_")}
     placed = {}
     props = ftf.new_collection("Placed")
+
+    def plain(name):
+        p = os.path.join(PLAIN_DIR, name + ".glb")
+        return p if os.path.exists(p) else None
+
     for stem, *_ in CAMPS:
-        p = os.path.join(MODELS, f"camp_{stem}.glb")
-        s = socks.get(f"socket_camp_{stem}")
-        if s and os.path.exists(p):
+        p, s = plain(f"camp_{stem}"), socks.get(f"socket_camp_{stem}")
+        if p and s:
             place_asset(p, s.matrix_world.translation.copy(), s.matrix_world.to_euler().z, props)
             placed[f"camp_{stem}"] = True
-    for n in range(1, 5):
-        s = socks.get(f"socket_anchor_{n}")
-        if not s:
-            continue
-        loc = s.matrix_world.translation.copy()
-        shell_proxy(props, loc + Vector((0, 0, SHELL_FLOAT)))
-        ap = os.path.join(MODELS, "anchor.glb")
-        if os.path.exists(ap):
-            place_asset(ap, loc + Vector((1.2, 0.0, 0)), 0.0, props)
+    shells = {1: (52, 14), 2: (50, 22), 3: (54, 17), 4: (50, 25)}   # layout.js SHELL_PLACES
+    for shell, a in ANCHOR_ZONES:
+        s = socks[f"socket_anchor_zone_{shell}"]
+        ap = plain("anchor")
+        if ap:
+            place_asset(ap, s.matrix_world.translation.copy(), s.matrix_world.to_euler().z, props)
             placed["anchor"] = True
-    st = os.path.join(MODELS, "scroll_table.glb")
-    if os.path.exists(st):
+        sp = plain(f"shell_{shell}")
+        r, h = shells[shell]
+        x, y = ring_xy(r, a)
+        if sp:
+            place_asset(sp, (x, y, h), face_plaza(a), props)
+            placed[f"shell_{shell}"] = True
+    st = plain("scroll_table")
+    if st:
         place_asset(st, (0, 0, 0), 0.0, props)
         placed["scroll_table"] = True
-    else:
-        m = ftf.simple_material("ScrollProxy", (0.25, 0.27, 0.26), 0.6)
-        bm = bmesh.new()
-        ftf.revolve(bm, [(1.5, 0.0), (1.5, 0.9), (1.2, 1.0)], 48, cap_top=True)
-        ftf.bm_object("scroll_proxy", bm, m, props)
     spawn = socks["socket_spawn"].matrix_world.translation.copy()
-    human_proxy(props, spawn + Vector((0.0, 0.0, 0.0)), 0.0)
+    human_proxy(props, spawn, face_plaza(BALCONY_ANGLE))
+    nb = ring_xy(17.0, 90)  # a second figure on the Moss bridge
+    human_proxy(props, (nb[0] + 0.4, nb[1], 0.0), 0.3)
 
     out = os.path.join(QA_DIR, "final")
     timings = {}
 
-    def shot(name, loc, tgt, lens=None, fov=None):
-        cam = ftf.add_camera(f"cam_{name}", loc, tgt, lens=lens or 35, fov_v_deg=fov, col=env)
+    def shot(name, loc, tgt, lens=None, fov=None, ortho=None):
+        cam = ftf.add_camera(f"cam_{name}", loc, tgt, lens=lens or 35, fov_v_deg=fov, ortho=ortho, col=env)
         timings[name] = ftf.render_to(sc, cam, os.path.join(out, f"island_{name}.jpg"))
         log("render", name, timings[name])
 
-    def iso(name, focus, dist):
-        t = min(1, max(0, (dist - 4.5) / (70 - 4.5)))
+    def iso(name, focus, dist, yaw_deg=0.0):
+        """Game camera (camera-rig.js): pitch, fov and focus height follow the zoom."""
+        t = min(1, max(0, (dist - 4.5) / (90 - 4.5)))
         pitch = math.radians(14 + 48 * t ** 0.6)
         fov = 50 - 18 * t ** 0.5
         f = Vector(focus) + Vector((0, 0, 1.55 - 0.45 * t))
-        loc = f + Vector((0, -math.cos(pitch) * dist, math.sin(pitch) * dist))
+        yw = math.radians(yaw_deg)
+        loc = f + Vector((math.sin(yw) * math.cos(pitch) * dist, -math.cos(yw) * math.cos(pitch) * dist,
+                          math.sin(pitch) * dist))
         shot(name, loc, f, fov=fov)
 
-    iris = socks["socket_camp_iris"].matrix_world.translation.copy()
-    a2 = socks["socket_anchor_2"].matrix_world.translation.copy()
-    shot("concept_balcony", spawn + Vector((3.0, -7.5, 6.5)), Vector((0, -30, -10)), lens=22)
-    shot("overview_high", Vector((-120, -330, 170)), Vector((0, -10, -12)), lens=30)
-    shot("overview_top", Vector((0, -1, 620)), Vector((0, 0, 0)), lens=35)
-    iso("iso_far_iris", iris, 70)
-    iso("iso_far_plaza", (0, 0, 0), 70)
-    iso("iso_mid_iris_bridge", iris + Vector((0, 22, 0)), 30)
-    iso("iso_far_anchor2", a2, 70)
-    shot("close_medallion", Vector((5.5, -10.5, 4.2)), Vector((0, 0, 0)), lens=28)
-    ib = socks["socket_camp_iris"].matrix_world.translation
-    shot("close_bridge_arch", Vector((ib.x + 26, ib.y + 40, ib.z - 9)), Vector((ib.x, ib.y + 35, ib.z - 2)), lens=30)
-    sal = socks["socket_camp_sol"].matrix_world.translation
-    shot("close_pillar_terraces", Vector((sal.x - 18, sal.y - 26, sal.z - 3)), Vector((sal.x, sal.y, sal.z - 6)), lens=32)
-    shot("close_balcony", spawn + Vector((-5.5, 9.0, 2.0)), spawn + Vector((0, -2, 0.3)), lens=28)
-    # collision overlay
-    cm = ftf.collision_overlay_material()
-    for c in cols:
-        c.hide_render = False
-        c.data.materials.clear()
-        c.data.materials.append(cm)
-    shot("collision_overlay", Vector((iris.x + 40, iris.y - 45, iris.z + 55)), Vector((iris.x, iris.y + 25, iris.z)), lens=32)
+    which = os.environ.get("ISLAND_SHOTS", "")
+    want = lambda n: not which or n in which.split(",")
+    if want("game_iso_overview"):
+        iso("game_iso_overview", (0, -6, 0), 90)
+    if want("overview_wide"):
+        shot("overview_wide", Vector((-62, -118, 52)), Vector((0, -2, -9)), lens=28)
+    if want("iso_mid_plaza"):
+        iso("iso_mid_plaza", (0, 0, 0), 30)
+    if want("iso_camp_moss_bridge"):
+        iso("iso_camp_moss_bridge", ring_xy(19, 90) + (0,), 16, yaw_deg=-30)
+    if want("pillars_side"):
+        shot("pillars_side", Vector((58, -70, -12)), Vector((0, 0, -16)), lens=24)
+    if want("balcony_start"):
+        bx, by = spawn.x, spawn.y
+        dvec = Vector((-bx, -by, 0)).normalized()
+        shot("balcony_start", spawn - dvec * 4.6 + Vector((0, 0, 2.6)), spawn + dvec * 20 + Vector((0, 0, -1.0)), fov=48)
+    if want("top_layout"):
+        shot("top_layout", Vector((0, -4, 300)), Vector((0, -4, 0)), ortho=104)
+    if want("collision_overlay"):
+        cm = ftf.collision_overlay_material()
+        for c in cols:
+            c.hide_render = False
+            c.data.materials.clear()
+            c.data.materials.append(cm)
+        iso("collision_overlay", (0, -10, 0), 70, yaw_deg=20)
+        for c in cols:
+            c.hide_render = True
     clock.stop()
     with open(os.path.join(out, "render-stats.json"), "w") as fh:
         json.dump({"device": dev, "resolution": list(res), "samples": samples, "placed_assets": placed,
-                   "render_only_proxies": ["cloud sea layers", "Shell stand-ins", "1.75 m figure",
-                                           "scroll table stand-in if scroll_table.glb is missing"],
+                   "render_only": ["cloud sea layers", "1.75 m figures (balcony spawn, Moss bridge)",
+                                   "placed camps / anchors / Shells / scroll table (decompressed copies)"],
                    "seconds_per_render": timings, "stages": clock.stages}, fh, indent=2)
 
 
