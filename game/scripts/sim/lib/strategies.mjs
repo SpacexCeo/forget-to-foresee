@@ -59,7 +59,7 @@ export function makeStrategy({ frag, trust, market }, extra = {}) {
           if (frag === 'coop') return { type: 'accept', id: o.id };       /* honest: only promise what tick 6 already delivers */
         }
         if (o.kind === 'loan' && S.silk[0] >= o.n + 5) return { type: 'accept', id: o.id };
-        if (o.kind === 'escrow' && honest && frag === 'coop' && S.silk[0] >= o.price + 10) return { type: 'accept', id: o.id };
+        if (o.kind === 'escrow' && honest && S.silk[0] >= o.price + 10) return { type: 'accept', id: o.id }; // cooperative social action, independent of the own fragment decision
         if (o.kind === 'sell' && anchors && o.from === 5 && S.silk[0] >= o.price + 15) return { type: 'accept', id: o.id };
         if (o.kind === 'sell' && !honest && o.from === 1 && S.silk[0] >= o.price + 5) return { type: 'accept', id: o.id };
       }
