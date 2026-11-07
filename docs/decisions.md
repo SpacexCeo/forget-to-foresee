@@ -76,3 +76,12 @@
 - Буква диска на ноутбуке может отличаться — закрепить F: в «Управлении дисками».
 - `node_modules` не коммитится: после переноса выполнить `cd game && npm install`.
 - npm на основном ПК не мог писать логи в стандартный кэш; помогают флаги `--cache` и `--logs-dir` во временную папку.
+
+## 8. Log (English from Nov 7 owner rule)
+| Date | Decision / change |
+|---|---|
+| 07.11 | Owner rule: **English only** for all new docs, UI, comments, commits. Art brief and manifest translated (`docs/art/`). |
+| 07.11 | RTX 5090 server (Clore) is a **separate blocked workstream**: unreachable from the cloud session (no SSH through the egress proxy; web URL denied by policy). Credentials pasted in chat were not used; owner advised to rotate. GPU work runs from the owner's own machine. |
+| 07.11 | Owner authorized **CPU Blender** production of `anchor.glb` and a minimal Three.js asset-review scene, on branch `claude/adoring-darwin-r9mu72` (no `art/anchor-first`, no push to `main`). |
+| 07.11 | Anchor blockout + scale check done (1.600 m, trefoil fins). Work stopped at owner's request; handoff: `docs/art/HANDOFF-anchor.md`. `anchor.glb` not produced yet. |
+| 07.11 | Owner attached a commercial assessment (two 5090s, human clans, entry-funded prizes, six prototype math findings). Recorded only; no rule/code changes made. |
