@@ -1,68 +1,79 @@
-# Forget to Foresee — бриф для художника (vertical slice)
+# Forget to Foresee — Artist Brief (vertical slice)
 
-Срок: модели нужны **до 11.11 вечера** (Киев). 12.11 — QA, 13.11 20:00 — заморозка.
-Пока модели не пришли, в игре стоит greybox, помеченный «не финальный арт». Как только модель лежит в папке, код её подхватывает.
+English translation of the original Russian brief (same requirements, exact filenames retained). Clauses marked *(owner addition, Nov 7)* come from the owner's later English brief (`ART-BRIEF.md`) and refine the original without removing anything.
 
-## Мир в двух словах
-Компактный остров-диорама. Шесть лагерей кланов вокруг центрального Свитка. Над зонами якорей парят четыре Раковины. Внутрь одной Раковины можно войти: там туман, стекло, и Гость рисует круглый знак-логограмму.
-Вдохновение — спокойный масштаб и загадка фильма «Прибытие» (2016). **Ничего из фильма не копируем:** ни форму кораблей, ни пришельцев, ни их чернильные круги, ни интерьеры. Раковины — именно раковины: спираль, рёбра роста, перламутр, а не гладкое «яйцо».
+**Deadline:** models are needed **by Nov 11, evening (Kyiv)**. Nov 12 — QA. **Nov 13, 20:00 (Kyiv) — freeze.**
+Until models arrive, the game uses greybox marked "not final art". As soon as a model is in the folder, the code picks it up.
 
-## Палитра и материал
-- Холодные серо-зелёные поверхности, угольные массы, светлый туман, **тёплый янтарь** как знак человеческого решения.
-- Стилизованный PBR: формы читаются в изометрии и выдерживают близкий осмотр. Фотореализм не нужен, generic-ассеты из библиотек без переработки не подходят.
-- Информационные цвета (Дар, Буря, доверие) рисует код поверх. Не запекайте их в текстуры.
+## The world in brief
+A compact diorama island. Six clan camps around the central Scroll. Four Shells float above the anchor zones. One Shell can be entered: inside there is fog, glass, and a Guest draws a circular logogram sign.
+Inspiration: the calm scale and mystery of the film *Arrival* (2016). **Nothing from the film is copied:** not the shape of the ships, not the aliens, not their ink circles, not the interiors. The Shells are genuinely shells — spiral, growth ribs, nacre — not a smooth "egg".
 
-## Технические требования (для всех моделей)
-| Параметр | Значение |
+## Palette and material
+- Cold grey-green surfaces, charcoal masses, light fog, **warm amber** as the sign of human decision.
+- Stylized PBR: forms read in isometric view and withstand close inspection. Photorealism is not needed; generic library assets without rework are not acceptable.
+- Informational colours (Gift, Storm, trust) are drawn by code on top. **Do not bake them into textures.**
+
+## Technical requirements (all models)
+| Parameter | Value |
 |---|---|
-| Формат | glTF 2.0 бинарный (`.glb`), один файл на объект |
-| Оси и единицы | Y вверх, 1 юнит = 1 метр, масштаб применён (Apply Scale) |
-| Pivot | на земле, в центре основания объекта |
-| Материалы | PBR metallic-roughness, ≤3 материала на объект, текстуры встроены в `.glb` |
-| Текстуры | hero и интерьер — до 2048², остальное — до 1024², PNG или JPEG (KTX2 сделаем в сборке) |
-| Нормали | корректные, без перевёрнутых полигонов; tangents экспортировать |
-| UV | без заметных растяжений, согласованная плотность текселей |
-| Collision | отдельный упрощённый меш с суффиксом `_col` внутри того же `.glb` (выпуклые боксы и простые формы) |
-| Анимации | не нужны (движение и голограммы делает код) |
+| Format | glTF 2.0 binary (`.glb`), one file per object |
+| Axes and units | Y up, 1 unit = 1 metre, scale applied (Apply Scale) |
+| Pivot | On the ground, at the centre of the object's base (floating Shells: pivot at the bottom of the Shell itself) |
+| Materials | PBR metallic-roughness, ≤ 3 materials per object, textures embedded in the `.glb` |
+| Textures | Hero and interior — up to 2048²; everything else — up to 1024²; PNG or JPEG (KTX2 is done in the build) |
+| Normals | Correct, no inverted faces; export tangents |
+| UV | No visible stretching, consistent texel density |
+| Collision | Separate simplified mesh with the suffix `_col` inside the same `.glb` (convex boxes and simple forms) |
+| Animations | Not needed (motion and holograms are done by code) |
 
-**Бюджет треугольников (runtime):**
-| Объект | Кол-во | Треугольников на штуку |
+**Triangle budget (runtime):**
+| Object | Count | Triangles each |
 |---|---|---|
-| Остров (рельеф + берег) | 1 | до 60 000 |
-| Раковина, экстерьер | 4 разные | до 15 000 |
-| Интерьер Раковины | 1 | до 80 000 |
-| Лагерь клана (сборка) | 6 разных | до 12 000 |
-| Hero: якорь, стол Свитка, осколок памяти | 3 | до 8 000 + отдельный LOD для близкого осмотра до 30 000 (`_inspect`) |
+| Island (terrain + shore) | 1 | up to 60,000 |
+| Shell, exterior | 4 distinct | up to 15,000 |
+| Shell interior | 1 | up to 80,000 |
+| Clan camp (assembly) | 6 distinct | up to 12,000 |
+| Hero: anchor, Scroll table, memory shard | 3 | up to 8,000 + a separate close-inspection LOD up to 30,000 (`_inspect`) |
 
-## Список объектов slice
-Имена файлов строго такие: код ищет их по имени. Папка: `game/public/assets/models/`.
+The `_inspect` mesh is separate and does not replace the runtime mesh or its LODs.
 
-### Hero-объекты (ближний осмотр обязателен)
-1. **`anchor.glb` — якорь.** Маяк, который игрок ставит у Раковины: залог 10 шёлка. Высота около 1.6 м. На корпусе — гнёзда под номер Раковины (I–IV) и тика: цифры рисует код, оставьте плоские площадки. Узнаваемый силуэт сбоку и сверху.
-2. **`scroll_table.glb` — стол Свитка.** Центр острова. Круглый стол или постамент диаметром около 3 м, на нём шесть секторов-гнёзд для фрагментов послания (кольцо из шести частей) и центральное углубление под «двойное кольцо». Каждому клану свой сектор.
-3. **`shard.glb` — осколок памяти.** Кристаллизованное воспоминание, около 0.4 м. Выглядит хрупким, с внутренними трещинами-нитями. Материал полупрозрачный; свечение добавит код.
+## Slice object list
+Filenames must be exactly these: the code looks them up by name. Folder: `game/public/assets/models/`.
 
-### Раковины
-4–7. **`shell_1.glb` … `shell_4.glb`** — четыре экстерьера, высота около 18 м. Висят над землёй (pivot внизу самой Раковины). Общий язык — спиральные раковины с рёбрами роста, но у каждой свой характер: I — вытянутая и тонкая, II — массивная, III — асимметричная, IV — с разломом. Номер виден издалека формой, а не надписью.
-8. **`shell_interior.glb` — интерьер одной Раковины.** Замкнутый объём: пол, стены, высокий свод, проёмы и опоры. Около 20×12 м, высота свода 10–14 м. В одной торцевой стене — большая светлая «стеклянная» плоскость около 12×7 м (на ней код рисует логограмму). **Обязательно:** потолок закрыт, нет дыр и односторонних стен; лестница или пандус ко входу; `_col` для пола, стен и потолка.
+### Hero objects (close inspection mandatory)
+1. **`anchor.glb` — anchor.** A beacon the player places by a Shell; stake: 10 silk. *(Owner addition, Nov 7: the stake is a game resource, not a modelled part.)* Height about 1.6 m. On the body — sockets for the Shell number (I–IV) and the tick: the code draws the numbers, leave flat pads. Recognizable silhouette from the side and from above.
+2. **`scroll_table.glb` — Scroll table.** Centre of the island. A round table or plinth about 3 m in diameter, with six sector sockets for message fragments (a ring of six parts) and a central recess for the "double ring" *(owner addition: the double ring itself is drawn by code)*. Each clan has its own sector.
+3. **`shard.glb` — memory shard.** A crystallized memory, about 0.4 m. Looks fragile, with inner crack-threads. Translucent material; the glow is added by code.
 
-### Лагеря кланов
-9–14. **`camp_iris.glb`, `camp_sol.glb`, `camp_pepel.glb`, `camp_moh.glb`, `camp_yantar.glb`, `camp_iney.glb`** — компактные авторские композиции примерно 8×8 м: шатёр или укрытие, место для голограммы агента (свободный круг около 2 м в центре), 2–4 смысловые детали. Характеры:
-   - **Ирис** (игрок) — ирис, фиолетовые тона, аккуратность, человеческий масштаб.
-   - **Соль** — белые кристаллы, весы, торговля, что-то спрятанное.
-   - **Пепел** — угольный, обгоревшее дерево, частокол: страх и защита.
-   - **Мох** — живое, мягкое, открытое, общий котёл.
-   - **Янтарь** — тёплый, сундуки, весы и замки: у всего есть цена.
-   - **Иней** — холодное стекло, инструменты, таблицы знаков.
+### Shells
+4–7. **`shell_1.glb` … `shell_4.glb`** — four exteriors, about 18 m tall. They hang above the ground (pivot at the bottom of the Shell itself). Shared language: spiral shells with growth ribs, but each has its own character: **I** — elongated and thin, **II** — massive, **III** — asymmetric, **IV** — with a fracture. The number is readable from afar by shape, not by lettering.
 
-### Остров
-15. **`island.glb`** — один рельеф около 70×70 м: центральная площадка под стол Свитка, шесть площадок под лагеря по кругу (радиус около 13 м), четыре зоны якорей под Раковинами (радиус около 25 м, по диагоналям), тропы между ними. Берег уходит в воду или туман. Пешком между соседними точками 30–45 секунд.
+8. **`shell_interior.glb` — interior of one Shell.** Closed volume: floor, walls, high vault, openings and supports. About 20 × 12 m, vault height 10–14 m. In one end wall — a large bright "glass" plane about 12 × 7 m (the code draws the logogram on it). **Mandatory:** ceiling closed, no holes and no single-sided walls; stairs or a ramp to the entrance; `_col` for floor, walls and ceiling.
 
-## Порядок работы (из ТЗ)
-brief → blockout и проверка масштаба → мастер-модель → retopo и bake → материалы → экспорт `.glb` → проверка в игре → утверждение.
-Первым сделайте **один hero-объект целиком** (предлагаю `anchor.glb`): по нему измерим реальную скорость и поправим объём, если всё не успевается.
+### Clan camps
+9–14. **`camp_iris.glb`, `camp_sol.glb`, `camp_pepel.glb`, `camp_moh.glb`, `camp_yantar.glb`, `camp_iney.glb`** — compact authored compositions about 8 × 8 m: a tent or shelter, a place for the agent's hologram (a free circle about 2 m in the centre), 2–4 meaningful details. Characters:
 
-## Как сдавать
-1. Положите `.glb` в `game/public/assets/models/` (или пришлите файл, положу сам).
-2. Добавьте строку в `docs/art/manifest.md`: файл, автор, источник (своё / купленное + лицензия), треугольники, размер текстур.
-3. Код подхватит модель вместо greybox. Ближний осмотр проверяем вместе.
+| File | Clan | Character |
+|---|---|---|
+| `camp_iris.glb` | Iris (player) | Iris flower, violet tones, neatness, human scale |
+| `camp_sol.glb` | Salt | White crystals, scales, trade, something hidden |
+| `camp_pepel.glb` | Ash | Charcoal, burned wood, palisade: fear and protection |
+| `camp_moh.glb` | Moss | Living, soft, open, a common pot |
+| `camp_yantar.glb` | Amber | Warm, chests, scales and locks: everything has a price |
+| `camp_iney.glb` | Frost | Cold glass, instruments, tables of signs |
+
+### Island
+15. **`island.glb`** — one terrain about 70 × 70 m: a central platform for the Scroll table, six camp platforms in a circle (radius about 13 m), four anchor zones under the Shells (radius about 25 m, on the diagonals), paths between them. The shore runs into water or fog. Walking between neighbouring points takes 30–45 seconds.
+
+> *(Owner addition, Nov 7)* Check before blockout: at these radii, 30–45 s between neighbours implies a slow gait or winding paths. Measure with the game's actual walk speed and report the result to the owner; do not silently change dimensions or the timing target.
+
+## Workflow (from the spec)
+brief → blockout and scale check → master model → retopo and bake → materials → `.glb` export → in-game check → approval.
+
+Do **one hero object completely** first (proposed: `anchor.glb`): it measures the real pace so the scope can be adjusted if not everything fits. *(Owner addition, Nov 7: a reference image may be used as input before blockout if the owner prefers; the pipeline stays the same.)*
+
+## How to deliver
+1. Put the `.glb` into `game/public/assets/models/` (or send the file and the owner places it).
+2. Add a row to `docs/art/manifest.md`: file, author, source (own / purchased + license), triangles, texture size.
+3. The code picks up the model instead of the greybox *(owner addition: verify the loader actually does this; do not claim it is tested until it is)*. Close inspection is reviewed together with the owner.
