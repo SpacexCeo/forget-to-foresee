@@ -94,7 +94,7 @@ export function createDialog(i18n, { id, titleKey, body }) {
     open(from) {
       opener = from || document.activeElement;
       if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
-      const first = dlg.querySelector('.ftf-dialog-body input, .ftf-dialog-body select, .ftf-dialog-body button') || close;
+      const first = dlg.querySelector('.ftf-dialog-body input:checked, .ftf-dialog-body input, .ftf-dialog-body select, .ftf-dialog-body button') || close;
       first.focus();
     },
     close: () => dlg.close(),
