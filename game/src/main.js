@@ -72,7 +72,9 @@ async function enterWorld() {
     window.__ftf.play = play;
   } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
 }
-if (params.get('play') === 'direct') enterWorld();
+// #play (artifact links pass only a hash) and touch devices go straight into the world.
+const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
+if (params.get('play') === 'direct' || location.hash === '#play' || coarse) enterWorld();
 else shellUi = mountShell(uiRoot, { ctx, onFirstContact: () => enterWorld() });
 
 window.addEventListener('resize', () => lookdev.setSize(window.innerWidth, window.innerHeight));
