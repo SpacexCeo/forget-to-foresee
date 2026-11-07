@@ -1,88 +1,85 @@
-# Forget to Foresee — decisions and context
+# Forget to Foresee — decision log and context
 
-## Current owner requirements — 7 November 2026
+This file carries context between machines and sessions. New session: read it in full, then `docs/spec.md`, `docs/hackathon-rules.md` and `README.md`.
+Last updated: 07.11.2026.
 
-- **Strict English-only rule:** all communication, new or changed documentation, UI, dialogue, game content, comments, and public materials must be in English. This supersedes earlier Russian communication and RU/EN delivery requirements. Historical notes below remain source material; untranslated player-facing text must not ship.
-- The current assessment targets a full commercial game, rather than only the hackathon demo.
-- Development hardware: **two RTX 5090 GPUs**. Their host layout and CPU/RAM/network specifications are not yet confirmed. Older three-GPU plans must be revised.
-- Tournament prizes are to be funded by **entry fees**. Earlier no-cash-prize scope is superseded as a product requirement; no live payments or deployments were requested in this assessment.
-- The intended market is international; the operator's country and initial eligible markets have not been selected.
+## 1. Hackathon
+- NEAR Hackathon, 1–14 November 2026. **Submission deadline: 15.11.2026 01:59 Kyiv.** Rules and checklist: `docs/hackathon-rules.md`.
+- Team: RAEN Computers. RAEN's core product is an NFT agent with its own wallet (an "NFT computer with an agent").
+- Candidate tracks: **games**, **nfts**, possibly social.
+- Competitor snapshot (7.11): 229 submissions in the catalog; nfts — 13 tags, games — 10, social — 10.
+  - NFT containers (the NFT owns a wallet or business): Deed, Logen, Torch, Outlive, Handover, Zinc, OneUp.
+  - AI traders in an economy: Nims, Nearverse, DiveMarket, Maven and **Bazaar Sovereign** (AI merchants are NFTs with wallets and remember relationships; the closest competitor).
+  - Bluffing and contests: Agent Undercover, Overclock, DUEL.
+  - "Social" in the catalog is mostly shared money: Roomy, Petty Cash.
+- Takeaway: "an NFT with a wallet and memory" is not a differentiator by itself. We need our own game mechanic.
 
-The remaining entries are historical context and may contain superseded requirements.
+## 2. Concept
+**Forget to Foresee** (earlier working titles: "RAEN: Twelve", "Arrival").
 
-Файл для переноса контекста между компьютерами и сессиями. Новая сессия: прочитай целиком, затем `docs/hackathon-rules.md` и `README.md`.
-Последнее обновление: 07.11.2026.
+Shells have appeared over a world of agents; the Guests speak in round signs (logograms). Six clans are NFT agents with a wallet and memory. The player guides the agent **Iris** (Ирис). The Guests' message can only be assembled from the fragments of all six clans. At the end there is a vote: is it a gift or a weapon?
 
-## 1. Хакатон
-- NEAR Hackathon, 1–14 ноября 2026. **Дедлайн подачи: 15.11.2026 01:59 по Киеву.** Правила и чек-лист: `docs/hackathon-rules.md`.
-- Команда: RAEN Computers. Исходный продукт RAEN — NFT-агент со своим кошельком («NFT-компьютер с агентом»).
-- Треки-кандидаты: **games**, **nfts**, возможно social.
-- Срез конкурентов (7.11): в каталоге 229 подач; nfts — 13 отметок, games — 10, social — 10.
-  - NFT-контейнеры (NFT владеет кошельком или бизнесом): Deed, Logen, Torch, Outlive, Handover, Zinc, OneUp.
-  - AI-торговцы в экономике: Nims, Nearverse, DiveMarket, Maven и **Bazaar Sovereign** (AI-купцы — NFT с кошельками, помнят отношения; ближайший конкурент).
-  - Блеф и соревнования: Agent Undercover, Overclock, DUEL.
-  - Social в каталоге — в основном общие деньги: Roomy, Petty Cash.
-- Вывод: «NFT с кошельком и памятью» само по себе не отличие. Нужна своя игровая механика.
+Inspired by *Arrival* (2016): non-linear time, language changes thinking, a message in parts. **No names, characters or visuals from the film.**
 
-## 2. Концепция
-**Forget to Foresee** (рабочие названия были «RAEN: Двенадцать» и «Прибытие»).
+### Signature mechanic — "The Price of Memory" (proposed by Fable)
+To see the future, the agent **forgets a memory forever**. The human chooses what to forget. The forgotten memory becomes a shard NFT and goes to auction; the buyer "remembers" it instead of you.
+- Forget a betrayal: the agent trusts the betrayer again (repairs a broken link, but can be fooled again).
+- Forget a debt: the debt disappears; the claim passes to the shard's buyer.
+- Forget a promise: freedom, but the one you promised can buy the shard and find out.
+- Forget the "First Word" (the owner's Key): the agent obeys worse (2 actions instead of 3), and the buyer speaks the owner's secret phrase in the finale.
+- Pitch: "An NFT that pays for prophecy with its own biography."
 
-Над миром агентов появились Раковины, Гости говорят круглыми знаками-логограммами. Шесть кланов — NFT-агенты с кошельком и памятью. Игрок ведёт агента **Ирис**. Послание Гостей собирается только из фрагментов всех шести кланов. В конце голосование: это дар или оружие.
+### Other mechanics (in the prototype; full rules in `docs/rules-baseline.md`)
+- **Language.** A sign is a ring of 4 slots: Place (Shell I–IV), Action (Gift/Storm/Silence/Call), Power (10/20/40/80), Delay (+1…+4 ticks). Four stroke forms: arc, spike, loop, drop. Permutations come from the seed. Dots in the core set where reading starts (0 = top, clockwise): the player's "aha" moment. The agent learns from the chronicle (sign + what happened); the player sets the reading rule and pays to ask the Guests.
+- **Anchors.** 10 silk on (Shell, tick). A Gift is shared by those who anchored, earlier anchors get a larger share. A Storm burns the stake. A Call gives a new memory.
+- **Commit-reveal.** The season's events are generated before play and a Merkle root is published; every reveal is checked against it. The Guests' language is deterministic code, not an LLM (otherwise it looks fake).
+- **Fragments.** Each clan holds a fragment with a hidden personal prize V. Contribute to the Scroll for a share of the gift, or hold until tick tV for the prize, after which the fragment goes dark. The key sign (double ring) decides gift or weapon.
+- **World tension.** Deceit and broken links raise it; at 100 the Shells leave and everyone loses.
+- **Crisis at tick 13.** Пепел (Ash) reads the sign as "weapon" and breaks links. **Key:** Ash's secret phrase is committed from tick 1; an agent with a good dictionary sees it in a vision, speaks it, the hash matches, and Ash returns.
+- **Finale.** Vote, then the agent's NFT card with its biography (what it remembers, what it forgot, who bought the forgotten). Choice: forget everything for an Heir, or keep the memory.
+- AI clans: Соль/Salt (lies about words), Пепел/Ash (paranoid, crisis), Мох/Moss (honest), Янтарь/Amber (greedy, escrow), Иней/Frost (scholar, learns fastest).
 
-Тема вдохновлена фильмом «Прибытие» (2016): нелинейное время, язык меняет мышление, послание по частям. **Названия, персонажи и визуал фильма не используем.**
+## 3. Findings of the three independent agents (07.11)
+- **Fable (game design):** proposed "The Price of Memory". The human is conscience and will (chooses what to forget); the agent is body and memory. A vision is only honest if you do nothing. Drop the wall-of-text "newspaper".
+- **Systems designer:** numbers and rules (slot ring, questions like "bulls and cows", a prisoner's dilemma around a fragment with hidden V, a tension threshold, anti-degeneration rules). On-chain: NEP-171 NFTs, an agent sub-account with a FunctionCall key, commit-reveal, escrow.
+- **Judge / red team:** average score about 6/10. Main risk: blending in with Bazaar Sovereign, so memory and the trust graph must not be the core. Core: a distributed message and verifiable predictions. Killer demo: the audience scans a QR code and assembles fragments; finale shows the vision verified on-chain. Too many terms for 3 minutes — simplify.
+- Pitch line: "We handed the room a fragment each of an alien language — only together can you read it — and the future we are about to see was committed to the blockchain before you walked in."
 
-### Фирменная механика — «Цена памяти» (предложил Fable)
-Чтобы увидеть будущее, агент **навсегда забывает воспоминание**. Что забыть, выбирает человек. Забытое становится осколком-NFT и уходит на аукцион. Купивший «помнит» это вместо тебя.
-- Забыть предательство: агент снова доверяет предателю (чинит разорванную связь, но может попасться снова).
-- Забыть долг: долг исчезает, право требования уходит покупателю осколка.
-- Забыть обещание: свобода, но тот, кому обещал, может купить осколок и узнать.
-- Забыть «Первое слово» (Ключ владельца): агент слушается хуже (2 действия вместо 3), а купивший произнесёт тайную фразу владельца в финале.
-- Питч: «NFT, который платит за пророчество собственной биографией».
-
-### Остальные механики (в прототипе)
-- **Язык.** Знак — кольцо из 4 слотов: Место (Раковина I–IV), Действие (Дар/Буря/Тишина/Зов), Сила (10/20/40/80), Срок (+1…+4 тика). 4 формы штриха: дуга, шип, петля, капля. Перестановки задаются сидом. Начало чтения задают точки в ядре (0 — сверху, по часовой): это момент озарения для игрока. Агент учится по летописи (знак + что случилось), игрок задаёт правило чтения и платит за вопросы Гостям.
-- **Якоря.** 10 шёлка на (Раковина, тик). Дар делят поставившие, ранние получают большую долю. Буря сжигает залог. Зов даёт новое воспоминание.
-- **Commit-reveal.** До начала сезона генерируются события, публикуется Merkle-корень; каждое раскрытие сверяется с корнем. Язык Гостей — детерминированный код, не LLM (иначе выглядит как фейк).
-- **Фрагменты.** У каждого клана фрагмент со скрытым личным призом V. Внести в Свиток — доля дара; удержать до тика tV — приз, но фрагмент гаснет. Ключевой знак (двойное кольцо) решает, дар это или оружие.
-- **Напряжение мира.** Обманы и разрывы его поднимают; на 100 Раковины улетают и проигрывают все.
-- **Кризис на тике 13.** Пепел читает знак как «оружие» и рвёт связи. **Ключ:** тайная фраза Пепла закоммичена с первого тика; агент с хорошим словарём видит её в видении, произносит, хэш совпадает, Пепел возвращается.
-- **Финал.** Голосование, затем NFT-карточка агента с биографией (что помнит, что забыл, кто купил забытое). Выбор: забыть всё ради Наследника или сохранить память.
-- Кланы-AI: Соль (лжёт о словах), Пепел (параноик, кризис), Мох (честный), Янтарь (жадный, эскроу), Иней (учёный, быстро учит язык).
-
-## 3. Выводы трёх независимых агентов (07.11)
-- **Fable (геймдизайн):** предложил «Цену памяти». Человек — совесть и воля (выбирает, что забыть), агент — тело и память. Видение честно только при бездействии. Убрать «газету»-простыню.
-- **Системный дизайнер:** числа и правила (кольцо слотов, вопросы как «быки и коровы», дилемма заключённого вокруг фрагмента со скрытым V, порог напряжения, защита от вырождения). Ончейн: NFT NEP-171, субаккаунт агента с FunctionCall-ключом, commit-reveal, эскроу.
-- **Судья / red team:** средний балл около 6/10. Главный риск — слиться с Bazaar Sovereign, поэтому память и граф доверия не делать ядром. Ядро — распределённое послание и проверяемые предсказания. Убойное демо: зал сканирует QR и собирает фрагменты, в финале проверка видения ончейн. Слишком много терминов на 3 минуты — упрощать.
-- Pitch line: «Мы раздали залу по фрагменту языка пришельцев, и только вместе вы его прочтёте, а будущее, которое мы увидим, было закоммичено в блокчейн до того, как вы вошли».
-
-## 4. Решения пользователя
-| Дата | Решение |
+## 4. User decisions
+| Date | Decision |
 |---|---|
-| 07.11 | Делаем **3D-игру**. Формат **«Мир + Раковина»**: изометрический остров (6 лагерей кланов, 4 висящие Раковины, агенты ходят, якоря на земле) плюс сцена внутри Раковины (туман, стекло, Гость рисует логограмму). |
-| 07.11 | Движок: **Three.js в браузере** (Vite). |
-| 07.11 | Проект в папке **F:\Hackaton** (внешний диск KINGSTON, переставляется между ПК и ноутбуком). |
-| 07.11 | Название: **Forget to Foresee**, репозиторий `forget-to-foresee`. |
-| 07.11 | Работаем в GitHub по правилам хакатона: публичный repo, MIT, маленькие коммиты, теги `pre-hackathon` и `hackathon-submission`. |
-| 07.11 | Диск **не переформатируем** (остаётся exFAT). Кэш записи в Windows отключён («Быстрое удаление»); на ноутбуке повторить. |
-| 07.11 | Создан публичный репозиторий https://github.com/SpacexCeo/forget-to-foresee. |
-| 07.11 | Получено единое ТЗ (выжимка: `docs/spec.md`). **G0 дан** — старт с R0. |
-| 07.11 | Арт: **есть художник / Blender** — главные объекты приходят как glTF, код их подключает; до прихода моделей — помеченный greybox. Нужен бриф и манифест ассетов. |
-| 07.11 | NEAR-контракт: **Rust + near-sdk** (Rust и cargo-near ставлю с согласия, данного 07.11). Testnet-аккаунт для деплоя заводит пользователь. |
+| 07.11 | Build a **3D game**. Format **"World + Shell"**: an isometric island (6 clan camps, 4 floating Shells, walking agents, anchors on the ground) plus a scene inside a Shell (fog, glass, a Guest drawing a logogram). |
+| 07.11 | Engine: **Three.js in the browser** (Vite). |
+| 07.11 | Project folder **F:\Hackaton** (external KINGSTON drive, moved between a PC and a laptop). |
+| 07.11 | Name: **Forget to Foresee**, repository `forget-to-foresee`. |
+| 07.11 | Work on GitHub by the hackathon rules: public repo, MIT, small commits, tags `pre-hackathon` and `hackathon-submission`. |
+| 07.11 | Public repository created: https://github.com/SpacexCeo/forget-to-foresee. |
+| 07.11 | The drive is **not reformatted** (stays exFAT). Windows write caching disabled ("Quick removal"); repeat on the laptop. |
+| 07.11 | Unified spec received (summary: `docs/spec.md`). **G0 granted** — start with R0. |
+| 07.11 | Art: **there is an artist / Blender** — hero objects arrive as glTF and code loads them; until then a labeled greybox. Brief and asset manifest: `docs/art/`. |
+| 07.11 | NEAR contract: **Rust + near-sdk** (Rust and cargo-near may be installed; consent given 07.11). The user creates the testnet account for deployment. |
+| 07.11 | R0 answers: **CSPRNG salts + RNG compatibility**; **UI-only guards move into the engine**; **defects fixed in a separate commit** as rules v2. |
+| 07.11 | **Strict rule: the repository and the game are English-only.** Russian only as the second UI language (spec requires RU/EN). Chat with the user stays Russian. |
 
-## 5. Состояние
-- `prototype-2d/index.html` — играбельная 2D-петля целиком. 300 симулированных сезонов без ошибок; исходы: дар принят 28%, оружие отвергнуто 28%, дар отвергнут 24%, Раковины улетели 16%, оружие принято 4%.
-- `game/`: Vite + Three.js. **R0 и G1-parity готовы (07.11):** `docs/rules-baseline.md` (правила прототипа со ссылками на строки, расхождения, 3 вопроса к автору в §13); `src/game/engine.js` — чистый движок (без DOM), действия возвращают {ok, reason}; `npm test` — 60 parity-сезонов + 8 граничных тестов, всё зелёное. Фикстуры: `npm run fixtures` (пересоздаёт из прототипа). Сцены и интерфейс 3D ещё не начаты.
-- GitHub: https://github.com/SpacexCeo/forget-to-foresee (Public, ветка main, тег pre-hackathon). Пушить после каждого коммита.
+## 5. Status
+- `prototype-2d/index.html` — the full 2D loop, playable. UI is still Russian; it is the frozen parity reference.
+- `game/` — Vite + Three.js.
+  - **R0 done:** `docs/rules-baseline.md` (prototype rules with line references, discrepancies, answered questions).
+  - **G1 done:** `src/game/engine.js` — headless engine, actions return `{ok, reason}`. Rule modes: `baseline-2d-1` (bit-exact with 2D), `v2` (default: CSPRNG commitments + fixes), `v2-crypto` (test only).
+  - `npm test` — 75 tests green: 60 parity seasons, 8 edge cases, 7 v2 tests. `npm run fixtures` regenerates fixtures from the prototype.
+  - 3D scenes and UI not started yet.
+- Engine game strings (logs, memory texts, offers) are still Russian, as in the prototype. **Planned in the localization step:** events carry i18n keys + args, English is the base locale, Russian is the second; the prototype's UI text gets translated and fixtures regenerated at the same time so parity holds.
+- GitHub: https://github.com/SpacexCeo/forget-to-foresee (public, branch main, tag pre-hackathon). Push after every commit.
 
-## 6. Открытые вопросы
-1. ~~ТЗ~~ — получено 07.11, см. docs/spec.md.
-2. ~~GitHub-репозиторий~~ — создан 07.11.
-3. Игра — отдельная подача или часть RAEN Computers (у пользователя есть другой проект RAEN Computers с Guard)? Если отдельная, это второй проект, и оба README должны ссылаться друг на друга.
-4. **Роль NEAR:** сейчас всё имитируется в браузере. Нужен собственный testnet-контракт: commit-reveal корня событий, NFT агентов, фрагментов и осколков (NEP-171), эскроу.
-5. Режим для зала (QR-фрагменты): войдёт ли в MVP.
+## 6. Open questions
+1. ~~Spec~~ — received 07.11, see `docs/spec.md`.
+2. ~~GitHub repository~~ — created 07.11.
+3. Is the game a separate submission or part of RAEN Computers (the user has another project, RAEN Computers with Guard)? If separate, it is the second project and both READMEs must link to each other.
+4. **NEAR's role:** everything is simulated locally for now. Needed: an own testnet contract — commit-reveal of the event root, NEP-171 NFTs for agents/fragments/shards, escrow.
+5. Audience mode (QR fragments): in the MVP or not.
 
-## 7. Заметки по окружению
-- exFAT не хранит владельца файлов, поэтому git пишет «dubious ownership». Либо один раз `git config --global --add safe.directory F:/Hackaton` на каждом компьютере, либо каждая команда `git -c safe.directory=F:/Hackaton ...`.
-- Буква диска на ноутбуке может отличаться — закрепить F: в «Управлении дисками».
-- `node_modules` не коммитится: после переноса выполнить `cd game && npm install`.
-- npm на основном ПК не мог писать логи в стандартный кэш; помогают флаги `--cache` и `--logs-dir` во временную папку.
+## 7. Environment notes
+- exFAT does not store file owners, so git reports "dubious ownership". Either run `git config --global --add safe.directory F:/Hackaton` once per machine, or run every command as `git -c safe.directory=F:/Hackaton ...`.
+- The drive letter may differ on the laptop — pin it to F: in Disk Management.
+- `node_modules` is not committed: after moving run `cd game && npm install`.
+- On the main PC npm could not write logs to its default cache; the `--cache` and `--logs-dir` flags pointing to a temp folder help.

@@ -1,10 +1,11 @@
 # Forget to Foresee
 
-A RAEN Computers game originating from the NEAR Hackathon. The recorded hackathon deadline is 15 November 2026, 01:59 Kyiv time; verify official requirements before submission.
+RAEN Computers' game for NEAR Hackathon (submission deadline 15.11.2026 01:59 Kyiv).
 
-- At the beginning of each session, read `docs/decisions.md` for context and decisions, and `docs/hackathon-rules.md` for the submission checklist.
-- English only is a strict owner requirement: communication, documentation, UI, dialogue, game content, comments, and public materials must be in English. See `AGENTS.md`; this supersedes older Russian and RU/EN requirements.
-- Record accepted decisions and changes of direction in `docs/decisions.md`.
-- Make small commits after each completed implementation step and push immediately. Never include secrets in the repository.
-- Do not claim functionality in README that cannot be run; keep the real/mock table accurate.
-- The drive uses exFAT. Run Git with `-c safe.directory=<repository-path>` if no global exception is configured.
+- **Strict rule: everything in this repository is English** — README, docs, commit messages, code comments, game text. Russian exists only as the second UI language in locale files. Conversation with the user stays in Russian.
+- At the start of every session read `docs/decisions.md` (context and decisions) and `docs/spec.md` (requirements), then `docs/hackathon-rules.md` (submission checklist).
+- Record decisions and course changes in `docs/decisions.md`.
+- Commit in small steps after each finished piece and push right away. No secrets in the repository.
+- The README never claims anything that does not run; keep the real/mock table current.
+- `npm test` in `game/` must stay green. `baseline-2d-1` rules must stay bit-exact with `prototype-2d/` (parity tests).
+- The drive is exFAT: run git with `-c safe.directory=<repo path>` unless a global exception is configured.

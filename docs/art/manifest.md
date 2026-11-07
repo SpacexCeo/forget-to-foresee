@@ -1,14 +1,14 @@
-# Манифест ассетов
+# Asset manifest
 
-Статус: `greybox` (код-заглушка) → `wip` → `review` → `approved`. Только `approved` считается финальным артом.
+Status: `greybox` (code placeholder) → `wip` → `review` → `approved`. Only `approved` counts as final art.
 
-| Файл | Объект | Автор | Источник / лицензия | Треугольники | Текстуры | Статус |
+| File | Object | Author | Source / license | Triangles | Textures | Status |
 |---|---|---|---|---|---|---|
-| anchor.glb | Якорь (hero) | — | — | — | — | greybox |
-| scroll_table.glb | Стол Свитка (hero) | — | — | — | — | greybox |
-| shard.glb | Осколок памяти (hero) | — | — | — | — | greybox |
-| shell_1..4.glb | Раковины, экстерьер | — | — | — | — | greybox |
-| shell_interior.glb | Интерьер Раковины | — | — | — | — | greybox |
-| camp_*.glb (6) | Лагеря кланов | — | — | — | — | greybox |
-| island.glb | Остров | — | — | — | — | greybox |
-| (код) | Голограммы агентов, логограммы, VFX | Claude Code | своё, MIT | — | — | в разработке |
+| anchor.glb | Anchor (hero) | — | — | — | — | greybox |
+| scroll_table.glb | Scroll table (hero) | — | — | — | — | greybox |
+| shard.glb | Memory shard (hero) | — | — | — | — | greybox |
+| shell_1..4.glb | Shell exteriors | — | — | — | — | greybox |
+| shell_interior.glb | Shell interior | — | — | — | — | greybox |
+| camp_*.glb (6) | Clan camps | — | — | — | — | greybox |
+| island.glb | Island | — | — | — | — | greybox |
+| (code) | Agent holograms, logograms, VFX | Claude Code | own, MIT | — | — | in progress |

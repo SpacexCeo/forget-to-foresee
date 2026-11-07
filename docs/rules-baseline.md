@@ -1,153 +1,156 @@
 # Rules baseline (R0)
 
-Источник истины: `prototype-2d/index.html` (коммит `4c7098d`). Ссылки вида `L367` — строки этого файла.
-Статус: извлечено из кода 07.11.2026. Расхождения и вопросы к автору — в конце (§12–13). Ничего в коде прототипа не менялось.
+Source of truth: `prototype-2d/index.html` (commit `4c7098d`). References like `L367` are line numbers in that file.
+Extracted from the code on 07.11.2026. The prototype code was not changed. Discrepancies and the author's answers are in §12–13.
+Clan names in code are Russian: 0 Ирис/Iris (player), 1 Соль/Salt, 2 Пепел/Ash, 3 Мох/Moss, 4 Янтарь/Amber, 5 Иней/Frost.
 
-## 1. Константы и сущности
-| Что | Значение | Где |
+## 1. Constants and entities
+| What | Value | Where |
 |---|---|---|
-| Тиков в сезоне | `TICKS=17` | L208 |
-| Последний тик для взноса фрагмента | `DEADLINE=16` | L208 |
-| Тик кризиса | `CRISIS=13` | L208 |
-| Кланы | 0 Ирис (игрок), 1 Соль, 2 Пепел, 3 Мох, 4 Янтарь, 5 Иней | L209 |
-| Личности AI `{h честность, g жадность, p паранойя, sk обучаемость}` | Соль .35/.6/.3/.5 · Пепел .8/.3/.85/.4 · Мох .92/.2/.2/.35 · Янтарь .65/.9/.3/.45 · Иней .88/.4/.4/.8 | L210–215 |
-| Слоты логограммы | Место, Действие, Сила, Срок | L216 |
-| Значения | Место I–IV · Дар/Буря/Тишина/Зов · 10/20/40/80 · +1…+4 тика | L217–218 |
-| Формы штриха | дуга, шип, петля, капля | L219 |
-| Стартовый шёлк | 60 у всех | L271 |
-| Доход | +3 шёлка всем в начале каждого тика | L370 |
-| Действий за тик | 3, после утраты «Первого слова» 2 (`maxAP`) | L318 |
-| Напряжение | старт 10, клампится снизу 0, округляется; ≥100 = поражение всех | L271, L313 |
-| Стартовое мастерство AI | Соль .12, Пепел .10, Мох .08, Янтарь .10, Иней .18 | L271 |
+| Ticks per season | `TICKS=17` | L208 |
+| Last tick to contribute a fragment | `DEADLINE=16` | L208 |
+| Crisis tick | `CRISIS=13` | L208 |
+| Clans | 0 Iris, 1 Salt, 2 Ash, 3 Moss, 4 Amber, 5 Frost | L209 |
+| AI personalities `{h honesty, g greed, p paranoia, sk learning}` | Salt .35/.6/.3/.5 · Ash .8/.3/.85/.4 · Moss .92/.2/.2/.35 · Amber .65/.9/.3/.45 · Frost .88/.4/.4/.8 | L210–215 |
+| Logogram slots | Place, Action, Power, Delay | L216 |
+| Values | Place I–IV · Gift/Storm/Silence/Call · 10/20/40/80 · +1…+4 ticks | L217–218 |
+| Stroke forms | arc, spike, loop, drop | L219 |
+| Starting silk | 60 for everyone | L271 |
+| Income | +3 silk for everyone at the start of each tick | L370 |
+| Actions per tick | 3; 2 after losing the "First Word" (`maxAP`) | L318 |
+| Tension | starts at 10, clamped at 0, rounded; ≥100 = everyone loses | L271, L313 |
+| Starting AI mastery | Salt .12, Ash .10, Moss .08, Amber .10, Frost .18 | L271 |
 
-## 2. Генерация сезона (`newSeason`, L269)
-Порядок вызовов RNG важен для воспроизводимости:
-1. `S.perm` — 4 перестановки `[0..3]` (по слоту), `perm[s][form] = meaning`.
-2. События для тиков 3…17: действие (тик 3 — всегда Дар, иначе веса 40/24/16/20), место `ri(4)`, сила (тик 3 — 20, иначе веса 34/36/22/8), задержка `1+ri(min(4, T-1))`, `pub = T - delay`, точки `ri(4)`, соль `hex(12)` из игрового RNG. Порядок вызовов внутри литерала: action, power, delay, затем place, dots, salt.
-3. `leaf = sha256(JSON{t,place,action,power,delay,dots} + salt)`; Merkle (нечётный лист дублируется), `root`.
-4. `seedCommit = sha256('seed:'+seed)` (без RNG).
-5. `truthGift = rnd() < .6`; `keyHolder = rnd() < .6 ? Пепел : Янтарь`.
-6. Фрагменты по кланам: `m = [ri(4), keyHolder ? (gift ? Дар : Буря) : 2+ri(2), ri(4), ri(4)]`, `dots = ri(4)`. Ключевой знак отличается только слотом Действия.
-7. Призы `V = [30|40|50|60, 20..50, 30..50, 20..40, 80, 20..40]`, `tV = [11..15, 17, 18, 18, 15, 13..17]`.
-8. Ключ Пепла: фраза из 4 вариантов, соль `hex(8)`, `hash = sha256(phrase+salt)`.
-9. Стартовая память Ирис: «Первое слово» (w4), «Зов в ночь прибытия» (w2), «Мох поделился шёлком» (gift, about Мох, w1). `T[0][3]=65`, `T[3][0]=60`, остальное доверие 50.
-10. Сразу вызывается `startTick()` для тика 1 (фаза ещё `intro`).
-`ACT.start` (L859): соль Ключа игрока `hex(8)` (игровой RNG), `pKey.hash = sha256(phrase+salt)`, фаза `play`.
+## 2. Season generation (`newSeason`, L269)
+The order of RNG calls matters for reproducibility:
+1. `S.perm` — 4 permutations of `[0..3]` (one per slot), `perm[s][form] = meaning`.
+2. Events for ticks 3…17: action (tick 3 is always Gift, otherwise weights 40/24/16/20), place `ri(4)`, power (tick 3 is 20, otherwise weights 34/36/22/8), delay `1+ri(min(4, T-1))`, `pub = T - delay`, dots `ri(4)`, salt `hex(12)` from the game RNG. Call order inside the literal: action, power, delay, then place, dots, salt.
+3. `leaf = sha256(JSON{t,place,action,power,delay,dots} + salt)`; Merkle tree (an odd leaf is duplicated), `root`.
+4. `seedCommit = sha256('seed:'+seed)` (no RNG).
+5. `truthGift = rnd() < .6`; `keyHolder = rnd() < .6 ? Ash : Amber`.
+6. Fragments per clan: `m = [ri(4), keyHolder ? (gift ? Gift : Storm) : 2+ri(2), ri(4), ri(4)]`, `dots = ri(4)`. The key sign differs only in the Action slot.
+7. Prizes `V = [30|40|50|60, 20..50, 30..50, 20..40, 80, 20..40]`, `tV = [11..15, 17, 18, 18, 15, 13..17]`.
+8. Ash's Key: one of 4 phrases, salt `hex(8)`, `hash = sha256(phrase+salt)`.
+9. Iris's starting memory: "First Word" (w4), "Call on the night of arrival" (w2), "Moss shared silk" (gift, about Moss, w1). `T[0][3]=65`, `T[3][0]=60`, all other trust 50.
+10. `startTick()` runs for tick 1 right away (phase is still `intro`).
+`ACT.start` (L859): the player's Key salt is `hex(8)` (game RNG), `pKey.hash = sha256(phrase+salt)`, phase becomes `play`.
 
-## 3. Язык и словарь
-- Кодирование (`encodeForms`, L263): форма слота `s` стоит в позиции `(dots + s) % 4`, позиции по часовой с верхней.
-- Голоса словаря (`dictVotes`, L322): по каждой записи летописи. Правило `dots` — вес 1 при `r = dots`; `top` — вес 1 при `r = 0`; `unknown` — 0.25 на каждый из 4 сдвигов.
-- Догадка (`guess`, L330): закреплённое (pin) → уверенность 1. Иначе счёт = голоса + 0.35, +1.6 за купленное непроверенное слово; исключены значения, закреплённые за другими формами того же слота, и значения из «точно не». Уверенность = лучший / сумма положительных.
-- Чтение (`readGlyph`, L342): при `unknown` перебираются 4 сдвига, выбирается с максимальной суммой уверенностей.
-- «Уверенный знак» — уверенность ≥ 0.65 (`confidentCells`, L349).
-- Разоблачение лжи (`checkBought`, L351): после каждой записи летописи, если голоса за верное значение ≥1.5 и больше голосов за купленное на 0.5 → `revealLie`.
-- `revealLie` (L359): память «предательство» w3 о продавце, `trust[0][X] −40`, H +6, разрыв связи 0–X (+10).
+## 3. Language and dictionary
+- Encoding (`encodeForms`, L263): slot `s`'s form sits at position `(dots + s) % 4`, positions clockwise from the top.
+- Dictionary votes (`dictVotes`, L322): one per chronicle entry. Rule `dots` — weight 1 at `r = dots`; `top` — weight 1 at `r = 0`; `unknown` — 0.25 on each of the 4 offsets.
+- Guess (`guess`, L330): a pinned cell → confidence 1. Otherwise score = votes + 0.35, +1.6 for an unverified purchased word; meanings pinned to other forms of the same slot and "definitely not" meanings are excluded. Confidence = best / sum of positive scores.
+- Reading (`readGlyph`, L342): with `unknown` all 4 offsets are tried and the one with the highest total confidence wins.
+- A "confident sign" has confidence ≥ 0.65 (`confidentCells`, L349).
+- Lie detection (`checkBought`, L351): after each chronicle entry, if votes for the true meaning are ≥1.5 and exceed votes for the purchased one by 0.5 → `revealLie`.
+- `revealLie` (L359): a "betrayal" memory w3 about the seller, `trust[0][X] −40`, tension +6, link 0–X breaks (+10).
 
-## 4. Порядок тика
-`startTick` (L367), строго по порядку:
-1. Действия = максимум; всем +3 шёлка.
-2. Торги осколками с `exp ≤ тик` закрываются (§8).
-3. Долги Ирис с `due = тик`: с вероятностью `h` должника возврат (+сумма Ирис, −должнику без клампа, доверие +10); иначе память «предательство», доверие −40, H +6, разрыв.
-4. Требования AI-покупателей долгов (`claims`): возврат с вероятностью `h`.
-5. Обещание Ирис с `by = тик` и фрагмент на руках → автоматический взнос.
-6. Пакты AI с `by = тик`: если фрагмент на руках — взнос, если не изолирован и `rnd() < h`; иначе предательство (как в п. 3).
-7. Эскроу Янтаря оплачен и фрагмент на руках → взнос, 45/55 шёлка уходят Янтарю.
-8. Добровольные взносы AI (тик ≤16, не изолирован, не жадный с `tV ≤ 16`): `c = .05 + max(0, avgTrust−45)/150 + (h−.5)·.2 + (тик≥11 ? .15 : 0) + (тик≥15 ? .3 : 0)`, затем `c *= 1 − p·.7`.
-9. Личные призы: фрагмент на руках и `tV = тик` → +V шёлка, фрагмент гаснет; AI-кланы теряют 10 доверия к удержавшему.
-10. Тик >16: все фрагменты на руках гаснут.
-11. Тик 13: кризис (§9).
-12. С тика 4 с вероятностью .22 AI-обман: обманщик по весам `1−h`, жертва — случайный AI без разрыва с ним, сумма 8…17, доверие жертвы −35, H +6, при доверии <20 — разрыв.
-13. Дрейф доверия AI к 50 на ±2 за тик (Ирис не дрейфует).
-14. AI–AI разрывы восстанавливаются с вероятностью .2, если оба доверия ≥30 и никто не изолирован.
-15. AI с доверием к Ирис <15 рвёт с ней связь.
-16. Мастерство AI `+= sk·.045 + .01` (максимум .95).
-17. Лог новых гласов; AI ставят якоря (§6); предложения тика (§7); тики 7 и 11 — осколок Инея (§8).
-18. Тик 17 → фаза `vote`.
+## 4. Tick order
+`startTick` (L367), strictly in this order:
+1. Actions reset to the maximum; everyone gets +3 silk.
+2. Shard auctions with `exp ≤ tick` close (§8).
+3. Iris's debts due this tick: repaid with probability `h` of the debtor (Iris +amount, the debtor −amount without a clamp, trust +10); otherwise a "betrayal" memory, trust −40, tension +6, link breaks.
+4. Claims held by AI buyers of debts: repaid with probability `h`.
+5. Iris's promise due this tick and fragment in hand → automatic contribution.
+6. AI pacts due this tick: if the fragment is in hand — contribute when not isolated and `rnd() < h`; otherwise betrayal (as in step 3).
+7. Amber's escrow is paid and the fragment is in hand → contribution, 45/55 silk go to Amber.
+8. Voluntary AI contributions (tick ≤16, not isolated, not greedy with `tV ≤ 16`): `c = .05 + max(0, avgTrust−45)/150 + (h−.5)·.2 + (tick≥11 ? .15 : 0) + (tick≥15 ? .3 : 0)`, then `c *= 1 − p·.7`.
+9. Personal prizes: fragment in hand and `tV = tick` → +V silk, the fragment goes dark; AI clans lose 10 trust in the holder.
+10. Tick >16: every fragment still in hand goes dark.
+11. Tick 13: crisis (§9).
+12. From tick 4, with probability .22, an AI deceit: deceiver by weights `1−h`, victim a random AI still linked to them, amount 8…17, victim's trust −35, tension +6, link breaks when trust <20.
+13. AI trust drifts towards 50 by ±2 per tick (Iris does not drift).
+14. Broken AI–AI links restore with probability .2 when both trusts are ≥30 and neither side is isolated.
+15. An AI whose trust in Iris is <15 breaks the link with her.
+16. AI mastery `+= sk·.045 + .01` (max .95).
+17. New voices are logged; AIs place anchors (§6); this tick's offers (§7); on ticks 7 and 11 — Frost's shard (§8).
+18. Tick 17 → phase `vote`.
 
-`endTick` (L440): только в фазе `play` → раскрытие события тика → очистка предложений → H −2 → при H ≥ 100 поражение `gone` → тик +1 → `startTick` → снова проверка H ≥ 100.
-Обработчик клика (L916) после **любого** действия: при H ≥ 100 в фазе `play` → `gone`.
+`endTick` (L440): only in phase `play` → reveal this tick's event → clear offers → tension −2 → if tension ≥ 100, outcome `gone` → tick +1 → `startTick` → check tension ≥ 100 again.
+The click handler (L916), after **any** click: tension ≥ 100 in phase `play` → `gone`.
 
-## 5. Раскрытие события (`resolveEvent`, L452)
-- Перед изменениями фиксируется, сколько слотов Ирис прочла верно (для летописи).
-- Merkle-доказательство листа сверяется с корнем.
-- Якоря на этот тик не на том месте → залог возвращается.
-- На верном месте: **Дар** — каждому залог + `round(сила · w / Σw)`, где `w = тик − тик_постановки + 1`. **Буря** — залоги сгорают. **Тишина** — залог возвращается. **Зов** — залог возвращается; Ирис получает память «Зов» (w2), AI +0.04 мастерства.
-- Если на верном месте Дара нет ни одного якоря, награда никому не уходит.
-- Событие добавляется в летопись, доказательство — в последние 5 проверок; затем `checkBought`.
-- `castVote` (L624) тоже вызывает раскрытие события тика 17 перед голосованием.
+## 5. Event reveal (`resolveEvent`, L452)
+- Before any change, it records how many slots Iris read correctly (for the chronicle).
+- The leaf's Merkle proof is checked against the root.
+- Anchors for this tick at the wrong place → stake returned.
+- At the right place: **Gift** — each gets their stake + `round(power · w / Σw)`, where `w = tick − tick_placed + 1`. **Storm** — stakes burn. **Silence** — stake returned. **Call** — stake returned; Iris gets a "Call" memory (w2), an AI gets +0.04 mastery.
+- If nobody anchored the right place for a Gift, the reward goes to no one.
+- The event joins the chronicle, the proof joins the last 5 checks; then `checkBought`.
+- `castVote` (L624) also reveals the tick-17 event before the vote.
 
-## 6. AI-якоря (`aiAnchors`, L473)
-Каждое опубликованное и ещё не наступившее событие каждый AI рассматривает один раз. Каждый слот читается верно с вероятностью `.3 + .7·мастерство`, иначе случайно. Якорь ставится, только если AI прочёл Дар, тик в пределах сезона, есть ≥10 шёлка и `rnd() ≤ .7`. Порядок вызовов RNG: Действие, Место, Срок, проверка .7.
+## 6. AI anchors (`aiAnchors`, L473)
+Every AI considers each published, not-yet-due event once. Each slot is read correctly with probability `.3 + .7·mastery`, otherwise at random. An anchor is placed only if the AI read a Gift, the tick is within the season, it has ≥10 silk and `rnd() ≤ .7`. RNG call order: Action, Place, Delay, the .7 check.
 
-## 7. Предложения (`genOffers`, L503)
-Сгорают в конце тика. От клана с разорванной связью с Ирис не приходят.
-| Тик | Предложение |
+## 7. Offers (`genOffers`, L503)
+Offers expire at the end of the tick. A clan whose link with Iris is broken sends none.
+| Tick | Offer |
 |---|---|
-| 2 | Соль продаёт слово (7) |
-| 3 | Мох просит в долг 15, вернёт 25 на тике 7 |
-| 4 | Иней дарит верное слово (память «дар» w1, доверие +15) |
-| 5 | Пепел: пакт «оба вносим до тика 14» (если у обоих фрагменты и у Ирис нет другого обещания) |
-| 6 | Иней продаёт слово (12) |
-| 7 | Соль просит 20, вернёт 32 на тике 11 |
-| 8 | Соль продаёт слово (7) |
-| 9, 13 | Янтарь: эскроу за взнос фрагмента 45 / 55 (если фрагмент у него и `tV` ещё не прошёл) |
-| 10 | Мох: пакт до тика 14 (те же условия) |
-| 11 | Иней продаёт слово (12) |
-| 3–15 | С вероятностью .3 — случайная продажа слова от Соли / Янтаря (10) / Инея |
-Продажа слова (`offSell`, L496): случайная незакреплённая и не купленная клетка; честно с вероятностью `h` продавца, иначе случайное неверное значение.
-Отказ от предложения: доверие продавца к Ирис −2.
+| 2 | Salt sells a word (7) |
+| 3 | Moss asks for a 15 loan, repays 25 on tick 7 |
+| 4 | Frost gives a true word for free ("gift" memory w1, trust +15) |
+| 5 | Ash: pact "we both contribute by tick 14" (if both hold fragments and Iris has no other promise) |
+| 6 | Frost sells a word (12) |
+| 7 | Salt asks for 20, repays 32 on tick 11 |
+| 8 | Salt sells a word (7) |
+| 9, 13 | Amber: escrow to contribute the fragment for 45 / 55 (if Amber holds it and `tV` has not passed) |
+| 10 | Moss: pact by tick 14 (same conditions) |
+| 11 | Frost sells a word (12) |
+| 3–15 | With probability .3 — a random word sale by Salt / Amber (10) / Frost |
+A word sale (`offSell`, L496): a random cell that is neither pinned nor bought; honest with the seller's probability `h`, otherwise a random wrong meaning.
+Declining an offer: the seller's trust in Iris −2.
 
-## 8. Память, видения, осколки
-- **Забыть** (`doForget`, L550): 1 действие. Эффекты удаления: предательство → доверие 50 и восстановление связи (H −10); дар → доверие −15; «Первое слово» → `wild`, 2 действия. Видение раскрывает `w` ближайших ещё не опубликованных событий (по тику публикации, затем по тику события). Режим «Ключ» раскрывает фразу Пепла.
-- Осколок выставляется на 2 тика. Ставки AI (округлённые, ставят при значении ≥3 и наличии шёлка): по умолчанию `rnd·5`; предательство — фигурант 16…26; долг — фигурант `.55·сумма`, прочие `(.25….55)·сумма`; обещание — адресат 12…18; дар — фигурант 5…9; Зов — Иней 9…14; «Первое слово» — Соль 22…30.
-- Ставка Ирис (`ACT.bid`, L895): лучшая + 3; AI с ценностью ≥ ставка+2 сразу перебивает на +2.
-- Закрытие (`resolveShards`, L590): победитель платит продавцу; без ставок или без денег у победителя — осколок сгорает. Эффекты (`applyShard`, L604): предательство (фигурант уничтожает, иначе покупатель −25 доверия к фигуранту); долг (фигурант списывает, иначе право требования у покупателя); обещание (адресат: доверие к Ирис −40, H +6); дар (+10 доверия); Зов (+.06 мастерства); «Первое слово» (покупатель произнесёт Ключ в финале).
-- Осколки Инея на тиках 7 и 11: «слово из слота» (покупка = верное слово) или на тике 11, если Ирис купила ложь у Соли, «как Соль торговал словами» (покупка разоблачает все её лживые слова).
+## 8. Memory, visions, shards
+- **Forget** (`doForget`, L550): 1 action. Effects of removal: betrayal → trust 50 and the link restores (tension −10); gift → trust −15; "First Word" → `wild`, 2 actions. A vision reveals the `w` nearest unpublished events (by publish tick, then event tick). "Key" mode reveals Ash's phrase.
+- The shard is auctioned for 2 ticks. AI bids (rounded; placed when the value is ≥3 and they have the silk): default `rnd·5`; betrayal — the subject 16…26; debt — the debtor `.55·amount`, others `(.25….55)·amount`; promise — the promisee 12…18; gift — the subject 5…9; Call — Frost 9…14; "First Word" — Salt 22…30.
+- Iris's bid (`ACT.bid`, L895): best + 3; an AI valuing it at ≥ bid+2 immediately outbids by +2.
+- Closing (`resolveShards`, L590): the winner pays the seller; with no bids, or if the winner lacks silk, the shard burns. Effects (`applyShard`, L604): betrayal (the subject destroys it, otherwise the buyer loses 25 trust in the subject); debt (the debtor cancels it, otherwise the buyer holds the claim); promise (the promisee: trust in Iris −40, tension +6); gift (+10 trust); Call (+.06 mastery); "First Word" (the buyer speaks the Key in the finale).
+- Frost's shards on ticks 7 and 11: "a word from a slot" (buying = a true word) or, on tick 11 if Iris bought a lie from Salt, "how Salt traded words" (buying exposes all of Salt's lies).
 
-## 9. Кризис и Ключ
-- Тик 13 (`crisis`, L431): H +15; Пепел рвёт связь с двумя кланами с наименьшим доверием среди тех, кому доверяет <70; Пепел изолирован; слух Соли (`rumor`).
-- Видение Ключа (UI L767+): доступно, если Пепел изолирован, ≥8 уверенных знаков, есть память весом ≥3, есть действие.
-- Произнести Ключ (`ACT.speak`, L880): 1 действие; хэш сверяется с коммитом; все разрывы Пепла восстанавливаются (доверие ≥45), доверие к Ирис 90, изоляция снята; если фрагмент у Пепла и тик < 16 — пакт на следующий тик.
+## 9. Crisis and Key
+- Tick 13 (`crisis`, L431): tension +15; Ash breaks links with the two clans it trusts least among those it trusts <70; Ash is isolated; Salt's rumor (`rumor`).
+- Key vision (UI L767+): available when Ash is isolated, ≥8 confident signs, a memory of weight ≥3 exists, an action is left.
+- Speak the Key (`ACT.speak`, L880): 1 action; the hash is checked against the commitment; all of Ash's broken links restore (trust ≥45), trust in Iris 90, isolation lifted; if Ash still holds the fragment and tick < 16 — a pact for the next tick.
 
-## 10. Действия игрока: стоимость и условия
-| Действие | Цена | Условия в функции | Условия только в UI |
+## 10. Player actions: cost and conditions
+| Action | Cost | Checked in the function | Checked only in the UI |
 |---|---|---|---|
-| Якорь (`placeAnchor`, L906) | 1 действие + 10 шёлка | тик в `[текущий, 17]`, нет такого же якоря | фаза `play` |
-| Вопрос Гостям (`ACT.ask`, L867) | 1 + 5 шёлка | — | клетка не закреплена, фаза `play` |
-| Забыть (`doForget`) | 1 | память есть | фаза `play`; для Ключа — условия §9 |
-| Ключ (`ACT.speak`) | 1 | — | Пепел изолирован, фраза известна |
-| Помириться (`ACT.mend`, L891) | 1 + 10 шёлка (уходят клану) | нет памяти о предательстве | доверие клана к Ирис ≥25 |
-| Посредничество (`ACT.mediate`, L892) | 1 + 15 шёлка | — | оба доверяют Ирис ≥40, никто не изолирован |
-| Принять предложение (`acceptOffer`, L528) | цена предложения | хватает шёлка | фаза `play` |
-| Ставка на осколок | лучшая + 3 | хватает шёлка, торги идут | не свой осколок, фаза `play` |
-| Внести фрагмент | 0 | тик ≤16, фрагмент на руках | фаза `play` |
-| Голосовать (`castVote`) | — | — | фаза `vote` |
-Правило чтения меняется бесплатно и сразу пересчитывает `checkBought`.
+| Anchor (`placeAnchor`, L906) | 1 action + 10 silk | tick in `[current, 17]`, no identical anchor | phase `play` |
+| Ask the Guests (`ACT.ask`, L867) | 1 + 5 silk | — | cell not pinned, phase `play` |
+| Forget (`doForget`) | 1 | memory exists | phase `play`; for the Key — §9 conditions |
+| Key (`ACT.speak`) | 1 | — | Ash isolated, phrase known |
+| Make peace (`ACT.mend`, L891) | 1 + 10 silk (paid to the clan) | no betrayal memory | the clan's trust in Iris ≥25 |
+| Mediate (`ACT.mediate`, L892) | 1 + 15 silk | — | both trust Iris ≥40, neither isolated |
+| Accept an offer (`acceptOffer`, L528) | offer price | enough silk | phase `play` |
+| Bid on a shard | best + 3 | enough silk, auction open | not own shard, phase `play` |
+| Contribute the fragment | 0 | tick ≤16, fragment in hand | phase `play` |
+| Vote (`castVote`) | — | — | phase `vote` |
+Changing the reading rule is free and re-runs `checkBought` immediately.
 
-## 11. Финал (`castVote`, L624)
-Голоса AI: если ключевой знак в Свитке — верный ответ с вероятностью `.35 + .6·мастерство`, у Пепла при слухе ещё 40% шанс голосовать «против»; без ключевого знака — 50% (Пепел 25%). «Принять» нужно ≥4 из 6, ничья = «отвергнуть».
-| Истина | Принято | Отвергнуто |
+## 11. Finale (`castVote`, L624)
+AI votes: if the key sign is in the Scroll — correct with probability `.35 + .6·mastery`, and Ash under the rumor has another 40% chance of voting "reject"; without the key sign — 50% (Ash 25%). "Accept" needs ≥4 of 6; a tie means "reject".
+| Truth | Accepted | Rejected |
 |---|---|---|
-| Дар | `gift`: каждому внёсшему +40 | `lost`: ничего |
-| Оружие | `weapon`: шёлк всех = 0 | `survived`: каждому внёсшему +15 |
-Плюс `gone` — при H ≥ 100 в любой момент. Выбор Наследника показывается только при `gift`.
+| Gift | `gift`: each contributor +40 | `lost`: nothing |
+| Weapon | `weapon`: everyone's silk = 0 | `survived`: each contributor +15 |
+Plus `gone` — tension ≥ 100 at any moment. The Heir choice appears only on `gift`.
 
-## 12. Расхождения
-**Журнал ↔ код:** существенных нет. Уточнения, которых нет в журнале: судьба залога при Тишине (возврат), формула доли Дара (§5), цена вопроса (5 шёлка), финальный тик 17, ничья = «отвергнуть».
+## 12. Discrepancies
+**Log ↔ code:** nothing significant. Details missing from the log: the stake on Silence is returned, the Gift share formula (§5), question cost (5 silk), final tick 17, a tie means "reject".
 
-**Код ↔ ТЗ:**
-1. **Соли коммитментов** — 12 hex (48 бит) у событий и 8 hex у Ключей, из игрового RNG (mulberry32, не CSPRNG), без domain tag и schemaVersion. ТЗ требует ≥32 байт CSPRNG и доменного разделения. *Предложение:* в движке генерировать соли через внедряемый CSPRNG, а для parity продолжать «сжигать» столько же вызовов игрового RNG, сколько тратил прототип. Тогда игровая последовательность не изменится.
-2. **Условия действий только в UI** (§10): серверному движку они нужны внутри действий. *Предложение:* перенести в движок без изменения поведения при допустимых действиях.
-3. **Нет идемпотентности** (`actionId`/`expectedVersion`) — это новый транспортный слой, правила не меняет.
-4. Онбординг, обучение, кастомизация, турнир, локализация — новые функции, в прототипе их нет.
+**Code ↔ spec:**
+1. **Commitment salts** — 12 hex (48 bits) for events and 8 hex for Keys, from the game RNG (mulberry32, not a CSPRNG), no domain tag or schemaVersion. The spec requires ≥32 CSPRNG bytes and domain separation.
+2. **UI-only conditions** (§10): an authoritative engine needs them inside the actions.
+3. **No idempotency** (`actionId`/`expectedVersion`) — a new transport layer; it does not change rules.
+4. Onboarding, tutorial, customization, tournaments, localization — new features absent from the prototype.
 
-**Дефекты прототипа (не исправлены, ждут решения):**
-- `mediate` прибавляет +5 доверия без клампа — может превысить 100.
-- Долги и обманы списывают шёлк без клампа — баланс AI может стать отрицательным.
-- `speak` не проверяет изоляцию Пепла (защищает только UI).
-- Смена правила чтения может разоблачить ложь и поднять напряжение до 100, но сезон закончится только при следующем клике (обработчик смены не проверяет порог). Движок повторяет это поведение: `setRule` не вызывает `settle`; интерфейс должен вызывать `settle()` после каждого клика.
+**Prototype defects:**
+- `mediate` adds +5 trust without a clamp — can exceed 100.
+- Debts and deceits subtract silk without a clamp — an AI balance can go negative.
+- `speak` does not check Ash's isolation (only the UI protects it).
+- Changing the reading rule can expose a lie and raise tension to 100, but the season ends only on the next click (the change handler does not check the threshold).
 
-## 13. Вопросы к автору
-1. Принимаем ли схему «CSPRNG для солей + сжигание вызовов игрового RNG ради совместимости» (§12.1)?
-2. Переносим ли условия из UI внутрь движка (§12.2)?
-3. Исправляем ли три дефекта сейчас (тогда parity сравнивается до исправления, а исправления идут отдельным коммитом с новой `rulesVersion`)?
+## 13. Author's answers (07.11.2026)
+1. **Salts:** CSPRNG with compatibility — accepted. Rules `v2` (the engine default) use 32-byte CSPRNG salts and domain-separated commitments (`ftf:leaf:v2|seasonId|index|event|salt`, `ftf:key:v2|…`, `ftf:seed:v2|…`); the game RNG still draws the legacy salts, so gameplay is identical to the prototype. Proven by the `v2-crypto` test over all 60 recorded seasons.
+2. **UI-only conditions move into the engine** — accepted. The engine rejects invalid actions with a reason; valid play is unchanged.
+3. **Defects fixed in a separate commit** — accepted. Rules `v2`: trust clamp in mediation, AI balances never negative, a rule change settles tension. `baseline-2d-1` keeps the prototype behavior bit-exact for parity tests; `speak` guards Ash's isolation in every mode (answer 2).
+
+**Known limitation (not fixed):** the season is generated by mulberry32 from a 32-bit seed. Someone who sees several revealed events could brute-force the seed offline and predict the rest. Production needs a 128-bit seed and a CSPRNG-grade stream cipher; for the hackathon the seed stays server-side and the README says so.

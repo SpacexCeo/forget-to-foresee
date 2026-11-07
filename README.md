@@ -1,66 +1,73 @@
 # Forget to Foresee
 
-> Игра от RAEN Computers. Built at NEAR HACKATHON (1–14 Nov 2026). Треки: **games**, **nfts** (предварительно).
+> A game by RAEN Computers. Built at NEAR HACKATHON (1–14 Nov 2026). Tracks: **games**, **nfts** (tentative).
 
-Над миром агентов появились Раковины. Гости говорят круглыми знаками. Каждый клан — NFT-агент со своим кошельком и памятью. Чтобы увидеть будущее, агент **навсегда забывает воспоминание**, и забытое уходит с молотка. Послание Гостей собирается только из фрагментов всех шести кланов, а будущее сезона зафиксировано в Merkle-корне ещё до первого хода.
+Shells have appeared over a world of agents. The Guests speak in round signs. Each clan is an NFT agent with its own wallet and memory. To see the future, an agent **forgets a memory forever**, and the forgotten memory goes to auction. The Guests' message can only be assembled from the fragments of all six clans, and the season's future is committed to a Merkle root before the first move.
 
-**Фирменная механика — «Цена памяти»:** NFT расплачивается за пророчество собственной биографией.
+**Signature mechanic — "The Price of Memory":** an NFT pays for prophecy with its own biography.
 
-## Что работает сейчас
+## What works today
 
-| Часть | Статус | Где |
+| Part | Status | Where |
 |---|---|---|
-| Браузерный прототип всей игровой петли (язык, якоря, видения за память, торги осколками, кризис, Ключ, голосование) | **работает**, играбельно | `prototype-2d/index.html` |
-| SHA-256, Merkle-корень событий сезона, проверка каждого раскрытия | **работает**, покрыто тестовыми векторами | прототип, `game/src/game/crypto.js` |
-| Игровой движок без интерфейса: все правила прототипа | **работает**, совпадает с 2D ход в ход на 60 сезонах | `game/src/game/engine.js` |
-| 3D-игра (Three.js): остров кланов + сцена внутри Раковины | **в разработке** | `game/` |
-| NEAR-контракт (commit-reveal, NFT-фрагменты NEP-171, эскроу) | **не начат** | — |
+| Browser prototype of the full game loop (language, anchors, visions paid with memory, shard auctions, crisis, Key, vote) | **works**, playable (UI in Russian; translation planned) | `prototype-2d/index.html` |
+| SHA-256, Merkle root of the season's events, verification of every reveal | **works**, covered by test vectors | `game/src/game/crypto.js` |
+| Headless game engine: all prototype rules | **works**, matches the 2D prototype move for move on 60 seasons | `game/src/game/engine.js` |
+| Rules v2: 32-byte CSPRNG salts with domain separation, approved defect fixes | **works**, proven not to change gameplay | `game/src/game/engine.js` |
+| 3D game (Three.js): clan island + scene inside a Shell | **in progress** | `game/` |
+| NEAR contract (commit-reveal, NEP-171 fragment NFTs, escrow) | **not started** | — |
 
 ### Real / mock
 
-| Что | Сейчас |
+| What | Now |
 |---|---|
-| AI-кланы | эвристики в браузере, не LLM (**mock**) |
-| Ончейн-коммиты, NFT, эскроу | имитируются в браузере (**mock**) |
-| Хэши и Merkle-доказательства | настоящий SHA-256 (**real**, но локально) |
-| Деньги | игровой «шёлк», без реальных токенов |
+| AI clans | deterministic heuristics, not an LLM (**mock**) |
+| On-chain commitments, NFTs, escrow | simulated locally (**mock**) |
+| Hashes and Merkle proofs | real SHA-256 (**real**, but local) |
+| Money | in-game "silk", no real tokens |
+| Season generator | 32-bit seed (mulberry32): fine for a demo, not brute-force resistant; production needs a 128-bit seed and a CSPRNG stream |
 
-## Запуск
+## Run
 
-### 2D-прототип (без установки)
-Откройте `prototype-2d/index.html` в браузере.
-**Do:** введите любую фразу-Ключ → «Начать сезон» → выберите правило чтения «Начало задают точки в ядре» → завершайте тики.
-**See:** словарь Ирис становится уверенным, якоря на Дар приносят шёлк, на тике 3 в блоке «Контракт» появляется первое «✓ сверен» — раскрытие события совпало с Merkle-корнем, опубликованным до начала сезона.
-
-### Тесты движка
+### Engine tests
 ```bash
 cd game
 npm install
 npm test
 ```
-**See:** `tests 68 · pass 68`. 60 тестов повторяют записанные сезоны 2D-прототипа (20 seed × 3 стратегии игрока) и после каждого хода сравнивают состояние движка с прототипом. Ещё 8 проверяют граничные случаи (напряжение 100, нехватка шёлка, кризис на тике 13) и подмену Merkle-доказательств. Правила движка описаны в [docs/rules-baseline.md](docs/rules-baseline.md).
+**See:** `tests 75 · pass 75`.
+- 60 tests replay seasons recorded from the 2D prototype (20 seeds × 3 player strategies) and compare the engine state with the prototype after every move.
+- 8 tests cover edge cases (tension reaching 100, missing silk, the tick-13 crisis) and tampered Merkle proofs.
+- 7 tests cover rules v2: strong salts leave all 60 seasons unchanged, commitments verify, each defect fix holds.
 
-### 3D-игра
+The engine rules are documented in [docs/rules-baseline.md](docs/rules-baseline.md).
+
+### 2D prototype (no install)
+Open `prototype-2d/index.html` in a browser.
+**Do:** enter any Key phrase → "Начать сезон" (start season) → pick the reading rule "Начало задают точки в ядре" (dots set the start) → end ticks.
+**See:** Iris's dictionary becomes confident, anchors on a Gift pay silk, and from tick 3 the "Контракт" (contract) panel shows "✓ сверен" (verified): the event reveal matched the Merkle root published before the season began.
+
+### 3D game
 ```bash
 cd game
 npm install
 npm run dev
 ```
-Требуется Node.js 20+.
+Requires Node.js 20+.
 
-## Baseline и заимствования (Q-001–005)
+## Baseline and third-party code (Q-001–005)
 
-- Весь код написан **после 19.10.2026**, в период хакатона. Старого кода нет.
-- Тег `pre-hackathon` — пустой корневой коммит. Тег `hackathon-submission` будет поставлен на версию для подачи; разница между ними — вся работа.
-- Библиотеки: [three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT). Шрифты Google Fonts (OFL).
-- **Код и дизайн созданы с помощью AI:** Claude Code (Claude Opus 5.5), геймдизайн-ревью — Claude Fable 5.1 и независимые агенты-ревьюеры.
-- Тема вдохновлена фильмом «Прибытие» (2016). Названия, персонажи и визуальные образы фильма не используются.
+- All code was written **after 19.10.2026**, during the hackathon. There is no earlier code.
+- Tag `pre-hackathon` is an empty root commit. Tag `hackathon-submission` will mark the submitted version; the diff between them is the whole work.
+- Libraries: [three.js](https://threejs.org) (MIT), [Vite](https://vitejs.dev) (MIT). Google Fonts (OFL).
+- **Code and design were made with AI assistance:** Claude Code (Claude Opus 5.5); game-design review by Claude Fable 5.1 and independent reviewer agents.
+- The theme is inspired by the film *Arrival* (2016). No names, characters or visuals from the film are used.
 
-## Связанные проекты
+## Related projects
 
-<!-- Если участник подаёт второй проект, по правилам (Q-015) оба README должны ссылаться друг на друга. -->
+<!-- If a participant submits a second project, both READMEs must link to each other (Q-015). -->
 —
 
-## Лицензия
+## License
 
-MIT, см. [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
