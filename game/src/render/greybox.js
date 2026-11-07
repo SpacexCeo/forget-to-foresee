@@ -1,20 +1,22 @@
 // Greybox stand-ins for every catalog asset, shown (with a "not final art" label) until the real
-// .glb exists and has streamed in. Each greybox is ONE merged mesh with vertex colors, so it costs a
-// single draw call, plus a label sprite. Greyboxes also carry simple colliders and the same socket
-// names as the real art (e.g. the anchor pads), so gameplay code works the same before art arrives.
+// .glb exists and has streamed in. Each greybox is merged into ONE mesh per material slot (default
+// grey, nacre, glass, amber, gold, cloth; render/materials.js) with vertex colors, so a plain prop
+// costs a single draw call and a Shell one nacre draw call, plus a label sprite. Greyboxes also
+// carry simple colliders and the same socket names as the real art (e.g. the anchor pads), so
+// gameplay code works the same before art arrives.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { boxTriangles, prismTriangles, transformTriangles, MASK_ALL, MASK_CAMERA, MASK_PLAYER } from '../physics/collision.js';
 import { assetByName } from './asset-catalog.js';
+import { SLOT_MATERIALS, greyMaterial } from './materials.js';
+import { LAYER_OVERLAY } from './layers.js';
 import { CLANS, ANCHOR_ZONES, ANCHOR_ZONE_RADIUS, RAIL_HEIGHT, PILLAR_DEPTH, platforms, bridges, parapetOpenings } from '../scenes/layout.js';
 
-const greyMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
-
 class Builder {
-  constructor() { this.parts = []; this.colliders = []; this.sockets = []; }
+  constructor() { this.parts = new Map(); this.colliders = []; this.sockets = []; }
 
-  /** Adds a primitive with a flat color, transformed by position / Euler rotation / scale. */
-  add(geometry, color, { position = [0, 0, 0], rotation = [0, 0, 0], scale = [1, 1, 1], flat = false } = {}) {
+  /** Adds a primitive with a flat color, transformed by position / Euler rotation / scale, into a material slot. */
+  add(geometry, color, { position = [0, 0, 0], rotation = [0, 0, 0], scale = [1, 1, 1], flat = false, slot = 'default' } = {}) {
     let g = geometry.index ? geometry.toNonIndexed() : geometry.clone();
     geometry.dispose();
     for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
@@ -25,7 +27,8 @@ class Builder {
     const n = g.attributes.position.count, col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    this.parts.push(g);
+    if (!this.parts.has(slot)) this.parts.set(slot, []);
+    this.parts.get(slot).push(g);
     return this;
   }
 
@@ -44,15 +47,20 @@ class Builder {
   socket(name, position, rotationY = 0, userData = {}) { this.sockets.push({ name, position, rotationY, userData }); return this; }
 
   build(name) {
-    const geo = mergeGeometries(this.parts, false);
-    for (const g of this.parts) g.dispose();
-    geo.computeBoundingSphere();
-    const mesh = new THREE.Mesh(geo, greyMaterial);
-    mesh.name = name + '_greybox';
-    mesh.castShadow = true; mesh.receiveShadow = true;
     const group = new THREE.Group();
     group.name = name + '_greybox_root';
-    group.add(mesh);
+    let mesh = null;
+    for (const [slot, parts] of this.parts) {
+      const geo = mergeGeometries(parts, false);
+      for (const g of parts) g.dispose();
+      geo.computeBoundingSphere();
+      const m = new THREE.Mesh(geo, SLOT_MATERIALS[slot] || greyMaterial);
+      m.name = name + '_greybox' + (slot === 'default' ? '' : '_' + slot);
+      m.castShadow = slot !== 'glass'; m.receiveShadow = true;
+      m.userData.lookdevSlot = slot;
+      group.add(m);
+      if (slot === 'default' || !mesh) mesh = m;
+    }
     const sockets = new Map();
     for (const s of this.sockets) {
       const o = new THREE.Object3D();
@@ -93,6 +101,7 @@ export function makeLabel(text, screenHeight = 0.03) {
   sprite.scale.set(screenHeight * tex.userData.aspect, screenHeight, 1);
   sprite.renderOrder = 10;
   sprite.name = 'label';
+  sprite.layers.set(LAYER_OVERLAY);
   return sprite;
 }
 
@@ -114,7 +123,7 @@ function anchor(b) {
   }
   b.add(new THREE.CylinderGeometry(0.1, 0.12, 0.16, 10), STONE, { position: [0, 0.94, 0] });
   b.add(new THREE.CylinderGeometry(0.2, 0.19, 0.05, 16), BRONZE, { position: [0, 1.045, 0] });
-  b.add(new THREE.IcosahedronGeometry(0.085, 1), AMBER, { position: [0, 1.226, 0] });
+  b.add(new THREE.IcosahedronGeometry(0.085, 1), AMBER, { position: [0, 1.226, 0], slot: 'amber' });
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
     b.add(new THREE.CylinderGeometry(0.01, 0.01, 0.36, 4), BRONZE, { position: [Math.sin(a) * 0.16, 1.25, Math.cos(a) * 0.16] });
@@ -133,23 +142,23 @@ function scrollTable(b) {
   // small centre piece holding the double-ring recess (owner concept 07.11, third image).
   const GOLD = 0xc9a24a;
   b.add(new THREE.CylinderGeometry(3.6, 3.6, 0.06, 48), 0xb9b4a6, { position: [0, 0.03, 0] });
-  for (const [r0, r1] of [[3.2, 3.36], [2.1, 2.2], [0.95, 1.02]]) b.add(new THREE.RingGeometry(r0, r1, 64), GOLD, { position: [0, 0.065, 0], rotation: [-Math.PI / 2, 0, 0] });
+  for (const [r0, r1] of [[3.2, 3.36], [2.1, 2.2], [0.95, 1.02]]) b.add(new THREE.RingGeometry(r0, r1, 64), GOLD, { position: [0, 0.065, 0], rotation: [-Math.PI / 2, 0, 0], slot: 'gold' });
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    b.box([0.08, 0.012, 2.2], GOLD, { position: [Math.sin(a) * 2.1, 0.066, Math.cos(a) * 2.1], rotation: [0, a, 0] });
+    b.box([0.08, 0.012, 2.2], GOLD, { position: [Math.sin(a) * 2.1, 0.066, Math.cos(a) * 2.1], rotation: [0, a, 0], slot: 'gold' });
     const m = a + Math.PI / 6;
     b.socket('socket_sector_' + i, [Math.sin(m) * 2.65, 0.07, Math.cos(m) * 2.65], m, { socket: 'sector', index: i });
   }
   b.add(new THREE.CylinderGeometry(0.42, 0.55, 0.5, 12), 0x9a958a, { position: [0, 0.25, 0], flat: true });
-  b.add(new THREE.TorusGeometry(0.3, 0.05, 6, 20), GOLD, { position: [0, 0.52, 0], rotation: [-Math.PI / 2, 0, 0] });
+  b.add(new THREE.TorusGeometry(0.3, 0.05, 6, 20), GOLD, { position: [0, 0.52, 0], rotation: [-Math.PI / 2, 0, 0], slot: 'gold' });
   b.socket('socket_center', [0, 0.55, 0], 0, { socket: 'double_ring' });
   b.collidePrism(0, 0, 3.6, 0, 0.06, 24);           // low enough to walk onto
   b.collidePrism(0, 0, 0.55, 0, 0.55, 10);
 }
 
 function shard(b) {
-  b.add(new THREE.OctahedronGeometry(0.2, 0), 0xb9d6dd, { position: [0, 0.2, 0], scale: [0.55, 1, 0.55] });
-  b.add(new THREE.OctahedronGeometry(0.09, 0), 0xdbe9ec, { position: [0.07, 0.12, 0.02], scale: [0.6, 1, 0.6], rotation: [0, 0, 0.5] });
+  b.add(new THREE.OctahedronGeometry(0.2, 0), 0xb9d6dd, { position: [0, 0.2, 0], scale: [0.55, 1, 0.55], slot: 'glass' });
+  b.add(new THREE.OctahedronGeometry(0.09, 0), 0xdbe9ec, { position: [0.07, 0.12, 0.02], scale: [0.6, 1, 0.6], rotation: [0, 0, 0.5], slot: 'glass' });
 }
 
 // Ammonite-like coiled Shells (owner concept 07.11, third image): a planispiral tube growing
@@ -213,7 +222,7 @@ function shell(b, n) {
   if (style.skew) geo.applyMatrix4(new THREE.Matrix4().set(1, style.skew, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
   geo.computeBoundingBox();
   const bb = geo.boundingBox.clone();
-  b.add(geo, n === 2 ? 0xc9cfcb : 0xd8dcd8, { flat: true });
+  b.add(geo, n === 2 ? 0xe6e2de : 0xf1ede9, { flat: true, slot: 'nacre' });
   // Camera-only collider: the coil's box with a 0.25 m margin for the code-driven hover.
   const m = 0.25;
   b.collideBox([bb.min.x - m, bb.min.y - m, bb.min.z - m], [bb.max.x + m, bb.max.y + m, bb.max.z + m], MASK_CAMERA);
@@ -227,7 +236,9 @@ function interior(b) {
   b.box([0.3, Hh, D], 0x7a837e, { position: [-W / 2 - 0.15, Hh / 2, 0] });
   b.box([0.3, Hh, D], 0x7a837e, { position: [W / 2 + 0.15, Hh / 2, 0] });
   b.box([W, Hh, 0.3], 0x7a837e, { position: [0, Hh / 2, D / 2 + 0.15] });
-  b.box([12, 7, 0.1], 0xdfe8ea, { position: [0, 5, -D / 2 + 0.1] });
+  b.box([12, 7, 0.1], 0xdfe8ea, { position: [0, 5, -D / 2 + 0.1], slot: 'glass' });
+  // Amber floor lights along the walk to the glass wall (owner concept: dark wet stone, amber inlays).
+  for (const x of [-3, 3]) for (const z of [-3.5, -1, 1.5, 4]) b.box([0.35, 0.02, 0.2], 0xffc270, { position: [x, 0.01, z], slot: 'amber' });
   b.box([W, Hh, 0.3], 0x7a837e, { position: [0, Hh / 2, -D / 2 - 0.15] });
   b.collideBox([-W / 2, -0.3, -D / 2], [W / 2, 0, D / 2]).collideBox([-W / 2, Hh, -D / 2], [W / 2, Hh + 0.3, D / 2]);
   b.collideBox([-W / 2 - 0.3, 0, -D / 2], [-W / 2, Hh, D / 2]).collideBox([W / 2, 0, -D / 2], [W / 2 + 0.3, Hh, D / 2]);
@@ -240,17 +251,24 @@ function camp(b, clanId) {
   const tint = new THREE.Color(0x8d9a8c).lerp(new THREE.Color(clan.color), 0.2).getHex();
   b.add(new THREE.CylinderGeometry(3.9, 4.0, 0.06, 8), tint, { position: [0, 0.03, 0], rotation: [0, Math.PI / 8, 0] });
   b.add(new THREE.RingGeometry(0.95, 1.1, 32), 0xe8e2c8, { position: [0, 0.07, 0], rotation: [-Math.PI / 2, 0, 0] });
-  const detail = (size, color, x, z) => { b.box(size, color, { position: [x, size[1] / 2, z] }); b.collideBox([x - size[0] / 2, 0, z - size[2] / 2], [x + size[0] / 2, size[1], z + size[2] / 2]); };
+  const detail = (size, color, x, z, slot = 'default') => { b.box(size, color, { position: [x, size[1] / 2, z], slot }); b.collideBox([x - size[0] / 2, 0, z - size[2] / 2], [x + size[0] / 2, size[1], z + size[2] / 2]); };
   const WOOD = 0x6b4f35;
+  // Two warm lanterns on posts flank the shelter (owner references: lantern glow in every camp).
+  for (const x of [-1.9, 1.9]) {
+    b.add(new THREE.CylinderGeometry(0.04, 0.05, 1.7, 6), WOOD, { position: [x, 0.85, -1.4] });
+    b.box([0.22, 0.26, 0.22], 0xffd27a, { position: [x, 1.55, -1.4], slot: 'amber' });
+    b.add(new THREE.ConeGeometry(0.2, 0.12, 4), 0x3a322b, { position: [x, 1.74, -1.4], rotation: [0, Math.PI / 4, 0] });
+    b.socket('socket_lantern_' + (x < 0 ? 'l' : 'r'), [x, 1.55, -1.4], 0, { socket: 'lantern' });
+  }
   switch (clanId) {
     case 'iris': // violet tent, an iris flower
-      b.add(new THREE.ConeGeometry(1.4, 2.4, 6), 0x8a6fc4, { position: [0, 1.2, -2.4], flat: true }); b.collidePrism(0, -2.4, 1.25, 0, 2.4, 6);
+      b.add(new THREE.ConeGeometry(1.4, 2.4, 6), 0x8a6fc4, { position: [0, 1.2, -2.4], flat: true, slot: 'cloth' }); b.collidePrism(0, -2.4, 1.25, 0, 2.4, 6);
       detail([0.12, 1.0, 0.12], 0x5b7a4a, -2.2, -0.6); b.add(new THREE.IcosahedronGeometry(0.3, 0), 0xa58ad8, { position: [-2.2, 1.15, -0.6], flat: true });
       detail([0.9, 0.45, 0.6], 0x9c8fb8, 2.1, -0.8); break;
     case 'sol': // white crystals, scales
-      for (const [x, z, s] of [[-0.6, -2.4, 1.3], [0.5, -2.6, 1.0], [0, -1.9, 0.7]]) b.add(new THREE.OctahedronGeometry(0.5, 0), 0xf2f3ef, { position: [x, 0.55 * s, z], scale: [0.6 * s, 1.2 * s, 0.6 * s], flat: true });
+      for (const [x, z, s] of [[-0.6, -2.4, 1.3], [0.5, -2.6, 1.0], [0, -1.9, 0.7]]) b.add(new THREE.OctahedronGeometry(0.5, 0), 0xf2f3ef, { position: [x, 0.55 * s, z], scale: [0.6 * s, 1.2 * s, 0.6 * s], flat: true, slot: 'glass' });
       b.collidePrism(0, -2.3, 1.1, 0, 1.4, 6);
-      detail([1.0, 0.9, 0.5], 0xb7b19b, 2.1, -0.8); b.add(new THREE.OctahedronGeometry(0.35, 0), 0xe9ecea, { position: [-2.1, 0.4, -0.7], flat: true }); break;
+      detail([1.0, 0.9, 0.5], 0xb7b19b, 2.1, -0.8); b.add(new THREE.OctahedronGeometry(0.35, 0), 0xe9ecea, { position: [-2.1, 0.4, -0.7], flat: true, slot: 'glass' }); break;
     case 'pepel': // wooden frame and palisade: fear and defense
       for (const x of [-1.1, 1.1]) for (const z of [-3.2, -1.6]) detail([0.16, 2.2, 0.16], WOOD, x, z);
       b.box([2.5, 0.14, 0.16], WOOD, { position: [0, 2.2, -3.2] }); b.box([2.5, 0.14, 0.16], WOOD, { position: [0, 2.2, -1.6] });
@@ -263,9 +281,12 @@ function camp(b, clanId) {
       b.add(new THREE.ConeGeometry(1.4, 2.2, 4), 0xc98f3a, { position: [0, 1.1, -2.4], rotation: [0, Math.PI / 4, 0], flat: true }); b.collidePrism(0, -2.4, 1.2, 0, 2.2, 4);
       detail([0.8, 0.55, 0.5], 0xb57a2e, -2.1, -0.7); detail([0.7, 0.5, 0.5], 0xd59a3a, 2.1, -0.9); detail([0.6, 0.45, 0.45], 0x9a6a2e, 2.3, 0.3); break;
     case 'iney': // cold glass arch, instruments, tables of signs
-      b.add(new THREE.TorusGeometry(1.3, 0.1, 6, 18, Math.PI), 0xbfe0ec, { position: [0, 0, -2.4] });
+      b.add(new THREE.TorusGeometry(1.3, 0.1, 6, 18, Math.PI), 0xbfe0ec, { position: [0, 0, -2.4], slot: 'glass' });
+      // Glass pavilion canopy on four slender posts (owner concept: Frost = glass pavilion).
+      for (const [x, z] of [[-1.3, -3.4], [1.3, -3.4], [-1.3, -1.4], [1.3, -1.4]]) b.add(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 6), 0x9fb4bd, { position: [x, 1.2, z] });
+      b.add(new THREE.ConeGeometry(2.0, 1.1, 4), 0xd8eef7, { position: [0, 2.95, -2.4], rotation: [0, Math.PI / 4, 0], flat: true, slot: 'glass' });
       b.collidePrism(-1.3, -2.4, 0.15, 0, 1.3, 6); b.collidePrism(1.3, -2.4, 0.15, 0, 1.3, 6);
-      detail([1.2, 0.8, 0.6], 0xbfd9e4, -2.1, -0.7); detail([0.2, 1.4, 0.2], 0x9fc4d6, 2.2, -0.8); break;
+      detail([1.2, 0.8, 0.6], 0xbfd9e4, -2.1, -0.7, 'glass'); detail([0.2, 1.4, 0.2], 0x9fc4d6, 2.2, -0.8, 'glass'); break;
     default: break;
   }
 }
@@ -336,7 +357,7 @@ function island(b) {
   }
   for (const z of ANCHOR_ZONES) {
     b.add(new THREE.CircleGeometry(ANCHOR_ZONE_RADIUS, 32), 0x8e958c, { position: [z.position[0], 0.02, z.position[2]], rotation: [-Math.PI / 2, 0, 0] });
-    b.add(new THREE.RingGeometry(ANCHOR_ZONE_RADIUS - 0.12, ANCHOR_ZONE_RADIUS, 40), 0xd9a441, { position: [z.position[0], 0.03, z.position[2]], rotation: [-Math.PI / 2, 0, 0] });
+    b.add(new THREE.RingGeometry(ANCHOR_ZONE_RADIUS - 0.12, ANCHOR_ZONE_RADIUS, 40), 0xd9a441, { position: [z.position[0], 0.03, z.position[2]], rotation: [-Math.PI / 2, 0, 0], slot: 'gold' });
   }
   // A few pines on the camp plateaus' outer edges.
   for (const p of platforms()) {
@@ -370,7 +391,7 @@ function fill(b, name) {
 export function greyboxColliders(name) {
   const b = new Builder();
   fill(b, name);
-  for (const g of b.parts) g.dispose();
+  for (const list of b.parts.values()) for (const g of list) g.dispose();
   return b.colliders;
 }
 

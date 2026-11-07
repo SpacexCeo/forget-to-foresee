@@ -26,6 +26,7 @@ export class CameraRig {
     this.actualDist = this.dist;
     this.inspect = null;                         // {center: Vector3, radius, yaw, pitch, dist}
     this.lastSweep = 1;
+    this.pitchOverride = null;                   // radians; dev/cinematic shots only (null = zoom-tied pitch)
   }
 
   /** 0 at the closest zoom, 1 at the farthest. */
@@ -78,7 +79,7 @@ export class CameraRig {
       const k = 1 - Math.exp(-dt * 10);
       this.smoothFocus.lerp(this.focus, this.smoothFocus.lengthSq() === 0 ? 1 : k);
       center = this.smoothFocus.clone().add(new THREE.Vector3(0, this.focusHeightFor(this.dist), 0));
-      yaw = this.yaw; dist = this.dist; pitch = this.pitchFor(dist);
+      yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? this.pitchFor(dist);
       const fov = this.fovFor(dist);
       if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     }
