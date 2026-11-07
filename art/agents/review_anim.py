@@ -34,7 +34,7 @@ sc.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in [
     else "BLENDER_EEVEE"
 sc.render.film_transparent = False
 sc.view_settings.view_transform = "AgX"
-sc.fps = 30
+sc.render.fps = 30
 w = bpy.data.worlds.new("w")
 w.use_nodes = True
 w.node_tree.nodes["Background"].inputs[0].default_value = (0.32, 0.30, 0.28, 1)
