@@ -268,3 +268,63 @@ npm test                                                   # 157 tests incl. 13 
 npm run sim -- --rules v3 --quick --no-findings             # 300 seasons per strategy
 npm run sim -- --rules v3 --no-findings --out docs/math/v3  # 10000 seasons per strategy, ~5 min
 ```
+
+## 9. Rules v3 with P2 and P8 (approved later on 07.11)
+
+The owner then approved the two remaining proposals. Both are in rule mode `v3` (no release uses v3 yet); `baseline-2d-1`, `v2` and the commitment schema are untouched. Tests: 18 in `game/tests/v3.test.mjs`, `npm test` 162 green.
+
+- **P2, exactly as proposed in §4:** a "no" from the Guests refunds the 5 silk (the question still costs attention); mediation costs 10 paid 5 + 5 to the two reconciled clans (a transfer, nothing burned); Frost's word costs 8 instead of 12. Salt's (7) and Amber's (10) prices are unchanged.
+- **P8, penalty size.** `V3.goneKeep` = the fraction of silk every clan keeps when the Shells leave. Counterfactual on 3 000 v3 (with P2) seasons per strategy, re-pricing only the `gone` seasons:
+
+| strategy | P(gone) | keep 1 (no P8) | keep 1/2 | keep 1/4 | keep 0 |
+| --- | --- | --- | --- | --- | --- |
+| coop-honest-none | 0.3% | 110.4 | 110.4 | 110.4 | 110.3 |
+| coop-honest-anchor | 1.1% | 107.4 | 107.3 | 107.2 | 107.1 |
+| coop-defect-none | 14.9% | 132.9 | 124.9 | 120.9 | 116.9 |
+| late-defect-none | 28.8% | 140.0 | 122.6 | 113.8 | 105.0 |
+| hold-defect-none | 28.7% | 129.1 | 111.7 | 103.0 | 94.2 |
+| late-defect-anchor | 34.3% | 125.0 | 107.9 | 99.2 | 90.5 |
+| hold-defect-anchor | 34.4% | 115.2 | 98.0 | 89.3 | 80.6 |
+| passive | 4.7% | 104.4 | 102.0 | 100.8 | 99.6 |
+
+  Keeping 1/2 or 1/4 still leaves `late-defect-none` above the honest cooperator (122.6 / 113.8 vs 110.4); only keep = 0 puts every late/hold defector below honest play. **Chosen: `goneKeep = 0`**: the Shells leaving wipes the world's silk exactly as the weapon does, which is also what the design brief says ("everyone loses"). The loss per clan is recorded in `S.goneLoss`.
+
+### 9.1 Full re-run (10 000 seasons per strategy, 17 strategies, 293 s, 0 rejected intents, 0 unexplained silk; tables in `docs/math/v3/`)
+
+| measure | v2 | v3 (P1, P3–P7, P9) | v3 + P2 + P8 |
+| --- | --- | --- | --- |
+| coop-honest-none final silk | 84.3 | 103.0 | **110.4 ± 0.6** |
+| coop-honest-anchor final silk | 76.1 | 92.3 | **107.7 ± 0.9** (total RTP 1.02: anchoring plus learning is now break-even) |
+| passive final silk | 138.0 | 105.0 | 99.8 |
+| coop-honest-none vs passive (paired) | −53.7 | −2.0 | **+10.6 ± 1.2** |
+| hold − coop, honest without market | +11.5 | −17.1 | −17.5 |
+| late-defect-none | 136.3 | 140.1 | 104.5 (P(gone) 29.5%, finale −28.7 on average) |
+| hold-defect-none | 161.1 | 129.4 | 93.7 |
+| coop-defect-none | 126.6 | 133.2 | **116.3 ± 1.6** (still +5.9 over honest, see 9.2) |
+| best trust response | defect 6/6 | defect 6/6 | **honest in 4 of 6 contexts**; defect only in coop-none and hold-none |
+| best fragment response | hold 3/4 | late 4/4 | coop or late (within 0.1) in 4/4; hold last everywhere |
+| best market response | none 6/6 | none 6/6 | none 6/6, but the gap shrank from 8–42 to 2.7–11 silk |
+| Gini (all clans) | 0.10–0.16 | 0.08–0.14 | 0.06–0.14 |
+| honest outcome mix, coop-honest-none (gift / lost / survived / weapon / gone) | 47.5 / 10.9 / 38.7 / 2.4 / 0.4 | 57.1 / 2.8 / 35.2 / 4.5 / 0.3 | 58.2 / 1.8 / 37.2 / 2.6 / 0.2 (the refunded silk buys more mediation and escrow; the key sign reaches the Scroll in 94%) |
+
+Dominance table (mean final silk ± 95% CI):
+
+| fragment \ trust-market | honest-anchor | honest-none | defect-anchor | defect-none |
+| --- | --- | --- | --- | --- |
+| coop | 107.7 ± 0.9 | **110.4 ± 0.6** | 106.3 ± 1.7 | 116.3 ± 1.6 |
+| late | 107.7 ± 0.9 | 110.4 ± 0.6 | 93.1 ± 1.9 | 104.5 ± 1.8 |
+| hold | 91.3 ± 0.8 | 92.9 ± 0.5 | 82.9 ± 1.7 | 93.7 ± 1.6 |
+
+### 9.2 What is fixed and what is not
+
+- Fixed: holding the fragment is the worst fragment choice in every context; an honest cooperator beats a passive player (+10.6) and every late/hold defector; learning (questions, words, mediation) is no longer a sink for the player and no longer destroys world silk; the Shells leaving is a real loss (the late/hold defectors' finale column is −21 to −55 on average).
+- **Not fixed: `coop-defect-none` (116.3) still beats `coop-honest-none` (110.4) by 5.9 ± 1.7.** This strategy contributes its fragment honestly at tick 6 and keeps P(gone) at 15.7%, so P8 bites less; its edge is not betrayal but **memory sales**: 66.7 silk per season from shards (v2: 66.0), mostly betrayal memories bought back by the betrayer (Salt pays 16–26 for its own lie) and debt memories sold to the debtor at 0.55 of face, each sale also buying a vision. The honest cooperator spends 40.9 on Amber's escrow and 25.7 on mediation for the common good and gets nothing back personally. The remaining lever is therefore the shard market, not tension: cap the betrayer's buy-back value (or make a forgotten betrayal worthless to its subject), and/or give the escrow payer and the mediator a share of the finale. This is the next proposal to put to the owner; it is not in v3.
+- Market play is break-even now (anchor RTP 1.47, total RTP 0.99–1.02) instead of a loss, but still not better than not playing; the oracle (seed leak) ceiling is +144.5 over passive.
+
+### 9.3 Reproduce
+
+```bash
+cd game
+npm test                                                   # 162 tests incl. 18 for v3
+npm run sim -- --rules v3 --no-findings --out docs/math/v3  # 10000 seasons per strategy, ~5 min
+```

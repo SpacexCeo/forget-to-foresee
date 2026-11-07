@@ -218,6 +218,69 @@ test('v3 P9: a 3:3 vote follows Iris; v2 keeps "tie = reject"', () => {
   assert.ok(seen >= 1, 'at least one 3:3 vote observed');
 });
 
+/* ---------- P2: learning is not a sink ---------- */
+test('v3 P2: a "no" from the Guests refunds the question, a "yes" costs 5; v2 charges both', () => {
+  for (const rules of ['v3', 'v2']) {
+    fresh(61, rules); E.startGame('');
+    const s = 0, f = 0, truth = E.S.perm[s][f], wrong = (truth + 1) % 4;
+    const silk = E.S.silk[0], ap = E.S.ap;
+    assert.ok(E.askGuests(s, f, wrong).ok);
+    assert.equal(E.S.ap, ap - 1);
+    assert.equal(E.S.silk[0], rules === 'v3' ? silk : silk - 5, rules + ': "no"');
+    assert.ok(E.askGuests(s, f, truth).ok);
+    assert.equal(E.S.silk[0], rules === 'v3' ? silk - 5 : silk - 10, rules + ': "yes"');
+    assert.equal(E.S.pins[s + '_' + f].m, truth);
+  }
+});
+
+test('v3 P2: mediation costs 10 and is a transfer (world silk conserved); v2 burns 15', () => {
+  for (const rules of ['v3', 'v2']) {
+    fresh(62, rules); E.startGame('');
+    E.S.broken.push('1-3'); E.S.T[1][0] = 60; E.S.T[3][0] = 60; E.S.ap = 3; E.S.silk[0] = 40;
+    const world = E.S.silk.reduce((a, b) => a + b, 0), iris = E.S.silk[0], salt = E.S.silk[1], moss = E.S.silk[3];
+    assert.ok(E.mediate(1, 3).ok);
+    if (rules === 'v3') { assert.equal(E.S.silk[0], iris - 10); assert.equal(E.S.silk[1], salt + 5); assert.equal(E.S.silk[3], moss + 5); assert.equal(E.S.silk.reduce((a, b) => a + b, 0), world, 'nothing burned'); }
+    else { assert.equal(E.S.silk[0], iris - 15); assert.equal(E.S.silk.reduce((a, b) => a + b, 0), world - 15); }
+    assert.equal(E.isBroken(1, 3), false);
+  }
+  fresh(62); E.startGame(''); E.S.broken.push('1-3'); E.S.T[1][0] = 60; E.S.T[3][0] = 60; E.S.silk[0] = 9;
+  assert.deepEqual(E.mediate(1, 3), { ok: false, reason: 'no_silk' });
+});
+
+test("v3 P2: Frost's word costs 8 (v2: 12); Salt's and Amber's prices are unchanged", () => {
+  const prices = (rules) => { const out = {}; for (let seed = 1; seed <= 40; seed++) { fresh(seed, rules); E.startGame(''); for (let guard = 0; guard < 16 && E.S.phase === 'play'; guard++) { for (const o of E.S.offers) if (o.kind === 'sell') out[o.from] = o.price; play({ type: 'end' }); } } return out; };
+  assert.deepEqual(prices('v3'), { 1: 7, 4: 10, 5: 8 });
+  assert.deepEqual(prices('v2'), { 1: 7, 4: 10, 5: 12 });
+});
+
+/* ---------- P8: the Shells leaving costs silk ---------- */
+test('v3 P8: outcome gone leaves every clan with round(silk · goneKeep) = 0; v2 keeps everything', () => {
+  assert.equal(E.V3.goneKeep, 0);
+  for (const rules of ['v3', 'v2']) {
+    fresh(71, rules); E.startGame(''); endTo(5);
+    const before = E.S.silk.slice();
+    E.S.H = 99; E.S.rule = 'top'; E.setRule('dots'); // a settle after a free action, as the 2D click handler did
+    assert.equal(E.S.outcome, null);
+    E.S.H = 100; E.setRule('top');
+    assert.equal(E.S.outcome, 'gone');
+    if (rules === 'v3') { assert.deepEqual(E.S.silk, [0, 0, 0, 0, 0, 0]); assert.deepEqual(E.S.goneLoss, before); }
+    else { assert.deepEqual(E.S.silk, before); assert.equal(E.S.goneLoss, undefined); }
+  }
+  fresh(72); E.startGame(''); endTo(4); E.S.H = 98; // +15 at the crisis would do it too; here the tick change pushes it over
+  E.S.H = 100; play({ type: 'end' });
+  assert.equal(E.S.outcome, 'gone');
+  assert.deepEqual(E.S.silk, [0, 0, 0, 0, 0, 0], 'gone reached inside endTick');
+});
+
+test('v3 P2+P8 (dominance, 300 seeds): late/hold defectors no longer beat an honest cooperator; passive is beaten too', () => {
+  const mean = (name, rules) => { let t = 0; for (let s = 1; s <= 300; s++) t += runSeason(s, STRATEGIES[name], { rules }).final.silk[0]; return t / 300; };
+  const honest3 = mean('coop-honest-none', 'v3'), passive3 = mean('passive', 'v3');
+  assert.ok(honest3 > passive3, `v3 honest ${honest3} vs passive ${passive3}`);
+  for (const d of ['late-defect-none', 'hold-defect-none', 'late-defect-anchor', 'hold-defect-anchor']) { const m = mean(d, 'v3'); assert.ok(m < honest3, `v3 ${d} ${m} vs honest ${honest3}`); }
+  const honest2 = mean('coop-honest-none', 'v2');
+  assert.ok(mean('late-defect-none', 'v2') > honest2 && mean('passive', 'v2') > honest2, 'v2 unchanged: defecting and passivity still pay');
+});
+
 /* ---------- harness under v3 ---------- */
 test('v3: every scripted strategy plays 25 seeds with no rejected intent and a balanced ledger', () => {
   for (const s of Object.values(STRATEGIES)) for (let seed = 1; seed <= 25; seed++) {
