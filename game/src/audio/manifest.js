@@ -3,6 +3,72 @@
 export const AUDIO_MANIFEST = {
   "sampleRate": 48000,
   "sounds": {
+    "amb_camp_iney": {
+      "file": "amb_camp_iney.ogg",
+      "kind": "amb",
+      "dur": 24.0,
+      "samples": 1152000,
+      "channels": 2,
+      "loop": true
+    },
+    "amb_camp_iris": {
+      "file": "amb_camp_iris.ogg",
+      "kind": "amb",
+      "dur": 24.0,
+      "samples": 1152000,
+      "channels": 2,
+      "loop": true
+    },
+    "amb_camp_moh": {
+      "file": "amb_camp_moh.ogg",
+      "kind": "amb",
+      "dur": 24.0,
+      "samples": 1152000,
+      "channels": 2,
+      "loop": true
+    },
+    "amb_camp_pepel": {
+      "file": "amb_camp_pepel.ogg",
+      "kind": "amb",
+      "dur": 24.0,
+      "samples": 1152000,
+      "channels": 2,
+      "loop": true
+    },
+    "amb_camp_sol": {
+      "file": "amb_camp_sol.ogg",
+      "kind": "amb",
+      "dur": 24.0,
+      "samples": 1152000,
+      "channels": 2,
+      "loop": true
+    },
+    "amb_camp_yantar": {
+      "file": "amb_camp_yantar.ogg",
+      "kind": "amb",
+      "dur": 24.0,
+      "samples": 1152000,
+      "channels": 2,
+      "loop": true
+    },
+    "amb_shell_hum": {
+      "file": "amb_shell_hum.ogg",
+      "kind": "amb",
+      "dur": 32.0,
+      "samples": 1536000,
+      "channels": 1,
+      "loop": true,
+      "ref": 22,
+      "rolloff": 0.8
+    },
+    "amb_shell_inside": {
+      "file": "amb_shell_inside.ogg",
+      "kind": "amb",
+      "dur": 32.0,
+      "samples": 1536000,
+      "channels": 2,
+      "loop": true
+    },
     "amb_wind": {
       "file": "amb_wind.ogg",
       "kind": "amb",
@@ -10,6 +76,43 @@ export const AUDIO_MANIFEST = {
       "samples": 1920000,
       "channels": 2,
       "loop": true
+    },
+    "anchor_plant": {
+      "file": "anchor_plant.ogg",
+      "kind": "sfx",
+      "dur": 4.6,
+      "samples": 220800,
+      "channels": 2,
+      "ref": 4
+    },
+    "bid_tick_1": {
+      "file": "bid_tick_1.ogg",
+      "kind": "sfx",
+      "dur": 0.16,
+      "samples": 7680,
+      "channels": 1
+    },
+    "bid_tick_2": {
+      "file": "bid_tick_2.ogg",
+      "kind": "sfx",
+      "dur": 0.16,
+      "samples": 7680,
+      "channels": 1
+    },
+    "bid_tick_3": {
+      "file": "bid_tick_3.ogg",
+      "kind": "sfx",
+      "dur": 0.16,
+      "samples": 7680,
+      "channels": 1
+    },
+    "gift_chime": {
+      "file": "gift_chime.ogg",
+      "kind": "sfx",
+      "dur": 4.5,
+      "samples": 216000,
+      "channels": 2,
+      "ref": 5
     },
     "guest_arc": {
       "file": "guest_arc.ogg",
@@ -22,13 +125,421 @@ export const AUDIO_MANIFEST = {
       "stroke": "arc",
       "strokeDur": 1.6
     },
+    "guest_call": {
+      "file": "guest_call.ogg",
+      "kind": "voice",
+      "dur": 5.775,
+      "samples": 277200,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "strokes": [
+        "spike",
+        "arc"
+      ]
+    },
+    "guest_drop": {
+      "file": "guest_drop.ogg",
+      "kind": "voice",
+      "dur": 4.7895,
+      "samples": 229897,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "stroke": "drop",
+      "strokeDur": 1.5
+    },
+    "guest_loop": {
+      "file": "guest_loop.ogg",
+      "kind": "voice",
+      "dur": 5.676,
+      "samples": 272447,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "stroke": "loop",
+      "strokeDur": 1.8
+    },
+    "guest_phrase_1": {
+      "file": "guest_phrase_1.ogg",
+      "kind": "voice",
+      "dur": 8.0673,
+      "samples": 387230,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "strokes": [
+        "arc",
+        "loop",
+        "drop"
+      ]
+    },
+    "guest_phrase_2": {
+      "file": "guest_phrase_2.ogg",
+      "kind": "voice",
+      "dur": 7.5929,
+      "samples": 364458,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "strokes": [
+        "spike",
+        "arc",
+        "spike"
+      ]
+    },
+    "guest_phrase_3": {
+      "file": "guest_phrase_3.ogg",
+      "kind": "voice",
+      "dur": 7.4465,
+      "samples": 357430,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "strokes": [
+        "loop",
+        "drop"
+      ]
+    },
+    "guest_phrase_4": {
+      "file": "guest_phrase_4.ogg",
+      "kind": "voice",
+      "dur": 8.3052,
+      "samples": 398650,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "strokes": [
+        "drop",
+        "arc",
+        "loop",
+        "spike"
+      ]
+    },
+    "guest_spike": {
+      "file": "guest_spike.ogg",
+      "kind": "voice",
+      "dur": 5.3644,
+      "samples": 257493,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 1.0,
+      "stroke": "spike",
+      "strokeDur": 1.2
+    },
+    "memory_dissolve": {
+      "file": "memory_dissolve.ogg",
+      "kind": "sfx",
+      "dur": 7.0,
+      "samples": 336000,
+      "channels": 2
+    },
+    "mus_calm": {
+      "file": "mus_calm.ogg",
+      "kind": "music",
+      "dur": 64.0,
+      "samples": 3072000,
+      "channels": 2,
+      "loop": true,
+      "bpm": 60,
+      "bars": 16
+    },
+    "mus_crisis": {
+      "file": "mus_crisis.ogg",
+      "kind": "music",
+      "dur": 64.0,
+      "samples": 3072000,
+      "channels": 2,
+      "loop": true,
+      "bpm": 60,
+      "bars": 16
+    },
+    "mus_uneasy": {
+      "file": "mus_uneasy.ogg",
+      "kind": "music",
+      "dur": 64.0,
+      "samples": 3072000,
+      "channels": 2,
+      "loop": true,
+      "bpm": 60,
+      "bars": 16
+    },
+    "step_glass_1": {
+      "file": "step_glass_1.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_glass_2": {
+      "file": "step_glass_2.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_glass_3": {
+      "file": "step_glass_3.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_glass_4": {
+      "file": "step_glass_4.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_grass_1": {
+      "file": "step_grass_1.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_grass_2": {
+      "file": "step_grass_2.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_grass_3": {
+      "file": "step_grass_3.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_grass_4": {
+      "file": "step_grass_4.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_metal_1": {
+      "file": "step_metal_1.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_metal_2": {
+      "file": "step_metal_2.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_metal_3": {
+      "file": "step_metal_3.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_metal_4": {
+      "file": "step_metal_4.ogg",
+      "kind": "step",
+      "dur": 0.4,
+      "samples": 19200,
+      "channels": 1
+    },
+    "step_stone_1": {
+      "file": "step_stone_1.ogg",
+      "kind": "step",
+      "dur": 0.3,
+      "samples": 14400,
+      "channels": 1
+    },
+    "step_stone_2": {
+      "file": "step_stone_2.ogg",
+      "kind": "step",
+      "dur": 0.3,
+      "samples": 14400,
+      "channels": 1
+    },
+    "step_stone_3": {
+      "file": "step_stone_3.ogg",
+      "kind": "step",
+      "dur": 0.3,
+      "samples": 14400,
+      "channels": 1
+    },
+    "step_stone_4": {
+      "file": "step_stone_4.ogg",
+      "kind": "step",
+      "dur": 0.3,
+      "samples": 14400,
+      "channels": 1
+    },
+    "step_wood_1": {
+      "file": "step_wood_1.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_wood_2": {
+      "file": "step_wood_2.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_wood_3": {
+      "file": "step_wood_3.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "step_wood_4": {
+      "file": "step_wood_4.ogg",
+      "kind": "step",
+      "dur": 0.32,
+      "samples": 15360,
+      "channels": 1
+    },
+    "sting_gone": {
+      "file": "sting_gone.ogg",
+      "kind": "sting",
+      "dur": 10.0,
+      "samples": 480000,
+      "channels": 2
+    },
+    "sting_survived": {
+      "file": "sting_survived.ogg",
+      "kind": "sting",
+      "dur": 8.0,
+      "samples": 384000,
+      "channels": 2
+    },
+    "sting_weapon": {
+      "file": "sting_weapon.ogg",
+      "kind": "sting",
+      "dur": 8.0,
+      "samples": 384000,
+      "channels": 2
+    },
+    "storm_crack": {
+      "file": "storm_crack.ogg",
+      "kind": "sfx",
+      "dur": 6.5,
+      "samples": 312000,
+      "channels": 2,
+      "ref": 12
+    },
     "ui_click": {
       "file": "ui_click.ogg",
       "kind": "ui",
       "dur": 0.14,
       "samples": 6720,
       "channels": 1
+    },
+    "ui_confirm": {
+      "file": "ui_confirm.ogg",
+      "kind": "ui",
+      "dur": 1.2,
+      "samples": 57600,
+      "channels": 2
+    },
+    "ui_error": {
+      "file": "ui_error.ogg",
+      "kind": "ui",
+      "dur": 0.5,
+      "samples": 24000,
+      "channels": 1
+    },
+    "ui_hover": {
+      "file": "ui_hover.ogg",
+      "kind": "ui",
+      "dur": 0.09,
+      "samples": 4320,
+      "channels": 1
+    },
+    "ui_notify": {
+      "file": "ui_notify.ogg",
+      "kind": "ui",
+      "dur": 2.0,
+      "samples": 96000,
+      "channels": 2
+    },
+    "vision_whoosh": {
+      "file": "vision_whoosh.ogg",
+      "kind": "sfx",
+      "dur": 2.8,
+      "samples": 134400,
+      "channels": 2
+    },
+    "vote_stone_1": {
+      "file": "vote_stone_1.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 1,
+      "ref": 3
+    },
+    "vote_stone_2": {
+      "file": "vote_stone_2.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 1,
+      "ref": 3
+    },
+    "vote_stone_3": {
+      "file": "vote_stone_3.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 1,
+      "ref": 3
     }
   },
-  "groups": {}
+  "groups": {
+    "bid_tick": [
+      "bid_tick_1",
+      "bid_tick_2",
+      "bid_tick_3"
+    ],
+    "step_glass": [
+      "step_glass_1",
+      "step_glass_2",
+      "step_glass_3",
+      "step_glass_4"
+    ],
+    "step_grass": [
+      "step_grass_1",
+      "step_grass_2",
+      "step_grass_3",
+      "step_grass_4"
+    ],
+    "step_metal": [
+      "step_metal_1",
+      "step_metal_2",
+      "step_metal_3",
+      "step_metal_4"
+    ],
+    "step_stone": [
+      "step_stone_1",
+      "step_stone_2",
+      "step_stone_3",
+      "step_stone_4"
+    ],
+    "step_wood": [
+      "step_wood_1",
+      "step_wood_2",
+      "step_wood_3",
+      "step_wood_4"
+    ],
+    "vote_stone": [
+      "vote_stone_1",
+      "vote_stone_2",
+      "vote_stone_3"
+    ]
+  }
 };

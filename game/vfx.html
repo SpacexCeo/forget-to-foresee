@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VFX lab (dev)</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #2f3532; color: #e9efe9; font: 13px/1.45 system-ui, sans-serif; }
+    #app, #app canvas { position: fixed; inset: 0; display: block; }
+    .panel { position: fixed; background: rgba(20, 24, 22, 0.82); border-radius: 8px; padding: 10px 12px; }
+    #controls { top: 12px; left: 12px; max-width: 360px; }
+    #controls button { margin: 3px 4px 0 0; font: inherit; background: #3a423d; color: inherit; border: 1px solid #5b665f; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+    #controls button:hover { border-color: #d9a441; }
+    #stats { bottom: 12px; left: 12px; font: 12px ui-monospace, Consolas, monospace; color: #a9b5ae; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="controls" class="panel"><b>VFX lab</b> (dev only)<div id="buttons"></div>
+    <label>tier <select id="tier"><option>ultra</option><option>high</option><option>low</option></select></label>
+    <label><input type="checkbox" id="rm"> reduced motion</label>
+    <label>tension <input type="range" id="tension" min="0" max="1" step="0.05" value="0"></label>
+  </div>
+  <div id="stats" class="panel"></div>
+  <script type="module" src="/src/vfx/dev-page.js"></script>
+</body>
+</html>

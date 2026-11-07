@@ -7,7 +7,9 @@
 //   freezes the clouds, wind and Shell hover (spec 1/3: reduced motion never blocks input).
 import * as THREE from 'three';
 import { QUALITY, isTier } from './quality.js';
-import { SkyDome, SUN_DIRECTION, SUN_COLOR, HAZE_COLOR } from './sky.js';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { SkyDome, TIME_PRESETS, DEFAULT_PRESET } from './sky.js';
+import { TierGovernor } from './quality.js';
 import { CloudSea } from './clouds.js';
 import { PostStack } from './post.js';
 import { Foliage } from './foliage.js';
@@ -22,39 +24,52 @@ export class LookDev {
    *          grassPatches:{center:number[], radius:number, tint?:number}[], lanterns:number[][],
    *          tier?:string, reducedMotion?:boolean}} o
    */
-  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', reducedMotion = false }) {
+  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', reducedMotion = false, autoTier = false, preset = DEFAULT_PRESET }) {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
     this.tier = isTier(tier) ? tier : 'ultra';
     this.cfg = QUALITY[this.tier];
     this.reducedMotion = reducedMotion;
-    this.sunDir = SUN_DIRECTION.clone();
     this.listeners = new Set();
+    this.governor = autoTier ? new TierGovernor() : null;
+    this.preset = TIME_PRESETS[preset] ? preset : DEFAULT_PRESET;
+    const P = TIME_PRESETS[this.preset];
 
     camera.layers.enable(LAYER_OVERLAY);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.AgXToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = Math.pow(2, P.exposure);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     if ('transmissionResolutionScale' in renderer) renderer.transmissionResolutionScale = 0.5;
 
-    // Fog: dense toward the cloud sea, a warm lobe toward the sun (installed before materials compile).
-    installHeightFog({ baseY: cloudLevel, falloff: 0.085, density: 0.0075, sunDir: this.sunDir, sunTint: [0.22, 0.14, 0.05], sunPower: 5 });
-    scene.fog = new THREE.Fog(HAZE_COLOR, 70, 340);
-
+    // Physically based sky: the LUT pass derives the sun colour and the fog colours (sky.js).
     this.sky = new SkyDome();
+    const atm = this.sky.setAtmosphere(renderer, P);
+    this.atm = atm;
+    this.sunDir = atm.sun.clone();
     scene.add(this.sky.mesh);
-    scene.environment = this.sky.bakeEnvironment(renderer);
-    scene.environmentIntensity = 0.9;
 
-    this.hemi = new THREE.HemisphereLight(0xc9d6de, 0x4d5a52, 0.45);
-    this.sun = new THREE.DirectionalLight(SUN_COLOR, 2.6);
+    // Fog: dense toward the cloud sea, warm gold lobe toward the sun, cool blue-grey base (installed before materials compile).
+    installHeightFog({ baseY: cloudLevel, falloff: P.fog.falloff, density: P.fog.density * 0.4, sunDir: this.sunDir, sunTint: atm.fogSunTint.toArray(), sunPower: P.fog.sunPower });
+    scene.fog = new THREE.Fog(atm.fogColor.clone(), 80, 380);
+
+    // IBL: sky-dome PMREM right away; the Blender-baked HDR (art/env/bake_env.py) replaces it on tiers that allow it.
+    this.envFallback = this.sky.bakeEnvironment(renderer);
+    scene.environment = this.envFallback.texture;
+    scene.environmentIntensity = P.envIntensity;
+    this.envHdr = null;
+    this.loadEnvHdr(P);
+
+    // Low cool fill so shadow sides stay blue-grey (the IBL carries most of the ambient).
+    this.hemi = new THREE.HemisphereLight(atm.zenith.clone(), 0x3a4048, 0.18);
+    this.sun = new THREE.DirectionalLight(atm.sunColor.clone(), atm.sunIntensity);
     this.sun.castShadow = true;
     this.sun.shadow.bias = -0.00025; this.sun.shadow.normalBias = 0.04;
     this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 320;
     scene.add(this.hemi, this.sun, this.sun.target);
 
     this.clouds = new CloudSea({ level: cloudLevel });
+    for (const l of this.clouds.layers) l.material.uniforms.uLit.value.multiply(atm.sunColor); // sun-tinted cloud tops
     scene.add(this.clouds.group);
 
     this.foliage = new Foliage({ patches: grassPatches, blades: this.cfg.grassBlades, flowers: this.cfg.flowers, fadeDistance: this.cfg.grassFadeDistance });
@@ -70,6 +85,19 @@ export class LookDev {
     this.post = new PostStack({ renderer, scene, camera });
     this.fader = new OcclusionFader({ camera });
     this.applyTier();
+  }
+
+  /** Loads the baked golden-hour HDR and prefilters it into a PMREM at runtime (tiers with envHdr). */
+  loadEnvHdr(P) {
+    if (!P.envUrl || !this.cfg.envHdr || this.envHdr || this.envLoading) return;
+    this.envLoading = true;
+    const base = import.meta.env?.BASE_URL || '/';
+    new RGBELoader().load(base + P.envUrl, (tex) => {
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      this.envHdr = pmrem.fromEquirectangular(tex);
+      pmrem.dispose(); tex.dispose();
+      if (this.cfg.envHdr) this.scene.environment = this.envHdr.texture;
+    }, undefined, () => { /* keep the dome PMREM */ });
   }
 
   /** Settings hook: 'ultra' | 'high' | 'low'. Rebuilds the post stack, shadows, foliage density. */
@@ -98,6 +126,11 @@ export class LookDev {
     for (const l of this.lanternLights) l.visible = cfg.pointLights;
     applyMaterialQuality(cfg);
     this.post.configure(cfg);
+    if (this.envFallback) {
+      if (cfg.envHdr && this.envHdr) this.scene.environment = this.envHdr.texture;
+      else if (!cfg.envHdr) this.scene.environment = this.envFallback.texture;
+      else this.loadEnvHdr(TIME_PRESETS[this.preset]);
+    }
   }
 
   setSize(w, h) {
@@ -130,6 +163,7 @@ export class LookDev {
 
   /** @param {number} dt seconds; @param {THREE.Vector3} focus the player's chest; @param {number} camDist camera distance */
   update(dt, focus, camDist) {
+    if (this.governor) { const next = this.governor.sample(dt * 1000, this.tier); if (next) this.setQuality(next); }
     const motion = this.reducedMotion ? 0 : dt;
     this.sky.follow(this.camera);
     this.sky.setTime(this.sky.material.uniforms.uTime.value + motion);

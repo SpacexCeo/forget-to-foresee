@@ -41,7 +41,7 @@ const { scene, world, streamer, interactables, player, avatar, marker, shells } 
 const lookdev = new LookDev({
   renderer, scene, camera,
   cloudLevel: world3d.cloudLevel, grassPatches: world3d.grassPatches, lanterns: world3d.lanterns,
-  tier: params.get('tier') || detectedTier,
+  tier: params.get('tier') || detectedTier, autoTier: !params.has('tier'), preset: params.get('tod') || undefined,
   reducedMotion: params.get('motion') === 'reduce' || systemReduced,
 });
 // Shells between the camera and Iris dither down instead of hiding her (visual only).
