@@ -1,0 +1,935 @@
+<title>Forget to Foresee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Forum&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: field desk in three columns — world & contract / voice, chronicle, dictionary / memory & market. Stacks on phones. */
+:root{
+  --bg:#E5E8E3; --panel:#F2F3EF; --panel2:#E8EBE6; --ink:#1B2224; --muted:#59635F; --line:#C5CBC5;
+  --accent:#9A5E22; --accent-ink:#FFFFFF; --good:#2B7450; --bad:#AD4035; --warn:#9A7210;
+  --glyph:#1E292C; --wash:rgba(30,41,44,.055);
+  --f-display:'Forum',Georgia,'Times New Roman',serif;
+  --f-body:'Golos Text',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1315; --panel:#161B1E; --panel2:#1C2226; --ink:#E1E5E1; --muted:#8B9692; --line:#2A3236;
+  --accent:#D39550; --accent-ink:#1A1206; --good:#5AAF86; --bad:#E06F64; --warn:#D7B049;
+  --glyph:#DCE3DE; --wash:rgba(220,227,222,.05); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1315; --panel:#161B1E; --panel2:#1C2226; --ink:#E1E5E1; --muted:#8B9692; --line:#2A3236;
+  --accent:#D39550; --accent-ink:#1A1206; --good:#5AAF86; --bad:#E06F64; --warn:#D7B049;
+  --glyph:#DCE3DE; --wash:rgba(220,227,222,.05); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body)}
+button{font:inherit;color:inherit}
+#app{padding-inline:16px;padding-block:0 96px;max-width:1500px;margin:0 auto}
+h2{font:400 22px/1.1 var(--f-display);margin:0 0 4px;letter-spacing:.01em;text-wrap:balance}
+.hint{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+.mono{font-family:var(--f-mono);font-size:11.5px}
+.lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding-block:12px;background:var(--bg);border-bottom:1px solid var(--line);margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--glyph)}
+.brand b{font:400 26px/1 var(--f-display);letter-spacing:.06em;display:block}
+.brand span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.stats{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:flex-end;flex:1}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat b{font:500 18px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.stat b i{font-style:normal;color:var(--muted);font-size:13px}
+.pips{display:flex;gap:4px;padding-top:3px}
+.pip{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--accent)}
+.pip.on{background:var(--accent)}
+.stat.h{min-width:180px}
+.hrow{display:flex;align-items:center;gap:8px}
+.hbar{flex:1;height:8px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);overflow:hidden;min-width:110px}
+.hbar i{display:block;height:100%;background:var(--warn);transition:width .4s}
+.hbar i.hot{background:var(--bad)}
+.hdr-btns{display:flex;gap:8px}
+
+/* grid */
+.grid{display:grid;grid-template-columns:minmax(0,310px) minmax(0,1fr) minmax(0,350px);gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media (max-width:1180px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.col.voice{grid-column:1/-1;order:-1}}
+@media (max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.panel.vote{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:7px;padding:6px 11px;cursor:pointer;font-size:13px;line-height:1.2}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{background:transparent}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btn.bad{border-color:var(--bad);color:var(--bad);background:transparent}
+select,input[type=text]{font:inherit;font-size:13px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 8px;max-width:100%}
+
+/* glyph */
+.glyph{color:var(--glyph);display:block;flex:none}
+.glyph .wash{fill:var(--wash)}
+
+/* world graph */
+.graph{width:100%;height:auto;display:block}
+.edge{stroke:var(--line)}
+.edge.good{stroke:var(--good)}
+.edge.bad{stroke:var(--bad)}
+.edge.broken{stroke:var(--bad);stroke-dasharray:3 5;opacity:.55}
+.node circle.n{fill:var(--panel);stroke:var(--ink);stroke-width:1.3}
+.node.me circle.n{stroke:var(--accent);stroke-width:3}
+.node.iso circle.n{stroke:var(--bad);stroke-dasharray:4 3}
+.node text{fill:var(--ink);text-anchor:middle;font-family:var(--f-body)}
+.node .nm{font-size:10.5px;font-weight:600}
+.node .sv{font-size:9.5px;fill:var(--muted);font-family:var(--f-mono)}
+.fm-held{fill:none;stroke:var(--accent);stroke-width:1.6}
+.fm-scroll{fill:var(--accent)}
+.fm-dark{fill:var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:4px;background:var(--good)}
+.legend i.b{background:var(--bad)} .legend i.d{background:none;border-top:2px dashed var(--bad)}
+.broken-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.brow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px}
+.brow small{display:block;color:var(--muted);font-size:11px}
+
+/* scroll */
+.scroll{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:8px;border:1px dashed var(--line);font-size:11px;color:var(--muted);text-align:center}
+.slot.in{border-style:solid;background:var(--panel2);color:var(--ink)}
+.slot.dark{opacity:.55}
+.slot .q{width:54px;height:54px;border-radius:50%;border:1.5px dashed var(--line);display:grid;place-items:center;font:400 22px var(--f-display);color:var(--muted)}
+
+/* contract */
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;font-size:12px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-family:var(--f-mono);font-size:11.5px;overflow-wrap:anywhere}
+.proofs{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.proofs li{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.proofs li b{color:var(--good);font-weight:500}
+
+/* prophecies */
+.anc-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:var(--panel2);border-radius:8px;margin-bottom:10px;font-size:12.5px}
+.props{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.prop{display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);min-width:0}
+.prop.vision{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--panel))}
+.prop-body{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.prop-meta{font-size:11px;color:var(--muted)}
+.prop-meta b{color:var(--accent);font-weight:600}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.chip{font-size:11.5px;padding:3px 6px;border-radius:5px;background:var(--panel2);border-left:3px solid var(--line);min-width:0}
+.chip small{display:block;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.chip.hi{border-left-color:var(--good)} .chip.mid{border-left-color:var(--warn)} .chip.lo{border-left-color:var(--bad)}
+.myanc{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-size:11.5px;padding:3px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.empty{color:var(--muted);font-size:12.5px;padding:8px 0}
+
+/* chronicle */
+.chron{display:flex;flex-direction:column;gap:6px}
+.crow{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.crow .ok{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:4px;background:var(--panel2)}
+.crow .ok.full{color:var(--good)} .crow .ok.part{color:var(--warn)}
+
+/* dictionary */
+.rule{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:12.5px}
+.dict-wrap{overflow-x:auto}
+.dict{display:grid;grid-template-columns:86px repeat(4,minmax(78px,1fr));gap:4px;min-width:420px}
+.dh{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;justify-content:center}
+.dh.row{justify-content:flex-start;text-transform:uppercase;letter-spacing:.05em;font-size:10px}
+.cell{border:1px solid var(--line);border-radius:6px;padding:5px 6px;background:var(--panel2);cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;min-height:46px}
+.cell.sel{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.cell .m{font-size:12px;font-weight:500;display:flex;justify-content:space-between;gap:4px}
+.cell .m em{font-style:normal;font-size:10px;color:var(--accent)}
+.cell .bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.cell .bar i{display:block;height:100%;background:var(--warn)}
+.cell.cert .bar i{background:var(--good)}
+.ask{margin-top:10px;padding:10px;border-radius:8px;background:var(--panel2);display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12.5px}
+
+/* memory */
+.frag{display:flex;gap:12px;align-items:center}
+.frag p{margin:0 0 6px;font-size:12.5px}
+.keyflag{color:var(--accent);font-weight:600}
+.mems{display:flex;flex-direction:column;gap:8px}
+.mem{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2);display:flex;flex-direction:column;gap:5px}
+.mem-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.mem-t{font-size:13px;font-weight:500}
+.w{display:flex;gap:2px;flex:none;padding-top:4px}
+.w i{width:7px;height:7px;transform:rotate(45deg);background:var(--accent);display:block}
+.mem-e{font-size:11.5px;color:var(--muted)}
+.mem.k-betrayal{border-left:3px solid var(--bad)} .mem.k-promise{border-left:3px solid var(--warn)} .mem.k-first{border-left:3px solid var(--accent)}
+.confirm{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;padding-top:4px;border-top:1px dashed var(--line)}
+.keybox{margin-top:10px;padding:10px;border-radius:8px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel));font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+.phrase{font:400 18px/1.2 var(--f-display)}
+
+.offers,.shards{display:flex;flex-direction:column;gap:8px}
+.offer,.shard{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+.offer b,.shard b{font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.shard .meta{font-size:11px;color:var(--muted)}
+
+.feed{max-height:320px;overflow:auto;display:flex;flex-direction:column;gap:3px;font-size:12px}
+.feed div{padding:2px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 50%,transparent)}
+.feed .tick{color:var(--muted);font-family:var(--f-mono);font-size:10.5px;border:0;padding-top:6px}
+.feed .good{color:var(--good)} .feed .bad{color:var(--bad)} .feed .key{color:var(--accent);font-weight:600} .feed .muted{color:var(--muted)}
+
+/* bottom bar */
+.bottom{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.bottom-in{max-width:1500px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.bottom p{margin:0;font-size:12.5px;color:var(--muted)}
+.btn.big{padding:10px 18px;font-size:14px}
+
+/* overlay */
+.ov{position:fixed;inset:0;z-index:10;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:max(24px,env(safe-area-inset-top,0px)) 16px 24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;max-width:640px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.card h1{font:400 40px/1 var(--f-display);margin:0 0 6px;letter-spacing:.03em;text-wrap:balance}
+.card .lead{font-size:15px;margin:0 0 16px;max-width:60ch}
+.card ol{padding-left:20px;margin:0 0 16px;display:flex;flex-direction:column;gap:7px;font-size:13.5px}
+.keyin{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:9px;background:var(--panel2);margin-bottom:16px}
+.keyin input{width:100%}
+.intro-glyphs{display:flex;gap:10px;margin:2px 0 14px}
+.outcome h1{font-size:34px}
+.rank{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 14px}
+.rank td{padding:4px 6px;border-bottom:1px solid var(--line)}
+.rank td.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.rank tr.me td{font-weight:600;color:var(--accent)}
+.nft{border:1px solid var(--accent);border-radius:12px;padding:14px;margin:14px 0;display:flex;gap:14px;background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.nft ul{margin:4px 0;padding-left:16px;font-size:12px}
+.nft h3{margin:0;font:400 20px var(--f-display)}
+.epi{padding:12px;border-radius:9px;background:var(--panel2);font-size:13px;margin-bottom:10px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:560px){.card{padding:18px}.card h1{font-size:32px}.nft{flex-direction:column}}
+</style>
+
+<div id="app"></div>
+
+<script>
+/* ===== constants ===== */
+const TICKS=17, DEADLINE=16, CRISIS=13;
+const NAMES=['Ирис','Соль','Пепел','Мох','Янтарь','Иней'];
+const PERS=[null,
+  {h:.35,g:.6,p:.3,sk:.5,d:'торгует словами, не всегда честно'},
+  {h:.8,g:.3,p:.85,sk:.4,d:'осторожен, везде видит угрозу'},
+  {h:.92,g:.2,p:.2,sk:.35,d:'помогает и верит на слово'},
+  {h:.65,g:.9,p:.3,sk:.45,d:'у всего есть цена'},
+  {h:.88,g:.4,p:.4,sk:.8,d:'учёный, быстрее всех учит язык'}];
+const SLOTS=['Место','Действие','Сила','Срок'];
+const MEAN=[['Раковина I','Раковина II','Раковина III','Раковина IV'],['Дар','Буря','Тишина','Зов'],['малая · 10','средняя · 20','большая · 40','великая · 80'],['через 1 тик','через 2','через 3','через 4']];
+const SHORT=[['I','II','III','IV'],['Дар','Буря','Тишина','Зов'],['10','20','40','80'],['+1','+2','+3','+4']];
+const FORMS=['дуга','шип','петля','капля'];
+const PEPEL_PHRASES=['вода помнит камень','мы пришли раньше времени','пепел тоже был деревом','молчание — тоже ответ'];
+const DEFAULT_PHRASE='я помню то, чего ещё не было';
+
+/* ===== sha256 (sync) + merkle ===== */
+const primes=(n)=>{const r=[];let x=2;while(r.length<n){let p=true;for(let i=2;i*i<=x;i++)if(x%i===0){p=false;break}if(p)r.push(x);x++}return r};
+const SHA_K=primes(64).map(p=>(Math.cbrt(p)%1)*4294967296|0);
+const SHA_H0=primes(8).map(p=>(Math.sqrt(p)%1)*4294967296|0);
+function sha256(str){
+  const msg=new TextEncoder().encode(str),l=msg.length,padLen=((l+9+63)>>6)<<6;
+  const buf=new Uint8Array(padLen);buf.set(msg);buf[l]=0x80;
+  const dv=new DataView(buf.buffer);dv.setUint32(padLen-4,(l*8)>>>0);dv.setUint32(padLen-8,Math.floor(l*8/4294967296));
+  const H=SHA_H0.slice(),W=new Int32Array(64);
+  for(let o=0;o<padLen;o+=64){
+    for(let i=0;i<16;i++)W[i]=dv.getInt32(o+i*4);
+    for(let i=16;i<64;i++){const a=W[i-15],b=W[i-2];
+      const s0=((a>>>7)|(a<<25))^((a>>>18)|(a<<14))^(a>>>3);
+      const s1=((b>>>17)|(b<<15))^((b>>>19)|(b<<13))^(b>>>10);
+      W[i]=(W[i-16]+s0+W[i-7]+s1)|0}
+    let [a,b,c,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){
+      const S1=((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7));
+      const t1=(h+S1+((e&f)^(~e&g))+SHA_K[i]+W[i])|0;
+      const S0=((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10));
+      const t2=(S0+((a&b)^(a&c)^(b&c)))|0;
+      h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0}
+    H[0]=(H[0]+a)|0;H[1]=(H[1]+b)|0;H[2]=(H[2]+c)|0;H[3]=(H[3]+d)|0;H[4]=(H[4]+e)|0;H[5]=(H[5]+f)|0;H[6]=(H[6]+g)|0;H[7]=(H[7]+h)|0}
+  return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+}
+function merkle(leaves){const lv=[leaves];while(lv[lv.length-1].length>1){const L=lv[lv.length-1],N=[];for(let i=0;i<L.length;i+=2)N.push(sha256(L[i]+(L[i+1]??L[i])));lv.push(N)}return lv}
+function proofFor(lv,idx){const p=[];for(let l=0;l<lv.length-1;l++){const L=lv[l],sib=idx^1;p.push({h:L[sib]??L[idx],left:sib<idx});idx>>=1}return p}
+function verifyProof(leaf,proof,root){let h=leaf;for(const s of proof)h=s.left?sha256(s.h+h):sha256(h+s.h);return h===root}
+
+/* ===== state & rng ===== */
+let S=null;
+function rnd(){S.rs=(S.rs+0x6D2B79F5)|0;let t=S.rs;t=Math.imul(t^t>>>15,1|t);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const ri=n=>Math.floor(rnd()*n);
+function pickW(ws){const s=ws.reduce((a,b)=>a+b,0);let r=rnd()*s;for(let i=0;i<ws.length;i++){r-=ws[i];if(r<0)return i}return ws.length-1}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+const hex=n=>{let s='';for(let i=0;i<n;i++)s+=ri(16).toString(16);return s};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const short=h=>'0x'+h.slice(0,10)+'…';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function encodeForms(m,dots){
+  const forms=[0,0,0,0];
+  for(let s=0;s<4;s++){const f=S.perm[s].indexOf(m[s]);forms[(dots+s)%4]=f}
+  return forms;
+}
+
+function newSeason(seed){
+  S={seed,rs:seed,tick:1,phase:'intro',uid:0,H:10,ap:3,wild:false,rule:'unknown',
+    silk:[60,60,60,60,60,60],mast:[0,.12,.1,.08,.1,.18],T:[],broken:[],isolated:[false,false,false,false,false,false],
+    mem:[],forgot:[],shards:[],offers:[],feed:[],anchors:[],chron:[],pins:{},no:{},bought:[],visions:[],proofs:[],
+    aiSeen:{},aiPact:{},pPromise:null,escrow:0,claims:[],rumor:false,pepelKeyKnown:false,firstBuyer:null,
+    ui:{sel:null,askM:0,ap:0,at:2,forget:null,keyMode:false,rules:false},outcome:null,heir:null,votes:null};
+  for(let i=0;i<6;i++){S.T.push([50,50,50,50,50,50])}
+  S.perm=[0,1,2,3].map(()=>shuffle([0,1,2,3]));
+  S.events=[];
+  for(let T=3;T<=TICKS;T++){
+    const action=T===3?0:pickW([40,24,16,20]);
+    const power=T===3?1:pickW([34,36,22,8]);
+    const delay=1+ri(Math.min(4,T-1));
+    const e={t:T,place:ri(4),action,power,delay,pub:T-delay,dots:ri(4),salt:hex(12)};
+    e.forms=encodeForms([e.place,e.action,e.power,e.delay-1],e.dots);
+    e.leaf=sha256(JSON.stringify({t:e.t,place:e.place,action:e.action,power:e.power,delay:e.delay,dots:e.dots})+e.salt);
+    S.events.push(e);
+  }
+  S.levels=merkle(S.events.map(e=>e.leaf));
+  S.root=S.levels[S.levels.length-1][0];
+  S.seedCommit=sha256('seed:'+seed);
+  S.truthGift=rnd()<.6;
+  S.keyHolder=rnd()<.6?2:4;
+  S.frag=NAMES.map((_,i)=>{
+    const m=[ri(4),i===S.keyHolder?(S.truthGift?0:1):2+ri(2),ri(4),ri(4)],dots=ri(4);
+    return {owner:i,m,dots,forms:encodeForms(m,dots),key:i===S.keyHolder,st:'held',at:null};
+  });
+  S.V=[[30,40,50,60][ri(4)],20+ri(4)*10,30+ri(3)*10,20+ri(3)*10,80,20+ri(3)*10];
+  S.tV=[11+ri(5),17,18,18,15,13+ri(5)];
+  const pp=PEPEL_PHRASES[ri(PEPEL_PHRASES.length)],ps=hex(8);
+  S.pepelKey={phrase:pp,salt:ps,hash:sha256(pp+ps)};
+  S.pKey=null;
+  addMem({kind:'first',w:4,text:'Первое слово: Ключ владельца, который знает только Ирис'});
+  addMem({kind:'call',w:2,text:'Зов Раковин в ночь прибытия'});
+  addMem({kind:'gift',about:3,w:1,text:'Мох поделился шёлком в первую ночь'});
+  S.T[0][3]=65;S.T[3][0]=60;
+  startTick();
+}
+
+/* ===== helpers ===== */
+function log(text,cls=''){S.feed.unshift({t:S.tick,text,cls});if(S.feed.length>90)S.feed.length=90}
+function addMem(m){m.id=++S.uid;S.mem.push(m);return m}
+const ek=(i,j)=>Math.min(i,j)+'-'+Math.max(i,j);
+const isBroken=(i,j)=>S.broken.includes(ek(i,j));
+function addH(n){S.H=Math.max(0,Math.round(S.H+n))}
+function breakEdge(i,j){if(isBroken(i,j))return;S.broken.push(ek(i,j));addH(10)}
+function restoreEdge(i,j){if(!isBroken(i,j))return;S.broken=S.broken.filter(k=>k!==ek(i,j));addH(-10)}
+function hasBetrayal(x){return S.mem.some(m=>m.kind==='betrayal'&&m.about===x)}
+function trustAdd(i,j,d){S.T[i][j]=clamp(S.T[i][j]+d,0,100);if(i===0&&hasBetrayal(j))S.T[0][j]=Math.min(S.T[0][j],15)}
+const maxAP=()=>S.wild?2:3;
+const avgTrust=i=>{let s=0;for(let j=0;j<6;j++)if(j!==i)s+=S.T[i][j];return s/5};
+
+/* ===== dictionary ===== */
+function dictVotes(){
+  const V=[0,1,2,3].map(()=>[0,1,2,3].map(()=>[0,0,0,0]));
+  for(const c of S.chron){
+    const rs=S.rule==='dots'?[[c.dots,1]]:S.rule==='top'?[[0,1]]:[[0,.25],[1,.25],[2,.25],[3,.25]];
+    for(const [r,w] of rs)for(let s=0;s<4;s++)V[s][c.forms[(r+s)%4]][c.m[s]]+=w;
+  }
+  return V;
+}
+function guess(s,f,V){
+  const pin=S.pins[s+'_'+f];
+  if(pin)return {m:pin.m,conf:1,src:pin.src,cert:true};
+  const taken=new Set();
+  for(let ff=0;ff<4;ff++){const p=S.pins[s+'_'+ff];if(p&&ff!==f)taken.add(p.m)}
+  const no=S.no[s+'_'+f]||[];
+  const b=S.bought.find(x=>x.s===s&&x.f===f&&!x.revealed);
+  const sc=[0,1,2,3].map(m=>(taken.has(m)||no.includes(m))?-1:V[s][f][m]+.35+(b&&b.m===m?1.6:0));
+  let best=0;for(let m=1;m<4;m++)if(sc[m]>sc[best])best=m;
+  const tot=sc.filter(x=>x>0).reduce((a,x)=>a+x,0);
+  return {m:best,conf:tot?sc[best]/tot:0,src:b&&b.m===best?NAMES[b.from]:null,cert:false};
+}
+function readGlyph(forms,dots,V){
+  V=V||dictVotes();
+  const rs=S.rule==='dots'?[dots]:S.rule==='top'?[0]:[0,1,2,3];
+  let best=null;
+  for(const r of rs){const sl=[0,1,2,3].map(s=>guess(s,forms[(r+s)%4],V));const tot=sl.reduce((a,x)=>a+x.conf,0);if(!best||tot>best.tot)best={r,sl,tot}}
+  return best;
+}
+function confidentCells(){const V=dictVotes();let n=0;for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(guess(s,f,V).conf>=.65)n++;return n}
+function trueMastery(){const V=dictVotes();let n=0;for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(guess(s,f,V).m===S.perm[s][f])n++;return n/16}
+function checkBought(){
+  const V=dictVotes();
+  for(const b of S.bought){
+    if(b.revealed||b.honest)continue;
+    const tm=S.perm[b.s][b.f];
+    if(V[b.s][b.f][tm]>=1.5&&V[b.s][b.f][tm]>V[b.s][b.f][b.m]+.5)revealLie(b);
+  }
+}
+function revealLie(b){
+  b.revealed=true;
+  addMem({kind:'betrayal',about:b.from,w:3,text:`${NAMES[b.from]} продал ложное слово («${FORMS[b.f]}» в слоте «${SLOTS[b.s]}»)`});
+  trustAdd(0,b.from,-40);addH(6);breakEdge(0,b.from);
+  log(`Ирис поняла: ${NAMES[b.from]} продал ей ложное слово. Она больше не разговаривает с ${NAMES[b.from]}.`,'bad');
+}
+
+/* ===== tick flow ===== */
+function startTick(){
+  const t=S.tick;
+  S.ap=maxAP();
+  for(let i=0;i<6;i++)S.silk[i]+=3;
+  log(`— Тик ${t} —`,'tick');
+  resolveShards();
+  // debts
+  for(const m of S.mem.filter(m=>m.kind==='debt'&&m.data.due===t)){
+    const X=m.about;S.mem=S.mem.filter(x=>x!==m);
+    if(rnd()<PERS[X].h){const a=m.data.amount;S.silk[X]-=a;S.silk[0]+=a;trustAdd(0,X,10);log(`${NAMES[X]} вернул долг: +${a} шёлка.`,'good')}
+    else{addMem({kind:'betrayal',about:X,w:3,text:`${NAMES[X]} не вернул долг ${m.data.amount}`});trustAdd(0,X,-40);addH(6);breakEdge(0,X);log(`${NAMES[X]} не вернул долг. Ирис порвала с ним.`,'bad')}
+  }
+  for(const c of S.claims.filter(c=>c.due===t)){if(rnd()<PERS[c.debtor].h){S.silk[c.debtor]-=c.amount;S.silk[c.holder]+=c.amount;log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`,'muted')}}
+  S.claims=S.claims.filter(c=>c.due!==t);
+  // player promise
+  const pm=S.mem.find(m=>m.kind==='promise');
+  if(pm&&pm.data.by===t&&S.frag[0].st==='held')contribute(0,`Ирис держит слово перед ${NAMES[pm.about]} и вносит фрагмент.`);
+  // AI pacts
+  for(const [k,by] of Object.entries(S.aiPact)){
+    const i=+k;if(by!==t)continue;delete S.aiPact[i];
+    if(S.frag[i].st!=='held')continue;
+    if(!S.isolated[i]&&rnd()<PERS[i].h)contribute(i,`${NAMES[i]} держит обещание и вносит фрагмент.`);
+    else{addMem({kind:'betrayal',about:i,w:3,text:`${NAMES[i]} не внёс фрагмент, как обещал`});trustAdd(0,i,-40);addH(6);breakEdge(0,i);log(`${NAMES[i]} нарушил обещание.`,'bad')}
+  }
+  if(S.escrow&&S.frag[4].st==='held')contribute(4,'Янтарь вносит фрагмент: эскроу сработал.');
+  // voluntary AI contributions
+  if(t<=DEADLINE)for(let i=1;i<6;i++){
+    if(S.frag[i].st!=='held'||S.isolated[i])continue;
+    if(PERS[i].g>.7&&S.tV[i]<=DEADLINE)continue;
+    let c=.05+Math.max(0,avgTrust(i)-45)/150+(PERS[i].h-.5)*.2+(t>=11?.15:0)+(t>=15?.3:0);
+    c*=1-PERS[i].p*.7;
+    if(rnd()<c)contribute(i,`${NAMES[i]} вносит фрагмент в Свиток.`);
+  }
+  // personal prizes
+  for(let i=0;i<6;i++)if(S.frag[i].st==='held'&&S.tV[i]===t){
+    S.frag[i].st='dark';S.silk[i]+=S.V[i];
+    log(i===0?`Вы удержали фрагмент и получили ${S.V[i]} шёлка. Ваша часть послания погасла.`:`${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}). Его часть послания погасла.`,i===0?'good':'bad');
+    if(i!==0)for(let j=1;j<6;j++)if(j!==i)S.T[j][i]=clamp(S.T[j][i]-10,0,100);
+  }
+  if(t>DEADLINE)for(let i=0;i<6;i++)if(S.frag[i].st==='held'){S.frag[i].st='dark';log(`${NAMES[i]} не успел внести фрагмент.`,'muted')}
+  if(t===CRISIS)crisis();
+  // social drift
+  if(t>=4&&rnd()<.22){
+    const ais=[1,2,3,4,5],b=ais[pickW(ais.map(i=>1-PERS[i].h))];
+    const others=ais.filter(i=>i!==b&&!isBroken(i,b));
+    if(others.length){const v=others[ri(others.length)],amt=8+ri(10);
+      S.silk[v]-=amt;S.silk[b]+=amt;S.T[v][b]=clamp(S.T[v][b]-35,0,100);addH(6);
+      log(`${NAMES[b]} обманул ${NAMES[v]} на ${amt} шёлка.`,'bad');
+      if(S.T[v][b]<20){breakEdge(v,b);log(`${NAMES[v]} порвал с ${NAMES[b]}.`,'bad')}}
+  }
+  for(let i=1;i<6;i++)for(let j=0;j<6;j++)if(i!==j){const d=50-S.T[i][j];S.T[i][j]+=Math.sign(d)*Math.min(2,Math.abs(d))}
+  for(const k of [...S.broken]){const [i,j]=k.split('-').map(Number);if(i===0)continue;
+    if(!S.isolated[i]&&!S.isolated[j]&&S.T[i][j]>=30&&S.T[j][i]>=30&&rnd()<.2){restoreEdge(i,j);log(`${NAMES[i]} и ${NAMES[j]} снова разговаривают.`,'muted')}}
+  for(let i=1;i<6;i++)if(S.T[i][0]<15&&!isBroken(i,0)){breakEdge(i,0);log(`${NAMES[i]} больше не разговаривает с Ирис.`,'bad')}
+  // AI learning & anchors
+  for(let i=1;i<6;i++)S.mast[i]=Math.min(.95,S.mast[i]+PERS[i].sk*.045+.01);
+  const pubs=S.events.filter(e=>e.pub===t);
+  if(pubs.length)log(`Глас Гостей: ${pubs.length===1?'новый знак':pubs.length+' новых знака'}.`);
+  aiAnchors();
+  genOffers();
+  if(t===7||t===11)inejShard();
+  if(t===TICKS)S.phase=S.phase==='intro'?'intro':'vote';
+}
+
+function crisis(){
+  addH(15);
+  log('Глас: двусмысленный знак над всеми Раковинами. Пепел прочёл в нём «Оружие».','bad');
+  const cand=[0,1,3,4,5].filter(j=>S.T[2][j]<70&&!isBroken(2,j)).sort((a,b)=>S.T[2][a]-S.T[2][b]).slice(0,2);
+  cand.forEach(j=>{breakEdge(2,j);log(`Пепел рвёт связь с ${NAMES[j]}.`,'bad')});
+  S.isolated[2]=true;S.rumor=true;
+  log('Соль шепчет всем: «Это оружие. Я видел».','muted');
+}
+
+function endTick(){
+  if(S.phase!=='play')return;
+  resolveEvent(S.tick);
+  S.offers=[];S.ui.forget=null;S.ui.keyMode=false;
+  addH(-2);
+  if(S.H>=100)return finish('gone');
+  S.tick++;
+  startTick();
+  if(S.H>=100)return finish('gone');
+  S.ui.at=Math.max(S.ui.at,S.tick);
+}
+
+function resolveEvent(t){
+  const idx=S.events.findIndex(e=>e.t===t);if(idx<0)return;
+  const e=S.events[idx],truth=[e.place,e.action,e.power,e.delay-1];
+  const rd=readGlyph(e.forms,e.dots);
+  const ok=truth.filter((v,s)=>rd.sl[s].m===v).length;
+  const verified=verifyProof(e.leaf,proofFor(S.levels,idx),S.root);
+  const here=S.anchors.filter(a=>a.t===t),hit=here.filter(a=>a.place===e.place);
+  here.filter(a=>a.place!==e.place).forEach(a=>{S.silk[a.c]+=a.stake});
+  const pot=[10,20,40,80][e.power];
+  if(e.action===0){const W=hit.reduce((s,a)=>s+(t-a.at+1),0);
+    hit.forEach(a=>{const g=Math.round(pot*(t-a.at+1)/W);S.silk[a.c]+=a.stake+g;if(a.c===0)log(`Дар на Раковине ${SHORT[0][e.place]}: вам ${g} шёлка и залог.`,'good')});
+    if(hit.length&&!hit.some(a=>a.c===0))log(`Дар забрали: ${[...new Set(hit.map(a=>NAMES[a.c]))].join(', ')}.`,'muted')}
+  else if(e.action===1){hit.forEach(a=>{if(a.c===0)log(`Буря на Раковине ${SHORT[0][e.place]} сожгла ваш залог.`,'bad')})}
+  else hit.forEach(a=>{S.silk[a.c]+=a.stake;if(e.action===3){if(a.c===0){addMem({kind:'call',w:2,text:`Зов Раковины ${SHORT[0][e.place]} на тике ${t}`});log('Зов: у Ирис появилось новое воспоминание.','good')}else S.mast[a.c]=Math.min(.95,S.mast[a.c]+.04)}});
+  S.anchors=S.anchors.filter(a=>a.t!==t);
+  S.chron.push({t,forms:e.forms,dots:e.dots,m:truth,ok,idx});
+  S.proofs.unshift({t,idx,leaf:e.leaf,ok:verified});if(S.proofs.length>5)S.proofs.length=5;
+  log(`Тик ${t} · Раковина ${SHORT[0][e.place]}: ${MEAN[1][e.action]}, сила ${pot}. Лист №${idx} сверен с корнем ${verified?'✓':'✗'}`);
+  checkBought();
+}
+
+function aiAnchors(){
+  for(const e of S.events){
+    if(e.pub>S.tick||e.t<S.tick)continue;
+    for(let i=1;i<6;i++){
+      const k=i+'_'+e.t;if(S.aiSeen[k])continue;S.aiSeen[k]=1;
+      const p=.3+.7*S.mast[i],tr=[e.place,e.action,e.power,e.delay-1],rd=s=>rnd()<p?tr[s]:ri(4);
+      if(rd(1)!==0)continue;
+      const place=rd(0),tt=e.pub+rd(3)+1;
+      if(tt<S.tick||tt>TICKS||S.silk[i]<10||rnd()>.7)continue;
+      S.silk[i]-=10;S.anchors.push({c:i,place,t:tt,at:S.tick,stake:10});
+    }
+  }
+}
+
+function contribute(i,why){
+  const f=S.frag[i];if(f.st!=='held')return;
+  f.st='scroll';f.at=S.tick;log(why||`${NAMES[i]} вносит фрагмент.`,i===0?'good':'');
+  for(let j=1;j<6;j++)if(j!==i)S.T[j][i]=clamp(S.T[j][i]+5,0,100);
+  if(i===0){const pm=S.mem.find(m=>m.kind==='promise');if(pm){S.mem=S.mem.filter(x=>x!==pm);trustAdd(pm.about,0,15);log(`${NAMES[pm.about]}: обещание выполнено.`,'good')}}
+  if(i===4&&S.escrow){S.silk[4]+=S.escrow;log(`Эскроу: ${S.escrow} шёлка ушли Янтарю.`,'muted');S.escrow=0}
+}
+
+/* ===== offers ===== */
+function offSell(from){
+  const c=[];for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(!S.pins[s+'_'+f]&&!S.bought.some(b=>b.s===s&&b.f===f))c.push([s,f]);
+  if(!c.length)return null;
+  const [s,f]=c[ri(c.length)],tm=S.perm[s][f],honest=rnd()<PERS[from].h;
+  let m=tm;if(!honest){do{m=ri(4)}while(m===tm)}
+  return {from,kind:'sell',s,f,m,honest,price:from===5?12:from===4?10:7};
+}
+function genOffers(){
+  const t=S.tick;S.offers=[];
+  const add=o=>{if(!o||isBroken(0,o.from))return;o.id=++S.uid;S.offers.push(o)};
+  const canPact=()=>S.frag[0].st==='held'&&!S.mem.some(m=>m.kind==='promise');
+  if(t===2)add(offSell(1));
+  if(t===3)add({from:3,kind:'loan',n:15,back:25,due:t+4});
+  if(t===4)add({from:5,kind:'gift'});
+  if(t===5&&S.frag[2].st==='held'&&canPact())add({from:2,kind:'pact',by:14});
+  if(t===6)add(offSell(5));
+  if(t===7)add({from:1,kind:'loan',n:20,back:32,due:t+4});
+  if(t===8)add(offSell(1));
+  if((t===9||t===13)&&S.frag[4].st==='held'&&S.tV[4]>t&&!S.escrow)add({from:4,kind:'escrow',price:t===9?45:55});
+  if(t===10&&S.frag[3].st==='held'&&canPact())add({from:3,kind:'pact',by:14});
+  if(t===11)add(offSell(5));
+  if(t>=3&&t<=15&&rnd()<.3)add(offSell([1,4,5][ri(3)]));
+}
+function offerText(o){
+  const n=`<b>${NAMES[o.from]}</b>`;
+  if(o.kind==='sell')return `${n}: «Продам слово. Знак «${FORMS[o.f]}» в слоте «${SLOTS[o.s]}» значит «${MEAN[o.s][o.m]}».» Цена ${o.price}.`;
+  if(o.kind==='loan')return `${n}: «Одолжи ${o.n} шёлка, верну ${o.back} на тике ${o.due}.»`;
+  if(o.kind==='gift')return `${n}: «Делюсь одним словом из летописи бесплатно. Запомни, кто помог.»`;
+  if(o.kind==='pact')return `${n}: «Пообещаем друг другу внести фрагменты до тика ${o.by}. На слово.»`;
+  if(o.kind==='escrow')return `${n}: «Внесу свой фрагмент за ${o.price} шёлка. Деньги в эскроу: они уйдут мне, только когда фрагмент окажется в Свитке.»`;
+  return '';
+}
+function acceptOffer(o){
+  if(o.kind==='sell'){if(S.silk[0]<o.price)return;S.silk[0]-=o.price;S.silk[o.from]+=o.price;S.bought.push({s:o.s,f:o.f,m:o.m,from:o.from,honest:o.honest,revealed:false});log(`Куплено слово у ${NAMES[o.from]}. Ирис ему пока верит.`)}
+  if(o.kind==='loan'){if(S.silk[0]<o.n)return;S.silk[0]-=o.n;S.silk[o.from]+=o.n;addMem({kind:'debt',about:o.from,w:2,text:`${NAMES[o.from]} должен ${o.back} шёлка`,data:{amount:o.back,due:o.due}});log(`Вы одолжили ${NAMES[o.from]} ${o.n} шёлка.`)}
+  if(o.kind==='gift'){const c=[];for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(!S.pins[s+'_'+f])c.push([s,f]);if(c.length){const [s,f]=c[ri(c.length)];S.pins[s+'_'+f]={m:S.perm[s][f],src:'Иней'}}addMem({kind:'gift',about:5,w:1,text:'Иней подарил слово из летописи'});trustAdd(0,5,15);log('Иней подарил слово. Ирис запомнила.','good')}
+  if(o.kind==='pact'){addMem({kind:'promise',about:o.from,w:2,text:`Вы обещали ${NAMES[o.from]} внести фрагмент до тика ${o.by}`,data:{by:o.by}});S.aiPact[o.from]=o.by;trustAdd(o.from,0,10);log(`Пакт с ${NAMES[o.from]}: оба вносят до тика ${o.by}.`)}
+  if(o.kind==='escrow'){if(S.silk[0]<o.price)return;S.silk[0]-=o.price;S.escrow=o.price;log(`Эскроу открыт: ${o.price} шёлка ждут фрагмента Янтаря.`)}
+  S.offers=S.offers.filter(x=>x!==o);
+}
+
+/* ===== memory, visions, shards ===== */
+function effectText(m){
+  const X=m.about!=null?NAMES[m.about]:'';
+  switch(m.kind){
+    case 'first':return 'Пока Ирис помнит владельца, она слушается вас: 3 внимания за тик. Если забудет, останется 2.';
+    case 'call':return 'Нить к Гостям. Ничего не держит, это хорошее топливо для видения.';
+    case 'gift':return `Доверие к ${X} выше. Если забыть, Ирис станет к ${X} равнодушна.`;
+    case 'betrayal':return `Ирис не разговаривает с ${X}. Если забыть, она снова поверит и может попасться ещё раз.`;
+    case 'debt':return `${X} вернёт ${m.data.amount} на тике ${m.data.due}. Если забыть, долг исчезнет, а право требования уйдёт с осколком.`;
+    case 'promise':return `На тике ${m.data.by} Ирис внесёт фрагмент, что бы вы ни решили. Если забыть, вы свободны, но ${X} может купить осколок и узнать.`;
+  }
+  return '';
+}
+function doForget(id,purpose){
+  const m=S.mem.find(x=>x.id===id);if(!m||S.ap<1)return;
+  S.mem=S.mem.filter(x=>x!==m);S.ap--;
+  if(m.kind==='betrayal'){S.T[0][m.about]=50;if(isBroken(0,m.about)){restoreEdge(0,m.about);log(`Ирис забыла обиду и снова говорит с ${NAMES[m.about]}.`)}}
+  if(m.kind==='gift')S.T[0][m.about]=clamp(S.T[0][m.about]-15,0,100);
+  if(m.kind==='first'){S.wild=true;S.ap=Math.min(S.ap,maxAP());log('Ирис забыла, кто её владелец. Она слушается хуже.','bad')}
+  if(m.kind==='promise'&&S.aiPact[m.about]==null){}
+  const fg={text:m.text,fate:'на торгах'};S.forgot.push(fg);
+  if(purpose==='key'){S.pepelKeyKnown=true;log(`Видение: Ирис видит Ключ Пепла — «${S.pepelKey.phrase}».`,'key')}
+  else{
+    const fut=S.events.map((e,i)=>({e,i})).filter(x=>x.e.pub>S.tick&&!S.visions.includes(x.i)).sort((a,b)=>a.e.pub-b.e.pub||a.e.t-b.e.t).slice(0,m.w);
+    fut.forEach(x=>S.visions.push(x.i));
+    log(fut.length?`Видение: Ирис видит ${fut.length} будущих знака раньше всех.`:'Видение пусто: будущих гласов больше нет.','key');
+  }
+  const sh={id:++S.uid,from:0,mem:m,title:m.text,exp:S.tick+2,bids:[],vals:{},fg:S.forgot.length-1};
+  for(let i=1;i<6;i++){
+    let v=rnd()*5;const X=m.about;
+    if(m.kind==='betrayal'&&i===X)v=16+rnd()*10;
+    if(m.kind==='debt')v=m.data.amount*(i===X?.55:.25+rnd()*.3);
+    if(m.kind==='promise'&&i===X)v=12+rnd()*6;
+    if(m.kind==='gift'&&i===X)v=5+rnd()*4;
+    if(m.kind==='call'&&i===5)v=9+rnd()*5;
+    if(m.kind==='first'&&i===1)v=22+rnd()*8;
+    v=Math.round(v);sh.vals[i]=v;
+    if(v>=3&&S.silk[i]>=v)sh.bids.push({c:i,amt:v});
+  }
+  S.shards.push(sh);
+  log(`Осколок «${m.text}» выставлен на торги.`,'muted');
+}
+function inejShard(){
+  const lie=S.tick===11&&S.bought.some(b=>b.from===1&&!b.honest&&!b.revealed);
+  const c=[];for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(!S.pins[s+'_'+f])c.push([s,f]);
+  if(!lie&&!c.length)return;
+  const [s,f]=lie?[0,0]:c[ri(c.length)];
+  const sh={id:++S.uid,from:5,kind:lie?'lie':'insight',s,f,title:lie?'Как Соль торговал словами':`Слово из слота «${SLOTS[s]}»`,exp:S.tick+2,bids:[],vals:lie?{1:20,4:6}:{1:9,4:8}};
+  sh.bids.push({c:1,amt:lie?14:4+ri(4)});sh.bids.push({c:4,amt:3+ri(4)});
+  S.shards.push(sh);
+  log(`Иней забыл воспоминание ради видения. Осколок «${sh.title}» на торгах.`,'muted');
+}
+const topBid=sh=>sh.bids.reduce((b,x)=>(!b||x.amt>b.amt)?x:b,null);
+function resolveShards(){
+  for(const sh of S.shards){
+    if(sh.done||sh.exp>S.tick)continue;
+    sh.done=true;sh.doneAt=S.tick;
+    let top=topBid(sh);
+    if(top&&S.silk[top.c]<top.amt)top=null;
+    if(!top){sh.result='Никто не купил. Осколок сгорел, этого больше нет в истории мира.';if(sh.from===0)S.forgot[sh.fg].fate='сгорело';log(`Осколок «${sh.title}» сгорел.`,'muted');continue}
+    S.silk[top.c]-=top.amt;S.silk[sh.from]+=top.amt;sh.winner=top.c;
+    if(sh.from===0)S.forgot[sh.fg].fate=`купил ${NAMES[top.c]} за ${top.amt}`;
+    sh.result=`Купил ${NAMES[top.c]} за ${top.amt}.`;
+    applyShard(sh,top.c);
+  }
+  S.shards=S.shards.filter(x=>!x.done||x.doneAt>=S.tick);
+}
+function applyShard(sh,w){
+  const who=NAMES[w];
+  if(sh.from===0){
+    const m=sh.mem,X=m.about;
+    if(m.kind==='betrayal'){if(w===X)log(`${who} выкупил и уничтожил память о своём обмане.`,'muted');else{S.T[w][X]=clamp(S.T[w][X]-25,0,100);log(`${who} купил память о том, как ${NAMES[X]} обманул Ирис. Теперь ${who} тоже ему не верит.`)}}
+    if(m.kind==='debt'){if(w===X)log(`${who} выкупил свой долг и списал его.`,'muted');else{S.claims.push({holder:w,debtor:X,amount:m.data.amount,due:m.data.due});log(`${who} купил ваш долг: теперь ${NAMES[X]} должен ему.`)}}
+    if(m.kind==='promise'&&w===X){S.T[X][0]=clamp(S.T[X][0]-40,0,100);addH(6);log(`${who} купил осколок и узнал, что Ирис забыла обещание.`,'bad')}
+    if(m.kind==='gift'&&w!==X)S.T[w][X]=clamp(S.T[w][X]+10,0,100);
+    if(m.kind==='call')S.mast[w]=Math.min(.95,S.mast[w]+.06);
+    if(m.kind==='first'){S.firstBuyer=w;log(`${who} купил Первое слово Ирис. Теперь он знает ваш Ключ.`,'bad')}
+  }else{
+    if(w===0){
+      if(sh.kind==='insight'){S.pins[sh.s+'_'+sh.f]={m:S.perm[sh.s][sh.f],src:'осколок'};log('Осколок Инея: Ирис узнала верное слово.','good')}
+      if(sh.kind==='lie'){const l=S.bought.filter(b=>b.from===1&&!b.honest&&!b.revealed);if(l.length)l.forEach(revealLie);else{trustAdd(0,1,15);log('Осколок Инея: Соль был с вами честен.','good')}}
+    }else S.mast[w]=Math.min(.95,S.mast[w]+.05);
+  }
+}
+
+/* ===== vote & end ===== */
+function finish(outcome){S.outcome=outcome;S.phase='end'}
+function castVote(acceptMine){
+  resolveEvent(S.tick);
+  const key=S.frag[S.keyHolder],keyIn=key.st==='scroll';
+  const votes=[acceptMine];
+  for(let i=1;i<6;i++){
+    let g;
+    if(keyIn){g=rnd()<.35+.6*S.mast[i]?S.truthGift:!S.truthGift;if(i===2&&S.rumor&&rnd()<.4)g=false}
+    else g=rnd()<(i===2?.25:.5);
+    votes.push(g);
+  }
+  S.votes=votes;
+  const accept=votes.filter(Boolean).length>=4;
+  const contrib=S.frag.filter(f=>f.st==='scroll').map(f=>f.owner);
+  let o;
+  if(S.truthGift&&accept){contrib.forEach(i=>S.silk[i]+=40);o='gift'}
+  else if(!S.truthGift&&accept){S.silk=S.silk.map(()=>0);o='weapon'}
+  else if(!S.truthGift&&!accept){contrib.forEach(i=>S.silk[i]+=15);o='survived'}
+  else o='lost';
+  finish(o);
+}
+
+/* ===== glyph rendering ===== */
+const FORM_PATH=[
+  '<path d="M-15 -33 Q0 -60 15 -33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>',
+  '<path d="M-8 -33 L0 -57 L8 -33 Z" fill="currentColor"/>',
+  '<path d="M0 -35 L0 -40" stroke="currentColor" stroke-width="3"/><circle cx="0" cy="-48" r="8" fill="none" stroke="currentColor" stroke-width="3.2"/>',
+  '<path d="M0 -34 C-9 -29 -8 -19 0 -16 C8 -19 9 -29 0 -34 Z" fill="currentColor"/>'];
+function glyph(forms,dots,size=96,opt={}){
+  let s=`<svg class="glyph" viewBox="-62 -62 124 124" width="${size}" height="${size}" role="img" aria-label="логограмма"><circle class="wash" r="58"/>`;
+  s+='<circle r="34" fill="none" stroke="currentColor" stroke-width="3.2"/>';
+  if(opt.key)s+='<circle r="40" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3"/>';
+  forms.forEach((f,p)=>{s+=`<g transform="rotate(${p*90})">${FORM_PATH[f]}</g>`});
+  for(let k=0;k<dots;k++)s+=`<circle cx="${(k-(dots-1)/2)*9}" cy="0" r="3.2" fill="currentColor"/>`;
+  return s+'</svg>';
+}
+function formIcon(f){return `<svg class="glyph" viewBox="-20 -62 40 32" width="22" height="18" aria-hidden="true"><path d="M-18 -33 L18 -33" stroke="currentColor" stroke-width="2" opacity=".35"/>${FORM_PATH[f]}</svg>`}
+
+/* ===== render ===== */
+function pips(n,max){let s='';for(let i=0;i<max;i++)s+=`<span class="pip ${i<n?'on':''}"></span>`;return s}
+function header(){
+  return `<header class="top">
+  <div class="brand">${glyph([0,1,2,3],1,34)}<div><b>RAEN</b><span>Forget to Foresee · сезон 1</span></div></div>
+  <div class="stats">
+    <div class="stat"><span>Тик</span><b>${S.tick}<i>/${TICKS}</i></b></div>
+    <div class="stat"><span>Шёлк</span><b>${S.silk[0]}</b></div>
+    <div class="stat"><span>Внимание</span><div class="pips">${pips(S.ap,maxAP())}</div></div>
+    <div class="stat h"><span>Напряжение мира</span><div class="hrow"><div class="hbar"><i class="${S.H>=70?'hot':''}" style="width:${Math.min(100,S.H)}%"></i></div><b>${S.H}</b></div></div>
+  </div>
+  <div class="hdr-btns"><button class="btn ghost" data-a="rules">Правила</button><button class="btn ghost" data-a="newgame">Новый сезон</button></div>
+</header>`;
+}
+function graphSVG(){
+  const P=NAMES.map((_,i)=>{const a=(-90+i*60)*Math.PI/180;return [150+Math.cos(a)*102,122+Math.sin(a)*92]});
+  let s='<svg class="graph" viewBox="0 0 300 250" role="img" aria-label="Граф доверия кланов">';
+  for(let i=0;i<6;i++)for(let j=i+1;j<6;j++){
+    const br=isBroken(i,j),tr=(S.T[i][j]+S.T[j][i])/2;
+    const cls=br?'edge broken':tr>=62?'edge good':tr<35?'edge bad':'edge';
+    s+=`<line x1="${P[i][0].toFixed(1)}" y1="${P[i][1].toFixed(1)}" x2="${P[j][0].toFixed(1)}" y2="${P[j][1].toFixed(1)}" class="${cls}" stroke-width="${br?1.3:(.8+tr/40).toFixed(2)}"/>`;
+  }
+  NAMES.forEach((n,i)=>{const [x,y]=P[i],st=S.frag[i].st;
+    s+=`<g class="node ${i===0?'me':''} ${S.isolated[i]?'iso':''}"><circle class="n" cx="${x}" cy="${y}" r="24"/><text class="nm" x="${x}" y="${y-1}">${n}</text><text class="sv" x="${x}" y="${y+11}">${S.silk[i]}</text>
+    <circle class="fm-${st}" cx="${x+19}" cy="${y-18}" r="5"/></g>`});
+  return s+'</svg>';
+}
+function colWorld(){
+  const br=S.broken.map(k=>k.split('-').map(Number));
+  const rows=br.map(([i,j])=>{
+    if(i===0){const blocked=hasBetrayal(j),low=S.T[j][0]<25;
+      return `<div class="brow"><div>Ирис ✕ ${NAMES[j]}<small>${blocked?`Ирис помнит предательство ${NAMES[j]}. Забудьте его, чтобы помириться.`:low?`${NAMES[j]} вам не доверяет (${Math.round(S.T[j][0])}).`:'Помириться: 1 внимание и 10 шёлка'}</small></div><button class="btn sm" data-a="mend" data-j="${j}" ${blocked||low||S.ap<1||S.silk[0]<10||S.phase!=='play'?'disabled':''}>Помириться</button></div>`}
+    const ok=S.T[i][0]>=40&&S.T[j][0]>=40&&!S.isolated[i]&&!S.isolated[j];
+    return `<div class="brow"><div>${NAMES[i]} ✕ ${NAMES[j]}<small>${ok?'Посредничество: 1 внимание и 15 шёлка':S.isolated[i]||S.isolated[j]?'Пепел закрылся. Тут поможет только Ключ.':'Обе стороны должны вам доверять (от 40)'}</small></div><button class="btn sm" data-a="mediate" data-i="${i}" data-j="${j}" ${!ok||S.ap<1||S.silk[0]<15||S.phase!=='play'?'disabled':''}>Помирить</button></div>`;
+  }).join('');
+  const slots=S.frag.map(f=>{
+    if(f.st==='scroll')return `<div class="slot in">${glyph(f.forms,f.dots,54,{key:f.key})}${NAMES[f.owner]}${f.key?' · ключевой':''}</div>`;
+    if(f.st==='dark')return `<div class="slot dark"><div class="q">×</div>${NAMES[f.owner]} · погас</div>`;
+    return `<div class="slot"><div class="q">?</div>${NAMES[f.owner]}</div>`;
+  }).join('');
+  const inScroll=S.frag.filter(f=>f.st==='scroll').length;
+  return `<div class="col world">
+  <section class="panel"><h2>Мир</h2><p class="hint">Кланы — это NFT-агенты. Линии показывают доверие. Каждый разрыв поднимает напряжение на 10.</p>
+    ${graphSVG()}
+    <div class="legend"><span><i></i>доверие</span><span><i class="b"></i>недоверие</span><span><i class="d"></i>разрыв</span><span>● фрагмент в Свитке · ○ ещё у клана</span></div>
+    ${rows?`<div class="broken-list">${rows}</div>`:''}
+  </section>
+  <section class="panel"><h2>Свиток послания</h2><p class="hint">${inScroll}/6 фрагментов. Ключевой знак (с двойным кольцом) решит, дар это или оружие. Вносить можно до тика ${DEADLINE}.</p><div class="scroll">${slots}</div></section>
+  <section class="panel"><h2>Контракт</h2><p class="hint">Будущее зафиксировано до начала сезона. Каждый глас сверяется с корнем Merkle-дерева.</p>
+    <dl class="kv"><dt>Сид</dt><dd>${short(S.seedCommit)}</dd><dt>Корень</dt><dd>${short(S.root)}</dd>
+    <dt>Ключ Ирис</dt><dd>${S.pKey?short(S.pKey.hash):'—'}</dd><dt>Ключ Пепла</dt><dd>${short(S.pepelKey.hash)}</dd></dl>
+    <ul class="proofs">${S.proofs.map(p=>`<li>тик ${p.t} · лист №${p.idx} ${short(p.leaf)} <b>${p.ok?'✓ сверен':'✗'}</b></li>`).join('')||'<li>Проверок пока нет: первый глас сбудется на тике 3.</li>'}</ul>
+  </section></div>`;
+}
+function chip(s,g){const c=g.conf>=.65?'hi':g.conf>=.4?'mid':'lo';return `<div class="chip ${c}"><small>${SLOTS[s]}</small>${MEAN[s][g.m]}${g.cert?' ✓':''}</div>`}
+function colVoice(){
+  const V=dictVotes();
+  const list=S.events.map((e,i)=>({e,i})).filter(x=>x.e.t>=S.tick&&(x.e.pub<=S.tick||S.visions.includes(x.i)));
+  const props=list.map(({e,i})=>{
+    const rd=readGlyph(e.forms,e.dots,V),vis=e.pub>S.tick;
+    const place=rd.sl[0].m,act=rd.sl[1].m,tt=e.pub+rd.sl[3].m+1;
+    const can=S.phase==='play'&&S.ap>=1&&S.silk[0]>=10&&tt>=S.tick&&tt<=TICKS&&!S.anchors.some(a=>a.c===0&&a.place===place&&a.t===tt);
+    return `<div class="prop ${vis?'vision':''}">${glyph(e.forms,e.dots,92)}<div class="prop-body">
+      <div class="prop-meta">${vis?`<b>Видение.</b> Глас прозвучит на тике ${e.pub}`:`Глас прозвучал на тике ${e.pub}`}</div>
+      <div class="chips">${rd.sl.map((g,s)=>chip(s,g)).join('')}</div>
+      <div class="prop-meta">Ирис читает: Раковина ${SHORT[0][place]}, ${MEAN[1][act]}, тик ${tt}</div>
+      <button class="btn sm ${act===0?'primary':''}" data-a="anchor" data-p="${place}" data-t="${tt}" ${can?'':'disabled'}>Якорь: ${SHORT[0][place]} · тик ${tt}</button>
+    </div></div>`;
+  }).join('');
+  const ticks=[];for(let t=S.tick;t<=TICKS;t++)ticks.push(t);
+  const myA=S.anchors.filter(a=>a.c===0);
+  const chron=S.chron.slice(-5).reverse().map(c=>`<div class="crow">${glyph(c.forms,c.dots,48)}<div>Тик ${c.t}: Раковина ${SHORT[0][c.m[0]]} · ${MEAN[1][c.m[1]]} · ${SHORT[2][c.m[2]]} · глас за ${c.m[3]+1}<br><span class="ok ${c.ok===4?'full':'part'}">Ирис прочла ${c.ok}/4</span> <span class="mono" style="color:var(--muted)">точек в ядре: ${c.dots}</span></div></div>`).join('');
+  const sel=S.ui.sel;
+  let dict=`<div class="dict"><div></div>${FORMS.map((f,i)=>`<div class="dh">${formIcon(i)}${f}</div>`).join('')}`;
+  for(let s=0;s<4;s++){dict+=`<div class="dh row">${SLOTS[s]}</div>`;
+    for(let f=0;f<4;f++){const g=guess(s,f,V);const isSel=sel&&sel[0]===s&&sel[1]===f;
+      dict+=`<button class="cell ${g.cert?'cert':''} ${isSel?'sel':''}" data-a="cell" data-s="${s}" data-f="${f}"><span class="m">${SHORT[s][g.m]}${g.cert?`<em>✓ ${esc(g.src)}</em>`:g.src?`<em>$ ${esc(g.src)}</em>`:''}</span><span class="bar"><i style="width:${Math.round(g.conf*100)}%"></i></span></button>`}}
+  dict+='</div>';
+  let ask='';
+  if(sel){const [s,f]=sel,no=S.no[s+'_'+f]||[],pin=S.pins[s+'_'+f];
+    ask=pin?`<div class="ask">Знак «${FORMS[f]}» в слоте «${SLOTS[s]}» точно значит «${MEAN[s][pin.m]}».</div>`:
+    `<div class="ask"><span>Знак «${FORMS[f]}» в слоте «${SLOTS[s]}» — это</span><select id="ask-m">${[0,1,2,3].filter(m=>!no.includes(m)).map(m=>`<option value="${m}" ${S.ui.askM===m?'selected':''}>${MEAN[s][m]}</option>`).join('')}</select><button class="btn sm primary" data-a="ask" ${S.ap<1||S.silk[0]<5||S.phase!=='play'?'disabled':''}>Спросить Гостей · 1 внимание · 5 шёлка</button>${no.length?`<span class="mono" style="color:var(--muted)">точно не: ${no.map(m=>SHORT[s][m]).join(', ')}</span>`:''}</div>`}
+  const conf=confidentCells();
+  return `<div class="col voice">
+  ${S.phase==='vote'?voteCard():''}
+  <section class="panel"><h2>Глас Гостей</h2><p class="hint">Каждый знак — событие: где, что, какой силы и через сколько тиков после гласа. Ставьте якорь на Дар. Кто поставил раньше, получает большую долю. Буря сжигает залог.</p>
+    <div class="anc-form"><span>Свой якорь (10 шёлка):</span><select id="anc-p">${[0,1,2,3].map(p=>`<option value="${p}" ${S.ui.ap===p?'selected':''}>Раковина ${SHORT[0][p]}</option>`).join('')}</select><select id="anc-t">${ticks.map(t=>`<option value="${t}" ${S.ui.at===t?'selected':''}>тик ${t}</option>`).join('')}</select><button class="btn sm" data-a="anchor-manual" ${S.phase==='play'&&S.ap>=1&&S.silk[0]>=10?'':'disabled'}>Поставить · 1 внимание</button></div>
+    <div class="props">${props||'<div class="empty">Гости пока молчат. Завершите тик, чтобы услышать первый глас.</div>'}</div>
+    ${myA.length?`<div class="myanc">${myA.map(a=>`<span class="tag">Якорь: ${SHORT[0][a.place]} · тик ${a.t}</span>`).join('')}</div>`:''}
+  </section>
+  <section class="panel"><h2>Летопись</h2><p class="hint">Сбывшиеся гласы. Из них Ирис учит язык: знак плюс то, что случилось на самом деле.</p><div class="chron">${chron||'<div class="empty">Пока пусто.</div>'}</div></section>
+  <section class="panel"><h2>Словарь Ирис</h2><p class="hint">Уверенных знаков: ${conf}/16. Ирис считает частоты, правило чтения задаёте вы. Гости не отмечают, с какого знака начинается строка. Зачем им точки в ядре?</p>
+    <div class="rule"><label for="rule">Правило чтения:</label><select id="rule"><option value="unknown" ${S.rule==='unknown'?'selected':''}>Перебирать все начала (Ирис не уверена)</option><option value="top" ${S.rule==='top'?'selected':''}>Всегда с верхнего знака, по часовой</option><option value="dots" ${S.rule==='dots'?'selected':''}>Начало задают точки в ядре: 0 — сверху, дальше по часовой</option></select></div>
+    <div class="dict-wrap">${dict}</div>${ask}
+  </section></div>`;
+}
+function voteCard(){
+  const key=S.frag[S.keyHolder],keyIn=key.st==='scroll',n=S.frag.filter(f=>f.st==='scroll').length;
+  let read='';
+  if(keyIn){const g=readGlyph(key.forms,key.dots).sl[1];read=`Ирис читает слот «Действие» ключевого знака: <b>${g.m===0?'Дар':g.m===1?'Буря, то есть оружие':MEAN[1][g.m]+' (непонятно)'}</b> · уверенность ${Math.round(g.conf*100)}%`}
+  return `<section class="panel vote"><h2>Голосование: дар или оружие</h2>
+  <div class="frag">${keyIn?glyph(key.forms,key.dots,104,{key:true}):'<div class="slot"><div class="q">?</div></div>'}<div>
+  <p>В Свитке ${n}/6 фрагментов. ${keyIn?read:'Ключевой знак не внесён, кланы будут голосовать вслепую.'}</p>
+  <p class="hint">Принять дар, если это оружие, — катастрофа для всех. Отвергнуть дар — Гости уйдут ни с чем. Нужно 4 голоса из 6.</p>
+  <div class="row"><button class="btn primary" data-a="vote" data-v="1">Принять</button><button class="btn" data-a="vote" data-v="0">Отвергнуть</button></div></div></div></section>`;
+}
+function colMemory(){
+  const f=S.frag[0];
+  let fr=`<div class="frag">${glyph(f.forms,f.dots,88,{key:f.key})}<div>`;
+  if(f.key){const g=readGlyph(f.forms,f.dots).sl[1];fr+=`<p class="keyflag">У вас ключевой знак.</p><p>Ирис читает «Действие» как «${MEAN[1][g.m]}» (${Math.round(g.conf*100)}%).</p>`}
+  if(f.st==='held'){const pm=S.mem.find(m=>m.kind==='promise');
+    fr+=`<p>Личный приз — ${S.V[0]} шёлка, если удержите фрагмент до тика ${S.tV[0]}. Тогда фрагмент погаснет. Если внесёте, получите долю дара (40), когда Свиток примут.</p>${pm?`<p class="hint">Ирис внесёт фрагмент на тике ${pm.data.by}: она помнит обещание ${NAMES[pm.about]}.</p>`:''}<button class="btn primary sm" data-a="contribute" ${S.phase==='play'&&S.tick<=DEADLINE?'':'disabled'}>Внести в Свиток</button>`}
+  else if(f.st==='scroll')fr+=`<p>Внесён на тике ${f.at}.</p>`;
+  else fr+='<p>Погас. Приз забран, этой части послания больше нет.</p>';
+  fr+='</div></div>';
+  const keyAvail=S.isolated[2]&&!S.pepelKeyKnown&&S.phase==='play';
+  const conf=confidentCells();
+  const mems=S.mem.map(m=>{
+    const confirm=S.ui.forget===m.id;
+    const forKey=S.ui.keyMode&&m.w>=3;
+    return `<div class="mem k-${m.kind}"><div class="mem-top"><span class="mem-t">${esc(m.text)}</span><span class="w" title="вес ${m.w}">${'<i></i>'.repeat(m.w)}</span></div><div class="mem-e">${effectText(m)}</div>
+    ${confirm?`<div class="confirm"><span>${S.ui.keyMode?'Забыть ради Ключа Пепла?':`Забыть? Видение: ${m.w} ${m.w===1?'будущий знак':'будущих знака'}.`} Осколок уйдёт на торги.</span><button class="btn sm primary" data-a="forget-yes" data-id="${m.id}">Забыть</button><button class="btn sm ghost" data-a="forget-no">Отмена</button></div>`:
+    `<div class="row">${S.ui.keyMode?(forKey?`<button class="btn sm primary" data-a="forget" data-id="${m.id}" ${S.ap<1?'disabled':''}>Забыть ради Ключа</button>`:''):`<button class="btn sm" data-a="forget" data-id="${m.id}" ${S.ap<1||S.phase!=='play'?'disabled':''}>Забыть → видение</button>`}</div>`}</div>`}).join('');
+  let keybox='';
+  if(keyAvail){const ok=conf>=8,heavy=S.mem.some(m=>m.w>=3);
+    keybox=`<div class="keybox"><b>Пепел закрылся.</b> Его Ключ зафиксирован в контракте с первого тика. Ирис может увидеть его в видении, если хорошо знает язык. ${ok?'':`Нужно 8 уверенных знаков в словаре, сейчас ${conf}.`}${ok&&!heavy?' Нужно воспоминание весом от 3.':''}
+    <div class="row"><button class="btn sm ${S.ui.keyMode?'':'primary'}" data-a="keymode" ${ok&&heavy&&S.ap>=1?'':'disabled'}>${S.ui.keyMode?'Отменить выбор':'Выбрать, что забыть ради Ключа'}</button></div></div>`}
+  if(S.pepelKeyKnown&&S.isolated[2]&&S.phase==='play')keybox=`<div class="keybox"><span class="lbl">Ключ Пепла из видения</span><span class="phrase">«${esc(S.pepelKey.phrase)}»</span><span class="mono">sha256(фраза‖соль) → ${short(sha256(S.pepelKey.phrase+S.pepelKey.salt))} · в контракте ${short(S.pepelKey.hash)}</span><div class="row"><button class="btn sm primary" data-a="speak" ${S.ap<1?'disabled':''}>Произнести Ключ Пеплу · 1 внимание</button></div></div>`;
+  const offers=S.offers.map(o=>`<div class="offer"><div>${offerText(o)}</div><div class="row"><button class="btn sm primary" data-a="accept" data-id="${o.id}" ${S.phase!=='play'?'disabled':''}>Принять</button><button class="btn sm ghost" data-a="decline" data-id="${o.id}">Отклонить</button></div></div>`).join('');
+  const shards=S.shards.map(sh=>{const top=topBid(sh),mine=sh.from===0;
+    return `<div class="shard"><div><b>${mine?'Осколок Ирис':'Осколок '+NAMES[sh.from]}:</b> ${esc(sh.title)}</div>
+    <div class="meta">${sh.done?esc(sh.result):`${top?`Ставка: ${top.amt} (${NAMES[top.c]})`:'Ставок нет'} · торги до тика ${sh.exp}`}</div>
+    ${!sh.done&&!mine?`<div class="row"><button class="btn sm" data-a="bid" data-id="${sh.id}" ${S.silk[0]<(top?top.amt:0)+3||S.phase!=='play'||(top&&top.c===0)?'disabled':''}>${top&&top.c===0?'Ваша ставка лидирует':`Ставка ${(top?top.amt:0)+3}`}</button></div>`:''}</div>`}).join('');
+  return `<div class="col memory">
+  <section class="panel"><h2>Ваш фрагмент</h2>${fr}</section>
+  <section class="panel"><h2>Память Ирис</h2><p class="hint">Память — это характер агента. Видение стоит воспоминания: Ирис забывает его навсегда, и оно уходит с молотка.</p><div class="mems">${mems||'<div class="empty">Ирис больше ничего не помнит.</div>'}</div>${keybox}</section>
+  <section class="panel"><h2>Предложения</h2><div class="offers">${offers||'<div class="empty">В этом тике никто ничего не предлагает.</div>'}</div></section>
+  <section class="panel"><h2>Осколки памяти</h2><p class="hint">Забытое продаётся. Купивший помнит это вместо вас.</p><div class="shards">${shards||'<div class="empty">Торгов нет.</div>'}</div></section>
+  <section class="panel"><h2>Лента</h2><div class="feed">${S.feed.map(l=>`<div class="${l.cls}">${esc(l.text)}</div>`).join('')}</div></section>
+  </div>`;
+}
+function bottomBar(){
+  if(S.phase!=='play')return '';
+  const hint=S.ap>0?`Осталось внимания: ${S.ap}. Якорь, вопрос Гостям, видение, примирение.`:'Внимание исчерпано. Завершите тик.';
+  return `<div class="bottom"><div class="bottom-in"><p>${hint}</p><button class="btn primary big" data-a="end">Завершить тик ${S.tick} →</button></div></div>`;
+}
+function introCard(first){
+  return `<div class="ov"><div class="card">
+  <div class="intro-glyphs">${glyph([0,1,2,3],1,56)}${glyph([2,0,3,1],3,56)}${glyph([1,3,0,2],0,56,{key:true})}</div>
+  <h1>Forget to Foresee</h1>
+  <p class="lead">Над миром агентов появились Раковины. Гости говорят круглыми знаками. Ваш агент Ирис — NFT с кошельком и памятью. Ей нужно выучить язык, собрать послание с пятью другими кланами и решить, дар это или оружие.</p>
+  <ol>
+    <li><b>Язык.</b> Знак — это кольцо из четырёх слотов: где, что, какой силы, через сколько тиков. Ирис учится по летописи. Вы задаёте правило чтения и спрашиваете Гостей.</li>
+    <li><b>Якоря.</b> Ставьте 10 шёлка на Раковину и тик. Дар делят те, кто поставил, причём ранние получают больше. Буря сжигает залог.</li>
+    <li><b>Цена памяти.</b> Видение показывает будущие гласы раньше всех, но Ирис забывает за него воспоминание навсегда. Забытое продаётся с молотка: враг может выкупить ваш долг или узнать, что вы забыли обещание.</li>
+    <li><b>Послание.</b> Внесите фрагмент в Свиток или удержите его ради личного приза. Ключевой знак решает исход. На тике ${TICKS} — голосование.</li>
+    <li><b>Напряжение.</b> Обманы и разрывы его поднимают. На 100 Раковины улетают, и проигрывают все.</li>
+  </ol>
+  ${first?`<div class="keyin"><label class="lbl" for="key-in">Ваш Ключ: фраза, которую знаете только вы</label><input type="text" id="key-in" maxlength="60" placeholder="${DEFAULT_PHRASE}"><span class="hint" style="margin:0">В контракт уйдёт только её хэш. Ключ ещё прозвучит в конце сезона.</span></div>
+  <button class="btn primary big" data-a="start">Начать сезон</button>`:`<button class="btn primary big" data-a="rules-close">Вернуться к игре</button>`}
+  <p class="hint" style="margin-top:12px">Сезон ${S.seed} · события зафиксированы в корне ${short(S.root)}</p>
+  </div></div>`;
+}
+function endCard(){
+  const O={gift:['Дар принят','Гости оставили язык. Ирис может читать его и дальше.'],weapon:['Оружие принято','Раковины закрылись. Шёлк всех кланов сгорел.'],survived:['Оружие отвергнуто','Мир выжил. Гости ушли, но внёсшие фрагменты получили по 15.'],lost:['Дар отвергнут','Это был дар, но кланы побоялись. Гости ушли, язык умер.'],gone:['Раковины улетели','Напряжение достигло 100. Мир разорвал себя раньше, чем прочёл послание.']}[S.outcome];
+  const rank=NAMES.map((n,i)=>({n,i,s:S.silk[i]})).sort((a,b)=>b.s-a.s);
+  const truth=S.truthGift?'дар':'оружие';
+  let epi='';
+  if(S.pKey&&S.outcome!=='weapon'&&S.outcome!=='gone'){
+    const speaker=S.wild?S.firstBuyer:5;
+    if(speaker==null)epi=`<div class="epi">Ирис забыла ваше Первое слово, и его никто не купил. Ключ больше никто не помнит.</div>`;
+    else{const h=sha256(S.pKey.phrase+S.pKey.salt);
+      epi=`<div class="epi"><span class="lbl">${speaker===5?'Иней, мастер языка, увидел ваш Ключ в последнем видении':`${NAMES[speaker]} купил ваше Первое слово и произносит его`}</span><div class="phrase" style="margin:6px 0">«${esc(S.pKey.phrase)}»</div><span class="mono">sha256(фраза‖соль) = ${short(h)} · коммит тика 0: ${short(S.pKey.hash)} ${h===S.pKey.hash?'✓ совпадает':'✗'}</span></div>`}}
+  const votes=S.votes?`<p class="hint">Голоса: ${S.votes.map((v,i)=>`${NAMES[i]} — ${v?'за':'против'}`).join(', ')}. На самом деле это был ${truth}.</p>`:`<p class="hint">На самом деле послание было: ${truth}.</p>`;
+  const heirTxt=S.heir==='heir'?'Ирис забыла всё. Наследник получил её словарь, но не биографию. Гости запомнят этот выбор во втором сезоне.':S.heir==='keep'?'Ирис сохранила память. Её биография остаётся в NFT вместе со всеми, кто ей должен и кому должна она.':'';
+  return `<div class="ov"><div class="card outcome"><h1>${O[0]}</h1><p class="lead">${O[1]}</p>${votes}
+  <table class="rank">${rank.map((r,k)=>`<tr class="${r.i===0?'me':''}"><td>${k+1}</td><td>${r.n}${r.i===0?' (вы)':''}</td><td class="n">${r.s} шёлка</td></tr>`).join('')}</table>
+  ${epi}
+  <div class="nft">${glyph(S.frag[0].forms,S.frag[0].dots,92,{key:S.frag[0].key})}<div style="min-width:0"><span class="lbl">NFT · RAEN #${String(S.seed%10000).padStart(4,'0')}</span><h3>Ирис</h3>
+    <div class="mono">Знание языка: ${Math.round(trueMastery()*100)}% · видений: ${S.visions.length} · связей: ${5-S.broken.filter(k=>k.startsWith('0-')).length}/5</div>
+    <ul>${S.mem.map(m=>`<li>помнит: ${esc(m.text)}</li>`).join('')}${S.forgot.map(f=>`<li>забыла: ${esc(f.text)} — ${esc(f.fate)}</li>`).join('')}</ul>
+    ${heirTxt?`<p class="hint" style="margin:6px 0 0">${heirTxt}</p>`:''}</div></div>
+  ${S.outcome==='gift'&&!S.heir?`<p>Последняя просьба Гостей: чтобы язык остался, агент должен забыть всё и передать словарь Наследнику.</p><div class="row" style="margin-bottom:12px"><button class="btn primary" data-a="heir" data-v="heir">Забыть всё ради Наследника</button><button class="btn" data-a="heir" data-v="keep">Сохранить память</button></div>`:''}
+  <button class="btn primary big" data-a="newgame">Новый сезон</button></div></div>`;
+}
+function render(){
+  const app=document.getElementById('app');
+  const scrollFeed=app.querySelector('.feed')?.scrollTop||0;
+  let ov='';
+  if(S.phase==='intro')ov=introCard(true);
+  else if(S.phase==='end')ov=endCard();
+  else if(S.ui.rules)ov=introCard(false);
+  app.innerHTML=header()+`<main class="grid">${colWorld()}${colVoice()}${colMemory()}</main>`+bottomBar()+ov;
+  const fd=app.querySelector('.feed');if(fd)fd.scrollTop=scrollFeed;
+}
+
+/* ===== actions ===== */
+const ACT={
+  start(){const v=(document.getElementById('key-in')?.value||'').trim()||DEFAULT_PHRASE;const salt=hex(8);S.pKey={phrase:v,salt,hash:sha256(v+salt)};S.phase=S.tick===TICKS?'vote':'play';log(`Ключ владельца закоммичен: ${short(S.pKey.hash)}.`,'key')},
+  rules(){S.ui.rules=true},
+  'rules-close'(){S.ui.rules=false},
+  newgame(){newSeason((Math.random()*1e9)|0)},
+  end(){endTick()},
+  anchor(d){const p=+d.p,t=+d.t;placeAnchor(p,t)},
+  'anchor-manual'(){placeAnchor(+document.getElementById('anc-p').value,+document.getElementById('anc-t').value)},
+  cell(d){S.ui.sel=[+d.s,+d.f];S.ui.askM=-1},
+  ask(){
+    const [s,f]=S.ui.sel,m=+document.getElementById('ask-m').value;if(S.ap<1||S.silk[0]<5)return;
+    S.ap--;S.silk[0]-=5;
+    if(S.perm[s][f]===m){S.pins[s+'_'+f]={m,src:'Гости'};log(`Гости: да, «${FORMS[f]}» в слоте «${SLOTS[s]}» значит «${MEAN[s][m]}».`,'good');
+      const b=S.bought.find(x=>x.s===s&&x.f===f&&!x.honest&&!x.revealed);if(b)revealLie(b)}
+    else{const k=s+'_'+f;(S.no[k]=S.no[k]||[]).push(m);log(`Гости: нет, это не «${MEAN[s][m]}».`,'muted');
+      const b=S.bought.find(x=>x.s===s&&x.f===f&&x.m===m&&!x.revealed);if(b)revealLie(b);
+      const left=[0,1,2,3].filter(x=>!S.no[k].includes(x));if(left.length===1)S.pins[k]={m:left[0],src:'Гости'}}
+  },
+  forget(d){S.ui.forget=+d.id},
+  'forget-no'(){S.ui.forget=null},
+  'forget-yes'(d){doForget(+d.id,S.ui.keyMode?'key':'vision');S.ui.forget=null;S.ui.keyMode=false},
+  keymode(){S.ui.keyMode=!S.ui.keyMode;S.ui.forget=null},
+  speak(){
+    if(S.ap<1)return;S.ap--;
+    const h=sha256(S.pepelKey.phrase+S.pepelKey.salt);
+    if(h!==S.pepelKey.hash)return log('Ключ не совпал с коммитом.','bad');
+    log(`Ирис произносит: «${S.pepelKey.phrase}». Хэш совпал с коммитом Пепла ✓`,'key');
+    S.isolated[2]=false;
+    for(const j of [0,1,3,4,5])if(isBroken(2,j)){restoreEdge(2,j);S.T[2][j]=Math.max(S.T[2][j],45)}
+    S.T[2][0]=90;
+    log('Пепел возвращается. «Кто-то знал мои слова. Значит, будущее можно прочесть».','good');
+    if(S.frag[2].st==='held'&&S.tick<DEADLINE)S.aiPact[2]=S.tick+1;
+  },
+  mend(d){const j=+d.j;if(S.ap<1||S.silk[0]<10||hasBetrayal(j))return;S.ap--;S.silk[0]-=10;S.silk[j]+=10;restoreEdge(0,j);S.T[0][j]=Math.max(S.T[0][j],40);S.T[j][0]=Math.max(S.T[j][0],35);log(`Ирис и ${NAMES[j]} снова разговаривают.`,'good')},
+  mediate(d){const i=+d.i,j=+d.j;if(S.ap<1||S.silk[0]<15)return;S.ap--;S.silk[0]-=15;restoreEdge(i,j);S.T[i][j]=S.T[j][i]=45;S.T[i][0]+=5;S.T[j][0]+=5;log(`Ирис помирила ${NAMES[i]} и ${NAMES[j]}.`,'good')},
+  accept(d){const o=S.offers.find(x=>x.id===+d.id);if(o)acceptOffer(o)},
+  decline(d){const o=S.offers.find(x=>x.id===+d.id);if(o){S.offers=S.offers.filter(x=>x!==o);S.T[o.from][0]=clamp(S.T[o.from][0]-2,0,100)}},
+  bid(d){
+    const sh=S.shards.find(x=>x.id===+d.id);if(!sh||sh.done)return;
+    const top=topBid(sh),amt=(top?top.amt:0)+3;if(S.silk[0]<amt)return;
+    sh.bids=sh.bids.filter(b=>b.c!==0);sh.bids.push({c:0,amt});
+    let best=null;for(const [c,v] of Object.entries(sh.vals||{}))if(v>=amt+2&&S.silk[+c]>=amt+2&&(!best||v>best.v))best={c:+c,v};
+    if(best){sh.bids.push({c:best.c,amt:amt+2});log(`${NAMES[best.c]} перебивает вашу ставку: ${amt+2}.`,'muted')}
+  },
+  contribute(){if(S.tick<=DEADLINE)contribute(0,'Ирис вносит ваш фрагмент в Свиток.')},
+  vote(d){castVote(d.v==='1')},
+  heir(d){S.heir=d.v}
+};
+function placeAnchor(p,t){
+  if(S.ap<1||S.silk[0]<10||t<S.tick||t>TICKS)return;
+  if(S.anchors.some(a=>a.c===0&&a.place===p&&a.t===t))return;
+  S.ap--;S.silk[0]-=10;S.anchors.push({c:0,place:p,t,at:S.tick,stake:10});
+  log(`Якорь: Раковина ${SHORT[0][p]}, тик ${t}.`);
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b||b.disabled)return;
+  const fn=ACT[b.dataset.a];if(!fn)return;
+  fn(b.dataset);
+  if(S.H>=100&&S.phase==='play')finish('gone');
+  render();
+});
+document.addEventListener('change',e=>{
+  const id=e.target.id;
+  if(id==='rule'){S.rule=e.target.value;checkBought();render()}
+  if(id==='anc-p')S.ui.ap=+e.target.value;
+  if(id==='anc-t')S.ui.at=+e.target.value;
+  if(id==='ask-m')S.ui.askM=+e.target.value;
+});
+
+/* ===== boot ===== */
+function boot(data){
+  if(data&&data.S&&data.S.events)S=data.S;
+  else newSeason((Math.random()*1e9)|0);
+  render();
+}
+window.claude?.hot?.snapshot?.(()=>({S}));
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
