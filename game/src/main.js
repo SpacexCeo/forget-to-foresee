@@ -21,8 +21,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 app.appendChild(renderer.domElement);
 
-// Tuned so the island stays readable from the top zoom while the sea and far Shells sink into haze.
-installHeightFog({ baseY: -0.6, falloff: 0.45, density: 0.004 });
+// Tuned so the walkable tops (y = 0) stay readable from the top zoom while the pillars sink into
+// dense fog toward the cloud sea (y = -28).
+installHeightFog({ baseY: -28, falloff: 0.075, density: 0.012 });
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 document.getElementById('objective').textContent = world3d.objective;

@@ -11,7 +11,7 @@
 /** Exact filenames the code looks up in /assets/models/ (brief "Slice object list"). */
 export const ASSETS = Object.freeze([
   { name: 'anchor', kind: 'hero', label: 'Anchor', height: 1.6, radius: 0.9, inspectDistance: 5 },
-  { name: 'scroll_table', kind: 'hero', label: 'Scroll table', height: 1.0, radius: 1.8, inspectDistance: 7 },
+  { name: 'scroll_table', kind: 'hero', label: 'Scroll table', height: 0.6, radius: 3.7, inspectDistance: 9 },
   { name: 'shard', kind: 'hero', label: 'Memory shard', height: 0.4, radius: 0.3, inspectDistance: 3 },
   { name: 'shell_1', kind: 'shell', label: 'Shell I', height: 18, radius: 10 },
   { name: 'shell_2', kind: 'shell', label: 'Shell II', height: 18, radius: 10 },
@@ -24,7 +24,7 @@ export const ASSETS = Object.freeze([
   { name: 'camp_moh', kind: 'camp', label: 'Camp: Moss', height: 3, radius: 5.7 },
   { name: 'camp_yantar', kind: 'camp', label: 'Camp: Amber', height: 3, radius: 5.7 },
   { name: 'camp_iney', kind: 'camp', label: 'Camp: Frost', height: 3, radius: 5.7 },
-  { name: 'island', kind: 'terrain', label: 'Island', height: 4, radius: 50 },
+  { name: 'island', kind: 'terrain', label: 'Island', height: 4, radius: 75 },
 ]);
 
 /** Load distance (meters from the camera to the bounding sphere surface) per kind, when on screen. */

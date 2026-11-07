@@ -17,7 +17,7 @@ export class CameraRig {
     this.baseYaw = opts.baseYaw ?? 0;
     this.yawLimit = opts.yawLimit ?? 50 * DEG;   // limited rotation around the base yaw
     this.minDist = opts.minDist ?? 4.5;   // low third-person view, never first person
-    this.maxDist = opts.maxDist ?? 70;     // far enough for the whole-diorama view
+    this.maxDist = opts.maxDist ?? 90;     // far enough for the whole-archipelago view
     this.radius = opts.radius ?? 0.35;           // camera collision sphere
     this.yaw = this.baseYaw;
     this.dist = opts.dist ?? 30;

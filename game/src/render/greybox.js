@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { boxTriangles, prismTriangles, transformTriangles, MASK_ALL, MASK_CAMERA, MASK_PLAYER } from '../physics/collision.js';
 import { assetByName } from './asset-catalog.js';
-import { CLANS, ISLAND_RADIUS, SHORE_WIDTH, PLAZA_RADIUS, ANCHOR_ZONES, ANCHOR_ZONE_RADIUS, PATH_WIDTH, pathSegments } from '../scenes/layout.js';
+import { CLANS, ANCHOR_ZONES, ANCHOR_ZONE_RADIUS, RAIL_HEIGHT, PILLAR_DEPTH, platforms, bridges, parapetOpenings } from '../scenes/layout.js';
 
 const greyMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
 
@@ -129,17 +129,22 @@ function anchor(b) {
 }
 
 function scrollTable(b) {
-  // Pale ring of six segments with a round hole in the middle (owner concept 07.11).
-  const ring = [new THREE.Vector2(0.45, 0), new THREE.Vector2(1.6, 0), new THREE.Vector2(1.5, 0.9), new THREE.Vector2(0.45, 0.9), new THREE.Vector2(0.45, 0)];
+  // The Scroll as a large floor medallion with gold inlay, six sector sockets (one per clan) and a
+  // small centre piece holding the double-ring recess (owner concept 07.11, third image).
+  const GOLD = 0xc9a24a;
+  b.add(new THREE.CylinderGeometry(3.6, 3.6, 0.06, 48), 0xb9b4a6, { position: [0, 0.03, 0] });
+  for (const [r0, r1] of [[3.2, 3.36], [2.1, 2.2], [0.95, 1.02]]) b.add(new THREE.RingGeometry(r0, r1, 64), GOLD, { position: [0, 0.065, 0], rotation: [-Math.PI / 2, 0, 0] });
   for (let i = 0; i < 6; i++) {
-    const gap = (4 * Math.PI) / 180;
-    b.add(new THREE.LatheGeometry(ring, 10, (i / 6) * Math.PI * 2 + gap / 2, Math.PI / 3 - gap), 0xe4e1d6);
-    const a = ((i + 0.5) / 6) * Math.PI * 2;
-    b.socket('socket_sector_' + i, [Math.sin(a) * 1.0, 0.91, Math.cos(a) * 1.0], a, { socket: 'sector', index: i });
+    const a = (i / 6) * Math.PI * 2;
+    b.box([0.08, 0.012, 2.2], GOLD, { position: [Math.sin(a) * 2.1, 0.066, Math.cos(a) * 2.1], rotation: [0, a, 0] });
+    const m = a + Math.PI / 6;
+    b.socket('socket_sector_' + i, [Math.sin(m) * 2.65, 0.07, Math.cos(m) * 2.65], m, { socket: 'sector', index: i });
   }
-  b.add(new THREE.CylinderGeometry(0.46, 0.46, 0.3, 20), CHARCOAL, { position: [0, 0.15, 0] });
-  b.socket('socket_center', [0, 0.32, 0], 0, { socket: 'double_ring' });
-  b.collidePrism(0, 0, 1.6, 0, 0.9, 12);
+  b.add(new THREE.CylinderGeometry(0.42, 0.55, 0.5, 12), 0x9a958a, { position: [0, 0.25, 0], flat: true });
+  b.add(new THREE.TorusGeometry(0.3, 0.05, 6, 20), GOLD, { position: [0, 0.52, 0], rotation: [-Math.PI / 2, 0, 0] });
+  b.socket('socket_center', [0, 0.55, 0], 0, { socket: 'double_ring' });
+  b.collidePrism(0, 0, 3.6, 0, 0.06, 24);           // low enough to walk onto
+  b.collidePrism(0, 0, 0.55, 0, 0.55, 10);
 }
 
 function shard(b) {
@@ -147,50 +152,71 @@ function shard(b) {
   b.add(new THREE.OctahedronGeometry(0.09, 0), 0xdbe9ec, { position: [0.07, 0.12, 0.02], scale: [0.6, 1, 0.6], rotation: [0, 0, 0.5] });
 }
 
+// Ammonite-like coiled Shells (owner concept 07.11, third image): a planispiral tube growing
+// logarithmically, coil plane facing the plaza. I elongated, II massive, III asymmetric, IV cracked.
 const SHELL_STYLE = [
-  { maxR: 3.0, power: 0.9, ridges: 9, sx: 1, skew: 0, phi: Math.PI * 2, twist: 1.1 },        // I  elongated, thin
-  { maxR: 6.0, power: 0.5, ridges: 7, sx: 1, skew: 0, phi: Math.PI * 2, twist: 0.6 },        // II massive
-  { maxR: 4.5, power: 0.65, ridges: 8, sx: 1.3, skew: 0.22, phi: Math.PI * 2, twist: 0.8 },  // III asymmetric
-  { maxR: 4.6, power: 0.65, ridges: 8, sx: 1, skew: 0, phi: Math.PI * 1.55, twist: 0.8 },    // IV cracked open
+  { turns: 3.2, growth: 0.16, thick: 0.42, sx: 0.8, sy: 1.25, skew: 0, crack: 0 },
+  { turns: 3.0, growth: 0.17, thick: 0.55, sx: 1.05, sy: 1.0, skew: 0, crack: 0 },
+  { turns: 3.1, growth: 0.18, thick: 0.45, sx: 1.15, sy: 0.92, skew: 0.18, crack: 0 },
+  { turns: 3.2, growth: 0.17, thick: 0.46, sx: 1, sy: 1, skew: 0, crack: 0.22 },
 ];
 const SHELL_H = 18;
 /** Shell radius at height fraction t: an inverted cone (point down) closing in a low dome on top. */
-function shellRadius(style, t) {
-  const cone = style.maxR * Math.pow(Math.max(t, 0.004), style.power);
-  const dome = t > 0.84 ? Math.sqrt(Math.max(0, 1 - ((t - 0.84) / 0.16) ** 2)) : 1;
-  return cone * dome;
+function spiralShellGeometry(style) {
+  // Path: r(theta) = a * e^(k theta) in the XY plane; tube radius proportional to r.
+  const k = style.growth, steps = 120, ring = 9;
+  const thetaMax = style.turns * Math.PI * 2;
+  const a = 1;
+  const rMax = a * Math.exp(k * thetaMax);
+  const pos = [];
+  const pt = (th) => { const r = a * Math.exp(k * th); return [Math.cos(th) * r, Math.sin(th) * r, r]; };
+  const rings = [];
+  for (let i = 0; i <= steps; i++) {
+    const th = (i / steps) * thetaMax;
+    const [x, y, r] = pt(th);
+    const [x2, y2] = pt(th + 0.01);
+    const t = [x2 - x, y2 - y]; const tl = Math.hypot(t[0], t[1]); t[0] /= tl; t[1] /= tl;
+    const nrm = [-t[1], t[0]]; // in-plane normal
+    const rho = r * style.thick;
+    const verts = [];
+    for (let j = 0; j < ring; j++) {
+      const ph = (j / ring) * Math.PI * 2;
+      verts.push([x + nrm[0] * Math.cos(ph) * rho, y + nrm[1] * Math.cos(ph) * rho, Math.sin(ph) * rho * 0.9]);
+    }
+    rings.push(verts);
+  }
+  const crackFrom = Math.floor(steps * (1 - style.crack));
+  for (let i = 0; i < steps; i++) {
+    if (style.crack && i >= crackFrom && (i % 3 !== 0)) continue; // broken outer whorl
+    for (let j = 0; j < ring; j++) {
+      const A = rings[i][j], B = rings[i][(j + 1) % ring], C = rings[i + 1][(j + 1) % ring], D = rings[i + 1][j];
+      pos.push(...A, ...B, ...C, ...A, ...C, ...D);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  // Fit: total height SHELL_H with the bottom at y = 0 and the coil centered on X.
+  g.computeBoundingBox();
+  const bb = g.boundingBox, h = bb.max.y - bb.min.y;
+  const s = SHELL_H / h;
+  g.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, 0);
+  g.scale(s * style.sx, s * style.sy, s);
+  void rMax;
+  return g;
 }
 
 /** Faceted spiral Shell stand-in, point down (owner concept 07.11); the four differ by silhouette. */
 function shell(b, n) {
   const style = SHELL_STYLE[n - 1];
-  const pts = [];
-  for (let i = 0; i <= 36; i++) {
-    const t = i / 36;
-    const ridge = 1 + 0.07 * Math.sin(t * style.ridges * Math.PI * 2);
-    pts.push(new THREE.Vector2(Math.max(0.02, shellRadius(style, t) * ridge), t * SHELL_H));
-  }
-  const geo = new THREE.LatheGeometry(pts, 9, 0, style.phi);
-  // Twist the facets into a spiral.
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i), a = (y / SHELL_H) * style.twist * Math.PI * 2, x = pos.getX(i), z = pos.getZ(i);
-    pos.setXYZ(i, x * Math.cos(a) - z * Math.sin(a) + style.skew * y, y, x * Math.sin(a) + z * Math.cos(a));
-  }
-  b.add(geo, n === 2 ? 0x8e9a95 : 0xb3bcb7, { scale: [style.sx, 1, 1], flat: true });
-  const curve = new THREE.CatmullRomCurve3(Array.from({ length: 48 }, (_, i) => {
-    const t = 0.06 + (i / 47) * 0.8, y = t * SHELL_H, r = shellRadius(style, t) * 1.03;
-    const a = t * Math.PI * 2 * 3;
-    return new THREE.Vector3((Math.cos(a) * r + style.skew * y) * style.sx, y, Math.sin(a) * r);
-  }));
-  b.add(new THREE.TubeGeometry(curve, 160, 0.16, 5, false), 0x5c6762);
-  // Camera-only colliders: Shells float out of reach, but the camera must never enter them.
-  for (let k = 0; k < 6; k++) {
-    const y0 = (k / 6) * SHELL_H, y1 = ((k + 1) / 6) * SHELL_H;
-    const r = shellRadius(style, Math.min(1, (k + 1) / 6 + 0.05)) * 1.1 * Math.max(1, style.sx) + 0.3;
-    // Extended 0.25 m up and down: the code-driven hover (scenes/island.js) stays inside.
-    b.collidePrism(style.skew * (y0 + y1) / 2 * style.sx, 0, r + 0.25, y0 - 0.25, y1 + 0.25, 10, MASK_CAMERA);
-  }
+  const geo = spiralShellGeometry(style);
+  if (style.skew) geo.applyMatrix4(new THREE.Matrix4().set(1, style.skew, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox.clone();
+  b.add(geo, n === 2 ? 0xc9cfcb : 0xd8dcd8, { flat: true });
+  // Camera-only collider: the coil's box with a 0.25 m margin for the code-driven hover.
+  const m = 0.25;
+  b.collideBox([bb.min.x - m, bb.min.y - m, bb.min.z - m], [bb.max.x + m, bb.max.y + m, bb.max.z + m], MASK_CAMERA);
 }
 
 function interior(b) {
@@ -247,55 +273,82 @@ function camp(b, clanId) {
 /** Deterministic pseudo-random numbers for repeatable greybox rocks and trees. */
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
+/** Flat walkable disc collider (triangle fan) at y. */
+function discTris(cx, cz, r, y = 0, n = 32) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
+    out.push(cx, y, cz, cx + Math.cos(a1) * r, y, cz + Math.sin(a1) * r, cx + Math.cos(a0) * r, y, cz + Math.sin(a0) * r);
+  }
+  return out;
+}
+
+/**
+ * The archipelago (owner concept 07.11, third image): plaza and camp plateaus on faceted rock
+ * pillars that sink into the clouds, a balcony, railed stone bridges and parapets with openings.
+ * Every bridge has railings with colliders so the capsule cannot walk off it.
+ */
 function island(b) {
-  const R = ISLAND_RADIUS, rand = rng(7);
-  const SAND = 0xcdb98f;
-  b.add(new THREE.CircleGeometry(R, 72), 0x7f8f84, { rotation: [-Math.PI / 2, 0, 0] });
-  // Rocky low-poly cliffs dropping into the sea.
-  const cliff = new THREE.CylinderGeometry(R + 0.2, R + SHORE_WIDTH, 4, 30, 3, true);
-  const cp = cliff.attributes.position;
-  for (let i = 0; i < cp.count; i++) {
-    const x = cp.getX(i), y = cp.getY(i), z = cp.getZ(i), r = Math.hypot(x, z);
-    const k = y > 1.99 ? 0 : 1 + (rand() - 0.5) * 0.06;
-    cp.setXYZ(i, (x / r) * r * k, y + (y > 1.99 ? 0 : (rand() - 0.5) * 0.6), (z / r) * r * k);
+  const rand = rng(7);
+  const ROCK = 0x6d716c, ROCK_DARK = 0x5a5e5a, STONE_TOP = 0xa7ab9f, PAVING = 0xbdb6a2, GRASS = 0x7f8f74;
+  for (const p of platforms()) {
+    const [cx, , cz] = p.center, r = p.radius;
+    // Walk surface, a terrace step below it, and the pillar down into the clouds.
+    b.add(new THREE.CylinderGeometry(r, r, 0.6, 28), p.id === 'plaza' ? PAVING : p.id === 'balcony' ? STONE_TOP : GRASS, { position: [cx, -0.3, cz] });
+    b.add(new THREE.CylinderGeometry(r + 0.9, r + 0.6, 1.4, 14), ROCK, { position: [cx, -1.6, cz], flat: true });
+    const pillar = new THREE.CylinderGeometry(r * 0.95, r * 0.45, PILLAR_DEPTH, 12, 6, true);
+    const pp = pillar.attributes.position;
+    for (let i = 0; i < pp.count; i++) {
+      const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), k = 1 + (rand() - 0.5) * 0.18;
+      pp.setXYZ(i, x * k, y, z * k);
+    }
+    b.add(pillar, ROCK_DARK, { position: [cx, -2.3 - PILLAR_DEPTH / 2, cz], flat: true });
+    b.colliders.push({ tris: discTris(cx, cz, r), mask: MASK_ALL });
+    // Parapet ring with openings where bridges attach.
+    const openings = parapetOpenings(p.id);
+    const n = p.id === 'plaza' ? 36 : 22;
+    const halfOpen = (Math.asin(Math.min(1, 1.5 / r)) * 180) / Math.PI;
+    for (let i = 0; i < n; i++) {
+      const midDeg = ((i + 0.5) / n) * 360;
+      const segHalf = 180 / n;
+      if (openings.some((o) => Math.abs(((midDeg - o + 540) % 360) - 180) < halfOpen + segHalf)) continue;
+      const a = (midDeg * Math.PI) / 180, len = 2 * r * Math.sin(Math.PI / n) + 0.05;
+      const px = cx + Math.cos(a) * (r - 0.15), pz = cz + Math.sin(a) * (r - 0.15);
+      const rotY = -a + Math.PI / 2;
+      b.box([len, RAIL_HEIGHT * 0.8, 0.3], STONE_TOP, { position: [px, RAIL_HEIGHT * 0.4, pz], rotation: [0, rotY, 0] });
+      b.collideRotatedBox([len, RAIL_HEIGHT * 0.8, 0.3], [px, RAIL_HEIGHT * 0.4, pz], rotY);
+    }
   }
-  b.add(cliff, 0x6d706b, { position: [0, -2, 0], flat: true });
-  for (let i = 0; i < 26; i++) {
-    const a = (i / 26) * Math.PI * 2 + rand() * 0.2, r = R + 1 + rand() * 2.5, s = 0.8 + rand() * 1.6;
-    b.add(new THREE.DodecahedronGeometry(s, 0), 0x63665f, { position: [Math.cos(a) * r, -0.9 + rand() * 0.5, Math.sin(a) * r], rotation: [rand() * 3, rand() * 3, 0], flat: true });
-  }
-  b.add(new THREE.CircleGeometry(PLAZA_RADIUS, 48), SAND, { position: [0, 0.02, 0], rotation: [-Math.PI / 2, 0, 0] });
-  for (const [a, c] of pathSegments()) {
-    const dx = c[0] - a[0], dz = c[2] - a[2], len = Math.hypot(dx, dz);
-    b.box([PATH_WIDTH, 0.02, len + PATH_WIDTH * 0.5], SAND, { position: [(a[0] + c[0]) / 2, 0.03, (a[2] + c[2]) / 2], rotation: [0, Math.atan2(dx, dz), 0] });
+  for (const br of bridges()) {
+    const [ax, , az] = br.from, [cx, , cz] = br.to;
+    const dx = cx - ax, dz = cz - az, len = Math.hypot(dx, dz), rotY = Math.atan2(dx, dz);
+    const mx = (ax + cx) / 2, mz = (az + cz) / 2;
+    b.box([br.width, 0.5, len], STONE_TOP, { position: [mx, -0.25, mz], rotation: [0, rotY, 0] });
+    // A keel under the deck (the arch is left to the island art).
+    b.box([br.width * 0.6, 0.7, len - 0.6], ROCK, { position: [mx, -0.85, mz], rotation: [0, rotY, 0] });
+    b.collideRotatedBox([br.width, 0.5, len], [mx, -0.25, mz], rotY);
+    // Railings on both sides (colliders for player and camera).
+    for (const side of [-1, 1]) {
+      const ox = Math.cos(rotY) * side * (br.width / 2 - 0.1), oz = -Math.sin(rotY) * side * (br.width / 2 - 0.1);
+      b.box([0.2, RAIL_HEIGHT, len], STONE_TOP, { position: [mx + ox, RAIL_HEIGHT / 2, mz + oz], rotation: [0, rotY, 0] });
+      b.collideRotatedBox([0.2, RAIL_HEIGHT, len], [mx + ox, RAIL_HEIGHT / 2, mz + oz], rotY);
+    }
   }
   for (const z of ANCHOR_ZONES) {
-    b.add(new THREE.CircleGeometry(ANCHOR_ZONE_RADIUS, 40), 0x66726c, { position: [z.position[0], 0.04, z.position[2]], rotation: [-Math.PI / 2, 0, 0] });
-    b.add(new THREE.RingGeometry(ANCHOR_ZONE_RADIUS - 0.2, ANCHOR_ZONE_RADIUS, 48), 0xd9a441, { position: [z.position[0], 0.05, z.position[2]], rotation: [-Math.PI / 2, 0, 0] });
+    b.add(new THREE.CircleGeometry(ANCHOR_ZONE_RADIUS, 32), 0x8e958c, { position: [z.position[0], 0.02, z.position[2]], rotation: [-Math.PI / 2, 0, 0] });
+    b.add(new THREE.RingGeometry(ANCHOR_ZONE_RADIUS - 0.12, ANCHOR_ZONE_RADIUS, 40), 0xd9a441, { position: [z.position[0], 0.03, z.position[2]], rotation: [-Math.PI / 2, 0, 0] });
   }
-  // A few pines near the shore, kept clear of the anchor-zone diagonals.
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2 + 0.26 + rand() * 0.15, r = R - 3.2 - rand() * 1.5;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r, h = 2.4 + rand() * 1.4;
-    b.add(new THREE.CylinderGeometry(0.12, 0.16, 0.9, 5), 0x5a4532, { position: [x, 0.45, z] });
-    b.add(new THREE.ConeGeometry(0.85, h, 6), 0x3f5a46, { position: [x, 0.9 + h / 2, z], flat: true });
-    b.collidePrism(x, z, 0.3, 0, 2, 6);
+  // A few pines on the camp plateaus' outer edges.
+  for (const p of platforms()) {
+    if (!p.id.startsWith('plateau_')) continue;
+    const [cx, , cz] = p.center, out = Math.atan2(cz, cx);
+    for (const da of [-0.55, 0.6]) {
+      const a = out + da, r = p.radius - 1.1, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r, h = 2.2 + rand() * 1.2;
+      b.add(new THREE.CylinderGeometry(0.1, 0.14, 0.8, 5), 0x5a4532, { position: [x, 0.4, z] });
+      b.add(new THREE.ConeGeometry(0.75, h, 6), 0x3f5a46, { position: [x, 0.8 + h / 2, z], flat: true });
+      b.collidePrism(x, z, 0.28, 0, 2, 6);
+    }
   }
-  // Ground: a flat fan slightly larger than the visible disc; a player-only rim keeps Iris on land.
-  const ground = [];
-  const n = 48, gr = R + 0.5;
-  for (let i = 0; i < n; i++) {
-    const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
-    ground.push(0, 0, 0, Math.cos(a1) * gr, 0, Math.sin(a1) * gr, Math.cos(a0) * gr, 0, Math.sin(a0) * gr);
-  }
-  b.colliders.push({ tris: ground, mask: MASK_ALL });
-  const rim = [], rr = R - 0.6;
-  for (let i = 0; i < n; i++) {
-    const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
-    const ax = Math.cos(a0) * rr, az = Math.sin(a0) * rr, bx = Math.cos(a1) * rr, bz = Math.sin(a1) * rr;
-    rim.push(ax, -1, az, bx, -1, bz, bx, 3, bz, ax, -1, az, bx, 3, bz, ax, 3, az);
-  }
-  b.colliders.push({ tris: rim, mask: MASK_PLAYER });
 }
 
 /** Builds the greybox for a catalog asset by exact name. */
@@ -311,9 +364,9 @@ export function buildGreybox(name) {
   else if (name === 'island') island(b);
   else b.box([1, 1, 1], 0xff00ff, { position: [0, 0.5, 0] });
   const built = b.build(name);
-  const labelY = name === 'island' ? 0.8 : /^shell_/.test(name) ? -0.6 : (def ? def.height : 1) + 0.35;
+  const labelY = name === 'island' ? 1.6 : /^shell_/.test(name) ? -0.6 : (def ? def.height : 1) + 0.35;
   const label = makeLabel((def ? def.label : name) + ' \u00b7 not final art', def && def.kind === 'hero' ? 0.015 : 0.019);
-  label.position.set(0, labelY, name === 'island' ? ISLAND_RADIUS - 6 : 0);
+  label.position.set(0, labelY, 0);
   built.object.add(label);
   return built;
 }

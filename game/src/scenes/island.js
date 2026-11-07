@@ -1,7 +1,8 @@
-// The island diorama scene (docs/art/brief.md, owner concept 07.11): terrain, central plaza with the
-// Scroll table, six camps on the hexagonal ring, four anchor zones on the diagonals with a floating
-// Shell above each, sea and pale haze. Every catalog object is a PropInstance: greybox first, real
-// art when its .glb streams in. No game rules here: the demo values on the anchor pads are labels.
+// The island scene: a floating archipelago above a sea of clouds (owner concept 07.11, third image).
+// Plaza plateau with the Scroll medallion and four anchor zones, six camp plateaus joined by railed
+// bridges, a viewing balcony where the player starts, four levitating Shells, a hovering glyph.
+// Every catalog object is a PropInstance: greybox first, real art when its .glb streams in.
+// No game rules here: the values on the anchor pads are demo labels.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { CollisionWorld } from '../physics/collision.js';
@@ -9,7 +10,7 @@ import { CharacterController } from '../physics/character.js';
 import { AssetLibrary, AssetStreamer, PropInstance } from '../render/assets.js';
 import { PadDecals } from '../render/decals.js';
 import { ROMAN } from '../render/asset-catalog.js';
-import { CAMPS, ANCHOR_ZONES, SCROLL_TABLE, SHARD, SPAWN, SHELL_FLOAT_HEIGHT, WATER_LEVEL, shellHover } from './layout.js';
+import { CAMPS, ANCHOR_ZONES, SCROLL_TABLE, SHARD, SPAWN, CLOUD_LEVEL, KILL_Y, WALK_SPEED, PLATEAU_RADIUS, shellHover } from './layout.js';
 
 export const HAZE = 0xc9d3d0;
 
@@ -35,6 +36,40 @@ function mistTexture() {
   return t;
 }
 
+/** Tileable soft cloud texture (random blurred blobs). */
+function cloudTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#c9d1ce'; ctx.fillRect(0, 0, 256, 256);
+  let s = 11;
+  const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * 256, y = rnd() * 256, r = 18 + rnd() * 46;
+    for (const [ox, oy] of [[0, 0], [256, 0], [-256, 0], [0, 256], [0, -256]]) {
+      const g = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+      g.addColorStop(0, 'rgba(250, 252, 250, 0.55)'); g.addColorStop(1, 'rgba(250, 252, 250, 0)');
+      ctx.fillStyle = g; ctx.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+    }
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Code-drawn glyph hovering above the plaza (the logogram itself comes with the language UI). */
+function glyphObject() {
+  const g = new THREE.Group();
+  g.name = 'plaza_glyph';
+  const mat = new THREE.MeshStandardMaterial({ color: 0xe9e4d2, emissive: 0x6a5a2a, roughness: 0.4, metalness: 0.2 });
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.05, 6, 40), mat));
+  for (let i = 0; i < 4; i++) {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), mat);
+    const a = (i / 4) * Math.PI * 2;
+    s.position.set(Math.cos(a) * 0.9, Math.sin(a) * 0.9, 0); s.rotation.z = a; g.add(s);
+  }
+  return g;
+}
+
 function playerMesh() {
   const g = new THREE.Group();
   g.name = 'player_iris';
@@ -50,7 +85,7 @@ export function createIslandScene(renderer, camera) {
   const scene = new THREE.Scene();
   scene.background = skyTexture();
   // Distance fog here; height fog (dense over the sea, thin on high ground) comes from render/fog.js.
-  scene.fog = new THREE.Fog(HAZE, 45, 190);
+  scene.fog = new THREE.Fog(HAZE, 70, 280);
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.45;
@@ -61,13 +96,16 @@ export function createIslandScene(renderer, camera) {
   sun.position.set(28, 46, 18);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -44, right: 44, top: 44, bottom: -44, near: 5, far: 140 });
+  Object.assign(sun.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55, near: 5, far: 160 });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
   scene.add(hemi, sun, sun.target);
 
-  const sea = new THREE.Mesh(new THREE.CircleGeometry(320, 64), new THREE.MeshStandardMaterial({ color: 0x86a0a2, roughness: 0.3, metalness: 0.05 }));
-  sea.rotation.x = -Math.PI / 2; sea.position.y = WATER_LEVEL; sea.receiveShadow = true; sea.name = 'sea';
-  scene.add(sea);
+  // Sea of clouds below the archipelago; the height fog thickens toward it.
+  const cloudTex = cloudTexture();
+  cloudTex.wrapS = cloudTex.wrapT = THREE.RepeatWrapping; cloudTex.repeat.set(10, 10);
+  const clouds = new THREE.Mesh(new THREE.CircleGeometry(420, 48), new THREE.MeshLambertMaterial({ color: 0xe6ebe8, map: cloudTex }));
+  clouds.rotation.x = -Math.PI / 2; clouds.position.y = CLOUD_LEVEL; clouds.name = 'cloud_sea';
+  scene.add(clouds);
 
   const world = new CollisionWorld({ cellSize: 2 });
   const library = new AssetLibrary();
@@ -81,27 +119,31 @@ export function createIslandScene(renderer, camera) {
 
   for (const c of CAMPS) {
     place(c.asset, c.position, c.rotationY);
-    if (c.id !== 'iris') interactables.push({ label: c.label, verb: 'Talk to', position: new THREE.Vector3(...c.position), radius: 4.2, inspect: false });
+    if (c.id !== 'iris') interactables.push({ label: c.label, verb: 'Talk to', position: new THREE.Vector3(...c.position), radius: PLATEAU_RADIUS - 1, inspect: false });
   }
 
   const anchors = [], shells = [];
   const mistTex = mistTexture();
   for (const z of ANCHOR_ZONES) {
-    const restYaw = -((z.angle * Math.PI) / 180);
-    const shellInst = place(z.shellAsset, [z.position[0], SHELL_FLOAT_HEIGHT, z.position[2]], restYaw);
-    // Soft mist under the levitating Shell: a ground layer and a camera-facing haze.
-    const mistDisc = new THREE.Mesh(new THREE.CircleGeometry(8, 32), new THREE.MeshBasicMaterial({ map: mistTex, transparent: true, opacity: 0.5, depthWrite: false }));
-    mistDisc.rotation.x = -Math.PI / 2; mistDisc.position.set(z.position[0], 1.2, z.position[2]); mistDisc.name = 'shell_mist_disc';
+    const [shx, shy, shz] = z.shellPosition;
+    const shellInst = place(z.shellAsset, z.shellPosition, z.shellRotationY);
+    // Soft mist under the levitating Shell: a drifting layer and a camera-facing haze.
+    const mistDisc = new THREE.Mesh(new THREE.CircleGeometry(10, 32), new THREE.MeshBasicMaterial({ map: mistTex, transparent: true, opacity: 0.45, depthWrite: false }));
+    mistDisc.rotation.x = -Math.PI / 2; mistDisc.position.set(shx, shy - 2.5, shz); mistDisc.name = 'shell_mist_disc';
     const mistHaze = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, transparent: true, opacity: 0.3, depthWrite: false }));
-    mistHaze.scale.set(15, 7, 1); mistHaze.position.set(z.position[0], 4, z.position[2]); mistHaze.name = 'shell_mist_haze';
+    mistHaze.scale.set(18, 8, 1); mistHaze.position.set(shx, shy - 1, shz); mistHaze.name = 'shell_mist_haze';
     scene.add(mistDisc, mistHaze);
-    shells.push({ instance: shellInst, restYaw, index: z.index, mistDisc });
+    shells.push({ instance: shellInst, restY: shy, restYaw: z.shellRotationY, index: z.index, mistDisc });
     const a = place('anchor', z.anchorPosition, z.anchorRotationY);
     // Demo label values only: the room snapshot will drive the real Shell number and tick.
     const decals = new PadDecals(a, { shell_number: ROMAN[z.index], tick: String(3 + z.index * 2) });
     anchors.push({ instance: a, decals, zone: z });
-    interactables.push({ label: 'Anchor (Shell ' + ROMAN[z.index] + ')', verb: 'Inspect', instance: a, position: new THREE.Vector3(...z.anchorPosition), radius: 2.2, inspect: true });
+    interactables.push({ label: 'Anchor (Shell ' + ROMAN[z.index] + ')', verb: 'Inspect', instance: a, position: new THREE.Vector3(...z.anchorPosition), radius: 1.8, inspect: true });
   }
+
+  const glyph = glyphObject();
+  glyph.position.set(0, 9, 0);
+  scene.add(glyph);
 
   // Shard on a pedestal at the Iris camp. The pedestal is scene dressing with its own collider.
   const [sx, , sz] = SHARD.position, [pw, ph, pd] = SHARD.pedestal.size;
@@ -112,7 +154,7 @@ export function createIslandScene(renderer, camera) {
   const shard = place('shard', SHARD.position);
   interactables.push({ label: 'Memory shard', verb: 'Inspect', instance: shard, position: new THREE.Vector3(sx, 0, sz), radius: 1.8, inspect: true });
 
-  const player = new CharacterController(world, { spawn: SPAWN });
+  const player = new CharacterController(world, { spawn: SPAWN, walkSpeed: WALK_SPEED, killY: KILL_Y });
   const avatar = playerMesh();
   scene.add(avatar);
 
@@ -126,10 +168,12 @@ export function createIslandScene(renderer, camera) {
   function update(t) {
     for (const s of shells) {
       const h = shellHover(t, s.index);
-      s.instance.root.position.y = SHELL_FLOAT_HEIGHT + h.dy;
+      s.instance.root.position.y = s.restY + h.dy;
       s.instance.root.rotation.y = s.restYaw + h.yaw;
       s.mistDisc.rotation.z = t * 0.02 + s.index;
     }
+    glyph.rotation.y = t * 0.25;
+    glyph.position.y = 9 + Math.sin(t * 0.7) * 0.15;
   }
 
   return { scene, world, library, streamer, interactables, anchors, player, avatar, marker, sun, objective, update };
