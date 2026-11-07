@@ -44,19 +44,19 @@ RUNTIME_TRI_BUDGET = 30000
 MASTER_EDGE = 0.030
 WALL = 0.32                     # shell wall thickness (solidify)
 
-COL_PEARL = (0.56, 0.58, 0.58)          # pale pearly grey (linear)
-TINTS = ((0.62, 0.53, 0.57), (0.50, 0.60, 0.56), (0.50, 0.55, 0.64))   # pink, green, blue sheen
+COL_PEARL = (0.40, 0.42, 0.42)          # pale pearly grey (linear)
+TINTS = ((0.58, 0.40, 0.48), (0.38, 0.56, 0.47), (0.38, 0.46, 0.62))   # pink, green, blue sheen
 
 SPECS = {
-    1: dict(numeral="I", W=1.9, a_ratio=0.34, t_ratio=0.62, whorls=3.6, ribs=26, rib_amp=0.055,
-            sides=18, target_h=18.0, hook=dict(straight=1.9, hook_deg=125.0, hook_r=0.45,
+    1: dict(numeral="I", W=1.9, a_ratio=0.34, t_ratio=0.62, whorls=3.6, ribs=24, rib_amp=0.12,
+            sides=18, target_h=18.0, hook=dict(straight=1.75, hook_deg=120.0, hook_r=0.62,
                                                 grow=1.22), theta_end=math.pi),
-    2: dict(numeral="II", W=3.0, a_ratio=0.66, t_ratio=0.95, whorls=3.4, ribs=22, rib_amp=0.075,
+    2: dict(numeral="II", W=3.0, a_ratio=0.66, t_ratio=0.95, whorls=3.4, ribs=18, rib_amp=0.17,
             sides=24, target_h=17.5, theta_end=-math.pi / 2),
-    3: dict(numeral="III", W=2.6, a_ratio=0.58, t_ratio=0.70, whorls=3.4, ribs=26, rib_amp=0.06,
-            sides=24, target_h=17.0, theta_end=-math.pi * 0.35, troch=0.22, oval=0.16,
-            flare=0.45, tilt=(math.radians(16), 0.0, math.radians(14))),
-    4: dict(numeral="IV", W=2.8, a_ratio=0.62, t_ratio=0.85, whorls=3.4, ribs=24, rib_amp=0.065,
+    3: dict(numeral="III", W=2.6, a_ratio=0.58, t_ratio=0.70, whorls=3.4, ribs=20, rib_amp=0.14,
+            sides=24, target_h=17.0, theta_end=-math.pi * 0.35, troch=0.50, oval=0.28,
+            flare=0.85, tilt=(math.radians(24), 0.0, math.radians(38)), mirror=True),
+    4: dict(numeral="IV", W=2.8, a_ratio=0.62, t_ratio=0.85, whorls=3.4, ribs=20, rib_amp=0.15,
             sides=24, target_h=17.5, theta_end=-math.pi / 2, broken=True),
 }
 
@@ -101,6 +101,11 @@ def coil_frames(spec):
         u = (th - t_start) * nr / (2 * math.pi)
         frac = u % 1.0
         rib = rib_profile(frac) if whorl_from_end < 2.8 else 0.0
+        lip_w = math.radians(28)
+        if th > t_end - lip_w and not spec.get("hook"):
+            lip = 1.0 + 0.13 * ((th - (t_end - lip_w)) / lip_w) ** 2
+            a *= lip
+            t *= lip
         flare = 0.0
         if spec.get("flare") and th > t_end - math.radians(70):
             flare = spec["flare"] * ((th - (t_end - math.radians(70))) / math.radians(70)) ** 2
@@ -153,6 +158,8 @@ def hook_frames(spec, frames, k):
         e1 = Vector((T.z, 0.0, -T.x))
         grow = 1.0 + (hk["grow"] - 1.0) * min(1.0, total / (hk["straight"] + 1.0))
         a = a0 * grow
+        if phase == "hook" and turned > math.radians(hk["hook_deg"]) - 0.35:
+            a *= 1.0 + 0.13 * ((turned - (math.radians(hk["hook_deg"]) - 0.35)) / 0.35) ** 2
         out.append(dict(c=pos.copy(), e1=e1, e2=Vector((0, 1, 0)), a=a, t=spec["t_ratio"] * a,
                         u=u, rib=rib_profile(frac), flare=0.0, th=None))
     return out
@@ -224,7 +231,9 @@ def break_shell(bm, frames, spec, rng):
         s = math.atan2(local.dot(fr["e2"]), local.dot(fr["e1"]))
         # Big opening on the outer flank toward the aperture, ragged edge.
         reach = 1.0 - span / math.radians(215)
-        edge = 0.35 + 1.25 * reach + 0.35 * math.sin(7.0 * th + 3 * s) + rng.uniform(-0.28, 0.28)
+        # Coherent ragged border (low-frequency waves, no per-face noise).
+        edge = (0.15 + 1.05 * reach + 0.30 * math.sin(5.0 * th + 2.0 * s)
+                + 0.16 * math.sin(11.0 * th - 3.0 * s + 1.3))
         side = abs(s + 0.5)
         if side < edge and s < 1.0:
             victims.append(f)
@@ -234,7 +243,7 @@ def break_shell(bm, frames, spec, rng):
     border = [f for f in victims if any(g not in vset for e in f.edges for g in e.link_faces)]
     rng.shuffle(border)
     used = set()
-    for seed in border[:7]:
+    for seed in border[:5]:
         if seed in used:
             continue
         cluster = [seed]
@@ -255,7 +264,7 @@ def add_plates(bm, plates, rng, frames):
         pts = [p for f in pl for p in f]
         pc = sum(pts, Vector()) / len(pts)
         away = (pc - centre).normalized()
-        off = away * rng.uniform(1.4, 3.2) + Vector((0, rng.uniform(-0.8, 0.8), rng.uniform(-0.6, 0.6)))
+        off = away * rng.uniform(0.10, 0.30) + Vector((0, rng.uniform(-0.08, 0.08), rng.uniform(-0.06, 0.06)))
         rot = Matrix.Rotation(rng.uniform(-0.45, 0.45), 3, Vector((rng.uniform(-1, 1), rng.uniform(-1, 1),
                                                                    rng.uniform(-1, 1))).normalized())
         for f in pl:
@@ -264,6 +273,20 @@ def add_plates(bm, plates, rng, frames):
             fc[bm.faces.layers.int["ring"]] = -1
             out.append(fc)
     return out
+
+
+def body_bounds(obj):
+    """Bounds of the shell body only (faces whose 'ring' attribute is >= 0)."""
+    me = obj.data
+    attr = me.attributes.get("ring")
+    verts = set()
+    for p in me.polygons:
+        if attr is None or attr.data[p.index].value >= 0:
+            verts.update(p.vertices)
+    cs = [me.vertices[i].co for i in verts]
+    lo = Vector((min(c.x for c in cs), min(c.y for c in cs), min(c.z for c in cs)))
+    hi = Vector((max(c.x for c in cs), max(c.y for c in cs), max(c.z for c in cs)))
+    return lo, hi
 
 
 def build_shell(n, col, m_ext, m_nacre):
@@ -286,11 +309,16 @@ def build_shell(n, col, m_ext, m_nacre):
     # Orientation and scale: tilt (III), then scale to the target height with the
     # pivot at the bottom centre. Frames are mapped with the same transform.
     R = Matrix.Identity(3)
+    if spec.get("mirror"):              # sinistral coil: winds the other way round
+        R = Matrix.Diagonal((-1.0, 1.0, 1.0))
     if spec.get("tilt"):
         rx, ry, rz = spec["tilt"]
-        R = Matrix.Rotation(rz, 3, "Z") @ Matrix.Rotation(ry, 3, "Y") @ Matrix.Rotation(rx, 3, "X")
+        R = Matrix.Rotation(rz, 3, "Z") @ Matrix.Rotation(ry, 3, "Y") @ Matrix.Rotation(rx, 3, "X") @ R
+    if R != Matrix.Identity(3):
         shell.data.transform(R.to_4x4())
-    lo, hi = P.world_bounds([shell])
+        if R.determinant() < 0:
+            shell.data.flip_normals()
+    lo, hi = body_bounds(shell)            # drifting plates do not count
     sc = spec["target_h"] / (hi.z - lo.z)
     centre = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
     M = Matrix.Diagonal((sc, sc, sc, 1)) @ Matrix.Translation(-centre)
@@ -309,8 +337,31 @@ def build_shell(n, col, m_ext, m_nacre):
     T = (R @ (last["c"] - prev["c"])).normalized()
     c_world = (M @ (R @ last["c"]).to_4d()).to_3d()
     P.triangulate_ngons(shell)
-    P.finish_shading(shell, angle=9)
+    P.finish_shading(shell, angle=28)
     return shell, dict(aperture=c_world, forward=T, aperture_radius=last["a"] * sc, **info), frames, M, R
+
+
+def spiral_seams(obj, spec):
+    """Seam edges from the spiral parametrisation: a ring every quarter whorl and
+    one line along the hidden inner side, so each patch unwraps flat."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    sp = bm.loops.layers.uv["spiral"]
+    uv = {}
+    for f in bm.faces:
+        for lp in f.loops:
+            uv.setdefault(lp.vert.index, (lp[sp].uv.x, lp[sp].uv.y))
+    K = max(1, spec["ribs"] // 4)
+    out = set()
+    for e in bm.edges:
+        a, b = e.verts[0].index, e.verts[1].index
+        (ua, va), (ub, vb) = uv.get(a, (0, 0)), uv.get(b, (0, 0))
+        ring = abs(ua - ub) < 1e-4 and abs(ua / K - round(ua / K)) < 1e-4
+        inner = abs(va - 0.5) < 1e-4 and abs(vb - 0.5) < 1e-4
+        if ring or inner:
+            out.add((min(a, b), max(a, b)))
+    bm.free()
+    return out
 
 
 # ---------------------------------------------------------- master shading
@@ -330,11 +381,11 @@ def pearl_material(name, nacre):
     lines.inputs["Detail"].default_value = 2.0
     n1 = k.noise(co, 0.35, 5.0, 0.6)
     n2 = k.noise(co, 1.6, 4.0, 0.55)
-    hue = k.noise(co, 0.12, 2.0, 0.5)
+    hue = k.noise(co, 0.18, 3.0, 0.55)
     tint = k.mix(k.maprange(hue, 0.35, 0.55), TINTS[0], TINTS[1])
     tint = k.mix(k.maprange(hue, 0.52, 0.70), tint, TINTS[2])
     if nacre:
-        base = k.mix(0.55, (0.70, 0.71, 0.72), tint)
+        base = k.mix(0.75, (0.66, 0.66, 0.70), tint)
         c = k.mix(k.maprange(lines.outputs["Fac"], 0.3, 0.9, 0.0, 0.25), base, (0.80, 0.80, 0.82))
         dirt = k.maprange(k.ao(0.8), 0.4, 0.95, 0.6, 0.0)
         c = k.mix(dirt, c, (0.10, 0.11, 0.12))
@@ -342,15 +393,15 @@ def pearl_material(name, nacre):
         metal = 0.0
         bump_h = k.math("ADD", lines.outputs["Fac"], k.math("MULTIPLY", n2, 0.3))
         return m, P.finish_procedural(k, out, c, rough, metal, bump_h, 0.10, 0.01)
-    base = k.mix(0.30, COL_PEARL, tint)
-    c = k.mix(k.maprange(n1, 0.3, 0.7, 0.0, 0.35), base, (0.36, 0.39, 0.39))
+    base = k.mix(0.62, COL_PEARL, tint)
+    c = k.mix(k.maprange(n1, 0.3, 0.7, 0.0, 0.45), base, (0.27, 0.30, 0.30))
     c = k.mix(k.maprange(lines.outputs["Fac"], 0.55, 0.95, 0.0, 0.18), c, (0.74, 0.75, 0.75))
     # Weathering: darker grey-green in crevices between ribs, chalky crests.
     geo = k.geometry()
     crest = k.maprange(geo.outputs["Pointiness"], 0.52, 0.58, 0.0, 0.35)
     c = k.mix(crest, c, (0.78, 0.79, 0.78))
-    dirt = k.maprange(k.ao(1.2), 0.35, 0.95, 0.75, 0.0)
-    c = k.mix(dirt, c, (0.07, 0.085, 0.08))
+    dirt = k.maprange(k.ao(0.7), 0.35, 0.95, 0.85, 0.0)
+    c = k.mix(dirt, c, (0.10, 0.115, 0.11))
     rough = k.math("ADD", k.maprange(n2, 0.3, 0.7, 0.32, 0.52),
                    k.math("MULTIPLY", dirt, 0.25), clamp=True)
     bump_h = k.math("ADD", k.math("MULTIPLY", lines.outputs["Fac"], 0.8),
@@ -418,24 +469,14 @@ def stage_build(n):
     P.log("runtime tris", stats["runtime_triangles"])
 
     clock.start("uv_unwrap")
+    seams = spiral_seams(shell, SPECS[n])
     shell.data.uv_layers.new(name="UVMap")
     shell.data.uv_layers.active = shell.data.uv_layers["UVMap"]
-    P.smart_uv(shell, margin=0.002, angle=46)
-    # Interior nacre gets half the texel density (it is mostly hidden), then repack.
-    bm = bmesh.new()
-    bm.from_mesh(shell.data)
-    uvl = bm.loops.layers.uv["UVMap"]
-    for f in bm.faces:
-        if f.material_index == 1:
-            for lp in f.loops:
-                lp[uvl].uv *= 0.5
-    bm.to_mesh(shell.data)
-    bm.free()
-    P.select_only([shell], shell)
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.pack_islands(rotate=True, margin=0.002)
-    bpy.ops.object.mode_set(mode="OBJECT")
+    # Interior nacre gets half the texel density (it is mostly hidden).
+    stats["uv_seams"] = P.seam_unwrap(
+        shell, lambda e: (min(e.verts[0].index, e.verts[1].index),
+                          max(e.verts[0].index, e.verts[1].index)) in seams,
+        sharp_deg=40, margin=0.001, scale_faces=(lambda f: f.material_index == 1, 0.5))
     stats["uv_exterior"] = P.uv_metrics(shell, TEX_SIZE, material_indices={0})
     stats["uv_nacre"] = P.uv_metrics(shell, TEX_SIZE, material_indices={1})
     P.log("uv", json.dumps(stats["uv_exterior"]))
@@ -445,8 +486,8 @@ def stage_build(n):
     passes, nt = P.densify(master, MASTER_EDGE)
     stats["master_densify"] = {"max_edge_m": MASTER_EDGE, "passes": passes, "triangles": nt}
     P.groups_from_materials(master)
-    P.add_displace(master, "weather", "CLOUDS", 0.9, 0.060, "tmp_ext", noise_depth=4)
-    P.add_displace(master, "pits", "VORONOI", 0.28, -0.035, "tmp_ext")
+    P.add_displace(master, "weather", "CLOUDS", 1.4, 0.035, "tmp_ext", noise_depth=4)
+    P.add_displace(master, "pits", "VORONOI", 0.12, -0.008, "tmp_ext")
     P.add_displace(master, "nacre_wave", "CLOUDS", 0.6, 0.012, "tmp_nacre", noise_depth=2)
     h_ext, kit_e = pearl_material("H_Exterior", False)
     h_nac, kit_n = pearl_material("H_Nacre", True)
