@@ -27,6 +27,9 @@ sc = bpy.context.scene
 bpy.ops.import_scene.gltf(filepath=GLB)
 arm = next(o for o in sc.objects if o.type == "ARMATURE")
 arm.location = (0, 0, 0)
+for o in list(sc.objects):
+    if o.name.endswith("_col"):                  # collision proxy capsule
+        bpy.data.objects.remove(o)
 acts = {a.name.split("|")[-1]: a for a in bpy.data.actions}
 
 sc.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in [

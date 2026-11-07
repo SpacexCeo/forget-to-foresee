@@ -514,8 +514,8 @@ def head_bm(body=BODY):
 # shared with the rig through FACE.
 
 FACE = dict(
-    eye=((0.030, -0.079, 1.646), 0.0128),        # eyeball centre (L, +X), radius
-    lid_r=0.0150,
+    eye=((0.030, -0.083, 1.646), 0.0135),        # eyeball centre (L, +X), radius
+    lid_r=0.0158,
     brow=(0.031, -0.090, 1.664),                 # brow ridge centre
     jaw=((0.0, -0.020, 1.616), (0.0, -0.088, 1.584)),   # jaw bone head, tail
     mouth_z=1.600,
@@ -600,7 +600,7 @@ def build_face(ag, body=BODY):
         bmesh.ops.translate(bm, verts=bm.verts, vec=Vector(c))
         ag.add(f"face_eye_{sfx}", bm, "body", "crystal", eye_col, rough=0.15, collide=())
         # upper lid: cap around an axis tilted up-back, open edge ~35 deg above centre
-        ag.add(f"face_lidup_{sfx}", _cap_bm(c, FACE["lid_r"], 125, 92), "body", "skin",
+        ag.add(f"face_lidup_{sfx}", _cap_bm(c, FACE["lid_r"], 130, 88), "body", "skin",
                lid_col, rough=0.6, collide=())
         ag.add(f"face_lidlo_{sfx}", _cap_bm(c, FACE["lid_r"] * 0.97, -125, 100, rings=4),
                "body", "skin", lid_col, rough=0.6, collide=())
@@ -610,7 +610,7 @@ def build_face(ag, body=BODY):
                "body", "skin", brow_col, rough=0.8, collide=())
         # weathered cheekbone facet (alien-tinged, slightly high)
         ag.add(f"face_cheek_{sfx}",
-               _bar((side * 0.046, -0.080, 1.626), 0.012, 0.010, 0.006,
+               _bar((side * 0.050, -0.072, 1.621), 0.008, 0.005, 0.004,
                     tilt=math.radians(22 * side)),
                "body", "skin", _shade(skin, 0.92), rough=0.55, collide=())
     # nose: faceted wedge from bridge to tip

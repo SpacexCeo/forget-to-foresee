@@ -948,7 +948,7 @@ def face_hands(key, clip, u, P):
         brow = -6 * u
     P.r("jaw", jaw, 0, 0)
     for sfx in ("L", "R"):
-        P.r(f"lid_up_{sfx}", 52 * blink, 0, 0)
+        P.r(f"lid_up_{sfx}", 60 * blink, 0, 0)
         P.r(f"lid_lo_{sfx}", -14 * blink, 0, 0)
         P.r(f"brow_{sfx}", -brow, 0, 0)
 
