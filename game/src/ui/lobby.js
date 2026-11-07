@@ -21,7 +21,7 @@ export function mountLobby(root, opts = {}) {
 
   // Owner reference art (docs/ui/lobby-reference.jpg) as a full-bleed backdrop with drifting mist layers on top.
   const bgEl = h('div', { class: 'ftf-bg ftf-bg-art', attrs: { 'aria-hidden': 'true' } },
-    h('div', { class: 'ftf-bg-image' }), h('div', { class: 'ftf-mist ftf-mist-a' }), h('div', { class: 'ftf-mist ftf-mist-b' }), h('div', { class: 'ftf-bg-vignette' }));
+    h('div', { class: 'ftf-bg-image', attrs: { style: `background-image: url('${(import.meta.env && import.meta.env.BASE_URL) || '/'}assets/ui/lobby_bg.jpg')` } }), h('div', { class: 'ftf-mist ftf-mist-a' }), h('div', { class: 'ftf-mist ftf-mist-b' }), h('div', { class: 'ftf-bg-vignette' }));
   const bg = { setReduced: (on) => bgEl.classList.toggle('ftf-still', !!on), setTier() {}, destroy() {} };
   bg.setReduced(prefs.reducedMotion());
 

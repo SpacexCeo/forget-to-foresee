@@ -58,6 +58,7 @@ export default defineConfig({
         main: resolve(ROOT, 'index.html'),
         review: resolve(ROOT, 'review.html'),
         vfx: resolve(ROOT, 'vfx.html'),
+        uiPreview: resolve(ROOT, 'ui-preview.html'),
       },
       output: {
         manualChunks(id) {
