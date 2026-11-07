@@ -49,7 +49,9 @@ export function isValidModelName(name) {
 /** URL of a model by exact name; throws on anything outside [a-z0-9_]. */
 export function modelUrl(name, base = '/') {
   if (!isValidModelName(name)) throw new Error('invalid model name: ' + JSON.stringify(name));
-  return base + 'assets/models/' + name + '.glb';
+  // Hosts that do not serve .glb can ship the same bytes under another extension (build-time VITE_MODEL_EXT).
+  const ext = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_MODEL_EXT) || '.glb';
+  return base + 'assets/models/' + name + ext;
 }
 
 // Blender may append ".001" to duplicate names; three.js strips the dot ("001").

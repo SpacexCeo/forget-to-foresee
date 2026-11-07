@@ -31,6 +31,24 @@ export class Input {
       downAt = null;
     });
     target.addEventListener('wheel', (e) => { e.preventDefault(); this.wheel += Math.sign(e.deltaY); }, { passive: false });
+
+    // Touch (phones/tablets): tap = walk there (the click path above), one-finger drag = orbit the camera,
+    // two-finger pinch = zoom. Pointer events give every finger its own pointerId.
+    target.style.touchAction = 'none';
+    const touches = new Map();
+    let pinch = 0;
+    target.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') { touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (touches.size === 2) pinch = spread(); } });
+    target.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch' || !touches.has(e.pointerId)) return;
+      const t = touches.get(e.pointerId);
+      if (touches.size === 1) { this.dragX += e.clientX - t.x; this.dragY += e.clientY - t.y; }
+      t.x = e.clientX; t.y = e.clientY;
+      if (touches.size === 2) { const d = spread(); if (pinch && Math.abs(d - pinch) > 24) { this.wheel += d > pinch ? -1 : 1; pinch = d; } }
+    });
+    const lift = (e) => { if (e.pointerType === 'touch') { touches.delete(e.pointerId); if (touches.size < 2) pinch = 0; } };
+    target.addEventListener('pointerup', lift);
+    target.addEventListener('pointercancel', lift);
+    function spread() { const [a, b] = [...touches.values()]; return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0; }
   }
 
   down(...codes) { return codes.some((c) => this.keys.has(c)); }
