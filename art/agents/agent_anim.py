@@ -20,7 +20,7 @@ from collections import defaultdict
 import bpy
 from mathutils import Euler, Matrix, Quaternion, Vector
 
-from agent_rig import CHAINS_REST
+from agent_rig import CHAINS_REST, EXTRA_BONES
 
 FPS = 30
 WALK_SPEED = 1.7            # m/s (game: AGENT_SPEED)
@@ -309,6 +309,10 @@ class Solver:
                 self.prop_place(pose, basis, name, self.rest_q[name], pr)
             else:
                 self.set_basis(pose, basis, name, Quaternion())
+        # face and finger bones (rotations keyed by face_hands)
+        for b in EXTRA_BONES:
+            if b in self.parent:
+                self.rot_arm(pose, basis, b, P.rot[b])
         # chains: rigid follow (the spring pass overrides them)
         for b in self.order:
             if b in self.chain_names:
@@ -887,12 +891,76 @@ def simulate(solver, poses, loop, air, cloth_scale=1.0, hang=None, sub=4):
 
 # ===================================================================== baking
 
+def _pulse(t, t0, half):
+    x = 1.0 - abs(t - t0) / half
+    return sm(max(0.0, x))
+
+
+def face_hands(key, clip, u, P):
+    """Blinks, jaw, brows and finger curls layered on top of a clip pose.
+    Rotations are in armature axes: +X tips a forward-pointing bone down."""
+    frames = CLIPS[clip][0]
+    t = u * frames / FPS
+    # holding hand (left) grips its prop, the free hand rests half-curled
+    for side, sfx in ((1, "L"), (-1, "R")):
+        grip = side == 1 and PROP_L.get(key) is not None
+        base_f, base_i, base_t = (62, 55, 30) if grip else (24, 16, 10)
+        cf, ci, ct = base_f, base_i, base_t
+        if clip == "idle":
+            cf += 4 * wave(u, 2, 0.1 * side)
+            ci += 3 * wave(u, 2, 0.2 * side)
+        elif clip in ("walk", "run"):
+            sw = wave(u, 1, 0.25 if side > 0 else 0.75)    # follows the arm swing
+            if not grip:
+                cf += 8 * sw
+                ci += 6 * sw
+                ct += 4 * sw
+        elif clip == "talk" and side == -1:
+            cf = 14 + 14 * max(0.0, wave(u, 4))
+            ci = 4 + 6 * max(0.0, wave(u, 4, 0.15))
+            ct = 4 + 8 * max(0.0, wave(u, 4, 0.3))
+        elif clip == "gesture_offer" and side == -1:
+            a = env(u, 0.0, 0.32, 0.72, 1.0)
+            cf, ci, ct = lerp(base_f, 6, a), lerp(base_i, 2, a), lerp(base_t, -12, a)
+        P.r(f"fingers_{sfx}", 0, side * cf, 0)
+        P.r(f"index_{sfx}", 0, side * ci, 0)
+        P.r(f"thumb_{sfx}", 0, 0, -side * ct)
+    # face
+    blink = 0.0
+    jaw = 0.0
+    brow = 0.0
+    if clip == "idle":
+        blink = max(_pulse(t, 1.35, 0.09), _pulse(t, 3.10, 0.09))
+        jaw = 1.5 + 1.0 * wave(u, 1)
+    elif clip == "talk":
+        n = max(1, round(4.2 * frames / FPS))
+        syl = max(0.0, math.sin(TAU * n * u)) ** 0.7
+        accent = 0.6 + 0.4 * max(0.0, wave(u, 3, 0.1))
+        jaw = 2 + 13 * syl * accent
+        brow = 7 * max(0.0, wave(u, 4))
+        blink = _pulse(t, 1.9, 0.09)
+    elif clip == "think":
+        brow = -4                    # knitted
+        blink = _pulse(t, 2.4, 0.10)
+    elif clip == "celebrate":
+        jaw, brow = 10, 8
+    elif clip == "defeat":
+        brow = -6 * u
+    P.r("jaw", jaw, 0, 0)
+    for sfx in ("L", "R"):
+        P.r(f"lid_up_{sfx}", 52 * blink, 0, 0)
+        P.r(f"lid_lo_{sfx}", -14 * blink, 0, 0)
+        P.r(f"brow_{sfx}", -brow, 0, 0)
+
+
 def evaluate_clip(solver, key, clip):
     frames, loop, air = CLIPS[clip]
     S = STYLE[key]
     fn = CLIP_FN[clip]
     n = frames if loop else frames + 1
     specs = [fn(key, S, f / frames) for f in range(n)]
+    for f, P in enumerate(specs):
+        face_hands(key, clip, f / frames, P)
     solved = [solver.solve(P) for P in specs]
     poses = [s[0] for s in solved]
     hang = HANG.get(key) if PROP_L.get(key) == "hang" else None

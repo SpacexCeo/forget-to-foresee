@@ -22,7 +22,7 @@ import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 from mathutils.kdtree import KDTree
 
-from agent_geometry import BODY, arm, leg, link, select_only
+from agent_geometry import BODY, FACE, arm, leg, link, select_only
 
 RIG_NAME = "rig"
 
@@ -57,6 +57,20 @@ def bone_layout(body=BODY):
         add(f"shin_{sfx}", L["K"], L["A"], f"thigh_{sfx}")
         add(f"foot_{sfx}", L["A"], (side * bx, by, bz), f"shin_{sfx}")
         add(f"toe_{sfx}", (side * bx, by, bz), (side * tx, ty - 0.03, tz), f"foot_{sfx}")
+    # Face bones (rigid face parts, see agent_geometry.build_face).
+    jh, jt = FACE["jaw"]
+    add("jaw", jh, jt, "head")
+    (ex, ey, ez), _ = FACE["eye"]
+    bx, by, bz = FACE["brow"]
+    for side, sfx in ((1, "L"), (-1, "R")):
+        add(f"lid_up_{sfx}", (side * ex, ey, ez), (side * ex, ey - 0.02, ez), "head")
+        add(f"lid_lo_{sfx}", (side * ex, ey + 0.001, ez), (side * ex, ey - 0.019, ez), "head")
+        add(f"brow_{sfx}", (side * bx, by + 0.030, bz), (side * bx, by, bz), "head")
+    # Finger bones: thumb, index, grouped rest (mitten hand of the body mesh).
+    for side, sfx in ((1, "L"), (-1, "R")):
+        A = arm(side, body)
+        for fname, h, t in finger_layout(A):
+            add(f"{fname}_{sfx}", h, t, f"hand_{sfx}")
     # Cloth chains (secondary motion, spring-simulated and baked).
     for name, pts, parent in CHAINS_REST:
         prev = parent
@@ -64,6 +78,21 @@ def bone_layout(body=BODY):
             add(f"{name}_{i}", pts[i], pts[i + 1], prev)
             prev = f"{name}_{i}"
     return B
+
+
+def finger_layout(A):
+    """(name, head, tail) of the finger bones of one hand (arm key points A)."""
+    d, inward = A["dir"], A["inward"]
+    fwd = Vector((0, -1, 0))
+    th = A["W"] + d * 0.05 + fwd * 0.035 + inward * 0.01
+    return (("thumb", A["W"] + d * 0.025 + fwd * 0.012, th + fwd * 0.006),
+            ("index", A["palm"] + fwd * 0.011, A["tip"] + fwd * 0.011),
+            ("fingers", A["palm"] + fwd * -0.006, A["tip"] + fwd * -0.006))
+
+
+FACE_BONES = ("jaw", "lid_up_L", "lid_lo_L", "brow_L", "lid_up_R", "lid_lo_R", "brow_R")
+FINGER_BONES = tuple(f"{f}_{s}" for s in ("L", "R") for f in ("thumb", "index", "fingers"))
+EXTRA_BONES = FACE_BONES + FINGER_BONES
 
 
 # chain name, joint points (head of bone 0 .. tail of the last bone), parent
@@ -135,6 +164,10 @@ def capture(ag):
 
 # Rules per part name (first match by prefix). See skin() for their meaning.
 RULES_COMMON = (
+    ("face_eye", "head"), ("face_lidup_L", "rigid:lid_up_L"), ("face_lidup_R", "rigid:lid_up_R"),
+    ("face_lidlo_L", "rigid:lid_lo_L"), ("face_lidlo_R", "rigid:lid_lo_R"),
+    ("face_brow_L", "rigid:brow_L"), ("face_brow_R", "rigid:brow_R"), ("face_jaw", "rigid:jaw"),
+    ("face", "head"),
     ("body", "body"), ("head", "head"), ("hair", "hair"), ("hat", "head"), ("helmet", "head"),
     ("visor", "head"), ("veil", "head"), ("lens_frame", "head"),
     ("sleeve", "fit"), ("boot_toe", "fit"), ("boot", "fit"), ("bracer", "fit"), ("belt", "fit"),
@@ -338,6 +371,13 @@ def skin(rt, cap, arm_obj, key, log=print):
         elif kind == "head":
             for i in idx:
                 W[i] = {"head": 1.0}
+            if names[pi - 1] == "head":          # lower front of the head follows the jaw
+                for i in idx:
+                    p = Vector(co[i])
+                    f = smoothstep((FACE["mouth_z"] + 0.004 - p.z) / 0.016) * \
+                        smoothstep((head_c.y - p.y) / 0.05)
+                    if f > 0.01:
+                        W[i] = {"head": 1.0 - f, "jaw": f}
         elif kind == "hair":
             for i in idx:
                 p = Vector(co[i])
@@ -493,6 +533,37 @@ def skin(rt, cap, arm_obj, key, log=print):
                         best = (d, b)
                 for i in comp:
                     W[i] = {best[1]: 1.0}
+
+    # fingers: hand-dominant vertices beyond the palm go to the finger bones
+    fing = 0
+    for side, sfx in ((1, "L"), (-1, "R")):
+        A = arm(side, BODY)
+        lay = {nm: (h, t) for nm, h, t in finger_layout(A)}
+        hb = f"hand_{sfx}"
+        for i in range(n):
+            w = W[i]
+            if not w or w.get(hb, 0.0) < 0.5 or rule_of_part.get(int(part[i]), "").startswith("rigid"):
+                continue
+            p = Vector(co[i])
+            s_along = (p - A["W"]).dot(A["dir"])
+            th_h, th_t = lay["thumb"]
+            ab = th_t - th_h
+            tt = max(0.0, min(1.0, (p - th_h).dot(ab) / ab.length_squared))
+            dth = (th_h + ab * tt - p).length
+            hw = w[hb]
+            if dth < 0.016 and p.y < A["W"].y - 0.015 and tt > 0.25:
+                bone, f = f"thumb_{sfx}", smoothstep((tt - 0.25) / 0.35)
+            else:
+                f = smoothstep((s_along - 0.060) / 0.030)
+                if f <= 0:
+                    continue
+                bone = f"index_{sfx}" if p.y < A["palm"].y - 0.002 else f"fingers_{sfx}"
+            w = dict(w)
+            w[hb] = hw * (1 - f)
+            w[bone] = w.get(bone, 0.0) + hw * f
+            W[i] = w
+            fing += 1
+    stats["finger_vertices"] = fing
 
     # write vertex groups
     W = [_norm(w) for w in W]

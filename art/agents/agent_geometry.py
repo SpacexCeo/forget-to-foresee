@@ -508,6 +508,134 @@ def head_bm(body=BODY):
     return bm
 
 
+# ================================================================ face
+# Readable, weathered faceted face. Every feature is a separate small part so the
+# rig can skin it rigidly to its face bone (agent_rig FACE_BONES). Positions are
+# shared with the rig through FACE.
+
+FACE = dict(
+    eye=((0.030, -0.079, 1.646), 0.0128),        # eyeball centre (L, +X), radius
+    lid_r=0.0150,
+    brow=(0.031, -0.090, 1.664),                 # brow ridge centre
+    jaw=((0.0, -0.020, 1.616), (0.0, -0.088, 1.584)),   # jaw bone head, tail
+    mouth_z=1.600,
+)
+
+EYE_ACCENT = ("gem", "amber", "glass", "crystal", "moss", "brass", "metal")
+
+
+def _shade(c, k):
+    return tuple(max(0.0, min(1.0, v * k)) for v in c)
+
+
+def _cap_bm(center, r, axis_elev_deg, half_angle_deg, segs=8, rings=4):
+    """Faceted spherical cap (a shell, open edge) around an axis in the YZ plane.
+    axis_elev_deg: elevation of the cap axis seen from the front (-Y); 90 = up."""
+    bm = bmesh.new()
+    a = math.radians(axis_elev_deg)
+    ax = Vector((0.0, -math.cos(a), math.sin(a)))
+    ref = Vector((1.0, 0.0, 0.0))
+    u = ref
+    w = ax.cross(u).normalized()
+    top = bm.verts.new(Vector(center) + ax * r)
+    prev = None
+    rows = []
+    for i in range(1, rings + 1):
+        th = math.radians(half_angle_deg) * i / rings
+        row = []
+        for j in range(segs):
+            ph = 2 * math.pi * j / segs
+            d = ax * math.cos(th) + (u * math.cos(ph) + w * math.sin(ph)) * math.sin(th)
+            row.append(bm.verts.new(Vector(center) + d * r))
+        rows.append(row)
+    for j in range(segs):
+        bm.faces.new((top, rows[0][j], rows[0][(j + 1) % segs]))
+    for a_row, b_row in zip(rows, rows[1:]):
+        for j in range(segs):
+            k = (j + 1) % segs
+            bm.faces.new((a_row[j], b_row[j], b_row[k], a_row[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    # normals outward from the eye centre
+    f0 = bm.faces[0]
+    if f0.normal.dot(f0.calc_center_median() - Vector(center)) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    return bm
+
+
+def _box_bm(verts8):
+    bm = bmesh.new()
+    v = [bm.verts.new(Vector(p)) for p in verts8]
+    for q in ((0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)):
+        bm.faces.new([v[i] for i in q])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return bm
+
+
+def _bar(c, sx, sy, sz, tilt=0.0, taper=1.0):
+    """Faceted bar centred at c; tilt rotates around Y (inner end down), taper
+    scales the +X end height."""
+    cx, cy, cz = c
+    pts = []
+    for z in (-1, 1):
+        for (x, y) in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+            h = sz * (taper if x > 0 else 1.0)
+            px, pz = x * sx, z * h
+            pz += x * sx * math.tan(tilt)
+            pts.append((cx + px, cy + y * sy, cz + pz))
+    return _box_bm(pts)
+
+
+def build_face(ag, body=BODY):
+    pal = ag.pal
+    skin = pal["skin"]
+    acc = next((pal[k] for k in EYE_ACCENT if k in pal), (0.6, 0.5, 0.3))
+    eye_col = tuple(0.25 * a + 0.04 for a in acc)          # dark, alien-tinted iris
+    brow_col = pal.get("hair", _shade(skin, 0.35))
+    lid_col = _shade(skin, 0.80)
+    (ex, ey, ez), er = FACE["eye"]
+    for side, sfx in ((1, "L"), (-1, "R")):
+        c = (side * ex, ey, ez)
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=er)
+        bmesh.ops.translate(bm, verts=bm.verts, vec=Vector(c))
+        ag.add(f"face_eye_{sfx}", bm, "body", "crystal", eye_col, rough=0.15, collide=())
+        # upper lid: cap around an axis tilted up-back, open edge ~35 deg above centre
+        ag.add(f"face_lidup_{sfx}", _cap_bm(c, FACE["lid_r"], 125, 92), "body", "skin",
+               lid_col, rough=0.6, collide=())
+        ag.add(f"face_lidlo_{sfx}", _cap_bm(c, FACE["lid_r"] * 0.97, -125, 100, rings=4),
+               "body", "skin", lid_col, rough=0.6, collide=())
+        bx, by, bz = FACE["brow"]
+        ag.add(f"face_brow_{sfx}",
+               _bar((side * bx, by, bz), 0.016, 0.006, 0.0042, tilt=math.radians(14 * side)),
+               "body", "skin", brow_col, rough=0.8, collide=())
+        # weathered cheekbone facet (alien-tinged, slightly high)
+        ag.add(f"face_cheek_{sfx}",
+               _bar((side * 0.046, -0.080, 1.626), 0.012, 0.010, 0.006,
+                    tilt=math.radians(22 * side)),
+               "body", "skin", _shade(skin, 0.92), rough=0.55, collide=())
+    # nose: faceted wedge from bridge to tip
+    pts = [(0, -0.094, 1.652), (0.0075, -0.096, 1.622), (0, -0.114, 1.619), (-0.0075, -0.096, 1.622),
+           (0, -0.100, 1.612)]
+    bm = bmesh.new()
+    v = [bm.verts.new(Vector(p)) for p in pts]
+    back = bm.verts.new(Vector((0, -0.086, 1.628)))
+    for f in ((v[0], v[1], v[2]), (v[0], v[2], v[3]), (v[1], v[4], v[2]), (v[2], v[4], v[3]),
+              (v[0], back, v[1]), (v[0], v[3], back), (v[1], back, v[4]), (v[3], v[4], back)):
+        bm.faces.new(f)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    ag.add("face_nose", bm, "body", "skin", skin, rough=0.5, collide=())
+    # mouth: dark cavity plate (head), upper lip (head), lower lip + chin plate (jaw)
+    mz = FACE["mouth_z"]
+    ag.add("face_mouth", _bar((0, -0.086, mz - 0.004), 0.016, 0.006, 0.0065), "body", "skin",
+           (0.03, 0.012, 0.012), rough=0.9, collide=())
+    ag.add("face_lipup", _bar((0, -0.0925, mz + 0.0028), 0.0155, 0.0035, 0.0024), "body", "skin",
+           _shade(skin, 0.72), rough=0.6, collide=())
+    ag.add("face_jaw_lip", _bar((0, -0.0915, mz - 0.0035), 0.014, 0.0035, 0.0025), "body",
+           "skin", _shade(skin, 0.78), rough=0.6, collide=())
+    ag.add("face_jaw_chin", _bar((0, -0.088, mz - 0.019), 0.017, 0.007, 0.007), "body", "skin",
+           _shade(skin, 0.95), rough=0.55, collide=())
+
+
 def build_body(ag, body=BODY, suit_color="suit"):
     verts, edges, radii, root = body_skeleton(body)
     obj = skin_object(f"{ag.key}_body", verts, edges, radii, root, ag.col)
@@ -516,6 +644,7 @@ def build_body(ag, body=BODY, suit_color="suit"):
     bpy.data.objects.remove(obj)
     ag.add("body", bm, "body", "skin", suit_color, rough=0.55, collide=("all",))
     ag.add("head", head_bm(body), "body", "skin", "skin", rough=0.5, collide=("all", "core"))
+    build_face(ag, body)
     # Core collider: torso and legs without arms (fitted garments ignore the arms).
     cv, ce, cr, croot = body_skeleton(body, with_arms=False)
     core = skin_object(f"{ag.key}_core", cv, ce, cr, croot, ag.col)
