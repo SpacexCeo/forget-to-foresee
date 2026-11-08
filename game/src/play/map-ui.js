@@ -337,6 +337,8 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       grp.addEventListener('keydown', (e) => { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); choose(p); } });
       // Route draw-on: hovering or focusing a walkable place draws the walk from Iris along the island's graph.
       grp.addEventListener('pointerenter', () => showRoute(p));
+      grp.addEventListener('pointerover', () => showRoute(p));   // bubbles from the hit area; some engines skip boundary events on SVG
+      grp.addEventListener('pointermove', () => showRoute(p));
       grp.addEventListener('focus', () => showRoute(p));
       grp.addEventListener('pointerleave', hideRoute);
       grp.addEventListener('blur', hideRoute);
@@ -363,13 +365,15 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       legend, hint);
   }
 
-  let routeEl = null;
-  function hideRoute() { if (routeEl) { routeEl.remove(); routeEl = null; } }
+  let routeEl = null, routeFor = null;
+  function hideRoute() { if (routeEl) { routeEl.remove(); routeEl = null; } routeFor = null; }
   function showRoute(p) {
+    if (routeEl && routeFor === p.id) return; // already drawn for this place (pointermove repeats)
     try { showRouteNow(p); } catch (e) { console.warn('[map] route draw-on failed', e); }
   }
   function showRouteNow(p) {
     hideRoute();
+    routeFor = p.id;
     if (!model || !p.route || p.route.kind !== 'walk' || !dynamic) return;
     const st = getState ? getState() : {};
     const from = st.playerPos; if (!from) return;

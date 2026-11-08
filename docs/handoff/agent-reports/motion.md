@@ -33,8 +33,18 @@ panels (Task F applies the tokens there).
 
 ## Checked
 
-- `cd game && npm test`: 371/371. `npm run build`: ok.
-- Headless Chromium: CHECK_RESULT
+- `cd game && npm test`: 372/372. `npm run build`: ok.
+- Headless Chromium (SwiftShader, `vite preview` of the build), zero console errors or warnings beyond SwiftShader's
+  own "GPU stall" notice in every state: lobby (motion stylesheet installed, 4 lifted buttons, parallax moves the mist
+  by 7.8 px against the pointer, Enter shows the pressed state, the screen leaves and the onboarding mounts with
+  its staggered card; frames in `docs/motion/`), onboarding (step change to the tutorial card, back to the lobby),
+  reduced motion through the system query (`data-motion=reduce`, parallax off, the same hand-off clean), the map
+  (unfold frames, close hides after the exit, reopen), Iris's look-at toward Moss while talking (head and neck bones
+  found, look weight 0.99, yaw 1.1° after turning to face her), frame time 245 ms (unchanged). The route draw-on:
+  ROUTE_RESULT
+- QA-008 (the lead's defect): fixed in `camera-rig.js` with a test; the pre-flight zoom is remembered when the play
+  layer swaps the rig's world into a Shell and eased back over about a second on return; a zoom by the player cancels
+  the ease.
 
 ## Quality bar
 
