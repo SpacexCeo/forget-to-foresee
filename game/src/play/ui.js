@@ -26,7 +26,7 @@ function el(tag, attrs = {}, ...kids) {
   return e;
 }
 
-export function createPlayUi({ root, ctx, session, hud, handlers = {} }) {
+export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMin = 1 }) {
   const { i18n } = ctx;
   const t = (k, a) => renderMsg(i18n, k, a);
   const goalEl = el('section', { class: 'pl-goal', 'aria-live': 'polite', id: 'pl-goal' });
@@ -74,7 +74,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {} }) {
   }
   function renderContext() {
     const opts = session.options;
-    ctxEl.hidden = !opts.length || !!panel;
+    ctxEl.hidden = opts.length < contextMin || !!panel;
     if (ctxEl.hidden) return;
     const di = session.defaultIndex;
     ctxEl.replaceChildren(el('h3', { text: spotTitle(session.spot) }), el('ol', {}, opts.slice(0, 9).map((o, i) => {

@@ -23,7 +23,8 @@ export function ensureWhStyle(name, href, doc = document) {
 
 /**
  * @param {HTMLElement} root  positioned container over the canvas
- * @param {{model: object, ctx?: object, onAction?: (action: string, ...args: any[]) => void, layout?: 'desktop'|'mobile'}} o
+ * @param {{model: object, ctx?: object, onAction?: (action: string, ...args: any[]) => void, layout?: 'desktop'|'mobile', keys?: boolean}} o
+ *   `keys: false` when the host routes the keyboard (the 3D client): the HUD then only shows the letters
  */
 export function mountWorldHud(root, o) {
   const ctx = o.ctx || getUiContext();
@@ -43,7 +44,7 @@ export function mountWorldHud(root, o) {
     else if (action === 'tile' && args[0] === 'signs') api.signs.open && api.signs.open();
     if (o.onAction) o.onAction(action, ...args);
   };
-  const opts = () => ({ model, i18n, layout, onAction, prefs: { reducedMotion: () => (prefs && prefs.reducedMotion ? prefs.reducedMotion() : matchReduced()) } });
+  const opts = () => ({ model, i18n, layout, onAction, keys: o.keys, prefs: { reducedMotion: () => (prefs && prefs.reducedMotion ? prefs.reducedMotion() : matchReduced()) } });
   const status = mountStatus(wrap, opts());
   const log = mountLog(wrap, opts());
   const actions = mountActions(wrap, opts());

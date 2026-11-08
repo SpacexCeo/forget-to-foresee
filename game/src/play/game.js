@@ -9,6 +9,7 @@ import { mountHud } from '../ui/index.js';
 import { createLocalTransport } from './transport-local.js';
 import { PlaySession } from './session.js';
 import { createPlayUi } from './ui.js';
+import { attachWorldHud } from './world-hud.js';
 import { ClanAgents } from './agents.js';
 import { reactionsFor } from './behaviour.js';
 import { Hooks } from './hooks.js';
@@ -29,7 +30,8 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  * @param {object} o.world3d island scene (scenes/island.js) @param {object} o.rig camera rig
  * @param {object} o.player CharacterController @param {THREE.Object3D} o.avatar @param {object} o.lookdev
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context (play/i18n.js createPlayContext)
- * @param {{seedHex?: string, rules?: string}} [o.options]
+ * @param {{seedHex?: string, rules?: string, worldHud?: boolean, onSettings?: Function}} [o.options]
+ *   `worldHud: false` keeps the greybox overlay (goal card, chronicle, action bar) instead of the world HUD
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
   const transport = createLocalTransport({ rules: options.rules, seedHex: options.seedHex });
@@ -54,14 +56,18 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hooks = new Hooks({ resolve: resolvePlace });
   const state = { route: null, zone: 'island', entering: null, now: 0, lastMove: 0, lastPos: player.pos.slice(), moved: 0 };
 
+  const useWorldHud = options.worldHud !== false;
   const ui = createPlayUi({
     root: uiRoot, ctx, session, hud,
     handlers: { onGo: walkTo },
+    // with the world HUD a single action is the HUD prompt; the context menu lists two or more
+    contextMin: useWorldHud ? 2 : 1,
   });
+  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, handlers: { onGo: walkTo, onSettings: options.onSettings } }) : null;
 
   session.on('event', (ev) => {
     const d = ev.data || {};
-    if (ev.type === 'fx' && d.line) hud.say({ speakerId: d.line.speakerId, key: d.line.key, args: d.line.args });
+    if (ev.type === 'fx' && d.line) { hud.say({ speakerId: d.line.speakerId, key: d.line.key, args: d.line.args }); if (worldHud) worldHud.say(d.line); }
     if (ev.type === 'fx' && d.fx && d.fx.type === 'ask') shell.answer(!!d.fx.yes, state.now);
     if (ev.type === 'world.dialogue') agents.setTalking(d.clan, 9, state.now);
     agents.react(reactionsFor(ev, state.now));
@@ -191,13 +197,18 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
+    if (worldHud) worldHud.update(dt);
     if (audio) { try { const sp = session.spot; audio.setZone(inShell ? 'shell' : sp && sp.kind === 'camp' ? CLAN_ASSET[sp.clan] : sp ? 'plaza' : 'bridge'); } catch { /* optional */ } }
   }
 
   /** Keyboard for the play UI; returns true when used. */
-  function handleKey(code) { return ui.handleKey(code); }
+  function handleKey(code) {
+    if (worldHud && code === 'KeyV') return worldHud.handleKey(code);
+    if (code === 'Escape') return ui.handleKey(code) || (worldHud ? worldHud.handleKey(code) : false);
+    return ui.handleKey(code);
+  }
 
-  return { session, transport, ui, hud, agents, shell, hooks, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, agents, shell, hooks, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {

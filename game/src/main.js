@@ -4,7 +4,7 @@
 // fixed 30 Hz, streamed assets with greybox fallbacks, look-dev stack with quality tiers, F3 dev HUD.
 // Dev URL parameters (harmless in production): ?tier=ultra|high|low, ?motion=reduce,
 // ?view=overview|camp|close (camera presets), ?play=direct (skip the lobby), ?seed=<32 hex> (fixed
-// test season), ?lang=en|ru.
+// test season), ?lang=en|ru, ?hud=old (greybox overlay instead of the world HUD).
 import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
@@ -73,7 +73,11 @@ async function enterWorld() {
   if (shellUi) { shellUi.destroy(); shellUi = null; }
   document.body.classList.add('in-world');
   try {
-    play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: { seedHex: /^[0-9a-f]{32}$/.test(params.get('seed') || '') ? params.get('seed') : undefined } });
+    play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
+      seedHex: /^[0-9a-f]{32}$/.test(params.get('seed') || '') ? params.get('seed') : undefined,
+      worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
+      onSettings: () => controls.open(),
+    } });
     window.__ftf.play = play;
   } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
 }

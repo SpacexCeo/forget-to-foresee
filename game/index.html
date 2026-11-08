@@ -30,6 +30,15 @@
     #ui { position: fixed; inset: 0; z-index: 10; }
     body:not(.in-world) #ui { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; } /* lobby/onboarding pages taller than the screen scroll */
     body.in-world #ui { pointer-events: none; }
+    /* World HUD (src/play/world-hud.js): it replaces the goal card, chronicle, action bar and the old status/subtitles;
+       the play panels, context menu, help and info stay above it. ?hud=old keeps the greybox overlay. */
+    .wh-host { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    body.wh-on .pl-goal, body.wh-on .pl-chronicle, body.wh-on .pl-bar, body.wh-on #ui .ftf-hud-status, body.wh-on #ui .ftf-subtitles { display: none !important; }
+    body.wh-on .pl-panel, body.wh-on .pl-context, body.wh-on .pl-help, body.wh-on .pl-info { z-index: 2; }
+    body.wh-on .pl-badge { top: auto; bottom: 8px; left: 16px; right: auto; max-width: min(380px, 30vw); z-index: 1; }
+    body.wh-on .ftf-scene-tools { display: none; } /* the hotbar's Settings and Esc open the same menu */
+    body.wh-on .ftf-scene-cue, body.wh-on #prompt { bottom: 22vh; }
+    @media (max-width: 700px) { body.wh-on .pl-badge { display: none; } }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
     .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { position: fixed; pointer-events: auto; background: var(--panel); border-radius: 10px; color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }

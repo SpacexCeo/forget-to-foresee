@@ -170,7 +170,7 @@ export function buildHudModel(o) {
   const promptVisible = !!opt && opt.available !== false && o.promptVisible !== false;
 
   const hintState = hints || { active: null, journal: [], lore: [] };
-  return {
+  const next = {
     mode,
     layer: novice ? layerOf(obs) : 2,
     trial,
@@ -199,7 +199,29 @@ export function buildHudModel(o) {
       { id: 'settings' },
     ],
   };
+  const sig = {
+    trial: JSON.stringify(trial),
+    quests: goal ? [goal.id, goal.key, goal.hintKey, JSON.stringify(goal.args), JSON.stringify(goal.hintArgs)].join('|') : '-',
+    signs: [obs.version, mode, next.signs.open, next.signs.filter].join('|'),
+    journal: [obs.version, (hintState.journal || []).length, (hintState.lore || []).length, next.journal.unread].join('|'),
+    prompt: opt ? [opt.id, JSON.stringify(opt.label), promptVisible].join('|') : '-',
+    dialogue: line || null,
+    hotbar: s.phase,
+    hint: hintState.active ? hintState.active.id + ':' + (hintState.active.shown || 0) : '-',
+  };
+  return o.prev ? reuse(o.prev, next, sig) : withSig(next, sig);
 }
+
+/**
+ * Keeps the previous model's sub-objects whose signature did not change, so the HUD packages (which
+ * compare sub-objects by reference) leave their DOM, focus and animations alone.
+ */
+function reuse(prev, next, sig) {
+  const ps = prev._sig || {};
+  for (const k of Object.keys(sig)) if (ps[k] !== undefined && ps[k] === sig[k] && prev[k] !== undefined) next[k] = prev[k];
+  return withSig(next, sig);
+}
+const withSig = (m, sig) => Object.defineProperty(m, '_sig', { value: sig || {}, enumerable: false });
 
 /** Clarity layer for Novice (clarity-layers §2): L0 trials 1–3, L1 from trial 4, L2 at crisis/vote. */
 export function layerOf(obs) {

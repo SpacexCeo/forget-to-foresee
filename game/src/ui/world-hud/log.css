@@ -210,6 +210,6 @@
 }
 
 /* Short or landscape phones (audit #4): the tiles leave room for the prompt and dialogue. */
-@media (max-width: 700px) and (max-height: 520px) {
+@media (max-width: 700px) and (max-height: 440px) {
   .wh-root .wh-tiles { display: none; }
 }

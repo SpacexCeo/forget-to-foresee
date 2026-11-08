@@ -142,7 +142,7 @@
 }
 .wh-root .wh-quest .wh-quest__text {
   margin-top: calc(6.3 * var(--wh-px));
-  max-width: calc(600 * var(--wh-px));
+  max-width: calc(560 * var(--wh-px)); /* clear of the key art when a live goal wraps */
   font-size: var(--wh-fs-body);
   line-height: calc(19 * var(--wh-px));
   color: var(--wh-text-2);
@@ -225,8 +225,9 @@
 .wh-root .wh-quest--mobile {
   left: 14px;
   right: 13px;
-  /* anchored by its bottom edge (top 409, height 124 in the mockup) so longer text grows upward */
-  bottom: calc(100% - 533px);
+  /* anchored by its bottom edge (top 409, height 124 on the 876-tall mockup → bottom 343) so longer text grows
+     upward and the whole mobile stack sits on the bottom edge on any phone height */
+  bottom: 343px;
   min-height: 124px;
   display: flex;
   flex-direction: column;
@@ -298,7 +299,7 @@
 .wh-root .wh-quest__dots {
   position: absolute;
   left: 50%;
-  top: 533px;
+  bottom: 319px; /* top 533 on the 876-tall mockup */
   transform: translateX(-50%);
   display: flex;
   pointer-events: auto;
@@ -328,7 +329,7 @@
 .wh-root .wh-trial--mobile {
   left: 12px;
   right: 10px;
-  top: 562px;
+  bottom: 250px; /* top 562 on the 876-tall mockup */
   height: 64px;
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr) 1px max-content 1px max-content;
@@ -390,12 +391,11 @@
   .wh-root .wh-toast { display: none; } /* tokens.css hides it too; this rule wins over .wh-toast { display: flex } */
 }
 
-/* Short or landscape phones (audit #4): the absolute 876-tall composition does not fit; keep the
-   top bar, the trial card pinned under it, and the bottom cluster; the quest card steps aside. */
-@media (max-width: 700px) and (max-height: 640px) {
+/* Short or landscape phones (audit #4): the mobile stack is bottom-anchored; below 580 px of height the quest
+   card steps aside, below 440 px the trial card and the tiles too (prompt and dialogue stay). */
+@media (max-width: 700px) and (max-height: 580px) {
   .wh-root .wh-quest--mobile, .wh-root .wh-quest__dots { display: none; }
-  .wh-root .wh-trial--mobile { top: auto; bottom: 244px; }
 }
-@media (max-width: 700px) and (max-height: 520px) {
+@media (max-width: 700px) and (max-height: 440px) {
   .wh-root .wh-trial--mobile { display: none; }
 }

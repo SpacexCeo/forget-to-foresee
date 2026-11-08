@@ -99,3 +99,16 @@ test('from-obs: helpers', () => {
   assert.equal(phaseOf({ id: 'end_tick' }), 'resolve');
   assert.equal(phaseOf({ id: 'reach_scroll' }), 'explore');
 });
+
+test('from-obs: an unchanged observation reuses the previous sub-objects (no DOM rebuild)', async () => {
+  const s = await season(2);
+  const a = build(s);
+  const b = build(s, 'novice', { prev: a });
+  for (const k of ['trial', 'quests', 'signs', 'journal', 'prompt', 'hotbar']) assert.equal(b[k], a[k], k);
+  assert.ok((await s.send('end_tick', {})).ok);
+  const c = build(s, 'novice', { prev: b });
+  assert.notEqual(c.trial, b.trial, 'a new trial rebuilds the trial card');
+  assert.notEqual(c.signs, b.signs);
+  const d = build(s, 'pro', { prev: c });
+  assert.notEqual(d.signs, c.signs, 'a mode switch rebuilds the sign cards');
+});
