@@ -83,12 +83,3 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 `game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
-
-## To the play layer owner (`game/src/play/game.js`), from worker G (movement, 08.11)
-
-### 7. Use `player.teleport()` for fly-ins and relocates
-`teleport(pos, heading)` in `game/src/play/game.js` resets position, `lastSafe`, `vy` and `grounded` by hand but
-leaves `player.vel` as it was, so a fly-in ordered while running keeps a few steps of momentum on arrival.
-`CharacterController` now has `teleport(pos, heading = null)` that also clears the velocity, the ground speed and
-the facing interpolation; please call `player.teleport(pos, heading)` there instead of the manual field writes
-(the rest of the function, `state.route = null`, stays).

@@ -40,6 +40,7 @@ export class CharacterController {
     this.speed = 0;       // actual horizontal ground speed of the last step (m/s), after collisions
     this.turnRate = 0;    // rad/s of the last step
     this.stepped = false; // the last step climbed a step
+    this.settled = null;  // position written by the last smooth step (an outside write is a teleport)
   }
 
   get accel() { return this._accel; }
@@ -86,6 +87,9 @@ export class CharacterController {
 
   /** The locomotion model: see motion.js and docs/movement.md. */
   stepSmooth(wish, dt) {
+    // An external position write (fly into a Shell, relocate) is a teleport: arrive at rest, no leftover momentum.
+    const s = this.settled;
+    if (s && (s[0] !== this.pos[0] || s[1] !== this.pos[1] || s[2] !== this.pos[2])) { this.vel = [0, 0]; this.speed = 0; this.prevHeading = this.heading; }
     const opts = { radius: this.radius, height: this.height, mask: MASK_PLAYER, ledgeGrip: this.radius * 0.7 };
     const m = { vel: this.vel, heading: this.heading };
     const res = stepMotion(m, wish, this.maxSpeed, dt, this.motion, this.grounded);
@@ -139,6 +143,7 @@ export class CharacterController {
     if (r.hitWall) { this.vel[0] = ax; this.vel[1] = az; }
     this.rememberSafe(r);
     if (this.pos[1] < this.killY) this.respawn();
+    this.settled = this.pos.slice();
     return r;
   }
 

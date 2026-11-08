@@ -188,6 +188,17 @@ test('the heading interpolates the short way round and the controller reports th
   assert.ok(Math.hypot(...ch.vel) < 1e-9, 'the intended velocity bled off (no lunge when the wall ends)');
 });
 
+test('an outside position write (fly-in, relocate) arrives at rest: no leftover momentum', () => {
+  const ch = makePlayer(floorWorld());
+  simulate(ch, () => [0, 1], 1, { run: true });
+  assert.ok(Math.hypot(...ch.vel) > 3);
+  ch.pos = [20, 0, 20]; ch.prevPos = ch.pos.slice(); // what game.js's teleport() does
+  ch.step([0, 0]);
+  assert.ok(Math.hypot(...ch.vel) < 1e-9 && Math.hypot(ch.pos[0] - 20, ch.pos[2] - 20) < 1e-9, 'rests where it was put');
+  ch.teleport([5, 0, 5], 1);
+  assert.deepEqual([ch.vel, ch.heading, ch.prevHeading], [[0, 0], 1, 1]);
+});
+
 test('legacy exact mode is unchanged: instant velocity, snapped heading', () => {
   const ch = new CharacterController(floorWorld(), { spawn: [0, 0, 0], walkSpeed: 2 });
   ch.step([1, 0]);

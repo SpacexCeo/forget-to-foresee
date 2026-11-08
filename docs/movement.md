@@ -67,6 +67,8 @@ Controller (`character.js`, `smooth = true`; the exact legacy path stays for the
 - **Velocity bleed against walls**: the intended velocity is replaced by the actual displacement when a wall was
   hit, so pushing into a parapet is standing still (idle animation, no running on the spot) and nothing lunges
   when the wall ends. Sliding along a wall at an angle keeps the tangential motion as before.
+- **Teleports**: an outside position write (the hub's fly-in, relocate) is detected and arrives at rest (no leftover
+  momentum); `teleport(pos, heading)` does the same explicitly.
 - **Reported state** for the renderer: `speed` (actual ground speed after collisions), `turnRate`, `lastHitWall`,
   `renderHeading(alpha)` (interpolated like the position), `stepped`.
 
