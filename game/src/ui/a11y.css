@@ -173,10 +173,10 @@ html[data-motion="reduce"] .a11y-hold::before { transition: none; }
 .ftf-a11y-host kbd { display: inline-block; min-width: 1.4em; margin-right: 8px; padding: 2px 6px; font: 600 13px/1 var(--wh-font-body, system-ui, sans-serif); text-align: center; border: 1px solid var(--wh-kbd-border, rgba(222, 210, 180, .85)); border-radius: 4px; background: var(--wh-kbd-bg, rgba(42, 38, 30, .92)); color: var(--wh-text-kbd, #fef4e6); }
 
 /* Simple mode: Iris's one proposal per trial. Desktop: bottom centre; the hub dock and cards yield to it. */
-.a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 16px 20px 18px;
+.a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw / var(--ftf-zoom) - 32px)); padding: 16px 20px 18px;
   max-height: calc(var(--vvh, 100vh) / var(--ftf-zoom) - 32px); overflow: auto; overscroll-behavior: contain; }
 .a11y-simple .a11y-simple-tools { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
-.a11y-simple .a11y-eyebrow { display: flex; align-items: center; min-height: 46px; padding-right: 132px; } /* the title starts below the tools */
+.a11y-simple .a11y-eyebrow { display: flex; align-items: center; min-height: 46px; padding-right: 132px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* the title starts below the tools */
 .a11y-simple .a11y-pause { min-height: 44px; min-width: 44px; padding: 6px 12px; font-size: 15px; }
 .a11y-simple .a11y-recap-inline { min-height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font: 600 22px/1 var(--wh-font, Georgia, serif); color: var(--wh-gold-text, #f6df9b); }
 body.ftf-simple-on .a11y-recap-btn { display: none; } /* the card carries its own ? button */
@@ -197,7 +197,7 @@ body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: no
   background: var(--wh-btn-bg, rgba(10, 22, 23, .82)) !important; border: 1px solid var(--wh-frame, rgba(232, 214, 172, .8)) !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
 }
-.a11y-recap { --a11y-tx: -50%; --a11y-ty: -50%; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 32px)); padding: 18px 22px 20px;
+.a11y-recap { --a11y-tx: -50%; --a11y-ty: -50%; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw / var(--ftf-zoom) - 32px)); padding: 18px 22px 20px;
   max-height: calc(var(--vvh, 100vh) / var(--ftf-zoom) - 24px); overflow: auto; overscroll-behavior: contain; }
 .a11y-recap p.a11y-where { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-text, #faf7ee); }
 .a11y-recap p.a11y-next { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-gold-text, #f6df9b); }
@@ -205,6 +205,8 @@ body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: no
 
 @media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
   .a11y-simple { --a11y-tx: 0px; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; padding: 12px 14px 14px; }
+  .a11y-simple .a11y-eyebrow { padding-right: 104px; min-height: 44px; }
+  .a11y-recap { --a11y-tx: 0px; left: 8px; right: 8px; width: auto; transform: translateY(-50%); }
   .a11y-simple .a11y-sign { grid-template-columns: 56px 1fr; } .a11y-simple .a11y-sign canvas { width: 56px; height: 56px; }
   .ftf-a11y-host h3 { font-size: 19px; }
   .a11y-recap-btn { left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
