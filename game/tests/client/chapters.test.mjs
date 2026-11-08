@@ -272,3 +272,14 @@ test('films: the judge link skips them unless asked; normal seasons play them', 
   assert.equal(q('?films=off'), false);
   assert.equal(q('?film=arrival'), false);
 });
+
+test('film overlay: animated elements never centre with a transform (put() overwrites it; phone subtitles left the screen)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/cinematic/chapters/overlay.js', import.meta.url), 'utf8');
+  for (const cls of ['ch-sub', 'ch-hint', 'ch-skip']) {
+    const rule = (src.match(new RegExp(`#ch-film \\.${cls} \\{[^}]*\\}`)) || [''])[0];
+    assert.ok(rule, cls);
+    assert.doesNotMatch(rule, /transform:\s*translate/, `${cls} must not centre with transform`);
+  }
+  assert.match((src.match(/#ch-film \.ch-sub \{[^}]*\}/) || [''])[0], /max-width:\s*calc\(100vw - 32px\)/);
+});
