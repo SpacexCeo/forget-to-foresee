@@ -84,7 +84,8 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 | Asset review page, UI preview page, HUD preview page (dev) | **work** | `game/review.html`, `game/ui-preview.html`, `game/hud-preview.html` |
 | Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
 | Browser prototype of the full game loop (2D) | **works**, the frozen parity reference (UI in Russian by design) | `prototype-2d/index.html` |
-| NEAR NEP-171 fragment / shard NFTs, escrow, wallet sign-in | **not started** | — |
+| **Memory shards as NEP-171 NFTs** (`contracts/memory-shard`, Rust, near-contract-standards 5.30): coordinator-only mint of one token per shard carrying the season id, the memory's kind and weight, the trial it was forgotten, the auction result and the Merkle leaf of the sign its vision opened; a deterministic on-chain ink-ring SVG as media, byte-identical to the game's own (`game/src/net/shard-nft.js`, shared vectors); NEP-177 metadata, NEP-181 enumeration, `shards_of_season` views; read-only game client and badge model | **builds and passes tests** (21 unit + mocked-chain tests, 5 game tests); **not deployed**, no shard minted yet (one script, waits for the owner's testnet permission like `season-commit`); the game shows a shard badge only once a deployment is recorded | `contracts/memory-shard/`, [docs/shard-nft.md](docs/shard-nft.md) |
+| Escrow, wallet sign-in | **not started** | — |
 
 ### Real / mock
 
@@ -92,7 +93,7 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 |---|---|
 | AI clans | deterministic heuristics with personalities, not an LLM (**mock AI, real rules**) |
 | Season commitment | the browser generates the season, commits the Merkle root before trial 1 and verifies every reveal against it: **real cryptography, local** ("browser verification against the root"). The contract that would make it **on-chain** is tested but **not deployed**, so the game never says "verified on-chain" |
-| NFTs, shards, escrow | simulated in the engine (**mock**) |
+| NFTs, shards, escrow | shards and their auctions are game state in the engine (**real rules, local**); the shard NFT contract is **built and tested, not deployed**, so no shard is an NFT yet; escrow **mock** |
 | Hashes and Merkle proofs | real SHA-256; the contract's test vectors are generated from the same engine (**real**) |
 | Money | in-game silk, no token, no payments |
 | 3D art | real models for everything listed above; any model that is missing or fails to load falls back to an unlabeled **greybox** stand-in (its "not final art" label shows only with `?dev=1`, the F3 dev HUD or on the asset review page) |
