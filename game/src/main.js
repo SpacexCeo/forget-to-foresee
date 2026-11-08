@@ -26,6 +26,7 @@ import { mountShell } from './ui/index.js';
 import { createPlayContext } from './play/i18n.js';
 import { startPlay } from './play/game.js';
 import { mountAudioSettings } from './play/audio-settings.js';
+import { attachAllAges } from './play/all-ages.js'; // Task Q: recap, Simple mode, in-world Settings, narration (docs/accessibility.md)
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
@@ -99,6 +100,7 @@ async function enterWorld() {
     window.__ftf.play = play;
     // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
     mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
+    attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog });
   } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
 }
 // #play (artifact links pass only a hash) and touch devices go straight into the world.
