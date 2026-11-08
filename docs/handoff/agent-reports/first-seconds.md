@@ -17,18 +17,30 @@ factory; the movement and play wiring inside is unchanged), new `game/src/ui/loa
    non-blocking fonts, the lobby art preloaded; `loading.js` takes the ring over with real progress (chunks, then the
    first frame's model bytes), a trickle that never freezes, a cross-fade hand-off through the motion tokens.
 3. **A thin boot**: `main.js` is 1.3 KB gzipped; the lobby mounts from the UI chunk, the world (three.js, scenes,
-   render, physics) loads behind it, the play layer (99 KB gzipped) loads on entering; on the direct path the screen
+   render, physics) loads behind it, the play layer (86 KB gzipped) loads on entering; on the direct path the screen
    hands off when the first frame and the cheap visible models are in, or after six seconds. `index.html` preloads
    only the boot chunk.
 4. **Byte-aware streaming**: visible assets ordered by apparent size weighted by file size, three downloads at once,
    a first-frame gate that skips files above 8 MB.
 5. **Phones**: `_m` variants and the KTX2 transcoder confirmed in the phone run.
-6. Tests: 7 new, `npm test` 386/386, `npm run build` green.
+6. Tests: 7 new, `npm test` 391/391 after the merge of `claude/loving-curie-ihasft`, `npm run build` green.
+7. **Chunk graph kept acyclic** (`vite.config.js`): the first smoke of the merged build failed at boot with a TDZ
+   error because the `ui` and `play` chunks imported each other; the rules (`src/game/`) now live in `ui`,
+   `play/logogram.js` in `client-core`. Documented in `docs/first-seconds.md`.
 
 ## Checked
 
-- Headless Chromium: SMOKE_RESULT
-- After measurement: AFTER_SUMMARY
+- Headless Chromium (SwiftShader, `vite preview` of the production build), zero console errors or warnings on both
+  paths: lobby path marks `ui` 224 ms, `lobby` 302 ms, boot screen gone at 1037 ms, world not loaded yet at that
+  point (streams behind the lobby); direct path (`?play=direct&mode=walk&demo=judge`) marks `world` 240 ms,
+  `firstFrame` 1.6 s, `play` 4.3 s, byte gate 7.0 s, hand-off 11.0 s (game clock runs at about a third of wall time
+  under SwiftShader). Capture: `docs/first-seconds/after-direct-1280x800.png`.
+- After measurement: from the production build sizes (`docs/first-seconds.md`, "After" table): the lobby needs
+  about 145 KB of gzipped JavaScript instead of 440 KB, the direct path about 395 KB before the world can render
+  with the play layer arriving behind the gate, `index.html` preloads only the boot chunk, and the first paint no
+  longer waits for the fonts stylesheet. The throttled (Fast 4G / Slow 4G) local re-measurement with
+  `boot-measure.mjs` and the live re-measurement after the Pages deploy were dropped under the wrap-up order and
+  are the first next steps.
 
 ## Quality bar
 

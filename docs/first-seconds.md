@@ -68,8 +68,8 @@ What the numbers said:
 
 | what | before | after |
 |---|---|---|
-| JavaScript before the first lobby pixel (gzipped) | about 440 KB (three.js, render/physics core, play layer, world HUD, UI, locales) | about 131 KB (`main` 1.3 KB + `boot` 4.9 KB + `ui` 40.7 KB + `locales` 84.3 KB); three.js, the world and the play layer load behind the lobby |
-| JavaScript before the world can render (direct path) | the same 440 KB | about 380 KB (`boot`, `ui`, `locales`, `three` 206.5 KB, `client-core` 37.6 KB, `boot-world` 4.3 KB); the play layer (99 KB) arrives while the loading screen's byte gate runs |
+| JavaScript before the first lobby pixel (gzipped) | about 440 KB (three.js, render/physics core, play layer, world HUD, UI, locales) | about 145 KB (`main` 1.3 KB + `boot` 4.9 KB + `ui` 52.8 KB + `locales` 85.8 KB); three.js, the world and the play layer load behind the lobby |
+| JavaScript before the world can render (direct path) | the same 440 KB | about 395 KB (`boot`, `ui`, `locales`, `three` 206.5 KB, `client-core` 38.5 KB, `boot-world` 4.3 KB); the play layer (86 KB) arrives while the loading screen's byte gate runs |
 | `index.html` preloads | every chunk of the game | `boot` only (the rest is imported on demand) |
 | first paint | after the Google Fonts stylesheet (0.9 s Fast 4G / 1.9 s Slow 4G) | the inline loading screen from the HTML itself; fonts no longer block |
 | model order in the first view | by apparent size, two at a time: `scroll_table` (20 MB) and `anchor` (19 MB) early | by apparent size weighted by file size, three at a time: terrain and camps first, the heroes behind their stand-ins |
@@ -83,6 +83,13 @@ The owner's wrap-up order (08.11, token budget) stopped the throttled after-meas
 budget (no file above 8 MB, cap 16 MB / 6 items, priority order), the byte-aware priority (a 6.6 MB camp before a
 20 MB hero of similar apparent size; a hero that fills the screen still beats a pebble; off-screen prefetch stays
 below every visible asset), three download slots, the screen controller without a DOM.
+
+The chunk graph must stay acyclic: the first smoke of the merged build failed at boot with
+`Cannot access 'ge' before initialization`, because `ui` modules read engine tables (`src/game/engine.js`, then in the
+`play` chunk) at module level while `play` imports `ui`. Rollup orders modules correctly inside one chunk, not across
+two chunks that import each other. The rules (`src/game/`) now live in the `ui` chunk and `play/logogram.js` in
+`client-core`; the graph is `main → boot → ui → locales`, `play → {boot, client-core, locales, three, ui}`,
+`client-core → three`.
 
 ## Not done / open
 

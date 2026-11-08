@@ -73,10 +73,11 @@ export default defineConfig({
           if (/\.css(\?|$)/.test(p)) return undefined; // stylesheets stay with their importer: a CSS import must not bind the entry to a chunk
           if (p.includes('/src/ui/loading.js') || p.includes('/src/ui/motion/') || p.includes('vite/preload-helper')) return 'boot'; // tiny, static with the entry
           if (p.includes('/node_modules/three/')) return 'three';
-          if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/')) return 'client-core';
+          // Chunk edges must not form a cycle: a module-level reference across two chunks that import each other is a TDZ error at boot.
+          if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/') || p.includes('/src/play/logogram.js')) return 'client-core'; // logogram is the only play module the scenes need
           if (p.includes('/src/locales/') || p.includes('/src/play/locales/')) return 'locales';
-          if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/game/') || p.includes('/src/ui/world-hud/')) return 'play';
-          if (p.includes('/src/ui/')) return 'ui';
+          if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/ui/world-hud/')) return 'play';
+          if (p.includes('/src/ui/') || p.includes('/src/game/')) return 'ui'; // the rules live with the ui: ui modules read engine tables at module level, play imports ui
           return undefined;
         },
       },
