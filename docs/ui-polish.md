@@ -235,7 +235,12 @@ Console errors in every run: 0.
 |---|---|
 | 1280×800 × en, uk, ru, it, zh, 12 states | 0 overlaps after the region work, except the `map` state (map over the quest banner / dialogue strip) and three dialogue-strip pairs in ru / it, all fixed afterwards (map hides the centre column; the strip centres in the free band) and not re-measured in a complete run |
 | 390×560, 375×500, 360×480, 667×300 × en, 12 states | 0 overlaps except two pairs fixed right after the run (the prompt pill inside a Shell on phones, the dialogue bar under the context menu), not re-measured |
-| 1920×1080, 390×844 (final state), 1280 × uk/ru/it/zh (final state) | the final run was cut by the owner's wrap-up order; last complete measurements predate the compact-layout and motion commits |
+| 1920×1080 × en, 12 states (final state, after the merge of 6f2f288) | 0 overlaps (the walk states re-run after a 30 s load timeout at this size) |
+| 390×844 × en, 12 states (final state) | 0 overlaps after two last fixes: the phone context menu also hides the trial card and the two fabs; inside a Shell the dialogue bar yields to the reading card |
+| 1280 × uk/ru/it/zh (final state) | not re-run after the last patches (the last complete run was green except the map state, fixed since) |
+
+Console in the final runs: 0 errors; one warning, `assets/ui/lobby_bg.jpg` "preloaded but not used" (the lobby's preload
+link in the UI shell, not a play-layer file).
 
 The screenshots above come from the last complete runs; the 1280 and 390×844 "after" frames predate the motion pass
 and the short-viewport tiers (which change nothing at those sizes except the easing), the short-viewport frames are from

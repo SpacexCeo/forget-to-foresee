@@ -46,9 +46,9 @@ no pull request (the lead merges). Full write-up with before/after screenshots: 
 
 ## Next steps (wrap-up ordered by the owner at the token freeze)
 
-1. `cd game && npm run dev` + `npm run hud:overlap` (all seven viewports, five locales): the last complete runs were green
-   except pairs fixed right after them (map modal, dialogue strip in ru/it, the prompt pill inside a Shell on phones,
-   the dialogue bar under the phone context menu); the std/locale re-run after the last patches was cut short.
+1. `npm run hud:overlap -- --viewports 1280x800 --langs uk,ru,it,zh`: the only combination not re-measured after the last
+   patches (1920×1080 and 390×844 × en, and the four short sizes × en, are green at `HEAD`; 1280 × five locales was green
+   except the map state, fixed since).
 2. Re-shoot the "after" frames at 1280×800, 390×844 and 1920×1080 for `docs/ui-polish.md` §3 (the committed ones
    predate the motion pass) with the script in this report.
 3. QA retest by worker K on the merged branch: QA-003/004/005/006/009/011/012/014/019/021 are fixed in code.
