@@ -21,7 +21,7 @@ before the player's nonce is sent and reveals them at the end, so anyone can rec
 
 ## Judge in 5 minutes
 
-Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; ~60 MB loads before you can play, models keep streaming in afterwards and unlabeled greybox stand-ins fill in until they arrive; place names are on the map, key **N**). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
+Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; the loading screen paints at once, the lobby appears after about 130 KB of JavaScript (gzipped) and the 3D world loads behind it; the models stream in afterwards, the first view's camps and terrain first and the two 20 MB heroes later, with unlabeled greybox stand-ins until they arrive; place names are on the map, key **N**). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
 
 **Open** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk — a fixed season in Novice mode with fresh hints, played by walking the island. This table was verified step by step. The default play mode is the Shell hub (see [Play through the Shell hub](#play-through-the-shell-hub)); `&mode=walk` keeps the walking play the table describes.
 

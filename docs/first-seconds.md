@@ -64,9 +64,17 @@ What the numbers said:
 5. Phones keep the `_m` model variants (2048 textures) and KTX2 (Basis Universal transcoder from `/basis/`); the
    measurement with an iPhone 13 user agent checks both.
 
-## After
+## After (local production build, from the build output and a headless smoke; the throttled re-measurement is a next step)
 
-AFTER_TABLE
+| what | before | after |
+|---|---|---|
+| JavaScript before the first lobby pixel (gzipped) | about 440 KB (three.js, render/physics core, play layer, world HUD, UI, locales) | about 131 KB (`main` 1.3 KB + `boot` 4.9 KB + `ui` 40.7 KB + `locales` 84.3 KB); three.js, the world and the play layer load behind the lobby |
+| JavaScript before the world can render (direct path) | the same 440 KB | about 380 KB (`boot`, `ui`, `locales`, `three` 206.5 KB, `client-core` 37.6 KB, `boot-world` 4.3 KB); the play layer (99 KB) arrives while the loading screen's byte gate runs |
+| `index.html` preloads | every chunk of the game | `boot` only (the rest is imported on demand) |
+| first paint | after the Google Fonts stylesheet (0.9 s Fast 4G / 1.9 s Slow 4G) | the inline loading screen from the HTML itself; fonts no longer block |
+| model order in the first view | by apparent size, two at a time: `scroll_table` (20 MB) and `anchor` (19 MB) early | by apparent size weighted by file size, three at a time: terrain and camps first, the heroes behind their stand-ins |
+
+The owner's wrap-up order (08.11, token budget) stopped the throttled after-measurement mid-run; `node game/tests/client/boot-measure.mjs local-after http://localhost:<port> out.json` against `vite preview` reproduces it in a few minutes, and the live row needs the next Pages deploy of `main`.
 
 ## Tests
 
