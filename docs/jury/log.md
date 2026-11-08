@@ -84,3 +84,11 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   vendor-only and flagged; no NEAR-specific guest-flow source found). Rubric v0.6: C4 gains the two-minute proof
   check (guest first, NearBlocks testnet link, commit transaction root equals in-game root, no-wallet view call,
   verified source or build hash); without link, transaction and view call C4 stays at most 5. No red flags.
+
+## Cycle 7: 2026-11-08 23:16 UTC
+- Weakest coverage chosen: the impact and sustainability half of C5 (the 7/10 band names it, no source or checklist
+  backed it).
+- 23:25 UTC: `notes/impact-and-sustainability.md` done (8 sources, snippets read; the under-5% follow-through figure
+  and a retention-collapse figure are single-source and not used; NEAR grant area from a secondary guide, portal not
+  read). Rubric v0.7: C5 gains the five-item impact checklist that decides 7 versus 8 to 10, and the note that "no
+  token" helps only if the pitch says it. No red flags.

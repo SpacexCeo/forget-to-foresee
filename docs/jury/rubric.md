@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.6, 2026-11-08 (research cycle 6). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.7, 2026-11-08 (research cycle 7). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -193,6 +193,10 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   elders with periodic memory wipes, `notes/investor-jury-and-pitch.md`). Originality credit depends on the
   one-sentence difference being stated: memory is a resource the player spends to see a future that was committed
   before play and is verifiable in the browser.
+- Impact and sustainability (`notes/impact-and-sustainability.md`): judges in web3 discount token-first games and
+  doubt post-hackathon follow-through. The five-item impact checklist (named audience, game-terms retention reason,
+  stated token position, dated NEAR next step, an honest metric) decides 7 versus 8 to 10. Having no token is a
+  strength only if the pitch says it.
 - The submission's free text ("What did you build?", API field `idea`, 20 to 2000 characters) is scored here and in
   C1: the template and ten-item checklist in `notes/investor-jury-and-pitch.md` (logline, problem, loop, what is built
   and real, why NEAR as a noun, team, what was cut, dated next step; claims mirror the README judge table; agents
