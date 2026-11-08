@@ -24,7 +24,7 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 |---|---|
 | `camp_*.glb` (6) | good, matches the concept |
 | `island.glb` | built on the `layout.js` layout; not reviewed by a human |
-| `agent_<clan>.glb` (6) | rigged, 8 clips (idle, walk, run, talk, think, gesture_offer, celebrate, defeat), faces with face bones and fingers. **Faces look crooked up close**, see open item 1. `agent_suit` is static |
+| `agent_<clan>.glb` (6) | rigged, 9 clips (idle, walk, run, talk, think, gesture_offer, celebrate, defeat, understand), smooth symmetric faces with face bones and fingers; all six rebuilt on 08.11 (branch `art/faces-wink`). `understand` is the wink Iris plays when a Guest's sign settles a word in her dictionary. `agent_suit` is static |
 | `guest.glb` | new: hovering nacre creature, idle/draw/react clips. Known problem: the core glows through the chest |
 | `prop_*.glb` (23) | props and clan relics; not reviewed |
 | `fauna_*.glb` (5) | built; not reviewed |
@@ -38,7 +38,7 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 - Lobby: https://claude.ai/artifact/3PATPnSi7PNpCmVm7cuWM7
 
 ## Open items, in priority order
-1. **Faces.** The rework in `art/agents/` is committed as WIP and is **not built into the glbs yet**: the CPU rebuild was stopped when the work wound down. Next: finish the build (on a GPU it takes about 15 minutes; on this container's CPU, hours), check the close-ups in `docs/art/qa/agents/<clan>/anim/`, and ship. The owner's goal: smooth, symmetric faces that hold up in close third person.
+1. ~~Faces.~~ Done on 08.11 on `art/faces-wink`: all six agents rebuilt with the smooth faces and the `understand` (wink) clip; close-ups in `docs/art/qa/agents/<clan>/anim/`. Under flat light the faces are symmetric (mirror check: median 0 mm); the remaining "crooked" impression in the review sheets comes from the low side key light casting the nose shadow. Not merged into `main` yet.
 2. **Wire audio and VFX into the gameplay.** Follow the integration lines in `docs/audio.md` and `docs/vfx.md`.
 3. ~~Merge Codex.~~ Done on 08.11 (only `game/src/ui/input.js` conflicted: Codex pointer/gamepad handling plus the touch controls).
 4. **Assets to fix:** Shell round 2 (nacre/iridescence, real wall pieces instead of slivers), `shell_interior` coordinates, the Guest's core glow, and pitch renders from the uncompressed sources.
