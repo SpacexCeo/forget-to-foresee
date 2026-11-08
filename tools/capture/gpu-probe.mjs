@@ -9,9 +9,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { chromium } = (() => { for (const p of ['playwright', '/opt/node-tools/node_modules/playwright/index.js']) { try { return require(p); } catch { /* next */ } } throw new Error('playwright not installed'); })();
+const { chromium } = (() => { for (const p of [process.env.PLAYWRIGHT_PATH, 'playwright', '/opt/node-tools/node_modules/playwright/index.js'].filter(Boolean)) { try { return require(p); } catch { /* next */ } } throw new Error('playwright not installed (set PLAYWRIGHT_PATH to its package directory)'); })();
 const COMMON = ['--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required', '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'];
 const CANDIDATES = [
+  // gl-egl is what the owner's RTX 4090 box answered with (08.11): "ANGLE (NVIDIA GeForce RTX 4090, OpenGL ES 3.2)".
+  { name: 'angle-gl-egl', args: ['--use-angle=gl-egl', '--use-gl=angle', '--enable-gpu'] },
   { name: 'angle-vulkan', args: ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan'] },
   { name: 'egl', args: ['--use-gl=egl'] },
   { name: 'angle-gl', args: ['--use-angle=gl'] },

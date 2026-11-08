@@ -13,10 +13,10 @@ const require = createRequire(import.meta.url);
 let playwright = null;
 function pw() {
   if (playwright) return playwright;
-  for (const p of ['playwright', '/opt/node-tools/node_modules/playwright/index.js']) {
+  for (const p of [process.env.PLAYWRIGHT_PATH, 'playwright', '/opt/node-tools/node_modules/playwright/index.js'].filter(Boolean)) {
     try { playwright = require(p); return playwright; } catch { /* next */ }
   }
-  throw new Error('playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH)');
+  throw new Error('playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory)');
 }
 
 export const BROWSER_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];

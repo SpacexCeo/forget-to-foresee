@@ -22,12 +22,17 @@ git -C "$SRC" checkout -q --detach "$(git -C "$SRC" rev-parse "origin/$REF" 2>/d
 echo "== commit $(git -C "$SRC" rev-parse --short HEAD): $(git -C "$SRC" log -1 --format=%s)"
 
 # 2. Tools: node 20+, ffmpeg with libx264/libass/libopus, Playwright's Chromium.
+# An existing Playwright install (the owner's box keeps one in /root/pw) is used as is; set PLAYWRIGHT_PATH to point at it.
+if [ -z "${PLAYWRIGHT_PATH:-}" ] && [ -d /root/pw/node_modules/playwright ]; then export PLAYWRIGHT_PATH=/root/pw/node_modules/playwright; fi
 command -v node >/dev/null || { echo "node 20+ is required"; exit 2; }
 command -v ffmpeg >/dev/null || { echo "ffmpeg is required (apt-get install -y ffmpeg)"; exit 2; }
 ffmpeg -hide_banner -version | head -1
 (cd "$SRC/game" && npm ci --no-audit --no-fund)
-if ! node -e "require('playwright')" 2>/dev/null; then npm i -g playwright@1.49.1 >/dev/null; fi
-npx --yes playwright@1.49.1 install --with-deps chromium >/dev/null 2>&1 || npx playwright install chromium
+if [ -n "${PLAYWRIGHT_PATH:-}" ] && node -e "require(process.env.PLAYWRIGHT_PATH)" 2>/dev/null; then echo "== playwright from $PLAYWRIGHT_PATH";
+else
+  if ! node -e "require('playwright')" 2>/dev/null; then npm i -g playwright@1.49.1 >/dev/null; fi
+  npx --yes playwright@1.49.1 install --with-deps chromium >/dev/null 2>&1 || npx playwright install chromium
+fi
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader || echo "nvidia-smi not found: the probe below decides"
 
 # 3. Build once (the capture serves the production bundle: no dev-server reloads during a long render).
@@ -39,6 +44,12 @@ curl -sf "http://localhost:$PORT/" >/dev/null || { echo "preview server did not 
 # 4. Which Chromium flags give hardware WebGL here (Vulkan via ANGLE, EGL, GL, or SwiftShader as the last resort).
 GPU_FLAG="--gpu"
 if ! (cd "$SRC" && node tools/capture/gpu-probe.mjs); then echo "WARNING: no hardware WebGL; rendering on SwiftShader (slow)"; GPU_FLAG=""; fi
+
+# 4b. FTF_TEST=1: a short pipeline test (one 8 s shot of the demo at 1080p, no assembly), then stop.
+if [ "${FTF_TEST:-}" = "1" ]; then
+  (cd "$SRC" && node tools/capture/capture.mjs demo --shots archipelago $GPU_FLAG --tier ultra --width 1920 --height 1080 --fps 60 --parallel 1 --sample 120 --base "http://localhost:$PORT" --out "$OUT" --work "$OUT/test")
+  echo "== test done: see $OUT/test/demo-1920x1080-ultra/archipelago.mp4, archipelago.json (renderer, secondsPerFrame) and the sample PNGs"; exit 0
+fi
 
 # 5. Render: 1080p60 ultra deliverables, then 4K60 masters (kept only if under 90 MB each).
 for v in "${VIDEOS[@]}"; do
