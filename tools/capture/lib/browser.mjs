@@ -29,6 +29,14 @@ export function browserArgs(gpu) {
   return GPU_ARGS;
 }
 
+async function pollPage(page, fn, timeout, what) {
+  const t0 = Date.now();
+  while (!(await page.evaluate(fn))) {
+    if (Date.now() - t0 > timeout) throw new Error(`timeout after ${timeout} ms waiting for ${what}`);
+    await new Promise((r) => setTimeout(r, 250));
+  }
+}
+
 /**
  * @param {object} o
  * @param {object} o.shot shot script (see tools/capture/shots)
@@ -52,8 +60,10 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     const url = baseUrl + '/?' + q.toString();
     log(`[${shot.name}] open ${url}`);
     await page.goto(url, { waitUntil: 'load', timeout: 120_000 });
-    await page.waitForFunction(() => window.__ftfCinematic && window.__ftf, null, { timeout: 120_000 });
-    if (!shot.lobby) await page.waitForFunction(() => window.__ftf.play, null, { timeout: 180_000 });
+    // Poll from Node: under the virtual clock the page's rAF and timers never fire on their own, so
+    // Playwright's waitForFunction (rAF polling) would only evaluate once.
+    await pollPage(page, () => !!(window.__ftfCinematic && window.__ftf), 120_000, 'window.__ftf');
+    if (!shot.lobby) await pollPage(page, () => !!(window.__ftf && window.__ftf.play), 180_000, 'window.__ftf.play');
     await page.evaluate(() => document.fonts.ready);
     result.renderer = await page.evaluate(() => { try { const gl = window.__ftf.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch { return null; } });
     log(`[${shot.name}] WebGL: ${result.renderer}`);
