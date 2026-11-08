@@ -17,6 +17,7 @@
     "hud:overlap": "node scripts/hud-overlap.mjs"
   },
   "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/libre-caslon-text": "^5.3.0",
     "@fontsource/old-standard-tt": "^5.3.0",
     "@fontsource/source-sans-3": "^5.3.1",

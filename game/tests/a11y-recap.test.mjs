@@ -112,7 +112,10 @@ test('recap: every goal of the walking mode and every decision card has a next s
   assert.match(renderMsg(uk, verified.where.key, { ...verified.where.args, n: 3 }), /3 наші ставки вже справдилися/);
   // the recap keys all live in the play strings of every locale
   for (const loc of LOCALES) for (const k of Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('recap.'))) assert.ok(k in PLAY_MESSAGES[loc], `${loc}:${k}`);
-  assert.equal(currentGoal(base, {}).id, 'reach_scroll');
+  // the live goal for this observation (its id depends on the first-loop order in objectives.js) always has a real recap
+  const live = currentGoal(base, {});
+  assert.ok(goals.includes(live.id), live.id);
+  assert.notEqual(recapFor(base, { goal: live }).next.key, 'recap.next.fallback', live.id);
 });
 
 test('recap sheet: opens on ?, closes on Escape, speaks only when narration is on, read-aloud always speaks', async () => {
