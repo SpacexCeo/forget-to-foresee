@@ -35,7 +35,7 @@ html:not([data-ui-scale="100"]) .hub-host,
 html:not([data-ui-scale="100"]) .pl-goal, html:not([data-ui-scale="100"]) .pl-context, html:not([data-ui-scale="100"]) .pl-panel,
 html:not([data-ui-scale="100"]) .pl-help, html:not([data-ui-scale="100"]) .pl-info, html:not([data-ui-scale="100"]) .pl-chronicle,
 html:not([data-ui-scale="100"]) #prompt, html:not([data-ui-scale="100"]) #toast,
-html:not([data-ui-scale="100"]) .ftf-scene-controls, html:not([data-ui-scale="100"]) .ftf-dialog,
+html:not([data-ui-scale="100"]) .ftf-scene-controls, html:not([data-ui-scale="100"]) .ftf-scene-dialog,
 html:not([data-ui-scale="100"]) .ftf-map-host, html:not([data-ui-scale="100"]) .ftf-map-fab,
 html:not([data-ui-scale="100"]) .ftf-a11y-host { zoom: var(--ftf-ui-scale); }
 /* lobby and onboarding pages: scale the type, let the layout reflow */
@@ -166,6 +166,7 @@ html[data-motion="reduce"] .a11y-hold::before { transition: none; }
 /* Simple mode: Iris's one proposal per trial. Desktop: bottom centre; the hub dock and cards yield to it. */
 .a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 16px 20px 18px; }
 .a11y-simple .a11y-simple-tools { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
+.a11y-simple .a11y-eyebrow { display: flex; align-items: center; min-height: 46px; padding-right: 132px; } /* the title starts below the tools */
 .a11y-simple .a11y-pause { min-height: 44px; min-width: 44px; padding: 6px 12px; font-size: 15px; }
 .a11y-simple .a11y-recap-inline { min-height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font: 600 22px/1 var(--wh-font, Georgia, serif); color: var(--wh-gold-text, #f6df9b); }
 body.ftf-simple-on .a11y-recap-btn { display: none; } /* the card carries its own ? button */

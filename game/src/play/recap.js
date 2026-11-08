@@ -120,6 +120,15 @@ export function createRecap({ root, ctx, session, hub = null, narration = null, 
         el(doc, 'button', { type: 'button', class: 'a11y-primary', 'data-recap': 'close', onclick: () => close() }, el(doc, 'kbd', { text: 'Esc' }), t('recap.close'))));
     // re-render in place; keep the focus on the same button when it was inside the sheet
     const focused = sheet && doc.activeElement && sheet.contains(doc.activeElement) ? doc.activeElement.getAttribute('data-recap') : null;
+    // keep Tab inside the sheet while it is open (aria-modal): wrap at both ends
+    body.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const items = [...body.querySelectorAll('button')].filter((b) => !b.disabled);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     if (sheet) sheet.remove();
     host.append(body);
     sheet = body;
