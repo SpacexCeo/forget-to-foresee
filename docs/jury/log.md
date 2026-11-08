@@ -50,3 +50,8 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   Generative Agents and Project Sid critiques, the organizers' games exemplar read directly). Rubric C2 gains the
   economy half: the twelve-question legibility test with caps (under six yes answers caps C2 at 5) and the
   two-minute evidence artefacts.
+- 18:10 UTC: `notes/investor-jury-and-pitch.md` done (25 sources; the seven jurors confirmed on nearhackathon.com;
+  some 2026 juror statements come from secondary reports and are marked). Rubric section 1 now names the jury and the
+  ten predicted questions; C5 gains the neighbour calibration (Clan World: Ælder) and the `idea` field checklist.
+  Note for the submission worker: the form labels the 20 to 2000 character field "What did you build?"; the API key
+  is `idea`.

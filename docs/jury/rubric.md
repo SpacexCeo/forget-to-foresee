@@ -16,9 +16,15 @@ an open flag is reported to the lead at once, and the score is marked provisiona
    with file and line; scores fall for the gap between README and code, rarely for modest honest claims
    (`notes/ai-screening-and-reproducibility.md`). The screener very likely runs offline or sandboxed and cannot see
    WebGL, so tests, CLI paths, CI runs and the video carry the browser claims.
-2. **Human jury per track.** The listed jurors are mostly crypto investors plus the NEAR founder, so expect "why does
-   this need NEAR", "what is the sustainable economy" and "what did you build in the window", not game-design depth
-   (`notes/near-hackathon-tracks.md`). Minutes per project, not hours: MLH plans 4, ETHGlobal finalists get 7; the first
+2. **Human jury per track.** The seven listed jurors (nearhackathon.com, read 2026-11-08) are the NEAR co-founder, the
+   a16z crypto CTO, the CEOs of Helius, Electric Capital, Synthetix/Infinex, Dragonfly and cyber.Fund: six investors or
+   infrastructure CEOs, no game designer. Their published taste is evidence over conviction: original landed code,
+   repo before deck, "chatbots with memecoins attached" as the agent-project failure mode, correctness proven not
+   patched, "mathematical proof at the time of using the system" (`notes/investor-jury-and-pitch.md`). The ten
+   predicted questions: fun without the chain; what NEAR does that a server cannot; are the agents agents; what the
+   commitment prevents and can I verify it myself; why not deployed and where the real/mock line is; bots and
+   collusion; what the player owns with no token; who is liable for an agent's wallet; distribution and why now; what
+   was cut and what is next. Minutes per project, not hours: MLH plans 4, ETHGlobal finalists get 7; the first
    thirty seconds and the README's first two paragraphs carry most of the score (`notes/hackathon-judging-rubrics.md`).
 3. **Track text.** `games`: "Judged on the game loop, not the token", bonus "if players never notice the chain". The
    organizers' own `games` exemplar wants the loop designed at three time scales (every 30 seconds, every 5 minutes,
@@ -46,7 +52,7 @@ an open flag is reported to the lead at once, and the score is marked provisiona
 | C2 | Game loop and fun in the first ten minutes, with a legible living economy | 20 | `games` track text and exemplar; `game-jam-and-festival-judging`; `agent-economy-legibility`; Imagine Cup Fun Factor 25 % |
 | C3 | Technical depth and quality | 13 | ETHGlobal Technicality, Devpost "technical implementation"; `hackathon-judging-rubrics` |
 | C4 | NEAR integration and track fit: concrete, in the loop, honest | 12 | Demo-post guidance, Q-010/Q-011; `near-hackathon-tracks`; `onchain-game-design`; `past-near-hackathon-winners` |
-| C5 | Originality, story and impact | 12 | IGF/Nuovo innovation; Imagine Cup Innovation 20 %; previous NEAR criteria (originality, impact, sustainability) |
+| C5 | Originality, story and impact | 12 | IGF/Nuovo innovation; Imagine Cup Innovation 20 %; previous NEAR criteria (originality, impact, sustainability); `investor-jury-and-pitch` |
 | C6 | Presentation: demo video, X post, README top | 10 | Q-012 and demo-post guidance; `demo-video-and-trailer`; judges' "first two paragraphs" |
 | C7 | Polish, UX and accessibility | 8 | `accessibility`; `game-jam-and-festival-judging` |
 
@@ -161,6 +167,14 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   plan and next steps; the Protocol Rewards funnel rewards mainnet progress and users).
 - **5/10**: a fresh theme over a familiar loop, or a fresh mechanic the demo never reaches.
 - **0/10**: a clone with a token.
+- Calibration: a direct neighbour exists in the field of 2026 hackathon finalists (Clan World: Ælder, four AI clan
+  elders with periodic memory wipes, `notes/investor-jury-and-pitch.md`). Originality credit depends on the
+  one-sentence difference being stated: memory is a resource the player spends to see a future that was committed
+  before play and is verifiable in the browser.
+- The submission's free text ("What did you build?", API field `idea`, 20 to 2000 characters) is scored here and in
+  C1: the template and ten-item checklist in `notes/investor-jury-and-pitch.md` (logline, problem, loop, what is built
+  and real, why NEAR as a noun, team, what was cut, dated next step; claims mirror the README judge table; agents
+  qualified as deterministic; "not deployed" stated before it is discovered).
 
 ### C6. Presentation: demo video, X post, README top (10)
 - **10/10**: a 2 to 3 minute video with gameplay in the first 5 seconds, the problem in 10 seconds, one complete
