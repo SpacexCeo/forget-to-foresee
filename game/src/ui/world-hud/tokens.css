@@ -8,32 +8,8 @@
 
 /* Cyrillic companion. unicode-range keeps it off Latin glyphs; size-adjust 112% matches Caslon's x-height
    (0.97×) while keeping caps within 1.05×; ascent/descent overrides equal Libre Caslon Text's font box
-   (97% / 26%) so a mixed EN/RU line never changes height. fonts.js re-declares the same faces with bundled
-   URLs for production builds — keep both in sync. */
-@font-face {
-  font-family: "WH Cyrillic";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../../../node_modules/@fontsource/old-standard-tt/files/old-standard-tt-cyrillic-400-normal.woff2") format("woff2");
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-  size-adjust: 112%;
-  ascent-override: 97%;
-  descent-override: 26%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: "WH Cyrillic";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../../../node_modules/@fontsource/old-standard-tt/files/old-standard-tt-cyrillic-700-normal.woff2") format("woff2");
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-  size-adjust: 112%;
-  ascent-override: 97%;
-  descent-override: 26%;
-  line-gap-override: 0%;
-}
+   (97% / 26%) so a mixed EN/RU line never changes height. The faces themselves are declared only in fonts.js (bundled URLs): this file is
+   linked as a static asset, so a relative node_modules url() here 404s in production (QA-034). */
 
 .wh-root {
   /* ---- scale: 1 u = 1 px at the 1811-wide desktop reference ---- */
