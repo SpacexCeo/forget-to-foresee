@@ -489,3 +489,25 @@ Owner: "everything must be animated and look expensive, as a 2026 consumer expec
    swaps movement for cross-fades. Tests for the tokens and helpers (pure). Before/after captures (short frame strips)
    in `docs/motion.md`.
 
+
+---
+
+## Task T: verification anyone can repeat, and entropy we do not control (juror early warning, 08.11)
+
+**Branch:** `claude/verify-anywhere` (worker M continues) · **Owns:** new `tools/verify/**` (a one-file verifier),
+`game/src/net/near*.js`, `game/src/net/verify-export.js` (new: the data behind a "Copy proof" action; Task F renders
+the button), the season-seed derivation outside the engine (`game/src/net/near-season.js`, the `seasonRandomBytes`
+hook in `game/src/play/transport-local.js`), `contracts/**`, new tests, `docs/verify.md` (new). Never edit
+`game/src/game/engine.js`; `baseline-2d-1` parity and the fixed judge season (`?demo=judge`) stay bit-exact.
+Juror finding (`docs/jury/notes/onchain-game-design.md`, rubric C4 on `claude/jury`): the browser generates the season,
+commits the root and shows "Verified" with the same code, so the badge proves the season did not change after it
+began, not that it was fair. Mitigations, in order of points per hour:
+1. Out-of-band check: for every revealed sign, the full root, leaf, salt, Merkle path and the hashing recipe are
+   exportable as one JSON (API for F's "Copy proof" button in Signs & Visions); `tools/verify/verify.mjs` (zero
+   dependencies, Node 20) and a documented shell one-liner (sha256sum) verify it independently; `docs/verify.md` and a
+   README line show how ("do X, see OK").
+2. Entropy the developer does not control, for real (non-judge) seasons: the player commits a nonce before the root
+   forms (hash shown, nonce revealed at the end), and/or the seed mixes in a NEAR testnet block hash fetched after the
+   commitment. Specify the protocol in `docs/verify.md` first; keep the judge seed fixed and documented as such.
+3. The testnet registration of the root before trial 1 stays pending the owner's permission (Task M); keep the
+   scripts ready and make the game say "registered on NEAR ✓" only when it is.
