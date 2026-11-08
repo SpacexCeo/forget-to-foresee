@@ -3,9 +3,9 @@
     "iris": {
       "clan": "Iris",
       "file": "game/public/assets/models/agent_iris.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "OPTIX",
       "part_triangles": {
-        "body": 1844,
+        "body": 1812,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -43,48 +43,48 @@
         "pin": 60
       },
       "ngons_triangulated": 46,
-      "runtime_triangles": 15520,
+      "runtime_triangles": 15488,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 411.5,
-          "p10": 395.7,
-          "p90": 422.8
+          "median": 410.4,
+          "p10": 394.6,
+          "p90": 421.6
         },
         "uv_anisotropy": {
           "median": 1.067,
-          "p95": 1.192
+          "p95": 1.19
         }
       },
-      "master_triangles": 4787536,
+      "master_triangles": 4786128,
       "bakes": {
         "ao": {
-          "seconds": 543.6,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 207.08,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 48.63,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 34.35,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 38.13,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 28.36,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 21.56,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 22.73,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 15.27,
+          "seconds": 16.81,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -95,7 +95,7 @@
             2048,
             2048
           ],
-          "bytes": 751229
+          "bytes": 699704
         },
         "orm": {
           "file": "agent_iris_orm.jpg",
@@ -103,7 +103,7 @@
             2048,
             2048
           ],
-          "bytes": 1649161
+          "bytes": 1489465
         },
         "normal": {
           "file": "agent_iris_normal.jpg",
@@ -111,7 +111,7 @@
             2048,
             2048
           ],
-          "bytes": 1691367
+          "bytes": 1192541
         }
       },
       "skin": {
@@ -154,7 +154,7 @@
           "scarf_front": "fit",
           "pin": "fit"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 154,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -209,7 +209,7 @@
       },
       "collision": {
         "name": "agent_iris_col",
-        "radius_m": 0.312,
+        "radius_m": 0.311,
         "height_m": 1.763,
         "triangles": 144
       },
@@ -261,6 +261,12 @@
           "loop": false,
           "max_hip_clamp_m": 0.0,
           "seconds": 2.5
+        },
+        "understand": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
         }
       },
       "walk_foot_check": {
@@ -284,8 +290,8 @@
           0.114
         ],
         "socket_hand_r": [
-          0.0,
           -0.0,
+          0.0,
           0.1
         ]
       },
@@ -306,8 +312,8 @@
           0.257
         ]
       },
-      "raw_glb_bytes": 7414224,
-      "glb_bytes": 5770716,
+      "raw_glb_bytes": 6880932,
+      "glb_bytes": 6880932,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -316,49 +322,49 @@
       "stages": [
         {
           "stage": "iris:model",
-          "seconds": 0.21
+          "seconds": 0.22
         },
         {
           "stage": "iris:uv",
-          "seconds": 1.62
+          "seconds": 1.52
         },
         {
           "stage": "iris:master",
-          "seconds": 39.04
+          "seconds": 19.43
         },
         {
           "stage": "iris:bake_gpu",
-          "seconds": 667.6
+          "seconds": 310.41
         },
         {
           "stage": "iris:textures",
-          "seconds": 1.15
+          "seconds": 6.0
         },
         {
           "stage": "iris:export",
-          "seconds": 0.0
+          "seconds": 0.06
         },
         {
           "stage": "iris:rig",
-          "seconds": 0.3
+          "seconds": 0.47
         },
         {
           "stage": "iris:anim",
-          "seconds": 1.13
+          "seconds": 1.6
         },
         {
           "stage": "iris:export",
-          "seconds": 12.16
+          "seconds": 2.82
         }
       ],
-      "total_seconds": 723.21
+      "total_seconds": 342.53
     },
     "sol": {
       "clan": "Salt",
       "file": "game/public/assets/models/agent_sol.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "OPTIX",
       "part_triangles": {
-        "body": 1844,
+        "body": 1812,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -400,48 +406,48 @@
         "pouch_2": 96
       },
       "ngons_triangulated": 82,
-      "runtime_triangles": 15528,
+      "runtime_triangles": 15496,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 310.2,
-          "p10": 298.3,
-          "p90": 318.8
+          "median": 309.8,
+          "p10": 298.0,
+          "p90": 318.1
         },
         "uv_anisotropy": {
-          "median": 1.066,
-          "p95": 1.185
+          "median": 1.062,
+          "p95": 1.191
         }
       },
-      "master_triangles": 6352624,
+      "master_triangles": 6351216,
       "bakes": {
         "ao": {
-          "seconds": 432.43,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 55.57,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 50.97,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 29.69,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 43.32,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 26.75,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 28.95,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 21.65,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 21.37,
+          "seconds": 16.88,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -452,7 +458,7 @@
             2048,
             2048
           ],
-          "bytes": 1145343
+          "bytes": 1125815
         },
         "orm": {
           "file": "agent_sol_orm.jpg",
@@ -460,7 +466,7 @@
             2048,
             2048
           ],
-          "bytes": 1778507
+          "bytes": 1623989
         },
         "normal": {
           "file": "agent_sol_normal.jpg",
@@ -468,7 +474,7 @@
             2048,
             2048
           ],
-          "bytes": 1782918
+          "bytes": 1520993
         }
       },
       "skin": {
@@ -515,7 +521,7 @@
           "pouch_1": "comp",
           "pouch_2": "comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 154,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -615,6 +621,12 @@
           "loop": false,
           "max_hip_clamp_m": 0.0,
           "seconds": 2.5
+        },
+        "understand": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
         }
       },
       "walk_foot_check": {
@@ -638,8 +650,8 @@
           0.114
         ],
         "socket_hand_r": [
-          0.0,
           -0.0,
+          0.0,
           0.1
         ]
       },
@@ -660,8 +672,8 @@
           0.293
         ]
       },
-      "raw_glb_bytes": 8066820,
-      "glb_bytes": 5477432,
+      "raw_glb_bytes": 7806504,
+      "glb_bytes": 7806504,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -670,49 +682,49 @@
       "stages": [
         {
           "stage": "sol:model",
-          "seconds": 0.22
+          "seconds": 0.8
         },
         {
           "stage": "sol:uv",
-          "seconds": 1.38
+          "seconds": 1.31
         },
         {
           "stage": "sol:master",
-          "seconds": 61.02
+          "seconds": 28.13
         },
         {
           "stage": "sol:bake_gpu",
-          "seconds": 577.56
+          "seconds": 151.8
         },
         {
           "stage": "sol:textures",
-          "seconds": 1.09
+          "seconds": 3.52
         },
         {
           "stage": "sol:export",
-          "seconds": 0.0
+          "seconds": 0.06
         },
         {
           "stage": "sol:rig",
-          "seconds": 0.35
+          "seconds": 0.48
         },
         {
           "stage": "sol:anim",
-          "seconds": 1.15
+          "seconds": 1.57
         },
         {
           "stage": "sol:export",
-          "seconds": 12.75
+          "seconds": 3.22
         }
       ],
-      "total_seconds": 655.52
+      "total_seconds": 190.9
     },
     "pepel": {
       "clan": "Ash",
       "file": "game/public/assets/models/agent_pepel.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "OPTIX",
       "part_triangles": {
-        "body": 1844,
+        "body": 1812,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -748,48 +760,48 @@
         "shield_bars": 24
       },
       "ngons_triangulated": 60,
-      "runtime_triangles": 13286,
+      "runtime_triangles": 13254,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 381.1,
-          "p10": 365.9,
-          "p90": 392.7
+          "median": 377.4,
+          "p10": 362.7,
+          "p90": 388.6
         },
         "uv_anisotropy": {
-          "median": 1.07,
-          "p95": 1.187
+          "median": 1.068,
+          "p95": 1.184
         }
       },
-      "master_triangles": 5473232,
+      "master_triangles": 5471824,
       "bakes": {
         "ao": {
-          "seconds": 442.78,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 67.87,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 46.2,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 28.07,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 40.77,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 24.98,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 31.7,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 19.34,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 25.69,
+          "seconds": 16.66,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -800,7 +812,7 @@
             2048,
             2048
           ],
-          "bytes": 820305
+          "bytes": 771605
         },
         "orm": {
           "file": "agent_pepel_orm.jpg",
@@ -808,7 +820,7 @@
             2048,
             2048
           ],
-          "bytes": 1887582
+          "bytes": 1693535
         },
         "normal": {
           "file": "agent_pepel_normal.jpg",
@@ -816,7 +828,7 @@
             2048,
             2048
           ],
-          "bytes": 2164320
+          "bytes": 1660552
         }
       },
       "skin": {
@@ -857,7 +869,7 @@
           "shield": "rigid:forearm_L",
           "shield_bars": "rigid:forearm_L"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 154,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -955,6 +967,12 @@
           "loop": false,
           "max_hip_clamp_m": 0.0,
           "seconds": 2.5
+        },
+        "understand": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
         }
       },
       "walk_foot_check": {
@@ -978,8 +996,8 @@
           0.114
         ],
         "socket_hand_r": [
-          0.0,
           -0.0,
+          0.0,
           0.1
         ]
       },
@@ -1000,8 +1018,8 @@
           0.258
         ]
       },
-      "raw_glb_bytes": 7898324,
-      "glb_bytes": 5958444,
+      "raw_glb_bytes": 7327584,
+      "glb_bytes": 7327584,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1010,23 +1028,23 @@
       "stages": [
         {
           "stage": "pepel:model",
-          "seconds": 0.23
+          "seconds": 0.71
         },
         {
           "stage": "pepel:uv",
-          "seconds": 1.43
+          "seconds": 1.38
         },
         {
           "stage": "pepel:master",
-          "seconds": 50.18
+          "seconds": 22.64
         },
         {
           "stage": "pepel:bake_gpu",
-          "seconds": 587.64
+          "seconds": 157.75
         },
         {
           "stage": "pepel:textures",
-          "seconds": 1.14
+          "seconds": 3.16
         },
         {
           "stage": "pepel:export",
@@ -1034,25 +1052,25 @@
         },
         {
           "stage": "pepel:rig",
-          "seconds": 0.21
+          "seconds": 0.31
         },
         {
           "stage": "pepel:anim",
-          "seconds": 1.13
+          "seconds": 1.37
         },
         {
           "stage": "pepel:export",
-          "seconds": 14.94
+          "seconds": 2.86
         }
       ],
-      "total_seconds": 656.91
+      "total_seconds": 190.18
     },
     "moh": {
       "clan": "Moss",
       "file": "game/public/assets/models/agent_moh.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "OPTIX",
       "part_triangles": {
-        "body": 1844,
+        "body": 1812,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -1089,48 +1107,48 @@
         "ladle": 80
       },
       "ngons_triangulated": 60,
-      "runtime_triangles": 14454,
+      "runtime_triangles": 14422,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 394.4,
-          "p10": 370.5,
-          "p90": 408.0
+          "median": 393.6,
+          "p10": 374.1,
+          "p90": 406.1
         },
         "uv_anisotropy": {
-          "median": 1.086,
-          "p95": 1.309
+          "median": 1.08,
+          "p95": 1.249
         }
       },
-      "master_triangles": 5097232,
+      "master_triangles": 5095824,
       "bakes": {
         "ao": {
-          "seconds": 489.87,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 59.46,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 51.69,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 27.13,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 59.33,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 23.16,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 31.75,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 19.4,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 24.89,
+          "seconds": 15.05,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -1141,7 +1159,7 @@
             2048,
             2048
           ],
-          "bytes": 1152462
+          "bytes": 1032598
         },
         "orm": {
           "file": "agent_moh_orm.jpg",
@@ -1149,7 +1167,7 @@
             2048,
             2048
           ],
-          "bytes": 1954295
+          "bytes": 1645860
         },
         "normal": {
           "file": "agent_moh_normal.jpg",
@@ -1157,7 +1175,7 @@
             2048,
             2048
           ],
-          "bytes": 1914061
+          "bytes": 1382891
         }
       },
       "skin": {
@@ -1199,7 +1217,7 @@
           "bail": "rigid:prop_L",
           "ladle": "comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 154,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -1304,6 +1322,12 @@
           "loop": false,
           "max_hip_clamp_m": 0.0,
           "seconds": 2.5
+        },
+        "understand": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
         }
       },
       "walk_foot_check": {
@@ -1327,8 +1351,8 @@
           0.114
         ],
         "socket_hand_r": [
-          0.0,
           -0.0,
+          0.0,
           0.1
         ]
       },
@@ -1349,8 +1373,8 @@
           0.252
         ]
       },
-      "raw_glb_bytes": 8232120,
-      "glb_bytes": 5922452,
+      "raw_glb_bytes": 7449616,
+      "glb_bytes": 7449616,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1359,23 +1383,23 @@
       "stages": [
         {
           "stage": "moh:model",
-          "seconds": 0.24
+          "seconds": 0.52
         },
         {
           "stage": "moh:uv",
-          "seconds": 1.64
+          "seconds": 1.67
         },
         {
           "stage": "moh:master",
-          "seconds": 43.31
+          "seconds": 19.89
         },
         {
           "stage": "moh:bake_gpu",
-          "seconds": 657.97
+          "seconds": 145.02
         },
         {
           "stage": "moh:textures",
-          "seconds": 1.26
+          "seconds": 3.12
         },
         {
           "stage": "moh:export",
@@ -1383,25 +1407,25 @@
         },
         {
           "stage": "moh:rig",
-          "seconds": 0.23
+          "seconds": 0.29
         },
         {
           "stage": "moh:anim",
-          "seconds": 1.38
+          "seconds": 1.35
         },
         {
           "stage": "moh:export",
-          "seconds": 17.71
+          "seconds": 2.66
         }
       ],
-      "total_seconds": 723.74
+      "total_seconds": 174.53
     },
     "yantar": {
       "clan": "Amber",
       "file": "game/public/assets/models/agent_yantar.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "OPTIX",
       "part_triangles": {
-        "body": 1844,
+        "body": 1812,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -1441,48 +1465,48 @@
         "gems": 60
       },
       "ngons_triangulated": 62,
-      "runtime_triangles": 13054,
+      "runtime_triangles": 13022,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 379.8,
-          "p10": 365.4,
-          "p90": 389.2
+          "median": 382.0,
+          "p10": 367.6,
+          "p90": 391.7
         },
         "uv_anisotropy": {
-          "median": 1.057,
-          "p95": 1.18
+          "median": 1.059,
+          "p95": 1.181
         }
       },
-      "master_triangles": 5384128,
+      "master_triangles": 5382720,
       "bakes": {
         "ao": {
-          "seconds": 465.62,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 54.5,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 48.61,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 26.65,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 40.45,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 23.87,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 29.94,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 19.52,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 19.93,
+          "seconds": 15.25,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -1493,7 +1517,7 @@
             2048,
             2048
           ],
-          "bytes": 1348207
+          "bytes": 1258721
         },
         "orm": {
           "file": "agent_yantar_orm.jpg",
@@ -1501,7 +1525,7 @@
             2048,
             2048
           ],
-          "bytes": 1876574
+          "bytes": 1641596
         },
         "normal": {
           "file": "agent_yantar_normal.jpg",
@@ -1509,7 +1533,7 @@
             2048,
             2048
           ],
-          "bytes": 2029344
+          "bytes": 1550784
         }
       },
       "skin": {
@@ -1554,7 +1578,7 @@
           "keys": "rigid:prop_L",
           "gems": "follow_comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 154,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -1652,6 +1676,12 @@
           "loop": false,
           "max_hip_clamp_m": 0.0,
           "seconds": 2.5
+        },
+        "understand": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
         }
       },
       "walk_foot_check": {
@@ -1675,8 +1705,8 @@
           0.114
         ],
         "socket_hand_r": [
-          0.0,
           -0.0,
+          0.0,
           0.1
         ]
       },
@@ -1697,8 +1727,8 @@
           0.29
         ]
       },
-      "raw_glb_bytes": 8253716,
-      "glb_bytes": 5852116,
+      "raw_glb_bytes": 7626868,
+      "glb_bytes": 7626868,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1707,23 +1737,23 @@
       "stages": [
         {
           "stage": "yantar:model",
-          "seconds": 0.17
+          "seconds": 0.45
         },
         {
           "stage": "yantar:uv",
-          "seconds": 1.73
+          "seconds": 1.49
         },
         {
           "stage": "yantar:master",
-          "seconds": 41.62
+          "seconds": 21.48
         },
         {
           "stage": "yantar:bake_gpu",
-          "seconds": 605.05
+          "seconds": 140.57
         },
         {
           "stage": "yantar:textures",
-          "seconds": 0.87
+          "seconds": 2.93
         },
         {
           "stage": "yantar:export",
@@ -1735,22 +1765,41 @@
         },
         {
           "stage": "yantar:anim",
-          "seconds": 1.23
+          "seconds": 1.38
         },
         {
           "stage": "yantar:export",
-          "seconds": 12.72
+          "seconds": 2.65
         }
       ],
-      "total_seconds": 663.64
+      "total_seconds": 171.18
     },
     "iney": {
       "clan": "Frost",
       "file": "game/public/assets/models/agent_iney.glb",
       "cycles_device": "OPTIX",
       "part_triangles": {
-        "body": 1844,
-        "head": 440,
+        "body": 1812,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "face_hair": 264,
+        "head": 1864,
         "robe": 2400,
         "sleeve_l": 384,
         "sleeve_r": 384,
@@ -1767,47 +1816,47 @@
         "vials": 144,
         "vial_caps": 114
       },
-      "ngons_triangulated": 5,
-      "runtime_triangles": 10982,
+      "ngons_triangulated": 49,
+      "runtime_triangles": 14570,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 417.9,
-          "p10": 394.7,
-          "p90": 430.6
+          "median": 372.4,
+          "p10": 356.9,
+          "p90": 383.7
         },
         "uv_anisotropy": {
-          "median": 1.073,
-          "p95": 1.26
+          "median": 1.072,
+          "p95": 1.196
         }
       },
-      "master_triangles": 4633888,
+      "master_triangles": 4701104,
       "bakes": {
         "ao": {
-          "seconds": 7.44,
+          "seconds": 47.42,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 5.59,
+          "seconds": 23.95,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 6.14,
+          "seconds": 21.12,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 5.73,
+          "seconds": 17.16,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 4.2,
+          "seconds": 13.98,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1820,7 +1869,7 @@
             2048,
             2048
           ],
-          "bytes": 1152837
+          "bytes": 1187395
         },
         "orm": {
           "file": "agent_iney_orm.jpg",
@@ -1828,7 +1877,7 @@
             2048,
             2048
           ],
-          "bytes": 1567551
+          "bytes": 1622956
         },
         "normal": {
           "file": "agent_iney_normal.jpg",
@@ -1836,13 +1885,32 @@
             2048,
             2048
           ],
-          "bytes": 1431787
+          "bytes": 1379886
         }
       },
       "skin": {
         "heat_empty_vertices": 0,
         "rules": {
           "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "face_hair": "head",
           "head": "head",
           "robe": "skirt",
           "sleeve_l": "fit",
@@ -1860,7 +1928,10 @@
           "vials": "follow_comp",
           "vial_caps": "follow_comp"
         },
+        "finger_vertices": 154,
         "bones_used": [
+          "brow_L",
+          "brow_R",
           "chest",
           "cloak_0",
           "cloak_1",
@@ -1868,6 +1939,8 @@
           "cloak_L_1",
           "cloak_R_0",
           "cloak_R_1",
+          "fingers_L",
+          "fingers_R",
           "foot_L",
           "foot_R",
           "forearm_L",
@@ -1877,6 +1950,13 @@
           "head",
           "hood_0",
           "hood_1",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
           "neck",
           "pelvis",
           "prop_L",
@@ -1891,6 +1971,8 @@
           "spine",
           "thigh_L",
           "thigh_R",
+          "thumb_L",
+          "thumb_R",
           "toe_L",
           "toe_R",
           "upperarm_L",
@@ -1900,7 +1982,7 @@
       },
       "collision": {
         "name": "agent_iney_col",
-        "radius_m": 0.319,
+        "radius_m": 0.317,
         "height_m": 2.02,
         "triangles": 144
       },
@@ -1952,6 +2034,12 @@
           "loop": false,
           "max_hip_clamp_m": 0.0,
           "seconds": 2.5
+        },
+        "understand": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
         }
       },
       "walk_foot_check": {
@@ -1967,7 +2055,7 @@
         },
         "stride_m": 1.36
       },
-      "bones": 40,
+      "bones": 53,
       "sockets_gltf": {
         "socket_head": [
           0.0,
@@ -1975,8 +2063,8 @@
           0.114
         ],
         "socket_hand_r": [
-          0.0,
           -0.0,
+          0.0,
           0.1
         ]
       },
@@ -1997,8 +2085,8 @@
           0.297
         ]
       },
-      "raw_glb_bytes": 6838684,
-      "glb_bytes": 5061468,
+      "raw_glb_bytes": 7567288,
+      "glb_bytes": 7567288,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -2007,23 +2095,23 @@
       "stages": [
         {
           "stage": "iney:model",
-          "seconds": 0.12
+          "seconds": 0.47
         },
         {
           "stage": "iney:uv",
-          "seconds": 0.86
+          "seconds": 1.26
         },
         {
           "stage": "iney:master",
-          "seconds": 1.79
+          "seconds": 17.73
         },
         {
           "stage": "iney:bake_gpu",
-          "seconds": 29.4
+          "seconds": 124.39
         },
         {
           "stage": "iney:textures",
-          "seconds": 1.95
+          "seconds": 2.94
         },
         {
           "stage": "iney:export",
@@ -2031,18 +2119,18 @@
         },
         {
           "stage": "iney:rig",
-          "seconds": 0.11
+          "seconds": 0.26
         },
         {
           "stage": "iney:anim",
-          "seconds": 0.57
+          "seconds": 1.34
         },
         {
           "stage": "iney:export",
-          "seconds": 4.17
+          "seconds": 2.63
         }
       ],
-      "total_seconds": 38.97
+      "total_seconds": 151.03
     },
     "suit": {
       "clan": "Suit",
@@ -2237,12 +2325,12 @@
       "total_seconds": 45.52
     }
   },
-  "blender": "4.5.3 LTS",
+  "blender": "5.1.2",
   "budgets": {
     "runtime_triangles": 16000,
     "materials": 3,
     "texture_px": 2048,
-    "bake_px": 2048
+    "bake_px": 4096
   },
   "qa_render": {
     "iris+sol+pepel+moh+yantar+iney": {
