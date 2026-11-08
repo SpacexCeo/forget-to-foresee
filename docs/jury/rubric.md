@@ -45,7 +45,7 @@ an open flag is reported to the lead at once, and the score is marked provisiona
 | C1 | Runs and is verifiable: reproducibility and honesty | 25 | Q-017 and README guidance; `ai-screening-and-reproducibility`; `hackathon-judging-rubrics` (Google "working application, not a mockup", Microsoft "does it work" 25 %) |
 | C2 | Game loop and fun in the first ten minutes | 20 | `games` track text and exemplar; `game-jam-and-festival-judging`; Imagine Cup Fun Factor 25 % |
 | C3 | Technical depth and quality | 13 | ETHGlobal Technicality, Devpost "technical implementation"; `hackathon-judging-rubrics` |
-| C4 | NEAR integration and track fit: concrete, in the loop, honest | 12 | Demo-post guidance, Q-010/Q-011; `near-hackathon-tracks`; `onchain-game-design` (pending) |
+| C4 | NEAR integration and track fit: concrete, in the loop, honest | 12 | Demo-post guidance, Q-010/Q-011; `near-hackathon-tracks`; `onchain-game-design`; `past-near-hackathon-winners` |
 | C5 | Originality, story and impact | 12 | IGF/Nuovo innovation; Imagine Cup Innovation 20 %; previous NEAR criteria (originality, impact, sustainability) |
 | C6 | Presentation: demo video, X post, README top | 10 | Q-012 and demo-post guidance; `demo-video-and-trailer`; judges' "first two paragraphs" |
 | C7 | Polish, UX and accessibility | 8 | `accessibility`; `game-jam-and-festival-judging` |
@@ -116,9 +116,28 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
 - Calibration: no verified past NEAR winner shipped without a live primitive (`notes/past-near-hackathon-winners.md`),
   so an undeployed contract caps this criterion at 5 whatever the design quality; a testnet deployment of the existing
   contract is the cheapest move from 5 to 7 or more.
-- Diagnostic questions (to be completed from `notes/onchain-game-design.md`): would the game be worse without the
-  chain; does the player ever see the verification at a decision; is the token the game or is the game the game;
-  does the economy evolve without a dev patch; is verification that nobody looks at theatre.
+- Diagnostic questions (the 24-item checklist in `notes/onchain-game-design.md`; the ones that bite here):
+  1. Name the mechanic that would be impossible without the chain; if the answer is "ownership" or "a database", a
+     database would do.
+  2. Who chose the seed, did they see player input before committing, and could they have generated many candidate
+     seasons and committed the favourable one? A commitment proves the sequence was fixed, not that it was chosen
+     fairly.
+  3. Can a third party verify an outcome offline, later, with only the root, the reveals and a documented algorithm,
+     without the game's own client? Is the "Verified" label produced by the same code that could lie?
+  4. Are hashes shown in full, is the hashing recipe published, is there a way to check outside the UI?
+  5. Is the token the game or is the game the game (would anyone play with the token at zero)? Do sinks exist for
+     fun and progression rather than accumulation?
+  6. Can the economy evolve without a dev patch, and is there a replay or log that shows it?
+  7. For the agents: can the player read why an agent acted, and does memory have visible consequence?
+  8. Does any claim name something not deployed or not running without the label "simulated" or "not deployed"?
+- Calibration for this project's pitch: today the browser generates the season, commits the root and verifies the
+  reveals with the same code, so the player trusts the client in all three roles. The literature calls a verification
+  badge produced by code that could lie the theatre case. For C4 that caps "provable prophecy" at the 5 band until one
+  of the named mitigations lands: entropy the developer does not control before the root is formed (a player
+  commitment first, a public beacon, or a NEAR block hash after the player's commitment), the root registered on the
+  deployed contract before trial 1, and an out-of-band verifier (copyable root, leaf, proof and recipe, or a one-file
+  standalone check). Honest wording ("the client proves the season did not change after it began") keeps C1 intact
+  even where C4 stays at 5.
 
 ### C5. Originality, story and impact (12)
 - **10/10**: a mechanic judges have not seen (the price of memory; provable prophecy), a one-sentence identity that

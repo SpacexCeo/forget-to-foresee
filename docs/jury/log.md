@@ -34,3 +34,8 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   and Encode winner lists were not retrievable and are marked unverified). Rubric: section 1 gains the five
   recurring NEAR criteria with their source and the winners' common traits; C4 gets a calibration note (an undeployed
   contract caps C4 at 5); C5 names the go-to-market question.
+- 18:00 UTC: `notes/onchain-game-design.md` done (29 first-hand sources, blocked pages marked). Rubric C4 gains the
+  eight diagnostic questions that bite here and a calibration: generator, committer and verifier are the same browser
+  code today, which the literature calls the theatre case; named mitigations (uncontrolled entropy before the root,
+  root registered on the deployed contract before trial 1, out-of-band verifier). Reported to the lead as an early
+  pitch risk, not a gate. All nine planned notes now exist; the rubric is v0.2 with every checklist filled.
