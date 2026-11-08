@@ -11,7 +11,7 @@ import { filterSigns, signCount } from './model.js';
 const FILTERS = ['all', 'active', 'resolved', 'anchors'];
 /** Compact desktop range (docs §1): the panel starts closed there and overlays when opened. */
 const COMPACT_QUERY = '(min-width: 701px) and (max-width: 1086px)';
-const STAT_ICONS = { stability: 'shield', anchorStrength: 'link', powerRange: 'bolt', delay: 'clock' };
+const STAT_ICONS = { stability: 'shield', anchorStrength: 'link', powerRange: 'bolt', delay: 'clock', place: 'map-pin', action: 'compass-star', power: 'bolt' };
 
 let uid = 0;
 
@@ -40,6 +40,7 @@ const isTyping = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)
  * the full text overflows) switches to `wh.sign.tiersShort` (RU "ур. 11–13").
  */
 function anchorArgs(i18n, a, el) {
+  if (a.trial != null) return { shell: i18n.t('shell.' + a.shell), tiers: i18n.t('wh.sign.trialShort', { n: a.trial }) };
   const count = a.tierTo > a.tierFrom ? 2 : 1;
   const tiersKey = el && el._short ? 'wh.sign.tiersShort' : 'wh.sign.tiers';
   return { shell: i18n.t('shell.' + a.shell), tiers: i18n.t(tiersKey, { count, from: a.tierFrom, to: a.tierTo }) };
@@ -54,16 +55,22 @@ function card(i18n, s, mobile, onAction) {
       h('dt', { class: 'wh-sign__k', i18n: 'wh.sign.statLabel', args: () => ({ label: i18n.t('wh.sign.' + st.id) }) }),
       tx(h('dd', { class: 'wh-sign__v' }), i18n, st.value.key, st.value.args))));
   const atext = h('span', { class: 'wh-sign__atext wh-heavy-sm' });
-  tx(atext, i18n, 'wh.sign.anchor', () => anchorArgs(i18n, s.anchor, atext));
-  const anchor = h('span', { class: 'wh-pill wh-pill--anchor wh-sign__anchor', attrs: { id: id + '-a' } },
-    ic(icon('target'), 'wh-sign__aicon'), atext);
+  if (s.anchor) tx(atext, i18n, 'wh.sign.anchor', () => anchorArgs(i18n, s.anchor, atext));
+  const anchor = s.anchor ? h('span', { class: 'wh-pill wh-pill--anchor wh-sign__anchor' + (s.anchored ? ' wh-sign__anchor--mine' : ''), attrs: { id: id + '-a' } },
+    ic(icon('target'), 'wh-sign__aicon'), atext) : null;
+  // Live model (from-obs.js): one plain reading line ("Likely: Gift of 20 at Shell II, trial 3"),
+  // and on resolved cards the proof check against the sealed root.
+  const plain = s.plain ? tx(h('p', { class: 'wh-sign__plain wh-body', attrs: { id: id + '-p' }, dataset: { confidence: s.confidence || '' } }), i18n, s.plain.key, s.plain.args) : null;
+  const verified = s.verified === 'ok' || s.verified === 'fail'
+    ? h('span', { class: 'wh-pill wh-sign__verified wh-sign__verified--' + s.verified, i18n: 'wh.sign.verified.' + s.verified, dataset: { tip: 'verified' } })
+    : null;
   const activate = () => onAction('sign', s.id);
   return h('div', {
     class: 'wh-card wh-sign' + (mobile ? ' wh-sign--mobile' : ''),
     attrs: {
       role: 'button', tabindex: '0',
       'aria-labelledby': id + '-t',
-      'aria-describedby': id + '-s ' + id + '-a',
+      'aria-describedby': [s.plain ? id + '-p' : '', s.stats.length ? id + '-s' : '', s.anchor ? id + '-a' : ''].filter(Boolean).join(' '),
     },
     dataset: { sign: s.id, state: s.state, whKey: 'sign-' + s.id },
     on: {
@@ -76,8 +83,10 @@ function card(i18n, s, mobile, onAction) {
     title,
     h('span', { class: 'wh-pill wh-sign__type' },
       ic(icon('sparkle'), 'wh-sign__spark'),
-      h('span', { class: 'wh-sign__tlabel wh-heavy-sm', i18n: 'wh.sign.type.' + s.type }))),
-  stats,
+      h('span', { class: 'wh-sign__tlabel wh-heavy-sm', i18n: 'wh.sign.type.' + s.type })),
+    verified),
+  plain,
+  s.stats.length ? stats : null,
   anchor,
   ic(icon('chevron-slim'), 'wh-sign__chev'));
 }
@@ -270,7 +279,8 @@ export function mountSigns(root, o) {
       api.toggle();
     }
   }
-  win.addEventListener('keydown', onKey);
+  // `keys: false`: the host routes V and Escape (the 3D client) through toggle()/close()
+  if (o.keys !== false) win.addEventListener('keydown', onKey);
   win.addEventListener('pointerdown', onPointer, true);
 
   const api = {

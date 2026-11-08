@@ -1,6 +1,7 @@
 // Dev page for the world HUD (game/hud-preview.html). Renders DEMO_MODEL over a dark backdrop or,
 // for parity checks, over the owner's mockup (?ref=1; the PNG lives in git-ignored .scratch/ref/).
 // Query: layout=desktop|mobile  ref=1  dim=0..1  lang=en|ru  sheet=1  tab=log|hints|lore
+//        live=1 [ticks=N] [mode=novice|pro]: a real local season (the API's room code) instead of DEMO_MODEL
 import { mountWorldHud, DEMO_MODEL } from './index.js';
 import { getUiContext } from '../context.js';
 
@@ -28,8 +29,14 @@ if (q.get('ref') === '1') {
   document.body.prepend(img);
 }
 
+let model = DEMO_MODEL;
+let liveCtx = null;
+if (q.get('live') === '1') {
+  const live = await import('./preview-live.js');
+  ({ model, ctx: liveCtx } = await live.liveModel({ ticks: Number(q.get('ticks') || 3), mode: q.get('mode') || 'novice', lang: q.get('lang') }));
+}
 const hud = mountWorldHud(document.getElementById('hud'), {
-  model: DEMO_MODEL, ctx, layout,
+  model, ctx: liveCtx || ctx, layout,
   onAction: (a, ...args) => console.debug('[wh action]', a, ...args),
 });
 if (sheet && hud.signs.open) hud.signs.open();

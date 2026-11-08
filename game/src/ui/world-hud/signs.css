@@ -303,3 +303,24 @@
   opacity: .5;
   pointer-events: none;
 }
+
+/* ---------- live model (from-obs.js): plain reading, proof badge, own anchor ---------- */
+.wh-root .wh-sign__plain {
+  margin-top: calc(6 * var(--wh-px));
+  font-size: var(--wh-fs-stat);
+  line-height: calc(18 * var(--wh-px));
+  color: var(--wh-text);
+}
+.wh-root .wh-sign__plain[data-confidence="unsure"] { color: var(--wh-text-muted); }
+.wh-root .wh-sign__plain[data-confidence="certain"] { color: var(--wh-gold-text); }
+.wh-root .wh-sign__verified { height: calc(21 * var(--wh-px)); font-family: var(--wh-font-body); font-size: var(--wh-fs-tab); }
+.wh-root .wh-sign__verified--ok { border-color: var(--wh-gold); color: var(--wh-gold-bright); box-shadow: var(--wh-glow-gold); }
+.wh-root .wh-sign__verified--fail { border-color: var(--wh-notify); color: var(--wh-notify); }
+.wh-root .wh-sign__anchor--mine { border-color: var(--wh-gold-bright); box-shadow: var(--wh-glow-gold); }
+@media (max-width: 700px) {
+  .wh-root .wh-sign__plain { margin-top: 4px; font-size: 12.5px; line-height: 16px; }
+  .wh-root .wh-sign__verified { height: 20px; font-size: 11px; }
+}
+/* Novice cards carry one reading line instead of four stat rows: a shorter card */
+.wh-root .wh-sign:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: calc(112 * var(--wh-px)); }
+@media (max-width: 700px) { .wh-root .wh-sign--mobile:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: 104px; } }

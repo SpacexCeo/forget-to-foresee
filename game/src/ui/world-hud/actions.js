@@ -52,6 +52,8 @@ export function mountActions(root, o = {}) {
   let refs = {};
 
   const say = (el2, ref) => (ref ? tx(el2, i18n, ref.key, ref.args) : el2);
+  /** Plain text of a TextRef (args may be a function, see dom.js tx). */
+  const tt = (ref) => (ref ? i18n.t(ref.key, typeof ref.args === 'function' ? ref.args() : ref.args) : '');
   const speakerName = () => i18n.t('agent.' + model.dialogue.speaker);
 
   function render() {
@@ -99,7 +101,7 @@ export function mountActions(root, o = {}) {
       class: 'wh-prompt wh-interactive ' + (mobile ? 'wh-prompt--mobile' : 'wh-panel'),
       attrs: { type: 'button', 'aria-keyshortcuts': p.hotkey || null },
       i18nAttrs: { 'aria-label': 'wh.prompt.aria' },
-      attrArgs: () => ({ key: p.hotkey, text: p.text ? i18n.t(p.text.key, p.text.args) : '' }),
+      attrArgs: () => ({ key: p.hotkey, text: tt(p.text) }),
       on: { click: () => emit('prompt') },
     },
     mobile ? null : ic('knot', 'wh-prompt__knot wh-prompt__knot--top'),
@@ -123,7 +125,7 @@ export function mountActions(root, o = {}) {
       class: 'wh-dialogue__reply wh-panel wh-interactive',
       attrs: { type: 'button', 'data-reply': r.id, 'aria-keyshortcuts': r.hotkey || null },
       i18nAttrs: { 'aria-label': 'wh.dialogue.reply' },
-      attrArgs: () => ({ key: r.hotkey, text: i18n.t(r.text.key, r.text.args) }),
+      attrArgs: () => ({ key: r.hotkey, text: tt(r.text) }),
       on: { click: () => emit('reply', r.id) },
     },
     h('span', { class: 'wh-kbd wh-kbd--lg wh-dialogue__kbd wh-heavy-sm', attrs: { 'aria-hidden': 'true' }, text: r.hotkey || '' }),
@@ -226,7 +228,8 @@ export function mountActions(root, o = {}) {
     if (hot) { if (!e.repeat) { e.preventDefault(); emit('hotkey', hot.id); } }
   }
   const win = typeof window !== 'undefined' ? window : null;
-  if (win) win.addEventListener('keydown', onKey);
+  // `keys: false`: the host routes the keyboard itself (the 3D client), the HUD only shows the letters
+  if (win && o.keys !== false) win.addEventListener('keydown', onKey);
   if (win) win.addEventListener('resize', fitDialogue);
 
   render();

@@ -63,10 +63,15 @@ function trialDesktop(i18n, t) {
       ic('compass-star', 'wh-trial__hicon'),
       tx(h('h2', { class: 'wh-trial__title wh-heavy-sm' }), i18n, 'wh.trial.title', { n: t.n, total: t.total })),
     h('div', { class: 'wh-divider wh-trial__rule wh-trial__rule--a' }),
-    row('crosshair', 'wh.trial.phase', v('wh.trial.phase.' + t.phase)),
-    row('bar-chart', 'wh.trial.skillTier', h('span', { class: 'wh-trial__v', text: String(t.skillTier) })),
-    row('bookmark', 'wh.trial.attempts', v('wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax }, true)),
-    row('map-pin', 'wh.trial.arena', ref(i18n, t.arena, 'wh-trial__v')),
+    // live model (from-obs.js) lists its rows; the mockup model uses the four fixed rows
+    ...(t.rows
+      ? t.rows.map((r) => row(r.icon, r.label, ref(i18n, r.value, 'wh-trial__v' + (r.id === 'attention' || r.id === 'words' ? ' wh-trial__v--num' : ''))))
+      : [
+        row('crosshair', 'wh.trial.phase', v('wh.trial.phase.' + t.phase)),
+        row('bar-chart', 'wh.trial.skillTier', h('span', { class: 'wh-trial__v', text: String(t.skillTier) })),
+        row('bookmark', 'wh.trial.attempts', v('wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax }, true)),
+        row('map-pin', 'wh.trial.arena', ref(i18n, t.arena, 'wh-trial__v')),
+      ]),
     h('div', { class: 'wh-divider wh-trial__rule wh-trial__rule--b' }),
     h('div', { class: 'wh-trial__progress' },
       h('p', { class: 'wh-trial__plabel wh-heavy-sm' },
@@ -174,10 +179,17 @@ function trialMobile(i18n, t) {
       h('span', { class: 'wh-trial__barrow' },
         bar(i18n, t, 'wh-trial__bar', MOBILE_BAR_CELLS),
         tx(h('span', { class: 'wh-trial__pct wh-body' }), i18n, 'wh.trial.percent', { n: t.progressPct }))),
-    h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
-    stat('attempts', 'bookmark', 'wh.trial.attempts', tx(h('span', { class: 'wh-trial__value wh-heavy-sm' }), i18n, 'wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax })),
-    h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
-    stat('skill', 'bar-chart', 'wh.trial.skillTierShort', h('span', { class: 'wh-trial__value wh-heavy-sm', text: String(t.skillTier) })));
+    ...(t.mobileStats
+      ? t.mobileStats.slice(0, 2).flatMap((m, k) => [
+        h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
+        stat(k ? 'skill' : 'attempts', m.icon, m.label, ref(i18n, m.value, 'wh-trial__value wh-heavy-sm')),
+      ])
+      : [
+        h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
+        stat('attempts', 'bookmark', 'wh.trial.attempts', tx(h('span', { class: 'wh-trial__value wh-heavy-sm' }), i18n, 'wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax })),
+        h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
+        stat('skill', 'bar-chart', 'wh.trial.skillTierShort', h('span', { class: 'wh-trial__value wh-heavy-sm', text: String(t.skillTier) })),
+      ]));
 }
 
 // ---------------------------------------------------------------- mount
