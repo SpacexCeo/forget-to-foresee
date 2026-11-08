@@ -24,6 +24,7 @@ import { steerTo } from '../physics/character.js';
 import { CAMPS, ANCHOR_ZONES, SHARD } from '../scenes/layout.js';
 import { CLAN_ASSET } from './behaviour.js';
 import { ShellHub, signForShell } from './hub.js';
+import { FIRST_LOOP_KEY } from './objectives.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
 import { CLAN_ORDER } from './behaviour.js';
@@ -47,8 +48,17 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
   const transport = createLocalTransport({ rules: options.rules, seedHex: options.seedHex });
-  const session = new PlaySession({ transport });
+  // A player who has already watched the first loop verified once on this device skips the first-loop goals
+  // (objectives.js honours the flag); ?demo=judge and ?hints=reset (resetHints) always start fresh.
+  const storage = ctx.storage && typeof ctx.storage.getJSON === 'function' ? ctx.storage : null;
+  let loopDone = !options.resetHints && !!(storage && (storage.getJSON(FIRST_LOOP_KEY, null) || {}).done);
+  const session = new PlaySession({ transport, skipOnboarding: loopDone });
   await session.start();
+  session.on('obs', (o) => {
+    if (loopDone || !storage || !(o.proofs || []).some((p) => p.verified)) return;
+    loopDone = true;
+    storage.setJSON(FIRST_LOOP_KEY, { done: true, at: new Date().toISOString() });
+  });
 
   const shell = createShellScene({ scene, streamer: world3d.streamer });
   const agents = new ClanAgents({ scene, i18n: ctx.i18n });
@@ -88,6 +98,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
   const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle() } }) : null;
+  // living agents (Task N): meeting and contribution beats reach the dialogue strip when they actually happen
+  agents.onSay = (l) => { if (worldHud) worldHud.say(l); };
   let movedReported = 0;
   const hubUi = hub ? createHubUi({ root: uiRoot, ctx, hub, onFly: fly, onRejected: (reason) => hud.showRejection(reason) }) : null;
   // The island map (play/map-ui.js, key N): place names live here, not on labels in the world (owner 08.11).
@@ -119,9 +131,13 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
 
   /** Flight from the island into Shell n: cover, enter (the zone event teleports), uncover. */
   async function fly(n) {
-    if (!hub || hub.busy || hub.advancing || state.zone === 'shell') return;
-    await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
-    const r = await hub.flyTo(n);
+    // claim the hub before the fade: keys pressed during the flight must not end a trial or start a second flight (QA-002)
+    if (!hub || state.zone === 'shell' || !hub.beginTransit('fly')) return;
+    let r;
+    try {
+      await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
+      r = await hub.flyTo(n);
+    } finally { hub.endTransit(); }
     setTimeout(() => hubUi.uncover(), 160);
     if (!r.ok) hud.showRejection(r.reason);
     else if (worldHud) { worldHud.activity('command'); worldHud.activity('signsOpen'); }
@@ -133,6 +149,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (ev.type === 'fx' && d.fx && d.fx.type === 'ask') shell.answer(!!d.fx.yes, state.now);
     if (ev.type === 'world.dialogue') agents.setTalking(d.clan, 9, state.now);
     agents.react(reactionsFor(ev, state.now));
+    agents.event(ev, state.now); // the director hears public events before the next observation (reveal look-up)
     hooks.event(ev);
   });
   session.on('zone', (res) => {

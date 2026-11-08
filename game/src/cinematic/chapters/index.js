@@ -3,7 +3,7 @@
 // trials stop and resume), keeps every panel closed under it, offers the Chronicle replay menu and the
 // optional narration. game.js calls attachChapters() once and forwards update/handleKey; nothing else in
 // the play layer changes. Dev parameters: ?films=off disables the films, ?films=full|cheap forces the shot
-// profile, ?film=<chapter> plays one film right away on a season advanced to that chapter (still frames for
+// profile, ?films=reset forgets the films seen in this season, ?film=<chapter> plays one film right away on a season advanced to that chapter (still frames for
 // docs/chapters.md use it with &stills=1).
 import { createChapterDirector, chapterFor, CHAPTER_IDS, SHOT_SECONDS, TITLE_SECONDS, CARD_SECONDS } from '../../play/chapters.js';
 import { renderMsg, resolvePlayArg } from '../../play/i18n.js';
@@ -33,7 +33,7 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
   const doc = uiRoot.ownerDocument || document;
   const params = new URLSearchParams(search != null ? search : (doc.location ? doc.location.search : ''));
   const devFilm = params.get('film');
-  const filmsParam = params.get('films'); // off | full | cheap (full/cheap force the shot profile: QA on SwiftShader)
+  const filmsParam = params.get('films'); // off | full | cheap | reset (full/cheap force the shot profile: QA on SwiftShader; reset forgets the seen films of this season)
   const enabled = filmsParam !== 'off' && !devFilm;
   const mode = hub ? 'hub' : 'walk';
   const director = createChapterDirector({
@@ -41,6 +41,7 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
     profile: () => (filmsParam === 'full' || filmsParam === 'cheap' ? filmsParam : lookdev.profile === 'phone' || lookdev.tier === 'low' ? 'cheap' : 'full'),
     reducedMotion: () => !!lookdev.reducedMotion,
   });
+  if (filmsParam === 'reset') director.reset();
   const { i18n } = ctx;
   const renderArg = (v) => resolvePlayArg(i18n, v);
   const renderLine = (line) => (line ? renderMsg(i18n, line.key, resolveLineArgs(line.args, i18n, renderArg)) : '');

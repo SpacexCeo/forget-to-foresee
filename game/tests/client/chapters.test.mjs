@@ -232,12 +232,17 @@ test('chapters: seen films persist per season and reset clears them', async () =
   assert.ok(again.has('language'));
   again.reset();
   assert.deepEqual(storage.getJSON(CHAPTERS_KEY), {});
-  // every room is a new season (its commitment is salted afresh, rules v3 P5), so a reload shows the intro again
+  // seen films are remembered per season commitment: a random season is new, the same fixed seed remembers
   const first = await hubSeason(JUDGE, storage);
+  const random = new PlaySession({ transport: createLocalTransport({}) });
+  await random.start();
+  assert.notEqual(seasonKey(random.obs), seasonKey(first.s.obs), 'another season has another key');
+  assert.equal(createChapterDirector({ obs: random.obs, storage, mode: 'hub' }).due(), 'arrival');
+  random.dispose();
   const s2 = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
   await s2.start();
-  assert.notEqual(seasonKey(s2.obs), seasonKey(first.s.obs));
   const d2 = createChapterDirector({ obs: s2.obs, storage, mode: 'hub' });
+  if (seasonKey(s2.obs) === seasonKey(first.s.obs)) { assert.equal(d2.due(), null, 'the same commitment remembers its films'); d2.reset(); }
   assert.equal(d2.due(), 'arrival');
   d2.markSeen('arrival');
   assert.equal(createChapterDirector({ obs: s2.obs, storage, mode: 'hub' }).due(), null, 'the same room (same key) remembers');

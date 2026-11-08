@@ -7,6 +7,7 @@ import { CommandBus } from './commands.js';
 import { Trail } from './trail.js';
 import { hotspotAt, contextOptions, defaultOption, placeForSpot } from './interactions.js';
 import { currentGoal } from './objectives.js';
+import { fetchNearBeacon } from '../net/near.js';
 
 const SYNC_EPS = 0.6; // meters: closer than this the room avatar counts as "here"
 
@@ -14,8 +15,11 @@ export class PlaySession {
   /**
    * @param {{transport: object, sleep?: (ms:number)=>Promise<void>, skipOnboarding?: boolean}} o
    */
-  constructor({ transport, sleep, skipOnboarding = false }) {
+  constructor({ transport, sleep, skipOnboarding = false, beacon } = {}) {
     this.transport = transport;
+    // Public beacon for the seed protocol: a function returning a string or null. Default: NEAR testnet block hash in a
+    // browser (read-only RPC, 2.5 s budget), none in node (tests never touch the network).
+    this.beaconProvider = beacon === undefined ? (typeof window !== 'undefined' ? () => fetchNearBeacon() : null) : beacon;
     this.bus = new CommandBus(transport, { sleep });
     this.obs = null;
     this.actions = [];
@@ -36,11 +40,23 @@ export class PlaySession {
   on(type, fn) { if (!this.listeners.has(type)) this.listeners.set(type, new Set()); this.listeners.get(type).add(fn); return () => this.listeners.get(type).delete(fn); }
   emit(type, data) { for (const fn of [...(this.listeners.get(type) || [])]) { try { fn(data); } catch (e) { console.warn('[play] listener failed', type, e); } } }
 
-  /** Commits the owner key and loads the first observation. */
-  async start({ phrase = '' } = {}) {
+  /**
+   * Commits the owner key and loads the first observation. Under the seed protocol (docs/verify.md, ftf-seed/1) the
+   * room has already published a commitment to its random bytes; the player's `nonce` (any text, default 16 random
+   * bytes as hex) and an optional public `beacon` (a NEAR testnet block hash, fetched here in a browser unless one is
+   * given or `beacon: null`) go into the seed, so neither side can steer the season. Fixed-seed sessions send neither.
+   */
+  async start({ phrase = '', nonce, beacon } = {}) {
     await this.refresh();
     if (this.obs.season.phase === 'intro') {
-      const r = await this.bus.send('start_season', phrase ? { phrase } : {});
+      const args = phrase ? { phrase } : {};
+      const e = this.obs.season.entropy;
+      if (e && e.protocol === 'ftf-seed/1' && !e.sealed) {
+        args.nonce = nonce != null && nonce !== '' ? String(nonce).replace(/\|/g, '/').slice(0, 128) : randomNonce();
+        if (beacon === undefined && this.beaconProvider) beacon = await this.beaconProvider().catch(() => null);
+        if (beacon) args.beacon = String(beacon).replace(/\|/g, '/').slice(0, 200);
+      }
+      const r = await this.bus.send('start_season', args);
       if (!r.ok) throw new Error('start_season failed: ' + r.reason);
     }
     await this.refresh();
@@ -160,4 +176,11 @@ export class PlaySession {
 function sameSpot(a, b) {
   if (!a || !b) return a === b;
   return a.kind === b.kind && a.clan === b.clan && a.shell === b.shell;
+}
+
+/** 16 CSPRNG bytes as hex: the default player nonce when the player types none. */
+export function randomNonce() {
+  const a = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(a);
+  return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
 }

@@ -1,4 +1,4 @@
-# Task P: chapter films — report (branch `claude/chapter-films`, 08.11.2026)
+# Task P: chapter films — report (branch `claude/chapter-films`, 08.11.2026, final at the owner's wrap-up)
 
 ## What was done
 
@@ -26,8 +26,8 @@
   its durations, easings, distances and stagger; `filmMotion` evaluates them on the film clock).
 - **Hook in `game/src/play/game.js`**: one import, one `attachChapters(...)` call, `chapters.update(dt)` after the
   map update, two lines in `handleKey`, `chapters` on the returned play API. Nothing else in the play layer changed.
-- **Tests**: `tests/client/chapters.test.mjs` (11) and `tests/client/chapters-player.test.mjs` (5), both in `npm test`
-  (335/335). `npm run build` green.
+- **Tests**: `tests/client/chapters.test.mjs` (11) and `tests/client/chapters-player.test.mjs` (6), both in `npm test`
+  (401/401 after merging `claude/loving-curie-ihasft`). `npm run build` green.
 - **Review frames**: `node tests/client/chapters-stills.mjs` renders every film's title, five shots and card at
   1280×800 plus 1920×1080 and 390×844 samples into `docs/chapters/` (Chromium + SwiftShader, judge seed, hub mode);
   `docs/chapters.md` documents the films, the rules, the wiring and the review notes.
@@ -36,14 +36,16 @@
 
 ## How it was checked
 
-- `cd game && npm test` 335/335, `npm run build` green (after every step; pushed after every commit).
+- `cd game && npm test` 401/401 and `npm run build` green on the branch merged with `claude/loving-curie-ihasft`
+  (conflicts: the two shared docs kept both sides, the test list and the locale allowlist are unions; the motion
+  module is byte-identical to the integration branch); pushed after every commit.
 - Headless Chromium (SwiftShader, 1280×800, `?play=direct&seed=<judge>`): the Arrival film starts after the world
   opens in hub mode; holding W does not move Iris; a short press shows "Hold to skip", a 0.9 s hold skips; the
   Chronicle opens on C with six rows (Arrival seen / Replay, the rest "not yet"); zero console errors (one
   renderer performance warning from SwiftShader itself).
-- Frames of every film reviewed by eye (`docs/chapters.md`, "Review frames"): framing of the island, the Shells,
-  the interior with the Guest drawing the first sign, Iris, the Scroll, the camps; subtitles readable at all three
-  sizes; the portrait layout keeps the subtitle in the bottom band.
+- Frames reviewed by eye: the five Arrival frames in `docs/chapters/` (title, island, Shell, the Guest's sign on the
+  glass, Iris) plus earlier runs of the Scroll shot, the card and the 390×844 portrait layout (not kept). The
+  owner's wrap-up order stopped the full render; `node tests/client/chapters-stills.mjs` finishes it.
 
 ## What was not done or could not be verified
 
@@ -62,6 +64,6 @@
 
 ## Owner decisions this touches
 
-- The Arrival film plays once per season on every world entry (a reload is a new season by rules v3). If the
-  owner wants it only on the very first visit per device, `createSeenStore` already persists per season key and
-  needs one line to key on the device instead.
+- Seen films persist per season commitment (`ftf.chapters.v1`): a random season shows the Arrival film on every
+  load, the fixed judge seed only once per device (`?films=reset` forgets). If the owner wants the intro once per
+  device for every season, `createSeenStore` needs one line to key on the device instead.

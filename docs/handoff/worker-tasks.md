@@ -244,6 +244,11 @@ floating over the island): "the labels cheapen it; make a map and show them ther
 - Polish is part of the task, not extra: spacing, timing, easing, sound, readability, copy. If a detail looks
   cheap, it is a defect.
 - Never trade correctness for looks: `baseline-2d-1` parity, the proofs and the agent API stay exact.
+- Everything is animated and looks premium by 2026 consumer standards (owner, 08.11): nothing appears, disappears,
+  changes value or state without motion (eased enter/exit, staggered lists, number tick-ups, press feedback, hover
+  and focus states, smooth camera and panel transitions, idle life in the world). Motion is fast and purposeful
+  (120–400 ms for UI, physically plausible springs), never blocks input, and fully respects reduced motion (cross-fades
+  instead of movement). Use the shared motion tokens from Task S (`game/src/ui/motion/`) once they land.
 
 ---
 
@@ -432,3 +437,114 @@ coordinate in `docs/collab-requests.md` (F applies your scale/contrast tokens; I
    built from the current observation.
 6. Checks: automated contrast and target-size tests; a headless walk-through of a full season in Simple mode at 200 %
    scale in each locale; WCAG 2.2 AA as the target. Settings persist (with try/catch storage fallbacks).
+
+---
+
+## Task R: the juror (a trained hackathon judge whose scores steer the project)
+
+**Branch:** `claude/jury` · **Owns:** `docs/jury/**` only (never product code).
+Owner's request: a juror agent, well-read and trained for this, who first studies judging for 24 hours (cases and
+literature), then scores the project; the team reworks the project against those scores. It browses the web every
+30 minutes.
+Phase 1, training (until 2026-11-09 15:00 UTC), one research cycle per wake-up:
+- The live NEAR HACKATHON rules and judging (https://nearhackathon.com/HACKATHON.md: Q-017 AI screening by Claude Code
+  and Codex, then humans; the tracks, especially `games`), past NEAR hackathon winners and what they had in common,
+  Devpost/ETHGlobal/Encode winner write-ups, judge guides and rubrics (innovation, technical depth, use of the sponsor
+  tech, completeness, UX, presentation/demo video, impact), game-jam and indie-festival judging (IGF, Ludum Dare,
+  GDC talks on first-time UX and onboarding), on-chain game design criticism ("chain as decoration" vs economy in
+  the loop), accessibility guidelines, trailer/demo-video best practice.
+- Write what you learn into `docs/jury/notes/<topic>.md` with sources (URL, date read), and keep `docs/jury/rubric.md`
+  current: weighted criteria, what a 10/10 looks like for each, the red flags that sink a submission, and how an AI
+  screener (Claude Code / Codex) checks "it runs and the claims exist".
+Phase 2, judging (from 2026-11-09 15:00 UTC; earlier only if the lead asks for a preliminary read):
+- Evaluate the latest integration build (`claude/loving-curie-ihasft`) and the live site exactly as a judge would:
+  README from a clean clone, the judge path, the demo video drafts (`docs/media/`, `docs/submission/`), the code and
+  tests, the NEAR integration, originality and story, accessibility.
+- Write `docs/jury/scorecard-<UTC date-time>.md`: score per criterion with evidence, the top 5 changes that would
+  raise the score most (concrete, ranked by points per hour of work), and the delta since the previous scorecard.
+  Message the lead with the summary after each scorecard. Be strict and specific; do not flatter.
+Rules: English only in the repository; cite sources; never post, never contact organizers or other teams, never
+submit anything.
+
+---
+
+## Task S: motion design system, the premium 2026 feel
+
+**Branch:** `claude/motion` (worker G continues) · **Owns:** new `game/src/ui/motion/**` (tokens: durations, easings,
+springs; helpers: enter/exit, stagger, FLIP layout transitions, number tick-up, press/hover feedback, reduced-motion
+fallbacks; one tiny dependency-free module), `game/src/ui/lobby.js`, `game/src/ui/onboarding.js`, `game/src/ui/flow.js`,
+`game/src/ui/hologram/**` (Task I is done with them), `game/src/play/agents.js` animation parts,
+`game/src/play/map-ui.js` (Task H is done), new `game/tests/motion*.test.mjs`, `docs/motion.md` (new).
+Task F applies the tokens to the world HUD and play panels; Task Q's settings and Task P's films use them too:
+publish the API early (push the module first, announce it in `docs/collab-requests.md`).
+Owner: "everything must be animated and look expensive, as a 2026 consumer expects."
+1. A motion language for the whole game in `docs/motion.md`: the feel (calm, weighty, precise; ink and nacre), the
+   tokens, and a table of every UI event → its motion (panel open/close, card reveal, number change, stake placed,
+   "Verified ✓" seal, toast, hover/press, screen transitions lobby → onboarding → island → Shell).
+2. Implement the module and apply it in the paths you own: the lobby (layered parallax, title reveal, button
+   micro-interactions), onboarding and the hologram constructor (morphing steps, staged reveals), the map panel
+   (unfold, route draw-on, markers), and the world (Iris and agents: anticipation/follow-through on starts and stops,
+   reaction gestures, Iris's look-at toward the clan she talks to, the open item from Task N).
+3. Performance: transforms/opacity only on the DOM, no layout thrash, 60 fps on the phone profile; reduced motion
+   swaps movement for cross-fades. Tests for the tokens and helpers (pure). Before/after captures (short frame strips)
+   in `docs/motion.md`.
+
+
+---
+
+## Task T: verification anyone can repeat, and entropy we do not control (juror early warning, 08.11)
+
+**Branch:** `claude/verify-anywhere` (worker M continues) · **Owns:** new `tools/verify/**` (a one-file verifier),
+`game/src/net/near*.js`, `game/src/net/verify-export.js` (new: the data behind a "Copy proof" action; Task F renders
+the button), the season-seed derivation outside the engine (`game/src/net/near-season.js`, the `seasonRandomBytes`
+hook in `game/src/play/transport-local.js`), `contracts/**`, new tests, `docs/verify.md` (new). Never edit
+`game/src/game/engine.js`; `baseline-2d-1` parity and the fixed judge season (`?demo=judge`) stay bit-exact.
+Juror finding (`docs/jury/notes/onchain-game-design.md`, rubric C4 on `claude/jury`): the browser generates the season,
+commits the root and shows "Verified" with the same code, so the badge proves the season did not change after it
+began, not that it was fair. Mitigations, in order of points per hour:
+1. Out-of-band check: for every revealed sign, the full root, leaf, salt, Merkle path and the hashing recipe are
+   exportable as one JSON (API for F's "Copy proof" button in Signs & Visions); `tools/verify/verify.mjs` (zero
+   dependencies, Node 20) and a documented shell one-liner (sha256sum) verify it independently; `docs/verify.md` and a
+   README line show how ("do X, see OK").
+2. Entropy the developer does not control, for real (non-judge) seasons: the player commits a nonce before the root
+   forms (hash shown, nonce revealed at the end), and/or the seed mixes in a NEAR testnet block hash fetched after the
+   commitment. Specify the protocol in `docs/verify.md` first; keep the judge seed fixed and documented as such.
+3. The testnet registration of the root before trial 1 stays pending the owner's permission (Task M); keep the
+   scripts ready and make the game say "registered on NEAR ✓" only when it is.
+
+---
+
+## Task U: the first ten seconds (loading and first impression)
+
+**Branch:** `claude/first-seconds` (worker G continues) · **Owns:** `game/index.html`, the boot section of
+`game/src/main.js` (module loading, the first frame, the lobby hand-off), `game/src/render/streaming.js` and
+`game/src/render/assets.js` (moved from Task L, which keeps the rest of `render/`), a new loading screen module
+`game/src/ui/loading.js`, `vite.config.*`, new `game/tests/client/boot*.mjs`, `docs/first-seconds.md` (new).
+Goal: a judge opening the live link sees something beautiful within one second and can play within five, on a laptop
+and on a phone inside the X in-app browser.
+1. Measure first on the live site and a local production build (headless, cold cache, throttled "Fast 4G" and
+   "Slow 4G"): time to first paint, to the lobby, to the first playable frame, bytes before play, the largest chunks.
+2. An animated loading screen in the game's look (ink ring drawing itself, the title, real progress from the
+   streamer, never a frozen bar), using the shared motion tokens; it hands off to the lobby without a flash.
+3. Cut what blocks the first frame: lazy-load audio, VFX, the hub, the map and non-visible models; prioritise what
+   the first camera sees; preload hints for the critical chunks; check that phone `_m` variants and KTX2 are used.
+4. Before/after numbers in `docs/first-seconds.md`; the README "Judge in 5 minutes" sizes and times updated to the
+   measured values. Tests for the load plan (pure). Zero console errors; both play modes and `?play=direct` intact.
+
+---
+
+## Task V: memory shards as NEP-171 NFTs (the nfts track, contract first)
+
+**Branch:** `claude/shard-nft` (worker M continues) · **Owns:** new `contracts/memory-shard/**` (Rust, near-sdk, NEP-171
+core + NEP-177 metadata + NEP-178 approvals only if needed), new `game/src/net/shard-nft*.js` (read-only view client
+and the metadata mapping), new tests, `docs/shard-nft.md` (new), the README real/mock row "NEAR NEP-171 fragment NFTs"
+(only with what runs). Testnet only; deployment waits for the owner's permission path like `season-commit`.
+Design: a forgotten memory becomes a shard (the Price of Memory). On-chain, a shard NFT carries the season id, the
+memory's kind and weight, the trial it was forgotten, the Merkle leaf of the season event it unlocked (so the shard is
+provably tied to the committed season), and a deterministic generated image (an ink-ring SVG from the shard's data,
+stored as a data URI or a content hash). Minting only by the season coordinator; transfers follow the auction result.
+1. Contract with unit tests (mocked chain) and, where the container allows, sandbox tests; a deploy script mirroring
+   `deploy-judge-season.sh` that mints the judge season's shards (not run until permitted).
+2. The game reads shard NFTs read-only when a deployment exists (silent otherwise) and shows "Shard minted on NEAR
+   testnet" with an explorer link next to the shard in Memories and the auction.
+3. Also small: `tools/verify/verify.mjs --help` prints usage instead of throwing.

@@ -9,7 +9,7 @@ import {
   CAMPS, ANCHOR_ZONES, ANCHOR_ZONE_RADIUS, SCROLL_TABLE, SHARD, BALCONY_CENTER, platforms, bridges,
 } from '../scenes/layout.js';
 import { placePosition } from '../net/world-map.js';
-import { signsByShell } from './hub.js';
+import { openSignsByShell } from './hub.js';
 import { CLAN_ASSET } from './behaviour.js';
 
 /** Metres from the island centre to the map edge (the Shells hang at r = 50–54). */
@@ -76,7 +76,7 @@ export function placeById(id) { return mapPlaces().find((p) => p.id === id) || n
  * plus the trials Iris staked there. Works on any observation (hub or walking play).
  */
 export function shellStates(obs) {
-  const by = obs ? signsByShell(obs) : null;
+  const by = obs ? openSignsByShell(obs) : null; // only signs that can still pay (QA-007)
   const inside = obs && obs.you && obs.you.zone === 'shell' ? obs.you.shell : null;
   const anchors = (obs && obs.iris && obs.iris.anchors) || [];
   return [1, 2, 3, 4].map((n) => {

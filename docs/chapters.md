@@ -79,30 +79,33 @@ Each film is five shots of 6 s, a 2.6 s chapter title over the first shot and a 
 - `cinematic/chapters/overlay.js`: letterbox (2.2:1 on landscape screens, fixed bands in portrait), title,
   subtitle, final card, progress dots, skip ring; all opacities are set from the film clock each frame.
 - `cinematic/chapters/chronicle.js`: the replay menu, world HUD tokens, keyboard and touch (48 px targets).
-- Dev parameters: `?films=off` (no films), `?film=<chapter>` (advance the local season to that chapter and play
+- Seen films are remembered per season commitment (`ftf.chapters.v1`): a random season is new on every load, so the
+  Arrival film plays again; the fixed judge seed remembers its films across reloads (`?films=reset` forgets them).
+- Dev parameters: `?films=off` (no films), `?films=reset`, `?film=<chapter>` (advance the local season to that chapter and play
   its film at once), `&stills=1` (start paused; the frames tool seeks it), `?tier=high` on SwiftShader (which
   otherwise detects the low tier and plays the cheap films).
 
 ## Review frames
 
 Rendered in headless Chromium through SwiftShader (no GPU in the cloud container) on the judge seed
-(`cc161d30…`), hub mode, English, with `node tests/client/chapters-stills.mjs`. Desktop frames at 1280×800
-force `?tier=high` (full films); the 390×844 frames use the phone profile and show the cheap films; one shot
-per film is also at 1920×1080. The streamed models were given up to 150 s to decode per film; where a model
-had not finished, its greybox stands in (the game itself does the same). The Guests behind the glass are the
-current `guest.glb` creatures; Task O's staging is not on this branch yet.
+(`cc161d30…`), hub mode, English, 1280×800, with `node tests/client/chapters-stills.mjs` (desktop frames use
+`?films=full`; SwiftShader detects the low tier, which would otherwise play the cheap films). The owner's wrap-up
+order (08.11 evening) stopped the render after the first film: **five frames of Arrival are in `docs/chapters/`**;
+the other films' frames, the 1920×1080 and the 390×844 samples are rendered by the same command (about 90 s per
+frame here; a few minutes on a GPU). Where a model had not decoded in time, its greybox stands in (the flat spiral
+is the greybox Shell; the real nacre Shell replaces it when it streams).
 
-| Film | Frames (1280×800 unless noted) |
+| Frame | What to look at |
 |---|---|
-| I Arrival | `arrival-title.jpg`, `arrival-1-island.jpg`, `arrival-2-shells.jpg`, `arrival-3-guests.jpg`, `arrival-4-iris.jpg`, `arrival-5-scroll.jpg`, `arrival-card.jpg`; `arrival-1-island-1920x1080.jpg`; phone: `arrival-1-island-390x844.jpg`, `arrival-card-390x844.jpg` |
-| II The Language | `language-title.jpg`, `language-1-verified.jpg`, `language-2-stakes.jpg`, `language-3-words.jpg`, `language-4-offer.jpg`, `language-5-lie.jpg`, `language-card.jpg` |
-| III Trust | `trust-title.jpg`, `trust-1-word.jpg`, `trust-2-trust.jpg`, `trust-3-memory.jpg`, `trust-4-links.jpg`, `trust-5-scroll.jpg`, `trust-card.jpg` |
-| IV The Crisis | `crisis-title.jpg`, `crisis-1-storm.jpg`, `crisis-2-ash.jpg`, `crisis-3-tension.jpg`, `crisis-4-key.jpg`, `crisis-5-scroll.jpg`, `crisis-card.jpg`; `crisis-2-ash-1920x1080.jpg`; phone: `crisis-2-ash-390x844.jpg` |
-| V The Vote | `vote-title.jpg`, `vote-1-scroll.jpg`, `vote-2-ring.jpg`, `vote-3-ash.jpg`, `vote-4-iris.jpg`, `vote-5-sky.jpg`, `vote-card.jpg` |
-| VI The ending | `ending-title.jpg`, `ending-1-outcome.jpg`, `ending-2-votes.jpg`, `ending-3-iris.jpg`, `ending-4-shards.jpg`, `ending-5-next.jpg`, `ending-card.jpg`; `ending-1-outcome-1920x1080.jpg`; phone: `ending-card-390x844.jpg` |
+| `arrival-title.jpg` | the chapter title over the crane shot of the archipelago; letterbox, dots |
+| `arrival-1-island.jpg` | "An island floats above a sea of clouds…": the island framed whole, the subtitle band |
+| `arrival-2-shells.jpg` | the Shell three-quarters from the plaza side (greybox Shell in this run) |
+| `arrival-3-guests.jpg` | inside the Shell: the Guest's first sign forming on the glass as ink |
+| `arrival-4-iris.jpg` | Iris from the front at head height on the balcony; nameplates hidden |
 
-`docs/chapters/stills.json` records, per frame, the film time, whether every model had streamed in and the
-subtitle on screen. Notes from the review of these frames are at the end of this file.
+Earlier runs of the same tool (before the Shell shot was reframed and the stills tool was fixed) also showed the
+Scroll shot, the final card over the plaza and the portrait layout at 390×844 (subtitle in the bottom band, two
+lines); they were not kept in git. `docs/chapters/stills.json` is written at the end of a complete run.
 
 ## Checks
 

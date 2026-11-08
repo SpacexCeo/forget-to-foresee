@@ -80,6 +80,12 @@ export const LOG_TEMPLATES = {
   'log.contribute': '{who:agent} вносит фрагмент.',
   'log.playerHeldPrize': 'Вы удержали фрагмент и получили {amount:int} шёлка. Ваша часть послания погасла.',
   'log.agentHeldPrize': '{who:agent} удержал фрагмент ради приза ({amount:int}). Его часть послания погасла.',
+  // rules v3 only (QA-022): held prizes pay at the finale, refunded questions, the Shells leaving
+  'log.playerHeldPrizeV3': 'Вы удержали фрагмент: приз {amount:int} ждёт финала — если послание прочтут без вас.',
+  'log.agentHeldPrizeV3': '{who:agent} удержал фрагмент ради приза ({amount:int}, выплата в финале). Его часть послания погасла.',
+  'log.deferredPrize': '{who:agent} получает отложенный приз {amount:int} шёлка: послание прочли без него.',
+  'log.askRefund': 'Гости вернули шёлк за вопрос без ответа.',
+  'log.shellsGone': 'Раковины ушли. Шёлк мира обесценился.',
   'log.fragmentMissed': '{who:agent} не успел внести фрагмент.',
   'log.agentCheat': '{who:agent} обманул {victim:agent} на {amount:int} шёлка.',
   'log.agentBreak': '{who:agent} порвал с {other:agent}.',
@@ -261,7 +267,7 @@ export function fxToLine(fx) {
   switch (fx.type) {
     case 'voice': return { speakerId: 'guests', key: 'line.voice', args: { count: fx.n } };
     case 'crisis': return { speakerId: 'ash', key: 'line.crisis', args: {} };
-    case 'event': return { speakerId: 'guests', key: 'line.event', args: { shell: { $shell: fx.place }, action: { $meaning: [1, fx.action] }, power: POWER[fx.power], verified: !!fx.verified } };
+    case 'event': return { speakerId: 'guests', key: 'line.event', args: { shell: { $shell: fx.place }, action: { $meaning: [1, fx.action] }, power: POWER[fx.power], verified: fx.verified ? 'yes' : 'no' } };
     case 'anchor': return { speakerId: 'iris', key: 'line.anchor', args: { shell: { $shell: fx.place }, tick: fx.t } };
     case 'ask': return { speakerId: 'guests', key: fx.yes ? 'line.askYes' : 'line.askNo', args: {} };
     case 'memory_burned': return { speakerId: 'iris', key: fx.purpose === 'key' ? 'line.burnKey' : 'line.burnVision', args: { kind: fx.kind } };
