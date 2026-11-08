@@ -1,6 +1,6 @@
 # Handoff: world HUD and clarity layers (session of 08.11.2026)
 
-Branch: `claude/jolly-gates-lhgcaw` (pushed, no PR yet). Base: `main` at `9e72e4e`.
+Branch: `claude/jolly-gates-lhgcaw`, merged on 08.11 into `claude/happy-clarke-139pi1` together with `integration/slice-frkc4d` and `codex/premium-ui` (see `docs/decisions.md`).
 Read first, as always: `CLAUDE.md`, `docs/decisions.md` (rows dated 08.11), `docs/spec.md`.
 
 ## 1. What this session delivered

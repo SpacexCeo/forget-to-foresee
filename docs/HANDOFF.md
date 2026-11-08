@@ -1,7 +1,7 @@
 # Handoff: state on 08.11.2026
 
-Branch: `integration/slice-frkc4d` (pushed). `main` is behind it and has not been merged.
-Tests: `cd game && npm test` passes 195/195, `cd server && npm test` passes 28/28, and `npm run build` succeeds.
+Branch: `integration/slice-frkc4d`, merged on 08.11 into `claude/happy-clarke-139pi1` with `codex/premium-ui` and the world HUD branch.
+Tests (after the 08.11 merge): `cd game && npm test` passes 239/239, `cd server && npm test` passes 28/28, and `npm run build` succeeds.
 Deadlines: models 11.11, freeze 13.11 20:00 Kyiv, submission 15.11 01:59 Kyiv.
 Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-rules.md`, `docs/collab.md`.
 
@@ -40,7 +40,7 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 ## Open items, in priority order
 1. **Faces.** The rework in `art/agents/` is committed as WIP and is **not built into the glbs yet**: the CPU rebuild was stopped when the work wound down. Next: finish the build (on a GPU it takes about 15 minutes; on this container's CPU, hours), check the close-ups in `docs/art/qa/agents/<clan>/anim/`, and ship. The owner's goal: smooth, symmetric faces that hold up in close third person.
 2. **Wire audio and VFX into the gameplay.** Follow the integration lines in `docs/audio.md` and `docs/vfx.md`.
-3. **Merge Codex.** Branch `codex/premium-ui` conflicts with the integration branch. The steps to reconcile it are in `docs/collab-requests.md`; since then the lobby, the settings and the locales have changed here as well.
+3. ~~Merge Codex.~~ Done on 08.11 (only `game/src/ui/input.js` conflicted: Codex pointer/gamepad handling plus the touch controls).
 4. **Assets to fix:** Shell round 2 (nacre/iridescence, real wall pieces instead of slivers), `shell_interior` coordinates, the Guest's core glow, and pitch renders from the uncompressed sources.
 5. **Full UA, IT and ZH translation** of the rest of the UI.
 6. **Mobile:** a run button, quality tiers tuned for phones, lighter textures.
