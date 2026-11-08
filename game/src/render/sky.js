@@ -31,23 +31,23 @@ export function sunDirection(elevationDeg, azimuthDeg) {
 export const TIME_PRESETS = Object.freeze({
   golden: Object.freeze({
     label: 'Golden hour', elevation: 13, azimuth: 34, sunIntensity: 5.0, skyMean: 0.30, mie: 2.4, ozone: 1.0,
-    exposure: 0.15, envUrl: 'assets/env/golden_1k.hdr', envIntensity: 0.28, cloudCover: 0.58, warmth: 1.0,
-    fog: { density: 0.085, falloff: 0.12, near: 30, far: 420, sunPower: 7, aerial: 0.35 },
+    exposure: 0.25, envUrl: 'assets/env/golden_1k.hdr', envIntensity: 0.28, cloudCover: 0.58, warmth: 1.0,
+    fog: { density: 0.06, falloff: 0.1, near: 30, far: 420, sunPower: 7, aerial: 0.35 },
   }),
   morning: Object.freeze({
     label: 'Morning', elevation: 24, azimuth: -38, sunIntensity: 4.6, skyMean: 0.36, mie: 1.6, ozone: 1.0,
     exposure: 0.0, envUrl: null, envIntensity: 0.34, cloudCover: 0.42, warmth: 0.6,
-    fog: { density: 0.07, falloff: 0.12, near: 35, far: 460, sunPower: 6, aerial: 0.3 },
+    fog: { density: 0.05, falloff: 0.1, near: 35, far: 460, sunPower: 6, aerial: 0.3 },
   }),
   noon: Object.freeze({
     label: 'Noon', elevation: 58, azimuth: 20, sunIntensity: 4.4, skyMean: 0.42, mie: 1.0, ozone: 1.0,
     exposure: -0.3, envUrl: null, envIntensity: 0.4, cloudCover: 0.36, warmth: 0.2,
-    fog: { density: 0.05, falloff: 0.12, near: 45, far: 520, sunPower: 5, aerial: 0.25 },
+    fog: { density: 0.04, falloff: 0.1, near: 45, far: 520, sunPower: 5, aerial: 0.25 },
   }),
   dusk: Object.freeze({
     label: 'Dusk', elevation: 4.5, azimuth: 48, sunIntensity: 3.8, skyMean: 0.2, mie: 3.2, ozone: 1.4,
     exposure: 0.7, envUrl: null, envIntensity: 0.22, cloudCover: 0.6, warmth: 1.3,
-    fog: { density: 0.1, falloff: 0.11, near: 25, far: 380, sunPower: 9, aerial: 0.4 },
+    fog: { density: 0.075, falloff: 0.1, near: 25, far: 380, sunPower: 9, aerial: 0.4 },
   }),
 });
 export const DEFAULT_PRESET = 'golden';
@@ -186,22 +186,28 @@ const DOME_FS = /* glsl */`
       float r = clamp((1.0 - mu) / (1.0 - uCosDisc), 0.0, 1.0);
       sky += uSunDisc * k * (1.0 - 0.6 * (1.0 - sqrt(1.0 - r * r)));
     }
-    // High altocumulus on a plane ~2.5 km up: billows (fbm) carved by cellular puffs.
+    // Two cloud layers on planes above the observer: high altocumulus (2.5 km, fine billows carved by
+    // cellular puffs) and a lower band of heavier cumulus (1.1 km) that only shows near the horizon,
+    // where the sun lights it from behind: the drama line of the key art.
     if (d.y > 0.0) {
-      float t = 2.5 / max(d.y, 0.03);
-      vec2 p = d.xz * t * 0.06 + vec2(uTime * 0.0006, uTime * 0.00025);
-      vec4 n1 = texture2D(tNoise, p);
-      vec4 n2 = texture2D(tNoise, p * 3.1 + 0.37);
-      float base = n1.r * 0.65 + n1.b * 0.35;
-      float detail = n2.g * 0.5 + n2.a * 0.5;
-      float dens = smoothstep(1.0 - uCover, 1.0 - uCover + 0.28, base - (1.0 - detail) * 0.18);
-      float thick = smoothstep(0.55, 1.0, base);
-      // Silver/gold lining: forward scattering through thin edges, dark cool cores.
-      vec3 lit = uCloudSun * (0.16 + 3.0 * hg(mu, 0.62) * (1.0 - thick * 0.8) + 0.35 * hg(mu, -0.2)) + uCloudAmb * (0.78 - thick * 0.5);
-      float far = exp(-t * 0.09);
-      lit = mix(sky, lit, far);
-      float fade = smoothstep(0.015, 0.14, d.y);
-      sky = mix(sky, lit, dens * fade * 0.92);
+      for (int layer = 0; layer < 2; layer++) {
+        float alt = layer == 0 ? 2.5 : 1.1;
+        float t = alt / max(d.y, 0.03);
+        vec2 p = d.xz * t * (layer == 0 ? 0.06 : 0.035) + vec2(uTime * 0.0006, uTime * 0.00025) * (layer == 0 ? 1.0 : 1.6) + float(layer) * 0.43;
+        vec4 n1 = texture2D(tNoise, p);
+        vec4 n2 = texture2D(tNoise, p * 3.1 + 0.37);
+        float base = n1.r * 0.65 + n1.b * 0.35;
+        float detail = n2.g * 0.5 + n2.a * 0.5;
+        float cover = layer == 0 ? uCover : uCover * 0.75;
+        float dens = smoothstep(1.0 - cover, 1.0 - cover + 0.28, base - (1.0 - detail) * 0.18);
+        float thick = smoothstep(0.55, 1.0, base) * (layer == 0 ? 1.0 : 1.25);
+        // Silver/gold lining: forward scattering through thin edges, dark cool cores.
+        vec3 lit = uCloudSun * (0.16 + 3.0 * hg(mu, 0.62) * (1.0 - thick * 0.8) + 0.35 * hg(mu, -0.2)) + uCloudAmb * (0.78 - thick * 0.5);
+        float far = exp(-t * (layer == 0 ? 0.09 : 0.16));
+        lit = mix(sky, lit, far);
+        float fade = layer == 0 ? smoothstep(0.015, 0.14, d.y) : smoothstep(0.012, 0.06, d.y) * (1.0 - smoothstep(0.16, 0.3, d.y));
+        sky = mix(sky, lit, dens * fade * 0.92);
+      }
     }
     // Below the horizon the cloud sea covers the dome; keep it the horizon haze so any gap matches the fog.
     sky = mix(uHorizon, sky, smoothstep(-0.06, 0.005, d.y));
@@ -305,7 +311,7 @@ export class SkyDome {
     const horiz = (azOffset, el = 2) => sunDirection(el, preset.azimuth + azOffset);
     const towardSun = sample(horiz(0, 3)), awaySun = sample(horiz(180, 3)), side = sample(horiz(90, 3)), zenith = sample(new THREE.Vector3(0, 1, 0));
     // Fog: the cool anti-sun horizon is the base; the gold toward the sun is added by the phase lobe.
-    const base = awaySun.map((v, k) => 0.55 * v + 0.45 * side[k]);
+    const base = awaySun.map((v, k) => 0.45 * v + 0.4 * side[k] + 0.15 * towardSun[k]);
     const sunTint = towardSun.map((v, k) => Math.max(0, v - base[k]));
     const T = sunTransmittance(preset.elevation, preset);
     const tMax = Math.max(...T, 1e-6);

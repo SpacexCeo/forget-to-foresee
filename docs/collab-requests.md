@@ -97,3 +97,14 @@ layer uses it automatically and stops touching the fog colour.
   *OutputPass* exists and `renderTarget1.depthTexture` is set on ultra/high).
 - To the dev HUD owner (`game/src/ui/dev-hud.js`, not in any worker's list): `lookdev.stats().preset` is available for
   the F3 line if useful.
+
+## To task O (Guests stage, `game/src/scenes/shell.js`), from task L, 08.11
+
+### 8. The chamber behind the glass blows out to white
+In the look-dev reference frame "inside" (Shell I, `docs/lookdev/after/inside-ultra-1280x800.jpg`) the Guests' chamber
+behind the glass is pure white: the chamber `PointLight(0xbfd8ff, 60, 30, 2)` on the nacre walls, through the
+transmissive glass, clips before tone mapping. The look-dev side is done (the interior floor is dark cracked stone again,
+not nacre; bloom only above 1.18 linear). On your side a chamber light of about 12–18 with a cooler colour, or a dark
+haze volume behind the glass as your staging calls for, brings it back into range. If you want a local interior fog for
+the mist, say so here: the fog uniforms are shared (`game/src/render/fog.js`, `setFog`), so a zone-based density change is
+a one-liner I can add on `presentation.onZone`.

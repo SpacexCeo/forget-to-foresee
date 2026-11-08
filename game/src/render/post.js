@@ -32,7 +32,7 @@ export class GodRaysPass extends Pass {
     super();
     this.scale = scale;
     this.sunUv = new THREE.Vector2(0.5, 0.5);
-    this.intensity = 0.5;
+    this.intensity = 0.36;
     this.color = new THREE.Color(0xffe5c4);
     this.rtA = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
     this.rtB = this.rtA.clone();
@@ -46,7 +46,7 @@ export class GodRaysPass extends Pass {
           float sky = step(0.99995, d);
           vec2 v = (vUv - uSun) * vec2(uAspect, 1.0);
           float r = length(v);
-          float glow = exp(-r * r * 9.0) + 0.18 * exp(-r * 2.2);
+          float glow = exp(-r * r * 14.0) + 0.14 * exp(-r * 2.6);
           gl_FragColor = vec4(vec3(sky * glow), 1.0);
         }`,
       depthTest: false, depthWrite: false,
@@ -133,7 +133,7 @@ export class GodRaysPass extends Pass {
  */
 export const GradeShader = {
   uniforms: {
-    tDiffuse: { value: null }, uVignette: { value: 0.26 }, uSaturation: { value: 1.06 }, uContrast: { value: 1.08 },
+    tDiffuse: { value: null }, uVignette: { value: 0.26 }, uSaturation: { value: 1.1 }, uContrast: { value: 1.08 },
     uShadowTint: { value: new THREE.Color(0.94, 0.975, 1.035) }, uHighlightTint: { value: new THREE.Color(1.035, 1.005, 0.955) },
     uGrain: { value: 0.028 }, uTime: { value: 0 }, uResolution: { value: new THREE.Vector2(1, 1) },
   },

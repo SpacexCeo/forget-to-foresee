@@ -21,7 +21,7 @@ const NACRE_RIM = /* glsl */`
 
 /** Adds the pearl rim to a physical material (idempotent per material object). */
 function withNacreRim(mat) {
-  const uniforms = { uNacreRim: { value: 0.9 }, uNacreRimColorA: { value: new THREE.Color(0.95, 0.82, 1.0) }, uNacreRimColorB: { value: new THREE.Color(0.72, 0.92, 1.0) } };
+  const uniforms = { uNacreRim: { value: 0.55 }, uNacreRimColorA: { value: new THREE.Color(0.95, 0.82, 1.0) }, uNacreRimColorB: { value: new THREE.Color(0.72, 0.92, 1.0) } };
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (shader, renderer) => {
     if (prev) prev(shader, renderer);
@@ -103,7 +103,7 @@ export function applyMaterialQuality(cfg) {
     if (m.iridescence === iri) continue;
     m.iridescence = iri; m.sheen = cfg.iridescence ? 0.6 : 0.0; m.clearcoat = cfg.iridescence ? 0.55 : 0.0;
     // Without the thin film the rim carries the pearl look alone, a little stronger.
-    if (m.userData.nacreUniforms) m.userData.nacreUniforms.uNacreRim.value = cfg.iridescence ? 0.9 : 1.2;
+    if (m.userData.nacreUniforms) m.userData.nacreUniforms.uNacreRim.value = cfg.iridescence ? 0.55 : 0.8;
     m.needsUpdate = true;
   }
   const tr = cfg.transmission ? 1.0 : 0.0;

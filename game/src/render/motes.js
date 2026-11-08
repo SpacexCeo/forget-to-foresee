@@ -43,8 +43,8 @@ export class AirMotes {
           float t = uTime * aPhase.y;
           vec3 p = position + uWind * (t * 0.35) + vec3(sin(t * 0.7 + aPhase.x), sin(t * 0.45 + aPhase.x * 1.3) * 0.6, cos(t * 0.6 + aPhase.x)) * 0.8;
           // Wrap the cube around the camera.
-          vec3 half = vec3(uSize * 0.5);
-          p = mod(p - cameraPosition + half, uSize) - half + cameraPosition;
+          vec3 hv = vec3(uSize * 0.5);
+          p = mod(p - cameraPosition + hv, uSize) - hv + cameraPosition;
           vec4 mvPosition = viewMatrix * vec4(p, 1.0);
           float d = -mvPosition.z;
           vFade = smoothstep(uSize * 0.5, uSize * 0.2, d) * smoothstep(0.8, 3.0, d);
