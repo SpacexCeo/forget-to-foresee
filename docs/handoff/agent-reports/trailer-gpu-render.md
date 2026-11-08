@@ -38,3 +38,13 @@ ReadPixels"), which also show that the frames came from the GPU, not SwiftShader
 `.report.json` (per-shot frame hashes) and `.srt` next to it; the burned-in caption versions stay on the
 render server. These are drafts: the game build is b7e310b, so the agents are older than round 5.
 4K masters are rendering next.
+
+## Known defect in these drafts
+
+The owner saw flicker: black rectangles anchored to a corner in many frames (for example frames 44-52
+of `trailer.mp4`) and large frame-to-frame brightness jumps. Cause: the render resolution / pixel ratio
+changes between frames during capture (adaptive frame-time and tier systems), not a GPU fault. The
+same black corner rectangle appeared once in an in-game screenshot (`docs/art/qa/agents/ingame-r5`).
+"0 errors" above only means no runner errors; the capture had no flicker check. The 4K masters were
+stopped; Task J is fixing the capture path (frozen adaptive systems, fixed pixel ratio, a check that
+fails the render on flicker or black regions).
