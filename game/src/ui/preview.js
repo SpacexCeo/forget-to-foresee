@@ -3,7 +3,8 @@
 import * as E from '../game/engine.js';
 import { mountShell, mountHud, createEngineStore, mountConstructor, mountTournamentCard, getUiContext } from './index.js';
 import { h, bindI18n, ensureStyles } from './dom.js';
-import { buildLangToggle } from './settings.js';
+import { bindGamepadMenus } from './gamepad-menu.js';
+import { mountUiReference } from './ui-reference.js';
 import { POLICY } from './preview-policy.js';
 
 const app = document.getElementById('app');
@@ -19,7 +20,6 @@ function mountWorldPreview() {
   const stage = h('div', { class: 'ftf-stage' });
   const bar = h('div', { class: 'ftf-preview-bar' },
     h('span', { class: 'ftf-badge ftf-badge-demo', i18n: 'preview.localDemo' }),
-    buildLangToggle(ctx),
     h('button', { class: 'ftf-btn ftf-btn-small', i18n: 'preview.autoPlay', attrs: { type: 'button' }, on: { click: autoTick } }),
     h('button', { class: 'ftf-btn ftf-btn-small', i18n: 'preview.endTick', attrs: { type: 'button' }, on: { click: endTick } }),
     h('button', { class: 'ftf-btn ftf-btn-small', i18n: 'preview.newSeason', attrs: { type: 'button' }, on: { click: mountWorldPreview } }));
@@ -46,7 +46,10 @@ function mountWorldPreview() {
   window.__ftf = { E, store, hud, ctx };
 }
 
-if (view === 'world') mountWorldPreview();
-else if (view === 'constructor') { ensureStyles(); const w = h('div', { class: 'ftf-root', attrs: { style: 'padding:24px' } }, buildLangToggle(ctx)); app.append(w); mountConstructor(w, { ctx }); bindI18n(w, ctx.i18n); }
-else if (view === 'tournament') { ensureStyles(); const w = h('div', { class: 'ftf-root', attrs: { style: 'padding:24px;max-width:480px' } }, buildLangToggle(ctx)); app.append(w); mountTournamentCard(w, ctx); bindI18n(w, ctx.i18n); }
+if (view === 'reference') mountUiReference(app);
+else if (view === 'world') mountWorldPreview();
+else if (view === 'constructor') { ensureStyles(); const w = h('div', { class: 'ftf-root', attrs: { style: 'padding:24px' } }); app.append(w); mountConstructor(w, { ctx }); bindI18n(w, ctx.i18n); }
+else if (view === 'tournament') { ensureStyles(); const w = h('div', { class: 'ftf-root', attrs: { style: 'padding:24px;max-width:480px' } }); app.append(w); mountTournamentCard(w, ctx); bindI18n(w, ctx.i18n); }
 else mountShell(app, { ctx, onFirstContact: mountWorldPreview, firstContactNoteKey: 'fc.previewNote' });
+
+bindGamepadMenus(app);

@@ -5,7 +5,7 @@ import { PREF_OPTIONS } from './prefs.js';
 let n = 0;
 const uid = (p) => `ftf-${p}-${++n}`;
 
-/** EN | RU toggle. Switching re-renders everything in place. */
+/** EN | UA | RU | IT | 中文 toggle. Switching re-renders everything in place. */
 export function buildLangToggle(ctx) {
   const { i18n } = ctx;
   const group = h('div', { class: 'ftf-lang', attrs: { role: 'group' }, i18nAttrs: { 'aria-label': 'lang.label' } });

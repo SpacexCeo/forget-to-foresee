@@ -1,4 +1,4 @@
-// Vite config: two pages (the game and the dev-only asset review page) and a virtual module that
+// Vite config: game, UI preview and asset review entry points and a virtual module that
 // lists the .glb files present in public/assets/models/, so the client only requests models that
 // exist and shows a labeled greybox for the rest (no 404 noise, no SPA fallback confusion).
 import { defineConfig } from 'vite';
