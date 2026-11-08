@@ -6,7 +6,7 @@
 //           of the same length, or 'ahead' = along the motion)
 //   orbit   circle around `center` at `radius`, from `yawFrom` to `yawTo` degrees, height `height`,
 //           optional radius/height change over the move
-//   crane   rises or lowers: `from` → `to` height over the same ground track as a dolly
+//   crane   rises or lowers: `y0` → `y1` height over the same ground track as a dolly
 //   push    dolly toward `look` along the view ray from `dist0` to `dist1`
 //   static  hold a pose with a slow drift (`drift` metres), so nothing is ever perfectly still
 //   rig     the game's own follow camera (handled by the runner; here it returns null)
@@ -34,7 +34,7 @@ export function compileCamera(spec) {
   switch (spec.type) {
     case 'dolly': case 'crane': {
       const pts = spec.path.map((p) => p.slice());
-      if (spec.type === 'crane') { pts[0][1] = spec.from ?? pts[0][1]; pts[pts.length - 1][1] = spec.to ?? pts[pts.length - 1][1]; }
+      if (spec.type === 'crane') { pts[0][1] = spec.y0 ?? pts[0][1]; pts[pts.length - 1][1] = spec.y1 ?? pts[pts.length - 1][1]; }
       const path = new Spline(pts);
       const lookPath = Array.isArray(spec.look) && Array.isArray(spec.look[0]) ? new Spline(spec.look) : null;
       return (u) => {

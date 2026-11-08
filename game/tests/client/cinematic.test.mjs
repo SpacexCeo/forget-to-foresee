@@ -101,7 +101,7 @@ test('camera: orbit, dolly, crane, push and static compile to smooth poses with 
   assert.ok(dolly(0.5).pos[2] < 60 && dolly(0.5).pos[2] > 20);
   const ahead = compileCamera({ type: 'dolly', path: [[0, 5, 0], [10, 5, 0]], look: 'ahead' });
   assert.ok(ahead(0.5).look[0] > ahead(0.5).pos[0], 'looks along the motion');
-  const crane = compileCamera({ type: 'crane', path: [[0, 0, 40], [0, 0, 30]], from: 3, to: 20, look: [0, 0, 0] });
+  const crane = compileCamera({ type: 'crane', path: [[0, 0, 40], [0, 0, 30]], y0: 3, y1: 20, look: [0, 0, 0] });
   assert.equal(crane(0).pos[1], 3); assert.equal(crane(1).pos[1], 20);
   const push = compileCamera({ type: 'push', from: [0, 10, 30], look: [0, 2, 0], dist1: 8, ease: 'linear' });
   const d0 = Math.hypot(0, 8, 30);
