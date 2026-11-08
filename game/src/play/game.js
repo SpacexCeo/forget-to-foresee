@@ -82,7 +82,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // World-driven presentation (play/presentation.js): Shell mist, hums and crack pulse, tension, the glass
   // sign as ink, footsteps, ambience zones, UI clicks, composer/tier/reduced-motion follow. The hub's flights
   // arrive through the same zone events, so they are covered too.
-  const presentation = attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session });
+  const presentation = attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session, rig });
 
   const useWorldHud = options.worldHud !== false;
   // The Shell hub (owner decision 08.11): fly into Shells, read and stake there, leaving ends the trial.
