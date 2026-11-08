@@ -24,6 +24,7 @@ import { CAMPS } from './scenes/layout.js';
 import { mountShell } from './ui/index.js';
 import { createPlayContext } from './play/i18n.js';
 import { startPlay } from './play/game.js';
+import { mountAudioSettings } from './play/audio-settings.js';
 
 const params = new URLSearchParams(location.search);
 const app = document.getElementById('app');
@@ -91,6 +92,8 @@ async function enterWorld() {
       onSettings: () => controls.open(),
     } });
     window.__ftf.play = play;
+    // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
+    mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
   } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
 }
 // #play (artifact links pass only a hash) and touch devices go straight into the world.
@@ -300,5 +303,8 @@ function frame() {
 }
 
 // Expose a small debug handle for manual checks in the browser console and for measurements.
-window.__ftf = { scene, world, streamer, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier };
+window.__ftf = {
+  scene, world, streamer, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier,
+  get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
+};
 requestAnimationFrame(frame);

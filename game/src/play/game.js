@@ -1,7 +1,8 @@
 // The play layer in the browser: wires the 3D client to the authoritative room through the local
 // transport (the same room code the agent API serves), and keeps every visual in sync with the
 // room's observation: clan agents and their minds, the Shell interior with the Guests and their
-// logogram, anchor pads, the plaza sign, the HUD (src/ui), the play UI, and VFX/audio hooks.
+// logogram, anchor pads, the plaza sign, the HUD (src/ui), the play UI, and VFX/audio (event cues in
+// hooks.js, world-driven presentation in presentation.js).
 // Movement stays in main.js; this module supplies a route to the current goal (G) and teleports on
 // Shell entry and exit. No rule is evaluated here.
 import * as THREE from 'three';
@@ -14,6 +15,7 @@ import { createHints } from './hints.js';
 import { ClanAgents } from './agents.js';
 import { reactionsFor } from './behaviour.js';
 import { Hooks } from './hooks.js';
+import { attachPresentation } from './presentation.js';
 import { drawLogogram } from './logogram.js';
 import { createShellScene } from '../scenes/shell.js';
 import { planRoute, placePosition } from '../net/world-map.js';
@@ -56,6 +58,9 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
 
   const hooks = new Hooks({ resolve: resolvePlace });
   const state = { route: null, zone: 'island', entering: null, now: 0, lastMove: 0, lastPos: player.pos.slice(), moved: 0 };
+  // World-driven presentation (play/presentation.js): Shell mist, hums and crack pulse, tension, the glass
+  // sign as ink, footsteps, ambience zones, UI clicks, composer/tier/reduced-motion follow.
+  const presentation = attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session });
 
   const useWorldHud = options.worldHud !== false;
   const ui = createPlayUi({
@@ -79,15 +84,24 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     hooks.event(ev);
   });
   session.on('zone', (res) => { if (res.zone === 'shell') enterShell(res.shell); else exitShell(res.position); });
-  session.on('result', (r) => { if (!r.ok && !r.silent) hooks.play('rejected', { kind: 'iris' }, { reason: r.reason }); if (worldHud) worldHud.activity('command'); });
+  session.on('result', (r) => {
+    if (!r.silent) hooks.play(r.ok ? 'command_ok' : 'rejected', r.ok ? null : { kind: 'iris' }, r.ok ? {} : { reason: r.reason });
+    if (worldHud) worldHud.activity('command');
+  });
 
   // VFX (src/vfx, createVfx(scene, camera, renderer, opts)) and audio (src/audio, createAudio()).
   let audio = null;
-  loadModule(VFX_MODULES).then((m) => { if (m && m.createVfx) hooks.attachVfx(m.createVfx(scene, camera, renderer, { tier: lookdev.tier, reducedMotion: lookdev.reducedMotion })); }).catch((e) => console.warn('[play] vfx unavailable', e));
+  loadModule(VFX_MODULES).then((m) => {
+    if (!m || !m.createVfx) return;
+    const vfx = m.createVfx(scene, camera, renderer, { tier: lookdev.tier, reducedMotion: lookdev.reducedMotion });
+    hooks.attachVfx(vfx);
+    presentation.attachVfx(vfx); // composer, tier, mists, crack pulse, tension, glass sign
+  }).catch((e) => console.warn('[play] vfx unavailable', e));
   loadModule(AUDIO_MODULES).then((m) => {
     if (!m || !m.createAudio) return;
     audio = m.createAudio();
     hooks.attachAudio(audio);
+    presentation.attachAudio(audio); // one hum per Shell, footsteps and zones from the frame loop
     // WebAudio starts only from a user gesture.
     const unlock = () => { audio.unlock().catch(() => {}); window.removeEventListener('keydown', unlock); window.removeEventListener('pointerdown', unlock); };
     window.addEventListener('keydown', unlock); window.addEventListener('pointerdown', unlock);
@@ -147,6 +161,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     const sp = shell.spawn();
     teleport(sp.pos, sp.heading);
     rig.yaw = rig.baseYaw; rig.dist = Math.min(rig.dist, 9);
+    presentation.onZone('shell');
   }
   function exitShell(position) {
     shell.deactivate();
@@ -154,6 +169,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     player.world = world3d.world; rig.world = world3d.world;
     teleport(position || session.obs.you.position, null);
     session.trail.reset(player.pos);
+    presentation.onZone('island');
   }
 
   let lastSignKey = '', lastPadKey = '';
@@ -173,6 +189,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     // The Guest draws the newest sign Iris can see (a vision first: it is hers alone).
     const vis = (o.prophecies || []).slice().sort((a, b) => (b.vision - a.vision) || (b.publishedAt - a.publishedAt))[0];
     shell.setSign(vis ? { forms: vis.forms, dots: vis.dots } : null, state.now);
+    presentation.setSign(vis ? { forms: vis.forms, dots: vis.dots } : null);
     if (audio) {
       try {
         audio.setTension(o.season.tension);
@@ -202,11 +219,11 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
+    presentation.update(dt, { focus, inShell, speed, running });
     if (worldHud) {
       if (moving && state.now - movedReported > 1) { movedReported = state.now; worldHud.activity('moved'); }
       worldHud.update(dt);
     }
-    if (audio) { try { const sp = session.spot; audio.setZone(inShell ? 'shell' : sp && sp.kind === 'camp' ? CLAN_ASSET[sp.clan] : sp ? 'plaza' : 'bridge'); } catch { /* optional */ } }
   }
 
   /** Keyboard for the play UI; returns true when used. */
@@ -216,7 +233,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, agents, shell, hooks, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, agents, shell, hooks, presentation, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {
