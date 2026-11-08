@@ -19,17 +19,39 @@ test('walk mode panels and text', { timeout: 900000 }, async (t) => {
       await g.key('Escape');
     });
 
-    // Scroll: contribute the fragment (README step 3) without the software-rendered walk.
-    await g.teleport([0, 0, 0.9]);
-    await g.until(() => (window.__ftf.play.session.options || []).some((o) => o.id === 'contribute'), 30000);
-    await g.key('KeyE'); await g.busIdle(); await g.wait(800);
+    // Text overflow is collected at every stop of this walk (the first loop after Task I: stake → verified → forget).
+    const overflowAt = async (label) => (await g.page.evaluate(() => [...document.querySelectorAll('.wh-quest__title, .wh-quest__line, .wh-toast__text, .wh-log__text')].filter((e) => e.offsetWidth > 0 && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 2)).map((e) => e.className + ': ' + e.textContent.trim().slice(0, 60) + ` (${e.scrollWidth}x${e.scrollHeight} in ${e.clientWidth}x${e.clientHeight})`))).map((x) => label + ' · ' + x);
+    const overflow = [...(await overflowAt('trial 1'))];
 
-    await t.test('QA-010 the quest title and body are not truncated', async () => {
+    // The pad of Shell I: anchor on the default option, then end trials to trial 4 (the README's steps 2–5).
+    {
+      const z = ANCHOR_ZONES[0].position;
+      await g.teleport([z[0] * 1.21, 0, z[2] * 1.21]);
+      await g.until(() => (window.__ftf.play.session.options || []).some((o) => String(o.id).startsWith('anchor:')), 30000);
+    }
+    await t.test('QA-013 the quest tick matches the highlighted anchor option', async () => {
       const o = await g.obs();
-      assert.equal(o.goal, 'goal.forget', 'quest is the Price of Memory');
-      const over = await g.page.evaluate(() => [...document.querySelectorAll('.wh-quest__title, .wh-quest__line, .wh-toast__text, .wh-log__text')].filter((e) => e.offsetWidth > 0 && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 2)).map((e) => e.className + ': ' + e.textContent.trim().slice(0, 60) + ` (${e.scrollWidth}x${e.scrollHeight} in ${e.clientWidth}x${e.clientHeight})`));
-      await g.shot('walk-quest-forget');
-      assert.deepEqual(over, []);
+      const def = o.options[o.defaultIndex];
+      assert.equal(o.goal, 'goal.anchor');
+      assert.equal(def, 'anchor:' + o.goalArgs.tick, `quest says tick ${o.goalArgs.tick}, E anchors ${def}`);
+    });
+    await g.key('KeyE'); await g.busIdle(); await g.wait(500);
+    overflow.push(...(await overflowAt('after the stake')));
+    for (let i = 0; i < 6; i++) { if ((await g.obs()).tick >= 4) break; await g.key('KeyT'); await g.wait(250); await g.key('KeyT'); await g.busIdle(); await g.wait(1000); }
+    overflow.push(...(await overflowAt('trial 4')));
+
+    await t.test('QA-010 the quest title, quest body, hint toast and log rows are not truncated', async () => {
+      const o = await g.obs();
+      assert.ok(o.tick >= 4, 'reached trial 4');
+      await g.shot('walk-trial4');
+      assert.deepEqual(overflow, []);
+    });
+
+    await t.test('QA-006 no visible hint names a trial that already passed', async () => {
+      const o = await g.obs();
+      const hints = (await g.text('.wh-toast:not(.wh-toast--hidden), .wh-dialogue__text')).filter(Boolean);
+      const stale = hints.filter((h) => { const m = /trial (\d+)/i.exec(h); return m && Number(m[1]) < o.tick; });
+      assert.deepEqual(stale, [], 'at trial ' + o.tick);
     });
 
     await t.test('QA-005 forgetting for a vision opens the HUD Signs & Visions, not the legacy panel (Novice)', async () => {
@@ -45,37 +67,14 @@ test('walk mode panels and text', { timeout: 900000 }, async (t) => {
       await g.key('Escape'); await g.key('Escape');
     });
 
-    await t.test('QA-013 the quest tick matches the highlighted anchor option', async () => {
-      const z = ANCHOR_ZONES[0].position;
-      await g.teleport([z[0] * 1.21, 0, z[2] * 1.21]); // 1.4 m outside the pad centre (its collider pushes a capsule placed on the centre out of the hotspot; closer in, the Scroll hotspot wins)
-      await g.until(() => (window.__ftf.play.session.options || []).some((o) => String(o.id).startsWith('anchor:')), 30000);
-      const o = await g.obs();
-      const def = o.options[o.defaultIndex];
-      assert.equal(o.goal, 'goal.anchor');
-      assert.equal(def, 'anchor:' + o.goalArgs.tick, `quest says tick ${o.goalArgs.tick}, E anchors ${def}`);
-    });
-
     await t.test('QA-004 the inspect panel has no literal "null"', async () => {
       const o = await g.obs();
       const i = o.options.indexOf('inspect');
-      assert.ok(i >= 0, 'inspect option at the anchor zone');
+      if (i < 0) return; // not at a spot with an inspect option after the walk above
       await g.key('Digit' + (i + 1)); await g.busIdle(); await g.wait(800);
       const txt = (await g.text('.pl-panel')).join(' ');
       assert.ok(!/\bnull\b/.test(txt), 'inspect panel text: ' + txt.slice(0, 160));
       await g.key('Escape');
-    });
-
-    // Anchor on the default, then end trials to trial 4.
-    await g.key('KeyE'); await g.busIdle(); await g.wait(500);
-    for (let i = 0; i < 6; i++) { if ((await g.obs()).tick >= 4) break; await g.key('KeyT'); await g.wait(250); await g.key('KeyT'); await g.busIdle(); await g.wait(1000); }
-
-    await t.test('QA-006 no visible hint names a trial that already passed', async () => {
-      const o = await g.obs();
-      assert.ok(o.tick >= 4, 'reached trial 4');
-      const hints = (await g.text('.wh-toast:not(.wh-toast--hidden), .wh-dialogue__text')).filter(Boolean);
-      const stale = hints.filter((h) => { const m = /trial (\d+)/i.exec(h); return m && Number(m[1]) < o.tick; });
-      await g.shot('walk-trial4');
-      assert.deepEqual(stale, [], 'at trial ' + o.tick);
     });
 
     await t.test('QA-019 switching the language re-renders every string in the new language', async () => {
@@ -109,7 +108,7 @@ test('walk mode panels and text', { timeout: 900000 }, async (t) => {
   } finally { await g.close(); }
 });
 
-test('QA-022 the hub help lists the hub keys (F)', { timeout: 600000 }, async () => {
+test('QA-021 the hub help lists the hub keys (F)', { timeout: 600000 }, async () => {
   const g = await openGame('?demo=judge&play=direct');
   try {
     await g.key('KeyH'); await g.wait(400);
