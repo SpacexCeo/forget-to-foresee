@@ -18,8 +18,8 @@ named in the **Check** line, that fails while the defect is open and passes once
 
 | ID | Sev | Area | Title | Owner | Status |
 |---|---|---|---|---|---|
-| QA-001 | Blocker | i18n / HUD | The Guests say "The reveal does not match the root." on every verified reveal (all five locales) | F (UI) | open |
-| QA-002 | High | Shell hub | Keys and dock clicks are accepted during the 480 ms flight fade; a queued flight runs inside the auto-advance, a second F is swallowed | F (hub-ui) + lead (hub.js, game.js) | open |
+| QA-001 | Blocker | i18n / HUD | The Guests say "The reveal does not match the root." on every verified reveal (all five locales) | F (UI) | fixed by the lead on `claude/loving-curie-ihasft` 17bf2de (real path: `play/i18n.js resolvePlayArg`); retest pending |
+| QA-002 | High | Shell hub | Keys and dock clicks are accepted during the 480 ms flight fade; a queued flight runs inside the auto-advance, a second F is swallowed | F (hub-ui) + lead (hub.js, game.js) | fixed by the lead on 17bf2de (beginTransit/endTransit, run() refuses ops during automatic trials); retest pending |
 | QA-003 | Medium | Shell hub / panels | Two Heir prompts at once at the season end (hub card over the Biography panel), different copy | F | open |
 | QA-004 | Medium | Play panels | Literal `null` text at the bottom of the Memories panel and of the inspect panel | F | open |
 | QA-005 | Medium | Play panels / Novice | "Forget it for a vision" opens the legacy *Signs and visions* panel (reading-rule buttons, four slots with confidence) instead of the HUD *Signs & Visions*; Novice sees Pro detail; two Signs UIs | F | open |
@@ -35,7 +35,10 @@ named in the **Check** line, that fails while the defect is open and passes once
 | QA-015 | Low | i18n zh | "Sign" is rendered as both 符印 (quest, dock) and 符号 (log "1 个新符号", hotbar "符号与幻象") | lead (locales) | open |
 | QA-016 | Low | Onboarding | "Begin first contact" sits below the fold at 1280×800 (the constructor page needs a scroll before the primary button is visible) | I | open |
 | QA-017 | Low | Copy | Season-end quest says "(panel below)" while the Biography panel is on the right | I | open |
-| QA-018 | Info | Movement | Walking the judge route with G took 156 s under SwiftShader (README: about 30 s); measurement of the in-game speed is in progress, see below | G | open |
+| QA-018 | Info | Movement | Walking the judge route with G took 156 s under SwiftShader (README: about 30 s) | G | not a defect: in-game speeds are 1.70 m/s walk and 3.51 m/s run; the wall-clock slowness is the software renderer stalling on texture uploads |
+| QA-019 | High | i18n | Switching the language mid-season (L or Settings) leaves strings of the previous language inside the new one: in zh the hint reads "我把它读作：Мушля I，Дар 10，试炼 2" and the log rows keep the Ukrainian "В1" prefix; in EN "I read it as a Дар of 10". Lazily rendered args (`wh.raw`, `$meaning`, `$shell`, log tick labels) are cached in the locale they were first rendered in | F (world-hud / from-obs), lead | open |
+| QA-020 | Medium | Settings | The in-world Settings (hotbar, Esc) opens "Exploration controls" (key reference + volume) with no language and no Novice/Pro switch, while the README says "Settings switches Novice/Pro and the five UI languages"; those switches exist only in the lobby dialog, unreachable from the world | F (UI) / D (README) | open |
+| QA-021 | Low | Help | H help in the hub lists the walk-mode keys only ("G walk to the current goal", "T end the tick"); F (fly / stake) and "T leaves the Shell" are missing | F / I | open |
 
 Not defects (checked and fine): `npm test` 292/292, `server` 28/28, `cargo test --lib` 56 passed, `npm run build`
 green, the agent example ends with `"rejected": 0, "firstProofVerified": true`; zero console errors or page errors in
@@ -198,8 +201,32 @@ scrolling (it is below the particles section).
 Season-end quest body: "Forget everything for an Heir, or keep the memory (panel below)." The Biography panel is on
 the right.
 
-## QA-018 · Info · Walk time of the judge route
+## QA-018 · Info · Walk time of the judge route (not a defect)
 
-README step 2: "Press G (Iris walks to the goal; about 30 s, hold Shift to run)". Under SwiftShader (7 fps) the walk
-balcony → Scroll took 156 s with Shift held. The in-game speed is measured separately (`npm run e2e` prints it in
-`movement.e2e.mjs`); if the speed is right, this is only the software renderer and the README can stay.
+README step 2: "Press G (Iris walks to the goal; about 30 s, hold Shift to run)". Under SwiftShader the walk balcony →
+Scroll took 156 s with Shift held, but the controller's own velocity is right: 1.70 m/s walking, 3.51 m/s running
+(`smoke.e2e.mjs` measures it). The frame loop stalls on model and texture uploads while Iris moves (0.5–3 fps), so game
+time runs 3–5× slower than the wall clock here. Needs one run on a real GPU to confirm there are no upload hitches.
+
+## QA-019 · High · Mixed languages after a language switch
+
+**Repro:** `/?demo=judge&mode=walk&play=direct` → press L four times (uk, ru, it, zh), then once more (en).
+**Actual:** zh HUD: hint "一个符号醒了。我把它读作：Мушля I，Дар 10，试炼 2。", log rows "В1 主人的钥匙已承诺…" (the
+Ukrainian trial prefix); EN HUD after the full cycle: "I read it as a Дар of 10 at Shell I…", log rows "В1 …"
+(`docs/qa/shots/misc-lang-3.jpg`, `misc-settings.jpg`). A fresh load in zh renders "试1" and "馈赠", so the strings
+exist: the re-render on a locale change keeps args that were resolved in the previous locale.
+**Expected:** spec §9 "switching language without a new season": every visible string in the new language.
+**Check:** `tests/e2e/walk-panels.e2e.mjs` (no Cyrillic in the zh HUD, no Cyrillic or Han in the EN HUD after cycling).
+
+## QA-020 · Medium · In-world Settings has no language or Novice/Pro switch
+
+`docs/qa/shots/misc-settings.jpg`: the hotbar Settings opens "Exploration controls" (move / orbit / interact / …,
+sound sliders, Resume exploration). README "Judge in 5 minutes": "**Settings** switches Novice/Pro and the five UI
+languages" and `docs/decisions.md` ("Settings can switch any time") describe the lobby dialog (`src/ui/settings.js`),
+which no longer opens once the player is in the world. L cycles languages; Pro is unreachable in-world.
+**Check:** `tests/e2e/walk-panels.e2e.mjs`.
+
+## QA-021 · Low · Help lacks the hub keys
+
+H in hub mode: "G walk to the current goal · … · T end the tick"; no F, no "T leaves the Shell", no N (map, after Task H).
+**Check:** `tests/e2e/walk-panels.e2e.mjs` (QA-022 in the test name; same item).
