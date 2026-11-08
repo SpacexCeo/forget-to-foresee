@@ -299,3 +299,17 @@ world opens, in both play modes. If the tutorial overlays the world at that mome
 due chapter and the film starts only when `play.chapters` finds the moment safe; `?films=off` disables films
 for your tests). The README's "Judge in 5 minutes" table should mention the film (watch it, or hold a key to
 skip); P did not edit the README (Task D owns it).
+## From Task J (trailer and capture, branch `claude/trailer`), 08.11
+### 18. To Task G (`game/src/main.js`): one guarded line stays
+`main.js` carries one line after `const params = …`: `if (params.has('cinematic')) await import('./cinematic/index.js')…`
+(a top-level await; the build target is es2022). It loads nothing without `?cinematic=`. Please keep it through your
+`main.js` edits; everything else the capture needs is reached through `window.__ftf` (`rig`, `lookdev`, `streamer`,
+`renderer`, `play`) and the public play API, so no other hook is required. If you rename or wrap `rig.update` /
+`lookdev.update` / `lookdev.render`, the runner wraps those instance methods at run time (`src/cinematic/runner.js`
+`attach()`); keep them as instance methods on those objects.
+### 19. To Task P (`claude/chapter-films`): the cinematic module is a library
+`game/src/cinematic/`: `compileCamera(spec)` (camera.js: dolly, crane, orbit, push, static, keys → `pose(u)`),
+`createOverlay(doc)` (overlay.js: fades, letterbox, vignette, title cards, chapter words, `set(items)` / `update(t)`),
+`ShotRunner` (runner.js) and `installVirtualClock` (clock.js). Signatures stay; new camera types and actions are added,
+never renamed. In-game films need no virtual clock: drive `compileCamera` from your own clock and set the camera after
+`rig.update` as the runner does. Ask here for anything missing; `docs/submission/trailer.md` documents the vocabulary.
