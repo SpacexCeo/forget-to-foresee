@@ -5,10 +5,13 @@
 import { createUiContext, i18n as uiI18n } from '../ui/index.js';
 import playEn from './locales/en.js';
 import playRu from './locales/ru.js';
+import playUk from './locales/uk.js';
+import playIt from './locales/it.js';
+import playZh from './locales/zh.js';
 
 const { MESSAGES, createI18n, detectLocale, BASE_LOCALE, resolveArg } = uiI18n;
 
-export const PLAY_MESSAGES = { en: playEn, ru: playRu };
+export const PLAY_MESSAGES = { en: playEn, uk: playUk, ru: playRu, it: playIt, zh: playZh };
 export const MERGED_MESSAGES = Object.fromEntries(Object.entries(MESSAGES).map(([locale, messages]) =>
   [locale, { ...playEn, ...messages, ...(PLAY_MESSAGES[locale] || {}) }]));
 

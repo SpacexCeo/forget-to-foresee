@@ -244,8 +244,12 @@ test('all five languages remain available in the game context with English fallb
     for (const key of Object.keys(MESSAGES.en)) assert.notEqual(i.t(key), key);
     assert.equal(i.t('not.a.real.key'), MISSING_TEXT);
   }
+  // uk, it and zh are full translations (08.11): every base key has its own text, except brand
+  // names, numerals and pure placeholder patterns.
   for (const locale of ['uk', 'it', 'zh']) {
     i.setLocale(locale);
-    assert.equal(i.t('settings.note'), MESSAGES.en['settings.note']);
+    assert.notEqual(i.t('settings.note'), MESSAGES.en['settings.note']);
+    const same = Object.keys(MESSAGES.en).filter((k) => !k.startsWith('lang.') && /[A-Za-z]{4,}/.test(MESSAGES.en[k].replace(/\{[^}]*\}/g, '')) && MESSAGES[locale][k] === MESSAGES.en[k]);
+    assert.ok(same.length <= 16, `${locale}: ${same.length} keys still English: ${same.slice(0, 20).join(', ')}`);
   }
 });

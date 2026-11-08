@@ -5,5 +5,5 @@ import uk from './uk.js';
 import it from './it.js';
 import zh from './zh.js';
 
-// uk, it and zh cover the lobby and core labels; untranslated keys fall back to English.
+// All five are full translations; a key missing in a locale still falls back to English.
 export const MESSAGES = { en, uk, ru, it, zh };
