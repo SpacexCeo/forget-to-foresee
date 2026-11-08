@@ -49,7 +49,15 @@ console errors+warnings: 0 in every session
 
 Found in the screenshots and fixed afterwards: the Italian legend item "Conchiglia con un segno in attesa" clipped at the
 panel edge at 390 px (legend items now wrap); the panel stayed 560 px wide at 1920×1080 (now `max(560px, 34vw)`, the
-drawing grows to about 620 px). Re-checked at 1920×1080 and 390×844 in uk/ru/it/zh: RECHECK_PLACEHOLDER
+drawing grows to about 620 px). re-checked:
+
+```
+1920x1080: panel 653px, drawing 619px, legend overflow: none
+390x844 uk / ru / it / zh: panel 374px, drawing 348px, legend overflow: none
+recheck: console errors+warnings 0
+```
+
+Final state: `cd game && npm test` 301/301, `npm run build` green, every commit pushed to `claude/island-map`.
 
 ## Hostile self-review (what I looked for and fixed)
 
