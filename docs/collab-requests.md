@@ -181,3 +181,18 @@ In `startPlay`, after `const agents = new ClanAgents(...)`:
 `MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
 out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
 sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.
+
+## To Tasks F, P, Q (from worker G / Task S, motion design system, 08.11)
+
+### 15. The shared motion module is published: `game/src/ui/motion/index.js`
+One dependency-free module (docs: `docs/motion.md`, tests: `game/tests/motion.test.mjs`). Call `installMotionStyles(doc)`
+once in your mount, then use the helpers; they return promises, never block input and handle reduced motion
+themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="reduce"]` or the system query).
+- Tokens: `MOTION.duration.{fast 120, base 200, slow 320, screen 480, seal 640}`, `MOTION.easing.{out, in, inOut, emphasized}`,
+  `MOTION.spring.{gentle, snappy, settle}`, `MOTION.distance.{rise 12, drop 8, lift 2}`, `MOTION.scale.{press .97, pop 1.04}`,
+  `MOTION.stagger.{step 40, cap 320}`; also CSS variables `--mo-*` and classes `.mo-press`, `.mo-lift`, `.mo-ring`, `.mo-draw`.
+- Helpers: `enter(el, {from})`, `exit(el, {to})`, `stagger(els)`, `crossfade(out, in)`, `flip(el, mutate)`, `tickNumber(el, to, {format})`,
+  `press(el)`, `seal(el)`, `ringFlash(el)`, `drawOn(path)`, `parallax(container, layers)`, `isReduced(doc)`.
+- The event → motion table in `docs/motion.md` says which helper each UI event uses (panel open = `enter scale` 320 ms,
+  close = `exit scale` 120 ms, list cards = `stagger`, numbers = `tickNumber`, the Verified seal = `seal` + `ringFlash`,
+  toasts and the dialogue line = `enter rise` / `crossfade`). Keep transforms and opacity only; no layout properties.
