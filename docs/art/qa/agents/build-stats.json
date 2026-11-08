@@ -751,43 +751,43 @@
       "runtime_triangles": 13286,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 379.7,
-          "p10": 364.6,
-          "p90": 391.2
+          "median": 381.1,
+          "p10": 365.9,
+          "p90": 392.7
         },
         "uv_anisotropy": {
-          "median": 1.069,
+          "median": 1.07,
           "p95": 1.187
         }
       },
-      "master_triangles": 5471568,
+      "master_triangles": 5473232,
       "bakes": {
         "ao": {
-          "seconds": 437.8,
+          "seconds": 442.78,
           "samples": 128,
           "size": 2048,
           "exploded": false
         },
         "normal": {
-          "seconds": 65.31,
+          "seconds": 46.2,
           "samples": 8,
           "size": 2048,
           "exploded": true
         },
         "color": {
-          "seconds": 55.41,
+          "seconds": 40.77,
           "samples": 8,
           "size": 2048,
           "exploded": true
         },
         "rough": {
-          "seconds": 32.29,
+          "seconds": 31.7,
           "samples": 8,
           "size": 2048,
           "exploded": true
         },
         "metal": {
-          "seconds": 16.74,
+          "seconds": 25.69,
           "samples": 8,
           "size": 2048,
           "exploded": true
@@ -800,7 +800,7 @@
             2048,
             2048
           ],
-          "bytes": 819205
+          "bytes": 820305
         },
         "orm": {
           "file": "agent_pepel_orm.jpg",
@@ -808,7 +808,7 @@
             2048,
             2048
           ],
-          "bytes": 1885664
+          "bytes": 1887582
         },
         "normal": {
           "file": "agent_pepel_normal.jpg",
@@ -816,7 +816,7 @@
             2048,
             2048
           ],
-          "bytes": 2146601
+          "bytes": 2164320
         }
       },
       "skin": {
@@ -1000,8 +1000,8 @@
           0.258
         ]
       },
-      "raw_glb_bytes": 7877588,
-      "glb_bytes": 5927376,
+      "raw_glb_bytes": 7898324,
+      "glb_bytes": 5958444,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1010,23 +1010,23 @@
       "stages": [
         {
           "stage": "pepel:model",
-          "seconds": 0.25
+          "seconds": 0.23
         },
         {
           "stage": "pepel:uv",
-          "seconds": 1.55
+          "seconds": 1.43
         },
         {
           "stage": "pepel:master",
-          "seconds": 42.31
+          "seconds": 50.18
         },
         {
           "stage": "pepel:bake_gpu",
-          "seconds": 608.01
+          "seconds": 587.64
         },
         {
           "stage": "pepel:textures",
-          "seconds": 0.82
+          "seconds": 1.14
         },
         {
           "stage": "pepel:export",
@@ -1034,18 +1034,18 @@
         },
         {
           "stage": "pepel:rig",
-          "seconds": 0.19
+          "seconds": 0.21
         },
         {
           "stage": "pepel:anim",
-          "seconds": 1.12
+          "seconds": 1.13
         },
         {
           "stage": "pepel:export",
-          "seconds": 12.29
+          "seconds": 14.94
         }
       ],
-      "total_seconds": 666.54
+      "total_seconds": 656.91
     },
     "moh": {
       "clan": "Moss",
@@ -1399,10 +1399,28 @@
     "yantar": {
       "clan": "Amber",
       "file": "game/public/assets/models/agent_yantar.glb",
-      "cycles_device": "OPTIX",
+      "cycles_device": "CPU",
       "part_triangles": {
         "body": 1844,
-        "head": 440,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "head": 1864,
         "robe": 2016,
         "coat": 1772,
         "sleeve_l": 384,
@@ -1422,49 +1440,49 @@
         "keys": 464,
         "gems": 60
       },
-      "ngons_triangulated": 18,
-      "runtime_triangles": 9698,
+      "ngons_triangulated": 62,
+      "runtime_triangles": 13054,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 409.6,
-          "p10": 382.9,
-          "p90": 421.5
+          "median": 379.8,
+          "p10": 365.4,
+          "p90": 389.2
         },
         "uv_anisotropy": {
-          "median": 1.067,
-          "p95": 1.316
+          "median": 1.057,
+          "p95": 1.18
         }
       },
-      "master_triangles": 5348080,
+      "master_triangles": 5384128,
       "bakes": {
         "ao": {
-          "seconds": 10.89,
-          "samples": 512,
-          "size": 4096,
+          "seconds": 465.62,
+          "samples": 128,
+          "size": 2048,
           "exploded": false
         },
         "normal": {
-          "seconds": 9.46,
-          "samples": 32,
-          "size": 4096,
+          "seconds": 48.61,
+          "samples": 8,
+          "size": 2048,
           "exploded": true
         },
         "color": {
-          "seconds": 8.08,
-          "samples": 32,
-          "size": 4096,
+          "seconds": 40.45,
+          "samples": 8,
+          "size": 2048,
           "exploded": true
         },
         "rough": {
-          "seconds": 7.06,
-          "samples": 16,
-          "size": 4096,
+          "seconds": 29.94,
+          "samples": 8,
+          "size": 2048,
           "exploded": true
         },
         "metal": {
-          "seconds": 8.07,
+          "seconds": 19.93,
           "samples": 8,
-          "size": 4096,
+          "size": 2048,
           "exploded": true
         }
       },
@@ -1475,7 +1493,7 @@
             2048,
             2048
           ],
-          "bytes": 1215169
+          "bytes": 1348207
         },
         "orm": {
           "file": "agent_yantar_orm.jpg",
@@ -1483,7 +1501,7 @@
             2048,
             2048
           ],
-          "bytes": 1577416
+          "bytes": 1876574
         },
         "normal": {
           "file": "agent_yantar_normal.jpg",
@@ -1491,13 +1509,31 @@
             2048,
             2048
           ],
-          "bytes": 1587060
+          "bytes": 2029344
         }
       },
       "skin": {
         "heat_empty_vertices": 0,
         "rules": {
           "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
           "head": "head",
           "robe": "skirt",
           "coat": "skirt",
@@ -1518,8 +1554,13 @@
           "keys": "rigid:prop_L",
           "gems": "follow_comp"
         },
+        "finger_vertices": 156,
         "bones_used": [
+          "brow_L",
+          "brow_R",
           "chest",
+          "fingers_L",
+          "fingers_R",
           "foot_L",
           "foot_R",
           "forearm_L",
@@ -1527,6 +1568,13 @@
           "hand_L",
           "hand_R",
           "head",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
           "neck",
           "pelvis",
           "prop_L",
@@ -1541,6 +1589,8 @@
           "spine",
           "thigh_L",
           "thigh_R",
+          "thumb_L",
+          "thumb_R",
           "toe_L",
           "toe_R",
           "upperarm_L",
@@ -1550,7 +1600,7 @@
       },
       "collision": {
         "name": "agent_yantar_col",
-        "radius_m": 0.332,
+        "radius_m": 0.329,
         "height_m": 1.781,
         "triangles": 144
       },
@@ -1617,7 +1667,7 @@
         },
         "stride_m": 1.36
       },
-      "bones": 40,
+      "bones": 53,
       "sockets_gltf": {
         "socket_head": [
           0.0,
@@ -1647,8 +1697,8 @@
           0.29
         ]
       },
-      "raw_glb_bytes": 6883284,
-      "glb_bytes": 5223400,
+      "raw_glb_bytes": 8253716,
+      "glb_bytes": 5852116,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1657,23 +1707,23 @@
       "stages": [
         {
           "stage": "yantar:model",
-          "seconds": 0.12
+          "seconds": 0.17
         },
         {
           "stage": "yantar:uv",
-          "seconds": 1.17
+          "seconds": 1.73
         },
         {
           "stage": "yantar:master",
-          "seconds": 2.09
+          "seconds": 41.62
         },
         {
           "stage": "yantar:bake_gpu",
-          "seconds": 43.95
+          "seconds": 605.05
         },
         {
           "stage": "yantar:textures",
-          "seconds": 2.0
+          "seconds": 0.87
         },
         {
           "stage": "yantar:export",
@@ -1681,18 +1731,18 @@
         },
         {
           "stage": "yantar:rig",
-          "seconds": 0.11
+          "seconds": 0.24
         },
         {
           "stage": "yantar:anim",
-          "seconds": 0.64
+          "seconds": 1.23
         },
         {
           "stage": "yantar:export",
-          "seconds": 4.32
+          "seconds": 12.72
         }
       ],
-      "total_seconds": 54.41
+      "total_seconds": 663.64
     },
     "iney": {
       "clan": "Frost",
