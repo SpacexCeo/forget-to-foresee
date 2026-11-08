@@ -38,6 +38,7 @@ CLIPS = {
     "gesture_offer": (60, False, 0.0),
     "celebrate": (60, True, 0.0),
     "defeat": (75, False, 0.0),
+    "understand": (75, False, 0.0),
 }
 
 TAU = 2 * math.pi
@@ -724,6 +725,37 @@ def clip_defeat(key, S, u):
     return P
 
 
+def _understand_beats(u):
+    """Timing shared by the body and the face of `understand`: study the sign, the
+    "aha" (brows up, index finger raised) and a wink with a small nod inside it."""
+    return {"study": env(u, 0.0, 0.12, 0.24, 0.36), "aha": env(u, 0.28, 0.40, 0.74, 0.96),
+            "wink": env(u, 0.48, 0.54, 0.62, 0.70), "nod": env(u, 0.50, 0.57, 0.60, 0.68)}
+
+
+def clip_understand(key, S, u):
+    """One-shot reaction when the agent has understood a Guest's sign: a brief squint
+    at the sign, then the aha with a raised index finger, a wink and a nod. Starts and
+    ends on idle frame 0."""
+    P = clip_idle(key, S, 0.0)
+    P.ik.pop(-1, None)
+    P.rot.pop("hand_R", None)
+    b = _understand_beats(u)
+    rest_ik = clip_idle(key, S, 0.0).ik.get(-1)
+    start, pole0 = rest_ik if rest_ik else (REST_WRIST_R, POLE_R)
+    up = V((-0.15, -0.30, 1.42))           # index finger raised beside the chin
+    if start.y > 0.05:                     # hand behind the back: come round the side
+        tgt = keys(b["aha"], [(0.0, start), (0.45, V((-0.32, -0.04, 1.08))), (1.0, up)])
+    else:
+        tgt = start.lerp(up, b["aha"])
+    P.ik[-1] = (tgt, pole0.lerp(POLE_R, b["aha"]))
+    P.twist["hand_R"] = 55 * b["aha"]
+    P.r("hand_R", -25 * b["aha"], 0, 0)
+    # lean in to read, straighten for the aha; the head tilts toward the winking eye
+    P.r("chest", 4 * b["study"] - 3 * b["aha"], 0, 0)
+    P.r("head", 6 * b["study"] - 5 * b["aha"] + 8 * b["nod"], 7 * b["aha"], 4 * b["study"])
+    return P
+
+
 CLIP_FN = {
     "idle": clip_idle,
     "walk": lambda k, S, u: clip_locomotion(k, S, u, run=False),
@@ -733,6 +765,7 @@ CLIP_FN = {
     "gesture_offer": clip_offer,
     "celebrate": clip_celebrate,
     "defeat": clip_defeat,
+    "understand": clip_understand,
 }
 
 
@@ -922,6 +955,9 @@ def face_hands(key, clip, u, P):
         elif clip == "gesture_offer" and side == -1:
             a = env(u, 0.0, 0.32, 0.72, 1.0)
             cf, ci, ct = lerp(base_f, 6, a), lerp(base_i, 2, a), lerp(base_t, -12, a)
+        elif clip == "understand" and side == -1:      # index finger up, the rest curled
+            a = _understand_beats(u)["aha"]
+            cf, ci, ct = lerp(base_f, 78, a), lerp(base_i, -4, a), lerp(base_t, 34, a)
         P.r(f"fingers_{sfx}", 0, side * cf, 0)
         P.r(f"index_{sfx}", 0, side * ci, 0)
         P.r(f"thumb_{sfx}", 0, 0, -side * ct)
@@ -946,11 +982,21 @@ def face_hands(key, clip, u, P):
         jaw, brow = 10, 8
     elif clip == "defeat":
         brow = -6 * u
+    lids = {"L": blink, "R": blink}
+    brows = {"L": brow, "R": brow}
+    if clip == "understand":
+        b = _understand_beats(u)
+        squint = 0.28 * b["study"]                 # narrowed eyes while reading the sign
+        brow = -4 * b["study"] + 9 * b["aha"]
+        # the left eye winks shut (its brow dips into it), the right one smiles a little
+        lids = {"L": max(squint, b["wink"]), "R": max(squint, 0.18 * b["wink"])}
+        brows = {"L": brow - 7 * b["wink"], "R": brow + 2 * b["wink"]}
+        jaw = 0.4
     P.r("jaw", jaw, 0, 0)
     for sfx in ("L", "R"):
-        P.r(f"lid_up_{sfx}", 60 * blink, 0, 0)
-        P.r(f"lid_lo_{sfx}", -14 * blink, 0, 0)
-        P.r(f"brow_{sfx}", -brow, 0, 0)
+        P.r(f"lid_up_{sfx}", 60 * lids[sfx], 0, 0)
+        P.r(f"lid_lo_{sfx}", -14 * lids[sfx], 0, 0)
+        P.r(f"brow_{sfx}", -brows[sfx], 0, 0)
 
 
 def evaluate_clip(solver, key, clip):

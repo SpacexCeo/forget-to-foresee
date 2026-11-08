@@ -6,7 +6,7 @@ With the optional `face` argument only the face close-ups are rendered.
 
 Uses the uncompressed glb (Blender cannot import KTX2). Renders with EEVEE on the GPU.
 Outputs: <clan>_anim_sheet.jpg (8 walk + 8 idle + 4 talk), <clan>_face.jpg (idle, blink,
-talk jaw open), <clan>_walk_turntable.mp4 (2.5 s, ffmpeg).
+talk jaw open, rest straight on; the `understand` wink row), <clan>_walk_turntable.mp4 (2.5 s, ffmpeg).
 """
 
 import math
@@ -113,18 +113,26 @@ if not FACE_ONLY:
     sheet.save(os.path.join(OUT, f"{CLAN}_anim_sheet.jpg"), quality=80)
 
 
-# face close-ups: idle rest, idle blink, talk jaw open
-look((0.22, -0.75, 1.68), (0, 0, 1.63), 85)
-faces = []
-for clip, f in (("idle", 0), ("idle", 40), ("talk", 2)):
-    set_action(clip)
-    sc.frame_set(f)
-    p = os.path.join(TMP, f"face_{clip}_{f}.png")
-    render(p, (400, 400))
-    faces.append(p)
-fs = Image.new("RGB", (1200, 400))
-for i, p in enumerate(faces):
-    fs.paste(Image.open(p).convert("RGB"), (i * 400, 0))
+# face close-ups. Row 1: idle rest, idle blink, talk jaw open (3/4), rest straight on (symmetry).
+# Row 2: `understand` (study the sign, the aha with the raised finger, the wink 3/4 and
+# straight on). Clips missing from an older glb are skipped.
+Q34 = ((0.22, -0.75, 1.68), (0, 0, 1.63), 85)
+FRONT = ((0.0, -0.78, 1.64), (0, 0, 1.63), 85)
+MEDIUM = ((-0.60, -1.25, 1.55), (-0.08, 0, 1.45), 50)
+SHOTS = ((("idle", 0, Q34), ("idle", 40, Q34), ("talk", 2, Q34), ("idle", 0, FRONT)),
+         (("understand", 14, Q34), ("understand", 32, MEDIUM), ("understand", 43, Q34),
+          ("understand", 43, FRONT)))
+fs = Image.new("RGB", (1600, 400 * len(SHOTS)), (20, 20, 20))
+for row, shots in enumerate(SHOTS):
+    for col, (clip, f, (loc, tgt, lens)) in enumerate(shots):
+        if clip not in acts:
+            continue
+        look(loc, tgt, lens)
+        set_action(clip)
+        sc.frame_set(f)
+        p = os.path.join(TMP, f"face_{row}_{col}.png")
+        render(p, (400, 400))
+        fs.paste(Image.open(p).convert("RGB"), (col * 400, row * 400))
 fs.save(os.path.join(OUT, f"{CLAN}_face.jpg"), quality=85)
 
 if not FACE_ONLY:
