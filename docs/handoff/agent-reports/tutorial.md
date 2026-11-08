@@ -45,7 +45,7 @@ judge seed with the new goals; the walk path also replayed headless against the 
 - Device-aware copy for every goal and tutorial body in five languages (`{input, select, touch/gamepad/other}`), `args.input`
   on every goal, a test that touch and gamepad never show a key letter (QA-011, QA-013 copy side).
 - Simple-mode variant of the hub stake hint; narration behind a guarded import; QA-016 and QA-017 fixed; plain-words pass
-  (stake, seal, sign, trial, silk). New requests 16–18 (input flag for the lead, narration assumptions for Q, the film seam for P).
+  (stake, seal, sign, trial, silk). New requests 15–17 (input flag for the lead, narration assumptions for Q, the film seam for P).
 
 
 ## Paused (owner order, usage limit) — where Task "first loop" stopped
