@@ -511,3 +511,22 @@ began, not that it was fair. Mitigations, in order of points per hour:
    commitment. Specify the protocol in `docs/verify.md` first; keep the judge seed fixed and documented as such.
 3. The testnet registration of the root before trial 1 stays pending the owner's permission (Task M); keep the
    scripts ready and make the game say "registered on NEAR ✓" only when it is.
+
+---
+
+## Task U: the first ten seconds (loading and first impression)
+
+**Branch:** `claude/first-seconds` (worker G continues) · **Owns:** `game/index.html`, the boot section of
+`game/src/main.js` (module loading, the first frame, the lobby hand-off), `game/src/render/streaming.js` and
+`game/src/render/assets.js` (moved from Task L, which keeps the rest of `render/`), a new loading screen module
+`game/src/ui/loading.js`, `vite.config.*`, new `game/tests/client/boot*.mjs`, `docs/first-seconds.md` (new).
+Goal: a judge opening the live link sees something beautiful within one second and can play within five, on a laptop
+and on a phone inside the X in-app browser.
+1. Measure first on the live site and a local production build (headless, cold cache, throttled "Fast 4G" and
+   "Slow 4G"): time to first paint, to the lobby, to the first playable frame, bytes before play, the largest chunks.
+2. An animated loading screen in the game's look (ink ring drawing itself, the title, real progress from the
+   streamer, never a frozen bar), using the shared motion tokens; it hands off to the lobby without a flash.
+3. Cut what blocks the first frame: lazy-load audio, VFX, the hub, the map and non-visible models; prioritise what
+   the first camera sees; preload hints for the critical chunks; check that phone `_m` variants and KTX2 are used.
+4. Before/after numbers in `docs/first-seconds.md`; the README "Judge in 5 minutes" sizes and times updated to the
+   measured values. Tests for the load plan (pure). Zero console errors; both play modes and `?play=direct` intact.
