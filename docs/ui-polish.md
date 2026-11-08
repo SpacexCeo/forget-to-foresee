@@ -89,6 +89,39 @@ stands between the camera and the agent (no occlusion test, see §5).
 
 `game.js` passes `camera` and `uiRoot` into `agents.update(...)` (one argument added; without them no plate is drawn).
 
+### 2.4 Reserved regions and the overlap check
+
+Owner (via the lead, 08.11): "such details must be removed", about a prompt pill drawn over the tail of another
+element. The rule is general: **no HUD element may overlap or partly cover another at any viewport in any locale.**
+Every surface has a region; the regions below do not intersect at 1280×800, 1920×1080 or 390×844 (u = `--wh-px`, the
+HUD unit: 0.707 px at 1280, 1.06 px at 1920; the play layer reads the same unit as `--pl-u`).
+
+| Region | Desktop box | Notes |
+|---|---|---|
+| trial card | left 18 u, top 15 u, 246 u wide | |
+| quest banner | centred, top 16 u, 717 u × 118 u | ends at 134 u |
+| hint toast | right 14 u, top 12 u, 339 u × 51 u | |
+| inspect hint `#prompt` | centred, top 152 u | greybox "I inspect … up close" |
+| transient row: hub status, info flash, greybox toast | centred, top 152 u + 48 px | mutually exclusive by mode; stacked under the inspect hint |
+| Signs & Visions | right 11 u, top 94 u, 460 u wide, max-height 100 % − 201 u; with the dock: 100 % − 94 u − 330 px | not modal on desktop |
+| play panels, help | right 16 px, top 120 px, 460 / 400 px wide, max-height 100 vh − 220 px | one at a time; help moved from the left column, where it covered the trial card and the log tabs |
+| hub reading card | right 16 px, top 120 px, 380 px | hidden under modals |
+| log tabs + body | left 18 u, top 522 u, 409 u × 264 u | |
+| HUD prompt | centred − 23 u, top 618 u | |
+| context menu | centred, bottom 23 u + 60 px + 12 px + 46 u + 12 px | above the dialogue row |
+| dialogue strip | centred − 45 u, bottom 38 u; lifted to 23 u + 60 px + 12 px when it would meet the hotbar; max-width 100 vw − 736 px + 90 u, long lines wrap | the mockup width whenever it fits |
+| hub dock | right 16 px, bottom 23 u + 60 px + 12 px, 340 px | 12 px above the hotbar whatever its height |
+| hotbar | right 15 u, bottom 23 u, min-height 53 u (buttons ≥ 40 px) | |
+| demo badge | left 16 px, bottom 8 px, max-width min(340 px, 26 vw) | clear of the dialogue strip |
+| nameplates | world-anchored; proximity only (≤ 7 m); hidden when their box meets any of the above | |
+| phones | top bar 14 px; bottom-anchored stack quest card → trial card → tiles → prompt → dialogue bar; the sheet from 114 px; modal panels from the bottom with a scrim; the mobile HUD stack is hidden under any modal | |
+
+`npm run hud:overlap` (`game/scripts/hud-overlap.mjs`, headless Chromium with the pre-installed Playwright) walks the
+states island · Signs · Memories · help · Shell reading · Shell + Memories · decision card (synthetic) · walk · Scroll ·
+agent · walk + Memories at the three viewports in the five locales, measures every visible HUD box (the leaf components
+above, ancestors excluded) and fails on any intersecting pair; it also collects console errors and warnings. Edits to
+`game/` while it runs make Vite reload the page and invalidate the run.
+
 ## 3. Before / after
 
 Desktop 1280×800:

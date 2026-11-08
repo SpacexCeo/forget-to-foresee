@@ -31,7 +31,7 @@ const CSS = `
 .hub-host button.hub-primary { background: var(--wh-chip-active-bg, #5b4215); border-color: var(--wh-gold, #e4c272); color: var(--wh-text-on-gold, #fffcec); }
 .hub-host button.hub-primary:hover { filter: brightness(1.08); }
 .hub-host kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); border: 1px solid rgba(232,214,172,.6); border-radius: 4px; background: var(--wh-kbd-bg, rgba(42,38,30,.92)); }
-.hub-dock { right: 16px; bottom: 84px; width: 340px; padding: 16px; }
+.hub-dock { right: 16px; bottom: calc(23 * var(--wh-px, 1px) + 60px + 12px); width: 340px; padding: 16px; } /* 12 px above the hotbar, whatever its height */
 .hub-shells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
 .hub-shells button { position: relative; flex-direction: column; gap: 6px; min-height: 60px; padding: 8px 4px; font: 400 20px/1 var(--wh-font, Georgia, serif); }
 .hub-shells button small { display: block; font: 600 10.5px/1 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); letter-spacing: .04em; }
@@ -50,7 +50,7 @@ const CSS = `
 .hub-target { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: var(--wh-anchor-bg, rgba(38,34,22,.7)); font: 400 15px/1.3 var(--wh-font, Georgia, serif); }
 .hub-card { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); padding: 20px 24px 24px; border-radius: 16px; border-color: var(--wh-gold, #e4c272); background: rgba(12, 20, 21, .96) !important; }
 .hub-card .hub-row { margin-top: 16px; }
-.hub-status { left: 50%; top: 120px; transform: translateX(-50%); padding: 8px 8px 8px 16px; border-radius: 999px; font: 400 15px/1.2 var(--wh-font, Georgia, serif); display: flex; gap: 12px; align-items: center; }
+.hub-status { left: 50%; top: calc(152 * var(--wh-px, 1px) + 48px); transform: translateX(-50%); /* the transient row under the quest banner (152 u), below the inspect hint slot */ padding: 8px 8px 8px 16px; border-radius: 999px; font: 400 15px/1.2 var(--wh-font, Georgia, serif); display: flex; gap: 12px; align-items: center; }
 .hub-status button { min-height: 36px; padding: 0 12px; font-size: 12.5px; border-radius: 999px; }
 .hub-fade { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .45s ease; z-index: 6;
   background: radial-gradient(circle at 50% 40%, rgba(255,250,238,.95), rgba(214,226,232,.98) 55%, rgba(170,186,196,1)); display: grid; place-items: center; }

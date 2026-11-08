@@ -14,7 +14,8 @@
       --pl-btn: rgba(10, 22, 23, .85); --pl-btn-hover: rgba(22, 36, 37, .95); --pl-primary: linear-gradient(180deg, #6f501b 0%, #5b4215 55%, #4a3410 100%);
       --pl-serif: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; --pl-sans: "Source Sans 3", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
       /* spacing scale 4 / 8 / 12 / 16 / 24; radii: buttons 10, panels 14, pills 999; targets 40 px (48 on phones) */
-      --pl-r-btn: 10px; --pl-r-panel: 14px; --pl-target: 40px; }
+      --pl-r-btn: 10px; --pl-r-panel: 14px; --pl-target: 40px;
+      --pl-u: clamp(0.6px, calc(100vw / 1811), 1.35px); /* the world HUD's unit (tokens.css --wh-px) for the play layer's reserved regions */ }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #c9d3d0; font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
     #app, #app canvas { position: fixed; inset: 0; display: block; }
     .panel { position: fixed; background: var(--panel); border-radius: 8px; padding: 8px 12px; pointer-events: none; }
@@ -47,7 +48,15 @@
     @media (max-width: 700px) { body.wh-on .pl-panel, body.wh-on .pl-help { z-index: 4; } } /* phones: above the hub dock and the reading card, which sit at the top */
     body.wh-on .pl-badge { top: auto; bottom: 8px; left: 16px; right: auto; max-width: min(340px, 26vw); z-index: 1; } /* clear of the centred dialogue strip at 1280 */
     body.wh-on .ftf-scene-tools { display: none; } /* the hotbar's Settings and Esc open the same menu */
-    body.wh-on .ftf-scene-cue, body.wh-on #prompt { bottom: 22vh; }
+    /* Reserved regions with the world HUD (docs/ui-polish.md §2.4). Bottom centre, from the bottom up: hotbar row
+       (23 u + ~56 px) · dialogue strip (lifted: +12 px) · context menu (+46 u + 12 px) · HUD prompt (top 618 u).
+       Top centre, under the quest banner (ends at 134 u): inspect hint at 152 u, then the transient row
+       (status / info / toast) 48 px lower. */
+    body.wh-on .ftf-scene-cue { bottom: 22vh; }
+    body.wh-on #prompt { bottom: auto; top: calc(152 * var(--pl-u)); font-size: 13px; padding: 8px 14px; border-radius: 999px; background: rgba(12, 20, 21, .9); }
+    body.wh-on #toast { bottom: auto; top: calc(152 * var(--pl-u) + 48px); border-radius: 999px; }
+    body.wh-on .pl-context { bottom: calc(23 * var(--pl-u) + 60px + 12px + 46 * var(--pl-u) + 12px); }
+    body.wh-on .pl-info { bottom: auto; top: calc(152 * var(--pl-u) + 48px); }
     @media (max-width: 700px) { body.wh-on .pl-badge { display: none; } }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
@@ -93,7 +102,7 @@
     .pl-chronicle li { display: flex; gap: 6px; padding: 1px 0; } .pl-chronicle .pl-t { color: var(--muted); min-width: 16px; text-align: right; }
     .pl-chronicle [data-tone=good] .pl-glyph { color: #9fd89a; } .pl-chronicle [data-tone=bad] .pl-glyph { color: #ff8a7a; } .pl-chronicle [data-tone=key] .pl-glyph { color: var(--amber); }
     .pl-bar { right: 12px; bottom: 12px; padding: 6px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 420px); }
-    .pl-help { top: 120px; left: 16px; width: 340px; padding: 16px 20px; font-size: 13.5px; line-height: 1.45; } .pl-help p { margin: 6px 0 0; color: var(--pl-text-2); } .pl-help h3 { margin: 0 0 4px; font: 400 18px/1.2 var(--pl-serif); -webkit-text-stroke: .3px currentColor; }
+    .pl-help { top: 120px; right: 16px; width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - 220px); overflow: auto; padding: 16px 20px; font-size: 13.5px; line-height: 1.45; } /* the right column is the panel column (the left holds the trial card and the log) */ .pl-help p { margin: 6px 0 0; color: var(--pl-text-2); } .pl-help h3 { margin: 0 0 4px; font: 400 18px/1.2 var(--pl-serif); -webkit-text-stroke: .3px currentColor; }
     .pl-help kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid rgba(232, 214, 172, .6); border-radius: 4px; background: rgba(42, 38, 30, .92); color: #fef4e6; font: 500 11px/1 var(--pl-sans); }
     .pl-info { bottom: 180px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 999px; font-size: 14px; }
     .pl-badge { top: 14px; right: 12px; max-width: 250px; padding: 6px 12px; font-size: 11.5px; line-height: 1.35; color: var(--muted); background: rgba(20, 24, 22, 0.5); }
