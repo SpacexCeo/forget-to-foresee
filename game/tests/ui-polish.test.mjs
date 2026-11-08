@@ -316,3 +316,14 @@ test('layout: an element that borrows .wh-root keeps its own position whatever t
   assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*bottom: calc\(56px/, 'the Chronicle fab resets the inherited top: 0 and sits at the bottom left');
   assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*pointer-events: auto/, 'the fab stays clickable over .wh-root pointer-events: none');
 });
+
+// QA-005 / README step 6: "Forget it for a vision" opens the HUD's Signs & Visions panel (the new cards marked
+// Vision), not the greybox-era detail panel. Checked in Chromium at 1280x800 (hub and walk); this pins the wiring.
+test('panels: a vision sacrifice opens the HUD Signs & Visions panel, the detail panel only without a HUD', () => {
+  const ui = read('../src/play/ui.js');
+  const game = read('../src/play/game.js');
+  const forget = ui.slice(ui.indexOf('async function forget('), ui.indexOf('async function sendAsk('));
+  assert.match(forget, /if \(!r\.ok\) \{[^}]*return; \}/, 'a rejected sacrifice opens nothing');
+  assert.match(forget, /purpose === 'vision'\) \{ if \(handlers\.onSigns\) handlers\.onSigns\(\); else open\('vision'\); \}/);
+  assert.match(game, /onSigns: \(\) => \{ if \(worldHud && worldHud\.hud\) worldHud\.hud\.signs\.open\(\); \}/, 'game.js routes onSigns to the HUD Signs panel');
+});
