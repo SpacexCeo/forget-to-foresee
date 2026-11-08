@@ -44,3 +44,4 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
 - Weakest coverage chosen: the competitor field in `games` and `nfts` (public directory), judging an agent economy
   (legibility, memory and consequence, "evolves without a dev patch"), and the investor jury (what they publish, the
   questions to expect, the 2000-character `idea` field). Routine re-check of the live HACKATHON.md for changes.
+- 17:50 UTC: live HACKATHON.md re-read, no differences against the 12:30 reading (logged in `notes/near-hackathon-rules.md`).

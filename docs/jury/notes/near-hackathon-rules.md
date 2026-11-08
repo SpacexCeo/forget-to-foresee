@@ -7,6 +7,9 @@ Read on 2026-11-08 (UTC), about 12:30 UTC. Juror notes feeding `docs/jury/rubric
   it every cycle and records differences here.
 - The repository's own digest `docs/hackathon-rules.md` (compared 08.11) matches this reading on dates, fields and
   limits. No contradiction found.
+- Re-read log (differences against the 12:30 UTC reading): 2026-11-08 17:50 UTC, no differences, 22,183 characters,
+  no new judging section (headings: Start here, Facts, What the human decides, Never without the human's explicit
+  confirmation, Rules, Procedure, Submission API, Tracks, Prizes, Ecosystem, Community).
 
 ## Summary for the rubric
 - The only judging text on the page is the track descriptions plus Q-017. There is **no published numeric rubric and no
