@@ -687,16 +687,21 @@ def build_fragments(spec, tab, acc, frags, master):
         keep = np.hypot(CU, CS) < rr
         if keep.sum() < 2:
             continue
-        cen = Po[:-1, :-1][keep].reshape(-1, 3).mean(0)
-        nout = _norm((Po - at["c"])[:-1, :-1][keep].reshape(-1, 3).mean(0)[None])[0]
+        # The piece's motion comes from a fixed 9x9 sampling of the whole patch, so the runtime mesh
+        # and the master (sampled ~50x denser, with a different kept-cell mask) move by exactly the
+        # same transform; per-mesh means put the master pieces beside the runtime ones and the bake
+        # missed them (black fragments, round-2 QA 08.11).
+        Pf, atf = section(spec, tab, *np.meshgrid(np.linspace(u0, u1, 9), np.linspace(fs["s0"], fs["s1"], 9), indexing="ij"))
+        cen = Pf.reshape(-1, 3).mean(0)
+        nout = _norm((Pf - atf["c"]).reshape(-1, 3).mean(0)[None])[0]
         Rm = np.array(Matrix.Rotation(fs["ang"], 3, Vector(fs["axis"]).normalized()))
         if fs["attached"]:
             # hinge on the patch edge nearest the hole border, swing outward a little
-            pivot = Po[0, :].mean(0)
+            pivot = Pf[0, :].mean(0)
             move = nout * fs["dist"]
         else:
             pivot = cen
-            tang = _norm(at["tan"].reshape(-1, 3).mean(0)[None])[0]
+            tang = _norm(atf["tan"].reshape(-1, 3).mean(0)[None])[0]
             move = nout * fs["dist"] + tang * fs["side"] * fs["dist"] * 0.5 + np.array([0, 0, fs["lift"]])
 
         def tf(X):
@@ -1072,6 +1077,13 @@ def write_textures_dither(imgs, tex_dir, prefix):
     os.makedirs(tex_dir, exist_ok=True)
     f = BAKE_SIZE // TEX_SIZE
     A = {k: P.downsample(P.pixels(v), f)[..., :3] for k, v in imgs.items()}
+    # Missed bake rays leave black texels inside the islands (the Shell has no near-black albedo):
+    # fill every map there, and in the empty atlas, from the nearest baked texel (also a full margin).
+    miss = A["color"].max(-1) < 0.01
+    if miss.any() and not miss.all():
+        from scipy import ndimage
+        iy, ix = ndimage.distance_transform_edt(miss, return_distances=False, return_indices=True)
+        A = {k: v[iy, ix] for k, v in A.items()}
     rng = np.random.default_rng(5)
 
     def dith(x):
