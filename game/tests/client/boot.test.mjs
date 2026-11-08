@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bootPlan, bootProgress, trickle, firstFrameBudget, BOOT_WEIGHTS, createLoadingScreen } from '../../src/ui/loading.js';
 import { instancePriority, byteFactor, planStreaming } from '../../src/render/streaming.js';
+import { chunkFor, ENTRY_MODULES } from '../../build/chunks.js';
 
 const MB = 1048576;
 
@@ -85,4 +86,26 @@ test('loading screen controller: safe without a DOM, finishes once, progress nev
   assert.equal(s.finished, false);
   await s.finish(); assert.equal(s.finished, true); assert.equal(s.shown, 1);
   await s.finish(); s.fail('boom'); s.destroy();
+});
+
+test('chunk plan: entry modules never join a shared chunk (the UI preview mounted its own lobby inside the game)', () => {
+  const root = '/repo/game';
+  for (const e of ENTRY_MODULES) assert.equal(chunkFor(root + e), undefined, e);
+  assert.equal(chunkFor(root + '/src/ui/preview.js?v=1'), undefined);
+  assert.equal(chunkFor(root + '/src/ui/lobby.js'), 'ui');
+  assert.equal(chunkFor(root + '/src/ui/world-hud/index.js'), 'play');
+});
+
+test('chunk plan: the graph stays acyclic (rules with ui, logogram with client-core, loading with boot)', () => {
+  const root = '/repo/game';
+  assert.equal(chunkFor(root + '/src/game/engine.js'), 'ui'); // ui modules read engine tables at module level
+  assert.equal(chunkFor(root + '/src/play/logogram.js'), 'client-core'); // scenes draw logograms
+  assert.equal(chunkFor(root + '/src/play/game.js'), 'play');
+  assert.equal(chunkFor(root + '/src/ui/loading.js'), 'boot');
+  assert.equal(chunkFor(root + '/src/ui/motion/index.js'), 'boot');
+  assert.equal(chunkFor(root + '/node_modules/vite/preload-helper.js'), 'boot');
+  assert.equal(chunkFor(root + '/src/ui/styles.css'), undefined);
+  assert.equal(chunkFor(root + '/src/play/locales/en.js'), 'locales');
+  assert.equal(chunkFor(root + '/src/render/streaming.js'), 'client-core');
+  assert.equal(chunkFor(root + '/node_modules/three/build/three.module.js'), 'three');
 });

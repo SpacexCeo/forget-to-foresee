@@ -84,6 +84,15 @@ budget (no file above 8 MB, cap 16 MB / 6 items, priority order), the byte-aware
 20 MB hero of similar apparent size; a hero that fills the screen still beats a pebble; off-screen prefetch stays
 below every visible asset), three download slots, the screen controller without a DOM.
 
+Two rules keep the production build bootable; both live in `game/build/chunks.js` with tests in
+`tests/client/boot.test.mjs`, and `node game/tests/client/boot-smoke.mjs` (after `npm run build`) walks the README
+judge link through the lobby and onboarding onto the island, and the direct URL, on a production build.
+
+An entry module never joins a shared chunk: Rollup keeps every module's top-level code when it joins a chunk, so the
+UI preview entry (`src/ui/preview.js`, part of `ui-preview.html`), grouped into `ui` by the first chunk plan, ran
+inside the game and mounted its own lobby into `#app` on top of the real one; its onboarding then led to the preview's
+greybox HUD and the real lobby never closed (the lead's merge blocker). The five entries stay in their own chunks.
+
 The chunk graph must stay acyclic: the first smoke of the merged build failed at boot with
 `Cannot access 'ge' before initialization`, because `ui` modules read engine tables (`src/game/engine.js`, then in the
 `play` chunk) at module level while `play` imports `ui`. Rollup orders modules correctly inside one chunk, not across

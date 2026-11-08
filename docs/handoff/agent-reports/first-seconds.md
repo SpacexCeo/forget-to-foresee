@@ -27,6 +27,13 @@ factory; the movement and play wiring inside is unchanged), new `game/src/ui/loa
 7. **Chunk graph kept acyclic** (`vite.config.js`): the first smoke of the merged build failed at boot with a TDZ
    error because the `ui` and `play` chunks imported each other; the rules (`src/game/`) now live in `ui`,
    `play/logogram.js` in `client-core`. Documented in `docs/first-seconds.md`.
+8. **Entry modules out of shared chunks** (the lead's merge blocker, lobby → island on the production build): the
+   UI preview entry (`src/ui/preview.js`) was grouped into the `ui` chunk and so ran inside the game, mounting a
+   second lobby into `#app` on top of the real one; its onboarding led to the preview's greybox HUD while the real
+   lobby never closed. The chunk plan moved to `game/build/chunks.js` with an entry guard and unit tests; a new
+   headless smoke `tests/client/boot-smoke.mjs` (production build, Chromium) walks `/?demo=judge` → ENTER THE WORLD
+   → Play as guest → Skip tutorial → Begin → Step onto the island and the direct URL: one lobby, lobby gone,
+   `body.in-world`, `window.__ftf.play`, no preview controls, zero console errors. Both pass.
 
 ## Checked
 
