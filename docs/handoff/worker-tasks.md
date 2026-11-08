@@ -304,3 +304,41 @@ Does not fix product code: files every defect with exact repro steps, expected v
    spikes, anything a judge would call a bug.
 3. Turn every reproducible defect into a failing e2e check where possible, so the fixing worker can prove the fix.
 4. Re-run on each merge the lead announces; keep `docs/qa/defects.md` current (open / fixed / won't fix).
+
+---
+
+## Task L: the world looks breathtaking (look-dev pass)
+
+**Branch:** `claude/lookdev` · **Owns:** `game/src/render/` except `camera-rig.js` (Task G) and `greybox.js` (Task H):
+`sky.js`, `clouds.js`, `fog.js`, `foliage.js`, `materials.js`, `decals.js`, `post.js`, `lookdev.js`, `quality.js`,
+`layers.js`, `noise.js`; `game/public/assets/env/**`; new `game/tests/client/lookdev*.mjs`; `docs/lookdev.md` (new).
+Keep the phone profile and its frame-time governor from `docs/mobile.md` working (re-measure).
+Goal: every frame of the floating archipelago reads like key art. Golden-hour light with soft, stable shadows; a sea of
+volumetric-looking clouds with depth and parallax; atmospheric perspective; rich but readable materials (stone, wood,
+nacre, grass) with correct PBR response; foliage with wind; tasteful post (ACES/AgX tone mapping, bloom only on emissive,
+subtle vignette and grain, no smeary TAA); Shells glowing with iridescent nacre; a day mood that supports reading signs.
+1. Capture the current look from fixed reference cameras (overview, plaza, bridge, camp, Shell exterior, inside a Shell)
+   at the high and low tiers; list what reads flat, noisy, washed out or cheap.
+2. Improve within the budgets (120 draw calls, 500k triangles; phone profile). Every change: before/after from the same
+   cameras in `docs/lookdev.md`. No regressions on the low tier and with reduced motion.
+
+---
+
+## Task M: NEAR for real — the season commitment on testnet, verified in the game
+
+**Branch:** `claude/near-live` · **Owns:** `contracts/**`, new `game/src/net/near*.js` (read-only RPC client), the
+NEAR badge/link in the play layer through a small API that Task F renders (agree in `docs/collab-requests.md`),
+new `game/tests/client/near*.mjs`, `docs/near.md` (new), the README real/mock rows about NEAR (only after it runs).
+Goal: turn the biggest "mock" in the README into "real" for the judges, on **testnet only** (free; never mainnet, never
+real funds).
+1. Create a dedicated testnet account through the faucet (`near account create-account sponsor-by-faucet-service …`),
+   build and deploy `season-commit` (README "Deploy to testnet"), and commit the judge season (`?demo=judge`, seed
+   `cc161d308faa67539af44205b56b6d4f`, rules v3): its schedule root, the Ash key commitment, and reveal every leaf with
+   its proof, exactly as the engine produces them. Keys stay in the session's keychain, never in the repository;
+   write down the account ids and the transaction hashes.
+2. In the game, a read-only client calls the public testnet RPC (`get_season`, `get_revealed_leaf`, `check_leaf`) and,
+   when the season is the committed one, shows "Committed on NEAR testnet ✓" with an explorer link next to
+   "Verified ✓"; it degrades silently (local verification only) when offline or for other seeds. No wallet, no signing
+   in the client.
+3. Tests with a mocked RPC; `docs/near.md` with the exact commands so the owner can redeploy under their own account;
+   update the README real/mock table and `docs/hackathon-rules.md` NEAR item only with what actually runs.
