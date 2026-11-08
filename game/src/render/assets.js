@@ -19,6 +19,15 @@ import { transformTriangles, MASK_ALL } from '../physics/collision.js';
 
 const BASE = import.meta.env.BASE_URL || '/';
 
+/**
+ * Texture budget variant. On phones and the low tier main.js sets '_m': an asset loads <name>_m.glb
+ * when the build has one (same model, KTX2 textures capped at 2048 by art/tools/glb_mobile.py, a
+ * quarter of the GPU memory). Assets without a variant load as usual.
+ */
+let modelVariant = '';
+export function setModelVariant(suffix) { modelVariant = suffix || ''; }
+export const getModelVariant = () => modelVariant;
+
 /* ---------- analysis shared with the review page ---------- */
 
 /** Names from `root` (exclusive) down to `obj` (inclusive), using the original glTF names. */
@@ -150,6 +159,7 @@ export class AssetLibrary {
   constructor({ available = MODEL_FILES, onTemplate = null } = {}) {
     this.entries = new Map();
     this.onTemplate = onTemplate;
+    this.available = available;
     for (const def of ASSETS) {
       const bytes = available[def.name];
       this.entries.set(def.name, { name: def.name, def, bytes: bytes || 0, state: bytes ? 'idle' : 'absent', template: null, stats: null, error: null, loadMs: 0, progress: 0 });
@@ -170,7 +180,8 @@ export class AssetLibrary {
     e.state = 'loading'; e.progress = 0;
     const t0 = performance.now();
     try {
-      const { gltf, bytes } = await fetchGltf(name, { onProgress: (got, total) => { e.progress = total ? got / total : 0; } });
+      const file = modelVariant && this.available[name + modelVariant] ? name + modelVariant : name;
+      const { gltf, bytes } = await fetchGltf(file, { onProgress: (got, total) => { e.progress = total ? got / total : 0; } });
       const scene = gltf.scene;
       scene.traverse((o) => {
         if (!o.isMesh) return;
