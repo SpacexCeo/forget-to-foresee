@@ -49,3 +49,4 @@ Scratch scripts for exploration, then the reproducible version of each finding a
 |---|---|
 | 7f65be6 | first pass: 21 defects filed |
 | 2004418 | QA-001, QA-002, QA-016, QA-017, QA-009c fixed; QA-003/004/005/006/007/008/009ab/011/012 reproduced; new QA-022/023/024/025 |
+| 5f94cbb | QA-007, QA-008, QA-013, QA-019, QA-022 fixed; QA-006, QA-010 not reproduced; QA-003, QA-004, QA-005, QA-012, QA-020, QA-021 reproduced; new `verify.e2e.mjs` (node and python verifiers OK on real exports, tampered root and salt FAIL) and `motion.e2e.mjs` (lobby/onboarding input and reduced motion green; the world part found QA-027 and QA-028) |
