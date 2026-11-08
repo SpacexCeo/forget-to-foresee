@@ -121,50 +121,68 @@ All text/background pairs are ≥ 4.5:1 (the lightest background a text token si
 
 ### 3.1 Family
 
-**PT Serif** (OFL 1.1, `@fontsource/pt-serif` 5.3.0, installed in `game/`). Chosen
-by rendering nine mockup strings in 15 free serifs at matched cap height and comparing
-widths and letterforms against crops (Playwright + PIL):
+**Latin: Libre Caslon Text** (OFL 1.1, `@fontsource/libre-caslon-text` 5.3.0) — owner decision
+08.11. Of 15 free serifs rendered against mockup crops at matched cap height it is the closest in
+letterforms and widths (width ratio 1.020 ± .051, x-height/cap 0.69 vs the mockup's 0.68–0.72,
+round double-storey g/a, straight-tailed y, lining figures). It has no Cyrillic, so the RU locale
+draws Cyrillic from a companion face:
 
-| Candidate | width ratio vs mockup (mean, sd) | x-height / cap | Cyrillic | verdict |
-|---|---|---|---|---|
-| EB Garamond 500 | 1.004, .046 | 0.64 | yes | widths right, x-height too small (mockup is 0.68–0.72), reads lighter |
-| Libre Caslon Text | 1.020, .051 | 0.69 | **no** | closest letterforms, no Cyrillic → unusable for RU |
-| **PT Serif 400** | 1.063, .048 | 0.71 | yes | round double-storey g/a, straight-tailed y, lining figures, Palatino-like proportions = the mockup |
-| Alegreya 500 | 1.037, .059 | 0.71 | yes | runner-up; more angular, heavier colour |
-| Crimson Text, Cardo, Marcellus, Cinzel | — | — | no | rejected |
-| Spectral, Lora, Vollkorn, PT Serif-like moderns | ≥1.06 | 0.68–0.71 | yes | wider / old-style figures / brushier |
+**Cyrillic: Old Standard TT** (OFL 1.1, `@fontsource/old-standard-tt` 5.3.0), loaded only from
+its `cyrillic-400/700` subset files under the family name `"WH Cyrillic"` with a Cyrillic
+`unicode-range`, so it never draws a Latin glyph. Compared next to Caslon with real `wh.*` RU
+strings (x-height, cap height, stem darkness, average lowercase advance, all at 100 px, then
+size-adjusted to Caslon's x-height):
 
-Loading: `index.js` imports `@fontsource/pt-serif/400.css`, `@fontsource/pt-serif/700.css`
-and `@fontsource/pt-serif/cyrillic-400.css` (Vite bundles the woff2; no CDN). Packages
-never import fonts. Fallback stack: `"PT Serif", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif`
-(`--wh-font`). The small-caps tag ("✦ MAIN QUEST") is the same family, uppercase with
-tracking — no second family.
+| Candidate | x/cap | size-adjust to Caslon x-height | caps after | lowercase width after | ink after | verdict |
+|---|---|---|---|---|---|---|
+| **Old Standard TT** | 0.64 | 1.15 (used: **1.12**) | 1.08 (1.05) | 1.06 (1.03) | 0.92 (0.87) | same transitional contrast and light colour as Caslon; traditional Russian serif forms |
+| PT Serif | 0.71 | 1.06 | 0.96 | 1.07 | 1.12 | heavier, low-contrast, reads sans-like next to Caslon |
+| Lora | 0.71 | 1.06 | 0.96 | 1.11 | 1.07 | wider, brushy modern terminals |
+| Literata | 0.72 | 1.04 | 0.96 | 1.13 | 1.26 | widest and darkest |
+| Alegreya | 0.71 | 1.15 | 0.97 | 1.07 | 1.05 | angular calligraphic forms clash with Caslon |
+
+`tokens.css` declares the two `@font-face` rules (`size-adjust: 112%`, `ascent-override: 97%`,
+`descent-override: 26%`, `line-gap-override: 0%` = Libre Caslon Text's font box), so a mixed
+EN/RU line keeps exactly the Latin line box (verified: 27.59 px at 23 px/1.2 for Latin, Cyrillic
+and mixed). The same faces are re-declared in `fonts.js` with Vite-bundled URLs for production
+builds; the two copies must stay identical.
+
+Loading: `index.js` imports `fonts.js` (the only file that imports fontsource):
+`@fontsource/libre-caslon-text/400.css`, `/700.css` and the two Old Standard TT cyrillic woff2
+files. Packages never import fonts. Stack: `--wh-font: "Libre Caslon Text", "WH Cyrillic",
+"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif`. The small-caps tag ("✦ MAIN
+QUEST") is the same family, uppercase with tracking — no third family.
 
 ### 3.2 Roles (CSS px at 1811 desktop / 390 mobile; weight 400 unless noted)
 
-Sizes were fitted to the measured string widths (PT Serif renders the mockup string at
+Sizes were fitted to the measured string widths (Libre Caslon Text renders the mockup string at
 exactly the mockup width at the size listed). Line heights are measured line pitches.
 
 | Role | Token | Desktop | Mobile | letter-spacing | line-height | colour |
 |---|---|---|---|---|---|---|
-| title-l (quest title) | `--wh-fs-title-l` | 23 | 20 | 0 | 1.2 (mobile 1.05) | text, text-glow |
-| title (Signs and Visions) | `--wh-fs-title` | 24 | 24 | 0 | 1.2 | text, text-glow |
+| title-l (quest title) | `--wh-fs-title-l` | 21 | 18.5 | 0 | 1.2 (mobile 1.05) | text, text-glow |
+| title (Signs and Visions) | `--wh-fs-title` | 23 | 23 | 0 | 1.2 | text, text-glow |
 | card-title (Trial 13 of 17) | `--wh-fs-card-title` | 20 | 14.5 | 0 | 1.2 | text |
-| sign-title (Sign #10) | `--wh-fs-sign-title` | 15 | 15 | 0 | 1.2 | text |
-| row (trial rows, Progress label) | `--wh-fs-row` | 15 | 14.5 (values) | 0 | 1.3 | text |
-| body (quest body, subtitle, toast) | `--wh-fs-body` | 13.5 | 14.5 (quest body) / 13.5 (subtitle) | 0 | 1.25 (subtitle 1.4) | text-2 |
-| ui (chips, tabs, hotbar labels, Close) | `--wh-fs-ui` | 13 | 12 | 0 | 1 | text / muted |
-| stat (sign stats, log rows) | `--wh-fs-stat` | 12.5 | 12.5 | 0 | 19 u (stats) / 1.35 (log) | text |
-| small (timestamps, Attempts/Skill Tier labels, 71%) | `--wh-fs-small` | 11.5 | 10 (labels) / 11 (71%, Explore) | 0 | 1.2 | muted |
-| tag (✦ MAIN QUEST) | `--wh-fs-tag` | 12 | 13 | .06em | 1 | gold-text, uppercase |
-| prompt | `--wh-fs-prompt` | 16 | 15.5 | 0 | 1 | text |
-| speaker (Ash) | `--wh-fs-speaker` | 15 | 13 | 0 | 1 | gold-text |
-| line (dialogue, reply) | `--wh-fs-line` | 14 (line) / 15 (reply) | 13 | 0 | 1 | text |
-| anchor pill | `--wh-fs-anchor` | 14 | 13.5 | 0 | 1 | gold-text |
-| kbd | `--wh-fs-kbd` | 15 ([E] [A]) / 12 (hotbar, Esc) | 15 / 12 | 0 | 1 | `#fef4e6` |
-| tile label | `--wh-fs-tile` | — | 13.5 | 0 | 1.15 | text |
+| sign-title (Sign #10) | `--wh-fs-sign-title` | 14 | 14.5 | 0 | 1.2 | text |
+| row (trial rows, Progress label) | `--wh-fs-row` | 14 | 13.5 (values) | 0 | 1.3 | text |
+| body (quest body, subtitle) | `--wh-fs-body` | 12.5 | 13.5 (quest body) / 12.5 (subtitle) | 0 | 1.25 (subtitle 1.4) | text-2 |
+| toast | `--wh-fs-toast` | 12 | 12 | 0 | 1.25 | text |
+| ui (chips, tabs, hotbar labels) | `--wh-fs-ui` | 11.5 | 11.5 | 0 | 1 | text / muted |
+| stat (sign stats, log rows) | `--wh-fs-stat` | 12 | 12 | 0 | 19 u (stats) / 1.35 (log) | text |
+| small (timestamps, Attempts/Skill Tier labels) | `--wh-fs-small` | 11 | 9.5 | 0 | 1.2 | muted |
+| tag (✦ MAIN QUEST) | `--wh-fs-tag` | 11 | 12 | .04em (mobile .06em) | 1 | gold-text, uppercase |
+| prompt | `--wh-fs-prompt` | 15 | 14.5 | 0 | 1 | text |
+| speaker (Ash) | `--wh-fs-speaker` | 14 | 12 | 0 | 1 | gold-text |
+| line / reply | `--wh-fs-line` / `--wh-fs-reply` | 13 / 14 | 12 / 12 | 0 | 1 | text |
+| anchor pill | `--wh-fs-anchor` | 14 | 13 | 0 | 1 | gold-text |
+| kbd / kbd-lg | `--wh-fs-kbd` / `--wh-fs-kbd-lg` | 11 / 14 | 11 / 14 | 0 | 1 | `#fef4e6` |
+| tile label | `--wh-fs-tile` | — | 12.5 | 0 | 1.15 | text |
 
-Numerals are lining (PT Serif default). Values follow labels with a wide gap, as in the
+Libre Caslon Text has tall capitals (cap 0.77 em, x 0.53 em), so these sizes are 5–10 % smaller
+than a PT Serif fit would be; widths, not cap heights, were matched. "Close" in the Signs header
+(38 u wide) fits 14 u, one notch above `--wh-fs-ui`.
+
+Numerals are lining (both faces' default). Values follow labels with a wide gap, as in the
 mockup ("Shell stability:  34%"): render label and value as two spans with
 `column-gap: .5em`, not with double spaces.
 

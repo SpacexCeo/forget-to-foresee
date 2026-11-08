@@ -1,7 +1,38 @@
 /* World HUD — design tokens and primitives (docs/ui-world-hud.md §2, §4, §5).
    Values were sampled from the owner's mockups. Scoped under .wh-root; packages
    (status/signs/log/actions) build on these and never redefine them.
-   Fonts: index.js imports @fontsource/pt-serif (400, 700, cyrillic-400) — no CDN. */
+   Fonts (docs §3): Latin = Libre Caslon Text (fonts.js imports @fontsource/libre-caslon-text 400/700);
+   Cyrillic = Old Standard TT through the "WH Cyrillic" faces declared below (cyrillic subset files only,
+   size-adjusted to Caslon's x-height, metrics overridden to Caslon's line box). No CDN at runtime. */
+
+/* Cyrillic companion. unicode-range keeps it off Latin glyphs; size-adjust 112% matches Caslon's x-height
+   (0.97×) while keeping caps within 1.05×; ascent/descent overrides equal Libre Caslon Text's font box
+   (97% / 26%) so a mixed EN/RU line never changes height. fonts.js re-declares the same faces with bundled
+   URLs for production builds — keep both in sync. */
+@font-face {
+  font-family: "WH Cyrillic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../node_modules/@fontsource/old-standard-tt/files/old-standard-tt-cyrillic-400-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  size-adjust: 112%;
+  ascent-override: 97%;
+  descent-override: 26%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "WH Cyrillic";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../../node_modules/@fontsource/old-standard-tt/files/old-standard-tt-cyrillic-700-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  size-adjust: 112%;
+  ascent-override: 97%;
+  descent-override: 26%;
+  line-gap-override: 0%;
+}
 
 .wh-root {
   /* ---- scale: 1 u = 1 px at the 1811-wide desktop reference ---- */
@@ -76,27 +107,27 @@
   --wh-r-mtrial: 16px;
 
   /* ---- type (docs §3.2; sizes in u on desktop, px on mobile) ---- */
-  --wh-font: "PT Serif", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --wh-fs-title-l: calc(23 * var(--wh-px));
-  --wh-fs-title: calc(24 * var(--wh-px));
+  --wh-font: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --wh-fs-title-l: calc(21 * var(--wh-px));
+  --wh-fs-title: calc(23 * var(--wh-px));
   --wh-fs-card-title: calc(20 * var(--wh-px));
-  --wh-fs-sign-title: calc(15 * var(--wh-px));
-  --wh-fs-row: calc(15 * var(--wh-px));
-  --wh-fs-body: calc(13.5 * var(--wh-px));
-  --wh-fs-toast: calc(13 * var(--wh-px));
-  --wh-fs-ui: calc(13 * var(--wh-px));
-  --wh-fs-stat: calc(12.5 * var(--wh-px));
-  --wh-fs-small: calc(11.5 * var(--wh-px));
-  --wh-fs-tag: calc(12 * var(--wh-px));
-  --wh-fs-prompt: calc(16 * var(--wh-px));
-  --wh-fs-speaker: calc(15 * var(--wh-px));
-  --wh-fs-line: calc(14 * var(--wh-px));
-  --wh-fs-reply: calc(15 * var(--wh-px));
+  --wh-fs-sign-title: calc(14 * var(--wh-px));
+  --wh-fs-row: calc(14 * var(--wh-px));
+  --wh-fs-body: calc(12.5 * var(--wh-px));
+  --wh-fs-toast: calc(12 * var(--wh-px));
+  --wh-fs-ui: calc(11.5 * var(--wh-px));
+  --wh-fs-stat: calc(12 * var(--wh-px));
+  --wh-fs-small: calc(11 * var(--wh-px));
+  --wh-fs-tag: calc(11 * var(--wh-px));
+  --wh-fs-prompt: calc(15 * var(--wh-px));
+  --wh-fs-speaker: calc(14 * var(--wh-px));
+  --wh-fs-line: calc(13 * var(--wh-px));
+  --wh-fs-reply: calc(14 * var(--wh-px));
   --wh-fs-anchor: calc(14 * var(--wh-px));
-  --wh-fs-kbd: calc(12 * var(--wh-px));
-  --wh-fs-kbd-lg: calc(15 * var(--wh-px));
-  --wh-fs-tile: 13.5px;
-  --wh-ls-tag: .06em;
+  --wh-fs-kbd: calc(11 * var(--wh-px));
+  --wh-fs-kbd-lg: calc(14 * var(--wh-px));
+  --wh-fs-tile: 12.5px;
+  --wh-ls-tag: .04em;
 
   --wh-transition: 160ms ease;
 
@@ -116,19 +147,23 @@
 @media (max-width: 700px) {
   .wh-root {
     --wh-px: 1px;
-    --wh-fs-title-l: 20px;
+    --wh-fs-title-l: 18.5px;
+    --wh-fs-title: 23px;
     --wh-fs-card-title: 14.5px;
-    --wh-fs-row: 14.5px;
-    --wh-fs-body: 14.5px;
-    --wh-fs-ui: 12px;
-    --wh-fs-small: 10px;
-    --wh-fs-tag: 13px;
-    --wh-fs-prompt: 15.5px;
-    --wh-fs-speaker: 13px;
-    --wh-fs-line: 13px;
-    --wh-fs-reply: 13px;
-    --wh-fs-anchor: 13.5px;
-    --wh-ls-tag: .08em;
+    --wh-fs-sign-title: 14.5px;
+    --wh-fs-row: 13.5px;
+    --wh-fs-body: 13.5px;
+    --wh-fs-ui: 11.5px;
+    --wh-fs-stat: 12px;
+    --wh-fs-small: 9.5px;
+    --wh-fs-tag: 12px;
+    --wh-fs-prompt: 14.5px;
+    --wh-fs-speaker: 12px;
+    --wh-fs-line: 12px;
+    --wh-fs-reply: 12px;
+    --wh-fs-anchor: 13px;
+    --wh-fs-kbd-lg: 14px;
+    --wh-ls-tag: .06em;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
