@@ -1,6 +1,6 @@
 # Task K report: QA, the adversarial playtester (branch `claude/qa`)
 
-Base: `claude/loving-curie-ihasft` `7f65be6` for the first pass (= `main` `07ddd60` + docs), then `2004418` (Tasks G, H,
+Base (latest retest: `claude/loving-curie-ihasft` `c6bb3b0`, see the retest log): `claude/loving-curie-ihasft` `7f65be6` for the first pass (= `main` `07ddd60` + docs), then `2004418` (Tasks G, H,
 I, M, N and the QA-001/002 fixes) merged into `claude/qa` for the retest. Owned paths only: `game/tests/e2e/**`,
 the `e2e` script in `game/package.json`, `docs/qa/**`, this report. No product code was changed.
 
@@ -51,3 +51,4 @@ Scratch scripts for exploration, then the reproducible version of each finding a
 | 2004418 | QA-001, QA-002, QA-016, QA-017, QA-009c fixed; QA-003/004/005/006/007/008/009ab/011/012 reproduced; new QA-022/023/024/025 |
 | 6f2f288 (= main 1a17673) | QA-003, QA-004, QA-009, QA-020 fixed; QA-027/028 closed as renderer timing; QA-005 half (nothing opens now, README stale); QA-011, QA-012, QA-021 reproduced; new QA-029 preload warning, QA-030 Iris capsule at first, QA-031 top-left button over the trial card, QA-032 frame-stepped fades; films on a phone, loading path, agents, verifiers and motion input all clean |
 | 5f94cbb | QA-007, QA-008, QA-013, QA-019, QA-022 fixed; QA-006, QA-010 not reproduced; QA-003, QA-004, QA-005, QA-012, QA-020, QA-021 reproduced; new `verify.e2e.mjs` (node and python verifiers OK on real exports, tampered root and salt FAIL) and `motion.e2e.mjs` (lobby/onboarding input and reduced motion green; the world part found QA-027 and QA-028) |
+| c6bb3b0 (integration, F2 + G2 + first-seconds) | QA-005, QA-012, QA-021, QA-029, QA-030, QA-031 fixed; QA-032 re-assessed as not a defect (WAAPI fades are wall-clock, agreed with G); QA-011 layout still open (dock over the quest card on iPhone 13); QA-015 still open; new QA-033 (truncated "Words known" / it trial values), QA-034 (uk/ru Cyrillic font 404 in the production build), QA-035 (phone: Chronicle and "?" buttons over the journal tiles and the map button). `npm test` 489/489, build + boot smoke green, README judge table and hub path match, phone film clean. e2e against `vite preview`: 43/53 (reds: QA-011, QA-034, and the `src/`-importing motion/verify files, which pass or show only SwiftShader timing on the dev server) |
