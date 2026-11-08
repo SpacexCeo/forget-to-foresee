@@ -20,18 +20,22 @@ requests 9 and 10 in `docs/collab-requests.md`. No engine, no game.js, no art, n
 4. **Conversations**: silk transfers and mended links make two clans meet, face each other and take talk turns; the
    first beat goes to the dialogue strip through `agents.onSay` with existing line keys (one-line wiring: request 9).
 5. **Budget**: no per-frame allocations beyond small arrays; one route plan per goal; the headless frame time did not
-   move (numbers below). 9 deterministic tests; `npm test` 319/319; `npm run build` green.
+   move (numbers below). 9 deterministic tests; `npm test` 328/328 (after merging the map); `npm run build` green.
 
 ## Checked
 
-- `cd game && npm test`: 319/319. `npm run build`: ok.
-- Headless Chromium (SwiftShader): BROWSER_RESULT
+- `cd game && npm test`: 328/328. `npm run build`: ok.
+- Headless Chromium (SwiftShader, zero console errors in walk mode and the hub): see "Headless result" in
+  `docs/npcs.md` (errand, meeting, real end-of-trial events, the gathering; frame time unchanged; four screenshots).
+  FINAL_CHECK
+- Also folded in (lead's request): `KeyN` is forwarded by `game/src/ui/input.js` (`WORLD_KEYS`) and the map panel's
+  own window listener in `game/src/play/map-ui.js` is removed (H's request 8); map and input tests green.
 
 ## Quality bar
 
 - Every behaviour has a test (director state machine, inference, scheduler, look-at, avoidance, route walk).
 - Hostile review: isolated / broken clans never take goals; a clan gone dark goes home; a host whose visitor never
-  arrives gives up after 12 s; Iris is never a meeting partner; the avoidance push is bounded and corridor-tested;
+  arrives gives up after 60 s, at once if the visitor drops the meeting; Iris is never a meeting partner; the avoidance push is bounded and corridor-tested;
   reduced motion slows the look-at and removes weight shifts and Ash's pacing; a model without head bones degrades
   to no look-at; agents keep working while Iris is inside a Shell (`irisPos` null).
 - Could not verify on a GPU: how the eye share and the 2° weight shift read up close; the real timing of a meeting

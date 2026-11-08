@@ -52,7 +52,7 @@ only go where the room says they acted, and look alive in between. Both play mod
    `agents.onSay({speakerId, key, args})` with existing line keys (`line.walk.silk`, `line.mend`, `line.fragment`,
    `line.pact`, `line.escrow`, args as `{$agentId}`), so no new locale strings are needed. The hook is wired by the
    play layer (request 9 in `docs/collab-requests.md`); until then the beat is silent and the room's own line (shown
-   at event time) is the only text. A host that never sees its visitor arrive waits 12 s and gives up.
+   at event time) is the only text. A host (or a visitor who arrives first) waits while the partner still means to come, up to 60 s, and walks home at once if the partner drops the meeting.
 5. **Budget.** Per frame per agent: one `clanCue`, one directive lookup, one `steerTo`, one avoidance pass over at
    most six neighbours, one motion step, the gait blend, and three quaternion products for the look-at; a route is
    planned once per goal (Dijkstra over 35 nodes). No per-frame allocations beyond a few small arrays. Measured in
@@ -73,7 +73,16 @@ and back with the motion model that stays inside the bridge width and takes 12�
 - `/?play=direct&demo=judge` (hub): fly into a Shell and leave; the trials pass automatically and the clans act.
 - Console: `__ftf.play.agents.stats()` (move / act / look weight / bones per agent),
   `__ftf.play.agents.director.events` (queued goals).
-- Headless result: BROWSER_RESULT
+- Headless result (SwiftShader at about 245 ms per frame, `vite preview` of the build, zero console errors or
+  warnings beyond SwiftShader's own "GPU stall" notice, in walk mode and in the hub): head and neck bones found on
+  every loaded agent (the glbs export no eye bones, so the eye share is inert until the GPU rebuild adds them);
+  idle glances show as look weights rising and falling while nobody is near; a director-driven contribution sends
+  Moss to the Scroll at 1.55 m/s with the gait weight at 1 and the cue clip under it; a silk transfer sends Ash to
+  Salt's camp while Salt steps to its bridge end and looks at the approaching visitor; two real `end_tick` commands
+  (tick 1 → 3) make the director queue Scroll errands for the clans whose fragments went in and fire the celebrate
+  reactions; `gather()` sends all five toward their plaza-ring nodes. Frame time 243 → 248 ms (unchanged within
+  noise). Screenshots: `docs/npcs/after-walk-trials-1280x800.png`, `after-errand-1280x800.png`,
+  `after-gather-1280x800.png`, `after-meeting-1280x800.png`. FINAL_CHECK
 
 ## Not done / open
 
