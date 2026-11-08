@@ -8,7 +8,10 @@ import { AUDIO_MANIFEST } from '../../src/audio/manifest.js';
 import { tensionMix, tensionBand, zoneMix, zoneAt, resolveSound, guestPlan, listenerPose, loadVolumes, saveVolumes, sanitizeVolumes, validateManifest, DEFAULT_VOLUMES, VOLUME_KEY } from '../../src/audio/mix.js';
 import { createAudio } from '../../src/audio/audio.js';
 import { memoryStorage } from '../../src/ui/storage.js';
-import { CAMPS, SPAWN } from '../../src/scenes/layout.js';
+import { CAMPS, SPAWN, ANCHOR_ZONES, BALCONY_CENTER } from '../../src/scenes/layout.js';
+import { CUE_NAMES, VFX_MAP, VFX_OPTS, AUDIO_MAP, AUDIO_OPTS, SILENT_CUES, audioFor, Hooks } from '../../src/play/hooks.js';
+import { EFFECT_NAMES } from '../../src/vfx/presets.js';
+import { surfaceAt, StepMeter, tensionLevel, humPositions, npcStepGain, SURFACES, STEP_LENGTH } from '../../src/play/ambience.js';
 
 const AUDIO_DIR = fileURLToPath(new URL('../../public/assets/audio/', import.meta.url));
 
@@ -157,4 +160,67 @@ test('runtime: one Shell hum per Shell follows the zone level; preload expands s
   a.setShellHums([]);
   assert.equal(a.state.hums, 0);
   a.dispose();
+});
+
+// ---- cue table and ambience rules (play/hooks.js, play/ambience.js) ---------------------------------
+test('cue table: every cue is mapped to an effect and/or a sound or listed as intentionally silent', () => {
+  for (const name of CUE_NAMES) {
+    const mapped = name in VFX_MAP || name in AUDIO_MAP || name === 'finale';
+    assert.ok(mapped || SILENT_CUES.includes(name), 'cue without a mapping or a silent note: ' + name);
+    assert.ok(!(mapped && SILENT_CUES.includes(name)), 'cue both mapped and silent: ' + name);
+  }
+  for (const n of SILENT_CUES) assert.ok(CUE_NAMES.includes(n), 'unknown silent cue ' + n);
+  for (const [cue, fx] of Object.entries(VFX_MAP)) { assert.ok(CUE_NAMES.includes(cue), cue); assert.ok(EFFECT_NAMES.includes(fx), 'vfx ' + fx); }
+  for (const [cue, snd] of Object.entries(AUDIO_MAP)) { assert.ok(CUE_NAMES.includes(cue), cue); assert.ok(AUDIO_MANIFEST.sounds[snd] || AUDIO_MANIFEST.groups[snd], 'sound ' + snd); }
+  for (const cue of [...Object.keys(VFX_OPTS), ...Object.keys(AUDIO_OPTS)]) assert.ok(CUE_NAMES.includes(cue), 'opts for unknown cue ' + cue);
+  for (const o of Object.values(AUDIO_OPTS)) { if ('gain' in o) assert.ok(o.gain > 0 && o.gain <= 1); if ('rate' in o) assert.ok(o.rate >= 0.5 && o.rate <= 2); }
+  for (const outcome of ['survived', 'weapon', 'gift', 'gone']) assert.ok(AUDIO_MANIFEST.sounds[audioFor('finale', { outcome })], outcome);
+  assert.equal(VFX_OPTS.finale.points.length, CAMPS.length, 'finale beams rise from the six camps');
+});
+
+test('hooks pass a positional `pos` and the per-cue options to the audio module', () => {
+  const played = [];
+  const h = new Hooks({ resolve: () => [4, 5, 6] });
+  h.attachAudio({ play: (n, o) => played.push([n, o]) });
+  h.play('link_break', { kind: 'camp', clan: 'ash' }, { other: 'salt' });
+  h.play('ui_click');
+  assert.equal(played[0][0], 'storm_crack');
+  assert.deepEqual(played[0][1].pos, [4, 5, 6]);
+  assert.equal(played[0][1].gain, AUDIO_OPTS.link_break.gain);
+  assert.equal(played[1][1].pos, undefined, 'UI sounds play in the head');
+});
+
+test('footsteps: surface by position, cadence by distance, first step after half a stride', () => {
+  for (const c of CAMPS) assert.equal(surfaceAt(c.position), 'grass');
+  assert.equal(surfaceAt([0, 0, 0]), 'stone');
+  assert.equal(surfaceAt(BALCONY_CENTER), 'stone');
+  assert.equal(surfaceAt([0, 0, 18]), 'wood', 'a bridge deck between the plaza and a camp');
+  assert.equal(surfaceAt([0, 0, 0], 'shell'), 'glass');
+  for (const s of SURFACES) assert.ok(AUDIO_MANIFEST.groups['step_' + s]?.length >= 4, 'step_' + s);
+  const m = new StepMeter();
+  let steps = 0, t = 0, first = null;
+  for (let i = 0; i < 600; i++) { const n = m.advance(1 / 60, 1.7); t += 1 / 60; if (n && first == null) first = t; steps += n; }
+  assert.ok(first > 0.15 && first < 0.3, 'first step at ' + first);
+  assert.ok(steps >= 22 && steps <= 25, 'about 2.4 steps per second walking at 1.7 m/s: ' + steps);
+  const r = new StepMeter(); let run = 0;
+  for (let i = 0; i < 600; i++) run += r.advance(1 / 60, 3.6, true);
+  assert.ok(run >= 31 && run <= 34, 'about 3.3 steps per second running: ' + run);
+  assert.equal(m.advance(1 / 60, 0.1), 0, 'standing still: no step');
+  assert.equal(m.phase, STEP_LENGTH.walk / 2, 'standing still resets the phase');
+  assert.ok(new StepMeter().advance(5, 1.7) <= 4, 'a long hitch never fires a burst');
+});
+
+test('tension level, hum positions and agent step gain', () => {
+  assert.equal(tensionLevel(0), 0);
+  assert.equal(tensionLevel(10), 0);
+  assert.ok(Math.abs(tensionLevel(55) - 0.5) < 1e-9);
+  assert.equal(tensionLevel(100), 1);
+  assert.equal(tensionLevel(NaN), 0);
+  const hp = humPositions();
+  assert.equal(hp.length, 4);
+  hp.forEach((p, i) => { assert.equal(p[0], ANCHOR_ZONES[i].shellPosition[0]); assert.ok(p[1] > ANCHOR_ZONES[i].shellPosition[1]); });
+  assert.equal(npcStepGain(0), 0.8);
+  assert.equal(npcStepGain(40), 0);
+  assert.ok(npcStepGain(18) > 0 && npcStepGain(18) < 0.8);
+  assert.equal(npcStepGain(NaN), 0);
 });
