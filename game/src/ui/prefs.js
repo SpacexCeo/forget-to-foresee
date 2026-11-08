@@ -2,24 +2,39 @@
 import { STORAGE_KEYS } from './storage.js';
 
 // hudMode: Novice is the default for every new player (owner decision 08.11, docs/design/clarity-layers.md);
+// Simple is the third level (docs/accessibility.md): Iris proposes one action per trial, the player confirms.
 // hudScale multiplies the world HUD unit (accessibility: text larger than the mockup proportions).
-export const PREF_DEFAULTS = Object.freeze({ locale: null, motion: 'system', subtitles: true, subtitleSize: 'm', quality: 'auto', hudMode: 'novice', hudScale: 'm' });
+// Accessibility prefs (docs/accessibility.md): uiScale 100–200 % for every panel, contrast normal/high,
+// font default/readable (Atkinson Hyperlegible), palette default/safe (colour-blind-safe state colours),
+// narration (spoken lines through the Web Speech API) with its rate.
+export const PREF_DEFAULTS = Object.freeze({
+  locale: null, motion: 'system', subtitles: true, subtitleSize: 'm', quality: 'auto', hudMode: 'novice', hudScale: 'm',
+  uiScale: 100, contrast: 'normal', font: 'default', palette: 'default', narration: false, narrationRate: 1,
+});
 export const PREF_OPTIONS = Object.freeze({
   motion: ['system', 'reduce', 'full'],
   subtitleSize: ['s', 'm', 'l'],
   quality: ['auto', 'high', 'low'],
   locale: ['en', 'uk', 'ru', 'it', 'zh'],
-  hudMode: ['novice', 'pro'],
+  hudMode: ['simple', 'novice', 'pro'],
   hudScale: ['s', 'm', 'l', 'xl'],
+  uiScale: [100, 125, 150, 175, 200],
+  contrast: ['normal', 'high'],
+  font: ['default', 'readable'],
+  palette: ['default', 'safe'],
+  narrationRate: [0.75, 0.9, 1, 1.15, 1.3],
 });
 /** World HUD unit multiplier per hudScale. */
 export const HUD_SCALE = Object.freeze({ s: 0.9, m: 1, l: 1.15, xl: 1.3 });
 
+/** Validates a prefs object; an invalid value falls back to its default. */
 function clean(p) {
   const out = { ...PREF_DEFAULTS };
   if (!p || typeof p !== 'object') return out;
-  for (const k of ['motion', 'subtitleSize', 'quality', 'locale', 'hudMode', 'hudScale']) if (PREF_OPTIONS[k].includes(p[k])) out[k] = p[k];
+  for (const k of ['motion', 'subtitleSize', 'quality', 'locale', 'hudMode', 'hudScale', 'contrast', 'font', 'palette']) if (PREF_OPTIONS[k].includes(p[k])) out[k] = p[k];
+  for (const k of ['uiScale', 'narrationRate']) if (PREF_OPTIONS[k].includes(Number(p[k]))) out[k] = Number(p[k]);
   if (typeof p.subtitles === 'boolean') out.subtitles = p.subtitles;
+  if (typeof p.narration === 'boolean') out.narration = p.narration;
   return out;
 }
 
@@ -70,5 +85,15 @@ export function applyPrefsToDocument(prefs, doc = globalThis.document) {
   el.dataset.subtitles = p.subtitles ? 'on' : 'off';
   el.dataset.subtitleSize = p.subtitleSize;
   el.dataset.hudMode = p.hudMode;
-  el.style.setProperty('--wh-user-scale', String(HUD_SCALE[p.hudScale] || 1));
+  // Accessibility tokens (docs/accessibility.md): the world HUD multiplies its unit by --wh-user-scale,
+  // every other panel reads --ftf-ui-scale; contrast / font / palette are data attributes for CSS.
+  el.dataset.contrast = p.contrast;
+  el.dataset.font = p.font;
+  el.dataset.palette = p.palette;
+  el.dataset.uiScale = String(p.uiScale);
+  el.dataset.narration = p.narration ? 'on' : 'off';
+  el.style.setProperty('--ftf-ui-scale', String(p.uiScale / 100));
+  // The world HUD follows the interface size up to 150 %: beyond that its mockup layout (docs/ui-world-hud.md) has no
+  // room on a 1280-wide screen; every other panel zooms the full 100–200 % (a11y.css). Task F may lift the cap.
+  el.style.setProperty('--wh-user-scale', String((HUD_SCALE[p.hudScale] || 1) * Math.min(1.5, p.uiScale / 100)));
 }

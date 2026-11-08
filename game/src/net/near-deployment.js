@@ -9,4 +9,8 @@ export const NEAR_DEPLOYMENT = {
   explorer: 'https://testnet.nearblocks.io',
   /** seasonId -> { seedHex, scheduleRoot, commitTx, ashKeyTx, revealTx: { [index]: txHash } } */
   seasons: {},
+  /** The memory-shard NFT contract (contracts/memory-shard); null = no shard lookups. */
+  shardContractId: null,
+  /** seasonId -> { [shardId]: mintTxHash } for the shards minted on testnet. */
+  shardMints: {},
 };

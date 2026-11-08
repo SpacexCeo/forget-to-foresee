@@ -11,6 +11,44 @@ export { DEMO_MODEL } from './model.js';
 
 const MOBILE_QUERY = '(max-width: 700px)';
 
+/**
+ * Short-viewport tiers (owner 08.11: in-app browsers such as X crop the screen). The real visible height is
+ * `visualViewport.height` (toolbars, keyboard), never 100vh. Sets on <html>: `--vvh` (px), `data-vh` =
+ * tall | short (< 620) | tiny (< 500), and `data-inapp` as a hint only (the layout follows the measurement).
+ */
+export const VH_TIERS = Object.freeze({ short: 620, tiny: 500 });
+export function viewportTier(height, tiers = VH_TIERS) {
+  if (!(height > 0)) return 'tall';
+  return height < tiers.tiny ? 'tiny' : height < tiers.short ? 'short' : 'tall';
+}
+export function inAppBrowser(ua = '') {
+  return /\bTwitter|\bX(?:Android|iOS)|FBAN|FBAV|Instagram|Telegram|\bLine\//i.test(ua) ? 'inapp' : '';
+}
+let vhInstalled = 0;
+export function installViewportVars(win = typeof window !== 'undefined' ? window : null) {
+  if (!win || vhInstalled++) return () => { vhInstalled = Math.max(0, vhInstalled - 1); };
+  const root = win.document.documentElement;
+  const apply = () => {
+    const vv = win.visualViewport;
+    const h = Math.round((vv && vv.height) || win.innerHeight || 0);
+    root.style.setProperty('--vvh', h + 'px');
+    root.dataset.vh = viewportTier(h);
+  };
+  const hint = inAppBrowser(win.navigator && win.navigator.userAgent);
+  if (hint) root.dataset.inapp = hint;
+  apply();
+  const vv = win.visualViewport;
+  if (vv && vv.addEventListener) { vv.addEventListener('resize', apply); vv.addEventListener('scroll', apply); }
+  win.addEventListener('resize', apply);
+  win.addEventListener('orientationchange', apply);
+  return () => {
+    if (--vhInstalled > 0) return;
+    if (vv && vv.removeEventListener) { vv.removeEventListener('resize', apply); vv.removeEventListener('scroll', apply); }
+    win.removeEventListener('resize', apply);
+    win.removeEventListener('orientationchange', apply);
+  };
+}
+
 /** Adds a stylesheet next to this module once (Vite dev, build and static serving). */
 export function ensureWhStyle(name, href, doc = document) {
   if (doc.querySelector(`link[data-wh-css="${name}"]`)) return;
@@ -32,6 +70,7 @@ export function mountWorldHud(root, o) {
   ensureWhStyle('tokens', new URL('./tokens.css', import.meta.url).href);
   import('./fonts.js').catch(() => { /* fonts are progressive; system serif fallback */ });
 
+  const unVh = installViewportVars();
   const mq = typeof matchMedia === 'function' ? matchMedia(MOBILE_QUERY) : null;
   let layout = o.layout || (mq && mq.matches ? 'mobile' : 'desktop');
   let model = o.model;
@@ -67,6 +106,7 @@ export function mountWorldHud(root, o) {
     destroy() {
       if (mq && mq.removeEventListener) mq.removeEventListener('change', onMq);
       unbind();
+      unVh();
       for (const p of parts) p.destroy();
       wrap.remove();
     },

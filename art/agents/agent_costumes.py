@@ -361,11 +361,13 @@ def costume_iris(ag):
                   kind="leather", color="leather", rough=0.5, thick=0.007, clear=0.010,
                   slot="ornament")
     hair_locks(ag, "hair", "hair", length=0.17, n=14, fringe_side=1, seed=11)
-    mantle(ag, "cloak", 1.50, 0.08, 1.20, 0.31, n=36, rows=12, depth=0.9,
+    # silhouette (owner 08.11, body design): a narrower cloak that falls closer to the body
+    # and a shorter cape, so shoulders, waist and legs read instead of one bell shape
+    mantle(ag, "cloak", 1.50, 0.08, 1.20, 0.265, n=36, rows=12, depth=0.88,
            hem=hem_jagged(5, 40, 0.06), front_short=0.02, back_long=0.04,
-           span=math.radians(292), th0=math.radians(-90 + 34), spread=1.6, color="cloak",
+           span=math.radians(292), th0=math.radians(-90 + 34), spread=1.25, color="cloak",
            kind="wool", rough=0.95, thick=0.012, trim=("trim", 0.035, "cloth"))
-    mantle(ag, "cape", 1.505, 0.08, 0.38, 0.33, n=30, rows=5, depth=0.9,
+    mantle(ag, "cape", 1.505, 0.08, 0.30, 0.27, n=30, rows=5, depth=0.9,
            hem=hem_scallop(6, 0.025), span=math.radians(300), th0=math.radians(-90 + 30),
            color="cloak2", kind="wool", rough=0.95, thick=0.012, trim=("trim", 0.035, "cloth"))
     cowl_roll(ag, "cloak2")
@@ -423,7 +425,7 @@ def costume_sol(ag):
     hiding the face, white quartz clusters as shoulder scales, a brass balance
     (trade), a sealed satchel and salt pouches."""
     build_body(ag)
-    robe(ag, "robe", 1.48, 0.06, 0.04, 0.27, n=34, rows=14, depth=0.85, flare=1.8,
+    robe(ag, "robe", 1.48, 0.06, 0.04, 0.27, n=34, rows=12, depth=0.85, flare=1.8,
          color="cloth", against="core", push=0.05, clear=0.014)
     for k, (zt, zb, amp) in enumerate(((1.02, 0.36, 0.05), (1.18, 0.64, 0.045),
                                        (1.34, 0.92, 0.04))):
@@ -575,7 +577,7 @@ def costume_moh(ag):
     lumpy hem, moss clumps and mushrooms growing on the shoulders, the hood down,
     and a shared cauldron carried in the left hand."""
     build_body(ag)
-    robe(ag, "tunic", 1.47, 0.14, 0.04, 0.25, n=32, rows=12, depth=0.85, flare=1.8,
+    robe(ag, "tunic", 1.47, 0.14, 0.04, 0.25, n=32, rows=9, depth=0.85, flare=1.8,
          pleats=8, pleat_amp=0.04, color="tunic", against="core", push=0.05, clear=0.014)
     sleeve(ag, "sleeve_l", 1, 0.075, 0.12, color="cloth", end_drop=0.03)
     sleeve(ag, "sleeve_r", -1, 0.075, 0.12, color="cloth", end_drop=0.03)
@@ -587,7 +589,7 @@ def costume_moh(ag):
            hem=soft(0.08, 7, 0.4), front_short=0.30, back_long=0.38, span=math.radians(250),
            th0=math.radians(-35), color="cloak", kind="wool", rough=0.9, thick=0.010,
            trim=("cap", 0.03, "cloth"))
-    mantle(ag, "capelet", 1.505, 0.075, 0.38, 0.27, n=36, rows=7, depth=0.92,
+    mantle(ag, "capelet", 1.505, 0.075, 0.38, 0.27, n=32, rows=7, depth=0.92,
            hem=soft(0.06, 9, 1.3), front_short=0.10, spread=1.0, color="cloak2", kind="wool",
            rough=0.9, thick=0.010, trim=("cap", 0.025, "cloth"))
     cowl_roll(ag, "cloak2", r=0.04)

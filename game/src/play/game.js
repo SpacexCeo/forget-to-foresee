@@ -27,8 +27,10 @@ import { ShellHub, signForShell } from './hub.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
+import { panelArbiterFor } from './panels.js';
 import { CLAN_ORDER } from './behaviour.js';
 import { setGreyboxLabels } from '../render/greybox.js';
+import { attachChapters } from '../cinematic/chapters/index.js';
 
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
@@ -111,8 +113,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
       if (state.route) ui.flash(ctx.i18n.t('map.walking', { place: ctx.i18n.t(place.labelKey, place.labelArgs) }), 2500);
       if (worldHud) worldHud.activity('command');
     },
-    // one panel at a time: the map closes the play panels and the HUD's Signs before it opens
-    onOpen: () => { ui.close(); if (worldHud && worldHud.hud) worldHud.hud.signs.close(); },
+    // one panel at a time (play/panels.js): claiming closes whatever else is open; another claim closes the map
+    onOpen: () => panelArbiterFor(uiRoot).claim('map', () => map.close()),
     reducedMotion: () => lookdev.reducedMotion,
   });
   // Greybox labels are a dev aid: ?dev=1 or the F3 dev HUD shows them, play never does.
@@ -279,6 +281,9 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   }
   session.on('obs', syncVisuals);
   syncVisuals();
+  // Chapter films (cinematic/chapters, docs/chapters.md): short in-engine cutscenes between the season's
+  // chapters, built from this season's facts; they take the camera after the rig, hold Iris, pause the hub.
+  const chapters = attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, camera, player, avatar, shell, agents, uiRoot, hooks, now: () => state.now, afterFilm: () => { lastSignKey = ''; syncVisuals(); } });
 
   /** Per frame, after physics. */
   function update(dt, { focus, moving, speed = 0, running = false }) {
@@ -293,7 +298,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (step > 0.01) { state.lastMove = state.now; state.moved += step; }
     if (state.quiet && moving && !state.route) { state.quiet = false; ui.update(); }
     if (!inShell && state.moved > 4 && state.now - state.lastMove > 0.8 && !session.syncing && session.bus.pending === 0) { state.moved = 0; session.syncPosition(); }
-    agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist });
+    agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist, camera, uiRoot });
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
@@ -302,13 +307,15 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
       if (moving && state.now - movedReported > 1) { movedReported = state.now; worldHud.activity('moved'); }
       worldHud.update(dt);
     }
-    // another panel opened from a click (hotbar, dock): the map yields
-    if (map.isOpen() && (ui.panel || (worldHud && worldHud.hud && worldHud.hud.signs.isOpen()))) map.close();
+    // the map has no close hook: release its claim once it is closed (Esc, N, its own Close, or another claim)
+    if (!map.isOpen() && panelArbiterFor(uiRoot).isOpen('map')) panelArbiterFor(uiRoot).release('map');
     map.update(dt);
+    chapters.update(dt); // after the rig and the HUD: a playing film owns the camera until the render
   }
 
   /** Keyboard for the play UI; returns true when used. */
   function handleKey(code) {
+    if (chapters.playing) return chapters.handleKey(code); // a film swallows every key (hold to skip)
     if (code === 'KeyN') return map.handleKey(code);
     if (map.isOpen()) {
       if (code === 'Escape') return map.handleKey(code);
@@ -316,11 +323,11 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     }
     if (hubUi && !ui.panel && hubUi.handleKey(code)) { hooks.play('ui_click'); return true; }
     if (worldHud && code === 'KeyV') return worldHud.handleKey(code);
-    if (code === 'Escape') return ui.handleKey(code) || (worldHud ? worldHud.handleKey(code) : false);
+    if (code === 'Escape') return ui.handleKey(code) || (worldHud ? worldHud.handleKey(code) : false) || chapters.handleKey(code);
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, hub, hubUi, map, fly, agents, shell, hooks, presentation, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {

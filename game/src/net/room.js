@@ -97,6 +97,10 @@ export class Room {
     this.listeners = new Set();
     this.idem = new Map();
     this.history = [];
+    // Shards: the engine keeps a shard only until the tick after its auction; the room remembers every shard of the
+    // season (last snapshot) and, for Iris's shards, which future sign the vision opened (docs/shard-nft.md).
+    this.shardLog = new Map();
+    this.shardMeta = new Map();
     this.emit('season.created', 'all', { rules, worldRules, timeScale, merkleRoot: this.entropy.sealed ? state.root : null, entropyProtocol: this.entropy.protocol, entropyCommitment: this.entropy.commitment ?? null });
     this.emitFx(fx);
     this.lastActivityMs = this.createdAtMs;
@@ -356,13 +360,26 @@ export class Room {
     return { protocol: e.protocol, commitment: e.commitment, nonce: e.nonce, beacon: e.beacon, sealed: e.sealed, seedHex: ended ? e.seedHex : null, roomEntropy: ended ? e.roomEntropy : null };
   }
 
+  /** Remembers every shard (last snapshot) and, for a shard Iris just created, the first sign its vision opened. */
+  recordShards(S, visionsBefore = S.visions, shardsBefore = new Set()) {
+    for (const sh of S.shards) {
+      if (sh.from === 0 && !shardsBefore.has(sh.id) && !this.shardMeta.has(sh.id)) {
+        const opened = S.visions.filter((i) => !visionsBefore.includes(i)).sort((a, b) => S.events[a].pub - S.events[b].pub || a - b);
+        this.shardMeta.set(sh.id, opened.length ? { index: opened[0], leaf: S.events[opened[0]].leaf, opened } : null);
+      }
+      this.shardLog.set(sh.id, { ...sh, bids: sh.bids.map((b) => ({ ...b })), mem: sh.mem ? { kind: sh.mem.kind, w: sh.mem.w, text: sh.mem.text, about: sh.mem.about ?? null } : null, vals: undefined });
+    }
+  }
+
   runRules(def, args, m) {
     const a = this.resolveArgs(def, args, m);
     if (!a) return { ok: false, source: 'world', reason: 'unknown_logogram' };
     const S = this.state;
     const pre = digest(S);
+    const visionsBefore = S.visions.slice(), shardsBefore = new Set(S.shards.map((x) => x.id));
     const { r, fx } = withState(S, (E) => { const r = ENGINE_CALLS[def.type](E, a); return { r, fx: E.takeFx() }; });
     if (!r || !r.ok) return { ok: false, source: 'rules', reason: (r && r.reason) || 'rejected' };
+    this.recordShards(S, visionsBefore, shardsBefore);
     this.deriveEvents(pre, digest(S), S);
     this.emitFx(fx);
     return { ok: true, result: { engine: def.engine, tick: S.tick, phase: S.phase } };
@@ -518,6 +535,8 @@ export class Room {
     return project(this.state, m, {
       session: this.sessionInfo(),
       entropy: this.entropyView(),
+      shardLog: [...this.shardLog.values()],
+      shardMeta: this.shardMeta,
       version: this.version,
       simTime: now,
       you,

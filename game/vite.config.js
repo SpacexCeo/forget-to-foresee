@@ -2,6 +2,7 @@
 // lists the .glb files present in public/assets/models/, so the client only requests models that
 // exist and shows a labeled greybox for the rest (no 404 noise, no SPA fallback confusion).
 import { defineConfig } from 'vite';
+import { chunkFor } from './build/chunks.js';
 import { resolve } from 'node:path';
 import { readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -64,12 +65,11 @@ export default defineConfig({
         hudPreview: resolve(ROOT, 'hud-preview.html'),
       },
       output: {
-        manualChunks(id) {
-          const p = id.replace(/\\/g, '/');
-          if (p.includes('/node_modules/three/')) return 'three';
-          if (p.includes('/src/render/') || p.includes('/src/physics/')) return 'client-core';
-          return undefined;
-        },
+        // Chunk plan for the first seconds (docs/first-seconds.md): the entry stays tiny; `ui` (lobby, onboarding,
+        // i18n) paints first; `three` + `client-core` + `scenes` are the world, imported lazily behind the lobby;
+        // `play` (room, engine, world HUD, hub, map) only when the player enters; `locales` stay one chunk so a
+        // language switch needs no network.
+        manualChunks: chunkFor,
       },
     },
   },

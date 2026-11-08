@@ -15,6 +15,7 @@ import { fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
+import { NAMEPLATE, platePlacement, plateBox, boxesIntersect } from './nameplate.js';
 import { PLAZA_RADIUS } from '../scenes/layout.js';
 import { NPC_MOTION, createMotion, stepMotion, gaitBlend, damp, avoidWish } from '../physics/motion.js';
 import { steerTo } from '../physics/character.js';
@@ -129,6 +130,10 @@ export class GaitLayer {
   }
 }
 const GLYPH = { offer: '◆', broken: '✕', isolated: '!', warm: '♥', cold: '·', given: '✓', dark: '○' };
+const _head = new THREE.Vector3(), _cam = new THREE.Vector3();
+// HUD boxes a nameplate may never sit under (checked against a cache refreshed every HUD_RECT_MS).
+const HUD_SEL = '.wh-trial, .wh-quest, .wh-toast, .wh-signs, .wh-log__tabs, .wh-log__body, .wh-prompt, .wh-dialogue__line, .wh-dialogue__reply, .wh-hotbar, .wh-topbar, .wh-quest--mobile, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile, .wh-sheet, .pl-panel, .pl-context, .pl-help, .pl-info, .pl-badge, .hub-dock, .hub-read, .hub-card, .hub-status, .ftf-run-toggle, .ftf-scene-cue';
+const HUD_RECT_MS = 250;
 const MOOD_COLOR = { warm: '#e9c46a', eager: '#ffd27a', hostile: '#ff8a7a', cold: '#9fb4c0', neutral: '#d6dcd8', uneasy: '#f0a868' };
 
 function standIn(color) {
@@ -143,38 +148,65 @@ function standIn(color) {
   return g;
 }
 
-/** Canvas sprite above an agent: name, trust arc and a mind glyph (shape + colour + text). */
-class MindSprite {
-  constructor() {
-    this.canvas = document.createElement('canvas');
-    this.canvas.width = 256; this.canvas.height = 128;
-    this.tex = new THREE.CanvasTexture(this.canvas);
-    this.tex.colorSpace = THREE.SRGBColorSpace;
-    this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }));
-    this.sprite.renderOrder = 10;
-    this.sprite.scale.set(1.6, 0.8, 1);
-    this.key = '';
+const PLATE_CSS = `
+.pl-plates { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.pl-plate { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px;
+  border-radius: 999px; background: rgba(9, 17, 19, .82); border: 1px solid rgba(232, 214, 172, .38); color: #faf7ee;
+  font: 400 13px/1 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05); transform-origin: 50% 100%; will-change: transform, opacity; }
+.pl-plate[hidden] { display: none; } /* inline-flex above would otherwise beat the UA's [hidden] rule */
+.pl-plate-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; box-shadow: 0 0 6px currentColor; }
+.pl-plate-sub { font: 500 11px/1 "Source Sans 3", "Segoe UI", system-ui, sans-serif; color: #cfcbbd; }
+.pl-plate-sub::before { content: "·"; margin: 0 6px 0 1px; color: #e4c272; }
+.pl-plate-sub:empty { display: none; }
+@media (max-width: 700px) { .pl-plate { font-size: 12px; padding: 4px 9px 4px 8px; } .pl-plate-sub { font-size: 10.5px; } }
+`;
+
+/** The fixed layer that holds every nameplate, created once per overlay root (first child: under the HUD panels). */
+function plateLayer(uiRoot) {
+  let layer = uiRoot.querySelector(':scope > .pl-plates');
+  if (layer) return layer;
+  const doc = uiRoot.ownerDocument;
+  if (!doc.getElementById('pl-plate-style')) { const st = doc.createElement('style'); st.id = 'pl-plate-style'; st.textContent = PLATE_CSS; doc.head.append(st); }
+  layer = doc.createElement('div');
+  layer.className = 'pl-plates';
+  layer.setAttribute('aria-hidden', 'true');
+  uiRoot.prepend(layer);
+  return layer;
+}
+
+/** Screen-space nameplate above an agent's head: name, a mood dot and one short line (mind or trust). */
+class Nameplate {
+  constructor(layer) {
+    const doc = layer.ownerDocument;
+    this.el = doc.createElement('div'); this.el.className = 'pl-plate'; this.el.hidden = true;
+    this.dot = doc.createElement('span'); this.dot.className = 'pl-plate-dot';
+    this.name = doc.createElement('span'); this.name.className = 'pl-plate-name';
+    this.sub = doc.createElement('span'); this.sub.className = 'pl-plate-sub';
+    this.el.append(this.dot, this.name, this.sub);
+    layer.append(this.el);
+    this.key = ''; this.shown = false;
   }
 
   draw({ name, trust, glyph, mood, label }) {
     const key = [name, trust, glyph, mood, label].join('|');
     if (key === this.key) return;
     this.key = key;
-    const c = this.canvas.getContext('2d');
-    c.clearRect(0, 0, 256, 128);
     const col = MOOD_COLOR[mood] || MOOD_COLOR.neutral;
-    // Trust arc (0..100) around the glyph disc.
-    c.lineWidth = 7; c.lineCap = 'round';
-    c.strokeStyle = 'rgba(20,24,22,0.55)'; c.beginPath(); c.arc(64, 64, 40, 0, Math.PI * 2); c.stroke();
-    if (trust != null) { c.strokeStyle = col; c.beginPath(); c.arc(64, 64, 40, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * Math.max(0, Math.min(100, trust))) / 100); c.stroke(); }
-    c.fillStyle = 'rgba(20,24,22,0.72)'; c.beginPath(); c.arc(64, 64, 33, 0, Math.PI * 2); c.fill();
-    c.fillStyle = col; c.font = '700 38px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(glyph ? GLYPH[glyph] || '•' : '•', 64, 66);
-    c.textAlign = 'left'; c.font = '600 30px Georgia, serif';
-    c.lineWidth = 6; c.strokeStyle = 'rgba(20,24,22,0.8)'; c.strokeText(name, 112, 50); c.fillStyle = '#f4f1e6'; c.fillText(name, 112, 50);
-    if (label) { c.font = '22px system-ui, sans-serif'; c.strokeText(label, 112, 86); c.fillStyle = col; c.fillText(label, 112, 86); }
-    this.tex.needsUpdate = true;
+    this.dot.style.color = col; this.dot.style.background = col;
+    this.name.textContent = name;
+    this.sub.textContent = label ? (glyph && GLYPH[glyph] ? GLYPH[glyph] + ' ' : '') + label : '';
   }
+
+  /** @param {{x:number,y:number,opacity:number,scale:number}|null} at */
+  place(at) {
+    if (!at) { if (this.shown) { this.el.hidden = true; this.shown = false; } return; }
+    if (!this.shown) { this.el.hidden = false; this.shown = true; }
+    this.el.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -100%) scale(${at.scale})`;
+    this.el.style.opacity = String(at.opacity);
+  }
+
+  remove() { this.el.remove(); }
 }
 
 class Agent {
@@ -191,9 +223,7 @@ class Agent {
     this.homeYaw = homeYaw;
     this.root.position.copy(this.home);
     this.root.rotation.y = homeYaw;
-    this.mind = new MindSprite();
-    this.mind.sprite.position.y = 2.35;
-    this.root.add(this.mind.sprite);
+    this.plate = null; // Nameplate (DOM), created by ClanAgents once it knows the overlay root
     scene.add(this.root);
     this.model = null; this.mixer = null; this.clips = []; this.actions = new Map();
     this.currentClip = null; this.state = 'absent';
@@ -355,7 +385,8 @@ export class ClanAgents {
 
   /**
    * @param {number} dt @param {object|null} obs controller observation
-   * @param {{now:number, focus:THREE.Vector3, irisPos:number[], reducedMotion:boolean, cameraDist:number}} ctx
+   * @param {{now:number, focus:THREE.Vector3, irisPos:number[]|null, reducedMotion:boolean, cameraDist:number, camera?:THREE.Camera, uiRoot?:HTMLElement}} ctx
+   *   camera + uiRoot enable the screen-space nameplates (nameplate.js); without them no plate is drawn
    */
   update(dt, obs, ctx) {
     // Stream models nearest the focus first, one at a time.
@@ -462,14 +493,51 @@ export class ClanAgents {
       else if (dir.look && dir.look.startsWith('sky:')) { const z = ANCHOR_ZONES[Number(dir.look.slice(4)) - 1]; if (z) lookTarget = z.shellPosition.slice(); }
       else if (life.kind === 'glance') { const ry = a.root.rotation.y + life.yaw; lookTarget = [pos.x + Math.sin(ry) * 5, pos.y + 1.55 + Math.sin(life.pitch) * 5, pos.z + Math.cos(ry) * 5]; }
       if (a.model) a.applyLook(dt, lookTarget, ctx.reducedMotion);
-      // Mind glyph.
-      const name = this.i18n.t('agent.' + a.clan);
-      const label = cue.glyph ? this.i18n.t('mind.' + cue.glyph) : (cue.trust != null ? this.i18n.t('mind.trust', { n: cue.trust }) : '');
-      a.mind.draw({ name, trust: cue.trust, glyph: cue.glyph, mood: cue.mood, label });
-      const s = THREE.MathUtils.clamp((ctx.cameraDist || 20) / 22, 0.8, 3.2);
-      a.mind.sprite.scale.set(1.6 * s, 0.8 * s, 1);
-      a.mind.sprite.position.y = 2.2 + 0.3 * s;
+      // Nameplate: screen-space DOM over the head (nameplate.js), proximity only, never under a HUD box.
+      this.placePlate(a, cue, ctx);
     }
+  }
+
+  /**
+   * Projects the head point and places the agent's nameplate; needs ctx.camera and ctx.uiRoot (game.js).
+   * A plate exists only while Iris stands near the agent (nameplate.js NAMEPLATE.show) and never under a HUD box.
+   */
+  placePlate(a, cue, ctx) {
+    if (!ctx.camera || !ctx.uiRoot) return;
+    if (!this.plates) this.plates = plateLayer(ctx.uiRoot);
+    if (!a.plate) a.plate = new Nameplate(this.plates);
+    const irisDistance = ctx.irisPos ? Math.hypot(ctx.irisPos[0] - a.root.position.x, ctx.irisPos[2] - a.root.position.z) : Infinity;
+    if (a.state === 'absent' || irisDistance >= NAMEPLATE.show) { a.plate.place(null); return; }
+    const name = this.i18n.t('agent.' + a.clan);
+    const label = cue.glyph ? this.i18n.t('mind.' + cue.glyph) : (cue.trust != null ? this.i18n.t('mind.trust', { n: cue.trust }) : '');
+    a.plate.draw({ name, trust: cue.trust, glyph: cue.glyph, mood: cue.mood, label });
+    const head = _head.set(a.root.position.x, a.root.position.y + NAMEPLATE.headY, a.root.position.z);
+    const camPos = ctx.camera.getWorldPosition(_cam);
+    const distance = head.distanceTo(camPos);
+    const ndc = head.project(ctx.camera);
+    const layer = this.plates;
+    let at = platePlacement({ ndc, distance, irisDistance, width: layer.clientWidth, height: layer.clientHeight });
+    if (at) {
+      const box = plateBox(at, a.plate.el.offsetWidth || 100, a.plate.el.offsetHeight || 26);
+      if (this.hudRects(ctx).some((r) => boxesIntersect(box, r))) at = null;
+    }
+    a.plate.place(at);
+  }
+
+  /** Visible HUD boxes (viewport px), refreshed every HUD_RECT_MS; plates hide rather than sit under them. */
+  hudRects(ctx) {
+    const now = performance.now();
+    if (this._hudRects && now - this._hudRectsAt < HUD_RECT_MS) return this._hudRects;
+    const doc = ctx.uiRoot.ownerDocument;
+    const out = [];
+    for (const el of doc.querySelectorAll(HUD_SEL)) {
+      const cs = getComputedStyle(el);
+      if (el.hidden || cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 1 && r.height > 1) out.push([r.left, r.top, r.right, r.bottom]);
+    }
+    this._hudRects = out; this._hudRectsAt = now;
+    return out;
   }
 
   /** Procedural layer: always on for the stand-in and for missing clips; subtle on top of clips. */

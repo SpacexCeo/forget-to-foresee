@@ -100,9 +100,9 @@ def verify_entropy(season):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("usage: python3 tools/verify/verify.py <proof.json | ->", file=sys.stderr)
-        sys.exit(2)
+    if len(sys.argv) < 2 or sys.argv[1] in ("--help", "-h"):
+        print("usage: python3 tools/verify/verify.py <proof.json | ->\n  Checks a Forget to Foresee proof export (format ftf-proof/1). Exit 0 = OK, 1 = FAIL.")
+        sys.exit(0 if len(sys.argv) >= 2 else 2)
     text = sys.stdin.read() if sys.argv[1] == "-" else open(sys.argv[1], encoding="utf-8").read()
     doc = json.loads(text)
     if doc.get("format") != "ftf-proof/1":

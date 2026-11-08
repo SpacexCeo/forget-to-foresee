@@ -27,7 +27,7 @@ const SAME_AS_EN = new Set([
   'shell.0', 'shell.1', 'shell.2', 'shell.3', 'tut.readLine', 'wh.raw', 'wh.trial.wordsValue', 'wh.sign.reading',
   'wh.trial.kv', 'wh.trial.attemptsValue', 'wh.trial.progressValue', 'wh.trial.percent', 'wh.sign.statLabel',
   'wh.sign.pct', 'wh.sign.range', 'wh.dialogue.speaker', 'wh.top.logo', 'opt.keyHint', 'dialogue.title', 'vision.slot',
-  'agent.iris', 'ctor.preset.iris', 'onb.look.iris', 'agent.moss', 'wh.demo.arena', 'log.tickStart',
+  'agent.iris', 'ctor.preset.iris', 'onb.look.iris', 'agent.moss', 'wh.demo.arena', 'log.tickStart', 'chapter.list.sep',
 ]);
 
 for (const [name, source, en] of [['game', MESSAGES, MESSAGES.en], ['play', PLAY_MESSAGES, PLAY_MESSAGES.en]]) {

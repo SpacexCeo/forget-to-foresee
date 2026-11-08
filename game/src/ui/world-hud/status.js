@@ -164,7 +164,16 @@ function questMobile(i18n, model, onAction) {
     e.preventDefault();
     onAction('questDot', (model.questIndex + (e.key === 'ArrowRight' ? 1 : n - 1)) % n);
   });
-  return h('div', { class: 'wh-quest-m' }, card, dots);
+  // short viewports collapse the card to its tag + title; this sibling toggle (a button cannot nest in the card
+  // button) reveals the body in place. CSS shows it only under html[data-vh="short"|"tiny"].
+  const more = h('button', { class: 'wh-quest__more wh-interactive', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': cardId }, i18nAttrs: { 'aria-label': 'wh.quest.open' } }, ic('chevron-up', 'wh-quest__more-icon'));
+  more.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const on = card.dataset.expanded !== 'true';
+    card.dataset.expanded = on ? 'true' : 'false';
+    more.setAttribute('aria-expanded', String(on));
+  });
+  return h('div', { class: 'wh-quest-m' }, card, more, dots);
 }
 
 function trialMobile(i18n, t) {
@@ -199,7 +208,46 @@ function trialMobile(i18n, t) {
  * @param {{model: object, i18n: object, layout: 'desktop'|'mobile', onAction?: Function, prefs?: object}} o
  * @returns {{el: HTMLElement, update(model: object, layout?: string): void, destroy(): void}}
  */
+/** Re-triggers the .wh-swap keyframe on a node (a content change that should read as a change). */
+function swapIn(node) {
+  if (!node || !node.classList) return;
+  node.classList.remove('wh-swap');
+  void node.offsetWidth;
+  node.classList.add('wh-swap');
+}
+
+/**
+ * Number tick-ups: the first integer of every trial value that changed since the last update counts from the old
+ * value to the new one over 420 ms (cubic ease-out). The rendered text is the source of truth; the tick only rewrites
+ * the digits in between frames, so a locale switch or the next render always wins.
+ */
+function tickNumbers(root, store, reduced) {
+  if (!root.querySelectorAll || typeof requestAnimationFrame !== 'function') return;
+  const spans = root.querySelectorAll('.wh-trial__v, .wh-trial__value, .wh-trial__pct');
+  spans.forEach((sp, i) => {
+    const m = /-?\d+/.exec(sp.textContent || '');
+    if (!m) return;
+    const to = Number(m[0]);
+    const from = store.get(i);
+    store.set(i, to);
+    if (from === undefined || from === to || reduced || Math.abs(to - from) > 9999) return;
+    const start = performance.now(), dur = 420;
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - t, 3);
+      const cur = sp.textContent || '', mm = /-?\d+/.exec(cur);
+      if (!mm || !sp.isConnected) return;
+      const v = Math.round(from + (to - from) * e);
+      sp.textContent = cur.slice(0, mm.index) + v + cur.slice(mm.index + mm[0].length);
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
 export function mountStatus(root, o) {
+  const ticks = new Map();
+  let lastQuest = null;
+  const reducedMotion = () => !!(o && o.prefs && o.prefs.reducedMotion && o.prefs.reducedMotion());
   const { i18n } = o;
   const onAction = (...a) => { if (o.onAction) o.onAction(...a); };
   const cssLink = ensureCss(root.ownerDocument || document);
@@ -294,7 +342,12 @@ export function mountStatus(root, o) {
   return {
     el,
     update(next, nextLayout) {
-      render(next || model, nextLayout ? (nextLayout === 'mobile' ? 'mobile' : 'desktop') : layout);
+      const m = next || model;
+      const q = m.quests && m.quests[m.questIndex];
+      render(m, nextLayout ? (nextLayout === 'mobile' ? 'mobile' : 'desktop') : layout);
+      // motion: a new quest cross-fades in; changed numbers tick up (reduced motion: no tick, the swap is a fade)
+      if (q && q !== lastQuest) { lastQuest = q; swapIn(el.querySelector('.wh-quest__body') || el.querySelector('.wh-quest--mobile')); }
+      tickNumbers(el, ticks, reducedMotion());
     },
     destroy() {
       unsubscribe();
