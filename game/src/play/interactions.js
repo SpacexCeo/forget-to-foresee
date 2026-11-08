@@ -3,6 +3,7 @@
 // preconditions or engine guards that fail). No rule is evaluated here: availability and reasons
 // come from the room, proximity radii from the room's own world map (src/net/world-map.js).
 import { campAt, nearScroll, nearShardPedestal, anchorZoneAt } from '../net/world-map.js';
+import { FIRST_EVENT_TICK } from './hub.js';
 
 /** Precondition failures the play layer fixes by itself (it replays the walk before sending). */
 const DEFERRABLE = new Set(['not_near', 'in_transit']);
@@ -102,6 +103,13 @@ export function contextOptions(spot, obs, actions) {
           if (seen.has(t) || mine.has(t)) continue;
           add('anchor:' + t, 'opt.anchorTick', { shell: ROMAN[n - 1], tick: t }, { type: 'place_anchor', args: { shell: n, tick: t } });
         }
+      }
+      // Before the first reveal no event can land on trials 1-2 (hub.js FIRST_EVENT_TICK): the trial-3 stake is
+      // the E option and a reading that points earlier loses its primary tone (it would never be paid back).
+      if (phase === 'play' && !(obs.chronicle || []).length) {
+        for (const o of out) if (o.id.startsWith('anchor:') && Number(o.id.slice(7)) < FIRST_EVENT_TICK) o.tone = 'normal';
+        const i3 = out.findIndex((o) => o.id === 'anchor:' + FIRST_EVENT_TICK);
+        if (i3 >= 0) { const [o3] = out.splice(i3, 1); o3.tone = 'primary'; out.unshift(o3); }
       }
       add('enter', 'opt.enterShell', { shell: ROMAN[n - 1] }, { type: 'enter_shell', args: { shell: n } });
       add('inspect', 'opt.lookZone', { shell: ROMAN[n - 1] }, { type: 'inspect', args: { target: 'anchor_zone:' + n } });

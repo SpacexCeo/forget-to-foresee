@@ -11,7 +11,7 @@ import {
   parseLogText, renderEvent, fxToLine, renderLine, localizeOffer, effectEvent,
   ADAPTER_KEYS, LINE_KEYS, AGENT_IDS, PIN_SOURCES,
 } from '../src/ui/i18n/index.js';
-import { createPlayI18n } from '../src/play/i18n.js';
+import { createPlayI18n, renderMsg } from '../src/play/i18n.js';
 import { stateHash } from './lib/normalize.mjs';
 import { playSeason } from './lib/play.mjs';
 
@@ -248,4 +248,22 @@ test('all five languages remain available in the game context with English fallb
     i.setLocale(locale);
     assert.notEqual(i.t('settings.note'), MISSING_TEXT); // full translations are checked in ui-i18n-locales.test.mjs
   }
+});
+
+test('the Guests\' reveal line says "matches" for a verified reveal in every locale (QA-001)', () => {
+  const fx = (verified) => ({ type: 'event', place: 1, action: 0, power: 1, verified });
+  for (const locale of ['en', 'uk', 'ru', 'it', 'zh']) {
+    const i = createPlayI18n(locale, { onMissing: () => {} });
+    const ok = renderLine(fxToLine(fx(true)), i).text, bad = renderLine(fxToLine(fx(false)), i).text;
+    assert.notEqual(ok, bad, locale);
+    // the world HUD dialogue strip renders through renderMsg (play/i18n.js), the path QA-001 hit
+    const line = (v) => { const l = fxToLine(fx(v)); return renderMsg(i, l.key, l.args); };
+    assert.equal(line(true), ok, locale);
+    assert.equal(line(false), bad, locale);
+    assert.equal(renderMsg(i, 'line.event', { ...fxToLine(fx(true)).args, verified: true }), ok, locale + ' raw boolean');
+    assert.equal(i.missing.size, 0, locale);
+  }
+  const en = createPlayI18n('en', { onMissing: () => {} });
+  assert.match(renderLine(fxToLine(fx(true)), en).text, /The reveal matches the root\./);
+  assert.match(renderLine(fxToLine(fx(false)), en).text, /does not match/);
 });

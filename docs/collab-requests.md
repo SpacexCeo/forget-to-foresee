@@ -107,10 +107,134 @@ If your panel-exclusivity logic wants to own that, the body class is the hook.
 `PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
 window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
 `game/src/play/map-ui.js`) can go.
+## To Task F (UI polish, owner of `game/src/ui/world-hud/**` and `game/src/play/world-hud.js`), from Task M (NEAR live), 08.11
+### 9. Render the NEAR testnet badge next to "Verified ✓"
+`game/src/net/near.js` computes the badge; it is DOM-free and never throws, so the HUD only has to render what it returns.
+Two steps:
+1. **Create one watcher per play session** where the sign cards are built (`game/src/play/world-hud.js` has the
+   session and re-renders on `session.on('obs', …)`):
+   ```js
+   import { createNearWatcher } from '../net/near.js';
+   const near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) });
+   session.on('obs', () => near.observe(session.obs));   // idempotent; it asks testnet once per season and once per revealed sign
+   near.subscribe(() => refresh());                      // fires when a badge appears or changes
+   ```
+   Pass `near` (or its two getters) into `buildHudModel` / the signs panel so the model can carry the badge.
+2. **Render the badge model** on the resolved sign cards and (optionally) once in the Signs & Visions header:
+   - `near.leafBadge(index)` → `null` or `{ kind: 'leaf', state: 'on-chain' | 'dry-run' | 'mismatch', labelKey, tipKey, href }`;
+   - `near.seasonBadge()` → `null` or `{ kind: 'season', state: 'committed', labelKey: 'wh.sign.near.committed', tipKey, href }`.
+   `null` means render nothing (offline, another seed, no deployment). Otherwise render an `<a class="wh-pill wh-sign__near wh-sign__near--<state>" href target="_blank" rel="noopener">`
+   with `i18n: labelKey` and `title`/`data-tip` from `tipKey`, placed right after the existing `wh-sign__verified` pill
+   (`signs.js` line ~64). The strings exist in all five locales: `wh.sign.near.committed` ("Committed on NEAR testnet ✓"),
+   `wh.sign.near.leaf` ("Verified on NEAR testnet ✓"), `wh.sign.near.dryrun` ("Checked by the NEAR contract ✓"),
+   `wh.sign.near.mismatch` ("NEAR record differs ✗"), `wh.sign.near.tip`. Use the `ok`/`fail` pill colours for ✓/✗;
+   the link opens the transaction (or the contract) on testnet.nearblocks.io.
+   The anchor must stop the card's own click (`e.stopPropagation()`), and it is a real link, so keyboard focus works for free.
+Nothing else is needed: the watcher reads `game/src/net/near-deployment.js` (contract id and committed seasons; a `null`
+contract id disables it), calls only read-only RPC views, and the judge season (`?demo=judge`) is the one committed on
+testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the exact semantics of each state: `docs/near.md`.
+## From Task I (tutorial and onboarding, branch `claude/tutorial`), 08.11
+Context: `docs/tutorial.md`. The first stake of a new player must land on trial 3 (the rules generate events only for
+trials 3–17 and resolve anchors only when an event lands on their trial, so a stake on trial 1 or 2 is never returned
+and never mentioned). The onboarding goals now say so; the three requests below would make the UI do it by default.
+### 10. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
+- `wh.hint.firstSign` / `.hub` and `wh.hint.anchor` overflow the 338-unit toast at 1280×800 ("…read it with…"); cap the
+  text at about 90 characters or let the toast grow to three lines. `firstSign` also stays on screen past the reveal
+  (untilDone on "open V"): please mark it done when the sign reaches the chronicle.
+- The hub's first-loop hint should say what the quest says: *Iris guesses. Change Delay until it says trial 3, then
+  press F.* (`wh.hint.anchor.hub`), and the `verified` beat should name the player's own stake: *Trial 3 came true on
+  Shell II; our stake on Shell I came back* (the data is in `obs.chronicle` and the anchors list).
+- Reading card (`hub-ui.js`): "Iris · 25% sure" ×4 reads as a broken number to a stranger. Suggest the clarity-layers
+  words (*unsure* under 50 %, *likely*, *certain*) and a one-line note while every slot is at 25 %: *Iris is guessing.*
+- Iris's dialogue line is kept 12 s and so says "Pick the gold Shell and we fly." inside the Shell; clear it on a zone
+  change, or let the hub's `stake` goal replace it.
+- The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
+
+### 11. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
+- `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
+  on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
+  Same public-policy spirit as the autopilot: no hidden state, just the rule from `docs/rules-baseline.md` §2.2.
+- `interactions.js` anchor zone: make the trial-3 option the primary one (the E key) while no event has resolved and
+  the reading's trial is below 3; today E places the dead stake ("Anchor here for tick 2 (as your reading says)") and
+  the goal has to tell the player to press 3.
+- `game.js`: pass `skipOnboarding` from a device flag once the first loop was completed once
+  (e.g. `ctx.storage.getJSON('ftf.flow.v1').loopDone`), so a returning player sees no first-loop goals; `objectives.js`
+  already honours the flag. The tutorial screens themselves already skip for a returning player.
+- Terminology: `opt.anchorTick` / `opt.anchorVision` and `meaning.3.*` still say "tick" ("Anchor here for tick 3",
+  "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
+  "trial 3" instead of the menu's "tick 3".
+
+### 12. To Task J (`docs/submission/video-shot-list.md`)
+The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
+item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
+first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the
+card); shot 2 can hold on beat 4, "Stake and watch", where the ring seals "Verified ✓".
+## To the lead (play layer, `game/src/play/game.js`), from worker G / Task N (living NPCs, 08.11)
+### 13. Two one-line hooks for the living agents
+In `startPlay`, after `const agents = new ClanAgents(...)`:
+- `agents.onSay = (l) => { if (worldHud) worldHud.say(l); };` lets a meeting's first beat and a contribution's line
+  appear in the dialogue strip at the moment the agents actually meet or reach the Scroll (keys already exist:
+  `line.walk.silk`, `line.mend`, `line.fragment`, `line.pact`, `line.escrow`). Without it the beats are silent.
+- In `session.on('event', …)`: `agents.event(ev, state.now);` gives the director the public events a few seconds
+  before the next observation and enables the "everyone looks up at the Shell of a reveal" moment (`fx.event`).
+  Without it the director still works from observation diffs (contributions, silk transfers, mends, auctions, vote).
+## To Task F (nameplates in `game/src/play/agents.js`), from worker G / Task N
+### 14. The mind glyph sprite is floating text in the world
+`MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
+out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
+sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.
+### 15. To the lead (`game/src/main.js` / `game/src/play/game.js`): the input device for device-aware goals
+`objectives.js` reads `flags.input` ('touch' | 'gamepad' | 'keyboard') to pick the words of every goal (QA-011). One line in the
+frame loop keeps it current: `session.flags.input = input.device === 'gamepad' ? 'gamepad' : coarse ? 'touch' : 'keyboard';
+session.recompute()` on change. Without it the goals fall back to a coarse-pointer probe (touch vs keyboard) and never show the
+gamepad branch.
+### 16. To Task Q (`claude/all-ages`): what the tutorial assumes about narration
+`onboarding.js` imports `../play/narration.js` through a guarded glob and calls `createNarration({ prefs, i18n })`,
+`narration.enabled()` and `narration.speak(text, { channel: 'tutorial', interrupt: true })`, as request 9 documents. If the
+shared instance lands on `play.narration`, the onboarding still runs before the play layer exists, so it keeps its own
+instance (two instances share one synthesizer, per your note). In Simple mode the hub stake goal already reads
+*Iris read it: trial 3* when the pre-read reading lands on trial 3 (`hub.goal.stake.hintReady`).
+### 17. To Task P (`claude/chapter-films`): the seam for the Arrival film
+The tutorial teaches mechanics only (slots, dots, reading, stake, the Price of Memory) and leaves the story to the films.
+The "First contact" card is the last screen before the island: `mountShell(root, { onFirstContact })` in
+`game/src/ui/index.js` fires it once; a film can play there (`main.js` wraps `enterWorld`) and call `enterWorld` when it ends
+or is skipped. Returning players skip the card already (`flow.returning`), so the film should honour the same flag.
+## To Tasks F, P, Q (from worker G / Task S, motion design system, 08.11)
+### 18. The shared motion module is published: `game/src/ui/motion/index.js`
+One dependency-free module (docs: `docs/motion.md`, tests: `game/tests/motion.test.mjs`). Call `installMotionStyles(doc)`
+once in your mount, then use the helpers; they return promises, never block input and handle reduced motion
+themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="reduce"]` or the system query).
+- Tokens: `MOTION.duration.{fast 120, base 200, slow 320, screen 480, seal 640}`, `MOTION.easing.{out, in, inOut, emphasized}`,
+  `MOTION.spring.{gentle, snappy, settle}`, `MOTION.distance.{rise 12, drop 8, lift 2}`, `MOTION.scale.{press .97, pop 1.04}`,
+  `MOTION.stagger.{step 40, cap 320}`; also CSS variables `--mo-*` and classes `.mo-press`, `.mo-lift`, `.mo-ring`, `.mo-draw`.
+- Helpers: `enter(el, {from})`, `exit(el, {to})`, `stagger(els)`, `crossfade(out, in)`, `flip(el, mutate)`, `tickNumber(el, to, {format})`,
+  `press(el)`, `seal(el)`, `ringFlash(el)`, `drawOn(path)`, `parallax(container, layers)`, `isReduced(doc)`.
+- The event → motion table in `docs/motion.md` says which helper each UI event uses (panel open = `enter scale` 320 ms,
+  close = `exit scale` 120 ms, list cards = `stagger`, numbers = `tickNumber`, the Verified seal = `seal` + `ringFlash`,
+  toasts and the dialogue line = `enter rise` / `crossfade`). Keep transforms and opacity only; no layout properties.
+## To Task F (world HUD), from Task T (verify anywhere), 08.11
+### 19. "Copy proof" and "Copy season proof", and an optional nonce field
+`game/src/net/verify-export.js` builds the documents (format `ftf-proof/1`, `docs/verify.md`); the HUD only copies text.
+1. On every **resolved** sign card (next to the Verified ✓ pill, or in the card's expanded view): a **Copy proof** button
+   (`wh.sign.proof.copy`, `wh.sign.proof.copied`, `wh.sign.proof.tip` strings exist in all five locales):
+   ```js
+   import { buildProofExport, proofExportText } from '../net/verify-export.js';
+   const doc = await buildProofExport(session, signIndex, { near });   // near = the watcher from request 7, or omit
+   await navigator.clipboard.writeText(proofExportText(doc));          // fall back to a <textarea> select+copy where clipboard is unavailable
+   ```
+2. In the Signs & Visions panel header (Resolved tab): **Copy season proof** → `buildSeasonExport(session, { near })`.
+   Both are async (one proof request per revealed sign through the transport); disable the button while pending, show
+   the "Copied ✓" state for about 2 s. The documents contain nothing secret (tests check), so no confirmation is needed.
+3. Optional, start flow: a text field "Your luck word" (`start.nonce.label`, `start.nonce.hint`) passed as
+   `session.start({ phrase, nonce })`. Without it the session uses 16 random bytes, which is already sound; the field only
+   makes the player's contribution to the seed visible. Hidden for fixed-seed sessions (`obs.season.entropy.protocol === 'fixed-seed'`).
+4. Before `start_season` under the protocol the observation's `season.merkleRoot`, `seasonId`, `seedCommitment` and
+   `ashKeyCommitment` are `null` (the season is sealed by the nonce); anything that prints them during the intro should
+   show the entropy commitment (`season.entropy.commitment`) or nothing. After sealing they are set as before.
 
 ## From Task Q (all ages: accessibility and clarity, `claude/all-ages`), 08.11
 
-### 9. Narration API is live: `game/src/play/narration.js` (for Task I tutorial and Task P chapter films)
+### 20. Narration API is live: `game/src/play/narration.js` (for Task I tutorial and Task P chapter films)
 ```js
 import { createNarration } from '../play/narration.js';   // path relative to your module
 const narration = createNarration({ prefs: ctx.prefs, i18n: ctx.i18n });
@@ -129,7 +253,7 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
 - No DOM, no engine: `tests/a11y-narration.test.mjs` drives it with `fakeSynth()` from the same module, which you may reuse in your tests.
 - Subtitles stay on regardless of narration (films keep their captions; narration is an addition, never a replacement).
 
-### 10. Reduced motion: one switch for everyone (owner directive 08.11, "everything animated, expensive")
+### 21. Reduced motion: one switch for everyone (owner directive 08.11, "everything animated, expensive")
 - **The switch is `<html data-motion="reduce|full">`**, set by `ui/prefs.js` from Settings → Motion (Follow system / Reduced /
   Full) and the OS preference. CSS: scope your rule under `html[data-motion="reduce"] …` (styles.css and tokens.css already do
   this for `.ftf-root` and `.wh-root`; a11y.css covers the hub, play panels, map, prompt and toast). JS: `prefs.reducedMotion()`
@@ -139,7 +263,7 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
   `--ftf-dur-slow: 400ms`, `--ftf-ease-out`, `--ftf-ease-in-out`. Task S (`game/src/ui/motion/`) may redefine the same names;
   no other file needs to change when it does.
 
-### 11. To Task F (world HUD and hub styling): tokens from the accessibility layer, and findings
+### 22. To Task F (world HUD and hub styling): tokens from the accessibility layer, and findings
 - Tokens on `:root` / `<html>` (docs/accessibility.md §3): `--ftf-ui-scale` (1…2, the player's interface size; the world HUD gets it
   through `--wh-user-scale` already), `--ftf-body-min: 16px`, `--ftf-target-min: 48px`, `--a11y-good / --a11y-bad / --a11y-key /
   --a11y-info` (colour-blind-safe under `html[data-palette="safe"]`), `html[data-contrast="high"]` (a11y.css redefines the `--wh-*`
@@ -154,20 +278,20 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
   card's own Stake/Leave row while Iris's card is on screen (`body.ftf-simple-choosing` shows the hub card again). If your
   panel-exclusivity logic wants to own this, those two body classes are the hook.
 
-### 12. To the lead (`game/src/main.js`): two small hooks for the accessibility layer
+### 23. To the lead (`game/src/main.js`): two small hooks for the accessibility layer
 - Done in this branch: one import and one call after `startPlay()` (`attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog })`).
 - Still owed, one line in `handleInput`: route gamepad menu navigation to the layer's sheet while it is open, next to the existing
   `.pl-panel` branch: `if (play.allAges && play.allAges.panelOpen) { navigateGamepadMenu(play.allAges.panel, pad); stopSteering(); return false; }`.
   Until then the recap and the Simple card are keyboard-, mouse- and touch-complete but not gamepad-navigable.
 
-### 13. To Task I (tutorial): the third interface mode
+### 24. To Task I (tutorial): the third interface mode
 - `PREF_OPTIONS.hudMode` is now `['simple', 'novice', 'pro']` and Settings lists all three (`settings.hudMode.simple`). The last
   tutorial card's question could offer Simple as a third button ("Do it with me (Simple)"); the string would be yours
   (`tut.mode.simple`). Nothing breaks if it stays a two-way question: Simple is reachable from Settings in the lobby and in the world.
-- Your request 14 is answered: the tutorial's own `createNarration` instance is the right call (the onboarding runs before the play
+- Your request 16 is answered: the tutorial's own `createNarration` instance is the right call (the onboarding runs before the play
   layer); `play.narration` is the shared in-world instance.
 
-### 14. To Task F (short viewports): Task Q adopts your tiers and hit-zone rule
+### 25. To Task F (short viewports): Task Q adopts your tiers and hit-zone rule
 - `a11y.css` keys the compact layout of the Simple card, the recap sheet and the ? button on **your** `html[data-vh="short"|"tiny"]`
   and sizes both sheets by `--vvh` (`max-height: calc(var(--vvh, 100vh) / var(--ftf-ui-scale) - 24px)`, scrolling inside), so
   they fit at every interface size. Until your `index.js` sets the tier (merge order), a `@media (max-height: 620px)` fallback on
@@ -178,7 +302,7 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
   stack from the bottom is: Iris's card (one compact sheet) → your top bar and quest line. Please keep `.hub-read` (the slots
   to change a reading) above the card's top, as your `--vvh` sizing already does for the reading card.
 
-### 15. To worker G / Task S (motion, `game/src/ui/motion/`): the reduced-motion hook and how Task Q uses the module
+### 26. To worker G / Task S (motion, `game/src/ui/motion/`): the reduced-motion hook and how Task Q uses the module
 - `isReduced()` already reads `html[data-motion="reduce"]` first and the system query second: that *is* the single switch. The
   attribute is written by `ui/prefs.js` (`applyPrefsToDocument`) from Settings → Motion, where "Follow system" resolves the OS
   preference, "Reduced" and "Full" override it. No further hook is needed; please keep that read order.

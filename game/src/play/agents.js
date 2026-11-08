@@ -15,12 +15,76 @@ import { fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
-import { NPC_MOTION, createMotion, stepMotion, gaitBlend, damp } from '../physics/motion.js';
+import { PLAZA_RADIUS } from '../scenes/layout.js';
+import { NPC_MOTION, createMotion, stepMotion, gaitBlend, damp, avoidWish } from '../physics/motion.js';
 import { steerTo } from '../physics/character.js';
+import { planRoute, walkGraph } from '../net/world-map.js';
+import { ANCHOR_ZONES } from '../scenes/layout.js';
+import { NpcDirector, lookAtAngles, seededRng } from './behaviour.js';
 
 const LOAD_RADIUS = 75;      // meters from the camera focus at which an agent model is requested
 const FADE = 0.35;           // clip cross-fade seconds
 const NPC_SPEED = 1.1;       // m/s, the agents' amble about their camps
+const NPC_WALK = 1.55;       // m/s, a purposeful walk to the Scroll, a camp or the pedestal (docs/npcs.md)
+const LOOK_NEAR = 7;         // m: Iris this close gets looked at
+const UP = new THREE.Vector3(0, 1, 0);
+const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _v1 = new THREE.Vector3();
+const boneIs = (name, re) => re.test(String(name || '').toLowerCase().replace(/[.\d]+$/, '').split(/[|:/]/).pop());
+
+/** Finds the head, neck and eye bones of a rigged model by name (prefixes and numeric suffixes ignored). */
+function findLookBones(model) {
+  const bones = { head: null, neck: null, eyes: [] };
+  model.traverse((o) => {
+    if (!o.isBone) return;
+    if (!bones.head && boneIs(o.name, /(^|[^a-z])head$/)) bones.head = o;
+    else if (!bones.neck && boneIs(o.name, /(^|[^a-z])neck$/)) bones.neck = o;
+    else if (boneIs(o.name, /(^|[^a-z])eye([^a-z]|$)/)) bones.eyes.push(o);
+  });
+  return bones;
+}
+
+/**
+ * Head look-at, applied after the mixer so it adds to the clip: a world-space turn (yaw about +Y, pitch about
+ * the character's right axis) shared between the neck (35 %), the head (65 %) and the eyes (a little more).
+ * `target` is a world point or null (the look fades out). `look` holds the smoothed angles and weight. Shared by
+ * the clan agents and Iris (docs/motion.md: "Iris talks to a clan").
+ */
+function applyLookTo(bones, look, rootPos, rootYaw, target, dt, reduced = false) {
+  const want = target ? lookAtAngles([rootPos.x, rootPos.y, rootPos.z], rootYaw, target) : { yaw: 0, pitch: 0, weight: 0 };
+  const rate = reduced ? 3 : 6;
+  look.w = damp(look.w, want.weight, rate, dt);
+  if (want.weight > 0) { look.yaw = damp(look.yaw, want.yaw, rate, dt); look.pitch = damp(look.pitch, want.pitch, rate, dt); }
+  if (look.w < 0.005 || !bones.head) return;
+  const yaw = look.yaw * look.w, pitch = look.pitch * look.w;
+  const turn = (bone, share) => {
+    if (!bone || !bone.parent) return;
+    const ry = rootYaw + yaw * share;
+    _q1.setFromAxisAngle(UP, yaw * share);
+    _v1.set(-Math.cos(ry), 0, Math.sin(ry)); // the character's right axis after the yaw
+    _q2.setFromAxisAngle(_v1, pitch * share);
+    _q1.multiply(_q2);                                    // world-space delta
+    bone.parent.updateWorldMatrix(true, false);
+    bone.parent.getWorldQuaternion(_q3);                  // parent world rotation
+    // delta in the parent's space: qp^-1 * delta * qp, premultiplied onto the bone's local rotation
+    const inv = _q2.copy(_q3).invert();
+    bone.quaternion.premultiply(inv.multiply(_q1).multiply(_q3));
+  };
+  turn(bones.neck, 0.35);
+  turn(bones.head, bones.neck ? 0.65 : 1);
+  for (const e of bones.eyes) turn(e, 0.3);
+}
+
+/**
+ * Anticipation and follow-through (docs/motion.md): the body pitches into an acceleration and settles back after a
+ * stop. Returns the eased pitch in radians; `state` keeps {speed, pitch}. Off under reduced motion.
+ */
+function accelLean(state, speed, dt, reduced, gain = 0.03, max = 0.1) {
+  const accel = dt > 1e-4 ? (speed - state.speed) / dt : 0;
+  state.speed = speed;
+  const target = reduced ? 0 : Math.max(-max, Math.min(max, accel * gain));
+  state.pitch = damp(state.pitch, target, 7, dt);
+  return state.pitch;
+}
 const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
 const WALK_REF = 1.7, RUN_REF = 3.57; // m/s the walk / run clips were authored at
 
@@ -137,6 +201,13 @@ class Agent {
     this.motion = createMotion(homeYaw); // velocity + facing, stepped by the shared motion model
     this.gait = null;
     this.cue = null;
+    this.phase = seededRng('phase:' + clan)() * 10; // seeded: the same island breathes the same way every run
+    this.bones = { head: null, neck: null, eyes: [] };
+    this.look = { yaw: 0, pitch: 0, w: 0 };   // smoothed head look-at (radians, weight)
+    this.route = null; this.routeKey = ''; this.routeIdx = 0;
+    this.shift = 0;                           // weight-shift roll (radians), eased
+    this.lifeGesture = null;                  // idle-life gesture in progress {clip, until}
+    this.directive = null;
   }
 
   async load() {
@@ -154,6 +225,7 @@ class Agent {
       this.body.remove(this.stand);
       this.body.add(model);
       this.model = model;
+      this.bones = findLookBones(model);
       this.clips = gltf.animations || [];
       if (this.clips.length) { this.mixer = new THREE.AnimationMixer(model); this.gait = new GaitLayer(this.mixer, this.clips); }
       this.state = 'loaded';
@@ -163,6 +235,9 @@ class Agent {
       console.warn('[play] agent model failed', this.asset, e);
     }
   }
+
+  /** Head look-at for this agent (see `applyLookTo`). */
+  applyLook(dt, target, reduced = false) { applyLookTo(this.bones, this.look, this.root.position, this.root.rotation.y, target, dt, reduced); }
 
   /** Cross-fades to a contract clip (with the fallback chain). Returns the clip name used or null. */
   play(name) {
@@ -197,6 +272,38 @@ export class ClanAgents {
       this.agents.set(clan, new Agent(clan, { scene, color: camp.color, home: camp.position, homeYaw: camp.rotationY }));
     }
     this.irisModel = null;
+    this.director = null;   // created with the season's seed on the first observation (deterministic life)
+    this.reducedMotion = false;
+    this.lastObs = null;
+    /** Optional speech hook for conversation beats: ({speakerId, key, args}) → the dialogue strip (worldHud.say). */
+    this.onSay = null;
+  }
+
+  /** A public room event (optional fast path for the director; the observation diff covers the same ground). */
+  event(ev, now = 0) { this.ensureDirector(null); this.director.onEvent(ev, now); }
+
+  ensureDirector(obs) {
+    if (this.director) return this.director;
+    const seed = (obs && obs.season && (obs.season.seedCommitment || obs.season.seasonId)) || 'ftf';
+    this.director = new NpcDirector({ seed: String(seed) });
+    return this.director;
+  }
+
+  /** Waypoints [[x, z], ...] for a director move: a world-map place, 'home', 'gather' (plaza ring) or 'edge'. */
+  routeFor(a, move) {
+    const pos = [a.root.position.x, 0, a.root.position.z];
+    const camp = CAMPS.find((c) => c.id === CLAN_ASSET[a.clan]);
+    if (move === 'edge') { const t = a.home.clone().addScaledVector(new THREE.Vector3(-a.home.x, 0, -a.home.z).normalize(), 2.6); return [[t.x, t.z]]; }
+    if (move === 'gather') {
+      const ring = walkGraph().nodes.get('ring:' + camp.angle);
+      const onPlaza = Math.hypot(pos[0], pos[2]) < PLAZA_RADIUS - 0.5;
+      if (onPlaza || !ring) return ring ? [[ring[0], ring[2]]] : [[0, 4.2]];
+      const pts = planRoute(pos, 'scroll') || [];
+      const i = pts.findIndex(([x, z]) => Math.hypot(x - ring[0], z - ring[2]) < 0.3);
+      return i >= 0 ? pts.slice(0, i + 1) : [...pts, [ring[0], ring[2]]];
+    }
+    const place = move === 'home' ? 'camp:' + a.clan : move;
+    return planRoute(pos, place);
   }
 
   /** Iris herself: the player's avatar group gets agent_iris.glb when it is available. */
@@ -213,12 +320,12 @@ export class ClanAgents {
       const idle = mixer ? resolveClip(gltf.animations, 'idle').clip : null;
       const idleAction = idle ? mixer.clipAction(idle) : null;
       if (idleAction) idleAction.play();
-      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null };
+      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { console.warn('[play] Iris model failed', e); }
   }
 
   /** Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips). */
-  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false) {
+  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false, reduced = this.reducedMotion) {
     const m = this.irisModel;
     if (!m) return;
     void running; // the blend follows the speed itself: the run clip appears above the walk speed
@@ -230,7 +337,14 @@ export class ClanAgents {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;
       m.model.rotation.z = moving ? Math.sin(t * 9) * 0.03 : 0;
     }
-    void avatarGroup;
+    // Anticipation / follow-through: lean into a start, settle after a stop (pitch of the model inside the avatar group).
+    if (m.lean) m.model.rotation.x = accelLean(m.lean, speed, dt, reduced);
+    // Look-at: the clan Iris is talking to (world.dialogue), else the look fades out.
+    if (m.bones && avatarGroup) {
+      const partner = this.talking && t < this.talkUntil ? this.agents.get(this.talking) : null;
+      const target = partner ? [partner.root.position.x, partner.root.position.y + 1.55, partner.root.position.z] : null;
+      applyLookTo(m.bones, m.look, avatarGroup.position, avatarGroup.rotation.y, target, dt, reduced);
+    }
   }
 
   /** Public events → short reactions (celebrate a contribution, slump at a break). */
@@ -255,44 +369,99 @@ export class ClanAgents {
       if (best) { this.loading = true; best.load().finally(() => { this.loading = false; }); }
     }
     const t = ctx.now;
+    this.reducedMotion = !!ctx.reducedMotion;
+    const director = this.ensureDirector(obs);
+    if (obs && obs !== this.lastObs) { this.lastObs = obs; director.observe(obs, t); }
+    const positions = new Map([...this.agents.values()].map((a) => [a.clan, [a.root.position.x, a.root.position.z]]));
+    const irisXZ = ctx.irisPos ? [ctx.irisPos[0], ctx.irisPos[2]] : null;
     for (const a of this.agents.values()) {
       const irisNear = ctx.irisPos && Math.hypot(ctx.irisPos[0] - a.home.x, ctx.irisPos[2] - a.home.z) < PLATEAU_RADIUS + 1;
       const talking = this.talking === a.clan && t < this.talkUntil;
       const cue = obs ? clanCue(a.clan, obs, { reaction: this.reactions[a.clan], now: t, talking, irisNear }) : { clip: 'idle', approach: 0, face: 'plaza', tempo: 1, glyph: null, trust: null, mood: 'neutral', state: 'rest' };
       a.cue = cue;
       const T = TEMPERAMENT[a.clan];
-      // Placement: step toward the bridge when trusting or offering, back toward the shelter when not.
-      const toPlaza = new THREE.Vector3(-a.home.x, 0, -a.home.z).normalize();
-      const target = a.home.clone().addScaledVector(toPlaza, cue.approach + 0.6);
-      if (T.fidget === 'pace' && !ctx.reducedMotion && (cue.state === 'rest' || cue.state === 'isolated' || cue.state === 'cold')) {
-        const side = new THREE.Vector3(toPlaza.z, 0, -toPlaza.x);
-        target.addScaledVector(side, Math.sin(t * 0.35 * cue.tempo + a.phase) * 1.4);
-      }
-      // Walk there with the shared motion model (accelerate, brake into the spot, turn at a limited rate)
-      // instead of an exponential glide; the agents never collide, their camp is flat.
+      // An isolated or broken clan keeps to itself: no errands, no meetings.
+      if (cue.state === 'isolated' || cue.state === 'broken') director.clear(a.clan);
+      const dir = director.directive(a.clan, t);
+      a.directive = dir;
       const pos = a.root.position;
-      const wish = steerTo([pos.x, 0, pos.z], [target.x, 0, target.z], 0.12, { speedRef: NPC_SPEED, decel: 2 }) || [0, 0];
-      const step = Math.min(dt, 0.1);
-      stepMotion(a.motion, wish, NPC_SPEED * cue.tempo, step, NPC_MOTION, true);
-      pos.x += a.motion.vel[0] * step; pos.z += a.motion.vel[1] * step;
+      const toPlaza = new THREE.Vector3(-a.home.x, 0, -a.home.z).normalize();
+      const others = [...positions.entries()].filter(([c]) => c !== a.clan).map(([, p]) => p);
+      if (irisXZ) others.push(irisXZ);
+      // Sub-step long frames so a slow device moves the agents the same distance per second.
+      const subSteps = Math.max(1, Math.ceil(dt / 0.05)), step = dt / subSteps;
+      let wish = [0, 0], maxSpeed = NPC_SPEED * cue.tempo;
+      if (dir.move) {
+        // Purposeful walk along the island's walk graph (the same graph the room validates Iris's walks on).
+        const key = dir.move + '|' + (dir.partner || '');
+        if (a.routeKey !== key) { a.route = this.routeFor(a, dir.move); a.routeKey = key; a.routeIdx = 0; }
+        if (!a.route || !a.route.length) { director.arrived(a.clan, t); a.route = null; a.routeKey = ''; }
+        else {
+          while (a.routeIdx < a.route.length) {
+            const last = a.routeIdx === a.route.length - 1;
+            const wp = a.route[a.routeIdx];
+            const w = steerTo([pos.x, 0, pos.z], [wp[0], 0, wp[1]], last ? 0.35 : 0.7, { speedRef: NPC_WALK, decel: 2.5 });
+            if (w) { const l = Math.hypot(w[0], w[1]); wish = last || !l ? w : [w[0] / l, w[1] / l]; break; }
+            a.routeIdx++;
+          }
+          // A meeting partner reached on the way counts as arrival too.
+          const partnerXZ = dir.partner ? positions.get(dir.partner) : null;
+          const metPartner = partnerXZ && dir.move !== 'home' && Math.hypot(partnerXZ[0] - pos.x, partnerXZ[1] - pos.z) < 2.4;
+          if (a.routeIdx >= a.route.length || metPartner) { director.arrived(a.clan, t); a.route = null; a.routeKey = ''; wish = [0, 0]; }
+          maxSpeed = NPC_WALK;
+        }
+      } else {
+        // At rest: the cue's placement on the plateau (toward the bridge when trusting, back when not), with Ash pacing.
+        const target = a.home.clone().addScaledVector(toPlaza, cue.approach + 0.6);
+        if (T.fidget === 'pace' && !ctx.reducedMotion && (cue.state === 'rest' || cue.state === 'isolated' || cue.state === 'cold')) {
+          const side = new THREE.Vector3(toPlaza.z, 0, -toPlaza.x);
+          target.addScaledVector(side, Math.sin(t * 0.35 * cue.tempo + a.phase) * 1.4);
+        }
+        if (dir.act || dir.face) target.copy(pos); // acting or listening: stand still
+        wish = steerTo([pos.x, 0, pos.z], [target.x, 0, target.z], 0.12, { speedRef: NPC_SPEED, decel: 2 }) || [0, 0];
+        a.route = null; a.routeKey = '';
+      }
+      // Local avoidance of the other agents and Iris, then the shared motion model.
+      if (wish[0] || wish[1]) wish = avoidWish([pos.x, pos.z], a.motion.heading, wish, others);
+      for (let k = 0; k < subSteps; k++) { stepMotion(a.motion, wish, maxSpeed, step, NPC_MOTION, true); pos.x += a.motion.vel[0] * step; pos.z += a.motion.vel[1] * step; }
       a.speed = Math.hypot(a.motion.vel[0], a.motion.vel[1]);
-      // Facing: the motion model's facing while walking, the cue's facing (Iris, the plaza, away) at rest.
+      positions.set(a.clan, [pos.x, pos.z]);
+      // Facing: the motion model's facing while walking; the partner, the Scroll, Iris or the cue's facing at rest.
       let yaw;
+      const partnerPos = dir.partner ? positions.get(dir.partner) : null;
       if (a.speed > 0.25) yaw = a.motion.heading;
+      else if (dir.face === 'partner' && partnerPos) yaw = Math.atan2(partnerPos[0] - pos.x, partnerPos[1] - pos.z);
+      else if (dir.face === 'scroll') yaw = Math.atan2(-pos.x, -pos.z);
       else if (cue.face === 'iris' && ctx.irisPos) yaw = Math.atan2(ctx.irisPos[0] - pos.x, ctx.irisPos[2] - pos.z);
       else yaw = Math.atan2(toPlaza.x, toPlaza.z) + (cue.face === 'away' ? Math.PI : 0);
-      if (T.fidget === 'glance' && !ctx.reducedMotion && cue.face !== 'iris' && a.speed <= 0.25) yaw += Math.sin(t * 0.9 + a.phase) > 0.85 ? 0.7 : 0; // Salt keeps glancing sideways
+      if (T.fidget === 'glance' && !ctx.reducedMotion && cue.face !== 'iris' && a.speed <= 0.25 && !dir.face) yaw += Math.sin(t * 0.9 + a.phase) > 0.85 ? 0.7 : 0; // Salt keeps glancing sideways
       let dy = yaw - a.root.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       a.root.rotation.y += dy * (1 - Math.exp(-dt * (a.speed > 0.25 ? 12 : 4)));
       if (a.speed <= 0.25) a.motion.heading = a.root.rotation.y; // so the next walk starts from the real facing
-      // Animation: the gait layer takes over the pose by speed; the cue clip owns the rest.
-      const used = a.play(cue.clip);
+      // Idle life: glances, weight shifts and short gestures, seeded per clan and staggered by the director.
+      const life = dir.idle || { kind: 'none' };
+      if (life.kind === 'gesture' && life.startedAt === t) director.gestureStarted(t);
+      const lifeClip = life.kind === 'gesture' && cue.state === 'rest' && a.speed <= 0.25 ? life.clip : null;
+      const shiftTarget = life.kind === 'shift' && !ctx.reducedMotion ? life.side * 0.035 : 0;
+      a.shift = damp(a.shift, shiftTarget, 2.5, dt);
+      // Speech beat (meeting, contribution): through the dialogue strip when the play layer wires `onSay`.
+      if (dir.say && this.onSay) { try { this.onSay(dir.say); } catch (e) { console.warn('[play] npc say failed', e); } }
+      // Animation: the director's act, an idle-life gesture, or the cue clip; the gait layer owns the walk.
+      const want = dir.act && dir.act !== 'idle' ? dir.act : dir.act === 'idle' ? 'idle' : lifeClip || cue.clip;
+      const used = a.play(want);
       if (a.mixer) {
         const move = a.gait ? a.gait.update(dt, a.speed) : 0;
         for (const [name, act] of a.actions) { act.weight = 1 - move; act.timeScale = cue.tempo; void name; }
         a.mixer.update(dt);
       }
       this.procedural(a, cue, t, dt, used, ctx.reducedMotion);
+      // Look-at: the conversation partner, Iris when near or talking, the Shell of a reveal, or an idle glance.
+      let lookTarget = null;
+      if (partnerPos && (dir.face === 'partner' || dir.move)) lookTarget = [partnerPos[0], 1.55, partnerPos[1]];
+      else if (ctx.irisPos && (talking || (irisNear && cue.face !== 'away') || Math.hypot(ctx.irisPos[0] - pos.x, ctx.irisPos[2] - pos.z) < LOOK_NEAR)) lookTarget = [ctx.irisPos[0], ctx.irisPos[1] + 1.55, ctx.irisPos[2]];
+      else if (dir.look && dir.look.startsWith('sky:')) { const z = ANCHOR_ZONES[Number(dir.look.slice(4)) - 1]; if (z) lookTarget = z.shellPosition.slice(); }
+      else if (life.kind === 'glance') { const ry = a.root.rotation.y + life.yaw; lookTarget = [pos.x + Math.sin(ry) * 5, pos.y + 1.55 + Math.sin(life.pitch) * 5, pos.z + Math.cos(ry) * 5]; }
+      if (a.model) a.applyLook(dt, lookTarget, ctx.reducedMotion);
       // Mind glyph.
       const name = this.i18n.t('agent.' + a.clan);
       const label = cue.glyph ? this.i18n.t('mind.' + cue.glyph) : (cue.trust != null ? this.i18n.t('mind.trust', { n: cue.trust }) : '');
@@ -309,7 +478,8 @@ export class ClanAgents {
     const full = !usedClip; // no clip available: the procedural layer carries the whole pose
     const amp = reduced ? 0.2 : 1;
     const T = TEMPERAMENT[a.clan];
-    let lean = T.lean, bob = 0, sway = 0, roll = 0;
+    if (!a.lean) a.lean = { speed: 0, pitch: 0 };
+    let lean = T.lean + accelLean(a.lean, a.speed, dt, reduced, 0.025, 0.08), bob = 0, sway = 0, roll = 0;
     const tt = t * cue.tempo + a.phase;
     if (full) {
       bob = Math.sin(tt * 1.7) * 0.015;
@@ -326,7 +496,7 @@ export class ClanAgents {
     b.position.y = bob * amp;
     b.rotation.x = THREE.MathUtils.lerp(b.rotation.x, lean, 1 - Math.exp(-dt * 3));
     b.rotation.y = sway * amp;
-    b.rotation.z = roll * amp;
+    b.rotation.z = roll * amp + a.shift; // idle-life weight shift (eased in the update loop)
   }
 
   /** Positions for VFX/audio cues and the chronicle (head height). */
@@ -335,5 +505,5 @@ export class ClanAgents {
     return a ? a.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)) : null;
   }
 
-  stats() { return [...this.agents.values()].map((a) => ({ clan: a.clan, state: a.state, clips: a.clips.map((c) => c.name), clip: a.currentClip, cue: a.cue && a.cue.state })); }
+  stats() { return [...this.agents.values()].map((a) => ({ clan: a.clan, state: a.state, clips: a.clips.map((c) => c.name), clip: a.currentClip, cue: a.cue && a.cue.state, move: a.directive && a.directive.move, act: a.directive && a.directive.act, look: +a.look.w.toFixed(2), bones: { head: !!a.bones.head, neck: !!a.bones.neck, eyes: a.bones.eyes.length } })); }
 }

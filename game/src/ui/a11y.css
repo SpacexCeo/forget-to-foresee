@@ -129,6 +129,9 @@ html[data-palette="safe"] .pl-off small { color: #ff8c6b; }
 html[data-palette="safe"] .wh-root .wh-sign__verified--ok { border-color: #8fd3ff; color: #8fd3ff; }
 html[data-palette="safe"] .wh-root .wh-sign__verified--fail { border-color: #ff8c6b; color: #ff8c6b; }
 
+/* the Accessibility section's own controls: 44 px minimum like the rest of the layer (the shared form styles use 40 px) */
+.ftf-a11y .ftf-choice label, .ftf-a11y .ftf-select, .ftf-a11y .ftf-btn { min-height: var(--ftf-hit-min); }
+
 /* ---------- motor: hold-to-confirm buttons (ui/a11y.js holdToConfirm) ---------- */
 .a11y-hold { position: relative; overflow: hidden; --hold: 0%; }
 .a11y-hold::before {
