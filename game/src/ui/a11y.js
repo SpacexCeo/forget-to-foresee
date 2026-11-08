@@ -20,6 +20,7 @@ export function ensureA11yHost(root) {
   let host = root.querySelector('.ftf-a11y-host');
   if (!host) { host = doc.createElement('div'); host.className = 'ftf-a11y-host'; root.appendChild(host); }
   ensureA11yStyles(doc);
+  loadMotion(); // optional shared motion module: ready by the time the first sheet opens
   return host;
 }
 
@@ -32,6 +33,30 @@ export function reducedMotion(doc = globalThis.document) {
     if (doc && doc.documentElement && doc.documentElement.dataset.motion) return doc.documentElement.dataset.motion === 'reduce';
     return !!(globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches);
   } catch { return false; }
+}
+
+// The shared motion module (Task S, game/src/ui/motion/index.js) is optional at build time: present → the sheets
+// enter and exit through its helpers on its tokens (and it reads the same html[data-motion] switch); absent → the
+// CSS keyframes in a11y.css on the --mo-* variables with local fallbacks.
+const MOTION_MODULES = typeof import.meta.glob === 'function' ? import.meta.glob('./motion/index.js') : {};
+let motionLoading = null, motionModule = null;
+export function loadMotion() {
+  if (motionLoading) return motionLoading;
+  const loader = Object.values(MOTION_MODULES)[0];
+  motionLoading = loader ? loader().then((m) => { if (m && m.installMotionStyles) m.installMotionStyles(); motionModule = m || null; return motionModule; }).catch(() => null) : Promise.resolve(null);
+  return motionLoading;
+}
+/** Enters `el` through the motion module once it is loaded (the host then skips its CSS keyframes); until then the CSS keyframes play. */
+export function motionEnter(el, host, opts = {}) {
+  const m = motionModule;
+  if (!m || !m.enter || !el) { loadMotion(); return null; }
+  if (host) host.dataset.jsMotion = 'true';
+  return m.enter(el, { from: opts.from || 'rise', duration: opts.duration || (m.MOTION ? m.MOTION.duration.slow : 320) });
+}
+/** Exits `el` through the motion module when it is loaded: a promise to await before removing it; null = remove at once. */
+export function motionExit(el, opts = {}) {
+  const m = motionModule;
+  return m && m.exit && el ? m.exit(el, { to: opts.to || 'fade' }) : null;
 }
 
 let fontLoading = null;

@@ -10,7 +10,7 @@ import { renderMsg, reasonText } from './i18n.js';
 import { signsByShell, signForShell } from './hub.js';
 import { confidenceBand } from '../ui/world-hud/from-obs.js';
 import { logogramCanvas } from './logogram.js';
-import { ensureA11yHost, holdToConfirm, reducedMotion } from '../ui/a11y.js';
+import { ensureA11yHost, holdToConfirm, reducedMotion, motionEnter } from '../ui/a11y.js';
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
 const roman = (n) => ROMAN[(n || 1) - 1];
@@ -250,9 +250,11 @@ export function createSimpleMode({ root, ctx, session, hub, fly, narration = nul
       if (p.kind === 'heir') box.append(el(doc, 'p', { class: 'a11y-why', text: i18n.t('a11y.hold') }));
     }
     const focused = card && doc.activeElement && card.contains(doc.activeElement) ? doc.activeElement.getAttribute('data-simple') : null;
+    const fresh = !card || card.getAttribute('data-kind') !== p.kind;
     if (card) card.remove();
     host.append(box);
     card = box;
+    if (fresh) motionEnter(box, host, { from: 'rise' }); // a new proposal rises in; a re-render of the same one stays put
     if (focused) { const again = box.querySelector(`[data-simple="${focused}"]`); if (again && again.focus) again.focus(); }
     speakProposal(p);
     scheduleAuto(p);

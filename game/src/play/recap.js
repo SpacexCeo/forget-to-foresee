@@ -4,7 +4,7 @@
 // key letters. Spoken through the narration when it is on. Pure part: recapFor(); the sheet is a small
 // self-styled panel in the shared accessibility host (ui/a11y.css). No rule is evaluated here.
 import { renderMsg } from './i18n.js';
-import { ensureA11yHost, reducedMotion } from '../ui/a11y.js';
+import { ensureA11yHost, reducedMotion, motionEnter, motionExit } from '../ui/a11y.js';
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
 const roman = (n) => ROMAN[(n || 1) - 1];
@@ -129,9 +129,11 @@ export function createRecap({ root, ctx, session, hub = null, narration = null, 
       if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
     });
+    const fresh = !sheet;
     if (sheet) sheet.remove();
     host.append(body);
     sheet = body;
+    if (fresh) { motionEnter(body, host, { from: 'scale' }); if (scrim) motionEnter(scrim, host, { from: 'fade' }); } // docs/motion.md: panel open = scale + rise
     if (focused) { const again = body.querySelector(`[data-recap="${focused}"]`); if (again && again.focus) again.focus(); }
     live.textContent = where + ' ' + next;
   }
@@ -153,8 +155,9 @@ export function createRecap({ root, ctx, session, hub = null, narration = null, 
   function close() {
     if (!open) return;
     open = false;
-    if (sheet) { sheet.remove(); sheet = null; }
-    if (scrim) { scrim.remove(); scrim = null; }
+    const gone = [sheet, scrim].filter(Boolean);
+    sheet = null; scrim = null;
+    for (const g of gone) { const p = motionExit(g, { to: 'scale' }); if (p) p.then(() => g.remove()); else g.remove(); } // close = exit scale (motion module), else at once
     button.setAttribute('aria-expanded', 'false');
     doc.body.classList.remove('ftf-recap-open');
     if (narration) narration.cancel();

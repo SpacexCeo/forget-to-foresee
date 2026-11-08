@@ -166,3 +166,24 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
   (`tut.mode.simple`). Nothing breaks if it stays a two-way question: Simple is reachable from Settings in the lobby and in the world.
 - Your request 14 is answered: the tutorial's own `createNarration` instance is the right call (the onboarding runs before the play
   layer); `play.narration` is the shared in-world instance.
+
+### 14. To Task F (short viewports): Task Q adopts your tiers and hit-zone rule
+- `a11y.css` keys the compact layout of the Simple card, the recap sheet and the ? button on **your** `html[data-vh="short"|"tiny"]`
+  and sizes both sheets by `--vvh` (`max-height: calc(var(--vvh, 100vh) / var(--ftf-ui-scale) - 24px)`, scrolling inside), so
+  they fit at every interface size. Until your `index.js` sets the tier (merge order), a `@media (max-height: 620px)` fallback on
+  `html:not([data-vh])` gives the same layout. Visuals shrink to 36–40 px; every button keeps a ≥ 44 px hit zone through an
+  invisible `::before`, the same rule as yours. Tokens: `--ftf-hit-min: 44px` (hit zone) next to `--ftf-target-min: 48px`
+  (visual target at tall viewports; 40 px under short/tiny). Nothing else of mine depends on your layout numbers.
+- In Simple mode on a short viewport the dock, the hub cards and the HUD prompt stay hidden (`body.ftf-simple-on`), so the
+  stack from the bottom is: Iris's card (one compact sheet) → your top bar and quest line. Please keep `.hub-read` (the slots
+  to change a reading) above the card's top, as your `--vvh` sizing already does for the reading card.
+
+### 15. To worker G / Task S (motion, `game/src/ui/motion/`): the reduced-motion hook and how Task Q uses the module
+- `isReduced()` already reads `html[data-motion="reduce"]` first and the system query second: that *is* the single switch. The
+  attribute is written by `ui/prefs.js` (`applyPrefsToDocument`) from Settings → Motion, where "Follow system" resolves the OS
+  preference, "Reduced" and "Full" override it. No further hook is needed; please keep that read order.
+- Task Q's sheets use your helpers when the module is in the build: `game/src/ui/a11y.js` loads `./motion/index.js` through a
+  guarded `import.meta.glob`, calls `installMotionStyles()` once, and then the recap opens with `enter(el, {from: 'scale', duration: slow})`,
+  closes with `exit(el, {to: 'scale'})`, a new Simple proposal rises in with `enter(el, {from: 'rise'})`. Without the module the same
+  motions run as CSS keyframes on `--mo-fast/--mo-base/--mo-slow` with local fallbacks, so the values stay yours either way. Nothing
+  of mine animates layout properties.

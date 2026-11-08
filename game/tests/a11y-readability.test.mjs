@@ -65,7 +65,8 @@ test('prefs: accessibility keys validate, persist and fall back; the document mi
 test('a11y.css: the stylesheet reacts to every pref attribute and defines the shared tokens', () => {
   for (const attr of ['data-ui-scale', 'data-contrast="high"', 'data-font="readable"', 'data-palette="safe"']) assert.ok(css.includes(`html[${attr}`) || css.includes(`html:not([${attr}`), attr);
   for (const tok of ['--ftf-ui-scale', '--ftf-body-min: 16px', '--ftf-target-min: 48px', '--a11y-good', '--a11y-bad', '--a11y-key', '--a11y-info']) assert.ok(css.includes(tok), tok);
-  assert.match(css, /zoom: var\(--ftf-ui-scale\)/, 'panels outside the world HUD zoom by the scale');
+  assert.match(css, /zoom: var\(--ftf-zoom\)/, 'panels outside the world HUD zoom by the scale (capped at 150 % on phones)');
+  assert.match(css, /--ftf-zoom: min\(var\(--ftf-ui-scale\), 1.5\)/);
   assert.match(css, /font-family: "Atkinson Hyperlegible"/);
   assert.match(css, /--wh-stroke-title: 0px/, 'the readable font drops the serif stroke');
   assert.match(css, /backdrop-filter: none !important/, 'high contrast removes translucency');
