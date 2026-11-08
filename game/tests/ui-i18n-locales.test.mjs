@@ -21,6 +21,7 @@ function ownKeys(locale, source) {
 const SAME_IT = new Set(['common.demo', 'lobby.nav.clan', 'panel.clan.title', 'settings.quality.auto', 'flow.step.tutorial',
   'ctor.palette', 'line.askNo', 'wh.trial.arena', 'wh.sign.seconds', 'wh.top.menu']);
 const SAME_AS_EN = new Set([
+  'hub.card.offer.body', // pure placeholder: '{offer}'
   'app.title.line1', 'app.title.line2', 'app.title.full', 'lang.en', 'lang.ru', 'lang.uk', 'lang.it', 'lang.zh',
   'lang.short.en', 'lang.short.ru', 'lang.short.uk', 'lang.short.it', 'lang.short.zh',
   'shell.0', 'shell.1', 'shell.2', 'shell.3', 'tut.readLine', 'wh.raw', 'wh.trial.wordsValue', 'wh.sign.reading',

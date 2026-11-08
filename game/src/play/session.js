@@ -19,7 +19,7 @@ export class PlaySession {
     this.bus = new CommandBus(transport, { sleep });
     this.obs = null;
     this.actions = [];
-    this.flags = { reachedScroll: false, heldFragment: false, talked: false, asked: false, anchored: false, skipOnboarding };
+    this.flags = { reachedScroll: false, heldFragment: false, talked: false, asked: false, anchored: false, skipOnboarding, hub: false };
     this.client = { zone: 'island', pos: null, shellSpots: null };
     this.trail = null;
     this.spot = null;

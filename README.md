@@ -12,9 +12,9 @@
 
 ## Judge in 5 minutes
 
-Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; ~60 MB loads before you can play, models keep streaming in afterwards and labeled greybox stand-ins fill in until they arrive). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge`.
+Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; ~60 MB loads before you can play, models keep streaming in afterwards and labeled greybox stand-ins fill in until they arrive). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
 
-**Open** https://spacexceo.github.io/forget-to-foresee/?demo=judge — a fixed season in Novice mode with fresh hints.
+**Open** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk — a fixed season in Novice mode with fresh hints, played by walking the island. This table was verified step by step. The default play mode is the Shell hub (see [Play through the Shell hub](#play-through-the-shell-hub)); `&mode=walk` keeps the walking play the table describes.
 
 | # | Do | See |
 |---|---|---|
@@ -26,6 +26,18 @@ Everything runs in the browser from the published build (desktop Chrome, Edge or
 | 6 | Press **T** twice (the second press confirms "End the tick anyway?"); repeat until **Trial 4 of 17** | Log at trial 3: ***Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓*** and *The gift went to Frost.* Press **V** → **Resolved** tab: **Sign #1 · Revealed · Verified ✓ · Came true: Gift of 20 at Shell II, trial 3.** |
 
 That is the loop: read a sign → anchor silk on it → the trial ends → the event is revealed with its Merkle proof against the root committed before you arrived. From here: **V** shows every sign (Novice: one plain line; Pro: the four slots with confidence), at an anchor zone **E → Enter Shell** takes you inside to the glass where the Guest draws the sign and you can **Ask the Guests** whether a stroke means a meaning; **H** lists every key; **L** switches EN/RU; **Settings** switches Novice/Pro and the five UI languages.
+
+### Play through the Shell hub
+
+The default mode (owner design, 08.11): open `/?demo=judge` without `&mode=walk`.
+
+1. **Fly into a Shell.** The Shell dock on the right shows the four Shells; a gold one has a sign waiting. Click it or press <kbd>F</kbd>.
+2. **Read the sign.** Inside, the Guest draws a round logogram on the glass. The reading card shows Iris's guess for each of the four slots (Place, Action, Power, Delay) and how sure she is. Change any slot you read differently with ‹ ›.
+3. **Stake 10 silk on your reading** (<kbd>F</kbd>). The card shows where it lands ("Gift at Shell II, trial 3").
+4. **Leave the Shell** (<kbd>T</kbd>). Leaving ends the trial: the trial's event is revealed and checked against the Merkle root sealed before trial 1 ("Verified ✓" in Signs & Visions, <kbd>V</kbd>). Trials with no new sign pass on their own; they stop for a new sign or a one-click decision (an offer, your fragment, Ash's Key at the trial-13 crisis, the final vote).
+5. **The Price of Memory** (<kbd>M</kbd>): forget a memory forever to see future signs as a vision. The memory goes to auction as a shard.
+
+**See:** silk changes after each reveal, the log fills with the clans' moves, and from trial 3 the revealed signs carry "Verified ✓". The season ends after the vote on trial 17. `tests/client/hub.test.mjs` plays a whole season only through the hub with zero rejected commands.
 
 **Second path, the agent API (no browser, about 1 minute):**
 ```bash
@@ -92,7 +104,7 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 cd game
 npm ci
 npm test            # 260 tests, ~12 s
-npm run dev         # http://localhost:5173/        (judge path: /?demo=judge; skip the lobby: /?play=direct)
+npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
 **See:** `# tests 260` / `# pass 260` / `# fail 0`; `✓ built in …s`.
@@ -102,7 +114,7 @@ What the 260 tests cover:
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
 
-Dev URL parameters: `?demo=judge`, `?play=direct`, `?seed=<32 hex>`, `?lang=en|ru`, `?hud=old`, `?hints=reset`, `?tier=ultra|high|low`, `?motion=reduce`, `?view=overview|camp|close`. **F3** opens the dev HUD (draw calls and triangles against the 120 / 500k budgets, asset states).
+Dev URL parameters: `?demo=judge`, `?mode=walk` (walking play instead of the Shell hub), `?play=direct`, `?seed=<32 hex>`, `?lang=en|uk|ru|it|zh`, `?hud=old`, `?hints=reset`, `?tier=ultra|high|low`, `?motion=reduce`, `?view=overview|camp|close`. **F3** opens the dev HUD (draw calls and triangles against the 120 / 500k budgets, asset states).
 
 ### Agent API
 ```bash
@@ -138,10 +150,11 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
 
 | Key | Action |
 |---|---|
-| **W A S D** / click the ground / tap | walk; **Shift** run |
+| **W A S D** / click the ground / tap | walk; **Shift** run; on phones the run button (bottom right), a double tap or a far tap runs |
+| **F** | Shell hub: fly into the gold Shell; inside, stake 10 silk on your reading |
 | **G** | walk to the current goal |
 | **E** | do the highlighted action; **1–9** pick another from the context menu |
-| **M** / **V** / **T** | Memories · Signs & Visions · end the trial (press twice to confirm while attention is left) |
+| **M** / **V** / **T** | Memories · Signs & Visions · end the trial (press twice to confirm while attention is left); in the Shell hub **T** leaves the Shell, which ends the trial |
 | **← →** / right-drag / one-finger drag | rotate the camera (limited); **↑ ↓** / wheel / pinch / **+ −** zoom from the overview down to third person (never first person) |
 | **I** | inspect the nearest hero object up close; **R** resets the camera |
 | **H** / **L** / **Esc** / **F3** | help · EN⇄RU · close / stop / menu · dev HUD |

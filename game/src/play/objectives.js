@@ -80,10 +80,45 @@ export function currentGoal(obs, flags = {}) {
   const s = obs.season;
   if (s.phase === 'intro') return { id: 'intro', key: 'goal.intro', args: {}, hintKey: 'goal.intro.hint', hintArgs: {}, target: null };
   if (s.phase === 'end') return { id: 'season_over', key: 'goal.season_over', args: { outcome: s.outcome }, hintKey: s.heir == null ? 'goal.season_over.hint' : 'goal.season_over.done', hintArgs: {}, target: null };
+  if (flags.hub) return hubGoal(obs, flags);
   if (!flags.skipOnboarding) {
     for (const id of ONBOARDING) if (!stepDone(id, obs, flags)) return onboardingGoal(id, obs, flags);
   }
   return dynamicGoal(obs);
+}
+
+/** The Shell-first onboarding (play/hub.js): fly into a Shell → stake on the reading → leave. */
+export const ONBOARDING_HUB = Object.freeze(['fly', 'stake', 'leave']);
+
+/** The Shell whose sign waits for the player: the newest sign Iris reads for a Shell not yet staked there. */
+function waitingShell(obs) {
+  const staked = new Set(((obs.iris && obs.iris.anchors) || []).map((a) => a.shell + ':' + a.tick));
+  const signs = (obs.prophecies || []).filter((p) => p.impliedAnchor && p.impliedAnchor.tick >= obs.season.tick)
+    .sort((a, b) => (b.vision - a.vision) || (b.publishedAt - a.publishedAt));
+  const open = signs.find((p) => !staked.has(p.impliedAnchor.shell + ':' + p.impliedAnchor.tick));
+  return open ? open.impliedAnchor.shell : null;
+}
+
+/** Goals in the Shell hub: the same priorities, phrased as flights instead of walks. */
+export function hubGoal(obs, flags = {}) {
+  const s = obs.season, iris = obs.iris || {};
+  const inShell = obs.you && obs.you.zone === 'shell';
+  const g = (id, args = {}, target = null, hintArgs = {}, extra = {}) => ({ id, key: 'hub.goal.' + id, args, hintKey: 'hub.goal.' + id + '.hint', hintArgs, target, ...extra });
+  if (s.phase === 'vote') return g('vote');
+  const wait = waitingShell(obs);
+  if (!flags.skipOnboarding) {
+    const step = (id) => ({ step: ONBOARDING_HUB.indexOf(id) + 1, steps: ONBOARDING_HUB.length, onboarding: true });
+    const staked = (iris.anchors || []).length > 0 || !!flags.anchored;
+    if (!inShell && !staked && s.tick === 1) return g('fly', { shell: ROMAN[(wait || 1) - 1] }, 'shell:' + (wait || 1), {}, step('fly'));
+    if (inShell && !staked && s.tick === 1) return g('stake', {}, null, {}, step('stake'));
+    if (inShell && s.tick === 1) return g('leave', {}, null, {}, step('leave'));
+  }
+  if (inShell) return g('inside', { shell: ROMAN[(obs.you.shell || 1) - 1] });
+  const rel = (obs.relationships && obs.relationships.clans) || [];
+  const ash = rel.find((c) => c.clan === 'ash');
+  if (ash && ash.isolated && !(iris.ashKey && iris.ashKey.known)) return g('ash_key', { have: iris.keyVision ? iris.keyVision.confidentCells : 0, need: iris.keyVision ? iris.keyVision.needCells : 8 });
+  if (wait && iris.attention > 0) return g('fly_next', { shell: ROMAN[wait - 1] }, 'shell:' + wait);
+  return g('wait', { tick: s.tick, ticks: s.ticks });
 }
 
 /** After onboarding: the most pressing thing, by priority. */

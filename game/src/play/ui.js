@@ -74,7 +74,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
   function renderContext() {
     const opts = session.options;
-    ctxEl.hidden = opts.length < contextMin || !!panel;
+    ctxEl.hidden = opts.length < contextMin || !!panel || !!(handlers.contextHidden && handlers.contextHidden());
     if (ctxEl.hidden) return;
     const di = session.defaultIndex;
     ctxEl.replaceChildren(el('h3', { text: spotTitle(session.spot) }), el('ol', {}, opts.slice(0, 9).map((o, i) => {
@@ -192,6 +192,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
 
   async function endTick(confirmed = false) {
+    if (handlers.onEndTick) return handlers.onEndTick(); // the Shell hub: T leaves the Shell or lets time pass
     const obs = session.obs;
     if (!obs || obs.season.phase !== 'play') return;
     if (!confirmed && obs.iris.attention > 0 && Date.now() - endConfirm > 4000) { endConfirm = Date.now(); flash(t('endtick.confirm', { n: obs.iris.attention })); return; }
@@ -256,7 +257,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     if (code === 'KeyV') { toggle('vision'); return true; }
     if (code === 'KeyT') { endTick(); return true; }
     if (code === 'KeyH') { helpEl.hidden = !helpEl.hidden; return true; }
-    if (code === 'KeyL') { i18n.setLocale(i18n.locale === 'ru' ? 'en' : 'ru'); return true; }
+    if (code === 'KeyL') { const ls = i18n.locales || ['en', 'ru']; i18n.setLocale(ls[(ls.indexOf(i18n.locale) + 1) % ls.length]); return true; }
     if (code === 'KeyG') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); return true; }
     return false;
   }
