@@ -42,8 +42,10 @@ for (const [name, query, opts] of CASES) {
 test('QA-018 walk and run speeds match the design (1.7 m/s, run ×2.1)', { timeout: 600000 }, async () => {
   const g = await openGame('?demo=judge&mode=walk&play=direct');
   try {
+    // Open plaza, facing +Z: nothing to hit for 20 m. Each run starts from rest.
     const measure = async (run) => {
-      await g.page.evaluate((r) => { const c = window.__ftf; c.player.run = r; window.__sp = []; let n = 0; const tick = () => { c.player.step([0, -1], 1 / 30); window.__sp.push(Math.hypot(c.player.vel[0], c.player.vel[1])); if (++n < 90) tick(); }; tick(); }, run);
+      await g.teleport([0, 0, -4]);
+      await g.page.evaluate((r) => { const c = window.__ftf; c.player.run = r; c.player.vel = [0, 0]; window.__sp = []; for (let n = 0; n < 90; n++) { c.player.step([0, 1], 1 / 30); window.__sp.push(Math.hypot(c.player.vel[0], c.player.vel[1])); } }, run);
       return g.page.evaluate(() => Math.max(...window.__sp));
     };
     const walk = await measure(false), runSpeed = await measure(true);
