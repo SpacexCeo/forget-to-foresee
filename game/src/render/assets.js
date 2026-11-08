@@ -160,6 +160,14 @@ export class AssetLibrary {
    * @param {{available?:Record<string,number>, onTemplate?:(name:string, scene:THREE.Object3D)=>void}} o
    *   onTemplate: look-dev hook run once per parsed template (material upgrades), before instances clone it.
    */
+  /** Build-time size in bytes of the file an asset name resolves to (variant and override aware), or undefined. */
+  bytesOf(name) {
+    const base = modelOverrides[name] && this.available[modelOverrides[name]] ? modelOverrides[name] : name;
+    const file = modelVariant && this.available[base + modelVariant] ? base + modelVariant : base;
+    const v = this.available[file];
+    return typeof v === 'number' ? v : undefined;
+  }
+
   constructor({ available = MODEL_FILES, onTemplate = null } = {}) {
     this.entries = new Map();
     this.onTemplate = onTemplate;
@@ -355,7 +363,7 @@ export class PropInstance {
 /* ---------- streaming ---------- */
 
 export class AssetStreamer {
-  constructor({ library, camera, maxConcurrent = 2, cacheBytes = 512 * 1024 * 1024, interval = 0.25, prefetchRadius = 14, releaseAfter = 8 }) {
+  constructor({ library, camera, maxConcurrent = 3, cacheBytes = 512 * 1024 * 1024, interval = 0.25, prefetchRadius = 14, releaseAfter = 8 }) {
     this.library = library; this.camera = camera;
     this.maxConcurrent = maxConcurrent; this.interval = interval; this.prefetchRadius = prefetchRadius; this.releaseAfter = releaseAfter;
     this.instances = [];
@@ -402,6 +410,7 @@ export class AssetStreamer {
           loadDistance: LOAD_DISTANCE[inst.def.kind] ?? 80,
           focusDistance: focus ? Math.max(0, focus.distanceTo(inst.center) - inst.radius) : Infinity,
           prefetchRadius: this.prefetchRadius,
+          bytes: this.library.bytesOf(name),
         });
       });
       const p = assetPriority(ps);
@@ -469,7 +478,7 @@ export class AssetStreamer {
     for (const name of names) {
       const e = this.library.get(name);
       s[e.state] = (s[e.state] || 0) + 1;
-      s.list.push({ name, state: e.state, progress: e.progress, priority: this.priority.get(name) ?? -1, error: e.error });
+      s.list.push({ name, state: e.state, progress: e.progress, priority: this.priority.get(name) ?? -1, error: e.error, bytes: this.library.bytesOf(name) });
     }
     return s;
   }

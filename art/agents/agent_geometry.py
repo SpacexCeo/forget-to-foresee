@@ -503,12 +503,17 @@ def body_skeleton(body=BODY, with_arms=True):
             A = arm(side, body)
             s = v(A["S"], 0.056)
             e = v(A["E"], 0.044)
-            w = v(A["W"], 0.033)
-            p = v(A["palm"], (0.040, 0.016))
-            t = v(A["tip"], (0.032, 0.012))
-            th = v(A["W"] + A["dir"] * 0.05 + Vector((0, -0.035, 0)) + A["inward"] * 0.01,
-                   0.013)
-            edges += [(upp, s), (s, e), (e, w), (w, p), (p, t), (w, th)]
+            # readable stylized hand (owner 08.11): a slightly larger palm, the index finger
+            # split from a block of three, and a two-segment thumb turned forward; the finger
+            # bones (agent_rig.finger_layout) and their weighting follow the same lines
+            fwd = Vector((0, -1, 0))
+            w = v(A["W"], 0.034)
+            p = v(A["palm"], (0.045, 0.018))
+            ix = v(A["tip"] + fwd * 0.019 + A["dir"] * 0.004, (0.0115, 0.010))
+            fg = v(A["tip"] + fwd * -0.011, (0.023, 0.011))
+            tb = v(A["W"] + A["dir"] * 0.030 + fwd * 0.018 + A["inward"] * 0.008, 0.0155)
+            tt = v(A["W"] + A["dir"] * 0.058 + fwd * 0.040 + A["inward"] * 0.010, 0.0115)
+            edges += [(upp, s), (s, e), (e, w), (w, p), (p, ix), (p, fg), (w, tb), (tb, tt)]
         L = leg(side, body)
         hp = v(L["H"], body["hip"][1])
         kn = v(L["K"], body["knee"][1])
@@ -942,6 +947,26 @@ def build_face(ag, body=BODY, hair=None):
     return head
 
 
+def paint_hands(obj, skin, body=BODY):
+    """Bare hands in skin colour (the suit colour made them read as dark sticks against the
+    cloaks): every body vertex past the wrist, with a short blend over the cuff."""
+    me = obj.data
+    col = me.color_attributes["Col"]
+    arms = [arm(s, body) for s in (-1, 1)]
+    for lp, cd in zip(me.loops, col.data):
+        p = me.vertices[lp.vertex_index].co
+        k = 0.0
+        for A in arms:
+            along = (p - A["W"]).dot(A["dir"])
+            radial = ((p - A["W"]) - A["dir"] * along).length
+            if radial < 0.09 and along > -0.02:
+                k = max(k, min(1.0, (along + 0.02) / 0.025))
+        if k > 0:
+            r = cd.color
+            cd.color = (r[0] + (skin[0] * 0.95 - r[0]) * k, r[1] + (skin[1] * 0.95 - r[1]) * k,
+                        r[2] + (skin[2] * 0.95 - r[2]) * k, 1.0)
+
+
 def paint_face(obj, skin):
     """Hand-painted skin: a soft warm blush on the cheeks and the nose tip, slightly
     cooler eye sockets. Writes into the part's Col attribute (baked into the albedo)."""
@@ -967,7 +992,8 @@ def build_body(ag, body=BODY, suit_color="suit", hair=None):
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bpy.data.objects.remove(obj)
-    ag.add("body", bm, "body", "skin", suit_color, rough=0.55, collide=("all",))
+    body_obj = ag.add("body", bm, "body", "skin", suit_color, rough=0.55, collide=("all",))
+    paint_hands(body_obj, ag.pal["skin"], body)
     # the smooth face head is visual only; garments keep conforming to the plain egg
     head = ag.add("head", build_face(ag, body, hair), "body", "skin", "skin", rough=0.5,
                   collide=(), smooth=True)

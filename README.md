@@ -21,7 +21,7 @@ before the player's nonce is sent and reveals them at the end, so anyone can rec
 
 ## Judge in 5 minutes
 
-Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; ~60 MB loads before you can play, models keep streaming in afterwards and unlabeled greybox stand-ins fill in until they arrive; place names are on the map, key **N**). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
+Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; the loading screen paints at once, the lobby appears after about 145 KB of JavaScript (gzipped) and the 3D world loads behind it; the models stream in afterwards, the first view's camps and terrain first and the two 20 MB heroes later, with unlabeled greybox stand-ins until they arrive; place names are on the map, key **N**). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
 
 **Open** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk — a fixed season in Novice mode with fresh hints, played by walking the island. This table was verified step by step. The default play mode is the Shell hub (see [Play through the Shell hub](#play-through-the-shell-hub)); `&mode=walk` keeps the walking play the table describes.
 
@@ -58,7 +58,7 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 460`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 469`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
 
 ---
 
@@ -115,13 +115,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 460 tests, ~20 s
+npm test            # 469 tests, ~20 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `# tests 460` / `# pass 460` / `# fail 0`; `✓ built in …s`.
+**See:** `# tests 469` / `# pass 469` / `# fail 0`; `✓ built in …s`.
 
-What the 460 tests cover (the breakdown below is the 260 of the first measurement; 200 were added on 08.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers and QA regressions):
+What the 469 tests cover (the breakdown below is the 260 of the first measurement; 209 were added on 08.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers and QA regressions):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
