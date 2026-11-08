@@ -128,6 +128,18 @@ export class ShotRunner {
     this.cues.push(cue);
   }
 
+  /**
+   * Puts the game's follow camera straight onto its target. The rig eases its focus and its collision pull-in
+   * over seconds, so after a jump (a teleport, a flight, a relocation) it would otherwise sit inside Iris's
+   * head or in the rock for a while; a cut must land on a settled frame.
+   */
+  snapCamera() {
+    const rig = this.game && this.game.rig;
+    if (!rig) return;
+    rig.smoothFocus.set(0, 0, 0); // the rig treats a zero focus as "not started" and snaps to the target
+    rig.actualDist = rig.dist;
+  }
+
   /** The camera pose of the current shot time, applied after the rig has placed the game camera. */
   applyCamera() {
     if (!this.pose || !this.shot) return;
@@ -234,8 +246,10 @@ export class ShotRunner {
         const p = g.player; p.pos = a.pos.slice(); p.prevPos = a.pos.slice(); p.lastSafe = a.pos.slice(); p.vy = 0;
         if (a.heading != null) p.heading = a.heading;
         if (play) play.session.trail && play.session.trail.reset(p.pos);
+        this.snapCamera();
         break;
       }
+      case 'snap': this.snapCamera(); break;
       case 'rig': { const r = g.rig; if (a.dist != null) r.dist = a.dist; if (a.yaw != null) r.yaw = a.yaw; if (a.pitch != null) r.pitchOverride = a.pitch; if (a.pitch === null) r.pitchOverride = null; break; }
       case 'ui': this.setUi(a.mode); break;
       case 'hide': this.hide(a.what); break;
@@ -265,7 +279,12 @@ export class ShotRunner {
     this.attach();
     this.wrapAudio();
     this.runActions();
+    const before = this.game ? this.game.player.pos.slice() : null;
     this.clock.step();
+    if (before) {
+      const after = this.game.player.pos;
+      if (Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2]) > 5) { this.snapCamera(); this.game.rig.update(0, new THREE.Vector3(after[0], after[1] + 1.1, after[2])); }
+    }
     await this.clock.settle(3);
     this.wrapAudio();
     if (this.overlay) this.overlay.update(this.t);

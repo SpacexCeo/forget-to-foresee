@@ -60,7 +60,8 @@ export const SETUP = {
 export const WALK = {
   /** Iris at Shell I's pad on the plaza rim, 10 silk staked on trial 3 through the pad's E option. */
   staked: [
-    { do: 'teleport', pos: [4.45, 0, 4.45], heading: -Math.PI * 0.75 }, { do: 'frames', n: 12 }, { do: 'until', pred: 'spot', value: 'anchor', max: 60 },
+    // on the pad's outer side: inside the zone (2.1 m of the pad), outside the Scroll's reach (4.8 m of the centre), clear of the anchor's collider
+    { do: 'teleport', pos: [5.55, 0, 5.55], heading: -Math.PI * 0.75 }, { do: 'frames', n: 12 }, { do: 'until', pred: 'spot', value: 'anchor', max: 60 },
     { do: 'key', code: 'KeyE' }, { do: 'until', pred: 'anchored', max: 300 }, { do: 'frames', n: 10 },
   ],
   /** Three trials ended (T twice each: the second press confirms): trial 4, the reveal verified, silk 72. */

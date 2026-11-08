@@ -21,7 +21,7 @@ function pw() {
 
 export const BROWSER_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];
 /** On a machine with a GPU, pass --gpu: the flags gpu-probe.mjs found (tools/capture/.gpu-args.json), else ANGLE's default back end. */
-export const GPU_ARGS = ['--use-angle=default', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];
+export const GPU_ARGS = ['--use-angle=default', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--disable-gpu-watchdog', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];
 export function browserArgs(gpu) {
   if (process.env.FTF_CHROMIUM_ARGS) return process.env.FTF_CHROMIUM_ARGS.split(/\s+/).filter(Boolean);
   if (!gpu) return BROWSER_ARGS;
@@ -80,13 +80,18 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     const preroll = Math.round((shot.preroll ?? 0) * fps);
     const pipe = openFramePipe(join(outDir, shot.name + '.mp4'), { fps });
     t = Date.now();
-    const stepAndWait = () => page.evaluate(async () => {
-      const r = await window.__ftfCinematic.step();
-      // Make the GPU finish this frame before the screenshot (SwiftShader runs it only now).
-      const gl = window.__ftf.renderer.getContext();
-      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-      return r;
-    });
+    const stepAndWait = async () => {
+      const r = await page.evaluate(async () => {
+        const t = await window.__ftfCinematic.step();
+        // Make the GPU finish this frame before the screenshot (SwiftShader runs it only now).
+        const gl = window.__ftf.renderer.getContext();
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+        return { t, lost: gl.isContextLost() || !!window.__ftfCinematic.runner.contextLost };
+      });
+      // A lost context would leave the HUD over a black canvas for the rest of the shot: fail loudly instead.
+      if (r.lost) throw new Error(`WebGL context lost in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${result.frames}); renderer ${result.renderer}`);
+      return r.t;
+    };
     for (let i = 0; i < preroll; i++) await stepAndWait();
     result.timings.prerollMs = Date.now() - t; t = Date.now();
     let lastReport = Date.now();
@@ -109,6 +114,11 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify(result));
     log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages`);
     return result;
+  } catch (e) {
+    result.failed = String(e.message);
+    try { Object.assign(result, { errors: await page.evaluate(() => window.__ftfCinematic.errors()), wallMs: Date.now() - wall0 }); } catch { /* page gone */ }
+    writeFileSync(join(outDir, shot.name + '.failed.json'), JSON.stringify(result));
+    throw e;
   } finally {
     await browser.close();
   }
