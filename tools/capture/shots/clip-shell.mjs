@@ -12,6 +12,10 @@ export default {
   shots: [
     {
       name: 'shell', duration: D, url: JUDGE_URL, ui: 'game',
+      camera: [
+        { from: 0, to: 1.6, type: 'rig' },
+        { from: 1.6, to: D, type: 'dolly', path: [[1.1, 303.5, 13.8], [0.9, 303.2, 11.6]], look: [0, 303.9, -10.7], fov: [42, 40], ease: 'inOutSine', minHeight: 300 },
+      ],
       actions: [
         { at: 0.0, do: 'rig', dist: 22, yaw: 0.35 },
         { at: 0.8, do: 'click', selector: '.hub-shells button[data-shell="1"]' },

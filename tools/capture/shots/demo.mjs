@@ -31,6 +31,13 @@ export default {
       // says trial 3 → F stakes 10 silk → T leaves → trial 2, a new sign glows → T lets trial 2 pass → trial 3
       // stops on Moss's loan card (cut).
       name: 'first-shell', duration: FIRST, url: JUDGE_URL, ui: 'game',
+      // The game's own camera on the island; inside the Shell (where the follow camera is pinned against the entrance
+      // wall) a slow push over Iris's shoulder toward the glass, switched while the flight fade covers the screen.
+      camera: [
+        { from: 0, to: 3.8, type: 'rig' },
+        { from: 3.8, to: 16.5, type: 'dolly', path: [[1.1, 303.5, 13.8], [0.9, 303.2, 11.6]], look: [0, 303.9, -10.7], fov: [42, 40], ease: 'inOutSine', minHeight: 300 },
+        { from: 16.5, to: FIRST, type: 'rig' },
+      ],
       actions: [
         { at: 0.0, do: 'rig', dist: 24, yaw: 0.35 },
         { at: 3.0, do: 'click', selector: '.hub-shells button[data-shell="1"]' },

@@ -44,6 +44,7 @@ export default {
       // One gameplay glimpse: the reading card inside the Shell, the human's reading and the stake.
       name: 'stake', duration: STAKE, url: JUDGE_URL, ui: 'game', transition: { type: 'fade', duration: 0.5 },
       setup: [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'frames', n: 180 }],
+      camera: { type: 'static', pos: [1.3, 303.3, 12.8], look: [0, 303.8, -10.7], fov: 42, drift: 0.12, minHeight: 300 },
       actions: [{ at: 1.2, do: 'key', code: 'KeyF' }],
       overlays: [],
     },
