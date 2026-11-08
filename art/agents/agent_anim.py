@@ -931,7 +931,7 @@ def face_hands(key, clip, u, P):
     brow = 0.0
     if clip == "idle":
         blink = max(_pulse(t, 1.35, 0.09), _pulse(t, 3.10, 0.09))
-        jaw = 1.5 + 1.0 * wave(u, 1)
+        jaw = 0.4 + 0.4 * wave(u, 1)         # lips stay closed (smooth face, 08.11)
     elif clip == "talk":
         n = max(1, round(4.2 * frames / FPS))
         syl = max(0.0, math.sin(TAU * n * u)) ** 0.7

@@ -24,6 +24,7 @@
     body.in-world #badge { display: none; }
     /* Lobby/onboarding (src/ui) and the in-world UI share one overlay; in the world only panels take input. */
     #ui { position: fixed; inset: 0; z-index: 10; }
+    body:not(.in-world) #ui { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; } /* lobby/onboarding pages taller than the screen scroll */
     body.in-world #ui { pointer-events: none; }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }

@@ -167,7 +167,7 @@ RULES_COMMON = (
     ("face_eye", "head"), ("face_lidup_L", "rigid:lid_up_L"), ("face_lidup_R", "rigid:lid_up_R"),
     ("face_lidlo_L", "rigid:lid_lo_L"), ("face_lidlo_R", "rigid:lid_lo_R"),
     ("face_brow_L", "rigid:brow_L"), ("face_brow_R", "rigid:brow_R"), ("face_jaw", "rigid:jaw"),
-    ("face", "head"),
+    ("face_mouth", "mouth"), ("face", "head"),
     ("body", "body"), ("head", "head"), ("hair", "hair"), ("hat", "head"), ("helmet", "head"),
     ("visor", "head"), ("veil", "head"), ("lens_frame", "head"),
     ("sleeve", "fit"), ("boot_toe", "fit"), ("boot", "fit"), ("bracer", "fit"), ("belt", "fit"),
@@ -374,10 +374,15 @@ def skin(rt, cap, arm_obj, key, log=print):
             if names[pi - 1] == "head":          # lower front of the head follows the jaw
                 for i in idx:
                     p = Vector(co[i])
-                    f = smoothstep((FACE["mouth_z"] + 0.004 - p.z) / 0.016) * \
+                    f = smoothstep((FACE["mouth_z"] + 0.002 - p.z) / 0.010) * \
                         smoothstep((head_c.y - p.y) / 0.05)
                     if f > 0.01:
                         W[i] = {"head": 1.0 - f, "jaw": f}
+        elif kind == "mouth":                    # mouth bag: top on the head, bottom on the jaw
+            for i in idx:
+                f = smoothstep((FACE["mouth_z"] + 0.0015 - co[i][2]) / 0.004)
+                W[i] = {"head": 1.0 - f, "jaw": f} if 0.0 < f < 1.0 else \
+                    ({"jaw": 1.0} if f >= 1.0 else {"head": 1.0})
         elif kind == "hair":
             for i in idx:
                 p = Vector(co[i])

@@ -19,7 +19,7 @@ from mathutils import Matrix, Vector
 
 from agent_geometry import (
     BODY, Agent, arm, axis_tube, band, basis, box, build_body, build_grid, conform_grid,
-    crystal, finish_sheet, frame, garment, grid_faces, hem_jagged, hem_points, hem_scallop,
+    crystal, face_head_bm, finish_sheet, frame, garment, grid_faces, hem_jagged, hem_points, hem_scallop,
     hood, ico, leg, lerp, mantle, orient_outward, petal, placed, revolve, robe, sleeve,
     stake, surface_point, torus, tube, vloft,
 )
@@ -260,8 +260,9 @@ def costume_sol(ag):
         for i in range(9):
             th = math.radians(-90 - 62 + 124 * i / 8)
             r = 0.118 + 0.012 * v
-            row.append(bm.verts.new((hc.x + r * math.cos(th),
-                                     hc.y + 0.02 + r * 0.95 * math.sin(th), z)))
+            row.append(bm.verts.new((hc.x + r * math.cos(th),     # front bulge clears the nose
+                                     hc.y + 0.02 + r * (0.95 + 0.17 * math.sin(th) ** 8) *
+                                     math.sin(th), z)))
         rows.append(row)
     grid_faces(bm, rows, False)
     orient_outward(bm, lambda c: Vector((hc.x, hc.y, c.z)))
@@ -321,7 +322,7 @@ def costume_sol(ag):
 def costume_pepel(ag):
     """Ash: soot-black layered tunic with a ragged burnt hem, wrapped arms, a
     low hood and scarf, a palisade collar of charred stakes and a stake shield."""
-    build_body(ag)
+    build_body(ag, hair=(0.030, 0.026, 0.024))       # soot-dark crop under the low hood
     robe(ag, "tunic", 1.48, 0.20, 0.04, 0.24, n=32, rows=12, depth=0.85, flare=1.5,
          hem=hem_jagged(3, 32, 0.10), color="cloth", against="core", push=0.05, clear=0.014)
     robe(ag, "coat", 1.40, 0.42, 0.06, 0.30, n=32, rows=9, depth=0.88, flare=1.3,
@@ -343,6 +344,7 @@ def costume_pepel(ag):
     for arow in A:
         for a in arow:
             a.y = hc.y
+    ag.add_collider_bm(("all",), face_head_bm())      # the scarf rides over the nose
     garment(ag, "scarf", P, A, color="wrap", rough=0.95, thick=0.010, clear=0.012, push=0.15)
     # Palisade collar: ring of charred stakes leaning out, taller at the back.
     rnd = random.Random(13)
@@ -563,7 +565,7 @@ def costume_iney(ag):
     """Frost: tall faceted hood ending in a point, crisp mantle with an icicle
     hem, long pleated robe, an armillary staff of glass rings, a lens arm in
     front of the eye and a slate tablet of signs at the hip."""
-    build_body(ag)
+    build_body(ag, hair=(0.74, 0.77, 0.82))          # frost-white crop
     robe(ag, "robe", 1.48, 0.04, 0.04, 0.25, n=40, rows=14, depth=0.82, flare=2.0,
          pleats=14, pleat_amp=0.07, color="robe", against="core", push=0.05, clear=0.014)
     sleeve(ag, "sleeve_l", 1, 0.072, 0.13, color="cloth", end_drop=0.10, bell=2.4)
