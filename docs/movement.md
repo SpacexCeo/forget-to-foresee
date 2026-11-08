@@ -171,8 +171,14 @@ Keyboard, gamepad and touch bindings are untouched (`input.js` not changed).
 - `/?play=direct`: the Shell hub; the fly-in / relocate snaps the camera.
 - F3 dev HUD: physics steps, substeps, grounded. Console: `__ftf.player.speed`, `.turnRate`, `.stepped`,
   `__ftf.rig.lookAhead`.
-- Headless check in this session (SwiftShader, 1280×720): both paths start, a scripted walk / turn / run reversal
-  runs with no console errors; see `docs/handoff/agent-reports/movement-feel.md`.
+- Headless check in this session (SwiftShader, `vite preview` of the build, zero console errors or warnings apart
+  from SwiftShader's own "GPU stall due to ReadPixels" driver notice): `/?play=direct&mode=walk&demo=judge` at
+  1280×800 with a scripted walk (W 2.5 s: speed 1.70 m/s, heading π, walk weight 1, look-ahead 0.36 m; D 2 s:
+  heading π/2; Shift+S 2.5 s: 3.57 m/s, run weight 0.91, walk clip rate 1.6, look-ahead 0.6 m; release: speed 0,
+  idle weight 1), `/?play=direct` (hub) at 1280×720, the phone profile at 390×844 (iPhone 13 emulation, low tier,
+  reduced motion: look-ahead 0, no lean) and 1920×1080. Screenshots: `docs/movement/after-walk-1280x800.png`
+  (Iris mid-stride, the camera leading her), `after-phone-390x844.png`, `after-click-1920x1080.png`. Details in
+  `docs/handoff/agent-reports/movement-feel.md`.
 
 ## What a human must still feel-test on a GPU
 
