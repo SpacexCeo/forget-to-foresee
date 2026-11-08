@@ -24,3 +24,9 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   (screener behaviour, jury profile, track exemplar at three time scales, field size: 25 `games`, 21 `nfts`, 49
   `open` of 302 on 2026-11-08), two more gates (hard-coded results, track mismatch), and pointers to the three
   checklists (20 screener checks, 15-item ten-minute play session, 15-item accessibility pass).
+- 17:40 UTC: `notes/demo-video-and-trailer.md` done (32 sources); its ten-item checklist is now the C6 checklist.
+  Findings for the scorecard, not red flags: the repo shot list (`docs/submission/video-shot-list.md`) opens with
+  about 12 s of lobby title and tutorial setup, which the sources and HACKATHON.md ("skip setup") argue against; it
+  records from `?demo=judge` while the README's verified table uses `?demo=judge&mode=walk`, and says "Continue as
+  guest" where the README says "Play as guest"; its editor notes allow speed ramps (ETHGlobal forbids sped-up
+  footage) and a 60 to 90 s cut (below the 2-minute floor hackathon judges expect; the X free tier caps at 140 s).

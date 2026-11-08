@@ -41,7 +41,7 @@ an open flag is reported to the lead at once, and the score is marked provisiona
 | C3 | Technical depth and quality | 13 | ETHGlobal Technicality, Devpost "technical implementation"; `hackathon-judging-rubrics` |
 | C4 | NEAR integration and track fit: concrete, in the loop, honest | 12 | Demo-post guidance, Q-010/Q-011; `near-hackathon-tracks`; `onchain-game-design` (pending) |
 | C5 | Originality, story and impact | 12 | IGF/Nuovo innovation; Imagine Cup Innovation 20 %; previous NEAR criteria (originality, impact, sustainability) |
-| C6 | Presentation: demo video, X post, README top | 10 | Q-012 and demo-post guidance; `demo-video-and-trailer` (pending); judges' "first two paragraphs" |
+| C6 | Presentation: demo video, X post, README top | 10 | Q-012 and demo-post guidance; `demo-video-and-trailer`; judges' "first two paragraphs" |
 | C7 | Polish, UX and accessibility | 8 | `accessibility`; `game-jam-and-festival-judging` |
 
 Change from v0.1: C1 up 20 to 25 (two independent sources say raise "works and is verifiable" above the generic
@@ -128,7 +128,13 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   step) and carries the tags; the README's first two paragraphs answer what, why and how to try.
 - **5/10**: a screen recording with narration but no structure, or a post that says "powered by NEAR".
 - **0/10**: no video for a browser game, or the post is missing.
-- Checklist: pending `notes/demo-video-and-trailer.md`.
+- Checklist (`notes/demo-video-and-trailer.md`): gameplay on screen within 5 seconds, no logo card; the user problem in
+  one sentence inside 15 seconds; one complete action (stake, trials pass, reveal) uncut in logic with the result held
+  3 seconds or more; NEAR's role concrete and honest (tested, not deployed: say so); product shown running (browser,
+  terminal, tests), no architecture slides, no "coming soon"; narration carries the explanation, no text-plus-music
+  substitute, no TTS voice; burned-in captions; 2:00 to 2:20 for the X cut (free tier 140 s), never sped-up footage;
+  1080p30 or better, HUD on; the post ends with a next step and carries "built at NEAR HACKATHON", @NEARProtocol and
+  #NEARHackathon in the first post with the video attached.
 
 ### C7. Polish, UX and accessibility (8)
 - **10/10**: no greybox or placeholder on the judge path; body text at least 18 px at 1080p; contrast 4.5:1 (text) and
