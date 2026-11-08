@@ -25,6 +25,9 @@ import { CAMPS, ANCHOR_ZONES, SHARD } from '../scenes/layout.js';
 import { CLAN_ASSET } from './behaviour.js';
 import { ShellHub, signForShell } from './hub.js';
 import { createHubUi } from './hub-ui.js';
+import { createMapPanel } from './map-ui.js';
+import { CLAN_ORDER } from './behaviour.js';
+import { setGreyboxLabels } from '../render/greybox.js';
 
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
@@ -36,9 +39,10 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  * @param {object} o.world3d island scene (scenes/island.js) @param {object} o.rig camera rig
  * @param {object} o.player CharacterController @param {THREE.Object3D} o.avatar @param {object} o.lookdev
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context (play/i18n.js createPlayContext)
- * @param {{seedHex?: string, rules?: string, worldHud?: boolean, hub?: boolean, onSettings?: Function, resetHints?: boolean}} [o.options]
+ * @param {{seedHex?: string, rules?: string, worldHud?: boolean, hub?: boolean, onSettings?: Function, resetHints?: boolean, devLabels?: boolean}} [o.options]
  *   `hub: false` keeps the walking play (no Shell hub, ticks only by End trial)
  *   `worldHud: false` keeps the greybox overlay (goal card, chronicle, action bar) instead of the world HUD
+ *   `devLabels: true` (?dev=1) shows the greybox "not final art" labels; the F3 dev HUD shows them too
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
   const transport = createLocalTransport({ rules: options.rules, seedHex: options.seedHex });
@@ -82,9 +86,28 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // Novice hints A to Z (play/hints.js): Novice gets toasts, Iris lines and the Hints tab; Pro only Lore.
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
-  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings } }) : null;
+  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle() } }) : null;
   let movedReported = 0;
   const hubUi = hub ? createHubUi({ root: uiRoot, ctx, hub, onFly: fly, onRejected: (reason) => hud.showRejection(reason) }) : null;
+  // The island map (play/map-ui.js, key N): place names live here, not on labels in the world (owner 08.11).
+  const map = createMapPanel({
+    root: uiRoot, ctx, session, hub: hubMode,
+    getState: () => ({ playerPos: player.pos, heading: player.heading, zone: state.zone, agents: CLAN_ORDER.filter((c) => c !== 'iris').map((clan) => { const p = agents.positionOf(clan); return { clan, position: p ? [p.x, 0, p.z] : null }; }) }),
+    onRoute: (route, place) => {
+      if (route.kind === 'fly') { fly(route.shell); return; }
+      walkTo(route.place);
+      if (state.route) ui.flash(ctx.i18n.t('map.walking', { place: ctx.i18n.t(place.labelKey, place.labelArgs) }), 2500);
+      if (worldHud) worldHud.activity('command');
+    },
+    // one panel at a time: the map closes the play panels and the HUD's Signs before it opens
+    onOpen: () => { ui.close(); if (worldHud && worldHud.hud) worldHud.hud.signs.close(); },
+  });
+  // Greybox labels are a dev aid: ?dev=1 or the F3 dev HUD shows them, play never does.
+  const devHudEl = uiRoot.ownerDocument.getElementById('hud');
+  const devParam = (() => { try { return new URLSearchParams(uiRoot.ownerDocument.location.search).get('dev') === '1'; } catch { return false; } })();
+  const syncLabels = () => setGreyboxLabels(!!options.devLabels || devParam || !!(devHudEl && !devHudEl.hidden));
+  syncLabels();
+  if (devHudEl && typeof MutationObserver !== 'undefined') new MutationObserver(syncLabels).observe(devHudEl, { attributes: true, attributeFilter: ['hidden'] });
   if (hub) {
     hub.onOpenMemories = () => ui.open('memory');
     hub.on('change', () => ui.update());
@@ -261,17 +284,25 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
       if (moving && state.now - movedReported > 1) { movedReported = state.now; worldHud.activity('moved'); }
       worldHud.update(dt);
     }
+    // another panel opened from a click (hotbar, dock): the map yields
+    if (map.isOpen() && (ui.panel || (worldHud && worldHud.hud && worldHud.hud.signs.isOpen()))) map.close();
+    map.update(dt);
   }
 
   /** Keyboard for the play UI; returns true when used. */
   function handleKey(code) {
+    if (code === 'KeyN') return map.handleKey(code);
+    if (map.isOpen()) {
+      if (code === 'Escape') return map.handleKey(code);
+      map.close(); // any other panel key closes the map first, then acts as usual
+    }
     if (hubUi && !ui.panel && hubUi.handleKey(code)) { hooks.play('ui_click'); return true; }
     if (worldHud && code === 'KeyV') return worldHud.handleKey(code);
     if (code === 'Escape') return ui.handleKey(code) || (worldHud ? worldHud.handleKey(code) : false);
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, hub, hubUi, fly, agents, shell, hooks, presentation, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, hub, hubUi, map, fly, agents, shell, hooks, presentation, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {

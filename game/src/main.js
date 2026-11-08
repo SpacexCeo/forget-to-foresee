@@ -158,7 +158,7 @@ function handleInspect() {
   inspecting = it;
   rig.enterInspect(it.instance.center, it.instance.radius);
 }
-const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
+const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))]; // N: the island map (play/map-ui.js)
 
 function leaveInspect() { clearWorldInput(); inspecting = null; rig.exitInspect(); }
 
