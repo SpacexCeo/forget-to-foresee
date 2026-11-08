@@ -84,7 +84,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     ctxEl.replaceChildren(el('h3', { text: spotTitle(session.spot) }), el('ol', {}, opts.slice(0, 9).map((o, i) => {
       const label = t(o.label.key, o.label.args);
       const off = o.available === false;
-      return el('li', {}, el('button', {
+      return el('li', { style: '--i:' + i }, el('button', {
         type: 'button', class: 'pl-opt' + (i === di ? ' pl-default' : '') + (off ? ' pl-off' : ''), 'data-opt': o.id,
         title: off ? t('opt.unavailable', { reason: reasonText(i18n, o.reason) }) : null,
         onclick: () => choose(i),
@@ -104,17 +104,25 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   function open(name, data = null) { panel = name; panelData = data; arb.claim('panel', close); renderPanel(); renderContext(); }
   function close() {
     if (!panel) { panelEl.hidden = true; return; }
-    panel = null; panelData = null; panelEl.hidden = true;
+    panel = null; panelData = null; leave(panelEl);
     arb.release('panel');
     renderContext();
   }
-  function showHelp(on) { helpEl.hidden = !on; if (on) arb.claim('help', () => showHelp(false)); else arb.release('help'); }
+  function showHelp(on) { if (on) { arrive(helpEl); arb.claim('help', () => showHelp(false)); } else { leave(helpEl); arb.release('help'); } }
+  /* exit motion: the node stays for --pl-dur-fast with .pl-leaving, then hides (reduced motion: a plain fade) */
+  const leaving = new Map();
+  function leave(node) {
+    clearTimeout(leaving.get(node));
+    node.classList.add('pl-leaving');
+    leaving.set(node, setTimeout(() => { node.hidden = true; node.classList.remove('pl-leaving'); leaving.delete(node); }, 140));
+  }
+  function arrive(node) { clearTimeout(leaving.get(node)); leaving.delete(node); node.classList.remove('pl-leaving'); node.hidden = false; }
 
   function panelShell(title, ...body) {
     panelEl.replaceChildren(
       el('header', {}, el('h2', { text: title }), el('button', { class: 'pl-btn pl-small', type: 'button', 'aria-label': t('panel.close'), onclick: close }, t('panel.close'), el('kbd', { text: 'Esc' }))),
       ...body.filter((x) => x != null));
-    panelEl.hidden = false;
+    arrive(panelEl);
   }
 
   function memoryText(m) { return m.text; } // the room renders memory titles in English; effects are re-rendered per locale
@@ -129,7 +137,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     if (!panel || !obs) { panelEl.hidden = true; return; }
     if (panel === 'memory') {
       const keyOpen = obs.iris.keyVision.open;
-      const list = obs.memories.length ? el('ul', { class: 'pl-list' }, obs.memories.map((m) => el('li', { class: 'pl-mem' },
+      const list = obs.memories.length ? el('ul', { class: 'pl-list' }, obs.memories.map((m, i) => el('li', { class: 'pl-mem', style: '--i:' + i },
         el('div', { class: 'pl-mem-head' }, el('b', { text: memoryText(m) }), el('span', { class: 'pl-muted', text: t('memory.weight', { n: m.weight }) })),
         el('p', { class: 'pl-muted', text: memoryEffect(m) }),
         el('div', { class: 'pl-row' },
@@ -143,7 +151,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         class: 'pl-btn pl-small' + (obs.dictionary.readingRule === r ? ' pl-primary' : ''), type: 'button', text: t('vision.rule.' + r),
         onclick: () => session.send('set_reading_rule', { rule: r }),
       })));
-      const body = signs.length ? el('ul', { class: 'pl-list' }, signs.map((p) => el('li', { class: 'pl-sign' },
+      const body = signs.length ? el('ul', { class: 'pl-list' }, signs.map((p, i) => el('li', { class: 'pl-sign', style: '--i:' + i },
         logogramCanvas({ forms: p.forms, dots: p.dots }, 112, { labels: true, background: '#141a18' }),
         el('div', {},
           el('b', { text: t('vision.sign', { index: p.index }) + ' · ' }), el('span', { class: 'pl-tag', text: p.vision ? t('vision.badge.vision') : t('vision.badge.published', { tick: p.publishedAt }) }),

@@ -157,8 +157,11 @@ export function mountSigns(root, o) {
     const focusKey = active && ui.list.contains(active) && active.dataset ? active.dataset.whKey : null;
     ui.list.textContent = '';
     const mobile = layout === 'mobile';
+    let i = 0;
     for (const s of filterSigns(model, filter)) {
       const c = card(i18n, s, mobile, onAction);
+      if (c.style && c.style.setProperty) c.style.setProperty('--i', String(Math.min(i, 8))); // staggered rise, capped so a long list never waits
+      i++;
       applyI18n(c, i18n);
       ui.list.appendChild(c);
     }

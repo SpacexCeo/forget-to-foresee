@@ -14,6 +14,10 @@ const ROMAN = ['I', 'II', 'III', 'IV'];
 const CSS = `
 /* Spacing scale 4/8/12/16/24; radii 10 (buttons) / 14 (panels) / 16 (cards) / 999 (pills); 40 px targets, 48 on phones. */
 .hub-host { position: absolute; inset: 0; pointer-events: none; z-index: 3; } /* inside #ui, which is as tall as the visible viewport */
+@keyframes hub-rise { from { opacity: 0; translate: 0 var(--pl-rise, 10px); } to { opacity: 1; translate: 0 0; } }
+@keyframes hub-glow { 0%, 100% { box-shadow: 0 0 10px rgba(228,194,114,.25); } 50% { box-shadow: 0 0 18px rgba(228,194,114,.5); } }
+.hub-host .hub-box.hub-enter { animation: hub-rise var(--pl-dur-slow, 360ms) var(--pl-ease-out, ease-out) both; }
+.hub-host .hub-status.hub-enter { animation-duration: var(--pl-dur, 220ms); }
 .hub-host .hub-box { position: absolute; pointer-events: auto; background: var(--wh-panel-bg, rgba(16,26,27,.92)); border: 1px solid var(--wh-frame, rgba(232,214,172,.8));
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); -webkit-backdrop-filter: blur(var(--wh-panel-blur, 10px)); backdrop-filter: blur(var(--wh-panel-blur, 10px)); color: var(--wh-text, #faf7ee); }
 .hub-host h3 { margin: 0; font: 400 20px/1.2 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); -webkit-text-stroke: .3px currentColor; }
@@ -35,7 +39,7 @@ const CSS = `
 .hub-shells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
 .hub-shells button { position: relative; flex-direction: column; gap: 6px; min-height: 60px; padding: 8px 4px; font: 400 20px/1 var(--wh-font, Georgia, serif); }
 .hub-shells button small { display: block; font: 600 10.5px/1 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); letter-spacing: .04em; }
-.hub-shells button.hub-wait { border-color: var(--wh-gold, #e4c272); box-shadow: 0 0 14px rgba(228,194,114,.35); }
+.hub-shells button.hub-wait { border-color: var(--wh-gold, #e4c272); box-shadow: 0 0 14px rgba(228,194,114,.35); animation: hub-glow 2.4s ease-in-out infinite; }
 .hub-shells button.hub-wait small { color: var(--wh-gold, #e4c272); }
 .hub-read { right: 16px; top: 120px; width: 380px; padding: 16px; max-height: calc(100vh - 240px); overflow: auto; scrollbar-width: thin; scrollbar-color: var(--wh-gold-deep, #b48d3c) transparent; }
 .hub-sign { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; margin-top: 8px; }
@@ -106,7 +110,8 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   html[data-vh="tiny"] .hub-dock { left: calc(50% + 6px); right: 8px; }
   html[data-vh="tiny"] .hub-status { left: auto; right: 8px; transform: none; }
 }
-@media (prefers-reduced-motion: reduce) { .hub-fade { transition: none; } .hub-host button { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .hub-fade { transition: none; } .hub-host button { transition: none; } .hub-shells button.hub-wait { animation: none; } }
+html[data-motion="reduce"] .hub-shells button.hub-wait { animation: none; }
 `;
 
 function el(doc, tag, attrs = {}, ...kids) {
@@ -257,7 +262,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
 
   function flash(text, ms = 4200) { notice = { key: 'wh.raw', args: { text } }; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; render(); }, ms); render(); }
 
-  let rendering = false;
+  let rendering = false, lastKind = '', lastStatus = false;
   function render() {
     const obs = hub.obs;
     if (!obs || rendering) return;
@@ -278,6 +283,12 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       doc.body.classList.toggle('hub-dock-on', dockOn);
       const st = status(obs);
       if (st) kids.push(st);
+      // enter motion only when a different box appears (the dock re-renders on every change)
+      const kind = c ? 'card:' + c.id : inShell ? 'read' : dockOn ? 'dock' : '';
+      if (kind !== lastKind && kids[0] && kind) kids[0].classList.add('hub-enter');
+      lastKind = kind;
+      if (st && !lastStatus) st.classList.add('hub-enter');
+      lastStatus = !!st;
       host.replaceChildren(...kids);
     } finally { rendering = false; }
   }

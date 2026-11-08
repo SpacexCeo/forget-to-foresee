@@ -392,14 +392,8 @@
   .wh-root .wh-toast { display: none; } /* tokens.css hides it too; this rule wins over .wh-toast { display: flex } */
 }
 
-/* Short or landscape phones (audit #4): the mobile stack is bottom-anchored; below 580 px of height the quest
-   card steps aside, below 440 px the trial card and the tiles too (prompt and dialogue stay). */
-@media (max-width: 700px) and (max-height: 580px) {
-  .wh-root .wh-quest--mobile, .wh-root .wh-quest__dots { display: none; }
-}
-@media (max-width: 700px) and (max-height: 440px) {
-  .wh-root .wh-trial--mobile { display: none; }
-}
+/* Short or landscape phones: the stack compacts by html[data-vh] tier (below) instead of hiding cards (audit #4
+   used to hide the quest card under 580 px and the trial card under 440 px; owner 08.11: keep them, make them small). */
 
 /* ---------- short viewports (tokens.css explains the tiers) ---------- */
 .wh-root .wh-quest__more {

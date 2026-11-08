@@ -176,7 +176,15 @@
   --wh-fs-tile: 12.5px;
   --wh-ls-tag: .03em;
 
-  --wh-transition: 160ms ease;
+  /* motion tokens (owner 08.11; switch to game/src/ui/motion/ when Task S lands) */
+  --wh-dur-fast: 120ms;
+  --wh-dur: 220ms;
+  --wh-dur-slow: 360ms;
+  --wh-ease: cubic-bezier(.2, .7, .2, 1);
+  --wh-ease-out: cubic-bezier(.16, 1, .3, 1);
+  --wh-rise: calc(10 * var(--wh-px));
+  --wh-stagger: 35ms;
+  --wh-transition: var(--wh-dur-fast) var(--wh-ease);
   /* touch / click targets (owner 08.11): 40 px on desktop, 48 px on phones */
   --wh-target: 40px;
 
@@ -385,10 +393,21 @@ html[data-tier="low"] .wh-root, html[data-fx="low"] .wh-root { --wh-panel-blur: 
 .wh-root .wh-icon svg { display: block; width: 100%; height: 100%; }
 
 /* ---------- motion ---------- */
+@keyframes wh-rise { from { opacity: 0; translate: 0 var(--wh-rise); } to { opacity: 1; translate: 0 0; } }
+@keyframes wh-swap { from { opacity: 0; translate: 0 calc(var(--wh-rise) * .5); } to { opacity: 1; translate: 0 0; } }
+.wh-root .wh-swap { animation: wh-swap var(--wh-dur) var(--wh-ease-out) both; }
+/* sign cards and the newest log row rise in, staggered by --i (signs.js sets it) */
+.wh-root .wh-sign { animation: wh-rise var(--wh-dur) var(--wh-ease-out) both; animation-delay: calc(var(--i, 0) * var(--wh-stagger)); }
+.wh-root .wh-log__row:first-child { animation: wh-rise var(--wh-dur) var(--wh-ease-out) both; }
+/* Reduced motion: cross-fades, never movement (owner: still animated, just without travel). */
 @media (prefers-reduced-motion: reduce) {
-  .wh-root, .wh-root * { transition: none !important; animation: none !important; }
+  .wh-root { --wh-rise: 0px; --wh-dur-fast: 100ms; --wh-dur: 140ms; --wh-dur-slow: 160ms; --wh-stagger: 0ms; }
+  .wh-root .wh-signs-root .wh-signs[data-open="false"], .wh-root .wh-signs-root .wh-sheet[data-open="false"] { transform: none; opacity: 0; }
+  .wh-root .wh-status .wh-toast--hidden { transform: none; }
 }
-html[data-motion="reduce"] .wh-root, html[data-motion="reduce"] .wh-root * { transition: none !important; animation: none !important; }
+html[data-motion="reduce"] .wh-root { --wh-rise: 0px; --wh-dur-fast: 100ms; --wh-dur: 140ms; --wh-dur-slow: 160ms; --wh-stagger: 0ms; }
+html[data-motion="reduce"] .wh-root .wh-signs-root .wh-signs[data-open="false"], html[data-motion="reduce"] .wh-root .wh-signs-root .wh-sheet[data-open="false"] { transform: none; opacity: 0; }
+html[data-motion="reduce"] .wh-root .wh-status .wh-toast--hidden { transform: none; }
 
 /* ---------- short viewports (in-app browsers crop the screen; owner 08.11) ----------
    index.js measures visualViewport.height into --vvh and sets html[data-vh="tall"|"short"|"tiny"] (< 620 / < 520 px).
@@ -399,8 +418,9 @@ html[data-motion="reduce"] .wh-root, html[data-motion="reduce"] .wh-root * { tra
     --wh-fs-body: 12.5px; --wh-fs-small: 10px; --wh-fs-tile: 10.5px; --wh-fs-line: 11.5px; --wh-fs-speaker: 11.5px; --wh-target: 44px;
   }
   html[data-vh="tiny"] .wh-root { --wh-fs-title-l: 14px; --wh-fs-prompt: 12.5px; --wh-fs-tag: 9px; --wh-fs-tile: 9.5px; }
-  html[data-vh="short"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-prompt--mobile, .wh-quest__more),
-  html[data-vh="tiny"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-prompt--mobile, .wh-quest__more) { position: relative; }
+  /* only the statically placed controls need a positioning context; the prompt pill and the quest chevron are absolute already */
+  html[data-vh="short"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar),
+  html[data-vh="tiny"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar) { position: relative; }
   html[data-vh="short"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-quest__more)::before,
   html[data-vh="tiny"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-quest__more)::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
   html[data-vh="short"] .wh-root .wh-btn-icon, html[data-vh="tiny"] .wh-root .wh-btn-icon { height: 35px; }
