@@ -2,11 +2,11 @@
 
 > A game by RAEN Computers. Built at NEAR HACKATHON (1–14 Nov 2026). Tracks: **games**, **nfts** (tentative, see [Tracks](#tracks)).
 
-**The problem.** Games with "AI agents" and "on-chain economies" usually hide two lies: the AI secretly decides the outcome, and the chain is decoration. We wanted a strategy game where a prophecy can be *proven* honest and where the agent's biography is the currency.
+**The problem.** Games with "AI agents" and "on-chain economies" usually hide two lies: the AI secretly decides the outcome, and the chain is decoration. We wanted a strategy game where every prophecy is fixed before play begins and can be checked afterwards, and where the agent's biography is the currency.
 
 **The product.** Shells hang over a floating archipelago. The Guests inside speak in round signs of four slots (Place, Action, Power, Delay). Six clans, each an agent with a wallet and a memory, read the signs, stake silk on where a Gift will land, trade words, keep or break trust, and must assemble one message from six fragments before the crisis on trial 13. To see the future early, your agent Iris **forgets a memory forever**, and the forgotten memory goes to auction as a shard: *an NFT that pays for prophecy with its own biography.*
 
-**How NEAR fits in.** The whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract `season-commit` recomputes the same leaf byte for byte and verifies the proof on-chain, with a separate commit-reveal for the crisis key. The contract builds and passes its tests; it is **not deployed yet** (owner step, one command). No token, no paid entry, no real money: the economy is closed in-game silk.
+**How NEAR fits in.** The whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract `season-commit` recomputes the same leaf byte for byte and verifies the proof on-chain, with a separate commit-reveal for the crisis key. The contract builds and passes its tests; it is **not deployed yet** (owner step, one command). **What "Verified ✓" proves, exactly:** the revealed event is the one fixed before trial 1 and was not changed afterwards. It does not prove the season was chosen fairly: today the same client generates the season, commits the root and checks it, so the root is only independent once it is registered on NEAR before trial 1 (the deployment step above). No token, no paid entry, no real money: the economy is closed in-game silk.
 
 ---
 
