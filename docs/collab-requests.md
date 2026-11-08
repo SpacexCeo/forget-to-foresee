@@ -83,3 +83,21 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 `game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
+
+## To the lead (play layer, `game/src/play/game.js`), from worker G / Task N (living NPCs, 08.11)
+
+### 7. Two one-line hooks for the living agents
+In `startPlay`, after `const agents = new ClanAgents(...)`:
+- `agents.onSay = (l) => { if (worldHud) worldHud.say(l); };` lets a meeting's first beat and a contribution's line
+  appear in the dialogue strip at the moment the agents actually meet or reach the Scroll (keys already exist:
+  `line.walk.silk`, `line.mend`, `line.fragment`, `line.pact`, `line.escrow`). Without it the beats are silent.
+- In `session.on('event', …)`: `agents.event(ev, state.now);` gives the director the public events a few seconds
+  before the next observation and enables the "everyone looks up at the Shell of a reveal" moment (`fx.event`).
+  Without it the director still works from observation diffs (contributions, silk transfers, mends, auctions, vote).
+
+## To Task F (nameplates in `game/src/play/agents.js`), from worker G / Task N
+
+### 8. The mind glyph sprite is floating text in the world
+`MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
+out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
+sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.
