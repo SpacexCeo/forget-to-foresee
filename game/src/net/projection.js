@@ -19,13 +19,18 @@ const revealedIdx = (p) => new Set(p.chron.map((c) => c.idx));
 
 function meaningObj(m) { return { place: m[0] + 1, action: MEANING_NAMES[1][m[1]], power: [10, 20, 40, 80][m[2]], delay: m[3] + 1 }; }
 
-function seasonPublic(p, E, role) {
+function seasonPublic(p, E, role, entropy = null) {
+  // Under ftf-seed/1 the season is sealed at start_season (room entropy committed first, player nonce after), so
+  // before that the root and ids are provisional and are not shown; the commitment is.
+  const sealed = !entropy || entropy.protocol !== 'ftf-seed/1' || entropy.sealed;
   const s = {
-    seasonId: p.seasonId ?? null,
+    seasonId: sealed ? p.seasonId ?? null : null,
     rules: p.rulesVersion,
-    merkleRoot: p.root,
-    seedCommitment: p.seedCommit,
-    ashKeyCommitment: p.pepelKey.hash,
+    merkleRoot: sealed ? p.root : null,
+    leafCount: p.events.length,
+    seedCommitment: sealed ? p.seedCommit : null,
+    entropy,
+    ashKeyCommitment: sealed ? p.pepelKey.hash : null,
     ownerKeyCommitment: p.pKey ? p.pKey.hash : null,
     tick: p.tick, ticks: E.TICKS, contributionDeadline: E.DEADLINE, crisisTick: E.CRISIS,
     phase: p.phase, tension: p.H, outcome: p.outcome,
@@ -156,7 +161,7 @@ function irisSelf(p, S, E) {
 
 /**
  * Builds the observation of `viewer` ({playerId, role}) from the room's engine state and world data.
- * `world` = {members, you, session, version, simTime, availableActions, clues, logograms}.
+ * `world` = {members, you, session, version, simTime, availableActions, clues, logograms, entropy}.
  */
 export function project(state, viewer, world) {
   return withState(state, (E) => {
@@ -169,7 +174,7 @@ export function project(state, viewer, world) {
       simTime: world.simTime,
       you: world.you,
       members: world.members,
-      season: seasonPublic(p, E, viewer.role),
+      season: seasonPublic(p, E, viewer.role, world.entropy ?? null),
       scroll: scroll(p),
       chronicle: chronicle(p),
       proofs: proofs(p),

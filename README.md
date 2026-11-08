@@ -8,6 +8,15 @@
 
 **How NEAR fits in.** The whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract `season-commit` recomputes the same leaf byte for byte and verifies the proof on-chain, with a separate commit-reveal for the crisis key. The contract builds and passes its tests; it is **not deployed yet** (owner step, one command). **What "Verified ✓" proves, exactly:** the revealed event is the one fixed before trial 1 and was not changed afterwards. It does not prove the season was chosen fairly: today the same client generates the season, commits the root and checks it, so the root is only independent once it is registered on NEAR before trial 1 (the deployment step above). No token, no paid entry, no real money: the economy is closed in-game silk.
 
+**Verify it yourself, without this code.** Every revealed sign exports as one JSON (`Copy proof` in Signs & Visions, once the
+HUD button lands; the same document comes from `game/src/net/verify-export.js`): full hashes, the byte recipe, the Merkle path.
+Check it with a one-file verifier that imports nothing from the game: `node tools/verify/verify.mjs proof.json` or
+`python3 tools/verify/verify.py proof.json` → every line `✓` and `OK` (exit 0); change one digit → `✗` and `FAIL` (exit 1).
+The leaf alone needs only a shell: the `recipe.shell` line of the file is a `printf … | sha256sum` command whose output is the
+leaf hash. Live seasons (not the fixed judge season) follow a seed protocol in which the room commits to its random bytes
+before the player's nonce is sent and reveals them at the end, so anyone can recompute the seed and regenerate the schedule
+(`node game/scripts/replay-season.mjs <seed> season.json`). Details, limits and what each check proves: [docs/verify.md](docs/verify.md).
+
 ---
 
 ## Judge in 5 minutes
@@ -47,7 +56,7 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 379`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 384`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
 
 ---
 
@@ -103,13 +112,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 379 tests, ~20 s
+npm test            # 384 tests, ~20 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `# tests 379` / `# pass 379` / `# fail 0`; `✓ built in …s`.
+**See:** `# tests 384` / `# pass 384` / `# fail 0`; `✓ built in …s`.
 
-What the 379 tests cover (the breakdown below is the 260 of the first measurement; 103 were added on 08.11: 6 Shell hub, 9 uk/it/zh locale parity, 12 mobile run and phone quality tier, 5 audio/VFX cue mapping, 18 locomotion and camera, 9 island map, 12 NEAR read-only client (mocked RPC), 3 QA regressions, 18 tutorial and first loop, 9 living NPC agents):
+What the 384 tests cover (the breakdown below is the 260 of the first measurement; 124 were added on 08.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers and QA regressions):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).

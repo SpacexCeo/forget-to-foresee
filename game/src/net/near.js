@@ -230,3 +230,23 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
   };
   return watcher;
 }
+
+/**
+ * A public beacon nobody in the game chose: the hash of the latest final NEAR testnet block, as
+ * `near-testnet:<height>:<blockHash>`. Read-only JSON-RPC `block`; null when no host answers within `timeoutMs`.
+ * Used by protocol ftf-seed/1 (docs/verify.md): fetched after the room's entropy commitment, mixed into the seed.
+ */
+export async function fetchNearBeacon({ rpcUrls = NEAR_TESTNET_RPC, fetch = globalThis.fetch, timeoutMs = 2500, network = 'testnet' } = {}) {
+  for (const url of rpcUrls) {
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ac ? setTimeout(() => ac.abort(), timeoutMs) : null;
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 'ftf-beacon', method: 'block', params: { finality: 'final' } }), signal: ac ? ac.signal : undefined });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const h = json && json.result && json.result.header;
+      if (h && typeof h.hash === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(h.hash) && Number.isInteger(h.height)) return `near-${network}:${h.height}:${h.hash}`;
+    } catch { /* next host */ } finally { if (timer) clearTimeout(timer); }
+  }
+  return null;
+}
