@@ -97,6 +97,23 @@ export function inkPenPoint(sign, progress, R = 1) {
   return { x: Math.sin(a) * R, y: Math.cos(a) * R, stroke: 4, pos: null };
 }
 
+/**
+ * Presentation must never kill the frame: wraps per-frame work so an exception is reported once per label
+ * (then once every `every` failures) and swallowed, and the render loop goes on. Returns the wrapped function.
+ */
+export function guardFrame(fn, label = 'frame', { warn = (...a) => console.warn(...a), every = 600 } = {}) {
+  let failures = 0;
+  const wrapped = (...args) => {
+    try { return fn(...args); } catch (e) {
+      if (failures % every === 0) warn('[play] ' + label + ' failed (frame skipped)', e);
+      failures++;
+      return undefined;
+    }
+  };
+  wrapped.failures = () => failures;
+  return wrapped;
+}
+
 /** FNV-1a over a string → 32-bit seed (the season's Merkle root makes the schedule per season). */
 export function hashSeed(s) {
   let h = 0x811c9dc5;

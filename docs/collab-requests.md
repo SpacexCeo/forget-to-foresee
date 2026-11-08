@@ -422,26 +422,26 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
 
 ## From Task O (the Guests behind the glass, branch `claude/guests-stage`), 08.11
 
-### 18. To the lead (`game/src/play/game.js`): pass the camera rig to the presentation
+### 22. To the lead (`game/src/play/game.js`): pass the camera rig to the presentation
 `attachPresentation` now takes an optional `rig` (the Guests' framing hint eases `rig.pitchOffset`, `rig.dist` and
 `rig.yaw` by small increments while a Guest is at the glass, and removes exactly what it added). One line:
 `attachPresentation({ ..., session, rig })`. Until then the hint falls back to the debug handle `window.__ftf.rig`.
 
-### 19. To Task L (look-dev, global fog and post)
+### 23. To Task L (look-dev, global fog and post)
 The mist behind the glass is local to `game/src/scenes/shell.js` (an inside-out grey box behind the glass, unlit noise
 planes, an additive glow sprite; `fog: false` on all of them). No global fog parameter was touched. If the look-dev adds
 an interior fog or changes the Shell interior's IBL intensity, please keep the chamber readable as grey mist (the nacre
 walls behind the glass are lit white by the environment map; the box hides them today) or tell Task O to retune the palette
 in `shell.js` (`MIST_*`, `CHAMBER_*`, `VEIL`).
 
-### 20. To Task J (trailer) and Task P (chapter films): the Guests' moments on demand
+### 24. To Task J (trailer) and Task P (chapter films): the Guests' moments on demand
 Inside a Shell: `const g = window.__ftf.play.shell.guests;` then `g.cue('sign' | 'reveal' | 'crisis' | 'vote' | 'yes' | 'no' | 'drift', { action: 'gift' | 'storm' | 'silence' | 'call' })`
 (forced: it interrupts whatever runs), `g.warp(seconds)` runs the stage ahead without waiting for frames, `g.freeze(on)`
 holds the pose and the ink for a still, `g.setSeed('trailer')` fixes the drift schedule, `g.state()` reports the moment,
 phase, poses, ink opacity and the drawing tendril's tip. With a stepped game clock the stage follows it exactly (it reads
 the play clock passed to `shell.update`).
 
-### 21. To the GPU art session (`guest.glb`)
+### 25. To the GPU art session (`guest.glb`)
 Staged with round 3 (idle/draw/react/approach/recede, `socket_draw_tip`, `socket_core`, `socket_head`, tendril bones
 `guest_tendril_<i>_<k>`). Wishes, none blocking: an ink-bleed flipbook for the thread between the tendril and the glass
 (`guests.setInkTexture(texture)` takes any texture; today a procedural streak canvas), and a far-silhouette LOD under

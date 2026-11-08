@@ -58,11 +58,21 @@ The crisis: ![crisis](guests-stage/crisis-1280x800.jpg)
 Before the vote: ![vote](guests-stage/vote-1280x800.jpg)
 Rest with a drift: ![rest](guests-stage/rest-drift-1280x800.jpg)
 
-## Known limits (08.11, wrapped up on the lead's order)
-- Only 1280×800 stills so far; 1920×1080, 390×844, the low tier and reduced motion stills are owed (SwiftShader needs
-  3–4 minutes per still here). No GPU look at the motion: the easing, the approach/recede clips and the ink thread are
-  tuned from numbers and stills, not from a running GPU build.
-- The ink thread is a procedural streak ribbon; it is thin at 1280×800 and wants a bleed flipbook (request 21).
+The sign moment on the other profiles (`?films=off` so the Arrival film does not take the camera; UI shown):
+phone profile 390×844, one Guest and two static mist planes: ![phone](guests-stage/sign-phone-390x844.jpg)
+low tier, two Guests, three static planes, skin without transmission (the dome and the ink tendrils read best here):
+![low](guests-stage/sign-low-1280x800.jpg)
+reduced motion (placed without travel, mist still, no camera hint): ![reduced](guests-stage/sign-reduced-motion-1280x800.jpg)
+
+## Known limits (08.11)
+- No 1920×1080 still yet (SwiftShader needs 3–4 minutes per still here). No GPU look at the motion: the easing, the
+  approach/recede clips and the ink thread are tuned from numbers and stills, not from a running GPU build.
+- On ultra/high the milky skin keeps the model's transmission (0.35) and reads glassier and paler than on the low tier,
+  where the plain-alpha skin shows the dome and the ink tendrils clearly; a lower transmission (about 0.12) on the staged
+  Guests is the next tune to look at on a GPU.
+- Per-frame Guest work is guarded (`guardFrame`): an exception is logged once and the frame goes on
+  (`play.shell.frameFailures()` counts them).
+- The ink thread is a procedural streak ribbon; it is thin at 1280×800 and wants a bleed flipbook (request 25).
 - The chamber reads pale: the mist planes and the glow are tuned against the interior's white IBL light; Task L's look-dev
-  pass may change the balance (request 19).
-- The camera hint reaches the rig through `window.__ftf.rig` until the lead passes `rig` into `attachPresentation` (request 18).
+  pass may change the balance (request 23).
+- The camera hint receives the rig from `game.js` (`attachPresentation({ ..., rig })`); the `window.__ftf.rig` fallback stays for older call sites.

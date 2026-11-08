@@ -22,7 +22,7 @@ import { CollisionWorld } from '../physics/collision.js';
 import { PropInstance, fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { drawLogogram } from '../play/logogram.js';
-import { GuestsStage, QUALITY, SLOTS, DRAWING_SLOT, resolveClip, inkPenPoint } from '../play/guests-stage.js';
+import { GuestsStage, QUALITY, SLOTS, DRAWING_SLOT, resolveClip, inkPenPoint, guardFrame } from '../play/guests-stage.js';
 
 export const SHELL_ORIGIN = Object.freeze([0, 300, 0]);
 
@@ -394,7 +394,8 @@ export function createShellScene({ scene, streamer }) {
     /** Shows the interior for Shell n (one interior serves all four in this slice). */
     activate(n) {
       active = true; shellNo = n; root.visible = true;
-      loadGuests(); ensureGuests();
+      // Synchronous and never awaiting: the Guests stream in on their own, the hub's fade never waits on them.
+      try { loadGuests(); ensureGuests(); } catch (e) { console.warn('[play] guests load', e); }
       stage.enter(n);
       // A sign waiting in this Shell: the drawing Guest comes to the glass and draws it for the visitor.
       if (sign) drawStart = stage.cue('sign') ? stage.now + 4.5 : stage.now;
@@ -416,8 +417,15 @@ export function createShellScene({ scene, streamer }) {
     },
     /** A yes/no answer from the Guests: posture and light. */
     answer(yes) { answer = yes; answerAt = stage.now; stage.cue(yes ? 'yes' : 'no'); },
+    /** Per frame; the Guest work is guarded: an exception is logged and the frame goes on (presentation only). */
     update(playT, dt, reducedMotion) {
       if (!active) return;
+      frame(playT, dt, reducedMotion);
+    },
+  };
+
+  const frame = guardFrame((playT, dt, reducedMotion) => {
+    {
       applyLayout();
       if (reducedMotion !== stage.reducedMotion) stage.setReducedMotion(reducedMotion);
       const L = layout();
@@ -513,7 +521,8 @@ export function createShellScene({ scene, streamer }) {
       // The ink runs from the drawing tendril onto the glass while the strokes form.
       const inkStrength = sign && g1.depth > 0.55 ? Math.min(1, (g1.depth - 0.55) / 0.25) * g1.fade * fade : 0;
       layInk(L, progress, inkStrength);
-    },
-  };
+    }
+  }, 'guests frame');
+  api.frameFailures = () => frame.failures();
   return api;
 }

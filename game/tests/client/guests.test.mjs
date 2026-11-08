@@ -192,3 +192,20 @@ test('guests: walking in (no hub) arms the stage through the zone event and the 
   assert.equal(stage.inside, false); assert.equal(stage.nextDrift, Infinity);
   s.dispose();
 });
+
+test('guests: presentation never kills the frame (guardFrame swallows and reports once)', async () => {
+  const { guardFrame } = await import('../../src/play/guests-stage.js');
+  const warned = [];
+  let calls = 0;
+  const f = guardFrame((x) => { calls++; if (x === 'boom') throw new Error('boom'); return x * 2; }, 'test frame', { warn: (...a) => warned.push(a[0]), every: 3 });
+  assert.equal(f(2), 4);
+  assert.equal(f('boom'), undefined);
+  assert.equal(f('boom'), undefined);
+  assert.equal(f('boom'), undefined);
+  assert.equal(f(5), 10, 'the frame after a failure runs as usual');
+  assert.equal(calls, 5);
+  assert.equal(f.failures(), 3);
+  assert.deepEqual(warned, ['[play] test frame failed (frame skipped)'], 'reported once per `every` failures');
+  f('boom');
+  assert.equal(warned.length, 2);
+});
