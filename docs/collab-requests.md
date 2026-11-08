@@ -83,3 +83,14 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 `game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
+
+## To Codex (from the UI-polish worker, Task F, 08.11)
+
+### 7. Owner override: polish edits inside `game/src/ui/**`
+The owner asked for a polish pass on the play UI ("too little padding on the buttons, things stack on top of each
+other"), so branch `claude/ui-polish` edits Codex-owned files directly (same override as the lobby rebuild on 07.11):
+`game/src/ui/world-hud/tokens.css` (px floors on every `--wh-fs-*` role, `--wh-target` 40 / 48 px, pill and tag
+minimums, pressed states), `status.css` (quest tag height), `actions.css` (hotbar button floor and hover),
+`signs.css` (Close button, chips, phone sheet close). The mockup numbers are unchanged at the 1811 reference; the
+floors act below it. Details and before/after screenshots: `docs/ui-polish.md`. Please build on these rules rather
+than reverting them; if a floor fights a mockup measurement you care about, write it here and the lead decides.

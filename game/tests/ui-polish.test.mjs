@@ -127,8 +127,8 @@ test('nameplate: NDC projects to CSS px; behind the camera and off screen give n
   assert.equal(platePosition({ x: 0, y: 0, z: 1.2 }, 1280, 800), null, 'behind the camera');
   assert.equal(platePosition({ x: 2, y: 0, z: 0.5 }, 1280, 800), null, 'far right of the viewport');
   assert.ok(platePosition({ x: 1.02, y: 0, z: 0.5 }, 1280, 800, 24), 'a positive margin allows a few px outside');
-  assert.equal(platePosition({ x: 0.98, y: 0, z: 0.5 }, 1280, 800), null, 'the default margin keeps plates 48 px clear of the edge');
-  assert.ok(platePosition({ x: 0.9, y: 0, z: 0.5 }, 1280, 800), 'inside the safe band');
+  assert.equal(platePosition({ x: 0.95, y: 0, z: 0.5 }, 1280, 800), null, 'the default margin keeps plates 64 px clear of the edge');
+  assert.ok(platePosition({ x: 0.85, y: 0, z: 0.5 }, 1280, 800), 'inside the safe band');
   assert.equal(platePosition({ x: 0, y: 0, z: 0.5 }, 0, 800), null, 'no layer size yet');
 });
 
@@ -161,7 +161,7 @@ test('spacing: play-layer buttons use the 40 px target (48 on phones) and the sh
 });
 
 test('stacking: modal play panels are opaque surfaces and the hub dock yields to them', () => {
-  assert.match(html, /\.pl-panel, \.pl-context, \.pl-help, \.pl-info \{ background: var\(--pl-panel\)/);
+  assert.match(html, /\.pl-panel, \.pl-context, \.pl-help, \.pl-info \{ background: var\(--pl-panel\) #121d1f;/, 'gradient on a solid base: fully opaque');
   const alpha = [...html.matchAll(/--pl-panel: linear-gradient\(180deg,([^;]+)\)/g)][0][1].match(/rgba\([^)]*,\s*(\.\d+|\d\.\d+)\)/g).map((s) => Number(s.match(/,\s*(\.\d+|\d\.\d+)\)/)[1]));
   assert.ok(alpha.length >= 3 && alpha.every((a) => a >= 0.9), 'every stop of the panel gradient is at least .9 opaque: ' + alpha.join(','));
   assert.match(hubUi, /body\.pl-modal-open \.hub-host \.hub-dock, body\.pl-modal-open \.hub-host \.hub-read \{ display: none; \}/);

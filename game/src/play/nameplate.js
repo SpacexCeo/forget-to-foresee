@@ -9,7 +9,7 @@ export const NAMEPLATE = Object.freeze({
   lift: 10,      // CSS px between the head point and the plate's bottom edge
   near: 30,      // metres: full opacity up to here (the third-person camera sits 20–30 m from the agents)
   far: 60,       // metres: invisible from here on
-  margin: -48,   // CSS px: the head point must be this far inside the viewport, so a plate is never cut by the edge or parked under a HUD corner
+  margin: -64,   // CSS px: the head point must be this far inside the viewport (a plate is ~90 px wide and sits 34 px above its anchor), so it is never cut by the edge or parked under a HUD corner
 });
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));

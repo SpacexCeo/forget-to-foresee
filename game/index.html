@@ -53,8 +53,9 @@
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
     .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { position: fixed; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
     /* Modal surfaces: the HUD's panel gradient, hairline frame and blur; the scene never shows through text. */
-    .pl-panel, .pl-context, .pl-help, .pl-info { background: var(--pl-panel); border: 1px solid var(--pl-frame); color: var(--pl-text); font-family: var(--pl-sans); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06); }
-    html[data-tier="low"] .pl-panel, html[data-tier="low"] .pl-context, html[data-tier="low"] .pl-help, html[data-tier="low"] .pl-info { -webkit-backdrop-filter: none; backdrop-filter: none; }
+    /* The gradient sits on a solid base colour: a modal panel over the 3D scene is fully opaque (no blur needed, cheaper on phones). */
+    .pl-panel, .pl-context, .pl-help, .pl-info { background: var(--pl-panel) #121d1f; border: 1px solid var(--pl-frame); color: var(--pl-text); font-family: var(--pl-sans); box-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06); }
+    @media (pointer: coarse) { .pl-panel header .pl-btn kbd { display: none; } } /* no Esc key on a phone */
     .pl-goal { top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 10px 16px 12px; border-top: 3px solid var(--amber); }
     .pl-goal-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
     .pl-goal-title { margin: 4px 0 2px; font: 600 19px/1.3 Georgia, 'Times New Roman', serif; color: #f6efdc; }
@@ -114,7 +115,7 @@
       .pl-chronicle, .pl-badge, #badge, #prompt { display: none !important; }
       /* phones: a modal panel dims the HUD behind it (no extra DOM) and the run toggle steps aside */
       .pl-panel, .pl-help { box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .38), 0 10px 30px rgba(0, 0, 0, .42); }
-      body.pl-modal-open .ftf-run-toggle { display: none; }
+      body.in-world.pl-modal-open .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* outranks input.js's display: flex */
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
     }
