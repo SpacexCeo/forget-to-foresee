@@ -549,7 +549,7 @@ export default {
   'wh.signs.filter.all': '全部符号（{n}）',
   'wh.signs.filter.active': '进行中',
   'wh.signs.filter.resolved': '已揭晓',
-  'wh.signs.filter.anchors': '锚',
+  'wh.signs.filter.anchors': '锚点',
   'wh.sign.number': '符号 #{n}',
   'wh.sign.open': '打开符号 #{n}',
   'wh.sign.type.elemental': '元素',

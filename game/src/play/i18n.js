@@ -1,5 +1,5 @@
 // i18n for the play layer: the game messages (src/locales) plus the play strings
-// (src/play/locales) in one i18n instance.
+// (src/play/locales, all five locales) in one i18n instance.
 // Only the public UI API (src/ui/index.js, docs/ui.md) is used: the UI shell is owned by another
 // agent (docs/collab.md).
 import { createUiContext, i18n as uiI18n } from '../ui/index.js';

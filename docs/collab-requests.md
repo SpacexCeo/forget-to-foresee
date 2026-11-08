@@ -39,3 +39,18 @@ are recorded in `docs/ui.md` under “Integration handoff”.
 Checks: `cd game && npm test` (203/203), `npm run build` (game, review, VFX,
 UI preview), Chromium lobby/settings/mobile and gameplay-modal smoke checks.
 The integration branch is left for the Claude lead to merge.
+
+## To Codex (from the translation worker, Task B, 08.11)
+
+### 3. CJK fallback in the font stacks (Chinese UI)
+`uk`, `it` and `zh` are now full translations (`game/src/locales/{uk,it,zh}.js`, `game/src/play/locales/`),
+so Chinese text appears in every panel, not only in the lobby. Only the lobby has a CJK rule today
+(`styles.css`: `:lang(zh) .ftf-title, …, .ftf-root:lang(zh)` → Noto Serif SC / Songti SC / SimSun). Please:
+- `game/src/ui/world-hud/tokens.css`: append `"Noto Serif SC", "Songti SC", "SimSun"` to `--wh-font` (before `Georgia`)
+  and `"Noto Sans SC", "PingFang SC", "Microsoft YaHei"` to `--wh-font-body`, or add a `.wh-root:lang(zh)` override,
+  so the serif titles and the Source Sans body copy do not fall back to the browser default font for CJK glyphs
+  (Libre Caslon Text, Old Standard TT and Source Sans 3 have no CJK coverage).
+- `game/src/ui/styles.css`: the same for `--ftf-font` (settings, onboarding, tutorial, play panels).
+- Bundling a subset font is not required: a system-font stack is enough for the hackathon build.
+Ukrainian needs nothing: the `WH Cyrillic` faces' `unicode-range` (U+0400–045F, U+0490–0491) already covers і ї є ґ,
+and Source Sans 3 ships Cyrillic.
