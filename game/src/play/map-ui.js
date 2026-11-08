@@ -366,6 +366,9 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
   let routeEl = null;
   function hideRoute() { if (routeEl) { routeEl.remove(); routeEl = null; } }
   function showRoute(p) {
+    try { showRouteNow(p); } catch (e) { console.warn('[map] route draw-on failed', e); }
+  }
+  function showRouteNow(p) {
     hideRoute();
     if (!model || !p.route || p.route.kind !== 'walk' || !dynamic) return;
     const st = getState ? getState() : {};

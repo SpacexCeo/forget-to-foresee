@@ -99,7 +99,18 @@ animates once; `tickNumber` writes text at most once per frame; parallax eases o
 rest; `will-change` only on `.mo-will-move` while something moves. The phone profile keeps every duration (motion
 is not what costs frames there; the renderer is).
 
-## Before / after captures
+## Captures (frames, `docs/motion/`)
 
-Frame strips of the lobby title reveal, the onboarding step change and the map unfold: `docs/motion/` (added when
-the application lands; the module itself is published first so the other tasks can start).
+Headless Chromium frames at 1280×800 (SwiftShader renders at a few frames per second, so each file is one frame
+of the animation at roughly the named time, not a smooth film; the timings in the code are the tokens above):
+
+| strip | frames | what to look for |
+|---|---|---|
+| lobby title reveal | `lobby-reveal-120ms.png`, `-320ms.png`, `-640ms.png` | line 1 and line 2 are in by 120 ms, the rule's dot next, the tagline and the menu arrive last (stagger 70 ms, cap 420 ms); before: everything appeared at once |
+| lobby → onboarding | `onboarding-enter-80ms.png`, `-700ms.png` | the onboarding card rises in with its heading, body, details and button staggered (50 ms); before: an instant swap |
+| onboarding step change | `onboarding-step-80ms.png`, `-700ms.png` | the access card drops away while the tutorial card rises; the stepper's current item slides 2 px; before: an instant swap |
+| map unfold | `map-unfold-60ms.png`, `-220ms.png`, `-520ms.png` | the scrim first, the parchment at 0.96 → 1 with a rise, then the places by distance from Iris and the markers popping in; before: `hidden` toggled |
+| route draw-on | `map-route-drawon.png` | the gold walk route from Iris to the hovered camp along the island's graph |
+
+Under reduced motion the same screens cross-fade (checked headless with the system query: no movement, zero
+console errors).
