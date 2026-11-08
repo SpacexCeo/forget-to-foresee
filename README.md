@@ -18,9 +18,9 @@ Everything runs in the browser from the published build (desktop Chrome, Edge or
 
 | # | Do | See |
 |---|---|---|
-| 1 | The lobby: **ENTER THE WORLD** → **Play as guest** → the five tutorial beats (tap the four strokes → **Next**; tap the core once → **Next**; tap the strokes 1 to 4 → **Next**; **Stake 10 silk on Shell II, trial 3**, watch trials 1–3 pass and the ring seal **Verified ✓** → **Next**; **Forget it for a vision** → **Guide me (Novice)**) → **Begin** (the hologram look picker) → **Step onto the island**. Every beat has **Skip tutorial**; a returning player goes straight to the island. | The island with Iris on the balcony. HUD top-left: **Trial 1 of 17**, Silk **63**. Main quest: **Stake 10 silk at Shell I’s pad** · *G walks there. At the pad choose “Anchor here for tick 3”.* Log: *Owner's Key committed: 0x…* (a salted commitment; the hex differs on every run). |
-| 2 | Press **G** (Iris walks to the pad of Shell I on the plaza rim; about 30 s, hold **Shift** to run; or **WASD** / click the ground) | At the pad the context menu lists **E Anchor here for tick 2 (as your reading says) · 2 … tick 1 · 3 Anchor here for tick 3 · 4 … tick 4 · 5 Enter Shell I · 6 Look at the zone**. |
-| 3 | Press **3** (*Anchor here for tick 3*: the first Gift of every season lands on trial 3; a stake on trial 1 or 2 can never pay) | Silk drops to **53**, log: *Anchor: Shell I, tick 3.* Quest: **End trial 1** · *Press T twice. Trials pass; trial 3 reveals the sign.* |
+| 1 | The lobby: **ENTER THE WORLD** → **Play as guest** → the five tutorial beats (tap the four strokes → **Next**; tap the core once → **Next**; tap the strokes 1 to 4 → **Next**; **Stake 10 silk on Shell II, trial 3**, watch trials 1–3 pass and the ring seal **Verified ✓** → **Next**; **Forget it for a vision** → **Guide me (Novice)**) → **Begin** (the hologram look picker) → **Step onto the island**. Every beat has **Skip tutorial**; a returning player goes straight to the island. | The island with Iris on the balcony. HUD top-left: **Trial 1 of 17**, Silk **63**. Main quest: **Stake 10 silk at Shell I’s pad** · *G walks there. At the pad choose “Anchor here for trial 3”.* Log: *Owner's Key committed: 0x…* (a salted commitment; the hex differs on every run). |
+| 2 | Press **G** (Iris walks to the pad of Shell I on the plaza rim; about 30 s, hold **Shift** to run; or **WASD** / click the ground) | At the pad the context menu lists **E Anchor here for trial 3 · 2 Anchor here for trial 2 (as your reading says) · 3 … trial 1 · 4 … trial 4 · 5 Enter Shell I · 6 Look at the zone** (before the first reveal the trial-3 stake is the highlighted one: the first Gift of every season lands on trial 3, and a stake on trial 1 or 2 can never pay). |
+| 3 | Press **E** | Silk drops to **53**, log: *Anchor: Shell I, tick 3.* Quest: **End trial 1** · *Press T twice. Trials pass; trial 3 reveals the sign.* |
 | 4 | Press **T** twice (the second press confirms "End the tick anyway?") | **Trial 2 of 17**, silk 56. Quest: **Watch trial 3 come true** · *Keep pressing T. The reveal is checked against the seal.* |
 | 5 | Press **T** twice more, twice (to **Trial 4 of 17**) | Silk **72** (the stake came back: the Gift fell on Shell II). Log: ***Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓***. Hint: *It came true, and the seal matches: this future was written before we arrived.* Press **V** → **Resolved** tab: **Sign #1 · Revealed · Verified ✓ · Came true: Gift of 20 at Shell II, trial 3.** Quest: **The Price of Memory** · *Press M. Forget a memory: Iris sees the next signs early.* |
 | 6 | Press **M**, then click **Forget it for a vision** on any memory (heavier memories show more signs) | Signs & Visions opens with one to four new cards marked *vision*; log: *Vision: Iris sees N future signs before anyone else.* and *Shard "…" is up for auction.* Quest: **Decide your fragment at the Scroll** · *Give it for a share, or hold it: 40 silk at trial 13.* (**G** walks there; **E** gives it.) |
@@ -32,7 +32,7 @@ That is the loop: read a sign → stake silk on it → the trial ends → the ev
 The default mode (owner design, 08.11): open `/?demo=judge` without `&mode=walk`.
 
 1. **Fly into a Shell.** Quest: *Fly into Shell I · A sign waits there. Press F or tap the gold Shell.* The Shell dock on the right shows the four Shells; a gold one has a sign waiting. Click it or press <kbd>F</kbd>.
-2. **Read the sign.** Inside, the Guest draws a round logogram on the glass. The reading card shows Iris's guess for each of the four slots (Place, Action, Power, Delay) and how sure she is. Change any slot you read differently with ‹ ›. Quest: *Stake 10 silk on the sign · Iris guesses. Change Delay until it says trial 3, then press F.* (the first Gift of every season lands on trial 3; press › on Delay once in the judge season).
+2. **Read the sign.** Inside, the Guest draws a round logogram on the glass. The reading card shows Iris's guess for each of the four slots (Place, Action, Power, Delay) and how sure she is. Change any slot you read differently with ‹ ›. Before the first reveal the card's Delay is pre-filled so the stake lands on trial 3 (the first Gift of every season lands there; a stake on trial 1 or 2 could never pay). Quest: *Stake 10 silk on the sign · Iris read it: trial 3. Press F to stake 10 silk.*
 3. **Stake 10 silk on your reading** (<kbd>F</kbd>). The card shows where it lands ("Gift at Shell I, trial 3"). Quest: *Leave and let time pass.*
 4. **Leave the Shell** (<kbd>T</kbd>). Leaving ends the trial. Quest: *Watch trial 3 come true · Let trials pass (T).* Trials with no new sign pass on their own; they stop for a new sign or a one-click decision (Moss's loan at trial 3: any answer). At trial 4 the log reads *Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓*, the stake is back, and "Verified ✓" shows in Signs & Visions (<kbd>V</kbd>).
 5. **The Price of Memory** (<kbd>M</kbd>): forget a memory forever to see future signs as a vision. The memory goes to auction as a shard.
@@ -47,7 +47,7 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 361`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 363`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
 
 ---
 
@@ -103,13 +103,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 361 tests, ~20 s
+npm test            # 363 tests, ~20 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `# tests 361` / `# pass 361` / `# fail 0`; `✓ built in …s`.
+**See:** `# tests 363` / `# pass 363` / `# fail 0`; `✓ built in …s`.
 
-What the 361 tests cover (the breakdown below is the 260 of the first measurement; 101 were added on 08.11: 6 Shell hub, 9 uk/it/zh locale parity, 12 mobile run and phone quality tier, 5 audio/VFX cue mapping, 18 locomotion and camera, 9 island map, 12 NEAR read-only client (mocked RPC), 3 QA regressions, 18 tutorial and first loop, 9 living NPC agents):
+What the 363 tests cover (the breakdown below is the 260 of the first measurement; 103 were added on 08.11: 6 Shell hub, 9 uk/it/zh locale parity, 12 mobile run and phone quality tier, 5 audio/VFX cue mapping, 18 locomotion and camera, 9 island map, 12 NEAR read-only client (mocked RPC), 3 QA regressions, 18 tutorial and first loop, 9 living NPC agents):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).

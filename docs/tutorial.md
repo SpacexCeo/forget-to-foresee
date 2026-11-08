@@ -222,3 +222,26 @@ Screenshots after the change: `docs/tutorial/after/` (1280×800, 1920×1080, 390
   inside 1280×800 (checked: tops 125 and 646). **QA-017**: the season-end hint no longer says "(panel below)".
 - Merged `origin/claude/loving-curie-ihasft` at `17bf2de` (map, NEAR client, QA fixes); 352 tests, build green.
 
+## 5. The first stake fixed at the source (branch `claude/first-loop`, 08.11, later)
+
+The lead handed over the spots behind request 11 (now `hub.js`, `interactions.js`, `game.js`, the option labels):
+
+- `hub.js` `prefillFirstDelay()`: while the chronicle is empty and a reading lands before trial 3, the reading card's
+  Delay is pre-filled so the target reads trial 3 (`draft.prefilled`). In the judge season the card opens on *in 2
+  trials · Gift at Shell I, trial 3* and the hub goal says *Iris read it: trial 3. Press F to stake 10 silk.* The
+  player can still change any slot.
+- `interactions.js`: under the same condition the trial-3 stake is the first and primary option at the pad (the **E**
+  prompt); the dead reading stays listed, without the primary tone. After the first reveal Iris's reading is E again.
+- `game.js`: the first verified proof writes `ftf.firstloop.v1` on the device; the next start passes `skipOnboarding`
+  to the session, so a returning player sees no first-loop goals. `?demo=judge` and `?hints=reset` ignore the flag.
+- Labels: `opt.anchorTick` / `opt.anchorVision` say **trial** in all five languages; the Delay meanings say *in N
+  trials* in en / uk / it / zh. Russian keeps the engine's own words (*через 2*): the Russian adapter renders must
+  match the frozen prototype text byte for byte (`tests/ui-i18n.test.mjs`). The goal quotes follow.
+- README judge table: step 3 is now **Press E** (the menu reads *E Anchor here for trial 3 · 2 Anchor here for trial 2
+  (as your reading says) · …*); the hub section describes the pre-filled card. Replayed headless on the judge seed:
+  silk 63 → 53 → 72 at trial 4, no anchor left dangling, *Verified ✓*; hub: stake lands on trial 3 without a Delay
+  change. Browser check: card pre-filled, quest *Iris read it*, flag written at trial 4, a plain restart skips the
+  first-loop goals (`skipOnboarding: true`), zero console errors.
+- Tests: `prefillFirstDelay` (pure), the pad default before/after the first reveal, the hub loop with the pre-fill,
+  the dead stake forced by hand; 363 total.
+
