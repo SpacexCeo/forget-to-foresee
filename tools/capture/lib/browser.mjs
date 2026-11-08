@@ -101,11 +101,21 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     for (let i = 0; i < preroll; i++) await stepGrab();
     result.timings.prerollMs = Date.now() - t; t = Date.now();
     let lastReport = Date.now();
-    const check = { jumps: 0, maxJump: 0, minMean: 255, maxMean: 0, maxEdgeBlack: 0 };
+    const check = { jumps: 0, maxJump: 0, minMean: 255, maxMean: 0, maxEdgeBlack: 0, retries: 0 };
     let prevMean = null;
     const allowJumps = shot.allowJumps ?? 3;
     for (let i = 0; i < total; i++) {
-      const r = await stepGrab();
+      let r = await stepGrab();
+      // An intermittent bad grab (seen once on the RTX 4090 / ANGLE Vulkan: a 46% black edge that a probe of the same frames
+      // never reproduced) is read again from a fresh render of the same frame; only a frame that stays bad fails the shot.
+      const bad = (x) => x && x.stats && ((x.stats.edgeBlack > 0.3 && x.stats.mean > 30) || (prevMean != null && Math.abs(x.stats.mean - prevMean) > 24));
+      for (let k = 0; k < 3 && !probe && (bad(r) || (process.env.FTF_TEST_RETRY && i === 0 && k === 0)); k++) {
+        check.retries = (check.retries || 0) + 1;
+        const tag = `${shot.name}-f${String(i).padStart(5, '0')}-retry${k}`;
+        writeFileSync(join(outDir, tag + '.png'), Buffer.from(r.png.slice(r.png.indexOf(',') + 1), 'base64'));
+        log(`[${shot.name}] frame ${i}: flagged (edge ${(r.stats.edgeBlack * 100).toFixed(0)}%, luma ${r.stats.mean.toFixed(0)}), re-rendering (${tag}.png kept)`);
+        r = await page.evaluate(() => window.__ftfCinematic.regrab());
+      }
       if (!r || !r.png) throw new Error(`no canvas frame at ${i} in shot ${shot.name}`);
       if (r.stats.lost) throw new Error(`WebGL context lost in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i}); renderer ${result.renderer}`);
       // Checks: a black band growing from an edge while the rest is lit is a partially drawn frame; large brightness
@@ -144,7 +154,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     const [cues, marks, camLog, errors, state] = await page.evaluate(() => [window.__ftfCinematic.cues(), window.__ftfCinematic.marks(), window.__ftfCinematic.camLog(), window.__ftfCinematic.errors(), window.__ftfCinematic.state()]);
     Object.assign(result, { cues, marks, camLog, errors, finalState: state, wallMs: Date.now() - wall0 });
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify(result));
-    log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages, luma ${result.check.minMean.toFixed(0)}–${result.check.maxMean.toFixed(0)} jumps ${result.check.jumps} (max ${result.check.maxJump.toFixed(1)}) edge-black ${(result.check.maxEdgeBlack * 100).toFixed(0)}%`);
+    log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages, luma ${result.check.minMean.toFixed(0)}–${result.check.maxMean.toFixed(0)} jumps ${result.check.jumps} (max ${result.check.maxJump.toFixed(1)}) edge-black ${(result.check.maxEdgeBlack * 100).toFixed(0)}% retries ${result.check.retries}`);
     return result;
   } catch (e) {
     result.failed = String(e.message);

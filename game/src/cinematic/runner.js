@@ -357,6 +357,13 @@ export class ShotRunner {
     return { png, stats };
   }
 
+  /** Renders the current frame again (same virtual time, same state) and reads it: the retry for a flagged grab. */
+  regrab() {
+    const t = this.t - 1 / this.clock.fps; // step() has already moved the shot clock to the next frame
+    const keep = this.t; this.t = t;
+    try { this.applyCamera(); this.game.lookdev.render(); return { t, ...this.grabCanvas() }; } finally { this.t = keep; }
+  }
+
   /**
    * GPU diagnosis for a frame already rendered: the sizes of canvas, drawing buffer and every post target, then the
    * same frame re-rendered with each post pass switched off in turn (and with no post stack), with the frame statistics

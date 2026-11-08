@@ -6,7 +6,8 @@
 #         bash gpu-job.sh 1a2b3c4d /root/ftf-media demo trailer     # only these
 # Outputs land incrementally in <output-folder>: <video>.mp4, <video>-captions.mp4, <video>.srt, <video>.report.json,
 # the 4K masters under <output-folder>/4k, per-shot intermediates and logs under <output-folder>/work. Re-running
-# resumes finished shots (--resume). Nothing here needs secrets; the repository is public.
+# resumes finished shots (--resume). FTF_SKIP_4K=1 renders the 1080p deliverables only. A flagged frame (black edge,
+# luma jump) is re-rendered up to three times before a shot fails; the reports count the retries. No secrets needed.
 set -euo pipefail
 REF="${1:?commit or branch}"; OUT="${2:?output folder}"; shift 2 || true
 VIDEOS=("$@"); if [ ${#VIDEOS[@]} -eq 0 ]; then VIDEOS=(demo trailer clip-shell clip-memory clip-verified); fi
@@ -17,8 +18,10 @@ echo "== $(date -u +%FT%TZ) job start: ref=$REF out=$OUT videos=${VIDEOS[*]}"
 
 # 1. Source at the exact commit.
 if [ ! -d "$SRC/.git" ]; then git clone -q https://github.com/SpacexCeo/forget-to-foresee.git "$SRC"; fi
-git -C "$SRC" fetch -q origin "$REF" || git -C "$SRC" fetch -q origin
-git -C "$SRC" checkout -q --detach "$(git -C "$SRC" rev-parse "origin/$REF" 2>/dev/null || git -C "$SRC" rev-parse "$REF")"
+git -C "$SRC" fetch -q origin 2>/dev/null || true
+git -C "$SRC" fetch -q origin "$REF" 2>/dev/null || true   # a branch name; a bare SHA is reachable after the full fetch
+COMMIT="$(git -C "$SRC" rev-parse -q --verify "origin/$REF^{commit}" || git -C "$SRC" rev-parse -q --verify "$REF^{commit}")" || { echo "ref $REF not found"; exit 2; }
+git -C "$SRC" checkout -q --detach "$COMMIT"
 echo "== commit $(git -C "$SRC" rev-parse --short HEAD): $(git -C "$SRC" log -1 --format=%s)"
 
 # 2. Tools: node 20+, ffmpeg with libx264/libass/libopus, Playwright's Chromium.
@@ -62,6 +65,7 @@ fi
 for v in "${VIDEOS[@]}"; do
   echo "== $(date -u +%FT%TZ) $v 1080p"
   (cd "$SRC" && node tools/capture/capture.mjs "$v" $GPU_FLAG --tier ultra --width 1920 --height 1080 --fps 60 --parallel 2 --resume --base "http://localhost:$PORT" --out "$OUT" --work "$OUT/work")
+  if [ "${FTF_SKIP_4K:-}" = "1" ]; then continue; fi
   echo "== $(date -u +%FT%TZ) $v 4K"
   (cd "$SRC" && node tools/capture/capture.mjs "$v" $GPU_FLAG --tier ultra --width 3840 --height 2160 --fps 60 --parallel 1 --resume --base "http://localhost:$PORT" --out "$OUT/4k" --work "$OUT/work") || echo "4K render of $v failed; the 1080p file stands"
   for f in "$OUT/4k/$v.mp4" "$OUT/4k/$v-captions.mp4"; do
