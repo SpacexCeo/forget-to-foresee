@@ -45,3 +45,10 @@ Fairness is provable. Before trial 1 the full season is committed to a SHA-256 M
 What runs today: a full 17-trial season in the browser (Three.js) on a deterministic headless engine that matches our 2D prototype move for move; a world HUD with Novice mode and hints from A to Z; English and Russian with live switching; and an agent-playable HTTP API (OpenAPI 3.1, idempotent commands, per-viewer observations, Merkle proofs) where AI agents play the same room code as humans. The economy is closed in-game silk: no real money, no token, no pay-to-win.
 
 Demo: clone the repo, run npm install and npm run dev in game/, open /?demo=judge. Tests: npm test in game/ and server/.
+
+## Teaser video
+
+`docs/video/forget-to-foresee-teaser-10s.mp4` — 10 s, 1080p30, 2.9 MB: aerial island in fog → a sign glowing on
+the Shell glass → close-up of the logogram → "DAY ONE OR ONE DAY." / "FORGET TO FORESEE". Cut from the owner's
+gameplay recordings of 08.11 (HUD cropped out, cool grade, light grain); audio from the game's own sounds
+(`amb_shell_inside`, `guest_phrase_1`, `guest_call`). Known flaw: the mouse cursor is visible in two shots.
