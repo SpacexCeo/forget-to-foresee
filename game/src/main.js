@@ -27,6 +27,8 @@ import { startPlay } from './play/game.js';
 import { mountAudioSettings } from './play/audio-settings.js';
 
 const params = new URLSearchParams(location.search);
+// Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
+if (params.has('cinematic')) await import('./cinematic/index.js').then((m) => m.boot(params.get('cinematic')));
 const app = document.getElementById('app');
 // ---- render setup (owned by the look-dev agent) ----
 // MSAA comes from the post stack's render target on ultra/high; the low tier renders directly with
