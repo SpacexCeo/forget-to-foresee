@@ -163,16 +163,19 @@ export class ClanAgents {
   }
 
   /** Iris's clip: walk while moving, idle otherwise (procedural bob when no clips). */
-  updateIris(dt, moving, avatarGroup, t) {
+  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false) {
     const m = this.irisModel;
     if (!m) return;
     if (m.mixer) {
-      const { clip } = resolveClip(m.clips, moving ? 'walk' : 'idle');
+      const want = !moving ? 'idle' : running && m.clips.some((c) => c.name === 'run') ? 'run' : 'walk';
+      const { clip } = resolveClip(m.clips, want);
       if (clip && m.current !== clip.name) {
         const act = m.mixer.clipAction(clip); act.reset().fadeIn(FADE).play();
         if (m.current) m.mixer.clipAction(m.clips.find((c) => c.name === m.current)).fadeOut(FADE);
         m.current = clip.name;
       }
+      // Match the stride to the ground speed (walk clip authored for 1.7 m/s, run for ~3.6 m/s) so feet do not skate.
+      if (clip && moving) m.mixer.clipAction(clip).timeScale = Math.min(1.6, Math.max(0.5, speed / (clip.name === 'run' ? 3.6 : 1.7)));
       m.mixer.update(dt);
     } else {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;

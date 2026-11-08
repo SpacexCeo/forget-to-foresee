@@ -190,6 +190,7 @@ function perf() {
   };
 }
 
+let movingState = false;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.25);
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
@@ -228,7 +229,12 @@ function frame() {
   rig.update(dt, focus);
   streamer.update(dt, focus);
   lookdev.update(dt, focus, rig.actualDist);
-  if (play) play.update(dt, { focus, moving });
+  // Animation state from the smoothed velocity, not from this frame's physics steps: at high frame rates many frames run
+  // no 30 Hz step, and toggling walk/idle on those frames restarted the walk clip every other frame (visible jitter).
+  const speed = Math.hypot(player.vel[0], player.vel[1]);
+  movingState = movingState ? speed > 0.08 : speed > 0.25;
+  void moving;
+  if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
 
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
   promptEl.innerHTML = inspecting

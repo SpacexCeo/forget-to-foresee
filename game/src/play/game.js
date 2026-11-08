@@ -176,7 +176,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   syncVisuals();
 
   /** Per frame, after physics. */
-  function update(dt, { focus, moving }) {
+  function update(dt, { focus, moving, speed = 0, running = false }) {
     state.now += dt;
     const pos = player.pos;
     const inShell = state.zone === 'shell';
@@ -188,7 +188,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (step > 0.01) { state.lastMove = state.now; state.moved += step; }
     if (!inShell && state.moved > 4 && state.now - state.lastMove > 0.8 && !session.syncing && session.bus.pending === 0) { state.moved = 0; session.syncPosition(); }
     agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist });
-    agents.updateIris(dt, moving, avatar, state.now);
+    agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
     if (audio) { try { const sp = session.spot; audio.setZone(inShell ? 'shell' : sp && sp.kind === 'camp' ? CLAN_ASSET[sp.clan] : sp ? 'plaza' : 'bridge'); } catch { /* optional */ } }
