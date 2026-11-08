@@ -27,6 +27,7 @@ export const PREF_OPTIONS = Object.freeze({
 /** World HUD unit multiplier per hudScale. */
 export const HUD_SCALE = Object.freeze({ s: 0.9, m: 1, l: 1.15, xl: 1.3 });
 
+/** Validates a prefs object; an invalid value falls back to its default. */
 function clean(p) {
   const out = { ...PREF_DEFAULTS };
   if (!p || typeof p !== 'object') return out;
