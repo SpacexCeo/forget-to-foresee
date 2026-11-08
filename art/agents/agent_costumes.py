@@ -176,7 +176,10 @@ def hair_locks(ag, name, color, length=0.20, n=14, part_x=0.025, fringe_side=1, 
             phi0 = 0.10 + 0.12 * rnd.random()
             th_root = th
             if fringe:
-                phi_end = fringe_end + 0.06 * rnd.random()
+                # a curtain part: fringe locks start at the front hairline and sweep away
+                # from the part to the temples, so no knot forms on the forehead
+                phi0 = 0.40 + 0.08 * rnd.random()
+                phi_end = 1.30 + 0.08 * rnd.random()
                 L = 0.0
             elif framing:
                 phi_end = math.pi / 2 + 0.25
@@ -192,7 +195,8 @@ def hair_locks(ag, name, color, length=0.20, n=14, part_x=0.025, fringe_side=1, 
                 phi = phi0 + (min(phi_end, math.pi / 2 + 0.25) - phi0) * t
                 # fringe locks sweep sideways across the forehead; framing locks bend
                 # away from the face so the cheeks stay clear
-                th_k = th_root + (fringe_side * 0.45 * smooth01(t * 1.2) if fringe else 0.0)
+                away = math.copysign(1.0, math.cos(th_root) + 1e-3 * fringe_side)
+                th_k = th_root + (away * 0.95 * smooth01(t) if fringe else 0.0)
                 if framing:
                     th_k += math.copysign(0.30 * smooth01(t), math.cos(th))
                 d = Vector((math.sin(phi) * math.cos(th_k), math.sin(phi) * math.sin(th_k), math.cos(phi)))
@@ -212,12 +216,13 @@ def hair_locks(ag, name, color, length=0.20, n=14, part_x=0.025, fringe_side=1, 
                 idx = [round(j * (len(pts) - 1) / 7) for j in range(8)]
                 pts = [pts[j] for j in idx]
             ww = w * (0.85 + 0.3 * rnd.random()) * (0.85 if fringe else 1.0)
-            _lock_bm(bm, pts, ww, h * (0.9 + 0.2 * rnd.random()), sides=5, twist=0.5 * rnd.uniform(-1, 1))
+            _lock_bm(bm, pts, ww, h * (0.9 + 0.2 * rnd.random()), sides=5,
+                     twist=0.0 if fringe else 0.5 * rnd.uniform(-1, 1))
             count += 1
     # a smooth inner cap so no scalp shows between the locks
     cap = face_hair_cap(hc, rx, ry, rz, vol * 0.6)
-    ag.add(name + "_cap", cap, "body", "felt", color, rough=0.7, collide=())
-    return ag.add(name, bm, "body", "felt", color, rough=0.55, collide=("all",), smooth=True)
+    ag.add(name + "_cap", cap, "body", "hair", color, rough=0.6, collide=(), smooth=True)
+    return ag.add(name, bm, "body", "hair", color, rough=0.42, collide=("all",), smooth=True)
 
 
 def face_hair_cap(hc, rx, ry, rz, v, n=20, rows=5):

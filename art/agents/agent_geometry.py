@@ -13,7 +13,7 @@ import bmesh
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-SOFT_KINDS = ("cloth", "leather", "wool", "felt", "skin", "moss", "silk")
+SOFT_KINDS = ("cloth", "leather", "wool", "felt", "skin", "moss", "hair")
 SHARP_DEG = 48.0              # soft parts: edges sharper than this stay creased (hems, rims)
 PAINT_LO, PAINT_HI = 0.80, 1.14   # painted value range over a part's height (bottom .. top)
 CLEAR = 0.016                 # default clearance between garment layers (m)
@@ -21,7 +21,7 @@ THICK = 0.008                 # default garment thickness (m); CLEAR - THICK > b
 
 SLOTS = ("body", "garment", "ornament")
 KINDS = ("skin", "cloth", "metal", "wood", "crystal", "glass", "leather", "moss",
-         "resin", "stone", "felt", "wool", "armor")
+         "resin", "stone", "felt", "wool", "armor", "hair")   # append only: indices are baked
 
 
 # ================================================================ utilities
