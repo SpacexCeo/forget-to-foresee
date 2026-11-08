@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.4, 2026-11-08 (research cycle 4). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.5, 2026-11-08 (research cycle 5). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -86,6 +86,8 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   `npm ci`, three test suites with matching counts, agent API path, OpenAPI reachable, contract build, deployment
   claim vs chain, claims grep-able, real/mock consistent, CI green, live URL responds, headless evidence for the
   browser path, third-party disclosure, git history inside the window, no secrets needed, every README link resolves).
+- Live-site checks (cold load desktop and emulated phone, transfer size, click-to-feedback, console errors):
+  `notes/live-site-load-and-devices.md`. A blank screen over 10 s on cold load counts as a drift (5/10 band).
 
 ### C2. Game loop and fun in the first ten minutes (20)
 - **10/10**: a first-time player states the goal within 30 seconds, makes a decision that visibly changes the outcome
@@ -217,6 +219,8 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   text-size option, no statement.
 - **5/10**: the judge path is clean but off-path scenes show placeholders, or accessibility exists only as tests.
 - Checklist: the fifteen items in `notes/accessibility.md`.
+- Load and device deductions (one point each): cold load over 4 s with no progress indicator; silent failure on an
+  emulated phone (no "desktop required" message); main action feedback slower than 200 ms (Core Web Vitals INP).
 
 ## 3. Red flags that sink a submission (gates, not deductions)
 

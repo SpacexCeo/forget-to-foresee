@@ -68,3 +68,11 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   C3 gains a ten-item checklist (architecture page, green tests, parity hashes, tamper test, contract integration
   tests, NEAR security checklist items, shared test vectors, agent rules in one module, no mock as feature, a
   performance figure) and a cap of 6 when the first three are not findable within five minutes. No red flags.
+
+## Cycle 5: 2026-11-08 22:16 UTC
+- Weakest coverage chosen: the live site's cold load and behaviour on phones (no note covered it; judges often open
+  X links on a phone).
+- 22:25 UTC: `notes/live-site-load-and-devices.md` done (8 sources, snippets read; evidence on judge abandonment is
+  anecdotal only, poor-band Core Web Vitals values from one secondary source). Rubric v0.5: C1 gains the live-site
+  checks and treats a blank screen over 10 s as drift; C7 gains three one-point deductions (slow load without
+  progress, silent mobile failure, main-action feedback over 200 ms). No red flags.
