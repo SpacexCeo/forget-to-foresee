@@ -1,7 +1,8 @@
 # Worker tasks (08.11.2026)
 
 Paste-ready tasks for extra workers (Claude Code cloud tasks or a local `claude --worktree <name>` window).
-Each task owns disjoint paths, so workers can run in parallel. Base every branch on `main`.
+Each task owns disjoint paths, so workers can run in parallel. Base every branch on `main` (or on the branch
+that holds this file, which is `main` plus docs).
 The local window on `art/faces-wink` owns the faces (HANDOFF item 1): nobody else touches `art/agents/`
 or `game/public/assets/models/agent_*.glb`.
 
@@ -9,6 +10,8 @@ Rules every worker follows (from `CLAUDE.md` and `docs/collab.md`): English-only
 commits pushed right away; `cd game && npm test` and `npm run build` stay green; never edit
 `game/src/game/engine.js` or `prototype-2d/`; record decisions in `docs/decisions.md`; write a short report
 to `docs/handoff/agent-reports/<task>.md` (what was done, what was not, how it was checked).
+Shared files: add new rows only at the end of the `docs/decisions.md` §4 table, and edit only your own rows of
+`docs/HANDOFF.md`, so the lead's merges stay trivial. Do not open pull requests; the lead merges the branches.
 
 ---
 
@@ -89,3 +92,62 @@ Defects:
   row of the §4 table in date order (keep the relative order of rows with the same date).
 
 Change no wording. Check that the file renders as one table on GitHub (preview the Markdown).
+
+---
+
+## Task D: submission readiness (README, judge path, checklist)
+
+**Branch:** `claude/submission-readiness` · **Owns:** `README.md`, `docs/hackathon-rules.md`, new files under
+`docs/submission/`, `docs/handoff/agent-reports/submission.md`.
+
+Context: the first judging layer is AI screening (Claude Code and Codex) that checks that the project runs and
+that every claimed feature exists (`docs/hackathon-rules.md`). The README is partly stale: for example the
+"3D game" section still says "No game rules run in the 3D client yet", while the play layer, the world HUD,
+`/?play=direct`, `/?demo=judge` and the GitHub Pages build now exist (`docs/HANDOFF.md`, last rows of
+`docs/decisions.md`).
+
+Steps:
+1. Re-read https://nearhackathon.com/HACKATHON.md (if the host is blocked, say so in the report and work from
+   `docs/hackathon-rules.md`); update the checklist in `docs/hackathon-rules.md` if the rules changed.
+2. From a fresh clone run every command the README gives (`game`: `npm ci`, `npm test`, `npm run build`,
+   `npm run dev` + the judge path in a headless browser; `server`: `npm ci`, `npm test`, the example agent;
+   `contracts/season-commit`: the tests if `cargo` is available, otherwise say so). Record the exact output.
+3. Rewrite the README so that every claim matches what runs now: one "Judge in 5 minutes" block at the top
+   (live Pages link, `/?demo=judge`, the exact "do X, see Y" steps), current controls, current real/mock table,
+   test counts as measured. Remove or fix every stale line. Never claim anything that does not run.
+4. Fill the Q-001–005 section: libraries with licences as found in the `package.json` / `Cargo.toml` files,
+   AI tools used, and the baseline tags (`pre-hackathon` exists; `hackathon-submission` is created by the owner
+   at freeze, write the exact commands and the diff link format).
+5. Draft in `docs/submission/`: the apply-form answers (description 20–2000 characters, tracks with reasons),
+   the X post text (with the required "built at NEAR HACKATHON", @NEARProtocol, #NEARHackathon) and a 60–90 s
+   demo video shot list that follows the judge path. Leave the owner's personal data as `TODO(owner)`.
+6. Report: every README command with pass/fail, every checklist item with done / owner action / blocked.
+
+---
+
+## Task E: mobile play (HANDOFF item 6)
+
+**Branch:** `claude/mobile-play` · **Owns:** `game/src/ui/input.js`, `game/src/render/quality.js`,
+`game/src/render/lookdev.js`, `game/src/render/post.js`, new `game/tests/client/mobile*.mjs` /
+`quality*.mjs`, `docs/mobile.md` (new).
+
+Context: touch controls exist (tap to walk, drag to orbit, pinch to zoom) and phones get the miniature HUD and the
+`_m` texture variants (last row of `docs/decisions.md`). Missing: a way to run on touch, and quality tiers tuned
+for phones. Task A owns `game/src/main.js` and `game/src/play/**`; if you need a hook there, write it in
+`docs/collab-requests.md` instead of editing those files.
+
+Steps:
+1. Measure first: in headless Chromium with phone emulation (`devices['iPhone 13']`, `devices['Pixel 7']`) load
+   `/?play=direct`, record frame time, draw calls, triangles, texture memory and the chosen tier (F3 dev HUD or
+   `renderer.info`). Put the numbers in `docs/mobile.md`.
+2. Run on touch: a run toggle button (thumb-reachable, bottom right, at least 48 px, does not cover the
+   miniature HUD) and/or double-tap-to-run, feeding the same run flag Shift sets in `input.js`. Keyboard and
+   gamepad behaviour stays exactly as is.
+3. Phone tier: pick the tier from device signals (touch + screen size + `deviceMemory` / `hardwareConcurrency`
+   where available), cap the pixel ratio, drop or cheapen the post passes that cost most, lower shadow-map size
+   and foliage density through the existing quality knobs. Keep the desktop tiers unchanged. Add a dynamic
+   step-down when frame time stays above budget for a few seconds.
+4. Tests for the tier choice and the run toggle (pure functions; no WebGL needed).
+5. Re-measure after the change; record before/after in `docs/mobile.md` and the HANDOFF Mobile item. Check that
+   desktop `/?play=direct` and the low tier still render with no console errors.
+
