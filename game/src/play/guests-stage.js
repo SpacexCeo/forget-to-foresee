@@ -64,6 +64,39 @@ export function momentForCue(name, data = {}) {
   }
 }
 
+/**
+ * Clip fallbacks: the stage names idle | draw | react | approach | recede (the ink Guest's clips);
+ * a model that lacks one plays the next name in its chain, so an older glb still animates.
+ */
+export const CLIP_FALLBACK = Object.freeze({ approach: ['approach', 'idle'], recede: ['recede', 'idle'], draw: ['draw', 'idle'], react: ['react', 'idle'], idle: ['idle'] });
+export function resolveClip(name, available) {
+  const has = available instanceof Set ? (n) => available.has(n) : Array.isArray(available) ? (n) => available.includes(n) : (n) => !!(available && available[n]);
+  for (const c of CLIP_FALLBACK[name] || [name, 'idle']) if (has(c)) return c;
+  return null;
+}
+
+/**
+ * Where the ink pen is on the glass while a sign forms, in the glyph's own units (radius R = the ring
+ * radius, x right, y up, the ring centre at 0,0), mirroring the schedule of play/logogram.js
+ * drawLogogram: strokes in reading order take the first 70 % (each at its ring position: 0 top, then
+ * clockwise), the ring 70..90 % (a filament from the top running clockwise), then the sign turns and the
+ * pen lifts (null). The drawing Guest's ink thread ends here.
+ */
+export function inkPenPoint(sign, progress, R = 1) {
+  const p = Math.min(1, Math.max(0, Number(progress) || 0));
+  if (!sign || p >= 0.9) return null;
+  const dots = sign.dots || 0;
+  if (p < 0.7) {
+    const k = Math.min(3, Math.floor(p / 0.175));
+    const pos = (dots + k) % 4;
+    const a = pos * Math.PI / 2;
+    return { x: Math.sin(a) * 1.13 * R, y: Math.cos(a) * 1.13 * R, stroke: k, pos };
+  }
+  const u = (p - 0.7) / 0.2, e = u * u * (3 - 2 * u);
+  const a = Math.PI * e;
+  return { x: Math.sin(a) * R, y: Math.cos(a) * R, stroke: 4, pos: null };
+}
+
 /** FNV-1a over a string → 32-bit seed (the season's Merkle root makes the schedule per season). */
 export function hashSeed(s) {
   let h = 0x811c9dc5;
@@ -91,9 +124,10 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const ease = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
 /** Rest pose per slot: deep in the mist, huge, dim, not facing the visitor squarely. */
+// The two giants watch from the sides; the smaller one in the centre is the one that comes close and draws.
 const REST = [
   { depth: 0.16, x: 0, rise: 0.2, scale: 2.5, light: 0.18, open: 0, face: -0.35 },
-  { depth: 0.22, x: 0, rise: 0.0, scale: 2.05, light: 0.22, open: 0, face: 0.25 },
+  { depth: 0.22, x: 0, rise: 0.0, scale: 1.35, light: 0.22, open: 0, face: 0.25 },
   { depth: 0.12, x: 0, rise: 0.5, scale: 2.3, light: 0.16, open: 0, face: 0.4 },
 ];
 const REST_MIST = Object.freeze({ density: 1, churn: 1, backlight: 0.55, thin: 0 });
@@ -107,7 +141,7 @@ export const MOMENT_DEFS = Object.freeze({
   sign: {
     approach: 5, hold: 9, withdraw: 8, camera: 0.6, swell: 0.7, clip: { 1: 'draw' },
     mist: { thin: 0.45, backlight: 0.8 },
-    guests: { 1: { depth: 0.86, scale: 1.75, light: 1, rise: 0.3, face: 0 }, 0: { depth: 0.3, light: 0.3, face: -0.6, x: -0.8 }, 2: { depth: 0.26, light: 0.28, face: 0.7, x: 0.8 } },
+    guests: { 1: { depth: 0.68, scale: 1.25, light: 1, rise: 0.3, face: 0 }, 0: { depth: 0.3, light: 0.3, face: -0.6, x: -0.8 }, 2: { depth: 0.26, light: 0.28, face: 0.7, x: 0.8 } },
   },
   reveal: {
     approach: 3.5, hold: 4, withdraw: 6, camera: 0.35, swell: 0.5, clip: { 0: 'react', 1: 'react', 2: 'react' },
@@ -125,13 +159,13 @@ export const MOMENT_DEFS = Object.freeze({
   crisis: {
     approach: 4, hold: 10, withdraw: 10, camera: 0.9, swell: 1, clip: { 0: 'react', 2: 'react' },
     mist: { churn: 2.2, backlight: 0.95, density: 0.9, thin: 0.3 },
-    guests: { 0: { depth: 0.74, scale: 2.9, light: 0.9, open: 0.7, rise: 1.4, face: -0.1 }, 1: { depth: 0.7, scale: 2.3, light: 1, open: 0.5, rise: 0.8, face: 0 }, 2: { depth: 0.76, scale: 2.7, light: 0.9, open: 0.7, rise: 1.6, face: 0.1 } },
+    guests: { 0: { depth: 0.74, scale: 2.9, light: 0.9, open: 0.7, rise: 1.4, face: -0.1 }, 1: { depth: 0.62, scale: 1.9, light: 1, open: 0.5, rise: -1.6, face: 0 }, 2: { depth: 0.76, scale: 2.7, light: 0.9, open: 0.7, rise: 1.6, face: 0.1 } },
   },
   vote: {
     approach: 8, hold: 25, withdraw: 10, camera: 0.7, swell: 0.6,
     mist: { thin: 0.6, backlight: 0.7, churn: 0.5 },
     // The one time they face the visitor squarely, still and lit: the question is theirs too.
-    guests: { 0: { depth: 0.64, light: 0.75, face: 0, rise: 0.6 }, 1: { depth: 0.7, light: 0.85, face: 0, rise: 0.4 }, 2: { depth: 0.62, light: 0.75, face: 0, rise: 0.7 } },
+    guests: { 0: { depth: 0.64, light: 0.75, face: 0, rise: 0.6 }, 1: { depth: 0.66, light: 0.85, face: 0, rise: -0.6 }, 2: { depth: 0.62, light: 0.75, face: 0, rise: 0.7 } },
   },
   yes: { approach: 1.2, hold: 2, withdraw: 3, camera: 0.15, swell: 0.35, clip: { 1: 'react' }, mist: { thin: 0.2, backlight: 0.7 }, guests: { 1: { depth: 0.55, light: 1, open: 0.8 }, 0: { open: 0.3, light: 0.35 }, 2: { open: 0.3, light: 0.35 } } },
   no: { approach: 1.2, hold: 2, withdraw: 3, camera: 0, swell: 0.2, mist: { density: 1.1, backlight: 0.4 }, guests: { 1: { depth: 0.1, light: 0.05, open: -0.9, rise: -0.5 }, 0: { open: -0.4, light: 0.1 }, 2: { open: -0.4, light: 0.1 } } },
@@ -159,7 +193,7 @@ export class GuestsStage {
     this.quality = QUALITY[quality] ? quality : 'high';
     this.reducedMotion = !!reducedMotion;
     this.now = 0;                // stage clock: the play clock plus the warp offset
-    this.raw = 0; this.offset = 0;
+    this.raw = 0; this.offset = 0; this.frozen = false;
     this.inside = false;
     this.shell = 0;
     this.moment = null;          // {name, action, def, start, dur, guestsDef}
@@ -264,13 +298,14 @@ export class GuestsStage {
   /** Per frame: advances the schedule and eases the pose toward the moment's targets. */
   update(t, dt = 0) {
     dt = Math.max(0, Math.min(0.25, Number(dt) || 0));
+    if (this.frozen) { this.offset = this.now - (Number(t) || 0); dt = 0; } // stills: the stage clock stands
     this.raw = Number(t) || 0;
     this.now = this.raw + this.offset;
-    if (this.inside && t >= this.nextDrift) {
+    if (this.inside && this.now >= this.nextDrift) {
       if (!this.moment || this.moment.name === 'drift') { if (!this.reducedMotion) this.cue('drift'); else this.drawDrift(); }
       this.scheduleDrift();
     }
-    let { u, phase } = this.strength(t);
+    let { u, phase } = this.strength(this.now);
     if (phase === 'done') { this.moment = null; u = 0; phase = 'rest'; }
     const m = this.moment;
     const d = m ? m.def : null;
@@ -286,8 +321,14 @@ export class GuestsStage {
         const want = over && over[k] != null ? over[k] : rest[k];
         tg[k] = lerp(rest[k], want, k === 'light' || k === 'open' ? u : uPose);
       }
-      const clip = m && d.clip && d.clip[i] && phase !== 'withdraw' ? d.clip[i] : 'idle';
-      g.clip = slots.has(i) ? clip : 'idle';
+      // Clips: the moment's own while it holds; approach / recede while the Guest travels toward or from the glass.
+      const moved = over && over.depth != null && over.depth > rest.depth + 0.12;
+      let clip = 'idle';
+      if (m && phase === 'approach' && moved) clip = 'approach';
+      else if (m && phase === 'withdraw' && moved) clip = 'recede';
+      else if (m && d.clip && d.clip[i] && phase === 'hold') clip = d.clip[i];
+      else if (m && d.clip && d.clip[i] && phase === 'approach') clip = d.clip[i];
+      g.clip = slots.has(i) && !this.reducedMotion ? clip : (slots.has(i) && m && d.clip && d.clip[i] && phase === 'hold' ? d.clip[i] : 'idle');
       g.onStage = slots.has(i);
     }
     // Pose: ease toward the targets; under reduced motion the pose is set in place behind a short fade.
@@ -329,6 +370,9 @@ export class GuestsStage {
     for (let i = 0; i < n; i++) { this.offset += step; this.update(this.raw, step); }
     return this.now;
   }
+
+  /** QA and stills: holds the stage clock (and every eased value) where it is until released. */
+  freeze(on = true) { this.frozen = !!on; }
 
   /** The Guest nearest to the glass (for the sound position and the camera). */
   get nearest() {
