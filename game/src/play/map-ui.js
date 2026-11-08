@@ -18,6 +18,7 @@ const CSS = `
 .ftf-map-host[hidden] { display: none; }
 .ftf-map-place, .ftf-map-dynamic > * { transform-box: fill-box; transform-origin: center; }
 .ftf-map-dynamic { pointer-events: none; }
+.ftf-map-plinth { fill: none; stroke: #4a3f2a; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .ftf-map-route { fill: none; stroke: var(--wh-gold, #e4c272); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .9; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
 .ftf-map-scrim { position: absolute; inset: 0; background: var(--wh-scrim, rgba(0,0,0,.35)); }
 .ftf-map { position: relative; width: min(max(560px, 34vw), 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 12px;
@@ -322,7 +323,11 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       grp.append(svg(doc, 'title', { text: actionText(p) }));
       grp.append(svg(doc, 'circle', { class: 'ftf-map-hit', cx: u, cy: v, r: hitR }));
       if (p.kind === 'camp') grp.append(svg(doc, 'circle', { class: 'ftf-map-camp-dot', cx: u, cy: v, r: 4.5, fill: hex(p.color) }));
-      if (p.kind === 'pedestal') grp.append(svg(doc, 'path', { class: 'ftf-map-gem', d: `M${u} ${v - 5} l3.5 5 -3.5 5 -3.5 -5 z` }));
+      if (p.kind === 'pedestal') {
+        // A plinth with a shard standing on it (distinct from the goal's diamond, QA-025).
+        grp.append(svg(doc, 'path', { class: 'ftf-map-plinth', d: `M${u - 4.5} ${v + 5} h9 M${u - 3} ${v + 5} v-2.2 h6 v2.2` }));
+        grp.append(svg(doc, 'path', { class: 'ftf-map-gem', d: `M${u} ${v - 6.5} l2.2 4.2 -2.2 5.1 -2.2 -5.1 z M${u - 2.2} ${v - 2.3} h4.4` }));
+      }
       if (p.kind !== 'pedestal' && p.kind !== 'anchor') { // those two keep their tooltip only: the plaza is too small for more labels
         let lx = u, ly = v, anchor = 'middle';
         if (p.kind === 'scroll') { lx = u + g.platforms[0].r + 7; ly = v + 4; anchor = 'start'; }
@@ -357,8 +362,10 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       legendItem(lg((i) => i.append(svg(doc, 'circle', { class: 'ftf-map-shell ftf-map-shell--waiting', style: 'filter:none', cx: 7, cy: 7, r: 5.5 }))), t('map.legend.waiting')),
       legendItem(lg((i) => i.append(svg(doc, 'circle', { class: 'ftf-map-shell', cx: 7, cy: 7, r: 5.5 }))), t('map.legend.quiet')),
       legendItem(lg((i) => i.append(svg(doc, 'circle', { class: 'ftf-map-agent', cx: 7, cy: 7, r: 4, fill: '#9fc4d6' }))), t('map.agents')));
-    hint.textContent = t(hub ? 'map.hint.hub' : 'map.hint');
-    const closeBtn = el(doc, 'button', { class: 'ftf-map-close', type: 'button', onclick: () => close() }, el(doc, 'kbd', { text: 'Esc' }), t('map.close'));
+    // Device-aware copy (QA-026): the client sets session.flags.input every frame (keyboard | gamepad | touch).
+    const dev = session.flags && session.flags.input;
+    hint.textContent = t((hub ? 'map.hint.hub' : 'map.hint') + (dev === 'touch' ? '.touch' : dev === 'gamepad' ? '.pad' : ''));
+    const closeBtn = el(doc, 'button', { class: 'ftf-map-close', type: 'button', onclick: () => close() }, dev === 'touch' ? null : el(doc, 'kbd', { text: dev === 'gamepad' ? 'B' : 'Esc' }), t('map.close'));
     panel.replaceChildren(
       el(doc, 'header', {}, el(doc, 'div', {}, el(doc, 'div', { class: 'ftf-map-eyebrow', text: t('map.eyebrow') }), el(doc, 'h2', { text: title })), closeBtn),
       el(doc, 'div', { class: 'ftf-map-canvas' }, s),
