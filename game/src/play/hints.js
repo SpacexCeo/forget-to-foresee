@@ -59,8 +59,9 @@ export const HINTS = [
  * @param {() => 'novice'|'pro'} [o.mode]
  * @param {object} [o.i18n]  for the reading args (shell numerals, meanings) and text length
  * @param {() => number} [o.now] milliseconds (tests)
+ * @param {boolean} [o.hub] the Shell hub (play/hub.js): no walking hint; `wh.hint.<id>.hub` texts where they exist
  */
-export function createHints({ storage = null, mode = () => 'novice', i18n = null, now = () => Date.now() } = {}) {
+export function createHints({ storage = null, mode = () => 'novice', i18n = null, now = () => Date.now(), hub = false } = {}) {
   const flags = (storage && storage.getJSON(HINTS_KEY)) || {};
   const subs = new Set();
   const st = { i18n, acts: {}, ms: 0, lastAct: 0, lastToast: -Infinity, trial: 0, perTrial: 0 };
@@ -74,10 +75,11 @@ export function createHints({ storage = null, mode = () => 'novice', i18n = null
   const flag = (id) => (flags[id] || (flags[id] = { seen: 0, done: false }));
   const emit = () => { for (const fn of [...subs]) fn(); };
   const novice = () => mode() !== 'pro';
-  const textOf = (def, args) => ({ key: 'wh.hint.' + def.id, args });
+  const textOf = (def, args) => ({ key: hub && i18n && i18n.has('wh.hint.' + def.id + '.hub') ? 'wh.hint.' + def.id + '.hub' : 'wh.hint.' + def.id, args });
   const entry = (def, args) => ({ id: def.id + '-' + flag(def.id).seen + '-' + st.trial, time: i18n ? i18n.t('wh.log.trial', { n: st.trial }) : 'T' + st.trial, text: textOf(def, args) });
 
   function eligible(def) {
+    if (hub && def.id === 'move') return false; // nobody has to walk in the hub
     const f = flag(def.id);
     if (f.done) return false;
     if (def.stop === 'once') return f.seen === 0;

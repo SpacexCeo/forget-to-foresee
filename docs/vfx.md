@@ -33,23 +33,27 @@ Common opts: `position` ([x,y,z] or Vector3), `scale` (spatial), `count` (partic
 
 Durations of vision and finale follow spec 6.
 
-## Integration lines for `main.js` (gameplay agent)
-```js
-import { createVfx } from './vfx/index.js';
-const vfx = createVfx(scene, camera, renderer, { tier: detectedTier });
-// after every lookdev.setQuality / post.configure (the composer is rebuilt):
-vfx.setQuality(lookdev.tier);
-vfx.attachToComposer(lookdev.post.composer);   // null on the low tier -> direct rendering
-// in the frame loop, before lookdev.render():
-vfx.update(dt);
-// reduced motion:
-vfx.setReducedMotion(on);
-// events, e.g.: vfx.play('anchor_plant', { position: zone.position });
-//               vfx.play('shell_mist', { follow: shellObject });
-//               vfx.hooks.skyTint = (c, k) => lookdev.sky.tint?.(c, k);
-```
+## Integration (state on 08.11, branch `claude/audio-vfx-wiring`)
+
+| What | Where |
+|---|---|
+| `createVfx(scene, camera, renderer, { tier, reducedMotion })`, lazy-loaded | `src/play/game.js` |
+| `attachToComposer(lookdev.post.composer)` at start and after every quality change (`lookdev.onQualityChange`; null composer on the low tier → direct rendering); `setQuality(lookdev.tier)` | `src/play/presentation.js` |
+| `setReducedMotion` follows `lookdev.reducedMotion` (checked every frame) | `presentation.js` |
+| `update(dt)` every frame before `lookdev.render()` | `src/play/hooks.js` `Hooks.update` (called from `play.update`, which `main.js` runs before the render) |
+| `shell_mist` looping under each of the four Shells (`follow: shell root`, so it rides the hover) | `presentation.js` |
+| `shell_crack_pulse` on Shell IV from an anchor on its front at mid-height, `crackDir` along the rib lines; `onPulse` breathes the emissive of the real model's crack/glow materials when it has any | `presentation.js` |
+| `tension` singleton with `level = tensionLevel(season tension)` (0 below 10, then linear to 1 at 100), following Iris; `hooks.skyTint` warms the fog and the fill light a little (a `lookdev.sky.tint` hook is used instead when the look-dev offers one) | `src/play/ambience.js` + `presentation.js` |
+| `logogram` on the Shell glass when the Guest draws a sign and Iris is inside (forms and dots of the visible sign, radius of the glass glyph, facing the visitor) | `presentation.js` |
+| `vote_finale` on the finale with `points` from `layout.js` CAMPS and `target` [0, 14, 0]; event cues (`VFX_MAP`, `VFX_OPTS`) | `src/play/hooks.js` |
+
 `attachToComposer` inserts `VfxPass` before bloom and reads the scene depth from
-`composer.renderTarget1.depthTexture` (PostStack's target already has one).
+`composer.renderTarget1.depthTexture` (PostStack's target already has one). The post stack disposes every
+pass when it is rebuilt on a tier change, so `VfxPass.dispose()` is a no-op and the pass is re-inserted into
+the new composer; `createVfx().dispose()` releases it for real (`release()`).
+
+Numbers for QA: `window.__ftf.vfx.stats()` and `window.__ftf.play.presentation.state()` (mists, crack,
+tension level, glass sign, footsteps, hums, tier, reduced motion).
 
 ## Design
 - **Particles** (`particles.js`, `shaders.js`): instanced quads, one draw call per (atlas, blend)

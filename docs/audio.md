@@ -6,7 +6,25 @@ All sound is synthesized from scratch. There are no samples and no third-party a
 - Rebuild: `python3 art/audio/build_audio.py` (numpy, scipy, ffmpeg with libopus; about 1 min on CPU). Use `--only <names>` for single assets and `--wav DIR` to keep the float masters.
 - Runtime: `game/src/audio/audio.js` (WebAudio) and `game/src/audio/mix.js` (pure logic, tested in `tests/client/audio.test.mjs`).
 
-## Integration (for the gameplay agent; main.js is not edited here)
+## Integration (state on 08.11, branch `claude/audio-vfx-wiring`)
+
+The runtime is wired into the play layer; nothing in `main.js` touches WebAudio directly.
+
+| What | Where |
+|---|---|
+| Lazy load of `createAudio`, unlock on the first key or pointer | `src/play/game.js` |
+| `setListener(camera, focus)` every frame (ears at Iris's chest, orientation from the camera) | `src/play/hooks.js` `Hooks.update` |
+| `setTension(obs.season.tension)` on every observation; `speakStrokes` for the sign the Guest draws while Iris is inside | `src/play/game.js` `syncVisuals` |
+| `setZone(inShell ? 'shell' : zoneAt(player.pos))` every frame (camp beds, balcony and bridge wind, the interior) | `src/play/presentation.js` |
+| One positional `amb_shell_hum` per Shell (`setShellHums`, level follows the zone: full on the plaza and bridges, 0.8 at a camp, off inside) | `src/play/presentation.js` → `audio.js` |
+| Footsteps: Iris non-positional, clan agents positional with distance gain (full within 6 m, silent beyond 30 m); surface by position (`step_grass` on camp plateaus, `step_stone` plaza and balcony, `step_wood` bridges, `step_glass` inside a Shell); cadence by distance walked (0.72 m per step walking, 1.1 m running) | `src/play/ambience.js` (pure, tested) + `presentation.js` |
+| Event cues: room events → sounds (`AUDIO_MAP`, per-cue `AUDIO_OPTS`; positional when the cue has a place) | `src/play/hooks.js` |
+| `ui_click` on every button in the play UI and world HUD, `ui_confirm` on the player's confirmed commands, `ui_error` on a rejected one | `presentation.js` (delegated click) + `game.js` (`command_ok` / `rejected`) |
+| Steps and UI sounds preloaded right after unlock (every variant of a group) | `presentation.js` → `audio.preload` |
+| Master / music / effects sliders in the scene settings dialog (Esc), persisted in `ftf.audio.v1`, labels in the five UI languages | `src/play/audio-settings.js`, mounted from `main.js` |
+
+Cue table: every name in `CUE_NAMES` (`src/play/hooks.js`) is mapped to a sound and/or an effect or listed in
+`SILENT_CUES` with its reason; `tests/client/audio.test.mjs` enforces it. The API as the play layer uses it:
 
 ```js
 import { createAudio } from './audio/audio.js';
@@ -14,7 +32,7 @@ import { zoneAt } from './audio/mix.js';
 
 const audio = createAudio();                          // nothing plays until unlock()
 addEventListener('pointerdown', () => audio.unlock(), { once: true });   // also on keydown
-for (const z of ANCHOR_ZONES) audio.play('amb_shell_hum', { pos: z.shellPosition, loop: true }); // queued until unlock
+audio.setShellHums(ANCHOR_ZONES.map((z) => z.shellPosition)); // one positional hum per Shell, queued until unlock
 
 // every frame
 audio.setListener(camera, player.position);           // ears at Iris, orientation from the camera
@@ -27,6 +45,7 @@ audio.play('anchor_plant', { pos: anchor.position });
 audio.speakStrokes([{ stroke: 'arc', dur: 1.2 }, { stroke: 'drop', dur: 0.9 }], { pos: guest.position }); // voice follows the logogram pen
 audio.play('sting_survived');                         // the voice and stingers duck music by -9 dB and ambience by -6 dB
 audio.setVolume('music', 0.5);                        // master | music | sfx, 0..1, saved in localStorage 'ftf.audio.v1'
+audio.preload(['step_stone', 'ui_click']);            // after unlock; a group name loads every variant
 audio.dispose();
 ```
 
@@ -58,4 +77,5 @@ Loudness: each sound is normalized at render time (short-term RMS for one-shots,
 
 ## Known limits
 - Ogg Opus decodes in Chrome, Edge and Firefox, and in Safari 18.4+. On older Safari `decodeAudioData` fails and the game simply stays silent: nothing throws.
-- No listening QA by a human yet. Levels were set from measurements only, and the mix between beds and music needs a pass in the running game.
+- No listening QA by a human yet (the wiring was checked in headless Chromium: the graph, the zones, the hums, the step counts; not the mix). Levels were set from measurements only, and the mix between beds, hums, steps and music needs a pass in the running game. Footstep timing follows distance walked, not the animation's foot contacts.
+- The volume sliders live in the scene controls dialog as an appended section (the dialog belongs to the UI shell); the request to move them into Settings proper is in `docs/collab-requests.md`.

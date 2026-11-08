@@ -10,8 +10,17 @@
 //          transmission/iridescence, the sky-dome PMREM instead of the baked HDR.
 // Reduced motion (spec 1/3) is orthogonal: it freezes the cloud drift, wind and Shell hover.
 // Per-pass costs and how they were estimated: docs/rendering.md.
+//
+// Phones use the same three tier names on a second *profile* (docs/mobile.md), so everything that
+// keys on 'ultra' | 'high' | 'low' (settings, VFX, the dev HUD) keeps working:
+//   phone/high  (also 'ultra'): direct render at up to 1.5x pixel ratio (the screen is small, so
+//          sharpness buys more than post effects), 1k shadows, a third of the desktop-low grass.
+//   phone/low   1x pixel ratio, 512 shadows, sparse grass; the governor then lowers the render
+//          resolution in steps before giving up.
+// The desktop tiers are untouched by the profile.
 
 export const TIERS = Object.freeze(['ultra', 'high', 'low']);
+export const PROFILES = Object.freeze(['desktop', 'phone']);
 
 export const QUALITY = Object.freeze({
   ultra: Object.freeze({
@@ -37,7 +46,39 @@ export const QUALITY = Object.freeze({
   }),
 });
 
+/** Phone profile (docs/mobile.md). 'ultra' resolves to `high` here: the best a phone should run. */
+export const PHONE_QUALITY = Object.freeze({
+  high: Object.freeze({
+    pixelRatioCap: 1.5, msaa: 0, smaa: false, shadowMap: 1024, shadowRadius: 1, shadowDistance: 50,
+    post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
+    godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
+    grassBlades: 1800, flowers: 90, grassFadeDistance: 32,
+    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false,
+  }),
+  low: Object.freeze({
+    pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 512, shadowRadius: 1, shadowDistance: 35,
+    post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
+    godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
+    grassBlades: 700, flowers: 30, grassFadeDistance: 24,
+    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false,
+  }),
+});
+
 export const isTier = (t) => TIERS.includes(t);
+export const isProfile = (p) => PROFILES.includes(p);
+
+/** The knob set for a tier on a profile; unknown input falls back to desktop ultra / phone high. */
+export function qualityFor(tier, profile = 'desktop') {
+  if (profile === 'phone') return tier === 'low' ? PHONE_QUALITY.low : PHONE_QUALITY.high;
+  return QUALITY[isTier(tier) ? tier : 'ultra'];
+}
+
+/** Governor settings per profile: phones aim at 30 fps (spec 10) and may also drop render resolution. */
+export const GOVERNORS = Object.freeze({
+  desktop: Object.freeze({ budgetMs: 1000 / 58, warmup: 4, window: 90, windowEnd: 40, cooldown: 5, pixelScales: Object.freeze([]) }),
+  // 90 frames at 30 fps are three seconds over budget; asset streaming hitches are excluded by the warm-up.
+  phone: Object.freeze({ budgetMs: 1000 / 30, warmup: 6, window: 90, windowEnd: 120, cooldown: 8, pixelScales: Object.freeze([0.85, 0.7]) }),
+});
 
 /** One step cheaper, or null at the bottom. */
 export const lowerTier = (t) => (t === 'ultra' ? 'high' : t === 'high' ? 'low' : null);
@@ -61,7 +102,7 @@ export function tierForPreference(pref, detected = 'ultra') {
  */
 export function detectTier(env = {}) {
   const gpu = String(env.gpu || '').toLowerCase();
-  if (env.mobile) return 'low';
+  if (env.mobile) return detectPhoneTier(env, gpu);
   if (/swiftshader|llvmpipe|software|basic render/.test(gpu)) return 'low';
   if (/intel\s*(\(r\)\s*)?(uhd|hd|iris)|apple gpu|adreno|mali|powervr|radeon\(tm\) graphics|vega \d/.test(gpu)) return 'low';
   const rtx = /rtx\s*(a?\d{4})/.exec(gpu);
@@ -83,23 +124,54 @@ export function detectTier(env = {}) {
 }
 
 /**
+ * Phone tier from the signals a browser gives (docs/mobile.md): small memory (`deviceMemory` is rounded to
+ * powers of two, so 3 GB phones report 2), one or two cores, or a last-generation mobile GPU mean 'low';
+ * everything else, including iPhones that expose neither number, starts on 'high' and relies on the governor.
+ */
+function detectPhoneTier(env, gpu) {
+  if (env.deviceMemory && env.deviceMemory <= 2) return 'low';
+  if (env.cores && env.cores <= 2) return 'low';
+  if (/swiftshader|llvmpipe|software/.test(gpu)) return 'low';
+  const adreno = /adreno\s*(?:\(tm\)\s*)?(\d{3})/.exec(gpu);
+  if (adreno && Number(adreno[1]) < 610) return 'low';
+  if (/mali-t\d|mali-g(?:[1-5]\d|7[01])\b|mali-400|powervr (?:ge|gx|sgx)/.test(gpu)) return 'low';
+  return 'high';
+}
+
+/**
+ * Render profile from device signals: a phone user agent, or a coarse (touch) primary pointer on a screen
+ * whose short side is phone-sized. Tablets with a desktop user agent stay on the desktop profile.
+ * @param {{mobile?:boolean, coarse?:boolean, screenMin?:number}} env
+ */
+export function detectProfile(env = {}) {
+  if (env.mobile) return 'phone';
+  if (env.coarse && env.screenMin && env.screenMin <= 600) return 'phone';
+  return 'desktop';
+}
+
+/**
  * Frame-time governor for the automatic tier: after a warm-up it watches a rolling window and
  * steps the tier down once when the 75th-percentile frame time stays above budget (never up, so
  * it cannot oscillate; it stops judging after `windowEnd` seconds). Pure: feed it frame times.
  */
 export class TierGovernor {
-  /** @param {{budgetMs?:number, warmup?:number, window?:number, windowEnd?:number, cooldown?:number}} o */
-  constructor({ budgetMs = 1000 / 58, warmup = 4, window = 90, windowEnd = 40, cooldown = 5 } = {}) {
-    Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown });
+  /**
+   * @param {{budgetMs?:number, warmup?:number, window?:number, windowEnd?:number, cooldown?:number,
+   *          pixelScales?:readonly number[]}} o `pixelScales`: render-resolution steps (fractions of the
+   *          tier's pixel ratio) taken once the bottom tier is reached, e.g. [0.85, 0.7]; empty on desktop.
+   */
+  constructor({ budgetMs = 1000 / 58, warmup = 4, window = 90, windowEnd = 40, cooldown = 5, pixelScales = [] } = {}) {
+    Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown, pixelScales: [...pixelScales] });
     this.t = 0; this.samples = []; this.lastChange = -Infinity; this.done = false;
+    this.pixelScale = 1; this.pixelStep = 0;
   }
 
   /**
    * @param {number} ms frame time
    * @param {string} tier current tier
-   * @returns {string|null} the tier to switch to, or null to stay
+   * @returns {{tier?:string, pixelScale?:number}|null} the change to apply, or null to stay
    */
-  sample(ms, tier) {
+  step(ms, tier) {
     if (this.done) return null;
     this.t += ms / 1000;
     if (this.t > this.windowEnd) { this.done = true; return null; }
@@ -111,8 +183,13 @@ export class TierGovernor {
     const p75 = sorted[Math.floor(sorted.length * 0.75)];
     if (p75 <= this.budgetMs * 1.12) return null;
     const next = lowerTier(tier);
-    if (!next) { this.done = true; return null; }
     this.lastChange = this.t; this.samples = [];
-    return next;
+    if (next) return { tier: next };
+    if (this.pixelStep < this.pixelScales.length) { this.pixelScale = this.pixelScales[this.pixelStep++]; return { pixelScale: this.pixelScale }; }
+    this.done = true;
+    return null;
   }
+
+  /** Tier-only view of `step()` (kept for callers that ignore the resolution steps). */
+  sample(ms, tier) { return this.step(ms, tier)?.tier || null; }
 }
