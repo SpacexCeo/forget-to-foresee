@@ -63,7 +63,7 @@ const CSS = `
 .ftf-silk { display: inline-flex; align-items: center; gap: 8px; font-family: var(--ftf-mono); color: var(--ftf-pearl); font-size: 1.05rem; }
 .ftf-silk b { color: var(--ftf-amber); font-weight: 600; min-width: 2ch; text-align: right; transition: color var(--ftf-motion-fast); }
 .ftf-trials { display: flex; gap: 8px; }
-.ftf-trials span { min-width: 72px; text-align: center; padding: 6px 10px; border: 1px solid var(--ftf-stone); border-radius: 4px; color: var(--ftf-mist); font-size: .95rem; }
+.ftf-trials span { min-width: 72px; text-align: center; padding: 6px 10px; border: 1px solid var(--ftf-stone); border-radius: 4px; color: var(--ftf-mist); font-size: .95rem; white-space: nowrap; }
 .ftf-trials span[data-on="true"] { border-color: var(--ftf-amber); color: var(--ftf-pearl); }
 .ftf-trials span[data-sealed="true"] { background: rgba(212,161,95,.14); color: var(--ftf-amber); }
 .ftf-seal { font-size: 1.15rem; color: var(--ftf-amber); margin: 0; }
@@ -87,7 +87,7 @@ const CSS = `
 .ftf-access details { margin: 0 0 16px; }
 .ftf-access summary { cursor: pointer; color: var(--ftf-mist); }
 .ftf-access details p { margin: .6em 0 0; }
-@media (max-width: 520px) { .ftf-looks { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ftf-trials span { min-width: 0; flex: 1; } }
+@media (max-width: 520px) { .ftf-looks { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ftf-trials span { min-width: 0; flex: 1; padding: 6px 4px; font-size: .88rem; } }
 `;
 function ensureTutStyles(doc = document) {
   if (doc.getElementById('ftf-tut-style')) return;

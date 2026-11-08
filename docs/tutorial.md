@@ -152,4 +152,47 @@ See `docs/collab-requests.md` (requests 7–9): the toast length, the "25 % sure
 
 ## 3. Built, checked, left
 
-Filled in below as the work lands (sections 3.1–3.3).
+### 3.1 Built (branch `claude/tutorial`)
+
+| File | Change |
+|---|---|
+| `game/src/ui/flow.js` | the step flow gains `skip('tutorial')` (remembered as skipped), a saved tutorial `beat` (resume after a reload), `returning` (every step done before this session: ENTER goes straight to the island); `createTutorial()` is the five-beat machine (pure, no DOM); `TUTORIAL_SIGN` moved here with the staged silk figures (63 → 53 → 83: the only anchor takes the whole Gift of 20 plus its stake, as `resolveEvent` pays) |
+| `game/src/ui/onboarding.js` | the five beats over one example ring (tap targets are real buttons over the SVG: keyboard, gamepad and screen readers work; the core is a button in beat 2); "Skip tutorial" on every beat; progress dots; the Novice/Pro question after the memory beat; the access card in one line with the long text under "What this means"; the look picker; first contact in one line; scoped styles (`#ftf-tut-style`), reduced motion plays the three trials of beat 4 at once |
+| `game/src/ui/hologram/recipe.js`, `constructor.js` | `LOOK_PRESETS` (four complete recipes, Mist = the default) and `mountConstructor(root, { compact: true })`: look tiles with `aria-pressed`, "Customize" folds the full constructor (hash, low tier, save/load, every control) in and out |
+| `game/src/play/objectives.js` | walk: `anchor → end_tick → verified → forget → fragment → talk → ask`; hub: `fly → stake → leave → verified`; `FIRST_GIFT_TICK = 3` steers the first stake; soft steps expire so the season's own goals take over |
+| locales (`tut.*`, `onb.*`, `goal.*`, `hub.goal.*`) | rewritten in en / ru / uk / it / zh; "trial" everywhere a goal speaks (the pad menu still says "tick": request 8) |
+| `game/tests/tutorial.test.mjs` | 15 tests: flow skip / resume / returning / tampered storage; the beat machine; the example arithmetic; the looks; the copy budget; five-language coverage and placeholders; the tick word; the hub and walk first loops on the judge season (the stake resolves, the dead stake would not); skipOnboarding; every goal renders in five languages |
+| `game/tests/client/play.test.mjs` | the walk onboarding test follows the new order |
+| `README.md` | the judge table and the hub steps re-verified; test counts |
+
+What a stranger reads now, measured the same way as §1.1 (sr-only text excluded):
+
+| Measure | Before | After |
+|---|---|---|
+| Clicks from the lobby to the island (first run) | 8 | 7 with the tutorial done (Enter, Play as guest, Next ×4 after each action, Guide me, Begin, Step onto the island) or 5 with Skip |
+| Clicks for a returning player | 2 (Enter, Step onto the island) | 1 (Enter) |
+| Words on the access card | 67 | 23 (7 of them the required badge) |
+| Words per tutorial beat (title + body + feedback + buttons) | 33–82, read only | 24–39 while acting, 53–57 once a beat's result is on screen |
+| Hologram screen | 117 words, 62 controls | 19 words, 6 buttons (the constructor one click away) |
+| Interactions in the tutorial | 0 | 11 taps that each change the ring, one staged stake, one staged forgetting |
+| First-loop goal: title / hint length (en) | up to 9 / 28 words | ≤ 7 / ≤ 13 words (test) |
+| First stake | trial 2, never resolved | trial 3 (hub: the hint names the Delay; walk: the hint names the menu item); resolved at trial 3, silk back at trial 4 |
+
+Screenshots after the change: `docs/tutorial/after/` (1280×800, 1920×1080, 390×844; uk, ru, it beats; hub and walk arrival, Shell, Verified).
+
+### 3.2 Checked
+
+- `cd game && npm test`: 307 / 307 (15 new); `npm run build` green.
+- Headless Chromium (SwiftShader) on `npm run dev`: every beat driven by clicks in en at 1280×800, 1920×1080 and 390×844 and in uk, ru, it, zh at 1280×800; a wrong tap in beat 3 is answered; a reload during beat 3 resumes at beat 3; the look tiles switch the preview and "Customize" opens the full constructor; "Begin" and "Step onto the island" lead to the island; after that a reload plus ENTER lands in the world with no onboarding screen; "Skip tutorial" on beat 1 jumps to the look picker. Zero console errors or warnings in these states apart from SwiftShader's own "GPU stall due to ReadPixels".
+- Hub mode on the judge season: quests *Fly into Shell I* → *Stake 10 silk on the sign* → *Leave and let time pass* → *Watch trial 3 come true* → (trial 4, proof verified) *A sign waits in Shell II*; the dock, toast and log behave as before.
+- Walk mode on the judge season, headless replay of the README table: trial 1 silk 63 → pad menu item 3 *Anchor here for tick 3* → silk 53, *Anchor: Shell I, tick 3* → T → trial 2, quest *Watch trial 3 come true* → T, T → trial 4, silk 72, log *Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓*, no anchor left dangling, quest *The Price of Memory* → M → 4 visions, quest *Decide your fragment at the Scroll*.
+- Judge path timing: with the tutorial (about 60–90 s of taps) plus the hub loop (fly, one Delay change, stake, leave, one card, one "let trial pass") the first "Verified ✓" is reached in under three minutes on a machine that renders at a normal frame rate; in this container (1–4 fps) the hub loop alone took 125–155 s after arrival.
+
+### 3.3 Not done, and why
+
+- The hub's reading card still pre-fills the dead trial (Iris's prior) and the walk pad's **E** still places it; the goals tell the player what to pick instead. The one-line fixes live in `hub.js` and `interactions.js` (request 8); the hint texts and the "25 % sure" wording live in Task F's files (request 7).
+- No sound or VFX cue in the tutorial beats: the audio and VFX runtimes load with the play layer, after the onboarding; the feedback is visual (the ring, the seal, the chips). A chime on the seal would need the audio module mounted earlier (Task A's `main.js`).
+- A returning player still sees the first-loop goals in a new season (they do not block anything); `skipOnboarding` is honoured by `objectives.js` and waits for one line in `game.js` (request 8).
+- `meaning.3.*` ("in 2 ticks") and the pad menu labels say "tick" (Codex locale families): beat 3 shows "Delay: in 2 ticks" next to "in 2 trials" until they are renamed (request 8).
+- Translations of the new strings are mine (AI), consistent with the existing clan and term choices per language; a native-speaker pass is still owed, as for the rest of uk / it / zh.
+- Not checked on a GPU: real clicks at full frame rate (Playwright's `page.click` cannot be used here, element `.click()` was), gamepad navigation of the tap targets (they are ordinary buttons; `navigateGamepadMenu` walks them), touch on a physical phone.
