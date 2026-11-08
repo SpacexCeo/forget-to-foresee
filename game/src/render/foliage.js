@@ -1,16 +1,20 @@
 // Instanced grass and flowers for the plateaus (owner references: dense grass and small flowers on
 // the camp plateaus, wind in the blades). One InstancedMesh per kind = one draw call each. The
-// vertex shader bends the blades with the wind and scales them down with camera distance, so far
-// patches cost nothing to shade; reduced motion freezes the wind. Blades receive shadows and fog.
+// vertex shader bends the blades with the wind (gust fronts travelling across the island from the
+// shared noise texture plus a fine flutter, in world wind direction, the tip drooping as it bends)
+// and scales them down with camera distance, so far patches cost nothing to shade. The fragment
+// adds backlight: blades between the camera and the sun glow warm, the way grass does at golden
+// hour. Reduced motion freezes the wind. Blades receive shadows and fog.
 import * as THREE from 'three';
+import { getNoiseTexture } from './noise.js';
 
 function mulberry(seed) { let s = seed >>> 0; return () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-/** A tapered blade: 3 segments, bent forward, 7 vertices, 5 triangles. Height 1, width 0.06. */
+/** A tapered blade: 4 segments, bent forward, 9 vertices, 7 triangles. Height 1, width 0.06. */
 function bladeGeometry() {
-  const segs = 3, pos = [], uv = [], idx = [];
+  const segs = 4, pos = [], uv = [], idx = [];
   for (let i = 0; i <= segs; i++) {
-    const h = i / segs, w = 0.06 * (1 - h * 0.85), bend = 0.12 * h * h;
+    const h = i / segs, w = 0.06 * (1 - h * 0.85), bend = 0.14 * h * h;
     if (i < segs) { pos.push(-w / 2, h, bend, w / 2, h, bend); uv.push(0, h, 1, h); } else { pos.push(0, 1, bend); uv.push(0.5, 1); }
   }
   for (let i = 0; i < segs - 1; i++) { const b = i * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
@@ -48,30 +52,58 @@ function flowerGeometry() {
   return g;
 }
 
-/** Shared wind + distance LOD injected into a standard material. */
+/** Wind direction on the island (world XZ, unit): from the Salt camp toward the Amber camp. */
+export const WIND_DIR = Object.freeze([0.83, -0.56]);
+
+/** Shared wind + distance LOD + backlight injected into a standard material. */
 function windMaterial(base, { fadeDistance, flower }) {
-  const uniforms = { uTime: { value: 0 }, uWind: { value: 1 }, uFade: { value: fadeDistance } };
+  const uniforms = {
+    uTime: { value: 0 }, uWind: { value: 1 }, uFade: { value: fadeDistance }, tWindNoise: { value: getNoiseTexture() },
+    uWindDir: { value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]) },
+    uSunView: { value: new THREE.Vector3(0, 1, 0) }, uSunColor: { value: new THREE.Color(1, 0.85, 0.6) }, uBacklight: { value: flower ? 0.35 : 0.9 },
+  };
   base.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
         uniform float uTime, uWind, uFade;
+        uniform sampler2D tWindNoise;
+        uniform vec2 uWindDir;
         varying float vBladeH;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         vec3 iPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
         vec3 iWorld = (modelMatrix * vec4(iPos, 1.0)).xyz;
         float camD = distance(iWorld, cameraPosition);
         float lod = 1.0 - smoothstep(uFade * 0.55, uFade, camD);
-        float gust = sin(uTime * 1.7 + iWorld.x * 0.35 + iWorld.z * 0.21) * 0.6 + sin(uTime * 2.9 + iWorld.z * 0.7) * 0.25 + 0.15;
-        float sway = gust * uWind * ${flower ? '0.06' : '0.16'} * hBlade * hBlade;
+        // Gust fronts: large noise billows drifting downwind, plus a fine flutter per blade.
+        float gustN = texture2D(tWindNoise, iWorld.xz * 0.016 - uWindDir * uTime * 0.05).r;
+        float gust = (gustN - 0.32) * 1.9 + 0.25;
+        float flutter = sin(uTime * 3.1 + iWorld.x * 1.3 + iWorld.z * 0.9) * 0.22 + sin(uTime * 5.3 + iWorld.z * 2.1) * 0.08;
+        float sway = (gust + flutter) * uWind * ${flower ? '0.05' : '0.17'} * hBlade * hBlade;
+        // World wind direction in the blade's local frame (instances rotate around Y only).
+        vec2 ax = normalize(instanceMatrix[0].xz), az = normalize(instanceMatrix[2].xz);
+        vec2 localWind = vec2(dot(uWindDir, ax), dot(uWindDir, az));
         transformed.y *= lod;
-        transformed.x += sway; transformed.z += sway * 0.4;`)
+        transformed.xz += localWind * sway;
+        transformed.y -= abs(sway) * 0.35 * hBlade; // the tip droops as it bends instead of stretching`)
       .replace('#include <color_vertex>', `#include <color_vertex>
         float hBlade = clamp(position.y, 0.0, 1.0);
         vBladeH = hBlade;
         #if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
           vColor.rgb *= mix(${flower ? '0.8' : '0.42'}, 1.0, hBlade);
         #endif`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform vec3 uSunView, uSunColor;
+        uniform float uBacklight;
+        varying float vBladeH;`)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+        {
+          // Light through the blade: looking toward the sun, thin tips glow warm (no shadow term: the
+          // sun shadow is already in the direct light; this is the scattered share, kept modest).
+          float bl = pow(max(dot(normalize(-vViewPosition), uSunView), 0.0), 5.0);
+          reflectedLight.indirectDiffuse += diffuseColor.rgb * uSunColor * bl * uBacklight * (0.25 + 0.75 * vBladeH);
+        }`);
     base.userData.shader = shader;
   };
   base.userData.uniforms = uniforms;
@@ -79,7 +111,7 @@ function windMaterial(base, { fadeDistance, flower }) {
   return base;
 }
 
-const GRASS_COLORS = [0x5f8f4a, 0x6f9c4f, 0x7fa655, 0x89ac5b, 0x5a8747, 0x9bb064];
+const GRASS_COLORS = [0x5f8f4a, 0x6f9c4f, 0x7fa655, 0x89ac5b, 0x5a8747, 0x9bb064, 0x7d9a4e, 0xa3b36a];
 const FLOWER_COLORS = [0xd8c7ff, 0xf6f1ff, 0xf2d26a, 0xb58fe6, 0xffffff, 0xe9c6ea];
 
 /**
@@ -92,11 +124,12 @@ export class Foliage {
     this.group.name = 'foliage';
     this.patches = patches;
     this.seed = seed;
-    this.grassMat = windMaterial(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0, side: THREE.DoubleSide }), { fadeDistance, flower: false });
+    this.grassMat = windMaterial(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, metalness: 0, side: THREE.DoubleSide }), { fadeDistance, flower: false });
     this.flowerMat = windMaterial(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, metalness: 0, side: THREE.DoubleSide, emissive: 0x111111 }), { fadeDistance, flower: true });
     this.bladeGeo = bladeGeometry();
     this.flowerGeo = flowerGeometry();
     this.grass = null; this.flowers = null;
+    this.sunDir = new THREE.Vector3(0, 1, 0);
     this.rebuild({ blades, flowers, fadeDistance });
   }
 
@@ -139,9 +172,19 @@ export class Foliage {
     return mesh;
   }
 
-  /** @param {number} dt seconds (0 under reduced motion) */
-  update(dt) {
-    for (const mat of [this.grassMat, this.flowerMat]) mat.userData.uniforms.uTime.value += dt;
+  /** Sun direction (world, toward the sun) and colour for the backlight. */
+  setSun(dir, color) {
+    this.sunDir.copy(dir);
+    for (const mat of [this.grassMat, this.flowerMat]) mat.userData.uniforms.uSunColor.value.copy(color);
+  }
+
+  /** @param {number} dt seconds (0 under reduced motion) @param {THREE.Camera} [camera] for the view-space sun */
+  update(dt, camera) {
+    for (const mat of [this.grassMat, this.flowerMat]) {
+      const u = mat.userData.uniforms;
+      u.uTime.value += dt;
+      if (camera) u.uSunView.value.copy(this.sunDir).transformDirection(camera.matrixWorldInverse);
+    }
   }
 
   setWind(strength) { for (const mat of [this.grassMat, this.flowerMat]) mat.userData.uniforms.uWind.value = strength; }

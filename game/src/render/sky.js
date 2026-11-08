@@ -24,28 +24,30 @@ export function sunDirection(elevationDeg, azimuthDeg) {
  * (art/env/bake_env.py: elevation 13, azimuth 34); the others fall back to the sky-dome PMREM.
  *   sunIntensity  directional light intensity (three.js units) before the atmosphere tint
  *   skyMean       mean radiance of the upper sky hemisphere after normalisation (ambient level)
- *   mie           aerosol multiplier (golden haze); exposure in EV; fog in render/fog.js units
+ *   mie           aerosol multiplier (golden haze); exposure in EV
+ *   fog           height fog density (extinction per m at the cloud sea) and falloff (per m above it),
+ *                 distance fog near/far (m), the sun lobe power and the aerial cool shift (render/fog.js)
  */
 export const TIME_PRESETS = Object.freeze({
   golden: Object.freeze({
-    label: 'Golden hour', elevation: 13, azimuth: 34, sunIntensity: 3.6, skyMean: 0.36, mie: 2.4, ozone: 1.0,
-    exposure: 0.15, envUrl: 'assets/env/golden_1k.hdr', envIntensity: 0.34, cloudCover: 0.46, warmth: 1.0,
-    fog: { density: 0.022, falloff: 0.085, distance: 0.0016, sunPower: 7 },
+    label: 'Golden hour', elevation: 13, azimuth: 34, sunIntensity: 5.0, skyMean: 0.30, mie: 2.4, ozone: 1.0,
+    exposure: 0.15, envUrl: 'assets/env/golden_1k.hdr', envIntensity: 0.28, cloudCover: 0.58, warmth: 1.0,
+    fog: { density: 0.085, falloff: 0.12, near: 30, far: 420, sunPower: 7, aerial: 0.35 },
   }),
   morning: Object.freeze({
-    label: 'Morning', elevation: 24, azimuth: -38, sunIntensity: 3.6, skyMean: 0.42, mie: 1.6, ozone: 1.0,
-    exposure: 0.0, envUrl: null, envIntensity: 0.42, cloudCover: 0.38, warmth: 0.6,
-    fog: { density: 0.02, falloff: 0.08, distance: 0.0014, sunPower: 6 },
+    label: 'Morning', elevation: 24, azimuth: -38, sunIntensity: 4.6, skyMean: 0.36, mie: 1.6, ozone: 1.0,
+    exposure: 0.0, envUrl: null, envIntensity: 0.34, cloudCover: 0.42, warmth: 0.6,
+    fog: { density: 0.07, falloff: 0.12, near: 35, far: 460, sunPower: 6, aerial: 0.3 },
   }),
   noon: Object.freeze({
-    label: 'Noon', elevation: 58, azimuth: 20, sunIntensity: 3.8, skyMean: 0.5, mie: 1.0, ozone: 1.0,
-    exposure: -0.3, envUrl: null, envIntensity: 0.48, cloudCover: 0.32, warmth: 0.2,
-    fog: { density: 0.016, falloff: 0.08, distance: 0.0011, sunPower: 5 },
+    label: 'Noon', elevation: 58, azimuth: 20, sunIntensity: 4.4, skyMean: 0.42, mie: 1.0, ozone: 1.0,
+    exposure: -0.3, envUrl: null, envIntensity: 0.4, cloudCover: 0.36, warmth: 0.2,
+    fog: { density: 0.05, falloff: 0.12, near: 45, far: 520, sunPower: 5, aerial: 0.25 },
   }),
   dusk: Object.freeze({
-    label: 'Dusk', elevation: 4.5, azimuth: 48, sunIntensity: 2.8, skyMean: 0.22, mie: 3.2, ozone: 1.4,
-    exposure: 0.7, envUrl: null, envIntensity: 0.26, cloudCover: 0.5, warmth: 1.3,
-    fog: { density: 0.026, falloff: 0.09, distance: 0.002, sunPower: 9 },
+    label: 'Dusk', elevation: 4.5, azimuth: 48, sunIntensity: 3.8, skyMean: 0.2, mie: 3.2, ozone: 1.4,
+    exposure: 0.7, envUrl: null, envIntensity: 0.22, cloudCover: 0.6, warmth: 1.3,
+    fog: { density: 0.1, falloff: 0.11, near: 25, far: 380, sunPower: 9, aerial: 0.4 },
   }),
 });
 export const DEFAULT_PRESET = 'golden';
@@ -195,7 +197,7 @@ const DOME_FS = /* glsl */`
       float dens = smoothstep(1.0 - uCover, 1.0 - uCover + 0.28, base - (1.0 - detail) * 0.18);
       float thick = smoothstep(0.55, 1.0, base);
       // Silver/gold lining: forward scattering through thin edges, dark cool cores.
-      vec3 lit = uCloudSun * (0.18 + 2.6 * hg(mu, 0.62) * (1.0 - thick * 0.75) + 0.35 * hg(mu, -0.2)) + uCloudAmb * (0.9 - thick * 0.45);
+      vec3 lit = uCloudSun * (0.16 + 3.0 * hg(mu, 0.62) * (1.0 - thick * 0.8) + 0.35 * hg(mu, -0.2)) + uCloudAmb * (0.78 - thick * 0.5);
       float far = exp(-t * 0.09);
       lit = mix(sky, lit, far);
       float fade = smoothstep(0.015, 0.14, d.y);
@@ -238,10 +240,30 @@ export class SkyDome {
     this.mesh.scale.setScalar(450);
     /** Derived each setAtmosphere(): what the fog, clouds and lights use. Linear RGB. */
     this.derived = null;
+    this.tintState = null;
+    /** @type {null|((hex:number|string, amount:number) => void)} set by LookDev to propagate tint() */
+    this.onTint = null;
   }
 
   /** Keeps the dome centred on the camera (its vertex shader pins it to the far plane). */
   follow(camera) { this.mesh.position.copy(camera.position); }
+
+  /**
+   * Runtime mood tint (the tension effect in play/presentation.js calls `lookdev.sky.tint(hex, amount)`):
+   * pulls the horizon haze and the cloud ambient toward a colour, hue only, and tells the look-dev
+   * (`onTint`) so the fog, the fill light and the cloud sea follow. amount 0 restores the preset.
+   */
+  tint(hex, amount) {
+    const k = THREE.MathUtils.clamp(Number(amount) || 0, 0, 1);
+    this.tintState = { hex, amount: k };
+    if (!this.derived) return;
+    const c = new THREE.Color(hex);
+    const toward = (base) => { const l = base.r * 0.2126 + base.g * 0.7152 + base.b * 0.0722; const cl = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722 || 1e-3; return base.clone().lerp(c.clone().multiplyScalar(l / cl), k * 0.6); };
+    const m = this.material.uniforms;
+    m.uHorizon.value.copy(toward(this.derived.fogColor));
+    m.uCloudAmb.value.copy(toward(this.derived.zenith.clone().multiplyScalar(0.9)));
+    if (typeof this.onTint === 'function') this.onTint(hex, k);
+  }
 
   setTime(t) { this.material.uniforms.uTime.value = t; }
 
@@ -300,6 +322,7 @@ export class SkyDome {
       fogColor: new THREE.Color(...base), fogSunTint: new THREE.Color(...sunTint),
       zenith: new THREE.Color(...zenith), horizonSun: new THREE.Color(...towardSun),
     };
+    if (this.tintState && this.tintState.amount > 0) this.tint(this.tintState.hex, this.tintState.amount);
     return this.derived;
   }
 

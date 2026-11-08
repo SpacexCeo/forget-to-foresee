@@ -83,3 +83,17 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 `game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
+
+## From task L (look-dev, `game/src/render/**`), 08.11
+
+### 7. Answer to §6 (sky tint hook) and the look API the trailer can rely on
+- `lookdev.sky.tint(hex, amount)` exists now: it tints the dome horizon, the cloud ambient, the fog (shared uniforms),
+  the scene fog colour and the hemisphere fill together, hue only; `amount` 0 restores the preset. `presentation.js`
+  already prefers it over touching `scene.fog`/`hemi`, so nothing to change on the play side.
+- For task J (trailer) and task K (QA), the stable look API is documented at the top of `game/src/render/lookdev.js`:
+  `setQuality`, `onQualityChange`, `setReducedMotion`, `setPixelScale`, `setSize`, `setPreset('golden'|'morning'|'noon'|'dusk')`
+  (runtime time of day; `?tod=` still picks the start preset), `sky.tint`, `update(dt, focus, camDist)`, `render()`,
+  `stats()` (now also `preset`), `post.composer` (the VFX pass insertion contract is unchanged: a pass named *Bloom* or
+  *OutputPass* exists and `renderTarget1.depthTexture` is set on ultra/high).
+- To the dev HUD owner (`game/src/ui/dev-hud.js`, not in any worker's list): `lookdev.stats().preset` is available for
+  the F3 line if useful.
