@@ -12,7 +12,7 @@ import { createPlayUi } from './ui.js';
 import { attachWorldHud } from './world-hud.js';
 import { createHints } from './hints.js';
 import { ClanAgents } from './agents.js';
-import { reactionsFor } from './behaviour.js';
+import { newlyUnderstood, reactionsFor } from './behaviour.js';
 import { Hooks } from './hooks.js';
 import { drawLogogram } from './logogram.js';
 import { createShellScene } from '../scenes/shell.js';
@@ -185,6 +185,12 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   }
   session.on('obs', syncVisuals);
   syncVisuals();
+  // Iris winks (`understand` clip) when a Guest's sign settles a word in her dictionary.
+  let prevObs = session.obs;
+  session.on('obs', () => {
+    if (newlyUnderstood(prevObs, session.obs) > 0) agents.irisReact('understand', state.now);
+    prevObs = session.obs;
+  });
 
   /** Per frame, after physics. */
   function update(dt, { focus, moving, speed = 0, running = false }) {

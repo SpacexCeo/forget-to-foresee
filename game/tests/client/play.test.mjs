@@ -7,7 +7,7 @@ import { CommandBus } from '../../src/play/commands.js';
 import { Trail, simplify, capWaypoints, MAX_WAYPOINTS } from '../../src/play/trail.js';
 import { hotspotAt, contextOptions, availability, defaultOption } from '../../src/play/interactions.js';
 import { currentGoal, ONBOARDING } from '../../src/play/objectives.js';
-import { clanCue, reactionsFor, findClip, resolveClip } from '../../src/play/behaviour.js';
+import { clanCue, reactionsFor, findClip, resolveClip, newlyUnderstood, ONE_SHOT_CLIPS } from '../../src/play/behaviour.js';
 import { cuesForEvent, Hooks, VFX_MAP, AUDIO_MAP } from '../../src/play/hooks.js';
 import { PlaySession } from '../../src/play/session.js';
 import { PLAY_MESSAGES, createPlayI18n, renderMsg } from '../../src/play/i18n.js';
@@ -170,6 +170,16 @@ test('clan cues make minds legible: offers lean in, broken links turn away, isol
   assert.equal(findClip(clips, 'idle').name, 'agent_moh|Idle');
   assert.equal(resolveClip(clips, 'gesture_offer').name, 'talk', 'missing clip falls back gracefully');
   assert.equal(resolveClip([], 'celebrate').clip, null);
+});
+
+test('Iris winks (understand) only when a dictionary word becomes known', () => {
+  const dict = (...known) => ({ dictionary: { cells: [0, 1, 2, 3].map((f) => ({ slot: 1, form: f, known: known.includes(f) ? 2 : null })) } });
+  assert.equal(newlyUnderstood(dict(), dict(2)), 1);
+  assert.equal(newlyUnderstood(dict(2), dict(2)), 0, 'an already known word is not new');
+  assert.equal(newlyUnderstood(dict(2), dict(0, 2, 3)), 2);
+  assert.equal(newlyUnderstood(null, dict(2)), 0, 'the first observation never triggers');
+  assert.equal(resolveClip([{ name: 'think' }], 'understand').name, 'think', 'older glbs fall back to think');
+  assert.ok(ONE_SHOT_CLIPS.includes('understand'));
 });
 
 test('hooks: room events become named cues that exist in the VFX and audio modules', () => {

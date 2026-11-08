@@ -11,7 +11,7 @@ import { MODEL_FILES } from 'virtual:model-list';
 import { fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
-import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
+import { CLAN_ASSET, CLAN_ORDER, ONE_SHOT_CLIPS, REACTION_SECONDS, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
 
 const LOAD_RADIUS = 75;      // meters from the camera focus at which an agent model is requested
 const FADE = 0.35;           // clip cross-fade seconds
@@ -121,7 +121,7 @@ class Agent {
     if (this.currentClip === clip.name) return used;
     let act = this.actions.get(clip.name);
     if (!act) { act = this.mixer.clipAction(clip); this.actions.set(clip.name, act); }
-    const once = used === 'celebrate' || used === 'defeat';
+    const once = ONE_SHOT_CLIPS.includes(used);
     act.reset(); act.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); act.clampWhenFinished = once;
     act.fadeIn(FADE).play();
     const prev = this.currentClip && this.actions.get(this.currentClip);
@@ -146,6 +146,7 @@ export class ClanAgents {
       this.agents.set(clan, new Agent(clan, { scene, color: camp.color, home: camp.position, homeYaw: camp.rotationY }));
     }
     this.irisModel = null;
+    this.irisReaction = null;
   }
 
   /** Iris herself: the player's avatar group gets agent_iris.glb when it is available. */
@@ -162,15 +163,23 @@ export class ClanAgents {
     } catch (e) { console.warn('[play] Iris model failed', e); }
   }
 
-  /** Iris's clip: walk while moving, idle otherwise (procedural bob when no clips). */
+  /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */
+  irisReact(clip, now = 0) { this.irisReaction = { clip, until: now + (REACTION_SECONDS[clip] || 3) }; }
+
+  /** Iris's clip: walk while moving, a pending reaction when standing, idle otherwise (procedural bob when no clips). */
   updateIris(dt, moving, avatarGroup, t, speed = 0, running = false) {
     const m = this.irisModel;
     if (!m) return;
+    if (moving) this.irisReaction = null;            // walking away cancels the reaction
     if (m.mixer) {
-      const want = !moving ? 'idle' : running && m.clips.some((c) => c.name === 'run') ? 'run' : 'walk';
-      const { clip } = resolveClip(m.clips, want);
+      const react = this.irisReaction && this.irisReaction.until > t ? this.irisReaction.clip : null;
+      const want = react || (!moving ? 'idle' : running && m.clips.some((c) => c.name === 'run') ? 'run' : 'walk');
+      const { clip, name: used } = resolveClip(m.clips, want);
       if (clip && m.current !== clip.name) {
-        const act = m.mixer.clipAction(clip); act.reset().fadeIn(FADE).play();
+        const act = m.mixer.clipAction(clip);
+        const once = ONE_SHOT_CLIPS.includes(used);
+        act.reset(); act.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); act.clampWhenFinished = once;
+        act.fadeIn(FADE).play();
         if (m.current) m.mixer.clipAction(m.clips.find((c) => c.name === m.current)).fadeOut(FADE);
         m.current = clip.name;
       }
