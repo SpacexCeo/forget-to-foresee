@@ -41,7 +41,11 @@ panels (Task F applies the tokens there).
   reduced motion through the system query (`data-motion=reduce`, parallax off, the same hand-off clean), the map
   (unfold frames, close hides after the exit, reopen), Iris's look-at toward Moss while talking (head and neck bones
   found, look weight 0.99, yaw 1.1° after turning to face her), frame time 245 ms (unchanged). The route draw-on:
-  ROUTE_RESULT
+  the handler is verified by dispatching `pointerenter` on a camp place (a gold polyline of 11 points, length 234
+  map units, drawn on over 480 ms, removed on leave), and it also listens on `pointerover`, `pointermove` and
+  `focus`; Playwright's synthetic hover over the map's SVG does not reach the place in this SwiftShader container
+  (`elementFromPoint` finds the hit circle, yet no pointer event arrives, with waits of 2.5 s), so hovering with a
+  real mouse is on the GPU check list below.
 - QA-008 (the lead's defect): fixed in `camera-rig.js` with a test; the pre-flight zoom is remembered when the play
   layer swaps the rig's world into a Shell and eased back over about a second on return; a zoom by the player cancels
   the ease.
@@ -53,7 +57,8 @@ panels (Task F applies the tokens there).
   off for coarse pointers), repeated opens / closes of the map (a close token guards the hide), screen hand-offs
   clicked twice (a `leaving` guard), re-renders in place (no animation unless the step or beat changed).
 - Could not verify on a GPU: the feel of the timings at 60 fps (SwiftShader runs at a few fps, so the captures are
-  frames, not a film); the eye share of the look-at (no eye bones in the current glbs).
+  frames, not a film); the route draw-on under a real mouse hover (see above; keyboard focus and the dispatched
+  events are verified); the eye share of the look-at (no eye bones in the current glbs).
 
 ## Not done / for the lead
 
