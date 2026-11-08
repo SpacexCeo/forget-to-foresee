@@ -18,8 +18,8 @@
   "sockets": {
     "socket_draw_tip": [
       -0.303,
-      -2.033,
-      0.992
+      -1.483,
+      0.792
     ],
     "socket_core": [
       0.0,
@@ -42,5 +42,5 @@
       "KHR_materials_emissive_strength"
     ]
   },
-  "glb_raw_bytes": 1292660
+  "glb_raw_bytes": 1293016
 }

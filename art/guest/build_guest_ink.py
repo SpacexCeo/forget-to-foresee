@@ -209,9 +209,10 @@ def tendril_paths(rng):
                 root + out_dir * 0.55 + sway * 0.5 + Vector((0, 0, -L * 0.42)),
                 root + out_dir * 0.40 + sway + Vector((0, 0, -L * 0.75)),
                 root + out_dir * 0.55 + sway * 0.6 + Vector((0, 0, -L))]
-        if front > 0.8:   # the drawing tendrils reach forward toward the glass
-            for k in (3, 4):
-                ctrl[k] += Vector((0, -0.55 * (k - 2), 0.15 * (k - 2)))
+        if front > 0.8:   # the drawing tendrils reach forward toward the glass, gradually
+            # (a sharp turn at the very end twisted the tube into a flat flag, QA 08.11)
+            for k, f in ((2, 0.25), (3, 0.6), (4, 1.0)):
+                ctrl[k] += Vector((0, -0.55 * f, 0.10 * f))
         out.append((th, catmull(ctrl, 5), L))
     return out
 
@@ -253,7 +254,8 @@ def build_ink(rng, paths):
     vmeta = {}   # vert -> (tendril index, arc fraction)
     for i, (th, pts, L) in enumerate(paths):
         r0 = 0.085 + 0.025 * rng.random()
-        rf = lambda t, r0=r0: r0 * (1.0 - t) ** 0.85 + 0.010 + 0.025 * math.exp(-((t - 0.82) / 0.07) ** 2)
+        # plain taper: a bead near the tip folded the tube on tight bends (QA 08.11)
+        rf = lambda t, r0=r0: r0 * (1.0 - t) ** 0.85 + 0.010
         rings, tip, faces = tube(bm, pts, rf, 7)
         n = len(rings)
         for ri, ring in enumerate(rings):
@@ -282,7 +284,9 @@ def build_ink(rng, paths):
                 for lp in f.loops:
                     lp[uvl].uv = (0.5, 0.97)   # drops sit in the bleed zone
             drops.append(c)
-    return bm, tend, vmeta
+    bm.verts.index_update()
+    meta = [vmeta.get(v, (0, 1.0)) for v in bm.verts]   # vert index -> (tendril, arc fraction)
+    return bm, tend, meta
 
 
 def ink_texture(path, w=256, h=1024):
@@ -624,7 +628,7 @@ def stage_build():
     body = obj_from_bm("guest_body", body_bm, mat_skin(), col)
     paint_skin(body, paths)
     core = obj_from_bm("guest_core", build_organs(rng), mat_core(), col)
-    ink_bm, tend, _ = build_ink(rng, paths)
+    ink_bm, tend, meta = build_ink(rng, paths)
     ink_mat = mat_ink(ink_texture(os.path.join(TEX_DIR, "guest_ink_basecolor.png")))
     ink = obj_from_bm("guest_ink", ink_bm, ink_mat, col)
     eyes = obj_from_bm("guest_eyes", build_eyes(), ink_mat, col)
@@ -634,13 +638,10 @@ def stage_build():
     skin(eyes, rig, lambda v: {"guest_head": 1.0})
 
     def ink_w(v):
-        best, bi, bs = 1e9, 0, 0.0
-        for td in tend:
-            for j, p in enumerate(td.pts):
-                d = (p - v.co).length
-                if d < best:
-                    best, bi, bs = d, td.idx, td.s[j] / td.s[-1]
-        return chain_w(tend[bi], bs)
+        # each vertex knows its own tendril and arc position (nearest-point weighting put
+        # vertices of crossing tendrils on the wrong chain and folded them, QA 08.11)
+        ti, sfrac = meta[v.index]
+        return chain_w(tend[ti], sfrac)
     skin(ink, rig, ink_w)
     # sockets
     an = Anim(rig)
