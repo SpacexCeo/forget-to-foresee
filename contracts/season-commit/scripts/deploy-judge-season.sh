@@ -37,7 +37,8 @@ LEAF_COUNT=$(node -pe "JSON.parse(require('fs').readFileSync('$ARGS/summary.json
 echo "season $SEASON_ID root $ROOT ($LEAF_COUNT leaves) -> $CONTRACT_ID as $COORDINATOR_ID"
 
 # Transaction hash of a near-cli-rs transaction result (its output names the hash on one line).
-tx_hash() { grep -oE 'Transaction ID: [A-Za-z0-9]+' | head -1 | awk '{print $3}'; }
+tx_hash() { # accepts "Transaction ID: <hash>" or an explorer link ending in /transactions/<hash> or /txns/<hash>
+  grep -oE 'Transaction ID: [1-9A-HJ-NP-Za-km-z]+|/(transactions|txns)/[1-9A-HJ-NP-Za-km-z]+' | head -1 | sed -E 's#.*(: |/)##'; }
 exists() { near account view-account-summary "$1" $NET now >/dev/null 2>&1; }
 
 # 1. Accounts (faucet-sponsored; the key goes to the keychain, never to the repository).
