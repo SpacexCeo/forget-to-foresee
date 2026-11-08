@@ -6,6 +6,7 @@
 import { renderMsg, reasonText } from './i18n.js';
 import { logogramCanvas } from './logogram.js';
 import { i18n as uiI18n } from '../ui/index.js';
+import { panelArbiterFor } from './panels.js';
 
 const { effectEvent, renderEvent } = uiI18n;
 const CLAN_INDEX = { iris: 0, salt: 1, ash: 2, moss: 3, amber: 4, frost: 5 };
@@ -29,6 +30,7 @@ function el(tag, attrs = {}, ...kids) {
 export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMin = 1 }) {
   const { i18n } = ctx;
   const t = (k, a) => renderMsg(i18n, k, a);
+  const arb = panelArbiterFor(root); // one modal surface at a time (panels.js): panels, help, Signs, hub card
   const goalEl = el('section', { class: 'pl-goal', 'aria-live': 'polite', id: 'pl-goal' });
   const ctxEl = el('section', { class: 'pl-context', id: 'pl-context', hidden: true });
   const panelEl = el('section', { class: 'pl-panel', id: 'pl-panel', role: 'dialog', hidden: true });
@@ -58,7 +60,8 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     if (g.id === 'forget') row.append(el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('memory.title'), onclick: () => open('memory') }));
     if (g.id === 'end_tick' || g.id === 'next_tick') row.append(el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('endtick.button', { tick: session.obs.season.tick }), onclick: () => endTick(true) }));
     if (g.id === 'fragment') row.append(el('button', { class: 'pl-btn', type: 'button', id: 'pl-hold', text: t('goal.fragment.hold'), onclick: () => session.holdFragment() }));
-    if (g.id === 'season_over' && session.obs.season.heir == null) open('end');
+    // the Biography opens itself at the season's end unless the hub's Heir card already asks (QA-003: one Heir prompt)
+    if (g.id === 'season_over' && session.obs.season.heir == null && panel !== 'end' && !arb.isOpen('hub-card')) open('end');
     if (row.childNodes.length) goalEl.append(row);
   }
 
@@ -75,12 +78,13 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   function renderContext() {
     const opts = session.options;
     ctxEl.hidden = opts.length < contextMin || !!panel || !!(handlers.contextHidden && handlers.contextHidden());
+    document.body.classList.toggle('pl-context-open', !ctxEl.hidden);
     if (ctxEl.hidden) return;
     const di = session.defaultIndex;
     ctxEl.replaceChildren(el('h3', { text: spotTitle(session.spot) }), el('ol', {}, opts.slice(0, 9).map((o, i) => {
       const label = t(o.label.key, o.label.args);
       const off = o.available === false;
-      return el('li', {}, el('button', {
+      return el('li', { style: '--i:' + i }, el('button', {
         type: 'button', class: 'pl-opt' + (i === di ? ' pl-default' : '') + (off ? ' pl-off' : ''), 'data-opt': o.id,
         title: off ? t('opt.unavailable', { reason: reasonText(i18n, o.reason) }) : null,
         onclick: () => choose(i),
@@ -97,12 +101,28 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
 
   /* ---------- panels ---------- */
-  function open(name, data = null) { panel = name; panelData = data; renderPanel(); renderContext(); }
-  function close() { panel = null; panelData = null; panelEl.hidden = true; renderContext(); }
+  function open(name, data = null) { panel = name; panelData = data; arb.claim('panel', close); renderPanel(); renderContext(); }
+  function close() {
+    if (!panel) { panelEl.hidden = true; return; }
+    panel = null; panelData = null; leave(panelEl);
+    arb.release('panel');
+    renderContext();
+  }
+  function showHelp(on) { if (on) { arrive(helpEl); arb.claim('help', () => showHelp(false)); } else { leave(helpEl); arb.release('help'); } }
+  /* exit motion: the node stays for --pl-dur-fast with .pl-leaving, then hides (reduced motion: a plain fade) */
+  const leaving = new Map();
+  function leave(node) {
+    clearTimeout(leaving.get(node));
+    node.classList.add('pl-leaving');
+    leaving.set(node, setTimeout(() => { node.hidden = true; node.classList.remove('pl-leaving'); leaving.delete(node); }, 140));
+  }
+  function arrive(node) { clearTimeout(leaving.get(node)); leaving.delete(node); node.classList.remove('pl-leaving'); node.hidden = false; }
 
   function panelShell(title, ...body) {
-    panelEl.replaceChildren(el('header', {}, el('h2', { text: title }), el('button', { class: 'pl-btn pl-small', type: 'button', text: t('panel.close') + ' (Esc)', onclick: close })), ...body);
-    panelEl.hidden = false;
+    panelEl.replaceChildren(
+      el('header', {}, el('h2', { text: title }), el('button', { class: 'pl-btn pl-small', type: 'button', 'aria-label': t('panel.close'), onclick: close }, t('panel.close'), el('kbd', { text: 'Esc' }))),
+      ...body.filter((x) => x != null));
+    arrive(panelEl);
   }
 
   function memoryText(m) { return m.text; } // the room renders memory titles in English; effects are re-rendered per locale
@@ -117,7 +137,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     if (!panel || !obs) { panelEl.hidden = true; return; }
     if (panel === 'memory') {
       const keyOpen = obs.iris.keyVision.open;
-      const list = obs.memories.length ? el('ul', { class: 'pl-list' }, obs.memories.map((m) => el('li', { class: 'pl-mem' },
+      const list = obs.memories.length ? el('ul', { class: 'pl-list' }, obs.memories.map((m, i) => el('li', { class: 'pl-mem', style: '--i:' + i },
         el('div', { class: 'pl-mem-head' }, el('b', { text: memoryText(m) }), el('span', { class: 'pl-muted', text: t('memory.weight', { n: m.weight }) })),
         el('p', { class: 'pl-muted', text: memoryEffect(m) }),
         el('div', { class: 'pl-row' },
@@ -131,7 +151,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         class: 'pl-btn pl-small' + (obs.dictionary.readingRule === r ? ' pl-primary' : ''), type: 'button', text: t('vision.rule.' + r),
         onclick: () => session.send('set_reading_rule', { rule: r }),
       })));
-      const body = signs.length ? el('ul', { class: 'pl-list' }, signs.map((p) => el('li', { class: 'pl-sign' },
+      const body = signs.length ? el('ul', { class: 'pl-list' }, signs.map((p, i) => el('li', { class: 'pl-sign', style: '--i:' + i },
         logogramCanvas({ forms: p.forms, dots: p.dots }, 112, { labels: true, background: '#141a18' }),
         el('div', {},
           el('b', { text: t('vision.sign', { index: p.index }) + ' · ' }), el('span', { class: 'pl-tag', text: p.vision ? t('vision.badge.vision') : t('vision.badge.published', { tick: p.publishedAt }) }),
@@ -170,7 +190,9 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         el('ul', { class: 'pl-list pl-muted' }, obs.memories.map((m) => el('li', { text: '✓ ' + memoryText(m) })), iris.forgotten.map((f) => el('li', { text: '✕ ' + f.text + ' — ' + f.fate }))),
         obs.season.heir == null ? el('div', { class: 'pl-row' },
           el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('end.heir'), onclick: () => session.send('set_heir', { heir: true }) }),
-          el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) })) : el('p', { text: t('goal.season_over.done') }));
+          el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) }))
+          : el('p', { class: 'pl-strong', text: '\u2713 ' + t(obs.season.heir ? 'end.heir' : 'end.keep') }),
+        obs.season.heir == null ? null : el('p', { text: t('goal.season_over.done') }));
     }
   }
 
@@ -216,7 +238,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
       el('button', { class: 'pl-btn', type: 'button', text: 'V · ' + t('vision.title'), onclick: () => toggle('vision') }),
       el('button', { class: 'pl-btn pl-primary', type: 'button', id: 'pl-endtick', text: t('endtick.button', { tick }), disabled: !obs || obs.season.phase !== 'play', onclick: () => endTick() }),
       el('button', { class: 'pl-btn', type: 'button', text: i18n.locale === 'ru' ? 'EN' : 'RU', onclick: () => i18n.setLocale(i18n.locale === 'ru' ? 'en' : 'ru') }),
-      el('button', { class: 'pl-btn', type: 'button', text: t('play.help.toggle'), onclick: () => { helpEl.hidden = !helpEl.hidden; } }));
+      el('button', { class: 'pl-btn', type: 'button', text: t('play.help.toggle'), onclick: () => showHelp(helpEl.hidden) }));
     badge.textContent = t('play.badge');
     helpEl.replaceChildren(el('h3', { text: t('play.help.title') }), ...['move', 'go', 'context', 'panels', 'camera', 'misc'].map((k) => el('p', { html: i18n.t('play.help.' + k) })), el('p', { class: 'pl-muted', text: t('play.loop') }));
   }
@@ -249,19 +271,19 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
 
   /** Keyboard: returns true when the key was used by the play UI. */
   function handleKey(code) {
-    if (code === 'Escape') { if (panel) { close(); return true; } if (!helpEl.hidden) { helpEl.hidden = true; return true; } return false; }
+    if (code === 'Escape') { if (panel) { close(); return true; } if (!helpEl.hidden) { showHelp(false); return true; } return false; }
     if (code === 'KeyE') { if (session.defaultIndex >= 0 && !panel) { choose(session.defaultIndex); return true; } return false; }
     const m = /^Digit([1-9])$/.exec(code);
     if (m && !panel) { choose(Number(m[1]) - 1); return true; }
     if (code === 'KeyM') { toggle('memory'); return true; }
     if (code === 'KeyV') { toggle('vision'); return true; }
     if (code === 'KeyT') { endTick(); return true; }
-    if (code === 'KeyH') { helpEl.hidden = !helpEl.hidden; return true; }
+    if (code === 'KeyH') { showHelp(helpEl.hidden); return true; }
     if (code === 'KeyL') { const ls = i18n.locales || ['en', 'ru']; i18n.setLocale(ls[(ls.indexOf(i18n.locale) + 1) % ls.length]); return true; }
     if (code === 'KeyG') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); return true; }
     return false;
   }
 
   update();
-  return { update, open, close, flash, handleKey, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
+  return { update, open, close, flash, handleKey, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
 }

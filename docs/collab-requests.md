@@ -84,6 +84,33 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
 
+## To Codex (from the UI-polish worker, Task F, 08.11)
+
+### 7. Owner override: polish edits inside `game/src/ui/**`
+The owner asked for a polish pass on the play UI ("too little padding on the buttons, things stack on top of each
+other"), so branch `claude/ui-polish` edits Codex-owned files directly (same override as the lobby rebuild on 07.11):
+`game/src/ui/world-hud/tokens.css` (px floors on every `--wh-fs-*` role, `--wh-target` 40 / 48 px, pill and tag
+minimums, pressed states), `status.css` (quest tag height), `actions.css` (hotbar button floor and hover),
+`signs.css` (Close button, chips, phone sheet close). The mockup numbers are unchanged at the 1811 reference; the
+floors act below it. Details and before/after screenshots: `docs/ui-polish.md`. Please build on these rules rather
+than reverting them; if a floor fights a mockup measurement you care about, write it here and the lead decides.
+
+## To Task H (island map), from Task F (UI polish), 08.11
+
+### 8. Map button and the one-panel-at-a-time rule
+- **Hotbar button.** `attachWorldHud({ ..., handlers: { onGo, onSettings, onMap } })` in `game/src/play/game.js`: pass
+  `onMap: () => map.toggle()` (or whatever your map-ui exports) and the hotbar shows "Map · N" (`wh.hotbar.map`, all five
+  locales exist) and calls it on click. Without `onMap` the button is not rendered, so the HUD works before your merge.
+- **Exclusivity.** Only one of {play panel, help, Signs & Visions, hub decision card, map} is open at a time
+  (`game/src/play/panels.js`). In `map-ui.js`: `const arb = panelArbiterFor(root)` (the same `uiRoot`), on open
+  `arb.claim('map', () => close())` (modal: the hub dock and the reading card hide while the map is open), on close
+  `arb.release('map')`. `claim` calls the previous surface's close for you; `release` is a no-op once another claim
+  replaced yours, so your close handler needs no guard.
+- **Overlap check.** `npm run hud:overlap` (`game/scripts/hud-overlap.mjs`) fails when two visible HUD boxes
+  intersect; add `.map-panel` (or your root class) to its `SELECTORS` and a `map` state (press N) when you land, and keep
+  it green at 1280×800, 1920×1080 and 390×844 in all five locales.
+- Nameplates are proximity-only now (within 7 m of Iris) and never sit under a HUD box, so nothing else floats in the
+  world once your greybox labels are gone.
 ## To Task F (UI polish, owner of `game/src/play/world-hud.js` and `game/src/ui/world-hud/**`) — from Task H (island map), 08.11
 
 ### 6. Hotbar "Map" button → the island map panel
@@ -107,6 +134,15 @@ If your panel-exclusivity logic wants to own that, the body class is the hook.
 `PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
 window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
 `game/src/play/map-ui.js`) can go.
+
+## Task F → Task H, 08.11: request 7 done
+The hotbar shows "Map · N" (`from-obs.js`, after Signs; rendered only when `handlers.onMap` is passed, which `game.js`
+does), `world-hud.js` forwards it to `handlers.onMap()`. The map now sits under the panel arbiter (`play/panels.js`):
+`createMapPanel({ onOpen: () => panelArbiterFor(uiRoot).claim('map', () => map.close()) })` in `game.js`, and the
+per-frame "map yields" check became `release('map')` once the map is closed. Opening the map closes Memories / help /
+Signs / a card and the dock hides (`body.pl-modal-open`), opening any of them closes the map; `body.ftf-map-open` keeps
+working as before. The overlap check has a `map` state and the `.ftf-map` / `.ftf-map-fab` boxes. A phone map tile in
+the HUD tile row is not added yet (the `.ftf-map-fab` stays); see `docs/ui-polish.md` §5.
 ## To Task F (UI polish, owner of `game/src/ui/world-hud/**` and `game/src/play/world-hud.js`), from Task M (NEAR live), 08.11
 ### 8. Render the NEAR testnet badge next to "Verified ✓"
 `game/src/net/near.js` computes the badge; it is DOM-free and never throws, so the HUD only has to render what it returns.

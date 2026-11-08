@@ -72,10 +72,10 @@
   display: inline-flex;
   align-items: center;
   gap: calc(4 * var(--wh-px));
-  height: calc(29 * var(--wh-px));
-  padding: 0 calc(11 * var(--wh-px)) 0 calc(12 * var(--wh-px));
+  height: calc(29 * var(--wh-px)); /* min-height: --wh-target (tokens.css) */
+  padding: 0 max(calc(11 * var(--wh-px)), 12px) 0 max(calc(12 * var(--wh-px)), 12px);
   border: 1px solid var(--wh-frame-soft);
-  border-radius: calc(15 * var(--wh-px));
+  border-radius: 999px;
   background: var(--wh-btn-bg);
   color: var(--wh-text);
   font-size: var(--wh-fs-close);
@@ -83,10 +83,12 @@
   white-space: nowrap;
   transition: border-color var(--wh-transition);
 }
-.wh-root .wh-signs .wh-signs__close:hover { border-color: var(--wh-frame); }
+.wh-root .wh-signs .wh-signs__close:hover { border-color: var(--wh-frame); background: rgba(22, 36, 37, .92); }
+/* the header grows with the 40 px Close button at small scales, so the title never sits under it */
+.wh-root .wh-signs .wh-signs__head { min-height: calc(17 * var(--wh-px) + var(--wh-target)); }
 .wh-root .wh-signs .wh-signs__esc {
-  min-width: calc(27 * var(--wh-px));
-  height: calc(20 * var(--wh-px));
+  min-width: max(calc(27 * var(--wh-px)), 24px);
+  height: max(calc(20 * var(--wh-px)), 18px);
   padding: 0 calc(3 * var(--wh-px));
   font-size: var(--wh-fs-kbd-sm);
   border-radius: calc(4 * var(--wh-px));
@@ -251,7 +253,7 @@
 .wh-root .wh-sheet .wh-signs__eye { position: absolute; left: 20px; top: 33px; width: 48px; height: 47px; }
 .wh-root .wh-sheet .wh-signs__title { margin-top: 2px; }
 .wh-root .wh-sheet .wh-signs__sub { line-height: 17px; margin-top: 0; max-width: 242px; }
-.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 30.5px; width: 35px; height: 35px; border-color: var(--wh-sg-round-border); background: var(--wh-sg-round-bg); }
+.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 26px; width: 44px; height: 44px; border-color: var(--wh-sg-round-border); background: var(--wh-sg-round-bg); }
 .wh-root .wh-sheet .wh-signs__close:hover { border-color: var(--wh-frame-soft); }
 .wh-root .wh-sheet .wh-signs__x { width: 26px; height: 26px; color: var(--wh-text); }
 .wh-root .wh-sheet .wh-signs__filters {
@@ -263,7 +265,7 @@
   scrollbar-width: none;
 }
 .wh-root .wh-sheet .wh-signs__filters::-webkit-scrollbar { display: none; }
-.wh-root .wh-sheet .wh-signs__chip { height: 30px; padding: 0 10px; font-size: var(--wh-fs-ui); }
+.wh-root .wh-sheet .wh-signs__chip { height: 30px; min-height: 44px; padding: 0 12px; font-size: var(--wh-fs-ui); }
 .wh-root .wh-sheet .wh-signs__chip[aria-pressed="true"] { padding: 0 18px; }
 .wh-root .wh-sheet .wh-signs__list {
   margin-top: 21px;
@@ -316,6 +318,11 @@
 .wh-root .wh-sign__verified { height: calc(21 * var(--wh-px)); font-family: var(--wh-font-body); font-size: var(--wh-fs-tab); }
 .wh-root .wh-sign__verified--ok { border-color: var(--wh-gold); color: var(--wh-gold-bright); box-shadow: var(--wh-glow-gold); }
 .wh-root .wh-sign__verified--fail { border-color: var(--wh-notify); color: var(--wh-notify); }
+/* NEAR testnet badge (request 9): same pill as the proof check, a link; ✓ states gold, mismatch in the alert colour */
+.wh-root .wh-sign__near { height: calc(21 * var(--wh-px)); margin-left: calc(6 * var(--wh-px)); font-family: var(--wh-font-body); font-size: var(--wh-fs-tab); text-decoration: none; pointer-events: auto; }
+.wh-root .wh-sign__near--on-chain, .wh-root .wh-sign__near--dry-run { border-color: var(--wh-gold); color: var(--wh-gold-bright); }
+.wh-root .wh-sign__near--mismatch { border-color: var(--wh-notify); color: var(--wh-notify); }
+.wh-root .wh-sign__near:hover { box-shadow: var(--wh-glow-gold); }
 .wh-root .wh-sign__anchor--mine { border-color: var(--wh-gold-bright); box-shadow: var(--wh-glow-gold); }
 @media (max-width: 700px) {
   .wh-root .wh-sign__plain { margin-top: 4px; font-size: 12.5px; line-height: 16px; }
@@ -324,3 +331,17 @@
 /* Novice cards carry one reading line instead of four stat rows: a shorter card */
 .wh-root .wh-sign:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: calc(112 * var(--wh-px)); }
 @media (max-width: 700px) { .wh-root .wh-sign--mobile:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: 104px; } }
+
+/* ---------- short viewports (tokens.css explains the tiers): the sheet fits the visible height ---------- */
+@media (max-width: 700px) {
+  html[data-vh="short"] .wh-root .wh-sheet { top: 64px; }
+  html[data-vh="tiny"] .wh-root .wh-sheet { top: 44px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__head, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__head { padding: 22px 50px 0 64px; min-height: 0; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__eye, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__eye { top: 20px; left: 16px; width: 36px; height: 36px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__title, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__title { font-size: 18px; margin-top: 4px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__sub, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__sub { display: none; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__close, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__close { top: 16px; width: 36px; height: 36px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__filters, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__filters { margin-top: 10px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__chip, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__chip { height: 32px; min-height: 36px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__list, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__list { margin-top: 10px; }
+}

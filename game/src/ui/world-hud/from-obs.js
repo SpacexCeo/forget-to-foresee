@@ -34,7 +34,7 @@ export function phaseOf(goal, obs) {
 }
 
 /** Sign cards: visible prophecies (active) and the chronicle (resolved, with the proof check). */
-export function signsFromObs(obs, { i18n, mode = 'novice' } = {}) {
+export function signsFromObs(obs, { i18n, mode = 'novice', near = null } = {}) {
   const mine = (shell, t) => (obs.iris.anchors || []).some((a) => a.shell === shell && a.tick === t);
   const meaning = (slot, m) => i18n.t(`meaning.${slot}.${m}`);
   const items = [];
@@ -96,6 +96,7 @@ export function signsFromObs(obs, { i18n, mode = 'novice' } = {}) {
       ] : [],
       anchor: { shell: ROMAN_SHELL(m.place), trial: c.tick },
       proof: proof ? { index: c.index, leaf: String(proof.leaf).slice(0, 10) } : undefined,
+      near: near ? near.leafBadge(c.index) : null,
     });
   }
   // newest first: active by due trial, then resolved by trial (descending)
@@ -117,6 +118,8 @@ export function signsFromObs(obs, { i18n, mode = 'novice' } = {}) {
  * @param {{speaker: string, text: object}|null} [o.line]   last spoken line (subtitle)
  * @param {boolean} [o.promptVisible]
  * @param {{open?: boolean, filter?: string}} [o.signsState]
+ * @param {boolean} [o.map]  true when the host wires an island map: the hotbar gets a Map button (N)
+ * @param {{leafBadge: (index: number) => object|null, seasonBadge: () => object|null}} [o.near]  NEAR testnet badges (net/near.js)
  * @param {boolean} [o.unread]
  */
 export function buildHudModel(o) {
@@ -125,7 +128,7 @@ export function buildHudModel(o) {
   const s = obs.season;
   const iris = obs.iris;
   const words = obs.dictionary ? obs.dictionary.confidentCells : 0;
-  const signs = signsFromObs(obs, { i18n, mode });
+  const signs = signsFromObs(obs, { i18n, mode, near: o.near || null });
   const novice = mode !== 'pro';
   const layer = novice ? layerOf(obs) : 2;
 
@@ -199,6 +202,7 @@ export function buildHudModel(o) {
     hotbar: [
       ...(layer >= 1 ? [{ id: 'memory', hotkey: 'M' }] : []),
       { id: 'signs', hotkey: 'V' },
+      ...(o.map ? [{ id: 'map', hotkey: 'N' }] : []), // the island map (task H, play/map-ui.js); shown once the host wires it
       ...(s.phase === 'play' ? [{ id: 'endTick', hotkey: 'T' }] : []),
       { id: 'help', hotkey: 'H' },
       { id: 'settings' },
@@ -211,7 +215,7 @@ export function buildHudModel(o) {
     journal: [obs.version, (hintState.journal || []).length, (hintState.lore || []).length, next.journal.unread].join('|'),
     prompt: opt ? [opt.id, JSON.stringify(opt.label), promptVisible].join('|') : '-',
     dialogue: line || null,
-    hotbar: s.phase + layer,
+    hotbar: s.phase + layer + (o.map ? 'm' : ''),
     hint: hintState.active ? hintState.active.id + ':' + (hintState.active.shown || 0) : 'off',
   };
   return o.prev ? reuse(o.prev, next, sig) : withSig(next, sig);

@@ -27,6 +27,7 @@ import { ShellHub, signForShell } from './hub.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
+import { panelArbiterFor } from './panels.js';
 import { CLAN_ORDER } from './behaviour.js';
 import { setGreyboxLabels } from '../render/greybox.js';
 import { attachChapters } from '../cinematic/chapters/index.js';
@@ -112,8 +113,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
       if (state.route) ui.flash(ctx.i18n.t('map.walking', { place: ctx.i18n.t(place.labelKey, place.labelArgs) }), 2500);
       if (worldHud) worldHud.activity('command');
     },
-    // one panel at a time: the map closes the play panels and the HUD's Signs before it opens
-    onOpen: () => { ui.close(); if (worldHud && worldHud.hud) worldHud.hud.signs.close(); },
+    // one panel at a time (play/panels.js): claiming closes whatever else is open; another claim closes the map
+    onOpen: () => panelArbiterFor(uiRoot).claim('map', () => map.close()),
     reducedMotion: () => lookdev.reducedMotion,
   });
   // Greybox labels are a dev aid: ?dev=1 or the F3 dev HUD shows them, play never does.
@@ -297,7 +298,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (step > 0.01) { state.lastMove = state.now; state.moved += step; }
     if (state.quiet && moving && !state.route) { state.quiet = false; ui.update(); }
     if (!inShell && state.moved > 4 && state.now - state.lastMove > 0.8 && !session.syncing && session.bus.pending === 0) { state.moved = 0; session.syncPosition(); }
-    agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist });
+    agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist, camera, uiRoot });
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
@@ -306,8 +307,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
       if (moving && state.now - movedReported > 1) { movedReported = state.now; worldHud.activity('moved'); }
       worldHud.update(dt);
     }
-    // another panel opened from a click (hotbar, dock): the map yields
-    if (map.isOpen() && (ui.panel || (worldHud && worldHud.hud && worldHud.hud.signs.isOpen()))) map.close();
+    // the map has no close hook: release its claim once it is closed (Esc, N, its own Close, or another claim)
+    if (!map.isOpen() && panelArbiterFor(uiRoot).isOpen('map')) panelArbiterFor(uiRoot).release('map');
     map.update(dt);
     chapters.update(dt); // after the rig and the HUD: a playing film owns the camera until the render
   }
