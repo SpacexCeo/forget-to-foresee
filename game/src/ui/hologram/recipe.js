@@ -82,6 +82,17 @@ export function normalizeRecipe(input, base = DEFAULT_RECIPE) {
   return out;
 }
 
+/**
+ * Four complete looks for the onboarding picker (docs/tutorial.md §2.1): a whole recipe each, so one
+ * tap gives a visibly different hologram. `mist` is the default recipe. Cosmetic only (spec §8).
+ */
+export const LOOK_PRESETS = Object.freeze({
+  mist: Object.freeze({ shape: 'shell', components: ['core', 'halo', 'glyphRing'], layers: ['outline', 'scanlines'], palette: PALETTE_PRESETS.mist, gesture: 'breathe', particles: { count: 120, size: 1.2, drift: 0.35 }, noise: { amount: 0.25, scale: 1.2 }, light: { intensity: 1, warmth: 0.15 }, trails: { length: 0.3, fade: 0.6 } }),
+  ember: Object.freeze({ shape: 'spiral', components: ['core', 'orbiters', 'shards'], layers: ['bloom', 'grain'], palette: PALETTE_PRESETS.ember, gesture: 'orbit', particles: { count: 180, size: 1.6, drift: 0.5 }, noise: { amount: 0.35, scale: 1.4 }, light: { intensity: 1.3, warmth: 0.6 }, trails: { length: 0.5, fade: 0.5 } }),
+  deep: Object.freeze({ shape: 'sphere', components: ['core', 'veil', 'halo'], layers: ['outline', 'dither'], palette: PALETTE_PRESETS.deep, gesture: 'still', particles: { count: 90, size: 1, drift: 0.2 }, noise: { amount: 0.15, scale: 0.9 }, light: { intensity: 0.8, warmth: 0 }, trails: { length: 0.1, fade: 0.8 } }),
+  iris: Object.freeze({ shape: 'ring', components: ['core', 'glyphRing', 'orbiters', 'veil'], layers: ['outline', 'bloom', 'chromatic'], palette: PALETTE_PRESETS.iris, gesture: 'beckon', particles: { count: 150, size: 1.3, drift: 0.4 }, noise: { amount: 0.3, scale: 1.1 }, light: { intensity: 1.1, warmth: 0.25 }, trails: { length: 0.4, fade: 0.6 } }),
+});
+
 export const DEFAULT_RECIPE = Object.freeze(normalizeRecipe({
   shape: 'shell',
   components: ['core', 'halo', 'glyphRing'],

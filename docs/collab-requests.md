@@ -133,3 +133,37 @@ Two steps:
 Nothing else is needed: the watcher reads `game/src/net/near-deployment.js` (contract id and committed seasons; a `null`
 contract id disables it), calls only read-only RPC views, and the judge season (`?demo=judge`) is the one committed on
 testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the exact semantics of each state: `docs/near.md`.
+## From Task I (tutorial and onboarding, branch `claude/tutorial`), 08.11
+Context: `docs/tutorial.md`. The first stake of a new player must land on trial 3 (the rules generate events only for
+trials 3–17 and resolve anchors only when an event lands on their trial, so a stake on trial 1 or 2 is never returned
+and never mentioned). The onboarding goals now say so; the three requests below would make the UI do it by default.
+### 7. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
+- `wh.hint.firstSign` / `.hub` and `wh.hint.anchor` overflow the 338-unit toast at 1280×800 ("…read it with…"); cap the
+  text at about 90 characters or let the toast grow to three lines. `firstSign` also stays on screen past the reveal
+  (untilDone on "open V"): please mark it done when the sign reaches the chronicle.
+- The hub's first-loop hint should say what the quest says: *Iris guesses. Change Delay until it says trial 3, then
+  press F.* (`wh.hint.anchor.hub`), and the `verified` beat should name the player's own stake: *Trial 3 came true on
+  Shell II; our stake on Shell I came back* (the data is in `obs.chronicle` and the anchors list).
+- Reading card (`hub-ui.js`): "Iris · 25% sure" ×4 reads as a broken number to a stranger. Suggest the clarity-layers
+  words (*unsure* under 50 %, *likely*, *certain*) and a one-line note while every slot is at 25 %: *Iris is guessing.*
+- Iris's dialogue line is kept 12 s and so says "Pick the gold Shell and we fly." inside the Shell; clear it on a zone
+  change, or let the hub's `stake` goal replace it.
+- The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
+### 8. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
+- `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
+  on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
+  Same public-policy spirit as the autopilot: no hidden state, just the rule from `docs/rules-baseline.md` §2.2.
+- `interactions.js` anchor zone: make the trial-3 option the primary one (the E key) while no event has resolved and
+  the reading's trial is below 3; today E places the dead stake ("Anchor here for tick 2 (as your reading says)") and
+  the goal has to tell the player to press 3.
+- `game.js`: pass `skipOnboarding` from a device flag once the first loop was completed once
+  (e.g. `ctx.storage.getJSON('ftf.flow.v1').loopDone`), so a returning player sees no first-loop goals; `objectives.js`
+  already honours the flag. The tutorial screens themselves already skip for a returning player.
+- Terminology: `opt.anchorTick` / `opt.anchorVision` and `meaning.3.*` still say "tick" ("Anchor here for tick 3",
+  "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
+  "trial 3" instead of the menu's "tick 3".
+### 9. To Task J (`docs/submission/video-shot-list.md`)
+The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
+item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
+first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the
+card); shot 2 can hold on beat 4, "Stake and watch", where the ring seals "Verified ✓".
