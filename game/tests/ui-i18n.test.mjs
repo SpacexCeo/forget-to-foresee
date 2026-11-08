@@ -69,7 +69,7 @@ test('locales: ru placeholders are a subset of en placeholders; en text has no C
 
 /** Every key-shaped string literal in src/ui must exist in the base locale. */
 function walk(dir) { return readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.js') ? [p] : []; }); }
-const NS = ['app', 'common', 'lang', 'lobby', 'panel', 'settings', 'profile', 'flow', 'ent', 'tut', 'ctor', 'fc', 'tour', 'hud', 'tell', 'preview', 'outcome', 'reason'];
+const NS = ['app', 'common', 'lang', 'lobby', 'panel', 'settings', 'profile', 'flow', 'ent', 'tut', 'ctor', 'fc', 'tour', 'hud', 'tell', 'preview', 'outcome', 'reason', 'wh'];
 test('no raw keys: every static key referenced from src/ui exists in en', () => {
   const dir = fileURLToPath(new URL('../src/ui/', import.meta.url));
   const re = new RegExp(`['"\`]((?:${NS.join('|')})\\.[A-Za-z0-9_.]+)['"\`]`, 'g');

@@ -7,13 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs tests/v3.test.mjs tests/client/collision.test.mjs tests/client/streaming.test.mjs tests/client/smooth.test.mjs tests/client/layout.test.mjs tests/client/play.test.mjs tests/client/audio.test.mjs tests/client/vfx.test.mjs tests/ui-i18n.test.mjs tests/ui-logic.test.mjs tests/ui-a11y.test.mjs tests/sim.test.mjs tests/contract-vectors.test.mjs tests/client/input.test.mjs",
+    "test": "node --test tests/parity.test.mjs tests/edge.test.mjs tests/v2.test.mjs tests/v3.test.mjs tests/client/collision.test.mjs tests/client/streaming.test.mjs tests/client/smooth.test.mjs tests/client/layout.test.mjs tests/client/play.test.mjs tests/client/audio.test.mjs tests/client/vfx.test.mjs tests/ui-i18n.test.mjs tests/ui-logic.test.mjs tests/ui-a11y.test.mjs tests/sim.test.mjs tests/contract-vectors.test.mjs tests/client/input.test.mjs tests/wh-status.test.mjs tests/wh-signs.test.mjs tests/wh-log.test.mjs tests/wh-actions.test.mjs",
     "fixtures": "node scripts/gen-fixtures.mjs",
     "sim": "node scripts/sim/run.mjs",
     "sim:quick": "node scripts/sim/run.mjs --quick --out docs/math",
-    "vectors": "node scripts/gen-contract-vectors.mjs"
+    "vectors": "node scripts/gen-contract-vectors.mjs",
+    "wh:compare": "node scripts/wh-compare.mjs"
   },
   "dependencies": {
+    "@fontsource/libre-caslon-text": "^5.3.0",
+    "@fontsource/old-standard-tt": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.1",
     "three": "^0.170.0"
   },
   "devDependencies": {
