@@ -38,3 +38,12 @@ Headless Chromium drives (`element.click()` through `page.evaluate`): every beat
 skip, the look tiles and Customize, first contact, the returning-player path, in en at three viewports and in uk / ru /
 it / zh at 1280; zero console errors or warnings beyond SwiftShader's ReadPixels notice. Both play modes replayed on the
 judge seed with the new goals; the walk path also replayed headless against the room to collect the README texts.
+
+## Follow-ups from the lead (later on 08.11)
+- Merged `origin/claude/loving-curie-ihasft` (`17bf2de`) into `claude/tutorial`: conflicts in the test script, decisions table,
+  collab requests (Task I requests renumbered to 10–12) and README counts resolved; 352 tests, build green.
+- Device-aware copy for every goal and tutorial body in five languages (`{input, select, touch/gamepad/other}`), `args.input`
+  on every goal, a test that touch and gamepad never show a key letter (QA-011, QA-013 copy side).
+- Simple-mode variant of the hub stake hint; narration behind a guarded import; QA-016 and QA-017 fixed; plain-words pass
+  (stake, seal, sign, trial, silk). New requests 13–15 (input flag for the lead, narration assumptions for Q, the film seam for P).
+

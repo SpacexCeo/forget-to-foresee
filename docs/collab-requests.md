@@ -149,6 +149,7 @@ and never mentioned). The onboarding goals now say so; the three requests below 
 - Iris's dialogue line is kept 12 s and so says "Pick the gold Shell and we fly." inside the Shell; clear it on a zone
   change, or let the hub's `stake` goal replace it.
 - The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
+
 ### 11. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
 - `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
   on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
@@ -162,6 +163,7 @@ and never mentioned). The onboarding goals now say so; the three requests below 
 - Terminology: `opt.anchorTick` / `opt.anchorVision` and `meaning.3.*` still say "tick" ("Anchor here for tick 3",
   "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
   "trial 3" instead of the menu's "tick 3".
+
 ### 12. To Task J (`docs/submission/video-shot-list.md`)
 The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
 item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
@@ -181,3 +183,19 @@ In `startPlay`, after `const agents = new ClanAgents(...)`:
 `MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
 out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
 sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.
+### 15. To the lead (`game/src/main.js` / `game/src/play/game.js`): the input device for device-aware goals
+`objectives.js` reads `flags.input` ('touch' | 'gamepad' | 'keyboard') to pick the words of every goal (QA-011). One line in the
+frame loop keeps it current: `session.flags.input = input.device === 'gamepad' ? 'gamepad' : coarse ? 'touch' : 'keyboard';
+session.recompute()` on change. Without it the goals fall back to a coarse-pointer probe (touch vs keyboard) and never show the
+gamepad branch.
+### 16. To Task Q (`claude/all-ages`): what the tutorial assumes about narration
+`onboarding.js` imports `../play/narration.js` through a guarded glob and calls `createNarration({ prefs, i18n })`,
+`narration.enabled()` and `narration.speak(text, { channel: 'tutorial', interrupt: true })`, as request 9 documents. If the
+shared instance lands on `play.narration`, the onboarding still runs before the play layer exists, so it keeps its own
+instance (two instances share one synthesizer, per your note). In Simple mode the hub stake goal already reads
+*Iris read it: trial 3* when the pre-read reading lands on trial 3 (`hub.goal.stake.hintReady`).
+### 17. To Task P (`claude/chapter-films`): the seam for the Arrival film
+The tutorial teaches mechanics only (slots, dots, reading, stake, the Price of Memory) and leaves the story to the films.
+The "First contact" card is the last screen before the island: `mountShell(root, { onFirstContact })` in
+`game/src/ui/index.js` fires it once; a film can play there (`main.js` wraps `enterWorld`) and call `enterWorld` when it ends
+or is skipped. Returning players skip the card already (`flow.returning`), so the film should honour the same flag.

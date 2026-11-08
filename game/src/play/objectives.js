@@ -16,7 +16,22 @@ export const ONBOARDING = Object.freeze(['anchor', 'end_tick', 'verified', 'forg
  */
 export const FIRST_GIFT_TICK = 3;
 
+import { signForShell } from './hub.js';
+
 const ROMAN = ['I', 'II', 'III', 'IV'];
+
+/**
+ * How the player drives the game, for device-aware copy (QA-011): 'touch' names on-screen buttons,
+ * 'gamepad' says "choose", 'keyboard' names the keys. `flags.input` (the client's input device) wins;
+ * otherwise a coarse pointer means touch. Pure outside the guarded matchMedia probe.
+ */
+export function inputKind(flags = {}) {
+  if (flags.input === 'gamepad' || flags.input === 'touch' || flags.input === 'keyboard') return flags.input;
+  try { if (globalThis.matchMedia && globalThis.matchMedia('(pointer: coarse)').matches) return 'touch'; } catch { /* no DOM */ }
+  return 'keyboard';
+}
+/** Every goal carries `input` in its args so the ICU `select` in the strings picks the device's words. */
+const withInput = (g, flags) => (g ? { ...g, args: { input: inputKind(flags), ...(g.args || {}) } } : g);
 const pct = (x) => Math.round((x || 0) * 100);
 
 /** The vision the onboarding points at: the earliest vision with its implied anchor. */
@@ -89,13 +104,13 @@ function nearestZoneHint(obs) {
 export function currentGoal(obs, flags = {}) {
   if (!obs || !obs.season) return null;
   const s = obs.season;
-  if (s.phase === 'intro') return { id: 'intro', key: 'goal.intro', args: {}, hintKey: 'goal.intro.hint', hintArgs: {}, target: null };
-  if (s.phase === 'end') return { id: 'season_over', key: 'goal.season_over', args: { outcome: s.outcome }, hintKey: s.heir == null ? 'goal.season_over.hint' : 'goal.season_over.done', hintArgs: {}, target: null };
+  if (s.phase === 'intro') return withInput({ id: 'intro', key: 'goal.intro', args: {}, hintKey: 'goal.intro.hint', hintArgs: {}, target: null }, flags);
+  if (s.phase === 'end') return withInput({ id: 'season_over', key: 'goal.season_over', args: { outcome: s.outcome }, hintKey: s.heir == null ? 'goal.season_over.hint' : 'goal.season_over.done', hintArgs: {}, target: null }, flags);
   if (flags.hub) return hubGoal(obs, flags);
   if (!flags.skipOnboarding && s.phase === 'play') {
-    for (const id of ONBOARDING) if (!stepDone(id, obs, flags)) return onboardingGoal(id, obs, flags);
+    for (const id of ONBOARDING) if (!stepDone(id, obs, flags)) return withInput(onboardingGoal(id, obs, flags), flags);
   }
-  return dynamicGoal(obs);
+  return withInput(dynamicGoal(obs), flags);
 }
 
 /** The Shell-first onboarding (play/hub.js): fly into a Shell → stake on the reading → leave → watch trial 3 verified. */
@@ -114,14 +129,19 @@ function waitingShell(obs) {
 export function hubGoal(obs, flags = {}) {
   const s = obs.season, iris = obs.iris || {};
   const inShell = obs.you && obs.you.zone === 'shell';
-  const g = (id, args = {}, target = null, hintArgs = {}, extra = {}) => ({ id, key: 'hub.goal.' + id, args, hintKey: 'hub.goal.' + id + '.hint', hintArgs, target, ...extra });
+  const g = (id, args = {}, target = null, hintArgs = {}, extra = {}) => withInput({ id, key: 'hub.goal.' + id, args, hintKey: 'hub.goal.' + id + '.hint', hintArgs, target, ...extra }, flags);
   if (s.phase === 'vote') return g('vote');
   const wait = waitingShell(obs);
   if (!flags.skipOnboarding && s.phase === 'play') {
     const step = (id) => ({ step: ONBOARDING_HUB.indexOf(id) + 1, steps: ONBOARDING_HUB.length, onboarding: true });
     const staked = (iris.anchors || []).length > 0 || !!flags.anchored;
     if (!inShell && !staked && s.tick === 1) return g('fly', { shell: ROMAN[(wait || 1) - 1] }, 'shell:' + (wait || 1), {}, step('fly'));
-    if (inShell && !staked && s.tick === 1) return g('stake', { tick: FIRST_GIFT_TICK }, null, {}, step('stake'));
+    if (inShell && !staked && s.tick === 1) {
+      // Simple mode (or a lucky prior): Iris's own reading already lands on trial 3, so there is nothing to change.
+      const sign = signForShell(obs, obs.you.shell);
+      const ready = !!(sign && sign.impliedAnchor && sign.impliedAnchor.tick === FIRST_GIFT_TICK);
+      return g('stake', { tick: FIRST_GIFT_TICK }, null, {}, { ...step('stake'), hintKey: ready ? 'hub.goal.stake.hintReady' : 'hub.goal.stake.hint' });
+    }
     if (inShell && s.tick === 1) return g('leave', {}, null, {}, step('leave'));
     if (!inShell && s.tick <= FIRST_GIFT_TICK && !firstProof(obs)) return g('verified', { tick: FIRST_GIFT_TICK }, null, {}, step('verified'));
   }
