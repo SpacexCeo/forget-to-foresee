@@ -28,9 +28,15 @@ an open flag is reported to the lead at once, and the score is marked provisiona
 4. **The field.** On 2026-11-08 the public directory listed 302 submissions: 25 in `games`, 21 in `nfts`, 49 in `open`,
    154 in `security`, 147 in `agents`. Three prizes per track; most rivals claim several tracks
    (`notes/near-hackathon-tracks.md`).
-5. **What previous NEAR hackathons scored** (per the organizers' FAQ): technical implementation, design, impact,
-   originality, sustainability. "Impact" and "sustainability" are therefore live questions for the human round even
-   though the 2026 page does not list them.
+5. **What previous NEAR hackathons scored** (MetaBUILD III 2022, One Trillion Agents 2025, cited again by the 2026
+   FAQ): technological implementation ("quality of NEAR integration"), design, ecosystem impact, originality,
+   sustainability ("realistic long-term plan"). "Impact" and "sustainability" are therefore live questions for the
+   human round even though the 2026 page does not list them.
+6. **What past winners had in common** (`notes/past-near-hackathon-winners.md`): working software with one
+   identifiable, live NEAR primitive (a deployed contract, wallet login and NFTs, Chain Signatures, NEAR AI); top
+   overall prizes went to tooling and infrastructure; gaming winners were complete small loops with one chain hook and
+   won in their track, not overall; judges asked for go-to-market and next steps; a NEAR Foundation judge named "a
+   slick video over a thin repo" as a red flag and read the pitch for the problem behind the solution.
 
 ## 2. Criteria, weights and what a 10 looks like
 
@@ -107,6 +113,9 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   README says so in plain words.
 - **2/10**: a contract exists but no sentence connects it to play; or a second track is claimed on a simulation.
 - **0/10**: "powered by NEAR" with no contract, or claims of on-chain verification the code does not perform.
+- Calibration: no verified past NEAR winner shipped without a live primitive (`notes/past-near-hackathon-winners.md`),
+  so an undeployed contract caps this criterion at 5 whatever the design quality; a testnet deployment of the existing
+  contract is the cheapest move from 5 to 7 or more.
 - Diagnostic questions (to be completed from `notes/onchain-game-design.md`): would the game be worse without the
   chain; does the player ever see the verification at a decision; is the token the game or is the game the game;
   does the economy evolve without a dev patch; is verification that nobody looks at theatre.
@@ -117,7 +126,8 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   future"), a theme that explains the rules and a mood recognisable by minute three, distinct from the field (the
   competitor snapshot in `docs/decisions.md` §1), and a credible answer to "who plays this after the hackathon and why
   does the economy sustain itself".
-- **7/10**: novel mechanic and theme, no impact or sustainability answer.
+- **7/10**: novel mechanic and theme, no impact or sustainability answer (past NEAR juries asked for a go-to-market
+  plan and next steps; the Protocol Rewards funnel rewards mainnet progress and users).
 - **5/10**: a fresh theme over a familiar loop, or a fresh mechanic the demo never reaches.
 - **0/10**: a clone with a token.
 

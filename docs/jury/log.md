@@ -30,3 +30,7 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   records from `?demo=judge` while the README's verified table uses `?demo=judge&mode=walk`, and says "Continue as
   guest" where the README says "Play as guest"; its editor notes allow speed ramps (ETHGlobal forbids sped-up
   footage) and a 60 to 90 s cut (below the 2-minute floor hackathon judges expect; the X free tier caps at 140 s).
+- 17:50 UTC: `notes/past-near-hackathon-winners.md` done (23 sources; REDACTED 2024, MetaBUILD III, NEARCON 2022
+  and Encode winner lists were not retrievable and are marked unverified). Rubric: section 1 gains the five
+  recurring NEAR criteria with their source and the winners' common traits; C4 gets a calibration note (an undeployed
+  contract caps C4 at 5); C5 names the go-to-market question.
