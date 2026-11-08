@@ -6,6 +6,7 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
 `docs/handoff/agent-reports/submission.md` tracks the state per date.
 
 ## Dates (UTC, with Kyiv = UTC+2)
+- There is no sign-up before the hackathon: the final submission is the only registration.
 - Code counts from the announcement on 19.10.2026 (Q-001); the hackathon window is 01.11–14.11.
 - **Submission deadline: 14.11.2026 23:59 UTC = 15.11.2026 01:59 Kyiv.** Submissions are accepted only from
   01.11 00:00 UTC to that moment; outside the window the API answers 403.
