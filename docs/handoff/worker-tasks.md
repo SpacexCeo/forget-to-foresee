@@ -530,3 +530,21 @@ and on a phone inside the X in-app browser.
    the first camera sees; preload hints for the critical chunks; check that phone `_m` variants and KTX2 are used.
 4. Before/after numbers in `docs/first-seconds.md`; the README "Judge in 5 minutes" sizes and times updated to the
    measured values. Tests for the load plan (pure). Zero console errors; both play modes and `?play=direct` intact.
+
+---
+
+## Task V: memory shards as NEP-171 NFTs (the nfts track, contract first)
+
+**Branch:** `claude/shard-nft` (worker M continues) · **Owns:** new `contracts/memory-shard/**` (Rust, near-sdk, NEP-171
+core + NEP-177 metadata + NEP-178 approvals only if needed), new `game/src/net/shard-nft*.js` (read-only view client
+and the metadata mapping), new tests, `docs/shard-nft.md` (new), the README real/mock row "NEAR NEP-171 fragment NFTs"
+(only with what runs). Testnet only; deployment waits for the owner's permission path like `season-commit`.
+Design: a forgotten memory becomes a shard (the Price of Memory). On-chain, a shard NFT carries the season id, the
+memory's kind and weight, the trial it was forgotten, the Merkle leaf of the season event it unlocked (so the shard is
+provably tied to the committed season), and a deterministic generated image (an ink-ring SVG from the shard's data,
+stored as a data URI or a content hash). Minting only by the season coordinator; transfers follow the auction result.
+1. Contract with unit tests (mocked chain) and, where the container allows, sandbox tests; a deploy script mirroring
+   `deploy-judge-season.sh` that mints the judge season's shards (not run until permitted).
+2. The game reads shard NFTs read-only when a deployment exists (silent otherwise) and shows "Shard minted on NEAR
+   testnet" with an explorer link next to the shard in Memories and the auction.
+3. Also small: `tools/verify/verify.mjs --help` prints usage instead of throwing.
