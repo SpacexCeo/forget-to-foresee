@@ -43,7 +43,7 @@ an open flag is reported to the lead at once, and the score is marked provisiona
 | # | Criterion | Weight | Resting on |
 |---|---|---|---|
 | C1 | Runs and is verifiable: reproducibility and honesty | 25 | Q-017 and README guidance; `ai-screening-and-reproducibility`; `hackathon-judging-rubrics` (Google "working application, not a mockup", Microsoft "does it work" 25 %) |
-| C2 | Game loop and fun in the first ten minutes | 20 | `games` track text and exemplar; `game-jam-and-festival-judging`; Imagine Cup Fun Factor 25 % |
+| C2 | Game loop and fun in the first ten minutes, with a legible living economy | 20 | `games` track text and exemplar; `game-jam-and-festival-judging`; `agent-economy-legibility`; Imagine Cup Fun Factor 25 % |
 | C3 | Technical depth and quality | 13 | ETHGlobal Technicality, Devpost "technical implementation"; `hackathon-judging-rubrics` |
 | C4 | NEAR integration and track fit: concrete, in the loop, honest | 12 | Demo-post guidance, Q-010/Q-011; `near-hackathon-tracks`; `onchain-game-design`; `past-near-hackathon-winners` |
 | C5 | Originality, story and impact | 12 | IGF/Nuovo innovation; Imagine Cup Innovation 20 %; previous NEAR criteria (originality, impact, sustainability) |
@@ -91,6 +91,18 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   mechanic at a time, first failure explained and cheap, no 30-second dead stretches, state and odds visible at each
   decision, hint after a 10-second stall, loads in a browser in under a minute without an account, hook at 10:00,
   one-sentence novelty, theme explains the rules). The juror plays silently first, then with the README.
+- The economy half of C2 (the track is "Games With Real Economies"): the twelve-question test in
+  `notes/agent-economy-legibility.md`. Can the juror state each agent's goal from the screen; does an agent say why
+  at the moment it acts, grounded in visible state (stock, trust, tension); does it cite a past event back when it
+  changes behaviour; are the rules in one short readable file; does the same seed reproduce the same log while
+  different seeds give a bounded band of different outcomes; can faucets, sinks, supply and wealth concentration be
+  read from the log and do they move for in-world reasons; is any social quantity spendable; in fast-forward, is the
+  inflection (crisis, collapse, recovery) visible with a nameable cause. Ten to twelve yes answers is a living,
+  legible economy (C2 can reach 9 to 10); six to nine is systemic but under-presented (C2 capped at 7); under six is
+  scripted or opaque (C2 capped at 5). Questions 7 to 9 are the "could this have been scripted?" test. Two-minute
+  evidence that counts: a reasoning tooltip per agent move, a who-did-what-to-whom-why log line, a seed-band plot
+  from the Monte Carlo harness with the live seed highlighted, a faucet-and-sink chart annotated at the crisis, a
+  byte-identical replay, and one memory-and-consequence moment.
 
 ### C3. Technical depth and quality (13)
 - **10/10**: engine, client, server and contract are each real and tested; tests cover rules, parity and tampering;

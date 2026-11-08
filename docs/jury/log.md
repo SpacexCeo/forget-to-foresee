@@ -45,3 +45,8 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   (legibility, memory and consequence, "evolves without a dev patch"), and the investor jury (what they publish, the
   questions to expect, the 2000-character `idea` field). Routine re-check of the live HACKATHON.md for changes.
 - 17:50 UTC: live HACKATHON.md re-read, no differences against the 12:30 reading (logged in `notes/near-hackathon-rules.md`).
+- 18:00 UTC: `notes/agent-economy-legibility.md` done (33 sources: Orkin, Isla, Nemesis, Caves of Qud, Hocking,
+  Crawford, Lehdonvirta and Castronova, EVE monthly economic reports, Schelling and Sugarscape conventions,
+  Generative Agents and Project Sid critiques, the organizers' games exemplar read directly). Rubric C2 gains the
+  economy half: the twelve-question legibility test with caps (under six yes answers caps C2 at 5) and the
+  two-minute evidence artefacts.
