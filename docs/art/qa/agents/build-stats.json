@@ -3,12 +3,13 @@
     "iris": {
       "clan": "Iris",
       "file": "game/public/assets/models/agent_iris.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "CUDA",
       "part_triangles": {
-        "body": 1844,
+        "body": 2220,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
+        "face_glint_L": 20,
         "face_lidup_L": 168,
         "face_lidlo_L": 140,
         "face_lidup_L_lash": 88,
@@ -16,6 +17,7 @@
         "face_eye_R": 154,
         "face_iris_R": 80,
         "face_pupil_R": 36,
+        "face_glint_R": 20,
         "face_lidup_R": 168,
         "face_lidlo_R": 140,
         "face_lidup_R_lash": 88,
@@ -25,66 +27,77 @@
         "face_mouth": 48,
         "face_teeth": 72,
         "head": 1864,
-        "tunic": 1408,
-        "sleeve_l": 384,
-        "sleeve_r": 384,
+        "tunic": 864,
+        "tunic_trim": 288,
+        "sleeve_l": 320,
+        "sleeve_r": 320,
         "boot_-1": 240,
+        "boot_cuff_-1": 120,
         "boot_1": 240,
+        "boot_cuff_1": 120,
         "belt": 256,
+        "buckle": 12,
+        "pouch": 12,
         "bracer_-1": 200,
         "bracer_1": 200,
-        "hair": 968,
-        "cloak": 2936,
-        "cape": 1564,
-        "hood_down": 136,
-        "scarf": 672,
+        "hair_cap": 200,
+        "hair": 1632,
+        "cloak": 1920,
+        "cloak_trim": 440,
+        "cape": 740,
+        "cape_trim": 368,
+        "hood_down": 140,
+        "clasp": 160,
+        "clasp_gem": 20,
+        "scarf": 576,
         "scarf_tail": 152,
         "scarf_front": 80,
+        "tassels": 120,
         "pin": 60
       },
-      "ngons_triangulated": 46,
-      "runtime_triangles": 15520,
+      "ngons_triangulated": 72,
+      "runtime_triangles": 15856,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 411.5,
-          "p10": 395.7,
-          "p90": 422.8
+          "median": 336.4,
+          "p10": 317.3,
+          "p90": 349.0
         },
         "uv_anisotropy": {
-          "median": 1.067,
-          "p95": 1.192
+          "median": 1.088,
+          "p95": 1.281
         }
       },
-      "master_triangles": 4787536,
+      "master_triangles": 5349776,
       "bakes": {
         "ao": {
-          "seconds": 543.6,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 22.92,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 48.63,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 11.74,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 38.13,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 11.52,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 21.56,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 9.89,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 15.27,
+          "seconds": 7.79,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -95,7 +108,7 @@
             2048,
             2048
           ],
-          "bytes": 751229
+          "bytes": 851078
         },
         "orm": {
           "file": "agent_iris_orm.jpg",
@@ -103,7 +116,7 @@
             2048,
             2048
           ],
-          "bytes": 1649161
+          "bytes": 1559565
         },
         "normal": {
           "file": "agent_iris_normal.jpg",
@@ -111,7 +124,7 @@
             2048,
             2048
           ],
-          "bytes": 1691367
+          "bytes": 1548461
         }
       },
       "skin": {
@@ -121,6 +134,7 @@
           "face_eye_L": "head",
           "face_iris_L": "head",
           "face_pupil_L": "head",
+          "face_glint_L": "head",
           "face_lidup_L": "rigid:lid_up_L",
           "face_lidlo_L": "rigid:lid_lo_L",
           "face_lidup_L_lash": "rigid:lid_up_L",
@@ -128,6 +142,7 @@
           "face_eye_R": "head",
           "face_iris_R": "head",
           "face_pupil_R": "head",
+          "face_glint_R": "head",
           "face_lidup_R": "rigid:lid_up_R",
           "face_lidlo_R": "rigid:lid_lo_R",
           "face_lidup_R_lash": "rigid:lid_up_R",
@@ -138,23 +153,34 @@
           "face_teeth": "head",
           "head": "head",
           "tunic": "skirt",
+          "tunic_trim": "skirt",
           "sleeve_l": "fit",
           "sleeve_r": "fit",
           "boot_-1": "fit",
+          "boot_cuff_-1": "fit",
           "boot_1": "fit",
+          "boot_cuff_1": "fit",
           "belt": "fit",
+          "buckle": "fit",
+          "pouch": "comp",
           "bracer_-1": "fit",
           "bracer_1": "fit",
+          "hair_cap": "hair",
           "hair": "hair",
           "cloak": "cloak",
+          "cloak_trim": "cloak",
           "cape": "cloak:0.35",
+          "cape_trim": "cloak",
           "hood_down": "fit",
+          "clasp": "comp",
+          "clasp_gem": "comp",
           "scarf": "fit",
           "scarf_tail": "chain:scarf",
           "scarf_front": "fit",
+          "tassels": "fit",
           "pin": "fit"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 294,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -209,8 +235,8 @@
       },
       "collision": {
         "name": "agent_iris_col",
-        "radius_m": 0.312,
-        "height_m": 1.763,
+        "radius_m": 0.297,
+        "height_m": 1.791,
         "triangles": 144
       },
       "clips": {
@@ -223,7 +249,7 @@
         "walk": {
           "frames": 24,
           "loop": true,
-          "max_hip_clamp_m": 0.0315,
+          "max_hip_clamp_m": 0.0395,
           "seconds": 0.8
         },
         "run": {
@@ -298,16 +324,16 @@
         "min": [
           -0.356,
           0.001,
-          -0.333
+          -0.291
         ],
         "max": [
           0.356,
-          1.763,
-          0.257
+          1.791,
+          0.223
         ]
       },
-      "raw_glb_bytes": 7414224,
-      "glb_bytes": 5770716,
+      "raw_glb_bytes": 6568780,
+      "glb_bytes": 4763156,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -316,23 +342,23 @@
       "stages": [
         {
           "stage": "iris:model",
-          "seconds": 0.21
+          "seconds": 0.35
         },
         {
           "stage": "iris:uv",
-          "seconds": 1.62
+          "seconds": 1.61
         },
         {
           "stage": "iris:master",
-          "seconds": 39.04
+          "seconds": 26.85
         },
         {
           "stage": "iris:bake_gpu",
-          "seconds": 667.6
+          "seconds": 64.17
         },
         {
           "stage": "iris:textures",
-          "seconds": 1.15
+          "seconds": 2.44
         },
         {
           "stage": "iris:export",
@@ -340,28 +366,29 @@
         },
         {
           "stage": "iris:rig",
-          "seconds": 0.3
+          "seconds": 0.19
         },
         {
           "stage": "iris:anim",
-          "seconds": 1.13
+          "seconds": 0.8
         },
         {
           "stage": "iris:export",
-          "seconds": 12.16
+          "seconds": 5.22
         }
       ],
-      "total_seconds": 723.21
+      "total_seconds": 101.63
     },
     "sol": {
       "clan": "Salt",
       "file": "game/public/assets/models/agent_sol.glb",
       "cycles_device": "CUDA",
       "part_triangles": {
-        "body": 1844,
+        "body": 2220,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
+        "face_glint_L": 20,
         "face_lidup_L": 168,
         "face_lidlo_L": 140,
         "face_lidup_L_lash": 88,
@@ -369,6 +396,7 @@
         "face_eye_R": 154,
         "face_iris_R": 80,
         "face_pupil_R": 36,
+        "face_glint_R": 20,
         "face_lidup_R": 168,
         "face_lidlo_R": 140,
         "face_lidup_R_lash": 88,
@@ -378,10 +406,13 @@
         "face_mouth": 48,
         "face_teeth": 72,
         "head": 1864,
-        "robe": 2400,
-        "tier_0": 960,
-        "tier_1": 960,
-        "tier_2": 960,
+        "robe": 1768,
+        "tier_0": 768,
+        "tier_0_trim": 384,
+        "tier_1": 768,
+        "tier_1_trim": 384,
+        "tier_2": 768,
+        "tier_2_trim": 384,
         "sleeve_l": 384,
         "sleeve_r": 384,
         "belt": 256,
@@ -400,46 +431,46 @@
         "pouch_2": 96
       },
       "ngons_triangulated": 82,
-      "runtime_triangles": 15528,
+      "runtime_triangles": 15888,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 310.2,
-          "p10": 298.3,
-          "p90": 318.8
+          "median": 290.9,
+          "p10": 280.2,
+          "p90": 299.2
         },
         "uv_anisotropy": {
-          "median": 1.066,
-          "p95": 1.185
+          "median": 1.067,
+          "p95": 1.183
         }
       },
-      "master_triangles": 6352624,
+      "master_triangles": 6274160,
       "bakes": {
         "ao": {
-          "seconds": 66.78,
+          "seconds": 23.2,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 24.77,
+          "seconds": 12.73,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 22.87,
+          "seconds": 13.52,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 24.79,
+          "seconds": 11.75,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 11.92,
+          "seconds": 8.47,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -452,7 +483,7 @@
             2048,
             2048
           ],
-          "bytes": 1118723
+          "bytes": 1218628
         },
         "orm": {
           "file": "agent_sol_orm.jpg",
@@ -460,7 +491,7 @@
             2048,
             2048
           ],
-          "bytes": 1610449
+          "bytes": 1692443
         },
         "normal": {
           "file": "agent_sol_normal.jpg",
@@ -468,7 +499,7 @@
             2048,
             2048
           ],
-          "bytes": 1510827
+          "bytes": 1751286
         }
       },
       "skin": {
@@ -478,6 +509,7 @@
           "face_eye_L": "head",
           "face_iris_L": "head",
           "face_pupil_L": "head",
+          "face_glint_L": "head",
           "face_lidup_L": "rigid:lid_up_L",
           "face_lidlo_L": "rigid:lid_lo_L",
           "face_lidup_L_lash": "rigid:lid_up_L",
@@ -485,6 +517,7 @@
           "face_eye_R": "head",
           "face_iris_R": "head",
           "face_pupil_R": "head",
+          "face_glint_R": "head",
           "face_lidup_R": "rigid:lid_up_R",
           "face_lidlo_R": "rigid:lid_lo_R",
           "face_lidup_R_lash": "rigid:lid_up_R",
@@ -496,8 +529,11 @@
           "head": "head",
           "robe": "skirt",
           "tier_0": "skirt",
+          "tier_0_trim": "skirt",
           "tier_1": "skirt",
+          "tier_1_trim": "skirt",
           "tier_2": "skirt",
+          "tier_2_trim": "skirt",
           "sleeve_l": "fit",
           "sleeve_r": "fit",
           "belt": "fit",
@@ -515,7 +551,7 @@
           "pouch_1": "comp",
           "pouch_2": "comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 330,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -563,7 +599,7 @@
       },
       "collision": {
         "name": "agent_sol_col",
-        "radius_m": 0.318,
+        "radius_m": 0.326,
         "height_m": 1.859,
         "triangles": 144
       },
@@ -577,7 +613,7 @@
         "walk": {
           "frames": 24,
           "loop": true,
-          "max_hip_clamp_m": 0.0365,
+          "max_hip_clamp_m": 0.0413,
           "seconds": 0.8
         },
         "run": {
@@ -652,7 +688,7 @@
         "min": [
           -0.412,
           0.001,
-          -0.258
+          -0.269
         ],
         "max": [
           0.405,
@@ -660,8 +696,8 @@
           0.293
         ]
       },
-      "raw_glb_bytes": 7600052,
-      "glb_bytes": 4879708,
+      "raw_glb_bytes": 7374084,
+      "glb_bytes": 4928544,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -670,23 +706,23 @@
       "stages": [
         {
           "stage": "sol:model",
-          "seconds": 0.21
+          "seconds": 0.25
         },
         {
           "stage": "sol:uv",
-          "seconds": 1.06
+          "seconds": 1.08
         },
         {
           "stage": "sol:master",
-          "seconds": 34.98
+          "seconds": 27.21
         },
         {
           "stage": "sol:bake_gpu",
-          "seconds": 151.5
+          "seconds": 70.01
         },
         {
           "stage": "sol:textures",
-          "seconds": 3.0
+          "seconds": 2.47
         },
         {
           "stage": "sol:export",
@@ -694,28 +730,29 @@
         },
         {
           "stage": "sol:rig",
-          "seconds": 0.18
+          "seconds": 0.19
         },
         {
           "stage": "sol:anim",
-          "seconds": 0.78
+          "seconds": 0.83
         },
         {
           "stage": "sol:export",
-          "seconds": 5.09
+          "seconds": 5.23
         }
       ],
-      "total_seconds": 196.81
+      "total_seconds": 107.27
     },
     "pepel": {
       "clan": "Ash",
       "file": "game/public/assets/models/agent_pepel.glb",
-      "cycles_device": "CPU",
+      "cycles_device": "CUDA",
       "part_triangles": {
-        "body": 1844,
+        "body": 2220,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
+        "face_glint_L": 20,
         "face_lidup_L": 168,
         "face_lidlo_L": 140,
         "face_lidup_L_lash": 88,
@@ -723,6 +760,7 @@
         "face_eye_R": 154,
         "face_iris_R": 80,
         "face_pupil_R": 36,
+        "face_glint_R": 20,
         "face_lidup_R": 168,
         "face_lidlo_R": 140,
         "face_lidup_R_lash": 88,
@@ -735,6 +773,7 @@
         "head": 1864,
         "tunic": 1664,
         "coat": 1316,
+        "coat_trim": 392,
         "sleeve_l": 384,
         "sleeve_r": 384,
         "wraps_-1": 384,
@@ -748,48 +787,48 @@
         "shield_bars": 24
       },
       "ngons_triangulated": 60,
-      "runtime_triangles": 13286,
+      "runtime_triangles": 14094,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 381.1,
-          "p10": 365.9,
-          "p90": 392.7
+          "median": 368.6,
+          "p10": 353.7,
+          "p90": 379.4
         },
         "uv_anisotropy": {
-          "median": 1.07,
-          "p95": 1.187
+          "median": 1.068,
+          "p95": 1.182
         }
       },
-      "master_triangles": 5473232,
+      "master_triangles": 5103088,
       "bakes": {
         "ao": {
-          "seconds": 442.78,
-          "samples": 128,
-          "size": 2048,
+          "seconds": 22.77,
+          "samples": 512,
+          "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 46.2,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 12.01,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 40.77,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 11.72,
+          "samples": 32,
+          "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 31.7,
-          "samples": 8,
-          "size": 2048,
+          "seconds": 9.8,
+          "samples": 16,
+          "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 25.69,
+          "seconds": 7.68,
           "samples": 8,
-          "size": 2048,
+          "size": 4096,
           "exploded": true
         }
       },
@@ -800,7 +839,7 @@
             2048,
             2048
           ],
-          "bytes": 820305
+          "bytes": 826329
         },
         "orm": {
           "file": "agent_pepel_orm.jpg",
@@ -808,7 +847,7 @@
             2048,
             2048
           ],
-          "bytes": 1887582
+          "bytes": 1725311
         },
         "normal": {
           "file": "agent_pepel_normal.jpg",
@@ -816,7 +855,7 @@
             2048,
             2048
           ],
-          "bytes": 2164320
+          "bytes": 1895175
         }
       },
       "skin": {
@@ -826,6 +865,7 @@
           "face_eye_L": "head",
           "face_iris_L": "head",
           "face_pupil_L": "head",
+          "face_glint_L": "head",
           "face_lidup_L": "rigid:lid_up_L",
           "face_lidlo_L": "rigid:lid_lo_L",
           "face_lidup_L_lash": "rigid:lid_up_L",
@@ -833,6 +873,7 @@
           "face_eye_R": "head",
           "face_iris_R": "head",
           "face_pupil_R": "head",
+          "face_glint_R": "head",
           "face_lidup_R": "rigid:lid_up_R",
           "face_lidlo_R": "rigid:lid_lo_R",
           "face_lidup_R_lash": "rigid:lid_up_R",
@@ -845,6 +886,7 @@
           "head": "head",
           "tunic": "skirt",
           "coat": "skirt",
+          "coat_trim": "skirt",
           "sleeve_l": "fit",
           "sleeve_r": "fit",
           "wraps_-1": "fit",
@@ -857,7 +899,7 @@
           "shield": "rigid:forearm_L",
           "shield_bars": "rigid:forearm_L"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 294,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -903,7 +945,7 @@
       },
       "collision": {
         "name": "agent_pepel_col",
-        "radius_m": 0.325,
+        "radius_m": 0.328,
         "height_m": 1.864,
         "triangles": 144
       },
@@ -917,7 +959,7 @@
         "walk": {
           "frames": 24,
           "loop": true,
-          "max_hip_clamp_m": 0.029,
+          "max_hip_clamp_m": 0.0386,
           "seconds": 0.8
         },
         "run": {
@@ -997,11 +1039,11 @@
         "max": [
           0.45,
           1.864,
-          0.258
+          0.268
         ]
       },
-      "raw_glb_bytes": 7898324,
-      "glb_bytes": 5958444,
+      "raw_glb_bytes": 6960788,
+      "glb_bytes": 5238308,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1010,23 +1052,23 @@
       "stages": [
         {
           "stage": "pepel:model",
-          "seconds": 0.23
+          "seconds": 0.22
         },
         {
           "stage": "pepel:uv",
-          "seconds": 1.43
+          "seconds": 1.15
         },
         {
           "stage": "pepel:master",
-          "seconds": 50.18
+          "seconds": 18.57
         },
         {
           "stage": "pepel:bake_gpu",
-          "seconds": 587.64
+          "seconds": 64.27
         },
         {
           "stage": "pepel:textures",
-          "seconds": 1.14
+          "seconds": 2.49
         },
         {
           "stage": "pepel:export",
@@ -1034,25 +1076,25 @@
         },
         {
           "stage": "pepel:rig",
-          "seconds": 0.21
+          "seconds": 0.16
         },
         {
           "stage": "pepel:anim",
-          "seconds": 1.13
+          "seconds": 0.84
         },
         {
           "stage": "pepel:export",
-          "seconds": 14.94
+          "seconds": 5.16
         }
       ],
-      "total_seconds": 656.91
+      "total_seconds": 92.86
     },
     "moh": {
       "clan": "Moss",
       "file": "game/public/assets/models/agent_moh.glb",
       "cycles_device": "CUDA",
       "part_triangles": {
-        "body": 1844,
+        "body": 2220,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -1074,14 +1116,14 @@
         "face_mouth": 48,
         "face_teeth": 72,
         "head": 1864,
-        "tunic": 1664,
+        "tunic": 1280,
         "sleeve_l": 384,
         "sleeve_r": 384,
         "belt": 256,
         "cloak": 1920,
         "cloak_trim": 440,
-        "capelet": 1152,
-        "capelet_trim": 432,
+        "capelet": 1024,
+        "capelet_trim": 384,
         "hood_down": 140,
         "hair_cap": 200,
         "hair": 1360,
@@ -1094,46 +1136,46 @@
         "ladle": 80
       },
       "ngons_triangulated": 80,
-      "runtime_triangles": 15982,
+      "runtime_triangles": 15798,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 334.5,
-          "p10": 314.1,
-          "p90": 347.0
+          "median": 335.1,
+          "p10": 313.5,
+          "p90": 347.6
         },
         "uv_anisotropy": {
-          "median": 1.091,
-          "p95": 1.299
+          "median": 1.093,
+          "p95": 1.312
         }
       },
-      "master_triangles": 5563136,
+      "master_triangles": 5257776,
       "bakes": {
         "ao": {
-          "seconds": 87.35,
+          "seconds": 23.02,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 28.25,
+          "seconds": 11.75,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 27.53,
+          "seconds": 14.79,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 22.75,
+          "seconds": 11.23,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 19.19,
+          "seconds": 7.28,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1146,7 +1188,7 @@
             2048,
             2048
           ],
-          "bytes": 1056680
+          "bytes": 1066548
         },
         "orm": {
           "file": "agent_moh_orm.jpg",
@@ -1154,7 +1196,7 @@
             2048,
             2048
           ],
-          "bytes": 1666612
+          "bytes": 1668412
         },
         "normal": {
           "file": "agent_moh_normal.jpg",
@@ -1162,7 +1204,7 @@
             2048,
             2048
           ],
-          "bytes": 1607079
+          "bytes": 1604274
         }
       },
       "skin": {
@@ -1209,7 +1251,7 @@
           "bail": "rigid:prop_L",
           "ladle": "comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 294,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -1262,7 +1304,7 @@
       },
       "collision": {
         "name": "agent_moh_col",
-        "radius_m": 0.337,
+        "radius_m": 0.339,
         "height_m": 1.79,
         "triangles": 144
       },
@@ -1276,7 +1318,7 @@
         "walk": {
           "frames": 24,
           "loop": true,
-          "max_hip_clamp_m": 0.0368,
+          "max_hip_clamp_m": 0.0424,
           "seconds": 0.8
         },
         "run": {
@@ -1359,8 +1401,8 @@
           0.261
         ]
       },
-      "raw_glb_bytes": 6979128,
-      "glb_bytes": 4862624,
+      "raw_glb_bytes": 6981092,
+      "glb_bytes": 4930640,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1369,23 +1411,23 @@
       "stages": [
         {
           "stage": "moh:model",
-          "seconds": 0.38
+          "seconds": 0.23
         },
         {
           "stage": "moh:uv",
-          "seconds": 2.44
+          "seconds": 1.22
         },
         {
           "stage": "moh:master",
-          "seconds": 48.13
+          "seconds": 20.32
         },
         {
           "stage": "moh:bake_gpu",
-          "seconds": 185.85
+          "seconds": 68.36
         },
         {
           "stage": "moh:textures",
-          "seconds": 10.56
+          "seconds": 2.43
         },
         {
           "stage": "moh:export",
@@ -1393,25 +1435,25 @@
         },
         {
           "stage": "moh:rig",
-          "seconds": 0.47
+          "seconds": 0.18
         },
         {
           "stage": "moh:anim",
-          "seconds": 3.0
+          "seconds": 0.81
         },
         {
           "stage": "moh:export",
-          "seconds": 13.79
+          "seconds": 5.13
         }
       ],
-      "total_seconds": 264.63
+      "total_seconds": 98.68
     },
     "yantar": {
       "clan": "Amber",
       "file": "game/public/assets/models/agent_yantar.glb",
       "cycles_device": "CUDA",
       "part_triangles": {
-        "body": 1844,
+        "body": 2220,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
@@ -1454,46 +1496,46 @@
         "gems": 60
       },
       "ngons_triangulated": 62,
-      "runtime_triangles": 13534,
+      "runtime_triangles": 13910,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 365.5,
-          "p10": 352.4,
-          "p90": 374.9
+          "median": 360.7,
+          "p10": 347.5,
+          "p90": 370.1
         },
         "uv_anisotropy": {
-          "median": 1.059,
-          "p95": 1.179
+          "median": 1.06,
+          "p95": 1.183
         }
       },
-      "master_triangles": 5488944,
+      "master_triangles": 5497776,
       "bakes": {
         "ao": {
-          "seconds": 85.77,
+          "seconds": 22.88,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 46.42,
+          "seconds": 12.26,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 44.12,
+          "seconds": 12.18,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 34.72,
+          "seconds": 10.11,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 27.33,
+          "seconds": 7.81,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1506,7 +1548,7 @@
             2048,
             2048
           ],
-          "bytes": 1288886
+          "bytes": 1294997
         },
         "orm": {
           "file": "agent_yantar_orm.jpg",
@@ -1514,7 +1556,7 @@
             2048,
             2048
           ],
-          "bytes": 1685398
+          "bytes": 1689394
         },
         "normal": {
           "file": "agent_yantar_normal.jpg",
@@ -1522,7 +1564,7 @@
             2048,
             2048
           ],
-          "bytes": 1811379
+          "bytes": 1802839
         }
       },
       "skin": {
@@ -1570,7 +1612,7 @@
           "keys": "rigid:prop_L",
           "gems": "follow_comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 294,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -1616,7 +1658,7 @@
       },
       "collision": {
         "name": "agent_yantar_col",
-        "radius_m": 0.329,
+        "radius_m": 0.333,
         "height_m": 1.781,
         "triangles": 144
       },
@@ -1630,7 +1672,7 @@
         "walk": {
           "frames": 24,
           "loop": true,
-          "max_hip_clamp_m": 0.0222,
+          "max_hip_clamp_m": 0.0334,
           "seconds": 0.8
         },
         "run": {
@@ -1713,8 +1755,8 @@
           0.3
         ]
       },
-      "raw_glb_bytes": 7288316,
-      "glb_bytes": 5247888,
+      "raw_glb_bytes": 7322560,
+      "glb_bytes": 5233312,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1723,23 +1765,23 @@
       "stages": [
         {
           "stage": "yantar:model",
-          "seconds": 0.55
+          "seconds": 0.21
         },
         {
           "stage": "yantar:uv",
-          "seconds": 4.31
+          "seconds": 1.29
         },
         {
           "stage": "yantar:master",
-          "seconds": 88.54
+          "seconds": 22.15
         },
         {
           "stage": "yantar:bake_gpu",
-          "seconds": 239.92
+          "seconds": 65.55
         },
         {
           "stage": "yantar:textures",
-          "seconds": 15.15
+          "seconds": 2.49
         },
         {
           "stage": "yantar:export",
@@ -1747,28 +1789,29 @@
         },
         {
           "stage": "yantar:rig",
-          "seconds": 0.89
+          "seconds": 0.17
         },
         {
           "stage": "yantar:anim",
-          "seconds": 5.35
+          "seconds": 0.83
         },
         {
           "stage": "yantar:export",
-          "seconds": 27.33
+          "seconds": 5.25
         }
       ],
-      "total_seconds": 382.05
+      "total_seconds": 97.93
     },
     "iney": {
       "clan": "Frost",
       "file": "game/public/assets/models/agent_iney.glb",
       "cycles_device": "CUDA",
       "part_triangles": {
-        "body": 1844,
+        "body": 2220,
         "face_eye_L": 154,
         "face_iris_L": 80,
         "face_pupil_L": 36,
+        "face_glint_L": 20,
         "face_lidup_L": 168,
         "face_lidlo_L": 140,
         "face_lidup_L_lash": 88,
@@ -1776,6 +1819,7 @@
         "face_eye_R": 154,
         "face_iris_R": 80,
         "face_pupil_R": 36,
+        "face_glint_R": 20,
         "face_lidup_R": 168,
         "face_lidlo_R": 140,
         "face_lidup_R_lash": 88,
@@ -1787,10 +1831,12 @@
         "face_hair": 264,
         "head": 1864,
         "robe": 2400,
+        "robe_trim": 480,
         "sleeve_l": 384,
         "sleeve_r": 384,
         "belt": 256,
         "mantle": 1600,
+        "mantle_trim": 480,
         "hood": 1436,
         "lens_frame": 148,
         "staff": 52,
@@ -1803,46 +1849,46 @@
         "vial_caps": 114
       },
       "ngons_triangulated": 49,
-      "runtime_triangles": 14602,
+      "runtime_triangles": 15978,
       "uv": {
         "texel_density_px_per_m": {
-          "median": 389.9,
-          "p10": 371.5,
-          "p90": 402.4
+          "median": 339.3,
+          "p10": 325.1,
+          "p90": 349.1
         },
         "uv_anisotropy": {
-          "median": 1.077,
-          "p95": 1.237
+          "median": 1.07,
+          "p95": 1.196
         }
       },
-      "master_triangles": 4702512,
+      "master_triangles": 4879072,
       "bakes": {
         "ao": {
-          "seconds": 29.08,
+          "seconds": 18.79,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 17.94,
+          "seconds": 10.67,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 17.98,
+          "seconds": 10.82,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 16.33,
+          "seconds": 9.26,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 11.77,
+          "seconds": 7.34,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1855,7 +1901,7 @@
             2048,
             2048
           ],
-          "bytes": 1177617
+          "bytes": 1229759
         },
         "orm": {
           "file": "agent_iney_orm.jpg",
@@ -1863,7 +1909,7 @@
             2048,
             2048
           ],
-          "bytes": 1612072
+          "bytes": 1709987
         },
         "normal": {
           "file": "agent_iney_normal.jpg",
@@ -1871,7 +1917,7 @@
             2048,
             2048
           ],
-          "bytes": 1406929
+          "bytes": 1578776
         }
       },
       "skin": {
@@ -1881,6 +1927,7 @@
           "face_eye_L": "head",
           "face_iris_L": "head",
           "face_pupil_L": "head",
+          "face_glint_L": "head",
           "face_lidup_L": "rigid:lid_up_L",
           "face_lidlo_L": "rigid:lid_lo_L",
           "face_lidup_L_lash": "rigid:lid_up_L",
@@ -1888,6 +1935,7 @@
           "face_eye_R": "head",
           "face_iris_R": "head",
           "face_pupil_R": "head",
+          "face_glint_R": "head",
           "face_lidup_R": "rigid:lid_up_R",
           "face_lidlo_R": "rigid:lid_lo_R",
           "face_lidup_R_lash": "rigid:lid_up_R",
@@ -1899,10 +1947,12 @@
           "face_hair": "head",
           "head": "head",
           "robe": "skirt",
+          "robe_trim": "skirt",
           "sleeve_l": "fit",
           "sleeve_r": "fit",
           "belt": "fit",
           "mantle": "cloak:0.45",
+          "mantle_trim": "cloak",
           "hood": "hood",
           "lens_frame": "head",
           "staff": "rigid:prop_L",
@@ -1914,7 +1964,7 @@
           "vials": "follow_comp",
           "vial_caps": "follow_comp"
         },
-        "finger_vertices": 156,
+        "finger_vertices": 294,
         "bones_used": [
           "brow_L",
           "brow_R",
@@ -1968,7 +2018,7 @@
       },
       "collision": {
         "name": "agent_iney_col",
-        "radius_m": 0.317,
+        "radius_m": 0.327,
         "height_m": 2.02,
         "triangles": 144
       },
@@ -1982,7 +2032,7 @@
         "walk": {
           "frames": 24,
           "loop": true,
-          "max_hip_clamp_m": 0.0389,
+          "max_hip_clamp_m": 0.0444,
           "seconds": 0.8
         },
         "run": {
@@ -2057,16 +2107,16 @@
         "min": [
           -0.424,
           -0.0,
-          -0.297
+          -0.309
         ],
         "max": [
           0.428,
           2.02,
-          0.297
+          0.309
         ]
       },
-      "raw_glb_bytes": 7395880,
-      "glb_bytes": 5041312,
+      "raw_glb_bytes": 7289120,
+      "glb_bytes": 4948992,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -2075,23 +2125,23 @@
       "stages": [
         {
           "stage": "iney:model",
-          "seconds": 0.25
+          "seconds": 0.22
         },
         {
           "stage": "iney:uv",
-          "seconds": 1.54
+          "seconds": 1.03
         },
         {
           "stage": "iney:master",
-          "seconds": 27.38
+          "seconds": 18.41
         },
         {
           "stage": "iney:bake_gpu",
-          "seconds": 93.47
+          "seconds": 57.16
         },
         {
           "stage": "iney:textures",
-          "seconds": 3.79
+          "seconds": 2.4
         },
         {
           "stage": "iney:export",
@@ -2099,18 +2149,18 @@
         },
         {
           "stage": "iney:rig",
-          "seconds": 0.26
+          "seconds": 0.17
         },
         {
           "stage": "iney:anim",
-          "seconds": 1.27
+          "seconds": 0.78
         },
         {
           "stage": "iney:export",
-          "seconds": 8.61
+          "seconds": 5.22
         }
       ],
-      "total_seconds": 136.57
+      "total_seconds": 85.39
     },
     "suit": {
       "clan": "Suit",

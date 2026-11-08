@@ -15,6 +15,7 @@ import { fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
+import { NAMEPLATE, platePlacement, plateBox, boxesIntersect } from './nameplate.js';
 import { PLAZA_RADIUS } from '../scenes/layout.js';
 import { NPC_MOTION, createMotion, stepMotion, gaitBlend, damp, avoidWish } from '../physics/motion.js';
 import { steerTo } from '../physics/character.js';
@@ -30,6 +31,61 @@ const LOOK_NEAR = 7;         // m: Iris this close gets looked at
 const UP = new THREE.Vector3(0, 1, 0);
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _v1 = new THREE.Vector3();
 const boneIs = (name, re) => re.test(String(name || '').toLowerCase().replace(/[.\d]+$/, '').split(/[|:/]/).pop());
+
+/** Finds the head, neck and eye bones of a rigged model by name (prefixes and numeric suffixes ignored). */
+function findLookBones(model) {
+  const bones = { head: null, neck: null, eyes: [] };
+  model.traverse((o) => {
+    if (!o.isBone) return;
+    if (!bones.head && boneIs(o.name, /(^|[^a-z])head$/)) bones.head = o;
+    else if (!bones.neck && boneIs(o.name, /(^|[^a-z])neck$/)) bones.neck = o;
+    else if (boneIs(o.name, /(^|[^a-z])eye([^a-z]|$)/)) bones.eyes.push(o);
+  });
+  return bones;
+}
+
+/**
+ * Head look-at, applied after the mixer so it adds to the clip: a world-space turn (yaw about +Y, pitch about
+ * the character's right axis) shared between the neck (35 %), the head (65 %) and the eyes (a little more).
+ * `target` is a world point or null (the look fades out). `look` holds the smoothed angles and weight. Shared by
+ * the clan agents and Iris (docs/motion.md: "Iris talks to a clan").
+ */
+function applyLookTo(bones, look, rootPos, rootYaw, target, dt, reduced = false) {
+  const want = target ? lookAtAngles([rootPos.x, rootPos.y, rootPos.z], rootYaw, target) : { yaw: 0, pitch: 0, weight: 0 };
+  const rate = reduced ? 3 : 6;
+  look.w = damp(look.w, want.weight, rate, dt);
+  if (want.weight > 0) { look.yaw = damp(look.yaw, want.yaw, rate, dt); look.pitch = damp(look.pitch, want.pitch, rate, dt); }
+  if (look.w < 0.005 || !bones.head) return;
+  const yaw = look.yaw * look.w, pitch = look.pitch * look.w;
+  const turn = (bone, share) => {
+    if (!bone || !bone.parent) return;
+    const ry = rootYaw + yaw * share;
+    _q1.setFromAxisAngle(UP, yaw * share);
+    _v1.set(-Math.cos(ry), 0, Math.sin(ry)); // the character's right axis after the yaw
+    _q2.setFromAxisAngle(_v1, pitch * share);
+    _q1.multiply(_q2);                                    // world-space delta
+    bone.parent.updateWorldMatrix(true, false);
+    bone.parent.getWorldQuaternion(_q3);                  // parent world rotation
+    // delta in the parent's space: qp^-1 * delta * qp, premultiplied onto the bone's local rotation
+    const inv = _q2.copy(_q3).invert();
+    bone.quaternion.premultiply(inv.multiply(_q1).multiply(_q3));
+  };
+  turn(bones.neck, 0.35);
+  turn(bones.head, bones.neck ? 0.65 : 1);
+  for (const e of bones.eyes) turn(e, 0.3);
+}
+
+/**
+ * Anticipation and follow-through (docs/motion.md): the body pitches into an acceleration and settles back after a
+ * stop. Returns the eased pitch in radians; `state` keeps {speed, pitch}. Off under reduced motion.
+ */
+function accelLean(state, speed, dt, reduced, gain = 0.03, max = 0.1) {
+  const accel = dt > 1e-4 ? (speed - state.speed) / dt : 0;
+  state.speed = speed;
+  const target = reduced ? 0 : Math.max(-max, Math.min(max, accel * gain));
+  state.pitch = damp(state.pitch, target, 7, dt);
+  return state.pitch;
+}
 const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
 const WALK_REF = 1.7, RUN_REF = 3.57; // m/s the walk / run clips were authored at
 
@@ -74,6 +130,10 @@ export class GaitLayer {
   }
 }
 const GLYPH = { offer: '◆', broken: '✕', isolated: '!', warm: '♥', cold: '·', given: '✓', dark: '○' };
+const _head = new THREE.Vector3(), _cam = new THREE.Vector3();
+// HUD boxes a nameplate may never sit under (checked against a cache refreshed every HUD_RECT_MS).
+const HUD_SEL = '.wh-trial, .wh-quest, .wh-toast, .wh-signs, .wh-log__tabs, .wh-log__body, .wh-prompt, .wh-dialogue__line, .wh-dialogue__reply, .wh-hotbar, .wh-topbar, .wh-quest--mobile, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile, .wh-sheet, .pl-panel, .pl-context, .pl-help, .pl-info, .pl-badge, .hub-dock, .hub-read, .hub-card, .hub-status, .ftf-run-toggle, .ftf-scene-cue';
+const HUD_RECT_MS = 250;
 const MOOD_COLOR = { warm: '#e9c46a', eager: '#ffd27a', hostile: '#ff8a7a', cold: '#9fb4c0', neutral: '#d6dcd8', uneasy: '#f0a868' };
 
 function standIn(color) {
@@ -88,38 +148,65 @@ function standIn(color) {
   return g;
 }
 
-/** Canvas sprite above an agent: name, trust arc and a mind glyph (shape + colour + text). */
-class MindSprite {
-  constructor() {
-    this.canvas = document.createElement('canvas');
-    this.canvas.width = 256; this.canvas.height = 128;
-    this.tex = new THREE.CanvasTexture(this.canvas);
-    this.tex.colorSpace = THREE.SRGBColorSpace;
-    this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }));
-    this.sprite.renderOrder = 10;
-    this.sprite.scale.set(1.6, 0.8, 1);
-    this.key = '';
+const PLATE_CSS = `
+.pl-plates { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.pl-plate { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px;
+  border-radius: 999px; background: rgba(9, 17, 19, .82); border: 1px solid rgba(232, 214, 172, .38); color: #faf7ee;
+  font: 400 13px/1 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05); transform-origin: 50% 100%; will-change: transform, opacity; }
+.pl-plate[hidden] { display: none; } /* inline-flex above would otherwise beat the UA's [hidden] rule */
+.pl-plate-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; box-shadow: 0 0 6px currentColor; }
+.pl-plate-sub { font: 500 11px/1 "Source Sans 3", "Segoe UI", system-ui, sans-serif; color: #cfcbbd; }
+.pl-plate-sub::before { content: "·"; margin: 0 6px 0 1px; color: #e4c272; }
+.pl-plate-sub:empty { display: none; }
+@media (max-width: 700px) { .pl-plate { font-size: 12px; padding: 4px 9px 4px 8px; } .pl-plate-sub { font-size: 10.5px; } }
+`;
+
+/** The fixed layer that holds every nameplate, created once per overlay root (first child: under the HUD panels). */
+function plateLayer(uiRoot) {
+  let layer = uiRoot.querySelector(':scope > .pl-plates');
+  if (layer) return layer;
+  const doc = uiRoot.ownerDocument;
+  if (!doc.getElementById('pl-plate-style')) { const st = doc.createElement('style'); st.id = 'pl-plate-style'; st.textContent = PLATE_CSS; doc.head.append(st); }
+  layer = doc.createElement('div');
+  layer.className = 'pl-plates';
+  layer.setAttribute('aria-hidden', 'true');
+  uiRoot.prepend(layer);
+  return layer;
+}
+
+/** Screen-space nameplate above an agent's head: name, a mood dot and one short line (mind or trust). */
+class Nameplate {
+  constructor(layer) {
+    const doc = layer.ownerDocument;
+    this.el = doc.createElement('div'); this.el.className = 'pl-plate'; this.el.hidden = true;
+    this.dot = doc.createElement('span'); this.dot.className = 'pl-plate-dot';
+    this.name = doc.createElement('span'); this.name.className = 'pl-plate-name';
+    this.sub = doc.createElement('span'); this.sub.className = 'pl-plate-sub';
+    this.el.append(this.dot, this.name, this.sub);
+    layer.append(this.el);
+    this.key = ''; this.shown = false;
   }
 
   draw({ name, trust, glyph, mood, label }) {
     const key = [name, trust, glyph, mood, label].join('|');
     if (key === this.key) return;
     this.key = key;
-    const c = this.canvas.getContext('2d');
-    c.clearRect(0, 0, 256, 128);
     const col = MOOD_COLOR[mood] || MOOD_COLOR.neutral;
-    // Trust arc (0..100) around the glyph disc.
-    c.lineWidth = 7; c.lineCap = 'round';
-    c.strokeStyle = 'rgba(20,24,22,0.55)'; c.beginPath(); c.arc(64, 64, 40, 0, Math.PI * 2); c.stroke();
-    if (trust != null) { c.strokeStyle = col; c.beginPath(); c.arc(64, 64, 40, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * Math.max(0, Math.min(100, trust))) / 100); c.stroke(); }
-    c.fillStyle = 'rgba(20,24,22,0.72)'; c.beginPath(); c.arc(64, 64, 33, 0, Math.PI * 2); c.fill();
-    c.fillStyle = col; c.font = '700 38px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(glyph ? GLYPH[glyph] || '•' : '•', 64, 66);
-    c.textAlign = 'left'; c.font = '600 30px Georgia, serif';
-    c.lineWidth = 6; c.strokeStyle = 'rgba(20,24,22,0.8)'; c.strokeText(name, 112, 50); c.fillStyle = '#f4f1e6'; c.fillText(name, 112, 50);
-    if (label) { c.font = '22px system-ui, sans-serif'; c.strokeText(label, 112, 86); c.fillStyle = col; c.fillText(label, 112, 86); }
-    this.tex.needsUpdate = true;
+    this.dot.style.color = col; this.dot.style.background = col;
+    this.name.textContent = name;
+    this.sub.textContent = label ? (glyph && GLYPH[glyph] ? GLYPH[glyph] + ' ' : '') + label : '';
   }
+
+  /** @param {{x:number,y:number,opacity:number,scale:number}|null} at */
+  place(at) {
+    if (!at) { if (this.shown) { this.el.hidden = true; this.shown = false; } return; }
+    if (!this.shown) { this.el.hidden = false; this.shown = true; }
+    this.el.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -100%) scale(${at.scale})`;
+    this.el.style.opacity = String(at.opacity);
+  }
+
+  remove() { this.el.remove(); }
 }
 
 class Agent {
@@ -136,9 +223,7 @@ class Agent {
     this.homeYaw = homeYaw;
     this.root.position.copy(this.home);
     this.root.rotation.y = homeYaw;
-    this.mind = new MindSprite();
-    this.mind.sprite.position.y = 2.35;
-    this.root.add(this.mind.sprite);
+    this.plate = null; // Nameplate (DOM), created by ClanAgents once it knows the overlay root
     scene.add(this.root);
     this.model = null; this.mixer = null; this.clips = []; this.actions = new Map();
     this.currentClip = null; this.state = 'absent';
@@ -170,12 +255,7 @@ class Agent {
       this.body.remove(this.stand);
       this.body.add(model);
       this.model = model;
-      model.traverse((o) => {
-        if (!o.isBone) return;
-        if (!this.bones.head && boneIs(o.name, /(^|[^a-z])head$/)) this.bones.head = o;
-        else if (!this.bones.neck && boneIs(o.name, /(^|[^a-z])neck$/)) this.bones.neck = o;
-        else if (boneIs(o.name, /(^|[^a-z])eye([^a-z]|$)/)) this.bones.eyes.push(o);
-      });
+      this.bones = findLookBones(model);
       this.clips = gltf.animations || [];
       if (this.clips.length) { this.mixer = new THREE.AnimationMixer(model); this.gait = new GaitLayer(this.mixer, this.clips); }
       this.state = 'loaded';
@@ -186,36 +266,8 @@ class Agent {
     }
   }
 
-  /**
-   * Head look-at, applied after the mixer so it adds to the clip: a world-space turn (yaw about +Y, pitch
-   * about the agent's right axis) shared between the neck (35 %), the head (65 %) and the eyes (a little
-   * more). `target` is a world point or null (the look fades out); angles are smoothed in the caller.
-   */
-  applyLook(dt, target, reduced = false) {
-    const want = target ? lookAtAngles(this.root.position.toArray(), this.root.rotation.y, target) : { yaw: 0, pitch: 0, weight: 0 };
-    const L = this.look;
-    const rate = reduced ? 3 : 6;
-    L.w = damp(L.w, want.weight, rate, dt);
-    if (want.weight > 0) { L.yaw = damp(L.yaw, want.yaw, rate, dt); L.pitch = damp(L.pitch, want.pitch, rate, dt); }
-    if (L.w < 0.005 || !this.bones.head) return;
-    const yaw = L.yaw * L.w, pitch = L.pitch * L.w;
-    const turn = (bone, share) => {
-      if (!bone || !bone.parent) return;
-      const ry = this.root.rotation.y + yaw * share;
-      _q1.setFromAxisAngle(UP, yaw * share);
-      _v1.set(-Math.cos(ry), 0, Math.sin(ry)); // the agent's right axis after the yaw
-      _q2.setFromAxisAngle(_v1, pitch * share);
-      _q1.multiply(_q2);                                    // world-space delta
-      bone.parent.updateWorldMatrix(true, false);
-      bone.parent.getWorldQuaternion(_q3);                  // parent world rotation
-      // delta in the parent's space: qp^-1 * delta * qp, premultiplied onto the bone's local rotation
-      const inv = _q2.copy(_q3).invert();
-      bone.quaternion.premultiply(inv.multiply(_q1).multiply(_q3));
-    };
-    turn(this.bones.neck, 0.35);
-    turn(this.bones.head, this.bones.neck ? 0.65 : 1);
-    for (const e of this.bones.eyes) turn(e, 0.3);
-  }
+  /** Head look-at for this agent (see `applyLookTo`). */
+  applyLook(dt, target, reduced = false) { applyLookTo(this.bones, this.look, this.root.position, this.root.rotation.y, target, dt, reduced); }
 
   /** Cross-fades to a contract clip (with the fallback chain). Returns the clip name used or null. */
   play(name) {
@@ -251,6 +303,7 @@ export class ClanAgents {
     }
     this.irisModel = null;
     this.director = null;   // created with the season's seed on the first observation (deterministic life)
+    this.reducedMotion = false;
     this.lastObs = null;
     /** Optional speech hook for conversation beats: ({speakerId, key, args}) → the dialogue strip (worldHud.say). */
     this.onSay = null;
@@ -297,12 +350,12 @@ export class ClanAgents {
       const idle = mixer ? resolveClip(gltf.animations, 'idle').clip : null;
       const idleAction = idle ? mixer.clipAction(idle) : null;
       if (idleAction) idleAction.play();
-      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null };
+      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { console.warn('[play] Iris model failed', e); }
   }
 
   /** Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips). */
-  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false) {
+  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false, reduced = this.reducedMotion) {
     const m = this.irisModel;
     if (!m) return;
     void running; // the blend follows the speed itself: the run clip appears above the walk speed
@@ -314,7 +367,14 @@ export class ClanAgents {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;
       m.model.rotation.z = moving ? Math.sin(t * 9) * 0.03 : 0;
     }
-    void avatarGroup;
+    // Anticipation / follow-through: lean into a start, settle after a stop (pitch of the model inside the avatar group).
+    if (m.lean) m.model.rotation.x = accelLean(m.lean, speed, dt, reduced);
+    // Look-at: the clan Iris is talking to (world.dialogue), else the look fades out.
+    if (m.bones && avatarGroup) {
+      const partner = this.talking && t < this.talkUntil ? this.agents.get(this.talking) : null;
+      const target = partner ? [partner.root.position.x, partner.root.position.y + 1.55, partner.root.position.z] : null;
+      applyLookTo(m.bones, m.look, avatarGroup.position, avatarGroup.rotation.y, target, dt, reduced);
+    }
   }
 
   /** Public events → short reactions (celebrate a contribution, slump at a break). */
@@ -325,7 +385,8 @@ export class ClanAgents {
 
   /**
    * @param {number} dt @param {object|null} obs controller observation
-   * @param {{now:number, focus:THREE.Vector3, irisPos:number[], reducedMotion:boolean, cameraDist:number}} ctx
+   * @param {{now:number, focus:THREE.Vector3, irisPos:number[]|null, reducedMotion:boolean, cameraDist:number, camera?:THREE.Camera, uiRoot?:HTMLElement}} ctx
+   *   camera + uiRoot enable the screen-space nameplates (nameplate.js); without them no plate is drawn
    */
   update(dt, obs, ctx) {
     // Stream models nearest the focus first, one at a time.
@@ -339,6 +400,7 @@ export class ClanAgents {
       if (best) { this.loading = true; best.load().finally(() => { this.loading = false; }); }
     }
     const t = ctx.now;
+    this.reducedMotion = !!ctx.reducedMotion;
     const director = this.ensureDirector(obs);
     if (obs && obs !== this.lastObs) { this.lastObs = obs; director.observe(obs, t); }
     const positions = new Map([...this.agents.values()].map((a) => [a.clan, [a.root.position.x, a.root.position.z]]));
@@ -431,14 +493,51 @@ export class ClanAgents {
       else if (dir.look && dir.look.startsWith('sky:')) { const z = ANCHOR_ZONES[Number(dir.look.slice(4)) - 1]; if (z) lookTarget = z.shellPosition.slice(); }
       else if (life.kind === 'glance') { const ry = a.root.rotation.y + life.yaw; lookTarget = [pos.x + Math.sin(ry) * 5, pos.y + 1.55 + Math.sin(life.pitch) * 5, pos.z + Math.cos(ry) * 5]; }
       if (a.model) a.applyLook(dt, lookTarget, ctx.reducedMotion);
-      // Mind glyph.
-      const name = this.i18n.t('agent.' + a.clan);
-      const label = cue.glyph ? this.i18n.t('mind.' + cue.glyph) : (cue.trust != null ? this.i18n.t('mind.trust', { n: cue.trust }) : '');
-      a.mind.draw({ name, trust: cue.trust, glyph: cue.glyph, mood: cue.mood, label });
-      const s = THREE.MathUtils.clamp((ctx.cameraDist || 20) / 22, 0.8, 3.2);
-      a.mind.sprite.scale.set(1.6 * s, 0.8 * s, 1);
-      a.mind.sprite.position.y = 2.2 + 0.3 * s;
+      // Nameplate: screen-space DOM over the head (nameplate.js), proximity only, never under a HUD box.
+      this.placePlate(a, cue, ctx);
     }
+  }
+
+  /**
+   * Projects the head point and places the agent's nameplate; needs ctx.camera and ctx.uiRoot (game.js).
+   * A plate exists only while Iris stands near the agent (nameplate.js NAMEPLATE.show) and never under a HUD box.
+   */
+  placePlate(a, cue, ctx) {
+    if (!ctx.camera || !ctx.uiRoot) return;
+    if (!this.plates) this.plates = plateLayer(ctx.uiRoot);
+    if (!a.plate) a.plate = new Nameplate(this.plates);
+    const irisDistance = ctx.irisPos ? Math.hypot(ctx.irisPos[0] - a.root.position.x, ctx.irisPos[2] - a.root.position.z) : Infinity;
+    if (a.state === 'absent' || irisDistance >= NAMEPLATE.show) { a.plate.place(null); return; }
+    const name = this.i18n.t('agent.' + a.clan);
+    const label = cue.glyph ? this.i18n.t('mind.' + cue.glyph) : (cue.trust != null ? this.i18n.t('mind.trust', { n: cue.trust }) : '');
+    a.plate.draw({ name, trust: cue.trust, glyph: cue.glyph, mood: cue.mood, label });
+    const head = _head.set(a.root.position.x, a.root.position.y + NAMEPLATE.headY, a.root.position.z);
+    const camPos = ctx.camera.getWorldPosition(_cam);
+    const distance = head.distanceTo(camPos);
+    const ndc = head.project(ctx.camera);
+    const layer = this.plates;
+    let at = platePlacement({ ndc, distance, irisDistance, width: layer.clientWidth, height: layer.clientHeight });
+    if (at) {
+      const box = plateBox(at, a.plate.el.offsetWidth || 100, a.plate.el.offsetHeight || 26);
+      if (this.hudRects(ctx).some((r) => boxesIntersect(box, r))) at = null;
+    }
+    a.plate.place(at);
+  }
+
+  /** Visible HUD boxes (viewport px), refreshed every HUD_RECT_MS; plates hide rather than sit under them. */
+  hudRects(ctx) {
+    const now = performance.now();
+    if (this._hudRects && now - this._hudRectsAt < HUD_RECT_MS) return this._hudRects;
+    const doc = ctx.uiRoot.ownerDocument;
+    const out = [];
+    for (const el of doc.querySelectorAll(HUD_SEL)) {
+      const cs = getComputedStyle(el);
+      if (el.hidden || cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 1 && r.height > 1) out.push([r.left, r.top, r.right, r.bottom]);
+    }
+    this._hudRects = out; this._hudRectsAt = now;
+    return out;
   }
 
   /** Procedural layer: always on for the stand-in and for missing clips; subtle on top of clips. */
@@ -447,7 +546,8 @@ export class ClanAgents {
     const full = !usedClip; // no clip available: the procedural layer carries the whole pose
     const amp = reduced ? 0.2 : 1;
     const T = TEMPERAMENT[a.clan];
-    let lean = T.lean, bob = 0, sway = 0, roll = 0;
+    if (!a.lean) a.lean = { speed: 0, pitch: 0 };
+    let lean = T.lean + accelLean(a.lean, a.speed, dt, reduced, 0.025, 0.08), bob = 0, sway = 0, roll = 0;
     const tt = t * cue.tempo + a.phase;
     if (full) {
       bob = Math.sin(tt * 1.7) * 0.015;

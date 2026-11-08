@@ -13,6 +13,7 @@ const DEG = Math.PI / 180;
 export class CameraRig {
   constructor(camera, world, opts = {}) {
     this.camera = camera;
+    this._world = null; this.saved = null; this.distTarget = null; this.distEaseRate = opts.distEaseRate ?? 4; // 1/s
     this.world = world;
     // Camera sits on the +Z side looking toward -Z: the Iris camp is in front and the four Shells
     // (on the diagonals) frame the view instead of blocking it.
@@ -38,6 +39,22 @@ export class CameraRig {
     this.lastSweep = 1;
     this.pitchOverride = null;                   // radians; dev/cinematic shots only (null = zoom-tied pitch)
   }
+
+  /**
+   * The collision world. The play layer swaps it when Iris flies into a Shell (and sets a close zoom) and back
+   * when she leaves: entering remembers the pre-flight distance, returning eases back to it (QA-008), so a
+   * Shell visit never leaves the overview stuck at the close view. A zoom or a reset by the player cancels the ease.
+   */
+  get world() { return this._world; }
+  set world(w) {
+    if (w === this._world) return;
+    if (this._world && this.saved && this.saved.world === w) { this.easeDistTo(this.saved.dist); this.saved = null; }
+    else if (this._world) this.saved = { world: this._world, dist: this.dist };
+    this._world = w;
+  }
+
+  /** Eases the zoom target to `dist` over about a second (pitch and field of view follow it as always). */
+  easeDistTo(dist) { this.distTarget = Math.min(this.maxDist, Math.max(this.minDist, dist)); }
 
   /** 0 at the closest zoom, 1 at the farthest. */
   zoomT(dist) { return Math.min(1, Math.max(0, (dist - this.minDist) / (this.maxDist - this.minDist))); }
@@ -77,10 +94,12 @@ export class CameraRig {
     this.yaw = this.baseYaw;
     this.rotate(heading - this.baseYaw);
     this.dist = this.defaultDist;
+    this.distTarget = null;
     this.pitchOffset = 0;
   }
 
   zoom(factor) {
+    this.distTarget = null; // the player's own zoom wins over an eased restore
     if (this.inspect) { const i = this.inspect; i.dist = Math.min(i.maxDist, Math.max(i.minDist, i.dist * factor)); return; }
     this.dist = Math.min(this.maxDist, Math.max(this.minDist, this.dist * factor));
   }
@@ -112,6 +131,11 @@ export class CameraRig {
       ({ center, yaw, pitch, dist } = this.inspect);
       if (this.camera.fov !== 40) { this.camera.fov = 40; this.camera.updateProjectionMatrix(); }
     } else {
+      if (this.distTarget != null) {
+        // Eased zoom restore after a Shell visit (QA-008).
+        this.dist += (this.distTarget - this.dist) * (1 - Math.exp(-dt * this.distEaseRate));
+        if (Math.abs(this.distTarget - this.dist) < 0.05) { this.dist = this.distTarget; this.distTarget = null; }
+      }
       this.focus.copy(focus);
       const sf = this.smoothFocus;
       if (!this.hasFocus || sf.distanceTo(this.focus) > this.snapDistance) { sf.copy(this.focus); this.lookAhead.set(0, 0, 0); this.hasFocus = true; }

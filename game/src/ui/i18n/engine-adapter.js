@@ -80,6 +80,12 @@ export const LOG_TEMPLATES = {
   'log.contribute': '{who:agent} вносит фрагмент.',
   'log.playerHeldPrize': 'Вы удержали фрагмент и получили {amount:int} шёлка. Ваша часть послания погасла.',
   'log.agentHeldPrize': '{who:agent} удержал фрагмент ради приза ({amount:int}). Его часть послания погасла.',
+  // rules v3 only (QA-022): held prizes pay at the finale, refunded questions, the Shells leaving
+  'log.playerHeldPrizeV3': 'Вы удержали фрагмент: приз {amount:int} ждёт финала — если послание прочтут без вас.',
+  'log.agentHeldPrizeV3': '{who:agent} удержал фрагмент ради приза ({amount:int}, выплата в финале). Его часть послания погасла.',
+  'log.deferredPrize': '{who:agent} получает отложенный приз {amount:int} шёлка: послание прочли без него.',
+  'log.askRefund': 'Гости вернули шёлк за вопрос без ответа.',
+  'log.shellsGone': 'Раковины ушли. Шёлк мира обесценился.',
   'log.fragmentMissed': '{who:agent} не успел внести фрагмент.',
   'log.agentCheat': '{who:agent} обманул {victim:agent} на {amount:int} шёлка.',
   'log.agentBreak': '{who:agent} порвал с {other:agent}.',

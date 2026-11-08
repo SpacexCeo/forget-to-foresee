@@ -289,6 +289,35 @@ test('camera: slight lag, look-ahead in the move direction, slower vertical foll
   assert.deepEqual(rig3.smoothFocus.toArray(), [40, 0, 40]);
 });
 
+test('camera: a Shell visit remembers the pre-flight zoom and eases back to it on return; a zoom by the player cancels the ease (QA-008)', () => {
+  const island = floorWorld(), shellWorld = floorWorld();
+  const cam = new THREE.PerspectiveCamera(32, 16 / 9, 0.2, 500);
+  const rig = new CameraRig(cam, island);
+  const focus = new THREE.Vector3(0, 1.1, 0);
+  rig.dist = 30; rig.update(1 / 60, focus);
+  // enterShell (game.js): swap the world, then the close view
+  rig.world = shellWorld; rig.dist = Math.min(rig.dist, 9);
+  for (let i = 0; i < 30; i++) rig.update(1 / 60, focus);
+  assert.equal(rig.dist, 9, 'stays close inside the Shell');
+  // exitShell: the world comes back
+  rig.world = island;
+  const seen = [];
+  for (let i = 0; i < 180; i++) { rig.update(1 / 60, focus); seen.push(rig.dist); }
+  for (let i = 1; i < seen.length; i++) assert.ok(seen[i] >= seen[i - 1] - 1e-9, 'eases out monotonically');
+  assert.ok(seen[6] > 9.5 && seen[6] < 20, 'under way after 0.1 s: ' + seen[6].toFixed(2));
+  assert.ok(Math.abs(seen[seen.length - 1] - 30) < 1e-9, 'back at 30 m within 3 s: ' + seen[seen.length - 1].toFixed(2));
+  assert.equal(rig.distTarget, null);
+  // a second visit, but the player zooms during the restore: the ease stops where the player put it
+  rig.world = shellWorld; rig.dist = 9; rig.update(1 / 60, focus); rig.world = island;
+  for (let i = 0; i < 10; i++) rig.update(1 / 60, focus);
+  rig.zoom(1);
+  const d = rig.dist;
+  for (let i = 0; i < 60; i++) rig.update(1 / 60, focus);
+  assert.equal(rig.dist, d, 'no further easing after the player zoomed');
+  // the same world set twice is not a visit
+  rig.dist = 12; rig.world = island; for (let i = 0; i < 30; i++) rig.update(1 / 60, focus); assert.equal(rig.dist, 12);
+});
+
 test('measureAll runs end to end (the docs table)', () => {
   const m = measureAll();
   assert.ok(m.accel_walk.t90 && m.brake_run.d && m['step_0.3'].climbed && m.edge.walkOffFell && m.camera);

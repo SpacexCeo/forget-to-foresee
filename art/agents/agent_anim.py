@@ -493,19 +493,23 @@ def clip_locomotion(key, S, u, run=False):
         P.feet[side] = gait_foot((u + ph0) % 1.0, side, speed, T, stance, lift, sp, op, width,
                                  tang=0.45 if run else 0.6)
     c, s2 = math.cos(TAU * u), math.cos(2 * TAU * u)
+    # weight: the body is lowest just after each foot contact (the "down" pose), not on it
+    s2w = math.cos(2 * TAU * (u - 0.07))
+    # overlapping action: chest, neck and head follow the pelvis a little late
+    c_ch, c_hd = math.cos(TAU * (u - 0.05)), math.cos(TAU * (u - 0.10))
     sw = S["sway"]
     if run:
         P.hips.z = -0.07 + 0.035 * S["bounce"] * math.cos(2 * TAU * (u - stance / 2) + math.pi)
         lean = 12 + S["lean"] * 0.5
     else:
-        P.hips.z = -0.035 - 0.022 * S["bounce"] * s2
+        P.hips.z = -0.035 - 0.022 * S["bounce"] * s2w
         lean = 3 + S["lean"] * 0.8
     P.hips.x = 0.018 * sw * math.sin(TAU * u) * (0.5 if run else 1.0)
     P.hips_rot = V((lean * 0.25, -3.0 * sw * math.sin(TAU * u), -6.0 * sw * c))
     P.r("spine", lean * 0.35, 0, 3.0 * sw * c)
-    P.r("chest", lean * 0.3 + 1.5 * s2, 1.5 * sw * math.sin(TAU * u), 5.0 * sw * c)
-    P.r("neck", -lean * 0.3, 0, -1.0 * sw * c)
-    P.r("head", -lean * 0.35, 1.5 * sw * math.sin(TAU * u), -0.8 * sw * c)
+    P.r("chest", lean * 0.3 + 1.5 * s2w, 1.5 * sw * math.sin(TAU * (u - 0.05)), 5.0 * sw * c_ch)
+    P.r("neck", -lean * 0.3 - 0.8 * s2w, 0, -1.0 * sw * c_hd)
+    P.r("head", -lean * 0.35 + 0.6 * s2w, 1.5 * sw * math.sin(TAU * (u - 0.10)), -0.8 * sw * c_hd)
     # arms swing opposite to the legs (left foot strikes at u = 0)
     A = (32 if run else 20) * S["swing"]
     lag = 0.04
@@ -513,10 +517,13 @@ def clip_locomotion(key, S, u, run=False):
     flex = 85 if run else 18
     for side, sfx, sgn in ((1, "L", 1), (-1, "R", -1)):
         sw_a = A * cl * sgn                    # + = backwards
-        P.r(f"upperarm_{sfx}", sw_a - (8 if run else 2), -side * (8 if run else 3), 0)
+        # arms carried a little away from the body so they clear cloaks and robes
+        P.r(f"upperarm_{sfx}", sw_a - (8 if run else 2), -side * (9 if run else 6), 0)
         P.r(f"forearm_{sfx}", -flex - (0.4 * A * max(0.0, -cl * sgn) if not run else 10 * cl * sgn),
             0, -side * (25 if run else 0))
-    P.r("hand_L", 0, 0, 0)
+    # follow-through: the hands drag behind the forearm swing
+    for sfx, sgn in (("L", 1), ("R", -1)):
+        P.r(f"hand_{sfx}", (6 if run else 9) * math.cos(TAU * (u - lag - 0.10)) * sgn, 0, 0)
     # clan overrides of the arms
     if key == "iney":
         right_rest(key, P)

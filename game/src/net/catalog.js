@@ -60,7 +60,11 @@ export const ACTIONS = [
   /* ---------- rules actions (engine-backed) ---------- */
   rules({
     type: 'start_season', engine: 'startGame', summary: 'Commit the owner key (a secret phrase) and start play. An empty phrase uses the default.',
-    params: { type: 'object', properties: { phrase: { type: 'string', maxLength: 64, description: 'Your secret owner phrase; only its salted commitment is shown to others.' } }, additionalProperties: false },
+    params: { type: 'object', properties: {
+      phrase: { type: 'string', maxLength: 64, description: 'Your secret owner phrase; only its salted commitment is shown to others.' },
+      nonce: { type: 'string', pattern: '^[^|]{1,128}$', description: 'Your contribution to the season seed (protocol ftf-seed/1): any text without "|". The room committed its own random bytes before you sent it, so neither side can steer the season. Ignored in fixed-seed test sessions.' },
+      beacon: { type: 'string', pattern: '^[^|]{1,200}$', description: 'Optional public randomness nobody chose, e.g. "near-testnet:<height>:<blockHash>" fetched after the commitment; mixed into the seed and recorded for verifiers.' },
+    }, additionalProperties: false },
     preconditions: ['phase_intro'], costs: {}, errors: { rules: [], world: [] },
   }),
   rules({
