@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createPanelArbiter, panelArbiterFor } from '../src/play/panels.js';
+import { signsFromObs } from '../src/ui/world-hud/from-obs.js';
 import { NAMEPLATE, plateOpacity, plateScale, platePosition, platePlacement, proximityOpacity, boxesIntersect, plateBox } from '../src/play/nameplate.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
@@ -206,4 +207,18 @@ test('nameplate: the agents draw DOM plates from the pure placement, no canvas s
   assert.match(agents, /a\.plate\.place\(null\); return;/, 'far agents get no plate at all');
   assert.match(agents, /\.pl-plates \{ position: fixed; inset: 0; pointer-events: none;/);
   assert.match(agents, /\.pl-plate\[hidden\] \{ display: none; \}/, 'a hidden plate must not render at the layer origin');
+});
+
+test('NEAR badge (request 9): resolved sign cards carry near.leafBadge(index); active cards and no watcher carry nothing', () => {
+  const obs = {
+    iris: { anchors: [] }, prophecies: [], proofs: [{ index: 3, verified: true, leaf: 'abcdef0123456789' }],
+    chronicle: [{ index: 3, tick: 5, meaning: { place: 1, action: 0, power: 10, delay: 2 } }],
+    dictionary: { cells: [] }, season: { tick: 6 },
+  };
+  const i18n = { t: (k) => k };
+  const near = { leafBadge: (i) => (i === 3 ? { kind: 'leaf', state: 'on-chain', labelKey: 'wh.sign.near.leaf', tipKey: 'wh.sign.near.tip', href: 'https://testnet.nearblocks.io/x' } : null), seasonBadge: () => null };
+  const [card] = signsFromObs(obs, { i18n, near });
+  assert.equal(card.verified, 'ok');
+  assert.equal(card.near.state, 'on-chain');
+  assert.equal(signsFromObs(obs, { i18n })[0].near, null);
 });
