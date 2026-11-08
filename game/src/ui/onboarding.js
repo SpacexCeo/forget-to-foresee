@@ -95,7 +95,16 @@ export function mountOnboarding(root, opts = {}) {
     const page = tutPage;
     const nav = h('div', { class: 'ftf-row' },
       page > 1 ? h('button', { class: 'ftf-btn', i18n: 'common.back', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => { tutPage--; render(); } } }) : null,
-      page < 4 ? primary('common.next', () => { tutPage++; render(); }) : primary('tut.finish', () => flow.complete('tutorial')));
+      page < 4 ? primary('common.next', () => { tutPage++; render(); }) : null);
+    // Last card: the one-time interface question (docs/design/clarity-layers.md §9.1 row 4). Novice is
+    // the default and the primary button; both choices can be changed later in Settings.
+    const choose = (mode) => { prefs.set({ hudMode: mode }); flow.complete('tutorial'); };
+    const modeQuestion = page === 4 ? h('div', { class: 'ftf-field ftf-mode-question' },
+      h('p', { class: 'ftf-strong', i18n: 'tut.mode.question' }),
+      h('div', { class: 'ftf-row' },
+        primary('tut.mode.novice', () => choose('novice')),
+        h('button', { class: 'ftf-btn', i18n: 'tut.mode.pro', attrs: { type: 'button', 'data-mode': 'pro' }, on: { click: () => choose('pro') } })),
+      h('p', { class: 'ftf-muted', i18n: 'tut.mode.note' })) : null;
     const readout = page === 3 ? h('ol', { class: 'ftf-example' }, TUTORIAL_SIGN.read.map(([slot, form, m], k) =>
       h('li', { i18n: 'tut.readLine', args: () => ({ slot: i18n.t('slot.' + slot), form: i18n.t('form.' + form), meaning: i18n.t(`meaning.${slot}.${m}`) }) }))) : null;
     const g = glyph(i18n, page);
@@ -103,7 +112,7 @@ export function mountOnboarding(root, opts = {}) {
       h('p', { class: 'ftf-muted', i18n: 'tut.title' }),
       h('div', { class: 'ftf-tut' }, g,
         h('div', {}, heading(`tut.${page}.title`), h('p', { i18n: `tut.${page}.body` }), page >= 2 ? h('p', { class: 'ftf-muted', i18n: 'tut.dots', args: { count: TUTORIAL_SIGN.dots } }) : null,
-          page === 3 ? h('p', { class: 'ftf-example', i18n: 'tut.example' }) : null, readout, nav)));
+          page === 3 ? h('p', { class: 'ftf-example', i18n: 'tut.example' }) : null, readout, modeQuestion, nav)));
     box._relabel = () => g.setAttribute('aria-label', glyph(i18n, page).getAttribute('aria-label'));
     return box;
   }

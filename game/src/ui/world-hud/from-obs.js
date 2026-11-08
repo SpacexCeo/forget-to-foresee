@@ -127,6 +127,7 @@ export function buildHudModel(o) {
   const words = obs.dictionary ? obs.dictionary.confidentCells : 0;
   const signs = signsFromObs(obs, { i18n, mode });
   const novice = mode !== 'pro';
+  const layer = novice ? layerOf(obs) : 2;
 
   const row = (id, icon, label, value) => ({ id, icon, label, value });
   const num = (n) => ({ key: 'wh.raw', args: { text: String(n) } });
@@ -137,13 +138,14 @@ export function buildHudModel(o) {
     progressDone: Math.max(0, s.tick - 1), progressTotal: s.ticks,
     progressPct: Math.round((Math.max(0, s.tick - 1) / s.ticks) * 100),
     silk: iris.silk, wordsKnown: words,
+    // Novice layers (clarity-layers §2): L0 shows only Phase and Silk; L1 adds Attention and Words known;
+    // L2 adds Tension. Pro always shows Phase, Silk, Attention and Tension.
     rows: [
       row('phase', 'crosshair', 'wh.trial.phase', { key: 'wh.trial.phase.' + phaseOf(goal, obs) }),
       row('silk', 'sparkle', 'wh.trial.silk', num(iris.silk)),
-      row('attention', 'bookmark', 'wh.trial.attention', { key: 'wh.trial.attemptsValue', args: { n: iris.attention, max: iris.maxAttention } }),
-      novice
-        ? row('words', 'book', 'wh.trial.words', { key: 'wh.trial.wordsValue', args: { n: words, total: 16 } })
-        : row('tension', 'bar-chart', 'wh.trial.tension', num(s.tension)),
+      ...(!novice || layer >= 1 ? [row('attention', 'bookmark', 'wh.trial.attention', { key: 'wh.trial.attemptsValue', args: { n: iris.attention, max: iris.maxAttention } })] : []),
+      ...(novice && layer >= 1 ? [row('words', 'book', 'wh.trial.words', { key: 'wh.trial.wordsValue', args: { n: words, total: 16 } })] : []),
+      ...(!novice || layer >= 2 ? [row('tension', 'bar-chart', 'wh.trial.tension', num(s.tension))] : []),
     ],
     mobileStats: [
       { id: 'silk', icon: 'sparkle', label: 'wh.trial.silk', value: num(iris.silk) },
@@ -172,11 +174,14 @@ export function buildHudModel(o) {
   const hintState = hints || { active: null, journal: [], lore: [] };
   const next = {
     mode,
-    layer: novice ? layerOf(obs) : 2,
+    layer,
+    unlocks: { memory: layer >= 1, words: layer >= 1, tension: layer >= 2 },
     trial,
     quests,
     questIndex: 0,
-    hint: hintState.active ? { text: hintState.active.text, visible: true, id: hintState.active.id } : { text: null, visible: false },
+    // a finished toast keeps its text while it fades out (status.js toggles visibility in place)
+    hint: hintState.active ? { text: hintState.active.text, visible: true, id: hintState.active.id }
+      : { text: o.prev && o.prev.hint ? o.prev.hint.text : null, visible: false },
     signs: { open: o.signsState ? !!o.signsState.open : !novice, filter: (o.signsState && o.signsState.filter) || 'all', items: signs },
     journal: {
       tab: 'log',
@@ -192,7 +197,7 @@ export function buildHudModel(o) {
       ? { speaker: line.speaker, line: line.text, replies: line.replies || [], expanded: false }
       : { speaker: 'iris', line: { key: 'wh.dialogue.idle' }, replies: [], expanded: false },
     hotbar: [
-      { id: 'memory', hotkey: 'M' },
+      ...(layer >= 1 ? [{ id: 'memory', hotkey: 'M' }] : []),
       { id: 'signs', hotkey: 'V' },
       ...(s.phase === 'play' ? [{ id: 'endTick', hotkey: 'T' }] : []),
       { id: 'help', hotkey: 'H' },
@@ -206,8 +211,8 @@ export function buildHudModel(o) {
     journal: [obs.version, (hintState.journal || []).length, (hintState.lore || []).length, next.journal.unread].join('|'),
     prompt: opt ? [opt.id, JSON.stringify(opt.label), promptVisible].join('|') : '-',
     dialogue: line || null,
-    hotbar: s.phase,
-    hint: hintState.active ? hintState.active.id + ':' + (hintState.active.shown || 0) : '-',
+    hotbar: s.phase + layer,
+    hint: hintState.active ? hintState.active.id + ':' + (hintState.active.shown || 0) : 'off',
   };
   return o.prev ? reuse(o.prev, next, sig) : withSig(next, sig);
 }

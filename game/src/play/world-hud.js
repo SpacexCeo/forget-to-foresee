@@ -33,6 +33,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
   function model() {
     const obs = session.obs;
     if (!obs) return null;
+    const c = hints && hints.takeCoach();
+    if (c) { line = { speaker: 'iris', text: c }; lineAge = 0; }
     const opts = session.options || [];
     return buildHudModel({
       obs, goal: session.goal, options: opts, defaultIndex: session.defaultIndex, i18n, mode: mode(),
@@ -63,17 +65,18 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       else if ((id === 'settings' || id === 'menu') && handlers.onSettings) handlers.onSettings();
     } else if (action === 'sign') ui.open('vision');
     else if (action === 'quest') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); }
-    else if (action === 'reply' && hints) { hints.reply(id); refresh(); }
     else if (action === 'signsOpen' && hints) hints.action('signsOpen');
+    if (hints && action !== 'signsClose') hints.action('ui');
   }
 
   const offs = [
-    session.on('obs', refresh),
+    session.on('obs', () => { if (hints) hints.observe(session.obs); refresh(); }),
     session.on('goal', refresh),
     session.on('spot', refresh),
     prefs ? prefs.subscribe(() => refresh()) : null,
     hints ? hints.subscribe(refresh) : null,
   ].filter(Boolean);
+  if (hints && session.obs) hints.observe(session.obs);
   refresh();
 
   return {
@@ -89,10 +92,12 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     /** Keys the HUD owns in the world: V toggles Signs, Escape closes it. Returns true when used. */
     handleKey(code) {
       if (!hud) return false;
-      if (code === 'KeyV') { hud.signs.toggle(); return true; }
+      if (code === 'KeyV') { hud.signs.toggle(); return true; } // opening reports 'signsOpen' through onAction
       if (code === 'Escape' && hud.signs.isOpen()) { hud.signs.close(); return true; }
       return false;
     },
+    /** Player activity the observation cannot see (movement, commands). */
+    activity(name) { if (hints) hints.action(name); },
     update(dt) {
       if (line && (lineAge += dt) > LINE_TTL) { line = null; refresh(); }
       if (hints && hints.tick(dt)) refresh();

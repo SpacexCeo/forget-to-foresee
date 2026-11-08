@@ -10,6 +10,7 @@ import { createLocalTransport } from './transport-local.js';
 import { PlaySession } from './session.js';
 import { createPlayUi } from './ui.js';
 import { attachWorldHud } from './world-hud.js';
+import { createHints } from './hints.js';
 import { ClanAgents } from './agents.js';
 import { reactionsFor } from './behaviour.js';
 import { Hooks } from './hooks.js';
@@ -30,7 +31,7 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  * @param {object} o.world3d island scene (scenes/island.js) @param {object} o.rig camera rig
  * @param {object} o.player CharacterController @param {THREE.Object3D} o.avatar @param {object} o.lookdev
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context (play/i18n.js createPlayContext)
- * @param {{seedHex?: string, rules?: string, worldHud?: boolean, onSettings?: Function}} [o.options]
+ * @param {{seedHex?: string, rules?: string, worldHud?: boolean, onSettings?: Function, resetHints?: boolean}} [o.options]
  *   `worldHud: false` keeps the greybox overlay (goal card, chronicle, action bar) instead of the world HUD
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
@@ -63,7 +64,11 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     // with the world HUD a single action is the HUD prompt; the context menu lists two or more
     contextMin: useWorldHud ? 2 : 1,
   });
-  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, handlers: { onGo: walkTo, onSettings: options.onSettings } }) : null;
+  // Novice hints A to Z (play/hints.js): Novice gets toasts, Iris lines and the Hints tab; Pro only Lore.
+  const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n }) : null;
+  if (hints && options.resetHints) hints.reset();
+  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings } }) : null;
+  let movedReported = 0;
 
   session.on('event', (ev) => {
     const d = ev.data || {};
@@ -74,7 +79,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     hooks.event(ev);
   });
   session.on('zone', (res) => { if (res.zone === 'shell') enterShell(res.shell); else exitShell(res.position); });
-  session.on('result', (r) => { if (!r.ok && !r.silent) hooks.play('rejected', { kind: 'iris' }, { reason: r.reason }); });
+  session.on('result', (r) => { if (!r.ok && !r.silent) hooks.play('rejected', { kind: 'iris' }, { reason: r.reason }); if (worldHud) worldHud.activity('command'); });
 
   // VFX (src/vfx, createVfx(scene, camera, renderer, opts)) and audio (src/audio, createAudio()).
   let audio = null;
@@ -197,7 +202,10 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });
-    if (worldHud) worldHud.update(dt);
+    if (worldHud) {
+      if (moving && state.now - movedReported > 1) { movedReported = state.now; worldHud.activity('moved'); }
+      worldHud.update(dt);
+    }
     if (audio) { try { const sp = session.spot; audio.setZone(inShell ? 'shell' : sp && sp.kind === 'camp' ? CLAN_ASSET[sp.clan] : sp ? 'plaza' : 'bridge'); } catch { /* optional */ } }
   }
 

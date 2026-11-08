@@ -22,17 +22,23 @@ const build = (s, mode = 'novice', extra = {}) => buildHudModel({
   render: (k, a) => renderMsg(i18n, k, a), ...extra,
 });
 
-test('from-obs: trial card shows silk, attention and words in Novice, tension in Pro', async () => {
+test('from-obs: Novice layers gate the trial rows and the hotbar; Pro shows everything', async () => {
   const s = await season(1);
   const m = build(s);
   assert.equal(m.trial.n, 1);
   assert.equal(m.trial.total, s.obs.season.ticks);
-  assert.deepEqual(m.trial.rows.map((r) => r.id), ['phase', 'silk', 'attention', 'words']);
-  assert.equal(T(m.trial.rows[1].value), String(s.obs.iris.silk));
-  assert.equal(T(m.trial.rows[3].value), '0 / 16');
-  assert.deepEqual(build(s, 'pro').trial.rows.map((r) => r.id), ['phase', 'silk', 'attention', 'tension']);
   assert.equal(m.layer, 0);
   assert.equal(m.mode, 'novice');
+  assert.deepEqual(m.trial.rows.map((r) => r.id), ['phase', 'silk'], 'L0: silk is the only number');
+  assert.equal(T(m.trial.rows[1].value), String(s.obs.iris.silk));
+  assert.ok(!m.hotbar.some((x) => x.id === 'memory'), 'Memories unlock at L1');
+  assert.deepEqual(build(s, 'pro').trial.rows.map((r) => r.id), ['phase', 'silk', 'attention', 'tension']);
+  assert.ok(build(s, 'pro').hotbar.some((x) => x.id === 'memory'));
+  const later = await season(4);
+  const l1 = build(later);
+  assert.equal(l1.layer, 1);
+  assert.deepEqual(l1.trial.rows.map((r) => r.id), ['phase', 'silk', 'attention', 'words']);
+  assert.match(T(l1.trial.rows[3].value), /^\d+ \/ 16$/);
 });
 
 test('from-obs: the quest banner is the session goal, rendered by the play layer', async () => {

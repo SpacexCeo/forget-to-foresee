@@ -4,7 +4,8 @@
 // fixed 30 Hz, streamed assets with greybox fallbacks, look-dev stack with quality tiers, F3 dev HUD.
 // Dev URL parameters (harmless in production): ?tier=ultra|high|low, ?motion=reduce,
 // ?view=overview|camp|close (camera presets), ?play=direct (skip the lobby), ?seed=<32 hex> (fixed
-// test season), ?lang=en|ru, ?hud=old (greybox overlay instead of the world HUD).
+// test season), ?lang=en|ru, ?hud=old (greybox overlay instead of the world HUD), ?hints=reset (Novice hints
+// fire again), ?demo=judge (the judges' 3-minute path: fixed season, Novice, fresh hints).
 import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
@@ -68,13 +69,20 @@ const uiRoot = document.getElementById('ui');
 
 // Lobby → onboarding → first contact, then the play layer. ?play=direct goes straight in (dev, QA).
 const ctx = createPlayContext({ locale: params.get('lang') || undefined });
+// ?demo=judge: a fixed v3 season whose first sign is visible on trial 1 and whose trial-3 Gift lands on
+// Shell II with a verified proof (docs/design/clarity-layers.md §6a item 8). Presentation only.
+const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
+const judge = params.get('demo') === 'judge';
+if (judge) ctx.prefs.set({ hudMode: 'novice' });
+const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, shellUi = null;
 async function enterWorld() {
   if (shellUi) { shellUi.destroy(); shellUi = null; }
   document.body.classList.add('in-world');
   try {
     play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
-      seedHex: /^[0-9a-f]{32}$/.test(params.get('seed') || '') ? params.get('seed') : undefined,
+      seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
+      resetHints: judge || params.get('hints') === 'reset',
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
       onSettings: () => controls.open(),
     } });

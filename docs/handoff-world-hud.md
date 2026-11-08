@@ -61,6 +61,15 @@ Deliberate deviations from the spec, because measurement of the mockup said othe
 
 ## 4. Open work, in priority order
 
+**Status 08.11 (evening):** items 1–5 below are done on `claude/happy-clarke-139pi1` (see the 08.11 rows in
+`docs/decisions.md` and §0 of `docs/ui-world-hud-qa.md`); item 6 (README) too. What is left from them:
+tooltips (`wh.tip.*`), Iris suggestions / "Let Iris decide", Pro Chronicle and Clans tabs, a hints mute
+setting, Ukrainian/Italian/Chinese text for the new `wh.*` keys (English fallback today), and a human
+playtest of the judge path (`/?demo=judge`). Run: `npm run dev`, then `/?demo=judge` (game) or
+`/hud-preview.html?live=1&ticks=5` (HUD only).
+
+The original list:
+
 1. **Apply the QA fix list** from `docs/ui-world-hud-qa.md` (top-15, each item tagged P1/P2/P3/shared). If the file is missing or marked partial, re-run the review (brief: compare with the mockups, impeccable `critique`/`audit`/`polish` playbooks, "the brief wins").
 2. **Fold local pieces into shared files**: icons defined locally (`st-info-i`, `st-menu` in `status.js`; `signRing()`, `CHEVRON` in `signs.js`; `wh-a-connector`, `wh-a-bubble` in `actions.js`) → `icons.js`; decide whether `--wh-fs-subtitle` becomes a sans role at 13.5 or is dropped (P2 uses body sans); mobile `--wh-fs-tab` ≈ 11 px.
 3. **Sign cards with engine data** (owner decision 08.11): keep the mockup look, rows become Place / Action / Power / Delay in trials, anchor pill "Trials" instead of "Tiers". `DEMO_MODEL` keeps the mockup text for the preview. Needs new `wh.sign.*` keys in both locales and a builder from engine state.
