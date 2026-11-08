@@ -122,6 +122,59 @@ agent · walk + Memories at the three viewports in the five locales, measures ev
 above, ancestors excluded) and fails on any intersecting pair; it also collects console errors and warnings. Edits to
 `game/` while it runs make Vite reload the page and invalidate the run.
 
+### 2.5 Short viewports: in-app browsers (owner, top priority)
+
+"On a phone, if you play inside Twitter/X the screen is cropped even more; make the elements small." The X,
+Facebook, Instagram and Telegram in-app browsers add their own bars, so the usable height is far below Safari's;
+tested at 390×560, 375×500, 360×480 and 667×300 (landscape). The layout follows the **measured** visible height, never
+`100vh`: `world-hud/index.js` reads `visualViewport.height` (fallback `innerHeight`) into `--vvh` on `<html>` on every
+viewport resize/scroll (toolbars collapsing, the keyboard) and sets `html[data-vh]`:
+
+| Tier | Visible height | Stack from the bottom (phone layout) |
+|---|---|---|
+| tall | ≥ 620 px | the mockup stack: dialogue bar 41 · prompt 49 · tiles 72 · trial card 64 · dots · quest card 124 (top at 467) |
+| short | < 620 px | dialogue bar 36 at 8 · prompt 40 at 52 · tiles 52 at 100 · trial card one row 44 at 160 · quest card one line (tag + title) at 212, a chevron expands its body in place (top at ≈ 268); top bar at 44; the Shell dock a slim five-cell bar at 88 (56 tall); sheets, panels and the reading card sized by `--vvh`; the run toggle and the map button join the top-bar row |
+| tiny | < 500 px | no trial card; tiles 44 at 86 · prompt 36 at 44 · bar 32 at 6 · quest line at 136 (top at ≈ 188); in landscape the quest line keeps the left half and the dock the right half |
+
+The in-app browser UA (Twitter/X, FBAN/FBAV, Instagram, Telegram, Line) is recorded as `html[data-inapp]` as a hint
+only; nothing keys on it. Visual boxes shrink to 36–40 px but every control keeps a ≥ 44 px hit zone through an
+invisible `::before` (top-bar buttons, tiles, chips, the dialogue bar, hub and play buttons, the two phone fabs). The
+overlay `#ui` is as tall as `--vvh` and its hosts and panels are absolute inside it, so nothing bottom-anchored can end
+under a toolbar. The earlier rules that simply hid the quest card under 580 px and the trial card and tiles under
+440 px are gone. `npm run hud:overlap` includes the four sizes by default.
+
+| Size | Before (the tall stack forced: `html[data-vh="tall"]`) | After |
+|---|---|---|
+| 390×560 island | ![](ui-polish/before-390x560-island.jpg) | ![](ui-polish/after-390x560-island.jpg) |
+| 390×560 Memories | ![](ui-polish/before-390x560-memories.jpg) | ![](ui-polish/after-390x560-memories.jpg) |
+| 375×500 island | ![](ui-polish/before-375x500-island.jpg) | ![](ui-polish/after-375x500-island.jpg) |
+| 360×480 island | ![](ui-polish/before-360x480-island.jpg) | ![](ui-polish/after-360x480-island.jpg) |
+| 360×480 inside a Shell | ![](ui-polish/before-360x480-shell.jpg) | ![](ui-polish/after-360x480-shell.jpg) |
+| 667×300 island | ![](ui-polish/before-667x300-island.jpg) | ![](ui-polish/after-667x300-island.jpg) |
+| 667×300 Signs sheet | ![](ui-polish/before-667x300-sheet.jpg) | ![](ui-polish/after-667x300-sheet.jpg) |
+
+### 2.6 Motion
+
+Owner: "everything must be animated and look expensive". Timings live in CSS variables (`--pl-dur-fast/--pl-dur/
+--pl-dur-slow` 120/220/360 ms, `--pl-ease`, `--pl-ease-out`, `--pl-rise` 10 px, `--pl-stagger` 40 ms in `index.html`;
+`--wh-dur-*`, `--wh-ease*`, `--wh-rise`, `--wh-stagger` in `tokens.css`) so Task S's shared motion tokens
+(`game/src/ui/motion/`) can replace them in one place.
+
+| What | Motion |
+|---|---|
+| play panels, help | rise in 360 ms (ease-out); leave with a 120 ms fade (`.pl-leaving`, the node stays for it) |
+| context menu, info flash | rise in 220 ms / pop 220 ms |
+| memory rows, sign list rows, context options, picks | staggered rise, 40 ms per row (`--i`) |
+| hub dock / reading card / decision card / status pill | rise in when a different box appears (not on every re-render); the waiting Shell cell breathes (2.4 s glow) |
+| Signs & Visions panel, phone sheet, toast | the existing slides, now on the tokens |
+| sign cards | staggered rise (35 ms, capped at 8) on every list render (filters included) |
+| newest log row | rises in |
+| quest banner / phone quest card | cross-fade on a new quest (`.wh-swap`) |
+| trial card numbers | tick from the old value to the new over 420 ms (cubic ease-out); the rendered text stays the source of truth |
+| buttons, chips, tiles, hotbar, close | hover (gold hairline, lift shadow), pressed (1 px down), focus-visible ring |
+| nameplates | opacity eases over 120 ms on top of the proximity fade |
+| reduced motion (`prefers-reduced-motion` or `html[data-motion="reduce"]`) | travel zeroed, durations 100–160 ms: cross-fades only; no number ticks; the Signs panel, sheet and toast fade instead of sliding; the Shell glow stops |
+
 ## 3. Before / after
 
 Desktop 1280×800:
