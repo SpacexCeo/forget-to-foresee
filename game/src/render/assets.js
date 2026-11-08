@@ -26,6 +26,10 @@ const BASE = import.meta.env.BASE_URL || '/';
  */
 let modelVariant = '';
 export function setModelVariant(suffix) { modelVariant = suffix || ''; }
+// Review overrides (dev): load another file for a model name, e.g. ?shells=r2 maps shell_1 -> shell_1_r2,
+// so a new art round can be judged in the game before it replaces the shipped file.
+let modelOverrides = {};
+export function setModelOverrides(map) { modelOverrides = { ...(map || {}) }; }
 export const getModelVariant = () => modelVariant;
 
 /* ---------- analysis shared with the review page ---------- */
@@ -180,7 +184,8 @@ export class AssetLibrary {
     e.state = 'loading'; e.progress = 0;
     const t0 = performance.now();
     try {
-      const file = modelVariant && this.available[name + modelVariant] ? name + modelVariant : name;
+      const base = modelOverrides[name] && this.available[modelOverrides[name]] ? modelOverrides[name] : name;
+      const file = modelVariant && this.available[base + modelVariant] ? base + modelVariant : base;
       const { gltf, bytes } = await fetchGltf(file, { onProgress: (got, total) => { e.progress = total ? got / total : 0; } });
       const scene = gltf.scene;
       scene.traverse((o) => {

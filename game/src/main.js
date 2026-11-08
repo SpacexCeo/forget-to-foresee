@@ -20,7 +20,7 @@ import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
-import { configureTextureSupport, setModelVariant } from './render/assets.js';
+import { configureTextureSupport, setModelVariant, setModelOverrides } from './render/assets.js';
 import { CAMPS } from './scenes/layout.js';
 import { mountShell } from './ui/index.js';
 import { createPlayContext } from './play/i18n.js';
@@ -49,6 +49,7 @@ const mobileDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || ((
 const detectedTier = detectTier({ gpu: gpuName(), mobile: /Mobi|Android/i.test(navigator.userAgent), deviceMemory: navigator.deviceMemory, cores: navigator.hardwareConcurrency });
 const systemReduced = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } })();
 
+if (params.get('shells') === 'r2') setModelOverrides({ shell_1: 'shell_1_r2', shell_2: 'shell_2_r2', shell_3: 'shell_3_r2', shell_4: 'shell_4_r2' }); // review round 2
 if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice || (params.get('tier') || detectedTier) === 'low'))) setModelVariant('_m');
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
