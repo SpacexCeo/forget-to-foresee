@@ -2,8 +2,9 @@
 // this module plays it at a safe moment, pauses the season clock around it (the Shell hub's automatic
 // trials stop and resume), keeps every panel closed under it, offers the Chronicle replay menu and the
 // optional narration. game.js calls attachChapters() once and forwards update/handleKey; nothing else in
-// the play layer changes. Dev parameters: ?films=off disables the films, ?film=<chapter> plays one film
-// right away on a season advanced to that chapter (still frames for docs/chapters.md use it with &stills=1).
+// the play layer changes. Dev parameters: ?films=off disables the films, ?films=full|cheap forces the shot
+// profile, ?film=<chapter> plays one film right away on a season advanced to that chapter (still frames for
+// docs/chapters.md use it with &stills=1).
 import { createChapterDirector, chapterFor, CHAPTER_IDS, SHOT_SECONDS, TITLE_SECONDS, CARD_SECONDS } from '../../play/chapters.js';
 import { renderMsg, resolvePlayArg } from '../../play/i18n.js';
 import { resolveLineArgs } from '../../play/chapters.js';
@@ -32,11 +33,12 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
   const doc = uiRoot.ownerDocument || document;
   const params = new URLSearchParams(search != null ? search : (doc.location ? doc.location.search : ''));
   const devFilm = params.get('film');
-  const enabled = params.get('films') !== 'off' && !devFilm;
+  const filmsParam = params.get('films'); // off | full | cheap (full/cheap force the shot profile: QA on SwiftShader)
+  const enabled = filmsParam !== 'off' && !devFilm;
   const mode = hub ? 'hub' : 'walk';
   const director = createChapterDirector({
     obs: session.obs, storage: ctx.storage, mode, enabled,
-    profile: () => (lookdev.profile === 'phone' || lookdev.tier === 'low' ? 'cheap' : 'full'),
+    profile: () => (filmsParam === 'full' || filmsParam === 'cheap' ? filmsParam : lookdev.profile === 'phone' || lookdev.tier === 'low' ? 'cheap' : 'full'),
     reducedMotion: () => !!lookdev.reducedMotion,
   });
   const { i18n } = ctx;

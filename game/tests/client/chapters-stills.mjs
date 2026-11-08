@@ -62,8 +62,8 @@ async function capture(browser, url, id, width, height, which, tag) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   const cdp = await page.context().newCDPSession(page);
   const shot = async (path) => { const r = await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 82 }); writeFileSync(path, Buffer.from(r.data, 'base64')); };
-  // desktop frames force the high tier (SwiftShader detects 'low', which would play the cheap films); phone frames keep the phone profile and its cheap films
-  await page.goto(`${url}/?play=direct&seed=${JUDGE}&lang=en&film=${id}&stills=1${width < height ? '&profile=phone' : '&tier=high'}`, { waitUntil: 'load' });
+  // desktop frames force the full films (SwiftShader detects the low tier, which would play the cheap ones; the high tier itself renders far too slowly here); phone frames keep the phone profile and its cheap films
+  await page.goto(`${url}/?play=direct&seed=${JUDGE}&lang=en&film=${id}&stills=1${width < height ? '&profile=phone' : '&films=full'}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ftf && window.__ftf.play && window.__ftf.play.chapters && window.__ftf.play.chapters.playing, null, { timeout: 180000 });
   const info = await page.evaluate(() => { const p = window.__ftf.play.chapters.player; const tl = p.timeline(); return { film: p.film.id, title: document.querySelector('#ch-film .ch-title').textContent, shots: p.film.shots.map((s, i) => ({ id: s.id, mid: (tl.shots[i].start + tl.shots[i].end) / 2 + (i === 0 ? 1.0 : 0) })), titleT: 1.3, cardT: tl.cardStart + 1.6, seconds: p.film.seconds, profile: p.film.profile }; });
   const list = which === 'all' ? [['title', info.titleT], ...info.shots.map((s, i) => [`${i + 1}-${s.id}`, s.mid]), ['card', info.cardT]]
@@ -72,7 +72,7 @@ async function capture(browser, url, id, width, height, which, tag) {
   for (const [name, t] of list) {
     await page.evaluate((x) => window.__ftf.play.chapters.player.seek(x), t);
     await frames(page, 2);
-    const loaded = await settle(page, out.length ? 40000 : 150000); // the first shot waits for the big models to decode
+    const loaded = await settle(page, out.length ? 40000 : 90000); // the first shot waits for the big models to decode
     await frames(page, 2);
     const sub = await page.evaluate(() => ({ sub: document.querySelector('#ch-film .ch-sub').textContent, card: document.querySelector('#ch-film .ch-matters').textContent, shot: window.__ftf.play.chapters.player.shotIndex }));
     const file = `${id}-${name}${tag ? '-' + tag : ''}.jpg`;
