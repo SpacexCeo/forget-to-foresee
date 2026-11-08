@@ -286,7 +286,7 @@ export class ShotRunner {
    * URL plus statistics for the capture's checks: mean luma, the fraction of black samples and the largest run of
    * fully black rows or columns at an edge (a partially drawn frame shows as a black corner rectangle).
    */
-  grabCanvas() {
+  grabCanvas({ noPng = false } = {}) {
     const renderer = this.game.renderer, gl = renderer.getContext(), canvas = renderer.domElement;
     const w = canvas.width, h = canvas.height;
     gl.finish();
@@ -309,9 +309,49 @@ export class ShotRunner {
     while (left < cols && colBlack(left)) left++;
     while (right < cols - left && colBlack(cols - 1 - right)) right++;
     const edgeBlack = Math.max(top / rows, bottom / rows, left / cols, right / cols);
-    const stats = { mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, width: w, height: h, lost: gl.isContextLost() };
-    const png = canvas.toDataURL('image/png');
+    // Where the black region is (grid cells, for the probe): the bounding box of black cells.
+    let bx0 = cols, by0 = rows, bx1 = -1, by1 = -1;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) if (grid[j * cols + i] < 8) { bx0 = Math.min(bx0, i); by0 = Math.min(by0, j); bx1 = Math.max(bx1, i); by1 = Math.max(by1, j); }
+    const stats = { mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, edges: { top, bottom, left, right }, blackBox: bx1 < 0 ? null : [bx0, by0, bx1, by1], width: w, height: h, lost: gl.isContextLost() };
+    const png = noPng ? null : canvas.toDataURL('image/png');
     return { png, stats };
+  }
+
+  /**
+   * GPU diagnosis for a frame already rendered: the sizes of canvas, drawing buffer and every post target, then the
+   * same frame re-rendered with each post pass switched off in turn (and with no post stack), with the frame statistics
+   * of each variant. A pass whose removal clears a black region is the culprit. Restores every pass afterwards.
+   */
+  probe({ png = false } = {}) {
+    const g = this.game, r = g.renderer, gl = r.getContext(), post = g.lookdev.post;
+    const sz = (t) => (t ? [t.width, t.height, t.samples || 0, t.texture && t.texture.type] : null);
+    const sizes = {
+      canvas: [r.domElement.width, r.domElement.height], css: [r.domElement.clientWidth, r.domElement.clientHeight],
+      drawingBuffer: [gl.drawingBufferWidth, gl.drawingBufferHeight], pixelRatio: r.getPixelRatio(), dpr: window.devicePixelRatio,
+      inner: [window.innerWidth, window.innerHeight], target: sz(post.target),
+    };
+    if (post.composer) {
+      sizes.read = sz(post.composer.readBuffer); sizes.write = sz(post.composer.writeBuffer);
+      sizes.passes = post.composer.passes.map((p) => ({ name: p.constructor.name, enabled: p.enabled, rts: Object.entries(p).filter(([, v]) => v && v.isWebGLRenderTarget).map(([k, v]) => [k, ...sz(v)]) }));
+      const bloom = post.passes.bloom; if (bloom && bloom.renderTargetsHorizontal) sizes.bloomMips = bloom.renderTargetsHorizontal.map((t) => [t.width, t.height]);
+    }
+    const variants = [];
+    const run = (name, fn) => {
+      const undo = fn();
+      try { g.lookdev.render(); const { png: p, stats } = this.grabCanvas({ noPng: !png }); variants.push({ name, stats, png: p }); }
+      catch (e) { variants.push({ name, error: String(e && e.message) }); }
+      finally { if (undo) undo(); }
+    };
+    run('rerender', () => null);
+    const names = new Map(Object.entries(post.passes).filter(([, p]) => p).map(([k, p]) => [p, k]));
+    if (post.composer) for (const p of post.composer.passes) {
+      const k = names.get(p) || p.constructor.name.replace(/^_/, '').replace(/Pass$/, '').toLowerCase();
+      if (k === 'render' || k === 'output' || !p.enabled) continue;
+      run('no-' + k, () => { p.enabled = false; return () => { p.enabled = true; }; });
+    }
+    if (post.composer) run('no-post', () => { const c = post.composer; post.composer = null; return () => { post.composer = c; }; });
+    g.lookdev.render();
+    return { sizes, variants, info: { calls: r.info.render.calls, triangles: r.info.render.triangles, programs: r.info.programs ? r.info.programs.length : null } };
   }
 
   /**

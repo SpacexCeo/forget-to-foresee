@@ -45,6 +45,13 @@ curl -sf "http://localhost:$PORT/" >/dev/null || { echo "preview server did not 
 GPU_FLAG="--gpu"
 if ! (cd "$SRC" && node tools/capture/gpu-probe.mjs); then echo "WARNING: no hardware WebGL; rendering on SwiftShader (slow)"; GPU_FLAG=""; fi
 
+# 4a. FTF_PROBE=<video>:<shot>:<from>-<to>: GPU diagnosis of one shot (each post pass off in turn, target sizes), then stop.
+if [ -n "${FTF_PROBE:-}" ]; then
+  IFS=: read -r PV PS PR <<< "$FTF_PROBE"
+  (cd "$SRC" && node tools/capture/capture.mjs "$PV" --shots "$PS" $GPU_FLAG --tier ultra --width 1920 --height 1080 --fps 60 --parallel 1 --probe "$PR" --base "http://localhost:$PORT" --out "$OUT" --work "$OUT/probe")
+  echo "== probe done: $OUT/probe/$PV-1920x1080-ultra/$PS.probe.json and the PNGs per variant"; exit 0
+fi
+
 # 4b. FTF_TEST=1: a short pipeline test (one 8 s shot of the demo at 1080p, no assembly), then stop.
 if [ "${FTF_TEST:-}" = "1" ]; then
   (cd "$SRC" && node tools/capture/capture.mjs demo --shots archipelago $GPU_FLAG --tier ultra --width 1920 --height 1080 --fps 60 --parallel 1 --sample 120 --base "http://localhost:$PORT" --out "$OUT" --work "$OUT/test")

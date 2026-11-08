@@ -19,6 +19,8 @@ export function boot(name = 'shot', { fps } = {}) {
     step: (o) => runner.step(o),
     /** The canvas as a PNG data URL plus frame statistics, read in the same task as the last render. */
     grab: () => runner.grabCanvas(),
+    /** GPU diagnosis of the frame just rendered: target sizes and the frame with each post pass off. */
+    probe: (o) => runner.probe(o),
     /** Steps until a predicate (see runner.js PREDICATES) holds. */
     until: (pred, value, max) => runner.until(pred, value, max),
     /** Steps until every placed model has streamed in. */

@@ -45,7 +45,10 @@ async function pollPage(page, fn, timeout, what) {
  * @param {{width:number,height:number,fps:number,tier:string,gpu?:boolean,sampleEvery?:number,maxFrames?:number,log?:Function}} o.opts
  */
 export async function renderShot({ shot, baseUrl, outDir, opts }) {
-  const { width, height, fps, tier, gpu = false, sampleEvery = 0, log = () => {} } = opts;
+  const { width, height, fps, tier, gpu = false, sampleEvery = 0, log = () => {}, probe = null } = opts;
+  // probe = { from, to }: GPU diagnosis. Frames from..to are dumped with every post pass switched off in turn and the
+  // target sizes (runner.probe); the checks only log; capture stops after `to`.
+  const probes = [];
   mkdirSync(outDir, { recursive: true });
   const { chromium } = pw();
   const browser = await chromium.launch({ args: browserArgs(gpu), headless: true });
@@ -90,7 +93,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     // stale or half-presented canvas), the UI is a screenshot with alpha taken with the canvas hidden; ffmpeg composites them.
     await cdp.send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
     await page.evaluate(() => document.documentElement.classList.add('cine-layers'));
-    const total = Math.round(shot.duration * fps);
+    const total = probe ? Math.min(Math.round(shot.duration * fps), probe.to + 1) : Math.round(shot.duration * fps);
     const preroll = Math.round((shot.preroll ?? 0) * fps);
     const pipe = openLayerPipe(join(outDir, shot.name + '.mp4'), { fps });
     t = Date.now();
@@ -108,10 +111,20 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
       // Checks: a black band growing from an edge while the rest is lit is a partially drawn frame; large brightness
       // jumps between consecutive frames are flicker (a cut inside a shot, a flight, counts as one allowed jump).
       const st = r.stats;
+      if (probe && i >= probe.from && i <= probe.to) {
+        const pr = await page.evaluate(() => window.__ftfCinematic.probe({ png: true }));
+        const tag = `${shot.name}-f${String(i).padStart(5, '0')}`;
+        writeFileSync(join(outDir, tag + '-grab.png'), Buffer.from(r.png.slice(r.png.indexOf(',') + 1), 'base64'));
+        for (const v of pr.variants) if (v.png) { writeFileSync(join(outDir, `${tag}-${v.name}.png`), Buffer.from(v.png.slice(v.png.indexOf(',') + 1), 'base64')); delete v.png; }
+        probes.push({ frame: i, t: r.t, grab: st, ...pr });
+        writeFileSync(join(outDir, shot.name + '.probe.json'), JSON.stringify(probes, null, 1));
+        log(`[${shot.name}] probe f${i}: grab edge ${(st.edgeBlack * 100).toFixed(0)}% box ${JSON.stringify(st.blackBox)} · ` + pr.variants.map((v) => `${v.name} ${v.stats ? (v.stats.edgeBlack * 100).toFixed(0) + '%' : v.error}`).join(' · '));
+      }
+      if (probe) { /* diagnosis: no failing checks */ } else
       if (st.edgeBlack > 0.3 && st.mean > 30) throw new Error(`black edge region (${(st.edgeBlack * 100).toFixed(0)}% of the frame) in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i})`);
       if (prevMean != null) { const d = Math.abs(st.mean - prevMean); if (d > check.maxJump) check.maxJump = d; if (d > 24) check.jumps++; }
       prevMean = st.mean; check.minMean = Math.min(check.minMean, st.mean); check.maxMean = Math.max(check.maxMean, st.mean); check.maxEdgeBlack = Math.max(check.maxEdgeBlack, st.edgeBlack);
-      if (check.jumps > allowJumps) throw new Error(`flicker in shot ${shot.name}: ${check.jumps} brightness jumps over 24/255 by t=${r.t.toFixed(2)} (max ${check.maxJump.toFixed(1)})`);
+      if (!probe && check.jumps > allowJumps) throw new Error(`flicker in shot ${shot.name}: ${check.jumps} brightness jumps over 24/255 by t=${r.t.toFixed(2)} (max ${check.maxJump.toFixed(1)})`);
       const canvasPng = Buffer.from(r.png.slice(r.png.indexOf(',') + 1), 'base64');
       await page.evaluate(() => window.__ftf.renderer.domElement.classList.add('cine-hidden'));
       const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
@@ -124,6 +137,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
       if (Date.now() - lastReport > 30_000) { lastReport = Date.now(); const per = (Date.now() - t) / (i + 1); log(`[${shot.name}] frame ${i + 1}/${total} · ${(per / 1000).toFixed(2)} s/frame · ETA ${Math.round(((total - i - 1) * per) / 60000)} min · luma ${st.mean.toFixed(0)} jumps ${check.jumps}`); }
     }
     result.check = check;
+    if (probe) result.probes = probes.map((p) => ({ frame: p.frame, grab: p.grab.edgeBlack, variants: p.variants.map((v) => [v.name, v.stats && v.stats.edgeBlack]) }));
     await pipe.close();
     result.timings.captureMs = Date.now() - t;
     result.secondsPerFrame = result.timings.captureMs / 1000 / Math.max(1, total);
