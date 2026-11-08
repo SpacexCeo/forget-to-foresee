@@ -109,7 +109,7 @@ HUD unit: 0.707 px at 1280, 1.06 px at 1920; the play layer reads the same unit 
 | log tabs + body | left 18 u, top 522 u, 409 u × 264 u | |
 | HUD prompt | centred − 23 u, top 618 u | |
 | context menu | centred, bottom 23 u + 60 px + 12 px + 46 u + 12 px | above the dialogue row |
-| dialogue strip | centred − 45 u, bottom 38 u; lifted to 23 u + 60 px + 12 px when it would meet the hotbar; max-width 100 vw − 736 px + 90 u, long lines wrap | the mockup width whenever it fits |
+| dialogue strip | centred − 45 u, bottom 23 u + 60 px + 12 px (one row above the hotbar; the mockup's 38 u row fits only its short lines), max-width 100 vw − 736 px + 90 u, long lines wrap | the measured lift in `actions.js` raced the layout at low frame rates, so the row is fixed |
 | hub dock | right 16 px, bottom 23 u + 60 px + 12 px, 340 px | 12 px above the hotbar whatever its height |
 | hotbar | right 15 u, bottom 23 u, min-height 53 u (buttons ≥ 40 px) | |
 | demo badge | left 16 px, bottom 8 px, max-width min(340 px, 26 vw) | clear of the dialogue strip |

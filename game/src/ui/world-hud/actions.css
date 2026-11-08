@@ -48,7 +48,9 @@
 .wh-root .wh-dialogue {
   position: absolute;
   left: calc(50% - 45 * var(--wh-px));
-  bottom: calc(38 * var(--wh-px));
+  /* Mockup row is 38 u (beside the hotbar); the strip now always sits one row above the hotbar, because live
+     Iris lines are 2–3× the mockup's and the measured lift (fitDialogue) raced the layout at a few FPS. */
+  bottom: calc(23 * var(--wh-px) + 60px + 12px);
   transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
