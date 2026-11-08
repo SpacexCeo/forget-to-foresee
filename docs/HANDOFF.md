@@ -1,4 +1,4 @@
-# Handoff: state on 08.11.2026, 23:25 Kyiv (lead session)
+# Handoff: state on 09.11.2026, 00:10 Kyiv (lead session)
 
 ## Live state (read this first if the session or the usage limit ended)
 
@@ -41,6 +41,8 @@ no server is stopped while it holds a server-only item the owner has not downloa
    `hackathon-submission` tag. Deadline 15.11 01:59 Kyiv; freeze 13.11 20:00.
 
 **Schedules (since 23:21 Kyiv):** one lead loop per hour (trig_018op6gxTUumLXJX3eyDUuzr at :09; the :29/:49 loops trig_01U3rg64KhBguBy5gwNvtbHF, trig_01AujfoKaraCGtHz4VpeNp8r stay off to save tokens) and the juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45). Active workers: F (open QA UI items), K (re-test of main 1a17673), O (shell.js frame safety, phone stills), J's capture job on the RTX 4090 via the GPU session (demo, then trailer and clips, the agent rebuild, 4K). Others paused with next steps in their reports.
+
+**Model availability (09.11 00:10 Kyiv):** the Fable limit is exhausted until about 12.11 (seven-day window). All worker sessions created on Fable (A–V, the juror R) fail on their next turn; their pushed branches are intact. Only Opus 5.5 sessions run: this lead session and the GPU art session ("Завершение работы", running the video queue on the RTX 4090). Owner: new workers use Opus 5.5 at medium effort (`model: claude-opus-5-5` in create_session). Overnight in eco mode: the GPU queue (demo, trailer, clips with the flicker check; agent rebuild; 4K server-only) and one morning merge at 07:01 Kyiv (trig_014q6NjmK4V33rZkA98BBkHq); all other schedules are off.
 
 **Open items after resume (priority):** final videos without flicker and with a stronger story (J + GPU); NEAR deploy;
 K's open QA list; the juror's scorecards from 09.11 15:00 UTC; native-speaker pass of uk/it/zh; physical phone and GPU
