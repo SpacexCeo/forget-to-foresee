@@ -171,3 +171,23 @@ The README judge table changed (08.11, Task I): the first quest is *Stake 10 sil
 item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
 first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the
 card); shot 2 can hold on beat 4, "Stake and watch", where the ring seals "Verified ✓".
+
+### 13. To the lead (`game/src/main.js` / `game/src/play/game.js`): the input device for device-aware goals
+`objectives.js` reads `flags.input` ('touch' | 'gamepad' | 'keyboard') to pick the words of every goal (QA-011). One line in the
+frame loop keeps it current: `session.flags.input = input.device === 'gamepad' ? 'gamepad' : coarse ? 'touch' : 'keyboard';
+session.recompute()` on change. Without it the goals fall back to a coarse-pointer probe (touch vs keyboard) and never show the
+gamepad branch.
+
+### 14. To Task Q (`claude/all-ages`): what the tutorial assumes about narration
+`onboarding.js` imports `../play/narration.js` through a guarded glob and calls `createNarration({ prefs, i18n })`,
+`narration.enabled()` and `narration.speak(text, { channel: 'tutorial', interrupt: true })`, as request 9 documents. If the
+shared instance lands on `play.narration`, the onboarding still runs before the play layer exists, so it keeps its own
+instance (two instances share one synthesizer, per your note). In Simple mode the hub stake goal already reads
+*Iris read it: trial 3* when the pre-read reading lands on trial 3 (`hub.goal.stake.hintReady`).
+
+### 15. To Task P (`claude/chapter-films`): the seam for the Arrival film
+The tutorial teaches mechanics only (slots, dots, reading, stake, the Price of Memory) and leaves the story to the films.
+The "First contact" card is the last screen before the island: `mountShell(root, { onFirstContact })` in
+`game/src/ui/index.js` fires it once; a film can play there (`main.js` wraps `enterWorld`) and call `enterWorld` when it ends
+or is skipped. Returning players skip the card already (`flow.returning`), so the film should honour the same flag.
+
