@@ -5,7 +5,17 @@
   <!-- The web fonts never block the first paint: the stylesheet loads as print media and switches to all when it arrives (font-display: swap). -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap"></noscript>
-  <link rel="preload" as="image" href="/assets/ui/lobby_bg.jpg" fetchpriority="high">
+  <!-- The lobby art is preloaded only when the lobby will show (QA-029): this mirrors bootPlan() in src/ui/loading.js
+       (?play=direct, #play and touch devices go straight into the world and never use it). -->
+  <script id="lobby-preload">
+    (function () {
+      var coarse = false; try { coarse = matchMedia('(pointer: coarse)').matches; } catch (e) {}
+      var direct = new URLSearchParams(location.search).get('play') === 'direct' || location.hash === '#play' || coarse;
+      if (direct) return;
+      var l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = '%BASE_URL%assets/ui/lobby_bg.jpg';
+      l.setAttribute('fetchpriority', 'high'); document.head.appendChild(l);
+    })();
+  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Forget to Foresee</title>
