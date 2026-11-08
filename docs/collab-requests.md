@@ -137,7 +137,7 @@ testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the
 Context: `docs/tutorial.md`. The first stake of a new player must land on trial 3 (the rules generate events only for
 trials 3–17 and resolve anchors only when an event lands on their trial, so a stake on trial 1 or 2 is never returned
 and never mentioned). The onboarding goals now say so; the three requests below would make the UI do it by default.
-### 7. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
+### 10. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
 - `wh.hint.firstSign` / `.hub` and `wh.hint.anchor` overflow the 338-unit toast at 1280×800 ("…read it with…"); cap the
   text at about 90 characters or let the toast grow to three lines. `firstSign` also stays on screen past the reveal
   (untilDone on "open V"): please mark it done when the sign reaches the chronicle.
@@ -149,7 +149,7 @@ and never mentioned). The onboarding goals now say so; the three requests below 
 - Iris's dialogue line is kept 12 s and so says "Pick the gold Shell and we fly." inside the Shell; clear it on a zone
   change, or let the hub's `stake` goal replace it.
 - The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
-### 8. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
+### 11. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
 - `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
   on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
   Same public-policy spirit as the autopilot: no hidden state, just the rule from `docs/rules-baseline.md` §2.2.
@@ -162,8 +162,22 @@ and never mentioned). The onboarding goals now say so; the three requests below 
 - Terminology: `opt.anchorTick` / `opt.anchorVision` and `meaning.3.*` still say "tick" ("Anchor here for tick 3",
   "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
   "trial 3" instead of the menu's "tick 3".
-### 9. To Task J (`docs/submission/video-shot-list.md`)
+### 12. To Task J (`docs/submission/video-shot-list.md`)
 The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
 item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
 first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the
 card); shot 2 can hold on beat 4, "Stake and watch", where the ring seals "Verified ✓".
+## To the lead (play layer, `game/src/play/game.js`), from worker G / Task N (living NPCs, 08.11)
+### 13. Two one-line hooks for the living agents
+In `startPlay`, after `const agents = new ClanAgents(...)`:
+- `agents.onSay = (l) => { if (worldHud) worldHud.say(l); };` lets a meeting's first beat and a contribution's line
+  appear in the dialogue strip at the moment the agents actually meet or reach the Scroll (keys already exist:
+  `line.walk.silk`, `line.mend`, `line.fragment`, `line.pact`, `line.escrow`). Without it the beats are silent.
+- In `session.on('event', …)`: `agents.event(ev, state.now);` gives the director the public events a few seconds
+  before the next observation and enables the "everyone looks up at the Shell of a reveal" moment (`fx.event`).
+  Without it the director still works from observation diffs (contributions, silk transfers, mends, auctions, vote).
+## To Task F (nameplates in `game/src/play/agents.js`), from worker G / Task N
+### 14. The mind glyph sprite is floating text in the world
+`MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
+out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
+sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.
