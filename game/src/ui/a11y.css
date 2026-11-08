@@ -169,7 +169,10 @@ html[data-motion="reduce"] .a11y-hold::before { transition: none; }
 .a11y-simple .a11y-sign { display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; margin-top: 8px; }
 .a11y-simple .a11y-sign canvas { border-radius: 50%; background: #0f1a1b; }
 body.ftf-simple-on .hub-host .hub-dock, body.ftf-simple-on .hub-host .hub-card, body.ftf-simple-on .pl-context { display: none !important; }
+/* inside a Shell the reading card keeps the sign and its slots (to change a reading); its own Stake / Leave row yields to Iris's card */
+body.ftf-simple-on .hub-host .hub-read .hub-row, body.ftf-simple-on .hub-host .hub-read > p.hub-muted:last-child { display: none !important; }
 body.ftf-simple-on .hub-host .hub-read { bottom: 200px; max-height: calc(100vh - 360px); }
+body.ftf-simple-choosing .hub-host .hub-dock { display: none !important; } /* "let me choose": the hub's own card shows, the dock stays away */
 body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: none !important; }
 
 /* Recap ("What is happening?"): a round button and a sheet with Iris's two sentences. */
