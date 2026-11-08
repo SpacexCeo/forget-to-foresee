@@ -10,17 +10,19 @@
 // (default 1000x) so that replay completes almost at once instead of making the player wait for
 // the same walk twice. The session is labeled "local demo" and is never a server session.
 import { createApi } from '../net/api.js';
+import { demoRandomBytes } from '../net/near-season.js';
 
 /**
  * @param {object} [o]
  * @param {string} [o.rules]      engine rules mode (default: the API default, v3)
  * @param {number} [o.timeScale]  simulated seconds per real second for walk replays
- * @param {string} [o.seedHex]    test/dev only: fixes the season (marked clientChoseSeed)
+ * @param {string} [o.seedHex]    test/dev only: fixes the season (marked clientChoseSeed), including its season id and
+ *                                salts (seed-derived bytes, src/net/near-season.js), so a committed demo season is recognised
  * @param {string} [o.name]
  * @param {() => number} [o.clock] milliseconds (tests)
  */
 export function createLocalTransport({ rules, timeScale = 1000, seedHex, name = 'Iris', clock } = {}) {
-  const api = createApi({ clock, maxSessions: 4, allowClientSeed: true, maxTimeScale: 1000 });
+  const api = createApi({ clock, maxSessions: 4, allowClientSeed: true, maxTimeScale: 1000, seasonRandomBytes: seedHex ? () => demoRandomBytes(seedHex) : null });
   const opts = { worldRules: 'proximity', timeScale, label: 'local demo', name };
   if (rules) opts.rules = rules;
   if (seedHex) opts.seedHex = seedHex;

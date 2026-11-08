@@ -162,5 +162,21 @@ near contract call-function as-read-only <CONTRACT_ID> get_ash_key file-args tar
 ```
 Each vector season can be committed once per contract; `node scripts/demo-args.mjs 1` (or `2`) gives a fresh one.
 
-Not wired yet: the game client does not commit or reveal its own live seasons; this contract and the commands
-above are the testnet slice.
+## Commit a game season (the judge demo), one script
+
+`?demo=judge` plays a fixed v3 season whose commitment is reproducible (seed-derived season id and salts,
+`game/src/net/near-season.js`): season `793f6c05e89839f2`, root `03dbd458…`, 15 leaves. The script below creates the
+accounts (faucet), builds, deploys and initializes the contract, commits the root and Ash's key, reveals every leaf
+(after a free `check_leaf` dry run) and records every transaction hash; each step is skipped when already done.
+
+```bash
+node scripts/judge-season-args.mjs [seedHex]                                   # arguments only -> target/judge-args/<seasonId>/
+scripts/deploy-judge-season.sh <CONTRACT_ID> <COORDINATOR_ID> [seedHex] [keychain|legacy-keychain]
+node scripts/write-deployment.mjs                                              # -> game/src/net/near-deployment.js for the game client
+```
+**See:** `wrote target/judge-deploy/793f6c05e89839f2.json`, then the game's `npm test` green and, in the browser, the
+"Committed on NEAR testnet ✓" badge next to "Verified ✓" (`docs/near.md`). The game reads the contract through
+read-only RPC views only (`get_season`, `get_revealed_leaf`, `check_leaf`); it never signs.
+
+Live seasons (no client seed) are not committed by the game: their salts come from the CSPRNG in the browser and no
+server holds a coordinator key. The judge season and the vector seasons are the testnet slice.

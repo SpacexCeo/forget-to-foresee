@@ -107,3 +107,29 @@ If your panel-exclusivity logic wants to own that, the body class is the hook.
 `PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
 window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
 `game/src/play/map-ui.js`) can go.
+## To Task F (UI polish, owner of `game/src/ui/world-hud/**` and `game/src/play/world-hud.js`), from Task M (NEAR live), 08.11
+### 9. Render the NEAR testnet badge next to "Verified ✓"
+`game/src/net/near.js` computes the badge; it is DOM-free and never throws, so the HUD only has to render what it returns.
+Two steps:
+1. **Create one watcher per play session** where the sign cards are built (`game/src/play/world-hud.js` has the
+   session and re-renders on `session.on('obs', …)`):
+   ```js
+   import { createNearWatcher } from '../net/near.js';
+   const near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) });
+   session.on('obs', () => near.observe(session.obs));   // idempotent; it asks testnet once per season and once per revealed sign
+   near.subscribe(() => refresh());                      // fires when a badge appears or changes
+   ```
+   Pass `near` (or its two getters) into `buildHudModel` / the signs panel so the model can carry the badge.
+2. **Render the badge model** on the resolved sign cards and (optionally) once in the Signs & Visions header:
+   - `near.leafBadge(index)` → `null` or `{ kind: 'leaf', state: 'on-chain' | 'dry-run' | 'mismatch', labelKey, tipKey, href }`;
+   - `near.seasonBadge()` → `null` or `{ kind: 'season', state: 'committed', labelKey: 'wh.sign.near.committed', tipKey, href }`.
+   `null` means render nothing (offline, another seed, no deployment). Otherwise render an `<a class="wh-pill wh-sign__near wh-sign__near--<state>" href target="_blank" rel="noopener">`
+   with `i18n: labelKey` and `title`/`data-tip` from `tipKey`, placed right after the existing `wh-sign__verified` pill
+   (`signs.js` line ~64). The strings exist in all five locales: `wh.sign.near.committed` ("Committed on NEAR testnet ✓"),
+   `wh.sign.near.leaf` ("Verified on NEAR testnet ✓"), `wh.sign.near.dryrun` ("Checked by the NEAR contract ✓"),
+   `wh.sign.near.mismatch` ("NEAR record differs ✗"), `wh.sign.near.tip`. Use the `ok`/`fail` pill colours for ✓/✗;
+   the link opens the transaction (or the contract) on testnet.nearblocks.io.
+   The anchor must stop the card's own click (`e.stopPropagation()`), and it is a real link, so keyboard focus works for free.
+Nothing else is needed: the watcher reads `game/src/net/near-deployment.js` (contract id and committed seasons; a `null`
+contract id disables it), calls only read-only RPC views, and the judge season (`?demo=judge`) is the one committed on
+testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the exact semantics of each state: `docs/near.md`.
