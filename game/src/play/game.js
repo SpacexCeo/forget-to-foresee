@@ -118,9 +118,13 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
 
   /** Flight from the island into Shell n: cover, enter (the zone event teleports), uncover. */
   async function fly(n) {
-    if (!hub || hub.busy || hub.advancing || state.zone === 'shell') return;
-    await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
-    const r = await hub.flyTo(n);
+    // claim the hub before the fade: keys pressed during the flight must not end a trial or start a second flight (QA-002)
+    if (!hub || state.zone === 'shell' || !hub.beginTransit('fly')) return;
+    let r;
+    try {
+      await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
+      r = await hub.flyTo(n);
+    } finally { hub.endTransit(); }
     setTimeout(() => hubUi.uncover(), 160);
     if (!r.ok) hud.showRejection(r.reason);
     else if (worldHud) { worldHud.activity('command'); worldHud.activity('signsOpen'); }
