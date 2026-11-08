@@ -16,14 +16,25 @@
  * Priority of one placed instance. Returns -1 when the instance is not wanted.
  * Visible instances always outrank prefetch-only ones; among equals, larger apparent size wins.
  * @param {{inFrustum:boolean, distance:number, radius:number, loadDistance:number,
- *          focusDistance?:number, prefetchRadius?:number}} f distance = camera to bounding-sphere surface
+ *          focusDistance?:number, prefetchRadius?:number, bytes?:number}} f distance = camera to bounding-sphere surface
  */
 export function instancePriority(f) {
   const apparent = Math.min(f.radius / Math.max(f.distance, 0.5), 10);
-  if (f.inFrustum && f.distance <= f.loadDistance) return 100 + apparent;
+  if (f.inFrustum && f.distance <= f.loadDistance) return 100 + apparent * byteFactor(f.bytes);
   const focus = f.focusDistance ?? Infinity;
-  if (focus <= (f.prefetchRadius ?? 0)) return 1 + Math.min(apparent, 10) * 0.01;
+  if (focus <= (f.prefetchRadius ?? 0)) return 1 + Math.min(apparent, 10) * 0.01 * byteFactor(f.bytes);
   return -1;
+}
+
+/**
+ * Bytes-aware weight for the first seconds (docs/first-seconds.md): among visible assets, a 20 MB hero should not
+ * take the pipe before three 6 MB camps of similar apparent size. Files up to 4 MB keep their full weight; above,
+ * the weight falls with the square root of the size (20 MB → 0.45), so a large asset that fills the screen still
+ * wins over a small one that does not. Unknown sizes count as 4 MB.
+ */
+export function byteFactor(bytes) {
+  const mb = (bytes ?? 4 * 1048576) / 1048576;
+  return mb <= 4 ? 1 : Math.sqrt(4 / mb);
 }
 
 /** An asset's priority is the best priority among its instances. */

@@ -64,10 +64,19 @@ export default defineConfig({
         hudPreview: resolve(ROOT, 'hud-preview.html'),
       },
       output: {
+        // Chunk plan for the first seconds (docs/first-seconds.md): the entry stays tiny; `ui` (lobby, onboarding,
+        // i18n) paints first; `three` + `client-core` + `scenes` are the world, imported lazily behind the lobby;
+        // `play` (room, engine, world HUD, hub, map) only when the player enters; `locales` stay one chunk so a
+        // language switch needs no network.
         manualChunks(id) {
           const p = id.replace(/\\/g, '/');
+          if (/\.css(\?|$)/.test(p)) return undefined; // stylesheets stay with their importer: a CSS import must not bind the entry to a chunk
+          if (p.includes('/src/ui/loading.js') || p.includes('/src/ui/motion/') || p.includes('vite/preload-helper')) return 'boot'; // tiny, static with the entry
           if (p.includes('/node_modules/three/')) return 'three';
-          if (p.includes('/src/render/') || p.includes('/src/physics/')) return 'client-core';
+          if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/')) return 'client-core';
+          if (p.includes('/src/locales/') || p.includes('/src/play/locales/')) return 'locales';
+          if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/game/') || p.includes('/src/ui/world-hud/')) return 'play';
+          if (p.includes('/src/ui/')) return 'ui';
           return undefined;
         },
       },

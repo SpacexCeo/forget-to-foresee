@@ -1,7 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- The web fonts never block the first paint: the stylesheet loads as print media and switches to all when it arrives (font-display: swap). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap"></noscript>
+  <link rel="preload" as="image" href="/assets/ui/lobby_bg.jpg" fetchpriority="high">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Forget to Foresee</title>
@@ -10,6 +14,24 @@
     :root { --ink: #e9efe9; --panel: rgba(20, 24, 22, 0.72); --amber: #d9a441; --muted: #a9b5ae; }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #c9d3d0; font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
     #app, #app canvas { position: fixed; inset: 0; display: block; }
+    /* ---- the first seconds: an inline loading screen that paints before any script (docs/first-seconds.md) ---- */
+    #boot { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 42%, #22282a 0%, #141a1c 58%, #0c1113 100%); color: #ece6da; font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif; }
+    #boot .boot-inner { display: grid; justify-items: center; gap: 22px; transform: translateY(-4vh); }
+    #boot .boot-title { margin: 0; font-weight: 300; letter-spacing: .32em; font-size: clamp(1.1rem, 2.6vw, 1.7rem); line-height: 1.35; text-align: center; text-indent: .32em; color: #efe9df; }
+    #boot .boot-title span { display: block; }
+    #boot .boot-ring { width: 128px; height: 128px; display: block; overflow: visible; }
+    #boot .boot-ring-bg { fill: none; stroke: rgba(236,230,218,.14); stroke-width: 1.5; }
+    #boot .boot-ring-fg { fill: none; stroke: #e4c272; stroke-width: 2; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; stroke-dasharray: 339.29; stroke-dashoffset: 339.29; filter: drop-shadow(0 0 6px rgba(228,194,114,.45)); transition: stroke-dashoffset 240ms cubic-bezier(.16, 1, .3, 1); }
+    #boot .boot-ring-ink { fill: none; stroke: rgba(236,230,218,.55); stroke-width: 1; stroke-dasharray: 2 7; animation: boot-breathe 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
+    #boot .boot-core { fill: #e4c272; opacity: .9; animation: boot-core 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
+    #boot .boot-meta { display: flex; gap: 14px; align-items: baseline; font: 400 12px/1 system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: rgba(236,230,218,.62); }
+    #boot .boot-pct { font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; color: #e4c272; }
+    #boot.boot--failed .boot-label { color: #ff8a7a; letter-spacing: .04em; text-transform: none; }
+    @keyframes boot-breathe { 0%, 100% { transform: scale(.94) rotate(0deg); opacity: .5; } 50% { transform: scale(1.02) rotate(12deg); opacity: .9; } }
+    @keyframes boot-core { 0%, 100% { transform: scale(.85); opacity: .55; } 50% { transform: scale(1); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { #boot .boot-ring-ink, #boot .boot-core { animation: none; } #boot .boot-ring-fg { transition: none; } }
+    html[data-motion="reduce"] #boot .boot-ring-ink, html[data-motion="reduce"] #boot .boot-core { animation: none; }
+    body.booting #badge { display: none; }
     .panel { position: fixed; background: var(--panel); border-radius: 8px; padding: 8px 12px; pointer-events: none; }
     #objective { position: fixed; top: 14px; left: 18px; max-width: calc(100% - 175px); font: 500 18px/1.3 Georgia, serif; pointer-events: none; }
     #scene-controls { z-index: 11; }
@@ -97,7 +119,31 @@
     }
   </style>
 </head>
-<body>
+<body class="booting">
+  <div id="boot" role="status" aria-live="polite" aria-label="Loading">
+    <div class="boot-inner">
+      <svg class="boot-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="boot-ring-bg" cx="60" cy="60" r="54"/>
+        <circle class="boot-ring-ink" cx="60" cy="60" r="46"/>
+        <circle class="boot-ring-fg" cx="60" cy="60" r="54"/>
+        <circle class="boot-core" cx="60" cy="60" r="3.5"/>
+      </svg>
+      <h1 class="boot-title"><span>Forget</span><span>to Foresee</span></h1>
+      <div class="boot-meta"><span class="boot-label">Loading the island</span><span class="boot-pct">4%</span></div>
+    </div>
+  </div>
+  <script>
+    // Before the module graph arrives: a slow trickle on the ring, so the first second is never a frozen bar.
+    (function () {
+      var ring = document.querySelector('#boot .boot-ring-fg'), pct = document.querySelector('#boot .boot-pct'), p = 0.04, C = 339.29, t0 = Date.now();
+      window.__ftfBoot = { shown: function () { return p; }, stop: function () { clearInterval(id); } };
+      var id = setInterval(function () {
+        if (!document.getElementById('boot')) { clearInterval(id); return; }
+        p = Math.min(0.3, 0.04 + (Date.now() - t0) / 1000 * 0.05);
+        ring.style.strokeDashoffset = String(C * (1 - p)); pct.textContent = Math.round(p * 100) + '%';
+      }, 120);
+    })();
+  </script>
   <div id="app"></div>
   <div id="hud" class="panel" hidden></div>
   <div id="prompt" class="panel" hidden></div>
