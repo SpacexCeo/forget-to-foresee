@@ -55,3 +55,9 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   ten predicted questions; C5 gains the neighbour calibration (Clan World: Ælder) and the `idea` field checklist.
   Note for the submission worker: the form labels the 20 to 2000 character field "What did you build?"; the API key
   is `idea`.
+- 18:20 UTC: `notes/competitor-field.md` done (directory read through its JSON endpoint at 17:47 UTC: 311 entries,
+  27 `games`, 21 `nfts`; 18 of 27 and 11 of 21 traced to repos; eight repos spot-checked; X-only demo links were not
+  readable). Rubric v0.3: section 1 carries the field snapshot (at least 15 traceable `games` rivals deployed on
+  testnet; six-plus "agents with NEAR accounts trading" entries; nobody pre-commits a season to a Merkle root; no
+  memory-shard mechanic elsewhere) and C4's calibration now reads "below the field's median while undeployed".
+  Cycle 3 closed: four notes added (twelve in total), rubric v0.2 to v0.3.

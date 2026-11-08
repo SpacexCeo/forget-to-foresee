@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.2, 2026-11-08 (research cycle 2). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.3, 2026-11-08 (research cycle 3). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -31,9 +31,16 @@ an open flag is reported to the lead at once, and the score is marked provisiona
    every session), agent NPCs with their own wallets and inventories, the agents' reasoning exposed in a tooltip, the
    price rules in one readable file, and a fast-forward mode so judges can watch the economy move in about a minute.
    `nfts`: "ownership with behavior", exemplar = a running NEP-171 contract bound to a sub-account with transfer tests.
-4. **The field.** On 2026-11-08 the public directory listed 302 submissions: 25 in `games`, 21 in `nfts`, 49 in `open`,
-   154 in `security`, 147 in `agents`. Three prizes per track; most rivals claim several tracks
-   (`notes/near-hackathon-tracks.md`).
+4. **The field.** On 2026-11-08 15:00 UTC the public directory listed 302 submissions: 25 in `games`, 21 in `nfts`,
+   49 in `open`, 154 in `security`, 147 in `agents`; at 17:47 UTC 311, with 27 in `games` (6 of them also in `nfts`).
+   Three prizes per track; most rivals claim several tracks. Of the 18 traceable `games` entries at least 15 name a
+   deployed testnet contract with an explorer link; "AI agents with their own NEAR accounts trading in an economy" is
+   already a cluster of six or more (Bazaar Sovereign is the thematic twin: silk, rival houses with memories and
+   grudges, living charter NFTs; Lantern Caravan the engineering twin: deterministic agents, seeded simulation, 65 test
+   files, deployed NEP-245). Commit-reveal appears in five entries, always per round; nobody pre-commits a whole
+   season to a Merkle root with browser-side verification, and no one has a memory-shard mechanic. Afterlight is the
+   one rival in the same "tested contract, no deployment named" position (`notes/competitor-field.md`,
+   `notes/near-hackathon-tracks.md`).
 5. **What previous NEAR hackathons scored** (MetaBUILD III 2022, One Trillion Agents 2025, cited again by the 2026
    FAQ): technological implementation ("quality of NEAR integration"), design, ecosystem impact, originality,
    sustainability ("realistic long-term plan"). "Impact" and "sustainability" are therefore live questions for the
@@ -132,8 +139,13 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
 - **2/10**: a contract exists but no sentence connects it to play; or a second track is claimed on a simulation.
 - **0/10**: "powered by NEAR" with no contract, or claims of on-chain verification the code does not perform.
 - Calibration: no verified past NEAR winner shipped without a live primitive (`notes/past-near-hackathon-winners.md`),
-  so an undeployed contract caps this criterion at 5 whatever the design quality; a testnet deployment of the existing
-  contract is the cheapest move from 5 to 7 or more.
+  and at least 15 of the 18 traceable `games` rivals in this hackathon already show a testnet address with an
+  explorer link (`notes/competitor-field.md`), so an undeployed contract caps this criterion at 5 whatever the design
+  quality and is below the field's median; a testnet deployment of the existing contract is the cheapest move from 5
+  to 7 or more. What stands out in the field: a first-screen Play link that works without a wallet, a five-minute path
+  with observable outcomes, a table of on-chain objects with explorer links, a test command with a count, a short
+  video in the repo, an honest "what is simulated and what is next" section. What hurts: X-only demo links, no
+  account id in the README, zero tests, track spam.
 - Diagnostic questions (the 24-item checklist in `notes/onchain-game-design.md`; the ones that bite here):
   1. Name the mechanic that would be impossible without the chain; if the answer is "ownership" or "a database", a
      database would do.
