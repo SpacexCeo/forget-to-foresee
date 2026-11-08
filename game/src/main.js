@@ -104,7 +104,8 @@ window.addEventListener('resize', () => lookdev.setSize(window.innerWidth, windo
 let toastTimer = 0;
 function toast(text) { toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
 
-let moveTarget = null, stuckTime = 0, lastDist = Infinity;
+// moveRun: phones have no Shift, so a tap far away (or a double tap) runs there
+let moveTarget = null, stuckTime = 0, lastDist = Infinity, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -201,6 +202,10 @@ function handleInput(dt) {
       const o = raycaster.ray.origin, d = raycaster.ray.direction;
       const hit = rayCast(world, [o.x, o.y, o.z], [d.x, d.y, d.z], 300, MASK_PLAYER);
       if (hit && hit.normal[1] > 0.7) {
+        const now = performance.now();
+        const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
+        lastTap = { t: now, x: c.x, y: c.y };
+        moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
         moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; play.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
@@ -249,7 +254,7 @@ function frame() {
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
-  player.run = input.down('ShiftLeft', 'ShiftRight');
+  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive));
   for (let i = 0; live && i < f.steps; i++) {
     const wish = wishVector();
     if (wish[0] || wish[1]) moving = true;
