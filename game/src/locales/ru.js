@@ -357,7 +357,7 @@ export default {
   'meaning.2.1': 'средняя · 20',
   'meaning.2.2': 'большая · 40',
   'meaning.2.3': 'великая · 80',
-  'meaning.3.0': 'через 1 тик',
+  'meaning.3.0': 'через 1 тик', // the engine's own Russian (parity with the prototype text, tests/ui-i18n.test.mjs)
   'meaning.3.1': 'через 2',
   'meaning.3.2': 'через 3',
   'meaning.3.3': 'через 4',
