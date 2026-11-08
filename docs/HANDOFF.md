@@ -15,8 +15,8 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 | Lobby | matches the owner reference one to one (owner-supplied background art) | `game/src/ui/lobby.js`, `docs/ui/lobby-reference.jpg` |
 | Languages | EN, UA, RU, IT, 中文. `uk`, `it` and `zh` cover only the lobby and core labels; every other key falls back to English | `game/src/locales/` |
 | NEAR contract `season-commit` | builds and passes tests; **not deployed** (the owner deploys) | `contracts/season-commit/` |
-| Audio | 60 procedurally synthesized sounds and a WebAudio runtime; **not wired into main.js**; not yet listened to by a human | `game/src/audio/`, `game/public/assets/audio/`, `docs/audio.md` |
-| VFX | GPU particle system and 4 flipbooks; integration into gameplay is partial | `game/src/vfx/`, `docs/vfx.md` |
+| Audio | 60 procedurally synthesized sounds and a WebAudio runtime, **wired into the play layer** (branch `claude/audio-vfx-wiring`): music by tension, zone beds, one hum per Shell, footsteps by surface for Iris and the agents, event cues, UI sounds, volume sliders in the scene settings; not yet listened to by a human | `game/src/audio/`, `game/src/play/presentation.js`, `docs/audio.md` |
+| VFX | GPU particle system and 4 flipbooks, **wired into the play layer**: composer attach across tier changes, mist under every Shell, Shell IV crack pulse, tension by season tension with a sky tint, the Guest's sign as ink on the glass, event cues, the finale beams from the camps | `game/src/vfx/`, `game/src/play/presentation.js`, `docs/vfx.md` |
 
 ## Art (glb, KTX2 + meshopt; procedural sources in `art/`)
 
@@ -39,7 +39,7 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 
 ## Open items, in priority order
 1. **Faces.** The rework in `art/agents/` is committed as WIP and is **not built into the glbs yet**: the CPU rebuild was stopped when the work wound down. Next: finish the build (on a GPU it takes about 15 minutes; on this container's CPU, hours), check the close-ups in `docs/art/qa/agents/<clan>/anim/`, and ship. The owner's goal: smooth, symmetric faces that hold up in close third person.
-2. **Wire audio and VFX into the gameplay.** Follow the integration lines in `docs/audio.md` and `docs/vfx.md`.
+2. ~~Wire audio and VFX into the gameplay.~~ Done on 08.11 on `claude/audio-vfx-wiring` (report: `docs/handoff/agent-reports/audio-vfx-wiring.md`). Left: a human listening pass on the mix; the volume sliders' proper home in Settings (request to Codex in `docs/collab-requests.md`).
 3. ~~Merge Codex.~~ Done on 08.11 (only `game/src/ui/input.js` conflicted: Codex pointer/gamepad handling plus the touch controls).
 4. **Assets to fix:** Shell round 2 (nacre/iridescence, real wall pieces instead of slivers), `shell_interior` coordinates, the Guest's core glow, and pitch renders from the uncompressed sources.
 5. **Full UA, IT and ZH translation** of the rest of the UI.

@@ -39,3 +39,23 @@ are recorded in `docs/ui.md` under “Integration handoff”.
 Checks: `cd game && npm test` (203/203), `npm run build` (game, review, VFX,
 UI preview), Chromium lobby/settings/mobile and gameplay-modal smoke checks.
 The integration branch is left for the Claude lead to merge.
+
+
+## To Codex (from worker A, audio/VFX wiring, 08.11)
+
+### 3. Volume sliders in Settings
+The audio runtime exposes `setVolume(bus, 0..1)` / `getVolumes()` for `master | music | sfx` (persisted in
+`localStorage` key `ftf.audio.v1`, pure helpers `loadVolumes` / `saveVolumes` in `game/src/audio/mix.js`).
+Today the sliders are a section appended to the scene controls dialog from `game/src/main.js`
+(`game/src/play/audio-settings.js`), with labels local to that module (`AUDIO_LABELS`, en/uk/ru/it/zh).
+Please give them a proper home in `game/src/ui/settings.js` (next to quality and motion) with keys in
+`game/src/locales/*.js` (`settings.sound`, `settings.sound.master`, `settings.sound.music`, `settings.sound.sfx`);
+the runtime is reached through `window.__ftf.audio` or, better, a `ctx.audio` getter if you prefer one in the
+UI context. When that lands, `mountAudioSettings` and its call in `main.js` can go.
+
+## To worker E (mobile, `game/src/render/lookdev.js`), from worker A
+
+### 4. Optional sky tint hook
+`game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
+(`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
+layer uses it automatically and stops touching the fog colour.
