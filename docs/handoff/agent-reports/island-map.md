@@ -35,7 +35,21 @@ hub-desktop-uk: Мапа архіпелагу | Ірис | Сіль | Попіл
 console errors: 0 in every session
 ```
 
-Run 2, screenshots and layout (after the visual pass): RUN2_PLACEHOLDER
+Run 2, screenshots and layout (after the visual pass; `docs/map/*.jpg`, 1× pixel ratio, JPEG q68):
+
+```
+before: ?dev=1&view=overview at 1280×800, 1920×1080, 390×844 (the old look: labels over the island)
+after 1280x800 / 1920x1080 / 390x844: map open true; labels outside the drawing: none
+after 1280x800: camp label 21px, caption 17px, hint 16.9px · after 390x844: camp label 14px, caption 11px, hint 15.5px
+locale uk/ru/it/zh at 390x844: open true, titles Мапа архіпелагу / Карта архипелага / Mappa dell’arcipelago / 群岛地图, labels outside: none
+label overlaps (zh, 390 wide): only name × its own caption pairs (by design), no two places overlap
+low tier + reduced motion: map open true, goal animation none, backdrop none
+console errors+warnings: 0 in every session
+```
+
+Found in the screenshots and fixed afterwards: the Italian legend item "Conchiglia con un segno in attesa" clipped at the
+panel edge at 390 px (legend items now wrap); the panel stayed 560 px wide at 1920×1080 (now `max(560px, 34vw)`, the
+drawing grows to about 620 px). Re-checked at 1920×1080 and 390×844 in uk/ru/it/zh: RECHECK_PLACEHOLDER
 
 ## Hostile self-review (what I looked for and fixed)
 

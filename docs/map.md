@@ -64,7 +64,8 @@ double hairline, Libre Caslon titles, Source Sans captions, gold for Shells with
   bridge); the balcony below its disc; the pedestal as a small gem with a tooltip.
 
 Reduced motion stops the goal pulse; the low tier drops the backdrop blur (same rule as the HUD). Widths:
-`min(560px, 100vw − 32px)`; at 390 px the drawing is 350 px wide and camp names are about 11 px tall.
+`min(max(560px, 34vw), 100vw − 32px)` (560 px up to 1646 px wide, about 650 px at 1920); at 390 px the drawing is 350 px wide,
+camp names 14 px tall and captions 11 px.
 
 ### Before / after (headless Chromium, SwiftShader; `docs/map/`)
 
@@ -75,7 +76,9 @@ Reduced motion stops the goal pulse; the low tier drops the backdrop blur (same 
 | 390×844 (2×) | `before-overview-390x844.jpg` | `after-overview-390x844.jpg` | `after-map-390x844.jpg` |
 
 Locales at 390×844: `after-map-390x844-{uk,ru,it,zh}.jpg` (English is `after-map-390x844.jpg`). Low tier with reduced
-motion: `after-map-low-reduced-1280x800.jpg`.
+motion: `after-map-low-reduced-1280x800.jpg`. All shots are 1× pixel ratio (the 2× phone shot is in the agent report's
+first run); the 3D behind the panel is the SwiftShader render, not the GPU look. The layout check counts a camp name and
+its own "camp" caption as one label pair; no two places overlap in any of the five locales.
 
 ## 3. Checks
 

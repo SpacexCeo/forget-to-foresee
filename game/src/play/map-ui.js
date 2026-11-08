@@ -15,7 +15,7 @@ const CSS = `
 .ftf-map-host { position: fixed; inset: 0; z-index: 5; pointer-events: auto; display: grid; place-items: center; padding: 16px; overflow: hidden; }
 .ftf-map-host[hidden] { display: none; }
 .ftf-map-scrim { position: absolute; inset: 0; background: var(--wh-scrim, rgba(0,0,0,.35)); }
-.ftf-map { position: relative; width: min(560px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 12px;
+.ftf-map { position: relative; width: min(max(560px, 34vw), 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 12px;
   background: var(--wh-panel-bg, rgba(16,26,27,.92)); border: 1px solid var(--wh-frame, rgba(232,214,172,.8)); border-radius: var(--wh-r-banner, 18px);
   box-shadow: var(--wh-shadow, 0 10px 30px rgba(0,0,0,.42)); -webkit-backdrop-filter: blur(var(--wh-panel-blur, 10px)); backdrop-filter: blur(var(--wh-panel-blur, 10px)); color: var(--wh-text, #faf7ee); }
 .ftf-map::before { content: ""; position: absolute; inset: 5px; border: 1px solid var(--wh-frame-soft, rgba(196,186,156,.45)); border-radius: calc(var(--wh-r-banner, 18px) - 5px); pointer-events: none; }
@@ -26,7 +26,7 @@ const CSS = `
   color: var(--wh-text, #faf7ee); background: var(--wh-btn-bg, rgba(10,22,23,.78)); border: 1px solid var(--wh-frame-soft, rgba(196,186,156,.45)); border-radius: var(--wh-r-btn, 10px); cursor: pointer; }
 .ftf-map-close:hover { border-color: var(--wh-gold, #e4c272); }
 .ftf-map-close kbd { font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); border: 1px solid var(--wh-kbd-border, rgba(222,210,180,.85)); border-radius: 4px; padding: 3px 5px; background: var(--wh-kbd-bg, rgba(42,38,30,.92)); }
-.ftf-map-canvas { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: min(70vh, 560px); margin: 0 auto; }
+.ftf-map-canvas { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: min(68vh, 760px); margin: 0 auto; }
 .ftf-map-canvas svg { display: block; width: 100%; height: 100%; overflow: visible; font-family: var(--wh-font, Georgia, serif); }
 .ftf-map-sea { fill: url(#ftf-map-sea); }
 .ftf-map-haze { fill: url(#ftf-map-haze); }
@@ -76,7 +76,9 @@ const CSS = `
 .ftf-map-goal-core { fill: var(--wh-gold-bright, #fbe6a6); }
 @keyframes ftf-map-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .55; } }
 .ftf-map-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font: var(--wh-font-body-weight, 500) 12px/1.3 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-2, #e6e3d7); }
-.ftf-map-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.ftf-map-legend li { display: inline-flex; align-items: flex-start; gap: 6px; max-width: 100%; min-width: 0; }
+.ftf-map-legend li span { min-width: 0; }
+.ftf-map-legend svg { margin-top: 1px; }
 .ftf-map-legend svg { width: 14px; height: 14px; flex: none; }
 .ftf-map-hint { margin: 0; font: var(--wh-font-body-weight, 500) 12.5px/1.35 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); }
 .ftf-map-fab { position: fixed; left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 4; display: none; width: 48px; height: 48px;
