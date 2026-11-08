@@ -247,7 +247,9 @@ export function mountStatus(root, o) {
     model = next;
     layout = nextLayout;
     if (focusKey && !el.contains(doc.activeElement)) {
-      const again = el.querySelector(`[data-wh-key="${focusKey}"]`);
+      // a focused carousel dot follows the selection (arrow keys move it)
+      const key = focusKey.startsWith('dot-') ? 'dot-' + next.questIndex : focusKey;
+      const again = el.querySelector(`[data-wh-key="${key}"]`);
       if (again) again.focus();
     }
   }

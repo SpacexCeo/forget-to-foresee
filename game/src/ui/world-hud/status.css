@@ -1,8 +1,9 @@
 /* World HUD — P1 Status & Quest (docs/ui-world-hud.md §6.1–6.3, §7.1–7.3).
    Desktop lengths are calc(N * var(--wh-px)) ("N u", 1 u = 1 px at 1811 wide); mobile lengths are
-   CSS px at 390 wide (the tokens set --wh-px: 1px there). Vertical offsets were fitted to the
-   mockup's measured baselines (PT Serif: ascent 1.039 em, descent .286 em), so some paddings
-   differ from the round numbers in the spec tables; the rendered boxes and text match the PNGs. */
+   CSS px at 390 wide (the tokens set --wh-px: 1px there). Font sizes, families and tracking come
+   only from the --wh-fs-* / --wh-font* / --wh-ls-* tokens. Vertical offsets were fitted to the
+   mockup's measured baselines, so some paddings differ from the round numbers in the spec
+   tables; the rendered boxes match the PNGs. */
 
 .wh-root .wh-status { position: absolute; inset: 0; pointer-events: none; }
 .wh-root .wh-status .wh-icon svg { overflow: visible; }
@@ -30,7 +31,7 @@
   margin: calc(-4 * var(--wh-px));
 }
 .wh-root .wh-trial__title {
-  font-size: calc(19 * var(--wh-px));
+  font-size: var(--wh-fs-card-title);
   font-weight: 400;
   line-height: calc(22 * var(--wh-px));
   color: var(--wh-text);
@@ -55,7 +56,7 @@
   align-items: baseline;
   column-gap: .5em;
   min-width: 0;
-  font-size: calc(14.5 * var(--wh-px));
+  font-size: var(--wh-fs-row);
   line-height: calc(28 * var(--wh-px));
   color: var(--wh-text);
   white-space: nowrap;
@@ -122,7 +123,7 @@
   height: calc(18 * var(--wh-px));
   padding: 0 calc(8 * var(--wh-px)) 0 calc(5 * var(--wh-px));
   gap: calc(5 * var(--wh-px));
-  font-size: calc(11.5 * var(--wh-px));
+  font-size: var(--wh-fs-tag);
 }
 .wh-root .wh-quest .wh-quest__sparkle { width: calc(11 * var(--wh-px)); height: calc(11 * var(--wh-px)); color: var(--wh-gold); }
 .wh-root .wh-quest .wh-quest__title {
@@ -176,7 +177,7 @@
 .wh-root .wh-toast__i { width: calc(9.5 * var(--wh-px)); height: calc(13 * var(--wh-px)); vertical-align: 0; color: #f1e8cf; }
 .wh-root .wh-toast__text {
   min-width: 0;
-  font-size: calc(12.75 * var(--wh-px));
+  font-size: var(--wh-fs-toast);
   line-height: calc(17 * var(--wh-px));
   color: var(--wh-text);
   display: -webkit-box;
@@ -261,15 +262,15 @@
   height: 19px;
   padding: 0 10px 0 8px;
   gap: 5px;
-  font-size: 11px;
-  letter-spacing: .06em;
+  font-size: var(--wh-fs-tag);
+  letter-spacing: var(--wh-ls-tag);
 }
 .wh-root .wh-quest--mobile .wh-quest__sparkle { width: 10px; height: 10px; color: var(--wh-gold); }
 .wh-root .wh-quest--mobile .wh-quest__title {
   display: block;
   margin: 5.5px 0 0 6px;
   max-width: 225px;
-  font-size: 20px;
+  font-size: var(--wh-fs-title-l);
   line-height: 21px;
   color: var(--wh-text);
   text-shadow: var(--wh-text-glow);
@@ -278,7 +279,7 @@
   display: block;
   margin: 3.9px 0 0 6px;
   max-width: 250px;
-  font-size: 12.3px;
+  font-size: var(--wh-fs-body);
   line-height: 15px;
   color: var(--wh-text-2);
 }
@@ -328,7 +329,7 @@
   top: 562px;
   height: 64px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 1px minmax(86px, max-content) 1px minmax(86px, max-content);
+  grid-template-columns: 22px minmax(0, 1fr) 1px max-content 1px max-content;
   align-items: center;
   padding: 0 0 0 13px;
   border-radius: var(--wh-r-mtrial);
@@ -337,7 +338,7 @@
 .wh-root .wh-trial__main { min-width: 0; align-self: start; margin: 9.65px 0 0 10px; display: flex; flex-direction: column; align-items: flex-start; }
 .wh-root .wh-trial--mobile .wh-trial__title {
   max-width: 100%;
-  font-size: 14.5px;
+  font-size: var(--wh-fs-card-title);
   line-height: 17.4px;
   white-space: nowrap;
   overflow: hidden;
@@ -345,7 +346,7 @@
 }
 .wh-root .wh-trial__phase {
   margin-top: 1.3px;
-  font-size: 11px;
+  font-size: var(--wh-fs-small);
   line-height: 13.2px;
   color: var(--wh-text-2);
 }
@@ -362,7 +363,7 @@
 .wh-root .wh-trial--mobile .wh-bar__seg { border-right: 1.5px solid rgba(24, 22, 16, .9); border-radius: 0; }
 .wh-root .wh-trial--mobile .wh-bar__seg:last-child { border-right: 0; }
 .wh-root .wh-trial--mobile .wh-bar__seg--on { background: linear-gradient(180deg, #fbd282 0%, #eab35c 100%); }
-.wh-root .wh-trial__pct { font-size: 11px; line-height: 1; color: var(--wh-text-2); }
+.wh-root .wh-trial__pct { font-size: var(--wh-fs-small); line-height: 1; color: var(--wh-text-2); }
 .wh-root .wh-trial__vr { width: 1px; height: 31px; background: var(--wh-sep); }
 .wh-root .wh-trial__stat {
   display: flex;
@@ -376,5 +377,5 @@
 .wh-root .wh-trial__sicon--skill { width: 21px; height: 21px; margin: 0 -1.5px; }
 .wh-root .wh-trial__sicon--skill svg { transform: translateY(-2px) scaleY(1.35); }
 .wh-root .wh-trial__stack { display: flex; flex-direction: column; }
-.wh-root .wh-trial__label { max-width: 64px; font-size: 10px; line-height: 12px; color: var(--wh-text-2); }
-.wh-root .wh-trial__value { margin-top: 1px; font-size: 14.5px; line-height: 17px; color: var(--wh-text); white-space: nowrap; }
+.wh-root .wh-trial__label { max-width: 56px; font-size: var(--wh-fs-small); line-height: 12px; color: var(--wh-text-2); }
+.wh-root .wh-trial__value { margin-top: 1px; font-size: var(--wh-fs-row); line-height: 17px; color: var(--wh-text); white-space: nowrap; }

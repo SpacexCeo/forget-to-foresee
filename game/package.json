@@ -15,6 +15,7 @@
     "wh:compare": "node scripts/wh-compare.mjs"
   },
   "dependencies": {
+    "@fontsource/libre-caslon-text": "^5.3.0",
     "@fontsource/pt-serif": "^5.3.0",
     "three": "^0.170.0"
   },
