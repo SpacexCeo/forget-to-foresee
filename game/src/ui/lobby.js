@@ -8,7 +8,7 @@ import { getUiContext } from './context.js';
 import { getEntitlement } from './entitlement.js';
 import { loadRecipe, recipeHash } from './hologram/recipe.js';
 import { STORAGE_KEYS } from './storage.js';
-import { MOTION, installMotionStyles, enter, exit, stagger, press, parallax } from './motion/index.js';
+import { MOTION, installMotionStyles, enter, exit as leaveScreen, stagger, press, parallax } from './motion/index.js';
 
 /**
  * @param {HTMLElement} root
@@ -36,7 +36,7 @@ export function mountLobby(root, opts = {}) {
   const enterBtn = h('button', { class: 'ftf-btn ftf-btn-primary mo-lift', i18n: 'lobby.enter', attrs: { type: 'button', id: 'ftf-enter' } });
   let leaving = false;
   // The screen leaves (fade + a slight scale, 120 ms) before the next one mounts; input is never blocked by it.
-  const leave = (then) => { if (leaving) return; leaving = true; exit(wrap, { to: 'scale', duration: MOTION.duration.fast }).then(() => { leaving = false; then(); }); };
+  const leave = (then) => { if (leaving) return; leaving = true; leaveScreen(wrap, { to: 'scale', duration: MOTION.duration.fast }).then(() => { leaving = false; then(); }); };
   enterBtn.addEventListener('click', () => { if (opts.onEnter) leave(opts.onEnter); });
 
   // Panels

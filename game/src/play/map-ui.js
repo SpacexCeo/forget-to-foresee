@@ -17,6 +17,7 @@ const CSS = `
 .ftf-map-host { position: fixed; inset: 0; z-index: 5; pointer-events: auto; display: grid; place-items: center; padding: 16px; overflow: hidden; }
 .ftf-map-host[hidden] { display: none; }
 .ftf-map-place, .ftf-map-dynamic > * { transform-box: fill-box; transform-origin: center; }
+.ftf-map-dynamic { pointer-events: none; }
 .ftf-map-route { fill: none; stroke: var(--wh-gold, #e4c272); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .9; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
 .ftf-map-scrim { position: absolute; inset: 0; background: var(--wh-scrim, rgba(0,0,0,.35)); }
 .ftf-map { position: relative; width: min(max(560px, 34vw), 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 12px;

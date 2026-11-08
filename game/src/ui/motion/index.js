@@ -115,7 +115,10 @@ function run(el, keyframes, { duration, delay = 0, easing = MOTION.easing.out, f
   if (!el || typeof el.animate !== 'function' || duration <= 0) return Promise.resolve(null);
   try {
     const a = el.animate(keyframes, { duration, delay, easing, fill, ...(composite ? { composite } : {}) });
-    return (a.finished || Promise.resolve(a)).then(() => a, () => a);
+    // Resolve on the animation's own finish, or on the clock a little after its end: a background tab, a throttled
+    // or software-rendered frame must never hold up what follows (hiding a panel, mounting the next screen).
+    const byClock = new Promise((r) => setTimeout(() => r(a), duration + delay + 80));
+    return Promise.race([(a.finished || Promise.resolve(a)).then(() => a, () => a), byClock]);
   } catch { return Promise.resolve(null); }
 }
 
