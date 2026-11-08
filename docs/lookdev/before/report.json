@@ -1,0 +1,166 @@
+[
+  {
+    "file": "overview-high-390x844-phone.png",
+    "tier": "high",
+    "size": [
+      390,
+      844
+    ],
+    "shot": "overview",
+    "calls": 88,
+    "tris": 192540,
+    "pr": 1,
+    "stats": {
+      "tier": "high",
+      "profile": "phone",
+      "pixelRatio": 1,
+      "pixelScale": 1,
+      "post": false,
+      "reducedMotion": true
+    },
+    "cam": [
+      6.31,
+      81.62,
+      49.25
+    ]
+  },
+  {
+    "file": "plaza-high-390x844-phone.png",
+    "tier": "high",
+    "size": [
+      390,
+      844
+    ],
+    "shot": "plaza",
+    "calls": 43,
+    "tris": 116332,
+    "pr": 1,
+    "stats": {
+      "tier": "high",
+      "profile": "phone",
+      "pixelRatio": 1,
+      "pixelScale": 1,
+      "post": false,
+      "reducedMotion": true
+    },
+    "cam": [
+      3.68,
+      8.28,
+      15.48
+    ]
+  },
+  {
+    "file": "inside-high-390x844-phone.png",
+    "tier": "high",
+    "size": [
+      390,
+      844
+    ],
+    "shot": "inside",
+    "calls": 20,
+    "tris": 145042,
+    "pr": 1,
+    "stats": {
+      "tier": "high",
+      "profile": "phone",
+      "pixelRatio": 1,
+      "pixelScale": 1,
+      "post": false,
+      "reducedMotion": true
+    },
+    "cam": [
+      0,
+      304.67,
+      9.5
+    ]
+  },
+  {
+    "tier": "high",
+    "size": "390x844",
+    "console": [
+      "[warning] [.WebGL-0x10fc0019ce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    ]
+  },
+  {
+    "file": "overview-low-390x844-phone.png",
+    "tier": "low",
+    "size": [
+      390,
+      844
+    ],
+    "shot": "overview",
+    "calls": 88,
+    "tris": 186670,
+    "pr": 1,
+    "stats": {
+      "tier": "low",
+      "profile": "phone",
+      "pixelRatio": 1,
+      "pixelScale": 1,
+      "post": false,
+      "reducedMotion": true
+    },
+    "cam": [
+      6.31,
+      81.62,
+      49.25
+    ]
+  },
+  {
+    "file": "plaza-low-390x844-phone.png",
+    "tier": "low",
+    "size": [
+      390,
+      844
+    ],
+    "shot": "plaza",
+    "calls": 43,
+    "tris": 110454,
+    "pr": 1,
+    "stats": {
+      "tier": "low",
+      "profile": "phone",
+      "pixelRatio": 1,
+      "pixelScale": 1,
+      "post": false,
+      "reducedMotion": true
+    },
+    "cam": [
+      3.68,
+      8.28,
+      15.48
+    ]
+  },
+  {
+    "file": "inside-low-390x844-phone.png",
+    "tier": "low",
+    "size": [
+      390,
+      844
+    ],
+    "shot": "inside",
+    "calls": 20,
+    "tris": 139182,
+    "pr": 1,
+    "stats": {
+      "tier": "low",
+      "profile": "phone",
+      "pixelRatio": 1,
+      "pixelScale": 1,
+      "post": false,
+      "reducedMotion": true
+    },
+    "cam": [
+      0,
+      304.67,
+      9.5
+    ]
+  },
+  {
+    "tier": "low",
+    "size": "390x844",
+    "console": [
+      "[warning] [.WebGL-0x10fc001aa800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    ]
+  }
+]

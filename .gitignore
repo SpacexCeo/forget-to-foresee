@@ -24,3 +24,5 @@ __pycache__/
 
 # Dev-only scratch (reference images for HUD comparison, screenshots)
 game/.scratch/
+# capture: per-machine GPU flags found by tools/capture/gpu-probe.mjs
+tools/capture/.gpu-args.json

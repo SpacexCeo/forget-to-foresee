@@ -1,0 +1,290 @@
+{
+ "label": "local",
+ "baseUrl": "http://localhost:4190",
+ "runs": {
+  "fast4g/lobby": {
+   "navMs": 32,
+   "reachedMs": 1517,
+   "paint": [
+    [
+     "first-paint",
+     836
+    ],
+    [
+     "first-contentful-paint",
+     836
+    ]
+   ],
+   "domContentLoaded": 1509,
+   "loadEvent": 0,
+   "totalKB": 545,
+   "byTypeKB": {
+    "other": 61,
+    "js": 467,
+    "css": 14
+   },
+   "resources": 13,
+   "biggest": [
+    [
+     "three-D7cBfWYb.js",
+     202,
+     1115
+    ],
+    [
+     "context-DSNbmKXS.js",
+     77,
+     872
+    ],
+    [
+     "css2",
+     61,
+     823
+    ],
+    [
+     "from-obs-Cu6OU7Gi.js",
+     58,
+     855
+    ],
+    [
+     "main-CBg03TpX.js",
+     49,
+     663
+    ],
+    [
+     "client-core-D8t0OPlm.js",
+     34,
+     482
+    ],
+    [
+     "scene-controls-D6vIfwE6.js",
+     22,
+     485
+    ],
+    [
+     "index-BaKfM0aw.js",
+     15,
+     688
+    ]
+   ],
+   "models": {
+    "loaded": 0,
+    "loading": 2,
+    "idle": 12
+   },
+   "errors": []
+  },
+  "fast4g/play": {
+   "navMs": 30,
+   "reachedMs": 1471,
+   "paint": [
+    [
+     "first-paint",
+     844
+    ],
+    [
+     "first-contentful-paint",
+     844
+    ]
+   ],
+   "domContentLoaded": 1460,
+   "loadEvent": 0,
+   "totalKB": 567,
+   "byTypeKB": {
+    "other": 61,
+    "js": 468,
+    "css": 34
+   },
+   "resources": 20,
+   "biggest": [
+    [
+     "three-D7cBfWYb.js",
+     202,
+     1112
+    ],
+    [
+     "context-DSNbmKXS.js",
+     77,
+     869
+    ],
+    [
+     "css2",
+     61,
+     821
+    ],
+    [
+     "from-obs-Cu6OU7Gi.js",
+     58,
+     852
+    ],
+    [
+     "main-CBg03TpX.js",
+     49,
+     628
+    ],
+    [
+     "client-core-D8t0OPlm.js",
+     34,
+     492
+    ],
+    [
+     "scene-controls-D6vIfwE6.js",
+     22,
+     486
+    ],
+    [
+     "index-BaKfM0aw.js",
+     15,
+     686
+    ]
+   ],
+   "models": {
+    "loaded": 0,
+    "loading": 2,
+    "idle": 13
+   },
+   "errors": []
+  },
+  "slow4g/lobby": {
+   "navMs": 163,
+   "reachedMs": 3396,
+   "paint": [
+    [
+     "first-paint",
+     2148
+    ],
+    [
+     "first-contentful-paint",
+     2148
+    ]
+   ],
+   "domContentLoaded": 3388,
+   "loadEvent": 0,
+   "totalKB": 538,
+   "byTypeKB": {
+    "other": 61,
+    "js": 467,
+    "css": 7
+   },
+   "resources": 12,
+   "biggest": [
+    [
+     "three-D7cBfWYb.js",
+     202,
+     2975
+    ],
+    [
+     "context-DSNbmKXS.js",
+     77,
+     2339
+    ],
+    [
+     "css2",
+     61,
+     2124
+    ],
+    [
+     "from-obs-Cu6OU7Gi.js",
+     58,
+     2382
+    ],
+    [
+     "main-CBg03TpX.js",
+     49,
+     1823
+    ],
+    [
+     "client-core-D8t0OPlm.js",
+     34,
+     1337
+    ],
+    [
+     "scene-controls-D6vIfwE6.js",
+     22,
+     1595
+    ],
+    [
+     "index-BaKfM0aw.js",
+     15,
+     1952
+    ]
+   ],
+   "models": {
+    "loaded": 0,
+    "loading": 2,
+    "idle": 12
+   },
+   "errors": []
+  },
+  "slow4g/play": {
+   "navMs": 163,
+   "reachedMs": 3443,
+   "paint": [
+    [
+     "first-paint",
+     2148
+    ],
+    [
+     "first-contentful-paint",
+     2148
+    ]
+   ],
+   "domContentLoaded": 3426,
+   "loadEvent": 0,
+   "totalKB": 566,
+   "byTypeKB": {
+    "other": 61,
+    "js": 467,
+    "css": 34
+   },
+   "resources": 19,
+   "biggest": [
+    [
+     "three-D7cBfWYb.js",
+     202,
+     2967
+    ],
+    [
+     "context-DSNbmKXS.js",
+     77,
+     2338
+    ],
+    [
+     "css2",
+     61,
+     2123
+    ],
+    [
+     "from-obs-Cu6OU7Gi.js",
+     58,
+     2381
+    ],
+    [
+     "main-CBg03TpX.js",
+     49,
+     1809
+    ],
+    [
+     "client-core-D8t0OPlm.js",
+     34,
+     1337
+    ],
+    [
+     "scene-controls-D6vIfwE6.js",
+     22,
+     1572
+    ],
+    [
+     "index-BaKfM0aw.js",
+     15,
+     1951
+    ]
+   ],
+   "models": {
+    "loaded": 0,
+    "loading": 2,
+    "idle": 13
+   },
+   "errors": []
+  }
+ }
+}

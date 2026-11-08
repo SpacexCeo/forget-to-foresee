@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { zoneAt } from '../audio/mix.js';
 import { surfaceAt, StepMeter, tensionLevel, humPositions, npcStepGain, vfxTierFor } from './ambience.js';
+import { momentForCue, stageQualityFor } from './guests-stage.js';
 
 const PRELOAD = ['step_stone', 'step_wood', 'step_grass', 'step_glass', 'ui_click', 'ui_confirm', 'ui_error', 'ui_notify', 'anchor_plant', 'gift_chime'];
 const NPC_MAX_SPEED = 6; // faster than this is a snap, not a walk
@@ -16,9 +17,12 @@ const NPC_MAX_SPEED = 6; // faster than this is a snap, not a walk
  * @param {import('./hooks.js').Hooks} o.hooks  @param {THREE.Scene} o.scene  @param {object} o.world3d island scene
  * @param {object} o.shell Shell interior scene  @param {object} o.lookdev  @param {object} o.agents ClanAgents
  * @param {object} o.player CharacterController  @param {HTMLElement} o.uiRoot  @param {object} o.session PlaySession
+ * @param {object} [o.rig] CameraRig for the Guests' framing hint (falls back to the debug handle `window.__ftf.rig`)
  */
-export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session }) {
+export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session, rig = null }) {
   let vfx = null, audio = null;
+  // The Guests behind the glass (play/guests-stage.js, scenes/shell.js): cues, season seed, quality, sound swell, camera hint.
+  const guestsPart = createGuestsPresentation({ hooks, shell, session, lookdev, rig });
   const loops = { mists: [], crack: null, tension: null, glass: null };
   let lastReduced = null, lastTier = null, unsubQuality = null, preloaded = false;
   const irisSteps = new StepMeter();
@@ -112,6 +116,7 @@ export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agen
       audio = a || null;
       if (!audio) return;
       try { audio.setShellHums(humPositions()); } catch (e) { console.warn('[play] shell hums', e); }
+      guestsPart.attachAudio(audio);
     },
     /** The sign the Guest draws on the glass ({forms, dots} or null); drawn as ink when Iris is inside. */
     setSign(next) {
@@ -125,6 +130,7 @@ export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agen
       zone = z;
       irisSteps.reset();
       showGlassSign();
+      guestsPart.onZone(z);
     },
     /** Per frame after the agents moved and before the render. */
     update(dt, { focus, inShell = false, speed = 0, running = false } = {}) {
@@ -157,10 +163,11 @@ export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agen
           }
         } catch (e) { console.warn('[play] audio frame', e); }
       }
+      guestsPart.update(dt, { inShell, focus });
     },
     /** Numbers for QA and the console (window.__ftf.play.presentation.state()). */
     state() {
-      return { zone, sign: !!sign, mists: loops.mists.filter((h) => !h.done).length, crack: !!loops.crack && !loops.crack.done, tension: loops.tension ? loops.tension.done ? 0 : (session.obs ? tensionLevel(session.obs.season.tension) : 0) : 0, glass: !!loops.glass && !loops.glass.done, tier: lastTier, reducedMotion: lastReduced, ...counters, hums: audio ? audio.state.hums : 0 };
+      return { zone, sign: !!sign, guests: guestsPart.state(), mists: loops.mists.filter((h) => !h.done).length, crack: !!loops.crack && !loops.crack.done, tension: loops.tension ? loops.tension.done ? 0 : (session.obs ? tensionLevel(session.obs.season.tension) : 0) : 0, glass: !!loops.glass && !loops.glass.done, tier: lastTier, reducedMotion: lastReduced, ...counters, hums: audio ? audio.state.hums : 0 };
     },
     dispose() {
       if (uiRoot && uiRoot.removeEventListener) uiRoot.removeEventListener('click', onUiClick);
@@ -169,7 +176,89 @@ export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agen
       loops.mists = []; loops.crack = loops.tension = loops.glass = null;
       if (vfx) vfx.hooks.skyTint = null;
       skyTint(0, 0);
+      guestsPart.dispose();
     },
   };
   return api;
+}
+
+/** Camera hint amplitudes at full weight: the key-art shot (Iris small, the glass, the silhouettes). */
+const GUEST_CAMERA = Object.freeze({ pitch: -6 * Math.PI / 180, dist: 1.6, yawShare: 0.5, maxDist: 12, yawArc: 2.1 });
+/** The low presence behind the glass: the Shell hum an octave down, swelling with the emergence. */
+const GUEST_SWELL = Object.freeze({ sound: 'amb_shell_hum', rate: 0.5, gain: 0.9 });
+
+/**
+ * The Guest part of the presentation (Task O). Routes the room cues to the stage (`momentForCue`),
+ * seeds the stage with the season's Merkle root, follows the look-dev quality and reduced motion,
+ * swells a low hum with the emergence, and eases the camera toward the key-art framing while a
+ * Guest is at the glass. The hint only adds increments (and removes exactly what it added), so the
+ * player's own camera moves are never overridden; under reduced motion the hint is off.
+ */
+export function createGuestsPresentation({ hooks, shell, session, lookdev, rig = null }) {
+  const g = () => (shell && shell.guests) || null;
+  let audio = null, swell = null, lastQ = null, seed = null, prevW = 0, yawTotal = 0, inside = false;
+  const applied = { pitch: 0, dist: 0, yaw: 0 };
+  const seedOf = () => { const s = session && session.obs && session.obs.season; return s ? String(s.merkleRoot || s.seasonId || 'season') : 'season'; };
+  const reseed = () => { const next = seedOf(); if (next !== seed && g()) { seed = next; g().setSeed(seed); } };
+  reseed();
+  const unsubObs = session && session.on ? session.on('obs', reseed) : null;
+  const unsubCue = hooks && hooks.onCue ? hooks.onCue((name, opts) => {
+    const mo = momentForCue(name, opts);
+    if (!mo || !g() || mo.name === 'enter' || mo.name === 'exit') return; // activate/deactivate arm the stage
+    try { g().stage.cue(mo.name, { action: mo.action }); } catch (e) { console.warn('[play] guests cue', e); }
+  }) : null;
+  const rigNow = () => rig || (globalThis.__ftf && globalThis.__ftf.rig) || null;
+  const shortArc = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+  function applyCamera(w) {
+    const r = rigNow();
+    if (!r) return;
+    if (w > 0.01 && prevW <= 0.01) {
+      const arc = shortArc((r.baseYaw || 0) - r.yaw);
+      yawTotal = Math.abs(arc) < GUEST_CAMERA.yawArc ? arc * GUEST_CAMERA.yawShare : 0;
+    }
+    const want = { pitch: GUEST_CAMERA.pitch * w, dist: GUEST_CAMERA.dist * w, yaw: yawTotal * w };
+    r.pitchOffset = (r.pitchOffset || 0) + want.pitch - applied.pitch;
+    const maxD = Math.max(r.minDist || 0, Math.min(r.maxDist || Infinity, GUEST_CAMERA.maxDist));
+    r.dist = Math.min(Math.max(r.dist + want.dist - applied.dist, r.minDist || 0), Math.max(maxD, r.dist));
+    r.yaw += want.yaw - applied.yaw;
+    Object.assign(applied, want);
+    prevW = w;
+  }
+  function releaseCamera() { if (applied.pitch || applied.dist || applied.yaw) applyCamera(0); prevW = 0; }
+
+  return {
+    attachAudio(a) { audio = a || null; },
+    onZone(z) {
+      inside = z === 'shell';
+      if (!inside) { if (swell) { try { swell.stop(1.5); } catch { /* ok */ } swell = null; } releaseCamera(); }
+    },
+    update(dt, { inShell = false } = {}) {
+      const gs = g();
+      if (!gs) return;
+      try {
+        const q = stageQualityFor(lookdev);
+        if (q !== lastQ) { lastQ = q; gs.setQuality(q); }
+        if (!inShell) return;
+        const sw = gs.swell();
+        if (audio) {
+          if (!swell && sw.level > 0.01) swell = audio.play(GUEST_SWELL.sound, { loop: true, gain: 0, rate: GUEST_SWELL.rate, pos: sw.position || undefined });
+          if (swell) { swell.setGain(Math.min(1, sw.level) * GUEST_SWELL.gain, 0.3); if (sw.position) swell.setPosition(sw.position); }
+        }
+        applyCamera(lookdev && lookdev.reducedMotion ? 0 : gs.cameraHint());
+      } catch (e) { console.warn('[play] guests frame', e); }
+    },
+    state() {
+      const gs = g();
+      if (!gs) return null;
+      const st = gs.stage.state;
+      return { moment: st.moment, quality: st.quality, drifts: st.drifts, swell: +st.swell.toFixed(3), camera: +st.camera.toFixed(3), applied: { ...applied }, models: gs.state().models, loaded: gs.loaded, seed: st.seed };
+    },
+    dispose() {
+      if (unsubObs) unsubObs();
+      if (unsubCue) unsubCue();
+      if (swell) { try { swell.stop(0.5); } catch { /* ok */ } swell = null; }
+      releaseCamera();
+    },
+  };
 }

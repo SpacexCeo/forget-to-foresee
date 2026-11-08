@@ -120,13 +120,22 @@ function offers(p) {
   });
 }
 
-function auctions(p, E) {
-  return p.shards.map((sh) => {
+function auctions(p, E, shards = p.shards, shardMeta = null) {
+  return shards.map((sh) => {
     const top = E.topBid(sh), mine = sh.bids.find((b) => b.c === 0);
+    const win = sh.winner != null ? sh.bids.find((b) => b.c === sh.winner) : null;
+    const meta = shardMeta && shardMeta.has(sh.id) ? shardMeta.get(sh.id) : undefined;
     return {
       id: sh.id, from: clan(sh.from), title: T.shardTitle(sh.title), closesAtTick: sh.exp, open: !sh.done,
       topBid: top ? { clan: clan(top.c), amount: top.amt } : null, yourBid: mine ? mine.amt : null,
       result: sh.done ? T.shardResult(sh.result) : null, winner: sh.winner != null ? clan(sh.winner) : null,
+      // Shard-NFT fields (docs/shard-nft.md): what was forgotten, when, the price paid, the sign the vision opened.
+      kind: sh.mem ? sh.mem.kind : sh.kind ?? null,
+      memory: sh.mem ? { kind: sh.mem.kind, weight: sh.mem.w } : null,
+      forgottenAtTick: Math.max(1, sh.exp - 2),
+      price: win ? win.amt : null,
+      unlocked: meta ? { index: meta.index, leaf: meta.leaf } : null,
+      tokenId: p.seasonId ? `${p.seasonId}-${sh.id}` : null,
     };
   });
 }
@@ -161,7 +170,7 @@ function irisSelf(p, S, E) {
 
 /**
  * Builds the observation of `viewer` ({playerId, role}) from the room's engine state and world data.
- * `world` = {members, you, session, version, simTime, availableActions, clues, logograms, entropy}.
+ * `world` = {members, you, session, version, simTime, availableActions, clues, logograms, entropy, shardLog, shardMeta}.
  */
 export function project(state, viewer, world) {
   return withState(state, (E) => {
@@ -188,7 +197,8 @@ export function project(state, viewer, world) {
       obs.dictionary = dictionary(p, E);
       obs.inventory.boughtWords = obs.dictionary.boughtWords;
       obs.offers = offers(p);
-      obs.auctions = auctions(p, E);
+      obs.auctions = auctions(p, E, p.shards, world.shardMeta || null);
+      obs.shards = auctions(p, E, world.shardLog || p.shards, world.shardMeta || null);
       obs.logograms = world.logograms;
       obs.log = p.feed.slice(0, 30).map(T.logEntry);
     } else {

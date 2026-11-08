@@ -1,0 +1,250 @@
+/* Accessibility layer (Task Q, docs/accessibility.md). Applied through data attributes that
+   ui/prefs.js mirrors onto <html>: data-ui-scale (100…200), data-contrast (normal|high),
+   data-font (default|readable), data-palette (default|safe), data-hud-mode (simple|novice|pro).
+   Tokens other modules read (the world HUD multiplies its unit by --wh-user-scale on its own):
+     --ftf-ui-scale   1 … 2        every panel outside the world HUD zooms by it (rules below)
+     --ftf-body-min   16px         minimum body text at 100 % (use font-size: max(var(--ftf-body-min), …))
+     --a11y-good / --a11y-bad / --a11y-key / --a11y-info   state colours, colour-blind-safe under data-palette="safe"
+   Contrast pairs are checked by tests/a11y-readability.test.mjs (AA at normal, AAA at high contrast). */
+
+:root {
+  --ftf-ui-scale: 1;
+  --ftf-body-min: 16px;
+  --ftf-target-min: 48px;
+  --a11y-good: #9fcfae;
+  --a11y-bad: #eba08f;
+  --a11y-key: #e2b578;
+  --a11y-info: #b3abcc;
+  --a11y-hold-ms: 700ms;
+  /* motion tokens (owner 08.11: "everything animated, expensive"): eased, 120–400 ms; Task S's shared
+     tokens in game/src/ui/motion/ may redefine these names; html[data-motion="reduce"] is the one switch */
+  --ftf-dur-fast: var(--mo-fast, 120ms);
+  --ftf-dur: var(--mo-base, 200ms);
+  --ftf-dur-slow: var(--mo-slow, 320ms);
+  --ftf-ease-out: var(--mo-ease-out, cubic-bezier(.16, 1, .3, 1));
+  --ftf-ease-in-out: var(--mo-ease-in-out, cubic-bezier(.65, 0, .35, 1));
+  /* short viewports (in-app browsers): Task F measures visualViewport.height into --vvh and sets html[data-vh]; visuals may
+     shrink there, hit zones never below --ftf-hit-min (an invisible ::before) */
+  --ftf-hit-min: 44px;
+  /* the zoom the panels take: the full interface size on desktop; phones cap it at 150 % (a 2× card on a 390 px screen
+     leaves 195 px of width), the type still grows through --ftf-ui-scale where modules read it */
+  --ftf-zoom: var(--ftf-ui-scale);
+}
+@media (max-width: 700px) { :root { --ftf-zoom: min(var(--ftf-ui-scale), 1.5); } }
+/* when the shared motion module animates the sheets itself (ui/motion, loaded on demand), the CSS keyframes step aside */
+.ftf-a11y-host[data-js-motion="true"] .a11y-box, .ftf-a11y-host[data-js-motion="true"] .a11y-scrim { animation: none; }
+/* The one reduced-motion switch, page wide (styles.css and tokens.css already cover .ftf-root and .wh-root). */
+html[data-motion="reduce"] .ftf-a11y-host *, html[data-motion="reduce"] .hub-host *, html[data-motion="reduce"] .pl-goal, html[data-motion="reduce"] .pl-panel,
+html[data-motion="reduce"] .pl-context, html[data-motion="reduce"] .ftf-map-host *, html[data-motion="reduce"] #prompt, html[data-motion="reduce"] #toast {
+  animation: none !important; transition: none !important;
+}
+
+/* ---------- interface size: every panel outside the world HUD zooms by the same factor ---------- */
+html:not([data-ui-scale="100"]) .hub-host,
+html:not([data-ui-scale="100"]) .pl-goal, html:not([data-ui-scale="100"]) .pl-context, html:not([data-ui-scale="100"]) .pl-panel,
+html:not([data-ui-scale="100"]) .pl-help, html:not([data-ui-scale="100"]) .pl-info, html:not([data-ui-scale="100"]) .pl-chronicle,
+html:not([data-ui-scale="100"]) #prompt, html:not([data-ui-scale="100"]) #toast,
+html:not([data-ui-scale="100"]) .ftf-scene-controls, html:not([data-ui-scale="100"]) .ftf-scene-dialog,
+html:not([data-ui-scale="100"]) .ftf-map-host, html:not([data-ui-scale="100"]) .ftf-map-fab,
+html:not([data-ui-scale="100"]) .ftf-a11y-host { zoom: var(--ftf-zoom); }
+/* lobby and onboarding pages: scale the type, let the layout reflow */
+html:not([data-ui-scale="100"]) .ftf-root:not(.ftf-scene-controls) { font-size: calc(16px * var(--ftf-ui-scale)); }
+
+/* ---------- readable font (Atkinson Hyperlegible, OFL; distinct b d p q, 1 I l, 0 O) ---------- */
+html[data-font="readable"] {
+  --ftf-font: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+html[data-font="readable"] .wh-root, html[data-font="readable"] .hub-host {
+  --wh-font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --wh-font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --wh-stroke-title: 0px;
+  --wh-stroke-text: 0px;
+  letter-spacing: .015em;
+}
+html[data-font="readable"] .ftf-root, html[data-font="readable"] .ftf-dialog, html[data-font="readable"] .ftf-a11y-host,
+html[data-font="readable"] .pl-goal, html[data-font="readable"] .pl-context, html[data-font="readable"] .pl-panel,
+html[data-font="readable"] .pl-help, html[data-font="readable"] .pl-info, html[data-font="readable"] .pl-chronicle,
+html[data-font="readable"] .ftf-map-host, html[data-font="readable"] #prompt, html[data-font="readable"] #toast {
+  letter-spacing: .015em; word-spacing: .06em; line-height: 1.5;
+}
+html[data-font="readable"] .ftf-root *, html[data-font="readable"] .ftf-dialog *, html[data-font="readable"] .ftf-a11y-host *,
+html[data-font="readable"] .pl-goal *, html[data-font="readable"] .pl-context *, html[data-font="readable"] .pl-panel *,
+html[data-font="readable"] .pl-help *, html[data-font="readable"] .pl-info *, html[data-font="readable"] .pl-chronicle *,
+html[data-font="readable"] .ftf-map-host *, html[data-font="readable"] #prompt, html[data-font="readable"] #toast,
+html[data-font="readable"] .pl-goal, html[data-font="readable"] .pl-panel, html[data-font="readable"] .pl-context {
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Arial, sans-serif !important;
+}
+html[data-font="readable"] .ftf-title, html[data-font="readable"] .ftf-tagline { letter-spacing: .12em; }
+
+/* ---------- high contrast: opaque black surfaces, white text, bright gold, solid frames ---------- */
+html[data-contrast="high"] {
+  --ftf-charcoal: #000000; --ftf-charcoal-deep: #000000; --ftf-panel: #000000; --ftf-panel-raised: #0a0a0a;
+  --ftf-stone: #bfbfbf; --ftf-line: #bfbfbf; --ftf-mist: #e8e8e8; --ftf-pearl: #ffffff;
+  --ftf-amber: #ffd54a; --ftf-amber-strong: #ffe27a; --ftf-iris-text: #d9d2f0;
+  --ftf-good: #b8f0c8; --ftf-bad: #ffb3a0; --ftf-key: #ffe27a;
+  --a11y-good: #b8f0c8; --a11y-bad: #ffb3a0; --a11y-key: #ffe27a; --a11y-info: #d9d2f0;
+  --panel: #000000; --ink: #ffffff; --muted: #e8e8e8; --amber: #ffd54a; /* index.html overlay tokens */
+}
+html[data-contrast="high"] .wh-root, html[data-contrast="high"] .hub-host {
+  --wh-panel-bg: #000000; --wh-card-bg: #000000; --wh-card-bg-hover: #141414; --wh-card-bg-mobile: #000000;
+  --wh-sheet-bg: #000000; --wh-tile-bg: #000000; --wh-btn-bg: #000000; --wh-bar-bg: #000000; --wh-chip-bg: #000000;
+  --wh-kbd-bg: #000000; --wh-tab-bg: #000000; --wh-tab-active-bg: #2a2000; --wh-pill-bg: #000000; --wh-anchor-bg: #000000;
+  --wh-prompt-bg: #000000; --wh-prompt-bg-mobile: #000000; --wh-tab-active-fill: #2a2000; --wh-track-bg: #333333;
+  --wh-panel-blur: 0px; --wh-blur-sm: 0px; --wh-scrim: rgba(0, 0, 0, .75);
+  --wh-divider: rgba(255, 255, 255, .55); --wh-sep: rgba(255, 255, 255, .6);
+  --wh-gold: #ffd54a; --wh-gold-bright: #ffe27a; --wh-gold-deep: #ffd54a; --wh-gold-text: #ffe27a;
+  --wh-frame: #ffffff; --wh-frame-strong: #ffffff; --wh-frame-soft: #e0e0e0; --wh-frame-dim: #bfbfbf;
+  --wh-pill-border: #ffffff; --wh-anchor-border: #ffffff; --wh-kbd-border: #ffffff; --wh-prompt-border: #ffffff;
+  --wh-text: #ffffff; --wh-text-2: #ffffff; --wh-text-muted: #e8e8e8; --wh-text-on-gold: #ffffff; --wh-text-kbd: #ffffff;
+  --wh-tab-active-text: #ffffff; --wh-speaker-mobile: #ffe27a; --wh-line-mobile: #ffffff;
+  --wh-notify: #ffb347; --wh-chip-active-bg: #3d2b00; --wh-chip-active-border: #ffe27a;
+  --wh-shadow: 0 0 0 1px #ffffff; --wh-glow-gold: none; --wh-text-glow: none;
+}
+html[data-contrast="high"] .hub-host .hub-box, html[data-contrast="high"] .hub-host button,
+html[data-contrast="high"] .pl-goal, html[data-contrast="high"] .pl-context, html[data-contrast="high"] .pl-panel,
+html[data-contrast="high"] .pl-help, html[data-contrast="high"] .pl-info, html[data-contrast="high"] .pl-chronicle,
+html[data-contrast="high"] .pl-btn, html[data-contrast="high"] #prompt, html[data-contrast="high"] #toast,
+html[data-contrast="high"] .ftf-map-host > *, html[data-contrast="high"] .ftf-a11y-host .a11y-box {
+  background: #000000 !important; backdrop-filter: none !important; border-color: #ffffff !important; box-shadow: 0 0 0 1px #ffffff !important; color: #ffffff;
+}
+html[data-contrast="high"] .hub-host .hub-card { background: #000000 !important; }
+html[data-contrast="high"] .pl-btn, html[data-contrast="high"] .hub-host button { color: #ffffff; }
+html[data-contrast="high"] .pl-primary, html[data-contrast="high"] .hub-host button.hub-primary { background: #3d2b00 !important; border-color: #ffe27a !important; }
+html[data-contrast="high"] .pl-muted, html[data-contrast="high"] .hub-muted { color: #e8e8e8 !important; }
+html[data-contrast="high"] :focus-visible { outline: 3px solid #ffd54a !important; outline-offset: 3px !important; box-shadow: 0 0 0 6px #000000 !important; }
+html[data-contrast="high"] .hub-fade { background: #000000; }
+html[data-contrast="high"] .hub-fade span { color: #ffffff; }
+
+/* ---------- colour-blind-safe state colours (never colour alone: glyphs and labels stay) ----------
+   Okabe–Ito hues lightened for dark panels: good = sky blue, bad = orange-vermilion, key = yellow, info = reddish purple.
+   Blue vs orange survives protan, deutan and tritan simulation (checked in tests). */
+html[data-palette="safe"] {
+  --a11y-good: #8fd3ff; --a11y-bad: #ff8c6b; --a11y-key: #ffe27a; --a11y-info: #e0b7ff;
+  --ftf-good: #8fd3ff; --ftf-bad: #ff8c6b; --ftf-key: #ffe27a; --ftf-iris-text: #e0b7ff;
+}
+html[data-palette="safe"] .wh-root, html[data-palette="safe"] .hub-host { --wh-notify: #ff8c6b; --wh-notify-glow: 0 0 8px #ff8c6b; }
+html[data-palette="safe"] .pl-chronicle [data-tone=good] .pl-glyph { color: #8fd3ff; }
+html[data-palette="safe"] .pl-chronicle [data-tone=bad] .pl-glyph { color: #ff8c6b; }
+html[data-palette="safe"] .pl-off small { color: #ff8c6b; }
+html[data-palette="safe"] .wh-root .wh-sign__verified--ok { border-color: #8fd3ff; color: #8fd3ff; }
+html[data-palette="safe"] .wh-root .wh-sign__verified--fail { border-color: #ff8c6b; color: #ff8c6b; }
+
+/* ---------- motor: hold-to-confirm buttons (ui/a11y.js holdToConfirm) ---------- */
+.a11y-hold { position: relative; overflow: hidden; --hold: 0%; }
+.a11y-hold::before {
+  content: ""; position: absolute; inset: 0; width: var(--hold); background: var(--a11y-hold-fill, rgba(255, 213, 74, .35));
+  pointer-events: none; transition: width 60ms linear;
+}
+.a11y-hold > * { position: relative; }
+.a11y-hold[data-holding="true"] { outline: 3px solid var(--a11y-key); outline-offset: 2px; }
+html[data-motion="reduce"] .a11y-hold::before { transition: none; }
+
+/* ---------- Simple mode and the recap sheet: own host, world-HUD tokens, large targets ---------- */
+@keyframes a11y-rise { from { opacity: 0; transform: translate(var(--a11y-tx, 0), calc(var(--a11y-ty, 0) + 14px)) scale(.985); } to { opacity: 1; transform: translate(var(--a11y-tx, 0), var(--a11y-ty, 0)) scale(1); } }
+@keyframes a11y-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes a11y-pulse { 0%, 100% { box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 0 0 rgba(228, 194, 114, .55); } 60% { box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 0 12px rgba(228, 194, 114, 0); } }
+.ftf-a11y-host { position: fixed; inset: 0; pointer-events: none; z-index: 4; font-family: var(--wh-font-body, "Source Sans 3", "Segoe UI", system-ui, sans-serif); }
+.ftf-a11y-host .a11y-box {
+  position: absolute; pointer-events: auto; color: var(--wh-text, #faf7ee);
+  background: var(--wh-panel-bg, rgba(16, 26, 27, .94)); border: 1px solid var(--wh-frame, rgba(232, 214, 172, .8));
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .4); backdrop-filter: blur(var(--wh-panel-blur, 10px));
+  animation: a11y-rise var(--ftf-dur) var(--ftf-ease-out) both;
+}
+.ftf-a11y-host button { transition: border-color var(--ftf-dur-fast) var(--ftf-ease-out), background-color var(--ftf-dur-fast) var(--ftf-ease-out), transform var(--ftf-dur-fast) var(--ftf-ease-out); }
+.ftf-a11y-host button:hover { transform: translateY(-1px); }
+.ftf-a11y-host button:active { transform: translateY(0) scale(.985); }
+.a11y-scrim { animation: a11y-fade var(--ftf-dur) var(--ftf-ease-out) both; }
+.a11y-recap-btn:hover { transform: scale(1.06); }
+.a11y-recap-btn[data-pulse="true"] { animation: a11y-pulse 1.8s var(--ftf-ease-in-out) 2; }
+.ftf-a11y-host .a11y-eyebrow { font: 600 12px/1 var(--wh-font-body, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--wh-gold, #e4c272); }
+.ftf-a11y-host h3 { margin: 6px 0 0; font: 400 clamp(20px, 1.3vw + 12px, 24px)/1.25 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); }
+.ftf-a11y-host p { margin: 8px 0 0; font: var(--wh-font-body-weight, 500) max(var(--ftf-body-min), 16px)/1.45 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-2, #e6e3d7); }
+.ftf-a11y-host p.a11y-why { color: var(--wh-text-muted, #c9c6b8); }
+.ftf-a11y-host .a11y-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.ftf-a11y-host button {
+  min-height: var(--ftf-target-min); min-width: var(--ftf-target-min); padding: 10px 18px; cursor: pointer;
+  font: 600 max(var(--ftf-body-min), 16px)/1.2 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text, #faf7ee);
+  background: var(--wh-btn-bg, rgba(10, 22, 23, .8)); border: 1px solid var(--wh-frame-soft, rgba(196, 186, 156, .5)); border-radius: 10px;
+}
+.ftf-a11y-host button:hover { border-color: var(--wh-gold, #e4c272); }
+.ftf-a11y-host button:focus-visible { outline: 3px solid var(--wh-gold, #e4c272); outline-offset: 2px; }
+.ftf-a11y-host button[disabled] { opacity: .5; cursor: default; }
+.ftf-a11y-host button.a11y-primary { background: var(--wh-chip-active-bg, #5b4215); border-color: var(--wh-gold, #e4c272); color: var(--wh-text-on-gold, #fffcec); }
+.ftf-a11y-host kbd { display: inline-block; min-width: 1.4em; margin-right: 8px; padding: 2px 6px; font: 600 13px/1 var(--wh-font-body, system-ui, sans-serif); text-align: center; border: 1px solid var(--wh-kbd-border, rgba(222, 210, 180, .85)); border-radius: 4px; background: var(--wh-kbd-bg, rgba(42, 38, 30, .92)); color: var(--wh-text-kbd, #fef4e6); }
+
+/* Simple mode: Iris's one proposal per trial. Desktop: bottom centre; the hub dock and cards yield to it. */
+.a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 16px 20px 18px;
+  max-height: calc(var(--vvh, 100vh) / var(--ftf-zoom) - 32px); overflow: auto; overscroll-behavior: contain; }
+.a11y-simple .a11y-simple-tools { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
+.a11y-simple .a11y-eyebrow { display: flex; align-items: center; min-height: 46px; padding-right: 132px; } /* the title starts below the tools */
+.a11y-simple .a11y-pause { min-height: 44px; min-width: 44px; padding: 6px 12px; font-size: 15px; }
+.a11y-simple .a11y-recap-inline { min-height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font: 600 22px/1 var(--wh-font, Georgia, serif); color: var(--wh-gold-text, #f6df9b); }
+body.ftf-simple-on .a11y-recap-btn { display: none; } /* the card carries its own ? button */
+.a11y-simple .a11y-sign { display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; margin-top: 8px; }
+.a11y-simple .a11y-sign canvas { border-radius: 50%; background: #0f1a1b; }
+body.ftf-simple-on .hub-host .hub-dock, body.ftf-simple-on .hub-host .hub-card, body.ftf-simple-on .pl-context { display: none !important; }
+/* inside a Shell the reading card keeps the sign and its slots (to change a reading); its own Stake / Leave row yields to Iris's card */
+body.ftf-simple-on .hub-host .hub-read .hub-row, body.ftf-simple-on .hub-host .hub-read > p.hub-muted:last-child { display: none !important; }
+body.ftf-simple-on .hub-host .hub-read { bottom: 200px; max-height: calc(100vh - 360px); }
+body.ftf-simple-choosing .hub-host .hub-dock { display: none !important; } /* "let me choose": the hub's own card shows, the dock stays away */
+body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: none !important; }
+
+/* Recap ("What is happening?"): a round button and a sheet with Iris's two sentences. */
+.a11y-recap-btn {
+  position: absolute; pointer-events: auto; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  width: 52px; height: 52px; min-width: 52px; min-height: 52px; padding: 0; border-radius: 50%;
+  font: 600 24px/1 var(--wh-font, Georgia, serif) !important; color: var(--wh-gold-text, #f6df9b) !important;
+  background: var(--wh-btn-bg, rgba(10, 22, 23, .82)) !important; border: 1px solid var(--wh-frame, rgba(232, 214, 172, .8)) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+}
+.a11y-recap { --a11y-tx: -50%; --a11y-ty: -50%; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 32px)); padding: 18px 22px 20px;
+  max-height: calc(var(--vvh, 100vh) / var(--ftf-zoom) - 24px); overflow: auto; overscroll-behavior: contain; }
+.a11y-recap p.a11y-where { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-text, #faf7ee); }
+.a11y-recap p.a11y-next { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-gold-text, #f6df9b); }
+.a11y-scrim { position: absolute; inset: 0; pointer-events: auto; background: var(--wh-scrim, rgba(0, 0, 0, .35)); }
+
+@media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
+  .a11y-simple { --a11y-tx: 0px; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; padding: 12px 14px 14px; }
+  .a11y-simple .a11y-sign { grid-template-columns: 56px 1fr; } .a11y-simple .a11y-sign canvas { width: 56px; height: 56px; }
+  .ftf-a11y-host h3 { font-size: 19px; }
+  .a11y-recap-btn { left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
+  body.ftf-simple-on .hub-host .hub-read { bottom: auto; max-height: calc(100vh - 330px); }
+  body.ftf-simple-on .wh-root .wh-tiles, body.ftf-simple-on .ftf-map-fab, body.ftf-simple-on .ftf-run-toggle { display: none !important; } /* nobody walks in Simple mode: the card has the room */
+}
+/* ---------- short viewports (in-app browsers; Task F's tiers: short < 620 px, tiny < 500 px) ----------
+   The compact layout is the default at 100 %: small visuals, ≥ 44 px hit zones, sheets anchored to the measured bottom. */
+html[data-vh="short"] .ftf-a11y-host, html[data-vh="tiny"] .ftf-a11y-host { --ftf-target-min: 40px; }
+html[data-vh="short"] .ftf-a11y-host button, html[data-vh="tiny"] .ftf-a11y-host button { position: relative; padding: 6px 12px; font-size: 15px; }
+html[data-vh="short"] .ftf-a11y-host button::before, html[data-vh="tiny"] .ftf-a11y-host button::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--ftf-hit-min)); height: max(100%, var(--ftf-hit-min)); transform: translate(-50%, -50%); }
+html[data-vh="short"] .a11y-simple, html[data-vh="tiny"] .a11y-simple { left: 8px; right: 8px; bottom: 6px; transform: none; width: auto; padding: 8px 12px 10px; border-radius: 10px; }
+html[data-vh="short"] .a11y-simple .a11y-eyebrow, html[data-vh="tiny"] .a11y-simple .a11y-eyebrow { min-height: 36px; font-size: 11px; }
+html[data-vh="short"] .a11y-simple .a11y-simple-tools, html[data-vh="tiny"] .a11y-simple .a11y-simple-tools { right: 8px; top: 6px; }
+html[data-vh="short"] .a11y-simple .a11y-pause, html[data-vh="short"] .a11y-simple .a11y-recap-inline,
+html[data-vh="tiny"] .a11y-simple .a11y-pause, html[data-vh="tiny"] .a11y-simple .a11y-recap-inline { min-height: 36px; min-width: 36px; font-size: 13px; }
+html[data-vh="short"] .ftf-a11y-host h3, html[data-vh="tiny"] .ftf-a11y-host h3 { margin-top: 0; font-size: 17px; }
+html[data-vh="short"] .ftf-a11y-host p, html[data-vh="tiny"] .ftf-a11y-host p { margin-top: 4px; font-size: 15px; line-height: 1.35; }
+html[data-vh="short"] .a11y-simple .a11y-sign, html[data-vh="tiny"] .a11y-simple .a11y-sign { grid-template-columns: 44px 1fr; gap: 10px; margin-top: 4px; }
+html[data-vh="short"] .a11y-simple .a11y-sign canvas, html[data-vh="tiny"] .a11y-simple .a11y-sign canvas { width: 44px; height: 44px; }
+html[data-vh="short"] .ftf-a11y-host .a11y-row, html[data-vh="tiny"] .ftf-a11y-host .a11y-row { gap: 6px; margin-top: 8px; }
+html[data-vh="tiny"] .a11y-simple .a11y-sign canvas, html[data-vh="tiny"] .a11y-simple p.a11y-why { display: none; } /* tiny: title and buttons only */
+html[data-vh="tiny"] .a11y-simple .a11y-sign { grid-template-columns: 1fr; }
+html[data-vh="short"] .a11y-recap, html[data-vh="tiny"] .a11y-recap { top: auto; bottom: 6px; left: 8px; right: 8px; width: auto; transform: none; --a11y-tx: 0px; --a11y-ty: 0px; padding: 10px 14px 12px; }
+html[data-vh="short"] .a11y-recap-btn, html[data-vh="tiny"] .a11y-recap-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; font-size: 20px !important; bottom: calc(118px + env(safe-area-inset-bottom, 0px)); }
+/* without the measured tier (the HUD not mounted yet, or another host) the media query gives the same compact layout */
+@media (max-height: 620px) and (max-width: 900px) {
+  html:not([data-vh]) .ftf-a11y-host { --ftf-target-min: 40px; }
+  html:not([data-vh]) .ftf-a11y-host button { position: relative; padding: 6px 12px; font-size: 15px; }
+  html:not([data-vh]) .ftf-a11y-host button::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--ftf-hit-min)); height: max(100%, var(--ftf-hit-min)); transform: translate(-50%, -50%); }
+  html:not([data-vh]) .a11y-simple { left: 8px; right: 8px; bottom: 6px; transform: none; width: auto; padding: 8px 12px 10px; }
+  html:not([data-vh]) .a11y-simple .a11y-eyebrow { min-height: 36px; font-size: 11px; }
+  html:not([data-vh]) .a11y-simple .a11y-simple-tools { right: 8px; top: 6px; }
+  html:not([data-vh]) .a11y-simple .a11y-pause, html:not([data-vh]) .a11y-simple .a11y-recap-inline { min-height: 36px; min-width: 36px; font-size: 13px; }
+  html:not([data-vh]) .ftf-a11y-host h3 { margin-top: 0; font-size: 17px; }
+  html:not([data-vh]) .ftf-a11y-host p { margin-top: 4px; font-size: 15px; line-height: 1.35; }
+  html:not([data-vh]) .a11y-simple .a11y-sign { grid-template-columns: 44px 1fr; gap: 10px; margin-top: 4px; }
+  html:not([data-vh]) .a11y-simple .a11y-sign canvas { width: 44px; height: 44px; }
+  html:not([data-vh]) .a11y-recap { top: auto; bottom: 6px; left: 8px; right: 8px; width: auto; transform: none; --a11y-tx: 0px; --a11y-ty: 0px; padding: 10px 14px 12px; }
+  html:not([data-vh]) .a11y-recap-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; font-size: 20px !important; bottom: calc(118px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .a11y-hold::before { transition: none; } }

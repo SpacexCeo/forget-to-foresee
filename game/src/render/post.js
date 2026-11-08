@@ -1,10 +1,15 @@
 // Post-processing stack (quality tiers ultra/high; the low tier renders directly).
-//   RenderPass (MSAA, half-float, depth texture)
-//   -> GodRaysPass: screen-space light shafts from the sun through the sky mask (quarter res)
-//   -> GTAOPass (ultra only): contact shadows
-//   -> UnrealBloomPass: lanterns, amber floor lights, the sun disc
-//   -> OutputPass: AgX tone mapping + sRGB
-//   -> GradePass: gentle film curve, cool shadows / warm highlights, vignette
+//   RenderPass (MSAA 4x, half-float, depth texture)
+//   -> GodRaysPass: screen-space light shafts from the sun through the sky mask (quarter/half res)
+//   -> GTAOPass (ultra full res, high half res): contact shadows under eaves, rims and roots
+//   -> UnrealBloomPass: threshold above diffuse white, so only emissives bloom (lanterns, amber floor
+//      lights, the glyph, the nacre rim of the Shells, the sun disc), never sunlit stone
+//   -> OutputPass: AgX tone mapping + sRGB (display referred from here on)
+//   -> SMAAPass (ultra): edge smoothing on top of the MSAA, no temporal pass, so nothing smears
+//   -> GradePass: gentle film curve, cool shadows / warm highlights, vignette, fine grain
+// The VFX module inserts its soft-particle pass before the bloom (vfx.attachToComposer): it looks
+// for a pass whose class name contains Bloom or OutputPass and reads renderTarget1.depthTexture, so
+// those two stay and the render target keeps its depth texture.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -12,10 +17,14 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { LAYER_OVERLAY } from './layers.js';
 
 const COPY_VS = /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+
+/** Bloom threshold in linear HDR: diffuse white under the sun stays below it, emissives are above. */
+export const BLOOM = Object.freeze({ strength: 0.42, radius: 0.62, threshold: 1.18 });
 
 /** Light shafts: sky pixels near the sun form a mask, two radial blurs smear it toward the sun, added back. */
 export class GodRaysPass extends Pass {
@@ -23,7 +32,7 @@ export class GodRaysPass extends Pass {
     super();
     this.scale = scale;
     this.sunUv = new THREE.Vector2(0.5, 0.5);
-    this.intensity = 0.55;
+    this.intensity = 0.36;
     this.color = new THREE.Color(0xffe5c4);
     this.rtA = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
     this.rtB = this.rtA.clone();
@@ -37,7 +46,7 @@ export class GodRaysPass extends Pass {
           float sky = step(0.99995, d);
           vec2 v = (vUv - uSun) * vec2(uAspect, 1.0);
           float r = length(v);
-          float glow = exp(-r * r * 9.0) + 0.18 * exp(-r * 2.2);
+          float glow = exp(-r * r * 14.0) + 0.14 * exp(-r * 2.6);
           gl_FragColor = vec4(vec3(sky * glow), 1.0);
         }`,
       depthTest: false, depthWrite: false,
@@ -79,6 +88,9 @@ export class GodRaysPass extends Pass {
     this.maskMat.uniforms.uAspect.value = w / h;
   }
 
+  /** The shafts take the sun's colour (linear RGB, normalised) so they agree with the sky. */
+  setSunColor(color) { this.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.25); }
+
   /** Projects the sun direction; shafts fade out as the sun leaves the frame or goes behind the camera. */
   setSun(sunDirection, camera) {
     const p = camera.position.clone().addScaledVector(sunDirection, 1000).project(camera);
@@ -114,20 +126,34 @@ export class GodRaysPass extends Pass {
   dispose() { this.rtA.dispose(); this.rtB.dispose(); this.maskMat.dispose(); this.blurMat.dispose(); this.compMat.dispose(); this.quad.dispose(); }
 }
 
-/** Display-referred grade after tone mapping: soft S-curve, split toning, vignette. Deliberately mild. */
+/**
+ * Display-referred grade after tone mapping: soft S-curve, split toning (cool shadows, warm
+ * highlights), vignette and fine film grain. Deliberately mild: the grade supports the physically
+ * based image, it never replaces it. Grain is time-seeded (uTime), static under reduced motion.
+ */
 export const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, uVignette: { value: 0.3 }, uSaturation: { value: 1.1 }, uContrast: { value: 1.14 }, uShadowTint: { value: new THREE.Color(0.93, 0.97, 1.04) }, uHighlightTint: { value: new THREE.Color(1.04, 1.0, 0.95) } },
+  uniforms: {
+    tDiffuse: { value: null }, uVignette: { value: 0.26 }, uSaturation: { value: 1.1 }, uContrast: { value: 1.08 },
+    uShadowTint: { value: new THREE.Color(0.94, 0.975, 1.035) }, uHighlightTint: { value: new THREE.Color(1.035, 1.005, 0.955) },
+    uGrain: { value: 0.028 }, uTime: { value: 0 }, uResolution: { value: new THREE.Vector2(1, 1) },
+  },
   vertexShader: COPY_VS,
   fragmentShader: /* glsl */`
-    uniform sampler2D tDiffuse; uniform float uVignette, uSaturation, uContrast; uniform vec3 uShadowTint, uHighlightTint; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uVignette, uSaturation, uContrast, uGrain, uTime; uniform vec3 uShadowTint, uHighlightTint; uniform vec2 uResolution; varying vec2 vUv;
+    float ftfHash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
     void main() {
       vec3 c = texture2D(tDiffuse, vUv).rgb;
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, uSaturation);
-      c = (c - 0.5) * uContrast + 0.5;
+      // Soft shoulder and toe around mid grey instead of a straight contrast line: highlights keep detail.
+      c = mix(c, c * c * (3.0 - 2.0 * c), clamp((uContrast - 1.0) * 2.5, 0.0, 1.0));
       c *= mix(uShadowTint, uHighlightTint, smoothstep(0.15, 0.85, l));
       vec2 q = vUv - 0.5; float v = 1.0 - uVignette * smoothstep(0.35, 0.95, dot(q, q) * 2.2);
-      gl_FragColor = vec4(clamp(c * v, 0.0, 1.0), 1.0);
+      c *= v;
+      // Grain: blue-ish noise from a hash, weighted toward the mids (film responds least in the highlights).
+      float g = ftfHash(vUv * uResolution + fract(uTime * 7.31) * 101.0) - 0.5;
+      c += g * uGrain * (1.0 - smoothstep(0.6, 1.0, l)) * (0.35 + 0.65 * smoothstep(0.0, 0.25, l));
+      gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
     }`,
 };
 
@@ -137,6 +163,8 @@ export class PostStack {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
     this.cfg = null; this.composer = null; this.target = null;
     this.passes = {};
+    this.time = 0;
+    this.sunColor = new THREE.Color(1, 0.9, 0.75);
   }
 
   /** (Re)builds the chain for a tier config (quality.js); null tears it down for the direct path. */
@@ -153,31 +181,52 @@ export class PostStack {
     composer.setSize(size.x, size.y);
     const render = new RenderPass(this.scene, this.camera);
     composer.addPass(render);
-    const rays = new GodRaysPass();
+    const rays = new GodRaysPass({ scale: cfg.raysScale || 0.25 });
     rays.enabled = !!cfg.godRays;
+    rays.setSunColor(this.sunColor);
     composer.addPass(rays);
     let ao = null;
     if (cfg.ao) {
-      ao = new GTAOPass(this.scene, this.camera, size.x, size.y);
+      const s = cfg.aoScale || 1;
+      ao = new GTAOPass(this.scene, this.camera, Math.max(1, Math.round(size.x * s)), Math.max(1, Math.round(size.y * s)));
       ao.output = GTAOPass.OUTPUT.Default;
-      ao.blendIntensity = 0.85;
-      ao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 0.6, scale: 1.0, samples: 12, distanceFallOff: 1.0, screenSpaceRadius: false });
+      ao.blendIntensity = 0.8;
+      ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 0.5, scale: 1.0, samples: cfg.aoSlices * 3 || 12, distanceFallOff: 1.0, screenSpaceRadius: false });
       ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, radiusExponent: 1, rings: 2, samples: 12 });
-      // The g-buffer pass must not see camera-facing overlay quads (labels, mist, markers): rendered
-      // with the normal override material they would leave solid black blocks in the AO buffer.
+      // The g-buffer pass must not see camera-facing overlay quads (labels, mist, markers) nor any
+      // sprite or transparent mesh (nameplates, holograms, glass): rendered with the normal override
+      // material they would leave solid black blocks in the AO buffer.
       const aoRender = ao.render.bind(ao);
-      ao.render = (...args) => { this.camera.layers.disable(LAYER_OVERLAY); aoRender(...args); this.camera.layers.enable(LAYER_OVERLAY); };
+      const hidden = [];
+      ao.render = (...args) => {
+        this.camera.layers.disable(LAYER_OVERLAY);
+        hidden.length = 0;
+        this.scene.traverse((o) => {
+          if (!o.visible || !(o.isSprite || (o.isMesh && o.material && (Array.isArray(o.material) ? o.material.some((m) => m.transparent) : o.material.transparent)))) return;
+          o.visible = false; hidden.push(o);
+        });
+        aoRender(...args);
+        for (const o of hidden) o.visible = true;
+        this.camera.layers.enable(LAYER_OVERLAY);
+      };
+      // The AO buffers follow the tier's scale (half res on high), the blend stays full res.
+      const aoSetSize = ao.setSize.bind(ao);
+      ao.setSize = (w, h) => aoSetSize(Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)));
       composer.addPass(ao);
     }
-    const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.32, 0.55, 1.0);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), BLOOM.strength, BLOOM.radius, BLOOM.threshold);
     bloom.enabled = !!cfg.bloom;
     composer.addPass(bloom);
-    composer.addPass(new OutputPass());
+    const output = new OutputPass();
+    composer.addPass(output);
+    let smaa = null;
+    if (cfg.smaa) { smaa = new SMAAPass(size.x, size.y); composer.addPass(smaa); }
     const grade = new ShaderPass(GradeShader);
     grade.enabled = !!cfg.grade;
+    grade.uniforms.uResolution.value.set(size.x, size.y);
     composer.addPass(grade);
     this.composer = composer;
-    this.passes = { render, rays, ao, bloom, grade };
+    this.passes = { render, rays, ao, bloom, output, smaa, grade };
   }
 
   get active() { return !!this.composer; }
@@ -186,8 +235,15 @@ export class PostStack {
     if (!this.composer) return;
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     this.composer.setSize(size.x, size.y);
+    if (this.passes.grade) this.passes.grade.uniforms.uResolution.value.set(size.x, size.y);
     void w; void h;
   }
+
+  /** The sun colour for the light shafts (sky.js derived value). */
+  setSunColor(color) { this.sunColor.copy(color); if (this.passes.rays) this.passes.rays.setSunColor(color); }
+
+  /** Advances the grain seed; pass dt = 0 under reduced motion (static grain, no flicker). */
+  update(dt) { this.time += dt; if (this.passes.grade) this.passes.grade.uniforms.uTime.value = this.time; }
 
   /** @param {THREE.Vector3} sunDirection */
   render(sunDirection) {
