@@ -107,3 +107,24 @@ If your panel-exclusivity logic wants to own that, the body class is the hook.
 `PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
 window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
 `game/src/play/map-ui.js`) can go.
+
+## From Task Q (all ages: accessibility and clarity, `claude/all-ages`), 08.11
+
+### 9. Narration API is live: `game/src/play/narration.js` (for Task I tutorial and Task P chapter films)
+```js
+import { createNarration } from '../play/narration.js';   // path relative to your module
+const narration = createNarration({ prefs: ctx.prefs, i18n: ctx.i18n });
+narration.enabled();                                        // false → skip building text (off by default; Settings → Accessibility)
+narration.speak(text, { channel: 'film', interrupt: true }); // {id, done: Promise<'end'|'cancel'|'error'>, cancel()} or null
+narration.say('chapter.arrival.shot1', { shell: 'II' });    // renders the i18n key first
+narration.subscribe(({ type, id, channel, text }) => …);    // 'start' | 'end' | 'cancel' | 'error' (caption highlight)
+narration.cancel(); narration.pause(); narration.resume();  // the film's skip / pause
+```
+- Channels: `film` and `tutorial` interrupt `line` (Iris, clans) and `hint`; `ui` is for recaps; `hint` never speaks over anyone
+  and is dropped first. One shared instance lives on `play.narration` once the all-ages wiring is merged (`game/src/play/all-ages.js`);
+  until then, create your own with the snippet above: two instances share the one browser synthesizer safely.
+- Language follows `i18n.locale` (`en-US`, `uk-UA`, `ru-RU`, `it-IT`, `zh-CN`); the rate follows `prefs.narrationRate`. `supports(locale)`
+  says whether the browser has a voice for the language; without one, speech still goes out with the tag set (browsers fall back).
+- Markup (`<kbd>`, `·`, `—`) is stripped for speech; long text is chunked at sentence ends (Chromium stops utterances after ~15 s).
+- No DOM, no engine: `tests/a11y-narration.test.mjs` drives it with `fakeSynth()` from the same module, which you may reuse in your tests.
+- Subtitles stay on regardless of narration (films keep their captions; narration is an addition, never a replacement).
