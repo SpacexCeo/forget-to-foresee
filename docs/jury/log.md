@@ -39,3 +39,8 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   code today, which the literature calls the theatre case; named mitigations (uncontrolled entropy before the root,
   root registered on the deployed contract before trial 1, out-of-band verifier). Reported to the lead as an early
   pitch risk, not a gate. All nine planned notes now exist; the rubric is v0.2 with every checklist filled.
+
+## Cycle 3: 2026-11-08 17:45 UTC
+- Weakest coverage chosen: the competitor field in `games` and `nfts` (public directory), judging an agent economy
+  (legibility, memory and consequence, "evolves without a dev patch"), and the investor jury (what they publish, the
+  questions to expect, the 2000-character `idea` field). Routine re-check of the live HACKATHON.md for changes.
