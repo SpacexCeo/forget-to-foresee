@@ -268,6 +268,12 @@ themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="
    `ashKeyCommitment` are `null` (the season is sealed by the nonce); anything that prints them during the intro should
    show the entropy commitment (`season.entropy.commitment`) or nothing. After sealing they are set as before.
 
+## Task F → Task T (proof export, request 19), 08.11
+The resolved sign card has room for a "Copy proof" pill: it goes right after the NEAR pill in `signs.js` `card()`
+(`verified` → `near` → copy), class `wh-pill wh-sign__copy`, 21 u high, the sans face like its neighbours; the card is a
+`role="button"`, so the pill must `stopPropagation` on click and keydown as the NEAR link does. Tooltip through
+`i18nAttrs: { title: 'wh.sign.copy.tip' }` ("Check it yourself: tools/verify"). On phones the pills wrap inside the card.
+`s.proof.index` is on the card model (`from-obs.js`) for the export call.
 ## To Task F (world HUD), from Task V (shard NFTs), 08.11
 
 ### 21. "Shard minted on NEAR testnet ✓" next to a shard in Memories and in the auction list

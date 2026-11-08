@@ -10,6 +10,8 @@ export default {
   'play.help.panels': '<kbd>M</kbd> спогади · <kbd>V</kbd> знаки та видіння · <kbd>T</kbd> завершити тик',
   'play.help.camera': '<kbd>←</kbd><kbd>→</kbd> або правою кнопкою — обертати · <kbd>↑</kbd><kbd>↓</kbd> або коліщатко — зум',
   'play.help.misc': '<kbd>L</kbd> мова · <kbd>H</kbd> ця довідка · <kbd>Esc</kbd> закрити · <kbd>F3</kbd> HUD розробника',
+  'play.help.hub': '<kbd>F</kbd> влетіти в золоту Мушлю · поставити всередині <kbd>F</kbd> · <kbd>T</kbd> вийти з Мушлі або пропустити випробування',
+  'play.help.map': '<kbd>N</kbd> мапа острова',
   'play.help.toggle': 'Довідка (H)',
 
   // ---- objective card ----

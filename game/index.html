@@ -20,8 +20,8 @@
       /* spacing scale 4 / 8 / 12 / 16 / 24; radii: buttons 10, panels 14, pills 999; targets 40 px (48 on phones) */
       --pl-r-btn: 10px; --pl-r-panel: 14px; --pl-target: 40px;
       --pl-u: clamp(0.6px, calc(100vw / 1811), 1.35px); /* the world HUD's unit (tokens.css --wh-px) for the play layer's reserved regions */
-      /* motion tokens (owner 08.11: everything animated; switch to game/src/ui/motion/ tokens when Task S lands) */
-      --pl-dur-fast: 120ms; --pl-dur: 220ms; --pl-dur-slow: 360ms; --pl-ease: cubic-bezier(.2, .7, .2, 1); --pl-ease-out: cubic-bezier(.16, 1, .3, 1); --pl-rise: 10px; --pl-stagger: 40ms; }
+      /* motion: Task S's shared tokens (game/src/ui/motion/ installs --mo-* on :root) with local fallbacks */
+      --pl-dur-fast: var(--mo-fast, 120ms); --pl-dur: var(--mo-base, 200ms); --pl-dur-slow: var(--mo-slow, 320ms); --pl-ease: var(--mo-ease-out, cubic-bezier(.16, 1, .3, 1)); --pl-ease-out: var(--mo-ease-out, cubic-bezier(.16, 1, .3, 1)); --pl-rise: var(--mo-rise, 12px); --pl-stagger: 40ms; }
     @media (prefers-reduced-motion: reduce) { :root { --pl-rise: 0px; --pl-dur: 140ms; --pl-dur-slow: 160ms; --pl-stagger: 0ms; } }
     html[data-motion="reduce"] { --pl-rise: 0px; --pl-dur: 140ms; --pl-dur-slow: 160ms; --pl-stagger: 0ms; }
     @keyframes pl-rise-in { from { opacity: 0; translate: 0 var(--pl-rise); } to { opacity: 1; translate: 0 0; } }
@@ -109,7 +109,7 @@
     @media (max-width: 700px) { body.wh-on .pl-badge { display: none; } }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
-    .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { position: absolute; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
+    .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { box-sizing: border-box; position: absolute; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
     /* Modal surfaces: the HUD's panel gradient, hairline frame and blur; the scene never shows through text. */
     /* The gradient sits on a solid base colour: a modal panel over the 3D scene is fully opaque (no blur needed, cheaper on phones). */
     .pl-panel, .pl-context, .pl-help, .pl-info { background: var(--pl-panel) #121d1f; border: 1px solid var(--pl-frame); color: var(--pl-text); font-family: var(--pl-sans); box-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06); }
@@ -173,12 +173,13 @@
         bottom: auto; top: max(44px, calc(8px + env(safe-area-inset-top, 0px))); width: 36px; height: 36px; }
       html[data-vh="short"] .ftf-run-toggle, html[data-vh="tiny"] .ftf-run-toggle { right: 112px; }
       html[data-vh="short"] .ftf-map-fab, html[data-vh="tiny"] .ftf-map-fab { left: 70px; }
+      html[data-vh="short"] body.pl-modal-open .wh-root .wh-topbar, html[data-vh="tiny"] body.pl-modal-open .wh-root .wh-topbar { visibility: hidden; }
       html[data-vh="short"] .ftf-run-toggle svg, html[data-vh="tiny"] .ftf-run-toggle svg { width: 22px; height: 22px; }
       html[data-vh="short"] :is(.ftf-run-toggle, .ftf-map-fab)::before, html[data-vh="tiny"] :is(.ftf-run-toggle, .ftf-map-fab)::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
     }
 
     /* Phones: miniature HUD so the world stays visible (owner 07.11). */
-    @media (max-width: 640px), (pointer: coarse) and (max-height: 900px) {
+    @media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
       .pl-goal { top: calc(6px + env(safe-area-inset-top, 0px)); width: min(340px, calc(100vw - 132px)); left: auto; right: 8px; transform: none; padding: 5px 9px 6px; border-top-width: 2px; border-radius: 8px; }
       .pl-goal-head { font-size: 9px; } .pl-goal-title { font-size: 13px; margin: 2px 0; } .pl-goal-hint { display: none; }
       .pl-row { gap: 4px; margin-top: 3px; }
@@ -190,7 +191,8 @@
       .pl-panel h2 { font-size: 17px; } .pl-panel h3 { font-size: 14px; } .pl-muted { font-size: 12px; }
       .pl-help { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); left: 8px; width: calc(100vw - 16px); max-height: calc(var(--vvh, 100vh) * .56); overflow: auto; font-size: 12.5px; padding: 12px 14px; }
       /* a context menu on a phone is a sheet of choices: the tiles and the prompt step aside while it is open */
-      body.pl-context-open .wh-root :is(.wh-tiles, .wh-prompt--mobile) { visibility: hidden; }
+      body.pl-context-open .wh-root :is(.wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile, .wh-trial--mobile) { visibility: hidden; }
+      body.in-world.pl-context-open .ftf-run-toggle.ftf-run-toggle--on, body.in-world.pl-context-open .ftf-map-fab { display: none; }
       .pl-info { bottom: calc(50px + env(safe-area-inset-bottom, 0px)); font-size: 12px; padding: 5px 10px; max-width: calc(100vw - 24px); }
       .pl-chronicle, .pl-badge, #badge, #prompt { display: none !important; }
       /* phones: a modal panel dims the HUD behind it (no extra DOM) and the run toggle steps aside */
@@ -199,7 +201,7 @@
       body.pl-modal-open .wh-root :is(.wh-quest--mobile, .wh-quest__dots, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
       body.in-world.pl-modal-open .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* outranks input.js's display: flex */
       body.in-world.hub-in-shell .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* no running inside a Shell: the reading card owns the screen */
-      body.pl-modal-open .ftf-map-fab { display: none; } /* the map's own phone button steps aside under a modal panel too */
+      body.in-world.pl-modal-open .ftf-map-fab { display: none; } /* the map's own phone button steps aside under a modal panel too (outranks map-ui.js's display: flex) */
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
     }

@@ -30,7 +30,8 @@ test('hints: the welcome line goes to Iris and the first sign to the toast, one 
   assert.equal(h.takeCoach().key, 'wh.hint.welcome', 'Iris lines never wait for the toast slot');
   const a = h.view().active;
   assert.equal(a.id, 'firstSign');
-  assert.match(i18n.t(a.text.key, a.text.args), /^A sign woke\. I read it as a \w+ of \d+ at Shell [IV]+, trial \d+\. Press V/);
+  // args are lazy since QA-019 (a language switch re-renders the words); the HUD's tx() calls the function
+  assert.match(i18n.t(a.text.key, typeof a.text.args === 'function' ? a.text.args() : a.text.args), /^A sign woke\. I read it as a \w+ of \d+ at Shell [IV]+, trial \d+\. Press V/);
   assert.equal(h.view().journal[0].text.key, 'wh.hint.firstSign', 'the Hints tab keeps it');
   advance(13000);
   assert.equal(h.view().active.id, 'firstSign', 'a long toast lives 14 s');

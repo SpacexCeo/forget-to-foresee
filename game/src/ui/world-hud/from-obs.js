@@ -138,8 +138,9 @@ export function buildHudModel(o) {
     n: s.tick, total: s.ticks, phase: phaseOf(goal, obs),
     skillTier: words, attempts: iris.attention, attemptsMax: iris.maxAttention,
     arena: { key: 'wh.trial.zone.' + (obs.you.zone === 'shell' ? 'shell' : 'island') },
-    progressDone: Math.max(0, s.tick - 1), progressTotal: s.ticks,
-    progressPct: Math.round((Math.max(0, s.tick - 1) / s.ticks) * 100),
+    // QA-012: once the season leaves play (vote, end) every trial is done: 17 / 17 · 100 %
+    progressDone: s.phase === 'play' ? Math.max(0, s.tick - 1) : s.ticks, progressTotal: s.ticks,
+    progressPct: Math.round(((s.phase === 'play' ? Math.max(0, s.tick - 1) : s.ticks) / s.ticks) * 100),
     silk: iris.silk, wordsKnown: words,
     // Novice layers (clarity-layers §2): L0 shows only Phase and Silk; L1 adds Attention and Words known;
     // L2 adds Tension. Pro always shows Phase, Silk, Attention and Tension.
@@ -166,7 +167,7 @@ export function buildHudModel(o) {
   // the clock column already says the trial, so the "— Tick N —" separators are dropped
   const logEntries = (obs.log || []).filter((e) => e.tone !== 'tick').slice(0, 30).map((e, i) => ({
     id: 'log-' + e.tick + '-' + i + '-' + e.key,
-    time: i18n.t('wh.log.trial', { n: e.tick }),
+    time: { key: 'wh.log.trial', args: { n: e.tick } }, // a TextRef, so a language switch re-renders "T1" (QA-019)
     tone: e.tone,
     text: raw(() => renderEvent({ key: e.key, args: e.args })),
   }));

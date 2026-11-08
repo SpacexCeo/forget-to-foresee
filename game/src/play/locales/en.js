@@ -11,6 +11,8 @@ export default {
   'play.help.panels': '<kbd>M</kbd> memories · <kbd>V</kbd> signs and visions · <kbd>T</kbd> end the tick',
   'play.help.camera': '<kbd>←</kbd><kbd>→</kbd> or right-drag rotate · <kbd>↑</kbd><kbd>↓</kbd> or wheel zoom',
   'play.help.misc': '<kbd>L</kbd> language · <kbd>H</kbd> this help · <kbd>Esc</kbd> close · <kbd>F3</kbd> dev HUD',
+  'play.help.hub': '<kbd>F</kbd> fly into the gold Shell · stake inside with <kbd>F</kbd> · <kbd>T</kbd> leave the Shell or let the trial pass',
+  'play.help.map': '<kbd>N</kbd> island map',
   'play.help.toggle': 'Help (H)',
 
   // ---- objective card ----
