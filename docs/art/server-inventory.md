@@ -13,12 +13,16 @@ stop or close a server while it holds a server-only item the owner has not downl
 | `/root/ftf-media/vk1080/clip-shell-captions.mp4` | 11 738 673 | `960d21fc43a7a2e9c064a6e947c775280bbbf802fbdcbc5ece8c75568aa652bb` | same | server-only |
 | `/root/ftf-media/vk1080/clip-memory-captions.mp4` | 13 403 900 | `4320bba57865b6120a81bc3d595fed37bc6ae10a2c644af2e8fd8dca224414a6` | same | server-only |
 | `/root/ftf-media/vk1080/clip-verified-captions.mp4` | 14 143 171 | `a1967103318828e8fe2d487161308d9e6bed895d01bebc6c0e640d47024bb6de` | same | server-only |
-| `/root/ftf-media/vk4k/*` | in progress | — | `vkall.sh`, 3840x2160 60 fps ultra, b7e310b | server-only (4K masters, not for git) |
 | `/root/w/shell_1_r2_raw.glb` | 32 558 172 | `49561ea96717f317de62d73d724c0002125e07928691b9c2253b20db30bad9a9` | `art/shells/build_shells.py` (r2), before KTX2/meshopt | server-only, rebuildable (about 1 h GPU each) |
 | `/root/w/shell_2_r2_raw.glb` | 25 829 292 | `1289338b2eb83832d305ccf1b957bb743484ae2aa756e9a36839010b1a0a5724` | same | server-only, rebuildable |
 | `/root/w/shell_3_r2_raw.glb` | 27 878 568 | `b2b3d5311932a0b607b8cc5526d86ce6cca913d6e31a48776893f57fadcd97e3` | same | server-only, rebuildable |
 | `/root/w/shell_4_r2_raw.glb` | 28 824 972 | `f61a1f36a9886ca87111ad8b93914236cf544e28446dc2044aeada2071fd2753` | same | server-only, rebuildable |
 | `/root/w/amber_blowout_evidence.png` | 1.3 MB | `501fc8385506ac5bce8e4aa7c31f2b5250966115c5e9885ee5a28dac714e34b9` | Task J capture, Amber camp over-exposed at ultra | server-only (look-dev evidence) |
+
+The 4K masters of these drafts were stopped at 19:15 before any finished: the drafts flicker
+(render resolution changes between frames, black corner rectangles), so they are superseded by Task J's
+corrected capture. Only partial frames remain in `/root/ftf-media/vkwork4k` (279 MB, defective).
+The 1080p drafts above carry the same defect; they are kept as a record, not for use.
 
 Not listed (rebuildable or public, safe to lose): git clones `/root/ftf*` (no unpushed commits;
 `ftf_o`'s modified `guest.glb` equals the one in git), frame caches `/root/ftf-media/{vkwork,vkwork4k,work,test,bisect-*}`,
