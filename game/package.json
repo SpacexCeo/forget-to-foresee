@@ -11,7 +11,8 @@
     "fixtures": "node scripts/gen-fixtures.mjs",
     "sim": "node scripts/sim/run.mjs",
     "sim:quick": "node scripts/sim/run.mjs --quick --out docs/math",
-    "vectors": "node scripts/gen-contract-vectors.mjs"
+    "vectors": "node scripts/gen-contract-vectors.mjs",
+    "wh:compare": "node scripts/wh-compare.mjs"
   },
   "dependencies": {
     "@fontsource/pt-serif": "^5.3.0",

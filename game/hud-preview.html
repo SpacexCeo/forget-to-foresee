@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Forget to Foresee · World HUD preview</title>
+  <meta name="color-scheme" content="dark" />
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(120% 90% at 50% 40%, #3c4a4a 0%, #1c2626 60%, #101818 100%); }
+    .wh-preview-ref { position: fixed; display: block; pointer-events: none; z-index: 0; }
+    #hud { position: fixed; inset: 0; z-index: 1; }
+  </style>
+</head>
+<body>
+  <!-- Dev page: ?layout=desktop|mobile&ref=1&dim=.5&lang=en|ru&sheet=1 (docs/ui-world-hud.md §10). -->
+  <div id="hud"></div>
+  <script type="module" src="/src/ui/world-hud/preview.js"></script>
+</body>
+</html>
