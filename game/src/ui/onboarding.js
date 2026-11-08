@@ -4,7 +4,7 @@
 // action, immediate feedback, at most about twelve words of body per beat; "Skip tutorial" on every
 // beat; the beat index is saved so a reload resumes; a returning player (every step done) goes
 // straight to the island with no screen at all.
-import { h, tx, bindI18n, ensureStyles } from './dom.js';
+import { h, tx, bindI18n, ensureStyles, applyI18n } from './dom.js';
 import { getUiContext } from './context.js';
 import { createOnboardingFlow, createTutorial, FLOW_STEPS, TUTORIAL_BEATS, TUTORIAL_SIGN } from './flow.js';
 import { issueDemoEntitlement, getEntitlement } from './entitlement.js';
@@ -14,6 +14,21 @@ import { saveRecipe, loadRecipe, recipeHash, DEFAULT_RECIPE } from './hologram/r
 import { actionButton } from './controls.js';
 
 export { TUTORIAL_SIGN } from './flow.js';
+
+// Task Q's narration (game/src/play/narration.js) is optional: present → the tutorial speaks each beat on its
+// 'tutorial' channel when the player turned narration on; absent → nothing happens. Vite resolves the glob at
+// build time, so a missing module is an empty map, never an error.
+const NARRATION_MODULES = typeof import.meta.glob === 'function' ? import.meta.glob('../play/narration.js') : {};
+
+/** 'touch' | 'gamepad' | 'keyboard' for the device-aware copy ({input, select, …} in the strings). */
+export function inputKindFor(win = globalThis) {
+  try {
+    const pads = win.navigator && win.navigator.getGamepads ? [...win.navigator.getGamepads()] : [];
+    if (pads.some((p) => p && p.connected)) return 'gamepad';
+  } catch { /* no gamepad API */ }
+  try { if (win.matchMedia && win.matchMedia('(pointer: coarse)').matches) return 'touch'; } catch { /* no DOM */ }
+  return 'keyboard';
+}
 
 const SVG = 'http://www.w3.org/2000/svg';
 const s = (tag, attrs = {}, ...kids) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, v); kids.forEach((c) => el.appendChild(c)); return el; };
@@ -80,7 +95,10 @@ const CSS = `
 .ftf-look[aria-pressed="true"]::before { content: none; }
 .ftf-look-swatch { display: inline-flex; gap: 3px; }
 .ftf-look-swatch i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.35); }
-.ftf-ctor-compact .ftf-ctor-preview { max-width: 460px; margin: 0 auto; position: static; }
+.ftf-ctor-compact .ftf-ctor-preview { max-width: 380px; margin: 0 auto; position: static; }
+.ftf-ctor-compact .ftf-ctor-canvas { max-height: 300px; max-width: 300px; margin: 0 auto; }
+.ftf-look-begin { margin-top: 6px; }
+.ftf-look-begin .ftf-btn { width: 100%; }
 .ftf-ctor-compact:not(.ftf-ctor-open) { grid-template-columns: minmax(0, 1fr); }
 .ftf-ctor-detail { display: grid; gap: 10px; }
 .ftf-ctor-detail[hidden], .ftf-ctor-controls[hidden] { display: none; }
@@ -159,6 +177,16 @@ export function mountOnboarding(root, opts = {}) {
   root.appendChild(wrap);
   let child = null;
   let timers = [];
+  const input = () => inputKindFor(root.ownerDocument ? root.ownerDocument.defaultView : globalThis);
+  // narration: created once the optional module loads; speaks only when prefs say so (narration.enabled())
+  let narration = null;
+  const loader = Object.values(NARRATION_MODULES)[0];
+  if (loader) loader().then((m) => { if (m && m.createNarration) narration = m.createNarration({ prefs, i18n }); }).catch(() => {});
+  const narrate = (keys, args = {}) => {
+    if (!narration || !narration.enabled || !narration.enabled()) return;
+    const text = keys.map((k) => i18n.t(k, args)).join('. ');
+    try { narration.speak(text, { channel: 'tutorial', interrupt: true }); } catch { /* speech is optional */ }
+  };
   const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
   const clearTimers = () => { for (const t of timers) clearTimeout(t); timers = []; };
 
@@ -182,6 +210,7 @@ export function mountOnboarding(root, opts = {}) {
 
   // ---- access: one line, the labeled badge, the details folded away ----
   function viewEntitlement() {
+    narrate(['onb.access.title', 'onb.access.body']);
     return h('section', { class: 'ftf-card ftf-access' },
       heading('onb.access.title'),
       h('p', {}, h('span', { class: 'ftf-badge ftf-badge-demo', i18n: 'ent.badge' })),
@@ -191,11 +220,12 @@ export function mountOnboarding(root, opts = {}) {
   }
 
   // ---- tutorial: five beats over one example sign ----
-  let tut = null;
+  let tut = null, spokenBeat = -1;
   function viewTutorial() {
     if (!tut) tut = createTutorial({ beat: flow.beat });
     const v = tut.view();
     const id = v.id;
+    if (spokenBeat !== v.index) { spokenBeat = v.index; narrate([`tut.${id}.title`, `tut.${id}.body`], { input: input() }); }
     const box = h('section', { class: 'ftf-card ftf-tutcard' });
     const dots = h('span', { class: 'ftf-tut-dots', attrs: { 'aria-hidden': 'true' } }, TUTORIAL_BEATS.map((b, k) => h('i', { dataset: { state: k < v.index ? 'done' : k === v.index ? 'current' : 'todo' } })));
     const head = h('div', { class: 'ftf-tut-head' },
@@ -218,10 +248,10 @@ export function mountOnboarding(root, opts = {}) {
         ringBox.appendChild(b);
       });
     }
-    if (id === 'dots') ringBox.appendChild(h('button', { class: 'ftf-corebtn', attrs: { type: 'button', 'data-core': true, 'data-expected': v.done ? null : 'true' }, i18nAttrs: { 'aria-label': 'tut.dots.core' }, on: { click: () => { tut.tapCore(); render(); } } }));
+    if (id === 'dots') ringBox.appendChild(h('button', { class: 'ftf-corebtn', attrs: { type: 'button', 'data-core': true, 'data-expected': v.done ? null : 'true' }, i18nAttrs: { 'aria-label': 'tut.dots.core' }, attrArgs: () => ({ input: input() }), on: { click: () => { tut.tapCore(); render(); } } }));
 
     // text column
-    const body = h('p', { class: 'ftf-tut-body', i18n: `tut.${id}.body` });
+    const body = h('p', { class: 'ftf-tut-body', i18n: `tut.${id}.body`, args: () => ({ input: input() }) });
     const stageEl = h('div', { class: 'ftf-tut-stage' });
     const fb = h('p', { class: 'ftf-tut-fb', attrs: { 'aria-live': 'polite' } });
     if (id === 'slots') {
@@ -282,17 +312,24 @@ export function mountOnboarding(root, opts = {}) {
 
   // ---- hologram: four looks, the full constructor folded under "Customize" ----
   function viewCustomization() {
-    const box = h('section', {}, heading('onb.look.title'), h('p', { class: 'ftf-tut-body ftf-muted', i18n: 'onb.look.body' }));
+    narrate(['onb.look.title', 'onb.look.body']);
+    const begin = () => { saveRecipe(storage, child ? child.getRecipe() : DEFAULT_RECIPE); flow.complete('customization'); };
+    // The primary button sits beside the title (QA-016: never below the fold) and once more under the tiles.
+    const box = h('section', {},
+      h('div', { class: 'ftf-spread' }, heading('onb.look.title'), primary('onb.look.begin', begin)),
+      h('p', { class: 'ftf-tut-body ftf-muted', i18n: 'onb.look.body' }));
     const host = h('div', { class: 'ftf-card' });
-    box.append(host, h('div', { class: 'ftf-row', attrs: { style: 'margin-top:20px' } }, primary('onb.look.begin', () => {
-      saveRecipe(storage, child.getRecipe());
-      flow.complete('customization');
-    })));
-    queueMicrotask(() => { child = mountConstructor(host, { ctx, compact: true }); });
+    box.append(host);
+    queueMicrotask(() => {
+      child = mountConstructor(host, { ctx, compact: true });
+      const looks = host.querySelector('.ftf-looks');
+      if (looks) { const row = h('div', { class: 'ftf-row ftf-look-begin' }, primary('onb.look.begin', begin)); looks.after(row); applyI18n(row, i18n); }
+    });
     return box;
   }
 
   function viewFirstContact() {
+    narrate(['fc.title', 'onb.fc.body']);
     return h('section', { class: 'ftf-card' },
       heading('fc.title'),
       h('p', { class: 'ftf-tut-body', i18n: 'onb.fc.body' }),
