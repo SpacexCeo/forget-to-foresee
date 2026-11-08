@@ -43,7 +43,7 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 3. ~~Merge Codex.~~ Done on 08.11 (only `game/src/ui/input.js` conflicted: Codex pointer/gamepad handling plus the touch controls).
 4. **Assets to fix:** Shell round 2 (nacre/iridescence, real wall pieces instead of slivers), `shell_interior` coordinates, the Guest's core glow, and pitch renders from the uncompressed sources.
 5. **Full UA, IT and ZH translation** of the rest of the UI.
-6. **Mobile:** a run button, quality tiers tuned for phones, lighter textures.
+6. **Mobile:** run button and double-tap-to-run, phone quality profile (1.5x sharp `high`, `low`, 30 fps governor with resolution steps) done on `claude/mobile-play` (`docs/mobile.md`); still owed: a run on a physical iPhone/Pixel (the container has no GPU), VFX capped at `low` on phones (request to task A), lighter textures beyond the `_m` variants.
 7. **Owner decisions still open:** make v3 the default rules; P9; the shard-market lever (see `docs/decisions.md`).
 
 ## GPU workflow (for when servers are rented again)

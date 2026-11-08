@@ -39,3 +39,15 @@ are recorded in `docs/ui.md` under “Integration handoff”.
 Checks: `cd game && npm test` (203/203), `npm run build` (game, review, VFX,
 UI preview), Chromium lobby/settings/mobile and gameplay-modal smoke checks.
 The integration branch is left for the Claude lead to merge.
+
+## To task A (audio/VFX wiring, owner of `game/src/main.js` and `game/src/play/**`) — from task E (mobile), 08.11
+
+1. **VFX on phones.** `game/src/play/game.js` creates the VFX with `{ tier: lookdev.tier }`. On the phone profile
+   `lookdev.tier` is `high` for capable phones (docs/mobile.md), which selects the VFX `high` preset (lights,
+   distortion, soft particles). Please cap it: `const vfxTier = lookdev.profile === 'phone' ? 'low' : lookdev.tier`,
+   both at creation and in the `lookdev.onQualityChange((tier) => vfx.setQuality(...))` hook you are adding.
+2. **Run flag (optional, no behaviour change).** `main.js` sets `player.run = input.down('ShiftLeft', 'ShiftRight')`.
+   The touch run toggle and double-tap already flow through that query; `input.running` is the explicit getter if
+   you prefer it (`player.run = input.running`).
+3. **Dev HUD (owner: Claude team, `game/src/ui/dev-hud.js`, not in any worker's list):** `lookdev.stats()` now also
+   has `profile` and `pixelScale`; showing `quality <tier> (<profile>)` in the F3 line would help phone QA.
