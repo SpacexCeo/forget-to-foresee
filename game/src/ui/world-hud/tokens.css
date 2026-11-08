@@ -147,33 +147,38 @@
      --wh-stroke-title, serif labels 13–15 u take --wh-stroke-text (-webkit-text-stroke: … currentColor). */
   --wh-stroke-title: .38px;
   --wh-stroke-text: .24px;
-  --wh-fs-title-l: calc(21 * var(--wh-px));
-  --wh-fs-title: calc(23 * var(--wh-px));
-  --wh-fs-card-title: calc(19 * var(--wh-px));
-  --wh-fs-sign-title: calc(14 * var(--wh-px));
-  --wh-fs-row: calc(14 * var(--wh-px));
-  --wh-fs-subtitle: calc(12.75 * var(--wh-px));
+  /* Legibility floors (owner feedback 08.11, "tiny type"): below ~1600 px wide the proportional scale
+     would take labels under 10 px, so every role keeps a px minimum (body 12, labels 11, titles 15–18).
+     At the 1811 reference the floors are inactive and the mockup numbers apply unchanged. */
+  --wh-fs-title-l: max(calc(21 * var(--wh-px)), 17px);
+  --wh-fs-title: max(calc(23 * var(--wh-px)), 18px);
+  --wh-fs-card-title: max(calc(19 * var(--wh-px)), 15px);
+  --wh-fs-sign-title: max(calc(14 * var(--wh-px)), 12.5px);
+  --wh-fs-row: max(calc(14 * var(--wh-px)), 12px);
+  --wh-fs-subtitle: max(calc(12.75 * var(--wh-px)), 11.5px);
   --wh-fs-body: max(calc(13.5 * var(--wh-px)), .75rem);
   --wh-fs-toast: max(calc(13.5 * var(--wh-px)), .75rem);
-  --wh-fs-ui: calc(13.5 * var(--wh-px));
-  --wh-fs-tab: calc(12.5 * var(--wh-px));
-  --wh-fs-close: calc(14 * var(--wh-px));
+  --wh-fs-ui: max(calc(13.5 * var(--wh-px)), 11.5px);
+  --wh-fs-tab: max(calc(12.5 * var(--wh-px)), 11px);
+  --wh-fs-close: max(calc(14 * var(--wh-px)), 12px);
   --wh-fs-stat: max(calc(13 * var(--wh-px)), .75rem);
-  --wh-fs-small: calc(12 * var(--wh-px));
-  --wh-fs-caption: calc(11.5 * var(--wh-px));
-  --wh-fs-tag: calc(10 * var(--wh-px));
-  --wh-fs-prompt: calc(15 * var(--wh-px));
-  --wh-fs-speaker: calc(14 * var(--wh-px));
-  --wh-fs-line: calc(13 * var(--wh-px));
-  --wh-fs-reply: calc(14 * var(--wh-px));
-  --wh-fs-anchor: calc(14 * var(--wh-px));
-  --wh-fs-kbd: calc(11 * var(--wh-px));
-  --wh-fs-kbd-sm: calc(11 * var(--wh-px));
-  --wh-fs-kbd-lg: calc(14 * var(--wh-px));
+  --wh-fs-small: max(calc(12 * var(--wh-px)), 10.5px);
+  --wh-fs-caption: max(calc(11.5 * var(--wh-px)), 10.5px);
+  --wh-fs-tag: max(calc(10 * var(--wh-px)), 10px);
+  --wh-fs-prompt: max(calc(15 * var(--wh-px)), 13px);
+  --wh-fs-speaker: max(calc(14 * var(--wh-px)), 12px);
+  --wh-fs-line: max(calc(13 * var(--wh-px)), 12px);
+  --wh-fs-reply: max(calc(14 * var(--wh-px)), 12px);
+  --wh-fs-anchor: max(calc(14 * var(--wh-px)), 12px);
+  --wh-fs-kbd: max(calc(11 * var(--wh-px)), 10px);
+  --wh-fs-kbd-sm: max(calc(11 * var(--wh-px)), 10px);
+  --wh-fs-kbd-lg: max(calc(14 * var(--wh-px)), 12px);
   --wh-fs-tile: 12.5px;
   --wh-ls-tag: .03em;
 
   --wh-transition: 160ms ease;
+  /* touch / click targets (owner 08.11): 40 px on desktop, 48 px on phones */
+  --wh-target: 40px;
 
   position: absolute;
   inset: 0;
@@ -197,6 +202,7 @@
 @media (max-width: 700px) {
   .wh-root {
     --wh-px: 1px;
+    --wh-target: 48px;
     --wh-fs-title-l: 18.5px;
     --wh-fs-title: 23px;
     --wh-fs-card-title: 14.5px;
@@ -283,7 +289,7 @@
 /* ---------- pills and tags ---------- */
 .wh-root .wh-pill {
   display: inline-flex; align-items: center; gap: calc(6 * var(--wh-px));
-  height: calc(21 * var(--wh-px)); padding: 0 calc(10 * var(--wh-px));
+  height: max(calc(21 * var(--wh-px)), 20px); padding: 0 max(calc(10 * var(--wh-px)), 8px);
   border: 1px solid var(--wh-pill-border); border-radius: var(--wh-r-pill);
   background: var(--wh-pill-bg); color: var(--wh-gold-text);
   font-size: var(--wh-fs-tab); line-height: 1; white-space: nowrap;
@@ -294,7 +300,7 @@
 }
 .wh-root .wh-tag {
   display: inline-flex; align-items: center; gap: calc(5 * var(--wh-px));
-  height: calc(20 * var(--wh-px)); padding: 0 calc(9 * var(--wh-px)) 0 calc(8 * var(--wh-px));
+  height: max(calc(20 * var(--wh-px)), 20px); padding: 0 max(calc(9 * var(--wh-px)), 9px) 0 max(calc(8 * var(--wh-px)), 8px);
   border: 1px solid var(--wh-pill-border); border-radius: var(--wh-r-pill);
   background: var(--wh-pill-bg); color: var(--wh-gold-text);
   font-size: var(--wh-fs-tag); line-height: 1; letter-spacing: var(--wh-ls-tag); text-transform: uppercase; white-space: nowrap;
@@ -303,7 +309,7 @@
 /* ---------- chips (filters) ---------- */
 .wh-root .wh-chip {
   display: inline-flex; align-items: center; justify-content: center;
-  height: calc(34 * var(--wh-px)); padding: 0 calc(22 * var(--wh-px));
+  height: calc(34 * var(--wh-px)); min-height: var(--wh-target); padding: 0 calc(22 * var(--wh-px));
   border: 1px solid var(--wh-frame-soft); border-radius: var(--wh-r-pill);
   background: var(--wh-chip-bg); color: var(--wh-text-muted);
   font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight);
@@ -314,7 +320,8 @@
 .wh-root .wh-chip[aria-pressed="true"], .wh-root .wh-chip[aria-selected="true"] {
   background: var(--wh-chip-active-bg); color: var(--wh-text-on-gold); border-color: var(--wh-chip-active-border); box-shadow: var(--wh-glow-chip);
 }
-@media (max-width: 700px) { .wh-root .wh-chip { height: 31px; padding: 0 20px; } }
+.wh-root .wh-chip:active { transform: translateY(1px); }
+@media (max-width: 700px) { .wh-root .wh-chip { height: 31px; min-height: 44px; padding: 0 20px; } }
 
 /* ---------- kbd (hotkey boxes) ---------- */
 .wh-root .wh-kbd {
@@ -340,7 +347,9 @@
   transition: border-color var(--wh-transition);
 }
 .wh-root .wh-btn-icon:hover { border-color: var(--wh-frame); }
+.wh-root .wh-btn-icon:active { transform: translateY(1px); }
 .wh-root .wh-btn-icon--round { width: 34px; height: 34px; border-radius: 50%; color: var(--wh-text); }
+@media (max-width: 700px) { .wh-root .wh-btn-icon { height: 44px; } .wh-root .wh-btn-icon--round { width: 44px; height: 44px; } }
 
 /* ---------- divider, progress bar, icon wrapper ---------- */
 .wh-root .wh-divider { height: 1px; background: var(--wh-divider); }
@@ -360,8 +369,11 @@
    the orchestrator measures slow frames (html[data-fx="low"]). The look stays; only the frost goes. */
 html[data-tier="low"] .wh-root, html[data-fx="low"] .wh-root { --wh-panel-blur: 0px; --wh-blur-sm: 0px; }
 
-/* 24 px minimum targets (WCAG 2.5.8): invisible at 1811 wide, active only at small desktop scales. */
-.wh-root :where(.wh-chip, .wh-signs__close, .wh-hotbar__btn, .wh-kbd--lg) { min-height: 24px; }
+/* Click / touch targets (owner 08.11): 40 px on desktop, 48 px on phones (--wh-target); boxes grow, the mockup
+   proportions stay wherever the scaled size is already above the floor. */
+.wh-root :where(.wh-signs__close, .wh-hotbar__btn, .wh-dialogue__reply, .wh-prompt, .wh-prompt--mobile) { min-height: var(--wh-target); }
+.wh-root :where(.wh-kbd--lg) { min-height: 24px; }
+.wh-root :where(.wh-hotbar__btn, .wh-signs__close, .wh-dialogue__reply):active { transform: translateY(1px); }
 
 /* body-copy text (sans): quest body, toast, log rows, sign stats, timestamps, small labels */
 .wh-root .wh-body { font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight); }

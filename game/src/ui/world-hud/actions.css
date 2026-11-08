@@ -127,7 +127,7 @@
   bottom: calc(23 * var(--wh-px));
   display: flex;
   gap: calc(10 * var(--wh-px));
-  height: calc(53 * var(--wh-px));
+  min-height: calc(53 * var(--wh-px)); /* grows with the 40 px button floor at small scales */
   padding: calc(8 * var(--wh-px)) calc(8 * var(--wh-px)) calc(8 * var(--wh-px)) calc(9 * var(--wh-px));
   border-color: var(--wh-frame-dim);
   border-radius: calc(16 * var(--wh-px));
@@ -139,18 +139,18 @@
   align-items: center;
   gap: calc(10 * var(--wh-px));
   height: calc(35 * var(--wh-px));
-  padding: 0 calc(12 * var(--wh-px)) 0 calc(8 * var(--wh-px));
+  padding: 0 max(calc(12 * var(--wh-px)), 12px) 0 max(calc(8 * var(--wh-px)), 8px);
   border: 1px solid var(--wh-frame-dim);
-  border-radius: var(--wh-r-btn);
+  border-radius: max(var(--wh-r-btn), 8px);
   background: var(--wh-btn-bg);
   color: var(--wh-text);
   white-space: nowrap;
-  transition: border-color var(--wh-transition);
+  transition: border-color var(--wh-transition), background-color var(--wh-transition);
 }
-.wh-root .wh-hotbar__btn:hover { border-color: var(--wh-frame-soft); }
+.wh-root .wh-hotbar__btn:hover { border-color: var(--wh-frame); background: rgba(22, 36, 37, .92); }
 .wh-root .wh-hotbar .wh-hotbar__kbd {
-  min-width: calc(23 * var(--wh-px));
-  height: calc(22 * var(--wh-px));
+  min-width: max(calc(23 * var(--wh-px)), 20px);
+  height: max(calc(22 * var(--wh-px)), 20px);
   padding: 0 calc(4 * var(--wh-px));
   font-size: var(--wh-fs-kbd);
 }

@@ -252,7 +252,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (step > 0.01) { state.lastMove = state.now; state.moved += step; }
     if (state.quiet && moving && !state.route) { state.quiet = false; ui.update(); }
     if (!inShell && state.moved > 4 && state.now - state.lastMove > 0.8 && !session.syncing && session.bus.pending === 0) { state.moved = 0; session.syncPosition(); }
-    agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist });
+    agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist, camera, uiRoot });
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
     shell.update(state.now, dt, lookdev.reducedMotion);
     hooks.update(dt, { camera, focus });

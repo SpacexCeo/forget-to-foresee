@@ -72,10 +72,10 @@
   display: inline-flex;
   align-items: center;
   gap: calc(4 * var(--wh-px));
-  height: calc(29 * var(--wh-px));
-  padding: 0 calc(11 * var(--wh-px)) 0 calc(12 * var(--wh-px));
+  height: calc(29 * var(--wh-px)); /* min-height: --wh-target (tokens.css) */
+  padding: 0 max(calc(11 * var(--wh-px)), 12px) 0 max(calc(12 * var(--wh-px)), 12px);
   border: 1px solid var(--wh-frame-soft);
-  border-radius: calc(15 * var(--wh-px));
+  border-radius: 999px;
   background: var(--wh-btn-bg);
   color: var(--wh-text);
   font-size: var(--wh-fs-close);
@@ -83,10 +83,12 @@
   white-space: nowrap;
   transition: border-color var(--wh-transition);
 }
-.wh-root .wh-signs .wh-signs__close:hover { border-color: var(--wh-frame); }
+.wh-root .wh-signs .wh-signs__close:hover { border-color: var(--wh-frame); background: rgba(22, 36, 37, .92); }
+/* the header grows with the 40 px Close button at small scales, so the title never sits under it */
+.wh-root .wh-signs .wh-signs__head { min-height: calc(17 * var(--wh-px) + var(--wh-target)); }
 .wh-root .wh-signs .wh-signs__esc {
-  min-width: calc(27 * var(--wh-px));
-  height: calc(20 * var(--wh-px));
+  min-width: max(calc(27 * var(--wh-px)), 24px);
+  height: max(calc(20 * var(--wh-px)), 18px);
   padding: 0 calc(3 * var(--wh-px));
   font-size: var(--wh-fs-kbd-sm);
   border-radius: calc(4 * var(--wh-px));
@@ -251,7 +253,7 @@
 .wh-root .wh-sheet .wh-signs__eye { position: absolute; left: 20px; top: 33px; width: 48px; height: 47px; }
 .wh-root .wh-sheet .wh-signs__title { margin-top: 2px; }
 .wh-root .wh-sheet .wh-signs__sub { line-height: 17px; margin-top: 0; max-width: 242px; }
-.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 30.5px; width: 35px; height: 35px; border-color: var(--wh-sg-round-border); background: var(--wh-sg-round-bg); }
+.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 26px; width: 44px; height: 44px; border-color: var(--wh-sg-round-border); background: var(--wh-sg-round-bg); }
 .wh-root .wh-sheet .wh-signs__close:hover { border-color: var(--wh-frame-soft); }
 .wh-root .wh-sheet .wh-signs__x { width: 26px; height: 26px; color: var(--wh-text); }
 .wh-root .wh-sheet .wh-signs__filters {
@@ -263,7 +265,7 @@
   scrollbar-width: none;
 }
 .wh-root .wh-sheet .wh-signs__filters::-webkit-scrollbar { display: none; }
-.wh-root .wh-sheet .wh-signs__chip { height: 30px; padding: 0 10px; font-size: var(--wh-fs-ui); }
+.wh-root .wh-sheet .wh-signs__chip { height: 30px; min-height: 44px; padding: 0 12px; font-size: var(--wh-fs-ui); }
 .wh-root .wh-sheet .wh-signs__chip[aria-pressed="true"] { padding: 0 18px; }
 .wh-root .wh-sheet .wh-signs__list {
   margin-top: 21px;

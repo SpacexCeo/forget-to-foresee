@@ -7,62 +7,73 @@
 import { renderMsg, reasonText } from './i18n.js';
 import { logogramCanvas } from './logogram.js';
 import { signsByShell, signForShell } from './hub.js';
+import { panelArbiterFor } from './panels.js';
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
 
 const CSS = `
+/* Spacing scale 4/8/12/16/24; radii 10 (buttons) / 14 (panels) / 16 (cards) / 999 (pills); 40 px targets, 48 on phones. */
 .hub-host { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
 .hub-host .hub-box { position: absolute; pointer-events: auto; background: var(--wh-panel-bg, rgba(16,26,27,.92)); border: 1px solid var(--wh-frame, rgba(232,214,172,.8));
-  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); backdrop-filter: blur(var(--wh-panel-blur, 10px)); color: var(--wh-text, #faf7ee); }
-.hub-host h3 { margin: 0; font: 400 19px/1.2 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); -webkit-text-stroke: .3px currentColor; }
-.hub-host p { margin: 4px 0; font: var(--wh-font-body-weight, 500) 13.5px/1.35 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-2, #e6e3d7); }
-.hub-host .hub-eyebrow { font: 600 10.5px/1 var(--wh-font-body, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--wh-gold, #e4c272); }
+  border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); -webkit-backdrop-filter: blur(var(--wh-panel-blur, 10px)); backdrop-filter: blur(var(--wh-panel-blur, 10px)); color: var(--wh-text, #faf7ee); }
+.hub-host h3 { margin: 0; font: 400 20px/1.2 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); -webkit-text-stroke: .3px currentColor; }
+.hub-host p { margin: 4px 0 0; font: var(--wh-font-body-weight, 500) 13.5px/1.4 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-2, #e6e3d7); }
+.hub-host .hub-eyebrow { margin-bottom: 4px; font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--wh-gold, #e4c272); }
 .hub-host .hub-muted { color: var(--wh-text-muted, #c9c6b8); font-size: 12.5px; }
-.hub-host .hub-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.hub-host button { font: 600 13.5px/1.2 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text, #faf7ee); background: var(--wh-btn-bg, rgba(10,22,23,.78));
-  border: 1px solid rgba(232,214,172,.45); border-radius: 7px; padding: 8px 12px; cursor: pointer; }
-.hub-host button:hover { border-color: var(--wh-gold, #e4c272); }
-.hub-host button:focus-visible { outline: 3px solid var(--wh-gold, #e4c272); outline-offset: 2px; }
-.hub-host button[disabled] { opacity: .45; cursor: default; }
+.hub-host .hub-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.hub-host button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 16px;
+  font: 600 14px/1.2 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text, #faf7ee); background: var(--wh-btn-bg, rgba(10,22,23,.78));
+  border: 1px solid rgba(232,214,172,.45); border-radius: 10px; cursor: pointer; transition: border-color .16s ease, background-color .16s ease, transform .08s ease; }
+.hub-host button:hover { border-color: var(--wh-gold, #e4c272); background: rgba(22,36,37,.92); }
+.hub-host button:active { transform: translateY(1px); }
+.hub-host button:focus-visible { outline: 2px solid var(--wh-gold-bright, #fbe6a6); outline-offset: 2px; }
+.hub-host button[disabled] { opacity: .45; cursor: default; transform: none; }
 .hub-host button.hub-primary { background: var(--wh-chip-active-bg, #5b4215); border-color: var(--wh-gold, #e4c272); color: var(--wh-text-on-gold, #fffcec); }
-.hub-host kbd { font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); border: 1px solid rgba(232,214,172,.6); border-radius: 4px; padding: 2px 5px; margin-right: 6px; background: var(--wh-kbd-bg, rgba(42,38,30,.92)); }
-.hub-dock { right: 16px; bottom: 84px; width: 330px; padding: 12px 14px 14px; }
-.hub-shells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
-.hub-shells button { position: relative; text-align: center; padding: 10px 0 8px; font: 400 20px/1 var(--wh-font, Georgia, serif); }
-.hub-shells button small { display: block; margin-top: 4px; font: 600 10px/1 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); letter-spacing: .04em; }
+.hub-host button.hub-primary:hover { filter: brightness(1.08); }
+.hub-host kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); border: 1px solid rgba(232,214,172,.6); border-radius: 4px; background: var(--wh-kbd-bg, rgba(42,38,30,.92)); }
+.hub-dock { right: 16px; bottom: 84px; width: 340px; padding: 16px; }
+.hub-shells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.hub-shells button { position: relative; flex-direction: column; gap: 6px; min-height: 60px; padding: 8px 4px; font: 400 20px/1 var(--wh-font, Georgia, serif); }
+.hub-shells button small { display: block; font: 600 10.5px/1 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); letter-spacing: .04em; }
 .hub-shells button.hub-wait { border-color: var(--wh-gold, #e4c272); box-shadow: 0 0 14px rgba(228,194,114,.35); }
 .hub-shells button.hub-wait small { color: var(--wh-gold, #e4c272); }
-.hub-read { right: 16px; top: 120px; width: 360px; padding: 12px 14px 14px; max-height: calc(100vh - 220px); overflow: auto; }
+.hub-read { right: 16px; top: 120px; width: 380px; padding: 16px; max-height: calc(100vh - 240px); overflow: auto; scrollbar-width: thin; scrollbar-color: var(--wh-gold-deep, #b48d3c) transparent; }
 .hub-sign { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; margin-top: 8px; }
 .hub-sign canvas { border-radius: 50%; background: #0f1a1b; }
-.hub-slots { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
-.hub-slots li { display: grid; grid-template-columns: 64px 28px 1fr 28px; align-items: center; gap: 6px; }
+.hub-slots { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.hub-slots li { display: grid; grid-template-columns: 64px 40px 1fr 40px; align-items: center; gap: 8px; }
 .hub-slots li > span:first-child { font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); text-transform: uppercase; letter-spacing: .08em; color: var(--wh-text-muted, #c9c6b8); }
-.hub-slots li button { padding: 2px 0 4px; text-align: center; font: 400 18px/1 var(--wh-font, Georgia, serif); }
+.hub-slots li button { width: 40px; min-height: 40px; padding: 0; font: 400 20px/1 var(--wh-font, Georgia, serif); }
 .hub-slots .hub-mean { text-align: center; font: 400 15px/1.15 var(--wh-font, Georgia, serif); }
-.hub-slots .hub-mean small { display: block; font: 500 10.5px/1.2 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); }
+.hub-slots .hub-mean small { display: block; margin-top: 2px; font: 500 10.5px/1.2 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); }
 .hub-slots .hub-mean.hub-edited small { color: var(--wh-gold, #e4c272); }
-.hub-target { margin-top: 10px; padding: 8px 10px; border-radius: 7px; background: var(--wh-anchor-bg, rgba(38,34,22,.7)); font: 400 15px/1.3 var(--wh-font, Georgia, serif); }
-.hub-card { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 32px)); padding: 16px 18px; border-color: var(--wh-gold, #e4c272); background: rgba(12, 20, 21, .96) !important; }
-.hub-status { left: 50%; top: 120px; transform: translateX(-50%); padding: 8px 16px; font: 400 15px/1.2 var(--wh-font, Georgia, serif); display: flex; gap: 12px; align-items: center; }
-.hub-status button { padding: 4px 10px; font-size: 12px; }
+.hub-target { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: var(--wh-anchor-bg, rgba(38,34,22,.7)); font: 400 15px/1.3 var(--wh-font, Georgia, serif); }
+.hub-card { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); padding: 20px 24px 24px; border-radius: 16px; border-color: var(--wh-gold, #e4c272); background: rgba(12, 20, 21, .96) !important; }
+.hub-card .hub-row { margin-top: 16px; }
+.hub-status { left: 50%; top: 120px; transform: translateX(-50%); padding: 8px 8px 8px 16px; border-radius: 999px; font: 400 15px/1.2 var(--wh-font, Georgia, serif); display: flex; gap: 12px; align-items: center; }
+.hub-status button { min-height: 36px; padding: 0 12px; font-size: 12.5px; border-radius: 999px; }
 .hub-fade { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .45s ease; z-index: 6;
   background: radial-gradient(circle at 50% 40%, rgba(255,250,238,.95), rgba(214,226,232,.98) 55%, rgba(170,186,196,1)); display: grid; place-items: center; }
 .hub-fade span { font: 400 26px/1.2 var(--wh-font, Georgia, serif); color: #2b3433; letter-spacing: .06em; }
 .hub-fade.on { opacity: 1; pointer-events: auto; }
+/* Exclusivity (play/panels.js): a modal panel hides the dock and the reading card; the open Signs panel leaves the dock's corner free. */
+body.pl-modal-open .hub-host .hub-dock, body.pl-modal-open .hub-host .hub-read { display: none; }
+body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 1px) - 330px); }
 @media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
-  .hub-dock { left: 8px; right: 8px; width: auto; bottom: auto; top: calc(112px + env(safe-area-inset-top, 0px)); padding: 8px 10px 10px; }
+  .hub-host button { min-height: 48px; padding: 0 16px; }
+  .hub-dock { left: 8px; right: 8px; width: auto; bottom: auto; top: calc(112px + env(safe-area-inset-top, 0px)); padding: 12px; }
   .hub-dock p { display: none; }
-  .hub-shells { margin-top: 6px; gap: 6px; } .hub-shells button { padding: 7px 0 6px; font-size: 17px; }
-  .hub-read { left: 8px; right: 8px; width: auto; top: calc(112px + env(safe-area-inset-top, 0px)); bottom: auto; max-height: calc(100vh - 260px); padding: 8px 10px 10px; background: rgba(12,20,21,.96); }
+  .hub-shells { margin-top: 8px; gap: 8px; } .hub-shells button { min-height: 56px; padding: 6px 2px; font-size: 18px; }
+  .hub-read { left: 8px; right: 8px; width: auto; top: calc(112px + env(safe-area-inset-top, 0px)); bottom: auto; max-height: calc(100vh - 260px); padding: 12px; background: rgba(12,20,21,.96); }
   body.hub-in-shell .wh-root .wh-quest-m, body.hub-in-shell .wh-root .wh-quest--mobile, body.hub-in-shell .wh-root .wh-trial--mobile, body.hub-in-shell .wh-root .wh-tiles { visibility: hidden; }
+  body.hub-dock-on .wh-root .wh-signs { max-height: none; }
   .hub-dock h3, .hub-read .hub-sign p.hub-muted, .hub-read > p.hub-muted:last-child { display: none; }
   .hub-sign { grid-template-columns: 76px 1fr; } .hub-sign canvas { width: 76px; height: 76px; }
-  .hub-host h3 { font-size: 16px; } .hub-host p { font-size: 12px; }
-  .hub-host button { padding: 6px 9px; font-size: 12.5px; }
-  .hub-status { top: calc(64px + env(safe-area-inset-top, 0px)); font-size: 13px; padding: 6px 10px; }
+  .hub-host h3 { font-size: 17px; } .hub-host p { font-size: 12.5px; }
+  .hub-slots li { grid-template-columns: 56px 44px 1fr 44px; gap: 6px; } .hub-slots li button { width: 44px; min-height: 44px; }
+  .hub-status { top: calc(64px + env(safe-area-inset-top, 0px)); font-size: 13px; padding: 6px 6px 6px 12px; } .hub-status button { min-height: 36px; }
 }
-@media (prefers-reduced-motion: reduce) { .hub-fade { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .hub-fade { transition: none; } .hub-host button { transition: none; } }
 `;
 
 function el(doc, tag, attrs = {}, ...kids) {
@@ -86,6 +97,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
   const doc = root.ownerDocument || document;
   const t = (k, a) => renderMsg(i18n, k, a);
   if (!doc.getElementById('hub-style')) doc.head.append(el(doc, 'style', { id: 'hub-style', text: CSS }));
+  const arb = panelArbiterFor(root); // panels.js: the dock and the reading card give way to any open modal panel
   const host = el(doc, 'div', { class: 'wh-root hub-host' });
   const fade = el(doc, 'div', { class: 'hub-fade', 'aria-hidden': 'true' }, el(doc, 'span'));
   root.append(host);
@@ -212,18 +224,29 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
 
   function flash(text, ms = 4200) { notice = { key: 'wh.raw', args: { text } }; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; render(); }, ms); render(); }
 
+  let rendering = false;
   function render() {
     const obs = hub.obs;
-    if (!obs) return;
-    const kids = [];
-    const c = hub.card;
-    doc.body.classList.toggle('hub-in-shell', obs.you.zone === 'shell' && !c);
-    if (c) kids.push(card(c, obs));
-    else if (obs.you.zone === 'shell') kids.push(reading(obs));
-    else if (obs.season.phase === 'play') kids.push(dock(obs));
-    const st = status(obs);
-    if (st) kids.push(st);
-    host.replaceChildren(...kids);
+    if (!obs || rendering) return;
+    rendering = true;
+    try {
+      const kids = [];
+      const c = hub.card;
+      const inShell = obs.you.zone === 'shell';
+      doc.body.classList.toggle('hub-in-shell', inShell && !c);
+      // A decision card is modal: it closes whatever panel is open and stays until the player decides.
+      if (c && !arb.isOpen('hub-card')) arb.claim('hub-card', () => {});
+      else if (!c && arb.isOpen('hub-card')) arb.release('hub-card');
+      const modal = arb.modal;
+      let dockOn = false;
+      if (c) kids.push(card(c, obs));
+      else if (inShell) { if (!modal) kids.push(reading(obs)); }
+      else if (obs.season.phase === 'play' && !modal) { kids.push(dock(obs)); dockOn = true; }
+      doc.body.classList.toggle('hub-dock-on', dockOn);
+      const st = status(obs);
+      if (st) kids.push(st);
+      host.replaceChildren(...kids);
+    } finally { rendering = false; }
   }
 
   const offs = [
@@ -240,6 +263,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       render();
     }),
     i18n.subscribe(render),
+    arb.subscribe(() => render()),
   ];
   render();
 
@@ -276,7 +300,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       }
       return false;
     },
-    destroy() { offs.forEach((f) => f()); host.remove(); fade.remove(); },
+    destroy() { offs.forEach((f) => f()); arb.release('hub-card'); doc.body.classList.remove('hub-dock-on', 'hub-in-shell'); host.remove(); fade.remove(); },
   };
 }
 

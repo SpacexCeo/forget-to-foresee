@@ -8,6 +8,7 @@ import { mountWorldHud } from '../ui/world-hud/index.js';
 import { buildHudModel, raw } from '../ui/world-hud/from-obs.js';
 import { renderMsg } from './i18n.js';
 import { i18n as uiI18n } from '../ui/index.js';
+import { panelArbiterFor } from './panels.js';
 
 const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
 
@@ -19,6 +20,7 @@ const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
  */
 export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handlers = {} }) {
   const { i18n, prefs } = ctx;
+  const arb = panelArbiterFor(uiRoot); // Signs is one of the exclusive surfaces (panels.js)
   const doc = uiRoot.ownerDocument || document;
   const host = doc.createElement('div');
   host.className = 'wh-host';
@@ -52,6 +54,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     if (!m) return;
     if (!hud) {
       hud = mountWorldHud(host, { model: m, ctx, onAction, keys: false });
+      if (hud.signs.isOpen()) claimSigns(); // Pro starts with the panel open (no signsOpen action fires on mount)
     } else hud.update(m);
     prev = m;
   }
@@ -65,9 +68,13 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       else if ((id === 'settings' || id === 'menu') && handlers.onSettings) handlers.onSettings();
     } else if (action === 'sign') ui.open('vision');
     else if (action === 'quest') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); }
-    else if (action === 'signsOpen' && hints) hints.action('signsOpen');
+    else if (action === 'signsOpen') { claimSigns(); if (hints) hints.action('signsOpen'); }
+    else if (action === 'signsClose') arb.release('signs');
     if (hints && action !== 'signsClose') hints.action('ui');
   }
+
+  /** The desktop Signs panel reads alongside the hub dock (not modal); the phone sheet covers the screen (modal). */
+  function claimSigns() { arb.claim('signs', () => { if (hud) hud.signs.close(); }, { modal: hud ? hud.layout === 'mobile' : false }); }
 
   const offs = [
     session.on('obs', () => { if (hints) hints.observe(session.obs); refresh(); }),

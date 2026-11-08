@@ -122,8 +122,9 @@
 }
 .wh-root .wh-quest__tag { flex: none; }
 .wh-root .wh-quest .wh-quest__tag {
-  height: calc(17 * var(--wh-px));
-  padding: 0 calc(8 * var(--wh-px)) 0 calc(5 * var(--wh-px));
+  /* 17 u in the mockup; the floor keeps the gold text clear of the border at small scales */
+  height: max(calc(17 * var(--wh-px)), 20px);
+  padding: 0 max(calc(8 * var(--wh-px)), 9px) 0 max(calc(5 * var(--wh-px)), 7px);
   gap: calc(5 * var(--wh-px));
   font-size: var(--wh-fs-tag);
 }
@@ -262,7 +263,7 @@
   padding: 14px 0 0 24px;
 }
 .wh-root .wh-quest--mobile .wh-quest__tag {
-  height: 19px;
+  height: 20px;
   padding: 0 10px 0 8px;
   gap: 5px;
   font-size: var(--wh-fs-tag);

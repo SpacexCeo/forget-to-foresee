@@ -6,6 +6,7 @@
 import { renderMsg, reasonText } from './i18n.js';
 import { logogramCanvas } from './logogram.js';
 import { i18n as uiI18n } from '../ui/index.js';
+import { panelArbiterFor } from './panels.js';
 
 const { effectEvent, renderEvent } = uiI18n;
 const CLAN_INDEX = { iris: 0, salt: 1, ash: 2, moss: 3, amber: 4, frost: 5 };
@@ -29,6 +30,7 @@ function el(tag, attrs = {}, ...kids) {
 export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMin = 1 }) {
   const { i18n } = ctx;
   const t = (k, a) => renderMsg(i18n, k, a);
+  const arb = panelArbiterFor(root); // one modal surface at a time (panels.js): panels, help, Signs, hub card
   const goalEl = el('section', { class: 'pl-goal', 'aria-live': 'polite', id: 'pl-goal' });
   const ctxEl = el('section', { class: 'pl-context', id: 'pl-context', hidden: true });
   const panelEl = el('section', { class: 'pl-panel', id: 'pl-panel', role: 'dialog', hidden: true });
@@ -97,11 +99,19 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
 
   /* ---------- panels ---------- */
-  function open(name, data = null) { panel = name; panelData = data; renderPanel(); renderContext(); }
-  function close() { panel = null; panelData = null; panelEl.hidden = true; renderContext(); }
+  function open(name, data = null) { panel = name; panelData = data; arb.claim('panel', close); renderPanel(); renderContext(); }
+  function close() {
+    if (!panel) { panelEl.hidden = true; return; }
+    panel = null; panelData = null; panelEl.hidden = true;
+    arb.release('panel');
+    renderContext();
+  }
+  function showHelp(on) { helpEl.hidden = !on; if (on) arb.claim('help', () => showHelp(false)); else arb.release('help'); }
 
   function panelShell(title, ...body) {
-    panelEl.replaceChildren(el('header', {}, el('h2', { text: title }), el('button', { class: 'pl-btn pl-small', type: 'button', text: t('panel.close') + ' (Esc)', onclick: close })), ...body);
+    panelEl.replaceChildren(
+      el('header', {}, el('h2', { text: title }), el('button', { class: 'pl-btn pl-small', type: 'button', 'aria-label': t('panel.close'), onclick: close }, t('panel.close'), el('kbd', { text: 'Esc' }))),
+      ...body.filter((x) => x != null));
     panelEl.hidden = false;
   }
 
@@ -216,7 +226,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
       el('button', { class: 'pl-btn', type: 'button', text: 'V · ' + t('vision.title'), onclick: () => toggle('vision') }),
       el('button', { class: 'pl-btn pl-primary', type: 'button', id: 'pl-endtick', text: t('endtick.button', { tick }), disabled: !obs || obs.season.phase !== 'play', onclick: () => endTick() }),
       el('button', { class: 'pl-btn', type: 'button', text: i18n.locale === 'ru' ? 'EN' : 'RU', onclick: () => i18n.setLocale(i18n.locale === 'ru' ? 'en' : 'ru') }),
-      el('button', { class: 'pl-btn', type: 'button', text: t('play.help.toggle'), onclick: () => { helpEl.hidden = !helpEl.hidden; } }));
+      el('button', { class: 'pl-btn', type: 'button', text: t('play.help.toggle'), onclick: () => showHelp(helpEl.hidden) }));
     badge.textContent = t('play.badge');
     helpEl.replaceChildren(el('h3', { text: t('play.help.title') }), ...['move', 'go', 'context', 'panels', 'camera', 'misc'].map((k) => el('p', { html: i18n.t('play.help.' + k) })), el('p', { class: 'pl-muted', text: t('play.loop') }));
   }
@@ -249,14 +259,14 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
 
   /** Keyboard: returns true when the key was used by the play UI. */
   function handleKey(code) {
-    if (code === 'Escape') { if (panel) { close(); return true; } if (!helpEl.hidden) { helpEl.hidden = true; return true; } return false; }
+    if (code === 'Escape') { if (panel) { close(); return true; } if (!helpEl.hidden) { showHelp(false); return true; } return false; }
     if (code === 'KeyE') { if (session.defaultIndex >= 0 && !panel) { choose(session.defaultIndex); return true; } return false; }
     const m = /^Digit([1-9])$/.exec(code);
     if (m && !panel) { choose(Number(m[1]) - 1); return true; }
     if (code === 'KeyM') { toggle('memory'); return true; }
     if (code === 'KeyV') { toggle('vision'); return true; }
     if (code === 'KeyT') { endTick(); return true; }
-    if (code === 'KeyH') { helpEl.hidden = !helpEl.hidden; return true; }
+    if (code === 'KeyH') { showHelp(helpEl.hidden); return true; }
     if (code === 'KeyL') { const ls = i18n.locales || ['en', 'ru']; i18n.setLocale(ls[(ls.indexOf(i18n.locale) + 1) % ls.length]); return true; }
     if (code === 'KeyG') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); return true; }
     return false;
