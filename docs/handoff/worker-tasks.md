@@ -342,3 +342,22 @@ real funds).
    in the client.
 3. Tests with a mocked RPC; `docs/near.md` with the exact commands so the owner can redeploy under their own account;
    update the README real/mock table and `docs/hackathon-rules.md` NEAR item only with what actually runs.
+
+---
+
+## Task N: a living island (NPC agents that feel alive)
+
+**Branch:** `claude/living-npcs` (worker G continues) · **Owns:** the animation and behaviour code in
+`game/src/play/agents.js` (not the nameplates: Task F), `game/src/play/behaviour.js`, `game/src/physics/motion.js`,
+new `game/tests/client/npc*.mjs`, `docs/npcs.md` (new). Presentation only: never change what the engine decides.
+Goal: the six clan agents read as people with intentions, in both play modes.
+1. Look-at: heads (and eyes when the face bones allow) track Iris when she is near or speaking to them; agents turn to
+   face whoever they talk to.
+2. Idle life: idle variations (weight shift, looking around, small gestures) with randomized but seeded timing, never
+   in sync between agents; `think` when a clan is deciding, `gesture_offer` when an offer is made, `celebrate` /
+   `defeat` on reveals that help or hurt them.
+3. Purposeful movement: agents walk to where the engine says they act (Scroll, anchors, camps, auctions) with the
+   Task G locomotion, avoid each other and Iris (simple local avoidance), and gather at the plaza for the vote.
+4. Conversations: when two clans trade words or silk, they meet and face each other with talk clips and a short
+   speech beat in the dialogue bar (through the existing world HUD API, coordinate with Task F).
+5. Budget: no frame-time regression on the phone profile; tests for the behaviour scheduler (seeded, deterministic).
