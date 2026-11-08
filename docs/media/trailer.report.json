@@ -1,0 +1,273 @@
+{
+ "video": "trailer",
+ "title": "Forget to Foresee: trailer (30 s)",
+ "width": 1920,
+ "height": 1080,
+ "fps": 60,
+ "tier": "ultra",
+ "duration": 28.900000000000002,
+ "shots": [
+  {
+   "shot": "rise",
+   "frames": 360,
+   "secondsPerFrame": 0.2661472222222222,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x215c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x215c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x215c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x215c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "36fed57cf6c0e018",
+    "359": "e213b457fc17116a"
+   }
+  },
+  {
+   "shot": "shell-iv",
+   "frames": 300,
+   "secondsPerFrame": 0.25342333333333333,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x3ffc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3ffc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3ffc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3ffc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "5f072507bd779d43",
+    "299": "b46e840d064d987d"
+   }
+  },
+  {
+   "shot": "plaza",
+   "frames": 330,
+   "secondsPerFrame": 0.2464242424242424,
+   "loaded": true,
+   "setupFrames": 1,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x19dc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x19dc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x19dc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x19dc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "df33b0e14869ca5f",
+    "329": "988215b598b602fa"
+   }
+  },
+  {
+   "shot": "glass",
+   "frames": 360,
+   "secondsPerFrame": 0.43385,
+   "loaded": true,
+   "setupFrames": 31,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x2bcc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2bcc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2bcc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2bcc000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "00bc9df3aa70991a",
+    "359": "a4e624ec3ceaae72"
+   }
+  },
+  {
+   "shot": "stake",
+   "frames": 210,
+   "secondsPerFrame": 0.3674761904761905,
+   "loaded": true,
+   "setupFrames": 211,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x2034000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2034000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2034000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2034000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "ccba1a90f9224787",
+    "209": "54d8782d14e2d340"
+   }
+  },
+  {
+   "shot": "title",
+   "frames": 360,
+   "secondsPerFrame": 0.27989444444444445,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x2a140012b100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2a140012b100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2a140012b100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2a140012b100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "cc44d8f19dbbb97b",
+    "359": "36fed57cf6c0e018"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.39096676324655527,
+  "events": 15,
+  "wav": "/root/ftf-media/vkwork/trailer-1920x1080-ultra/trailer.wav",
+  "cues": 37
+ },
+ "files": {
+  "/root/ftf-media/vk1080/trailer.mp4": {
+   "bytes": 24324370,
+   "mb": 23.2,
+   "duration": 28.9,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 443904,
+    "duration": "28.900000",
+    "bit_rate": "6466302",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "1734",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media/vk1080/trailer-captions.mp4": {
+   "bytes": 24987872,
+   "mb": 23.8,
+   "duration": 28.9,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 443904,
+    "duration": "28.900000",
+    "bit_rate": "6649983",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "1734",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media/vk1080/trailer.srt": {
+   "bytes": 469,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}

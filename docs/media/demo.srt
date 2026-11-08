@@ -1,0 +1,60 @@
+1
+00:00:00,400 --> 00:00:03,800
+Trial 3 came true, exactly as the seal said: Verified ✓
+
+2
+00:00:04,400 --> 00:00:09,600
+Forget to Foresee: the whole season is fixed before trial 1, and every reveal is checked against that seal.
+
+3
+00:00:10,400 --> 00:00:14,200
+Your agent Iris. Six clans of AI agents with wallets and memory. Four Shells.
+
+4
+00:00:14,800 --> 00:00:18,600
+The Guests draw round signs. Iris reads one: a Gift, two trials out.
+
+5
+00:00:19,600 --> 00:00:23,200
+At Shell I’s pad: stake 10 silk on trial 3.
+
+6
+00:00:24,000 --> 00:00:27,400
+Silk 63 to 53. Now end the trials; T ends one.
+
+7
+00:00:28,200 --> 00:00:32,400
+Trials 1 and 2 pass. The clans trade, lend and place their fragments.
+
+8
+00:00:33,000 --> 00:00:38,400
+Trial 3 comes true: a Gift of 20 on Shell II. The stake returns, and the leaf is checked against the seal.
+
+9
+00:00:39,400 --> 00:00:45,000
+Signs & Visions, Resolved: Verified ✓. The season was fixed before trial 1 and checked against that seal.
+
+10
+00:00:46,400 --> 00:00:52,200
+The Price of Memory: Iris forgets a memory forever to see the next signs early. The memory becomes a shard at auction.
+
+11
+00:00:53,400 --> 00:00:57,400
+The same season in the Shell hub: fly in, and the Guest draws on the glass.
+
+12
+00:00:58,000 --> 00:01:02,000
+Iris pre-reads each slot. Change any you doubt, then stake.
+
+13
+00:01:02,400 --> 00:01:06,800
+It all runs in your browser. The NEAR contract for the same check is tested, not yet deployed.
+
+14
+00:01:07,400 --> 00:01:10,600
+What would you forget to see the future?
+
+15
+00:01:11,000 --> 00:01:14,400
+Play it in the browser. Built at NEAR HACKATHON by RAEN Computers.
+
