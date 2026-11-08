@@ -18,7 +18,7 @@ Applies to Iris and the six clan agents (`art/agents/`), built procedurally and 
   leather and metal accents at belts, clasps and cuffs; smooth shading on soft parts, a painted value
   gradient (lighter top, deeper bottom).
 - **Hands and feet.** Readable silhouettes: thumb separated, boots with a heel and a toe line. Hands are
-  the next thing to improve (currently mittens with finger bones).
+  stylized four-part hands since round 5: palm, split index, finger block, two-segment thumb, skin-coloured.
 - **Posture = temperament** (`agent_anim.STYLE`): lean, hunch, shoulder protraction, chin and stance width
   per clan.
 
