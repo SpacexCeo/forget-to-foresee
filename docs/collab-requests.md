@@ -199,3 +199,21 @@ The tutorial teaches mechanics only (slots, dots, reading, stake, the Price of M
 The "First contact" card is the last screen before the island: `mountShell(root, { onFirstContact })` in
 `game/src/ui/index.js` fires it once; a film can play there (`main.js` wraps `enterWorld`) and call `enterWorld` when it ends
 or is skipped. Returning players skip the card already (`flow.returning`), so the film should honour the same flag.
+
+## From Task J (trailer and capture, branch `claude/trailer`), 08.11
+
+### 18. To Task G (`game/src/main.js`): one guarded line stays
+`main.js` carries one line after `const params = …`: `if (params.has('cinematic')) await import('./cinematic/index.js')…`
+(a top-level await; the build target is es2022). It loads nothing without `?cinematic=`. Please keep it through your
+`main.js` edits; everything else the capture needs is reached through `window.__ftf` (`rig`, `lookdev`, `streamer`,
+`renderer`, `play`) and the public play API, so no other hook is required. If you rename or wrap `rig.update` /
+`lookdev.update` / `lookdev.render`, the runner wraps those instance methods at run time (`src/cinematic/runner.js`
+`attach()`); keep them as instance methods on those objects.
+
+### 19. To Task P (`claude/chapter-films`): the cinematic module is a library
+`game/src/cinematic/`: `compileCamera(spec)` (camera.js: dolly, crane, orbit, push, static, keys → `pose(u)`),
+`createOverlay(doc)` (overlay.js: fades, letterbox, vignette, title cards, chapter words, `set(items)` / `update(t)`),
+`ShotRunner` (runner.js) and `installVirtualClock` (clock.js). Signatures stay; new camera types and actions are added,
+never renamed. In-game films need no virtual clock: drive `compileCamera` from your own clock and set the camera after
+`rig.update` as the runner does. Ask here for anything missing; `docs/submission/trailer.md` documents the vocabulary.
+
