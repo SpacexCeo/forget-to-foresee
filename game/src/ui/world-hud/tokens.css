@@ -1,9 +1,10 @@
 /* World HUD — design tokens and primitives (docs/ui-world-hud.md §2, §4, §5).
    Values were sampled from the owner's mockups. Scoped under .wh-root; packages
    (status/signs/log/actions) build on these and never redefine them.
-   Fonts (docs §3): Latin = Libre Caslon Text (fonts.js imports @fontsource/libre-caslon-text 400/700);
-   Cyrillic = Old Standard TT through the "WH Cyrillic" faces declared below (cyrillic subset files only,
-   size-adjusted to Caslon's x-height, metrics overridden to Caslon's line box). No CDN at runtime. */
+   Fonts (docs §3): serif roles = Libre Caslon Text (Latin) + Old Standard TT (Cyrillic, through the
+   "WH Cyrillic" faces below: cyrillic subset files only, size-adjusted to Caslon's x-height, metrics
+   overridden to Caslon's line box); body-copy roles = Source Sans 3 (Latin + Cyrillic in one family).
+   fonts.js imports the fontsource files; no CDN at runtime. */
 
 /* Cyrillic companion. unicode-range keeps it off Latin glyphs; size-adjust 112% matches Caslon's x-height
    (0.97×) while keeping caps within 1.05×; ascent/descent overrides equal Libre Caslon Text's font box
@@ -36,7 +37,8 @@
 
 .wh-root {
   /* ---- scale: 1 u = 1 px at the 1811-wide desktop reference ---- */
-  --wh-px: clamp(0.8px, calc(100vw / 1811), 1.35px);
+  /* proportional from 1087 px up (0.6 u floor); 701–1086 px is the compact desktop range, see docs §1 */
+  --wh-px: clamp(0.6px, calc(100vw / 1811), 1.35px);
 
   /* ---- surfaces ---- */
   --wh-panel-bg: linear-gradient(180deg, rgba(11, 21, 23, .90) 0%, rgba(24, 34, 34, .87) 55%, rgba(36, 44, 41, .84) 100%);
@@ -70,6 +72,10 @@
   --wh-frame-strong: rgba(232, 214, 172, .75);
   --wh-frame-soft: rgba(196, 186, 156, .45);
   --wh-frame-dim: rgba(196, 186, 156, .28);
+  /* pill, anchor and kbd outlines are pale parchment (sampled #86836d / #a19b8a / #b3a48d), not saturated gold */
+  --wh-pill-border: rgba(214, 206, 180, .62);
+  --wh-anchor-border: rgba(226, 214, 180, .80);
+  --wh-kbd-border: rgba(222, 210, 180, .85);
   --wh-prompt-border: rgba(216, 200, 160, .70);
   --wh-prompt-border-mobile: #f5d788;
   --wh-bar-fill: linear-gradient(90deg, #cf9846 0%, #e2ac56 100%);
@@ -87,6 +93,9 @@
   --wh-text-muted: #c9c6b8;
   --wh-text-on-gold: #fffcec;
   --wh-text-kbd: #fef4e6;
+  --wh-tab-active-text: #fff6d2;
+  --wh-speaker-mobile: #ddc58a;
+  --wh-line-mobile: #ecedea;
 
   /* ---- shadows and glows ---- */
   --wh-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06);
@@ -108,26 +117,38 @@
 
   /* ---- type (docs §3.2; sizes in u on desktop, px on mobile) ---- */
   --wh-font: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  /* body copy (quest body, toast, log rows, sign stats, chips, timestamps, small labels) */
+  --wh-font-body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --wh-font-body-weight: 500;
+  /* Caslon 400 is lighter than the mockup lettering; 700 is far too heavy. Titles ≥ 20 u take
+     --wh-stroke-title, serif labels 13–15 u take --wh-stroke-text (-webkit-text-stroke: … currentColor). */
+  --wh-stroke-title: .3px;
+  --wh-stroke-text: .18px;
   --wh-fs-title-l: calc(21 * var(--wh-px));
   --wh-fs-title: calc(23 * var(--wh-px));
-  --wh-fs-card-title: calc(20 * var(--wh-px));
+  --wh-fs-card-title: calc(19 * var(--wh-px));
   --wh-fs-sign-title: calc(14 * var(--wh-px));
   --wh-fs-row: calc(14 * var(--wh-px));
-  --wh-fs-body: calc(12.5 * var(--wh-px));
-  --wh-fs-toast: calc(12 * var(--wh-px));
-  --wh-fs-ui: calc(11.5 * var(--wh-px));
-  --wh-fs-stat: calc(12 * var(--wh-px));
-  --wh-fs-small: calc(11 * var(--wh-px));
-  --wh-fs-tag: calc(11 * var(--wh-px));
+  --wh-fs-subtitle: calc(12.75 * var(--wh-px));
+  --wh-fs-body: calc(13.5 * var(--wh-px));
+  --wh-fs-toast: calc(13.5 * var(--wh-px));
+  --wh-fs-ui: calc(13.5 * var(--wh-px));
+  --wh-fs-tab: calc(12.5 * var(--wh-px));
+  --wh-fs-close: calc(14 * var(--wh-px));
+  --wh-fs-stat: calc(13 * var(--wh-px));
+  --wh-fs-small: calc(12 * var(--wh-px));
+  --wh-fs-caption: calc(11.5 * var(--wh-px));
+  --wh-fs-tag: calc(11.5 * var(--wh-px));
   --wh-fs-prompt: calc(15 * var(--wh-px));
   --wh-fs-speaker: calc(14 * var(--wh-px));
   --wh-fs-line: calc(13 * var(--wh-px));
   --wh-fs-reply: calc(14 * var(--wh-px));
   --wh-fs-anchor: calc(14 * var(--wh-px));
   --wh-fs-kbd: calc(11 * var(--wh-px));
+  --wh-fs-kbd-sm: calc(11 * var(--wh-px));
   --wh-fs-kbd-lg: calc(14 * var(--wh-px));
   --wh-fs-tile: 12.5px;
-  --wh-ls-tag: .04em;
+  --wh-ls-tag: .03em;
 
   --wh-transition: 160ms ease;
 
@@ -144,6 +165,12 @@
   font-variant-numeric: lining-nums;
 }
 
+/* Compact desktop (701–1086 px): the scale floor keeps text legible, so the top row no longer fits
+   side by side; the Signs panel starts closed and overlays when opened, the toast is hidden (docs §1). */
+@media (max-width: 1086px) and (min-width: 701px) {
+  .wh-root .wh-toast { display: none; }
+}
+
 @media (max-width: 700px) {
   .wh-root {
     --wh-px: 1px;
@@ -152,11 +179,16 @@
     --wh-fs-card-title: 14.5px;
     --wh-fs-sign-title: 14.5px;
     --wh-fs-row: 13.5px;
+    --wh-fs-subtitle: 12.75px;
     --wh-fs-body: 13.5px;
-    --wh-fs-ui: 11.5px;
-    --wh-fs-stat: 12px;
-    --wh-fs-small: 9.5px;
-    --wh-fs-tag: 12px;
+    --wh-fs-toast: 13.5px;
+    --wh-fs-ui: 13px;
+    --wh-fs-tab: 12.5px;
+    --wh-fs-close: 14px;
+    --wh-fs-stat: 12.5px;
+    --wh-fs-small: 10.5px;
+    --wh-fs-caption: 11.5px;
+    --wh-fs-tag: 11.5px;
     --wh-fs-prompt: 14.5px;
     --wh-fs-speaker: 12px;
     --wh-fs-line: 12px;
@@ -229,18 +261,18 @@
 .wh-root .wh-pill {
   display: inline-flex; align-items: center; gap: calc(6 * var(--wh-px));
   height: calc(21 * var(--wh-px)); padding: 0 calc(10 * var(--wh-px));
-  border: 1px solid var(--wh-gold-deep); border-radius: var(--wh-r-pill);
+  border: 1px solid var(--wh-pill-border); border-radius: var(--wh-r-pill);
   background: var(--wh-pill-bg); color: var(--wh-gold-text);
-  font-size: var(--wh-fs-ui); line-height: 1; white-space: nowrap;
+  font-size: var(--wh-fs-tab); line-height: 1; white-space: nowrap;
 }
 .wh-root .wh-pill--anchor {
   height: calc(28 * var(--wh-px)); padding: 0 calc(14 * var(--wh-px)) 0 calc(10 * var(--wh-px)); gap: calc(8 * var(--wh-px));
-  border-color: var(--wh-gold); background: var(--wh-anchor-bg); font-size: var(--wh-fs-anchor);
+  border-color: var(--wh-anchor-border); background: var(--wh-anchor-bg); font-size: var(--wh-fs-anchor);
 }
 .wh-root .wh-tag {
   display: inline-flex; align-items: center; gap: calc(5 * var(--wh-px));
   height: calc(20 * var(--wh-px)); padding: 0 calc(9 * var(--wh-px)) 0 calc(8 * var(--wh-px));
-  border: 1px solid var(--wh-gold-deep); border-radius: var(--wh-r-pill);
+  border: 1px solid var(--wh-pill-border); border-radius: var(--wh-r-pill);
   background: var(--wh-pill-bg); color: var(--wh-gold-text);
   font-size: var(--wh-fs-tag); line-height: 1; letter-spacing: var(--wh-ls-tag); text-transform: uppercase; white-space: nowrap;
 }
@@ -251,6 +283,7 @@
   height: calc(34 * var(--wh-px)); padding: 0 calc(22 * var(--wh-px));
   border: 1px solid var(--wh-frame-soft); border-radius: var(--wh-r-pill);
   background: var(--wh-chip-bg); color: var(--wh-text-muted);
+  font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight);
   font-size: var(--wh-fs-ui); line-height: 1; white-space: nowrap;
   transition: border-color var(--wh-transition), color var(--wh-transition), box-shadow var(--wh-transition);
 }
@@ -264,7 +297,7 @@
 .wh-root .wh-kbd {
   display: inline-grid; place-items: center;
   min-width: calc(24 * var(--wh-px)); height: calc(24 * var(--wh-px)); padding: 0 calc(5 * var(--wh-px));
-  border: 1px solid var(--wh-gold); border-radius: calc(5 * var(--wh-px));
+  border: 1px solid var(--wh-kbd-border); border-radius: calc(5 * var(--wh-px));
   background: var(--wh-kbd-bg); color: var(--wh-text-kbd);
   font-family: var(--wh-font); font-size: var(--wh-fs-kbd); font-weight: 400; line-height: 1;
 }
@@ -299,6 +332,12 @@
 .wh-root .wh-bar__seg:first-child { border-radius: calc(5 * var(--wh-px)) 0 0 calc(5 * var(--wh-px)); }
 .wh-root .wh-bar__seg:last-child { border-radius: 0 calc(5 * var(--wh-px)) calc(5 * var(--wh-px)) 0; }
 @media (max-width: 700px) { .wh-root .wh-bar { height: 8px; border-radius: 4px; } .wh-root .wh-bar__seg--on { background: var(--wh-bar-fill-mobile); } }
+
+/* body-copy text (sans): quest body, toast, log rows, sign stats, timestamps, small labels */
+.wh-root .wh-body { font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight); }
+/* serif weight helpers (see --wh-stroke-*) */
+.wh-root .wh-heavy { -webkit-text-stroke: var(--wh-stroke-title) currentColor; }
+.wh-root .wh-heavy-sm { -webkit-text-stroke: var(--wh-stroke-text) currentColor; }
 
 .wh-root .wh-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -.15em; color: var(--wh-gold); flex: none; }
 .wh-root .wh-icon svg { display: block; width: 100%; height: 100%; }

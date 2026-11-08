@@ -1,10 +1,15 @@
-// Fonts for the world HUD (docs/ui-world-hud.md §3). Latin: Libre Caslon Text (OFL-1.1); Cyrillic:
-// Old Standard TT (OFL-1.1) through the cyrillic subset files only, under the family "WH Cyrillic"
-// that tokens.css also declares (same size-adjust / metric overrides — keep the two in sync). The
-// declaration here uses Vite-bundled URLs so production builds work; tokens.css's copy uses the
-// node_modules path for dev and the parity script. Browser-only module, no CDN at runtime.
+// Fonts for the world HUD (docs/ui-world-hud.md §3), all OFL-1.1, bundled by Vite, no CDN at runtime.
+// Serif roles: Libre Caslon Text (Latin) + Old Standard TT for Cyrillic, loaded from the cyrillic
+// subset files only under the family "WH Cyrillic" that tokens.css also declares (same size-adjust /
+// metric overrides — keep the two in sync; this copy uses bundled URLs so production builds work,
+// tokens.css's copy uses the node_modules path for dev and the parity script).
+// Body-copy roles: Source Sans 3 (Latin + Cyrillic in one family; 400/500/600).
+// Browser-only module.
 import '@fontsource/libre-caslon-text/400.css';
 import '@fontsource/libre-caslon-text/700.css';
+import '@fontsource/source-sans-3/400.css';
+import '@fontsource/source-sans-3/500.css';
+import '@fontsource/source-sans-3/600.css';
 import cyr400 from '@fontsource/old-standard-tt/files/old-standard-tt-cyrillic-400-normal.woff2?url';
 import cyr700 from '@fontsource/old-standard-tt/files/old-standard-tt-cyrillic-700-normal.woff2?url';
 
