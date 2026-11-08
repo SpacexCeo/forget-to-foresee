@@ -47,6 +47,8 @@ function modelListPlugin() {
 }
 
 export default defineConfig({
+  // Public path: '/' locally; the GitHub Pages workflow builds with FTF_BASE=/forget-to-foresee/.
+  base: process.env.FTF_BASE || '/',
   // 'mpa': a missing file is a real 404, never index.html.
   appType: 'mpa',
   plugins: [modelListPlugin()],
@@ -59,6 +61,7 @@ export default defineConfig({
         review: resolve(ROOT, 'review.html'),
         vfx: resolve(ROOT, 'vfx.html'),
         uiPreview: resolve(ROOT, 'ui-preview.html'),
+        hudPreview: resolve(ROOT, 'hud-preview.html'),
       },
       output: {
         manualChunks(id) {
