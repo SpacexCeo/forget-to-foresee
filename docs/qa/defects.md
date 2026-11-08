@@ -20,25 +20,28 @@ named in the **Check** line, that fails while the defect is open and passes once
 |---|---|---|---|---|---|
 | QA-001 | Blocker | i18n / HUD | The Guests say "The reveal does not match the root." on every verified reveal (all five locales) | F (UI) | **fixed** (lead, 17bf2de; verified on 2004418: `proof-line.e2e.mjs` green, the Guests say "The reveal matches the root.") |
 | QA-002 | High | Shell hub | Keys and dock clicks are accepted during the 480 ms flight fade; a queued flight runs inside the auto-advance, a second F is swallowed | F (hub-ui) + lead (hub.js, game.js) | **fixed** (lead, 17bf2de; verified on 2004418: F then T within 120 ms keeps the trial and lands the flight; F then F runs one flight, the second press is dropped silently while the fade is up, a settled F stakes) |
-| QA-003 | Medium | Shell hub / panels | Two Heir prompts at once at the season end (hub card over the Biography panel), different copy | F | open |
-| QA-004 | Medium | Play panels | Literal `null` text at the bottom of the Memories panel and of the inspect panel | F | open |
-| QA-005 | Medium | Play panels / Novice | "Forget it for a vision" opens the legacy *Signs and visions* panel (reading-rule buttons, four slots with confidence) instead of the HUD *Signs & Visions*; Novice sees Pro detail; two Signs UIs | F | open |
-| QA-006 | Medium | Hints | The hint toast "I read it as a Gift of 10 at Shell I, trial 2. Press V to see why." stays on screen through trial 4 | F (hints.js), copy I | open |
-| QA-007 | Medium | Shell hub | A Shell stays gold ("2 signs") when every sign it holds points at a past trial; F flies there and the card says "That trial is already past" | lead (hub.js) | open |
-| QA-008 | Medium | Camera | After leaving a Shell the camera keeps the Shell framing (distance ≤ 9 m, low pitch): the frame is mostly sky and Iris hides behind the decision card | G | open |
+| QA-003 | Medium | Shell hub / panels | Two Heir prompts at once at the season end (hub card over the Biography panel), different copy | F | open (reproduced on 2004418: `hub-season.e2e.mjs`) |
+| QA-004 | Medium | Play panels | Literal `null` text at the bottom of the Memories panel and of the inspect panel | F | open (reproduced on 2004418) |
+| QA-005 | Medium | Play panels / Novice | "Forget it for a vision" opens the legacy *Signs and visions* panel (reading-rule buttons, four slots with confidence) instead of the HUD *Signs & Visions*; Novice sees Pro detail; two Signs UIs | F | open (reproduced on 2004418) |
+| QA-006 | Medium | Hints | The hint toast "I read it as a Gift of 10 at Shell I, trial 2. Press V to see why." stays on screen through trial 4 | F (hints.js), copy I | open (reproduced on 2004418, walk and hub) |
+| QA-007 | Medium | Shell hub | A Shell stays gold ("2 signs") when every sign it holds points at a past trial; F flies there and the card says "That trial is already past" | lead (hub.js) | open (reproduced on 2004418 at trials 11, 13, 14 of the judge seed) |
+| QA-008 | Medium | Camera | After leaving a Shell the camera keeps the Shell framing (distance ≤ 9 m, low pitch): the frame is mostly sky and Iris hides behind the decision card | G | open (reproduced on 2004418: 9 m after leaving vs 30 m before the flight) |
 | QA-009 | Medium | Layout | Overlaps on desktop: the main.js inspect prompt under the context menu and under the "Shell I opens…" flash; the "Local demo" badge over the dialogue strip; greybox labels poking out from behind the quest banner | F (a, b), H (c) | open |
 | QA-010 | Medium | Layout / copy | Truncated text: quest title ellipsis, quest body under the key icon, hint toast cut at two lines (EN, ZH), log rows clipped at the bottom of the log box | F | open |
 | QA-011 | Medium | Phone | At 390×844 the Shell dock covers the top of the MAIN QUEST card; the quest copy says "Press F or pick the gold Shell on the right" on a device with no F and the dock at the top | F (layout), I (copy) | open |
-| QA-012 | Low | HUD | Progress reads "16 / 17 · 94 %" once the season is over | F (from-obs) | open |
+| QA-012 | Low | HUD | Progress reads "16 / 17 · 94 %" once the season is over | F (from-obs) | open (reproduced on 2004418) |
 | QA-013 | Low | Objectives | Quest says "Anchor on Shell I for tick 3" while E's highlighted default anchors tick 2 | I | open |
 | QA-014 | Low | Shell hub | While the Memories panel is open (after the Key card's "Open memories") F and T are ignored but the dock buttons still work | F | open |
 | QA-015 | Low | i18n zh | "Sign" is rendered as both 符印 (quest, dock) and 符号 (log "1 个新符号", hotbar "符号与幻象") | lead (locales) | open |
-| QA-016 | Low | Onboarding | "Begin first contact" sits below the fold at 1280×800 (the constructor page needs a scroll before the primary button is visible) | I | open |
-| QA-017 | Low | Copy | Season-end quest says "(panel below)" while the Biography panel is on the right | I | open |
+| QA-016 | Low | Onboarding | "Begin first contact" sits below the fold at 1280×800 (the constructor page needs a scroll before the primary button is visible) | I | **fixed** (I; verified on 2004418: "Begin" beside the title, above the fold) |
+| QA-017 | Low | Copy | Season-end quest says "(panel below)" while the Biography panel is on the right | I | **fixed** (I; verified on 2004418: "Thank you for playing this local demo.") |
 | QA-018 | Info | Movement | Walking the judge route with G took 156 s under SwiftShader (README: about 30 s) | G | not a defect: in-game speeds are 1.70 m/s walk and 3.51 m/s run; the wall-clock slowness is the software renderer stalling on texture uploads |
 | QA-019 | High | i18n | Switching the language mid-season (L or Settings) leaves strings of the previous language inside the new one: in zh the hint reads "我把它读作：Мушля I，Дар 10，试炼 2" and the log rows keep the Ukrainian "В1" prefix; in EN "I read it as a Дар of 10". Lazily rendered args (`wh.raw`, `$meaning`, `$shell`, log tick labels) are cached in the locale they were first rendered in | F (world-hud / from-obs), lead | open |
 | QA-020 | Medium | Settings | The in-world Settings (hotbar, Esc) opens "Exploration controls" (key reference + volume) with no language and no Novice/Pro switch, while the README says "Settings switches Novice/Pro and the five UI languages"; those switches exist only in the lobby dialog, unreachable from the world | F (UI) / D (README) | open |
 | QA-021 | Low | Help | H help in the hub lists the walk-mode keys only ("G walk to the current goal", "T end the tick"); F (fly / stake) and "T leaves the Shell" are missing | F / I | open |
+| QA-022 | High | i18n / log | Rules-v3 log lines render as "Something happened that this build cannot describe yet." in every locale: the refunded question, held fragments, deferred prizes, the Shells leaving | engine-text adapter owner (F / lead) | open |
+| QA-023 | Low | Tutorial copy | Beat 3 reads the Delay stroke as "in 2 ticks" and the sentence below says "in 2 trials"; the world HUD says "trial" everywhere (Task I's open request to rename `meaning.3.*`) | I / lead | open |
+| QA-024 | Low | Season end | When the vote accepts a weapon the HUD shows Silk 0 and "the message was a weapon" with no line that says the weapon took the silk; the Biography lists the memories and "Thank you for playing" only | I / F | open |
 
 Not defects (checked and fine): `npm test` 292/292, `server` 28/28, `cargo test --lib` 56 passed, `npm run build`
 green, the agent example ends with `"rejected": 0, "firstProofVerified": true`; zero console errors or page errors in
@@ -200,6 +203,39 @@ scrolling (it is below the particles section).
 
 Season-end quest body: "Forget everything for an Heir, or keep the memory (panel below)." The Biography panel is on
 the right.
+
+## QA-022 · High · Untranslatable rules-v3 log lines
+
+**Repro:** any season (`?demo=judge` hub, judge seed: trial 15; `tests/e2e/.shots/hub-season-end.png`), or
+`node --test game/tests/e2e/engine-text.e2e.mjs` (2 s, no browser): it simulates 20 seeds × every sim strategy on
+rules v3 and lists each engine feed line the adapter cannot parse. On 2004418:
+
+| times | engine line |
+|---|---|
+| 159 | Гости вернули шёлк за вопрос без ответа. |
+| 64 | Янтарь удержал фрагмент ради приза (N, выплата в финале). Его часть послания погасла. |
+| 49 | Янтарь получает отложенный приз N шёлка: послание прочли без него. |
+| 19 | Вы удержали фрагмент: приз N ждёт финала — если послание прочтут без вас. |
+| 7 | Раковины ушли. Шёлк мира обесценился. |
+| 32 | the same held-fragment / deferred-prize lines for Соль, Иней, Ирис |
+
+**Actual:** the HUD log row reads "Something happened that this build cannot describe yet." (`log.unknown`), in all five
+locales; the Lore/Log tabs and the agent API's `log[].text` carry the same fallback.
+**Cause:** `src/ui/i18n/engine-adapter.js` `LOG_PATTERNS` covers the v2 feed; the v3 lines (P2 refund, P1 deferred
+prize, gone wipes silk) were added to `engine.js` without patterns, and the adapter test replays v2 seasons only.
+**Check:** `tests/e2e/engine-text.e2e.mjs`.
+
+## QA-023 · Low · "ticks" vs "trials" on one tutorial card
+
+Beat 3 ("Read it") lists "4 Delay: in 2 ticks" and then "Gift of 20 at Shell II, in 2 trials." The HUD, the quest
+and the README say "trial"; `meaning.3.*` and `opt.anchor*` still say "tick" (Task I asked the lead to rename them).
+
+## QA-024 · Low · Weapon outcome leaves Silk 0 unexplained
+
+Hub season, vote "A gift: accept" on a weapon season (`hub-season.e2e.mjs`, judge seed): the trial card shows Silk 0,
+the quest "The season is over: the message was a weapon", the Biography the kept memories and "Thank you for playing
+this local demo." Nothing says that accepting the weapon cost every clan its silk (and the log line that would, if it
+is "Раковины ушли…"-like, is QA-022). The player cannot tell a bug from the rule.
 
 ## QA-018 · Info · Walk time of the judge route (not a defect)
 
