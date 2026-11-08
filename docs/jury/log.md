@@ -16,3 +16,11 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   the weakest-covered topics and go first in the next cycle. The rubric is still v0.1; folding the six notes into
   weights and checklists is the other job of the next cycle. Paused on the lead's order (usage limit); the schedule
   resumes when the lead restarts it.
+
+## Cycle 2: 2026-11-08 17:09 UTC (resumed on the lead's order)
+- Restarted the three missing research threads (past NEAR winners, on-chain game design, demo video and trailer).
+- Folded the six notes into `rubric.md` v0.2: weights C1 25 / C2 20 / C3 13 / C4 12 / C5 12 / C6 10 / C7 8
+  (reproducibility up, presentation and NEAR integration down, reasons in the rubric); added the judging model
+  (screener behaviour, jury profile, track exemplar at three time scales, field size: 25 `games`, 21 `nfts`, 49
+  `open` of 302 on 2026-11-08), two more gates (hard-coded results, track mismatch), and pointers to the three
+  checklists (20 screener checks, 15-item ten-minute play session, 15-item accessibility pass).

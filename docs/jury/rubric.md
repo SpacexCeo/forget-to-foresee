@@ -1,131 +1,188 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.1, 2026-11-08 (research cycle 1). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
-This rubric is **inferred**: the hackathon publishes no numeric rubric (see `notes/near-hackathon-rules.md`). Every
-weight below names the notes it rests on; weights change as the notes grow, and `log.md` records each change.
+Version 0.2, 2026-11-08 (research cycle 2). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
+`notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
 How the scorecards use it: each criterion is scored 0 to 10 with evidence (a URL, a command and its output, a
-screenshot, a file and line). The weighted total is out of 100. A red flag (section 3) is not a deduction; it is a
-gate that the submission must pass before the score means anything.
+screenshot, a file and line). The weighted total is out of 100. A red flag (section 3) is a gate, not a deduction:
+an open flag is reported to the lead at once, and the score is marked provisional until it closes.
 
 ## 1. How this hackathon judges (the model)
 
-1. **AI screening first** (Claude Code and Codex): can the project be reproduced from the README, do the claimed features
-   exist, structured report, preliminary score. Humans decide; a low AI score alone cannot reject (HACKATHON.md Q-017).
-2. **Human jury per track**: `games` is judged "on the game loop, not the token", bonus "if players never notice the
-   chain"; `nfts` is "ownership with behavior". Prizes are per track (1st/2nd/3rd) plus one cross-track grand prize.
-3. **What the page itself tells judges to look at**: a README for a machine and a human ("do X - see Y", no marketing),
-   a demo post that leads with the user problem, shows one complete user action with a visible result and states NEAR's
-   role concretely, a public repo with a LICENSE, baseline tags and disclosure of libraries and AI-generated code.
-
-So the two audiences are (a) a screener that runs commands and greps for claims, and (b) a tired human judge who opens
-the demo post, watches two minutes of video, opens the live link, and reads the README top. The rubric scores both.
+1. **AI screening first** (Claude Code and Codex): reproducibility check, feature verification, structured report,
+   preliminary score. Humans decide; a low AI score alone cannot reject (HACKATHON.md Q-017). The closest published
+   pipeline walks the repo with read/grep/ls, checks the pitch claim by claim and emits a `claims_mismatches` list
+   with file and line; scores fall for the gap between README and code, rarely for modest honest claims
+   (`notes/ai-screening-and-reproducibility.md`). The screener very likely runs offline or sandboxed and cannot see
+   WebGL, so tests, CLI paths, CI runs and the video carry the browser claims.
+2. **Human jury per track.** The listed jurors are mostly crypto investors plus the NEAR founder, so expect "why does
+   this need NEAR", "what is the sustainable economy" and "what did you build in the window", not game-design depth
+   (`notes/near-hackathon-tracks.md`). Minutes per project, not hours: MLH plans 4, ETHGlobal finalists get 7; the first
+   thirty seconds and the README's first two paragraphs carry most of the score (`notes/hackathon-judging-rubrics.md`).
+3. **Track text.** `games`: "Judged on the game loop, not the token", bonus "if players never notice the chain". The
+   organizers' own `games` exemplar wants the loop designed at three time scales (every 30 seconds, every 5 minutes,
+   every session), agent NPCs with their own wallets and inventories, the agents' reasoning exposed in a tooltip, the
+   price rules in one readable file, and a fast-forward mode so judges can watch the economy move in about a minute.
+   `nfts`: "ownership with behavior", exemplar = a running NEP-171 contract bound to a sub-account with transfer tests.
+4. **The field.** On 2026-11-08 the public directory listed 302 submissions: 25 in `games`, 21 in `nfts`, 49 in `open`,
+   154 in `security`, 147 in `agents`. Three prizes per track; most rivals claim several tracks
+   (`notes/near-hackathon-tracks.md`).
+5. **What previous NEAR hackathons scored** (per the organizers' FAQ): technical implementation, design, impact,
+   originality, sustainability. "Impact" and "sustainability" are therefore live questions for the human round even
+   though the 2026 page does not list them.
 
 ## 2. Criteria, weights and what a 10 looks like
 
 | # | Criterion | Weight | Resting on |
 |---|---|---|---|
-| C1 | Reproducibility and honesty (the screener's view) | 20 | `notes/near-hackathon-rules.md` (Q-017, README guidance); `notes/ai-screening-and-reproducibility.md` |
-| C2 | Game loop and fun in the first ten minutes | 20 | `games` track text; `notes/game-jam-and-festival-judging.md` |
-| C3 | NEAR integration: concrete, in the loop, verifiable | 15 | HACKATHON.md demo-post guidance, Q-011; `notes/onchain-game-design.md` |
-| C4 | Innovation and story | 10 | `notes/hackathon-judging-rubrics.md`, `notes/past-near-hackathon-winners.md` |
-| C5 | Technical depth and quality | 10 | `notes/hackathon-judging-rubrics.md` |
-| C6 | Presentation: demo video, X post, README top | 15 | Q-012 and demo-post guidance; `notes/demo-video-and-trailer.md` |
-| C7 | Completeness, polish, UX and accessibility | 10 | `notes/accessibility.md`, `notes/game-jam-and-festival-judging.md` |
+| C1 | Runs and is verifiable: reproducibility and honesty | 25 | Q-017 and README guidance; `ai-screening-and-reproducibility`; `hackathon-judging-rubrics` (Google "working application, not a mockup", Microsoft "does it work" 25 %) |
+| C2 | Game loop and fun in the first ten minutes | 20 | `games` track text and exemplar; `game-jam-and-festival-judging`; Imagine Cup Fun Factor 25 % |
+| C3 | Technical depth and quality | 13 | ETHGlobal Technicality, Devpost "technical implementation"; `hackathon-judging-rubrics` |
+| C4 | NEAR integration and track fit: concrete, in the loop, honest | 12 | Demo-post guidance, Q-010/Q-011; `near-hackathon-tracks`; `onchain-game-design` (pending) |
+| C5 | Originality, story and impact | 12 | IGF/Nuovo innovation; Imagine Cup Innovation 20 %; previous NEAR criteria (originality, impact, sustainability) |
+| C6 | Presentation: demo video, X post, README top | 10 | Q-012 and demo-post guidance; `demo-video-and-trailer` (pending); judges' "first two paragraphs" |
+| C7 | Polish, UX and accessibility | 8 | `accessibility`; `game-jam-and-festival-judging` |
 
-Weights are provisional (cycle 1). The initial split puts 35 points on "it runs and shows well" (C1, C6) because both
-judging layers start there, 35 on the game and its chain role (C2, C3) because that is what the track text names, and
-30 on the rest.
+Change from v0.1: C1 up 20 to 25 (two independent sources say raise "works and is verifiable" above the generic
+15 to 20 because this hackathon screens reproducibility explicitly); presentation down 15 to 10 (the first reader is a
+machine; the video still matters as the only browser evidence a sandboxed screener and a hurried judge will see);
+NEAR integration 15 to 12 (Q-011: an own fitting contract is enough, hints are wishes); technical depth 10 to 13 and
+originality 10 to 12 to match the consolidated table; polish 10 to 8.
 
-### C1. Reproducibility and honesty (20)
+### C1. Runs and is verifiable (25)
 - **10/10**: a screener with Node 20+ and Rust reproduces every README command on a clean clone in under 30 minutes
   with the stated output (test counts, server banner, agent summary); every row of the judge table is true on the
-  submitted commit; the real/mock table matches the code; no claim without a path to verify it; tags `pre-hackathon`
-  and `hackathon-submission` exist and the README links the diff; libraries and AI-generated code are listed; LICENSE
-  present; no secrets; CI green on the submitted commit.
+  submitted commit; the real/mock table matches the code and uses grep-able words ("not deployed", "simulated");
+  tags `pre-hackathon` and `hackathon-submission` exist and the compare link resolves; libraries and AI-generated code
+  are listed; LICENSE present; no secrets; CI green on the submitted commit and linked from the README; a
+  claim-by-claim table (claim, status, file or test) is already in the README so an incomplete exploration cannot mark
+  a working feature unverified.
+- **7/10**: all of the above except that a browser-only claim has no headless evidence (no screenshots, no video, no
+  test naming the step).
 - **5/10**: commands work but expected output drifts (test counts, labels), or one judge-table row is stale, or a
-  claimed feature is only reachable with a dev flag.
+  claimed feature is reachable only with a dev flag.
 - **0/10**: install fails, tests fail, or a headline claim ("verified on-chain", "NFT") does not exist in code.
+- Checklist: the twenty screener checks in `notes/ai-screening-and-reproducibility.md` (tags, toolchain pinned,
+  `npm ci`, three test suites with matching counts, agent API path, OpenAPI reachable, contract build, deployment
+  claim vs chain, claims grep-able, real/mock consistent, CI green, live URL responds, headless evidence for the
+  browser path, third-party disclosure, git history inside the window, no secrets needed, every README link resolves).
 
 ### C2. Game loop and fun in the first ten minutes (20)
-- **10/10**: a first-time player knows the goal within 30 seconds, makes a meaningful decision within 2 minutes, sees
-  cause and effect (stake, reveal, payout) with clear feedback, reaches the signature mechanic (forget a memory to
-  foresee) inside the session, and wants another season. The economy (silk, trust, fragments, tension) is legible
-  without reading docs. Failure states are understandable. The loop works without the walkthrough table.
-- **5/10**: the loop is complete but needs the README table or hotkey list to be followed; the first decision is a
-  guess; payout feedback is text in a log.
+- **10/10**: a first-time player states the goal within 30 seconds, makes a decision that visibly changes the outcome
+  within 2 minutes, reaches the signature mechanic (forget a memory to foresee) by minute 5, reads cause and effect
+  (stake, reveal, payout) without the README, never waits more than 30 seconds with nothing to decide, understands
+  the first loss, and at minute 10 can say what happens next and wants to continue. The loop is visible at the three
+  time scales the organizers name (30 seconds, 5 minutes, a session) and a judge can fast-forward a season and watch
+  the economy move.
+- **7/10**: all of that with one stall that a hint rescues, or one stretch of dead time (a long walk, an unskippable
+  animation).
+- **5/10**: the loop is complete but needs the README table or hotkey list; the first decision is a guess; payout
+  feedback is text in a log; the signature mechanic is reached only by following instructions.
 - **0/10**: the player cannot find the first action, or the season cannot be finished.
+- Checklist: the fifteen-item ten-minute session in `notes/game-jam-and-festival-judging.md` (goal in 30 s, eye drawn
+  to the first action, decision by 2:00, every action answered, signature mechanic by 5:00, short legible text, one
+  mechanic at a time, first failure explained and cheap, no 30-second dead stretches, state and odds visible at each
+  decision, hint after a 10-second stall, loads in a browser in under a minute without an account, hook at 10:00,
+  one-sentence novelty, theme explains the rules). The juror plays silently first, then with the README.
 
-### C3. NEAR integration: concrete, in the loop, verifiable (15)
-- **10/10**: the chain does something the game would be worse without (here: the season commitment that prevents the
-  AI or the devs from bending the outcome), the player sees it at the right moment, the contract is deployed (testnet
-  is eligible, Q-010) with an address the judge can open in an explorer, the README states exactly what is and is not
-  on-chain, and the integration was built in the window.
+### C3. Technical depth and quality (13)
+- **10/10**: engine, client, server and contract are each real and tested; tests cover rules, parity and tampering;
+  the architecture fits on a page; the contract's test vectors come from the same engine; performance is inside the
+  stated budgets; agents are deterministic and their rules live in one readable place; no dead code is presented as a
+  feature; the team can say what breaks first.
+- **7/10**: depth everywhere but one layer is scaffolding (for example the server is exercised only by its tests).
+- **5/10**: depth in one layer, the rest is a front-end wrapper.
+- **0/10**: generated boilerplate with a thin game on top.
+
+### C4. NEAR integration and track fit (12)
+- **10/10**: the chain does something the game would be worse without (here: the season commitment that stops the
+  AI or the devs from bending the outcome), the player meets it at the moment it matters, the contract is deployed
+  (testnet is eligible, Q-010) with an address a judge can open, the README states exactly what is and is not
+  on-chain, the integration was built in the window, the track claims are honest (no `nfts` without a running NEP-171
+  path), and the "why NEAR" paragraph exists for the investor jury.
+- **7/10**: deployed on testnet, but the game never shows the player the on-chain step, or the "why NEAR" answer is
+  only in the docs.
 - **5/10**: the mechanism is real but local (browser verification), the contract is tested but not deployed, and the
-  README says so honestly.
-- **0/10**: "powered by NEAR" with no contract, or claims of on-chain verification that the code does not perform.
+  README says so in plain words.
+- **2/10**: a contract exists but no sentence connects it to play; or a second track is claimed on a simulation.
+- **0/10**: "powered by NEAR" with no contract, or claims of on-chain verification the code does not perform.
+- Diagnostic questions (to be completed from `notes/onchain-game-design.md`): would the game be worse without the
+  chain; does the player ever see the verification at a decision; is the token the game or is the game the game;
+  does the economy evolve without a dev patch; is verification that nobody looks at theatre.
 
-### C4. Innovation and story (10)
-- **10/10**: a mechanic judges have not seen (the price of memory, provable prophecy), a one-sentence pitch that
-  survives the demo post, and a theme that the UI and art carry consistently. Distinct from the field (see the
-  competitor snapshot in `docs/decisions.md` §1).
-- **5/10**: a fresh theme over a familiar loop, or a fresh mechanic that the demo never reaches.
+### C5. Originality, story and impact (12)
+- **10/10**: a mechanic judges have not seen (the price of memory; provable prophecy), a one-sentence identity that
+  survives the demo post ("stake on alien signs, verify the reveal against a sealed root, pay with memory to see the
+  future"), a theme that explains the rules and a mood recognisable by minute three, distinct from the field (the
+  competitor snapshot in `docs/decisions.md` §1), and a credible answer to "who plays this after the hackathon and why
+  does the economy sustain itself".
+- **7/10**: novel mechanic and theme, no impact or sustainability answer.
+- **5/10**: a fresh theme over a familiar loop, or a fresh mechanic the demo never reaches.
+- **0/10**: a clone with a token.
 
-### C5. Technical depth and quality (10)
-- **10/10**: engine, client, server and contract are each real and tested; tests cover rules and tampering; the
-  architecture is explained in a page; the contract's test vectors come from the same engine; performance is within
-  stated budgets; no dead code presented as features.
-- **5/10**: depth in one layer, scaffolding in others.
-
-### C6. Presentation: demo video, X post, README top (15)
-- **10/10**: a 2 to 3 minute video that shows gameplay in the first 5 seconds, states the problem in 10 seconds, shows
-  one complete user action with a visible result, shows the verification moment and the NEAR role concretely, has
-  captions, no slide intro; the X post follows the page's four-part structure and the tags; the README top answers
-  "what, why, how to try" above the fold.
+### C6. Presentation: demo video, X post, README top (10)
+- **10/10**: a 2 to 3 minute video with gameplay in the first 5 seconds, the problem in 10 seconds, one complete
+  user action with a visible result, the verification moment, NEAR's role in concrete words, captions, no slide
+  intro, no sped-up footage; the X post follows the page's four parts (problem, action with result, NEAR's role, next
+  step) and carries the tags; the README's first two paragraphs answer what, why and how to try.
 - **5/10**: a screen recording with narration but no structure, or a post that says "powered by NEAR".
 - **0/10**: no video for a browser game, or the post is missing.
+- Checklist: pending `notes/demo-video-and-trailer.md`.
 
-### C7. Completeness, polish, UX and accessibility (10)
-- **10/10**: no greybox or placeholder in the judge path, text readable at 1080p, colour-independent state cues,
-  remappable or at least listed keys, reduced motion honoured, no time pressure that punishes a reader, mobile does
-  not break, five languages do not leak keys, audio has volume controls.
-- **5/10**: the judge path is clean but off-path scenes show placeholders; or accessibility is tests-only.
+### C7. Polish, UX and accessibility (8)
+- **10/10**: no greybox or placeholder on the judge path; body text at least 18 px at 1080p; contrast 4.5:1 (text) and
+  3:1 (large text, controls); colour-coded state also carries a word or icon; hotkeys remappable or at least
+  disable-able; reduced motion honoured; no timed UI outside the turn; subtitles for the Guest's voice and separate
+  volume sliders; 24 px touch targets; `lang` set per UI language; settings persist; an accessibility statement in
+  the README and in-game.
+- **7/10**: baseline present (contrast, colour-independent tells, reduced motion, volume sliders) but no remapping, no
+  text-size option, no statement.
+- **5/10**: the judge path is clean but off-path scenes show placeholders, or accessibility exists only as tests.
+- Checklist: the fifteen items in `notes/accessibility.md`.
 
 ## 3. Red flags that sink a submission (gates, not deductions)
 
-Each of these is checked before scoring. Any open flag is reported to the lead immediately.
-1. Repository private, missing LICENSE, or `hackathon-submission` tag absent at the deadline (HACKATHON.md Q-003,
-   Q-014).
-2. A claim in the README, the post or the video that the code does not do (for example "verified on-chain" while the
-   contract is undeployed; "NFT" while no NEP-171 exists). The screener is told to verify features (Q-017).
-3. Commands in the README that fail on a clean clone, or test counts that do not match.
+Checked before scoring; any open flag goes to the lead immediately. Sources: HACKATHON.md, `hackathon-judging-rubrics`.
+1. Repository private, LICENSE missing, or tag `hackathon-submission` absent at the deadline (Q-003, Q-014); the
+   compare link in the README is dead until the tag exists.
+2. A claim in the README, post or video that the code does not do ("verified on-chain" while undeployed; "NFT"
+   while no NEP-171 exists; a feature "coming soon" described as present). Screeners list claim mismatches by file
+   and line.
+3. README commands that fail on a clean clone, or test counts that do not match the output.
 4. Secrets or personal data committed (the submission payload, keys).
-5. Code or assets from before 19.10.2026 presented as hackathon work, or undisclosed templates and AI code (Q-001,
-   Q-005).
-6. Demo post without video for a game that judges may not be able to run (Q-012), or without the required tags.
-7. A `website` value or a second submission for the same repo (breaks the submission itself).
-8. A second project by the same person without mutual README links (Q-015).
-9. The live site down during judging (16.11 to 18.11; keep it up to 25.11).
+5. Code or assets from before 19.10.2026 presented as hackathon work; one giant import commit; undisclosed
+   templates or AI-generated code (Q-001, Q-005; ETHGlobal and MLH disqualify for this).
+6. Demo post without video for a game judges may not be able to run (Q-012), or without the required tags.
+7. Hard-coded results shown as live, or a "JPEG pretending to be an app".
+8. A `website` value, or a second submission for the same repo (breaks the submission itself).
+9. A second project by the same person without mutual README links (Q-015).
+10. The live site down during judging (16.11 to 18.11; keep it up to 25.11).
+11. Track mismatch: a track box ticked that the project cannot demonstrate (bounty spraying is a named red flag).
 
 ## 4. How the AI screener checks "it runs and the claims exist" (working model)
 
-To be refined by `notes/ai-screening-and-reproducibility.md`. Working assumptions for cycle 1:
-- It clones the repo at the submitted commit, reads the README, runs the exact commands, compares output to the
-  stated "see" text, and greps the code for each headline claim (contract name, Merkle verification, tests).
-- It cannot see WebGL. The browser path is therefore verified through the tests, the agent API path and the CI
-  workflow, plus whatever the video shows. A no-browser path that exercises the whole loop is worth a lot here.
-- It checks hygiene: LICENSE, tags, lockfiles, Node and Rust versions, CI status, secrets, and whether the demo URL
-  responds.
-- It writes a claims table (verified / partial / unverified) and a preliminary score; humans read that table first.
+From `notes/ai-screening-and-reproducibility.md`:
+- It clones the repo at the submitted commit, reads the README, runs the exact commands, compares output with the
+  "see" text, and greps the code for each headline claim (contract name, Merkle verification, tests, events).
+- It treats the project's self-assessment as untrusted and writes a claims table (verified / partial / unverified)
+  plus a preliminary 0 to 10 per criterion; a human accepts or overrides.
+- It is probably offline and headless: it cannot fetch 60 MB of models or open WebGL. The browser path is verified
+  through tests that name the steps, the agent API path, CI runs, screenshots and the video.
+- The dominant agent failure in large reproduction runs is a missing artefact, not a wrong one. Every referenced
+  file, flag, route and URL must exist.
+- Hygiene it checks: LICENSE, tags and compare link, lockfiles and pinned toolchain, CI status, secrets, whether the
+  demo URL responds, git history inside the window.
+- The single strongest predictor of a usable repo is a results table next to the exact commands that produce it.
 
 ## 5. Judging procedure the juror follows (phase 2)
 
-1. Re-read HACKATHON.md and note changes.
-2. Clean clone of the integration branch; run every README command; record output verbatim.
-3. Open the live site as a first-time player, no README: ten-minute session, timed notes (goal clear at?, first
-   decision at?, signature mechanic reached at?).
-4. Then follow the README judge table step by step and mark each row true or false.
-5. Read the contract and its tests; check deployment state.
-6. Watch the video draft with the C6 checklist; read the X post draft.
-7. Score each criterion with evidence; list the top 5 changes ranked by points per hour; compute the delta since the
-   previous scorecard; message the lead.
+1. Re-read HACKATHON.md and note changes; re-check the directory counts per track.
+2. Clean clone of the integration branch; run every README command; record output verbatim; run the twenty checks.
+3. Open the live site as a first-time player with no README: a silent ten-minute session with timed notes against
+   the fifteen-item checklist.
+4. Then follow the README judge table step by step and mark each row true or false on that commit.
+5. Read the contract and its tests; check deployment state on the explorer.
+6. Watch the video draft against the C6 checklist; read the X post draft against the four-part structure.
+7. Apply the gates; score each criterion with evidence; list the top 5 changes ranked by points per hour; compute the
+   delta since the previous scorecard; message the lead.
