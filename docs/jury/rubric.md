@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.3, 2026-11-08 (research cycle 3). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.4, 2026-11-08 (research cycle 4). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -125,6 +125,10 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
 - **7/10**: depth everywhere but one layer is scaffolding (for example the server is exercised only by its tests).
 - **5/10**: depth in one layer, the rest is a front-end wrapper.
 - **0/10**: generated boilerplate with a thin game on top.
+- Checklist: the ten items in `notes/technical-depth.md` (one point each). Cap: if the architecture page, a green
+  `npm test` and the parity evidence are not findable within five minutes, C3 is capped at 6 (rubrics reward depth a
+  judge can see; several explicitly do not reward complexity as such). Contract depth is judged against NEAR's own
+  security checklist and near-workspaces integration tests.
 
 ### C4. NEAR integration and track fit (12)
 - **10/10**: the chain does something the game would be worse without (here: the season commitment that stops the

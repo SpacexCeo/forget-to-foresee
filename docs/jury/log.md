@@ -61,3 +61,10 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   testnet; six-plus "agents with NEAR accounts trading" entries; nobody pre-commits a season to a Merkle root; no
   memory-shard mechanic elsewhere) and C4's calibration now reads "below the field's median while undeployed".
   Cycle 3 closed: four notes added (twelve in total), rubric v0.2 to v0.3.
+
+## Cycle 4: 2026-11-08 22:03 UTC
+- Weakest coverage chosen: C3 (technical depth), the only criterion without a note or checklist.
+- 22:10 UTC: `notes/technical-depth.md` done (11 sources, snippets read; one unverified claim marked). Rubric v0.4:
+  C3 gains a ten-item checklist (architecture page, green tests, parity hashes, tamper test, contract integration
+  tests, NEAR security checklist items, shared test vectors, agent rules in one module, no mock as feature, a
+  performance figure) and a cap of 6 when the first three are not findable within five minutes. No red flags.
