@@ -12,7 +12,8 @@
     "sim": "node scripts/sim/run.mjs",
     "sim:quick": "node scripts/sim/run.mjs --quick --out docs/math",
     "vectors": "node scripts/gen-contract-vectors.mjs",
-    "wh:compare": "node scripts/wh-compare.mjs"
+    "wh:compare": "node scripts/wh-compare.mjs",
+    "hud:overlap": "node scripts/hud-overlap.mjs"
   },
   "dependencies": {
     "@fontsource/libre-caslon-text": "^5.3.0",

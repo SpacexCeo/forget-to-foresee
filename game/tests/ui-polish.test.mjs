@@ -6,9 +6,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createPanelArbiter, panelArbiterFor } from '../src/play/panels.js';
-import { NAMEPLATE, plateOpacity, plateScale, platePosition, platePlacement } from '../src/play/nameplate.js';
+import { NAMEPLATE, plateOpacity, plateScale, platePosition, platePlacement, proximityOpacity, boxesIntersect, plateBox } from '../src/play/nameplate.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
+const agents = read('../src/play/agents.js');
 
 /* ---------------- panel exclusivity ---------------- */
 
@@ -142,12 +143,34 @@ test('nameplate: placement lifts the plate above the head point and hides it ins
   assert.equal(far.scale, 0.9);
 });
 
+test('nameplate: proximity only (no floating text in the world): 0 beyond 7 m, fading in over the last 2 m', () => {
+  assert.equal(proximityOpacity(20), 0);
+  assert.equal(proximityOpacity(NAMEPLATE.show), 0);
+  assert.equal(proximityOpacity(NAMEPLATE.show - NAMEPLATE.fadeIn / 2), 0.5);
+  assert.equal(proximityOpacity(1), 1);
+  assert.equal(proximityOpacity(Infinity), 0, 'inside a Shell Iris is nowhere near');
+  const near = platePlacement({ ndc: { x: 0, y: 0, z: 0.5 }, distance: 5, irisDistance: 2, width: 1280, height: 800 });
+  assert.equal(near.opacity, 1);
+  assert.equal(platePlacement({ ndc: { x: 0, y: 0, z: 0.5 }, distance: 5, irisDistance: 12, width: 1280, height: 800 }), null, 'the agent across the plaza has no plate');
+  assert.equal(platePlacement({ ndc: { x: 0, y: 0, z: 0.5 }, distance: 5, irisDistance: 6, width: 1280, height: 800 }).opacity, 0.5);
+});
+
+test('nameplate: a plate never sits under a HUD box (box test used by agents.js)', () => {
+  const at = { x: 640, y: 400, opacity: 1, scale: 1 };
+  assert.deepEqual(plateBox(at, 100, 26), [590, 374, 690, 400]);
+  assert.deepEqual(plateBox({ ...at, scale: 0.8 }, 100, 26), [600, 379.2, 680, 400]);
+  assert.equal(boxesIntersect([590, 374, 690, 400], [680, 390, 900, 500]), true);
+  assert.equal(boxesIntersect([590, 374, 690, 400], [690, 400, 900, 500]), false, 'touching edges do not count');
+  assert.equal(boxesIntersect([0, 0, 10, 10], [20, 20, 30, 30]), false);
+  assert.match(agents, /hudRects\(ctx\)\.some\(\(r\) => boxesIntersect\(box, r\)\)/);
+  assert.match(agents, /irisDistance >= NAMEPLATE\.show/);
+});
+
 /* ---------------- stylesheet rules ---------------- */
 
 const html = read('../index.html');
 const tokens = read('../src/ui/world-hud/tokens.css');
 const hubUi = read('../src/play/hub-ui.js');
-const agents = read('../src/play/agents.js');
 
 test('spacing: play-layer buttons use the 40 px target (48 on phones) and the shared radii', () => {
   assert.match(html, /--pl-target: 40px/);
@@ -179,8 +202,8 @@ test('type: every world HUD role keeps a px floor and the quest tag cannot touch
 
 test('nameplate: the agents draw DOM plates from the pure placement, no canvas sprite is left', () => {
   assert.doesNotMatch(agents, /MindSprite|new THREE\.Sprite/);
-  assert.match(agents, /platePlacement\(\{ ndc, distance/);
-  assert.match(agents, /hidden: !ctx\.irisPos/);
+  assert.match(agents, /platePlacement\(\{ ndc, distance, irisDistance/);
+  assert.match(agents, /a\.plate\.place\(null\); return;/, 'far agents get no plate at all');
   assert.match(agents, /\.pl-plates \{ position: fixed; inset: 0; pointer-events: none;/);
   assert.match(agents, /\.pl-plate\[hidden\] \{ display: none; \}/, 'a hidden plate must not render at the layer origin');
 });

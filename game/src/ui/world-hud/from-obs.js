@@ -117,6 +117,7 @@ export function signsFromObs(obs, { i18n, mode = 'novice' } = {}) {
  * @param {{speaker: string, text: object}|null} [o.line]   last spoken line (subtitle)
  * @param {boolean} [o.promptVisible]
  * @param {{open?: boolean, filter?: string}} [o.signsState]
+ * @param {boolean} [o.map]  true when the host wires an island map: the hotbar gets a Map button (N)
  * @param {boolean} [o.unread]
  */
 export function buildHudModel(o) {
@@ -199,6 +200,7 @@ export function buildHudModel(o) {
     hotbar: [
       ...(layer >= 1 ? [{ id: 'memory', hotkey: 'M' }] : []),
       { id: 'signs', hotkey: 'V' },
+      ...(o.map ? [{ id: 'map', hotkey: 'N' }] : []), // the island map (task H, play/map-ui.js); shown once the host wires it
       ...(s.phase === 'play' ? [{ id: 'endTick', hotkey: 'T' }] : []),
       { id: 'help', hotkey: 'H' },
       { id: 'settings' },
@@ -211,7 +213,7 @@ export function buildHudModel(o) {
     journal: [obs.version, (hintState.journal || []).length, (hintState.lore || []).length, next.journal.unread].join('|'),
     prompt: opt ? [opt.id, JSON.stringify(opt.label), promptVisible].join('|') : '-',
     dialogue: line || null,
-    hotbar: s.phase + layer,
+    hotbar: s.phase + layer + (o.map ? 'm' : ''),
     hint: hintState.active ? hintState.active.id + ':' + (hintState.active.shown || 0) : 'off',
   };
   return o.prev ? reuse(o.prev, next, sig) : withSig(next, sig);

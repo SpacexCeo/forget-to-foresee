@@ -12,12 +12,15 @@ import { fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
-import { NAMEPLATE, platePlacement } from './nameplate.js';
+import { NAMEPLATE, platePlacement, plateBox, boxesIntersect } from './nameplate.js';
 
 const LOAD_RADIUS = 75;      // meters from the camera focus at which an agent model is requested
 const FADE = 0.35;           // clip cross-fade seconds
 const GLYPH = { offer: '◆', broken: '✕', isolated: '!', warm: '♥', cold: '·', given: '✓', dark: '○' };
 const _head = new THREE.Vector3(), _cam = new THREE.Vector3();
+// HUD boxes a nameplate may never sit under (checked against a cache refreshed every HUD_RECT_MS).
+const HUD_SEL = '.wh-trial, .wh-quest, .wh-toast, .wh-signs, .wh-log__tabs, .wh-log__body, .wh-prompt, .wh-dialogue__line, .wh-dialogue__reply, .wh-hotbar, .wh-topbar, .wh-quest--mobile, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile, .wh-sheet, .pl-panel, .pl-context, .pl-help, .pl-info, .pl-badge, .hub-dock, .hub-read, .hub-card, .hub-status, .ftf-run-toggle, .ftf-scene-cue';
+const HUD_RECT_MS = 250;
 const MOOD_COLOR = { warm: '#e9c46a', eager: '#ffd27a', hostile: '#ff8a7a', cold: '#9fb4c0', neutral: '#d6dcd8', uneasy: '#f0a868' };
 
 function standIn(color) {
@@ -269,11 +272,16 @@ export class ClanAgents {
     }
   }
 
-  /** Projects the head point and places the agent's nameplate; needs ctx.camera and ctx.uiRoot (game.js). */
+  /**
+   * Projects the head point and places the agent's nameplate; needs ctx.camera and ctx.uiRoot (game.js).
+   * A plate exists only while Iris stands near the agent (nameplate.js NAMEPLATE.show) and never under a HUD box.
+   */
   placePlate(a, cue, ctx) {
     if (!ctx.camera || !ctx.uiRoot) return;
     if (!this.plates) this.plates = plateLayer(ctx.uiRoot);
     if (!a.plate) a.plate = new Nameplate(this.plates);
+    const irisDistance = ctx.irisPos ? Math.hypot(ctx.irisPos[0] - a.root.position.x, ctx.irisPos[2] - a.root.position.z) : Infinity;
+    if (a.state === 'absent' || irisDistance >= NAMEPLATE.show) { a.plate.place(null); return; }
     const name = this.i18n.t('agent.' + a.clan);
     const label = cue.glyph ? this.i18n.t('mind.' + cue.glyph) : (cue.trust != null ? this.i18n.t('mind.trust', { n: cue.trust }) : '');
     a.plate.draw({ name, trust: cue.trust, glyph: cue.glyph, mood: cue.mood, label });
@@ -282,7 +290,28 @@ export class ClanAgents {
     const distance = head.distanceTo(camPos);
     const ndc = head.project(ctx.camera);
     const layer = this.plates;
-    a.plate.place(platePlacement({ ndc, distance, width: layer.clientWidth, height: layer.clientHeight, hidden: !ctx.irisPos || a.state === 'absent' }));
+    let at = platePlacement({ ndc, distance, irisDistance, width: layer.clientWidth, height: layer.clientHeight });
+    if (at) {
+      const box = plateBox(at, a.plate.el.offsetWidth || 100, a.plate.el.offsetHeight || 26);
+      if (this.hudRects(ctx).some((r) => boxesIntersect(box, r))) at = null;
+    }
+    a.plate.place(at);
+  }
+
+  /** Visible HUD boxes (viewport px), refreshed every HUD_RECT_MS; plates hide rather than sit under them. */
+  hudRects(ctx) {
+    const now = performance.now();
+    if (this._hudRects && now - this._hudRectsAt < HUD_RECT_MS) return this._hudRects;
+    const doc = ctx.uiRoot.ownerDocument;
+    const out = [];
+    for (const el of doc.querySelectorAll(HUD_SEL)) {
+      const cs = getComputedStyle(el);
+      if (el.hidden || cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 1 && r.height > 1) out.push([r.left, r.top, r.right, r.bottom]);
+    }
+    this._hudRects = out; this._hudRectsAt = now;
+    return out;
   }
 
   /** Procedural layer: always on for the stand-in and for missing clips; subtle on top of clips. */

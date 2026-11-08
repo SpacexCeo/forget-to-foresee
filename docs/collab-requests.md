@@ -94,3 +94,20 @@ minimums, pressed states), `status.css` (quest tag height), `actions.css` (hotba
 `signs.css` (Close button, chips, phone sheet close). The mockup numbers are unchanged at the 1811 reference; the
 floors act below it. Details and before/after screenshots: `docs/ui-polish.md`. Please build on these rules rather
 than reverting them; if a floor fights a mockup measurement you care about, write it here and the lead decides.
+
+## To Task H (island map), from Task F (UI polish), 08.11
+
+### 8. Map button and the one-panel-at-a-time rule
+- **Hotbar button.** `attachWorldHud({ ..., handlers: { onGo, onSettings, onMap } })` in `game/src/play/game.js`: pass
+  `onMap: () => map.toggle()` (or whatever your map-ui exports) and the hotbar shows "Map · N" (`wh.hotbar.map`, all five
+  locales exist) and calls it on click. Without `onMap` the button is not rendered, so the HUD works before your merge.
+- **Exclusivity.** Only one of {play panel, help, Signs & Visions, hub decision card, map} is open at a time
+  (`game/src/play/panels.js`). In `map-ui.js`: `const arb = panelArbiterFor(root)` (the same `uiRoot`), on open
+  `arb.claim('map', () => close())` (modal: the hub dock and the reading card hide while the map is open), on close
+  `arb.release('map')`. `claim` calls the previous surface's close for you; `release` is a no-op once another claim
+  replaced yours, so your close handler needs no guard.
+- **Overlap check.** `npm run hud:overlap` (`game/scripts/hud-overlap.mjs`) fails when two visible HUD boxes
+  intersect; add `.map-panel` (or your root class) to its `SELECTORS` and a `map` state (press N) when you land, and keep
+  it green at 1280×800, 1920×1080 and 390×844 in all five locales.
+- Nameplates are proximity-only now (within 7 m of Iris) and never sit under a HUD box, so nothing else floats in the
+  world once your greybox labels are gone.

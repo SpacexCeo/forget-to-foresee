@@ -16,7 +16,9 @@ const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
  * @param {object} o
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context @param {object} o.session PlaySession
  * @param {object} o.ui play UI (createPlayUi) @param {object} [o.hints] hint engine (play/hints.js)
- * @param {{onGo?: Function, onSettings?: Function}} [o.handlers]
+ * @param {{onGo?: Function, onSettings?: Function, onMap?: Function}} [o.handlers]
+ *   `onMap` (task H, play/map-ui.js): the hotbar shows a Map button (N) only when it is given; the map panel takes
+ *   part in the one-panel-at-a-time rule through panelArbiterFor(uiRoot).claim('map', close)
  */
 export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handlers = {} }) {
   const { i18n, prefs } = ctx;
@@ -46,6 +48,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       // one action: the prompt is enough; several: the play UI's context menu lists them
       promptVisible: opts.length === 1 && !ui.panel,
       signsState: hud ? { open: hud.signs.isOpen() } : { open: mode() === 'pro' },
+      map: !!handlers.onMap,
     });
   }
 
@@ -65,6 +68,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       if (id === 'memory' || id === 'journal') ui.handleKey('KeyM');
       else if (id === 'endTick') ui.handleKey('KeyT');
       else if (id === 'help') ui.handleKey('KeyH');
+      else if (id === 'map' && handlers.onMap) handlers.onMap();
       else if ((id === 'settings' || id === 'menu') && handlers.onSettings) handlers.onSettings();
     } else if (action === 'sign') ui.open('vision');
     else if (action === 'quest') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); }
