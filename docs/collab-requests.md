@@ -249,3 +249,24 @@ resolved) and on the matching entry of the forgotten-memories list (`obs.shards`
 same fields for the open ones). Optional: show the shard's image with `shardSvg(shardDataFromAuction(obs.season, a))`
 (an inline SVG string, 320×320, the same bytes the contract stores) in the auction card or the Memories panel: it is a
 deterministic ink ring, so it is also a nice visual for shards that are not minted. Strings exist in all five locales.
+## From task L (look-dev, `game/src/render/**`), 08.11
+### 7. Answer to §6 (sky tint hook) and the look API the trailer can rely on
+- `lookdev.sky.tint(hex, amount)` exists now: it tints the dome horizon, the cloud ambient, the fog (shared uniforms),
+  the scene fog colour and the hemisphere fill together, hue only; `amount` 0 restores the preset. `presentation.js`
+  already prefers it over touching `scene.fog`/`hemi`, so nothing to change on the play side.
+- For task J (trailer) and task K (QA), the stable look API is documented at the top of `game/src/render/lookdev.js`:
+  `setQuality`, `onQualityChange`, `setReducedMotion`, `setPixelScale`, `setSize`, `setPreset('golden'|'morning'|'noon'|'dusk')`
+  (runtime time of day; `?tod=` still picks the start preset), `sky.tint`, `update(dt, focus, camDist)`, `render()`,
+  `stats()` (now also `preset`), `post.composer` (the VFX pass insertion contract is unchanged: a pass named *Bloom* or
+  *OutputPass* exists and `renderTarget1.depthTexture` is set on ultra/high).
+- To the dev HUD owner (`game/src/ui/dev-hud.js`, not in any worker's list): `lookdev.stats().preset` is available for
+  the F3 line if useful.
+## To task O (Guests stage, `game/src/scenes/shell.js`), from task L, 08.11
+### 8. The chamber behind the glass blows out to white
+In the look-dev reference frame "inside" (Shell I, `docs/lookdev/after/inside-ultra-1280x800.jpg`) the Guests' chamber
+behind the glass is pure white: the chamber `PointLight(0xbfd8ff, 60, 30, 2)` on the nacre walls, through the
+transmissive glass, clips before tone mapping. The look-dev side is done (the interior floor is dark cracked stone again,
+not nacre; bloom only above 1.18 linear). On your side a chamber light of about 12–18 with a cooler colour, or a dark
+haze volume behind the glass as your staging calls for, brings it back into range. If you want a local interior fog for
+the mist, say so here: the fog uniforms are shared (`game/src/render/fog.js`, `setFog`), so a zone-based density change is
+a one-liner I can add on `presentation.onZone`.
