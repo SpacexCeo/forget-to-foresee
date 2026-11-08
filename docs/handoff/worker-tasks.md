@@ -361,3 +361,29 @@ Goal: the six clan agents read as people with intentions, in both play modes.
 4. Conversations: when two clans trade words or silk, they meet and face each other with talk clips and a short
    speech beat in the dialogue bar (through the existing world HUD API, coordinate with Task F).
 5. Budget: no frame-time regression on the phone profile; tests for the behaviour scheduler (seeded, deterministic).
+
+---
+
+## Task O: the Guests behind the glass (owner request 08.11, with a mood reference)
+
+**Branch:** `claude/guests-stage` · **Owns:** `game/src/scenes/shell.js`, new `game/src/play/guests-stage.js`, the Guest
+part of `game/src/play/presentation.js` (coordinate with nothing else there), new `game/tests/client/guests*.mjs`,
+`docs/guests-stage.md` (new). The model `guest.glb` and `art/guest/` belong to the GPU art session: ask it for model
+changes (a far-silhouette LOD, extra clips) through the lead. The global fog/post belong to Task L: agree any
+interior-fog parameter with L in `docs/collab-requests.md`.
+
+Owner's words, with a film still as mood reference (huge creatures looming in grey mist behind a lone figure and a
+round ink sign): "behind the glass I would sometimes like to see the aliens themselves." Mood only: the Guests stay
+our own design (`docs/decisions.md` 07.11: translucent, sail/fin membranes, nacre-crystal bodies; **no Arrival
+heptapods**, no limbs like giant hands, nothing from the film).
+1. Staging, not a static prop: the Guests are mostly hidden in dense, slowly moving mist behind the glass; they emerge
+   as enormous soft silhouettes (scale far beyond the player, backlit, low contrast, depth haze) at meaningful moments:
+   when a sign is drawn (the drawing Guest comes closest, the ink logogram forms on the glass between it and Iris), on a
+   reveal (a reaction), at the trial-13 crisis, and before the final vote; otherwise an occasional distant drift, never
+   on a fixed loop, seeded per season so it is deterministic. Both play modes (hub flights into a Shell, walking in).
+2. The shot: from Iris's position the composition reads like key art: Iris small in the foreground, the glass, the ring
+   sign, the silhouettes. Camera framing hints when a Guest appears (gentle, never stealing control).
+3. Sound: a low presence swell from the existing audio cues (`docs/audio.md`), synced to the emergence.
+4. Budgets and tiers: the low tier and the phone profile get a cheaper version (fewer Guests, no volumetric tricks)
+   without losing the moment; reduced motion keeps it but without drift. Tests for the scheduler (seeded, which moments
+   trigger, both modes). Screenshots of each moment in `docs/guests-stage.md`.

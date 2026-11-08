@@ -51,7 +51,7 @@ only go where the room says they acted, and look alive in between. Both play mod
    alternate every 2.4 s for 7 s, then the visitor walks home. The first beat is offered to the dialogue strip through
    `agents.onSay({speakerId, key, args})` with existing line keys (`line.walk.silk`, `line.mend`, `line.fragment`,
    `line.pact`, `line.escrow`, args as `{$agentId}`), so no new locale strings are needed. The hook is wired by the
-   play layer (request 7 in `docs/collab-requests.md`); until then the beat is silent and the room's own line (shown
+   play layer (request 9 in `docs/collab-requests.md`); until then the beat is silent and the room's own line (shown
    at event time) is the only text. A host that never sees its visitor arrive waits 12 s and gives up.
 5. **Budget.** Per frame per agent: one `clanCue`, one directive lookup, one `steerTo`, one avoidance pass over at
    most six neighbours, one motion step, the gait blend, and three quaternion products for the look-at; a route is

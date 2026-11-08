@@ -5,7 +5,7 @@ Branch `claude/living-npcs` (based on `claude/loving-curie-ihasft` after the Tas
 (animation and behaviour code: routing, avoidance, look-at bones, idle life, meetings, the `onSay` hook, `event()`;
 the nameplate code untouched), `game/src/physics/motion.js` (`avoidWish`), new `game/tests/client/npc.test.mjs`,
 `game/package.json` (test script), new `docs/npcs.md`, one row at the end of the `docs/decisions.md` §4 table,
-requests 7 and 8 in `docs/collab-requests.md`. No engine, no game.js, no art, no locale files.
+requests 9 and 10 in `docs/collab-requests.md`. No engine, no game.js, no art, no locale files.
 
 ## Done (the five points of the task)
 
@@ -18,7 +18,7 @@ requests 7 and 8 in `docs/collab-requests.md`. No engine, no game.js, no art, no
    the pedestal, the plaza ring for the vote), inferred from observation diffs (so it works with no new wiring) and
    from the public events when wired; local avoidance of agents and Iris; the route walk is corridor-checked.
 4. **Conversations**: silk transfers and mended links make two clans meet, face each other and take talk turns; the
-   first beat goes to the dialogue strip through `agents.onSay` with existing line keys (one-line wiring: request 7).
+   first beat goes to the dialogue strip through `agents.onSay` with existing line keys (one-line wiring: request 9).
 5. **Budget**: no per-frame allocations beyond small arrays; one route plan per goal; the headless frame time did not
    move (numbers below). 9 deterministic tests; `npm test` 319/319; `npm run build` green.
 
@@ -39,6 +39,6 @@ requests 7 and 8 in `docs/collab-requests.md`. No engine, no game.js, no art, no
 
 ## Not done / for the lead
 
-- Request 7 (two one-line hooks in `game/src/play/game.js`) for the speech beats and the event fast path.
-- Request 8 to Task F: the mind glyph sprite is floating world text.
+- Request 9 (two one-line hooks in `game/src/play/game.js`) for the speech beats and the event fast path.
+- Request 10 to Task F: the mind glyph sprite is floating world text.
 - Iris's own look-at toward the clan she talks to (small follow-up in `updateIris`).
