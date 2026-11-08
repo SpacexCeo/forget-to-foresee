@@ -14,7 +14,7 @@ function world() {
 /** Runs the main.js loop for `seconds` with frame times from `frameDt(i)`; returns rendered x per frame. */
 function run({ frameDt, seconds = 4, run: running = false, stopAt = Infinity }) {
   const ch = new CharacterController(world(), { spawn: [0, 0, 0], walkSpeed: 1.7 });
-  ch.accel = 8; ch.run = running;
+  ch.smooth = true; ch.run = running;
   let acc = 0, t = 0; const xs = [], dts = [];
   for (let i = 0; t < seconds; i++) {
     const dt = frameDt(i); t += dt;
