@@ -166,6 +166,36 @@ export class ShotRunner {
     cam.updateMatrixWorld(true);
   }
 
+  /**
+   * A live 'track' camera: compileCamera's pose around the target's estimated position (`at`), moved to where the
+   * target really is this frame (Iris or a clan agent's head) and turned with its heading when `local` is set, so a
+   * close-up keeps the face in frame while the agent walks or turns.
+   */
+  trackPose(spec) {
+    const base = compileCamera(spec);
+    const at = spec.at || [0, 0, 0];
+    return (u) => {
+      const p = base(u);
+      const live = this.targetOf(spec.target);
+      if (!live) return p;
+      const rel = (v) => [v[0] - at[0], v[1] - at[1], v[2] - at[2]];
+      let dp = rel(p.pos), dl = rel(p.look);
+      if (spec.local) { const c = Math.cos(live.yaw), sn = Math.sin(live.yaw); const rot = (v) => [v[0] * c + v[2] * sn, v[1], -v[0] * sn + v[2] * c]; dp = rot(dp); dl = rot(dl); }
+      return { ...p, pos: [live.pos[0] + dp[0], live.pos[1] + dp[1], live.pos[2] + dp[2]], look: [live.pos[0] + dl[0], live.pos[1] + dl[1], live.pos[2] + dl[2]] };
+    };
+  }
+
+  /** Head position and heading (radians about +Y, 0 = facing +Z) of Iris or a clan agent. */
+  targetOf(id) {
+    const g = this.game, play = this.play;
+    if (!g) return null;
+    if (!id || id === 'iris') { const p = g.player.pos; return { pos: [p[0], p[1] + 1.4, p[2]], yaw: g.player.heading || 0 }; }
+    const a = play && play.agents && play.agents.agents && play.agents.agents.get(id);
+    if (!a || !a.root) return null;
+    const r = a.root;
+    return { pos: [r.position.x, r.position.y + 1.4, r.position.z], yaw: r.rotation.y };
+  }
+
   currentSegment() {
     let seg = null;
     for (const s of this.segments) if (this.t >= s.from) seg = s;
@@ -181,7 +211,7 @@ export class ShotRunner {
     const cam = shot.camera;
     const list = Array.isArray(cam) ? cam : cam ? [{ from: 0, to: shot.duration, ...cam }] : [];
     // Segments may mix the game's own camera (`type: 'rig'`, pose null) with scripted moves; the latest one that has started wins.
-    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: compileCamera(c), spec: c }));
+    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: c.type === 'track' ? this.trackPose(c) : compileCamera(c), spec: c }));
     this.pose = this.segments.some((s) => s.pose) ? true : null;
     this.actions = (shot.actions || []).map((a, i) => ({ ...a, id: i, done: false }));
     if (!this.overlay) this.overlay = createOverlay(document);
@@ -276,6 +306,16 @@ export class ShotRunner {
       case 'forget': { const b = document.querySelectorAll('[data-forget]')[a.index ?? 0]; if (!b) throw new Error('no memory button'); b.click(); break; }
       case 'quality': this.allowQualityChange = true; try { g.lookdev.setQuality(a.tier); } finally { this.allowQualityChange = false; } break;
       case 'motion': g.setReducedMotion(!!a.reduce); break;
+      case 'guests': {
+        // The Guests behind the glass (docs/guests-stage.md): seed, a moment (sign | reveal | crisis | vote | yes | no), warp, freeze.
+        const gs = play && play.shell && play.shell.guests;
+        if (!gs) throw new Error('no Guests stage (not inside a Shell?)');
+        if (a.seed != null) gs.setSeed(a.seed);
+        if (a.cue) gs.cue(a.cue, a.action ? { action: a.action } : {});
+        if (a.warp) gs.warp(a.warp);
+        if (a.freeze != null) gs.freeze(!!a.freeze);
+        break;
+      }
       default: throw new Error('unknown action ' + a.do);
     }
   }

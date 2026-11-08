@@ -75,3 +75,21 @@ export const WALK = {
     { do: 'key', code: 'KeyV' }, { do: 'frames', n: 20 }, { do: 'click', selector: '.wh-signs__chip[data-filter="resolved"]' }, { do: 'frames', n: 20 },
   ],
 };
+
+/** Inside Shell I with the real interior loaded (the Guests behind the glass); rendering off. */
+export const IN_SHELL = [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'until', pred: 'interiorReal', max: 120 }];
+/** Iris placed 6 m in front of the glass, facing it (the camera behind her keeps her small against the Guest). */
+export const IRIS_AT_GLASS = [{ do: 'teleport', pos: [0.3, 301.2, 4.5], heading: Math.PI }, { do: 'frames', n: 10 }];
+/** Behind Iris, low, looking up at the glass; a slow push. */
+export const BEHIND_IRIS = { type: 'push', from: [1.1, 302.0, 12.4], look: [0, 303.6, -10.7], lookTo: [0, 304.0, -10.7], dist1: 20.6, fov: [42, 38], ease: 'inOutSine', minHeight: 290 };
+/** The Guest emerging and drawing, pinned for the capture: the trailer seed, the sign moment restarted `warp` seconds in. */
+export const guestSign = (warp = 0) => ({ at: 0.0, do: 'guests', seed: 'trailer', cue: 'sign', warp });
+/** A head-height estimate for a clan agent at its camp (the track camera follows the real head). */
+export const HEAD = Object.fromEntries(Object.entries(CAMP).map(([k, [x, , z]]) => [k, [x, 1.4, z]]));
+/** Clan id (game) → camp asset key. */
+export const CLAN_CAMP = { salt: 'sol', ash: 'pepel', moss: 'moh', amber: 'yantar', frost: 'iney' };
+/** A close-up on a clan agent's face: a slow push in front of the head, turned with the agent. */
+export const faceCam = (clan, side = 0.3) => ({ type: 'track', target: clan, local: true, at: HEAD[CLAN_CAMP[clan]], off0: [side, 0.06, 1.55], off1: [side * 0.6, 0.02, 1.15], lookOffset: [0, -0.02, 0], fov: [30, 27], ease: 'inOutSine', minHeight: -5 });
+/** A title card in the game's type over a darkened, moving frame (the video's chapter cards). */
+export const chapterCard = (text, sub, from, to, eyebrow) => ({ kind: 'title', from, to, fadeIn: 0.25, fadeOut: 0.25, text, sub, eyebrow, rule: true });
+export const dim = (from, to, amount = 0.72) => ({ kind: 'black', from, to, fadeIn: 0.2, fadeOut: 0.2, amount });
