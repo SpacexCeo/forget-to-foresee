@@ -29,6 +29,7 @@ const CSS = `
 .cine-lines .gold { color: #e4c272; }
 .cine-word { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; font-weight: 400; font-size: clamp(22px, 2.6vw, 54px); letter-spacing: .26em; text-transform: uppercase; text-shadow: 0 2px 22px rgba(0,0,0,.6); }
 .cine-word.low { bottom: 14vh; } .cine-word.high { top: 12vh; }
+.cine-word.small { top: auto; bottom: 6.5vh; left: 3vw; right: auto; text-align: left; text-transform: none; letter-spacing: .06em; font: 500 clamp(11px, 1.05vw, 20px)/1.4 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; color: #e6dfd3; padding: .35em .8em; background: rgba(6, 9, 10, .55); border-left: 2px solid #e4c272; border-radius: 3px; }
 body.cine-clean #ui, body.cine-clean #prompt, body.cine-clean #toast, body.cine-clean #badge, body.cine-clean #scene-controls, body.cine-clean #hud, body.cine-clean .hub-fade { visibility: hidden !important; }
 body.cine-nohub .hub-host, body.cine-nohub #prompt, body.cine-nohub #toast { visibility: hidden !important; }
 body.cine-nodev #badge, body.cine-nodev #hud { visibility: hidden !important; }
@@ -66,7 +67,7 @@ export function createOverlay(doc = document) {
         card.append(inner);
         return card;
       }
-      case 'word': return h(doc, 'div', 'cine-word ' + (item.position || 'low'), esc(item.text));
+      case 'word': return h(doc, 'div', 'cine-word ' + (item.small ? 'small' : (item.position || 'low')), esc(item.text));
       default: return null;
     }
   }

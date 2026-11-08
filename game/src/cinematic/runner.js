@@ -23,6 +23,9 @@ const PREDICATES = {
   interiorReal: (g) => !!(g.play && g.play.shell.ready),
   loaded: (g) => { const s = g.streamer.stats(); return s.loading === 0 && s.idle === 0; },
   signsOpen: (g) => !!(g.play && g.play.worldHud && g.play.worldHud.hud && g.play.worldHud.hud.signs.isOpen()),
+  goal: (g, v) => !!(g.play && g.play.session.goal && g.play.session.goal.id === v),
+  spot: (g, v) => !!(g.play && g.play.session.spot && g.play.session.spot.kind === v),
+  anchored: (g) => !!(g.play && g.play.session.obs && g.play.session.obs.iris.anchors.length),
   lobby: (g) => !!document.querySelector('.ftf-lobby'),
   onboarding: (g) => !!document.querySelector('.ftf-onboarding, .ftf-tutorial, .ftf-page'),
 };
@@ -214,6 +217,8 @@ export class ShotRunner {
         this.keyups.push({ frame: this.frame + KEYUP_DELAY_FRAMES, code: a.code, key });
         break;
       }
+      case 'keydown': window.dispatchEvent(new KeyboardEvent('keydown', { code: a.code, key: a.key || keyFor(a.code), bubbles: true })); break;
+      case 'keyup': window.dispatchEvent(new KeyboardEvent('keyup', { code: a.code, key: a.key || keyFor(a.code), bubbles: true })); break;
       case 'click': {
         const el = document.querySelector(a.selector);
         if (!el) throw new Error('no element ' + a.selector);

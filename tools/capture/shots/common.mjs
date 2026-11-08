@@ -16,6 +16,10 @@ export const ANCHOR = { 1: [4.67, 0, 4.67], 2: [-4.67, 0, 4.67], 3: [-4.67, 0, -
 export const INTERIOR = { origin: [0, 300, 0], spawn: [0, 301.2, 11.3], glass: [0, 303.95, -10.75], guests: [[-4.4, 299.7, -15.75], [0.4, 299.7, -17.95], [4.6, 299.7, -15.35]] };
 
 export const JUDGE_URL = { play: 'direct', demo: 'judge' };
+/** The README judge table's own URL: the walking play. */
+export const WALK_URL = { play: 'direct', demo: 'judge', mode: 'walk' };
+/** The page's label for a segment: which URL a judge opens to see the same thing. */
+export const segmentLabel = (text, from = 0, to = 4.5) => ({ kind: 'word', text, position: 'high', from, to, fadeIn: 0.5, fadeOut: 0.6, small: true });
 export const BEAUTY_HIDE = ['labels', 'nameplates', 'marker'];
 
 /** A fade from black at the start and/or to black at the end of a shot. */
@@ -49,5 +53,24 @@ export const SETUP = {
   /** ...then forgot "The Shells' Call" for a vision (two future signs) and closed the panel. */
   forgot: [
     { do: 'key', code: 'KeyM' }, { do: 'frames', n: 4 }, { do: 'forget', index: 1 }, { do: 'frames', n: 12 }, { do: 'key', code: 'Escape' }, { do: 'frames', n: 6 },
+  ],
+};
+
+/** The walking judge path (README table, `?demo=judge&mode=walk`), replayed with rendering off. */
+export const WALK = {
+  /** Iris at Shell I's pad on the plaza rim, 10 silk staked on trial 3 through the pad's E option. */
+  staked: [
+    { do: 'teleport', pos: [4.45, 0, 4.45], heading: -Math.PI * 0.75 }, { do: 'frames', n: 12 }, { do: 'until', pred: 'spot', value: 'anchor', max: 60 },
+    { do: 'key', code: 'KeyE' }, { do: 'until', pred: 'anchored', max: 300 }, { do: 'frames', n: 10 },
+  ],
+  /** Three trials ended (T twice each: the second press confirms): trial 4, the reveal verified, silk 72. */
+  trial4: [
+    { do: 'key', code: 'KeyT' }, { do: 'frames', n: 30 }, { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'trial', value: 2, max: 300 }, { do: 'frames', n: 30 },
+    { do: 'key', code: 'KeyT' }, { do: 'frames', n: 30 }, { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'trial', value: 3, max: 300 }, { do: 'frames', n: 30 },
+    { do: 'key', code: 'KeyT' }, { do: 'frames', n: 30 }, { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'trial', value: 4, max: 300 }, { do: 'frames', n: 40 },
+  ],
+  /** Signs & Visions open on the Resolved tab: "Verified ✓". */
+  resolved: [
+    { do: 'key', code: 'KeyV' }, { do: 'frames', n: 20 }, { do: 'click', selector: '.wh-signs__chip[data-filter="resolved"]' }, { do: 'frames', n: 20 },
   ],
 };
