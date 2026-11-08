@@ -92,15 +92,21 @@ MASTER_RINGS_PER_RIB = 56
 MASTER_SIDES_MULT = 16
 
 
+# FTF_SHELL_SUFFIX="_r2" writes shell_<n>_r2.glb and its QA beside the shipped files, so a new
+# round can be reviewed in game (?shells=r2) before it replaces shell_<n>.glb. Texture names keep
+# the plain asset name (compress-glb.sh matches "<asset>_normal").
+SUFFIX = os.environ.get("FTF_SHELL_SUFFIX", "")
+
+
 def paths(n):
     asset = f"shell_{n}"
     return dict(
         asset=asset,
-        qa=os.path.join(REPO, "docs", "art", "qa", asset),
+        qa=os.path.join(REPO, "docs", "art", "qa", asset + SUFFIX),
         tex=os.path.join(HERE, "textures"),
-        glb=os.path.join(REPO, "game", "public", "assets", "models", f"{asset}.glb"),
-        blend=os.path.join(HERE, f"{asset}.blend"),
-        stats=os.path.join(REPO, "docs", "art", "qa", asset, "build-stats.json"))
+        glb=os.path.join(REPO, "game", "public", "assets", "models", f"{asset}{SUFFIX}.glb"),
+        blend=os.path.join(HERE, f"{asset}{SUFFIX}.blend"),
+        stats=os.path.join(REPO, "docs", "art", "qa", asset + SUFFIX, "build-stats.json"))
 
 
 # ------------------------------------------------------------- centre line
@@ -637,13 +643,13 @@ def fragment_specs(spec, rng_seed=77):
     nr = spec["ribs"]
     out = []
     for n in range(10):
-        ribs = r.choice((1, 1, 2, 2, 2))
+        ribs = r.choice((2, 2, 2, 3))           # 1-rib pieces came out as slivers
         u_off = r.uniform(-spec["break_half"] * nr, spec["break_half"] * nr - ribs)
         s0 = r.uniform(-1.5, 0.7)
-        ds = r.uniform(0.38, 0.72)
+        ds = r.uniform(0.60, 0.95)
         attached = n < 2
         out.append(dict(u_off=u_off, ribs=ribs, s0=s0, s1=s0 + ds, attached=attached,
-                        lobes=[r.uniform(0.62, 1.0) for _ in range(7)], lobe_phase=r.uniform(0, TAU),
+                        lobes=[r.uniform(0.86, 1.18) for _ in range(7)], lobe_phase=r.uniform(0, TAU),
                         dist=(r.uniform(0.3, 0.6) if attached else r.uniform(1.2, 6.0)),
                         axis=(r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-1, 1)),
                         ang=(r.uniform(0.20, 0.35) if attached else r.uniform(0.5, 2.6)),
@@ -677,7 +683,7 @@ def build_fragments(spec, tab, acc, frags, master):
         lob = np.array(fs["lobes"])
         k = (ang % TAU) / TAU * len(lob)
         i0 = np.floor(k).astype(int) % len(lob)
-        rr = lob[i0] * 0.5                       # stepped lobes: a broken, angular outline
+        rr = lob[i0] * 0.62                      # stepped lobes: a broken, angular outline (wide: no slivers)
         keep = np.hypot(CU, CS) < rr
         if keep.sum() < 2:
             continue
