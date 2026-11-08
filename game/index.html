@@ -57,6 +57,15 @@
     body.wh-on #toast { bottom: auto; top: calc(152 * var(--pl-u) + 48px); border-radius: 999px; }
     body.wh-on .pl-context { bottom: calc(23 * var(--pl-u) + 60px + 12px + 46 * var(--pl-u) + 12px); }
     body.wh-on .pl-info { bottom: auto; top: calc(152 * var(--pl-u) + 48px); }
+    /* The island map (play/map-ui.js) is a centred modal: the centre column and the phone top bar hide under it. */
+    body.ftf-map-open .wh-root :is(.wh-quest, .wh-dialogue, .wh-toast, .wh-prompt, .wh-topbar, .wh-quest--mobile, .wh-quest__dots, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
+    body.ftf-map-open .pl-badge, body.ftf-map-open #toast, body.ftf-map-open .pl-info { visibility: hidden; }
+    body.wh-on .ftf-map-host { padding-bottom: calc(23 * var(--pl-u) + 60px + 24px); } /* the map stops 12 px above the hotbar row */
+    /* With a right-column panel (Memories, help, the reading card) the dialogue strip centres in the band left of it. */
+    @media (min-width: 701px) {
+      body.pl-modal-open .wh-root .wh-dialogue { left: calc((100vw - 492px) / 2); max-width: calc(100vw - 524px); }
+      body.hub-in-shell .wh-root .wh-dialogue { left: calc((100vw - 412px) / 2); max-width: calc(100vw - 444px); }
+    }
     @media (max-width: 700px) { body.wh-on .pl-badge { display: none; } }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
@@ -127,6 +136,7 @@
       /* the phone HUD stack never shows under a modal panel (the Signs sheet already brings its own scrim) */
       body.pl-modal-open .wh-root :is(.wh-quest--mobile, .wh-quest__dots, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
       body.in-world.pl-modal-open .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* outranks input.js's display: flex */
+      body.pl-modal-open .ftf-map-fab { display: none; } /* the map's own phone button steps aside under a modal panel too */
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
     }

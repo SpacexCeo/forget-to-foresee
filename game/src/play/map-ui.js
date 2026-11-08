@@ -137,7 +137,7 @@ function coilPath(cx, cy, R, n) {
   }
   return d;
 }
-const isTyping = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+
 
 /**
  * @param {object} o
@@ -406,15 +406,6 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
     return true;
   }
 
-  // Until input.js forwards KeyN (request to Task G in docs/collab-requests.md), the panel listens itself.
-  function onKeyDown(e) {
-    if (e.code !== 'KeyN' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-    if (isTyping(e.target) || !doc.body.classList.contains('in-world') || doc.querySelector('dialog[open]')) return;
-    e.preventDefault();
-    toggleFromKey();
-  }
-  if (win) win.addEventListener('keydown', onKeyDown);
-
   const offs = [
     session.on('obs', () => { if (open) render(); }),
     session.on('goal', () => { if (open) render(); }),
@@ -441,6 +432,6 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
     /** The last rendered view model (tests and the dev console). */
     get model() { return model; },
     element: host,
-    destroy() { offs.forEach((f) => f()); if (win) win.removeEventListener('keydown', onKeyDown); close(); host.remove(); if (fab) fab.remove(); },
+    destroy() { offs.forEach((f) => f()); close(); host.remove(); if (fab) fab.remove(); },
   };
 }

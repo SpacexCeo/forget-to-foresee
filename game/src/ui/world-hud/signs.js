@@ -64,6 +64,11 @@ function card(i18n, s, mobile, onAction) {
   const verified = s.verified === 'ok' || s.verified === 'fail'
     ? h('span', { class: 'wh-pill wh-sign__verified wh-sign__verified--' + s.verified, i18n: 'wh.sign.verified.' + s.verified, dataset: { tip: 'verified' } })
     : null;
+  // NEAR testnet badge (request 9): a real link after the proof pill; it must not trigger the card
+  const near = s.near && verified
+    ? h('a', { class: 'wh-pill wh-sign__near wh-sign__near--' + s.near.state, i18n: s.near.labelKey, i18nAttrs: { title: s.near.tipKey }, attrs: { href: s.near.href, target: '_blank', rel: 'noopener' } })
+    : null;
+  if (near) { near.addEventListener('click', (e) => e.stopPropagation()); near.addEventListener('keydown', (e) => e.stopPropagation()); }
   const activate = () => onAction('sign', s.id);
   return h('div', {
     class: 'wh-card wh-sign' + (mobile ? ' wh-sign--mobile' : ''),

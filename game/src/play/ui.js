@@ -60,7 +60,8 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     if (g.id === 'forget') row.append(el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('memory.title'), onclick: () => open('memory') }));
     if (g.id === 'end_tick' || g.id === 'next_tick') row.append(el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('endtick.button', { tick: session.obs.season.tick }), onclick: () => endTick(true) }));
     if (g.id === 'fragment') row.append(el('button', { class: 'pl-btn', type: 'button', id: 'pl-hold', text: t('goal.fragment.hold'), onclick: () => session.holdFragment() }));
-    if (g.id === 'season_over' && session.obs.season.heir == null) open('end');
+    // the Biography opens itself at the season's end unless the hub's Heir card already asks (QA-003: one Heir prompt)
+    if (g.id === 'season_over' && session.obs.season.heir == null && panel !== 'end' && !arb.isOpen('hub-card')) open('end');
     if (row.childNodes.length) goalEl.append(row);
   }
 
@@ -180,7 +181,9 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         el('ul', { class: 'pl-list pl-muted' }, obs.memories.map((m) => el('li', { text: '✓ ' + memoryText(m) })), iris.forgotten.map((f) => el('li', { text: '✕ ' + f.text + ' — ' + f.fate }))),
         obs.season.heir == null ? el('div', { class: 'pl-row' },
           el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('end.heir'), onclick: () => session.send('set_heir', { heir: true }) }),
-          el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) })) : el('p', { text: t('goal.season_over.done') }));
+          el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) }))
+          : el('p', { class: 'pl-strong', text: '\u2713 ' + t(obs.season.heir ? 'end.heir' : 'end.keep') }),
+        obs.season.heir == null ? null : el('p', { text: t('goal.season_over.done') }));
     }
   }
 

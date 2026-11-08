@@ -143,3 +143,77 @@ per-frame "map yields" check became `release('map')` once the map is closed. Ope
 Signs / a card and the dock hides (`body.pl-modal-open`), opening any of them closes the map; `body.ftf-map-open` keeps
 working as before. The overlap check has a `map` state and the `.ftf-map` / `.ftf-map-fab` boxes. A phone map tile in
 the HUD tile row is not added yet (the `.ftf-map-fab` stays); see `docs/ui-polish.md` §5.
+## To Task F (UI polish, owner of `game/src/ui/world-hud/**` and `game/src/play/world-hud.js`), from Task M (NEAR live), 08.11
+### 9. Render the NEAR testnet badge next to "Verified ✓"
+`game/src/net/near.js` computes the badge; it is DOM-free and never throws, so the HUD only has to render what it returns.
+Two steps:
+1. **Create one watcher per play session** where the sign cards are built (`game/src/play/world-hud.js` has the
+   session and re-renders on `session.on('obs', …)`):
+   ```js
+   import { createNearWatcher } from '../net/near.js';
+   const near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) });
+   session.on('obs', () => near.observe(session.obs));   // idempotent; it asks testnet once per season and once per revealed sign
+   near.subscribe(() => refresh());                      // fires when a badge appears or changes
+   ```
+   Pass `near` (or its two getters) into `buildHudModel` / the signs panel so the model can carry the badge.
+2. **Render the badge model** on the resolved sign cards and (optionally) once in the Signs & Visions header:
+   - `near.leafBadge(index)` → `null` or `{ kind: 'leaf', state: 'on-chain' | 'dry-run' | 'mismatch', labelKey, tipKey, href }`;
+   - `near.seasonBadge()` → `null` or `{ kind: 'season', state: 'committed', labelKey: 'wh.sign.near.committed', tipKey, href }`.
+   `null` means render nothing (offline, another seed, no deployment). Otherwise render an `<a class="wh-pill wh-sign__near wh-sign__near--<state>" href target="_blank" rel="noopener">`
+   with `i18n: labelKey` and `title`/`data-tip` from `tipKey`, placed right after the existing `wh-sign__verified` pill
+   (`signs.js` line ~64). The strings exist in all five locales: `wh.sign.near.committed` ("Committed on NEAR testnet ✓"),
+   `wh.sign.near.leaf` ("Verified on NEAR testnet ✓"), `wh.sign.near.dryrun` ("Checked by the NEAR contract ✓"),
+   `wh.sign.near.mismatch` ("NEAR record differs ✗"), `wh.sign.near.tip`. Use the `ok`/`fail` pill colours for ✓/✗;
+   the link opens the transaction (or the contract) on testnet.nearblocks.io.
+   The anchor must stop the card's own click (`e.stopPropagation()`), and it is a real link, so keyboard focus works for free.
+Nothing else is needed: the watcher reads `game/src/net/near-deployment.js` (contract id and committed seasons; a `null`
+contract id disables it), calls only read-only RPC views, and the judge season (`?demo=judge`) is the one committed on
+testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the exact semantics of each state: `docs/near.md`.
+## From Task I (tutorial and onboarding, branch `claude/tutorial`), 08.11
+Context: `docs/tutorial.md`. The first stake of a new player must land on trial 3 (the rules generate events only for
+trials 3–17 and resolve anchors only when an event lands on their trial, so a stake on trial 1 or 2 is never returned
+and never mentioned). The onboarding goals now say so; the three requests below would make the UI do it by default.
+### 10. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
+- `wh.hint.firstSign` / `.hub` and `wh.hint.anchor` overflow the 338-unit toast at 1280×800 ("…read it with…"); cap the
+  text at about 90 characters or let the toast grow to three lines. `firstSign` also stays on screen past the reveal
+  (untilDone on "open V"): please mark it done when the sign reaches the chronicle.
+- The hub's first-loop hint should say what the quest says: *Iris guesses. Change Delay until it says trial 3, then
+  press F.* (`wh.hint.anchor.hub`), and the `verified` beat should name the player's own stake: *Trial 3 came true on
+  Shell II; our stake on Shell I came back* (the data is in `obs.chronicle` and the anchors list).
+- Reading card (`hub-ui.js`): "Iris · 25% sure" ×4 reads as a broken number to a stranger. Suggest the clarity-layers
+  words (*unsure* under 50 %, *likely*, *certain*) and a one-line note while every slot is at 25 %: *Iris is guessing.*
+- Iris's dialogue line is kept 12 s and so says "Pick the gold Shell and we fly." inside the Shell; clear it on a zone
+  change, or let the hub's `stake` goal replace it.
+- The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
+### 11. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
+- `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
+  on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
+  Same public-policy spirit as the autopilot: no hidden state, just the rule from `docs/rules-baseline.md` §2.2.
+- `interactions.js` anchor zone: make the trial-3 option the primary one (the E key) while no event has resolved and
+  the reading's trial is below 3; today E places the dead stake ("Anchor here for tick 2 (as your reading says)") and
+  the goal has to tell the player to press 3.
+- `game.js`: pass `skipOnboarding` from a device flag once the first loop was completed once
+  (e.g. `ctx.storage.getJSON('ftf.flow.v1').loopDone`), so a returning player sees no first-loop goals; `objectives.js`
+  already honours the flag. The tutorial screens themselves already skip for a returning player.
+- Terminology: `opt.anchorTick` / `opt.anchorVision` and `meaning.3.*` still say "tick" ("Anchor here for tick 3",
+  "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
+  "trial 3" instead of the menu's "tick 3".
+### 12. To Task J (`docs/submission/video-shot-list.md`)
+The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
+item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
+first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the
+card); shot 2 can hold on beat 4, "Stake and watch", where the ring seals "Verified ✓".
+## To the lead (play layer, `game/src/play/game.js`), from worker G / Task N (living NPCs, 08.11)
+### 13. Two one-line hooks for the living agents
+In `startPlay`, after `const agents = new ClanAgents(...)`:
+- `agents.onSay = (l) => { if (worldHud) worldHud.say(l); };` lets a meeting's first beat and a contribution's line
+  appear in the dialogue strip at the moment the agents actually meet or reach the Scroll (keys already exist:
+  `line.walk.silk`, `line.mend`, `line.fragment`, `line.pact`, `line.escrow`). Without it the beats are silent.
+- In `session.on('event', …)`: `agents.event(ev, state.now);` gives the director the public events a few seconds
+  before the next observation and enables the "everyone looks up at the Shell of a reveal" moment (`fx.event`).
+  Without it the director still works from observation diffs (contributions, silk transfers, mends, auctions, vote).
+## To Task F (nameplates in `game/src/play/agents.js`), from worker G / Task N
+### 14. The mind glyph sprite is floating text in the world
+`MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
+out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
+sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.

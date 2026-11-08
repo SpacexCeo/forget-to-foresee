@@ -9,6 +9,7 @@ import { buildHudModel, raw } from '../ui/world-hud/from-obs.js';
 import { renderMsg } from './i18n.js';
 import { i18n as uiI18n } from '../ui/index.js';
 import { panelArbiterFor } from './panels.js';
+import { createNearWatcher } from '../net/near.js';
 
 const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
 
@@ -29,6 +30,9 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
   uiRoot.appendChild(host);
   doc.body.classList.add('wh-on');
 
+  // NEAR testnet badges (net/near.js, request 9): read-only views, idempotent per season and per revealed sign
+  let near = null;
+  try { near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) }); } catch (e) { console.warn('[play] NEAR watcher off', e); }
   const render = (k, a) => renderMsg(i18n, k, a);
   const renderEvent = (e) => uiI18n.renderEvent(e, i18n);
   const mode = () => (prefs && prefs.get().hudMode === 'pro' ? 'pro' : 'novice');
@@ -49,6 +53,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       promptVisible: opts.length === 1 && !ui.panel,
       signsState: hud ? { open: hud.signs.isOpen() } : { open: mode() === 'pro' },
       map: !!handlers.onMap,
+      near,
     });
   }
 
@@ -81,7 +86,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
   function claimSigns() { arb.claim('signs', () => { if (hud) hud.signs.close(); }, { modal: hud ? hud.layout === 'mobile' : false }); }
 
   const offs = [
-    session.on('obs', () => { if (hints) hints.observe(session.obs); refresh(); }),
+    session.on('obs', () => { if (hints) hints.observe(session.obs); if (near) near.observe(session.obs); refresh(); }),
+    near ? near.subscribe(() => refresh()) : null,
     session.on('goal', refresh),
     session.on('spot', refresh),
     prefs ? prefs.subscribe(() => refresh()) : null,
@@ -114,6 +120,6 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       if (hints && hints.tick(dt)) refresh();
     },
     refresh,
-    destroy() { offs.forEach((f) => f()); if (hud) hud.destroy(); host.remove(); doc.body.classList.remove('wh-on'); },
+    destroy() { offs.forEach((f) => f()); if (near && near.destroy) near.destroy(); if (hud) hud.destroy(); host.remove(); doc.body.classList.remove('wh-on'); },
   };
 }

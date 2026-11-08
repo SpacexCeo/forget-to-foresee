@@ -96,6 +96,7 @@ export function signsFromObs(obs, { i18n, mode = 'novice' } = {}) {
       ] : [],
       anchor: { shell: ROMAN_SHELL(m.place), trial: c.tick },
       proof: proof ? { index: c.index, leaf: String(proof.leaf).slice(0, 10) } : undefined,
+      near: o.near ? o.near.leafBadge(c.index) : null,
     });
   }
   // newest first: active by due trial, then resolved by trial (descending)
@@ -118,6 +119,7 @@ export function signsFromObs(obs, { i18n, mode = 'novice' } = {}) {
  * @param {boolean} [o.promptVisible]
  * @param {{open?: boolean, filter?: string}} [o.signsState]
  * @param {boolean} [o.map]  true when the host wires an island map: the hotbar gets a Map button (N)
+ * @param {{leafBadge: (index: number) => object|null, seasonBadge: () => object|null}} [o.near]  NEAR testnet badges (net/near.js)
  * @param {boolean} [o.unread]
  */
 export function buildHudModel(o) {

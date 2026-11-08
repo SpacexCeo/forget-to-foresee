@@ -91,3 +91,32 @@ export function gaitBlend(speed, { walkRef = 1.7, runRef = 3.57, walkOn = 0.6, i
 
 /** Exponential damping toward a target (frame-rate independent); `rate` in 1/s. */
 export const damp = (value, target, rate, dt) => value + (target - value) * (1 - Math.exp(-rate * dt));
+
+/**
+ * Local avoidance for agents walking without colliders: neighbours within `look` ahead and `radius`
+ * to the side push the wish sideways (away from them), a neighbour almost on top of us slows the step.
+ * Deterministic tie-break (a neighbour dead ahead is passed on the agent's right). Returns a new wish.
+ * @param {number[]} pos [x, z] @param {number} heading @param {number[]} wish [x, z]
+ * @param {number[][]} others [[x, z], ...] positions of the other agents and the player
+ */
+export function avoidWish(pos, heading, wish, others, { radius = 1.1, look = 2.2, strength = 0.9, slowRadius = 0.7 } = {}) {
+  const mag = Math.hypot(wish[0], wish[1]);
+  if (mag < 1e-6 || !others || !others.length) return wish;
+  const fx = Math.sin(heading), fz = Math.cos(heading);
+  const sx = fz, sz = -fx; // the agent's left-hand side
+  let push = 0, slow = 1;
+  for (const o of others) {
+    const dx = o[0] - pos[0], dz = o[1] - pos[1];
+    const ahead = dx * fx + dz * fz, lat = dx * sx + dz * sz;
+    const d = Math.hypot(dx, dz);
+    if (d < slowRadius) slow = Math.min(slow, 0.45);
+    if (ahead <= 0 || ahead > look || Math.abs(lat) >= radius) continue;
+    const near = (1 - ahead / look) * (1 - Math.abs(lat) / radius);
+    push -= (lat >= 0 ? 1 : -1) * near * strength; // step to the side the neighbour is not on
+  }
+  if (!push && slow === 1) return wish;
+  const out = [wish[0] + sx * push * mag, wish[1] + sz * push * mag];
+  const l = Math.hypot(out[0], out[1]) || 1;
+  const k = (Math.min(1, mag) * slow) / l;
+  return [out[0] * k, out[1] * k];
+}

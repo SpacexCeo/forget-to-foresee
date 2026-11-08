@@ -73,6 +73,15 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   .hub-slots li { grid-template-columns: 56px 44px 1fr 44px; gap: 6px; } .hub-slots li button { width: 44px; min-height: 44px; }
   .hub-status { top: calc(64px + env(safe-area-inset-top, 0px)); font-size: 13px; padding: 6px 6px 6px 12px; } .hub-status button { min-height: 36px; }
 }
+/* Short phones (QA-011): the bottom-anchored HUD stack rises to ~220 px on a 664 px screen, so the dock at 112 px
+   gets compact: no eyebrow, 44 px Shell cells, a 40 px pass row; 112 + 8 + 44 + 6 + 40 + 8 = 218 px. */
+@media (max-width: 700px) and (max-height: 760px) {
+  .hub-dock { padding: 8px; }
+  .hub-dock .hub-eyebrow { display: none; }
+  .hub-shells { margin-top: 0; gap: 6px; } .hub-shells button { min-height: 44px; padding: 4px 2px 3px; font-size: 16px; gap: 3px; }
+  .hub-shells button small { font-size: 9.5px; }
+  .hub-dock .hub-row { margin-top: 6px; } .hub-dock .hub-row button { min-height: 40px; width: 100%; }
+}
 @media (prefers-reduced-motion: reduce) { .hub-fade { transition: none; } .hub-host button { transition: none; } }
 `;
 
@@ -281,6 +290,8 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
     handleKey(code) {
       const obs = hub.obs;
       if (!obs) return false;
+      // during a flight or a running operation F and T are swallowed, not queued (QA-002); T still stops automatic trials
+      if ((hub.transit || hub.busy) && (code === 'KeyF' || code === 'KeyT')) return true;
       if (hub.card) {
         const m = /^Digit([1-3])$/.exec(code);
         if (m) { const b = host.querySelectorAll('.hub-card [data-choice]')[Number(m[1]) - 1]; if (b && !b.disabled) b.click(); return true; }
