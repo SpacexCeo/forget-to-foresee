@@ -61,11 +61,11 @@ export default {
     },
   ],
   captions: [
-    { from: 1.6, to: 5.2, text: 'A season sealed in a Merkle root before your first move.' },
+    { from: 1.6, to: 5.2, text: 'A season fixed before trial 1 and checked against that seal.' },
     { from: 6.4, to: 10.2, text: 'The Guests draw round signs on the glass. Read them.' },
     { from: 11.4, to: 15.6, text: 'Six clans of AI agents trade words, silk and trust. Stake on what you read.' },
     { from: 17.2, to: 21.4, text: 'Your agent Iris forgets a memory forever to see the future.' },
-    { from: 22.6, to: 25.0, text: 'Stake 10 silk. Watch the sign come true. Verified ✓' },
+    { from: 22.6, to: 25.2, text: 'Stake 10 silk. Watch the sign come true. Verified ✓' },
   ],
 };
 void SHELL; void GLYPH; void CAMP; void INTERIOR; void SETUP;

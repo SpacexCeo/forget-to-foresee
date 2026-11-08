@@ -27,7 +27,7 @@ export default {
   captions: [
     { from: 0.4, to: 3.4, text: 'The clans lend, trade and break trust: agents with wallets and memory.' },
     { from: 3.7, to: 6.9, text: 'Trial 3 ends. A Gift of 20 on Shell II; your stake returns.' },
-    { from: 7.4, to: 11.0, text: 'Every reveal is checked against the Merkle root sealed before trial 1.' },
+    { from: 7.4, to: 11.0, text: 'The season was fixed before trial 1 and checked against that seal.' },
     { from: 11.4, to: 13.6, text: 'Verified ✓' },
   ],
 };
