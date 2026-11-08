@@ -151,3 +151,59 @@ Steps:
 5. Re-measure after the change; record before/after in `docs/mobile.md` and the HANDOFF Mobile item. Check that
    desktop `/?play=direct` and the low tier still render with no console errors.
 
+
+---
+
+## Task F: UI polish, the "cheap" look (owner feedback 08.11, with screenshots)
+
+**Branch:** `claude/ui-polish` · **Owns:** `game/src/play/ui.js`, `game/src/play/hub-ui.js`, `game/src/play/world-hud.js`,
+`game/src/play/hints.js`, the label/nameplate code in `game/src/play/agents.js` (not its animation code: Task G),
+`game/src/ui/world-hud/**`, `game/src/ui/styles.css`, `game/src/ui/hud.js`, new `game/tests/ui-polish*.test.mjs`,
+`docs/ui-polish.md` (new). Owner override of the Codex ownership of `game/src/ui/**` for this polish (same as the lobby
+rebuild); record it in `docs/decisions.md` and leave a note in `docs/collab-requests.md` for Codex.
+
+Owner's words: "this looks cheap: too little padding on the buttons, things stack on top of each other". What the
+screenshots show (live build, desktop):
+- The Memories panel opens on top of Signs & Visions and both stay visible: the sign cards' text ("Sign #3 · Published",
+  "Anchor: Shell III, Trial 4") shows through the memory cards. Only one modal panel may be open at a time, or the one
+  underneath must be fully hidden; panel backgrounds must be opaque enough that nothing reads through.
+- The Shell hub dock ("Fly into a Shell", I–IV, "Let trial 5 pass") overlaps the open panel. The dock must hide while
+  a panel is open (or the panels must leave its area free).
+- Buttons ("Forget it for a vision", the quest pill "MAIN QUEST", the dock buttons) have cramped padding and tiny
+  type; the gold pill text touches its border. Use one spacing scale (e.g. 4/8/12/16/24), min 40 px touch targets on
+  desktop and 48 px on phones, consistent radii, clear hover/focus/pressed states.
+- The world nameplate ("Frost · fragment giver") floats in the scene as a translucent box behind scenery edges and over
+  a wooden board, with a large faint circle icon; it reads as a debug label. Make it a small, legible, screen-space
+  plate that fades with distance, never clips into geometry, and does not cover the character's head.
+Steps: audit every play-layer panel, card, button and label at 1280×800, 1920×1080 and 390×844 (headless Chromium
+screenshots in `docs/ui-polish.md`, before and after); fix stacking/z-order and panel exclusivity; apply the spacing
+and type scale; keep the owner's world HUD mockups (`docs/ui-world-hud.md`) as the visual reference, only polish
+spacing/stacking/legibility, no redesign. Keep all five locales fitting (longest strings: uk, it). Tests for panel
+exclusivity (pure logic). `npm test` and `npm run build` green.
+
+---
+
+## Task G: player movement that feels AAA (owner feedback 08.11)
+
+**Branch:** `claude/movement-feel` · **Owns:** `game/src/physics/**`, `game/src/render/camera-rig.js`, the movement and
+avatar-update parts of `game/src/main.js` (`frame()`, `wishVector`, the avatar heading/position block), the animation
+code in `game/src/play/agents.js` (clip blending, Iris's model; not the nameplates: Task F), `game/src/ui/input.js`,
+`game/tests/client/collision*.mjs`, `smooth*.mjs`, new `game/tests/client/movement*.mjs`, `docs/movement.md` (new).
+
+Owner's words: "the player's movement does not match normal AAA physics". Target: the feel of a modern third-person
+action game. Concretely:
+1. Measure the current controller first (`docs/movement.md`): acceleration/deceleration curves, turn rate, walk/run
+   speeds, stopping distance, slope and step behaviour, camera lag; note what reads as floaty, robotic or sliding.
+2. Movement: speed-dependent acceleration and braking (quick start, short controlled stop), turn rate limited by speed
+   (pivot in place when standing, wide arc at a run), no instant 180° flips; momentum preserved over small bumps;
+   ground snapping on slopes and steps without jitter; edge handling on bridges (no sliding off, no invisible walls
+   feel). Keep the swept capsule and the no-tunneling guarantees (existing tests stay green, add new ones).
+3. Animation: blend idle/walk/run by actual ground speed and sync the clip playback rate to it (no foot sliding);
+   start/stop and turn transitions with short cross-fades; lean slightly into turns; Iris faces the move direction
+   smoothly. Same for NPC agents walking routes.
+4. Camera: smooth follow with slight lag and look-ahead in the move direction, no jitter at 30 Hz physics (interpolate
+   between physics steps for rendering), collision with scenery so it never clips into walls.
+5. Click/tap-to-move and G routes use the same controller (they must not glide). Keyboard, gamepad and touch keep
+   their bindings. Walk speeds stay in the range the design needs (walks of 30-45 s camp to camp, `docs/decisions.md`).
+6. Before/after numbers and a short frame-by-frame description in `docs/movement.md`. `npm test` and `npm run build`
+   green; check `/?demo=judge&mode=walk` and the hub mode still work with no console errors.
