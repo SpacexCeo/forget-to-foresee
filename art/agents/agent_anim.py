@@ -354,6 +354,10 @@ STYLE = {
                  swing=1.0, sway=0.8, bounce=1.0, tempo=1, cloth=1.0),
 }
 
+# talk: head nod (degrees, beats per cycle) = temperament. Ash nods short and sharp, Moss slow and
+# deep, Amber quick and shallow, Frost rarely (lecturing), Salt barely (the head rolls instead).
+TALK_NOD = {"pepel": (3, 8), "moh": (6, 2), "yantar": (2.5, 6), "iney": (3, 2), "sol": (2, 2)}
+
 # left-hand prop handling: mode (hang = pendulum under gravity, upright = held
 # vertical), ground behaviour of the prop foot in standing clips
 PROP_L = {"sol": "hang", "moh": "hang", "yantar": "hang", "iney": "upright"}
@@ -587,10 +591,15 @@ def clip_talk(key, S, u):
         P.twist["hand_R"] = 70
         P.r("hand_R", -15, 0, 0)
     P.ik[-1] = (tgt, pole)
-    # head nods with the beats, chest turns toward the listener
-    P.r("head", 4 * max(0.0, wave(u, 4)), 0, 0).r("chest", 0, 0, -5 * wave(u, 1))
-    if key not in ("iney", "pepel", "moh", "sol", "yantar") and key != "iris":
-        pass
+    # head nods with the beats in the clan's manner, chest turns toward the listener
+    amp, k = TALK_NOD.get(key, (4, 4))
+    P.r("head", amp * max(0.0, wave(u, k)), 0, 0).r("chest", 0, 0, -5 * wave(u, 1))
+    if key in ("iris", "suit"):     # the off hand joins the firm beats: a two-handed, open read
+        a = env(u, 0.06, 0.14, 0.44, 0.56)
+        lift = V((0.0, 0.0, 0.03 * max(0.0, wave(u, 6, 0.1)))) * a
+        P.ik[1] = (REST_WRIST_L.lerp(V((0.17, -0.30, 1.10)), a) + lift, POLE_L)
+        P.twist["hand_L"] = -60 * a
+        P.r("hand_L", -15 * a, 0, 0)
     return P
 
 

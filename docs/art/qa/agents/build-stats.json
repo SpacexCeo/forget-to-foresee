@@ -71,31 +71,31 @@
       "master_triangles": 5349776,
       "bakes": {
         "ao": {
-          "seconds": 22.92,
+          "seconds": 22.01,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 11.74,
+          "seconds": 11.38,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 11.52,
+          "seconds": 11.12,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 9.89,
+          "seconds": 9.21,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 7.79,
+          "seconds": 7.39,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -108,7 +108,7 @@
             2048,
             2048
           ],
-          "bytes": 851078
+          "bytes": 851065
         },
         "orm": {
           "file": "agent_iris_orm.jpg",
@@ -116,7 +116,7 @@
             2048,
             2048
           ],
-          "bytes": 1559565
+          "bytes": 1559541
         },
         "normal": {
           "file": "agent_iris_normal.jpg",
@@ -124,7 +124,7 @@
             2048,
             2048
           ],
-          "bytes": 1548461
+          "bytes": 1548008
         }
       },
       "skin": {
@@ -332,8 +332,8 @@
           0.223
         ]
       },
-      "raw_glb_bytes": 6568780,
-      "glb_bytes": 4763156,
+      "raw_glb_bytes": 6568288,
+      "glb_bytes": 4763304,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -342,23 +342,23 @@
       "stages": [
         {
           "stage": "iris:model",
-          "seconds": 0.35
+          "seconds": 0.25
         },
         {
           "stage": "iris:uv",
-          "seconds": 1.61
+          "seconds": 1.16
         },
         {
           "stage": "iris:master",
-          "seconds": 26.85
+          "seconds": 19.91
         },
         {
           "stage": "iris:bake_gpu",
-          "seconds": 64.17
+          "seconds": 61.41
         },
         {
           "stage": "iris:textures",
-          "seconds": 2.44
+          "seconds": 2.39
         },
         {
           "stage": "iris:export",
@@ -366,18 +366,18 @@
         },
         {
           "stage": "iris:rig",
-          "seconds": 0.19
+          "seconds": 0.18
         },
         {
           "stage": "iris:anim",
-          "seconds": 0.8
+          "seconds": 0.75
         },
         {
           "stage": "iris:export",
-          "seconds": 5.22
+          "seconds": 4.87
         }
       ],
-      "total_seconds": 101.63
+      "total_seconds": 90.92
     },
     "sol": {
       "clan": "Salt",
@@ -446,31 +446,31 @@
       "master_triangles": 6274160,
       "bakes": {
         "ao": {
-          "seconds": 23.2,
+          "seconds": 22.62,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 12.73,
+          "seconds": 12.37,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 13.52,
+          "seconds": 12.25,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 11.75,
+          "seconds": 10.65,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 8.47,
+          "seconds": 7.86,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -483,7 +483,7 @@
             2048,
             2048
           ],
-          "bytes": 1218628
+          "bytes": 1218745
         },
         "orm": {
           "file": "agent_sol_orm.jpg",
@@ -491,7 +491,7 @@
             2048,
             2048
           ],
-          "bytes": 1692443
+          "bytes": 1692726
         },
         "normal": {
           "file": "agent_sol_normal.jpg",
@@ -499,7 +499,7 @@
             2048,
             2048
           ],
-          "bytes": 1751286
+          "bytes": 1751353
         }
       },
       "skin": {
@@ -696,8 +696,8 @@
           0.293
         ]
       },
-      "raw_glb_bytes": 7374084,
-      "glb_bytes": 4928544,
+      "raw_glb_bytes": 7374556,
+      "glb_bytes": 4928100,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -706,23 +706,23 @@
       "stages": [
         {
           "stage": "sol:model",
-          "seconds": 0.25
+          "seconds": 0.23
         },
         {
           "stage": "sol:uv",
-          "seconds": 1.08
+          "seconds": 1.03
         },
         {
           "stage": "sol:master",
-          "seconds": 27.21
+          "seconds": 26.35
         },
         {
           "stage": "sol:bake_gpu",
-          "seconds": 70.01
+          "seconds": 66.07
         },
         {
           "stage": "sol:textures",
-          "seconds": 2.47
+          "seconds": 2.56
         },
         {
           "stage": "sol:export",
@@ -734,14 +734,14 @@
         },
         {
           "stage": "sol:anim",
-          "seconds": 0.83
+          "seconds": 0.8
         },
         {
           "stage": "sol:export",
-          "seconds": 5.23
+          "seconds": 4.99
         }
       ],
-      "total_seconds": 107.27
+      "total_seconds": 102.23
     },
     "pepel": {
       "clan": "Ash",
@@ -802,31 +802,31 @@
       "master_triangles": 5103088,
       "bakes": {
         "ao": {
-          "seconds": 22.77,
+          "seconds": 21.95,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 12.01,
+          "seconds": 11.48,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 11.72,
+          "seconds": 11.39,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 9.8,
+          "seconds": 9.5,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 7.68,
+          "seconds": 7.51,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -839,7 +839,7 @@
             2048,
             2048
           ],
-          "bytes": 826329
+          "bytes": 826306
         },
         "orm": {
           "file": "agent_pepel_orm.jpg",
@@ -847,7 +847,7 @@
             2048,
             2048
           ],
-          "bytes": 1725311
+          "bytes": 1725557
         },
         "normal": {
           "file": "agent_pepel_normal.jpg",
@@ -855,7 +855,7 @@
             2048,
             2048
           ],
-          "bytes": 1895175
+          "bytes": 1895380
         }
       },
       "skin": {
@@ -1042,8 +1042,8 @@
           0.268
         ]
       },
-      "raw_glb_bytes": 6960788,
-      "glb_bytes": 5238308,
+      "raw_glb_bytes": 6961216,
+      "glb_bytes": 5238708,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1056,19 +1056,19 @@
         },
         {
           "stage": "pepel:uv",
-          "seconds": 1.15
+          "seconds": 1.16
         },
         {
           "stage": "pepel:master",
-          "seconds": 18.57
+          "seconds": 20.27
         },
         {
           "stage": "pepel:bake_gpu",
-          "seconds": 64.27
+          "seconds": 62.11
         },
         {
           "stage": "pepel:textures",
-          "seconds": 2.49
+          "seconds": 2.41
         },
         {
           "stage": "pepel:export",
@@ -1080,14 +1080,14 @@
         },
         {
           "stage": "pepel:anim",
-          "seconds": 0.84
+          "seconds": 0.8
         },
         {
           "stage": "pepel:export",
-          "seconds": 5.16
+          "seconds": 4.97
         }
       ],
-      "total_seconds": 92.86
+      "total_seconds": 92.1
     },
     "moh": {
       "clan": "Moss",
@@ -1151,31 +1151,31 @@
       "master_triangles": 5257776,
       "bakes": {
         "ao": {
-          "seconds": 23.02,
+          "seconds": 22.48,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 11.75,
+          "seconds": 11.39,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 14.79,
+          "seconds": 11.7,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 11.23,
+          "seconds": 9.16,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 7.28,
+          "seconds": 7.16,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1188,7 +1188,7 @@
             2048,
             2048
           ],
-          "bytes": 1066548
+          "bytes": 1066641
         },
         "orm": {
           "file": "agent_moh_orm.jpg",
@@ -1196,7 +1196,7 @@
             2048,
             2048
           ],
-          "bytes": 1668412
+          "bytes": 1668368
         },
         "normal": {
           "file": "agent_moh_normal.jpg",
@@ -1204,7 +1204,7 @@
             2048,
             2048
           ],
-          "bytes": 1604274
+          "bytes": 1603899
         }
       },
       "skin": {
@@ -1401,8 +1401,8 @@
           0.261
         ]
       },
-      "raw_glb_bytes": 6981092,
-      "glb_bytes": 4930640,
+      "raw_glb_bytes": 6980768,
+      "glb_bytes": 4930264,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1411,23 +1411,23 @@
       "stages": [
         {
           "stage": "moh:model",
-          "seconds": 0.23
+          "seconds": 0.22
         },
         {
           "stage": "moh:uv",
-          "seconds": 1.22
+          "seconds": 1.2
         },
         {
           "stage": "moh:master",
-          "seconds": 20.32
+          "seconds": 20.9
         },
         {
           "stage": "moh:bake_gpu",
-          "seconds": 68.36
+          "seconds": 62.19
         },
         {
           "stage": "moh:textures",
-          "seconds": 2.43
+          "seconds": 2.51
         },
         {
           "stage": "moh:export",
@@ -1435,18 +1435,18 @@
         },
         {
           "stage": "moh:rig",
-          "seconds": 0.18
+          "seconds": 0.17
         },
         {
           "stage": "moh:anim",
-          "seconds": 0.81
+          "seconds": 0.8
         },
         {
           "stage": "moh:export",
-          "seconds": 5.13
+          "seconds": 5.1
         }
       ],
-      "total_seconds": 98.68
+      "total_seconds": 93.1
     },
     "yantar": {
       "clan": "Amber",
@@ -1511,31 +1511,31 @@
       "master_triangles": 5497776,
       "bakes": {
         "ao": {
-          "seconds": 22.88,
+          "seconds": 22.03,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 12.26,
+          "seconds": 11.97,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 12.18,
+          "seconds": 11.75,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 10.11,
+          "seconds": 9.91,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 7.81,
+          "seconds": 7.73,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1548,7 +1548,7 @@
             2048,
             2048
           ],
-          "bytes": 1294997
+          "bytes": 1294849
         },
         "orm": {
           "file": "agent_yantar_orm.jpg",
@@ -1556,7 +1556,7 @@
             2048,
             2048
           ],
-          "bytes": 1689394
+          "bytes": 1689360
         },
         "normal": {
           "file": "agent_yantar_normal.jpg",
@@ -1564,7 +1564,7 @@
             2048,
             2048
           ],
-          "bytes": 1802839
+          "bytes": 1803132
         }
       },
       "skin": {
@@ -1755,8 +1755,8 @@
           0.3
         ]
       },
-      "raw_glb_bytes": 7322560,
-      "glb_bytes": 5233312,
+      "raw_glb_bytes": 7322668,
+      "glb_bytes": 5227140,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -1765,23 +1765,23 @@
       "stages": [
         {
           "stage": "yantar:model",
-          "seconds": 0.21
+          "seconds": 0.22
         },
         {
           "stage": "yantar:uv",
-          "seconds": 1.29
+          "seconds": 1.25
         },
         {
           "stage": "yantar:master",
-          "seconds": 22.15
+          "seconds": 21.0
         },
         {
           "stage": "yantar:bake_gpu",
-          "seconds": 65.55
+          "seconds": 63.68
         },
         {
           "stage": "yantar:textures",
-          "seconds": 2.49
+          "seconds": 2.44
         },
         {
           "stage": "yantar:export",
@@ -1789,18 +1789,18 @@
         },
         {
           "stage": "yantar:rig",
-          "seconds": 0.17
+          "seconds": 0.16
         },
         {
           "stage": "yantar:anim",
-          "seconds": 0.83
+          "seconds": 0.81
         },
         {
           "stage": "yantar:export",
-          "seconds": 5.25
+          "seconds": 5.12
         }
       ],
-      "total_seconds": 97.93
+      "total_seconds": 94.68
     },
     "iney": {
       "clan": "Frost",
@@ -1864,31 +1864,31 @@
       "master_triangles": 4879072,
       "bakes": {
         "ao": {
-          "seconds": 18.79,
+          "seconds": 18.65,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 10.67,
+          "seconds": 10.63,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 10.82,
+          "seconds": 10.67,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 9.26,
+          "seconds": 9.21,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 7.34,
+          "seconds": 7.27,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1901,7 +1901,7 @@
             2048,
             2048
           ],
-          "bytes": 1229759
+          "bytes": 1229706
         },
         "orm": {
           "file": "agent_iney_orm.jpg",
@@ -1909,7 +1909,7 @@
             2048,
             2048
           ],
-          "bytes": 1709987
+          "bytes": 1709960
         },
         "normal": {
           "file": "agent_iney_normal.jpg",
@@ -1917,7 +1917,7 @@
             2048,
             2048
           ],
-          "bytes": 1578776
+          "bytes": 1579092
         }
       },
       "skin": {
@@ -2115,8 +2115,8 @@
           0.309
         ]
       },
-      "raw_glb_bytes": 7289120,
-      "glb_bytes": 4948992,
+      "raw_glb_bytes": 7289356,
+      "glb_bytes": 4949172,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -2125,23 +2125,23 @@
       "stages": [
         {
           "stage": "iney:model",
-          "seconds": 0.22
+          "seconds": 0.23
         },
         {
           "stage": "iney:uv",
-          "seconds": 1.03
+          "seconds": 1.05
         },
         {
           "stage": "iney:master",
-          "seconds": 18.41
+          "seconds": 18.52
         },
         {
           "stage": "iney:bake_gpu",
-          "seconds": 57.16
+          "seconds": 56.71
         },
         {
           "stage": "iney:textures",
-          "seconds": 2.4
+          "seconds": 2.48
         },
         {
           "stage": "iney:export",
@@ -2149,18 +2149,18 @@
         },
         {
           "stage": "iney:rig",
-          "seconds": 0.17
+          "seconds": 0.18
         },
         {
           "stage": "iney:anim",
-          "seconds": 0.78
+          "seconds": 0.79
         },
         {
           "stage": "iney:export",
-          "seconds": 5.22
+          "seconds": 5.1
         }
       ],
-      "total_seconds": 85.39
+      "total_seconds": 85.04
     },
     "suit": {
       "clan": "Suit",
