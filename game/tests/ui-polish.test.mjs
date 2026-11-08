@@ -340,6 +340,8 @@ test('layout: on phones the Chronicle and recap fabs share the fab row with the 
   assert.match(input, /\.ftf-run-toggle \{[^}]*right: calc\(8px[^}]*bottom: calc\(96px[^}]*width: 52px/);
   assert.match(chronicle, /@media \(max-width: 700px\) \{ \.ch-fab\.wh-root \{ bottom: calc\(96px[^}]*left: calc\(64px/, 'Chronicle right of the map button');
   assert.match(a11y, /\.a11y-recap-btn \{ left: auto; right: calc\(68px[^}]*bottom: calc\(96px/, 'recap left of the run toggle');
+  const html = read('../index.html');
+  assert.match(html, /body\.in-world:is\(\.pl-modal-open, \.pl-context-open, \.ftf-map-open\) :is\(\.ch-fab, \.a11y-recap-btn\) \{ visibility: hidden; \}/, 'both fabs step aside under panels, the context menu and the map, like the map button');
   const overlap = read('../scripts/hud-overlap.mjs');
   assert.match(overlap, /'\.ch-fab', '\.a11y-recap-btn'/, 'the overlap check measures both fabs');
   assert.match(overlap, /390x664/, 'the overlap check covers the iPhone 13 viewport (390x664)');
