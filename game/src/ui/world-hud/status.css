@@ -7,8 +7,6 @@
 
 .wh-root .wh-status { position: absolute; inset: 0; pointer-events: none; }
 .wh-root .wh-status .wh-icon svg { overflow: visible; }
-/* The mockup's text is a touch heavier than PT Serif 400; a hairline stroke closes the gap. */
-.wh-root .wh-status { -webkit-text-stroke: .25px currentColor; }
 
 /* ================================================================ desktop: trial card (6.1) */
 
@@ -379,3 +377,8 @@
 .wh-root .wh-trial__stack { display: flex; flex-direction: column; }
 .wh-root .wh-trial__label { max-width: 56px; font-size: var(--wh-fs-small); line-height: 12px; color: var(--wh-text-2); }
 .wh-root .wh-trial__value { margin-top: 1px; font-size: var(--wh-fs-row); line-height: 17px; color: var(--wh-text); white-space: nowrap; }
+
+/* Compact desktop (701–1086 px): the banner must clear the trial card (docs §1). */
+@media (max-width: 1086px) and (min-width: 701px) {
+  .wh-root .wh-quest { max-width: calc(100vw - 2 * 290 * var(--wh-px)); }
+}

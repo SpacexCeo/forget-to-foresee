@@ -73,7 +73,7 @@ No mechanical difference: identical costs, odds, information. Pro simply sees mo
 - Vote and Heir: never delegated.
 Pro has no delegation; the "Let Iris decide" reply does not exist in the model (`iris.suggestion` is null).
 
-**Setting.** `prefs.hud: 'novice' | 'pro'`, default **`novice`**, stored with the other prefs (`prefs.js`, `PREF_DEFAULTS`, `PREF_OPTIONS.hud`), mirrored as `data-hud="novice|pro"` on `<html>`. First-run question on the last tutorial card (`tut.finish` screen, before the hologram constructor, so the lobby → tutorial → customization order is untouched): "How much do you want on screen?" with two buttons: "Guide me (Novice)" / "Show me everything (Pro)". Switching is instant and allowed mid-season; it never restarts a season or changes state.
+**Setting.** `prefs.hud: 'novice' | 'pro'`, default **`novice`** for a new profile (derived from player state for a returning one, §8.1), stored with the other prefs (`prefs.js`, `PREF_DEFAULTS`, `PREF_OPTIONS.hud`), mirrored as `data-hud="novice|pro"` on `<html>`. First-run question on the last tutorial card (`tut.finish` screen, before the hologram constructor, so the lobby → tutorial → customization order is untouched): "How much do you want on screen?" with two buttons: "Guide me (Novice)" / "Show me everything (Pro)". Switching is instant and allowed mid-season; it never restarts a season or changes state.
 
 **i18n.** New namespaces in both locales: `wh.plain.*` (ICU `select` on action and place, ~12 keys), `wh.tip.*` (~26 keys), `wh.teach.*` (7 beats × title + body), `wh.auto.*` (~8 reasons), `settings.hud.*` (4), `wh.tabs.chronicle`, `wh.tabs.clans`, `wh.trial.silk`, `wh.trial.words`, `wh.trial.tension`, `wh.sign.verified.*` (3). About 75 keys × 2 locales. The `plain` line must fit 426 u at 13.5 u: cap at 44 Latin characters; ru: Cyrillic runs ~15% longer, so the ru strings drop the article words ("Likely: Gift of 20" → ru: "Скорее всего: дар 20").
 
@@ -200,7 +200,7 @@ Additions only; nothing existing is renamed. The orchestrator fills these; packa
 //   tension: { value: number, visible: boolean }
 //   chain: { root: string, sealed: boolean, verified: number, failed: number }   root = hex prefix for display
 //   tooltips: Record<string, TextRef>   term id → wh.tip.<term>; packages set data-tip="<term>"
-//   beats: { pending: { id: string, title: TextRef, body: TextRef }|null, seen: string[] }
+//   hints: { active: Hint|null, queue: Hint[], journal: Hint[], muted: boolean }   see §9.4 for Hint
 
 // TrialModel additions
 //   silk: number
@@ -233,8 +233,71 @@ Additions only; nothing existing is renamed. The orchestrator fills these; packa
 
 Formatter additions in `fmt`: `trials(from, to)` → "+1 – +2 trials" (`wh.sign.trials`), `silk(n)` → "20 silk" (`wh.sign.silk`), `conf(n)` → "65%" (reuses `wh.sign.pct`). `fmt.seconds` stays for the preview page but is not used by the live model.
 
-## 8. Owner decisions in this proposal
+## 8. Player state, mixed rooms, data and API
+
+Owner clarification (08.11): Novice/Pro is also **player state**, and novices and pros must share one season fairly. This section keeps the split of §6: everything here is presentation, profile and API shape unless marked **[OWNER]**.
+
+### 8.1 Player state vs. presentation mode
+
+Two different things with two different lifetimes:
+
+| | Player state (`profile`) | Presentation mode (`prefs.hud`) |
+|---|---|---|
+| Lifetime | persistent, per player (human or external agent) | per session, changeable at any moment |
+| Fields | `seasonsPlayed`, `seasonsCompleted`, `bestMastery` (0–1, unassisted seasons only), `lastMastery`, `rank`, `maxLayer` (0–2), `beatsSeen[]`, `assistedShare` (delegated actions ÷ all actions, last season) | `'novice' \| 'pro'` |
+| Who sets it | the engine's results after each season; never editable by the client | the player |
+| Rank | **Apprentice** (0 completed seasons) → **Reader** (≥1 completed season) → **Master** (≥3 completed seasons and `bestMastery ≥ 0.75`); ranks never drop | — |
+
+Relation: the default mode is derived from state once, at the start of a session — `pro` if `rank ≥ Reader` and `assistedShare < 0.25`, otherwise `novice`. The player overrides in either direction from Settings and from the first-run card; a Master dropping to Novice view loses nothing (rank and mastery are state, not mode). Layers (§2) open by state **or** by progress in the current season, whichever is further: a Reader starts at `maxLayer` from their profile, an Apprentice at L0. Unlocking in a season raises `maxLayer` in the profile when the season ends.
+
+Mastery accrues only from manual decisions: a season in which `assistedShare > 0` counts toward `seasonsCompleted` but not toward `bestMastery`. So a novice can lean on Iris as long as they like and still progress to Reader; Master is earned by hand.
+
+### 8.2 Mixed rooms — one season, one engine, same rules
+
+Today's engine has one human seat (Iris) and five AI clans. Two kinds of mixed play exist on the roadmap (`spec.md` App. E): **helpers** — 2–4 people joining one Iris via QR (SHOULD, this week) — and **human clans** — people in the Salt/Ash/Moss/Amber/Frost seats (LATER). Everything below is written for both; where a point needs the human-clan seat it says so, because that seat needs engine work (**[OWNER]**, branch `api/agent-play`, new actions for non-Iris seats; no rule change, the AI policies simply stop driving a seat that a human or agent holds).
+
+**Fairness.**
+- Same actions, same costs, same information in both modes: Novice hides digits, it never hides facts a Pro would see (a Pro's "Place II (72%)" and a Novice's "likely" are the same confidence value).
+- Delegation to Iris is **honest-but-average** and public: the autopilot is the repository's example agent client (`api/agent-play`), one file, one published policy, reading only `clientProjection()`. Rules of the policy: anchor only on published Gift readings with confidence ≥ 0.65, at most one anchor per trial; decline any word sale until that seller has one verified true word in the chronicle, then accept at ≤ 8 silk; never bid on shards; never forget, never speak the Key, never vote. Its target in the Monte Carlo (`docs/math/economy-report.md`) is the "honest cooperator" line (110.4 silk under v3), below any competent manual play, above passive. The simulation gets a `--strategy iris-autopilot` row so the claim stays measured, not asserted.
+- Every delegated action is logged publicly in the room's event log with `assisted: true`; the engine does not know about it (`fx` data from the client), so parity is untouched.
+
+**Visibility.** Each seat carries a public card: name, rank badge (Apprentice / Reader / Master), mode is **not** shown (view is private; rank is public). Apprentices get a small sprout badge next to the name label in the world and in dialogue; the badge is a request for patience, not a handicap. A Pro may **open a reading**: publish their current reading of a sign (`place/action/power/delay` + confidence) to the room; it appears on everyone's sign card as "Frost's reading: Gift of 20, Shell II" under the owner's own `plain` line. Open readings are speech, not state: the engine is untouched, the receiver still decides where to anchor.
+
+**Interaction inside existing systems** (no new rule modes):
+- *Passing knowledge* = the existing word offer (`offSell` → `acceptOffer`): a Pro clan can sell or give a word (price 0–12) to a novice seat; honesty is the sender's choice, the chronicle still catches lies (`checkBought`). This is the staging table's "passing knowledge" with a human sender; it needs the human-clan seat **[OWNER]**.
+- *Trust graph*: trust between seats moves by the same rules (gift memory +15, decline −2, betrayal −40). A Pro who gives true words earns trust and, from trial 11, a higher chance of the novice's voluntary contribution; a novice who repays loans on time is a good partner regardless of skill.
+- *Mediation* (`mediate`, 10 silk under v3, paid to the two clans): the natural "pro helps two novices" action; the mediator pays, the two reconciled seats receive.
+- *Fragments into the Scroll*: a novice's fragment is exactly as necessary as a Master's — six pieces or nothing (beat 7). Nobody can take a fragment from another seat; a pact or escrow is the only way to influence it.
+- *Vote*: one seat, one vote, four of six to accept. A Master's vote weighs the same as an Apprentice's; what a Master has is a better dictionary and so a better guess at the key sign.
+- *Helpers in one Iris* (this week's scope): helpers share one seat; the room owner holds the actions, helpers hold a "propose" channel (a proposed anchor shows as a ghost pad until the owner confirms). Rank badges and open readings apply to helpers as well.
+
+**Matchmaking and tournaments.** One board, no handicap: silk, outcome and contribution are the same numbers for everyone. The board has a rank column and filters by rank, and the weekly trophy is awarded **per rank bracket** (Apprentice, Reader, Master) from the same table — three trophies, one race. Rows from seasons with `assistedShare > 0` show an "assisted" mark and are excluded from the Master bracket only. Enrollment is unchanged (idempotent, synthetic); the result record gains `rank` and `assistedShare`. No separate novice queue: an Apprentice in a Master's room is the intended case, not an edge case.
+
+### 8.3 Data and API
+
+Where the state lives:
+
+| Now (hackathon) | Later |
+|---|---|
+| client `profile` in `createSafeStorage` under `STORAGE_KEYS.profile`, next to `prefs`; written only from the finale result | server `Player` row keyed by account (human: NEAR account or guest id; agent: its sub-account), the same fields, updated by the room on `finish()`; the voluntary final-card NFT carries `rank`, `lastMastery`, `seasonsCompleted` as public metadata (no private data, no mode) |
+
+Per-viewer projection additions (`clientProjection()` is the single source; the HUD orchestrator and the OpenAPI schema read the same object) — projection shape only, no rule change, but it is inside `engine.js` **[OWNER]**:
+
+```js
+// added to the projection, all public to every viewer
+seats: [{ seat: 0..5, kind: 'human'|'agent'|'ai', name, rank: 'apprentice'|'reader'|'master',
+          openReading?: { signId, place, action, power, delay, conf } }]
+// private to the viewer
+viewer: { seat, mode: 'novice'|'pro', unlocks: Unlocks, assisted: number }
+```
+
+The external agent is a player with the same state: its `profile` is stored server side under its account, its `rank` accrues by the same rule, its actions are always manual (`assistedShare = 0`), its mode field is `'pro'` because it has no HUD. The autopilot policy and the example agent client are literally the same module, so "Iris plays for a novice" and "an agent plays a seat" are one code path with two callers.
+
+Build items added to §6a: profile store + rank derivation (S), rank badge + open-reading card line (M, needs the room channel), tournament board rank column + bracket trophies (S, local simulation). Added to §6b **[OWNER]**: projection `seats`/`viewer` fields (S); human-clan seat actions (L, LATER unless the owner pulls it in).
+
+## 9. Owner decisions in this proposal
 
 1. **[OWNER]** Rename the anchor pill "Tiers" → "Trials" and replace the mockup's four sign stats with engine-unit rows (Place / Action / Power / Delay in trials). Alternative: keep the mockup labels and map them loosely (stability = confidence, anchor strength = share estimate, power range = power, delay in trials instead of seconds).
-2. **[OWNER]** Default mode `novice` with the first-run question on the tutorial's last card. Alternative: default `pro` for the hackathon build and `novice` only via Settings.
+2. **[OWNER]** Default mode from player state (§8.1: `pro` for Readers with little assistance, otherwise `novice`) with an override on the tutorial's last card and in Settings. Alternative: always `novice` by default for the hackathon build.
 3. **[OWNER]** Approve B1 and/or B3 as a new rule mode / fx addition, or ship 6a only.
+4. **[OWNER]** Mixed-room scope for the freeze: helpers in one Iris only (badge, open readings, propose channel), or also pull the human-clan seat into this week.

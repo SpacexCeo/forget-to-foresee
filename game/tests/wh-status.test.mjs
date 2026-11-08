@@ -171,7 +171,7 @@ for (const locale of ['en', 'ru']) {
     const expected = [
       t('wh.quest.tag'), t('wh.demo.quest.title'), t('wh.demo.quest.body1'), t('wh.demo.quest.bodyShort2'),
       t('wh.trial.title', { n: 13, total: 17 }), t('wh.trial.phase.explore'), t('wh.trial.percent', { n: 71 }),
-      t('wh.trial.attempts'), t('wh.trial.attemptsValue', { n: 3, max: 3 }), t('wh.trial.skillTier'), '12',
+      t('wh.trial.attempts'), t('wh.trial.attemptsValue', { n: 3, max: 3 }), t('wh.trial.skillTierShort'), '12',
     ];
     for (const e of expected) assert.ok(shown.includes(e), `missing "${e}"`);
     const labels = attrText(s.el);

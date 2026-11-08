@@ -155,7 +155,7 @@
   font-size: var(--wh-fs-kbd);
 }
 .wh-root .wh-hotbar__gear { width: calc(21 * var(--wh-px)); height: calc(21 * var(--wh-px)); margin-left: calc(1.5 * var(--wh-px)); }
-.wh-root .wh-hotbar__label { font-size: var(--wh-fs-ui); line-height: 1; }
+.wh-root .wh-hotbar__label { font-size: var(--wh-fs-tab); line-height: 1; }
 
 /* ================= mobile ================= */
 
@@ -201,7 +201,7 @@
   min-width: 27px;
   height: 27px;
   padding: 0;
-  border: 1px solid rgba(236, 204, 136, .62);
+  border: 1px solid var(--wh-kbd-border);
   border-radius: 6px;
   background: rgba(40, 38, 31, .9);
   font-size: var(--wh-fs-kbd-lg);
@@ -233,7 +233,7 @@
 }
 .wh-root .wh-dialogue__bar:focus-visible { outline-offset: -3px; }
 .wh-root .wh-dialogue__bubble { width: 22px; height: 18px; margin-top: 2px; }
-.wh-root .wh-dialogue__bar .wh-dialogue__speaker { margin-left: 17px; font-size: var(--wh-fs-speaker); flex: none; color: #ddc58a; /* sampled, deeper than --wh-gold-text */ }
+.wh-root .wh-dialogue__bar .wh-dialogue__speaker { margin-left: 17px; font-size: var(--wh-fs-speaker); flex: none; color: var(--wh-speaker-mobile); }
 .wh-root .wh-dialogue__bar .wh-dialogue__text {
   flex: 1;
   min-width: 0;
@@ -244,7 +244,7 @@
   font-size: var(--wh-fs-line);
   line-height: 1.3;
   text-align: left;
-  color: #ecedea; /* sampled #edf0ef: cooler and softer than --wh-text */
+  color: var(--wh-line-mobile);
 }
 .wh-root .wh-dialogue__chevron {
   width: 22px;

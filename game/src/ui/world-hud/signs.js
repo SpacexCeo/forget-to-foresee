@@ -6,9 +6,11 @@
 // Chrome labels are `wh.*` keys (data-i18n); narrative values are the model's TextRefs.
 import { h, tx, applyI18n } from '../dom.js';
 import { icon } from './icons.js';
-import { filterSigns, signCount, anchorText } from './model.js';
+import { filterSigns, signCount } from './model.js';
 
 const FILTERS = ['all', 'active', 'resolved', 'anchors'];
+/** Compact desktop range (docs §1): the panel starts closed there and overlays when opened. */
+const COMPACT_QUERY = '(min-width: 701px) and (max-width: 1086px)';
 const STAT_ICONS = { stability: 'shield', anchorStrength: 'link', powerRange: 'bolt', delay: 'clock' };
 /** Node-hole fill of the ring sigil: the card interior tone (§2.1). */
 const RING_HOLE = '#101d20';
@@ -62,17 +64,28 @@ const isTyping = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)
 
 // ---------------------------------------------------------------- pieces
 
+/**
+ * Anchor pill args: "Anchor: Shell III, Tiers 11–13". `el._short` (set by fitAnchors on mobile when
+ * the full text overflows) switches to `wh.sign.tiersShort` (RU "ур. 11–13").
+ */
+function anchorArgs(i18n, a, el) {
+  const count = a.tierTo > a.tierFrom ? 2 : 1;
+  const tiersKey = el && el._short ? 'wh.sign.tiersShort' : 'wh.sign.tiers';
+  return { shell: i18n.t('shell.' + a.shell), tiers: i18n.t(tiersKey, { count, from: a.tierFrom, to: a.tierTo }) };
+}
+
 function card(i18n, s, mobile, onAction) {
   const id = 'wh-sign-' + (++uid);
-  const title = tx(h('span', { class: 'wh-sign__title', attrs: { id: id + '-t' } }), i18n, 'wh.sign.number', { n: s.number });
-  const stats = h('dl', { class: 'wh-sign__stats', attrs: { id: id + '-s' } },
+  const title = tx(h('span', { class: 'wh-sign__title wh-heavy', attrs: { id: id + '-t' } }), i18n, 'wh.sign.number', { n: s.number });
+  const stats = h('dl', { class: 'wh-sign__stats wh-body', attrs: { id: id + '-s' } },
     ...s.stats.map((st) => h('div', { class: 'wh-sign__stat', dataset: { stat: st.id } },
       ic(icon(STAT_ICONS[st.id] || 'sparkle'), 'wh-sign__sicon'),
-      h('dt', { class: 'wh-sign__k', i18n: 'wh.sign.' + st.id }),
+      h('dt', { class: 'wh-sign__k', i18n: 'wh.sign.statLabel', args: () => ({ label: i18n.t('wh.sign.' + st.id) }) }),
       tx(h('dd', { class: 'wh-sign__v' }), i18n, st.value.key, st.value.args))));
+  const atext = h('span', { class: 'wh-sign__atext wh-heavy-sm' });
+  tx(atext, i18n, 'wh.sign.anchor', () => anchorArgs(i18n, s.anchor, atext));
   const anchor = h('span', { class: 'wh-pill wh-pill--anchor wh-sign__anchor', attrs: { id: id + '-a' } },
-    ic(icon('target'), 'wh-sign__aicon'),
-    tx(h('span', { class: 'wh-sign__atext' }), i18n, 'wh.sign.anchor', () => anchorText(i18n, s.anchor).args));
+    ic(icon('target'), 'wh-sign__aicon'), atext);
   const activate = () => onAction('sign', s.id);
   return h('div', {
     class: 'wh-card wh-sign' + (mobile ? ' wh-sign--mobile' : ''),
@@ -178,7 +191,7 @@ export function mountSigns(root, o) {
     const head = h('header', { class: 'wh-signs__head' },
       eye,
       h('div', { class: 'wh-signs__text' },
-        h('h2', { class: 'wh-signs__title', i18n: 'wh.signs.title', attrs: { id: titleId } }),
+        h('h2', { class: 'wh-signs__title wh-heavy', i18n: 'wh.signs.title', attrs: { id: titleId } }),
         h('p', { class: 'wh-signs__sub', i18n: 'wh.signs.subtitle' })));
     const close = mobile
       ? h('button', {

@@ -3,7 +3,6 @@
    re-measured on the mockup where it disagrees with the spec table (tabs left 21, body 17–427). */
 
 .wh-root .wh-log {
-  --wh-l-tab-active-text: #fff6d2; /* sampled "Log" label (#fffbd4 cores); lighter than --wh-gold-text */
   --wh-l-underline-glow: 0 0 calc(6 * var(--wh-px)) rgba(255, 200, 100, .75), 0 0 calc(14 * var(--wh-px)) rgba(255, 180, 80, .35);
   position: absolute;
   left: calc(17 * var(--wh-px));
@@ -42,7 +41,7 @@
   border-bottom: 0;
   border-radius: calc(17 * var(--wh-px)) calc(17 * var(--wh-px)) 0 0;
   color: var(--wh-text);
-  font-size: var(--wh-fs-ui);
+  font-size: var(--wh-fs-tab);
   line-height: 1;
   white-space: nowrap;
   transition: color var(--wh-transition), border-color var(--wh-transition);
@@ -72,7 +71,7 @@
 .wh-root .wh-log__tab--active {
   z-index: 1;
   border-color: var(--wh-frame);
-  color: var(--wh-l-tab-active-text);
+  color: var(--wh-tab-active-text);
   background:
     linear-gradient(180deg, rgba(255, 190, 90, 0) 55%, rgba(200, 140, 40, .32) 85%, rgba(230, 170, 70, .55) 100%),
     linear-gradient(180deg, rgba(98, 98, 82, .82) 0%, rgba(82, 80, 64, .80) 50%, rgba(78, 70, 48, .82) 100%);

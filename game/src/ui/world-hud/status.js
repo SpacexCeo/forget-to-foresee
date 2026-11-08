@@ -61,12 +61,12 @@ function bar(i18n, trial, cls, segments) {
 function trialDesktop(i18n, t) {
   const row = (iconName, labelKey, value) => h('div', { class: 'wh-trial__row' },
     ic(iconName, 'wh-trial__ricon wh-trial__ricon--' + iconName),
-    h('span', { class: 'wh-trial__text' }, h('span', { class: 'wh-trial__k', i18n: labelKey }), value));
+    h('span', { class: 'wh-trial__text wh-heavy-sm' }, h('span', { class: 'wh-trial__k', i18n: labelKey }), value));
   const v = (key, args, num) => tx(h('span', { class: 'wh-trial__v' + (num ? ' wh-trial__v--num' : '') }), i18n, key, args);
   return h('section', { class: 'wh-panel wh-trial', i18nAttrs: { 'aria-label': 'wh.trial.title' }, attrArgs: { n: t.n, total: t.total } },
     h('div', { class: 'wh-trial__head' },
       ic('compass-star', 'wh-trial__hicon'),
-      tx(h('h2', { class: 'wh-trial__title' }), i18n, 'wh.trial.title', { n: t.n, total: t.total })),
+      tx(h('h2', { class: 'wh-trial__title wh-heavy-sm' }), i18n, 'wh.trial.title', { n: t.n, total: t.total })),
     h('div', { class: 'wh-divider wh-trial__rule wh-trial__rule--a' }),
     row('target', 'wh.trial.phase', v('wh.trial.phase.' + t.phase)),
     row('bar-chart', 'wh.trial.skillTier', h('span', { class: 'wh-trial__v', text: String(t.skillTier) })),
@@ -74,7 +74,7 @@ function trialDesktop(i18n, t) {
     row('map-pin', 'wh.trial.arena', ref(i18n, t.arena, 'wh-trial__v')),
     h('div', { class: 'wh-divider wh-trial__rule wh-trial__rule--b' }),
     h('div', { class: 'wh-trial__progress' },
-      h('p', { class: 'wh-trial__plabel' },
+      h('p', { class: 'wh-trial__plabel wh-heavy-sm' },
         h('span', { class: 'wh-trial__k', i18n: 'wh.trial.progress' }),
         v('wh.trial.progressValue', { done: t.progressDone, total: t.progressTotal }, true),
         h('span', { class: 'wh-trial__dot', text: '•', attrs: { 'aria-hidden': 'true' } }),
@@ -96,8 +96,8 @@ function questDesktop(i18n, q) {
     art,
     h('div', { class: 'wh-quest__body' },
       tag(),
-      ref(i18n, q && q.title, 'wh-quest__title', 'h2'),
-      h('div', { class: 'wh-quest__text' }, ...(q ? q.body : []).map((b) => ref(i18n, b, 'wh-quest__line', 'p')))));
+      ref(i18n, q && q.title, 'wh-quest__title wh-heavy', 'h2'),
+      h('div', { class: 'wh-quest__text wh-body' }, ...(q ? q.body : []).map((b) => ref(i18n, b, 'wh-quest__line', 'p')))));
 }
 
 function tag() {
@@ -111,7 +111,7 @@ function toast(i18n, hint) {
   },
   h('span', { class: 'wh-toast__icon', attrs: { 'aria-hidden': 'true' } }, ic('st-info-i', 'wh-toast__i')),
   h('span', { class: 'sr-only', i18n: 'wh.hint.label' }),
-  ref(i18n, hint && hint.text, 'wh-toast__text', 'p'));
+  ref(i18n, hint && hint.text, 'wh-toast__text wh-body', 'p'));
 }
 
 // ---------------------------------------------------------------- mobile
@@ -144,8 +144,8 @@ function questMobile(i18n, model, onAction) {
   art,
   h('span', { class: 'wh-quest__body' },
     tag(),
-    ref(i18n, q && q.title, 'wh-quest__title'),
-    h('span', { class: 'wh-quest__text' }, ...lines.map((b) => ref(i18n, b, 'wh-quest__line'))),
+    ref(i18n, q && q.title, 'wh-quest__title wh-heavy'),
+    h('span', { class: 'wh-quest__text wh-body' }, ...lines.map((b) => ref(i18n, b, 'wh-quest__line'))),
     h('span', { class: 'sr-only', i18n: 'wh.quest.open' })),
   ic('chevron-right', 'wh-quest__chev'));
 
@@ -169,19 +169,19 @@ function questMobile(i18n, model, onAction) {
 function trialMobile(i18n, t) {
   const stat = (cls, iconName, labelKey, value) => h('div', { class: 'wh-trial__stat wh-trial__stat--' + cls },
     ic(iconName, 'wh-trial__sicon wh-trial__sicon--' + cls),
-    h('span', { class: 'wh-trial__stack' }, h('span', { class: 'wh-trial__label', i18n: labelKey }), value));
+    h('span', { class: 'wh-trial__stack' }, h('span', { class: 'wh-trial__label wh-body', i18n: labelKey }), value));
   return h('section', { class: 'wh-panel wh-trial--mobile', i18nAttrs: { 'aria-label': 'wh.trial.title' }, attrArgs: { n: t.n, total: t.total } },
     ic('target', 'wh-trial__micon'),
     h('div', { class: 'wh-trial__main' },
-      tx(h('h2', { class: 'wh-trial__title' }), i18n, 'wh.trial.title', { n: t.n, total: t.total }),
-      tx(h('span', { class: 'wh-trial__phase' }), i18n, 'wh.trial.phase.' + t.phase),
+      tx(h('h2', { class: 'wh-trial__title wh-heavy-sm', dataset: { fit: 'wh.trial.titleShort' } }), i18n, 'wh.trial.title', { n: t.n, total: t.total }),
+      tx(h('span', { class: 'wh-trial__phase wh-body' }), i18n, 'wh.trial.phase.' + t.phase),
       h('span', { class: 'wh-trial__barrow' },
         bar(i18n, t, 'wh-trial__bar', MOBILE_BAR_CELLS),
-        tx(h('span', { class: 'wh-trial__pct' }), i18n, 'wh.trial.percent', { n: t.progressPct }))),
+        tx(h('span', { class: 'wh-trial__pct wh-body' }), i18n, 'wh.trial.percent', { n: t.progressPct }))),
     h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
-    stat('attempts', 'bookmark', 'wh.trial.attempts', tx(h('span', { class: 'wh-trial__value' }), i18n, 'wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax })),
+    stat('attempts', 'bookmark', 'wh.trial.attempts', tx(h('span', { class: 'wh-trial__value wh-heavy-sm' }), i18n, 'wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax })),
     h('span', { class: 'wh-trial__vr', attrs: { 'aria-hidden': 'true' } }),
-    stat('skill', 'bar-chart', 'wh.trial.skillTier', h('span', { class: 'wh-trial__value', text: String(t.skillTier) })));
+    stat('skill', 'bar-chart', 'wh.trial.skillTierShort', h('span', { class: 'wh-trial__value wh-heavy-sm', text: String(t.skillTier) })));
 }
 
 // ---------------------------------------------------------------- mount
@@ -234,6 +234,7 @@ export function mountStatus(root, o) {
       el.dataset.layout = nextLayout;
     }
     const defs = PARTS[nextLayout];
+    let changed = false;
     for (const [name, def] of Object.entries(defs)) {
       const deps = def.deps(next);
       const cur = parts[name];
@@ -242,10 +243,12 @@ export function mountStatus(root, o) {
       const node = def.build(next);
       applyI18n(node, i18n);
       if (cur) cur.node.replaceWith(node); else el.appendChild(node);
+      changed = true;
       parts[name] = { node, deps };
     }
     model = next;
     layout = nextLayout;
+    if (changed && layout === 'mobile') { fit(); queueFit(); }
     if (focusKey && !el.contains(doc.activeElement)) {
       // a focused carousel dot follows the selection (arrow keys move it)
       const key = focusKey.startsWith('dot-') ? 'dot-' + next.questIndex : focusKey;
@@ -253,6 +256,24 @@ export function mountStatus(root, o) {
       if (again) again.focus();
     }
   }
+
+  /** Mobile trial title: the full key when it fits, `wh.trial.titleShort` when it overflows (RU). */
+  function fit() {
+    for (const node of el.querySelectorAll('[data-fit]')) {
+      const args = node._i18nArgs;
+      tx(node, i18n, node.dataset.fitLong || (node.dataset.fitLong = node.dataset.i18n), args);
+      if (typeof node.scrollWidth === 'number' && node.scrollWidth > node.clientWidth + 0.5) tx(node, i18n, node.dataset.fit, args);
+    }
+  }
+  const later = (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 0));
+  let fitQueued = false;
+  const queueFit = () => {
+    if (fitQueued) return;
+    fitQueued = true;
+    // after bindI18n has re-rendered the new locale (it subscribes after the packages mount)
+    later(() => { fitQueued = false; if (el.parentNode) fit(); });
+  };
+  const unsubscribe = i18n.subscribe ? i18n.subscribe(queueFit) : () => {};
 
   render(o.model, o.layout === 'mobile' ? 'mobile' : 'desktop');
 
@@ -262,6 +283,7 @@ export function mountStatus(root, o) {
       render(next || model, nextLayout ? (nextLayout === 'mobile' ? 'mobile' : 'desktop') : layout);
     },
     destroy() {
+      unsubscribe();
       el.remove();
       parts = {};
     },

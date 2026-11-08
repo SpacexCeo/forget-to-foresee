@@ -115,11 +115,11 @@ export function mountLog(root, o = {}) {
     const items = (model.journal[tab] || []).slice(0, MAX_LOG_ROWS);
     list.dataset.tab = tab;
     for (const it of items) {
-      const text = h('span', { class: 'wh-log__text' });
+      const text = h('span', { class: 'wh-log__text wh-body' });
       tx(text, i18n, it.text.key, it.text.args);
       list.appendChild(h('li', { class: 'wh-log__row', dataset: { id: it.id } },
         ic(def.bullet, 'wh-log__bullet wh-log__bullet--' + def.bullet, def.bullet === 'diamond' ? { strokeWidth: 5 } : undefined),
-        h('span', { class: 'wh-log__time', text: it.time || '' }),
+        h('span', { class: 'wh-log__time wh-body', text: it.time || '' }),
         text));
     }
     list.scrollTop = 0;
