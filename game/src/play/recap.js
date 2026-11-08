@@ -93,7 +93,9 @@ export function createRecap({ root, ctx, session, hub = null, narration = null, 
     const r = recapFor(session.obs, { goal: session.goal, hub });
     const ov = nextOverride();
     if (ov) r.next = ov;
-    return { where: t(r.where.key, r.where.args), next: t(r.next.key, r.next.args) };
+    // a title supplied by Simple mode has no full stop: the recap always speaks whole sentences
+    const sentence = (text) => (/[.!?。！？]$/.test(text) ? text : text + (i18n.locale === 'zh' ? '。' : '.'));
+    return { where: sentence(t(r.where.key, r.where.args)), next: sentence(t(r.next.key, r.next.args)) };
   }
 
   function speak(force = false) {

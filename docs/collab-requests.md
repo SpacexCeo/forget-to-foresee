@@ -128,3 +128,41 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
 - Markup (`<kbd>`, `·`, `—`) is stripped for speech; long text is chunked at sentence ends (Chromium stops utterances after ~15 s).
 - No DOM, no engine: `tests/a11y-narration.test.mjs` drives it with `fakeSynth()` from the same module, which you may reuse in your tests.
 - Subtitles stay on regardless of narration (films keep their captions; narration is an addition, never a replacement).
+
+### 10. Reduced motion: one switch for everyone (owner directive 08.11, "everything animated, expensive")
+- **The switch is `<html data-motion="reduce|full">`**, set by `ui/prefs.js` from Settings → Motion (Follow system / Reduced /
+  Full) and the OS preference. CSS: scope your rule under `html[data-motion="reduce"] …` (styles.css and tokens.css already do
+  this for `.ftf-root` and `.wh-root`; a11y.css covers the hub, play panels, map, prompt and toast). JS: `prefs.reducedMotion()`
+  on the context, or `reducedMotion()` from `game/src/ui/a11y.js` when you only have a document. Never read `matchMedia` directly:
+  the player can override the system setting either way.
+- Motion tokens the accessibility layer uses, on `:root` (a11y.css): `--ftf-dur-fast: 120ms`, `--ftf-dur: 240ms`,
+  `--ftf-dur-slow: 400ms`, `--ftf-ease-out`, `--ftf-ease-in-out`. Task S (`game/src/ui/motion/`) may redefine the same names;
+  no other file needs to change when it does.
+
+### 11. To Task F (world HUD and hub styling): tokens from the accessibility layer, and findings
+- Tokens on `:root` / `<html>` (docs/accessibility.md §3): `--ftf-ui-scale` (1…2, the player's interface size; the world HUD gets it
+  through `--wh-user-scale` already), `--ftf-body-min: 16px`, `--ftf-target-min: 48px`, `--a11y-good / --a11y-bad / --a11y-key /
+  --a11y-info` (colour-blind-safe under `html[data-palette="safe"]`), `html[data-contrast="high"]` (a11y.css redefines the `--wh-*`
+  surface, text and frame tokens: anything that reads tokens is covered; hard-coded rgba() is not), `html[data-font="readable"]`
+  (a11y.css swaps `--wh-font` / `--wh-font-body` and zeroes the serif stroke).
+- Findings, measured in Chromium at 1280×800, Novice, 100 % (docs/accessibility.md §8): the hub reading/dock body copy is 13.5 px and
+  the "Let trial N pass" button 34 px tall (`.hub-host p`, `.hub-host button`; the four Shell buttons are 54 px); the world HUD
+  hotbar buttons are 25 px tall at 10.5 px type, and the trial rows, quest body and log rows render at 10.5 px at this width
+  (`--wh-px` ≈ 0.7). Please use `font-size: max(var(--ftf-body-min), …)` for body copy and `min-height: var(--ftf-target-min)`
+  on tap targets (44 px is the WCAG 2.2 AA floor; 48 px is this game's bar). My own surfaces (Simple card, recap, settings) meet both.
+- Simple mode sets `body.ftf-simple-on`: a11y.css hides `.hub-dock`, `.hub-card`, `.pl-context`, the HUD prompt and the reading
+  card's own Stake/Leave row while Iris's card is on screen (`body.ftf-simple-choosing` shows the hub card again). If your
+  panel-exclusivity logic wants to own this, those two body classes are the hook.
+
+### 12. To the lead (`game/src/main.js`): two small hooks for the accessibility layer
+- Done in this branch: one import and one call after `startPlay()` (`attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog })`).
+- Still owed, one line in `handleInput`: route gamepad menu navigation to the layer's sheet while it is open, next to the existing
+  `.pl-panel` branch: `if (play.allAges && play.allAges.panelOpen) { navigateGamepadMenu(play.allAges.panel, pad); stopSteering(); return false; }`.
+  Until then the recap and the Simple card are keyboard-, mouse- and touch-complete but not gamepad-navigable.
+
+### 13. To Task I (tutorial): the third interface mode
+- `PREF_OPTIONS.hudMode` is now `['simple', 'novice', 'pro']` and Settings lists all three (`settings.hudMode.simple`). The last
+  tutorial card's question could offer Simple as a third button ("Do it with me (Simple)"); the string would be yours
+  (`tut.mode.simple`). Nothing breaks if it stays a two-way question: Simple is reachable from Settings in the lobby and in the world.
+- Your request 14 is answered: the tutorial's own `createNarration` instance is the right call (the onboarding runs before the play
+  layer); `play.narration` is the shared in-world instance.

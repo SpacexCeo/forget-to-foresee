@@ -165,9 +165,10 @@ function el(doc, tag, attrs = {}, ...kids) {
  * @param {() => void} [o.onOpenMemories]
  * @param {(reason:string)=>void} [o.onRejected]
  * @param {() => void} [o.onOpen]  called when the card first shows a decision (other panels may close)
+ * @param {() => void} [o.onRecap]  opens "What is happening?" (the card carries the ? button; the floating one hides)
  * @param {(fn:Function, ms:number)=>any} [o.setTimer] @param {(h:any)=>void} [o.clearTimer]  (tests)
  */
-export function createSimpleMode({ root, ctx, session, hub, fly, narration = null, onOpenMemories = null, onRejected = () => {}, onOpen = () => {}, setTimer = (fn, ms) => setTimeout(fn, ms), clearTimer = (h) => clearTimeout(h) }) {
+export function createSimpleMode({ root, ctx, session, hub, fly, narration = null, onOpenMemories = null, onRejected = () => {}, onOpen = () => {}, onRecap = null, setTimer = (fn, ms) => setTimeout(fn, ms), clearTimer = (h) => clearTimeout(h) }) {
   const { i18n, prefs } = ctx;
   const doc = root.ownerDocument || document;
   const host = ensureA11yHost(root);
@@ -229,9 +230,10 @@ export function createSimpleMode({ root, ctx, session, hub, fly, narration = nul
     const disabled = busy || !!hub.busy;
     const pauseBtn = el(doc, 'button', { type: 'button', class: 'a11y-pause', 'aria-pressed': String(paused), 'data-simple': 'pause', onclick: () => { paused = !paused; if (paused && hub.advancing) hub.stop(); render(); } },
       el(doc, 'kbd', { text: 'P' }), paused ? t('simple.resume') : t('simple.pause'));
+    const recapBtn = onRecap ? el(doc, 'button', { type: 'button', class: 'a11y-recap-inline', 'data-simple': 'recap', 'aria-label': t('recap.button'), 'aria-haspopup': 'dialog', onclick: () => onRecap() }, '?') : null;
     const box = el(doc, 'section', { class: 'a11y-box a11y-simple', role: 'region', 'aria-live': 'polite', 'aria-label': t('simple.eyebrow'), 'data-kind': p.kind },
       el(doc, 'div', { class: 'a11y-eyebrow', text: paused ? t('simple.paused') : t('simple.eyebrow') }),
-      pauseBtn,
+      el(doc, 'div', { class: 'a11y-simple-tools' }, recapBtn, pauseBtn),
       el(doc, 'h3', { text: t(p.title.key, p.title.args) }),
       p.sign ? el(doc, 'div', { class: 'a11y-sign' }, safeCanvas(p.sign), el(doc, 'p', { class: 'a11y-why', text: t(p.why.key, p.why.args) })) : el(doc, 'p', { class: 'a11y-why', text: t(p.why.key, p.why.args) }));
     if (p.kind === 'passing') box.append(el(doc, 'div', { class: 'a11y-row' }, el(doc, 'button', { type: 'button', class: 'a11y-primary', 'data-simple': 'stop', onclick: () => { paused = true; hub.stop(); render(); } }, t('simple.stop'))));

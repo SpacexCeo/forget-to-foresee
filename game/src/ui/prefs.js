@@ -93,5 +93,7 @@ export function applyPrefsToDocument(prefs, doc = globalThis.document) {
   el.dataset.uiScale = String(p.uiScale);
   el.dataset.narration = p.narration ? 'on' : 'off';
   el.style.setProperty('--ftf-ui-scale', String(p.uiScale / 100));
-  el.style.setProperty('--wh-user-scale', String((HUD_SCALE[p.hudScale] || 1) * (p.uiScale / 100)));
+  // The world HUD follows the interface size up to 150 %: beyond that its mockup layout (docs/ui-world-hud.md) has no
+  // room on a 1280-wide screen; every other panel zooms the full 100–200 % (a11y.css). Task F may lift the cap.
+  el.style.setProperty('--wh-user-scale', String((HUD_SCALE[p.hudScale] || 1) * Math.min(1.5, p.uiScale / 100)));
 }

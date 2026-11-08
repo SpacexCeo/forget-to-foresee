@@ -50,7 +50,11 @@ test('prefs: accessibility keys validate, persist and fall back; the document mi
   assert.equal(el.dataset.contrast, 'high'); assert.equal(el.dataset.font, 'readable'); assert.equal(el.dataset.palette, 'safe');
   assert.equal(el.dataset.uiScale, '200'); assert.equal(el.dataset.hudMode, 'simple'); assert.equal(el.dataset.narration, 'on');
   assert.equal(el.style.props['--ftf-ui-scale'], '2');
-  assert.equal(el.style.props['--wh-user-scale'], String(1 * 2), 'the HUD unit multiplies hudScale by uiScale');
+  assert.equal(el.style.props['--wh-user-scale'], '1.5', 'the HUD unit multiplies hudScale by uiScale, capped at 150 %');
+  prefs.set({ uiScale: 125, hudScale: 'l' });
+  applyPrefsToDocument(prefs, { documentElement: el });
+  assert.equal(el.style.props['--wh-user-scale'], String(1.15 * 1.25));
+  prefs.set({ uiScale: 200, hudScale: 'm' });
   // storage that throws still works in memory
   const throwing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() {} };
   const mem = createPrefs(createSafeStorage(throwing));
