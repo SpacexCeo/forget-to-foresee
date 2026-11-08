@@ -124,6 +124,8 @@
       .pl-chronicle, .pl-badge, #badge, #prompt { display: none !important; }
       /* phones: a modal panel dims the HUD behind it (no extra DOM) and the run toggle steps aside */
       .pl-panel, .pl-help { box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .38), 0 10px 30px rgba(0, 0, 0, .42); }
+      /* the phone HUD stack never shows under a modal panel (the Signs sheet already brings its own scrim) */
+      body.pl-modal-open .wh-root :is(.wh-quest--mobile, .wh-quest__dots, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
       body.in-world.pl-modal-open .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* outranks input.js's display: flex */
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }

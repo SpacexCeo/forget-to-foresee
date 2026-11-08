@@ -54,7 +54,8 @@ function measure(selectors) {
       let e = el, ok = true;
       while (e && e !== document.body) {
         const cs = getComputedStyle(e);
-        if (e.hidden || cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05 || e.getAttribute('aria-hidden') === 'true' && e !== el) { ok = false; break; }
+        // data-open="false" / inert: a closing panel whose 160 ms visibility transition SwiftShader stretches to seconds
+        if (e.hidden || cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05 || e.dataset.open === 'false' || e.hasAttribute('inert') || e.getAttribute('aria-hidden') === 'true' && e !== el) { ok = false; break; }
         e = e.parentElement;
       }
       if (!ok) continue;
@@ -85,7 +86,7 @@ for (const [w, h] of VIEWPORTS) for (const lang of LANGS) {
   let page = await ctx.newPage();
   const consoleIssues = [];
   const hook = (p) => {
-    p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleIssues.push(m.type() + ': ' + m.text().slice(0, 160)); });
+    p.on('console', (m) => { if ((m.type() === 'error' || m.type() === 'warning') && !/GL Driver Message/.test(m.text())) consoleIssues.push(m.type() + ': ' + m.text().slice(0, 160)); }); // driver chatter (SwiftShader ReadPixels stalls) is not the game's
     p.on('pageerror', (e) => consoleIssues.push('pageerror: ' + e.message));
     p.on('crash', () => consoleIssues.push('crash'));
   };
@@ -98,7 +99,7 @@ for (const [w, h] of VIEWPORTS) for (const lang of LANGS) {
     await page.waitForFunction(READY, null, { timeout: 180000 });
     await page.waitForTimeout(mode ? 3500 : 5000);
   }
-  const key = async (k, ms = 1200) => { await page.evaluate((k) => window.__ftf.play.handleKey(k), k); await page.waitForTimeout(ms); };
+  const key = async (k, ms = 2000) => { await page.evaluate((k) => window.__ftf.play.handleKey(k), k); await page.waitForTimeout(ms); };
   const teleport = async (x, z, ms = 2500) => {
     await page.evaluate(([x, z]) => { const p = window.__ftf.player; p.pos[0] = x; p.pos[2] = z; p.pos[1] = 0; const s = window.__ftf.play.session; if (s && s.trail) s.trail.reset(p.pos); }, [x, z]);
     await page.waitForTimeout(ms);
@@ -117,7 +118,7 @@ for (const [w, h] of VIEWPORTS) for (const lang of LANGS) {
   const ensure = async (want) => { if (!loaded || mode !== want || !(await alive())) { await load(want); mode = want; loaded = true; } };
   const reset = async () => { await key('Escape', 400); await key('Escape', 400); };
 
-  for (const st of STATES) {
+  for (const st of STATES) for (let attempt = 0; attempt < 2; attempt++) {
     try {
       if (['island', 'signs', 'memories', 'help', 'shell', 'shell-memories', 'card'].includes(st)) {
         await ensure(null);
@@ -152,11 +153,14 @@ for (const [w, h] of VIEWPORTS) for (const lang of LANGS) {
         }
         if (st === 'walk-memories') { await reset(); await key('KeyM'); await check(st); }
       }
+      break;
     } catch (e) {
+      // a Vite reload (an edit while the run is on) or a lost tab: load again and replay the state once
+      loaded = false;
+      if (attempt === 0) { console.log(`${tag} ${st}: retry (${e.message.split('\n')[0].slice(0, 80)})`); continue; }
       console.log(`${tag} ${st}: ERROR ${e.message.split('\n')[0]}`);
       report.push({ viewport: `${w}x${h}`, lang, state: st, error: e.message.split('\n')[0] });
       failures++;
-      loaded = false;
     }
   }
   const issues = consoleIssues.filter((s, i, a) => a.indexOf(s) === i);
