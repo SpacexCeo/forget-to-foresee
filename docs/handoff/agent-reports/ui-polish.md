@@ -46,9 +46,12 @@ no pull request (the lead merges). Full write-up with before/after screenshots: 
 
 ## Next steps (wrap-up ordered by the owner at the token freeze)
 
-1. `npm run hud:overlap -- --viewports 1280x800 --langs uk,ru,it,zh`: the only combination not re-measured after the last
-   patches (1920×1080 and 390×844 × en, and the four short sizes × en, are green at `HEAD`; 1280 × five locales was green
-   except the map state, fixed since).
+1. Done (continuation worker, 08.11): `npm run hud:overlap -- --viewports 1280x800 --langs uk,ru,it,zh` is green,
+   0 overlaps in 48 states. QA-031 fixed (815eca5): the Chronicle fab and the map host borrow `.wh-root`, whose
+   `position: absolute; inset: 0; pointer-events: none` (tokens.css) won when Vite injected it after their styles on
+   the lobby path, so the fab sat at the top-left corner over the trial card; their base rules now double the class.
+   QA-005: the code already opens the HUD Signs & Visions panel after a vision sacrifice (1cf03e9, after the QA build
+   6f2f288); verified in Chromium (hub and walk), README step 6 matches, wiring pinned by a test (f929e88).
 2. Re-shoot the "after" frames at 1280×800, 390×844 and 1920×1080 for `docs/ui-polish.md` §3 (the committed ones
    predate the motion pass) with the script in this report.
 3. QA retest by worker K on the merged branch: QA-003/004/005/006/009/011/012/014/019/021 are fixed in code.
@@ -64,7 +67,7 @@ no pull request (the lead merges). Full write-up with before/after screenshots: 
 
 ## Checks
 
-- `cd game && npm test`: 403/403 at `HEAD`; `npm run build`: green.
+- `cd game && npm test`: 485/485 at `HEAD` (after the merge of claude/loving-curie-ihasft); `npm run build`: green.
 - `npm run hud:overlap`: results per viewport and locale are in `docs/ui-polish.md` §3 (table "Overlap check").
 - Headless Chromium screenshots before/after at 1280×800, 1920×1080, 390×844 and the four short sizes, committed under
   `docs/ui-polish/` and embedded in `docs/ui-polish.md`; console errors and warnings in every run: 0 (GL driver chatter

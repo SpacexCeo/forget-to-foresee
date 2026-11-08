@@ -14,7 +14,7 @@ const REFRESH = 0.2;        // seconds between marker refreshes while open
 const KEY_DEDUPE_MS = 400;  // N arrives twice while input.js also forwards it (own listener + PLAY_KEYS)
 
 const CSS = `
-.ftf-map-host { position: fixed; inset: 0; z-index: 5; pointer-events: auto; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+.ftf-map-host.wh-root { position: fixed; inset: 0; z-index: 5; pointer-events: auto; display: grid; place-items: center; padding: 16px; overflow: hidden; }
 .ftf-map-host[hidden] { display: none; }
 .ftf-map-place, .ftf-map-dynamic > * { transform-box: fill-box; transform-origin: center; }
 .ftf-map-dynamic { pointer-events: none; }
@@ -95,7 +95,7 @@ body.ftf-map-open .ftf-map-fab { display: none !important; }
 /* only one panel at a time: while the map is open the dock, the reading card and the spot menu wait underneath the scrim */
 body.ftf-map-open .hub-dock, body.ftf-map-open .hub-read, body.ftf-map-open .pl-context, body.ftf-map-open #prompt, body.ftf-map-open .ftf-scene-cue, body.ftf-map-open .ftf-run-toggle, body.ftf-map-open .hub-card, body.ftf-map-open .hub-status { visibility: hidden; }
 @media (max-width: 700px) {
-  .ftf-map-host { padding: 8px; }
+  .ftf-map-host.wh-root { padding: 8px; }
   .ftf-map { padding: 10px 12px 10px; gap: 8px; }
   .ftf-map h2 { font-size: 17px; }
   .ftf-map-canvas { max-height: min(62vh, 100vw); }

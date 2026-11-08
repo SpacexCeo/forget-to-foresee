@@ -292,3 +292,38 @@ test('QA-012: the trial progress reaches 100 % once the season leaves play', () 
   assert.match(src, /progressDone: s\.phase === 'play' \? Math\.max\(0, s\.tick - 1\) : s\.ticks/);
 });
 
+
+/* ---------------- elements that borrow .wh-root for its tokens (QA-031) ---------------- */
+
+// tokens.css gives `.wh-root` `position: absolute; inset: 0; pointer-events: none`. On the lobby path Vite injects
+// that sheet after the Chronicle and map styles, so a single-class base rule (`.ch-fab { ... }`) lost and the
+// Chronicle button sat at the top-left corner over the trial card. Each borrower's base rule doubles the class.
+test('layout: an element that borrows .wh-root keeps its own position whatever the stylesheet order', () => {
+  const borrowers = [
+    ['../src/cinematic/chapters/chronicle.js', ['ch-fab', 'ch-menu']],
+    ['../src/play/map-ui.js', ['ftf-map-host']],
+  ];
+  for (const [file, classes] of borrowers) {
+    const src = read(file);
+    for (const cls of classes) {
+      assert.match(src, new RegExp(`class: '(${cls}[^']*\\bwh-root\\b|wh-root[^']*\\b${cls}\\b)`), `${cls} still borrows .wh-root (else drop it here)`);
+      const base = new RegExp(`(^|[\\s}])\\.${cls}\\s*\\{[^}]*(position|inset|top|bottom|pointer-events)`, 'm');
+      assert.doesNotMatch(src, base, `${file}: a single-class .${cls} rule sets layout; tokens.css .wh-root can override it`);
+      assert.match(src, new RegExp(`\\.${cls}\\.wh-root\\s*\\{[^}]*position: fixed`), `${cls}: the doubled base rule fixes the position`);
+    }
+  }
+  const chronicle = read('../src/cinematic/chapters/chronicle.js');
+  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*bottom: calc\(56px/, 'the Chronicle fab resets the inherited top: 0 and sits at the bottom left');
+  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*pointer-events: auto/, 'the fab stays clickable over .wh-root pointer-events: none');
+});
+
+// QA-005 / README step 6: "Forget it for a vision" opens the HUD's Signs & Visions panel (the new cards marked
+// Vision), not the greybox-era detail panel. Checked in Chromium at 1280x800 (hub and walk); this pins the wiring.
+test('panels: a vision sacrifice opens the HUD Signs & Visions panel, the detail panel only without a HUD', () => {
+  const ui = read('../src/play/ui.js');
+  const game = read('../src/play/game.js');
+  const forget = ui.slice(ui.indexOf('async function forget('), ui.indexOf('async function sendAsk('));
+  assert.match(forget, /if \(!r\.ok\) \{[^}]*return; \}/, 'a rejected sacrifice opens nothing');
+  assert.match(forget, /purpose === 'vision'\) \{ if \(handlers\.onSigns\) handlers\.onSigns\(\); else open\('vision'\); \}/);
+  assert.match(game, /onSigns: \(\) => \{ if \(worldHud && worldHud\.hud\) worldHud\.hud\.signs\.open\(\); \}/, 'game.js routes onSigns to the HUD Signs panel');
+});
