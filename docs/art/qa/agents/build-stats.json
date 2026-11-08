@@ -1832,31 +1832,31 @@
       "master_triangles": 4701104,
       "bakes": {
         "ao": {
-          "seconds": 47.42,
+          "seconds": 44.97,
           "samples": 512,
           "size": 4096,
           "exploded": false
         },
         "normal": {
-          "seconds": 23.95,
+          "seconds": 22.92,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "color": {
-          "seconds": 21.12,
+          "seconds": 20.66,
           "samples": 32,
           "size": 4096,
           "exploded": true
         },
         "rough": {
-          "seconds": 17.16,
+          "seconds": 17.14,
           "samples": 16,
           "size": 4096,
           "exploded": true
         },
         "metal": {
-          "seconds": 13.98,
+          "seconds": 13.79,
           "samples": 8,
           "size": 4096,
           "exploded": true
@@ -1869,7 +1869,7 @@
             2048,
             2048
           ],
-          "bytes": 1187395
+          "bytes": 1187277
         },
         "orm": {
           "file": "agent_iney_orm.jpg",
@@ -1877,7 +1877,7 @@
             2048,
             2048
           ],
-          "bytes": 1622956
+          "bytes": 1623024
         },
         "normal": {
           "file": "agent_iney_normal.jpg",
@@ -1885,7 +1885,7 @@
             2048,
             2048
           ],
-          "bytes": 1379886
+          "bytes": 1379788
         }
       },
       "skin": {
@@ -2085,8 +2085,8 @@
           0.297
         ]
       },
-      "raw_glb_bytes": 7567288,
-      "glb_bytes": 7567288,
+      "raw_glb_bytes": 7567140,
+      "glb_bytes": 7567140,
       "budget_ok": {
         "triangles": true,
         "materials": true,
@@ -2095,23 +2095,23 @@
       "stages": [
         {
           "stage": "iney:model",
-          "seconds": 0.47
+          "seconds": 0.29
         },
         {
           "stage": "iney:uv",
-          "seconds": 1.26
+          "seconds": 1.29
         },
         {
           "stage": "iney:master",
-          "seconds": 17.73
+          "seconds": 17.54
         },
         {
           "stage": "iney:bake_gpu",
-          "seconds": 124.39
+          "seconds": 120.23
         },
         {
           "stage": "iney:textures",
-          "seconds": 2.94
+          "seconds": 2.9
         },
         {
           "stage": "iney:export",
@@ -2123,14 +2123,14 @@
         },
         {
           "stage": "iney:anim",
-          "seconds": 1.34
+          "seconds": 1.36
         },
         {
           "stage": "iney:export",
-          "seconds": 2.63
+          "seconds": 2.88
         }
       ],
-      "total_seconds": 151.03
+      "total_seconds": 146.74
     },
     "suit": {
       "clan": "Suit",

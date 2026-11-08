@@ -732,6 +732,10 @@ def _understand_beats(u):
             "wink": env(u, 0.48, 0.54, 0.62, 0.70), "nod": env(u, 0.50, 0.57, 0.60, 0.68)}
 
 
+# the winking eye; Frost's monocle sits over the left one, so Frost winks with the right
+WINK_EYE = {"iney": "R"}
+
+
 def clip_understand(key, S, u):
     """One-shot reaction when the agent has understood a Guest's sign: a brief squint
     at the sign, then the aha with a raised index finger, a wink and a nod. Starts and
@@ -752,7 +756,8 @@ def clip_understand(key, S, u):
     P.r("hand_R", -25 * b["aha"], 0, 0)
     # lean in to read, straighten for the aha; the head tilts toward the winking eye
     P.r("chest", 4 * b["study"] - 3 * b["aha"], 0, 0)
-    P.r("head", 6 * b["study"] - 5 * b["aha"] + 8 * b["nod"], 7 * b["aha"], 4 * b["study"])
+    tilt = 7 if WINK_EYE.get(key, "L") == "L" else -7
+    P.r("head", 6 * b["study"] - 5 * b["aha"] + 8 * b["nod"], tilt * b["aha"], 4 * b["study"])
     return P
 
 
@@ -988,9 +993,10 @@ def face_hands(key, clip, u, P):
         b = _understand_beats(u)
         squint = 0.28 * b["study"]                 # narrowed eyes while reading the sign
         brow = -4 * b["study"] + 9 * b["aha"]
-        # the left eye winks shut (its brow dips into it), the right one smiles a little
-        lids = {"L": max(squint, b["wink"]), "R": max(squint, 0.18 * b["wink"])}
-        brows = {"L": brow - 7 * b["wink"], "R": brow + 2 * b["wink"]}
+        # one eye winks shut (its brow dips into it), the other one smiles a little
+        w, o = ("L", "R") if WINK_EYE.get(key, "L") == "L" else ("R", "L")
+        lids = {w: max(squint, b["wink"]), o: max(squint, 0.18 * b["wink"])}
+        brows = {w: brow - 7 * b["wink"], o: brow + 2 * b["wink"]}
         jaw = 0.4
     P.r("jaw", jaw, 0, 0)
     for sfx in ("L", "R"):
