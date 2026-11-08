@@ -22,7 +22,7 @@ import { Foliage } from './foliage.js';
 import { OcclusionFader } from './fade.js';
 import { applyMaterialQuality, setTextureAnisotropy, setNacreTime } from './materials.js';
 import { AirMotes } from './motes.js';
-import { installHeightFog, setFog, setFogTint } from './fog.js';
+import { installHeightFog, setFog, setFogTint, tickFog } from './fog.js';
 import { LAYER_OVERLAY } from './layers.js';
 
 /**
@@ -266,6 +266,7 @@ export class LookDev {
     this.foliage.update(motion, this.camera);
     this.post.update(motion);
     this.motes.update(motion);
+    tickFog(motion);
     this.time += motion;
     this.animateLight(this.time);
     this.fitShadow(focus, camDist);

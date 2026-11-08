@@ -23,6 +23,8 @@ export const FOG_UNIFORMS = Object.freeze({
   ftfFogSunTint: { value: new Float32Array([0, 0, 0, 1]) },
   /** runtime tint (linear RGB) and its amount: the tension effect warms the haze (presentation.js) */
   ftfFogTint: { value: new Float32Array([1, 1, 1, 0]) },
+  /** mist drift: time (s, frozen under reduced motion), amplitude (0..1 of the height density), spatial scale (1/m) */
+  ftfFogDrift: { value: new Float32Array([0, 0.3, 0.045]) },
 });
 
 let installed = false;
@@ -47,6 +49,7 @@ export function installHeightFog(params = {}) {
     THREE.ShaderChunk.fog_pars_fragment = `#ifdef USE_FOG
   uniform vec3 fogColor;
   uniform vec4 ftfFogParams, ftfFogSun, ftfFogSunTint, ftfFogTint;
+  uniform vec3 ftfFogDrift;
   varying float vFogDepth;
   varying vec3 vFogWorldPos;
   #ifdef FOG_EXP2
@@ -66,8 +69,12 @@ export function installHeightFog(params = {}) {
     float e = k * dy * len;
     // (1 - exp(-e)) / e, stable near e = 0
     float f = abs( e ) > 1e-3 ? ( 1.0 - exp( - e ) ) / e : 1.0 - 0.5 * e;
-    // below baseY the mist is uniform: clamp the camera-height term instead of growing without bound
-    return dense * len * f;
+    // Slow rolling banks of mist (owner 08.11: the world is alive): two travelling waves modulate the
+    // density along the ray, sampled at its midpoint. No texture, so every material pays four sines.
+    vec2 m = ( cam.xz + p.xz ) * 0.5 * ftfFogDrift.z;
+    float tt = ftfFogDrift.x;
+    float bank = sin( m.x * 1.0 + tt * 0.11 ) * sin( m.y * 1.3 - tt * 0.07 ) * 0.6 + sin( ( m.x - m.y ) * 2.1 + tt * 0.16 ) * 0.4;
+    return dense * len * f * ( 1.0 + ftfFogDrift.y * bank );
   }
 #endif`;
     THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
@@ -116,10 +123,14 @@ export function setFogTint(hex, amount) {
   v[0] = c.r; v[1] = c.g; v[2] = c.b; v[3] = THREE.MathUtils.clamp(Number(amount) || 0, 0, 1);
 }
 
+/** Advances the mist drift clock; pass dt = 0 under reduced motion. */
+export function tickFog(dt) { FOG_UNIFORMS.ftfFogDrift.value[0] += Number(dt) || 0; }
+
 /** Current fog settings (for tests and the dev HUD). */
 export function fogState() {
   const P = FOG_UNIFORMS.ftfFogParams.value, S = FOG_UNIFORMS.ftfFogSun.value, T = FOG_UNIFORMS.ftfFogSunTint.value, Q = FOG_UNIFORMS.ftfFogTint.value;
-  return { baseY: P[0], falloff: P[1], density: P[2], aerial: P[3], sunDir: [S[0], S[1], S[2]], sunPower: S[3], sunTint: [T[0], T[1], T[2]], sunStrength: T[3], tint: [Q[0], Q[1], Q[2]], tintAmount: Q[3], installed };
+  const D = FOG_UNIFORMS.ftfFogDrift.value;
+  return { baseY: P[0], falloff: P[1], density: P[2], aerial: P[3], sunDir: [S[0], S[1], S[2]], sunPower: S[3], sunTint: [T[0], T[1], T[2]], sunStrength: T[3], tint: [Q[0], Q[1], Q[2]], tintAmount: Q[3], driftTime: D[0], driftAmplitude: D[1], installed };
 }
 
 /**

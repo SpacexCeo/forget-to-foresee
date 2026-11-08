@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { TIME_PRESETS, DEFAULT_PRESET, sunDirection, sunTransmittance, SUN_DIRECTION } from '../../src/render/sky.js';
-import { FOG_UNIFORMS, heightFogDepth, setFog, setFogTint, fogState } from '../../src/render/fog.js';
+import { FOG_UNIFORMS, heightFogDepth, setFog, setFogTint, fogState, tickFog } from '../../src/render/fog.js';
 import { slotForMaterial, SLOT_MATERIALS, nacreMaterial, glassMaterial, applyMaterialQuality, setNacreTime } from '../../src/render/materials.js';
 import { QUALITY, PHONE_QUALITY, TIERS, qualityFor } from '../../src/render/quality.js';
 import { BLOOM, GradeShader } from '../../src/render/post.js';
@@ -68,6 +68,8 @@ test('fog uniforms are typed arrays shared by reference and the setters write th
   assert.ok(Math.abs(t.tintAmount - 0.5) < 1e-6 && t.tint[0] > t.tint[2], 'warm tint stored');
   setFogTint(0xff6a2a, 3); assert.equal(fogState().tintAmount, 1, 'clamped');
   setFogTint(0xffffff, 0); assert.equal(fogState().tintAmount, 0, 'off');
+  const t0 = fogState().driftTime; tickFog(0.5); tickFog(0); assert.ok(Math.abs(fogState().driftTime - t0 - 0.5) < 1e-6, 'the mist clock advances by dt and holds at dt 0');
+  assert.ok(fogState().driftAmplitude > 0 && fogState().driftAmplitude < 0.5, 'banks of mist modulate, they never empty the fog');
 });
 
 test('material slots: Shells are nacre, the interior floor stays stone, named glass/amber/gold upgrade, art materials are kept', () => {
