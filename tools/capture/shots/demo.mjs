@@ -1,6 +1,6 @@
 // The 60–90 s demo video for the X post (docs/submission/x-post.md): one complete loop on the fixed judge
 // season (`?demo=judge`, Shell hub), in the order of the README judge table (08.11): read the sign the Guest
-// draws, set Delay so the stake lands on trial 3, stake 10 silk, let the trials pass, answer Moss's loan,
+// draws, Iris reads it for trial 3, stake 10 silk, let the trials pass, answer Moss's loan,
 // see trial 3 come true with "Verified ✓" against the sealed root, then pay a memory for a vision. Captions
 // are the voice; the music and every sound are the game's own. Times are shot seconds; captions are
 // final-timeline seconds (the tool prints each shot's start with --check).
@@ -27,14 +27,13 @@ export default {
       overlays: [fadeIn(1.0)],
     },
     {
-      // Gameplay, continuous: the Shell dock on the balcony → flight into Shell I → the Guest draws → Delay › so the
-      // reading says trial 3 → F stakes 10 silk → T leaves → trial 2, a new sign glows → T lets trial 2 pass → trial 3
+      // Gameplay, continuous: the Shell dock on the balcony → flight into Shell I → the Guest draws → the reading card
+      // says trial 3 → F stakes 10 silk → T leaves → trial 2, a new sign glows → T lets trial 2 pass → trial 3
       // stops on Moss's loan card (cut).
       name: 'first-shell', duration: FIRST, url: JUDGE_URL, ui: 'game',
       actions: [
         { at: 0.0, do: 'rig', dist: 24, yaw: 0.35 },
         { at: 3.0, do: 'click', selector: '.hub-shells button[data-shell="1"]' },
-        { at: 10.6, do: 'slot', k: 3, dir: 1 },
         { at: 12.6, do: 'key', code: 'KeyF' },
         { at: 15.8, do: 'key', code: 'KeyT' },
         { at: 20.4, do: 'key', code: 'KeyT' },
@@ -77,7 +76,7 @@ export default {
     { from: 9.6, to: 12.8, text: 'A floating archipelago. Six clans of AI agents. Four Shells.' },
     { from: 13.4, to: 17.0, text: 'Your agent Iris. The Guests inside the Shells draw signs on the glass.' },
     { from: 17.8, to: 21.6, text: 'A sign is a ring of four slots: Place, Action, Power, Delay.' },
-    { from: 22.4, to: 25.4, text: 'Iris guesses. You set Delay so the stake lands on trial 3.' },
+    { from: 22.2, to: 25.5, text: 'Iris reads it: a Gift, two trials out. Change any slot you doubt.' },
     { from: 25.8, to: 28.4, text: 'Stake 10 silk on your reading.' },
     { from: 29.2, to: 32.4, text: 'Leaving the Shell ends the trial. A new sign glows.' },
     { from: 33.4, to: 36.8, text: 'Trials pass on their own and stop when a clan wants something.' },

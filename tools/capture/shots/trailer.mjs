@@ -22,14 +22,14 @@ export default {
     {
       // Shell IV, cracked open, mist below: a close orbit.
       name: 'shell-iv', duration: SHELL4, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fade', duration: 0.6 },
-      camera: { type: 'orbit', center: SHELL_MID[4], radius: [30, 24], height: [26, 38], yawFrom: 230, yawTo: 275, lookHeight: 0, fov: [36, 40], ease: 'inOutSine' },
+      camera: { type: 'orbit', center: SHELL_MID[4], radius: [54, 44], height: [22, 32], yawFrom: 230, yawTo: 268, lookHeight: -2, fov: [34, 38], ease: 'inOutSine' },
       overlays: [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.5 }, word('Read the signs', 0.8, SHELL4 - 0.4)],
     },
     {
       // The plaza: a low dolly across the Scroll medallion under the floating glyph, the clans at their camps.
       name: 'plaza', duration: PLAZA, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fade', duration: 0.6 },
       setup: [{ do: 'teleport', pos: [0, 0, 6.5], heading: Math.PI }],
-      camera: { type: 'dolly', path: [[-14, 2.2, 16], [-4, 3.0, 9], [6, 4.2, 7]], look: [[0, 2.5, 0], [0, 4, 0], [0, 8, 0]], fov: [40, 34], ease: 'inOutSine' },
+      camera: { type: 'dolly', path: [[-7.5, 1.9, 6.0], [-2.5, 2.6, 7.2], [5.5, 3.6, 4.5]], look: [[0, 1.2, 0], [0, 3, 0], [0, 8.5, 0]], fov: [42, 34], ease: 'inOutSine' },
       actions: [{ at: 2.2, do: 'music', tension: 48 }],
       overlays: [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.5 }, word('Stake silk on your reading', 1.0, PLAZA - 0.4)],
     },
@@ -37,13 +37,13 @@ export default {
       // Inside a Shell: the Guests behind the glass draw the sign, a slow push toward the glass.
       name: 'glass', duration: GLASS, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fade', duration: 0.6 },
       setup: [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'until', pred: 'interiorReal', max: 60 }],
-      camera: { type: 'push', from: [1.5, 302.6, 309], look: [0, 303.6, 289.3], lookTo: [0, 303.9, 289.3], dist1: 9.5, fov: [44, 38], ease: 'inOutSine', minHeight: 290 },
+      camera: { type: 'push', from: [1.5, 302.6, 9.0], look: [0, 303.6, -10.7], lookTo: [0, 303.9, -10.7], dist1: 9.5, fov: [44, 38], ease: 'inOutSine', minHeight: 290 },
       overlays: [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.35 }, word('Forget a memory to see further', 1.2, GLASS - 0.4)],
     },
     {
       // One gameplay glimpse: the reading card inside the Shell, the human's reading and the stake.
       name: 'stake', duration: STAKE, url: JUDGE_URL, ui: 'game', transition: { type: 'fade', duration: 0.5 },
-      setup: [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'frames', n: 180 }, { do: 'slot', k: 3, dir: 1 }, { do: 'frames', n: 2 }],
+      setup: [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'frames', n: 180 }],
       actions: [{ at: 1.2, do: 'key', code: 'KeyF' }],
       overlays: [],
     },

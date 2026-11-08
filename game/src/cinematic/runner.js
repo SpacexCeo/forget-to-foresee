@@ -72,9 +72,15 @@ export class ShotRunner {
     lookdev.render = function () { if (self.renderOn) ldRender(); };
     const ldUpdate = lookdev.update.bind(lookdev);
     lookdev.update = function (dt, focus, camDist) {
-      if (self.pose) { ldUpdate(dt, self.camState.look, self.camState.pos.distanceTo(self.camState.look)); return; }
+      const seg = self.pose ? self.currentSegment() : null;
+      if (seg && seg.pose) { ldUpdate(dt, self.camState.look, self.camState.pos.distanceTo(self.camState.look)); return; }
       ldUpdate(dt, focus, camDist);
     };
+    // The occlusion fader dithers Shells between the camera and the player; a scripted camera fades nothing (its subject is often a Shell).
+    if (lookdev.fader && lookdev.fader.update) {
+      const faderUpdate = lookdev.fader.update.bind(lookdev.fader);
+      lookdev.fader.update = function (dt, focus) { const seg = self.pose ? self.currentSegment() : null; faderUpdate(dt, seg && seg.pose ? g.rig.camera.position : focus); };
+    }
     // Streaming: everything that is placed loads and nothing is released, so no greybox pops into a shot.
     g.streamer.prefetchRadius = 1e6; g.streamer.releaseAfter = Infinity; g.streamer.maxConcurrent = 4;
     // A lost WebGL context would leave the HUD over a blank canvas; the capture must know.
@@ -124,7 +130,7 @@ export class ShotRunner {
     if (!this.pose || !this.shot) return;
     const cam = this.game.rig.camera;
     const seg = this.currentSegment();
-    if (!seg) return;
+    if (!seg || !seg.pose) return; // the game's own camera for this segment
     const u = seg.to > seg.from ? Math.min(1, Math.max(0, (this.t - seg.from) / (seg.to - seg.from))) : 1;
     const pose = seg.pose(u);
     this.camState.pos.set(...pose.pos); this.camState.look.set(...pose.look); this.camState.fov = pose.fov;
@@ -150,8 +156,9 @@ export class ShotRunner {
     this.cues = []; this.marks = []; this.camLog = [];
     const cam = shot.camera;
     const list = Array.isArray(cam) ? cam : cam ? [{ from: 0, to: shot.duration, ...cam }] : [];
-    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: compileCamera(c), spec: c })).filter((s) => s.pose);
-    this.pose = this.segments.length ? true : null;
+    // Segments may mix the game's own camera (`type: 'rig'`, pose null) with scripted moves; the latest one that has started wins.
+    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: compileCamera(c), spec: c }));
+    this.pose = this.segments.some((s) => s.pose) ? true : null;
     this.actions = (shot.actions || []).map((a, i) => ({ ...a, id: i, done: false }));
     if (!this.overlay) this.overlay = createOverlay(document);
     this.overlay.set(shot.overlays || []);
@@ -339,7 +346,7 @@ export class ShotRunner {
       name: this.name, shot: this.shot && this.shot.name, t: this.t, frame: this.frame, play: !!this.play,
       zone: this.play ? this.play.zone : null, trial: o ? o.season.tick : null, silk: o ? o.iris.silk : null,
       streaming: this.game ? this.game.streamer.stats() : null, cues: this.cues.length, errors: this.errors.slice(),
-      camera: this.pose ? { pos: this.camState.pos.toArray(), look: this.camState.look.toArray(), fov: this.camState.fov } : 'rig',
+      camera: (() => { const seg = this.pose && this.currentSegment(); return seg && seg.pose ? { pos: this.camState.pos.toArray(), look: this.camState.look.toArray(), fov: this.camState.fov } : 'rig'; })(),
       drawCalls: this.game ? this.game.renderer.info.render.calls : 0, contextLost: !!this.contextLost,
     };
   }

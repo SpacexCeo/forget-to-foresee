@@ -13,7 +13,7 @@ export const BALCONY = [-23, 0, 39.84];
 export const SPAWN = [-22.31, 0, 38.64];
 export const ANCHOR = { 1: [4.67, 0, 4.67], 2: [-4.67, 0, 4.67], 3: [-4.67, 0, -4.67], 4: [4.67, 0, -4.67] };
 // The Shell interior lives at [0, 300, 0]; the real interior's sockets (scenes/shell.js REAL).
-export const INTERIOR = { origin: [0, 300, 0], spawn: [0, 301.2, 311.3], glass: [0, 303.95, 289.25], guests: [[-4.4, 299.7, 284.25], [0.4, 299.7, 282.05], [4.6, 299.7, 284.65]] };
+export const INTERIOR = { origin: [0, 300, 0], spawn: [0, 301.2, 11.3], glass: [0, 303.95, -10.75], guests: [[-4.4, 299.7, -15.75], [0.4, 299.7, -17.95], [4.6, 299.7, -15.35]] };
 
 export const JUDGE_URL = { play: 'direct', demo: 'judge' };
 export const BEAUTY_HIDE = ['labels', 'nameplates', 'marker'];
@@ -24,13 +24,14 @@ export const fadeOut = (shotDuration, dur = 1.0) => ({ kind: 'black', from: shot
 
 /**
  * The judge-season opening replayed with rendering off, following the README judge table for the Shell hub
- * (08.11, Task I): Delay › once so the first stake lands on trial 3; the first Gift of every season lands there.
+ * (08.11, Task I, first loop 73d4e72): Iris pre-fills Delay so the first stake lands on trial 3, where the first Gift of
+ * every season lands; F stakes as is.
  */
 export const SETUP = {
-  /** Inside Shell I at trial 1, Delay read as +2 (trial 3), 10 silk staked on Shell I, trial 3. */
+  /** Inside Shell I at trial 1, Iris's reading pointing at trial 3, 10 silk staked on Shell I, trial 3. */
   stakedInShellI: [
     { do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 },
-    { do: 'frames', n: 6 }, { do: 'slot', k: 3, dir: 1 }, { do: 'frames', n: 3 },
+    { do: 'frames', n: 9 },
     { do: 'key', code: 'KeyF' }, { do: 'until', pred: 'hubIdle', max: 300 },
   ],
   /** ...then left the Shell: trial 2 on the island, a new sign waiting in Shell I. */

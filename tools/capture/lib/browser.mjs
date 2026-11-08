@@ -5,7 +5,7 @@
 // script gives the same frames (the harness records a hash of the first and last frame for the report).
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { openFramePipe } from './ffmpeg.mjs';
 
@@ -20,8 +20,14 @@ function pw() {
 }
 
 export const BROWSER_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];
-/** On a machine with a GPU, pass --gpu: ANGLE picks the real driver (Vulkan/GL) instead of SwiftShader. */
-export const GPU_ARGS = ['--use-gl=angle', '--use-angle=default', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];
+/** On a machine with a GPU, pass --gpu: the flags gpu-probe.mjs found (tools/capture/.gpu-args.json), else ANGLE's default back end. */
+export const GPU_ARGS = ['--use-angle=default', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--hide-scrollbars'];
+export function browserArgs(gpu) {
+  if (process.env.FTF_CHROMIUM_ARGS) return process.env.FTF_CHROMIUM_ARGS.split(/\s+/).filter(Boolean);
+  if (!gpu) return BROWSER_ARGS;
+  try { const saved = JSON.parse(readFileSync(new URL('../.gpu-args.json', import.meta.url), 'utf8')); if (saved.args) return saved.args; } catch { /* no probe result */ }
+  return GPU_ARGS;
+}
 
 /**
  * @param {object} o
@@ -34,7 +40,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
   const { width, height, fps, tier, gpu = false, sampleEvery = 0, log = () => {} } = opts;
   mkdirSync(outDir, { recursive: true });
   const { chromium } = pw();
-  const browser = await chromium.launch({ args: gpu ? GPU_ARGS : BROWSER_ARGS, headless: true });
+  const browser = await chromium.launch({ args: browserArgs(gpu), headless: true });
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   const consoleErrors = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleErrors.push(m.type() + ': ' + m.text().slice(0, 400)); });
@@ -49,6 +55,8 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     await page.waitForFunction(() => window.__ftfCinematic && window.__ftf, null, { timeout: 120_000 });
     if (!shot.lobby) await page.waitForFunction(() => window.__ftf.play, null, { timeout: 180_000 });
     await page.evaluate(() => document.fonts.ready);
+    result.renderer = await page.evaluate(() => { try { const gl = window.__ftf.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch { return null; } });
+    log(`[${shot.name}] WebGL: ${result.renderer}`);
     await page.evaluate((s) => window.__ftfCinematic.load(s), shot);
     let t = Date.now();
     if (!shot.lobby) {

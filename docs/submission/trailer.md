@@ -8,9 +8,9 @@ and two renders of one script give the same frames.
 
 | Video | Script | Length | Shows |
 |---|---|---|---|
-| Demo (the X post) | `tools/capture/shots/demo.mjs` | 72 s | The README judge path on the Shell hub: lobby → the archipelago → fly into Shell I, the Guest draws the sign, Delay set to trial 3, 10 silk staked → T, trial 2, T, Moss's loan card → decline, trial 3 comes true ("Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓"), Signs & Visions → Resolved → **Verified ✓** → M, forget a memory, the vision → end card |
+| Demo (the X post) | `tools/capture/shots/demo.mjs` | 72 s | The README judge path on the Shell hub: lobby → the archipelago → fly into Shell I, the Guest draws the sign, Iris's reading points at trial 3, 10 silk staked → T, trial 2, T, Moss's loan card → decline, trial 3 comes true ("Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓"), Signs & Visions → Resolved → **Verified ✓** → M, forget a memory, the vision → end card |
 | Trailer | `tools/capture/shots/trailer.mjs` | 29 s | Beauty shots with four chapter words (crane out of the cloud sea, Shell IV, the plaza, the Guests behind the glass), one glimpse of the stake, the title card |
-| Clip: read the sign | `tools/capture/shots/clip-shell.mjs` | 14 s | Fly in, the Guest draws, Delay ›, stake |
+| Clip: read the sign | `tools/capture/shots/clip-shell.mjs` | 14 s | Fly in, the Guest draws, the stake |
 | Clip: the Price of Memory | `tools/capture/shots/clip-memory.mjs` | 12 s | M, "Forget it for a vision", the vision effect, two future signs |
 | Clip: Verified ✓ | `tools/capture/shots/clip-verified.mjs` | 14 s | Moss's card, trial 3 comes true, Resolved: Verified ✓ |
 
