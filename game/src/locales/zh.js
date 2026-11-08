@@ -558,6 +558,8 @@ export default {
   'wh.sign.proof.season': '复制整季证明',
   'start.nonce.label': '你的幸运词',
   'start.nonce.hint': '任意文字。在房间先行承诺自身随机数之后混入本季种子，因此任何一方都无法操控本季。',
+  'wh.shard.near.minted': '碎片已在 NEAR 测试网铸造 ✓',
+  'wh.shard.near.tip': '这枚记忆碎片已作为 NFT 存在于 NEAR 测试网：在浏览器中打开铸造交易',
   'wh.hint.welcome': '广场就在我们下方。贝壳悬在营地之外。和我一起走吧。',
   'wh.hint.move': 'WASD 或点击行走。滚轮缩放，拖动转向。G 走向目标。',
   'wh.hint.firstSign': '一个符号醒了。我把它读作：{place}，{action} {power}，试炼 {trial}。按 V 看看为什么。',

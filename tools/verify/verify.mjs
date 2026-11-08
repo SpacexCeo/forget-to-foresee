@@ -83,7 +83,10 @@ function verifyEntropy(season) {
 
 function main() {
   const arg = process.argv[2];
-  if (!arg) { console.error('usage: node tools/verify/verify.mjs <proof.json | ->'); process.exit(2); }
+  if (!arg || arg === '--help' || arg === '-h') {
+    console.log('usage: node tools/verify/verify.mjs <proof.json | ->\n  Checks a Forget to Foresee proof export (format ftf-proof/1): the leaf hash, the Merkle path to the\n  schedule root, the stated meaning, Ash\'s key when revealed and the seed protocol. Exit 0 = OK, 1 = FAIL.');
+    process.exit(arg ? 0 : 2);
+  }
   const text = arg === '-' ? readFileSync(0, 'utf8') : readFileSync(arg, 'utf8');
   const doc = JSON.parse(text);
   if (doc.format !== 'ftf-proof/1') { console.log(`FAIL: unknown format ${JSON.stringify(doc.format)}`); process.exit(1); }

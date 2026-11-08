@@ -558,6 +558,8 @@ export default {
   'wh.sign.proof.season': 'Copia prova della stagione',
   'start.nonce.label': 'La tua parola fortunata',
   'start.nonce.hint': 'Qualsiasi testo. Entra nel seme della stagione dopo che la stanza ha vincolato la propria casualità, così nessuna parte può pilotare la stagione.',
+  'wh.shard.near.minted': 'Frammento coniato su NEAR testnet ✓',
+  'wh.shard.near.tip': 'Questo frammento di memoria esiste come NFT su NEAR testnet: apri la transazione di conio nell’esploratore',
   'wh.hint.welcome': 'La piazza è sotto di noi. Le Conchiglie pendono oltre gli accampamenti. Cammina con me.',
   'wh.hint.move': 'WASD o clic per camminare. Rotella per lo zoom, trascina per girare. G porta all’obiettivo.',
   'wh.hint.firstSign': 'Un segno si è svegliato. Lo leggo come {action} di {power} su {place}, prova {trial}. Premi V per vedere perché.',

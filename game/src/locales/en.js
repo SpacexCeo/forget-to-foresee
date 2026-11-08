@@ -552,6 +552,8 @@ export default {
   'wh.sign.proof.season': 'Copy season proof',
   'start.nonce.label': 'Your luck word',
   'start.nonce.hint': 'Any text. Mixed into the season seed after the room committed its own randomness, so neither side can steer the season.',
+  'wh.shard.near.minted': 'Shard minted on NEAR testnet ✓',
+  'wh.shard.near.tip': 'This memory shard exists as an NFT on NEAR testnet: open the mint transaction on the explorer',
   'wh.hint.welcome': 'The plaza is below us. The Shells hang beyond the camps. Walk with me.',
   'wh.hint.move': 'WASD or click to walk. Scroll to zoom, drag to turn. G walks to the goal.',
   'wh.hint.firstSign': 'A sign woke. I read it as a {action} of {power} at {place}, trial {trial}. Press V to see why.',
