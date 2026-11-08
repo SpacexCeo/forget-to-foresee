@@ -1,4 +1,4 @@
-# Handoff: state on 08.11.2026, 21:20 Kyiv (lead session)
+# Handoff: state on 08.11.2026, 23:25 Kyiv (lead session)
 
 ## Live state (read this first if the session or the usage limit ended)
 
@@ -40,9 +40,7 @@ no server is stopped while it holds a server-only item the owner has not downloa
    the form (or the API payload in `docs/submission/apply-form.md`, sent only after the owner confirms), the
    `hackathon-submission` tag. Deadline 15.11 01:59 Kyiv; freeze 13.11 20:00.
 
-**Schedules:** lead loops (trig_018op6gxTUumLXJX3eyDUuzr :09, trig_01U3rg64KhBguBy5gwNvtbHF :29,
-trig_01AujfoKaraCGtHz4VpeNp8r :49) and juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45) are
-disabled; a one-shot resume is set for 23:21 Kyiv (trig_01RvxgLVLa479pxgFuzfnQp4).
+**Schedules (since 23:21 Kyiv):** one lead loop per hour (trig_018op6gxTUumLXJX3eyDUuzr at :09; the :29/:49 loops trig_01U3rg64KhBguBy5gwNvtbHF, trig_01AujfoKaraCGtHz4VpeNp8r stay off to save tokens) and the juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45). Active workers: F (open QA UI items), K (re-test of main 1a17673), O (shell.js frame safety, phone stills), J's capture job on the RTX 4090 via the GPU session (demo, then trailer and clips, the agent rebuild, 4K). Others paused with next steps in their reports.
 
 **Open items after resume (priority):** final videos without flicker and with a stronger story (J + GPU); NEAR deploy;
 K's open QA list; the juror's scorecards from 09.11 15:00 UTC; native-speaker pass of uk/it/zh; physical phone and GPU
