@@ -8,6 +8,7 @@ import { getUiContext } from './context.js';
 import { getEntitlement } from './entitlement.js';
 import { loadRecipe, recipeHash } from './hologram/recipe.js';
 import { STORAGE_KEYS } from './storage.js';
+import { MOTION, installMotionStyles, enter, exit as leaveScreen, stagger, press, parallax } from './motion/index.js';
 
 /**
  * @param {HTMLElement} root
@@ -18,15 +19,25 @@ export function mountLobby(root, opts = {}) {
   const ctx = opts.ctx || getUiContext();
   const { i18n, prefs } = ctx;
   ensureStyles();
+  installMotionStyles(root.ownerDocument || document);
 
   // Owner reference art (docs/ui/lobby-reference.jpg) as a full-bleed backdrop with drifting mist layers on top.
-  const bgEl = h('div', { class: 'ftf-bg ftf-bg-art', attrs: { 'aria-hidden': 'true' } },
-    h('div', { class: 'ftf-bg-image', attrs: { style: `background-image: url('${(import.meta.env && import.meta.env.BASE_URL) || '/'}assets/ui/lobby_bg.jpg')` } }), h('div', { class: 'ftf-mist ftf-mist-a' }), h('div', { class: 'ftf-mist ftf-mist-b' }), h('div', { class: 'ftf-bg-vignette' }));
-  const bg = { setReduced: (on) => bgEl.classList.toggle('ftf-still', !!on), setTier() {}, destroy() {} };
-  bg.setReduced(prefs.reducedMotion());
+  const bgImage = h('div', { class: 'ftf-bg-image', attrs: { style: `background-image: url('${(import.meta.env && import.meta.env.BASE_URL) || '/'}assets/ui/lobby_bg.jpg')` } });
+  const mistA = h('div', { class: 'ftf-mist ftf-mist-a' }), mistB = h('div', { class: 'ftf-mist ftf-mist-b' });
+  const bgEl = h('div', { class: 'ftf-bg ftf-bg-art', attrs: { 'aria-hidden': 'true' } }, bgImage, mistA, mistB, h('div', { class: 'ftf-bg-vignette' }));
+  // Layered parallax (docs/motion.md): the far art barely moves, the near mist the most; off for touch and reduced motion.
+  let unParallax = () => {};
+  const bg = {
+    setReduced: (on) => { bgEl.classList.toggle('ftf-still', !!on); unParallax(); unParallax = on ? () => {} : parallax(wrapRef.el || bgEl, [{ el: bgImage, depth: 0.35 }, { el: mistB, depth: 0.7 }, { el: mistA, depth: 1 }]); },
+    setTier() {}, destroy() { unParallax(); },
+  };
+  const wrapRef = { el: null };
 
-  const enter = h('button', { class: 'ftf-btn ftf-btn-primary', i18n: 'lobby.enter', attrs: { type: 'button', id: 'ftf-enter' } });
-  enter.addEventListener('click', () => { if (opts.onEnter) opts.onEnter(); });
+  const enterBtn = h('button', { class: 'ftf-btn ftf-btn-primary mo-lift', i18n: 'lobby.enter', attrs: { type: 'button', id: 'ftf-enter' } });
+  let leaving = false;
+  // The screen leaves (fade + a slight scale, 120 ms) before the next one mounts; input is never blocked by it.
+  const leave = (then) => { if (leaving) return; leaving = true; leaveScreen(wrap, { to: 'scale', duration: MOTION.duration.fast }).then(() => { leaving = false; then(); }); };
+  enterBtn.addEventListener('click', () => { if (opts.onEnter) leave(opts.onEnter); });
 
   // Panels
   const panels = {
@@ -85,7 +96,7 @@ export function mountLobby(root, opts = {}) {
   const exit = () => { try { window.close(); } catch { /* browsers only close script-opened tabs */ } setTimeout(() => tx(exitStatus, i18n, 'lobby.exitHint'), 150); };
   const item = (key, onClick, extra = {}) => h('li', {}, h('button', { class: 'ftf-menu-item', i18n: key, attrs: { type: 'button', ...extra }, on: { click: onClick } }));
   const menu = h('nav', { class: 'ftf-menu', i18nAttrs: { 'aria-label': 'lobby.nav.label' } },
-    enter,
+    enterBtn,
     h('ul', { class: 'ftf-menu-list' }, item('lobby.settings', open('settings'), { 'aria-haspopup': 'dialog' }), item('lobby.exit', exit)),
     exitStatus);
   rovingArrows(menu);
@@ -103,19 +114,27 @@ export function mountLobby(root, opts = {}) {
       menu),
     h('footer', { class: 'sr-only' }, h('span', { i18n: 'lobby.demoNotice' })));
 
-  const skip = h('a', { class: 'ftf-skip', i18n: 'common.skipToContent', attrs: { href: '#ftf-enter' }, on: { click: (e) => { e.preventDefault(); enter.focus(); } } });
+  const skip = h('a', { class: 'ftf-skip', i18n: 'common.skipToContent', attrs: { href: '#ftf-enter' }, on: { click: (e) => { e.preventDefault(); enterBtn.focus(); } } });
   const wrap = h('div', { class: 'ftf-root' }, skip, bgEl, main, Object.values(panels).map((p) => p.el));
+  wrapRef.el = wrap;
   root.appendChild(wrap);
+  bg.setReduced(prefs.reducedMotion());
+
+  // Title reveal: the two title lines, the rule, the tagline and the menu rise one after another; the top bar fades in.
+  const hero = main.querySelector('.ftf-hero');
+  stagger([...hero.children], { from: 'rise', duration: MOTION.duration.slow, step: 70, cap: 420 });
+  enter(main.querySelector('.ftf-topbar'), { from: 'fade', delay: 300 });
+  const unPress = [enterBtn, ...menu.querySelectorAll('.ftf-menu-item'), profileChip].map((b) => { b.classList.add('mo-lift'); return press(b); });
 
   const unbind = bindI18n(wrap, i18n);
   const unPrefs = prefs.subscribe(() => { bg.setReduced(prefs.reducedMotion()); bg.setTier(prefs.tier()); });
-  enter.focus({ preventScroll: true });
+  enterBtn.focus({ preventScroll: true });
 
   return {
     el: wrap,
     ctx,
-    focus: () => enter.focus(),
+    focus: () => enterBtn.focus(),
     openPanel: (name) => open(name)(),
-    destroy() { unbind(); unPrefs(); bg.destroy(); card.destroy(); tourInDialog.destroy(); wrap.remove(); },
+    destroy() { unbind(); unPrefs(); bg.destroy(); card.destroy(); tourInDialog.destroy(); unPress.forEach((f) => f()); wrap.remove(); },
   };
 }

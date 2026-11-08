@@ -30,6 +30,61 @@ const LOOK_NEAR = 7;         // m: Iris this close gets looked at
 const UP = new THREE.Vector3(0, 1, 0);
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _v1 = new THREE.Vector3();
 const boneIs = (name, re) => re.test(String(name || '').toLowerCase().replace(/[.\d]+$/, '').split(/[|:/]/).pop());
+
+/** Finds the head, neck and eye bones of a rigged model by name (prefixes and numeric suffixes ignored). */
+function findLookBones(model) {
+  const bones = { head: null, neck: null, eyes: [] };
+  model.traverse((o) => {
+    if (!o.isBone) return;
+    if (!bones.head && boneIs(o.name, /(^|[^a-z])head$/)) bones.head = o;
+    else if (!bones.neck && boneIs(o.name, /(^|[^a-z])neck$/)) bones.neck = o;
+    else if (boneIs(o.name, /(^|[^a-z])eye([^a-z]|$)/)) bones.eyes.push(o);
+  });
+  return bones;
+}
+
+/**
+ * Head look-at, applied after the mixer so it adds to the clip: a world-space turn (yaw about +Y, pitch about
+ * the character's right axis) shared between the neck (35 %), the head (65 %) and the eyes (a little more).
+ * `target` is a world point or null (the look fades out). `look` holds the smoothed angles and weight. Shared by
+ * the clan agents and Iris (docs/motion.md: "Iris talks to a clan").
+ */
+function applyLookTo(bones, look, rootPos, rootYaw, target, dt, reduced = false) {
+  const want = target ? lookAtAngles([rootPos.x, rootPos.y, rootPos.z], rootYaw, target) : { yaw: 0, pitch: 0, weight: 0 };
+  const rate = reduced ? 3 : 6;
+  look.w = damp(look.w, want.weight, rate, dt);
+  if (want.weight > 0) { look.yaw = damp(look.yaw, want.yaw, rate, dt); look.pitch = damp(look.pitch, want.pitch, rate, dt); }
+  if (look.w < 0.005 || !bones.head) return;
+  const yaw = look.yaw * look.w, pitch = look.pitch * look.w;
+  const turn = (bone, share) => {
+    if (!bone || !bone.parent) return;
+    const ry = rootYaw + yaw * share;
+    _q1.setFromAxisAngle(UP, yaw * share);
+    _v1.set(-Math.cos(ry), 0, Math.sin(ry)); // the character's right axis after the yaw
+    _q2.setFromAxisAngle(_v1, pitch * share);
+    _q1.multiply(_q2);                                    // world-space delta
+    bone.parent.updateWorldMatrix(true, false);
+    bone.parent.getWorldQuaternion(_q3);                  // parent world rotation
+    // delta in the parent's space: qp^-1 * delta * qp, premultiplied onto the bone's local rotation
+    const inv = _q2.copy(_q3).invert();
+    bone.quaternion.premultiply(inv.multiply(_q1).multiply(_q3));
+  };
+  turn(bones.neck, 0.35);
+  turn(bones.head, bones.neck ? 0.65 : 1);
+  for (const e of bones.eyes) turn(e, 0.3);
+}
+
+/**
+ * Anticipation and follow-through (docs/motion.md): the body pitches into an acceleration and settles back after a
+ * stop. Returns the eased pitch in radians; `state` keeps {speed, pitch}. Off under reduced motion.
+ */
+function accelLean(state, speed, dt, reduced, gain = 0.03, max = 0.1) {
+  const accel = dt > 1e-4 ? (speed - state.speed) / dt : 0;
+  state.speed = speed;
+  const target = reduced ? 0 : Math.max(-max, Math.min(max, accel * gain));
+  state.pitch = damp(state.pitch, target, 7, dt);
+  return state.pitch;
+}
 const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
 const WALK_REF = 1.7, RUN_REF = 3.57; // m/s the walk / run clips were authored at
 
@@ -170,12 +225,7 @@ class Agent {
       this.body.remove(this.stand);
       this.body.add(model);
       this.model = model;
-      model.traverse((o) => {
-        if (!o.isBone) return;
-        if (!this.bones.head && boneIs(o.name, /(^|[^a-z])head$/)) this.bones.head = o;
-        else if (!this.bones.neck && boneIs(o.name, /(^|[^a-z])neck$/)) this.bones.neck = o;
-        else if (boneIs(o.name, /(^|[^a-z])eye([^a-z]|$)/)) this.bones.eyes.push(o);
-      });
+      this.bones = findLookBones(model);
       this.clips = gltf.animations || [];
       if (this.clips.length) { this.mixer = new THREE.AnimationMixer(model); this.gait = new GaitLayer(this.mixer, this.clips); }
       this.state = 'loaded';
@@ -186,36 +236,8 @@ class Agent {
     }
   }
 
-  /**
-   * Head look-at, applied after the mixer so it adds to the clip: a world-space turn (yaw about +Y, pitch
-   * about the agent's right axis) shared between the neck (35 %), the head (65 %) and the eyes (a little
-   * more). `target` is a world point or null (the look fades out); angles are smoothed in the caller.
-   */
-  applyLook(dt, target, reduced = false) {
-    const want = target ? lookAtAngles(this.root.position.toArray(), this.root.rotation.y, target) : { yaw: 0, pitch: 0, weight: 0 };
-    const L = this.look;
-    const rate = reduced ? 3 : 6;
-    L.w = damp(L.w, want.weight, rate, dt);
-    if (want.weight > 0) { L.yaw = damp(L.yaw, want.yaw, rate, dt); L.pitch = damp(L.pitch, want.pitch, rate, dt); }
-    if (L.w < 0.005 || !this.bones.head) return;
-    const yaw = L.yaw * L.w, pitch = L.pitch * L.w;
-    const turn = (bone, share) => {
-      if (!bone || !bone.parent) return;
-      const ry = this.root.rotation.y + yaw * share;
-      _q1.setFromAxisAngle(UP, yaw * share);
-      _v1.set(-Math.cos(ry), 0, Math.sin(ry)); // the agent's right axis after the yaw
-      _q2.setFromAxisAngle(_v1, pitch * share);
-      _q1.multiply(_q2);                                    // world-space delta
-      bone.parent.updateWorldMatrix(true, false);
-      bone.parent.getWorldQuaternion(_q3);                  // parent world rotation
-      // delta in the parent's space: qp^-1 * delta * qp, premultiplied onto the bone's local rotation
-      const inv = _q2.copy(_q3).invert();
-      bone.quaternion.premultiply(inv.multiply(_q1).multiply(_q3));
-    };
-    turn(this.bones.neck, 0.35);
-    turn(this.bones.head, this.bones.neck ? 0.65 : 1);
-    for (const e of this.bones.eyes) turn(e, 0.3);
-  }
+  /** Head look-at for this agent (see `applyLookTo`). */
+  applyLook(dt, target, reduced = false) { applyLookTo(this.bones, this.look, this.root.position, this.root.rotation.y, target, dt, reduced); }
 
   /** Cross-fades to a contract clip (with the fallback chain). Returns the clip name used or null. */
   play(name) {
@@ -251,6 +273,7 @@ export class ClanAgents {
     }
     this.irisModel = null;
     this.director = null;   // created with the season's seed on the first observation (deterministic life)
+    this.reducedMotion = false;
     this.lastObs = null;
     /** Optional speech hook for conversation beats: ({speakerId, key, args}) → the dialogue strip (worldHud.say). */
     this.onSay = null;
@@ -297,12 +320,12 @@ export class ClanAgents {
       const idle = mixer ? resolveClip(gltf.animations, 'idle').clip : null;
       const idleAction = idle ? mixer.clipAction(idle) : null;
       if (idleAction) idleAction.play();
-      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null };
+      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { console.warn('[play] Iris model failed', e); }
   }
 
   /** Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips). */
-  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false) {
+  updateIris(dt, moving, avatarGroup, t, speed = 0, running = false, reduced = this.reducedMotion) {
     const m = this.irisModel;
     if (!m) return;
     void running; // the blend follows the speed itself: the run clip appears above the walk speed
@@ -314,7 +337,14 @@ export class ClanAgents {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;
       m.model.rotation.z = moving ? Math.sin(t * 9) * 0.03 : 0;
     }
-    void avatarGroup;
+    // Anticipation / follow-through: lean into a start, settle after a stop (pitch of the model inside the avatar group).
+    if (m.lean) m.model.rotation.x = accelLean(m.lean, speed, dt, reduced);
+    // Look-at: the clan Iris is talking to (world.dialogue), else the look fades out.
+    if (m.bones && avatarGroup) {
+      const partner = this.talking && t < this.talkUntil ? this.agents.get(this.talking) : null;
+      const target = partner ? [partner.root.position.x, partner.root.position.y + 1.55, partner.root.position.z] : null;
+      applyLookTo(m.bones, m.look, avatarGroup.position, avatarGroup.rotation.y, target, dt, reduced);
+    }
   }
 
   /** Public events → short reactions (celebrate a contribution, slump at a break). */
@@ -339,6 +369,7 @@ export class ClanAgents {
       if (best) { this.loading = true; best.load().finally(() => { this.loading = false; }); }
     }
     const t = ctx.now;
+    this.reducedMotion = !!ctx.reducedMotion;
     const director = this.ensureDirector(obs);
     if (obs && obs !== this.lastObs) { this.lastObs = obs; director.observe(obs, t); }
     const positions = new Map([...this.agents.values()].map((a) => [a.clan, [a.root.position.x, a.root.position.z]]));
@@ -447,7 +478,8 @@ export class ClanAgents {
     const full = !usedClip; // no clip available: the procedural layer carries the whole pose
     const amp = reduced ? 0.2 : 1;
     const T = TEMPERAMENT[a.clan];
-    let lean = T.lean, bob = 0, sway = 0, roll = 0;
+    if (!a.lean) a.lean = { speed: 0, pitch: 0 };
+    let lean = T.lean + accelLean(a.lean, a.speed, dt, reduced, 0.025, 0.08), bob = 0, sway = 0, roll = 0;
     const tt = t * cue.tempo + a.phase;
     if (full) {
       bob = Math.sin(tt * 1.7) * 0.015;

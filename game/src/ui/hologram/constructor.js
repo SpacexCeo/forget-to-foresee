@@ -8,6 +8,7 @@ import {
   normalizeRecipe, recipeHash, randomizeRecipe, saveRecipe, loadRecipe,
 } from './recipe.js';
 import { createHologramPreview } from './preview.js';
+import { MOTION, installMotionStyles, enter, exit, stagger, press } from '../motion/index.js';
 
 let seq = 0;
 
@@ -21,6 +22,7 @@ export function mountConstructor(root, opts = {}) {
   const ctx = opts.ctx || getUiContext();
   const { i18n, prefs, storage } = ctx;
   ensureStyles();
+  installMotionStyles(root.ownerDocument || document);
   const id = 'ftf-ctor-' + (++seq);
   let recipe = normalizeRecipe(opts.initial || loadRecipe(storage) || DEFAULT_RECIPE);
   let lowTier = prefs.tier() === 'low';
@@ -83,12 +85,13 @@ export function mountConstructor(root, opts = {}) {
   fields.gesture = () => { gesture.value = recipe.gesture; };
 
   const btn = (key, fn) => h('button', { class: 'ftf-btn', i18n: key, attrs: { type: 'button' }, on: { click: fn } });
-  const randomize = () => { apply(randomizeRecipe(), true); tx(status, i18n, 'ctor.randomized'); };
+  const say = (key) => { tx(status, i18n, key); enter(status, { from: 'fade' }); };
+  const randomize = () => { apply(randomizeRecipe(), true); say('ctor.randomized'); };
   const actions = h('div', { class: 'ftf-row' },
     btn('ctor.randomize', randomize),
-    btn('ctor.reset', () => { apply(DEFAULT_RECIPE, true); tx(status, i18n, 'ctor.resetDone'); }),
-    btn('ctor.save', () => { const r = saveRecipe(storage, recipe); tx(status, i18n, r.persistent ? 'ctor.saved' : 'ctor.saveFailed'); }),
-    btn('ctor.load', () => { const r = loadRecipe(storage); if (r) { apply(r, true); tx(status, i18n, 'ctor.loaded'); } else tx(status, i18n, 'ctor.loadNone'); }));
+    btn('ctor.reset', () => { apply(DEFAULT_RECIPE, true); say('ctor.resetDone'); }),
+    btn('ctor.save', () => { const r = saveRecipe(storage, recipe); say(r.persistent ? 'ctor.saved' : 'ctor.saveFailed'); }),
+    btn('ctor.load', () => { const r = loadRecipe(storage); if (r) { apply(r, true); say('ctor.loaded'); } else say('ctor.loadNone'); }));
 
   // Compact picker: one tile per complete look; the pressed tile is the one whose recipe is on screen.
   const compact = !!opts.compact;
@@ -109,10 +112,19 @@ export function mountConstructor(root, opts = {}) {
     actions);
   if (customize) customize.addEventListener('click', () => {
     const open = detail.hidden;
-    detail.hidden = !open; el.classList.toggle('ftf-ctor-open', open);
-    el.querySelector('.ftf-ctor-controls').hidden = !open;
+    const controls = el.querySelector('.ftf-ctor-controls');
+    el.classList.toggle('ftf-ctor-open', open);
     customize.setAttribute('aria-expanded', String(open));
     tx(customize, i18n, open ? 'onb.look.less' : 'onb.look.customize');
+    if (open) {
+      // Unfold: the detail block rises in, the control groups follow in a stagger.
+      detail.hidden = false; controls.hidden = false;
+      enter(detail, { from: 'rise' });
+      stagger([...controls.children], { from: 'rise', duration: MOTION.duration.base, step: 30, cap: 240 });
+    } else {
+      // Fold: both leave quickly, then are hidden (the layout snaps back only once they are invisible).
+      Promise.all([exit(detail, { to: 'rise' }), exit(controls, { to: 'rise' })]).then(() => { detail.hidden = true; controls.hidden = true; detail.style.opacity = ''; controls.style.opacity = ''; });
+    }
   });
 
   const el = h('div', { class: 'ftf-ctor' + (compact ? ' ftf-ctor-compact' : '') },
@@ -134,6 +146,11 @@ export function mountConstructor(root, opts = {}) {
   root.appendChild(el);
 
   const preview = createHologramPreview(canvas, { recipe, tier: lowTier ? 'low' : 'high', reducedMotion: prefs.reducedMotion() });
+  // Staged reveal: the preview first, then the look tiles one by one; every button gets press and lift feedback.
+  enter(canvas, { from: 'scale', duration: MOTION.duration.slow });
+  if (lookTiles.length) stagger(lookTiles, { from: 'rise', delay: 120, step: 60, cap: 300 });
+  const unPress = [...el.querySelectorAll('button')].map((b) => { b.classList.add('mo-lift'); return press(b); });
+  let lastHash = null;
   function apply(next, syncAll) {
     recipe = normalizeRecipe(next);
     const hash = recipeHash(recipe);
@@ -142,6 +159,9 @@ export function mountConstructor(root, opts = {}) {
     for (const [k, fn] of Object.entries(fields)) if (syncAll || k === 'components' || k === 'layers' || k.includes('.')) fn();
     for (const tile of lookTiles) tile.setAttribute('aria-pressed', String(tile._hash === hash));
     preview.setRecipe(recipe);
+    // A whole new look (a tile, randomize, reset, load) cross-fades the preview and the hash; slider nudges do not.
+    if (syncAll && lastHash && lastHash !== hash) { enter(canvas, { from: 'fade', duration: MOTION.duration.slow }); enter(hashEl, { from: 'fade' }); }
+    lastHash = hash;
     if (opts.onChange) opts.onChange(recipe, hash);
   }
   const syncMotion = () => { const r = prefs.reducedMotion(); stillNote.hidden = !r; preview.setReduced(r); };
@@ -155,6 +175,6 @@ export function mountConstructor(root, opts = {}) {
     getRecipe: () => normalizeRecipe(recipe),
     getHash: () => recipeHash(recipe),
     save: () => saveRecipe(storage, recipe),
-    destroy() { unbind(); unPrefs(); preview.destroy(); el.remove(); },
+    destroy() { unbind(); unPrefs(); preview.destroy(); unPress.forEach((f) => f()); el.remove(); },
   };
 }
