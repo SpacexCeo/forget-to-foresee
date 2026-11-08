@@ -119,7 +119,7 @@ Tooltips (`wh.tip.<term>`, one line, shown on hover/focus and on long-press on m
 
 ## 5. Teaching moments (diegetic beats)
 
-Each beat is a hint toast in Novice (title + one line, Iris's voice), an entry in the Hints tab, and a line in the Lore tab after it fires. Pro gets only the Lore entry. Each fires once per profile (stored with prefs as `seenBeats[]`).
+Each beat is a hint toast in Novice (title + one line, Iris's voice), an entry in the Hints tab, and a line in the Lore tab after it fires. Pro gets only the Lore entry. Each fires once per profile (`profile.hints`, §9.3); the beats are the `teach` rows of the full hint matrix in §9.1.
 
 | # | Beat | Trigger | Toast text |
 |---|---|---|---|
@@ -295,7 +295,123 @@ The external agent is a player with the same state: its `profile` is stored serv
 
 Build items added to §6a: profile store + rank derivation (S), rank badge + open-reading card line (M, needs the room channel), tournament board rank column + bracket trophies (S, local simulation). Added to §6b **[OWNER]**: projection `seats`/`viewer` fields (S); human-clan seat actions (L, LATER unless the owner pulls it in).
 
-## 9. Owner decisions in this proposal
+## 9. Novice hint system — full coverage
+
+Owner requirement (08.11): novices get hints for the whole game, A to Z. The system below absorbs the teaching beats of §5 (they are the `teach` rows) and every tooltip of §4 (the `tip` rows), so there is one hint engine, one journal and one set of flags.
+
+Hint types: **toast** (top-right, contextual, one at a time) · **tip** (HUD tooltip on hover/focus/long-press) · **journal** (Hints tab entry, always re-openable) · **iris** (dialogue strip line, Iris's voice) · **highlight** (one gold pulse of a HUD element or a world object; no text) · **block** (tutorial only: input waits for the step). Stop rules: **once** (seen → never again), **N×** (shown N times, then fades), **until done** (repeats until the player performs the action, with cooldown), **dismiss** (stays until closed). Pro column: default no; "lore" means the Lore entry still appears.
+
+### 9.1 Coverage matrix (play order)
+
+| # | Moment | Trigger | Type | Example text (≤ 90 chars) | Stops | Pro |
+|---|---|---|---|---|---|---|
+| 1 | Lobby | lobby mounted | highlight | pulse on "Enter" | once | no |
+| 2 | Demo access | entitlement screen | block | "Guest demo: free, testnet, no real money. Nothing here spends NEAR." | once | yes |
+| 3 | Tutorial cards 1–4 | each card | block | existing `tut.*` text | once | yes |
+| 4 | Mode question | `tut.finish` | block | "How much on screen? Guide me (Novice) · Show me everything (Pro)" | once | yes |
+| 5 | Constructor | constructor mounted | toast | "Cosmetic only: the hologram never changes the odds. Randomize is fine." | once | no |
+| 6 | First contact | island loaded, Iris on the balcony | iris | "The plaza is below us. The Shells hang beyond the camps. Walk with me." | once | no |
+| 7 | Moving | 6 s with no movement input | toast | "WASD or click to walk. Scroll to zoom; drag to turn." | 3× | no |
+| 8 | Camera | first zoom-in below 10 m | toast | "Zooming in puts you behind Iris. Zoom out for the whole island." | once | no |
+| 9 | Interact | first object within prompt range | highlight + prompt | "E · Inspect the Scroll Table" | until done | prompt only |
+| 10 | Visit a Shell | first sign published (trial 1–2) | iris + highlight on the Shell | "A sign woke on Shell II. Let us go and read it." | until done | no |
+| 11 | Read a sign | inside the Shell, sign on the glass | toast | "Four slots, read clockwise from the dots. I read it as: Gift of 20, trial 3." | until done | no |
+| 12 | Sign card | first open of V | tip on each stat / `plain` line | "Likely = I am 50–80% sure of every slot." | once per term | tips: yes |
+| 13 | Anchor bet | a published Gift reading exists, no anchor yet | toast + highlight on the anchor pad | "Anchor 10 silk on Shell II for trial 3. If the Gift lands, we share it." | until done | no |
+| 14 | Anchor confirm | confirm dialogue | iris | "10 silk goes to the pad. We get it back unless a Storm comes." | once | no |
+| 15 | Verification | `fx event` at trial 3 | toast | "It came true, and the seal matches: this future was written before we arrived." | once | lore |
+| 16 | Wrong Shell | first anchor returned unpaid | toast | "The Gift fell elsewhere; the stake came back. Check the Place slot next time." | 2× | no |
+| 17 | Guest hint | L1 open, a word < 65% | toast | "Unsure of a word? Ask the Guests: 5 silk, one honest yes or no." | until done | no |
+| 18 | Ask result | first `fx ask` | iris | "They answered. The word is pinned; no one can sell us a lie about it." | once | no |
+| 19 | Clan offers | first offer (trial 2) | iris + reply "Why?" | "Salt sells a word for 7. I would decline: nothing Salt said has been checked yet." | until L1 | no |
+| 20 | Overrule | first manual answer to an offer | toast | "Your call now. Accepted words are checked against every new sign." | once | no |
+| 21 | Loan | Moss's loan (trial 3) | iris | "Moss asks 15 silk, returns 25 on trial 7. Moss has kept every promise so far." | once | no |
+| 22 | Price of memory | trial 4 or an unpublished sign is opened | toast | "I could see the next sign now, if I forget something forever. You choose what." | once | lore |
+| 23 | Memory list | first open of I | tip per memory kind | "Forgetting a debt erases it; whoever buys the shard holds the claim." | once per kind | tips: yes |
+| 24 | Forget confirm | forget dialogue | block (consent, both modes) | "This memory is gone for good and goes to auction. Forget it?" | always | yes |
+| 25 | Shards | first `fx memory_burned` or first bid | toast | "Someone is bidding on what I forgot. They will remember it instead of me." | once | lore |
+| 26 | Silk | silk < 20 for the first time | toast | "Silk is low. Every trial pays +3; a shared Gift pays more." | 2× | no |
+| 27 | Dictionary | words known reaches 4, 8, 12 | toast | "8 words known. That is enough to read Ash's Key when the time comes." | once per step | no |
+| 28 | Reading rule | first lie exposed (`revealLie`) | toast | "The chronicle caught a lie. The seller's trust fell; the word is unpinned." | once | lore |
+| 29 | Trust | first trust pill shown (L1) | tip | "Wary, even, close: how this clan feels about Iris. Low trust cuts the link." | once | tips: yes |
+| 30 | Mend / mediate | a broken link exists and silk ≥ 10 | toast | "Ash cut the link. 10 silk and a word of peace can restore it." | 2× | no |
+| 31 | Fragments / Scroll | trial 5 or Scroll Table inspected | toast | "Six clans, six fragments. The message reads only when all six lie in the Scroll." | once | lore |
+| 32 | Pact / escrow | first pact or escrow offer | iris | "Ash offers a pact: both fragments in by trial 14. Breaking it costs trust." | once | no |
+| 33 | Fragment prize | first fragment goes dark | toast | "A fragment went dark: its holder took the prize. Fewer than six never read." | once | lore |
+| 34 | Tension | tension ≥ 40 first time | toast + sky highlight | "The sky darkens: tension 40. At 100 the Shells leave and everyone loses." | once | lore |
+| 35 | Crisis 13 | `fx crisis` | toast + quest banner | "Ash read the sign as a weapon and cut the bridges. Trust is the only rope left." | once | lore |
+| 36 | Ash's Key | key vision available | toast | "I can see Ash's phrase now, for one heavy memory. Speak it and Ash returns." | until done | no |
+| 37 | Key spoken | `fx key_spoken` | iris | "The hash matched. Ash heard its own words and came back." | once | lore |
+| 38 | Vote | phase `vote` | toast | "Gift or weapon. Four of six must agree; the Scroll decides how well we read." | once | lore |
+| 39 | Ending | `fx end` | iris | outcome line per result, e.g. "A gift. Everyone who gave a fragment shares it." | once | yes |
+| 40 | Verification / proofs | finale card | tip on "Verified" | "Every revealed sign matched the root sealed before trial 1. Tap to see the hashes." | once | tips: yes |
+| 41 | Heir | outcome `gift` | block (consent) | "Forget everything for an Heir, or keep the memory? The Heir starts clean." | always | yes |
+| 42 | NFT card | final card shown | toast | "This card is Iris's biography. Minting is optional and testnet only." | once | yes |
+
+42 rows; rows 2–4, 24 and 41 are the only blocking steps and exist in both modes because they are consents, not hints.
+
+### 9.2 Rules of the system
+
+1. **One toast at a time.** `hints.active` holds the visible toast; `hints.queue` is sorted by priority (block 0 > until-done 1 > once 2 > N× 3), then by trigger time. A new hint with a higher priority replaces the active one, which returns to the queue head.
+2. **Cooldown.** 6 s between toasts, 20 s for the same hint id; a toast lives 9 s, or 14 s when its text exceeds 60 characters; never more than 3 toasts per trial.
+3. **Never block input** outside the tutorial and the two consents (24, 41). Toasts, tips, highlights and Iris lines are `pointer-events: none` except their close button.
+4. **"Why?"** Every Iris-delegated action produces a journal entry with its `wh.auto.*` reason (§3), and the dialogue strip offers a "Why?" reply (hotkey S) for 9 s that opens that entry.
+5. **Stuck detector.** No meaningful action (engine action, offer answer, panel open, movement ≥ 2 m) for 25 s in L0, 45 s in L1–L2 → the lowest-numbered unfinished *until done* hint fires again; after two repeats it switches to a highlight only.
+6. **Journal.** Every hint ever shown is appended to `hints.journal` (the Hints tab) with its trial number; tapping an entry re-shows it as a toast; the tab's filter shows "unfinished" first.
+7. **i18n.** Hint ids are stable keys: `wh.hint.<id>.title` / `.body`; tips are `wh.tip.<term>`; the matrix text above is the `en` content, ru: strings capped at 100 characters.
+8. **Reduced motion.** Highlights become a static gold border for 2 s; toasts appear without translateY; nothing pulses.
+9. **Voice.** Iris speaks in first person plural ("we", "us"); the Guests never speak; system facts (prices, hashes) are stated without a speaker. No hint ever says "click here" when a diegetic line can carry it.
+10. **Mute.** Settings → "Hints: all / essential / off". "Essential" keeps *until done* and consents only.
+
+### 9.3 Link to player state
+
+- `profile.hints[id] = { seen: n, done: boolean, mastered: boolean }`. `seen` counts shows; `done` is set by the matching action; `mastered` when the player performed the action 3 times without the hint firing first. Mastered hints never fire again, in any season.
+- A Pro joining a mixed room sees no toasts, highlights or Iris coaching; tips stay available on hover (they are reference, not coaching); the consents stay.
+- A returning novice resumes: the queue is rebuilt from `profile.hints` and the current layer at session start, so finished hints stay finished and the next *until done* hint fires on first idle.
+- The external agent has `profile.hints = {}` and `mode = 'pro'`: no hints are produced for it, nothing in the API changes.
+
+### 9.4 Mapping to the HUD
+
+| Hint type | HUD component (`docs/ui-world-hud.md`) | Model field |
+|---|---|---|
+| toast | 6.3 hint toast (desktop) / mobile: the same toast under the top bar | `hints.active` |
+| journal | 6.6 Hints tab | `hints.journal` (replaces `journal.hints`) |
+| iris | 6.8 dialogue strip, speaker `iris`, optional "Why?" reply | `dialogue` with `coach: true` |
+| highlight | any component or world object by `target` | `hints.active.target` |
+| tip | sign-card stats, trial-card rows, pills, memory rows: `data-tip="<term>"` | `tooltips` |
+| block | onboarding screens and consent dialogues (outside `.wh-root`) | not in the HUD model |
+| quest step | 6.2 quest banner shows the current *until done* hint as the quest in L0 | `quests[0].recommended` |
+
+```js
+/**
+ * @typedef {Object} Hint
+ * @property {string} id              matrix row id, e.g. 'anchor-first'
+ * @property {'toast'|'iris'|'highlight'} type
+ * @property {0|1|2|3} priority
+ * @property {TextRef} title  @property {TextRef} body
+ * @property {string} [target]        HUD element id ('wh-anchor-pad', 'wh-signs-btn') or world object id ('shell-2')
+ * @property {number} trial           when it fired
+ * @property {'once'|'untilDone'|'repeat'} stop   @property {number} shown
+ * @property {boolean} done           untilDone: the matching action happened
+ * @property {TextRef} [why]          delegated-decision reason (wh.auto.*)
+ */
+// WorldHudModel: hints: { active: Hint|null, queue: Hint[], journal: Hint[], muted: 'all'|'essential'|'off' }
+//                tooltips: Record<string, TextRef>
+```
+
+### 9.5 Effort
+
+| Part | Effort | Notes |
+|---|---|---|
+| Hint engine: queue, priority, cooldown, stuck detector, profile flags, journal | M | one module `ui/hints.js`, pure functions over fx events + state, Node tests for ordering and cooldown |
+| Toast/iris/highlight rendering in the three HUD packages | S | the toast exists; add `target` highlight and the "Why?" reply |
+| Content: 42 rows × (title + body) + 20 tips + 8 reasons, both locales | M | ~140 strings per locale |
+| Settings mute row, Hints tab filter | S | |
+| **Total** | **L** (about two working days with content) | |
+
+**Demo-critical subset** (the judges' 3-minute path; build these first, S+S): rows 2, 6, 10, 11, 13, 14, 15 and the tips of row 12. Seven toasts/lines and four tooltips carry the whole Read → Anchor → Verify loop. Rows 7 and 9 are next (movement and interact), then 17–22 for the L1 hand-off.
+
+## 10. Owner decisions in this proposal
 
 1. **[OWNER]** Rename the anchor pill "Tiers" → "Trials" and replace the mockup's four sign stats with engine-unit rows (Place / Action / Power / Delay in trials). Alternative: keep the mockup labels and map them loosely (stability = confidence, anchor strength = share estimate, power range = power, delay in trials instead of seconds).
 2. **[OWNER]** Default mode from player state (§8.1: `pro` for Readers with little assistance, otherwise `novice`) with an override on the tutorial's last card and in Settings. Alternative: always `novice` by default for the hackathon build.
