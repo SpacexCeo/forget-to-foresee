@@ -20,7 +20,7 @@ the `e2e` script in `game/package.json`, `docs/qa/**`, this report. No product c
   QA-011, greybox labels), `smoke` (both modes, five locales, reduced motion + low tier, old HUD, Pixel 7, walk and
   run speeds), `engine-text` (QA-022, node only). Each check is named after its defect and fails while it is open.
 - **What was played**: a whole 17-trial hub season to the vote and the Heir (92 commands, 0 rejected, 0 console
-  errors), the README judge table in walk mode step by step (first and second version), the new five-beat tutorial
+  errors), a whole walk-mode season by T alone with the vote at the Scroll and the Heir panel (0 rejected, 0 errors), the README judge table in walk mode step by step (first and second version), the new five-beat tutorial
   end to end (wrong taps, dot cycling, stake and seal, forget, Novice, look picker, first contact, returning player),
   the lobby flow, the island map (open/close, routes, exclusivity with Memories, phone), every play panel, settings,
   help, language cycling, the live GitHub Pages build, iPhone 13 / Pixel 7 emulation, 1280×800 / 1920×1080 / 390×844,
@@ -35,8 +35,7 @@ the `e2e` script in `game/package.json`, `docs/qa/**`, this report. No product c
 - Gamepad was not emulated beyond the input unit tests (no virtual pad in headless Chromium); touch was emulated
   (tap/drag through Playwright devices), not felt on a phone.
 - Native-speaker review of uk / it / zh copy: only mechanical checks (no raw keys, no placeholders, no mixed scripts).
-- `smoke.e2e.mjs` was written after the other checks and not yet run end to end in this session (every other file
-  ran at least once; results in `docs/qa/defects.md`).
+- Every e2e file ran at least once on 2004418; the red ones are the open defects (`docs/qa/defects.md`).
 
 ## How it was checked
 

@@ -222,7 +222,7 @@ rules v3 and lists each engine feed line the adapter cannot parse. On 2004418:
 | 32 | the same held-fragment / deferred-prize lines for Соль, Иней, Ирис |
 
 **Actual:** the HUD log row reads "Something happened that this build cannot describe yet." (`log.unknown`), in all five
-locales; the Lore/Log tabs and the agent API's `log[].text` carry the same fallback.
+locales (seen at trial 15 of the judge seed in both the hub and the walk season); the Lore/Log tabs and the agent API's `log[].text` carry the same fallback.
 **Cause:** `src/ui/i18n/engine-adapter.js` `LOG_PATTERNS` covers the v2 feed; the v3 lines (P2 refund, P1 deferred
 prize, gone wipes silk) were added to `engine.js` without patterns, and the adapter test replays v2 seasons only.
 **Check:** `tests/e2e/engine-text.e2e.mjs`.
