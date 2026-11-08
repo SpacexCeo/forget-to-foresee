@@ -489,3 +489,62 @@ Owner: "everything must be animated and look expensive, as a 2026 consumer expec
    swaps movement for cross-fades. Tests for the tokens and helpers (pure). Before/after captures (short frame strips)
    in `docs/motion.md`.
 
+
+---
+
+## Task T: verification anyone can repeat, and entropy we do not control (juror early warning, 08.11)
+
+**Branch:** `claude/verify-anywhere` (worker M continues) · **Owns:** new `tools/verify/**` (a one-file verifier),
+`game/src/net/near*.js`, `game/src/net/verify-export.js` (new: the data behind a "Copy proof" action; Task F renders
+the button), the season-seed derivation outside the engine (`game/src/net/near-season.js`, the `seasonRandomBytes`
+hook in `game/src/play/transport-local.js`), `contracts/**`, new tests, `docs/verify.md` (new). Never edit
+`game/src/game/engine.js`; `baseline-2d-1` parity and the fixed judge season (`?demo=judge`) stay bit-exact.
+Juror finding (`docs/jury/notes/onchain-game-design.md`, rubric C4 on `claude/jury`): the browser generates the season,
+commits the root and shows "Verified" with the same code, so the badge proves the season did not change after it
+began, not that it was fair. Mitigations, in order of points per hour:
+1. Out-of-band check: for every revealed sign, the full root, leaf, salt, Merkle path and the hashing recipe are
+   exportable as one JSON (API for F's "Copy proof" button in Signs & Visions); `tools/verify/verify.mjs` (zero
+   dependencies, Node 20) and a documented shell one-liner (sha256sum) verify it independently; `docs/verify.md` and a
+   README line show how ("do X, see OK").
+2. Entropy the developer does not control, for real (non-judge) seasons: the player commits a nonce before the root
+   forms (hash shown, nonce revealed at the end), and/or the seed mixes in a NEAR testnet block hash fetched after the
+   commitment. Specify the protocol in `docs/verify.md` first; keep the judge seed fixed and documented as such.
+3. The testnet registration of the root before trial 1 stays pending the owner's permission (Task M); keep the
+   scripts ready and make the game say "registered on NEAR ✓" only when it is.
+
+---
+
+## Task U: the first ten seconds (loading and first impression)
+
+**Branch:** `claude/first-seconds` (worker G continues) · **Owns:** `game/index.html`, the boot section of
+`game/src/main.js` (module loading, the first frame, the lobby hand-off), `game/src/render/streaming.js` and
+`game/src/render/assets.js` (moved from Task L, which keeps the rest of `render/`), a new loading screen module
+`game/src/ui/loading.js`, `vite.config.*`, new `game/tests/client/boot*.mjs`, `docs/first-seconds.md` (new).
+Goal: a judge opening the live link sees something beautiful within one second and can play within five, on a laptop
+and on a phone inside the X in-app browser.
+1. Measure first on the live site and a local production build (headless, cold cache, throttled "Fast 4G" and
+   "Slow 4G"): time to first paint, to the lobby, to the first playable frame, bytes before play, the largest chunks.
+2. An animated loading screen in the game's look (ink ring drawing itself, the title, real progress from the
+   streamer, never a frozen bar), using the shared motion tokens; it hands off to the lobby without a flash.
+3. Cut what blocks the first frame: lazy-load audio, VFX, the hub, the map and non-visible models; prioritise what
+   the first camera sees; preload hints for the critical chunks; check that phone `_m` variants and KTX2 are used.
+4. Before/after numbers in `docs/first-seconds.md`; the README "Judge in 5 minutes" sizes and times updated to the
+   measured values. Tests for the load plan (pure). Zero console errors; both play modes and `?play=direct` intact.
+
+---
+
+## Task V: memory shards as NEP-171 NFTs (the nfts track, contract first)
+
+**Branch:** `claude/shard-nft` (worker M continues) · **Owns:** new `contracts/memory-shard/**` (Rust, near-sdk, NEP-171
+core + NEP-177 metadata + NEP-178 approvals only if needed), new `game/src/net/shard-nft*.js` (read-only view client
+and the metadata mapping), new tests, `docs/shard-nft.md` (new), the README real/mock row "NEAR NEP-171 fragment NFTs"
+(only with what runs). Testnet only; deployment waits for the owner's permission path like `season-commit`.
+Design: a forgotten memory becomes a shard (the Price of Memory). On-chain, a shard NFT carries the season id, the
+memory's kind and weight, the trial it was forgotten, the Merkle leaf of the season event it unlocked (so the shard is
+provably tied to the committed season), and a deterministic generated image (an ink-ring SVG from the shard's data,
+stored as a data URI or a content hash). Minting only by the season coordinator; transfers follow the auction result.
+1. Contract with unit tests (mocked chain) and, where the container allows, sandbox tests; a deploy script mirroring
+   `deploy-judge-season.sh` that mints the judge season's shards (not run until permitted).
+2. The game reads shard NFTs read-only when a deployment exists (silent otherwise) and shows "Shard minted on NEAR
+   testnet" with an explorer link next to the shard in Memories and the auction.
+3. Also small: `tools/verify/verify.mjs --help` prints usage instead of throwing.

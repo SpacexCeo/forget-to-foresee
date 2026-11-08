@@ -16,18 +16,33 @@ const GAP_MS = 6000, SAME_MS = 30000, PER_TRIAL = 3;
 const STUCK_L0_MS = 25000, STUCK_MS = 45000;
 const PRIORITY = { untilDone: 1, once: 2, repeat: 3 };
 
-/** First visible prophecy with a full reading, as args for the hint text. */
+/**
+ * The newest visible prophecy with a full reading whose implied trial is still ahead, as args for the hint text
+ * (QA-006: a hint about a sign whose trial has passed is withdrawn or re-issued for the newest sign).
+ */
 function firstReading(obs, i18n) {
-  const p = (obs.prophecies || []).find((x) => x.reading && x.impliedAnchor);
+  const tick = obs.season ? obs.season.tick : 0;
+  const live = (obs.prophecies || []).filter((x) => x.reading && x.impliedAnchor && x.impliedAnchor.tick >= tick);
+  const p = live[live.length - 1];
   if (!p) return null;
   const [pl, ac, pw] = p.reading.slots;
-  return {
-    shell: i18n ? i18n.t('shell.' + (p.impliedAnchor.shell - 1)) : String(p.impliedAnchor.shell),
-    action: i18n ? i18n.t('meaning.1.' + ac.meaning) : String(ac.meaning),
-    power: [10, 20, 40, 80][pw.meaning],
-    place: i18n ? i18n.t('meaning.0.' + pl.meaning) : String(pl.meaning),
-    trial: p.impliedAnchor.tick,
-  };
+  // raw ids: the hint text resolves them in whatever language is current when it renders (QA-019)
+  void i18n;
+  return { shell: p.impliedAnchor.shell, action: ac.meaning, power: [10, 20, 40, 80][pw.meaning], place: pl.meaning, trial: p.impliedAnchor.tick };
+}
+
+/** Arg resolvers by placeholder name: numbers / ids in, localized words out (identity for everything else). */
+const RESOLVE = {
+  shell: (v, i18n) => (typeof v === 'number' ? i18n.t('shell.' + (v - 1)) : v),
+  action: (v, i18n) => (typeof v === 'number' ? i18n.t('meaning.1.' + v) : v),
+  place: (v, i18n) => (typeof v === 'number' ? i18n.t('meaning.0.' + v) : v),
+  who: (v, i18n) => (typeof v === 'string' && !/\s/.test(v) ? i18n.t('agent.' + v) : v),
+};
+export function resolveHintArgs(args, i18n) {
+  if (!i18n || !args) return args || {};
+  const out = {};
+  for (const [k, v] of Object.entries(args)) out[k] = RESOLVE[k] ? RESOLVE[k](v, i18n) : v;
+  return out;
 }
 
 /**
@@ -43,7 +58,7 @@ export const HINTS = [
   { id: 'anchored', type: 'iris', stop: 'once', when: (o) => ((o.iris.anchors || []).length ? {} : null) },
   { id: 'verified', type: 'toast', stop: 'once', lore: true, when: (o) => ((o.proofs || []).some((p) => p.verified) ? {} : null) },
   { id: 'endTick', type: 'toast', stop: 'repeat', max: 2, when: (o) => (o.season.phase === 'play' && o.iris.attention === 0 ? {} : null) },
-  { id: 'offer', type: 'iris', stop: 'once', when: (o, st) => { const f = (o.offers || [])[0]; return f ? { who: st.i18n ? st.i18n.t('agent.' + f.from) : f.from } : null; } },
+  { id: 'offer', type: 'iris', stop: 'once', when: (o) => { const f = (o.offers || [])[0]; return f ? { who: f.from } : null; } },
   { id: 'memory', type: 'toast', stop: 'once', lore: true, when: (o) => (o.season.tick >= 4 && (o.memories || []).length ? {} : null) },
   { id: 'words', type: 'toast', stop: 'once', when: (o) => (o.dictionary && o.dictionary.confidentCells >= 4 ? { n: o.dictionary.confidentCells } : null) },
   { id: 'silkLow', type: 'toast', stop: 'repeat', max: 2, when: (o) => (o.season.phase === 'play' && o.iris.silk < 20 ? {} : null) },
@@ -75,8 +90,10 @@ export function createHints({ storage = null, mode = () => 'novice', i18n = null
   const flag = (id) => (flags[id] || (flags[id] = { seen: 0, done: false }));
   const emit = () => { for (const fn of [...subs]) fn(); };
   const novice = () => mode() !== 'pro';
-  const textOf = (def, args) => ({ key: hub && i18n && i18n.has('wh.hint.' + def.id + '.hub') ? 'wh.hint.' + def.id + '.hub' : 'wh.hint.' + def.id, args });
-  const entry = (def, args) => ({ id: def.id + '-' + flag(def.id).seen + '-' + st.trial, time: i18n ? i18n.t('wh.log.trial', { n: st.trial }) : 'T' + st.trial, text: textOf(def, args) });
+  // `args` is a function (lazy): the HUD's tx() calls it at render time, so a language switch re-renders the words;
+  // `raw` keeps the ids for comparisons (stale-hint refresh) and tests
+  const textOf = (def, args) => ({ key: hub && i18n && i18n.has('wh.hint.' + def.id + '.hub') ? 'wh.hint.' + def.id + '.hub' : 'wh.hint.' + def.id, args: () => resolveHintArgs(args, i18n), raw: args });
+  const entry = (def, args) => ({ id: def.id + '-' + flag(def.id).seen + '-' + st.trial, time: { key: 'wh.log.trial', args: { n: st.trial } }, text: textOf(def, args) });
 
   function eligible(def) {
     if (hub && def.id === 'move') return false; // nobody has to walk in the hub
@@ -100,6 +117,23 @@ export function createHints({ storage = null, mode = () => 'novice', i18n = null
     if (obs.season.tick !== st.trial) { st.trial = obs.season.tick; st.perTrial = 0; }
     // a queued hint whose action already happened is dropped before it shows
     for (let i = queue.length - 1; i >= 0; i--) if (queue[i].def.done && queue[i].def.done(obs, st)) { queue.splice(i, 1); changed = true; }
+    // a hint whose trigger no longer holds is withdrawn; one whose facts changed (another sign, a later trial) is re-issued
+    const refresh = (item) => {
+      const def = item.def;
+      if (def.stop === 'once' || !def.when) return 'keep';
+      const args = def.when(obs, st);
+      if (!args) return 'drop';
+      if (JSON.stringify(args) !== JSON.stringify(item.args)) { item.args = args; return 'changed'; }
+      return 'keep';
+    };
+    for (let i = queue.length - 1; i >= 0; i--) { const r = refresh(queue[i]); if (r === 'drop') { queue.splice(i, 1); changed = true; } }
+    if (active) {
+      const def = HINTS.find((d) => d.id === active.id);
+      const item = { def, args: active.text.raw };
+      const r = def ? refresh(item) : 'keep';
+      if (r === 'drop') { active = null; changed = true; }
+      else if (r === 'changed') { active = { ...active, text: textOf(def, item.args) }; changed = true; }
+    }
     for (const def of HINTS) {
       const f = flag(def.id);
       if (def.done && !f.done && f.seen > 0 && def.done(obs, st)) {
@@ -147,7 +181,7 @@ export function createHints({ storage = null, mode = () => 'novice', i18n = null
     const item = queue.splice(ti, 1)[0];
     const text = show(item, t);
     st.lastToast = t; st.perTrial++;
-    const len = i18n ? i18n.t(text.key, text.args).length : 0;
+    const len = i18n ? i18n.t(text.key, resolveHintArgs(text.raw, i18n)).length : 0;
     active = { id: item.def.id, text, shown: flag(item.def.id).seen };
     activeUntil = t + (len > LONG_CHARS ? TOAST_LONG_MS : TOAST_MS);
     return true;

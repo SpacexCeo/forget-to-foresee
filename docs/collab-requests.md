@@ -235,3 +235,35 @@ The tutorial teaches mechanics only (slots, dots, reading, stake, the Price of M
 The "First contact" card is the last screen before the island: `mountShell(root, { onFirstContact })` in
 `game/src/ui/index.js` fires it once; a film can play there (`main.js` wraps `enterWorld`) and call `enterWorld` when it ends
 or is skipped. Returning players skip the card already (`flow.returning`), so the film should honour the same flag.
+## To Tasks F, P, Q (from worker G / Task S, motion design system, 08.11)
+### 18. The shared motion module is published: `game/src/ui/motion/index.js`
+One dependency-free module (docs: `docs/motion.md`, tests: `game/tests/motion.test.mjs`). Call `installMotionStyles(doc)`
+once in your mount, then use the helpers; they return promises, never block input and handle reduced motion
+themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="reduce"]` or the system query).
+- Tokens: `MOTION.duration.{fast 120, base 200, slow 320, screen 480, seal 640}`, `MOTION.easing.{out, in, inOut, emphasized}`,
+  `MOTION.spring.{gentle, snappy, settle}`, `MOTION.distance.{rise 12, drop 8, lift 2}`, `MOTION.scale.{press .97, pop 1.04}`,
+  `MOTION.stagger.{step 40, cap 320}`; also CSS variables `--mo-*` and classes `.mo-press`, `.mo-lift`, `.mo-ring`, `.mo-draw`.
+- Helpers: `enter(el, {from})`, `exit(el, {to})`, `stagger(els)`, `crossfade(out, in)`, `flip(el, mutate)`, `tickNumber(el, to, {format})`,
+  `press(el)`, `seal(el)`, `ringFlash(el)`, `drawOn(path)`, `parallax(container, layers)`, `isReduced(doc)`.
+- The event → motion table in `docs/motion.md` says which helper each UI event uses (panel open = `enter scale` 320 ms,
+  close = `exit scale` 120 ms, list cards = `stagger`, numbers = `tickNumber`, the Verified seal = `seal` + `ringFlash`,
+  toasts and the dialogue line = `enter rise` / `crossfade`). Keep transforms and opacity only; no layout properties.
+## To Task F (world HUD), from Task T (verify anywhere), 08.11
+### 19. "Copy proof" and "Copy season proof", and an optional nonce field
+`game/src/net/verify-export.js` builds the documents (format `ftf-proof/1`, `docs/verify.md`); the HUD only copies text.
+1. On every **resolved** sign card (next to the Verified ✓ pill, or in the card's expanded view): a **Copy proof** button
+   (`wh.sign.proof.copy`, `wh.sign.proof.copied`, `wh.sign.proof.tip` strings exist in all five locales):
+   ```js
+   import { buildProofExport, proofExportText } from '../net/verify-export.js';
+   const doc = await buildProofExport(session, signIndex, { near });   // near = the watcher from request 7, or omit
+   await navigator.clipboard.writeText(proofExportText(doc));          // fall back to a <textarea> select+copy where clipboard is unavailable
+   ```
+2. In the Signs & Visions panel header (Resolved tab): **Copy season proof** → `buildSeasonExport(session, { near })`.
+   Both are async (one proof request per revealed sign through the transport); disable the button while pending, show
+   the "Copied ✓" state for about 2 s. The documents contain nothing secret (tests check), so no confirmation is needed.
+3. Optional, start flow: a text field "Your luck word" (`start.nonce.label`, `start.nonce.hint`) passed as
+   `session.start({ phrase, nonce })`. Without it the session uses 16 random bytes, which is already sound; the field only
+   makes the player's contribution to the seed visible. Hidden for fixed-seed sessions (`obs.season.entropy.protocol === 'fixed-seed'`).
+4. Before `start_season` under the protocol the observation's `season.merkleRoot`, `seasonId`, `seedCommitment` and
+   `ashKeyCommitment` are `null` (the season is sealed by the nonce); anything that prints them during the intro should
+   show the entropy commitment (`season.entropy.commitment`) or nothing. After sealing they are set as before.

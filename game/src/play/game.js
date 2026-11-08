@@ -24,6 +24,7 @@ import { steerTo } from '../physics/character.js';
 import { CAMPS, ANCHOR_ZONES, SHARD } from '../scenes/layout.js';
 import { CLAN_ASSET } from './behaviour.js';
 import { ShellHub, signForShell } from './hub.js';
+import { FIRST_LOOP_KEY } from './objectives.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
 import { panelArbiterFor } from './panels.js';
@@ -47,8 +48,17 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
   const transport = createLocalTransport({ rules: options.rules, seedHex: options.seedHex });
-  const session = new PlaySession({ transport });
+  // A player who has already watched the first loop verified once on this device skips the first-loop goals
+  // (objectives.js honours the flag); ?demo=judge and ?hints=reset (resetHints) always start fresh.
+  const storage = ctx.storage && typeof ctx.storage.getJSON === 'function' ? ctx.storage : null;
+  let loopDone = !options.resetHints && !!(storage && (storage.getJSON(FIRST_LOOP_KEY, null) || {}).done);
+  const session = new PlaySession({ transport, skipOnboarding: loopDone });
   await session.start();
+  session.on('obs', (o) => {
+    if (loopDone || !storage || !(o.proofs || []).some((p) => p.verified)) return;
+    loopDone = true;
+    storage.setJSON(FIRST_LOOP_KEY, { done: true, at: new Date().toISOString() });
+  });
 
   const shell = createShellScene({ scene, streamer: world3d.streamer });
   const agents = new ClanAgents({ scene, i18n: ctx.i18n });
@@ -80,7 +90,11 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   if (hub) { session.flags.hub = true; session.recompute(); }
   const ui = createPlayUi({
     root: uiRoot, ctx, session, hud,
-    handlers: { onGo: walkTo, onEndTick: hub ? () => hubUi && hubUi.handleKey('KeyT') : null, contextHidden: () => !!(hub && (state.quiet || hub.card || hub.advancing || hub.busy)) },
+    handlers: {
+      onGo: walkTo, onEndTick: hub ? () => hubUi && hubUi.handleKey('KeyT') : null,
+      contextHidden: () => !!(hub && (state.quiet || hub.card || hub.advancing || hub.busy)),
+      onSigns: () => { if (worldHud && worldHud.hud) worldHud.hud.signs.open(); }, // QA-005: visions open the HUD Signs panel
+    },
     // with the world HUD a single action is the HUD prompt; the context menu lists two or more
     contextMin: useWorldHud ? 2 : 1,
   });

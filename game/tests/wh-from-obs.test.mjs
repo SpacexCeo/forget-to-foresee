@@ -87,7 +87,7 @@ test('from-obs: log, prompt, hotbar and layer', async () => {
   const s = await season(5);
   const m = build(s);
   assert.ok(m.journal.log.length > 0);
-  assert.ok(m.journal.log.every((e) => /^T\d+$/.test(e.time)));
+  assert.ok(m.journal.log.every((e) => e.time.key === 'wh.log.trial' && Number.isInteger(e.time.args.n)), 'the clock column is a TextRef (QA-019)');
   assert.ok(!m.journal.log.some((e) => e.tone === 'tick'), 'tick separators are dropped');
   assert.equal(new Set(m.journal.log.map((e) => e.id)).size, m.journal.log.length, 'ids are unique');
   assert.deepEqual(m.hotbar.map((x) => x.id), ['memory', 'signs', 'endTick', 'help', 'settings']);

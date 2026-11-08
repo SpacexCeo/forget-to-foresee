@@ -87,7 +87,7 @@
     @media (max-width: 700px) { body.wh-on .pl-badge { display: none; } }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
-    .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { position: absolute; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
+    .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { box-sizing: border-box; position: absolute; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
     /* Modal surfaces: the HUD's panel gradient, hairline frame and blur; the scene never shows through text. */
     /* The gradient sits on a solid base colour: a modal panel over the 3D scene is fully opaque (no blur needed, cheaper on phones). */
     .pl-panel, .pl-context, .pl-help, .pl-info { background: var(--pl-panel) #121d1f; border: 1px solid var(--pl-frame); color: var(--pl-text); font-family: var(--pl-sans); box-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06); }
@@ -151,12 +151,13 @@
         bottom: auto; top: max(44px, calc(8px + env(safe-area-inset-top, 0px))); width: 36px; height: 36px; }
       html[data-vh="short"] .ftf-run-toggle, html[data-vh="tiny"] .ftf-run-toggle { right: 112px; }
       html[data-vh="short"] .ftf-map-fab, html[data-vh="tiny"] .ftf-map-fab { left: 70px; }
+      html[data-vh="short"] body.pl-modal-open .wh-root .wh-topbar, html[data-vh="tiny"] body.pl-modal-open .wh-root .wh-topbar { visibility: hidden; }
       html[data-vh="short"] .ftf-run-toggle svg, html[data-vh="tiny"] .ftf-run-toggle svg { width: 22px; height: 22px; }
       html[data-vh="short"] :is(.ftf-run-toggle, .ftf-map-fab)::before, html[data-vh="tiny"] :is(.ftf-run-toggle, .ftf-map-fab)::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
     }
 
     /* Phones: miniature HUD so the world stays visible (owner 07.11). */
-    @media (max-width: 640px), (pointer: coarse) and (max-height: 900px) {
+    @media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
       .pl-goal { top: calc(6px + env(safe-area-inset-top, 0px)); width: min(340px, calc(100vw - 132px)); left: auto; right: 8px; transform: none; padding: 5px 9px 6px; border-top-width: 2px; border-radius: 8px; }
       .pl-goal-head { font-size: 9px; } .pl-goal-title { font-size: 13px; margin: 2px 0; } .pl-goal-hint { display: none; }
       .pl-row { gap: 4px; margin-top: 3px; }
@@ -177,7 +178,7 @@
       body.pl-modal-open .wh-root :is(.wh-quest--mobile, .wh-quest__dots, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
       body.in-world.pl-modal-open .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* outranks input.js's display: flex */
       body.in-world.hub-in-shell .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* no running inside a Shell: the reading card owns the screen */
-      body.pl-modal-open .ftf-map-fab { display: none; } /* the map's own phone button steps aside under a modal panel too */
+      body.in-world.pl-modal-open .ftf-map-fab { display: none; } /* the map's own phone button steps aside under a modal panel too (outranks map-ui.js's display: flex) */
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
     }
