@@ -8,11 +8,11 @@ and two renders of one script give the same frames.
 
 | Video | Script | Length | Shows |
 |---|---|---|---|
-| Demo (the X post) | `tools/capture/shots/demo.mjs` | 75 s | Cold open on the payoff (trial 4, Resolved: **Verified ✓**), the archipelago, then the README judge table recorded from its own URL (`?demo=judge&mode=walk`) in real time: G with Shift from the balcony, the pad's **E · Anchor here for trial 3** (silk 53), T T three times to trial 4 (silk 72, *Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓*), V → Resolved, M → forget a memory → the vision; the Shell hub as a labelled second segment (fly in, the Guest draws, F stakes); end card. Every segment carries the URL a judge opens to see the same thing |
-| Trailer | `tools/capture/shots/trailer.mjs` | 29 s | Beauty shots with four chapter words (crane out of the cloud sea, Shell IV, the plaza, the Guests behind the glass), one glimpse of the stake, the title card |
-| Clip: read the sign | `tools/capture/shots/clip-shell.mjs` | 14 s | Fly in, the Guest draws, the stake |
-| Clip: the Price of Memory | `tools/capture/shots/clip-memory.mjs` | 12 s | M, "Forget it for a vision", the vision effect, two future signs |
-| Clip: Verified ✓ | `tools/capture/shots/clip-verified.mjs` | 14 s | Moss's card, trial 3 comes true, Resolved: Verified ✓ |
+| Demo (the X post) | `tools/capture/shots/demo.mjs` | 75 s | Opens on the Guest coming out of the mist and drawing the ring sign on the glass, Iris small in front (4 s, the hub URL labelled); then the payoff (trial 4, Resolved: **Verified ✓**), the archipelago, then the README judge table recorded from its own URL (`?demo=judge&mode=walk`) in real time: G with Shift from the balcony, the pad's **E · Anchor here for trial 3** (silk 53), T T three times to trial 4 (silk 72, *Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓*), V → Resolved, M → forget a memory → the vision; the Shell hub as a labelled second segment (fly in, the Guest draws, F stakes); end card. Every segment carries the URL a judge opens to see the same thing |
+| Trailer | `tools/capture/shots/trailer.mjs` | 41 s | Cut on whole seconds of the game's 60 bpm music: the Guest emerging and drawing (Iris small in front) → the ink ring close → the reading card and the stake → card *I · Sealed* → Resolved: Verified ✓ → card *II · The price of memory* → forget, the vision, the shard to auction → four one-beat face close-ups of the clan agents → the clans meeting after a trial → *Trial 13 · The crisis* (the Guests' crisis moment) → the vote moment → the title |
+| Clip: read the sign | `tools/capture/shots/clip-shell.mjs` | 12 s | The Guest emerging and drawing, the ink ring close, the reading card, the stake |
+| Clip: the Price of Memory | `tools/capture/shots/clip-memory.mjs` | 10 s | Opens on the act: forget at 0.6 s, the vision, two future signs, the shard to auction; the chapter card |
+| Clip: Verified ✓ | `tools/capture/shots/clip-verified.mjs` | 12 s | Card *Sealed*, then the walking judge path: T ends trial 3, the Gift lands, Resolved: Verified ✓ held 4 s |
 
 Outputs go to `docs/media/`: `<video>.mp4` (clean), `<video>-captions.mp4` (captions burned in), `<video>.srt`,
 `<video>.report.json` (frames, seconds per frame, console messages, runner errors, file sizes). Each file stays under
@@ -101,6 +101,19 @@ If `--use-angle=vulkan` falls back to SwiftShader (the renderer string says so),
 render needs (models, sounds, fonts); no extra files travel to the server. Each 4K master must stay under 90 MB
 for git: the encoder settings give about 40–60 MB per minute at 4K60 crf 17; if one exceeds the limit, keep it out of
 git and link it from the report.
+
+### GPU diagnosis
+
+`--probe a-b` renders a shot up to frame b and, for frames a..b, re-renders each frame with every post pass switched off
+in turn (and with no post stack), writes a PNG per variant and `<shot>.probe.json` with the sizes of the canvas, the
+drawing buffer and every composer target; the frame checks only log. On the GPU box: `FTF_PROBE=<video>:<shot>:<a>-<b>
+bash tools/capture/gpu-job.sh <ref> <out>`.
+
+### Shot vocabulary added 08.11
+
+`camera: { type: 'track', target: '<clan>' | 'iris', local: true, at, off0, off1, lookOffset }` follows a live head
+(close-ups that keep the face in frame while the agent moves); action `{ do: 'guests', seed, cue, action, warp, freeze }`
+drives the Guests behind the glass (`docs/guests-stage.md`).
 
 ## Quality checks before a video is called done
 

@@ -8,6 +8,7 @@
 // Options: --out <dir> (default docs/media)  --work <dir> (frames, intermediates; default the OS temp dir)
 //          --width --height --fps  --tier ultra|high|low  --parallel <n>  --shots a,b  --sample <n>
 //          --base <url> (a running game dev server; default: start `vite` from game/)  --gpu  --smoke  --resume
+//          --probe a-b (GPU diagnosis: frames a..b with each post pass off, target sizes; stops after b)
 //          --draft (720p, low tier: what this container can do)   --final (1080p, ultra: for a GPU machine)
 // Every shot is a fresh page: the game state comes from the shot's `setup`, the frames from its scripted
 // camera and actions, so a re-render of one shot is exact and the shots can be rendered in parallel.
@@ -126,7 +127,7 @@ async function main() {
     const list = await pool(shots, parallel, async (shot) => {
       const jsonPath = join(work, shot.name + '.json');
       if (args.resume && existsSync(jsonPath) && existsSync(join(work, shot.name + '.mp4'))) { log(`[${shot.name}] reusing ${jsonPath}`); return JSON.parse(readFileSync(jsonPath, 'utf8')); }
-      return renderShot({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, tier, gpu: !!args.gpu, sampleEvery: Number(args.sample || 0), log } });
+      return renderShot({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, tier, gpu: !!args.gpu, sampleEvery: Number(args.sample || 0), log, probe: args.probe ? { from: Number(String(args.probe).split('-')[0]), to: Number(String(args.probe).split('-')[1] ?? String(args.probe).split('-')[0]) } : null } });
     });
     results.push(...list);
   } finally { server.stop(); }

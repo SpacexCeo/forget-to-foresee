@@ -81,6 +81,15 @@ export function compileCamera(spec) {
         return { pos, look: spec.look.slice(), fov: fovAt(spec, u), roll: rollAt(spec, u) };
       };
     }
+    case 'track': {
+      // Moves relative to a live target (runner.trackPose); offline it moves around `at` from offset `off0` to `off1`.
+      const at = spec.at || [0, 0, 0], o0 = spec.off0, o1 = spec.off1 || spec.off0, lk = spec.lookOffset || [0, 0, 0];
+      return (u) => {
+        const e = E(u);
+        const o = lerpV(o0, o1, e);
+        return { pos: [at[0] + o[0], at[1] + o[1], at[2] + o[2]], look: [at[0] + lk[0], at[1] + lk[1], at[2] + lk[2]], fov: fovAt(spec, e), roll: rollAt(spec, u) };
+      };
+    }
     case 'keys': {
       // Fully keyframed: pos/look/fov tracks in shot seconds; `duration` scales u.
       const pos = new Track(spec.pos), look = new Track(spec.look), fov = spec.fov ? new Track(spec.fov) : null;

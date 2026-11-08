@@ -1,71 +1,121 @@
-// The 30 s trailer: pure beauty shots with four chapter words in the game's typography (READ · STAKE ·
-// FORGET · FORESEE), one gameplay glimpse of the glass, and the title card. No HUD except that glimpse.
-// The music is the game's own stems, pushed from calm to uneasy for the middle and resolved by the
-// survived stinger under the title.
-import { JUDGE_URL, BEAUTY_HIDE, SHELL_MID, SHELL, GLYPH, CAMP, INTERIOR, fadeIn, fadeOut, SETUP } from './common.mjs';
+// The trailer (41 s), reworked 08.11 on the owner's note "make the videos interesting": open on the strongest image
+// (the ink Guest emerging from the mist and drawing the ring sign on the glass, Iris small in front), then a fast,
+// legible story on the beats of the game's own music (60 bpm: every cut lands on a whole second, the chapter cards on
+// bar lines): a sign → Iris stakes → the seal, Verified ✓ → forget a memory → visions → the shard to auction → the
+// clans' faces and hands, meeting and trading → trial 13, the crisis → the vote → the title. The two differentiators
+// lead as cards: the sealed season and the Price of Memory. Motion in every shot; no wide fog shot over 2 s.
+// The crisis and vote shots cue the Guests' own trial-13 and pre-vote moments (docs/guests-stage.md) directly.
+import { JUDGE_URL, WALK_URL, BEAUTY_HIDE, GLYPH, fadeIn, fadeOut, WALK, IN_SHELL, guestSign, faceCam, handsCam, followCam, chapterCard, dim, BEHIND_IRIS, IRIS_AT_GLASS } from './common.mjs';
 
-const RISE = 6.0, SHELL4 = 5.0, PLAZA = 5.5, GLASS = 6.0, STAKE = 3.5, TITLE = 6.0;
-const word = (text, from, to) => ({ kind: 'word', text, position: 'low', from, to, fadeIn: 0.5, fadeOut: 0.5, rise: 12 });
+const word = (text, from, to) => ({ kind: 'word', text, position: 'low', from, to, fadeIn: 0.2, fadeOut: 0.25, rise: 10 });
+const FRAME = [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.45 }];
+const face = (clan, side, hands = false) => ({
+  name: (hands ? 'hands-' : 'face-') + clan, duration: 1.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+  setup: [{ do: 'frames', n: 90 }],
+  camera: hands ? handsCam(clan) : faceCam(clan, side),
+  overlays: [...FRAME],
+});
 
 export default {
-  title: 'Forget to Foresee: trailer (30 s)',
+  title: 'Forget to Foresee: trailer (41 s)',
   width: 1920, height: 1080, fps: 60,
   music: { gain: 1.0, fadeOut: 2.0 },
   output: { crf: 16, preset: 'slow', grain: 0 },
   shots: [
     {
-      // Out of the cloud sea: a crane rising from below the plateaus to the whole archipelago.
-      name: 'rise', duration: RISE, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
-      camera: { type: 'crane', path: [[30, 0, 118], [10, 0, 92]], y0: -6, y1: 34, look: [[0, 6, 0], [0, 4, 0]], fov: [42, 36], ease: 'inOutSine', allowLow: true },
-      overlays: [fadeIn(1.4), { kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.5 }],
+      // 0–6: out of black, the Guest comes forward through the mist and starts to draw; Iris small in the foreground.
+      name: 'emerge', duration: 6.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      setup: [...IN_SHELL, ...IRIS_AT_GLASS],
+      camera: BEHIND_IRIS,
+      actions: [guestSign(1.5), { at: 0.0, do: 'music', tension: 35 }],
+      overlays: [fadeIn(1.0), ...FRAME, word('They draw the future', 3.0, 5.8)],
     },
     {
-      // Shell IV, cracked open, mist below: a close orbit.
-      name: 'shell-iv', duration: SHELL4, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fade', duration: 0.6 },
-      camera: { type: 'orbit', center: SHELL_MID[4], radius: [54, 44], height: [22, 32], yawFrom: 230, yawTo: 268, lookHeight: -2, fov: [34, 38], ease: 'inOutSine' },
-      overlays: [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.5 }, word('Read the signs', 0.8, SHELL4 - 0.4)],
+      // 6–8: close on the glass: ink runs from the tendril and the ring closes.
+      name: 'ink', duration: 2.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      setup: IN_SHELL,
+      camera: { type: 'push', from: [0.6, 303.8, -2.0], look: [0, 303.95, -10.75], dist1: 5.6, fov: [38, 34], ease: 'outSine', minHeight: 290 },
+      actions: [guestSign(7.5)],
+      overlays: [...FRAME],
     },
     {
-      // The plaza: a low dolly across the Scroll medallion under the floating glyph, the clans at their camps.
-      name: 'plaza', duration: PLAZA, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fade', duration: 0.6 },
-      setup: [{ do: 'teleport', pos: [0, 0, 6.5], heading: Math.PI }],
-      camera: { type: 'dolly', path: [[-7.5, 1.9, 6.0], [-2.5, 2.6, 7.2], [5.5, 3.6, 4.5]], look: [[0, 1.2, 0], [0, 3, 0], [0, 8.5, 0]], fov: [42, 34], ease: 'inOutSine' },
-      actions: [{ at: 2.2, do: 'music', tension: 48 }],
-      overlays: [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.5 }, word('Stake silk on your reading', 1.0, PLAZA - 0.4)],
-    },
-    {
-      // Inside a Shell: the Guests behind the glass draw the sign, a slow push toward the glass.
-      name: 'glass', duration: GLASS, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fade', duration: 0.6 },
-      setup: [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'until', pred: 'interiorReal', max: 60 }],
-      camera: { type: 'push', from: [1.5, 302.6, 9.0], look: [0, 303.6, -10.7], lookTo: [0, 303.9, -10.7], dist1: 9.5, fov: [44, 38], ease: 'inOutSine', minHeight: 290 },
-      overlays: [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.35 }, word('Forget a memory to see further', 1.2, GLASS - 0.4)],
-    },
-    {
-      // One gameplay glimpse: the reading card inside the Shell, the human's reading and the stake.
-      name: 'stake', duration: STAKE, url: JUDGE_URL, ui: 'game', transition: { type: 'fade', duration: 0.5 },
-      setup: [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'frames', n: 180 }],
-      camera: { type: 'static', pos: [1.3, 303.3, 12.8], look: [0, 303.8, -10.7], fov: 42, drift: 0.12, minHeight: 300 },
-      actions: [{ at: 1.2, do: 'key', code: 'KeyF' }],
+      // 8–11: the reading card; F: Iris stakes 10 silk on her reading.
+      name: 'stake', duration: 3.0, url: JUDGE_URL, ui: 'game',
+      setup: [...IN_SHELL, { do: 'frames', n: 120 }],
+      camera: { type: 'push', from: [1.3, 303.3, 13.6], look: [0, 303.8, -10.7], dist1: 21.5, fov: [42, 40], ease: 'inOutSine', minHeight: 290 },
+      actions: [{ at: 0.9, do: 'key', code: 'KeyF' }, { at: 0.9, do: 'music', tension: 45 }],
       overlays: [],
     },
     {
-      // Title over the archipelago at a slow drift, the survived stinger, the links.
-      name: 'title', duration: TITLE, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, transition: { type: 'fadeblack', duration: 0.8 },
-      camera: { type: 'orbit', center: [0, 0, 0], radius: [88, 84], height: [34, 36], yawFrom: 84, yawTo: 96, lookHeight: 6, fov: 34, ease: 'inOutSine' },
-      actions: [{ at: 0.3, do: 'cue', name: 'sting_survived', gain: 0.8 }, { at: 0.0, do: 'music', tension: 8, gain: 0.5 }],
+      // 11–13: differentiator I, the sealed season: a card over a push on the floating glyph.
+      name: 'card-seal', duration: 2.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      camera: { type: 'push', from: [6, 12.5, 16], look: GLYPH, dist1: 9, fov: [36, 32], ease: 'inOutSine' },
+      overlays: [...FRAME, dim(-1, 3, 0.7), chapterCard('Sealed', 'The whole season is fixed before trial 1', 0.0, 2.0, 'I')],
+    },
+    {
+      // 13–16: trial 3 came true: Signs & Visions, Resolved, Verified ✓ (the walking judge path).
+      name: 'verified', duration: 3.0, url: WALK_URL, ui: 'game',
+      setup: [...WALK.staked, ...WALK.trial4, ...WALK.resolved],
+      actions: [{ at: 0.0, do: 'rig', dist: 12, yaw: 0.7 }, { at: 0.0, do: 'cue', name: 'gift_chime', gain: 0.8 }],
+      overlays: [],
+    },
+    {
+      // 16–18: differentiator II, the Price of Memory.
+      name: 'card-memory', duration: 2.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      camera: { type: 'orbit', center: [0, 0, 0], radius: [26, 22], height: [7, 9], yawFrom: 60, yawTo: 78, lookHeight: 5, fov: [38, 34], ease: 'inOutSine' },
+      overlays: [...FRAME, dim(-1, 3, 0.7), chapterCard('The price of memory', 'Forget one forever to see the future', 0.0, 2.0, 'II')],
+    },
+    {
+      // 18–22: M, "Forget it for a vision": the vision floods in, two future signs; the shard goes to auction (the log).
+      name: 'forget', duration: 4.0, url: WALK_URL, ui: 'game',
+      setup: [...WALK.staked, ...WALK.trial4, { do: 'key', code: 'KeyM' }, { do: 'frames', n: 12 }],
+      actions: [{ at: 0.0, do: 'rig', dist: 9, yaw: 0.4 }, { at: 0.4, do: 'forget', index: 1 }, { at: 0.4, do: 'music', tension: 58 }],
+      overlays: [],
+    },
+    // 22–26: the round-5 agents up close, one beat each: three faces and a pair of hands.
+    face('moss', 0.25), face('salt', -0.25), face('amber', 0, true), face('frost', -0.25),
+    {
+      // 26–29: trial 1 ends on the walking path and the clans go about the trial's trades: the camera follows Moss.
+      name: 'clans', duration: 3.0, url: WALK_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      setup: [...WALK.staked, { do: 'key', code: 'KeyT' }, { do: 'frames', n: 30 }, { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'trial', value: 2, max: 300 }, { do: 'frames', n: 90 }],
+      camera: followCam('moss'),
+      actions: [{ at: 0.0, do: 'music', tension: 66 }],
+      overlays: [...FRAME, word('Trade · lend · betray', 0.4, 2.8)],
+    },
+    {
+      // 29–33: trial 13, the crisis: the giants loom at the glass, the mist churns, the backlight flares.
+      name: 'crisis', duration: 4.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      setup: IN_SHELL,
+      camera: { type: 'push', from: [-1.2, 302.4, 9.5], look: [0, 304.6, -10.7], dist1: 15.0, fov: [44, 40], roll: [0, -0.02], ease: 'inOutSine', minHeight: 290 },
+      actions: [{ at: 0.0, do: 'guests', seed: 'trailer', cue: 'crisis', warp: 2.5 }, { at: 0.0, do: 'music', tension: 92 }, { at: 0.0, do: 'cue', name: 'guest_spike', gain: 0.9 }],
+      overlays: [...FRAME, chapterCard('Trial 13', 'The crisis', 0.3, 2.6)],
+    },
+    {
+      // 33–36: before the vote: every Guest faces the visitor, still and lit.
+      name: 'vote', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      setup: [...IN_SHELL, ...IRIS_AT_GLASS],
+      camera: BEHIND_IRIS,
+      actions: [{ at: 0.0, do: 'guests', seed: 'trailer', cue: 'vote', warp: 7.5 }, { at: 0.0, do: 'music', tension: 40 }, { at: 0.0, do: 'cue', name: 'guest_call', gain: 0.8 }],
+      overlays: [...FRAME, word('Then the clans vote', 0.4, 2.8)],
+    },
+    {
+      // 36–41: the title over a drift toward the glyph, the survived stinger, the links.
+      name: 'title', duration: 5.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      camera: { type: 'orbit', center: [0, 0, 0], radius: [70, 58], height: [26, 22], yawFrom: 84, yawTo: 100, lookHeight: 6, fov: 34, ease: 'outSine' },
+      actions: [{ at: 0.0, do: 'cue', name: 'sting_survived', gain: 0.8 }, { at: 0.0, do: 'music', tension: 8, gain: 0.5 }],
       overlays: [
-        { kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.55 },
-        { kind: 'title', from: 0.6, to: TITLE + 1, fadeIn: 1.4, fadeOut: 0.6, eyebrow: 'RAEN Computers · built at NEAR HACKATHON', text: 'Forget', text2: 'to foresee', sub: 'The future costs a memory', lines: ['*spacexceo.github.io/forget-to-foresee', 'github.com/SpacexCeo/forget-to-foresee'] },
-        fadeOut(TITLE, 1.2),
+        ...FRAME, dim(-1, 6, 0.45),
+        { kind: 'title', from: 0.2, to: 6, fadeIn: 0.9, fadeOut: 0.6, eyebrow: 'RAEN Computers · built at NEAR HACKATHON', text: 'Forget', text2: 'to foresee', sub: 'The future costs a memory', lines: ['*spacexceo.github.io/forget-to-foresee', 'github.com/SpacexCeo/forget-to-foresee'] },
+        fadeOut(5.0, 1.0),
       ],
     },
   ],
   captions: [
-    { from: 1.6, to: 5.2, text: 'A season fixed before trial 1 and checked against that seal.' },
-    { from: 6.4, to: 10.2, text: 'The Guests draw round signs on the glass. Read them.' },
-    { from: 11.4, to: 15.6, text: 'Six clans of AI agents trade words, silk and trust. Stake on what you read.' },
-    { from: 17.2, to: 21.4, text: 'Your agent Iris forgets a memory forever to see the future.' },
-    { from: 22.6, to: 25.2, text: 'Stake 10 silk. Watch the sign come true. Verified ✓' },
+    { from: 1.0, to: 5.6, text: 'Behind the glass, the Guests draw round signs of what is coming.' },
+    { from: 8.2, to: 10.8, text: 'Your agent Iris reads one. You stake silk on it.' },
+    { from: 13.2, to: 15.8, text: 'It comes true, and the seal checks it: Verified ✓' },
+    { from: 18.2, to: 21.8, text: 'Forget a memory forever: the visions come early, and the memory goes to auction.' },
+    { from: 22.2, to: 25.8, text: 'Six clans of AI agents with wallets and memory.' },
+    { from: 26.2, to: 28.8, text: 'They meet, trade, lend and break trust.' },
   ],
 };
-void SHELL; void GLYPH; void CAMP; void INTERIOR; void SETUP;
