@@ -468,6 +468,7 @@ export default {
   'wh.sign.statLabel': '{label}:',
   'wh.sign.anchor': 'Якорь: Раковина {shell}, {tiers}',
   'wh.sign.tiers': '{count, plural, one {уровень {from}} other {уровни {from}–{to}}}',
+  'wh.sign.tiersShort': '{count, plural, one {ур. {from}} other {ур. {from}–{to}}}',
   'wh.sign.pct': '{n}%',
   'wh.sign.range': '{from} – {to}%',
   'wh.sign.seconds': '{from} с – {to} с',

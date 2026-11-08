@@ -30,16 +30,22 @@ All desktop numbers in this document are CSS px at 1811 wide ("u"). The HUD scal
 them with one unit:
 
 ```css
-.wh-root { --wh-px: clamp(0.8px, calc(100vw / 1811), 1.35px); }   /* desktop: 1 u = 1 px at 1811, 0.8 px floor at ≤1449, 1.35 px cap at ≥2445 */
+.wh-root { --wh-px: clamp(0.6px, calc(100vw / 1811), 1.35px); }   /* 1 u = 1 px at 1811; proportional from 1087 px up; 1.35 px cap at ≥ 2445 */
 @media (max-width: 700px) { .wh-root { --wh-px: 1px; } }          /* mobile numbers are CSS px at 390 wide, no scaling */
 ```
 
 Every length in a package stylesheet is written as `calc(N * var(--wh-px))`; the
-shorthand used in this spec is `N u`. Font sizes scale the same way (section 3), so a
-1280-wide window shows the whole desktop composition at 0.8× and a 2560-wide one at
-1.35×, with identical proportions. Mobile layout switches at `max-width: 700px`
-(`layout === 'mobile'` in JS, decided by the orchestrator from `matchMedia`, passed to
-every package and re-passed through `update()` when it changes).
+shorthand used in this spec is `N u`. Font sizes scale the same way (section 3), so every
+window from 1087 to 2445 px wide shows the desktop composition at exactly the mockup
+proportions (1280 → 0.707×, 1440 → 0.795×, 1920 → 1.06×, 2560 → 1.35×). The price is
+small type below ~1300 px (body 9.5 px at 1280); the owner chose proportions over a
+floor. **Compact desktop range 701–1086 px:** the 0.6 u floor stops the top row fitting
+side by side, so in this range the toast is hidden (`tokens.css`), the Signs panel starts
+closed (`model.signs.open = false` is the orchestrator's default there) and overlays when
+opened, and the quest banner keeps `max-width: calc(100vw - 2 * 290u)` so it clears the
+trial card. Mobile layout switches at `max-width: 700px` (`layout === 'mobile'` in JS,
+decided by the orchestrator from `matchMedia`, passed to every package and re-passed
+through `update()` when it changes).
 
 ---
 
@@ -83,6 +89,9 @@ text/gold, anti-aliased edge for hairlines). They are the `--wh-*` properties in
 | `--wh-frame` | `rgba(232,214,172,.82)` | panel outer hairline `#e5d2a7` / `#dacca8` |
 | `--wh-frame-soft` | `rgba(196,186,156,.45)` | inner hairline, card border `#9e947c`, chip/button border |
 | `--wh-frame-dim` | `rgba(196,186,156,.28)` | hotbar button border, toast border |
+| `--wh-pill-border` | `rgba(214,206,180,.62)` | type / MAIN QUEST pill outline `#86836d` (pale parchment, not gold) |
+| `--wh-anchor-border` | `rgba(226,214,180,.80)` | anchor pill outline `#87897b`–`#aeaf9c` |
+| `--wh-kbd-border` | `rgba(222,210,180,.85)` | kbd outlines `#b3a48d`, `#a19b8a`, `#ada691` |
 | `--wh-prompt-border` | `rgba(216,200,160,.70)` | desktop prompt `#786b5c` (AA) |
 | `--wh-prompt-border-mobile` | `#f5d788` | mobile prompt bright 2px border `#fbf5e2` |
 | `--wh-bar-fill` | `linear-gradient(90deg, #cf9846 0%, #e2ac56 100%)` | segments `#d49d49` → `#dda754` |
@@ -102,6 +111,9 @@ text/gold, anti-aliased edge for hairlines). They are the `--wh-*` properties in
 | `--wh-text-muted` | `#c9c6b8` | 10.9:1 | timestamps `#cbc7b7`, inactive chip `#cdd0d0` |
 | `--wh-gold-text` | `#f6df9b` | 13.4:1 | gold labels |
 | `--wh-text-on-gold` | `#fffcec` | 7.6:1 on `#5b4215` | active chip text |
+| `--wh-tab-active-text` | `#fff6d2` | 10.3:1 on `#3b3e30` | active tab label |
+| `--wh-speaker-mobile` | `#ddc58a` | 9.6:1 | mobile dialogue bar speaker |
+| `--wh-line-mobile` | `#ecedea` | 13.4:1 | mobile dialogue bar line |
 
 All text/background pairs are ≥ 4.5:1 (the lightest background a text token sits on is
 `#3b3e30` for the active tab: `--wh-gold-text` 7.9:1, `--wh-text` 10.5:1).
@@ -147,9 +159,26 @@ EN/RU line keeps exactly the Latin line box (verified: 27.59 px at 23 px/1.2 for
 and mixed). The same faces are re-declared in `fonts.js` with Vite-bundled URLs for production
 builds; the two copies must stay identical.
 
+**Body copy: Source Sans 3 500** (OFL 1.1, `@fontsource/source-sans-3`, Latin and Cyrillic in
+one family). Zoomed crops show the mockup is a two-face system: titles, trial rows, tabs,
+hotbar labels, dialogue, prompt, pills and the Signs subtitle are serif, while the quest
+body, toast, log rows, sign stats, timestamps, chips and the small mobile labels are a
+humanist sans (serifless l/k/d, single-storey g, straight y, medium weight). Of PT Sans,
+Alegreya Sans, Source Sans 3, Fira Sans and Open Sans, Source Sans 3 is the only one whose
+width fit and cap-height fit agree (13.4–14.2 u by width, 12.9–14.4 u by cap for the body
+strings) and whose letterforms match the crops. Roles that use it carry
+`font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight)` (class
+`.wh-body`); `.wh-chip` has it built in.
+
+**Weight:** Libre Caslon Text 400 is lighter than the mockup lettering and 700 is far
+heavier. Serif titles ≥ 20 u get `-webkit-text-stroke: var(--wh-stroke-title) currentColor`
+(0.3 px, class `.wh-heavy`); serif labels 13–15 u get `--wh-stroke-text` (0.18 px,
+`.wh-heavy-sm`). Rendered against the "Signs and Visions" crop, 0.3 px sits between the
+mockup's weight and 0.4 px.
+
 Loading: `index.js` imports `fonts.js` (the only file that imports fontsource):
-`@fontsource/libre-caslon-text/400.css`, `/700.css` and the two Old Standard TT cyrillic woff2
-files. Packages never import fonts. Stack: `--wh-font: "Libre Caslon Text", "WH Cyrillic",
+`@fontsource/libre-caslon-text/400.css`, `/700.css`, `@fontsource/source-sans-3/400.css`,
+`/500.css`, `/600.css` and the two Old Standard TT cyrillic woff2 files. Packages never import fonts. Stack: `--wh-font: "Libre Caslon Text", "WH Cyrillic",
 "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif`. The small-caps tag ("✦ MAIN
 QUEST") is the same family, uppercase with tracking — no third family.
 
@@ -158,29 +187,35 @@ QUEST") is the same family, uppercase with tracking — no third family.
 Sizes were fitted to the measured string widths (Libre Caslon Text renders the mockup string at
 exactly the mockup width at the size listed). Line heights are measured line pitches.
 
-| Role | Token | Desktop | Mobile | letter-spacing | line-height | colour |
-|---|---|---|---|---|---|---|
-| title-l (quest title) | `--wh-fs-title-l` | 21 | 18.5 | 0 | 1.2 (mobile 1.05) | text, text-glow |
-| title (Signs and Visions) | `--wh-fs-title` | 23 | 23 | 0 | 1.2 | text, text-glow |
-| card-title (Trial 13 of 17) | `--wh-fs-card-title` | 20 | 14.5 | 0 | 1.2 | text |
-| sign-title (Sign #10) | `--wh-fs-sign-title` | 14 | 14.5 | 0 | 1.2 | text |
-| row (trial rows, Progress label) | `--wh-fs-row` | 14 | 13.5 (values) | 0 | 1.3 | text |
-| body (quest body, subtitle) | `--wh-fs-body` | 12.5 | 13.5 (quest body) / 12.5 (subtitle) | 0 | 1.25 (subtitle 1.4) | text-2 |
-| toast | `--wh-fs-toast` | 12 | 12 | 0 | 1.25 | text |
-| ui (chips, tabs, hotbar labels) | `--wh-fs-ui` | 11.5 | 11.5 | 0 | 1 | text / muted |
-| stat (sign stats, log rows) | `--wh-fs-stat` | 12 | 12 | 0 | 19 u (stats) / 1.35 (log) | text |
-| small (timestamps, Attempts/Skill Tier labels) | `--wh-fs-small` | 11 | 9.5 | 0 | 1.2 | muted |
-| tag (✦ MAIN QUEST) | `--wh-fs-tag` | 11 | 12 | .04em (mobile .06em) | 1 | gold-text, uppercase |
-| prompt | `--wh-fs-prompt` | 15 | 14.5 | 0 | 1 | text |
-| speaker (Ash) | `--wh-fs-speaker` | 14 | 12 | 0 | 1 | gold-text |
-| line / reply | `--wh-fs-line` / `--wh-fs-reply` | 13 / 14 | 12 / 12 | 0 | 1 | text |
-| anchor pill | `--wh-fs-anchor` | 14 | 13 | 0 | 1 | gold-text |
-| kbd / kbd-lg | `--wh-fs-kbd` / `--wh-fs-kbd-lg` | 11 / 14 | 11 / 14 | 0 | 1 | `#fef4e6` |
-| tile label | `--wh-fs-tile` | — | 12.5 | 0 | 1.15 | text |
+| Role | Token | Face | Desktop | Mobile | letter-spacing | line-height | colour |
+|---|---|---|---|---|---|---|---|
+| title-l (quest title) | `--wh-fs-title-l` | serif, `.wh-heavy` | 21 | 18.5 | 0 | 1.2 (mobile 1.05) | text, text-glow |
+| title (Signs and Visions) | `--wh-fs-title` | serif, `.wh-heavy` | 23 | 23 | 0 | 1.2 | text, text-glow |
+| card-title (Trial 13 of 17) | `--wh-fs-card-title` | serif, `.wh-heavy-sm` | 19 | 14.5 | 0 | 1.2 | text |
+| sign-title (Sign #10) | `--wh-fs-sign-title` | serif | 14 | 14.5 | 0 | 1.2 | text |
+| row (trial rows, Progress label) | `--wh-fs-row` | serif, `.wh-heavy-sm` | 14 | 13.5 (values) | 0 | 1.3 | text |
+| subtitle (Signs panel / sheet) | `--wh-fs-subtitle` | serif | 12.75 | 12.75 | 0 | 1.4 | text-2 |
+| body (quest body) | `--wh-fs-body` | sans 500 | 13.5 | 13.5 | 0 | 1.25 (mobile 15 px pitch) | text-2 |
+| toast | `--wh-fs-toast` | sans 500 | 13.5 | 13.5 | 0 | 1.25 | text |
+| ui (chips) | `--wh-fs-ui` | sans 500 | 13.5 | 13 | 0 | 1 | muted / on-gold |
+| tab (tabs, hotbar labels, type pill) | `--wh-fs-tab` | serif | 12.5 | 12.5 | 0 | 1 | text / gold-text |
+| close ("Close" in the Signs header) | `--wh-fs-close` | serif | 14 | 14 | 0 | 1 | text |
+| stat (sign stats, log rows) | `--wh-fs-stat` | sans 500 | 13 | 12.5 | 0 | 19 u (stats) / 1.35 (log) | text |
+| small (timestamps, Attempts / Skill Tier labels) | `--wh-fs-small` | sans 500 | 12 | 10.5 | 0 | 1.2 | muted / text-2 |
+| caption ("Explore", "71%") | `--wh-fs-caption` | sans 500 | 11.5 | 11.5 | 0 | 1.2 | text-2 |
+| tag (✦ MAIN QUEST) | `--wh-fs-tag` | serif | 11.5 | 11.5 | .03em (mobile .06em) | 1 | gold-text, uppercase |
+| prompt | `--wh-fs-prompt` | serif | 15 | 14.5 | 0 | 1 | text |
+| speaker (Ash) | `--wh-fs-speaker` | serif | 14 | 12 | 0 | 1 | gold-text / speaker-mobile |
+| line / reply | `--wh-fs-line` / `--wh-fs-reply` | serif | 13 / 14 | 12 / 12 | 0 | 1 | text / line-mobile |
+| anchor pill | `--wh-fs-anchor` | serif | 14 | 13 | 0 | 1 | gold-text |
+| kbd / kbd-sm / kbd-lg | `--wh-fs-kbd` / `--wh-fs-kbd-sm` / `--wh-fs-kbd-lg` | serif | 11 / 11 / 14 | 11 / 11 / 14 | 0 | 1 | `#fef4e6` |
+| tile label | `--wh-fs-tile` | serif | — | 12.5 | 0 | 1.15 | text |
 
-Libre Caslon Text has tall capitals (cap 0.77 em, x 0.53 em), so these sizes are 5–10 % smaller
-than a PT Serif fit would be; widths, not cap heights, were matched. "Close" in the Signs header
-(38 u wide) fits 14 u, one notch above `--wh-fs-ui`.
+Libre Caslon Text has tall capitals (cap 0.77 em, x 0.53 em), so its sizes are 5–10 % smaller
+than a PT Serif fit would be; for serif roles widths, not cap heights, were matched (the two
+agree for the sans roles). Russian strings run 1.7–1.9× the English width: mobile uses
+`wh.trial.titleShort` when `wh.trial.title` overflows, and the mobile anchor pill renders `wh.sign.tiersShort` (RU "ур. 11–13") when
+`wh.sign.tiers` overflows.
 
 Numerals are lining (both faces' default). Values follow labels with a wide gap, as in the
 mockup ("Shell stability:  34%"): render label and value as two spans with
@@ -196,14 +231,16 @@ mockup ("Shell stability:  34%"): render label and value as two spans with
 | `.wh-panel` | `background: var(--wh-panel-bg); backdrop-filter: blur(var(--wh-panel-blur)); border: 1px solid var(--wh-frame); border-radius: var(--wh-r-panel); box-shadow: var(--wh-shadow)` | the single pale hairline (trial card, toast, log panel, dialogue, hotbar) |
 | `.wh-frame` | adds `::before` inner hairline: `inset: 5u; border: 1px solid var(--wh-frame-soft); border-radius: calc(var(--wh-r-panel) - 5u); pointer-events:none` and the corner flourish slots (`.wh-frame__corner`) | the double frame (quest banner, Signs panel, sheet) |
 | `.wh-card` | `background: var(--wh-card-bg); border:1px solid var(--wh-frame-soft); border-radius: var(--wh-r-card)` | sign cards |
-| `.wh-pill` | `display:inline-flex; align-items:center; gap:6u; height:21u; padding:0 10u; border:1px solid var(--wh-gold-deep); border-radius:999px; background: var(--wh-pill-bg); color: var(--wh-gold-text); font-size: var(--wh-fs-ui)` | type pill "✦ Elemental"; `.wh-pill--anchor` is 28u high, 1px `--wh-gold` border, `--wh-anchor-bg`, 14u font |
+| `.wh-pill` | `display:inline-flex; align-items:center; gap:6u; height:21u; padding:0 10u; border:1px solid var(--wh-pill-border); border-radius:999px; background: var(--wh-pill-bg); color: var(--wh-gold-text); font-size: var(--wh-fs-ui)` | type pill "✦ Elemental"; `.wh-pill--anchor` is 28u high, 1px `--wh-anchor-border`, `--wh-anchor-bg`, 14u font |
 | `.wh-tag` | like `.wh-pill` but `height:20u; padding:0 9u 0 8u; font-size: var(--wh-fs-tag); text-transform:uppercase; letter-spacing:.06em` | "✦ MAIN QUEST" |
 | `.wh-chip` | `height:34u; padding:0 22u; border-radius:17u; border:1px solid var(--wh-frame-soft); background: var(--wh-chip-bg); color: var(--wh-text-muted); font-size: var(--wh-fs-ui)`; `[aria-pressed=true]` → `--wh-chip-active-bg`, `color: --wh-text-on-gold`, `border-color: #ffe78e`, `box-shadow: var(--wh-glow-chip)` | filter chips (mobile 31px high, padding 0 20px) |
-| `.wh-kbd` | `display:inline-grid; place-items:center; min-width:24u; height:24u; padding:0 5u; border:1px solid var(--wh-gold); border-radius:5u; background: var(--wh-kbd-bg); color:#fef4e6; font-size: var(--wh-fs-kbd); font-weight:400` ; `.wh-kbd--lg` = 38u×33u, radius 7u, 1.5px border, font 15u | hotkey boxes |
+| `.wh-kbd` | `display:inline-grid; place-items:center; min-width:24u; height:24u; padding:0 5u; border:1px solid var(--wh-kbd-border); border-radius:5u; background: var(--wh-kbd-bg); color:#fef4e6; font-size: var(--wh-fs-kbd); font-weight:400` ; `.wh-kbd--lg` = 38u×33u, radius 7u, 1.5px border, font 15u | hotkey boxes |
 | `.wh-btn-icon` | `width:48px; height:35px; border-radius:14px; border:1px solid var(--wh-frame-soft); background: var(--wh-btn-bg); color: var(--wh-gold); display:grid; place-items:center`; `.wh-btn-icon--round` = 34px circle | mobile top bar buttons, sheet close |
 | `.wh-divider` | `height:1px; background: var(--wh-divider)` | horizontal rules inside panels |
 | `.wh-bar` | segmented progress: `height:11u; border:1px solid var(--wh-bar-border); border-radius:6u; background: var(--wh-track-bg); padding:1px; display:grid; grid-auto-flow:column; gap:1px`; `.wh-bar__seg` filled → `--wh-bar-fill`, empty → transparent; first/last segments inherit the radius | 17 segments, 12 filled |
 | `.wh-icon` | `width:1em;height:1em; display:inline-block; vertical-align:-.15em; color: var(--wh-gold)` | wraps `icon()` output |
+| `.wh-body` | `font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight)` | the sans body-copy roles of §3.2 |
+| `.wh-heavy`, `.wh-heavy-sm` | `-webkit-text-stroke: var(--wh-stroke-title / --wh-stroke-text) currentColor` | serif weight correction (§3.1) |
 | `.sr-only` | standard | screen-reader labels |
 
 Radii tokens: `--wh-r-panel: 14u` (trial, log, toast body), `--wh-r-banner: 18u`

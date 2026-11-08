@@ -493,6 +493,7 @@ export default {
   'wh.sign.statLabel': '{label}:',
   'wh.sign.anchor': 'Anchor: Shell {shell}, {tiers}',
   'wh.sign.tiers': '{count, plural, one {Tier {from}} other {Tiers {from}–{to}}}',
+  'wh.sign.tiersShort': '{count, plural, one {Tier {from}} other {Tiers {from}–{to}}}',
   'wh.sign.pct': '{n}%',
   'wh.sign.range': '{from} – {to}%',
   'wh.sign.seconds': '{from} s – {to} s',
