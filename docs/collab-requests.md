@@ -231,3 +231,21 @@ themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="
 4. Before `start_season` under the protocol the observation's `season.merkleRoot`, `seasonId`, `seedCommitment` and
    `ashKeyCommitment` are `null` (the season is sealed by the nonce); anything that prints them during the intro should
    show the entropy commitment (`season.entropy.commitment`) or nothing. After sealing they are set as before.
+
+## To Task F (world HUD), from Task V (shard NFTs), 08.11
+
+### 9. "Shard minted on NEAR testnet ✓" next to a shard in Memories and in the auction list
+`game/src/net/shard-nft.js` computes the badge; like requests 7 and 8 the HUD only renders it.
+```js
+import { createShardWatcher } from '../net/shard-nft.js';
+const shards = createShardWatcher();                 // reads game/src/net/near-deployment.js; silent while shardContractId is null
+session.on('obs', () => shards.observe(session.obs)); // one RPC view per season
+shards.subscribe(() => refresh());
+const b = shards.badge(auction.id);                   // null, or { kind: 'shard', labelKey: 'wh.shard.near.minted', tipKey: 'wh.shard.near.tip', href, tokenId, owner }
+```
+Render `b` as an `<a class="wh-pill wh-shard__near" href target="_blank" rel="noopener">` on the auction card (open or
+resolved) and on the matching entry of the forgotten-memories list (`obs.shards` now lists every shard of the season with
+`kind`, `memory {kind, weight}`, `forgottenAtTick`, `price`, `unlocked {index, leaf}` and `tokenId`; `obs.auctions` has the
+same fields for the open ones). Optional: show the shard's image with `shardSvg(shardDataFromAuction(obs.season, a))`
+(an inline SVG string, 320×320, the same bytes the contract stores) in the auction card or the Memories panel: it is a
+deterministic ink ring, so it is also a nice visual for shards that are not minted. Strings exist in all five locales.
