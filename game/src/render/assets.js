@@ -13,7 +13,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, socketRole } from './asset-catalog.js';
-import { instancePriority, assetPriority, planStreaming, LruCache } from './streaming.js';
+import { instancePriority, assetPriority, planStreaming, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
 import { transformTriangles, MASK_ALL } from '../physics/collision.js';
 
@@ -154,6 +154,12 @@ export async function fetchGltf(name, { onProgress } = {}) {
   const gltf = await loader().parseAsync(buffer, url.slice(0, url.lastIndexOf('/') + 1));
   return { gltf, bytes: buffer.byteLength };
 }
+
+/** Whether the build ships a model file for this name (any variant falls back to the base file). */
+export function hasModelFile(name) { return !!MODEL_FILES[name]; }
+
+/** fetchGltf shared per name: a model started early (Iris, QA-030) is not downloaded twice. Callers clone the scene. */
+export const prefetchGltf = createPrefetch((name) => fetchGltf(name));
 
 export class AssetLibrary {
   /**

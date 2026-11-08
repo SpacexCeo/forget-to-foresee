@@ -70,6 +70,15 @@ export function springSamples(s, { hz = 60, maxSeconds = 2 } = {}) {
 /** Seconds a spring takes to settle (sampled). */
 export function springDuration(s, hz = 60) { return (springSamples(s, { hz }).length - 1) / hz; }
 
+/** Follow rate (per second) of eased pursuits such as the parallax: 0.12 of the gap per frame at 60 Hz. */
+export const FOLLOW_RATE = -Math.log(1 - 0.12) * 60;
+
+/**
+ * Share of the remaining gap an exponential follow closes in `dt` seconds (QA-032: wall-clock, not per frame, so a
+ * 30 fps phone or a 5 fps software renderer settles in the same time as a 60 fps desktop; two half steps equal one).
+ */
+export function followFactor(dt, rate = FOLLOW_RATE) { return 1 - Math.exp(-rate * Math.max(0, dt)); }
+
 /** Delay of the i-th item in a staggered list: step per item, capped so long lists finish together. */
 export function staggerDelay(i, { step = MOTION.stagger.step, cap = MOTION.stagger.cap } = {}) { return Math.min(i * step, cap); }
 
@@ -238,8 +247,9 @@ export function seal(el, o = {}) {
 }
 
 /**
- * Pointer parallax: layers move against the pointer by `depth × max` px (transform only, eased per frame). Off under
- * reduced motion and for coarse pointers. `layers` = [{el, depth}]. Returns an unbind function.
+ * Pointer parallax: layers move against the pointer by `depth × max` px (transform only, eased over wall-clock time,
+ * not per frame: QA-032). Off under reduced motion and for coarse pointers. `layers` = [{el, depth}]. `now` can be
+ * injected (tests). Returns an unbind function.
  */
 export function parallax(container, layers, o = {}) {
   if (!container || !container.addEventListener || !layers || !layers.length) return () => {};
@@ -248,19 +258,26 @@ export function parallax(container, layers, o = {}) {
   let coarse = false; try { coarse = !!(win.matchMedia && win.matchMedia('(pointer: coarse)').matches); } catch { /* no media queries */ }
   if (coarse || isReduced(doc)) return () => {};
   const max = o.max ?? MOTION.distance.parallax;
-  let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, alive = true;
+  const now = o.now || (() => (win.performance ? win.performance.now() : Date.now()));
+  let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, last = 0, alive = true;
+  const schedule = () => {
+    if (raf) return;
+    if (!last) last = now();
+    raf = win.requestAnimationFrame ? win.requestAnimationFrame(frame) : setTimeout(frame, 16);
+  };
   const frame = () => {
     raf = 0;
-    cx += (tx - cx) * 0.12; cy += (ty - cy) * 0.12;
+    const t = now(), k = followFactor((t - last) / 1000); last = t;
+    cx += (tx - cx) * k; cy += (ty - cy) * k;
     for (const { el, depth = 1 } of layers) if (el && el.style) el.style.transform = `translate3d(${(cx * depth).toFixed(2)}px, ${(cy * depth).toFixed(2)}px, 0)`;
-    if (alive && (Math.abs(tx - cx) > 0.05 || Math.abs(ty - cy) > 0.05)) raf = win.requestAnimationFrame ? win.requestAnimationFrame(frame) : setTimeout(frame, 16);
+    if (alive && (Math.abs(tx - cx) > 0.05 || Math.abs(ty - cy) > 0.05)) schedule(); else last = 0;
   };
   const move = (e) => {
     const w = win.innerWidth || 1, h = win.innerHeight || 1;
     tx = -((e.clientX / w) * 2 - 1) * max; ty = -((e.clientY / h) * 2 - 1) * max;
-    if (!raf) raf = win.requestAnimationFrame ? win.requestAnimationFrame(frame) : setTimeout(frame, 16);
+    schedule();
   };
-  const leave = () => { tx = 0; ty = 0; if (!raf) raf = win.requestAnimationFrame ? win.requestAnimationFrame(frame) : setTimeout(frame, 16); };
+  const leave = () => { tx = 0; ty = 0; schedule(); };
   container.addEventListener('pointermove', move);
   container.addEventListener('pointerleave', leave);
   return () => { alive = false; container.removeEventListener('pointermove', move); container.removeEventListener('pointerleave', leave); for (const { el } of layers) if (el && el.style) el.style.transform = ''; };

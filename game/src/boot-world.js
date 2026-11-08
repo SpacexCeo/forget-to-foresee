@@ -20,7 +20,8 @@ import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
-import { configureTextureSupport, setModelVariant, setModelOverrides } from './render/assets.js';
+import { configureTextureSupport, setModelVariant, setModelOverrides, hasModelFile, prefetchGltf } from './render/assets.js';
+import { irisStandInVisible } from './render/streaming.js';
 import { CAMPS } from './scenes/layout.js';
 
 /**
@@ -54,9 +55,22 @@ const systemReduced = (() => { try { return matchMedia('(prefers-reduced-motion:
 
 if (params.get('shells') === 'r2') setModelOverrides({ shell_1: 'shell_1_r2', shell_2: 'shell_2_r2', shell_3: 'shell_3_r2', shell_4: 'shell_4_r2' }); // review round 2
 if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice || (params.get('tier') || detectedTier) === 'low'))) setModelVariant('_m');
+// QA-030: the heroine streams before the camps and props, and her greybox capsule stays hidden while her model is
+// on its way (shown only without a file, after a failure, or after IRIS_STANDIN_AFTER seconds).
+const irisLoad = { hasModel: hasModelFile('agent_iris'), fetched: false, loaded: false, failed: false, t0: performance.now() };
+if (irisLoad.hasModel) prefetchGltf('agent_iris').then(() => { irisLoad.fetched = true; }, () => { irisLoad.failed = true; });
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
+const irisStandIn = [...avatar.children];
+function updateIrisStandIn() {
+  if (irisLoad.loaded) return;
+  irisLoad.loaded = avatar.children.length > irisStandIn.length; // attachIris (play/agents.js) added her model
+  if (avatar.userData.irisFailed) irisLoad.failed = true;
+  const show = irisStandInVisible({ ...irisLoad, waited: (performance.now() - irisLoad.t0) / 1000 });
+  for (const c of irisStandIn) c.visible = show;
+}
+updateIrisStandIn();
 player.smooth = true; // the locomotion model: speed-dependent acceleration, braking, turn rate (docs/movement.md)
 const lookdev = new LookDev({
   renderer, scene, camera,
@@ -303,6 +317,7 @@ function frame() {
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
+  updateIrisStandIn();
   lookdev.update(dt, focus, rig.actualDist);
   // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
   // still), smoothed per frame rather than toggled per physics step: at high frame rates many frames run

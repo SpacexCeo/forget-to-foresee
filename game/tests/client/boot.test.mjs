@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bootPlan, bootProgress, trickle, firstFrameBudget, BOOT_WEIGHTS, createLoadingScreen } from '../../src/ui/loading.js';
-import { instancePriority, byteFactor, planStreaming } from '../../src/render/streaming.js';
+import { instancePriority, byteFactor, planStreaming, createPrefetch, irisStandInVisible, IRIS_STANDIN_AFTER } from '../../src/render/streaming.js';
 import { chunkFor, ENTRY_MODULES } from '../../build/chunks.js';
 
 const MB = 1048576;
@@ -108,4 +108,47 @@ test('chunk plan: the graph stays acyclic (rules with ui, logogram with client-c
   assert.equal(chunkFor(root + '/src/play/locales/en.js'), 'locales');
   assert.equal(chunkFor(root + '/src/render/streaming.js'), 'client-core');
   assert.equal(chunkFor(root + '/node_modules/three/build/three.module.js'), 'three');
+});
+
+test('index.html preloads the lobby art only on the lobby path (QA-029: no unused-preload warning on direct loads)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const vm = await import('node:vm');
+  const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.ok(!/<link[^>]+lobby_bg/.test(html), 'no static preload link for the lobby art');
+  const src = html.match(/<script id="lobby-preload">([\s\S]*?)<\/script>/)[1];
+  const run = ({ search = '', hash = '', coarse = false }) => {
+    const added = [];
+    const doc = { head: { appendChild: (n) => added.push(n) }, createElement: () => ({ setAttribute() {} }) };
+    vm.runInNewContext(src, { document: doc, location: { search, hash }, URLSearchParams, matchMedia: () => ({ matches: coarse }) });
+    return added;
+  };
+  for (const c of [{}, { search: '?demo=judge' }, { search: '?play=direct' }, { hash: '#play' }, { coarse: true }]) {
+    const plan = bootPlan({ play: new URLSearchParams(c.search || '').get('play'), hash: c.hash || '', coarse: !!c.coarse });
+    const added = run(c);
+    assert.equal(added.length, plan.lobby ? 1 : 0, JSON.stringify(c));
+    if (added.length) assert.match(added[0].href, /assets\/ui\/lobby_bg\.jpg$/);
+  }
+});
+
+test('Iris streams once and early: a shared prefetch per name, retried after a failure (QA-030)', async () => {
+  const calls = []; let fail = true;
+  const get = createPrefetch(async (k) => { calls.push(k); if (fail) throw new Error('offline'); return { gltf: k }; });
+  const a = get('agent_iris'), b = get('agent_iris');
+  assert.equal(a, b, 'the play layer picks up the download the world started');
+  await assert.rejects(a);
+  assert.deepEqual(calls, ['agent_iris']);
+  fail = false;
+  assert.deepEqual(await get('agent_iris'), { gltf: 'agent_iris' }, 'a failed download may be retried');
+  assert.deepEqual(calls, ['agent_iris', 'agent_iris']);
+  await get('agent_iris');
+  assert.equal(calls.length, 2);
+});
+
+test('Iris stand-in: no capsule while her model is on its way, the capsule only as a fallback (QA-030)', () => {
+  assert.equal(irisStandInVisible({ hasModel: true, waited: 1 }), false, 'hidden while loading');
+  assert.equal(irisStandInVisible({ hasModel: true, loaded: true, waited: 99 }), false, 'hidden once her model is in');
+  assert.equal(irisStandInVisible({ hasModel: false }), true, 'no model file: the capsule is Iris');
+  assert.equal(irisStandInVisible({ hasModel: true, failed: true }), true, 'a failed download shows the capsule');
+  assert.equal(irisStandInVisible({ hasModel: true, waited: IRIS_STANDIN_AFTER }), true, 'a slow network shows it after the wait');
+  assert.equal(irisStandInVisible({ hasModel: true, fetched: true, waited: 60 }), false, 'downloaded and waiting for the play layer: still hidden');
 });
