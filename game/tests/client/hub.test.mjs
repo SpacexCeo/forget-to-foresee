@@ -118,3 +118,29 @@ test('hub goals and strings: every hub key exists in all five languages', async 
   }
   s.dispose();
 });
+
+test('hub: input during a flight is refused, not queued (QA-002)', async () => {
+  const { s, hub } = await setup();
+  const n = [...signsByShell(s.obs)].find(([, v]) => v.length)[0];
+  const tick = s.obs.tick;
+  assert.equal(hub.beginTransit('fly'), true);
+  assert.equal(hub.beginTransit('fly'), false, 'a second flight cannot start during the first');
+  assert.equal((await hub.advance()).reason, 'busy', 'T during the fade does not pass the trial');
+  assert.equal((await hub.stake()).ok, false, 'F during the fade does not stake on the island');
+  assert.equal(s.obs.tick, tick);
+  assert.equal((await hub.flyTo(n)).ok, true, 'the flight that owns the transition proceeds');
+  hub.endTransit();
+  assert.equal(s.obs.you.zone, 'shell');
+  assert.equal(s.obs.tick, tick, 'still the same trial after landing');
+  assert.equal((await hub.stake()).ok, true, 'after landing, F stakes');
+  s.dispose();
+});
+
+test('hub: player operations wait while automatic trials run', async () => {
+  const { s, hub } = await setup();
+  hub.advancing = true;
+  assert.equal((await hub.flyTo(1)).reason, 'busy');
+  assert.equal(hub.beginTransit('fly'), false);
+  hub.advancing = false;
+  s.dispose();
+});
