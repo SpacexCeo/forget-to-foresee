@@ -1,7 +1,7 @@
-# Handoff: state on 08.11.2026
+# Handoff: state on 08.11.2026 (evening)
 
-Branch: `integration/slice-frkc4d`, merged on 08.11 into `claude/happy-clarke-139pi1` with `codex/premium-ui` and the world HUD branch.
-Tests (after the 08.11 merge): `cd game && npm test` passes 239/239, `cd server && npm test` passes 28/28, and `npm run build` succeeds.
+Branch: `claude/laughing-thompson-dc7r09` (on top of `main` at `bf89d82`): Shell hub, full uk/it/zh translations, phone running, README refresh. **Not on `main` yet**: GitHub Pages publishes only `main`, so the live site shows the hub after the owner merges.
+Tests: `cd game && npm test` passes 266/266, `cd server && npm test` passes 28/28, and `npm run build` succeeds.
 Deadlines: models 11.11, freeze 13.11 20:00 Kyiv, submission 15.11 01:59 Kyiv.
 Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-rules.md`, `docs/collab.md`.
 
@@ -11,12 +11,13 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 |---|---|---|
 | Rules engine (baseline / v2 / v3) | works; parity with `prototype-2d/` | `game/src/game/engine.js` |
 | Agent-playable HTTP API | works: OpenAPI 3.1 spec, idempotent version-checked commands, per-viewer observations, SSE, Merkle proofs, an example agent that plays a full season, 28 tests | `server/`, `game/src/net/`, `docs/api/` |
+| Shell hub | default play mode (owner design 08.11): Shell dock, flight, reading card with Iris's pre-filled slots, stake from inside, leaving ends the trial, automatic trials, decision cards (offer, fragment, Key, vote, Heir); `?mode=walk` keeps the walking play | `game/src/play/hub.js`, `game/src/play/hub-ui.js`, `tests/client/hub.test.mjs` |
 | 3D client | archipelago with the play layer (goals, ticks, chronicle, Memories/Signs panels) running the same room code as the API; 360° camera; Shift to run; smooth acceleration and stopping; touch controls (tap to walk, drag to orbit, pinch to zoom); miniature HUD on phones; phones and `#play` skip the lobby | `game/index.html`, `game/src/main.js`, `game/src/play/` |
 | Lobby | matches the owner reference one to one (owner-supplied background art) | `game/src/ui/lobby.js`, `docs/ui/lobby-reference.jpg` |
-| Languages | EN, UA, RU, IT, 中文. `uk`, `it` and `zh` cover only the lobby and core labels; every other key falls back to English | `game/src/locales/` |
+| Languages | EN (primary), UA, RU, IT, 中文: all five full (uk/it/zh AI-translated 08.11, not reviewed by native speakers) | `game/src/locales/`, `game/src/play/locales/` |
 | NEAR contract `season-commit` | builds and passes tests; **not deployed** (the owner deploys) | `contracts/season-commit/` |
-| Audio | 60 procedurally synthesized sounds and a WebAudio runtime; **not wired into main.js**; not yet listened to by a human | `game/src/audio/`, `game/public/assets/audio/`, `docs/audio.md` |
-| VFX | GPU particle system and 4 flipbooks; integration into gameplay is partial | `game/src/vfx/`, `docs/vfx.md` |
+| Audio | 60 procedurally synthesized sounds and a WebAudio runtime, wired through `play/hooks.js` (room events → cues, zone ambience, tension, the Guest's strokes); not yet tuned by ear | `game/src/audio/`, `game/public/assets/audio/`, `docs/audio.md` |
+| VFX | GPU particle system and 4 flipbooks, wired through `play/hooks.js` (`VFX_MAP`) | `game/src/vfx/`, `docs/vfx.md` |
 
 ## Art (glb, KTX2 + meshopt; procedural sources in `art/`)
 
@@ -39,12 +40,14 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 
 ## Open items, in priority order
 1. **Faces.** The rework in `art/agents/` is committed as WIP and is **not built into the glbs yet**: the CPU rebuild was stopped when the work wound down. Next: finish the build (on a GPU it takes about 15 minutes; on this container's CPU, hours), check the close-ups in `docs/art/qa/agents/<clan>/anim/`, and ship. The owner's goal: smooth, symmetric faces that hold up in close third person.
-2. **Wire audio and VFX into the gameplay.** Follow the integration lines in `docs/audio.md` and `docs/vfx.md`.
+2. ~~Wire audio and VFX.~~ Already wired through `game/src/play/hooks.js`; what remains is listening to the mix and tuning volumes.
 3. ~~Merge Codex.~~ Done on 08.11 (only `game/src/ui/input.js` conflicted: Codex pointer/gamepad handling plus the touch controls).
-4. **Assets to fix:** Shell round 2 (nacre/iridescence, real wall pieces instead of slivers), `shell_interior` coordinates, the Guest's core glow, and pitch renders from the uncompressed sources.
-5. **Full UA, IT and ZH translation** of the rest of the UI.
-6. **Mobile:** a run button, quality tiers tuned for phones, lighter textures.
-7. **Owner decisions still open:** make v3 the default rules; P9; the shard-market lever (see `docs/decisions.md`).
+4. **Assets to fix** (needs Blender and ideally a GPU; the 08.11 evening cloud session had neither, so items 1 and 4 were not touched): Shell round 2 (nacre/iridescence, real wall pieces instead of slivers), `shell_interior` coordinates, the Guest's core glow, and pitch renders from the uncompressed sources.
+5. ~~Full UA, IT and ZH translation.~~ Done 08.11 (AI translation; a native-speaker pass is welcome).
+6. **Mobile:** running is done (a far tap or a double tap runs; G routes run on touch) and phone texture variants ship; still open: quality tiers measured on a real phone.
+7. **Shell hub follow-ups (not built):** a camera fly path instead of the fade; showing each sign only in the Shell it is about (Fable's "where is free" amendment; it changes what the player learns, so it needs an owner OK before the freeze); the 16-cell glossary on the glass; ghost strokes for visions; the testnet agent NFT (needs the owner's account; cut if not deployed by 11.11 noon).
+8. **Owner-only steps for the submission:** merge this branch into `main` (Pages republishes), deploy `season-commit` to testnet, the X post with the video, the application form, the `hackathon-submission` tag.
+9. **Owner decisions still open:** make v3 the default rules; P9; the shard-market lever (see `docs/decisions.md`).
 
 ## GPU workflow (for when servers are rented again)
 - From a cloud session, SSH is blocked; the Clore Jupyter can be reached over HTTPS when its host is allowed in the cloud environment (environment `forget-to-foresee-gpu`). The Jupyter password works as a token: send it in the `Authorization: token …` header.
