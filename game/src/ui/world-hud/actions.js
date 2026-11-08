@@ -69,6 +69,7 @@ export function mountActions(root, o = {}) {
 
   function render() {
     el.textContent = '';
+    el.classList.remove('wh-actions--dialogue-open');
     refs = {};
     if (!model) return;
     if (layout === 'mobile') {
@@ -192,6 +193,7 @@ export function mountActions(root, o = {}) {
     refs.bar.dataset.i18nAttrs = JSON.stringify({ title: expanded ? 'wh.dialogue.collapse' : 'wh.dialogue.expand' });
     refs.bar.setAttribute('title', i18n.t(expanded ? 'wh.dialogue.collapse' : 'wh.dialogue.expand'));
     refs.dialogueBox.classList.toggle('wh-is-expanded', expanded);
+    el.classList.toggle('wh-actions--dialogue-open', expanded); // the pill makes room (CSS)
     if (expanded) refs.more.removeAttribute('inert'); else refs.more.setAttribute('inert', '');
   }
 

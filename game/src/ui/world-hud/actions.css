@@ -182,7 +182,8 @@
   white-space: nowrap;
   transition: opacity var(--wh-transition), transform var(--wh-transition);
 }
-.wh-root .wh-prompt--mobile.wh-is-hidden { opacity: 0; transform: translate(-50%, 4px); pointer-events: none; }
+.wh-root .wh-prompt--mobile.wh-is-hidden,
+.wh-root .wh-actions--dialogue-open .wh-prompt--mobile { opacity: 0; transform: translate(-50%, 4px); pointer-events: none; }
 .wh-root .wh-prompt--mobile::after {
   /* the pointer notch under the pill */
   content: "";
