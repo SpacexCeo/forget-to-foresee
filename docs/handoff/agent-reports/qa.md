@@ -49,4 +49,5 @@ Scratch scripts for exploration, then the reproducible version of each finding a
 |---|---|
 | 7f65be6 | first pass: 21 defects filed |
 | 2004418 | QA-001, QA-002, QA-016, QA-017, QA-009c fixed; QA-003/004/005/006/007/008/009ab/011/012 reproduced; new QA-022/023/024/025 |
+| 6f2f288 (= main 1a17673) | QA-003, QA-004, QA-009, QA-020 fixed; QA-027/028 closed as renderer timing; QA-005 half (nothing opens now, README stale); QA-011, QA-012, QA-021 reproduced; new QA-029 preload warning, QA-030 Iris capsule at first, QA-031 top-left button over the trial card, QA-032 frame-stepped fades; films on a phone, loading path, agents, verifiers and motion input all clean |
 | 5f94cbb | QA-007, QA-008, QA-013, QA-019, QA-022 fixed; QA-006, QA-010 not reproduced; QA-003, QA-004, QA-005, QA-012, QA-020, QA-021 reproduced; new `verify.e2e.mjs` (node and python verifiers OK on real exports, tampered root and salt FAIL) and `motion.e2e.mjs` (lobby/onboarding input and reduced motion green; the world part found QA-027 and QA-028) |
