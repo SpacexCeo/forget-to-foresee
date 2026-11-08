@@ -12,7 +12,7 @@
 
 ## Judge in 5 minutes
 
-Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; ~60 MB loads before you can play, models keep streaming in afterwards and labeled greybox stand-ins fill in until they arrive). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
+Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; ~60 MB loads before you can play, models keep streaming in afterwards and unlabeled greybox stand-ins fill in until they arrive; place names are on the map, key **N**). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
 
 **Open** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk — a fixed season in Novice mode with fresh hints, played by walking the island. This table was verified step by step. The default play mode is the Shell hub (see [Play through the Shell hub](#play-through-the-shell-hub)); `&mode=walk` keeps the walking play the table describes.
 
@@ -47,7 +47,7 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 307`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 349`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
 
 ---
 
@@ -86,7 +86,7 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 | NFTs, shards, escrow | simulated in the engine (**mock**) |
 | Hashes and Merkle proofs | real SHA-256; the contract's test vectors are generated from the same engine (**real**) |
 | Money | in-game silk, no token, no payments |
-| 3D art | real models for everything listed above; any model that is missing or fails to load falls back to a **labeled greybox** |
+| 3D art | real models for everything listed above; any model that is missing or fails to load falls back to an unlabeled **greybox** stand-in (its "not final art" label shows only with `?dev=1`, the F3 dev HUD or on the asset review page) |
 | Access check | **mock**: a free synthetic guest entitlement stored in the browser, labeled |
 | Weekly tournament | **mock**: synthetic schedule, enrollment and results on the device, labeled "simulation" |
 | Agent API sessions | **real** server logic; test sessions only: in-memory, per-session tokens, no accounts |
@@ -103,13 +103,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 307 tests, ~20 s
+npm test            # 349 tests, ~20 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `# tests 307` / `# pass 307` / `# fail 0`; `✓ built in …s`.
+**See:** `# tests 349` / `# pass 349` / `# fail 0`; `✓ built in …s`.
 
-What the 307 tests cover (the breakdown below is the 260 of the first measurement; 47 were added on 08.11: 6 Shell hub, 9 uk/it/zh locale parity, 12 mobile run and phone quality tier, 5 audio/VFX cue mapping, 15 tutorial and first loop):
+What the 349 tests cover (the breakdown below is the 260 of the first measurement; 89 were added on 08.11: 15 tutorial and first loop, 6 Shell hub, 9 uk/it/zh locale parity, 12 mobile run and phone quality tier, 5 audio/VFX cue mapping, 18 locomotion and camera, 9 island map, 12 NEAR read-only client (mocked RPC), 3 QA regressions):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
@@ -153,6 +153,7 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
 | **W A S D** / click the ground / tap | walk; **Shift** run; on phones the run button (bottom right), a double tap or a far tap runs |
 | **F** | Shell hub: fly into the gold Shell; inside, stake 10 silk on your reading |
 | **G** | walk to the current goal |
+| **N** | the island map: camps, the Scroll, anchor zones, the four Shells with their state, your position and goal; click a place to walk there (in the Shell hub a Shell click flies) |
 | **E** | do the highlighted action; **1–9** pick another from the context menu |
 | **M** / **V** / **T** | Memories · Signs & Visions · end the trial (press twice to confirm while attention is left); in the Shell hub **T** leaves the Shell, which ends the trial |
 | **← →** / right-drag / one-finger drag | rotate the camera (limited); **↑ ↓** / wheel / pinch / **+ −** zoom from the overview down to third person (never first person) |

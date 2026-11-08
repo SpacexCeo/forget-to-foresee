@@ -101,6 +101,7 @@ export class ShellHub {
     this.pauseMs = pauseMs;
     this.busy = null;        // name of the running operation, or null
     this.advancing = false;
+    this.transit = null;     // a flight (or another screen transition) the player started; input waits for it (QA-002)
     this.card = null;        // the interrupt waiting for the player
     this.asked = new Set();
     this.seen = new Set((session.obs && session.obs.prophecies || []).map((p) => p.index));
@@ -151,8 +152,18 @@ export class ShellHub {
     return { shell: this.draft.slots[0] + 1, tick: impliedTick(p, this.draft.slots) };
   }
 
+  /** Claims the hub for a transition (the flight's fade) before any await, so input during it is refused. */
+  beginTransit(name) {
+    if (this.busy || this.advancing || this.transit) return false;
+    this.transit = name; this.changed();
+    return true;
+  }
+
+  endTransit() { this.transit = null; this.changed(); }
+
   async run(name, fn) {
-    if (this.busy) return { ok: false, reason: 'busy' };
+    // player operations wait for a running one, for automatic trials and for a transition they are not part of
+    if (this.busy || (this.advancing && name !== 'resolve') || (this.transit && this.transit !== name)) return { ok: false, reason: 'busy' };
     this.busy = name; this.changed();
     try { return await fn(); }
     finally { this.busy = null; this.changed(); }
@@ -234,7 +245,7 @@ export class ShellHub {
    * no decision card, the season still in play. Returns {ticks, reason}.
    */
   async advance({ max = MAX_AUTO } = {}) {
-    if (this.advancing || this.busy) return { ticks: 0, reason: 'busy' };
+    if (this.advancing || this.busy || this.transit) return { ticks: 0, reason: 'busy' };
     this.advancing = true; this.stopRequested = false; this.card = null; this.changed();
     let ticks = 0, reason = 'max';
     try {

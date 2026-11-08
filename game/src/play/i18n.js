@@ -44,6 +44,7 @@ export function renderMsg(i18n, key, args = {}) {
 }
 
 export function resolvePlayArg(i18n, v) {
+  if (typeof v === 'boolean') return v ? 'yes' : 'no'; // ICU select branches are yes/other (QA-001)
   if (v == null || typeof v !== 'object') return v;
   if ('$agentId' in v) return i18n.t('agent.' + v.$agentId);
   if (typeof v.key === 'string' && 'args' in v) return renderMsg(i18n, v.key, v.args);

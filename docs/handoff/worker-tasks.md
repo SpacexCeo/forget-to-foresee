@@ -304,3 +304,131 @@ Does not fix product code: files every defect with exact repro steps, expected v
    spikes, anything a judge would call a bug.
 3. Turn every reproducible defect into a failing e2e check where possible, so the fixing worker can prove the fix.
 4. Re-run on each merge the lead announces; keep `docs/qa/defects.md` current (open / fixed / won't fix).
+
+---
+
+## Task L: the world looks breathtaking (look-dev pass)
+
+**Branch:** `claude/lookdev` · **Owns:** `game/src/render/` except `camera-rig.js` (Task G) and `greybox.js` (Task H):
+`sky.js`, `clouds.js`, `fog.js`, `foliage.js`, `materials.js`, `decals.js`, `post.js`, `lookdev.js`, `quality.js`,
+`layers.js`, `noise.js`; `game/public/assets/env/**`; new `game/tests/client/lookdev*.mjs`; `docs/lookdev.md` (new).
+Keep the phone profile and its frame-time governor from `docs/mobile.md` working (re-measure).
+Goal: every frame of the floating archipelago reads like key art. Golden-hour light with soft, stable shadows; a sea of
+volumetric-looking clouds with depth and parallax; atmospheric perspective; rich but readable materials (stone, wood,
+nacre, grass) with correct PBR response; foliage with wind; tasteful post (ACES/AgX tone mapping, bloom only on emissive,
+subtle vignette and grain, no smeary TAA); Shells glowing with iridescent nacre; a day mood that supports reading signs.
+1. Capture the current look from fixed reference cameras (overview, plaza, bridge, camp, Shell exterior, inside a Shell)
+   at the high and low tiers; list what reads flat, noisy, washed out or cheap.
+2. Improve within the budgets (120 draw calls, 500k triangles; phone profile). Every change: before/after from the same
+   cameras in `docs/lookdev.md`. No regressions on the low tier and with reduced motion.
+
+---
+
+## Task M: NEAR for real — the season commitment on testnet, verified in the game
+
+**Branch:** `claude/near-live` · **Owns:** `contracts/**`, new `game/src/net/near*.js` (read-only RPC client), the
+NEAR badge/link in the play layer through a small API that Task F renders (agree in `docs/collab-requests.md`),
+new `game/tests/client/near*.mjs`, `docs/near.md` (new), the README real/mock rows about NEAR (only after it runs).
+Goal: turn the biggest "mock" in the README into "real" for the judges, on **testnet only** (free; never mainnet, never
+real funds).
+1. Create a dedicated testnet account through the faucet (`near account create-account sponsor-by-faucet-service …`),
+   build and deploy `season-commit` (README "Deploy to testnet"), and commit the judge season (`?demo=judge`, seed
+   `cc161d308faa67539af44205b56b6d4f`, rules v3): its schedule root, the Ash key commitment, and reveal every leaf with
+   its proof, exactly as the engine produces them. Keys stay in the session's keychain, never in the repository;
+   write down the account ids and the transaction hashes.
+2. In the game, a read-only client calls the public testnet RPC (`get_season`, `get_revealed_leaf`, `check_leaf`) and,
+   when the season is the committed one, shows "Committed on NEAR testnet ✓" with an explorer link next to
+   "Verified ✓"; it degrades silently (local verification only) when offline or for other seeds. No wallet, no signing
+   in the client.
+3. Tests with a mocked RPC; `docs/near.md` with the exact commands so the owner can redeploy under their own account;
+   update the README real/mock table and `docs/hackathon-rules.md` NEAR item only with what actually runs.
+
+---
+
+## Task N: a living island (NPC agents that feel alive)
+
+**Branch:** `claude/living-npcs` (worker G continues) · **Owns:** the animation and behaviour code in
+`game/src/play/agents.js` (not the nameplates: Task F), `game/src/play/behaviour.js`, `game/src/physics/motion.js`,
+new `game/tests/client/npc*.mjs`, `docs/npcs.md` (new). Presentation only: never change what the engine decides.
+Goal: the six clan agents read as people with intentions, in both play modes.
+1. Look-at: heads (and eyes when the face bones allow) track Iris when she is near or speaking to them; agents turn to
+   face whoever they talk to.
+2. Idle life: idle variations (weight shift, looking around, small gestures) with randomized but seeded timing, never
+   in sync between agents; `think` when a clan is deciding, `gesture_offer` when an offer is made, `celebrate` /
+   `defeat` on reveals that help or hurt them.
+3. Purposeful movement: agents walk to where the engine says they act (Scroll, anchors, camps, auctions) with the
+   Task G locomotion, avoid each other and Iris (simple local avoidance), and gather at the plaza for the vote.
+4. Conversations: when two clans trade words or silk, they meet and face each other with talk clips and a short
+   speech beat in the dialogue bar (through the existing world HUD API, coordinate with Task F).
+5. Budget: no frame-time regression on the phone profile; tests for the behaviour scheduler (seeded, deterministic).
+
+---
+
+## Task O: the Guests behind the glass (owner request 08.11, with a mood reference)
+
+**Branch:** `claude/guests-stage` · **Owns:** `game/src/scenes/shell.js`, new `game/src/play/guests-stage.js`, the Guest
+part of `game/src/play/presentation.js` (coordinate with nothing else there), new `game/tests/client/guests*.mjs`,
+`docs/guests-stage.md` (new). The model `guest.glb` and `art/guest/` belong to the GPU art session: ask it for model
+changes (a far-silhouette LOD, extra clips) through the lead. The global fog/post belong to Task L: agree any
+interior-fog parameter with L in `docs/collab-requests.md`.
+
+Owner's words, with a film still as mood reference (huge creatures looming in grey mist behind a lone figure and a
+round ink sign): "behind the glass I would sometimes like to see the aliens themselves." Mood only: the Guests stay
+our own design (`docs/decisions.md` 07.11: translucent, sail/fin membranes, nacre-crystal bodies; **no Arrival
+heptapods**, no limbs like giant hands, nothing from the film).
+1. Staging, not a static prop: the Guests are mostly hidden in dense, slowly moving mist behind the glass; they emerge
+   as enormous soft silhouettes (scale far beyond the player, backlit, low contrast, depth haze) at meaningful moments:
+   when a sign is drawn (the drawing Guest comes closest, the ink logogram forms on the glass between it and Iris), on a
+   reveal (a reaction), at the trial-13 crisis, and before the final vote; otherwise an occasional distant drift, never
+   on a fixed loop, seeded per season so it is deterministic. Both play modes (hub flights into a Shell, walking in).
+2. The shot: from Iris's position the composition reads like key art: Iris small in the foreground, the glass, the ring
+   sign, the silhouettes. Camera framing hints when a Guest appears (gentle, never stealing control).
+3. Sound: a low presence swell from the existing audio cues (`docs/audio.md`), synced to the emergence.
+4. Budgets and tiers: the low tier and the phone profile get a cheaper version (fewer Guests, no volumetric tricks)
+   without losing the moment; reduced motion keeps it but without drift. Tests for the scheduler (seeded, which moments
+   trigger, both modes). Screenshots of each moment in `docs/guests-stage.md`.
+
+---
+
+## Task P: chapter films (in-engine cutscenes between chapters)
+
+**Branch:** `claude/chapter-films` · **Owns:** new `game/src/play/chapters.js` (chapter model and triggers), new
+`game/src/cinematic/chapters/**` (one script per film, built on Task J's cinematic module: import it, do not fork it;
+ask J through `docs/collab-requests.md` for any API you need), the `chapter.*` strings in all five locale files
+(translate uk/it/zh yourself, parity test green), new `game/tests/client/chapters*.mjs`, `docs/chapters.md` (new).
+Owner idea: "films between chapters", so that anyone from 12 to 95 understands the story.
+1. Chapters of a season: Arrival (trials 1–4), The Language (5–8), Trust (9–12), The Crisis (13), The Vote (14–17),
+   plus an ending film per outcome (gift / weapon / lost / heir). Each film 20–40 s, in-engine (the island, the Shells,
+   the clans, the Guests behind the glass from Task O), built from what actually happened in this season (who betrayed
+   whom, which signs came true), never contradicting the engine. Presentation only.
+2. Storytelling for all ages: one idea per shot, a calm narrator line per shot (subtitles always on, readable size;
+   spoken by the browser's speech synthesis through Task Q's narration API when enabled), a final card "What matters
+   now: …" in one sentence. Skippable (one key/tap, hold to skip so it is not accidental), replayable from a Chronicle
+   menu, never blocks input longer than the film, pauses the season clock.
+3. Music and sound from the game's own assets. Phone and low tier: same films, cheaper shots.
+4. Tests for the chapter triggers (both play modes, deterministic per seed). Screenshots/frames of each film in
+   `docs/chapters.md`. Task J may cut the trailer from these films.
+
+---
+
+## Task Q: playable and understandable from 12 to 95 (accessibility and clarity)
+
+**Branch:** `claude/all-ages` · **Owns:** `game/src/ui/settings.js`, `game/src/ui/prefs.js`, new
+`game/src/play/narration.js` (speech synthesis wrapper exported for Tasks I and P), new `game/src/play/recap.js`
+("What is happening?" recap), the `a11y.*`, `recap.*`, `settings.a11y*` strings in all five locale files, new
+`game/tests/a11y*.test.mjs`, `docs/accessibility.md` (new). Task F owns the world HUD styling and Task I the tutorial:
+coordinate in `docs/collab-requests.md` (F applies your scale/contrast tokens; I uses your narration and simple mode).
+1. Narration: optional voice for Iris's lines, hints, tutorial and chapter films via the Web Speech API, in the current
+   locale (en, uk, ru, it, zh), with rate control; graceful no-op when unavailable.
+2. Readability: UI scale 100–200 %, a high-contrast theme, a dyslexia-friendly font option, colour-blind-safe sign and
+   state colours (never colour alone), minimum body text 16 px at 100 %.
+3. Simple mode (a third level next to Novice/Pro): Iris pre-reads every sign and proposes one action per trial; the
+   player confirms or changes it; no timers, pause anywhere, auto-pass trials when nothing needs a decision. The engine
+   rules do not change (only what is offered and how).
+4. Motor: everything playable with one mouse button or one finger; large targets (≥ 48 px); no required key chords,
+   no rapid presses; hold-to-confirm instead of double-press for destructive choices; full keyboard and gamepad
+   navigation of every panel.
+5. "What is happening?" (a button and the key `?`): two short sentences from Iris: where we are, what to do next,
+   built from the current observation.
+6. Checks: automated contrast and target-size tests; a headless walk-through of a full season in Simple mode at 200 %
+   scale in each locale; WCAG 2.2 AA as the target. Settings persist (with try/catch storage fallbacks).

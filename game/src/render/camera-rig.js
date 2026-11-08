@@ -1,7 +1,9 @@
 // Isometric 3/4 camera (spec 5: limited rotation and zoom, no first person). Zoom runs from the
 // high diorama view down to a low third-person view behind and above Iris (owner concept 07.11);
-// pitch, focus height and field of view follow the zoom. Follows a focus point;
-// a sphere sweep from the focus to the desired position keeps the camera out of geometry.
+// pitch, focus height and field of view follow the zoom. Follows a focus point with a slight lag
+// (slower vertically, so steps and bumps do not bob the view), looks ahead in the move direction,
+// snaps on teleports; a sphere sweep from the focus to the desired position keeps the camera out of
+// geometry. The focus the client passes is already interpolated between physics steps (docs/movement.md).
 // Inspect mode orbits a hero object up close (that is when <name>_inspect meshes swap in).
 import * as THREE from 'three';
 import { sweepSphere, MASK_CAMERA } from '../physics/collision.js';
@@ -23,6 +25,14 @@ export class CameraRig {
     this.reset();
     this.focus = new THREE.Vector3();
     this.smoothFocus = new THREE.Vector3();
+    this.hasFocus = false;
+    this.lookAhead = new THREE.Vector3();        // smoothed offset of the focus in the move direction
+    this.lookAheadTime = opts.lookAheadTime ?? 0.3;   // seconds of travel the camera leads by
+    this.lookAheadMax = opts.lookAheadMax ?? 1.0;     // meters
+    this.followRate = opts.followRate ?? 10;          // 1/s, horizontal follow
+    this.followRateY = opts.followRateY ?? 5;         // 1/s, vertical follow (steps, slopes)
+    this.snapDistance = opts.snapDistance ?? 6;       // a focus jump beyond this is a teleport: no easing
+    this._tmp = new THREE.Vector3();
     this.actualDist = this.dist;
     this.inspect = null;                         // {center: Vector3, radius, yaw, pitch, dist}
     this.lastSweep = 1;
@@ -91,16 +101,30 @@ export class CameraRig {
     return { fwd, right };
   }
 
-  update(dt, focus) {
+  /**
+   * @param {number} dt frame time
+   * @param {THREE.Vector3} focus point to follow (render-interpolated)
+   * @param {number[]|null} vel horizontal velocity [x, z] of the followed character, for the look-ahead
+   */
+  update(dt, focus, vel = null) {
     let center, yaw, pitch, dist;
     if (this.inspect) {
       ({ center, yaw, pitch, dist } = this.inspect);
       if (this.camera.fov !== 40) { this.camera.fov = 40; this.camera.updateProjectionMatrix(); }
     } else {
       this.focus.copy(focus);
-      const k = 1 - Math.exp(-dt * 10);
-      this.smoothFocus.lerp(this.focus, this.smoothFocus.lengthSq() === 0 ? 1 : k);
-      center = this.smoothFocus.clone().add(new THREE.Vector3(0, this.focusHeightFor(this.dist), 0));
+      const sf = this.smoothFocus;
+      if (!this.hasFocus || sf.distanceTo(this.focus) > this.snapDistance) { sf.copy(this.focus); this.lookAhead.set(0, 0, 0); this.hasFocus = true; }
+      else {
+        const k = 1 - Math.exp(-dt * this.followRate), ky = 1 - Math.exp(-dt * this.followRateY);
+        sf.x += (this.focus.x - sf.x) * k; sf.z += (this.focus.z - sf.z) * k;
+        sf.y += (this.focus.y - sf.y) * ky;
+      }
+      // Look-ahead: lead the focus by a fraction of a second of travel, less when zoomed out.
+      const la = this._tmp.set(vel ? vel[0] : 0, 0, vel ? vel[1] : 0).multiplyScalar(this.lookAheadTime * (1 - 0.6 * this.zoomT(this.dist)));
+      if (la.lengthSq() > this.lookAheadMax * this.lookAheadMax) la.setLength(this.lookAheadMax);
+      this.lookAhead.lerp(la, 1 - Math.exp(-dt * 3));
+      center = sf.clone().add(this.lookAhead).add(new THREE.Vector3(0, this.focusHeightFor(this.dist), 0));
       yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? THREE.MathUtils.clamp(this.pitchFor(dist) + this.pitchOffset, 8 * DEG, 75 * DEG);
       const fov = this.fovFor(dist);
       if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }

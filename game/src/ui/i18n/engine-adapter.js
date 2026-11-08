@@ -261,7 +261,7 @@ export function fxToLine(fx) {
   switch (fx.type) {
     case 'voice': return { speakerId: 'guests', key: 'line.voice', args: { count: fx.n } };
     case 'crisis': return { speakerId: 'ash', key: 'line.crisis', args: {} };
-    case 'event': return { speakerId: 'guests', key: 'line.event', args: { shell: { $shell: fx.place }, action: { $meaning: [1, fx.action] }, power: POWER[fx.power], verified: !!fx.verified } };
+    case 'event': return { speakerId: 'guests', key: 'line.event', args: { shell: { $shell: fx.place }, action: { $meaning: [1, fx.action] }, power: POWER[fx.power], verified: fx.verified ? 'yes' : 'no' } };
     case 'anchor': return { speakerId: 'iris', key: 'line.anchor', args: { shell: { $shell: fx.place }, tick: fx.t } };
     case 'ask': return { speakerId: 'guests', key: fx.yes ? 'line.askYes' : 'line.askNo', args: {} };
     case 'memory_burned': return { speakerId: 'iris', key: fx.purpose === 'key' ? 'line.burnKey' : 'line.burnVision', args: { kind: fx.kind } };

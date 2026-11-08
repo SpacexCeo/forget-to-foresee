@@ -84,13 +84,62 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
 
+## To Task F (UI polish, owner of `game/src/play/world-hud.js` and `game/src/ui/world-hud/**`) — from Task H (island map), 08.11
+
+### 7. Hotbar "Map" button → the island map panel
+The map panel exists on `claude/island-map` (`game/src/play/map-ui.js`, key **N**, `docs/map.md`). Its API, as the play
+layer exposes it: `play.map.open()`, `play.map.close()`, `play.map.toggle()`, `play.map.isOpen()`, and `play.handleKey('KeyN')`
+(toggles). `game/src/play/game.js` already passes `handlers.onMap` to `attachWorldHud(...)`; please:
+- add `{ id: 'map', hotkey: 'N' }` to the hotbar in `game/src/ui/world-hud/from-obs.js` (the `wh.hotbar.map` label already
+  exists in all locales; put it first or after Signs, your call) and, on phones, a map tile where your mobile layout wants it;
+- in `game/src/play/world-hud.js` `onAction`: `if (id === 'map' && handlers.onMap) handlers.onMap();`
+- the panel's own round tap target on coarse pointers (`.ftf-map-fab`, bottom-left, mirroring the run button) is a stopgap:
+  hide it once the mobile HUD has a map tile (`createMapPanel({ phoneButton: false })` in `game.js`, or a CSS rule on `.ftf-map-fab`).
+Panel exclusivity: opening the map calls `ui.close()` and `worldHud.hud.signs.close()`; the map closes itself when
+`ui.panel` or the Signs panel opens (checked each frame in `play.update`). While it is open `body.ftf-map-open` is set and
+the map's own stylesheet hides `.hub-dock`, `.hub-read`, `.pl-context`, `#prompt` and `.ftf-scene-cue` under its scrim.
+If your panel-exclusivity logic wants to own that, the body class is the hook.
+
+## To Task G (movement, owner of `game/src/ui/input.js`) — from Task H (island map), 08.11
+
+### 8. Forward `KeyN` to the play layer
+`WORLD_KEYS` in `game/src/ui/input.js` is an allowlist, so `input.hit('KeyN')` never fires and the new `KeyN` entry in
+`PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
+window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
+`game/src/play/map-ui.js`) can go.
+## To Task F (UI polish, owner of `game/src/ui/world-hud/**` and `game/src/play/world-hud.js`), from Task M (NEAR live), 08.11
+### 9. Render the NEAR testnet badge next to "Verified ✓"
+`game/src/net/near.js` computes the badge; it is DOM-free and never throws, so the HUD only has to render what it returns.
+Two steps:
+1. **Create one watcher per play session** where the sign cards are built (`game/src/play/world-hud.js` has the
+   session and re-renders on `session.on('obs', …)`):
+   ```js
+   import { createNearWatcher } from '../net/near.js';
+   const near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) });
+   session.on('obs', () => near.observe(session.obs));   // idempotent; it asks testnet once per season and once per revealed sign
+   near.subscribe(() => refresh());                      // fires when a badge appears or changes
+   ```
+   Pass `near` (or its two getters) into `buildHudModel` / the signs panel so the model can carry the badge.
+2. **Render the badge model** on the resolved sign cards and (optionally) once in the Signs & Visions header:
+   - `near.leafBadge(index)` → `null` or `{ kind: 'leaf', state: 'on-chain' | 'dry-run' | 'mismatch', labelKey, tipKey, href }`;
+   - `near.seasonBadge()` → `null` or `{ kind: 'season', state: 'committed', labelKey: 'wh.sign.near.committed', tipKey, href }`.
+   `null` means render nothing (offline, another seed, no deployment). Otherwise render an `<a class="wh-pill wh-sign__near wh-sign__near--<state>" href target="_blank" rel="noopener">`
+   with `i18n: labelKey` and `title`/`data-tip` from `tipKey`, placed right after the existing `wh-sign__verified` pill
+   (`signs.js` line ~64). The strings exist in all five locales: `wh.sign.near.committed` ("Committed on NEAR testnet ✓"),
+   `wh.sign.near.leaf` ("Verified on NEAR testnet ✓"), `wh.sign.near.dryrun` ("Checked by the NEAR contract ✓"),
+   `wh.sign.near.mismatch` ("NEAR record differs ✗"), `wh.sign.near.tip`. Use the `ok`/`fail` pill colours for ✓/✗;
+   the link opens the transaction (or the contract) on testnet.nearblocks.io.
+   The anchor must stop the card's own click (`e.stopPropagation()`), and it is a real link, so keyboard focus works for free.
+Nothing else is needed: the watcher reads `game/src/net/near-deployment.js` (contract id and committed seasons; a `null`
+contract id disables it), calls only read-only RPC views, and the judge season (`?demo=judge`) is the one committed on
+testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the exact semantics of each state: `docs/near.md`.
 ## From Task I (tutorial and onboarding, branch `claude/tutorial`), 08.11
 
 Context: `docs/tutorial.md`. The first stake of a new player must land on trial 3 (the rules generate events only for
 trials 3–17 and resolve anchors only when an event lands on their trial, so a stake on trial 1 or 2 is never returned
 and never mentioned). The onboarding goals now say so; the three requests below would make the UI do it by default.
 
-### 7. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
+### 10. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
 - `wh.hint.firstSign` / `.hub` and `wh.hint.anchor` overflow the 338-unit toast at 1280×800 ("…read it with…"); cap the
   text at about 90 characters or let the toast grow to three lines. `firstSign` also stays on screen past the reveal
   (untilDone on "open V"): please mark it done when the sign reaches the chronicle.
@@ -103,7 +152,7 @@ and never mentioned). The onboarding goals now say so; the three requests below 
   change, or let the hub's `stake` goal replace it.
 - The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
 
-### 8. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
+### 11. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
 - `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
   on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
   Same public-policy spirit as the autopilot: no hidden state, just the rule from `docs/rules-baseline.md` §2.2.
@@ -117,7 +166,7 @@ and never mentioned). The onboarding goals now say so; the three requests below 
   "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
   "trial 3" instead of the menu's "tick 3".
 
-### 9. To Task J (`docs/submission/video-shot-list.md`)
+### 12. To Task J (`docs/submission/video-shot-list.md`)
 The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
 item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
 first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the

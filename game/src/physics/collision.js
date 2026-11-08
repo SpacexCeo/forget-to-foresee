@@ -249,7 +249,7 @@ function triNormal(a, b, c) {
  * large `delta` is. Low frame rates only run more fixed 30 Hz steps; the step size never grows.
  * @returns {{pos:number[], grounded:boolean, groundNormal:number[]|null, hitWall:boolean, substeps:number}}
  */
-export function moveCapsule(world, pos, delta, { radius = 0.35, height = 1.75, mask = MASK_PLAYER, walkableY = 0.7, iterations = 4 } = {}) {
+export function moveCapsule(world, pos, delta, { radius = 0.35, height = 1.75, mask = MASK_PLAYER, walkableY = 0.7, iterations = 4, ledgeGrip = 0 } = {}) {
   let p = pos.slice();
   let remaining = delta.slice();
   const total = Math.sqrt(len2(delta));
@@ -279,6 +279,21 @@ export function moveCapsule(world, pos, delta, { radius = 0.35, height = 1.75, m
           if (dot(sub(pc, a), n) < 0) n = scale(n, -1);
         }
         const depth = radius - d;
+        // Rim contact (the capsule bottom touches a triangle edge, not a face: a bridge mouth, a step, a curb).
+        // With `ledgeGrip`, an overhang up to that distance still counts as ground (lift straight up, no
+        // outward shove, so nobody slides off an edge they stand on); beyond it the capsule is simply
+        // unsupported and falls. Without it every such contact is a wall (the exact legacy behaviour).
+        if (ledgeGrip > 0 && n[1] > 0.15 && n[1] < walkableY && d > 1e-6 && Math.abs(dot(n, triNormal(a, b, c))) < 0.999) {
+          const horiz = d * Math.hypot(n[0], n[2]);
+          if (horiz <= ledgeGrip) {
+            const lift = Math.sqrt(Math.max(0, radius * radius - horiz * horiz)) - d * n[1];
+            if (lift > 0) p[1] += lift + 1e-5;
+            grounded = true; groundNormal = [0, 1, 0];
+            if (remaining[1] < 0) remaining[1] = 0;
+            pushed = true;
+          }
+          continue;
+        }
         if (n[1] >= walkableY) {
           // Walkable ground: lift straight up so the capsule does not slide down gentle slopes.
           p[1] += depth / n[1] + 1e-5;
@@ -313,7 +328,10 @@ export function moveCapsule(world, pos, delta, { radius = 0.35, height = 1.75, m
       if (hit.d2 < radius * radius) {
         const n = triNormal(a, b, c);
         const up = n[1] >= 0 ? n : scale(n, -1);
-        if (up[1] >= walkableY) { grounded = true; groundNormal = up; break; }
+        if (up[1] < walkableY) continue;
+        // With ledge handling, a rim further out than the grip is not support (the capsule is falling off it).
+        if (ledgeGrip > 0 && Math.hypot(hit.onTri[0] - c0[0], hit.onTri[2] - c0[2]) > ledgeGrip && hit.onTri[1] < c0[1] - probe) continue;
+        grounded = true; groundNormal = up; break;
       }
     }
   }
