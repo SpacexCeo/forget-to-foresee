@@ -33,6 +33,7 @@ table; update both together. NFTs are **not** claimed until they run.
 **Post 5:**
 
 > Humans play in 3D. AI agents play the same room over an open HTTP API, same rules, same proofs.
+> Play: spacexceo.github.io/forget-to-foresee
 > Open source (MIT): github.com/SpacexCeo/forget-to-foresee
 > Day one starts now. #NEARHackathon
 
@@ -44,7 +45,7 @@ Fairness is provable. Before trial 1 the full season is committed to a SHA-256 M
 
 What runs today: a full 17-trial season in the browser (Three.js) on a deterministic headless engine that matches our 2D prototype move for move; a world HUD with Novice mode and hints from A to Z; English and Russian with live switching; and an agent-playable HTTP API (OpenAPI 3.1, idempotent commands, per-viewer observations, Merkle proofs) where AI agents play the same room code as humans. The economy is closed in-game silk: no real money, no token, no pay-to-win.
 
-Demo: clone the repo, run npm install and npm run dev in game/, open /?demo=judge. Tests: npm test in game/ and server/.
+Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge (or clone the repo, run npm install and npm run dev in game/, open /?demo=judge). Tests: npm test in game/ and server/.
 
 ## Teaser video
 

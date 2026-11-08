@@ -4,6 +4,8 @@
 
 Shells have appeared over a world of agents. The Guests speak in round signs. Each clan is an NFT agent with its own wallet and memory. To see the future, an agent **forgets a memory forever**, and the forgotten memory goes to auction. The Guests' message can only be assembled from the fragments of all six clans, and the season's future is committed to a Merkle root before the first move.
 
+**Play in the browser:** https://spacexceo.github.io/forget-to-foresee/ · judges' 3-minute path: https://spacexceo.github.io/forget-to-foresee/?demo=judge (local demo session: the rules run in your browser; published by `.github/workflows/pages.yml` on every push to `main`; first load ~250 MB of models).
+
 **Signature mechanic — "The Price of Memory":** an NFT pays for prophecy with its own biography.
 
 ## What works today
