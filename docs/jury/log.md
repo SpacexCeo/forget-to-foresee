@@ -24,17 +24,17 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   (screener behaviour, jury profile, track exemplar at three time scales, field size: 25 `games`, 21 `nfts`, 49
   `open` of 302 on 2026-11-08), two more gates (hard-coded results, track mismatch), and pointers to the three
   checklists (20 screener checks, 15-item ten-minute play session, 15-item accessibility pass).
-- 17:40 UTC: `notes/demo-video-and-trailer.md` done (32 sources); its ten-item checklist is now the C6 checklist.
+- 17:15 UTC: `notes/demo-video-and-trailer.md` done (32 sources); its ten-item checklist is now the C6 checklist.
   Findings for the scorecard, not red flags: the repo shot list (`docs/submission/video-shot-list.md`) opens with
   about 12 s of lobby title and tutorial setup, which the sources and HACKATHON.md ("skip setup") argue against; it
   records from `?demo=judge` while the README's verified table uses `?demo=judge&mode=walk`, and says "Continue as
   guest" where the README says "Play as guest"; its editor notes allow speed ramps (ETHGlobal forbids sped-up
   footage) and a 60 to 90 s cut (below the 2-minute floor hackathon judges expect; the X free tier caps at 140 s).
-- 17:50 UTC: `notes/past-near-hackathon-winners.md` done (23 sources; REDACTED 2024, MetaBUILD III, NEARCON 2022
+- 17:16 UTC: `notes/past-near-hackathon-winners.md` done (23 sources; REDACTED 2024, MetaBUILD III, NEARCON 2022
   and Encode winner lists were not retrievable and are marked unverified). Rubric: section 1 gains the five
   recurring NEAR criteria with their source and the winners' common traits; C4 gets a calibration note (an undeployed
   contract caps C4 at 5); C5 names the go-to-market question.
-- 18:00 UTC: `notes/onchain-game-design.md` done (29 first-hand sources, blocked pages marked). Rubric C4 gains the
+- 17:17 UTC: `notes/onchain-game-design.md` done (29 first-hand sources, blocked pages marked). Rubric C4 gains the
   eight diagnostic questions that bite here and a calibration: generator, committer and verifier are the same browser
   code today, which the literature calls the theatre case; named mitigations (uncontrolled entropy before the root,
   root registered on the deployed contract before trial 1, out-of-band verifier). Reported to the lead as an early
