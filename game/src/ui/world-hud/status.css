@@ -400,3 +400,42 @@
 @media (max-width: 700px) and (max-height: 440px) {
   .wh-root .wh-trial--mobile { display: none; }
 }
+
+/* ---------- short viewports (tokens.css explains the tiers) ---------- */
+.wh-root .wh-quest__more {
+  display: none; position: absolute; right: 20px; bottom: 222px; width: 36px; height: 36px; place-items: center;
+  border: 1px solid var(--wh-frame-soft); border-radius: 50%; background: var(--wh-btn-bg); color: var(--wh-gold); z-index: 1;
+}
+.wh-root .wh-quest__more-icon { width: 16px; height: 16px; transition: transform var(--wh-transition); }
+.wh-root .wh-quest__more[aria-expanded="true"] .wh-quest__more-icon { transform: rotate(180deg); }
+@media (max-width: 700px) {
+  html[data-vh="short"] .wh-root .wh-topbar, html[data-vh="tiny"] .wh-root .wh-topbar { top: max(44px, calc(8px + env(safe-area-inset-top, 0px))); }
+  /* the quest card is one line (tag + title); the chevron reveals the body in place */
+  html[data-vh="short"] .wh-root .wh-quest--mobile, html[data-vh="tiny"] .wh-root .wh-quest--mobile { bottom: 212px; min-height: 0; padding: 0 0 8px; border-radius: 16px; }
+  html[data-vh="short"] .wh-root .wh-quest--mobile .wh-quest__body, html[data-vh="tiny"] .wh-root .wh-quest--mobile .wh-quest__body { padding: 8px 52px 0 16px; }
+  html[data-vh="short"] .wh-root .wh-quest--mobile .wh-quest__title, html[data-vh="tiny"] .wh-root .wh-quest--mobile .wh-quest__title {
+    display: block; max-width: none; margin: 3px 0 0; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html[data-vh="short"] .wh-root .wh-quest--mobile:not([data-expanded="true"]) .wh-quest__text, html[data-vh="tiny"] .wh-root .wh-quest--mobile:not([data-expanded="true"]) .wh-quest__text { display: none; }
+  html[data-vh="short"] .wh-root .wh-quest--mobile .wh-quest__text, html[data-vh="tiny"] .wh-root .wh-quest--mobile .wh-quest__text { margin-top: 4px; max-width: none; }
+  html[data-vh="short"] .wh-root .wh-quest--mobile .wh-quest__art, html[data-vh="tiny"] .wh-root .wh-quest--mobile .wh-quest__art,
+  html[data-vh="short"] .wh-root .wh-quest--mobile .wh-quest__chev, html[data-vh="tiny"] .wh-root .wh-quest--mobile .wh-quest__chev,
+  html[data-vh="short"] .wh-root .wh-quest__dots, html[data-vh="tiny"] .wh-root .wh-quest__dots { display: none; }
+  html[data-vh="short"] .wh-root .wh-quest__more, html[data-vh="tiny"] .wh-root .wh-quest__more { display: grid; }
+  /* the trial card is one row: title + progress; the attempts / skill stats go */
+  html[data-vh="short"] .wh-root .wh-trial--mobile { bottom: 160px; height: 44px; grid-template-columns: 22px minmax(0, 1fr); border-radius: 12px; }
+  html[data-vh="short"] .wh-root .wh-trial--mobile .wh-trial__vr, html[data-vh="short"] .wh-root .wh-trial--mobile .wh-trial__stat { display: none; }
+  html[data-vh="short"] .wh-root .wh-trial--mobile .wh-trial__main { margin: 0 10px 0 10px; align-self: center; flex-direction: row; align-items: center; gap: 10px; }
+  html[data-vh="short"] .wh-root .wh-trial--mobile .wh-trial__title { flex: 0 1 auto; line-height: 1.2; }
+  html[data-vh="short"] .wh-root .wh-trial--mobile .wh-trial__phase { display: none; }
+  html[data-vh="short"] .wh-root .wh-trial--mobile .wh-trial__barrow { flex: 1 1 auto; margin-top: 0; }
+  /* tiny: no trial card; the quest line sits right above the tiles */
+  html[data-vh="tiny"] .wh-root .wh-trial--mobile { display: none; }
+  html[data-vh="tiny"] .wh-root .wh-quest--mobile { bottom: 136px; }
+  html[data-vh="tiny"] .wh-root .wh-quest__more { bottom: 144px; width: 32px; height: 32px; }
+  html[data-vh="tiny"] .wh-root .wh-quest--mobile .wh-quest__body { padding-top: 6px; }
+}
+/* tiny landscape (667×300): the quest line keeps the left half, the Shell dock the right half */
+@media (max-width: 700px) and (max-height: 520px) and (orientation: landscape) {
+  html[data-vh="tiny"] .wh-root .wh-quest--mobile { right: calc(50% + 6px); }
+  html[data-vh="tiny"] .wh-root .wh-quest__more { right: calc(50% + 12px); }
+}

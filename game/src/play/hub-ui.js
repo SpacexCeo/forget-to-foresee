@@ -13,7 +13,7 @@ const ROMAN = ['I', 'II', 'III', 'IV'];
 
 const CSS = `
 /* Spacing scale 4/8/12/16/24; radii 10 (buttons) / 14 (panels) / 16 (cards) / 999 (pills); 40 px targets, 48 on phones. */
-.hub-host { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
+.hub-host { position: absolute; inset: 0; pointer-events: none; z-index: 3; } /* inside #ui, which is as tall as the visible viewport */
 .hub-host .hub-box { position: absolute; pointer-events: auto; background: var(--wh-panel-bg, rgba(16,26,27,.92)); border: 1px solid var(--wh-frame, rgba(232,214,172,.8));
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); -webkit-backdrop-filter: blur(var(--wh-panel-blur, 10px)); backdrop-filter: blur(var(--wh-panel-blur, 10px)); color: var(--wh-text, #faf7ee); }
 .hub-host h3 { margin: 0; font: 400 20px/1.2 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); -webkit-text-stroke: .3px currentColor; }
@@ -48,7 +48,7 @@ const CSS = `
 .hub-slots .hub-mean small { display: block; margin-top: 2px; font: 500 10.5px/1.2 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); }
 .hub-slots .hub-mean.hub-edited small { color: var(--wh-gold, #e4c272); }
 .hub-target { margin-top: 12px; padding: 8px 12px; border-radius: 8px; background: var(--wh-anchor-bg, rgba(38,34,22,.7)); font: 400 15px/1.3 var(--wh-font, Georgia, serif); }
-.hub-card { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); padding: 20px 24px 24px; border-radius: 16px; border-color: var(--wh-gold, #e4c272); background: rgba(12, 20, 21, .96) !important; }
+.hub-card { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: calc(var(--vvh, 100vh) - 24px); overflow: auto; padding: 20px 24px 24px; border-radius: 16px; border-color: var(--wh-gold, #e4c272); background: rgba(12, 20, 21, .96) !important; }
 .hub-card .hub-row { margin-top: 16px; }
 .hub-status { left: 50%; top: calc(152 * var(--wh-px, 1px) + 48px); transform: translateX(-50%); /* the transient row under the quest banner (152 u), below the inspect hint slot */ padding: 8px 8px 8px 16px; border-radius: 999px; font: 400 15px/1.2 var(--wh-font, Georgia, serif); display: flex; gap: 12px; align-items: center; }
 .hub-status button { min-height: 36px; padding: 0 12px; font-size: 12.5px; border-radius: 999px; }
@@ -81,6 +81,30 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   .hub-shells { margin-top: 0; gap: 6px; } .hub-shells button { min-height: 44px; padding: 4px 2px 3px; font-size: 16px; gap: 3px; }
   .hub-shells button small { font-size: 9.5px; }
   .hub-dock .hub-row { margin-top: 6px; } .hub-dock .hub-row button { min-height: 40px; width: 100%; }
+}
+/* Short viewports (html[data-vh], see tokens.css): the dock is a slim bar of five cells under the top bar; the
+   reading card fits the visible height; every button keeps a 44 px hit zone around its 40 px box. */
+@media (max-width: 700px) {
+  html[data-vh="short"] .hub-host button, html[data-vh="tiny"] .hub-host button { position: relative; min-height: 40px; }
+  html[data-vh="short"] .hub-host button::before, html[data-vh="tiny"] .hub-host button::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
+  html[data-vh="short"] .hub-dock, html[data-vh="tiny"] .hub-dock { top: calc(88px + env(safe-area-inset-top, 0px)); padding: 6px; border-radius: 12px; display: grid; grid-template-columns: repeat(4, 1fr) 1.7fr; gap: 6px; }
+  html[data-vh="short"] .hub-dock .hub-eyebrow, html[data-vh="tiny"] .hub-dock .hub-eyebrow, html[data-vh="short"] .hub-dock h3, html[data-vh="tiny"] .hub-dock h3, html[data-vh="short"] .hub-dock p, html[data-vh="tiny"] .hub-dock p { display: none; }
+  html[data-vh="short"] .hub-dock .hub-shells, html[data-vh="tiny"] .hub-dock .hub-shells, html[data-vh="short"] .hub-dock .hub-row, html[data-vh="tiny"] .hub-dock .hub-row { display: contents; }
+  html[data-vh="short"] .hub-shells button, html[data-vh="tiny"] .hub-shells button { min-height: 40px; padding: 2px 2px 1px; font-size: 15px; gap: 1px; border-radius: 10px; }
+  html[data-vh="short"] .hub-shells button small, html[data-vh="tiny"] .hub-shells button small { font-size: 9px; letter-spacing: 0; }
+  html[data-vh="short"] .hub-dock .hub-row button, html[data-vh="tiny"] .hub-dock .hub-row button { display: block; min-height: 40px; padding: 0 8px; font-size: 12px; line-height: 40px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 10px; }
+  html[data-vh="short"] .hub-dock .hub-row button kbd, html[data-vh="tiny"] .hub-dock .hub-row button kbd { display: none; }
+  html[data-vh="short"] .hub-read, html[data-vh="tiny"] .hub-read { top: calc(88px + env(safe-area-inset-top, 0px)); max-height: calc(var(--vvh, 100vh) - 100px - env(safe-area-inset-top, 0px)); padding: 10px; }
+  html[data-vh="short"] .hub-read h3, html[data-vh="tiny"] .hub-read h3 { font-size: 15px; }
+  html[data-vh="short"] .hub-sign, html[data-vh="tiny"] .hub-sign { grid-template-columns: 64px 1fr; } html[data-vh="short"] .hub-sign canvas, html[data-vh="tiny"] .hub-sign canvas { width: 64px; height: 64px; }
+  html[data-vh="short"] .hub-slots, html[data-vh="tiny"] .hub-slots { gap: 6px; } html[data-vh="short"] .hub-slots li button, html[data-vh="tiny"] .hub-slots li button { width: 40px; min-height: 40px; }
+  html[data-vh="short"] .hub-status, html[data-vh="tiny"] .hub-status { top: calc(148px + env(safe-area-inset-top, 0px)); font-size: 12.5px; padding: 4px 4px 4px 12px; } html[data-vh="short"] .hub-status button, html[data-vh="tiny"] .hub-status button { min-height: 32px; }
+  html[data-vh="short"] .hub-card, html[data-vh="tiny"] .hub-card { padding: 12px 14px 14px; } html[data-vh="short"] .hub-card .hub-row, html[data-vh="tiny"] .hub-card .hub-row { margin-top: 10px; }
+}
+/* tiny landscape (667×300): the dock takes the right half, the quest line (status.css) the left half */
+@media (max-width: 700px) and (max-height: 520px) and (orientation: landscape) {
+  html[data-vh="tiny"] .hub-dock { left: calc(50% + 6px); right: 8px; }
+  html[data-vh="tiny"] .hub-status { left: auto; right: 8px; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hub-fade { transition: none; } .hub-host button { transition: none; } }
 `;

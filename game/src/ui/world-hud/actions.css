@@ -287,3 +287,17 @@
 .wh-root .wh-dialogue--mobile .wh-dialogue__kbd { min-width: 28px; height: 28px; padding: 0; border-radius: 6px; font-size: var(--wh-fs-kbd-lg); }
 .wh-root .wh-dialogue--mobile .wh-dialogue__reply .wh-dialogue__sep { height: 20px; margin: 0 11px; }
 .wh-root .wh-dialogue--mobile .wh-dialogue__reply-text { font-size: var(--wh-fs-reply); overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- short viewports (tokens.css explains the tiers) ---------- */
+@media (max-width: 700px) {
+  html[data-vh="short"] .wh-root .wh-prompt--mobile { bottom: 52px; height: 40px; min-height: 40px; gap: 10px; padding: 0 18px; }
+  html[data-vh="short"] .wh-root .wh-prompt--mobile .wh-kbd--lg, html[data-vh="tiny"] .wh-root .wh-prompt--mobile .wh-kbd--lg { min-width: 26px; height: 26px; min-height: 26px; font-size: 12px; }
+  html[data-vh="short"] .wh-root .wh-dialogue--mobile.wh-panel { left: 14px; right: 14px; bottom: 8px; min-height: 36px; border-radius: 18px; }
+  html[data-vh="short"] .wh-root .wh-dialogue__bar { height: 36px; min-height: 36px; }
+  html[data-vh="tiny"] .wh-root .wh-prompt--mobile { bottom: 44px; height: 36px; min-height: 36px; gap: 8px; padding: 0 16px; }
+  html[data-vh="tiny"] .wh-root .wh-dialogue--mobile.wh-panel { left: 14px; right: 14px; bottom: 6px; min-height: 32px; border-radius: 16px; }
+  html[data-vh="tiny"] .wh-root .wh-dialogue__bar { height: 32px; min-height: 32px; }
+  html[data-vh="short"] .wh-root .wh-dialogue--mobile.wh-is-expanded .wh-dialogue__bar, html[data-vh="tiny"] .wh-root .wh-dialogue--mobile.wh-is-expanded .wh-dialogue__bar { height: auto; }
+  /* the expanded bar fits the visible height */
+  html[data-vh="short"] .wh-root .wh-dialogue--mobile.wh-panel, html[data-vh="tiny"] .wh-root .wh-dialogue--mobile.wh-panel { max-height: calc(var(--vvh, 100vh) - 120px); overflow: auto; }
+}

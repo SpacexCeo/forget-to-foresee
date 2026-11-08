@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createPanelArbiter, panelArbiterFor } from '../src/play/panels.js';
 import { signsFromObs } from '../src/ui/world-hud/from-obs.js';
+import { viewportTier, inAppBrowser, VH_TIERS } from '../src/ui/world-hud/index.js';
 import { NAMEPLATE, plateOpacity, plateScale, platePosition, platePlacement, proximityOpacity, boxesIntersect, plateBox } from '../src/play/nameplate.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
@@ -205,7 +206,7 @@ test('nameplate: the agents draw DOM plates from the pure placement, no canvas s
   assert.doesNotMatch(agents, /MindSprite|new THREE\.Sprite/);
   assert.match(agents, /platePlacement\(\{ ndc, distance, irisDistance/);
   assert.match(agents, /a\.plate\.place\(null\); return;/, 'far agents get no plate at all');
-  assert.match(agents, /\.pl-plates \{ position: fixed; inset: 0; pointer-events: none;/);
+  assert.match(agents, /\.pl-plates \{ position: absolute; inset: 0; pointer-events: none;/);
   assert.match(agents, /\.pl-plate\[hidden\] \{ display: none; \}/, 'a hidden plate must not render at the layer origin');
 });
 
@@ -221,4 +222,22 @@ test('NEAR badge (request 9): resolved sign cards carry near.leafBadge(index); a
   assert.equal(card.verified, 'ok');
   assert.equal(card.near.state, 'on-chain');
   assert.equal(signsFromObs(obs, { i18n })[0].near, null);
+});
+
+test('short viewports: tiers by the measured visible height; in-app browsers are a hint only', () => {
+  assert.equal(viewportTier(844), 'tall');
+  assert.equal(viewportTier(VH_TIERS.short), 'tall');
+  assert.equal(viewportTier(560), 'short');
+  assert.equal(viewportTier(500), 'short', '375x500 keeps the trial row');
+  assert.equal(viewportTier(480), 'tiny');
+  assert.equal(viewportTier(300), 'tiny');
+  assert.equal(viewportTier(0), 'tall', 'no measurement yet: the full layout');
+  assert.equal(inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Twitter for iPhone/10.0'), 'inapp');
+  assert.equal(inAppBrowser('Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 [FB_IAB/FB4A;FBAV/450.0.0.0;]'), 'inapp');
+  assert.equal(inAppBrowser('Mozilla/5.0 (iPhone) Instagram 300.0'), 'inapp');
+  assert.equal(inAppBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Version/17.0 Mobile/15E148 Safari/604.1'), '');
+  const css = read('../src/ui/world-hud/tokens.css') + read('../src/ui/world-hud/status.css') + read('../src/play/hub-ui.js') + read('../index.html');
+  for (const sel of ['html[data-vh="short"] .wh-root .wh-quest--mobile', 'html[data-vh="tiny"] .wh-root .wh-trial--mobile { display: none; }', 'html[data-vh="short"] .hub-dock', 'body.in-world #ui { bottom: auto; height: var(--vvh, 100%); }']) {
+    assert.ok(css.includes(sel), 'compact rule present: ' + sel);
+  }
 });

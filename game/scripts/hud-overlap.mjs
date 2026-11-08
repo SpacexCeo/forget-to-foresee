@@ -4,7 +4,7 @@
 // cover another at any viewport in any locale (owner, 08.11).
 //
 //   cd game && npm run dev -- --host 127.0.0.1 --port 5173 &
-//   npm run hud:overlap -- [--viewports 1280x800,1920x1080,390x844] [--langs en,uk,ru,it,zh]
+//   npm run hud:overlap -- [--viewports 1280x800,1920x1080,390x844,390x560,375x500,360x480,667x300] [--langs en,uk,ru,it,zh]
 //                          [--states island,signs,memories,help,map,shell,shell-memories,card,walk,scroll,agent,walk-memories]
 //                          [--out .scratch/overlap] [--base http://127.0.0.1:5173] [--shots all|fail|none]
 //
@@ -16,7 +16,7 @@ import { createRequire } from 'node:module';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) => (a.startsWith('--') ? [a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true'] : null)).filter(Boolean));
 const BASE = args.base || 'http://127.0.0.1:5173';
-const VIEWPORTS = (args.viewports || '1280x800,1920x1080,390x844').split(',').map((s) => s.split('x').map(Number));
+const VIEWPORTS = (args.viewports || '1280x800,1920x1080,390x844,390x560,375x500,360x480,667x300').split(',').map((s) => s.split('x').map(Number));
 const LANGS = (args.langs || 'en,uk,ru,it,zh').split(',');
 const ALL_STATES = ['island', 'signs', 'memories', 'help', 'map', 'shell', 'shell-memories', 'card', 'walk', 'scroll', 'agent', 'walk-memories'];
 const STATES = (args.states || ALL_STATES.join(',')).split(',');

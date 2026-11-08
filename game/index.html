@@ -38,9 +38,12 @@
     #ui { position: fixed; inset: 0; z-index: 10; }
     body:not(.in-world) #ui { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; } /* lobby/onboarding pages taller than the screen scroll */
     body.in-world #ui { pointer-events: none; }
+    /* The overlay is as tall as the VISIBLE viewport (--vvh from visualViewport, set by the world HUD), never 100vh:
+       in-app browsers and collapsing toolbars would otherwise push the bottom-anchored stack off screen. */
+    body.in-world #ui { bottom: auto; height: var(--vvh, 100%); }
     /* World HUD (src/play/world-hud.js): it replaces the goal card, chronicle, action bar and the old status/subtitles;
        the play panels, context menu, help and info stay above it. ?hud=old keeps the greybox overlay. */
-    .wh-host { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .wh-host { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     body.wh-on .pl-goal, body.wh-on .pl-chronicle, body.wh-on .pl-bar, body.wh-on #ui .ftf-hud-status, body.wh-on #ui .ftf-subtitles { display: none !important; }
     /* Stacking inside #ui: nameplates 0 · world HUD 0 · play panels / help / context 2 · hub dock, reading card, cards 3 · hub fade 6.
        Only one of panel / help / Signs / card is open at a time (src/play/panels.js); the dock and the reading card hide under any of them. */
@@ -69,7 +72,7 @@
     @media (max-width: 700px) { body.wh-on .pl-badge { display: none; } }
     body.in-world #ui .ftf-hud-chronicle { display: none; } /* the play chronicle renders the room log (docs/collab-requests.md) */
     #ui .ftf-hud { position: fixed; inset: 0; pointer-events: none; }
-    .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { position: fixed; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
+    .pl-goal, .pl-context, .pl-panel, .pl-chronicle, .pl-help, .pl-bar, .pl-info, .pl-badge { position: absolute; pointer-events: auto; background: var(--panel); border-radius: var(--pl-r-panel); color: var(--ink); box-shadow: 0 6px 24px rgba(10, 14, 12, 0.35); }
     /* Modal surfaces: the HUD's panel gradient, hairline frame and blur; the scene never shows through text. */
     /* The gradient sits on a solid base colour: a modal panel over the 3D scene is fully opaque (no blur needed, cheaper on phones). */
     .pl-panel, .pl-context, .pl-help, .pl-info { background: var(--pl-panel) #121d1f; border: 1px solid var(--pl-frame); color: var(--pl-text); font-family: var(--pl-sans); box-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06); }
@@ -117,6 +120,19 @@
     .pl-badge { top: 14px; right: 12px; max-width: 250px; padding: 6px 12px; font-size: 11.5px; line-height: 1.35; color: var(--muted); background: rgba(20, 24, 22, 0.5); }
     @media (max-width: 900px) { .pl-bar { max-width: none; left: 12px; } .pl-chronicle { display: none; } .pl-badge { display: none; } }
 
+    /* Short viewports (in-app browsers; html[data-vh] from the world HUD): panels fit the visible height, buttons keep
+       a 44 px hit zone around a 40 px box. */
+    @media (max-width: 700px) {
+      html[data-vh="short"] .pl-panel, html[data-vh="tiny"] .pl-panel, html[data-vh="short"] .pl-help, html[data-vh="tiny"] .pl-help { bottom: 8px; max-height: calc(var(--vvh, 100vh) - 96px); padding: 10px 12px 12px; }
+      html[data-vh="short"] .pl-panel h2, html[data-vh="tiny"] .pl-panel h2 { font-size: 15px; }
+      html[data-vh="short"] .pl-panel, html[data-vh="tiny"] .pl-panel { font-size: 12.5px; }
+      html[data-vh="short"] .pl-list > li, html[data-vh="tiny"] .pl-list > li { padding: 8px 0; }
+      html[data-vh="short"] .pl-btn, html[data-vh="tiny"] .pl-btn, html[data-vh="short"] .pl-opt, html[data-vh="tiny"] .pl-opt { --pl-target: 40px; position: relative; }
+      html[data-vh="short"] .pl-btn::before, html[data-vh="tiny"] .pl-btn::before, html[data-vh="short"] .pl-opt::before, html[data-vh="tiny"] .pl-opt::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
+      html[data-vh="short"] .pl-context, html[data-vh="tiny"] .pl-context { bottom: 8px; max-height: calc(var(--vvh, 100vh) - 96px); overflow: auto; }
+      html[data-vh="short"] .pl-info, html[data-vh="tiny"] .pl-info { top: calc(88px + env(safe-area-inset-top, 0px)); }
+    }
+
     /* Phones: miniature HUD so the world stays visible (owner 07.11). */
     @media (max-width: 640px), (pointer: coarse) and (max-height: 900px) {
       .pl-goal { top: calc(6px + env(safe-area-inset-top, 0px)); width: min(340px, calc(100vw - 132px)); left: auto; right: 8px; transform: none; padding: 5px 9px 6px; border-top-width: 2px; border-radius: 8px; }
@@ -126,9 +142,11 @@
       .pl-bar { left: 6px; right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); padding: 4px; gap: 4px; max-width: none; justify-content: center; border-radius: 8px; }
       .pl-context { bottom: calc(46px + env(safe-area-inset-bottom, 0px)); min-width: 0; width: calc(100vw - 16px); padding: 5px 8px; }
       .pl-context h3 { font-size: 14px; margin-bottom: 4px; } .pl-opt { --pl-target: 48px; font-size: 13.5px; padding: 0 8px; }
-      .pl-panel { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); right: 8px; left: 8px; width: auto; max-height: 56vh; padding: 12px 14px 16px; font-size: 13px; }
+      .pl-panel { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); right: 8px; left: 8px; width: auto; max-height: calc(var(--vvh, 100vh) * .56); padding: 12px 14px 16px; font-size: 13px; }
       .pl-panel h2 { font-size: 17px; } .pl-panel h3 { font-size: 14px; } .pl-muted { font-size: 12px; }
-      .pl-help { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); left: 8px; width: calc(100vw - 16px); font-size: 12.5px; padding: 12px 14px; }
+      .pl-help { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); left: 8px; width: calc(100vw - 16px); max-height: calc(var(--vvh, 100vh) * .56); overflow: auto; font-size: 12.5px; padding: 12px 14px; }
+      /* a context menu on a phone is a sheet of choices: the tiles and the prompt step aside while it is open */
+      body.pl-context-open .wh-root :is(.wh-tiles, .wh-prompt--mobile) { visibility: hidden; }
       .pl-info { bottom: calc(50px + env(safe-area-inset-bottom, 0px)); font-size: 12px; padding: 5px 10px; max-width: calc(100vw - 24px); }
       .pl-chronicle, .pl-badge, #badge, #prompt { display: none !important; }
       /* phones: a modal panel dims the HUD behind it (no extra DOM) and the run toggle steps aside */

@@ -78,6 +78,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   function renderContext() {
     const opts = session.options;
     ctxEl.hidden = opts.length < contextMin || !!panel || !!(handlers.contextHidden && handlers.contextHidden());
+    document.body.classList.toggle('pl-context-open', !ctxEl.hidden);
     if (ctxEl.hidden) return;
     const di = session.defaultIndex;
     ctxEl.replaceChildren(el('h3', { text: spotTitle(session.spot) }), el('ol', {}, opts.slice(0, 9).map((o, i) => {
@@ -276,5 +277,5 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
 
   update();
-  return { update, open, close, flash, handleKey, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
+  return { update, open, close, flash, handleKey, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
 }

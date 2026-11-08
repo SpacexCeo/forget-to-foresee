@@ -94,7 +94,7 @@ function standIn(color) {
 }
 
 const PLATE_CSS = `
-.pl-plates { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.pl-plates { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
 .pl-plate { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px;
   border-radius: 999px; background: rgba(9, 17, 19, .82); border: 1px solid rgba(232, 214, 172, .38); color: #faf7ee;
   font: 400 13px/1 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; white-space: nowrap;

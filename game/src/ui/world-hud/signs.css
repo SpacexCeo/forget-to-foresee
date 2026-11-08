@@ -331,3 +331,17 @@
 /* Novice cards carry one reading line instead of four stat rows: a shorter card */
 .wh-root .wh-sign:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: calc(112 * var(--wh-px)); }
 @media (max-width: 700px) { .wh-root .wh-sign--mobile:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: 104px; } }
+
+/* ---------- short viewports (tokens.css explains the tiers): the sheet fits the visible height ---------- */
+@media (max-width: 700px) {
+  html[data-vh="short"] .wh-root .wh-sheet { top: 64px; }
+  html[data-vh="tiny"] .wh-root .wh-sheet { top: 44px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__head, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__head { padding: 22px 50px 0 64px; min-height: 0; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__eye, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__eye { top: 20px; left: 16px; width: 36px; height: 36px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__title, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__title { font-size: 18px; margin-top: 4px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__sub, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__sub { display: none; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__close, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__close { top: 16px; width: 36px; height: 36px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__filters, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__filters { margin-top: 10px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__chip, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__chip { height: 32px; min-height: 36px; }
+  html[data-vh="short"] .wh-root .wh-sheet .wh-signs__list, html[data-vh="tiny"] .wh-root .wh-sheet .wh-signs__list { margin-top: 10px; }
+}

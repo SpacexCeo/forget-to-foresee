@@ -164,7 +164,16 @@ function questMobile(i18n, model, onAction) {
     e.preventDefault();
     onAction('questDot', (model.questIndex + (e.key === 'ArrowRight' ? 1 : n - 1)) % n);
   });
-  return h('div', { class: 'wh-quest-m' }, card, dots);
+  // short viewports collapse the card to its tag + title; this sibling toggle (a button cannot nest in the card
+  // button) reveals the body in place. CSS shows it only under html[data-vh="short"|"tiny"].
+  const more = h('button', { class: 'wh-quest__more wh-interactive', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': cardId }, i18nAttrs: { 'aria-label': 'wh.quest.open' } }, ic('chevron-up', 'wh-quest__more-icon'));
+  more.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const on = card.dataset.expanded !== 'true';
+    card.dataset.expanded = on ? 'true' : 'false';
+    more.setAttribute('aria-expanded', String(on));
+  });
+  return h('div', { class: 'wh-quest-m' }, card, more, dots);
 }
 
 function trialMobile(i18n, t) {

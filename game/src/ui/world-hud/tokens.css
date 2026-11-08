@@ -389,3 +389,21 @@ html[data-tier="low"] .wh-root, html[data-fx="low"] .wh-root { --wh-panel-blur: 
   .wh-root, .wh-root * { transition: none !important; animation: none !important; }
 }
 html[data-motion="reduce"] .wh-root, html[data-motion="reduce"] .wh-root * { transition: none !important; animation: none !important; }
+
+/* ---------- short viewports (in-app browsers crop the screen; owner 08.11) ----------
+   index.js measures visualViewport.height into --vvh and sets html[data-vh="tall"|"short"|"tiny"] (< 620 / < 520 px).
+   The mobile stack compacts by tier; visual boxes shrink but every control keeps a 44 px hit zone (::before). */
+@media (max-width: 700px) {
+  html[data-vh="short"] .wh-root, html[data-vh="tiny"] .wh-root {
+    --wh-fs-title-l: 15px; --wh-fs-card-title: 13px; --wh-fs-prompt: 13px; --wh-fs-tag: 9.5px; --wh-fs-ui: 12px;
+    --wh-fs-body: 12.5px; --wh-fs-small: 10px; --wh-fs-tile: 10.5px; --wh-fs-line: 11.5px; --wh-fs-speaker: 11.5px; --wh-target: 44px;
+  }
+  html[data-vh="tiny"] .wh-root { --wh-fs-title-l: 14px; --wh-fs-prompt: 12.5px; --wh-fs-tag: 9px; --wh-fs-tile: 9.5px; }
+  html[data-vh="short"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-prompt--mobile, .wh-quest__more),
+  html[data-vh="tiny"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-prompt--mobile, .wh-quest__more) { position: relative; }
+  html[data-vh="short"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-quest__more)::before,
+  html[data-vh="tiny"] .wh-root :is(.wh-btn-icon, .wh-tile, .wh-chip, .wh-dialogue__bar, .wh-quest__more)::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
+  html[data-vh="short"] .wh-root .wh-btn-icon, html[data-vh="tiny"] .wh-root .wh-btn-icon { height: 35px; }
+  html[data-vh="short"] .wh-root .wh-btn-icon--round, html[data-vh="tiny"] .wh-root .wh-btn-icon--round { width: 36px; height: 36px; }
+  html[data-vh="short"] .wh-root .wh-chip, html[data-vh="tiny"] .wh-root .wh-chip { min-height: 36px; }
+}
