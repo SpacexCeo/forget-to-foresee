@@ -26,6 +26,8 @@ const CSS = `
 #ch-film { position: fixed; inset: 0; z-index: 40; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
   font-family: 'Cormorant Garamond', 'Libre Caslon Text', 'Noto Serif SC', 'Songti SC', Georgia, serif; color: #efe9df; }
 #ch-film[hidden] { display: none; }
+/* While a film plays, nothing of the game's HUD may sit over it (phone: the map and run buttons covered the subtitles). */
+body.ch-film-on .ftf-run-toggle, body.ch-film-on .ftf-map-fab, body.ch-film-on .wh-root, body.ch-film-on .hub-host, body.ch-film-on #prompt, body.ch-film-on .ftf-scene-controls { visibility: hidden !important; }
 #ch-film * { box-sizing: border-box; }
 #ch-film .ch-bar { position: absolute; left: 0; right: 0; background: #050708; height: 0; }
 #ch-film .ch-bar.top { top: 0; } #ch-film .ch-bar.bottom { bottom: 0; }
@@ -39,7 +41,7 @@ const CSS = `
 #ch-film .ch-rule span { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(228,194,114,0), rgba(228,194,114,.9), rgba(228,194,114,0)); }
 #ch-film .ch-rule i { width: 7px; height: 7px; border-radius: 50%; background: #e4c272; box-shadow: 0 0 14px 3px rgba(228,194,114,.55); }
 #ch-film .ch-matters { font-weight: 400; font-size: clamp(22px, 2.5vw, 48px); line-height: 1.3; max-width: min(84vw, 980px); margin: 0; text-shadow: 0 2px 24px rgba(0,0,0,.7); }
-#ch-film .ch-sub { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--ch-bar, 0px) + 3.2vh); width: min(86vw, 1040px); text-align: center; opacity: 0;
+#ch-film .ch-sub { position: absolute; left: 0; right: 0; margin-inline: auto; max-width: calc(100vw - 32px); box-sizing: border-box; bottom: calc(var(--ch-bar, 0px) + 3.2vh); width: min(86vw, 1040px); text-align: center; opacity: 0;
   font: 500 clamp(17px, 1.55vw, 27px)/1.4 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; color: #f6f1e6; text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 18px rgba(0,0,0,.8); }
 #ch-film .ch-sub span { display: inline; background: rgba(5, 8, 9, .62); padding: .18em .55em; border-radius: 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 #ch-film .ch-dots { position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--ch-bar, 0px) + 2vh); display: flex; gap: 8px; opacity: .9; }
@@ -50,7 +52,7 @@ const CSS = `
   font: 600 clamp(12px, 1vw, 16px)/1 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #e6dfd3; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 #ch-film .ch-ring { width: 30px; height: 30px; border-radius: 50%; background: conic-gradient(#e4c272 calc(var(--ch-hold, 0) * 1turn), rgba(228,194,114,.18) 0); display: grid; place-items: center; }
 #ch-film .ch-ring::after { content: ''; width: 20px; height: 20px; border-radius: 50%; background: rgba(5,8,9,.85); }
-#ch-film .ch-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--ch-bar, 0px) + 1vh); opacity: 0;
+#ch-film .ch-hint { position: absolute; left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px); bottom: calc(var(--ch-bar, 0px) + 1vh); opacity: 0;
   font: 600 clamp(11px, .95vw, 15px)/1 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; color: #c9c6b8; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 body.ch-film-on #ui, body.ch-film-on #prompt, body.ch-film-on #toast, body.ch-film-on #badge, body.ch-film-on #scene-controls, body.ch-film-on #hud, body.ch-film-on .hub-fade, body.ch-film-on .ch-fab { visibility: hidden !important; }
 body.ch-film-on, body.ch-film-on * { cursor: none !important; }
