@@ -554,13 +554,18 @@ def head_bm(body=BODY):
 # separate parts the rig skins rigidly to their face bone (agent_rig FACE_BONES);
 # positions are shared with the rig through FACE.
 
+# Round 3 proportions (owner 08.11 "Iris looks very bad"; checked against standard face-
+# proportion guides): the eye line sits on the head's middle, the eyes are one eye width
+# apart and about a fifth of the head's width (stylized: slightly larger), the nose ends
+# halfway down the lower face, the mouth a third of the way from nose to chin, and the
+# lower face is shorter with a tapered jaw (the old face read as a long, wide oval).
 FACE = dict(
-    eye=((0.0262, -0.0805, 1.643), 0.0128),      # eyeball centre (L, +X), radius
-    lid_r=0.0138,                                # upper lid shell radius
-    brow=(0.0262, -0.0955, 1.6625),              # brow centre (L)
-    jaw=((0.0, -0.020, 1.616), (0.0, -0.088, 1.584)),   # jaw bone head, tail
-    mouth_z=1.5905,                              # lip line
-    mouth_w=0.0168,                              # half width of the mouth
+    eye=((0.0300, -0.0812, 1.6405), 0.0152),     # eyeball centre (L, +X), radius
+    lid_r=0.0164,                                # upper lid shell radius
+    brow=(0.0300, -0.0965, 1.6615),              # brow centre (L)
+    jaw=((0.0, -0.020, 1.616), (0.0, -0.088, 1.586)),   # jaw bone head, tail
+    mouth_z=1.5915,                              # lip line
+    mouth_w=0.0152,                              # half width of the mouth
 )
 
 # per-clan iris colour (linear); others fall back to the clan accent
@@ -573,7 +578,8 @@ IRIS_COLOR = {
     "iney": (0.40, 0.66, 0.90),      # ice blue
 }
 EYE_ACCENT = ("gem", "amber", "glass", "crystal", "moss", "brass", "metal")
-LID_OPEN = (25.0, -24.0)     # lid edge elevation at the eye centre line (deg, rest)
+LID_OPEN = (20.0, -27.0)     # lid edge elevation at the eye centre line (deg, rest): the upper
+                             # lid rests on the top of the iris (a relaxed, not startled, look)
 LID_CORNER = 62.0            # azimuth of the eye corners (deg)
 
 
@@ -604,9 +610,10 @@ def _samples(n, lo, hi, dens, steps=4000):
 
 def _egg(x, y, z):
     """The shared egg deformation of the unit sphere (normalised head coords)."""
-    if z < 0:                                      # jaw taper and chin
-        x *= 1.0 - 0.30 * (-z) ** 1.3
+    if z < 0:                                      # jaw taper and a shorter lower face
+        x *= 1.0 - 0.35 * (-z) ** 1.35
         y *= 1.0 - 0.10 * (-z)
+        z *= 1.0 - 0.10 * (-z)
     if z > 0.25:                                   # cranium slightly back
         y += 0.06 * (z - 0.25)
     return x, y, z
@@ -624,16 +631,16 @@ def _face_relief(x, y, z):
     zt = ez - 0.27                                  # nose tip
     if z > zt:
         k = min(1.0, (z - zt) / (ez + 0.10 - zt))
-        h = 0.20 * (1.0 - k) ** 1.6 + 0.035 * _g(z - (ez + 0.02), 0.12)
-        w = 0.085 + 0.055 * (1.0 - k)
+        h = 0.17 * (1.0 - k) ** 1.6 + 0.030 * _g(z - (ez + 0.02), 0.12)
+        w = 0.060 + 0.045 * (1.0 - k)              # narrow bridge, soft rounded tip
     else:
-        h = 0.20 * _g(z - zt, 0.055)
-        w = 0.14
+        h = 0.17 * _g(z - zt, 0.055)
+        w = 0.115
     nose = h * _g(ax, w)
-    alae = 0.075 * _g(ax - 0.125, 0.055) * _g(z - (zt - 0.015), 0.055)
+    alae = 0.060 * _g(ax - 0.105, 0.050) * _g(z - (zt - 0.015), 0.055)
     brow = 0.055 * _g(z - (ez + 0.165), 0.085) * (_g(ax - ex, 0.22) + 0.6 * _g(ax, 0.15))
     socket = -0.115 * _g(ax - ex * 1.02, 0.175) * _g(z - (ez + 0.01), 0.125)
-    cheek = 0.055 * _g(ax - 0.56, 0.17) * _g(z - (ez - 0.17), 0.14)
+    cheek = 0.075 * _g(ax - 0.54, 0.16) * _g(z - (ez - 0.15), 0.13)
     hollow = -0.030 * _g(ax - 0.52, 0.15) * _g(z - (mz + 0.04), 0.14)
     muzzle = 0.060 * _g(ax, 0.30) * _g(z - (mz + 0.02), 0.20)
     mouth = -0.030 * _g(ax, 0.20) * _g(z - mz, 0.055)
@@ -834,8 +841,8 @@ def build_face(ag, body=BODY, hair=None):
     acc = next((pal[k] for k in EYE_ACCENT if k in pal), (0.6, 0.5, 0.3))
     iris_col = IRIS_COLOR.get(ag.key, tuple(0.7 * a + 0.05 for a in acc))
     brow_col = pal.get("hair", _shade(skin, 0.30))
-    lid_col = (skin[0] * 0.80, skin[1] * 0.74, skin[2] * 0.74)
-    lip_col = (skin[0] * 0.66, skin[1] * 0.40, skin[2] * 0.40)
+    lid_col = (skin[0] * 0.93, skin[1] * 0.88, skin[2] * 0.88)   # lids close to skin: no dark rings
+    lip_col = (skin[0] * 0.82, skin[1] * 0.44, skin[2] * 0.46)
     head = face_head_bm(body)
     bvh = BVHTree.FromBMesh(head)
     (ex, ey, ez), er = FACE["eye"]
@@ -850,10 +857,18 @@ def build_face(ag, body=BODY, hair=None):
         ag.add(f"face_eye_{sfx}", bm, "body", "skin", (0.44, 0.40, 0.35), rough=0.25,
                collide=(), smooth=True)
         look = Vector((side * 0.06, -1.0, 0.0))          # a hair divergent, rests forward
-        ag.add(f"face_iris_{sfx}", _cap_on(c, er * 1.012, look, 34, segs=16, rings=3), "body",
-               "skin", iris_col, rough=0.2, collide=(), smooth=True)
-        ag.add(f"face_pupil_{sfx}", _cap_on(c, er * 1.022, look, 14, segs=12, rings=2), "body",
-               "skin", (0.012, 0.010, 0.010), rough=0.15, collide=(), smooth=True)
+        ag.add(f"face_iris_{sfx}", _cap_on(c, er * 1.012, look, 41, segs=16, rings=3), "body",
+               "skin", iris_col, rough=0.2, collide=(), smooth=True, paint=False)
+        ag.add(f"face_pupil_{sfx}", _cap_on(c, er * 1.022, look, 18, segs=12, rings=2), "body",
+               "skin", (0.012, 0.010, 0.010), rough=0.15, collide=(), smooth=True, paint=False)
+        # catchlight: one small bright dot, upper left as seen from the front on both eyes
+        # (a shared light), so the eyes look alive at gameplay distance
+        cl = c + (look.normalized() + Vector((-0.42, 0.0, 0.38))).normalized() * er * 1.03
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=er * 0.16)
+        bmesh.ops.translate(bm, verts=bm.verts, vec=cl)
+        ag.add(f"face_glint_{sfx}", bm, "body", "skin", (0.95, 0.95, 0.95), rough=0.05,
+               collide=(), smooth=True, paint=False)
         ag.add(f"face_lidup_{sfx}", _lid_bm(c, FACE["lid_r"], side, True,
                                             roll=er * 1.04 / FACE["lid_r"]),
                "body", "skin", lid_col, rough=0.6, collide=(), smooth=True)
@@ -875,11 +890,11 @@ def build_face(ag, body=BODY, hair=None):
         for i in range(9):
             t = i / 8
             x = bx + (-0.0150 + 0.0315 * t)
-            z = bz - 0.0004 - 0.0042 * t + 0.0046 * math.sin(math.pi * min(1.0, t * 1.15)) \
+            z = bz - 0.0004 - 0.0042 * t + 0.0034 * math.sin(math.pi * min(1.0, t * 1.15)) \
                 - 0.0022 * (1 - t) ** 3
             pts.append(Vector((side * x, _surface_y(bvh, side * x, z, 0.0012), z)))
         ag.add(f"face_brow_{sfx}", _sweep_bm(
-            pts, lambda t: 0.0021 * (1.0 - 0.5 * t), lambda t: 0.0033 * (1.0 - 0.62 * t) ** 0.8,
+            pts, lambda t: 0.0017 * (1.0 - 0.5 * t), lambda t: 0.0027 * (1.0 - 0.62 * t) ** 0.8,
             sides=6), "body", "skin", brow_col, rough=0.85, collide=(), smooth=True)
     # lips: upper (head) with a cupid's bow, fuller lower lip (jaw)
     mz, mw = FACE["mouth_z"], FACE["mouth_w"]
@@ -892,13 +907,13 @@ def build_face(ag, body=BODY, hair=None):
             pts.append(Vector((x, _surface_y(bvh, x, z, out), z)))
         return pts
     prof = lambda t: math.sin(math.pi * t) ** 0.55          # noqa: E731
-    ag.add("face_lipup", _sweep_bm(lip(0.0016, 0.0010, 0.0007),
-                                   lambda t: 0.0013 * prof(t) + 0.0002,
-                                   lambda t: 0.0022 * prof(t) + 0.0002, sides=6),
+    ag.add("face_lipup", _sweep_bm(lip(0.0016, 0.0003, 0.0008),
+                                   lambda t: 0.0012 * prof(t) + 0.0002,
+                                   lambda t: 0.0023 * prof(t) + 0.0002, sides=6),
            "body", "skin", _shade(lip_col, 0.9), rough=0.5, collide=(), smooth=True)
-    ag.add("face_jaw_lip", _sweep_bm(lip(-0.0026, 0.0012, 0.0),
+    ag.add("face_jaw_lip", _sweep_bm(lip(-0.0026, 0.0005, 0.0),
                                      lambda t: 0.0015 * prof(t) + 0.0002,
-                                     lambda t: 0.0027 * prof(t) + 0.0002, sides=6),
+                                     lambda t: 0.0033 * prof(t) + 0.0002, sides=6),
            "body", "skin", _shade(lip_col, 1.06), rough=0.45, collide=(), smooth=True)
     # mouth bag: dark sheet behind the lips; its top follows the head, its bottom the
     # jaw (agent_rig rule "mouth"), so it fills the gap when the jaw opens
@@ -927,6 +942,25 @@ def build_face(ag, body=BODY, hair=None):
     return head
 
 
+def paint_face(obj, skin):
+    """Hand-painted skin: a soft warm blush on the cheeks and the nose tip, slightly
+    cooler eye sockets. Writes into the part's Col attribute (baked into the albedo)."""
+    me = obj.data
+    col = me.color_attributes["Col"]
+    (ex, ey, ez), er = FACE["eye"]
+    blush = (min(1.0, skin[0] * 1.10), skin[1] * 0.80, skin[2] * 0.80)
+    for lp, cd in zip(me.loops, col.data):
+        p = me.vertices[lp.vertex_index].co
+        if p.y > -0.05:
+            continue
+        r = cd.color
+        k = 0.55 * _g(abs(p.x) - 0.046, 0.016) * _g(p.z - (ez - 0.026), 0.014)      # cheeks
+        k += 0.35 * _g(p.x, 0.008) * _g(p.z - (ez - 0.030), 0.008)                  # nose tip
+        s = -0.10 * _g(abs(p.x) - ex, 0.014) * _g(p.z - (ez + 0.004), 0.012)        # sockets
+        cd.color = (r[0] + (blush[0] - r[0]) * k + s * r[0], r[1] + (blush[1] - r[1]) * k + s * r[1],
+                    r[2] + (blush[2] - r[2]) * k + s * r[2], 1.0)
+
+
 def build_body(ag, body=BODY, suit_color="suit", hair=None):
     verts, edges, radii, root = body_skeleton(body)
     obj = skin_object(f"{ag.key}_body", verts, edges, radii, root, ag.col)
@@ -935,8 +969,9 @@ def build_body(ag, body=BODY, suit_color="suit", hair=None):
     bpy.data.objects.remove(obj)
     ag.add("body", bm, "body", "skin", suit_color, rough=0.55, collide=("all",))
     # the smooth face head is visual only; garments keep conforming to the plain egg
-    ag.add("head", build_face(ag, body, hair), "body", "skin", "skin", rough=0.5, collide=(),
-           smooth=True)
+    head = ag.add("head", build_face(ag, body, hair), "body", "skin", "skin", rough=0.5,
+                  collide=(), smooth=True)
+    paint_face(head, ag.pal["skin"])
     ag.add_collider_bm(("all", "core"), head_bm(body))
     # Core collider: torso and legs without arms (fitted garments ignore the arms).
     cv, ce, cr, croot = body_skeleton(body, with_arms=False)
