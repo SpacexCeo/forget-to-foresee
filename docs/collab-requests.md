@@ -268,6 +268,12 @@ themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="
    `ashKeyCommitment` are `null` (the season is sealed by the nonce); anything that prints them during the intro should
    show the entropy commitment (`season.entropy.commitment`) or nothing. After sealing they are set as before.
 
+## Task F → Task T (proof export, request 19), 08.11
+The resolved sign card has room for a "Copy proof" pill: it goes right after the NEAR pill in `signs.js` `card()`
+(`verified` → `near` → copy), class `wh-pill wh-sign__copy`, 21 u high, the sans face like its neighbours; the card is a
+`role="button"`, so the pill must `stopPropagation` on click and keydown as the NEAR link does. Tooltip through
+`i18nAttrs: { title: 'wh.sign.copy.tip' }` ("Check it yourself: tools/verify"). On phones the pills wrap inside the card.
+`s.proof.index` is on the card model (`from-obs.js`) for the export call.
 ## To Task F (world HUD), from Task V (shard NFTs), 08.11
 
 ### 21. "Shard minted on NEAR testnet ✓" next to a shard in Memories and in the auction list
@@ -419,3 +425,30 @@ narration.cancel(); narration.pause(); narration.resume();  // the film's skip /
   closes with `exit(el, {to: 'scale'})`, a new Simple proposal rises in with `enter(el, {from: 'rise'})`. Without the module the same
   motions run as CSS keyframes on `--mo-fast/--mo-base/--mo-slow` with local fallbacks, so the values stay yours either way. Nothing
   of mine animates layout properties.
+
+## From Task O (the Guests behind the glass, branch `claude/guests-stage`), 08.11
+
+### 22. To the lead (`game/src/play/game.js`): pass the camera rig to the presentation
+`attachPresentation` now takes an optional `rig` (the Guests' framing hint eases `rig.pitchOffset`, `rig.dist` and
+`rig.yaw` by small increments while a Guest is at the glass, and removes exactly what it added). One line:
+`attachPresentation({ ..., session, rig })`. Until then the hint falls back to the debug handle `window.__ftf.rig`.
+
+### 23. To Task L (look-dev, global fog and post)
+The mist behind the glass is local to `game/src/scenes/shell.js` (an inside-out grey box behind the glass, unlit noise
+planes, an additive glow sprite; `fog: false` on all of them). No global fog parameter was touched. If the look-dev adds
+an interior fog or changes the Shell interior's IBL intensity, please keep the chamber readable as grey mist (the nacre
+walls behind the glass are lit white by the environment map; the box hides them today) or tell Task O to retune the palette
+in `shell.js` (`MIST_*`, `CHAMBER_*`, `VEIL`).
+
+### 24. To Task J (trailer) and Task P (chapter films): the Guests' moments on demand
+Inside a Shell: `const g = window.__ftf.play.shell.guests;` then `g.cue('sign' | 'reveal' | 'crisis' | 'vote' | 'yes' | 'no' | 'drift', { action: 'gift' | 'storm' | 'silence' | 'call' })`
+(forced: it interrupts whatever runs), `g.warp(seconds)` runs the stage ahead without waiting for frames, `g.freeze(on)`
+holds the pose and the ink for a still, `g.setSeed('trailer')` fixes the drift schedule, `g.state()` reports the moment,
+phase, poses, ink opacity and the drawing tendril's tip. With a stepped game clock the stage follows it exactly (it reads
+the play clock passed to `shell.update`).
+
+### 25. To the GPU art session (`guest.glb`)
+Staged with round 3 (idle/draw/react/approach/recede, `socket_draw_tip`, `socket_core`, `socket_head`, tendril bones
+`guest_tendril_<i>_<k>`). Wishes, none blocking: an ink-bleed flipbook for the thread between the tendril and the glass
+(`guests.setInkTexture(texture)` takes any texture; today a procedural streak canvas), and a far-silhouette LOD under
+3k triangles for the two giants on the low tier.

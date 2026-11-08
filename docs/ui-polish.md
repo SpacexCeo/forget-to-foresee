@@ -175,6 +175,25 @@ Owner: "everything must be animated and look expensive". Timings live in CSS var
 | nameplates | opacity eases over 120 ms on top of the proximity fade |
 | reduced motion (`prefers-reduced-motion` or `html[data-motion="reduce"]`) | travel zeroed, durations 100–160 ms: cross-fades only; no number ticks; the Signs panel, sheet and toast fade instead of sliding; the Shell glow stops |
 
+### 2.7 QA items closed in this branch (`docs/qa/defects.md`)
+
+| Item | Fix |
+|---|---|
+| QA-003 two Heir prompts | the Biography does not open while the hub's Heir card asks; afterwards it names the chosen outcome |
+| QA-004 "null" lines | `panelShell` drops null children (Memories, inspect) |
+| QA-005 legacy Signs panel after a vision | forgetting for a vision opens the HUD Signs & Visions panel (`handlers.onSigns`); the detail panel stays only as the fallback without a world HUD |
+| QA-006 stale hint | a hint whose trigger no longer holds is withdrawn, one whose facts changed is re-issued; the first-sign hint names the newest sign whose trial is still ahead |
+| QA-009a/b | the inspect hint moved to the top-centre row; the badge narrowed and the dialogue strip lifted (§2.4) |
+| QA-011 dock over the quest card at 390 px | compact dock on short phones, then the tiers of §2.5 |
+| QA-012 94 % at the end | progress reads 17 / 17 · 100 % once the season leaves play |
+| QA-014 dock clickable under Memories | the dock is not rendered under a modal |
+| QA-019 mixed languages after L | hint args stay raw ids and resolve at render time; log and hint clock cells are TextRefs |
+| QA-021 Help without F / N | Help lists the hub keys and the map in all five languages |
+
+Reserved for Task T (proof export, request 19): a "Copy proof" action next to "Verified ✓" on a resolved card is a third
+pill in the same row as the proof and NEAR pills (`signs.js`, after `near`); the card's padding already leaves room for
+three pills on desktop and the phone card wraps them.
+
 ## 3. Before / after
 
 Desktop 1280×800:
@@ -194,7 +213,7 @@ Phone 390×844 (iPhone-class emulation):
 | Signs sheet | ![](ui-polish/before-390-signs.jpg) | ![](ui-polish/after-390-signs.jpg) |
 | Memories | ![](ui-polish/before-390-memories.jpg) | ![](ui-polish/after-390-memories.jpg) |
 
-Desktop 1920×1080 after: ![](ui-polish/after-1920-memories.jpg)
+Desktop 1920×1080 after (island): ![](ui-polish/after-1920-world.jpg)
 
 Locales at 1280 (longest strings): Ukrainian ![](ui-polish/after-uk-1280-memories.jpg) · Italian
 ![](ui-polish/after-it-1280-memories.jpg)
@@ -209,6 +228,23 @@ Measured element boxes from the same runs (`getBoundingClientRect`, CSS px):
 | 390×844 after | V then M | closed | 8,295 374×503 (scrim behind) | not rendered |
 
 Console errors in every run: 0.
+
+**Overlap check results (`npm run hud-overlap` output, last complete runs):**
+
+| Run | Result |
+|---|---|
+| 1280×800 × en, uk, ru, it, zh, 12 states | 0 overlaps after the region work, except the `map` state (map over the quest banner / dialogue strip) and three dialogue-strip pairs in ru / it, all fixed afterwards (map hides the centre column; the strip centres in the free band) and not re-measured in a complete run |
+| 390×560, 375×500, 360×480, 667×300 × en, 12 states | 0 overlaps except two pairs fixed right after the run (the prompt pill inside a Shell on phones, the dialogue bar under the context menu), not re-measured |
+| 1920×1080 × en, 12 states (final state, after the merge of 6f2f288) | 0 overlaps (the walk states re-run after a 30 s load timeout at this size) |
+| 390×844 × en, 12 states (final state) | 0 overlaps after two last fixes: the phone context menu also hides the trial card and the two fabs; inside a Shell the dialogue bar yields to the reading card |
+| 1280 × uk/ru/it/zh (final state) | not re-run after the last patches (the last complete run was green except the map state, fixed since) |
+
+Console in the final runs: 0 errors; one warning, `assets/ui/lobby_bg.jpg` "preloaded but not used" (the lobby's preload
+link in the UI shell, not a play-layer file).
+
+The screenshots above come from the last complete runs; the 1280 and 390×844 "after" frames predate the motion pass
+and the short-viewport tiers (which change nothing at those sizes except the easing), the short-viewport frames are from
+the compact-layout run.
 
 ## 4. How to re-check
 

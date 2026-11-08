@@ -9,6 +9,8 @@ export default {
   'play.help.panels': '<kbd>M</kbd> воспоминания · <kbd>V</kbd> знаки и видения · <kbd>T</kbd> закончить тик',
   'play.help.camera': '<kbd>←</kbd><kbd>→</kbd> или правая кнопка — поворот · <kbd>↑</kbd><kbd>↓</kbd> или колесо — масштаб',
   'play.help.misc': '<kbd>L</kbd> язык · <kbd>H</kbd> эта подсказка · <kbd>Esc</kbd> закрыть · <kbd>F3</kbd> отладка',
+  'play.help.hub': '<kbd>F</kbd> влететь в золотую Раковину · поставить внутри <kbd>F</kbd> · <kbd>T</kbd> выйти из Раковины или пропустить испытание',
+  'play.help.map': '<kbd>N</kbd> карта острова',
   'play.help.toggle': 'Помощь (H)',
 
   // ---- objective card ----

@@ -108,6 +108,14 @@ export function mountLog(root, o = {}) {
     renderRows();
   }
 
+  /** The clock column: a TextRef re-renders on a language switch; the mockup model's literal strings stay literal. */
+  function timeCell(time) {
+    const cell = h('span', { class: 'wh-log__time wh-body' });
+    if (time && typeof time === 'object' && time.key) tx(cell, i18n, time.key, time.args);
+    else cell.textContent = time || '';
+    return cell;
+  }
+
   function renderRows() {
     const list = refs.list;
     list.textContent = '';
@@ -119,7 +127,7 @@ export function mountLog(root, o = {}) {
       tx(text, i18n, it.text.key, it.text.args);
       list.appendChild(h('li', { class: 'wh-log__row', dataset: { id: it.id } },
         ic(def.bullet, 'wh-log__bullet wh-log__bullet--' + def.bullet, def.bullet === 'diamond' ? { strokeWidth: 2.4 } : undefined),
-        h('span', { class: 'wh-log__time wh-body', text: it.time || '' }),
+        timeCell(it.time),
         text));
     }
     list.scrollTop = 0;

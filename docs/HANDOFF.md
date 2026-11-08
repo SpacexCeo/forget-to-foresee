@@ -1,4 +1,58 @@
-# Handoff: state on 08.11.2026 (evening)
+# Handoff: state on 09.11.2026, 00:10 Kyiv (lead session)
+
+## Live state (read this first if the session or the usage limit ended)
+
+**Integration branch:** `claude/loving-curie-ihasft` (lead). `main` = PR #3 + PR #4 (merged 08.11 ~20:35 Kyiv), live on
+GitHub Pages: https://spacexceo.github.io/forget-to-foresee/ (`?demo=judge&mode=walk` is the README judge path).
+The integration branch is ahead of `main` only by the round-5 agents (hands) and docs; merge it with a PR when convenient.
+Checks at 426cc1a: `cd game && npm test` 469/469, `cd server && npm test` 28/28, `npm run build` green; headless on the
+production build: `node tests/client/boot-smoke.mjs` (lobby and direct paths), the judge walk/hub paths, zero console errors.
+
+**How the work is organised:** one Fable cloud session per task in `docs/handoff/worker-tasks.md` (A–V); each works on
+its own `claude/<task>` branch, owns disjoint paths, writes `docs/handoff/agent-reports/<task>.md`, and the lead merges
+into the integration branch, runs the checks and merges into `main` on the owner's word. Cross-task asks:
+`docs/collab-requests.md`. Decisions: `docs/decisions.md` §4 (newest rows at the end of the table).
+
+**Paused workers (all pushed, green):** F UI polish, G motion + first seconds, H map, I tutorial, K QA (`docs/qa/defects.md`
+on `claude/qa`), L look-dev, M NEAR + shard NFT, N living NPCs, O Guests stage, P chapter films, Q accessibility,
+R juror (`docs/jury/` on `claude/jury`; 24 h study until 09.11 15:00 UTC, then scorecards). Their reports list next steps.
+
+**Active (minimal, token saving):** J fixes the video flicker (cause found: render resolution/pixel ratio changing during
+frame-stepped capture → black corner rectangles and luma jumps; fix = freeze governor/autoTier/dynamic resolution in the
+cinematic path + a luma/black-region check that fails the render) and sends a 10 s test + the demo to the GPU session.
+The GPU art session ("Завершение работы", branch `claude/laughing-thompson-dc7r09`) runs it on the owner's RTX 4090.
+The current `docs/media/` drafts on that branch flicker; do not use them.
+
+**Servers (Clore):** order 2419013 = owner's RTX 4090, stays up; used for project GPU work (ANGLE Vulkan WebGL works,
+gl-egl loses context). Order 2419123 belongs to another session: never touch. Extra rentals: cap 4 USD total, 0.44 USD
+spent (order 2419219 closed 16:30 UTC). Rule: nothing server-only is lost; inventory in `docs/art/server-inventory.md`;
+no server is stopped while it holds a server-only item the owner has not downloaded.
+
+**Waiting for the owner:**
+1. NEAR testnet deployment of `season-commit` and `memory-shard`: the owner allowed testnet transactions, but the cloud
+   auto-mode classifier refuses them. Either switch worker M's session ("Worker M: NEAR testnet live") from Auto to
+   Accept edits and approve the prompt, or say "добавь правило" (an allow rule for the two deploy scripts in
+   `.claude/settings.json`). Scripts: `contracts/season-commit/scripts/deploy-judge-season.sh`,
+   `contracts/memory-shard/scripts/deploy-judge-shards.sh`; then `node scripts/write-deployment.mjs` and update the
+   README real/mock rows. The juror: 15+ of 18 games-track rivals have a deployed testnet contract; this is the one
+   change that moves us above the field median on the NEAR axis.
+2. Owner-only submission steps (`docs/submission/owner-steps.md`): mainnet payout account, X post with the final video,
+   the form (or the API payload in `docs/submission/apply-form.md`, sent only after the owner confirms), the
+   `hackathon-submission` tag. Deadline 15.11 01:59 Kyiv; freeze 13.11 20:00.
+
+**Schedules (since 23:21 Kyiv):** one lead loop per hour (trig_018op6gxTUumLXJX3eyDUuzr at :09; the :29/:49 loops trig_01U3rg64KhBguBy5gwNvtbHF, trig_01AujfoKaraCGtHz4VpeNp8r stay off to save tokens) and the juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45). Active workers: F (open QA UI items), K (re-test of main 1a17673), O (shell.js frame safety, phone stills), J's capture job on the RTX 4090 via the GPU session (demo, then trailer and clips, the agent rebuild, 4K). Others paused with next steps in their reports.
+
+**Model availability (09.11 00:10 Kyiv):** the Fable limit is exhausted until about 12.11 (seven-day window). All worker sessions created on Fable (A–V, the juror R) fail on their next turn; their pushed branches are intact. Only Opus 5.5 sessions run: this lead session and the GPU art session ("Завершение работы", running the video queue on the RTX 4090). Owner: new workers use Opus 5.5 at medium effort (`model: claude-opus-5-5` in create_session). Overnight in eco mode: the GPU queue (demo, trailer, clips with the flicker check; agent rebuild; 4K server-only) and one morning merge at 07:01 Kyiv (trig_014q6NjmK4V33rZkA98BBkHq); all other schedules are off.
+
+**Overnight relaunch on Opus 5.5 (09.11 00:05 Kyiv):** F2 `session_01QfMhgC3bXjG8v7dRm14NjA` (claude/ui-polish: QA-031, QA-005/README, overlap at 1280 in four locales), G2 `session_01QfMhgCFUQvCkLm6XJ3XYDN` (claude/first-seconds: QA-029/030/032), J2 `session_01QfMhgFJGfUrN6eJtU2qesA` (claude/trailer: interesting video scripts, one GPU job), R2 juror `session_01QfMhgDAKdSL1ErtGNuQjaQ` (claude/jury; schedules trig_01W1fqnBUpajNw2RddU5YpMn :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45), GPU art session on the RTX 4090. The hourly lead loop (trig_018op6gxTUumLXJX3eyDUuzr :09) merges finished branches and starts one K2 QA session on Opus once F2 and G2 are in; the 07:01 Kyiv run (trig_014q6NjmK4V33rZkA98BBkHq) merges into main.
+
+**Open items after resume (priority):** final videos without flicker and with a stronger story (J + GPU); NEAR deploy;
+K's open QA list; the juror's scorecards from 09.11 15:00 UTC; native-speaker pass of uk/it/zh; physical phone and GPU
+feel tests (movement numbers in `docs/movement.md`, the 8 feel items).
+
+---
+
+## Earlier state (08.11 evening, kept for history)
 
 Branch: `claude/laughing-thompson-dc7r09` (on top of `main` at `bf89d82`): Shell hub, full uk/it/zh translations, phone running, README refresh. **Not on `main` yet**: GitHub Pages publishes only `main`, so the live site shows the hub after the owner merges.
 Tests: `cd game && npm test` passes 266/266, `cd server && npm test` passes 28/28, and `npm run build` succeeds.

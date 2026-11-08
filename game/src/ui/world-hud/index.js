@@ -6,6 +6,7 @@ import { mountStatus } from './status.js';
 import { mountSigns } from './signs.js';
 import { mountLog } from './log.js';
 import { mountActions } from './actions.js';
+import { installMotionStyles } from '../motion/index.js';
 
 export { DEMO_MODEL } from './model.js';
 
@@ -68,6 +69,7 @@ export function mountWorldHud(root, o) {
   const ctx = o.ctx || getUiContext();
   const { i18n, prefs } = ctx;
   ensureWhStyle('tokens', new URL('./tokens.css', import.meta.url).href);
+  installMotionStyles(typeof document !== 'undefined' ? document : null); // Task S tokens (--mo-*) feed --wh-dur-* / --pl-dur-*
   import('./fonts.js').catch(() => { /* fonts are progressive; system serif fallback */ });
 
   const unVh = installViewportVars();

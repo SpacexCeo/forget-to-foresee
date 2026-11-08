@@ -34,7 +34,7 @@ const SELECTORS = [
   // world HUD, desktop
   '.wh-trial', '.wh-quest', '.wh-toast', '.wh-signs', '.wh-log__tabs', '.wh-log__body', '.wh-prompt', '.wh-dialogue__line', '.wh-dialogue__reply', '.wh-hotbar',
   // world HUD, phone
-  '.wh-topbar', '.wh-quest--mobile', '.wh-quest__dots', '.wh-trial--mobile', '.wh-tiles', '.wh-prompt--mobile', '.wh-dialogue--mobile', '.wh-sheet',
+  '.wh-topbar__btn', '.wh-topbar__logo', '.wh-quest--mobile', '.wh-quest__dots', '.wh-trial--mobile', '.wh-tiles', '.wh-prompt--mobile', '.wh-dialogue--mobile', '.wh-sheet',
   // play layer, hub, greybox leftovers, scene controls, nameplates
   '.pl-panel', '.pl-context', '.pl-help', '.pl-info', '.pl-badge', '#prompt', '#toast', '.ftf-scene-cue', '.ftf-scene-tools', '.ftf-run-toggle', '.ftf-hud-toast',
   '.hub-dock', '.hub-read', '.hub-card', '.hub-status', '.pl-plate',

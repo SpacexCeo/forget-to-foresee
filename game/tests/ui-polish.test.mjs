@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createPanelArbiter, panelArbiterFor } from '../src/play/panels.js';
 import { signsFromObs } from '../src/ui/world-hud/from-obs.js';
 import { viewportTier, inAppBrowser, VH_TIERS } from '../src/ui/world-hud/index.js';
+import { createHints, resolveHintArgs } from '../src/play/hints.js';
 import { NAMEPLATE, plateOpacity, plateScale, platePosition, platePlacement, proximityOpacity, boxesIntersect, plateBox } from '../src/play/nameplate.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
@@ -241,3 +242,53 @@ test('short viewports: tiers by the measured visible height; in-app browsers are
     assert.ok(css.includes(sel), 'compact rule present: ' + sel);
   }
 });
+
+test('QA-006: a hint about a sign whose trial has passed is withdrawn, a newer sign re-issues it', () => {
+  let t = 0;
+  const i18n = { t: (k) => k };
+  const mem = new Map(); const storage = { getJSON: (k) => mem.get(k) ?? null, setJSON: (k, v) => mem.set(k, v) };
+  const hints = createHints({ storage, i18n, now: () => t });
+  const sign = (index, tick) => ({ index, reading: { slots: [{ meaning: 0 }, { meaning: 1 }, { meaning: 0 }, { meaning: 0 }] }, impliedAnchor: { shell: 1, tick } });
+  const obs = (tick, prophecies) => ({ season: { tick, phase: 'play', tension: 0 }, iris: { anchors: [], attention: 3, silk: 60 }, prophecies, proofs: [], offers: [], memories: [], dictionary: { confidentCells: 0 } });
+  hints.action('moved');
+  hints.observe(obs(1, [sign(0, 2)]));
+  t = 7000; hints.tick(0.1); hints.observe(obs(1, [sign(0, 2)]));
+  let v = hints.view();
+  const args = (x) => (typeof x.text.args === 'function' ? x.text.args() : x.text.args);
+  assert.equal(v.active && v.active.id, 'firstSign');
+  assert.equal(args(v.active).trial, 2);
+  // trial 4: the sign's trial has passed and no newer sign exists → the toast is withdrawn
+  t = 8000; hints.observe(obs(4, [sign(0, 2)]));
+  assert.equal(hints.view().active, null, 'stale hint withdrawn');
+  // a newer sign for trial 7 → the hint comes back with the new facts (after the 30 s repeat gap)
+  t = 60000; hints.observe(obs(4, [sign(0, 2), sign(1, 7)])); hints.tick(0.1);
+  v = hints.view();
+  assert.equal(v.active && v.active.id, 'firstSign');
+  assert.equal(args(v.active).trial, 7);
+  // the facts change while the toast is up → it is re-issued in place
+  t = 61000; hints.observe(obs(4, [sign(0, 2), sign(1, 7), sign(2, 9)]));
+  assert.equal(args(hints.view().active).trial, 9);
+});
+
+test('QA-019: hint args are raw ids resolved in the current language at render time', () => {
+  const en = { t: (k) => ({ 'shell.0': 'Shell I', 'meaning.1.1': 'Gift', 'meaning.0.0': 'Shell I', 'agent.moss': 'Moss' })[k] || k };
+  const ru = { t: (k) => ({ 'shell.0': 'Раковина I', 'meaning.1.1': 'Дар', 'meaning.0.0': 'Раковина I', 'agent.moss': 'Мох' })[k] || k };
+  const raw = { shell: 1, action: 1, place: 0, power: 10, trial: 2, who: 'moss' };
+  assert.deepEqual(resolveHintArgs(raw, en), { shell: 'Shell I', action: 'Gift', place: 'Shell I', power: 10, trial: 2, who: 'Moss' });
+  assert.deepEqual(resolveHintArgs(raw, ru), { shell: 'Раковина I', action: 'Дар', place: 'Раковина I', power: 10, trial: 2, who: 'Мох' });
+  assert.deepEqual(resolveHintArgs(raw, null), raw);
+  const hints = createHints({ i18n: en, now: () => 0 });
+  hints.action('moved');
+  hints.observe({ season: { tick: 1, phase: 'play', tension: 0 }, iris: { anchors: [], attention: 3, silk: 60 }, prophecies: [{ index: 0, reading: { slots: [{ meaning: 0 }, { meaning: 1 }, { meaning: 0 }, { meaning: 0 }] }, impliedAnchor: { shell: 1, tick: 2 } }], proofs: [], offers: [], memories: [], dictionary: { confidentCells: 0 } });
+  const row = hints.view().journal[0];
+  assert.ok(row, 'the hint reached the journal');
+  assert.deepEqual(row.time, { key: 'wh.log.trial', args: { n: 1 } }, 'the clock column is a TextRef');
+  assert.equal(typeof row.text.args, 'function', 'args resolve lazily');
+  assert.equal(row.text.args().action, 'Gift');
+});
+
+test('QA-012: the trial progress reaches 100 % once the season leaves play', () => {
+  const src = read('../src/ui/world-hud/from-obs.js');
+  assert.match(src, /progressDone: s\.phase === 'play' \? Math\.max\(0, s\.tick - 1\) : s\.ticks/);
+});
+
