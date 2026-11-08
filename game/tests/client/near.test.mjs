@@ -20,6 +20,14 @@ const JUDGE_ROOT = '03dbd4587b5d54fc3a6d4befe19920ba66236de11e786baa0a8678305075
 const JUDGE_ASH_KEY = 'd1a397141934211d4673b7db523824988957b5d2d06b1ab050341a4b545d99b6';
 
 const observe = async (tr) => (await tr.observe()).body.observation;
+/** A live (unseeded) season after start_season: its id and root exist only once the seed protocol sealed it. */
+async function startedSeason() {
+  const tr = createLocalTransport({});
+  const o = await observe(tr);
+  const r = await tr.command({ actionId: 'near-live-start', expectedVersion: o.version, type: 'start_season', args: { nonce: 'test nonce' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return (await observe(tr)).season;
+}
 
 test('demoRandomBytes: deterministic per seed, different across seeds, rejects a bad seed', () => {
   const a = demoRandomBytes(JUDGE_SEED), b = demoRandomBytes(JUDGE_SEED), c = demoRandomBytes('0'.repeat(32));
@@ -43,10 +51,14 @@ test('fixed-seed local sessions reproduce the season id, root and Ash key; unsee
   const other = (await observe(createLocalTransport({ seedHex: '0123456789abcdef0123456789abcdef' }))).season;
   assert.notEqual(other.seasonId, s1.seasonId);
   assert.notEqual(other.merkleRoot, s1.merkleRoot);
-  const r1 = (await observe(createLocalTransport({}))).season;
-  const r2 = (await observe(createLocalTransport({}))).season;
+  const r1 = await startedSeason();
+  const r2 = await startedSeason();
   assert.notEqual(r1.seasonId, r2.seasonId, 'a real season keeps the CSPRNG');
   assert.notEqual(r1.merkleRoot, r2.merkleRoot);
+  const intro = (await observe(createLocalTransport({}))).season;
+  assert.equal(intro.seasonId, null, 'before start_season a live season shows only the entropy commitment');
+  assert.equal(intro.merkleRoot, null);
+  assert.equal(intro.entropy.protocol, 'ftf-seed/1');
 });
 
 test('seasonCommitment: the contract arguments match the room and the game proof endpoint byte for byte', async () => {
@@ -212,7 +224,7 @@ test('watcher: disabled deployment and unknown seasons never touch the network',
   assert.equal(off.status.state, 'disabled');
   assert.equal(off.seasonBadge(), null);
   assert.equal(off.client(), null);
-  const other = (await observe(createLocalTransport({}))).season;
+  const other = await startedSeason();
   const w = createNearWatcher({ season: () => other, proof: tr.proof, deployment: DEPLOY, fetch: fakeRpc({ log }) });
   w.observe({ season: other, proofs: [], chronicle: [] }); await w.settle();
   assert.equal(w.status.state, 'other-season');
