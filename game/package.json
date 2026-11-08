@@ -14,6 +14,7 @@
     "vectors": "node scripts/gen-contract-vectors.mjs"
   },
   "dependencies": {
+    "@fontsource/pt-serif": "^5.3.0",
     "three": "^0.170.0"
   },
   "devDependencies": {

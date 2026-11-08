@@ -1,0 +1,275 @@
+/* World HUD — design tokens and primitives (docs/ui-world-hud.md §2, §4, §5).
+   Values were sampled from the owner's mockups. Scoped under .wh-root; packages
+   (status/signs/log/actions) build on these and never redefine them.
+   Fonts: index.js imports @fontsource/pt-serif (400, 700, cyrillic-400) — no CDN. */
+
+.wh-root {
+  /* ---- scale: 1 u = 1 px at the 1811-wide desktop reference ---- */
+  --wh-px: clamp(0.8px, calc(100vw / 1811), 1.35px);
+
+  /* ---- surfaces ---- */
+  --wh-panel-bg: linear-gradient(180deg, rgba(11, 21, 23, .90) 0%, rgba(24, 34, 34, .87) 55%, rgba(36, 44, 41, .84) 100%);
+  --wh-panel-blur: 10px;
+  --wh-card-bg: rgba(8, 18, 21, .55);
+  --wh-card-bg-hover: rgba(14, 26, 29, .70);
+  --wh-card-bg-mobile: rgba(8, 18, 21, .50);
+  --wh-sheet-bg: linear-gradient(180deg, rgba(44, 48, 44, .93) 0%, rgba(24, 33, 33, .96) 18%, rgba(16, 26, 27, .97) 100%);
+  --wh-tile-bg: rgba(52, 58, 54, .62);
+  --wh-btn-bg: rgba(10, 22, 23, .78);
+  --wh-bar-bg: rgba(28, 40, 41, .80);
+  --wh-chip-bg: rgba(16, 28, 30, .82);
+  --wh-chip-active-bg: linear-gradient(180deg, #6f501b 0%, #5b4215 55%, #4a3410 100%);
+  --wh-kbd-bg: rgba(42, 38, 30, .92);
+  --wh-tab-bg: rgba(18, 30, 32, .80);
+  --wh-tab-active-bg: linear-gradient(180deg, rgba(92, 86, 56, .60), rgba(56, 54, 40, .70));
+  --wh-pill-bg: rgba(20, 26, 24, .70);
+  --wh-anchor-bg: rgba(38, 34, 22, .70);
+  --wh-prompt-bg-mobile: rgba(30, 32, 27, .88);
+  --wh-track-bg: #242d2a;
+  --wh-scrim: rgba(0, 0, 0, .35);
+  --wh-divider: rgba(255, 255, 255, .12);
+  --wh-sep: rgba(255, 255, 255, .16);
+
+  /* ---- gold and hairlines ---- */
+  --wh-gold: #e4c272;
+  --wh-gold-bright: #fbe6a6;
+  --wh-gold-deep: #b48d3c;
+  --wh-gold-text: #f6df9b;
+  --wh-frame: rgba(232, 214, 172, .82);
+  --wh-frame-strong: rgba(232, 214, 172, .75);
+  --wh-frame-soft: rgba(196, 186, 156, .45);
+  --wh-frame-dim: rgba(196, 186, 156, .28);
+  --wh-prompt-border: rgba(216, 200, 160, .70);
+  --wh-prompt-border-mobile: #f5d788;
+  --wh-bar-fill: linear-gradient(90deg, #cf9846 0%, #e2ac56 100%);
+  --wh-bar-fill-mobile: linear-gradient(90deg, #e2ac56 0%, #f6c572 100%);
+  --wh-bar-border: rgba(226, 200, 150, .45);
+  --wh-tab-underline: #ffe084;
+  --wh-notify: #ffb347;
+  --wh-notify-glow: 0 0 8px #ffa63a;
+  --wh-dot-off: rgba(150, 160, 158, .55);
+  --wh-handle: rgba(190, 196, 194, .70);
+
+  /* ---- text (every pair with the surfaces above is ≥ 4.5:1) ---- */
+  --wh-text: #faf7ee;
+  --wh-text-2: #e6e3d7;
+  --wh-text-muted: #c9c6b8;
+  --wh-text-on-gold: #fffcec;
+  --wh-text-kbd: #fef4e6;
+
+  /* ---- shadows and glows ---- */
+  --wh-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06);
+  --wh-glow-gold: 0 0 18px rgba(255, 205, 120, .22);
+  --wh-glow-prompt-mobile: 0 0 10px rgba(255, 205, 120, .55), 0 0 26px rgba(255, 190, 100, .25);
+  --wh-glow-chip: 0 0 14px rgba(255, 200, 100, .45), 0 0 0 1px rgba(255, 231, 142, .9);
+  --wh-text-glow: 0 0 8px rgba(255, 236, 190, .22);
+
+  /* ---- radii ---- */
+  --wh-r-panel: calc(14 * var(--wh-px));
+  --wh-r-banner: calc(18 * var(--wh-px));
+  --wh-r-card: calc(13 * var(--wh-px));
+  --wh-r-btn: calc(10 * var(--wh-px));
+  --wh-r-pill: 999px;
+  --wh-r-tile: 16px;
+  --wh-r-sheet: 28px;
+  --wh-r-mquest: 22px;
+  --wh-r-mtrial: 16px;
+
+  /* ---- type (docs §3.2; sizes in u on desktop, px on mobile) ---- */
+  --wh-font: "PT Serif", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --wh-fs-title-l: calc(23 * var(--wh-px));
+  --wh-fs-title: calc(24 * var(--wh-px));
+  --wh-fs-card-title: calc(20 * var(--wh-px));
+  --wh-fs-sign-title: calc(15 * var(--wh-px));
+  --wh-fs-row: calc(15 * var(--wh-px));
+  --wh-fs-body: calc(13.5 * var(--wh-px));
+  --wh-fs-toast: calc(13 * var(--wh-px));
+  --wh-fs-ui: calc(13 * var(--wh-px));
+  --wh-fs-stat: calc(12.5 * var(--wh-px));
+  --wh-fs-small: calc(11.5 * var(--wh-px));
+  --wh-fs-tag: calc(12 * var(--wh-px));
+  --wh-fs-prompt: calc(16 * var(--wh-px));
+  --wh-fs-speaker: calc(15 * var(--wh-px));
+  --wh-fs-line: calc(14 * var(--wh-px));
+  --wh-fs-reply: calc(15 * var(--wh-px));
+  --wh-fs-anchor: calc(14 * var(--wh-px));
+  --wh-fs-kbd: calc(12 * var(--wh-px));
+  --wh-fs-kbd-lg: calc(15 * var(--wh-px));
+  --wh-fs-tile: 13.5px;
+  --wh-ls-tag: .06em;
+
+  --wh-transition: 160ms ease;
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--wh-font);
+  font-size: var(--wh-fs-body);
+  line-height: 1.25;
+  color: var(--wh-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: lining-nums;
+}
+
+@media (max-width: 700px) {
+  .wh-root {
+    --wh-px: 1px;
+    --wh-fs-title-l: 20px;
+    --wh-fs-card-title: 14.5px;
+    --wh-fs-row: 14.5px;
+    --wh-fs-body: 14.5px;
+    --wh-fs-ui: 12px;
+    --wh-fs-small: 10px;
+    --wh-fs-tag: 13px;
+    --wh-fs-prompt: 15.5px;
+    --wh-fs-speaker: 13px;
+    --wh-fs-line: 13px;
+    --wh-fs-reply: 13px;
+    --wh-fs-anchor: 13.5px;
+    --wh-ls-tag: .08em;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+.wh-root, .wh-root * , .wh-root *::before, .wh-root *::after { box-sizing: border-box; }
+.wh-root :where(button) { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; text-align: inherit; }
+.wh-root :where(ol, ul, dl, dd, dt, p, h1, h2, h3, h4) { margin: 0; padding: 0; list-style: none; }
+.wh-root :focus-visible { outline: 2px solid var(--wh-gold-bright); outline-offset: 2px; }
+.wh-root :focus:not(:focus-visible) { outline: none; }
+.wh-root .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Anything that takes input re-enables pointer events; the canvas gets the rest. */
+.wh-root .wh-interactive { pointer-events: auto; }
+
+/* ---------- panel: the single pale hairline surface ---------- */
+.wh-root .wh-panel {
+  position: absolute;
+  background: var(--wh-panel-bg);
+  -webkit-backdrop-filter: blur(var(--wh-panel-blur));
+  backdrop-filter: blur(var(--wh-panel-blur));
+  border: 1px solid var(--wh-frame);
+  border-radius: var(--wh-r-panel);
+  box-shadow: var(--wh-shadow);
+  color: var(--wh-text);
+}
+
+/* ---------- frame: the double hairline (quest banner, Signs panel, sheet) ---------- */
+.wh-root .wh-frame { border-radius: var(--wh-r-banner); }
+.wh-root .wh-frame::before {
+  content: "";
+  position: absolute;
+  inset: calc(5 * var(--wh-px));
+  border: 1px solid var(--wh-frame-soft);
+  border-radius: calc(var(--wh-r-banner) - 5 * var(--wh-px));
+  pointer-events: none;
+}
+.wh-root .wh-frame__corner {
+  position: absolute;
+  left: calc(6 * var(--wh-px));
+  top: calc(6 * var(--wh-px));
+  width: calc(54 * var(--wh-px));
+  height: calc(54 * var(--wh-px));
+  color: var(--wh-gold);
+  opacity: .55;
+  pointer-events: none;
+}
+.wh-root .wh-frame__corner svg { width: 100%; height: 100%; display: block; }
+.wh-root .wh-frame__corner--bl { top: auto; bottom: calc(6 * var(--wh-px)); transform: scaleY(-1); opacity: .28; }
+.wh-root .wh-frame__corner--tr { left: auto; right: calc(6 * var(--wh-px)); transform: scaleX(-1); opacity: .35; }
+
+/* ---------- card (sign cards) ---------- */
+.wh-root .wh-card {
+  position: relative;
+  background: var(--wh-card-bg);
+  border: 1px solid var(--wh-frame-soft);
+  border-radius: var(--wh-r-card);
+  transition: border-color var(--wh-transition), background-color var(--wh-transition);
+}
+.wh-root .wh-card:hover, .wh-root .wh-card:focus-visible { border-color: var(--wh-frame); background: var(--wh-card-bg-hover); }
+
+/* ---------- pills and tags ---------- */
+.wh-root .wh-pill {
+  display: inline-flex; align-items: center; gap: calc(6 * var(--wh-px));
+  height: calc(21 * var(--wh-px)); padding: 0 calc(10 * var(--wh-px));
+  border: 1px solid var(--wh-gold-deep); border-radius: var(--wh-r-pill);
+  background: var(--wh-pill-bg); color: var(--wh-gold-text);
+  font-size: var(--wh-fs-ui); line-height: 1; white-space: nowrap;
+}
+.wh-root .wh-pill--anchor {
+  height: calc(28 * var(--wh-px)); padding: 0 calc(14 * var(--wh-px)) 0 calc(10 * var(--wh-px)); gap: calc(8 * var(--wh-px));
+  border-color: var(--wh-gold); background: var(--wh-anchor-bg); font-size: var(--wh-fs-anchor);
+}
+.wh-root .wh-tag {
+  display: inline-flex; align-items: center; gap: calc(5 * var(--wh-px));
+  height: calc(20 * var(--wh-px)); padding: 0 calc(9 * var(--wh-px)) 0 calc(8 * var(--wh-px));
+  border: 1px solid var(--wh-gold-deep); border-radius: var(--wh-r-pill);
+  background: var(--wh-pill-bg); color: var(--wh-gold-text);
+  font-size: var(--wh-fs-tag); line-height: 1; letter-spacing: var(--wh-ls-tag); text-transform: uppercase; white-space: nowrap;
+}
+
+/* ---------- chips (filters) ---------- */
+.wh-root .wh-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: calc(34 * var(--wh-px)); padding: 0 calc(22 * var(--wh-px));
+  border: 1px solid var(--wh-frame-soft); border-radius: var(--wh-r-pill);
+  background: var(--wh-chip-bg); color: var(--wh-text-muted);
+  font-size: var(--wh-fs-ui); line-height: 1; white-space: nowrap;
+  transition: border-color var(--wh-transition), color var(--wh-transition), box-shadow var(--wh-transition);
+}
+.wh-root .wh-chip:hover { border-color: var(--wh-frame); color: var(--wh-text); }
+.wh-root .wh-chip[aria-pressed="true"], .wh-root .wh-chip[aria-selected="true"] {
+  background: var(--wh-chip-active-bg); color: var(--wh-text-on-gold); border-color: #ffe78e; box-shadow: var(--wh-glow-chip);
+}
+@media (max-width: 700px) { .wh-root .wh-chip { height: 31px; padding: 0 20px; } }
+
+/* ---------- kbd (hotkey boxes) ---------- */
+.wh-root .wh-kbd {
+  display: inline-grid; place-items: center;
+  min-width: calc(24 * var(--wh-px)); height: calc(24 * var(--wh-px)); padding: 0 calc(5 * var(--wh-px));
+  border: 1px solid var(--wh-gold); border-radius: calc(5 * var(--wh-px));
+  background: var(--wh-kbd-bg); color: var(--wh-text-kbd);
+  font-family: var(--wh-font); font-size: var(--wh-fs-kbd); font-weight: 400; line-height: 1;
+}
+.wh-root .wh-kbd--lg {
+  min-width: calc(38 * var(--wh-px)); height: calc(33 * var(--wh-px));
+  border-width: 1.5px; border-radius: calc(7 * var(--wh-px)); font-size: var(--wh-fs-kbd-lg);
+}
+@media (max-width: 700px) { .wh-root .wh-kbd--lg { min-width: 30px; height: 30px; border-radius: 7px; } }
+
+/* ---------- icon buttons (mobile top bar, sheet close) ---------- */
+.wh-root .wh-btn-icon {
+  display: grid; place-items: center;
+  width: 48px; height: 35px;
+  border: 1px solid var(--wh-frame-soft); border-radius: 14px;
+  background: var(--wh-btn-bg); color: var(--wh-gold);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: border-color var(--wh-transition);
+}
+.wh-root .wh-btn-icon:hover { border-color: var(--wh-frame); }
+.wh-root .wh-btn-icon--round { width: 34px; height: 34px; border-radius: 50%; color: var(--wh-text); }
+
+/* ---------- divider, progress bar, icon wrapper ---------- */
+.wh-root .wh-divider { height: 1px; background: var(--wh-divider); }
+.wh-root .wh-bar {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px;
+  height: calc(11 * var(--wh-px)); padding: 1px;
+  border: 1px solid var(--wh-bar-border); border-radius: calc(6 * var(--wh-px));
+  background: var(--wh-track-bg); overflow: hidden;
+}
+.wh-root .wh-bar__seg { background: transparent; }
+.wh-root .wh-bar__seg--on { background: var(--wh-bar-fill); }
+.wh-root .wh-bar__seg:first-child { border-radius: calc(5 * var(--wh-px)) 0 0 calc(5 * var(--wh-px)); }
+.wh-root .wh-bar__seg:last-child { border-radius: 0 calc(5 * var(--wh-px)) calc(5 * var(--wh-px)) 0; }
+@media (max-width: 700px) { .wh-root .wh-bar { height: 8px; border-radius: 4px; } .wh-root .wh-bar__seg--on { background: var(--wh-bar-fill-mobile); } }
+
+.wh-root .wh-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -.15em; color: var(--wh-gold); flex: none; }
+.wh-root .wh-icon svg { display: block; width: 100%; height: 100%; }
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .wh-root, .wh-root * { transition: none !important; animation: none !important; }
+}
+html[data-motion="reduce"] .wh-root, html[data-motion="reduce"] .wh-root * { transition: none !important; animation: none !important; }

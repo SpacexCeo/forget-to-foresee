@@ -21,3 +21,6 @@ __pycache__/
 
 # Local agent worktrees and session data
 .claude/
+
+# Dev-only scratch (reference images for HUD comparison, screenshots)
+game/.scratch/
