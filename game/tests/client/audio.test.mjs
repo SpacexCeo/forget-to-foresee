@@ -134,3 +134,27 @@ test('runtime: unlock, spatial play, ducking, zones, tension and persisted volum
   a.dispose();
   assert.equal(a.state.unlocked, false);
 });
+
+test('runtime: one Shell hum per Shell follows the zone level; preload expands step groups', async () => {
+  const a = createAudio({ AudioContextClass: FakeCtx, fetch: fakeFetch, storage: memoryStorage(), base: '/x/', music: false });
+  const hums = a.setShellHums([[10, 14, 10], [-10, 22, 10], [-10, 17, -10], [10, 25, -10]]);
+  assert.equal(hums.length, 4);
+  assert.equal(a.state.hums, 4);
+  a.setZone('plaza');
+  await a.unlock();
+  await flush();
+  const ctx = FakeCtx.last;
+  const humPanners = ctx.panners.filter((p) => p.positionY.value >= 14);
+  assert.equal(humPanners.length, 4, 'four positional hums started on unlock');
+  assert.equal(hums[0].inner.gainNode.gain.value, 1, 'full level on the plaza');
+  a.setZone('sol');
+  assert.equal(hums[0].inner.gainNode.gain.value, 0.8, 'lower at a camp');
+  a.setZone('shell');
+  assert.equal(hums[0].inner.gainNode.gain.value, 0, 'off inside a Shell');
+  const loaded = await a.preload(['step_stone', 'ui_click', 'nope']);
+  assert.equal(loaded.length, AUDIO_MANIFEST.groups.step_stone.length + 1, 'every variant of the group plus the single sound');
+  assert.equal(ctx.sources.filter((s) => !s.loop).length, 0, 'preload decodes without playing a one-shot');
+  a.setShellHums([]);
+  assert.equal(a.state.hums, 0);
+  a.dispose();
+});

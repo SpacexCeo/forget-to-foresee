@@ -52,5 +52,11 @@ export class VfxPass extends Pass {
     this.quad.render(renderer);
   }
 
-  dispose() { this.rt.dispose(); this.quad.material.dispose(); this.quad.dispose(); }
+  /**
+   * The composer that hosts this pass disposes every pass when the look-dev stack rebuilds it on a
+   * tier change (render/post.js); the pass belongs to the VFX system and is re-attached to the new
+   * composer, so the composer's dispose() is a no-op here. createVfx().dispose() calls release().
+   */
+  dispose() {}
+  release() { this.rt.dispose(); this.quad.material.dispose(); this.quad.dispose(); }
 }

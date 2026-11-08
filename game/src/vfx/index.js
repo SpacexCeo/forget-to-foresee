@@ -325,7 +325,7 @@ export function createVfx(scene, camera, renderer, options = {}) {
     if (composer) { const i = composer.passes.indexOf(pass); if (i >= 0) composer.passes.splice(i, 1); }
     particles.dispose();
     for (const p of Object.values(pools)) for (const m of p.all()) { m.geometry.dispose(); m.material.dispose(); }
-    pass.dispose();
+    pass.release();
     root.removeFromParent();
   }
 

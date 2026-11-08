@@ -31,6 +31,7 @@ export function createAudio(opts = {}) {
   let duckCount = 0;
   let zone = null, bed = null, wind = null, tension = 0, music = null, musicStarting = false;
   const pendingLoops = [];
+  let hums = [];                   // one positional amb_shell_hum per Shell (setShellHums)
 
   const now = () => ctx.currentTime;
   const ramp = (param, v, tc = 0.08) => { try { param.cancelScheduledValues(now()); param.setTargetAtTime(v, now(), tc); } catch { param.value = v; } };
@@ -152,6 +153,7 @@ export function createAudio(opts = {}) {
       bed = m.bed ? play(m.bed, { loop: true, gain: 0 }) : null;
       bed?.setGain(1, 0.8);
     }
+    for (const h of hums) h.setGain(m.hum, 1.5);
   }
 
   async function startMusic() {
@@ -203,6 +205,15 @@ export function createAudio(opts = {}) {
     speakStrokes(strokes, o = {}) { return guestPlan(manifest, strokes).map((s) => play(s.name, { ...o, rate: s.rate, delay: (o.delay ?? 0) + s.at })); },
     setTension(t) { tension = Math.min(100, Math.max(0, +t || 0)); if (ctx && !music) startMusic(); applyTension(); },
     setZone(z) { const m = zoneMix(z); if (zone && zoneMix(zone).zone === m.zone) return; zone = m.zone; applyZone(); },
+    /**
+     * One positional Shell hum per position ([x, y, z] of each Shell). Loops queue until unlock(); their
+     * level follows the zone (`zoneMix(zone).hum`: full on the plaza and bridges, lower at a camp, off inside).
+     */
+    setShellHums(positions) {
+      for (const h of hums) h.stop(1);
+      hums = (positions || []).map((pos) => play('amb_shell_hum', { pos, loop: true, gain: zone ? zoneMix(zone).hum : 1 }));
+      return hums;
+    },
     setListener(camera, target) {
       if (!ctx) return;
       const { pos, forward, up } = listenerPose(camera, target);
@@ -220,9 +231,14 @@ export function createAudio(opts = {}) {
       if (nodes) ramp(nodes[bus].gain, sliderGain(vols[bus]), 0.05);
     },
     getVolumes() { return { ...vols }; },
-    preload(names) { if (!ctx) return Promise.resolve([]); return Promise.all(names.map((n) => load(resolveSound(manifest, n, rng) || n))); },
+    /** Decodes sounds ahead of time; a group name loads every variant (steps must not miss their first beat). */
+    preload(names) {
+      if (!ctx) return Promise.resolve([]);
+      const all = names.flatMap((n) => manifest.groups?.[n] || [n]).filter((n) => manifest.sounds?.[n]);
+      return Promise.all(all.map(load));
+    },
     get context() { return ctx; },
-    get state() { return { unlocked: !!ctx, zone, tension, active: active.size, ducked: duckCount > 0, music: !!music, bed: bed?.name ?? null }; },
+    get state() { return { unlocked: !!ctx, zone, tension, active: active.size, ducked: duckCount > 0, music: !!music, bed: bed?.name ?? null, hums: hums.length }; },
     _nodes: () => nodes, _music: () => music,
     dispose() {
       disposed = true;
