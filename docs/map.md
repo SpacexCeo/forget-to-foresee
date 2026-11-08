@@ -46,14 +46,36 @@ stay inside it.
 Routing reuses the room's walk graph (`walkTo` → `planRoute`, the same path the G key takes) and the hub's flight; a click
 never evaluates a rule. Inside a Shell only other Shells are clickable (hub), the rest reads "Leave the Shell first".
 
-### Style
+### Style (hand-drawn chart, not a debug plot)
 
 The panel reuses the world HUD tokens through `.wh-root` (`docs/ui-world-hud.md`): the dark panel surface with the pale
-double hairline, Libre Caslon titles, Source Sans captions, gold for Shells with a sign, the goal and Iris. The archipelago
-itself is drawn in parchment (`#d7c9a2`, plaza `#e3d8b8`) with ink outlines on the cloud sea. Reduced motion stops the goal
-pulse; the low tier drops the backdrop blur (same rule as the HUD).
+double hairline, Libre Caslon titles, Source Sans captions, gold for Shells with a sign, the goal and Iris. The chart itself:
 
-Widths: `min(560px, 100vw − 32px)`; at 390 px the drawing is 350 px wide and camp names are 11–12 px tall.
+- the archipelago in parchment (a warm radial paper gradient with fractal-noise grain, `feTurbulence` multiplied in) with ink
+  outlines, a dashed cliff hatching around every plateau, a terrace ring inside, and soft blurred drop shadows of the rock
+  pillars on the cloud sea (blurred cloud banks along the edges, a haze under the island);
+- bridges as parchment decks on an ink edge with a dashed paving joint;
+- the Scroll as a medallion with six clan sectors and a gold core; the four anchor zones with their numerals on the plaza rim;
+- the Shells as coiled ammonite glyphs on discs: dashed and dim when quiet, gold-filled with a glow and a count badge when a
+  sign waits, a bright ring when Iris is inside; their names sit in the four corners of the sea next to their discs, so the
+  camp ring stays uncluttered in every locale;
+- cartouche details: gold corner flourishes, a compass rose (north = −Z, the top of the map), a 10 m scale bar;
+- camp names in gold serif with a small-caps "camp" caption; the Scroll named to the right of the plaza (the only side with no
+  bridge); the balcony below its disc; the pedestal as a small gem with a tooltip.
+
+Reduced motion stops the goal pulse; the low tier drops the backdrop blur (same rule as the HUD). Widths:
+`min(560px, 100vw − 32px)`; at 390 px the drawing is 350 px wide and camp names are about 11 px tall.
+
+### Before / after (headless Chromium, SwiftShader; `docs/map/`)
+
+| Viewport | Before: overview with the floating labels (`?dev=1&view=overview`, the old look) | After: the same view in play | After: the map |
+|---|---|---|---|
+| 1280×800 | `before-overview-1280x800.jpg` | `after-overview-1280x800.jpg` | `after-map-1280x800.jpg` |
+| 1920×1080 | `before-overview-1920x1080.jpg` | `after-overview-1920x1080.jpg` | `after-map-1920x1080.jpg` |
+| 390×844 (2×) | `before-overview-390x844.jpg` | `after-overview-390x844.jpg` | `after-map-390x844.jpg` |
+
+Locales at 390×844: `after-map-390x844-{uk,ru,it,zh}.jpg` (English is `after-map-390x844.jpg`). Low tier with reduced
+motion: `after-map-low-reduced-1280x800.jpg`.
 
 ## 3. Checks
 
@@ -61,13 +83,18 @@ Widths: `min(560px, 100vw − 32px)`; at 390 px the drawing is 350 px wide and c
   resolve in `placePosition` and are reachable from the spawn over the walk graph, Shell states against a real judge-seed
   season (waiting → inside → staked), route decisions in both modes and inside a Shell, goal and Iris markers, the view
   model, five-locale strings, the label toggle default.
-- Headless Chromium (SwiftShader, a few FPS; clicks dispatched with `element.click()`): see `docs/handoff/agent-reports/island-map.md`
-  for the run log. Both modes, desktop 1280×800 and iPhone 13, EN and UK.
+- Headless Chromium (SwiftShader, a few FPS; clicks dispatched with `element.click()`): both modes, desktop and iPhone 13,
+  EN and UK, zero console errors; the run log is in `docs/handoff/agent-reports/island-map.md`. A second run takes the
+  before/after screenshots above, checks that no label leaves the drawing or overlaps another at 390 px in five locales, and
+  that the low tier with reduced motion opens the map with no animation and no blur.
 
 ## 4. Open
 
 - `input.js` does not forward `KeyN` yet (Task G owns it, request 8): until then the panel listens for N itself and
   de-duplicates the two paths within 400 ms. Remove the listener in `map-ui.js` once `WORLD_KEYS` has `KeyN`.
-- Gamepad navigation inside the map (main.js only navigates `.pl-panel` and dialogs).
+- Gamepad navigation inside the map (main.js only navigates `.pl-panel` and dialogs); keyboard works (Tab cycles the close
+  button and the places, Enter/Space routes, Esc closes).
+- The map is a drawing, not the live island: it does not show the real art's silhouettes or the agents' walking routes,
+  only their positions.
 - The phone tap target is a stopgap until Task F's mobile HUD has a map tile; hide it with
   `createMapPanel({ phoneButton: false })` or CSS on `.ftf-map-fab`.

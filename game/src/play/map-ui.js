@@ -5,7 +5,7 @@
 // DOM under the play UI root, no three.js. Only one panel is open at a time: opening the map asks
 // the host to close the others (onOpen), and the host closes the map when another panel opens.
 import { renderMsg } from './i18n.js';
-import { buildMapModel, MAP_SIZE, ROMAN } from './map.js';
+import { buildMapModel, MAP_SIZE, ROMAN, scaleLength } from './map.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const REFRESH = 0.2;        // seconds between marker refreshes while open
@@ -30,19 +30,32 @@ const CSS = `
 .ftf-map-canvas svg { display: block; width: 100%; height: 100%; overflow: visible; font-family: var(--wh-font, Georgia, serif); }
 .ftf-map-sea { fill: url(#ftf-map-sea); }
 .ftf-map-haze { fill: url(#ftf-map-haze); }
-.ftf-map-bridge { stroke: #b9a87f; stroke-linecap: round; }
-.ftf-map-bridge-ink { stroke: #4a3f2a; stroke-linecap: round; }
-.ftf-map-platform { fill: #d7c9a2; stroke: #4a3f2a; stroke-width: 1.2; }
-.ftf-map-platform--plaza { fill: #e3d8b8; }
+.ftf-map-bridge { stroke: #c4b38a; stroke-linecap: round; }
+.ftf-map-bridge-ink { stroke: #3f3523; stroke-linecap: round; }
+.ftf-map-bridge-joint { stroke: rgba(74,63,42,.45); stroke-width: .6; stroke-dasharray: 2 2; }
+.ftf-map-cliff { fill: none; stroke: #3f3523; stroke-width: 4.5; stroke-dasharray: 1.1 2.4; opacity: .5; }
+.ftf-map-platform { fill: url(#ftf-map-paper); stroke: #3f3523; stroke-width: 1.3; }
+.ftf-map-platform--plaza { fill: #e6dcbd; }
 .ftf-map-platform--balcony { fill: #cfc39e; }
+.ftf-map-terrace { fill: none; stroke: rgba(74,63,42,.35); stroke-width: .7; }
 .ftf-map-ring { fill: none; stroke: #8a7a52; stroke-width: .8; stroke-dasharray: 2 3; }
 .ftf-map-scroll { fill: none; stroke: var(--wh-gold-deep, #b48d3c); stroke-width: 1.6; }
+.ftf-map-scroll-core { fill: var(--wh-gold, #e4c272); }
+.ftf-map-shell-glow { fill: rgba(255,205,120,.14); }
+.ftf-map-coil { fill: none; stroke: rgba(250,247,238,.55); stroke-width: 1.1; stroke-linecap: round; }
+.ftf-map-coil--lit { stroke: var(--wh-gold-bright, #fbe6a6); stroke-width: 1.3; }
+.ftf-map-flourish { fill: none; stroke: var(--wh-gold, #e4c272); stroke-width: .9; opacity: .55; }
+.ftf-map-rose-ring { fill: rgba(8,18,21,.35); stroke: rgba(232,214,172,.55); stroke-width: .7; }
+.ftf-map-rose-pts { fill: rgba(232,214,172,.45); }
+.ftf-map-rose-n { fill: var(--wh-gold, #e4c272); }
+.ftf-map-rose-text { font: 400 9px/1 var(--wh-font, Georgia, serif); fill: var(--wh-gold-text, #f6df9b); text-anchor: middle; }
+.ftf-map-scale path { fill: none; stroke: rgba(232,214,172,.7); stroke-width: .9; }
+.ftf-map-scale text { font: 500 7.5px/1 var(--wh-font-body, system-ui, sans-serif); fill: var(--wh-text-muted, #c9c6b8); text-anchor: middle; }
 .ftf-map-anchor { fill: rgba(228,194,114,.18); stroke: var(--wh-gold-deep, #b48d3c); stroke-width: 1; }
 .ftf-map-anchor-n { font: 400 7px/1 var(--wh-font, Georgia, serif); fill: #4a3f2a; text-anchor: middle; pointer-events: none; }
-.ftf-map-shell { fill: rgba(250,247,238,.08); stroke: var(--wh-frame-soft, rgba(196,186,156,.45)); stroke-width: 1.2; stroke-dasharray: 3 2.5; }
+.ftf-map-shell { fill: rgba(250,247,238,.07); stroke: var(--wh-frame-soft, rgba(196,186,156,.5)); stroke-width: 1.1; stroke-dasharray: 3 2.5; }
 .ftf-map-shell--waiting { fill: rgba(228,194,114,.28); stroke: var(--wh-gold, #e4c272); stroke-dasharray: none; filter: drop-shadow(0 0 5px rgba(255,205,120,.55)); }
 .ftf-map-shell--inside { fill: rgba(250,247,238,.18); stroke: var(--wh-gold-bright, #fbe6a6); stroke-width: 2; stroke-dasharray: none; }
-.ftf-map-shell-n { font: 400 13px/1 var(--wh-font, Georgia, serif); fill: var(--wh-text, #faf7ee); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .ftf-map-badge { fill: var(--wh-gold, #e4c272); }
 .ftf-map-badge-n { font: 700 8px/1 var(--wh-font-body, system-ui, sans-serif); fill: #2a2112; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .ftf-map-place { cursor: pointer; outline: none; }
@@ -50,7 +63,8 @@ const CSS = `
 .ftf-map-hit { fill: transparent; stroke: transparent; stroke-width: 1.5; transition: stroke 160ms ease, fill 160ms ease; }
 .ftf-map-place:hover .ftf-map-hit, .ftf-map-place:focus-visible .ftf-map-hit { fill: rgba(228,194,114,.16); stroke: var(--wh-gold-bright, #fbe6a6); }
 .ftf-map-label { font: 400 13px/1 var(--wh-font, Georgia, serif); fill: var(--wh-text, #faf7ee); paint-order: stroke; stroke: rgba(8,18,21,.9); stroke-width: 3px; stroke-linejoin: round; text-anchor: middle; pointer-events: none; }
-.ftf-map-label--sub { font: 500 8.5px/1 var(--wh-font-body, system-ui, sans-serif); fill: var(--wh-text-muted, #c9c6b8); letter-spacing: .06em; text-transform: uppercase; }
+.ftf-map-label--sub { font: 600 9px/1 var(--wh-font-body, system-ui, sans-serif); fill: var(--wh-text-muted, #c9c6b8); letter-spacing: .07em; text-transform: uppercase; }
+.ftf-map-label--lit { fill: var(--wh-gold-text, #f6df9b); }
 .ftf-map-label--camp { fill: var(--wh-gold-text, #f6df9b); }
 .ftf-map-camp-dot { stroke: #4a3f2a; stroke-width: 1; }
 .ftf-map-gem { fill: #bfe0ec; stroke: #4a3f2a; stroke-width: .8; }
@@ -71,7 +85,7 @@ const CSS = `
 @media (pointer: coarse) { body.in-world .ftf-map-fab { display: flex; } }
 body.ftf-map-open .ftf-map-fab { display: none !important; }
 /* only one panel at a time: while the map is open the dock, the reading card and the spot menu wait underneath the scrim */
-body.ftf-map-open .hub-dock, body.ftf-map-open .hub-read, body.ftf-map-open .pl-context, body.ftf-map-open #prompt, body.ftf-map-open .ftf-scene-cue { visibility: hidden; }
+body.ftf-map-open .hub-dock, body.ftf-map-open .hub-read, body.ftf-map-open .pl-context, body.ftf-map-open #prompt, body.ftf-map-open .ftf-scene-cue, body.ftf-map-open .ftf-run-toggle, body.ftf-map-open .hub-card, body.ftf-map-open .hub-status { visibility: hidden; }
 @media (max-width: 700px) {
   .ftf-map-host { padding: 8px; }
   .ftf-map { padding: 10px 12px 10px; gap: 8px; }
@@ -109,6 +123,18 @@ function svg(doc, tag, attrs = {}, ...kids) {
   return e;
 }
 const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
+/** A planispiral coil (the Shells' silhouette) as an SVG path inside radius R; each Shell turns a little differently. */
+function coilPath(cx, cy, R, n) {
+  const turns = 2.6 + n * 0.15, k = 0.22, steps = 64;
+  const thetaMax = turns * Math.PI * 2, rMax = Math.exp(k * thetaMax);
+  let d = '';
+  for (let i = 0; i <= steps; i++) {
+    const th = (i / steps) * thetaMax, r = (Math.exp(k * th) / rMax) * R;
+    const x = cx + Math.cos(th + n) * r, y = cy + Math.sin(th + n) * r;
+    d += (i ? ' L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
+  }
+  return d;
+}
 const isTyping = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
 /**
@@ -128,6 +154,16 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
   if (!doc.getElementById('ftf-map-style')) doc.head.append(el(doc, 'style', { id: 'ftf-map-style', text: CSS }));
 
   const host = el(doc, 'div', { class: 'wh-root ftf-map-host', role: 'dialog', 'aria-modal': 'true', hidden: true });
+  // Tab stays inside the dialog while it is open (close button, then the places in reading order).
+  host.addEventListener('keydown', (e) => {
+    if (e.code !== 'Tab') return;
+    const items = [...host.querySelectorAll('button, [tabindex="0"]')].filter((n) => !n.hasAttribute('disabled'));
+    if (!items.length) return;
+    const i = items.indexOf(doc.activeElement);
+    const next = e.shiftKey ? (i <= 0 ? items[items.length - 1] : items[i - 1]) : (i < 0 || i === items.length - 1 ? items[0] : items[i + 1]);
+    e.preventDefault();
+    next.focus({ preventScroll: true });
+  });
   const scrim = el(doc, 'div', { class: 'ftf-map-scrim', onclick: () => close() });
   const panel = el(doc, 'section', { class: 'ftf-map' });
   host.append(scrim, panel);
@@ -176,56 +212,100 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
     const g = m.geometry;
     const title = t('map.title');
     host.setAttribute('aria-label', title);
-    const s = svg(doc, 'svg', { viewBox: `0 0 ${MAP_SIZE} ${MAP_SIZE}`, role: 'img', 'aria-label': title });
+    // no role="img" here: the places inside are buttons and must stay in the accessibility tree
+    const s = svg(doc, 'svg', { viewBox: `0 0 ${MAP_SIZE} ${MAP_SIZE}`, 'aria-label': title });
+    const c = MAP_SIZE / 2;
     const defs = svg(doc, 'defs');
-    const sea = svg(doc, 'radialGradient', { id: 'ftf-map-sea', cx: '50%', cy: '48%', r: '70%' },
-      svg(doc, 'stop', { offset: '0%', 'stop-color': '#1b2a2c' }), svg(doc, 'stop', { offset: '100%', 'stop-color': '#0a1416' }));
-    const haze = svg(doc, 'radialGradient', { id: 'ftf-map-haze', cx: '50%', cy: '50%', r: '50%' },
-      svg(doc, 'stop', { offset: '0%', 'stop-color': 'rgba(214,226,232,.26)' }), svg(doc, 'stop', { offset: '100%', 'stop-color': 'rgba(214,226,232,0)' }));
-    defs.append(sea, haze);
+    defs.append(
+      svg(doc, 'radialGradient', { id: 'ftf-map-sea', cx: '50%', cy: '48%', r: '70%' },
+        svg(doc, 'stop', { offset: '0%', 'stop-color': '#1c2c2e' }), svg(doc, 'stop', { offset: '100%', 'stop-color': '#0a1416' })),
+      svg(doc, 'radialGradient', { id: 'ftf-map-haze', cx: '50%', cy: '50%', r: '50%' },
+        svg(doc, 'stop', { offset: '0%', 'stop-color': 'rgba(214,226,232,.22)' }), svg(doc, 'stop', { offset: '100%', 'stop-color': 'rgba(214,226,232,0)' })),
+      svg(doc, 'radialGradient', { id: 'ftf-map-paper', cx: '38%', cy: '34%', r: '80%' },
+        svg(doc, 'stop', { offset: '0%', 'stop-color': '#e6dab8' }), svg(doc, 'stop', { offset: '100%', 'stop-color': '#c9b98f' })),
+      // paper grain: fine fractal noise multiplied over the parchment
+      svg(doc, 'filter', { id: 'ftf-map-grain', x: '-5%', y: '-5%', width: '110%', height: '110%' },
+        svg(doc, 'feTurbulence', { type: 'fractalNoise', baseFrequency: '0.9', numOctaves: '2', seed: '7', result: 'noise' }),
+        svg(doc, 'feColorMatrix', { in: 'noise', type: 'matrix', values: '0 0 0 0 .35  0 0 0 0 .3  0 0 0 0 .2  0 0 0 .28 0', result: 'tint' }),
+        svg(doc, 'feComposite', { in: 'tint', in2: 'SourceGraphic', operator: 'in', result: 'grain' }),
+        svg(doc, 'feBlend', { in: 'grain', in2: 'SourceGraphic', mode: 'multiply' })),
+      svg(doc, 'filter', { id: 'ftf-map-shadow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, svg(doc, 'feGaussianBlur', { stdDeviation: '2.2' })),
+      svg(doc, 'filter', { id: 'ftf-map-cloud', x: '-40%', y: '-40%', width: '180%', height: '180%' }, svg(doc, 'feGaussianBlur', { stdDeviation: '9' })));
     s.append(defs,
       svg(doc, 'rect', { class: 'ftf-map-sea', x: 0, y: 0, width: MAP_SIZE, height: MAP_SIZE, rx: 14 }),
-      svg(doc, 'ellipse', { class: 'ftf-map-haze', cx: MAP_SIZE / 2, cy: MAP_SIZE / 2, rx: MAP_SIZE * 0.46, ry: MAP_SIZE * 0.42 }));
-    // Bridges (ink edge under a parchment deck), then the walkable discs on top.
+      svg(doc, 'ellipse', { class: 'ftf-map-haze', cx: c, cy: c, rx: MAP_SIZE * 0.47, ry: MAP_SIZE * 0.43 }));
+    // The sea of clouds: soft banks along the edges, under the archipelago.
+    const clouds = svg(doc, 'g', { class: 'ftf-map-clouds', filter: 'url(#ftf-map-cloud)' });
+    for (const [cx, cy, rx, ry, o] of [[60, 150, 52, 22, .16], [345, 140, 46, 20, .14], [120, 372, 70, 18, .13], [300, 388, 60, 16, .12], [200, 28, 90, 14, .1], [386, 260, 30, 40, .1]]) {
+      clouds.append(svg(doc, 'ellipse', { cx, cy, rx, ry, fill: `rgba(222,230,234,${o})` }));
+    }
+    s.append(clouds);
+    // Drop shadows of the rock pillars, then the cliff hatching, then the walkable tops.
+    const shadows = svg(doc, 'g', { filter: 'url(#ftf-map-shadow)', opacity: '.55' });
+    for (const p of g.platforms) shadows.append(svg(doc, 'circle', { cx: p.center[0] + 2, cy: p.center[1] + 3.5, r: p.r + 1, fill: '#050b0c' }));
+    s.append(shadows);
     const decks = svg(doc, 'g');
     for (const b of g.bridges) {
-      decks.append(svg(doc, 'line', { class: 'ftf-map-bridge-ink', x1: b.from[0], y1: b.from[1], x2: b.to[0], y2: b.to[1], 'stroke-width': b.width + 2.4 }));
+      decks.append(svg(doc, 'line', { class: 'ftf-map-bridge-ink', x1: b.from[0], y1: b.from[1], x2: b.to[0], y2: b.to[1], 'stroke-width': b.width + 2.6 }));
       decks.append(svg(doc, 'line', { class: 'ftf-map-bridge', x1: b.from[0], y1: b.from[1], x2: b.to[0], y2: b.to[1], 'stroke-width': b.width }));
+      // railing hairline down the middle of the deck reads as the paving joint
+      decks.append(svg(doc, 'line', { class: 'ftf-map-bridge-joint', x1: b.from[0], y1: b.from[1], x2: b.to[0], y2: b.to[1] }));
     }
     s.append(decks);
-    const discs = svg(doc, 'g');
+    const discs = svg(doc, 'g', { filter: 'url(#ftf-map-grain)' });
     for (const p of g.platforms) {
+      discs.append(svg(doc, 'circle', { class: 'ftf-map-cliff', cx: p.center[0], cy: p.center[1], r: p.r + 2.4 }));
       const cls = 'ftf-map-platform' + (p.id === 'plaza' ? ' ftf-map-platform--plaza' : p.id === 'balcony' ? ' ftf-map-platform--balcony' : '');
       discs.append(svg(doc, 'circle', { class: cls, cx: p.center[0], cy: p.center[1], r: p.r }));
+      if (p.id !== 'plaza') discs.append(svg(doc, 'circle', { class: 'ftf-map-terrace', cx: p.center[0], cy: p.center[1], r: p.r - 2.6 }));
     }
     s.append(discs);
-    // The plaza: the Scroll medallion and the four anchor zones with their Shell numerals.
-    s.append(svg(doc, 'circle', { class: 'ftf-map-ring', cx: g.scroll.center[0], cy: g.scroll.center[1], r: g.platforms[0].r - 4 }));
-    s.append(svg(doc, 'circle', { class: 'ftf-map-scroll', cx: g.scroll.center[0], cy: g.scroll.center[1], r: g.scroll.r }));
-    s.append(svg(doc, 'circle', { class: 'ftf-map-scroll', cx: g.scroll.center[0], cy: g.scroll.center[1], r: g.scroll.r * 0.45, 'stroke-width': 1 }));
+    // The plaza: the anchor ring, the Scroll medallion with its six clan sectors, the four anchor zones.
+    const [su, sv] = g.scroll.center;
+    s.append(svg(doc, 'circle', { class: 'ftf-map-ring', cx: su, cy: sv, r: g.platforms[0].r - 4 }));
+    s.append(svg(doc, 'circle', { class: 'ftf-map-scroll', cx: su, cy: sv, r: g.scroll.r }));
+    s.append(svg(doc, 'circle', { class: 'ftf-map-scroll', cx: su, cy: sv, r: g.scroll.r * 0.55, 'stroke-width': 1 }));
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      s.append(svg(doc, 'line', { class: 'ftf-map-scroll', x1: su + Math.sin(a) * g.scroll.r * 0.55, y1: sv + Math.cos(a) * g.scroll.r * 0.55, x2: su + Math.sin(a) * g.scroll.r, y2: sv + Math.cos(a) * g.scroll.r, 'stroke-width': .8 }));
+    }
+    s.append(svg(doc, 'circle', { class: 'ftf-map-scroll-core', cx: su, cy: sv, r: 2.2 }));
     for (const a of g.anchors) {
       s.append(svg(doc, 'circle', { class: 'ftf-map-anchor', cx: a.center[0], cy: a.center[1], r: a.r }),
         svg(doc, 'text', { class: 'ftf-map-anchor-n', x: a.center[0], y: a.center[1] + 2.5, text: ROMAN[a.shell - 1] }));
     }
-    // Shells: state from the hub (quiet / waiting with a count / inside).
+    // Shells: a coiled glyph (the ammonite silhouette of the art) on a disc that carries the hub state.
     for (const sh of g.shells) {
       const st = m.shells[sh.shell - 1];
       const grp = svg(doc, 'g');
+      grp.append(svg(doc, 'circle', { class: 'ftf-map-shell-glow', cx: sh.center[0], cy: sh.center[1], r: sh.r + 6, style: st.state === 'waiting' ? '' : 'display:none' }));
       grp.append(svg(doc, 'circle', { class: 'ftf-map-shell' + (st.state === 'waiting' ? ' ftf-map-shell--waiting' : st.state === 'inside' ? ' ftf-map-shell--inside' : ''), cx: sh.center[0], cy: sh.center[1], r: sh.r }));
-      grp.append(svg(doc, 'text', { class: 'ftf-map-shell-n', x: sh.center[0], y: sh.center[1], text: ROMAN[sh.shell - 1] }));
+      grp.append(svg(doc, 'path', { class: 'ftf-map-coil' + (st.state === 'quiet' ? '' : ' ftf-map-coil--lit'), d: coilPath(sh.center[0], sh.center[1], sh.r * 0.78, sh.shell) }));
       if (st.signs) {
-        grp.append(svg(doc, 'circle', { class: 'ftf-map-badge', cx: sh.center[0] + sh.r * 0.8, cy: sh.center[1] - sh.r * 0.8, r: 6.5 }),
-          svg(doc, 'text', { class: 'ftf-map-badge-n', x: sh.center[0] + sh.r * 0.8, y: sh.center[1] - sh.r * 0.8, text: String(st.signs) }));
+        grp.append(svg(doc, 'circle', { class: 'ftf-map-badge', cx: sh.center[0] + sh.r * 0.85, cy: sh.center[1] - sh.r * 0.85, r: 6.5 }),
+          svg(doc, 'text', { class: 'ftf-map-badge-n', x: sh.center[0] + sh.r * 0.85, y: sh.center[1] - sh.r * 0.85, text: String(st.signs) }));
       }
       s.append(grp);
     }
-    // Places: a hit area, a label placed away from the island centre, the camp's clan colour.
+    // Cartouche details: corner flourishes, a compass rose (north = -Z, the top of the map) and a 10 m scale bar.
+    for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      const ox = sx > 0 ? 7 : MAP_SIZE - 7, oy = sy > 0 ? 7 : MAP_SIZE - 7;
+      s.append(svg(doc, 'path', { class: 'ftf-map-flourish', d: `M${ox} ${oy + sy * 22} L${ox} ${oy} L${ox + sx * 22} ${oy} M${ox + sx * 3} ${oy + sy * 14} L${ox + sx * 3} ${oy + sy * 3} L${ox + sx * 14} ${oy + sy * 3}` }));
+    }
+    const rose = svg(doc, 'g', { class: 'ftf-map-rose', transform: `translate(30 ${c})` });
+    rose.append(svg(doc, 'circle', { cx: 0, cy: 0, r: 11, class: 'ftf-map-rose-ring' }),
+      svg(doc, 'path', { class: 'ftf-map-rose-pts', d: 'M0 -15 L3 -3 L0 0 L-3 -3 Z M0 15 L3 3 L0 0 L-3 3 Z M15 0 L3 3 L0 0 L3 -3 Z M-15 0 L-3 3 L0 0 L-3 -3 Z' }),
+      svg(doc, 'path', { class: 'ftf-map-rose-n', d: 'M0 -15 L3 -3 L0 0 L-3 -3 Z' }),
+      svg(doc, 'text', { class: 'ftf-map-rose-text', x: 0, y: -19, text: 'N' }));
+    s.append(rose);
+    const tenM = scaleLength(10);
+    s.append(svg(doc, 'g', { class: 'ftf-map-scale', transform: `translate(${c - tenM / 2} ${MAP_SIZE - 14})` },
+      svg(doc, 'path', { d: `M0 -3 V0 H${tenM} V-3 M${tenM / 2} 0 V-2` }), svg(doc, 'text', { x: tenM / 2, y: -5.5, text: '10 m' })));
+    // Places: a hit area, a label (camps below or above their plateau, Shells in their corner of the sea), the clan colour.
     const placesG = svg(doc, 'g');
-    const c = MAP_SIZE / 2;
+    const corner = (p) => ({ x: p.point[0] < c ? 20 : MAP_SIZE - 20, y: p.point[1] < c ? 36 : MAP_SIZE - 32, anchor: p.point[0] < c ? 'start' : 'end' });
     for (const p of m.places) {
       const [u, v] = p.point;
-      const dx = u - c, dy = v - c, len = Math.hypot(dx, dy) || 1;
-      const outward = [dx / len, dy / len];
       const name = labelFor(p);
       const hitR = p.kind === 'shell' ? 24 : p.kind === 'camp' ? 24 : p.kind === 'balcony' ? 18 : p.kind === 'scroll' ? 16 : p.kind === 'anchor' ? 9 : 10;
       const grp = svg(doc, 'g', { class: 'ftf-map-place' + (p.route ? '' : ' ftf-map-place--off'), 'data-place': p.id, role: 'button', tabindex: 0, 'aria-label': actionText(p), 'aria-disabled': p.route ? null : 'true' });
@@ -235,14 +315,13 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       if (p.kind === 'pedestal') grp.append(svg(doc, 'path', { class: 'ftf-map-gem', d: `M${u} ${v - 5} l3.5 5 -3.5 5 -3.5 -5 z` }));
       if (p.kind !== 'pedestal' && p.kind !== 'anchor') { // those two keep their tooltip only: the plaza is too small for more labels
         let lx = u, ly = v, anchor = 'middle';
-        if (p.kind === 'scroll') { lx = u + g.platforms[0].r + 6; ly = v + 4; anchor = 'start'; }
-        else if (p.kind === 'shell') { lx = u + outward[0] * (hitR + 2); ly = v + outward[1] * (hitR + 4) + (outward[1] > 0 ? 8 : -2); anchor = outward[0] > 0.2 ? 'start' : outward[0] < -0.2 ? 'end' : 'middle'; }
-        else { const r = hitR - 2; lx = u; ly = outward[1] >= 0 ? v + r + 12 : v - r - 6; }
+        if (p.kind === 'scroll') { lx = u + g.platforms[0].r + 7; ly = v + 4; anchor = 'start'; }
+        else if (p.kind === 'shell') { const k = corner(p); lx = k.x; ly = k.y; anchor = k.anchor; }
+        else { const r = hitR - 2; lx = u; ly = v >= c ? v + r + 12 : v - r - 7; }
         // the stylesheet sets text-anchor: middle; an inline style wins where a label hangs to one side
-        const label = svg(doc, 'text', { class: 'ftf-map-label' + (p.kind === 'camp' ? ' ftf-map-label--camp' : ''), x: lx, y: ly, style: `text-anchor:${anchor}`, text: name });
-        grp.append(label);
-        if (p.kind === 'camp') grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub', x: lx, y: ly + 10, text: t('map.camp') }));
-        if (p.kind === 'shell' && p.shellState) grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub', x: lx, y: ly + 10, style: `text-anchor:${anchor}`, text: shellCaption(p.shellState) }));
+        grp.append(svg(doc, 'text', { class: 'ftf-map-label' + (p.kind === 'camp' ? ' ftf-map-label--camp' : ''), x: lx, y: ly, style: `text-anchor:${anchor}`, text: name }));
+        if (p.kind === 'camp') grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub', x: lx, y: ly + 10.5, text: t('map.camp') }));
+        if (p.kind === 'shell' && p.shellState) grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub' + (p.shellState.state === 'quiet' ? '' : ' ftf-map-label--lit'), x: lx, y: ly + 11, style: `text-anchor:${anchor}`, text: shellCaption(p.shellState) }));
       }
       grp.addEventListener('click', () => choose(p));
       grp.addEventListener('keydown', (e) => { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); choose(p); } });
