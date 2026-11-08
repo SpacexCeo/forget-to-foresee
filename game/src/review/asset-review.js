@@ -7,7 +7,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { MODEL_FILES } from 'virtual:model-list';
 import { ASSETS, TRIANGLE_BUDGET, assetByName, isValidModelName } from '../render/asset-catalog.js';
 import { fetchGltf, splitAssetScene, analyzeAssetScene, configureTextureSupport } from '../render/assets.js';
-import { buildGreybox, makeLabel } from '../render/greybox.js';
+import { buildGreybox, makeLabel, setGreyboxLabels } from '../render/greybox.js';
+setGreyboxLabels(true); // the review page is a dev surface: greybox labels stay on here
 import { LAYER_OVERLAY } from '../render/layers.js';
 import { PadDecals } from '../render/decals.js';
 

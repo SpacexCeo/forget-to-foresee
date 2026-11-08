@@ -1,329 +1,46 @@
 {
-  "blender": "4.5.3 LTS",
-  "stages": [
-    {
-      "stage": "model",
-      "seconds": 0.04
-    },
-    {
-      "stage": "uv_unwrap",
-      "seconds": 0.73
-    },
-    {
-      "stage": "bake_gpu",
-      "seconds": 17.62
-    },
-    {
-      "stage": "textures",
-      "seconds": 29.94
-    },
-    {
-      "stage": "materials",
-      "seconds": 0.01
-    },
-    {
-      "stage": "rig_skin",
-      "seconds": 0.0
-    },
-    {
-      "stage": "animation",
-      "seconds": 0.59
-    },
-    {
-      "stage": "export",
-      "seconds": 1.6
-    }
+  "design": "ink guest (owner input 08.11)",
+  "triangles": {
+    "guest_body": 7296,
+    "guest_core": 1256,
+    "guest_eyes": 336,
+    "guest_ink": 3957
+  },
+  "triangles_total": 12845,
+  "budget_ok": true,
+  "clips": [
+    "approach",
+    "draw",
+    "idle",
+    "react",
+    "recede"
   ],
-  "triangles_by_object": {
-    "guest_body": 10865,
-    "guest_membranes": 1392,
-    "guest_core": 14
-  },
-  "triangles_total": 12271,
-  "cycles_device": "OPTIX",
-  "bakes": {
-    "color": 2.61,
-    "rough": 2.44,
-    "metal": 2.32,
-    "emission": 2.36,
-    "normal": 2.91,
-    "ao": 4.77
-  },
-  "texture_files": {
-    "base": {
-      "file": "art/guest/textures/guest_basecolor.jpg",
-      "bytes": 1532195
-    },
-    "orm": {
-      "file": "art/guest/textures/guest_orm.jpg",
-      "bytes": 2112305
-    },
-    "normal": {
-      "file": "art/guest/textures/guest_normal.png",
-      "bytes": 3606826
-    },
-    "emissive": {
-      "file": "art/guest/textures/guest_emissive.jpg",
-      "bytes": 414162
-    },
-    "mem_base": {
-      "file": "art/guest/textures/guest_membrane_basecolor.png",
-      "bytes": 703021
-    },
-    "mem_emissive": {
-      "file": "art/guest/textures/guest_membrane_emissive.jpg",
-      "bytes": 123057
-    }
-  },
-  "draw_stroke": {
-    "circle_centre_m": [
-      0.108,
-      -2.214,
-      3.942
-    ],
-    "radius_m": 0.864,
-    "tip_to_circle_err_m_max": 0.311,
-    "tip_to_circle_err_m_mean": 0.125
-  },
-  "unweighted_vertices": 0,
-  "max_influences": 4,
-  "deform_bones": 90,
-  "glb_patched_extensions": {
-    "M_Guest_Nacre": [
-      "KHR_materials_iridescence",
-      "KHR_materials_volume"
-    ],
-    "M_Guest_Membrane": [
-      "KHR_materials_iridescence"
-    ]
-  },
-  "glb_raw_bytes": 10238548,
-  "glb_raw_summary": {
-    "meshes": {
-      "guest_body": 10865,
-      "guest_core": 14,
-      "guest_membranes": 1392
-    },
-    "materials": [
-      {
-        "name": "M_Guest_Nacre",
-        "alphaMode": "OPAQUE",
-        "doubleSided": true,
-        "extensions": [
-          "KHR_materials_emissive_strength",
-          "KHR_materials_ior",
-          "KHR_materials_iridescence",
-          "KHR_materials_transmission",
-          "KHR_materials_volume"
-        ],
-        "texCoord": {
-          "baseColor": 0,
-          "metallicRoughness": 0,
-          "normal": 0,
-          "occlusion": 0,
-          "emissive": 0
-        }
-      },
-      {
-        "name": "M_Guest_Core",
-        "alphaMode": "OPAQUE",
-        "doubleSided": true,
-        "extensions": [
-          "KHR_materials_emissive_strength"
-        ],
-        "texCoord": {}
-      },
-      {
-        "name": "M_Guest_Membrane",
-        "alphaMode": "BLEND",
-        "doubleSided": true,
-        "extensions": [
-          "KHR_materials_emissive_strength",
-          "KHR_materials_iridescence"
-        ],
-        "texCoord": {
-          "baseColor": 0,
-          "emissive": 0
-        }
-      }
-    ],
-    "images": [
-      {
-        "name": "guest_emissive",
-        "mime": "image/jpeg",
-        "bytes": 414162
-      },
-      {
-        "name": "guest_normal",
-        "mime": "image/png",
-        "bytes": 3606826
-      },
-      {
-        "name": "guest_orm",
-        "mime": "image/jpeg",
-        "bytes": 2112305
-      },
-      {
-        "name": "guest_basecolor",
-        "mime": "image/jpeg",
-        "bytes": 1532195
-      },
-      {
-        "name": "guest_membrane_emissive",
-        "mime": "image/jpeg",
-        "bytes": 123057
-      },
-      {
-        "name": "guest_membrane_basecolor",
-        "mime": "image/png",
-        "bytes": 703021
-      }
-    ],
-    "nodes": [
-      "tail_3",
-      "tail_2",
-      "tendril0_5",
-      "tendril0_4",
-      "tendril0_3",
-      "tendril0_2",
-      "tendril0_1",
-      "tendril1_5",
-      "tendril1_4",
-      "tendril1_3",
-      "tendril1_2",
-      "tendril1_1",
-      "tendril2_5",
-      "tendril2_4",
-      "tendril2_3",
-      "tendril2_2",
-      "tendril2_1",
-      "tendril3_5",
-      "tendril3_4",
-      "tendril3_3",
-      "tendril3_2",
-      "tendril3_1",
-      "tendril4_5",
-      "tendril4_4",
-      "tendril4_3",
-      "tendril4_2",
-      "tendril4_1",
-      "tendril5_5",
-      "tendril5_4",
-      "tendril5_3",
-      "tendril5_2",
-      "tendril5_1",
-      "tail_1",
-      "crown_4",
-      "crown_3",
-      "crown_2",
-      "socket_head",
-      "crown_1",
-      "neck",
-      "sail_l0_3",
-      "sail_l0_2",
-      "sail_l0_1",
-      "sail_l1_3",
-      "sail_l1_2",
-      "sail_l1_1",
-      "sail_l2_3",
-      "sail_l2_2",
-      "sail_l2_1",
-      "sail_l3_3",
-      "sail_l3_2",
-      "sail_l3_1",
-      "sail_l4_3",
-      "sail_l4_2",
-      "sail_l4_1",
-      "sail_l5_3",
-      "sail_l5_2",
-      "sail_l5_1",
-      "sail_r0_3",
-      "sail_r0_2",
-      "sail_r0_1",
-      "sail_r1_3",
-      "sail_r1_2",
-      "sail_r1_1",
-      "sail_r2_3",
-      "sail_r2_2",
-      "sail_r2_1",
-      "sail_r3_3",
-      "sail_r3_2",
-      "sail_r3_1",
-      "sail_r4_3",
-      "sail_r4_2",
-      "sail_r4_1",
-      "sail_r5_3",
-      "sail_r5_2",
-      "sail_r5_1",
-      "crest3_2",
-      "crest3_1",
-      "crest4_2",
-      "crest4_1",
-      "spine",
-      "crest0_2",
-      "crest0_1",
-      "crest1_2",
-      "crest1_1",
-      "crest2_2",
-      "crest2_1",
-      "socket_draw_tip",
-      "arm_4",
-      "arm_3",
-      "arm_2",
-      "arm_1",
-      "socket_core",
-      "chest",
-      "hover",
-      "root",
-      "guest_body",
-      "guest_core",
-      "guest_membranes",
-      "guest_rig"
-    ],
-    "extensionsUsed": [
-      "KHR_materials_emissive_strength",
-      "KHR_materials_ior",
-      "KHR_materials_iridescence",
-      "KHR_materials_transmission",
-      "KHR_materials_volume"
-    ],
-    "glb_bytes": 10238548,
-    "has_tangents": true,
-    "animations": 3
-  },
-  "bounds_blender_zup_rest": {
-    "min": [
-      -2.581,
-      -2.001,
-      0.418
-    ],
-    "max": [
-      3.293,
-      3.412,
-      6.944
-    ]
-  },
-  "sockets_gltf_rest": {
+  "sockets": {
     "socket_draw_tip": [
-      0.2873,
-      1.2747,
-      2.0002
+      -0.303,
+      -2.033,
+      0.992
     ],
     "socket_core": [
-      0.0282,
-      3.512,
-      0.0778
+      0.0,
+      0.0,
+      3.85
     ],
     "socket_head": [
-      0.0273,
-      6.3906,
-      0.1878
+      0.0,
+      0.0,
+      6.4
     ]
   },
-  "budget_ok": {
-    "triangles": true,
-    "materials": true,
-    "animations_3": true,
-    "all_weighted": true
-  }
+  "tendrils": 11,
+  "draw_tendril": 10,
+  "patched": {
+    "M_Guest_Skin": [
+      "KHR_materials_volume"
+    ],
+    "M_Guest_Core": [
+      "KHR_materials_emissive_strength"
+    ]
+  },
+  "glb_raw_bytes": 1292660
 }

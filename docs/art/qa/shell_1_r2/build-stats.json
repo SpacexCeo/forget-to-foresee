@@ -1,0 +1,240 @@
+{
+  "asset": "shell_1",
+  "numeral": "I",
+  "blender": "4.5.3 LTS",
+  "round": 2,
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.11
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 9.64
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 2.92
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 149.05
+    },
+    {
+      "stage": "textures",
+      "seconds": 37.32
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.47
+    }
+  ],
+  "cycles_device": "CUDA",
+  "scale": 1.5308,
+  "geometry": {
+    "outer_cells_culled": 1267,
+    "outer_cells_total": 6880,
+    "septa": 1
+  },
+  "runtime_triangles": 12106,
+  "nonmanifold_edges": 20,
+  "uv_seams": 5266,
+  "uv_exterior": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 140.5,
+      "p10": 135.1,
+      "p90": 148.3,
+      "coefficient_of_variation": 0.05
+    },
+    "uv_anisotropy": {
+      "median": 1.026,
+      "p95": 1.165,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 11286,
+    "uv_fill": 0.456
+  },
+  "uv_nacre": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 79.3,
+      "p10": 73.3,
+      "p90": 136.7,
+      "coefficient_of_variation": 0.236
+    },
+    "uv_anisotropy": {
+      "median": 1.034,
+      "p95": 1.232,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 820,
+    "uv_fill": 0.456
+  },
+  "master_triangles": 2980456,
+  "bakes": {
+    "normal": {
+      "seconds": 31.15,
+      "samples": 24,
+      "size": 8192
+    },
+    "color": {
+      "seconds": 23.4,
+      "samples": 24,
+      "size": 8192
+    },
+    "rough": {
+      "seconds": 19.2,
+      "samples": 12,
+      "size": 8192
+    },
+    "ao": {
+      "seconds": 75.08,
+      "samples": 384,
+      "size": 8192
+    }
+  },
+  "bake": {
+    "size": 8192,
+    "supersample": 2,
+    "cage_m": 0.035,
+    "ray_m": 0.09
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/shells/textures/shell_1_basecolor.jpg",
+      "bytes": 3836544
+    },
+    "orm": {
+      "file": "art/shells/textures/shell_1_orm.jpg",
+      "bytes": 7063491
+    },
+    "normal": {
+      "file": "art/shells/textures/shell_1_normal.png",
+      "bytes": 20990331
+    }
+  },
+  "socket_aperture": {
+    "position": [
+      -3.644,
+      -1.263,
+      1.908
+    ],
+    "forward": [
+      -0.941,
+      -0.0,
+      0.339
+    ],
+    "radius_m": 1.92
+  },
+  "collision_triangles": {
+    "shell_1_hull_a_col": 114,
+    "shell_1_hull_b_col": 102
+  },
+  "materials": [
+    "M_Shell_Exterior",
+    "M_Shell_Nacre",
+    "M_Shell_Glow"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -3.994,
+      -3.38,
+      0.0
+    ],
+    "max": [
+      3.994,
+      3.38,
+      18.0
+    ]
+  },
+  "inward_facing_faces": {
+    "checked": 5653,
+    "suspect": 515
+  },
+  "glb_raw_bytes": 32558172,
+  "glb": {
+    "extensionsUsed": [
+      "KHR_materials_clearcoat",
+      "KHR_materials_emissive_strength",
+      "KHR_materials_iridescence"
+    ],
+    "nodes": [
+      "shell_1",
+      "shell_1_hull_a_col",
+      "shell_1_hull_b_col",
+      "socket_aperture"
+    ],
+    "materials": [
+      {
+        "name": "M_Shell_Exterior",
+        "extensions": {
+          "KHR_materials_iridescence": {
+            "iridescenceFactor": 1.0,
+            "iridescenceIor": 1.3,
+            "iridescenceThicknessMinimum": 150.0,
+            "iridescenceThicknessMaximum": 400.0,
+            "iridescenceThicknessTexture": {
+              "index": 1
+            }
+          },
+          "KHR_materials_clearcoat": {
+            "clearcoatFactor": 0.6,
+            "clearcoatRoughnessFactor": 0.15
+          }
+        }
+      },
+      {
+        "name": "M_Shell_Nacre",
+        "extensions": {
+          "KHR_materials_iridescence": {
+            "iridescenceFactor": 1.0,
+            "iridescenceIor": 1.3,
+            "iridescenceThicknessMinimum": 200.0,
+            "iridescenceThicknessMaximum": 460.0,
+            "iridescenceThicknessTexture": {
+              "index": 4
+            }
+          },
+          "KHR_materials_clearcoat": {
+            "clearcoatFactor": 0.8,
+            "clearcoatRoughnessFactor": 0.08
+          }
+        }
+      },
+      {
+        "name": "M_Shell_Glow",
+        "extensions": {
+          "KHR_materials_emissive_strength": {
+            "emissiveStrength": 1.8
+          }
+        }
+      }
+    ],
+    "images": [
+      {
+        "name": "shell_1_normal",
+        "mime": "image/png",
+        "bytes": 20990331
+      },
+      {
+        "name": "shell_1_orm",
+        "mime": "image/jpeg",
+        "bytes": 7063491
+      },
+      {
+        "name": "shell_1_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 3836544
+      }
+    ]
+  },
+  "budget_ok": {
+    "runtime": true,
+    "materials_per_object": true
+  }
+}

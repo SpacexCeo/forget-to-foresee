@@ -26,11 +26,13 @@ from agent_geometry import (
 
 PALETTES = {
     "iris": {
-        "suit": (0.030, 0.028, 0.034), "skin": (0.42, 0.34, 0.31), "hair": (0.022, 0.017, 0.016),
-        "tunic": (0.045, 0.043, 0.050), "cloth": (0.055, 0.052, 0.060),
-        "cloak": (0.075, 0.074, 0.078), "cloak2": (0.085, 0.084, 0.088),
-        "scarf": (0.200, 0.085, 0.380), "leather": (0.075, 0.048, 0.030),
-        "boot": (0.040, 0.030, 0.024), "metal": (0.55, 0.53, 0.58), "gem": (0.30, 0.08, 0.70),
+        # round 3: values lifted and hues separated so the layers read (stylized hero bar)
+        "suit": (0.030, 0.028, 0.034), "skin": (0.46, 0.35, 0.30), "hair": (0.045, 0.030, 0.034),
+        "tunic": (0.060, 0.055, 0.075), "cloth": (0.070, 0.064, 0.085),
+        "cloak": (0.105, 0.102, 0.118), "cloak2": (0.135, 0.130, 0.150),
+        "trim": (0.230, 0.215, 0.270), "scarf": (0.270, 0.090, 0.520), "scarf2": (0.360, 0.150, 0.640),
+        "leather": (0.160, 0.090, 0.050), "boot": (0.070, 0.048, 0.034),
+        "metal": (0.72, 0.70, 0.76), "gem": (0.42, 0.10, 0.86),
     },
     "sol": {
         "suit": (0.20, 0.19, 0.17), "skin": (0.42, 0.36, 0.32),
@@ -42,7 +44,7 @@ PALETTES = {
         "suit": (0.030, 0.028, 0.026), "skin": (0.30, 0.26, 0.24),
         "cloth": (0.040, 0.038, 0.040), "coat": (0.055, 0.050, 0.048), "wrap": (0.180, 0.170, 0.160),
         "hood": (0.050, 0.046, 0.044), "wood": (0.040, 0.030, 0.022), "wood2": (0.075, 0.055, 0.038),
-        "iron": (0.070, 0.070, 0.075), "rope": (0.200, 0.160, 0.110),
+        "iron": (0.070, 0.070, 0.075), "rope": (0.200, 0.160, 0.110), "ember": (0.340, 0.080, 0.020),
     },
     "moh": {
         "suit": (0.060, 0.050, 0.030), "skin": (0.40, 0.33, 0.27), "hair": (0.060, 0.045, 0.025),
@@ -111,6 +113,157 @@ def hair(ag, name, color, length_back=0.18, vol=0.014, seed=1, n=22, rows=10, fr
     return ag.add(name, bm, "body", "felt", color, rough=0.65, solid=0.012)
 
 
+def _lock_bm(bm, pts, w0, h0, sides=6, twist=0.6, root_w=0.75):
+    """One sculpted lock: a tapered, flattened tube along pts (root .. tip), its wide
+    side facing out from the head, pinched to a point at the tip."""
+    hc = Vector(BODY["head_c"])
+    n = len(pts)
+    rings = []
+    for k, p in enumerate(pts):
+        t = k / (n - 1)
+        T = (pts[min(k + 1, n - 1)] - pts[max(k - 1, 0)]).normalized()
+        out = (p - Vector((hc.x, hc.y, min(p.z, hc.z + 0.02)))).normalized()
+        B = T.cross(out).normalized()
+        N = B.cross(T).normalized()
+        # chunky lock with a rounded, not needle, tip
+        taper = (root_w + (1 - root_w) * smooth01(t * 3.0)) * (1.0 - 0.72 * t ** 2.2)
+        w, h = w0 * taper, h0 * taper
+        a0 = twist * t
+        if k == n - 1:
+            rings.append([bm.verts.new(p)])
+            continue
+        ring = []
+        for j in range(sides):
+            a = a0 + 2 * math.pi * j / sides
+            ring.append(bm.verts.new(p + B * (math.cos(a) * w) + N * (math.sin(a) * h)))
+        rings.append(ring)
+    for k in range(n - 1):
+        r0, r1 = rings[k], rings[k + 1]
+        for j in range(sides):
+            if len(r1) == 1:
+                bm.faces.new((r0[j], r0[(j + 1) % sides], r1[0]))
+            else:
+                bm.faces.new((r0[j], r0[(j + 1) % sides], r1[(j + 1) % sides], r1[j]))
+    bm.faces.new(list(reversed(rings[0])))
+
+
+def smooth01(x):
+    x = min(1.0, max(0.0, x))
+    return x * x * (3 - 2 * x)
+
+
+def hair_locks(ag, name, color, length=0.20, n=14, part_x=0.025, fringe_side=1, seed=7,
+               fringe_end=0.95, vol=0.010, layers=2, w=0.050, h=0.016, flick=0.030):
+    """Stylized sculpted hair (owner 08.11: no helmet blob, no noisy strands): chunky
+    tapered locks that start along a side part, follow the skull and fall to `length`
+    below the head's equator at the back and sides; the fringe sweeps across the
+    forehead to one side and stops above the brows, so the face stays open.
+    Two layers (the second offset and shorter) give volume; tips flick outward."""
+    hc = Vector(BODY["head_c"])
+    rx, ry, rz = BODY["head_r"]
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    count = 0
+    for layer in range(layers):
+        m = n - 4 * layer
+        for i in range(m):
+            th = -math.pi / 2 + 2 * math.pi * (i + 0.5 * layer + rnd.uniform(-0.18, 0.18)) / m
+            front = max(0.0, -math.sin(th))           # 1 at the face, 0 at the back
+            # three zones: fringe (short, swept to one side, ends above the brows),
+            # face-framing locks (outside the cheeks, to the jaw), the fall (back, sides)
+            fringe = front > 0.80
+            framing = 0.42 < front <= 0.80
+            phi0 = 0.10 + 0.12 * rnd.random()
+            th_root = th
+            if fringe:
+                # a curtain part: fringe locks start at the front hairline and sweep away
+                # from the part to the temples, so no knot forms on the forehead
+                phi0 = 0.40 + 0.08 * rnd.random()
+                phi_end = 1.30 + 0.08 * rnd.random()
+                L = 0.0
+            elif framing:
+                phi_end = math.pi / 2 + 0.25
+                L = 0.07 + 0.03 * rnd.random()
+            else:
+                phi_end = 2.05
+                L = length * (1.0 - 0.2 * layer) * (0.85 + 0.3 * rnd.random())
+            v = vol + 0.006 * layer + 0.004 * rnd.random() + (0.014 if framing else 0.0)
+            pts = []
+            steps = 9
+            for k in range(steps):
+                t = k / (steps - 1)
+                phi = phi0 + (min(phi_end, math.pi / 2 + 0.25) - phi0) * t
+                # fringe locks sweep sideways across the forehead; framing locks bend
+                # away from the face so the cheeks stay clear
+                away = math.copysign(1.0, math.cos(th_root) + 1e-3 * fringe_side)
+                th_k = th_root + (away * 0.95 * smooth01(t) if fringe else 0.0)
+                if framing:
+                    th_k += math.copysign(0.30 * smooth01(t), math.cos(th))
+                d = Vector((math.sin(phi) * math.cos(th_k), math.sin(phi) * math.sin(th_k), math.cos(phi)))
+                p = hc + Vector((d.x * (rx + v), d.y * (ry + v), d.z * (rz + v)))
+                pts.append(p)
+            if L > 0.02:
+                # the fall: below the skull, straight down with a soft outward spread,
+                # the tip flicking out
+                base = pts[-1]
+                outv = Vector((base.x - hc.x, base.y - hc.y, 0))
+                outv = outv.normalized() if outv.length > 1e-6 else Vector((0, 1, 0))
+                for k in range(1, 6):
+                    t = k / 5
+                    pts.append(base + Vector((0, 0, -L * t)) + outv * (0.010 * t + flick * t ** 3))
+            # thin out the polyline to 8 points (budget) keeping root and tip
+            if len(pts) > 8:
+                idx = [round(j * (len(pts) - 1) / 7) for j in range(8)]
+                pts = [pts[j] for j in idx]
+            ww = w * (0.85 + 0.3 * rnd.random()) * (0.85 if fringe else 1.0)
+            _lock_bm(bm, pts, ww, h * (0.9 + 0.2 * rnd.random()), sides=5,
+                     twist=0.0 if fringe else 0.5 * rnd.uniform(-1, 1))
+            count += 1
+    # a smooth inner cap so no scalp shows between the locks
+    cap = face_hair_cap(hc, rx, ry, rz, vol * 0.6)
+    ag.add(name + "_cap", cap, "body", "hair", color, rough=0.6, collide=(), smooth=True)
+    return ag.add(name, bm, "body", "hair", color, rough=0.42, collide=("all",), smooth=True)
+
+
+def face_hair_cap(hc, rx, ry, rz, v, n=20, rows=5):
+    """Smooth skull cap under the locks: from the crown to the hairline (front) and the
+    nape (back)."""
+    bm = bmesh.new()
+    rows_v = []
+    for r in range(rows + 1):
+        t = r / rows
+        row = []
+        for i in range(n):
+            th = -math.pi / 2 + 2 * math.pi * i / n
+            front = max(0.0, -math.sin(th))
+            phi = (0.02 + t * ((1 - front ** 1.2) * 1.95 + front ** 1.2 * 0.95))
+            d = Vector((math.sin(phi) * math.cos(th), math.sin(phi) * math.sin(th), math.cos(phi)))
+            row.append(bm.verts.new(hc + Vector((d.x * (rx + v), d.y * (ry + v), d.z * (rz + v)))))
+        rows_v.append(row)
+    for r in range(rows):
+        for i in range(n):
+            a, b = rows_v[r][i], rows_v[r][(i + 1) % n]
+            c, d = rows_v[r + 1][(i + 1) % n], rows_v[r + 1][i]
+            bm.faces.new((a, d, c, b))
+    bm.normal_update()
+    for f in bm.faces:
+        if f.normal.dot(f.calc_center_median() - hc) < 0:
+            f.normal_flip()
+    return bm
+
+
+def cowl_roll(ag, color, z=1.475, r=0.036):
+    """A lowered hood as a soft roll lying behind the neck (replaces the box-like fold)."""
+    bm = bmesh.new()
+    arc = []
+    for k in range(9):
+        th = math.radians(lerp(10, 170, k / 8))
+        p, d = surface_point(ag, z, th, out=0.03)
+        arc.append(p + Vector((0, 0, 0.012 * math.sin(math.pi * k / 8))))
+    tube(bm, arc, r, 8, cap=True)
+    return ag.add("hood_down", bm, "garment", "wool", color, rough=0.95, collide=("all",), smooth=True)
+
+
 def ribbon(ag, name, path, width, color, kind="wool", rough=0.9, out=0.014, thick=0.008,
            fray=0.0, seed=3, cols=3):
     """Strip lying on the current outer surface. path: list of (z, theta, width_scale)."""
@@ -171,41 +324,64 @@ def balance(ag, side, color="brass", cord="cord", beam=0.20, drop=0.20):
 
 def costume_iris(ag):
     """Iris (player clan), after the owner's concept: long charcoal hooded wool
-    cloak with a frayed hem and shoulder cape, long violet scarf wrapped over the
-    shoulders and hanging down the back, dark layers, leather bracers and boots,
-    dark shoulder-length hair."""
+    cloak and shoulder cape, long violet scarf wrapped over the shoulders and hanging
+    down the back, dark layers, leather bracers and boots, dark shoulder-length hair.
+    Round 3 (owner 08.11, stylized hero bar): sculpted hair locks, smooth cloth with
+    clean tatters and silver-grey sewn hems, a buckled belt with a pouch, a silver
+    clasp with a violet stone, boot cuffs, scarf tails with tassels."""
     build_body(ag)
-    robe(ag, "tunic", 1.49, 0.58, 0.04, 0.21, n=32, rows=10, depth=0.85, flare=1.8,
-         pleats=8, pleat_amp=0.03, color="tunic", against="core", push=0.05, clear=0.013)
-    sleeve(ag, "sleeve_l", 1, 0.064, 0.060, color="cloth", bell=1.0)
-    sleeve(ag, "sleeve_r", -1, 0.064, 0.060, color="cloth", bell=1.0)
+    robe(ag, "tunic", 1.49, 0.58, 0.04, 0.21, n=24, rows=8, depth=0.85, flare=1.8,
+         pleats=8, pleat_amp=0.02, color="tunic", against="core", push=0.05, clear=0.013,
+         trim=("trim", 0.035, "cloth"))
+    sleeve(ag, "sleeve_l", 1, 0.064, 0.060, color="cloth", bell=1.0, n=10)
+    sleeve(ag, "sleeve_r", -1, 0.064, 0.060, color="cloth", bell=1.0, n=10)
     for side in (-1, 1):
         L = leg(side)
         axis_tube(ag, f"boot_{side}", L["K"] + (L["A"] - L["K"]) * 0.12,
                   L["A"] + Vector((0, 0, -0.035)), 0.066, 0.058, n=10, rows=5, bell=1.0,
                   kind="leather", color="boot", rough=0.55, thick=0.008, clear=0.010)
+        top = L["K"] + (L["A"] - L["K"]) * 0.10
+        axis_tube(ag, f"boot_cuff_{side}", top, top + (L["A"] - L["K"]).normalized() * 0.07,
+                  0.078, 0.072, n=10, rows=2, bell=1.0, kind="leather", color="leather",
+                  rough=0.5, thick=0.010, clear=0.016, collide=())
     band(ag, "belt", 1.00, 1.05, color="leather", kind="leather")
+    # buckle and hip pouch
+    p, d = surface_point(ag, 1.025, math.radians(-90), out=0.008)
+    bm = bmesh.new()
+    placed(bm, frame(p, d), lambda b: box(b, Vector((0, 0, 0)), Vector((0.050, 0.044, 0.010))))
+    ag.add("buckle", bm, "ornament", "metal", "metal", rough=0.3, metal=1.0, collide=())
+    p, d = surface_point(ag, 0.975, math.radians(-62), out=0.012)
+    bm = bmesh.new()
+    placed(bm, frame(p, d), lambda b: box(b, Vector((0, 0, 0)), Vector((0.070, 0.085, 0.036))))
+    ag.add("pouch", bm, "ornament", "leather", "leather", rough=0.6, collide=())
     for side in (-1, 1):
         Ar = arm(side)
         axis_tube(ag, f"bracer_{side}", Ar["E"] + (Ar["W"] - Ar["E"]) * 0.22,
                   Ar["W"] + Ar["dir"] * 0.01, 0.052, 0.046, n=10, rows=4, bell=1.0,
                   kind="leather", color="leather", rough=0.5, thick=0.007, clear=0.010,
                   slot="ornament")
-    hair(ag, "hair", "hair", length_back=0.20, seed=11)
-    mantle(ag, "cloak", 1.50, 0.08, 1.20, 0.31, n=48, rows=14, depth=0.9,
-           hem=hem_jagged(5, 48, 0.07), front_short=0.02, back_long=0.04,
+    hair_locks(ag, "hair", "hair", length=0.17, n=14, fringe_side=1, seed=11)
+    mantle(ag, "cloak", 1.50, 0.08, 1.20, 0.31, n=36, rows=12, depth=0.9,
+           hem=hem_jagged(5, 40, 0.06), front_short=0.02, back_long=0.04,
            span=math.radians(292), th0=math.radians(-90 + 34), spread=1.6, color="cloak",
-           kind="wool", rough=0.95, thick=0.012)
-    mantle(ag, "cape", 1.505, 0.08, 0.40, 0.33, n=48, rows=7, depth=0.9,
-           hem=hem_jagged(9, 48, 0.05), span=math.radians(300), th0=math.radians(-90 + 30),
-           color="cloak2", kind="wool", rough=0.95, thick=0.012)
-    # Hood down: heavy fold lying on the upper back.
-    p, d = surface_point(ag, 1.43, math.pi / 2)
-    bm = bmesh.new()
-    placed(bm, frame(p + d * 0.02 + Vector((0, 0, 0.03)), (0, 0.75, 1.0)), lambda b: revolve(
-        b, [(0.05, -0.04), (0.11, -0.02), (0.125, 0.02), (0.10, 0.05), (0.05, 0.06)], 14,
-        cap_bottom=True, cap_top=True, sx=1.25))
-    ag.add("hood_down", bm, "garment", "wool", "cloak", rough=0.95, collide=("all",))
+           kind="wool", rough=0.95, thick=0.012, trim=("trim", 0.035, "cloth"))
+    mantle(ag, "cape", 1.505, 0.08, 0.38, 0.33, n=30, rows=5, depth=0.9,
+           hem=hem_scallop(6, 0.025), span=math.radians(300), th0=math.radians(-90 + 30),
+           color="cloak2", kind="wool", rough=0.95, thick=0.012, trim=("trim", 0.035, "cloth"))
+    cowl_roll(ag, "cloak2")
+    # Cloak clasp: two silver discs on the front edges joined by a short chain, a violet stone.
+    bm, gem = bmesh.new(), bmesh.new()
+    pts = []
+    for th in (-90 + 31, -90 - 31 + 360 - 292 + 292):
+        p, d = surface_point(ag, 1.405, math.radians(th), out=0.006)
+        pts.append(p)
+        placed(bm, frame(p, d), lambda b: revolve(
+            b, [(0.0, -0.004), (0.022, -0.004), (0.024, 0.0), (0.020, 0.005), (0.0, 0.006)], 9))
+    tube(bm, pts, 0.0035, 5)
+    mid = (pts[0] + pts[1]) / 2 + Vector((0, -0.01, -0.012))
+    ico(gem, mid, 0.012, 1, (1.0, 0.7, 1.2))
+    ag.add("clasp", bm, "ornament", "metal", "metal", rough=0.28, metal=1.0, collide=(), smooth=True)
+    ag.add("clasp_gem", gem, "ornament", "resin", "gem", rough=0.15, collide=(), smooth=True)
 
     # Violet scarf: two wraps around the neck over the cloak, puffed rolls.
     def zf(t, th):
@@ -213,16 +389,25 @@ def costume_iris(ag):
 
     def rf(t, th):
         return 0.06 + 0.02 * abs(math.sin(2 * math.pi * t + 0.6 * th))
-    P, A = vloft(28, 5, zf, rf, 0.92)
+    P, A = vloft(24, 5, zf, rf, 0.92)
     garment(ag, "scarf", P, A, kind="wool", color="scarf", rough=0.9, thick=0.016,
             clear=0.012, push=0.22)
     # Scarf tails: long one down the back (agent's left), short one over the chest.
-    path = [(lerp(1.43, 0.52, k / 12), math.radians(lerp(62, 78, k / 12)),
+    path = [(lerp(1.43, 0.56, k / 12), math.radians(lerp(62, 78, k / 12)),
              1.0 + 0.25 * k / 12) for k in range(13)]
-    ribbon(ag, "scarf_tail", path, 0.15, "scarf", fray=0.05, seed=4)
-    path = [(lerp(1.42, 1.06, k / 6), math.radians(lerp(-118, -108, k / 6)), 1.0)
+    ribbon(ag, "scarf_tail", path, 0.15, "scarf", thick=0.012, seed=4)
+    path = [(lerp(1.42, 1.08, k / 6), math.radians(lerp(-118, -108, k / 6)), 1.0)
             for k in range(7)]
-    ribbon(ag, "scarf_front", path, 0.12, "scarf", fray=0.03, seed=6)
+    ribbon(ag, "scarf_front", path, 0.12, "scarf", thick=0.012, seed=6)
+    # tassels at both tail ends
+    bm = bmesh.new()
+    for z, th, wd in ((0.56, 78, 0.19), (1.08, -108, 0.12)):
+        p, d = surface_point(ag, z, math.radians(th), out=0.022)
+        side = Vector((-math.sin(math.radians(th)), math.cos(math.radians(th)), 0))
+        for k in range(5):
+            q = p + side * (wd * (k / 4 - 0.5))
+            tube(bm, [q, q + Vector((0, 0, -0.045)) + d * 0.004], 0.006, 4)
+    ag.add("tassels", bm, "garment", "wool", "scarf2", rough=0.9, collide=(), smooth=True)
     # Iris pin: three small petals on the scarf knot (the clan's flower).
     p, d = surface_point(ag, 1.45, math.radians(-110), out=0.004)
     bm = bmesh.new()
@@ -230,7 +415,7 @@ def costume_iris(ag):
         a = 2 * math.pi * k / 3 + math.pi / 2
         off = Vector((math.cos(a) * 0.012, 0, math.sin(a) * 0.012))
         ico(bm, p + off + d * 0.006, 0.011, 1, (1.0, 0.55, 1.4))
-    ag.add("pin", bm, "ornament", "resin", "gem", rough=0.2, collide=())
+    ag.add("pin", bm, "ornament", "resin", "gem", rough=0.2, collide=(), smooth=True)
 
 
 def costume_sol(ag):
@@ -238,12 +423,13 @@ def costume_sol(ag):
     hiding the face, white quartz clusters as shoulder scales, a brass balance
     (trade), a sealed satchel and salt pouches."""
     build_body(ag)
-    robe(ag, "robe", 1.48, 0.06, 0.04, 0.27, n=40, rows=14, depth=0.85, flare=1.8,
+    robe(ag, "robe", 1.48, 0.06, 0.04, 0.27, n=34, rows=14, depth=0.85, flare=1.8,
          color="cloth", against="core", push=0.05, clear=0.014)
     for k, (zt, zb, amp) in enumerate(((1.02, 0.36, 0.05), (1.18, 0.64, 0.045),
                                        (1.34, 0.92, 0.04))):
-        robe(ag, f"tier_{k}", zt, zb, 0.05, 0.30 - 0.02 * k, n=40, rows=5, depth=0.86,
-             flare=1.2, hem=hem_scallop(10, amp, phase=0.3 * k), color="tier", push=0.18)
+        robe(ag, f"tier_{k}", zt, zb, 0.05, 0.30 - 0.02 * k, n=32, rows=5, depth=0.86,
+             flare=1.2, hem=hem_scallop(8, amp, phase=0.3 * k), color="tier", push=0.18,
+             trim=("brass", 0.022, "cloth"))
     sleeve(ag, "sleeve_l", 1, 0.075, 0.11, color="cloth", end_drop=0.06)
     sleeve(ag, "sleeve_r", -1, 0.075, 0.11, color="cloth", end_drop=0.06)
     band(ag, "belt", 1.02, 1.07, color="leather", kind="leather")
@@ -326,7 +512,8 @@ def costume_pepel(ag):
     robe(ag, "tunic", 1.48, 0.20, 0.04, 0.24, n=32, rows=12, depth=0.85, flare=1.5,
          hem=hem_jagged(3, 32, 0.10), color="cloth", against="core", push=0.05, clear=0.014)
     robe(ag, "coat", 1.40, 0.42, 0.06, 0.30, n=32, rows=9, depth=0.88, flare=1.3,
-         hem=hem_jagged(11, 32, 0.16), opening=0.22, color="coat", push=0.16)
+         hem=hem_jagged(11, 32, 0.16), opening=0.22, color="coat", push=0.16,
+         trim=("ember", 0.03, "cloth"))
     sleeve(ag, "sleeve_l", 1, 0.068, 0.062, color="wrap", rough=0.95, bell=1.0)
     sleeve(ag, "sleeve_r", -1, 0.068, 0.062, color="wrap", rough=0.95, bell=1.0)
     for side in (-1, 1):
@@ -398,17 +585,13 @@ def costume_moh(ag):
         return lambda th: -amp * (0.5 + 0.5 * math.sin(th * k + ph))
     mantle(ag, "cloak", 1.50, 0.075, 0.78, 0.34, n=36, rows=12, depth=0.92,
            hem=soft(0.08, 7, 0.4), front_short=0.30, back_long=0.38, span=math.radians(250),
-           th0=math.radians(-35), color="cloak", kind="wool", rough=0.9, thick=0.010)
+           th0=math.radians(-35), color="cloak", kind="wool", rough=0.9, thick=0.010,
+           trim=("cap", 0.03, "cloth"))
     mantle(ag, "capelet", 1.505, 0.075, 0.38, 0.27, n=36, rows=7, depth=0.92,
            hem=soft(0.06, 9, 1.3), front_short=0.10, spread=1.0, color="cloak2", kind="wool",
-           rough=0.9, thick=0.010)
-    p, d = surface_point(ag, 1.43, math.pi / 2)
-    bm = bmesh.new()
-    placed(bm, frame(p + d * 0.02 + Vector((0, 0, 0.02)), (0, 0.6, 1.0)), lambda b: revolve(
-        b, [(0.09, -0.03), (0.13, 0.0), (0.14, 0.04), (0.11, 0.07), (0.05, 0.08)], 12,
-        cap_bottom=True, cap_top=True, sx=1.25))
-    ag.add("hood_down", bm, "garment", "wool", "cloak", rough=0.9, collide=("all",))
-    hair(ag, "hair", "hair", length_back=0.10, seed=5, messy=0.018)
+           rough=0.9, thick=0.010, trim=("cap", 0.025, "cloth"))
+    cowl_roll(ag, "cloak2", r=0.04)
+    hair_locks(ag, "hair", "hair", length=0.10, n=12, fringe_side=-1, seed=5)
     rnd = random.Random(5)
     mo = bmesh.new()
     for k in range(22):
@@ -470,7 +653,7 @@ def costume_yantar(ag):
     build_body(ag)
     robe(ag, "robe", 1.48, 0.07, 0.04, 0.26, n=36, rows=13, depth=0.86, flare=1.9,
          color="cloth", against="core", push=0.05, clear=0.014)
-    robe(ag, "coat", 1.47, 0.30, 0.05, 0.33, n=36, rows=11, depth=0.88, flare=1.6,
+    robe(ag, "coat", 1.47, 0.30, 0.05, 0.33, n=36, rows=11, depth=0.88, flare=1.6, trim=("lining", 0.035, "cloth"),
          opening=0.28, pleats=10, pleat_amp=0.05, color="coat", push=0.14)
     sleeve(ag, "sleeve_l", 1, 0.078, 0.10, color="coat", end_drop=0.02)
     sleeve(ag, "sleeve_r", -1, 0.078, 0.10, color="coat", end_drop=0.02)
@@ -567,13 +750,14 @@ def costume_iney(ag):
     front of the eye and a slate tablet of signs at the hip."""
     build_body(ag, hair=(0.74, 0.77, 0.82))          # frost-white crop
     robe(ag, "robe", 1.48, 0.04, 0.04, 0.25, n=40, rows=14, depth=0.82, flare=2.0,
-         pleats=14, pleat_amp=0.07, color="robe", against="core", push=0.05, clear=0.014)
+         pleats=14, pleat_amp=0.07, color="robe", against="core", push=0.05, clear=0.014,
+         trim=("silver", 0.025, "cloth"))
     sleeve(ag, "sleeve_l", 1, 0.072, 0.13, color="cloth", end_drop=0.10, bell=2.4)
     sleeve(ag, "sleeve_r", -1, 0.072, 0.13, color="cloth", end_drop=0.10, bell=2.4)
     band(ag, "belt", 1.02, 1.065, color="silver", kind="metal", rough=0.3, metal=1.0)
     mantle(ag, "mantle", 1.50, 0.075, 0.46, 0.33, n=40, rows=9, depth=0.9,
            hem=hem_points(10, 0.14, phase=0.5), front_short=0.10, back_long=0.12,
-           color="mantle", rough=0.65, thick=0.009)
+           color="mantle", rough=0.65, thick=0.009, trim=("silver", 0.022, "cloth"))
     hood(ag, "hood", rad=0.138, open_w=0.66, open_top=0.42, open_bot=1.80, tip=1.55,
          tip_dir=(0, 0.42, 0.90), tip_pow=5.0, cowl_r=0.23, cowl_z=1.43, n=24, rows=16,
          color="hood", rough=0.7)

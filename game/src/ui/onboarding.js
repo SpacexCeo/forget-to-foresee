@@ -1,51 +1,159 @@
-// Guest/testnet onboarding (spec §1): synthetic entitlement (labeled demo) →
-// tutorial → hologram customization → first contact. The order is enforced by
-// flow.js; this module only renders the current step.
-import { h, tx, bindI18n, ensureStyles } from './dom.js';
+// Guest/testnet onboarding (spec §1): synthetic entitlement (labeled demo) → tutorial → hologram
+// customization → first contact. The order is enforced by flow.js; this module only renders the
+// current step. The tutorial is five show-don't-tell beats (docs/tutorial.md §2.1): one idea, one
+// action, immediate feedback, at most about twelve words of body per beat; "Skip tutorial" on every
+// beat; the beat index is saved so a reload resumes; a returning player (every step done) goes
+// straight to the island with no screen at all.
+import { h, tx, bindI18n, ensureStyles, applyI18n } from './dom.js';
 import { getUiContext } from './context.js';
-import { createOnboardingFlow, FLOW_STEPS } from './flow.js';
+import { createOnboardingFlow, createTutorial, FLOW_STEPS, TUTORIAL_BEATS, TUTORIAL_SIGN } from './flow.js';
 import { issueDemoEntitlement, getEntitlement } from './entitlement.js';
 import { mountConstructor } from './hologram/constructor.js';
 import { mountBackground } from './background.js';
 import { saveRecipe, loadRecipe, recipeHash, DEFAULT_RECIPE } from './hologram/recipe.js';
 import { actionButton } from './controls.js';
 
-const SVG = 'http://www.w3.org/2000/svg';
-const s = (tag, attrs = {}, ...kids) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); kids.forEach((c) => el.appendChild(c)); return el; };
-const FORM_PATHS = [
-  (c) => s('path', { d: 'M -28 -93 Q 0 -114 28 -93', fill: 'none', stroke: c, 'stroke-width': 5, 'stroke-linecap': 'round' }),
-  (c) => s('path', { d: 'M -11 -88 L 0 -118 L 11 -88', fill: 'none', stroke: c, 'stroke-width': 5, 'stroke-linejoin': 'round' }),
-  (c) => s('circle', { cx: 0, cy: -103, r: 10, fill: 'none', stroke: c, 'stroke-width': 5 }),
-  (c) => s('path', { d: 'M 0 -119 C 11 -102 11 -91 0 -88 C -11 -91 -11 -102 0 -119 Z', fill: c }),
-];
-/** The tutorial example "Shell II · Gift · 20 · +2": one dot, so reading starts at the right-hand slot. */
-export const TUTORIAL_SIGN = Object.freeze({
-  dots: 1,
-  // reading order: [slot index, form index, meaning index]
-  read: [[0, 2, 1], [1, 0, 0], [2, 1, 1], [3, 3, 1]],
-});
+export { TUTORIAL_SIGN } from './flow.js';
 
-function glyph(i18n, step) {
-  const { dots, read } = TUTORIAL_SIGN;
-  const svg = s('svg', { viewBox: '-130 -130 260 260', role: 'img' });
-  svg.appendChild(s('circle', { cx: 0, cy: 0, r: 90, fill: 'none', stroke: '#b7c6bd', 'stroke-width': 2, opacity: 0.7 }));
-  read.forEach(([, form], k) => {
-    const pos = (dots + k) % 4; // 0 = top, clockwise
-    const highlight = step >= 2 && k === 0;
-    const g = s('g', { transform: `rotate(${pos * 90})` });
-    g.appendChild(FORM_PATHS[form](highlight ? '#d4a15f' : '#e9e9db'));
-    if (step >= 2) {
-      const tEl = s('text', { x: 0, y: -60, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: highlight ? '#d4a15f' : '#b7c6bd', 'font-size': 16, transform: `rotate(${-pos * 90} 0 -60)` });
-      tEl.textContent = String(k + 1);
+// Task Q's narration (game/src/play/narration.js) is optional: present → the tutorial speaks each beat on its
+// 'tutorial' channel when the player turned narration on; absent → nothing happens. Vite resolves the glob at
+// build time, so a missing module is an empty map, never an error.
+const NARRATION_MODULES = typeof import.meta.glob === 'function' ? import.meta.glob('../play/narration.js') : {};
+
+/** 'touch' | 'gamepad' | 'keyboard' for the device-aware copy ({input, select, …} in the strings). */
+export function inputKindFor(win = globalThis) {
+  try {
+    const pads = win.navigator && win.navigator.getGamepads ? [...win.navigator.getGamepads()] : [];
+    if (pads.some((p) => p && p.connected)) return 'gamepad';
+  } catch { /* no gamepad API */ }
+  try { if (win.matchMedia && win.matchMedia('(pointer: coarse)').matches) return 'touch'; } catch { /* no DOM */ }
+  return 'keyboard';
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+const s = (tag, attrs = {}, ...kids) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, v); kids.forEach((c) => el.appendChild(c)); return el; };
+const FORM_PATHS = [
+  (c, w) => s('path', { d: 'M -28 -93 Q 0 -114 28 -93', fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linecap': 'round' }),
+  (c, w) => s('path', { d: 'M -11 -88 L 0 -118 L 11 -88', fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linejoin': 'round' }),
+  (c, w) => s('circle', { cx: 0, cy: -103, r: 10, fill: 'none', stroke: c, 'stroke-width': w }),
+  (c, w) => s('path', { d: 'M 0 -119 C 11 -102 11 -91 0 -88 C -11 -91 -11 -102 0 -119 Z', fill: c, stroke: c, 'stroke-width': Math.max(0, w - 5) }),
+];
+const PEARL = '#e9e9db', AMBER = '#d4a15f', MIST = '#b7c6bd', STONE = '#53645d', INK = '#18231f';
+/** Trial pacing of beat 4 (ms per trial); reduced motion plays all three at once. */
+const TRIAL_MS = 650;
+
+/** Scoped styles for the tutorial beats (the shared stylesheet is owned by the UI polish task). */
+const CSS = `
+.ftf-tutcard { position: relative; }
+.ftf-tut-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.ftf-tut-head .ftf-muted { letter-spacing: .08em; text-transform: uppercase; font-size: .82rem; }
+.ftf-tut-dots { display: inline-flex; gap: 8px; margin-left: 14px; vertical-align: middle; }
+.ftf-tut-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--ftf-stone); display: inline-block; }
+.ftf-tut-dots i[data-state="done"] { background: var(--ftf-good); }
+.ftf-tut-dots i[data-state="current"] { background: var(--ftf-amber); box-shadow: 0 0 0 3px rgba(212,161,95,.25); }
+.ftf-ring { position: relative; width: min(320px, 100%); margin: 0 auto; aspect-ratio: 1; }
+.ftf-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ftf-ring .ftf-slotbtn { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 1px solid transparent; background: transparent; cursor: pointer; padding: 0; }
+.ftf-ring .ftf-slotbtn:hover:enabled { border-color: rgba(212,161,95,.55); background: rgba(212,161,95,.08); }
+.ftf-ring .ftf-slotbtn[disabled] { cursor: default; }
+.ftf-ring .ftf-slotbtn[data-expected="true"] { animation: ftf-pulse 1.2s ease-in-out infinite; border-color: rgba(212,161,95,.7); }
+.ftf-ring .ftf-corebtn { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%; border: 1px solid transparent; background: transparent; cursor: pointer; padding: 0; }
+.ftf-ring .ftf-corebtn:hover:enabled { border-color: rgba(212,161,95,.6); }
+.ftf-ring .ftf-corebtn[data-expected="true"] { animation: ftf-pulse 1.2s ease-in-out infinite; border-color: rgba(212,161,95,.7); }
+@keyframes ftf-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(212,161,95,.0); } 50% { box-shadow: 0 0 0 8px rgba(212,161,95,.22); } }
+.ftf-tut-text h1 { font-size: clamp(1.45rem, 3vw, 2rem); }
+.ftf-tut-body { font-size: 1.08rem; margin: 0 0 14px; }
+.ftf-tut-stage { min-height: 96px; display: grid; gap: 8px; align-content: start; justify-items: start; margin-bottom: 10px; }
+.ftf-tut-stage > .ftf-row, .ftf-tut-stage > .ftf-field, .ftf-tut-stage > ol { justify-self: stretch; }
+.ftf-tut-fb { min-height: 1.6em; color: var(--ftf-amber); margin: 0 0 14px; font-size: 1.02rem; }
+.ftf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ftf-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 12px; border: 1px solid var(--ftf-stone); border-radius: 17px; color: var(--ftf-mist); font-size: .95rem; }
+.ftf-chip[data-on="true"] { border-color: var(--ftf-amber); color: var(--ftf-pearl); }
+.ftf-chip[data-on="true"]::before { content: "✓"; color: var(--ftf-amber); }
+.ftf-readrow { display: grid; grid-template-columns: 1.6em 1fr; gap: 6px 10px; margin: 0; padding: 0; list-style: none; font-size: 1.02rem; }
+.ftf-readrow li { display: contents; }
+.ftf-readrow .ftf-n { color: var(--ftf-amber); font-family: var(--ftf-mono); }
+.ftf-readrow .ftf-k { color: var(--ftf-mist); }
+.ftf-sentence { font-size: 1.15rem; color: var(--ftf-pearl); margin: 6px 0 0; }
+.ftf-silk { display: inline-flex; align-items: center; gap: 8px; font-family: var(--ftf-mono); color: var(--ftf-pearl); font-size: 1.05rem; }
+.ftf-silk b { color: var(--ftf-amber); font-weight: 600; min-width: 2ch; text-align: right; transition: color var(--ftf-motion-fast); }
+.ftf-trials { display: flex; gap: 8px; }
+.ftf-trials span { min-width: 72px; text-align: center; padding: 6px 10px; border: 1px solid var(--ftf-stone); border-radius: 4px; color: var(--ftf-mist); font-size: .95rem; white-space: nowrap; }
+.ftf-trials span[data-on="true"] { border-color: var(--ftf-amber); color: var(--ftf-pearl); }
+.ftf-trials span[data-sealed="true"] { background: rgba(212,161,95,.14); color: var(--ftf-amber); }
+.ftf-seal { font-size: 1.15rem; color: var(--ftf-amber); margin: 0; }
+.ftf-memcard { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--ftf-stone); border-radius: 6px; max-width: 420px; transition: opacity .5s, transform .5s; }
+.ftf-memcard[data-gone="true"] { opacity: .32; transform: translateY(2px) scale(.98); text-decoration: line-through; }
+.ftf-memcard b { font-weight: 600; letter-spacing: .04em; }
+.ftf-vision { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; max-width: 420px; }
+.ftf-vision .ftf-ghost { width: 44px; height: 44px; border-radius: 50%; border: 2px dashed var(--ftf-iris-text); opacity: .9; }
+.ftf-mode-question { margin: 10px 0 0; }
+.ftf-mode-question .ftf-strong { font-size: 1.05rem; margin: 0 0 10px; }
+.ftf-looks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ftf-look { flex-direction: column; gap: 8px; padding: 12px 6px; min-height: 76px; }
+.ftf-look[aria-pressed="true"] { border-color: var(--ftf-amber); color: var(--ftf-amber); }
+.ftf-look[aria-pressed="true"]::before { content: none; }
+.ftf-look-swatch { display: inline-flex; gap: 3px; }
+.ftf-look-swatch i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.35); }
+.ftf-ctor-compact .ftf-ctor-preview { max-width: 380px; margin: 0 auto; position: static; }
+.ftf-ctor-compact .ftf-ctor-canvas { max-height: 300px; max-width: 300px; margin: 0 auto; }
+.ftf-look-begin { margin-top: 6px; }
+.ftf-look-begin .ftf-btn { width: 100%; }
+.ftf-ctor-compact:not(.ftf-ctor-open) { grid-template-columns: minmax(0, 1fr); }
+.ftf-ctor-detail { display: grid; gap: 10px; }
+.ftf-ctor-detail[hidden], .ftf-ctor-controls[hidden] { display: none; }
+.ftf-access details { margin: 0 0 16px; }
+.ftf-access summary { cursor: pointer; color: var(--ftf-mist); }
+.ftf-access details p { margin: .6em 0 0; }
+@media (max-width: 520px) { .ftf-looks { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ftf-trials span { min-width: 0; flex: 1; padding: 6px 4px; font-size: .88rem; } }
+`;
+function ensureTutStyles(doc = document) {
+  if (doc.getElementById('ftf-tut-style')) return;
+  const el = doc.createElement('style'); el.id = 'ftf-tut-style'; el.textContent = CSS; doc.head.appendChild(el);
+}
+
+/** Position (0 = top, clockwise) of the stroke read k-th. */
+const posOf = (k, dots) => (dots + k) % 4;
+/** The reading index of the stroke at position p (0 = top), or -1 when there are no dots to read from. */
+const readAt = (p, dots) => (p - dots + 4) % 4;
+const SLOT_POS = [[50, 12], [88, 50], [50, 88], [12, 50]]; // % of the ring box per position
+
+/**
+ * The example sign. `o.dots` dots in the core; strokes keep their ring positions (the example's
+ * layout under one dot) while the numbers follow the dots, which is what beat 2 teaches.
+ * @param {{dots: number, lit: Set<number>, numbers: boolean, labels: boolean, sealed?: boolean, ghost?: boolean, expected?: number|null}} o
+ */
+function ring(i18n, o) {
+  const svg = s('svg', { viewBox: '-130 -130 260 260', role: 'img', 'aria-hidden': 'true' });
+  svg.appendChild(s('circle', { cx: 0, cy: 0, r: 90, fill: 'none', stroke: o.sealed ? AMBER : MIST, 'stroke-width': o.sealed ? 3 : 2, opacity: o.sealed ? 0.95 : 0.7 }));
+  if (o.sealed) svg.appendChild(s('circle', { cx: 0, cy: 0, r: 100, fill: 'none', stroke: AMBER, 'stroke-width': 1.5, opacity: 0.5, 'stroke-dasharray': '4 6' }));
+  // strokes sit where the example puts them (one dot): reading index k → position (1 + k) % 4
+  TUTORIAL_SIGN.read.forEach(([slot, form], k) => {
+    const p = posOf(k, TUTORIAL_SIGN.dots);
+    const lit = o.lit.has(slot);
+    const g = s('g', { transform: `rotate(${p * 90})`, 'data-pos': p });
+    g.appendChild(FORM_PATHS[form](lit ? AMBER : PEARL, lit ? 6.5 : 5));
+    const n = readAt(p, o.dots) + 1;
+    if (o.numbers) {
+      const tEl = s('text', { x: 0, y: -60, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: lit ? AMBER : MIST, 'font-size': 16, transform: `rotate(${-p * 90} 0 -60)` });
+      tEl.textContent = String(n);
+      g.appendChild(tEl);
+    }
+    if (o.labels && lit) {
+      const tEl = s('text', { x: 0, y: -56, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: AMBER, 'font-size': 10.5, 'letter-spacing': 0.8, transform: `rotate(${-p * 90} 0 -56)` });
+      tEl.textContent = i18n.t('slot.' + slot).toUpperCase();
       g.appendChild(tEl);
     }
     svg.appendChild(g);
   });
-  svg.appendChild(s('circle', { cx: 0, cy: 0, r: 26, fill: '#18231f', stroke: step === 2 ? '#d4a15f' : '#53645d', 'stroke-width': 2 }));
-  for (let d = 0; d < dots; d++) svg.appendChild(s('circle', { cx: (d - (dots - 1) / 2) * 12, cy: 0, r: 4.5, fill: '#e9e9db' }));
-  if (step === 4) svg.appendChild(s('path', { d: 'M 70 70 l 18 -8 l 6 20 l -16 6 Z', fill: '#8f86a8', opacity: 0.9 }));
-  const slots = read.map(([slot, form]) => `${i18n.t('slot.' + slot)} (${i18n.t('form.' + form)})`).join(', ');
-  svg.setAttribute('aria-label', i18n.t('tut.glyphAlt', { count: dots, slots }));
+  svg.appendChild(s('circle', { cx: 0, cy: 0, r: 26, fill: INK, stroke: o.expected === 'core' ? AMBER : STONE, 'stroke-width': 2 }));
+  for (let d = 0; d < o.dots; d++) svg.appendChild(s('circle', { cx: (d - (o.dots - 1) / 2) * 12, cy: 0, r: 4.5, fill: PEARL }));
+  if (o.sealed) {
+    const badge = s('g', { transform: 'translate(78 -78)' });
+    badge.appendChild(s('circle', { cx: 0, cy: 0, r: 22, fill: AMBER }));
+    badge.appendChild(s('path', { d: 'M -9 1 L -3 7 L 10 -7', fill: 'none', stroke: INK, 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    svg.appendChild(badge);
+  }
   return svg;
 }
 
@@ -58,6 +166,7 @@ export function mountOnboarding(root, opts = {}) {
   const { i18n, prefs, storage } = ctx;
   const flow = opts.flow || createOnboardingFlow(storage);
   ensureStyles();
+  ensureTutStyles(root.ownerDocument || document);
   const bgEl = h('div', { class: 'ftf-bg', attrs: { 'aria-hidden': 'true' } });
   const bg = mountBackground(bgEl, { reducedMotion: true, tier: prefs.tier() });
   const stepper = h('ol', { class: 'ftf-stepper', i18nAttrs: { 'aria-label': 'flow.progress' } });
@@ -67,7 +176,19 @@ export function mountOnboarding(root, opts = {}) {
   const wrap = h('div', { class: 'ftf-root' }, bgEl, h('main', { class: 'ftf-screen' }, top, stage));
   root.appendChild(wrap);
   let child = null;
-  let tutPage = 1;
+  let timers = [];
+  const input = () => inputKindFor(root.ownerDocument ? root.ownerDocument.defaultView : globalThis);
+  // narration: created once the optional module loads; speaks only when prefs say so (narration.enabled())
+  let narration = null;
+  const loader = Object.values(NARRATION_MODULES)[0];
+  if (loader) loader().then((m) => { if (m && m.createNarration) narration = m.createNarration({ prefs, i18n }); }).catch(() => {});
+  const narrate = (keys, args = {}) => {
+    if (!narration || !narration.enabled || !narration.enabled()) return;
+    const text = keys.map((k) => i18n.t(k, args)).join('. ');
+    try { narration.speak(text, { channel: 'tutorial', interrupt: true }); } catch { /* speech is optional */ }
+  };
+  const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+  const clearTimers = () => { for (const t of timers) clearTimeout(t); timers = []; };
 
   function renderStepper() {
     stepper.replaceChildren(...FLOW_STEPS.slice(1).map((st, k) => {
@@ -80,67 +201,145 @@ export function mountOnboarding(root, opts = {}) {
   }
 
   const heading = (key) => h('h1', { i18n: key, attrs: { tabindex: '-1' } });
-  const primary = (key, fn) => actionButton({ key, variant: 'primary', symbol: 'arrow', trailing: true, onClick: fn });
+  const primary = (key, fn, attrs = {}) => actionButton({ key, variant: 'primary', symbol: 'arrow', trailing: true, onClick: fn, attrs });
 
-  function viewEntitlement() {
-    return h('section', { class: 'ftf-card' },
-      heading('ent.title'),
-      h('p', {}, h('span', { class: 'ftf-badge ftf-badge-demo', i18n: 'ent.badge' })),
-      h('p', { i18n: 'ent.body' }),
-      h('p', { class: 'ftf-muted', i18n: 'ent.wallet' }),
-      primary('ent.accept', () => { issueDemoEntitlement(storage, ctx.guestId); flow.complete('entitlement'); }));
+  function enterWorld() {
+    const recipe = loadRecipe(storage) || DEFAULT_RECIPE;
+    if (opts.onFirstContact) opts.onFirstContact({ guestId: ctx.guestId, entitlement: getEntitlement(storage), recipe, recipeHash: recipeHash(recipe), locale: i18n.locale });
   }
 
+  // ---- access: one line, the labeled badge, the details folded away ----
+  function viewEntitlement() {
+    narrate(['onb.access.title', 'onb.access.body']);
+    return h('section', { class: 'ftf-card ftf-access' },
+      heading('onb.access.title'),
+      h('p', {}, h('span', { class: 'ftf-badge ftf-badge-demo', i18n: 'ent.badge' })),
+      h('p', { class: 'ftf-tut-body', i18n: 'onb.access.body' }),
+      h('details', {}, h('summary', { i18n: 'onb.access.details' }), h('p', { class: 'ftf-muted', i18n: 'ent.body' }), h('p', { class: 'ftf-muted', i18n: 'ent.wallet' })),
+      primary('onb.access.play', () => { issueDemoEntitlement(storage, ctx.guestId); flow.complete('entitlement'); }));
+  }
+
+  // ---- tutorial: five beats over one example sign ----
+  let tut = null, spokenBeat = -1;
   function viewTutorial() {
-    const page = tutPage;
+    if (!tut) tut = createTutorial({ beat: flow.beat });
+    const v = tut.view();
+    const id = v.id;
+    if (spokenBeat !== v.index) { spokenBeat = v.index; narrate([`tut.${id}.title`, `tut.${id}.body`], { input: input() }); }
+    const box = h('section', { class: 'ftf-card ftf-tutcard' });
+    const dots = h('span', { class: 'ftf-tut-dots', attrs: { 'aria-hidden': 'true' } }, TUTORIAL_BEATS.map((b, k) => h('i', { dataset: { state: k < v.index ? 'done' : k === v.index ? 'current' : 'todo' } })));
+    const head = h('div', { class: 'ftf-tut-head' },
+      h('p', { class: 'ftf-muted', attrs: { style: 'margin:0' } }, h('span', { i18n: 'tut.title' }), dots, h('span', { class: 'sr-only', i18n: 'flow.stepOf', args: { n: v.index + 1, total: v.count } })),
+      h('button', { class: 'ftf-btn ftf-btn-ghost ftf-btn-small', i18n: 'tut.skip', attrs: { type: 'button' }, on: { click: () => { tut = null; flow.skip('tutorial'); } } }));
+
+    // ring + its tap targets
+    const lit = new Set(id === 'slots' || id === 'read' ? tut.tapped() : id === 'stake' || id === 'price' ? [0, 1, 2, 3] : []);
+    const expected = id === 'read' ? tut.expected() : null;
+    const ringBox = h('div', { class: 'ftf-ring' },
+      ring(i18n, { dots: id === 'dots' ? v.dots : TUTORIAL_SIGN.dots, lit, numbers: id !== 'slots', labels: id === 'slots', sealed: v.sealed, expected: id === 'dots' && !v.done ? 'core' : null }));
+    const srAlt = i18n.t('tut.glyphAlt', { count: id === 'dots' ? v.dots : TUTORIAL_SIGN.dots, slots: TUTORIAL_SIGN.read.map(([slot, form]) => `${i18n.t('slot.' + slot)} (${i18n.t('form.' + form)})`).join(', ') });
+    ringBox.appendChild(h('span', { class: 'sr-only', text: srAlt }));
+    if (id === 'slots' || id === 'read') {
+      TUTORIAL_SIGN.read.forEach(([slot, form], k) => {
+        const p = posOf(k, TUTORIAL_SIGN.dots);
+        const [x, y] = SLOT_POS[p];
+        const b = h('button', { class: 'ftf-slotbtn', attrs: { type: 'button', 'data-slot': slot, 'data-expected': expected === slot ? 'true' : null, 'aria-pressed': lit.has(slot) ? 'true' : 'false', 'aria-label': `${i18n.t('slot.' + slot)} · ${i18n.t('form.' + form)}`, style: `left:${x}%;top:${y}%` },
+          on: { click: () => { tut.tap(slot); render(); } } });
+        ringBox.appendChild(b);
+      });
+    }
+    if (id === 'dots') ringBox.appendChild(h('button', { class: 'ftf-corebtn', attrs: { type: 'button', 'data-core': true, 'data-expected': v.done ? null : 'true' }, i18nAttrs: { 'aria-label': 'tut.dots.core' }, attrArgs: () => ({ input: input() }), on: { click: () => { tut.tapCore(); render(); } } }));
+
+    // text column
+    const body = h('p', { class: 'ftf-tut-body', i18n: `tut.${id}.body`, args: () => ({ input: input() }) });
+    const stageEl = h('div', { class: 'ftf-tut-stage' });
+    const fb = h('p', { class: 'ftf-tut-fb', attrs: { 'aria-live': 'polite' } });
+    if (id === 'slots') {
+      stageEl.append(h('div', { class: 'ftf-chips' }, [0, 1, 2, 3].map((slot) => h('span', { class: 'ftf-chip', dataset: { on: String(v.slots.includes(slot)) }, i18n: 'slot.' + slot }))));
+      if (v.done) tx(fb, i18n, 'tut.slots.done'); else tx(fb, i18n, 'tut.slots.left', { n: 4 - v.slots.length });
+    } else if (id === 'dots') {
+      tx(fb, i18n, v.done ? 'tut.dots.one' : 'tut.dots', { count: v.dots });
+      if (!v.done) stageEl.append(h('p', { class: 'ftf-muted', attrs: { style: 'margin:0' }, i18n: 'tut.dots.want' }));
+    } else if (id === 'read') {
+      const rows = TUTORIAL_SIGN.read.slice(0, v.readIndex).map(([slot, , m], k) => h('li', {}, h('span', { class: 'ftf-n', text: String(k + 1) }), h('span', {}, h('span', { class: 'ftf-k', i18n: 'slot.' + slot }), ': ', h('span', { i18n: `meaning.${slot}.${m}` }))));
+      stageEl.append(h('ol', { class: 'ftf-readrow' }, rows));
+      if (v.done) { stageEl.append(h('p', { class: 'ftf-sentence', i18n: 'tut.read.sentence' })); tx(fb, i18n, 'tut.read.done'); }
+      else if (v.lastRead && v.lastRead.ok === false) tx(fb, i18n, 'tut.read.wrong', { n: v.lastRead.step });
+      else tx(fb, i18n, 'tut.read.next', { n: v.readIndex + 1 });
+    } else if (id === 'stake') {
+      const silk = h('span', { class: 'ftf-silk' }, h('span', { i18n: 'tut.stake.silk' }), h('b', { text: String(v.silk) }));
+      const trials = h('div', { class: 'ftf-trials' }, [1, 2, 3].map((n) => h('span', { dataset: { on: String(v.staked && v.trial >= n), sealed: String(v.sealed && n === TUTORIAL_SIGN.trial) }, i18n: 'tut.stake.trial', args: { n } })));
+      const stakeBtn = primary('tut.stake.button', () => { if (tut.stake()) { render(); runTrials(); } }, v.staked ? { disabled: true, 'aria-disabled': 'true' } : {});
+      stageEl.append(silk, stakeBtn, trials);
+      if (v.sealed) { stageEl.append(h('p', { class: 'ftf-seal', i18n: 'tut.stake.sealed' })); tx(fb, i18n, 'tut.stake.sealedNote'); }
+      else if (v.staked) tx(fb, i18n, 'tut.stake.staked');
+      else fb.textContent = '';
+    } else if (id === 'price') {
+      const card = h('div', { class: 'ftf-memcard', dataset: { gone: String(v.forgotten) } },
+        h('b', { i18n: 'tut.price.memory' }), h('span', { class: 'ftf-muted', i18n: 'tut.price.memoryNote' }),
+        v.forgotten ? null : h('div', {}, primary('tut.price.forget', () => { if (tut.forget()) render(); })));
+      stageEl.append(card);
+      fb.textContent = '';
+      if (v.forgotten) {
+        stageEl.append(h('div', { class: 'ftf-vision' }, h('span', { class: 'ftf-ghost', attrs: { 'aria-hidden': 'true' } }), h('span', { i18n: 'tut.price.vision' })),
+          h('p', { class: 'ftf-tut-fb', attrs: { style: 'margin:0', 'aria-live': 'polite' }, i18n: 'tut.price.shard' }));
+        // The one-time interface question (docs/design/clarity-layers.md §9.1 row 4): Novice is the default
+        // and the primary button; both can be changed later in Settings.
+        const choose = (mode) => { prefs.set({ hudMode: mode }); tut = null; flow.complete('tutorial'); };
+        stageEl.append(h('div', { class: 'ftf-field ftf-mode-question' },
+          h('p', { class: 'ftf-strong', i18n: 'tut.mode.question' }),
+          h('div', { class: 'ftf-row' },
+            primary('tut.mode.novice', () => choose('novice')),
+            h('button', { class: 'ftf-btn', i18n: 'tut.mode.pro', attrs: { type: 'button', 'data-mode': 'pro' }, on: { click: () => choose('pro') } })),
+          h('p', { class: 'ftf-muted', attrs: { style: 'margin:0' }, i18n: 'tut.mode.note' })));
+      }
+    }
+
     const nav = h('div', { class: 'ftf-row' },
-      page > 1 ? h('button', { class: 'ftf-btn', i18n: 'common.back', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => { tutPage--; render(); } } }) : null,
-      page < 4 ? primary('common.next', () => { tutPage++; render(); }) : null);
-    // Last card: the one-time interface question (docs/design/clarity-layers.md §9.1 row 4). Novice is
-    // the default and the primary button; both choices can be changed later in Settings.
-    const choose = (mode) => { prefs.set({ hudMode: mode }); flow.complete('tutorial'); };
-    const modeQuestion = page === 4 ? h('div', { class: 'ftf-field ftf-mode-question' },
-      h('p', { class: 'ftf-strong', i18n: 'tut.mode.question' }),
-      h('div', { class: 'ftf-row' },
-        primary('tut.mode.novice', () => choose('novice')),
-        h('button', { class: 'ftf-btn', i18n: 'tut.mode.pro', attrs: { type: 'button', 'data-mode': 'pro' }, on: { click: () => choose('pro') } })),
-      h('p', { class: 'ftf-muted', i18n: 'tut.mode.note' })) : null;
-    const readout = page === 3 ? h('ol', { class: 'ftf-example' }, TUTORIAL_SIGN.read.map(([slot, form, m], k) =>
-      h('li', { i18n: 'tut.readLine', args: () => ({ slot: i18n.t('slot.' + slot), form: i18n.t('form.' + form), meaning: i18n.t(`meaning.${slot}.${m}`) }) }))) : null;
-    const g = glyph(i18n, page);
-    const box = h('section', { class: 'ftf-card' },
-      h('p', { class: 'ftf-muted', i18n: 'tut.title' }),
-      h('div', { class: 'ftf-tut' }, g,
-        h('div', {}, heading(`tut.${page}.title`), h('p', { i18n: `tut.${page}.body` }), page >= 2 ? h('p', { class: 'ftf-muted', i18n: 'tut.dots', args: { count: TUTORIAL_SIGN.dots } }) : null,
-          page === 3 ? h('p', { class: 'ftf-example', i18n: 'tut.example' }) : null, readout, modeQuestion, nav)));
-    box._relabel = () => g.setAttribute('aria-label', glyph(i18n, page).getAttribute('aria-label'));
+      v.index > 0 ? h('button', { class: 'ftf-btn', i18n: 'common.back', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => { tut.back(); flow.setBeat(tut.index); render(); } } }) : null,
+      id !== 'price' ? primary('common.next', () => { if (tut.next()) { flow.setBeat(tut.index); render(); } }, v.done ? {} : { disabled: true, 'aria-disabled': 'true' }) : null);
+    box.append(head, h('div', { class: 'ftf-tut' }, ringBox, h('div', { class: 'ftf-tut-text' }, heading(`tut.${id}.title`), body, stageEl, fb, nav)));
     return box;
   }
 
+  /** Beat 4: trials 1 → 2 → 3 pass on their own after the stake; reduced motion plays them at once. */
+  function runTrials() {
+    const reduced = prefs.reducedMotion();
+    if (reduced) { while (!tut.view().sealed) tut.tickTrial(); render(); return; }
+    const step = () => { if (!tut || tut.id !== 'stake') return; tut.tickTrial(); render(); if (!tut.view().sealed) later(step, TRIAL_MS); };
+    later(step, TRIAL_MS);
+  }
+
+  // ---- hologram: four looks, the full constructor folded under "Customize" ----
   function viewCustomization() {
-    const box = h('section', {}, heading('ctor.title'), h('p', { class: 'ftf-muted', i18n: 'ctor.subtitle' }));
+    narrate(['onb.look.title', 'onb.look.body']);
+    const begin = () => { saveRecipe(storage, child ? child.getRecipe() : DEFAULT_RECIPE); flow.complete('customization'); };
+    // The primary button sits beside the title (QA-016: never below the fold) and once more under the tiles.
+    const box = h('section', {},
+      h('div', { class: 'ftf-spread' }, heading('onb.look.title'), primary('onb.look.begin', begin)),
+      h('p', { class: 'ftf-tut-body ftf-muted', i18n: 'onb.look.body' }));
     const host = h('div', { class: 'ftf-card' });
-    box.append(host, h('div', { class: 'ftf-row', attrs: { style: 'margin-top:20px' } }, primary('ctor.done', () => {
-      saveRecipe(storage, child.getRecipe());
-      flow.complete('customization');
-    })));
-    queueMicrotask(() => { child = mountConstructor(host, { ctx }); });
+    box.append(host);
+    queueMicrotask(() => {
+      child = mountConstructor(host, { ctx, compact: true });
+      const looks = host.querySelector('.ftf-looks');
+      if (looks) { const row = h('div', { class: 'ftf-row ftf-look-begin' }, primary('onb.look.begin', begin)); looks.after(row); applyI18n(row, i18n); }
+    });
     return box;
   }
 
   function viewFirstContact() {
-    const recipe = loadRecipe(storage) || DEFAULT_RECIPE;
+    narrate(['fc.title', 'onb.fc.body']);
     return h('section', { class: 'ftf-card' },
       heading('fc.title'),
-      h('p', { i18n: 'fc.body' }),
+      h('p', { class: 'ftf-tut-body', i18n: 'onb.fc.body' }),
       opts.firstContactNoteKey ? h('p', { class: 'ftf-muted', i18n: opts.firstContactNoteKey }) : null,
-      primary('fc.enter', () => {
-        if (opts.onFirstContact) opts.onFirstContact({ guestId: ctx.guestId, entitlement: getEntitlement(storage), recipe, recipeHash: recipeHash(recipe), locale: i18n.locale });
-      }));
+      primary('fc.enter', enterWorld));
   }
 
   let view = null;
   function render() {
+    clearTimers();
     if (child) { child.destroy(); child = null; }
     renderStepper();
     const st = flow.step;
@@ -151,14 +350,20 @@ export function mountOnboarding(root, opts = {}) {
     if (hd) hd.focus({ preventScroll: false });
   }
   let unbind = null;
-  function bindAll() { if (unbind) unbind(); unbind = bindI18n(wrap, i18n, () => { if (view && view._relabel) view._relabel(); }); }
+  function bindAll() { if (unbind) unbind(); unbind = bindI18n(wrap, i18n, () => { if (flow.step === 'tutorial') render(); }); }
 
-  const unFlow = flow.subscribe((st) => { if (st !== 'lobby') { tutPage = 1; render(); } });
+  const unFlow = flow.subscribe((st) => {
+    if (st === 'lobby') return;
+    // A returning player (every step done before this session) never sees a screen: straight to the island.
+    if (st === 'firstContact' && flow.returning && opts.onFirstContact && !opts.firstContactNoteKey) { enterWorld(); return; }
+    if (st !== 'tutorial') tut = null;
+    render();
+  });
   if (flow.step === 'lobby') flow.enter(); else render();
 
   return {
     el: wrap,
     flow,
-    destroy() { unFlow(); if (unbind) unbind(); if (child) child.destroy(); bg.destroy(); wrap.remove(); },
+    destroy() { clearTimers(); unFlow(); if (unbind) unbind(); if (child) child.destroy(); bg.destroy(); wrap.remove(); },
   };
 }
