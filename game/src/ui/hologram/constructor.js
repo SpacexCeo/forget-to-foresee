@@ -4,21 +4,25 @@
 import { h, tx, bindI18n, ensureStyles } from '../dom.js';
 import { getUiContext } from '../context.js';
 import {
-  DEFAULT_RECIPE, SHAPES, COMPONENTS, LAYERS, GESTURES, NUMERIC, PALETTE_KEYS, PALETTE_PRESETS, MAX_COMPONENTS, MAX_LAYERS,
+  DEFAULT_RECIPE, SHAPES, COMPONENTS, LAYERS, GESTURES, NUMERIC, PALETTE_KEYS, PALETTE_PRESETS, LOOK_PRESETS, MAX_COMPONENTS, MAX_LAYERS,
   normalizeRecipe, recipeHash, randomizeRecipe, saveRecipe, loadRecipe,
 } from './recipe.js';
 import { createHologramPreview } from './preview.js';
+import { MOTION, installMotionStyles, enter, exit, stagger, press } from '../motion/index.js';
 
 let seq = 0;
 
 /**
  * @param {HTMLElement} root
- * @param {{ctx?: object, initial?: object, onChange?: (recipe, hash) => void}} opts
+ * @param {{ctx?: object, initial?: object, onChange?: (recipe, hash) => void, compact?: boolean}} opts
+ *   `compact`: the onboarding picker (docs/tutorial.md §2.1): four look tiles next to the preview and a
+ *   "Customize" toggle that reveals the full constructor; nothing is removed, only folded.
  */
 export function mountConstructor(root, opts = {}) {
   const ctx = opts.ctx || getUiContext();
   const { i18n, prefs, storage } = ctx;
   ensureStyles();
+  installMotionStyles(root.ownerDocument || document);
   const id = 'ftf-ctor-' + (++seq);
   let recipe = normalizeRecipe(opts.initial || loadRecipe(storage) || DEFAULT_RECIPE);
   let lowTier = prefs.tier() === 'low';
@@ -81,20 +85,55 @@ export function mountConstructor(root, opts = {}) {
   fields.gesture = () => { gesture.value = recipe.gesture; };
 
   const btn = (key, fn) => h('button', { class: 'ftf-btn', i18n: key, attrs: { type: 'button' }, on: { click: fn } });
+  const say = (key) => { tx(status, i18n, key); enter(status, { from: 'fade' }); };
+  const randomize = () => { apply(randomizeRecipe(), true); say('ctor.randomized'); };
   const actions = h('div', { class: 'ftf-row' },
-    btn('ctor.randomize', () => { apply(randomizeRecipe(), true); tx(status, i18n, 'ctor.randomized'); }),
-    btn('ctor.reset', () => { apply(DEFAULT_RECIPE, true); tx(status, i18n, 'ctor.resetDone'); }),
-    btn('ctor.save', () => { const r = saveRecipe(storage, recipe); tx(status, i18n, r.persistent ? 'ctor.saved' : 'ctor.saveFailed'); }),
-    btn('ctor.load', () => { const r = loadRecipe(storage); if (r) { apply(r, true); tx(status, i18n, 'ctor.loaded'); } else tx(status, i18n, 'ctor.loadNone'); }));
+    btn('ctor.randomize', randomize),
+    btn('ctor.reset', () => { apply(DEFAULT_RECIPE, true); say('ctor.resetDone'); }),
+    btn('ctor.save', () => { const r = saveRecipe(storage, recipe); say(r.persistent ? 'ctor.saved' : 'ctor.saveFailed'); }),
+    btn('ctor.load', () => { const r = loadRecipe(storage); if (r) { apply(r, true); say('ctor.loaded'); } else say('ctor.loadNone'); }));
 
-  const el = h('div', { class: 'ftf-ctor' },
+  // Compact picker: one tile per complete look; the pressed tile is the one whose recipe is on screen.
+  const compact = !!opts.compact;
+  const lookTiles = compact ? Object.entries(LOOK_PRESETS).map(([name, look]) => {
+    const sw = h('span', { class: 'ftf-look-swatch', attrs: { 'aria-hidden': 'true' } }, PALETTE_KEYS.map((k) => { const d = h('i'); d.style.background = look.palette[k]; return d; }));
+    const tile = h('button', { class: 'ftf-btn ftf-look', attrs: { type: 'button', 'data-look': name, 'aria-pressed': 'false' }, on: { click: () => { apply(look, true); tx(status, i18n, 'onb.look.chosen', () => ({ look: i18n.t('onb.look.' + name) })); } } },
+      sw, h('span', { class: 'ftf-btn-label', i18n: 'onb.look.' + name }));
+    tile._hash = recipeHash(look);
+    return tile;
+  }) : [];
+  const looksRow = compact ? h('div', { class: 'ftf-looks', attrs: { role: 'group' }, i18nAttrs: { 'aria-label': 'onb.look.label' } }, lookTiles) : null;
+  const detailId = id + '-detail';
+  const customize = compact ? h('button', { class: 'ftf-btn ftf-btn-small', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': detailId }, i18n: 'onb.look.customize' }) : null;
+  const detail = h('div', { class: 'ftf-ctor-detail', attrs: compact ? { id: detailId, hidden: true } : {} },
+    h('div', {}, h('span', { class: 'ftf-muted', i18n: 'ctor.hash' }), ' ', hashEl),
+    h('div', { class: 'ftf-choice' }, h('label', { attrs: { for: id + '-low' } }, lowBox, h('span', { i18n: 'ctor.lowTier' }))),
+    h('p', { class: 'ftf-muted', i18n: 'ctor.lowTierHint' }),
+    actions);
+  if (customize) customize.addEventListener('click', () => {
+    const open = detail.hidden;
+    const controls = el.querySelector('.ftf-ctor-controls');
+    el.classList.toggle('ftf-ctor-open', open);
+    customize.setAttribute('aria-expanded', String(open));
+    tx(customize, i18n, open ? 'onb.look.less' : 'onb.look.customize');
+    if (open) {
+      // Unfold: the detail block rises in, the control groups follow in a stagger.
+      detail.hidden = false; controls.hidden = false;
+      enter(detail, { from: 'rise' });
+      stagger([...controls.children], { from: 'rise', duration: MOTION.duration.base, step: 30, cap: 240 });
+    } else {
+      // Fold: both leave quickly, then are hidden (the layout snaps back only once they are invisible).
+      Promise.all([exit(detail, { to: 'rise' }), exit(controls, { to: 'rise' })]).then(() => { detail.hidden = true; controls.hidden = true; detail.style.opacity = ''; controls.style.opacity = ''; });
+    }
+  });
+
+  const el = h('div', { class: 'ftf-ctor' + (compact ? ' ftf-ctor-compact' : '') },
     h('div', { class: 'ftf-ctor-preview' },
       canvas, stillNote,
-      h('div', {}, h('span', { class: 'ftf-muted', i18n: 'ctor.hash' }), ' ', hashEl),
-      h('div', { class: 'ftf-choice' }, h('label', { attrs: { for: id + '-low' } }, lowBox, h('span', { i18n: 'ctor.lowTier' }))),
-      h('p', { class: 'ftf-muted', i18n: 'ctor.lowTierHint' }),
-      actions, status),
-    h('div', { class: 'ftf-ctor-controls' },
+      looksRow,
+      compact ? h('div', { class: 'ftf-row' }, customize, btn('ctor.randomize', randomize)) : null,
+      detail, status),
+    h('div', { class: 'ftf-ctor-controls', attrs: compact ? { hidden: true } : {} },
       radioGroup('shape', 'ctor.shape', SHAPES, 'shape.', (r) => r.shape, (d, v) => { d.shape = v; }),
       checkGroup('components', 'ctor.components', 'ctor.componentsHint', MAX_COMPONENTS, COMPONENTS, 'comp.', 'components'),
       checkGroup('layers', 'ctor.layers', 'ctor.layersHint', MAX_LAYERS, LAYERS, 'layer.', 'layers'),
@@ -107,13 +146,22 @@ export function mountConstructor(root, opts = {}) {
   root.appendChild(el);
 
   const preview = createHologramPreview(canvas, { recipe, tier: lowTier ? 'low' : 'high', reducedMotion: prefs.reducedMotion() });
+  // Staged reveal: the preview first, then the look tiles one by one; every button gets press and lift feedback.
+  enter(canvas, { from: 'scale', duration: MOTION.duration.slow });
+  if (lookTiles.length) stagger(lookTiles, { from: 'rise', delay: 120, step: 60, cap: 300 });
+  const unPress = [...el.querySelectorAll('button')].map((b) => { b.classList.add('mo-lift'); return press(b); });
+  let lastHash = null;
   function apply(next, syncAll) {
     recipe = normalizeRecipe(next);
     const hash = recipeHash(recipe);
     hashEl.textContent = hash;
     hashEl.title = hash;
     for (const [k, fn] of Object.entries(fields)) if (syncAll || k === 'components' || k === 'layers' || k.includes('.')) fn();
+    for (const tile of lookTiles) tile.setAttribute('aria-pressed', String(tile._hash === hash));
     preview.setRecipe(recipe);
+    // A whole new look (a tile, randomize, reset, load) cross-fades the preview and the hash; slider nudges do not.
+    if (syncAll && lastHash && lastHash !== hash) { enter(canvas, { from: 'fade', duration: MOTION.duration.slow }); enter(hashEl, { from: 'fade' }); }
+    lastHash = hash;
     if (opts.onChange) opts.onChange(recipe, hash);
   }
   const syncMotion = () => { const r = prefs.reducedMotion(); stillNote.hidden = !r; preview.setReduced(r); };
@@ -127,6 +175,6 @@ export function mountConstructor(root, opts = {}) {
     getRecipe: () => normalizeRecipe(recipe),
     getHash: () => recipeHash(recipe),
     save: () => saveRecipe(storage, recipe),
-    destroy() { unbind(); unPrefs(); preview.destroy(); el.remove(); },
+    destroy() { unbind(); unPrefs(); preview.destroy(); unPress.forEach((f) => f()); el.remove(); },
   };
 }

@@ -25,13 +25,13 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 
 ## `idea` (project description, 20–2000 characters)
 
-> Forget to Foresee is a 3D strategy game about the price of knowing the future, and a demonstration that a game's randomness and its AI agents can be made provably honest.
+> Forget to Foresee is a 3D strategy game about the price of knowing the future, and a demonstration that a game's prophecies can be fixed in advance and checked by anyone afterwards.
 >
 > Problem: in most "AI agent" and "on-chain" games the AI quietly decides the outcome and the chain is decoration. Players cannot tell a prophecy from a script.
 >
 > Product: over a floating archipelago, alien Shells speak in round signs with four slots (Place, Action, Power, Delay). Six clans, each an agent with a wallet and a memory, read the signs, stake silk on where a Gift will land, trade words, keep or break trust, and must assemble one message from six fragments before a crisis on trial 13. To see a sign early, your agent forgets a memory forever and that memory goes to auction as a shard: you pay for prophecy with your own biography. Novice mode teaches the loop in three trials; Pro shows every number. Humans play in the browser (Three.js); AI agents play the same room over an open HTTP API with the same rules and proofs.
 >
-> How NEAR fits in: the whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract season-commit (Rust, near-sdk) recomputes the same leaf byte for byte and verifies the proof on-chain, plus a commit-reveal for the crisis key. Nobody, including us, can rewrite what the Guests said. The contract builds and passes 56 unit and 2 sandbox tests; testnet deployment is the next step and is marked as such in the README. The economy is closed in-game silk: no token, no payments, no pay-to-win. Everything is open source (MIT) and reproducible from a clean clone: 260 game tests, 28 API tests, a published build, and a "judge in 5 minutes" path in the README.
+> How NEAR fits in: the whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract season-commit (Rust, near-sdk) recomputes the same leaf byte for byte and verifies the proof on-chain, plus a commit-reveal for the crisis key. Once the root is registered, nobody, including us, can rewrite what the Guests said; until then "Verified ✓" proves the season did not change after it began, not that it was chosen fairly. The contract builds and passes 56 unit and 2 sandbox tests; testnet deployment is the next step and is marked as such in the README. The economy is closed in-game silk: no token, no payments, no pay-to-win. Everything is open source (MIT) and reproducible from a clean clone: 363 game tests, 28 API tests, a published build, and a "judge in 5 minutes" path in the README.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
 

@@ -13,13 +13,14 @@ import { detectTier } from './render/quality.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo } from './physics/character.js';
+import { damp } from './physics/motion.js';
 import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
 import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
-import { configureTextureSupport, setModelVariant } from './render/assets.js';
+import { configureTextureSupport, setModelVariant, setModelOverrides } from './render/assets.js';
 import { CAMPS } from './scenes/layout.js';
 import { mountShell } from './ui/index.js';
 import { createPlayContext } from './play/i18n.js';
@@ -48,11 +49,12 @@ const mobileDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || ((
 const detectedTier = detectTier({ gpu: gpuName(), mobile: /Mobi|Android/i.test(navigator.userAgent), deviceMemory: navigator.deviceMemory, cores: navigator.hardwareConcurrency });
 const systemReduced = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } })();
 
+if (params.get('shells') === 'r2') setModelOverrides({ shell_1: 'shell_1_r2', shell_2: 'shell_2_r2', shell_3: 'shell_3_r2', shell_4: 'shell_4_r2' }); // review round 2
 if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice || (params.get('tier') || detectedTier) === 'low'))) setModelVariant('_m');
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
-player.accel = 8; // smooth start/stop instead of instant velocity changes
+player.smooth = true; // the locomotion model: speed-dependent acceleration, braking, turn rate (docs/movement.md)
 const lookdev = new LookDev({
   renderer, scene, camera,
   cloudLevel: world3d.cloudLevel, grassPatches: world3d.grassPatches, lanterns: world3d.lanterns,
@@ -158,7 +160,7 @@ function handleInspect() {
   inspecting = it;
   rig.enterInspect(it.instance.center, it.instance.radius);
 }
-const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
+const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))]; // N: the island map (play/map-ui.js)
 
 function leaveInspect() { clearWorldInput(); inspecting = null; rig.exitInspect(); }
 
@@ -247,11 +249,16 @@ function perf() {
   };
 }
 
-let movingState = false;
+let movingState = false, animSpeed = 0, lean = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.25);
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
+  // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
+  if (play && play.session) {
+    const dev = input.device === 'gamepad' ? 'gamepad' : coarse ? 'touch' : 'keyboard';
+    if (play.session.flags.input !== dev) { play.session.flags.input = dev; play.session.recompute(); }
+  }
 
   const f = fixedSteps(accumulator, dt, PHYSICS_DT, 8);
   accumulator = f.accumulator;
@@ -264,9 +271,11 @@ function frame() {
     player.step(wish, PHYSICS_DT);
     physics.substeps += player.lastSubsteps;
     if (moveTarget) {
-      // Give up on a click target we cannot reach (no pathfinding yet).
+      // Give up on a click target we cannot reach (no pathfinding yet): pressed against a wall with no
+      // progress. Braking and pivoting toward a target behind us also makes no progress, so a wall
+      // contact is required (otherwise a reversal would cancel its own order).
       const d = Math.hypot(moveTarget[0] - player.pos[0], moveTarget[2] - player.pos[2]);
-      stuckTime = d > lastDist - 0.01 ? stuckTime + PHYSICS_DT : 0;
+      stuckTime = player.lastHitWall && d > lastDist - 0.01 ? stuckTime + PHYSICS_DT : 0;
       lastDist = Math.min(lastDist, d);
       if (stuckTime > 0.6) { moveTarget = null; marker.visible = false; }
     }
@@ -277,18 +286,24 @@ function frame() {
   const p = player.renderPos(f.alpha);
   avatar.position.set(p[0], p[1], p[2]);
   avatar.visible = !inspecting; // keep the close-up clear of Iris
-  let dh = player.heading - avatar.rotation.y;
-  dh = Math.atan2(Math.sin(dh), Math.cos(dh));
-  avatar.rotation.y += dh * (1 - Math.exp(-dt * 14));
+  // Facing is rate-limited by the controller itself (pivot when standing, a wide arc at a run) and
+  // interpolated between physics steps like the position, so there is no second smoothing to lag behind it.
+  avatar.rotation.y = player.renderHeading(f.alpha);
+  // Lean into turns: roll about the forward axis by turn rate x speed, eased (about 8° in a full-speed arc).
+  const leanTarget = THREE.MathUtils.clamp(-player.turnRate * player.speed * 0.009, -0.17, 0.17);
+  lean = damp(lean, lookdev.reducedMotion ? 0 : leanTarget, 8, dt);
+  avatar.rotation.z = lean;
   focus.set(p[0], p[1] + 1.1, p[2]);
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
-  rig.update(dt, focus);
+  rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
   lookdev.update(dt, focus, rig.actualDist);
-  // Animation state from the smoothed velocity, not from this frame's physics steps: at high frame rates many frames run
-  // no 30 Hz step, and toggling walk/idle on those frames restarted the walk clip every other frame (visible jitter).
-  const speed = Math.hypot(player.vel[0], player.vel[1]);
+  // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
+  // still), smoothed per frame rather than toggled per physics step: at high frame rates many frames run
+  // no 30 Hz step, and toggling walk/idle on those frames restarted the walk clip every other frame.
+  animSpeed = damp(animSpeed, player.speed, 14, dt);
+  const speed = animSpeed;
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
   if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
