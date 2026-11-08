@@ -38,7 +38,7 @@ test('QA-009 no overlapping UI with the context menu open (walk, anchor zone)', 
   try {
     const { ANCHOR_ZONES } = await import('../../src/scenes/layout.js');
     const z = ANCHOR_ZONES[0].position;
-    await g.teleport([z[0], 0, z[2]]);
+    await g.teleport([z[0] * 0.72, 0, z[2] * 0.72]); // beside the pad: its collider pushes a capsule placed on its centre out of the hotspot
     await g.until(() => (window.__ftf.play.session.options || []).length >= 2, 30000);
     await g.wait(1500);
     const bad = await overlaps(g);

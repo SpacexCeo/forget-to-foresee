@@ -47,7 +47,7 @@ test('walk mode panels and text', { timeout: 900000 }, async (t) => {
 
     await t.test('QA-013 the quest tick matches the highlighted anchor option', async () => {
       const z = ANCHOR_ZONES[0].position;
-      await g.teleport([z[0], 0, z[2]]);
+      await g.teleport([z[0] * 0.72, 0, z[2] * 0.72]); // beside the pad: its collider pushes a capsule placed on its centre out of the hotspot
       await g.until(() => (window.__ftf.play.session.options || []).some((o) => String(o.id).startsWith('anchor:')), 30000);
       const o = await g.obs();
       const def = o.options[o.defaultIndex];

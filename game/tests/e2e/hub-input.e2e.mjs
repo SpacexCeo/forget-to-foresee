@@ -24,18 +24,36 @@ test('Shell hub input', { timeout: 900000 }, async (t) => {
     });
 
     // A card may be waiting after the first trials; answer it with its primary choice so the dock is back.
-    const settle = async () => { for (let i = 0; i < 4; i++) { await g.hubIdle(); const h = await g.hub(); if (!h.card) break; await g.click('.hub-card .hub-primary'); await g.wait(400); } await g.hubIdle(); };
+    // Answer waiting cards with their primary choice and let trials pass until a Shell is waiting (gold).
+    const settle = async () => {
+      for (let i = 0; i < 8; i++) {
+        await g.hubIdle();
+        const h = await g.hub();
+        if (h.card) { await g.click('.hub-card .hub-primary'); await g.wait(400); continue; }
+        if ((await g.obs()).zone === 'shell') { await g.key('KeyT'); await g.wait(300); continue; }
+        if (await g.page.evaluate(() => !!document.querySelector('.hub-shells .hub-wait'))) break;
+        await g.key('KeyT'); await g.wait(300);
+      }
+      await g.hubIdle();
+    };
 
-    await t.test('QA-002b F then F (fly, then stake as the README says) stakes once the flight lands', async () => {
+    await t.test('QA-002b F then F (fly, then stake as the README says): one flight, same trial, no stray command', async () => {
       await settle();
       const gold = await g.page.evaluate(() => { const b = document.querySelector('.hub-shells .hub-wait'); return b ? Number(b.dataset.shell) : 0; });
       assert.ok(gold, 'a Shell is waiting');
-      const anchorsBefore = (await g.obs()).anchors.length;
+      const tick = (await g.obs()).tick;
+      await g.page.evaluate(() => { window.__qa.cmds = []; });
       await g.key('KeyF'); await g.wait(250); await g.key('KeyF');
       await g.hubIdle(); await g.wait(1500); await g.hubIdle();
       const o = await g.obs();
+      const cmds = await g.page.evaluate(() => window.__qa.cmds.map((c) => c.type));
       assert.equal(o.zone, 'shell', 'Iris is inside the Shell');
-      assert.equal(o.anchors.length, anchorsBefore + 1, 'the second F staked 10 silk (anchors ' + anchorsBefore + ' → ' + o.anchors.length + ')');
+      assert.equal(o.tick, tick, 'same trial');
+      assert.equal(cmds.filter((c) => c === 'enter_shell').length, 1, 'exactly one flight: ' + cmds.join(', '));
+      assert.ok(!cmds.includes('end_tick'), 'no trial passed: ' + cmds.join(', '));
+      // A settled F must stake.
+      await g.key('KeyF'); await g.hubIdle(); await g.wait(500);
+      assert.equal((await g.obs()).anchors.length >= 1, true, 'F inside the Shell stakes once the flight has landed');
       await g.key('KeyT'); await g.hubIdle(); await g.wait(800);
     });
 

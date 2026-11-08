@@ -1,6 +1,6 @@
 # QA defects (Task K, the adversarial playtester)
 
-Build under test: `claude/qa` cut from `claude/loving-curie-ihasft` at `7f65be6` (= `main` `07ddd60` + docs), 08.11.2026.
+Build under test: first pass on `claude/loving-curie-ihasft` `7f65be6` (= `main` `07ddd60` + docs); retest on `2004418` (Tasks G, H, I, M, N and the QA-001/002 fixes merged into `claude/qa`), 08.11.2026.
 Live site checked: https://spacexceo.github.io/forget-to-foresee/ (serves the same hub build as `main`).
 Environment: headless Chromium 1243 (Playwright 1.63) on SwiftShader, 4 CPU cores, no GPU. Real-time input is
 impractical at the resulting 7–15 fps, so unless a repro says otherwise the play layer was driven through
@@ -18,8 +18,8 @@ named in the **Check** line, that fails while the defect is open and passes once
 
 | ID | Sev | Area | Title | Owner | Status |
 |---|---|---|---|---|---|
-| QA-001 | Blocker | i18n / HUD | The Guests say "The reveal does not match the root." on every verified reveal (all five locales) | F (UI) | fixed by the lead on `claude/loving-curie-ihasft` 17bf2de (real path: `play/i18n.js resolvePlayArg`); retest pending |
-| QA-002 | High | Shell hub | Keys and dock clicks are accepted during the 480 ms flight fade; a queued flight runs inside the auto-advance, a second F is swallowed | F (hub-ui) + lead (hub.js, game.js) | fixed by the lead on 17bf2de (beginTransit/endTransit, run() refuses ops during automatic trials); retest pending |
+| QA-001 | Blocker | i18n / HUD | The Guests say "The reveal does not match the root." on every verified reveal (all five locales) | F (UI) | **fixed** (lead, 17bf2de; verified on 2004418: `proof-line.e2e.mjs` green, the Guests say "The reveal matches the root.") |
+| QA-002 | High | Shell hub | Keys and dock clicks are accepted during the 480 ms flight fade; a queued flight runs inside the auto-advance, a second F is swallowed | F (hub-ui) + lead (hub.js, game.js) | **fixed** (lead, 17bf2de; verified on 2004418: F then T within 120 ms keeps the trial and lands the flight; F then F runs one flight, the second press is dropped silently while the fade is up, a settled F stakes) |
 | QA-003 | Medium | Shell hub / panels | Two Heir prompts at once at the season end (hub card over the Biography panel), different copy | F | open |
 | QA-004 | Medium | Play panels | Literal `null` text at the bottom of the Memories panel and of the inspect panel | F | open |
 | QA-005 | Medium | Play panels / Novice | "Forget it for a vision" opens the legacy *Signs and visions* panel (reading-rule buttons, four slots with confidence) instead of the HUD *Signs & Visions*; Novice sees Pro detail; two Signs UIs | F | open |

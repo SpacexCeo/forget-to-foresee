@@ -22,8 +22,8 @@ test('QA-001 line.event: verified reveal renders the "matches" branch in every l
 test('QA-001 live: the dialogue strip at the trial-3 reveal does not contradict the ✓ in the log', { timeout: 600000 }, async () => {
   const g = await openGame('?demo=judge&mode=walk&play=direct');
   try {
-    // Every line the dialogue strip ever shows (lines expire after 12 s, so a snapshot can miss the reveal).
-    await g.page.evaluate(() => { window.__lines = []; const seen = new Set(); const mo = new MutationObserver(() => { for (const e of document.querySelectorAll('.wh-dialogue__text')) { const t = e.textContent.trim(); if (t && !seen.has(t)) { seen.add(t); window.__lines.push(t); } } }); mo.observe(document.body, { subtree: true, childList: true, characterData: true }); });
+    // Every line spoken into the dialogue strip (lines replace each other within one event burst, so a DOM snapshot can miss the reveal).
+    await g.page.evaluate(() => { window.__lines = []; const ws = window.__ftf.play.worldHud; const orig = ws.say.bind(ws); ws.say = (l) => { orig(l); const e = document.querySelector('.wh-dialogue__text'); window.__lines.push((l.speakerId || 'iris') + ': ' + (e ? e.textContent.trim() : '?')); }; });
     // End trials 1 and 2 (T twice each: the second press confirms while attention is left).
     for (let i = 0; i < 6; i++) {
       const o = await g.obs();
