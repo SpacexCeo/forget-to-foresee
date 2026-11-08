@@ -95,3 +95,37 @@ export class LruCache {
     return out;
   }
 }
+
+/**
+ * One shared download per key (QA-030): the heroine's model starts loading when the world module is created, before
+ * the camps and props take the pipe, and the play layer later picks up the same promise instead of fetching again.
+ * A failed download is forgotten so a later call may retry.
+ * @param {(key:string) => Promise<any>} fetchFn
+ */
+export function createPrefetch(fetchFn) {
+  const pending = new Map();
+  return (key) => {
+    if (!pending.has(key)) {
+      const p = Promise.resolve().then(() => fetchFn(key));
+      pending.set(key, p);
+      p.catch(() => { if (pending.get(key) === p) pending.delete(key); });
+    }
+    return pending.get(key);
+  };
+}
+
+/** Seconds the player waits for Iris's model before the greybox stand-in shows anyway (a slow network). */
+export const IRIS_STANDIN_AFTER = 8;
+
+/**
+ * Whether Iris's greybox capsule is shown (QA-030): never while her model is on its way or downloaded and waiting for
+ * the play layer to attach it; shown only without a model file, after a failure, or when the download itself has taken
+ * longer than IRIS_STANDIN_AFTER seconds (a slow network); never once her model is in.
+ * @param {{hasModel:boolean, fetched?:boolean, loaded?:boolean, failed?:boolean, waited?:number}} s
+ *   fetched = the file is downloaded and parsed; waited = seconds since the world began
+ */
+export function irisStandInVisible({ hasModel, fetched = false, loaded = false, failed = false, waited = 0 }) {
+  if (loaded) return false;
+  if (!hasModel || failed) return true;
+  return !fetched && waited >= IRIS_STANDIN_AFTER;
+}
