@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { openFramePipe } from './ffmpeg.mjs';
+import { openLayerPipe } from './ffmpeg.mjs';
 
 const require = createRequire(import.meta.url);
 let playwright = null;
@@ -76,43 +76,51 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     }
     await page.evaluate((pre) => window.__ftfCinematic.rewind(pre), shot.preroll ?? 0);
     const cdp = await page.context().newCDPSession(page);
+    // Two layers per frame: the 3D frame is read from the WebGL drawing buffer in the same task as the render (never a
+    // stale or half-presented canvas), the UI is a screenshot with alpha taken with the canvas hidden; ffmpeg composites them.
+    await cdp.send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
+    await page.evaluate(() => document.documentElement.classList.add('cine-layers'));
     const total = Math.round(shot.duration * fps);
     const preroll = Math.round((shot.preroll ?? 0) * fps);
-    const pipe = openFramePipe(join(outDir, shot.name + '.mp4'), { fps });
+    const pipe = openLayerPipe(join(outDir, shot.name + '.mp4'), { fps });
     t = Date.now();
-    const stepAndWait = async () => {
-      const r = await page.evaluate(async () => {
-        const t = await window.__ftfCinematic.step();
-        // Make the GPU finish this frame before the screenshot (SwiftShader runs it only now).
-        const gl = window.__ftf.renderer.getContext();
-        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-        return { t, lost: gl.isContextLost() || !!window.__ftfCinematic.runner.contextLost };
-      });
-      // A lost context would leave the HUD over a black canvas for the rest of the shot: fail loudly instead.
-      if (r.lost) throw new Error(`WebGL context lost in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${result.frames}); renderer ${result.renderer}`);
-      return r.t;
-    };
-    for (let i = 0; i < preroll; i++) await stepAndWait();
+    const stepGrab = () => page.evaluate(() => window.__ftfCinematic.step({ grab: true }));
+    for (let i = 0; i < preroll; i++) await stepGrab();
     result.timings.prerollMs = Date.now() - t; t = Date.now();
     let lastReport = Date.now();
+    const check = { jumps: 0, maxJump: 0, minMean: 255, maxMean: 0, maxEdgeBlack: 0 };
+    let prevMean = null;
+    const allowJumps = shot.allowJumps ?? 3;
     for (let i = 0; i < total; i++) {
-      await stepAndWait();
-      // No optimizeForSpeed here: with it Chromium drops the WebGL canvas from this and every later capture.
+      const r = await stepGrab();
+      if (!r || !r.png) throw new Error(`no canvas frame at ${i} in shot ${shot.name}`);
+      if (r.stats.lost) throw new Error(`WebGL context lost in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i}); renderer ${result.renderer}`);
+      // Checks: a black band growing from an edge while the rest is lit is a partially drawn frame; large brightness
+      // jumps between consecutive frames are flicker (a cut inside a shot, a flight, counts as one allowed jump).
+      const st = r.stats;
+      if (st.edgeBlack > 0.3 && st.mean > 30) throw new Error(`black edge region (${(st.edgeBlack * 100).toFixed(0)}% of the frame) in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i})`);
+      if (prevMean != null) { const d = Math.abs(st.mean - prevMean); if (d > check.maxJump) check.maxJump = d; if (d > 24) check.jumps++; }
+      prevMean = st.mean; check.minMean = Math.min(check.minMean, st.mean); check.maxMean = Math.max(check.maxMean, st.mean); check.maxEdgeBlack = Math.max(check.maxEdgeBlack, st.edgeBlack);
+      if (check.jumps > allowJumps) throw new Error(`flicker in shot ${shot.name}: ${check.jumps} brightness jumps over 24/255 by t=${r.t.toFixed(2)} (max ${check.maxJump.toFixed(1)})`);
+      const canvasPng = Buffer.from(r.png.slice(r.png.indexOf(',') + 1), 'base64');
+      await page.evaluate(() => window.__ftf.renderer.domElement.classList.add('cine-hidden'));
       const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
-      const buf = Buffer.from(data, 'base64');
-      if (i === 0 || i === total - 1) result.hashes[i] = createHash('sha1').update(buf).digest('hex').slice(0, 16);
-      if (sampleEvery && (i % sampleEvery === 0 || i === total - 1)) writeFileSync(join(outDir, `${shot.name}-f${String(i).padStart(5, '0')}.png`), buf);
-      await pipe.write(buf);
+      await page.evaluate(() => window.__ftf.renderer.domElement.classList.remove('cine-hidden'));
+      const uiPng = Buffer.from(data, 'base64');
+      if (i === 0 || i === total - 1) result.hashes[i] = createHash('sha1').update(canvasPng).update(uiPng).digest('hex').slice(0, 16);
+      if (sampleEvery && (i % sampleEvery === 0 || i === total - 1)) { writeFileSync(join(outDir, `${shot.name}-f${String(i).padStart(5, '0')}.png`), canvasPng); writeFileSync(join(outDir, `${shot.name}-f${String(i).padStart(5, '0')}-ui.png`), uiPng); }
+      await pipe.write(canvasPng, uiPng);
       result.frames++;
-      if (Date.now() - lastReport > 30_000) { lastReport = Date.now(); const per = (Date.now() - t) / (i + 1); log(`[${shot.name}] frame ${i + 1}/${total} · ${(per / 1000).toFixed(2)} s/frame · ETA ${Math.round(((total - i - 1) * per) / 60000)} min`); }
+      if (Date.now() - lastReport > 30_000) { lastReport = Date.now(); const per = (Date.now() - t) / (i + 1); log(`[${shot.name}] frame ${i + 1}/${total} · ${(per / 1000).toFixed(2)} s/frame · ETA ${Math.round(((total - i - 1) * per) / 60000)} min · luma ${st.mean.toFixed(0)} jumps ${check.jumps}`); }
     }
+    result.check = check;
     await pipe.close();
     result.timings.captureMs = Date.now() - t;
     result.secondsPerFrame = result.timings.captureMs / 1000 / Math.max(1, total);
     const [cues, marks, camLog, errors, state] = await page.evaluate(() => [window.__ftfCinematic.cues(), window.__ftfCinematic.marks(), window.__ftfCinematic.camLog(), window.__ftfCinematic.errors(), window.__ftfCinematic.state()]);
     Object.assign(result, { cues, marks, camLog, errors, finalState: state, wallMs: Date.now() - wall0 });
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify(result));
-    log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages`);
+    log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages, luma ${result.check.minMean.toFixed(0)}–${result.check.maxMean.toFixed(0)} jumps ${result.check.jumps} (max ${result.check.maxJump.toFixed(1)}) edge-black ${(result.check.maxEdgeBlack * 100).toFixed(0)}%`);
     return result;
   } catch (e) {
     result.failed = String(e.message);

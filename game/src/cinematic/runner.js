@@ -79,6 +79,15 @@ export class ShotRunner {
       if (seg && seg.pose) { ldUpdate(dt, self.camState.look, self.camState.pos.distanceTo(self.camState.look)); return; }
       ldUpdate(dt, focus, camDist);
     };
+    // Nothing adaptive during a capture: the frame-time governor, the resolution step and quality changes would alter the
+    // drawing-buffer size between frames (the owner saw it as black corner rectangles and brightness flicker).
+    lookdev.governor = null;
+    if (lookdev.pixelScale !== 1) lookdev.setPixelScale(1);
+    lookdev.setPixelScale = () => {};
+    const setQuality = lookdev.setQuality.bind(lookdev);
+    lookdev.setQuality = (tier) => (self.allowQualityChange ? setQuality(tier) : lookdev.tier);
+    const setSize = lookdev.setSize.bind(lookdev);
+    lookdev.setSize = (w, h) => { if (w === window.innerWidth && h === window.innerHeight) setSize(w, h); };
     // The occlusion fader dithers Shells between the camera and the player; a scripted camera fades nothing (its subject is often a Shell).
     if (lookdev.fader && lookdev.fader.update) {
       const faderUpdate = lookdev.fader.update.bind(lookdev.fader);
@@ -265,17 +274,51 @@ export class ShotRunner {
         break;
       }
       case 'forget': { const b = document.querySelectorAll('[data-forget]')[a.index ?? 0]; if (!b) throw new Error('no memory button'); b.click(); break; }
-      case 'quality': g.setQuality(a.tier); break;
+      case 'quality': this.allowQualityChange = true; try { g.lookdev.setQuality(a.tier); } finally { this.allowQualityChange = false; } break;
       case 'motion': g.setReducedMotion(!!a.reduce); break;
       default: throw new Error('unknown action ' + a.do);
     }
   }
 
   /**
-   * One frame: scripted actions, then the game's own frame through the virtual clock, then the overlay.
-   * Returns the shot time of the frame just rendered.
+   * Reads the finished frame out of the WebGL drawing buffer, in the same task as the render (the buffer is not
+   * preserved across tasks: after the browser composites it, its content is undefined). Returns the PNG as a data
+   * URL plus statistics for the capture's checks: mean luma, the fraction of black samples and the largest run of
+   * fully black rows or columns at an edge (a partially drawn frame shows as a black corner rectangle).
    */
-  async step() {
+  grabCanvas() {
+    const renderer = this.game.renderer, gl = renderer.getContext(), canvas = renderer.domElement;
+    const w = canvas.width, h = canvas.height;
+    gl.finish();
+    if (!this.pixels || this.pixels.length !== w * h * 4) this.pixels = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, this.pixels);
+    const px = this.pixels, cols = 48, rows = 27;
+    const grid = new Float32Array(cols * rows);
+    let sum = 0, black = 0;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const x = Math.floor((i + 0.5) * w / cols), y = Math.floor((j + 0.5) * h / rows);
+      const o = (y * w + x) * 4;
+      const l = 0.2126 * px[o] + 0.7152 * px[o + 1] + 0.0722 * px[o + 2];
+      grid[j * cols + i] = l; sum += l; if (l < 8) black++;
+    }
+    const rowBlack = (j) => { for (let i = 0; i < cols; i++) if (grid[j * cols + i] >= 8) return false; return true; };
+    const colBlack = (i) => { for (let j = 0; j < rows; j++) if (grid[j * cols + i] >= 8) return false; return true; };
+    let top = 0, bottom = 0, left = 0, right = 0;
+    while (top < rows && rowBlack(top)) top++;
+    while (bottom < rows - top && rowBlack(rows - 1 - bottom)) bottom++;
+    while (left < cols && colBlack(left)) left++;
+    while (right < cols - left && colBlack(cols - 1 - right)) right++;
+    const edgeBlack = Math.max(top / rows, bottom / rows, left / cols, right / cols);
+    const stats = { mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, width: w, height: h, lost: gl.isContextLost() };
+    const png = canvas.toDataURL('image/png');
+    return { png, stats };
+  }
+
+  /**
+   * One frame: scripted actions, then the game's own frame through the virtual clock, the frame grab (same task),
+   * then the overlay. Returns the shot time of the frame just rendered, with the grab when asked for.
+   */
+  async step({ grab = false } = {}) {
     this.attach();
     this.wrapAudio();
     this.runActions();
@@ -283,8 +326,9 @@ export class ShotRunner {
     this.clock.step();
     if (before) {
       const after = this.game.player.pos;
-      if (Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2]) > 5) { this.snapCamera(); this.game.rig.update(0, new THREE.Vector3(after[0], after[1] + 1.1, after[2])); }
+      if (Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2]) > 5) { this.snapCamera(); this.game.rig.update(0, new THREE.Vector3(after[0], after[1] + 1.1, after[2])); this.game.lookdev.render(); }
     }
+    const grabbed = grab && this.renderOn && this.game ? this.grabCanvas() : null;
     await this.clock.settle(3);
     this.wrapAudio();
     if (this.overlay) this.overlay.update(this.t);
@@ -297,7 +341,7 @@ export class ShotRunner {
     const t = this.t;
     this.t += 1 / this.clock.fps;
     this.frame++;
-    return t;
+    return grabbed ? { t, ...grabbed } : t;
   }
 
   /** Steps virtual time until a predicate holds (or `maxFrames` pass); used before capture starts. */

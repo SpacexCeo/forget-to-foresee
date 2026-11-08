@@ -16,7 +16,9 @@ export function boot(name = 'shot', { fps } = {}) {
     /** Loads a shot script (plain data). */
     load: (shot) => runner.load(shot),
     /** Advances one frame; resolves with the shot time of the frame now on screen. */
-    step: () => runner.step(),
+    step: (o) => runner.step(o),
+    /** The canvas as a PNG data URL plus frame statistics, read in the same task as the last render. */
+    grab: () => runner.grabCanvas(),
     /** Steps until a predicate (see runner.js PREDICATES) holds. */
     until: (pred, value, max) => runner.until(pred, value, max),
     /** Steps until every placed model has streamed in. */

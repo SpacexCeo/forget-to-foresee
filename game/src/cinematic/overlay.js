@@ -34,6 +34,9 @@ body.cine-clean #ui, body.cine-clean #prompt, body.cine-clean #toast, body.cine-
 body.cine-nohub .hub-host, body.cine-nohub #prompt, body.cine-nohub #toast { visibility: hidden !important; }
 body.cine-nodev #badge, body.cine-nodev #hud { visibility: hidden !important; }
 body.cine-on, body.cine-on * { cursor: none !important; }
+/* The capture reads the 3D frame from the canvas and the UI from a separate screenshot with alpha: nothing opaque behind the UI. */
+html.cine-layers, html.cine-layers body, html.cine-layers #app { background: transparent !important; }
+html.cine-layers #app canvas.cine-hidden { visibility: hidden !important; }
 body.cine-on .wh-root, body.cine-on .hub-host, body.cine-on .pl-panel, body.cine-on .pl-context { transition: none !important; }
 `;
 
