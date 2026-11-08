@@ -69,7 +69,8 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   .hub-dock p { display: none; }
   .hub-shells { margin-top: 8px; gap: 8px; } .hub-shells button { min-height: 56px; padding: 6px 2px; font-size: 18px; }
   .hub-read { left: 8px; right: 8px; width: auto; top: calc(112px + env(safe-area-inset-top, 0px)); bottom: auto; max-height: calc(100vh - 260px); padding: 12px; background: rgba(12,20,21,.96); }
-  body.hub-in-shell .wh-root .wh-quest-m, body.hub-in-shell .wh-root .wh-quest--mobile, body.hub-in-shell .wh-root .wh-trial--mobile, body.hub-in-shell .wh-root .wh-tiles { visibility: hidden; }
+  body.hub-in-shell .wh-root .wh-quest-m, body.hub-in-shell .wh-root .wh-quest--mobile, body.hub-in-shell .wh-root .wh-trial--mobile, body.hub-in-shell .wh-root .wh-tiles,
+  body.hub-in-shell .wh-root .wh-prompt, body.hub-in-shell .wh-root .wh-prompt--mobile { visibility: hidden; } /* the reading card carries Leave / Stake itself */
   body.hub-dock-on .wh-root .wh-signs { max-height: none; }
   .hub-dock h3, .hub-read .hub-sign p.hub-muted, .hub-read > p.hub-muted:last-child { display: none; }
   .hub-sign { grid-template-columns: 76px 1fr; } .hub-sign canvas { width: 76px; height: 76px; }

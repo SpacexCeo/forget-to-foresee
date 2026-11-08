@@ -44,6 +44,16 @@ no pull request (the lead merges). Full write-up with before/after screenshots: 
    the stylesheet rules, the NEAR badge plumbing, the viewport tiers and UA hint). Docs: `docs/ui-polish.md`,
    decisions rows, collab requests 7 and 8 and the reply to H, this report.
 
+## Next steps (wrap-up ordered by the owner at the token freeze)
+
+1. `cd game && npm run dev` + `npm run hud:overlap` (all seven viewports, five locales): the last complete runs were green
+   except pairs fixed right after them (map modal, dialogue strip in ru/it, the prompt pill inside a Shell on phones,
+   the dialogue bar under the phone context menu); the std/locale re-run after the last patches was cut short.
+2. Re-shoot the "after" frames at 1280×800, 390×844 and 1920×1080 for `docs/ui-polish.md` §3 (the committed ones
+   predate the motion pass) with the script in this report.
+3. QA retest by worker K on the merged branch: QA-003/004/005/006/009/011/012/014/019/021 are fixed in code.
+4. Task T's "Copy proof" pill (slot described in `docs/collab-requests.md`), a phone map tile, nameplate occlusion.
+
 ## What was not done
 
 - Occlusion for nameplates (DOM has no depth; a raycast every few frames would hide a plate behind a wall).
@@ -54,7 +64,7 @@ no pull request (the lead merges). Full write-up with before/after screenshots: 
 
 ## Checks
 
-- `cd game && npm test`: see the branch log for the count at `HEAD` (377 at the time of writing); `npm run build`: green.
+- `cd game && npm test`: 403/403 at `HEAD`; `npm run build`: green.
 - `npm run hud:overlap`: results per viewport and locale are in `docs/ui-polish.md` §3 (table "Overlap check").
 - Headless Chromium screenshots before/after at 1280×800, 1920×1080, 390×844 and the four short sizes, committed under
   `docs/ui-polish/` and embedded in `docs/ui-polish.md`; console errors and warnings in every run: 0 (GL driver chatter

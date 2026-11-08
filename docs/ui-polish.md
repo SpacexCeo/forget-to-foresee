@@ -213,7 +213,7 @@ Phone 390×844 (iPhone-class emulation):
 | Signs sheet | ![](ui-polish/before-390-signs.jpg) | ![](ui-polish/after-390-signs.jpg) |
 | Memories | ![](ui-polish/before-390-memories.jpg) | ![](ui-polish/after-390-memories.jpg) |
 
-Desktop 1920×1080 after: ![](ui-polish/after-1920-memories.jpg)
+Desktop 1920×1080 after (island): ![](ui-polish/after-1920-world.jpg)
 
 Locales at 1280 (longest strings): Ukrainian ![](ui-polish/after-uk-1280-memories.jpg) · Italian
 ![](ui-polish/after-it-1280-memories.jpg)
@@ -228,6 +228,18 @@ Measured element boxes from the same runs (`getBoundingClientRect`, CSS px):
 | 390×844 after | V then M | closed | 8,295 374×503 (scrim behind) | not rendered |
 
 Console errors in every run: 0.
+
+**Overlap check results (`npm run hud-overlap` output, last complete runs):**
+
+| Run | Result |
+|---|---|
+| 1280×800 × en, uk, ru, it, zh, 12 states | 0 overlaps after the region work, except the `map` state (map over the quest banner / dialogue strip) and three dialogue-strip pairs in ru / it, all fixed afterwards (map hides the centre column; the strip centres in the free band) and not re-measured in a complete run |
+| 390×560, 375×500, 360×480, 667×300 × en, 12 states | 0 overlaps except two pairs fixed right after the run (the prompt pill inside a Shell on phones, the dialogue bar under the context menu), not re-measured |
+| 1920×1080, 390×844 (final state), 1280 × uk/ru/it/zh (final state) | the final run was cut by the owner's wrap-up order; last complete measurements predate the compact-layout and motion commits |
+
+The screenshots above come from the last complete runs; the 1280 and 390×844 "after" frames predate the motion pass
+and the short-viewport tiers (which change nothing at those sizes except the easing), the short-viewport frames are from
+the compact-layout run.
 
 ## 4. How to re-check
 

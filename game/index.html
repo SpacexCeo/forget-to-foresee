@@ -169,7 +169,7 @@
       .pl-panel h2 { font-size: 17px; } .pl-panel h3 { font-size: 14px; } .pl-muted { font-size: 12px; }
       .pl-help { top: auto; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); left: 8px; width: calc(100vw - 16px); max-height: calc(var(--vvh, 100vh) * .56); overflow: auto; font-size: 12.5px; padding: 12px 14px; }
       /* a context menu on a phone is a sheet of choices: the tiles and the prompt step aside while it is open */
-      body.pl-context-open .wh-root :is(.wh-tiles, .wh-prompt--mobile) { visibility: hidden; }
+      body.pl-context-open .wh-root :is(.wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
       .pl-info { bottom: calc(50px + env(safe-area-inset-bottom, 0px)); font-size: 12px; padding: 5px 10px; max-width: calc(100vw - 24px); }
       .pl-chronicle, .pl-badge, #badge, #prompt { display: none !important; }
       /* phones: a modal panel dims the HUD behind it (no extra DOM) and the run toggle steps aside */
