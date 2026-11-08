@@ -1,0 +1,205 @@
+# QA defects (Task K, the adversarial playtester)
+
+Build under test: `claude/qa` cut from `claude/loving-curie-ihasft` at `7f65be6` (= `main` `07ddd60` + docs), 08.11.2026.
+Live site checked: https://spacexceo.github.io/forget-to-foresee/ (serves the same hub build as `main`).
+Environment: headless Chromium 1243 (Playwright 1.63) on SwiftShader, 4 CPU cores, no GPU. Real-time input is
+impractical at the resulting 7–15 fps, so unless a repro says otherwise the play layer was driven through
+`window.__ftf.play.handleKey(code)` (the same function the keyboard calls) and `element.click()` via
+`page.evaluate`. Every defect below reproduces with the real keyboard as well unless marked *harness only*.
+
+Severity: **Blocker** = a judge would call the game broken or lying · **High** = loses state, soft-locks, or
+contradicts the README · **Medium** = visible defect in the judge path · **Low** = polish, copy, consistency.
+Status: open · fixed (commit) · won't fix (owner) · retest.
+
+Each defect has an e2e check under `game/tests/e2e/` (run `cd game && npm run e2e`; not part of `npm test`),
+named in the **Check** line, that fails while the defect is open and passes once it is fixed.
+
+## Summary
+
+| ID | Sev | Area | Title | Owner | Status |
+|---|---|---|---|---|---|
+| QA-001 | Blocker | i18n / HUD | The Guests say "The reveal does not match the root." on every verified reveal (all five locales) | F (UI) | open |
+| QA-002 | High | Shell hub | Keys and dock clicks are accepted during the 480 ms flight fade; a queued flight runs inside the auto-advance, a second F is swallowed | F (hub-ui) + lead (hub.js, game.js) | open |
+| QA-003 | Medium | Shell hub / panels | Two Heir prompts at once at the season end (hub card over the Biography panel), different copy | F | open |
+| QA-004 | Medium | Play panels | Literal `null` text at the bottom of the Memories panel and of the inspect panel | F | open |
+| QA-005 | Medium | Play panels / Novice | "Forget it for a vision" opens the legacy *Signs and visions* panel (reading-rule buttons, four slots with confidence) instead of the HUD *Signs & Visions*; Novice sees Pro detail; two Signs UIs | F | open |
+| QA-006 | Medium | Hints | The hint toast "I read it as a Gift of 10 at Shell I, trial 2. Press V to see why." stays on screen through trial 4 | F (hints.js), copy I | open |
+| QA-007 | Medium | Shell hub | A Shell stays gold ("2 signs") when every sign it holds points at a past trial; F flies there and the card says "That trial is already past" | lead (hub.js) | open |
+| QA-008 | Medium | Camera | After leaving a Shell the camera keeps the Shell framing (distance ≤ 9 m, low pitch): the frame is mostly sky and Iris hides behind the decision card | G | open |
+| QA-009 | Medium | Layout | Overlaps on desktop: the main.js inspect prompt under the context menu and under the "Shell I opens…" flash; the "Local demo" badge over the dialogue strip; greybox labels poking out from behind the quest banner | F (a, b), H (c) | open |
+| QA-010 | Medium | Layout / copy | Truncated text: quest title ellipsis, quest body under the key icon, hint toast cut at two lines (EN, ZH), log rows clipped at the bottom of the log box | F | open |
+| QA-011 | Medium | Phone | At 390×844 the Shell dock covers the top of the MAIN QUEST card; the quest copy says "Press F or pick the gold Shell on the right" on a device with no F and the dock at the top | F (layout), I (copy) | open |
+| QA-012 | Low | HUD | Progress reads "16 / 17 · 94 %" once the season is over | F (from-obs) | open |
+| QA-013 | Low | Objectives | Quest says "Anchor on Shell I for tick 3" while E's highlighted default anchors tick 2 | I | open |
+| QA-014 | Low | Shell hub | While the Memories panel is open (after the Key card's "Open memories") F and T are ignored but the dock buttons still work | F | open |
+| QA-015 | Low | i18n zh | "Sign" is rendered as both 符印 (quest, dock) and 符号 (log "1 个新符号", hotbar "符号与幻象") | lead (locales) | open |
+| QA-016 | Low | Onboarding | "Begin first contact" sits below the fold at 1280×800 (the constructor page needs a scroll before the primary button is visible) | I | open |
+| QA-017 | Low | Copy | Season-end quest says "(panel below)" while the Biography panel is on the right | I | open |
+| QA-018 | Info | Movement | Walking the judge route with G took 156 s under SwiftShader (README: about 30 s); measurement of the in-game speed is in progress, see below | G | open |
+
+Not defects (checked and fine): `npm test` 292/292, `server` 28/28, `cargo test --lib` 56 passed, `npm run build`
+green, the agent example ends with `"rejected": 0, "firstProofVerified": true`; zero console errors or page errors in
+the hub season, the walk judge path, the lobby flow, the phone profile and the zh locale; zero rejected commands over a
+full hub season (92 commands); the README judge table lines 1–6 match the build word for word except where QA-005
+and QA-013 say otherwise; the live site loads the hub build with the same first screen as the local build.
+
+---
+
+## QA-001 · Blocker · The Guests say "The reveal does not match the root." on every verified reveal
+
+**Repro** (walk or hub, any locale): `/?demo=judge&mode=walk&play=direct` → press T twice until trial 3 (or in the
+hub: fly into Shell I, stake, leave, let trials pass). Look at the dialogue strip at the bottom when the trial-3
+event is revealed. Also at trials 5, 15, 16, 17 (`shots/hub-card-fragment-6.jpg`, `shots/hub-card-vote-17.jpg`).
+**Expected:** "Shell II: Gift, power 20. The reveal matches the root." (the log row next to it says
+"Leaf #0 checked against the root ✓", the hint says "the seal matches").
+**Actual:** "Shell II: Gift, power 20. **The reveal does not match the root.**" Every reveal, all five locales
+(ru "не совпало", uk "не збіглося", it "non corrisponde", zh "不符").
+**Cause:** `src/ui/i18n/engine-adapter.js:264` passes `verified: !!fx.verified` (a boolean) into
+`line.event`, whose ICU select has the branches `yes {…} other {…}`; `String(true)` is `"true"`, so the `other`
+branch always wins. The unit tests render `LINE_KEYS` with placeholder args and never assert the branch.
+**Why Blocker:** the one sentence a judge reads about the proof says the proof fails, right next to a ✓.
+**Check:** `tests/e2e/proof-line.e2e.mjs` (renders `line.event` through the adapter with `verified: true` in all
+five locales and reads the live dialogue strip at trial 3).
+
+## QA-002 · High · Hub input accepted during the flight fade; a queued flight runs inside the auto-advance
+
+**Repro A (F then T, ~150 ms apart; a player tapping two keys):** `/?demo=judge&play=direct` (hub). Press F (the
+gold Shell), then T before the fade clears. Trace of the room commands: `end_tick` (T, trial 1 → 2) runs first,
+then the flight's `move anchor_zone:1` + `enter_shell 1` run while `advance()` is still passing trials. Result
+(`shots/hub-race-after.jpg`): Iris stands inside Shell I at trial 3 with the "Moss makes an offer" card on top of
+nothing (the reading card is hidden by the card), the sign she sees is the one from trial 1, and the dock said
+nothing was waiting. With the real keyboard: F, T within half a second.
+**Repro B (F then F, the README's own sequence "fly … stake (F)"):** press F to fly, press F again ~300 ms later
+(still under the fade) to stake. The second F is read on the island (`obs.you.zone` is still `island`) and starts
+a second flight instead of the stake; the stake never happens and nothing tells the player.
+**Expected:** while a flight is in progress every hub input is ignored or queued in order; `T` can never pass a
+trial while a flight is pending; the second `F` stakes (or is ignored with the fade still up).
+**Actual:** `fly()` in `src/play/game.js` awaits `hubUi.cover()` (480 ms) before `hub.flyTo()` sets `busy`, so
+the dock buttons, F and T are live for half a second; `ShellHub.run()` checks `busy` but not `advancing`, so
+`flyTo` runs concurrently with `advance()` (which checks `busy` only at its start).
+**Check:** `tests/e2e/hub-race.e2e.mjs` (F then T within 150 ms: asserts the trial does not advance before the
+flight lands and Iris is not inside a Shell during an advance; F then F: asserts a stake happened).
+
+## QA-003 · Medium · Two Heir prompts at once at the season end
+
+**Repro:** play the hub season to the vote (any seed), answer the vote card. `shots/hub-card-heir-17.jpg`.
+**Expected:** one Heir decision.
+**Actual:** the hub card "The season is over · 1 Forget for an Heir · 2 Keep the memory" opens on top of the
+Biography panel, which carries its own "Forget everything for an Heir / Keep the memory" buttons (different
+wording); the card hides the panel's memory list; the translucent panel lets the finale beams read through the
+list rows. After the card is answered the Biography stays with "Thank you for playing this local demo." and no
+line that says which choice was made.
+**Check:** `tests/e2e/season-end.e2e.mjs` (at `phase === 'end'` at most one element offers the Heir choice).
+
+## QA-004 · Medium · Literal `null` in the Memories panel and the inspect panel
+
+**Repro:** `/?demo=judge&mode=walk&play=direct` → press M. The last line of the panel is the text "null"
+(`shots/walk-4a.jpg`). Also: at the Scroll press E on "Read the chronicle" / at an anchor zone "Look at the zone":
+the info panel ends with "null" when there are no signs to show.
+**Cause:** `src/play/ui.js` `panelShell(title, ...body)` → `panelEl.replaceChildren(header, ...body)`; `forgotten`
+(Memories) and the `signs` row (info) are `null` when empty, and `replaceChildren(null)` appends the string
+"null". (`el()` filters nulls; `panelShell` does not.)
+**Check:** `tests/e2e/panels.e2e.mjs` (no text node equal to "null" in `.pl-panel`).
+
+## QA-005 · Medium · "Forget it for a vision" opens the legacy Signs panel; Novice sees Pro detail
+
+**Repro:** README step 4, walk mode: M → "Forget it for a vision". `shots/walk-4b.jpg`.
+**Expected (README):** "Signs & Visions opens with one to four new cards marked *vision*" (the HUD panel: one
+plain line per sign in Novice).
+**Actual:** the greybox-era `.pl-panel` "Signs and visions" opens: "Reading rule: try all starts / start at the top /
+start where the dots point", "Dictionary: 0 of 16 words confident", and every sign with its four slots and
+confidences. In Novice mode this is the Pro view (clarity layers §L0 hides it), styled unlike the HUD, and it is a
+second, different "Signs" UI next to the HUD's V panel. The same legacy panel opens from the HUD sign cards
+(`onAction('sign')`).
+**Check:** `tests/e2e/panels.e2e.mjs` (after a vision sacrifice in Novice the HUD Signs panel is open and the
+legacy `.pl-panel` is not).
+
+## QA-006 · Medium · Stale hint toast
+
+**Repro:** walk judge path through trial 4. The top-right toast keeps "A sign woke. I read it as a Gift of 10 at
+Shell I, trial 2. Press V to see why." (`shots/walk-6.jpg`). The hub shows the same text with "Fly into a Shell (F)".
+**Expected:** a hint about a sign whose trial has passed is withdrawn (or re-issued for the newest sign); in the hub
+the hint also keeps "Press V" wording while the HUD's `Hint` row repeats it.
+**Check:** `tests/e2e/hints.e2e.mjs` (no visible hint names a trial lower than the current one).
+
+## QA-007 · Medium · Gold Shell with only expired signs
+
+**Repro:** hub season, seed `?demo=judge`: at trial 13 the dock shows "I · 2 signs" and "III · 2 signs"; F flies into
+Shell I; the reading card shows the sign drawn on trial 11 pointing at trial 12 with "That trial is already past:
+change the Delay or wait for a new sign." and the Stake button disabled.
+**Expected:** a Shell counts as waiting only while it holds a sign Iris can still stake on; otherwise it is "quiet"
+and F does not fly there.
+**Check:** `tests/e2e/hub-dock.e2e.mjs` (a dock button marked `hub-wait` implies an anchorable sign for that Shell).
+
+## QA-008 · Medium · Camera after leaving a Shell
+
+**Repro:** hub: fly in, leave (T). `shots/hub-card-offer-3.jpg`: the camera stays at the Shell distance and pitch; on
+the island this frames the sky with the island at the bottom edge; Iris is behind the decision card.
+**Expected:** leaving a Shell restores the island framing (or the framing the player had before the flight).
+**Check:** `tests/e2e/camera.e2e.mjs` (after exit the rig distance returns to its pre-flight value ± 10 %).
+
+## QA-009 · Medium · Overlaps on desktop
+
+(a) The main.js `#prompt` ("I inspect Anchor (Shell I) up close") renders under the play context menu and shows
+through between its rows (`shots/walk-6.jpg`), and under the `.pl-info` flash "Shell I opens…"
+(`shots/hub-card-key-13.jpg`, `shots/hub-card-fragment-6.jpg`); it is also styled in the greybox grey while
+everything around it is parchment and gold.
+(b) The "Local demo · the rules run in your browser…" badge (bottom left, two lines) overlaps the dialogue strip's
+speaker tag on every desktop screenshot.
+(c) Greybox "Scroll table · not final art" / "Anchor · not final art" labels poke out from behind the quest banner
+(`shots/hub-desktop.jpg`); Task H removes the labels.
+**Check:** `tests/e2e/overlaps.e2e.mjs` (bounding boxes of visible UI elements do not intersect).
+
+## QA-010 · Medium · Truncated text
+
+Quest title "The Price of Memory: forget something to see the futu…" (`shots/walk-4a.jpg`); the quest body runs
+under the key ornament ("Anchor on the hunch, or enter the Shell…", `shots/walk-4b.jpg`); the hint toast is cut after
+two lines with an ellipsis in EN and ZH (`shots/hub-desktop.jpg`, `shots/zh-hub.jpg`); the log box clips its last row
+mid-line (`shots/walk-6.jpg`).
+**Check:** `tests/e2e/overflow.e2e.mjs` (no visible HUD text element with `scrollWidth > clientWidth` or
+`scrollHeight > clientHeight + 2` unless it is a scroll container).
+
+## QA-011 · Medium · Phone layout and copy
+
+`shots/phone-hub.jpg` (iPhone 13 emulation, 390×664 viewport): the Shell dock sits over the top of the MAIN QUEST
+card ("Let trial 1 pass" covers the eyebrow); the quest says "Press F or pick the gold Shell on the right" while the
+dock is at the top and there is no F. The world is almost fully covered by UI on this screen (dock + quest + trial
+card + three tiles + run button + dialogue strip).
+**Check:** `tests/e2e/phone.e2e.mjs` (dock and quest card do not intersect; the quest copy on a coarse pointer does
+not mention a key).
+
+## QA-012 · Low · Progress 94 % at the season end
+
+`shots/hub-final.jpg`: "Progress: 16 / 17 · 94 %" with "The season is over".
+**Check:** `tests/e2e/season-end.e2e.mjs`.
+
+## QA-013 · Low · Quest tick vs default anchor tick
+
+Walk mode step 5: the quest reads "Anchor on Shell I for tick 3" (the vision), the context menu's E default is
+"Anchor here for tick 2 (as your reading says)". Pressing E as the README says anchors tick 2; the quest then
+moves on, so nothing is lost, but the two numbers disagree.
+
+## QA-014 · Low · Keys ignored while the Memories panel is open, dock still clickable
+
+After the Key card's "Open memories" the Memories panel opens; F and T do nothing (`!ui.panel` guard in
+`game.js handleKey`) while the dock buttons and T-pass button remain enabled under the panel.
+
+## QA-015 · Low · zh: two words for "sign"
+
+符印 in the quest, dock and hint; 符号 in the log ("来客开口：1 个新符号") and the hotbar ("符号与幻象").
+
+## QA-016 · Low · Onboarding primary button below the fold
+
+`shots/lobby-desktop-ctor.jpg`: at 1280×800 the hologram page shows no "Begin first contact" button without
+scrolling (it is below the particles section).
+
+## QA-017 · Low · "(panel below)"
+
+Season-end quest body: "Forget everything for an Heir, or keep the memory (panel below)." The Biography panel is on
+the right.
+
+## QA-018 · Info · Walk time of the judge route
+
+README step 2: "Press G (Iris walks to the goal; about 30 s, hold Shift to run)". Under SwiftShader (7 fps) the walk
+balcony → Scroll took 156 s with Shift held. The in-game speed is measured separately (`npm run e2e` prints it in
+`movement.e2e.mjs`); if the speed is right, this is only the software renderer and the README can stay.
