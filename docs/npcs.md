@@ -82,7 +82,12 @@ and back with the motion model that stays inside the bridge width and takes 12�
   (tick 1 → 3) make the director queue Scroll errands for the clans whose fragments went in and fire the celebrate
   reactions; `gather()` sends all five toward their plaza-ring nodes. Frame time 243 → 248 ms (unchanged within
   noise). Screenshots: `docs/npcs/after-walk-trials-1280x800.png`, `after-errand-1280x800.png`,
-  `after-gather-1280x800.png`, `after-meeting-1280x800.png`. FINAL_CHECK
+  `after-gather-1280x800.png`, `after-meeting-1280x800.png`. A final run to completion: `KeyN` toggles the map
+  once per press (closed → open → closed); Frost walks from its camp to the Scroll along the graph, gestures at the
+  ring node (−0.1, 4.2), walks home; Moss visits Amber (the room's graph routes it over the plaza), Amber steps to its
+  bridge end and waits looking at the approaching visitor, the talk turns start when Moss arrives; crossing at the
+  plaza ring both slow to 0.7 m/s (avoidance) and carry on. Note: under SwiftShader the game clock runs at about a
+  third of wall time, so the walks look three times longer in these logs than they are.
 
 ## Not done / open
 

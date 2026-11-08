@@ -27,7 +27,8 @@ requests 9 and 10 in `docs/collab-requests.md`. No engine, no game.js, no art, n
 - `cd game && npm test`: 328/328. `npm run build`: ok.
 - Headless Chromium (SwiftShader, zero console errors in walk mode and the hub): see "Headless result" in
   `docs/npcs.md` (errand, meeting, real end-of-trial events, the gathering; frame time unchanged; four screenshots).
-  FINAL_CHECK
+  Final run: KeyN toggles once per press; an errand and a
+  neighbour meeting run to completion with avoidance when two agents cross.
 - Also folded in (lead's request): `KeyN` is forwarded by `game/src/ui/input.js` (`WORLD_KEYS`) and the map panel's
   own window listener in `game/src/play/map-ui.js` is removed (H's request 8); map and input tests green.
 
