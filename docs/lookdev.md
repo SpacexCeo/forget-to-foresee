@@ -71,12 +71,50 @@ Draw-call budget: the slab adds one call on ultra/high; nothing else adds calls.
 
 ## 3. Before / after
 
-_Frames in `docs/lookdev/before/` and `docs/lookdev/after/` (JPEG q4 from the PNG read-backs). Filled in below._
+Frames are JPEG (q4) from the PNG read-backs. **Before:** `docs/lookdev/before/` (23 frames: six cameras × ultra/low at
+1280×800, four at 1920×1080 ultra, three × high/low at 390×844 with the phone profile; the Shell exterior shot was
+recomposed on 08.11 evening, so its three before-frames are from the new camera). **After (verified, this pass):**
+`docs/lookdev/after/overview-ultra-1280x800.jpg` and `plaza-ultra-1280x800.jpg`, rendered from the final tuning.
+
+| Camera | Before (`before/`) | After (`after/`) | What to look at |
+|---|---|---|---|
+| overview, ultra | `overview-ultra-1280x800.jpg`: milky grey haze, the Amber camp a blown-out orange blob (its whole atlas was treated as an emissive), black boxes where the agent nameplates are, a flat cloud floor | `overview-ultra-1280x800.jpg`: the Amber camp reads as a wooden pavilion, nameplates are intact, soft lit billows below the pillars, warm haze toward the sun, cooler away from it | Amber camp, nameplates, the sea of clouds, plateau tops |
+| plaza, ultra | `plaza-ultra-1280x800.jpg`: blank white-yellow sky, pale low-contrast stone, lanterns blooming into the stone | `plaza-ultra-1280x800.jpg`: cloud structure in the sky, golden haze on the sun side, stone with a 5:1 sun/shade ratio, bloom only on the lantern flames, grain in the mids | sky, stone texture, lanterns, the far camps in aerial perspective |
+
+Frames of the intermediate tuning (not kept in the repo) also confirmed: the interior floor is dark cracked stone with
+amber floor lights again (it was lilac nacre), the raymarched slab renders with no console errors on ultra, the low tier
+renders the deck alone with no errors. The other after-cameras (bridge, camp, Shell exterior, inside, the 1920×1080 and
+390×844 sets) were **not re-rendered** before the stop order: the capture takes about four seconds per frame on
+SwiftShader, so the full set is roughly 50 minutes. Command for whoever continues:
+
+    cd game && npx vite build --outDir .scratch/dist && (npx vite preview --outDir .scratch/dist --port 4173 &)
+    node tests/client/lookdev-capture.mjs --out ../docs/lookdev/after --tier ultra,low --size 1280x800
+    node tests/client/lookdev-capture.mjs --out ../docs/lookdev/after --tier ultra --size 1920x1080 --shots overview,plaza,shell,inside
+    node tests/client/lookdev-capture.mjs --out ../docs/lookdev/after --tier high,low --size 390x844 --profile phone --shots overview,plaza,inside
 
 ## 4. Low tier, reduced motion, phones
 
-_Filled in below._
+- **Low tier** (desktop): no post stack, deck-only clouds (one draw call, as before), the nacre keeps a slightly stronger
+  pearl rim instead of the thin film, grass wind and backlight run (vertex/fragment cost only), 120 air motes (one
+  draw call). Verified on two frames (overview, plaza) with no console errors; draw calls 129 / 82 on those cameras,
+  the same as the baseline plus the motes call.
+- **Reduced motion**: every capture frame in this doc was rendered with reduced motion, so the deterministic path is
+  the verified one: clouds, wind, Shell hover, lantern flicker, nacre shimmer, mist drift and grain all stop (their
+  clocks take dt = 0); nothing pops or flashes.
+- **Phones** (`docs/mobile.md` profile): knobs unchanged except `motes` (80 on phone/high, 0 on phone/low, so phone/low
+  adds no draw call); the governor and pixel-ratio steps are untouched. Baseline phone numbers (390×844, SwiftShader):
+  overview 88 calls / 193k triangles (high) and 88 / 187k (low), plaza 43 / 116k and 43 / 110k, inside 20 / 145k and
+  20 / 139k, all within the mobile budget (≤ 65 calls on the play cameras, ≤ 180k triangles except the 90 m overview).
+  The after-numbers were not re-measured before the stop order (same command as above with `--profile phone`).
 
 ## 5. Not done / open
 
-_Filled in below._
+- After-frames for the remaining cameras and sizes (see §3); phone re-measurement.
+- The Guests' chamber behind the glass still blows out to white (the chamber light lives in `scenes/shell.js`, now task O:
+  `docs/collab-requests.md` §8).
+- Cloth wind on the clan banners: no banner prop is placed in the scene yet; when they land, a vertex sway for materials
+  named banner/flag/canopy belongs in `materials.js`.
+- The SMAA pass on ultra and the anisotropic filtering could not be judged on SwiftShader (no anisotropy, MSAA already
+  smooth); they need one look on a real GPU.
+- The Shell exterior reference shot was recomposed late (from the Moss camp across the plaza toward Shell III); only its
+  before-frames exist.
