@@ -238,11 +238,11 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
         if (p.kind === 'scroll') { lx = u + g.platforms[0].r + 6; ly = v + 4; anchor = 'start'; }
         else if (p.kind === 'shell') { lx = u + outward[0] * (hitR + 2); ly = v + outward[1] * (hitR + 4) + (outward[1] > 0 ? 8 : -2); anchor = outward[0] > 0.2 ? 'start' : outward[0] < -0.2 ? 'end' : 'middle'; }
         else { const r = hitR - 2; lx = u; ly = outward[1] >= 0 ? v + r + 12 : v - r - 6; }
-        const label = svg(doc, 'text', { class: 'ftf-map-label' + (p.kind === 'camp' ? ' ftf-map-label--camp' : ''), x: lx, y: ly, text: name });
-        label.setAttribute('text-anchor', anchor);
+        // the stylesheet sets text-anchor: middle; an inline style wins where a label hangs to one side
+        const label = svg(doc, 'text', { class: 'ftf-map-label' + (p.kind === 'camp' ? ' ftf-map-label--camp' : ''), x: lx, y: ly, style: `text-anchor:${anchor}`, text: name });
         grp.append(label);
         if (p.kind === 'camp') grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub', x: lx, y: ly + 10, text: t('map.camp') }));
-        if (p.kind === 'shell' && p.shellState) grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub', x: lx, y: ly + 10, 'text-anchor': anchor, text: shellCaption(p.shellState) }));
+        if (p.kind === 'shell' && p.shellState) grp.append(svg(doc, 'text', { class: 'ftf-map-label ftf-map-label--sub', x: lx, y: ly + 10, style: `text-anchor:${anchor}`, text: shellCaption(p.shellState) }));
       }
       grp.addEventListener('click', () => choose(p));
       grp.addEventListener('keydown', (e) => { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); choose(p); } });
