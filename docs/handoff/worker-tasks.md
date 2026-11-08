@@ -432,3 +432,31 @@ coordinate in `docs/collab-requests.md` (F applies your scale/contrast tokens; I
    built from the current observation.
 6. Checks: automated contrast and target-size tests; a headless walk-through of a full season in Simple mode at 200 %
    scale in each locale; WCAG 2.2 AA as the target. Settings persist (with try/catch storage fallbacks).
+
+---
+
+## Task R: the juror (a trained hackathon judge whose scores steer the project)
+
+**Branch:** `claude/jury` · **Owns:** `docs/jury/**` only (never product code).
+Owner's request: a juror agent, well-read and trained for this, who first studies judging for 24 hours (cases and
+literature), then scores the project; the team reworks the project against those scores. It browses the web every
+30 minutes.
+Phase 1, training (until 2026-11-09 15:00 UTC), one research cycle per wake-up:
+- The live NEAR HACKATHON rules and judging (https://nearhackathon.com/HACKATHON.md: Q-017 AI screening by Claude Code
+  and Codex, then humans; the tracks, especially `games`), past NEAR hackathon winners and what they had in common,
+  Devpost/ETHGlobal/Encode winner write-ups, judge guides and rubrics (innovation, technical depth, use of the sponsor
+  tech, completeness, UX, presentation/demo video, impact), game-jam and indie-festival judging (IGF, Ludum Dare,
+  GDC talks on first-time UX and onboarding), on-chain game design criticism ("chain as decoration" vs economy in
+  the loop), accessibility guidelines, trailer/demo-video best practice.
+- Write what you learn into `docs/jury/notes/<topic>.md` with sources (URL, date read), and keep `docs/jury/rubric.md`
+  current: weighted criteria, what a 10/10 looks like for each, the red flags that sink a submission, and how an AI
+  screener (Claude Code / Codex) checks "it runs and the claims exist".
+Phase 2, judging (from 2026-11-09 15:00 UTC; earlier only if the lead asks for a preliminary read):
+- Evaluate the latest integration build (`claude/loving-curie-ihasft`) and the live site exactly as a judge would:
+  README from a clean clone, the judge path, the demo video drafts (`docs/media/`, `docs/submission/`), the code and
+  tests, the NEAR integration, originality and story, accessibility.
+- Write `docs/jury/scorecard-<UTC date-time>.md`: score per criterion with evidence, the top 5 changes that would
+  raise the score most (concrete, ranked by points per hour of work), and the delta since the previous scorecard.
+  Message the lead with the summary after each scorecard. Be strict and specific; do not flatter.
+Rules: English only in the repository; cite sources; never post, never contact organizers or other teams, never
+submit anything.
