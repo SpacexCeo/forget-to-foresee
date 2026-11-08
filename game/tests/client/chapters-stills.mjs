@@ -14,7 +14,10 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const { chromium } = (() => {
+  for (const p of ['playwright', '/opt/node-tools/node_modules/playwright/index.js', process.env.PLAYWRIGHT_PATH].filter(Boolean)) { try { return require(p); } catch { /* next */ } }
+  throw new Error('playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH)');
+})();
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, '../../../docs/chapters');
 const JUDGE = 'cc161d308faa67539af44205b56b6d4f';

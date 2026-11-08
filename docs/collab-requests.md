@@ -133,3 +133,11 @@ reaches `play.handleKey`; until it does, `cinematic/chapters/chronicle.js` liste
 (skipped when a dialog or text field has focus). Please add `'KeyC'` to `WORLD_KEYS` (G) and, if the hotbar has
 room, a `chronicle` button (F) that calls `play.chapters.openChronicle()`; the round button P ships
 (`.ch-fab`, bottom left) is the fallback and can go when the hotbar has the entry.
+
+### 12. To Task I (tutorial) and Task D/the lead (README judge path), from Task P
+The Arrival film (34 s, skippable by holding any key or a finger for 0.7 s) starts about two seconds after the
+world opens, in both play modes. If the tutorial overlays the world at that moment, please wait while
+`play.chapters.playing` is true (or start your flow and let the film wait: `play.chapters.pending` holds the
+due chapter and the film starts only when `play.chapters` finds the moment safe; `?films=off` disables films
+for your tests). The README's "Judge in 5 minutes" table should mention the film (watch it, or hold a key to
+skip); P did not edit the README (Task D owns it).

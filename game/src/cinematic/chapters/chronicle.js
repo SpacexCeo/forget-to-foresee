@@ -9,7 +9,7 @@ const CSS = `
 .ch-fab:hover { border-color: var(--wh-gold, #e4c272); }
 .ch-fab:focus-visible { outline: 3px solid var(--wh-gold, #e4c272); outline-offset: 2px; }
 .ch-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-body.hub-in-shell .ch-fab, body.ftf-map-open .ch-fab { display: none; }
+body.ftf-map-open .ch-fab { display: none; }
 @media (max-width: 700px) { .ch-fab { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); } }
 .ch-menu { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: var(--wh-scrim, rgba(0,0,0,.35)); pointer-events: auto; }
 .ch-menu[hidden] { display: none; }
@@ -55,8 +55,9 @@ function el(doc, tag, attrs = {}, ...kids) {
  * @param {() => object[]} o.rows director.rows()  @param {(id:string) => void} o.onReplay
  * @param {(id:string) => {key:string}} o.titleOf  the film title TextRef for a chapter id (from the stored film when seen)
  * @param {() => boolean} [o.canOpen] false while a film plays or a flight covers the screen
+ * @param {number} [o.filmSeconds] the length of a film, for the eyebrow
  */
-export function createChronicleMenu({ root, ctx, rows, onReplay, titleOf, canOpen = () => true }) {
+export function createChronicleMenu({ root, ctx, rows, onReplay, titleOf, canOpen = () => true, filmSeconds = 30 }) {
   const doc = root.ownerDocument || document;
   const { i18n } = ctx;
   const t = (k, a) => i18n.t(k, a);
@@ -77,7 +78,7 @@ export function createChronicleMenu({ root, ctx, rows, onReplay, titleOf, canOpe
         r.watchable ? el(doc, 'button', { type: 'button', class: r.state === 'now' || r.state === 'missed' ? 'ch-primary' : null, 'data-replay': r.id, onclick: () => { api.close(); onReplay(r.id); } }, t(r.state === 'seen' ? 'chapter.chronicle.replay' : 'chapter.chronicle.watch')) : el(doc, 'span'));
     });
     menu.replaceChildren(el(doc, 'section', { class: 'ch-panel' },
-      el(doc, 'div', { class: 'ch-eyebrow', text: t('chapter.ui.film', { seconds: 30 }) }),
+      el(doc, 'div', { class: 'ch-eyebrow', text: t('chapter.ui.film', { seconds: filmSeconds }) }),
       el(doc, 'h2', { text: t('chapter.chronicle.title') }),
       el(doc, 'p', { text: t('chapter.chronicle.hint') }),
       el(doc, 'ul', { class: 'ch-rows' }, list),

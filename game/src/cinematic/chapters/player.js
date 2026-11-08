@@ -62,7 +62,7 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
   function startShot(i) {
     shotIndex = i;
     const s = film.shots[i];
-    pose = compileShotCamera(s.cam, { iris: liveIris, interior: liveInterior });
+    pose = compileShotCamera(s.cam, { iris: liveIris, interior: liveInterior }, { frozen: !!film.reducedMotion });
     if (s.cam.kind === 'interior' && s.cam.sign) { try { shell.setSign({ forms: s.cam.sign.forms, dots: s.cam.sign.dots }, now()); } catch { /* presentation */ } }
     if (s.cam.kind === 'interior' && guests && guests.cue) { try { guests.cue(film.id === 'crisis' ? 'crisis' : film.id === 'vote' ? 'vote' : 'sign', { force: true }); } catch { /* optional */ } }
     if (s.actors && s.actors.length && agents && agents.react) {

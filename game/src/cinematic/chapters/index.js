@@ -4,7 +4,7 @@
 // optional narration. game.js calls attachChapters() once and forwards update/handleKey; nothing else in
 // the play layer changes. Dev parameters: ?films=off disables the films, ?film=<chapter> plays one film
 // right away on a season advanced to that chapter (still frames for docs/chapters.md use it with &stills=1).
-import { createChapterDirector, chapterFor, CHAPTER_IDS } from '../../play/chapters.js';
+import { createChapterDirector, chapterFor, CHAPTER_IDS, SHOT_SECONDS, TITLE_SECONDS, CARD_SECONDS } from '../../play/chapters.js';
 import { renderMsg, resolvePlayArg } from '../../play/i18n.js';
 import { resolveLineArgs } from '../../play/chapters.js';
 import { createFilmOverlay } from './overlay.js';
@@ -56,6 +56,7 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
     root: uiRoot, ctx, rows: () => director.rows(), onReplay: (id) => api.replay(id),
     titleOf: (id) => { const f = director.films.get(id); if (f) return f.title; const o = session.obs; const cur = o && chapterFor(o); return id === 'ending' && cur === 'ending' && o.season.outcome ? { key: 'chapter.title.ending.' + o.season.outcome } : { key: 'chapter.title.' + id }; },
     canOpen: () => !filmPlayer.playing && !(hub && (hub.busy || hub.advancing)),
+    filmSeconds: Math.round(TITLE_SECONDS + 5 * SHOT_SECONDS + CARD_SECONDS),
   });
 
   const state = { pending: null, stoppedHub: false, lastAdvance: null, opened: now(), playing: null };

@@ -7,9 +7,10 @@ import { compileCamera } from '../camera.js';
 const DRIFT_STILL = 0.12;
 
 /** J's camera spec for a chapter shot camera that is already absolute. */
-export function specFor(cam) {
+export function specFor(cam, { frozen = false } = {}) {
   if (cam.kind !== 'path') throw new Error('specFor: absolute cameras only');
-  if (cam.still || samePose(cam.from, cam.to)) return { type: 'static', pos: cam.from.pos, look: cam.from.look, fov: cam.from.fov, drift: DRIFT_STILL, driftCycles: 0.5, ease: 'inOutSine' };
+  // frozen (reduced motion): no breath either; a still shot is a still frame
+  if (cam.still || samePose(cam.from, cam.to)) return { type: 'static', pos: cam.from.pos, look: cam.from.look, fov: cam.from.fov, drift: frozen ? 0 : DRIFT_STILL, driftCycles: 0.5, ease: 'inOutSine' };
   return { type: 'dolly', path: [cam.from.pos, cam.to.pos], look: [cam.from.look, cam.to.look], fov: [cam.from.fov, cam.to.fov], ease: 'inOutSine' };
 }
 
@@ -42,11 +43,11 @@ export function interiorCamera(cam, interior) {
 
 /**
  * Compiles a shot camera into pose(u) → {pos, look, fov, roll}. `resolve` supplies the live positions:
- * {iris(): {position, heading}, interior(shell): {spawn, glass}}.
+ * {iris(): {position, heading}, interior(shell): {spawn, glass}}. `frozen` (reduced motion) removes the breath of still shots.
  */
-export function compileShotCamera(cam, resolve) {
+export function compileShotCamera(cam, resolve, { frozen = false } = {}) {
   let abs = cam;
   if (cam.kind === 'iris') abs = irisCamera(cam, resolve.iris());
   else if (cam.kind === 'interior') abs = interiorCamera(cam, resolve.interior(cam.shell));
-  return compileCamera(specFor(abs));
+  return compileCamera(specFor(abs, { frozen }));
 }
