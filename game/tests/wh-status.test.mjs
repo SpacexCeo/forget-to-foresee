@@ -269,3 +269,20 @@ test('status: a language switch re-renders chrome and narrative in place', () =>
   assert.ok(text(s.el).includes('Испытание 13 из 17'));
   s.destroy();
 });
+
+test('status: the mobile trial title falls back to wh.trial.titleShort when the full one overflows', async () => {
+  const i18n = i18nFor('en');
+  const root = makeRoot();
+  const s = mountStatus(root, { model: DEMO_MODEL, i18n, layout: 'mobile' });
+  const title = s.el.querySelector('[data-fit]');
+  assert.equal(title.dataset.i18n, 'wh.trial.title');
+  // pretend the Russian title is wider than its column; the refit runs after a locale change
+  Object.defineProperty(title, 'clientWidth', { value: 100, configurable: true });
+  Object.defineProperty(title, 'scrollWidth', { get: () => (title.dataset.i18n === 'wh.trial.title' ? 140 : 90), configurable: true });
+  i18n.setLocale('ru');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(title.dataset.i18n, 'wh.trial.titleShort');
+  assert.equal(title.textContent, MESSAGES.ru['wh.trial.titleShort'].replace('{n}', '13').replace('{total}', '17'));
+  s.destroy();
+  assert.equal(root.childNodes.length, 0);
+});

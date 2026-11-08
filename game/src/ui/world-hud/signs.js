@@ -105,7 +105,7 @@ function card(i18n, s, mobile, onAction) {
     title,
     h('span', { class: 'wh-pill wh-sign__type' },
       ic(icon('sparkle'), 'wh-sign__spark'),
-      h('span', { i18n: 'wh.sign.type.' + s.type }))),
+      h('span', { class: 'wh-sign__tlabel wh-heavy-sm', i18n: 'wh.sign.type.' + s.type }))),
   stats,
   anchor,
   ic(CHEVRON, 'wh-sign__chev'));
@@ -145,7 +145,8 @@ export function mountSigns(root, o) {
   let layout = o.layout === 'mobile' ? 'mobile' : 'desktop';
   let filter = FILTERS.includes(model.signs.filter) ? model.signs.filter : 'all';
   let modelFilter = model.signs.filter;
-  let desktopOpen = model.signs.open !== false;
+  const compact = () => { try { return !!(win.matchMedia && win.matchMedia(COMPACT_QUERY).matches); } catch { return false; } };
+  let desktopOpen = model.signs.open !== false && !compact();
   let isOpenNow = layout === 'desktop' ? desktopOpen : false;
   let opener = null;
   /** Current DOM refs. */
@@ -180,7 +181,27 @@ export function mountSigns(root, o) {
       const again = ui.list.querySelector(`[data-wh-key="${focusKey}"]`);
       if (again) again.focus();
     }
+    scheduleFit();
   }
+
+  /** Mobile: an anchor pill whose text overflows switches to the short tiers form (docs §3.2). */
+  function fitAnchors() {
+    if (!ui || layout !== 'mobile') return;
+    for (const a of ui.list.querySelectorAll('.wh-sign__atext')) {
+      if (typeof a.scrollWidth !== 'number' || !a.clientWidth) continue;
+      if (a._short) { a._short = false; applyI18n(a, i18n); }
+      if (a.scrollWidth > a.clientWidth + 1) { a._short = true; applyI18n(a, i18n); }
+    }
+  }
+  let fitQueued = false;
+  function scheduleFit() {
+    if (fitQueued || layout !== 'mobile' || typeof win.requestAnimationFrame !== 'function') return;
+    fitQueued = true;
+    win.requestAnimationFrame(() => { fitQueued = false; fitAnchors(); });
+  }
+  // Re-fit once the fonts arrive and after every language switch (bindI18n re-renders first).
+  if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(() => scheduleFit(), () => {});
+  const unsubLocale = i18n.subscribe ? i18n.subscribe(() => scheduleFit()) : null;
 
   function build() {
     el.textContent = '';
@@ -192,7 +213,7 @@ export function mountSigns(root, o) {
       eye,
       h('div', { class: 'wh-signs__text' },
         h('h2', { class: 'wh-signs__title wh-heavy', i18n: 'wh.signs.title', attrs: { id: titleId } }),
-        h('p', { class: 'wh-signs__sub', i18n: 'wh.signs.subtitle' })));
+        h('p', { class: 'wh-signs__sub wh-body', i18n: 'wh.signs.subtitle' })));
     const close = mobile
       ? h('button', {
         class: 'wh-btn-icon wh-btn-icon--round wh-signs__close wh-signs__close--round',
@@ -205,7 +226,7 @@ export function mountSigns(root, o) {
         attrs: { type: 'button', 'aria-keyshortcuts': 'Escape' }, i18nAttrs: { 'aria-label': 'wh.signs.closeAria' },
         dataset: { whKey: 'close' },
         on: { click: () => api.close() },
-      }, h('span', { class: 'wh-signs__close-label', i18n: 'wh.signs.close' }), h('span', { class: 'wh-kbd wh-signs__esc', text: 'Esc', attrs: { 'aria-hidden': 'true' } }));
+      }, h('span', { class: 'wh-signs__close-label wh-body', i18n: 'wh.signs.close' }), h('span', { class: 'wh-kbd wh-signs__esc wh-body', text: 'Esc', attrs: { 'aria-hidden': 'true' } }));
     head.appendChild(close);
     const filters = chips(i18n, model, filter, pickFilter);
     filters.setAttribute('aria-labelledby', titleId);
@@ -323,6 +344,7 @@ export function mountSigns(root, o) {
     destroy() {
       win.removeEventListener('keydown', onKey);
       win.removeEventListener('pointerdown', onPointer, true);
+      if (unsubLocale) unsubLocale();
       el.remove();
       ui = null;
     },

@@ -18,12 +18,14 @@ const LOCAL_ICONS = {
 const MOBILE_BAR_CELLS = 8;
 
 const ensureCss = (doc = document) => {
-  if (doc.querySelector('link[data-wh-css="status"]')) return;
+  const have = doc.querySelector('link[data-wh-css="status"]');
+  if (have) return have;
   const link = doc.createElement('link');
   link.rel = 'stylesheet';
   link.href = new URL('./status.css', import.meta.url).href;
   link.dataset.whCss = 'status';
   doc.head.appendChild(link);
+  return link;
 };
 
 /** `<span class="wh-icon …">` holding an inline SVG; its box is sized in CSS (u).
@@ -194,7 +196,7 @@ function trialMobile(i18n, t) {
 export function mountStatus(root, o) {
   const { i18n } = o;
   const onAction = (...a) => { if (o.onAction) o.onAction(...a); };
-  ensureCss(root.ownerDocument || document);
+  const cssLink = ensureCss(root.ownerDocument || document);
   const el = h('div', { class: 'wh-status' });
   root.appendChild(el);
 
@@ -274,6 +276,12 @@ export function mountStatus(root, o) {
     later(() => { fitQueued = false; if (el.parentNode) fit(); });
   };
   const unsubscribe = i18n.subscribe ? i18n.subscribe(queueFit) : () => {};
+  // widths change once the stylesheet and the web fonts arrive, and on resize
+  if (cssLink && cssLink.addEventListener) cssLink.addEventListener('load', queueFit);
+  const fonts = typeof document !== 'undefined' && document.fonts;
+  if (fonts && fonts.ready) fonts.ready.then(queueFit, () => {});
+  if (fonts && fonts.addEventListener) fonts.addEventListener('loadingdone', queueFit);
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', queueFit);
 
   render(o.model, o.layout === 'mobile' ? 'mobile' : 'desktop');
 
@@ -284,6 +292,9 @@ export function mountStatus(root, o) {
     },
     destroy() {
       unsubscribe();
+      if (cssLink && cssLink.removeEventListener) cssLink.removeEventListener('load', queueFit);
+      if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('resize', queueFit);
+      if (fonts && fonts.removeEventListener) fonts.removeEventListener('loadingdone', queueFit);
       el.remove();
       parts = {};
     },

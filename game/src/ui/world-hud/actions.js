@@ -107,7 +107,7 @@ export function mountActions(root, o = {}) {
   // ---------- prompt (§6.7 / §7.5) ----------
   function renderPrompt(mobile) {
     const p = model.prompt;
-    const text = say(h('span', { class: 'wh-prompt__text' }), p.text);
+    const text = say(h('span', { class: 'wh-prompt__text wh-heavy-sm' }), p.text);
     const btn = h('button', {
       class: 'wh-prompt wh-interactive ' + (mobile ? 'wh-prompt--mobile' : 'wh-panel'),
       attrs: { type: 'button', 'aria-keyshortcuts': p.hotkey || null },
@@ -116,7 +116,7 @@ export function mountActions(root, o = {}) {
       on: { click: () => emit('prompt') },
     },
     mobile ? null : ic('knot', 'wh-prompt__knot wh-prompt__knot--top'),
-    h('span', { class: 'wh-kbd wh-kbd--lg wh-prompt__kbd', attrs: { 'aria-hidden': 'true' }, text: p.hotkey || '' }),
+    h('span', { class: 'wh-kbd wh-kbd--lg wh-prompt__kbd wh-heavy-sm', attrs: { 'aria-hidden': 'true' }, text: p.hotkey || '' }),
     text,
     mobile ? null : ic('knot', 'wh-prompt__knot wh-prompt__knot--bottom'));
     setHidden(btn, !p.visible);
@@ -139,15 +139,15 @@ export function mountActions(root, o = {}) {
       attrArgs: () => ({ key: r.hotkey, text: i18n.t(r.text.key, r.text.args) }),
       on: { click: () => emit('reply', r.id) },
     },
-    h('span', { class: 'wh-kbd wh-kbd--lg wh-dialogue__kbd', attrs: { 'aria-hidden': 'true' }, text: r.hotkey || '' }),
+    h('span', { class: 'wh-kbd wh-kbd--lg wh-dialogue__kbd wh-heavy-sm', attrs: { 'aria-hidden': 'true' }, text: r.hotkey || '' }),
     h('span', { class: 'wh-dialogue__sep', attrs: { 'aria-hidden': 'true' } }),
-    say(h('span', { class: 'wh-dialogue__reply-text' }), r.text))));
+    say(h('span', { class: 'wh-dialogue__reply-text wh-heavy-sm' }), r.text))));
   }
 
   // ---------- desktop dialogue (§6.8) ----------
   function renderDialogue() {
     const d = model.dialogue;
-    const speaker = h('span', { class: 'wh-dialogue__speaker' });
+    const speaker = h('span', { class: 'wh-dialogue__speaker wh-heavy-sm' });
     tx(speaker, i18n, 'agent.' + d.speaker);
     const strip = h('div', {
       class: 'wh-dialogue__line wh-panel',
@@ -155,7 +155,7 @@ export function mountActions(root, o = {}) {
       i18nAttrs: { 'aria-label': 'wh.dialogue.label' },
     }, speaker,
     h('span', { class: 'wh-dialogue__sep', attrs: { 'aria-hidden': 'true' } }),
-    say(h('span', { class: 'wh-dialogue__text' }), d.line),
+    say(h('span', { class: 'wh-dialogue__text wh-heavy-sm' }), d.line),
     ic('wh-a-connector', 'wh-dialogue__connector'));
     return h('div', { class: 'wh-dialogue' }, strip, renderReplies('wh-dialogue__replies'));
   }
@@ -164,7 +164,7 @@ export function mountActions(root, o = {}) {
   function renderMobileDialogue() {
     const d = model.dialogue;
     const moreId = `${id}-more`;
-    const speaker = h('span', { class: 'wh-dialogue__speaker' });
+    const speaker = h('span', { class: 'wh-dialogue__speaker wh-heavy-sm' });
     tx(speaker, i18n, 'wh.dialogue.speaker', () => ({ name: speakerName() }));
     const bar = h('button', {
       class: 'wh-dialogue__bar',
@@ -173,7 +173,7 @@ export function mountActions(root, o = {}) {
     },
     ic('wh-a-bubble', 'wh-dialogue__bubble'),
     speaker,
-    say(h('span', { class: 'wh-dialogue__text' }), d.lineMobile || d.line),
+    say(h('span', { class: 'wh-dialogue__text wh-body' }), d.lineMobile || d.line), // the mobile bar's line is the humanist sans
     ic('chevron-up', 'wh-dialogue__chevron'));
     const more = h('div', { class: 'wh-dialogue__more', attrs: { id: moreId } },
       h('div', { class: 'wh-dialogue__more-inner' }, renderReplies('wh-dialogue__replies')));
@@ -214,9 +214,9 @@ export function mountActions(root, o = {}) {
         on: { click: () => emit('hotkey', it.id) },
       },
       it.hotkey
-        ? h('span', { class: 'wh-kbd wh-hotbar__kbd', attrs: { 'aria-hidden': 'true' }, text: it.hotkey })
+        ? h('span', { class: 'wh-kbd wh-hotbar__kbd wh-heavy-sm', attrs: { 'aria-hidden': 'true' }, text: it.hotkey })
         : ic('gear', 'wh-hotbar__gear'),
-      h('span', { class: 'wh-hotbar__label', i18n: 'wh.hotbar.' + it.id }))));
+      h('span', { class: 'wh-hotbar__label wh-body', i18n: 'wh.hotbar.' + it.id }))));
   }
 
   // ---------- keyboard (§9.1): E prompt, A/S/D replies, M/I/H hotkeys; never V ----------

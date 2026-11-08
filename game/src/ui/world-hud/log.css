@@ -129,7 +129,9 @@
   display: grid;
   grid-template-columns: calc(23 * var(--wh-px)) calc(45 * var(--wh-px)) 1fr;
   align-items: start;
-  font-size: var(--wh-fs-stat);
+  /* rows are body copy: Source Sans 3 fits the mockup rows at 13.2–14.0 u (mean 13.6) → the body
+     size, not --wh-fs-stat (13 u, ~5 % narrow) */
+  font-size: var(--wh-fs-body);
   line-height: calc(17 * var(--wh-px));
 }
 .wh-root .wh-log__bullet {
@@ -188,8 +190,8 @@
 /* icon boxes are sized so the visible art matches the mockup (eye 26×20, bubble 20×17, book 22×16) */
 .wh-root .wh-tile__icon { flex: none; }
 .wh-root .wh-tile--signs .wh-tile__icon { width: 29px; height: 22.3px; margin-bottom: 3.6px; }
-.wh-root .wh-tile--log .wh-tile__icon { width: 27.2px; height: 27.2px; margin-bottom: 2.8px; }
-.wh-root .wh-tile--lore .wh-tile__icon { width: 30px; height: 24px; margin-bottom: 5.3px; }
+.wh-root .wh-tile--log .wh-tile__icon { width: 27.2px; height: 27.2px; margin-bottom: 4.2px; }
+.wh-root .wh-tile--lore .wh-tile__icon { width: 30px; height: 24px; margin-bottom: 7.3px; }
 .wh-root .wh-tile__label {
   font-size: var(--wh-fs-tile);
   line-height: 1.15;

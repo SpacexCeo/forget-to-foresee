@@ -168,7 +168,7 @@ const DEMO_TEXTS = [
   'Signs and Visions', 'Read the signs, interpret their meaning, and find what lies beyond.',
   'All Signs (4)', 'Active', 'Resolved', 'Anchors',
   'Sign #10', 'Sign #11', 'Sign #13', 'Sign #9', 'Elemental', 'Conditional',
-  'Shell stability', 'Anchor strength', 'Power range', 'Delay',
+  'Shell stability:', 'Anchor strength:', 'Power range:', 'Delay:',
   '34%', '+5%', '20 – 51%', '4.6 s – 47.6 s', '45%', '+3%', '10 – 42%', '3.9 s – 62.9 s', '39%', '10 – 39%', '4.1 s – 55.2 s',
   'Anchor: Shell III, Tiers 11–13', 'Anchor: Shell III, Tiers 14–15', 'Anchor: Shell III, Tier 16',
 ];
@@ -336,6 +336,37 @@ test('signs: a locale switch re-renders chrome and narrative text in place', () 
   }
   assert.ok(!text.includes('Tiers'), 'no stale English inside the anchor pill');
   api.destroy();
+});
+
+test('signs: compact desktop (701–1086 px) starts closed and V opens it', () => {
+  window.matchMedia = (q) => ({ matches: q.includes('1086px') });
+  try {
+    const { api } = setup('desktop');
+    assert.equal(api.isOpen(), false);
+    key('v');
+    assert.equal(api.isOpen(), true);
+    api.destroy();
+  } finally { delete window.matchMedia; }
+});
+
+test('signs: a mobile anchor pill that overflows switches to the short tiers form', () => {
+  const frames = [];
+  window.requestAnimationFrame = (fn) => frames.push(fn);
+  try {
+    const { root, api, i18n } = setup('mobile');
+    i18n.setLocale('ru');
+    applyI18n(root, i18n);
+    // Fake layout: the pill is 200 px wide; text wider than that overflows.
+    for (const a of root.querySelectorAll('.wh-sign__atext')) {
+      Object.defineProperty(a, 'clientWidth', { value: 200, configurable: true });
+      Object.defineProperty(a, 'scrollWidth', { get: () => a.textContent.length * 6.2, configurable: true });
+    }
+    while (frames.length) frames.shift()();
+    const texts = root.querySelectorAll('.wh-sign__atext').map((a) => a.textContent);
+    assert.equal(texts[0], 'Якорь: Раковина III, ур. 11–13', 'long form overflowed, short form fits');
+    assert.equal(texts[2], 'Якорь: Раковина III, уровень 16', 'fitting text keeps the long form');
+    api.destroy();
+  } finally { delete window.requestAnimationFrame; }
 });
 
 test('signs: destroy() empties root and removes the window listeners', () => {

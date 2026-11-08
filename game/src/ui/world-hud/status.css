@@ -14,7 +14,7 @@
   left: calc(18 * var(--wh-px));
   top: calc(15 * var(--wh-px));
   width: calc(246 * var(--wh-px));
-  padding: calc(14.4 * var(--wh-px)) calc(20 * var(--wh-px)) calc(17 * var(--wh-px)) calc(21 * var(--wh-px));
+  padding: calc(16.4 * var(--wh-px)) calc(20 * var(--wh-px)) calc(17 * var(--wh-px)) calc(21 * var(--wh-px));
   border-radius: var(--wh-r-panel);
 }
 .wh-root .wh-trial__head {
@@ -35,8 +35,8 @@
   color: var(--wh-text);
   white-space: nowrap;
 }
-.wh-root .wh-trial__rule--a { margin: calc(9.6 * var(--wh-px)) 0 calc(4.5 * var(--wh-px)); }
-.wh-root .wh-trial__rule--b { margin: calc(1 * var(--wh-px)) 0 calc(6 * var(--wh-px)); }
+.wh-root .wh-trial__rule--a { margin: calc(7.6 * var(--wh-px)) 0 calc(5.5 * var(--wh-px)); }
+.wh-root .wh-trial__rule--b { margin: 0 0 calc(7 * var(--wh-px)); }
 .wh-root .wh-trial__row {
   display: flex;
   align-items: center;
@@ -52,14 +52,14 @@
 .wh-root .wh-trial__plabel {
   display: flex;
   align-items: baseline;
-  column-gap: .5em;
+  column-gap: .45em;
   min-width: 0;
   font-size: var(--wh-fs-row);
   line-height: calc(28 * var(--wh-px));
   color: var(--wh-text);
   white-space: nowrap;
 }
-.wh-root .wh-trial__plabel { line-height: calc(19.5 * var(--wh-px)); margin-bottom: calc(6 * var(--wh-px)); }
+.wh-root .wh-trial__plabel { line-height: calc(19.5 * var(--wh-px)); margin-bottom: calc(5 * var(--wh-px)); }
 .wh-root .wh-trial__k::after { content: ":"; }
 .wh-root .wh-trial__ricon--bar-chart svg { transform: scaleY(1.3); }
 .wh-root .wh-trial__v { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -114,7 +114,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: calc(11 * var(--wh-px)) 0 calc(11.6 * var(--wh-px)) calc(84 * var(--wh-px));
+  padding: calc(13 * var(--wh-px)) 0 calc(11.6 * var(--wh-px)) calc(84 * var(--wh-px));
 }
 .wh-root .wh-quest__tag { flex: none; }
 .wh-root .wh-quest .wh-quest__tag {
@@ -137,7 +137,7 @@
   text-overflow: ellipsis;
 }
 .wh-root .wh-quest .wh-quest__text {
-  margin-top: calc(9.3 * var(--wh-px));
+  margin-top: calc(6.3 * var(--wh-px));
   max-width: calc(600 * var(--wh-px));
   font-size: var(--wh-fs-body);
   line-height: calc(19 * var(--wh-px));
@@ -254,7 +254,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px 0 0 24px;
+  padding: 14px 0 0 24px;
 }
 .wh-root .wh-quest--mobile .wh-quest__tag {
   height: 19px;
@@ -266,7 +266,7 @@
 .wh-root .wh-quest--mobile .wh-quest__sparkle { width: 10px; height: 10px; color: var(--wh-gold); }
 .wh-root .wh-quest--mobile .wh-quest__title {
   display: block;
-  margin: 5.5px 0 0 6px;
+  margin: 3.5px 0 0 6px;
   max-width: 225px;
   font-size: var(--wh-fs-title-l);
   line-height: 21px;
@@ -366,9 +366,9 @@
 .wh-root .wh-trial__stat {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   margin-bottom: 6px;
-  padding: 0 6px 0 14px;
+  padding: 0 9px 0 14px;
 }
 .wh-root .wh-trial__stat--skill { gap: 9px; padding: 0 9px 0 10px; }
 .wh-root .wh-trial__sicon--attempts { width: 22px; height: 22px; margin: 0 -4.5px; }
@@ -381,4 +381,5 @@
 /* Compact desktop (701–1086 px): the banner must clear the trial card (docs §1). */
 @media (max-width: 1086px) and (min-width: 701px) {
   .wh-root .wh-quest { max-width: calc(100vw - 2 * 290 * var(--wh-px)); }
+  .wh-root .wh-toast { display: none; } /* tokens.css hides it too; this rule wins over .wh-toast { display: flex } */
 }

@@ -7,17 +7,8 @@
   --wh-sg-frame-right: rgba(196, 186, 156, .14);
   --wh-sg-card-edge: linear-gradient(90deg, rgba(236, 222, 186, .72) 0%, rgba(214, 202, 168, .42) 22%, rgba(196, 186, 156, .26) 55%, rgba(196, 186, 156, .3) 100%);
   --wh-sg-card-sheen: radial-gradient(120% 70% at 0 0, rgba(140, 116, 64, .22) 0%, rgba(140, 116, 64, 0) 45%);
-  /* Type: shared --wh-fs-* tokens only. Roles without a shared token yet fall back to the closest
-     one (see the P2 report: --wh-fs-subtitle, --wh-fs-close, --wh-fs-kbd-sm). */
-  --wh-sg-fs-sub: var(--wh-fs-subtitle, var(--wh-fs-body));
-  --wh-sg-fs-close: var(--wh-fs-close, var(--wh-fs-ui));
-  --wh-sg-fs-esc: var(--wh-fs-kbd-sm, var(--wh-fs-kbd));
   --wh-sg-chip-border: rgba(196, 186, 156, .24);
-  /* pill / kbd hairlines read as pale parchment, not saturated gold, in the mockup */
-  --wh-sg-pill-border: rgba(222, 210, 172, .5);
   --wh-sg-pill-bg: rgba(64, 54, 20, .55);
-  --wh-sg-anchor-border: rgba(226, 216, 186, .52);
-  --wh-sg-kbd-border: rgba(222, 222, 210, .5);
   --wh-sg-kbd-bg: rgba(10, 20, 20, .45);
   --wh-sg-round-border: rgba(196, 186, 156, .2);
   position: absolute; inset: 0; pointer-events: none;
@@ -64,13 +55,13 @@
   text-shadow: var(--wh-text-glow);
   white-space: nowrap;
 }
-.wh-root .wh-signs .wh-signs__title { margin-top: calc(1 * var(--wh-px)); padding-right: calc(110 * var(--wh-px)); }
-.wh-root .wh-signs__sub { color: var(--wh-text-2); }
+.wh-root .wh-signs .wh-signs__title { margin-top: calc(4 * var(--wh-px)); padding-right: calc(110 * var(--wh-px)); }
+.wh-root .wh-signs__sub { color: var(--wh-text-2); letter-spacing: .02em; } /* sans in both mockups (zoomed crops), so the body role */
 .wh-root .wh-signs .wh-signs__sub {
-  font-size: var(--wh-sg-fs-sub);
+  font-size: var(--wh-fs-body);
   line-height: calc(19 * var(--wh-px));
-  margin-top: calc(6 * var(--wh-px));
-  max-width: calc(250 * var(--wh-px));
+  margin-top: calc(3 * var(--wh-px));
+  max-width: calc(242 * var(--wh-px));
 }
 
 .wh-root .wh-signs .wh-signs__close {
@@ -79,26 +70,25 @@
   right: calc(17 * var(--wh-px));
   display: inline-flex;
   align-items: center;
-  gap: calc(6 * var(--wh-px));
+  gap: calc(4 * var(--wh-px));
   height: calc(29 * var(--wh-px));
-  padding: 0 calc(11 * var(--wh-px)) 0 calc(13 * var(--wh-px));
+  padding: 0 calc(11 * var(--wh-px)) 0 calc(12 * var(--wh-px));
   border: 1px solid var(--wh-frame-soft);
   border-radius: calc(15 * var(--wh-px));
   background: var(--wh-btn-bg);
   color: var(--wh-text);
-  font-size: var(--wh-sg-fs-close);
+  font-size: var(--wh-fs-close);
   line-height: 1;
   white-space: nowrap;
   transition: border-color var(--wh-transition);
 }
 .wh-root .wh-signs .wh-signs__close:hover { border-color: var(--wh-frame); }
 .wh-root .wh-signs .wh-signs__esc {
-  min-width: calc(22 * var(--wh-px));
-  height: calc(19 * var(--wh-px));
+  min-width: calc(27 * var(--wh-px));
+  height: calc(20 * var(--wh-px));
   padding: 0 calc(3 * var(--wh-px));
-  font-size: var(--wh-sg-fs-esc);
+  font-size: var(--wh-fs-kbd-sm);
   border-radius: calc(4 * var(--wh-px));
-  border-color: var(--wh-sg-kbd-border);
   background: var(--wh-sg-kbd-bg);
 }
 
@@ -176,8 +166,9 @@
   height: calc(21 * var(--wh-px));
 }
 .wh-root .wh-sign__title { font-size: var(--wh-fs-sign-title); line-height: 1.2; color: var(--wh-text); white-space: nowrap; }
-.wh-root .wh-sign__type { height: calc(21 * var(--wh-px)); border-color: var(--wh-sg-pill-border); background: var(--wh-sg-pill-bg); }
-.wh-root .wh-sign__spark { width: calc(9 * var(--wh-px)); height: calc(9 * var(--wh-px)); }
+.wh-root .wh-sign__type { height: calc(21 * var(--wh-px)); padding: 0 calc(10 * var(--wh-px)) 0 calc(9 * var(--wh-px)); gap: calc(5 * var(--wh-px)); background: var(--wh-sg-pill-bg); }
+.wh-root .wh-sign__spark { width: calc(12 * var(--wh-px)); height: calc(12 * var(--wh-px)); margin-left: calc(-1 * var(--wh-px)); }
+.wh-root .wh-sign__tlabel { letter-spacing: -.045em; }
 
 .wh-root .wh-sign__stats {
   margin: calc(8 * var(--wh-px)) 0 0 calc(4 * var(--wh-px));
@@ -188,12 +179,11 @@
 .wh-root .wh-sign__stat > *, .wh-root .wh-sign > * { flex: none; }
 .wh-root .wh-sign__sicon { width: calc(19 * var(--wh-px)); height: calc(19 * var(--wh-px)); margin: 0 calc(10 * var(--wh-px)) 0 calc(-5 * var(--wh-px)); }
 .wh-root .wh-sign__k { color: var(--wh-text); }
-.wh-root .wh-sign__k::after { content: ":"; }
-.wh-root .wh-sign__v { color: var(--wh-text); margin-left: calc(11 * var(--wh-px)); }
+.wh-root .wh-sign__v { color: var(--wh-text); margin-left: calc(11 * var(--wh-px)); letter-spacing: .05em; word-spacing: .1em; }
 
-.wh-root .wh-sign__anchor { border-color: var(--wh-sg-anchor-border); margin: calc(8 * var(--wh-px)) 0 0 calc(-15 * var(--wh-px)); }
-.wh-root .wh-sign__aicon { width: calc(18 * var(--wh-px)); height: calc(18 * var(--wh-px)); margin-left: calc(2 * var(--wh-px)); }
-.wh-root .wh-sign__atext { overflow: hidden; text-overflow: ellipsis; }
+.wh-root .wh-sign__anchor { margin: calc(8 * var(--wh-px)) 0 0 calc(-15 * var(--wh-px)); }
+.wh-root .wh-sign__aicon { width: calc(18 * var(--wh-px)); height: calc(18 * var(--wh-px)); margin-left: calc(2 * var(--wh-px)); margin-right: calc(-3 * var(--wh-px)); }
+.wh-root .wh-sign__atext { min-width: 0; letter-spacing: -.03em; overflow: hidden; text-overflow: ellipsis; }
 /* Long (e.g. Russian) anchors may run under the chevron column, never past the card edge. */
 .wh-root .wh-sign__anchor { max-width: calc(100% + 15 * var(--wh-px) + 36 * var(--wh-px)); min-width: 0; }
 .wh-root .wh-sign--mobile .wh-sign__anchor { max-width: calc(100% + 13.5px + 30px); }
@@ -258,7 +248,8 @@
   padding: 35px 50px 0 80px;
 }
 .wh-root .wh-sheet .wh-signs__eye { position: absolute; left: 20px; top: 33px; width: 48px; height: 47px; }
-.wh-root .wh-sheet .wh-signs__sub { line-height: 17px; margin-top: 2px; max-width: 250px; }
+.wh-root .wh-sheet .wh-signs__title { margin-top: 2px; }
+.wh-root .wh-sheet .wh-signs__sub { line-height: 17px; margin-top: 0; max-width: 242px; }
 .wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 30.5px; width: 35px; height: 35px; border-color: var(--wh-sg-round-border); background: rgba(255, 255, 255, .04); }
 .wh-root .wh-sheet .wh-signs__close:hover { border-color: var(--wh-frame-soft); }
 .wh-root .wh-sheet .wh-signs__x { width: 26px; height: 26px; color: var(--wh-text); }
@@ -283,14 +274,14 @@
 /* ================================================================ mobile card (§7.8) */
 .wh-root .wh-sign--mobile {
   min-height: 146px;
-  padding: 10.5px 40px 8px 110px;
+  padding: 14px 40px 4.5px 110px;
   background-color: var(--wh-card-bg-mobile);
 }
 .wh-root .wh-sign--mobile .wh-sign__ring { left: 20px; top: 24px; width: 64px; height: 64px; }
 .wh-root .wh-sign--mobile .wh-sign__head { gap: 13px; height: 20px; }
-.wh-root .wh-sign--mobile .wh-sign__type { height: 20px; padding: 0 9px 0 8px; gap: 6px; }
+.wh-root .wh-sign--mobile .wh-sign__type { height: 20px; padding: 0 8px 0 7px; gap: 4px; }
 .wh-root .wh-sign--mobile .wh-sign__spark { width: 8px; height: 8px; }
-.wh-root .wh-sign--mobile .wh-sign__stats { margin: 9.5px 0 0 0; line-height: 16.6px; }
+.wh-root .wh-sign--mobile .wh-sign__stats { margin: 6px 0 0 0; line-height: 16.6px; }
 .wh-root .wh-sign--mobile .wh-sign__stat { height: 16.6px; }
 .wh-root .wh-sign--mobile .wh-sign__sicon { width: 15px; height: 15px; margin: 0 14px 0 0; }
 .wh-root .wh-sign--mobile .wh-sign__v { margin-left: 9px; }

@@ -71,7 +71,7 @@ export function mountLog(root, o = {}) {
         class: 'wh-log__tab',
         attrs: { type: 'button', role: 'tab', id: `${id}-tab-${t.id}`, 'aria-controls': `${id}-panel`, 'data-tab': t.id },
         on: { click: () => { setTab(t.id); emit('tab', t.id); } },
-      }, ic(t.icon, 'wh-log__tab-icon'), h('span', { class: 'wh-log__tab-label', i18n: 'wh.tabs.' + t.id }));
+      }, ic(t.icon, 'wh-log__tab-icon'), h('span', { class: 'wh-log__tab-label wh-heavy-sm', i18n: 'wh.tabs.' + t.id }));
       return b;
     });
     const tablist = h('div', {
@@ -143,7 +143,7 @@ export function mountLog(root, o = {}) {
       class: 'wh-tile wh-tile--' + t.id,
       attrs: { type: 'button', 'data-tile': t.id },
       on: { click: () => emit('tile', t.id) },
-    }, ic(t.icon, 'wh-tile__icon', t.stretch ? { stretch: true } : undefined), h('span', { class: 'wh-tile__label', i18n: t.label })));
+    }, ic(t.icon, 'wh-tile__icon', t.stretch ? { stretch: true } : undefined), h('span', { class: 'wh-tile__label wh-heavy-sm', i18n: t.label })));
     el.appendChild(h('nav', { class: 'wh-tiles wh-interactive', i18nAttrs: { 'aria-label': 'wh.log.label' } }, tiles));
     refs = { logTile: tiles[1] };
     syncUnread();
