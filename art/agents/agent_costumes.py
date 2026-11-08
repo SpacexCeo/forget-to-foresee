@@ -361,11 +361,13 @@ def costume_iris(ag):
                   kind="leather", color="leather", rough=0.5, thick=0.007, clear=0.010,
                   slot="ornament")
     hair_locks(ag, "hair", "hair", length=0.17, n=14, fringe_side=1, seed=11)
-    mantle(ag, "cloak", 1.50, 0.08, 1.20, 0.31, n=36, rows=12, depth=0.9,
+    # silhouette (owner 08.11, body design): a narrower cloak that falls closer to the body
+    # and a shorter cape, so shoulders, waist and legs read instead of one bell shape
+    mantle(ag, "cloak", 1.50, 0.08, 1.20, 0.265, n=36, rows=12, depth=0.88,
            hem=hem_jagged(5, 40, 0.06), front_short=0.02, back_long=0.04,
-           span=math.radians(292), th0=math.radians(-90 + 34), spread=1.6, color="cloak",
+           span=math.radians(292), th0=math.radians(-90 + 34), spread=1.25, color="cloak",
            kind="wool", rough=0.95, thick=0.012, trim=("trim", 0.035, "cloth"))
-    mantle(ag, "cape", 1.505, 0.08, 0.38, 0.33, n=30, rows=5, depth=0.9,
+    mantle(ag, "cape", 1.505, 0.08, 0.30, 0.27, n=30, rows=5, depth=0.9,
            hem=hem_scallop(6, 0.025), span=math.radians(300), th0=math.radians(-90 + 30),
            color="cloak2", kind="wool", rough=0.95, thick=0.012, trim=("trim", 0.035, "cloth"))
     cowl_roll(ag, "cloak2")
