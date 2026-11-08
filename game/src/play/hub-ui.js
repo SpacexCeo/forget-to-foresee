@@ -6,7 +6,7 @@
 // so it reads as part of the same HUD. All text is localized; every decision is a hub call.
 import { renderMsg, reasonText } from './i18n.js';
 import { logogramCanvas } from './logogram.js';
-import { signsByShell, signForShell } from './hub.js';
+import { openSignsByShell, signForShell } from './hub.js';
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
 
@@ -96,7 +96,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
   const btn = (attrs, ...kids) => el(doc, 'button', { type: 'button', ...attrs }, ...kids);
 
   function dock(obs) {
-    const by = signsByShell(obs);
+    const by = openSignsByShell(obs);
     const busy = !!hub.busy || hub.advancing;
     const canPass = obs.season.phase === 'play';
     return el(doc, 'section', { class: 'hub-box hub-dock', 'aria-label': t('hub.dock.title') },
@@ -266,7 +266,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       }
       if (code === 'KeyF') {
         if (obs.you.zone === 'shell') { stake(); return true; }
-        const by = signsByShell(obs);
+        const by = openSignsByShell(obs);
         const n = [1, 2, 3, 4].find((s) => by.get(s).length);
         if (n) { onFly(n); return true; }
         return false;

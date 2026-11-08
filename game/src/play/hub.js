@@ -37,6 +37,20 @@ export function signsByShell(obs) {
   return m;
 }
 
+/** A sign is still open while its implied trial can be staked on (the room's `anchorable`: now … 17). QA-007 */
+export function isOpenSign(p, obs) {
+  const t = p && p.impliedAnchor ? p.impliedAnchor.tick : null;
+  const now = obs && obs.season ? obs.season.tick : 0;
+  return t != null && t >= now && t <= 17;
+}
+
+/** Signs grouped by Shell, only those still open: a Shell glows gold only when a stake there can still pay. */
+export function openSignsByShell(obs) {
+  const m = signsByShell(obs);
+  for (const [k, list] of m) m.set(k, list.filter((p) => isOpenSign(p, obs)));
+  return m;
+}
+
 /** The sign the Guest of Shell `n` draws: one Iris reads for this Shell, else the newest visible sign. */
 export function signForShell(obs, n) {
   const own = signsByShell(obs).get(n) || [];
