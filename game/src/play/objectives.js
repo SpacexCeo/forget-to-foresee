@@ -14,9 +14,12 @@ export const ONBOARDING = Object.freeze(['anchor', 'end_tick', 'verified', 'forg
  * the rules resolve a stake only when an event lands on its trial: a stake on trial 1 or 2 is never
  * paid back. The first-loop goals therefore steer the first stake to this trial. Presentation only.
  */
-export const FIRST_GIFT_TICK = 3;
+export const FIRST_GIFT_TICK = FIRST_EVENT_TICK;
 
-import { signForShell } from './hub.js';
+import { signForShell, impliedTick, prefillFirstDelay, FIRST_EVENT_TICK } from './hub.js';
+
+/** Device flag (createSafeStorage key): set once the player has seen the first loop verified; `skipOnboarding` then. */
+export const FIRST_LOOP_KEY = 'ftf.firstloop.v1';
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
 
@@ -139,7 +142,9 @@ export function hubGoal(obs, flags = {}) {
     if (inShell && !staked && s.tick === 1) {
       // Simple mode (or a lucky prior): Iris's own reading already lands on trial 3, so there is nothing to change.
       const sign = signForShell(obs, obs.you.shell);
-      const ready = !!(sign && sign.impliedAnchor && sign.impliedAnchor.tick === FIRST_GIFT_TICK);
+      const slots = sign && sign.reading ? sign.reading.slots.map((x) => x.meaning) : null;
+      if (slots) prefillFirstDelay(obs, sign, slots); // the same pre-fill the hub's reading card applies
+      const ready = !!(slots && impliedTick(sign, slots) === FIRST_GIFT_TICK);
       return g('stake', { tick: FIRST_GIFT_TICK }, null, {}, { ...step('stake'), hintKey: ready ? 'hub.goal.stake.hintReady' : 'hub.goal.stake.hint' });
     }
     if (inShell && s.tick === 1) return g('leave', {}, null, {}, step('leave'));

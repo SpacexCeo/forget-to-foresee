@@ -5,6 +5,7 @@
 // beat; the beat index is saved so a reload resumes; a returning player (every step done) goes
 // straight to the island with no screen at all.
 import { h, tx, bindI18n, ensureStyles, applyI18n } from './dom.js';
+import { MOTION, installMotionStyles, enter, exit, stagger, press, seal, tickNumber, ringFlash } from './motion/index.js';
 import { getUiContext } from './context.js';
 import { createOnboardingFlow, createTutorial, FLOW_STEPS, TUTORIAL_BEATS, TUTORIAL_SIGN } from './flow.js';
 import { issueDemoEntitlement, getEntitlement } from './entitlement.js';
@@ -48,7 +49,8 @@ const CSS = `
 .ftf-tut-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .ftf-tut-head .ftf-muted { letter-spacing: .08em; text-transform: uppercase; font-size: .82rem; }
 .ftf-tut-dots { display: inline-flex; gap: 8px; margin-left: 14px; vertical-align: middle; }
-.ftf-tut-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--ftf-stone); display: inline-block; }
+.ftf-tut-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--ftf-stone); display: inline-block; transition: transform var(--mo-base, 200ms) var(--mo-ease-out, ease-out), background-color var(--mo-fast, 120ms); }
+.ftf-tut-dots i[data-state="current"] { transform: scale(1.25); }
 .ftf-tut-dots i[data-state="done"] { background: var(--ftf-good); }
 .ftf-tut-dots i[data-state="current"] { background: var(--ftf-amber); box-shadow: 0 0 0 3px rgba(212,161,95,.25); }
 .ftf-ring { position: relative; width: min(320px, 100%); margin: 0 auto; aspect-ratio: 1; }
@@ -79,7 +81,14 @@ const CSS = `
 .ftf-silk b { color: var(--ftf-amber); font-weight: 600; min-width: 2ch; text-align: right; transition: color var(--ftf-motion-fast); }
 .ftf-trials { display: flex; gap: 8px; }
 .ftf-trials span { min-width: 72px; text-align: center; padding: 6px 10px; border: 1px solid var(--ftf-stone); border-radius: 4px; color: var(--ftf-mist); font-size: .95rem; white-space: nowrap; }
+.ftf-trials span { transition: transform var(--mo-base, 200ms) var(--mo-ease-out, ease-out), border-color var(--mo-fast, 120ms), color var(--mo-fast, 120ms), background-color var(--mo-fast, 120ms); }
 .ftf-trials span[data-on="true"] { border-color: var(--ftf-amber); color: var(--ftf-pearl); }
+.ftf-trials span[data-on="true"]:not([data-sealed="true"]) { transform: scale(1.04); }
+.ftf-chip { transition: transform var(--mo-base, 200ms) var(--mo-ease-out, ease-out), opacity var(--mo-fast, 120ms); }
+.ftf-chip[data-on="true"] { transform: scale(1.06); }
+.ftf-stepper li { transition: color var(--mo-fast, 120ms), transform var(--mo-base, 200ms) var(--mo-ease-out, ease-out); }
+.ftf-stepper li[data-state="current"] { transform: translateX(2px); }
+html[data-motion="reduce"] .ftf-tut-dots i, html[data-motion="reduce"] .ftf-trials span, html[data-motion="reduce"] .ftf-chip, html[data-motion="reduce"] .ftf-stepper li { transform: none !important; }
 .ftf-trials span[data-sealed="true"] { background: rgba(212,161,95,.14); color: var(--ftf-amber); }
 .ftf-seal { font-size: 1.15rem; color: var(--ftf-amber); margin: 0; }
 .ftf-memcard { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--ftf-stone); border-radius: 6px; max-width: 420px; transition: opacity .5s, transform .5s; }
@@ -167,12 +176,13 @@ export function mountOnboarding(root, opts = {}) {
   const flow = opts.flow || createOnboardingFlow(storage);
   ensureStyles();
   ensureTutStyles(root.ownerDocument || document);
+  installMotionStyles(root.ownerDocument || document);
   const bgEl = h('div', { class: 'ftf-bg', attrs: { 'aria-hidden': 'true' } });
   const bg = mountBackground(bgEl, { reducedMotion: true, tier: prefs.tier() });
   const stepper = h('ol', { class: 'ftf-stepper', i18nAttrs: { 'aria-label': 'flow.progress' } });
   const stage = h('div', { class: 'ftf-step' });
   const top = h('div', { class: 'ftf-spread' }, stepper,
-    h('button', { class: 'ftf-btn ftf-btn-small', i18n: 'flow.toLobby', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => { flow.toLobby(); if (opts.onExit) opts.onExit(); } } }));
+    h('button', { class: 'ftf-btn ftf-btn-small mo-lift', i18n: 'flow.toLobby', attrs: { type: 'button', 'data-gamepad-back': true }, on: { click: () => leave(() => { flow.toLobby(); if (opts.onExit) opts.onExit(); }) } }));
   const wrap = h('div', { class: 'ftf-root' }, bgEl, h('main', { class: 'ftf-screen' }, top, stage));
   root.appendChild(wrap);
   let child = null;
@@ -187,6 +197,11 @@ export function mountOnboarding(root, opts = {}) {
     const text = keys.map((k) => i18n.t(k, args)).join('. ');
     try { narration.speak(text, { channel: 'tutorial', interrupt: true }); } catch { /* speech is optional */ }
   };
+  let leaving = false;
+  // The screen leaves (fade + slight scale) before the next one mounts; never blocks input (docs/motion.md).
+  const leave = (then) => { if (leaving) return; leaving = true; exit(wrap, { to: 'scale', duration: MOTION.duration.fast }).then(() => { leaving = false; then(); }); };
+  const unPress = [];
+  const pressAll = (scope) => { for (const b of scope.querySelectorAll('button')) { b.classList.add('mo-lift'); unPress.push(press(b)); } };
   const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
   const clearTimers = () => { for (const t of timers) clearTimeout(t); timers = []; };
 
@@ -205,7 +220,9 @@ export function mountOnboarding(root, opts = {}) {
 
   function enterWorld() {
     const recipe = loadRecipe(storage) || DEFAULT_RECIPE;
-    if (opts.onFirstContact) opts.onFirstContact({ guestId: ctx.guestId, entitlement: getEntitlement(storage), recipe, recipeHash: recipeHash(recipe), locale: i18n.locale });
+    const go = () => { if (opts.onFirstContact) opts.onFirstContact({ guestId: ctx.guestId, entitlement: getEntitlement(storage), recipe, recipeHash: recipeHash(recipe), locale: i18n.locale }); };
+    // Into the island: the onboarding fades and shrinks away over the screen duration (the world is already rendering beneath).
+    if (wrap.isConnected && !flow.returning) { leaving = true; exit(wrap, { to: 'scale', duration: MOTION.duration.screen }).then(() => { leaving = false; go(); }); } else go();
   }
 
   // ---- access: one line, the labeled badge, the details folded away ----
@@ -220,7 +237,7 @@ export function mountOnboarding(root, opts = {}) {
   }
 
   // ---- tutorial: five beats over one example sign ----
-  let tut = null, spokenBeat = -1;
+  let tut = null, spokenBeat = -1, lastSilk = null, sealShown = false;
   function viewTutorial() {
     if (!tut) tut = createTutorial({ beat: flow.beat });
     const v = tut.view();
@@ -267,11 +284,18 @@ export function mountOnboarding(root, opts = {}) {
       else if (v.lastRead && v.lastRead.ok === false) tx(fb, i18n, 'tut.read.wrong', { n: v.lastRead.step });
       else tx(fb, i18n, 'tut.read.next', { n: v.readIndex + 1 });
     } else if (id === 'stake') {
-      const silk = h('span', { class: 'ftf-silk' }, h('span', { i18n: 'tut.stake.silk' }), h('b', { text: String(v.silk) }));
+      const silkNum = h('b', { text: String(lastSilk ?? v.silk) });
+      const silk = h('span', { class: 'ftf-silk' }, h('span', { i18n: 'tut.stake.silk' }), silkNum);
+      if (lastSilk != null && lastSilk !== v.silk) queueMicrotask(() => tickNumber(silkNum, v.silk, { from: lastSilk }));
+      lastSilk = v.silk;
       const trials = h('div', { class: 'ftf-trials' }, [1, 2, 3].map((n) => h('span', { dataset: { on: String(v.staked && v.trial >= n), sealed: String(v.sealed && n === TUTORIAL_SIGN.trial) }, i18n: 'tut.stake.trial', args: { n } })));
       const stakeBtn = primary('tut.stake.button', () => { if (tut.stake()) { render(); runTrials(); } }, v.staked ? { disabled: true, 'aria-disabled': 'true' } : {});
       stageEl.append(silk, stakeBtn, trials);
-      if (v.sealed) { stageEl.append(h('p', { class: 'ftf-seal', i18n: 'tut.stake.sealed' })); tx(fb, i18n, 'tut.stake.sealedNote'); }
+      if (v.sealed) {
+        const sealEl = h('p', { class: 'ftf-seal', i18n: 'tut.stake.sealed', attrs: { style: 'position:relative;display:inline-block' } });
+        stageEl.append(sealEl); tx(fb, i18n, 'tut.stake.sealedNote');
+        if (!sealShown) { sealShown = true; queueMicrotask(() => { seal(sealEl); ringFlash(sealEl); }); }
+      }
       else if (v.staked) tx(fb, i18n, 'tut.stake.staked');
       else fb.textContent = '';
     } else if (id === 'price') {
@@ -337,14 +361,29 @@ export function mountOnboarding(root, opts = {}) {
       primary('fc.enter', enterWorld));
   }
 
-  let view = null;
+  let view = null, lastStep = null, lastBeat = -1;
   function render() {
     clearTimers();
     if (child) { child.destroy(); child = null; }
     renderStepper();
     const st = flow.step;
+    const prev = view;
+    const beat = st === 'tutorial' && tut ? tut.index : -1;
+    const newScreen = st !== lastStep || beat !== lastBeat; // a step or beat change animates; a re-render in place does not
+    lastStep = st; lastBeat = beat;
     view = st === 'entitlement' ? viewEntitlement() : st === 'tutorial' ? viewTutorial() : st === 'customization' ? viewCustomization() : st === 'firstContact' ? viewFirstContact() : null;
-    stage.replaceChildren(...(view ? [view] : []));
+    if (newScreen && prev && prev.isConnected) {
+      // The old card drops away while the new one rises; the old one is kept out of the flow during its exit.
+      prev.style.position = 'absolute'; prev.style.inset = '0'; prev.style.pointerEvents = 'none'; prev.setAttribute('aria-hidden', 'true');
+      stage.style.position = 'relative';
+      exit(prev, { to: 'drop', duration: MOTION.duration.fast }).then(() => prev.remove());
+      stage.append(...(view ? [view] : []));
+    } else stage.replaceChildren(...(view ? [view] : []));
+    if (view && newScreen) {
+      const parts = view.classList.contains('ftf-tutcard') ? [view.querySelector('.ftf-tut-head'), view.querySelector('.ftf-ring'), ...(view.querySelector('.ftf-tut-text') ? view.querySelector('.ftf-tut-text').children : [])] : [...view.children];
+      stagger(parts.filter(Boolean), { from: 'rise', duration: MOTION.duration.slow, step: 50, cap: 300 });
+    }
+    pressAll(view || stage);
     bindAll();
     const hd = stage.querySelector('h1');
     if (hd) hd.focus({ preventScroll: false });
@@ -364,6 +403,6 @@ export function mountOnboarding(root, opts = {}) {
   return {
     el: wrap,
     flow,
-    destroy() { clearTimers(); unFlow(); if (unbind) unbind(); if (child) child.destroy(); bg.destroy(); wrap.remove(); },
+    destroy() { clearTimers(); unFlow(); if (unbind) unbind(); if (child) child.destroy(); bg.destroy(); unPress.forEach((f) => f()); wrap.remove(); },
   };
 }

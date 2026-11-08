@@ -37,6 +37,20 @@ export function signsByShell(obs) {
   return m;
 }
 
+/** A sign is still open while its implied trial can be staked on (the room's `anchorable`: now … 17). QA-007 */
+export function isOpenSign(p, obs) {
+  const t = p && p.impliedAnchor ? p.impliedAnchor.tick : null;
+  const now = obs && obs.season ? obs.season.tick : 0;
+  return t != null && t >= now && t <= 17;
+}
+
+/** Signs grouped by Shell, only those still open: a Shell glows gold only when a stake there can still pay. */
+export function openSignsByShell(obs) {
+  const m = signsByShell(obs);
+  for (const [k, list] of m) m.set(k, list.filter((p) => isOpenSign(p, obs)));
+  return m;
+}
+
 /** The sign the Guest of Shell `n` draws: one Iris reads for this Shell, else the newest visible sign. */
 export function signForShell(obs, n) {
   const own = signsByShell(obs).get(n) || [];
@@ -48,6 +62,27 @@ export function signForShell(obs, n) {
 /** The trial a reading points at: publication tick + delay + 1 (the room's assemble_logogram rule). */
 export function impliedTick(p, slots) {
   return p.publishedAt + slots[3] + 1;
+}
+
+/**
+ * The first event of every season lands on trial 3 (a Gift of 20; `docs/rules-baseline.md` §2.2), and the
+ * rules resolve a stake only when an event lands on its trial: a stake on trial 1 or 2 is never paid back.
+ */
+export const FIRST_EVENT_TICK = 3;
+
+/**
+ * Before the first reveal Iris's prior can read a sign's Delay so that it points at trial 1 or 2. While the
+ * chronicle is empty and the reading lands before trial 3, the Delay slot is set so the target reads trial 3,
+ * the only trial that can pay before the first reveal. Public policy, no hidden state (docs/tutorial.md §1.2
+ * item 10). Mutates `slots`; returns true when it changed them.
+ */
+export function prefillFirstDelay(obs, p, slots) {
+  if (!obs || !p || (obs.chronicle || []).length) return false;
+  if (impliedTick(p, slots) >= FIRST_EVENT_TICK) return false;
+  const d = FIRST_EVENT_TICK - 1 - p.publishedAt;
+  if (d < 0 || d > 3) return false;
+  slots[3] = d;
+  return true;
 }
 
 /**
@@ -129,7 +164,8 @@ export class ShellHub {
     if (!p) { this.draft = null; return; }
     if (!this.draft || this.draft.prophecy !== p.index) {
       const slots = p.reading ? p.reading.slots.map((s) => s.meaning) : [this.shell - 1, 0, 0, 0];
-      this.draft = { prophecy: p.index, slots, edited: [false, false, false, false] };
+      const prefilled = prefillFirstDelay(this.obs, p, slots);
+      this.draft = { prophecy: p.index, slots, edited: [false, false, false, false], prefilled };
     }
   }
 

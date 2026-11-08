@@ -5,7 +5,9 @@
 // DOM under the play UI root, no three.js. Only one panel is open at a time: opening the map asks
 // the host to close the others (onOpen), and the host closes the map when another panel opens.
 import { renderMsg } from './i18n.js';
-import { buildMapModel, MAP_SIZE, ROMAN, scaleLength } from './map.js';
+import { buildMapModel, MAP_SIZE, ROMAN, scaleLength, project } from './map.js';
+import { planRoute } from '../net/world-map.js';
+import { MOTION, installMotionStyles, enter, exit, stagger, drawOn } from '../ui/motion/index.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const REFRESH = 0.2;        // seconds between marker refreshes while open
@@ -14,6 +16,9 @@ const KEY_DEDUPE_MS = 400;  // N arrives twice while input.js also forwards it (
 const CSS = `
 .ftf-map-host { position: fixed; inset: 0; z-index: 5; pointer-events: auto; display: grid; place-items: center; padding: 16px; overflow: hidden; }
 .ftf-map-host[hidden] { display: none; }
+.ftf-map-place, .ftf-map-dynamic > * { transform-box: fill-box; transform-origin: center; }
+.ftf-map-dynamic { pointer-events: none; }
+.ftf-map-route { fill: none; stroke: var(--wh-gold, #e4c272); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .9; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
 .ftf-map-scrim { position: absolute; inset: 0; background: var(--wh-scrim, rgba(0,0,0,.35)); }
 .ftf-map { position: relative; width: min(max(560px, 34vw), 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 12px;
   background: var(--wh-panel-bg, rgba(16,26,27,.92)); border: 1px solid var(--wh-frame, rgba(232,214,172,.8)); border-radius: var(--wh-r-banner, 18px);
@@ -155,6 +160,7 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
   const win = doc.defaultView;
   const t = (k, a) => renderMsg(i18n, k, a);
   if (!doc.getElementById('ftf-map-style')) doc.head.append(el(doc, 'style', { id: 'ftf-map-style', text: CSS }));
+  installMotionStyles(doc);
 
   const host = el(doc, 'div', { class: 'wh-root ftf-map-host', role: 'dialog', 'aria-modal': 'true', hidden: true });
   // Tab stays inside the dialog while it is open (close button, then the places in reading order).
@@ -329,6 +335,13 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       }
       grp.addEventListener('click', () => choose(p));
       grp.addEventListener('keydown', (e) => { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); choose(p); } });
+      // Route draw-on: hovering or focusing a walkable place draws the walk from Iris along the island's graph.
+      grp.addEventListener('pointerenter', () => showRoute(p));
+      grp.addEventListener('pointerover', () => showRoute(p));   // bubbles from the hit area; some engines skip boundary events on SVG
+      grp.addEventListener('pointermove', () => showRoute(p));
+      grp.addEventListener('focus', () => showRoute(p));
+      grp.addEventListener('pointerleave', hideRoute);
+      grp.addEventListener('blur', hideRoute);
       placesG.append(grp);
     }
     s.append(placesG);
@@ -350,6 +363,39 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
       el(doc, 'header', {}, el(doc, 'div', {}, el(doc, 'div', { class: 'ftf-map-eyebrow', text: t('map.eyebrow') }), el(doc, 'h2', { text: title })), closeBtn),
       el(doc, 'div', { class: 'ftf-map-canvas' }, s),
       legend, hint);
+  }
+
+  let routeEl = null, routeFor = null;
+  function hideRoute() { if (routeEl) { routeEl.remove(); routeEl = null; } routeFor = null; }
+  function showRoute(p) {
+    if (routeEl && routeFor === p.id) return; // already drawn for this place (pointermove repeats)
+    try { showRouteNow(p); } catch (e) { console.warn('[map] route draw-on failed', e); }
+  }
+  function showRouteNow(p) {
+    hideRoute();
+    routeFor = p.id;
+    if (!model || !p.route || p.route.kind !== 'walk' || !dynamic) return;
+    const st = getState ? getState() : {};
+    const from = st.playerPos; if (!from) return;
+    const place = p.route.place || p.route.to || p.id;
+    let pts = null;
+    try { pts = planRoute([from[0], 0, from[2]], place); } catch { pts = null; }
+    if (!pts || pts.length < 1) return;
+    const all = [project(from), ...pts.map(([x, z]) => project([x, 0, z]))];
+    routeEl = svg(doc, 'polyline', { class: 'ftf-map-route', points: all.map(([u, v]) => `${u},${v}`).join(' ') });
+    dynamic.insertBefore(routeEl, dynamic.firstChild);
+    let len = 0; for (let i = 1; i < all.length; i++) len += Math.hypot(all[i][0] - all[i - 1][0], all[i][1] - all[i - 1][1]);
+    drawOn(routeEl, len);
+  }
+
+  /** The parchment unfolds: places arrive in a stagger ordered by their distance from Iris, markers pop in. */
+  function revealPlaces(m) {
+    const groups = [...panel.querySelectorAll('.ftf-map-place')];
+    const here = m.iris ? m.iris.point : [MAP_SIZE / 2, MAP_SIZE / 2];
+    const dist = (g) => { const pl = m.places.find((p) => p.id === g.getAttribute('data-place')); return pl ? Math.hypot(pl.point[0] - here[0], pl.point[1] - here[1]) : 1e9; };
+    groups.sort((a, b) => dist(a) - dist(b));
+    stagger(groups, { from: 'fade', duration: MOTION.duration.base, delay: 120, step: 25, cap: 260 });
+    if (dynamic) stagger([...dynamic.children].filter((c) => c !== routeEl), { from: 'pop', duration: MOTION.duration.slow, delay: 200, step: 40, cap: 200 });
   }
 
   /** Markers that move: the other agents, the goal, Iris. */
@@ -384,14 +430,23 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
     lastFocus = doc.activeElement;
     render();
     host.hidden = false;
+    scrim.style.opacity = ''; panel.style.opacity = '';
     doc.body.classList.add('ftf-map-open');
+    // Unfold (docs/motion.md): the scrim fades, the parchment scales up from 0.96 and rises, then the places and markers arrive.
+    enter(scrim, { from: 'fade', duration: MOTION.duration.fast });
+    enter(panel, { from: 'scale', duration: MOTION.duration.slow });
+    revealPlaces(model);
     const btn = panel.querySelector('.ftf-map-close');
     if (btn) btn.focus({ preventScroll: true });
   }
+  let closing = 0;
   function close() {
     if (!open) return;
     open = false;
-    host.hidden = true;
+    hideRoute();
+    const token = ++closing;
+    Promise.all([exit(panel, { to: 'scale', duration: MOTION.duration.fast }), exit(scrim, { to: 'fade', duration: MOTION.duration.fast })])
+      .then(() => { if (token === closing && !open) { host.hidden = true; panel.style.opacity = ''; scrim.style.opacity = ''; } });
     doc.body.classList.remove('ftf-map-open');
     if (lastFocus && lastFocus.focus && doc.contains(lastFocus)) { try { lastFocus.focus({ preventScroll: true }); } catch { /* fine */ } }
     lastFocus = null;
