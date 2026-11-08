@@ -14,6 +14,26 @@ export function ensureA11yStyles(doc = globalThis.document) {
   doc.head.appendChild(link);
 }
 
+/** The one fixed host for the recap sheet and the Simple-mode card (a11y.css .ftf-a11y-host), created once. */
+export function ensureA11yHost(root) {
+  const doc = root.ownerDocument || globalThis.document;
+  let host = root.querySelector('.ftf-a11y-host');
+  if (!host) { host = doc.createElement('div'); host.className = 'ftf-a11y-host'; root.appendChild(host); }
+  ensureA11yStyles(doc);
+  return host;
+}
+
+/**
+ * The single reduced-motion switch for every module: prefs.js mirrors the resolved preference onto
+ * <html data-motion="reduce|full">; CSS reads `html[data-motion="reduce"]`, JS reads this.
+ */
+export function reducedMotion(doc = globalThis.document) {
+  try {
+    if (doc && doc.documentElement && doc.documentElement.dataset.motion) return doc.documentElement.dataset.motion === 'reduce';
+    return !!(globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  } catch { return false; }
+}
+
 let fontLoading = null;
 /** Loads Atkinson Hyperlegible (OFL, bundled) the first time the readable font is chosen. */
 export function loadReadableFont() {

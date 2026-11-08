@@ -16,6 +16,18 @@
   --a11y-key: #e2b578;
   --a11y-info: #b3abcc;
   --a11y-hold-ms: 700ms;
+  /* motion tokens (owner 08.11: "everything animated, expensive"): eased, 120–400 ms; Task S's shared
+     tokens in game/src/ui/motion/ may redefine these names; html[data-motion="reduce"] is the one switch */
+  --ftf-dur-fast: 120ms;
+  --ftf-dur: 240ms;
+  --ftf-dur-slow: 400ms;
+  --ftf-ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ftf-ease-in-out: cubic-bezier(.65, 0, .35, 1);
+}
+/* The one reduced-motion switch, page wide (styles.css and tokens.css already cover .ftf-root and .wh-root). */
+html[data-motion="reduce"] .ftf-a11y-host *, html[data-motion="reduce"] .hub-host *, html[data-motion="reduce"] .pl-goal, html[data-motion="reduce"] .pl-panel,
+html[data-motion="reduce"] .pl-context, html[data-motion="reduce"] .ftf-map-host *, html[data-motion="reduce"] #prompt, html[data-motion="reduce"] #toast {
+  animation: none !important; transition: none !important;
 }
 
 /* ---------- interface size: every panel outside the world HUD zooms by the same factor ---------- */
@@ -119,12 +131,22 @@ html[data-palette="safe"] .wh-root .wh-sign__verified--fail { border-color: #ff8
 html[data-motion="reduce"] .a11y-hold::before { transition: none; }
 
 /* ---------- Simple mode and the recap sheet: own host, world-HUD tokens, large targets ---------- */
+@keyframes a11y-rise { from { opacity: 0; transform: translate(var(--a11y-tx, 0), calc(var(--a11y-ty, 0) + 14px)) scale(.985); } to { opacity: 1; transform: translate(var(--a11y-tx, 0), var(--a11y-ty, 0)) scale(1); } }
+@keyframes a11y-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes a11y-pulse { 0%, 100% { box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 0 0 rgba(228, 194, 114, .55); } 60% { box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 0 12px rgba(228, 194, 114, 0); } }
 .ftf-a11y-host { position: fixed; inset: 0; pointer-events: none; z-index: 4; font-family: var(--wh-font-body, "Source Sans 3", "Segoe UI", system-ui, sans-serif); }
 .ftf-a11y-host .a11y-box {
   position: absolute; pointer-events: auto; color: var(--wh-text, #faf7ee);
   background: var(--wh-panel-bg, rgba(16, 26, 27, .94)); border: 1px solid var(--wh-frame, rgba(232, 214, 172, .8));
   border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .4); backdrop-filter: blur(var(--wh-panel-blur, 10px));
+  animation: a11y-rise var(--ftf-dur) var(--ftf-ease-out) both;
 }
+.ftf-a11y-host button { transition: border-color var(--ftf-dur-fast) var(--ftf-ease-out), background-color var(--ftf-dur-fast) var(--ftf-ease-out), transform var(--ftf-dur-fast) var(--ftf-ease-out); }
+.ftf-a11y-host button:hover { transform: translateY(-1px); }
+.ftf-a11y-host button:active { transform: translateY(0) scale(.985); }
+.a11y-scrim { animation: a11y-fade var(--ftf-dur) var(--ftf-ease-out) both; }
+.a11y-recap-btn:hover { transform: scale(1.06); }
+.a11y-recap-btn[data-pulse="true"] { animation: a11y-pulse 1.8s var(--ftf-ease-in-out) 2; }
 .ftf-a11y-host .a11y-eyebrow { font: 600 12px/1 var(--wh-font-body, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--wh-gold, #e4c272); }
 .ftf-a11y-host h3 { margin: 6px 0 0; font: 400 clamp(20px, 1.3vw + 12px, 24px)/1.25 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); }
 .ftf-a11y-host p { margin: 8px 0 0; font: var(--wh-font-body-weight, 500) max(var(--ftf-body-min), 16px)/1.45 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-2, #e6e3d7); }
@@ -142,7 +164,7 @@ html[data-motion="reduce"] .a11y-hold::before { transition: none; }
 .ftf-a11y-host kbd { display: inline-block; min-width: 1.4em; margin-right: 8px; padding: 2px 6px; font: 600 13px/1 var(--wh-font-body, system-ui, sans-serif); text-align: center; border: 1px solid var(--wh-kbd-border, rgba(222, 210, 180, .85)); border-radius: 4px; background: var(--wh-kbd-bg, rgba(42, 38, 30, .92)); color: var(--wh-text-kbd, #fef4e6); }
 
 /* Simple mode: Iris's one proposal per trial. Desktop: bottom centre; the hub dock and cards yield to it. */
-.a11y-simple { left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 16px 20px 18px; }
+.a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 16px 20px 18px; }
 .a11y-simple .a11y-pause { position: absolute; right: 14px; top: 12px; min-height: 40px; min-width: 40px; padding: 6px 12px; font-size: 14px; }
 .a11y-simple .a11y-sign { display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; margin-top: 8px; }
 .a11y-simple .a11y-sign canvas { border-radius: 50%; background: #0f1a1b; }
@@ -158,13 +180,13 @@ body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: no
   background: var(--wh-btn-bg, rgba(10, 22, 23, .82)) !important; border: 1px solid var(--wh-frame, rgba(232, 214, 172, .8)) !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
 }
-.a11y-recap { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 32px)); padding: 18px 22px 20px; }
+.a11y-recap { --a11y-tx: -50%; --a11y-ty: -50%; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 32px)); padding: 18px 22px 20px; }
 .a11y-recap p.a11y-where { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-text, #faf7ee); }
 .a11y-recap p.a11y-next { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-gold-text, #f6df9b); }
 .a11y-scrim { position: absolute; inset: 0; pointer-events: auto; background: var(--wh-scrim, rgba(0, 0, 0, .35)); }
 
 @media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
-  .a11y-simple { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; padding: 12px 14px 14px; }
+  .a11y-simple { --a11y-tx: 0px; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; padding: 12px 14px 14px; }
   .a11y-simple .a11y-sign { grid-template-columns: 56px 1fr; } .a11y-simple .a11y-sign canvas { width: 56px; height: 56px; }
   .ftf-a11y-host h3 { font-size: 19px; }
   .a11y-recap-btn { left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
