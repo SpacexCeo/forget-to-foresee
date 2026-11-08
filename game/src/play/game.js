@@ -101,6 +101,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     },
     // one panel at a time: the map closes the play panels and the HUD's Signs before it opens
     onOpen: () => { ui.close(); if (worldHud && worldHud.hud) worldHud.hud.signs.close(); },
+    reducedMotion: () => lookdev.reducedMotion,
   });
   // Greybox labels are a dev aid: ?dev=1 or the F3 dev HUD shows them, play never does.
   const devHudEl = uiRoot.ownerDocument.getElementById('hud');

@@ -95,7 +95,7 @@ body.ftf-map-open .hub-dock, body.ftf-map-open .hub-read, body.ftf-map-open .pl-
   .ftf-map-hint { font-size: 11.5px; }
 }
 @media (prefers-reduced-motion: reduce) { .ftf-map-goal { animation: none; } .ftf-map-hit { transition: none; } }
-html[data-motion="reduce"] .ftf-map-goal { animation: none; }
+.ftf-map-host--still .ftf-map-goal { animation: none; } .ftf-map-host--still .ftf-map-hit { transition: none; }
 html[data-tier="low"] .ftf-map, html[data-fx="low"] .ftf-map { -webkit-backdrop-filter: none; backdrop-filter: none; }
 `;
 
@@ -145,8 +145,9 @@ const isTyping = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA
  * @param {(route: {kind: 'walk', place: string} | {kind: 'fly', shell: number}, place: object) => void} o.onRoute
  * @param {() => void} [o.onOpen] called before the map shows, so the host can close its other panels
  * @param {boolean} [o.phoneButton=true] the round tap target on coarse pointers (Task F may replace it with the hotbar)
+ * @param {() => boolean} [o.reducedMotion] the look-dev's reduced-motion flag (?motion=reduce or the setting); the system media query is honoured anyway
  */
-export function createMapPanel({ root, ctx, session, hub = false, getState, onRoute, onOpen = () => {}, phoneButton = true }) {
+export function createMapPanel({ root, ctx, session, hub = false, getState, onRoute, onOpen = () => {}, phoneButton = true, reducedMotion = () => false }) {
   const { i18n } = ctx;
   const doc = root.ownerDocument || document;
   const win = doc.defaultView;
@@ -212,6 +213,7 @@ export function createMapPanel({ root, ctx, session, hub = false, getState, onRo
     const g = m.geometry;
     const title = t('map.title');
     host.setAttribute('aria-label', title);
+    host.classList.toggle('ftf-map-host--still', !!reducedMotion());
     // no role="img" here: the places inside are buttons and must stay in the accessibility tree
     const s = svg(doc, 'svg', { viewBox: `0 0 ${MAP_SIZE} ${MAP_SIZE}`, 'aria-label': title });
     const c = MAP_SIZE / 2;
