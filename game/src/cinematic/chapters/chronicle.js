@@ -16,7 +16,8 @@ const CSS = `
 .ch-fab:focus-visible { outline: 3px solid var(--wh-gold, #e4c272); outline-offset: 2px; }
 .ch-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 body.ftf-map-open .ch-fab { display: none; }
-@media (max-width: 700px) { .ch-fab.wh-root { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); } }
+/* phones (QA-035): the fab row above the dialogue strip, right of the map button (8 + 48 + 8 px), clear of the tiles */
+@media (max-width: 700px) { .ch-fab.wh-root { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); left: calc(64px + env(safe-area-inset-left, 0px)); } }
 .ch-menu.wh-root { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: var(--wh-scrim, rgba(0,0,0,.35)); pointer-events: auto; }
 .ch-menu.wh-root[hidden] { display: none; }
 .ch-panel { width: min(520px, calc(100vw - 24px)); max-height: calc(100vh - 32px); overflow: auto; padding: 16px 18px 18px; border-radius: 12px; color: var(--wh-text, #faf7ee);
