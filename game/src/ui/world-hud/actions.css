@@ -54,6 +54,8 @@
   align-items: flex-end;
   white-space: nowrap;
 }
+/* set by actions.js when a long translation would run into the hotkey bar: one row up */
+.wh-root .wh-dialogue.wh-dialogue--lifted { bottom: calc(92 * var(--wh-px)); }
 .wh-root .wh-dialogue .wh-dialogue__line {
   position: relative;
   display: flex;

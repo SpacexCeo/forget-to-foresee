@@ -80,6 +80,27 @@ export function mountActions(root, o = {}) {
       if (model.hotbar && model.hotbar.length) el.appendChild(renderHotbar());
     }
     applyI18n(el, i18n);
+    watchFit();
+  }
+
+  // ---------- desktop: keep the dialogue clear of the hotkey bar ----------
+  // Long translations (RU) widen both; when they would touch, the dialogue moves up one row.
+  let ro = null;
+  function fitDialogue() {
+    const d = el.querySelector('.wh-dialogue');
+    const bar = el.querySelector('.wh-hotbar');
+    if (!d || !bar || typeof d.getBoundingClientRect !== 'function') return;
+    d.classList.remove('wh-dialogue--lifted');
+    const a = d.getBoundingClientRect();
+    const b = bar.getBoundingClientRect();
+    d.classList.toggle('wh-dialogue--lifted', a.right > b.left - 8 && a.left < b.right && a.bottom > b.top && a.top < b.bottom);
+  }
+  function watchFit() {
+    if (ro) ro.disconnect();
+    ro = null;
+    if (layout !== 'desktop' || typeof ResizeObserver !== 'function') return;
+    ro = new ResizeObserver(() => fitDialogue());
+    for (const n of el.querySelectorAll('.wh-dialogue, .wh-hotbar')) ro.observe(n);
   }
 
   // ---------- prompt (§6.7 / §7.5) ----------
@@ -217,6 +238,7 @@ export function mountActions(root, o = {}) {
   }
   const win = typeof window !== 'undefined' ? window : null;
   if (win) win.addEventListener('keydown', onKey);
+  if (win) win.addEventListener('resize', fitDialogue);
 
   render();
 
@@ -245,6 +267,9 @@ export function mountActions(root, o = {}) {
     },
     destroy() {
       if (win) win.removeEventListener('keydown', onKey);
+      if (win) win.removeEventListener('resize', fitDialogue);
+      if (ro) ro.disconnect();
+      ro = null;
       el.textContent = '';
       el.remove();
       refs = {};
