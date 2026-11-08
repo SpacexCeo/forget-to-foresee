@@ -87,6 +87,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
   const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle() } }) : null;
+  // living agents (Task N): meeting and contribution beats reach the dialogue strip when they actually happen
+  agents.onSay = (l) => { if (worldHud) worldHud.say(l); };
   let movedReported = 0;
   const hubUi = hub ? createHubUi({ root: uiRoot, ctx, hub, onFly: fly, onRejected: (reason) => hud.showRejection(reason) }) : null;
   // The island map (play/map-ui.js, key N): place names live here, not on labels in the world (owner 08.11).
@@ -136,6 +138,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (ev.type === 'fx' && d.fx && d.fx.type === 'ask') shell.answer(!!d.fx.yes, state.now);
     if (ev.type === 'world.dialogue') agents.setTalking(d.clan, 9, state.now);
     agents.react(reactionsFor(ev, state.now));
+    agents.event(ev, state.now); // the director hears public events before the next observation (reveal look-up)
     hooks.event(ev);
   });
   session.on('zone', (res) => {
