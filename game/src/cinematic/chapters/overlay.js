@@ -4,7 +4,23 @@
 // are the same under the capture clock, under reduced motion and on a slow software renderer. Typography
 // follows the trailer's overlay (src/cinematic/overlay.js): Cormorant Garamond titles, Source Sans 3
 // body, the world HUD gold. All text arrives rendered: no i18n here.
-import { envelope } from '../ease.js';
+import { MOTION, ease, staggerDelay } from '../../ui/motion/index.js';
+
+/**
+ * Motion of one overlay element on the film clock (seconds): visible from `from` to `to`, entering over `enter`
+ * ms with a rise and the expo-out ease, leaving over `exit` ms with the ease-in; `delay` staggers siblings.
+ * Tokens from the motion design system (src/ui/motion, docs/motion.md). Reduced motion: fades of
+ * MOTION.duration.reduced, no rise. Pure; returns {opacity, y} (y in px, downward).
+ */
+export function filmMotion(t, from, to, { reduced = false, enter = MOTION.duration.base, exit = MOTION.duration.fast, rise = MOTION.distance.rise, delay = 0 } = {}) {
+  const s = from + delay / 1000;
+  if (!(t >= s) || t >= to) return { opacity: 0, y: reduced ? 0 : rise };
+  const ein = (reduced ? MOTION.duration.reduced : enter) / 1000, eout = (reduced ? MOTION.duration.reduced : exit) / 1000;
+  const a = ein > 0 ? Math.min(1, (t - s) / ein) : 1;
+  const b = eout > 0 ? Math.min(1, (to - t) / eout) : 1;
+  const inE = ease.out(a), outE = 1 - ease.in(1 - b);
+  return { opacity: Math.min(inE, outE), y: reduced ? 0 : (1 - inE) * rise };
+}
 
 const CSS = `
 #ch-film { position: fixed; inset: 0; z-index: 40; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
@@ -15,7 +31,8 @@ const CSS = `
 #ch-film .ch-bar.top { top: 0; } #ch-film .ch-bar.bottom { bottom: 0; }
 #ch-film .ch-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 50%, rgba(5,8,9,.5) 100%); opacity: .8; }
 #ch-film .ch-black { position: absolute; inset: 0; background: #06090a; opacity: 0; }
-#ch-film .ch-card { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; opacity: 0; padding: 6vh 8vw; }
+#ch-film .ch-card { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 6vh 8vw; }
+#ch-film .ch-card > div > * { opacity: 0; will-change: transform, opacity; }
 #ch-film .ch-eyebrow { font: 600 clamp(11px, 1.05vw, 20px)/1 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .32em; text-transform: uppercase; color: #e4c272; margin-bottom: 2.2vh; }
 #ch-film .ch-title { font-weight: 300; font-size: clamp(30px, 4.6vw, 92px); line-height: 1.12; letter-spacing: .22em; text-transform: uppercase; text-shadow: 0 2px 28px rgba(0,0,0,.6); margin: 0; }
 #ch-film .ch-rule { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 3vh auto 0; width: min(42vw, 560px); }
@@ -26,7 +43,8 @@ const CSS = `
   font: 500 clamp(17px, 1.55vw, 27px)/1.4 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; color: #f6f1e6; text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 18px rgba(0,0,0,.8); }
 #ch-film .ch-sub span { display: inline; background: rgba(5, 8, 9, .62); padding: .18em .55em; border-radius: 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 #ch-film .ch-dots { position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--ch-bar, 0px) + 2vh); display: flex; gap: 8px; opacity: .9; }
-#ch-film .ch-dots i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid rgba(228,194,114,.7); background: transparent; }
+#ch-film .ch-dots i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid rgba(228,194,114,.7); background: transparent; transition: background-color var(--mo-fast, 120ms) var(--mo-ease-out, ease-out), box-shadow var(--mo-fast, 120ms) var(--mo-ease-out, ease-out), transform var(--mo-slow, 320ms) var(--mo-ease-out, ease-out); }
+#ch-film .ch-dots i.now { transform: scale(var(--mo-pop, 1.04)); }
 #ch-film .ch-dots i.on { background: #e4c272; box-shadow: 0 0 10px rgba(228,194,114,.6); }
 #ch-film .ch-skip { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); top: calc(var(--ch-bar, 0px) + 14px); display: flex; align-items: center; gap: 10px; opacity: 0;
   font: 600 clamp(12px, 1vw, 16px)/1 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #e6dfd3; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
@@ -94,7 +112,8 @@ export function createFilmOverlay(doc = document, { reducedMotion = () => false 
       cardEyebrow.textContent = ce; cardText.textContent = ct;
       dots.replaceChildren(); dotEls = [];
       for (let i = 0; i < shots; i++) { const d = h(doc, 'i'); dots.append(d); dotEls.push(d); }
-      subSpan.textContent = ''; sub.style.opacity = '0'; title.style.opacity = '0'; card.style.opacity = '0'; black.style.opacity = '0';
+      subSpan.textContent = ''; sub.style.opacity = '0'; black.style.opacity = '0';
+      for (const el of [eyebrow, titleText, rule, cardEyebrow, cardText]) el.style.opacity = '0';
       skip.style.opacity = '0'; hint.style.opacity = '0'; root.style.setProperty('--ch-hold', '0');
       hintUntil = -1; skipUntil = -1;
       layout();
@@ -111,20 +130,28 @@ export function createFilmOverlay(doc = document, { reducedMotion = () => false 
     layout,
     /**
      * Applies the film clock. `tl` = {t, titleEnd, shotIndex, shotStart, shotEnd, cardStart, end, hold}.
-     * Fades are time-based envelopes; reduced motion shortens them to a few frames.
+     * Every element's opacity and rise come from filmMotion (the motion tokens) at the film time.
      */
     update(tl) {
-      const fade = reducedMotion() ? 0.12 : 0.6;
+      const reduced = reducedMotion();
       const { t } = tl;
-      title.style.opacity = envelope(t, 0.1, tl.titleEnd, fade, fade).toFixed(3);
-      const subOn = tl.shotIndex >= 0 && t >= tl.shotStart + (tl.shotIndex === 0 ? tl.titleEnd * 0.55 : 0.15) && t < tl.cardStart;
-      sub.style.opacity = subOn ? envelope(t, tl.shotIndex === 0 ? tl.titleEnd * 0.55 : tl.shotStart + 0.15, Math.min(tl.shotEnd, tl.cardStart), fade * 0.6, fade * 0.5).toFixed(3) : '0';
-      card.style.opacity = envelope(t, tl.cardStart, tl.end + 1, fade, 0.01).toFixed(3);
-      black.style.opacity = envelope(t, tl.end - 0.35, tl.end + 5, 0.35, 0.01).toFixed(3);
-      dotEls.forEach((d, i) => d.classList.toggle('on', i <= tl.shotIndex));
+      const D = MOTION.duration;
+      const put = (el, m) => { el.style.opacity = m.opacity.toFixed(3); el.style.transform = m.y ? `translate3d(0, ${m.y.toFixed(2)}px, 0)` : 'none'; };
+      // chapter title: eyebrow, title and rule rise in a stagger over a screen duration, leave together
+      [eyebrow, titleText, rule].forEach((el, i) => put(el, filmMotion(t, 0.1, tl.titleEnd, { reduced, enter: D.screen, exit: D.slow, delay: staggerDelay(i) })));
+      // the narrator line: in with the shot (after the title on the first), out just before the next shot or the card
+      const subFrom = tl.shotIndex === 0 ? tl.titleEnd * 0.55 : tl.shotStart + 0.15;
+      const subTo = Math.min(tl.shotEnd, tl.cardStart);
+      put(sub, tl.shotIndex >= 0 ? filmMotion(t, subFrom, subTo, { reduced, enter: D.base, exit: D.fast }) : { opacity: 0, y: 0 });
+      // the final card: eyebrow then sentence, held until the fade to black
+      [cardEyebrow, cardText].forEach((el, i) => put(el, filmMotion(t, tl.cardStart, tl.end + 1, { reduced, enter: D.screen, exit: D.fast, delay: staggerDelay(i) })));
+      // the fade to black at the end
+      black.style.opacity = filmMotion(t, tl.end - D.screen / 1000, tl.end + 5, { reduced, enter: D.screen, exit: 0, rise: 0 }).opacity.toFixed(3);
+      dotEls.forEach((d, i) => { d.classList.toggle('on', i <= tl.shotIndex); d.classList.toggle('now', i === tl.shotIndex); });
       root.style.setProperty('--ch-hold', String(Math.min(1, Math.max(0, tl.hold || 0))));
-      skip.style.opacity = tl.hold > 0 || t < skipUntil ? '1' : '0';
-      hint.style.opacity = t < hintUntil ? '1' : '0';
+      // the skip ring while a key is held (or just released); the "hold to skip" hint after a short press
+      put(skip, tl.hold > 0 || t < skipUntil ? filmMotion(t, -1e9, 1e9, { reduced, rise: MOTION.distance.nudge }) : { opacity: 0, y: 0 });
+      put(hint, filmMotion(t, hintUntil - 1.8, hintUntil, { reduced, enter: D.fast, exit: D.fast, rise: MOTION.distance.nudge }));
     },
     destroy() { root.remove(); doc.body.classList.remove('ch-film-on'); },
   };

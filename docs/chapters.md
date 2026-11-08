@@ -47,6 +47,14 @@ Each film is five shots of 6 s, a 2.6 s chapter title over the first shot and a 
 - **Phones and the low tier: the same films, cheaper shots.** The `cheap` profile keeps every line but holds the
   camera still (J's slow breath, 12 cm) and shows the Shell from outside instead of visiting the interior.
   Reduced motion freezes the still cameras completely and shortens the fades to a few frames.
+- **Motion from the motion design system** (`game/src/ui/motion`, Task S, `docs/motion.md`): the title's eyebrow,
+  title and rule rise 12 px in a 40 ms stagger over the screen duration (480 ms) and leave over 320 ms; each
+  subtitle rises in over 200 ms and leaves in 120 ms; the final card's eyebrow and sentence are staggered; the
+  fade to black takes 480 ms; the progress dot of the current shot pops. All of it is evaluated on the film
+  clock (`filmMotion` in `overlay.js`), so the frames stay deterministic under the capture clock; reduced motion
+  turns every movement into the 160 ms cross-fade. The Chronicle opens with the panel scaling in, its rows
+  rising in a stagger, its buttons lifting and pressing (the module's own helpers). `ui/motion/index.js` on
+  this branch is Task S's file from `claude/motion`, unchanged (a full merge conflicts in the shared docs).
 - **Music and sound from the game's own assets.** One cue per film from `game/public/assets/audio`: the Guest
   call for Arrival, the gift chime for a verified reveal, the memory dissolve when a memory was forgotten, the
   storm crack for the crisis, the vote stone, and the outcome stingers (`sting_weapon`, `sting_survived`,

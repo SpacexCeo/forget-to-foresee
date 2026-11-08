@@ -96,3 +96,21 @@ test('letterbox: cinema bars on landscape screens, fixed bands in portrait', () 
   assert.equal(letterboxFraction(390, 844), 0.085);
   assert.equal(letterboxFraction(0, 0), 0);
 });
+
+test('overlay motion follows the motion design system tokens; reduced motion is a short cross-fade without rise', async () => {
+  const { filmMotion } = await import('../../src/cinematic/chapters/overlay.js');
+  const { MOTION } = await import('../../src/ui/motion/index.js');
+  const o = { enter: MOTION.duration.base, exit: MOTION.duration.fast };
+  assert.deepEqual(filmMotion(0.9, 1, 5, o), { opacity: 0, y: MOTION.distance.rise }, 'hidden before its time, waiting 12 px below');
+  const early = filmMotion(1 + 0.05, 1, 5, o);
+  assert.ok(early.opacity > 0.4 && early.opacity < 1 && early.y > 0 && early.y < MOTION.distance.rise, 'rising in with the expo-out ease');
+  assert.deepEqual(filmMotion(1 + MOTION.duration.base / 1000, 1, 5, o), { opacity: 1, y: 0 }, 'at rest after the base duration');
+  assert.deepEqual(filmMotion(3, 1, 5, o), { opacity: 1, y: 0 });
+  const leaving = filmMotion(5 - 0.06, 1, 5, o);
+  assert.ok(leaving.opacity > 0 && leaving.opacity < 1 && leaving.y === 0, 'exits fade in place over the fast duration');
+  assert.equal(filmMotion(5, 1, 5, o).opacity, 0);
+  assert.deepEqual(filmMotion(1.02, 1, 5, { ...o, delay: 40 }), { opacity: 0, y: MOTION.distance.rise }, 'a staggered sibling waits its 40 ms');
+  const r = filmMotion(1 + MOTION.duration.reduced / 2000, 1, 5, { ...o, reduced: true });
+  assert.ok(r.opacity > 0.5 && r.opacity < 1 && r.y === 0, 'reduced motion: a 160 ms fade, no movement');
+  assert.deepEqual(filmMotion(1 + MOTION.duration.reduced / 1000, 1, 5, { ...o, reduced: true }), { opacity: 1, y: 0 });
+});

@@ -72,7 +72,7 @@ async function capture(browser, url, id, width, height, which, tag) {
   for (const [name, t] of list) {
     await page.evaluate((x) => window.__ftf.play.chapters.player.seek(x), t);
     await frames(page, 2);
-    const loaded = await settle(page, out.length ? 40000 : 90000); // the first shot waits for the big models to decode
+    const loaded = await settle(page, out.length ? 20000 : 60000); // the first shot waits longer for the big models to decode
     await frames(page, 2);
     const sub = await page.evaluate(() => ({ sub: document.querySelector('#ch-film .ch-sub').textContent, card: document.querySelector('#ch-film .ch-matters').textContent, shot: window.__ftf.play.chapters.player.shotIndex }));
     const file = `${id}-${name}${tag ? '-' + tag : ''}.jpg`;

@@ -20,7 +20,10 @@
   `chronicle.js` (replay menu, C and a 48 px button), `shot-camera.js` (shot data → J's camera spec; runtime
   cameras for Iris and the interior), `index.js` (glue: safe moment, panels closed, hub stop/resume, narration
   via a guarded import of Task Q's `play/narration.js`, `?films=off|full|cheap`, `?film=<id>`).
-  `camera.js` and `ease.js` are J's files copied unchanged from `claude/trailer` so this branch builds alone.
+  `camera.js` and `ease.js` are J's files copied unchanged from `claude/trailer` so this branch builds alone; the
+  overlay's and the Chronicle's motion run on Task S's motion design system (`game/src/ui/motion/index.js`, copied
+  unchanged from `claude/motion` on the lead's request: titles, subtitles, card, dots, skip ring and the menu use
+  its durations, easings, distances and stagger; `filmMotion` evaluates them on the film clock).
 - **Hook in `game/src/play/game.js`**: one import, one `attachChapters(...)` call, `chapters.update(dt)` after the
   map update, two lines in `handleKey`, `chapters` on the returned play API. Nothing else in the play layer changed.
 - **Tests**: `tests/client/chapters.test.mjs` (11) and `tests/client/chapters-player.test.mjs` (5), both in `npm test`

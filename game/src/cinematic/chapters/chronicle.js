@@ -1,7 +1,10 @@
 // The Chronicle: a small menu listing the season's chapters with their state (seen / now / skipped / not
 // yet) and a Replay button for each film that can be watched. Opens on C (listened for on the window
 // until `KeyC` is forwarded by the input layer, docs/collab-requests.md 11) and from a round button at
-// the bottom left (large enough for touch). Styled with the world HUD tokens so it reads as part of the HUD.
+// the bottom left (large enough for touch). Styled with the world HUD tokens so it reads as part of the HUD;
+// opens and closes with the motion design system (src/ui/motion: the panel scales in, the rows rise in a
+// stagger, buttons lift and press; reduced motion cross-fades).
+import { installMotionStyles, enter, exit, stagger, MOTION } from '../../ui/motion/index.js';
 const CSS = `
 .ch-fab { position: fixed; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); width: 48px; height: 48px; border-radius: 50%; z-index: 4;
   display: grid; place-items: center; cursor: pointer; color: var(--wh-gold, #e4c272); background: var(--wh-btn-bg, rgba(10,22,23,.78)); border: 1px solid var(--wh-frame-soft, rgba(196,186,156,.45));
@@ -62,7 +65,8 @@ export function createChronicleMenu({ root, ctx, rows, onReplay, titleOf, canOpe
   const { i18n } = ctx;
   const t = (k, a) => i18n.t(k, a);
   if (!doc.getElementById('ch-chronicle-style')) doc.head.append(el(doc, 'style', { id: 'ch-chronicle-style', text: CSS }));
-  const fab = el(doc, 'button', { type: 'button', class: 'ch-fab wh-root', 'aria-label': t('chapter.chronicle.open'), title: t('chapter.chronicle.open'), html: ICON, onclick: () => api.toggle() });
+  installMotionStyles(doc);
+  const fab = el(doc, 'button', { type: 'button', class: 'ch-fab wh-root mo-lift', 'aria-label': t('chapter.chronicle.open'), title: t('chapter.chronicle.open'), html: ICON, onclick: () => api.toggle() });
   const menu = el(doc, 'div', { class: 'ch-menu wh-root', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': t('chapter.chronicle.title'), onclick: (e) => { if (e.target === menu) api.close(); } });
   root.append(fab, menu);
   let open = false;
@@ -75,14 +79,14 @@ export function createChronicleMenu({ root, ctx, rows, onReplay, titleOf, canOpe
       return el(doc, 'li', { class: r.state, 'data-chapter': r.id },
         el(doc, 'span', { class: 'ch-num', text: r.numeral }),
         el(doc, 'div', {}, el(doc, 'div', { class: 'ch-name', text: title ? t(title.key, title.args || {}) : '' }), el(doc, 'span', { class: 'ch-state', text: t('chapter.chronicle.' + r.state) })),
-        r.watchable ? el(doc, 'button', { type: 'button', class: r.state === 'now' || r.state === 'missed' ? 'ch-primary' : null, 'data-replay': r.id, onclick: () => { api.close(); onReplay(r.id); } }, t(r.state === 'seen' ? 'chapter.chronicle.replay' : 'chapter.chronicle.watch')) : el(doc, 'span'));
+        r.watchable ? el(doc, 'button', { type: 'button', class: 'mo-lift' + (r.state === 'now' || r.state === 'missed' ? ' ch-primary' : ''), 'data-replay': r.id, onclick: () => { api.close(); onReplay(r.id); } }, t(r.state === 'seen' ? 'chapter.chronicle.replay' : 'chapter.chronicle.watch')) : el(doc, 'span'));
     });
     menu.replaceChildren(el(doc, 'section', { class: 'ch-panel' },
       el(doc, 'div', { class: 'ch-eyebrow', text: t('chapter.ui.film', { seconds: filmSeconds }) }),
       el(doc, 'h2', { text: t('chapter.chronicle.title') }),
       el(doc, 'p', { text: t('chapter.chronicle.hint') }),
       el(doc, 'ul', { class: 'ch-rows' }, list),
-      el(doc, 'div', { class: 'ch-foot' }, el(doc, 'button', { type: 'button', onclick: () => api.close() }, el(doc, 'kbd', { text: 'Esc' }), t('chapter.chronicle.close')))));
+      el(doc, 'div', { class: 'ch-foot' }, el(doc, 'button', { type: 'button', class: 'mo-lift', onclick: () => api.close() }, el(doc, 'kbd', { text: 'Esc' }), t('chapter.chronicle.close')))));
   }
 
   function onWindowKey(e) {
@@ -96,8 +100,20 @@ export function createChronicleMenu({ root, ctx, rows, onReplay, titleOf, canOpe
 
   const api = {
     get isOpen() { return open; },
-    open() { if (open || !canOpen()) return; open = true; menu.hidden = false; render(); const b = menu.querySelector('button'); if (b) b.focus(); },
-    close() { if (!open) return; open = false; menu.hidden = true; menu.replaceChildren(); },
+    open() {
+      if (open || !canOpen()) return;
+      open = true; menu.hidden = false; render();
+      const panel = menu.querySelector('.ch-panel');
+      if (panel) { enter(panel, { from: 'scale', duration: MOTION.duration.slow }); stagger(menu.querySelectorAll('.ch-rows li'), { from: 'rise', delay: 60 }); }
+      const b = menu.querySelector('button'); if (b) b.focus();
+    },
+    close() {
+      if (!open) return;
+      open = false;
+      const panel = menu.querySelector('.ch-panel');
+      const done = () => { if (!open) { menu.hidden = true; menu.replaceChildren(); } };
+      if (panel) exit(panel, { to: 'scale' }).then(done); else done();
+    },
     toggle() { if (open) api.close(); else api.open(); },
     /** C toggles, Escape closes. Returns true when the key was used. */
     handleKey(code) {
