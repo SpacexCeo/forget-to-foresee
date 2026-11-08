@@ -63,9 +63,16 @@ export function openLayerPipe(out, { fps = 60, crf = 6, preset = 'faster' } = {}
   const a = p.stdio[3], b = p.stdio[4];
   a.on('error', (e) => { failed = e; }); b.on('error', (e) => { failed = e; });
   const done = new Promise((resolve, reject) => { p.on('close', (code) => (code === 0 ? resolve() : reject(new Error('ffmpeg intermediate failed (' + code + '): ' + err)))); });
-  const push = (stream, buf) => new Promise((resolve, reject) => { if (failed) return reject(failed); if (!stream.write(buf)) stream.once('drain', resolve); else resolve(); });
+  // ffmpeg probes input 0 (up to analyzeduration, dozens of frames) before it opens input 1, so waiting for
+  // pipe 4 to drain after every frame would deadlock. Frames are queued in Node and only a large backlog waits.
+  const drain = (stream) => new Promise((resolve, reject) => { if (failed) return reject(failed); stream.once('drain', resolve); });
   return {
-    write(canvasPng, uiPng) { return Promise.all([push(a, canvasPng), push(b, uiPng)]); },
+    async write(canvasPng, uiPng) {
+      if (failed) throw failed;
+      a.write(canvasPng); b.write(uiPng);
+      while (!failed && a.writableLength + b.writableLength > 256 * 1024 * 1024) await drain(a.writableLength >= b.writableLength ? a : b);
+      if (failed) throw failed;
+    },
     close() { a.end(); b.end(); return done; },
   };
 }
