@@ -1,0 +1,303 @@
+/* World HUD — P2 Signs & Visions (docs/ui-world-hud.md §6.4, §6.5, §7.7, §7.8).
+   Desktop numbers are u (calc(N * var(--wh-px))), mobile numbers are CSS px at 390 wide. */
+
+.wh-root .wh-signs-root {
+  /* local tokens (sampled from ref/desktop.png; candidates for tokens.css) */
+  --wh-sg-frame-left: rgba(226, 214, 186, .55);
+  --wh-sg-frame-right: rgba(196, 186, 156, .14);
+  --wh-sg-card-edge: linear-gradient(90deg, rgba(236, 222, 186, .72) 0%, rgba(214, 202, 168, .42) 22%, rgba(196, 186, 156, .26) 55%, rgba(196, 186, 156, .3) 100%);
+  --wh-sg-card-sheen: radial-gradient(120% 70% at 0 0, rgba(140, 116, 64, .22) 0%, rgba(140, 116, 64, 0) 45%);
+  /* The mockup's serif renders a touch heavier than PT Serif 400: a hairline stroke in the text
+     colour closes the gap without switching to the (much heavier) 700 cut. */
+  --wh-sg-ink: calc(.3 * var(--wh-px));
+  --wh-sg-ink-title: calc(.6 * var(--wh-px));
+  --wh-sg-chip-border: rgba(196, 186, 156, .24);
+  /* pill / kbd hairlines read as pale parchment, not saturated gold, in the mockup */
+  --wh-sg-pill-border: rgba(222, 210, 172, .5);
+  --wh-sg-pill-bg: rgba(64, 54, 20, .55);
+  --wh-sg-anchor-border: rgba(226, 216, 186, .52);
+  --wh-sg-kbd-border: rgba(222, 222, 210, .5);
+  --wh-sg-kbd-bg: rgba(10, 20, 20, .45);
+  --wh-sg-round-border: rgba(196, 186, 156, .2);
+  position: absolute; inset: 0; pointer-events: none;
+  -webkit-text-stroke: var(--wh-sg-ink) currentColor;
+}
+
+/* ================================================================ desktop panel (§6.4) */
+.wh-root .wh-signs {
+  right: calc(11 * var(--wh-px));
+  top: calc(94 * var(--wh-px));
+  width: calc(460 * var(--wh-px));
+  max-height: calc(100% - 201 * var(--wh-px));
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--wh-r-banner);
+  /* The mockup lights the frame from the left: bright top, left and bottom, the right edge almost gone. */
+  border-color: var(--wh-frame) var(--wh-sg-frame-right) var(--wh-frame) var(--wh-sg-frame-left);
+  transition: opacity var(--wh-transition), transform var(--wh-transition), visibility 0s linear 0s;
+}
+/* No inner hairline is visible on this panel in the mockup (unlike the quest banner). */
+.wh-root .wh-signs::before { border-color: transparent; }
+.wh-root .wh-signs[data-open="false"] {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(calc(12 * var(--wh-px)));
+  transition: opacity var(--wh-transition), transform var(--wh-transition), visibility 0s linear 160ms;
+}
+
+.wh-root .wh-signs .wh-signs__head {
+  position: relative;
+  padding: calc(16 * var(--wh-px)) calc(17 * var(--wh-px)) 0 calc(80 * var(--wh-px));
+}
+.wh-root .wh-signs .wh-signs__eye {
+  position: absolute;
+  left: calc(21 * var(--wh-px));
+  top: calc(21 * var(--wh-px));
+  width: calc(47 * var(--wh-px));
+  height: calc(48 * var(--wh-px));
+}
+.wh-root .wh-signs__title {
+  font-size: var(--wh-fs-title);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--wh-text);
+  text-shadow: var(--wh-text-glow);
+  white-space: nowrap;
+  -webkit-text-stroke: var(--wh-sg-ink-title) currentColor;
+}
+.wh-root .wh-signs .wh-signs__title { margin-top: calc(1 * var(--wh-px)); padding-right: calc(110 * var(--wh-px)); }
+.wh-root .wh-signs__sub { color: var(--wh-text-2); }
+.wh-root .wh-signs .wh-signs__sub {
+  font-size: calc(13.5 * var(--wh-px));
+  line-height: calc(19 * var(--wh-px));
+  margin-top: calc(6 * var(--wh-px));
+  max-width: calc(250 * var(--wh-px));
+}
+
+.wh-root .wh-signs .wh-signs__close {
+  position: absolute;
+  top: calc(17 * var(--wh-px));
+  right: calc(17 * var(--wh-px));
+  display: inline-flex;
+  align-items: center;
+  gap: calc(6 * var(--wh-px));
+  height: calc(29 * var(--wh-px));
+  padding: 0 calc(11 * var(--wh-px)) 0 calc(13 * var(--wh-px));
+  border: 1px solid var(--wh-frame-soft);
+  border-radius: calc(15 * var(--wh-px));
+  background: var(--wh-btn-bg);
+  color: var(--wh-text);
+  font-size: calc(14 * var(--wh-px));
+  line-height: 1;
+  white-space: nowrap;
+  transition: border-color var(--wh-transition);
+}
+.wh-root .wh-signs .wh-signs__close:hover { border-color: var(--wh-frame); }
+.wh-root .wh-signs .wh-signs__esc {
+  min-width: calc(22 * var(--wh-px));
+  height: calc(19 * var(--wh-px));
+  padding: 0 calc(3 * var(--wh-px));
+  font-size: calc(11 * var(--wh-px));
+  border-radius: calc(4 * var(--wh-px));
+  border-color: var(--wh-sg-kbd-border);
+  background: var(--wh-sg-kbd-bg);
+}
+
+/* chips */
+.wh-root .wh-signs__filters { display: flex; flex: none; }
+.wh-root .wh-signs .wh-signs__filters {
+  --wh-sg-chip-gap: calc(8 * var(--wh-px));
+  margin-top: calc(14 * var(--wh-px));
+  padding: 0 calc(18 * var(--wh-px)) 0 calc(23 * var(--wh-px));
+  gap: var(--wh-sg-chip-gap);
+}
+/* Inactive chips share the row equally; the pressed chip keeps its natural width and its glow
+   swallows the gap to its right neighbour (the mockup's "All Signs (4)" | "Active" join). */
+.wh-root .wh-signs__chip { flex: 1 1 0; min-width: max-content; padding: 0 calc(12 * var(--wh-px)); }
+.wh-root .wh-signs__chip[aria-pressed="true"] { flex: 0 0 auto; padding: 0 calc(23 * var(--wh-px)); position: relative; z-index: 1; }
+.wh-root .wh-signs__chip[aria-pressed="true"] + .wh-signs__chip { margin-left: calc(-1 * var(--wh-sg-chip-gap)); }
+.wh-root .wh-signs__chip[aria-pressed="false"] { border-color: var(--wh-sg-chip-border); }
+.wh-root .wh-signs__chip[aria-pressed="false"]:hover { border-color: var(--wh-frame-soft); }
+
+/* list */
+.wh-root .wh-signs__list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  scrollbar-color: var(--wh-gold-deep) transparent;
+  scrollbar-width: thin;
+}
+.wh-root .wh-signs .wh-signs__list {
+  margin-top: calc(17 * var(--wh-px));
+  padding: 0 calc(14 * var(--wh-px)) calc(15 * var(--wh-px)) calc(20 * var(--wh-px));
+  row-gap: calc(10 * var(--wh-px));
+}
+
+/* ================================================================ sign card (§6.5) */
+.wh-root .wh-sign {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: calc(158 * var(--wh-px));
+  padding: calc(10 * var(--wh-px)) calc(48 * var(--wh-px)) calc(7 * var(--wh-px)) calc(117 * var(--wh-px));
+  cursor: pointer;
+  text-align: left;
+  border-color: transparent;
+  background-image: var(--wh-sg-card-sheen);
+}
+.wh-root .wh-sign::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--wh-sg-card-edge);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  transition: opacity var(--wh-transition);
+}
+.wh-root .wh-sign:hover, .wh-root .wh-sign:focus-visible { border-color: transparent; }
+.wh-root .wh-sign:hover::after, .wh-root .wh-sign:focus-visible::after { background: var(--wh-frame); }
+.wh-root .wh-sign__ring {
+  position: absolute;
+  left: calc(16.5 * var(--wh-px));
+  top: calc(28 * var(--wh-px));
+  width: calc(70 * var(--wh-px));
+  height: calc(70 * var(--wh-px));
+}
+.wh-root .wh-sign__head {
+  display: flex;
+  align-items: center;
+  gap: calc(10 * var(--wh-px));
+  height: calc(21 * var(--wh-px));
+}
+.wh-root .wh-sign__title { font-size: var(--wh-fs-sign-title); line-height: 1.2; color: var(--wh-text); white-space: nowrap; -webkit-text-stroke: calc(.5 * var(--wh-px)) currentColor; }
+.wh-root .wh-sign__type { height: calc(21 * var(--wh-px)); border-color: var(--wh-sg-pill-border); background: var(--wh-sg-pill-bg); }
+.wh-root .wh-sign__spark { width: calc(9 * var(--wh-px)); height: calc(9 * var(--wh-px)); }
+
+.wh-root .wh-sign__stats {
+  margin: calc(8 * var(--wh-px)) 0 0 calc(4 * var(--wh-px));
+  font-size: var(--wh-fs-stat);
+  line-height: calc(19 * var(--wh-px));
+}
+.wh-root .wh-sign__stat { display: flex; align-items: center; height: calc(19 * var(--wh-px)); white-space: nowrap; }
+.wh-root .wh-sign__stat > *, .wh-root .wh-sign > * { flex: none; }
+.wh-root .wh-sign__sicon { width: calc(19 * var(--wh-px)); height: calc(19 * var(--wh-px)); margin: 0 calc(10 * var(--wh-px)) 0 calc(-5 * var(--wh-px)); }
+.wh-root .wh-sign__k { color: var(--wh-text); }
+.wh-root .wh-sign__k::after { content: ":"; }
+.wh-root .wh-sign__v { color: var(--wh-text); margin-left: calc(11 * var(--wh-px)); font-size: calc(13 * var(--wh-px)); letter-spacing: .03em; }
+
+.wh-root .wh-sign__anchor { border-color: var(--wh-sg-anchor-border); margin: calc(8 * var(--wh-px)) 0 0 calc(-15 * var(--wh-px)); }
+.wh-root .wh-sign__aicon { width: calc(18 * var(--wh-px)); height: calc(18 * var(--wh-px)); margin-left: calc(2 * var(--wh-px)); }
+.wh-root .wh-sign__atext { letter-spacing: -.015em; overflow: hidden; text-overflow: ellipsis; }
+/* Long (e.g. Russian) anchors may run under the chevron column, never past the card edge. */
+.wh-root .wh-sign__anchor { max-width: calc(100% + 15 * var(--wh-px) + 36 * var(--wh-px)); min-width: 0; }
+.wh-root .wh-sign--mobile .wh-sign__anchor { max-width: calc(100% + 13.5px + 30px); }
+
+.wh-root .wh-sign__chev {
+  position: absolute;
+  right: calc(19 * var(--wh-px));
+  top: calc(55 * var(--wh-px));
+  width: calc(11 * var(--wh-px));
+  height: calc(17 * var(--wh-px));
+}
+
+/* ================================================================ mobile sheet (§7.7) */
+.wh-root .wh-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--wh-scrim);
+  transition: opacity 220ms ease-out, visibility 0s linear 0s;
+}
+.wh-root .wh-sheet__scrim[data-open="false"] {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 220ms ease-out, visibility 0s linear 220ms;
+}
+.wh-root .wh-sheet {
+  left: 0;
+  right: 0;
+  top: 114px;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--wh-sheet-bg);
+  border: 1px solid var(--wh-frame);
+  border-bottom: 0;
+  border-radius: var(--wh-r-sheet) var(--wh-r-sheet) 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .06);
+  transform: translateY(0);
+  transition: transform 220ms ease-out, visibility 0s linear 0s;
+}
+.wh-root .wh-sheet::before {
+  inset: 6px 6px 0 6px;
+  border-bottom: 0;
+  border-radius: calc(var(--wh-r-sheet) - 6px) calc(var(--wh-r-sheet) - 6px) 0 0;
+}
+.wh-root .wh-sheet[data-open="false"] {
+  transform: translateY(100%);
+  visibility: hidden;
+  transition: transform 220ms ease-out, visibility 0s linear 220ms;
+}
+.wh-root .wh-sheet__handle {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  width: 63px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--wh-handle);
+  transform: translateX(-50%);
+}
+.wh-root .wh-sheet .wh-signs__head {
+  position: relative;
+  padding: 35px 50px 0 80px;
+}
+.wh-root .wh-sheet .wh-signs__eye { position: absolute; left: 20px; top: 33px; width: 48px; height: 47px; }
+.wh-root .wh-sheet .wh-signs__title { font-size: 24px; -webkit-text-stroke-width: .3px; }
+.wh-root .wh-sheet .wh-signs__sub { font-size: 13.5px; line-height: 17px; margin-top: 2px; max-width: 250px; }
+.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 30.5px; width: 35px; height: 35px; border-color: var(--wh-sg-round-border); background: rgba(255, 255, 255, .04); }
+.wh-root .wh-sheet .wh-signs__close:hover { border-color: var(--wh-frame-soft); }
+.wh-root .wh-sheet .wh-signs__x { width: 26px; height: 26px; color: var(--wh-text); }
+.wh-root .wh-sheet .wh-signs__filters {
+  --wh-sg-chip-gap: 6.5px;
+  margin-top: 19px;
+  padding: 0 10px 0 19px;
+  gap: var(--wh-sg-chip-gap);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.wh-root .wh-sheet .wh-signs__filters::-webkit-scrollbar { display: none; }
+.wh-root .wh-sheet .wh-signs__chip { height: 30px; font-size: 12px; padding: 0 10px; }
+.wh-root .wh-sheet .wh-signs__chip[aria-pressed="true"] { padding: 0 18px; }
+.wh-root .wh-sheet .wh-signs__list {
+  margin-top: 21px;
+  padding: 0 7px 24px 12px;
+  row-gap: 10px;
+  overscroll-behavior: contain;
+}
+
+/* ================================================================ mobile card (§7.8) */
+.wh-root .wh-sheet { --wh-sg-ink: .15px; }
+.wh-root .wh-sign--mobile {
+  min-height: 146px;
+  padding: 10.5px 40px 8px 110px;
+  background-color: var(--wh-card-bg-mobile);
+}
+.wh-root .wh-sign--mobile .wh-sign__ring { left: 20px; top: 24px; width: 64px; height: 64px; }
+.wh-root .wh-sign--mobile .wh-sign__head { gap: 13px; height: 20px; }
+.wh-root .wh-sign--mobile .wh-sign__title { font-size: 15px; -webkit-text-stroke-width: .45px; }
+.wh-root .wh-sign--mobile .wh-sign__type { height: 20px; padding: 0 9px 0 8px; gap: 6px; font-size: 10.5px; }
+.wh-root .wh-sign--mobile .wh-sign__spark { width: 8px; height: 8px; }
+.wh-root .wh-sign--mobile .wh-sign__stats { margin: 9.5px 0 0 0; font-size: 11.6px; line-height: 16.6px; }
+.wh-root .wh-sign--mobile .wh-sign__stat { height: 16.6px; }
+.wh-root .wh-sign--mobile .wh-sign__sicon { width: 15px; height: 15px; margin: 0 14px 0 0; }
+.wh-root .wh-sign--mobile .wh-sign__v { margin-left: 9px; font-size: 12px; }
+.wh-root .wh-sign--mobile .wh-sign__anchor { height: 24px; margin: 6.5px 0 0 -13.5px; padding: 0 12px 0 13px; gap: 8px; font-size: 13.2px; }
+.wh-root .wh-sign--mobile .wh-sign__aicon { width: 17px; height: 17px; margin-left: 0; }
+.wh-root .wh-sign--mobile .wh-sign__chev { right: 15px; top: 55.5px; width: 9px; height: 16px; }

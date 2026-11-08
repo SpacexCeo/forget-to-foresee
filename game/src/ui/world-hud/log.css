@@ -1,0 +1,208 @@
+/* World HUD P3a — Log / Hints / Lore panel (desktop) and the mobile tile row.
+   docs/ui-world-hud.md §6.6, §7.4. Lengths are calc(N * var(--wh-px)) = "N u". Boxes were
+   re-measured on the mockup where it disagrees with the spec table (tabs left 21, body 17–427). */
+
+.wh-root .wh-log {
+  --wh-l-tab-active-text: #fff6d2; /* sampled "Log" label (#fffbd4 cores); lighter than --wh-gold-text */
+  --wh-l-underline-glow: 0 0 calc(6 * var(--wh-px)) rgba(255, 200, 100, .75), 0 0 calc(14 * var(--wh-px)) rgba(255, 180, 80, .35);
+  position: absolute;
+  left: calc(17 * var(--wh-px));
+  top: calc(522 * var(--wh-px));
+  width: calc(411 * var(--wh-px));
+  height: calc(265 * var(--wh-px));
+}
+
+/* ---------- tab strip ---------- */
+.wh-root .wh-log__tabs {
+  position: absolute;
+  z-index: 1;
+  left: calc(4 * var(--wh-px));
+  top: 0;
+  width: calc(331 * var(--wh-px));
+  height: calc(40 * var(--wh-px));
+  display: flex;
+  background: var(--wh-tab-bg);
+  -webkit-backdrop-filter: blur(var(--wh-panel-blur));
+  backdrop-filter: blur(var(--wh-panel-blur));
+  border: 1px solid var(--wh-frame-soft);
+  border-bottom: 0;
+  border-radius: calc(17 * var(--wh-px)) calc(17 * var(--wh-px)) 0 0;
+}
+.wh-root .wh-log__tab {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(9 * var(--wh-px));
+  height: calc(100% + 1px);
+  margin-top: -1px;
+  padding: 0 0 calc(1 * var(--wh-px));
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: calc(17 * var(--wh-px)) calc(17 * var(--wh-px)) 0 0;
+  color: var(--wh-text);
+  font-size: var(--wh-fs-ui);
+  line-height: 1;
+  white-space: nowrap;
+  transition: color var(--wh-transition), border-color var(--wh-transition);
+}
+.wh-root .wh-log__tab[data-tab="log"] { width: calc(110 * var(--wh-px)); margin-left: -1px; gap: calc(7 * var(--wh-px)); padding-right: calc(3 * var(--wh-px)); }
+.wh-root .wh-log__tab[data-tab="hints"] { width: calc(111 * var(--wh-px)); }
+.wh-root .wh-log__tab[data-tab="lore"] { flex: 1; margin-right: -1px; }
+.wh-root .wh-log__tab:hover { color: var(--wh-gold-text); }
+.wh-root .wh-log__tab:focus-visible { outline-offset: -3px; }
+
+.wh-root .wh-log__tab-icon { width: calc(24 * var(--wh-px)); height: calc(24 * var(--wh-px)); }
+.wh-root .wh-log__tab[data-tab="log"] .wh-log__tab-icon { width: calc(25 * var(--wh-px)); height: calc(25 * var(--wh-px)); }
+.wh-root .wh-log__tab[data-tab="lore"] .wh-log__tab-icon { width: calc(26 * var(--wh-px)); height: calc(26 * var(--wh-px)); }
+
+/* divider between two inactive neighbours (Hints | Lore in the mockup) */
+.wh-root .wh-log__tab--sep::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: calc(9 * var(--wh-px));
+  width: 1px;
+  height: calc(22 * var(--wh-px));
+  background: var(--wh-frame-dim);
+}
+
+/* active: warm fill that brightens into a glowing gold rule with a small upward notch */
+.wh-root .wh-log__tab--active {
+  z-index: 1;
+  border-color: var(--wh-frame);
+  color: var(--wh-l-tab-active-text);
+  background:
+    linear-gradient(180deg, rgba(255, 190, 90, 0) 55%, rgba(200, 140, 40, .32) 85%, rgba(230, 170, 70, .55) 100%),
+    linear-gradient(180deg, rgba(98, 98, 82, .82) 0%, rgba(82, 80, 64, .80) 50%, rgba(78, 70, 48, .82) 100%);
+}
+.wh-root .wh-log__tab--active::after {
+  content: "";
+  position: absolute;
+  left: calc(2 * var(--wh-px));
+  right: calc(-12 * var(--wh-px));
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 224, 132, .55) 0%, var(--wh-tab-underline) 10%, var(--wh-tab-underline) 72%, rgba(255, 224, 132, 0) 100%);
+  box-shadow: var(--wh-l-underline-glow);
+  pointer-events: none;
+}
+.wh-root .wh-log__tab--active .wh-log__tab-label::after {
+  /* the notch: an upward chevron in the rule, centred under the tab */
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(-4 * var(--wh-px));
+  width: calc(7 * var(--wh-px));
+  height: calc(7 * var(--wh-px));
+  transform: translateX(-50%) rotate(45deg);
+  border-top: 1.5px solid var(--wh-tab-underline);
+  border-left: 1.5px solid var(--wh-tab-underline);
+  background: rgba(70, 56, 30, 1);
+  box-shadow: -2px -2px 6px rgba(255, 200, 100, .45);
+  pointer-events: none;
+}
+
+/* ---------- body ---------- */
+.wh-root .wh-log__body {
+  left: 0;
+  top: calc(39 * var(--wh-px));
+  width: 100%;
+  height: calc(226 * var(--wh-px));
+  border-color: var(--wh-frame-soft);
+  border-radius: var(--wh-r-panel);
+  padding: calc(17.5 * var(--wh-px)) calc(14 * var(--wh-px)) calc(12 * var(--wh-px)) calc(16 * var(--wh-px));
+  overflow: hidden;
+}
+.wh-root .wh-log__body:focus-visible { outline-offset: -3px; }
+.wh-root .wh-log__list {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wh-gold-deep) transparent;
+  display: grid;
+  align-content: start;
+  row-gap: calc(9 * var(--wh-px));
+}
+.wh-root .wh-log__row {
+  display: grid;
+  grid-template-columns: calc(23 * var(--wh-px)) calc(45 * var(--wh-px)) 1fr;
+  align-items: start;
+  font-size: var(--wh-fs-stat);
+  line-height: calc(17 * var(--wh-px));
+}
+.wh-root .wh-log__bullet {
+  width: calc(8 * var(--wh-px));
+  height: calc(8 * var(--wh-px));
+  margin-top: calc(6.5 * var(--wh-px));
+  color: var(--wh-gold);
+}
+.wh-root .wh-log__bullet--bulb, .wh-root .wh-log__bullet--book {
+  width: calc(13 * var(--wh-px));
+  height: calc(13 * var(--wh-px));
+  margin: calc(2 * var(--wh-px)) 0 0 calc(-2 * var(--wh-px));
+}
+.wh-root .wh-log__time {
+  color: var(--wh-text-2); /* sampled #f6f8e8 cores: brighter than --wh-text-muted */
+  font-size: var(--wh-fs-small);
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+}
+.wh-root .wh-log__text { color: var(--wh-text); min-width: 0; overflow-wrap: anywhere; }
+/* Lore entries carry no clock: the text takes the time column too. */
+.wh-root .wh-log__list[data-tab="lore"] .wh-log__time:empty { display: none; }
+.wh-root .wh-log__list[data-tab="lore"] .wh-log__row { grid-template-columns: calc(23 * var(--wh-px)) 1fr; }
+
+/* ---------- mobile tiles (§7.4; mockup tiles 23–134, 145–251, 262–370 × 640–712) ---------- */
+.wh-root .wh-tiles {
+  position: absolute;
+  left: 23px;
+  right: 20px;
+  bottom: 164px; /* top 640 on the 876-tall mockup; the bottom cluster is anchored to the bottom edge */
+  height: 72px;
+  display: grid;
+  grid-template-columns: 111fr 106fr 108fr; /* the mockup's tiles are not quite equal */
+  gap: 11px;
+}
+.wh-root .wh-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 2px 0 6px;
+  border: 1px solid var(--wh-frame-soft);
+  border-radius: var(--wh-r-tile);
+  background:
+    radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0) 60%),
+    var(--wh-tile-bg);
+  box-shadow: inset 0 -8px 14px -10px rgba(255, 196, 110, .35), 0 6px 18px rgba(0, 0, 0, .3);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--wh-text);
+  text-align: center;
+  transition: border-color var(--wh-transition);
+}
+.wh-root .wh-tile:hover { border-color: var(--wh-frame); }
+/* icon boxes are sized so the visible art matches the mockup (eye 26×20, bubble 20×17, book 22×16) */
+.wh-root .wh-tile__icon { flex: none; }
+.wh-root .wh-tile--signs .wh-tile__icon { width: 29px; height: 22.3px; margin-bottom: 3.6px; }
+.wh-root .wh-tile--log .wh-tile__icon { width: 27.2px; height: 27.2px; margin-bottom: 2.8px; }
+.wh-root .wh-tile--lore .wh-tile__icon { width: 30px; height: 24px; margin-bottom: 5.3px; }
+.wh-root .wh-tile__label {
+  font-size: var(--wh-fs-tile);
+  line-height: 1.15;
+  max-width: 80px;
+}
+.wh-root .wh-tile__dot {
+  position: absolute;
+  top: 7px;
+  right: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff3b4;
+  box-shadow: 0 0 2px 1px var(--wh-notify), 0 0 8px #ffa63a;
+}
