@@ -37,15 +37,39 @@ as is). No art file, no `game/src/play/game.js`, no `engine.js`.
    overshoot under 0.2 m at a run), a route corner at a run does not orbit, and the "unreachable click" cancel now
    requires a wall contact so a reversal cannot cancel its own order. Bindings for keyboard, gamepad and touch
    unchanged; walk speed stays 1.7 m/s.
-6. **Tests**: 17 new (`movement.test.mjs`), 309 total, `npm test` and `npm run build` green. Before/after table and a
+6. **Tests**: 18 new (`movement.test.mjs`), 310 total, `npm test` and `npm run build` green. Before/after table and a
    frame-by-frame description in `docs/movement.md`.
+
+## Quality bar (owner, 08.11) applied
+
+- Every behaviour change has a test (18 new in `movement.test.mjs`, 310 total); trajectories recorded before and
+  after (`docs/movement/trajectory-*.csv`, `trajectories.svg`); the before/after table in `docs/movement.md`.
+- Hostile self-review done over: phone (touch tap / far tap / run toggle feed the same run flag), low tier,
+  reduced motion (no lean, no look-ahead), keyboard, gamepad (analog stick magnitude now gives a slower walk through
+  the same model), click-to-move, G routes (`steerTo` braking profile, no waypoint orbiting), hub flights and
+  teleports (an outside position write arrives at rest, tested), zero console errors in the states touched.
+- Could not verify: the feel itself at 60 fps (no GPU here); the double-click run at SwiftShader frame times.
 
 ## Checked
 
-- `cd game && npm test`: 309/309. `npm run build`: ok.
+- `cd game && npm test`: 310/310. `npm run build`: ok.
 - `node game/tests/client/movement-measure.mjs` (and `--legacy`) produce the two columns of the table in
   `docs/movement.md`.
-- Headless Chromium (SwiftShader, 1280×720, `vite preview` of the build): BROWSER_RESULT
+- Headless Chromium (SwiftShader at about 240 ms per frame, `vite preview` of the build), zero console errors and
+  zero warnings other than SwiftShader's own "GPU stall due to ReadPixels" driver notice, in every state below:
+  - `/?play=direct&mode=walk&demo=judge`, 1280×800, scripted keys: W → 1.70 m/s, heading π, Iris walk weight 1,
+    camera look-ahead 0.36 m; D → heading π/2 (turned, not snapped); Shift+S → 3.57 m/s, run weight 0.91, walk
+    rate 1.6, look-ahead 0.6 m; release → speed 0, idle weight 1, look-ahead eased back to 0.04 m. The NPC agents
+    stream in and walk (Ash at 0.38 m/s with gait weight 0.63).
+  - `/?play=direct` (hub), 1280×720: starts clean, Iris's gait layer attached.
+  - `/?play=direct&mode=walk`, 1920×1080: a mouse click on the ground walks there at 1.70 m/s with the marker
+    shown, brakes and stops at the target, marker hidden.
+  - iPhone 13 emulation 390×844, `profile=phone&tier=low&motion=reduce`: a tap walks there (brakes into the
+    spot), look-ahead stays 0 and the lean stays 0 under reduced motion.
+  - Screenshots in `docs/movement/` (walk 1280×800, phone 390×844, click 1920×1080).
+  - Not confirmed here: the double-click / double-tap run (Task E's 350 ms window is one or two SwiftShader frames,
+    so the second click may land outside it); Shift-run and the far-tap run go through the same flag and work. A
+    GPU check is listed in `docs/movement.md`.
 
 ## Not done / for the lead and the owner
 
