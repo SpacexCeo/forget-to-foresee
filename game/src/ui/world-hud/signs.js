@@ -5,42 +5,13 @@
 // closes while open. Focus moves to the close button on open and back to the opener on close.
 // Chrome labels are `wh.*` keys (data-i18n); narrative values are the model's TextRefs.
 import { h, tx, applyI18n } from '../dom.js';
-import { icon } from './icons.js';
+import { icon, ringSigil, iconUrl } from './icons.js';
 import { filterSigns, signCount } from './model.js';
 
 const FILTERS = ['all', 'active', 'resolved', 'anchors'];
 /** Compact desktop range (docs §1): the panel starts closed there and overlays when opened. */
 const COMPACT_QUERY = '(min-width: 701px) and (max-width: 1086px)';
 const STAT_ICONS = { stability: 'shield', anchorStrength: 'link', powerRange: 'bolt', delay: 'clock' };
-/** Node-hole fill of the ring sigil: the card interior tone (§2.1). */
-const RING_HOLE = '#101d20';
-
-const STAR = (cx, cy, r) => `M${cx} ${cy - r}C${cx + r * .12} ${cy - r * .35} ${cx + r * .35} ${cy - r * .12} ${cx + r} ${cy}C${cx + r * .35} ${cy + r * .12} ${cx + r * .12} ${cy + r * .35} ${cx} ${cy + r}C${cx - r * .12} ${cy + r * .35} ${cx - r * .35} ${cy + r * .12} ${cx - r} ${cy}C${cx - r * .35} ${cy - r * .12} ${cx - r * .12} ${cy - r * .35} ${cx} ${cy - r}Z`;
-
-/**
- * The sign-card logogram ring, redrawn from the mockup (measured at 8x on ref/desktop.png): a
- * 26.5-radius ring with a cream-to-gold gradient, an open core ring (r 8), four small stars at
- * r 19 and four bead nodes (r 4, dark hole) sitting on the ring at N E S W; N and S carry a short
- * point outward. Same 70-unit grid as icons.js `ringSigil` (which it replaces for this package).
- */
-function signRing(hole = RING_HOLE) {
-  const id = 'wh-sg-ring-' + (++uid);
-  const bead = (x, y) => `<circle cx="${x}" cy="${y}" r="4.1" fill="url(#${id}-g)"/><circle cx="${x}" cy="${y}" r="1.35" fill="${hole}"/>`;
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70" width="70" height="70" overflow="visible" fill="none" aria-hidden="true" focusable="false" data-icon="sg-ring">'
-    + `<defs><linearGradient id="${id}-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset=".45" stop-color="#f0cf86"/><stop offset="1" stop-color="#c7983f"/></linearGradient>`
-    + `<radialGradient id="${id}-d" cx="35" cy="35" r="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#05100f" stop-opacity=".55"/><stop offset="1" stop-color="#05100f" stop-opacity=".15"/></radialGradient></defs>`
-    + `<circle cx="35" cy="35" r="25.4" fill="url(#${id}-d)"/>`
-    + `<circle cx="35" cy="35" r="26.6" stroke="url(#${id}-g)" stroke-width="2.2"/>`
-    + `<circle cx="35" cy="35" r="8.1" stroke="url(#${id}-g)" stroke-width="2"/>`
-    + `<path d="${STAR(35, 16, 2.9)}${STAR(54, 35, 2.6)}${STAR(35, 54, 2.9)}${STAR(16, 35, 2.6)}" fill="#f6dc9a"/>`
-    + `<path d="M46.2 35h2.6" stroke="#f6dc9a" stroke-width="1" stroke-linecap="round" opacity=".45"/>`
-    + `<path d="M35 0.6l2.6 3.6h-5.2ZM35 70.4l-2.6-4.4h5.2Z" fill="url(#${id}-g)"/>`
-    + bead(35, 4.6) + bead(65.6, 35) + bead(35, 65.4) + bead(4.4, 35)
-    + '</svg>';
-}
-
-/** Chevron with the mockup's proportions (10×16 box; icons.js draws it on a square grid). */
-const CHEVRON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 16" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" data-icon="sg-chevron"><path d="M1.8 1.4L8.4 8 1.8 14.6"/></svg>';
 
 let uid = 0;
 
@@ -100,7 +71,7 @@ function card(i18n, s, mobile, onAction) {
       keydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); } },
     },
   },
-  ic(signRing(), 'wh-sign__ring'),
+  ic(ringSigil(), 'wh-sign__ring'),
   h('div', { class: 'wh-sign__head' },
     title,
     h('span', { class: 'wh-pill wh-sign__type' },
@@ -108,7 +79,7 @@ function card(i18n, s, mobile, onAction) {
       h('span', { class: 'wh-sign__tlabel wh-heavy-sm', i18n: 'wh.sign.type.' + s.type }))),
   stats,
   anchor,
-  ic(CHEVRON, 'wh-sign__chev'));
+  ic(icon('chevron-slim'), 'wh-sign__chev'));
 }
 
 function chips(i18n, model, filter, onPick) {
@@ -190,8 +161,10 @@ export function mountSigns(root, o) {
     for (const a of ui.list.querySelectorAll('.wh-sign__atext')) {
       if (typeof a.scrollWidth !== 'number' || !a.clientWidth) continue;
       if (a._short) { a._short = false; applyI18n(a, i18n); }
-      if (a.scrollWidth > a.clientWidth + 1) { a._short = true; applyI18n(a, i18n); }
     }
+    // batched: all long forms are written above, read every width, then switch the overflowing ones
+    const over = [...ui.list.querySelectorAll('.wh-sign__atext')].filter((a) => typeof a.scrollWidth === 'number' && a.clientWidth && a.scrollWidth > a.clientWidth + 1);
+    for (const a of over) { a._short = true; applyI18n(a, i18n); }
   }
   let fitQueued = false;
   function scheduleFit() {
@@ -246,10 +219,12 @@ export function mountSigns(root, o) {
     } else {
       const corner = h('span', { class: 'wh-frame__corner', attrs: { 'aria-hidden': 'true' } });
       corner.innerHTML = icon('flourish');
+      // the woven strip down the left edge (mockup); one source of truth in icons.js
+      const braid = h('span', { class: 'wh-signs__braid', attrs: { 'aria-hidden': 'true', style: 'background-image:' + iconUrl('braid') } });
       panel = h('section', {
         class: 'wh-panel wh-frame wh-signs wh-interactive',
         attrs: { 'aria-labelledby': titleId },
-      }, corner, head, filters, list);
+      }, corner, braid, head, filters, list);
       el.append(panel);
     }
     ui = { panel, scrim, close, filters, list };

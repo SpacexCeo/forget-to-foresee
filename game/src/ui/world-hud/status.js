@@ -7,15 +7,8 @@ import { h, tx, applyI18n } from '../dom.js';
 import { icon, keyArt } from './icons.js';
 import { barSegments } from './model.js';
 
-/** Glyphs the shared icon set lacks (folded into icons.js later, see the P1 report). */
-const LOCAL_ICONS = {
-  // The toast's "i": the circle is the CSS border of .wh-toast__icon, so only stem, serif and dot here.
-  'st-info-i': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 14" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" data-icon="st-info-i"><circle cx="5" cy="2.2" r="1.15" fill="currentColor" stroke="none"/><path d="M3.4 6.1H5.3V12.4M3.2 12.4H7"/></svg>',
-  // Mobile menu: three 21×12 rules (the shared `menu` icon is drawn on a square grid).
-  'st-menu': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 12" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false" data-icon="st-menu"><path d="M.75 .9h19.5M.75 6h19.5M.75 11.1h19.5"/></svg>',
-};
-
 const MOBILE_BAR_CELLS = 8;
+let uid = 0;
 
 const ensureCss = (doc = document) => {
   const have = doc.querySelector('link[data-wh-css="status"]');
@@ -32,7 +25,7 @@ const ensureCss = (doc = document) => {
  *  `o.stretch` lets the glyph fill a non-square box (the mockup's book is wider than the grid icon). */
 function ic(name, cls, o = {}) {
   const span = h('span', { class: 'wh-icon ' + cls, attrs: { 'aria-hidden': 'true' } });
-  let svg = LOCAL_ICONS[name] || icon(name, o.strokeWidth ? { strokeWidth: o.strokeWidth } : {});
+  let svg = icon(name, o.strokeWidth ? { strokeWidth: o.strokeWidth } : {});
   if (o.stretch) svg = svg.replace('<svg ', '<svg preserveAspectRatio="none" ');
   span.innerHTML = svg;
   return span;
@@ -70,7 +63,7 @@ function trialDesktop(i18n, t) {
       ic('compass-star', 'wh-trial__hicon'),
       tx(h('h2', { class: 'wh-trial__title wh-heavy-sm' }), i18n, 'wh.trial.title', { n: t.n, total: t.total })),
     h('div', { class: 'wh-divider wh-trial__rule wh-trial__rule--a' }),
-    row('target', 'wh.trial.phase', v('wh.trial.phase.' + t.phase)),
+    row('crosshair', 'wh.trial.phase', v('wh.trial.phase.' + t.phase)),
     row('bar-chart', 'wh.trial.skillTier', h('span', { class: 'wh-trial__v', text: String(t.skillTier) })),
     row('bookmark', 'wh.trial.attempts', v('wh.trial.attemptsValue', { n: t.attempts, max: t.attemptsMax }, true)),
     row('map-pin', 'wh.trial.arena', ref(i18n, t.arena, 'wh-trial__v')),
@@ -111,7 +104,7 @@ function toast(i18n, hint) {
     class: 'wh-panel wh-toast' + (hint && hint.visible ? '' : ' wh-toast--hidden'),
     attrs: { role: 'status', 'aria-hidden': hint && hint.visible ? null : 'true' },
   },
-  h('span', { class: 'wh-toast__icon', attrs: { 'aria-hidden': 'true' } }, ic('st-info-i', 'wh-toast__i')),
+  h('span', { class: 'wh-toast__icon', attrs: { 'aria-hidden': 'true' } }, ic('info-i', 'wh-toast__i')),
   h('span', { class: 'sr-only', i18n: 'wh.hint.label' }),
   ref(i18n, hint && hint.text, 'wh-toast__text wh-body', 'p'));
 }
@@ -126,7 +119,7 @@ function topbar(onAction) {
     on: { click: () => onAction('top', id) },
   }, ic(iconName, 'wh-topbar__icon wh-topbar__icon--' + cls, io));
   return h('nav', { class: 'wh-topbar', i18nAttrs: { 'aria-label': 'wh.root.label' } },
-    btn('menu', 'wh.top.menu', 'st-menu', 'menu'),
+    btn('menu', 'wh.top.menu', 'menu-wide', 'menu'),
     h('span', { class: 'wh-topbar__logo', attrs: { 'aria-hidden': 'true' } }, ic('logo-a', 'wh-topbar__logo-a', { strokeWidth: 2.7 })),
     h('span', { class: 'wh-topbar__end' },
       btn('journal', 'wh.top.journal', 'book', 'book', { stretch: true }),
@@ -138,9 +131,10 @@ function questMobile(i18n, model, onAction) {
   const lines = q ? (q.bodyShort || q.body) : [];
   const art = h('span', { class: 'wh-quest__art', attrs: { 'aria-hidden': 'true' } });
   art.innerHTML = keyArt({ size: 98, tall: true });
+  const cardId = 'wh-quest-card-' + (++uid);
   const card = h('button', {
     class: 'wh-panel wh-frame wh-quest--mobile wh-interactive',
-    attrs: { type: 'button' }, dataset: { whKey: 'quest', quest: q ? q.id : '' },
+    attrs: { type: 'button', id: cardId }, dataset: { whKey: 'quest', quest: q ? q.id : '' },
     on: { click: () => onAction('quest') },
   },
   art,
@@ -155,7 +149,7 @@ function questMobile(i18n, model, onAction) {
   const dots = h('div', { class: 'wh-quest__dots wh-interactive', attrs: { role: 'tablist' } },
     ...model.quests.map((qq, i) => h('button', {
       class: 'wh-quest__dot',
-      attrs: { type: 'button', role: 'tab', 'aria-selected': i === model.questIndex ? 'true' : 'false', tabindex: i === model.questIndex ? '0' : '-1' },
+      attrs: { type: 'button', role: 'tab', 'aria-controls': cardId, 'aria-selected': i === model.questIndex ? 'true' : 'false', tabindex: i === model.questIndex ? '0' : '-1' },
       dataset: { whKey: 'dot-' + i },
       i18nAttrs: { 'aria-label': 'wh.quest.dot' }, attrArgs: { n: i + 1, total: n },
       on: { click: () => onAction('questDot', i) },
@@ -261,11 +255,11 @@ export function mountStatus(root, o) {
 
   /** Mobile trial title: the full key when it fits, `wh.trial.titleShort` when it overflows (RU). */
   function fit() {
-    for (const node of el.querySelectorAll('[data-fit]')) {
-      const args = node._i18nArgs;
-      tx(node, i18n, node.dataset.fitLong || (node.dataset.fitLong = node.dataset.i18n), args);
-      if (typeof node.scrollWidth === 'number' && node.scrollWidth > node.clientWidth + 0.5) tx(node, i18n, node.dataset.fit, args);
-    }
+    // batched: write every long form, then read every width, then write the short forms (one reflow)
+    const nodes = [...el.querySelectorAll('[data-fit]')];
+    for (const node of nodes) tx(node, i18n, node.dataset.fitLong || (node.dataset.fitLong = node.dataset.i18n), node._i18nArgs);
+    const over = nodes.filter((node) => typeof node.scrollWidth === 'number' && node.scrollWidth > node.clientWidth + 0.5);
+    for (const node of over) tx(node, i18n, node.dataset.fit, node._i18nArgs);
   }
   const later = (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 0));
   let fitQueued = false;

@@ -73,6 +73,14 @@ export default {
   'settings.quality.high': 'High',
   'settings.quality.low': 'Low',
   'settings.note': 'Settings are stored on this device only.',
+  'settings.hudMode': 'Interface',
+  'settings.hudMode.novice': 'Novice: guided, plain readings',
+  'settings.hudMode.pro': 'Pro: full data, no teaching',
+  'settings.hudScale': 'Interface size',
+  'settings.hudScale.s': 'Small',
+  'settings.hudScale.m': 'Normal',
+  'settings.hudScale.l': 'Large',
+  'settings.hudScale.xl': 'Extra large',
 
   // ---- profile ----
   'profile.title': 'Profile',
@@ -510,6 +518,7 @@ export default {
   'wh.tabs.hints': 'Hints',
   'wh.tabs.lore': 'Lore',
   'wh.log.label': 'Journal',
+  'wh.tiles.label': 'Journal shortcuts',
   'wh.prompt.aria': 'Press {key}: {text}',
   'wh.dialogue.label': 'Dialogue',
   'wh.dialogue.speaker': '{name}:',

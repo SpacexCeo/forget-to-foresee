@@ -11,6 +11,25 @@ component made with PIL (kept in the session scratchpad, not committed). The rev
 short by the owner; sections marked **not checked** were not exercised and should be run before
 the next pass.
 
+## 0. Status (08.11, after the fix pass)
+
+All 15 items of §5 are applied, plus audit P3 #10 (batched fits), #11 (`wh.tiles.label`) and #13
+(`aria-controls` on the carousel). Decisions taken:
+
+- **#1 key art:** softened vector. The mockup PNGs are not in the repository (`game/.scratch/` is
+  git-ignored), so no raster plate could be cut; `keyArt()` lost its orbits, arcs and sparks, the
+  halo is stronger, and the banner/card apply `blur(.8px)` plus a warm drop-shadow.
+- **#10 zoom:** `--wh-user-scale` from the new `prefs.hudScale` (Settings → Interface size: 0.9 /
+  1 / 1.15 / 1.3), and body-copy tokens have a `.75rem` floor so browser font settings reach them.
+- **#11 low effects:** `html[data-tier="low"]` (or `data-fx="low"`) drops every backdrop blur.
+- **#13:** short/landscape phones hide the quest card (≤ 640 px tall), then the trial card and tiles
+  (≤ 520 px); the 320 px trial bar shrinks instead of overflowing.
+- **#15:** every package glyph is in `icons.js` (`menu-wide`, `info-i`, `chevron-slim`, `connector`,
+  `bubble`, `braid`, `crosshair`; `ringSigil` is now the mockup ring); package CSS has no hex colour
+  literals (`tests/wh-shared.test.mjs` enforces both).
+- **Audit #9 (sign card as `<button>`) is not applied:** the card holds a `<dl>`, which is not
+  allowed inside a button; it stays `div role="button"` with Enter/Space handling.
+
 ---
 
 ## 1. Summary scores

@@ -38,11 +38,14 @@
 .wh-root {
   /* ---- scale: 1 u = 1 px at the 1811-wide desktop reference ---- */
   /* proportional from 1087 px up (0.6 u floor); 701–1086 px is the compact desktop range, see docs §1 */
-  --wh-px: clamp(0.6px, calc(100vw / 1811), 1.35px);
+  /* --wh-user-scale is the player's HUD scale preference (index.js sets it from prefs), so the HUD can
+     grow for players who need larger text without changing the mockup proportions at 100 %. */
+  --wh-px: calc(clamp(0.6px, calc(100vw / 1811), 1.35px) * var(--wh-user-scale, 1));
 
   /* ---- surfaces ---- */
   --wh-panel-bg: linear-gradient(180deg, rgba(11, 21, 23, .90) 0%, rgba(24, 34, 34, .87) 55%, rgba(36, 44, 41, .84) 100%);
   --wh-panel-blur: 10px;
+  --wh-blur-sm: 8px; /* mobile buttons, tiles, prompt pill, log tabs */
   --wh-card-bg: rgba(8, 18, 21, .55);
   --wh-card-bg-hover: rgba(14, 26, 29, .70);
   --wh-card-bg-mobile: rgba(8, 18, 21, .50);
@@ -59,6 +62,13 @@
   --wh-anchor-bg: rgba(38, 34, 22, .70);
   --wh-prompt-bg-mobile: rgba(30, 32, 27, .88);
   --wh-track-bg: #242d2a;
+  --wh-ring-hole: #101d20; /* node holes of the sign ring = card interior */
+  --wh-tab-active-fill:
+    linear-gradient(180deg, rgba(255, 190, 90, 0) 55%, rgba(200, 140, 40, .32) 85%, rgba(230, 170, 70, .55) 100%),
+    linear-gradient(180deg, rgba(98, 98, 82, .82) 0%, rgba(82, 80, 64, .80) 50%, rgba(78, 70, 48, .82) 100%);
+  --wh-tab-notch-bg: rgba(70, 56, 30, 1);
+  --wh-prompt-bg: linear-gradient(180deg, rgba(14, 22, 22, .90) 0%, rgba(26, 32, 30, .88) 60%, rgba(34, 38, 34, .86) 100%);
+  --wh-kbd-bg-mobile: rgba(40, 38, 31, .9);
   --wh-scrim: rgba(0, 0, 0, .35);
   --wh-divider: rgba(255, 255, 255, .12);
   --wh-sep: rgba(255, 255, 255, .16);
@@ -78,12 +88,25 @@
   --wh-kbd-border: rgba(222, 210, 180, .85);
   --wh-prompt-border: rgba(216, 200, 160, .70);
   --wh-prompt-border-mobile: #f5d788;
+  --wh-prompt-border-mobile-quad: #f8e6b2 #f1c878 #ebb35c #f1c878;
+  --wh-prompt-notch: #ecb55e;
+  --wh-dialogue-border-quad: rgba(214, 208, 186, .62) rgba(190, 182, 160, .45) rgba(150, 140, 115, .42) rgba(190, 182, 160, .45);
+  --wh-toast-border-quad: rgba(236, 222, 186, .9) rgba(214, 200, 164, .6) rgba(196, 186, 156, .4);
+  --wh-toast-ring: rgba(226, 204, 150, .95);
+  --wh-toast-icon: #f1e8cf;
+  --wh-quest-border-mobile: rgba(240, 214, 150, .85);
+  --wh-bar-border-mobile: rgba(232, 196, 124, .85);
+  --wh-bar-track-mobile: rgba(70, 68, 58, .9);
+  --wh-bar-gap-mobile: rgba(24, 22, 16, .9);
+  --wh-bar-cell-mobile: linear-gradient(180deg, #fbd282 0%, #eab35c 100%);
+  --wh-chip-active-border: #ffe78e;
   --wh-bar-fill: linear-gradient(90deg, #cf9846 0%, #e2ac56 100%);
   --wh-bar-fill-mobile: linear-gradient(90deg, #e2ac56 0%, #f6c572 100%);
   --wh-bar-border: rgba(226, 200, 150, .45);
   --wh-tab-underline: #ffe084;
   --wh-notify: #ffb347;
   --wh-notify-glow: 0 0 8px #ffa63a;
+  --wh-notify-core: #fff3b4;
   --wh-dot-off: rgba(150, 160, 158, .55);
   --wh-handle: rgba(190, 196, 194, .70);
 
@@ -100,8 +123,8 @@
   /* ---- shadows and glows ---- */
   --wh-shadow: 0 10px 30px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06);
   --wh-glow-gold: 0 0 18px rgba(255, 205, 120, .22);
-  --wh-glow-prompt-mobile: 0 0 10px rgba(255, 205, 120, .55), 0 0 26px rgba(255, 190, 100, .25);
-  --wh-glow-chip: 0 0 14px rgba(255, 200, 100, .45), 0 0 0 1px rgba(255, 231, 142, .9);
+  --wh-glow-prompt-mobile: 0 0 14px rgba(255, 190, 90, .75), 0 0 32px rgba(255, 170, 70, .35);
+  --wh-glow-chip: 0 0 18px rgba(255, 190, 90, .7), 0 0 36px rgba(255, 170, 70, .3), 0 0 0 1px rgba(255, 231, 142, .9);
   --wh-text-glow: 0 0 8px rgba(255, 236, 190, .22);
 
   /* ---- radii ---- */
@@ -122,23 +145,23 @@
   --wh-font-body-weight: 500;
   /* Caslon 400 is lighter than the mockup lettering; 700 is far too heavy. Titles ≥ 20 u take
      --wh-stroke-title, serif labels 13–15 u take --wh-stroke-text (-webkit-text-stroke: … currentColor). */
-  --wh-stroke-title: .3px;
-  --wh-stroke-text: .18px;
+  --wh-stroke-title: .38px;
+  --wh-stroke-text: .24px;
   --wh-fs-title-l: calc(21 * var(--wh-px));
   --wh-fs-title: calc(23 * var(--wh-px));
   --wh-fs-card-title: calc(19 * var(--wh-px));
   --wh-fs-sign-title: calc(14 * var(--wh-px));
   --wh-fs-row: calc(14 * var(--wh-px));
   --wh-fs-subtitle: calc(12.75 * var(--wh-px));
-  --wh-fs-body: calc(13.5 * var(--wh-px));
-  --wh-fs-toast: calc(13.5 * var(--wh-px));
+  --wh-fs-body: max(calc(13.5 * var(--wh-px)), .75rem);
+  --wh-fs-toast: max(calc(13.5 * var(--wh-px)), .75rem);
   --wh-fs-ui: calc(13.5 * var(--wh-px));
   --wh-fs-tab: calc(12.5 * var(--wh-px));
   --wh-fs-close: calc(14 * var(--wh-px));
-  --wh-fs-stat: calc(13 * var(--wh-px));
+  --wh-fs-stat: max(calc(13 * var(--wh-px)), .75rem);
   --wh-fs-small: calc(12 * var(--wh-px));
   --wh-fs-caption: calc(11.5 * var(--wh-px));
-  --wh-fs-tag: calc(11.5 * var(--wh-px));
+  --wh-fs-tag: calc(10 * var(--wh-px));
   --wh-fs-prompt: calc(15 * var(--wh-px));
   --wh-fs-speaker: calc(14 * var(--wh-px));
   --wh-fs-line: calc(13 * var(--wh-px));
@@ -188,7 +211,7 @@
     --wh-fs-stat: 12.5px;
     --wh-fs-small: 10.5px;
     --wh-fs-caption: 11.5px;
-    --wh-fs-tag: 11.5px;
+    --wh-fs-tag: 10.5px;
     --wh-fs-prompt: 14.5px;
     --wh-fs-speaker: 12px;
     --wh-fs-line: 12px;
@@ -289,7 +312,7 @@
 }
 .wh-root .wh-chip:hover { border-color: var(--wh-frame); color: var(--wh-text); }
 .wh-root .wh-chip[aria-pressed="true"], .wh-root .wh-chip[aria-selected="true"] {
-  background: var(--wh-chip-active-bg); color: var(--wh-text-on-gold); border-color: #ffe78e; box-shadow: var(--wh-glow-chip);
+  background: var(--wh-chip-active-bg); color: var(--wh-text-on-gold); border-color: var(--wh-chip-active-border); box-shadow: var(--wh-glow-chip);
 }
 @media (max-width: 700px) { .wh-root .wh-chip { height: 31px; padding: 0 20px; } }
 
@@ -313,7 +336,7 @@
   width: 48px; height: 35px;
   border: 1px solid var(--wh-frame-soft); border-radius: 14px;
   background: var(--wh-btn-bg); color: var(--wh-gold);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(var(--wh-blur-sm)); backdrop-filter: blur(var(--wh-blur-sm));
   transition: border-color var(--wh-transition);
 }
 .wh-root .wh-btn-icon:hover { border-color: var(--wh-frame); }
@@ -322,7 +345,7 @@
 /* ---------- divider, progress bar, icon wrapper ---------- */
 .wh-root .wh-divider { height: 1px; background: var(--wh-divider); }
 .wh-root .wh-bar {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px;
   height: calc(11 * var(--wh-px)); padding: 1px;
   border: 1px solid var(--wh-bar-border); border-radius: calc(6 * var(--wh-px));
   background: var(--wh-track-bg); overflow: hidden;
@@ -332,6 +355,13 @@
 .wh-root .wh-bar__seg:first-child { border-radius: calc(5 * var(--wh-px)) 0 0 calc(5 * var(--wh-px)); }
 .wh-root .wh-bar__seg:last-child { border-radius: 0 calc(5 * var(--wh-px)) calc(5 * var(--wh-px)) 0; }
 @media (max-width: 700px) { .wh-root .wh-bar { height: 8px; border-radius: 4px; } .wh-root .wh-bar__seg--on { background: var(--wh-bar-fill-mobile); } }
+
+/* Low effects (audit #2): no backdrop blur over the live WebGL canvas on the low quality tier or when
+   the orchestrator measures slow frames (html[data-fx="low"]). The look stays; only the frost goes. */
+html[data-tier="low"] .wh-root, html[data-fx="low"] .wh-root { --wh-panel-blur: 0px; --wh-blur-sm: 0px; }
+
+/* 24 px minimum targets (WCAG 2.5.8): invisible at 1811 wide, active only at small desktop scales. */
+.wh-root :where(.wh-chip, .wh-signs__close, .wh-hotbar__btn, .wh-kbd--lg) { min-height: 24px; }
 
 /* body-copy text (sans): quest body, toast, log rows, sign stats, timestamps, small labels */
 .wh-root .wh-body { font-family: var(--wh-font-body); font-weight: var(--wh-font-body-weight); }

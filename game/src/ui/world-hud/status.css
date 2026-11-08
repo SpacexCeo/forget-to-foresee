@@ -79,14 +79,16 @@
   box-shadow: var(--wh-shadow), var(--wh-glow-gold);
   overflow: hidden;
 }
-/* The mockup shows no inner rule on the banner, only the filigree corners. */
+/* The mockup shows no inner rule on the banner, only a faint top-left filigree. */
+.wh-root .wh-quest .wh-frame__corner { opacity: .32; }
+.wh-root .wh-quest .wh-frame__corner--bl { opacity: .12; }
 .wh-root .wh-quest::before { border-color: rgba(196, 186, 156, .06); }
-.wh-root .wh-quest .wh-frame__corner--tr { opacity: .3; }
+.wh-root .wh-quest .wh-frame__corner--tr { opacity: .12; }
 .wh-root .wh-quest .wh-frame__corner--br {
   left: auto; top: auto;
   right: calc(6 * var(--wh-px)); bottom: calc(6 * var(--wh-px));
   transform: scale(-1, -1);
-  opacity: .2;
+  opacity: .12;
 }
 .wh-root .wh-quest__key {
   position: absolute;
@@ -108,6 +110,8 @@
   transform: rotate(5deg);
 }
 .wh-root .wh-quest__art svg { display: block; width: 100%; height: 100%; }
+/* the mockup key is a soft glowing silhouette, not crisp vector art */
+.wh-root .wh-quest__art { filter: blur(.8px) drop-shadow(0 0 calc(12 * var(--wh-px)) rgba(255, 200, 110, .6)); }
 .wh-root .wh-quest .wh-quest__body {
   position: relative;
   z-index: 1;
@@ -118,7 +122,7 @@
 }
 .wh-root .wh-quest__tag { flex: none; }
 .wh-root .wh-quest .wh-quest__tag {
-  height: calc(18 * var(--wh-px));
+  height: calc(17 * var(--wh-px));
   padding: 0 calc(8 * var(--wh-px)) 0 calc(5 * var(--wh-px));
   gap: calc(5 * var(--wh-px));
   font-size: var(--wh-fs-tag);
@@ -157,7 +161,7 @@
   gap: calc(12 * var(--wh-px));
   padding: 0 calc(12 * var(--wh-px)) calc(2 * var(--wh-px)) calc(12 * var(--wh-px));
   /* bright on top, fading down the sides, as in the mockup */
-  border-color: rgba(236, 222, 186, .9) rgba(214, 200, 164, .6) rgba(196, 186, 156, .4);
+  border-color: var(--wh-toast-border-quad);
   border-radius: calc(25.5 * var(--wh-px));
   transition: opacity var(--wh-transition), transform var(--wh-transition);
 }
@@ -168,11 +172,11 @@
   place-items: center;
   width: calc(21 * var(--wh-px));
   height: calc(21 * var(--wh-px));
-  border: 1.6px solid rgba(226, 204, 150, .95);
+  border: 1.6px solid var(--wh-toast-ring);
   border-radius: 50%;
-  color: #f1e8cf;
+  color: var(--wh-toast-icon);
 }
-.wh-root .wh-toast__i { width: calc(9.5 * var(--wh-px)); height: calc(13 * var(--wh-px)); vertical-align: 0; color: #f1e8cf; }
+.wh-root .wh-toast__i { width: calc(9.5 * var(--wh-px)); height: calc(13 * var(--wh-px)); vertical-align: 0; color: var(--wh-toast-icon); }
 .wh-root .wh-toast__text {
   min-width: 0;
   font-size: var(--wh-fs-toast);
@@ -213,7 +217,7 @@
   width: 26px;
   height: 27.7px;
   color: var(--wh-gold-bright);
-  filter: drop-shadow(0 0 6px rgba(255, 220, 150, .6));
+  filter: drop-shadow(0 0 8px rgba(255, 220, 150, .9)) drop-shadow(0 0 18px rgba(255, 200, 120, .5));
 }
 
 /* ================================================================ mobile: quest card + dots (7.2) */
@@ -229,7 +233,7 @@
   align-items: stretch;
   justify-content: flex-start;
   padding: 0 0 9.6px;
-  border-color: rgba(240, 214, 150, .85);
+  border-color: var(--wh-quest-border-mobile);
   border-radius: var(--wh-r-mquest);
   box-shadow: var(--wh-shadow), var(--wh-glow-gold), 0 0 6px rgba(255, 205, 120, .25);
   text-align: left;
@@ -294,21 +298,21 @@
 .wh-root .wh-quest__dots {
   position: absolute;
   left: 50%;
-  top: 535px;
+  top: 533px;
   transform: translateX(-50%);
   display: flex;
   pointer-events: auto;
 }
 .wh-root .wh-quest__dot {
   position: relative;
-  width: 18px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }
 .wh-root .wh-quest__dot::after {
   content: "";
   position: absolute;
-  left: 6px;
-  top: 6.5px;
+  left: 9px;
+  top: 8.5px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -348,19 +352,21 @@
   line-height: 13.2px;
   color: var(--wh-text-2);
 }
-.wh-root .wh-trial__barrow { display: flex; align-items: center; gap: 9px; margin-top: 4px; }
+.wh-root .wh-trial__barrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 9px; margin-top: 4px; min-width: 0; max-width: 100%; }
 .wh-root .wh-trial--mobile .wh-trial__bar {
   width: 104px;
+  flex: 0 1 104px;
+  min-width: 40px;
   height: 8px;
   padding: 0;
   gap: 0;
-  border: 1px solid rgba(232, 196, 124, .85);
+  border: 1px solid var(--wh-bar-border-mobile);
   border-radius: 4px;
-  background: rgba(70, 68, 58, .9);
+  background: var(--wh-bar-track-mobile);
 }
-.wh-root .wh-trial--mobile .wh-bar__seg { border-right: 1.5px solid rgba(24, 22, 16, .9); border-radius: 0; }
+.wh-root .wh-trial--mobile .wh-bar__seg { border-right: 1.5px solid var(--wh-bar-gap-mobile); border-radius: 0; }
 .wh-root .wh-trial--mobile .wh-bar__seg:last-child { border-right: 0; }
-.wh-root .wh-trial--mobile .wh-bar__seg--on { background: linear-gradient(180deg, #fbd282 0%, #eab35c 100%); }
+.wh-root .wh-trial--mobile .wh-bar__seg--on { background: var(--wh-bar-cell-mobile); }
 .wh-root .wh-trial__pct { font-size: var(--wh-fs-small); line-height: 1; color: var(--wh-text-2); }
 .wh-root .wh-trial__vr { width: 1px; height: 31px; background: var(--wh-sep); }
 .wh-root .wh-trial__stat {
@@ -382,4 +388,14 @@
 @media (max-width: 1086px) and (min-width: 701px) {
   .wh-root .wh-quest { max-width: calc(100vw - 2 * 290 * var(--wh-px)); }
   .wh-root .wh-toast { display: none; } /* tokens.css hides it too; this rule wins over .wh-toast { display: flex } */
+}
+
+/* Short or landscape phones (audit #4): the absolute 876-tall composition does not fit; keep the
+   top bar, the trial card pinned under it, and the bottom cluster; the quest card steps aside. */
+@media (max-width: 700px) and (max-height: 640px) {
+  .wh-root .wh-quest--mobile, .wh-root .wh-quest__dots { display: none; }
+  .wh-root .wh-trial--mobile { top: auto; bottom: 244px; }
+}
+@media (max-width: 700px) and (max-height: 520px) {
+  .wh-root .wh-trial--mobile { display: none; }
 }

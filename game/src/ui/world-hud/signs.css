@@ -11,6 +11,7 @@
   --wh-sg-pill-bg: rgba(64, 54, 20, .55);
   --wh-sg-kbd-bg: rgba(10, 20, 20, .45);
   --wh-sg-round-border: rgba(196, 186, 156, .2);
+  --wh-sg-round-bg: rgba(255, 255, 255, .04);
   position: absolute; inset: 0; pointer-events: none;
 }
 
@@ -102,7 +103,7 @@
 }
 /* Inactive chips share the row equally; the pressed chip keeps its natural width and its glow
    swallows the gap to its right neighbour (the mockup's "All Signs (4)" | "Active" join). */
-.wh-root .wh-signs__chip { flex: 1 1 0; min-width: max-content; padding: 0 calc(12 * var(--wh-px)); }
+.wh-root .wh-signs__chip { flex: 1 1 0; min-width: max-content; padding: 0 calc(12 * var(--wh-px)); font-size: calc(14.5 * var(--wh-px)); }
 .wh-root .wh-signs__chip[aria-pressed="true"] { flex: 0 0 auto; padding: 0 calc(23 * var(--wh-px)); position: relative; z-index: 1; }
 .wh-root .wh-signs__chip[aria-pressed="true"] + .wh-signs__chip { margin-left: calc(-1 * var(--wh-sg-chip-gap)); }
 .wh-root .wh-signs__chip[aria-pressed="false"] { border-color: var(--wh-sg-chip-border); }
@@ -166,7 +167,7 @@
   height: calc(21 * var(--wh-px));
 }
 .wh-root .wh-sign__title { font-size: var(--wh-fs-sign-title); line-height: 1.2; color: var(--wh-text); white-space: nowrap; }
-.wh-root .wh-sign__type { height: calc(21 * var(--wh-px)); padding: 0 calc(10 * var(--wh-px)) 0 calc(9 * var(--wh-px)); gap: calc(5 * var(--wh-px)); background: var(--wh-sg-pill-bg); }
+.wh-root .wh-sign__type { height: calc(21 * var(--wh-px)); padding: 0 calc(9 * var(--wh-px)) 0 calc(8 * var(--wh-px)); gap: calc(5 * var(--wh-px)); background: var(--wh-sg-pill-bg); }
 .wh-root .wh-sign__spark { width: calc(12 * var(--wh-px)); height: calc(12 * var(--wh-px)); margin-left: calc(-1 * var(--wh-px)); }
 .wh-root .wh-sign__tlabel { letter-spacing: -.045em; }
 
@@ -177,7 +178,7 @@
 }
 .wh-root .wh-sign__stat { display: flex; align-items: center; height: calc(19 * var(--wh-px)); white-space: nowrap; }
 .wh-root .wh-sign__stat > *, .wh-root .wh-sign > * { flex: none; }
-.wh-root .wh-sign__sicon { width: calc(19 * var(--wh-px)); height: calc(19 * var(--wh-px)); margin: 0 calc(10 * var(--wh-px)) 0 calc(-5 * var(--wh-px)); }
+.wh-root .wh-sign__sicon { width: calc(17 * var(--wh-px)); height: calc(17 * var(--wh-px)); margin: 0 calc(11 * var(--wh-px)) 0 calc(-4 * var(--wh-px)); }
 .wh-root .wh-sign__k { color: var(--wh-text); }
 .wh-root .wh-sign__v { color: var(--wh-text); margin-left: calc(11 * var(--wh-px)); letter-spacing: .05em; word-spacing: .1em; }
 
@@ -250,7 +251,7 @@
 .wh-root .wh-sheet .wh-signs__eye { position: absolute; left: 20px; top: 33px; width: 48px; height: 47px; }
 .wh-root .wh-sheet .wh-signs__title { margin-top: 2px; }
 .wh-root .wh-sheet .wh-signs__sub { line-height: 17px; margin-top: 0; max-width: 242px; }
-.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 30.5px; width: 35px; height: 35px; border-color: var(--wh-sg-round-border); background: rgba(255, 255, 255, .04); }
+.wh-root .wh-sheet .wh-signs__close { position: absolute; right: 9px; top: 30.5px; width: 35px; height: 35px; border-color: var(--wh-sg-round-border); background: var(--wh-sg-round-bg); }
 .wh-root .wh-sheet .wh-signs__close:hover { border-color: var(--wh-frame-soft); }
 .wh-root .wh-sheet .wh-signs__x { width: 26px; height: 26px; color: var(--wh-text); }
 .wh-root .wh-sheet .wh-signs__filters {
@@ -262,7 +263,7 @@
   scrollbar-width: none;
 }
 .wh-root .wh-sheet .wh-signs__filters::-webkit-scrollbar { display: none; }
-.wh-root .wh-sheet .wh-signs__chip { height: 30px; padding: 0 10px; }
+.wh-root .wh-sheet .wh-signs__chip { height: 30px; padding: 0 10px; font-size: var(--wh-fs-ui); }
 .wh-root .wh-sheet .wh-signs__chip[aria-pressed="true"] { padding: 0 18px; }
 .wh-root .wh-sheet .wh-signs__list {
   margin-top: 21px;
@@ -288,3 +289,17 @@
 .wh-root .wh-sign--mobile .wh-sign__anchor { height: 24px; margin: 6.5px 0 0 -13.5px; padding: 0 12px 0 13px; gap: 8px; }
 .wh-root .wh-sign--mobile .wh-sign__aicon { width: 17px; height: 17px; margin-left: 0; }
 .wh-root .wh-sign--mobile .wh-sign__chev { right: 15px; top: 55.5px; width: 9px; height: 16px; }
+
+/* The woven strip down the panel's left edge (mockup); art: icons.js 'braid', set inline by signs.js. */
+.wh-root .wh-signs__braid {
+  position: absolute;
+  left: calc(3 * var(--wh-px));
+  top: calc(64 * var(--wh-px));
+  bottom: calc(64 * var(--wh-px));
+  width: calc(10 * var(--wh-px));
+  background-repeat: repeat-y;
+  background-position: center top;
+  background-size: calc(10 * var(--wh-px)) calc(24 * var(--wh-px));
+  opacity: .5;
+  pointer-events: none;
+}

@@ -118,7 +118,7 @@ export function mountLog(root, o = {}) {
       const text = h('span', { class: 'wh-log__text wh-body' });
       tx(text, i18n, it.text.key, it.text.args);
       list.appendChild(h('li', { class: 'wh-log__row', dataset: { id: it.id } },
-        ic(def.bullet, 'wh-log__bullet wh-log__bullet--' + def.bullet, def.bullet === 'diamond' ? { strokeWidth: 5 } : undefined),
+        ic(def.bullet, 'wh-log__bullet wh-log__bullet--' + def.bullet, def.bullet === 'diamond' ? { strokeWidth: 2.4 } : undefined),
         h('span', { class: 'wh-log__time wh-body', text: it.time || '' }),
         text));
     }
@@ -144,7 +144,7 @@ export function mountLog(root, o = {}) {
       attrs: { type: 'button', 'data-tile': t.id },
       on: { click: () => emit('tile', t.id) },
     }, ic(t.icon, 'wh-tile__icon', t.stretch ? { stretch: true } : undefined), h('span', { class: 'wh-tile__label wh-heavy-sm', i18n: t.label })));
-    el.appendChild(h('nav', { class: 'wh-tiles wh-interactive', i18nAttrs: { 'aria-label': 'wh.log.label' } }, tiles));
+    el.appendChild(h('nav', { class: 'wh-tiles wh-interactive', i18nAttrs: { 'aria-label': 'wh.tiles.label' } }, tiles));
     refs = { logTile: tiles[1] };
     syncUnread();
   }

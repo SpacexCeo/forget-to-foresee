@@ -17,7 +17,7 @@
   padding: 0 calc(18 * var(--wh-px)) 0 calc(14 * var(--wh-px));
   border-color: var(--wh-prompt-border);
   border-radius: calc(22 * var(--wh-px));
-  background: linear-gradient(180deg, rgba(14, 22, 22, .90) 0%, rgba(26, 32, 30, .88) 60%, rgba(34, 38, 34, .86) 100%);
+  background: var(--wh-prompt-bg);
   white-space: nowrap;
   transition: opacity var(--wh-transition), transform var(--wh-transition), border-color var(--wh-transition);
 }
@@ -90,7 +90,7 @@
   color: var(--wh-gold);
   pointer-events: none;
 }
-.wh-root .wh-dialogue__connector .wh-a-connector__arc { stroke: var(--wh-frame-soft); }
+.wh-root .wh-dialogue__connector .wh-connector__arc { stroke: var(--wh-frame-soft); }
 
 .wh-root .wh-dialogue .wh-dialogue__replies {
   position: relative;
@@ -154,7 +154,7 @@
   padding: 0 calc(4 * var(--wh-px));
   font-size: var(--wh-fs-kbd);
 }
-.wh-root .wh-hotbar__gear { width: calc(21 * var(--wh-px)); height: calc(21 * var(--wh-px)); margin-left: 0; }
+.wh-root .wh-hotbar__gear { width: calc(19 * var(--wh-px)); height: calc(19 * var(--wh-px)); margin-left: 0; }
 /* the mockup's hotbar labels are the humanist sans (like the chips); Source Sans 3 fits at 12.6–13.7 u */
 .wh-root .wh-hotbar__label { font-size: var(--wh-fs-ui); line-height: 1; }
 
@@ -173,12 +173,12 @@
   padding: 0 25px 0 29.5px;
   border: 1.5px solid;
   /* pale on top, warmer gold at the bottom, as sampled */
-  border-color: #f8e6b2 #f1c878 #ebb35c #f1c878;
+  border-color: var(--wh-prompt-border-mobile-quad);
   border-radius: 25px;
   background: var(--wh-prompt-bg-mobile);
-  box-shadow: 0 0 8px rgba(255, 190, 90, .6), 0 0 22px rgba(255, 170, 70, .28), inset 0 -12px 18px -10px rgba(255, 180, 90, .25);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  box-shadow: var(--wh-glow-prompt-mobile), inset 0 -12px 18px -10px rgba(255, 180, 90, .25);
+  -webkit-backdrop-filter: blur(var(--wh-blur-sm));
+  backdrop-filter: blur(var(--wh-blur-sm));
   color: var(--wh-text);
   white-space: nowrap;
   transition: opacity var(--wh-transition), transform var(--wh-transition);
@@ -194,7 +194,7 @@
   width: 11px;
   height: 5.5px;
   transform: translateX(-50%);
-  background: #ecb55e;
+  background: var(--wh-prompt-notch);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   filter: drop-shadow(0 0 3px rgba(255, 190, 90, .8));
 }
@@ -204,7 +204,7 @@
   padding: 0;
   border: 1px solid var(--wh-kbd-border);
   border-radius: 6px;
-  background: rgba(40, 38, 31, .9);
+  background: var(--wh-kbd-bg-mobile);
   font-size: var(--wh-fs-kbd-lg);
 }
 .wh-root .wh-prompt--mobile .wh-prompt__text { font-size: var(--wh-fs-prompt); text-shadow: var(--wh-text-glow); }
@@ -218,7 +218,7 @@
   flex-direction: column;
   min-height: 41px;
   /* sampled: a dim hairline, lighter on top (#a5a497) than at the bottom (#5e594b) */
-  border-color: rgba(214, 208, 186, .62) rgba(190, 182, 160, .45) rgba(150, 140, 115, .42) rgba(190, 182, 160, .45);
+  border-color: var(--wh-dialogue-border-quad);
   border-radius: 21px;
   overflow: hidden;
 }

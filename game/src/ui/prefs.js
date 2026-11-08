@@ -1,18 +1,24 @@
 // Player preferences (language, motion, subtitles, quality), stored on this device.
 import { STORAGE_KEYS } from './storage.js';
 
-export const PREF_DEFAULTS = Object.freeze({ locale: null, motion: 'system', subtitles: true, subtitleSize: 'm', quality: 'auto' });
+// hudMode: Novice is the default for every new player (owner decision 08.11, docs/design/clarity-layers.md);
+// hudScale multiplies the world HUD unit (accessibility: text larger than the mockup proportions).
+export const PREF_DEFAULTS = Object.freeze({ locale: null, motion: 'system', subtitles: true, subtitleSize: 'm', quality: 'auto', hudMode: 'novice', hudScale: 'm' });
 export const PREF_OPTIONS = Object.freeze({
   motion: ['system', 'reduce', 'full'],
   subtitleSize: ['s', 'm', 'l'],
   quality: ['auto', 'high', 'low'],
   locale: ['en', 'uk', 'ru', 'it', 'zh'],
+  hudMode: ['novice', 'pro'],
+  hudScale: ['s', 'm', 'l', 'xl'],
 });
+/** World HUD unit multiplier per hudScale. */
+export const HUD_SCALE = Object.freeze({ s: 0.9, m: 1, l: 1.15, xl: 1.3 });
 
 function clean(p) {
   const out = { ...PREF_DEFAULTS };
   if (!p || typeof p !== 'object') return out;
-  for (const k of ['motion', 'subtitleSize', 'quality', 'locale']) if (PREF_OPTIONS[k].includes(p[k])) out[k] = p[k];
+  for (const k of ['motion', 'subtitleSize', 'quality', 'locale', 'hudMode', 'hudScale']) if (PREF_OPTIONS[k].includes(p[k])) out[k] = p[k];
   if (typeof p.subtitles === 'boolean') out.subtitles = p.subtitles;
   return out;
 }
@@ -63,4 +69,6 @@ export function applyPrefsToDocument(prefs, doc = globalThis.document) {
   el.dataset.tier = prefs.tier();
   el.dataset.subtitles = p.subtitles ? 'on' : 'off';
   el.dataset.subtitleSize = p.subtitleSize;
+  el.dataset.hudMode = p.hudMode;
+  el.style.setProperty('--wh-user-scale', String(HUD_SCALE[p.hudScale] || 1));
 }

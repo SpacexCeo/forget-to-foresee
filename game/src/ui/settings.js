@@ -46,6 +46,8 @@ export function buildSettings(ctx) {
       h('input', { attrs: { id: subId, type: 'checkbox', checked: p.subtitles }, on: { change: (e) => prefs.set({ subtitles: e.target.checked }) } }),
       h('span', { i18n: 'settings.subtitles' })))),
     select('settings.subtitleSize', PREF_OPTIONS.subtitleSize, p.subtitleSize, (s) => 'settings.size.' + s, (s) => prefs.set({ subtitleSize: s })),
+    radios('hudMode', 'settings.hudMode', PREF_OPTIONS.hudMode, p.hudMode, (m) => 'settings.hudMode.' + m, (m) => prefs.set({ hudMode: m })),
+    select('settings.hudScale', PREF_OPTIONS.hudScale, p.hudScale, (s) => 'settings.hudScale.' + s, (s) => prefs.set({ hudScale: s })),
     select('settings.quality', PREF_OPTIONS.quality, p.quality, (q) => 'settings.quality.' + q, (q) => prefs.set({ quality: q })),
     h('p', { class: 'ftf-muted', i18n: 'settings.note' }));
   // Keep the language radios in sync when the language changes elsewhere.

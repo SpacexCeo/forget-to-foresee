@@ -6,19 +6,6 @@ import { icon } from './icons.js';
 
 let uid = 0;
 
-/** Local art (folded into icons.js by the orchestrator later; names are prefixed wh-a-). */
-const LOCAL_ICONS = {
-  // Mockup end of the dialogue strip: a full-height ")" hairline, a double diamond, a stub into the reply.
-  'wh-a-connector': (cls) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 46" class="${cls}" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">`
-    + '<path class="wh-a-connector__arc" d="M0 .6C7.4 4.6 11 13.4 11.6 21.4c.1 1 .5 1.6 1.4 1.6-.9 0-1.3.6-1.4 1.6C11 32.6 7.4 41.4 0 45.4" stroke-width="1"/>'
-    + '<path d="M18.6 17.2l5.8 5.8-5.8 5.8-5.8-5.8Z" stroke-width="1.1"/>'
-    + '<path d="M18.6 20.2l2.8 2.8-2.8 2.8-2.8-2.8Z" stroke-width=".8" opacity=".75"/>'
-    + '<path d="M24.4 23H33" stroke-width="1"/></svg>',
-  // Mobile dialogue bar: an empty speech bubble with the tail at the bottom centre.
-  'wh-a-bubble': (cls) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 18" class="${cls}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">`
-    + '<path d="M4 1h14a3 3 0 0 1 3 3v6.4a3 3 0 0 1-3 3h-5.2L10.6 16.6 8.4 13.4H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Z"/></svg>',
-};
-
 function ensureCss() {
   if (typeof document === 'undefined' || !document.head) return;
   if (document.querySelector('link[data-wh-css="actions"]')) return;
@@ -31,7 +18,7 @@ function ensureCss() {
 
 function ic(name, cls, opts) {
   const s = h('span', { class: 'wh-icon ' + cls, attrs: { 'aria-hidden': 'true' } });
-  s.innerHTML = LOCAL_ICONS[name] ? LOCAL_ICONS[name]('') : icon(name, opts);
+  s.innerHTML = icon(name, opts);
   return s;
 }
 
@@ -156,7 +143,7 @@ export function mountActions(root, o = {}) {
     }, speaker,
     h('span', { class: 'wh-dialogue__sep', attrs: { 'aria-hidden': 'true' } }),
     say(h('span', { class: 'wh-dialogue__text wh-heavy-sm' }), d.line),
-    ic('wh-a-connector', 'wh-dialogue__connector'));
+    ic('connector', 'wh-dialogue__connector'));
     return h('div', { class: 'wh-dialogue' }, strip, renderReplies('wh-dialogue__replies'));
   }
 
@@ -171,10 +158,10 @@ export function mountActions(root, o = {}) {
       attrs: { type: 'button', 'aria-controls': moreId },
       on: { click: () => setDialogueExpanded(!expanded, true) },
     },
-    ic('wh-a-bubble', 'wh-dialogue__bubble'),
+    ic('bubble', 'wh-dialogue__bubble'),
     speaker,
     say(h('span', { class: 'wh-dialogue__text wh-body' }), d.lineMobile || d.line), // the mobile bar's line is the humanist sans
-    ic('chevron-up', 'wh-dialogue__chevron'));
+    ic('chevron-up', 'wh-dialogue__chevron', { strokeWidth: 1.9 }));
     const more = h('div', { class: 'wh-dialogue__more', attrs: { id: moreId } },
       h('div', { class: 'wh-dialogue__more-inner' }, renderReplies('wh-dialogue__replies')));
     const box = h('div', {
