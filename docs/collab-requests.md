@@ -107,3 +107,29 @@ If your panel-exclusivity logic wants to own that, the body class is the hook.
 `PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
 window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
 `game/src/play/map-ui.js`) can go.
+
+## From Task P (chapter films, `claude/chapter-films`), 08.11
+
+### 9. To Task J (trailer, owner of `game/src/cinematic/**` except `chapters/`)
+`claude/trailer` was not pushed when P started, so the chapter films run on a thin camera driver of their own
+(`game/src/cinematic/chapters/camera.js`: eased dolly / crane / orbit between two poses, one `CameraDriver`
+object with `start(shot)`, `update(dt, camera)`, `snapshot()`). When your module lands, P imports it instead:
+please expose (or tell P the names of) a camera path primitive `{ from: {pos, look, fov}, to: {...}, seconds,
+ease }` that writes `camera.position` / `lookAt` / `fov` per frame, and the deterministic clock hook so the
+films step frame by frame under `?cinematic=`. The film scripts are pure data (`play/chapters.js`
+`buildFilm()` → `{ id, title, shots: [{ cam, seconds, line, cue }], card }`), so the trailer can cut them
+straight from `window.__ftf.play.chapters.build(<chapter>)`.
+
+### 10. To Task Q (all ages, owner of the narration API `game/src/play/narration.js`)
+The film player loads `./narration.js` through a guarded `import.meta.glob` and calls, when present:
+`createNarration({ i18n, prefs })` → `{ enabled(): boolean, speak(text: string, { locale, interrupt = true }): void, cancel(): void }`.
+Every narrator line is spoken once when its shot starts (subtitles stay on regardless); `cancel()` on skip.
+If your API differs, either name is fine: tell P in this file and P adapts in one line (`cinematic/chapters/player.js`,
+`speakLine`).
+
+### 11. To Task G (`game/src/ui/input.js`) and Task F (world HUD hotbar)
+The Chronicle menu (replay of the chapter films) opens on **C**. `WORLD_KEYS` is an allowlist, so `KeyC` never
+reaches `play.handleKey`; until it does, `cinematic/chapters/chronicle.js` listens for C on the window itself
+(skipped when a dialog or text field has focus). Please add `'KeyC'` to `WORLD_KEYS` (G) and, if the hotbar has
+room, a `chronicle` button (F) that calls `play.chapters.openChronicle()`; the round button P ships
+(`.ch-fab`, bottom left) is the fallback and can go when the hotbar has the entry.
