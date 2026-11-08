@@ -182,4 +182,5 @@ test('nameplate: the agents draw DOM plates from the pure placement, no canvas s
   assert.match(agents, /platePlacement\(\{ ndc, distance/);
   assert.match(agents, /hidden: !ctx\.irisPos/);
   assert.match(agents, /\.pl-plates \{ position: fixed; inset: 0; pointer-events: none;/);
+  assert.match(agents, /\.pl-plate\[hidden\] \{ display: none; \}/, 'a hidden plate must not render at the layer origin');
 });

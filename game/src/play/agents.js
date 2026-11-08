@@ -38,6 +38,7 @@ const PLATE_CSS = `
   border-radius: 999px; background: rgba(9, 17, 19, .82); border: 1px solid rgba(232, 214, 172, .38); color: #faf7ee;
   font: 400 13px/1 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; white-space: nowrap;
   box-shadow: 0 2px 10px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05); transform-origin: 50% 100%; will-change: transform, opacity; }
+.pl-plate[hidden] { display: none; } /* inline-flex above would otherwise beat the UA's [hidden] rule */
 .pl-plate-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; box-shadow: 0 0 6px currentColor; }
 .pl-plate-sub { font: 500 11px/1 "Source Sans 3", "Segoe UI", system-ui, sans-serif; color: #cfcbbd; }
 .pl-plate-sub::before { content: "·"; margin: 0 6px 0 1px; color: #e4c272; }
