@@ -25,6 +25,7 @@ export class CameraRig {
     this.reset();
     this.focus = new THREE.Vector3();
     this.smoothFocus = new THREE.Vector3();
+    this.hasFocus = false;
     this.lookAhead = new THREE.Vector3();        // smoothed offset of the focus in the move direction
     this.lookAheadTime = opts.lookAheadTime ?? 0.3;   // seconds of travel the camera leads by
     this.lookAheadMax = opts.lookAheadMax ?? 1.0;     // meters
@@ -113,7 +114,7 @@ export class CameraRig {
     } else {
       this.focus.copy(focus);
       const sf = this.smoothFocus;
-      if (sf.lengthSq() === 0 || sf.distanceTo(this.focus) > this.snapDistance) { sf.copy(this.focus); this.lookAhead.set(0, 0, 0); }
+      if (!this.hasFocus || sf.distanceTo(this.focus) > this.snapDistance) { sf.copy(this.focus); this.lookAhead.set(0, 0, 0); this.hasFocus = true; }
       else {
         const k = 1 - Math.exp(-dt * this.followRate), ky = 1 - Math.exp(-dt * this.followRateY);
         sf.x += (this.focus.x - sf.x) * k; sf.z += (this.focus.z - sf.z) * k;

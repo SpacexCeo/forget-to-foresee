@@ -105,16 +105,23 @@ export class CharacterController {
     this.stepped = false;
     if (this.grounded && r.hitWall && (hx || hz)) {
       // Step climbing: up, across, down. Accepted only when it lands on ground higher than the blocked
-      // result and gets further along the intended direction (a real step, not a wall).
-      const up = moveCapsule(this.world, this.pos, [0, this.stepHeight, 0], opts);
-      if (up.pos[1] >= this.pos[1] + this.stepHeight - 1e-3) {
+      // result, not more than a step height up (the rounded bottom alone rides over rims up to about
+      // 0.85 r, so this caps the total), and further along the intended direction (a step, not a wall).
+      // The ground height just ahead of the capsule decides whether this is a step or a wall.
+      const travel0 = Math.hypot(hx, hz), ux = hx / travel0, uz = hz / travel0;
+      const ahead = rayCast(this.world, [this.pos[0] + ux * (this.radius + 0.05), this.pos[1] + this.stepHeight + 0.5, this.pos[2] + uz * (this.radius + 0.05)], [0, -1, 0], this.stepHeight + 1.5, MASK_PLAYER);
+      const stepLike = !ahead || ahead.point[1] - this.pos[1] <= this.stepHeight + 0.02;
+      const up = stepLike ? moveCapsule(this.world, this.pos, [0, this.stepHeight, 0], opts) : null;
+      if (up && up.pos[1] >= this.pos[1] + this.stepHeight - 1e-3) {
         // Carry the capsule far enough onto the step to stand within the ledge grip (at least 0.4 r).
-        const travel = Math.hypot(hx, hz), min = this.radius * 0.4;
-        const k = travel < min ? min / travel : 1;
+        const min = this.radius * 0.4;
+        const k = travel0 < min ? min / travel0 : 1;
         const across = moveCapsule(this.world, up.pos, [hx * k, 0, hz * k], opts);
         const down = moveCapsule(this.world, across.pos, [0, -this.stepHeight - 0.02, 0], opts);
         const along = (q) => (q[0] - this.pos[0]) * hx + (q[2] - this.pos[2]) * hz;
-        if (down.grounded && down.pos[1] > r.pos[1] + 0.01 && along(down.pos) > along(r.pos) + 1e-4) {
+        // A lift during the raised sweep means the rim is higher than a step: a wall, not a step.
+        const rise = down.pos[1] - this.pos[1], lifted = across.pos[1] - up.pos[1];
+        if (down.grounded && lifted <= 0.02 && rise > 0.01 && rise <= this.stepHeight + 0.02 && down.pos[1] > r.pos[1] + 0.01 && along(down.pos) > along(r.pos) + 1e-4) {
           r = { ...down, hitWall: across.hitWall, substeps: r.substeps + up.substeps + across.substeps + down.substeps };
           this.stepped = true;
         }
