@@ -13,6 +13,9 @@ import bmesh
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
+SOFT_KINDS = ("cloth", "leather", "wool", "felt", "skin", "moss", "silk")
+SHARP_DEG = 48.0              # soft parts: edges sharper than this stay creased (hems, rims)
+PAINT_LO, PAINT_HI = 0.80, 1.14   # painted value range over a part's height (bottom .. top)
 CLEAR = 0.016                 # default clearance between garment layers (m)
 THICK = 0.008                 # default garment thickness (m); CLEAR - THICK > bake cage
 
@@ -344,9 +347,16 @@ class Agent:
         return self._bvh[which]
 
     def add(self, name, bm, slot, kind, color, rough=0.7, metal=0.0, solid=None,
-            collide=("all",), smooth=False, solid_offset=-1.0):
+            collide=("all",), smooth=None, solid_offset=-1.0, paint=True):
+        """smooth: True (smooth), False (flat facets) or None (default: soft kinds such as
+        cloth, wool, leather, felt and skin are smooth with sharp edges above SHARP_DEG, the
+        stylized hero look the owner asked for on 08.11; hard kinds stay faceted).
+        paint: hand-painted value gradient over the part's height (lighter top, deeper
+        bottom) plus a faint per-vertex variation, baked into the albedo."""
         if isinstance(color, str):
             color = self.pal[color]
+        if smooth is None:
+            smooth = "angle" if kind in SOFT_KINDS else False
         bm.normal_update()
         me = bpy.data.meshes.new(f"{self.key}_{name}")
         bm.to_mesh(me)
@@ -367,10 +377,26 @@ class Agent:
         # part index per vertex: used to explode the parts apart for clean bakes
         pa = me.attributes.new("part", "INT", "POINT")
         pa.data.foreach_set("value", [len(self.parts) + 1] * len(me.vertices))
-        for an, val in (("Col", (*color, 1.0)), ("Prm", (rough, metal, 0.0, 1.0))):
-            c = me.color_attributes.new(an, "FLOAT_COLOR", "CORNER")
-            c.data.foreach_set("color", list(val) * n_l)
-        if smooth:
+        cols = list((*color, 1.0)) * n_l
+        if paint and n_l:
+            zs = [v.co.z for v in me.vertices]
+            z0, z1 = min(zs), max(zs)
+            span = max(z1 - z0, 0.05)
+            rnd = random.Random(len(self.parts) * 7919 + n_l)
+            jit = [1.0 + rnd.uniform(-0.035, 0.035) for _ in me.vertices]
+            cols = []
+            for lp in me.loops:
+                h = (me.vertices[lp.vertex_index].co.z - z0) / span
+                k = (PAINT_LO + (PAINT_HI - PAINT_LO) * smoothstep(h)) * jit[lp.vertex_index]
+                cols += [min(1.0, color[0] * k), min(1.0, color[1] * k), min(1.0, color[2] * k), 1.0]
+        c = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
+        c.data.foreach_set("color", cols)
+        c = me.color_attributes.new("Prm", "FLOAT_COLOR", "CORNER")
+        c.data.foreach_set("color", [rough, metal, 0.0, 1.0] * n_l)
+        if smooth == "angle":
+            me.shade_smooth()
+            me.set_sharp_from_angle(angle=math.radians(SHARP_DEG))
+        elif smooth:
             me.shade_smooth()
         else:
             me.shade_flat()
@@ -970,11 +996,30 @@ def pleat(th, count, phase=0.0):
 
 def garment(ag, name, P, A, slot="garment", kind="cloth", color="cloth", rough=0.85,
             metal=0.0, thick=THICK, clear=CLEAR, push=0.10, against="all", closed=True,
-            mask=None, collide=("all",), iters=6, axis_fn=None):
+            mask=None, collide=("all",), iters=6, axis_fn=None, trim=None):
+    """trim: None, or (color, rows, kind) for a hem band: the last `rows` rows of the
+    garment repeated a few millimetres outside it, thicker, in another colour and
+    material (sewn hem, embroidered edge). Reads as material breakup at any distance."""
     P = conform_grid(P, A, ag.bvh(against), clear=clear, push=push, closed_u=closed,
                      iters=iters)
     bm = build_grid(P, closed, mask, axis_fn)
-    return ag.add(name, bm, slot, kind, color, rough, metal, solid=thick, collide=collide)
+    obj = ag.add(name, bm, slot, kind, color, rough, metal, solid=thick, collide=collide)
+    if trim and mask is None:
+        tcol, width, tkind = trim
+        # a narrow band (width in metres) along the hem, a few millimetres outside the cloth
+        up = [b + (a - b).normalized() * width if (a - b).length > 1e-6 else b.copy()
+              for a, b in zip(P[-2], P[-1])]
+
+        def outward(row, arow, off):
+            return [p + (p - Vector((ax.x, ax.y, p.z))).normalized() * off
+                    if (p - Vector((ax.x, ax.y, p.z))).length > 1e-6 else p.copy()
+                    for p, ax in zip(row, arow)]
+        T = [outward(up, A[-1], thick + 0.003), outward(P[-1], A[-1], thick + 0.003)]
+        T.append([p + Vector((0, 0, -0.005)) for p in T[-1]])   # tucks under the edge
+        tb = build_grid(T, closed, None, axis_fn)
+        ag.add(name + "_trim", tb, slot, tkind, tcol, rough=0.6, metal=0.0, solid=0.005,
+               collide=(), paint=False)
+    return obj
 
 
 def robe(ag, name, z_top, z_hem, r_top, r_hem, n=32, rows=12, depth=0.85, hem=None,
@@ -1157,11 +1202,17 @@ def hem_points(count, amp, phase=0.0, sharp=1.0):
 
 
 def hem_jagged(seed, n, amp):
-    """Ragged, frayed or burnt hem: deterministic random drops per column."""
+    """Stylized tatters (owner 08.11: the paper zigzags read as cheap): a few broad,
+    clean tongues of cloth with smooth notches between them, deterministic per seed.
+    n keeps the old call signature: about n/6 tongues around the hem."""
     rnd = random.Random(seed)
-    vals = [rnd.uniform(0.0, 1.0) for _ in range(n)]
+    k = max(5, n // 6)
+    vals = [rnd.uniform(0.35, 1.0) for _ in range(k)]
 
     def f(th):
-        x = ((th + math.pi / 2) / (2 * math.pi)) % 1.0 * n
-        return -amp * vals[int(x) % n]
+        x = ((th + math.pi / 2) / (2 * math.pi)) % 1.0 * k
+        i = int(x) % k
+        u = x - int(x)
+        tongue = math.sin(math.pi * u) ** 0.6      # rounded tongue, notch at the joins
+        return -amp * vals[i] * tongue
     return f
