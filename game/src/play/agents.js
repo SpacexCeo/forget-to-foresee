@@ -1,8 +1,11 @@
 // The six clan agents in the 3D world. Each clan's agent_<asset>.glb stands in its camp; its clips
 // play through THREE.AnimationMixer by the animation contract (docs/art/animation-contract.md:
-// idle, walk, talk, think, gesture_offer, celebrate, defeat). Missing files or clips degrade
+// idle, walk, run, talk, think, gesture_offer, celebrate, defeat). Missing files or clips degrade
 // gracefully: a labeled hologram stand-in until the model streams in, a fallback clip chain, and a
 // procedural layer (breathing, glances, pacing, slump) that runs whenever a clip is missing.
+// Locomotion (Iris and the agents alike) is a gait layer blended by the actual ground speed with the
+// clip rate synced to it (docs/movement.md): no foot sliding, short eased start/stop transitions.
+// The agents walk their camp with the same motion model as the player (physics/motion.js).
 // Behaviour cues come from behaviour.js (room observation → pose, placement, facing, mind glyph),
 // so the clans' minds are legible from the isometric camera. Presentation only.
 import * as THREE from 'three';
@@ -12,9 +15,55 @@ import { fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
+import { NPC_MOTION, createMotion, stepMotion, gaitBlend, damp } from '../physics/motion.js';
+import { steerTo } from '../physics/character.js';
 
 const LOAD_RADIUS = 75;      // meters from the camera focus at which an agent model is requested
 const FADE = 0.35;           // clip cross-fade seconds
+const NPC_SPEED = 1.1;       // m/s, the agents' amble about their camps
+const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
+const WALK_REF = 1.7, RUN_REF = 3.57; // m/s the walk / run clips were authored at
+
+/**
+ * Locomotion layer on a mixer: the walk and run actions always play, their weights follow the
+ * actual ground speed (idle → walk by 0.6 m/s, walk → run from 1.7 to 3.57 m/s) and their playback
+ * rate follows it too, so the stride matches the ground. `move` (0..1) is how much of the pose the
+ * gait owns; the caller scales its idle / cue actions by 1 - move. Without a run clip the walk clip
+ * carries the run at a higher rate; without a walk clip the layer is inert (procedural fallback).
+ */
+export class GaitLayer {
+  constructor(mixer, clips) {
+    this.mixer = mixer;
+    const w = resolveClip(clips, 'walk'), r = resolveClip(clips, 'run');
+    this.walk = w.clip && w.name === 'walk' ? mixer.clipAction(w.clip) : null;
+    this.run = r.clip && r.name === 'run' ? mixer.clipAction(r.clip) : null;
+    for (const a of [this.walk, this.run]) if (a) { a.play(); a.weight = 0; a.enabled = true; }
+    this.weights = { walk: 0, run: 0 };
+    this.move = 0;
+  }
+
+  /** @param {number} speed actual ground speed in m/s @returns {number} move weight 0..1 */
+  update(dt, speed) {
+    const g = gaitBlend(speed, { walkRef: WALK_REF, runRef: RUN_REF });
+    let walkW = g.walk, runW = g.run;
+    if (!this.run) { walkW += runW; runW = 0; }
+    if (!this.walk) walkW = 0;
+    this.weights.walk = damp(this.weights.walk, walkW, GAIT_RATE, dt);
+    this.weights.run = damp(this.weights.run, runW, GAIT_RATE, dt);
+    this.move = Math.min(1, this.weights.walk + this.weights.run);
+    if (this.walk) {
+      this.walk.weight = this.weights.walk;
+      this.walk.timeScale = this.run ? g.walkScale : Math.min(2.2, Math.max(0.55, Math.max(speed, 0.6) / WALK_REF));
+    }
+    if (this.run) {
+      // Keep the two gait cycles in phase so the feet stay planted through the walk → run blend.
+      if (this.weights.run < 0.01 && runW > 0 && this.walk) this.run.time = (this.walk.time / this.walk.getClip().duration) * this.run.getClip().duration;
+      this.run.weight = this.weights.run;
+      this.run.timeScale = g.runScale;
+    }
+    return this.move;
+  }
+}
 const GLYPH = { offer: '◆', broken: '✕', isolated: '!', warm: '♥', cold: '·', given: '✓', dark: '○' };
 const MOOD_COLOR = { warm: '#e9c46a', eager: '#ffd27a', hostile: '#ff8a7a', cold: '#9fb4c0', neutral: '#d6dcd8', uneasy: '#f0a868' };
 
@@ -85,6 +134,8 @@ class Agent {
     this.model = null; this.mixer = null; this.clips = []; this.actions = new Map();
     this.currentClip = null; this.state = 'absent';
     this.speed = 0; this.phase = Math.random() * 10;
+    this.motion = createMotion(homeYaw); // velocity + facing, stepped by the shared motion model
+    this.gait = null;
     this.cue = null;
   }
 
@@ -104,7 +155,7 @@ class Agent {
       this.body.add(model);
       this.model = model;
       this.clips = gltf.animations || [];
-      if (this.clips.length) this.mixer = new THREE.AnimationMixer(model);
+      if (this.clips.length) { this.mixer = new THREE.AnimationMixer(model); this.gait = new GaitLayer(this.mixer, this.clips); }
       this.state = 'loaded';
       this.currentClip = null;
     } catch (e) {
@@ -158,24 +209,22 @@ export class ClanAgents {
       model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = true; });
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
-      this.irisModel = { model, mixer: gltf.animations.length ? new THREE.AnimationMixer(model) : null, clips: gltf.animations, current: null };
+      const mixer = gltf.animations.length ? new THREE.AnimationMixer(model) : null;
+      const idle = mixer ? resolveClip(gltf.animations, 'idle').clip : null;
+      const idleAction = idle ? mixer.clipAction(idle) : null;
+      if (idleAction) idleAction.play();
+      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null };
     } catch (e) { console.warn('[play] Iris model failed', e); }
   }
 
-  /** Iris's clip: walk while moving, idle otherwise (procedural bob when no clips). */
+  /** Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips). */
   updateIris(dt, moving, avatarGroup, t, speed = 0, running = false) {
     const m = this.irisModel;
     if (!m) return;
+    void running; // the blend follows the speed itself: the run clip appears above the walk speed
     if (m.mixer) {
-      const want = !moving ? 'idle' : running && m.clips.some((c) => c.name === 'run') ? 'run' : 'walk';
-      const { clip } = resolveClip(m.clips, want);
-      if (clip && m.current !== clip.name) {
-        const act = m.mixer.clipAction(clip); act.reset().fadeIn(FADE).play();
-        if (m.current) m.mixer.clipAction(m.clips.find((c) => c.name === m.current)).fadeOut(FADE);
-        m.current = clip.name;
-      }
-      // Match the stride to the ground speed (walk clip authored for 1.7 m/s, run for ~3.6 m/s) so feet do not skate.
-      if (clip && moving) m.mixer.clipAction(clip).timeScale = Math.min(1.6, Math.max(0.5, speed / (clip.name === 'run' ? 3.6 : 1.7)));
+      const move = m.gait ? m.gait.update(dt, speed) : 0;
+      if (m.idleAction) m.idleAction.weight = 1 - move;
       m.mixer.update(dt);
     } else {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;
@@ -219,22 +268,30 @@ export class ClanAgents {
         const side = new THREE.Vector3(toPlaza.z, 0, -toPlaza.x);
         target.addScaledVector(side, Math.sin(t * 0.35 * cue.tempo + a.phase) * 1.4);
       }
-      const before = a.root.position.clone();
-      const k = 1 - Math.exp(-dt * 1.2);
-      a.root.position.lerp(target, k);
-      a.speed = before.distanceTo(a.root.position) / Math.max(dt, 1e-3);
-      // Facing.
+      // Walk there with the shared motion model (accelerate, brake into the spot, turn at a limited rate)
+      // instead of an exponential glide; the agents never collide, their camp is flat.
+      const pos = a.root.position;
+      const wish = steerTo([pos.x, 0, pos.z], [target.x, 0, target.z], 0.12, { speedRef: NPC_SPEED, decel: 2 }) || [0, 0];
+      const step = Math.min(dt, 0.1);
+      stepMotion(a.motion, wish, NPC_SPEED * cue.tempo, step, NPC_MOTION, true);
+      pos.x += a.motion.vel[0] * step; pos.z += a.motion.vel[1] * step;
+      a.speed = Math.hypot(a.motion.vel[0], a.motion.vel[1]);
+      // Facing: the motion model's facing while walking, the cue's facing (Iris, the plaza, away) at rest.
       let yaw;
-      if (cue.face === 'iris' && ctx.irisPos) yaw = Math.atan2(ctx.irisPos[0] - a.root.position.x, ctx.irisPos[2] - a.root.position.z);
-      else if (a.speed > 0.25) yaw = Math.atan2(target.x - before.x, target.z - before.z);
+      if (a.speed > 0.25) yaw = a.motion.heading;
+      else if (cue.face === 'iris' && ctx.irisPos) yaw = Math.atan2(ctx.irisPos[0] - pos.x, ctx.irisPos[2] - pos.z);
       else yaw = Math.atan2(toPlaza.x, toPlaza.z) + (cue.face === 'away' ? Math.PI : 0);
-      if (T.fidget === 'glance' && !ctx.reducedMotion && cue.face !== 'iris') yaw += Math.sin(t * 0.9 + a.phase) > 0.85 ? 0.7 : 0; // Salt keeps glancing sideways
+      if (T.fidget === 'glance' && !ctx.reducedMotion && cue.face !== 'iris' && a.speed <= 0.25) yaw += Math.sin(t * 0.9 + a.phase) > 0.85 ? 0.7 : 0; // Salt keeps glancing sideways
       let dy = yaw - a.root.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-      a.root.rotation.y += dy * (1 - Math.exp(-dt * 4));
-      // Animation: walking beats the cue clip while the agent is moving.
-      const want = a.speed > 0.3 ? 'walk' : cue.clip;
-      const used = a.play(want);
-      if (a.mixer) a.mixer.update(dt * (want === 'walk' ? 1 : cue.tempo));
+      a.root.rotation.y += dy * (1 - Math.exp(-dt * (a.speed > 0.25 ? 12 : 4)));
+      if (a.speed <= 0.25) a.motion.heading = a.root.rotation.y; // so the next walk starts from the real facing
+      // Animation: the gait layer takes over the pose by speed; the cue clip owns the rest.
+      const used = a.play(cue.clip);
+      if (a.mixer) {
+        const move = a.gait ? a.gait.update(dt, a.speed) : 0;
+        for (const [name, act] of a.actions) { act.weight = 1 - move; act.timeScale = cue.tempo; void name; }
+        a.mixer.update(dt);
+      }
       this.procedural(a, cue, t, dt, used, ctx.reducedMotion);
       // Mind glyph.
       const name = this.i18n.t('agent.' + a.clan);
