@@ -47,7 +47,7 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 260`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 292`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
 
 ---
 
@@ -65,13 +65,13 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 | **World HUD** to the owner's mockups (desktop and phone): trial card, quest banner, Signs & Visions with plain readings (Novice) or the four slots (Pro), "Verified ✓" on revealed signs, log / hints / lore tabs, dialogue strip, hotkey bar | **works**; `?hud=old` shows the previous greybox overlay | `game/src/ui/world-hud/`, `game/src/play/world-hud.js` |
 | **Novice / Pro** presentation modes (same rules; Novice unlocks HUD layers L0→L2 as the season advances) and 15 hint rows | **works** | `game/src/play/hints.js`, `docs/design/clarity-layers.md` |
 | Lobby and onboarding: guest demo entitlement → 4-page tutorial → hologram constructor (canonical recipe hash) → first contact | **works**; the entitlement is synthetic and labeled | `game/src/ui/`, `game/ui-preview.html` |
-| UI languages | **EN and RU complete**, switch mid-season without losing the season; **UA, IT, 中文 cover the lobby and core labels**, every other key falls back to English | `game/src/locales/`, `game/src/play/locales/` |
-| Input | keyboard + mouse (WASD, click-to-move, arrows / right-drag, wheel), **Shift** to run, gamepad, touch (tap to walk, drag to orbit, pinch to zoom); phones get the miniature HUD and skip the lobby | `game/src/ui/input.js`, `game/src/ui/gamepad.js` |
+| UI languages | **EN, UA, RU, IT, 中文 complete** (UA, IT and 中文 AI-translated, not yet proofread by native speakers; key and placeholder parity enforced by `tests/ui-i18n-locales.test.mjs`); switch mid-season without losing the season | `game/src/locales/`, `game/src/play/locales/` |
+| Input | keyboard + mouse (WASD, click-to-move, arrows / right-drag, wheel), **Shift** to run, gamepad, touch (tap to walk, drag to orbit, pinch to zoom; run button, double tap or a far tap to run); phones get the miniature HUD, a phone quality profile and skip the lobby | `game/src/ui/input.js`, `game/src/ui/gamepad.js` |
 | **Agent-playable HTTP API:** OpenAPI 3.1, action catalog with JSON Schemas, idempotent version-checked commands, per-viewer redacted observations, navigation-bound movement, SSE, audit history, Merkle proofs, an example agent that plays a whole season | **works** locally; 28 tests | `server/`, `game/src/net/`, [docs/api/](docs/api/README.md) |
 | **NEAR contract `season-commit`** (Rust, near-sdk 5.30, testnet only): immutable season root commitment, on-chain recomputation and verification of each revealed leaf and Merkle path, Ash's key commit-reveal, NEP-297 events | **builds and passes tests**: 56 unit + mocked-chain tests on any Linux/macOS, 2 sandbox tests in CI; **not deployed** | `contracts/season-commit/`, [its README](contracts/season-commit/README.md) |
 | 3D art: island, 6 camps, 4 Shell exteriors (+ unused round-2 variants), Shell interior, anchor, Scroll table, shard, 6 rigged clan agents (8 clips each) + suit, the Guest (idle / draw / react), 23 props and relics, 5 fauna; all textures KTX2, geometry meshopt | **67 glb files load by name**; several are not yet reviewed by a human (faces up close, interior coordinates, Guest core glow: `docs/HANDOFF.md`) | `game/public/assets/models/`, `art/`, [docs/art/](docs/art/) |
-| Audio: 60 procedurally synthesized sounds (ambience, three music stems, Guest voice, UI, footsteps, stingers) and a WebAudio runtime | **partly wired**: unlock on first input, tension-driven music, the Guest speaks the strokes, zone ambience; footsteps, UI clicks and volume settings are not wired | `game/src/audio/`, [docs/audio.md](docs/audio.md) |
-| VFX: GPU particle system, 4 flipbooks, presets (memory burn, vision, mist, logogram, vote finale, …) | **partly wired** into the play layer (`createVfx` is loaded and cues are mapped; not every cue has an effect yet) | `game/src/vfx/`, [docs/vfx.md](docs/vfx.md) |
+| Audio: 60 procedurally synthesized sounds (ambience, three music stems, Guest voice, UI, footsteps, stingers) and a WebAudio runtime | **wired**: unlock on first input, tension-driven music, the Guest speaks the strokes, zone ambience, one positional hum per Shell, footsteps by surface (Iris and agents), UI click/confirm/error, music/SFX/master volume sliders in the scene controls dialog; not yet tuned by a human listener | `game/src/audio/`, [docs/audio.md](docs/audio.md) |
+| VFX: GPU particle system, 4 flipbooks, presets (memory burn, vision, mist, logogram, vote finale, …) | **wired**: mist under every Shell, Shell IV crack pulse, season-tension tint, logogram on the Shell glass, vote-finale beams, cue effects; follows the quality tier and reduced motion; every cue is mapped or listed as silent (enforced by a test) | `game/src/vfx/`, [docs/vfx.md](docs/vfx.md) |
 | Asset review page, UI preview page, HUD preview page (dev) | **work** | `game/review.html`, `game/ui-preview.html`, `game/hud-preview.html` |
 | Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
 | Browser prototype of the full game loop (2D) | **works**, the frozen parity reference (UI in Russian by design) | `prototype-2d/index.html` |
@@ -91,7 +91,7 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 | Weekly tournament | **mock**: synthetic schedule, enrollment and results on the device, labeled "simulation" |
 | Agent API sessions | **real** server logic; test sessions only: in-memory, per-session tokens, no accounts |
 | Season seed | `v3` (the client's and the API's default): a 128-bit CSPRNG seed, SHA-256 counter-mode RNG, no secret in the client projection. `v2` / baseline: 32-bit seed (parity with the prototype) |
-| Audio / VFX | present and partly wired; what you hear and see is listed above, nothing else is claimed |
+| Audio / VFX | present and wired as listed above; nothing else is claimed |
 
 ---
 
@@ -103,13 +103,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 260 tests, ~12 s
+npm test            # 292 tests, ~20 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `# tests 260` / `# pass 260` / `# fail 0`; `✓ built in …s`.
+**See:** `# tests 292` / `# pass 292` / `# fail 0`; `✓ built in …s`.
 
-What the 260 tests cover:
+What the 292 tests cover (the breakdown below is the 260 of the first measurement; 32 were added on 08.11: 6 Shell hub, 9 uk/it/zh locale parity, 12 mobile run and phone quality tier, 5 audio/VFX cue mapping):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
@@ -157,7 +157,7 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
 | **M** / **V** / **T** | Memories · Signs & Visions · end the trial (press twice to confirm while attention is left); in the Shell hub **T** leaves the Shell, which ends the trial |
 | **← →** / right-drag / one-finger drag | rotate the camera (limited); **↑ ↓** / wheel / pinch / **+ −** zoom from the overview down to third person (never first person) |
 | **I** | inspect the nearest hero object up close; **R** resets the camera |
-| **H** / **L** / **Esc** / **F3** | help · EN⇄RU · close / stop / menu · dev HUD |
+| **H** / **L** / **Esc** / **F3** | help · next UI language (EN → UA → RU → IT → 中文) · close / stop / menu · dev HUD |
 | Gamepad | left stick walk, right stick look, A interact, B back, menu button settings |
 
 ---
