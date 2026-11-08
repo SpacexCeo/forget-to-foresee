@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLocalTransport } from '../../src/play/transport-local.js';
 import { PlaySession } from '../../src/play/session.js';
-import { ShellHub, signsByShell, signForShell, impliedTick, interruptFor, autopilotMoves } from '../../src/play/hub.js';
+import { ShellHub, signsByShell, openSignsByShell, isOpenSign, signForShell, impliedTick, interruptFor, autopilotMoves } from '../../src/play/hub.js';
 import { currentGoal, hubGoal } from '../../src/play/objectives.js';
 import { PLAY_MESSAGES, createPlayI18n } from '../../src/play/i18n.js';
 
@@ -116,5 +116,47 @@ test('hub goals and strings: every hub key exists in all five languages', async 
       assert.ok(out && out !== '…', `${loc}:${k} formats`);
     }
   }
+  s.dispose();
+});
+
+test('hub: input during a flight is refused, not queued (QA-002)', async () => {
+  const { s, hub } = await setup();
+  const n = [...signsByShell(s.obs)].find(([, v]) => v.length)[0];
+  const tick = s.obs.tick;
+  assert.equal(hub.beginTransit('fly'), true);
+  assert.equal(hub.beginTransit('fly'), false, 'a second flight cannot start during the first');
+  assert.equal((await hub.advance()).reason, 'busy', 'T during the fade does not pass the trial');
+  assert.equal((await hub.stake()).ok, false, 'F during the fade does not stake on the island');
+  assert.equal(s.obs.tick, tick);
+  assert.equal((await hub.flyTo(n)).ok, true, 'the flight that owns the transition proceeds');
+  hub.endTransit();
+  assert.equal(s.obs.you.zone, 'shell');
+  assert.equal(s.obs.tick, tick, 'still the same trial after landing');
+  assert.equal((await hub.stake()).ok, true, 'after landing, F stakes');
+  s.dispose();
+});
+
+test('hub: player operations wait while automatic trials run', async () => {
+  const { s, hub } = await setup();
+  hub.advancing = true;
+  assert.equal((await hub.flyTo(1)).reason, 'busy');
+  assert.equal(hub.beginTransit('fly'), false);
+  hub.advancing = false;
+  s.dispose();
+});
+
+test('hub: a Shell glows gold only for signs that can still pay (QA-007)', async () => {
+  const { s, hub } = await setup();
+  const obs = s.obs;
+  const all = [...signsByShell(obs).values()].flat();
+  assert.ok(all.length > 0);
+  for (const p of all) assert.equal(isOpenSign(p, obs), p.impliedAnchor.tick >= obs.season.tick && p.impliedAnchor.tick <= 17);
+  // play on until some sign's trial has passed, then no Shell may count it
+  for (let i = 0; i < 6; i++) await hub.advance();
+  const later = s.obs;
+  const open = [...openSignsByShell(later).values()].flat();
+  for (const p of open) assert.ok(p.impliedAnchor.tick >= later.season.tick, `sign #${p.index} for trial ${p.impliedAnchor.tick} is past (now ${later.season.tick})`);
+  const past = [...signsByShell(later).values()].flat().filter((p) => p.impliedAnchor.tick < later.season.tick);
+  assert.ok(past.length > 0, 'the season has past signs to filter');
   s.dispose();
 });

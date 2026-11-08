@@ -7,6 +7,7 @@ import { createSeason, withState, dryRun, RULES_VERSIONS, DEFAULT_RULES } from '
 import { ACTIONS, ACTIONS_BY_TYPE, PRECONDITIONS, MEANING_NAMES } from './catalog.js';
 import { validate } from './schema.js';
 import { project, meaningObj } from './projection.js';
+import { deriveSeed, entropyCommitment, hexOf, SEED_PROTOCOL } from './near-season.js';
 import * as W from './world-map.js';
 import * as T from './text.js';
 
@@ -74,7 +75,19 @@ export class Room {
     this.createdAtMs = clock();
     this.clientSeed = seed != null || seedHex != null;
     this.label = label;
-    const { state, fx } = createSeason({ rules, seed, seedHex, randomBytes });
+    this.randomBytes = randomBytes || ((n) => globalThis.crypto.getRandomValues(new Uint8Array(n)));
+    // Season entropy (docs/verify.md, protocol ftf-seed/1): for a live v3 season the room draws 32 random bytes now and
+    // publishes only their commitment; the player's nonce arrives with start_season, and the seed that generates the
+    // season is derived from both (plus an optional public beacon). Until then the season is provisional (nonce "").
+    // A client-chosen seed (test and demo sessions) or a legacy rules mode has no nonce protocol.
+    if (!this.clientSeed && rules === 'v3') {
+      const roomEntropy = hexOf(this.randomBytes(32));
+      this.entropy = { protocol: SEED_PROTOCOL, roomEntropy, commitment: entropyCommitment(roomEntropy), nonce: null, beacon: null, seedHex: deriveSeed(roomEntropy, '', null), sealed: false };
+      seedHex = this.entropy.seedHex;
+    } else {
+      this.entropy = this.clientSeed ? { protocol: 'fixed-seed', seedHex: seedHex ?? null, seed: seed ?? null, sealed: true } : { protocol: 'none', sealed: true };
+    }
+    const { state, fx } = createSeason({ rules, seed, seedHex, randomBytes: this.randomBytes });
     this.state = state;
     this.version = 1;
     this.members = new Map();
@@ -84,7 +97,11 @@ export class Room {
     this.listeners = new Set();
     this.idem = new Map();
     this.history = [];
-    this.emit('season.created', 'all', { rules, worldRules, timeScale, merkleRoot: state.root });
+    // Shards: the engine keeps a shard only until the tick after its auction; the room remembers every shard of the
+    // season (last snapshot) and, for Iris's shards, which future sign the vision opened (docs/shard-nft.md).
+    this.shardLog = new Map();
+    this.shardMeta = new Map();
+    this.emit('season.created', 'all', { rules, worldRules, timeScale, merkleRoot: this.entropy.sealed ? state.root : null, entropyProtocol: this.entropy.protocol, entropyCommitment: this.entropy.commitment ?? null });
     this.emitFx(fx);
     this.lastActivityMs = this.createdAtMs;
   }
@@ -308,10 +325,50 @@ export class Room {
       if (perm) return { status: 403, body: err('forbidden', perm.message) };
       return finish(422, rejected(type, actionId, this.version, failed[0].reason, failed[0].source, failed), false, failed[0].reason);
     }
+    if (type === 'start_season') this.sealSeason(args);
     const res = def.kind === 'rules' ? this.runRules(def, args, m) : this.runWorld(def, args, m);
     if (!res.ok) return finish(422, rejected(type, actionId, this.version, res.reason, res.source, [{ id: res.source === 'rules' ? 'engine_guards' : 'world', source: res.source, reason: res.reason, message: res.message || T.reasonText(res.reason) }]), false, res.reason);
     if (def.mutates !== false) this.version++;
     return finish(200, { ok: true, actionId, type, version: this.version, result: res.result || {} }, true);
+  }
+
+  /**
+   * Protocol ftf-seed/1: fixes the season from the room's committed entropy and the player's nonce (and beacon).
+   * Runs once, right before start_season is applied; the provisional season generated at creation is replaced when
+   * the nonce changes the seed. Fixed-seed and legacy sessions ignore the nonce.
+   */
+  sealSeason(args = {}) {
+    const e = this.entropy;
+    if (e.protocol !== SEED_PROTOCOL || e.sealed || this.state.phase !== 'intro') return;
+    const nonce = args.nonce == null ? '' : String(args.nonce);
+    const beacon = args.beacon == null ? null : String(args.beacon);
+    const seedHex = deriveSeed(e.roomEntropy, nonce, beacon);
+    if (seedHex !== e.seedHex) {
+      const { state, fx } = createSeason({ rules: this.rules, seedHex, randomBytes: this.randomBytes });
+      this.state = state;
+      this.emitFx(fx);
+    }
+    Object.assign(e, { nonce, beacon, seedHex, sealed: true, sealedAtSim: this.simNow() });
+    this.emit('season.sealed', 'all', { merkleRoot: this.state.root, seasonId: this.state.seasonId, entropyCommitment: e.commitment, nonce, beacon });
+  }
+
+  /** What viewers learn about the season entropy: the commitment always, the room's bytes only once the season has ended. */
+  entropyView() {
+    const e = this.entropy;
+    if (e.protocol !== SEED_PROTOCOL) return e.protocol === 'fixed-seed' ? { protocol: 'fixed-seed', seedHex: e.seedHex, sealed: true } : { protocol: 'none', sealed: true };
+    const ended = this.state.phase === 'end';
+    return { protocol: e.protocol, commitment: e.commitment, nonce: e.nonce, beacon: e.beacon, sealed: e.sealed, seedHex: ended ? e.seedHex : null, roomEntropy: ended ? e.roomEntropy : null };
+  }
+
+  /** Remembers every shard (last snapshot) and, for a shard Iris just created, the first sign its vision opened. */
+  recordShards(S, visionsBefore = S.visions, shardsBefore = new Set()) {
+    for (const sh of S.shards) {
+      if (sh.from === 0 && !shardsBefore.has(sh.id) && !this.shardMeta.has(sh.id)) {
+        const opened = S.visions.filter((i) => !visionsBefore.includes(i)).sort((a, b) => S.events[a].pub - S.events[b].pub || a - b);
+        this.shardMeta.set(sh.id, opened.length ? { index: opened[0], leaf: S.events[opened[0]].leaf, opened } : null);
+      }
+      this.shardLog.set(sh.id, { ...sh, bids: sh.bids.map((b) => ({ ...b })), mem: sh.mem ? { kind: sh.mem.kind, w: sh.mem.w, text: sh.mem.text, about: sh.mem.about ?? null } : null, vals: undefined });
+    }
   }
 
   runRules(def, args, m) {
@@ -319,8 +376,10 @@ export class Room {
     if (!a) return { ok: false, source: 'world', reason: 'unknown_logogram' };
     const S = this.state;
     const pre = digest(S);
+    const visionsBefore = S.visions.slice(), shardsBefore = new Set(S.shards.map((x) => x.id));
     const { r, fx } = withState(S, (E) => { const r = ENGINE_CALLS[def.type](E, a); return { r, fx: E.takeFx() }; });
     if (!r || !r.ok) return { ok: false, source: 'rules', reason: (r && r.reason) || 'rejected' };
+    this.recordShards(S, visionsBefore, shardsBefore);
     this.deriveEvents(pre, digest(S), S);
     this.emitFx(fx);
     return { ok: true, result: { engine: def.engine, tick: S.tick, phase: S.phase } };
@@ -475,6 +534,9 @@ export class Room {
     const you = { ...this.memberView(m, now), place: W.campAt(this.avatarPos(m, now)) ? 'camp:' + W.campAt(this.avatarPos(m, now)) : null };
     return project(this.state, m, {
       session: this.sessionInfo(),
+      entropy: this.entropyView(),
+      shardLog: [...this.shardLog.values()],
+      shardMeta: this.shardMeta,
       version: this.version,
       simTime: now,
       you,

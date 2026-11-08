@@ -8,6 +8,8 @@ import { mountWorldHud } from '../ui/world-hud/index.js';
 import { buildHudModel, raw } from '../ui/world-hud/from-obs.js';
 import { renderMsg } from './i18n.js';
 import { i18n as uiI18n } from '../ui/index.js';
+import { panelArbiterFor } from './panels.js';
+import { createNearWatcher } from '../net/near.js';
 
 const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
 
@@ -15,16 +17,22 @@ const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
  * @param {object} o
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context @param {object} o.session PlaySession
  * @param {object} o.ui play UI (createPlayUi) @param {object} [o.hints] hint engine (play/hints.js)
- * @param {{onGo?: Function, onSettings?: Function}} [o.handlers]
+ * @param {{onGo?: Function, onSettings?: Function, onMap?: Function}} [o.handlers]
+ *   `onMap` (task H, play/map-ui.js): the hotbar shows a Map button (N) only when it is given; the map panel takes
+ *   part in the one-panel-at-a-time rule through panelArbiterFor(uiRoot).claim('map', close)
  */
 export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handlers = {} }) {
   const { i18n, prefs } = ctx;
+  const arb = panelArbiterFor(uiRoot); // Signs is one of the exclusive surfaces (panels.js)
   const doc = uiRoot.ownerDocument || document;
   const host = doc.createElement('div');
   host.className = 'wh-host';
   uiRoot.appendChild(host);
   doc.body.classList.add('wh-on');
 
+  // NEAR testnet badges (net/near.js, request 9): read-only views, idempotent per season and per revealed sign
+  let near = null;
+  try { near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) }); } catch (e) { console.warn('[play] NEAR watcher off', e); }
   const render = (k, a) => renderMsg(i18n, k, a);
   const renderEvent = (e) => uiI18n.renderEvent(e, i18n);
   const mode = () => (prefs && prefs.get().hudMode === 'pro' ? 'pro' : 'novice');
@@ -44,6 +52,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       // one action: the prompt is enough; several: the play UI's context menu lists them
       promptVisible: opts.length === 1 && !ui.panel,
       signsState: hud ? { open: hud.signs.isOpen() } : { open: mode() === 'pro' },
+      map: !!handlers.onMap,
+      near,
     });
   }
 
@@ -52,6 +62,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     if (!m) return;
     if (!hud) {
       hud = mountWorldHud(host, { model: m, ctx, onAction, keys: false });
+      if (hud.signs.isOpen()) claimSigns(); // Pro starts with the panel open (no signsOpen action fires on mount)
     } else hud.update(m);
     prev = m;
   }
@@ -62,15 +73,21 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       if (id === 'memory' || id === 'journal') ui.handleKey('KeyM');
       else if (id === 'endTick') ui.handleKey('KeyT');
       else if (id === 'help') ui.handleKey('KeyH');
+      else if (id === 'map' && handlers.onMap) handlers.onMap();
       else if ((id === 'settings' || id === 'menu') && handlers.onSettings) handlers.onSettings();
     } else if (action === 'sign') ui.open('vision');
     else if (action === 'quest') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); }
-    else if (action === 'signsOpen' && hints) hints.action('signsOpen');
+    else if (action === 'signsOpen') { claimSigns(); if (hints) hints.action('signsOpen'); }
+    else if (action === 'signsClose') arb.release('signs');
     if (hints && action !== 'signsClose') hints.action('ui');
   }
 
+  /** The desktop Signs panel reads alongside the hub dock (not modal); the phone sheet covers the screen (modal). */
+  function claimSigns() { arb.claim('signs', () => { if (hud) hud.signs.close(); }, { modal: hud ? hud.layout === 'mobile' : false }); }
+
   const offs = [
-    session.on('obs', () => { if (hints) hints.observe(session.obs); refresh(); }),
+    session.on('obs', () => { if (hints) hints.observe(session.obs); if (near) near.observe(session.obs); refresh(); }),
+    near ? near.subscribe(() => refresh()) : null,
     session.on('goal', refresh),
     session.on('spot', refresh),
     prefs ? prefs.subscribe(() => refresh()) : null,
@@ -103,6 +120,6 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       if (hints && hints.tick(dt)) refresh();
     },
     refresh,
-    destroy() { offs.forEach((f) => f()); if (hud) hud.destroy(); host.remove(); doc.body.classList.remove('wh-on'); },
+    destroy() { offs.forEach((f) => f()); if (near && near.destroy) near.destroy(); if (hud) hud.destroy(); host.remove(); doc.body.classList.remove('wh-on'); },
   };
 }

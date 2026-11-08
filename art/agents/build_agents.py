@@ -510,6 +510,8 @@ KIND_SHADING = {
     "resin": dict(var=(6.0, 0.25), bump="soft", bs=0.03),
     "stone": dict(var=(10.0, 0.30), bump="grain", bs=0.35),
     "armor": dict(var=(8.0, 0.10), bump="armor", bs=0.12),
+    # sculpted stylized hair: clean painted value, no cloth noise, a faint soft bump
+    "hair": dict(var=(3.0, 0.08), bump="soft", bs=0.02),
 }
 
 # displacement on the master: (texture, noise scale, strength, props, vertical folds)

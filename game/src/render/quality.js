@@ -8,7 +8,8 @@
 //          (2 slices), 16-step clouds, quarter-res god rays, half the grass. Same look, cheaper.
 //   low    direct render (no post stack), 1k shadows, flat-shaded cloud deck, sparse grass, no
 //          transmission/iridescence, the sky-dome PMREM instead of the baked HDR.
-// Reduced motion (spec 1/3) is orthogonal: it freezes the cloud drift, wind and Shell hover.
+//   motes  air specks drifting around the camera (render/motes.js), one draw call; 0 hides it.
+// Reduced motion (spec 1/3) is orthogonal: it freezes the cloud drift, wind, motes, flicker and Shell hover.
 // Per-pass costs and how they were estimated: docs/rendering.md.
 //
 // Phones use the same three tier names on a second *profile* (docs/mobile.md), so everything that
@@ -28,21 +29,21 @@ export const QUALITY = Object.freeze({
     post: true, ao: true, aoScale: 1, aoSlices: 4, aoSteps: 6, bloom: true, bloomMips: 6,
     godRays: true, raysScale: 0.5, grade: true, cloudSteps: 28, envHdr: true,
     grassBlades: 36000, flowers: 1400, grassFadeDistance: 70,
-    cloudLayers: 3, transmission: true, iridescence: true, pointLights: true,
+    cloudLayers: 3, transmission: true, iridescence: true, pointLights: true, motes: 500,
   }),
   high: Object.freeze({
     pixelRatioCap: 1, msaa: 4, smaa: false, shadowMap: 2048, shadowRadius: 1.5, shadowDistance: 110,
     post: true, ao: true, aoScale: 0.5, aoSlices: 2, aoSteps: 5, bloom: true, bloomMips: 5,
     godRays: true, raysScale: 0.25, grade: true, cloudSteps: 16, envHdr: true,
     grassBlades: 18000, flowers: 800, grassFadeDistance: 55,
-    cloudLayers: 2, transmission: true, iridescence: true, pointLights: true,
+    cloudLayers: 2, transmission: true, iridescence: true, pointLights: true, motes: 300,
   }),
   low: Object.freeze({
     pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 1024, shadowRadius: 1, shadowDistance: 70,
     post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
     godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
     grassBlades: 5000, flowers: 250, grassFadeDistance: 40,
-    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false,
+    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false, motes: 120,
   }),
 });
 
@@ -53,14 +54,14 @@ export const PHONE_QUALITY = Object.freeze({
     post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
     godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
     grassBlades: 1800, flowers: 90, grassFadeDistance: 32,
-    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false,
+    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false, motes: 80,
   }),
   low: Object.freeze({
     pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 512, shadowRadius: 1, shadowDistance: 35,
     post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
     godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
     grassBlades: 700, flowers: 30, grassFadeDistance: 24,
-    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false,
+    cloudLayers: 1, transmission: false, iridescence: false, pointLights: false, motes: 0,
   }),
 });
 

@@ -402,7 +402,7 @@ components:
         simTime: { type: number }
         you: { type: object, description: 'playerId, role, zone, shell, position [x,y,z], walking {to, arriveAt} or null, place' }
         members: { type: array, items: { type: object } }
-        season: { type: object, description: 'seasonId, rules, merkleRoot, commitments, tick, ticks, phase (intro|play|vote|end), tension, outcome, votes' }
+        season: { type: object, description: 'seasonId, rules, merkleRoot, leafCount, commitments, entropy (seed protocol ftf-seed/1: commitment, nonce, beacon, sealed; roomEntropy and seedHex once phase is end; see docs/verify.md), tick, ticks, phase (intro|play|vote|end), tension, outcome, votes. Under the protocol seasonId, merkleRoot and the commitments are null until start_season seals the season.' }
         scroll: { type: array, items: { type: object } }
         chronicle: { type: array, items: { type: object } }
         proofs: { type: array, items: { type: object } }

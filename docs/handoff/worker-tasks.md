@@ -151,3 +151,400 @@ Steps:
 5. Re-measure after the change; record before/after in `docs/mobile.md` and the HANDOFF Mobile item. Check that
    desktop `/?play=direct` and the low tier still render with no console errors.
 
+
+---
+
+## Task F: UI polish, the "cheap" look (owner feedback 08.11, with screenshots)
+
+**Branch:** `claude/ui-polish` · **Owns:** `game/src/play/ui.js`, `game/src/play/hub-ui.js`, `game/src/play/world-hud.js`,
+`game/src/play/hints.js`, the label/nameplate code in `game/src/play/agents.js` (not its animation code: Task G),
+`game/src/ui/world-hud/**`, `game/src/ui/styles.css`, `game/src/ui/hud.js`, new `game/tests/ui-polish*.test.mjs`,
+`docs/ui-polish.md` (new). Owner override of the Codex ownership of `game/src/ui/**` for this polish (same as the lobby
+rebuild); record it in `docs/decisions.md` and leave a note in `docs/collab-requests.md` for Codex.
+
+Owner's words: "this looks cheap: too little padding on the buttons, things stack on top of each other". What the
+screenshots show (live build, desktop):
+- The Memories panel opens on top of Signs & Visions and both stay visible: the sign cards' text ("Sign #3 · Published",
+  "Anchor: Shell III, Trial 4") shows through the memory cards. Only one modal panel may be open at a time, or the one
+  underneath must be fully hidden; panel backgrounds must be opaque enough that nothing reads through.
+- The Shell hub dock ("Fly into a Shell", I–IV, "Let trial 5 pass") overlaps the open panel. The dock must hide while
+  a panel is open (or the panels must leave its area free).
+- Buttons ("Forget it for a vision", the quest pill "MAIN QUEST", the dock buttons) have cramped padding and tiny
+  type; the gold pill text touches its border. Use one spacing scale (e.g. 4/8/12/16/24), min 40 px touch targets on
+  desktop and 48 px on phones, consistent radii, clear hover/focus/pressed states.
+- The world nameplate ("Frost · fragment giver") floats in the scene as a translucent box behind scenery edges and over
+  a wooden board, with a large faint circle icon; it reads as a debug label. Make it a small, legible, screen-space
+  plate that fades with distance, never clips into geometry, and does not cover the character's head.
+Steps: audit every play-layer panel, card, button and label at 1280×800, 1920×1080 and 390×844 (headless Chromium
+screenshots in `docs/ui-polish.md`, before and after); fix stacking/z-order and panel exclusivity; apply the spacing
+and type scale; keep the owner's world HUD mockups (`docs/ui-world-hud.md`) as the visual reference, only polish
+spacing/stacking/legibility, no redesign. Keep all five locales fitting (longest strings: uk, it). Tests for panel
+exclusivity (pure logic). `npm test` and `npm run build` green.
+
+---
+
+## Task G: player movement that feels AAA (owner feedback 08.11)
+
+**Branch:** `claude/movement-feel` · **Owns:** `game/src/physics/**`, `game/src/render/camera-rig.js`, the movement and
+avatar-update parts of `game/src/main.js` (`frame()`, `wishVector`, the avatar heading/position block), the animation
+code in `game/src/play/agents.js` (clip blending, Iris's model; not the nameplates: Task F), `game/src/ui/input.js`,
+`game/tests/client/collision*.mjs`, `smooth*.mjs`, new `game/tests/client/movement*.mjs`, `docs/movement.md` (new).
+
+Owner's words: "the player's movement does not match normal AAA physics". Target: the feel of a modern third-person
+action game. Concretely:
+1. Measure the current controller first (`docs/movement.md`): acceleration/deceleration curves, turn rate, walk/run
+   speeds, stopping distance, slope and step behaviour, camera lag; note what reads as floaty, robotic or sliding.
+2. Movement: speed-dependent acceleration and braking (quick start, short controlled stop), turn rate limited by speed
+   (pivot in place when standing, wide arc at a run), no instant 180° flips; momentum preserved over small bumps;
+   ground snapping on slopes and steps without jitter; edge handling on bridges (no sliding off, no invisible walls
+   feel). Keep the swept capsule and the no-tunneling guarantees (existing tests stay green, add new ones).
+3. Animation: blend idle/walk/run by actual ground speed and sync the clip playback rate to it (no foot sliding);
+   start/stop and turn transitions with short cross-fades; lean slightly into turns; Iris faces the move direction
+   smoothly. Same for NPC agents walking routes.
+4. Camera: smooth follow with slight lag and look-ahead in the move direction, no jitter at 30 Hz physics (interpolate
+   between physics steps for rendering), collision with scenery so it never clips into walls.
+5. Click/tap-to-move and G routes use the same controller (they must not glide). Keyboard, gamepad and touch keep
+   their bindings. Walk speeds stay in the range the design needs (walks of 30-45 s camp to camp, `docs/decisions.md`).
+6. Before/after numbers and a short frame-by-frame description in `docs/movement.md`. `npm test` and `npm run build`
+   green; check `/?demo=judge&mode=walk` and the hub mode still work with no console errors.
+
+---
+
+## Task H: island map; no floating labels in the world (owner feedback 08.11)
+
+**Branch:** `claude/island-map` · **Owns:** `game/src/render/greybox.js` (labels only), new `game/src/play/map.js` and
+`game/src/play/map-ui.js` (self-contained panel with its own styles), the map wiring in `game/src/play/game.js`, the
+`KeyN` entry of `PLAY_KEYS` in `game/src/main.js` (one-line change; the rest of `main.js` belongs to Task G), the map
+strings in `game/src/play/locales/*.js` (all five locales; translate uk/it/zh yourself, keep the parity test green),
+new `game/tests/client/map*.mjs`, `docs/map.md` (new). Task F wires the world HUD hotbar "map" button to the API
+you export; agree on it through `docs/collab-requests.md`.
+
+Owner's words, with a screenshot of the overview camera ("Camp: Iris · not final art", "Memory shard · not final art"
+floating over the island): "the labels cheapen it; make a map and show them there".
+1. No text floats in the 3D world during play. The greybox "· not final art" labels show only in dev (`?dev=1`, the F3
+   dev HUD, or the asset review page); in play the greybox stand-ins stay unlabeled (they are replaced by the models as
+   they stream in). Update the README lines that describe the labels.
+2. A map panel (key **N**, the hotbar map button, a tap target on phones): a stylized top-down view of the
+   archipelago drawn from `game/src/scenes/layout.js` (island, bridges, plaza, the Scroll, the six camps with clan
+   names, the four Shells with their state from the hub: quiet / signs waiting, the anchor zones), Iris's position and
+   heading, the current goal marker, other agents' positions. Clicking a place routes there (the existing `walkTo` /
+   G route) and in the hub mode clicking a Shell flies there. Style: matches the world HUD (parchment/ink and gold
+   from `docs/ui-world-hud.md`), legible at 390 px wide, closes with N/Esc, only one panel open at a time.
+3. Tests for the map model (places from the layout, coordinates, state per Shell, route targets). `npm test` and
+   `npm run build` green; headless check of both modes with the map open and closed, no console errors.
+
+---
+
+## Quality bar for every task (owner, 08.11): "the best humanity has seen, no errors, no misses; money is no problem"
+
+- Ship nothing you have not looked at: every visual change gets before/after screenshots at 1280×800, 1920×1080 and
+  390×844 in your doc, every behaviour change gets a test. Zero console errors and warnings in the states you touch.
+- Self-review before each push: re-read the diff as a hostile reviewer (edge cases, all five locales, phone, low
+  tier, reduced motion, keyboard/gamepad/touch). Fix what you find; list what you could not verify and why.
+- Polish is part of the task, not extra: spacing, timing, easing, sound, readability, copy. If a detail looks
+  cheap, it is a defect.
+- Never trade correctness for looks: `baseline-2d-1` parity, the proofs and the agent API stay exact.
+- Everything is animated and looks premium by 2026 consumer standards (owner, 08.11): nothing appears, disappears,
+  changes value or state without motion (eased enter/exit, staggered lists, number tick-ups, press feedback, hover
+  and focus states, smooth camera and panel transitions, idle life in the world). Motion is fast and purposeful
+  (120–400 ms for UI, physically plausible springs), never blocks input, and fully respects reduced motion (cross-fades
+  instead of movement). Use the shared motion tokens from Task S (`game/src/ui/motion/`) once they land.
+
+---
+
+## Task I: a world-class first-time experience (tutorial and onboarding)
+
+**Branch:** `claude/tutorial` · **Owns:** `game/src/ui/onboarding.js`, `game/src/ui/flow.js`, `game/src/ui/hologram/**`,
+`game/src/play/objectives.js`, the `tut.*`, `onb.*` and `goal.*` strings in all locale files (translate uk/it/zh
+yourself, parity test green), new `game/tests/tutorial*.test.mjs`, `docs/tutorial.md` (new). Task F owns the world HUD
+and `play/hints.js`: agree hint changes with F through `docs/collab-requests.md`.
+
+Goal: a new player (and a hackathon judge with 5 minutes) understands the core loop Read → Anchor → Reveal → Verified
+and the Price of Memory without reading anything long, in both play modes (Shell hub default, `?mode=walk`).
+1. Play the current first 5 minutes as a stranger (headless, both modes, all five locales); write every confusion,
+   dead end, wall of text and unclear button into `docs/tutorial.md` first.
+2. Redesign the flow as show-don't-tell: one idea per step, the player does it right away, immediate feedback
+   (sound, VFX cue, a short line from Iris), never more than ~12 words on screen per beat, skippable, resumable,
+   never blocks a returning player. The judge path (`?demo=judge`) must reach "Verified ✓" in under 3 minutes.
+3. Copy: short, concrete, in the game's voice; the same terms everywhere (Shell, sign, anchor, silk, trial, vision).
+4. Tests for the flow state machine (step order, skip, resume, both modes). `npm test` and `npm run build` green.
+   Update the README judge table if the steps change, verified step by step.
+
+---
+
+## Task J: trailer, demo video and clips (best-in-class capture)
+
+**Branch:** `claude/trailer` · **Owns:** new `game/src/cinematic/**` (scripted camera paths, a deterministic clock /
+frame-stepping hook enabled only by `?cinematic=<name>`), new `tools/capture/**`, `docs/submission/video-shot-list.md`,
+`docs/submission/trailer.md` (new), `docs/media/` (final encoded videos, each file under 90 MB; no raw frames in git).
+May add one guarded hook line in `game/src/main.js` for the cinematic clock (coordinate with Task G in
+`docs/collab-requests.md`).
+
+Goal: a 60–90 s hackathon demo video (the one the owner posts on X; it must show one complete loop: read a sign,
+anchor silk, the reveal with "Verified ✓", the Price of Memory) and a 30 s trailer, plus three 10–15 s clips for social
+posts, at a quality above the best indie trailers: 1080p60 minimum, 4K masters if feasible.
+1. Deterministic capture: render frame by frame with a fixed timestep (the game clock advanced per captured frame, not
+   wall time), so a slow software renderer still yields perfectly smooth 60 fps; encode with ffmpeg (installed:
+   ffmpeg 6.1). If the result needs a GPU for quality (soft shadows, post), say so and prepare the exact commands for
+   the owner's GPU server; do not rent servers yourself.
+2. Cinematography: scripted dolly/crane/orbit shots with eased motion, no UI in pure beauty shots, UI shown deliberately
+   in gameplay shots; title cards in the game's typography; captions in English (subtitle file, plus burned-in versions).
+3. Sound: mix the game's own synthesized music and SFX (game/public/assets/audio) to picture; no third-party music.
+4. Build the pipeline now on the current build; the final render waits for the lead's signal after Tasks F, G, H and the
+   new character models land. Report what each video shows, its duration, resolution, file size and where it is.
+
+---
+
+## Task K: QA, the adversarial playtester
+
+**Branch:** `claude/qa` · **Owns:** new `game/tests/e2e/**` (headless Chromium end-to-end checks, run by a separate
+`npm run e2e` script you add to `game/package.json`; not part of `npm test`), `docs/qa/**`.
+Does not fix product code: files every defect with exact repro steps, expected vs actual, screenshot and severity in
+`docs/qa/defects.md`, and messages the lead for each blocker.
+1. Play `main` end to end, both modes, all five locales, desktop and phone viewports, low tier, reduced motion,
+   keyboard / gamepad (emulated) / touch: lobby, onboarding, every panel, every decision card, a full 17-trial season
+   to the vote and the Heir, the agent API example, the README commands exactly as written.
+2. Look for: console errors, overlaps and clipping, untranslated or overflowing strings, stuck states, soft-locks,
+   wrong numbers (silk, attention, trial), proofs that do not verify, sounds that do not play or never stop, frame-time
+   spikes, anything a judge would call a bug.
+3. Turn every reproducible defect into a failing e2e check where possible, so the fixing worker can prove the fix.
+4. Re-run on each merge the lead announces; keep `docs/qa/defects.md` current (open / fixed / won't fix).
+
+---
+
+## Task L: the world looks breathtaking (look-dev pass)
+
+**Branch:** `claude/lookdev` · **Owns:** `game/src/render/` except `camera-rig.js` (Task G) and `greybox.js` (Task H):
+`sky.js`, `clouds.js`, `fog.js`, `foliage.js`, `materials.js`, `decals.js`, `post.js`, `lookdev.js`, `quality.js`,
+`layers.js`, `noise.js`; `game/public/assets/env/**`; new `game/tests/client/lookdev*.mjs`; `docs/lookdev.md` (new).
+Keep the phone profile and its frame-time governor from `docs/mobile.md` working (re-measure).
+Goal: every frame of the floating archipelago reads like key art. Golden-hour light with soft, stable shadows; a sea of
+volumetric-looking clouds with depth and parallax; atmospheric perspective; rich but readable materials (stone, wood,
+nacre, grass) with correct PBR response; foliage with wind; tasteful post (ACES/AgX tone mapping, bloom only on emissive,
+subtle vignette and grain, no smeary TAA); Shells glowing with iridescent nacre; a day mood that supports reading signs.
+1. Capture the current look from fixed reference cameras (overview, plaza, bridge, camp, Shell exterior, inside a Shell)
+   at the high and low tiers; list what reads flat, noisy, washed out or cheap.
+2. Improve within the budgets (120 draw calls, 500k triangles; phone profile). Every change: before/after from the same
+   cameras in `docs/lookdev.md`. No regressions on the low tier and with reduced motion.
+
+---
+
+## Task M: NEAR for real — the season commitment on testnet, verified in the game
+
+**Branch:** `claude/near-live` · **Owns:** `contracts/**`, new `game/src/net/near*.js` (read-only RPC client), the
+NEAR badge/link in the play layer through a small API that Task F renders (agree in `docs/collab-requests.md`),
+new `game/tests/client/near*.mjs`, `docs/near.md` (new), the README real/mock rows about NEAR (only after it runs).
+Goal: turn the biggest "mock" in the README into "real" for the judges, on **testnet only** (free; never mainnet, never
+real funds).
+1. Create a dedicated testnet account through the faucet (`near account create-account sponsor-by-faucet-service …`),
+   build and deploy `season-commit` (README "Deploy to testnet"), and commit the judge season (`?demo=judge`, seed
+   `cc161d308faa67539af44205b56b6d4f`, rules v3): its schedule root, the Ash key commitment, and reveal every leaf with
+   its proof, exactly as the engine produces them. Keys stay in the session's keychain, never in the repository;
+   write down the account ids and the transaction hashes.
+2. In the game, a read-only client calls the public testnet RPC (`get_season`, `get_revealed_leaf`, `check_leaf`) and,
+   when the season is the committed one, shows "Committed on NEAR testnet ✓" with an explorer link next to
+   "Verified ✓"; it degrades silently (local verification only) when offline or for other seeds. No wallet, no signing
+   in the client.
+3. Tests with a mocked RPC; `docs/near.md` with the exact commands so the owner can redeploy under their own account;
+   update the README real/mock table and `docs/hackathon-rules.md` NEAR item only with what actually runs.
+
+---
+
+## Task N: a living island (NPC agents that feel alive)
+
+**Branch:** `claude/living-npcs` (worker G continues) · **Owns:** the animation and behaviour code in
+`game/src/play/agents.js` (not the nameplates: Task F), `game/src/play/behaviour.js`, `game/src/physics/motion.js`,
+new `game/tests/client/npc*.mjs`, `docs/npcs.md` (new). Presentation only: never change what the engine decides.
+Goal: the six clan agents read as people with intentions, in both play modes.
+1. Look-at: heads (and eyes when the face bones allow) track Iris when she is near or speaking to them; agents turn to
+   face whoever they talk to.
+2. Idle life: idle variations (weight shift, looking around, small gestures) with randomized but seeded timing, never
+   in sync between agents; `think` when a clan is deciding, `gesture_offer` when an offer is made, `celebrate` /
+   `defeat` on reveals that help or hurt them.
+3. Purposeful movement: agents walk to where the engine says they act (Scroll, anchors, camps, auctions) with the
+   Task G locomotion, avoid each other and Iris (simple local avoidance), and gather at the plaza for the vote.
+4. Conversations: when two clans trade words or silk, they meet and face each other with talk clips and a short
+   speech beat in the dialogue bar (through the existing world HUD API, coordinate with Task F).
+5. Budget: no frame-time regression on the phone profile; tests for the behaviour scheduler (seeded, deterministic).
+
+---
+
+## Task O: the Guests behind the glass (owner request 08.11, with a mood reference)
+
+**Branch:** `claude/guests-stage` · **Owns:** `game/src/scenes/shell.js`, new `game/src/play/guests-stage.js`, the Guest
+part of `game/src/play/presentation.js` (coordinate with nothing else there), new `game/tests/client/guests*.mjs`,
+`docs/guests-stage.md` (new). The model `guest.glb` and `art/guest/` belong to the GPU art session: ask it for model
+changes (a far-silhouette LOD, extra clips) through the lead. The global fog/post belong to Task L: agree any
+interior-fog parameter with L in `docs/collab-requests.md`.
+
+Owner's words, with a film still as mood reference (huge creatures looming in grey mist behind a lone figure and a
+round ink sign): "behind the glass I would sometimes like to see the aliens themselves." Mood only: the Guests stay
+our own design (`docs/decisions.md` 07.11: translucent, sail/fin membranes, nacre-crystal bodies; **no Arrival
+heptapods**, no limbs like giant hands, nothing from the film).
+1. Staging, not a static prop: the Guests are mostly hidden in dense, slowly moving mist behind the glass; they emerge
+   as enormous soft silhouettes (scale far beyond the player, backlit, low contrast, depth haze) at meaningful moments:
+   when a sign is drawn (the drawing Guest comes closest, the ink logogram forms on the glass between it and Iris), on a
+   reveal (a reaction), at the trial-13 crisis, and before the final vote; otherwise an occasional distant drift, never
+   on a fixed loop, seeded per season so it is deterministic. Both play modes (hub flights into a Shell, walking in).
+2. The shot: from Iris's position the composition reads like key art: Iris small in the foreground, the glass, the ring
+   sign, the silhouettes. Camera framing hints when a Guest appears (gentle, never stealing control).
+3. Sound: a low presence swell from the existing audio cues (`docs/audio.md`), synced to the emergence.
+4. Budgets and tiers: the low tier and the phone profile get a cheaper version (fewer Guests, no volumetric tricks)
+   without losing the moment; reduced motion keeps it but without drift. Tests for the scheduler (seeded, which moments
+   trigger, both modes). Screenshots of each moment in `docs/guests-stage.md`.
+
+---
+
+## Task P: chapter films (in-engine cutscenes between chapters)
+
+**Branch:** `claude/chapter-films` · **Owns:** new `game/src/play/chapters.js` (chapter model and triggers), new
+`game/src/cinematic/chapters/**` (one script per film, built on Task J's cinematic module: import it, do not fork it;
+ask J through `docs/collab-requests.md` for any API you need), the `chapter.*` strings in all five locale files
+(translate uk/it/zh yourself, parity test green), new `game/tests/client/chapters*.mjs`, `docs/chapters.md` (new).
+Owner idea: "films between chapters", so that anyone from 12 to 95 understands the story.
+1. Chapters of a season: Arrival (trials 1–4), The Language (5–8), Trust (9–12), The Crisis (13), The Vote (14–17),
+   plus an ending film per outcome (gift / weapon / lost / heir). Each film 20–40 s, in-engine (the island, the Shells,
+   the clans, the Guests behind the glass from Task O), built from what actually happened in this season (who betrayed
+   whom, which signs came true), never contradicting the engine. Presentation only.
+2. Storytelling for all ages: one idea per shot, a calm narrator line per shot (subtitles always on, readable size;
+   spoken by the browser's speech synthesis through Task Q's narration API when enabled), a final card "What matters
+   now: …" in one sentence. Skippable (one key/tap, hold to skip so it is not accidental), replayable from a Chronicle
+   menu, never blocks input longer than the film, pauses the season clock.
+3. Music and sound from the game's own assets. Phone and low tier: same films, cheaper shots.
+4. Tests for the chapter triggers (both play modes, deterministic per seed). Screenshots/frames of each film in
+   `docs/chapters.md`. Task J may cut the trailer from these films.
+
+---
+
+## Task Q: playable and understandable from 12 to 95 (accessibility and clarity)
+
+**Branch:** `claude/all-ages` · **Owns:** `game/src/ui/settings.js`, `game/src/ui/prefs.js`, new
+`game/src/play/narration.js` (speech synthesis wrapper exported for Tasks I and P), new `game/src/play/recap.js`
+("What is happening?" recap), the `a11y.*`, `recap.*`, `settings.a11y*` strings in all five locale files, new
+`game/tests/a11y*.test.mjs`, `docs/accessibility.md` (new). Task F owns the world HUD styling and Task I the tutorial:
+coordinate in `docs/collab-requests.md` (F applies your scale/contrast tokens; I uses your narration and simple mode).
+1. Narration: optional voice for Iris's lines, hints, tutorial and chapter films via the Web Speech API, in the current
+   locale (en, uk, ru, it, zh), with rate control; graceful no-op when unavailable.
+2. Readability: UI scale 100–200 %, a high-contrast theme, a dyslexia-friendly font option, colour-blind-safe sign and
+   state colours (never colour alone), minimum body text 16 px at 100 %.
+3. Simple mode (a third level next to Novice/Pro): Iris pre-reads every sign and proposes one action per trial; the
+   player confirms or changes it; no timers, pause anywhere, auto-pass trials when nothing needs a decision. The engine
+   rules do not change (only what is offered and how).
+4. Motor: everything playable with one mouse button or one finger; large targets (≥ 48 px); no required key chords,
+   no rapid presses; hold-to-confirm instead of double-press for destructive choices; full keyboard and gamepad
+   navigation of every panel.
+5. "What is happening?" (a button and the key `?`): two short sentences from Iris: where we are, what to do next,
+   built from the current observation.
+6. Checks: automated contrast and target-size tests; a headless walk-through of a full season in Simple mode at 200 %
+   scale in each locale; WCAG 2.2 AA as the target. Settings persist (with try/catch storage fallbacks).
+
+---
+
+## Task R: the juror (a trained hackathon judge whose scores steer the project)
+
+**Branch:** `claude/jury` · **Owns:** `docs/jury/**` only (never product code).
+Owner's request: a juror agent, well-read and trained for this, who first studies judging for 24 hours (cases and
+literature), then scores the project; the team reworks the project against those scores. It browses the web every
+30 minutes.
+Phase 1, training (until 2026-11-09 15:00 UTC), one research cycle per wake-up:
+- The live NEAR HACKATHON rules and judging (https://nearhackathon.com/HACKATHON.md: Q-017 AI screening by Claude Code
+  and Codex, then humans; the tracks, especially `games`), past NEAR hackathon winners and what they had in common,
+  Devpost/ETHGlobal/Encode winner write-ups, judge guides and rubrics (innovation, technical depth, use of the sponsor
+  tech, completeness, UX, presentation/demo video, impact), game-jam and indie-festival judging (IGF, Ludum Dare,
+  GDC talks on first-time UX and onboarding), on-chain game design criticism ("chain as decoration" vs economy in
+  the loop), accessibility guidelines, trailer/demo-video best practice.
+- Write what you learn into `docs/jury/notes/<topic>.md` with sources (URL, date read), and keep `docs/jury/rubric.md`
+  current: weighted criteria, what a 10/10 looks like for each, the red flags that sink a submission, and how an AI
+  screener (Claude Code / Codex) checks "it runs and the claims exist".
+Phase 2, judging (from 2026-11-09 15:00 UTC; earlier only if the lead asks for a preliminary read):
+- Evaluate the latest integration build (`claude/loving-curie-ihasft`) and the live site exactly as a judge would:
+  README from a clean clone, the judge path, the demo video drafts (`docs/media/`, `docs/submission/`), the code and
+  tests, the NEAR integration, originality and story, accessibility.
+- Write `docs/jury/scorecard-<UTC date-time>.md`: score per criterion with evidence, the top 5 changes that would
+  raise the score most (concrete, ranked by points per hour of work), and the delta since the previous scorecard.
+  Message the lead with the summary after each scorecard. Be strict and specific; do not flatter.
+Rules: English only in the repository; cite sources; never post, never contact organizers or other teams, never
+submit anything.
+
+---
+
+## Task S: motion design system, the premium 2026 feel
+
+**Branch:** `claude/motion` (worker G continues) · **Owns:** new `game/src/ui/motion/**` (tokens: durations, easings,
+springs; helpers: enter/exit, stagger, FLIP layout transitions, number tick-up, press/hover feedback, reduced-motion
+fallbacks; one tiny dependency-free module), `game/src/ui/lobby.js`, `game/src/ui/onboarding.js`, `game/src/ui/flow.js`,
+`game/src/ui/hologram/**` (Task I is done with them), `game/src/play/agents.js` animation parts,
+`game/src/play/map-ui.js` (Task H is done), new `game/tests/motion*.test.mjs`, `docs/motion.md` (new).
+Task F applies the tokens to the world HUD and play panels; Task Q's settings and Task P's films use them too:
+publish the API early (push the module first, announce it in `docs/collab-requests.md`).
+Owner: "everything must be animated and look expensive, as a 2026 consumer expects."
+1. A motion language for the whole game in `docs/motion.md`: the feel (calm, weighty, precise; ink and nacre), the
+   tokens, and a table of every UI event → its motion (panel open/close, card reveal, number change, stake placed,
+   "Verified ✓" seal, toast, hover/press, screen transitions lobby → onboarding → island → Shell).
+2. Implement the module and apply it in the paths you own: the lobby (layered parallax, title reveal, button
+   micro-interactions), onboarding and the hologram constructor (morphing steps, staged reveals), the map panel
+   (unfold, route draw-on, markers), and the world (Iris and agents: anticipation/follow-through on starts and stops,
+   reaction gestures, Iris's look-at toward the clan she talks to, the open item from Task N).
+3. Performance: transforms/opacity only on the DOM, no layout thrash, 60 fps on the phone profile; reduced motion
+   swaps movement for cross-fades. Tests for the tokens and helpers (pure). Before/after captures (short frame strips)
+   in `docs/motion.md`.
+
+
+---
+
+## Task T: verification anyone can repeat, and entropy we do not control (juror early warning, 08.11)
+
+**Branch:** `claude/verify-anywhere` (worker M continues) · **Owns:** new `tools/verify/**` (a one-file verifier),
+`game/src/net/near*.js`, `game/src/net/verify-export.js` (new: the data behind a "Copy proof" action; Task F renders
+the button), the season-seed derivation outside the engine (`game/src/net/near-season.js`, the `seasonRandomBytes`
+hook in `game/src/play/transport-local.js`), `contracts/**`, new tests, `docs/verify.md` (new). Never edit
+`game/src/game/engine.js`; `baseline-2d-1` parity and the fixed judge season (`?demo=judge`) stay bit-exact.
+Juror finding (`docs/jury/notes/onchain-game-design.md`, rubric C4 on `claude/jury`): the browser generates the season,
+commits the root and shows "Verified" with the same code, so the badge proves the season did not change after it
+began, not that it was fair. Mitigations, in order of points per hour:
+1. Out-of-band check: for every revealed sign, the full root, leaf, salt, Merkle path and the hashing recipe are
+   exportable as one JSON (API for F's "Copy proof" button in Signs & Visions); `tools/verify/verify.mjs` (zero
+   dependencies, Node 20) and a documented shell one-liner (sha256sum) verify it independently; `docs/verify.md` and a
+   README line show how ("do X, see OK").
+2. Entropy the developer does not control, for real (non-judge) seasons: the player commits a nonce before the root
+   forms (hash shown, nonce revealed at the end), and/or the seed mixes in a NEAR testnet block hash fetched after the
+   commitment. Specify the protocol in `docs/verify.md` first; keep the judge seed fixed and documented as such.
+3. The testnet registration of the root before trial 1 stays pending the owner's permission (Task M); keep the
+   scripts ready and make the game say "registered on NEAR ✓" only when it is.
+
+---
+
+## Task U: the first ten seconds (loading and first impression)
+
+**Branch:** `claude/first-seconds` (worker G continues) · **Owns:** `game/index.html`, the boot section of
+`game/src/main.js` (module loading, the first frame, the lobby hand-off), `game/src/render/streaming.js` and
+`game/src/render/assets.js` (moved from Task L, which keeps the rest of `render/`), a new loading screen module
+`game/src/ui/loading.js`, `vite.config.*`, new `game/tests/client/boot*.mjs`, `docs/first-seconds.md` (new).
+Goal: a judge opening the live link sees something beautiful within one second and can play within five, on a laptop
+and on a phone inside the X in-app browser.
+1. Measure first on the live site and a local production build (headless, cold cache, throttled "Fast 4G" and
+   "Slow 4G"): time to first paint, to the lobby, to the first playable frame, bytes before play, the largest chunks.
+2. An animated loading screen in the game's look (ink ring drawing itself, the title, real progress from the
+   streamer, never a frozen bar), using the shared motion tokens; it hands off to the lobby without a flash.
+3. Cut what blocks the first frame: lazy-load audio, VFX, the hub, the map and non-visible models; prioritise what
+   the first camera sees; preload hints for the critical chunks; check that phone `_m` variants and KTX2 are used.
+4. Before/after numbers in `docs/first-seconds.md`; the README "Judge in 5 minutes" sizes and times updated to the
+   measured values. Tests for the load plan (pure). Zero console errors; both play modes and `?play=direct` intact.
+
+---
+
+## Task V: memory shards as NEP-171 NFTs (the nfts track, contract first)
+
+**Branch:** `claude/shard-nft` (worker M continues) · **Owns:** new `contracts/memory-shard/**` (Rust, near-sdk, NEP-171
+core + NEP-177 metadata + NEP-178 approvals only if needed), new `game/src/net/shard-nft*.js` (read-only view client
+and the metadata mapping), new tests, `docs/shard-nft.md` (new), the README real/mock row "NEAR NEP-171 fragment NFTs"
+(only with what runs). Testnet only; deployment waits for the owner's permission path like `season-commit`.
+Design: a forgotten memory becomes a shard (the Price of Memory). On-chain, a shard NFT carries the season id, the
+memory's kind and weight, the trial it was forgotten, the Merkle leaf of the season event it unlocked (so the shard is
+provably tied to the committed season), and a deterministic generated image (an ink-ring SVG from the shard's data,
+stored as a data URI or a content hash). Minting only by the season coordinator; transfers follow the auction result.
+1. Contract with unit tests (mocked chain) and, where the container allows, sandbox tests; a deploy script mirroring
+   `deploy-judge-season.sh` that mints the judge season's shards (not run until permitted).
+2. The game reads shard NFTs read-only when a deployment exists (silent otherwise) and shows "Shard minted on NEAR
+   testnet" with an explorer link next to the shard in Memories and the auction.
+3. Also small: `tools/verify/verify.mjs --help` prints usage instead of throwing.

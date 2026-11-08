@@ -38,7 +38,7 @@ test('assets: every shipped texture is KTX2 and every model is meshopt-compresse
 });
 
 test('assets: models with textures above 2048 have a phone variant capped at 2048', () => {
-  for (const f of files.filter((x) => !x.endsWith('_m.glb') && !/_r2\.glb$/.test(x))) {
+  for (const f of files.filter((x) => !x.endsWith('_m.glb'))) {
     const max = Math.max(0, ...textures(readGlb(f)).map((t) => t.width || 0));
     if (max <= 2048) continue;
     const m = f.replace(/\.glb$/, '_m.glb');

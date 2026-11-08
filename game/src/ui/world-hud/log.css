@@ -209,7 +209,16 @@
   box-shadow: 0 0 2px 1px var(--wh-notify), var(--wh-notify-glow);
 }
 
-/* Short or landscape phones (audit #4): the tiles leave room for the prompt and dialogue. */
-@media (max-width: 700px) and (max-height: 440px) {
-  .wh-root .wh-tiles { display: none; }
+/* Short or landscape phones: the tiles compact by html[data-vh] tier (below) instead of hiding (audit #4). */
+
+/* ---------- short viewports (tokens.css explains the tiers) ---------- */
+@media (max-width: 700px) {
+  html[data-vh="short"] .wh-root .wh-tiles { left: 14px; right: 14px; bottom: 100px; height: 52px; gap: 8px; }
+  html[data-vh="short"] .wh-root .wh-tile { padding: 5px 2px 0 4px; border-radius: 12px; }
+  html[data-vh="short"] .wh-root .wh-tile .wh-tile__icon { width: 22px; height: 18px; margin-bottom: 2px; }
+  html[data-vh="short"] .wh-root .wh-tile__label { font-size: var(--wh-fs-tile); line-height: 1.1; }
+  html[data-vh="tiny"] .wh-root .wh-tiles { left: 14px; right: 14px; bottom: 86px; height: 44px; gap: 8px; }
+  html[data-vh="tiny"] .wh-root .wh-tile { padding: 4px 4px 0; border-radius: 12px; }
+  html[data-vh="tiny"] .wh-root .wh-tile .wh-tile__icon { width: 20px; height: 16px; margin-bottom: 1px; }
+  html[data-vh="tiny"] .wh-root .wh-tile__label { font-size: var(--wh-fs-tile); line-height: 1.1; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
