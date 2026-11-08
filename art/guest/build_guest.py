@@ -619,7 +619,7 @@ def final_nacre(paths):
                        orm=K.load_image(paths["orm"], data=True), normal=K.load_image(paths["normal"], data=True),
                        emissive=K.load_image(paths["emissive"]), emissive_strength=3.0)
     b = m.node_tree.nodes["Principled BSDF"]
-    b.inputs["Transmission Weight"].default_value = 0.25
+    b.inputs["Transmission Weight"].default_value = 0.08   # 0.25 let the core shine through the chest
     b.inputs["IOR"].default_value = 1.53
     for nm, v in (("Thin Film Thickness", 380.0), ("Thin Film IOR", 1.36)):
         if nm in b.inputs:
@@ -640,7 +640,7 @@ def final_membrane(paths):
 
 
 def final_core():
-    m = K.mat_simple("M_Guest_Core", (1.0, 0.86, 0.62), rough=0.1, emit=(1.0, 0.70, 0.36), emit_strength=8.0)
+    m = K.mat_simple("M_Guest_Core", (1.0, 0.86, 0.62), rough=0.1, emit=(1.0, 0.70, 0.36), emit_strength=2.5)  # 8.0 shone through the chest as an oval
     return m
 
 
@@ -1085,13 +1085,13 @@ def stage_build():
             "iridescenceThicknessMinimum": 240, "iridescenceThicknessMaximum": 520}
     stats["glb_patched_extensions"] = K.patch_materials(GLB_RAW, {
         "M_Guest_Nacre": {"KHR_materials_iridescence": dict(irid, iridescenceFactor=0.85),
-                          "KHR_materials_transmission": {"transmissionFactor": 0.25},
-                          "KHR_materials_volume": {"thicknessFactor": 0.35, "attenuationDistance": 1.6,
+                          "KHR_materials_transmission": {"transmissionFactor": 0.08},
+                          "KHR_materials_volume": {"thicknessFactor": 0.35, "attenuationDistance": 0.6,
                                                    "attenuationColor": [0.96, 0.86, 0.72]},
                           "KHR_materials_ior": {"ior": 1.53}},
         "M_Guest_Membrane": {"KHR_materials_iridescence": irid,
                              "_set": {"alphaMode": "BLEND", "doubleSided": True}},
-        "M_Guest_Core": {"KHR_materials_emissive_strength": {"emissiveStrength": 8.0}},
+        "M_Guest_Core": {"KHR_materials_emissive_strength": {"emissiveStrength": 2.5}},
     })
     stats["glb_raw_bytes"] = os.path.getsize(GLB_RAW)
     stats["glb_raw_summary"] = K.glb_summary(GLB_RAW)
