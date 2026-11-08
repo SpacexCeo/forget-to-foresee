@@ -10,6 +10,8 @@ Read on 2026-11-08 (UTC), about 12:30 UTC. Juror notes feeding `docs/jury/rubric
 - Re-read log (differences against the 12:30 UTC reading): 2026-11-08 17:50 UTC, no differences, 22,183 characters,
   no new judging section (headings: Start here, Facts, What the human decides, Never without the human's explicit
   confirmation, Rules, Procedure, Submission API, Tracks, Prizes, Ecosystem, Community).
+  2026-11-08 23:48 UTC, no differences in length (22,183 characters, 22,199 bytes, sha256 903794f4…d381d9aed for
+  future byte-level diffs); dates unchanged (development ends 2026-11-14T23:59:00Z, judging starts 2026-11-16T00:00:00Z).
 
 ## Summary for the rubric
 - The only judging text on the page is the track descriptions plus Q-017. There is **no published numeric rubric and no

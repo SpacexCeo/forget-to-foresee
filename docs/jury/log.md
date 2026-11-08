@@ -92,3 +92,12 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   and a retention-collapse figure are single-source and not used; NEAR grant area from a secondary guide, portal not
   read). Rubric v0.7: C5 gains the five-item impact checklist that decides 7 versus 8 to 10, and the note that "no
   token" helps only if the pitch says it. No red flags.
+
+## Cycle 8: 2026-11-08 23:46 UTC
+- Routine re-check of the live HACKATHON.md: no differences (22,183 characters, same dates); sha256 recorded in
+  `notes/near-hackathon-rules.md` for byte-level diffs from now on.
+- Weakest coverage chosen: how much time a juror gives one project (every checklist assumed a long look).
+- 23:55 UTC: `notes/judge-time-budget.md` done (4 sources; organizers plan 3 to 5 minutes per project; no measured
+  figure for asynchronous online judging). Rubric v0.8: section 5 gains step 0, a five-minute first pass (X post,
+  README top, live link, no clone) scored beside the full score; a gap over 15 points is a presentation risk. No red
+  flags.
