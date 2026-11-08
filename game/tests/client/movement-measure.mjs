@@ -165,22 +165,22 @@ export function measureAll(opts = {}) {
     const rig = new CameraRig(cam, w);
     rig.dist = 11;
     const ch = mk(w);
-    let acc = 0; const camXs = [], focusLag = [];
+    let acc = 0; const camXs = [], focusLag = []; let lookAhead = 0;
     const focus = new THREE.Vector3();
     for (let i = 0, t = 0; t < 6; i++, t += 1 / 60) {
       const f = fixedSteps(acc, 1 / 60, PHYSICS_DT, 8); acc = f.accumulator;
       for (let s = 0; s < f.steps; s++) ch.step(t < 4 ? [0, 1] : [0, 0], PHYSICS_DT);
       const p = ch.renderPos(f.alpha);
       focus.set(p[0], p[1] + 1.1, p[2]);
-      rig.update(1 / 60, focus, rig.update.length >= 3 ? ch.vel : undefined);
+      rig.update(1 / 60, focus, ch.vel);
       camXs.push(cam.position.z);
-      if (t > 2 && t < 4) focusLag.push(rig.smoothFocus.z - p[2]);
+      if (t > 2 && t < 4) { focusLag.push(rig.smoothFocus.z + (rig.lookAhead ? rig.lookAhead.z : 0) - p[2]); if (rig.lookAhead) lookAhead = Math.max(lookAhead, rig.lookAhead.length()); }
     }
     const v = camXs.slice(1).map((z, i) => (z - camXs[i]) * 60);
     const steady = v.slice(150, 230);
     const mean = steady.reduce((a, b) => a + b, 0) / steady.length;
     const jitter = Math.max(...steady.map((s) => Math.abs(s - mean)));
-    out.camera = { lagAtWalk: focusLag.reduce((a, b) => a + b, 0) / focusLag.length, lookAhead: rig.lookAhead ? rig.lookAhead.length() : 0, frameJitterPct: (jitter / Math.abs(mean)) * 100, settleAfterStop: (() => { const idx = v.findIndex((s, i) => i > 240 && Math.abs(s) < 0.01); return idx >= 0 ? idx / 60 - 4 : null; })() };
+    out.camera = { lagAtWalk: focusLag.reduce((a, b) => a + b, 0) / focusLag.length, lookAhead, frameJitterPct: (jitter / Math.abs(mean)) * 100, settleAfterStop: (() => { const idx = v.findIndex((s, i) => i > 240 && Math.abs(s) < 0.01); return idx >= 0 ? idx / 60 - 4 : null; })() };
   }
   return out;
 }
@@ -206,7 +206,7 @@ export function report(out) {
   row('walk straight off the edge', e.walkOffFell ? `falls at x = ${fmt(e.walkOffFallsAtX)} (edge at 1.2)` : 'never falls');
   row('click 6 m away: arrival / overshoot / final error', `${fmt(out.click_6m.arrive)} s / ${fmt(out.click_6m.overshoot, 3)} m / ${fmt(out.click_6m.final, 3)} m`);
   row('route with a 90° corner at run: done / time / final error', `${out.route_corner_run.done} / ${fmt(out.route_corner_run.t)} s / ${fmt(out.route_corner_run.final, 3)} m`);
-  row('camera: focus lag at walk / look-ahead / frame jitter / settle after stop', `${fmt(out.camera.lagAtWalk, 3)} m / ${fmt(out.camera.lookAhead)} m / ${fmt(out.camera.frameJitterPct, 1)} % / ${fmt(out.camera.settleAfterStop)} s`);
+  row('camera: focus lead at walk (lag + look-ahead) / look-ahead / frame jitter / settle after stop', `${fmt(out.camera.lagAtWalk, 3)} m / ${fmt(out.camera.lookAhead)} m / ${fmt(out.camera.frameJitterPct, 1)} % / ${fmt(out.camera.settleAfterStop)} s`);
   return lines.join('\n');
 }
 

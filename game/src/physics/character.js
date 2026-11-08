@@ -150,6 +150,13 @@ export class CharacterController {
     }
   }
 
+  /** Places the character somewhere else at rest (fly-in, relocate): no leftover velocity or facing turn. */
+  teleport(pos, heading = null) {
+    this.pos = pos.slice(); this.prevPos = pos.slice(); this.lastSafe = pos.slice();
+    this.vel = [0, 0]; this.vy = 0; this.grounded = false; this.speed = 0; this.turnRate = 0;
+    if (heading != null) { this.heading = heading; this.prevHeading = heading; }
+  }
+
   /** Falling off the archipelago puts the player back at the last safe point. */
   respawn() { this.pos = this.lastSafe.slice(); this.prevPos = this.pos.slice(); this.vy = 0; this.grounded = false; this.vel = [0, 0]; this.respawns++; }
 
