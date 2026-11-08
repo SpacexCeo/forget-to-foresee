@@ -1,4 +1,4 @@
-// Social clip 2 (12 s): the Price of Memory. Trial 2 on the island: M opens the memories, "Forget it for a
+// Social clip 2 (12 s): the Price of Memory. Trial 4 on the island, the first reveal verified: M opens the memories, "Forget it for a
 // vision" on The Shells' Call, the vision effect, two future signs appear and the shard goes to auction.
 import { JUDGE_URL, fadeIn, fadeOut, SETUP } from './common.mjs';
 
@@ -12,7 +12,7 @@ export default {
   shots: [
     {
       name: 'memory', duration: D, url: JUDGE_URL, ui: 'game',
-      setup: [...SETUP.stakedInShellI, ...SETUP.trial2],
+      setup: [...SETUP.stakedInShellI, ...SETUP.trial2, ...SETUP.trial3card, ...SETUP.trial4],
       actions: [
         { at: 0.0, do: 'rig', dist: 16, yaw: 0.5 },
         { at: 1.4, do: 'key', code: 'KeyM' },

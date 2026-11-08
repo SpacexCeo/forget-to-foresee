@@ -13,14 +13,11 @@ export default {
   shots: [
     {
       name: 'verified', duration: D, url: JUDGE_URL, ui: 'game',
-      // trial 2 with the vision → into Shell I → leave → trial 3 with Moss's card waiting
-      setup: [...SETUP.stakedInShellI, ...SETUP.trial2, ...SETUP.forgot,
-        { do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 }, { do: 'frames', n: 30 },
-        { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'cardOpen', max: 600 }, { do: 'frames', n: 10 }],
+      // trial 3 with Moss's loan card waiting (the first stake sits on Shell I, trial 3)
+      setup: [...SETUP.stakedInShellI, ...SETUP.trial2, ...SETUP.trial3card],
       actions: [
         { at: 0.0, do: 'rig', dist: 18, yaw: 0.4 },
         { at: 1.6, do: 'card', choice: 'decline' },
-        { when: 'trial', value: 4, do: 'key', code: 'KeyT' },
         { at: 7.0, do: 'key', code: 'KeyV' },
         { at: 8.0, do: 'click', selector: '.wh-signs__chip[data-filter="resolved"]' },
       ],
@@ -29,7 +26,7 @@ export default {
   ],
   captions: [
     { from: 0.4, to: 3.4, text: 'The clans lend, trade and break trust: agents with wallets and memory.' },
-    { from: 3.7, to: 6.9, text: 'Trial 3 ends. The Gift lands on Shell II, as you read it.' },
+    { from: 3.7, to: 6.9, text: 'Trial 3 ends. A Gift of 20 on Shell II; your stake returns.' },
     { from: 7.4, to: 11.0, text: 'Every reveal is checked against the Merkle root sealed before trial 1.' },
     { from: 11.4, to: 13.6, text: 'Verified ✓' },
   ],

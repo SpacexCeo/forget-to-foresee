@@ -18,7 +18,7 @@ const PREDICATES = {
   panelOpen: (g) => !!(g.play && g.play.ui.panel),
   panelClosed: (g) => !!g.play && !g.play.ui.panel,
   cardOpen: (g) => !!(g.play && g.play.hub && g.play.hub.card),
-  hubIdle: (g) => !!(g.play && g.play.hub && !g.play.hub.busy && !g.play.hub.advancing),
+  hubIdle: (g) => !!(g.play && g.play.hub && !g.play.hub.busy && !g.play.hub.advancing && !g.play.hub.transit),
   trial: (g, v) => !!(g.play && g.play.session.obs && g.play.session.obs.season.tick >= v),
   interiorReal: (g) => !!(g.play && g.play.shell.ready),
   loaded: (g) => { const s = g.streamer.stats(); return s.loading === 0 && s.idle === 0; },
@@ -176,7 +176,7 @@ export class ShotRunner {
     this.hidden.add(what);
     const scene = g.scene;
     if (what === 'labels') scene.traverse((o) => { if (o.isSprite && o.name === 'label') o.visible = false; });
-    if (what === 'nameplates' && this.play) for (const a of this.play.agents.agents.values()) a.mind.sprite.visible = false;
+    if (what === 'nameplates' && this.play) for (const a of this.play.agents.agents.values()) if (a.mind && a.mind.sprite) a.mind.sprite.visible = false;
     if (what === 'marker') scene.traverse((o) => { if (o.name === 'move_marker') o.visible = false; });
     if (what === 'iris' && this.play) g.scene.traverse((o) => { if (o.name === 'player_iris') o.visible = false; });
   }

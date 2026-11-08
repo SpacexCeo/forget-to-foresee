@@ -22,17 +22,28 @@ export const BEAUTY_HIDE = ['labels', 'nameplates', 'marker'];
 export const fadeIn = (dur = 1.0) => ({ kind: 'black', from: -1, to: dur, fadeIn: 0, fadeOut: dur });
 export const fadeOut = (shotDuration, dur = 1.0) => ({ kind: 'black', from: shotDuration - dur, to: shotDuration + 1, fadeIn: dur, fadeOut: 0 });
 
-/** The judge-season opening replayed with rendering off (see the trace in docs/submission/trailer.md). */
+/**
+ * The judge-season opening replayed with rendering off, following the README judge table for the Shell hub
+ * (08.11, Task I): Delay › once so the first stake lands on trial 3; the first Gift of every season lands there.
+ */
 export const SETUP = {
-  /** Inside Shell I at trial 1, the human reading set to Shell II / +2, 10 silk staked. */
+  /** Inside Shell I at trial 1, Delay read as +2 (trial 3), 10 silk staked on Shell I, trial 3. */
   stakedInShellI: [
     { do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell', max: 400 }, { do: 'until', pred: 'hubIdle', max: 200 },
-    { do: 'frames', n: 6 }, { do: 'slot', k: 0, dir: 1 }, { do: 'slot', k: 3, dir: 1 }, { do: 'frames', n: 3 },
+    { do: 'frames', n: 6 }, { do: 'slot', k: 3, dir: 1 }, { do: 'frames', n: 3 },
     { do: 'key', code: 'KeyF' }, { do: 'until', pred: 'hubIdle', max: 300 },
   ],
-  /** ...then left the Shell: trial 2 on the island, the new sign waiting in Shell I. */
+  /** ...then left the Shell: trial 2 on the island, a new sign waiting in Shell I. */
   trial2: [
     { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'onIsland', max: 400 }, { do: 'until', pred: 'hubIdle', max: 400 }, { do: 'frames', n: 20 },
+  ],
+  /** ...then let trial 2 pass: trial 3 stops on Moss's loan card. */
+  trial3card: [
+    { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'cardOpen', max: 600 }, { do: 'frames', n: 10 },
+  ],
+  /** ...declined the loan: trial 3 ends, the Gift falls on Shell II, the reveal is verified, trial 4 stops on the new signs. */
+  trial4: [
+    { do: 'card', choice: 'decline' }, { do: 'until', pred: 'trial', value: 4, max: 600 }, { do: 'until', pred: 'hubIdle', max: 400 }, { do: 'frames', n: 20 },
   ],
   /** ...then forgot "The Shells' Call" for a vision (two future signs) and closed the panel. */
   forgot: [
