@@ -104,6 +104,15 @@ Notes on the table: the click-to-move "final error" is where the player rests in
 above the slope is identical in both modes (3.6 cm, the rounded capsule bottom). The camera "settle" is longer
 because the look-ahead eases back over about 1.5 s after a stop; see the feel-test list.
 
+## Recorded trajectories
+
+`node game/tests/client/movement-trajectories.mjs docs/movement` writes one row per physics step (time, x, z,
+ground speed, heading, grounded) for a fixed scenario (walk, release, rest, run, run reversal, 90° turn at a run,
+stop) with the old and the new controller: `docs/movement/trajectory-before.csv`, `trajectory-after.csv`, and
+`docs/movement/trajectories.svg` (speed and heading over time, the path on the ground; dashed grey = before,
+gold = after). The chart shows the shape of the change in one look: instant heading flips become 0.3–0.5 s
+turns, the long braking tail becomes a short ramp to zero, the reversal grows a hook, the 90° turn an arc.
+
 ## Frame by frame (30 Hz, walk = 1.7 m/s)
 
 - **Start**: step 1 the body turns toward the input at up to 23° per step and moves 1.2 cm; step 4 the speed is
@@ -129,6 +138,7 @@ because the look-ahead eases back over about 1.5 s after a stop; see the feel-te
 - A focus jump beyond 6 m is a teleport (fly into a Shell, relocate): the follow snaps instead of easing.
 - 0 % per-frame speed jitter at 60 fps over the 30 Hz physics (interpolated focus), unchanged.
 - Collision with scenery: the existing sphere sweep (pulls in fast, eases out slowly). Not changed.
+- Under reduced motion (`?motion=reduce` or the system setting) the look-ahead is off and Iris does not lean.
 
 ## Animation (`agents.js`: `GaitLayer`)
 

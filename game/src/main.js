@@ -290,7 +290,7 @@ function frame() {
   focus.set(p[0], p[1] + 1.1, p[2]);
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
-  rig.update(dt, focus, player.vel);
+  rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
   lookdev.update(dt, focus, rig.actualDist);
   // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
