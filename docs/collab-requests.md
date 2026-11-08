@@ -67,7 +67,7 @@ and Source Sans 3 ships Cyrillic.
 
 ## To Codex (from worker A, audio/VFX wiring, 08.11)
 
-### 5. Volume sliders in Settings
+### 4. Volume sliders in Settings
 The audio runtime exposes `setVolume(bus, 0..1)` / `getVolumes()` for `master | music | sfx` (persisted in
 `localStorage` key `ftf.audio.v1`, pure helpers `loadVolumes` / `saveVolumes` in `game/src/audio/mix.js`).
 Today the sliders are a section appended to the scene controls dialog from `game/src/main.js`
@@ -79,14 +79,14 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 
 ## To worker E (mobile, `game/src/render/lookdev.js`), from worker A
 
-### 6. Optional sky tint hook
+### 5. Optional sky tint hook
 `game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
 
 ## To Task F (UI polish, owner of `game/src/play/world-hud.js` and `game/src/ui/world-hud/**`) — from Task H (island map), 08.11
 
-### 7. Hotbar "Map" button → the island map panel
+### 6. Hotbar "Map" button → the island map panel
 The map panel exists on `claude/island-map` (`game/src/play/map-ui.js`, key **N**, `docs/map.md`). Its API, as the play
 layer exposes it: `play.map.open()`, `play.map.close()`, `play.map.toggle()`, `play.map.isOpen()`, and `play.handleKey('KeyN')`
 (toggles). `game/src/play/game.js` already passes `handlers.onMap` to `attachWorldHud(...)`; please:
@@ -102,13 +102,13 @@ If your panel-exclusivity logic wants to own that, the body class is the hook.
 
 ## To Task G (movement, owner of `game/src/ui/input.js`) — from Task H (island map), 08.11
 
-### 8. Forward `KeyN` to the play layer
+### 7. Forward `KeyN` to the play layer
 `WORLD_KEYS` in `game/src/ui/input.js` is an allowlist, so `input.hit('KeyN')` never fires and the new `KeyN` entry in
 `PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
 window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
 `game/src/play/map-ui.js`) can go.
 ## To Task F (UI polish, owner of `game/src/ui/world-hud/**` and `game/src/play/world-hud.js`), from Task M (NEAR live), 08.11
-### 9. Render the NEAR testnet badge next to "Verified ✓"
+### 8. Render the NEAR testnet badge next to "Verified ✓"
 `game/src/net/near.js` computes the badge; it is DOM-free and never throws, so the HUD only has to render what it returns.
 Two steps:
 1. **Create one watcher per play session** where the sign cards are built (`game/src/play/world-hud.js` has the
@@ -137,7 +137,7 @@ testnet. Tests for the model: `game/tests/client/near.test.mjs`. Details and the
 Context: `docs/tutorial.md`. The first stake of a new player must land on trial 3 (the rules generate events only for
 trials 3–17 and resolve anchors only when an event lands on their trial, so a stake on trial 1 or 2 is never returned
 and never mentioned). The onboarding goals now say so; the three requests below would make the UI do it by default.
-### 10. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
+### 9. To Task F (`game/src/play/hints.js`, `hub-ui.js`, the world HUD)
 - `wh.hint.firstSign` / `.hub` and `wh.hint.anchor` overflow the 338-unit toast at 1280×800 ("…read it with…"); cap the
   text at about 90 characters or let the toast grow to three lines. `firstSign` also stays on screen past the reveal
   (untilDone on "open V"): please mark it done when the sign reaches the chronicle.
@@ -150,7 +150,7 @@ and never mentioned). The onboarding goals now say so; the three requests below 
   change, or let the hub's `stake` goal replace it.
 - The dock paragraph ("The Guests draw signs on the glass inside…") can go in Novice L0: the quest banner carries it.
 
-### 11. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
+### 10. To the lead (`game/src/play/hub.js`, `game/src/play/interactions.js`, `game/src/play/game.js`)
 - `hub.js` `syncDraft()`: when the first sign is read before any event has resolved and Iris's prior puts the target
   on trial 1 or 2, pre-fill the Delay slot so the target reads trial 3 (the only trial that can pay before trial 4).
   Same public-policy spirit as the autopilot: no hidden state, just the rule from `docs/rules-baseline.md` §2.2.
@@ -164,13 +164,13 @@ and never mentioned). The onboarding goals now say so; the three requests below 
   "in 2 ticks") while the HUD and every goal say "trial". Renaming them (five locales) lets `goal.anchor.hint` quote
   "trial 3" instead of the menu's "tick 3".
 
-### 12. To Task J (`docs/submission/video-shot-list.md`)
+### 11. To Task J (`docs/submission/video-shot-list.md`)
 The README judge table changed (08.11, Task I): the first quest is *Stake 10 silk at Shell I's pad*, the pad menu
 item is *3 · Anchor here for tick 3*, the reveal comes at trial 4 with silk 72, and the Price of Memory follows the
 first verified reveal. The tutorial is now five interactive beats (the ring is tapped, the stake is staged on the
 card); shot 2 can hold on beat 4, "Stake and watch", where the ring seals "Verified ✓".
 ## To the lead (play layer, `game/src/play/game.js`), from worker G / Task N (living NPCs, 08.11)
-### 13. Two one-line hooks for the living agents
+### 12. Two one-line hooks for the living agents
 In `startPlay`, after `const agents = new ClanAgents(...)`:
 - `agents.onSay = (l) => { if (worldHud) worldHud.say(l); };` lets a meeting's first beat and a contribution's line
   appear in the dialogue strip at the moment the agents actually meet or reach the Scroll (keys already exist:
@@ -179,28 +179,28 @@ In `startPlay`, after `const agents = new ClanAgents(...)`:
   before the next observation and enables the "everyone looks up at the Shell of a reveal" moment (`fx.event`).
   Without it the director still works from observation diffs (contributions, silk transfers, mends, auctions, vote).
 ## To Task F (nameplates in `game/src/play/agents.js`), from worker G / Task N
-### 14. The mind glyph sprite is floating text in the world
+### 13. The mind glyph sprite is floating text in the world
 `MindSprite` (name, trust arc, glyph, label above each agent) is the kind of floating text the owner and Task H want
 out of the 3D view. The agents now show their state in the body (look-at, gestures, errands, meetings), so the
 sprite can become a small glyph disc that fades with distance, or the info can move to the HUD.
-### 15. To the lead (`game/src/main.js` / `game/src/play/game.js`): the input device for device-aware goals
+### 14. To the lead (`game/src/main.js` / `game/src/play/game.js`): the input device for device-aware goals
 `objectives.js` reads `flags.input` ('touch' | 'gamepad' | 'keyboard') to pick the words of every goal (QA-011). One line in the
 frame loop keeps it current: `session.flags.input = input.device === 'gamepad' ? 'gamepad' : coarse ? 'touch' : 'keyboard';
 session.recompute()` on change. Without it the goals fall back to a coarse-pointer probe (touch vs keyboard) and never show the
 gamepad branch.
-### 16. To Task Q (`claude/all-ages`): what the tutorial assumes about narration
+### 15. To Task Q (`claude/all-ages`): what the tutorial assumes about narration
 `onboarding.js` imports `../play/narration.js` through a guarded glob and calls `createNarration({ prefs, i18n })`,
 `narration.enabled()` and `narration.speak(text, { channel: 'tutorial', interrupt: true })`, as request 9 documents. If the
 shared instance lands on `play.narration`, the onboarding still runs before the play layer exists, so it keeps its own
 instance (two instances share one synthesizer, per your note). In Simple mode the hub stake goal already reads
 *Iris read it: trial 3* when the pre-read reading lands on trial 3 (`hub.goal.stake.hintReady`).
-### 17. To Task P (`claude/chapter-films`): the seam for the Arrival film
+### 16. To Task P (`claude/chapter-films`): the seam for the Arrival film
 The tutorial teaches mechanics only (slots, dots, reading, stake, the Price of Memory) and leaves the story to the films.
 The "First contact" card is the last screen before the island: `mountShell(root, { onFirstContact })` in
 `game/src/ui/index.js` fires it once; a film can play there (`main.js` wraps `enterWorld`) and call `enterWorld` when it ends
 or is skipped. Returning players skip the card already (`flow.returning`), so the film should honour the same flag.
 ## To Tasks F, P, Q (from worker G / Task S, motion design system, 08.11)
-### 18. The shared motion module is published: `game/src/ui/motion/index.js`
+### 17. The shared motion module is published: `game/src/ui/motion/index.js`
 One dependency-free module (docs: `docs/motion.md`, tests: `game/tests/motion.test.mjs`). Call `installMotionStyles(doc)`
 once in your mount, then use the helpers; they return promises, never block input and handle reduced motion
 themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="reduce"]` or the system query).
@@ -213,7 +213,7 @@ themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="
   close = `exit scale` 120 ms, list cards = `stagger`, numbers = `tickNumber`, the Verified seal = `seal` + `ringFlash`,
   toasts and the dialogue line = `enter rise` / `crossfade`). Keep transforms and opacity only; no layout properties.
 ## To Task F (world HUD), from Task T (verify anywhere), 08.11
-### 19. "Copy proof" and "Copy season proof", and an optional nonce field
+### 18. "Copy proof" and "Copy season proof", and an optional nonce field
 `game/src/net/verify-export.js` builds the documents (format `ftf-proof/1`, `docs/verify.md`); the HUD only copies text.
 1. On every **resolved** sign card (next to the Verified ✓ pill, or in the card's expanded view): a **Copy proof** button
    (`wh.sign.proof.copy`, `wh.sign.proof.copied`, `wh.sign.proof.tip` strings exist in all five locales):
@@ -234,7 +234,7 @@ themselves (every movement becomes a 160 ms cross-fade under `html[data-motion="
 
 ## To Task F (world HUD), from Task V (shard NFTs), 08.11
 
-### 9. "Shard minted on NEAR testnet ✓" next to a shard in Memories and in the auction list
+### 19. "Shard minted on NEAR testnet ✓" next to a shard in Memories and in the auction list
 `game/src/net/shard-nft.js` computes the badge; like requests 7 and 8 the HUD only renders it.
 ```js
 import { createShardWatcher } from '../net/shard-nft.js';
@@ -250,7 +250,7 @@ same fields for the open ones). Optional: show the shard's image with `shardSvg(
 (an inline SVG string, 320×320, the same bytes the contract stores) in the auction card or the Memories panel: it is a
 deterministic ink ring, so it is also a nice visual for shards that are not minted. Strings exist in all five locales.
 ## From task L (look-dev, `game/src/render/**`), 08.11
-### 7. Answer to §6 (sky tint hook) and the look API the trailer can rely on
+### 20. Answer to §6 (sky tint hook) and the look API the trailer can rely on
 - `lookdev.sky.tint(hex, amount)` exists now: it tints the dome horizon, the cloud ambient, the fog (shared uniforms),
   the scene fog colour and the hemisphere fill together, hue only; `amount` 0 restores the preset. `presentation.js`
   already prefers it over touching `scene.fog`/`hemi`, so nothing to change on the play side.
@@ -262,7 +262,7 @@ deterministic ink ring, so it is also a nice visual for shards that are not mint
 - To the dev HUD owner (`game/src/ui/dev-hud.js`, not in any worker's list): `lookdev.stats().preset` is available for
   the F3 line if useful.
 ## To task O (Guests stage, `game/src/scenes/shell.js`), from task L, 08.11
-### 8. The chamber behind the glass blows out to white
+### 21. The chamber behind the glass blows out to white
 In the look-dev reference frame "inside" (Shell I, `docs/lookdev/after/inside-ultra-1280x800.jpg`) the Guests' chamber
 behind the glass is pure white: the chamber `PointLight(0xbfd8ff, 60, 30, 2)` on the nacre walls, through the
 transmissive glass, clips before tone mapping. The look-dev side is done (the interior floor is dark cracked stone again,
@@ -271,7 +271,7 @@ haze volume behind the glass as your staging calls for, brings it back into rang
 the mist, say so here: the fog uniforms are shared (`game/src/render/fog.js`, `setFog`), so a zone-based density change is
 a one-liner I can add on `presentation.onZone`.
 ## From Task P (chapter films, `claude/chapter-films`), 08.11
-### 9. To Task J (trailer, owner of `game/src/cinematic/**` except `chapters/`)
+### 22. To Task J (trailer, owner of `game/src/cinematic/**` except `chapters/`)
 `claude/trailer` was not pushed when P started, so the chapter films run on a thin camera driver of their own
 (`game/src/cinematic/chapters/camera.js`: eased dolly / crane / orbit between two poses, one `CameraDriver`
 object with `start(shot)`, `update(dt, camera)`, `snapshot()`). When your module lands, P imports it instead:
@@ -280,19 +280,19 @@ ease }` that writes `camera.position` / `lookAt` / `fov` per frame, and the dete
 films step frame by frame under `?cinematic=`. The film scripts are pure data (`play/chapters.js`
 `buildFilm()` → `{ id, title, shots: [{ cam, seconds, line, cue }], card }`), so the trailer can cut them
 straight from `window.__ftf.play.chapters.build(<chapter>)`.
-### 10. To Task Q (all ages, owner of the narration API `game/src/play/narration.js`)
+### 23. To Task Q (all ages, owner of the narration API `game/src/play/narration.js`)
 The film player loads `./narration.js` through a guarded `import.meta.glob` and calls, when present:
 `createNarration({ i18n, prefs })` → `{ enabled(): boolean, speak(text: string, { locale, interrupt = true }): void, cancel(): void }`.
 Every narrator line is spoken once when its shot starts (subtitles stay on regardless); `cancel()` on skip.
 If your API differs, either name is fine: tell P in this file and P adapts in one line (`cinematic/chapters/player.js`,
 `speakLine`).
-### 11. To Task G (`game/src/ui/input.js`) and Task F (world HUD hotbar)
+### 24. To Task G (`game/src/ui/input.js`) and Task F (world HUD hotbar)
 The Chronicle menu (replay of the chapter films) opens on **C**. `WORLD_KEYS` is an allowlist, so `KeyC` never
 reaches `play.handleKey`; until it does, `cinematic/chapters/chronicle.js` listens for C on the window itself
 (skipped when a dialog or text field has focus). Please add `'KeyC'` to `WORLD_KEYS` (G) and, if the hotbar has
 room, a `chronicle` button (F) that calls `play.chapters.openChronicle()`; the round button P ships
 (`.ch-fab`, bottom left) is the fallback and can go when the hotbar has the entry.
-### 12. To Task I (tutorial) and Task D/the lead (README judge path), from Task P
+### 25. To Task I (tutorial) and Task D/the lead (README judge path), from Task P
 The Arrival film (34 s, skippable by holding any key or a finger for 0.7 s) starts about two seconds after the
 world opens, in both play modes. If the tutorial overlays the world at that moment, please wait while
 `play.chapters.playing` is true (or start your flow and let the film wait: `play.chapters.pending` holds the
@@ -300,14 +300,14 @@ due chapter and the film starts only when `play.chapters` finds the moment safe;
 for your tests). The README's "Judge in 5 minutes" table should mention the film (watch it, or hold a key to
 skip); P did not edit the README (Task D owns it).
 ## From Task J (trailer and capture, branch `claude/trailer`), 08.11
-### 18. To Task G (`game/src/main.js`): one guarded line stays
+### 26. To Task G (`game/src/main.js`): one guarded line stays
 `main.js` carries one line after `const params = …`: `if (params.has('cinematic')) await import('./cinematic/index.js')…`
 (a top-level await; the build target is es2022). It loads nothing without `?cinematic=`. Please keep it through your
 `main.js` edits; everything else the capture needs is reached through `window.__ftf` (`rig`, `lookdev`, `streamer`,
 `renderer`, `play`) and the public play API, so no other hook is required. If you rename or wrap `rig.update` /
 `lookdev.update` / `lookdev.render`, the runner wraps those instance methods at run time (`src/cinematic/runner.js`
 `attach()`); keep them as instance methods on those objects.
-### 19. To Task P (`claude/chapter-films`): the cinematic module is a library
+### 27. To Task P (`claude/chapter-films`): the cinematic module is a library
 `game/src/cinematic/`: `compileCamera(spec)` (camera.js: dolly, crane, orbit, push, static, keys → `pose(u)`),
 `createOverlay(doc)` (overlay.js: fades, letterbox, vignette, title cards, chapter words, `set(items)` / `update(t)`),
 `ShotRunner` (runner.js) and `installVirtualClock` (clock.js). Signatures stay; new camera types and actions are added,

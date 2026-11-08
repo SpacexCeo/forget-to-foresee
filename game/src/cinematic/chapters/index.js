@@ -5,6 +5,7 @@
 // the play layer changes. Dev parameters: ?films=off disables the films, ?films=full|cheap forces the shot
 // profile, ?films=reset forgets the films seen in this season, ?film=<chapter> plays one film right away on a season advanced to that chapter (still frames for
 // docs/chapters.md use it with &stills=1).
+import { filmsEnabled } from './films-enabled.js';
 import { createChapterDirector, chapterFor, CHAPTER_IDS, SHOT_SECONDS, TITLE_SECONDS, CARD_SECONDS } from '../../play/chapters.js';
 import { renderMsg, resolvePlayArg } from '../../play/i18n.js';
 import { resolveLineArgs } from '../../play/chapters.js';
@@ -34,7 +35,7 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
   const params = new URLSearchParams(search != null ? search : (doc.location ? doc.location.search : ''));
   const devFilm = params.get('film');
   const filmsParam = params.get('films'); // off | full | cheap | reset (full/cheap force the shot profile: QA on SwiftShader; reset forgets the seen films of this season)
-  const enabled = filmsParam !== 'off' && !devFilm;
+  const enabled = filmsEnabled(params);
   const mode = hub ? 'hub' : 'walk';
   const director = createChapterDirector({
     obs: session.obs, storage: ctx.storage, mode, enabled,

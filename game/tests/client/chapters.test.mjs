@@ -259,3 +259,16 @@ test('chapters: every chapter key exists in all five languages', () => {
   for (const id of CHAPTER_IDS) for (let i = 1; i <= 5; i++) assert.ok(keys.includes(`chapter.${id}.${i}`), `chapter.${id}.${i}`);
   for (const o of OUTCOMES) assert.ok(keys.includes('chapter.title.ending.' + o));
 });
+
+test('films: the judge link skips them unless asked; normal seasons play them', async () => {
+  const { filmsEnabled } = await import('../../src/cinematic/chapters/films-enabled.js');
+  const q = (s) => filmsEnabled(new URLSearchParams(s));
+  assert.equal(q('?demo=judge'), false);
+  assert.equal(q('?demo=judge&mode=walk&play=direct'), false);
+  assert.equal(q('?demo=judge&films=full'), true);
+  assert.equal(q('?demo=judge&films=cheap'), true);
+  assert.equal(q(''), true);
+  assert.equal(q('?play=direct'), true);
+  assert.equal(q('?films=off'), false);
+  assert.equal(q('?film=arrival'), false);
+});
