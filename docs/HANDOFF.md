@@ -13,7 +13,7 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 | Agent-playable HTTP API | works: OpenAPI 3.1 spec, idempotent version-checked commands, per-viewer observations, SSE, Merkle proofs, an example agent that plays a full season, 28 tests | `server/`, `game/src/net/`, `docs/api/` |
 | 3D client | archipelago with the play layer (goals, ticks, chronicle, Memories/Signs panels) running the same room code as the API; 360° camera; Shift to run; smooth acceleration and stopping; touch controls (tap to walk, drag to orbit, pinch to zoom); miniature HUD on phones; phones and `#play` skip the lobby | `game/index.html`, `game/src/main.js`, `game/src/play/` |
 | Lobby | matches the owner reference one to one (owner-supplied background art) | `game/src/ui/lobby.js`, `docs/ui/lobby-reference.jpg` |
-| Languages | EN, UA, RU, IT, 中文. `uk`, `it` and `zh` cover only the lobby and core labels; every other key falls back to English | `game/src/locales/` |
+| Languages | EN, UA, RU, IT, 中文, all five fully translated (game and play strings; parity test `tests/ui-i18n-locales.test.mjs`). Open: CJK fallback in the HUD/UI font stacks (request 3 in `docs/collab-requests.md`); native-speaker proofreading of UA/IT/ZH | `game/src/locales/`, `game/src/play/locales/` |
 | NEAR contract `season-commit` | builds and passes tests; **not deployed** (the owner deploys) | `contracts/season-commit/` |
 | Audio | 60 procedurally synthesized sounds and a WebAudio runtime; **not wired into main.js**; not yet listened to by a human | `game/src/audio/`, `game/public/assets/audio/`, `docs/audio.md` |
 | VFX | GPU particle system and 4 flipbooks; integration into gameplay is partial | `game/src/vfx/`, `docs/vfx.md` |
