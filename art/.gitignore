@@ -4,3 +4,4 @@
 *.blend
 *.blend1
 __pycache__/
+guest/guest_raw.glb
