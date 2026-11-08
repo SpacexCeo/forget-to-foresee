@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { TIME_PRESETS, DEFAULT_PRESET, sunDirection, sunTransmittance, SUN_DIRECTION } from '../../src/render/sky.js';
 import { FOG_UNIFORMS, heightFogDepth, setFog, setFogTint, fogState } from '../../src/render/fog.js';
-import { slotForMaterial, SLOT_MATERIALS, nacreMaterial, glassMaterial, applyMaterialQuality } from '../../src/render/materials.js';
+import { slotForMaterial, SLOT_MATERIALS, nacreMaterial, glassMaterial, applyMaterialQuality, setNacreTime } from '../../src/render/materials.js';
 import { QUALITY, PHONE_QUALITY, TIERS, qualityFor } from '../../src/render/quality.js';
 import { BLOOM, GradeShader } from '../../src/render/post.js';
 import { WIND_DIR } from '../../src/render/foliage.js';
@@ -118,6 +118,8 @@ test('quality knobs the look reads exist on every tier and profile and keep thei
   assert.equal(QUALITY.ultra.aoScale, 1); assert.equal(QUALITY.high.aoScale, 0.5);
   assert.equal(QUALITY.ultra.cloudSteps, 28); assert.equal(QUALITY.high.cloudSteps, 16); assert.equal(QUALITY.low.cloudSteps, 0);
   assert.equal(PHONE_QUALITY.high.cloudSteps, 0); assert.equal(PHONE_QUALITY.low.cloudSteps, 0);
+  assert.ok(QUALITY.ultra.motes > QUALITY.high.motes && QUALITY.high.motes > QUALITY.low.motes && QUALITY.low.motes > 0, 'air motes thin out with the tier');
+  assert.ok(PHONE_QUALITY.high.motes > 0 && PHONE_QUALITY.high.motes < QUALITY.low.motes); assert.equal(PHONE_QUALITY.low.motes, 0, 'phone/low: no extra draw call');
 });
 
 test('post defaults: bloom threshold sits above diffuse white, the grade is mild, grain is fine', () => {
@@ -128,6 +130,14 @@ test('post defaults: bloom threshold sits above diffuse white, the grade is mild
   assert.ok(u.uVignette.value > 0.1 && u.uVignette.value < 0.4);
   assert.ok(u.uGrain.value > 0 && u.uGrain.value < 0.05, 'grain is felt, not seen');
   assert.ok(u.uShadowTint.value.b > u.uShadowTint.value.r && u.uHighlightTint.value.r > u.uHighlightTint.value.b, 'cool shadows, warm highlights');
+});
+
+test('nacre shimmer stays within the pearl range and is a pure function of time', () => {
+  setNacreTime(0); const r0 = nacreMaterial.iridescenceThicknessRange.slice(); const a0 = nacreMaterial.userData.nacreUniforms.uNacreRimColorA.value.getHex();
+  setNacreTime(12.5); const r1 = nacreMaterial.iridescenceThicknessRange.slice();
+  assert.notDeepEqual(r0, r1, 'it moves');
+  for (const t of [0, 3, 12.5, 60, 600]) { setNacreTime(t); const [lo, hi] = nacreMaterial.iridescenceThicknessRange; assert.ok(lo > 100 && lo < 180 && hi > 400 && hi < 520 && lo < hi, `t=${t}: ${lo}..${hi}`); }
+  setNacreTime(0); assert.deepEqual(nacreMaterial.iridescenceThicknessRange, r0); assert.equal(nacreMaterial.userData.nacreUniforms.uNacreRimColorA.value.getHex(), a0, 'deterministic');
 });
 
 test('wind direction is a unit vector on the ground plane', () => {

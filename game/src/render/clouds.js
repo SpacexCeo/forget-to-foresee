@@ -22,10 +22,10 @@ const CLOUD_GLSL = /* glsl */`
   // Height of the cloud top as a fraction of the slab thickness (0 = no cloud).
   float ftfCloudH(vec2 xz) {
     vec2 p = xz * uScale + uWind * uTime;
-    float n1 = texture2D(tNoise, p).r;                 // large billows
-    float n2 = texture2D(tNoise, p * 3.7 + 0.31).b;    // cellular puffs
-    float n3 = texture2D(tNoise, p * 11.0 + 0.67).g;   // fine detail
-    float h = n1 * 0.62 + n2 * 0.26 + n3 * 0.12;
+    float n1 = texture2D(tNoise, p).r;                 // large billows (about 70 m)
+    float n2 = texture2D(tNoise, p * 2.9 + 0.31).b;    // cellular puffs
+    float n3 = texture2D(tNoise, p * 7.0 + 0.67).g;    // fine detail
+    float h = n1 * 0.7 + n2 * 0.22 + n3 * 0.08;
     float lo = 1.0 - uCover - 0.22, hi = 1.0 - uCover + 0.30;
     return smoothstep(lo, hi, h);
   }
@@ -36,8 +36,8 @@ function deckMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       tNoise: { value: getNoiseTexture() },
-      uTime: { value: 0 }, uScale: { value: 0.012 }, uCover: { value: 0.46 }, uTop: { value: 0 }, uBottom: { value: -28 },
-      uWind: { value: new THREE.Vector2(0.06, 0.021) },
+      uTime: { value: 0 }, uScale: { value: 0.0038 }, uCover: { value: 0.46 }, uTop: { value: 0 }, uBottom: { value: -28 },
+      uWind: { value: new THREE.Vector2(0.04, 0.014) },
       uSunDir: { value: SUN_DIRECTION.clone() },
       uSunCol: { value: new THREE.Color(1, 0.85, 0.6) },
       uAmbUp: { value: new THREE.Color(0.5, 0.56, 0.62) },
@@ -62,15 +62,15 @@ function deckMaterial() {
       // The deck uses the soft billows alone: from 100 m up, fine detail aliases into a dotted texture.
       float ftfDeckH(vec2 xz) {
         vec2 p = xz * uScale + uWind * uTime;
-        float h = texture2D(tNoise, p).r * 0.78 + texture2D(tNoise, p * 2.3 + 0.31).b * 0.22;
+        float h = texture2D(tNoise, p).r * 0.78 + texture2D(tNoise, p * 2.9 + 0.31).b * 0.22;
         return smoothstep(1.0 - uCover - 0.3, 1.0 - uCover + 0.3, h);
       }
       void main() {
         float h = ftfDeckH(vWorld.xz);
         // Finite-difference normal of the height field for a soft sun shading.
-        float e = 2.5;
+        float e = 6.0;
         float hx = ftfDeckH(vWorld.xz + vec2(e, 0.0)) - h, hz = ftfDeckH(vWorld.xz + vec2(0.0, e)) - h;
-        vec3 nrm = normalize(vec3(-hx * 5.0, 1.0, -hz * 5.0));
+        vec3 nrm = normalize(vec3(-hx * 3.0, 1.0, -hz * 3.0));
         float ndl = clamp(dot(nrm, uSunDir), 0.0, 1.0);
         vec3 amb = mix(uAmbDown, uAmbUp, 0.35 + 0.65 * h);
         vec3 col = amb + uSunCol * ndl * (0.25 + 0.55 * h);
@@ -88,8 +88,8 @@ function slabMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       tNoise: { value: getNoiseTexture() },
-      uTime: { value: 0 }, uScale: { value: 0.012 }, uCover: { value: 0.46 }, uTop: { value: -16 }, uBottom: { value: -28 },
-      uWind: { value: new THREE.Vector2(0.06, 0.021) },
+      uTime: { value: 0 }, uScale: { value: 0.0038 }, uCover: { value: 0.46 }, uTop: { value: -16 }, uBottom: { value: -28 },
+      uWind: { value: new THREE.Vector2(0.04, 0.014) },
       uSteps: { value: 16 },
       uSunDir: { value: SUN_DIRECTION.clone() },
       uSunCol: { value: new THREE.Color(1, 0.85, 0.6) },
@@ -116,7 +116,7 @@ function slabMaterial() {
       float ftfDensity(vec3 p) {
         float top = uBottom + (uTop - uBottom) * ftfCloudH(p.xz);
         float d = (top - p.y) / (uTop - uBottom);
-        return smoothstep(0.0, 0.22, d);
+        return smoothstep(0.0, 0.38, d);
       }
       void main() {
         vec3 ro = cameraPosition;
@@ -140,12 +140,12 @@ function slabMaterial() {
           float d = ftfDensity(p);
           if (d < 0.01) continue;
           float sh = ftfDensity(p + uSunDir * 2.5) * 0.55 + ftfDensity(p + uSunDir * 7.0) * 0.45;
-          float lit = exp(-sh * 2.6);
+          float lit = exp(-sh * 1.7);
           float hfrac = clamp((p.y - uBottom) / (uTop - uBottom), 0.0, 1.0);
           vec3 amb = mix(uAmbDown, uAmbUp, hfrac);
           // Powder term: thin edges catch more light than the dense interior.
           float powder = 1.0 - 0.35 * exp(-d * 4.0);
-          vec3 S = uSunCol * lit * phase * 4.2 * powder + amb * (0.6 + 0.4 * lit);
+          vec3 S = uSunCol * lit * phase * 3.0 * powder + amb * (0.7 + 0.3 * lit);
           float a = 1.0 - exp(-d * sigma * ds);
           L += T * S * a;
           T *= 1.0 - a;
@@ -198,8 +198,8 @@ export class CloudSea {
       const u = m.material.uniforms;
       u.uSunDir.value.copy(sun);
       u.uSunCol.value.copy(sunRadiance);
-      u.uAmbUp.value.copy(zenith).lerp(fogColor, 0.35).multiplyScalar(1.15);
-      u.uAmbDown.value.copy(fogColor).multiplyScalar(0.55);
+      u.uAmbUp.value.copy(zenith).lerp(fogColor, 0.4).multiplyScalar(1.05);
+      u.uAmbDown.value.copy(fogColor).multiplyScalar(0.8);
       if (cover != null) u.uCover.value = cover;
     }
   }

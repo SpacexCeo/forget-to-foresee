@@ -78,6 +78,21 @@ const GLASS_FALLBACK = { transparent: true, opacity: 0.42, roughness: 0.12 };
 const nacreClones = new Set();
 
 /**
+ * Slow shimmer of the mother of pearl (owner 08.11: everything is animated): the thin film's thickness
+ * range breathes and the rim hue drifts violet <-> aqua over about half a minute, far below anything
+ * that would read as flicker. t in seconds; pass a frozen t under reduced motion.
+ */
+export function setNacreTime(t) {
+  const lo = 140 + 18 * Math.sin(t * 0.21), hi = 460 + 28 * Math.sin(t * 0.17 + 1.3);
+  const hueA = 0.78 + 0.035 * Math.sin(t * 0.13), hueB = 0.53 + 0.03 * Math.sin(t * 0.11 + 0.7);
+  for (const m of [nacreMaterial, ...nacreClones]) {
+    m.iridescenceThicknessRange[0] = lo; m.iridescenceThicknessRange[1] = hi;
+    const u = m.userData.nacreUniforms;
+    if (u) { u.uNacreRimColorA.value.setHSL(hueA, 0.9, 0.9); u.uNacreRimColorB.value.setHSL(hueB, 0.9, 0.86); }
+  }
+}
+
+/**
  * Applies a tier's material features in place. Changing transmission/iridescence between zero and
  * non-zero changes the shader program, so the materials are flagged for recompilation.
  * @param {{transmission:boolean, iridescence:boolean}} cfg

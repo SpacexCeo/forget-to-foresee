@@ -20,7 +20,8 @@ import { CloudSea } from './clouds.js';
 import { PostStack } from './post.js';
 import { Foliage } from './foliage.js';
 import { OcclusionFader } from './fade.js';
-import { applyMaterialQuality, setTextureAnisotropy } from './materials.js';
+import { applyMaterialQuality, setTextureAnisotropy, setNacreTime } from './materials.js';
+import { AirMotes } from './motes.js';
 import { installHeightFog, setFog, setFogTint } from './fog.js';
 import { LAYER_OVERLAY } from './layers.js';
 
@@ -90,12 +91,16 @@ export class LookDev {
     this.foliage = new Foliage({ patches: grassPatches, blades: this.cfg.grassBlades, flowers: this.cfg.flowers, fadeDistance: this.cfg.grassFadeDistance });
     scene.add(this.foliage.group);
 
-    this.lanternLights = lanterns.map(([x, y, z]) => {
+    this.lanternLights = lanterns.map(([x, y, z], i) => {
       const l = new THREE.PointLight(0xffa64d, 14, 11, 2);
       l.position.set(x, y, z); l.castShadow = false; l.name = 'lantern_light';
+      l.userData.phase = i * 1.618 * Math.PI; // flicker phase: no two lanterns in step
       scene.add(l);
       return l;
     });
+    this.motes = new AirMotes({ count: 500 });
+    scene.add(this.motes.points);
+    this.time = 0;
 
     this.post = new PostStack({ renderer, scene, camera });
     this.fader = new OcclusionFader({ camera });
@@ -120,6 +125,7 @@ export class LookDev {
     setFog({ baseY: this.cloudLevel, falloff: P.fog.falloff, density: P.fog.density, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: 1 });
     this.clouds.setLighting({ sun: atm.sun, sunRadiance: atm.sunRadiance, zenith: atm.zenith, fogColor: atm.fogColor, cover: P.cloudCover });
     this.foliage.setSun(this.sunDir, atm.sunColor);
+    this.motes.setSun(this.sunDir, atm.sunColor);
     this.post.setSunColor(atm.sunColor);
     for (const l of this.lanternLights) l.color.setHex(0xffa64d);
     // IBL: sky-dome PMREM right away; the Blender-baked HDR (art/env/bake_env.py) replaces it on tiers that allow it.
@@ -206,6 +212,8 @@ export class LookDev {
     this.clouds.setSteps(cfg.cloudSteps);
     this.foliage.rebuild({ blades: cfg.grassBlades, flowers: cfg.flowers, fadeDistance: cfg.grassFadeDistance });
     for (const l of this.lanternLights) l.visible = cfg.pointLights;
+    this.motes.setCount(cfg.motes);
+    this.motes.setPixelRatio(r.getPixelRatio());
     applyMaterialQuality(cfg);
     this.post.configure(cfg);
     if (this.envFallback) {
@@ -257,8 +265,23 @@ export class LookDev {
     this.clouds.update(motion);
     this.foliage.update(motion, this.camera);
     this.post.update(motion);
+    this.motes.update(motion);
+    this.time += motion;
+    this.animateLight(this.time);
     this.fitShadow(focus, camDist);
     this.fader.update(dt, focus);
+  }
+
+  /**
+   * Slow life in the light (owner 08.11: everything is animated): lantern flames flicker (each on its
+   * own phase, a few percent, never a strobe), the nacre shimmers. t stops under reduced motion.
+   */
+  animateLight(t) {
+    for (const l of this.lanternLights) {
+      const p = l.userData.phase || 0;
+      l.intensity = 14 * (1 + 0.1 * (Math.sin(t * 7.3 + p) * 0.5 + Math.sin(t * 13.1 + p * 1.7) * 0.3 + Math.sin(t * 2.1 + p) * 0.2));
+    }
+    setNacreTime(t);
   }
 
   render() { this.post.render(this.sunDir); }
