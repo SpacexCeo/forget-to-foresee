@@ -1,4 +1,7 @@
-"""Procedural source for guest.glb (Forget to Foresee: one Guest), rigged and animated.
+"""SUPERSEDED (08.11): guest.glb is now built by build_guest_ink.py (the owner's ink-Guest
+design). This round-2 nacre-crystal Guest is kept for reference only.
+
+Procedural source for guest.glb (Forget to Foresee: one Guest), rigged and animated.
 
 Run with Blender 4.5 LTS:
 

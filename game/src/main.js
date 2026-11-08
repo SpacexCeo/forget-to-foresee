@@ -160,7 +160,7 @@ function handleInspect() {
   inspecting = it;
   rig.enterInspect(it.instance.center, it.instance.radius);
 }
-const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
+const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))]; // N: the island map (play/map-ui.js)
 
 function leaveInspect() { clearWorldInput(); inspecting = null; rig.exitInspect(); }
 
@@ -254,6 +254,11 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.25);
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
+  // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
+  if (play && play.session) {
+    const dev = input.device === 'gamepad' ? 'gamepad' : coarse ? 'touch' : 'keyboard';
+    if (play.session.flags.input !== dev) { play.session.flags.input = dev; play.session.recompute(); }
+  }
 
   const f = fixedSteps(accumulator, dt, PHYSICS_DT, 8);
   accumulator = f.accumulator;

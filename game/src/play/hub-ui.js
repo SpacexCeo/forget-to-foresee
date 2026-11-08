@@ -257,6 +257,8 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
     handleKey(code) {
       const obs = hub.obs;
       if (!obs) return false;
+      // during a flight or a running operation F and T are swallowed, not queued (QA-002); T still stops automatic trials
+      if ((hub.transit || hub.busy) && (code === 'KeyF' || code === 'KeyT')) return true;
       if (hub.card) {
         const m = /^Digit([1-3])$/.exec(code);
         if (m) { const b = host.querySelectorAll('.hub-card [data-choice]')[Number(m[1]) - 1]; if (b && !b.disabled) b.click(); return true; }
