@@ -35,8 +35,9 @@ of `docs/HANDOFF.md`, request 7 in `docs/collab-requests.md`. README real/mock r
    0.31.1 (`npm install -g near-cli-rs`), `cargo-near` built from crates.io (`cargo install cargo-near --locked`; it
    needs `libudev-dev` + `pkg-config` for its Ledger dependency, installed with apt). The GitHub installer scripts were
    refused by the permission layer ("code from external"), so crates.io/npm were used instead.
-2. **Contract checks**: `cargo test --lib` → `test result: ok. 56 passed` (13 pure + 43 mocked chain). Wasm build and
-   sandbox tests: see "How it was checked".
+2. **Contract checks**: `cargo test --lib` → `test result: ok. 56 passed` (13 pure + 43 mocked chain);
+   `cargo near build non-reproducible-wasm --no-abi` → `target/near/season_commit.wasm`, 199,813 bytes, SHA-256
+   `af945497c922c18ab670c1acc9ee3888a50320cfcf5c5dad3d68cc1d3860aea9`. Sandbox tests: see "How it was checked".
 3. **Reproducible demo commitment** (`game/src/net/near-season.js`): `demoRandomBytes(seedHex)` (SHA-256 counter mode,
    domain `ftf:demo-bytes:v1`), `seasonCommitment(state)` (re-derives every leaf with the contract preimage and checks it
    against the engine's leaf and root, so a byte-format drift fails locally), `contractArgs()` (the exact
@@ -90,5 +91,8 @@ of `docs/HANDOFF.md`, request 7 in `docs/collab-requests.md`. README real/mock r
   writer was dry-run against a fake record and the module re-imported, then restored.
 - Self-review against the quality bar: no visual change (no screenshots to take); every behaviour change has a test;
   all five locales have the strings; keyboard focus is free because the badge is a real link (noted for F).
+- `cargo test --test sandbox` could not run here: the near-sandbox node demands a file-descriptor limit of 65535 and
+  the container's hard limit is 20000 (`Could not startup and run sandbox node`), not a code problem; that tier runs in
+  `.github/workflows/contracts.yml` on Ubuntu (green on `main`; the contract source is unchanged by this task).
 - Could not verify: a real transaction's CLI output format (the hash parser accepts both `Transaction ID: <hash>` and an
-  explorer URL); the sandbox integration tests (see the line below).
+  explorer URL).
