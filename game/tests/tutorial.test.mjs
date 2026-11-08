@@ -5,18 +5,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSafeStorage, memoryStorage, STORAGE_KEYS } from '../src/ui/storage.js';
 import { createOnboardingFlow, createTutorial, FLOW_STEPS, TUTORIAL_BEATS, TUTORIAL_SIGN } from '../src/ui/flow.js';
-import { MESSAGES, argNames } from '../src/ui/i18n/index.js';
+import { MESSAGES, argNames, format } from '../src/ui/i18n/index.js';
 import { LOOK_PRESETS, DEFAULT_RECIPE, normalizeRecipe, recipeHash } from '../src/ui/hologram/recipe.js';
 import { createLocalTransport } from '../src/play/transport-local.js';
 import { PlaySession } from '../src/play/session.js';
 import { ShellHub, signsByShell } from '../src/play/hub.js';
-import { currentGoal, hubGoal, ONBOARDING, ONBOARDING_HUB, FIRST_GIFT_TICK } from '../src/play/objectives.js';
+import { currentGoal, hubGoal, inputKind, ONBOARDING, ONBOARDING_HUB, FIRST_GIFT_TICK } from '../src/play/objectives.js';
 import { PLAY_MESSAGES, createPlayI18n, renderMsg } from '../src/play/i18n.js';
 import { planRoute, placePosition, SPAWN } from '../src/net/world-map.js';
 
 const JUDGE = 'cc161d308faa67539af44205b56b6d4f'; // ?demo=judge
 const LOCALES = ['en', 'uk', 'ru', 'it', 'zh'];
-const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
+const INPUTS = ['touch', 'gamepad', 'keyboard'];
+/** Word count of the longest device branch of a message (device-aware strings carry an {input, select}). */
+const words = (s, loc = 'en') => Math.max(...INPUTS.map((input) => format(String(s), { input, tick: 3, n: 1, prize: 40, shell: 'II', ticks: 17, need: 8, have: 1 }, loc).trim().split(/\s+/).filter(Boolean).length));
 
 // ---------------------------------------------------------------- step flow
 
@@ -198,8 +200,66 @@ test('languages: the in-game word is "trial" (never "tick") in every first-loop 
   const bad = [];
   // goal.anchor.hint quotes the pad menu's own label (opt.anchorTick, "tick" until that family is renamed: docs/collab-requests.md)
   const QUOTED = /[“«][^”»]*[”»]/g;
-  for (const loc of LOCALES) for (const k of GOAL_KEYS) if (TICK[loc].test(PLAY_MESSAGES[loc][k].replace(/\{[^}]*\}/g, '').replace(QUOTED, ''))) bad.push(`${loc}:${k}`);
+  for (const loc of LOCALES) for (const k of GOAL_KEYS) for (const input of INPUTS) {
+    const txt = format(PLAY_MESSAGES[loc][k], { input, tick: 'N', n: 1, prize: 40, shell: 'II', ticks: 17, need: 8, have: 1, who: 'X', title: 't', outcome: 'gift', tension: 50, deadline: 16 }, loc);
+    if (TICK[loc].test(txt.replace(QUOTED, ''))) bad.push(`${loc}:${k}:${input}`);
+  }
   assert.deepEqual(bad, []);
+});
+
+test('device-aware copy: touch and gamepad never name a keyboard key; keyboard copy does; tutorial bodies switch verbs', () => {
+  const KEY = /(^|[\s(«“"])[EFGMT]([\s).,:»”"]|$)/; // a bare key letter such as "Press T", "(M)", "E → Enter"
+  const bad = [];
+  for (const loc of LOCALES) for (const k of GOAL_KEYS) {
+    for (const input of ['touch', 'gamepad']) {
+      const txt = format(PLAY_MESSAGES[loc][k], { input, tick: 3, n: 1, prize: 40, shell: 'II', ticks: 17, need: 8, have: 1, who: 'X', title: 't', outcome: 'gift', tension: 50, deadline: 16 }, loc);
+      if (KEY.test(txt.replace(/[“«][^”»]*[”»]/g, ''))) bad.push(`${loc}:${k}:${input} → ${txt}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+  const kb = format(PLAY_MESSAGES.en['hub.goal.leave.hint'], { input: 'keyboard' }, 'en');
+  assert.match(kb, /Press T/);
+  assert.match(format(PLAY_MESSAGES.en['hub.goal.leave.hint'], { input: 'touch' }, 'en'), /Tap “Leave/);
+  assert.match(format(PLAY_MESSAGES.en['goal.anchor.hint'], { input: 'touch', tick: 3 }, 'en'), /^Tap the quest/);
+  assert.match(format(MESSAGES.en['tut.slots.body'], { input: 'touch' }, 'en'), /Tap/);
+  assert.match(format(MESSAGES.en['tut.slots.body'], { input: 'keyboard' }, 'en'), /Click/);
+  assert.match(format(MESSAGES.en['tut.slots.body'], { input: 'gamepad' }, 'en'), /Select/);
+  assert.ok(!/panel below/.test(PLAY_MESSAGES.en['goal.season_over.hint']), 'QA-017');
+});
+
+test('device-aware copy: every goal carries the input kind; flags.input wins over the pointer probe', async () => {
+  assert.equal(inputKind({}), 'keyboard', 'Node has no coarse pointer');
+  assert.equal(inputKind({ input: 'gamepad' }), 'gamepad');
+  assert.equal(inputKind({ input: 'touch' }), 'touch');
+  assert.equal(inputKind({ input: 'mouse' }), 'keyboard', 'unknown values fall back');
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  await s.start();
+  assert.equal(currentGoal(s.obs, {}).args.input, 'keyboard');
+  assert.equal(currentGoal(s.obs, { input: 'touch' }).args.input, 'touch');
+  assert.equal(currentGoal(s.obs, { hub: true, input: 'gamepad' }).args.input, 'gamepad');
+  const i18n = createPlayI18n('en');
+  const g = currentGoal(s.obs, { hub: true, input: 'touch' });
+  assert.equal(renderMsg(i18n, g.hintKey, { ...g.args, ...g.hintArgs }), 'A sign waits there. Tap the gold Shell.');
+  s.dispose();
+});
+
+test('Simple mode: when Iris\'s own reading already lands on trial 3 the stake hint says so instead of asking for a Delay change', async () => {
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  await s.start();
+  s.flags.hub = true; s.recompute();
+  const hub = new ShellHub({ session: s, sleep: async () => {}, pauseMs: 0 });
+  const n = [...signsByShell(s.obs)].find(([, v]) => v.length)[0];
+  await hub.flyTo(n);
+  const o = s.obs;
+  assert.equal(hubGoal(o, {}).hintKey, 'hub.goal.stake.hint', 'the judge prior reads trial 2: ask for the Delay change');
+  const read = { ...o, prophecies: o.prophecies.map((p) => ({ ...p, impliedAnchor: { ...p.impliedAnchor, tick: FIRST_GIFT_TICK } })) };
+  const g = hubGoal(read, {});
+  assert.equal(g.hintKey, 'hub.goal.stake.hintReady');
+  for (const loc of LOCALES) {
+    const i18n = createPlayI18n(loc, { onMissing: (k) => { throw new Error(`${loc} missing ${k}`); } });
+    assert.ok(renderMsg(i18n, g.hintKey, g.args).includes('3'), loc);
+  }
+  s.dispose();
 });
 
 // ---------------------------------------------------------------- the first loop in the world

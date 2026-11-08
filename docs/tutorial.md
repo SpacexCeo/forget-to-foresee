@@ -196,3 +196,29 @@ Screenshots after the change: `docs/tutorial/after/` (1280×800, 1920×1080, 390
 - `meaning.3.*` ("in 2 ticks") and the pad menu labels say "tick" (Codex locale families): beat 3 shows "Delay: in 2 ticks" next to "in 2 trials" until they are renamed (request 8).
 - Translations of the new strings are mine (AI), consistent with the existing clan and term choices per language; a native-speaker pass is still owed, as for the rest of uk / it / zh.
 - Not checked on a GPU: real clicks at full frame rate (Playwright's `page.click` cannot be used here, element `.click()` was), gamepad navigation of the tap targets (they are ordinary buttons; `navigateGamepadMenu` walks them), touch on a physical phone.
+
+## 4. Follow-ups from the lead (08.11, later): all ages, devices, Simple mode
+
+- **Device-aware copy (QA-011, QA-013).** Every goal and tutorial body carries an `{input, select, touch {…} gamepad {…} other {…}}`
+  branch in all five languages. `objectives.js` adds `args.input` to every goal (`inputKind(flags)`: `flags.input` from the client
+  wins; otherwise a coarse pointer means touch; keyboard is the default), the tutorial probes the pointer and connected gamepads.
+  Touch names the on-screen buttons ("Tap the gold Shell", "Tap “End trial”", "Open Memories (the book icon)"), gamepad says
+  "choose", keyboard names the keys. A test renders every goal in every language for touch and gamepad and fails on a bare key
+  letter. Wiring `session.flags.input = input.device` from `main.js` is a one-liner for the lead (request 11); until then the
+  gamepad branch is reached only through the tutorial's own probe.
+- **Simple mode (Task Q).** When Iris's own reading already lands on trial 3 (Simple mode pre-reads, or a lucky prior) the hub
+  stake goal switches to *Iris read it: trial 3. Press F / Tap “Stake 10 silk”.* instead of asking for a Delay change
+  (`hub.goal.stake.hintReady`). Nothing in the tutorial depends on the HUD mode; Skip is on every beat.
+- **Narration (Task Q).** `onboarding.js` loads `game/src/play/narration.js` through a guarded `import.meta.glob`; when the module is
+  present and `narration.enabled()` the access card, each tutorial beat (title and body), the look picker and first contact are
+  spoken on the `tutorial` channel with `interrupt: true`. Absent module or narration off: nothing happens.
+- **Chapter films (Task P).** The tutorial stays about the mechanics (slots, dots, reading, the stake, the Price of Memory); the
+  story of the Arrival belongs to the film. The "First contact" card is the natural seam: P can mount the Arrival film from
+  `mountShell`'s `onFirstContact` before `enterWorld` (request 12).
+- **Plain words for 12 to 95.** The strings use *stake* (the button says "Stake 10 silk"), *seal* for the Merkle root ("checked
+  against the seal from the start", "sealed before you arrived"), *sign*, *Shell*, *trial*, *silk*; no "Merkle", "proof",
+  "entitlement" or "logogram" outside the folded details of the access card.
+- **QA-016** (Begin below the fold): the look picker's primary button sits beside the title and again under the tiles; both are
+  inside 1280×800 (checked: tops 125 and 646). **QA-017**: the season-end hint no longer says "(panel below)".
+- Merged `origin/claude/loving-curie-ihasft` at `17bf2de` (map, NEAR client, QA fixes); 352 tests, build green.
+
