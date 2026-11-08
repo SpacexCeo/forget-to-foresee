@@ -39,7 +39,8 @@ export const SHOTS = {
   plaza: { player: [0.8, 0, 4.2], heading: Math.PI, dist: 13, yaw: 0.25, pitch: null },
   bridge: { player: [0.4, 0, -16.5], heading: Math.PI, dist: 8.5, yaw: 0.9, pitch: 16 },
   camp: { player: [0, 0, -26.5], heading: Math.PI, dist: 11, yaw: 0.35, pitch: null },
-  shell: { player: [3.3, 0, 3.3], heading: Math.PI / 4, dist: 12, yaw: -2.356, pitch: 9 },
+  // From the Moss camp across the plaza toward Shell III (78 m away, 17-35 m up): the whole Shell in frame with the archipelago in front.
+  shell: { player: [0, 0, 25], heading: Math.PI, dist: 10, yaw: 0.51, pitch: 4 },
   inside: { shell: 1, dist: 9, yaw: 0, pitch: null },
 };
 const SHOT_NAMES = args.shots ? String(args.shots).split(',') : Object.keys(SHOTS);
