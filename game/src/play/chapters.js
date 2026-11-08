@@ -165,14 +165,16 @@ const pose = (pos, look, fov) => ({ pos: pos.slice(), look: look.slice(), fov })
 const path = (from, to) => ({ kind: 'path', from, to });
 
 /** The whole archipelago from high on the camera side, a slow crane down and in. */
-export function camWide() { return path(pose([38, 72, 122], [0, 6, 0], 34), pose([12, 56, 96], [0, 8, -4], 34)); }
+export function camWide() { return path(pose([30, 60, 104], [0, 5, 0], 34), pose([9, 46, 82], [0, 8, -4], 34)); }
 /** A levitating Shell seen from the plaza side, dolly toward it. */
 export function camShell(n) {
   const z = ANCHOR_ZONES[(n || 1) - 1];
   const [sx, sy, sz] = z.shellPosition;
-  const l = Math.hypot(sx, sz) || 1, ux = -sx / l, uz = -sz / l; // toward the plaza
-  const look = [sx, sy + 6, sz];
-  return path(pose([sx + ux * 34, sy + 11, sz + uz * 34], look, 36), pose([sx + ux * 19, sy + 7.5, sz + uz * 19], look, 36));
+  // from the plaza side, swung 50 degrees around the Shell so its spiral reads in three quarters, dolly in
+  const a = Math.atan2(sz, sx) + Math.PI + 0.87;
+  const at = (d, h) => [sx + Math.cos(a) * d, sy + h, sz + Math.sin(a) * d];
+  const look = [sx, sy + 5.5, sz];
+  return path(pose(at(44, 13), look, 34), pose(at(30, 9.5), look, 34));
 }
 /** A camp from over its bridge, slightly off axis, dolly in. */
 export function camCamp(clan) {

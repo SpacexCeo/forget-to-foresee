@@ -310,6 +310,7 @@ export default {
   'chapter.title.trust': 'La fiducia',
   'chapter.title.crisis': 'La crisi',
   'chapter.title.vote': 'Il voto',
+  'chapter.title.ending': 'Il finale',
   'chapter.title.ending.gift': 'Un dono',
   'chapter.title.ending.weapon': 'Un’arma',
   'chapter.title.ending.lost': 'Un dono rifiutato',

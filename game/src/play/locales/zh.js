@@ -309,6 +309,7 @@ export default {
   'chapter.title.trust': '信任',
   'chapter.title.crisis': '危机',
   'chapter.title.vote': '投票',
+  'chapter.title.ending': '结局',
   'chapter.title.ending.gift': '一份礼物',
   'chapter.title.ending.weapon': '一件武器',
   'chapter.title.ending.lost': '被拒绝的礼物',

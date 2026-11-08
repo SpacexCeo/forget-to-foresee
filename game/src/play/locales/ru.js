@@ -309,6 +309,7 @@ export default {
   'chapter.title.trust': 'Доверие',
   'chapter.title.crisis': 'Кризис',
   'chapter.title.vote': 'Голосование',
+  'chapter.title.ending': 'Финал',
   'chapter.title.ending.gift': 'Дар',
   'chapter.title.ending.weapon': 'Оружие',
   'chapter.title.ending.lost': 'Отвергнутый дар',

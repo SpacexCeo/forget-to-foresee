@@ -311,6 +311,7 @@ export default {
   'chapter.title.trust': 'Trust',
   'chapter.title.crisis': 'The Crisis',
   'chapter.title.vote': 'The Vote',
+  'chapter.title.ending': 'The Ending',
   'chapter.title.ending.gift': 'A Gift',
   'chapter.title.ending.weapon': 'A Weapon',
   'chapter.title.ending.lost': 'A Gift Refused',
