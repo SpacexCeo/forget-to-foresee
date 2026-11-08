@@ -232,3 +232,75 @@ floating over the island): "the labels cheapen it; make a map and show them ther
    from `docs/ui-world-hud.md`), legible at 390 px wide, closes with N/Esc, only one panel open at a time.
 3. Tests for the map model (places from the layout, coordinates, state per Shell, route targets). `npm test` and
    `npm run build` green; headless check of both modes with the map open and closed, no console errors.
+
+---
+
+## Quality bar for every task (owner, 08.11): "the best humanity has seen, no errors, no misses; money is no problem"
+
+- Ship nothing you have not looked at: every visual change gets before/after screenshots at 1280×800, 1920×1080 and
+  390×844 in your doc, every behaviour change gets a test. Zero console errors and warnings in the states you touch.
+- Self-review before each push: re-read the diff as a hostile reviewer (edge cases, all five locales, phone, low
+  tier, reduced motion, keyboard/gamepad/touch). Fix what you find; list what you could not verify and why.
+- Polish is part of the task, not extra: spacing, timing, easing, sound, readability, copy. If a detail looks
+  cheap, it is a defect.
+- Never trade correctness for looks: `baseline-2d-1` parity, the proofs and the agent API stay exact.
+
+---
+
+## Task I: a world-class first-time experience (tutorial and onboarding)
+
+**Branch:** `claude/tutorial` · **Owns:** `game/src/ui/onboarding.js`, `game/src/ui/flow.js`, `game/src/ui/hologram/**`,
+`game/src/play/objectives.js`, the `tut.*`, `onb.*` and `goal.*` strings in all locale files (translate uk/it/zh
+yourself, parity test green), new `game/tests/tutorial*.test.mjs`, `docs/tutorial.md` (new). Task F owns the world HUD
+and `play/hints.js`: agree hint changes with F through `docs/collab-requests.md`.
+
+Goal: a new player (and a hackathon judge with 5 minutes) understands the core loop Read → Anchor → Reveal → Verified
+and the Price of Memory without reading anything long, in both play modes (Shell hub default, `?mode=walk`).
+1. Play the current first 5 minutes as a stranger (headless, both modes, all five locales); write every confusion,
+   dead end, wall of text and unclear button into `docs/tutorial.md` first.
+2. Redesign the flow as show-don't-tell: one idea per step, the player does it right away, immediate feedback
+   (sound, VFX cue, a short line from Iris), never more than ~12 words on screen per beat, skippable, resumable,
+   never blocks a returning player. The judge path (`?demo=judge`) must reach "Verified ✓" in under 3 minutes.
+3. Copy: short, concrete, in the game's voice; the same terms everywhere (Shell, sign, anchor, silk, trial, vision).
+4. Tests for the flow state machine (step order, skip, resume, both modes). `npm test` and `npm run build` green.
+   Update the README judge table if the steps change, verified step by step.
+
+---
+
+## Task J: trailer, demo video and clips (best-in-class capture)
+
+**Branch:** `claude/trailer` · **Owns:** new `game/src/cinematic/**` (scripted camera paths, a deterministic clock /
+frame-stepping hook enabled only by `?cinematic=<name>`), new `tools/capture/**`, `docs/submission/video-shot-list.md`,
+`docs/submission/trailer.md` (new), `docs/media/` (final encoded videos, each file under 90 MB; no raw frames in git).
+May add one guarded hook line in `game/src/main.js` for the cinematic clock (coordinate with Task G in
+`docs/collab-requests.md`).
+
+Goal: a 60–90 s hackathon demo video (the one the owner posts on X; it must show one complete loop: read a sign,
+anchor silk, the reveal with "Verified ✓", the Price of Memory) and a 30 s trailer, plus three 10–15 s clips for social
+posts, at a quality above the best indie trailers: 1080p60 minimum, 4K masters if feasible.
+1. Deterministic capture: render frame by frame with a fixed timestep (the game clock advanced per captured frame, not
+   wall time), so a slow software renderer still yields perfectly smooth 60 fps; encode with ffmpeg (installed:
+   ffmpeg 6.1). If the result needs a GPU for quality (soft shadows, post), say so and prepare the exact commands for
+   the owner's GPU server; do not rent servers yourself.
+2. Cinematography: scripted dolly/crane/orbit shots with eased motion, no UI in pure beauty shots, UI shown deliberately
+   in gameplay shots; title cards in the game's typography; captions in English (subtitle file, plus burned-in versions).
+3. Sound: mix the game's own synthesized music and SFX (game/public/assets/audio) to picture; no third-party music.
+4. Build the pipeline now on the current build; the final render waits for the lead's signal after Tasks F, G, H and the
+   new character models land. Report what each video shows, its duration, resolution, file size and where it is.
+
+---
+
+## Task K: QA, the adversarial playtester
+
+**Branch:** `claude/qa` · **Owns:** new `game/tests/e2e/**` (headless Chromium end-to-end checks, run by a separate
+`npm run e2e` script you add to `game/package.json`; not part of `npm test`), `docs/qa/**`.
+Does not fix product code: files every defect with exact repro steps, expected vs actual, screenshot and severity in
+`docs/qa/defects.md`, and messages the lead for each blocker.
+1. Play `main` end to end, both modes, all five locales, desktop and phone viewports, low tier, reduced motion,
+   keyboard / gamepad (emulated) / touch: lobby, onboarding, every panel, every decision card, a full 17-trial season
+   to the vote and the Heir, the agent API example, the README commands exactly as written.
+2. Look for: console errors, overlaps and clipping, untranslated or overflowing strings, stuck states, soft-locks,
+   wrong numbers (silk, attention, trial), proofs that do not verify, sounds that do not play or never stop, frame-time
+   spikes, anything a judge would call a bug.
+3. Turn every reproducible defect into a failing e2e check where possible, so the fixing worker can prove the fix.
+4. Re-run on each merge the lead announces; keep `docs/qa/defects.md` current (open / fixed / won't fix).
