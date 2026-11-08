@@ -5,14 +5,14 @@
 // clans' faces and hands, meeting and trading → trial 13, the crisis → the vote → the title. The two differentiators
 // lead as cards: the sealed season and the Price of Memory. Motion in every shot; no wide fog shot over 2 s.
 // The crisis and vote shots cue the Guests' own trial-13 and pre-vote moments (docs/guests-stage.md) directly.
-import { JUDGE_URL, WALK_URL, BEAUTY_HIDE, GLYPH, fadeIn, fadeOut, WALK, IN_SHELL, guestSign, faceCam, chapterCard, dim, BEHIND_IRIS, IRIS_AT_GLASS } from './common.mjs';
+import { JUDGE_URL, WALK_URL, BEAUTY_HIDE, GLYPH, fadeIn, fadeOut, WALK, IN_SHELL, guestSign, faceCam, handsCam, followCam, chapterCard, dim, BEHIND_IRIS, IRIS_AT_GLASS } from './common.mjs';
 
 const word = (text, from, to) => ({ kind: 'word', text, position: 'low', from, to, fadeIn: 0.2, fadeOut: 0.25, rise: 10 });
 const FRAME = [{ kind: 'letterbox', ratio: 2.2 }, { kind: 'vignette', amount: 0.45 }];
-const face = (clan, side) => ({
-  name: 'face-' + clan, duration: 1.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+const face = (clan, side, hands = false) => ({
+  name: (hands ? 'hands-' : 'face-') + clan, duration: 1.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
   setup: [{ do: 'frames', n: 90 }],
-  camera: faceCam(clan, side),
+  camera: hands ? handsCam(clan) : faceCam(clan, side),
   overlays: [...FRAME],
 });
 
@@ -72,13 +72,13 @@ export default {
       actions: [{ at: 0.0, do: 'rig', dist: 9, yaw: 0.4 }, { at: 0.4, do: 'forget', index: 1 }, { at: 0.4, do: 'music', tension: 58 }],
       overlays: [],
     },
-    // 22–26: the clans' faces, one beat each.
-    face('moss', 0.25), face('salt', -0.25), face('amber', 0.25), face('frost', -0.25),
+    // 22–26: the round-5 agents up close, one beat each: three faces and a pair of hands.
+    face('moss', 0.25), face('salt', -0.25), face('amber', 0, true), face('frost', -0.25),
     {
-      // 26–29: the clans meet and trade over the plaza after a trial ends: a crane over the camps.
+      // 26–29: trial 1 ends on the walking path and the clans go about the trial's trades: the camera follows Moss.
       name: 'clans', duration: 3.0, url: WALK_URL, ui: 'clean', hide: BEAUTY_HIDE,
-      setup: [...WALK.staked, { do: 'key', code: 'KeyT' }, { do: 'frames', n: 30 }, { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'trial', value: 2, max: 300 }, { do: 'frames', n: 60 }],
-      camera: { type: 'crane', path: [[-14, 0, 20], [-4, 0, 14]], y0: 4.5, y1: 9, look: [[0, 1.5, 0], [0, 1.0, -6]], fov: [40, 36], ease: 'inOutSine' },
+      setup: [...WALK.staked, { do: 'key', code: 'KeyT' }, { do: 'frames', n: 30 }, { do: 'key', code: 'KeyT' }, { do: 'until', pred: 'trial', value: 2, max: 300 }, { do: 'frames', n: 90 }],
+      camera: followCam('moss'),
       actions: [{ at: 0.0, do: 'music', tension: 66 }],
       overlays: [...FRAME, word('Trade · lend · betray', 0.4, 2.8)],
     },

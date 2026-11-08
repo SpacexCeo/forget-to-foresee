@@ -81,7 +81,7 @@ export const IN_SHELL = [{ do: 'fly', shell: 1 }, { do: 'until', pred: 'inShell'
 /** Iris placed 6 m in front of the glass, facing it (the camera behind her keeps her small against the Guest). */
 export const IRIS_AT_GLASS = [{ do: 'teleport', pos: [0.3, 301.2, 4.5], heading: Math.PI }, { do: 'frames', n: 10 }];
 /** Behind Iris, low, looking up at the glass; a slow push. */
-export const BEHIND_IRIS = { type: 'push', from: [1.1, 302.0, 12.4], look: [0, 303.6, -10.7], lookTo: [0, 304.0, -10.7], dist1: 20.6, fov: [42, 38], ease: 'inOutSine', minHeight: 290 };
+export const BEHIND_IRIS = { type: 'push', from: [1.1, 302.3, 12.4], look: [0, 302.7, -10.7], lookTo: [0, 303.1, -10.7], dist1: 20.6, fov: [42, 38], ease: 'inOutSine', minHeight: 290 };
 /** The Guest emerging and drawing, pinned for the capture: the trailer seed, the sign moment restarted `warp` seconds in. */
 export const guestSign = (warp = 0) => ({ at: 0.0, do: 'guests', seed: 'trailer', cue: 'sign', warp });
 /** A head-height estimate for a clan agent at its camp (the track camera follows the real head). */
@@ -89,7 +89,11 @@ export const HEAD = Object.fromEntries(Object.entries(CAMP).map(([k, [x, , z]]) 
 /** Clan id (game) → camp asset key. */
 export const CLAN_CAMP = { salt: 'sol', ash: 'pepel', moss: 'moh', amber: 'yantar', frost: 'iney' };
 /** A close-up on a clan agent's face: a slow push in front of the head, turned with the agent. */
-export const faceCam = (clan, side = 0.3) => ({ type: 'track', target: clan, local: true, at: HEAD[CLAN_CAMP[clan]], off0: [side, 0.06, 1.55], off1: [side * 0.6, 0.02, 1.15], lookOffset: [0, -0.02, 0], fov: [30, 27], ease: 'inOutSine', minHeight: -5 });
+export const faceCam = (clan, side = 0.3) => ({ type: 'track', target: clan, local: true, at: HEAD[CLAN_CAMP[clan]], off0: [side, 0.32, 1.55], off1: [side * 0.6, 0.26, 1.15], lookOffset: [0, 0.2, 0], fov: [30, 27], ease: 'inOutSine', minHeight: -5 });
+/** A close-up on the hands (round 5: palm, fingers, thumb), a slow slide across the front of the agent. */
+export const handsCam = (clan) => ({ type: 'track', target: clan, local: true, at: HEAD[CLAN_CAMP[clan]], off0: [0.55, -0.35, 1.0], off1: [-0.2, -0.4, 1.05], lookOffset: [0, -0.55, 0.1], fov: [32, 30], ease: 'inOutSine', minHeight: -5 });
+/** A medium shot that follows a clan agent wherever it walks (meetings, errands). */
+export const followCam = (clan) => ({ type: 'track', target: clan, local: false, at: HEAD[CLAN_CAMP[clan]], off0: [2.6, 0.5, 3.4], off1: [3.4, 0.9, 2.2], lookOffset: [0, -0.3, 0], fov: [40, 36], ease: 'inOutSine', minHeight: -5 });
 /** A title card in the game's type over a darkened, moving frame (the video's chapter cards). */
 export const chapterCard = (text, sub, from, to, eyebrow) => ({ kind: 'title', from, to, fadeIn: 0.25, fadeOut: 0.25, text, sub, eyebrow, rule: true });
 export const dim = (from, to, amount = 0.72) => ({ kind: 'black', from, to, fadeIn: 0.2, fadeOut: 0.2, amount });
