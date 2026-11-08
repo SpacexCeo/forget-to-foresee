@@ -313,7 +313,7 @@ test('layout: an element that borrows .wh-root keeps its own position whatever t
     }
   }
   const chronicle = read('../src/cinematic/chapters/chronicle.js');
-  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*bottom: calc\(56px/, 'the Chronicle fab resets the inherited top: 0 and sits at the bottom left');
+  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*left: calc\(80px[^}]*bottom: calc\(152px/, 'the Chronicle fab resets the inherited top: 0 and sits beside the recap ?, above the dialogue line');
   assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*pointer-events: auto/, 'the fab stays clickable over .wh-root pointer-events: none');
 });
 

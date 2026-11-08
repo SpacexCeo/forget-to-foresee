@@ -8,8 +8,10 @@ import { installMotionStyles, enter, exit, stagger, MOTION } from '../../ui/moti
 // The fab and the menu borrow `.wh-root` for its tokens, but tokens.css also gives `.wh-root` `position: absolute;
 // inset: 0; pointer-events: none`. Vite injects that sheet after this one on the lobby path, so each base rule below
 // doubles the class (`.ch-fab.wh-root`) to win whatever the order (QA-031: the fab sat at the top-left corner).
+// On desktop it sits beside the recap "?" (left 16, bottom 150, 52 px), above the dialogue line, which a long
+// locale (it) stretches to the left edge.
 const CSS = `
-.ch-fab.wh-root { position: fixed; top: auto; right: auto; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); width: 48px; height: 48px; border-radius: 50%; z-index: 4;
+.ch-fab.wh-root { position: fixed; top: auto; right: auto; left: calc(80px + env(safe-area-inset-left, 0px)); bottom: calc(152px + env(safe-area-inset-bottom, 0px)); width: 48px; height: 48px; border-radius: 50%; z-index: 4;
   display: grid; place-items: center; cursor: pointer; color: var(--wh-gold, #e4c272); background: var(--wh-btn-bg, rgba(10,22,23,.78)); border: 1px solid var(--wh-frame-soft, rgba(196,186,156,.45));
   box-shadow: 0 6px 18px rgba(0,0,0,.35); backdrop-filter: blur(var(--wh-blur-sm, 8px)); pointer-events: auto; }
 .ch-fab:hover { border-color: var(--wh-gold, #e4c272); }

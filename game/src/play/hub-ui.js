@@ -81,7 +81,7 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
 /* Short phones (QA-011): the bottom-anchored HUD stack rises to ~220 px on a 664 px screen, so the dock at 112 px
    gets compact: no eyebrow, 44 px Shell cells, a 40 px pass row; 112 + 8 + 44 + 6 + 40 + 8 = 218 px. */
 @media (max-width: 700px) and (max-height: 760px) {
-  .hub-dock { padding: 8px; }
+  .hub-dock { padding: 8px; top: calc(104px + env(safe-area-inset-top, 0px)); } /* 6 px under the top bar's buttons: a two-line quest title (uk, ru, it) still clears it */
   .hub-dock .hub-eyebrow { display: none; }
   .hub-shells { margin-top: 0; gap: 6px; } .hub-shells button { min-height: 44px; padding: 4px 2px 3px; font-size: 16px; gap: 3px; }
   .hub-shells button small { font-size: 9.5px; }
