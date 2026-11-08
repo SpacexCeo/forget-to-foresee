@@ -8,6 +8,15 @@
 
 **How NEAR fits in.** The whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract `season-commit` recomputes the same leaf byte for byte and verifies the proof on-chain, with a separate commit-reveal for the crisis key. The contract builds and passes its tests; it is **not deployed yet** (owner step, one command). **What "Verified ✓" proves, exactly:** the revealed event is the one fixed before trial 1 and was not changed afterwards. It does not prove the season was chosen fairly: today the same client generates the season, commits the root and checks it, so the root is only independent once it is registered on NEAR before trial 1 (the deployment step above). No token, no paid entry, no real money: the economy is closed in-game silk.
 
+**Verify it yourself, without this code.** Every revealed sign exports as one JSON (`Copy proof` in Signs & Visions, once the
+HUD button lands; the same document comes from `game/src/net/verify-export.js`): full hashes, the byte recipe, the Merkle path.
+Check it with a one-file verifier that imports nothing from the game: `node tools/verify/verify.mjs proof.json` or
+`python3 tools/verify/verify.py proof.json` → every line `✓` and `OK` (exit 0); change one digit → `✗` and `FAIL` (exit 1).
+The leaf alone needs only a shell: the `recipe.shell` line of the file is a `printf … | sha256sum` command whose output is the
+leaf hash. Live seasons (not the fixed judge season) follow a seed protocol in which the room commits to its random bytes
+before the player's nonce is sent and reveals them at the end, so anyone can recompute the seed and regenerate the schedule
+(`node game/scripts/replay-season.mjs <seed> season.json`). Details, limits and what each check proves: [docs/verify.md](docs/verify.md).
+
 ---
 
 ## Judge in 5 minutes
