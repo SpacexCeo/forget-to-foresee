@@ -18,10 +18,10 @@ import { AUDIO_MANIFEST } from '../../src/audio/manifest.js';
 const SEED = '0123456789abcdef0123456789abcdef';
 
 test('play strings: EN and RU have the same keys, every message formats in both locales', () => {
-  const en = Object.keys(PLAY_MESSAGES.en).sort(), ru = Object.keys(PLAY_MESSAGES.ru).sort();
-  assert.deepEqual(ru, en);
+  const en = Object.keys(PLAY_MESSAGES.en).sort();
+  for (const loc of ['uk', 'ru', 'it', 'zh']) assert.deepEqual(Object.keys(PLAY_MESSAGES[loc]).sort(), en, `${loc} play keys mirror en`);
   const missing = [];
-  for (const loc of ['en', 'ru']) {
+  for (const loc of ['en', 'uk', 'ru', 'it', 'zh']) {
     const i18n = createPlayI18n(loc, { onMissing: (k) => missing.push(k) });
     for (const k of en) {
       const out = i18n.t(k, { who: 'X', n: 1, total: 7, tick: 3, ticks: 17, shell: 'II', prize: 30, deadline: 16, confidence: 25, count: 2, outcome: 'gift', fragment: 'held', link: 'speaking', offer: 'o', price: 1, a: 'A', b: 'B', amount: 3, closes: 4, title: 't', inScroll: 1, revealed: 0, open: 1, have: 1, need: 8, tension: 50, slot: 's', meaning: 'm', list: 'l', reason: 'r', index: 1 });

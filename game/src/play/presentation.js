@@ -6,7 +6,7 @@
 // only: nothing here reads or changes a rule (spec §2). Every call into the optional modules is guarded.
 import * as THREE from 'three';
 import { zoneAt } from '../audio/mix.js';
-import { surfaceAt, StepMeter, tensionLevel, humPositions, npcStepGain } from './ambience.js';
+import { surfaceAt, StepMeter, tensionLevel, humPositions, npcStepGain, vfxTierFor } from './ambience.js';
 
 const PRELOAD = ['step_stone', 'step_wood', 'step_grass', 'step_glass', 'ui_click', 'ui_confirm', 'ui_error', 'ui_notify', 'anchor_plant', 'gift_chime'];
 const NPC_MAX_SPEED = 6; // faster than this is a snap, not a walk
@@ -45,7 +45,7 @@ export function attachPresentation({ hooks, scene, world3d, shell, lookdev, agen
     lastTier = lookdev.tier;
     try {
       vfx.attachToComposer(null);
-      vfx.setQuality(lookdev.tier);
+      vfx.setQuality(vfxTierFor(lookdev)); // phones: always the low VFX preset (docs/mobile.md)
       vfx.attachToComposer(lookdev.post && lookdev.post.composer ? lookdev.post.composer : null);
     } catch (e) { console.warn('[play] vfx composer attach failed', e); }
   }

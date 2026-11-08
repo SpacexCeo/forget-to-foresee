@@ -6,10 +6,9 @@
 //   fade, material quality. setQuality(tier) is the hook for the settings UI; setReducedMotion()
 //   freezes the clouds, wind and Shell hover (spec 1/3: reduced motion never blocks input).
 import * as THREE from 'three';
-import { QUALITY, isTier } from './quality.js';
+import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor } from './quality.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { SkyDome, TIME_PRESETS, DEFAULT_PRESET } from './sky.js';
-import { TierGovernor } from './quality.js';
 import { CloudSea } from './clouds.js';
 import { PostStack } from './post.js';
 import { Foliage } from './foliage.js';
@@ -18,19 +17,36 @@ import { applyMaterialQuality } from './materials.js';
 import { installHeightFog } from './fog.js';
 import { LAYER_OVERLAY } from './layers.js';
 
+/**
+ * Render profile of this browser (docs/mobile.md): phones get the phone knob set for every tier name.
+ * `?profile=phone|desktop` overrides it for QA on a desktop (like `?tier=`).
+ */
+export function browserProfile() {
+  try {
+    const forced = new URLSearchParams(location.search).get('profile');
+    if (isProfile(forced)) return forced;
+    const ua = navigator.userAgent || '';
+    const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
+    const screenMin = Math.min(screen?.width || Infinity, screen?.height || Infinity);
+    return detectProfile({ mobile: /Mobi|Android/i.test(ua), coarse, screenMin: Number.isFinite(screenMin) ? screenMin : 0 });
+  } catch { return 'desktop'; }
+}
+
 export class LookDev {
   /**
    * @param {{renderer:THREE.WebGLRenderer, scene:THREE.Scene, camera:THREE.PerspectiveCamera, cloudLevel:number,
    *          grassPatches:{center:number[], radius:number, tint?:number}[], lanterns:number[][],
-   *          tier?:string, reducedMotion?:boolean}} o
+   *          tier?:string, profile?:string, reducedMotion?:boolean}} o
    */
-  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', reducedMotion = false, autoTier = false, preset = DEFAULT_PRESET }) {
+  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', profile = browserProfile(), reducedMotion = false, autoTier = false, preset = DEFAULT_PRESET }) {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
+    this.profile = isProfile(profile) ? profile : 'desktop';
     this.tier = isTier(tier) ? tier : 'ultra';
-    this.cfg = QUALITY[this.tier];
+    this.cfg = qualityFor(this.tier, this.profile);
+    this.pixelScale = 1; // the governor's render-resolution step (phones), on top of the tier's pixel ratio cap
     this.reducedMotion = reducedMotion;
     this.listeners = new Set();
-    this.governor = autoTier ? new TierGovernor() : null;
+    this.governor = autoTier ? new TierGovernor(GOVERNORS[this.profile]) : null;
     this.preset = TIME_PRESETS[preset] ? preset : DEFAULT_PRESET;
     const P = TIME_PRESETS[this.preset];
 
@@ -103,7 +119,7 @@ export class LookDev {
   /** Settings hook: 'ultra' | 'high' | 'low'. Rebuilds the post stack, shadows, foliage density. */
   setQuality(tier) {
     if (!isTier(tier) || tier === this.tier) return this.tier;
-    this.tier = tier; this.cfg = QUALITY[tier];
+    this.tier = tier; this.cfg = qualityFor(tier, this.profile);
     this.applyTier();
     for (const fn of this.listeners) fn(tier);
     return tier;
@@ -113,13 +129,28 @@ export class LookDev {
 
   setReducedMotion(on) { this.reducedMotion = !!on; this.foliage.setWind(on ? 0 : 1); }
 
+  /** Governor step on the bottom tier (phones): render at a fraction of the tier's pixel ratio. */
+  setPixelScale(scale) {
+    scale = THREE.MathUtils.clamp(Number(scale) || 1, 0.5, 1);
+    if (scale === this.pixelScale) return;
+    this.pixelScale = scale;
+    this.applyPixelRatio();
+  }
+
+  applyPixelRatio() {
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.cfg.pixelRatioCap) * this.pixelScale);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.post.setSize(window.innerWidth, window.innerHeight);
+  }
+
   applyTier() {
     const cfg = this.cfg, r = this.renderer;
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatioCap));
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatioCap) * this.pixelScale);
     r.setSize(window.innerWidth, window.innerHeight);
     const map = this.sun.shadow.map;
     if (map && (map.width !== cfg.shadowMap)) { map.dispose(); this.sun.shadow.map = null; }
-    this.sun.shadow.mapSize.set(cfg.shadowMap, cfg.shadowMap);
+    this.sun.castShadow = cfg.shadowMap > 0; // a 0 shadow map turns the sun shadow off
+    this.sun.shadow.mapSize.set(Math.max(1, cfg.shadowMap), Math.max(1, cfg.shadowMap));
     this.sun.shadow.radius = cfg.shadowRadius;
     this.clouds.setLayers(cfg.cloudLayers);
     this.foliage.rebuild({ blades: cfg.grassBlades, flowers: cfg.flowers, fadeDistance: cfg.grassFadeDistance });
@@ -163,7 +194,11 @@ export class LookDev {
 
   /** @param {number} dt seconds; @param {THREE.Vector3} focus the player's chest; @param {number} camDist camera distance */
   update(dt, focus, camDist) {
-    if (this.governor) { const next = this.governor.sample(dt * 1000, this.tier); if (next) this.setQuality(next); }
+    if (this.governor) {
+      const change = this.governor.step(dt * 1000, this.tier);
+      if (change?.tier) this.setQuality(change.tier);
+      else if (change?.pixelScale) this.setPixelScale(change.pixelScale);
+    }
     const motion = this.reducedMotion ? 0 : dt;
     this.sky.follow(this.camera);
     this.sky.setTime(this.sky.material.uniforms.uTime.value + motion);
@@ -176,6 +211,6 @@ export class LookDev {
 
   render() { this.post.render(this.sunDir); }
 
-  /** Numbers for the HUD / measurement: tier, pixel ratio, whether the post stack is active. */
-  stats() { return { tier: this.tier, pixelRatio: this.renderer.getPixelRatio(), post: this.post.active, reducedMotion: this.reducedMotion }; }
+  /** Numbers for the HUD / measurement: tier, profile, pixel ratio (after the governor's scale), whether the post stack is active. */
+  stats() { return { tier: this.tier, profile: this.profile, pixelRatio: this.renderer.getPixelRatio(), pixelScale: this.pixelScale, post: this.post.active, reducedMotion: this.reducedMotion }; }
 }

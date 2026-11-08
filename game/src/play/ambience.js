@@ -66,3 +66,12 @@ export function npcStepGain(distance) {
   if (distance >= 30) return 0;
   return 0.8 * (1 - (distance - 6) / 24);
 }
+
+/**
+ * VFX tier for the look-dev state: phones (render profile `phone`, docs/mobile.md) always get the VFX `low`
+ * preset (no lights, no distortion, no soft particles), whatever their render tier name; desktops follow the tier.
+ */
+export function vfxTierFor(lookdev) {
+  if (!lookdev) return 'high';
+  return lookdev.profile === 'phone' ? 'low' : lookdev.tier || 'high';
+}

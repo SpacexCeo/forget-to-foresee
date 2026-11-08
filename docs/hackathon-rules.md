@@ -1,32 +1,88 @@
-# NEAR Hackathon — submission checklist
+# NEAR Hackathon — rules and submission checklist
 
-Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it can change).
+Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it can change). Last compared on
+08.11.2026: the dates, fields and limits below match that version. Every item below is either **done**, an
+**owner action** (needs the owner's account, wallet or confirmation), or **blocked**; the checklist in
+`docs/handoff/agent-reports/submission.md` tracks the state per date.
 
-## Dates (Kyiv, UTC+2)
-- Code counts from 19.10.2026.
-- **Submission deadline: 15.11.2026 01:59** (14.11 23:59 UTC).
-- Judging from 16.11, results by 19.11. The repository must stay public throughout judging.
+## Dates (UTC, with Kyiv = UTC+2)
+- There is no sign-up before the hackathon: the final submission is the only registration.
+- Code counts from the announcement on 19.10.2026 (Q-001); the hackathon window is 01.11–14.11.
+- **Submission deadline: 14.11.2026 23:59 UTC = 15.11.2026 01:59 Kyiv.** Submissions are accepted only from
+  01.11 00:00 UTC to that moment; outside the window the API answers 403.
+- Judging starts 16.11 00:00 UTC; results are announced by 18.11 23:59 UTC (19.11 01:59 Kyiv).
+- The repository must stay public through judging. A hosted demo should stay up until 18.11, ideally 25.11 (Q-012).
+- Our own plan: code freeze 13.11 20:00 Kyiv; 14.11 is buffer and submission (`docs/spec.md` §0).
 
 ## Required
-- [ ] A working prototype, not a pitch (Q-012).
-- [ ] Public repository by the deadline + LICENSE (MIT) (Q-013–014).
-- [ ] README: what works, how to reproduce from a clean environment, the real/mock boundary (Q-012).
-- [ ] Baseline: tags `pre-hackathon` and `hackathon-submission` with a diff link; list libraries, templates and AI-generated code (Q-001–005).
-- [ ] Post on X: "built at NEAR HACKATHON", @NEARProtocol, #NEARHackathon, **video** (the demo is local) (Q-012).
-- [ ] A concrete NEAR role: an own contract that fits the track is enough (Q-011).
-- [ ] Form https://nearhackathon.com/#apply: name, lead, email, team size, tracks, mainnet NEAR payout address, repo, demo post, description of 20–2000 characters (Q-015).
-- [ ] One submission per project. A person may be in at most two projects; then both READMEs link to each other (Q-015).
+- [x] A working prototype, not a pitch (Q-012). Live: https://spacexceo.github.io/forget-to-foresee/?demo=judge
+- [x] Public repository + LICENSE (MIT) (Q-013–014). https://github.com/SpacexCeo/forget-to-foresee
+- [x] README written for a machine reader as well as a human: what the product is, the problem, "do X, see Y"
+  steps, the real/mock boundary, no marketing (Procedure §1, Q-012).
+- [ ] Baseline (Q-001–005): tag `pre-hackathon` exists; tag `hackathon-submission` is created by the owner at
+  freeze; the README links the diff between them and lists libraries, templates and AI-generated code.
+  **Owner action** (commands in `README.md` → "Baseline and third-party code").
+- [ ] Demo post on X: says the project was **built at NEAR HACKATHON**, tags **@NEARProtocol** and
+  **#NEARHackathon** (optionally @NearLegion and @NearBuilders), has the demo **video** attached (screenshots are
+  not enough for a local-only demo, Q-012). **Owner action**: draft in `docs/submission/x-post.md`, shot list in
+  `docs/submission/video-shot-list.md`.
+- [x] A concrete NEAR role (Q-011): an own contract that fits the track is enough. `contracts/season-commit`
+  (builds, 56 unit + 2 sandbox tests). Testnet deployment is an **owner action** and is not required for eligibility
+  (Q-010: testnet-only projects are eligible in every track).
+- [ ] Submission (Procedure §3): the form at https://nearhackathon.com/#apply or `POST
+  https://nearhackathon.com/api/applications` with exactly the fields below. **One submission per repository, one
+  attempt**: mistakes are fixed at https://nearhackathon.com/request-changes, never by submitting again.
+  **Owner action**: values and the ready payload in `docs/submission/apply-form.md`.
+- [ ] If the owner submits a second, independent project (RAEN Computers / Guard), both READMEs must name each
+  other (Q-015: at most 2 projects per person, each email at most 2 submissions). **Owner decision**
+  (`docs/decisions.md` §6 item 3); the README has a "Related projects" placeholder.
+
+## Submission fields (the human decides every value; never guess or fill placeholders)
+
+| Field | Rule |
+|---|---|
+| `projectName` | 2–80 characters |
+| `leadName` | 2–80 characters |
+| `email` | valid, max 160 characters, at most 2 submissions per email |
+| `size` | exactly one of `1`, `2 - 4`, `4 - 6`, `6 - 8`, `8+` |
+| `tracks` | one or more ids, each once: `defi`, `thesis`, `privacy`, `business`, `swarms`, `security`, `agents`, `realworld`, `games`, `nfts`, `memecoins`, `social`, `open` |
+| `nearAddress` | **mainnet** payout account, 2–64 chars, lowercase, `^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$` (`team.near` or a 64-hex implicit account); the team creates it in any NEAR wallet |
+| `projectUrl` | public repository URL, max 300 chars, unique per submission |
+| `demoUrl` | public demo post URL (the X post), max 300 chars |
+| `idea` | 20–2000 characters: the problem, the product, how NEAR fits in |
+| `consent` | `true` only after the human agreed to: "I agree that the organizers may use these details to review our submission and contact us about this hackathon." |
+| `requestId` | UUID generated once (`node -e 'console.log(crypto.randomUUID())'`), reused on a retry after a network error or 503 |
+
+Body up to 12000 bytes. **Do not add any other field**: `website` is a spam trap and rejects the submission.
+Responses: 201 saved · 400 fix the listed fields and resend with the same `requestId` · 403 window closed or
+cross-site, do not retry · 409 repository or email already used, do not change the link to get around it ·
+413 shorten `idea` · 503 wait a minute, resend with the same `requestId`. Never commit the payload (personal data).
 
 ## How judging works
-- First layer: AI screening (Claude Code and Codex) checks that it runs and that claimed features exist. Humans decide (Q-017).
-- So: exact commands, expected output ("do X → see Y"), tests, no secrets in the repo.
+- First layer: AI screening (Claude Code and Codex) checks reproducibility, verifies claimed features, writes a
+  structured report and a preliminary score. Humans decide; a low AI score alone cannot reject (Q-017).
+- So: exact commands, expected output ("do X → see Y"), tests, no secrets in the repo, no claim that does not run.
+- Prizes: $250,000 pool; one grand prize ($55,000) and 1st/2nd/3rd ($10,000 / $3,000 / $2,000) in each of the 13
+  tracks, paid in NEAR to the submitted mainnet account within 30 days of the results (Q-016).
 
-## Candidate tracks
-- **games** — the economy is part of the game loop, not a token for its own sake.
-- **nfts** — an NFT as an account or asset with behavior.
-- social — collective ownership and a shared budget (if co-owned clans make the MVP).
+## Tracks we fit (ids for the `tracks` array)
+- **`games`** (Games With Real Economies): judged on the game loop, not the token; NPCs with wallets and
+  economies that evolve without a dev patch. Ours: six AI clans trade words, silk, trust and memories inside one
+  season; the economy is closed in-game silk; the season is committed before the first move.
+- **`nfts`** (NFTs That Do Something) — tentative: an NFT as an agent with a biography that changes through play
+  (memories forgotten, shards sold, the First Word). Claim it only as a concept plus the commit-reveal contract: no
+  NEP-171 contract runs today (see the README real/mock table), so the README must say so.
+- **`open`** is a fallback if the owner prefers not to claim `nfts`. `social` (shared budgets on Sputnik DAO /
+  Trezu) is not a fit for the MVP.
+
+## What the agent never does without the owner's explicit confirmation (from HACKATHON.md)
+Send the submission (print the payload first, wait for a yes); post on X; make the repo public, push or
+force-push on the owner's behalf (our workers push to their own branches by the owner's standing rule in
+`CLAUDE.md`); sign transactions, spend tokens or deploy to mainnet; commit secrets.
 
 ## Working rules for the repo
 - Small commits with clear messages after each finished step; push right after committing.
 - No keys or secrets: only `.env.example`.
-- Never claim in the README what does not run.
+- Never claim in the README what does not run; keep the real/mock table current.
+- `cd game && npm test`, `cd server && npm test` and `npm run build` stay green; the Pages workflow runs them on
+  every push to `main`.

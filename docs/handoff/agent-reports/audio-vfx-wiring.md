@@ -110,3 +110,17 @@ breaks the game (`Hooks.play` guards every call).
   - Screenshots looked at: the plaza on ultra with the full post chain, the Shell interior on low (canvas sign drawing)
     and mid-draw with the ink's first dot on the glass. No rendering artifacts from the VFX pass.
 - Not checked: real speakers (no audio device in the container), a real GPU, Safari.
+
+## 5. Merge of the moved base (08.11, after the lead's message)
+`origin/claude/loving-curie-ihasft` (workers B, D, E and the Shell hub session) merged into this branch. Conflicts
+resolved keeping both sides: `game/src/play/game.js` (hub state, zone handler and return value plus the
+presentation wiring and `command_ok`), `docs/decisions.md` (the other workers' rows, then this task's row),
+`docs/collab-requests.md` (both sets of requests; this task's are now 5 and 6), `docs/HANDOFF.md` (this task's
+Audio/VFX rows and item 2 kept, they are the more precise state).
+Also done for the merged code: hub keyboard actions ring `ui_click` (hub buttons are covered by the delegated
+click); worker E's request 1 applied, the VFX preset is `low` on the phone render profile whatever the tier name
+(`vfxTierFor` in `ambience.js`, used at creation and on every quality change, tested).
+Checks after the merge: `npm test` **292/292** (the base's 287 plus this task's 5), `npm run build` green; headless
+Chromium on `/?demo=judge&play=direct&tier=low` in the default hub mode: `play.fly(2)` lands inside Shell II with
+the ink sign on the glass, 4 mists, 4 hums, the interior bed; `hub.stake()` fires `anchor_placed` and `command_ok`;
+`hub.leave()` returns to the island, ends the trial and stops the glass effect; 0 console errors.

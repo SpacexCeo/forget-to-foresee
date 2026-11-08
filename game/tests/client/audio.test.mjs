@@ -11,7 +11,7 @@ import { memoryStorage } from '../../src/ui/storage.js';
 import { CAMPS, SPAWN, ANCHOR_ZONES, BALCONY_CENTER } from '../../src/scenes/layout.js';
 import { CUE_NAMES, VFX_MAP, VFX_OPTS, AUDIO_MAP, AUDIO_OPTS, SILENT_CUES, audioFor, Hooks } from '../../src/play/hooks.js';
 import { EFFECT_NAMES } from '../../src/vfx/presets.js';
-import { surfaceAt, StepMeter, tensionLevel, humPositions, npcStepGain, SURFACES, STEP_LENGTH } from '../../src/play/ambience.js';
+import { surfaceAt, StepMeter, tensionLevel, humPositions, npcStepGain, vfxTierFor, SURFACES, STEP_LENGTH } from '../../src/play/ambience.js';
 
 const AUDIO_DIR = fileURLToPath(new URL('../../public/assets/audio/', import.meta.url));
 
@@ -223,4 +223,7 @@ test('tension level, hum positions and agent step gain', () => {
   assert.equal(npcStepGain(40), 0);
   assert.ok(npcStepGain(18) > 0 && npcStepGain(18) < 0.8);
   assert.equal(npcStepGain(NaN), 0);
+  assert.equal(vfxTierFor({ tier: 'high', profile: 'phone' }), 'low', 'phones get the low VFX preset');
+  assert.equal(vfxTierFor({ tier: 'ultra', profile: 'desktop' }), 'ultra');
+  assert.equal(vfxTierFor({ tier: 'low' }), 'low');
 });

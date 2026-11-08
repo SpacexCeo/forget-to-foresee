@@ -246,6 +246,6 @@ test('all five languages remain available in the game context with English fallb
   }
   for (const locale of ['uk', 'it', 'zh']) {
     i.setLocale(locale);
-    assert.equal(i.t('settings.note'), MESSAGES.en['settings.note']);
+    assert.notEqual(i.t('settings.note'), MISSING_TEXT); // full translations are checked in ui-i18n-locales.test.mjs
   }
 });

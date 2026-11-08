@@ -1,14 +1,17 @@
 // i18n for the play layer: the game messages (src/locales) plus the play strings
-// (src/play/locales) in one i18n instance.
+// (src/play/locales, all five locales) in one i18n instance.
 // Only the public UI API (src/ui/index.js, docs/ui.md) is used: the UI shell is owned by another
 // agent (docs/collab.md).
 import { createUiContext, i18n as uiI18n } from '../ui/index.js';
 import playEn from './locales/en.js';
 import playRu from './locales/ru.js';
+import playUk from './locales/uk.js';
+import playIt from './locales/it.js';
+import playZh from './locales/zh.js';
 
 const { MESSAGES, createI18n, detectLocale, BASE_LOCALE, resolveArg } = uiI18n;
 
-export const PLAY_MESSAGES = { en: playEn, ru: playRu };
+export const PLAY_MESSAGES = { en: playEn, ru: playRu, uk: playUk, it: playIt, zh: playZh };
 export const MERGED_MESSAGES = Object.fromEntries(Object.entries(MESSAGES).map(([locale, messages]) =>
   [locale, { ...playEn, ...messages, ...(PLAY_MESSAGES[locale] || {}) }]));
 
