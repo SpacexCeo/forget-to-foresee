@@ -87,3 +87,17 @@ await page.screenshot({ path: '4-nameplate.jpg', type: 'jpeg', quality: 72, time
 
 At 1920 wide SwiftShader drops the tab after a screenshot or two; the full script reloads and replays the keys when
 `window.__ftf` is gone.
+
+## Where this stopped (08.11, paused on the lead's order at the usage limit)
+
+Done and pushed since the sections above: the panel arbiter now also covers the island map (task H merged) and the hub
+Heir card (QA-003); reserved regions for the dialogue strip, context menu, hub dock, inspect hint and transient row;
+`npm run hud:overlap` (`game/scripts/hud-overlap.mjs`, 12 states × 3 viewports × 5 locales) was green at 1280×800 in
+all five locales except the map state, whose fix (map hides the centre column, stops above the hotbar) is committed but
+not yet re-measured; 1920 and 390 were not re-run after the last patches. Nameplates are proximity-only (≤ 7 m) and never
+under a HUD box; the hotbar Map button and the NEAR testnet badge (request 9) are wired; QA-004/011/014 fixed in code.
+Not started: the motion pass (owner directive: eased enter/exit, staggered lists, number tick-ups, reduced-motion
+cross-fades; timings to live in CSS variables until Task S's tokens land), the final before/after screenshots for
+`docs/ui-polish.md` (the earlier runs were invalidated by edits during the runs), and this report's final numbers.
+Next step when resumed: `cd game && npm run dev` + `npm run hud:overlap` (expect green; fix what it lists), then the
+motion pass, then screenshots → docs → report. `npm test` 373/373 and `npm run build` are green at `HEAD`.
