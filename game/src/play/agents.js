@@ -357,7 +357,8 @@ export class ClanAgents {
       const toPlaza = new THREE.Vector3(-a.home.x, 0, -a.home.z).normalize();
       const others = [...positions.entries()].filter(([c]) => c !== a.clan).map(([, p]) => p);
       if (irisXZ) others.push(irisXZ);
-      const step = Math.min(dt, 0.1);
+      // Sub-step long frames so a slow device moves the agents the same distance per second.
+      const subSteps = Math.max(1, Math.ceil(dt / 0.05)), step = dt / subSteps;
       let wish = [0, 0], maxSpeed = NPC_SPEED * cue.tempo;
       if (dir.move) {
         // Purposeful walk along the island's walk graph (the same graph the room validates Iris's walks on).
@@ -391,8 +392,7 @@ export class ClanAgents {
       }
       // Local avoidance of the other agents and Iris, then the shared motion model.
       if (wish[0] || wish[1]) wish = avoidWish([pos.x, pos.z], a.motion.heading, wish, others);
-      stepMotion(a.motion, wish, maxSpeed, step, NPC_MOTION, true);
-      pos.x += a.motion.vel[0] * step; pos.z += a.motion.vel[1] * step;
+      for (let k = 0; k < subSteps; k++) { stepMotion(a.motion, wish, maxSpeed, step, NPC_MOTION, true); pos.x += a.motion.vel[0] * step; pos.z += a.motion.vel[1] * step; }
       a.speed = Math.hypot(a.motion.vel[0], a.motion.vel[1]);
       positions.set(a.clan, [pos.x, pos.z]);
       // Facing: the motion model's facing while walking; the partner, the Scroll, Iris or the cue's facing at rest.

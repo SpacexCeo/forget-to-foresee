@@ -96,13 +96,18 @@ test('director: a silk transfer is a meeting (visitor walks, both talk in turns,
   assert.equal(v2.act, 'idle'); assert.equal(h2.act, 'talk', 'turns alternate every beat');
   assert.equal(d.directive('salt', 28).move, 'home');
   assert.equal(d.directive('amber', 28).move, null, 'the host is already home');
-  // A visitor whose host never shows up gives up and walks home.
+  // A visitor waits while the host still means to come (its goal is queued), gives up at the cap or when the host drops it.
   const d2 = new NpcDirector({ seed: 'test' });
   d2.meet('frost', 'moss');
   assert.equal(d2.directive('frost', 0).move, 'camp:moss');
   d2.arrived('frost', 5);
   assert.equal(d2.directive('frost', 6).act, 'idle');
-  assert.equal(d2.directive('frost', 18).move, 'home');
+  assert.equal(d2.directive('frost', 40).act, 'idle', 'still waiting: a camp-to-camp walk takes about 30 s');
+  assert.equal(d2.directive('frost', 70).move, 'home', 'gives up at the cap');
+  const d3 = new NpcDirector({ seed: 'test' });
+  d3.meet('frost', 'moss'); d3.directive('frost', 0); d3.arrived('frost', 5); d3.directive('frost', 6);
+  d3.clear('moss');
+  assert.equal(d3.directive('frost', 7).move, 'home', 'the host dropped the meeting: walk home at once');
   // Iris is never a meeting partner; an isolated clan is cleared.
   assert.equal(d2.meet('frost', 'iris'), false);
   d2.errand('ash', 'scroll'); d2.clear('ash');

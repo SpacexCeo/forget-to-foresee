@@ -183,7 +183,7 @@ const BEAT = {
   escrow: () => ({ speakerId: 'amber', key: 'line.escrow', args: {} }),
 };
 
-const ERRAND = Object.freeze({ hold: 3.5, auctionHold: 14, bidHold: 8, meetHold: 7, talkBeat: 2.4, meetDistance: 2.4 });
+const ERRAND = Object.freeze({ hold: 3.5, auctionHold: 14, bidHold: 8, meetHold: 7, talkBeat: 2.4, meetDistance: 2.4, waitCap: 60 });
 
 /**
  * The director: turns what the room shows (observation diffs, public events) into purposeful goals per
@@ -299,7 +299,7 @@ export class NpcDirector {
         if (other && other.goal && other.goal.kind === 'meet' && other.goal.partner === clan && other.arrived) {
           // Both are there: the visitor speaks first, turns every talkBeat seconds, for meetHold seconds.
           for (const [c, s] of [[clan, st], [g.partner, other]]) { s.phase = 'act'; s.until = now + ERRAND.meetHold; s.talkStart = now; void c; }
-        } else { st.phase = 'wait'; st.until = now + 12; } // the partner is still walking; give up after 12 s
+        } else { st.phase = 'wait'; st.until = now + ERRAND.waitCap; } // the partner is still on its way (see directive)
       }
     } else if (st.phase === 'return') { st.goal = null; st.phase = 'idle'; st.arrived = false; }
   }
@@ -315,7 +315,12 @@ export class NpcDirector {
     const g = st.goal;
     const look = this.sky.until > now ? 'sky:' + this.sky.shell : null;
     if (!g) return { move: null, act: null, face: null, partner: null, say: null, look, idle: st.life.update(now, now - this.lastGestureAt > 0.7) };
-    if (st.phase === 'wait' && now > st.until) { st.phase = 'return'; }
+    if (st.phase === 'wait') {
+      // Wait while the partner still means to come (a matching goal, active or queued); give up otherwise or at the cap.
+      const other = g.kind === 'meet' ? this.s.get(g.partner) : null;
+      const coming = !!other && ((other.goal && other.goal.kind === 'meet' && other.goal.partner === clan) || other.queue.some((q) => q.kind === 'meet' && q.partner === clan));
+      if (now > st.until || !coming) st.phase = 'return';
+    }
     if (st.phase === 'act' && now > st.until) {
       if (g.kind === 'gather') return { move: null, act: null, face: 'scroll', partner: null, say: null, look };
       st.phase = 'return'; st.arrived = false;
