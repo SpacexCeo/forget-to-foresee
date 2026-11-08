@@ -244,6 +244,11 @@ floating over the island): "the labels cheapen it; make a map and show them ther
 - Polish is part of the task, not extra: spacing, timing, easing, sound, readability, copy. If a detail looks
   cheap, it is a defect.
 - Never trade correctness for looks: `baseline-2d-1` parity, the proofs and the agent API stay exact.
+- Everything is animated and looks premium by 2026 consumer standards (owner, 08.11): nothing appears, disappears,
+  changes value or state without motion (eased enter/exit, staggered lists, number tick-ups, press feedback, hover
+  and focus states, smooth camera and panel transitions, idle life in the world). Motion is fast and purposeful
+  (120–400 ms for UI, physically plausible springs), never blocks input, and fully respects reduced motion (cross-fades
+  instead of movement). Use the shared motion tokens from Task S (`game/src/ui/motion/`) once they land.
 
 ---
 
@@ -460,3 +465,27 @@ Phase 2, judging (from 2026-11-09 15:00 UTC; earlier only if the lead asks for a
   Message the lead with the summary after each scorecard. Be strict and specific; do not flatter.
 Rules: English only in the repository; cite sources; never post, never contact organizers or other teams, never
 submit anything.
+
+---
+
+## Task S: motion design system, the premium 2026 feel
+
+**Branch:** `claude/motion` (worker G continues) · **Owns:** new `game/src/ui/motion/**` (tokens: durations, easings,
+springs; helpers: enter/exit, stagger, FLIP layout transitions, number tick-up, press/hover feedback, reduced-motion
+fallbacks; one tiny dependency-free module), `game/src/ui/lobby.js`, `game/src/ui/onboarding.js`, `game/src/ui/flow.js`,
+`game/src/ui/hologram/**` (Task I is done with them), `game/src/play/agents.js` animation parts,
+`game/src/play/map-ui.js` (Task H is done), new `game/tests/motion*.test.mjs`, `docs/motion.md` (new).
+Task F applies the tokens to the world HUD and play panels; Task Q's settings and Task P's films use them too:
+publish the API early (push the module first, announce it in `docs/collab-requests.md`).
+Owner: "everything must be animated and look expensive, as a 2026 consumer expects."
+1. A motion language for the whole game in `docs/motion.md`: the feel (calm, weighty, precise; ink and nacre), the
+   tokens, and a table of every UI event → its motion (panel open/close, card reveal, number change, stake placed,
+   "Verified ✓" seal, toast, hover/press, screen transitions lobby → onboarding → island → Shell).
+2. Implement the module and apply it in the paths you own: the lobby (layered parallax, title reveal, button
+   micro-interactions), onboarding and the hologram constructor (morphing steps, staged reveals), the map panel
+   (unfold, route draw-on, markers), and the world (Iris and agents: anticipation/follow-through on starts and stops,
+   reaction gestures, Iris's look-at toward the clan she talks to, the open item from Task N).
+3. Performance: transforms/opacity only on the DOM, no layout thrash, 60 fps on the phone profile; reduced motion
+   swaps movement for cross-fades. Tests for the tokens and helpers (pure). Before/after captures (short frame strips)
+   in `docs/motion.md`.
+
