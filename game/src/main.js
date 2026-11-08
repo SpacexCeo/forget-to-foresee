@@ -88,6 +88,7 @@ async function enterWorld() {
       seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
       resetHints: judge || params.get('hints') === 'reset',
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
+      hub: params.get('mode') !== 'walk', // ?mode=walk: walking play without the Shell hub
       onSettings: () => controls.open(),
     } });
     window.__ftf.play = play;
@@ -153,7 +154,7 @@ function handleInspect() {
   inspecting = it;
   rig.enterInspect(it.instance.center, it.instance.radius);
 }
-const PLAY_KEYS = ['KeyE', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
+const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'Escape', ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1))];
 
 function leaveInspect() { clearWorldInput(); inspecting = null; rig.exitInspect(); }
 

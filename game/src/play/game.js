@@ -20,6 +20,8 @@ import { planRoute, placePosition } from '../net/world-map.js';
 import { steerTo } from '../physics/character.js';
 import { CAMPS, ANCHOR_ZONES, SHARD } from '../scenes/layout.js';
 import { CLAN_ASSET } from './behaviour.js';
+import { ShellHub, signForShell } from './hub.js';
+import { createHubUi } from './hub-ui.js';
 
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
@@ -31,7 +33,8 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  * @param {object} o.world3d island scene (scenes/island.js) @param {object} o.rig camera rig
  * @param {object} o.player CharacterController @param {THREE.Object3D} o.avatar @param {object} o.lookdev
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context (play/i18n.js createPlayContext)
- * @param {{seedHex?: string, rules?: string, worldHud?: boolean, onSettings?: Function, resetHints?: boolean}} [o.options]
+ * @param {{seedHex?: string, rules?: string, worldHud?: boolean, hub?: boolean, onSettings?: Function, resetHints?: boolean}} [o.options]
+ *   `hub: false` keeps the walking play (no Shell hub, ticks only by End trial)
  *   `worldHud: false` keeps the greybox overlay (goal card, chronicle, action bar) instead of the world HUD
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
@@ -55,20 +58,42 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hud = mountHud(uiRoot, store, { ctx });
 
   const hooks = new Hooks({ resolve: resolvePlace });
-  const state = { route: null, zone: 'island', entering: null, now: 0, lastMove: 0, lastPos: player.pos.slice(), moved: 0 };
+  // quiet: in the hub the spot menu stays hidden after a flight or a relocation until the player walks
+  const state = { route: null, zone: 'island', entering: null, now: 0, lastMove: 0, lastPos: player.pos.slice(), moved: 0, quiet: !!(options.hub !== false) };
 
   const useWorldHud = options.worldHud !== false;
+  // The Shell hub (owner decision 08.11): fly into Shells, read and stake there, leaving ends the trial.
+  const hubMode = options.hub !== false;
+  const hub = hubMode ? new ShellHub({ session }) : null;
+  if (hub) { session.flags.hub = true; session.recompute(); }
   const ui = createPlayUi({
     root: uiRoot, ctx, session, hud,
-    handlers: { onGo: walkTo },
+    handlers: { onGo: walkTo, onEndTick: hub ? () => hubUi && hubUi.handleKey('KeyT') : null, contextHidden: () => !!(hub && (state.quiet || hub.card || hub.advancing || hub.busy)) },
     // with the world HUD a single action is the HUD prompt; the context menu lists two or more
     contextMin: useWorldHud ? 2 : 1,
   });
   // Novice hints A to Z (play/hints.js): Novice gets toasts, Iris lines and the Hints tab; Pro only Lore.
-  const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n }) : null;
+  const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
   const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings } }) : null;
   let movedReported = 0;
+  const hubUi = hub ? createHubUi({ root: uiRoot, ctx, hub, onFly: fly, onRejected: (reason) => hud.showRejection(reason) }) : null;
+  if (hub) {
+    hub.onOpenMemories = () => ui.open('memory');
+    hub.on('change', () => ui.update());
+    hub.on('relocate', async ({ position }) => { await hubUi.cover(''); state.quiet = true; teleport(position, null); session.trail.reset(player.pos); setTimeout(() => hubUi.uncover(), 120); });
+    hub.on('auto', (reason) => { if (worldHud) worldHud.say({ speakerId: 'iris', key: reason.key, args: reason.args }); });
+  }
+
+  /** Flight from the island into Shell n: cover, enter (the zone event teleports), uncover. */
+  async function fly(n) {
+    if (!hub || hub.busy || hub.advancing || state.zone === 'shell') return;
+    await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
+    const r = await hub.flyTo(n);
+    setTimeout(() => hubUi.uncover(), 160);
+    if (!r.ok) hud.showRejection(r.reason);
+    else if (worldHud) { worldHud.activity('command'); worldHud.activity('signsOpen'); }
+  }
 
   session.on('event', (ev) => {
     const d = ev.data || {};
@@ -78,7 +103,15 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     agents.react(reactionsFor(ev, state.now));
     hooks.event(ev);
   });
-  session.on('zone', (res) => { if (res.zone === 'shell') enterShell(res.shell); else exitShell(res.position); });
+  session.on('zone', (res) => {
+    if (res.zone === 'shell') enterShell(res.shell);
+    else {
+      if (hub) state.quiet = true;
+      exitShell(res.position);
+      // leaving a Shell ends the trial in the hub (hub.leave advances itself; E at the entrance lands here)
+      if (hub && !hub.busy && !hub.advancing) hub.advance();
+    }
+  });
   session.on('result', (r) => { if (!r.ok && !r.silent) hooks.play('rejected', { kind: 'iris' }, { reason: r.reason }); if (worldHud) worldHud.activity('command'); });
 
   // VFX (src/vfx, createVfx(scene, camera, renderer, opts)) and audio (src/audio, createAudio()).
@@ -108,6 +141,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
 
   /** G / "Walk there": follow the room's walk graph from here to a named place. */
   function walkTo(place) {
+    if (place && place.startsWith('shell:')) { fly(Number(place.slice(6))); return; }
     if (state.zone === 'shell') {
       const g = shell.spots().glass;
       state.route = [[shell.origin[0] + g[0], 0, shell.origin[2] + g[1]]];
@@ -171,7 +205,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     const pk = JSON.stringify(map);
     if (pk !== lastPadKey) { lastPadKey = pk; world3d.setAnchorTicks(map); }
     // The Guest draws the newest sign Iris can see (a vision first: it is hers alone).
-    const vis = (o.prophecies || []).slice().sort((a, b) => (b.vision - a.vision) || (b.publishedAt - a.publishedAt))[0];
+    const vis = hub && o.you.zone === 'shell' ? signForShell(o, o.you.shell) : (o.prophecies || []).slice().sort((a, b) => (b.vision - a.vision) || (b.publishedAt - a.publishedAt))[0];
     shell.setSign(vis ? { forms: vis.forms, dots: vis.dots } : null, state.now);
     if (audio) {
       try {
@@ -197,6 +231,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     const step = Math.hypot(pos[0] - state.lastPos[0], pos[2] - state.lastPos[2]);
     state.lastPos = pos.slice();
     if (step > 0.01) { state.lastMove = state.now; state.moved += step; }
+    if (state.quiet && moving && !state.route) { state.quiet = false; ui.update(); }
     if (!inShell && state.moved > 4 && state.now - state.lastMove > 0.8 && !session.syncing && session.bus.pending === 0) { state.moved = 0; session.syncPosition(); }
     agents.update(dt, session.obs, { now: state.now, focus, irisPos: inShell ? null : pos, reducedMotion: lookdev.reducedMotion, cameraDist: rig.actualDist });
     agents.updateIris(dt, moving, avatar, state.now, speed, running);
@@ -211,12 +246,13 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
 
   /** Keyboard for the play UI; returns true when used. */
   function handleKey(code) {
+    if (hubUi && !ui.panel && hubUi.handleKey(code)) return true;
     if (worldHud && code === 'KeyV') return worldHud.handleKey(code);
     if (code === 'Escape') return ui.handleKey(code) || (worldHud ? worldHud.handleKey(code) : false);
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, agents, shell, hooks, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, hub, hubUi, fly, agents, shell, hooks, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {
