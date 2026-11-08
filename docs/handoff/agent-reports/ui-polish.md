@@ -1,103 +1,83 @@
 # Report: Task F, UI polish ("this looks cheap"), 08.11.2026
 
-Branch `claude/ui-polish` (base: `claude/loving-curie-ihasft` at `832ff68`, which contains `main`). Not merged; no pull
-request (the lead merges). Full write-up with before/after screenshots: `docs/ui-polish.md`.
+Branch `claude/ui-polish` (contains `claude/loving-curie-ihasft` as of the last merge; see the branch log). Not merged;
+no pull request (the lead merges). Full write-up with before/after screenshots: `docs/ui-polish.md`.
 
 ## What was done
 
 1. **Reproduced the owner's screenshots** in headless Chromium (SwiftShader) at 1280×800, 390×844 and 1920×1080 on
-   `/?demo=judge&play=direct`: <kbd>V</kbd> then <kbd>M</kbd> showed Memories over Signs & Visions with the sign cards
-   reading through, the Shell dock over both, cramped buttons (hotbar 25 px tall, 9.5 px labels; "Forget it for a
-   vision" 30 px; the MAIN QUEST pill 12 px tall with 7 px text touching the border), the canvas-sprite nameplate, and a
-   stray "null" line in the Memories panel.
-2. **Panel exclusivity** (`game/src/play/panels.js`, new, pure): one arbiter per overlay root shared by the play UI, the
-   world HUD and the hub UI. Play panels, help, the Signs panel and the hub decision card are exclusive; modal ones set
-   `body.pl-modal-open`, under which the hub dock and the reading card are not rendered (and the phone run toggle
-   hides). The desktop Signs panel is not modal: it stays beside the dock and `body.hub-dock-on` caps its height so it
-   never reaches the dock's corner (read the signs, then pick the Shell).
-3. **Spacing and type scale**: 4/8/12/16/24 spacing, radii 10/14/16/999, 40 px targets on desktop and 48 px on phones,
-   hover / pressed / focus / disabled states, across `index.html` (`.pl-*`), `hub-ui.js` (`.hub-*`) and the world HUD
-   (`tokens.css`, `status.css`, `actions.css`, `signs.css`). Every `--wh-fs-*` role has a px floor (body 12, labels 11,
-   titles 15–18); the mockup numbers are untouched at the 1811 reference.
-4. **Opaque modal surfaces**: play panels use the HUD gradient on a solid base, hairline frame, Caslon titles and
-   Source Sans body. On the low tier (phones) the backdrop blur was off, which is why the HUD cards read through the
-   Memories panel; the solid base fixes it and the blur is gone.
-5. **Nameplates** (`game/src/play/nameplate.js`, new, pure + DOM plates in `agents.js`): screen-space pills projected
-   from the head point each frame, 30 → 60 m fade, 64 px safe band from the viewport edges, hidden inside a Shell, drawn
-   under every HUD panel. The `THREE.Sprite` canvas is gone. `game.js` passes `camera` and `uiRoot` into
-   `agents.update(...)` (one argument; the only edit outside the task's paths).
-6. **Tests**: `game/tests/ui-polish.test.mjs`, 12 tests (exclusivity, modality, re-claims, throwing close handlers,
-   the shared-arbiter body class, nameplate opacity / scale / projection / placement, stylesheet rules: targets,
-   radii, opaque panel gradient, dock rules, type floors, no sprite left, hidden plates render nothing).
-7. **Docs**: `docs/ui-polish.md` (audit, rules, before/after, re-check procedure, open items), a decisions row,
-   collab request 7 to Codex (owner override of `game/src/ui/**` for this polish), this report.
+   `/?demo=judge&play=direct`: Memories over Signs & Visions with the sign cards reading through, the Shell dock over
+   both, cramped buttons (hotbar 25 px tall with 9.5 px labels; "Forget it for a vision" 30 px; the MAIN QUEST pill
+   12 px tall with 7 px text touching the border), the canvas-sprite nameplate, a stray "null" line in Memories.
+2. **One surface at a time** (`game/src/play/panels.js`, pure): the play panels, help, the Signs & Visions panel, the
+   island map (task H) and the hub decision card share one arbiter per overlay root; opening one closes the other.
+   Modal surfaces set `body.pl-modal-open`: the Shell dock and the reading card are not rendered, the phone HUD stack,
+   run toggle and map button hide. The desktop Signs panel is not modal (read the signs, then pick the Shell): it stays
+   beside the dock and `body.hub-dock-on` caps its height.
+3. **Reserved regions, no overlaps** (`docs/ui-polish.md` §2.4): the dialogue strip one row above the hotbar, capped at
+   the dock's column (long lines wrap) and centred in the free band when a right-column panel or the reading card is
+   open; the context menu one row above it; the hub dock 12 px above the hotbar; help in the right panel column; the
+   inspect hint and the transient row (hub status / info flash / greybox toast) under the quest banner; the map a
+   centred modal that hides the centre column and stops above the hotbar. `npm run hud:overlap`
+   (`game/scripts/hud-overlap.mjs`) walks 12 states at seven viewports in five locales and fails on any intersecting
+   pair of visible HUD boxes; it also collects console errors and warnings.
+4. **Spacing and type**: 4/8/12/16/24, radii 10/14/16/999, 40 px targets on desktop and 48 px on phones, hover /
+   pressed / focus / disabled states, px floors on every world HUD type role (mockup numbers unchanged at 1811),
+   opaque modal panels on a solid base (the phone blur was off, so the HUD read through).
+5. **Nameplates**: screen-space DOM plates (`game/src/play/nameplate.js`, pure + `agents.js`), proximity only (within
+   7 m of Iris, fading over the last 2 m), never under a HUD box, 64 px clear of the viewport edge, hidden inside a
+   Shell. No world sprite is left for them.
+6. **Short viewports (owner, top priority; in-app browsers)** (§2.5): the visible height is measured
+   (`visualViewport.height` → `--vvh`, `html[data-vh]` = tall / short < 620 / tiny < 500); the phone stack compacts by
+   tier (one-line quest card with an expand chevron, one-row trial card, 52/44 px tiles, 40/36 px prompt, one-line
+   dialogue bar, slim five-cell Shell dock, sheets and panels sized by `--vvh`, the run toggle and map button in the
+   top-bar row); `#ui` is as tall as the visible viewport; every control keeps a 44 px hit zone; the in-app UA is a hint
+   only. Tested at 390×560, 375×500, 360×480 and 667×300.
+7. **Motion** (§2.6): panels, context menu, info flash, hub boxes, list rows, sign cards, the newest log row, quest text,
+   trial numbers (tick-ups) and nameplates animate at 120–400 ms with eased curves and staggers; reduced motion keeps
+   cross-fades only. Timings are CSS variables (`--pl-dur-*`, `--wh-dur-*`) until Task S's tokens land.
+8. **Requests and QA**: hotbar "Map · N" and the map under the one-panel rule (task H, collab requests 7/8); the NEAR
+   testnet badge after the Verified pill (request 9: `createNearWatcher` in `play/world-hud.js`, `near.leafBadge(index)`
+   on resolved cards, a link pill in `signs.js`); QA-003 (one Heir prompt; the Biography names the chosen outcome),
+   QA-004 ("null" lines), QA-011 (compact dock on short phones), QA-014 (dock hidden under modals).
+9. **Tests**: `game/tests/ui-polish.test.mjs` (17 tests: exclusivity and modality, nameplate maths and HUD avoidance,
+   the stylesheet rules, the NEAR badge plumbing, the viewport tiers and UA hint). Docs: `docs/ui-polish.md`,
+   decisions rows, collab requests 7 and 8 and the reply to H, this report.
 
 ## What was not done
 
-- No occlusion test for nameplates: a plate can show over scenery that hides the agent (DOM has no depth). A raycast
-  every few frames would fix it; not added to keep phones cheap.
-- The greybox labels "Camp: Frost · not final art" / "Memory shard · not final art" (`game/src/render/greybox.js`,
-  not in this task's paths) still float in the scene in `?mode=walk` and look like the debug label the owner disliked.
-  Lead's call.
-- Audit of every locale at 390 px: EN, UK and IT were screenshotted at 1280 and EN at 390 and 1920; RU and ZH only
-  through the shared layout rules (the longest strings are UK and IT).
-- `docs/HANDOFF.md` was not edited (no row of this task there; the lead may add one from this report).
+- Occlusion for nameplates (DOM has no depth; a raycast every few frames would hide a plate behind a wall).
+- A phone map tile in the HUD tile row (the map's own `.ftf-map-fab` stays, now in the top-bar row on short screens).
+- Task S's shared motion tokens: not announced yet; the timings are variables ready to switch.
+- The motion pass does not touch the lobby, onboarding or settings (Codex / task I files).
+- See "Checks" for which viewport × locale combinations the overlap check covered.
 
-## How it was checked
+## Checks
 
-- `cd game && npm test`: 304/304 (292 before plus 12 new). `npm run build`: green.
-- Headless Chromium runs (script below) on EN 1280×800, 390×844, 1920×1080 and UK/IT 1280×800: 0 console errors in every
-  run; measured boxes: after <kbd>V</kbd> then <kbd>M</kbd> the Signs panel is closed, the Memories panel is the only
-  panel, and the hub dock is not in the DOM (1280: panel 762,120 502×550; 390: panel 8,295 374×503 with scrim).
-- Before/after JPEGs are committed under `docs/ui-polish/` and embedded in `docs/ui-polish.md`.
+- `cd game && npm test`: see the branch log for the count at `HEAD` (377 at the time of writing); `npm run build`: green.
+- `npm run hud:overlap`: results per viewport and locale are in `docs/ui-polish.md` §3 (table "Overlap check").
+- Headless Chromium screenshots before/after at 1280×800, 1920×1080, 390×844 and the four short sizes, committed under
+  `docs/ui-polish/` and embedded in `docs/ui-polish.md`; console errors and warnings in every run: 0 (GL driver chatter
+  from SwiftShader excluded).
 
 ## Files touched
 
-New: `game/src/play/panels.js`, `game/src/play/nameplate.js`, `game/tests/ui-polish.test.mjs`, `docs/ui-polish.md`,
-`docs/ui-polish/*.jpg`, this report. Edited: `game/src/play/ui.js`, `hub-ui.js`, `world-hud.js`, `agents.js` (nameplate
-code only: the `MindSprite` class became `Nameplate` + `placePlate()`; `play()`, `procedural()`, `updateIris()` untouched
-for task G), `game/src/play/game.js` (one argument), `game/index.html` (`.pl-*` rules and the stacking comment),
-`game/src/ui/world-hud/{tokens,status,actions,signs}.css`, `game/package.json` (test list), `docs/decisions.md` (one
-row at the end of §4), `docs/collab-requests.md` (request 7).
+New: `game/src/play/panels.js`, `game/src/play/nameplate.js`, `game/scripts/hud-overlap.mjs`,
+`game/tests/ui-polish.test.mjs`, `docs/ui-polish.md`, `docs/ui-polish/*.jpg`, this report. Edited: `game/src/play/ui.js`,
+`hub-ui.js`, `world-hud.js`, `agents.js` (nameplate code only), `game.js` (agents.update arguments, the map's arbiter
+claim), `game/index.html` (`.pl-*` rules, overlay height, stacking), `game/src/ui/world-hud/{index.js, status.js,
+signs.js, from-obs.js, tokens.css, status.css, actions.css, signs.css, log.css}`, `game/package.json` (test and
+`hud:overlap` scripts), `docs/decisions.md`, `docs/collab-requests.md`.
 
-## The screenshot script (Playwright with the pre-installed Chromium)
+## The screenshot and check procedure
 
-```js
-// node shoot.mjs <outDir> <tag> <lang> <WxH,...> [states 1,2,3,4]; Vite on 127.0.0.1:5173
-import pw from 'playwright'; const { chromium } = pw;
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
-const page = await ctx.newPage();
-await page.goto('http://127.0.0.1:5173/?demo=judge&play=direct', { waitUntil: 'load' });
-await page.waitForFunction(() => window.__ftf?.play?.session?.obs, null, { timeout: 180000 });
-await page.waitForTimeout(6000);
-await page.screenshot({ path: '1-world.jpg', type: 'jpeg', quality: 72, timeout: 240000 });
-await page.evaluate(() => window.__ftf.play.handleKey('KeyV')); await page.waitForTimeout(1500);  // keys, not clicks: SwiftShader runs at a few FPS
-await page.screenshot({ path: '2-signs.jpg', type: 'jpeg', quality: 72, timeout: 240000 });
-await page.evaluate(() => window.__ftf.play.handleKey('KeyM')); await page.waitForTimeout(1500);
-await page.screenshot({ path: '3-signs-memories.jpg', type: 'jpeg', quality: 72, timeout: 240000 });
-// nameplate: ?mode=walk, then stand 2.2 m in front of Frost
-await page.goto('http://127.0.0.1:5173/?demo=judge&play=direct&mode=walk', { waitUntil: 'load' });
-await page.waitForFunction(() => window.__ftf?.play?.session?.obs, null, { timeout: 180000 });
-await page.evaluate(() => { const a = window.__ftf.play.agents.agents.get('frost'), p = window.__ftf.player, y = a.root.rotation.y;
-  p.pos[0] = a.root.position.x + Math.sin(y) * 2.2; p.pos[2] = a.root.position.z + Math.cos(y) * 2.2; });
-await page.waitForTimeout(2500);
-await page.screenshot({ path: '4-nameplate.jpg', type: 'jpeg', quality: 72, timeout: 240000 });
+```bash
+cd game && npm run dev -- --host 127.0.0.1 --port 5173 &
+npm run hud:overlap                       # all seven viewports, five locales, 12 states; exit 1 on any overlap
+npm run hud:overlap -- --viewports 390x560,667x300 --langs en,uk --shots all --out .scratch/overlap/short
 ```
 
-At 1920 wide SwiftShader drops the tab after a screenshot or two; the full script reloads and replays the keys when
-`window.__ftf` is gone.
-
-## Where this stopped (08.11, paused on the lead's order at the usage limit)
-
-Done and pushed since the sections above: the panel arbiter now also covers the island map (task H merged) and the hub
-Heir card (QA-003); reserved regions for the dialogue strip, context menu, hub dock, inspect hint and transient row;
-`npm run hud:overlap` (`game/scripts/hud-overlap.mjs`, 12 states × 3 viewports × 5 locales) was green at 1280×800 in
-all five locales except the map state, whose fix (map hides the centre column, stops above the hotbar) is committed but
-not yet re-measured; 1920 and 390 were not re-run after the last patches. Nameplates are proximity-only (≤ 7 m) and never
-under a HUD box; the hotbar Map button and the NEAR testnet badge (request 9) are wired; QA-004/011/014 fixed in code.
-Not started: the motion pass (owner directive: eased enter/exit, staggered lists, number tick-ups, reduced-motion
-cross-fades; timings to live in CSS variables until Task S's tokens land), the final before/after screenshots for
-`docs/ui-polish.md` (the earlier runs were invalidated by edits during the runs), and this report's final numbers.
-Next step when resumed: `cd game && npm run dev` + `npm run hud:overlap` (expect green; fix what it lists), then the
-motion pass, then screenshots → docs → report. `npm test` 373/373 and `npm run build` are green at `HEAD`.
+SwiftShader renders at a few FPS: the scripts drive the UI through `window.__ftf.play.handleKey(...)` and teleports,
+wait 2 s after each key, treat a closing panel (`data-open="false"`) as hidden while its 160 ms transition drags, and
+replay a state once when the tab reloads. Do not edit files under `game/` while a run is on: Vite reloads the page and
+the run is invalid.
