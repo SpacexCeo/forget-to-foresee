@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.5, 2026-11-08 (research cycle 5). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.6, 2026-11-08 (research cycle 6). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -144,6 +144,10 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   README says so in plain words.
 - **2/10**: a contract exists but no sentence connects it to play; or a second track is claimed on a simulation.
 - **0/10**: "powered by NEAR" with no contract, or claims of on-chain verification the code does not perform.
+- Proof a judge can open in two minutes (`notes/wallet-onboarding-and-chain-proof.md`): guest play before any
+  wallet prompt; contract as a testnet NearBlocks link; one commit transaction whose logged root matches the root the
+  game shows; a no-wallet view call; verified source or reproducible build hash. Without the link, the transaction
+  and the view call, C4 stays at most 5 even if a contract is deployed.
 - Calibration: no verified past NEAR winner shipped without a live primitive (`notes/past-near-hackathon-winners.md`),
   and at least 15 of the 18 traceable `games` rivals in this hackathon already show a testnet address with an
   explorer link (`notes/competitor-field.md`), so an undeployed contract caps this criterion at 5 whatever the design

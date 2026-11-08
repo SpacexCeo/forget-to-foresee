@@ -76,3 +76,11 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   anecdotal only, poor-band Core Web Vitals values from one secondary source). Rubric v0.5: C1 gains the live-site
   checks and treats a blank screen over 10 s as drift; C7 gains three one-point deductions (slow load without
   progress, silent mobile failure, main-action feedback over 200 ms). No red flags.
+
+## Cycle 6: 2026-11-08 22:46 UTC
+- Weakest coverage chosen: how a judge actually checks the NEAR claim and meets the wallet (C4 had calibrations but
+  no "what to open" procedure).
+- 22:55 UTC: `notes/wallet-onboarding-and-chain-proof.md` done (9 sources, snippets read; drop-off percentages are
+  vendor-only and flagged; no NEAR-specific guest-flow source found). Rubric v0.6: C4 gains the two-minute proof
+  check (guest first, NearBlocks testnet link, commit transaction root equals in-game root, no-wallet view call,
+  verified source or build hash); without link, transaction and view call C4 stays at most 5. No red flags.
