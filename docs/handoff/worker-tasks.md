@@ -207,3 +207,28 @@ action game. Concretely:
    their bindings. Walk speeds stay in the range the design needs (walks of 30-45 s camp to camp, `docs/decisions.md`).
 6. Before/after numbers and a short frame-by-frame description in `docs/movement.md`. `npm test` and `npm run build`
    green; check `/?demo=judge&mode=walk` and the hub mode still work with no console errors.
+
+---
+
+## Task H: island map; no floating labels in the world (owner feedback 08.11)
+
+**Branch:** `claude/island-map` · **Owns:** `game/src/render/greybox.js` (labels only), new `game/src/play/map.js` and
+`game/src/play/map-ui.js` (self-contained panel with its own styles), the map wiring in `game/src/play/game.js`, the
+`KeyN` entry of `PLAY_KEYS` in `game/src/main.js` (one-line change; the rest of `main.js` belongs to Task G), the map
+strings in `game/src/play/locales/*.js` (all five locales; translate uk/it/zh yourself, keep the parity test green),
+new `game/tests/client/map*.mjs`, `docs/map.md` (new). Task F wires the world HUD hotbar "map" button to the API
+you export; agree on it through `docs/collab-requests.md`.
+
+Owner's words, with a screenshot of the overview camera ("Camp: Iris · not final art", "Memory shard · not final art"
+floating over the island): "the labels cheapen it; make a map and show them there".
+1. No text floats in the 3D world during play. The greybox "· not final art" labels show only in dev (`?dev=1`, the F3
+   dev HUD, or the asset review page); in play the greybox stand-ins stay unlabeled (they are replaced by the models as
+   they stream in). Update the README lines that describe the labels.
+2. A map panel (key **N**, the hotbar map button, a tap target on phones): a stylized top-down view of the
+   archipelago drawn from `game/src/scenes/layout.js` (island, bridges, plaza, the Scroll, the six camps with clan
+   names, the four Shells with their state from the hub: quiet / signs waiting, the anchor zones), Iris's position and
+   heading, the current goal marker, other agents' positions. Clicking a place routes there (the existing `walkTo` /
+   G route) and in the hub mode clicking a Shell flies there. Style: matches the world HUD (parchment/ink and gold
+   from `docs/ui-world-hud.md`), legible at 390 px wide, closes with N/Esc, only one panel open at a time.
+3. Tests for the map model (places from the layout, coordinates, state per Shell, route targets). `npm test` and
+   `npm run build` green; headless check of both modes with the map open and closed, no console errors.
