@@ -85,3 +85,27 @@ export function contractArgs(c) {
     reveal_leaf: c.leaves.map((l) => ({ season_id: c.seasonId, index: l.index, canonical_event: l.canonicalEvent, salt: l.salt, merkle_path: l.path })),
   };
 }
+
+/* ---------- entropy the developer does not control: protocol ftf-seed/1 (docs/verify.md) ---------- */
+
+export const SEED_PROTOCOL = 'ftf-seed/1';
+export const NONCE_MAX = 128;
+/** Nonce and beacon are opaque strings without `|` (the field separator of the seed preimage). */
+export const NONCE_PATTERN = '^[^|]{1,128}$';
+
+/** The room's commitment to its 32 random bytes, shown before the player's nonce is sent. */
+export function entropyCommitment(roomEntropyHex) {
+  return sha256(`ftf:entropy:v1|${roomEntropyHex}`);
+}
+
+/**
+ * The engine's 128-bit seed from the room's entropy (committed first), the player's nonce (chosen after seeing
+ * the commitment) and an optional public beacon nobody chose (e.g. a NEAR testnet block hash).
+ * Anyone can recompute it from the revealed room entropy; `game/scripts/replay-season.mjs` regenerates the schedule.
+ */
+export function deriveSeed(roomEntropyHex, nonce = '', beacon = null) {
+  if (!/^[0-9a-f]{64}$/.test(roomEntropyHex)) throw new Error('room entropy must be 32 bytes of lowercase hex');
+  return sha256(`ftf:seed:v1|${roomEntropyHex}|${nonce ?? ''}|${beacon ?? ''}`).slice(0, 32);
+}
+
+export const hexOf = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
