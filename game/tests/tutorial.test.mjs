@@ -9,8 +9,9 @@ import { MESSAGES, argNames, format } from '../src/ui/i18n/index.js';
 import { LOOK_PRESETS, DEFAULT_RECIPE, normalizeRecipe, recipeHash } from '../src/ui/hologram/recipe.js';
 import { createLocalTransport } from '../src/play/transport-local.js';
 import { PlaySession } from '../src/play/session.js';
-import { ShellHub, signsByShell } from '../src/play/hub.js';
-import { currentGoal, hubGoal, inputKind, ONBOARDING, ONBOARDING_HUB, FIRST_GIFT_TICK } from '../src/play/objectives.js';
+import { ShellHub, signsByShell, prefillFirstDelay, impliedTick, FIRST_EVENT_TICK } from '../src/play/hub.js';
+import { contextOptions, defaultOption } from '../src/play/interactions.js';
+import { currentGoal, hubGoal, inputKind, ONBOARDING, ONBOARDING_HUB, FIRST_GIFT_TICK, FIRST_LOOP_KEY } from '../src/play/objectives.js';
 import { PLAY_MESSAGES, createPlayI18n, renderMsg } from '../src/play/i18n.js';
 import { planRoute, placePosition, SPAWN } from '../src/net/world-map.js';
 
@@ -198,7 +199,7 @@ test('languages: every tutorial, onboarding and goal string exists in all five l
 test('languages: the in-game word is "trial" (never "tick") in every first-loop goal, in all five languages', () => {
   const TICK = { en: /\btick/i, ru: /\bтик/i, uk: /\bтик/i, it: /\btick/i, zh: /回合/ };
   const bad = [];
-  // goal.anchor.hint quotes the pad menu's own label (opt.anchorTick, "tick" until that family is renamed: docs/collab-requests.md)
+  // goal.anchor.hint quotes the pad menu's own label (opt.anchorTick)
   const QUOTED = /[“«][^”»]*[”»]/g;
   for (const loc of LOCALES) for (const k of GOAL_KEYS) for (const input of INPUTS) {
     const txt = format(PLAY_MESSAGES[loc][k], { input, tick: 'N', n: 1, prize: 40, shell: 'II', ticks: 17, need: 8, have: 1, who: 'X', title: 't', outcome: 'gift', tension: 50, deadline: 16 }, loc);
@@ -251,14 +252,57 @@ test('Simple mode: when Iris\'s own reading already lands on trial 3 the stake h
   const n = [...signsByShell(s.obs)].find(([, v]) => v.length)[0];
   await hub.flyTo(n);
   const o = s.obs;
-  assert.equal(hubGoal(o, {}).hintKey, 'hub.goal.stake.hint', 'the judge prior reads trial 2: ask for the Delay change');
-  const read = { ...o, prophecies: o.prophecies.map((p) => ({ ...p, impliedAnchor: { ...p.impliedAnchor, tick: FIRST_GIFT_TICK } })) };
-  const g = hubGoal(read, {});
-  assert.equal(g.hintKey, 'hub.goal.stake.hintReady');
+  assert.equal(hubGoal(o, {}).hintKey, 'hub.goal.stake.hintReady', 'before the first reveal the card pre-fills trial 3, so the goal says "Iris read it"');
+  // once something has been revealed there is no pre-fill: a reading that lands elsewhere asks for the Delay change
+  const later = { ...o, chronicle: [{ index: 0, tick: 3, meaning: { place: 2, action: 'gift', power: 20 } }] };
+  assert.equal(hubGoal(later, {}).hintKey, 'hub.goal.stake.hint');
+  const g = hubGoal(o, {});
   for (const loc of LOCALES) {
     const i18n = createPlayI18n(loc, { onMissing: (k) => { throw new Error(`${loc} missing ${k}`); } });
     assert.ok(renderMsg(i18n, g.hintKey, g.args).includes('3'), loc);
   }
+  s.dispose();
+});
+
+test('first stake: the Delay pre-fill is pure, only before the first reveal, only when the reading lands before trial 3', () => {
+  const p1 = { publishedAt: 1 }, p2 = { publishedAt: 2 }, p4 = { publishedAt: 4 };
+  const empty = { chronicle: [] }, revealed = { chronicle: [{ index: 0 }] };
+  let slots = [0, 0, 0, 0];
+  assert.equal(prefillFirstDelay(empty, p1, slots), true); assert.equal(impliedTick(p1, slots), 3);
+  slots = [0, 0, 0, 1];
+  assert.equal(prefillFirstDelay(empty, p1, slots), false, 'already trial 3');
+  slots = [0, 0, 0, 0];
+  assert.equal(prefillFirstDelay(empty, p2, slots), false, 'published on trial 2 with Delay +1 is trial 3 already'); assert.equal(impliedTick(p2, slots), 3);
+  slots = [0, 0, 0, 0];
+  assert.equal(prefillFirstDelay(revealed, p1, slots), false, 'after a reveal the prior stands'); assert.deepEqual(slots, [0, 0, 0, 0]);
+  slots = [0, 0, 0, 0];
+  assert.equal(prefillFirstDelay(empty, p4, slots), false, 'a sign published on trial 4 is never early');
+  assert.equal(FIRST_GIFT_TICK, FIRST_EVENT_TICK);
+  assert.equal(FIRST_LOOP_KEY, 'ftf.firstloop.v1');
+});
+
+test('first stake: at the pad the trial-3 option is E before the first reveal; afterwards the reading is', async () => {
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  await s.start();
+  s.setClient({ zone: 'island', pos: SPAWN.slice() });
+  walk(s, s.goal.target);
+  const opts = s.options, obs0 = s.obs, actions0 = s.actions;
+  const def = opts[s.defaultIndex];
+  assert.equal(def.cmd.type, 'place_anchor'); assert.equal(def.cmd.args.tick, FIRST_EVENT_TICK);
+  assert.equal(s.defaultIndex, 0, 'first in the list, so the prompt and the menu agree');
+  const reading = opts.find((o) => o.label.key === 'opt.anchorVision');
+  assert.ok(reading && reading.tone === 'normal', 'the dead trial-2 reading is listed but not primary');
+  assert.equal((await s.run(def)).ok, true);
+  for (let i = 0; i < 3; i++) await s.send('end_tick', {});
+  assert.ok(s.obs.chronicle.length > 0);
+  walk(s, 'anchor_zone:2');
+  const later = s.options;
+  const dl = later[defaultOption(later)];
+  assert.equal(dl.label.key, 'opt.anchorVision', 'after the first reveal Iris\'s reading is the E option again');
+  // the pure function agrees with the session (trial 1, nothing revealed yet)
+  const pure = contextOptions({ kind: 'anchor', shell: 1 }, obs0, actions0);
+  assert.equal(pure[0].cmd.args.tick, FIRST_EVENT_TICK);
+  assert.equal(defaultOption(pure), 0);
   s.dispose();
 });
 
@@ -323,7 +367,10 @@ test('hub first loop: a stake on a trial before 3 would never resolve (why the g
   const hub = new ShellHub({ session: s, sleep: async () => {}, pauseMs: 0 });
   const n = [...signsByShell(s.obs)].find(([, v]) => v.length)[0];
   await hub.flyTo(n);
-  assert.equal(hub.target().tick, 2, 'the judge season: Iris\'s prior reads the first sign as trial 2');
+  assert.equal(hub.draft.prefilled, true, 'the card pre-filled the Delay');
+  assert.equal(hub.target().tick, FIRST_EVENT_TICK, 'the pre-filled target is trial 3');
+  hub.cycleSlot(3, -1);
+  assert.equal(hub.target().tick, 2, 'the judge season: Iris\'s own prior reads the first sign as trial 2');
   await hub.stake();
   await hub.leave();
   while (s.obs.season.tick < 5) { if (hub.card) await hub.resolve(hub.card.kind === 'offer' ? 'later' : 'give'); else await hub.advance(); }

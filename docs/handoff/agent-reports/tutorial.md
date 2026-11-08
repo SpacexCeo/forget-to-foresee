@@ -45,5 +45,14 @@ judge seed with the new goals; the walk path also replayed headless against the 
 - Device-aware copy for every goal and tutorial body in five languages (`{input, select, touch/gamepad/other}`), `args.input`
   on every goal, a test that touch and gamepad never show a key letter (QA-011, QA-013 copy side).
 - Simple-mode variant of the hub stake hint; narration behind a guarded import; QA-016 and QA-017 fixed; plain-words pass
-  (stake, seal, sign, trial, silk). New requests 13–15 (input flag for the lead, narration assumptions for Q, the film seam for P).
+  (stake, seal, sign, trial, silk). New requests 15–17 (input flag for the lead, narration assumptions for Q, the film seam for P).
 
+
+## First loop at the source (`claude/first-loop`, resumed after the pause)
+Branch from `de4465d` with `claude/tutorial` and `2004418` merged. Done: `hub.js` pre-fills the Delay to trial 3 before the first
+reveal; `interactions.js` makes the trial-3 stake the E option under the same condition; `game.js` writes `ftf.firstloop.v1` at
+the first verified proof and passes `skipOnboarding` on later starts (judge/reset ignore it); `opt.anchorTick` / `opt.anchorVision`
+and the Delay meanings say "trial" (Russian Delay meanings stay the engine's words for prototype parity); goal quotes, README
+judge table (step 3 = Press E) and hub steps updated and replayed headless; 363 tests, build green; browser check with zero
+console errors. Details: `docs/tutorial.md` §5. Not changed: `docs/submission/video-shot-list.md` (Task J) still says
+"Anchor here for tick …" in shot 6; the lobby Profile → Reset does not clear `ftf.firstloop.v1` (lobby.js is Codex's).
