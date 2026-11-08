@@ -175,6 +175,25 @@ Owner: "everything must be animated and look expensive". Timings live in CSS var
 | nameplates | opacity eases over 120 ms on top of the proximity fade |
 | reduced motion (`prefers-reduced-motion` or `html[data-motion="reduce"]`) | travel zeroed, durations 100–160 ms: cross-fades only; no number ticks; the Signs panel, sheet and toast fade instead of sliding; the Shell glow stops |
 
+### 2.7 QA items closed in this branch (`docs/qa/defects.md`)
+
+| Item | Fix |
+|---|---|
+| QA-003 two Heir prompts | the Biography does not open while the hub's Heir card asks; afterwards it names the chosen outcome |
+| QA-004 "null" lines | `panelShell` drops null children (Memories, inspect) |
+| QA-005 legacy Signs panel after a vision | forgetting for a vision opens the HUD Signs & Visions panel (`handlers.onSigns`); the detail panel stays only as the fallback without a world HUD |
+| QA-006 stale hint | a hint whose trigger no longer holds is withdrawn, one whose facts changed is re-issued; the first-sign hint names the newest sign whose trial is still ahead |
+| QA-009a/b | the inspect hint moved to the top-centre row; the badge narrowed and the dialogue strip lifted (§2.4) |
+| QA-011 dock over the quest card at 390 px | compact dock on short phones, then the tiers of §2.5 |
+| QA-012 94 % at the end | progress reads 17 / 17 · 100 % once the season leaves play |
+| QA-014 dock clickable under Memories | the dock is not rendered under a modal |
+| QA-019 mixed languages after L | hint args stay raw ids and resolve at render time; log and hint clock cells are TextRefs |
+| QA-021 Help without F / N | Help lists the hub keys and the map in all five languages |
+
+Reserved for Task T (proof export, request 19): a "Copy proof" action next to "Verified ✓" on a resolved card is a third
+pill in the same row as the proof and NEAR pills (`signs.js`, after `near`); the card's padding already leaves room for
+three pills on desktop and the phone card wraps them.
+
 ## 3. Before / after
 
 Desktop 1280×800:
