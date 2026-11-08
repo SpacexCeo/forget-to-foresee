@@ -3,35 +3,35 @@
   "stages": [
     {
       "stage": "model",
-      "seconds": 0.04
+      "seconds": 0.06
     },
     {
       "stage": "uv_unwrap",
-      "seconds": 0.73
+      "seconds": 0.91
     },
     {
       "stage": "bake_gpu",
-      "seconds": 17.62
+      "seconds": 50.31
     },
     {
       "stage": "textures",
-      "seconds": 29.94
+      "seconds": 73.9
     },
     {
       "stage": "materials",
-      "seconds": 0.01
+      "seconds": 0.04
     },
     {
       "stage": "rig_skin",
-      "seconds": 0.0
+      "seconds": 0.04
     },
     {
       "stage": "animation",
-      "seconds": 0.59
+      "seconds": 1.08
     },
     {
       "stage": "export",
-      "seconds": 1.6
+      "seconds": 2.26
     }
   ],
   "triangles_by_object": {
@@ -40,27 +40,27 @@
     "guest_core": 14
   },
   "triangles_total": 12271,
-  "cycles_device": "OPTIX",
+  "cycles_device": "CUDA",
   "bakes": {
-    "color": 2.61,
-    "rough": 2.44,
-    "metal": 2.32,
-    "emission": 2.36,
-    "normal": 2.91,
-    "ao": 4.77
+    "color": 4.51,
+    "rough": 4.14,
+    "metal": 3.61,
+    "emission": 4.83,
+    "normal": 5.35,
+    "ao": 27.72
   },
   "texture_files": {
     "base": {
       "file": "art/guest/textures/guest_basecolor.jpg",
-      "bytes": 1532195
+      "bytes": 1532274
     },
     "orm": {
       "file": "art/guest/textures/guest_orm.jpg",
-      "bytes": 2112305
+      "bytes": 2112261
     },
     "normal": {
       "file": "art/guest/textures/guest_normal.png",
-      "bytes": 3606826
+      "bytes": 3606910
     },
     "emissive": {
       "file": "art/guest/textures/guest_emissive.jpg",
@@ -97,7 +97,7 @@
       "KHR_materials_iridescence"
     ]
   },
-  "glb_raw_bytes": 10238548,
+  "glb_raw_bytes": 10238684,
   "glb_raw_summary": {
     "meshes": {
       "guest_body": 10865,
@@ -156,17 +156,17 @@
       {
         "name": "guest_normal",
         "mime": "image/png",
-        "bytes": 3606826
+        "bytes": 3606910
       },
       {
         "name": "guest_orm",
         "mime": "image/jpeg",
-        "bytes": 2112305
+        "bytes": 2112261
       },
       {
         "name": "guest_basecolor",
         "mime": "image/jpeg",
-        "bytes": 1532195
+        "bytes": 1532274
       },
       {
         "name": "guest_membrane_emissive",
@@ -287,7 +287,7 @@
       "KHR_materials_transmission",
       "KHR_materials_volume"
     ],
-    "glb_bytes": 10238548,
+    "glb_bytes": 10238684,
     "has_tangents": true,
     "animations": 3
   },

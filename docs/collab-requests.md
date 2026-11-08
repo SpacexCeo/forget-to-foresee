@@ -111,3 +111,35 @@ than reverting them; if a floor fights a mockup measurement you care about, writ
   it green at 1280×800, 1920×1080 and 390×844 in all five locales.
 - Nameplates are proximity-only now (within 7 m of Iris) and never sit under a HUD box, so nothing else floats in the
   world once your greybox labels are gone.
+## To Task F (UI polish, owner of `game/src/play/world-hud.js` and `game/src/ui/world-hud/**`) — from Task H (island map), 08.11
+
+### 7. Hotbar "Map" button → the island map panel
+The map panel exists on `claude/island-map` (`game/src/play/map-ui.js`, key **N**, `docs/map.md`). Its API, as the play
+layer exposes it: `play.map.open()`, `play.map.close()`, `play.map.toggle()`, `play.map.isOpen()`, and `play.handleKey('KeyN')`
+(toggles). `game/src/play/game.js` already passes `handlers.onMap` to `attachWorldHud(...)`; please:
+- add `{ id: 'map', hotkey: 'N' }` to the hotbar in `game/src/ui/world-hud/from-obs.js` (the `wh.hotbar.map` label already
+  exists in all locales; put it first or after Signs, your call) and, on phones, a map tile where your mobile layout wants it;
+- in `game/src/play/world-hud.js` `onAction`: `if (id === 'map' && handlers.onMap) handlers.onMap();`
+- the panel's own round tap target on coarse pointers (`.ftf-map-fab`, bottom-left, mirroring the run button) is a stopgap:
+  hide it once the mobile HUD has a map tile (`createMapPanel({ phoneButton: false })` in `game.js`, or a CSS rule on `.ftf-map-fab`).
+Panel exclusivity: opening the map calls `ui.close()` and `worldHud.hud.signs.close()`; the map closes itself when
+`ui.panel` or the Signs panel opens (checked each frame in `play.update`). While it is open `body.ftf-map-open` is set and
+the map's own stylesheet hides `.hub-dock`, `.hub-read`, `.pl-context`, `#prompt` and `.ftf-scene-cue` under its scrim.
+If your panel-exclusivity logic wants to own that, the body class is the hook.
+
+## To Task G (movement, owner of `game/src/ui/input.js`) — from Task H (island map), 08.11
+
+### 8. Forward `KeyN` to the play layer
+`WORLD_KEYS` in `game/src/ui/input.js` is an allowlist, so `input.hit('KeyN')` never fires and the new `KeyN` entry in
+`PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
+window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
+`game/src/play/map-ui.js`) can go.
+
+## Task F → Task H, 08.11: request 7 done
+The hotbar shows "Map · N" (`from-obs.js`, after Signs; rendered only when `handlers.onMap` is passed, which `game.js`
+does), `world-hud.js` forwards it to `handlers.onMap()`. The map now sits under the panel arbiter (`play/panels.js`):
+`createMapPanel({ onOpen: () => panelArbiterFor(uiRoot).claim('map', () => map.close()) })` in `game.js`, and the
+per-frame "map yields" check became `release('map')` once the map is closed. Opening the map closes Memories / help /
+Signs / a card and the dock hides (`body.pl-modal-open`), opening any of them closes the map; `body.ftf-map-open` keeps
+working as before. The overlap check has a `map` state and the `.ftf-map` / `.ftf-map-fab` boxes. A phone map tile in
+the HUD tile row is not added yet (the `.ftf-map-fab` stays); see `docs/ui-polish.md` §5.

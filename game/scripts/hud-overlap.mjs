@@ -5,7 +5,7 @@
 //
 //   cd game && npm run dev -- --host 127.0.0.1 --port 5173 &
 //   npm run hud:overlap -- [--viewports 1280x800,1920x1080,390x844] [--langs en,uk,ru,it,zh]
-//                          [--states island,signs,memories,help,shell,shell-memories,card,walk,scroll,agent,walk-memories]
+//                          [--states island,signs,memories,help,map,shell,shell-memories,card,walk,scroll,agent,walk-memories]
 //                          [--out .scratch/overlap] [--base http://127.0.0.1:5173] [--shots all|fail|none]
 //
 // SwiftShader renders at a few FPS, so states are driven through window.__ftf.play.handleKey(...) and
@@ -18,7 +18,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) => (a.star
 const BASE = args.base || 'http://127.0.0.1:5173';
 const VIEWPORTS = (args.viewports || '1280x800,1920x1080,390x844').split(',').map((s) => s.split('x').map(Number));
 const LANGS = (args.langs || 'en,uk,ru,it,zh').split(',');
-const ALL_STATES = ['island', 'signs', 'memories', 'help', 'shell', 'shell-memories', 'card', 'walk', 'scroll', 'agent', 'walk-memories'];
+const ALL_STATES = ['island', 'signs', 'memories', 'help', 'map', 'shell', 'shell-memories', 'card', 'walk', 'scroll', 'agent', 'walk-memories'];
 const STATES = (args.states || ALL_STATES.join(',')).split(',');
 const OUT = args.out || '.scratch/overlap';
 const SHOTS = args.shots || 'fail';
@@ -38,6 +38,8 @@ const SELECTORS = [
   // play layer, hub, greybox leftovers, scene controls, nameplates
   '.pl-panel', '.pl-context', '.pl-help', '.pl-info', '.pl-badge', '#prompt', '#toast', '.ftf-scene-cue', '.ftf-scene-tools', '.ftf-run-toggle', '.ftf-hud-toast',
   '.hub-dock', '.hub-read', '.hub-card', '.hub-status', '.pl-plate',
+  // island map (task H)
+  '.ftf-map', '.ftf-map-fab',
 ];
 
 const READY = () => window.__ftf && window.__ftf.play && window.__ftf.play.session && window.__ftf.play.session.obs;
@@ -120,12 +122,13 @@ for (const [w, h] of VIEWPORTS) for (const lang of LANGS) {
 
   for (const st of STATES) for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      if (['island', 'signs', 'memories', 'help', 'shell', 'shell-memories', 'card'].includes(st)) {
+      if (['island', 'signs', 'memories', 'help', 'map', 'shell', 'shell-memories', 'card'].includes(st)) {
         await ensure(null);
         if (st === 'island') { await reset(); await check(st); }
         if (st === 'signs') { await reset(); await key('KeyV', 1500); await check(st); }
         if (st === 'memories') { await reset(); await key('KeyM'); await check(st); }
         if (st === 'help') { await reset(); await key('KeyH'); await check(st); }
+        if (st === 'map') { await reset(); await key('KeyN'); await check(st); await key('KeyN', 800); }
         if (st === 'shell' || st === 'shell-memories') {
           await reset();
           const inShell = await page.evaluate(() => window.__ftf.play.zone === 'shell');
