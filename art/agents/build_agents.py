@@ -59,7 +59,10 @@ COMPRESS = os.environ.get("FTF_COMPRESS", "/root/tools/compress-glb.sh")
 
 AGENT_HEIGHT = 1.75
 TEX_SIZE = 2048               # brief: agent textures up to 2048
-BAKE_SIZE = 4096              # baked at 4k and box-downsampled (supersampling)
+BAKE_SIZE = int(os.environ.get("FTF_BAKE_SIZE", "4096"))   # baked at 4k, box-downsampled
+# CPU-only rebuilds (no GPU host): FTF_BAKE_SIZE=2048 bakes at texture size (no
+# supersampling) and FTF_BAKE_SPP scales every bake's sample count (e.g. 0.25).
+BAKE_SPP_SCALE = float(os.environ.get("FTF_BAKE_SPP", "1.0"))
 RUNTIME_TRI_BUDGET = 16000     # rigged characters (brief: characters <= 16k)
 MAX_MATERIALS = 3
 NORMAL_FORMAT = "jpg"         # "jpg" q95 (half the size of png, no visible loss) or "png"
@@ -832,6 +835,19 @@ def build_master(rt, work):
             d.texture_coords = "LOCAL"
         d.vertex_group = kd
     apply_modifiers(master)              # real geometry, so it can be exploded
+    # Smooth-shaded parts (the face): the edge splits above leave flat-normal verts
+    # inside every low-poly face, which would bake facets back into the normal map.
+    # Give the master the runtime mesh's interpolated normals there instead.
+    smooth_v = sorted({v for p in master.data.polygons if p.use_smooth for v in p.vertices})
+    if smooth_v:
+        master.vertex_groups.new(name="smooth_nrm").add(smooth_v, 1.0, "REPLACE")
+        dt = master.modifiers.new("smooth_nrm", "DATA_TRANSFER")
+        dt.object = rt
+        dt.use_loop_data = True
+        dt.data_types_loops = {"CUSTOM_NORMAL"}
+        dt.loop_mapping = "POLYINTERP_NEAREST"
+        dt.vertex_group = "smooth_nrm"
+        apply_modifiers(master)
     master.data.calc_loop_triangles()
     return master, kits, len(master.data.loop_triangles)
 
@@ -867,7 +883,7 @@ def build_one(key, clock):
     cap = agent_rig.capture(ag)
     rt = join(list(ag.parts), f"agent_{key}")
     st["ngons_triangulated"] = triangulate_ngons(rt)
-    rt.data.shade_flat()
+    # per-part shading from Agent.add: flat costume facets, smooth face
     st["runtime_triangles"] = mesh_tris(rt)
     log(key, "runtime tris", st["runtime_triangles"])
 
@@ -897,6 +913,7 @@ def build_one(key, clock):
             explode(rt, 1)
             explode(master, 1)
         set_master_output(kits, channel)
+        spp = max(8, round(spp * BAKE_SPP_SCALE))
         t = time.time()
         bake(sc, kind, rt, [master], imgs[kk], spp,
              **({"normal_space": "TANGENT"} if kind == "NORMAL" else {}))
@@ -1199,7 +1216,7 @@ def stage_anim(keys):
         cap = agent_rig.capture(ag)
         rt = join(list(ag.parts), f"agent_{key}")
         triangulate_ngons(rt)
-        rt.data.shade_flat()
+        # per-part shading from Agent.add: flat costume facets, smooth face
         pm = preview_material()
         rt.data.materials.clear()
         rt.data.materials.append(pm)

@@ -1,6 +1,8 @@
 """Animation review renders for one clan agent (contact sheet, face close-ups, walk turntable).
 
-    blender -b -P review_anim.py -- <raw agent glb> <out dir> <clan>
+    blender -b -P review_anim.py -- <raw agent glb> <out dir> <clan> [face]
+
+With the optional `face` argument only the face close-ups are rendered.
 
 Uses the uncompressed glb (Blender cannot import KTX2). Renders with EEVEE on the GPU.
 Outputs: <clan>_anim_sheet.jpg (8 walk + 8 idle + 4 talk), <clan>_face.jpg (idle, blink,
@@ -18,12 +20,14 @@ from PIL import Image
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 GLB, OUT, CLAN = argv[0], argv[1], argv[2]
+FACE_ONLY = len(argv) > 3 and argv[3] == "face"
 os.makedirs(OUT, exist_ok=True)
 TMP = os.path.join(OUT, "_tmp")
 os.makedirs(TMP, exist_ok=True)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
+sc.render.fps = 30          # before the import: the importer maps glTF seconds at the scene fps
 bpy.ops.import_scene.gltf(filepath=GLB)
 arm = next(o for o in sc.objects if o.type == "ARMATURE")
 arm.location = (0, 0, 0)
@@ -88,24 +92,26 @@ def render(path, res):
 
 tiles = []
 cell = (240, 330)
-look((1.9, -3.0, 1.55), (0, 0, 0.95), 50)     # 3/4 front, slightly high
-for clip, n in (("walk", 8), ("idle", 8), ("talk", 4)):
-    f0, f1 = set_action(clip)
-    for i in range(n):
-        f = f0 + round((f1 - f0) * i / n)
-        sc.frame_set(f)
-        p = os.path.join(TMP, f"{clip}_{i}.png")
-        render(p, cell)
-        tiles.append((clip, p))
-cols = 8
-rows = 3
-sheet = Image.new("RGB", (cols * cell[0], rows * cell[1]), (20, 20, 20))
-r = {"walk": 0, "idle": 1, "talk": 2}
-cnt = {"walk": 0, "idle": 0, "talk": 0}
-for clip, p in tiles:
-    sheet.paste(Image.open(p).convert("RGB"), (cnt[clip] * cell[0], r[clip] * cell[1]))
-    cnt[clip] += 1
-sheet.save(os.path.join(OUT, f"{CLAN}_anim_sheet.jpg"), quality=80)
+if not FACE_ONLY:
+    look((1.9, -3.0, 1.55), (0, 0, 0.95), 50)     # 3/4 front, slightly high
+    for clip, n in (("walk", 8), ("idle", 8), ("talk", 4)):
+        f0, f1 = set_action(clip)
+        for i in range(n):
+            f = f0 + round((f1 - f0) * i / n)
+            sc.frame_set(f)
+            p = os.path.join(TMP, f"{clip}_{i}.png")
+            render(p, cell)
+            tiles.append((clip, p))
+    cols = 8
+    rows = 3
+    sheet = Image.new("RGB", (cols * cell[0], rows * cell[1]), (20, 20, 20))
+    r = {"walk": 0, "idle": 1, "talk": 2}
+    cnt = {"walk": 0, "idle": 0, "talk": 0}
+    for clip, p in tiles:
+        sheet.paste(Image.open(p).convert("RGB"), (cnt[clip] * cell[0], r[clip] * cell[1]))
+        cnt[clip] += 1
+    sheet.save(os.path.join(OUT, f"{CLAN}_anim_sheet.jpg"), quality=80)
+
 
 # face close-ups: idle rest, idle blink, talk jaw open
 look((0.22, -0.75, 1.68), (0, 0, 1.63), 85)
@@ -114,22 +120,24 @@ for clip, f in (("idle", 0), ("idle", 40), ("talk", 2)):
     set_action(clip)
     sc.frame_set(f)
     p = os.path.join(TMP, f"face_{clip}_{f}.png")
-    render(p, (300, 300))
+    render(p, (400, 400))
     faces.append(p)
-fs = Image.new("RGB", (900, 300))
+fs = Image.new("RGB", (1200, 400))
 for i, p in enumerate(faces):
-    fs.paste(Image.open(p).convert("RGB"), (i * 300, 0))
+    fs.paste(Image.open(p).convert("RGB"), (i * 400, 0))
 fs.save(os.path.join(OUT, f"{CLAN}_face.jpg"), quality=85)
 
-# walk turntable: 75 frames, camera orbits once
-f0, f1 = set_action("walk")
-L = f1 - f0
-for i in range(75):
-    a = 2 * math.pi * i / 75
-    look((3.2 * math.sin(a), -3.2 * math.cos(a), 1.5), (0, 0, 0.95), 50)
-    sc.frame_set(f0 + (i % L))
-    render(os.path.join(TMP, f"tt_{i:03d}.png"), (360, 420))
-subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", "30", "-i",
-                os.path.join(TMP, "tt_%03d.png"), "-c:v", "libx264", "-crf", "28",
-                "-pix_fmt", "yuv420p", os.path.join(OUT, f"{CLAN}_walk_turntable.mp4")], check=True)
+if not FACE_ONLY:
+    # walk turntable: 75 frames, camera orbits once
+    f0, f1 = set_action("walk")
+    L = f1 - f0
+    for i in range(75):
+        a = 2 * math.pi * i / 75
+        look((3.2 * math.sin(a), -3.2 * math.cos(a), 1.5), (0, 0, 0.95), 50)
+        sc.frame_set(f0 + (i % L))
+        render(os.path.join(TMP, f"tt_{i:03d}.png"), (360, 420))
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", "30", "-i",
+                    os.path.join(TMP, "tt_%03d.png"), "-c:v", "libx264", "-crf", "28",
+                    "-pix_fmt", "yuv420p", os.path.join(OUT, f"{CLAN}_walk_turntable.mp4")], check=True)
+
 print("REVIEW_DONE", CLAN)

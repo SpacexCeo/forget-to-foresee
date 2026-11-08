@@ -381,6 +381,15 @@ class Agent:
         self.part_tris[name] = self.part_tris.get(name, 0) + mesh_tris(obj)
         return obj
 
+    def add_collider_bm(self, whiches, bm):
+        me = bpy.data.meshes.new("tmp_collider")
+        bm.to_mesh(me)
+        bm.free()
+        for which in whiches:
+            self.colliders[which].from_mesh(me)
+            self._bvh.pop(which, None)
+        bpy.data.meshes.remove(me)
+
     def add_collider_only(self, which, obj):
         self.colliders[which].from_mesh(obj.data)
         self._bvh.pop(which, None)
@@ -509,142 +518,400 @@ def head_bm(body=BODY):
 
 
 # ================================================================ face
-# Readable, weathered faceted face. Every feature is a separate small part so the
-# rig can skin it rigidly to its face bone (agent_rig FACE_BONES). Positions are
-# shared with the rig through FACE.
+# Smooth stylised face (owner 08.11: the faceted mask read as crooked in close
+# third-person view). The head is a lat-long egg whose columns and rings crowd
+# into the face and whose face region is subdivided once more; eye sockets,
+# brow, nose, muzzle and chin are smooth displacements of that one surface, shaded
+# smooth. Eyes are eyeballs with iris and pupil caps seated in the sockets,
+# under almond-edged lid shells; brows and lips are tapered sweeps. Every
+# feature is built for the left side and mirrored exactly. Moving features are
+# separate parts the rig skins rigidly to their face bone (agent_rig FACE_BONES);
+# positions are shared with the rig through FACE.
 
 FACE = dict(
-    eye=((0.030, -0.083, 1.646), 0.0135),        # eyeball centre (L, +X), radius
-    lid_r=0.0158,
-    brow=(0.031, -0.090, 1.664),                 # brow ridge centre
+    eye=((0.0262, -0.0805, 1.643), 0.0128),      # eyeball centre (L, +X), radius
+    lid_r=0.0138,                                # upper lid shell radius
+    brow=(0.0262, -0.0955, 1.6625),              # brow centre (L)
     jaw=((0.0, -0.020, 1.616), (0.0, -0.088, 1.584)),   # jaw bone head, tail
-    mouth_z=1.600,
+    mouth_z=1.5905,                              # lip line
+    mouth_w=0.0168,                              # half width of the mouth
 )
 
+# per-clan iris colour (linear); others fall back to the clan accent
+IRIS_COLOR = {
+    "iris": (0.30, 0.07, 0.72),      # violet, the player clan's mark
+    "sol": (0.46, 0.50, 0.52),       # salt-pale grey
+    "pepel": (0.62, 0.16, 0.035),    # ember
+    "moh": (0.16, 0.34, 0.06),       # moss green
+    "yantar": (0.78, 0.36, 0.03),    # amber
+    "iney": (0.40, 0.66, 0.90),      # ice blue
+}
 EYE_ACCENT = ("gem", "amber", "glass", "crystal", "moss", "brass", "metal")
+LID_OPEN = (25.0, -24.0)     # lid edge elevation at the eye centre line (deg, rest)
+LID_CORNER = 62.0            # azimuth of the eye corners (deg)
 
 
 def _shade(c, k):
     return tuple(max(0.0, min(1.0, v * k)) for v in c)
 
 
-def _cap_bm(center, r, axis_elev_deg, half_angle_deg, segs=8, rings=4):
-    """Faceted spherical cap (a shell, open edge) around an axis in the YZ plane.
-    axis_elev_deg: elevation of the cap axis seen from the front (-Y); 90 = up."""
+def _g(d, s):
+    return math.exp(-(d / s) ** 2)
+
+
+def _samples(n, lo, hi, dens, steps=4000):
+    """n intervals from lo to hi, spaced inversely to the density function."""
+    xs = [lo + (hi - lo) * i / steps for i in range(steps + 1)]
+    cum = [0.0]
+    for a, b in zip(xs, xs[1:]):
+        cum.append(cum[-1] + dens(0.5 * (a + b)) * (b - a))
+    out, j = [], 0
+    for k in range(n + 1):
+        tgt = cum[-1] * k / n
+        while j < steps - 1 and cum[j + 1] < tgt:
+            j += 1
+        t = (tgt - cum[j]) / max(cum[j + 1] - cum[j], 1e-12)
+        out.append(xs[j] + min(1.0, max(0.0, t)) * (xs[j + 1] - xs[j]))
+    out[0], out[-1] = lo, hi
+    return out
+
+
+def _egg(x, y, z):
+    """The shared egg deformation of the unit sphere (normalised head coords)."""
+    if z < 0:                                      # jaw taper and chin
+        x *= 1.0 - 0.30 * (-z) ** 1.3
+        y *= 1.0 - 0.10 * (-z)
+    if z > 0.25:                                   # cranium slightly back
+        y += 0.06 * (z - 0.25)
+    return x, y, z
+
+
+def _face_relief(x, y, z):
+    """Smooth face relief: forward offset (normalised, -y is out) at a point of the
+    egg. Symmetric in x by construction."""
+    front = smoothstep((-y - 0.35) / 0.55)
+    ax = abs(x)
+    ex = FACE["eye"][0][0] / BODY["head_r"][0]
+    ez = (FACE["eye"][0][2] - BODY["head_c"][2]) / BODY["head_r"][2]
+    mz = (FACE["mouth_z"] - BODY["head_c"][2]) / BODY["head_r"][2]
+    # nose: bridge -> tip, narrow at the bridge, wider at the tip, quick undercut
+    zt = ez - 0.27                                  # nose tip
+    if z > zt:
+        k = min(1.0, (z - zt) / (ez + 0.10 - zt))
+        h = 0.20 * (1.0 - k) ** 1.6 + 0.035 * _g(z - (ez + 0.02), 0.12)
+        w = 0.085 + 0.055 * (1.0 - k)
+    else:
+        h = 0.20 * _g(z - zt, 0.055)
+        w = 0.14
+    nose = h * _g(ax, w)
+    alae = 0.075 * _g(ax - 0.125, 0.055) * _g(z - (zt - 0.015), 0.055)
+    brow = 0.055 * _g(z - (ez + 0.165), 0.085) * (_g(ax - ex, 0.22) + 0.6 * _g(ax, 0.15))
+    socket = -0.115 * _g(ax - ex * 1.02, 0.175) * _g(z - (ez + 0.01), 0.125)
+    cheek = 0.055 * _g(ax - 0.56, 0.17) * _g(z - (ez - 0.17), 0.14)
+    hollow = -0.030 * _g(ax - 0.52, 0.15) * _g(z - (mz + 0.04), 0.14)
+    muzzle = 0.060 * _g(ax, 0.30) * _g(z - (mz + 0.02), 0.20)
+    mouth = -0.030 * _g(ax, 0.20) * _g(z - mz, 0.055)
+    chin = 0.075 * _g(ax, 0.20) * _g(z - (mz - 0.24), 0.11)
+    # nasolabial fold: a soft groove from the nose wing down to the mouth corner
+    t = max(0.0, min(1.0, (zt - 0.02 - z) / (zt - 0.02 - (mz - 0.05))))
+    fold = -0.022 * _g(ax - (0.17 + 0.10 * t), 0.035) * (1.0 if 0.0 < t < 1.0 else 0.0) * \
+        math.sin(math.pi * t) ** 0.5
+    return front * (fold + nose + alae + brow + socket + cheek + hollow + muzzle + mouth + chin)
+
+
+def face_head_bm(body=BODY):
+    """Visual head: front-dense lat-long egg + face relief, smooth shaded."""
+    cx, cy, cz = body["head_c"]
+    rx, ry, rz = body["head_r"]
+    half = _samples(13, 0.0, math.pi, lambda p: 1.0 + 2.6 * _g(p, 0.75))
+    cols = [-half[i] for i in range(len(half) - 2, 0, -1)] + half      # -.. 0 .. pi
+    rings = _samples(20, -math.pi / 2, math.pi / 2, lambda t: 1.0 + 2.2 * _g(t + 0.2, 0.62))
     bm = bmesh.new()
-    a = math.radians(axis_elev_deg)
-    ax = Vector((0.0, -math.cos(a), math.sin(a)))
-    ref = Vector((1.0, 0.0, 0.0))
-    u = ref
-    w = ax.cross(u).normalized()
-    top = bm.verts.new(Vector(center) + ax * r)
-    prev = None
-    rows = []
-    for i in range(1, rings + 1):
-        th = math.radians(half_angle_deg) * i / rings
-        row = []
-        for j in range(segs):
-            ph = 2 * math.pi * j / segs
-            d = ax * math.cos(th) + (u * math.cos(ph) + w * math.sin(ph)) * math.sin(th)
-            row.append(bm.verts.new(Vector(center) + d * r))
-        rows.append(row)
-    for j in range(segs):
-        bm.faces.new((top, rows[0][j], rows[0][(j + 1) % segs]))
-    for a_row, b_row in zip(rows, rows[1:]):
-        for j in range(segs):
-            k = (j + 1) % segs
-            bm.faces.new((a_row[j], b_row[j], b_row[k], a_row[k]))
+    grid = []
+    for th in rings[1:-1]:
+        grid.append([bm.verts.new((math.sin(p) * math.cos(th), -math.cos(p) * math.cos(th),
+                                   math.sin(th))) for p in cols])
+    bot = bm.verts.new((0, 0, -1))
+    top = bm.verts.new((0, 0, 1))
+    n = len(cols)
+    for r0, r1 in zip(grid, grid[1:]):
+        for j in range(n):
+            k = (j + 1) % n
+            bm.faces.new((r0[j], r0[k], r1[k], r1[j]))
+    for j in range(n):
+        k = (j + 1) % n
+        bm.faces.new((bot, grid[0][k], grid[0][j]))
+        bm.faces.new((top, grid[-1][j], grid[-1][k]))
+    # one more subdivision over the face (front, brow to chin)
+    sel = [f for f in bm.faces
+           if all(-v.co.y > 0.55 and -0.82 < v.co.z < 0.42 for v in f.verts)]
+    edges = list({e for f in sel for e in f.edges})
+    bmesh.ops.subdivide_edges(bm, edges=edges, cuts=1, use_grid_fill=True)
+    for v in bm.verts:
+        v.co = v.co.normalized()
+    for v in bm.verts:
+        x, y, z = _egg(*v.co)
+        y -= _face_relief(x, y, z)
+        v.co = Vector((cx + x * rx, cy + y * ry, cz + z * rz))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-    # normals outward from the eye centre
+    return bm
+
+
+def face_hair_bm(body=BODY, cols=24, rows=6):
+    """Close-cropped hair cap over the cranium, for agents whose hood leaves the top
+    of the head open. Its hairline row hugs the skin, the rest stands 4 mm off."""
+    cx, cy, cz = body["head_c"]
+    rx, ry, rz = body["head_r"]
+    c = Vector((cx, cy, cz))
+
+    def point(ph, th, off):
+        x, y, z = _egg(math.sin(ph) * math.cos(th), -math.cos(ph) * math.cos(th), math.sin(th))
+        y -= _face_relief(x, y, z)
+        p = Vector((cx + x * rx, cy + y * ry, cz + z * rz))
+        return c + (p - c) * (1.0 + off / (p - c).length)
+
+    def hairline(ph):
+        a = abs(ph)
+        return 0.13 + 0.42 * _g(a, 0.62) - 0.72 * smoothstep((a - 1.55) / 1.45) + \
+            0.012 * math.cos(7 * ph)
+    bm = bmesh.new()
+    grid = []
+    for j in range(cols):
+        ph = -math.pi + 2 * math.pi * (j + 0.5) / cols
+        th0 = hairline(ph)
+        grid.append([bm.verts.new(point(ph, th0 + (math.pi / 2 - th0) * (k / rows) ** 0.9,
+                                        0.0018 if k == 0 else 0.0042 - 0.0006 * (k == 1)))
+                     for k in range(rows)])
+    top = bm.verts.new(Vector((cx, cy + 0.06 * 0.75 * ry, cz + rz + 0.0042)))
+    for j in range(cols):
+        a, b = grid[j], grid[(j + 1) % cols]
+        for k in range(rows - 1):
+            bm.faces.new((a[k], b[k], b[k + 1], a[k + 1]))
+        bm.faces.new((a[-1], b[-1], top))
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
     f0 = bm.faces[0]
-    if f0.normal.dot(f0.calc_center_median() - Vector(center)) < 0:
+    if f0.normal.dot(f0.calc_center_median() - c) < 0:
         bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
     return bm
 
 
-def _box_bm(verts8):
+def _sweep_bm(pts, w, h, sides=8, side=1):
+    """Closed tube along pts with an elliptical section; w(t), h(t) half sizes along
+    the local 'out' (section x) and 'up' (section y) axes. Ends pinch shut."""
     bm = bmesh.new()
-    v = [bm.verts.new(Vector(p)) for p in verts8]
-    for q in ((0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)):
-        bm.faces.new([v[i] for i in q])
+    pts = [Vector(p) for p in pts]
+    m = len(pts)
+    rings = []
+    for i, p in enumerate(pts):
+        t = i / (m - 1)
+        tan = (pts[min(i + 1, m - 1)] - pts[max(i - 1, 0)]).normalized()
+        up = Vector((0, 0, 1))
+        out = tan.cross(up).normalized()
+        if out.y > 0:
+            out = -out
+        up = out.cross(tan).normalized()
+        if up.z < 0:
+            up = -up
+        ww, hh = w(t), h(t)
+        rings.append([bm.verts.new(p + out * (ww * math.cos(a)) + up * (hh * math.sin(a)))
+                      for a in (2 * math.pi * s / sides for s in range(sides))])
+    for r0, r1 in zip(rings, rings[1:]):
+        for s in range(sides):
+            q = (s + 1) % sides
+            bm.faces.new((r0[s], r0[q], r1[q], r1[s]))
+    c0 = bm.verts.new(pts[0] - (pts[1] - pts[0]).normalized() * 0.0004)
+    c1 = bm.verts.new(pts[-1] + (pts[-1] - pts[-2]).normalized() * 0.0004)
+    for s in range(sides):
+        q = (s + 1) % sides
+        bm.faces.new((c0, rings[0][q], rings[0][s]))
+        bm.faces.new((c1, rings[-1][s], rings[-1][q]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
     return bm
 
 
-def _bar(c, sx, sy, sz, tilt=0.0, taper=1.0):
-    """Faceted bar centred at c; tilt rotates around Y (inner end down), taper
-    scales the +X end height."""
-    cx, cy, cz = c
-    pts = []
-    for z in (-1, 1):
-        for (x, y) in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
-            h = sz * (taper if x > 0 else 1.0)
-            px, pz = x * sx, z * h
-            pz += x * sx * math.tan(tilt)
-            pts.append((cx + px, cy + y * sy, cz + pz))
-    return _box_bm(pts)
+def _lid_dir(a, b):
+    """Direction on the eye sphere: azimuth a around Z from the front, then tilted by
+    b around X (the lid bones rotate around X, so a lid edge is a curve b(a))."""
+    return Vector((math.sin(a), -math.cos(a) * math.cos(b), math.cos(a) * math.sin(b)))
 
 
-def build_face(ag, body=BODY):
+def _lid_edge(a_deg, upper):
+    A = LID_CORNER
+    s = max(0.0, math.cos(math.pi / 2 * min(1.0, abs(a_deg) / A))) ** 0.75
+    if upper:
+        return -3.0 + (LID_OPEN[0] + 3.0) * s
+    return 3.0 + (LID_OPEN[1] - 3.0) * s
+
+
+def _lid_bm(c, r, side, upper, rows=5, cols=14, roll=0.93):
+    """Lid shell around eye centre c: from the almond edge over the eyeball to far
+    behind it, with a rolled-in rim so the lid edge reads thick."""
+    bm = bmesh.new()
+    c = Vector(c)
+    far = 160.0 if upper else -150.0
+    grid = []
+    for i in range(cols + 1):
+        a = -84.0 + 168.0 * i / cols
+        e = _lid_edge(a, upper)
+        col = [c + _lid_dir(math.radians(a) * side, math.radians(e)) * (r * roll)]
+        for k in range(rows + 1):
+            b = e + (far - e) * (k / rows) ** 1.3
+            col.append(c + _lid_dir(math.radians(a) * side, math.radians(b)) * r)
+        grid.append([bm.verts.new(p) for p in col])
+    for c0, c1 in zip(grid, grid[1:]):
+        for k in range(len(c0) - 1):
+            bm.faces.new((c0[k], c1[k], c1[k + 1], c0[k + 1]))
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
+    f0 = bm.faces[len(bm.faces) // 2]
+    if f0.normal.dot(f0.calc_center_median() - c) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    return bm
+
+
+def _cap_on(c, r, axis, half_deg, segs=16, rings=3):
+    """Spherical cap shell (iris / pupil) on the sphere (c, r) around axis."""
+    bm = bmesh.new()
+    c, ax = Vector(c), Vector(axis).normalized()
+    u = ax.cross(Vector((0, 0, 1))).normalized()
+    w = ax.cross(u).normalized()
+    top = bm.verts.new(c + ax * r)
+    rows = []
+    for i in range(1, rings + 1):
+        th = math.radians(half_deg) * i / rings
+        rows.append([bm.verts.new(c + (ax * math.cos(th) + (u * math.cos(p) + w * math.sin(p))
+                                       * math.sin(th)) * r)
+                     for p in (2 * math.pi * j / segs for j in range(segs))])
+    for j in range(segs):
+        bm.faces.new((top, rows[0][j], rows[0][(j + 1) % segs]))
+    for r0, r1 in zip(rows, rows[1:]):
+        for j in range(segs):
+            k = (j + 1) % segs
+            bm.faces.new((r0[j], r1[j], r1[k], r0[k]))
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
+    if bm.faces[0].normal.dot(ax) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    return bm
+
+
+def _surface_y(bvh, x, z, off=0.0):
+    """Front surface of the head at (x, z), pushed out by off along -y."""
+    hit = bvh.ray_cast(Vector((x, -0.3, z)), Vector((0, 1, 0)), 0.5)
+    return (hit[0].y if hit[0] is not None else -0.09) - off
+
+
+def build_face(ag, body=BODY, hair=None):
     pal = ag.pal
     skin = pal["skin"]
     acc = next((pal[k] for k in EYE_ACCENT if k in pal), (0.6, 0.5, 0.3))
-    eye_col = tuple(0.25 * a + 0.04 for a in acc)          # dark, alien-tinted iris
-    brow_col = pal.get("hair", _shade(skin, 0.35))
-    lid_col = _shade(skin, 0.80)
+    iris_col = IRIS_COLOR.get(ag.key, tuple(0.7 * a + 0.05 for a in acc))
+    brow_col = pal.get("hair", _shade(skin, 0.30))
+    lid_col = (skin[0] * 0.80, skin[1] * 0.74, skin[2] * 0.74)
+    lip_col = (skin[0] * 0.66, skin[1] * 0.40, skin[2] * 0.40)
+    head = face_head_bm(body)
+    bvh = BVHTree.FromBMesh(head)
     (ex, ey, ez), er = FACE["eye"]
     for side, sfx in ((1, "L"), (-1, "R")):
-        c = (side * ex, ey, ez)
+        c = Vector((side * ex, ey, ez))
         bm = bmesh.new()
-        bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=er)
-        bmesh.ops.translate(bm, verts=bm.verts, vec=Vector(c))
-        ag.add(f"face_eye_{sfx}", bm, "body", "crystal", eye_col, rough=0.15, collide=())
-        # upper lid: cap around an axis tilted up-back, open edge ~35 deg above centre
-        ag.add(f"face_lidup_{sfx}", _cap_bm(c, FACE["lid_r"], 130, 88), "body", "skin",
-               lid_col, rough=0.6, collide=())
-        ag.add(f"face_lidlo_{sfx}", _cap_bm(c, FACE["lid_r"] * 0.97, -125, 100, rings=4),
-               "body", "skin", lid_col, rough=0.6, collide=())
+        bmesh.ops.create_uvsphere(bm, u_segments=14, v_segments=10, radius=er)
+        bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0),
+                         matrix=Matrix.Rotation(math.pi / 2, 3, "X"))   # poles front/back
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.y > 0.45 * er], context="VERTS")
+        bmesh.ops.translate(bm, verts=bm.verts, vec=c)
+        ag.add(f"face_eye_{sfx}", bm, "body", "skin", (0.44, 0.40, 0.35), rough=0.25,
+               collide=(), smooth=True)
+        look = Vector((side * 0.06, -1.0, 0.0))          # a hair divergent, rests forward
+        ag.add(f"face_iris_{sfx}", _cap_on(c, er * 1.012, look, 34, segs=16, rings=3), "body",
+               "skin", iris_col, rough=0.2, collide=(), smooth=True)
+        ag.add(f"face_pupil_{sfx}", _cap_on(c, er * 1.022, look, 14, segs=12, rings=2), "body",
+               "skin", (0.012, 0.010, 0.010), rough=0.15, collide=(), smooth=True)
+        ag.add(f"face_lidup_{sfx}", _lid_bm(c, FACE["lid_r"], side, True,
+                                            roll=er * 1.04 / FACE["lid_r"]),
+               "body", "skin", lid_col, rough=0.6, collide=(), smooth=True)
+        ag.add(f"face_lidlo_{sfx}", _lid_bm(c, FACE["lid_r"] * 0.975, side, False, rows=4,
+                                       roll=er * 1.04 / (FACE["lid_r"] * 0.975)),
+               "body", "skin", lid_col, rough=0.6, collide=(), smooth=True)
+        # lash line along the upper lid edge (reads the eye shape from afar)
+        lash = []
+        for i in range(11):
+            a = -LID_CORNER * 1.02 + 2.04 * LID_CORNER * i / 10
+            lash.append(c + _lid_dir(math.radians(a) * side,
+                                     math.radians(_lid_edge(a, True) - 1.0)) * FACE["lid_r"] * 1.03)
+        ag.add(f"face_lidup_{sfx}_lash", _sweep_bm(
+            lash, lambda t: 0.00055, lambda t: 0.0006 + 0.0005 * math.sin(math.pi * t), sides=4),
+            "body", "skin", _shade(brow_col, 0.8), rough=0.7, collide=(), smooth=True)
+        # brow: arched tapered sweep on the brow ridge, heavy at the inner end
         bx, by, bz = FACE["brow"]
-        ag.add(f"face_brow_{sfx}",
-               _bar((side * bx, by, bz), 0.016, 0.006, 0.0042, tilt=math.radians(14 * side)),
-               "body", "skin", brow_col, rough=0.8, collide=())
-        # weathered cheekbone facet (alien-tinged, slightly high)
-        ag.add(f"face_cheek_{sfx}",
-               _bar((side * 0.050, -0.072, 1.621), 0.008, 0.005, 0.004,
-                    tilt=math.radians(22 * side)),
-               "body", "skin", _shade(skin, 0.92), rough=0.55, collide=())
-    # nose: faceted wedge from bridge to tip
-    pts = [(0, -0.094, 1.652), (0.0075, -0.096, 1.622), (0, -0.114, 1.619), (-0.0075, -0.096, 1.622),
-           (0, -0.100, 1.612)]
+        pts = []
+        for i in range(9):
+            t = i / 8
+            x = bx + (-0.0150 + 0.0315 * t)
+            z = bz - 0.0004 - 0.0042 * t + 0.0046 * math.sin(math.pi * min(1.0, t * 1.15)) \
+                - 0.0022 * (1 - t) ** 3
+            pts.append(Vector((side * x, _surface_y(bvh, side * x, z, 0.0012), z)))
+        ag.add(f"face_brow_{sfx}", _sweep_bm(
+            pts, lambda t: 0.0021 * (1.0 - 0.5 * t), lambda t: 0.0033 * (1.0 - 0.62 * t) ** 0.8,
+            sides=6), "body", "skin", brow_col, rough=0.85, collide=(), smooth=True)
+    # lips: upper (head) with a cupid's bow, fuller lower lip (jaw)
+    mz, mw = FACE["mouth_z"], FACE["mouth_w"]
+
+    def lip(dz, out, bow):
+        pts = []
+        for i in range(11):
+            x = -mw + 2 * mw * i / 10
+            z = mz + dz + bow * _g(abs(x) - 0.0035, 0.0028) - 0.0012 * (abs(x) / mw) ** 2
+            pts.append(Vector((x, _surface_y(bvh, x, z, out), z)))
+        return pts
+    prof = lambda t: math.sin(math.pi * t) ** 0.55          # noqa: E731
+    ag.add("face_lipup", _sweep_bm(lip(0.0016, 0.0010, 0.0007),
+                                   lambda t: 0.0013 * prof(t) + 0.0002,
+                                   lambda t: 0.0022 * prof(t) + 0.0002, sides=6),
+           "body", "skin", _shade(lip_col, 0.9), rough=0.5, collide=(), smooth=True)
+    ag.add("face_jaw_lip", _sweep_bm(lip(-0.0026, 0.0012, 0.0),
+                                     lambda t: 0.0015 * prof(t) + 0.0002,
+                                     lambda t: 0.0027 * prof(t) + 0.0002, sides=6),
+           "body", "skin", _shade(lip_col, 1.06), rough=0.45, collide=(), smooth=True)
+    # mouth bag: dark sheet behind the lips; its top follows the head, its bottom the
+    # jaw (agent_rig rule "mouth"), so it fills the gap when the jaw opens
     bm = bmesh.new()
-    v = [bm.verts.new(Vector(p)) for p in pts]
-    back = bm.verts.new(Vector((0, -0.086, 1.628)))
-    for f in ((v[0], v[1], v[2]), (v[0], v[2], v[3]), (v[1], v[4], v[2]), (v[2], v[4], v[3]),
-              (v[0], back, v[1]), (v[0], v[3], back), (v[1], back, v[4]), (v[3], v[4], back)):
-        bm.faces.new(f)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-    ag.add("face_nose", bm, "body", "skin", skin, rough=0.5, collide=())
-    # mouth: dark cavity plate (head), upper lip (head), lower lip + chin plate (jaw)
-    mz = FACE["mouth_z"]
-    ag.add("face_mouth", _bar((0, -0.086, mz - 0.004), 0.016, 0.006, 0.0065), "body", "skin",
-           (0.03, 0.012, 0.012), rough=0.9, collide=())
-    ag.add("face_lipup", _bar((0, -0.0925, mz + 0.0028), 0.0155, 0.0035, 0.0024), "body", "skin",
-           _shade(skin, 0.72), rough=0.6, collide=())
-    ag.add("face_jaw_lip", _bar((0, -0.0915, mz - 0.0035), 0.014, 0.0035, 0.0025), "body",
-           "skin", _shade(skin, 0.78), rough=0.6, collide=())
-    ag.add("face_jaw_chin", _bar((0, -0.088, mz - 0.019), 0.017, 0.007, 0.007), "body", "skin",
-           _shade(skin, 0.95), rough=0.55, collide=())
+    rows = []
+    for zz, k in ((0.0030, 0.45), (0.0010, 0.74), (-0.0015, 0.74), (-0.0040, 0.45)):
+        rows.append([bm.verts.new(Vector((x, _surface_y(bvh, x, mz + zz, 0.00025), mz + zz)))
+                     for x in (mw * k * (-1 + 2 * i / 8) for i in range(9))])
+    for r0, r1 in zip(rows, rows[1:]):
+        for j in range(8):
+            bm.faces.new((r0[j], r0[j + 1], r1[j + 1], r1[j]))
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
+    if bm.faces[4].normal.y > 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    ag.add("face_mouth", bm, "body", "skin", (0.035, 0.012, 0.012), rough=0.9, collide=(),
+           smooth=True)
+    # upper teeth: a dim strip just behind the upper lip, seen when talking
+    pts = [Vector((x, _surface_y(bvh, x, mz + 0.0013, 0.0006),
+                   mz + 0.0013)) for x in (-mw * 0.62 + 1.24 * mw * i / 8 for i in range(9))]
+    ag.add("face_teeth", _sweep_bm(pts, lambda t: 0.00035, lambda t: 0.0012, sides=4), "body",
+           "skin", (0.36, 0.33, 0.27), rough=0.35, collide=(), smooth=True)
+    if hair is not None:
+        ag.add("face_hair", face_hair_bm(body), "body", "skin", hair, rough=0.9, collide=(),
+               smooth=True)
+    return head
 
 
-def build_body(ag, body=BODY, suit_color="suit"):
+def build_body(ag, body=BODY, suit_color="suit", hair=None):
     verts, edges, radii, root = body_skeleton(body)
     obj = skin_object(f"{ag.key}_body", verts, edges, radii, root, ag.col)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bpy.data.objects.remove(obj)
     ag.add("body", bm, "body", "skin", suit_color, rough=0.55, collide=("all",))
-    ag.add("head", head_bm(body), "body", "skin", "skin", rough=0.5, collide=("all", "core"))
-    build_face(ag, body)
+    # the smooth face head is visual only; garments keep conforming to the plain egg
+    ag.add("head", build_face(ag, body, hair), "body", "skin", "skin", rough=0.5, collide=(),
+           smooth=True)
+    ag.add_collider_bm(("all", "core"), head_bm(body))
     # Core collider: torso and legs without arms (fitted garments ignore the arms).
     cv, ce, cr, croot = body_skeleton(body, with_arms=False)
     core = skin_object(f"{ag.key}_core", cv, ce, cr, croot, ag.col)
