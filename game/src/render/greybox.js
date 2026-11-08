@@ -1,5 +1,7 @@
-// Greybox stand-ins for every catalog asset, shown (with a "not final art" label) until the real
-// .glb exists and has streamed in. Each greybox is merged into ONE mesh per material slot (default
+// Greybox stand-ins for every catalog asset, shown until the real .glb exists and has streamed in.
+// Their "· not final art" labels are a development aid (owner feedback 08.11: floating labels cheapen
+// the world): they render only where `setGreyboxLabels(true)` asked for them (?dev=1, the F3 dev HUD,
+// the asset review page); in play the stand-ins stay unlabeled and the map panel names the places. Each greybox is merged into ONE mesh per material slot (default
 // grey, nacre, glass, amber, gold, cloth; render/materials.js) with vertex colors, so a plain prop
 // costs a single draw call and a Shell one nacre draw call, plus a label sprite. Greyboxes also
 // carry simple colliders and the same socket names as the real art (e.g. the anchor pads), so
@@ -74,6 +76,19 @@ class Builder {
 
 /* ---------- label sprites ---------- */
 const labelCache = new Map();
+/** Every greybox label sprite built so far (toggled together by setGreyboxLabels). */
+const labelSprites = new Set();
+let labelsEnabled = false;
+
+/**
+ * Shows or hides the "· not final art" labels of every greybox, built or still to be built. Off by
+ * default: play never shows text floating in the world. Dev surfaces turn it on.
+ */
+export function setGreyboxLabels(on) {
+  labelsEnabled = !!on;
+  for (const s of labelSprites) s.visible = labelsEnabled;
+}
+export const greyboxLabelsEnabled = () => labelsEnabled;
 /**
  * Text sprite with a constant on-screen size: `screenHeight` is the label height at 1 m from the
  * camera (sizeAttenuation off), so 0.03 is roughly 5% of the view height at the default FOV.
@@ -395,16 +410,24 @@ export function greyboxColliders(name) {
   return b.colliders;
 }
 
-/** Builds the greybox for a catalog asset by exact name. */
-export function buildGreybox(name) {
+/**
+ * Builds the greybox for a catalog asset by exact name. The label sprite is attached but visible
+ * only while greybox labels are enabled (dev surfaces); `label: false` skips it entirely.
+ */
+export function buildGreybox(name, { label = true } = {}) {
   const def = assetByName(name);
   const b = new Builder();
   fill(b, name);
   const built = b.build(name);
-  const labelY = name === 'island' ? 1.6 : /^shell_/.test(name) ? -0.6 : (def ? def.height : 1) + 0.35;
-  const label = makeLabel((def ? def.label : name) + ' \u00b7 not final art', def && def.kind === 'hero' ? 0.015 : 0.019);
-  label.position.set(0, labelY, 0);
-  built.object.add(label);
+  if (label) {
+    const labelY = name === 'island' ? 1.6 : /^shell_/.test(name) ? -0.6 : (def ? def.height : 1) + 0.35;
+    const sprite = makeLabel((def ? def.label : name) + ' \u00b7 not final art', def && def.kind === 'hero' ? 0.015 : 0.019);
+    sprite.position.set(0, labelY, 0);
+    sprite.visible = labelsEnabled;
+    labelSprites.add(sprite);
+    built.object.add(sprite);
+    built.label = sprite;
+  }
   return built;
 }
 

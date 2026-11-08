@@ -83,3 +83,27 @@ UI context. When that lands, `mountAudioSettings` and its call in `main.js` can 
 `game/src/play/presentation.js` tints the fog and the hemisphere fill a little as the tension effect rises
 (`vfx.hooks.skyTint(hex, amount)`). If the look-dev gains a `lookdev.sky.tint(hex, amount)` method, the play
 layer uses it automatically and stops touching the fog colour.
+
+## To Task F (UI polish, owner of `game/src/play/world-hud.js` and `game/src/ui/world-hud/**`) — from Task H (island map), 08.11
+
+### 7. Hotbar "Map" button → the island map panel
+The map panel exists on `claude/island-map` (`game/src/play/map-ui.js`, key **N**, `docs/map.md`). Its API, as the play
+layer exposes it: `play.map.open()`, `play.map.close()`, `play.map.toggle()`, `play.map.isOpen()`, and `play.handleKey('KeyN')`
+(toggles). `game/src/play/game.js` already passes `handlers.onMap` to `attachWorldHud(...)`; please:
+- add `{ id: 'map', hotkey: 'N' }` to the hotbar in `game/src/ui/world-hud/from-obs.js` (the `wh.hotbar.map` label already
+  exists in all locales; put it first or after Signs, your call) and, on phones, a map tile where your mobile layout wants it;
+- in `game/src/play/world-hud.js` `onAction`: `if (id === 'map' && handlers.onMap) handlers.onMap();`
+- the panel's own round tap target on coarse pointers (`.ftf-map-fab`, bottom-left, mirroring the run button) is a stopgap:
+  hide it once the mobile HUD has a map tile (`createMapPanel({ phoneButton: false })` in `game.js`, or a CSS rule on `.ftf-map-fab`).
+Panel exclusivity: opening the map calls `ui.close()` and `worldHud.hud.signs.close()`; the map closes itself when
+`ui.panel` or the Signs panel opens (checked each frame in `play.update`). While it is open `body.ftf-map-open` is set and
+the map's own stylesheet hides `.hub-dock`, `.hub-read`, `.pl-context`, `#prompt` and `.ftf-scene-cue` under its scrim.
+If your panel-exclusivity logic wants to own that, the body class is the hook.
+
+## To Task G (movement, owner of `game/src/ui/input.js`) — from Task H (island map), 08.11
+
+### 8. Forward `KeyN` to the play layer
+`WORLD_KEYS` in `game/src/ui/input.js` is an allowlist, so `input.hit('KeyN')` never fires and the new `KeyN` entry in
+`PLAY_KEYS` (`main.js`) does nothing yet. Please add `'KeyN'` to `WORLD_KEYS`. Until then `map-ui.js` listens for N on the
+window itself and de-duplicates the two paths (400 ms); once `KeyN` is forwarded, that listener (`onKeyDown` in
+`game/src/play/map-ui.js`) can go.
