@@ -9,13 +9,13 @@ const D = JSON.parse(readFileSync(new URL('../../../game/cine/jury-data.json', i
 const S = D.shard;
 const FRAME = [{ kind: 'vignette', amount: 0.42 }];
 // The capture-only look (lead 09.11): dusk, a cool grey-green mood tint; the game's defaults are untouched.
-const LOOK = { do: 'look', preset: 'dusk', atm: { elevation: 7, azimuth: 48, sunIntensity: 2.6, skyMean: 0.14, exposure: 0.35, cloudCover: 0.75, warmth: 0.75, envIntensity: 0.18, fog: { density: 0.028, falloff: 0.12, sunPower: 4, aerial: 0.55 } }, tint: '#4f625e', amount: 0.32, lanterns: 0.6 };
+const LOOK = { do: 'look', preset: 'dusk', atm: { elevation: 7, azimuth: 48, sunIntensity: 2.6, skyMean: 0.14, exposure: 0.35, cloudCover: 0.75, warmth: 0.75, envIntensity: 0.18, fog: { density: 0.028, falloff: 0.12, sunPower: 4, aerial: 0.55 } }, tint: '#4f625e', amount: 0.32, lanterns: 0.6, clampHdr: 64 };
 const cue = (at, name, gain = 0.8) => ({ at, do: 'cue', name, gain });
 const music = (at, tension, gain) => ({ at, do: 'music', tension, ...(gain != null ? { gain } : {}) });
 const head = (camp) => [CAMP[camp][0], 1.6, CAMP[camp][2]];
 // The shard on its pedestal at the Iris plateau (scenes/layout.js SHARD: ring 26.8 m at 277°, pedestal top 1.0 m).
 const SHARD_AT = [26.8 * Math.cos(277 * Math.PI / 180), 1.2, 26.8 * Math.sin(277 * Math.PI / 180)];
-const IN = [Math.cos(118 * Math.PI / 180), Math.sin(118 * Math.PI / 180)]; // from the shard toward the plaza, turned so the lantern leaves the frame
+const IN = [Math.cos(126 * Math.PI / 180), Math.sin(126 * Math.PI / 180)]; // from the shard toward the plaza, turned so the lantern leaves the frame
 const SHELL2 = [SHELL[2][0], SHELL[2][1] + 9, SHELL[2][2]];
 const ACCENT = { iris: '#b49be6', salt: '#d9dcd6', ash: '#bdb6ad', moss: '#9cba7c', amber: '#e6a84a', frost: '#a9c6d4' };
 // A sweep inside the camp ring (radius 21 m: 9 m from the camps) from one angle to another, looking out at the camps.
@@ -76,7 +76,7 @@ export default {
     },
     { // 9–12 · macro on the physical shard: it cracks, two future signs rise out of it
       name: 'shard-macro', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
-      camera: { type: 'push', from: [SHARD_AT[0] + IN[0] * 2.6, 1.32, SHARD_AT[2] + IN[1] * 2.6], look: [SHARD_AT[0], 1.26, SHARD_AT[2]], dist1: 1.35, fov: [15, 10], ease: 'inOutSine', minHeight: 0.5 },
+      camera: { type: 'push', from: [SHARD_AT[0] + IN[0] * 2.6, 1.38, SHARD_AT[2] + IN[1] * 2.6], look: [SHARD_AT[0], 1.3, SHARD_AT[2]], dist1: 1.35, fov: [15, 10], ease: 'inOutSine', minHeight: 0.5 },
       actions: [{ at: 0, do: 'dof', world: SHARD_AT, aperture: 0.006, maxblur: 0.014 }, music(0, 36), cue(1.4, 'memory_dissolve', 0.9), cue(2.0, 'vision_whoosh', 0.7)],
       overlays: [...FRAME],
       layers: [
@@ -90,7 +90,7 @@ export default {
     },
     { // 12–15 · the token assembles out of the shard; the season seal closes around it
       name: 'token', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
-      camera: { type: 'orbit', center: SHARD_AT, radius: [1.05, 1.2], height: [1.62, 1.78], yawFrom: 118, yawTo: 132, look: lookBeside(SHARD_AT, 0.42), fov: [30, 32], ease: 'inOutSine', minHeight: 0.5 },
+      camera: { type: 'orbit', center: SHARD_AT, radius: [1.05, 1.2], height: [1.62, 1.78], yawFrom: 126, yawTo: 138, look: lookBeside(SHARD_AT, 0.42), fov: [30, 32], ease: 'inOutSine', minHeight: 0.5 },
       actions: [{ at: 0, do: 'dof', world: SHARD_AT, aperture: 0.005, maxblur: 0.012 }, cue(1.1, 'ui_confirm', 0.6), cue(2.0, 'gift_chime', 0.5)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 3.5, fadeIn: 0, fadeOut: 0, amount: 0.28 }],
       layers: [

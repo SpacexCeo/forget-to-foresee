@@ -9,6 +9,11 @@ import { compileCamera } from './camera.js';
 import { createLayers } from './layers.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { TIME_PRESETS } from '../render/sky.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+
+/** HDR guard for the capture: clamps the scene's linear colour and zeroes NaN/Inf before bloom and bokeh. A single Inf
+ *  sample (a low sun's disc) otherwise spreads through the bloom mip chain into solid black squares. */
+const HDR_GUARD = { uniforms: { tDiffuse: { value: null }, maxValue: { value: 64 } }, vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: 'uniform sampler2D tDiffuse; uniform float maxValue; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 r = c.rgb; if (any(isnan(r)) || any(isinf(r))) r = vec3(0.0); gl_FragColor = vec4(clamp(r, 0.0, maxValue), c.a); }' };
 import { createOverlay } from './overlay.js';
 
 const KEYUP_DELAY_FRAMES = 2;
@@ -342,6 +347,7 @@ export class ShotRunner {
         if (a.atm) { const base = TIME_PRESETS[ld.preset]; ld.applyAtmosphere({ ...base, ...a.atm, fog: { ...base.fog, ...(a.atm.fog || {}) } }); }
         if (a.tint) ld.sky.tint(a.tint, a.amount ?? 0.3);
         if (a.lanterns != null) ld.lanternScale = a.lanterns; // lantern light spill (capture only)
+        if (a.clampHdr && ld.post && ld.post.composer && !this.hdrGuard) { this.hdrGuard = new ShaderPass(HDR_GUARD); this.hdrGuard.uniforms.maxValue.value = a.clampHdr; ld.post.composer.insertPass(this.hdrGuard, 1); }
         break;
       }
       // Capture-only depth of field: a bokeh pass after the scene render, focused every frame on a world point.
@@ -350,7 +356,7 @@ export class ShotRunner {
         if (!post || !post.composer) break; // low tier / no post stack: no DOF (CPU drafts)
         if (this.dof) post.composer.removePass(this.dof.pass);
         const pass = new BokehPass(post.scene || g.scene, g.rig.camera, { focus: 3, aperture: a.aperture ?? 0.004, maxblur: a.maxblur ?? 0.012 });
-        post.composer.insertPass(pass, 1);
+        post.composer.insertPass(pass, this.hdrGuard ? 2 : 1); // after the HDR guard
         this.dof = { pass, world: a.world };
         break;
       }
@@ -402,7 +408,21 @@ export class ShotRunner {
     // Where the black region is (grid cells, for the probe): the bounding box of black cells.
     let bx0 = cols, by0 = rows, bx1 = -1, by1 = -1;
     for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) if (grid[j * cols + i] < 8) { bx0 = Math.min(bx0, i); by0 = Math.min(by0, j); bx1 = Math.max(bx1, i); by1 = Math.max(by1, j); }
-    const stats = { mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, edges: { top, bottom, left, right }, blackBox: bx1 < 0 ? null : [bx0, by0, bx1, by1], width: w, height: h, lost: gl.isContextLost() };
+    // Interior black blocks (the bloom NaN artifact): connected near-black cells that fill their bounding box (a
+    // rectangle, not a shadow's shape) in a lit frame. The largest one's share of the frame.
+    let blackBlock = 0;
+    if (sum / (cols * rows) > 30) {
+      const seen = new Uint8Array(cols * rows);
+      for (let k = 0; k < cols * rows; k++) {
+        if (seen[k] || grid[k] >= 3) continue; // pure black only: the artifact is 0, a dusk shadow is not
+        const stack = [k]; seen[k] = 1; let n = 0, x0 = cols, y0 = rows, x1 = -1, y1 = -1;
+        while (stack.length) { const c = stack.pop(), ci = c % cols, cj = (c / cols) | 0; n++; x0 = Math.min(x0, ci); x1 = Math.max(x1, ci); y0 = Math.min(y0, cj); y1 = Math.max(y1, cj);
+          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue; const q = nj * cols + ni; if (!seen[q] && grid[q] < 3) { seen[q] = 1; stack.push(q); } } }
+        const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+        if (n >= 9 && n / area >= 0.9) blackBlock = Math.max(blackBlock, n / (cols * rows));
+      }
+    }
+    const stats = { blackBlock, mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, edges: { top, bottom, left, right }, blackBox: bx1 < 0 ? null : [bx0, by0, bx1, by1], width: w, height: h, lost: gl.isContextLost() };
     const png = noPng ? null : canvas.toDataURL('image/png');
     return { png, stats };
   }

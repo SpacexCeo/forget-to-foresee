@@ -145,7 +145,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
       let r = await stepGrab();
       // An intermittent bad grab (seen once on the RTX 4090 / ANGLE Vulkan: a 46% black edge that a probe of the same frames
       // never reproduced) is read again from a fresh render of the same frame; only a frame that stays bad fails the shot.
-      const bad = (x) => x && x.stats && ((x.stats.edgeBlack > 0.3 && x.stats.mean > 30) || (prevMean != null && Math.abs(x.stats.mean - prevMean) > 24));
+      const bad = (x) => x && x.stats && ((x.stats.blackBlock || 0) > 0.01 || (x.stats.edgeBlack > 0.3 && x.stats.mean > 30) || (prevMean != null && Math.abs(x.stats.mean - prevMean) > 24));
       for (let k = 0; k < 3 && !probe && (bad(r) || (process.env.FTF_TEST_RETRY && i === 0 && k === 0)); k++) {
         check.retries = (check.retries || 0) + 1;
         const tag = `${shot.name}-f${String(i).padStart(5, '0')}-retry${k}`;
@@ -168,6 +168,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
         log(`[${shot.name}] probe f${i}: grab edge ${(st.edgeBlack * 100).toFixed(0)}% box ${JSON.stringify(st.blackBox)} · ` + pr.variants.map((v) => `${v.name} ${v.stats ? (v.stats.edgeBlack * 100).toFixed(0) + '%' : v.error}`).join(' · '));
       }
       if (probe) { /* diagnosis: no failing checks */ } else
+      if ((st.blackBlock || 0) > 0.01) throw new Error(`black block (${(st.blackBlock * 100).toFixed(1)}% of the frame, a solid rectangle in a lit frame) in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i})`);
       if (st.edgeBlack > 0.3 && st.mean > 30) throw new Error(`black edge region (${(st.edgeBlack * 100).toFixed(0)}% of the frame) in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i})`);
       if (prevMean != null) { const d = Math.abs(st.mean - prevMean); if (d > check.maxJump) check.maxJump = d; if (d > 24) check.jumps++; }
       prevMean = st.mean; check.minMean = Math.min(check.minMean, st.mean); check.maxMean = Math.max(check.maxMean, st.mean); check.maxEdgeBlack = Math.max(check.maxEdgeBlack, st.edgeBlack);
