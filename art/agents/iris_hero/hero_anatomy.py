@@ -28,8 +28,8 @@ import os
 
 # Peak displacement along the normal, metres at a 1.70 m body; IRIS_ANAT='{"gmax": 0.02}' overrides any of them.
 AMOUNT = {
-    "gmax": 0.075,
-    "gmed": 0.003,        # subtle: the reference's pelvis is narrow above the trochanter
+    "gmax": 0.084,      # owner 09.11 (v13): a rounder, fuller athletic seat, as in the reference
+    "gmed": 0.005,        # subtle: the reference's pelvis is narrow above the trochanter
     "quad": 0.008,
     "ham": 0.008,
     "add": 0.006,

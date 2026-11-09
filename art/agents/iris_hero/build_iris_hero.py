@@ -820,11 +820,17 @@ def athletic_costume(bm, P, dom, bones):
         thigh = 0.62 < p.z < 0.98 and outer > 0.80 and abs(nrm.y + 0.25) < 0.10
         shin = 0.22 < p.z < 0.42 and outer > 0.55 and abs(nrm.y + 0.45 - (p.z - 0.22) * 0.8) < 0.08
         return 1.0 if thigh or shin else 0.0
+    # owner 09.11 (v13): the top edge is one level, unbroken line. The body dips into the gluteal cleft at the
+    # sacrum, so the edge is bridged straight across the back there (the fabric spans the cleft at the waist).
+    back_y = max((p.y for p in (co.values() if hasattr(co, "values") else co) if 1.00 < p.z < 1.04 and 0.040 < abs(p.x) < 0.065 and p.y > c.y), default=c.y)
     def leg_edges(v):
         if v.co.z < 0.6:
             v.co.z = 0.12
         else:                                                 # a level top edge, hidden in the waistband
             v.co.z = 1.020
+            if v.co.y > c.y and abs(v.co.x) < 0.045:
+                w = 1.0 - (abs(v.co.x) / 0.045) ** 2          # flat across the cleft, blending into the cheeks
+                v.co.y = max(v.co.y, back_y * w + v.co.y * (1 - w))
     # compression fabric unifies the forms: the crotch and a restrained glute cleft are bridged
     crotch = lambda p: ((abs(p.x) < 0.07 and 0.70 < p.z < 0.88 and p.y < c.y + 0.02)   # the front crotch; the back follows the cleft,
                         or (abs(p.x) < 0.03 and p.y > c.y and 0.935 < p.z < 1.0))     # except its deep top (no dark pit)
@@ -833,25 +839,9 @@ def athletic_costume(bm, P, dom, bones):
                                         accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12))
     # (owner 09.11: one layer, pressed into the cleft between the cheeks: no bridge, no separate waistband)
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
-    # piping, the centre back seam and the sleeve stripes as clean lines on the fabric (owner's reference 09.11)
+    # owner 09.11 (v13): the leggings are seamless, nothing drawn on them: no piping, no stripes, no seam.
+    # The fabric follows the body alone. The violet stripes stay on the jacket sleeves only (the reference).
     sm = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(max(0.0, min(1.0, (x - a) / (b - a))))
-    leg = out["leggings"]
-    for sx, side in (("L", 1), ("R", -1)):
-        hip, knee = bones[f"thigh_{sx}"][0], bones[f"shin_{sx}"][0]
-        def pipe_ray(t, side=side, hip=hip, knee=knee):
-            # one continuous path: rays from an axis that moves from the pelvis centre to the thigh's axis,
-            # turning from near the centre back (18 deg) round the cheek to the outside of the leg (92 deg)
-            z = 0.985 - (0.985 - 0.30) * t
-            f = (hip.z - z) / max(hip.z - knee.z, 1e-3)
-            lc = hip.lerp(knee, max(0.0, min(1.3, f)))
-            k = sm(0.93, 0.82, z)
-            cen = V((lc.x * k, c.y * (1 - k) + lc.y * k, z))
-            phi = math.radians(18 + 44 * sm(0.985, 0.86, z) + 30 * sm(0.86, 0.50, z))
-            d = V((side * math.sin(phi), math.cos(phi), 0))
-            return cen + d * 0.4, -d
-        o = C.surface_line(f"leggings_piping_{sx}", leg, pipe_ray, 180, 0.0028, lift=0.0012)
-        if o:
-            out[o.name] = o
     jk = out.get("jacket")
     if jk:
         for sx, side in (("L", 1), ("R", -1)):
