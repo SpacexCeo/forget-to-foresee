@@ -1,5 +1,7 @@
 # Handoff: wrap-up on 09.11.2026, ~11:00 UTC (13:00 Kyiv), lead session
 
+**09.11 ~11:00 UTC, resumed (owner):** "wait for the new Iris, then make the final video and the text". The GPU art session finishes the athletic Iris (close-up hair, deformation, cuffs, knit, desktop + phone check, owner review) → the lead merges → J3 adds Iris shots, runs ONE plates round with the HDR guard (routed by the lead to the 4090), composites, delivers A–F → owner approval → full 60 s → final X thread and submission (texts in `docs/submission/`).
+
 **Start here.** All work was stopped and merged on the owner's order. `main` = PR #15 (`85dbc02`), live on Pages;
 508 game tests, 28 server tests. Every worker branch is merged (except the old MP4s, see below). Worker reports:
 `docs/handoff/agent-reports/` (`jury-video.md`, `gpu-art-session.md`, `shard-nft-hud.md`, `near-live.md`, ...).

@@ -102,7 +102,7 @@ Colour is never the only tell: the existing glyphs on tells, the pattern on crit
   consumed, so it does not also open the controls); Enter/P/Escape in Simple mode as above. Focus moves into a sheet when
   it opens and back to the opener (or the ? button) when it closes.
 - Gamepad: menus and the play panels are navigable through `navigateGamepadMenu` (main.js); the recap and the Simple card
-  need the one-line hook in `docs/collab-requests.md` §12 (lead) to join that routing.
+  need the one-line hook in `docs/collab-requests.md` §23 (lead) to join that routing.
 
 ## 5. "What is happening?"
 
@@ -122,7 +122,7 @@ sheet also speaks itself when narration is on), and it re-renders live when the 
 Every animation in the layer is eased and short (`--ftf-dur-fast` 120 ms, `--ftf-dur` 240 ms, `--ftf-dur-slow` 400 ms;
 entrance rise and fade, scrim fade, hover lift, the ? button's two-pulse hello) and obeys the single switch
 `<html data-motion="reduce">` set by Settings → Motion (page-wide rules in `a11y.css`, `styles.css`, `tokens.css`).
-JS reads `prefs.reducedMotion()` or `reducedMotion()` from `a11y.js`. Announced to all tasks in `docs/collab-requests.md` §10.
+JS reads `prefs.reducedMotion()` or `reducedMotion()` from `a11y.js`. Announced to all tasks in `docs/collab-requests.md` §21.
 
 ## 7. Settings persistence
 
@@ -141,7 +141,16 @@ the new strings.
 Headless Chromium (SwiftShader, `element.click()` through `page.evaluate`, fixed seed `cc161d…`, Simple mode, five
 locales × 1280×800 / 1920×1080 / 390×844 × 100 % and 200 %), screenshots in `docs/accessibility/`:
 
-_Chromium results pending: the five-locale run is in progress; this section is filled in the next commit._
+| Check | Result |
+|---|---|
+| Frames | 38 screenshots (five locales; en at 1280×800, 1920×1080 and 390×844 at 100 % and 200 %; uk/ru/it/zh at 1280×800 and 390×844 at 200 %): the Simple card, the recap sheet, the in-world Settings scrolled to Accessibility; plus three high-contrast + readable font + safe palette frames (en desktop 100 %, en phone 150 %, zh desktop 125 %) |
+| Console | zero page errors; zero errors or warnings from the layer. Present in the log: Chromium's SwiftShader `GPU stall due to ReadPixels` performance warnings (every run, not ours) and one `404 (File not found)` on the uk and ru loads (a resource outside this layer; the page runs on; to be traced by its owner) |
+| Full season in Simple mode at 200 %, each locale | en / uk / ru / it / zh all reach `phase: end` (`outcome: weapon` for the fixed seed): 20 proposals confirmed per season (10 stakes, 6 decision cards, 3 passes, 1 Key card), 5 stakes placed, **0 refused commands**, 119–129 s each with the hub's 1.4 s reveal pauses |
+| Target sizes | every button of the layer ≥ 44 × 44 px at 100 % (the card's ? and Pause 44 px, the main buttons 48 px, the ? button 52 px); the Accessibility section's checkboxes and selects were 40 px (the shared form styles) and are now 44 px |
+| High contrast + readable font | `<html>` carries `high/readable/safe`; the recap, the hub card and the world HUD all compute `"Atkinson Hyperlegible"` as the font family, `document.fonts.check` is true, the sheet background is `rgb(0, 0, 0)` with `rgb(250, 247, 238)` text |
+| QA-020 | the in-world controls dialog carries the full Settings form (language, motion, subtitles, interface mode Simple / Novice / Pro, size, quality, accessibility); switching the language or the mode mid-season keeps the season (same tick and version), verified in the targeted re-shoot |
+
+Frames in `docs/accessibility/` (JPEG): the Simple card and recap at 100 % and 200 % on desktop and phone, the 1920 frame, uk/ru/it/zh samples, the in-world Settings, high contrast.
 
 ## 9. WCAG 2.2 AA map (what is covered, what is not)
 
@@ -153,7 +162,7 @@ _Chromium results pending: the five-locale run is in progress; this section is f
 | 1.4.12 Text spacing | readable font option widens spacing; no clipping observed in the layer's surfaces |
 | 2.1.1 Keyboard | the layer: yes; the rest of the play UI: yes through existing bindings |
 | 2.2.1 Timing adjustable | Simple mode: Pause stops automatic trials; no other timers decide anything |
-| 2.5.8 Target size (minimum 24 px) | the layer ≥ 48 px; findings for the hub and HUD in `docs/collab-requests.md` §11 |
+| 2.5.8 Target size (minimum 24 px) | the layer ≥ 48 px; findings for the hub and HUD in `docs/collab-requests.md` §22 |
 | 2.5.1 Pointer gestures / 2.5.2 Cancellation | single-pointer everywhere; hold-to-confirm cancels on release |
 | 2.4.3 Focus order / 2.4.7 Focus visible | focus into and back out of sheets; 3 px gold ring (white halo in high contrast) |
 | 3.1.1 Language of page | `<html lang>` follows the UI locale (existing) |

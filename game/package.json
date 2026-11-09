@@ -14,7 +14,8 @@
     "vectors": "node scripts/gen-contract-vectors.mjs",
     "shard-vectors": "node scripts/gen-shard-vectors.mjs",
     "wh:compare": "node scripts/wh-compare.mjs",
-    "hud:overlap": "node scripts/hud-overlap.mjs"
+    "hud:overlap": "node scripts/hud-overlap.mjs",
+    "e2e": "node --test --test-concurrency=2 tests/e2e/*.e2e.mjs"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
