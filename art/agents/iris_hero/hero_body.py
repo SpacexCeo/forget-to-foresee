@@ -195,7 +195,7 @@ def inner_fill(cos, doms, s=None, step=0.02, z_full=0.43, z_none=0.30):
 # (fractions of H): lower back -0.005 at 0.63, seat peak +0.029 at 0.51, fold +0.013 at 0.455.
 SEAT = {
     "z_anchor": 0.360, "z_fold": 0.455, "z_peak": 0.510, "z_lumbar": 0.630,
-    "fold": 0.010, "peak": 0.040, "lumbar": -0.006,   # peak and fold: a little fuller and crisper than measured (owner: keep the roundness)
+    "fold": 0.010, "peak": 0.052, "lumbar": -0.006,   # owner 09.11: "as in the reference" (its close-ups read fuller than the full-body view)
     "round": 0.62,       # arc exponent: 0.5 = an ellipse, higher = fuller shoulders on the arc
     "fade": 0.05,        # above the lumbar point and below the fold the change fades out over this height
     # each cheek is its own convex dome (owner 09.11: "no squareness, firm and convex"): the push is the
@@ -262,7 +262,7 @@ def seat_profile(cos, doms, s=None, step=0.01):
         if dl == 0.0:
             res.append((0.0, 0.0, 0.0))
             continue
-        dl = max(-0.025 * k, min(0.035 * k, dl)) * s
+        dl = max(-0.025 * k, min(0.050 * k, dl)) * s
         cx, cy, hx, hy = st[(r, int(zn / 0.02))]
         back = smoothstep(0.0, 0.85, (y - cy) / hy)               # only the back surface
         if dl > 0.0 and zn < zl:                                   # added volume: a dome per cheek (never a flat slab)
@@ -276,7 +276,7 @@ def seat_profile(cos, doms, s=None, step=0.01):
 CHEEK = {
     "z": 0.522,          # dome centre height, fraction of H
     "x": 0.060,          # dome centre from the midline, metres at 1.70 m
-    "rx": 0.074, "ry": 0.080, "rz": 0.092,   # dome radii (across, depth, height), metres at 1.70 m
+    "rx": 0.080, "ry": 0.088, "rz": 0.096,   # dome radii (across, depth, height), metres at 1.70 m
     "inflate": 0.75,     # inside the dome: how far a vertex moves to the dome surface (1 = all the way)
     "trim": 0.55,        # just outside, below the centre: how far it is pulled in (rounds the lower-outer corner)
     "trim_r": 1.35,      # ... up to this dome radius
