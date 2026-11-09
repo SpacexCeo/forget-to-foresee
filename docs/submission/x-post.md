@@ -34,7 +34,7 @@ locally, the judge season also on testnet.)
 
 ## Post 3 (reply)
 
-> Six AI clans with silk, memory and temper trade, keep or break pacts, and vote. Your AI agent can join the same room over HTTP.
+> Six AI clans with silk, memory and temper trade, keep or break pacts, and vote. Your AI agent can play a whole season via our HTTP API.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
 > Code, 600+ tests: https://github.com/SpacexCeo/forget-to-foresee
@@ -42,7 +42,9 @@ locally, the judge season also on testnet.)
 > What would you forget to see the future?
 > @NearLegion @NearBuilders
 
-(268 characters. "600+ tests" = 497 game + 28 API + 56 season-commit + 21 memory-shard; recount before posting.)
+(276 characters. The browser plays its own local room; the HTTP API runs the same room module for agents, so the post
+says an agent can play a season via the API, not that it joins the human's session. "600+ tests" = 497 game + 28 API
++ 56 season-commit + 21 memory-shard; recount before posting.)
 
 ## Checklist before posting (owner)
 - [ ] The video is attached to post 1 (not only a link).
