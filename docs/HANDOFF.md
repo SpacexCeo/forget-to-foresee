@@ -1,4 +1,114 @@
-# Handoff: state on 09.11.2026, 07:10 Kyiv (lead session)
+# Handoff: live state on 09.11.2026, ~10:00 UTC (12:00 Kyiv), lead session
+
+Read this section first if a session, the usage limit or the container ended. Everything below "History" is older.
+
+## 1. Where things are
+
+- **`main`** = PR #12 (`e85f075`), live on GitHub Pages: https://spacexceo.github.io/forget-to-foresee/ . 498 game
+  tests, 28 server tests, contracts CI green. Judge path: `?demo=judge&mode=walk` (fixed seed
+  `cc161d308faa67539af44205b56b6d4f`); films skipped there unless `&films=full|cheap`.
+- **Integration branch (lead):** `claude/loving-curie-ihasft`, same content as `main` plus docs-only commits. Merge
+  flow: worker branch → integration (tests + build + headless check) → PR to `main` → merge. The owner approved
+  merging to `main` for this phase ("добро", 09.11 morning); keep doing it per finished, verified piece.
+- **Credit:** the game is by **Lambada_eth** (X: @Lambada_eth) everywhere (owner, 09.11). External/business texts are
+  always English. Talk to the owner in Russian.
+- **Fable is exhausted until ~12.11.** All workers run on `claude-opus-5-5` (owner: Opus 5.5, medium effort).
+
+## 2. NEAR (done, live on testnet)
+
+- `ftf-seasons.testnet` (season-commit): judge season `793f6c05e89839f2` committed, 15/15 leaves revealed and verified
+  on-chain, Ash key committed (not revealed). `ftf-shards.testnet` (memory-shard, NEP-171): 3 judge shards minted.
+  Every tx hash: `docs/near.md`, `contracts/deployments/`, `game/src/net/near-deployment.js`.
+- In the game: "Verified on NEAR testnet ✓" under a revealed sign in the judge path, linked to the reveal tx.
+- **Control handed to the owner:** the 3 shards are owned by `lambada_eth.testnet`; that account is a coordinator on
+  both contracts; its public key `ed25519:7w8hrbbdxUFhxShfGBT4rP6k8W7j4Q1TTD6rP6ky5LTE` is a full-access key on
+  `ftf-coordinator`, `ftf-seasons`, `ftf-shards` (.testnet). The owner also holds the original keys (delivered
+  privately by worker M). No key is in the repo. Contract `owner_id` stays `ftf-coordinator.testnet` (no transfer
+  method).
+
+## 3. Submission (waiting for the owner)
+
+- Rules re-checked against https://nearhackathon.com/HACKATHON.md on 09.11 (unchanged). Deadline 15.11 01:59 Kyiv
+  (14.11 23:59 UTC); our freeze 13.11 20:00 Kyiv.
+- Texts: `docs/submission/x-post.md` (3-post thread, each ≤ 280; credit @Lambada_eth; agents and NFT shards up
+  front; no claim that an agent joins the human's session) and `docs/submission/apply-form.md` (idea 1,979 chars,
+  tracks `games` + `nfts`).
+- Owner values given in chat (not committed, personal data): leadName **Vladislav** (Latin script), size **1**,
+  nearAddress **lambadaa.near** (exists on mainnet), email: the owner's (ask again if this session is lost).
+  `requestId` was generated in the lead's scratchpad but **nothing was sent**; a new agent may generate a fresh one.
+- Still needed from the owner: (1) approve the jury video; (2) publish the X thread with it and send the post URL;
+  (3) the consent sentence; (4) an explicit "yes" to send. **Send once**, only after printing the full payload.
+  Then the `hackathon-submission` tag at freeze (`docs/submission/owner-steps.md`).
+
+## 4. Active work
+
+| Who | Session | Branch | Doing |
+|---|---|---|---|
+| J3, jury video | `session_01QfMhgE18GEabs5bp2KW1we` | `claude/jury-video` | the 60 s jury video; now the 18.5 s cinematic test |
+| GPU art session ("Завершение работы", owner's desktop session, Opus) | `session_01QfMhgDiqET9W6zwun44weJ` | `claude/iris-hero`, `claude/jury-plates` | runs GPU jobs on the RTX 4090; Iris rebuilds |
+| R2, juror | `session_01QfMhgDAKdSL1ErtGNuQjaQ` | `claude/jury` | scorecards from 15:00 UTC 09.11 (schedules trig_01W1fqnBUpajNw2RddU5YpMn :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45) |
+| M, NEAR | `session_01QfMhgExsbgGFqMUCWf9EVh` | `claude/near-live` | done; holds the original testnet keys in its container |
+
+**Jury video (J3).** Owner's direction (verbatim in J3's session and summarised in `docs/submission/jury-video.md`):
+a cinematic trailer, not an infographic. Storytelling hierarchy: the world creates emotion, the agents create conflict,
+the memory creates mystery, the blockchain provides proof. Two pillars: the AGENTS and the MEMORY SHARD NFT. First an
+18.5 s test (0–3 fly-in + "I · The Agents", 3–6 the six clans, 6–9 three real events: Frost wins Iris's shard for
+13 silk, Salt says "It is a weapon", Ash cheats Amber of 16 silk; 9–12 the physical `shard.glb` cracks and shows two
+future signs; 12–15 the real contract SVG assembles + season seal; 15–18.5 the dotted "same" link to leaf #3 on
+`ftf-seasons.testnet`), deliverables A–F (test, clean plates, UI components, transition spec, authenticity list,
+mobile readability) for owner approval, then the full minute. End card "Made by @Lambada_eth".
+Truth rules: only the judge season is on-chain; shards are minted by the coordinator script; silk is in-game, no
+token; the browser runs its own local room (the HTTP API runs the same room module); v3 vote payouts are +60 gift /
++30 survived / weapon zeroes silk / lost pays nothing; every clan starts at 60 silk (the HUD showed Iris 63 at
+trial 1: J3 checks why, cards show no starting numbers).
+Owner look references (AI frames, reference only, never presented as gameplay): branch `claude/jury-video-ref`,
+`docs/submission/jury-video-ref/` (README describes 13 frames and layers; 5 frames and 5 layers are files).
+Pipeline: GPU plates (`tools/capture/gpu-job.sh <commit> <out> jury-test`, `FTF_FORMAT=3840x2160@30 FTF_NO_LAYERS=1`)
+on the 4090 → 1080p proxies, stills, camera json and job.log pushed to `claude/jury-plates`
+(`docs/media/plates/jury-test-<commit>/`); 4K masters (100–230 MB each) stay server-only (inventory) → J3 builds
+the overlay layers on CPU (`game/src/cinematic/layers.js`, layers pass) → the 4K composite runs on the server by one
+command J3 sends. Plates rounds: 44ed2fd and 5b64ae9 delivered; **962c906 (overcast dusk look, fly-in out of the
+cloud, BokehPass DOF on the shard) is rendering now**. Lead's open notes to J3: text unreadable on bright fog (fixed
+by the dusk look), event lines in the serif, shard clutter and lantern blow-out, faint "Iris · Memory" rail.
+**Routing rule:** J3 never talks to the GPU directly; the lead forwards its commands to the art session, J3's jobs
+before Iris builds.
+
+**Iris.** The stylized-realism hero (MPFB base, 49k tris, 61 bones, 23 face morphs, groomed hair cards) is in `main`
+(PR #10). PR #11: models load as `<name>.glb?v=<bytes>` (the owner's phone had cached the old Iris). PR #12: hair
+cards use alphaTest 0.3 + alpha-to-coverage. Owner: the reddish hair is fine, do not darken. **Now (owner's direct
+order in the art session):** Iris re-dressed in athletic sportswear (open graphite zip jacket, black sports top,
+paneled leggings, violet piping, athletic body) on the same rig; merge after an in-game check on desktop and phone.
+
+## 5. Competitive note (juror, 09.11)
+
+"Ashes of the Ninth Heaven" (games track) has testnet contracts (NEP-245 items, NEP-171 deeds), a one-click /judge
+page that sends real transactions, 221 + 62 tests. Our differentiators: the season sealed before the first move and
+memory as the price of prophecy. Juror notes: `docs/jury/notes/competitor-field.md` on `claude/jury`.
+
+## 6. Open items (priority)
+
+1. Jury video: approve the look on deliverables A–F, then the full minute, then the X post.
+2. Submission (section 3) and the `hackathon-submission` tag at freeze.
+3. Juror scorecards from 15:00 UTC: turn the top item of each into a worker task (Opus 5.5).
+4. Sportswear Iris: merge after checks; re-render any video shot that shows Iris.
+5. Owner-side: change the Clore Jupyter passwords (pasted in chat earlier); keep the site and repo public until 25.11.
+6. Known gaps: no HUD element shows shard NFTs; live seasons are not registered on-chain; uk/it/zh need a native
+   proofread; real-phone feel test; QA-014, 015, 023–026.
+
+## 7. Servers
+
+Clore order 2419013 = owner's RTX 4090 (ANGLE Vulkan; gl-egl loses context), stays up, reachable only from the GPU
+art session. Never touch order 2419123. Extra rentals capped at 4 USD (0.44 spent). Nothing server-only is lost:
+inventory in `docs/art/server-inventory.md` (on `claude/jury-plates` for the plates); never stop a server holding a
+server-only item the owner has not downloaded.
+
+## 8. Lead's scratchpad tools (recreate if lost)
+
+`union.py` (doc conflicts: keep both sides), `readme_count.py N` (README test counts by regex), headless checks
+(`irischeck.cjs`: judge walk loads `agent_iris.glb`, no console errors; `tapfilm.cjs`: chapter films tap-through on
+iPhone 13; `check.cjs`/`race.cjs`/`onb*.cjs`). Pattern: `npm run build`, `npx vite preview --port 5199`, Playwright.
+
+# History
 
 **09.11 07:35 UTC:** the owner wants ONE 60 s jury video (English, readable, credit "Made by Lambada_eth") with the new Iris and current Guests, mechanics, agents + HTTP API, tense season, rewards, NFT, and an animated backend data-flow diagram. Worker J3 `session_01QfMhgE18GEabs5bp2KW1we` (`claude/jury-video`); storyboard first in `docs/submission/jury-video.md`; GPU jobs are routed through the lead to the GPU art session. The X post waits for this video. Iris hero target: in game by 11.11 12:00 Kyiv.
 
