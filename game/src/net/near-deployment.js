@@ -6,8 +6,8 @@ export const NEAR_DEPLOYMENT = {
   network: "testnet",
   contractId: "ftf-seasons.testnet",
   rpcUrls: [
-    "https://rpc.testnet.near.org",
-    "https://test.rpc.fastnear.com"
+    "https://test.rpc.fastnear.com",
+    "https://rpc.testnet.near.org"
   ],
   explorer: "https://testnet.nearblocks.io",
   seasons: {

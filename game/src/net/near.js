@@ -11,7 +11,8 @@
 // No DOM here: the world HUD renders the badge model this module computes (docs/collab-requests.md, Task F).
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 
-export const NEAR_TESTNET_RPC = ['https://rpc.testnet.near.org', 'https://test.rpc.fastnear.com'];
+// fastnear first: rpc.testnet.near.org refuses browser requests (CORS) from most origins, which only cluttered the console
+export const NEAR_TESTNET_RPC = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
 
 const b64 = (s) => (typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'utf8').toString('base64'));
 const utf8 = (bytes) => new TextDecoder().decode(Uint8Array.from(bytes));

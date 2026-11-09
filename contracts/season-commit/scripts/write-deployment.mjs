@@ -34,7 +34,7 @@ for (const r of records.filter((x) => x.contractId === contractId)) {
 const deployment = {
   network: 'testnet',
   contractId,
-  rpcUrls: opt('--rpc', 'https://rpc.testnet.near.org,https://test.rpc.fastnear.com').split(','),
+  rpcUrls: opt('--rpc', 'https://test.rpc.fastnear.com,https://rpc.testnet.near.org').split(','),
   explorer: opt('--explorer', 'https://testnet.nearblocks.io'),
   seasons,
   shardContractId,
