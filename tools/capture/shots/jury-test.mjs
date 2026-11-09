@@ -34,7 +34,7 @@ export default {
   width: 1920, height: 1080, fps: 60,
   reading: { maxWps: 3, minHold: 1.5 },
   music: { gain: 1.0, fadeOut: 1.0 },
-  output: { crf: 16, preset: 'slow', grain: 0 },
+  output: { crf: 18, preset: 'slow', grain: 0 }, // a 4K30 master of 18.5 s stays under GitHub's 100 MB
   shots: [
     { // 0–3 · up out of the cloud sea; the archipelago opens; the chapter title emerges from the haze
       name: 'fly-in', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,

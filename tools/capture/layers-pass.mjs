@@ -19,7 +19,13 @@ const pw = () => { for (const p of [process.env.PLAYWRIGHT_PATH, 'playwright'].f
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
 const [name, platesDir, outDir] = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
-const base = opt('base', 'http://localhost:5173');
+let base = opt('base', null), devServer = null;
+if (!base) { // no running dev server given: start one (the layers page is a dev-server page, not a build input)
+  const port = Number(process.env.FTF_LAYERS_PORT || 5181);
+  devServer = spawn('npx', ['vite', '--port', String(port), '--strictPort', '--clearScreen', 'false'], { cwd: join(HERE, '../../game'), stdio: ['ignore', 'pipe', 'pipe'] });
+  await new Promise((r, j) => { const tm = setTimeout(() => j(new Error('vite did not start')), 60_000); devServer.stdout.on('data', (d) => { if (String(d).includes('Local:')) { clearTimeout(tm); r(); } }); });
+  base = `http://localhost:${port}`;
+}
 const video = (await import('file://' + join(HERE, 'shots', name + '.mjs'))).default;
 mkdirSync(outDir, { recursive: true });
 
@@ -59,5 +65,5 @@ try {
     console.log(`[${shot.name}] layers composited: ${res.frames} frames, luma ${JSON.stringify(luma)}`);
     if (!luma.ok) throw new Error(`[${shot.name}] luma check failed after the layers pass`);
   }
-} finally { await browser.close(); }
+} finally { await browser.close(); if (devServer) devServer.kill(); }
 console.log(`layers pass done: ${resolve(outDir)}. Next: node tools/capture/capture.mjs ${name} --resume --work <parent of ${outDir}> (the folder name must be ${name}-WxH-tier)`);
