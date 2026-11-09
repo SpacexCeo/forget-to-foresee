@@ -3,7 +3,7 @@
 
 Kokoro-82M through kokoro-onnx (CPU, no torch; model files next to the script or in $KOKORO_DIR). Each line of tools/capture/vo-lines.json is synthesised on its own and laid on the
 timeline at its caption's start; a line longer than its window is sped up (at most 1.3x) and otherwise left alone.
-Usage: python3 tools/capture/vo.py <out.wav> [--voice bm_fable] [--lines vo-lines.json] [--speed 1.0] [--sample "text"]
+Usage: python3 tools/capture/vo.py <out.wav> [--voice bm_george | "bm_george:0.7,am_fenrir:0.3"] [--piper voice.onnx]\n       [--lines vo-lines.json] [--speed 1.1] [--sample "text"]
 Voices tried for the owner: bm_fable, bm_george (British), am_fenrir, am_michael (American).
 """
 import argparse, json, sys, os
@@ -13,16 +13,36 @@ ap = argparse.ArgumentParser()
 ap.add_argument('out'); ap.add_argument('--voice', default='bm_fable'); ap.add_argument('--lines', default=os.path.join(os.path.dirname(__file__), 'vo-lines.json'))
 ap.add_argument('--speed', type=float, default=1.0); ap.add_argument('--sample', default=None); ap.add_argument('--duration', type=float, default=60.0)
 ap.add_argument('--models', default=os.environ.get('KOKORO_DIR', os.path.dirname(__file__)))
+ap.add_argument('--piper', default=None, help='a Piper .onnx voice instead of Kokoro (piper-tts)')
 a = ap.parse_args()
-from kokoro_onnx import Kokoro
-k = Kokoro(os.path.join(a.models, 'kokoro-v1.0.onnx'), os.path.join(a.models, 'voices-v1.0.bin'))
-lang = 'en-gb' if a.voice.startswith('b') else 'en-us'
-SR = 24000
-
-def say(text, speed):
-    x, sr = k.create(text, voice=a.voice, speed=speed, lang=lang)
-    assert sr == SR
-    return np.asarray(x, dtype=np.float32)
+if a.piper:
+    # Piper: one voice model; `speed` maps to length_scale (1/speed).
+    import io, wave
+    from piper import PiperVoice
+    pv = PiperVoice.load(a.piper)
+    SR = pv.config.sample_rate
+    def say(text, speed):
+        buf = io.BytesIO()
+        with wave.open(buf, 'wb') as w:
+            try: pv.synthesize_wav(text, w, length_scale=1 / speed)
+            except TypeError:
+                from piper import SynthesisConfig
+                pv.synthesize_wav(text, w, syn_config=SynthesisConfig(length_scale=1 / speed))
+        buf.seek(0)
+        with wave.open(buf, 'rb') as w: pcm = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+        return pcm.astype(np.float32) / 32768.0
+else:
+    from kokoro_onnx import Kokoro
+    k = Kokoro(os.path.join(a.models, 'kokoro-v1.0.onnx'), os.path.join(a.models, 'voices-v1.0.bin'))
+    # A voice name, or a blend "bm_george:0.7,am_fenrir:0.3" (style vectors mixed by weight).
+    parts = [(v.split(':')[0], float(v.split(':')[1]) if ':' in v else 1.0) for v in a.voice.split(',')]
+    style = sum(k.get_voice_style(v) * w for v, w in parts) / sum(w for _, w in parts) if len(parts) > 1 else parts[0][0]
+    lang = 'en-gb' if parts[0][0].startswith('b') else 'en-us'
+    SR = 24000
+    def say(text, speed):
+        x, sr = k.create(text, voice=style, speed=speed, lang=lang)
+        assert sr == SR
+        return np.asarray(x, dtype=np.float32)
 
 def trim(x, thr=0.01):
     idx = np.where(np.abs(x) > thr)[0]
