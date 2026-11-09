@@ -13,24 +13,23 @@ to the rules and to what runs on 08.11. Use either, but keep the three required 
 
 > In most AI games the AI quietly decides the ending.
 >
-> In Forget to Foresee the future is sealed before you move, six AI clans scheme around you, and your agent pays for every prophecy with one of its memories.
+> In Forget to Foresee the future is sealed before you move, AI clans scheme around you, and each prophecy costs a memory: a shard the clans bid for.
 >
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
 
-(278 characters as X counts them. Owner 09.11: credit "@Lambada_eth"; lead with the two pillars, the AI clans
-(agents) and the memory shards (NFTs). "Sealed before you move" is true for every season: live seasons seal the root
-locally, the judge season also on testnet.)
+(270 characters as X counts them. Credit @Lambada_eth; the agents and the memory shards up front. "Sealed before you
+move" holds for every season: live seasons seal the root locally, the judge season also on testnet.)
 
 ## Post 2 (reply)
 
-> Why NEAR: the judge season is sealed as one Merkle root in our testnet contract before trial 1; every event is then checked on-chain. No one, us included, can rewrite it.
+> Why NEAR: the judge season is sealed as one Merkle root in our testnet contract before trial 1; every event is then checked on-chain.
 >
-> Its forgotten memories are NEP-171 NFT shards bound to that root.
+> Its forgotten memories are NEP-171 NFT shards, each carrying the sealed leaf of the sign it opened.
 >
-> https://testnet.nearblocks.io/address/ftf-seasons.testnet
+> https://testnet.nearblocks.io/address/ftf-shards.testnet
 
-(262 characters. Only the judge season is on-chain; the post says so.)
+(259 characters. Only the judge season is on-chain, and the post says so; the link opens the NFT contract.)
 
 ## Post 3 (reply)
 
@@ -42,9 +41,8 @@ locally, the judge season also on testnet.)
 > What would you forget to see the future?
 > @NearLegion @NearBuilders
 
-(276 characters. The browser plays its own local room; the HTTP API runs the same room module for agents, so the post
-says an agent can play a season via the API, not that it joins the human's session. "600+ tests" = 497 game + 28 API
-+ 56 season-commit + 21 memory-shard; recount before posting.)
+(276 characters. The browser plays its own local room; the HTTP API runs the same room module for agents. "600+
+tests" = 498 game + 28 API + 56 season-commit + 21 memory-shard; recount before posting.)
 
 ## Checklist before posting (owner)
 - [ ] The video is attached to post 1 (not only a link).
