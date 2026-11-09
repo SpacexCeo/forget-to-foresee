@@ -13,11 +13,11 @@ Mistakes afterwards go through https://nearhackathon.com/request-changes.
 | `leadName` | `TODO(owner)` | 2–80 characters |
 | `email` | `TODO(owner)` | at most 2 submissions per email |
 | `size` | `TODO(owner)` | exactly one of `1`, `2 - 4`, `4 - 6`, `6 - 8`, `8+` (the string with spaces). Humans only; AI agents are not team members |
-| `tracks` | `["games"]` or `["games", "nfts"]` | see "Tracks" below; owner decision |
+| `tracks` | `["games", "nfts"]` | see "Tracks" below; `nfts` claimed (owner, 09.11) |
 | `nearAddress` | `TODO(owner)` | **mainnet** account for the payout (`something.near` or 64 hex). Created by the owner in any NEAR wallet; never invented |
 | `projectUrl` | `https://github.com/SpacexCeo/forget-to-foresee` | public |
 | `demoUrl` | `TODO(owner)` | the X post URL once published (`docs/submission/x-post.md`) |
-| `idea` | text below | 20–2000 characters; the draft is 1,978 characters, re-count after edits |
+| `idea` | text below | 20–2000 characters; the draft is 1,975 characters, re-count after edits |
 | `consent` | `true` | only after the owner has read: "I agree that the organizers may use these details to review our submission and contact us about this hackathon." |
 | `requestId` | generate once | `node -e 'console.log(crypto.randomUUID())'`; keep it for retries after 503 |
 
@@ -31,15 +31,14 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 >
 > Product: above a floating archipelago, four alien Shells speak in round signs with four slots (place, action, power, delay). Six clans, each an agent with a wallet, a memory and a temper, read the signs, stake silk on where a Gift will land, trade words, keep or break pacts, and must assemble one message from six fragments before a crisis on trial 13 and a final vote. To see a sign early, your agent forgets a memory forever and that memory goes to auction as a shard: you pay for prophecy with your own biography. Simple, Novice and Pro modes, short films between chapters, five languages, phone play. AI agents play the same room over an open HTTP API with the same rules and proofs.
 >
-> How NEAR fits in: the whole 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root is registered there and all 15 events have been revealed and proof-checked on-chain, byte for byte, plus a commit-reveal for the crisis key. Nobody, including us, can rewrite what the Guests said. The browser shows "Verified ✓" for each reveal, and anyone can re-check a proof offline with a Node or Python script. A second contract, memory-shard (NEP-171, tested, testnet deploy next), turns a forgotten memory into an NFT bound to the season root. The economy is closed in-game silk: no token, no payments.
+> How NEAR fits in: the whole 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root is registered there and all 15 events have been revealed and proof-checked on-chain, byte for byte, plus a commit-reveal for the crisis key. Nobody, including us, can rewrite what the Guests said. The browser shows "Verified ✓" for each reveal, and anyone can re-check a proof offline with a Node or Python script. A second contract, memory-shard (NEP-171, live as ftf-shards.testnet), mints a forgotten memory as an NFT bound to the season root. The economy is closed in-game silk: no token, no payments.
 >
 > Open source (MIT), reproducible from a clean clone: 495 game tests, 28 API tests, 56 + 21 contract tests, and a five-minute judge path in the README.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,978. Updated 09.11 after the
-testnet deployment of season-commit. If memory-shard is deployed before submitting, replace "(NEP-171, tested,
-testnet deploy next)" with "(NEP-171, live on testnet)" and add `nfts` to `tracks`. Re-count before sending:
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,975. Updated 09.11 after the
+testnet deployment of season-commit and memory-shard (`ftf-shards.testnet`, 3 shards minted). Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
 
 ## Tracks: which ids and why
@@ -47,9 +46,9 @@ testnet deploy next)" with "(NEP-171, live on testnet)" and add `nfts` to `track
 - **`games`** (Games With Real Economies) — the primary track. The economy is the loop: anchors, Gift splits, trust,
   debts, shard auctions and the tension threshold all run inside one 17-trial season among six agent clans. Judged
   on the game loop, not a token: we have no token.
-- **`nfts`** (NFTs That Do Something) — **owner decision**. The design is "an NFT whose biography is the currency",
-  and the NEP-171 contract `contracts/memory-shard` is built and tested (21 tests) but not yet deployed. Claim the
-  track once it is live on testnet; until then submit `games` alone.
+- **`nfts`** (NFTs That Do Something) — **claimed** (owner, 09.11). The design is "an NFT whose biography is the
+  currency": the NEP-171 contract `contracts/memory-shard` runs on testnet as `ftf-shards.testnet` with the judge
+  playthrough's 3 shards minted, each bound to the season root and to the leaf its vision opened (`docs/near.md`).
 - Not claimed: `social` (we have no shared budget / DAO), `agents` (our agents do not pay for anything in NEAR),
   `open` (only as a fallback instead of `nfts`).
 
@@ -62,7 +61,7 @@ testnet deploy next)" with "(NEP-171, live on testnet)" and add `nfts` to `track
   "leadName": "TODO(owner)",
   "email": "TODO(owner)",
   "size": "TODO(owner)",
-  "tracks": ["games"],
+  "tracks": ["games", "nfts"],
   "nearAddress": "TODO(owner)",
   "projectUrl": "https://github.com/SpacexCeo/forget-to-foresee",
   "demoUrl": "TODO(owner): https://x.com/.../status/...",
