@@ -8,6 +8,7 @@ import { logogramCanvas } from './logogram.js';
 import { i18n as uiI18n } from '../ui/index.js';
 import { panelArbiterFor } from './panels.js';
 import { renderShardSection } from '../ui/world-hud/shard-card.js';
+import { forgetConfirmModel } from './forget-confirm.js';
 
 const { effectEvent, renderEvent } = uiI18n;
 const CLAN_INDEX = { iris: 0, salt: 1, ash: 2, moss: 3, amber: 4, frost: 5 };
@@ -43,6 +44,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   root.append(goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info);
 
   let panel = null, panelData = null, endConfirm = 0, infoTimer = 0;
+  let forgetAsk = null; // { id, purpose }: the memory waiting for "Forget this memory" / "Keep it" (forget-confirm.js)
   // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
   // re-render on every observation does not restart the ink ring's drawing.
   let shardSource = null, shardKey = '', shardNode = null;
@@ -112,10 +114,10 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
 
   /* ---------- panels ---------- */
-  function open(name, data = null) { panel = name; panelData = data; arb.claim('panel', close); renderPanel(); renderContext(); }
+  function open(name, data = null) { panel = name; panelData = data; forgetAsk = null; arb.claim('panel', close); renderPanel(); renderContext(); }
   function close() {
     if (!panel) { panelEl.hidden = true; return; }
-    panel = null; panelData = null; leave(panelEl);
+    panel = null; panelData = null; forgetAsk = null; leave(panelEl);
     arb.release('panel');
     renderContext();
   }
@@ -147,13 +149,28 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     const obs = session.obs;
     if (!panel || !obs) { panelEl.hidden = true; return; }
     if (panel === 'memory') {
+      const fc = forgetConfirmModel(obs, forgetAsk);
+      if (!fc) forgetAsk = null;
+      else {
+        const m = fc.memory;
+        panelShell(t('memory.title'), el('div', { class: 'pl-confirm', role: 'group', 'aria-labelledby': 'pl-forget-ask' },
+          el('h3', { id: 'pl-forget-ask', text: t(fc.title.key, fc.title.args) }),
+          el('p', {}, el('span', { class: 'pl-label', text: t('forget.changes') }), el('span', { text: memoryEffect(m) })),
+          el('p', {}, el('span', { class: 'pl-label', text: t('forget.gains') }), el('span', { class: 'pl-strong', text: t(fc.gain.key, fc.gain.args) })),
+          el('p', { class: 'pl-muted', text: t(fc.cost.key, fc.cost.args) }),
+          fc.reason ? el('p', { class: 'pl-muted', text: reasonText(i18n, fc.reason) }) : null,
+          el('div', { class: 'pl-row' },
+            el('button', { class: 'pl-btn pl-primary', type: 'button', 'data-forget-confirm': m.id, disabled: !fc.canConfirm, text: t('forget.confirm'), onclick: () => forget(m.id, fc.purpose) }),
+            el('button', { class: 'pl-btn', type: 'button', 'data-forget-keep': m.id, text: t('forget.keep'), onclick: keepMemory }))));
+        return;
+      }
       const keyOpen = obs.iris.keyVision.open;
       const list = obs.memories.length ? el('ul', { class: 'pl-list' }, obs.memories.map((m, i) => el('li', { class: 'pl-mem', style: '--i:' + i },
         el('div', { class: 'pl-mem-head' }, el('b', { text: memoryText(m) }), el('span', { class: 'pl-muted', text: t('memory.weight', { n: m.weight }) })),
         el('p', { class: 'pl-muted', text: memoryEffect(m) }),
         el('div', { class: 'pl-row' },
-          el('button', { class: 'pl-btn pl-primary', type: 'button', 'data-forget': m.id, text: t('memory.forget'), onclick: () => forget(m.id, 'vision') }),
-          keyOpen && m.weight >= 3 ? el('button', { class: 'pl-btn', type: 'button', text: t('memory.forgetKey'), onclick: () => forget(m.id, 'key') }) : null)))) : el('p', { text: t('memory.empty') });
+          el('button', { class: 'pl-btn pl-primary', type: 'button', 'data-forget': m.id, text: t('memory.forget'), onclick: () => askForget(m.id, 'vision') }),
+          keyOpen && m.weight >= 3 ? el('button', { class: 'pl-btn', type: 'button', text: t('memory.forgetKey'), onclick: () => askForget(m.id, 'key') }) : null)))) : el('p', { text: t('memory.empty') });
       const forgotten = obs.iris.forgotten.length ? el('div', {}, el('h3', { text: t('memory.forgotten') }), el('ul', { class: 'pl-list pl-muted' }, obs.iris.forgotten.map((f) => el('li', { text: f.text + ' — ' + f.fate })))) : null;
       panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten, shardSection(obs));
     } else if (panel === 'vision') {
@@ -207,9 +224,19 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     }
   }
 
+  /** First click on "Forget it": show what forgetting changes; nothing is sent yet ("Keep it" is focused). */
+  function askForget(id, purpose) {
+    forgetAsk = { id, purpose };
+    renderPanel();
+    const keep = panelEl.querySelector('[data-forget-keep]');
+    if (keep) keep.focus();
+  }
+  function keepMemory() { forgetAsk = null; renderPanel(); }
+  /** "Forget this memory": the only path that sends sacrifice_memory. */
   async function forget(id, purpose) {
+    forgetAsk = null;
     const r = await session.send('sacrifice_memory', { memoryId: id, purpose }, { key: session.bus.key('forget' + id) });
-    if (!r.ok) { hud.showRejection(r.reason); return; }
+    if (!r.ok) { hud.showRejection(r.reason); renderPanel(); return; }
     close();
     // QA-005: the new visions show in the HUD's Signs & Visions panel (one plain line per sign in Novice), not in the
     // greybox-era detail panel; without a world HUD the detail panel remains the fallback
@@ -287,7 +314,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
 
   /** Keyboard: returns true when the key was used by the play UI. */
   function handleKey(code) {
-    if (code === 'Escape') { if (panel) { close(); return true; } if (!helpEl.hidden) { showHelp(false); return true; } return false; }
+    if (code === 'Escape') { if (panel === 'memory' && forgetAsk) { keepMemory(); return true; } if (panel) { close(); return true; } if (!helpEl.hidden) { showHelp(false); return true; } return false; }
     if (code === 'KeyE') { if (session.defaultIndex >= 0 && !panel) { choose(session.defaultIndex); return true; } return false; }
     const m = /^Digit([1-9])$/.exec(code);
     if (m && !panel) { choose(Number(m[1]) - 1); return true; }
