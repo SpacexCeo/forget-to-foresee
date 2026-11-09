@@ -18,6 +18,11 @@ V = Vector
 TAU = 2 * math.pi
 
 
+def smooth01(a, b, x):
+    t = max(0.0, min(1.0, (x - a) / (b - a)))
+    return t * t * (3 - 2 * t)
+
+
 # ===================================================================== body sampling
 
 class BodyProbe:
@@ -82,11 +87,11 @@ def set_attr(o, name, fn):
         a.data[i].value = fn(i, v.co)
 
 
-def solidify(o, t, offset=-1.0):
+def solidify(o, t, offset=-1.0, even=True):
     m = o.modifiers.new("thick", "SOLIDIFY")
     m.thickness = t
     m.offset = offset
-    m.use_even_offset = True
+    m.use_even_offset = even                     # even offset spikes on pinched faces: off for body shells
     m.use_rim = True
     m.use_quality_normals = True
     bpy.context.view_layer.objects.active = o
@@ -656,7 +661,7 @@ def hair_cap(body, scalp_idx, offset=0.006):
 
 # ===================================================================== athletic sportswear (owner, 09.11)
 
-def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None):
+def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None, envelope=None):
     """A tight garment cut from the body surface: the kept faces are duplicated, pushed out along the
     normals by `offset` and given cloth thickness. keep(index, co) decides per vertex; a face is kept
     when all its vertices are. trim/accent(co, normal) -> 0..1 paint the trim and accent attributes."""
@@ -677,8 +682,42 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
     bmesh.ops.delete(b, geom=kill, context="FACES")
     bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
     b.normal_update()
+    off_of = offset if callable(offset) else (lambda p, n: offset)
     for v in b.verts:
-        v.co += v.normal * offset
+        v.co += v.normal * off_of(v.co, v.normal)
+    offset = off_of(V((0, 0, 1.2)), V((0, -1, 0))) if callable(offset) else offset
+    if envelope:                                 # front panels on the convex envelope of the torso, with ease
+        region, pts, ease = envelope
+        cache = {}
+        for v in b.verts:
+            p = v.co
+            if not region(p):
+                continue
+            key = round(p.z * 200)
+            if key not in cache:
+                sec = [(q.x, q.y) for q in pts if abs(q.z - p.z) < 0.007]
+                hull = _hull2d(sec) if len(sec) > 6 else None
+                cx = sum(h[0] for h in hull) / len(hull) if hull else 0
+                cy = sum(h[1] for h in hull) / len(hull) if hull else 0
+                cache[key] = (hull, cx, cy)
+            hull, cx, cy = cache[key]
+            if not hull:
+                continue
+            dx, dy = p.x - cx, p.y - cy
+            dl = math.hypot(dx, dy) or 1.0
+            dx, dy = dx / dl, dy / dl
+            best = None
+            for (ax, ay), (bx, by) in zip(hull, hull[1:] + hull[:1]):       # ray from the centre out
+                ex, ey = bx - ax, by - ay
+                den = dx * ey - dy * ex
+                if abs(den) < 1e-9:
+                    continue
+                t = ((ax - cx) * ey - (ay - cy) * ex) / den
+                u = ((ax - cx) * dy - (ay - cy) * dx) / den
+                if t > 0 and 0 <= u <= 1:
+                    best = t if best is None else max(best, t)
+            if best is not None and dl < best + ease < dl + 0.03:      # only fill hollows, never spike
+                p.x, p.y = cx + dx * (best + ease), cy + dy * (best + ease)
     if curtain:                                  # fabric falls straight from the fullest point of the bust
         region, pts, top = curtain
         for v in b.verts:
@@ -714,7 +753,7 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
     set_attr(o, "trim", (lambda i, co: trim(co, nr[i])) if trim else (lambda i, co: 0.0))
     set_attr(o, "accent", (lambda i, co: accent(co, nr[i])) if accent else (lambda i, co: 0.0))
     if thick:
-        solidify(o, thick, 1.0)
+        solidify(o, thick, 1.0, even=False)
     smooth(o, 50)
     return o
 
@@ -824,66 +863,94 @@ def tube_along(name, path, radii, n=20, cuff=None):
 
 
 def sneaker(name, heel, toe, width, side):
-    """A trainer built as footwear, not from the toes: outsole, midsole, upper with a toe box, a heel
-    counter and an ankle opening. heel/toe: ground points under the heel and the toe tip."""
+    """A white high-top trainer modelled as footwear: a layered sole (outsole, flared midsole with a
+    rounded top edge), a rounded toe box with toe spring, a closed heel counter, high padded walls round
+    the ankle with the opening on top, a raised tongue, and a dark side stripe and heel tab (original
+    design, no brand marks). heel/toe: ground points under the heel and the toe tip."""
     b = bmesh.new()
     uv = b.loops.layers.uv.new("UVMap")
-    fwd = (toe - heel)
+    fwd = toe - heel
     L = fwd.length
     fwd.normalize()
     lat = V((fwd.y, -fwd.x, 0)) * (-1 if side < 0 else 1)
     up = V((0, 0, 1))
-    m = 28                                                   # stations heel -> toe
-    k = 18                                                   # points across each station's cross-section
+    m, k = 40, 20
+    SOLE = 0.030
 
-    def half_width(t):                                       # footprint: narrow heel, wide forefoot, round toe
-        w = 0.62 + 0.38 * math.sin(math.pi * min(1.0, t * 1.15)) ** 0.6
-        return width / 2 * w * (1 - 0.85 * max(0.0, (t - 0.86) / 0.14) ** 2)
+    def hw(t):                                               # footprint half width, rounded heel and toe
+        core = 0.60 + 0.40 * math.sin(math.pi * min(1.0, t * 1.12)) ** 0.55
+        heel_round = math.sqrt(max(0.0, 1 - ((0.10 - min(t, 0.10)) / 0.10) ** 2))
+        toe_round = math.sqrt(max(0.0, 1 - (max(0.0, t - 0.80) / 0.20) ** 2))
+        return width / 2 * core * heel_round * toe_round
 
-    def height(t):                                           # top line: collar, ankle dip, toe box
-        if t < 0.12:
-            return 0.082 - 0.10 * t
-        if t < 0.45:
-            return 0.070 - 0.02 * math.sin(math.pi * (t - 0.12) / 0.33)
-        return 0.070 - 0.030 * ((t - 0.45) / 0.55) ** 1.4
+    def centre(t):
+        return heel + fwd * (L * t) + up * (0.016 * max(0.0, (t - 0.78) / 0.22) ** 2)   # toe spring
 
-    sole_h = 0.027
+    # --- sole: rings of the footprint outline at several heights (outset = flare)
+    outline_t = [i / m for i in range(m + 1)]
+    def outline(scale, z):
+        pts = []
+        for t in outline_t:
+            pts.append(centre(t) + lat * hw(t) * scale + up * z)
+        for t in reversed(outline_t[1:-1]):
+            pts.append(centre(t) - lat * hw(t) * scale + up * z)
+        return pts
+    layers = [(0.94, 0.0), (1.00, 0.004), (1.03, 0.009), (1.02, 0.012), (1.06, 0.026), (1.00, SOLE)]
+    srings = [[b.verts.new(p) for p in outline(sc, z)] for sc, z in layers]
+    nO = len(srings[0])
+    for r0, r1 in zip(srings, srings[1:]):
+        for i in range(nO):
+            b.faces.new((r0[i], r0[(i + 1) % nO], r1[(i + 1) % nO], r1[i]))
+    b.faces.new(srings[0][::-1])
+    # --- upper: arcs over the foot from the outer to the inner sole edge
+    def heights(t):
+        side_h = 0.135 - 0.095 * smooth01(0.30, 0.75, t)               # high walls round the ankle
+        top_h = 0.060 + 0.045 * smooth01(0.30, 0.55, t) * (1 - smooth01(0.55, 1.0, t)) - 0.020 * smooth01(0.75, 1.0, t)
+        if t < 0.30:
+            top_h = side_h
+        return side_h, top_h
     rows = []
     for i in range(m + 1):
         t = i / m
-        c = heel + fwd * (L * (0.02 + 0.96 * t))
-        hw = half_width(t)
-        h = height(t)
-        toe_spring = 0.012 * max(0.0, (t - 0.8) / 0.2) ** 2
-        heel_round = 0.008 * max(0.0, (0.08 - t) / 0.08)
+        c = centre(t)
+        w = max(hw(t), 0.002)
+        sh, th = heights(t)
         row = []
         for j in range(k + 1):
-            a = math.pi * j / k                              # 0: outer side at the sole .. pi: inner side
-            x = math.cos(a) * hw
-            zz = sole_h + toe_spring + heel_round + math.sin(a) * (h - sole_h)
-            if 0.10 < t < 0.42 and math.sin(a) > 0.75:      # the ankle opening
-                zz = sole_h + (h - sole_h) * 0.75
-            row.append(c + lat * x + up * zz)
+            a = math.pi * j / k
+            zz = SOLE + (sh - SOLE) * (1 - math.sin(a)) + (th - SOLE) * math.sin(a)
+            bulge = 1.0 + 0.10 * math.sin(a) * (1 - smooth01(0.85, 1.0, t))
+            row.append(b.verts.new(c + lat * (math.cos(a) * w * bulge) + up * zz))
         rows.append(row)
-    vrows = [[b.verts.new(p) for p in row] for row in rows]
     for i in range(m):
+        t = (i + 0.5) / m
         for j in range(k):
-            f = b.faces.new((vrows[i][j], vrows[i][j + 1], vrows[i + 1][j + 1], vrows[i + 1][j]))
+            a = math.pi * (j + 0.5) / k
+            if 0.06 < t < 0.33 and math.sin(a) > 0.55:              # the ankle opening
+                continue
+            f = b.faces.new((rows[i][j], rows[i][j + 1], rows[i + 1][j + 1], rows[i + 1][j]))
             for lo, (uu, vv) in zip(f.loops, ((i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j))):
                 lo[uv].uv = (uu / m, vv / k)
-    # sole: a slab under the footprint (midsole + outsole), slightly wider than the upper
-    outline = [rows[i][0] for i in range(m + 1)] + [rows[i][k] for i in range(m, -1, -1)]
-    top = [b.verts.new(V((p.x, p.y, sole_h)) + (p - (heel + fwd * L * 0.5)).normalized() * 0.004 * V((1, 1, 0)).length)
-           for p in outline]
-    bot = [b.verts.new(V((p.x, p.y, 0.0)) + (p - (heel + fwd * L * 0.5)).normalized() * 0.003) for p in outline]
-    nO = len(outline)
-    for i in range(nO):
-        b.faces.new((top[i], top[(i + 1) % nO], bot[(i + 1) % nO], bot[i]))
-    b.faces.new(bot[::-1])
-    b.faces.new(top)
     bmesh.ops.triangulate(b, faces=[f for f in b.faces if len(f.verts) > 4])
+    bmesh.ops.recalc_face_normals(b, faces=b.faces[:])
     o = new_obj(name, b)
-    set_attr(o, "trim", lambda i, co: 1.0 if co.z <= sole_h + 0.002 else 0.0)        # white midsole
+    me = o.data
+    heel_w = heel + up * 0.0
+
+    def dark(i, co):
+        if co.z < 0.009:                                    # outsole
+            return 1.0
+        rel = co - heel
+        t = rel.dot(fwd) / L
+        if t < 0.05 and co.z > 0.09:                        # heel tab
+            return 1.0
+        # side stripe: a straight diagonal band on the outer and inner walls
+        if 0.035 < co.z < 0.11 and abs(rel.dot(lat)) > hw(max(0.0, min(1.0, t))) * 0.75:
+            along = t - (co.z - 0.035) * 2.2
+            return 1.0 if 0.32 < along < 0.42 else 0.0
+        return 0.0
+    set_attr(o, "trim", dark)
     set_attr(o, "accent", lambda i, co: 0.0)
-    smooth(o, 40)
+    C_smooth = smooth
+    C_smooth(o, 45)
     return o

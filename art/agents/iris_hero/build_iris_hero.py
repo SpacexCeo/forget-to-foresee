@@ -47,14 +47,19 @@ ARM_DEG = 14.0              # agent rest stance: arms 14 deg off the body, hangi
 
 COSTUME = os.environ.get("IRIS_COSTUME", "athletic")    # athletic (owner 09.11) | wanderer (the coat)
 
-ATHLETIC = {                  # curvy athletic (owner's reference): narrow waist, full hips and glutes,
-    # shapely toned legs tapering to slim knees and ankles, a full bust (MakeHuman anatomy targets, CC0)
-    "torso/measure-waist-circ-decr": 0.55, "torso/measure-hips-circ-incr": 0.20, "hip/hip-scale-horiz-incr": 0.04,
-    "torso/measure-waisttohip-dist-incr": 0.35,           # a longer, softer waist-to-hip curve (no shelf)
+ATHLETIC = {                  # curvy athletic (owner's references), shaped rather than enlarged
+    # waist: a narrower lower ribcage and a long soft curve into the hips; a flat, toned stomach
+    "torso/measure-waist-circ-decr": 0.70, "torso/measure-underbust-circ-decr": 0.25,
+    "torso/measure-waisttohip-dist-incr": 0.45, "torso/measure-hips-circ-incr": 0.15, "hip/hip-scale-horiz-incr": 0.03,
+    "stomach/stomach-pregnant-decr": 0.80,
+    # seat: volume kept, shape refined in round_glutes()
+    "buttocks/buttocks-volume-incr": 0.80,
+    # legs: lighter thighs front to back, a gradual taper through the knees to slim ankles
+    "legs/l-upperleg-scale-depth-decr": 0.30, "legs/r-upperleg-scale-depth-decr": 0.30,
+    "legs/l-upperleg-fat-decr": 0.40, "legs/r-upperleg-fat-decr": 0.40, "legs/measure-thigh-circ-decr": 0.15,
+    "legs/l-lowerleg-fat-decr": 0.40, "legs/r-lowerleg-fat-decr": 0.40, "legs/measure-knee-circ-decr": 0.35,
+    "legs/measure-calf-circ-decr": 0.10,
     "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.40,
-    "stomach/stomach-pregnant-decr": 0.60, "buttocks/buttocks-volume-incr": 1.0,
-    "legs/l-upperleg-fat-decr": 0.20, "legs/r-upperleg-fat-decr": 0.20,
-    "legs/l-lowerleg-fat-decr": 0.30, "legs/r-lowerleg-fat-decr": 0.30, "legs/measure-knee-circ-decr": 0.30,
     "torso/measure-shoulder-dist-incr": 0.05,
 }
 
@@ -438,14 +443,13 @@ def make_eyes(eyes, k):
 
 # ===================================================================== stages
 
-def round_glutes(bm, dom, depth=0.014):
-    """A rounder seat: a soft dome pushed back (and a little up) over each gluteus, strongest at its
-    fullest point and fading smoothly into the lower back and the backs of the thighs, so the curve stays
-    round instead of forming a shelf."""
+def round_glutes(bm, dom, depth=0.007):
+    """A round seat without a shelf: each gluteus gets its own soft dome (narrow across, so the back
+    view reads two round forms), the push fades slowly downward into the back of the thigh and quickly
+    upward into the lower back, and the midline is eased in a little."""
     import math as _m
-    zs = [v.co.z for v in bm.data.vertices]
-    H = max(zs)
-    zc = 0.505 * H                                   # the fullest point of the seat
+    H = max(v.co.z for v in bm.data.vertices)
+    zc = 0.505 * H
     for v, d in zip(bm.data.vertices, dom):
         if d not in ("pelvis", "spine", "thigh_L", "thigh_R"):
             continue
@@ -453,11 +457,15 @@ def round_glutes(bm, dom, depth=0.014):
         if p.y <= 0.0:
             continue
         side = 1 if p.x > 0 else -1
-        r2 = ((p.x - side * 0.075 * H / 1.75) / 0.085) ** 2 + ((p.z - zc) / 0.095) ** 2
-        w = _m.exp(-r2 * 1.6)
+        sz = 0.060 if p.z > zc else 0.110                 # quick above, slow below
+        r2 = ((p.x - side * 0.068 * H / 1.75) / 0.058) ** 2 + ((p.z - zc) / sz) ** 2
+        w = _m.exp(-r2 * 1.4)
         back = min(1.0, p.y / 0.08)
-        v.co.y += depth * w * back
-        v.co.z += 0.004 * w * back * (1 if p.z < zc else 0.4)     # lifted, not dropped
+        out = V((side * 0.35, 1.0, 0.0)).normalized()      # round to the sides as well as back
+        v.co += out * depth * w * back
+        v.co.z += 0.003 * w * back
+        cleft = _m.exp(-(p.x / 0.012) ** 2 - ((p.z - zc) / 0.08) ** 2)
+        v.co.y -= 0.003 * cleft * back
 
 
 def stage_body():
@@ -616,21 +624,31 @@ def athletic_costume(bm, P, dom, bones):
             p.x = math.copysign(0.058, p.x)
     front_body = [p for p in torso_pts if p.y < c.y]
     bust = lambda p: p.y < c.y and 1.14 < p.z < 1.33 and abs(p.x) < 0.17
-    out["jacket"] = C.shell_from_body(bm, "jacket", upper_keep, 0.0085, 0.0035, trim=upper_trim,
+    def ease(p, nrm):                                         # snug at shoulder, elbow and wrist
+        if abs(p.x) < 0.15:
+            return 0.0085
+        sx = "L" if p.x > 0 else "R"
+        E, W, S0 = bones[f"forearm_{sx}"][0], wrist[sx], bones[f"upperarm_{sx}"][0]
+        dE, dW, dS = (p - E).length, (p - W).length, (p - S0).length
+        k = min(1.0, dE / 0.06) * min(1.0, dW / 0.08) * min(1.0, dS / 0.07)
+        return 0.0035 + 0.0065 * k
+    out["jacket"] = C.shell_from_body(bm, "jacket", upper_keep, ease, 0.0035, trim=upper_trim,
                                       accent=upper_accent, edges=upper_edges,
-                                      curtain=(bust, front_body, 1.33), relax=(bust, 3))
+                                      envelope=(lambda p: abs(p.x) < 0.17 and 1.14 < p.z < 1.40,
+                                                torso_pts, 0.016),
+                                      curtain=(bust, front_body, 1.33), relax=(bust, 4))
     out["jacket_collar"] = C.stand_collar(P)
     # leggings: from the body surface, high-rise, the crotch relaxed so it never cuts in
     LEG = ("thigh_L", "thigh_R", "shin_L", "shin_R")
     def leg_keep(i, _):
         p = co[i]
-        return dom[i] in LEG + ("pelvis", "spine") and 0.095 < p.z < 1.045
+        return dom[i] in LEG + ("pelvis", "spine") and 0.115 < p.z < 1.045
     def leg_panel(p, nrm):
         side = 1 if p.x > 0 else -1
         centre = side * (0.095 + 0.022 * math.sin((p.z - 0.2) * 3.5))
         return 1.0 if 0.18 < p.z < 0.95 and side * (p.x - centre) > 0.016 else 0.0
     def leg_edges(v):
-        v.co.z = 1.04 if v.co.z > 0.6 else 0.10
+        v.co.z = 1.04 if v.co.z > 0.6 else 0.12
     crotch = lambda p: abs(p.x) < 0.07 and 0.70 < p.z < 0.88
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
@@ -640,9 +658,9 @@ def athletic_costume(bm, P, dom, bones):
         foot = [co[i] for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}") and co[i].z < 0.10]
         heel_p = max(foot, key=lambda q: q.y)
         toe_p = min(foot, key=lambda q: q.y)
-        width = (max(q.x for q in foot) - min(q.x for q in foot)) * 1.12
-        heel = V((heel_p.x, heel_p.y + 0.012, 0.0))
-        toe = V((toe_p.x, toe_p.y - 0.014, 0.0))
+        width = (max(q.x for q in foot) - min(q.x for q in foot)) * 1.08
+        heel = V((heel_p.x, heel_p.y + 0.016, 0.0))
+        toe = V((toe_p.x, toe_p.y - 0.018, 0.0))
         out[f"trainers_{sfx}"] = C.sneaker(f"trainers_{sfx}", heel, toe, width, side)
     return out
 
