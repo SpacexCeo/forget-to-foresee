@@ -52,11 +52,11 @@ body.ch-film-on .ftf-run-toggle, body.ch-film-on .ftf-map-fab, body.ch-film-on .
   font: 600 clamp(12px, 1vw, 16px)/1 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #e6dfd3; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 #ch-film .ch-ring { width: 30px; height: 30px; border-radius: 50%; background: conic-gradient(#e4c272 calc(var(--ch-hold, 0) * 1turn), rgba(228,194,114,.18) 0); display: grid; place-items: center; }
 #ch-film .ch-ring::after { content: ''; width: 20px; height: 20px; border-radius: 50%; background: rgba(5,8,9,.85); }
-#ch-film .ch-hint { position: absolute; left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px); bottom: calc(var(--ch-bar, 0px) + 1vh); opacity: 0;
-  font: 600 clamp(11px, .95vw, 15px)/1 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; color: #c9c6b8; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+#ch-film .ch-hint { position: absolute; left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px); bottom: max(10px, calc(var(--ch-bar, 0px) * .3)); text-align: center; opacity: 0;
+  font: 600 clamp(11px, .95vw, 15px)/1.35 'Source Sans 3', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; color: #c9c6b8; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 body.ch-film-on #ui, body.ch-film-on #prompt, body.ch-film-on #toast, body.ch-film-on #badge, body.ch-film-on #scene-controls, body.ch-film-on #hud, body.ch-film-on .hub-fade, body.ch-film-on .ch-fab { visibility: hidden !important; }
 body.ch-film-on, body.ch-film-on * { cursor: none !important; }
-@media (max-width: 700px) { #ch-film .ch-title { letter-spacing: .14em; } #ch-film .ch-matters { font-size: clamp(19px, 5.2vw, 30px); } #ch-film .ch-sub { font-size: clamp(16px, 4.2vw, 20px); width: 92vw; } }
+@media (max-width: 700px) { #ch-film .ch-title { letter-spacing: .14em; } #ch-film .ch-matters { font-size: clamp(19px, 5.2vw, 30px); } #ch-film .ch-sub { font-size: clamp(16px, 4.2vw, 20px); width: 92vw; } #ch-film .ch-hint { letter-spacing: .08em; } }
 `;
 
 function h(doc, tag, cls, text) { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }

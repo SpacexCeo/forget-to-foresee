@@ -293,7 +293,7 @@ export default {
   'wh.hint.endTick.hub': 'Уваги в цьому випробуванні не лишилося. Вийди з Мушлі або натисни T і дивись, що обіцяли Гості.',
   'wh.hint.offer.hub': 'Клан {who} має пропозицію. Його слова ще не перевірені; я спитаю тебе, перш ніж відповісти.',
   // ---- chapter films (play/chapters.js, cinematic/chapters/) ----
-  'chapter.ui.hold': 'Утримуйте, щоб пропустити',
+  'chapter.ui.hold': 'Натисніть — наступний епізод · Утримуйте — пропустити фільм',
   'chapter.ui.skip': 'Пропустити фільм',
   'chapter.ui.continue': 'Торкніться, щоб продовжити',
   'chapter.ui.matters': 'Що важливо зараз',
