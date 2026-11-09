@@ -35,6 +35,44 @@ function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0
 let uid = 0;
 const id = (p) => `${p}${++uid}`;
 
+
+/* ---------- the owner's clan cards (09.11): tilted gold-edged glass cards with the clan's material art ----------
+ * The art files are the owner's own frames (docs/submission/jury-video-ref/layers, copied to game/cine/ref). A clan
+ * without a file yet gets a card drawn in the same language (dark glass, gold edge, serif name, spaced temper, the
+ * programmatic material) until the owner's file lands. Same interface as clanCard, so the scenes can swap them. */
+export const OWNER_CARD_FILES = { salt: 'card-salt.png', iris: 'card-iris.png', frost: 'card-frost.png' };   // cropped to the card (600x800)
+export function ownerCard(clan, { x, y, w = 260, player = false } = {}) {
+  const c = CLAN[clan], h = Math.round(w * 4 / 3);
+  const el = document.createElement('div');
+  el.className = 'oc-card' + (player ? ' oc-player' : '');
+  Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  let art = null, name = null;
+  if (OWNER_CARD_FILES[clan]) {
+    art = document.createElement('img'); art.src = '/cine/ref/' + OWNER_CARD_FILES[clan]; art.className = 'oc-img'; art.draggable = false;
+    el.append(art);
+  } else {
+    const inner = document.createElement('div'); inner.className = 'oc-draw';
+    const mw = w * 0.86, mh = h * 0.46;
+    const mat = MATERIAL[clan](mw, mh);
+    const svg = s('svg', { width: mw, height: mh, viewBox: `0 0 ${mw} ${mh}`, class: 'oc-art' }, mat.g);
+    name = document.createElement('div'); name.className = 'oc-name'; name.textContent = c.name;
+    const temper = document.createElement('div'); temper.className = 'oc-temper'; temper.textContent = c.temper;
+    inner.append(name, temper, svg);
+    el.append(inner);
+    art = inner; art._mat = mat;
+  }
+  const anchor = (side) => side === 'top' ? [x + w / 2, y + 8] : side === 'bottom' ? [x + w / 2, y + h - 8] : side === 'left' ? [x + 6, y + h / 2] : [x + w - 6, y + h / 2];
+  return {
+    el, x, y, w, h, anchor,
+    set(t, st = {}) {
+      const cool = st.cool || 0, ph = (x + y) * 0.013;
+      el.style.translate = `0 ${(Math.sin(t * 0.9 + ph) * 3).toFixed(2)}px`;
+      el.style.filter = cool > 0 ? `saturate(${(1 - 0.7 * cool).toFixed(3)}) brightness(${(1 - 0.35 * cool).toFixed(3)})` : '';
+      if (art && art._mat && art._mat.update) art._mat.update(t, st);
+    },
+  };
+}
+
 /* ---------- materials: each returns an SVG <g> drawn in a w×h box; `update(t, state)` animates it where it means something ---------- */
 export const MATERIAL = {
   salt(w, h) { // mineral prisms: cool, faceted, a little light on the upper faces
@@ -168,6 +206,23 @@ export function keyGlyph(color = T.amber) {
 }
 
 export const CSS = `
+
+.oc-card { position: absolute; }
+.oc-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 18px 30px rgba(0,0,0,.55)); }
+.oc-draw { position: absolute; inset: 0; border-radius: 14px; overflow: hidden; transform: perspective(1400px) rotateY(-9deg) rotateZ(-3deg);
+  background: radial-gradient(120% 90% at 50% 100%, rgba(40,52,50,.96), rgba(8,12,13,.98) 70%);
+  box-shadow: 0 0 0 2px #e4c272, 0 0 0 5px rgba(228,194,114,.18), 0 0 26px rgba(228,194,114,.25), 0 18px 40px rgba(0,0,0,.55); }
+.oc-name { position: absolute; left: 0; right: 0; top: 14%; text-align: center; font: 400 62px/1 "Libre Caslon Text", Georgia, serif; color: #f1e8d6; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
+.oc-temper { position: absolute; left: 0; right: 0; top: 36%; text-align: center; font: 600 24px/1 "Source Sans 3", sans-serif; letter-spacing: .34em; text-transform: uppercase; color: #cfd6d2; }
+.oc-art { position: absolute; left: 7%; bottom: 6%; opacity: .95; }
+
+.oc-badge { text-align: center; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+.oc-badge-line { font: 400 40px/1.15 "Libre Caslon Text", Georgia, serif; color: #f1e8d6; text-shadow: 0 2px 14px rgba(0,0,0,.7); }
+.oc-badge-num { margin-top: 6px; font: 400 40px/1 "Source Sans 3", sans-serif; letter-spacing: .34em; text-transform: uppercase; color: #e4c272; }
+.oc-badge-num i { display: block; font: italic 700 124px/1 "Libre Caslon Text", Georgia, serif; letter-spacing: 0; color: #e4c272; text-shadow: 0 0 28px rgba(228,194,114,.45); }
+.oc-quote { padding: 18px 44px 20px; border-radius: 999px; background: rgba(10,14,15,.86); box-shadow: 0 0 0 2px #e4c272, 0 0 24px rgba(228,194,114,.25), 0 12px 30px rgba(0,0,0,.5); font: italic 400 54px/1 "Libre Caslon Text", Georgia, serif; color: #f1e8d6; white-space: nowrap; }
+.oc-quote small { display: block; margin-top: 10px; font: 600 24px/1 "Source Sans 3", sans-serif; font-style: normal; letter-spacing: .3em; text-transform: uppercase; color: #cfd6d2; text-align: center; }
+
 .ds-card { position: absolute; border-radius: ${T.radius}px; overflow: hidden;
   background: linear-gradient(180deg, rgba(24,36,35,.96), rgba(14,22,22,.96));
   box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 0 0 1px ${T.hair}, 0 18px 40px rgba(0,0,0,.45);
