@@ -28,3 +28,7 @@ stage (`iris_body.blend`, `iris_body_pre.blend` before the anatomical pass, `iri
 editable shape key BODY_FEM_TARGET), the shipped compressed glb (`agent_iris_compressed.glb`), the bare-body
 deformation test renders (`deform.tgz`), and the server set-up scripts of that session (`setup.sh`,
 `setup2.sh`: system libraries, Blender 4.5.3, Node; no secrets). Checksums in `iris_hero_anatomy/SHA256SUMS`.
+
+## iris_hero_final (09.11.2026, GPU order 2423138, before it was released)
+
+Iris with the anatomical body, straight stance and the new trainers and socks (`main` after the trainer change): full build blends, raw and compressed glb, baked textures, body-stage blends (editable shape key in `iris_body_shape.blend`), the server set-up script `setup-new.sh` (no secrets). Checksums in `iris_hero_final/SHA256SUMS`.
