@@ -26,7 +26,8 @@ export class NearError extends Error {
  * `UNKNOWN_ACCOUNT`, `NO_CONTRACT_CODE`, `CONTRACT_EXECUTION_ERROR` (method panicked or does not exist) or `RPC`.
  * @param {{contractId: string, rpcUrls?: string[], fetch?: typeof fetch, timeoutMs?: number}} o
  */
-export function createNearClient({ contractId, rpcUrls = NEAR_TESTNET_RPC, fetch = globalThis.fetch, timeoutMs = 6000 }) {
+// 15 s per host: public testnet RPC behind a slow link or a corporate proxy can take 5-10 s per view call.
+export function createNearClient({ contractId, rpcUrls = NEAR_TESTNET_RPC, fetch = globalThis.fetch, timeoutMs = 15000 }) {
   if (!contractId) throw new NearError('CONFIG', 'contractId is required');
   let rpcIndex = 0;
   const urls = rpcUrls.length ? rpcUrls : NEAR_TESTNET_RPC;
@@ -142,14 +143,17 @@ export function leafBadge(status, leaf) {
  * @param {typeof fetch} [o.fetch]
  * @param {boolean} [o.knownSeasonsOnly=true]  only ask the contract about seasons listed in the deployment
  * @param {number} [o.retryMs=30000]  how long an `offline` answer is kept before the next observation retries
+ * @param {boolean} [o.autoRetry]  also retry on a timer after `retryMs` (default: in a browser), so a badge appears
+ *   without another player action once the network recovers
  * @param {() => number} [o.now]
  */
-export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT, fetch = globalThis.fetch, knownSeasonsOnly = true, retryMs = 30000, now = () => Date.now(), timeoutMs } = {}) {
+export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT, fetch = globalThis.fetch, knownSeasonsOnly = true, retryMs = 30000, now = () => Date.now(), timeoutMs, autoRetry = typeof window !== 'undefined' } = {}) {
   const listeners = new Set();
   const leaves = new Map();
   let client = null;
   let pending = null;
   let lastFail = 0;
+  let lastObs = null;
   const base = { state: deployment && deployment.contractId ? 'idle' : 'disabled', network: deployment ? deployment.network : null, contractId: deployment ? deployment.contractId : null };
   const status = { ...base, seasonId: null, contractUrl: null, commitTxUrl: null, onChain: null, error: null };
   const emit = () => { for (const fn of [...listeners]) { try { fn(status); } catch (e) { console.warn('[near] listener failed', e); } } };
@@ -174,6 +178,7 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
       if (status.seasonId !== s.seasonId) return;
       lastFail = now();
       set({ state: 'offline', error: e.code || 'NETWORK' });
+      scheduleRetry();
     }
   }
 
@@ -197,7 +202,16 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
       emit();
     } catch (e) {
       entry.state = 'offline'; entry.error = e.code || 'NETWORK'; lastFail = now(); emit();
+      scheduleRetry();
     }
+  }
+
+  /** One pending retry at a time: re-observes the latest observation after `retryMs` (never keeps node alive). */
+  let retryTimer = null;
+  function scheduleRetry() {
+    if (retryTimer || !autoRetry) return;
+    retryTimer = setTimeout(() => { retryTimer = null; if (lastObs) watcher.observe(lastObs); }, retryMs);
+    if (retryTimer && typeof retryTimer.unref === 'function') retryTimer.unref();
   }
 
   const watcher = {
@@ -206,19 +220,22 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
     /** Call after each observation. Starts (at most one) season check and one check per revealed leaf. */
     observe(obs) {
       if (status.state === 'disabled') return;
+      if (obs) lastObs = obs; // observations that arrive while the season check is in flight are not lost
       const s = (obs && obs.season) || season();
       if (!s || !s.seasonId || !s.merkleRoot) return;
       if (s.seasonId !== status.seasonId) {
         leaves.clear();
         if (knownSeasonsOnly && !seasonRecord(s.seasonId)) { set({ state: 'other-season', seasonId: s.seasonId, contractUrl: explorerLinks(deployment).contract, commitTxUrl: null, onChain: null, error: null }); return; }
-        pending = checkSeason(s).then(() => watcher.observe(obs));
+        pending = checkSeason(s).then(() => watcher.observe(lastObs));
         return;
       }
-      if (status.state === 'offline' && now() - lastFail >= retryMs) { pending = checkSeason(s).then(() => watcher.observe(obs)); return; }
+      if (status.state === 'offline' && now() - lastFail >= retryMs) { pending = checkSeason(s).then(() => watcher.observe(lastObs)); return; }
       if (status.state !== 'committed') return;
       const revealed = (obs && obs.proofs) || [];
-      for (const p of revealed) if (!leaves.has(p.index)) pending = checkLeaf(p.index);
-      for (const c of (obs && obs.chronicle) || []) if (!leaves.has(c.index)) pending = checkLeaf(c.index);
+      // A leaf is asked once; one that failed on the network is asked again after `retryMs`.
+      const due = (i) => { const l = leaves.get(i); return !l || (l.state === 'offline' && now() - lastFail >= retryMs); };
+      for (const p of revealed) if (due(p.index)) pending = checkLeaf(p.index);
+      for (const c of (obs && obs.chronicle) || []) if (due(c.index)) pending = checkLeaf(c.index);
     },
     /** Resolves when the checks started so far have finished (tests, QA). */
     async settle() { let p = null; while (pending && pending !== p) { p = pending; await p; } return status; },
@@ -226,6 +243,8 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
     seasonBadge: () => seasonBadge(status),
     leafBadge: (index) => leafBadge(status, leaves.get(index) || null),
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    /** Stops the retry timer and drops listeners (the HUD calls it on unmount). */
+    destroy() { if (retryTimer) clearTimeout(retryTimer); retryTimer = null; listeners.clear(); },
     client: () => (status.state === 'disabled' ? null : getClient()),
   };
   return watcher;
