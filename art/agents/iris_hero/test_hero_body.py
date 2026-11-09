@@ -81,3 +81,22 @@ def test_fill():
 
 
 test_fill()
+
+
+def test_domes():
+    cos, doms, edges = body()
+    off = B.cheek_domes(cos, doms, s=1.0)
+    moved = [(c, o) for c, o in zip(cos, off) if o != (0.0, 0.0, 0.0)]
+    assert moved, "the domes moved nothing"
+    # only back-side torso/leg vertices, never the front, the arms or the cleft line
+    assert all(c[1] > -0.02 for c, _ in moved)
+    assert all(abs(c[0]) > 0.003 for c, _ in moved)
+    assert all(o == (0.0, 0.0, 0.0) for c, o, d in zip(cos, off, doms) if d.startswith(("forearm", "head")))
+    # symmetric
+    for c, o in moved[:200]:
+        j = min(range(len(cos)), key=lambda i: (cos[i][0] + c[0]) ** 2 + (cos[i][1] - c[1]) ** 2 + (cos[i][2] - c[2]) ** 2)
+        assert abs(off[j][0] + o[0]) < 1e-6 and abs(off[j][1] - o[1]) < 1e-6
+    print("cheek_domes ok;", len(moved), "vertices, max", round(max(sum(v * v for v in o) ** 0.5 for _, o in moved) * 1000, 1), "mm")
+
+
+test_domes()
