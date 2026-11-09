@@ -225,8 +225,7 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
 
 ## Related projects
 
-<!-- TODO(owner): unconfirmed. If RAEN Computers / Guard is submitted as a separate project (Q-015: one person may be in at most two projects), replace this paragraph with a link to its repository, and its README must link back here. Remove this comment once decided. -->
-None submitted yet. If the team submits a second project to NEAR Hackathon, both READMEs will link to each other here.
+None. Forget to Foresee is the only NEAR Hackathon submission of its developer, Lambada_eth (owner and CEO of RAEN, the company behind it); RAEN is not a separate project.
 
 ## License
 

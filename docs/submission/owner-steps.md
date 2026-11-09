@@ -45,10 +45,8 @@ it without re-rendering.
 `docs/submission/x-post.md`. Post 1 must contain the video, "built at NEAR HACKATHON", @NEARProtocol and
 #NEARHackathon. Copy the post URL.
 
-### 5. Related project (decide before submitting)
-TODO(owner): if RAEN Computers / Guard is submitted as a separate project (Q-015: one person may be in at most two
-projects; each email at most two submissions), add a "Related projects" link to it in this README and a link back to
-this repository in its README before submitting either. If not, leave the README's "Related projects" section as is.
+### 5. Related project
+Settled 09.11: none. RAEN is the company; Lambada_eth is its owner, CEO and this game's developer. One submission only.
 
 ### 6. Submit (once)
 `docs/submission/apply-form.md`: fill the TODO(owner) values, generate the `requestId`, read the consent sentence,

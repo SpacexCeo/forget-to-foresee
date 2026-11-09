@@ -37,9 +37,8 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
   https://nearhackathon.com/api/applications` with exactly the fields below. **One submission per repository, one
   attempt**: mistakes are fixed at https://nearhackathon.com/request-changes, never by submitting again.
   **Owner action**: values and the ready payload in `docs/submission/apply-form.md`. Not sent yet.
-- [ ] If the owner submits a second, independent project (RAEN Computers / Guard), both READMEs must name each
-  other (Q-015: at most 2 projects per person, each email at most 2 submissions). **TODO(owner)**: unconfirmed
-  (`docs/decisions.md` §6 item 3); the README's "Related projects" section holds a marked placeholder.
+- [x] Related projects (Q-015): none. RAEN is the company name and Lambada_eth its owner, CEO and the developer;
+  Forget to Foresee is the only submission (owner, 09.11).
 
 ## Submission fields (the human decides every value; never guess or fill placeholders)
 

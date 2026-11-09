@@ -86,7 +86,5 @@ resend with the same `requestId`.
 
 ## Related project (Q-015)
 
-TODO(owner): unconfirmed. One person may be in at most two projects (and each email may make at most two
-submissions). If RAEN Computers / Guard is submitted as a separate project, add a "Related projects" link to it in
-this README and a link back here in its README before submitting either; `docs/decisions.md` §6 item 3 is still open.
-If it is not submitted, nothing changes here.
+Settled 09.11 (owner): no related project. RAEN is the company name; Lambada_eth is its owner, CEO and the
+developer of this game. Forget to Foresee is the only submission, so no cross-links are needed.
