@@ -51,6 +51,15 @@ export async function renderPage({ shot, baseUrl, outDir, opts }) {
     const q = new URLSearchParams({ scene: shot.page, w: String(width), h: String(height), fps: String(fps), ...(alpha ? { alpha: '1' } : {}), ...(shot.params || {}) });
     const url = `${baseUrl}/cine/jury.html?${q}`;
     log(`[${shot.name}] page ${url}`);
+    // No hot reload during a capture: a code edit on the dev server must not reload a page mid-render. The vite client is
+    // replaced by a no-op with the same exports (CSS modules still inject their styles through updateStyle).
+    await page.route('**/@vite/client', (r) => r.fulfill({ contentType: 'application/javascript', body: [
+      'export const createHotContext = () => ({ accept() {}, acceptExports() {}, dispose() {}, prune() {}, invalidate() {}, on() {}, off() {}, send() {}, data: {} });',
+      'const sheets = new Map();',
+      'export const updateStyle = (id, css) => { let s = sheets.get(id); if (!s) { s = document.createElement("style"); s.setAttribute("data-vite-dev-id", id); document.head.appendChild(s); sheets.set(id, s); } s.textContent = css; };',
+      'export const removeStyle = (id) => { const s = sheets.get(id); if (s) { s.remove(); sheets.delete(id); } };',
+      'export const injectQuery = (u) => u;',
+    ].join('\n') }));
     await page.goto(url, { waitUntil: 'load', timeout: 120_000 });
     for (let t0 = Date.now(); !(await page.evaluate(() => !!window.__cine)); ) { if (Date.now() - t0 > 60_000) throw new Error('page did not expose window.__cine'); await new Promise((r) => setTimeout(r, 200)); }
     await page.evaluate(() => window.__cine.ready);

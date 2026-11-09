@@ -4,7 +4,7 @@ Task J3 (owner brief 09.11): one 60 s English video for the jury and the hackath
 sells the game. Rules for this cut: no flicker; every line readable on a phone inside the X app; nothing shown that
 does not run; anything illustrated is drawn as a diagram, never as a fake UI.
 
-Status: **storyboard, waiting for the lead's review.** Script: `tools/capture/shots/jury.mjs`. The motion-graphics
+Status: **storyboard approved by the lead (09.11); v2 restructured around the two pillars at the owner's request.** Script: `tools/capture/shots/jury.mjs`. The motion-graphics
 pages are `game/cine/jury-*.html`, dev server only and not part of the game build.
 
 ## Format and craft
@@ -19,33 +19,61 @@ pages are `game/cine/jury-*.html`, dev server only and not part of the game buil
 | Anti-flicker | In-engine shots use the existing capture path: virtual clock, frozen governor/autoTier/adaptive resolution, and the luma/black-edge check that fails a shot. Motion-graphics pages draw each frame as a pure function of `t` (`window.__jury.render(t)`) under the same virtual clock, so every frame is identical on every run. |
 | Sound | The game's own stems through `lib/mix.mjs`: music rises with tension (35 → 92 at the crisis), falls to 40 at the vote and to 8 at the end card; stingers are `gift_chime`, `guest_spike`, `guest_call` and `sting_survived`. No voice-over. |
 
-## Shot list
+## Shot list (v2, 09.11: two pillars)
 
-`IE` = in-engine (GPU final, current Iris and current Guests). `MG` = motion graphics (HTML/SVG page, renders on CPU,
-final quality). Times are on the final timeline, and cuts land on whole seconds of the 60 bpm music.
+The owner asked for two pillars, each with a title card and the most screen time: **I · the agents** (six AI clans
+with silk, memory and temper; your own AI agent over the HTTP API) and **II · the memory shard** (a forgotten memory
+becomes a NEP-171 NFT bound to the sealed season). The seal, the season, the rewards and the backend support them.
+`IE` = in-engine (GPU final). `MG` = motion graphics (`game/cine/jury.js`, CPU, final quality). Every MG scene opens
+with the ink-ring wipe; every element moves (enter with the motion tokens, lines draw on, packets travel, numbers count).
 
-| # | Time | Kind | Picture | On-screen text (words · hold) | Source of every claim |
-|---|---|---|---|---|---|
-| 1 | 0.0–4.0 | IE `emerge` | Out of black: the Guest comes forward through the mist and draws the ring sign on the glass. Iris stands small in front. | "They draw the future." (4 w · 2.6 s) | `docs/guests-stage.md`; `guestSign` action |
-| 2 | 4.0–6.5 | IE `island` | Crane over the archipelago: four Shells hovering, six camps, bridges | "Four Shells. Six clans. One message." (6 w · 2.2 s) | README product paragraph; `scenes/layout.js` |
-| 3 | 6.5–8.0 | IE `ink` | Push in on the glass as the ink ring closes | none | as 1 |
-| 4 | 8.0–12.0 | MG `decode` | The real sign of trial 3 (judge leaf #0, drawn by the game's `drawLogogram`). Each slot lights up and a large label flies out: **PLACE** Shell II · **ACTION** Gift · **POWER** 20 · **DELAY** trial 3. Then a yes/no chip pops on one stroke. | "Read the sign, slot by slot" (6 w · 2.0 s) → "Ask the Guests: yes or no" (6 w · 2.0 s) | engine `MEAN`/`SLOTS`; leaf 0 = `{t:3, place:1, action:0, power:1}` (`docs/near.md`); `askGuests` (5 silk, refunded on "no" in v3) |
-| 5 | 12.0–15.0 | IE `forget` | Walk path, trial 4. Memories panel → **Forget it for a vision** → the vision cards arrive. | "Forget a memory forever…" (4 w · 2.8 s) | README judge table row 6; `forget()` |
-| 6 | 15.0–17.5 | MG `shard` | The memory card cracks into a shard. Arrows lead to "2 future signs, seen first" and "Shard → auction". | "…to see the future first" (5 w · 2.3 s) | `forget()`: a vision shows as many signs as the memory weighs; Call weighs 2 |
-| 7 | 17.5–20.5 | IE `faces` | Three 1-second close-ups of the round-5 clan agents (Moss, Salt, Frost) | "Six clans. Each one an agent." (6 w · 2.6 s) | README; `agent_<clan>.glb` |
-| 8 | 20.5–25.0 | MG `agents` | Six clan cards in a ring. Each card shows its silk (60 at the start), its temper (Honest / Greedy / Wary) and one memory. Lines pulse between the cards: **Frost bids 13** for Iris's shard (sold), **Ash: pact, fragments by trial 14** (a solid line = kept), **Moss: loan 15, repay 25** (dashed, then it breaks in red = broken). | "Silk, a memory, a temper" (5 w · 1.8 s) → "They bid, lend, make pacts… and break them" (8 w · 2.6 s) | `PERS` (h/g/p) in `rules-baseline.md`; shard 7 → Frost for 13 (`judge-shards-args.mjs`); `offers()` t5 Ash pact by 14, t3 Moss loan 15 → 25 |
-| 9 | 25.0–30.0 | MG + IE `api` | Split screen. Left, labelled **Browser**: the in-engine stake shot (reading card, F stakes 10 silk). Right, labelled **AI agent · HTTP API**: a terminal types `node examples/agent.mjs` and then the real output lines (`session s-… (rules v3)`, `tick 2: anchor Shell 1 @ tick 3`, … `"rejected": 0`, `"firstProofVerified": true`). The endpoints `POST /v1/sessions` and `POST /v1/sessions/{id}/commands` show above. | "Humans and agents. Same rules." (5 w · 2.0 s) → "Open HTTP API · OpenAPI 3.1" (5 w · 2.0 s) | README "Second path"; real output saved in `docs/submission/jury-video-agent.txt`; `server/` routes. Wording is "same rules / same room code", **not** "the same live room": the browser runs the room locally and does not talk to the HTTP server. |
-| 10 | 30.0–35.0 | MG `season` | Timeline 1→17. Each trial lights up in turn. From trial 3, a ✓ lands on each reveal. The tension meter fills. | "17 trials. Every reveal checked ✓" (5 w · 2.4 s) → "Tension rises" (2 w · 1.6 s) | 15 leaves for ticks 3–17; `addH` |
-| 11 | 35.0–38.0 | IE `crisis` | Inside a Shell at trial 13: the giants loom, the mist churns | "Trial 13 · The crisis" (title, 4 w · 2.4 s) | `crisis()`; guests-stage `crisis` cue |
-| 12 | 38.0–41.0 | MG `ash` | The six-card ring again. Ash's links snap (red) and Ash's card dims: **isolated**. A key icon: "Ash's Key: hash matches the commitment ✓", and the links re-form in gold. | "Ash cuts every tie" (4 w · 1.5 s) → "Ash's Key restores them ✓" (4 w · 1.5 s) | `crisis()` breaks Ash's two weakest links and isolates Ash; `speakKey()` checks the hash and restores the links; the Ash key commitment is on testnet (`commit_ash_key` E3ppFx…) |
-| 13 | 41.0–43.5 | IE `vote` | Before the vote: every Guest faces the visitor | "Trial 17. Gift or Weapon?" (5 w · 2.2 s) | `vote()`; guests-stage `vote` cue |
-| 14 | 43.5–49.0 | MG `rewards` | **Top:** a stake of 10 silk on a Gift. The pot (10 / 20 / 40 / 80 by power) splits between two stakes, bars sized by how early each was placed (example: 20 → 12 + 8). Storm: the coin burns. Silence / Call: the coin returns. **Bottom:** four vote tiles: **GIFT** +60 each contributor · **WEAPON** all silk → 0 · **SURVIVED** +30 each contributor · **LOST** nothing. | "Stake early, earn a bigger share" (5 w · 2.0 s) → "A Storm burns it. Silence returns it." (7 w · 2.4 s); the tiles are labels (≈ 10 w, held 3.0 s) | `resolveTick` (weight = trials waited + 1, `apportion` = largest remainder, ties to the earlier stake; `apportion(20,[3,2])` = 12, 8); finale in `vote()` with `V3.finaleGift` = 60, `V3.finaleSurvived` = 30 |
-| 15 | 49.0–53.0 | MG `nft` | The real token card, drawn from on-chain data: the ink-ring SVG of `793f6c05e89839f2-7` (the bytes of `shardSvg()`, identical on-chain) with its fields: memory **Iris · Call (weight 2)** · forgotten **trial 4** · auction **Frost, 13 silk** · opened **sign #4, leaf 63903cca…** · season **793f6c05e89839f2**. Footer: `ftf-shards.testnet · NEP-171 · mint tx 2nqGqiVf…` | "The forgotten memory becomes an NFT" (6 w · 2.4 s) → "Minted on NEAR testnet" (4 w · 1.5 s) | `contracts/deployments/testnet-memory-shard-…json`; `docs/shard-nft.md`; mint args regenerated by `contracts/memory-shard/scripts/judge-shards-args.mjs` |
-| 16 | 53.0–57.0 | MG `backend` | Animated data-flow diagram. Packets travel the lines and check marks pop at each approval: **Seed** → **Engine: 17 trials** → **Merkle root (SHA-256)** → **Coordinator** signs `commit_season` → **ftf-seasons.testnet** (tx `6TtWeZ3W…`). Each reveal: **leaf + proof** → the contract recomputes the leaf and folds the path ✓ (15/15) → **Browser: "Verified on NEAR testnet ✓"** (read-only RPC views). A side branch: **Shard → `mint_shard` → ftf-shards.testnet**, carrying leaf #3. A third input: **HTTP agent API → same engine**. | "Sealed before trial 1. Checked on NEAR." (7 w · 2.4 s) | `docs/near.md` (diagram, tx hashes, read-only client); `game/src/net/near-deployment.js` |
-| 17 | 57.0–60.0 | MG `end` | End card over a slow drift of the ink ring | **Forget to Foresee** · spacexceo.github.io/forget-to-foresee/?demo=judge · Built at NEAR HACKATHON · Made by Lambada_eth | owner brief |
+| # | Time | Kind | Picture | On-screen text |
+|---|---|---|---|---|
+| 1 | 0.0–2.5 | IE `emerge` | The Guest comes through the mist and draws the ring sign; Iris small in front | They draw the future. |
+| 2 | 2.5–4.5 | IE `island` | Orbit over the archipelago: four Shells, six camps | Four Shells. Six clans. |
+| 3 | 4.5–6.0 | IE `ink` | Push in on the glass as the ink ring closes | — |
+| 4 | 6.0–10.5 | MG `decode` | The judge season's first sign drawn by the game's `drawLogogram`; each slot lights and its value flies out: Place Shell II · Action Gift · Power 20 · Delay trial 3; then "Gift?" → "Yes ✓" | Read it slot by slot. / Ask the Guests. |
+| 5 | 10.5–12.5 | MG `pillar-agents` | Title card **I · The Agents** over the sign's ring | Six AI clans scheme around you |
+| 6 | 12.5–14.0 | IE `face-moss` | A clan agent up close | — |
+| 7 | 14.0–20.0 | MG `agents` | The six cards (clan material, temper), silk counting up to 60; three real judge-season moments on their ties: Frost wins Iris's shard (−13 / +13), Salt whispers "It is a weapon" (a broadcast ring, no tie), Ash cheats Amber (−16 / +16, the tie breaks) | Silk, a memory, a temper. / They trade… and break trust. |
+| 8 | 20.0–24.5 | MG `api` + IE | Two labelled windows: "You · in the browser" (in-engine stake shot) and "AI agent · HTTP API" (a replay of a real `node examples/agent.mjs` run) | Your AI agent can play a whole season via our HTTP API. |
+| 9 | 24.5–26.5 | MG `pillar-nft` | Title card **II · The Memory Shard** | Your agent pays for prophecy with a memory |
+| 10 | 26.5–29.0 | IE `forget` | Walk path, trial 4: Memories → Forget it for a vision (the Call) | Forget a memory forever… |
+| 11 | 29.0–32.0 | MG `shard` | The memory card cracks into the shard; the two future signs its vision opened; the shard to auction | …to see the future first. |
+| 12 | 32.0–37.5 | MG `nft` | Token `793f6c05e89839f2-7`: the on-chain ink-ring SVG drawing itself, its fields, the season root, the opened leaf joined by a dotted "same" line to leaf #3 on ftf-seasons | Bound to the sealed season. / Minted on NEAR testnet. |
+| 13 | 37.5–41.0 | MG `season` | 17 trials; a seal on each of the 15 reveals; crisis at 13, vote at 17; the tension line | 17 trials. Every reveal checked. / Tension rises. |
+| 14 | 41.0–43.0 | IE `crisis` | The giants loom at the glass | Trial 13 · The crisis |
+| 15 | 43.0–47.0 | MG `ash` | The six cards; Ash's real broken ties; the Key's seal on the Iris–Ash tie: SHA-256(phrase · salt) = d1a39714…5d99b6; the ties relight | Ash turns away. / Ash's Key restores them. |
+| 16 | 47.0–49.0 | IE `vote` | Every Guest faces the visitor | Trial 17: Gift or Weapon? |
+| 17 | 49.0–53.5 | MG `rewards` | The Gift pot ring splits 12 / 8 by how early; Storm burns, Silence and Call return; the four outcomes | Stake early, bigger share. / Then the vote pays out. |
+| 18 | 53.5–57.0 | MG `backend` | Seed → engine → Merkle root → coordinator → ftf-seasons (seal: leaf + path checked) → browser (seal: Verified on NEAR testnet); HTTP agent API → engine; mint → ftf-shards (dotted "same leaf #3") | Sealed before trial 1. Checked on NEAR. |
+| 19 | 57.0–60.0 | MG `end` | Forget to Foresee · spacexceo.github.io/forget-to-foresee/?demo=judge · Built at NEAR HACKATHON · Made by @Lambada_eth | — |
 
-Total on-screen words ≈ 110 in 60 s. Every line stays under 3 words per second, and the checker enforces the 1.5 s
-minimum hold.
+Pillar screen time: agents 14.0 s (shots 5–8) + the crisis of an agent (shot 15, 4.0 s); memory shard 13.0 s (9–12).
+
+## Verified facts (every number, account, hash and arrow, with its source)
+
+| On screen | Value | Source |
+|---|---|---|
+| Judge sign #1 | Shell II · Gift · power 20 · trial 3 | engine event `t:3` of seed `cc161d30…` via `tools/capture/jury-data.mjs`; `docs/near.md` leaf 0 |
+| Ask the Guests | a "no" refunds the 5 silk (v3) | `engine.js` `askGuests`, `V3.askRefundOnNo` |
+| Starting silk | 60 for every clan | `engine.js` `newSeason` (`silk: [60, …]`) |
+| Tempers | Salt cunning (h .35), Ash wary (p .85), Moss honest (h .92), Amber greedy (g .9), Frost scholar (learning .8) | `engine.js` `PERS`, `docs/rules-baseline.md` |
+| Frost wins Iris's shard for 13 | Frost −13, Iris +13 (the price goes to the seller) | judge shard 7 (`judge-shards-args.mjs`); `engine.js` auction close |
+| Ash cheats Amber of 16 | Ash +16, Amber −16; Amber cuts the tie (trial 8) | judge-season log (`jury-data.json` `crisis.breaks`); `engine.js` cheat |
+| Salt: "It is a weapon" | broadcast at trial 13 | judge-season log; `engine.js` `crisis()` |
+| Agent run | `session … (rules v3)`, `tick 2: anchor Shell 1 @ tick 3`, `"rejected": 0`, `"firstProofVerified": true` | `docs/submission/jury-video-agent.txt` (real run, 09.11) |
+| Shard 7 | token `793f6c05e89839f2-7`, Iris, Call, weight 2, forgotten trial 4, Frost 13, opened sign #4 (leaf index 3) `63903cca…`, root `03dbd458…` | `contracts/memory-shard/scripts/judge-shards-args.mjs`; `docs/shard-nft.md`; `docs/near.md` |
+| Shard SVG | byte-identical to the game's `shardSvg()` | `game/src/net/shard-nft.js`; `docs/near.md` |
+| Mint tx | `2nqGqiVf…` on `ftf-shards.testnet`, minted by the coordinator | `contracts/deployments/testnet-memory-shard-…json` |
+| 17 trials, 15 reveals (trials 3–17), crisis 13 | `TICKS = 17`, `CRISIS = 13`, 15 leaves | `engine.js`; `docs/near.md` |
+| Crisis ties | Ash cut Iris and Salt (trial 13); Amber–Ash broken since trial 8; Moss and Frost stay | judge playthrough at trial 14 (`jury-data.json` `crisis`) |
+| Ash's Key check | SHA-256(`ftf:key:v2|season|phrase|salt`) = `d1a39714…5d99b6`, committed on testnet before trial 1 (`commit_ash_key` E3ppFx…); the browser compares; not revealed on-chain | `engine.js` `keyCommit`, `speakKey`; `docs/near.md` |
+| Gift pot | 10 / 20 / 40 / 80 by power; split by weight trials-waited + 1; `apportion(20, [3, 2]) = 12, 8` | `engine.js` reveal and `apportion` |
+| Storm / Silence / Call | Storm burns the stake; Silence and Call return it | `engine.js` reveal |
+| Vote | Gift +60 each contributor; Weapon everyone's silk 0; Survived +30 each contributor; Lost nothing | `engine.js` `vote()` with `V3.finaleGift`, `V3.finaleSurvived` |
+| Commit tx | `6TtWeZ3W…` to `ftf-seasons.testnet` by `ftf-coordinator.testnet` | `game/src/net/near-deployment.js`; `docs/near.md` |
+| Arrows | coordinator → contract (signed txs); contract → browser (read-only RPC views); agent API → engine; coordinator → ftf-shards (mint) | `docs/near.md` "What runs where"; `game/src/net/near.js` |
 
 ## Truth notes (checked against the engine and the README)
 

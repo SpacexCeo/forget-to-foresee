@@ -10,8 +10,8 @@
 export const T = Object.freeze({
   charcoal: '#0b0f10', ground: '#0f1716', surface: '#142020', surface2: '#18262533',
   pearl: '#ece6d8', ivory: '#f3ead6', mist: '#9aa8a4', silver: '#a9b0ad', hair: 'rgba(220, 214, 196, .16)',
-  amber: '#e8b25a', amberSoft: 'rgba(232, 178, 90, .55)', amberGlow: 'rgba(232, 178, 90, .22)',
-  broken: 'rgba(154, 168, 164, .38)', verified: '#e8b25a',
+  amber: '#e4c272', amberSoft: 'rgba(228, 194, 114, .55)', amberGlow: 'rgba(228, 194, 114, .22)',
+  broken: 'rgba(154, 168, 164, .38)', verified: '#e4c272',
   radius: 18, line: 3, anchor: 6,
 });
 
@@ -129,7 +129,10 @@ export function clanCard(clan, { x, y, w = 440, h = 164, player = false } = {}) 
     el, x, y, w, h, anchor,
     /** state: { cool 0..1 (isolated: the material and name cool down), drift 0..1 (Ash's particles carried off), note } */
     set(t, st = {}) {
-      const cool = st.cool || 0;
+      const cool = st.cool || 0, ph = (x + y) * 0.013;
+      el.style.translate = `0 ${(Math.sin(t * 0.9 + ph) * 3).toFixed(2)}px`;
+      mg.setAttribute('transform', `translate(${(Math.sin(t * 0.55 + ph) * 5).toFixed(2)},${(Math.cos(t * 0.7 + ph) * 3).toFixed(2)})`);
+      mat.g.style.opacity = (0.86 + 0.14 * Math.sin(t * 1.3 + ph)).toFixed(3);
       el.style.setProperty('--ds-cool', cool.toFixed(3));
       name.style.opacity = (1 - 0.45 * cool).toFixed(3);
       art.style.opacity = (1 - 0.6 * cool).toFixed(3);
@@ -152,7 +155,7 @@ export function route([x1, y1], [x2, y2], { via = 'h', r = 22, mid = null } = {}
 }
 
 /** The confirmation mark of the system (the same seal as Ash's Key, small): an amber ring with a fine check. */
-export function sealMark(r = 20, color = '#e8b25a') {
+export function sealMark(r = 20, color = '#e4c272') {
   return s('g', { fill: 'none', stroke: color, 'stroke-width': Math.max(2, r / 9), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
     s('circle', { cx: 0, cy: 0, r }), s('path', { d: `M${-r * 0.42},${r * 0.02} L${-r * 0.1},${r * 0.34} L${r * 0.46},${-r * 0.3}` }));
 }
@@ -172,6 +175,6 @@ export const CSS = `
 .ds-card.ds-player { box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 0 0 1.5px color-mix(in srgb, var(--ds-edge) 70%, transparent), 0 0 46px color-mix(in srgb, var(--ds-edge) 18%, transparent), 0 18px 40px rgba(0,0,0,.45); }
 .ds-art { position: absolute; inset: 0; }
 .ds-name { position: absolute; left: 30px; top: 22px; font: 400 66px/1 "Libre Caslon Text", Georgia, serif; letter-spacing: .005em; }
-.ds-temper { position: absolute; left: 32px; top: 100px; font: 600 40px/1 "Source Sans 3", sans-serif; letter-spacing: .26em; text-transform: uppercase; color: ${T.mist}; }
+.ds-temper { position: absolute; left: 32px; top: 98px; font: 600 44px/1 "Source Sans 3", sans-serif; letter-spacing: .26em; text-transform: uppercase; color: ${T.mist}; }
 .ds-note { display: none; position: absolute; right: 26px; top: 100px; font: 600 40px/1 "Source Sans 3", sans-serif; letter-spacing: .18em; text-transform: uppercase; color: ${T.mist}; opacity: 0; }
 `;

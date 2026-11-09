@@ -64,7 +64,7 @@ const cap = (text) => stage.appendChild(h('div', { class: 'cap', html: text }));
 const bg = document.getElementById('bg'), bgx = bg.getContext('2d');
 // A static film grain (seeded once, identical on every frame: texture without shimmer).
 const grain = (() => { const c = document.createElement('canvas'); c.width = 960; c.height = 540; const x = c.getContext('2d'), im = x.createImageData(960, 540); let a = 99; for (let i = 0; i < im.data.length; i += 4) { a = (a * 1103515245 + 12345) & 0x7fffffff; const v = a % 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 10; } x.putImageData(im, 0, 0); return c; })();
-function drawBg(t, { tint = [232, 178, 90], heat = 0 } = {}) {
+function drawBg(t, { tint = [228, 194, 114], heat = 0 } = {}) {
   if (ALPHA) { bgx.clearRect(0, 0, 960, 540); return; }
   const g = bgx.createRadialGradient(480, 230, 30, 480, 300, 640);
   g.addColorStop(0, '#16221f'); g.addColorStop(0.5, '#0f1716'); g.addColorStop(1, '#070a0b');
@@ -79,7 +79,7 @@ function drawBg(t, { tint = [232, 178, 90], heat = 0 } = {}) {
   });
   // the horizon of a Shell: one fine arc, warm at its crown, fading at the sides
   const arc = bgx.createLinearGradient(0, 0, 960, 0);
-  arc.addColorStop(0, 'rgba(232,178,90,0)'); arc.addColorStop(0.5, 'rgba(232,178,90,.16)'); arc.addColorStop(1, 'rgba(232,178,90,0)');
+  arc.addColorStop(0, 'rgba(228,194,114,0)'); arc.addColorStop(0.5, 'rgba(228,194,114,.16)'); arc.addColorStop(1, 'rgba(228,194,114,0)');
   bgx.strokeStyle = arc; bgx.lineWidth = 1; bgx.beginPath(); bgx.arc(480, 760, 740, Math.PI * 1.12, Math.PI * 1.88); bgx.stroke();
   const vg = bgx.createRadialGradient(480, 270, 260, 480, 270, 620); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
   bgx.fillStyle = vg; bgx.fillRect(0, 0, 960, 540);
@@ -139,8 +139,8 @@ const short = (s, a = 8, b = 5) => `${s.slice(0, a)}…${s.slice(-b)}`;
 const SCENES = {};
 
 // 4 · Read the sign slot by slot, then ask the Guests (6.0 s).
-SCENES.decode = { duration: 6.0, build() {
-  const c1 = cap('Read it slot by slot'), c2 = cap('Ask the Guests: <em>yes</em> or <em>no</em>');
+SCENES.decode = { duration: 4.5, build() {
+  const c1 = cap('Read it slot by slot'), c2 = cap('Ask the Guests');
   const sz = 760, cx = 600, cy = 590;
   const cv = signCanvas(D.sign, sz); at(cv, cx - sz / 2, cy - sz / 2); cv.classList.add('abs'); stage.append(cv);
   const lines = edgeLayer(stage);
@@ -159,15 +159,15 @@ SCENES.decode = { duration: 6.0, build() {
   const yes = h('div', { class: 'chip ok', text: 'Yes ✓' }); at(yes, cx + 250, cy - 230); stage.append(yes);
   return (t) => {
     drawBg(t);
-    show(c1, t, 0.2, 3.5); show(c2, t, 3.7, 5.95);
-    const draw = ease.inOut(P(t, 0, 1.3));
-    const slotT = (k) => 1.2 + k * 0.55;
+    show(c1, t, 0.15, 2.85); show(c2, t, 2.95, 4.45);
+    const draw = ease.inOut(P(t, 0, 1.0));
+    const slotT = (k) => 0.9 + k * 0.42;
     let hl = null;
     rows.forEach((r, k) => { if (t >= slotT(k) && t < slotT(k) + 0.55) hl = (D.sign.dots + k) % 4; });
-    if (t >= 4.1) hl = (D.sign.dots + 1) % 4; // the asked stroke: the Action slot
+    if (t >= 3.1) hl = (D.sign.dots + 1) % 4; // the asked stroke: the Action slot
     cv.draw({ progress: draw, turn: true, highlight: hl, time: t });
     rows.forEach((r, k) => {
-      const dim = t > 3.6 ? lerp(1, k === 1 ? 1 : 0.35, ease.out(P(t, 3.6, 0.4))) : 1;
+      const dim = t > 2.9 ? lerp(1, k === 1 ? 1 : 0.35, ease.out(P(t, 2.9, 0.4))) : 1;
       const a = show(r.el, t, slotT(k) + 0.1, 99);
       r.el.style.opacity = (a * dim).toFixed(3);
       if (!r.len) r.len = r.ln.getTotalLength();
@@ -175,11 +175,11 @@ SCENES.decode = { duration: 6.0, build() {
       r.ln.setAttribute('stroke-dasharray', `${r.len}`); r.ln.setAttribute('stroke-dashoffset', `${(r.len * (1 - k1)).toFixed(1)}`);
       // one connector at a time: it draws while its slot lights, then settles to a faint trace
       const live = 1 - 0.85 * ease.inOut(P(t, slotT(k) + 0.6, 0.3));
-      r.ln.style.opacity = (0.9 * live * (t > 4.0 && k === 1 ? 6 : 1)).toFixed(3);
+      r.ln.style.opacity = (0.9 * live * (t > 3.1 && k === 1 ? 6 : 1)).toFixed(3);
     });
-    show(ask, t, 4.0, 99, { scale: 0.9 });
-    const s = settle(P(t, 4.6, 0.7));
-    yes.style.opacity = t < 4.6 ? 0 : 1; yes.style.transform = `scale(${lerp(MOTION.scale.sealFrom, 1, s).toFixed(4)})`;
+    show(ask, t, 3.1, 99, { scale: 0.9 });
+    const s = settle(P(t, 3.6, 0.7));
+    yes.style.opacity = t < 3.6 ? 0 : 1; yes.style.transform = `scale(${lerp(MOTION.scale.sealFrom, 1, s).toFixed(4)})`;
   };
 } };
 
@@ -213,7 +213,7 @@ SCENES.shard = { duration: 3.0, build() {
 // temper; then three real moments of the judge season (its log): Frost wins Iris's shard for 13 silk (trial 6), Ash
 // cheats Amber out of 16 silk (trial 8, on their tie), Salt whispers to everyone that it is a weapon (trial 13: a
 // broadcast, so no tie is drawn, only a ring around Salt).
-SCENES.agents = { duration: 4.5, build() {
+SCENES.agents = { duration: 6.0, build() {
   const c1 = cap('Silk, a memory, a temper'), c2 = cap('They trade… and break <em>trust</em>');
   const svg = edgeLayer(stage);
   const TOP = 230, BOT = 700, W = 440, H = 164;
@@ -222,7 +222,10 @@ SCENES.agents = { duration: 4.5, build() {
     moss: clanCard('moss', { x: 110, y: BOT }), ash: clanCard('ash', { x: 740, y: BOT }), amber: clanCard('amber', { x: 1370, y: BOT }),
   };
   Object.values(cards).forEach((c) => stage.append(c.el));
-  const silk = Object.fromEntries(Object.entries(cards).map(([k, c]) => { const el = h('div', { class: 'abs', style: { left: c.x + 'px', width: W + 'px', top: c.y + H + 14 + 'px', textAlign: 'center', font: '400 40px/1 var(--body)', color: 'var(--ink-dim)' }, html: `<b style="color:var(--gold);font-weight:700">60</b> silk · memories` }); stage.append(el); return [k, el]; }));
+  const silk = Object.fromEntries(Object.entries(cards).map(([k, c]) => { const el = h('div', { class: 'abs', style: { left: c.x + 'px', width: W + 'px', top: c.y + H + 14 + 'px', textAlign: 'center', font: '400 40px/1 var(--body)', color: 'var(--ink-dim)' }, html: `<b style="color:var(--gold);font-weight:700">0</b> silk at the start` }); el.style.fontSize = '44px'; stage.append(el); return [k, el]; }));
+  // The real silk moves of these moments (engine: the auction price goes to the seller; a cheat moves silk to the cheat).
+  const delta = (card, txt, col) => { const el = h('div', { class: 'abs', style: { left: card.x + card.w - 150 + 'px', top: card.y - 64 + 'px', width: '140px', textAlign: 'right', font: '400 60px/1 var(--title)', color: col }, text: txt }); stage.append(el); return el; };
+  const dl = [[delta(cards.frost, '−13', '#d0806a'), 1.35], [delta(cards.iris, '+13', T.amber), 1.5], [delta(cards.amber, '−16', '#d0806a'), 3.35], [delta(cards.ash, '+16', T.amber), 3.5]];
   const tie = (a, b, via = 'h') => { const p = sv('path', { d: route(a, b, { via }), fill: 'none', stroke: 'rgba(169,176,173,.75)', 'stroke-width': T.line, 'stroke-linecap': 'round' }); svg.append(p); anchorNode(svg, a); anchorNode(svg, b); return p; };
   const e1 = tie(cards.frost.anchor('left'), cards.iris.anchor('right'));
   const ring = sv('circle', { cx: cards.salt.x + W / 2, cy: TOP + H / 2, r: 260, fill: 'none', stroke: 'rgba(217,220,214,.5)', 'stroke-width': 2 }); svg.append(ring);
@@ -230,12 +233,13 @@ SCENES.agents = { duration: 4.5, build() {
   const p1 = packet(svg, T.amber, 9), p3 = packet(svg, '#c8735a', 9);
   const ch1 = h('div', { class: 'chip ok', text: 'Frost wins the shard · 13' }); at(ch1, 1150, 448);
   const ch2 = h('div', { class: 'chip', text: 'Salt: “It is a weapon”' }); at(ch2, 110, 520);
-  const ch3 = h('div', { class: 'chip bad', text: 'Ash cheats Amber · 16' }); at(ch3, 1040, 905);
+  const ch3 = h('div', { class: 'chip bad', text: 'Ash cheats Amber' }); at(ch3, 1040, 905);
   stage.append(ch1, ch2, ch3);
   return (t) => {
     drawBg(t);
-    show(c1, t, 0.2, 2.2); show(c2, t, 2.35, 4.45);
-    Object.entries(cards).forEach(([k, c], i) => { show(c.el, t, 0.1 + i * 0.07, 99, { scale: 0.97 }); c.set(t, {}); show(silk[k], t, 0.5 + i * 0.07, 2.4); });
+    show(c1, t, 0.2, 2.4); show(c2, t, 2.6, 5.95);
+    Object.entries(cards).forEach(([k, c], i) => { show(c.el, t, 0.1 + i * 0.07, 99, { scale: 0.97 }); c.set(t, {}); show(silk[k], t, 0.4 + i * 0.07, 1.15); silk[k].firstChild.textContent = String(Math.round(60 * ease.out(P(t, 0.45 + i * 0.07, 0.6)))); });
+    dl.forEach(([el, a]) => { const k = P(t, a, 1.3); el.style.opacity = (k <= 0 ? 0 : Math.min(1, k * 6) * (1 - ease.in(P(t, a + 1.0, 0.3)))).toFixed(3); el.style.transform = `translateY(${(-26 * ease.out(k)).toFixed(1)}px)`; });
     const lit = (p, a, col) => { const L = p.getTotalLength(), k = ease.out(P(t, a, 0.45)); p.setAttribute('stroke-dasharray', `${L}`); p.setAttribute('stroke-dashoffset', (L * (1 - k)).toFixed(1)); if (t > a + 0.45) p.setAttribute('stroke', col); };
     lit(e1, 1.0, T.amber); moveOn(p1, e1, P(t, 1.0, 0.7)); show(ch1, t, 1.3, 99);
     const rk = P(t, 1.9, 0.9); ring.setAttribute('r', (230 + 260 * ease.out(rk)).toFixed(1)); ring.setAttribute('opacity', (rk > 0 ? 0.6 * (1 - rk) : 0).toFixed(3)); show(ch2, t, 2.1, 99);
@@ -243,6 +247,26 @@ SCENES.agents = { duration: 4.5, build() {
     if (t > 3.4) e3.setAttribute('stroke-dasharray', '14 14');
   };
 } };
+
+// Pillar title cards (2.0 s): the numeral, the title in the display face, one line; the season's real first sign draws
+// itself behind as the ring motif and turns slowly.
+function pillar(numeral, title, sub) { return { duration: 2.0, build() {
+  const cv = signCanvas(D.sign, 820); cv.classList.add('abs'); at(cv, 550, 130); stage.append(cv);
+  const eb = h('div', { class: 'abs label', style: { left: 0, right: 0, top: '330px', textAlign: 'center', letterSpacing: '.5em' }, text: numeral });
+  const tt = h('div', { class: 'abs', style: { left: 0, right: 0, top: '400px', textAlign: 'center', font: '400 112px/1 var(--title)', color: 'var(--ink)', textShadow: '0 4px 40px rgba(0,0,0,.8)' }, text: title });
+  const rl = h('div', { class: 'abs', style: { left: '760px', width: '400px', top: '556px', height: '1px', background: 'linear-gradient(90deg, rgba(228,194,114,0), #e4c272, rgba(228,194,114,0))' } });
+  const sb = h('div', { class: 'abs', style: { left: 0, right: 0, top: '600px', textAlign: 'center', font: '400 52px/1.2 var(--body)', color: 'var(--ink)' }, text: sub });
+  stage.append(eb, tt, rl, sb);
+  return (t) => {
+    drawBg(t);
+    cv.style.opacity = (0.28 * ease.out(P(t, 0, 0.5))).toFixed(3); cv.style.transform = `rotate(${(t * 6).toFixed(2)}deg) scale(${lerp(0.92, 1.02, ease.out(P(t, 0, 2))).toFixed(4)})`;
+    cv.draw({ progress: ease.inOut(P(t, 0, 1.4)), time: t });
+    show(eb, t, 0.15, 1.95); show(tt, t, 0.25, 1.95, { scale: 0.97 }); show(sb, t, 0.5, 1.95);
+    rl.style.transform = `scaleX(${ease.out(P(t, 0.35, 0.6)).toFixed(4)})`; rl.style.opacity = (1 - ease.in(P(t, 1.75, 0.2))).toFixed(3);
+  };
+} }; }
+SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Six AI clans scheme around you');
+SCENES['pillar-nft'] = pillar('II', 'The Memory Shard', 'Your agent pays for prophecy with a memory');
 
 // 9 · Split screen: the browser (an in-engine shot composited into the hole) and an AI agent over the HTTP API (5.0 s).
 const TERM = [
@@ -257,15 +281,15 @@ const TERM = [
   ['"firstProofVerified": true', 'ok'],
 ];
 SCENES.api = { duration: 4.5, build() {
-  const c1 = cap('Humans and agents. <em>Same rules.</em>'), c2 = cap('Open HTTP API · OpenAPI 3.1');
-  const BX = 60, BY = 300, BW = 880, BH = 495;
+  const c1 = cap('Your AI agent can play <em>a whole season</em><br>via our HTTP API');
+  const BX = 60, BY = 350, BW = 880, BH = 495;
   // The hole for the browser footage (transparent when rendered with alpha), framed like a window.
   const frame = h('div', { class: 'abs', style: { left: BX - 4 + 'px', top: BY - 4 + 'px', width: BW + 'px', height: BH + 'px', border: '4px solid var(--frame)', borderRadius: '10px' } });
   const l1 = h('div', { class: 'abs label', text: 'You · in the browser' }); at(l1, BX, BY - 70);
-  const term = h('div', { class: 'card', style: { left: '980px', top: BY + 'px', width: '880px', height: '600px', background: 'rgba(4,10,12,.94)', borderColor: 'rgba(159,196,214,.6)', borderRadius: '10px' } });
+  const term = h('div', { class: 'card', style: { left: '980px', top: BY + 'px', width: '880px', height: '548px', background: 'rgba(4,10,12,.94)', borderColor: 'rgba(159,196,214,.6)', borderRadius: '10px' } });
   const l2 = h('div', { class: 'abs label', style: { color: '#9fc4d6' }, text: 'AI agent · HTTP API' }); at(l2, 980, BY - 70);
-  const rows = TERM.map(([s, k], i) => { const r = h('div', { class: 'abs mono', style: { left: '30px', top: 26 + i * 62 + 'px', font: '400 42px/1.2 var(--mono)', color: k === 'cmd' ? '#ffe78e' : k === 'ok' ? '#9fdc8c' : k === 'json' ? '#cfe3ec' : 'var(--ink)', whiteSpace: 'pre' } }); r.full = s; term.append(r); return r; });
-  const foot = h('div', { class: 'abs', style: { font: '400 44px/1 var(--body)', color: 'var(--ink-dim)' }, text: 'replay of a real run' }); at(foot, 1000, BY + 620);
+  const rows = TERM.map(([s, k], i) => { const r = h('div', { class: 'abs mono', style: { left: '30px', top: 22 + i * 58 + 'px', font: '400 44px/1.2 var(--mono)', color: k === 'cmd' ? '#ffe78e' : k === 'ok' ? '#9fdc8c' : k === 'json' ? '#cfe3ec' : 'var(--ink)', whiteSpace: 'pre' } }); r.full = s; term.append(r); return r; });
+  const foot = h('div', { class: 'abs', style: { font: '400 44px/1 var(--body)', color: 'var(--ink-dim)' }, text: 'replay of a real run' }); at(foot, 1000, BY + 562);
   stage.append(frame, l1, term, l2, foot);
   // In alpha mode the area outside the hole needs its own background (the page background is transparent).
   const shade = h('div', { class: 'abs', style: { inset: 0, zIndex: -1, background: 'transparent' } });
@@ -273,7 +297,7 @@ SCENES.api = { duration: 4.5, build() {
   stage.prepend(shade);
   return (t) => {
     drawBg(t, { tint: [159, 196, 214] });
-    show(c1, t, 0.2, 2.3); show(c2, t, 2.5, 4.45);
+    show(c1, t, 0.2, 4.45);
     show(frame, t, 0.0, 99, { rise: 0 }); show(l1, t, 0.15); show(term, t, 0.1, 99, { rise: 0 }); show(l2, t, 0.25); show(foot, t, 0.6);
     // Typed at reading speed: the command letter by letter, then one output line every 0.42 s.
     rows.forEach((r, i) => {
@@ -286,7 +310,7 @@ SCENES.api = { duration: 4.5, build() {
 } };
 
 // 10 · The season: 17 trials, a ✓ on every reveal, the tension meter (4.0 s).
-SCENES.season = { duration: 4.0, build() {
+SCENES.season = { duration: 3.5, build() {
   const c1 = cap('17 trials. Every reveal checked <em>✓</em>'), c2 = cap('Tension rises');
   const svg = edgeLayer(stage);
   const X0 = 170, X1 = 1750, Y = 480, step = (X1 - X0) / 16;
@@ -303,14 +327,14 @@ SCENES.season = { duration: 4.0, build() {
   const vt = h('div', { class: 'abs label', style: { color: T.amber }, text: 'Vote' }); at(vt, X0 + 16 * step - 90, Y - 150);
   const tl = h('div', { class: 'abs label', style: { color: 'var(--ink-dim)' }, text: 'Tension' }); at(tl, X0, 700);
   const bar = h('div', { class: 'abs', style: { left: X0 + 'px', top: '770px', width: X1 - X0 + 'px', height: '8px', borderRadius: '4px', background: T.hair, overflow: 'hidden' } });
-  const fill = h('div', { style: { height: '100%', width: '0%', background: 'linear-gradient(90deg, #9aa8a4, #e8b25a 60%, #c8735a)' } }); bar.append(fill);
+  const fill = h('div', { style: { height: '100%', width: '0%', background: 'linear-gradient(90deg, #9aa8a4, #e4c272 60%, #d0806a)' } }); bar.append(fill);
   stage.append(cr, vt, tl, bar);
   // A tension curve shaped like the game's: slow rise, the trial-13 spike, a slight ease before the vote.
   const tension = (x) => x < 12 / 16 ? 0.12 + 0.45 * (x / (12 / 16)) : x < 13 / 16 ? 0.57 + 0.33 * ((x - 12 / 16) * 16) : 0.9 - 0.06 * ((x - 13 / 16) / (3 / 16));
   return (t) => {
-    const k = ease.inOut(P(t, 0.25, 3.2));
+    const k = ease.inOut(P(t, 0.2, 2.9));
     drawBg(t, { heat: clamp((k - 0.7) * 3) * 0.8 });
-    show(c1, t, 0.2, 2.25); show(c2, t, 2.4, 3.95);
+    show(c1, t, 0.15, 1.85); show(c2, t, 1.95, 3.45);
     prog.setAttribute('x2', (X0 + (X1 - X0) * k).toFixed(1));
     nodes.forEach((o, i) => {
       const reached = k * 16 >= i - 1e-6, kk = P(k * 16, i - 0.6, 0.6);
@@ -318,7 +342,7 @@ SCENES.season = { duration: 4.0, build() {
       o.c.setAttribute('r', ((o.special ? 24 : 14) * (1 + 0.25 * Math.sin(Math.PI * clamp(kk)))).toFixed(2));
       o.ck.style.opacity = reached ? ease.out(kk).toFixed(3) : 0;
     });
-    show(cr, t, 0.25 + 3.2 * 0.72); show(vt, t, 0.25 + 3.2 * 0.97);
+    show(cr, t, 0.2 + 2.9 * 0.72); show(vt, t, 0.2 + 2.9 * 0.97);
     show(tl, t, 0.3);
     fill.style.width = (100 * tension(k) * ease.out(P(t, 0.2, 0.4))).toFixed(2) + '%';
   };
@@ -412,7 +436,7 @@ SCENES.ash = { duration: 4.0, build() {
 // 14 · How rewards are shared (6.0 s). Top: a Gift's pot as a ring that splits into arcs by how early each stake was
 // placed (the engine's weight: trials waited + 1; apportion(20, [3, 2]) = 12 + 8), with what a Storm and a Silence or
 // Call do to the stake. Bottom: the four vote outcomes as an editorial row (v3 numbers from the engine).
-SCENES.rewards = { duration: 6.0, build() {
+SCENES.rewards = { duration: 4.5, build() {
   const R = D.rules;
   const c1 = cap('Stake early, <em>bigger share</em>'), c2 = cap('Then the vote pays out');
   const svg = edgeLayer(stage);
@@ -420,7 +444,7 @@ SCENES.rewards = { duration: 6.0, build() {
   svg.append(sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: T.hair, 'stroke-width': 18 }));
   const tot = R.split[0] + R.split[1];
   const arcA = sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: T.amber, 'stroke-width': 18, transform: `rotate(-90 ${CX} ${CY})` });
-  const arcB = sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: 'rgba(232,178,90,.45)', 'stroke-width': 18, transform: `rotate(${-90 + 360 * R.split[0] / tot + 1.5} ${CX} ${CY})` });
+  const arcB = sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: 'rgba(228,194,114,.45)', 'stroke-width': 18, transform: `rotate(${-90 + 360 * R.split[0] / tot + 1.5} ${CX} ${CY})` });
   svg.append(arcA, arcB);
   const potN = h('div', { class: 'abs', style: { left: CX - 120 + 'px', width: '240px', top: CY - 62 + 'px', textAlign: 'center' } },
     h('div', { style: { font: '400 84px/1 var(--title)', color: 'var(--ink)' }, text: String(R.pot[1]) }),
@@ -429,7 +453,7 @@ SCENES.rewards = { duration: 6.0, build() {
     h('span', { style: { display: 'inline-block', width: '44px', height: '6px', background: col, borderRadius: '3px', verticalAlign: 'middle', marginRight: '22px' } }),
     h('span', { style: { font: '400 76px/1 var(--title)', color: col, verticalAlign: 'middle' }, text: big }),
     h('span', { style: { font: '400 44px/1 var(--body)', color: 'var(--ink)', marginLeft: '22px', verticalAlign: 'middle' }, text: txt })); stage.append(el); return el; };
-  const lA = leg(300, T.amber, '+' + R.split[0], 'staked at trial 1'), lB = leg(410, 'rgba(232,178,90,.6)', '+' + R.split[1], 'staked at trial 2');
+  const lA = leg(300, T.amber, '+' + R.split[0], 'staked at trial 1'), lB = leg(410, 'rgba(228,194,114,.6)', '+' + R.split[1], 'staked at trial 2');
   const rule = h('div', { class: 'abs', style: { left: '700px', top: '520px', width: '1080px', height: '1px', background: 'var(--frame-soft)' } });
   const fates = h('div', { class: 'abs', style: { left: '700px', top: '548px', font: '400 44px/1.25 var(--body)', color: 'var(--ink-dim)' }, html: '<b style="color:#c8735a;font-weight:700">Storm</b> burns the stake · <b style="color:var(--ink);font-weight:700">Silence, Call</b> return it' });
   stage.append(potN, rule, fates);
@@ -447,46 +471,65 @@ SCENES.rewards = { duration: 6.0, build() {
   });
   return (t) => {
     drawBg(t);
-    show(c1, t, 0.2, 2.75); show(c2, t, 2.95, 5.95);
-    const top = 1 - 0.6 * ease.inOut(P(t, 2.8, 0.4));
-    const k = ease.out(P(t, 0.3, 0.5)), sp = ease.inOut(P(t, 0.9, 0.6));
+    show(c1, t, 0.15, 2.2); show(c2, t, 2.35, 4.45);
+    const top = 1 - 0.6 * ease.inOut(P(t, 2.2, 0.4));
+    const k = ease.out(P(t, 0.25, 0.45)), sp = ease.inOut(P(t, 0.7, 0.5));
     const fa = C * R.split[0] / tot, fb = C * R.split[1] / tot;
     arcA.setAttribute('stroke-dasharray', `${(lerp(C * k, fa - 6, sp)).toFixed(1)} ${C}`);
     arcB.setAttribute('stroke-dasharray', `${(fb - 6) * sp} ${C}`);
     arcA.style.opacity = arcB.style.opacity = top.toFixed(3);
     show(potN, t, 0.25); potN.style.opacity = (Number(potN.style.opacity) * top).toFixed(3);
-    [lA, lB, rule, fates].forEach((el, i) => { const a = show(el, t, [1.05, 1.25, 1.5, 1.6][i]); el.style.opacity = (a * top).toFixed(3); });
-    cols.forEach((el, i) => show(el, t, 3.0 + i * 0.16, 99));
+    [lA, lB, rule, fates].forEach((el, i) => { const a = show(el, t, [0.8, 0.95, 1.15, 1.25][i]); el.style.opacity = (a * top).toFixed(3); });
+    cols.forEach((el, i) => show(el, t, 2.4 + i * 0.14, 99));
   };
 } };
 
-// 15 · The shard as a NEP-171 token, drawn from the real mint data and the contract's own SVG (4.0 s).
-SCENES.nft = { duration: 4.0, build() {
+// 15 · The memory shard as a NEP-171 token (5.5 s), drawn from the real mint data and the contract's own SVG
+// (byte-identical to the game's shardSvg()). The token carries the sealed season root and the leaf of the sign its vision
+// opened; that leaf is the same bytes as leaf #3 recorded on ftf-seasons.testnet (a dotted "same leaf" link: the shard
+// contract stores it, it does not call the season contract, so no check mark there).
+SCENES.nft = { duration: 5.5, build() {
   const S = D.shard;
-  const c1 = cap('The memory becomes an <em>NFT</em>'), c2 = cap('Minted on NEAR testnet');
-  const art = h('div', { class: 'abs', html: S.svg.replace('width="320" height="320"', 'width="560" height="560"'), style: { width: '560px', height: '560px', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 0 90px rgba(127,179,213,.35)' } });
-  at(art, 140, 250);
-  const fields = [
-    ['Token', S.tokenId], ['Memory', 'Iris · Call · weight 2'], ['Forgotten', `trial ${S.forgotten_at_tick}`],
-    ['Auction', `Frost · ${S.price} silk`], ['Opened', `sign #${S.unlocked_index + 1} · leaf ${S.unlocked_leaf.slice(0, 8)}…`],
-  ].map(([k, v], i) => {
-    const el = h('div', { class: 'abs', style: { left: '790px', top: 250 + i * 112 + 'px' } }, h('div', { class: 'label', style: { fontSize: '40px' }, text: k }), h('div', { class: 'body', style: { marginTop: '4px', fontSize: '50px' }, text: v }));
-    stage.append(el); return el;
-  });
-  const foot = h('div', { class: 'abs mono', style: { font: '400 44px/1 var(--mono)', color: '#9fc4d6' }, text: `${D.near.shards} · NEP-171 · mint ${S.mintTx.slice(0, 8)}…` }); at(foot, 140, 860);
-  const foot2 = h('div', { class: 'abs', style: { font: '400 44px/1 var(--body)', color: 'var(--ink-dim)' }, text: 'minted by the season coordinator' }); at(foot2, 140, 930);
-  stage.append(art, foot, foot2);
+  const c1 = cap('Bound to the <em>sealed season</em>'), c2 = cap('Minted on NEAR testnet');
+  const svg = edgeLayer(stage);
+  const art = h('div', { class: 'abs', html: S.svg.replace('width="320" height="320"', 'width="520" height="520"'), style: { width: '520px', height: '520px', borderRadius: '26px', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(220,214,196,.16), 0 30px 80px rgba(0,0,0,.6), 0 0 90px rgba(127,179,213,.22)' } });
+  at(art, 130, 230); stage.append(art);
+  const strokes = [...art.querySelectorAll('circle, line')].map((el) => { const L = el.getTotalLength ? el.getTotalLength() : 600; el.setAttribute('stroke-dasharray', `${L}`); return { el, L }; });
+  const row = (y, k, v, mono = false) => { const el = h('div', { class: 'abs', style: { left: '730px', top: y + 'px' } }, h('div', { class: 'label', text: k }), h('div', { style: { font: mono ? '400 46px/1.1 var(--mono)' : '400 52px/1.1 var(--body)', color: 'var(--ink)', marginTop: '8px' }, text: v })); stage.append(el); return el; };
+  const rows = [
+    row(230, 'Memory', `Iris · a Call · weight ${S.weight}`),
+    row(360, 'Forgotten · sold', `trial ${S.forgotten_at_tick} · Frost, ${S.price} silk`),
+    row(490, 'Season root', `${D.root.slice(0, 10)}…`, true),
+    row(620, 'Opened leaf', `${S.unlocked_leaf.slice(0, 10)}…`, true),
+  ];
+  // the same leaf on the season contract: a small node with the record, joined by a dotted line
+  const node = h('div', { class: 'card', style: { left: '1380px', top: '600px', width: '440px', height: '150px' } },
+    h('div', { class: 'abs', style: { left: '26px', top: '22px', font: '700 44px/1 var(--body)' }, text: `leaf #${S.unlocked_index}` }),
+    h('div', { class: 'abs', style: { left: '26px', top: '86px', font: '400 44px/1 var(--mono)', color: '#a9c6d4' }, text: 'ftf-seasons' }));
+  stage.append(node);
+  const link = sv('path', { d: 'M1150,690 L1380,690', fill: 'none', stroke: 'rgba(169,198,212,.85)', 'stroke-width': 3, 'stroke-dasharray': '10 12' }); svg.append(link);
+  const same = h('div', { class: 'abs', style: { left: '1170px', top: '622px', font: '600 44px/1 var(--label)', color: '#a9c6d4' }, text: 'same' }); stage.append(same);
+  const pk = packet(svg, '#a9c6d4', 8);
+  const foot = h('div', { class: 'abs', style: { left: '130px', top: '800px', font: '400 44px/1.3 var(--mono)', color: '#a9c6d4' }, text: `${D.near.shards} · NEP-171` });
+  const foot2 = h('div', { class: 'abs', style: { left: '130px', top: '866px', font: '400 44px/1 var(--body)', color: 'var(--ink-dim)' }, text: `token ${S.tokenId} · mint ${S.mintTx.slice(0, 6)}…` });
+  stage.append(foot, foot2);
   return (t) => {
     drawBg(t, { tint: [127, 179, 213] });
-    show(c1, t, 0.15, 2.2); show(c2, t, 2.35, 3.95);
-    const s = settle(P(t, 0.1, 0.9)); art.style.opacity = t < 0.1 ? 0 : 1; art.style.transform = `scale(${lerp(0.85, 1, s).toFixed(4)})`;
-    fields.forEach((el, i) => show(el, t, 0.5 + i * 0.16));
-    show(foot, t, 1.4); show(foot2, t, 1.6);
+    show(c1, t, 0.2, 2.9); show(c2, t, 3.1, 5.45);
+    const s0 = settle(P(t, 0.05, 0.9)); art.style.opacity = t < 0.05 ? 0 : 1;
+    art.style.transform = `scale(${lerp(0.9, 1, s0).toFixed(4)}) rotate(${(Math.sin(t * 0.6) * 0.8).toFixed(3)}deg)`;
+    strokes.forEach((o, i) => o.el.setAttribute('stroke-dashoffset', (o.L * (1 - ease.out(P(t, 0.15 + i * 0.05, 0.7)))).toFixed(1)));
+    rows.forEach((el, i) => show(el, t, 0.6 + i * 0.22));
+    show(node, t, 1.7, 99, { scale: 0.97 });
+    const L = 230, k = ease.out(P(t, 1.9, 0.5)); link.setAttribute('stroke-dashoffset', '0'); link.style.opacity = k.toFixed(3);
+    link.setAttribute('d', `M1150,690 L${(1150 + L * k).toFixed(1)},690`);
+    show(same, t, 2.2); moveOn(pk, link, t < 2.4 ? 0 : ((t - 2.4) % 1.1) / 1.1);
+    show(foot, t, 3.2); show(foot2, t, 3.4);
   };
 } };
 
 // 16 · The backend as a data-flow diagram: who sends what where, and where it is checked (4.5 s).
-SCENES.backend = { duration: 4.5, build() {
+SCENES.backend = { duration: 3.5, build() {
   const N = D.near;
   const c1 = cap('Sealed before trial 1. <em>Checked on NEAR.</em>');
   const svg = edgeLayer(stage);
@@ -526,9 +569,11 @@ SCENES.backend = { duration: 4.5, build() {
   const pk = L.map((_, i) => packet(svg, i === 7 ? '#9fc4d6' : '#ffe78e', 10));
   // Order of the story: seed → engine → root → coordinator → contract → browser; the agent API feeds the engine; the mint.
   const T0 = [0.3, 0.75, 1.15, 1.6, 2.35, 0.9, 2.1, 2.6];
-  return (t) => {
-    drawBg(t, { tint: [159, 196, 214] });
-    show(c1, t, 0.15, 4.45);
+  // the diagram's own beats run 1.3× faster than the scene clock so the whole story lands in 3.5 s
+  return (t0) => {
+    const t = t0 * 1.3;
+    drawBg(t0, { tint: [159, 196, 214] });
+    show(c1, t0, 0.15, 3.45);
     [seed, eng, root, coord, seas, brow, api, shards].forEach((b, i) => show(b.el, t, [0.1, 0.45, 0.85, 1.3, 1.7, 2.3, 0.7, 2.0][i], 99, { scale: 0.96 }));
     L.forEach((p, i) => {
       const len = p.getTotalLength(), k = ease.out(P(t, T0[i] - 0.1, 0.4));
@@ -549,7 +594,7 @@ SCENES.end = { duration: 3.0, build() {
   const title = h('div', { class: 'abs', style: { left: 0, right: 0, top: '300px', textAlign: 'center', font: '700 132px/1 var(--title)', textShadow: '0 4px 40px rgba(0,0,0,.8)' }, text: 'Forget to Foresee' });
   const url = h('div', { class: 'abs', style: { left: 0, right: 0, top: '500px', textAlign: 'center', font: '600 52px/1 var(--label)', color: 'var(--gold)' }, text: 'spacexceo.github.io/forget-to-foresee/?demo=judge' });
   const built = h('div', { class: 'abs label', style: { left: 0, right: 0, top: '640px', textAlign: 'center', color: 'var(--ink)' }, text: 'Built at NEAR HACKATHON' });
-  const by = h('div', { class: 'abs', style: { left: 0, right: 0, top: '730px', textAlign: 'center', font: '400 50px/1 var(--body)', color: 'var(--ink-dim)' }, text: 'Made by Lambada_eth' });
+  const by = h('div', { class: 'abs', style: { left: 0, right: 0, top: '730px', textAlign: 'center', font: '400 50px/1 var(--body)', color: 'var(--ink-dim)' }, text: 'Made by @Lambada_eth' });
   stage.append(title, url, built, by);
   return (t) => {
     drawBg(t);
@@ -566,10 +611,20 @@ const name = Q.get('scene') || 'decode';
 const scene = SCENES[name];
 if (!scene) throw new Error('unknown scene ' + name);
 let render = null;
+const wipe = document.createElement('div'); wipe.id = 'wipe'; stage.append(wipe);
+function withWipe(fn) {
+  return (t) => {
+    fn(t);
+    const k = ease.out(P(t, 0, 0.5)), r = 40 + 1180 * k;
+    stage.style.clipPath = k < 1 ? `circle(${r.toFixed(1)}px at 960px 540px)` : 'none';
+    wipe.style.width = wipe.style.height = (2 * r).toFixed(1) + 'px';
+    wipe.style.opacity = (k < 1 ? 1 - k : 0).toFixed(3);
+  };
+}
 const ready = (async () => {
   await document.fonts.ready;
   await Promise.all(['700 64px "Atkinson Hyperlegible"', '400 46px "Atkinson Hyperlegible"', '600 44px "Source Sans 3"', '400 76px "Libre Caslon Text"', '700 132px "Libre Caslon Text"'].map((f) => document.fonts.load(f)));
-  render = scene.build();
+  render = withWipe(scene.build());
   render(0);
 })();
 window.__cine = { ready, duration: scene.duration, scenes: Object.fromEntries(Object.entries(SCENES).map(([k, v]) => [k, v.duration])), render: (t) => render && render(t), step: () => clock.step ? clock.step() : null };
