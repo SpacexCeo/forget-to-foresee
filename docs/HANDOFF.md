@@ -46,6 +46,8 @@ no server is stopped while it holds a server-only item the owner has not downloa
 
 **Overnight relaunch on Opus 5.5 (09.11 00:05 Kyiv):** F2 `session_01QfMhgC3bXjG8v7dRm14NjA` (claude/ui-polish: QA-031, QA-005/README, overlap at 1280 in four locales), G2 `session_01QfMhgCFUQvCkLm6XJ3XYDN` (claude/first-seconds: QA-029/030/032), J2 `session_01QfMhgFJGfUrN6eJtU2qesA` (claude/trailer: interesting video scripts, one GPU job), R2 juror `session_01QfMhgDAKdSL1ErtGNuQjaQ` (claude/jury; schedules trig_01W1fqnBUpajNw2RddU5YpMn :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45), GPU art session on the RTX 4090. The hourly lead loop (trig_018op6gxTUumLXJX3eyDUuzr :09) merges finished branches and starts one K2 QA session on Opus once F2 and G2 are in; the 07:01 Kyiv run (trig_014q6NjmK4V33rZkA98BBkHq) merges into main.
 
+**Videos (09.11 03:50 Kyiv):** clean 1080p60 GPU renders (ANGLE Vulkan, flicker check passed) of the demo (71 s), trailer (35 s) and three clips are on `claude/laughing-thompson-dc7r09` docs/media (b2c71ae, 2ed5956) and were sent to the owner; captioned versions are server-only (inventory). Two capture defects to fix before the final cut: the opening guest/emerge shot stalls on the GPU every run (excluded with FTF_SKIP_SHOTS), and the capture's "forget" action finds no memory button (trailer shot 'forget', clip-memory shot 'memory'). Keep the mp4s out of `main` unless the owner asks (repo size); link them instead.
+
 **Open items after resume (priority):** final videos without flicker and with a stronger story (J + GPU); NEAR deploy;
 K's open QA list; the juror's scorecards from 09.11 15:00 UTC; native-speaker pass of uk/it/zh; physical phone and GPU
 feel tests (movement numbers in `docs/movement.md`, the 8 feel items).
