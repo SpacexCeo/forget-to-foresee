@@ -1,42 +1,66 @@
 {
  "video": "clip-memory",
- "title": "Forget to Foresee: clip, the Price of Memory (12 s)",
+ "title": "Forget to Foresee: clip, the Price of Memory (10 s)",
  "width": 1920,
  "height": 1080,
  "fps": 60,
  "tier": "ultra",
- "duration": 12,
+ "duration": 10,
  "shots": [
   {
    "shot": "memory",
-   "frames": 720,
-   "secondsPerFrame": 0.25219305555555555,
+   "frames": 420,
+   "secondsPerFrame": 0.27863809523809524,
    "loaded": true,
-   "setupFrames": 96,
-   "errors": [],
+   "setupFrames": 235,
+   "errors": [
+    "action forget: no memory button"
+   ],
    "consoleErrors": [
-    "warning: [.WebGL-0x3bd4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "warning: [.WebGL-0x3bd4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "warning: [.WebGL-0x3bd4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "warning: [.WebGL-0x3bd4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [cinematic] action failed {at: 0.6, do: forget, index: 1, id: 1, done: true} Error: no memory button\n    at Z.perform (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:11393)\n    at Z.runActions (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:9054)\n    at Z.step (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:14856)\n    at Z.setup (http://localhost:5179/assets/cinematic-DfKYIKzQ",
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
    ],
    "hashes": {
-    "0": "36fed57cf6c0e018",
-    "719": "36fed57cf6c0e018"
+    "0": "43369ecfe1613462",
+    "419": "2d82667d7720ec25"
+   }
+  },
+  {
+   "shot": "card",
+   "frames": 180,
+   "secondsPerFrame": 0.2465388888888889,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "d62eaa29d56208ae",
+    "179": "41a233ccf35b9f33"
    }
   }
  ],
  "mix": {
-  "peak": 0.4651165687143803,
-  "events": 30,
-  "wav": "/root/ftf-media/vkwork/clip-memory-1920x1080-ultra/clip-memory.wav",
-  "cues": 33
+  "peak": 0.3612587836235762,
+  "events": 45,
+  "wav": "/root/ftf-media-v2/work/clip-memory-1920x1080-ultra/clip-memory.wav",
+  "cues": 53
  },
  "files": {
-  "/root/ftf-media/vk1080/clip-memory.mp4": {
-   "bytes": 13250359,
-   "mb": 12.6,
-   "duration": 12,
+  "/root/ftf-media-v2/clip-memory.mp4": {
+   "bytes": 5769731,
+   "mb": 5.5,
+   "duration": 9.983333,
    "video": {
     "index": 0,
     "codec_name": "h264",
@@ -69,11 +93,11 @@
     "time_base": "1/15360",
     "start_pts": 0,
     "start_time": "0.000000",
-    "duration_ts": 184320,
-    "duration": "12.000000",
-    "bit_rate": "8562886",
+    "duration_ts": 153344,
+    "duration": "9.983333",
+    "bit_rate": "4354142",
     "bits_per_raw_sample": "8",
-    "nb_frames": "720",
+    "nb_frames": "599",
     "extradata_size": 50,
     "disposition": {
      "default": 1,
@@ -103,10 +127,10 @@
     }
    }
   },
-  "/root/ftf-media/vk1080/clip-memory-captions.mp4": {
-   "bytes": 13403900,
-   "mb": 12.8,
-   "duration": 12,
+  "/root/ftf-media-v2/clip-memory-captions.mp4": {
+   "bytes": 5875755,
+   "mb": 5.6,
+   "duration": 9.983333,
    "video": {
     "index": 0,
     "codec_name": "h264",
@@ -139,11 +163,11 @@
     "time_base": "1/15360",
     "start_pts": 0,
     "start_time": "0.000000",
-    "duration_ts": 184320,
-    "duration": "12.000000",
-    "bit_rate": "8665220",
+    "duration_ts": 153344,
+    "duration": "9.983333",
+    "bit_rate": "4439103",
     "bits_per_raw_sample": "8",
-    "nb_frames": "720",
+    "nb_frames": "599",
     "extradata_size": 50,
     "disposition": {
      "default": 1,
@@ -173,8 +197,8 @@
     }
    }
   },
-  "/root/ftf-media/vk1080/clip-memory.srt": {
-   "bytes": 272,
+  "/root/ftf-media-v2/clip-memory.srt": {
+   "bytes": 182,
    "mb": 0,
    "duration": null,
    "video": null

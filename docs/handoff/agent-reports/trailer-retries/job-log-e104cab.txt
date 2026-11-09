@@ -1,0 +1,4 @@
+01:12:58 [guest] open http://localhost:5179/?cinematic=guest&tier=ultra&tex=full&profile=desktop&fps=60&play=direct&demo=judge
+01:12:59 [guest] WebGL: ANGLE (NVIDIA, Vulkan 1.4.329 (NVIDIA NVIDIA GeForce RTX 4090 (0x00002684)), NVIDIA)
+01:15:22 [guest] WATCHDOG: stalled in frame 80 for 120 s in shot guest (limit 120 s): killed
+(no further log line; capture.mjs alive, no ffmpeg; killed at 01:32)
