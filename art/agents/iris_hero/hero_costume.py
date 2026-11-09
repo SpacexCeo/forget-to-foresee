@@ -627,7 +627,7 @@ def scalp_points(body, scalp_idx, k_offset=0.004):
     return out
 
 
-def hair_cap(body, scalp_idx):
+def hair_cap(body, scalp_idx, offset=0.006):
     """A thin hair-coloured shell over the scalp so no skin shows between the cards."""
     o = body.copy()
     o.data = body.data.copy()
@@ -641,7 +641,7 @@ def hair_cap(body, scalp_idx):
     keep = set(scalp_idx)
     bmesh.ops.delete(b, geom=[v for v in b.verts if v.index not in keep], context="VERTS")
     for v in b.verts:
-        v.co += v.normal * 0.006
+        v.co += v.normal * offset
     b.to_mesh(o.data)
     b.free()
     for m in list(o.modifiers):

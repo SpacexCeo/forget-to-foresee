@@ -568,7 +568,7 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     for o in C.belt_and_props(P):
         garments[o.name] = o
     scalp = hair_region(bm, dom)
-    garments["hair_cap"] = C.hair_cap(bm, scalp)
+    garments["hair_cap"] = C.hair_cap(bm, inset_region(bm, scalp, 0.008), offset=0.0015)
     brow_z = max(c.z for c, _ in [(h, 0) for h in (bones["eye_L"][0], bones["eye_R"][0])]) + 0.028
     garments["hair"], _master = groom_hair(bm, rig, garments, scalp, head_c, head_r)
 
@@ -619,6 +619,24 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     log("costume", {n: len(o.data.polygons) for n, o in garments.items()})
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_costume.blend"))
     return bm, rig, eye_objs, garments
+
+
+def inset_region(bm, idx, d):
+    """The region shrunk by d metres from its border."""
+    from mathutils.kdtree import KDTree
+    sset = set(idx)
+    me = bm.data
+    ec = {}
+    for p in me.polygons:
+        if all(v in sset for v in p.vertices):
+            for e in p.edge_keys:
+                ec[e] = ec.get(e, 0) + 1
+    border = {v for e, n in ec.items() if n == 1 for v in e}
+    kd = KDTree(len(border))
+    for i, v in enumerate(border):
+        kd.insert(me.vertices[v].co, i)
+    kd.balance()
+    return [i for i in idx if kd.find(me.vertices[i].co)[2] > d]
 
 
 def hair_region(bm, dom):

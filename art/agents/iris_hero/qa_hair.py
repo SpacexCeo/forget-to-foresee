@@ -26,7 +26,8 @@ try:
 except Exception:
     pass
 sc.cycles.samples = samples
-sc.cycles.use_denoising = True
+sc.cycles.use_denoising = samples < 200
+sc.cycles.denoising_prefilter = "ACCURATE"
 sc.cycles_curves.shape = "THICK"
 sc.view_settings.view_transform = "AgX"
 sc.render.resolution_x = sc.render.resolution_y = res
@@ -53,7 +54,7 @@ for o in sc.objects:
     if o.name == "hair_cap" and not o.data.materials:
         m = bpy.data.materials.new("cap")
         m.use_nodes = True
-        m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.05, 0.023, 0.012, 1)
+        m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.07, 0.035, 0.020, 1)
         o.data.materials.append(m)
     if o.type == "MESH" and not o.data.materials and not o.hide_render:
         m = bpy.data.materials.new("clay_" + o.name)
@@ -85,6 +86,7 @@ SHOTS = {
     "back": ((0.05, 0.95, 1.68), H + V((0, 0.02, -0.04)), 70),
     "hairline": ((0.10, -0.42, 1.74), V((0.01, -0.06, 1.70)), 85),
     "strands": ((0.32, -0.30, 1.56), V((0.10, -0.02, 1.52)), 100),
+    "crown": ((0.05, -0.30, 1.98), V((0.0, 0.0, 1.72)), 70),
 }
 for name, (loc, tgt, lens) in SHOTS.items():
     if views and name not in views:

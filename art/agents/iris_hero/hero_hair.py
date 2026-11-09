@@ -282,22 +282,24 @@ class Tied(Groom):
         self.tail = [self.T + V((0.0, 0.030 * s ** 0.5 + 0.030 * s, -0.22 * s)) +
                      V((0.008 * math.sin(s * 4.0), 0, 0)) for s in np.linspace(0, 1, 12)]
         self.tail = [self.body_col.push(p, 0.040) if i > 2 else p for i, p in enumerate(self.tail)]
-        self.clumps = [(rnd.uniform(0, math.tau), rnd.uniform(0.0, 1.0) ** 0.5) for _ in range(26)]
+        self.clumps = [(rnd.uniform(0, math.tau), rnd.uniform(0.0, 1.0) ** 0.5, rnd.uniform(0, math.tau), rnd.uniform(11, 17)) for _ in range(18)]
 
-    def skull_path(self, root, nrm, lift):
+    def skull_path(self, root, nrm, lift, pv=None):
         pts = [root + nrm * 0.0015]
         p = pts[0].copy()
         q0 = root - self.c
         side = 1.0 if root.x > self.part_x else -1.0
-        near_part = max(0.0, 1.0 - abs(root.x - self.part_x) / 0.035) * smooth01(0.35, 0.75, q0.z / self.r[2]) \
+        near_part = max(0.0, 1.0 - abs(root.x - self.part_x) / 0.045) * smooth01(0.35, 0.75, q0.z / self.r[2]) \
             * smooth01(-0.2, 0.5, -q0.y / self.r[1])
         travelled = 0.0
         for _ in range(60):
             q = p - self.c
             n = q.normalized()
             d = (self.T - p).normalized()
-            lateral = near_part * (1.0 - smooth01(0.0, 0.035, travelled))
+            lateral = near_part * (1.0 - smooth01(0.0, 0.06, travelled))
             d = d * (1 - lateral) + V((side, 0.2, -0.3)).normalized() * lateral
+            if pv is not None:                                  # clump's own combing direction, fading out
+                d = d + pv * (1.0 - smooth01(0.02, 0.10, travelled))
             travelled += 0.008
             d = d * (self.T - p).length
             if d.length < 0.016:
@@ -310,17 +312,21 @@ class Tied(Groom):
         return pts
 
     def tail_path(self, k, own, length):
-        ang, rad = self.clumps[k]
+        """Ponytail: compressed in the tie, opening out just after it, then narrowing toward the ends;
+        each of 18 strand groups carries its own wave; strands keep a small offset within their group."""
+        ang, rad, cph, cfreq = self.clumps[k]
         out = []
         for i, c in enumerate(self.tail):
             s = i / (len(self.tail) - 1)
             if s > length:
                 break
-            spread = 0.008 + 0.042 * math.sin(min(1.0, s * 1.6) * math.pi / 2) * (1 - 0.30 * s)
-            a = ang + own[0] + 0.6 * s * math.sin(own[1] * 3)
-            off = V((math.cos(a), 0.6 * math.sin(a), 0)) * (spread * (rad + own[2]))
-            wave = 0.008 * smooth01(0.45, 1.0, s) * math.sin(s * 14 + own[1])
-            out.append(c + off + V((wave, wave * 0.4, 0)))
+            spread = 0.006 + 0.034 * math.sin(min(1.0, s * 2.2) * math.pi / 2) * (1 - 0.45 * s ** 1.3)
+            a = ang + 0.5 * s * math.sin(cph)
+            group = V((math.cos(a), 0.75 * math.sin(a), 0)) * (spread * rad)
+            mine = V((math.cos(own[1]), 0.75 * math.sin(own[1]), 0)) * (0.0035 + 0.006 * s) * own[2]
+            wave = 0.010 * smooth01(0.35, 1.0, s) * math.sin(s * cfreq + cph)
+            sway = V((math.cos(cph), math.sin(cph) * 0.5, 0)) * wave
+            out.append(c + group + mine + sway)
         return out
 
     def strands(self, guides=None, n=30000):
@@ -328,29 +334,53 @@ class Tied(Groom):
         rnd = self.rnd
         out, radius, reps = [], [], []
         roots = self.scalp.sample(n, rnd)
+        seeds = self.scalp.sample(420, rnd)                  # strand groups on the scalp
+        kds = KDTree(len(seeds))
+        for i, (sp, _) in enumerate(seeds):
+            kds.insert(sp, i)
+        kds.balance()
+        seed_prm = [(rnd.uniform(0.0005, 0.0060), V((rnd.gauss(0, 0.18), rnd.gauss(0, 0.18), rnd.gauss(0, 0.10))),
+                     rnd.randrange(len(self.clumps))) for _ in seeds]
         for idx, (p, nrm) in enumerate(roots):
             hl = self.scalp.hairline_dist(p)
+            if hl < 0.012 and rnd.random() > 0.35 + 0.65 * hl / 0.012:   # density thins toward the hairline
+                continue
             q = p - self.c
             top = max(0.0, q.z / self.r[2])
-            lift = 0.001 + 0.006 * top * rnd.uniform(0.5, 1.0)             # sleek, a little volume on top
-            if hl < 0.006 and rnd.random() < 0.5:                          # baby hairs
+            si = kds.find(p)[1]
+            g_lift, g_dir, g_tail = seed_prm[si]
+            lift = 0.0008 + g_lift * (0.4 + 0.6 * top) + abs(rnd.gauss(0, 0.0006))
+            if hl < 0.006 and rnd.random() < 0.30:                      # fine transitional hairs
                 d = (self.T - p)
                 d = (d - nrm * d.dot(nrm)).normalized()
-                L = rnd.uniform(0.006, 0.016)
-                poly = [p + nrm * 0.001, p + d * L * 0.5 + nrm * 0.002, p + d * L + nrm * 0.003 + V((0, 0, rnd.uniform(-0.003, 0.003)))]
+                L = rnd.uniform(0.004, 0.012)
+                bend = V((rnd.gauss(0, 0.004), rnd.gauss(0, 0.004), rnd.gauss(0, 0.004)))
+                poly = [p + nrm * 0.0008, p + d * L * 0.5 + nrm * 0.0025 + bend * 0.5, p + d * L + nrm * 0.004 + bend]
                 out.append(resample(poly))
-                radius.append(0.00003)
+                radius.append(0.000025)
                 continue
-            skull = self.skull_path(p, nrm, lift)
-            k = rnd.randrange(len(self.clumps))
-            own = (rnd.uniform(-0.3, 0.3), rnd.uniform(0, math.tau), rnd.uniform(-0.15, 0.15))
-            tail = self.tail_path(k, own, rnd.uniform(0.80, 1.0))
+            skull = self.skull_path(p, nrm, lift, g_dir)
+            k = g_tail if rnd.random() < 0.8 else rnd.randrange(len(self.clumps))
+            own = (0.0, rnd.uniform(0, math.tau), rnd.uniform(0.0, 1.0) ** 0.5)
+            tail = self.tail_path(k, own, rnd.uniform(0.62, 1.0))
+            tail = [self.body_col.push(x, 0.004) if i > 1 else x for i, x in enumerate(tail)]
             s = resample(skull + tail)
-            s = s + np.random.normal(0, 0.0006, s.shape) * np.linspace(0, 1, PTS)[:, None] ** 2
+            tt = np.linspace(0, 1, PTS)[:, None]
+            s = s + np.random.normal(0, 0.00035, s.shape) * (0.3 + tt) + np.random.normal(0, 0.0012, s.shape) * tt ** 3
             out.append(s)
-            radius.append(0.00008 * rnd.uniform(0.8, 1.2))
-            if idx % 140 == 0:
+            radius.append(0.000075 * rnd.uniform(0.7, 1.3))
+            if idx % 95 == 0:
                 reps.append(dict(root=p, pts=s, side=1.0, kind="main"))
+        # strays over the crown: a few strands arcing a little off the surface
+        for _ in range(110):
+            p, nrm = rnd.choice(roots)
+            if (p - self.c).z < self.r[2] * 0.2:
+                continue
+            sk = self.skull_path(p, nrm, rnd.uniform(0.004, 0.010))
+            s = resample(sk[: max(3, int(len(sk) * rnd.uniform(0.3, 0.8)))])
+            arc = np.sin(np.linspace(0, math.pi, PTS))[:, None] * np.array(tuple(nrm)) * rnd.uniform(0.002, 0.007)
+            out.append(s + arc)
+            radius.append(0.00004)
         # face-framing wisps at the temples: loose, soft, waved, ending near the jaw
         for side in (1.0, -1.0):
             for w in range(1):
@@ -416,16 +446,16 @@ def hair_material(name="M_Iris_HairMaster"):
     info = nt.nodes.new("ShaderNodeHairInfo")
     ramp = nt.nodes.new("ShaderNodeMapRange")
     nt.links.new(info.outputs["Intercept"], ramp.inputs["Value"])
-    ramp.inputs["To Min"].default_value = 0.80            # roots
-    ramp.inputs["To Max"].default_value = 0.62            # ends
+    ramp.inputs["To Min"].default_value = 0.88            # roots
+    ramp.inputs["To Max"].default_value = 0.76            # ends
     nt.links.new(ramp.outputs["Result"], h.inputs["Melanin"])
-    h.inputs["Melanin Redness"].default_value = 0.62
+    h.inputs["Melanin Redness"].default_value = 0.55
     h.inputs["Tint"].default_value = (1.0, 0.93, 0.88, 1)
-    h.inputs["Roughness"].default_value = 0.32
-    h.inputs["Radial Roughness"].default_value = 0.42
-    h.inputs["Coat"].default_value = 0.08
-    h.inputs["Random Color"].default_value = 0.16
-    h.inputs["Random Roughness"].default_value = 0.22
+    h.inputs["Roughness"].default_value = 0.40
+    h.inputs["Radial Roughness"].default_value = 0.55
+    h.inputs["Coat"].default_value = 0.0
+    h.inputs["Random Color"].default_value = 0.22
+    h.inputs["Random Roughness"].default_value = 0.35
     nt.links.new(info.outputs["Random"], h.inputs["Random"])
     nt.links.new(h.outputs[0], out.inputs["Surface"])
     return m
@@ -471,7 +501,7 @@ def cards_from_groom(guides, strands, card_cols=(0, 1, 2, 3), fine_cols=(4, 5, 6
             else:
                 nrms.append((p - head_c).normalized())
         n = len(pts)
-        widths = [0.011 * (0.85 + 0.3 * rnd.random()) * (1.0 - 0.55 * (i / (n - 1)) ** 1.5) for i in range(n)]
+        widths = [0.008 * (0.85 + 0.3 * rnd.random()) * (1.0 - 0.55 * (i / (n - 1)) ** 1.5) for i in range(n)]
         card(pts, widths, rnd.choice(card_cols), nrms)
         # a second, airier card a little outside the first breaks up the surface
         if rnd.random() < 0.55:
@@ -501,7 +531,7 @@ def render_strand_atlas(path, size=2048, seed=3):
     sc.collection.children.link(coll)
     strands, radii = [], []
     for col in range(8):
-        dense = 260 if col < 4 else 120 if col < 7 else 14
+        dense = 520 if col < 4 else 220 if col < 7 else 18
         for k in range(dense):
             x0 = (col + 0.08 + 0.84 * rnd.random()) / 8
             if col >= 4:
@@ -515,8 +545,28 @@ def render_strand_atlas(path, size=2048, seed=3):
                 x = x0 + 0.004 * math.sin(t * 7 + ph) * t
                 pts.append((x, y, 0.0))
             strands.append(np.array(pts))
-            radii.append(0.0011 if col < 7 else 0.0008)
-    mat = bpy.data.materials.get("M_Iris_HairMaster") or hair_material()
+            radii.append(0.0009 if col < 7 else 0.0007)
+    mat = bpy.data.materials.new("_atlas_mat")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    em = nt.nodes.new("ShaderNodeEmission")
+    info = nt.nodes.new("ShaderNodeHairInfo")
+    mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"
+    mix.inputs[6].default_value = (0.050, 0.024, 0.013, 1)        # root
+    mix.inputs[7].default_value = (0.150, 0.072, 0.034, 1)        # ends
+    nt.links.new(info.outputs["Intercept"], mix.inputs[0])
+    var = nt.nodes.new("ShaderNodeMath"); var.operation = "MULTIPLY_ADD"
+    nt.links.new(info.outputs["Random"], var.inputs[0]); var.inputs[1].default_value = 0.6; var.inputs[2].default_value = 0.7
+    mul = nt.nodes.new("ShaderNodeMix"); mul.data_type = "RGBA"; mul.blend_type = "MULTIPLY"; mul.inputs[0].default_value = 1.0
+    nt.links.new(mix.outputs[2], mul.inputs[6])
+    comb = nt.nodes.new("ShaderNodeCombineColor")
+    for c in ("Red", "Green", "Blue"):
+        nt.links.new(var.outputs[0], comb.inputs[c])
+    nt.links.new(comb.outputs[0], mul.inputs[7])
+    nt.links.new(mul.outputs[2], em.inputs["Color"])
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
     o = build_curves("_atlas_strands", strands, radii, mat, coll)
     cam = bpy.data.objects.new("_atlas_cam", bpy.data.cameras.new("_atlas_cam"))
     cam.data.type = "ORTHO"
@@ -528,6 +578,8 @@ def render_strand_atlas(path, size=2048, seed=3):
     L.rotation_euler = (0.5, 0.3, 0.0)
     coll.objects.link(L)
     old = (sc.camera, sc.render.film_transparent, sc.render.resolution_x, sc.render.resolution_y, sc.render.filepath)
+    old_vt = sc.view_settings.view_transform
+    sc.view_settings.view_transform = "Standard"
     sc.camera = cam
     sc.render.film_transparent = True
     sc.render.resolution_x = sc.render.resolution_y = size
@@ -543,6 +595,7 @@ def render_strand_atlas(path, size=2048, seed=3):
     for ob in hidden:
         ob.hide_render = False
     sc.camera, sc.render.film_transparent, sc.render.resolution_x, sc.render.resolution_y, sc.render.filepath = old
+    sc.view_settings.view_transform = old_vt
     for ob in list(coll.objects):
         bpy.data.objects.remove(ob)
     bpy.data.collections.remove(coll)
