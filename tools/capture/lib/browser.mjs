@@ -85,6 +85,8 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     await pollPage(page, () => !!(window.__ftfCinematic && window.__ftf), 120_000, 'window.__ftf');
     if (!shot.lobby) await pollPage(page, () => !!(window.__ftf && window.__ftf.play), 180_000, 'window.__ftf.play');
     await page.evaluate(() => document.fonts.ready);
+    // The caption overlay's face is not used before the first caption: load it now so no frame shows a fallback font.
+    await page.evaluate(() => document.fonts.load('700 64px "Atkinson Hyperlegible"').catch(() => null));
     result.renderer = await page.evaluate(() => { try { const gl = window.__ftf.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch { return null; } });
     log(`[${shot.name}] WebGL: ${result.renderer}`);
     await page.evaluate((s) => window.__ftfCinematic.load(s), shot);

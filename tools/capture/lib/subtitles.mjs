@@ -47,7 +47,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 }
 
 /** Overlapping or out-of-order captions are a script bug; returns the problems found. */
-export function checkCaptions(captions, duration) {
+export function checkCaptions(captions, duration, reading = null) {
   const out = [];
   const sorted = [...captions].sort((a, b) => a.from - b.from);
   sorted.forEach((c, i) => {
@@ -55,7 +55,8 @@ export function checkCaptions(captions, duration) {
     if (c.to > duration + 0.01) out.push(`caption ${i} ends after the video (${c.to} > ${duration})`);
     if (i && c.from < sorted[i - 1].to - 1e-6) out.push(`caption ${i} overlaps the previous one (${c.from} < ${sorted[i - 1].to})`);
     const words = c.text.split(/\s+/).length;
-    if ((c.to - c.from) < words / 4.2) out.push(`caption ${i} is too fast to read (${words} words in ${(c.to - c.from).toFixed(1)} s)`);
+    if ((c.to - c.from) < words / (reading?.maxWps ?? 4.2)) out.push(`caption ${i} is too fast to read (${words} words in ${(c.to - c.from).toFixed(1)} s)`);
+    if (reading?.minHold && (c.to - c.from) < reading.minHold - 1e-6) out.push(`caption ${i} is held ${(c.to - c.from).toFixed(2)} s, under ${reading.minHold} s`);
   });
   return out;
 }

@@ -5,6 +5,8 @@
 // is loaded and the game runs exactly as before.
 import { installVirtualClock, hashString } from './clock.js';
 import { ShotRunner } from './runner.js';
+// The caption overlay's face (Atkinson Hyperlegible, as the game's readable mode); loaded with the cinematic module only.
+import '@fontsource/atkinson-hyperlegible/700.css';
 
 export function boot(name = 'shot', { fps } = {}) {
   const params = new URLSearchParams(location.search);
