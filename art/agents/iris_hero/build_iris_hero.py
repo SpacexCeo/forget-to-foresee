@@ -665,7 +665,7 @@ def athletic_costume(bm, P, dom, bones):
     bra, n = C.hull_loft("sports_top", C.without_nipples(torso_pts), zs, 0.004, n=60, smooth=2)
     rows = len(zs)
     def neckline(th_front):                                   # top edge height by how frontal the column is
-        return 1.385 - 0.060 * th_front ** 1.6
+        return 1.385 - 0.060 * th_front ** 1.6 - 0.038 * th_front ** 8   # a soft scoop: cleavage (owner 09.11)
     me = bra.data
     cxy = sum((v.co for v in me.vertices), V()) / len(me.vertices)
     from mathutils.bvhtree import BVHTree
@@ -743,7 +743,7 @@ def athletic_costume(bm, P, dom, bones):
             return 0.0
         return (1.0 - C.smooth01(0.120, 0.172, abs(p.x))) * (1.0 - C.smooth01(1.355, 1.405, p.z))
     jk = C.shell_from_body(bm, "jacket", upper_keep, ease, 0.0035, trim=upper_trim,
-                           accent=upper_accent, edges=upper_edges,
+                           accent=lambda p, nrm: 0.0, edges=upper_edges,   # (upper_accent off: jagged blocks at this density)
                            envelope=(lambda p: abs(p.x) < 0.17 and 1.14 < p.z < 1.40 and p.y > c.y,
                                      torso_pts, 0.013), edge_relax=4,
                            drape=(drape_w, depth, x_edge, HEM, 40), clear=(bra, 0.0035),
@@ -829,7 +829,10 @@ def athletic_costume(bm, P, dom, bones):
     crotch = lambda p: (abs(p.x) < 0.07 and 0.70 < p.z < 0.88) or (abs(p.x) < 0.045 and p.y > c.y and 0.78 < p.z < 0.99)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
-                                        accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12))
+                                        accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12),
+                                        # compression knit bridges the glute cleft (owner: no 1-3 cm gap between the cheeks)
+                                        envelope=(lambda p: p.y > c.y and abs(p.x) < 0.075 and 0.875 < p.z < 1.0,
+                                                  [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")], 0.0025))
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
     hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")]
@@ -1012,6 +1015,8 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     # the body keeps the head, neck, hands and lashes; everything under the costume is removed
     cz, crx, cry = P.section(1.10)
 
+    wrists = {sx: rig.data.bones[f"hand_{sx}"].head_local.copy() for sx in ("L", "R")}
+
     def covered(i, co):
         d = dom[i]
         if co.z > 1.445:
@@ -1019,10 +1024,12 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
         if d in HAND_BONES:
             return False
         if COSTUME == "athletic" and d in ("spine", "pelvis", "chest"):
-            if 1.035 < co.z < 1.175:                   # the bare midriff between the top and the leggings
+            if (0.990 if co.y < cz.y else 1.055) < co.z < 1.205:   # the bare midriff, kept under the band's front and the top's hem
+                return False                                        # (no see-through gap; never through the band at the back)
+            if 1.27 < co.z and co.y < cz.y:             # the neckline and cleavage above the top, inside the open jacket
                 return False
-            if 1.36 < co.z and co.y < cz.y:             # the neckline above the top, inside the open jacket
-                return False
+        if d in ("forearm_L", "forearm_R") and (co - wrists[d[-1]]).length < 0.055:
+            return False                                # skin under the cuff: no see-through at the wrist
         return True
     ref = bm.copy()                                   # the full body, for anatomy review only (not exported)
     ref.data = bm.data.copy()

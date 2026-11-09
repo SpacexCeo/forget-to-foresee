@@ -36,6 +36,8 @@ AMOUNT = {
     "lumbar": -0.020,     # negative = filled: the reference's lower back is 2.5 cm shallower (no exaggerated S)
     "flank": 0.050,       # taken out: the reference stays narrow down to about 0.58 H, then flares
     "knee": 0.010,        # vastus medialis and lateralis above the knee
+    "abs_line": 0.0020,   # owner 09.11 "muscles drawn": the linea alba, a shallow groove down the stomach
+    "abs_side": 0.0013,   # the outer edges of the rectus abdominis
 }
 
 # Region shapes in landmark coordinates (metres at 1.70 m): lat = lateral offset from the hip joint's
@@ -152,6 +154,12 @@ def offsets(cos, normals, weights, joints, H, a=None):
         g = SHAPE["flank"]
         m = gauss((dz - g["dz"] * k) / (g["r_z"] * k)) * smoothstep(0.3, 0.85, n_out + 0.4 * max(0.0, n_back))
         d -= a["flank"] * m * gate(w, GATE["flank"])                # side and back-side (seen at 45 degrees)
+        # abdominal definition: the linea alba and the rectus edges, front-facing torso only
+        if -n_back > 0.5 and 0.10 * k < dz < 0.32 * k:
+            band = smoothstep(0.10 * k, 0.14 * k, dz) * (1.0 - smoothstep(0.27 * k, 0.32 * k, dz))
+            g = gate(w, ("spine05", "spine04", "spine03", "spine02"))
+            d -= a.get("abs_line", 0.0) * band * gauss(x / (0.006 * k)) * g
+            d -= a.get("abs_side", 0.0) * band * gauss((abs(x) - 0.058 * k) / (0.007 * k)) * g
         d *= k
         res.append((nx * d, ny * d, nz * d))
     return res

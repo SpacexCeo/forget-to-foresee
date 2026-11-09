@@ -146,16 +146,16 @@ class NB:
 def skin_shader(b, land):
     geo = b.n("ShaderNodeNewGeometry")
     pos = geo.outputs["Position"]
-    base = (0.62, 0.40, 0.31)
+    base = (0.46, 0.27, 0.18)        # sun-kissed tan (owner 09.11)
     var = b.noise(38.0, 6.0, pos)
-    col = b.mix(b.math("MULTIPLY", var.outputs["Fac"], 0.35), base, (0.66, 0.38, 0.30))
+    col = b.mix(b.math("MULTIPLY", var.outputs["Fac"], 0.35), base, (0.49, 0.27, 0.18))
     warm = b.noise(9.0, 3.0, pos)
-    col = b.mix(b.math("MULTIPLY", warm.outputs["Fac"], 0.25), col, (0.58, 0.36, 0.30))
+    col = b.mix(b.math("MULTIPLY", warm.outputs["Fac"], 0.25), col, (0.43, 0.26, 0.18))
     for c in land["cheeks"]:
-        col = b.mix(b.math("MULTIPLY", b.blob(pos, c, 0.032, 1.6), 0.38), col, (0.70, 0.30, 0.25))
-    col = b.mix(b.math("MULTIPLY", b.blob(pos, land["nose"], 0.020, 1.4), 0.25), col, (0.68, 0.30, 0.25))
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, c, 0.032, 1.6), 0.38), col, (0.52, 0.23, 0.17))
+    col = b.mix(b.math("MULTIPLY", b.blob(pos, land["nose"], 0.020, 1.4), 0.25), col, (0.50, 0.23, 0.17))
     for e in land["ears"]:
-        col = b.mix(b.math("MULTIPLY", b.blob(pos, e, 0.030, 1.2), 0.30), col, (0.66, 0.30, 0.25))
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, e, 0.030, 1.2), 0.30), col, (0.48, 0.23, 0.17))
     lips = b.attr("lipsw").outputs["Fac"]
     col = b.mix(b.math("MULTIPLY", b.math("POWER", lips, 0.7), 0.75), col, (0.46, 0.17, 0.15))
     col = makeup(b, pos, col, land, lips)

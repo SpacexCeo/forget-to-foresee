@@ -25,6 +25,8 @@ clothed = "clothed" in mode                                # "clothed": a full b
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"
 try:
+    if __import__("os").environ.get("IRIS_CPU"):
+        raise RuntimeError("cpu")
     prefs = bpy.context.preferences.addons["cycles"].preferences
     prefs.compute_device_type = "OPTIX"
     prefs.get_devices()

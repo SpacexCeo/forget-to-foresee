@@ -147,7 +147,7 @@ def hermite(p0, p1, m0, m1, s):
 
 
 def gait_foot(ph, side, speed, T, stance, lift, strike_pitch, off_pitch, width, tang=0.6,
-              fwd_bias=0.0):
+              fwd_bias=0.0, lift_pow=0.8):
     """One foot of a locomotion cycle. ph: foot phase (0 = heel strike).
     Returns dict(ankle, pitch, toe). The flat-foot reference moves back at exactly
     `speed` while planted (no foot sliding against the ground)."""
@@ -173,7 +173,7 @@ def gait_foot(ph, side, speed, T, stance, lift, strike_pitch, off_pitch, width, 
     D = (1 - stance) * T
     m = -speed * D * tang
     f = hermite(-A0.y, -A1.y, m, m, s)
-    z = lerp(A0.z, A1.z, sm(s)) + lift * math.sin(math.pi * min(1.0, s ** 0.8))
+    z = lerp(A0.z, A1.z, sm(s)) + lift * math.sin(math.pi * min(1.0, s ** lift_pow))   # lower pow: the heel rises early
     pitch = keys(s, [(0.0, off_pitch), (0.35, off_pitch * 0.25), (0.75, strike_pitch * 0.6),
                      (1.0, strike_pitch)])
     toe = keys(s, [(0.0, -off_pitch * 0.6), (0.3, 8.0), (1.0, 0.0)])
@@ -349,8 +349,8 @@ STYLE = {
     # chin: + looks down; tilt: head roll; width: extra stance per foot (m);
     # knee: hip drop when standing (m); swing: walk arm swing scale; sway: pelvis
     # roll/yaw scale; bounce: vertical bob scale; tempo: speed of idle cycles (int)
-    "iris": dict(track_run=0.062, track_walk=0.088, hips_walk=(-0.012, 0.010), hips_run=(-0.045, 0.025),
-                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.0, knee=0.003,
+    "iris": dict(track_run=0.062, track_walk=0.072, hips_walk=(-0.012, 0.010), hips_run=(-0.045, 0.025),
+                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=-0.020, knee=0.003,   # feet a little inside the hips: no gap under the seat
                  swing=1.1, sway=0.9, bounce=1.0, tempo=1, cloth=1.0),
     "sol": dict(lean=1, hunch=2, protract=2, chin=2, tilt=6, width=0.015, knee=0.01,
                 swing=0.6, sway=1.6, bounce=0.6, tempo=1, cloth=0.8),
@@ -505,10 +505,11 @@ def clip_iris_run(key, S, u):
     Character reference: the owner's iris_graceful_run.py (stride, knee recovery, arm and torso values)."""
     T = RUN_FRAMES / FPS
     P = base_pose(key, S, standing=False)
-    stance = 0.31                                           # longer flight: light, springy
+    stance = 0.24                                           # a short contact (owner 09.11: no lunge, a real flight)
     for side, ph0 in ((1, 0.0), (-1, 0.5)):                 # the foot lands under the body, no overstride
-        P.feet[side] = gait_foot((u + ph0) % 1.0, side, RUN_SPEED, T, stance, 0.12, 4.0, -38.0,
-                                 0.042 - ANKLE_X, tang=0.45, fwd_bias=-0.13)   # ankles 4.2 cm off the midline: near one line
+        P.feet[side] = gait_foot((u + ph0) % 1.0, side, RUN_SPEED, T, stance, 0.20, 4.0, -38.0,
+                                 0.042 - ANKLE_X, tang=0.45, fwd_bias=-0.10,   # ankles 4.2 cm off the midline
+                                 lift_pow=0.5)              # heel recovery: the heel rises early behind, then the knee drives
     c, s_ = math.cos(TAU * u), math.sin(TAU * u)
     # one low point per step, just after contact (weight accepted), lightest in flight
     bob = math.cos(2 * TAU * (u - stance / 2) + math.pi)
@@ -524,10 +525,10 @@ def clip_iris_run(key, S, u):
     lag = 0.04
     cl = math.cos(TAU * (u - lag))
     for side, sfx, sgn in ((1, "L", 1), (-1, "R", -1)):
-        sw_a = 22.0 * cl * sgn                              # + = backwards; opposite to the leg
-        P.r(f"upperarm_{sfx}", sw_a + 3.0, -side * 4.0, 0)   # close to the body, more back than forward
+        sw_a = 32.0 * cl * sgn                              # + = backwards; opposite to the leg
+        P.r(f"upperarm_{sfx}", sw_a + 10.0, -side * 4.0, 0)  # close to the body, more back than forward
         back = max(0.0, cl * sgn)                           # the elbow opens a little behind
-        P.r(f"forearm_{sfx}", -72.0 + 10.0 * back, 0, -side * 12.0)   # hands toward the midline, not across
+        P.r(f"forearm_{sfx}", -88.0 + 12.0 * back, 0, -side * 10.0)   # a 90-degree elbow; hands pass the hip, not reaching
         P.r(f"hand_{sfx}", 5.0 * math.cos(TAU * (u - lag - 0.10)) * sgn, 0, -side * 4.0)
     return P
 
