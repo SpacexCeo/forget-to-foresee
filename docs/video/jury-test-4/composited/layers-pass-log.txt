@@ -1,0 +1,20 @@
+[fly-in] layers composited: 90 frames, luma {"ok":true,"frames":90,"jumps":0,"at":[],"maxJump":13.3,"min":15.9,"max":147.5}
+[clans-back] layers composited: 45 frames, luma {"ok":true,"frames":45,"jumps":0,"at":[],"maxJump":10,"min":85.3,"max":138.5}
+[clans-front] layers composited: 45 frames, luma {"ok":true,"frames":45,"jumps":0,"at":[],"maxJump":5.8,"min":78.4,"max":113.5}
+[conflict] layers composited: 90 frames, luma {"ok":true,"frames":90,"jumps":0,"at":[],"maxJump":0.6,"min":89.1,"max":99.5}
+[shard-macro] layers composited: 90 frames, luma {"ok":true,"frames":90,"jumps":0,"at":[],"maxJump":0.6,"min":94.2,"max":110.1}
+[token] layers composited: 90 frames, luma {"ok":true,"frames":90,"jumps":0,"at":[],"maxJump":0.7,"min":30.7,"max":37.8}
+[proof] layers composited: 105 frames, luma {"ok":true,"frames":105,"jumps":0,"at":[],"maxJump":12.7,"min":16.4,"max":82.3}
+layers pass done: /root/ftf-media/jury-test-4/final/work/jury-test-3840x2160-ultra. Next: node tools/capture/capture.mjs jury-test --resume --work <parent of /root/ftf-media/jury-test-4/final/work/jury-test-3840x2160-ultra> (the folder name must be jury-test-WxH-tier)
+== 2026-11-09T20:28:22Z assembly
+20:28:22 Forget to Foresee: jury video, cinematic test (18.5 s): 7 shots at 3840x2160@30 tier ultra, work /root/ftf-media/jury-test-4/final/work/jury-test-3840x2160-ultra
+20:28:23 [31merror when starting dev server:
+Error: Port 5179 is already in use
+    at Server.onError (file:///root/ftf-jury-tools/game/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:25336:18)
+    at Server.emit (node:events:518:28)
+    at emitErrorNT (node:net:1943:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+Error: vite exited 1
+    at ChildProcess.<anonymous> [90m(file:///root/ftf-jury-tools/[39mtools/capture/capture.mjs:90:32[90m)[39m
+[90m    at ChildProcess.emit (node:events:518:28)[39m
+[90m    at ChildProcess._handle.onexit (node:internal/child_process:293:12)[39m

@@ -21,3 +21,20 @@ kept; only the plain 4K master was pulled in time. Everything here was downscale
 The layer log was recorded at 3840×2160. Whether `layers-pass.mjs` accepts a plate smaller than the recorded size has
 not been checked: if it projects in pixels, scale the projected positions by 0.5 (or render the layers at 3840×2160 and
 downscale the composite). The per-frame camera and the shot timings are unchanged by the downscale.
+
+## `composited/`: the CPU layers pass over these plates (09.11, run on the server's last minutes)
+
+`tools/capture/layers-pass.mjs` drew the depth-anchored data layers (clan names and tempers over the camps, the three
+conflict links, the shard's cracks and signs, the token assembling, the proof line) over the 4K plates on the server;
+all seven shots passed the luma check (`layers-pass-log.txt`). The final 4K assembly did not run (the capture's own
+port was still held by the earlier job and the server's credit ran out), so the composited shots were downscaled to
+1920×1080 and assembled here with ffmpeg instead:
+
+| File | What |
+|---|---|
+| `composited/<shot>.mp4` + `.json` | each shot with its layers, 1080p30, no audio; the json carries `layersPass` luma stats |
+| `composited/jury-test-layers-1080p.mp4` | the seven shots in order with the mix (`plates/jury-test.wav`) |
+| `composited/jury-test-layers-captions-1080p.mp4` | the same with the captions burnt in (`plates/jury-test.ass`) |
+
+This ffmpeg assembly skips `capture.mjs`'s own fades, final luma check and report; it is the review cut for the owner's
+approval of the test (deliverables A-F in `docs/submission/jury-video.md`), not the master.
