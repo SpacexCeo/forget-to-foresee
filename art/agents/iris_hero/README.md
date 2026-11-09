@@ -43,7 +43,27 @@ Stages: `body` (MPFB body, re-pose, rig, face morphs), `costume` (+ garments, ha
    right eye a frame late), gaze saccades, brow and lip motion per clip, syllables in `talk`. Morph and
    bone curves are exported as one glTF animation per clip (NLA tracks merged by name).
 
-## Third-party assets
+## Standing stance adjustment
+
+Iris's six standing clips use no additional outward foot offset: each foot is 3 cm
+closer to the centre, reducing the ankle span from 22.42 cm to 16.42 cm. Walking
+and running retain their existing tracks. This reduces the upper-thigh gap without
+changing the mesh, weights, costume, face, or textures.
+
+To refresh a recovered final build without repeating the GPU bakes:
+
+```sh
+blender -b --python art/agents/iris_hero/update_stance.py -- /path/to/iris_hero.blend /path/to/separate-output
+node art/agents/iris_hero/apply-stance-animation.mjs /path/to/original-compressed.glb /path/to/separate-output/agent_iris.glb game/public/assets/models/agent_iris.glb
+```
+
+The first command saves a separate editable file with packed textures. The second
+copies only standing pelvis/leg animation channels into the original compressed
+asset and checks that geometry, textures, walking, and running remain unchanged.
+Source: `art-sources` commit `f07d745566f7223a512779d02f27c70c17b473a0`,
+`iris_hero_final/`. Rear-view pose comparison: [before / after](../../../docs/art/qa/iris-hero/stance-before-after-detail.png).
+
+## Third-party asset licences
 
 | Asset | Source | Licence |
 |---|---|---|
