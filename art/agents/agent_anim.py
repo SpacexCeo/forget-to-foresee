@@ -108,10 +108,20 @@ def eq(v):
 HEEL = V((0, 0.040, -0.085))
 BALL = V((0, -0.092, -0.085))
 ANKLE_Z = 0.085
+ANKLE_X = 0.114          # the rest ankle's distance from the midline
+
+
+def set_ankle(x, z):
+    """Fit the foot model to a rig whose rest ankle sits elsewhere (Iris: the agent constants put her ankle
+    5 cm above her own, so the leg IK bent her knees in every clip)."""
+    global ANKLE_X, ANKLE_Z, HEEL, BALL
+    ANKLE_X, ANKLE_Z = x, z
+    HEEL = V((HEEL.x, HEEL.y, -z))
+    BALL = V((BALL.x, BALL.y, -z))
 
 
 def ankle_rest(side):
-    return V((0.114 * side, 0.0, ANKLE_Z))
+    return V((ANKLE_X * side, 0.0, ANKLE_Z))
 
 
 def planted(x, gy, pitch):
@@ -142,7 +152,7 @@ def gait_foot(ph, side, speed, T, stance, lift, strike_pitch, off_pitch, width, 
     `speed` while planted (no foot sliding against the ground)."""
     stride = speed * T
     a = stride * stance / 2 + fwd_bias          # forward coordinate at strike
-    x = (0.114 + width) * side
+    x = (ANKLE_X + width) * side
     roll_in = 0.14 * stance                      # heel rocker
     rise = 0.62 * stance                         # heel rise starts
     if ph < stance:
@@ -338,8 +348,8 @@ STYLE = {
     # chin: + looks down; tilt: head roll; width: extra stance per foot (m);
     # knee: hip drop when standing (m); swing: walk arm swing scale; sway: pelvis
     # roll/yaw scale; bounce: vertical bob scale; tempo: speed of idle cycles (int)
-    "iris": dict(track_run=0.062, track_walk=0.088,
-                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.03, knee=0.012,
+    "iris": dict(track_run=0.062, track_walk=0.088, hips_walk=(-0.012, 0.010), hips_run=(-0.045, 0.025),
+                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.03, knee=0.003,
                  swing=1.1, sway=0.9, bounce=1.0, tempo=1, cloth=1.0),
     "sol": dict(lean=1, hunch=2, protract=2, chin=2, tilt=6, width=0.015, knee=0.01,
                 swing=0.6, sway=1.6, bounce=0.6, tempo=1, cloth=0.8),
@@ -494,7 +504,7 @@ def clip_locomotion(key, S, u, run=False):
     lift = 0.20 if run else 0.075
     width = (0.0 if run else -0.01) + S["width"] * 0.3
     if "track_run" in S:                        # Iris (owner 09.11): feet land under the body, not wider than
-        width = S["track_run" if run else "track_walk"] - 0.114   # the hips; this is the ankle's distance from the midline
+        width = S["track_run" if run else "track_walk"] - ANKLE_X   # the hips; this is the ankle's distance from the midline
     sp, op = (8.0, -45.0) if run else (14.0, -36.0)
     for side, ph0 in ((1, 0.0), (-1, 0.5)):
         P.feet[side] = gait_foot((u + ph0) % 1.0, side, speed, T, stance, lift, sp, op, width,
@@ -505,11 +515,14 @@ def clip_locomotion(key, S, u, run=False):
     # overlapping action: chest, neck and head follow the pelvis a little late
     c_ch, c_hd = math.cos(TAU * (u - 0.05)), math.cos(TAU * (u - 0.10))
     sw = S["sway"]
+    # pelvis height (m below the standing rest) and its bob; Iris overrides (owner: she must not walk crouched)
     if run:
-        P.hips.z = -0.07 + 0.035 * S["bounce"] * math.cos(2 * TAU * (u - stance / 2) + math.pi)
+        h0, hb = S.get("hips_run", (-0.07, 0.035))
+        P.hips.z = h0 + hb * S["bounce"] * math.cos(2 * TAU * (u - stance / 2) + math.pi)
         lean = 12 + S["lean"] * 0.5
     else:
-        P.hips.z = -0.035 - 0.022 * S["bounce"] * s2w
+        h0, hb = S.get("hips_walk", (-0.035, 0.022))
+        P.hips.z = h0 - hb * S["bounce"] * s2w
         lean = 3 + S["lean"] * 0.8
     P.hips.x = 0.018 * sw * math.sin(TAU * u) * (0.5 if run else 1.0)
     P.hips_rot = V((lean * 0.25, -3.0 * sw * math.sin(TAU * u), -6.0 * sw * c))

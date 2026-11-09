@@ -254,7 +254,18 @@ def repose(bm, rig):
     for m in list(bm.modifiers):
         if m.type == "ARMATURE":
             bpy.ops.object.modifier_apply(modifier=m.name)
-    return {pb.name: (bone_world(rig, pb.name), bone_world(rig, pb.name, True)) for pb in rig.pose.bones}
+    J = {pb.name: (bone_world(rig, pb.name), bone_world(rig, pb.name, True)) for pb in rig.pose.bones}
+    # straightening the legs pushes the soles below the ground (3.6 cm on the athletic body): stand her on it
+    feet = set()
+    for gname in ("foot.L", "foot.R", "toe1-1.L", "toe1-1.R"):
+        if gname in bm.vertex_groups:
+            feet |= group_verts(bm, gname, 0.3)
+    dz = -min(bm.data.vertices[i].co.z for i in feet) if feet else 0.0
+    if abs(dz) > 1e-4:
+        for v in bm.data.vertices:
+            v.co.z += dz
+        J = {n: (h + V((0, 0, dz)), t + V((0, 0, dz))) for n, (h, t) in J.items()}
+    return J
 
 
 def delete_verts(obj, pred):
@@ -1406,6 +1417,9 @@ def stage_full(shade=True, size=2048, samples=16):
             for p in bm.data.polygons:
                 if all(la.data[i].value > 0.5 for i in p.vertices):
                     p.material_index = 1
+    ank = rig.data.bones["shin_L"].tail_local                  # the clips' foot model on Iris's own ankle
+    agent_anim.set_ankle(abs(ank.x), ank.z)
+    log("ankle", round(abs(ank.x), 3), round(ank.z, 3))
     acts = agent_anim.bake_clips(rig, "iris", log=log)
     actions = {c: bpy.data.actions[c] for c in agent_anim.CLIPS}
     face = bake_face(rig, bm, actions)
