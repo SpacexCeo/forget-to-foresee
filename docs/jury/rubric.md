@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.10, 2026-11-09 (research cycle 10). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.11, 2026-11-09 (research cycle 11). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -50,6 +50,9 @@ an open flag is reported to the lead at once, and the score is marked provisiona
    overall prizes went to tooling and infrastructure; gaming winners were complete small loops with one chain hook and
    won in their track, not overall; judges asked for go-to-market and next steps; a NEAR Foundation judge named "a
    slick video over a thin repo" as a red flag and read the pitch for the problem behind the solution.
+
+- Field update 2026-11-09 01:20 UTC: 335 entries (`games` 27 unchanged, `nfts` 23, `open` 56); the `games`
+  competition has not grown in eight hours, so the calibrations in `notes/competitor-field.md` still hold.
 
 ## 2. Criteria, weights and what a 10 looks like
 

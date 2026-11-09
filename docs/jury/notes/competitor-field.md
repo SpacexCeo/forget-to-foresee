@@ -132,3 +132,12 @@ GitHub only, `nfts`: CrewPass ("NEAR NFT ambassador passes whose vaults follow o
 - The forget-to-foresee trade is unique in the field; put the memory-shard NFT on the first screen of the README with a picture and a one-line rule, and state honestly that it is simulated if no NFT contract is deployed. Bazaar Sovereign and NEARlyHuman will be the comparison for "does the NFT do something".
 - Match the README pattern the strong rivals share: play link, numbered judge path with "you see", on-chain table, `npm test` count, short mp4 in the repo, "what is real / what is mocked" table (already a repository rule), and a sibling-submission disclosure if any.
 - Tag `nfts` only if the shard is minted on testnet or the simulation is explicit; the `nfts` field is full of deployed wallet-NFTs and a simulated shard will be judged against them.
+
+## Re-count 2026-11-09 01:20 UTC (`/api/projects`)
+- Totals: 335 overall (was 311 at 2026-11-08 17:47 UTC), `games` 27 (unchanged, same names), `nfts` 23 (was 21),
+  `open` 56.
+- New in `nfts`: OpenNear (https://x.com/Patrik0042/status/2119588458339373462), an NFT bridge from NEAR to an EVM
+  chain (Base) for OpenSea listing, repo traced by name to https://github.com/ONOSPETER/opennear-v2 (description
+  read via GitHub search, README not read; mapping is an inference). Not a game and no memory mechanic: no effect on
+  our originality calibration. The second `nfts` addition matched an existing name variant (NEARlyHuman).
+- Live HACKATHON.md unchanged (sha256 903794f4…d381d9aed).

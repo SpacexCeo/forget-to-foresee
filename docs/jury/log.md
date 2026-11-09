@@ -115,3 +115,9 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
 - 00:55 UTC: `tools/live-check.cjs` (Playwright, preinstalled Chromium) measures cold load, first control, LCP,
   transfer size and console errors on desktop and an emulated Pixel 7; smoke-tested against https://example.com
   (both profiles ok, 2,497 bytes, no errors). Rubric v0.10: section 5 names the tool. No red flags.
+
+## Cycle 11: 2026-11-09 01:17 UTC
+- Routine re-checks (the field and the rules are the two inputs that can still move before judging).
+- 01:25 UTC: live HACKATHON.md byte-identical (sha256 match). Directory re-count: 335 total (+24), `games` 27
+  unchanged, `nfts` 23 (+1 real new entry, OpenNear, an NFT bridge; not a rival on mechanic). Appended to
+  `notes/competitor-field.md`; rubric v0.11 section 1 carries the update. No red flags.
