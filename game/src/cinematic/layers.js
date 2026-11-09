@@ -136,6 +136,7 @@ export function createLayers(doc = document) {
       const hero = el(doc, 'div', 'cl-abs', `<div style="font:600 44px/1 'Source Sans 3',sans-serif;letter-spacing:.3em;color:${GOLD};text-transform:uppercase">NEP-171 token</div><div style="font:400 72px/1.1 'Libre Caslon Text',Georgia,serif;margin-top:14px;text-shadow:0 3px 24px rgba(0,0,0,.8)">${esc(it.hero)}</div>`);
       const meta = el(doc, 'div', 'cl-abs cl-small', (it.meta || []).map(esc).join('<br>'));
       root.append(hero, meta);
+      if (!it.hero) hero.style.display = 'none';
       return (t, project) => {
         const [x, y] = project(it.world), k = inOut(P(t, it.from, it.assemble ?? 1.2));
         const X = it.x ?? 300, Y = it.y ?? 240;

@@ -16,6 +16,9 @@ const SHARD_AT = [26.8 * Math.cos(277 * Math.PI / 180), 1.2, 26.8 * Math.sin(277
 const IN = [Math.cos(97 * Math.PI / 180), Math.sin(97 * Math.PI / 180)]; // from the shard toward the plaza
 const SHELL2 = [SHELL[2][0], SHELL[2][1] + 9, SHELL[2][2]];
 const ACCENT = { iris: '#b49be6', salt: '#d9dcd6', ash: '#bdb6ad', moss: '#9cba7c', amber: '#e6a84a', frost: '#a9c6d4' };
+// A sweep inside the camp ring (radius 21 m: 9 m from the camps) from one angle to another, looking out at the camps.
+const ring = (a0, a1, n = 5) => Array.from({ length: n }, (_, i) => { const a = (a0 + (a1 - a0) * i / (n - 1)) * Math.PI / 180; return [[21 * Math.cos(a), 2.3, 21 * Math.sin(a)], [30 * Math.cos(a), 1.5, 30 * Math.sin(a)]]; });
+const sweep = (a0, a1) => { const r = ring(a0, a1); return { type: 'dolly', path: r.map((x) => x[0]), look: r.map((x) => x[1]), fov: [40, 38], ease: 'inOutSine' }; };
 const pin = (clan, name, temper, from, to, target = clan) => ({ kind: 'pin', target: clan === 'iris' ? null : target, world: clan === 'iris' ? head('iris') : null, name, sub: temper, color: ACCENT[clan], from, to, lift: 160 });
 
 export default {
@@ -34,14 +37,14 @@ export default {
     },
     { // 3–4.5 · the back of the ring: Salt, Iris, Frost, their names pinned above their heads
       name: 'clans-back', duration: 1.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
-      camera: { type: 'dolly', path: [[-15, 4.2, 4], [0, 3.6, 2], [15, 4.2, 4]], look: [[-22, 1.6, -18], [0, 1.6, -26], [22, 1.6, -18]], fov: [52, 50], ease: 'inOutSine' },
+      camera: sweep(200, 340),
       actions: [music(0, 38), cue(0.1, 'ui_notify', 0.4)],
       overlays: [...FRAME],
       layers: [pin('salt', 'Salt', 'Cunning', 0.0, 1.5), pin('iris', 'Iris', 'You', 0.12, 1.5), pin('frost', 'Frost', 'Scholar', 0.24, 1.5)],
     },
     { // 4.5–6 · the front of the ring: Ash, Moss, Amber
       name: 'clans-front', duration: 1.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
-      camera: { type: 'dolly', path: [[15, 4.2, -4], [0, 3.6, -2], [-15, 4.2, -4]], look: [[22, 1.6, 18], [0, 1.6, 26], [-22, 1.6, 18]], fov: [52, 50], ease: 'inOutSine' },
+      camera: sweep(20, 160),
       actions: [cue(0.1, 'ui_notify', 0.4)],
       overlays: [...FRAME],
       layers: [pin('amber', 'Amber', 'Greedy', 0.0, 1.5), pin('moss', 'Moss', 'Honest', 0.12, 1.5), pin('ash', 'Ash', 'Wary', 0.24, 1.5)],
@@ -59,7 +62,7 @@ export default {
     },
     { // 9–12 · macro on the physical shard: it cracks, two future signs rise out of it
       name: 'shard-macro', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
-      camera: { type: 'push', from: [SHARD_AT[0] + IN[0] * 4.6, 1.75, SHARD_AT[2] + IN[1] * 4.6], look: SHARD_AT, dist1: 1.5, fov: [24, 16], ease: 'inOutSine', minHeight: 0.5 },
+      camera: { type: 'push', from: [SHARD_AT[0] + IN[0] * 2.6, 1.55, SHARD_AT[2] + IN[1] * 2.6], look: SHARD_AT, dist1: 1.25, fov: [20, 13], ease: 'inOutSine', minHeight: 0.5 },
       actions: [music(0, 36), cue(1.4, 'memory_dissolve', 0.9), cue(2.0, 'vision_whoosh', 0.7)],
       overlays: [...FRAME],
       layers: [
@@ -71,7 +74,7 @@ export default {
     },
     { // 12–15 · the token assembles out of the shard; the season seal closes around it
       name: 'token', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
-      camera: { type: 'orbit', center: SHARD_AT, radius: [1.7, 2.9], height: [1.5, 1.9], yawFrom: 97, yawTo: 132, lookHeight: 0, fov: [26, 30], ease: 'inOutSine', minHeight: 0.5 },
+      camera: { type: 'orbit', center: SHARD_AT, radius: [1.3, 1.45], height: [1.45, 1.6], yawFrom: 97, yawTo: 125, lookHeight: 0, fov: [26, 30], ease: 'inOutSine', minHeight: 0.5 },
       actions: [cue(1.1, 'ui_confirm', 0.6), cue(2.0, 'gift_chime', 0.5)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 3.5, fadeIn: 0, fadeOut: 0, amount: 0.28 }],
       layers: [
@@ -85,7 +88,8 @@ export default {
       actions: [music(0, 56), music(2.2, 30), cue(1.4, 'gift_chime', 0.7)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 4, fadeIn: 0, fadeOut: 0, amount: 0.22 }, { kind: 'black', from: 3.0, to: 4.5, fadeIn: 0.5, fadeOut: 0 }],
       layers: [
-        { kind: 'token', world: SHARD_AT, svg: S.svg, from: -2, to: 3.5, x: 120, y: 190, size: 420, assemble: 0.01, hero: S.tokenId, meta: [`opened leaf ${S.unlocked_leaf.slice(0, 8)}…`, `${D.near.shards} · mint ${S.mintTx.slice(0, 6)}…`] },
+        { kind: 'token', world: SHARD_AT, svg: S.svg, from: -2, to: 3.5, x: 120, y: 190, size: 420, assemble: 0.01, hero: '', meta: [] },
+        { kind: 'text', html: `<span style="font:400 44px/1.3 DejaVu Sans Mono,monospace;color:#a9c6d4">opened leaf ${S.unlocked_leaf.slice(0, 8)}… · ${D.near.shards}</span>`, x: 120, y: 640, from: 0.2, to: 3.45 },
         { kind: 'node', world: SHELL2, title: D.near.seasons, sub: `leaf #${S.unlocked_index}`, from: 0.6, to: 3.5 },
         { kind: 'screenLink', from2: [540, 400], world: SHELL2, from: 0.7, to: 3.5 },
         { kind: 'text', html: 'Same leaf, <span style="color:#e4c272">sealed on NEAR testnet.</span>', big: true, from: 1.3, to: 3.45, y: 820 },
