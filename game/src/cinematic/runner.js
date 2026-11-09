@@ -303,7 +303,21 @@ export class ShotRunner {
         for (let i = 0; i < (a.times ?? 1); i++) btns[a.dir < 0 ? 0 : btns.length - 1].click();
         break;
       }
-      case 'forget': { const b = document.querySelectorAll('[data-forget]')[a.index ?? 0]; if (!b) throw new Error('no memory button'); b.click(); break; }
+      case 'forget': {
+        // The Memories panel may be closed by the time the action fires (the M key in the setup can land while another
+        // surface holds the panel arbiter, as on the 1080p GPU renders): open it directly, then pick the memory by kind
+        // (`kind: 'call'`, the judge playthrough's shard 7) or by index, and click its "Forget it for a vision" button.
+        const pick = () => {
+          const mems = (play.session.obs && play.session.obs.memories) || [];
+          const m = a.kind ? mems.find((x) => x.kind === a.kind) : mems[a.index ?? 0];
+          return m ? document.querySelector(`[data-forget="${m.id}"]`) : null;
+        };
+        let b = pick();
+        if (!b && play.ui.open) { play.ui.open('memory'); b = pick(); }
+        if (!b) throw new Error(`no memory button (${a.kind ? 'kind ' + a.kind : 'index ' + (a.index ?? 0)}; memories: ${((play.session.obs && play.session.obs.memories) || []).map((x) => x.kind).join(',') || 'none'})`);
+        this.marks.push({ t: this.t, label: 'forget ' + b.getAttribute('data-forget') });
+        b.click(); break;
+      }
       case 'quality': this.allowQualityChange = true; try { g.lookdev.setQuality(a.tier); } finally { this.allowQualityChange = false; } break;
       case 'motion': g.setReducedMotion(!!a.reduce); break;
       case 'guests': {
