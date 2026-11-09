@@ -61,6 +61,11 @@ function card(i18n, s, mobile, onAction) {
   // Live model (from-obs.js): one plain reading line ("Likely: Gift of 20 at Shell II, trial 3"),
   // and on resolved cards the proof check against the sealed root.
   const plain = s.plain ? tx(h('p', { class: 'wh-sign__plain wh-body', attrs: { id: id + '-p' }, dataset: { confidence: s.confidence || '' } }), i18n, s.plain.key, s.plain.args) : null;
+  // Revealed cards (readiness audit P2): the seal fact, your reading slot by slot, the stake, what Iris learned
+  const details = s.details && s.details.length
+    ? h('ul', { class: 'wh-sign__details wh-body', attrs: { id: id + '-d' } },
+      ...s.details.map((d) => tx(h('li', { class: 'wh-sign__line', dataset: { line: d.id, tone: d.tone || 'plain' } }), i18n, d.text.key, d.text.args)))
+    : null;
   const verified = s.verified === 'ok' || s.verified === 'fail'
     ? h('span', { class: 'wh-pill wh-sign__verified wh-sign__verified--' + s.verified, i18n: 'wh.sign.verified.' + s.verified, dataset: { tip: 'verified' } })
     : null;
@@ -75,7 +80,7 @@ function card(i18n, s, mobile, onAction) {
     attrs: {
       role: 'button', tabindex: '0',
       'aria-labelledby': id + '-t',
-      'aria-describedby': [s.plain ? id + '-p' : '', s.stats.length ? id + '-s' : '', s.anchor ? id + '-a' : ''].filter(Boolean).join(' '),
+      'aria-describedby': [s.plain ? id + '-p' : '', details ? id + '-d' : '', s.stats.length ? id + '-s' : '', s.anchor ? id + '-a' : ''].filter(Boolean).join(' '),
     },
     dataset: { sign: s.id, state: s.state, whKey: 'sign-' + s.id },
     on: {
@@ -91,6 +96,7 @@ function card(i18n, s, mobile, onAction) {
       h('span', { class: 'wh-sign__tlabel wh-heavy-sm', i18n: 'wh.sign.type.' + s.type })),
     verified),
   plain,
+  details,
   s.stats.length ? stats : null,
   anchor,
   near, // its own row under the anchor: the head row has a fixed height and the label is long in every locale
