@@ -466,6 +466,24 @@ export class ShotRunner {
     }
   }
 
+  /**
+   * Waits (wall time, stepping frames) until the Shell is active and its Guests are built and loaded, so a shot that
+   * drives them never starts on a missing stage. Returns {ok, frames, ms, why}.
+   */
+  async waitGuests(maxMs = 120_000) {
+    const start = this.clock.real.performanceNow();
+    const wait = (ms) => new Promise((r) => this.clock.real.setTimeout(r, ms));
+    let frames = 0, why = 'no play';
+    for (;;) {
+      const p = this.play, gs = p && p.shell && p.shell.guests;
+      why = !p ? 'no play' : p.zone !== 'shell' ? 'not inside a Shell (zone ' + p.zone + ')' : !p.shell.ready ? 'Shell interior not ready' : !gs ? 'no Guests handle' : !gs.loaded ? 'Guest models not loaded' : null;
+      if (!why) return { ok: true, frames, ms: this.clock.real.performanceNow() - start };
+      if (this.clock.real.performanceNow() - start > maxMs) return { ok: false, frames, ms: this.clock.real.performanceNow() - start, why };
+      await this.step(); frames++;
+      await wait(100);
+    }
+  }
+
   /** Resets the shot clock to -preroll after the setup moved the game; cue logs restart from the live state. */
   rewind(preroll = 0) {
     this.t = -preroll; this.frame = 0; this.cues = []; this.marks = []; this.camLog = [];

@@ -1,5 +1,17 @@
 # Task J report: trailer, demo video and clips (paused 08.11 18:00 UTC on the lead's order)
 
+## 09.11 night: the opening Shell shot hung on the GPU (43d672f)
+The demo's `guest` shot hung twice on the 4090: no frame came back and nothing timed out. Evidence: 122d3f3 on
+claude/laughing-thompson-dc7r09. Fixes:
+- **Watchdog per shot:** each phase (page load, setup, waiting for the Guests, the first frame, every frame at
+  `FTF_FRAME_TIMEOUT` = 120 s, the encode) has a limit. On a stall the shot's Chromium (marked by a tag) and its ffmpeg
+  are killed, and the shot fails with the phase named.
+- **Shot retries:** `capture.mjs` renders a failed shot again in a fresh browser (`FTF_SHOT_ATTEMPTS` = 3).
+- **Guests readiness:** a shot that drives the Guests waits for `runner.waitGuests` (Shell active, interior ready,
+  Guest models loaded; fails after 150 s with the reason), then cues the sign at shot time 0.
+- **Local checks:** with a 1 s frame limit the watchdog kills and retries as designed, with no leftover processes. The
+  guest shot renders clean (60 frames, 0 errors).
+
 ## 08.11 late: rework "make the videos interesting" (Opus relaunch)
 - **Scripts reworked** (`tools/capture/shots/*`, `--check` green): every video opens on the Guest coming out of the
   mist and drawing the ring sign on the glass, with Iris small in front. The trailer is 41 s, cut on whole seconds of
