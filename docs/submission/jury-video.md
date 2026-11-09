@@ -140,3 +140,25 @@ typed at reading speed, not in real time, and is labelled "replay of a real run"
 `emerge`, `island`, `ink`, `forget`, `face-moss`, `face-salt`, `face-frost`, `stake` (the left half of shot 9), `crisis`
 and `vote`. They are rendered with the current Guests (Task O, on the integration branch) and with the new Iris if her
 glb lands by 11.11 12:00 Kyiv; otherwise they use the current Iris, and the report says so.
+
+## v4: the full minute, cards over live footage (owner, 09.11 evening)
+
+The owner's call after the cinematic test: **keep the cards and the infographics, but a real in-engine screencast plays
+behind every scene** instead of a drawn background. v4 is the 60 s script of v2 (`tools/capture/shots/jury.mjs`) at
+30 fps with these changes:
+
+- Every motion-graphics page carries `plate: { shot, from, slow, dim, blur }`: the page is rendered with alpha and laid
+  over a hidden in-engine plate by `compositePlate` (`tools/capture/lib/compose.mjs`). The plates are the cinematic
+  test's shots (`jury-test.mjs`, rendered here as hidden `plate-*` shots or reused from the GPU run); a page longer than
+  its plate plays it slower with motion interpolation (`minterpolate`), never a frozen frame. The plate is dimmed to 58%
+  luma and softened by 2 px so the type and the cards stay legible.
+- **The owner's own art** (`docs/submission/jury-video-ref/`): the six landscape clan cards from the layered asset pack
+  (`pack/02_clan_cards`) in the agents and crisis scenes, the "The Agents" ring lockup on the first pillar card, the
+  "Bound to the Sealed Season" rail on the shard scene. Event badges (13 silk, "It is a weapon", 16 silk) are typeset in
+  the owner's style (serif line, large gold italic number, spaced SILK) because their image files were not received.
+- **Voice-over** (owner: a local, male, native-English narrator, lively): `tools/capture/vo.py` synthesises the lines of
+  `tools/capture/vo-lines.json` with Kokoro-82M (kokoro-onnx, CPU) at each caption's time, speeding a line up to 1.3x
+  when it would run into the next; `tools/capture/vo-mix.sh` ducks the game's mix under the voice (sidechain) and lays
+  the voice on top. The storyboard's "no voice-over" line above is superseded.
+- Rendered on this container's CPU (SwiftShader) at 1920×1080, tier `high`, about 45 s per in-engine frame; the GPU
+  path (`gpu-job.sh`) is unchanged for a 4K master when a server is available.
