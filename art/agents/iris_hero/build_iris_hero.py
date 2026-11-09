@@ -456,7 +456,7 @@ def round_glutes(bm, dom, depth=0.006):
     upward into the lower back, and the midline is eased in a little."""
     import math as _m
     H = max(v.co.z for v in bm.data.vertices)
-    zc = 0.530 * H                                     # a high seat (owner reference 09.11)
+    zc = 0.555 * H                                     # a high seat (owner reference 09.11)
     for v, d in zip(bm.data.vertices, dom):
         if d not in ("pelvis", "spine", "thigh_L", "thigh_R"):
             continue
