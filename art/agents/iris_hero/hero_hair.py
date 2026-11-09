@@ -511,6 +511,9 @@ def cards_from_groom(guides, strands, card_cols=(0, 1, 2, 3), fine_cols=(4, 5, 6
         pts = [V(tuple(x)) for x in s[::step]]
         nrms = [(p - head_c).normalized() for p in pts]
         card(pts, [0.0035] * len(pts), fine_cols[-1], nrms)
+    b.normal_update()
+    flip = [f for f in b.faces if f.normal.dot(f.calc_center_median() - head_c) < 0]
+    bmesh.ops.reverse_faces(b, faces=flip)                      # cards face out of the head
     me = bpy.data.meshes.new("hair")
     b.to_mesh(me)
     b.free()

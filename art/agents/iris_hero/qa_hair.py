@@ -39,10 +39,21 @@ w.node_tree.nodes["Background"].inputs["Color"].default_value = (0.18, 0.19, 0.2
 w.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.6
 sc.frame_set(0)
 for o in sc.objects:
-    if o.type == "ARMATURE" and o.animation_data:
-        o.animation_data.action = None
-        for tr in o.animation_data.nla_tracks:
+    if o.type == "ARMATURE":
+        if o.animation_data:
+            o.animation_data.action = None
+            for tr in o.animation_data.nla_tracks:
+                tr.mute = True
+        for pb in o.pose.bones:                      # rest pose (the build leaves the last baked frame)
+            pb.rotation_quaternion = (1, 0, 0, 0)
+            pb.location = (0, 0, 0)
+            pb.scale = (1, 1, 1)
+    sk = getattr(getattr(o, "data", None), "shape_keys", None)
+    if sk and sk.animation_data:
+        for tr in sk.animation_data.nla_tracks:
             tr.mute = True
+        for kb in sk.key_blocks:
+            kb.value = 0.0
     if o.name.endswith("_col") or o.name.startswith(("_", "hair_master_guides")):
         o.hide_render = True
 for o in sc.objects:

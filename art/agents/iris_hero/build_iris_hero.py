@@ -576,6 +576,14 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     install_chains(chains)
     bpy.data.objects.remove(rig)
     rig = rebuild_rig(bm)
+    for nm in ("hair_master", "hair_master_guides"):          # the master groom follows the head bone
+        o = bpy.data.objects.get(nm)
+        if o:
+            mw = o.matrix_world.copy()
+            o.parent = rig
+            o.parent_type = "BONE"
+            o.parent_bone = "head"
+            o.matrix_world = mw
 
     c13, rx13, ry13 = P.section(1.0)
 
@@ -692,6 +700,7 @@ def groom_hair(bm, rig, garments, scalp, head_c, head_r):
     garments["hair_tie"] = H.hair_tie(G.T + V((0, 0.006, -0.004)), G.tail[2] - G.tail[0])
     bpy.data.objects.remove(head)
     cards = H.cards_from_groom(guides, strands, head_c=head_c, tie=G.T)
+    master["groom"] = "Hair Curves master: edit here, rebuild the cards with cards_from_groom"
     log("hair", len(guides), "guides", len(strands), "strands", len(cards.data.polygons), "card faces")
     return cards, master
 
