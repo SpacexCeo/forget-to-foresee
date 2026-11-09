@@ -26,6 +26,8 @@ try:
 except Exception:
     pass
 sc.cycles.samples = 96
+sc.cycles.transparent_max_bounces = 128
+sc.cycles.max_bounces = 16
 sc.cycles.use_denoising = True
 sc.view_settings.view_transform = "AgX"
 sc.render.resolution_x, sc.render.resolution_y = 1200, 1200

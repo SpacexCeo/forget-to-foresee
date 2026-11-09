@@ -987,7 +987,6 @@ def lips_attr(body):
 def stage_full(shade=True, size=2048, samples=16):
     bm, rig, eye_objs, garments = stage_costume()
     lips_attr(bm)
-    add_lashes(bm, rig)
     hair = [garments.pop("hair"), garments.pop("hair_cap")]
     cloth = list(garments.values())
     if shade:

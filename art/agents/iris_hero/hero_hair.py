@@ -279,7 +279,7 @@ class Tied(Groom):
         self.T = V((0.004, c.y + r[1] * 0.88, c.z - r[2] * 0.42))           # the tie, low at the back
         rnd = self.rnd
         # tail centre line: out from the head a little, then down over the hood
-        self.tail = [self.T + V((0.0, 0.030 * s ** 0.5 + 0.030 * s, -0.22 * s)) +
+        self.tail = [self.T + V((0.0, 0.030 * s ** 0.5 + 0.030 * s, -0.17 * s)) +
                      V((0.008 * math.sin(s * 4.0), 0, 0)) for s in np.linspace(0, 1, 12)]
         self.tail = [self.body_col.push(p, 0.040) if i > 2 else p for i, p in enumerate(self.tail)]
         self.clumps = [(rnd.uniform(0, math.tau), rnd.uniform(0.0, 1.0) ** 0.5, rnd.uniform(0, math.tau), rnd.uniform(11, 17)) for _ in range(18)]
@@ -387,13 +387,13 @@ class Tied(Groom):
                 base = self.c + V((side * self.r[0] * 0.78, -self.r[1] * 0.42, self.r[2] * 0.30))
                 base = self.head_col.push(base, 0.002)
                 ph = rnd.uniform(0, math.tau)
-                Lw = rnd.uniform(0.09, 0.12)
-                for j in range(90):
+                Lw = rnd.uniform(0.06, 0.08)
+                for j in range(45):
                     jit = V((rnd.gauss(0, 0.002), rnd.gauss(0, 0.002), rnd.gauss(0, 0.002)))
                     poly = []
                     for i in range(14):
                         t = i / 13
-                        pp = base + jit * (1 + 2 * t) + V((side * 0.006 * t, -0.016 * t * t, -Lw * t))
+                        pp = base + jit * (1 + 2 * t) + V((side * 0.014 * t, 0.004 * t, -Lw * t))
                         pp += V((side * 0.006 * math.sin(t * 9 + ph), 0, 0)) * t
                         poly.append(self.head_col.push(pp, 0.003))
                     out.append(resample(poly))

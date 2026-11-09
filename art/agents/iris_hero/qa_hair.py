@@ -26,6 +26,8 @@ try:
 except Exception:
     pass
 sc.cycles.samples = samples
+sc.cycles.transparent_max_bounces = 128
+sc.cycles.max_bounces = 16
 sc.cycles.use_denoising = samples < 200
 sc.cycles.denoising_prefilter = "ACCURATE"
 sc.cycles_curves.shape = "THICK"
