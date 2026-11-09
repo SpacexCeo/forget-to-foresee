@@ -121,12 +121,12 @@ def coat(P, hem=0.40, top=1.43):
             rx = rx * (1 - 0.15 * k) + 0.03
             ry = ry + 0.03
         else:
-            rx, ry = rx + 0.032, ry + 0.035
+            rx, ry = rx + 0.040, ry + 0.044
         if z < 0.95:                             # below the hips: an A-line flare
             hip_r = hip_r or (rx, ry)
             f = (0.95 - z) / (0.95 - hem)
-            rx = hip_r[0] + 0.07 * f
-            ry = hip_r[1] + 0.06 * f
+            rx = hip_r[0] + 0.085 * f
+            ry = hip_r[1] + 0.075 * f
         ring = []
         gap = math.radians(9 + 15 * (top - z) / (top - hem))     # the coat hangs open lower down
         for i in range(n):
@@ -141,7 +141,7 @@ def coat(P, hem=0.40, top=1.43):
     # trim band: the front edges and the hem (smoky lighter wool)
     nv = n
     set_attr(o, "trim", lambda i, co: 1.0 if (i % nv) in (0, 1, nv - 2, nv - 1) or i >= nv * (rows - 1) else 0.0)
-    solidify(o, 0.012)
+    solidify(o, 0.012, 1.0)                              # thickness grows outward, away from the dress
     smooth(o)
     return o
 
@@ -158,9 +158,7 @@ def collar(P, z0=1.40, z1=1.56):
         for i in range(n):
             th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)
             ends = math.sin(math.pi * i / (n - 1)) ** 0.6           # lower and closer to the neck at the ends
-            p = ellipse(c, rx + flare * ends, ry + flare * ends, th)
-            p.z = z0 + (p.z - z0) * (0.35 + 0.65 * ends)
-            ring.append(p)
+            ring.append(ellipse(c, rx + flare * ends, ry + flare * ends, th))
         rings.append(ring)
     o = loft("collar", rings, closed_u=False)
     set_attr(o, "trim", lambda i, co: 1.0 if i >= n * 5 else 0.0)
@@ -247,7 +245,7 @@ def dress(P, top=1.43, hem=0.17):
         if z < 0.95:
             hip = hip or (rx, ry)
             f = (0.95 - z) / (0.95 - hem)
-            rx, ry = hip[0] + 0.05 * f, hip[1] + 0.06 * f
+            rx, ry = hip[0] + 0.025 * f, hip[1] + 0.03 * f
         ring = []
         for i in range(n):
             th = -math.pi / 2 + TAU * i / n
@@ -398,10 +396,8 @@ HAIR_COLS = 8          # texture columns: 0-3 dense clumps, 4-6 airy clumps, 7 s
 
 # layer: cards, surface offset (m), card width (m), segments, length scale, wave (m), lift, texture columns
 HAIR_LAYERS = (
-    ("base", 200, (0.004, 0.008), 0.022, 8, 0.95, 0.005, 0.0, (0, 1, 2, 3)),
-    ("mid", 170, (0.010, 0.018), 0.016, 10, 1.00, 0.014, 0.25, (1, 2, 4, 5)),
-    ("outer", 110, (0.018, 0.028), 0.012, 10, 1.05, 0.020, 0.45, (4, 5, 6)),
-    ("fly", 30, (0.022, 0.034), 0.005, 12, 1.10, 0.024, 0.9, (7,)),
+    ("outer", 70, (0.022, 0.032), 0.010, 8, 0.95, 0.020, 0.45, (4, 5, 6)),
+    ("fly", 26, (0.026, 0.038), 0.005, 10, 1.05, 0.024, 0.9, (7,)),
 )
 
 
@@ -529,6 +525,97 @@ def headband(head_c, head_r, lift=0.024, tilt=0.30, width=0.010, thick=0.004):
     o = loft("headband", rings, closed_u=False)
     solidify(o, thick, 0.0)
     smooth(o)
+    return o
+
+
+def hair_locks(scalp_pts, head_c, head_r, seed=23, length=0.30, band_y=None):
+    """Game-ready sculpted locks for chestnut shoulder-length hair with a side parting (after the owner's
+    curve-lock groom): flattened tapering ribbons with thickness, in two levels, every lock with its own
+    width, length, bend and wave phase; the wave grows toward the ends.
+      main mass  ~70 wide locks: the silhouette and the volume at the back
+      mid locks  ~55 narrower locks: face-framing waves and the ends
+    UV: u around the lock in [0, 0.5) (the opaque strand region of the hair atlas), v root (1) -> tip (0)."""
+    rnd = random.Random(seed)
+    b = bmesh.new()
+    uv = b.loops.layers.uv.new("UVMap")
+    part_x = 0.024                                      # parting on her left
+
+    def shell(p, off):
+        q = p - head_c
+        e = V((q.x / (head_r[0] + off), q.y / (head_r[1] + off), q.z / (head_r[2] + off)))
+        return head_c + q * (1.0 / max(e.length, 1e-6))
+
+    usable = [r for r in scalp_pts if not ((r - head_c).y < -head_r[1] * 0.45 and (r - head_c).z < head_r[2] * 0.62)]
+    neck_r = head_r[0] * 0.95
+    levels = (("main", 62, (0.008, 0.016), (0.019, 0.027), 7, 0.012),
+              ("mid", 48, (0.014, 0.022), (0.011, 0.017), 7, 0.020))
+    sides = 5
+
+    def flow(p):
+        """Combed direction at p (tangent to the skull): away from the parting near the top, sweeping back
+        at the front, straight down below the crown."""
+        q = p - head_c
+        n = q.normalized()
+        top = max(0.0, min(1.0, q.z / head_r[2]))
+        fwd = max(0.0, min(1.0, -q.y / head_r[1]))
+        side = 1.0 if p.x > part_x else -1.0
+        d = V((side * (0.25 + 1.1 * top), 0.10 + 0.55 * fwd * (0.4 + top), -(1.15 - 0.85 * top)))
+        d = d - n * d.dot(n) if q.z > -head_r[2] * 0.3 else d
+        return d.normalized()
+
+    for name, count, (o0, o1), (w0a, w0b), segs, wave_a in levels:
+        for li in range(count):
+            r = rnd.choice(usable)
+            q = r - head_c
+            side = 1.0 if r.x > part_x else -1.0
+            fwd = max(0.0, -q.y / head_r[1])
+            layer = o0 + (o1 - o0) * rnd.random()
+            L = length * (0.80 + 0.40 * rnd.random()) * (1.0 + 0.15 * fwd)
+            ph = rnd.uniform(0, math.tau)
+            freq = rnd.uniform(6.0, 10.0)
+            amp = wave_a * rnd.uniform(0.6, 1.4)
+            pts = [shell(r, layer)]
+            p = pts[0].copy()
+            for s in range(segs):
+                t = (s + 1) / segs
+                g = flow(p) 
+                p = p + g * (L / segs)
+                if p.z >= head_c.z - head_r[2] * 0.30:
+                    p = shell(p, layer + 0.005 * t)
+                else:                                   # below the skull: fall, keep clear of the neck and capelet
+                    flat = V((p.x - head_c.x, p.y - head_c.y, 0))
+                    rr = max(flat.length, 1e-6)
+                    want = neck_r + layer + 0.03 * (head_c.z - head_r[2] * 0.3 - p.z) / 0.1
+                    if rr < want:
+                        p = p + flat / rr * (want - rr)
+                radial = (p - head_c).normalized()
+                tside = g.cross(radial).normalized()
+                wv = amp * t ** 1.8
+                pts.append(p + radial * (0.3 * wv * math.sin(t * freq + ph)) + tside * (wv * math.cos(t * freq * 0.8 + ph)))
+            w0 = rnd.uniform(w0a, w0b)
+            th0 = w0 * rnd.uniform(0.22, 0.32)
+            rows = []
+            for s, p in enumerate(pts):
+                t = s / segs
+                tang = (pts[min(s + 1, segs)] - pts[max(s - 1, 0)]).normalized()
+                nrm = (p - head_c).normalized()
+                nrm = (nrm - tang * nrm.dot(tang)).normalized()
+                sdir = tang.cross(nrm).normalized()
+                w = w0 * (0.65 + 0.55 * math.sin(math.pi * min(1.0, t * 1.4 + 0.15))) * (1 - 0.75 * t ** 2)
+                th = th0 * (1 - 0.6 * t)
+                rows.append([b.verts.new(p + sdir * (w * math.cos(math.tau * k / sides)) + nrm * (th * math.sin(math.tau * k / sides)))
+                             for k in range(sides)])
+            for s in range(segs):
+                for k in range(sides):
+                    k2 = (k + 1) % sides
+                    f = b.faces.new((rows[s][k], rows[s][k2], rows[s + 1][k2], rows[s + 1][k]))
+                    for lo, (uu, vv) in zip(f.loops, ((k, s), (k + 1, s), (k + 1, s + 1), (k, s + 1))):
+                        lo[uv].uv = (0.5 * uu / sides, 1 - vv / segs)
+            tip = b.verts.new(pts[-1] + (pts[-1] - pts[-2]).normalized() * 0.006)
+            for k in range(sides):
+                b.faces.new((rows[-1][k], rows[-1][(k + 1) % sides], tip))
+    o = new_obj("hair_locks", b)
+    smooth(o, 85)
     return o
 
 

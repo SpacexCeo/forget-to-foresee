@@ -33,6 +33,7 @@ import agent_rig  # noqa: E402
 import agent_anim  # noqa: E402
 import hero_costume as C  # noqa: E402
 import hero_shading as S  # noqa: E402
+import hero_hair as H  # noqa: E402
 
 from bl_ext.user_default.mpfb.services.humanservice import HumanService  # noqa: E402
 from bl_ext.user_default.mpfb.services.targetservice import TargetService  # noqa: E402
@@ -58,6 +59,14 @@ DETAIL = {
     "chin/chin-width-decr": 0.25, "mouth/mouth-lowerlip-volume-incr": 0.25,
     "cheek/l-cheek-bones-incr": 0.22, "cheek/r-cheek-bones-incr": 0.16,
     "head/head-fat-decr": 0.2,
+    # head refinement: an oval head with a fuller back (visible with the hair tied back), a slender
+    # longer neck, a defined chin, a softer nose with a slightly lifted tip, a cupid's bow
+    "head/head-oval": 0.45, "head/head-back-scale-depth-incr": 0.30, "forehead/forehead-temple-decr": 0.20,
+    "chin/chin-prominent-incr": 0.15, "chin/chin-height-incr": 0.10, "chin/chin-jaw-drop-decr": 0.15,
+    "cheek/l-cheek-volume-decr": 0.18, "cheek/r-cheek-volume-decr": 0.12,
+    "nose/nose-hump-decr": 0.35, "nose/nose-point-up": 0.25, "nose/nose-nostrils-width-decr": 0.20,
+    "mouth/mouth-cupidsbow-incr": 0.45, "mouth/mouth-angles-up": 0.15,
+    "neck/measure-neck-circ-decr": 0.25, "neck/neck-scale-vert-incr": 0.15,
 }
 
 # Face morph targets kept on the body (MakeHuman expression units, caucasian set): morph name -> unit.
@@ -558,11 +567,10 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
         garments[o.name] = o
     for o in C.belt_and_props(P):
         garments[o.name] = o
-    scalp = sorted(group_verts(bm, "scalp", 0.5))
+    scalp = hair_region(bm, dom)
     garments["hair_cap"] = C.hair_cap(bm, scalp)
     brow_z = max(c.z for c, _ in [(h, 0) for h in (bones["eye_L"][0], bones["eye_R"][0])]) + 0.028
-    garments["hair"] = C.hair_cards(C.scalp_points(bm, scalp), head_c, head_r, brow_z)
-    garments["headband"] = C.headband(head_c, head_r)
+    garments["hair"], _master = groom_hair(bm, rig, garments, scalp, head_c, head_r)
 
     chains = hero_chains(P, garments["coat"], tail_pts, head_c)
     install_chains(chains)
@@ -611,6 +619,63 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     log("costume", {n: len(o.data.polygons) for n, o in garments.items()})
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_costume.blend"))
     return bm, rig, eye_objs, garments
+
+
+def hair_region(bm, dom):
+    """Vertices where hair grows: a natural hairline over the forehead and temples, above and behind the
+    ears and down the back of the head to the nape (the MakeHuman scalp group alone leaves the temples
+    and the area behind the ears bare)."""
+    pts = [(i, bm.matrix_world @ v.co) for i, v in enumerate(bm.data.vertices) if dom[i] == "head"]
+    zs = [p.z for _, p in pts]
+    hp = [p for _, p in pts if p.z > 1.50]
+    xs = [p.x for p in hp]; ys = [p.y for p in hp]
+    c = V(((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, (max(zs) + 1.50) / 2))
+    r = ((max(xs) - min(xs)) / 2, (max(ys) - min(ys)) / 2, (max(zs) - 1.50) / 2)
+    ears = group_verts(bm, "ears", 0.3) if "ears" in bm.vertex_groups else set()
+    out = []
+    for i, p in pts:
+        if i in ears:
+            continue
+        q = p - c
+        fy, sx, zz = q.y / r[1], abs(q.x) / r[0], q.z / r[2]
+        if fy < -0.35:                                   # forehead: a rounded hairline, lower at the temples
+            need = 0.52 - 0.22 * min(1.0, sx / 0.75) ** 2
+        elif fy < 0.0:                                   # temples and above the ears
+            need = 0.15 - 0.40 * (fy + 0.35) / 0.35
+        else:                                            # behind the ears and the back, down to the nape
+            need = -0.25 - 0.50 * min(1.0, fy / 0.5)
+        if zz > need:
+            out.append(i)
+    return out
+
+
+def groom_hair(bm, rig, garments, scalp, head_c, head_r):
+    """Master groom (Hair Curves, kept in the 'Hair_Master' collection) and the game cards built from it."""
+    neck_z = rig.data.bones["head"].head_local.z - 0.01
+    head = bm.copy()
+    head.data = bm.data.copy()
+    head.name = "_head_collider"
+    if head.data.shape_keys:
+        head.shape_key_clear()
+    bpy.context.scene.collection.objects.link(head)
+    for m in list(head.modifiers):
+        head.modifiers.remove(m)
+    head.parent = None
+    delete_verts(head, lambda i, co: co.z < neck_z - 0.04)
+    body_parts = [garments[k] for k in ("collar", "hood", "capelet", "scarf_wrap_0", "scarf_wrap_1", "coat")]
+    cols = (H.Collider([head], 0.003), H.Collider(body_parts + [head], 0.010))
+    G = H.Tied(bm, scalp, head_c, head_r, cols)
+    strands, radii, guides = G.strands(None, 30000)
+    coll = bpy.data.collections.new("Hair_Master")
+    bpy.context.scene.collection.children.link(coll)
+    gmat = H.hair_material()
+    H.build_curves("hair_master_guides", [g["pts"] for g in guides], [0.0002] * len(guides), gmat, coll).hide_render = True
+    master = H.build_curves("hair_master", strands, radii, gmat, coll)
+    garments["hair_tie"] = H.hair_tie(G.T + V((0, 0.006, -0.004)), G.tail[2] - G.tail[0])
+    bpy.data.objects.remove(head)
+    cards = H.cards_from_groom(guides, strands, head_c=head_c, tie=G.T)
+    log("hair", len(guides), "guides", len(strands), "strands", len(cards.data.polygons), "card faces")
+    return cards, master
 
 
 def rebuild_rig(bm):
@@ -861,6 +926,28 @@ def add_lashes(body, rig):
     me.update()
 
 
+def hair_textures(cards, size):
+    """Card material: the strand atlas rendered from master-style strands (RGBA), flat ORM and normal."""
+    import numpy as np
+    p = H.render_strand_atlas(os.path.join(OUT, "agent_iris_hair_basecolor.png"), size)
+    base = bpy.data.images.load(p)
+    base.name = "agent_iris_hair_basecolor"
+    small = 64
+    orm = bpy.data.images.new("agent_iris_hair_orm", small, small)
+    orm.pixels[:] = np.tile([1.0, 0.55, 0.0, 1.0], small * small)
+    orm.colorspace_settings.name = "Non-Color"
+    nrm = bpy.data.images.new("agent_iris_normal_hair", small, small)
+    nrm.pixels[:] = np.tile([0.5, 0.5, 1.0, 1.0], small * small)
+    nrm.colorspace_settings.name = "Non-Color"
+    for img in (orm, nrm):
+        img.filepath_raw = os.path.join(OUT, img.name + ".png")
+        img.file_format = "PNG"
+        img.save()
+    m = S.final_material("M_Iris_Hair", base, orm, nrm, alpha=True)
+    cards.data.materials.clear()
+    cards.data.materials.append(m)
+
+
 def lips_attr(body):
     if "lips" not in body.vertex_groups:
         return
@@ -904,7 +991,7 @@ def stage_full(shade=True, size=2048, samples=16):
         S.pack_atlas(cloth)
         S.bake_set([bm], "M_Iris_Skin", S.skin_shader, size, OUT, "skin", samples, land=land)
         S.bake_set(cloth, "M_Iris_Garment", S.garment_shader, size, OUT, "garment", samples)
-        S.bake_set(hair[:1], "M_Iris_Hair", S.hair_shader, size, OUT, "hair", samples, ao=False)
+        hair_textures(hair[0], size)
         cap = S.flat_material("M_Iris_HairCap", (0.050, 0.023, 0.012), 0.7)
         hair[1].data.materials.clear()
         hair[1].data.materials.append(cap)

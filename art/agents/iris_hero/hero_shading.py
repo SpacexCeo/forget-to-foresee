@@ -24,12 +24,12 @@ GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool,
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
     "scarf": (0.150, 0.075, 0.220), "belt": (0.035, 0.018, 0.010), "pouch": (0.200, 0.085, 0.032),
-    "pendant": (0.62, 0.62, 0.64), "headband": (0.110, 0.055, 0.160),
+    "pendant": (0.62, 0.62, 0.64), "hair_tie": (0.110, 0.055, 0.160),
 }
 TRIM = {"coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}
-ROUGH = {"headband": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
+ROUGH = {"hair_tie": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
 METAL = {"pendant": 1.0}
 
 
@@ -183,9 +183,9 @@ def makeup(b, pos, col, land, lips):
         b.l(b.math("MULTIPLY", b.math("ADD", z, b.math("MULTIPLY", x, 0.2)), 60.0), sv.inputs["Y"])
         hairs = b.n("ShaderNodeTexNoise", in_Scale=1.0, in_Detail=2.0, in_Roughness=0.5)
         b.l(sv.outputs[0], hairs.inputs["Vector"])
-        strokes = b.math("ADD", 0.85, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.4))
+        strokes = b.math("ADD", 1.0, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.2))
         m = b.math("MINIMUM", b.math("MULTIPLY", b.math("MULTIPLY", b.math("MULTIPLY", band, inside), ombre), strokes), 0.95)
-        col = b.mix(m, col, (0.070, 0.036, 0.020))
+        col = b.mix(m, col, (0.045, 0.024, 0.014))
         # lid shadow: a soft mauve-brown wash between the lash line and the crease
         sh = b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.003, E[1] - 0.004, E[2] + 0.009), 0.017, 1.4),
                     b.math("GREATER_THAN", z, 0.002))
@@ -248,6 +248,7 @@ def hair_shader(b):
     b.l(uv.outputs["UV"], xyz.inputs[0])
     u, v = xyz.outputs["X"], xyz.outputs["Y"]
     col_i = b.math("FLOOR", b.math("MULTIPLY", u, 8.0))
+    locks = b.math("LESS_THAN", u, 0.5)                                 # sculpted locks: opaque
     lu = b.math("FRACT", b.math("MULTIPLY", u, 8.0))                     # 0..1 across the card
     # strands: thin bands across u, slightly wavy along v
     sv = b.n("ShaderNodeCombineXYZ")
@@ -270,7 +271,7 @@ def hair_shader(b):
     b.l(tv.outputs[0], tipn.inputs["Vector"])
     tips = b.math("GREATER_THAN", v, b.math("MULTIPLY", b.math("SUBTRACT", tipn.outputs["Fac"], 0.3), 0.55))
     roots = b.math("LESS_THAN", v, b.math("SUBTRACT", 1.0, b.math("MULTIPLY", tipn.outputs["Fac"], 0.12)))
-    alpha = b.math("MULTIPLY", b.math("MULTIPLY", hairs, tips), roots)
+    alpha = b.math("MAXIMUM", b.math("MULTIPLY", b.math("MULTIPLY", hairs, tips), roots), locks)
     # colour: root -> mid -> tip, per-strand value variation and highlights
     c = b.mix(b.math("POWER", v, 0.6), (0.20, 0.10, 0.050), (0.120, 0.052, 0.024))     # tip (v=0) -> mid
     root = b.math("MULTIPLY", b.math("SUBTRACT", v, 0.82), 5.5, clamp=True)
