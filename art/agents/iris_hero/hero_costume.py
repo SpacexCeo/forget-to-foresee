@@ -865,11 +865,12 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
             rows.setdefault(round(v.co.z * 100), []).append(v)
         for key, vs in rows.items():
             near = [v for z in (key - 1, key, key + 1) for v in rows.get(z, [])]
-            pl = [v.co.y for v in near if hw * 0.5 < v.co.x < hw * 2.2]
-            pr = [v.co.y for v in near if -hw * 2.2 < v.co.x < -hw * 0.5]
+            pl = [v.co.y for v in near if hw < v.co.x < hw * 1.35]
+            pr = [v.co.y for v in near if -hw * 1.35 < v.co.x < -hw]
             if not pl or not pr:
                 continue
-            top = min(max(pl), max(pr))                      # the lower of the two cheeks' fullest points
+            # the arc starts on the surface at the cleft's edges (never higher: no ridge between the cheeks)
+            top = min(sum(pl) / len(pl), sum(pr) / len(pr))
             for v in vs:
                 u = abs(v.co.x) / hw
                 if u >= 1.0:

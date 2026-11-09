@@ -764,9 +764,9 @@ def athletic_costume(bm, P, dom, bones):
             b = hit_front(side * (xe + 0.0105), z)
             if a is None or b is None:
                 return None
-            lift = V((0, -0.0011, 0))
+            lift = V((0, -0.0003, 0))                         # flush with the jacket (owner: no seam stands proud)
             return (a + lift + V((-side * 0.0012, 0, 0)), b + lift * 0.3)
-        out[f"jacket_placket_{sx}"] = C.edge_strip(f"jacket_placket_{sx}", rows, 40, 0.0018)
+        out[f"jacket_placket_{sx}"] = C.edge_strip(f"jacket_placket_{sx}", rows, 40, 0.0008)
     # ribbed hem band all round, open at the zip
     def hit_round(th, z):                                     # from inside out: the torso, never a sleeve
         d = V((math.cos(th), math.sin(th), 0))
@@ -777,9 +777,9 @@ def athletic_costume(bm, P, dom, bones):
         a, b = hit_round(th, HEM + 0.0008), hit_round(th, HEM + 0.017)
         if a is None or b is None or (a.y < c.y and abs(a.x) < x_edge(HEM) + 0.001):
             return None
-        d = V((math.cos(th), math.sin(th), 0)) * 0.0014
+        d = V((math.cos(th), math.sin(th), 0)) * 0.0004
         return (a + d, b + d)
-    out["jacket_hem"] = C.edge_strip("jacket_hem", hem_rows, 120, 0.0022, rib=True)
+    out["jacket_hem"] = C.edge_strip("jacket_hem", hem_rows, 120, 0.0010, rib=True)
     # ribbed cuffs: a knit band round each sleeve end, cast from the forearm axis onto the sleeve
     for sx in ("L", "R"):
         E, W = bones[f"forearm_{sx}"][0], wrist[sx]
@@ -795,14 +795,14 @@ def athletic_costume(bm, P, dom, bones):
             o = W - ax * back
             d = u * math.cos(th) + w * math.sin(th)
             h = jt.ray_cast(o, d, 0.12)
-            return None if h[0] is None else h[0] + d * 0.0040
+            return None if h[0] is None else h[0] + d * 0.0012
         def cuff_rows(t, hit_sleeve=hit_sleeve, on_sleeve=on_sleeve):   # from 1.2 cm past the sleeve's cut up over it
             th = t * 2 * math.pi
             a, b = hit_sleeve(th, 0.012), (on_sleeve(th, 0.046) or hit_sleeve(th, 0.046))
             if a is None or b is None:
                 return None
             return (a, b)
-        out[f"jacket_cuff_{sx}"] = C.edge_strip(f"jacket_cuff_{sx}", cuff_rows, 64, 0.0030, rib=True)
+        out[f"jacket_cuff_{sx}"] = C.edge_strip(f"jacket_cuff_{sx}", cuff_rows, 64, 0.0012, rib=True)
     gap = math.degrees(math.asin(min(0.95, (x_edge(1.42) + 0.004) / (nrx + 0.016))))
     out["jacket_collar"] = C.stand_collar(P, z0=1.400, gap_deg=gap)
     # leggings: from the body surface, high-rise, the crotch relaxed so it never cuts in
@@ -831,15 +831,15 @@ def athletic_costume(bm, P, dom, bones):
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
                                         accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12),
                                         # compression knit lies over the glute cleft (owner: the cheeks rest together, no gap)
-                                        bridge=(lambda p: p.y > c.y and abs(p.x) < 0.10 and 0.855 < p.z < 1.0, 0.045, 0.004))
+                                        bridge=(lambda p: p.y > c.y and abs(p.x) < 0.06 and 0.855 < p.z < 1.0, 0.028, 0.003))
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
     hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")]
     zs = [0.972 + (1.050 - 0.972) * k / 6 for k in range(7)]   # a reinforced band over the leggings' top
-    wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0095, n=72, smooth=2)
+    wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0050, n=72, smooth=2)   # just over the leggings' top
     C.set_attr(wb, "trim", lambda i, p: 1.0)
     C.set_attr(wb, "accent", lambda i, p: 0.0)
-    C.solidify(wb, 0.0025, 1.0, even=False)
+    C.solidify(wb, 0.0012, 1.0, even=False)
     C.smooth(wb, 50)
     out["leggings_band"] = wb
     # trainers (built from the foot) and grey ankle socks that tuck under the leggings' hem (owner 09.11:

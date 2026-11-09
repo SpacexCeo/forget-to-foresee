@@ -29,8 +29,8 @@ test('flat hair: hair cards and the cap become one unlit brown; the cards keep t
   const [h, c, s] = meshes.map((m) => m.material);
   assert.ok(h.isMeshBasicMaterial && c.isMeshBasicMaterial);
   assert.equal(h.map, tex);
-  assert.equal(h.alphaTest, HAIR_ALPHA_TEST);
-  assert.equal(h.alphaToCoverage, true);
+  assert.equal(h.alphaTest, HAIR_ALPHA_TEST * 0.5);
+  assert.equal(h.alphaToCoverage, false);
   assert.equal(h.color.getHex(), new THREE.Color(HAIR_FLAT_COLOR).getHex());
   assert.equal(c.alphaTest, 0);
   assert.equal(s, skin);
