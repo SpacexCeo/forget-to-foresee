@@ -183,6 +183,9 @@
         bottom: auto; top: max(44px, calc(8px + env(safe-area-inset-top, 0px))); width: 36px; height: 36px; }
       html[data-vh="short"] .ftf-run-toggle, html[data-vh="tiny"] .ftf-run-toggle { right: 112px; }
       html[data-vh="short"] .ftf-map-fab, html[data-vh="tiny"] .ftf-map-fab { left: 70px; }
+      /* QA-035: the Chronicle fab follows the map button into the top bar row (70 + 36 + 8 px) */
+      html[data-vh="short"] .ch-fab, html[data-vh="tiny"] .ch-fab { bottom: auto; top: max(44px, calc(8px + env(safe-area-inset-top, 0px))); left: calc(114px + env(safe-area-inset-left, 0px)); width: 36px; height: 36px; }
+      html[data-vh="short"] .ch-fab svg, html[data-vh="tiny"] .ch-fab svg { width: 20px; height: 20px; }
       html[data-vh="short"] body.pl-modal-open .wh-root .wh-topbar, html[data-vh="tiny"] body.pl-modal-open .wh-root .wh-topbar { visibility: hidden; }
       html[data-vh="short"] .ftf-run-toggle svg, html[data-vh="tiny"] .ftf-run-toggle svg { width: 22px; height: 22px; }
       html[data-vh="short"] :is(.ftf-run-toggle, .ftf-map-fab)::before, html[data-vh="tiny"] :is(.ftf-run-toggle, .ftf-map-fab)::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
@@ -210,8 +213,10 @@
       /* the phone HUD stack never shows under a modal panel (the Signs sheet already brings its own scrim) */
       body.pl-modal-open .wh-root :is(.wh-quest--mobile, .wh-quest__dots, .wh-trial--mobile, .wh-tiles, .wh-prompt--mobile, .wh-dialogue--mobile) { visibility: hidden; }
       body.in-world.pl-modal-open .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* outranks input.js's display: flex */
-      body.in-world.hub-in-shell .ftf-run-toggle.ftf-run-toggle--on { display: none; } /* no running inside a Shell: the reading card owns the screen */
+      body.in-world.hub-in-shell .ftf-run-toggle.ftf-run-toggle--on, body.in-world.hub-in-shell .ch-fab { display: none; } /* no running inside a Shell: the reading card owns the screen */
       body.in-world.pl-modal-open .ftf-map-fab { display: none; } /* the map's own phone button steps aside under a modal panel too (outranks map-ui.js's display: flex) */
+      /* QA-035: the Chronicle and recap fabs share that row, so they step aside under the same surfaces (and the map) */
+      body.in-world:is(.pl-modal-open, .pl-context-open, .ftf-map-open) :is(.ch-fab, .a11y-recap-btn) { visibility: hidden; }
       #ui .ftf-hud-status { top: calc(6px + env(safe-area-inset-top, 0px)) !important; left: 6px !important; right: auto !important; width: 190px !important; min-width: 0 !important; grid-template-columns: 1fr !important; gap: 0 !important; padding: 8px 10px !important; transform: scale(.58); transform-origin: top left; }
       #toast { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); font-size: 12px; }
     }

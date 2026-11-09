@@ -313,7 +313,7 @@ test('layout: an element that borrows .wh-root keeps its own position whatever t
     }
   }
   const chronicle = read('../src/cinematic/chapters/chronicle.js');
-  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*bottom: calc\(56px/, 'the Chronicle fab resets the inherited top: 0 and sits at the bottom left');
+  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*left: calc\(80px[^}]*bottom: calc\(152px/, 'the Chronicle fab resets the inherited top: 0 and sits beside the recap ?, above the dialogue line');
   assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*pointer-events: auto/, 'the fab stays clickable over .wh-root pointer-events: none');
 });
 
@@ -326,4 +326,36 @@ test('panels: a vision sacrifice opens the HUD Signs & Visions panel, the detail
   assert.match(forget, /if \(!r\.ok\) \{[^}]*return; \}/, 'a rejected sacrifice opens nothing');
   assert.match(forget, /purpose === 'vision'\) \{ if \(handlers\.onSigns\) handlers\.onSigns\(\); else open\('vision'\); \}/);
   assert.match(game, /onSigns: \(\) => \{ if \(worldHud && worldHud\.hud\) worldHud\.hud\.signs\.open\(\); \}/, 'game.js routes onSigns to the HUD Signs panel');
+});
+
+/* ---------------- phones and long values (QA-035, QA-011, QA-033) ---------------- */
+
+test('layout: on phones the Chronicle and recap fabs share the fab row with the map button and the run toggle (QA-035)', () => {
+  const chronicle = read('../src/cinematic/chapters/chronicle.js');
+  const a11y = read('../src/ui/a11y.css');
+  const mapUi = read('../src/play/map-ui.js');
+  const input = read('../src/ui/input.js');
+  // the row: map fab at left 8 (48 px), run toggle at right 8 (52 px), both at bottom 96 above the dialogue strip
+  assert.match(mapUi, /\.ftf-map-fab \{[^}]*left: calc\(8px[^}]*bottom: calc\(96px[^}]*width: 48px/);
+  assert.match(input, /\.ftf-run-toggle \{[^}]*right: calc\(8px[^}]*bottom: calc\(96px[^}]*width: 52px/);
+  assert.match(chronicle, /@media \(max-width: 700px\) \{ \.ch-fab\.wh-root \{ bottom: calc\(96px[^}]*left: calc\(64px/, 'Chronicle right of the map button');
+  assert.match(a11y, /\.a11y-recap-btn \{ left: auto; right: calc\(68px[^}]*bottom: calc\(96px/, 'recap left of the run toggle');
+  const html = read('../index.html');
+  assert.match(html, /body\.in-world:is\(\.pl-modal-open, \.pl-context-open, \.ftf-map-open\) :is\(\.ch-fab, \.a11y-recap-btn\) \{ visibility: hidden; \}/, 'both fabs step aside under panels, the context menu and the map, like the map button');
+  const overlap = read('../scripts/hud-overlap.mjs');
+  assert.match(overlap, /'\.ch-fab', '\.a11y-recap-btn'/, 'the overlap check measures both fabs');
+  assert.match(overlap, /390x664/, 'the overlap check covers the iPhone 13 viewport (390x664)');
+});
+
+test('layout: the phone quest card keeps its natural height on short phones so the Shell dock does not cover it (QA-011)', () => {
+  const status = read('../src/ui/world-hud/status.css');
+  assert.match(status, /@media \(max-width: 700px\) and \(max-height: 760px\) \{ html:not\(\[data-vh="short"\]\):not\(\[data-vh="tiny"\]\) \.wh-root \.wh-quest--mobile \{ min-height: 0; \} \}/);
+});
+
+test('layout: the desktop trial card widens for long values instead of clipping them (QA-033)', () => {
+  const status = read('../src/ui/world-hud/status.css');
+  const card = status.match(/\.wh-root \.wh-trial \{[^}]*\}/)[0];
+  assert.match(card, /width: max-content;/);
+  assert.match(card, /min-width: calc\(246 \* var\(--wh-px\)\);/, 'the mockup width is the floor');
+  assert.match(card, /max-width: calc\(340 \* var\(--wh-px\)\);/, 'capped clear of the quest banner');
 });
