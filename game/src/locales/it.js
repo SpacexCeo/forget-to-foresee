@@ -626,7 +626,7 @@ export default {
   'wh.hint.firstSign': 'Un segno si è svegliato. Lo leggo come {action} di {power} su {place}, prova {trial}. Premi V per vedere perché.',
   'wh.hint.anchor': 'Àncora 10 seta sulla Conchiglia {shell} per la prova {trial}: vai alla sua piattaforma e premi E. Se lì arriva un Dono, lo dividiamo.',
   'wh.hint.anchored': '10 seta sono sulla piattaforma. Le riavremo, a meno che non arrivi una Tempesta.',
-  'wh.hint.verified': 'Si è avverato, e il sigillo corrisponde: questo futuro era scritto prima del nostro arrivo.',
+  'wh.hint.verified': 'L’evento corrisponde al sigillo: questo futuro era scritto prima del nostro arrivo. Se la tua lettura era giusta, lo dice la scheda.',
   'wh.hint.endTick': 'Nessuna attenzione rimasta in questa prova. Chiudila con T e guarda cosa avevano promesso gli Ospiti.',
   'wh.hint.offer': '{who} ha un’offerta. Nulla di ciò che ha detto è ancora verificato, quindi valutala all’accampamento.',
   'wh.hint.memory': 'Potrei vedere il prossimo segno adesso, se dimentico qualcosa per sempre. Scegli tu cosa (M).',

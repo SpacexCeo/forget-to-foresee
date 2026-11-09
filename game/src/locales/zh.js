@@ -626,7 +626,7 @@ export default {
   'wh.hint.firstSign': '一个符号醒了。我把它读作：{place}，{action} {power}，试炼 {trial}。按 V 看看为什么。',
   'wh.hint.anchor': '为试炼 {trial} 在贝壳 {shell} 押 10 丝下锚：走到它的锚台按 E。若馈赠降临那里，我们平分。',
   'wh.hint.anchored': '10 丝已放在锚台上。除非风暴来袭，我们都能拿回来。',
-  'wh.hint.verified': '应验了，封印也相符：这段未来在我们到来之前就已写定。',
+  'wh.hint.verified': '事件与封印相符：这段未来在我们到来之前就已写定。你的解读是否正确，请看卡片。',
   'wh.hint.endTick': '本试炼的注意力已用尽。按 T 结束它，看看来客许诺了什么。',
   'wh.hint.offer': '{who}有一个提议。{who}说的话尚未经过任何核实，到营地再斟酌。',
   'wh.hint.memory': '如果我永远忘掉某样东西，现在就能看见下一个符号。忘什么由你选（M）。',

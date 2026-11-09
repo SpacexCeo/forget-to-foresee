@@ -620,7 +620,7 @@ export default {
   'wh.hint.firstSign': 'A sign woke. I read it as a {action} of {power} at {place}, trial {trial}. Press V to see why.',
   'wh.hint.anchor': 'Anchor 10 silk on Shell {shell} for trial {trial}: walk to its pad and press E. If a Gift lands there, we share it.',
   'wh.hint.anchored': '10 silk sits on the pad. We get it back unless a Storm comes.',
-  'wh.hint.verified': 'It came true, and the seal matches: this future was written before we arrived.',
+  'wh.hint.verified': 'The event matches its seal: this future was written before we arrived. Whether your reading was right is on the card.',
   'wh.hint.endTick': 'No attention left this trial. End it with T and watch what the Guests promised.',
   'wh.hint.offer': '{who} has an offer. Nothing {who} said has been checked yet, so weigh it at the camp.',
   'wh.hint.memory': 'I could see the next sign now, if I forget something forever. You choose what (M).',
