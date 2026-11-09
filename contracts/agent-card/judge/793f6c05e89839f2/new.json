@@ -1,0 +1,8 @@
+{
+ "owner_id": "lambada_eth.testnet",
+ "coordinators": [
+  "lambada_eth.testnet"
+ ],
+ "season_contract": "ftf-seasons.testnet",
+ "shard_contract": "ftf-shards.testnet"
+}
