@@ -1,6 +1,9 @@
 # Scorecard <UTC timestamp>
 
-Rubric version: <v>. Branch `claude/loving-curie-ihasft` at <commit>. Live site <URL> checked at <UTC>.
+Rubric version: <v>. Branch `main` at <commit> (lead's instruction, 2026-11-09). Live site <URL> checked at <UTC>.
+
+## Highest-leverage change versus Ashes of the Ninth Heaven
+<one change, why it moves the comparison, estimated points and hours>
 
 ## Gates (section 3)
 | Gate | Status | Evidence |

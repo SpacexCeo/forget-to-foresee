@@ -169,3 +169,9 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   agent economy on NEAR testnet that overlaps our pitch on readable deterministic rules and JS-Rust parity. Recorded
   in `notes/competitor-field.md`; rubric v0.12 recalibrates the top of C1/C3/C4 to it. Reported to the lead at once as
   a competitive risk (not a gate).
+- 08:30 UTC: lead's reply (cross-session message, 08:20 UTC): judge `main` (df8d80e at the time, merge of PR #9 from
+  `claude/loving-curie-ihasft`) from 15:00 UTC, and open each scorecard with the single highest-leverage change versus
+  Ashes of the Ninth Heaven. Lead reports `ftf-seasons.testnet` (season committed, 15/15 reveals verified on-chain) and
+  `ftf-shards.testnet` (NEP-171, 3 shards) live. Juror spot-check via testnet RPC `view_account` at 08:30 UTC: both
+  accounts exist with contract code deployed (code hashes CpPXpJ…AQEL and BtScRF…JBM). Reveal and shard counts not yet
+  checked; that is part of the 15:00 pass.
