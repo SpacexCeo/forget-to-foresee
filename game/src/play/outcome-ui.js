@@ -30,6 +30,8 @@ const CSS = `
 .oc-card button:hover { border-color: var(--wh-gold, #e4c272); }
 .oc-card button:focus-visible { outline: 2px solid var(--wh-gold-bright, #fbe6a6); outline-offset: 2px; }
 .oc-card .oc-close { position: absolute; top: 8px; right: 8px; width: 28px; min-height: 28px; padding: 0; font-size: 16px; }
+/* narrow desktops: the Shell's reading card holds the right column, so the card moves left under the trial card */
+@media (min-width: 701px) and (max-width: 1199px) { .oc-card { left: 16px; transform: none; top: 128px; width: min(380px, calc(100vw - 380px)); } }
 @media (max-width: 700px) {
   .oc-card { top: 120px; padding: 10px 36px 10px 12px; font-size: 12px; }
   .oc-title { font-size: 15px; }
