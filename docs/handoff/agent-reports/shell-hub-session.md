@@ -1,4 +1,4 @@
-# Report: session "Завершение работы" (08.11, branch `claude/laughing-thompson-dc7r09`)
+# Report: session "Wrap-up" (08.11, branch `claude/laughing-thompson-dc7r09`)
 
 Base: `main` at `bf89d82`. Five commits, all pushed. `cd game && npm test` 266/266, `cd server && npm test` 28/28, `npm run build` green.
 
@@ -10,7 +10,7 @@ Base: `main` at `bf89d82`. Five commits, all pushed. `cd game && npm test` 266/2
 | `2c4acba` | README (how to play, status table, real/mock), `docs/HANDOFF.md`, `docs/decisions.md`, `docs/submission.md` |
 
 ## Overlap with the parallel workers (merge with care)
-- Worker B (UA/IT/ZH translation) did the same job on its own branch: pick one set; mine uses Мушля/такт (uk), Conchiglia (it), 螺壳 (zh).
+- Worker B (UA/IT/ZH translation) did the same job on its own branch: pick one set; mine uses the uk Shell and tick terms now in `src/play/locales/uk.js`, Conchiglia (it), 螺壳 (zh).
 - Worker E (mobile play) touches `main.js` input too; my change is only the `moveRun` lines and `player.run`.
 - Worker D (submission readiness) edits the README; mine rewrote "What works today" and "Run".
 - Worker A (audio/VFX wiring): audio and VFX were already wired through `game/src/play/hooks.js` before this session.

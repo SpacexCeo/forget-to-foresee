@@ -214,7 +214,7 @@ exactly the mockup width at the size listed). Line heights are measured line pit
 Libre Caslon Text has tall capitals (cap 0.77 em, x 0.53 em), so its sizes are 5–10 % smaller
 than a PT Serif fit would be; for serif roles widths, not cap heights, were matched (the two
 agree for the sans roles). Russian strings run 1.7–1.9× the English width: mobile uses
-`wh.trial.titleShort` when `wh.trial.title` overflows, and the mobile anchor pill renders `wh.sign.tiersShort` (RU "ур. 11–13") when
+`wh.trial.titleShort` when `wh.trial.title` overflows, and the mobile anchor pill renders `wh.sign.tiersShort` (the RU short form for "tiers 11–13") when
 `wh.sign.tiers` overflows.
 
 Numerals are lining (both faces' default). Values follow labels with a wide gap, as in the

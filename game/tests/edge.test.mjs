@@ -86,8 +86,8 @@ test('parity test detects a changed intent', () => {
   assert.notEqual(stateHash(E.S), a);
 });
 
-test('sha256 matches node:crypto, including Cyrillic', () => {
-  for (const s of ['', 'abc', 'Ирис', 'вода помнит камень' + 'a1b2c3d4', 'x'.repeat(1000)]) {
+test('sha256 matches node:crypto on multi-byte UTF-8 (Ash’s phrases are Cyrillic preimages)', () => {
+  for (const s of ['', 'abc', '螺壳', 'вода помнит камень' + 'a1b2c3d4', 'x'.repeat(1000)]) {
     assert.equal(sha256(s), createHash('sha256').update(s, 'utf8').digest('hex'));
   }
 });

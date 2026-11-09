@@ -36,7 +36,7 @@ named in the **Check** line, that fails while the defect is open and passes once
 | QA-016 | Low | Onboarding | "Begin first contact" sits below the fold at 1280×800 (the constructor page needs a scroll before the primary button is visible) | I | **fixed** (I; verified on 2004418: "Begin" beside the title, above the fold) |
 | QA-017 | Low | Copy | Season-end quest says "(panel below)" while the Biography panel is on the right | I | **fixed** (I; verified on 2004418: "Thank you for playing this local demo.") |
 | QA-018 | Info | Movement | Walking the judge route with G took 156 s under SwiftShader (README: about 30 s) | G | not a defect: in-game speeds are 1.70 m/s walk and 3.51 m/s run; the wall-clock slowness is the software renderer stalling on texture uploads |
-| QA-019 | High | i18n | Switching the language mid-season (L or Settings) leaves strings of the previous language inside the new one: in zh the hint reads "我把它读作：Мушля I，Дар 10，试炼 2" and the log rows keep the Ukrainian "В1" prefix; in EN "I read it as a Дар of 10". Lazily rendered args (`wh.raw`, `$meaning`, `$shell`, log tick labels) are cached in the locale they were first rendered in | F (world-hud / from-obs), lead | **fixed** (verified on 5f94cbb: zh and EN HUDs clean after cycling L five times) |
+| QA-019 | High | i18n | Switching the language mid-season (L or Settings) leaves strings of the previous language inside the new one: in zh the hint reads "我把它读作：" followed by the Ukrainian word for Shell and the Russian word for Gift, and the log rows keep the Ukrainian trial prefix; in EN "I read it as a" followed by the Russian word for Gift. Lazily rendered args (`wh.raw`, `$meaning`, `$shell`, log tick labels) are cached in the locale they were first rendered in | F (world-hud / from-obs), lead | **fixed** (verified on 5f94cbb: zh and EN HUDs clean after cycling L five times) |
 | QA-020 | Medium | Settings | The in-world Settings (hotbar, Esc) opens "Exploration controls" (key reference + volume) with no language and no Novice/Pro switch, while the README says "Settings switches Novice/Pro and the five UI languages"; those switches exist only in the lobby dialog, unreachable from the world | F (UI) / D (README) | **fixed** (verified on 6f2f288: Novice/Pro and the languages are in the in-world Settings) |
 | QA-021 | Low | Help | H help in the hub lists the walk-mode keys only ("G walk to the current goal", "T end the tick"); F (fly / stake), N (map) and "T leaves the Shell" are missing | F / I | **fixed** (verified on c6bb3b0: hub H lists "F fly into the gold Shell · stake inside with F · T leave the Shell or let the trial pass · N island map"; `walk-panels.e2e.mjs` green) |
 | QA-022 | High | i18n / log | Rules-v3 log lines render as "Something happened that this build cannot describe yet." in every locale: the refunded question, held fragments, deferred prizes, the Shells leaving | engine-text adapter owner (F / lead) | **fixed** (lead, a36fadf; verified on 5f94cbb: `engine-text.e2e.mjs` green) |
@@ -72,7 +72,7 @@ event is revealed. Also at trials 5, 15, 16, 17 (`shots/hub-card-fragment-6.jpg`
 **Expected:** "Shell II: Gift, power 20. The reveal matches the root." (the log row next to it says
 "Leaf #0 checked against the root ✓", the hint says "the seal matches").
 **Actual:** "Shell II: Gift, power 20. **The reveal does not match the root.**" Every reveal, all five locales
-(ru "не совпало", uk "не збіглося", it "non corrisponde", zh "不符").
+(the `mismatch` string in each locale: it "non corrisponde", zh "不符", likewise in ru and uk).
 **Cause:** `src/ui/i18n/engine-adapter.js:264` passes `verified: !!fx.verified` (a boolean) into
 `line.event`, whose ICU select has the branches `yes {…} other {…}`; `String(true)` is `"true"`, so the `other`
 branch always wins. The unit tests render `LINE_KEYS` with placeholder args and never assert the branch.
@@ -225,12 +225,12 @@ rules v3 and lists each engine feed line the adapter cannot parse. On 2004418:
 
 | times | engine line |
 |---|---|
-| 159 | Гости вернули шёлк за вопрос без ответа. |
-| 64 | Янтарь удержал фрагмент ради приза (N, выплата в финале). Его часть послания погасла. |
-| 49 | Янтарь получает отложенный приз N шёлка: послание прочли без него. |
-| 19 | Вы удержали фрагмент: приз N ждёт финала — если послание прочтут без вас. |
-| 7 | Раковины ушли. Шёлк мира обесценился. |
-| 32 | the same held-fragment / deferred-prize lines for Соль, Иней, Ирис |
+| 159 | The Guests returned the silk for a question with no answer. |
+| 64 | Amber held the fragment for the prize (N, paid at the finale). Its part of the message went dark. |
+| 49 | Amber receives the deferred prize of N silk: the message was read without it. |
+| 19 | You held the fragment: the prize N waits for the finale, if the message is read without you. |
+| 7 | The Shells left. The world's silk lost its value. |
+| 32 | the same held-fragment / deferred-prize lines for Salt, Frost, Iris |
 
 **Actual:** the HUD log row reads "Something happened that this build cannot describe yet." (`log.unknown`), in all five
 locales (seen at trial 15 of the judge seed in both the hub and the walk season); the Lore/Log tabs and the agent API's `log[].text` carry the same fallback.
@@ -248,7 +248,7 @@ and the README say "trial"; `meaning.3.*` and `opt.anchor*` still say "tick" (Ta
 Hub season, vote "A gift: accept" on a weapon season (`hub-season.e2e.mjs`, judge seed): the trial card shows Silk 0,
 the quest "The season is over: the message was a weapon", the Biography the kept memories and "Thank you for playing
 this local demo." Nothing says that accepting the weapon cost every clan its silk (and the log line that would, if it
-is "Раковины ушли…"-like, is QA-022). The player cannot tell a bug from the rule.
+is "The Shells left…"-like, is QA-022). The player cannot tell a bug from the rule.
 
 ## QA-018 · Info · Walk time of the judge route (not a defect)
 
@@ -260,8 +260,8 @@ time runs 3–5× slower than the wall clock here. Needs one run on a real GPU t
 ## QA-019 · High · Mixed languages after a language switch
 
 **Repro:** `/?demo=judge&mode=walk&play=direct` → press L four times (uk, ru, it, zh), then once more (en).
-**Actual:** zh HUD: hint "一个符号醒了。我把它读作：Мушля I，Дар 10，试炼 2。", log rows "В1 主人的钥匙已承诺…" (the
-Ukrainian trial prefix); EN HUD after the full cycle: "I read it as a Дар of 10 at Shell I…", log rows "В1 …"
+**Actual:** zh HUD: hint "一个符号醒了。我把它读作：" with the Ukrainian Shell word and the Russian Gift word inside, log rows "主人的钥匙已承诺…" with the
+Ukrainian trial prefix; EN HUD after the full cycle: "I read it as a" + the Russian Gift word + "of 10 at Shell I…", log rows with the Ukrainian prefix
 (`docs/qa/shots/misc-lang-3.jpg`, `misc-settings.jpg`). A fresh load in zh renders "试1" and "馈赠", so the strings
 exist: the re-render on a locale change keeps args that were resolved in the previous locale.
 **Expected:** spec §9 "switching language without a new season": every visible string in the new language.

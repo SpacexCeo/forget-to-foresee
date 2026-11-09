@@ -206,19 +206,20 @@ select,input[type=text]{font:inherit;font-size:13px;background:var(--panel2);col
 <script>
 /* ===== constants ===== */
 const TICKS=17, DEADLINE=16, CRISIS=13;
-const NAMES=['Ирис','Соль','Пепел','Мох','Янтарь','Иней'];
+const NAMES=['Iris','Salt','Ash','Moss','Amber','Frost'];
 const PERS=[null,
-  {h:.35,g:.6,p:.3,sk:.5,d:'торгует словами, не всегда честно'},
-  {h:.8,g:.3,p:.85,sk:.4,d:'осторожен, везде видит угрозу'},
-  {h:.92,g:.2,p:.2,sk:.35,d:'помогает и верит на слово'},
-  {h:.65,g:.9,p:.3,sk:.45,d:'у всего есть цена'},
-  {h:.88,g:.4,p:.4,sk:.8,d:'учёный, быстрее всех учит язык'}];
-const SLOTS=['Место','Действие','Сила','Срок'];
-const MEAN=[['Раковина I','Раковина II','Раковина III','Раковина IV'],['Дар','Буря','Тишина','Зов'],['малая · 10','средняя · 20','большая · 40','великая · 80'],['через 1 тик','через 2','через 3','через 4']];
-const SHORT=[['I','II','III','IV'],['Дар','Буря','Тишина','Зов'],['10','20','40','80'],['+1','+2','+3','+4']];
-const FORMS=['дуга','шип','петля','капля'];
+  {h:.35,g:.6,p:.3,sk:.5,d:'trades in words, not always honestly'},
+  {h:.8,g:.3,p:.85,sk:.4,d:'cautious, sees a threat everywhere'},
+  {h:.92,g:.2,p:.2,sk:.35,d:'helps and takes others at their word'},
+  {h:.65,g:.9,p:.3,sk:.45,d:'everything has a price'},
+  {h:.88,g:.4,p:.4,sk:.8,d:'a scholar, learns the language fastest'}];
+const SLOTS=['Place','Action','Power','Delay'];
+const MEAN=[['Shell I','Shell II','Shell III','Shell IV'],['Gift','Storm','Silence','Call'],['small · 10','medium · 20','large · 40','great · 80'],['in 1 trial','in 2 trials','in 3 trials','in 4 trials']];
+const SHORT=[['I','II','III','IV'],['Gift','Storm','Silence','Call'],['10','20','40','80'],['+1','+2','+3','+4']];
+const FORMS=['arc','spike','loop','drop'];
+// Ash's phrases are hash preimages: the judge season's Ash key is committed on NEAR testnet, so they never change.
 const PEPEL_PHRASES=['вода помнит камень','мы пришли раньше времени','пепел тоже был деревом','молчание — тоже ответ'];
-const DEFAULT_PHRASE='я помню то, чего ещё не было';
+const DEFAULT_PHRASE='I remember what has not happened yet';
 
 /* ===== sha256 (sync) + merkle ===== */
 const primes=(n)=>{const r=[];let x=2;while(r.length<n){let p=true;for(let i=2;i*i<=x;i++)if(x%i===0){p=false;break}if(p)r.push(x);x++}return r};
@@ -298,9 +299,9 @@ function newSeason(seed){
   const pp=PEPEL_PHRASES[ri(PEPEL_PHRASES.length)],ps=hex(8);
   S.pepelKey={phrase:pp,salt:ps,hash:sha256(pp+ps)};
   S.pKey=null;
-  addMem({kind:'first',w:4,text:'Первое слово: Ключ владельца, который знает только Ирис'});
-  addMem({kind:'call',w:2,text:'Зов Раковин в ночь прибытия'});
-  addMem({kind:'gift',about:3,w:1,text:'Мох поделился шёлком в первую ночь'});
+  addMem({kind:'first',w:4,text:'First Word: the owner’s Key, known only to Iris'});
+  addMem({kind:'call',w:2,text:'The Shells’ Call on the night of arrival'});
+  addMem({kind:'gift',about:3,w:1,text:'Moss shared silk on the first night'});
   S.T[0][3]=65;S.T[3][0]=60;
   startTick();
 }
@@ -358,9 +359,9 @@ function checkBought(){
 }
 function revealLie(b){
   b.revealed=true;
-  addMem({kind:'betrayal',about:b.from,w:3,text:`${NAMES[b.from]} продал ложное слово («${FORMS[b.f]}» в слоте «${SLOTS[b.s]}»)`});
+  addMem({kind:'betrayal',about:b.from,w:3,text:`${NAMES[b.from]} sold a false word (“${FORMS[b.f]}” in the ${SLOTS[b.s]} slot)`});
   trustAdd(0,b.from,-40);addH(6);breakEdge(0,b.from);
-  log(`Ирис поняла: ${NAMES[b.from]} продал ей ложное слово. Она больше не разговаривает с ${NAMES[b.from]}.`,'bad');
+  log(`Iris understood: ${NAMES[b.from]} sold her a false word. She no longer speaks to ${NAMES[b.from]}.`,'bad');
 }
 
 /* ===== tick flow ===== */
@@ -368,42 +369,42 @@ function startTick(){
   const t=S.tick;
   S.ap=maxAP();
   for(let i=0;i<6;i++)S.silk[i]+=3;
-  log(`— Тик ${t} —`,'tick');
+  log(`— Tick ${t} —`,'tick');
   resolveShards();
   // debts
   for(const m of S.mem.filter(m=>m.kind==='debt'&&m.data.due===t)){
     const X=m.about;S.mem=S.mem.filter(x=>x!==m);
-    if(rnd()<PERS[X].h){const a=m.data.amount;S.silk[X]-=a;S.silk[0]+=a;trustAdd(0,X,10);log(`${NAMES[X]} вернул долг: +${a} шёлка.`,'good')}
-    else{addMem({kind:'betrayal',about:X,w:3,text:`${NAMES[X]} не вернул долг ${m.data.amount}`});trustAdd(0,X,-40);addH(6);breakEdge(0,X);log(`${NAMES[X]} не вернул долг. Ирис порвала с ним.`,'bad')}
+    if(rnd()<PERS[X].h){const a=m.data.amount;S.silk[X]-=a;S.silk[0]+=a;trustAdd(0,X,10);log(`${NAMES[X]} repaid the debt: +${a} silk.`,'good')}
+    else{addMem({kind:'betrayal',about:X,w:3,text:`${NAMES[X]} did not repay a debt of ${m.data.amount}`});trustAdd(0,X,-40);addH(6);breakEdge(0,X);log(`${NAMES[X]} did not repay the debt. Iris cut ties.`,'bad')}
   }
-  for(const c of S.claims.filter(c=>c.due===t)){if(rnd()<PERS[c.debtor].h){S.silk[c.debtor]-=c.amount;S.silk[c.holder]+=c.amount;log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`,'muted')}}
+  for(const c of S.claims.filter(c=>c.due===t)){if(rnd()<PERS[c.debtor].h){S.silk[c.debtor]-=c.amount;S.silk[c.holder]+=c.amount;log(`${NAMES[c.debtor]} paid ${c.amount} silk to the shard holder, ${NAMES[c.holder]}.`,'muted')}}
   S.claims=S.claims.filter(c=>c.due!==t);
   // player promise
   const pm=S.mem.find(m=>m.kind==='promise');
-  if(pm&&pm.data.by===t&&S.frag[0].st==='held')contribute(0,`Ирис держит слово перед ${NAMES[pm.about]} и вносит фрагмент.`);
+  if(pm&&pm.data.by===t&&S.frag[0].st==='held')contribute(0,`Iris keeps her word to ${NAMES[pm.about]} and contributes the fragment.`);
   // AI pacts
   for(const [k,by] of Object.entries(S.aiPact)){
     const i=+k;if(by!==t)continue;delete S.aiPact[i];
     if(S.frag[i].st!=='held')continue;
-    if(!S.isolated[i]&&rnd()<PERS[i].h)contribute(i,`${NAMES[i]} держит обещание и вносит фрагмент.`);
-    else{addMem({kind:'betrayal',about:i,w:3,text:`${NAMES[i]} не внёс фрагмент, как обещал`});trustAdd(0,i,-40);addH(6);breakEdge(0,i);log(`${NAMES[i]} нарушил обещание.`,'bad')}
+    if(!S.isolated[i]&&rnd()<PERS[i].h)contribute(i,`${NAMES[i]} keeps the promise and contributes a fragment.`);
+    else{addMem({kind:'betrayal',about:i,w:3,text:`${NAMES[i]} did not contribute a fragment as promised`});trustAdd(0,i,-40);addH(6);breakEdge(0,i);log(`${NAMES[i]} broke the promise.`,'bad')}
   }
-  if(S.escrow&&S.frag[4].st==='held')contribute(4,'Янтарь вносит фрагмент: эскроу сработал.');
+  if(S.escrow&&S.frag[4].st==='held')contribute(4,'Amber contributes a fragment: the escrow released.');
   // voluntary AI contributions
   if(t<=DEADLINE)for(let i=1;i<6;i++){
     if(S.frag[i].st!=='held'||S.isolated[i])continue;
     if(PERS[i].g>.7&&S.tV[i]<=DEADLINE)continue;
     let c=.05+Math.max(0,avgTrust(i)-45)/150+(PERS[i].h-.5)*.2+(t>=11?.15:0)+(t>=15?.3:0);
     c*=1-PERS[i].p*.7;
-    if(rnd()<c)contribute(i,`${NAMES[i]} вносит фрагмент в Свиток.`);
+    if(rnd()<c)contribute(i,`${NAMES[i]} places a fragment in the Scroll.`);
   }
   // personal prizes
   for(let i=0;i<6;i++)if(S.frag[i].st==='held'&&S.tV[i]===t){
     S.frag[i].st='dark';S.silk[i]+=S.V[i];
-    log(i===0?`Вы удержали фрагмент и получили ${S.V[i]} шёлка. Ваша часть послания погасла.`:`${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}). Его часть послания погасла.`,i===0?'good':'bad');
+    log(i===0?`You held your fragment and received ${S.V[i]} silk. Your part of the message went dark.`:`${NAMES[i]} held a fragment for the prize (${S.V[i]}). That part of the message went dark.`,i===0?'good':'bad');
     if(i!==0)for(let j=1;j<6;j++)if(j!==i)S.T[j][i]=clamp(S.T[j][i]-10,0,100);
   }
-  if(t>DEADLINE)for(let i=0;i<6;i++)if(S.frag[i].st==='held'){S.frag[i].st='dark';log(`${NAMES[i]} не успел внести фрагмент.`,'muted')}
+  if(t>DEADLINE)for(let i=0;i<6;i++)if(S.frag[i].st==='held'){S.frag[i].st='dark';log(`${NAMES[i]} did not contribute a fragment in time.`,'muted')}
   if(t===CRISIS)crisis();
   // social drift
   if(t>=4&&rnd()<.22){
@@ -411,17 +412,17 @@ function startTick(){
     const others=ais.filter(i=>i!==b&&!isBroken(i,b));
     if(others.length){const v=others[ri(others.length)],amt=8+ri(10);
       S.silk[v]-=amt;S.silk[b]+=amt;S.T[v][b]=clamp(S.T[v][b]-35,0,100);addH(6);
-      log(`${NAMES[b]} обманул ${NAMES[v]} на ${amt} шёлка.`,'bad');
-      if(S.T[v][b]<20){breakEdge(v,b);log(`${NAMES[v]} порвал с ${NAMES[b]}.`,'bad')}}
+      log(`${NAMES[b]} cheated ${NAMES[v]} out of ${amt} silk.`,'bad');
+      if(S.T[v][b]<20){breakEdge(v,b);log(`${NAMES[v]} cut ties with ${NAMES[b]}.`,'bad')}}
   }
   for(let i=1;i<6;i++)for(let j=0;j<6;j++)if(i!==j){const d=50-S.T[i][j];S.T[i][j]+=Math.sign(d)*Math.min(2,Math.abs(d))}
   for(const k of [...S.broken]){const [i,j]=k.split('-').map(Number);if(i===0)continue;
-    if(!S.isolated[i]&&!S.isolated[j]&&S.T[i][j]>=30&&S.T[j][i]>=30&&rnd()<.2){restoreEdge(i,j);log(`${NAMES[i]} и ${NAMES[j]} снова разговаривают.`,'muted')}}
-  for(let i=1;i<6;i++)if(S.T[i][0]<15&&!isBroken(i,0)){breakEdge(i,0);log(`${NAMES[i]} больше не разговаривает с Ирис.`,'bad')}
+    if(!S.isolated[i]&&!S.isolated[j]&&S.T[i][j]>=30&&S.T[j][i]>=30&&rnd()<.2){restoreEdge(i,j);log(`${NAMES[i]} and ${NAMES[j]} are speaking again.`,'muted')}}
+  for(let i=1;i<6;i++)if(S.T[i][0]<15&&!isBroken(i,0)){breakEdge(i,0);log(`${NAMES[i]} no longer speaks to Iris.`,'bad')}
   // AI learning & anchors
   for(let i=1;i<6;i++)S.mast[i]=Math.min(.95,S.mast[i]+PERS[i].sk*.045+.01);
   const pubs=S.events.filter(e=>e.pub===t);
-  if(pubs.length)log(`Глас Гостей: ${pubs.length===1?'новый знак':pubs.length+' новых знака'}.`);
+  if(pubs.length)log(`The Guests speak: ${pubs.length===1?'a new sign':pubs.length+' new signs'}.`);
   aiAnchors();
   genOffers();
   if(t===7||t===11)inejShard();
@@ -430,11 +431,11 @@ function startTick(){
 
 function crisis(){
   addH(15);
-  log('Глас: двусмысленный знак над всеми Раковинами. Пепел прочёл в нём «Оружие».','bad');
+  log('The Voice: an ambiguous sign over every Shell. Ash read it as “Weapon”.','bad');
   const cand=[0,1,3,4,5].filter(j=>S.T[2][j]<70&&!isBroken(2,j)).sort((a,b)=>S.T[2][a]-S.T[2][b]).slice(0,2);
-  cand.forEach(j=>{breakEdge(2,j);log(`Пепел рвёт связь с ${NAMES[j]}.`,'bad')});
+  cand.forEach(j=>{breakEdge(2,j);log(`Ash cuts ties with ${NAMES[j]}.`,'bad')});
   S.isolated[2]=true;S.rumor=true;
-  log('Соль шепчет всем: «Это оружие. Я видел».','muted');
+  log('Salt whispers to everyone: “It is a weapon. I saw it.”','muted');
 }
 
 function endTick(){
@@ -459,14 +460,14 @@ function resolveEvent(t){
   here.filter(a=>a.place!==e.place).forEach(a=>{S.silk[a.c]+=a.stake});
   const pot=[10,20,40,80][e.power];
   if(e.action===0){const W=hit.reduce((s,a)=>s+(t-a.at+1),0);
-    hit.forEach(a=>{const g=Math.round(pot*(t-a.at+1)/W);S.silk[a.c]+=a.stake+g;if(a.c===0)log(`Дар на Раковине ${SHORT[0][e.place]}: вам ${g} шёлка и залог.`,'good')});
-    if(hit.length&&!hit.some(a=>a.c===0))log(`Дар забрали: ${[...new Set(hit.map(a=>NAMES[a.c]))].join(', ')}.`,'muted')}
-  else if(e.action===1){hit.forEach(a=>{if(a.c===0)log(`Буря на Раковине ${SHORT[0][e.place]} сожгла ваш залог.`,'bad')})}
-  else hit.forEach(a=>{S.silk[a.c]+=a.stake;if(e.action===3){if(a.c===0){addMem({kind:'call',w:2,text:`Зов Раковины ${SHORT[0][e.place]} на тике ${t}`});log('Зов: у Ирис появилось новое воспоминание.','good')}else S.mast[a.c]=Math.min(.95,S.mast[a.c]+.04)}});
+    hit.forEach(a=>{const g=Math.round(pot*(t-a.at+1)/W);S.silk[a.c]+=a.stake+g;if(a.c===0)log(`Gift on Shell ${SHORT[0][e.place]}: ${g} silk for you, and your stake back.`,'good')});
+    if(hit.length&&!hit.some(a=>a.c===0))log(`The gift went to ${[...new Set(hit.map(a=>NAMES[a.c]))].join(', ')}.`,'muted')}
+  else if(e.action===1){hit.forEach(a=>{if(a.c===0)log(`A Storm on Shell ${SHORT[0][e.place]} burned your stake.`,'bad')})}
+  else hit.forEach(a=>{S.silk[a.c]+=a.stake;if(e.action===3){if(a.c===0){addMem({kind:'call',w:2,text:`The Call of Shell ${SHORT[0][e.place]} at tick ${t}`});log('Call: Iris has a new memory.','good')}else S.mast[a.c]=Math.min(.95,S.mast[a.c]+.04)}});
   S.anchors=S.anchors.filter(a=>a.t!==t);
   S.chron.push({t,forms:e.forms,dots:e.dots,m:truth,ok,idx});
   S.proofs.unshift({t,idx,leaf:e.leaf,ok:verified});if(S.proofs.length>5)S.proofs.length=5;
-  log(`Тик ${t} · Раковина ${SHORT[0][e.place]}: ${MEAN[1][e.action]}, сила ${pot}. Лист №${idx} сверен с корнем ${verified?'✓':'✗'}`);
+  log(`Tick ${t} · Shell ${SHORT[0][e.place]}: ${MEAN[1][e.action]}, power ${pot}. Leaf #${idx} checked against the root ${verified?'✓':'✗'}`);
   checkBought();
 }
 
@@ -486,10 +487,10 @@ function aiAnchors(){
 
 function contribute(i,why){
   const f=S.frag[i];if(f.st!=='held')return;
-  f.st='scroll';f.at=S.tick;log(why||`${NAMES[i]} вносит фрагмент.`,i===0?'good':'');
+  f.st='scroll';f.at=S.tick;log(why||`${NAMES[i]} contributes a fragment.`,i===0?'good':'');
   for(let j=1;j<6;j++)if(j!==i)S.T[j][i]=clamp(S.T[j][i]+5,0,100);
-  if(i===0){const pm=S.mem.find(m=>m.kind==='promise');if(pm){S.mem=S.mem.filter(x=>x!==pm);trustAdd(pm.about,0,15);log(`${NAMES[pm.about]}: обещание выполнено.`,'good')}}
-  if(i===4&&S.escrow){S.silk[4]+=S.escrow;log(`Эскроу: ${S.escrow} шёлка ушли Янтарю.`,'muted');S.escrow=0}
+  if(i===0){const pm=S.mem.find(m=>m.kind==='promise');if(pm){S.mem=S.mem.filter(x=>x!==pm);trustAdd(pm.about,0,15);log(`${NAMES[pm.about]}: promise fulfilled.`,'good')}}
+  if(i===4&&S.escrow){S.silk[4]+=S.escrow;log(`Escrow: ${S.escrow} silk went to Amber.`,'muted');S.escrow=0}
 }
 
 /* ===== offers ===== */
@@ -518,19 +519,19 @@ function genOffers(){
 }
 function offerText(o){
   const n=`<b>${NAMES[o.from]}</b>`;
-  if(o.kind==='sell')return `${n}: «Продам слово. Знак «${FORMS[o.f]}» в слоте «${SLOTS[o.s]}» значит «${MEAN[o.s][o.m]}».» Цена ${o.price}.`;
-  if(o.kind==='loan')return `${n}: «Одолжи ${o.n} шёлка, верну ${o.back} на тике ${o.due}.»`;
-  if(o.kind==='gift')return `${n}: «Делюсь одним словом из летописи бесплатно. Запомни, кто помог.»`;
-  if(o.kind==='pact')return `${n}: «Пообещаем друг другу внести фрагменты до тика ${o.by}. На слово.»`;
-  if(o.kind==='escrow')return `${n}: «Внесу свой фрагмент за ${o.price} шёлка. Деньги в эскроу: они уйдут мне, только когда фрагмент окажется в Свитке.»`;
+  if(o.kind==='sell')return `${n}: “I’ll sell a word. The “${FORMS[o.f]}” sign in the ${SLOTS[o.s]} slot means “${MEAN[o.s][o.m]}”.” Price ${o.price}.`;
+  if(o.kind==='loan')return `${n}: “Lend me ${o.n} silk, I’ll return ${o.back} at tick ${o.due}.”`;
+  if(o.kind==='gift')return `${n}: “I’ll share one word from the chronicle for free. Remember who helped.”`;
+  if(o.kind==='pact')return `${n}: “Let us both promise to contribute our fragments by tick ${o.by}. On our word.”`;
+  if(o.kind==='escrow')return `${n}: “I’ll contribute my fragment for ${o.price} silk. The silk waits in escrow and reaches me only when the fragment is in the Scroll.”`;
   return '';
 }
 function acceptOffer(o){
-  if(o.kind==='sell'){if(S.silk[0]<o.price)return;S.silk[0]-=o.price;S.silk[o.from]+=o.price;S.bought.push({s:o.s,f:o.f,m:o.m,from:o.from,honest:o.honest,revealed:false});log(`Куплено слово у ${NAMES[o.from]}. Ирис ему пока верит.`)}
-  if(o.kind==='loan'){if(S.silk[0]<o.n)return;S.silk[0]-=o.n;S.silk[o.from]+=o.n;addMem({kind:'debt',about:o.from,w:2,text:`${NAMES[o.from]} должен ${o.back} шёлка`,data:{amount:o.back,due:o.due}});log(`Вы одолжили ${NAMES[o.from]} ${o.n} шёлка.`)}
-  if(o.kind==='gift'){const c=[];for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(!S.pins[s+'_'+f])c.push([s,f]);if(c.length){const [s,f]=c[ri(c.length)];S.pins[s+'_'+f]={m:S.perm[s][f],src:'Иней'}}addMem({kind:'gift',about:5,w:1,text:'Иней подарил слово из летописи'});trustAdd(0,5,15);log('Иней подарил слово. Ирис запомнила.','good')}
-  if(o.kind==='pact'){addMem({kind:'promise',about:o.from,w:2,text:`Вы обещали ${NAMES[o.from]} внести фрагмент до тика ${o.by}`,data:{by:o.by}});S.aiPact[o.from]=o.by;trustAdd(o.from,0,10);log(`Пакт с ${NAMES[o.from]}: оба вносят до тика ${o.by}.`)}
-  if(o.kind==='escrow'){if(S.silk[0]<o.price)return;S.silk[0]-=o.price;S.escrow=o.price;log(`Эскроу открыт: ${o.price} шёлка ждут фрагмента Янтаря.`)}
+  if(o.kind==='sell'){if(S.silk[0]<o.price)return;S.silk[0]-=o.price;S.silk[o.from]+=o.price;S.bought.push({s:o.s,f:o.f,m:o.m,from:o.from,honest:o.honest,revealed:false});log(`Bought a word from ${NAMES[o.from]}. Iris trusts it for now.`)}
+  if(o.kind==='loan'){if(S.silk[0]<o.n)return;S.silk[0]-=o.n;S.silk[o.from]+=o.n;addMem({kind:'debt',about:o.from,w:2,text:`${NAMES[o.from]} owes ${o.back} silk`,data:{amount:o.back,due:o.due}});log(`You lent ${NAMES[o.from]} ${o.n} silk.`)}
+  if(o.kind==='gift'){const c=[];for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(!S.pins[s+'_'+f])c.push([s,f]);if(c.length){const [s,f]=c[ri(c.length)];S.pins[s+'_'+f]={m:S.perm[s][f],src:'Frost'}}addMem({kind:'gift',about:5,w:1,text:'Frost gave a word from the chronicle'});trustAdd(0,5,15);log('Frost gave a word. Iris will remember.','good')}
+  if(o.kind==='pact'){addMem({kind:'promise',about:o.from,w:2,text:`You promised ${NAMES[o.from]} to contribute a fragment by tick ${o.by}`,data:{by:o.by}});S.aiPact[o.from]=o.by;trustAdd(o.from,0,10);log(`Pact with ${NAMES[o.from]}: both contribute by tick ${o.by}.`)}
+  if(o.kind==='escrow'){if(S.silk[0]<o.price)return;S.silk[0]-=o.price;S.escrow=o.price;log(`Escrow open: ${o.price} silk wait for Amber’s fragment.`)}
   S.offers=S.offers.filter(x=>x!==o);
 }
 
@@ -538,28 +539,28 @@ function acceptOffer(o){
 function effectText(m){
   const X=m.about!=null?NAMES[m.about]:'';
   switch(m.kind){
-    case 'first':return 'Пока Ирис помнит владельца, она слушается вас: 3 внимания за тик. Если забудет, останется 2.';
-    case 'call':return 'Нить к Гостям. Ничего не держит, это хорошее топливо для видения.';
-    case 'gift':return `Доверие к ${X} выше. Если забыть, Ирис станет к ${X} равнодушна.`;
-    case 'betrayal':return `Ирис не разговаривает с ${X}. Если забыть, она снова поверит и может попасться ещё раз.`;
-    case 'debt':return `${X} вернёт ${m.data.amount} на тике ${m.data.due}. Если забыть, долг исчезнет, а право требования уйдёт с осколком.`;
-    case 'promise':return `На тике ${m.data.by} Ирис внесёт фрагмент, что бы вы ни решили. Если забыть, вы свободны, но ${X} может купить осколок и узнать.`;
+    case 'first':return 'While Iris remembers her owner she obeys you: 3 attention per tick. If she forgets, 2 remain.';
+    case 'call':return 'A thread to the Guests. It holds nothing; good fuel for a vision.';
+    case 'gift':return `Trust in ${X} is higher. Forget it and Iris becomes indifferent to ${X}.`;
+    case 'betrayal':return `Iris does not speak to ${X}. Forget it and she trusts again, and can be fooled again.`;
+    case 'debt':return `${X} returns ${m.data.amount} at tick ${m.data.due}. Forget it and the debt disappears; the claim leaves with the shard.`;
+    case 'promise':return `At tick ${m.data.by} Iris contributes the fragment whatever you decide. Forget it and you are free, but ${X} may buy the shard and find out.`;
   }
   return '';
 }
 function doForget(id,purpose){
   const m=S.mem.find(x=>x.id===id);if(!m||S.ap<1)return;
   S.mem=S.mem.filter(x=>x!==m);S.ap--;
-  if(m.kind==='betrayal'){S.T[0][m.about]=50;if(isBroken(0,m.about)){restoreEdge(0,m.about);log(`Ирис забыла обиду и снова говорит с ${NAMES[m.about]}.`)}}
+  if(m.kind==='betrayal'){S.T[0][m.about]=50;if(isBroken(0,m.about)){restoreEdge(0,m.about);log(`Iris forgot the grudge and speaks to ${NAMES[m.about]} again.`)}}
   if(m.kind==='gift')S.T[0][m.about]=clamp(S.T[0][m.about]-15,0,100);
-  if(m.kind==='first'){S.wild=true;S.ap=Math.min(S.ap,maxAP());log('Ирис забыла, кто её владелец. Она слушается хуже.','bad')}
+  if(m.kind==='first'){S.wild=true;S.ap=Math.min(S.ap,maxAP());log('Iris forgot who her owner is. She obeys less.','bad')}
   if(m.kind==='promise'&&S.aiPact[m.about]==null){}
-  const fg={text:m.text,fate:'на торгах'};S.forgot.push(fg);
-  if(purpose==='key'){S.pepelKeyKnown=true;log(`Видение: Ирис видит Ключ Пепла — «${S.pepelKey.phrase}».`,'key')}
+  const fg={text:m.text,fate:'at auction'};S.forgot.push(fg);
+  if(purpose==='key'){S.pepelKeyKnown=true;log(`Vision: Iris sees Ash’s Key — “${S.pepelKey.phrase}”.`,'key')}
   else{
     const fut=S.events.map((e,i)=>({e,i})).filter(x=>x.e.pub>S.tick&&!S.visions.includes(x.i)).sort((a,b)=>a.e.pub-b.e.pub||a.e.t-b.e.t).slice(0,m.w);
     fut.forEach(x=>S.visions.push(x.i));
-    log(fut.length?`Видение: Ирис видит ${fut.length} будущих знака раньше всех.`:'Видение пусто: будущих гласов больше нет.','key');
+    log(fut.length?`Vision: Iris sees ${fut.length} future sign${fut.length===1?'':'s'} before anyone else.`:'The vision is empty: no more voices are coming.','key');
   }
   const sh={id:++S.uid,from:0,mem:m,title:m.text,exp:S.tick+2,bids:[],vals:{},fg:S.forgot.length-1};
   for(let i=1;i<6;i++){
@@ -574,17 +575,17 @@ function doForget(id,purpose){
     if(v>=3&&S.silk[i]>=v)sh.bids.push({c:i,amt:v});
   }
   S.shards.push(sh);
-  log(`Осколок «${m.text}» выставлен на торги.`,'muted');
+  log(`Shard “${m.text}” is up for auction.`,'muted');
 }
 function inejShard(){
   const lie=S.tick===11&&S.bought.some(b=>b.from===1&&!b.honest&&!b.revealed);
   const c=[];for(let s=0;s<4;s++)for(let f=0;f<4;f++)if(!S.pins[s+'_'+f])c.push([s,f]);
   if(!lie&&!c.length)return;
   const [s,f]=lie?[0,0]:c[ri(c.length)];
-  const sh={id:++S.uid,from:5,kind:lie?'lie':'insight',s,f,title:lie?'Как Соль торговал словами':`Слово из слота «${SLOTS[s]}»`,exp:S.tick+2,bids:[],vals:lie?{1:20,4:6}:{1:9,4:8}};
+  const sh={id:++S.uid,from:5,kind:lie?'lie':'insight',s,f,title:lie?'How Salt traded in words':`A word from the ${SLOTS[s]} slot`,exp:S.tick+2,bids:[],vals:lie?{1:20,4:6}:{1:9,4:8}};
   sh.bids.push({c:1,amt:lie?14:4+ri(4)});sh.bids.push({c:4,amt:3+ri(4)});
   S.shards.push(sh);
-  log(`Иней забыл воспоминание ради видения. Осколок «${sh.title}» на торгах.`,'muted');
+  log(`Frost forgot a memory for a vision. Shard “${sh.title}” is up for auction.`,'muted');
 }
 const topBid=sh=>sh.bids.reduce((b,x)=>(!b||x.amt>b.amt)?x:b,null);
 function resolveShards(){
@@ -593,10 +594,10 @@ function resolveShards(){
     sh.done=true;sh.doneAt=S.tick;
     let top=topBid(sh);
     if(top&&S.silk[top.c]<top.amt)top=null;
-    if(!top){sh.result='Никто не купил. Осколок сгорел, этого больше нет в истории мира.';if(sh.from===0)S.forgot[sh.fg].fate='сгорело';log(`Осколок «${sh.title}» сгорел.`,'muted');continue}
+    if(!top){sh.result='Nobody bought it. The shard burned; it is gone from the world’s history.';if(sh.from===0)S.forgot[sh.fg].fate='burned';log(`Shard “${sh.title}” burned.`,'muted');continue}
     S.silk[top.c]-=top.amt;S.silk[sh.from]+=top.amt;sh.winner=top.c;
-    if(sh.from===0)S.forgot[sh.fg].fate=`купил ${NAMES[top.c]} за ${top.amt}`;
-    sh.result=`Купил ${NAMES[top.c]} за ${top.amt}.`;
+    if(sh.from===0)S.forgot[sh.fg].fate=`bought by ${NAMES[top.c]} for ${top.amt}`;
+    sh.result=`Bought by ${NAMES[top.c]} for ${top.amt}.`;
     applyShard(sh,top.c);
   }
   S.shards=S.shards.filter(x=>!x.done||x.doneAt>=S.tick);
@@ -605,16 +606,16 @@ function applyShard(sh,w){
   const who=NAMES[w];
   if(sh.from===0){
     const m=sh.mem,X=m.about;
-    if(m.kind==='betrayal'){if(w===X)log(`${who} выкупил и уничтожил память о своём обмане.`,'muted');else{S.T[w][X]=clamp(S.T[w][X]-25,0,100);log(`${who} купил память о том, как ${NAMES[X]} обманул Ирис. Теперь ${who} тоже ему не верит.`)}}
-    if(m.kind==='debt'){if(w===X)log(`${who} выкупил свой долг и списал его.`,'muted');else{S.claims.push({holder:w,debtor:X,amount:m.data.amount,due:m.data.due});log(`${who} купил ваш долг: теперь ${NAMES[X]} должен ему.`)}}
-    if(m.kind==='promise'&&w===X){S.T[X][0]=clamp(S.T[X][0]-40,0,100);addH(6);log(`${who} купил осколок и узнал, что Ирис забыла обещание.`,'bad')}
+    if(m.kind==='betrayal'){if(w===X)log(`${who} bought and destroyed the memory of their own deceit.`,'muted');else{S.T[w][X]=clamp(S.T[w][X]-25,0,100);log(`${who} bought the memory of how ${NAMES[X]} deceived Iris. Now ${who} distrusts them too.`)}}
+    if(m.kind==='debt'){if(w===X)log(`${who} bought back their own debt and wrote it off.`,'muted');else{S.claims.push({holder:w,debtor:X,amount:m.data.amount,due:m.data.due});log(`${who} bought your debt: ${NAMES[X]} now owes them.`)}}
+    if(m.kind==='promise'&&w===X){S.T[X][0]=clamp(S.T[X][0]-40,0,100);addH(6);log(`${who} bought the shard and learned that Iris forgot her promise.`,'bad')}
     if(m.kind==='gift'&&w!==X)S.T[w][X]=clamp(S.T[w][X]+10,0,100);
     if(m.kind==='call')S.mast[w]=Math.min(.95,S.mast[w]+.06);
-    if(m.kind==='first'){S.firstBuyer=w;log(`${who} купил Первое слово Ирис. Теперь он знает ваш Ключ.`,'bad')}
+    if(m.kind==='first'){S.firstBuyer=w;log(`${who} bought Iris’s First Word. They now know your Key.`,'bad')}
   }else{
     if(w===0){
-      if(sh.kind==='insight'){S.pins[sh.s+'_'+sh.f]={m:S.perm[sh.s][sh.f],src:'осколок'};log('Осколок Инея: Ирис узнала верное слово.','good')}
-      if(sh.kind==='lie'){const l=S.bought.filter(b=>b.from===1&&!b.honest&&!b.revealed);if(l.length)l.forEach(revealLie);else{trustAdd(0,1,15);log('Осколок Инея: Соль был с вами честен.','good')}}
+      if(sh.kind==='insight'){S.pins[sh.s+'_'+sh.f]={m:S.perm[sh.s][sh.f],src:'a shard'};log('Frost’s shard: Iris learned a true word.','good')}
+      if(sh.kind==='lie'){const l=S.bought.filter(b=>b.from===1&&!b.honest&&!b.revealed);if(l.length)l.forEach(revealLie);else{trustAdd(0,1,15);log('Frost’s shard: Salt was honest with you.','good')}}
     }else S.mast[w]=Math.min(.95,S.mast[w]+.05);
   }
 }
@@ -649,7 +650,7 @@ const FORM_PATH=[
   '<path d="M0 -35 L0 -40" stroke="currentColor" stroke-width="3"/><circle cx="0" cy="-48" r="8" fill="none" stroke="currentColor" stroke-width="3.2"/>',
   '<path d="M0 -34 C-9 -29 -8 -19 0 -16 C8 -19 9 -29 0 -34 Z" fill="currentColor"/>'];
 function glyph(forms,dots,size=96,opt={}){
-  let s=`<svg class="glyph" viewBox="-62 -62 124 124" width="${size}" height="${size}" role="img" aria-label="логограмма"><circle class="wash" r="58"/>`;
+  let s=`<svg class="glyph" viewBox="-62 -62 124 124" width="${size}" height="${size}" role="img" aria-label="logogram"><circle class="wash" r="58"/>`;
   s+='<circle r="34" fill="none" stroke="currentColor" stroke-width="3.2"/>';
   if(opt.key)s+='<circle r="40" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3"/>';
   forms.forEach((f,p)=>{s+=`<g transform="rotate(${p*90})">${FORM_PATH[f]}</g>`});
@@ -662,19 +663,19 @@ function formIcon(f){return `<svg class="glyph" viewBox="-20 -62 40 32" width="2
 function pips(n,max){let s='';for(let i=0;i<max;i++)s+=`<span class="pip ${i<n?'on':''}"></span>`;return s}
 function header(){
   return `<header class="top">
-  <div class="brand">${glyph([0,1,2,3],1,34)}<div><b>RAEN</b><span>Forget to Foresee · сезон 1</span></div></div>
+  <div class="brand">${glyph([0,1,2,3],1,34)}<div><b>RAEN</b><span>Forget to Foresee · season 1</span></div></div>
   <div class="stats">
-    <div class="stat"><span>Тик</span><b>${S.tick}<i>/${TICKS}</i></b></div>
-    <div class="stat"><span>Шёлк</span><b>${S.silk[0]}</b></div>
-    <div class="stat"><span>Внимание</span><div class="pips">${pips(S.ap,maxAP())}</div></div>
-    <div class="stat h"><span>Напряжение мира</span><div class="hrow"><div class="hbar"><i class="${S.H>=70?'hot':''}" style="width:${Math.min(100,S.H)}%"></i></div><b>${S.H}</b></div></div>
+    <div class="stat"><span>Tick</span><b>${S.tick}<i>/${TICKS}</i></b></div>
+    <div class="stat"><span>Silk</span><b>${S.silk[0]}</b></div>
+    <div class="stat"><span>Attention</span><div class="pips">${pips(S.ap,maxAP())}</div></div>
+    <div class="stat h"><span>World tension</span><div class="hrow"><div class="hbar"><i class="${S.H>=70?'hot':''}" style="width:${Math.min(100,S.H)}%"></i></div><b>${S.H}</b></div></div>
   </div>
-  <div class="hdr-btns"><button class="btn ghost" data-a="rules">Правила</button><button class="btn ghost" data-a="newgame">Новый сезон</button></div>
+  <div class="hdr-btns"><button class="btn ghost" data-a="rules">Rules</button><button class="btn ghost" data-a="newgame">New season</button></div>
 </header>`;
 }
 function graphSVG(){
   const P=NAMES.map((_,i)=>{const a=(-90+i*60)*Math.PI/180;return [150+Math.cos(a)*102,122+Math.sin(a)*92]});
-  let s='<svg class="graph" viewBox="0 0 300 250" role="img" aria-label="Граф доверия кланов">';
+  let s='<svg class="graph" viewBox="0 0 300 250" role="img" aria-label="Clan trust graph">';
   for(let i=0;i<6;i++)for(let j=i+1;j<6;j++){
     const br=isBroken(i,j),tr=(S.T[i][j]+S.T[j][i])/2;
     const cls=br?'edge broken':tr>=62?'edge good':tr<35?'edge bad':'edge';
@@ -689,27 +690,27 @@ function colWorld(){
   const br=S.broken.map(k=>k.split('-').map(Number));
   const rows=br.map(([i,j])=>{
     if(i===0){const blocked=hasBetrayal(j),low=S.T[j][0]<25;
-      return `<div class="brow"><div>Ирис ✕ ${NAMES[j]}<small>${blocked?`Ирис помнит предательство ${NAMES[j]}. Забудьте его, чтобы помириться.`:low?`${NAMES[j]} вам не доверяет (${Math.round(S.T[j][0])}).`:'Помириться: 1 внимание и 10 шёлка'}</small></div><button class="btn sm" data-a="mend" data-j="${j}" ${blocked||low||S.ap<1||S.silk[0]<10||S.phase!=='play'?'disabled':''}>Помириться</button></div>`}
+      return `<div class="brow"><div>Iris ✕ ${NAMES[j]}<small>${blocked?`Iris remembers the betrayal by ${NAMES[j]}. Forget it to make peace.`:low?`${NAMES[j]} does not trust you (${Math.round(S.T[j][0])}).`:'Make peace: 1 attention and 10 silk'}</small></div><button class="btn sm" data-a="mend" data-j="${j}" ${blocked||low||S.ap<1||S.silk[0]<10||S.phase!=='play'?'disabled':''}>Make peace</button></div>`}
     const ok=S.T[i][0]>=40&&S.T[j][0]>=40&&!S.isolated[i]&&!S.isolated[j];
-    return `<div class="brow"><div>${NAMES[i]} ✕ ${NAMES[j]}<small>${ok?'Посредничество: 1 внимание и 15 шёлка':S.isolated[i]||S.isolated[j]?'Пепел закрылся. Тут поможет только Ключ.':'Обе стороны должны вам доверять (от 40)'}</small></div><button class="btn sm" data-a="mediate" data-i="${i}" data-j="${j}" ${!ok||S.ap<1||S.silk[0]<15||S.phase!=='play'?'disabled':''}>Помирить</button></div>`;
+    return `<div class="brow"><div>${NAMES[i]} ✕ ${NAMES[j]}<small>${ok?'Mediate: 1 attention and 15 silk':S.isolated[i]||S.isolated[j]?'Ash has shut himself away. Only the Key can help here.':'Both sides must trust you (40 or more)'}</small></div><button class="btn sm" data-a="mediate" data-i="${i}" data-j="${j}" ${!ok||S.ap<1||S.silk[0]<15||S.phase!=='play'?'disabled':''}>Reconcile</button></div>`;
   }).join('');
   const slots=S.frag.map(f=>{
-    if(f.st==='scroll')return `<div class="slot in">${glyph(f.forms,f.dots,54,{key:f.key})}${NAMES[f.owner]}${f.key?' · ключевой':''}</div>`;
-    if(f.st==='dark')return `<div class="slot dark"><div class="q">×</div>${NAMES[f.owner]} · погас</div>`;
+    if(f.st==='scroll')return `<div class="slot in">${glyph(f.forms,f.dots,54,{key:f.key})}${NAMES[f.owner]}${f.key?' · key':''}</div>`;
+    if(f.st==='dark')return `<div class="slot dark"><div class="q">×</div>${NAMES[f.owner]} · dark</div>`;
     return `<div class="slot"><div class="q">?</div>${NAMES[f.owner]}</div>`;
   }).join('');
   const inScroll=S.frag.filter(f=>f.st==='scroll').length;
   return `<div class="col world">
-  <section class="panel"><h2>Мир</h2><p class="hint">Кланы — это NFT-агенты. Линии показывают доверие. Каждый разрыв поднимает напряжение на 10.</p>
+  <section class="panel"><h2>World</h2><p class="hint">The clans are NFT agents. Lines show trust. Every broken tie raises the tension by 10.</p>
     ${graphSVG()}
-    <div class="legend"><span><i></i>доверие</span><span><i class="b"></i>недоверие</span><span><i class="d"></i>разрыв</span><span>● фрагмент в Свитке · ○ ещё у клана</span></div>
+    <div class="legend"><span><i></i>trust</span><span><i class="b"></i>distrust</span><span><i class="d"></i>broken tie</span><span>● fragment in the Scroll · ○ still with the clan</span></div>
     ${rows?`<div class="broken-list">${rows}</div>`:''}
   </section>
-  <section class="panel"><h2>Свиток послания</h2><p class="hint">${inScroll}/6 фрагментов. Ключевой знак (с двойным кольцом) решит, дар это или оружие. Вносить можно до тика ${DEADLINE}.</p><div class="scroll">${slots}</div></section>
-  <section class="panel"><h2>Контракт</h2><p class="hint">Будущее зафиксировано до начала сезона. Каждый глас сверяется с корнем Merkle-дерева.</p>
-    <dl class="kv"><dt>Сид</dt><dd>${short(S.seedCommit)}</dd><dt>Корень</dt><dd>${short(S.root)}</dd>
-    <dt>Ключ Ирис</dt><dd>${S.pKey?short(S.pKey.hash):'—'}</dd><dt>Ключ Пепла</dt><dd>${short(S.pepelKey.hash)}</dd></dl>
-    <ul class="proofs">${S.proofs.map(p=>`<li>тик ${p.t} · лист №${p.idx} ${short(p.leaf)} <b>${p.ok?'✓ сверен':'✗'}</b></li>`).join('')||'<li>Проверок пока нет: первый глас сбудется на тике 3.</li>'}</ul>
+  <section class="panel"><h2>Scroll of the message</h2><p class="hint">${inScroll}/6 fragments. The key sign (with the double ring) decides whether it is a gift or a weapon. Fragments can go in until tick ${DEADLINE}.</p><div class="scroll">${slots}</div></section>
+  <section class="panel"><h2>Contract</h2><p class="hint">The future was committed before the season began. Every voice is checked against the Merkle root.</p>
+    <dl class="kv"><dt>Seed</dt><dd>${short(S.seedCommit)}</dd><dt>Root</dt><dd>${short(S.root)}</dd>
+    <dt>Iris’s Key</dt><dd>${S.pKey?short(S.pKey.hash):'—'}</dd><dt>Ash’s Key</dt><dd>${short(S.pepelKey.hash)}</dd></dl>
+    <ul class="proofs">${S.proofs.map(p=>`<li>tick ${p.t} · leaf #${p.idx} ${short(p.leaf)} <b>${p.ok?'✓ verified':'✗'}</b></li>`).join('')||'<li>No checks yet: the first voice comes true at tick 3.</li>'}</ul>
   </section></div>`;
 }
 function chip(s,g){const c=g.conf>=.65?'hi':g.conf>=.4?'mid':'lo';return `<div class="chip ${c}"><small>${SLOTS[s]}</small>${MEAN[s][g.m]}${g.cert?' ✓':''}</div>`}
@@ -721,15 +722,15 @@ function colVoice(){
     const place=rd.sl[0].m,act=rd.sl[1].m,tt=e.pub+rd.sl[3].m+1;
     const can=S.phase==='play'&&S.ap>=1&&S.silk[0]>=10&&tt>=S.tick&&tt<=TICKS&&!S.anchors.some(a=>a.c===0&&a.place===place&&a.t===tt);
     return `<div class="prop ${vis?'vision':''}">${glyph(e.forms,e.dots,92)}<div class="prop-body">
-      <div class="prop-meta">${vis?`<b>Видение.</b> Глас прозвучит на тике ${e.pub}`:`Глас прозвучал на тике ${e.pub}`}</div>
+      <div class="prop-meta">${vis?`<b>Vision.</b> The voice will sound at tick ${e.pub}`:`The voice sounded at tick ${e.pub}`}</div>
       <div class="chips">${rd.sl.map((g,s)=>chip(s,g)).join('')}</div>
-      <div class="prop-meta">Ирис читает: Раковина ${SHORT[0][place]}, ${MEAN[1][act]}, тик ${tt}</div>
-      <button class="btn sm ${act===0?'primary':''}" data-a="anchor" data-p="${place}" data-t="${tt}" ${can?'':'disabled'}>Якорь: ${SHORT[0][place]} · тик ${tt}</button>
+      <div class="prop-meta">Iris reads: Shell ${SHORT[0][place]}, ${MEAN[1][act]}, tick ${tt}</div>
+      <button class="btn sm ${act===0?'primary':''}" data-a="anchor" data-p="${place}" data-t="${tt}" ${can?'':'disabled'}>Anchor: ${SHORT[0][place]} · tick ${tt}</button>
     </div></div>`;
   }).join('');
   const ticks=[];for(let t=S.tick;t<=TICKS;t++)ticks.push(t);
   const myA=S.anchors.filter(a=>a.c===0);
-  const chron=S.chron.slice(-5).reverse().map(c=>`<div class="crow">${glyph(c.forms,c.dots,48)}<div>Тик ${c.t}: Раковина ${SHORT[0][c.m[0]]} · ${MEAN[1][c.m[1]]} · ${SHORT[2][c.m[2]]} · глас за ${c.m[3]+1}<br><span class="ok ${c.ok===4?'full':'part'}">Ирис прочла ${c.ok}/4</span> <span class="mono" style="color:var(--muted)">точек в ядре: ${c.dots}</span></div></div>`).join('');
+  const chron=S.chron.slice(-5).reverse().map(c=>`<div class="crow">${glyph(c.forms,c.dots,48)}<div>Tick ${c.t}: Shell ${SHORT[0][c.m[0]]} · ${MEAN[1][c.m[1]]} · ${SHORT[2][c.m[2]]} · voiced ${c.m[3]+1} ahead<br><span class="ok ${c.ok===4?'full':'part'}">Iris read ${c.ok}/4</span> <span class="mono" style="color:var(--muted)">dots in the core: ${c.dots}</span></div></div>`).join('');
   const sel=S.ui.sel;
   let dict=`<div class="dict"><div></div>${FORMS.map((f,i)=>`<div class="dh">${formIcon(i)}${f}</div>`).join('')}`;
   for(let s=0;s<4;s++){dict+=`<div class="dh row">${SLOTS[s]}</div>`;
@@ -738,110 +739,110 @@ function colVoice(){
   dict+='</div>';
   let ask='';
   if(sel){const [s,f]=sel,no=S.no[s+'_'+f]||[],pin=S.pins[s+'_'+f];
-    ask=pin?`<div class="ask">Знак «${FORMS[f]}» в слоте «${SLOTS[s]}» точно значит «${MEAN[s][pin.m]}».</div>`:
-    `<div class="ask"><span>Знак «${FORMS[f]}» в слоте «${SLOTS[s]}» — это</span><select id="ask-m">${[0,1,2,3].filter(m=>!no.includes(m)).map(m=>`<option value="${m}" ${S.ui.askM===m?'selected':''}>${MEAN[s][m]}</option>`).join('')}</select><button class="btn sm primary" data-a="ask" ${S.ap<1||S.silk[0]<5||S.phase!=='play'?'disabled':''}>Спросить Гостей · 1 внимание · 5 шёлка</button>${no.length?`<span class="mono" style="color:var(--muted)">точно не: ${no.map(m=>SHORT[s][m]).join(', ')}</span>`:''}</div>`}
+    ask=pin?`<div class="ask">The “${FORMS[f]}” sign in the ${SLOTS[s]} slot surely means “${MEAN[s][pin.m]}”.</div>`:
+    `<div class="ask"><span>The “${FORMS[f]}” sign in the ${SLOTS[s]} slot is</span><select id="ask-m">${[0,1,2,3].filter(m=>!no.includes(m)).map(m=>`<option value="${m}" ${S.ui.askM===m?'selected':''}>${MEAN[s][m]}</option>`).join('')}</select><button class="btn sm primary" data-a="ask" ${S.ap<1||S.silk[0]<5||S.phase!=='play'?'disabled':''}>Ask the Guests · 1 attention · 5 silk</button>${no.length?`<span class="mono" style="color:var(--muted)">surely not: ${no.map(m=>SHORT[s][m]).join(', ')}</span>`:''}</div>`}
   const conf=confidentCells();
   return `<div class="col voice">
   ${S.phase==='vote'?voteCard():''}
-  <section class="panel"><h2>Глас Гостей</h2><p class="hint">Каждый знак — событие: где, что, какой силы и через сколько тиков после гласа. Ставьте якорь на Дар. Кто поставил раньше, получает большую долю. Буря сжигает залог.</p>
-    <div class="anc-form"><span>Свой якорь (10 шёлка):</span><select id="anc-p">${[0,1,2,3].map(p=>`<option value="${p}" ${S.ui.ap===p?'selected':''}>Раковина ${SHORT[0][p]}</option>`).join('')}</select><select id="anc-t">${ticks.map(t=>`<option value="${t}" ${S.ui.at===t?'selected':''}>тик ${t}</option>`).join('')}</select><button class="btn sm" data-a="anchor-manual" ${S.phase==='play'&&S.ap>=1&&S.silk[0]>=10?'':'disabled'}>Поставить · 1 внимание</button></div>
-    <div class="props">${props||'<div class="empty">Гости пока молчат. Завершите тик, чтобы услышать первый глас.</div>'}</div>
-    ${myA.length?`<div class="myanc">${myA.map(a=>`<span class="tag">Якорь: ${SHORT[0][a.place]} · тик ${a.t}</span>`).join('')}</div>`:''}
+  <section class="panel"><h2>Voice of the Guests</h2><p class="hint">Every sign is an event: where, what, how strong and how many ticks after the voice. Anchor on a Gift. Whoever anchors earlier gets a bigger share. A Storm burns the stake.</p>
+    <div class="anc-form"><span>Your own anchor (10 silk):</span><select id="anc-p">${[0,1,2,3].map(p=>`<option value="${p}" ${S.ui.ap===p?'selected':''}>Shell ${SHORT[0][p]}</option>`).join('')}</select><select id="anc-t">${ticks.map(t=>`<option value="${t}" ${S.ui.at===t?'selected':''}>tick ${t}</option>`).join('')}</select><button class="btn sm" data-a="anchor-manual" ${S.phase==='play'&&S.ap>=1&&S.silk[0]>=10?'':'disabled'}>Place · 1 attention</button></div>
+    <div class="props">${props||'<div class="empty">The Guests are silent so far. End the tick to hear the first voice.</div>'}</div>
+    ${myA.length?`<div class="myanc">${myA.map(a=>`<span class="tag">Anchor: ${SHORT[0][a.place]} · tick ${a.t}</span>`).join('')}</div>`:''}
   </section>
-  <section class="panel"><h2>Летопись</h2><p class="hint">Сбывшиеся гласы. Из них Ирис учит язык: знак плюс то, что случилось на самом деле.</p><div class="chron">${chron||'<div class="empty">Пока пусто.</div>'}</div></section>
-  <section class="panel"><h2>Словарь Ирис</h2><p class="hint">Уверенных знаков: ${conf}/16. Ирис считает частоты, правило чтения задаёте вы. Гости не отмечают, с какого знака начинается строка. Зачем им точки в ядре?</p>
-    <div class="rule"><label for="rule">Правило чтения:</label><select id="rule"><option value="unknown" ${S.rule==='unknown'?'selected':''}>Перебирать все начала (Ирис не уверена)</option><option value="top" ${S.rule==='top'?'selected':''}>Всегда с верхнего знака, по часовой</option><option value="dots" ${S.rule==='dots'?'selected':''}>Начало задают точки в ядре: 0 — сверху, дальше по часовой</option></select></div>
+  <section class="panel"><h2>Chronicle</h2><p class="hint">Voices that came true. Iris learns the language from them: the sign plus what really happened.</p><div class="chron">${chron||'<div class="empty">Empty so far.</div>'}</div></section>
+  <section class="panel"><h2>Iris’s dictionary</h2><p class="hint">Confident signs: ${conf}/16. Iris counts frequencies; you set the reading rule. The Guests do not mark which sign starts the line. Why the dots in the core?</p>
+    <div class="rule"><label for="rule">Reading rule:</label><select id="rule"><option value="unknown" ${S.rule==='unknown'?'selected':''}>Try every start (Iris is unsure)</option><option value="top" ${S.rule==='top'?'selected':''}>Always from the top sign, clockwise</option><option value="dots" ${S.rule==='dots'?'selected':''}>The dots in the core set the start: 0 is the top, then clockwise</option></select></div>
     <div class="dict-wrap">${dict}</div>${ask}
   </section></div>`;
 }
 function voteCard(){
   const key=S.frag[S.keyHolder],keyIn=key.st==='scroll',n=S.frag.filter(f=>f.st==='scroll').length;
   let read='';
-  if(keyIn){const g=readGlyph(key.forms,key.dots).sl[1];read=`Ирис читает слот «Действие» ключевого знака: <b>${g.m===0?'Дар':g.m===1?'Буря, то есть оружие':MEAN[1][g.m]+' (непонятно)'}</b> · уверенность ${Math.round(g.conf*100)}%`}
-  return `<section class="panel vote"><h2>Голосование: дар или оружие</h2>
+  if(keyIn){const g=readGlyph(key.forms,key.dots).sl[1];read=`Iris reads the Action slot of the key sign: <b>${g.m===0?'Gift':g.m===1?'Storm, so a weapon':MEAN[1][g.m]+' (unclear)'}</b> · confidence ${Math.round(g.conf*100)}%`}
+  return `<section class="panel vote"><h2>Vote: gift or weapon</h2>
   <div class="frag">${keyIn?glyph(key.forms,key.dots,104,{key:true}):'<div class="slot"><div class="q">?</div></div>'}<div>
-  <p>В Свитке ${n}/6 фрагментов. ${keyIn?read:'Ключевой знак не внесён, кланы будут голосовать вслепую.'}</p>
-  <p class="hint">Принять дар, если это оружие, — катастрофа для всех. Отвергнуть дар — Гости уйдут ни с чем. Нужно 4 голоса из 6.</p>
-  <div class="row"><button class="btn primary" data-a="vote" data-v="1">Принять</button><button class="btn" data-a="vote" data-v="0">Отвергнуть</button></div></div></div></section>`;
+  <p>The Scroll holds ${n}/6 fragments. ${keyIn?read:'The key sign is not in, so the clans will vote blind.'}</p>
+  <p class="hint">Accepting a weapon is a catastrophe for everyone. Refusing a gift sends the Guests away with nothing. It takes 4 votes of 6.</p>
+  <div class="row"><button class="btn primary" data-a="vote" data-v="1">Accept</button><button class="btn" data-a="vote" data-v="0">Refuse</button></div></div></div></section>`;
 }
 function colMemory(){
   const f=S.frag[0];
   let fr=`<div class="frag">${glyph(f.forms,f.dots,88,{key:f.key})}<div>`;
-  if(f.key){const g=readGlyph(f.forms,f.dots).sl[1];fr+=`<p class="keyflag">У вас ключевой знак.</p><p>Ирис читает «Действие» как «${MEAN[1][g.m]}» (${Math.round(g.conf*100)}%).</p>`}
+  if(f.key){const g=readGlyph(f.forms,f.dots).sl[1];fr+=`<p class="keyflag">You hold the key sign.</p><p>Iris reads the Action as “${MEAN[1][g.m]}” (${Math.round(g.conf*100)}%).</p>`}
   if(f.st==='held'){const pm=S.mem.find(m=>m.kind==='promise');
-    fr+=`<p>Личный приз — ${S.V[0]} шёлка, если удержите фрагмент до тика ${S.tV[0]}. Тогда фрагмент погаснет. Если внесёте, получите долю дара (40), когда Свиток примут.</p>${pm?`<p class="hint">Ирис внесёт фрагмент на тике ${pm.data.by}: она помнит обещание ${NAMES[pm.about]}.</p>`:''}<button class="btn primary sm" data-a="contribute" ${S.phase==='play'&&S.tick<=DEADLINE?'':'disabled'}>Внести в Свиток</button>`}
-  else if(f.st==='scroll')fr+=`<p>Внесён на тике ${f.at}.</p>`;
-  else fr+='<p>Погас. Приз забран, этой части послания больше нет.</p>';
+    fr+=`<p>Personal prize: ${S.V[0]} silk if you hold the fragment until tick ${S.tV[0]}. The fragment then goes dark. If you contribute it, you get a share of the gift (40) when the Scroll is accepted.</p>${pm?`<p class="hint">Iris contributes the fragment at tick ${pm.data.by}: she remembers the promise to ${NAMES[pm.about]}.</p>`:''}<button class="btn primary sm" data-a="contribute" ${S.phase==='play'&&S.tick<=DEADLINE?'':'disabled'}>Contribute to the Scroll</button>`}
+  else if(f.st==='scroll')fr+=`<p>Contributed at tick ${f.at}.</p>`;
+  else fr+='<p>Dark. The prize is taken; this part of the message is gone.</p>';
   fr+='</div></div>';
   const keyAvail=S.isolated[2]&&!S.pepelKeyKnown&&S.phase==='play';
   const conf=confidentCells();
   const mems=S.mem.map(m=>{
     const confirm=S.ui.forget===m.id;
     const forKey=S.ui.keyMode&&m.w>=3;
-    return `<div class="mem k-${m.kind}"><div class="mem-top"><span class="mem-t">${esc(m.text)}</span><span class="w" title="вес ${m.w}">${'<i></i>'.repeat(m.w)}</span></div><div class="mem-e">${effectText(m)}</div>
-    ${confirm?`<div class="confirm"><span>${S.ui.keyMode?'Забыть ради Ключа Пепла?':`Забыть? Видение: ${m.w} ${m.w===1?'будущий знак':'будущих знака'}.`} Осколок уйдёт на торги.</span><button class="btn sm primary" data-a="forget-yes" data-id="${m.id}">Забыть</button><button class="btn sm ghost" data-a="forget-no">Отмена</button></div>`:
-    `<div class="row">${S.ui.keyMode?(forKey?`<button class="btn sm primary" data-a="forget" data-id="${m.id}" ${S.ap<1?'disabled':''}>Забыть ради Ключа</button>`:''):`<button class="btn sm" data-a="forget" data-id="${m.id}" ${S.ap<1||S.phase!=='play'?'disabled':''}>Забыть → видение</button>`}</div>`}</div>`}).join('');
+    return `<div class="mem k-${m.kind}"><div class="mem-top"><span class="mem-t">${esc(m.text)}</span><span class="w" title="weight ${m.w}">${'<i></i>'.repeat(m.w)}</span></div><div class="mem-e">${effectText(m)}</div>
+    ${confirm?`<div class="confirm"><span>${S.ui.keyMode?'Forget it for Ash’s Key?':`Forget it? Vision: ${m.w} ${m.w===1?'future sign':'future signs'}.`} The shard goes to auction.</span><button class="btn sm primary" data-a="forget-yes" data-id="${m.id}">Forget</button><button class="btn sm ghost" data-a="forget-no">Cancel</button></div>`:
+    `<div class="row">${S.ui.keyMode?(forKey?`<button class="btn sm primary" data-a="forget" data-id="${m.id}" ${S.ap<1?'disabled':''}>Forget for the Key</button>`:''):`<button class="btn sm" data-a="forget" data-id="${m.id}" ${S.ap<1||S.phase!=='play'?'disabled':''}>Forget → vision</button>`}</div>`}</div>`}).join('');
   let keybox='';
   if(keyAvail){const ok=conf>=8,heavy=S.mem.some(m=>m.w>=3);
-    keybox=`<div class="keybox"><b>Пепел закрылся.</b> Его Ключ зафиксирован в контракте с первого тика. Ирис может увидеть его в видении, если хорошо знает язык. ${ok?'':`Нужно 8 уверенных знаков в словаре, сейчас ${conf}.`}${ok&&!heavy?' Нужно воспоминание весом от 3.':''}
-    <div class="row"><button class="btn sm ${S.ui.keyMode?'':'primary'}" data-a="keymode" ${ok&&heavy&&S.ap>=1?'':'disabled'}>${S.ui.keyMode?'Отменить выбор':'Выбрать, что забыть ради Ключа'}</button></div></div>`}
-  if(S.pepelKeyKnown&&S.isolated[2]&&S.phase==='play')keybox=`<div class="keybox"><span class="lbl">Ключ Пепла из видения</span><span class="phrase">«${esc(S.pepelKey.phrase)}»</span><span class="mono">sha256(фраза‖соль) → ${short(sha256(S.pepelKey.phrase+S.pepelKey.salt))} · в контракте ${short(S.pepelKey.hash)}</span><div class="row"><button class="btn sm primary" data-a="speak" ${S.ap<1?'disabled':''}>Произнести Ключ Пеплу · 1 внимание</button></div></div>`;
-  const offers=S.offers.map(o=>`<div class="offer"><div>${offerText(o)}</div><div class="row"><button class="btn sm primary" data-a="accept" data-id="${o.id}" ${S.phase!=='play'?'disabled':''}>Принять</button><button class="btn sm ghost" data-a="decline" data-id="${o.id}">Отклонить</button></div></div>`).join('');
+    keybox=`<div class="keybox"><b>Ash has shut himself away.</b> His Key has been committed in the contract since the first tick. Iris can see it in a vision if she knows the language well. ${ok?'':`It takes 8 confident signs in the dictionary; now ${conf}.`}${ok&&!heavy?' It takes a memory of weight 3 or more.':''}
+    <div class="row"><button class="btn sm ${S.ui.keyMode?'':'primary'}" data-a="keymode" ${ok&&heavy&&S.ap>=1?'':'disabled'}>${S.ui.keyMode?'Cancel the choice':'Choose what to forget for the Key'}</button></div></div>`}
+  if(S.pepelKeyKnown&&S.isolated[2]&&S.phase==='play')keybox=`<div class="keybox"><span class="lbl">Ash’s Key from the vision</span><span class="phrase">“${esc(S.pepelKey.phrase)}”</span><span class="mono">sha256(phrase‖salt) → ${short(sha256(S.pepelKey.phrase+S.pepelKey.salt))} · in the contract ${short(S.pepelKey.hash)}</span><div class="row"><button class="btn sm primary" data-a="speak" ${S.ap<1?'disabled':''}>Speak the Key to Ash · 1 attention</button></div></div>`;
+  const offers=S.offers.map(o=>`<div class="offer"><div>${offerText(o)}</div><div class="row"><button class="btn sm primary" data-a="accept" data-id="${o.id}" ${S.phase!=='play'?'disabled':''}>Accept</button><button class="btn sm ghost" data-a="decline" data-id="${o.id}">Decline</button></div></div>`).join('');
   const shards=S.shards.map(sh=>{const top=topBid(sh),mine=sh.from===0;
-    return `<div class="shard"><div><b>${mine?'Осколок Ирис':'Осколок '+NAMES[sh.from]}:</b> ${esc(sh.title)}</div>
-    <div class="meta">${sh.done?esc(sh.result):`${top?`Ставка: ${top.amt} (${NAMES[top.c]})`:'Ставок нет'} · торги до тика ${sh.exp}`}</div>
-    ${!sh.done&&!mine?`<div class="row"><button class="btn sm" data-a="bid" data-id="${sh.id}" ${S.silk[0]<(top?top.amt:0)+3||S.phase!=='play'||(top&&top.c===0)?'disabled':''}>${top&&top.c===0?'Ваша ставка лидирует':`Ставка ${(top?top.amt:0)+3}`}</button></div>`:''}</div>`}).join('');
+    return `<div class="shard"><div><b>${mine?'Iris’s shard':NAMES[sh.from]+'’s shard'}:</b> ${esc(sh.title)}</div>
+    <div class="meta">${sh.done?esc(sh.result):`${top?`Bid: ${top.amt} (${NAMES[top.c]})`:'No bids'} · auction until tick ${sh.exp}`}</div>
+    ${!sh.done&&!mine?`<div class="row"><button class="btn sm" data-a="bid" data-id="${sh.id}" ${S.silk[0]<(top?top.amt:0)+3||S.phase!=='play'||(top&&top.c===0)?'disabled':''}>${top&&top.c===0?'Your bid leads':`Bid ${(top?top.amt:0)+3}`}</button></div>`:''}</div>`}).join('');
   return `<div class="col memory">
-  <section class="panel"><h2>Ваш фрагмент</h2>${fr}</section>
-  <section class="panel"><h2>Память Ирис</h2><p class="hint">Память — это характер агента. Видение стоит воспоминания: Ирис забывает его навсегда, и оно уходит с молотка.</p><div class="mems">${mems||'<div class="empty">Ирис больше ничего не помнит.</div>'}</div>${keybox}</section>
-  <section class="panel"><h2>Предложения</h2><div class="offers">${offers||'<div class="empty">В этом тике никто ничего не предлагает.</div>'}</div></section>
-  <section class="panel"><h2>Осколки памяти</h2><p class="hint">Забытое продаётся. Купивший помнит это вместо вас.</p><div class="shards">${shards||'<div class="empty">Торгов нет.</div>'}</div></section>
-  <section class="panel"><h2>Лента</h2><div class="feed">${S.feed.map(l=>`<div class="${l.cls}">${esc(l.text)}</div>`).join('')}</div></section>
+  <section class="panel"><h2>Your fragment</h2>${fr}</section>
+  <section class="panel"><h2>Iris’s memory</h2><p class="hint">Memory is the agent’s character. A vision costs a memory: Iris forgets it forever, and it goes under the hammer.</p><div class="mems">${mems||'<div class="empty">Iris remembers nothing more.</div>'}</div>${keybox}</section>
+  <section class="panel"><h2>Offers</h2><div class="offers">${offers||'<div class="empty">Nobody offers anything this tick.</div>'}</div></section>
+  <section class="panel"><h2>Memory shards</h2><p class="hint">What is forgotten is sold. The buyer remembers it instead of you.</p><div class="shards">${shards||'<div class="empty">No auctions.</div>'}</div></section>
+  <section class="panel"><h2>Feed</h2><div class="feed">${S.feed.map(l=>`<div class="${l.cls}">${esc(l.text)}</div>`).join('')}</div></section>
   </div>`;
 }
 function bottomBar(){
   if(S.phase!=='play')return '';
-  const hint=S.ap>0?`Осталось внимания: ${S.ap}. Якорь, вопрос Гостям, видение, примирение.`:'Внимание исчерпано. Завершите тик.';
-  return `<div class="bottom"><div class="bottom-in"><p>${hint}</p><button class="btn primary big" data-a="end">Завершить тик ${S.tick} →</button></div></div>`;
+  const hint=S.ap>0?`Attention left: ${S.ap}. Anchor, ask the Guests, vision, reconciliation.`:'No attention left. End the tick.';
+  return `<div class="bottom"><div class="bottom-in"><p>${hint}</p><button class="btn primary big" data-a="end">End tick ${S.tick} →</button></div></div>`;
 }
 function introCard(first){
   return `<div class="ov"><div class="card">
   <div class="intro-glyphs">${glyph([0,1,2,3],1,56)}${glyph([2,0,3,1],3,56)}${glyph([1,3,0,2],0,56,{key:true})}</div>
   <h1>Forget to Foresee</h1>
-  <p class="lead">Над миром агентов появились Раковины. Гости говорят круглыми знаками. Ваш агент Ирис — NFT с кошельком и памятью. Ей нужно выучить язык, собрать послание с пятью другими кланами и решить, дар это или оружие.</p>
+  <p class="lead">Shells have appeared over the world of agents. The Guests speak in round signs. Your agent Iris is an NFT with a wallet and a memory. She has to learn the language, assemble the message with five other clans and decide whether it is a gift or a weapon.</p>
   <ol>
-    <li><b>Язык.</b> Знак — это кольцо из четырёх слотов: где, что, какой силы, через сколько тиков. Ирис учится по летописи. Вы задаёте правило чтения и спрашиваете Гостей.</li>
-    <li><b>Якоря.</b> Ставьте 10 шёлка на Раковину и тик. Дар делят те, кто поставил, причём ранние получают больше. Буря сжигает залог.</li>
-    <li><b>Цена памяти.</b> Видение показывает будущие гласы раньше всех, но Ирис забывает за него воспоминание навсегда. Забытое продаётся с молотка: враг может выкупить ваш долг или узнать, что вы забыли обещание.</li>
-    <li><b>Послание.</b> Внесите фрагмент в Свиток или удержите его ради личного приза. Ключевой знак решает исход. На тике ${TICKS} — голосование.</li>
-    <li><b>Напряжение.</b> Обманы и разрывы его поднимают. На 100 Раковины улетают, и проигрывают все.</li>
+    <li><b>Language.</b> A sign is a ring of four slots: where, what, how strong, in how many ticks. Iris learns from the chronicle. You set the reading rule and ask the Guests.</li>
+    <li><b>Anchors.</b> Stake 10 silk on a Shell and a tick. A Gift is shared by those who staked, and the early ones get more. A Storm burns the stake.</li>
+    <li><b>The Price of Memory.</b> A vision shows future voices before anyone else, but Iris forgets a memory for it forever. What is forgotten goes under the hammer: an enemy can buy your debt or learn that you forgot a promise.</li>
+    <li><b>The message.</b> Contribute your fragment to the Scroll or hold it for a personal prize. The key sign decides the outcome. At tick ${TICKS} comes the vote.</li>
+    <li><b>Tension.</b> Deceit and broken ties raise it. At 100 the Shells fly away, and everyone loses.</li>
   </ol>
-  ${first?`<div class="keyin"><label class="lbl" for="key-in">Ваш Ключ: фраза, которую знаете только вы</label><input type="text" id="key-in" maxlength="60" placeholder="${DEFAULT_PHRASE}"><span class="hint" style="margin:0">В контракт уйдёт только её хэш. Ключ ещё прозвучит в конце сезона.</span></div>
-  <button class="btn primary big" data-a="start">Начать сезон</button>`:`<button class="btn primary big" data-a="rules-close">Вернуться к игре</button>`}
-  <p class="hint" style="margin-top:12px">Сезон ${S.seed} · события зафиксированы в корне ${short(S.root)}</p>
+  ${first?`<div class="keyin"><label class="lbl" for="key-in">Your Key: a phrase only you know</label><input type="text" id="key-in" maxlength="60" placeholder="${DEFAULT_PHRASE}"><span class="hint" style="margin:0">Only its hash goes into the contract. The Key will be heard again at the end of the season.</span></div>
+  <button class="btn primary big" data-a="start">Start season</button>`:`<button class="btn primary big" data-a="rules-close">Back to the game</button>`}
+  <p class="hint" style="margin-top:12px">Season ${S.seed} · events committed in the root ${short(S.root)}</p>
   </div></div>`;
 }
 function endCard(){
-  const O={gift:['Дар принят','Гости оставили язык. Ирис может читать его и дальше.'],weapon:['Оружие принято','Раковины закрылись. Шёлк всех кланов сгорел.'],survived:['Оружие отвергнуто','Мир выжил. Гости ушли, но внёсшие фрагменты получили по 15.'],lost:['Дар отвергнут','Это был дар, но кланы побоялись. Гости ушли, язык умер.'],gone:['Раковины улетели','Напряжение достигло 100. Мир разорвал себя раньше, чем прочёл послание.']}[S.outcome];
+  const O={gift:['Gift accepted','The Guests left their language behind. Iris can keep reading it.'],weapon:['Weapon accepted','The Shells closed. Every clan’s silk burned.'],survived:['Weapon refused','The world survived. The Guests left, but those who contributed fragments got 15 each.'],lost:['Gift refused','It was a gift, but the clans were afraid. The Guests left; the language died.'],gone:['The Shells flew away','Tension reached 100. The world tore itself apart before it read the message.']}[S.outcome];
   const rank=NAMES.map((n,i)=>({n,i,s:S.silk[i]})).sort((a,b)=>b.s-a.s);
-  const truth=S.truthGift?'дар':'оружие';
+  const truth=S.truthGift?'a gift':'a weapon';
   let epi='';
   if(S.pKey&&S.outcome!=='weapon'&&S.outcome!=='gone'){
     const speaker=S.wild?S.firstBuyer:5;
-    if(speaker==null)epi=`<div class="epi">Ирис забыла ваше Первое слово, и его никто не купил. Ключ больше никто не помнит.</div>`;
+    if(speaker==null)epi=`<div class="epi">Iris forgot your First Word, and nobody bought it. Nobody remembers the Key any more.</div>`;
     else{const h=sha256(S.pKey.phrase+S.pKey.salt);
-      epi=`<div class="epi"><span class="lbl">${speaker===5?'Иней, мастер языка, увидел ваш Ключ в последнем видении':`${NAMES[speaker]} купил ваше Первое слово и произносит его`}</span><div class="phrase" style="margin:6px 0">«${esc(S.pKey.phrase)}»</div><span class="mono">sha256(фраза‖соль) = ${short(h)} · коммит тика 0: ${short(S.pKey.hash)} ${h===S.pKey.hash?'✓ совпадает':'✗'}</span></div>`}}
-  const votes=S.votes?`<p class="hint">Голоса: ${S.votes.map((v,i)=>`${NAMES[i]} — ${v?'за':'против'}`).join(', ')}. На самом деле это был ${truth}.</p>`:`<p class="hint">На самом деле послание было: ${truth}.</p>`;
-  const heirTxt=S.heir==='heir'?'Ирис забыла всё. Наследник получил её словарь, но не биографию. Гости запомнят этот выбор во втором сезоне.':S.heir==='keep'?'Ирис сохранила память. Её биография остаётся в NFT вместе со всеми, кто ей должен и кому должна она.':'';
+      epi=`<div class="epi"><span class="lbl">${speaker===5?'Frost, the master of the language, saw your Key in a last vision':`${NAMES[speaker]} bought your First Word and speaks it`}</span><div class="phrase" style="margin:6px 0">“${esc(S.pKey.phrase)}”</div><span class="mono">sha256(phrase‖salt) = ${short(h)} · tick 0 commitment: ${short(S.pKey.hash)} ${h===S.pKey.hash?'✓ matches':'✗'}</span></div>`}}
+  const votes=S.votes?`<p class="hint">Votes: ${S.votes.map((v,i)=>`${NAMES[i]}: ${v?'for':'against'}`).join(', ')}. In truth it was ${truth}.</p>`:`<p class="hint">In truth the message was ${truth}.</p>`;
+  const heirTxt=S.heir==='heir'?'Iris forgot everything. The Heir received her dictionary but not her biography. The Guests will remember this choice in the second season.':S.heir==='keep'?'Iris kept her memory. Her biography stays in the NFT, along with everyone who owes her and everyone she owes.':'';
   return `<div class="ov"><div class="card outcome"><h1>${O[0]}</h1><p class="lead">${O[1]}</p>${votes}
-  <table class="rank">${rank.map((r,k)=>`<tr class="${r.i===0?'me':''}"><td>${k+1}</td><td>${r.n}${r.i===0?' (вы)':''}</td><td class="n">${r.s} шёлка</td></tr>`).join('')}</table>
+  <table class="rank">${rank.map((r,k)=>`<tr class="${r.i===0?'me':''}"><td>${k+1}</td><td>${r.n}${r.i===0?' (you)':''}</td><td class="n">${r.s} silk</td></tr>`).join('')}</table>
   ${epi}
-  <div class="nft">${glyph(S.frag[0].forms,S.frag[0].dots,92,{key:S.frag[0].key})}<div style="min-width:0"><span class="lbl">NFT · RAEN #${String(S.seed%10000).padStart(4,'0')}</span><h3>Ирис</h3>
-    <div class="mono">Знание языка: ${Math.round(trueMastery()*100)}% · видений: ${S.visions.length} · связей: ${5-S.broken.filter(k=>k.startsWith('0-')).length}/5</div>
-    <ul>${S.mem.map(m=>`<li>помнит: ${esc(m.text)}</li>`).join('')}${S.forgot.map(f=>`<li>забыла: ${esc(f.text)} — ${esc(f.fate)}</li>`).join('')}</ul>
+  <div class="nft">${glyph(S.frag[0].forms,S.frag[0].dots,92,{key:S.frag[0].key})}<div style="min-width:0"><span class="lbl">NFT · RAEN #${String(S.seed%10000).padStart(4,'0')}</span><h3>Iris</h3>
+    <div class="mono">Language mastery: ${Math.round(trueMastery()*100)}% · visions: ${S.visions.length} · ties: ${5-S.broken.filter(k=>k.startsWith('0-')).length}/5</div>
+    <ul>${S.mem.map(m=>`<li>remembers: ${esc(m.text)}</li>`).join('')}${S.forgot.map(f=>`<li>forgot: ${esc(f.text)} — ${esc(f.fate)}</li>`).join('')}</ul>
     ${heirTxt?`<p class="hint" style="margin:6px 0 0">${heirTxt}</p>`:''}</div></div>
-  ${S.outcome==='gift'&&!S.heir?`<p>Последняя просьба Гостей: чтобы язык остался, агент должен забыть всё и передать словарь Наследнику.</p><div class="row" style="margin-bottom:12px"><button class="btn primary" data-a="heir" data-v="heir">Забыть всё ради Наследника</button><button class="btn" data-a="heir" data-v="keep">Сохранить память</button></div>`:''}
-  <button class="btn primary big" data-a="newgame">Новый сезон</button></div></div>`;
+  ${S.outcome==='gift'&&!S.heir?`<p>The Guests’ last request: for the language to stay, the agent must forget everything and pass the dictionary to an Heir.</p><div class="row" style="margin-bottom:12px"><button class="btn primary" data-a="heir" data-v="heir">Forget everything for the Heir</button><button class="btn" data-a="heir" data-v="keep">Keep the memory</button></div>`:''}
+  <button class="btn primary big" data-a="newgame">New season</button></div></div>`;
 }
 function render(){
   const app=document.getElementById('app');
@@ -856,7 +857,7 @@ function render(){
 
 /* ===== actions ===== */
 const ACT={
-  start(){const v=(document.getElementById('key-in')?.value||'').trim()||DEFAULT_PHRASE;const salt=hex(8);S.pKey={phrase:v,salt,hash:sha256(v+salt)};S.phase=S.tick===TICKS?'vote':'play';log(`Ключ владельца закоммичен: ${short(S.pKey.hash)}.`,'key')},
+  start(){const v=(document.getElementById('key-in')?.value||'').trim()||DEFAULT_PHRASE;const salt=hex(8);S.pKey={phrase:v,salt,hash:sha256(v+salt)};S.phase=S.tick===TICKS?'vote':'play';log(`Owner’s Key committed: ${short(S.pKey.hash)}.`,'key')},
   rules(){S.ui.rules=true},
   'rules-close'(){S.ui.rules=false},
   newgame(){newSeason((Math.random()*1e9)|0)},
@@ -867,11 +868,11 @@ const ACT={
   ask(){
     const [s,f]=S.ui.sel,m=+document.getElementById('ask-m').value;if(S.ap<1||S.silk[0]<5)return;
     S.ap--;S.silk[0]-=5;
-    if(S.perm[s][f]===m){S.pins[s+'_'+f]={m,src:'Гости'};log(`Гости: да, «${FORMS[f]}» в слоте «${SLOTS[s]}» значит «${MEAN[s][m]}».`,'good');
+    if(S.perm[s][f]===m){S.pins[s+'_'+f]={m,src:'the Guests'};log(`The Guests: yes, “${FORMS[f]}” in the ${SLOTS[s]} slot means “${MEAN[s][m]}”.`,'good');
       const b=S.bought.find(x=>x.s===s&&x.f===f&&!x.honest&&!x.revealed);if(b)revealLie(b)}
-    else{const k=s+'_'+f;(S.no[k]=S.no[k]||[]).push(m);log(`Гости: нет, это не «${MEAN[s][m]}».`,'muted');
+    else{const k=s+'_'+f;(S.no[k]=S.no[k]||[]).push(m);log(`The Guests: no, it is not “${MEAN[s][m]}”.`,'muted');
       const b=S.bought.find(x=>x.s===s&&x.f===f&&x.m===m&&!x.revealed);if(b)revealLie(b);
-      const left=[0,1,2,3].filter(x=>!S.no[k].includes(x));if(left.length===1)S.pins[k]={m:left[0],src:'Гости'}}
+      const left=[0,1,2,3].filter(x=>!S.no[k].includes(x));if(left.length===1)S.pins[k]={m:left[0],src:'the Guests'}}
   },
   forget(d){S.ui.forget=+d.id},
   'forget-no'(){S.ui.forget=null},
@@ -880,16 +881,16 @@ const ACT={
   speak(){
     if(S.ap<1)return;S.ap--;
     const h=sha256(S.pepelKey.phrase+S.pepelKey.salt);
-    if(h!==S.pepelKey.hash)return log('Ключ не совпал с коммитом.','bad');
-    log(`Ирис произносит: «${S.pepelKey.phrase}». Хэш совпал с коммитом Пепла ✓`,'key');
+    if(h!==S.pepelKey.hash)return log('The Key did not match the commitment.','bad');
+    log(`Iris speaks: “${S.pepelKey.phrase}”. The hash matches Ash’s commitment ✓`,'key');
     S.isolated[2]=false;
     for(const j of [0,1,3,4,5])if(isBroken(2,j)){restoreEdge(2,j);S.T[2][j]=Math.max(S.T[2][j],45)}
     S.T[2][0]=90;
-    log('Пепел возвращается. «Кто-то знал мои слова. Значит, будущее можно прочесть».','good');
+    log('Ash returns. “Someone knew my words. So the future can be read.”','good');
     if(S.frag[2].st==='held'&&S.tick<DEADLINE)S.aiPact[2]=S.tick+1;
   },
-  mend(d){const j=+d.j;if(S.ap<1||S.silk[0]<10||hasBetrayal(j))return;S.ap--;S.silk[0]-=10;S.silk[j]+=10;restoreEdge(0,j);S.T[0][j]=Math.max(S.T[0][j],40);S.T[j][0]=Math.max(S.T[j][0],35);log(`Ирис и ${NAMES[j]} снова разговаривают.`,'good')},
-  mediate(d){const i=+d.i,j=+d.j;if(S.ap<1||S.silk[0]<15)return;S.ap--;S.silk[0]-=15;restoreEdge(i,j);S.T[i][j]=S.T[j][i]=45;S.T[i][0]+=5;S.T[j][0]+=5;log(`Ирис помирила ${NAMES[i]} и ${NAMES[j]}.`,'good')},
+  mend(d){const j=+d.j;if(S.ap<1||S.silk[0]<10||hasBetrayal(j))return;S.ap--;S.silk[0]-=10;S.silk[j]+=10;restoreEdge(0,j);S.T[0][j]=Math.max(S.T[0][j],40);S.T[j][0]=Math.max(S.T[j][0],35);log(`Iris and ${NAMES[j]} are speaking again.`,'good')},
+  mediate(d){const i=+d.i,j=+d.j;if(S.ap<1||S.silk[0]<15)return;S.ap--;S.silk[0]-=15;restoreEdge(i,j);S.T[i][j]=S.T[j][i]=45;S.T[i][0]+=5;S.T[j][0]+=5;log(`Iris reconciled ${NAMES[i]} and ${NAMES[j]}.`,'good')},
   accept(d){const o=S.offers.find(x=>x.id===+d.id);if(o)acceptOffer(o)},
   decline(d){const o=S.offers.find(x=>x.id===+d.id);if(o){S.offers=S.offers.filter(x=>x!==o);S.T[o.from][0]=clamp(S.T[o.from][0]-2,0,100)}},
   bid(d){
@@ -897,9 +898,9 @@ const ACT={
     const top=topBid(sh),amt=(top?top.amt:0)+3;if(S.silk[0]<amt)return;
     sh.bids=sh.bids.filter(b=>b.c!==0);sh.bids.push({c:0,amt});
     let best=null;for(const [c,v] of Object.entries(sh.vals||{}))if(v>=amt+2&&S.silk[+c]>=amt+2&&(!best||v>best.v))best={c:+c,v};
-    if(best){sh.bids.push({c:best.c,amt:amt+2});log(`${NAMES[best.c]} перебивает вашу ставку: ${amt+2}.`,'muted')}
+    if(best){sh.bids.push({c:best.c,amt:amt+2});log(`${NAMES[best.c]} outbids you: ${amt+2}.`,'muted')}
   },
-  contribute(){if(S.tick<=DEADLINE)contribute(0,'Ирис вносит ваш фрагмент в Свиток.')},
+  contribute(){if(S.tick<=DEADLINE)contribute(0,'Iris places your fragment in the Scroll.')},
   vote(d){castVote(d.v==='1')},
   heir(d){S.heir=d.v}
 };
@@ -907,7 +908,7 @@ function placeAnchor(p,t){
   if(S.ap<1||S.silk[0]<10||t<S.tick||t>TICKS)return;
   if(S.anchors.some(a=>a.c===0&&a.place===p&&a.t===t))return;
   S.ap--;S.silk[0]-=10;S.anchors.push({c:0,place:p,t,at:S.tick,stake:10});
-  log(`Якорь: Раковина ${SHORT[0][p]}, тик ${t}.`);
+  log(`Anchor: Shell ${SHORT[0][p]}, tick ${t}.`);
 }
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b||b.disabled)return;

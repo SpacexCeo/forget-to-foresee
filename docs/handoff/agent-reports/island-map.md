@@ -11,7 +11,7 @@ over the island cheapen the game; place names belong on a map. Doc: `docs/map.md
 | Map model | `game/src/play/map.js` (pure, no DOM/three): projection (±62 m → 400-unit square, +Z at the bottom), geometry from `scenes/layout.js` (platforms, bridges, anchor rings, Shells, the Scroll), 17 places with room routes, Shell state from the observation (quiet / waiting with the count / inside, staked trials), route decisions per mode and zone, goal and Iris markers, the view model. |
 | Map panel | `game/src/play/map-ui.js`: self-contained (own styles, `.wh-root` tokens), SVG chart drawn to look hand-made (paper grain, cliff hatching, pillar shadows, cloud banks, Shell coil glyphs, Scroll medallion with six sectors, corner flourishes, compass rose, 10 m scale bar), clickable places with tooltips and keyboard access (Tab trap, Enter/Space), Iris's heading arrow, pulsing goal marker, agent dots, legend, hint; N / Esc / scrim / close button; a round 48 px tap target on coarse pointers (bottom-left, mirrors the run button). |
 | Wiring | `game/src/play/game.js`: `play.map`, `handleKey` (N toggles; with the map open Esc closes and any other panel key closes it first), `onRoute` → `walkTo` (the G route) or `fly(n)` in the hub, one-panel-at-a-time both ways, dev-label sync. `game/src/main.js`: `KeyN` in `PLAY_KEYS` (one line). `handlers.onMap` passed to the world HUD for Task F. |
-| Strings | `map.*` (24 keys) in `game/src/play/locales/{en,ru,uk,it,zh}.js`, translated by me (uk Мушля / ru Раковина / it Conchiglia / zh 贝壳, matching the existing hub terms). |
+| Strings | `map.*` (24 keys) in `game/src/play/locales/{en,ru,uk,it,zh}.js`, translated by me (the uk and ru Shell terms from the locale files, it Conchiglia, zh 贝壳, matching the existing hub terms). |
 | Tests | `game/tests/client/map.test.mjs`, 9 tests (projection and orientation, geometry, places and routes reachable over the walk graph from the spawn, Shell states on a real judge-seed season through fly and stake, route decisions, goal and Iris markers, the view model, five-locale strings, the label default). `npm test`: 301/301. `npm run build`: green. |
 | Docs | `docs/map.md` (what, how, style, before/after table, open items), `docs/map/*.jpg` (before/after at 1280×800, 1920×1080, 390×844; five locales at 390; low tier + reduced motion), decisions row, README (label lines, N in Controls), requests 7 (Task F: hotbar button) and 8 (Task G: `KeyN` in `WORLD_KEYS`) in `docs/collab-requests.md`. |
 
@@ -31,7 +31,7 @@ walk-desktop: click Shell II → walking route true, zone island; click the Scro
 walk-desktop: F3 → labels visible 18; F3 off → 0
 dev-labels: ?dev=1 labels visible 18 of 18
 hub-phone: tap target display flex; tap opens the map; panel 374×482 fits; close button closes
-hub-desktop-uk: Мапа архіпелагу | Ірис | Сіль | Попіл | Мох | Бурштин | Іній
+hub-desktop-uk: the map title and the six clan names in Ukrainian (`map.*`, `agent.*` in the uk locale)
 console errors: 0 in every session
 ```
 
@@ -41,7 +41,7 @@ Run 2, screenshots and layout (after the visual pass; `docs/map/*.jpg`, 1× pixe
 before: ?dev=1&view=overview at 1280×800, 1920×1080, 390×844 (the old look: labels over the island)
 after 1280x800 / 1920x1080 / 390x844: map open true; labels outside the drawing: none
 after 1280x800: camp label 21px, caption 17px, hint 16.9px · after 390x844: camp label 14px, caption 11px, hint 15.5px
-locale uk/ru/it/zh at 390x844: open true, titles Мапа архіпелагу / Карта архипелага / Mappa dell’arcipelago / 群岛地图, labels outside: none
+locale uk/ru/it/zh at 390x844: open true, titles `map.title` in uk / ru / Mappa dell’arcipelago / 群岛地图, labels outside: none
 label overlaps (zh, 390 wide): only name × its own caption pairs (by design), no two places overlap
 low tier + reduced motion: map open true, goal animation none, backdrop none
 console errors+warnings: 0 in every session

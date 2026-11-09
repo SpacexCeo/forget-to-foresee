@@ -235,7 +235,7 @@ The lead handed over the spots behind request 11 (now `hub.js`, `interactions.js
 - `game.js`: the first verified proof writes `ftf.firstloop.v1` on the device; the next start passes `skipOnboarding`
   to the session, so a returning player sees no first-loop goals. `?demo=judge` and `?hints=reset` ignore the flag.
 - Labels: `opt.anchorTick` / `opt.anchorVision` say **trial** in all five languages; the Delay meanings say *in N
-  trials* in en / uk / it / zh. Russian keeps the engine's own words (*через 2*): the Russian adapter renders must
+  trials* in en / uk / it / zh. Russian keeps the engine's own words (*in 2*, worded in Russian): the Russian adapter renders must
   match the frozen prototype text byte for byte (`tests/ui-i18n.test.mjs`). The goal quotes follow.
 - README judge table: step 3 is now **Press E** (the menu reads *E Anchor here for trial 3 · 2 Anchor here for trial 2
   (as your reading says) · …*); the hub section describes the pre-filled card. Replayed headless on the judge seed:

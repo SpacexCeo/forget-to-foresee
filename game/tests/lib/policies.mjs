@@ -36,7 +36,7 @@ function weakestCell(S, api) {
 
 export const POLICIES = {
   coop(S, api, pr, n) {
-    if (S.phase === 'intro') return { type: 'start', phrase: 'мы читаем вместе' };
+    if (S.phase === 'intro') return { type: 'start', phrase: 'we read together' };
     if (S.phase === 'vote') return { type: 'vote', v: voteByKey(S, api) };
     if (S.phase !== 'play') return null;
     if (S.rule !== 'dots') return { type: 'rule', r: 'dots' };
@@ -80,7 +80,7 @@ export const POLICIES = {
     return null;
   },
   breaks(S, api, pr, n) {
-    if (S.phase === 'intro') return { type: 'start', phrase: 'я забуду' };
+    if (S.phase === 'intro') return { type: 'start', phrase: 'I will forget' };
     if (S.phase === 'vote') return { type: 'vote', v: false };
     if (S.phase !== 'play') return null;
     if (S.tick >= 3 && S.rule !== 'dots') return { type: 'rule', r: 'dots' };

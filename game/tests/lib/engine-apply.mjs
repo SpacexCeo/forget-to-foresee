@@ -1,4 +1,4 @@
-// Maps a recorded intent onto the engine's action API.
+// Maps a recorded intent (tests/fixtures/parity) onto the engine's action API.
 import * as E from '../../src/game/engine.js';
 
 export function applyToEngine(it) {

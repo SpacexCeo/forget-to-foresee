@@ -7,7 +7,7 @@ verified on-chain); this page covers the pieces around it.
 
 ## Deployment status: live on testnet (09.11.2026)
 
-Deployed by worker M with the owner's permission ("деплой в testnet разрешаю"), testnet only, faucet-sponsored accounts,
+Deployed by worker M with the owner's permission ("I allow the testnet deployment"), testnet only, faucet-sponsored accounts,
 refundable storage deposits; keys stay in the deploying machine's `~/.near-credentials`, never in the repository.
 Records (account ids and public transaction hashes only): `contracts/deployments/`.
 

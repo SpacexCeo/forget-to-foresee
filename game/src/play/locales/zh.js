@@ -483,4 +483,10 @@ export default {
   'shard.nft.kind.promise': "承诺",
   'shard.nft.kind.insight': "洞见",
   'shard.nft.kind.lie': "谎言",
+
+  // ---- volume sliders in the scene settings dialog (src/play/audio-settings.js) ----
+  'audio.title': "声音",
+  'audio.master': "总音量",
+  'audio.music': "音乐",
+  'audio.sfx': "音效",
 };

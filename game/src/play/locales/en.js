@@ -485,4 +485,10 @@ export default {
   'shard.nft.kind.promise': "promise",
   'shard.nft.kind.insight': "insight",
   'shard.nft.kind.lie': "lie",
+
+  // ---- volume sliders in the scene settings dialog (src/play/audio-settings.js) ----
+  'audio.title': "Sound",
+  'audio.master': "Master",
+  'audio.music': "Music",
+  'audio.sfx': "Effects",
 };

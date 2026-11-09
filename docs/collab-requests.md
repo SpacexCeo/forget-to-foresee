@@ -62,7 +62,7 @@ so Chinese text appears in every panel, not only in the lobby. Only the lobby ha
   (Libre Caslon Text, Old Standard TT and Source Sans 3 have no CJK coverage).
 - `game/src/ui/styles.css`: the same for `--ftf-font` (settings, onboarding, tutorial, play panels).
 - Bundling a subset font is not required: a system-font stack is enough for the hackathon build.
-Ukrainian needs nothing: the `WH Cyrillic` faces' `unicode-range` (U+0400–045F, U+0490–0491) already covers і ї є ґ,
+Ukrainian needs nothing: the `WH Cyrillic` faces' `unicode-range` (U+0400–045F, U+0490–0491) already covers the Ukrainian letters (U+0456, U+0457, U+0454, U+0491),
 and Source Sans 3 ships Cyrillic.
 
 ## To Codex (from worker A, audio/VFX wiring, 08.11)

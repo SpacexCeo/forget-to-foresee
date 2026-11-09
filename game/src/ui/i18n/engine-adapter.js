@@ -1,7 +1,7 @@
 // Engine → i18n adapter.
-// The engine (frozen for parity with prototype-2d) still writes Russian prose
-// into S.feed, memory texts and shard titles. This layer recognises every one
-// of those templates and turns it into a semantic event {key, args} whose args
+// The engine (frozen for parity with prototype-2d) writes English prose into
+// S.feed, memory texts and shard titles. This layer recognises every one of
+// those templates and turns it into a semantic event {key, args} whose args
 // carry IDs, not words. Rendering then goes through the active locale, so the
 // whole chronicle re-renders when the language changes mid-season.
 // When the engine migrates to emitting {key, args} itself (docs/i18n-migration.md),
@@ -64,107 +64,110 @@ function parseWith(patterns, text) {
 }
 
 /* ---------- templates, copied verbatim from engine.js ---------- */
+// The engine writes English: with the English locale, renderEvent() reproduces each line exactly
+// (log.giftTaken aside, which formats the list of names). A '#suffix' marks a plural variant of a key.
 
 export const LOG_TEMPLATES = {
-  'log.keyCommitted': 'Ключ владельца закоммичен: {hash:text}.',
-  'log.tickStart': '— Тик {tick:int} —',
-  'log.debtRepaid': '{who:agent} вернул долг: +{amount:int} шёлка.',
-  'log.debtDefault': '{who:agent} не вернул долг. Ирис порвала с ним.',
-  'log.claimRepaid': '{debtor:agent} вернул {amount:int} шёлка владельцу осколка: {holder:agent}.',
-  'log.irisKeepsPromise': 'Ирис держит слово перед {who:agent} и вносит фрагмент.',
-  'log.agentKeepsPromise': '{who:agent} держит обещание и вносит фрагмент.',
-  'log.agentBrokePromise': '{who:agent} нарушил обещание.',
-  'log.escrowContribute': 'Янтарь вносит фрагмент: эскроу сработал.',
-  'log.playerContribute': 'Ирис вносит ваш фрагмент в Свиток.',
-  'log.agentContribute': '{who:agent} вносит фрагмент в Свиток.',
-  'log.contribute': '{who:agent} вносит фрагмент.',
-  'log.playerHeldPrize': 'Вы удержали фрагмент и получили {amount:int} шёлка. Ваша часть послания погасла.',
-  'log.agentHeldPrize': '{who:agent} удержал фрагмент ради приза ({amount:int}). Его часть послания погасла.',
+  'log.keyCommitted': 'Owner’s Key committed: {hash:text}.',
+  'log.tickStart': '— Tick {tick:int} —',
+  'log.debtRepaid': '{who:agent} repaid the debt: +{amount:int} silk.',
+  'log.debtDefault': '{who:agent} did not repay the debt. Iris cut ties.',
+  'log.claimRepaid': '{debtor:agent} paid {amount:int} silk to the shard holder, {holder:agent}.',
+  'log.irisKeepsPromise': 'Iris keeps her word to {who:agent} and contributes the fragment.',
+  'log.agentKeepsPromise': '{who:agent} keeps the promise and contributes a fragment.',
+  'log.agentBrokePromise': '{who:agent} broke the promise.',
+  'log.escrowContribute': 'Amber contributes a fragment: the escrow released.',
+  'log.playerContribute': 'Iris places your fragment in the Scroll.',
+  'log.agentContribute': '{who:agent} places a fragment in the Scroll.',
+  'log.contribute': '{who:agent} contributes a fragment.',
+  'log.playerHeldPrize': 'You held your fragment and received {amount:int} silk. Your part of the message went dark.',
+  'log.agentHeldPrize': '{who:agent} held a fragment for the prize ({amount:int}). That part of the message went dark.',
   // rules v3 only (QA-022): held prizes pay at the finale, refunded questions, the Shells leaving
-  'log.playerHeldPrizeV3': 'Вы удержали фрагмент: приз {amount:int} ждёт финала — если послание прочтут без вас.',
-  'log.agentHeldPrizeV3': '{who:agent} удержал фрагмент ради приза ({amount:int}, выплата в финале). Его часть послания погасла.',
-  'log.deferredPrize': '{who:agent} получает отложенный приз {amount:int} шёлка: послание прочли без него.',
-  'log.askRefund': 'Гости вернули шёлк за вопрос без ответа.',
-  'log.shellsGone': 'Раковины ушли. Шёлк мира обесценился.',
-  'log.fragmentMissed': '{who:agent} не успел внести фрагмент.',
-  'log.agentCheat': '{who:agent} обманул {victim:agent} на {amount:int} шёлка.',
-  'log.agentBreak': '{who:agent} порвал с {other:agent}.',
-  'log.reconciled': '{a:agent} и {b:agent} снова разговаривают.',
-  'log.stopsTalkingToIris': '{who:agent} больше не разговаривает с Ирис.',
-  'log.guestVoice': { tpl: 'Глас Гостей: новый знак.', fixed: { count: 1 } },
-  'log.guestVoice#many': { tpl: 'Глас Гостей: {count:int} новых знака.' },
-  'log.crisis': 'Глас: двусмысленный знак над всеми Раковинами. Пепел прочёл в нём «Оружие».',
-  'log.ashBreaks': 'Пепел рвёт связь с {who:agent}.',
-  'log.saltRumor': 'Соль шепчет всем: «Это оружие. Я видел».',
-  'log.lieRevealed': 'Ирис поняла: {who:agent} продал ей ложное слово. Она больше не разговаривает с {_who:agent}.',
-  'log.giftPaid': 'Дар на Раковине {shell:shell}: вам {amount:int} шёлка и залог.',
-  'log.giftTaken': 'Дар забрали: {who:agents}.',
-  'log.stormBurned': 'Буря на Раковине {shell:shell} сожгла ваш залог.',
-  'log.callMemory': 'Зов: у Ирис появилось новое воспоминание.',
-  'log.eventResolved': 'Тик {tick:int} · Раковина {shell:shell}: {action:action}, сила {power:int}. Лист №{leaf:int} сверен с корнем {verified:mark}',
-  'log.anchorPlaced': 'Якорь: Раковина {shell:shell}, тик {tick:int}.',
-  'log.guestsYes': 'Гости: да, «{form:form}» в слоте «{slot:slot}» значит «{meaning:meaning}».',
-  'log.guestsNo': 'Гости: нет, это не «{meaning:meaning}».',
-  'log.forgaveBetrayal': 'Ирис забыла обиду и снова говорит с {who:agent}.',
-  'log.forgotOwner': 'Ирис забыла, кто её владелец. Она слушается хуже.',
-  'log.visionAshKey': 'Видение: Ирис видит Ключ Пепла — «{phrase:text}».',
-  'log.visionSigns': 'Видение: Ирис видит {count:int} будущих знака раньше всех.',
-  'log.visionEmpty': 'Видение пусто: будущих гласов больше нет.',
-  'log.shardListed': 'Осколок «{title:title}» выставлен на торги.',
-  'log.keyMismatch': 'Ключ не совпал с коммитом.',
-  'log.keySpoken': 'Ирис произносит: «{phrase:text}». Хэш совпал с коммитом Пепла ✓',
-  'log.ashReturns': 'Пепел возвращается. «Кто-то знал мои слова. Значит, будущее можно прочесть».',
-  'log.mediated': 'Ирис помирила {a:agent} и {b:agent}.',
-  'log.wordBought': 'Куплено слово у {who:agent}. Ирис ему пока верит.',
-  'log.loanGiven': 'Вы одолжили {who:agent} {amount:int} шёлка.',
-  'log.frostGift': 'Иней подарил слово. Ирис запомнила.',
-  'log.pact': 'Пакт с {who:agent}: оба вносят до тика {tick:int}.',
-  'log.escrowOpened': 'Эскроу открыт: {amount:int} шёлка ждут фрагмента Янтаря.',
-  'log.outbid': '{who:agent} перебивает вашу ставку: {amount:int}.',
-  'log.promiseKept': '{who:agent}: обещание выполнено.',
-  'log.escrowPaid': 'Эскроу: {amount:int} шёлка ушли Янтарю.',
-  'log.frostShard': 'Иней забыл воспоминание ради видения. Осколок «{title:title}» на торгах.',
-  'log.shardBurned': 'Осколок «{title:title}» сгорел.',
-  'log.shardBetrayalDestroyed': '{who:agent} выкупил и уничтожил память о своём обмане.',
-  'log.shardBetrayalBought': '{who:agent} купил память о том, как {other:agent} обманул Ирис. Теперь {_who:agent} тоже ему не верит.',
-  'log.shardDebtCleared': '{who:agent} выкупил свой долг и списал его.',
-  'log.shardDebtBought': '{who:agent} купил ваш долг: теперь {debtor:agent} должен ему.',
-  'log.shardPromiseFound': '{who:agent} купил осколок и узнал, что Ирис забыла обещание.',
-  'log.shardFirstBought': '{who:agent} купил Первое слово Ирис. Теперь он знает ваш Ключ.',
-  'log.frostShardInsight': 'Осколок Инея: Ирис узнала верное слово.',
-  'log.frostShardHonest': 'Осколок Инея: Соль был с вами честен.',
+  'log.playerHeldPrizeV3': 'You held your fragment: a prize of {amount:int} waits for the finale, paid only if the message is read without you.',
+  'log.agentHeldPrizeV3': '{who:agent} held a fragment for the prize ({amount:int}, paid at the finale). That part of the message went dark.',
+  'log.deferredPrize': '{who:agent} receives the deferred prize of {amount:int} silk: the message was read without them.',
+  'log.askRefund': 'The Guests returned the silk for an unanswered question.',
+  'log.shellsGone': 'The Shells have gone. The world’s silk has lost its worth.',
+  'log.fragmentMissed': '{who:agent} did not contribute a fragment in time.',
+  'log.agentCheat': '{who:agent} cheated {victim:agent} out of {amount:int} silk.',
+  'log.agentBreak': '{who:agent} cut ties with {other:agent}.',
+  'log.reconciled': '{a:agent} and {b:agent} are speaking again.',
+  'log.stopsTalkingToIris': '{who:agent} no longer speaks to Iris.',
+  'log.guestVoice': { tpl: 'The Guests speak: a new sign.', fixed: { count: 1 } },
+  'log.guestVoice#many': { tpl: 'The Guests speak: {count:int} new signs.' },
+  'log.crisis': 'The Voice: an ambiguous sign over every Shell. Ash read it as “Weapon”.',
+  'log.ashBreaks': 'Ash cuts ties with {who:agent}.',
+  'log.saltRumor': 'Salt whispers to everyone: “It is a weapon. I saw it.”',
+  'log.lieRevealed': 'Iris understood: {who:agent} sold her a false word. She no longer speaks to {_who:agent}.',
+  'log.giftPaid': 'Gift on Shell {shell:shell}: {amount:int} silk for you, and your stake back.',
+  'log.giftTaken': 'The gift went to {who:agents}.',
+  'log.stormBurned': 'A Storm on Shell {shell:shell} burned your stake.',
+  'log.callMemory': 'Call: Iris has a new memory.',
+  'log.eventResolved': 'Tick {tick:int} · Shell {shell:shell}: {action:action}, power {power:int}. Leaf #{leaf:int} checked against the root {verified:mark}',
+  'log.anchorPlaced': 'Anchor: Shell {shell:shell}, tick {tick:int}.',
+  'log.guestsYes': 'The Guests: yes, “{form:form}” in the {slot:slot} slot means “{meaning:meaning}”.',
+  'log.guestsNo': 'The Guests: no, it is not “{meaning:meaning}”.',
+  'log.forgaveBetrayal': 'Iris forgot the grudge and speaks to {who:agent} again.',
+  'log.forgotOwner': 'Iris forgot who her owner is. She obeys less.',
+  'log.visionAshKey': 'Vision: Iris sees Ash’s Key — “{phrase:text}”.',
+  'log.visionSigns': 'Vision: Iris sees {count:int} future signs before anyone else.',
+  'log.visionSigns#one': 'Vision: Iris sees {count:int} future sign before anyone else.',
+  'log.visionEmpty': 'The vision is empty: no more voices are coming.',
+  'log.shardListed': 'Shard “{title:title}” is up for auction.',
+  'log.keyMismatch': 'The Key did not match the commitment.',
+  'log.keySpoken': 'Iris speaks: “{phrase:text}”. The hash matches Ash’s commitment ✓',
+  'log.ashReturns': 'Ash returns. “Someone knew my words. So the future can be read.”',
+  'log.mediated': 'Iris reconciled {a:agent} and {b:agent}.',
+  'log.wordBought': 'Bought a word from {who:agent}. Iris trusts it for now.',
+  'log.loanGiven': 'You lent {who:agent} {amount:int} silk.',
+  'log.frostGift': 'Frost gave a word. Iris will remember.',
+  'log.pact': 'Pact with {who:agent}: both contribute by tick {tick:int}.',
+  'log.escrowOpened': 'Escrow open: {amount:int} silk wait for Amber’s fragment.',
+  'log.outbid': '{who:agent} outbids you: {amount:int}.',
+  'log.promiseKept': '{who:agent}: promise fulfilled.',
+  'log.escrowPaid': 'Escrow: {amount:int} silk went to Amber.',
+  'log.frostShard': 'Frost forgot a memory for a vision. Shard “{title:title}” is up for auction.',
+  'log.shardBurned': 'Shard “{title:title}” burned.',
+  'log.shardBetrayalDestroyed': '{who:agent} bought and destroyed the memory of their own deceit.',
+  'log.shardBetrayalBought': '{who:agent} bought the memory of how {other:agent} deceived Iris. Now {_who:agent} distrusts them too.',
+  'log.shardDebtCleared': '{who:agent} bought back their own debt and wrote it off.',
+  'log.shardDebtBought': '{who:agent} bought your debt: {debtor:agent} now owes them.',
+  'log.shardPromiseFound': '{who:agent} bought the shard and learned that Iris forgot her promise.',
+  'log.shardFirstBought': '{who:agent} bought Iris’s First Word. They now know your Key.',
+  'log.frostShardInsight': 'Frost’s shard: Iris learned a true word.',
+  'log.frostShardHonest': 'Frost’s shard: Salt was honest with you.',
 };
 
 export const MEMORY_TEMPLATES = {
-  'mem.first': 'Первое слово: Ключ владельца, который знает только Ирис',
-  'mem.callArrival': 'Зов Раковин в ночь прибытия',
-  'mem.mossGift': 'Мох поделился шёлком в первую ночь',
-  'mem.betrayalLie': '{who:agent} продал ложное слово («{form:form}» в слоте «{slot:slot}»)',
-  'mem.betrayalDebt': '{who:agent} не вернул долг {amount:int}',
-  'mem.betrayalPact': '{who:agent} не внёс фрагмент, как обещал',
-  'mem.call': 'Зов Раковины {shell:shell} на тике {tick:int}',
-  'mem.debt': '{who:agent} должен {amount:int} шёлка',
-  'mem.frostGift': 'Иней подарил слово из летописи',
-  'mem.promise': 'Вы обещали {who:agent} внести фрагмент до тика {tick:int}',
+  'mem.first': 'First Word: the owner’s Key, known only to Iris',
+  'mem.callArrival': 'The Shells’ Call on the night of arrival',
+  'mem.mossGift': 'Moss shared silk on the first night',
+  'mem.betrayalLie': '{who:agent} sold a false word (“{form:form}” in the {slot:slot} slot)',
+  'mem.betrayalDebt': '{who:agent} did not repay a debt of {amount:int}',
+  'mem.betrayalPact': '{who:agent} did not contribute a fragment as promised',
+  'mem.call': 'The Call of Shell {shell:shell} at tick {tick:int}',
+  'mem.debt': '{who:agent} owes {amount:int} silk',
+  'mem.frostGift': 'Frost gave a word from the chronicle',
+  'mem.promise': 'You promised {who:agent} to contribute a fragment by tick {tick:int}',
 };
 
 export const SHARD_TITLE_TEMPLATES = {
-  'shardTitle.saltTrade': 'Как Соль торговал словами',
-  'shardTitle.slotWord': 'Слово из слота «{slot:slot}»',
+  'shardTitle.saltTrade': 'How Salt traded in words',
+  'shardTitle.slotWord': 'A word from the {slot:slot} slot',
 };
 
 export const SHARD_RESULT_TEMPLATES = {
-  'shardResult.burned': 'Никто не купил. Осколок сгорел, этого больше нет в истории мира.',
-  'shardResult.bought': 'Купил {who:agent} за {amount:int}.',
+  'shardResult.burned': 'Nobody bought it. The shard burned; it is gone from the world’s history.',
+  'shardResult.bought': 'Bought by {who:agent} for {amount:int}.',
 };
 
 export const FATE_TEMPLATES = {
-  'fate.auction': 'на торгах',
-  'fate.burned': 'сгорело',
-  'fate.bought': 'купил {who:agent} за {amount:int}',
+  'fate.auction': 'at auction',
+  'fate.burned': 'burned',
+  'fate.bought': 'bought by {who:agent} for {amount:int}',
 };
 
-export const PIN_SOURCES = { 'Гости': 'pinSource.guests', 'Иней': 'pinSource.frost', 'осколок': 'pinSource.shard' };
+export const PIN_SOURCES = { 'the Guests': 'pinSource.guests', 'Frost': 'pinSource.frost', 'a shard': 'pinSource.shard' };
 
 const strip = (ev) => ev && ev.key.includes('#') ? { ...ev, key: ev.key.split('#')[0] } : ev;
 const MEMORY_PATTERNS = compile(MEMORY_TEMPLATES);
@@ -219,7 +222,7 @@ export function renderEvent(ev, i18n) {
   return i18n.t(ev.key, args);
 }
 
-/** A feed entry {t, text, cls} → {tick, cls, event, text}. Unknown lines never leak Russian prose. */
+/** A feed entry {t, text, cls} → {tick, cls, event, text}. Unknown lines never leak raw engine prose. */
 export function localizeFeedEntry(entry, i18n) {
   const event = parseLogText(entry.text) || { key: 'log.unknown', args: {} };
   return { tick: entry.t, cls: entry.cls || '', event, text: renderEvent(event, i18n) };
@@ -230,7 +233,7 @@ export const localizeShardResult = (text, i18n) => (text ? renderEvent(parseShar
 export const localizeFate = (text, i18n) => renderEvent(parseFate(text) || { key: 'log.unknown', args: {} }, i18n);
 export const localizePinSource = (src, i18n) => (PIN_SOURCES[src] ? i18n.t(PIN_SOURCES[src]) : NAMES.includes(src) ? i18n.t('agent.' + AGENT_IDS[NAMES.indexOf(src)]) : i18n.t('pinSource.unknown'));
 
-/** Offers are built from structured fields, not parsed (engine.offerText returns Russian HTML). */
+/** Offers are built from structured fields, not parsed (engine.offerText returns English HTML). */
 export function offerEvent(o) {
   const who = { $agent: o.from };
   switch (o.kind) {

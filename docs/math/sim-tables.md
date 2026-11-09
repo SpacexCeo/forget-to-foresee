@@ -231,7 +231,7 @@ Fix: 128-bit server-side seed, CSPRNG stream (not mulberry32), never ship `seed`
 | bidder | 12870 | 0 | 127 | 127 | 855 | 127 | 31 |
 | latebid | 12877 | 0 | 74 | 74 | 484 | 74 | 131 |
 Griefing reproduction (Frost's tick-7 shard): Iris bids, then spends her silk below the bid before the auction closes at tick 9. Succeeded in 1000/1000 seasons where the shard existed and Iris could become top bidder; Frost lost 6450 silk of otherwise funded AI bids, and the AI buyers lost the insight.
-Minimal trace, seed 1: t7 accept Salt's loan (−20); t7 bid 9; t7 anchor (−10); t7 anchor (−10); t7 anchor (−10); t8 anchor (−10); t8 anchor (−10); t8 anchor (−10); silk at close 7 < bid 9 → "Никто не купил. Осколок сгорел, этого больше нет в истории мира.".
+Minimal trace, seed 1: t7 accept Salt's loan (−20); t7 bid 9; t7 anchor (−10); t7 anchor (−10); t7 anchor (−10); t8 anchor (−10); t8 anchor (−10); t8 anchor (−10); silk at close 7 < bid 9 → "Nobody bought it. The shard burned; it is no longer in the world's history." (the engine text, Russian at the time).
 Fix: lock the bid amount in escrow when bidding (refund when outbid), or at closing fall back to the highest funded bid.
 
 ## F6. Overdue debts are transferable (and the claim can never be collected)

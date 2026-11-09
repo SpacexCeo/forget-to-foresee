@@ -22,7 +22,7 @@ function ic(name, cls, opts) {
   return s;
 }
 
-/** Keyboard letter of a KeyboardEvent, independent of the active layout (RU keyboards send "у" for E). */
+/** Keyboard letter of a KeyboardEvent, independent of the active layout (a Russian layout sends the Cyrillic letter U for E). */
 function letterOf(e) {
   if (e.code && /^Key[A-Z]$/.test(e.code)) return e.code.slice(3);
   return typeof e.key === 'string' && e.key.length === 1 ? e.key.toUpperCase() : '';

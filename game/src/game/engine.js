@@ -36,22 +36,23 @@ function leafHash(e, idx) {
   const body = JSON.stringify({ t: e.t, place: e.place, action: e.action, power: e.power, delay: e.delay, dots: e.dots });
   return strong() ? sha256(`ftf:leaf:v2|${S.seasonId}|${idx}|${body}|${e.salt}`) : sha256(body + e.salt);
 }
-/** Commitment to a secret phrase (the player's or Пепел's key). */
+/** Commitment to a secret phrase (the player's or Ash's key). */
 export function keyCommit(phrase, salt) { return strong() ? sha256(`ftf:key:v2|${S.seasonId}|${phrase}|${salt}`) : sha256(phrase + salt); }
 export const TICKS = 17, DEADLINE = 16, CRISIS = 13;
-export const NAMES = ['Ирис', 'Соль', 'Пепел', 'Мох', 'Янтарь', 'Иней'];
+export const NAMES = ['Iris', 'Salt', 'Ash', 'Moss', 'Amber', 'Frost'];
 export const PERS = [null,
   { h: .35, g: .6, p: .3, sk: .5 },
   { h: .8, g: .3, p: .85, sk: .4 },
   { h: .92, g: .2, p: .2, sk: .35 },
   { h: .65, g: .9, p: .3, sk: .45 },
   { h: .88, g: .4, p: .4, sk: .8 }];
-export const SLOTS = ['Место', 'Действие', 'Сила', 'Срок'];
-export const MEAN = [['Раковина I', 'Раковина II', 'Раковина III', 'Раковина IV'], ['Дар', 'Буря', 'Тишина', 'Зов'], ['малая · 10', 'средняя · 20', 'большая · 40', 'великая · 80'], ['через 1 тик', 'через 2', 'через 3', 'через 4']];
-export const SHORT = [['I', 'II', 'III', 'IV'], ['Дар', 'Буря', 'Тишина', 'Зов'], ['10', '20', '40', '80'], ['+1', '+2', '+3', '+4']];
-export const FORMS = ['дуга', 'шип', 'петля', 'капля'];
+export const SLOTS = ['Place', 'Action', 'Power', 'Delay'];
+export const MEAN = [['Shell I', 'Shell II', 'Shell III', 'Shell IV'], ['Gift', 'Storm', 'Silence', 'Call'], ['small · 10', 'medium · 20', 'large · 40', 'great · 80'], ['in 1 trial', 'in 2 trials', 'in 3 trials', 'in 4 trials']];
+export const SHORT = [['I', 'II', 'III', 'IV'], ['Gift', 'Storm', 'Silence', 'Call'], ['10', '20', '40', '80'], ['+1', '+2', '+3', '+4']];
+export const FORMS = ['arc', 'spike', 'loop', 'drop'];
+// Ash's phrases are hash preimages: the judge season's Ash key is committed on NEAR testnet, so they never change.
 const PEPEL_PHRASES = ['вода помнит камень', 'мы пришли раньше времени', 'пепел тоже был деревом', 'молчание — тоже ответ'];
-export const DEFAULT_PHRASE = 'я помню то, чего ещё не было';
+export const DEFAULT_PHRASE = 'I remember what has not happened yet';
 
 /** Current season state. Reassigned by newSeason/loadState. */
 export let S = null;
@@ -126,9 +127,9 @@ export function newSeason(seed, opts = {}) {
   const pp = PEPEL_PHRASES[ri(PEPEL_PHRASES.length)], ps = saltFor(8);
   S.pepelKey = { phrase: pp, salt: ps, hash: keyCommit(pp, ps) };
   S.pKey = null;
-  addMem({ kind: 'first', w: 4, text: 'Первое слово: Ключ владельца, который знает только Ирис' });
-  addMem({ kind: 'call', w: 2, text: 'Зов Раковин в ночь прибытия' });
-  addMem({ kind: 'gift', about: 3, w: 1, text: 'Мох поделился шёлком в первую ночь' });
+  addMem({ kind: 'first', w: 4, text: 'First Word: the owner’s Key, known only to Iris' });
+  addMem({ kind: 'call', w: 2, text: 'The Shells’ Call on the night of arrival' });
+  addMem({ kind: 'gift', about: 3, w: 1, text: 'Moss shared silk on the first night' });
   S.T[0][3] = 65; S.T[3][0] = 60;
   startTick();
   return S;
@@ -143,7 +144,7 @@ export function startGame(phrase) {
   const salt = saltFor(8);
   S.pKey = { phrase: v, salt, hash: keyCommit(v, salt) };
   S.phase = S.tick === TICKS ? 'vote' : 'play';
-  log(`Ключ владельца закоммичен: ${short(S.pKey.hash)}.`, 'key');
+  log(`Owner’s Key committed: ${short(S.pKey.hash)}.`, 'key');
   bump();
 }
 
@@ -202,9 +203,9 @@ function checkBought() {
 }
 function revealLie(b) {
   b.revealed = true;
-  addMem({ kind: 'betrayal', about: b.from, w: 3, text: `${NAMES[b.from]} продал ложное слово («${FORMS[b.f]}» в слоте «${SLOTS[b.s]}»)` });
+  addMem({ kind: 'betrayal', about: b.from, w: 3, text: `${NAMES[b.from]} sold a false word (“${FORMS[b.f]}” in the ${SLOTS[b.s]} slot)` });
   trustAdd(0, b.from, -40); addH(6); breakEdge(0, b.from);
-  log(`Ирис поняла: ${NAMES[b.from]} продал ей ложное слово. Она больше не разговаривает с ${NAMES[b.from]}.`, 'bad');
+  log(`Iris understood: ${NAMES[b.from]} sold her a false word. She no longer speaks to ${NAMES[b.from]}.`, 'bad');
 }
 /** Prophecies the player can see now: published ones plus visions. */
 export function visibleProphecies() {
@@ -216,32 +217,32 @@ function startTick() {
   const t = S.tick;
   S.ap = maxAP();
   for (let i = 0; i < 6; i++) S.silk[i] += 3;
-  log(`— Тик ${t} —`, 'tick');
+  log(`— Tick ${t} —`, 'tick');
   resolveShards();
   for (const m of S.mem.filter((m) => m.kind === 'debt' && m.data.due === t)) {
     const X = m.about; S.mem = S.mem.filter((x) => x !== m);
-    if (rnd() < PERS[X].h) { const a = fixes() ? Math.min(m.data.amount, Math.max(0, S.silk[X])) : m.data.amount; S.silk[X] -= a; S.silk[0] += a; trustAdd(0, X, 10); log(`${NAMES[X]} вернул долг: +${a} шёлка.`, 'good'); fx('walk', { from: X, to: 0, kind: 'silk' }); }
-    else { addMem({ kind: 'betrayal', about: X, w: 3, text: `${NAMES[X]} не вернул долг ${m.data.amount}` }); trustAdd(0, X, -40); addH(6); breakEdge(0, X); log(`${NAMES[X]} не вернул долг. Ирис порвала с ним.`, 'bad'); }
+    if (rnd() < PERS[X].h) { const a = fixes() ? Math.min(m.data.amount, Math.max(0, S.silk[X])) : m.data.amount; S.silk[X] -= a; S.silk[0] += a; trustAdd(0, X, 10); log(`${NAMES[X]} repaid the debt: +${a} silk.`, 'good'); fx('walk', { from: X, to: 0, kind: 'silk' }); }
+    else { addMem({ kind: 'betrayal', about: X, w: 3, text: `${NAMES[X]} did not repay a debt of ${m.data.amount}` }); trustAdd(0, X, -40); addH(6); breakEdge(0, X); log(`${NAMES[X]} did not repay the debt. Iris cut ties.`, 'bad'); }
   }
   // P7 (v3): a claim whose due date has passed settles now instead of lingering forever.
   const claimDue = (c) => (v3() ? c.due <= t : c.due === t);
-  for (const c of S.claims.filter(claimDue)) { if (rnd() < PERS[c.debtor].h) { if (fixes()) c.amount = Math.min(c.amount, Math.max(0, S.silk[c.debtor])); S.silk[c.debtor] -= c.amount; S.silk[c.holder] += c.amount; log(`${NAMES[c.debtor]} вернул ${c.amount} шёлка владельцу осколка: ${NAMES[c.holder]}.`, 'muted'); } }
+  for (const c of S.claims.filter(claimDue)) { if (rnd() < PERS[c.debtor].h) { if (fixes()) c.amount = Math.min(c.amount, Math.max(0, S.silk[c.debtor])); S.silk[c.debtor] -= c.amount; S.silk[c.holder] += c.amount; log(`${NAMES[c.debtor]} paid ${c.amount} silk to the shard holder, ${NAMES[c.holder]}.`, 'muted'); } }
   S.claims = S.claims.filter((c) => !claimDue(c));
   const pm = S.mem.find((m) => m.kind === 'promise');
-  if (pm && pm.data.by === t && S.frag[0].st === 'held') contribute(0, `Ирис держит слово перед ${NAMES[pm.about]} и вносит фрагмент.`);
+  if (pm && pm.data.by === t && S.frag[0].st === 'held') contribute(0, `Iris keeps her word to ${NAMES[pm.about]} and contributes the fragment.`);
   for (const [k, by] of Object.entries(S.aiPact)) {
     const i = +k; if (by !== t) continue; delete S.aiPact[i];
     if (S.frag[i].st !== 'held') continue;
-    if (!S.isolated[i] && rnd() < PERS[i].h) contribute(i, `${NAMES[i]} держит обещание и вносит фрагмент.`);
-    else { addMem({ kind: 'betrayal', about: i, w: 3, text: `${NAMES[i]} не внёс фрагмент, как обещал` }); trustAdd(0, i, -40); addH(6); breakEdge(0, i); log(`${NAMES[i]} нарушил обещание.`, 'bad'); }
+    if (!S.isolated[i] && rnd() < PERS[i].h) contribute(i, `${NAMES[i]} keeps the promise and contributes a fragment.`);
+    else { addMem({ kind: 'betrayal', about: i, w: 3, text: `${NAMES[i]} did not contribute a fragment as promised` }); trustAdd(0, i, -40); addH(6); breakEdge(0, i); log(`${NAMES[i]} broke the promise.`, 'bad'); }
   }
-  if (S.escrow && S.frag[4].st === 'held') contribute(4, 'Янтарь вносит фрагмент: эскроу сработал.');
+  if (S.escrow && S.frag[4].st === 'held') contribute(4, 'Amber contributes a fragment: the escrow released.');
   if (t <= DEADLINE) for (let i = 1; i < 6; i++) {
     if (S.frag[i].st !== 'held' || S.isolated[i]) continue;
     if (PERS[i].g > .7 && S.tV[i] <= DEADLINE) continue;
     let c = .05 + Math.max(0, avgTrust(i) - 45) / 150 + (PERS[i].h - .5) * .2 + (t >= 11 ? .15 : 0) + (t >= 15 ? .3 : 0);
     c *= 1 - PERS[i].p * .7;
-    if (rnd() < c) contribute(i, `${NAMES[i]} вносит фрагмент в Свиток.`);
+    if (rnd() < c) contribute(i, `${NAMES[i]} places a fragment in the Scroll.`);
   }
   tickPrizesAndSocial(t);
 }
@@ -250,12 +251,12 @@ function tickPrizesAndSocial(t) {
   for (let i = 0; i < 6; i++) if (S.frag[i].st === 'held' && S.tV[i] === t) {
     S.frag[i].st = 'dark';
     // P1 "D" (v3): the prize is only promised here; it is paid at the finale, and only if the message succeeds without the holder.
-    if (v3()) { S.frag[i].prize = S.V[i]; log(i === 0 ? `Вы удержали фрагмент: приз ${S.V[i]} ждёт финала — если послание прочтут без вас.` : `${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}, выплата в финале). Его часть послания погасла.`, i === 0 ? 'good' : 'bad'); }
-    else { S.silk[i] += S.V[i]; log(i === 0 ? `Вы удержали фрагмент и получили ${S.V[i]} шёлка. Ваша часть послания погасла.` : `${NAMES[i]} удержал фрагмент ради приза (${S.V[i]}). Его часть послания погасла.`, i === 0 ? 'good' : 'bad'); }
+    if (v3()) { S.frag[i].prize = S.V[i]; log(i === 0 ? `You held your fragment: a prize of ${S.V[i]} waits for the finale, paid only if the message is read without you.` : `${NAMES[i]} held a fragment for the prize (${S.V[i]}, paid at the finale). That part of the message went dark.`, i === 0 ? 'good' : 'bad'); }
+    else { S.silk[i] += S.V[i]; log(i === 0 ? `You held your fragment and received ${S.V[i]} silk. Your part of the message went dark.` : `${NAMES[i]} held a fragment for the prize (${S.V[i]}). That part of the message went dark.`, i === 0 ? 'good' : 'bad'); }
     fx('dark', { i });
     if (i !== 0) for (let j = 1; j < 6; j++) if (j !== i) S.T[j][i] = clamp(S.T[j][i] - 10, 0, 100);
   }
-  if (t > DEADLINE) for (let i = 0; i < 6; i++) if (S.frag[i].st === 'held') { S.frag[i].st = 'dark'; log(`${NAMES[i]} не успел внести фрагмент.`, 'muted'); fx('dark', { i }); }
+  if (t > DEADLINE) for (let i = 0; i < 6; i++) if (S.frag[i].st === 'held') { S.frag[i].st = 'dark'; log(`${NAMES[i]} did not contribute a fragment in time.`, 'muted'); fx('dark', { i }); }
   if (t === CRISIS) crisis();
   if (t >= 4 && rnd() < .22) {
     const ais = [1, 2, 3, 4, 5], b = ais[pickW(ais.map((i) => 1 - PERS[i].h))];
@@ -263,20 +264,20 @@ function tickPrizesAndSocial(t) {
     if (others.length) {
       const v = others[ri(others.length)], drawn = 8 + ri(10), amt = fixes() ? Math.min(drawn, Math.max(0, S.silk[v])) : drawn;
       S.silk[v] -= amt; S.silk[b] += amt; S.T[v][b] = clamp(S.T[v][b] - 35, 0, 100); addH(6);
-      log(`${NAMES[b]} обманул ${NAMES[v]} на ${amt} шёлка.`, 'bad');
+      log(`${NAMES[b]} cheated ${NAMES[v]} out of ${amt} silk.`, 'bad');
       fx('walk', { from: b, to: v, kind: 'betray' });
-      if (S.T[v][b] < 20) { breakEdge(v, b); log(`${NAMES[v]} порвал с ${NAMES[b]}.`, 'bad'); }
+      if (S.T[v][b] < 20) { breakEdge(v, b); log(`${NAMES[v]} cut ties with ${NAMES[b]}.`, 'bad'); }
     }
   }
   for (let i = 1; i < 6; i++) for (let j = 0; j < 6; j++) if (i !== j) { const d = 50 - S.T[i][j]; S.T[i][j] += Math.sign(d) * Math.min(2, Math.abs(d)); }
   for (const k of [...S.broken]) {
     const [i, j] = k.split('-').map(Number); if (i === 0) continue;
-    if (!S.isolated[i] && !S.isolated[j] && S.T[i][j] >= 30 && S.T[j][i] >= 30 && rnd() < .2) { restoreEdge(i, j); log(`${NAMES[i]} и ${NAMES[j]} снова разговаривают.`, 'muted'); }
+    if (!S.isolated[i] && !S.isolated[j] && S.T[i][j] >= 30 && S.T[j][i] >= 30 && rnd() < .2) { restoreEdge(i, j); log(`${NAMES[i]} and ${NAMES[j]} are speaking again.`, 'muted'); }
   }
-  for (let i = 1; i < 6; i++) if (S.T[i][0] < 15 && !isBroken(i, 0)) { breakEdge(i, 0); log(`${NAMES[i]} больше не разговаривает с Ирис.`, 'bad'); }
+  for (let i = 1; i < 6; i++) if (S.T[i][0] < 15 && !isBroken(i, 0)) { breakEdge(i, 0); log(`${NAMES[i]} no longer speaks to Iris.`, 'bad'); }
   for (let i = 1; i < 6; i++) S.mast[i] = Math.min(.95, S.mast[i] + PERS[i].sk * .045 + .01);
   const pubs = S.events.filter((e) => e.pub === t);
-  if (pubs.length) { log(`Глас Гостей: ${pubs.length === 1 ? 'новый знак' : pubs.length + ' новых знака'}.`); fx('voice', { n: pubs.length }); }
+  if (pubs.length) { log(`The Guests speak: ${pubs.length === 1 ? 'a new sign' : pubs.length + ' new signs'}.`); fx('voice', { n: pubs.length }); }
   aiAnchors();
   genOffers();
   if (t === 7 || t === 11) inejShard();
@@ -285,12 +286,12 @@ function tickPrizesAndSocial(t) {
 
 function crisis() {
   addH(15);
-  log('Глас: двусмысленный знак над всеми Раковинами. Пепел прочёл в нём «Оружие».', 'bad');
+  log('The Voice: an ambiguous sign over every Shell. Ash read it as “Weapon”.', 'bad');
   fx('crisis', {});
   const cand = [0, 1, 3, 4, 5].filter((j) => S.T[2][j] < 70 && !isBroken(2, j)).sort((a, b) => S.T[2][a] - S.T[2][b]).slice(0, 2);
-  cand.forEach((j) => { breakEdge(2, j); log(`Пепел рвёт связь с ${NAMES[j]}.`, 'bad'); });
+  cand.forEach((j) => { breakEdge(2, j); log(`Ash cuts ties with ${NAMES[j]}.`, 'bad'); });
   S.isolated[2] = true; S.rumor = true;
-  log('Соль шепчет всем: «Это оружие. Я видел».', 'muted');
+  log('Salt whispers to everyone: “It is a weapon. I saw it.”', 'muted');
 }
 
 export function endTick() {
@@ -315,28 +316,28 @@ function resolveEvent(t) {
   // P4 (v3): the leaf is recomputed from the very fields that are about to be paid out; a mismatch
   // (edited field, wrong path or root) voids the season before any silk moves. v2 only logs the result.
   const verified = (!v3() || leafHash(e, idx) === e.leaf) && verifyProof(e.leaf, proofFor(S.levels, idx), S.root);
-  if (v3() && !verified) { log(`Лист №${idx} не сходится с корнем. Сезон недействителен.`, 'bad'); fx('event', { place: null, action: null, power: null, idx, verified: false }); finish('proof_failed'); return; }
+  if (v3() && !verified) { log(`Leaf #${idx} does not match the root. The season is void.`, 'bad'); fx('event', { place: null, action: null, power: null, idx, verified: false }); finish('proof_failed'); return; }
   const here = S.anchors.filter((a) => a.t === t), hit = here.filter((a) => a.place === e.place);
   here.filter((a) => a.place !== e.place).forEach((a) => { S.silk[a.c] += a.stake; });
   const pot = [10, 20, 40, 80][e.power];
   if (e.action === 0) {
     const W = hit.reduce((s, a) => s + (t - a.at + 1), 0);
     const shares = v3() ? apportion(pot, hit.map((a) => t - a.at + 1)) : hit.map((a) => Math.round(pot * (t - a.at + 1) / W)); // P3: exact split in v3
-    hit.forEach((a, k) => { const g = shares[k]; S.silk[a.c] += a.stake + g; if (a.c === 0) log(`Дар на Раковине ${SHORT[0][e.place]}: вам ${g} шёлка и залог.`, 'good'); });
-    if (hit.length && !hit.some((a) => a.c === 0)) log(`Дар забрали: ${[...new Set(hit.map((a) => NAMES[a.c]))].join(', ')}.`, 'muted');
+    hit.forEach((a, k) => { const g = shares[k]; S.silk[a.c] += a.stake + g; if (a.c === 0) log(`Gift on Shell ${SHORT[0][e.place]}: ${g} silk for you, and your stake back.`, 'good'); });
+    if (hit.length && !hit.some((a) => a.c === 0)) log(`The gift went to ${[...new Set(hit.map((a) => NAMES[a.c]))].join(', ')}.`, 'muted');
   } else if (e.action === 1) {
-    hit.forEach((a) => { if (a.c === 0) log(`Буря на Раковине ${SHORT[0][e.place]} сожгла ваш залог.`, 'bad'); });
+    hit.forEach((a) => { if (a.c === 0) log(`A Storm on Shell ${SHORT[0][e.place]} burned your stake.`, 'bad'); });
   } else hit.forEach((a) => {
     S.silk[a.c] += a.stake;
     if (e.action === 3) {
-      if (a.c === 0) { addMem({ kind: 'call', w: 2, text: `Зов Раковины ${SHORT[0][e.place]} на тике ${t}` }); log('Зов: у Ирис появилось новое воспоминание.', 'good'); }
+      if (a.c === 0) { addMem({ kind: 'call', w: 2, text: `The Call of Shell ${SHORT[0][e.place]} at tick ${t}` }); log('Call: Iris has a new memory.', 'good'); }
       else S.mast[a.c] = Math.min(.95, S.mast[a.c] + .04);
     }
   });
   S.anchors = S.anchors.filter((a) => a.t !== t);
   S.chron.push({ t, forms: e.forms, dots: e.dots, m: truth, ok, idx });
   S.proofs.unshift({ t, idx, leaf: e.leaf, ok: verified }); if (S.proofs.length > 5) S.proofs.length = 5;
-  log(`Тик ${t} · Раковина ${SHORT[0][e.place]}: ${MEAN[1][e.action]}, сила ${pot}. Лист №${idx} сверен с корнем ${verified ? '✓' : '✗'}`);
+  log(`Tick ${t} · Shell ${SHORT[0][e.place]}: ${MEAN[1][e.action]}, power ${pot}. Leaf #${idx} checked against the root ${verified ? '✓' : '✗'}`);
   fx('event', { place: e.place, action: e.action, power: e.power, idx, verified });
   checkBought();
 }
@@ -369,11 +370,11 @@ function aiAnchors() {
 
 function contribute(i, why) {
   const f = S.frag[i]; if (f.st !== 'held') return;
-  f.st = 'scroll'; f.at = S.tick; log(why || `${NAMES[i]} вносит фрагмент.`, i === 0 ? 'good' : '');
+  f.st = 'scroll'; f.at = S.tick; log(why || `${NAMES[i]} contributes a fragment.`, i === 0 ? 'good' : '');
   fx('fragment', { i });
   for (let j = 1; j < 6; j++) if (j !== i) S.T[j][i] = clamp(S.T[j][i] + 5, 0, 100);
-  if (i === 0) { const pm = S.mem.find((m) => m.kind === 'promise'); if (pm) { S.mem = S.mem.filter((x) => x !== pm); trustAdd(pm.about, 0, 15); log(`${NAMES[pm.about]}: обещание выполнено.`, 'good'); } }
-  if (i === 4 && S.escrow) { S.silk[4] += S.escrow; log(`Эскроу: ${S.escrow} шёлка ушли Янтарю.`, 'muted'); S.escrow = 0; }
+  if (i === 0) { const pm = S.mem.find((m) => m.kind === 'promise'); if (pm) { S.mem = S.mem.filter((x) => x !== pm); trustAdd(pm.about, 0, 15); log(`${NAMES[pm.about]}: promise fulfilled.`, 'good'); } }
+  if (i === 4 && S.escrow) { S.silk[4] += S.escrow; log(`Escrow: ${S.escrow} silk went to Amber.`, 'muted'); S.escrow = 0; }
 }
 
 /* ---------- offers ---------- */
@@ -402,11 +403,11 @@ function genOffers() {
 }
 export function offerText(o) {
   const n = `<b>${NAMES[o.from]}</b>`;
-  if (o.kind === 'sell') return `${n}: «Продам слово. Знак «${FORMS[o.f]}» в слоте «${SLOTS[o.s]}» значит «${MEAN[o.s][o.m]}».» Цена ${o.price}.`;
-  if (o.kind === 'loan') return `${n}: «Одолжи ${o.n} шёлка, верну ${o.back} на тике ${o.due}.»`;
-  if (o.kind === 'gift') return `${n}: «Делюсь одним словом из летописи бесплатно. Запомни, кто помог.»`;
-  if (o.kind === 'pact') return `${n}: «Пообещаем друг другу внести фрагменты до тика ${o.by}. На слово.»`;
-  if (o.kind === 'escrow') return `${n}: «Внесу свой фрагмент за ${o.price} шёлка. Деньги в эскроу: они уйдут мне, только когда фрагмент окажется в Свитке.»`;
+  if (o.kind === 'sell') return `${n}: “I’ll sell a word. The “${FORMS[o.f]}” sign in the ${SLOTS[o.s]} slot means “${MEAN[o.s][o.m]}”.” Price ${o.price}.`;
+  if (o.kind === 'loan') return `${n}: “Lend me ${o.n} silk, I’ll return ${o.back} at tick ${o.due}.”`;
+  if (o.kind === 'gift') return `${n}: “I’ll share one word from the chronicle for free. Remember who helped.”`;
+  if (o.kind === 'pact') return `${n}: “Let us both promise to contribute our fragments by tick ${o.by}. On our word.”`;
+  if (o.kind === 'escrow') return `${n}: “I’ll contribute my fragment for ${o.price} silk. The silk waits in escrow and reaches me only when the fragment is in the Scroll.”`;
   return '';
 }
 
@@ -414,12 +415,12 @@ export function offerText(o) {
 export function effectText(m) {
   const X = m.about != null ? NAMES[m.about] : '';
   switch (m.kind) {
-    case 'first': return 'Пока Ирис помнит владельца, она слушается вас: 3 внимания за тик. Если забудет, останется 2.';
-    case 'call': return 'Нить к Гостям. Ничего не держит, это хорошее топливо для видения.';
-    case 'gift': return `Доверие к ${X} выше. Если забыть, Ирис станет к ${X} равнодушна.`;
-    case 'betrayal': return `Ирис не разговаривает с ${X}. Если забыть, она снова поверит и может попасться ещё раз.`;
-    case 'debt': return `${X} вернёт ${m.data.amount} на тике ${m.data.due}. Если забыть, долг исчезнет, а право требования уйдёт с осколком.`;
-    case 'promise': return `На тике ${m.data.by} Ирис внесёт фрагмент, что бы вы ни решили. Если забыть, вы свободны, но ${X} может купить осколок и узнать.`;
+    case 'first': return 'While Iris remembers her owner she obeys you: 3 attention per tick. If she forgets, 2 remain.';
+    case 'call': return 'A thread to the Guests. It holds nothing; good fuel for a vision.';
+    case 'gift': return `Trust in ${X} is higher. Forget it and Iris becomes indifferent to ${X}.`;
+    case 'betrayal': return `Iris does not speak to ${X}. Forget it and she trusts again, and can be fooled again.`;
+    case 'debt': return `${X} returns ${m.data.amount} at tick ${m.data.due}. Forget it and the debt disappears; the claim leaves with the shard.`;
+    case 'promise': return `At tick ${m.data.by} Iris contributes the fragment whatever you decide. Forget it and you are free, but ${X} may buy the shard and find out.`;
   }
   return '';
 }
@@ -428,10 +429,10 @@ function inejShard() {
   const c = []; for (let s = 0; s < 4; s++) for (let f = 0; f < 4; f++) if (!S.pins[s + '_' + f]) c.push([s, f]);
   if (!lie && !c.length) return;
   const [s, f] = lie ? [0, 0] : c[ri(c.length)];
-  const sh = { id: ++S.uid, from: 5, kind: lie ? 'lie' : 'insight', s, f, title: lie ? 'Как Соль торговал словами' : `Слово из слота «${SLOTS[s]}»`, exp: S.tick + 2, bids: [], vals: lie ? { 1: 20, 4: 6 } : { 1: 9, 4: 8 } };
+  const sh = { id: ++S.uid, from: 5, kind: lie ? 'lie' : 'insight', s, f, title: lie ? 'How Salt traded in words' : `A word from the ${SLOTS[s]} slot`, exp: S.tick + 2, bids: [], vals: lie ? { 1: 20, 4: 6 } : { 1: 9, 4: 8 } };
   sh.bids.push({ c: 1, amt: lie ? 14 : 4 + ri(4) }); sh.bids.push({ c: 4, amt: 3 + ri(4) });
   S.shards.push(sh);
-  log(`Иней забыл воспоминание ради видения. Осколок «${sh.title}» на торгах.`, 'muted');
+  log(`Frost forgot a memory for a vision. Shard “${sh.title}” is up for auction.`, 'muted');
 }
 export const topBid = (sh) => sh.bids.reduce((b, x) => (!b || x.amt > b.amt) ? x : b, null);
 function resolveShards() {
@@ -442,10 +443,10 @@ function resolveShards() {
     if (top && S.silk[top.c] < top.amt) top = null;
     // P6 (v3): an unfunded top bid no longer burns the sale; the highest bid that is still covered wins.
     if (!top && v3()) top = [...sh.bids].sort((a, b) => b.amt - a.amt).find((b) => S.silk[b.c] >= b.amt) || null;
-    if (!top) { sh.result = 'Никто не купил. Осколок сгорел, этого больше нет в истории мира.'; if (sh.from === 0) S.forgot[sh.fg].fate = 'сгорело'; log(`Осколок «${sh.title}» сгорел.`, 'muted'); continue; }
+    if (!top) { sh.result = 'Nobody bought it. The shard burned; it is gone from the world’s history.'; if (sh.from === 0) S.forgot[sh.fg].fate = 'burned'; log(`Shard “${sh.title}” burned.`, 'muted'); continue; }
     S.silk[top.c] -= top.amt; S.silk[sh.from] += top.amt; sh.winner = top.c;
-    if (sh.from === 0) S.forgot[sh.fg].fate = `купил ${NAMES[top.c]} за ${top.amt}`;
-    sh.result = `Купил ${NAMES[top.c]} за ${top.amt}.`;
+    if (sh.from === 0) S.forgot[sh.fg].fate = `bought by ${NAMES[top.c]} for ${top.amt}`;
+    sh.result = `Bought by ${NAMES[top.c]} for ${top.amt}.`;
     fx('walk', { from: sh.from, to: top.c, kind: 'shard' });
     applyShard(sh, top.c);
   }
@@ -455,21 +456,21 @@ function applyShard(sh, w) {
   const who = NAMES[w];
   if (sh.from === 0) {
     const m = sh.mem, X = m.about;
-    if (m.kind === 'betrayal') { if (w === X) log(`${who} выкупил и уничтожил память о своём обмане.`, 'muted'); else { S.T[w][X] = clamp(S.T[w][X] - 25, 0, 100); log(`${who} купил память о том, как ${NAMES[X]} обманул Ирис. Теперь ${who} тоже ему не верит.`); } }
-    if (m.kind === 'debt') { if (w === X) log(`${who} выкупил свой долг и списал его.`, 'muted'); else { S.claims.push({ holder: w, debtor: X, amount: m.data.amount, due: m.data.due }); log(`${who} купил ваш долг: теперь ${NAMES[X]} должен ему.`); } }
-    if (m.kind === 'promise' && w === X) { S.T[X][0] = clamp(S.T[X][0] - 40, 0, 100); addH(6); log(`${who} купил осколок и узнал, что Ирис забыла обещание.`, 'bad'); }
+    if (m.kind === 'betrayal') { if (w === X) log(`${who} bought and destroyed the memory of their own deceit.`, 'muted'); else { S.T[w][X] = clamp(S.T[w][X] - 25, 0, 100); log(`${who} bought the memory of how ${NAMES[X]} deceived Iris. Now ${who} distrusts them too.`); } }
+    if (m.kind === 'debt') { if (w === X) log(`${who} bought back their own debt and wrote it off.`, 'muted'); else { S.claims.push({ holder: w, debtor: X, amount: m.data.amount, due: m.data.due }); log(`${who} bought your debt: ${NAMES[X]} now owes them.`); } }
+    if (m.kind === 'promise' && w === X) { S.T[X][0] = clamp(S.T[X][0] - 40, 0, 100); addH(6); log(`${who} bought the shard and learned that Iris forgot her promise.`, 'bad'); }
     if (m.kind === 'gift' && w !== X) S.T[w][X] = clamp(S.T[w][X] + 10, 0, 100);
     if (m.kind === 'call') S.mast[w] = Math.min(.95, S.mast[w] + .06);
-    if (m.kind === 'first') { S.firstBuyer = w; log(`${who} купил Первое слово Ирис. Теперь он знает ваш Ключ.`, 'bad'); }
+    if (m.kind === 'first') { S.firstBuyer = w; log(`${who} bought Iris’s First Word. They now know your Key.`, 'bad'); }
   } else if (w === 0) {
-    if (sh.kind === 'insight') { S.pins[sh.s + '_' + sh.f] = { m: S.perm[sh.s][sh.f], src: 'осколок' }; log('Осколок Инея: Ирис узнала верное слово.', 'good'); }
-    if (sh.kind === 'lie') { const l = S.bought.filter((b) => b.from === 1 && !b.honest && !b.revealed); if (l.length) l.forEach(revealLie); else { trustAdd(0, 1, 15); log('Осколок Инея: Соль был с вами честен.', 'good'); } }
+    if (sh.kind === 'insight') { S.pins[sh.s + '_' + sh.f] = { m: S.perm[sh.s][sh.f], src: 'a shard' }; log('Frost’s shard: Iris learned a true word.', 'good'); }
+    if (sh.kind === 'lie') { const l = S.bought.filter((b) => b.from === 1 && !b.honest && !b.revealed); if (l.length) l.forEach(revealLie); else { trustAdd(0, 1, 15); log('Frost’s shard: Salt was honest with you.', 'good'); } }
   } else S.mast[w] = Math.min(.95, S.mast[w] + .05);
 }
 
 function finish(outcome) {
   // P8 (v3): the Shells leaving is a loss for everyone in silk, not only in story.
-  if (outcome === 'gone' && v3()) { S.goneLoss = S.silk.map((s) => s - Math.round(s * V3.goneKeep)); S.silk = S.silk.map((s, i) => s - S.goneLoss[i]); log('Раковины ушли. Шёлк мира обесценился.', 'bad'); }
+  if (outcome === 'gone' && v3()) { S.goneLoss = S.silk.map((s) => s - Math.round(s * V3.goneKeep)); S.silk = S.silk.map((s, i) => s - S.goneLoss[i]); log('The Shells have gone. The world’s silk has lost its worth.', 'bad'); }
   S.outcome = outcome; S.phase = 'end'; fx('end', { outcome });
 }
 
@@ -492,7 +493,7 @@ export function placeAnchor(p, t) {
   if (t < S.tick || t > TICKS) return no('bad_tick');
   if (S.anchors.some((a) => a.c === 0 && a.place === p && a.t === t)) return no('duplicate');
   S.ap--; S.silk[0] -= 10; S.anchors.push({ c: 0, place: p, t, at: S.tick, stake: 10 });
-  log(`Якорь: Раковина ${SHORT[0][p]}, тик ${t}.`);
+  log(`Anchor: Shell ${SHORT[0][p]}, tick ${t}.`);
   fx('anchor', { place: p, t });
   return done();
 }
@@ -506,13 +507,13 @@ export function askGuests(s, f, m) {
   if (S.silk[0] < 5) return no('no_silk');
   S.ap--; S.silk[0] -= 5;
   if (S.perm[s][f] === m) {
-    S.pins[k] = { m, src: 'Гости' }; log(`Гости: да, «${FORMS[f]}» в слоте «${SLOTS[s]}» значит «${MEAN[s][m]}».`, 'good');
+    S.pins[k] = { m, src: 'the Guests' }; log(`The Guests: yes, “${FORMS[f]}” in the ${SLOTS[s]} slot means “${MEAN[s][m]}”.`, 'good');
     const b = S.bought.find((x) => x.s === s && x.f === f && !x.honest && !x.revealed); if (b) revealLie(b);
   } else {
-    (S.no[k] = S.no[k] || []).push(m); log(`Гости: нет, это не «${MEAN[s][m]}».`, 'muted');
-    if (v3() && V3.askRefundOnNo) { S.silk[0] += 5; log('Гости вернули шёлк за вопрос без ответа.', 'muted'); } // P2: a "no" costs attention, not silk
+    (S.no[k] = S.no[k] || []).push(m); log(`The Guests: no, it is not “${MEAN[s][m]}”.`, 'muted');
+    if (v3() && V3.askRefundOnNo) { S.silk[0] += 5; log('The Guests returned the silk for an unanswered question.', 'muted'); } // P2: a "no" costs attention, not silk
     const b = S.bought.find((x) => x.s === s && x.f === f && x.m === m && !x.revealed); if (b) revealLie(b);
-    const left = [0, 1, 2, 3].filter((x) => !S.no[k].includes(x)); if (left.length === 1) S.pins[k] = { m: left[0], src: 'Гости' };
+    const left = [0, 1, 2, 3].filter((x) => !S.no[k].includes(x)); if (left.length === 1) S.pins[k] = { m: left[0], src: 'the Guests' };
   }
   fx('ask', { s, f, yes: S.perm[s][f] === m });
   return done();
@@ -525,7 +526,7 @@ export function setRule(r) {
   return OK;
 }
 
-/** Whether the "see Пепел's key" vision is available right now. */
+/** Whether the "see Ash's key" vision is available right now. */
 export function keyVisionStatus() {
   const open = S.isolated[2] && !S.pepelKeyKnown && S.phase === 'play';
   const cells = confidentCells();
@@ -541,15 +542,15 @@ export function forget(id, purpose = 'vision') {
   // P7 (v3): a debt whose auction would close after its due date cannot be forgotten (the claim would be overdue, hence worthless).
   if (v3() && m.kind === 'debt' && m.data.due < S.tick + V3.debtForgetGap) return no('debt_due');
   S.mem = S.mem.filter((x) => x !== m); S.ap--;
-  if (m.kind === 'betrayal') { S.T[0][m.about] = 50; if (isBroken(0, m.about)) { restoreEdge(0, m.about); log(`Ирис забыла обиду и снова говорит с ${NAMES[m.about]}.`); } }
+  if (m.kind === 'betrayal') { S.T[0][m.about] = 50; if (isBroken(0, m.about)) { restoreEdge(0, m.about); log(`Iris forgot the grudge and speaks to ${NAMES[m.about]} again.`); } }
   if (m.kind === 'gift') S.T[0][m.about] = clamp(S.T[0][m.about] - 15, 0, 100);
-  if (m.kind === 'first') { S.wild = true; S.ap = Math.min(S.ap, maxAP()); log('Ирис забыла, кто её владелец. Она слушается хуже.', 'bad'); }
-  S.forgot.push({ text: m.text, fate: 'на торгах' });
-  if (purpose === 'key') { S.pepelKeyKnown = true; log(`Видение: Ирис видит Ключ Пепла — «${S.pepelKey.phrase}».`, 'key'); }
+  if (m.kind === 'first') { S.wild = true; S.ap = Math.min(S.ap, maxAP()); log('Iris forgot who her owner is. She obeys less.', 'bad'); }
+  S.forgot.push({ text: m.text, fate: 'at auction' });
+  if (purpose === 'key') { S.pepelKeyKnown = true; log(`Vision: Iris sees Ash’s Key — “${S.pepelKey.phrase}”.`, 'key'); }
   else {
     const fut = S.events.map((e, i) => ({ e, i })).filter((x) => x.e.pub > S.tick && !S.visions.includes(x.i)).sort((a, b) => a.e.pub - b.e.pub || a.e.t - b.e.t).slice(0, m.w);
     fut.forEach((x) => S.visions.push(x.i));
-    log(fut.length ? `Видение: Ирис видит ${fut.length} будущих знака раньше всех.` : 'Видение пусто: будущих гласов больше нет.', 'key');
+    log(fut.length ? `Vision: Iris sees ${fut.length} future sign${fut.length === 1 ? '' : 's'} before anyone else.` : 'The vision is empty: no more voices are coming.', 'key');
   }
   fx('memory_burned', { kind: m.kind, about: m.about ?? null, purpose });
   const sh = { id: ++S.uid, from: 0, mem: m, title: m.text, exp: S.tick + 2, bids: [], vals: {}, fg: S.forgot.length - 1 };
@@ -565,7 +566,7 @@ export function forget(id, purpose = 'vision') {
     if (v >= 3 && S.silk[i] >= v) sh.bids.push({ c: i, amt: v });
   }
   S.shards.push(sh);
-  log(`Осколок «${m.text}» выставлен на торги.`, 'muted');
+  log(`Shard “${m.text}” is up for auction.`, 'muted');
   return done();
 }
 
@@ -575,12 +576,12 @@ export function speakKey() {
   if (S.ap < 1) return no('no_ap');
   S.ap--;
   const h = keyCommit(S.pepelKey.phrase, S.pepelKey.salt);
-  if (h !== S.pepelKey.hash) { log('Ключ не совпал с коммитом.', 'bad'); return done(); }
-  log(`Ирис произносит: «${S.pepelKey.phrase}». Хэш совпал с коммитом Пепла ✓`, 'key');
+  if (h !== S.pepelKey.hash) { log('The Key did not match the commitment.', 'bad'); return done(); }
+  log(`Iris speaks: “${S.pepelKey.phrase}”. The hash matches Ash’s commitment ✓`, 'key');
   S.isolated[2] = false;
   for (const j of [0, 1, 3, 4, 5]) if (isBroken(2, j)) { restoreEdge(2, j); S.T[2][j] = Math.max(S.T[2][j], 45); }
   S.T[2][0] = 90;
-  log('Пепел возвращается. «Кто-то знал мои слова. Значит, будущее можно прочесть».', 'good');
+  log('Ash returns. “Someone knew my words. So the future can be read.”', 'good');
   fx('key_spoken', { to: 2, hash: h });
   if (S.frag[2].st === 'held' && S.tick < DEADLINE) S.aiPact[2] = S.tick + 1;
   return done();
@@ -595,7 +596,7 @@ export function mend(j) {
   if (S.silk[0] < 10) return no('no_silk');
   S.ap--; S.silk[0] -= 10; S.silk[j] += 10; restoreEdge(0, j);
   S.T[0][j] = Math.max(S.T[0][j], 40); S.T[j][0] = Math.max(S.T[j][0], 35);
-  log(`Ирис и ${NAMES[j]} снова разговаривают.`, 'good');
+  log(`Iris and ${NAMES[j]} are speaking again.`, 'good');
   return done();
 }
 
@@ -610,7 +611,7 @@ export function mediate(i, j) {
   S.ap--; S.silk[0] -= cost; restoreEdge(i, j);
   if (v3()) { S.silk[i] += cost / 2; S.silk[j] += cost / 2; } // P2: the fee goes to the two clans, nothing is burned
   S.T[i][j] = S.T[j][i] = 45; if (fixes()) { S.T[i][0] = clamp(S.T[i][0] + 5, 0, 100); S.T[j][0] = clamp(S.T[j][0] + 5, 0, 100); } else { S.T[i][0] += 5; S.T[j][0] += 5; } // baseline: no clamp (rules-baseline §12)
-  log(`Ирис помирила ${NAMES[i]} и ${NAMES[j]}.`, 'good');
+  log(`Iris reconciled ${NAMES[i]} and ${NAMES[j]}.`, 'good');
   return done();
 }
 
@@ -618,11 +619,11 @@ export function acceptOffer(id) {
   if (S.phase !== 'play') return no('phase');
   const o = S.offers.find((x) => x.id === id);
   if (!o) return no('no_offer');
-  if (o.kind === 'sell') { if (S.silk[0] < o.price) return no('no_silk'); S.silk[0] -= o.price; S.silk[o.from] += o.price; S.bought.push({ s: o.s, f: o.f, m: o.m, from: o.from, honest: o.honest, revealed: false }); log(`Куплено слово у ${NAMES[o.from]}. Ирис ему пока верит.`); }
-  if (o.kind === 'loan') { if (S.silk[0] < o.n) return no('no_silk'); S.silk[0] -= o.n; S.silk[o.from] += o.n; addMem({ kind: 'debt', about: o.from, w: 2, text: `${NAMES[o.from]} должен ${o.back} шёлка`, data: { amount: o.back, due: o.due } }); log(`Вы одолжили ${NAMES[o.from]} ${o.n} шёлка.`); fx('walk', { from: 0, to: o.from, kind: 'silk' }); }
-  if (o.kind === 'gift') { const c = []; for (let s = 0; s < 4; s++) for (let f = 0; f < 4; f++) if (!S.pins[s + '_' + f]) c.push([s, f]); if (c.length) { const [s, f] = c[ri(c.length)]; S.pins[s + '_' + f] = { m: S.perm[s][f], src: 'Иней' }; } addMem({ kind: 'gift', about: 5, w: 1, text: 'Иней подарил слово из летописи' }); trustAdd(0, 5, 15); log('Иней подарил слово. Ирис запомнила.', 'good'); fx('walk', { from: 5, to: 0, kind: 'gift' }); }
-  if (o.kind === 'pact') { addMem({ kind: 'promise', about: o.from, w: 2, text: `Вы обещали ${NAMES[o.from]} внести фрагмент до тика ${o.by}`, data: { by: o.by } }); S.aiPact[o.from] = o.by; trustAdd(o.from, 0, 10); log(`Пакт с ${NAMES[o.from]}: оба вносят до тика ${o.by}.`); fx('pact', { with: o.from }); }
-  if (o.kind === 'escrow') { if (S.silk[0] < o.price) return no('no_silk'); S.silk[0] -= o.price; S.escrow = o.price; log(`Эскроу открыт: ${o.price} шёлка ждут фрагмента Янтаря.`); fx('escrow', { with: 4 }); }
+  if (o.kind === 'sell') { if (S.silk[0] < o.price) return no('no_silk'); S.silk[0] -= o.price; S.silk[o.from] += o.price; S.bought.push({ s: o.s, f: o.f, m: o.m, from: o.from, honest: o.honest, revealed: false }); log(`Bought a word from ${NAMES[o.from]}. Iris trusts it for now.`); }
+  if (o.kind === 'loan') { if (S.silk[0] < o.n) return no('no_silk'); S.silk[0] -= o.n; S.silk[o.from] += o.n; addMem({ kind: 'debt', about: o.from, w: 2, text: `${NAMES[o.from]} owes ${o.back} silk`, data: { amount: o.back, due: o.due } }); log(`You lent ${NAMES[o.from]} ${o.n} silk.`); fx('walk', { from: 0, to: o.from, kind: 'silk' }); }
+  if (o.kind === 'gift') { const c = []; for (let s = 0; s < 4; s++) for (let f = 0; f < 4; f++) if (!S.pins[s + '_' + f]) c.push([s, f]); if (c.length) { const [s, f] = c[ri(c.length)]; S.pins[s + '_' + f] = { m: S.perm[s][f], src: 'Frost' }; } addMem({ kind: 'gift', about: 5, w: 1, text: 'Frost gave a word from the chronicle' }); trustAdd(0, 5, 15); log('Frost gave a word. Iris will remember.', 'good'); fx('walk', { from: 5, to: 0, kind: 'gift' }); }
+  if (o.kind === 'pact') { addMem({ kind: 'promise', about: o.from, w: 2, text: `You promised ${NAMES[o.from]} to contribute a fragment by tick ${o.by}`, data: { by: o.by } }); S.aiPact[o.from] = o.by; trustAdd(o.from, 0, 10); log(`Pact with ${NAMES[o.from]}: both contribute by tick ${o.by}.`); fx('pact', { with: o.from }); }
+  if (o.kind === 'escrow') { if (S.silk[0] < o.price) return no('no_silk'); S.silk[0] -= o.price; S.escrow = o.price; log(`Escrow open: ${o.price} silk wait for Amber’s fragment.`); fx('escrow', { with: 4 }); }
   S.offers = S.offers.filter((x) => x !== o);
   return done();
 }
@@ -645,7 +646,7 @@ export function bid(id) {
   if (S.silk[0] < amt) return no('no_silk');
   sh.bids = sh.bids.filter((b) => b.c !== 0); sh.bids.push({ c: 0, amt });
   let best = null; for (const [c, v] of Object.entries(sh.vals || {})) if (v >= amt + 2 && S.silk[+c] >= amt + 2 && (!best || v > best.v)) best = { c: +c, v };
-  if (best) { sh.bids.push({ c: best.c, amt: amt + 2 }); log(`${NAMES[best.c]} перебивает вашу ставку: ${amt + 2}.`, 'muted'); }
+  if (best) { sh.bids.push({ c: best.c, amt: amt + 2 }); log(`${NAMES[best.c]} outbids you: ${amt + 2}.`, 'muted'); }
   return done();
 }
 
@@ -653,7 +654,7 @@ export function contributeMine() {
   if (S.phase !== 'play') return no('phase');
   if (S.tick > DEADLINE) return no('too_late');
   if (S.frag[0].st !== 'held') return no('no_fragment');
-  contribute(0, 'Ирис вносит ваш фрагмент в Свиток.');
+  contribute(0, 'Iris places your fragment in the Scroll.');
   return done();
 }
 
@@ -679,7 +680,7 @@ export function castVote(acceptMine) {
   else if (!S.truthGift && !accept) { contrib.forEach((i) => (S.silk[i] += bonusSurvived)); o = 'survived'; }
   else o = 'lost';
   // P1 "D" (v3): deferred prizes are paid only when the message succeeded without the holder.
-  if (v3() && (o === 'gift' || o === 'survived')) for (const f of S.frag) if (f.prize) { S.silk[f.owner] += f.prize; f.prizePaid = true; log(`${NAMES[f.owner]} получает отложенный приз ${f.prize} шёлка: послание прочли без него.`, 'muted'); }
+  if (v3() && (o === 'gift' || o === 'survived')) for (const f of S.frag) if (f.prize) { S.silk[f.owner] += f.prize; f.prizePaid = true; log(`${NAMES[f.owner]} receives the deferred prize of ${f.prize} silk: the message was read without them.`, 'muted'); }
   finish(o); bump();
   return OK;
 }

@@ -1,7 +1,10 @@
 # i18n: engine text migration plan
 
-Status: **planned, not done.** The engine still writes Russian prose. The client
-already renders every engine string in English or Russian through an adapter.
+Status: **step 5 done (09.11).** `prototype-2d/` and `engine.js` write English prose (identical bytes in both,
+fixtures regenerated), the adapter parses the English text, and the English locale reproduces it exactly. Only
+Ash's phrases stay in their original form: they are hash preimages committed on NEAR testnet for the judge
+season. Steps 1-4 and 6 (structured events instead of parsing) remain open. The sections below describe the
+state before step 5.
 
 ## Where we are
 
@@ -10,7 +13,7 @@ already renders every engine string in English or Russian through an adapter.
   - `S.feed[].text`: the chronicle (about 60 templates);
   - `S.mem[].text` and `S.forgot[].text`: memory texts;
   - `S.shards[].title`, `S.shards[].result`, `S.forgot[].fate`;
-  - `S.pins[*].src` (`'Гости'`, `'Иней'`, `'осколок'`);
+  - `S.pins[*].src` (Guests, Frost, shard);
   - `offerText()` / `effectText()` (Russian HTML helpers, not stored in state).
 - `game/src/ui/i18n/engine-adapter.js` holds a verbatim copy of each template with
   typed placeholders (`{who:agent}`, `{shell:shell}`, `{title:title}`...). It parses

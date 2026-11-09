@@ -71,7 +71,7 @@ Steps:
 5. Add `tests/ui-i18n-locales.test.mjs` (and list it in the `test` script of `game/package.json`): every `en` key
    exists in `uk`, `it`, `zh` as an own property, and the placeholder set of each message matches `en`.
 6. Check rendering: Chinese glyphs need a CJK fallback in the font stacks (Libre Caslon / Old Standard TT /
-   Source Sans 3 have none); Ukrainian needs і ї є ґ in the Cyrillic face. Fix the font stacks only through a
+   Source Sans 3 have none); Ukrainian needs Ukrainian letters (U+0456, U+0457, U+0454, U+0491) in the Cyrillic face. Fix the font stacks only through a
    request in `docs/collab-requests.md` if they live in Codex-owned UI files. Look at the lobby, tutorial, world
    HUD and play panels in each language at 1280 px and 390 px wide.
 7. Update the HANDOFF Languages row.

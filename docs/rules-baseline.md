@@ -2,7 +2,7 @@
 
 Source of truth: `prototype-2d/index.html` (commit `4c7098d`). References like `L367` are line numbers in that file.
 Extracted from the code on 07.11.2026. The prototype code was not changed. Discrepancies and the author's answers are in §12–13.
-Clan names in code are Russian: 0 Ирис/Iris (player), 1 Соль/Salt, 2 Пепел/Ash, 3 Мох/Moss, 4 Янтарь/Amber, 5 Иней/Frost.
+Clan names in code: 0 Iris (player), 1 Salt, 2 Ash, 3 Moss, 4 Amber, 5 Frost (the prototype and engine were Russian until 09.11 and are English since).
 
 ## 1. Constants and entities
 | What | Value | Where |

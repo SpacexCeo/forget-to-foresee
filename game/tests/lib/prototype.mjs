@@ -1,5 +1,5 @@
-// Loads prototype-2d/index.html into a Node VM so its untouched game code can
-// serve as the reference implementation for parity tests.
+// Loads prototype-2d/index.html into a Node VM so its game code (rules frozen; text
+// English since 09.11) can serve as the reference implementation for parity tests.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';

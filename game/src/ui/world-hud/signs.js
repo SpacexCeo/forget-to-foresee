@@ -37,7 +37,7 @@ const isTyping = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)
 
 /**
  * Anchor pill args: "Anchor: Shell III, Tiers 11–13". `el._short` (set by fitAnchors on mobile when
- * the full text overflows) switches to `wh.sign.tiersShort` (RU "ур. 11–13").
+ * the full text overflows) switches to `wh.sign.tiersShort` (the abbreviated form, e.g. in Russian).
  */
 function anchorArgs(i18n, a, el) {
   if (a.trial != null) return { shell: i18n.t('shell.' + a.shell), tiers: i18n.t('wh.sign.trialShort', { n: a.trial }) };

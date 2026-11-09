@@ -1,5 +1,6 @@
 // Synchronous SHA-256 and a small Merkle tree: enough to commit the season's
-// future at tick 0 and verify every reveal against the root.
+// future at tick 0 and verify every reveal against the root. Strings hash as UTF-8
+// (Ash's phrases, committed on testnet, are multi-byte).
 
 const primes = (n) => {
   const r = [];

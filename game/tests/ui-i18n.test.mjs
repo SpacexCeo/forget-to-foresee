@@ -140,50 +140,62 @@ test('adapter: every engine chronicle line, memory, shard and fate maps to a key
   for (const { S } of seasons) {
     for (const f of S.feed) if (!parseLogText(f.text)) miss.push('log: ' + f.text);
     const i = createGameI18n('en', { onMissing: (k) => miss.push('key: ' + k) });
-    for (const m of S.mem) if (CYR.test(localizeMemoryText(m.text, i))) miss.push('mem: ' + m.text);
-    for (const sh of S.shards) { localizeShardTitle(sh.title, i); localizeShardResult(sh.result, i); }
-    for (const f of S.forgot) localizeFate(f.fate, i);
-    for (const p of Object.values(S.pins)) if (!PIN_SOURCES[p.src]) miss.push('pin: ' + p.src);
+    for (const m of S.mem) if (localizeMemoryText(m.text, i) !== m.text) miss.push('mem: ' + m.text);
+    for (const f of S.forgot) { if (localizeMemoryText(f.text, i) !== f.text) miss.push('forgot: ' + f.text); if (localizeFate(f.fate, i) !== f.fate) miss.push('fate: ' + f.fate); }
+    for (const sh of S.shards) {
+      if (localizeShardTitle(sh.title, i) !== sh.title) miss.push('shard: ' + sh.title);
+      if (localizeShardResult(sh.result, i) !== (sh.result || '')) miss.push('result: ' + sh.result);
+    }
+    for (const p of Object.values(S.pins)) if (!PIN_SOURCES[p.src] && !E.NAMES.includes(p.src)) miss.push('pin: ' + p.src);
     assert.equal(i.missing.size, 0, [...i.missing].join(', '));
   }
   assert.deepEqual(miss, []);
 });
 
-test('adapter: English renders contain no Russian except verbatim secret phrases; Russian renders match the engine', () => {
+test('adapter: the English locale reproduces the engine text exactly; the Russian locale renders every line', () => {
   const iEn = createGameI18n('en'), iRu = createGameI18n('ru');
-  // Intentional improvements over the prototype text: list formatting and plural agreement.
-  const improved = new Set(['log.giftTaken', 'log.visionSigns', 'log.guestVoice']);
+  let lines = 0;
   for (const { S } of seasons) for (const f of S.feed) {
     const e = localizeFeedEntry(f, iEn);
+    // The one deliberate difference: a list of names is locale-formatted ("Salt and Moss", not "Salt, Moss").
+    if (e.event.key === 'log.giftTaken' && e.event.args.who.$agents.length > 1) continue;
+    assert.equal(e.text, f.text);
     let txt = e.text;
-    if (typeof e.event.args.phrase === 'string') txt = txt.replace(e.event.args.phrase, '');
-    assert.ok(!CYR.test(txt), `en render leaks Russian: ${e.text}`);
+    if (typeof e.event.args.phrase === 'string') txt = txt.replace(e.event.args.phrase, ''); // Ash's phrases stay verbatim
+    assert.ok(!CYR.test(txt), `en render leaks Cyrillic: ${e.text}`);
     const r = localizeFeedEntry(f, iRu);
-    if (!improved.has(r.event.key)) assert.equal(r.text, f.text);
+    assert.ok(r.text !== MISSING_TEXT && r.text !== e.text && CYR.test(r.text), `ru render: ${r.text}`);
+    lines++;
   }
+  assert.equal(iEn.missing.size + iRu.missing.size, 0);
+  assert.ok(lines > 1000, `expected many chronicle lines, got ${lines}`);
 });
 
 test('adapter: rare engine lines that scripted seasons do not reach', () => {
-  const i = createGameI18n('en');
-  const cases = {
-    'Соль вернул 25 шёлка владельцу осколка: Мох.': 'Salt paid 25 silk to the shard holder, Moss.',
-    'Ирис держит слово перед Пепел и вносит фрагмент.': 'Iris keeps her word to Ash and contributes the fragment.',
-    'Иней вносит фрагмент.': 'Frost contributes a fragment.',
-    'Ключ не совпал с коммитом.': 'The Key did not match the commitment.',
-    'Осколок «Как Соль торговал словами» сгорел.': 'Shard “How Salt traded in words” burned.',
-    'Осколок «Соль продал ложное слово («петля» в слоте «Сила»)» выставлен на торги.': 'Shard “Salt sold a false word (“loop” in the Power slot)” is up for auction.',
-    'Янтарь купил память о том, как Соль обманул Ирис. Теперь Янтарь тоже ему не верит.': 'Amber bought the memory of how Salt deceived Iris. Now Amber distrusts them too.',
-    'Мох купил ваш долг: теперь Соль должен ему.': 'Moss bought your debt: Salt now owes them.',
-    'Видение: Ирис видит Ключ Пепла — «вода помнит камень».': 'Vision: Iris sees Ash’s Key — “вода помнит камень”.',
-    'Дар забрали: Соль, Мох, Иней.': 'The gift went to Salt, Moss, and Frost.',
-    'Глас Гостей: 2 новых знака.': 'The Guests speak: 2 new signs.',
-    'Глас Гостей: новый знак.': 'The Guests speak: a new sign.',
-  };
-  for (const [ruText, enText] of Object.entries(cases)) assert.equal(localizeFeedEntry({ t: 1, text: ruText }, i).text, enText);
-  assert.equal(localizeFeedEntry({ t: 1, text: 'совсем новая строка' }, i).text, en['log.unknown']);
-  assert.equal(localizePinSource('Гости', i), 'the Guests');
-  assert.equal(localizePinSource('Соль', i), 'Salt');
-  assert.equal(localizeFate('купил Янтарь за 12', i), 'bought by Amber for 12');
+  const i = createGameI18n('en'), r = createGameI18n('ru');
+  const lines = [
+    'Salt paid 25 silk to the shard holder, Moss.',
+    'Iris keeps her word to Ash and contributes the fragment.',
+    'Frost contributes a fragment.',
+    'The Key did not match the commitment.',
+    'Shard “How Salt traded in words” burned.',
+    'Shard “Salt sold a false word (“loop” in the Power slot)” is up for auction.',
+    'Amber bought the memory of how Salt deceived Iris. Now Amber distrusts them too.',
+    'Moss bought your debt: Salt now owes them.',
+    'Vision: Iris sees Ash’s Key — “вода помнит камень”.',
+    'Vision: Iris sees 1 future sign before anyone else.',
+    'The Guests speak: 2 new signs.',
+    'The Guests speak: a new sign.',
+  ];
+  for (const text of lines) assert.equal(localizeFeedEntry({ t: 1, text }, i).text, text);
+  assert.equal(localizeFeedEntry({ t: 1, text: 'The gift went to Salt, Moss, Frost.' }, i).text, 'The gift went to Salt, Moss, and Frost.');
+  assert.equal(localizeFeedEntry({ t: 1, text: 'Salt paid 25 silk to the shard holder, Moss.' }, r).text, 'Соль вернул 25 шёлка владельцу осколка: Мох.');
+  assert.equal(localizeFeedEntry({ t: 1, text: 'Vision: Iris sees Ash’s Key — “вода помнит камень”.' }, r).text, 'Видение: Ирис видит Ключ Пепла — «вода помнит камень».');
+  assert.equal(localizeFeedEntry({ t: 1, text: 'a brand new line' }, i).text, en['log.unknown']);
+  assert.equal(localizePinSource('the Guests', i), 'the Guests');
+  assert.equal(localizePinSource('Salt', i), 'Salt');
+  assert.equal(localizePinSource('Salt', r), 'Соль');
+  assert.equal(localizeFate('bought by Amber for 12', i), 'bought by Amber for 12');
 });
 
 test('adapter: every S.fx event becomes a localized agent line with a speaker', () => {

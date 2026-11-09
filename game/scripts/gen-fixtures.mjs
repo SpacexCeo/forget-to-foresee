@@ -1,4 +1,4 @@
-// Generates parity fixtures from the untouched 2D prototype (the reference).
+// Generates parity fixtures from the 2D prototype (the reference; its rules are frozen).
 // Usage: npm run fixtures
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -47,6 +47,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     fx.final.burned.forEach((k) => (cov.burned[k] = (cov.burned[k] || 0) + 1));
     cov.crisis += fx.final.crisis ? 1 : 0; cov.keySpoken += fx.final.keySpoken ? 1 : 0; cov.intents += fx.intents.length;
   }
-  writeFileSync(`${OUT}_coverage.json`, JSON.stringify(cov, null, 2));
+  writeFileSync(`${OUT}_coverage.json`, JSON.stringify(cov, null, 2) + '\n');
   console.log(JSON.stringify(cov, null, 2));
 }

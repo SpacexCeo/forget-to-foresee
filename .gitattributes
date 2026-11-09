@@ -1,3 +1,4 @@
+# LF everywhere: the repository is edited on Windows and Linux (an exFAT drive moves between machines).
 * text=auto eol=lf
 *.png binary
 *.jpg binary

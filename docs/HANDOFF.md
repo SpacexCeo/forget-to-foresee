@@ -73,7 +73,7 @@ Everything below "History" is older.
   `cc161d308faa67539af44205b56b6d4f`); films skipped there unless `&films=full|cheap`.
 - **Integration branch (lead):** `claude/loving-curie-ihasft`, same content as `main` plus docs-only commits. Merge
   flow: worker branch → integration (tests + build + headless check) → PR to `main` → merge. The owner approved
-  merging to `main` for this phase ("добро", 09.11 morning); keep doing it per finished, verified piece.
+  merging to `main` for this phase ("go ahead", 09.11 morning); keep doing it per finished, verified piece.
 - **Credit:** the game is by **Lambada_eth** (X: @Lambada_eth) everywhere (owner, 09.11). External/business texts are
   always English. Talk to the owner in Russian.
 - **Fable is exhausted until ~12.11.** All workers run on `claude-opus-5-5` (owner: Opus 5.5, medium effort).
@@ -109,7 +109,7 @@ Everything below "History" is older.
 | Who | Session | Branch | Doing |
 |---|---|---|---|
 | J3, jury video | `session_01QfMhgE18GEabs5bp2KW1we` | `claude/jury-video` | the 60 s jury video; now the 18.5 s cinematic test |
-| GPU art session ("Завершение работы", owner's desktop session, Opus) | `session_01QfMhgDiqET9W6zwun44weJ` | `claude/iris-hero`, `claude/jury-plates` | runs GPU jobs on the RTX 4090; Iris rebuilds |
+| GPU art session ("Wrap-up", owner's desktop session, Opus) | `session_01QfMhgDiqET9W6zwun44weJ` | `claude/iris-hero`, `claude/jury-plates` | runs GPU jobs on the RTX 4090; Iris rebuilds |
 | R2, juror | `session_01QfMhgDAKdSL1ErtGNuQjaQ` | `claude/jury` | scorecards from 15:00 UTC 09.11 (schedules trig_01W1fqnBUpajNw2RddU5YpMn :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45) |
 | M, NEAR | `session_01QfMhgExsbgGFqMUCWf9EVh` | `claude/near-live` | done; holds the original testnet keys in its container |
 
@@ -202,7 +202,7 @@ R juror (`docs/jury/` on `claude/jury`; 24 h study until 09.11 15:00 UTC, then s
 **Active (minimal, token saving):** J fixes the video flicker (cause found: render resolution/pixel ratio changing during
 frame-stepped capture → black corner rectangles and luma jumps; fix = freeze governor/autoTier/dynamic resolution in the
 cinematic path + a luma/black-region check that fails the render) and sends a 10 s test + the demo to the GPU session.
-The GPU art session ("Завершение работы", branch `claude/laughing-thompson-dc7r09`) runs it on the owner's RTX 4090.
+The GPU art session ("Wrap-up", branch `claude/laughing-thompson-dc7r09`) runs it on the owner's RTX 4090.
 The current `docs/media/` drafts on that branch flicker; do not use them.
 
 **Servers (Clore):** order 2419013 = owner's RTX 4090, stays up; used for project GPU work (ANGLE Vulkan WebGL works,
@@ -219,7 +219,7 @@ no server is stopped while it holds a server-only item the owner has not downloa
 
 **Schedules (since 23:21 Kyiv):** one lead loop per hour (trig_018op6gxTUumLXJX3eyDUuzr at :09; the :29/:49 loops trig_01U3rg64KhBguBy5gwNvtbHF, trig_01AujfoKaraCGtHz4VpeNp8r stay off to save tokens) and the juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45). Active workers: F (open QA UI items), K (re-test of main 1a17673), O (shell.js frame safety, phone stills), J's capture job on the RTX 4090 via the GPU session (demo, then trailer and clips, the agent rebuild, 4K). Others paused with next steps in their reports.
 
-**Model availability (09.11 00:10 Kyiv):** the Fable limit is exhausted until about 12.11 (seven-day window). All worker sessions created on Fable (A–V, the juror R) fail on their next turn; their pushed branches are intact. Only Opus 5.5 sessions run: this lead session and the GPU art session ("Завершение работы", running the video queue on the RTX 4090). Owner: new workers use Opus 5.5 at medium effort (`model: claude-opus-5-5` in create_session). Overnight in eco mode: the GPU queue (demo, trailer, clips with the flicker check; agent rebuild; 4K server-only) and one morning merge at 07:01 Kyiv (trig_014q6NjmK4V33rZkA98BBkHq); all other schedules are off.
+**Model availability (09.11 00:10 Kyiv):** the Fable limit is exhausted until about 12.11 (seven-day window). All worker sessions created on Fable (A–V, the juror R) fail on their next turn; their pushed branches are intact. Only Opus 5.5 sessions run: this lead session and the GPU art session ("Wrap-up", running the video queue on the RTX 4090). Owner: new workers use Opus 5.5 at medium effort (`model: claude-opus-5-5` in create_session). Overnight in eco mode: the GPU queue (demo, trailer, clips with the flicker check; agent rebuild; 4K server-only) and one morning merge at 07:01 Kyiv (trig_014q6NjmK4V33rZkA98BBkHq); all other schedules are off.
 
 **Overnight relaunch on Opus 5.5 (09.11 00:05 Kyiv):** F2 `session_01QfMhgC3bXjG8v7dRm14NjA` (claude/ui-polish: QA-031, QA-005/README, overlap at 1280 in four locales), G2 `session_01QfMhgCFUQvCkLm6XJ3XYDN` (claude/first-seconds: QA-029/030/032), J2 `session_01QfMhgFJGfUrN6eJtU2qesA` (claude/trailer: interesting video scripts, one GPU job), R2 juror `session_01QfMhgDAKdSL1ErtGNuQjaQ` (claude/jury; schedules trig_01W1fqnBUpajNw2RddU5YpMn :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45), GPU art session on the RTX 4090. The hourly lead loop (trig_018op6gxTUumLXJX3eyDUuzr :09) merges finished branches and starts one K2 QA session on Opus once F2 and G2 are in; the 07:01 Kyiv run (trig_014q6NjmK4V33rZkA98BBkHq) merges into main.
 
