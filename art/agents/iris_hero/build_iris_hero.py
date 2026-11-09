@@ -922,6 +922,14 @@ def stage_full(shade=True, size=2048, samples=16):
     to_nla(rig, actions)
     to_nla(bm.data.shape_keys, face)
     col, socks = add_collision_and_sockets(rig)
+    for o in [bm, *eye_objs, *cloth, *hair]:                       # glTF tangents need tris/quads
+        bb = bmesh.new()
+        bb.from_mesh(o.data)
+        ng = [f for f in bb.faces if len(f.verts) > 4]
+        if ng:
+            bmesh.ops.triangulate(bb, faces=ng)
+            bb.to_mesh(o.data)
+        bb.free()
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_hero.blend"))
     path = os.path.join(OUT, "agent_iris.glb")
     bpy.ops.object.select_all(action="DESELECT")

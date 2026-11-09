@@ -157,7 +157,10 @@ def collar(P, z0=1.40, z1=1.56):
         gap = math.radians(62 + 8 * k / 5)
         for i in range(n):
             th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)
-            ring.append(ellipse(c, rx + flare, ry + flare, th))
+            ends = math.sin(math.pi * i / (n - 1)) ** 0.6           # lower and closer to the neck at the ends
+            p = ellipse(c, rx + flare * ends, ry + flare * ends, th)
+            p.z = z0 + (p.z - z0) * (0.35 + 0.65 * ends)
+            ring.append(p)
         rings.append(ring)
     o = loft("collar", rings, closed_u=False)
     set_attr(o, "trim", lambda i, co: 1.0 if i >= n * 5 else 0.0)
@@ -508,7 +511,7 @@ def hair_cards(scalp_pts, head_c, head_r, brow_z, seed=11, length=0.33):
     return o
 
 
-def headband(head_c, head_r, lift=0.036, tilt=0.30, width=0.011, thick=0.0045):
+def headband(head_c, head_r, lift=0.024, tilt=0.30, width=0.010, thick=0.004):
     """A slim band over the hair from ear to ear, about 4 cm behind the hairline (the hair runs under it)."""
     n = 40
     rings = []
@@ -516,9 +519,10 @@ def headband(head_c, head_r, lift=0.036, tilt=0.30, width=0.011, thick=0.0045):
         off = lift + thick * (k == 1)
         ring = []
         for i in range(n):
-            a = math.pi * (0.06 + 0.88 * i / (n - 1))                    # from her left ear over the top
+            a = math.pi * (0.10 + 0.80 * i / (n - 1))                    # from her left ear over the top
             d = V((math.cos(a), math.sin(tilt) * math.sin(a), math.cos(tilt) * math.sin(a)))
-            p = head_c + V((d.x * (head_r[0] + off), d.y * (head_r[1] + off), d.z * (head_r[2] + off)))
+            tuck = 0.012 * (1 - math.sin(a))                          # the ends tuck into the hair
+            p = head_c + V((d.x * (head_r[0] + off - tuck), d.y * (head_r[1] + off), d.z * (head_r[2] + off)))
             along = V((0, math.cos(tilt), -math.sin(tilt)))              # across the band
             ring.append(p + along * (width * (k - 1)))
         rings.append(ring)

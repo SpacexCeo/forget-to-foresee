@@ -141,7 +141,7 @@ def skin_shader(b, land):
     pores = b.noise(1600.0, 2.0, pos)
     rough = b.math("ADD", 0.48, b.math("MULTIPLY", pores.outputs["Fac"], 0.12))
     rough = b.math("SUBTRACT", rough, b.math("MULTIPLY", b.math("POWER", lips, 0.6), 0.28))   # glossy lips
-    mole = b.blob(pos, land["mole"], 0.0026, 0.7)
+    mole = b.blob(pos, land["mole"], 0.0021, 0.7)
     height = b.math("ADD", b.math("MULTIPLY", pores.outputs["Fac"], 0.25), b.math("MULTIPLY", mole, 0.6))
     return col, rough, 0.0, height, None
 
@@ -173,18 +173,18 @@ def makeup(b, pos, col, land, lips):
         rise = b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.66), 1.0), 0.0105)
         fall = b.math("MULTIPLY", b.math("POWER", b.math("DIVIDE", b.math("MAXIMUM", b.math("SUBTRACT", tc, 0.66), 0.0), 0.34), 1.3), 0.0125)
         zc = b.math("SUBTRACT", b.math("ADD", 0.0175, rise), fall)
-        half = b.math("ADD", 0.0011, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.6), 0.0036))
+        half = b.math("ADD", 0.0014, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.6), 0.0042))
         band = _smooth_band(b, b.math("SUBTRACT", z, zc), half, 0.0012)
         inside = b.math("MULTIPLY", b.math("GREATER_THAN", t, -0.02), b.math("LESS_THAN", t, 1.02))
-        ombre = b.math("ADD", 0.45, b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.22), 1.0), 0.55))
+        ombre = b.math("ADD", 0.60, b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.22), 1.0), 0.40))
         sv = b.n("ShaderNodeCombineXYZ")                     # hair strokes: stretched along the brow, tilted up at the head
         b.l(b.math("ADD", b.math("MULTIPLY", x, 130.0), b.math("MULTIPLY", z, b.math("ADD", 40.0, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, tc), 160.0)))), sv.inputs["X"])
         b.l(b.math("MULTIPLY", b.math("SUBTRACT", z, b.math("MULTIPLY", x, 0.25)), 900.0), sv.inputs["Y"])
         hairs = b.n("ShaderNodeTexNoise", in_Scale=1.0, in_Detail=2.0, in_Roughness=0.5)
         b.l(sv.outputs[0], hairs.inputs["Vector"])
-        strokes = b.math("ADD", 0.55, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.6))
+        strokes = b.math("ADD", 0.92, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.3))
         m = b.math("MINIMUM", b.math("MULTIPLY", b.math("MULTIPLY", b.math("MULTIPLY", band, inside), ombre), strokes), 0.95)
-        col = b.mix(m, col, (0.080, 0.048, 0.032))
+        col = b.mix(m, col, (0.055, 0.032, 0.022))
         # lid shadow: a soft mauve-brown wash between the lash line and the crease
         sh = b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.003, E[1] - 0.004, E[2] + 0.009), 0.017, 1.4),
                     b.math("GREATER_THAN", z, 0.002))
@@ -196,7 +196,7 @@ def makeup(b, pos, col, land, lips):
         upper = b.math("GREATER_THAN", z, b.math("SUBTRACT", b.math("MULTIPLY", x, 0.35), 0.004))
         wide = b.math("ADD", 1.10, b.math("MULTIPLY", b.math("MAXIMUM", b.math("DIVIDE", x, r), 0.0), 0.12))
         line = b.math("MULTIPLY", b.math("MULTIPLY", b.math("GREATER_THAN", ring, 0.98), b.math("LESS_THAN", ring, wide)), upper)
-        wing = b.math("MULTIPLY", b.math("GREATER_THAN", x, r * 0.85), b.math("LESS_THAN", x, r * 1.45))
+        wing = b.math("MULTIPLY", b.math("GREATER_THAN", x, r * 0.90), b.math("LESS_THAN", x, r * 1.18))
         wing = b.math("MULTIPLY", wing, _smooth_band(b, b.math("SUBTRACT", z, b.math("MULTIPLY", b.math("SUBTRACT", x, r * 0.85), 0.55)), 0.0006, 0.0008))
         col = b.mix(b.math("MINIMUM", b.math("ADD", line, wing), 0.9), col, (0.020, 0.013, 0.011))
         lower = b.math("MULTIPLY", b.math("MULTIPLY", b.math("GREATER_THAN", ring, 0.98), b.math("LESS_THAN", ring, 1.05)),
@@ -208,7 +208,7 @@ def makeup(b, pos, col, land, lips):
     edge = b.math("MULTIPLY", b.math("GREATER_THAN", lips, 0.12), b.math("LESS_THAN", lips, 0.45))
     col = b.mix(b.math("MULTIPLY", edge, 0.35), col, (0.30, 0.07, 0.08))
     # beauty mark: small, round, deep brown with a soft edge (her left cheek, above the mouth corner)
-    mole = b.blob(pos, land["mole"], 0.0026, 0.7)
+    mole = b.blob(pos, land["mole"], 0.0021, 0.7)
     col = b.mix(b.math("MINIMUM", b.math("MULTIPLY", mole, 1.6), 0.95), col, (0.035, 0.018, 0.012))
     return col
 
@@ -261,14 +261,15 @@ def hair_shader(b):
     thr = b.math("ADD", 0.47, b.math("MULTIPLY", b.math("GREATER_THAN", col_i, 3.5), 0.08))
     thr = b.math("ADD", thr, b.math("MULTIPLY", b.math("GREATER_THAN", col_i, 6.5), 0.07))
     edge = b.math("SUBTRACT", 1.0, b.math("POWER", b.math("ABSOLUTE", b.math("SUBTRACT", b.math("MULTIPLY", lu, 2.0), 1.0)), 3.0))
-    thr = b.math("ADD", thr, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, edge), 0.25))  # thinner at the card edges
+    thr = b.math("ADD", thr, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, edge), 0.45))  # thinner at the card edges
     hairs = b.math("GREATER_THAN", strand, thr)
     # ragged tips: each strand ends at its own length (v = 0 is the tip)
     tipn = b.n("ShaderNodeTexNoise", in_Scale=300.0, in_Detail=1.0)
     tv = b.n("ShaderNodeCombineXYZ"); b.l(u, tv.inputs["X"])
     b.l(tv.outputs[0], tipn.inputs["Vector"])
     tips = b.math("GREATER_THAN", v, b.math("MULTIPLY", b.math("SUBTRACT", tipn.outputs["Fac"], 0.3), 0.55))
-    alpha = b.math("MULTIPLY", hairs, tips)
+    roots = b.math("LESS_THAN", v, b.math("SUBTRACT", 1.0, b.math("MULTIPLY", tipn.outputs["Fac"], 0.12)))
+    alpha = b.math("MULTIPLY", b.math("MULTIPLY", hairs, tips), roots)
     # colour: root -> mid -> tip, per-strand value variation and highlights
     c = b.mix(b.math("POWER", v, 0.6), (0.20, 0.10, 0.050), (0.120, 0.052, 0.024))     # tip (v=0) -> mid
     root = b.math("MULTIPLY", b.math("SUBTRACT", v, 0.82), 5.5, clamp=True)
