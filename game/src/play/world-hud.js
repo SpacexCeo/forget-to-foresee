@@ -16,6 +16,9 @@ import { createMintToast } from '../ui/world-hud/shard-card.js';
 import { openSignsByShell } from './hub.js';
 import { createOutcomeTracker } from './outcome.js';
 import { createOutcomeToast } from './outcome-ui.js';
+import { attachProofViews } from '../ui/world-hud/proof-model.js';
+import { buildProofExport, proofExportText } from '../net/verify-export.js';
+import { copyText } from './clipboard.js';
 
 const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
 
@@ -51,6 +54,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     mintToast = createMintToast(host, { t: render, doc, onOpen: () => ui.open('memory') });
     if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs }));
   } catch (e) { console.warn('[play] shard NFT watcher off', e); shards = null; }
+  if (ui.setNearSource) ui.setNearSource(() => (near ? near.status : null)); // the Biography's season record
   const showMints = () => { if (moments && mintToast) for (const m of moments.take(shards.status, session.obs)) mintToast.show(m.card); };
   // "See what changed" (readiness audit P2): what each reveal did to the staked reading, the stake and Iris's
   // dictionary, and what each forget changed; presentation state kept from consecutive observations (outcome.js)
@@ -88,7 +92,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     const c = hints && hints.takeCoach();
     if (c) { line = { speaker: 'iris', text: c }; lineAge = 0; }
     const opts = session.options || [];
-    return buildHudModel({
+    const m = buildHudModel({
       obs, goal: session.goal, options: opts, defaultIndex: session.defaultIndex, i18n, mode: mode(),
       render, renderEvent, prev,
       hints: hints ? hints.view() : null,
@@ -101,6 +105,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
       hub: hubInfo(obs),
       outcomes: outcomes.reports(),
     });
+    // the visible NEAR state and "What does this prove?" on every revealed sign (proof-model.js)
+    return attachProofViews(m, { near, merkleRoot: obs.season ? obs.season.merkleRoot : null });
   }
 
   function refresh() {
@@ -129,7 +135,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     body.classList.toggle('wh-m-card', id === 'hub-card' || (id === 'panel' && ui.panel === 'end'));
   }
 
-  function onAction(action, id) {
+  function onAction(action, id, extra) {
     if (action === 'prompt') ui.handleKey('KeyE');
     else if (action === 'hotkey' || action === 'top') {
       if (id === 'memory' || id === 'journal') ui.handleKey('KeyM');
@@ -146,7 +152,15 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     else if (action === 'pass') { if (handlers.onPass) handlers.onPass(); else ui.handleKey('KeyT'); }
     else if (action === 'sheetOpen') arb.claim('m-' + id, () => { if (hud && hud.mobile && hud.mobile.sheet === id) hud.mobile.closeSheet(); }, { modal: true }); // a switch to the other own sheet must not close the new one
     else if (action === 'sheetClose') arb.release('m-' + id);
+    else if (action === 'copyProof') copyProof(id, extra);
     if (hints && action !== 'signsClose' && action !== 'sheetClose' && action !== 'nav') hints.action('ui');
+  }
+
+  /** "Copy proof" (net/verify-export.js): the sign's full proof as JSON; `done(ok)` updates the button. */
+  async function copyProof(index, done = () => {}) {
+    let ok = false;
+    try { ok = await copyText(proofExportText(await buildProofExport(session, index, { near })), doc); } catch (e) { console.warn('[play] copy proof failed', e); }
+    done(ok);
   }
 
   /** The desktop Signs panel reads alongside the hub dock (not modal); the phone sheet covers the screen (modal). */
@@ -159,8 +173,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
       if (shards) { shards.observe(session.obs); moments.observe(session.obs); showMints(); }
       refresh();
     }),
-    near ? near.subscribe(() => refresh()) : null,
-    shards ? shards.subscribe(() => { showMints(); if (ui.panel === 'memory') ui.update(); }) : null,
+    near ? near.subscribe(() => { refresh(); if (ui.panel === 'end') ui.update(); }) : null,
+    shards ? shards.subscribe(() => { showMints(); if (ui.panel === 'memory' || ui.panel === 'end') ui.update(); }) : null,
     session.on('goal', refresh),
     session.on('spot', refresh),
     prefs ? prefs.subscribe(() => refresh()) : null,

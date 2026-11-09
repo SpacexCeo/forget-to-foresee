@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { createLocalTransport } from '../../src/play/transport-local.js';
 import { createSeason } from '../../src/net/engine-host.js';
 import { demoRandomBytes, seasonCommitment, contractArgs, canonicalEvent, COMMITMENT_SCHEMA } from '../../src/net/near-season.js';
-import { createNearClient, createNearWatcher, compareSeason, leafArgs, explorerLinks, seasonBadge, leafBadge, NearError } from '../../src/net/near.js';
+import { createNearClient, createNearWatcher, compareSeason, leafArgs, explorerLinks, seasonBadge, leafBadge, verificationView, NearError } from '../../src/net/near.js';
 import { NEAR_DEPLOYMENT } from '../../src/net/near-deployment.js';
 import { sha256, verifyProof } from '../../src/game/crypto.js';
 import * as E from '../../src/game/engine.js';
@@ -378,4 +378,68 @@ test('watcher: a leaf that failed on the network is asked again after retryMs (a
   }
   assert.equal(w2.leaf(index).state, 'on-chain', 'retried by the timer');
   w2.destroy();
+});
+
+test('verificationView: every NEAR state is visible on a revealed sign; a recorded tx is never shown as live', async () => {
+  const { tr, obs, index, proof } = await playedJudgeSession();
+  const root = obs.season.merkleRoot;
+  // waiting: the season check and then the leaf check are in flight
+  let releaseLeaf;
+  const gate = new Promise((r) => { releaseLeaf = r; });
+  const slow = fakeRpc({ views: { get_season: () => SEASON_VIEW, get_revealed_leaf: () => ({ leaf: proof.leaf }) } });
+  const w = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, autoRetry: false,
+    fetch: async (url, init) => { if (JSON.parse(init.body).params.method_name === 'get_revealed_leaf') await gate; return slow(url, init); } });
+  assert.equal(w.verification(index, 'ok', root).state, 'local', 'before the first observation nothing was asked');
+  w.observe(obs);
+  assert.equal(w.verification(index, 'ok', root).state, 'checking', 'season check in flight');
+  await new Promise((r) => setTimeout(r, 10));
+  const leafWait = w.verification(index, 'ok', root);
+  assert.equal(leafWait.state, 'checking', 'leaf check in flight');
+  assert.equal(leafWait.pill, false);
+  releaseLeaf(); await w.settle();
+  const good = w.verification(index, 'ok', root);
+  assert.equal(good.state, 'on-chain');
+  assert.equal(good.pill, true, 'the existing pill shows it');
+  assert.equal(good.live, true);
+  assert.equal(good.commitBlock, '276700000');
+  assert.equal(good.commitTxUrl, 'https://testnet.nearblocks.io/txns/CommitTxHash');
+  assert.equal(good.revealTxUrl, index === 0 ? 'https://testnet.nearblocks.io/txns/Reveal0Hash' : null);
+  assert.equal(good.recordedTxUrl, null, 'no recorded fallback while the network answers');
+  assert.equal(good.merkleRoot, root);
+
+  // offline: no host answers → the local check stands, the deployment's recorded reveal tx is labelled recorded, not live
+  const off = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, autoRetry: false, fetch: fakeRpc({ failUrls: DEPLOY.rpcUrls }) });
+  off.observe(obs); await off.settle();
+  const ov = off.verification(index, 'ok', root);
+  assert.equal(ov.state, 'offline');
+  assert.equal(ov.live, false);
+  assert.equal(ov.pill, false);
+  assert.equal(ov.recordedTxUrl, index === 0 ? 'https://testnet.nearblocks.io/txns/Reveal0Hash' : null);
+  assert.equal(off.leafBadge(index), null, 'offline never produces a success badge');
+  assert.equal(off.verification(index, 'fail', root).local, 'fail', 'the local result is carried as is');
+
+  // the season answered but the leaf call failed → offline at leaf level, still not live
+  let calls = 0;
+  const flaky = fakeRpc({ views: { get_season: () => SEASON_VIEW } });
+  const half = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, autoRetry: false,
+    fetch: async (url, init) => { if (JSON.parse(init.body).params.method_name !== 'get_season') { calls++; throw new TypeError('fetch failed'); } return flaky(url, init); } });
+  half.observe(obs); await half.settle();
+  assert.ok(calls > 0);
+  assert.equal(half.verification(index, 'ok', root).state, 'offline');
+  assert.equal(half.verification(index, 'ok', root).live, false);
+
+  // mismatch on the season root, nothing recorded for the leaf, no record of the season, a leaf with no proof
+  const mk = async (views) => { const x = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, autoRetry: false, fetch: fakeRpc({ views }) }); x.observe(obs); await x.settle(); return x.verification(index, 'ok', root); };
+  assert.equal((await mk({ get_season: () => ({ ...SEASON_VIEW, schedule_root: 'ff' + JUDGE_ROOT.slice(2) }) })).state, 'season-mismatch');
+  assert.equal((await mk({ get_season: () => SEASON_VIEW, get_revealed_leaf: () => null, check_leaf: () => ({ valid: false }) })).state, 'missing');
+  assert.equal((await mk({ get_season: () => null })).state, 'not-committed');
+  assert.equal((await mk({ get_season: () => SEASON_VIEW, get_revealed_leaf: () => ({ leaf: 'ab'.repeat(32) }) })).pill, true, 'a differing record keeps its ✗ pill');
+  const noProof = createNearWatcher({ season: () => obs.season, proof: async () => ({ status: 404, body: {} }), deployment: DEPLOY, autoRetry: false, fetch: fakeRpc({ views: { get_season: () => SEASON_VIEW } }) });
+  noProof.observe(obs); await noProof.settle();
+  assert.equal(noProof.verification(index, 'ok', root).state, 'unavailable');
+
+  // local: no deployment, or a season nobody committed
+  assert.equal(verificationView({ state: 'disabled' }, null, { index, local: 'ok' }).state, 'local');
+  assert.equal(verificationView({ state: 'other-season', seasonId: 'x' }, null, { index, local: 'ok' }).state, 'local');
+  assert.equal(verificationView(null, null, { index, local: 'ok' }).state, 'local');
 });

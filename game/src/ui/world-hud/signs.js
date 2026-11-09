@@ -7,6 +7,7 @@
 import { h, tx, applyI18n } from '../dom.js';
 import { icon, ringSigil, iconUrl } from './icons.js';
 import { filterSigns, signCount } from './model.js';
+import { proofBlock } from './proof-panel.js';
 
 const FILTERS = ['all', 'active', 'resolved', 'anchors'];
 /** Compact desktop range (docs §1): the panel starts closed there and overlays when opened. */
@@ -100,6 +101,7 @@ function card(i18n, s, mobile, onAction) {
   s.stats.length ? stats : null,
   anchor,
   near, // its own row under the anchor: the head row has a fixed height and the label is long in every locale
+  proofBlock(i18n, s, onAction), // proof-panel.js: the NEAR state line and "What does this prove?" (resolved cards)
   ic(icon('chevron-slim'), 'wh-sign__chev'));
 }
 

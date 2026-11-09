@@ -1,0 +1,55 @@
+/* The proof block on a revealed sign card (proof-panel.js): the NEAR state line, the recorded link and
+   "What does this prove?". It sits in the card's text column, aligned with the NEAR pill. */
+.wh-root .wh-proof {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(4 * var(--wh-px));
+  /* stretch with negative margins, not a percentage width: a % width inside the grid list is measured unwrapped
+     during track sizing, and the open panel would overflow its card */
+  align-self: stretch;
+  margin: calc(6 * var(--wh-px)) calc(-36 * var(--wh-px)) 0 calc(-15 * var(--wh-px));
+  font-family: var(--wh-font-body);
+  font-size: var(--wh-fs-tab);
+  line-height: 1.35;
+  color: var(--wh-text-muted);
+  cursor: auto;
+  pointer-events: auto;
+}
+.wh-root .wh-proof__state { margin: 0; color: var(--wh-text-muted); }
+.wh-root .wh-proof__state--wait { color: var(--wh-text); }
+.wh-root .wh-proof__state--wait::before { content: "◌ "; display: inline-block; animation: wh-proof-spin 1.6s linear infinite; }
+.wh-root .wh-proof__state--bad { color: var(--wh-notify); }
+.wh-root .wh-proof__state--good { color: var(--wh-gold-bright); }
+.wh-root .wh-proof__recorded, .wh-root .wh-proof__link { color: var(--wh-gold-text, var(--wh-gold-bright)); text-decoration: underline; text-underline-offset: 2px; }
+.wh-root .wh-proof__details { align-self: stretch; }
+.wh-root .wh-proof__summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  cursor: pointer;
+  color: var(--wh-text);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  list-style: none;
+}
+.wh-root .wh-proof__summary::-webkit-details-marker { display: none; }
+.wh-root .wh-proof__summary::before { content: "▸"; margin-right: 6px; transition: transform var(--wh-transition, 160ms); }
+.wh-root .wh-proof__details[open] > .wh-proof__summary::before { transform: rotate(90deg); }
+.wh-root .wh-proof__summary:focus-visible { outline: 2px solid var(--wh-gold-bright); outline-offset: 2px; border-radius: 4px; }
+.wh-root .wh-proof__h { margin: calc(6 * var(--wh-px)) 0 calc(2 * var(--wh-px)); color: var(--wh-text); font-weight: 600; }
+.wh-root .wh-proof__list { margin: 0; padding-left: 1.1em; }
+.wh-root .wh-proof__item { margin: 0 0 calc(3 * var(--wh-px)); overflow-wrap: anywhere; }
+.wh-root .wh-proof__item--good { color: var(--wh-text); }
+.wh-root .wh-proof__item--bad { color: var(--wh-notify); }
+.wh-root .wh-proof__list--no .wh-proof__item { list-style: "– "; }
+.wh-root .wh-proof__row { display: flex; gap: 8px; margin-top: calc(6 * var(--wh-px)); }
+.wh-root .wh-proof__copy { min-height: 28px; padding: 0 12px; cursor: pointer; }
+.wh-root .wh-proof__copy[disabled] { opacity: .6; cursor: progress; }
+.wh-root .wh-sign--mobile .wh-proof { margin: 5px -30px 0 -13.5px; font-size: 11.5px; }
+/* the open panel makes the card as tall as its content (the grid list otherwise sizes the row before the panel's
+   wrapped lines are counted and the text spills under the next card) */
+.wh-root .wh-sign:has(.wh-proof__details[open]) { min-height: max-content; }
+@keyframes wh-proof-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .wh-root .wh-proof__state--wait::before { animation: none; } }
+html[data-motion="reduce"] .wh-root .wh-proof__state--wait::before { animation: none; }

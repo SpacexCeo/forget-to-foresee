@@ -9,6 +9,8 @@ import { i18n as uiI18n } from '../ui/index.js';
 import { panelArbiterFor } from './panels.js';
 import { renderShardSection } from '../ui/world-hud/shard-card.js';
 import { forgetConfirmModel } from './forget-confirm.js';
+import { biographyModel, biographyLines, biographyText } from './biography.js';
+import { copyText } from './clipboard.js';
 
 const { effectEvent, renderEvent } = uiI18n;
 const CLAN_INDEX = { iris: 0, salt: 1, ash: 2, moss: 3, amber: 4, frost: 5 };
@@ -48,6 +50,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
   // re-render on every observation does not restart the ink ring's drawing.
   let shardSource = null, shardKey = '', shardNode = null;
+  let nearSource = null; // () => the NEAR watcher's status (world-hud.js): the Biography's season record
   function shardSection(obs) {
     if (!shardSource) return null;
     const v = shardSource(obs);
@@ -74,8 +77,17 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     if (g.id === 'end_tick' || g.id === 'next_tick') row.append(el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('endtick.button', { tick: session.obs.season.tick }), onclick: () => endTick(true) }));
     if (g.id === 'fragment') row.append(el('button', { class: 'pl-btn', type: 'button', id: 'pl-hold', text: t('goal.fragment.hold'), onclick: () => session.holdFragment() }));
     // the Biography opens itself at the season's end unless the hub's Heir card already asks (QA-003: one Heir prompt)
-    if (g.id === 'season_over' && session.obs.season.heir == null && panel !== 'end' && !arb.isOpen('hub-card')) open('end');
+    // the Biography also opens once after the hub's Heir card was answered (it is the season's final record)
+    maybeOpenEnd();
     if (row.childNodes.length) goalEl.append(row);
+  }
+
+  let endShown = false;
+  function maybeOpenEnd() {
+    const g = session.goal;
+    if (!g || g.id !== 'season_over' || endShown || panel === 'end' || arb.isOpen('hub-card')) return;
+    endShown = true;
+    open('end');
   }
 
   /* ---------- context menu ---------- */
@@ -212,14 +224,34 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     } else if (panel === 'info') {
       panelShell(panelData.title, ...panelData.lines.map((x) => el('p', { text: x })), panelData.signs ? el('div', { class: 'pl-row' }, panelData.signs.map((s) => logogramCanvas(s, 96, { background: '#141a18' }))) : null);
     } else if (panel === 'end') {
-      const iris = obs.iris;
+      // Iris's biography (biography.js): remembered, sacrificed with each fate, the shard NFT, the season record
+      const shardsView = shardSource ? shardSource(obs) : null;
+      const bio = biographyModel({ obs, nearStatus: nearSource ? nearSource() : null, shards: shardsView });
+      const L = biographyLines(bio, t, i18n);
+      const link = (href, text) => (href ? el('a', { class: 'pl-link', href, target: '_blank', rel: 'noopener', text }) : null);
+      const copyBtn = el('button', { class: 'pl-btn pl-small', type: 'button', 'data-bio-copy': '', text: t('bio.copy'), onclick: async () => {
+        copyBtn.disabled = true;
+        const ok = await copyText(biographyText(bio, t, i18n));
+        copyBtn.disabled = false;
+        copyBtn.textContent = t(ok ? 'bio.copied' : 'bio.copyFailed');
+        setTimeout(() => { if (copyBtn.isConnected) copyBtn.textContent = t('bio.copy'); }, 2000);
+      } });
       panelShell(t('end.title'),
-        el('p', { class: 'pl-strong', text: t('goal.season_over', { outcome: obs.season.outcome }) }),
-        el('ul', { class: 'pl-list pl-muted' }, obs.memories.map((m) => el('li', { text: '✓ ' + memoryText(m) })), iris.forgotten.map((f) => el('li', { text: '✕ ' + f.text + ' — ' + f.fate }))),
+        el('p', { class: 'pl-strong', text: L.outcome }),
+        el('p', { class: 'pl-muted', 'data-bio': 'season', text: L.season }),
+        el('h3', { text: t('bio.remembered') }),
+        el('ul', { class: 'pl-list pl-muted', 'data-bio': 'remembered' }, L.remembered.length ? L.remembered.map((x) => el('li', { text: '✓ ' + x })) : el('li', { text: t('bio.none') })),
+        el('h3', { text: t('bio.sacrificed') }),
+        el('ul', { class: 'pl-list pl-muted', 'data-bio': 'sacrificed' }, L.sacrificed.length ? L.sacrificed.map((x) => el('li', { text: '✕ ' + x })) : el('li', { text: t('bio.none') })),
+        L.shards.length ? el('ul', { class: 'pl-list', 'data-bio': 'shards' }, L.shards.map((x) => el('li', {}, el('span', { text: x.text + ' ' }), link(x.href, t('shard.nft.view'))))) : null,
+        el('p', { 'data-bio': 'chain', 'data-state': bio.chain.state }, el('span', { text: L.chain.text + ' ' }), link(L.chain.href, t('bio.chain.link'))),
+        L.chain.recorded ? el('p', { class: 'pl-muted' }, link(L.chain.recorded.href, L.chain.recorded.text)) : null,
+        el('p', { class: 'pl-muted', 'data-bio': 'note', text: L.note }),
+        el('div', { class: 'pl-row' }, copyBtn),
         obs.season.heir == null ? el('div', { class: 'pl-row' },
           el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('end.heir'), onclick: () => session.send('set_heir', { heir: true }) }),
           el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) }))
-          : el('p', { class: 'pl-strong', text: '\u2713 ' + t(obs.season.heir ? 'end.heir' : 'end.keep') }),
+          : el('p', { class: 'pl-strong', text: '✓ ' + t(obs.season.heir ? 'end.heir' : 'end.keep') }),
         obs.season.heir == null ? null : el('p', { text: t('goal.season_over.done') }));
     }
   }
@@ -296,6 +328,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     session.on('dialogue', (d) => open('dialogue', d)),
     session.on('inspect', (r) => open('info', inspectInfo(r))),
     i18n.subscribe(() => { update(); if (panel) renderPanel(); }),
+    arb.subscribe(() => maybeOpenEnd()), // the hub's Heir card closing at the season end opens the Biography
   ];
 
   function inspectInfo(r) {
@@ -330,5 +363,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   update();
   return { update, open, close, flash, handleKey,
     /** The Memories panel's shard NFT cards: fn(obs) → {cards, judgeOnly} (shard-card-model.js shardCards). */
-    setShardSource(fn) { shardSource = fn; if (panel === 'memory') renderPanel(); }, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
+    setShardSource(fn) { shardSource = fn; if (panel === 'memory' || panel === 'end') renderPanel(); },
+    /** The Biography's season record: fn() → the NEAR watcher's status (net/near.js). */
+    setNearSource(fn) { nearSource = fn; if (panel === 'end') renderPanel(); }, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
 }

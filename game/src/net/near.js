@@ -125,6 +125,56 @@ export function leafBadge(status, leaf) {
 }
 
 /**
+ * What the player sees about NEAR for one revealed sign, in every state (readiness audit 09.11: a visible waiting /
+ * offline / mismatch state, never a silent nothing). `leafBadge` above stays the pill for the good and the mismatch
+ * results; this view adds the line for the states it hides, and the facts the "What does this prove?" panel lists.
+ *
+ *   state        when                                                  line (wh.proof.state.*)
+ *   local        no deployment, or this season was never committed     "Local season, not committed on-chain"
+ *   checking     the season or this leaf is being asked                "Checking NEAR testnet…"
+ *   offline      no RPC answered                                       "Could not reach NEAR testnet — local browser check only"
+ *   not-committed / season-mismatch / missing                          the contract has no / another record
+ *   unavailable  the room gave no proof record to ask the contract with
+ *   on-chain / dry-run / mismatch                                      covered by the leafBadge pill (pill: true)
+ *
+ * `recordedTxUrl` is the reveal transaction written in near-deployment.js at deploy time. It is shown only as
+ * "recorded" (never as a live answer) and only while the network is down, so an RPC outage never looks like success.
+ * @param {object|null} status   the watcher's status
+ * @param {object|null} leaf     the watcher's leaf(index) entry
+ * @param {{index: number, local: 'ok'|'fail', merkleRoot?: string, deployment?: object}} o
+ */
+export function verificationView(status, leaf, { index, local, merkleRoot = null, deployment = NEAR_DEPLOYMENT } = {}) {
+  const st = (status && status.state) || 'disabled';
+  const seasonId = status ? status.seasonId : null;
+  const rec = deployment && deployment.seasons && seasonId ? deployment.seasons[seasonId] || null : null;
+  const recordedTx = rec && rec.revealTx ? rec.revealTx[index] || null : null;
+  const onChain = status && status.onChain;
+  const view = {
+    index, local, state: 'local', pill: false, live: false,
+    contractId: (status && status.contractId) || null,
+    contractUrl: (status && status.contractUrl) || null,
+    seasonId,
+    merkleRoot,
+    commitTxUrl: null, commitBlock: null, revealTxUrl: null, recordedTxUrl: null,
+  };
+  if (st === 'disabled' || st === 'idle' || st === 'other-season') return view;
+  if (st === 'checking') return { ...view, state: 'checking' };
+  if (st === 'offline') return { ...view, state: 'offline', recordedTxUrl: recordedTx ? explorerLinks(deployment, { txHash: recordedTx }).tx : null };
+  if (st === 'not-committed') return { ...view, state: 'not-committed', live: true };
+  if (st === 'mismatch') return { ...view, state: 'season-mismatch', live: true };
+  // committed: the season record matched live; now the leaf
+  const committed = { ...view, live: true, commitTxUrl: status.commitTxUrl || null, commitBlock: onChain && onChain.committed_at_block != null ? String(onChain.committed_at_block) : null };
+  const ls = leaf ? leaf.state : 'checking';
+  if (ls === 'on-chain') return { ...committed, state: 'on-chain', pill: true, revealTxUrl: leaf.txUrl || null };
+  if (ls === 'dry-run') return { ...committed, state: 'dry-run', pill: true };
+  if (ls === 'mismatch') return { ...committed, state: 'mismatch', pill: true };
+  if (ls === 'missing') return { ...committed, state: 'missing' };
+  if (ls === 'unknown') return { ...committed, state: 'unavailable', live: false }; // no proof record to ask with
+  if (ls === 'offline') return { ...committed, state: 'offline', live: false, recordedTxUrl: recordedTx ? explorerLinks(deployment, { txHash: recordedTx }).tx : null };
+  return { ...committed, state: 'checking' }; // unknown / checking / not asked yet
+}
+
+/**
  * Watches one play session's season on testnet.
  *
  *   const near = createNearWatcher({ season: () => session.obs && session.obs.season, proof: (i) => session.transport.proof(i) });
@@ -245,6 +295,8 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
     leaf: (index) => leaves.get(index) || null,
     seasonBadge: () => seasonBadge(status),
     leafBadge: (index) => leafBadge(status, leaves.get(index) || null),
+    /** The visible verification state of a revealed sign (verificationView). */
+    verification: (index, local, merkleRoot = null) => verificationView(status, leaves.get(index) || null, { index, local, merkleRoot, deployment }),
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     /** Stops the retry timer and drops listeners (the HUD calls it on unmount). */
     destroy() { if (retryTimer) clearTimeout(retryTimer); retryTimer = null; listeners.clear(); },
