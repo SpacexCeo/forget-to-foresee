@@ -1,0 +1,32 @@
+1
+00:00:01,000 --> 00:00:02,950
+The Agents
+
+2
+00:00:03,000 --> 00:00:04,500
+Salt, Iris, Frost
+
+3
+00:00:04,500 --> 00:00:06,000
+Amber, Moss, Ash
+
+4
+00:00:06,200 --> 00:00:08,950
+Trade. Rumor. Betrayal.
+
+5
+00:00:09,100 --> 00:00:10,600
+The Memory Shard
+
+6
+00:00:10,700 --> 00:00:12,200
+Two future signs.
+
+7
+00:00:12,300 --> 00:00:14,950
+Token 793f6c05e89839f2-7, bound to the season root.
+
+8
+00:00:16,300 --> 00:00:18,450
+Same leaf, sealed on NEAR testnet.
+

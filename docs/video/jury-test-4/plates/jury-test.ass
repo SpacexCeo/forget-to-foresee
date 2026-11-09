@@ -1,0 +1,23 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 3840
+PlayResY: 2160
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Caption,Source Sans 3,91,&H00EFE9DF,&H00FFFFFF,&H6E060A0B,&HA0000000,0,0,0,0,100,100,0.6,0,1,4,6,2,384,384,162,1
+Style: Quiet,Source Sans 3,78,&H00C9C6B8,&H00FFFFFF,&H6E060A0B,&HA0000000,0,1,0,0,100,100,0.4,0,1,4,6,2,384,384,162,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:02.95,Caption,,0,0,0,,{\fad(220,260)}The Agents
+Dialogue: 0,0:00:03.00,0:00:04.50,Caption,,0,0,0,,{\fad(220,260)}Salt, Iris, Frost
+Dialogue: 0,0:00:04.50,0:00:06.00,Caption,,0,0,0,,{\fad(220,260)}Amber, Moss, Ash
+Dialogue: 0,0:00:06.20,0:00:08.95,Caption,,0,0,0,,{\fad(220,260)}Trade. Rumor. Betrayal.
+Dialogue: 0,0:00:09.10,0:00:10.60,Caption,,0,0,0,,{\fad(220,260)}The Memory Shard
+Dialogue: 0,0:00:10.70,0:00:12.20,Caption,,0,0,0,,{\fad(220,260)}Two future signs.
+Dialogue: 0,0:00:12.30,0:00:14.95,Caption,,0,0,0,,{\fad(220,260)}Token 793f6c05e89839f2-7, bound to the season root.
+Dialogue: 0,0:00:16.30,0:00:18.45,Caption,,0,0,0,,{\fad(220,260)}Same leaf, sealed on NEAR testnet.
