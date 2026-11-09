@@ -687,9 +687,13 @@ def athletic_costume(bm, P, dom, bones):
             if p.z > 1.38 and neck_r(p) < 1.0:
                 return False
             return True
-        if d in ARM:
-            sx = "L" if p.x > 0 else "R"
-            return (p - wrist[sx]).length > 0.012
+        if abs(p.x) > 0.15 and p.z < 1.10 or d in ARM:        # the forearm by position (thumb-side skin near the
+            sx = "L" if p.x > 0 else "R"                      # wrist is weighted to the hand), cut straight
+            E = bones[f"forearm_{sx}"][0]                     # across inside the cuff
+            ax = (wrist[sx] - E).normalized()
+            t = (wrist[sx] - p).dot(ax)
+            radial = ((p - wrist[sx]) + ax * t).length
+            return t > 0.020 and (d in ARM or (t < 0.10 and radial < 0.05))
         return False
     def upper_trim(p, nrm):
         return 0.0
@@ -700,7 +704,7 @@ def athletic_costume(bm, P, dom, bones):
         return 1.0 if sleeve or shoulder else 0.0
     def upper_edges(v):
         p = v.co
-        if p.z < 1.17 and abs(p.x) < 0.25:
+        if 1.08 < p.z < 1.17 and abs(p.x) < 0.25:              # the hem, never a sleeve's cut at the wrist
             p.z = HEM
         elif p.y < c.y and abs(p.x) < x_edge(p.z) + 0.03 and p.z < 1.42:    # straight zip edges
             p.x = math.copysign(x_edge(p.z), p.x)
@@ -711,7 +715,7 @@ def athletic_costume(bm, P, dom, bones):
         sx = "L" if p.x > 0 else "R"
         E, W, S0 = bones[f"forearm_{sx}"][0], wrist[sx], bones[f"upperarm_{sx}"][0]
         dE, dW, dS = (p - E).length, (p - W).length, (p - S0).length
-        k = min(1.0, dE / 0.06) * min(1.0, dW / 0.08) * min(1.0, dS / 0.07)
+        k = min(1.0, dE / 0.06) * min(1.0, dS / 0.07)          # the wrist: the ribbed cuff gathers it
         return 0.0030 + 0.0050 * k
     under = C.without_nipples(torso_pts) + [bra.matrix_world @ v.co for v in bra.data.vertices]
     depth = C.front_surface(under, 0.0050)                   # laid over the sports top, never through it
@@ -756,7 +760,30 @@ def athletic_costume(bm, P, dom, bones):
             return None
         d = V((math.cos(th), math.sin(th), 0)) * 0.0014
         return (a + d, b + d)
-    out["jacket_hem"] = C.edge_strip("jacket_hem", hem_rows, 120, 0.0022)
+    out["jacket_hem"] = C.edge_strip("jacket_hem", hem_rows, 120, 0.0022, rib=True)
+    # ribbed cuffs: a knit band round each sleeve end, cast from the forearm axis onto the sleeve
+    for sx in ("L", "R"):
+        E, W = bones[f"forearm_{sx}"][0], wrist[sx]
+        ax = (W - E).normalized()
+        u = ax.orthogonal().normalized()
+        w = ax.cross(u).normalized()
+        def hit_sleeve(th, back, W=W, ax=ax, u=u, w=w):       # the forearm skin from inside, plus the ease
+            o = W - ax * back
+            d = u * math.cos(th) + w * math.sin(th)
+            h = tree.ray_cast(o, d, 0.12)
+            return None if h[0] is None else h[0] + d * 0.0090
+        def on_sleeve(th, back, W=W, ax=ax, u=u, w=w):        # the sleeve's outer surface (no ledge at the top)
+            o = W - ax * back
+            d = u * math.cos(th) + w * math.sin(th)
+            h = jt.ray_cast(o, d, 0.12)
+            return None if h[0] is None else h[0] + d * 0.0040
+        def cuff_rows(t, hit_sleeve=hit_sleeve, on_sleeve=on_sleeve):   # from 1.2 cm past the sleeve's cut up over it
+            th = t * 2 * math.pi
+            a, b = hit_sleeve(th, 0.012), (on_sleeve(th, 0.046) or hit_sleeve(th, 0.046))
+            if a is None or b is None:
+                return None
+            return (a, b)
+        out[f"jacket_cuff_{sx}"] = C.edge_strip(f"jacket_cuff_{sx}", cuff_rows, 64, 0.0030, rib=True)
     gap = math.degrees(math.asin(min(0.95, (x_edge(1.42) + 0.004) / (nrx + 0.016))))
     out["jacket_collar"] = C.stand_collar(P, z0=1.400, gap_deg=gap)
     # leggings: from the body surface, high-rise, the crotch relaxed so it never cuts in

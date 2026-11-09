@@ -1038,18 +1038,30 @@ def front_surface(torso_pts, ease, x_max=0.20, z_lo=1.10, z_hi=1.46, step=0.005)
     return depth
 
 
-def edge_strip(name, rows_of, n, thick, trim=1.0):
-    """A sewn band (zip placket, ribbed hem) as a clean quad strip: rows_of(t) -> (a, b), the two
-    edge points of the band at t in 0..1 along it (None skips a sample)."""
+def edge_strip(name, rows_of, n, thick, trim=1.0, rib=False):
+    """A sewn band (zip placket, ribbed hem, ribbed cuff) as a clean quad strip: rows_of(t) -> (a, b),
+    the two edge points of the band at t in 0..1 along it (None skips a sample). rib=True writes the
+    arc length along the band (metres) as the `ribu` attribute: the garment shader turns it into knit
+    ribs that run across the band (hero_shading.RIB_PERIOD)."""
     me = bpy.data.meshes.new(name)
     b = bmesh.new()
     rows = []
+    ribu = b.verts.layers.float.new("ribu") if rib else None
+    last, s = None, 0.0
     for i in range(n):
         ab = rows_of(i / (n - 1))
         if ab is None:
             rows.append(None)
             continue
-        rows.append([b.verts.new(ab[0]), b.verts.new(ab[1])])
+        mid = (V(ab[0]) + V(ab[1])) / 2
+        if last is not None:
+            s += (mid - last).length
+        last = mid
+        row = [b.verts.new(ab[0]), b.verts.new(ab[1])]
+        if ribu is not None:
+            for v in row:
+                v[ribu] = s
+        rows.append(row)
     for r0, r1 in zip(rows, rows[1:]):
         if r0 and r1:
             b.faces.new((r0[0], r1[0], r1[1], r0[1]))
