@@ -19,3 +19,12 @@ Everything here can also be rebuilt from the scripts on `claude/iris-hero` and `
 (Blender 4.5.3 + MPFB 2.0.18; see `art/agents/iris_hero/README.md`).
 | `shells_raw_glb/` | the four shells' raw glb exports (before KTX2/meshopt), from `/root/w/` | input of `tools/compress-glb.sh` |
 | `media_v2/` | final 1080p videos from `/root/ftf-media-v2/` (demo, trailer, three clips; with and without burned captions) | release media |
+
+## iris_hero_anatomy (09.11.2026, GPU server order 2422935, before it was released)
+
+Iris on the anatomical body (`main` at `cf6d182`, `art/agents/iris_hero/hero_anatomy.py`): the full build
+(`iris_hero.blend`, `iris_costume.blend`, the raw `agent_iris.glb` and its baked textures, CPU bake), the body
+stage (`iris_body.blend`, `iris_body_pre.blend` before the anatomical pass, `iris_body_shape.blend` with the
+editable shape key BODY_FEM_TARGET), the shipped compressed glb (`agent_iris_compressed.glb`), the bare-body
+deformation test renders (`deform.tgz`), and the server set-up scripts of that session (`setup.sh`,
+`setup2.sh`: system libraries, Blender 4.5.3, Node; no secrets). Checksums in `iris_hero_anatomy/SHA256SUMS`.
