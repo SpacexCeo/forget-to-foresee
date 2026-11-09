@@ -500,7 +500,9 @@ SCENES.rewards = { duration: 4.5, build() {
 // contract stores it, it does not call the season contract, so no check mark there).
 SCENES.nft = { duration: 5.5, build() {
   const S = D.shard;
-  const c1 = cap('Bound to the <em>sealed season</em>'), c2 = cap('Minted on NEAR testnet');
+  // The owner's rail lockup (09.11) carries the first line; the second line stays the caption.
+  const c1 = h('img', { src: '/cine/ref/rail-sealed-season.png', class: 'abs', style: { left: '470px', top: '56px', width: '980px', filter: 'drop-shadow(0 4px 18px rgba(0,0,0,.6))' } }); stage.append(c1);
+  const c2 = cap('Minted on NEAR testnet');
   const svg = edgeLayer(stage);
   const art = h('div', { class: 'abs', html: S.svg.replace('width="320" height="320"', 'width="520" height="520"'), style: { width: '520px', height: '520px', borderRadius: '26px', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(220,214,196,.16), 0 30px 80px rgba(0,0,0,.6), 0 0 90px rgba(127,179,213,.22)' } });
   at(art, 130, 230); stage.append(art);
