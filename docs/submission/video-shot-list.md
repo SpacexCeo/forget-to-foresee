@@ -1,5 +1,11 @@
 # Demo video: shot list (75 s, the README judge path from its own URL, 08.11)
 
+**Status (09.11): superseded for the X post by the 60 s jury video (`jury-video.md`). Do not post this cut as rendered:
+shot 6 captions "The NEAR contract for the same check is tested, not yet deployed" (`tools/capture/shots/demo.mjs`),
+which has been false since the testnet deployment of 09.11 (`docs/near.md`), and shot 4 as listed below says the
+clans have "wallets" (they hold in-game silk; no clan has a NEAR account). Re-render with corrected captions first if
+this cut is ever used.**
+
 The video is not recorded by hand: `tools/capture/shots/demo.mjs` renders it frame by frame from the game on the fixed
 judge season, in real time (no speed ramps, no time-lapse; plain cuts only), so every beat below happens exactly as a
 judge will repeat it (`docs/submission/trailer.md` explains the pipeline; `node tools/capture/capture.mjs demo --draft`

@@ -14,6 +14,11 @@ and two renders of one script give the same frames.
 | Clip: the Price of Memory | `tools/capture/shots/clip-memory.mjs` | 10 s | Opens on the act: forget at 0.6 s, the vision, two future signs, the shard to auction; the chapter card |
 | Clip: Verified ✓ | `tools/capture/shots/clip-verified.mjs` | 12 s | Card *Sealed*, then the walking judge path: T ends trial 3, the Gift lands, Resolved: Verified ✓ held 4 s |
 
+**Stale captions (09.11), fix in the scripts before any of these is posted:** the trailer says "Six clans of AI agents
+with wallets and memory." (`tools/capture/shots/trailer.mjs`; the clans hold in-game silk, not NEAR accounts) and the
+demo says the NEAR contract is "tested, not yet deployed" (`tools/capture/shots/demo.mjs`; deployed on testnet since
+09.11). The X post uses the jury video (`jury-video.md`) instead.
+
 Outputs go to `docs/media/`: `<video>.mp4` (clean), `<video>-captions.mp4` (captions burned in), `<video>.srt`,
 `<video>.report.json` (frames, seconds per frame, console messages, runner errors, file sizes). Each file stays under
 90 MB; raw frames never enter git (they live in the work directory and are deleted with it).

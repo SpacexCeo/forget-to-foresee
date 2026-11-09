@@ -1,13 +1,17 @@
 # Demo post on X (draft)
 
+Part of the single current submission package (`docs/submission/`; order of steps: `owner-steps.md`).
+
 Rules (HACKATHON.md, "The demo post"): the post says the project was **built at NEAR HACKATHON**, tags
 **@NEARProtocol** and **#NEARHackathon** (optionally @NearLegion and @NearBuilders), and has the **demo video**
 attached (screenshots alone are not enough while the hosted demo is new). Lead with the user problem, show one
 complete moment, say concretely what NEAR enables, give a next step. The owner posts it and pastes the URL into
 `docs/submission/apply-form.md` → `demoUrl`.
 
-An earlier, longer thread draft ("DAY ONE OR ONE DAY") lives in `docs/submission.md`; the version below is tightened
-to the rules and to what runs on 08.11. Use either, but keep the three required elements in the **first** post.
+Every claim must match the README (shipped scope, the real/mock table, "What is proven, and what is not"). Keep out of
+the post: the weekly tournament (a UI simulation), any "player-owned" or "live-minted" NFT, any claim that the
+commitment makes the game impossible to modify (the rules run in the browser; the commitment fixes the Guests'
+events, not silk or outcomes).
 
 ## Post 1 (attach the 60 s jury video: `docs/submission/jury-video.md`)
 
@@ -18,18 +22,21 @@ to the rules and to what runs on 08.11. Use either, but keep the three required 
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
 
-(270 characters as X counts them. Credit @Lambada_eth; the agents and the memory shards up front. "Sealed before you
-move" holds for every season: live seasons seal the root locally, the judge season also on testnet.)
+(270 characters as X counts them. Credit @Lambada_eth; the agents and the memory shards up front. "The future is sealed
+before you move" holds for every season: the schedule of the Guests' events is committed to a Merkle root before
+trial 1, locally for live seasons and also on testnet for the judge season.)
 
 ## Post 2 (reply)
 
-> Why NEAR: the judge season is sealed as one Merkle root in our testnet contract before trial 1; every event is then checked on-chain.
+> Why NEAR: our testnet contract holds the judge season's Merkle root, and all 15 of its events were revealed and checked on-chain against it.
 >
-> Its forgotten memories are NEP-171 NFT shards, each carrying the sealed leaf of the sign it opened.
+> Three of its forgotten memories were minted as NEP-171 NFT shards bound to that sealed season.
 >
 > https://testnet.nearblocks.io/address/ftf-shards.testnet
 
-(259 characters. Only the judge season is on-chain, and the post says so; the link opens the NFT contract.)
+(261 characters. Only the judge season is on-chain, and the post says so. The reveals and the mints were sent by the
+coordinator script, not during a player's session; the post does not claim otherwise. The link opens the NFT
+contract.)
 
 ## Post 3 (reply)
 
@@ -41,11 +48,22 @@ move" holds for every season: live seasons seal the root locally, the judge seas
 > What would you forget to see the future?
 > @NearLegion @NearBuilders
 
-(276 characters. The browser plays its own local room; the HTTP API runs the same room module for agents. "600+
-tests" = 498 game + 28 API + 56 season-commit + 21 memory-shard; recount before posting.)
+(276 characters. The browser plays its own local room; the HTTP API (`server/`, run locally) runs the same room module
+for agents. "600+ tests" = 516 game + 28 API + 56 season-commit + 21 memory-shard = 621, counted on 09.11; recount
+before posting.)
+
+Character counts: X counts each URL as 23 characters; recount after any edit.
+
+## Optional teaser
+
+`docs/video/forget-to-foresee-teaser-10s.mp4`: 10 s, 1080p30, 2.9 MB: aerial island in fog → a sign glowing on
+the Shell glass → close-up of the logogram → "DAY ONE OR ONE DAY." / "FORGET TO FORESEE". Cut from the owner's
+gameplay recordings of 08.11 (HUD cropped out, cool grade, light grain); audio from the game's own sounds
+(`amb_shell_inside`, `guest_phrase_1`, `guest_call`). Known flaw: the mouse cursor is visible in two shots. It carries
+no claims, so it can go in a later reply; it does not replace the jury video in post 1.
 
 ## Checklist before posting (owner)
-- [ ] The video is attached to post 1 (not only a link).
+- [ ] The video is attached to post 1 (not only a link), and its captions match the README (`owner-steps.md` §3).
 - [ ] "built at NEAR HACKATHON", @NEARProtocol and #NEARHackathon are in post 1.
 - [ ] The live link opens and reaches "Verified ✓" (re-run the README judge path once on the day).
 - [ ] Open the explorer link in post 2 in a browser once (the bot check blocks scripted fetches).

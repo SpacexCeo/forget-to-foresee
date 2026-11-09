@@ -124,7 +124,11 @@ GPU: the six in-engine shots render at 1080p60 ultra through `gpu-job.sh` on the
   not call the season contract to check it, so the diagram uses a dotted "same leaf" line with no check mark there.
 - The clans' wallets hold in-game silk. There is no NEAR payment, no token and no real money. The clan agents are
   deterministic heuristics with tempers, not an LLM: the video says "agent" and never "AI decides".
-- No HUD element shows shard NFTs yet, so the NFT appears as a motion-graphics card built from the real token data.
+- The NFT appears as a motion-graphics card built from the real token data. (Since 09.11 the game itself also shows
+  the minted judge shards as NFT cards in the Memories panel, `docs/shard-nft.md`; the video card is still a diagram,
+  not a capture of that HUD.)
+- The shards were minted by the coordinator for the recorded judge playthrough; an ordinary season mints nothing, and
+  there is no player-owned agent NFT. The video never says or shows otherwise.
 - "Humans and agents. Same rules.": the browser and the HTTP API run the same room module and engine, but not the same
   live session. The split screen is labelled as two windows, not one shared game.
 
