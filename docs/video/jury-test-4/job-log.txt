@@ -1,0 +1,243 @@
+== 2026-11-09T19:24:44Z job start: ref=45ac33614ad31ac0a1d419616678e41477622c66 out=/root/ftf-media/jury-test-4 videos=jury-test
+== commit 45ac336: Merge pull request #32 from SpacexCeo/claude/great-lovelace-jl1v3l
+ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+
+added 19 packages in 3s
+NVIDIA GeForce RTX 4090, 615.71.09, 24564 MiB
+Circular chunk: play -> ui -> play. Please adjust the manual chunk logic for these chunks.
+Circular chunk: play -> client-core -> play. Please adjust the manual chunk logic for these chunks.
+[plugin vite:reporter] 
+(!) /root/ftf-jury-tools/game/src/play/narration.js is dynamically imported by /root/ftf-jury-tools/game/src/cinematic/chapters/index.js, /root/ftf-jury-tools/game/src/ui/onboarding.js but also statically imported by /root/ftf-jury-tools/game/src/ui/a11y.js, /root/ftf-jury-tools/game/src/ui/settings.js, dynamic import will not move module into another chunk.
+
+== build ok
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+tools/capture/gpu-job.sh: line 44: curl: command not found
+file:///root/ftf-jury-tools/tools/capture/gpu-probe.mjs:12
+const { chromium } = (() => { for (const p of [process.env.PLAYWRIGHT_PATH, 'playwright', '/opt/node-tools/node_modules/playwright/index.js'].filter(Boolean)) { try { return require(p); } catch { /* next */ } } throw new Error('playwright not installed (set PLAYWRIGHT_PATH to its package directory)'); })();
+                                                                                                                                                                                                                         ^
+
+Error: playwright not installed (set PLAYWRIGHT_PATH to its package directory)
+    at file:///root/ftf-jury-tools/tools/capture/gpu-probe.mjs:12:218
+    at file:///root/ftf-jury-tools/tools/capture/gpu-probe.mjs:12:306
+    at ModuleJob.run (node:internal/modules/esm/module_job:268:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:543:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)
+
+Node.js v22.11.0
+WARNING: no hardware WebGL; rendering on SwiftShader (slow)
+== 2026-11-09T19:26:01Z jury-test 3840x2160@30 (FTF_NO_LAYERS=1)
+19:26:01 Forget to Foresee: jury video, cinematic test (18.5 s): 7 shots at 3840x2160@30 tier ultra, work /root/ftf-media/jury-test-4/work/jury-test-3840x2160-ultra
+19:26:01 [fly-in] attempt 1 failed: playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory) · retrying (2/3)
+19:26:01 [fly-in] attempt 2 failed: playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory) · retrying (3/3)
+Error: playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory)
+    at pw (file:///root/ftf-jury-tools/tools/capture/lib/browser.mjs:20:9)
+    at renderShot (file:///root/ftf-jury-tools/tools/capture/lib/browser.mjs:54:24)
+    at renderOnce (file:///root/ftf-jury-tools/tools/capture/capture.mjs:142:192)
+    at file:///root/ftf-jury-tools/tools/capture/capture.mjs:137:28
+    at async file:///root/ftf-jury-tools/tools/capture/capture.mjs:98:151
+    at async Promise.all (index 0)
+    at async pool (file:///root/ftf-jury-tools/tools/capture/capture.mjs:98:3)
+    at async main (file:///root/ftf-jury-tools/tools/capture/capture.mjs:131:18)
+Terminated
+== 2026-11-09T19:29:11Z job start: ref=45ac33614ad31ac0a1d419616678e41477622c66 out=/root/ftf-media/jury-test-4 videos=jury-test
+== commit 45ac336: Merge pull request #32 from SpacexCeo/claude/great-lovelace-jl1v3l
+ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+
+added 19 packages in 2s
+== playwright from /root/pw/node_modules/playwright
+NVIDIA GeForce RTX 4090, 615.71.09, 24564 MiB
+Circular chunk: play -> ui -> play. Please adjust the manual chunk logic for these chunks.
+Circular chunk: play -> client-core -> play. Please adjust the manual chunk logic for these chunks.
+[plugin vite:reporter] 
+(!) /root/ftf-jury-tools/game/src/play/narration.js is dynamically imported by /root/ftf-jury-tools/game/src/cinematic/chapters/index.js, /root/ftf-jury-tools/game/src/ui/onboarding.js but also statically imported by /root/ftf-jury-tools/game/src/ui/a11y.js, /root/ftf-jury-tools/game/src/ui/settings.js, dynamic import will not move module into another chunk.
+
+== build ok
+GPU   angle-gl-egl   ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+GPU   angle-vulkan   ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 4090 (0x00002684)), NVIDIA)
+soft  egl            ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+soft  angle-gl       ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+soft  angle-default  ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+soft  swiftshader    ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+using angle-gl-egl: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2) (saved to /root/ftf-jury-tools/tools/capture/.gpu-args.json)
+== 2026-11-09T19:29:22Z jury-test 3840x2160@30 (FTF_NO_LAYERS=1)
+19:29:22 Forget to Foresee: jury video, cinematic test (18.5 s): 7 shots at 3840x2160@30 tier ultra, work /root/ftf-media/jury-test-4/work/jury-test-3840x2160-ultra
+19:29:23 [fly-in] open http://localhost:5179/?cinematic=fly-in&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:29:26 [fly-in] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:30:08 [fly-in] frame 24/90 · 1.26 s/frame · ETA 1 min · luma 176 jumps 0
+19:30:40 [fly-in] frame 44/90 · 1.40 s/frame · ETA 1 min · luma 180 jumps 0
+19:31:10 [fly-in] frame 66/90 · 1.40 s/frame · ETA 1 min · luma 155 jumps 0
+19:31:41 [fly-in] frame 89/90 · 1.38 s/frame · ETA 0 min · luma 124 jumps 0
+19:31:44 [fly-in] done: 90 frames in 2.4 min (1.40 s/frame), 6 cues, 0 runner errors, 0 console messages, luma 123–184 jumps 0 (max 7.5) edge-black 0% retries 0
+19:31:45 [clans-back] open http://localhost:5179/?cinematic=clans-back&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:31:46 [clans-back] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:32:22 [clans-back] frame 23/45 · 1.32 s/frame · ETA 0 min · luma 119 jumps 0
+19:32:52 [clans-back] frame 43/45 · 1.40 s/frame · ETA 0 min · luma 120 jumps 0
+19:32:57 [clans-back] done: 45 frames in 1.2 min (1.46 s/frame), 5 cues, 0 runner errors, 0 console messages, luma 105–162 jumps 0 (max 10.7) edge-black 0% retries 0
+19:32:58 [clans-front] open http://localhost:5179/?cinematic=clans-front&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:32:59 [clans-front] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:33:36 [clans-front] frame 20/45 · 1.56 s/frame · ETA 1 min · luma 117 jumps 0
+19:34:07 [clans-front] frame 40/45 · 1.56 s/frame · ETA 0 min · luma 97 jumps 0
+19:34:16 [clans-front] done: 45 frames in 1.3 min (1.58 s/frame), 4 cues, 0 runner errors, 0 console messages, luma 96–135 jumps 0 (max 7.5) edge-black 0% retries 0
+19:34:16 [conflict] open http://localhost:5179/?cinematic=conflict&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:34:18 [conflict] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:34:54 [conflict] frame 23/90 · 1.32 s/frame · ETA 1 min · luma 122 jumps 0
+19:35:25 [conflict] frame 44/90 · 1.39 s/frame · ETA 1 min · luma 119 jumps 0
+19:35:56 [conflict] frame 64/90 · 1.44 s/frame · ETA 1 min · luma 114 jumps 0
+19:36:27 [conflict] frame 85/90 · 1.44 s/frame · ETA 0 min · luma 111 jumps 0
+19:36:35 [conflict] done: 90 frames in 2.3 min (1.46 s/frame), 7 cues, 0 runner errors, 0 console messages, luma 111–123 jumps 0 (max 0.9) edge-black 0% retries 0
+19:36:36 [shard-macro] open http://localhost:5179/?cinematic=shard-macro&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:36:37 [shard-macro] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:37:13 [shard-macro] frame 24/90 · 1.27 s/frame · ETA 1 min · luma 117 jumps 0
+19:37:43 [shard-macro] frame 48/90 · 1.27 s/frame · ETA 1 min · luma 125 jumps 0
+19:38:14 [shard-macro] frame 72/90 · 1.27 s/frame · ETA 0 min · luma 130 jumps 0
+19:38:39 [shard-macro] done: 90 frames in 2.0 min (1.29 s/frame), 6 cues, 0 runner errors, 0 console messages, luma 111–131 jumps 0 (max 0.7) edge-black 0% retries 0
+19:38:39 [token] open http://localhost:5179/?cinematic=token&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:38:40 [token] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:39:16 [token] frame 23/90 · 1.34 s/frame · ETA 1 min · luma 52 jumps 0
+19:39:46 [token] frame 46/90 · 1.32 s/frame · ETA 1 min · luma 49 jumps 0
+19:40:17 [token] frame 69/90 · 1.32 s/frame · ETA 0 min · luma 46 jumps 0
+19:40:47 [token] done: 90 frames in 2.1 min (1.35 s/frame), 5 cues, 0 runner errors, 0 console messages, luma 44–54 jumps 0 (max 0.8) edge-black 0% retries 0
+19:40:47 [proof] open http://localhost:5179/?cinematic=proof&tier=ultra&tex=full&profile=desktop&fps=30&play=direct&demo=judge&nolayers=1
+19:40:49 [proof] WebGL: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+19:41:18 [proof] frame 17: flagged (edge 0%, luma 87), re-rendering (proof-f00017-retry0.png kept)
+19:41:19 [proof] frame 17: flagged (edge 0%, luma 87), re-rendering (proof-f00017-retry1.png kept)
+19:41:19 [proof] frame 17: flagged (edge 0%, luma 87), re-rendering (proof-f00017-retry2.png kept)
+19:41:25 [proof] frame 21/105 · 1.49 s/frame · ETA 2 min · luma 111 jumps 1
+19:41:55 [proof] frame 45/105 · 1.38 s/frame · ETA 1 min · luma 133 jumps 1
+19:42:26 [proof] frame 69/105 · 1.34 s/frame · ETA 1 min · luma 143 jumps 1
+19:42:56 [proof] frame 93/105 · 1.32 s/frame · ETA 0 min · luma 142 jumps 1
+19:43:12 [proof] done: 105 frames in 2.4 min (1.32 s/frame), 6 cues, 0 runner errors, 0 console messages, luma 32–143 jumps 1 (max 27.0) edge-black 0% retries 3
+19:43:22 timeline 18.50 s: fly-in@0.0 clans-back@3.0 clans-front@4.5 conflict@6.0 shard-macro@9.0 token@12.0 proof@15.0
+19:43:24 mix: 17 sound events from 39 cues, peak 0.488
+19:44:32 final luma: {"ok":true,"frames":555,"jumps":1,"at":[360],"maxJump":73.1,"min":23,"max":167.3}
+19:44:32 done:
+  /root/ftf-media/jury-test-4/jury-test.mp4: 92.7 MB · 18.50 s · 3840x2160 30/1
+  /root/ftf-media/jury-test-4/jury-test-captions.mp4: 92.1 MB · 18.50 s · 3840x2160 30/1
+  /root/ftf-media/jury-test-4/jury-test.srt: 0 MB
+== 2026-11-09T19:44:32Z done
+-rw-r--r-- 1 root root 12394 Nov  9 19:44 /root/ftf-media/jury-test-4/work/job.log
+-rw-r--r-- 1 root root    76 Nov  9 19:29 /root/ftf-media/jury-test-4/work/preview.log
+
+/root/ftf-media/jury-test-4:
+total 352972
+drwxr-xr-x 5 root root      144 Nov  9 19:44 .
+drwxr-xr-x 3 root root       25 Nov  9 19:16 ..
+drwxr-xr-x 2 root root        6 Nov  9 19:24 4k
+-rw-r--r-- 1 root root 96575145 Nov  9 19:44 jury-test-captions.mp4
+-rw-r--r-- 1 root root 97185153 Nov  9 19:43 jury-test.mp4
+-rw-r--r-- 1 root root     5778 Nov  9 19:44 jury-test.report.json
+-rw-r--r-- 1 root root      456 Nov  9 19:43 jury-test.srt
+drwxr-xr-x 2 root root       56 Nov  9 19:32 preview
+drwxr-xr-x 5 root root      103 Nov  9 19:43 work
+
+/root/ftf-media/jury-test-4/work/fonts:
+total 212
+drwxr-xr-x 2 root root  4096 Nov  9 19:43 .
+drwxr-xr-x 5 root root   103 Nov  9 19:43 ..
+-rw-r--r-- 1 root root 44656 Nov  9 19:43 libre-caslon-text-latin-400-normal.ttf
+-rw-r--r-- 1 root root 44956 Nov  9 19:43 libre-caslon-text-latin-700-normal.ttf
+-rw-r--r-- 1 root root 37904 Nov  9 19:43 source-sans-3-latin-400-normal.ttf
+-rw-r--r-- 1 root root 37816 Nov  9 19:43 source-sans-3-latin-500-normal.ttf
+-rw-r--r-- 1 root root 37852 Nov  9 19:43 source-sans-3-latin-600-normal.ttf
+
+/root/ftf-media/jury-test-4/work/jury-test-3840x2160-ultra:
+total 1474612
+drwxr-xr-x 2 root root      4096 Nov  9 19:44 .
+drwxr-xr-x 5 root root       103 Nov  9 19:43 ..
+-rw-r--r-- 1 root root    906179 Nov  9 19:31 clans-back-f00000-ui.png
+-rw-r--r-- 1 root root  10653422 Nov  9 19:31 clans-back-f00000.png
+-rw-r--r-- 1 root root    906179 Nov  9 19:32 clans-back-f00044-ui.png
+-rw-r--r-- 1 root root  11160064 Nov  9 19:32 clans-back-f00044.png
+-rw-r--r-- 1 root root     20072 Nov  9 19:32 clans-back.json
+-rw-r--r-- 1 root root 110886900 Nov  9 19:32 clans-back.mp4
+-rw-r--r-- 1 root root    906179 Nov  9 19:33 clans-front-f00000-ui.png
+-rw-r--r-- 1 root root  11263630 Nov  9 19:33 clans-front-f00000.png
+-rw-r--r-- 1 root root    906179 Nov  9 19:34 clans-front-f00044-ui.png
+-rw-r--r-- 1 root root  11465503 Nov  9 19:34 clans-front-f00044.png
+-rw-r--r-- 1 root root     22238 Nov  9 19:34 clans-front.json
+-rw-r--r-- 1 root root 114626348 Nov  9 19:34 clans-front.mp4
+-rw-r--r-- 1 root root    906179 Nov  9 19:34 conflict-f00000-ui.png
+-rw-r--r-- 1 root root  11695283 Nov  9 19:34 conflict-f00000.png
+-rw-r--r-- 1 root root    906179 Nov  9 19:36 conflict-f00089-ui.png
+-rw-r--r-- 1 root root  12060687 Nov  9 19:36 conflict-f00089.png
+-rw-r--r-- 1 root root     27613 Nov  9 19:36 conflict.json
+-rw-r--r-- 1 root root 229358399 Nov  9 19:36 conflict.mp4
+-rw-r--r-- 1 root root     29421 Nov  9 19:29 fly-in-f00000-ui.png
+-rw-r--r-- 1 root root   9494631 Nov  9 19:29 fly-in-f00000.png
+-rw-r--r-- 1 root root    906179 Nov  9 19:31 fly-in-f00089-ui.png
+-rw-r--r-- 1 root root  11598248 Nov  9 19:31 fly-in-f00089.png
+-rw-r--r-- 1 root root     27763 Nov  9 19:31 fly-in.json
+-rw-r--r-- 1 root root 191314936 Nov  9 19:31 fly-in.mp4
+-rw-r--r-- 1 root root      1416 Nov  9 19:43 jury-test.ass
+-rw-r--r-- 1 root root      5778 Nov  9 19:44 jury-test.report.json
+-rw-r--r-- 1 root root   7104044 Nov  9 19:43 jury-test.wav
+-rw-r--r-- 1 root root    648783 Nov  9 19:40 proof-f00000-ui.png
+-rw-r--r-- 1 root root  11803879 Nov  9 19:40 proof-f00000.png
+-rw-r--r-- 1 root root  12258664 Nov  9 19:41 proof-f00017-retry0.png
+-rw-r--r-- 1 root root  12258664 Nov  9 19:41 proof-f00017-retry1.png
+-rw-r--r-- 1 root root  12258664 Nov  9 19:41 proof-f00017-retry2.png
+-rw-r--r-- 1 root root    648783 Nov  9 19:42 proof-f00090-ui.png
+-rw-r--r-- 1 root root  10206275 Nov  9 19:42 proof-f00090.png
+-rw-r--r-- 1 root root     42294 Nov  9 19:43 proof-f00104-ui.png
+-rw-r--r-- 1 root root  10208918 Nov  9 19:43 proof-f00104.png
+-rw-r--r-- 1 root root     31489 Nov  9 19:43 proof.json
+-rw-r--r-- 1 root root 232072617 Nov  9 19:43 proof.mp4
+-rw-r--r-- 1 root root    906179 Nov  9 19:36 shard-macro-f00000-ui.png
+-rw-r--r-- 1 root root  10624892 Nov  9 19:36 shard-macro-f00000.png
+-rw-r--r-- 1 root root    906179 Nov  9 19:38 shard-macro-f00089-ui.png
+-rw-r--r-- 1 root root  10682711 Nov  9 19:38 shard-macro-f00089.png
+-rw-r--r-- 1 root root     27371 Nov  9 19:38 shard-macro.json
+-rw-r--r-- 1 root root 228597042 Nov  9 19:38 shard-macro.mp4
+-rw-r--r-- 1 root root    580965 Nov  9 19:38 token-f00000-ui.png
+-rw-r--r-- 1 root root  11547333 Nov  9 19:38 token-f00000.png
+-rw-r--r-- 1 root root    580965 Nov  9 19:40 token-f00089-ui.png
+-rw-r--r-- 1 root root  11325449 Nov  9 19:40 token-f00089.png
+-rw-r--r-- 1 root root     27009 Nov  9 19:40 token.json
+-rw-r--r-- 1 root root 182493539 Nov  9 19:40 token.mp4
+
+/root/ftf-media/jury-test-4/work/pcm-cache:
+total 112436
+drwxr-xr-x 2 root root     4096 Nov  9 19:43 .
+drwxr-xr-x 5 root root      103 Nov  9 19:43 ..
+-rw-r--r-- 1 root root 12288000 Nov  9 19:43 amb_shell_hum.f32
+-rw-r--r-- 1 root root 15360000 Nov  9 19:43 amb_wind.f32
+-rw-r--r-- 1 root root    61440 Nov  9 19:43 bid_tick_2.f32
+-rw-r--r-- 1 root root  1728000 Nov  9 19:43 gift_chime.f32
+-rw-r--r-- 1 root root  1909920 Nov  9 19:43 guest_arc.f32
+-rw-r--r-- 1 root root  2059944 Nov  9 19:43 guest_spike.f32
+-rw-r--r-- 1 root root  2688000 Nov  9 19:43 memory_dissolve.f32
+-rw-r--r-- 1 root root 24576000 Nov  9 19:43 mus_calm.f32
+-rw-r--r-- 1 root root 24576000 Nov  9 19:43 mus_crisis.f32
+-rw-r--r-- 1 root root 24576000 Nov  9 19:43 mus_uneasy.f32
+-rw-r--r-- 1 root root   122880 Nov  9 19:43 step_grass_1.f32
+-rw-r--r-- 1 root root   122880 Nov  9 19:43 step_grass_2.f32
+-rw-r--r-- 1 root root   122880 Nov  9 19:43 step_grass_3.f32
+-rw-r--r-- 1 root root   122880 Nov  9 19:43 step_grass_4.f32
+-rw-r--r-- 1 root root  2496000 Nov  9 19:43 storm_crack.f32
+-rw-r--r-- 1 root root   460800 Nov  9 19:43 ui_confirm.f32
+-rw-r--r-- 1 root root   768000 Nov  9 19:43 ui_notify.f32
+-rw-r--r-- 1 root root  1075200 Nov  9 19:43 vision_whoosh.f32

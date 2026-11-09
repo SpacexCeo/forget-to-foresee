@@ -3,7 +3,7 @@
 The 18.5 s cinematic test from `docs/submission/jury-video.md` (v3), rendered by `tools/capture/gpu-job.sh` with
 `FTF_FORMAT=3840x2160@30 FTF_NO_LAYERS=1`: clean plates with the camera recorded per frame, for the CPU layers pass
 (`tools/capture/layers-pass.mjs`). All seven shots rendered with 0 runner errors and 0 console messages; `proof` needed
-three frame retries (one luma jump of 27 at its frame 17). Report: `jury-test.report.json`; the job log: `job.log`.
+three frame retries (one luma jump of 27 at its frame 17). Report: `jury-test.report.json`; the job log: `job-log.txt`.
 
 The rented server was returned right after the run, so the 4K masters (97 MB each) and the 4K per-shot plates (1.5 GB)
 could not be kept. Everything here was downscaled on the server to 1920×1080 (lanczos, H.264 CRF 16/17) before it went:
