@@ -121,6 +121,9 @@ export function signsFromObs(obs, { i18n, mode = 'novice', near = null } = {}) {
  * @param {boolean} [o.map]  true when the host wires an island map: the hotbar gets a Map button (N)
  * @param {{leafBadge: (index: number) => object|null, seasonBadge: () => object|null}} [o.near]  NEAR testnet badges (net/near.js)
  * @param {boolean} [o.unread]
+ * @param {{shells: {n: number, signs: number}[], inShell: boolean, shell: number|null, busy: boolean, canPass: boolean}|null} [o.hub]
+ *   the Shell hub's state (play/hub.js, passed by the host): the phone HUD draws the Shell selector and the quests sheet
+ *   from it; `visible` is derived here (island or Shell, while the season is in play)
  */
 export function buildHudModel(o) {
   const { obs, goal, options = [], defaultIndex = -1, i18n, render, mode = 'novice', hints, line } = o;
@@ -176,9 +179,16 @@ export function buildHudModel(o) {
   const promptVisible = !!opt && opt.available !== false && o.promptVisible !== false;
 
   const hintState = hints || { active: null, journal: [], lore: [] };
+  const hub = o.hub ? {
+    shells: [1, 2, 3, 4].map((n) => { const x = (o.hub.shells || []).find((y) => y.n === n); return { n, signs: x ? x.signs : 0 }; }),
+    inShell: !!o.hub.inShell, shell: o.hub.inShell ? o.hub.shell : null, busy: !!o.hub.busy,
+    canPass: !!o.hub.canPass && s.phase === 'play',
+    visible: s.phase === 'play' || s.phase === 'intro',
+  } : null;
   const next = {
     mode,
     layer,
+    hub,
     unlocks: { memory: layer >= 1, words: layer >= 1, tension: layer >= 2 },
     trial,
     quests,
@@ -218,6 +228,7 @@ export function buildHudModel(o) {
     dialogue: line || null,
     hotbar: s.phase + layer + (o.map ? 'm' : ''),
     hint: hintState.active ? hintState.active.id + ':' + (hintState.active.shown || 0) : 'off',
+    hub: hub ? JSON.stringify(hub) : '-',
   };
   return o.prev ? reuse(o.prev, next, sig) : withSig(next, sig);
 }

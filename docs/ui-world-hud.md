@@ -404,6 +404,12 @@ Text starts at x 71 (icon column 18u + gap 12u + pad 21u) for the rows and at x 
 
 ## 7. Mobile components (CSS px at 390×876)
 
+> **Superseded on phones (09.11.2026).** The 3D client mounts the two-mode phone HUD of
+> `docs/ui-mobile-hud.md` (`mobile.js`) for `layout: 'mobile'`; the components below are what `status.js`,
+> `log.js` and `actions.js` still render when mounted with `layout: 'mobile'` directly (their unit tests and
+> `hud-preview.html`). The Signs sheet (§7.7) is shared by both layouts.
+
+
 Side gutter is 14px for cards and 18px for the dialogue bar; the safe area is added by
 the orchestrator (`padding-top: env(safe-area-inset-top)` on `.wh-root`), the mockup's
 status bar is 44px tall — so the top bar sits at `top: 58px` on a 44px status bar, i.e.

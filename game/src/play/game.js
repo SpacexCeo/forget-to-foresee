@@ -102,7 +102,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // Novice hints A to Z (play/hints.js): Novice gets toasts, Iris lines and the Hints tab; Pro only Lore.
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
-  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle() } }) : null;
+  // the phone HUD (docs/ui-mobile-hud.md) draws the Shell selector and the quests sheet from the hub and flies / passes through it
+  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, hub, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle(), onFly: (n) => fly(n), onPass: () => hubUi && hubUi.handleKey('KeyT') } }) : null;
   // living agents (Task N): meeting and contribution beats reach the dialogue strip when they actually happen
   agents.onSay = (l) => { if (worldHud) worldHud.say(l); };
   let movedReported = 0;

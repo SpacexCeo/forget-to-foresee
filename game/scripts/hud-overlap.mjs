@@ -33,8 +33,10 @@ if (!chromium) { console.error('playwright not found'); process.exit(2); }
 const SELECTORS = [
   // world HUD, desktop
   '.wh-trial', '.wh-quest', '.wh-toast', '.wh-signs', '.wh-log__tabs', '.wh-log__body', '.wh-prompt', '.wh-dialogue__line', '.wh-dialogue__reply', '.wh-hotbar',
-  // world HUD, phone
-  '.wh-topbar__btn', '.wh-topbar__logo', '.wh-quest--mobile', '.wh-quest__dots', '.wh-trial--mobile', '.wh-tiles', '.wh-prompt--mobile', '.wh-dialogue--mobile', '.wh-sheet',
+  // world HUD, phone (docs/ui-mobile-hud.md): top bar, Shell selector, prompt, objective, Iris line, navigation, sheets
+  '.wh-m-menu', '.wh-m-status', '.wh-m-shells', '.wh-m-prompt', '.wh-m-objective', '.wh-m-iris', '.wh-m-nav', '.wh-m-sheet', '.wh-sheet',
+  // world HUD, the earlier phone stack (status/log/actions packages mounted with layout: 'mobile'; the preview page)
+  '.wh-topbar__btn', '.wh-topbar__logo', '.wh-quest--mobile', '.wh-quest__dots', '.wh-trial--mobile', '.wh-tiles', '.wh-prompt--mobile', '.wh-dialogue--mobile',
   // play layer, hub, greybox leftovers, scene controls, nameplates
   '.pl-panel', '.pl-context', '.pl-help', '.pl-info', '.pl-badge', '#prompt', '#toast', '.ftf-scene-cue', '.ftf-scene-tools', '.ftf-run-toggle', '.ftf-hud-toast',
   '.hub-dock', '.hub-read', '.hub-card', '.hub-status', '.pl-plate',
