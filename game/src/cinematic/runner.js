@@ -325,7 +325,8 @@ export class ShotRunner {
       case 'forget': {
         // The Memories panel may be closed by the time the action fires (the M key in the setup can land while another
         // surface holds the panel arbiter, as on the 1080p GPU renders): open it directly, then pick the memory by kind
-        // (`kind: 'call'`, the judge playthrough's shard 7) or by index, and click its "Forget it for a vision" button.
+        // (`kind: 'call'`, the judge playthrough's shard 7) or by index, click its "Forget it for a vision" button, then
+        // "Forget this memory" on the confirmation that follows (cancel before a memory burn, forget-confirm.js).
         const pick = () => {
           const mems = (play.session.obs && play.session.obs.memories) || [];
           const m = a.kind ? mems.find((x) => x.kind === a.kind) : mems[a.index ?? 0];
@@ -335,7 +336,10 @@ export class ShotRunner {
         if (!b && play.ui.open) { play.ui.open('memory'); b = pick(); }
         if (!b) throw new Error(`no memory button (${a.kind ? 'kind ' + a.kind : 'index ' + (a.index ?? 0)}; memories: ${((play.session.obs && play.session.obs.memories) || []).map((x) => x.kind).join(',') || 'none'})`);
         this.marks.push({ t: this.t, label: 'forget ' + b.getAttribute('data-forget') });
-        b.click(); break;
+        b.click();
+        const ok = document.querySelector(`[data-forget-confirm="${b.getAttribute('data-forget')}"]`);
+        if (!ok) throw new Error('no forget confirmation for memory ' + b.getAttribute('data-forget'));
+        ok.click(); break;
       }
       // Capture-only look (the jury video's dusk grade): a time-of-day preset and a mood tint, never the game's defaults.
       case 'look': {
