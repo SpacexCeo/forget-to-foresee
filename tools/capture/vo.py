@@ -2,7 +2,7 @@
 """Voice-over for the jury video (owner 09.11: a local, male, native-English narrator; not a stock announcer voice).
 
 Kokoro-82M through kokoro-onnx (CPU, no torch; model files next to the script or in $KOKORO_DIR). Each line of tools/capture/vo-lines.json is synthesised on its own and laid on the
-timeline at its caption's start; a line longer than its window is sped up (at most 1.18x) and otherwise left alone.
+timeline at its caption's start; a line longer than its window is sped up (at most 1.3x) and otherwise left alone.
 Usage: python3 tools/capture/vo.py <out.wav> [--voice bm_fable] [--lines vo-lines.json] [--speed 1.0] [--sample "text"]
 Voices tried for the owner: bm_fable, bm_george (British), am_fenrir, am_michael (American).
 """
@@ -33,11 +33,12 @@ if a.sample:
 
 lines = json.load(open(a.lines))
 out = np.zeros(int(a.duration * SR) + SR, np.float32)
-for L in lines:
-    win = L['end'] - L['at']
+for i, L in enumerate(lines):
+    nxt = lines[i + 1]['at'] if i + 1 < len(lines) else a.duration
+    win = max(L['end'], nxt - 0.12) - L['at']   # the line may run past its caption, but not into the next line
     x = trim(say(L['text'], a.speed))
     if len(x) / SR > win:   # too long for its caption window: speak faster, up to 1.18x
-        sp = min(1.18, a.speed * (len(x) / SR) / win * 1.02)
+        sp = min(1.3, a.speed * (len(x) / SR) / win * 1.02)
         x = trim(say(L['text'], sp))
     s0 = int(L['at'] * SR); s1 = min(len(out), s0 + len(x))
     out[s0:s1] += x[:s1 - s0]
