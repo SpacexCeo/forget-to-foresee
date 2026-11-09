@@ -9,14 +9,15 @@ import playUk from './locales/uk.js';
 import playIt from './locales/it.js';
 import playZh from './locales/zh.js';
 
-const { MESSAGES, createI18n, detectLocale, BASE_LOCALE, resolveArg } = uiI18n;
+const { MESSAGES, createI18n, BASE_LOCALE, resolveArg } = uiI18n;
 
 export const PLAY_MESSAGES = { en: playEn, ru: playRu, uk: playUk, it: playIt, zh: playZh };
 export const MERGED_MESSAGES = Object.fromEntries(Object.entries(MESSAGES).map(([locale, messages]) =>
   [locale, { ...playEn, ...messages, ...(PLAY_MESSAGES[locale] || {}) }]));
 
+/** English unless `locale` is given (the player's saved choice or `?lang=`): the browser language is not consulted. */
 export function createPlayI18n(locale, { onMissing } = {}) {
-  const preferred = locale || (typeof navigator !== 'undefined' ? detectLocale(navigator.languages || [navigator.language]) : BASE_LOCALE);
+  const preferred = locale || BASE_LOCALE;
   return createI18n({ messages: MERGED_MESSAGES, locale: preferred, onMissing: onMissing || ((key, loc) => { if (typeof console !== 'undefined') console.warn(`[i18n] missing ${loc}:${key}`); }) });
 }
 

@@ -127,6 +127,33 @@ test('runtime: language switches in place and notifies subscribers', () => {
   assert.equal(detectLocale(['fr']), 'en');
 });
 
+test('English is the release language: the browser language never picks the locale; a saved choice or ?lang= does', async () => {
+  const { createUiContext } = await import('../src/ui/context.js');
+  const { createPlayContext } = await import('../src/play/i18n.js');
+  const { createSafeStorage, memoryStorage, STORAGE_KEYS } = await import('../src/ui/storage.js');
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { languages: ['ru-RU', 'uk'], language: 'ru-RU' } });
+  try {
+    const quiet = { onMissing: () => {} };
+    assert.equal(createGameI18n(undefined, quiet).locale, 'en', 'a Russian browser still opens in English');
+    assert.equal(createPlayI18n(undefined, quiet).locale, 'en');
+    const fresh = createSafeStorage(memoryStorage());
+    assert.equal(createPlayContext({ storage: fresh }).i18n.locale, 'en', 'no saved choice → English');
+    assert.equal(fresh.getJSON(STORAGE_KEYS.prefs), null, 'nothing is saved for a player who never chose');
+    // the player's choice is saved and wins on the next start
+    const ctx = createPlayContext({ storage: fresh });
+    ctx.i18n.setLocale('uk');
+    assert.equal(createPlayContext({ storage: fresh }).i18n.locale, 'uk', 'a saved choice survives a reload');
+    assert.equal(createUiContext({ storage: fresh }).i18n.locale, 'uk');
+    // ?lang= (main.js passes it as `locale`) overrides the saved choice without overwriting it
+    const viaUrl = createPlayContext({ storage: fresh, locale: 'zh' });
+    assert.equal(viaUrl.i18n.locale, 'zh');
+    assert.equal(fresh.getJSON(STORAGE_KEYS.prefs).locale, 'uk', '?lang= is not stored');
+  } finally {
+    if (had) Object.defineProperty(globalThis, 'navigator', had); else delete globalThis.navigator;
+  }
+});
+
 /** Plays many seasons once; the adapter tests below share the states. */
 const seasons = [];
 for (const rules of ['baseline-2d-1', 'v2']) for (const pol of ['coop', 'hold', 'breaks']) for (let s = 1; s <= 20; s++) {
