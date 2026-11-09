@@ -1,5 +1,21 @@
 # Task M report: NEAR for real (season commitment on testnet, verified in the game)
 
+## Update 09.11: deployed
+
+With the owner's direct permission in this session, both contracts run on NEAR testnet. Accounts, every transaction hash
+and explorer links: `docs/near.md` → "Deployment status"; records: `contracts/deployments/`.
+- `ftf-seasons.testnet`: judge season committed, Ash key committed, 15 leaves revealed and verified on-chain; read-only
+  RPC checks confirm `revealed_count: 15` and reject a tampered leaf with `ERR_ROOT_MISMATCH`.
+- `ftf-shards.testnet`: 3 judge-playthrough shards minted; on-chain SVG equals the game's; shard 7's leaf equals leaf #3
+  of the season contract.
+- In the game, the revealed sign shows "Verified on NEAR testnet ✓" linked to its reveal transaction (headless Chromium
+  at 1280, 1920 and 390 px, no console errors). Fixed on the way: the watcher's in-flight observation and retry bugs, a
+  15 s RPC timeout, and in Task F's `signs.js` the badge that was never inserted into the card (plus its layout).
+- `npm test` 495/495, build green, server 28/28. README real/mock rows and the hackathon-rules NEAR item now state what
+  runs. Not done: a HUD element for shard NFTs (request 9); live (non-judge) seasons are not registered on-chain.
+
+The original report follows.
+
 Branch `claude/near-live` (based on `claude/loving-curie-ihasft` = `main` + worker docs). Files touched, all inside
 Task M's paths plus the two shared files every worker appends to: new `game/src/net/near.js`, `near-season.js`,
 `near-deployment.js`, `game/tests/client/near.test.mjs`; one line + a comment in `game/src/play/transport-local.js`

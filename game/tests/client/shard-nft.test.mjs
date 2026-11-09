@@ -168,6 +168,8 @@ test('shard client views and the watcher badge: minted → link to the mint tx; 
   const noTx = createShardWatcher({ deployment: { ...DEPLOY, shardMints: { '793f6c05e89839f2': {} } }, fetch: fakeRpc(views) });
   noTx.observe(obs); await noTx.settle();
   assert.equal(noTx.badge(7).href, 'https://testnet.nearblocks.io/address/ftf-shards.testnet?tab=nfts');
-  assert.equal(NEAR_DEPLOYMENT.shardContractId, null, 'no shard deployment recorded yet');
-  assert.deepEqual(NEAR_DEPLOYMENT.shardMints, {});
+  // The recorded testnet deployment (09.11): the judge playthrough's three shards, testnet only.
+  assert.equal(NEAR_DEPLOYMENT.shardContractId, 'ftf-shards.testnet');
+  assert.deepEqual(Object.keys(NEAR_DEPLOYMENT.shardMints['793f6c05e89839f2']).sort(), ['10', '15', '7']);
+  for (const h of Object.values(NEAR_DEPLOYMENT.shardMints['793f6c05e89839f2'])) assert.match(h, /^[1-9A-HJ-NP-Za-km-z]{43,44}$/, 'base58 tx hash');
 });

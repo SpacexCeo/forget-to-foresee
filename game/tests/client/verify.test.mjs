@@ -67,7 +67,14 @@ test('proof export: one revealed sign carries everything the verifier needs and 
   assert.deepEqual(doc.merklePath, proof.path);
   assert.equal(doc.contractArgs.merkle_path, proof.path);
   assert.equal(doc.recipe.shell, shellLine(doc.season, doc.leaf));
-  assert.equal(doc.near, null, 'no deployment recorded → no NEAR block');
+  // The recorded testnet deployment (game/src/net/near-deployment.js) names the contract; without a watcher the
+  // season and leaf states are 'unknown' (the export never claims an on-chain state it did not read).
+  assert.equal(doc.near.network, 'testnet');
+  assert.equal(doc.near.contractId, 'ftf-seasons.testnet');
+  assert.equal(doc.near.contract, 'https://testnet.nearblocks.io/address/ftf-seasons.testnet');
+  assert.equal(doc.near.season, 'unknown');
+  assert.equal(doc.near.leaf, 'unknown');
+  assert.equal(proofExport({ obs, proof, deployment: { contractId: null } }).near, null, 'no deployment → no NEAR block');
   assert.equal(doc.exportedAt, '2026-11-08T12:00:00.000Z');
   assert.equal(proofFileName(doc), 'ftf-proof-793f6c05e89839f2-leaf-0.json');
   const text = proofExportText(doc);

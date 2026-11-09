@@ -319,7 +319,8 @@
 .wh-root .wh-sign__verified--ok { border-color: var(--wh-gold); color: var(--wh-gold-bright); box-shadow: var(--wh-glow-gold); }
 .wh-root .wh-sign__verified--fail { border-color: var(--wh-notify); color: var(--wh-notify); }
 /* NEAR testnet badge (request 9): same pill as the proof check, a link; ✓ states gold, mismatch in the alert colour */
-.wh-root .wh-sign__near { height: calc(21 * var(--wh-px)); margin-left: calc(6 * var(--wh-px)); font-family: var(--wh-font-body); font-size: var(--wh-fs-tab); text-decoration: none; pointer-events: auto; }
+.wh-root .wh-sign__near { height: calc(21 * var(--wh-px)); margin: calc(6 * var(--wh-px)) 0 0 calc(-15 * var(--wh-px)); max-width: calc(100% + 15 * var(--wh-px) + 36 * var(--wh-px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--wh-font-body); font-size: var(--wh-fs-tab); text-decoration: none; pointer-events: auto; }
+.wh-root .wh-sign--mobile .wh-sign__near { height: 20px; margin: 5px 0 0 -13.5px; max-width: calc(100% + 13.5px + 30px); font-size: 11px; }
 .wh-root .wh-sign__near--on-chain, .wh-root .wh-sign__near--dry-run { border-color: var(--wh-gold); color: var(--wh-gold-bright); }
 .wh-root .wh-sign__near--mismatch { border-color: var(--wh-notify); color: var(--wh-notify); }
 .wh-root .wh-sign__near:hover { box-shadow: var(--wh-glow-gold); }
