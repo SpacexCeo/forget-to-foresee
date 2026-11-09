@@ -34,12 +34,12 @@ to the rules and to what runs on 08.11. Use either, but keep the three required 
 
 > Play in the browser, phone included (5-minute judge path): https://spacexceo.github.io/forget-to-foresee/?demo=judge
 >
-> Open source, 600 tests, AI agents play the same room over HTTP: https://github.com/SpacexCeo/forget-to-foresee
+> Open source, 600+ tests, AI agents play the same room over HTTP: https://github.com/SpacexCeo/forget-to-foresee
 >
 > What memory would you give up to see the future?
 > @NearLegion @NearBuilders
 
-(247 characters. "600 tests" = 495 game + 28 API + 56 season-commit + 21 memory-shard; recount before posting.)
+(248 characters. "600+ tests" = 497 game + 28 API + 56 season-commit + 21 memory-shard; recount before posting.)
 
 ## Checklist before posting (owner)
 - [ ] The video is attached to post 1 (not only a link).
