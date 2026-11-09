@@ -232,8 +232,9 @@ export function createSimpleMode({ root, ctx, session, hub, fly, narration = nul
       el(doc, 'kbd', { text: 'P' }), paused ? t('simple.resume') : t('simple.pause'));
     const recapBtn = onRecap ? el(doc, 'button', { type: 'button', class: 'a11y-recap-inline', 'data-simple': 'recap', 'aria-label': t('recap.button'), 'aria-haspopup': 'dialog', onclick: () => onRecap() }, '?') : null;
     const box = el(doc, 'section', { class: 'a11y-box a11y-simple', role: 'region', 'aria-live': 'polite', 'aria-label': t('simple.eyebrow'), 'data-kind': p.kind },
-      el(doc, 'div', { class: 'a11y-eyebrow', text: paused ? t('simple.paused') : t('simple.eyebrow') }),
-      el(doc, 'div', { class: 'a11y-simple-tools' }, recapBtn, pauseBtn),
+      el(doc, 'div', { class: 'a11y-simple-head' },
+        el(doc, 'div', { class: 'a11y-eyebrow', text: paused ? t('simple.paused') : t('simple.eyebrow') }),
+        el(doc, 'div', { class: 'a11y-simple-tools' }, recapBtn, pauseBtn)),
       el(doc, 'h3', { text: t(p.title.key, p.title.args) }),
       p.sign ? el(doc, 'div', { class: 'a11y-sign' }, safeCanvas(p.sign), el(doc, 'p', { class: 'a11y-why', text: t(p.why.key, p.why.args) })) : el(doc, 'p', { class: 'a11y-why', text: t(p.why.key, p.why.args) }));
     if (p.kind === 'passing') box.append(el(doc, 'div', { class: 'a11y-row' }, el(doc, 'button', { type: 'button', class: 'a11y-primary', 'data-simple': 'stop', onclick: () => { paused = true; hub.stop(); render(); } }, t('simple.stop'))));

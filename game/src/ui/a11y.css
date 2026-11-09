@@ -129,6 +129,9 @@ html[data-palette="safe"] .pl-off small { color: #ff8c6b; }
 html[data-palette="safe"] .wh-root .wh-sign__verified--ok { border-color: #8fd3ff; color: #8fd3ff; }
 html[data-palette="safe"] .wh-root .wh-sign__verified--fail { border-color: #ff8c6b; color: #ff8c6b; }
 
+/* the Accessibility section's own controls: 44 px minimum like the rest of the layer (the shared form styles use 40 px) */
+.ftf-a11y .ftf-choice label, .ftf-a11y .ftf-select, .ftf-a11y .ftf-btn { min-height: var(--ftf-hit-min); }
+
 /* ---------- motor: hold-to-confirm buttons (ui/a11y.js holdToConfirm) ---------- */
 .a11y-hold { position: relative; overflow: hidden; --hold: 0%; }
 .a11y-hold::before {
@@ -173,10 +176,11 @@ html[data-motion="reduce"] .a11y-hold::before { transition: none; }
 .ftf-a11y-host kbd { display: inline-block; min-width: 1.4em; margin-right: 8px; padding: 2px 6px; font: 600 13px/1 var(--wh-font-body, system-ui, sans-serif); text-align: center; border: 1px solid var(--wh-kbd-border, rgba(222, 210, 180, .85)); border-radius: 4px; background: var(--wh-kbd-bg, rgba(42, 38, 30, .92)); color: var(--wh-text-kbd, #fef4e6); }
 
 /* Simple mode: Iris's one proposal per trial. Desktop: bottom centre; the hub dock and cards yield to it. */
-.a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 16px 20px 18px;
+.a11y-simple { --a11y-tx: -50%; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw / var(--ftf-zoom) - 32px)); padding: 16px 20px 18px;
   max-height: calc(var(--vvh, 100vh) / var(--ftf-zoom) - 32px); overflow: auto; overscroll-behavior: contain; }
-.a11y-simple .a11y-simple-tools { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
-.a11y-simple .a11y-eyebrow { display: flex; align-items: center; min-height: 46px; padding-right: 132px; } /* the title starts below the tools */
+.a11y-simple .a11y-simple-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.a11y-simple .a11y-simple-tools { display: flex; gap: 8px; flex: none; }
+.a11y-simple .a11y-eyebrow { flex: 1; min-width: 0; line-height: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .a11y-simple .a11y-pause { min-height: 44px; min-width: 44px; padding: 6px 12px; font-size: 15px; }
 .a11y-simple .a11y-recap-inline { min-height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font: 600 22px/1 var(--wh-font, Georgia, serif); color: var(--wh-gold-text, #f6df9b); }
 body.ftf-simple-on .a11y-recap-btn { display: none; } /* the card carries its own ? button */
@@ -197,7 +201,7 @@ body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: no
   background: var(--wh-btn-bg, rgba(10, 22, 23, .82)) !important; border: 1px solid var(--wh-frame, rgba(232, 214, 172, .8)) !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
 }
-.a11y-recap { --a11y-tx: -50%; --a11y-ty: -50%; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 32px)); padding: 18px 22px 20px;
+.a11y-recap { --a11y-tx: -50%; --a11y-ty: -50%; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw / var(--ftf-zoom) - 32px)); padding: 18px 22px 20px;
   max-height: calc(var(--vvh, 100vh) / var(--ftf-zoom) - 24px); overflow: auto; overscroll-behavior: contain; }
 .a11y-recap p.a11y-where { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-text, #faf7ee); }
 .a11y-recap p.a11y-next { font-size: max(var(--ftf-body-min), 18px); color: var(--wh-gold-text, #f6df9b); }
@@ -205,6 +209,7 @@ body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: no
 
 @media (max-width: 700px), (pointer: coarse) and (max-height: 900px) {
   .a11y-simple { --a11y-tx: 0px; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; padding: 12px 14px 14px; }
+  .a11y-recap { --a11y-tx: 0px; left: 8px; right: 8px; width: auto; transform: translateY(-50%); }
   .a11y-simple .a11y-sign { grid-template-columns: 56px 1fr; } .a11y-simple .a11y-sign canvas { width: 56px; height: 56px; }
   .ftf-a11y-host h3 { font-size: 19px; }
   /* QA-035: the fab row above the dialogue strip, left of the run toggle (8 + 52 + 8 px), clear of the Lore tile */
@@ -220,7 +225,6 @@ html[data-vh="short"] .ftf-a11y-host button::before, html[data-vh="tiny"] .ftf-a
   content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--ftf-hit-min)); height: max(100%, var(--ftf-hit-min)); transform: translate(-50%, -50%); }
 html[data-vh="short"] .a11y-simple, html[data-vh="tiny"] .a11y-simple { left: 8px; right: 8px; bottom: 6px; transform: none; width: auto; padding: 8px 12px 10px; border-radius: 10px; }
 html[data-vh="short"] .a11y-simple .a11y-eyebrow, html[data-vh="tiny"] .a11y-simple .a11y-eyebrow { min-height: 36px; font-size: 11px; }
-html[data-vh="short"] .a11y-simple .a11y-simple-tools, html[data-vh="tiny"] .a11y-simple .a11y-simple-tools { right: 8px; top: 6px; }
 html[data-vh="short"] .a11y-simple .a11y-pause, html[data-vh="short"] .a11y-simple .a11y-recap-inline,
 html[data-vh="tiny"] .a11y-simple .a11y-pause, html[data-vh="tiny"] .a11y-simple .a11y-recap-inline { min-height: 36px; min-width: 36px; font-size: 13px; }
 html[data-vh="short"] .ftf-a11y-host h3, html[data-vh="tiny"] .ftf-a11y-host h3 { margin-top: 0; font-size: 17px; }
@@ -239,7 +243,6 @@ html[data-vh="short"] .a11y-recap-btn, html[data-vh="tiny"] .a11y-recap-btn { wi
   html:not([data-vh]) .ftf-a11y-host button::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--ftf-hit-min)); height: max(100%, var(--ftf-hit-min)); transform: translate(-50%, -50%); }
   html:not([data-vh]) .a11y-simple { left: 8px; right: 8px; bottom: 6px; transform: none; width: auto; padding: 8px 12px 10px; }
   html:not([data-vh]) .a11y-simple .a11y-eyebrow { min-height: 36px; font-size: 11px; }
-  html:not([data-vh]) .a11y-simple .a11y-simple-tools { right: 8px; top: 6px; }
   html:not([data-vh]) .a11y-simple .a11y-pause, html:not([data-vh]) .a11y-simple .a11y-recap-inline { min-height: 36px; min-width: 36px; font-size: 13px; }
   html:not([data-vh]) .ftf-a11y-host h3 { margin-top: 0; font-size: 17px; }
   html:not([data-vh]) .ftf-a11y-host p { margin-top: 4px; font-size: 15px; line-height: 1.35; }
