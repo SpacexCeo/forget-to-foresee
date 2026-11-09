@@ -496,7 +496,44 @@ def clip_idle(key, S, u):
     return P
 
 
+def clip_iris_run(key, S, u):
+    """Iris's run: graceful and athletic, not a model's catwalk. A narrow natural track (feet land
+    under the hips, never crossing), a soft midfoot strike, a light springy bob, an upright chest,
+    restrained pelvis/shoulder counter-rotation, relaxed elbows (~75 deg) swinging close to the body,
+    a steady head. Foot phases match the walk (left strike at u = 0) so walk<->run blends cleanly.
+    Character reference: the owner's iris_graceful_run.py (stride, knee recovery, arm and torso values)."""
+    T = RUN_FRAMES / FPS
+    P = base_pose(key, S, standing=False)
+    stance = 0.31                                           # longer flight: light, springy
+    for side, ph0 in ((1, 0.0), (-1, 0.5)):                 # the foot lands under the body, no overstride
+        P.feet[side] = gait_foot((u + ph0) % 1.0, side, RUN_SPEED, T, stance, 0.12, 4.0, -38.0,
+                                 0.042 - ANKLE_X, tang=0.45, fwd_bias=-0.13)   # ankles 4.2 cm off the midline: near one line
+    c, s_ = math.cos(TAU * u), math.sin(TAU * u)
+    # one low point per step, just after contact (weight accepted), lightest in flight
+    bob = math.cos(2 * TAU * (u - stance / 2) + math.pi)
+    P.hips.z = -0.024 + 0.013 * bob                         # tall: no sitting into the stance
+    lean = 8.0
+    P.hips.x = 0.006 * s_                                   # almost no lateral splay
+    # pelvis yaw follows the swing leg (2.5 deg), a slight drop on the swing side
+    P.hips_rot = V((lean * 0.25 + 1.0 * bob, -1.5 * s_, -2.5 * c))
+    P.r("spine", lean * 0.35, 0, 1.0 * c)
+    P.r("chest", lean * 0.30 + 0.8 * bob, 0.8 * math.sin(TAU * (u - 0.05)), 2.0 * math.cos(TAU * (u - 0.04)))
+    P.r("neck", -lean * 0.30 - 0.6 * bob, 0, -1.4 * c)       # the head stays steady
+    P.r("head", -lean * 0.35 + 0.4 * bob, 0, -1.2 * c)
+    lag = 0.04
+    cl = math.cos(TAU * (u - lag))
+    for side, sfx, sgn in ((1, "L", 1), (-1, "R", -1)):
+        sw_a = 22.0 * cl * sgn                              # + = backwards; opposite to the leg
+        P.r(f"upperarm_{sfx}", sw_a + 3.0, -side * 4.0, 0)   # close to the body, more back than forward
+        back = max(0.0, cl * sgn)                           # the elbow opens a little behind
+        P.r(f"forearm_{sfx}", -72.0 + 10.0 * back, 0, -side * 12.0)   # hands toward the midline, not across
+        P.r(f"hand_{sfx}", 5.0 * math.cos(TAU * (u - lag - 0.10)) * sgn, 0, -side * 4.0)
+    return P
+
+
 def clip_locomotion(key, S, u, run=False):
+    if run and key == "iris":
+        return clip_iris_run(key, S, u)
     T = (RUN_FRAMES if run else WALK_FRAMES) / FPS
     speed = RUN_SPEED if run else WALK_SPEED
     P = base_pose(key, S, standing=False)
