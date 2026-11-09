@@ -12,6 +12,7 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 out = argv[0]
 res = int(argv[1]) if len(argv) > 1 else 900
 samples = int(argv[2]) if len(argv) > 2 else 48
+only = argv[3] if len(argv) > 3 else None                 # "jacket": the jacket alone (front, side, three-quarter)
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"
 try:
@@ -97,6 +98,20 @@ def shot(name, d):
 
 
 VIEWS = {"front": V((0, -1, 0)), "side": V((1, 0, 0)), "back": V((0, 1, 0))}
+if only:
+    for o in sc.objects:
+        if o.type == "MESH":
+            o.hide_render = not o.name.startswith(only)
+    cam.data.ortho_scale = 0.75
+    for v, d in {"front": V((0, -1, 0)), "side": V((1, 0, 0)), "q3": V((0.7, -0.7, 0.12)).normalized()}.items():
+        cam.location = V((0, 0, 1.30)) + d * 6.0
+        cam.rotation_euler = (V((0, 0, 1.30)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+        key.location = cam.location * 0.4 + V((0, 0, 2.2))
+        key.rotation_euler = (V((0, 0, 1.2)) - key.location).to_track_quat("-Z", "Y").to_euler()
+        sc.render.resolution_x = sc.render.resolution_y = res
+        sc.render.filepath = f"{out}_{only}_{v}.png"
+        bpy.ops.render.render(write_still=True)
+    raise SystemExit(0)
 full = bpy.data.objects.get("body_review_full")
 for label, nude in (("clothed", False), ("body", True)):
     for o in garments:

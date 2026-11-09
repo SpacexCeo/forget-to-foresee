@@ -613,12 +613,30 @@ def athletic_costume(bm, P, dom, bones):
     torso_pts = [co[i] for i in co if dom[i] in TORSO]
     c, rx, ry = P.section(1.25)
     out = {}
-    # sports bra: continuous, bridging the cleavage and the under-bust, a supportive band at the bottom
-    zs = [1.168 + (1.372 - 1.168) * k / 16 for k in range(17)]
-    bra, n = C.hull_loft("sports_top", torso_pts, zs, 0.004, n=56, smooth=2)
-    C.set_attr(bra, "trim", lambda i, p: 1.0 if p.z < 1.19 else 0.0)
+    # sports bra: continuous compression top from convex sections, a scooped neckline (higher at the
+    # sides and back), a supportive underbust band
+    zs = [1.168 + (1.385 - 1.168) * k / 18 for k in range(19)]
+    bra, n = C.hull_loft("sports_top", torso_pts, zs, 0.004, n=60, smooth=2)
+    rows = len(zs)
+    def neckline(th_front):                                   # top edge height by how frontal the column is
+        return 1.385 - 0.060 * th_front ** 1.6
+    me = bra.data
+    cxy = sum((v.co for v in me.vertices), V()) / len(me.vertices)
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromPolygons([vv.co.copy() for vv in bm.data.vertices], [list(pp.vertices) for pp in bm.data.polygons])
+    for i, v in enumerate(me.vertices):
+        j, r = i % n, i // n
+        th = math.atan2(v.co.y - cxy.y, v.co.x - cxy.x)
+        front = max(0.0, -math.sin(th))
+        top = neckline(front)
+        z0 = zs[0]
+        v.co.z = z0 + (v.co.z - z0) * (top - z0) / (zs[-1] - z0)
+        loc, nrm, _, d = tree.find_nearest(v.co)
+        if loc is not None and (v.co - loc).dot(nrm) < 0.004:
+            v.co = loc + nrm * 0.004
+    C.set_attr(bra, "trim", lambda i, p: 1.0 if p.z < 1.195 or (i // n) == rows - 1 else 0.0)
     C.set_attr(bra, "accent", lambda i, p: 0.0)
-    C.solidify(bra, 0.003, 1.0)
+    C.solidify(bra, 0.0025, 1.0, even=False)
     C.smooth(bra, 50)
     out["sports_top"] = bra
     # jacket upper: shoulders, upper chest, upper back and sleeves follow the body (no boxy shoulders)
@@ -629,7 +647,7 @@ def athletic_costume(bm, P, dom, bones):
         d = dom[i]
         if d in TORSO + ("neck", "head"):
             front = p.y < c.y
-            return 1.15 < p.z < 1.43 and not (front and abs(p.x) < 0.058)
+            return 1.15 < p.z < 1.43 and not (front and abs(p.x) < 0.062 + 0.012 * (1.43 - p.z) / 0.28)
         if d in ARM:
             sx = "L" if p.x > 0 else "R"
             return (p - wrist[sx]).length > 0.012
@@ -645,8 +663,8 @@ def athletic_costume(bm, P, dom, bones):
         p = v.co
         if p.z < 1.17 and abs(p.x) < 0.25:
             p.z = 1.15
-        elif p.y < c.y and abs(p.x) < 0.10 and p.z > 1.17:
-            p.x = math.copysign(0.058, p.x)
+        elif p.y < c.y and abs(p.x) < 0.10 and p.z > 1.17:          # a straight zip edge (soft, no snap)
+            p.x = math.copysign(0.062 + 0.012 * (1.43 - p.z) / 0.28, p.x)
     front_body = [p for p in torso_pts if p.y < c.y]
     bust = lambda p: p.y < c.y and 1.14 < p.z < 1.33 and abs(p.x) < 0.17
     def ease(p, nrm):                                         # snug at shoulder, elbow and wrist
@@ -656,18 +674,22 @@ def athletic_costume(bm, P, dom, bones):
         E, W, S0 = bones[f"forearm_{sx}"][0], wrist[sx], bones[f"upperarm_{sx}"][0]
         dE, dW, dS = (p - E).length, (p - W).length, (p - S0).length
         k = min(1.0, dE / 0.06) * min(1.0, dW / 0.08) * min(1.0, dS / 0.07)
-        return 0.0035 + 0.0065 * k
+        return 0.0030 + 0.0050 * k
     out["jacket"] = C.shell_from_body(bm, "jacket", upper_keep, ease, 0.0035, trim=upper_trim,
                                       accent=upper_accent, edges=upper_edges,
                                       envelope=(lambda p: abs(p.x) < 0.17 and 1.14 < p.z < 1.40,
-                                                torso_pts, 0.016),
-                                      curtain=(bust, front_body, 1.33), relax=(bust, 4))
+                                                torso_pts, 0.013),
+                                      curtain=(bust, front_body, 1.33,
+                                               lambda z: 0.45 + 0.55 * C.smooth01(1.15, 1.30, z)),
+                                      relax=(bust, 6),
+                                      flatten=(lambda p: p.y < c.y - 0.01 and 1.15 < p.z < 1.38 and abs(p.x) < 0.16, 0.055),
+                                      edge_relax=6)
     out["jacket_collar"] = C.stand_collar(P)
     # leggings: from the body surface, high-rise, the crotch relaxed so it never cuts in
     LEG = ("thigh_L", "thigh_R", "shin_L", "shin_R")
     def leg_keep(i, _):
         p = co[i]
-        return dom[i] in LEG + ("pelvis", "spine") and 0.115 < p.z < 1.045
+        return dom[i] in LEG + ("pelvis", "spine") and 0.115 < p.z < 1.03
     def leg_panel(p, nrm):
         side = 1 if p.x > 0 else -1
         centre = side * (0.095 + 0.022 * math.sin((p.z - 0.2) * 3.5))
@@ -679,11 +701,21 @@ def athletic_costume(bm, P, dom, bones):
         shin = 0.22 < p.z < 0.42 and outer > 0.55 and abs(nrm.y + 0.45 - (p.z - 0.22) * 0.8) < 0.08
         return 1.0 if thigh or shin else 0.0
     def leg_edges(v):
-        v.co.z = 1.04 if v.co.z > 0.6 else 0.12
+        if v.co.z < 0.6:
+            v.co.z = 0.12
     crotch = lambda p: abs(p.x) < 0.07 and 0.70 < p.z < 0.88
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
                                         accent=leg_stripes, edges=leg_edges, relax=(crotch, 8))
+    # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
+    hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine")]
+    zs = [0.990 + (1.050 - 0.990) * k / 5 for k in range(6)]
+    wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0045, n=64, smooth=1)
+    C.set_attr(wb, "trim", lambda i, p: 1.0)
+    C.set_attr(wb, "accent", lambda i, p: 0.0)
+    C.solidify(wb, 0.0025, 1.0, even=False)
+    C.smooth(wb, 50)
+    out["leggings_band"] = wb
     # trainers: sized from each foot
     for sfx, side in (("L", 1), ("R", -1)):
         foot = [co[i] for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}") and co[i].z < 0.10]

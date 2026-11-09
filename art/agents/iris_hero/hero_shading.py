@@ -22,7 +22,7 @@ V = Vector
 GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool, near-black navy, dusty violet)
     # athletic sportswear (owner 09.11): graphite knit jacket, black top, graphite leggings, trainers
     "jacket": (0.010, 0.010, 0.011), "jacket_collar": (0.010, 0.010, 0.011), "sports_top": (0.007, 0.007, 0.008),
-    "leggings": (0.009, 0.009, 0.010), "trainers": (0.72, 0.72, 0.73),
+    "leggings_band": (0.009, 0.009, 0.010), "leggings": (0.009, 0.009, 0.010), "trainers": (0.72, 0.72, 0.73),
     "coat": (0.040, 0.040, 0.043), "collar": (0.040, 0.040, 0.043), "sleeve": (0.040, 0.040, 0.043),
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
@@ -30,7 +30,7 @@ GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool,
     "pendant": (0.62, 0.62, 0.64), "hair_tie": (0.110, 0.055, 0.160),
 }
 TRIM = {"jacket": (0.014, 0.014, 0.015), "jacket_collar": (0.014, 0.014, 0.015), "sports_top": (0.013, 0.013, 0.014),
-        "leggings": (0.006, 0.006, 0.007), "trainers": (0.012, 0.012, 0.013),
+        "leggings_band": (0.011, 0.011, 0.012), "leggings": (0.006, 0.006, 0.007), "trainers": (0.012, 0.012, 0.013),
         "coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}

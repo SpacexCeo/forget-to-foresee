@@ -661,7 +661,8 @@ def hair_cap(body, scalp_idx, offset=0.006):
 
 # ===================================================================== athletic sportswear (owner, 09.11)
 
-def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None, envelope=None):
+def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None, envelope=None,
+                    flatten=None, edge_relax=0):
     """A tight garment cut from the body surface: the kept faces are duplicated, pushed out along the
     normals by `offset` and given cloth thickness. keep(index, co) decides per vertex; a face is kept
     when all its vertices are. trim/accent(co, normal) -> 0..1 paint the trim and accent attributes."""
@@ -719,17 +720,58 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
             if best is not None and dl < best + ease < dl + 0.03:      # only fill hollows, never spike
                 p.x, p.y = cx + dx * (best + ease), cy + dy * (best + ease)
     if curtain:                                  # fabric falls straight from the fullest point of the bust
-        region, pts, top = curtain
+        region, pts, top = curtain[:3]
+        blend = curtain[3] if len(curtain) > 3 else (lambda z: 1.0)
         for v in b.verts:
             p = v.co
             if not region(p):
                 continue
             above = [q.y for q in pts if abs(q.x - p.x) < 0.02 and p.z <= q.z <= top]
             if above:
-                p.y = min(p.y, min(above) - offset)
+                target = min(p.y, min(above) - offset)
+                p.y = p.y + (target - p.y) * blend(p.z)
+    if flatten:                                  # fabric tension: the panel is a low-pass of the body under it
+        from mathutils.kdtree import KDTree as _KD
+        from mathutils.bvhtree import BVHTree as _BVH
+        region, radius = flatten
+        sel = [v for v in b.verts if region(v.co)]
+        kd = _KD(len(sel))
+        for i, v in enumerate(sel):
+            kd.insert(v.co, i)
+        kd.balance()
+        tree = _BVH.FromPolygons([vv.co.copy() for vv in body.data.vertices], [list(pp.vertices) for pp in body.data.polygons])
+        for rad in (radius, radius * 0.6):       # two passes: broad drape, then rounder tips
+            orig = [v.co.copy() for v in sel]
+            new_y = []
+            for v in sel:
+                acc = wsum = 0.0
+                for co, i, d in kd.find_range(v.co, rad):
+                    w = 1.0 - d / rad
+                    acc += orig[i].y * w
+                    wsum += w
+                new_y.append(acc / wsum if wsum else v.co.y)
+            for v, y in zip(sel, new_y):
+                v.co.y = y
+            for v in sel:
+                loc, nrm, _, d = tree.find_nearest(v.co)
+                if loc is not None and (v.co - loc).dot(nrm) < offset + 0.006:
+                    v.co = loc + nrm * (offset + 0.006)
+        tree = _BVH.FromPolygons([vv.co.copy() for vv in body.data.vertices], [list(pp.vertices) for pp in body.data.polygons])
+        for v in sel:                            # never inside the body (and the bra under it)
+            loc, nrm, _, d = tree.find_nearest(v.co)
+            if loc is not None and (v.co - loc).dot(nrm) < offset + 0.006:
+                v.co = loc + nrm * (offset + 0.006)
     if edges:                                    # tidy the cut edges (straight hems, plackets)
-        for v in [v for v in b.verts if v.is_boundary]:
+        bnd = [v for v in b.verts if v.is_boundary]
+        for v in bnd:
             edges(v)
+        if edge_relax:                           # even out the rows next to the cut
+            ring = set(bnd)
+            for _ in range(2):
+                ring |= {e.other_vert(v) for v in list(ring) for e in v.link_edges}
+            inner = [v for v in ring if not v.is_boundary]
+            for _ in range(edge_relax):
+                bmesh.ops.smooth_vert(b, verts=inner, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     if relax:                                    # fabric bridges hollows instead of hugging every curve
         region, iters = relax
         sel = [v for v in b.verts if region(v.co) and not v.is_boundary]
@@ -758,7 +800,7 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
     return o
 
 
-def stand_collar(P, z0=1.425, z1=1.50, gap_deg=34):
+def stand_collar(P, z0=1.425, z1=1.485, gap_deg=30):
     """The jacket's stand collar: a ring round the neck, open at the front for the zip."""
     n = 36
     rings = []
@@ -770,12 +812,12 @@ def stand_collar(P, z0=1.425, z1=1.50, gap_deg=34):
         gap = math.radians(gap_deg + 6 * k / 4)
         for i in range(n):
             th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)
-            ring.append(ellipse(c, rx + 0.016 + 0.004 * k / 4, ry + 0.016 + 0.004 * k / 4, th))
+            ring.append(ellipse(c, rx + 0.009 + 0.002 * k / 4, ry + 0.010 + 0.002 * k / 4, th))
         rings.append(ring)
     o = loft("jacket_collar", rings, closed_u=False)
     set_attr(o, "trim", lambda i, co: 1.0 if (i % n) in (0, n - 1) else 0.0)
-    set_attr(o, "accent", lambda i, co: 1.0 if i >= n * 4 else 0.0)     # violet piping on the collar edge
-    solidify(o, 0.004)
+    set_attr(o, "accent", lambda i, co: 0.0)
+    solidify(o, 0.0028)
     smooth(o)
     return o
 
@@ -875,7 +917,7 @@ def sneaker(name, heel, toe, width, side):
     lat = V((fwd.y, -fwd.x, 0)) * (-1 if side < 0 else 1)
     up = V((0, 0, 1))
     m, k = 40, 20
-    SOLE = 0.030
+    SOLE = 0.022
 
     def hw(t):                                               # footprint half width, rounded heel and toe
         core = 0.60 + 0.40 * math.sin(math.pi * min(1.0, t * 1.12)) ** 0.55
@@ -895,7 +937,7 @@ def sneaker(name, heel, toe, width, side):
         for t in reversed(outline_t[1:-1]):
             pts.append(centre(t) - lat * hw(t) * scale + up * z)
         return pts
-    layers = [(0.94, 0.0), (1.00, 0.004), (1.03, 0.009), (1.02, 0.012), (1.06, 0.026), (1.00, SOLE)]
+    layers = [(0.95, 0.0), (1.00, 0.003), (1.02, 0.007), (1.01, 0.009), (1.03, 0.019), (0.99, SOLE)]
     srings = [[b.verts.new(p) for p in outline(sc, z)] for sc, z in layers]
     nO = len(srings[0])
     for r0, r1 in zip(srings, srings[1:]):
@@ -904,7 +946,7 @@ def sneaker(name, heel, toe, width, side):
     b.faces.new(srings[0][::-1])
     # --- upper: arcs over the foot from the outer to the inner sole edge
     def heights(t):
-        side_h = 0.135 - 0.095 * smooth01(0.30, 0.75, t)               # high walls round the ankle
+        side_h = 0.125 - 0.088 * smooth01(0.30, 0.75, t)               # high walls round the ankle
         top_h = 0.060 + 0.045 * smooth01(0.30, 0.55, t) * (1 - smooth01(0.55, 1.0, t)) - 0.020 * smooth01(0.75, 1.0, t)
         if t < 0.30:
             top_h = side_h
@@ -918,9 +960,11 @@ def sneaker(name, heel, toe, width, side):
         row = []
         for j in range(k + 1):
             a = math.pi * j / k
-            zz = SOLE + (sh - SOLE) * (1 - math.sin(a)) + (th - SOLE) * math.sin(a)
-            bulge = 1.0 + 0.10 * math.sin(a) * (1 - smooth01(0.85, 1.0, t))
-            row.append(b.verts.new(c + lat * (math.cos(a) * w * bulge) + up * zz))
+            sa, ca = math.sin(a), math.cos(a)
+            se = abs(sa) ** 0.75                                     # a rounder, fuller last (superellipse)
+            zz = SOLE + (sh - SOLE) * (1 - se) + (th - SOLE) * se
+            bulge = 1.0 + 0.06 * se * (1 - smooth01(0.85, 1.0, t))
+            row.append(b.verts.new(c + lat * (math.copysign(abs(ca) ** 0.8, ca) * w * bulge) + up * zz))
         rows.append(row)
     for i in range(m):
         t = (i + 0.5) / m
@@ -944,6 +988,8 @@ def sneaker(name, heel, toe, width, side):
         t = rel.dot(fwd) / L
         if t < 0.05 and co.z > 0.09:                        # heel tab
             return 1.0
+        if 0.40 < t < 0.70 and abs(rel.dot(lat)) < width * 0.10 and co.z > 0.05:   # the lacing strip
+            return 1.0 if int(t * 40) % 2 == 0 else 0.0
         # side stripe: a straight diagonal band on the outer and inner walls
         if 0.035 < co.z < 0.11 and abs(rel.dot(lat)) > hw(max(0.0, min(1.0, t))) * 0.75:
             along = t - (co.z - 0.035) * 2.2
