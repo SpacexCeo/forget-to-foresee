@@ -1,0 +1,308 @@
+{
+ "finalLuma": {
+  "ok": true,
+  "frames": 555,
+  "jumps": 7,
+  "at": [
+   12,
+   13,
+   14,
+   154,
+   180,
+   270,
+   360
+  ],
+  "maxJump": 46.1,
+  "min": 23,
+  "max": 194.6
+ },
+ "video": "jury-test",
+ "title": "Forget to Foresee: jury video, cinematic test (18.5 s)",
+ "width": 3840,
+ "height": 2160,
+ "fps": 30,
+ "tier": "ultra",
+ "duration": 18.5,
+ "shots": [
+  {
+   "shot": "fly-in",
+   "frames": 90,
+   "secondsPerFrame": 0.8834,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x15bc000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x15bc000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x15bc000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x15bc000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "c27ebc6f716d4df8",
+    "89": "91c3fe59785e0fa9"
+   }
+  },
+  {
+   "shot": "clans-back",
+   "frames": 45,
+   "secondsPerFrame": 0.8995111111111112,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x374000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x374000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x374000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x374000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "610018033934ba0a",
+    "44": "ef80c36ff93ad863"
+   }
+  },
+  {
+   "shot": "clans-front",
+   "frames": 45,
+   "secondsPerFrame": 0.9534666666666667,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x16640056f800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x16640056f800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x16640056f800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x16640056f800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "9b16a9022c24d468",
+    "44": "540970d974763300"
+   }
+  },
+  {
+   "shot": "conflict",
+   "frames": 90,
+   "secondsPerFrame": 0.9099333333333334,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x18dc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x18dc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x18dc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x18dc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "721e726b2750d308",
+    "89": "a076127b4017d14c"
+   }
+  },
+  {
+   "shot": "shard-macro",
+   "frames": 90,
+   "secondsPerFrame": 0.8977777777777778,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0xa2c00571400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xa2c00571400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xa2c00571400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xa2c00571400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "a93951dc1e0c3fe2",
+    "89": "d001cc694438400c"
+   }
+  },
+  {
+   "shot": "token",
+   "frames": 90,
+   "secondsPerFrame": 0.8875111111111111,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x3434000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3434000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3434000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3434000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "17aaff622e981510",
+    "89": "b7b2bb16f7a5f750"
+   }
+  },
+  {
+   "shot": "proof",
+   "frames": 105,
+   "secondsPerFrame": 0.9504857142857143,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x13b4000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x13b4000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x13b4000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x13b4000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ],
+   "hashes": {
+    "0": "1e89b77143b3ab61",
+    "104": "365b7d19494cbc3d"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.5067585955936893,
+  "events": 17,
+  "wav": "/root/ftf-media/jury-test/work/jury-test-3840x2160-ultra/jury-test.wav",
+  "cues": 41
+ },
+ "files": {
+  "/root/ftf-media/jury-test/jury-test.mp4": {
+   "bytes": 213581576,
+   "mb": 203.7,
+   "duration": 18.5,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 3840,
+    "height": 2160,
+    "coded_width": 3840,
+    "coded_height": 2160,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "30/1",
+    "avg_frame_rate": "30/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 284160,
+    "duration": "18.500000",
+    "bit_rate": "92093965",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "555",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media/jury-test/jury-test-captions.mp4": {
+   "bytes": 212653977,
+   "mb": 202.8,
+   "duration": 18.5,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 3840,
+    "height": 2160,
+    "coded_width": 3840,
+    "coded_height": 2160,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "30/1",
+    "avg_frame_rate": "30/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 284160,
+    "duration": "18.500000",
+    "bit_rate": "91692599",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "555",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media/jury-test/jury-test.srt": {
+   "bytes": 456,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}
