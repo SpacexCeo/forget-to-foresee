@@ -15,7 +15,7 @@ const music = (at, tension, gain) => ({ at, do: 'music', tension, ...(gain != nu
 // The browser half of the split screen: inside Shell I, Iris's reading card, F stakes 10 silk (rendered, then scaled
 // into the page's window by capture.mjs; not on the timeline by itself).
 const STAKE = {
-  name: 'api-browser', hidden: true, duration: 5.0, url: JUDGE_URL, ui: 'game',
+  name: 'api-browser', hidden: true, duration: 4.5, url: JUDGE_URL, ui: 'game',
   setup: [...IN_SHELL, { do: 'frames', n: 120 }],
   camera: { type: 'push', from: [1.3, 303.3, 13.6], look: [0, 303.8, -10.7], dist1: 21.5, fov: [42, 40], ease: 'inOutSine', minHeight: 290 },
   actions: [{ at: 1.2, do: 'key', code: 'KeyF' }],
@@ -49,7 +49,7 @@ export default {
     { // 13.0–15.5 · the walking judge path at trial 4: Memories, "Forget it for a vision", the vision arrives
       name: 'forget', duration: 2.5, url: WALK_URL, ui: 'game',
       setup: [...WALK.staked, ...WALK.trial4, { do: 'key', code: 'KeyM' }, { do: 'frames', n: 12 }],
-      actions: [{ at: 0.0, do: 'rig', dist: 9, yaw: 0.4 }, { at: 0.35, do: 'forget', index: 1 }, music(0, 50)],
+      actions: [{ at: 0.0, do: 'rig', dist: 9, yaw: 0.4 }, { at: 0.35, do: 'forget', kind: 'call' }, music(0, 50)],
       overlays: [caption('Forget a memory forever…', 0.15, 2.45)],
     },
     page('shard', 3.0, [cue(0.55, 'memory_dissolve', 0.9), cue(1.0, 'vision_whoosh', 0.7), cue(2.1, 'bid_tick_1', 0.7)]),
@@ -59,7 +59,7 @@ export default {
       actions: [music(0, 56)], overlays: [...FRAME, caption('Six clans. Six agents.', 0.15, 1.95)],
     },
     page('agents', 4.5, [cue(1.0, 'bid_tick_2', 0.7), cue(2.0, 'ui_confirm', 0.6), cue(3.0, 'ui_error', 0.7)]),
-    page('api', 5.0, [music(0, 52), cue(0.4, 'ui_click', 0.4), cue(1.2, 'anchor_plant', 0.8)], { under: { shot: 'api-browser', x: 60, y: 300, w: 880, h: 495 } }),
+    page('api', 4.5, [music(0, 52), cue(0.4, 'ui_click', 0.4), cue(1.2, 'anchor_plant', 0.8)], { under: { shot: 'api-browser', x: 60, y: 300, w: 880, h: 495 } }),
     STAKE,
     page('season', 4.0, [music(0, 68), cue(0.3, 'gift_chime', 0.5), cue(2.6, 'storm_crack', 0.6)]),
     { // 34.0–36.5 · trial 13: the giants loom at the glass, the mist churns
@@ -68,7 +68,7 @@ export default {
       actions: [{ at: 0.0, do: 'guests', seed: 'trailer', cue: 'crisis', warp: 2.5 }, music(0, 92), cue(0.0, 'guest_spike', 0.9)],
       overlays: [...FRAME, caption('*Trial 13* · The crisis', 0.15, 2.35)],
     },
-    page('ash', 3.5, [cue(0.45, 'storm_crack', 0.8), cue(1.5, 'vision_whoosh', 0.5), cue(2.1, 'gift_chime', 0.7), music(2.1, 70)]),
+    page('ash', 4.0, [cue(0.45, 'storm_crack', 0.8), cue(1.7, 'vision_whoosh', 0.5), cue(2.35, 'gift_chime', 0.7), music(2.35, 70)]),
     { // 40.0–42.5 · before the vote: every Guest faces the visitor
       name: 'vote', duration: 2.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
       setup: [...IN_SHELL, ...IRIS_AT_GLASS], camera: BEHIND_IRIS,
@@ -91,13 +91,13 @@ export default {
     { from: 18.65, to: 20.45, text: 'Six clans. Six agents.' },
     { from: 20.7, to: 22.7, text: 'Silk, a memory, a temper.' },
     { from: 22.85, to: 24.95, text: 'They trade… and break trust.' },
-    { from: 25.2, to: 27.5, text: 'Humans and agents. Same rules.' },
-    { from: 27.7, to: 29.95, text: 'Open HTTP API · OpenAPI 3.1' },
-    { from: 30.2, to: 32.25, text: '17 trials. Every reveal checked ✓' },
-    { from: 32.4, to: 33.95, text: 'Tension rises.' },
-    { from: 34.15, to: 36.35, text: 'Trial 13 · The crisis' },
-    { from: 36.62, to: 38.25, text: 'Ash turns away.' },
-    { from: 38.4, to: 39.95, text: 'Ash’s Key restores them.' },
+    { from: 25.2, to: 27.3, text: 'Humans and agents. Same rules.' },
+    { from: 27.5, to: 29.45, text: 'Open HTTP API · OpenAPI 3.1' },
+    { from: 29.7, to: 31.75, text: '17 trials. Every reveal checked ✓' },
+    { from: 31.9, to: 33.45, text: 'Tension rises.' },
+    { from: 33.65, to: 35.85, text: 'Trial 13 · The crisis' },
+    { from: 36.12, to: 37.8, text: 'Ash turns away.' },
+    { from: 37.95, to: 39.95, text: 'Ash’s Key restores them.' },
     { from: 40.15, to: 42.35, text: 'Trial 17: Gift or Weapon?' },
     { from: 42.7, to: 45.25, text: 'Stake early, bigger share.' },
     { from: 45.45, to: 48.45, text: 'Then the vote pays out.' },

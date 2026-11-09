@@ -12,6 +12,8 @@ import '@fontsource/source-sans-3/600.css';
 import '@fontsource/libre-caslon-text/400.css';
 import '@fontsource/libre-caslon-text/700.css';
 import D from './jury-data.json';
+import { T, CLAN, CSS as DS_CSS, clanCard, anchorNode, route, keyGlyph, s as sv } from './jury-ds.js';
+document.head.append(Object.assign(document.createElement('style'), { textContent: DS_CSS }));
 
 const Q = new URLSearchParams(location.search);
 const W = Number(Q.get('w') || innerWidth), H = Number(Q.get('h') || innerHeight);
@@ -236,7 +238,7 @@ const TERM = [
   ['"rejected": 0', 'json'],
   ['"firstProofVerified": true', 'ok'],
 ];
-SCENES.api = { duration: 5.0, build() {
+SCENES.api = { duration: 4.5, build() {
   const c1 = cap('Humans and agents. <em>Same rules.</em>'), c2 = cap('Open HTTP API · OpenAPI 3.1');
   const BX = 60, BY = 300, BW = 880, BH = 495;
   // The hole for the browser footage (transparent when rendered with alpha), framed like a window.
@@ -253,7 +255,7 @@ SCENES.api = { duration: 5.0, build() {
   stage.prepend(shade);
   return (t) => {
     drawBg(t, { tint: [159, 196, 214] });
-    show(c1, t, 0.2, 2.5); show(c2, t, 2.7, 4.95);
+    show(c1, t, 0.2, 2.3); show(c2, t, 2.5, 4.45);
     show(frame, t, 0.0, 99, { rise: 0 }); show(l1, t, 0.15); show(term, t, 0.1, 99, { rise: 0 }); show(l2, t, 0.25); show(foot, t, 0.6);
     // Typed at reading speed: the command letter by letter, then one output line every 0.42 s.
     rows.forEach((r, i) => {
@@ -304,31 +306,88 @@ SCENES.season = { duration: 4.0, build() {
   };
 } };
 
-// 12 · Trial 13: Ash turns away; Ash's Key, checked against Ash's commitment, brings the links back (3.5 s).
-SCENES.ash = { duration: 3.5, build() {
+// 12 · Trial 13 (4.0 s). The central idea: Ash's Key restores Ash's broken ties through a verified commitment.
+// Only the judge season's real relationships are drawn (jury-data.json `crisis`): at trial 13 Ash cut ties with Iris
+// and Salt; the tie with Amber was already broken at trial 8; Moss and Frost stay linked while Ash is isolated.
+// The seal sits on the Iris–Ash tie because Iris speaks the Key to Ash; the browser compares the hash with the
+// commitment that was put on NEAR testnet before trial 1 (the phrase itself is not revealed on-chain).
+SCENES.ash = { duration: 4.0, build() {
   const c1 = cap('Ash turns away'), c2 = cap('Ash’s Key <em>restores them</em>');
   const svg = edgeLayer(stage);
-  const cards = clanCards(stage, { compact: true });
-  const links = ['iris', 'salt', 'moss'].map((o) => edge(svg, 'ash', o, { color: '#ffe78e', width: 6 }));
-  const tag = h('div', { class: 'chip bad', text: 'Isolated' }); at(tag, 300, 880);
-  const key = h('div', { class: 'chip gold', text: '🗝 hash = commitment ✓' }); at(key, 560, 520);
-  stage.append(tag, key);
-  const kp = packet(svg, '#ffe78e', 14); const path = h('path', { d: `M${SEAT.iris[0]},${SEAT.iris[1]} L${SEAT.ash[0]},${SEAT.ash[1]}`, fill: 'none' }); svg.append(path);
+  const W = 440, H = 164;
+  const TOP = 210, BOT = 700;
+  const cards = {
+    salt: clanCard('salt', { x: 110, y: TOP }), iris: clanCard('iris', { x: 740, y: TOP, player: true }), frost: clanCard('frost', { x: 1370, y: TOP }),
+    moss: clanCard('moss', { x: 110, y: BOT }), ash: clanCard('ash', { x: 740, y: BOT }), amber: clanCard('amber', { x: 1370, y: BOT }),
+  };
+  Object.values(cards).forEach((c) => stage.append(c.el));
+  const A = cards.ash;
+  // Anchors: Ash's top edge carries Salt, Iris and Frost; its sides carry Moss and Amber on the same row.
+  const ends = {
+    salt: [[A.x + 70, A.y], cards.salt.anchor('bottom'), 'v'], iris: [[A.x + W / 2, A.y], cards.iris.anchor('bottom'), 'v'],
+    frost: [[A.x + W - 70, A.y], cards.frost.anchor('bottom'), 'v'],
+    moss: [A.anchor('left'), cards.moss.anchor('right'), 'h'], amber: [A.anchor('right'), cards.amber.anchor('left'), 'h'],
+  };
+  const isoLabel = h('div', { class: 'abs', style: { left: A.x + 'px', width: W + 'px', top: BOT + H + 18 + 'px', textAlign: 'center', font: '600 40px/1 var(--label)', letterSpacing: '.26em', textTransform: 'uppercase', color: T.mist }, text: 'Isolated' });
+  stage.append(isoLabel);
+  const state = Object.fromEntries(D.crisis.edges.map((e) => [e.clan, e]));
+  const brokenEarly = (c) => state[c].broken && !D.crisis.breaks.some((b) => b.tick === 13 && b.text.toLowerCase().includes(CLAN[c].name.toLowerCase()));
+  const edges = Object.entries(ends).map(([clan, [a, b, via]]) => {
+    const p = sv('path', { d: route(a, b, { via, mid: BOT - 64 }), fill: 'none', 'stroke-width': T.line, 'stroke-linecap': 'round' });
+    const glow = sv('path', { d: p.getAttribute('d'), fill: 'none', 'stroke-width': 12, stroke: T.amberGlow, 'stroke-linecap': 'round', opacity: 0 });
+    svg.append(glow, p);
+    const n1 = anchorNode(svg, a), n2 = anchorNode(svg, b);
+    return { clan, p, glow, n1, n2, len: 0, broken: state[clan].broken, early: brokenEarly(clan) };
+  });
+  // The seal: a ring with the key, on the Iris–Ash tie; the commitment formula beside it.
+  const SX = 960, SY = 486, R = 58;
+  const halo = sv('circle', { cx: SX, cy: SY, r: R * 2.2, fill: 'url(#sealHalo)', opacity: 0 });
+  svg.append(sv('defs', {}, sv('radialGradient', { id: 'sealHalo' }, sv('stop', { offset: 0, 'stop-color': T.amber, 'stop-opacity': 0.35 }), sv('stop', { offset: 1, 'stop-color': T.amber, 'stop-opacity': 0 }))));
+  const disc = sv('circle', { cx: SX, cy: SY, r: R, fill: T.ground, stroke: T.hair, 'stroke-width': 1.5 });
+  const ring = sv('circle', { cx: SX, cy: SY, r: R, fill: 'none', stroke: T.amber, 'stroke-width': 3, transform: `rotate(-90 ${SX} ${SY})` });
+  const key = sv('g', {}, keyGlyph(T.amber)); // travels from Iris to the seal
+  svg.append(halo, disc, ring, key);
+  const formula = h('div', { class: 'abs', style: { left: '1060px', top: '418px', width: '780px' } },
+    h('div', { style: { font: '400 44px/1 var(--mono)', color: 'var(--ink)' }, text: 'SHA-256(phrase · salt)' }),
+    h('div', { style: { font: '400 44px/1 var(--mono)', color: T.amber, marginTop: '16px' }, text: `= ${D.near.ashKey.slice(0, 8)}…${D.near.ashKey.slice(-6)}` }),
+    h('div', { style: { font: '600 34px/1.3 var(--label)', color: T.mist, letterSpacing: '.16em', textTransform: 'uppercase', marginTop: '18px' }, html: 'Committed on NEAR testnet<br>before trial 1' }));
+  stage.append(formula);
+  const T_BREAK = 0.5, T_KEY = 1.7, T_MATCH = 2.35, T_HEAL = 2.6;
   return (t) => {
-    const broken = t >= 0.45 && t < 2.1;
-    drawBg(t, { heat: broken ? 0.7 : 0.15 });
-    show(c1, t, 0.12, 1.75); show(c2, t, 1.9, 3.45);
-    CLANS.forEach((c) => { cards[c.id].style.opacity = 1; cards[c.id].style.visibility = 'visible'; });
-    cards.ash.style.filter = broken ? 'grayscale(1) brightness(.55)' : 'none';
-    const snap = ease.out(P(t, 0.45, 0.3)), heal = ease.out(P(t, 2.1, 0.5));
-    links.forEach((l, i) => {
-      if (t < 0.45) { l.setAttribute('stroke', 'rgba(232,214,172,.5)'); l.removeAttribute('stroke-dasharray'); l.style.opacity = 1; }
-      else if (t < 2.1) { l.setAttribute('stroke', '#ff7a66'); l.setAttribute('stroke-dasharray', `${40 + i * 6} ${lerp(0, 60, snap).toFixed(1)}`); l.style.opacity = (1 - 0.6 * snap).toFixed(3); }
-      else { l.setAttribute('stroke', '#ffe78e'); l.removeAttribute('stroke-dasharray'); l.style.opacity = heal.toFixed(3); }
+    const iso = ease.out(P(t, T_BREAK, 0.4)) * (1 - ease.inOut(P(t, T_HEAL + 0.6, 0.6)));
+    drawBg(t, { tint: [189, 182, 173], heat: 0 });
+    show(c1, t, 0.12, 1.8); show(c2, t, 1.95, 3.95);
+    cards.ash.set(t, { cool: iso, drift: iso * (0.4 + 0.6 * P(t, T_BREAK, 2)) });
+    isoLabel.style.opacity = iso.toFixed(3);
+    for (const c of ['iris', 'salt', 'frost', 'moss', 'amber']) cards[c].set(t, {});
+    edges.forEach((e, i) => {
+      if (!e.len) e.len = e.p.getTotalLength();
+      const L = e.len, healAt = T_HEAL + ['iris', 'salt', 'amber'].indexOf(e.clan) * 0.22;
+      const breakK = e.early ? 1 : e.broken ? ease.out(P(t, T_BREAK, 0.35)) : 0;
+      const healK = e.broken ? ease.inOut(P(t, healAt, 0.45)) : 0;
+      const gap = 70 * breakK * (1 - healK); // the tie opens in the middle and closes again
+      e.p.setAttribute('stroke-dasharray', gap > 0.5 ? `${(L / 2 - gap / 2).toFixed(1)} ${gap.toFixed(1)} ${L}` : 'none');
+      const col = healK > 0 ? T.amber : breakK > 0 ? T.broken : 'rgba(169,176,173,.75)';
+      e.p.setAttribute('stroke', col);
+      e.p.style.opacity = (e.broken && healK === 0 ? 1 - 0.35 * breakK : 1).toFixed(3);
+      e.glow.setAttribute('opacity', (healK * (1 - 0.6 * P(t, healAt + 0.45, 0.6))).toFixed(3));
+      e.n1.style.opacity = e.n2.style.opacity = '1';
+      void i;
     });
-    show(tag, t, 0.55, 2.1, { scale: 0.9 });
-    moveOn(kp, path, P(t, 1.5, 0.6));
-    show(key, t, 1.95, 99, { scale: 0.9 });
+    // The key comes down from Iris to the seal, the ring closes on a match, a warm light answers once and settles.
+    const kk = ease.inOut(P(t, T_KEY, 0.55));
+    key.setAttribute('transform', `translate(${(SX - 42).toFixed(1)},${lerp(TOP + H + 20, SY, kk).toFixed(1)})`);
+    key.style.opacity = (t < T_KEY ? 0 : Math.min(1, (t - T_KEY) * 6)).toFixed(3);
+    const sealIn = ease.out(P(t, T_KEY - 0.1, 0.35));
+    disc.style.opacity = halo.style.opacity = '';
+    disc.setAttribute('opacity', sealIn.toFixed(3));
+    const rc = ease.inOut(P(t, T_KEY + 0.2, T_MATCH - T_KEY - 0.2)), C = 2 * Math.PI * R;
+    ring.setAttribute('stroke-dasharray', `${C}`); ring.setAttribute('stroke-dashoffset', (C * (1 - rc)).toFixed(1));
+    ring.setAttribute('opacity', sealIn.toFixed(3));
+    const flash = P(t, T_MATCH, 0.25) * (1 - 0.6 * ease.out(P(t, T_MATCH + 0.25, 0.8)));
+    halo.setAttribute('opacity', flash.toFixed(3));
+    show(formula, t, T_KEY + 0.15, 99);
+    formula.children[1].style.opacity = (0.45 + 0.55 * P(t, T_MATCH, 0.2)).toFixed(3);
   };
 } };
 
