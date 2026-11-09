@@ -121,3 +121,8 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
 - 01:25 UTC: live HACKATHON.md byte-identical (sha256 match). Directory re-count: 335 total (+24), `games` 27
   unchanged, `nfts` 23 (+1 real new entry, OpenNear, an NFT bridge; not a rival on mechanic). Appended to
   `notes/competitor-field.md`; rubric v0.11 section 1 carries the update. No red flags.
+
+## Cycle 12: 2026-11-09 01:46 UTC
+- Checks only: HACKATHON.md byte-identical, `games` still 27. No rubric change (v0.11 stands). Research coverage is
+  saturated (every criterion has a note and checklist), so cycles until 15:00 UTC are kept to these two checks plus
+  any new gap that appears; this saves tokens without losing the signals that can still move. No red flags.
