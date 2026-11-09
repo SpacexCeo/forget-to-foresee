@@ -98,13 +98,18 @@ export function createLayers(doc = document) {
       };
     },
     transfer(it) { // a thing moves between two places on a silk thread (Event A: the shard from Iris to Frost, 13 silk)
-      const thread = sv(doc, 'path', { fill: 'none', stroke: 'rgba(236,230,216,.75)', 'stroke-width': 2 }), glow = sv(doc, 'path', { fill: 'none', stroke: GOLD, 'stroke-width': 10, opacity: 0.18 });
+      const gid = 'rib' + Math.random().toString(36).slice(2, 7), defs = sv(doc, 'defs'), lg = sv(doc, 'linearGradient', { id: gid, gradientUnits: 'userSpaceOnUse' });
+      lg.append(sv(doc, 'stop', { offset: 0, 'stop-color': it.c0 || '#b49be6' }), sv(doc, 'stop', { offset: 1, 'stop-color': it.c1 || NACRE })); defs.append(lg); svg.append(defs);
+      const thread = sv(doc, 'path', { fill: 'none', stroke: `url(#${gid})`, 'stroke-width': 3 }), glow = sv(doc, 'path', { fill: 'none', stroke: `url(#${gid})`, 'stroke-width': 12, opacity: 0.18 });
       const shard = sv(doc, 'polygon', { points: '0,-26 12,-4 6,26 -7,24 -12,-2', fill: 'rgba(214,226,236,.85)', stroke: GOLD, 'stroke-width': 1.5 });
       svg.append(glow, thread, shard);
-      const amt = el(doc, 'div', 'cl-abs cl-amount', `<div class="w">${esc(it.label)}</div><div class="v">${esc(it.amount)}</div><div class="u">${esc(it.unit || 'SILK')}</div>`); root.append(amt);
+      // a silk spool beside the amount (the badge of Event A): two flanges, the wound thread, a loose end
+      const spool = `<svg width="70" height="90" viewBox="0 0 70 90" style="vertical-align:middle;margin-right:18px"><ellipse cx="35" cy="12" rx="26" ry="8" fill="none" stroke="${GOLD}" stroke-width="2"/><ellipse cx="35" cy="78" rx="26" ry="8" fill="none" stroke="${GOLD}" stroke-width="2"/>${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<line x1="13" y1="${20 + i * 7.5}" x2="57" y2="${22 + i * 7.5}" stroke="#ece6d8" stroke-opacity=".75" stroke-width="2.4"/>`).join('')}<path d="M57,60 C70,62 66,82 52,88" fill="none" stroke="#b49be6" stroke-width="2"/></svg>`;
+      const amt = el(doc, 'div', 'cl-abs cl-amount', `<div class="w">${esc(it.label)}</div><div>${spool}<span class="v">${esc(it.amount)}</span></div><div class="u">${esc(it.unit || 'SILK')}</div>`); root.append(amt);
       return (t, project) => {
         const [x1, y1] = project(it.a), [x2, y2] = project(it.b), mx = (x1 + x2) / 2, my = Math.min(y1, y2) - (it.arc ?? 220);
         const d = `M${x1.toFixed(1)},${y1.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`; thread.setAttribute('d', d); glow.setAttribute('d', d);
+        lg.setAttribute('x1', x1.toFixed(1)); lg.setAttribute('y1', y1.toFixed(1)); lg.setAttribute('x2', x2.toFixed(1)); lg.setAttribute('y2', y2.toFixed(1));
         const a = env(t, it), L = thread.getTotalLength(), k = out(P(t, it.from, 0.5)), u = inOut(P(t, it.from + 0.25, 0.9));
         thread.setAttribute('stroke-dasharray', `${(L * k).toFixed(1)} ${L}`); thread.style.opacity = a.toFixed(3); glow.style.opacity = (a * 0.2).toFixed(3); glow.setAttribute('stroke-dasharray', `${(L * u).toFixed(1)} ${L}`);
         const q = thread.getPointAtLength(L * u); shard.setAttribute('transform', `translate(${q.x.toFixed(1)},${q.y.toFixed(1)}) rotate(${(u * 220).toFixed(1)})`); shard.style.opacity = (u > 0 ? a : 0).toFixed(3);
@@ -114,8 +119,13 @@ export function createLayers(doc = document) {
     quote(it) { // a declaration given the weight of a line of dialogue (Event B: Salt, "It is a weapon")
       const e = el(doc, 'div', 'cl-abs cl-quote', `“${esc(it.text)}”${it.who ? `<div style="font:600 44px/1 'Source Sans 3',sans-serif;letter-spacing:.36em;text-transform:uppercase;font-style:normal;color:${it.color || PEARL};margin-top:22px">${esc(it.who)}</div>` : ''}`); root.append(e);
       const rs = [0, 1].map(() => sv(doc, 'ellipse', { fill: 'none', stroke: it.color || PEARL, 'stroke-width': 2 })); rs.forEach((r) => svg.append(r));
+      // the badge of Event B: a reticle disc on Salt with a crystal blade through it
+      const ret = sv(doc, 'g', {}); ret.append(sv(doc, 'circle', { r: 46, fill: 'rgba(16,24,24,.35)', stroke: it.color || PEARL, 'stroke-width': 1.6 }), sv(doc, 'circle', { r: 30, fill: 'none', stroke: 'rgba(236,230,216,.4)', 'stroke-width': 1 }));
+      [0, 90, 180, 270].forEach((d) => ret.append(sv(doc, 'line', { x1: 0, y1: -52, x2: 0, y2: -40, stroke: GOLD, 'stroke-width': 2, transform: `rotate(${d})` })));
+      ret.append(sv(doc, 'polygon', { points: '-6,30 0,-40 6,30 0,36', fill: 'rgba(220,232,240,.85)', stroke: GOLD, 'stroke-width': 1.2, transform: 'rotate(28)' })); svg.append(ret);
       return (t, project) => {
         const [x, y] = project(it.world), a = env(t, it, 0.5, 0.3), k = out(P(t, it.from, 0.8));
+        ret.setAttribute('transform', `translate(${x.toFixed(1)},${(y - 70).toFixed(1)}) scale(${lerp(0.6, 1, settle(P(t, it.from, 0.8))).toFixed(3)}) rotate(${(t * 12).toFixed(1)})`); ret.style.opacity = a.toFixed(3);
         e.style.left = (it.x ?? x) + 'px'; e.style.top = (it.y ?? y - 220) + 'px'; e.style.opacity = a.toFixed(3); e.style.filter = `blur(${(8 * (1 - k)).toFixed(2)}px)`;
         rs.forEach((r, i) => { const q = P(t, it.from + i * 0.35, 1.3); r.setAttribute('cx', x.toFixed(1)); r.setAttribute('cy', y.toFixed(1)); r.setAttribute('rx', (30 + 520 * out(q)).toFixed(1)); r.setAttribute('ry', (10 + 180 * out(q)).toFixed(1)); r.style.opacity = (q > 0 && q < 1 ? a * (1 - q) * 0.8 : 0).toFixed(3); });
       };
@@ -124,6 +134,7 @@ export function createLayers(doc = document) {
       const line = sv(doc, 'path', { fill: 'none', stroke: 'rgba(236,230,216,.7)', 'stroke-width': 2.5 }); svg.append(line);
       const crack = sv(doc, 'path', { fill: 'none', stroke: RUST, 'stroke-width': 3, 'stroke-linejoin': 'round' }); svg.append(crack);
       const coin = sv(doc, 'circle', { r: 12, fill: GOLD }); svg.append(coin);
+      const spark = sv(doc, 'path', { d: 'M0,-26 L5,-5 L26,0 L5,5 L0,26 L-5,5 L-26,0 L-5,-5 Z', fill: '#ffe2b0' }); svg.append(spark);
       let a0 = 11; const r = () => { a0 = (a0 * 16807) % 2147483647; return a0 / 2147483647; };
       const flakes = Array.from({ length: 14 }, () => ({ p: sv(doc, 'polygon', { points: `0,-${4 + r() * 6} ${3 + r() * 5},${r() * 4} -${3 + r() * 4},${2 + r() * 4}`, fill: `rgba(${200 + r() * 40 | 0},${140 + r() * 40 | 0},60,.85)` }), vx: (r() - 0.5) * 160, vy: 40 + r() * 140, rot: r() * 360 }));
       flakes.forEach((f) => svg.append(f.p));
@@ -139,6 +150,7 @@ export function createLayers(doc = document) {
         const u = inOut(P(t, it.from + 0.2, it.snap - it.from - 0.25)); if (u > 0 && u < 1) { const q = line.getPointAtLength(L * (1 - u)); coin.setAttribute('cx', q.x.toFixed(1)); coin.setAttribute('cy', q.y.toFixed(1)); coin.style.opacity = a.toFixed(3); } else coin.style.opacity = 0;
         const c = line.getPointAtLength(L / 2); let zz = `M${(c.x - 6).toFixed(1)},${(c.y - 40 * sn).toFixed(1)}`; for (let i = 1; i <= 5; i++) zz += ` L${(c.x + (i % 2 ? 10 : -10) * sn).toFixed(1)},${(c.y - 40 * sn + i * 16 * sn).toFixed(1)}`;
         crack.setAttribute('d', zz); crack.style.opacity = (a * sn).toFixed(3);
+        const sp = P(t, it.snap, 0.45); spark.setAttribute('transform', `translate(${c.x.toFixed(1)},${c.y.toFixed(1)}) scale(${(sp > 0 && sp < 1 ? Math.sin(Math.PI * sp) * 1.3 : 0).toFixed(3)})`); spark.style.opacity = (a * (sp > 0 && sp < 1 ? 1 : 0)).toFixed(3);
         flakes.forEach((f) => { const q = P(t, it.snap, 1.2); f.p.setAttribute('transform', `translate(${(c.x + f.vx * q).toFixed(1)},${(c.y + f.vy * q + 120 * q * q).toFixed(1)}) rotate(${(f.rot + q * 200).toFixed(1)})`); f.p.style.opacity = (q > 0 ? a * (1 - q) : 0).toFixed(3); });
         amt.style.left = (it.ax ?? mx) + 'px'; amt.style.top = (it.ay ?? my - 170) + 'px'; amt.style.opacity = env(t, { ...it, from: it.from + 0.3 }).toFixed(3);
       };
