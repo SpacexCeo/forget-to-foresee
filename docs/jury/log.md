@@ -175,3 +175,6 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   `ftf-shards.testnet` (NEP-171, 3 shards) live. Juror spot-check via testnet RPC `view_account` at 08:30 UTC: both
   accounts exist with contract code deployed (code hashes CpPXpJ…AQEL and BtScRF…JBM). Reveal and shard counts not yet
   checked; that is part of the 15:00 pass.
+
+## Cycle 26: 2026-11-09 08:46 UTC
+- Checks only: HACKATHON.md byte-identical, `games` 28. No rubric change. No red flags.
