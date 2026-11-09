@@ -15,7 +15,9 @@ function project(vp, w) {
   return [(nx + 1) / 2 * 1920, (1 - ny) / 2 * 1080, ww > 0 && nz < 1 && Math.abs(nx) < 1.6 && Math.abs(ny) < 1.6];
 }
 window.__lp = {
-  async load(items, layerLog) {
+  /** grade: a CSS filter for the plate only (the film grade toward charcoal, grey-green and pearl; the UI is not graded). */
+  async load(items, layerLog, grade) {
+    document.getElementById('plate').style.filter = grade || 'none';
     await document.fonts.ready;
     await Promise.all(['400 112px "Libre Caslon Text"', '700 56px "Atkinson Hyperlegible"', '600 44px "Source Sans 3"'].map((f) => document.fonts.load(f)));
     layers = createLayers(document); layers.set(items); log = layerLog;

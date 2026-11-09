@@ -33,11 +33,13 @@ export default {
   title: 'Forget to Foresee: jury video, cinematic test (18.5 s)',
   width: 1920, height: 1080, fps: 60,
   reading: { maxWps: 3, minHold: 1.5 },
+  // The film grade of the plates (layers pass): deeper shadows, less milk in the fog, a cooler grey-green; per shot below.
+  grade: 'contrast(1.16) brightness(0.9) saturate(0.86) sepia(0.05)',
   music: { gain: 1.0, fadeOut: 1.0 },
   output: { crf: 18, preset: 'slow', grain: 0 }, // a 4K30 master of 18.5 s stays under GitHub's 100 MB
   shots: [
     { // 0–3 · up out of the cloud sea; the archipelago opens; the chapter title emerges from the haze
-      name: 'fly-in', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      name: 'fly-in', duration: 3.0, grade: 'contrast(1.42) brightness(0.8) saturate(0.8) sepia(0.06)', url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
       camera: { type: 'dolly', path: [[118, -21, 146], [84, 4, 108], [52, 24, 72], [38, 30, 54]], look: [[40, -6, 40], [20, 2, 20], [4, 5, 4], [0, 6, 0]], fov: [46, 40], ease: 'inOutSine', minHeight: -40, allowLow: true },
       actions: [music(0, 28), cue(0.0, 'guest_arc', 0.4)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 0.6, fadeIn: 0, fadeOut: 0.6 }],

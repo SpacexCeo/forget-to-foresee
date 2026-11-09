@@ -45,6 +45,8 @@ const CSS = `
 .cl-amount .w { font: 700 52px/1.1 'Atkinson Hyperlegible', sans-serif; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,.8); }
 .cl-label { font: 600 40px/1 'Source Sans 3', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: ${GOLD}; }
 .cl-value { font: 400 50px/1.15 'Libre Caslon Text', Georgia, serif; color: ${PEARL}; margin: 8px 0 24px; white-space: nowrap; }
+.cl-quote::before, .cl-amount::before, .cl-lock::before { content: ''; position: absolute; left: -30%; right: -30%; top: -35%; bottom: -35%; z-index: -1; background: radial-gradient(closest-side, rgba(6,10,10,.42), rgba(6,10,10,0)); }
+.cl-lock::before { left: 22%; right: 22%; }
 .cl-mono { font: 400 44px/1.2 'DejaVu Sans Mono', Menlo, monospace; color: ${NACRE}; text-shadow: 0 2px 16px rgba(0,0,0,.85); }
 `;
 

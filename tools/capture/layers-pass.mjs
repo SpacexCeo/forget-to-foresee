@@ -38,12 +38,13 @@ try {
     const res = JSON.parse(readFileSync(meta, 'utf8'));
     if (!shot.layers || !shot.layers.length) { copyFileSync(plate, join(outDir, shot.name + '.mp4')); copyFileSync(meta, join(outDir, shot.name + '.json')); console.log(`[${shot.name}] no layers: plate copied`); continue; }
     if (!res.layerLog || res.layerLog.length < res.frames) throw new Error(`[${shot.name}] the plate has no layerLog (render it with FTF_NO_LAYERS=1 from a build that records the camera)`);
-    const { width = 1920, height = 1080, fps = 60 } = res;
+    // --width/--height: the plate's real size when it is a proxy of a larger render (the layers scale to any size)
+    const width = Number(opt('width', res.width || 1920)), height = Number(opt('height', res.height || 1080)), fps = res.fps || 60;
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
     const errs = []; page.on('pageerror', (e) => errs.push(e.message));
     await page.goto(`${base}/cine/layers.html`, { waitUntil: 'load' });
     for (let k = 0; k < 200 && !(await page.evaluate(() => !!window.__lp)); k++) await new Promise((r) => setTimeout(r, 100));
-    await page.evaluate(([items, log]) => window.__lp.load(items, log), [shot.layers, res.layerLog.slice(-res.frames)]);
+    await page.evaluate(([items, log, grade]) => window.__lp.load(items, log, grade), [shot.layers, res.layerLog.slice(-res.frames), shot.grade ?? video.grade ?? null]);
     // The plate's frames sit behind the layers in the page, so backdrop blur (frosted glass) sees the real world.
     const frames = join(outDir, shot.name + '.frames'); mkdirSync(frames, { recursive: true });
     execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', plate, '-q:v', '2', join(frames, '%05d.jpg')]);
