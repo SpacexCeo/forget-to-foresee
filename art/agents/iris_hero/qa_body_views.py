@@ -17,8 +17,10 @@ out = argv[0]
 res = int(argv[1]) if len(argv) > 1 else 800
 samples = int(argv[2]) if len(argv) > 2 else 48
 pose = argv[3] if len(argv) > 3 else "rest"
-zoom = len(argv) > 4 and argv[4] == "seat"                 # "seat": a close-up of the hips and seat (0.36..0.70 H)
-clothed = len(argv) > 4 and argv[4] == "clothed"           # "clothed": a full build as built (garments, hair, materials)
+mode = argv[4] if len(argv) > 4 else ""
+zoom = "seat" in mode                                      # "seat": a close-up of the hips and seat (0.36..0.70 H)
+feet = "feet" in mode                                      # "feet": a close-up of the shins and feet (0..0.32 H)
+clothed = "clothed" in mode                                # "clothed": a full build as built (garments, hair, materials)
 
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"
@@ -102,9 +104,9 @@ def light(name, energy, rot):
 
 cam_d = bpy.data.cameras.new("cam")
 cam_d.type = "ORTHO"
-cam_d.ortho_scale = zmax * (0.40 if zoom else 1.08)
-if zoom:
-    mid = V((0.0, 0.0, zmax * 0.53))
+cam_d.ortho_scale = zmax * (0.40 if zoom else 0.34 if feet else 1.08)
+if zoom or feet:
+    mid = V((0.0, 0.0, zmax * (0.53 if zoom else 0.15)))
     sc.render.resolution_y = res
 cam = bpy.data.objects.new("cam", cam_d)
 sc.collection.objects.link(cam)
@@ -113,7 +115,9 @@ key = light("key", 2.6, (50, 0, 0))
 rim = light("rim", 1.4, (70, 0, 0))
 
 # the body faces -Y; yaw 0 = camera behind the body (back view)
-VIEWS = {"back": 0.0, "back34": 45.0, "side": 90.0, "front": 180.0}   # back34: the brief's 45-degree rear three-quarter
+VIEWS = {"back": 0.0, "back34": 45.0, "side": 90.0, "front": 180.0}
+if feet:
+    VIEWS = {"back34": 45.0, "side": 90.0, "front34": 140.0, "front": 180.0}   # back34: the brief's 45-degree rear three-quarter
 for name, yaw in VIEWS.items():
     a = math.radians(yaw)
     d = V((math.sin(a), math.cos(a), 0.0))                     # from the body towards the camera

@@ -802,7 +802,8 @@ def athletic_costume(bm, P, dom, bones):
     crotch = lambda p: (abs(p.x) < 0.07 and 0.70 < p.z < 0.88) or (abs(p.x) < 0.045 and p.y > c.y and 0.78 < p.z < 0.99)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
-                                        accent=leg_stripes, edges=leg_edges, relax=(crotch, 12))
+                                        accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12))
+    # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
     hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")]
     zs = [0.972 + (1.050 - 0.972) * k / 6 for k in range(7)]   # a reinforced band over the leggings' top
@@ -812,15 +813,17 @@ def athletic_costume(bm, P, dom, bones):
     C.solidify(wb, 0.0025, 1.0, even=False)
     C.smooth(wb, 50)
     out["leggings_band"] = wb
-    # trainers: sized from each foot
+    # trainers (built from the foot) and grey ankle socks that tuck under the leggings' hem (owner 09.11:
+    # the ankle under the hem was empty and the old shoe twisted)
     for sfx, side in (("L", 1), ("R", -1)):
-        foot = [co[i] for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}") and co[i].z < 0.10]
-        heel_p = max(foot, key=lambda q: q.y)
-        toe_p = min(foot, key=lambda q: q.y)
-        width = (max(q.x for q in foot) - min(q.x for q in foot)) * 1.08
-        heel = V((heel_p.x, heel_p.y + 0.016, 0.0))
-        toe = V((toe_p.x, toe_p.y - 0.018, 0.0))
-        out[f"trainers_{sfx}"] = C.sneaker(f"trainers_{sfx}", heel, toe, width, side)
+        foot_idx = [i for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}", f"shin_{sfx}") and co[i].z < 0.11]
+        out[f"trainers_{sfx}"] = C.trainer(bm, foot_idx, f"trainers_{sfx}", side)
+        sock_keep = lambda i, _, sfx=sfx: dom[i] in (f"foot_{sfx}", f"shin_{sfx}", f"toe_{sfx}") and 0.030 < co[i].z < 0.140
+        def sock_edges(v):
+            if v.co.z > 0.09:
+                v.co.z = 0.138                                   # tucked under the leggings' hem (0.12)
+        out[f"ankle_socks_{sfx}"] = C.shell_from_body(bm, f"ankle_socks_{sfx}", sock_keep, 0.0016, 0.0012,
+                                                      trim=lambda p, n: 0.0, accent=lambda p, n: 0.0, edges=sock_edges)
     return out
 
 
