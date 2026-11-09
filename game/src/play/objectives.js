@@ -142,6 +142,8 @@ export function hubGoal(obs, flags = {}) {
     if (inShell && !staked && s.tick === 1) {
       // Simple mode (or a lucky prior): Iris's own reading already lands on trial 3, so there is nothing to change.
       const sign = signForShell(obs, obs.you.shell);
+      // a quiet Shell (no sign of its own): point to the Shell that holds the waiting sign, as its card does
+      if (!sign) return g('fly', { shell: ROMAN[(wait || 1) - 1] }, 'shell:' + (wait || 1), {}, step('fly'));
       const slots = sign && sign.reading ? sign.reading.slots.map((x) => x.meaning) : null;
       if (slots) prefillFirstDelay(obs, sign, slots); // the same pre-fill the hub's reading card applies
       const ready = !!(slots && impliedTick(sign, slots) === FIRST_GIFT_TICK);

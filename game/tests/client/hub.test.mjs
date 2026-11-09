@@ -106,6 +106,11 @@ test('hub goals and strings: every hub key exists in all five languages', async 
   const { s } = await setup();
   assert.equal(hubGoal(s.obs, s.flags).id, 'fly');
   assert.ok(hubGoal(s.obs, s.flags).target.startsWith('shell:'));
+  // inside a quiet Shell on trial 1 the goal points to the Shell holding the waiting sign, never "stake" (no sign here)
+  const quiet = [...signsByShell(s.obs)].find(([, v]) => !v.length)[0];
+  const inQuiet = hubGoal({ ...s.obs, you: { ...s.obs.you, zone: 'shell', shell: quiet } }, s.flags);
+  assert.equal(inQuiet.id, 'fly');
+  assert.notEqual(inQuiet.target, 'shell:' + quiet);
   const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('hub.'));
   assert.ok(keys.length > 60);
   for (const loc of ['en', 'uk', 'ru', 'it', 'zh']) {
