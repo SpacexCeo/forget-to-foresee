@@ -115,7 +115,7 @@ export default {
     { from: 8.2, to: 10.8, text: 'Your agent Iris reads one. You stake silk on it.' },
     { from: 13.2, to: 15.8, text: 'It comes true, and the seal checks it: Verified ✓' },
     { from: 18.2, to: 21.8, text: 'Forget a memory forever: the visions come early, and the memory goes to auction.' },
-    { from: 22.2, to: 25.8, text: 'Six clans of AI agents with wallets and memory.' },
+    { from: 22.2, to: 25.8, text: 'Six clans of agents with silk and memory.' },
     { from: 26.2, to: 28.8, text: 'They meet, trade, lend and break trust.' },
   ],
 };

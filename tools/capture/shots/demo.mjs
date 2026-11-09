@@ -113,7 +113,7 @@ export default {
     { from: 46.4, to: 52.2, text: 'The Price of Memory: Iris forgets a memory forever to see the next signs early. The memory becomes a shard at auction.' },
     { from: 53.4, to: 57.4, text: 'The same season in the Shell hub: fly in, and the Guest draws on the glass.' },
     { from: 58.0, to: 62.0, text: 'Iris pre-reads each slot. Change any you doubt, then stake.' },
-    { from: 62.4, to: 66.8, text: 'It all runs in your browser. The NEAR contract for the same check is tested, not yet deployed.', style: 'Quiet' },
+    { from: 62.4, to: 66.8, text: 'The season runs in your browser. Its schedule is committed on NEAR testnet, and the contract checks each reveal.', style: 'Quiet' },
     { from: 67.4, to: 70.6, text: 'What would you forget to see the future?' },
     { from: 71.0, to: 74.4, text: 'Play it in the browser. Built at NEAR HACKATHON by Lambada_eth.', style: 'Quiet' },
   ],
