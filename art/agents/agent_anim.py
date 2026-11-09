@@ -338,7 +338,8 @@ STYLE = {
     # chin: + looks down; tilt: head roll; width: extra stance per foot (m);
     # knee: hip drop when standing (m); swing: walk arm swing scale; sway: pelvis
     # roll/yaw scale; bounce: vertical bob scale; tempo: speed of idle cycles (int)
-    "iris": dict(lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.03, knee=0.012,
+    "iris": dict(track_run=0.062, track_walk=0.088,
+                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.03, knee=0.012,
                  swing=1.1, sway=0.9, bounce=1.0, tempo=1, cloth=1.0),
     "sol": dict(lean=1, hunch=2, protract=2, chin=2, tilt=6, width=0.015, knee=0.01,
                 swing=0.6, sway=1.6, bounce=0.6, tempo=1, cloth=0.8),
@@ -492,6 +493,8 @@ def clip_locomotion(key, S, u, run=False):
     stance = 0.36 if run else 0.60
     lift = 0.20 if run else 0.075
     width = (0.0 if run else -0.01) + S["width"] * 0.3
+    if "track_run" in S:                        # Iris (owner 09.11): feet land under the body, not wider than
+        width = S["track_run" if run else "track_walk"] - 0.114   # the hips; this is the ankle's distance from the midline
     sp, op = (8.0, -45.0) if run else (14.0, -36.0)
     for side, ph0 in ((1, 0.0), (-1, 0.5)):
         P.feet[side] = gait_foot((u + ph0) % 1.0, side, speed, T, stance, lift, sp, op, width,
