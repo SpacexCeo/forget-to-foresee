@@ -1353,16 +1353,20 @@ def hair_textures(cards, size):
     base = bpy.data.images.load(p)
     base.name = "agent_iris_hair_basecolor"
     small = 64
+    # colour space first: changing it on a generated image regenerates the buffer, which had saved both
+    # maps as zeros (occlusion 0, roughness 0, a (0,0,0) normal: the black hair cards in close-ups)
     orm = bpy.data.images.new("agent_iris_hair_orm", small, small)
-    orm.pixels[:] = np.tile([1.0, 0.55, 0.0, 1.0], small * small)
     orm.colorspace_settings.name = "Non-Color"
+    orm.pixels[:] = np.tile([1.0, 0.55, 0.0, 1.0], small * small)
     nrm = bpy.data.images.new("agent_iris_normal_hair", small, small)
-    nrm.pixels[:] = np.tile([0.5, 0.5, 1.0, 1.0], small * small)
     nrm.colorspace_settings.name = "Non-Color"
-    for img in (orm, nrm):
+    nrm.pixels[:] = np.tile([0.5, 0.5, 1.0, 1.0], small * small)
+    for img, want in ((orm, (1.0, 0.55, 0.0)), (nrm, (0.5, 0.5, 1.0))):
         img.filepath_raw = os.path.join(OUT, img.name + ".png")
         img.file_format = "PNG"
         img.save()
+        got = tuple(img.pixels[:3])
+        assert all(abs(a - b) < 0.01 for a, b in zip(got, want)), (img.name, got)
     m = S.final_material("M_Iris_Hair", base, orm, nrm, alpha=True)
     cards.data.materials.clear()
     cards.data.materials.append(m)

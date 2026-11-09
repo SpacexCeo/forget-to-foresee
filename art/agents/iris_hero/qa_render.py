@@ -3,6 +3,7 @@
     blender -b -P art/agents/iris_hero/qa_render.py -- <in.glb> <out_prefix> [clip] [frame]
 """
 import math
+import os
 import sys
 
 import bpy
@@ -25,12 +26,12 @@ try:
     sc.cycles.device = "GPU"
 except Exception:
     pass
-sc.cycles.samples = 96
+sc.cycles.samples = int(os.environ.get("QA_SAMPLES", "96"))      # 24-32 for a CPU check
 sc.cycles.transparent_max_bounces = 128
 sc.cycles.max_bounces = 16
 sc.cycles.use_denoising = True
 sc.view_settings.view_transform = "AgX"
-sc.render.resolution_x, sc.render.resolution_y = 1200, 1200
+sc.render.resolution_x = sc.render.resolution_y = int(os.environ.get("QA_RES", "1200"))
 w = bpy.data.worlds.new("w")
 sc.world = w
 w.use_nodes = True
@@ -41,19 +42,21 @@ for o in bpy.data.objects:
     if o.name.endswith("_col"):
         o.hide_render = True
 arm = next((o for o in bpy.data.objects if o.type == "ARMATURE"), None)
-if arm and arm.animation_data:
-    act = bpy.data.actions.get(clip)
-    for o in bpy.data.objects:
-        ad = o.animation_data or (o.data.shape_keys.animation_data if getattr(o.data, "shape_keys", None) else None)
-    # imported glTF clips are NLA tracks per object: keep only the chosen clip
+# the importer leaves the first clip as the active action over all NLA tracks: make the chosen clip the
+# active action of every animated datablock (rig and shape keys) and mute the tracks, or every render shows idle
+act = bpy.data.actions.get(clip)
+if act is not None:
     for o in list(bpy.data.objects) + [m.shape_keys for m in bpy.data.meshes if m.shape_keys]:
         ad = o.animation_data
         if not ad:
             continue
         for tr in ad.nla_tracks:
-            tr.mute = not tr.name.startswith(clip)
-        a = next((x for x in bpy.data.actions if x.name.startswith(clip) and (
-            (o == arm and "_" + arm.name in x.name) or True)), None)
+            tr.mute = True
+        if ad.action is not None or any(tr.name == clip for tr in ad.nla_tracks):
+            ad.action = act
+            slots = [sl for sl in getattr(act, "slots", []) if sl.target_id_type == ("OBJECT" if o == arm else "KEY")]
+            if slots and hasattr(ad, "action_slot"):
+                ad.action_slot = slots[0]
 sc.frame_set(frame)
 floor = bpy.data.meshes.new("floor")
 import bmesh
@@ -96,6 +99,9 @@ def shot(path, loc, tgt, lens=50, ortho=None):
     bpy.ops.render.render(write_still=True)
 
 
+if os.environ.get("QA_ONLY") == "deform":                 # a deformation check: one close full-body shot
+    shot(out + "_deform.png", (1.1, -2.9, 1.05), (0, 0, 0.88), 45)
+    sys.exit(0)
 shot(out + "_face.png", (0.30, -0.95, 1.66), (0.0, -0.03, 1.60), 85)
 shot(out + "_body.png", (1.5, -4.6, 1.25), (0, 0, 0.88), 42)
 d = 12.0

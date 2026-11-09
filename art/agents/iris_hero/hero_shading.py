@@ -41,7 +41,7 @@ ROUGH = {"jacket": 0.70, "jacket_collar": 0.66, "sports_top": 0.80, "leggings": 
 METAL = {"pendant": 1.0}
 KNIT = ("jacket",)          # garments of a fine knit: courses in the normal map (the leggings stay smooth)
 RIB_PERIOD = 0.0036         # metres per rib on ribbed bands (hem, cuffs): a 1x1 rib of a sports jacket
-KNIT_COURSE = 0.0024        # metres per knit course (row of stitches) on the jacket body
+KNIT_COURSE = 0.0050        # metres per knit course on the jacket body (2.4 mm aliased into moire in the 2K atlas)
 
 
 def _key(name):
@@ -263,7 +263,7 @@ def garment_shader(b):
     course = b.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction="Z", wave_profile="SIN",
                  in_Scale=2 * math.pi / (20 * KNIT_COURSE), in_Distortion=0.6, in_Detail=2.0)
     b.l(pos, course.inputs["Vector"])
-    h = b.math("ADD", h, b.math("MULTIPLY", knit, b.math("MULTIPLY", course.outputs["Fac"], 0.45)))
+    h = b.math("ADD", h, b.math("MULTIPLY", knit, b.math("MULTIPLY", course.outputs["Fac"], 0.28)))
     # ribs across the ribbed bands: a sine of the arc length along the band (the `ribu` attribute)
     rib = b.attr("rib").outputs["Fac"]
     phase = b.math("MULTIPLY", b.attr("ribu").outputs["Fac"], math.pi / RIB_PERIOD)       # |sin| repeats every pi
