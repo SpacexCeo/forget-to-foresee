@@ -15,7 +15,7 @@ Records (account ids and public transaction hashes only): `contracts/deployments
 |---|---|
 | [`ftf-seasons.testnet`](https://testnet.nearblocks.io/address/ftf-seasons.testnet) | `season-commit` contract |
 | [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet) | `memory-shard` NEP-171 contract (refers to `ftf-seasons.testnet`) |
-| [`ftf-coordinator.testnet`](https://testnet.nearblocks.io/address/ftf-coordinator.testnet) | owner and coordinator of both; holds the 3 shards (standing in for the AI clans) |
+| [`ftf-coordinator.testnet`](https://testnet.nearblocks.io/address/ftf-coordinator.testnet) | owner and coordinator of both; received the 3 shards at mint (standing in for the AI clans), then transferred them to `lambada_eth.testnet` (see "Control handed to the owner") |
 
 The judge season (`?demo=judge`, seed `cc161d308faa67539af44205b56b6d4f`): season `793f6c05e89839f2`, root
 `03dbd4587b5d54fc3a6d4befe19920ba66236de11e786baa0a8678305075769a`, 15 leaves, Ash key commitment
@@ -218,6 +218,11 @@ never touches the network. The contract's own tiers: contract README.
 ## Security and scope notes
 
 - The client never signs: no wallet, no key, no transaction. The only writes are the owner's / coordinator's CLI calls.
+- What is on-chain is the judge season's schedule commitment, its 15 verified reveals, the Ash key commitment and the
+  3 shard tokens. The game rules run in the browser: silk, stakes, trust, auctions and the outcome of a played season
+  are local and never reach the chain, and live seasons (random seeds) are not committed at all. The records prove
+  that the judge season's events were fixed before play and that each revealed event matches the committed root
+  (the contract recomputes the leaf); they do not prove anything about how a particular player's session went.
 - Faucet accounts hold testnet NEAR only; the deposits are storage deposits refunded in the same call.
 - The deployment module and the deploy records contain account ids and transaction hashes, nothing else.
 - Seed-derived salts apply to fixed-seed sessions only, which are already labelled dev/demo (`clientChoseSeed`); a

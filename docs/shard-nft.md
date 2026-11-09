@@ -4,6 +4,11 @@ Status (09.11): **deployed on testnet** as [`ftf-shards.testnet`](https://testne
 three shards minted (`793f6c05e89839f2-7`, `-10`, `-15`; hashes in `docs/near.md`). The game shows them: NFT cards in the
 Memories panel and a "Minted on NEAR testnet" toast on the judge path (see Game side).
 
+Scope, exactly: the three tokens were minted by the coordinator script (`ftf-coordinator.testnet`) for the recorded judge
+playthrough, not by a player's session, and were transferred to the owner's `lambada_eth.testnet` the same day. An
+ordinary season mints nothing (the game says "on-chain for the judge season only"); the player never signs. Iris is
+not an NFT: a persistent, player-owned agent NFT, live minting per season and wallet-controlled play are future work.
+
 ## Design
 
 A forgotten memory becomes a shard (the Price of Memory) and goes to the clans' auction. On-chain, a shard is one NEP-171

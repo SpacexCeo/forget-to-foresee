@@ -3,7 +3,8 @@
 Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it can change). Last compared on
 08.11.2026: the dates, fields and limits below match that version. Every item below is either **done**, an
 **owner action** (needs the owner's account, wallet or confirmation), or **blocked**; the checklist in
-`docs/handoff/agent-reports/submission.md` tracks the state per date.
+`docs/handoff/agent-reports/submission.md` tracks the state per date. The current submission package is
+`docs/submission/` (order of the owner's remaining steps: `docs/submission/owner-steps.md`). State below: 09.11.2026.
 
 ## Dates (UTC, with Kyiv = UTC+2)
 - There is no sign-up before the hackathon: the final submission is the only registration.
@@ -16,16 +17,17 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
 
 ## Required
 - [x] A working prototype, not a pitch (Q-012). Live: https://spacexceo.github.io/forget-to-foresee/?demo=judge
+  (HTTP 200 on 09.11; the season runs locally in the browser tab, see README "The season lives in this browser tab").
 - [x] Public repository + LICENSE (MIT) (Q-013–014). https://github.com/SpacexCeo/forget-to-foresee
 - [x] README written for a machine reader as well as a human: what the product is, the problem, "do X, see Y"
   steps, the real/mock boundary, no marketing (Procedure §1, Q-012).
-- [ ] Baseline (Q-001–005): tag `pre-hackathon` exists; tag `hackathon-submission` is created by the owner at
-  freeze; the README links the diff between them and lists libraries, templates and AI-generated code.
-  **Owner action** (commands in `README.md` → "Baseline and third-party code").
+- [ ] Baseline (Q-001–005): done: tag `pre-hackathon` exists; the README links the diff and lists libraries,
+  templates and AI-generated code. Open: tag `hackathon-submission`, created by the owner at freeze.
+  **Owner action** (commands in `docs/submission/owner-steps.md` §1).
 - [ ] Demo post on X: says the project was **built at NEAR HACKATHON**, tags **@NEARProtocol** and
   **#NEARHackathon** (optionally @NearLegion and @NearBuilders), has the demo **video** attached (screenshots are
-  not enough for a local-only demo, Q-012). **Owner action**: draft in `docs/submission/x-post.md`, shot list in
-  `docs/submission/video-shot-list.md`.
+  not enough for a local-only demo, Q-012). **Owner action**: draft in `docs/submission/x-post.md`, the video is the
+  60 s jury cut (`docs/submission/jury-video.md`). Not posted yet.
 - [x] A concrete NEAR role (Q-011): our own contracts, **deployed on NEAR testnet** (09.11, owner-permitted; Q-010:
   testnet-only projects are eligible in every track). `ftf-seasons.testnet` (`contracts/season-commit`): the judge
   season committed, 15 leaves revealed and verified on-chain, read back by the game ("Verified on NEAR testnet ✓").
@@ -34,10 +36,10 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
 - [ ] Submission (Procedure §3): the form at https://nearhackathon.com/#apply or `POST
   https://nearhackathon.com/api/applications` with exactly the fields below. **One submission per repository, one
   attempt**: mistakes are fixed at https://nearhackathon.com/request-changes, never by submitting again.
-  **Owner action**: values and the ready payload in `docs/submission/apply-form.md`.
+  **Owner action**: values and the ready payload in `docs/submission/apply-form.md`. Not sent yet.
 - [ ] If the owner submits a second, independent project (RAEN Computers / Guard), both READMEs must name each
-  other (Q-015: at most 2 projects per person, each email at most 2 submissions). **Owner decision**
-  (`docs/decisions.md` §6 item 3); the README has a "Related projects" placeholder.
+  other (Q-015: at most 2 projects per person, each email at most 2 submissions). **TODO(owner)**: unconfirmed
+  (`docs/decisions.md` §6 item 3); the README's "Related projects" section holds a marked placeholder.
 
 ## Submission fields (the human decides every value; never guess or fill placeholders)
 
@@ -68,13 +70,16 @@ cross-site, do not retry · 409 repository or email already used, do not change 
   tracks, paid in NEAR to the submitted mainnet account within 30 days of the results (Q-016).
 
 ## Tracks we fit (ids for the `tracks` array)
-- **`games`** (Games With Real Economies): judged on the game loop, not the token; NPCs with wallets and
-  economies that evolve without a dev patch. Ours: six AI clans trade words, silk, trust and memories inside one
-  season; the economy is closed in-game silk; the season is committed before the first move.
-- **`nfts`** (NFTs That Do Something) — tentative: an NFT as an agent with a biography that changes through play
-  (memories forgotten, shards sold, the First Word). Claim it only as a concept plus the commit-reveal contract: no
-  NEP-171 contract runs today (see the README real/mock table), so the README must say so.
-- **`open`** is a fallback if the owner prefers not to claim `nfts`. `social` (shared budgets on Sputnik DAO /
+- **`games`** (Games With Real Economies), the primary track: judged on the game loop, not the token; NPCs with
+  wallets and economies that evolve without a dev patch. Ours: six clans (five computer-run) trade words, silk, trust
+  and memories inside one local season; each clan's "wallet" is an in-game silk balance; the economy is closed
+  in-game silk; the season's events are committed before the first move. The weekly tournament is a UI simulation
+  and is not part of the judged loop.
+- **`nfts`** (NFTs That Do Something) — claimed (owner, 09.11) for the memory shards only: `contracts/memory-shard`
+  (NEP-171) runs as `ftf-shards.testnet` with the judge season's 3 shards, minted by the coordinator script; each
+  carries its biography and the season's root, and the game shows them as NFT cards on the judge path. Not claimed:
+  a persistent, player-owned agent NFT, live minting per season, wallet-controlled play (future work in the README).
+- **`open`** remains a fallback if the owner drops `nfts`. `social` (shared budgets on Sputnik DAO /
   Trezu) is not a fit for the MVP.
 
 ## What the agent never does without the owner's explicit confirmation (from HACKATHON.md)
