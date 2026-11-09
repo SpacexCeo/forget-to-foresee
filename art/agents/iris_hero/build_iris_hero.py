@@ -842,7 +842,7 @@ def athletic_costume(bm, P, dom, bones):
     # the band's lower edge dips in a V at the centre back (owner's reference: the seam runs on into the cleft)
     for v in wb.data.vertices:
         if v.co.y > c.y and v.co.z < 0.990:
-            v.co.z -= 0.030 * max(0.0, 1.0 - abs(v.co.x) / 0.075) * min(1.0, (0.990 - v.co.z) / 0.016)
+            v.co.z -= 0.015 * max(0.0, 1.0 - abs(v.co.x) / 0.090) * min(1.0, (0.990 - v.co.z) / 0.016)   # shallow: no dark notch
     C.solidify(wb, 0.0012, 1.0, even=False)
     C.smooth(wb, 50)
     out["leggings_band"] = wb
@@ -865,7 +865,7 @@ def athletic_costume(bm, P, dom, bones):
         o = C.surface_line(f"leggings_piping_{sx}", leg, pipe_ray, 180, 0.0028, lift=0.0012)
         if o:
             out[o.name] = o
-    o = C.surface_line("leggings_seam_back", leg, lambda t: (V((0.0, 0.6, 0.944 - 0.070 * t)), V((0, -1, 0))), 24, 0.0016, lift=0.0010,
+    o = C.surface_line("leggings_seam_back", leg, lambda t: (V((0.0, 0.6, 0.956 - 0.075 * t)), V((0, -1, 0))), 24, 0.0016, lift=0.0010,
                        trim=1.0, accent=0.0)
     if o:
         out[o.name] = o
