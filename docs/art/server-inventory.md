@@ -49,3 +49,76 @@ Not listed (rebuildable or public, safe to lose): git clones `/root/ftf*` (no un
 `ftf_o`'s modified `guest.glb` equals the one in git), frame caches `/root/ftf-media/{vkwork,vkwork4k,work,test,bisect-*}`,
 `/root/w/nv` and the NVIDIA installer (public download), `_raw` agent glbs (rebuilt by `build_agents.py`),
 old transfer bundles `/root/w/*.tgz`, `/root/r5.tgz`, `/root/r6.tgz`.
+
+## Full sweep 09.11.2026 10:40 UTC (gpu-art session wrap-up)
+
+Every file over 1 MB on the server that no git checkout tracks: **1165 files, 17.48 GB**. Each one with path, bytes and sha256 is in [`server-only-files-2026-11-09.tsv`](server-only-files-2026-11-09.tsv). Files over 100 MB: **40, 7.84 GB** (4K plate masters, work segments, the driver installer, the tarballs); they stay on the server and can be downloaded over Jupyter (`/files/<path>` relative to `/root`).
+
+Everything an agent needs to continue art work is now in git: branch **`art-sources`** (Git LFS, 843 MB: shell blends + textures, raw shell and agent glbs, agent textures, guest, Iris coat and athletic blends, the v2 1080p videos; `SHA256SUMS` inside).
+
+| Directory or file | Files | Size | Over 100 MB | What | Reproduce | In git? |
+|---|---|---|---|---|---|---|
+| `/root/ftf-media-v2/work` | 260 | 2895.7 MB | 6 | 1080p capture work frames/segments behind media_v2 | `tools/gpu-server/vkall.sh` (Vulkan 1080p) | no (intermediate) |
+| `/root/ftf-media/jury-test-2` | 77 | 2234.4 MB | 8 | J3 plates round 2, 4K masters + work | `gpu-job.sh 5b64ae9` | proxies/stills/json in `docs/media/plates/jury-test-5b64ae9/` |
+| `/root/ftf-media/jury-test-3b` | 76 | 2116.3 MB | 7 | J3 plates round 3, 4K masters + work | `gpu-job.sh 8e35537` | proxies/stills/json in `docs/media/plates/jury-test-8e35537/` |
+| `/root/ftf-media/jury-test` | 57 | 2072.0 MB | 8 | J3 plates round 1, 4K masters + work | `gpu-job.sh 44ed2fd` | proxies/stills/json in `docs/media/plates/jury-test-44ed2fd/` |
+| `/root/w/nv` | 50 | 1635.5 MB | 3 | NVIDIA driver/Vulkan probe downloads | driver setup (see gpu-art report) | no (downloads) |
+| `/root/ftf-media/vkwork` | 36 | 844.7 MB | 1 | Vulkan trailer/demo capture work | `tools/gpu-server/vkall.sh` | no (intermediate) |
+| `/root/ftf-media/mainsmoke` | 119 | 687.4 MB | 0 | main-branch smoke capture frames | `mainsmoke.sh` (capture smoke on main) | no (QA) |
+| `/root/ftf/art` | 36 | 611.4 MB | 3 | shell blends + textures, guest raw, agent textures/raw glbs | `art/shells/build_shells.py`, `art/agents/*` builds | yes: branch `art-sources` (LFS) |
+| `/root/ftf-probe/probe` | 190 | 547.1 MB | 0 | GPU probe frames (demo 1080p) | `tools/capture/gpu-probe.mjs` | no (QA) |
+| `/root/archive_src.tar` | 1 | 465.7 MB | 1 | tar of /root/archive_src | this session | yes: `art-sources` |
+| `/root/w/NVIDIA-Linux-x86_64-595.104.02.run` | 1 | 423.4 MB | 1 | NVIDIA driver installer | download | no (public) |
+| `/root/archive_src/shells` | 16 | 315.7 MB | 0 | compressed shell blends | re-save of /root/ftf/art/shells | yes: `art-sources/shells/` |
+| `/root/ftf-capture-src/game` | 60 | 314.6 MB | 0 | capture checkout game assets | git checkout | yes (tracked in git at the capture commit) |
+| `/root/ftf-media/vkwork4k` | 3 | 291.6 MB | 2 | 4K Vulkan demo capture work | `vkall.sh` 4K | no (over 100 MB) |
+| `/root/ftf-media/vk1080` | 10 | 256.4 MB | 0 | 1080p Vulkan media with captions | `tools/gpu-server/vkall.sh` on b7e310b | captionless versions in `docs/media/` |
+| `/root/ftf-media/work` | 16 | 143.6 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf_iris/art` | 10 | 126.0 MB | 0 | Iris hero raw build outputs (blends, raw glb, bakes) | `build_iris_hero.py -- full` on `claude/iris-hero` | yes: `art-sources/iris_hero_*` |
+| `/root/.npm/_cacache` | 13 | 86.9 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/tmp/blender_CqAqFy/cycles-tile-buffer-11223-140380899347136-0-0.exr` | 1 | 85.1 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media-v2/demo-captions.mp4` | 1 | 84.0 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/tmp/blender_Kq8c1q/cycles-tile-buffer-11285-140505598357184-0-0.exr` | 1 | 83.2 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media/j2` | 3 | 82.3 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media-v2/demo.mp4` | 1 | 82.3 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/archive_src/iris_hero_coat` | 10 | 70.5 MB | 0 | Iris coat version blends + bakes | re-save | yes: `art-sources/iris_hero_coat/` |
+| `/root/w/r4.tgz` | 1 | 70.1 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/w/agents.tgz` | 1 | 64.8 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media/test` | 5 | 54.9 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/archive_src/agents_raw` | 6 | 42.5 MB | 0 | raw agent glbs | agent builds | yes: `art-sources/agents_raw/` |
+| `/root/ftf-capture-src/art` | 6 | 42.3 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/w/shells.tgz` | 1 | 38.5 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media-v2/trailer-captions.mp4` | 1 | 38.4 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/ftf-media-v2/trailer.mp4` | 1 | 38.1 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/w/shell_1_r2_raw.glb` | 1 | 32.6 MB | 0 | raw shell glb | `build_shells.py` r2 | yes: `art-sources/shells_raw_glb/` |
+| `/root/r5.tgz` | 1 | 31.4 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-capture-src/docs` | 12 | 29.8 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/r6.tgz` | 1 | 29.8 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/w/shell_4_r2_raw.glb` | 1 | 28.8 MB | 0 | raw shell glb | `build_shells.py` r2 | yes: `art-sources/shells_raw_glb/` |
+| `/root/w/shell_3_r2_raw.glb` | 1 | 27.9 MB | 0 | raw shell glb | `build_shells.py` r2 | yes: `art-sources/shells_raw_glb/` |
+| `/root/ftf-media/bisect-vk` | 1 | 27.1 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/w/shell_2_r2_raw.glb` | 1 | 25.8 MB | 0 | raw shell glb | `build_shells.py` r2 | yes: `art-sources/shells_raw_glb/` |
+| `/root/archive_src/agents_textures` | 16 | 25.0 MB | 0 | agent textures | agent builds | yes: `art-sources/agents_textures/` |
+| `/root/w/diaghw` | 1 | 18.9 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/pl.tgz` | 1 | 14.6 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/qa_iris.tgz` | 1 | 14.1 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/pl2.tgz` | 1 | 13.4 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/w/diagw` | 1 | 12.3 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/pl3.tgz` | 1 | 11.0 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/tmp/tmp.Lv1kS0OiBf/a.glb` | 1 | 10.0 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/tmp/tmp.Lv1kS0OiBf/b.glb` | 1 | 9.7 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media-v2/clip-shell-captions.mp4` | 1 | 9.3 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/ftf-media-v2/clip-shell.mp4` | 1 | 9.2 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/ftf-media/bisect-low` | 1 | 9.1 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/archive_src/guest` | 4 | 8.5 MB | 0 | guest raw + textures | guest build | yes: `art-sources/guest/` |
+| `/root/ftf-media-v2/clip-verified-captions.mp4` | 1 | 8.3 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/ftf-media-v2/clip-verified.mp4` | 1 | 8.2 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/ftf-media/bisect-texm` | 1 | 8.2 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/iris_after.glb` | 1 | 8.0 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/tmp/KTX-Software-4.4.0-Linux-x86_64.deb` | 1 | 7.2 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/iris_before.glb` | 1 | 6.6 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/j2fail.tgz` | 1 | 5.9 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media/bisect-motion` | 1 | 5.9 MB | 0 | scratch / QA / cache | see the gpu-art report | no |
+| `/root/ftf-media-v2/clip-memory-captions.mp4` | 1 | 5.9 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| `/root/ftf-media-v2/clip-memory.mp4` | 1 | 5.8 MB | 0 | final 1080p video | `tools/gpu-server/vkall.sh` (v2) | yes: `art-sources/media_v2/` |
+| everything else under 5 MB per directory | | | 0 | QA stills, tarballs of QA, logs | | see the tsv |
