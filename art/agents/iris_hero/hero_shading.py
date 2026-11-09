@@ -21,19 +21,20 @@ V = Vector
 
 GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool, near-black navy, dusty violet)
     # athletic sportswear (owner 09.11): graphite knit jacket, black top, graphite leggings, trainers
-    "jacket": (0.018, 0.019, 0.024), "jacket_collar": (0.018, 0.019, 0.024), "sports_top": (0.008, 0.008, 0.010),
-    "leggings": (0.013, 0.014, 0.017), "trainers": (0.70, 0.70, 0.71),
+    "jacket": (0.010, 0.010, 0.011), "jacket_collar": (0.010, 0.010, 0.011), "sports_top": (0.007, 0.007, 0.008),
+    "leggings": (0.009, 0.009, 0.010), "trainers": (0.72, 0.72, 0.73),
     "coat": (0.040, 0.040, 0.043), "collar": (0.040, 0.040, 0.043), "sleeve": (0.040, 0.040, 0.043),
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
     "scarf": (0.150, 0.075, 0.220), "belt": (0.035, 0.018, 0.010), "pouch": (0.200, 0.085, 0.032),
     "pendant": (0.62, 0.62, 0.64), "hair_tie": (0.110, 0.055, 0.160),
 }
-TRIM = {"jacket": (0.010, 0.010, 0.013), "jacket_collar": (0.010, 0.010, 0.013), "sports_top": (0.016, 0.016, 0.019),
-        "leggings": (0.007, 0.0075, 0.009), "trainers": (0.015, 0.015, 0.017),
+TRIM = {"jacket": (0.014, 0.014, 0.015), "jacket_collar": (0.014, 0.014, 0.015), "sports_top": (0.013, 0.013, 0.014),
+        "leggings": (0.006, 0.006, 0.007), "trainers": (0.012, 0.012, 0.013),
         "coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}
+ACCENT = {"jacket": (0.80, 0.80, 0.80), "jacket_collar": (0.80, 0.80, 0.80), "leggings": (0.80, 0.80, 0.80)}  # white stripes
 ROUGH = {"jacket": 0.76, "jacket_collar": 0.76, "sports_top": 0.72, "leggings": 0.80, "trainers": 0.60,
          "hair_tie": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
 METAL = {"pendant": 1.0}
@@ -55,6 +56,10 @@ def paint_garment_attrs(objs):
             a = me.color_attributes.get(nm) or me.color_attributes.new(nm, "FLOAT_COLOR", "POINT")
             for d in a.data:
                 d.color = (*val, 1.0)
+        acol = ACCENT.get(k, (0.20, 0.13, 0.32))
+        a = me.color_attributes.get("acol") or me.color_attributes.new("acol", "FLOAT_COLOR", "POINT")
+        for d in a.data:
+            d.color = (*acol, 1.0)
         for nm, val in (("rough", ROUGH.get(k, 0.92)), ("metal", METAL.get(k, 0.0))):
             a = me.attributes.get(nm) or me.attributes.new(nm, "FLOAT", "POINT")
             for d in a.data:
@@ -228,7 +233,7 @@ def garment_shader(b):
     trim = b.attr("trim").outputs["Fac"]
     col = b.mix(b.math("GREATER_THAN", trim, 0.5), gcol, tcol)
     accent = b.attr("accent").outputs["Fac"]
-    col = b.mix(b.math("GREATER_THAN", accent, 0.5), col, (0.20, 0.13, 0.32))      # violet pearl piping
+    col = b.mix(b.math("GREATER_THAN", accent, 0.5), col, b.attr("acol").outputs["Color"])   # stripes / piping
     fib = b.noise(420.0, 8.0, pos, 0.7)
     weave = b.n("ShaderNodeTexWave", wave_type="BANDS", in_Scale=180.0, in_Distortion=2.0)
     b.l(pos, weave.inputs["Vector"])

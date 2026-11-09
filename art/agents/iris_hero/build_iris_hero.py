@@ -161,12 +161,13 @@ def detail_path(name):
 
 # ===================================================================== body
 
-def make_human():
+def make_human(athletic=None):
+    athletic = (COSTUME == "athletic") if athletic is None else athletic
     bm = HumanService.create_human(mask_helpers=True, detailed_helpers=True, extra_vertex_groups=True,
                                    feet_on_ground=True, scale=0.1,
                                    macro_detail_dict={**MACROS, **({"muscle": 0.55, "weight": 0.42, "cupsize": 0.85,
-                                                                    "firmness": 0.85, "proportions": 1.0} if COSTUME == "athletic" else {})})
-    for name, w in {**DETAIL, **(ATHLETIC if COSTUME == "athletic" else {})}.items():
+                                                                    "firmness": 0.85, "proportions": 1.0} if athletic else {})})
+    for name, w in {**DETAIL, **(ATHLETIC if athletic else {})}.items():
         p = detail_path(name)
         if os.path.exists(p):
             TargetService.load_target(bm, p, weight=w)
@@ -474,7 +475,29 @@ def stage_body():
     J = repose(bm, mrig)
     eyes = split_helpers(bm)
     k = scale_to_eye_line([bm], eyes)
-    J = {n: (h * k, t * k) for n, (h, t) in J.items()}
+    k_body = k
+    if COSTUME == "athletic":
+        # Iris's own face: the athletic macros also reshape the head, so the head and neck are taken from
+        # a body built with the original macros (same topology), blended into the new body down the neck
+        ref, rrig = make_human(athletic=False)
+        repose(ref, rrig)
+        eyes_ref = split_helpers(ref)
+        k_ref = scale_to_eye_line([ref], eyes_ref)
+        bpy.data.objects.remove(rrig)
+        assert len(ref.data.vertices) == len(bm.data.vertices)
+        zs = [v.co.z for v in bm.data.vertices]
+        H = max(zs)
+        z_lo, z_hi = 0.815 * H, 0.865 * H              # base of the neck .. under the jaw
+        for va, vr in zip(bm.data.vertices, ref.data.vertices):
+            z = va.co.z
+            if z <= z_lo:
+                continue
+            t = min(1.0, (z - z_lo) / (z_hi - z_lo))
+            t = t * t * (3 - 2 * t)
+            va.co = va.co.lerp(vr.co, t)
+        bpy.data.objects.remove(ref)
+        eyes, k = eyes_ref, k_ref
+    J = {n: (h * k_body, t * k_body) for n, (h, t) in J.items()}
     eyes_k = {p: (c * k, r * k) for p, (c, r) in eyes.items()}
     mpfb_bones = {b.name for b in mrig.data.bones}
     bpy.data.objects.remove(mrig)
@@ -613,9 +636,11 @@ def athletic_costume(bm, P, dom, bones):
         return False
     def upper_trim(p, nrm):
         return 1.0 if (p.y < c.y and abs(p.x) < 0.072) or p.z < 1.165 else 0.0
-    def upper_accent(p, nrm):
-        side = 1 if p.x > 0 else -1
-        return 1.0 if abs(p.x) > 0.17 and nrm.x * side > 0.93 and p.z < 1.40 else 0.0
+    def upper_accent(p, nrm):                                 # a white stripe down the outer sleeve to the cuff,
+        side = 1 if p.x > 0 else -1                           # carried over the shoulder to the collar
+        sleeve = abs(p.x) > 0.16 and nrm.x * side > 0.90 and 1.02 < p.z < 1.40
+        shoulder = p.z > 1.38 and abs(p.y - (c.y + 0.01)) < 0.012 and abs(p.x) > 0.07
+        return 1.0 if sleeve or shoulder else 0.0
     def upper_edges(v):
         p = v.co
         if p.z < 1.17 and abs(p.x) < 0.25:
@@ -647,12 +672,18 @@ def athletic_costume(bm, P, dom, bones):
         side = 1 if p.x > 0 else -1
         centre = side * (0.095 + 0.022 * math.sin((p.z - 0.2) * 3.5))
         return 1.0 if 0.18 < p.z < 0.95 and side * (p.x - centre) > 0.016 else 0.0
+    def leg_stripes(p, nrm):                                  # white stripes: outer hip to mid-thigh, outer shin
+        side = 1 if p.x > 0 else -1
+        outer = nrm.x * side
+        thigh = 0.62 < p.z < 0.98 and outer > 0.80 and abs(nrm.y + 0.25) < 0.10
+        shin = 0.22 < p.z < 0.42 and outer > 0.55 and abs(nrm.y + 0.45 - (p.z - 0.22) * 0.8) < 0.08
+        return 1.0 if thigh or shin else 0.0
     def leg_edges(v):
         v.co.z = 1.04 if v.co.z > 0.6 else 0.12
     crotch = lambda p: abs(p.x) < 0.07 and 0.70 < p.z < 0.88
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
-                                        edges=leg_edges, relax=(crotch, 8))
+                                        accent=leg_stripes, edges=leg_edges, relax=(crotch, 8))
     # trainers: sized from each foot
     for sfx, side in (("L", 1), ("R", -1)):
         foot = [co[i] for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}") and co[i].z < 0.10]
