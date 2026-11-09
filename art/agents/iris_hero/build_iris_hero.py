@@ -52,19 +52,19 @@ ATHLETIC = {                  # owner's body reference and brief 09.11: feminine
     # waist: narrow and clean, a long soft curve into the hips; a flat, toned stomach
     "torso/measure-waist-circ-decr": 0.70, "torso/measure-underbust-circ-decr": 0.25,
     "torso/measure-waisttohip-dist-incr": 0.35, "stomach/stomach-pregnant-decr": 0.90,
-    # pelvis: slightly wider (the lateral hip line and the seat come from hero_body.py)
-    "hip/hip-scale-horiz-incr": 0.08, "torso/measure-hips-circ-incr": 0.10,
+    # pelvis: the reference's hips are about as wide as its shoulders (0.21 H from the back)
+    "torso/measure-hips-circ-decr": 0.05,
     # seat: volume; projection, lift and the S-curve from hero_body.py and round_glutes()
-    "buttocks/buttocks-volume-incr": 0.90, "hip/hip-scale-depth-incr": 0.10,
+    "buttocks/buttocks-volume-incr": 0.60, "hip/hip-scale-depth-incr": 0.10,
     # legs: a long line; soft athletic upper thighs, slim but not weak knees and calves
     "legs/upperlegs-height-incr": 0.15, "legs/lowerlegs-height-incr": 0.10,
     "legs/l-upperleg-fat-decr": 0.20, "legs/r-upperleg-fat-decr": 0.20,
     "legs/l-lowerleg-fat-decr": 0.35, "legs/r-lowerleg-fat-decr": 0.35, "legs/measure-knee-circ-decr": 0.35,
     "legs/measure-calf-circ-decr": 0.10,
     # bust: natural, medium and lifted
-    "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.40,
+    "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.80,
     # upper body: slightly narrower shoulders, lean arms
-    "torso/measure-shoulder-dist-decr": 0.08,
+    "torso/measure-shoulder-dist-decr": 1.00,
     "arms/l-upperarm-fat-decr": 0.30, "arms/r-upperarm-fat-decr": 0.30,
     "arms/l-lowerarm-fat-decr": 0.20, "arms/r-lowerarm-fat-decr": 0.20,
 }
@@ -450,13 +450,13 @@ def make_eyes(eyes, k):
 
 # ===================================================================== stages
 
-def round_glutes(bm, dom, depth=0.010):
+def round_glutes(bm, dom, depth=0.006):
     """A round seat without a shelf: each gluteus gets its own soft dome (narrow across, so the back
     view reads two round forms), the push fades slowly downward into the back of the thigh and quickly
     upward into the lower back, and the midline is eased in a little."""
     import math as _m
     H = max(v.co.z for v in bm.data.vertices)
-    zc = 0.515 * H                                     # a high seat (owner reference 09.11)
+    zc = 0.530 * H                                     # a high seat (owner reference 09.11)
     for v, d in zip(bm.data.vertices, dom):
         if d not in ("pelvis", "spine", "thigh_L", "thigh_R"):
             continue
@@ -464,7 +464,7 @@ def round_glutes(bm, dom, depth=0.010):
         if p.y <= 0.0:
             continue
         side = 1 if p.x > 0 else -1
-        sz = 0.060 if p.z > zc else 0.110                 # quick above, slow below
+        sz = 0.080 if p.z > zc else 0.075                 # soft above (no shelf under the lower back), no low sag below
         r2 = ((p.x - side * 0.068 * H / 1.75) / 0.058) ** 2 + ((p.z - zc) / sz) ** 2
         w = _m.exp(-r2 * 1.4)
         back = min(1.0, p.y / 0.08)
@@ -523,10 +523,17 @@ def stage_body():
         # the silhouette pass (hero_body.py, from the owner's shape-key script), then the two seat domes
         cos = [tuple(v.co) for v in bm.data.vertices]
         off = B.offsets(cos, dom0)
-        off = B.smooth_field(off, [tuple(e.vertices) for e in bm.data.edges])
+        edges = [tuple(e.vertices) for e in bm.data.edges]
+        off = B.smooth_field(off, edges)
+        fill = B.smooth_field(B.inner_fill(cos, dom0), edges, iters=6)   # blends into the crotch (no fold)
+        off = [(a[0] + b[0], a[1] + b[1], a[2] + b[2]) for a, b in zip(off, fill)]
         for v, (dx, dy, dz) in zip(bm.data.vertices, off):
             v.co += V((dx, dy, dz))
         round_glutes(bm, dom0)
+        # one round arc in profile (owner: "keep the roundness"), fitted after every other change
+        prof = B.smooth_field(B.seat_profile([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=4)
+        for v, (dx, dy, dz) in zip(bm.data.vertices, prof):
+            v.co += V((dx, dy, dz))
         # soften the nipple detail so tight tops and the jacket lie smoothly over the bust
         b = bmesh.new()
         b.from_mesh(bm.data)

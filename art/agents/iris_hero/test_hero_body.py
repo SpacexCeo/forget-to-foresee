@@ -45,14 +45,14 @@ def main():
     assert all(o == (0.0, 0.0, 0.0) for _, o in get(lambda c, d: d.startswith(("forearm", "head"))))
     # the seat moves back (+Y), the most at the back centre line of each cheek
     seat = get(lambda c, d: d == "pelvis" and abs(c[2] - 0.505 * H) < 0.02 and c[1] > 0.09)
-    assert seat and max(o[1] for _, o in seat) > 0.012, max(o[1] for _, o in seat)
+    assert seat and max(o[1] for _, o in seat) > 0.006, max(o[1] for _, o in seat)
     # the front of the pelvis barely moves back
     front = get(lambda c, d: d == "pelvis" and abs(c[2] - 0.505 * H) < 0.02 and c[1] < -0.09)
     assert max(o[1] for _, o in front) < 0.004
     # the waist sides move in, the lower back moves forward
     waist = get(lambda c, d: d == "spine" and abs(c[2] - 0.625 * H) < 0.015 and abs(c[0]) > 0.14)
     assert all(o[0] * c[0] < 0 for c, o in waist)
-    lb = get(lambda c, d: abs(c[2] - 0.60 * H) < 0.015 and c[1] > 0.09 and abs(c[0]) < 0.03)
+    lb = get(lambda c, d: abs(c[2] - 0.645 * H) < 0.012 and c[1] > 0.09 and abs(c[0]) < 0.03)
     assert all(o[1] < 0 for _, o in lb)
     # left/right symmetric
     for (c, o) in get(lambda c, d: d == "pelvis")[:400]:
@@ -65,3 +65,19 @@ def main():
 
 
 main()
+
+
+def test_fill():
+    cos, doms, edges = body()
+    fill = B.inner_fill(cos, doms, s=1.0)
+    # at 0.45 H the inner edge of the left leg (x > 0) reaches the midline minus the half gap
+    inner = [(c, o) for c, o, d in zip(cos, fill, doms) if d == "thigh_L" and abs(c[2] - 0.45 * H) < 0.012]
+    edge = min(c[0] + o[0] for c, o in inner)
+    assert abs(edge - B.FEM["inner_touch"]) < 0.004, edge
+    # the outer side never moves; below 0.36 H nothing moves
+    assert all(o[0] == 0.0 for c, o in inner if c[0] > 0.085)
+    assert all(o == (0.0, 0.0, 0.0) for c, o in zip(cos, fill) if c[2] < 0.30 * H)
+    print("inner_fill ok; inner edge at", round(edge * 1000, 1), "mm from the midline")
+
+
+test_fill()

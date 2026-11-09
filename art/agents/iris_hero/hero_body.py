@@ -23,13 +23,14 @@ FEM = {
     "waist_in": 0.020,        # each side, at the sides of the waist
     "underbust_in": 0.008,
     "ribcage_in": 0.004,
-    "pelvis_out": 0.008,      # each side, the lateral hip line above the trochanter
-    "hip_out": 0.012,         # each side, at the widest point of the seat
-    "glute_back": 0.024,      # projection of the seat, upper and central volume
+    "pelvis_out": 0.004,      # each side, the lateral hip line above the trochanter
+    "hip_out": 0.000,         # each side, at the widest point of the seat (the reference: hips about as wide as the shoulders)
+    "glute_back": 0.016,      # projection of the seat, upper and central volume
     "glute_up": 0.006,        # lift
-    "lower_back_in": 0.010,   # the S-curve from the lower back into the seat
+    "lower_back_in": 0.006,   # the S-curve from the lower back into the seat
     "outer_thigh_out": 0.006,
-    "inner_thigh_in": 0.004,  # cleaner inner thigh, no forced gap
+    "inner_thigh_in": 0.000,  # (owner script: a cleaner inner thigh; replaced by inner_touch below)
+    "inner_touch": 0.000,     # owner 09.11: the inner thighs meet from the crotch down to about 0.41 H
     "thigh_front": 0.004,     # a soft front of the upper thigh
     "calf_out": 0.003,        # slim calves, not weak
     "chest_front": 0.005,
@@ -38,8 +39,8 @@ FEM = {
 # Band centres and half widths as fractions of H (MakeHuman female, feet on the ground).
 BANDS = {
     "ribcage": (0.700, 0.050), "underbust": (0.685, 0.035), "chest": (0.725, 0.045),
-    "waist": (0.625, 0.050), "lower_back": (0.600, 0.045),
-    "pelvis": (0.545, 0.045), "hip": (0.505, 0.060), "glute": (0.505, 0.065),
+    "waist": (0.625, 0.050), "lower_back": (0.640, 0.040),   # the curve sits at the waist, above the seat
+    "pelvis": (0.545, 0.045), "hip": (0.505, 0.060), "glute": (0.525, 0.080),
     "upper_thigh": (0.430, 0.065), "calf": (0.205, 0.070),
 }
 
@@ -66,6 +67,13 @@ def band(name, zn):
         return 0.0
     t = 1.0 - d / h
     return t * t * (3.0 - 2.0 * t)
+
+
+def round_band(name, zn, p=4):
+    """A flat-topped band (super-Gaussian): the seat keeps its volume over most of its height, so the side
+    profile is one round arc instead of a cone (owner 09.11: "keep the roundness")."""
+    c, h = BANDS[name]
+    return 2.718281828 ** (-((abs(zn - c) / (0.62 * h)) ** p))
 
 
 def region(dom):
@@ -122,7 +130,7 @@ def offsets(cos, doms, s=None, step=0.02):
             dx -= side * (F["waist_in"] * band("waist", zn) + F["underbust_in"] * band("underbust", zn)
                           + F["ribcage_in"] * band("ribcage", zn)) * sides * u
             dx += side * (F["pelvis_out"] * band("pelvis", zn) + F["hip_out"] * band("hip", zn)) * sides
-            g = band("glute", zn) * back
+            g = round_band("glute", zn) * back
             dy += F["glute_back"] * g * (0.45 + 0.55 * seat)
             dz += F["glute_up"] * g * seat
             dy -= F["lower_back_in"] * band("lower_back", zn) * back * centre
@@ -135,14 +143,120 @@ def offsets(cos, doms, s=None, step=0.02):
             ut = band("upper_thigh", zn)
             dx += side * (F["outer_thigh_out"] * ut * outer - F["inner_thigh_in"] * ut * inner)
             dy -= F["thigh_front"] * ut * front
-            g = band("glute", zn) * back                           # the seat continues over the top of the thigh
-            dy += F["glute_back"] * g * 0.75 * (1.0 - inner)
+            g = round_band("glute", zn) * back                     # the seat continues over the top of the thigh
+            dy += F["glute_back"] * g * 0.40 * (1.0 - inner)
             dz += F["glute_up"] * g * (1.0 - inner)
             dx += side * F["hip_out"] * band("hip", zn) * outer
             c = band("calf", zn)
             dx += side * F["calf_out"] * c * outer
             dy += F["calf_out"] * c * back
         res.append((dx, dy, dz))
+    return res
+
+
+def inner_fill(cos, doms, s=None, step=0.02, z_full=0.43, z_none=0.30):
+    """Owner 09.11 (marked on a render): the inner thighs meet from the crotch down to about 0.41 H, as in
+    the reference. The inner half of each thigh slice is widened toward the midline so its inner edge
+    stops a half gap (inner_touch) short of it: full above z_full, fading out by z_none (in the reference a narrow gap opens below 0.41 H and widens to the knees). Kept apart from
+    offsets() because the strong smoothing there would eat most of it (the field is smooth along the
+    leg already; the build smooths it lightly)."""
+    s = strength() if s is None else s
+    H = max(c[2] for c in cos)
+    half = FEM["inner_touch"] * H / 1.70
+    st = slice_stats(cos, doms, H, step)
+    edge = {}                                                      # the true inner edge (min |x|) per slice
+    for (x, y, z), d in zip(cos, doms):
+        r = region(d)
+        if r in ("leg_L", "leg_R"):
+            k = (r, int(z / H / step))
+            edge[k] = min(edge.get(k, 1e9), abs(x))
+    res = []
+    for (x, y, z), d in zip(cos, doms):
+        r = region(d)
+        zn = z / H
+        if r not in ("leg_L", "leg_R") or zn < z_none:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        k = (r, int(zn / step))
+        cx = st[k][0]
+        gap = edge[k] - half
+        u = (abs(x) - abs(cx)) / max(abs(cx) - edge[k], 1e-4)      # -1 at the inner edge
+        u = max(u, -1.0)
+        if gap <= 0.0 or u >= 0.0:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        side = 1.0 if x >= 0.0 else -1.0
+        t = smoothstep(z_none, z_full, zn) * s
+        res.append((-side * gap * t * (-u) ** 1.5, 0.0, 0.0))     # the inner edge moves the full gap, the centre not at all
+    return res
+
+
+# The reference's side view, measured on its back line relative to the back of the thigh at 0.36 H
+# (fractions of H): lower back -0.005 at 0.63, seat peak +0.029 at 0.51, fold +0.013 at 0.455.
+SEAT = {
+    "z_anchor": 0.360, "z_fold": 0.455, "z_peak": 0.510, "z_lumbar": 0.630,
+    "fold": 0.010, "peak": 0.040, "lumbar": -0.006,   # peak and fold: a little fuller and crisper than measured (owner: keep the roundness)
+    "round": 0.62,       # arc exponent: 0.5 = an ellipse, higher = fuller shoulders on the arc
+    "fade": 0.05,        # above the lumbar point and below the fold the change fades out over this height
+}
+
+
+def seat_profile(cos, doms, s=None, step=0.01):
+    """Owner 09.11, "keep the roundness": the side profile of the back from the fold under the seat to the
+    lower back is fitted to the reference's: one round arc (two quarter ellipses) through the seat's peak,
+    anchored on the back of the thigh. Measured on the current back line (the furthest-back vertex of each
+    1 cm slice within the two cheeks); back-side vertices move by the difference, the most at the cheek
+    centres, nothing at the sides or the front."""
+    s = strength() if s is None else s
+    H = max(c[2] for c in cos)
+    k = H / 1.70
+    xr = 0.11 * k                                                  # the cheeks' half span
+    yb = {}
+    for (x, y, z), d in zip(cos, doms):
+        if region(d) is None or abs(x) > xr:
+            continue
+        b = int(z / H / step)
+        yb[b] = max(yb.get(b, -1e9), y)
+
+    def back_at(zn):
+        b = int(zn / step)
+        return yb.get(b, yb.get(b + 1, yb.get(b - 1, 0.0)))
+
+    P = SEAT
+    y_t = back_at(P["z_anchor"])
+    zf, zp, zl, e, fd = P["z_fold"], P["z_peak"], P["z_lumbar"], P["round"], P["fade"]
+    y_f, y_p, y_l = (y_t + P[n] * H for n in ("fold", "peak", "lumbar"))
+
+    def target(zn):
+        if zp <= zn <= zl:
+            t = (zn - zp) / (zl - zp)
+            return y_l + (y_p - y_l) * max(0.0, 1.0 - t * t) ** e
+        t = (zp - zn) / (zp - zf)
+        return y_f + (y_p - y_f) * max(0.0, 1.0 - t * t) ** e
+
+    def delta(zn):
+        if zf <= zn <= zl:
+            return target(zn) - back_at(zn)
+        if zl < zn < zl + fd:
+            return (target(zl) - back_at(zl)) * (1.0 - smoothstep(zl, zl + fd, zn))
+        if zf - fd < zn < zf:
+            return (target(zf) - back_at(zf)) * smoothstep(zf - fd, zf, zn)
+        return 0.0
+
+    st = slice_stats(cos, doms, H, 0.02)
+    res = []
+    for (x, y, z), d in zip(cos, doms):
+        r = region(d)
+        zn = z / H
+        dl = delta(zn) if r is not None else 0.0
+        if dl == 0.0:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        dl = max(-0.025 * k, min(0.035 * k, dl)) * s
+        cx, cy, hx, hy = st[(r, int(zn / 0.02))]
+        back = smoothstep(0.0, 0.85, (y - cy) / hy)               # only the back surface
+        wx = 1.0 - smoothstep(0.6 * xr, 1.25 * xr, abs(x))        # the cheeks and the spine, not the hips' sides
+        res.append((0.0, dl * back * wx, 0.0))
     return res
 
 
