@@ -8,6 +8,7 @@
 // The agents walk their camp with the same motion model as the player (physics/motion.js).
 // Behaviour cues come from behaviour.js (room observation → pose, placement, facing, mind glyph),
 // so the clans' minds are legible from the isometric camera. Presentation only.
+import { tuneHairCards } from '../render/hair-cards.js';
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
@@ -343,6 +344,7 @@ export class ClanAgents {
       const { gltf } = await prefetchGltf('agent_iris'); // started by boot-world.js before the camps (QA-030)
       const model = cloneSkinned(gltf.scene);
       upgradeAssetMaterials('agent_iris', model);
+      tuneHairCards(model);
       model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = true; });
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
