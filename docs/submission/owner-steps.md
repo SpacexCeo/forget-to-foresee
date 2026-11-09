@@ -4,6 +4,16 @@
 `apply-form.md` (the form values and payload), `jury-video.md` (the video for the post) and the video pipeline notes
 (`trailer.md`, `video-shot-list.md`). Dates: freeze 13.11 20:00 Kyiv, deadline 15.11 01:59 Kyiv (14.11 23:59 UTC).
 
+## 0. Mint Iris's agent card (one command, testnet)
+
+```bash
+bash contracts/agent-card/scripts/mint-judge-card.sh
+```
+
+Creates `ftf-agents.testnet` (faucet), deploys `contracts/agent-card`, checks the state hash and mints
+`793f6c05e89839f2-agent-iris` to `lambada_eth.testnet`, signing with the keys in this machine's NEAR keychain. The game
+shows the card as minted by itself; nothing to edit. Details: `docs/agent-nft.md`.
+
 ## Already done (no action)
 
 - **NEAR testnet deployment (09.11, owner permission).** `ftf-seasons.testnet` (season-commit): the judge season

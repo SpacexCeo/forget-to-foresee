@@ -55,6 +55,16 @@ In the game, the card's states are exactly these (`loadAgentCard`):
 
 ## Owner steps (testnet; nothing here was run by an agent)
 
+**One command** (Git Bash, from the repository root; re-runnable, every step skips itself when already done, and it
+stops if the contract's preview hash differs from `summary.json`):
+
+```bash
+bash contracts/agent-card/scripts/mint-judge-card.sh
+```
+
+The game then finds the card by itself (`agent-nft.js` reads `ftf-agents.testnet`). The step-by-step commands below are
+the same thing by hand.
+
 Prerequisites: Rust, `cargo-near`, the `near` CLI (see `contracts/season-commit/README.md`), and the
 `lambada_eth.testnet` key in the keychain (it is the coordinator on both existing contracts). From the repository root:
 
