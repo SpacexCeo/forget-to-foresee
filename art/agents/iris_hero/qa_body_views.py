@@ -17,6 +17,7 @@ out = argv[0]
 res = int(argv[1]) if len(argv) > 1 else 800
 samples = int(argv[2]) if len(argv) > 2 else 48
 pose = argv[3] if len(argv) > 3 else "rest"
+zoom = len(argv) > 4 and argv[4] == "seat"                 # "seat": a close-up of the hips and seat (0.36..0.70 H)
 
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"
@@ -89,7 +90,8 @@ mid = V((0.0, 0.0, zmax / 2))
 def light(name, energy, rot):
     ld = bpy.data.lights.new(name, "SUN")
     ld.energy = energy
-    ld.use_shadow = False                          # the hanging arms would shadow the hips and read as dents
+    ld.use_shadow = name == "key"                  # only the high key casts shadows (form), soft, so the arms do not draw dents
+    ld.angle = math.radians(12)
     lo = bpy.data.objects.new(name, ld)
     lo.rotation_euler = [math.radians(a) for a in rot]
     sc.collection.objects.link(lo)
@@ -98,7 +100,10 @@ def light(name, energy, rot):
 
 cam_d = bpy.data.cameras.new("cam")
 cam_d.type = "ORTHO"
-cam_d.ortho_scale = zmax * 1.08
+cam_d.ortho_scale = zmax * (0.40 if zoom else 1.08)
+if zoom:
+    mid = V((0.0, 0.0, zmax * 0.53))
+    sc.render.resolution_y = res
 cam = bpy.data.objects.new("cam", cam_d)
 sc.collection.objects.link(cam)
 sc.camera = cam
@@ -112,7 +117,7 @@ for name, yaw in VIEWS.items():
     d = V((math.sin(a), math.cos(a), 0.0))                     # from the body towards the camera
     cam.location = mid + d * 6.0
     cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
-    key.rotation_euler = (math.radians(55), 0, a + math.radians(35) + math.pi)
+    key.rotation_euler = (math.radians(38), 0, a + math.radians(55) + math.pi)   # high and to the side: reads convexity
     rim.rotation_euler = (math.radians(70), 0, a + math.radians(-120) + math.pi)
     sc.render.filepath = f"{out}_{name}.png"
     bpy.ops.render.render(write_still=True)

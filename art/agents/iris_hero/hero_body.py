@@ -198,6 +198,11 @@ SEAT = {
     "fold": 0.010, "peak": 0.040, "lumbar": -0.006,   # peak and fold: a little fuller and crisper than measured (owner: keep the roundness)
     "round": 0.62,       # arc exponent: 0.5 = an ellipse, higher = fuller shoulders on the arc
     "fade": 0.05,        # above the lumbar point and below the fold the change fades out over this height
+    # each cheek is its own convex dome (owner 09.11: "no squareness, firm and convex"): the push is the
+    # full profile change at the cheek centre and falls off as an ellipse toward the cleft and the side
+    "cheek_x": 0.062,    # cheek centre from the midline, metres at 1.70 m
+    "cheek_rx": 0.080,   # the dome's half width
+    "fold_lift": 0.030,  # the fold rises toward the outside (a curved fold, a rounded lower-outer corner), H
 }
 
 
@@ -248,15 +253,104 @@ def seat_profile(cos, doms, s=None, step=0.01):
     for (x, y, z), d in zip(cos, doms):
         r = region(d)
         zn = z / H
-        dl = delta(zn) if r is not None else 0.0
+        ux = (abs(x) - P["cheek_x"] * k) / (P["cheek_rx"] * k)       # 0 at the cheek centre, +-1 at its edges
+        if zn < zp:                                                # outer parts of the lower seat act as if lower:
+            zn_eff = zn - P["fold_lift"] * max(0.0, ux) ** 2      # the fold curves up toward the hip
+        else:
+            zn_eff = zn
+        dl = delta(zn_eff) if r is not None else 0.0
         if dl == 0.0:
             res.append((0.0, 0.0, 0.0))
             continue
         dl = max(-0.025 * k, min(0.035 * k, dl)) * s
         cx, cy, hx, hy = st[(r, int(zn / 0.02))]
         back = smoothstep(0.0, 0.85, (y - cy) / hy)               # only the back surface
-        wx = 1.0 - smoothstep(0.6 * xr, 1.25 * xr, abs(x))        # the cheeks and the spine, not the hips' sides
+        if dl > 0.0 and zn < zl:                                   # added volume: a dome per cheek (never a flat slab)
+            wx = max(0.0, 1.0 - ux * ux) ** 0.5
+        else:                                                      # the lower back and trimming: across the back
+            wx = 1.0 - smoothstep(0.6 * xr, 1.25 * xr, abs(x))
         res.append((0.0, dl * back * wx, 0.0))
+    return res
+
+
+CHEEK = {
+    "z": 0.522,          # dome centre height, fraction of H
+    "x": 0.060,          # dome centre from the midline, metres at 1.70 m
+    "rx": 0.074, "ry": 0.080, "rz": 0.092,   # dome radii (across, depth, height), metres at 1.70 m
+    "inflate": 0.75,     # inside the dome: how far a vertex moves to the dome surface (1 = all the way)
+    "trim": 0.55,        # just outside, below the centre: how far it is pulled in (rounds the lower-outer corner)
+    "trim_r": 1.35,      # ... up to this dome radius
+}
+
+
+def cheek_domes(cos, doms, s=None):
+    """Owner 09.11: "the seat has square corners; it must be firm and convex". Each cheek is fitted to an
+    ellipsoid whose back-most point is the seat's current back line (so the profile and its projection stay):
+    back-surface vertices inside it move out to its surface (a convex, round, firm surface instead of a
+    flat slab), vertices just outside it below its centre are pulled toward it (a curved fold and a rounded
+    lower-outer corner instead of a square one). Nothing moves near the cleft (the two domes meet there),
+    at the front, or above the dome."""
+    s = strength() if s is None else s
+    C = CHEEK
+    H = max(c[2] for c in cos)
+    k = H / 1.70
+    cz, cxo = C["z"] * H, C["x"] * k
+    rx, ry, rz = C["rx"] * k, C["ry"] * k, C["rz"] * k
+    yb = -1e9
+    for (x, y, z), d in zip(cos, doms):                            # the seat's back line at the dome centre
+        if region(d) is not None and abs(z - cz) < 0.01 * H and abs(abs(x) - cxo) < 0.02 * k:
+            yb = max(yb, y)
+    cy = yb - ry
+    res = []
+    for (x, y, z), d in zip(cos, doms):
+        if region(d) is None or y <= cy or abs(x) < 1e-6:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        side = 1.0 if x > 0 else -1.0
+        qx, qy, qz = (x - side * cxo) / rx, (y - cy) / ry, (z - cz) / rz
+        r = (qx * qx + qy * qy + qz * qz) ** 0.5
+        if r < 1e-6:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        if r < 1.0:
+            g = C["inflate"] * smoothstep(0.35, 0.8, r)            # deep points (inside the body) barely move
+        elif r < C["trim_r"] and z < cz:
+            g = C["trim"] * (1.0 - smoothstep(1.0, C["trim_r"], r)) * smoothstep(0.0, 0.6, (cz - z) / rz)
+        else:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        g *= smoothstep(0.004 * k, 0.030 * k, abs(x)) * s          # nothing at the cleft
+        m = (r + (1.0 - r) * g) / r - 1.0                          # along the ray from the centre: r -> r + (1 - r) g
+        res.append(((x - side * cxo) * m, (y - cy) * m, (z - cz) * m))
+    return res
+
+
+SIDE = {"z": 0.490, "h": 0.050, "amount": 0.009}   # fractions of H / metres at 1.70 m
+
+
+def side_fill(cos, doms, s=None):
+    """Owner 09.11 (arrow on a render): a hollow where the lower seat turns into the side of the hip. The
+    posterolateral surface (outer and back at once) at the height of the lower seat is pushed out and back,
+    so the cheek runs into the hip as one convex surface."""
+    s = strength() if s is None else s
+    H = max(c[2] for c in cos)
+    k = H / 1.70
+    st = slice_stats(cos, doms, H, 0.02)
+    res = []
+    for (x, y, z), d in zip(cos, doms):
+        r = region(d)
+        zn = z / H
+        if r is None or abs(zn - SIDE["z"]) > 2.5 * SIDE["h"]:
+            res.append((0.0, 0.0, 0.0))
+            continue
+        cx, cy, hx, hy = st[(r, int(zn / 0.02))]
+        side = 1.0 if x >= 0.0 else -1.0
+        u = (abs(x) - abs(cx)) / hx if r != "torso" else abs(x - cx) / hx   # outward across the slice
+        b = (y - cy) / hy                                                      # backward
+        w = smoothstep(0.15, 0.75, u) * smoothstep(-0.35, 0.35, b) * (1.0 - smoothstep(0.6, 1.0, b))
+        w *= 2.718281828 ** (-((zn - SIDE["z"]) / SIDE["h"]) ** 2)
+        a = SIDE["amount"] * k * w * s
+        res.append((side * a * 0.75, a * 0.66, 0.0))
     return res
 
 

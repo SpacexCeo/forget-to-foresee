@@ -534,6 +534,14 @@ def stage_body():
         prof = B.smooth_field(B.seat_profile([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=4)
         for v, (dx, dy, dz) in zip(bm.data.vertices, prof):
             v.co += V((dx, dy, dz))
+        # each cheek a firm convex dome (owner: "no square corners")
+        dome = B.smooth_field(B.cheek_domes([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=3)
+        for v, (dx, dy, dz) in zip(bm.data.vertices, dome):
+            v.co += V((dx, dy, dz))
+        # no hollow where the lower seat turns into the side of the hip (owner)
+        side = B.smooth_field(B.side_fill([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=4)
+        for v, (dx, dy, dz) in zip(bm.data.vertices, side):
+            v.co += V((dx, dy, dz))
         # soften the nipple detail so tight tops and the jacket lie smoothly over the bust
         b = bmesh.new()
         b.from_mesh(bm.data)
