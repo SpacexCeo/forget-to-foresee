@@ -8,6 +8,7 @@ stop or close a server while it holds a server-only item the owner has not downl
 
 | Path | Size | sha256 | Produced by | Where |
 |---|---|---|---|---|
+| `/root/ftf-media-v2/demo-captions.mp4` | 84 007 666 | `5909ebef94442af27b6951669d75799ccdb8162a1f8f1dab05c33ad22648ba29` | `tools/gpu-server/full2.sh` on e104cab (guest shot excluded) | server-only (captionless version in git, `docs/media/demo.mp4`) |
 | `/root/ftf-media/vk1080/demo-captions.mp4` | 65 289 520 | `14b94ecf607562ab58f38242a2ea772e86c376b2f1363687046d29cd85ba9452` | `tools/gpu-server/vkall.sh` on b7e310b | server-only (captionless version in git at 838b4e1, `docs/media/`) |
 | `/root/ftf-media/vk1080/trailer-captions.mp4` | 24 987 872 | `d64907ed44f5dd55991945a684c7a2cc38947d60c7ef666777d9ef917048935f` | same | server-only |
 | `/root/ftf-media/vk1080/clip-shell-captions.mp4` | 11 738 673 | `960d21fc43a7a2e9c064a6e947c775280bbbf802fbdcbc5ece8c75568aa652bb` | same | server-only |
