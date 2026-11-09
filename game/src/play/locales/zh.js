@@ -293,7 +293,7 @@ export default {
   'wh.hint.endTick.hub': '本场试炼已没有专注。离开贝壳或按 T，看看来客许诺了什么。',
   'wh.hint.offer.hub': '{who} 提出了交易。{who} 说过的话还没有被验证过；回答之前我会先问你。',
   // ---- chapter films (play/chapters.js, cinematic/chapters/) ----
-  'chapter.ui.hold': '长按跳过',
+  'chapter.ui.hold': '点击：下一个镜头 · 长按：跳过短片',
   'chapter.ui.skip': '跳过短片',
   'chapter.ui.continue': '点击继续',
   'chapter.ui.matters': '现在要紧的是',

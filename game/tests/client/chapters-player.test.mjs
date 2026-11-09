@@ -114,3 +114,57 @@ test('overlay motion follows the motion design system tokens; reduced motion is 
   assert.ok(r.opacity > 0.5 && r.opacity < 1 && r.y === 0, 'reduced motion: a 160 ms fade, no movement');
   assert.deepEqual(filmMotion(1 + MOTION.duration.reduced / 1000, 1, 5, { ...o, reduced: true }), { opacity: 1, y: 0 });
 });
+
+test('tap to cut: nextStop walks shot by shot to the final card, then ends the film', async () => {
+  const { nextStop } = await import('../../src/cinematic/chapters/player.js');
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  await s.start();
+  const tl = timeline(buildFilm('arrival', { obs: s.obs }));
+  assert.equal(nextStop(tl, 0), tl.shots[1].start, 'during the title a tap goes to the second shot');
+  assert.equal(nextStop(tl, tl.shots[1].start), tl.shots[2].start, 'at a shot start it goes to the following shot');
+  assert.equal(nextStop(tl, tl.shots[4].start + 0.5), tl.cardStart, 'after the last shot comes the card');
+  assert.equal(nextStop(tl, tl.cardStart), null, 'on the card a tap ends the film');
+  s.dispose();
+});
+
+test('film player: quick taps click through every shot and the card; a long hold still skips', async () => {
+  const THREE = await import('three');
+  const { createFilmPlayer, TAP_MAX_MS } = await import('../../src/cinematic/chapters/player.js');
+  const { SKIP_HOLD_MS } = await import('../../src/play/chapters.js');
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  await s.start();
+  const film = buildFilm('arrival', { obs: s.obs });
+  const listeners = {};
+  const win = { addEventListener: (k, f) => { listeners[k] = f; }, removeEventListener: (k) => { delete listeners[k]; } };
+  const ev = (extra = {}) => ({ preventDefault() {}, stopImmediatePropagation() {}, ...extra });
+  let clock = 0;
+  const hints = [];
+  const overlay = { show() {}, hide() {}, setSubtitle() {}, setSkipText() {}, setHintText() {}, showSkip() {}, showHint: (t) => hints.push(t), update() {} };
+  const shell = { active: false, origin: [0, 300, 0], root: new THREE.Object3D(), activate() { this.active = true; }, deactivate() { this.active = false; }, spawn: () => ({ pos: [0, 300, 4.5] }), setSign() {} };
+  const mk = () => createFilmPlayer({ camera: new THREE.PerspectiveCamera(40, 1.6, 0.1, 1000), player: { pos: [0, 0, 0], heading: 0 }, avatar: new THREE.Object3D(), shell, agents: null, overlay, now: () => 0, renderLine: () => 'line', win, wall: () => clock });
+  const fp = mk();
+  const done = fp.play(film);
+  assert.ok(hints.length >= 1, 'the tap/hold hint is scheduled when a film starts');
+  const tap = (kind) => {
+    if (kind === 'key') { listeners.keydown(ev({ code: 'Space' })); clock += TAP_MAX_MS - 100; listeners.keyup?.(ev({ code: 'Space' })); }
+    else { listeners.pointerdown(ev()); clock += TAP_MAX_MS - 100; listeners.pointerup?.(ev()); }
+  };
+  for (let i = 1; i < film.shots.length; i++) { tap(i % 2 ? 'pointer' : 'key'); assert.equal(fp.shotIndex, i, `tap ${i} cuts to shot ${i}`); }
+  tap('pointer');
+  assert.equal(fp.time, fp.timeline().cardStart, 'the tap after the last shot goes to the card');
+  assert.ok(fp.playing);
+  tap('key');
+  assert.deepEqual(await done, { skipped: false }, 'a tap on the card ends the film');
+  assert.equal(listeners.keydown, undefined, 'input listeners are released');
+
+  const fp2 = mk();
+  const done2 = fp2.play(film);
+  listeners.pointerdown(ev()); clock += SKIP_HOLD_MS + 5; fp2.update(1 / 60);
+  assert.deepEqual(await done2, { skipped: true }, 'holding still skips the whole film');
+  const fp3 = mk();
+  const done3 = fp3.play(film);
+  listeners.keydown(ev({ code: 'KeyA' })); clock += (TAP_MAX_MS + SKIP_HOLD_MS) / 2; listeners.keyup(ev({ code: 'KeyA' }));
+  assert.equal(fp3.shotIndex, 0, 'an abandoned hold (between a tap and a skip) does not cut');
+  fp3.skip(); await done3;
+  s.dispose();
+});

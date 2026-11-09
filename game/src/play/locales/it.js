@@ -294,7 +294,7 @@ export default {
   'wh.hint.endTick.hub': 'Nessuna attenzione rimasta in questa prova. Esci dalla Conchiglia o premi T, e guarda cosa hanno promesso gli Ospiti.',
   'wh.hint.offer.hub': '{who} ha una proposta. Nulla di ciò che {who} ha detto è stato verificato; ti chiederò prima di rispondere.',
   // ---- chapter films (play/chapters.js, cinematic/chapters/) ----
-  'chapter.ui.hold': 'Tieni premuto per saltare',
+  'chapter.ui.hold': 'Tocca: scena successiva · Tieni premuto: salta il filmato',
   'chapter.ui.skip': 'Salta il filmato',
   'chapter.ui.continue': 'Tocca per continuare',
   'chapter.ui.matters': 'Cosa conta adesso',
