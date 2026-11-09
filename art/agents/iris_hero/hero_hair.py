@@ -540,11 +540,12 @@ def render_strand_atlas(path, size=2048, seed=3):
             if col >= 4:
                 x0 = (col + 0.12 + 0.76 * rnd.random()) / 8
             lv = 1.0 - rnd.uniform(0.0, 0.18 if col < 7 else 0.35)
+            y0 = 1.0 - rnd.uniform(0.0, 0.05)                    # ragged roots: no hard card edge
             ph = rnd.uniform(0, math.tau)
             pts = []
             for i in range(PTS):
                 t = i / (PTS - 1)
-                y = 1.0 - t * lv
+                y = y0 - t * (lv - (1.0 - y0))
                 x = x0 + 0.004 * math.sin(t * 7 + ph) * t
                 pts.append((x, y, 0.0))
             strands.append(np.array(pts))
@@ -557,8 +558,8 @@ def render_strand_atlas(path, size=2048, seed=3):
     em = nt.nodes.new("ShaderNodeEmission")
     info = nt.nodes.new("ShaderNodeHairInfo")
     mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"
-    mix.inputs[6].default_value = (0.050, 0.024, 0.013, 1)        # root
-    mix.inputs[7].default_value = (0.150, 0.072, 0.034, 1)        # ends
+    mix.inputs[6].default_value = (0.105, 0.052, 0.027, 1)        # root
+    mix.inputs[7].default_value = (0.230, 0.118, 0.058, 1)        # ends
     nt.links.new(info.outputs["Intercept"], mix.inputs[0])
     var = nt.nodes.new("ShaderNodeMath"); var.operation = "MULTIPLY_ADD"
     nt.links.new(info.outputs["Random"], var.inputs[0]); var.inputs[1].default_value = 0.6; var.inputs[2].default_value = 0.7

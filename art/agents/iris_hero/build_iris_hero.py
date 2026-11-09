@@ -1018,7 +1018,7 @@ def stage_full(shade=True, size=2048, samples=16):
         S.bake_set([bm], "M_Iris_Skin", S.skin_shader, size, OUT, "skin", samples, land=land)
         S.bake_set(cloth, "M_Iris_Garment", S.garment_shader, size, OUT, "garment", samples)
         hair_textures(hair[0], size)
-        cap = S.flat_material("M_Iris_HairCap", (0.050, 0.023, 0.012), 0.7)
+        cap = S.flat_material("M_Iris_HairCap", (0.085, 0.042, 0.022), 0.75)
         hair[1].data.materials.clear()
         hair[1].data.materials.append(cap)
         S.bake_set(eye_objs, "M_Iris_Eye", S.eye_shader, 512, OUT, "eye", samples, ao=False)
