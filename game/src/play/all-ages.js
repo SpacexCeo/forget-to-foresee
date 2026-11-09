@@ -12,6 +12,8 @@ import { attachA11y, ensureA11yStyles } from '../ui/a11y.js';
 import { buildSettings } from '../ui/settings.js';
 import { createRecap } from './recap.js';
 import { createSimpleMode } from './simple.js';
+import { buildSeasonSection, fixedSeedFromSearch } from './season-local.js';
+import { renderMsg } from './i18n.js';
 
 /**
  * @param {object} o
@@ -51,7 +53,7 @@ export function attachAllAges({ play, ctx, uiRoot, settingsDialog = null, win = 
 
   // Settings inside the world: the same form the lobby shows (language, motion, subtitles, interface mode,
   // size, quality, accessibility), appended to the controls dialog body before its Resume button.
-  let settingsEl = null;
+  let settingsEl = null, season = null;
   if (settingsDialog) {
     const body = settingsDialog.querySelector('.ftf-dialog-body') || settingsDialog;
     settingsEl = doc.createElement('section');
@@ -61,7 +63,9 @@ export function attachAllAges({ play, ctx, uiRoot, settingsDialog = null, win = 
     title.id = 'ftf-a11y-settings-title';
     title.dataset.i18n = 'settings.title';
     title.textContent = ctx.i18n.t('settings.title');
-    settingsEl.append(title, buildSettings(ctx));
+    // the season is local (season-local.js): the notice and "Start a new season", asked before discarding
+    season = buildSeasonSection({ t: (k, a) => renderMsg(ctx.i18n, k, a), i18n: ctx.i18n, doc, fixedSeed: fixedSeedFromSearch(doc.defaultView ? doc.defaultView.location.search : '') });
+    settingsEl.append(title, season.el, buildSettings(ctx));
     const last = body.lastElementChild;
     if (last && last.tagName === 'BUTTON') body.insertBefore(settingsEl, last); else body.append(settingsEl);
     ctx.i18n.subscribe(() => { title.textContent = ctx.i18n.t('settings.title'); });
@@ -98,14 +102,14 @@ export function attachAllAges({ play, ctx, uiRoot, settingsDialog = null, win = 
   if (win && win.addEventListener) win.addEventListener('keydown', onKey, true);
 
   const api = {
-    narration, recap, simple, settingsEl,
+    narration, recap, simple, settingsEl, season,
     /** True while one of this layer's sheets is open (hosts may route gamepad navigation to `panel`). */
     get panelOpen() { return recap.isOpen() || !!(simple && simple.active && uiRoot.querySelector('.a11y-simple')); },
     get panel() { return uiRoot.querySelector('.a11y-recap') || uiRoot.querySelector('.a11y-simple'); },
     destroy() {
       if (win && win.removeEventListener) win.removeEventListener('keydown', onKey, true);
       if (observer) observer.disconnect();
-      recap.destroy(); if (simple) simple.destroy(); if (settingsEl) settingsEl.remove();
+      recap.destroy(); if (simple) simple.destroy(); if (season) season.destroy(); if (settingsEl) settingsEl.remove();
     },
   };
   play.allAges = api;

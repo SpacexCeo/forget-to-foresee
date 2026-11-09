@@ -49,6 +49,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     mintToast = createMintToast(host, { t: render, doc, onOpen: () => ui.open('memory') });
     if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs }));
   } catch (e) { console.warn('[play] shard NFT watcher off', e); shards = null; }
+  if (ui.setNearSource) ui.setNearSource(() => (near ? near.status : null)); // the Biography's season record
   const showMints = () => { if (moments && mintToast) for (const m of moments.take(shards.status, session.obs)) mintToast.show(m.card); };
   const renderEvent = (e) => uiI18n.renderEvent(e, i18n);
   const mode = () => (prefs && prefs.get().hudMode === 'pro' ? 'pro' : 'novice');
@@ -117,8 +118,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       if (shards) { shards.observe(session.obs); moments.observe(session.obs); showMints(); }
       refresh();
     }),
-    near ? near.subscribe(() => refresh()) : null,
-    shards ? shards.subscribe(() => { showMints(); if (ui.panel === 'memory') ui.update(); }) : null,
+    near ? near.subscribe(() => { refresh(); if (ui.panel === 'end') ui.update(); }) : null,
+    shards ? shards.subscribe(() => { showMints(); if (ui.panel === 'memory' || ui.panel === 'end') ui.update(); }) : null,
     session.on('goal', refresh),
     session.on('spot', refresh),
     prefs ? prefs.subscribe(() => refresh()) : null,
