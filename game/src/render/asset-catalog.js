@@ -54,6 +54,16 @@ export function modelUrl(name, base = '/') {
   return base + 'assets/models/' + name + ext;
 }
 
+/**
+ * The model URL with a cache key: the file's build-time byte size (?v=<bytes>). Hosts such as GitHub
+ * Pages let browsers and phones keep a .glb for a while; a new build of a model has a new size, so the
+ * new file is fetched instead of a stale copy (the owner's phone kept the old Iris after a deploy).
+ */
+export function versionedModelUrl(name, base = '/', bytes) {
+  const url = modelUrl(name, base);
+  return Number.isFinite(bytes) && bytes > 0 ? url + '?v=' + bytes : url;
+}
+
 // Blender may append ".001" to duplicate names; three.js strips the dot ("001").
 const COL_RE = /_col(?:[._]?\d+)?$/;
 const INSPECT_RE = /_inspect(?:[._]?\d+)?$/;

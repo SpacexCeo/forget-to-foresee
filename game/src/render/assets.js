@@ -12,7 +12,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MODEL_FILES } from 'virtual:model-list';
-import { ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, socketRole } from './asset-catalog.js';
+import { ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
 import { instancePriority, assetPriority, planStreaming, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
 import { transformTriangles, MASK_ALL } from '../physics/collision.js';
@@ -138,7 +138,7 @@ function loader() {
 
 /** Fetches and parses one model; rejects with a readable error (404, not a GLB, parse failure). */
 export async function fetchGltf(name, { onProgress } = {}) {
-  const url = modelUrl(name, BASE);
+  const url = versionedModelUrl(name, BASE, MODEL_FILES[name]);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   const total = Number(res.headers.get('content-length')) || 0;
@@ -151,7 +151,7 @@ export async function fetchGltf(name, { onProgress } = {}) {
   } else buffer = await res.arrayBuffer();
   const magic = new DataView(buffer).getUint32(0, true);
   if (buffer.byteLength < 12 || magic !== 0x46546c67) throw new Error(`${url}: not a binary glTF (.glb)`);
-  const gltf = await loader().parseAsync(buffer, url.slice(0, url.lastIndexOf('/') + 1));
+  const gltf = await loader().parseAsync(buffer, url.slice(0, url.split('?')[0].lastIndexOf('/') + 1));
   return { gltf, bytes: buffer.byteLength };
 }
 
