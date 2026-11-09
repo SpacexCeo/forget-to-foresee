@@ -115,6 +115,7 @@
 .wh-root .wh-signs__list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content; /* a revealed card (outcome lines, proof panel) is taller than its min-height: rows must grow, never squeeze */
   align-content: start;
   overflow-y: auto;
   min-height: 0;

@@ -359,3 +359,10 @@ test('layout: the desktop trial card widens for long values instead of clipping 
   assert.match(card, /min-width: calc\(246 \* var\(--wh-px\)\);/, 'the mockup width is the floor');
   assert.match(card, /max-width: calc\(340 \* var\(--wh-px\)\);/, 'capped clear of the quest banner');
 });
+
+// Revealed sign cards carry outcome lines and the proof panel, far taller than their min-height: the list's rows must
+// grow with the card (owner screenshot 10.11: on phones the cards overlapped when the rows kept the 104 px minimum).
+test('layout: the Signs list rows grow with each card, never squeeze it to its min-height', () => {
+  const css = read('../src/ui/world-hud/signs.css');
+  assert.match(css, /\.wh-root \.wh-signs__list \{[^}]*grid-auto-rows: max-content/);
+});
