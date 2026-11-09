@@ -44,7 +44,7 @@ const CSS = `
 .cl-amount .u { font: 600 44px/1 'Source Sans 3', sans-serif; letter-spacing: .5em; color: ${PEARL}; margin-top: 6px; }
 .cl-amount .w { font: 700 52px/1.1 'Atkinson Hyperlegible', sans-serif; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,.8); }
 .cl-label { font: 600 40px/1 'Source Sans 3', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: ${GOLD}; }
-.cl-value { font: 400 54px/1.15 'Libre Caslon Text', Georgia, serif; color: ${PEARL}; margin: 10px 0 30px; }
+.cl-value { font: 400 50px/1.15 'Libre Caslon Text', Georgia, serif; color: ${PEARL}; margin: 8px 0 24px; white-space: nowrap; }
 .cl-mono { font: 400 44px/1.2 'DejaVu Sans Mono', Menlo, monospace; color: ${NACRE}; text-shadow: 0 2px 16px rgba(0,0,0,.85); }
 `;
 
@@ -148,15 +148,14 @@ export function createLayers(doc = document) {
       const e = el(doc, 'div', 'cl-abs cl-glass'); Object.assign(e.style, { left: it.x + 'px', top: it.y + 'px', width: W + 'px', height: H + 'px' });
       const art = el(doc, 'div', 'cl-abs'); Object.assign(art.style, { left: '60px', top: ((H - S) / 2) + 'px', width: S + 'px', height: S + 'px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(236,230,216,.18), 0 0 60px rgba(127,179,213,.25)' });
       art.innerHTML = it.svg.replace(/width="\d+" height="\d+"/, `width="${S}" height="${S}"`);
-      const strokes = [...art.querySelectorAll('circle, line')].map((n, i) => ({ n, i, L: n.getTotalLength ? n.getTotalLength() : 400 }));
-      strokes.forEach((o) => o.n.setAttribute('stroke-dasharray', `${o.L}`));
-      const col = el(doc, 'div', 'cl-abs', `<div style="font:400 64px/1.1 'Libre Caslon Text',Georgia,serif;margin-bottom:34px">${it.title}</div>` + (it.fields || []).map(([k, v]) => `<div class="cl-label">${esc(k)}</div><div class="cl-value">${esc(v)}</div>`).join(''));
+      const strokes = [...art.querySelectorAll('circle, line')].map((n, i) => ({ n, i, L: 0 })); // lengths are read once mounted
+      const col = el(doc, 'div', 'cl-abs', `<div style="font:400 58px/1.1 'Libre Caslon Text',Georgia,serif;margin-bottom:30px;white-space:nowrap">${it.title}</div>` + (it.fields || []).map(([k, v]) => `<div class="cl-label">${esc(k)}</div><div class="cl-value">${esc(v)}</div>`).join(''));
       Object.assign(col.style, { left: (60 + S + 70) + 'px', top: '56px' });
       e.append(art, col); root.append(e);
       const rows = [...col.children];
       return (t) => {
         const a = env(t, it, 0.6, 0.4), k = out(P(t, it.from, 0.8)); e.style.opacity = a.toFixed(3); e.style.transform = `translateY(${((1 - k) * 30).toFixed(1)}px) scale(${lerp(0.97, 1, k).toFixed(4)})`;
-        strokes.forEach((o) => o.n.setAttribute('stroke-dashoffset', (o.L * (1 - out(P(t, it.from + 0.2 + o.i * 0.06, 0.7)))).toFixed(1)));
+        strokes.forEach((o) => { if (!o.L) { o.L = o.n.getTotalLength(); o.n.setAttribute('stroke-dasharray', `${o.L}`); } o.n.setAttribute('stroke-dashoffset', (o.L * (1 - out(P(t, it.from + 0.2 + o.i * 0.06, 0.7)))).toFixed(1)); });
         rows.forEach((r, i) => { const q = out(P(t, it.from + 0.5 + i * 0.09, 0.5)); r.style.opacity = q.toFixed(3); r.style.transform = `translateY(${((1 - q) * 14).toFixed(1)}px)`; });
       };
     },

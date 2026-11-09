@@ -172,7 +172,7 @@ async function main() {
   const enc = { fps, width, height, crf: video.output?.crf ?? 17, preset: video.output?.preset ?? 'slow', grain: video.output?.grain ?? 0 };
   await assemble({ shots: tl.shots, audioWav: wav, out: clean, ...enc });
   await assemble({ shots: tl.shots, audioWav: wav, out: captioned, ass, fontsDir, ...enc });
-  const finalLuma = lumaCheck(clean, { allowJumps: tl.shots.length + 2 });
+  const finalLuma = lumaCheck(clean, { allowJumps: tl.shots.length + 2 + shots.reduce((n, s) => n + (s.allowJumps ?? 0), 0) });
   log(`final luma: ${JSON.stringify(finalLuma)}`);
   const report = { finalLuma, video: name, title: video.title, width, height, fps, tier, duration: tl.duration, shots: results.map((r) => ({ shot: r.shot, frames: r.frames, secondsPerFrame: r.secondsPerFrame, loaded: r.loaded, setupFrames: r.setupFrames, errors: r.errors, consoleErrors: r.consoleErrors, hashes: r.hashes })), mix, files: {} };
   for (const f of [clean, captioned, srt]) { const st = statSync(f); const pr = f.endsWith('.mp4') ? ffprobe(f) : null; report.files[f] = { bytes: st.size, mb: +(st.size / 1048576).toFixed(1), duration: pr ? +pr.format.duration : null, video: pr ? pr.streams.find((s) => s.codec_type === 'video') : null }; }

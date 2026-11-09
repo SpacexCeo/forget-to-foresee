@@ -17,14 +17,14 @@ const IN = [Math.cos(97 * Math.PI / 180), Math.sin(97 * Math.PI / 180)]; // from
 const SHELL2 = [SHELL[2][0], SHELL[2][1] + 9, SHELL[2][2]];
 const ACCENT = { iris: '#b49be6', salt: '#d9dcd6', ash: '#bdb6ad', moss: '#9cba7c', amber: '#e6a84a', frost: '#a9c6d4' };
 // A sweep inside the camp ring (radius 21 m: 9 m from the camps) from one angle to another, looking out at the camps.
-const ring = (a0, a1, n = 5) => Array.from({ length: n }, (_, i) => { const a = (a0 + (a1 - a0) * i / (n - 1)) * Math.PI / 180; return [[21 * Math.cos(a), 2.3, 21 * Math.sin(a)], [30 * Math.cos(a), 1.5, 30 * Math.sin(a)]]; });
-const sweep = (a0, a1) => { const r = ring(a0, a1); return { type: 'dolly', path: r.map((x) => x[0]), look: r.map((x) => x[1]), fov: [40, 38], ease: 'inOutSine' }; };
+const ring = (a0, a1, n = 5) => Array.from({ length: n }, (_, i) => { const a = (a0 + (a1 - a0) * i / (n - 1)) * Math.PI / 180; return [[14 * Math.cos(a), 3.4, 14 * Math.sin(a)], [30 * Math.cos(a), 1.2, 30 * Math.sin(a)]]; });
+const sweep = (a0, a1) => { const r = ring(a0, a1); return { type: 'dolly', path: r.map((x) => x[0]), look: r.map((x) => x[1]), fov: [44, 42], ease: 'inOutSine' }; };
 // The camera's right in a view along -dir (XZ), to frame the subject off-centre beside the token panel.
 const RIGHT = [-(-IN[1]), 0, -IN[0]];
 const lookBeside = (p, k) => [p[0] - RIGHT[0] * k, p[1], p[2] - RIGHT[2] * k];
 const card = (clan, name, temper, from, to) => ({ kind: 'clanCard', clan, name, sub: temper, color: ACCENT[clan], target: clan === 'iris' ? null : clan, world: clan === 'iris' ? head('iris') : null, from, to, lift: 120 });
 const ROOT8 = D.root.slice(0, 8) + '…';
-const PANEL = { kind: 'panel', svg: S.svg, x: 80, y: 190, w: 1060, h: 690, art: 320, title: 'Minted on <b>NEAR</b> testnet',
+const PANEL = { kind: 'panel', svg: S.svg, x: 80, y: 180, w: 1180, h: 720, art: 320, title: 'Minted on <b>NEAR</b> testnet',
   fields: [['Memory', `Iris · A Call · weight ${S.weight}`], ['Forgotten · Sold', `Trial ${S.forgotten_at_tick} · Frost, ${S.price} silk`], ['Season root', ROOT8], ['Opened leaf', `#${S.unlocked_index} · ${S.unlocked_leaf.slice(0, 8)}…`]] };
 // eslint-disable-next-line no-unused-vars
 const pin = (clan, name, temper, from, to, target = clan) => ({ kind: 'pin', target: clan === 'iris' ? null : target, world: clan === 'iris' ? head('iris') : null, name, sub: temper, color: ACCENT[clan], from, to, lift: 160 });
@@ -65,9 +65,9 @@ export default {
       actions: [music(0, 52), cue(0.3, 'bid_tick_2', 0.7), cue(1.15, 'guest_spike', 0.5), cue(2.1, 'storm_crack', 0.8)],
       overlays: [...FRAME],
       layers: [
-        { kind: 'transfer', a: head('iris'), b: head('iney'), label: 'Frost wins the shard', amount: '13', from: 0.1, to: 1.75, arc: 260 },
-        { kind: 'quote', world: head('sol'), text: 'It is a weapon', who: 'Salt', color: ACCENT.salt, from: 0.95, to: 2.45, y: 300 },
-        { kind: 'fracture', a: head('pepel'), b: head('yantar'), label: 'Ash cheats Amber', amount: '16', from: 1.75, snap: 2.4, to: 3.0, arc: 80 },
+        { kind: 'transfer', a: head('iris'), b: head('iney'), label: 'Frost wins the shard', amount: '13', from: 0.1, to: 1.75, arc: 200, ax: 1480, ay: 330 },
+        { kind: 'quote', world: head('sol'), text: 'It is a weapon', who: 'Salt', color: ACCENT.salt, from: 0.95, to: 2.45, x: 520, y: 300 },
+        { kind: 'fracture', a: head('pepel'), b: head('yantar'), label: 'Ash cheats Amber', amount: '16', from: 1.75, snap: 2.4, to: 3.0, arc: 80, ax: 1300, ay: 720 },
       ],
     },
     { // 9–12 · macro on the physical shard: it cracks, two future signs rise out of it
@@ -95,14 +95,14 @@ export default {
     },
     { // 15–18.5 · crane up toward Shell II: the token's leaf is the season's leaf #3 on NEAR testnet
       name: 'proof', duration: 3.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
-      camera: { type: 'dolly', path: [[SHARD_AT[0] + IN[0] * 2.9, 1.9, SHARD_AT[2] + IN[1] * 2.9], [5, 10, -15], [6, 22, -4]], look: [lookBeside(SHARD_AT, 0.42), [-8, 14, 14], [SHELL2[0] + 8.3, SHELL2[1], SHELL2[2] + 8.6]], fov: [32, 44], ease: 'inOutSine', minHeight: 0.5 },
+      camera: { type: 'dolly', path: [[SHARD_AT[0] + IN[0] * 2.9, 1.9, SHARD_AT[2] + IN[1] * 2.9], [5, 10, -15], [6, 22, -4]], look: [lookBeside(SHARD_AT, 0.42), [-8, 14, 14], [SHELL2[0] + 16, SHELL2[1] - 2, SHELL2[2] + 17]], fov: [32, 44], ease: 'inOutSine', minHeight: 0.5 },
       actions: [music(0, 56), music(2.2, 30), cue(1.4, 'gift_chime', 0.7)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 4, fadeIn: 0, fadeOut: 0, amount: 0.22 }, { kind: 'black', from: 3.0, to: 4.5, fadeIn: 0.5, fadeOut: 0 }],
       layers: [
         { ...PANEL, from: -2, to: 3.5, fadeOut: 0.5 },
-        { kind: 'seal', from: 0.2, to: 3.5, cx: 300, cy: 535, r: 205, label: '', value: '', lx: -999, ly: 0 },
+        { kind: 'seal', from: 0.2, to: 3.5, cx: 300, cy: 540, r: 205, label: '', value: '', lx: -999, ly: 0 },
         { kind: 'node', world: SHELL2, title: `leaf #${S.unlocked_index}`, sub: 'ftf-seasons', from: 0.8, to: 3.5 },
-        { kind: 'screenLink', from2: [1110, 790], world: SHELL2, from: 0.9, to: 3.5 },
+        { kind: 'screenLink', from2: [1240, 800], world: SHELL2, from: 0.9, to: 3.5 },
         { kind: 'text', html: 'Same leaf, <span style="color:#e4c272">sealed on NEAR testnet.</span>', big: true, from: 1.3, to: 3.45, y: 70 },
       ],
     },
