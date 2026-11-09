@@ -122,7 +122,38 @@ export function createMintToast(host, { t, doc = host.ownerDocument || document,
           onOpen ? el(doc, 'button', { class: 'sh-toast__link', type: 'button', text: t('shard.nft.open'), onclick: () => { close(); onOpen(card); } }) : null)),
       el(doc, 'button', { class: 'sh-toast__close', type: 'button', 'aria-label': t('shard.nft.close'), text: '×', onclick: close }));
     region.append(current);
+    place(current);
+    // the toast stays while the pointer or focus is on it, then leaves after a short beat
+    const hold = () => clearTimeout(timer);
+    const release = () => { clearTimeout(timer); timer = setTimeout(close, 2500); };
+    current.addEventListener('pointerenter', hold); current.addEventListener('focusin', hold);
+    current.addEventListener('pointerleave', release); current.addEventListener('focusout', release);
     timer = setTimeout(close, ttl);
+  }
+  /** Puts the toast in the free gap of the world HUD: under the quest banner, clear of the trial card and the Signs
+   * panel (desktop); between the top bar and the quest card (phone). Measured at show time, so it follows the scale. */
+  function place(node) {
+    const root = doc.querySelector('.wh-root');
+    if (!root) return;
+    const vw = doc.documentElement.clientWidth;
+    const box = (sel) => { const e = root.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left < vw && r.right > 0 ? r : null; };
+    let top, left = 16, right = vw - 16;
+    if (root.dataset.layout === 'mobile') {
+      const bar = box('.wh-topbar');
+      top = bar ? bar.bottom + 8 : null;
+    } else {
+      const quest = box('.wh-quest'), trial = box('.wh-trial'), signs = box('.wh-signs');
+      top = (quest ? quest.bottom : 8) + 10;
+      if (quest) { left = Math.max(left, quest.left); right = Math.min(right, quest.right); }
+      if (trial && trial.right + 12 > left && trial.bottom > top) left = trial.right + 12;
+      if (signs && signs.top < top + 110 && signs.left - 12 < right) right = Math.max(left + 280, signs.left - 12);
+    }
+    const width = Math.min(420, right - left);
+    if (top != null) node.style.top = Math.round(top) + 'px';
+    node.style.width = Math.round(width) + 'px';
+    node.style.left = Math.round(left + (right - left - width) / 2) + 'px';
+    node.style.right = 'auto';
+    node.style.margin = '0';
   }
   return {
     show(card) { queue.push(card); next(); },
