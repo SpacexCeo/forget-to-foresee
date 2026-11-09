@@ -7,7 +7,8 @@ the GPU memory. Works for BasisLZ/ETC1S (supercompression 1: the per-level image
 supercompression global data are dropped too) and for UASTC (+ Zstandard). Geometry and the rest
 of the glb are copied byte for byte.
 
-Usage: glb_mobile.py in.glb out.glb [max=2048]
+Usage: glb_mobile.py in.glb out.glb [max=2048] [inspect_max]
+(inspect_max caps the textures whose name contains `_inspect`, e.g. 1024: phones rarely inspect up close)
 """
 import json, struct, sys
 
@@ -58,7 +59,7 @@ def drop_top_level(k):
     for p, blob in blobs: out[p:p + len(blob)] = blob
     return bytes(out), w >> 1
 
-def main(src, dst, mx=2048):
+def main(src, dst, mx=2048, inspect_mx=None):
     b = open(src, 'rb').read()
     jl = u32(b, 12); j = json.loads(b[20:20 + jl])
     bin_off = 20 + jl + 8; bl = u32(b, 20 + jl)
@@ -71,7 +72,8 @@ def main(src, dst, mx=2048):
         v = views[im['bufferView']]
         assert v.get('buffer', 0) == 0
         k = binb[v.get('byteOffset', 0):v.get('byteOffset', 0) + v['byteLength']]
-        while u32(k, 20) > mx:
+        cap = inspect_mx if (inspect_mx and '_inspect' in im.get('name', '')) else mx
+        while u32(k, 20) > cap:
             k, _ = drop_top_level(k); changed += 1
         replace[im['bufferView']] = k
     # Every region of the embedded buffer 0: plain views on buffer 0, and meshopt views whose
@@ -107,4 +109,5 @@ def main(src, dst, mx=2048):
     print(f'{src} -> {dst}: {changed} levels dropped, {len(b)/1e6:.1f} MB -> {total/1e6:.1f} MB')
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 2048)
+    main(sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 2048,
+         int(sys.argv[4]) if len(sys.argv) > 4 else None)

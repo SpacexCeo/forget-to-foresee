@@ -43,10 +43,10 @@ BLEND_PATH = os.path.join(HERE, f"{ASSET}.blend")
 STATS_PATH = os.path.join(QA_DIR, "build-stats.json")
 
 TEX_SIZE = 4096
-BAKE_SIZE = 8192
+BAKE_SIZE = int(os.environ.get("FTF_BAKE_SIZE", "8192"))   # 4096 for a CPU-only build (no supersampling)
 RUNTIME_TRI_BUDGET = 16000
 INSPECT_TRI_BUDGET = 60000
-MASTER_EDGE = 0.0040          # max master edge before displacement (near-square cells)
+MASTER_EDGE = float(os.environ.get("FTF_MASTER_EDGE", "0.0040"))   # max master edge before displacement; 0.006 fits a 16 GB CPU box
 
 TOP_Z = 0.420                 # table top (low medallion)
 SOCKET_DEPTH = 0.040
@@ -205,21 +205,22 @@ def build_parts(col, m_stone, m_bronze, m_socket, m_amber):
         (0.447, TOP_Z - 0.002), (0.449, TOP_Z + 0.003), (0.444, TOP_Z + 0.008),
         (0.400, TOP_Z + 0.010), (0.362, TOP_Z + 0.008), (0.355, TOP_Z + 0.003),
         (0.354, TOP_Z - 0.010), (0.362, TOP_Z - 0.014), (0.372, TOP_Z - 0.008)], 48))
+    # inlay flush with the stone, at most 1.5 mm proud (review 07.11 fix 5)
     part("inlay_ring", m_bronze, lambda bm: P.revolve(bm, [
-        (1.348, TOP_Z - 0.002), (1.349, TOP_Z + 0.002), (1.343, TOP_Z + 0.005),
-        (1.267, TOP_Z + 0.005), (1.261, TOP_Z + 0.002), (1.262, TOP_Z - 0.002)], 120,
+        (1.348, TOP_Z - 0.003), (1.349, TOP_Z + 0.0008), (1.345, TOP_Z + 0.0015),
+        (1.265, TOP_Z + 0.0015), (1.261, TOP_Z + 0.0008), (1.262, TOP_Z - 0.003)], 120,
         rfunc=lobe, phase=sector_angle(1)))
     part("inlay_ring_outer", m_bronze, lambda bm: P.revolve(bm, [
-        (1.538, TOP_Z - 0.002), (1.539, TOP_Z + 0.0015), (1.535, TOP_Z + 0.0035),
-        (1.517, TOP_Z + 0.0035), (1.513, TOP_Z + 0.0015), (1.514, TOP_Z - 0.002)], 120,
+        (1.538, TOP_Z - 0.003), (1.539, TOP_Z + 0.0006), (1.536, TOP_Z + 0.0012),
+        (1.516, TOP_Z + 0.0012), (1.513, TOP_Z + 0.0006), (1.514, TOP_Z - 0.003)], 120,
         rfunc=lobe, phase=sector_angle(1)))
 
     # Bronze strips along the six dividers, running out to the outer inlay ring.
     def strips(bm):
         for k in range(1, 7):
             a = sector_angle(k) + math.pi / 6
-            P.box(bm, Vector((0.9875 * math.cos(a), 0.9875 * math.sin(a), TOP_Z + 0.0013)),
-                  (1.035, 0.018, 0.0045), a)
+            P.box(bm, Vector((0.9875 * math.cos(a), 0.9875 * math.sin(a), TOP_Z - 0.0008)),
+                  (1.035, 0.018, 0.0045), a)                  # 1.5 mm proud
     part("divider_strips", m_bronze, strips, bevel=(0.0022, 1, 40))
 
     # Six short shell-rib buttresses on the drum under the dividers, bronze shoes.
@@ -233,14 +234,12 @@ def build_parts(col, m_stone, m_bronze, m_socket, m_amber):
         part(f"fin_{k}", m_stone,
              lambda bm, a=a: P.prism(bm, fin, lambda z: 0.046 - 0.012 * (z - 0.10) / 0.2, a),
              bevel=(0.007, 1))
-        part(f"fin_shoe_{k}", m_bronze,
-             lambda bm, a=a: P.box(bm, Vector((1.615 * math.cos(a), 1.615 * math.sin(a), 0.118)),
-                                   (0.080, 0.112, 0.046), a), bevel=(0.005, 1))
+        # no bronze shoe: the blocks read as furniture glides (review 07.11 fix 8)
 
-    # Amber cabochon on the central boss: the human-decision mark (not baked).
+    # Amber disc set into the central boss (review 07.11 fix 7: a flat inlay, not a glossy dome).
     bm = bmesh.new()
-    P.revolve(bm, [(0.078, SEAT_Z + 0.008), (0.076, SEAT_Z + 0.016), (0.066, SEAT_Z + 0.025),
-                   (0.048, SEAT_Z + 0.031), (0.024, SEAT_Z + 0.034)], 32, cap_top=True)
+    P.revolve(bm, [(0.078, SEAT_Z + 0.002), (0.078, SEAT_Z + 0.0075), (0.074, SEAT_Z + 0.0085)], 32,
+              cap_top=True)
     amber = P.bm_object("amber", bm, m_amber, col)
     P.finish_shading(amber, angle=60)
     return stone, bronze, amber
@@ -282,6 +281,79 @@ def build_collision(col):
     ngon("scroll_table_foot_col", 24, 1.70, 1.70, 0.0, 0.10)
     ngon("scroll_table_body_col", 24, 1.65, 1.65, 0.10, TOP_Z)
     return objs
+
+
+# ------------------------------------------------- carved joints and signs
+
+def _glyphs():
+    """The game's own sign forms as engraving strokes (local metres: u along the ring, v outward)."""
+    def arc(r, a0, a1, n=10, cx=0.0, cv=0.0):
+        return [(cx + r * math.cos(a0 + (a1 - a0) * i / n), cv + r * math.sin(a0 + (a1 - a0) * i / n))
+                for i in range(n + 1)]
+    return {
+        "arc": [arc(0.022, math.radians(200), math.radians(340), cv=0.010)],
+        "spike": [[(-0.016, -0.026), (0.0, 0.028), (0.016, -0.026)]],
+        "loop": [arc(0.014, 0.0, 2 * math.pi, 14, cv=0.010), [(0.0, -0.004), (0.004, -0.030)]],
+        "drop": [arc(0.012, math.radians(-30), math.radians(210), 10, cv=-0.012),
+                 [(-0.0104, -0.006), (0.0, 0.030), (0.0104, -0.006)]],
+    }
+
+
+def _seg_dist(px, py, a, b):
+    ax, ay = a
+    bx, by = b
+    dx, dy = bx - ax, by - ay
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / max(dx * dx + dy * dy, 1e-12)))
+    return math.hypot(px - ax - t * dx, py - ay - t * dy)
+
+
+def carve_joints_and_signs(master):
+    """Review 07.11 fixes 1 and 6 on the dense master, before displacement: six radial block joints
+    (4 mm deep, 7 mm wide) across the outer stone ring and down the drum under the dividers, and a ring
+    of engraved sign strokes (2.5 mm deep, 6-7 cm tall) on the bare outer ring between the inlays."""
+    me = master.data
+    mw = master.matrix_world
+    inv = mw.inverted()
+    glyphs = _glyphs()
+    names = sorted(glyphs)
+    R_SIGN = 1.432
+    step = 0.13 / R_SIGN                     # one sign every 13 cm along the ring
+    n_sign = int(2 * math.pi / step)
+    dividers = [sector_angle(k) + math.pi / 6 for k in range(1, 7)]
+    joints = signs = 0
+    for v in me.vertices:
+        p = mw @ v.co
+        r = math.hypot(p.x, p.y)
+        th = math.atan2(p.y, p.x)
+        top = p.z > TOP_Z - 0.003 and 1.355 < r < 1.640
+        side = r > 1.52 and 0.104 < p.z < TOP_Z - 0.003
+        if not (top or side):
+            continue
+        dj = min(abs(((th - a + math.pi) % (2 * math.pi)) - math.pi) for a in dividers) * r
+        depth = 0.0
+        if dj < 0.0035:
+            depth = 0.004 * (1.0 - (dj / 0.0035) ** 2)
+            joints += 1
+        elif top and 1.395 < r < 1.470 and dj > 0.05:
+            k = round(th / step) % n_sign
+            g = glyphs[names[(k * 7 + k // 5) % len(names)]]
+            u = (((th - k * step + math.pi) % (2 * math.pi)) - math.pi) * R_SIGN
+            vv = r - R_SIGN
+            d = min(_seg_dist(u, vv, a, b) for stroke in g for a, b in zip(stroke, stroke[1:]))
+            if d < 0.0028:
+                depth = 0.0025 * (1.0 - (d / 0.0028) ** 2)
+                signs += 1
+        if depth:
+            if top:
+                p.z -= depth
+            else:
+                f = (r - depth) / r
+                p.x *= f
+                p.y *= f
+            v.co = inv @ p
+    me.update()
+    P.log("carved", {"joint_verts": joints, "sign_verts": signs, "signs": n_sign})
+    return {"joint_verts": joints, "sign_verts": signs, "signs": n_sign}
 
 
 # ---------------------------------------------------------- master shading
@@ -329,7 +401,7 @@ def stage_build():
     m_stone = P.mat_simple("tmp_stone", P.COL_STONE)
     m_bronze = P.mat_simple("tmp_bronze", P.COL_BRONZE)
     m_socket = P.mat_simple("tmp_socket", P.COL_CHARCOAL)
-    m_amber = P.mat_simple("M_ScrollTable_Amber", (0.95, 0.40, 0.07), rough=0.18,
+    m_amber = P.mat_simple("M_ScrollTable_Amber", (0.95, 0.40, 0.07), rough=0.35,
                            emit=COL_AMBER, emit_strength=0.5)
     stone, bronze, amber = build_parts(work, m_stone, m_bronze, m_socket, m_amber)
     body = P.join(stone + bronze, f"{ASSET}_body")
@@ -355,11 +427,12 @@ def stage_build():
     if STOP_AFTER_MASTER:
         P.log("master test", json.dumps(stats))
         return
+    stats["carved"] = carve_joints_and_signs(master)
     P.groups_from_materials(master)
     P.add_displace(master, "stone_weather", "CLOUDS", 0.060, 0.0042, "tmp_stone", noise_depth=4)
     P.add_displace(master, "stone_chips", "VORONOI", 0.032, -0.0034, "tmp_stone")
     P.add_displace(master, "stone_pits", "DISTORTED_NOISE", 0.012, 0.0010, "tmp_stone", distortion=2.0)
-    P.add_displace(master, "socket_wave", "CLOUDS", 0.050, 0.0010, "tmp_socket", noise_depth=2)
+    P.add_displace(master, "socket_wave", "CLOUDS", 0.160, 0.0008, "tmp_socket", noise_depth=2)   # >= 3 cm: no moire
     P.add_displace(master, "bronze_hammer", "CLOUDS", 0.012, 0.0007, "tmp_bronze", noise_depth=2)
     h_stone, kit_s = P.stone_material("H_Stone", lichen_top=0.14, scale=1.3, pale=0.55, lichen=0.55,
                                      cracks=0.85, dirt_strength=0.5)
@@ -392,13 +465,14 @@ def stage_build():
     for o in (body, insp):
         for i, sl in enumerate(o.material_slots):
             sl.material = P.bake_target_material(f"bake_{o.name}_{i}")
+    cpu = stats["cycles_device"] == "CPU"                       # a CPU build: fewer samples, same maps
     imgs, stats["bakes"] = P.run_bakes(sc, master, kits, (
-        ("normal", "NORMAL", body, 64, "bsdf"),
-        ("normal_inspect", "NORMAL", insp, 64, "bsdf"),
-        ("color", "EMIT", body, 64, "color"),
-        ("rough", "EMIT", body, 32, "rough"),
-        ("metal", "EMIT", body, 32, "metal"),
-        ("ao", "AO", body, 1024, "bsdf")), BAKE_SIZE, cage=0.02, ray=0.05)
+        ("normal", "NORMAL", body, 8 if cpu else 64, "bsdf"),
+        ("normal_inspect", "NORMAL", insp, 8 if cpu else 64, "bsdf"),
+        ("color", "EMIT", body, 4 if cpu else 64, "color"),
+        ("rough", "EMIT", body, 4 if cpu else 32, "rough"),
+        ("metal", "EMIT", body, 2 if cpu else 32, "metal"),
+        ("ao", "AO", body, 64 if cpu else 1024, "bsdf")), BAKE_SIZE, cage=0.02, ray=0.05)
 
     clock.start("textures")
     paths, stats["texture_files"] = P.write_textures(imgs, BAKE_SIZE, TEX_SIZE, TEX_DIR, ASSET, REPO)
@@ -413,6 +487,8 @@ def stage_build():
                                    tex["normal_inspect"])
     m_sock_i = P.textured_material("M_ScrollTable_Socket_Inspect", tex["base"], tex["orm"],
                                    tex["normal_inspect"])
+    for m in (m_body, m_sock, m_body_i, m_sock_i):              # closed slab: single-sided (review fix 12)
+        m.use_backface_culling = True
     final = {"tmp_stone": m_body, "tmp_bronze": m_body, "tmp_socket": m_sock}
     final_i = {"tmp_stone": m_body_i, "tmp_bronze": m_body_i, "tmp_socket": m_sock_i}
     for o, orig, table in ((body, body_slots, final), (insp, insp_slots, final_i)):
@@ -431,6 +507,7 @@ def stage_build():
     for o in (runtime, inspect):
         work.objects.unlink(o)
         out.objects.link(o)
+        P.triangulate_ngons(o)               # the amber disc's cap: glTF tangents need tris/quads
     cols = build_collision(out)
     for c in cols:
         P.triangulate_ngons(c)

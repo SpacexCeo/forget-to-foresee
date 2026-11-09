@@ -4,47 +4,47 @@
   "stages": [
     {
       "stage": "model_runtime",
-      "seconds": 0.07
+      "seconds": 0.47
     },
     {
       "stage": "uv_unwrap",
-      "seconds": 1.56
+      "seconds": 4.23
     },
     {
       "stage": "master_highpoly",
-      "seconds": 57.58
+      "seconds": 64.86
     },
     {
       "stage": "inspect_mesh",
-      "seconds": 1.95
+      "seconds": 2.8
     },
     {
       "stage": "bake_gpu",
-      "seconds": 179.01
+      "seconds": 2074.24
     },
     {
       "stage": "textures",
-      "seconds": 24.54
+      "seconds": 122.0
     },
     {
       "stage": "materials",
-      "seconds": 0.01
+      "seconds": 0.07
     },
     {
       "stage": "assemble_export",
-      "seconds": 0.61
+      "seconds": 1.52
     }
   ],
-  "cycles_device": "OPTIX",
+  "cycles_device": "CPU",
   "ngons_triangulated": 13,
-  "runtime_body_triangles": 13486,
-  "uv_seams": 5712,
+  "runtime_body_triangles": 13222,
+  "uv_seams": 5424,
   "uv": {
     "texture_size": 4096,
     "texel_density_px_per_m": {
-      "median": 643.3,
-      "p10": 639.5,
-      "p90": 644.4,
+      "median": 644.0,
+      "p10": 640.1,
+      "p90": 645.1,
       "coefficient_of_variation": 0.014
     },
     "uv_anisotropy": {
@@ -52,67 +52,72 @@
       "p95": 1.031,
       "share_over_1_5": 0.0018
     },
-    "triangles_measured": 13486,
-    "uv_fill": 0.4466
+    "triangles_measured": 13222,
+    "uv_fill": 0.4422
   },
   "master_densify": {
-    "max_edge_m": 0.004,
-    "passes": 8,
-    "triangles": 12755114
+    "max_edge_m": 0.006,
+    "passes": 7,
+    "triangles": 4857660
   },
-  "master_triangles": 12755114,
+  "carved": {
+    "joint_verts": 9365,
+    "sign_verts": 3722,
+    "signs": 69
+  },
+  "master_triangles": 4857660,
   "bakes": {
     "normal": {
-      "seconds": 31.95,
-      "samples": 64,
-      "size": 8192
+      "seconds": 209.62,
+      "samples": 8,
+      "size": 4096
     },
     "normal_inspect": {
-      "seconds": 32.07,
-      "samples": 64,
-      "size": 8192
+      "seconds": 200.34,
+      "samples": 8,
+      "size": 4096
     },
     "color": {
-      "seconds": 33.3,
-      "samples": 64,
-      "size": 8192
+      "seconds": 96.22,
+      "samples": 4,
+      "size": 4096
     },
     "rough": {
-      "seconds": 28.85,
-      "samples": 32,
-      "size": 8192
+      "seconds": 54.53,
+      "samples": 4,
+      "size": 4096
     },
     "metal": {
-      "seconds": 17.14,
-      "samples": 32,
-      "size": 8192
+      "seconds": 26.01,
+      "samples": 2,
+      "size": 4096
     },
     "ao": {
-      "seconds": 35.5,
-      "samples": 1024,
-      "size": 8192
+      "seconds": 1487.27,
+      "samples": 64,
+      "size": 4096
     }
   },
   "texture_files": {
     "base": {
       "file": "art/scroll_table/textures/scroll_table_basecolor.jpg",
-      "bytes": 2992612
+      "bytes": 3035282
     },
     "orm": {
       "file": "art/scroll_table/textures/scroll_table_orm.jpg",
-      "bytes": 10372206
+      "bytes": 10584864
     },
     "normal": {
       "file": "art/scroll_table/textures/scroll_table_normal.png",
-      "bytes": 15301230
+      "bytes": 18284538
     },
     "normal_inspect": {
       "file": "art/scroll_table/textures/scroll_table_inspect_normal.png",
-      "bytes": 15132031
+      "bytes": 18127445
     }
   },
-  "runtime_triangles": 13772,
-  "inspect_triangles": 54874,
+  "runtime_triangles": 13380,
+  "inspect_triangles": 53594,
   "collision_triangles": {
     "scroll_table_foot_col": 92,
     "scroll_table_body_col": 92
@@ -139,7 +144,7 @@
       0.43
     ]
   },
-  "glb_bytes": 45985232,
+  "glb_bytes": 52143092,
   "glb": {
     "extensionsUsed": [],
     "nodes": [
@@ -181,22 +186,22 @@
       {
         "name": "scroll_table_normal",
         "mime": "image/png",
-        "bytes": 15301230
+        "bytes": 18284538
       },
       {
         "name": "scroll_table_orm",
         "mime": "image/jpeg",
-        "bytes": 10372206
+        "bytes": 10584864
       },
       {
         "name": "scroll_table_basecolor",
         "mime": "image/jpeg",
-        "bytes": 2992612
+        "bytes": 3035282
       },
       {
         "name": "scroll_table_inspect_normal",
         "mime": "image/png",
-        "bytes": 15132031
+        "bytes": 18127445
       }
     ]
   },
