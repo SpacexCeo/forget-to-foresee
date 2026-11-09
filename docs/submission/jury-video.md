@@ -75,6 +75,38 @@ Pillar screen time: agents 14.0 s (shots 5–8) + the crisis of an agent (shot 1
 | Commit tx | `6TtWeZ3W…` to `ftf-seasons.testnet` by `ftf-coordinator.testnet` | `game/src/net/near-deployment.js`; `docs/near.md` |
 | Arrows | coordinator → contract (signed txs); contract → browser (read-only RPC views); agent API → engine; coordinator → ftf-shards (mint) | `docs/near.md` "What runs where"; `game/src/net/near.js` |
 
+## v3: the cinematic test (18.5 s), after the owner's art-direction brief (09.11)
+
+The owner rejected the 18.5 s motion-graphics draft as the visual direction: **the world comes first**. The story
+order is: the world creates emotion, the agents create conflict, the memory creates mystery, the blockchain provides
+proof. v3 rebuilds the test on **in-engine footage** (GPU, frame-stepped, the anti-flicker path). The interface and the
+data are **anchored in depth**: a new layer module (`game/src/cinematic/layers.js`) projects world positions through
+the shot's camera every frame. A clan's name sits on that clan's camp, a link runs between two real camps, and the
+token assembles out of the shard's own screen position. The layers are rendered by the same virtual clock as the
+frame. No flat cards fill the screen and no blurred gameplay sits behind UI. Script: `tools/capture/shots/jury-test.mjs`.
+
+Legend: **R** = real in-engine (models, environments, lighting, Guests, VFX). **D** = data layer anchored in depth
+(DOM/SVG in the game's type and tokens, projected each frame). **A** = new artwork: none needed for the test; every
+visual is an existing game asset or the contract's own SVG.
+
+| Time | Shot | Camera | Environment and subject (R) | Data layer (D) | Sound |
+|---|---|---|---|---|---|
+| 0.0–3.0 | `fly-in` | Crane-dolly from inside the cloud deck (y ≈ 95) down through the mist; the archipelago opens beneath; ends in a slow drift over the plaza ring, the four Shells framing it | Sky, the cloud sea, fog, the island, the camps, the Shells hovering | 1.2 s: the chapter title **I · The Agents** emerges from the haze (opacity and a blur that sharpens: the "atmosphere" reveal), held 1.6 s | wind bed, music tension 30 → 40 |
+| 3.0–4.5 | `clans-back` | Low lateral dolly along the back of the ring (Salt → Iris → Frost camps), 45° look-across, foreground camp silhouettes passing | Real agent models idling at their camps; their camp architecture | Each clan's **name** (Libre Caslon, 120 px) and **temper** (44 px tracked) pinned above its head, entering in a stagger as the camera passes (expo-out, rise) with a fine anchor stem down to the head | one soft `ui_notify` per name |
+| 4.5–6.0 | `clans-front` | The mirror move along the front (Ash → Moss → Amber) | as above | as above | as above |
+| 6.0–9.0 | `conflict` | High three-quarter crane over the plaza, slowly rotating, all six camps in frame | The island at golden hour, agents at camps | Links **drawn between the real camps** in depth, one event per beat: 6.2 Frost → Iris (gold line, a packet travels, "Frost buys Iris's memory · 13 silk"); 7.2 Salt's ring broadcast expands over the island ("Salt: 'It is a weapon'"); 8.0 Ash → Amber (rust line, then it **snaps**: "Ash cheats Amber · 16"). Hero line per beat, metadata small | `bid_tick`, `guest_spike` (rumor), `storm_crack` (snap); music 40 → 60 |
+| 9.0–12.0 | `shard-macro` | Slow push-in macro on the shard on its pedestal at the Iris plateau (0.4 m crystal in a bronze clasp; glTF transmission and volume), shallow depth (long lens, fov 18 → 12) | The physical shard, its refraction of the island behind, the pedestal | 9.4 title **II · The Memory Shard** low; 10.4 ink cracks draw across the crystal (anchored to the shard); 11.0 the vision's **two real future signs** rise out of it as ink rings (judge signs #4 and #6) | `memory_dissolve`, `vision_whoosh`; music dips to 35 |
+| 12.0–15.0 | `token` | The camera arcs 40° around the shard, pulling back to a medium | The shard and the pedestal, the camp behind out of focus | The contract's on-chain SVG **assembles from the shard's position**: its rings and strokes fly in and lock (the bytes of `shardSvg()`). Hero: **Token 793f6c05e89839f2-7**. Secondary: Iris · Call · forgotten trial 4 · sold to Frost, 13. 14.0 the **season seal** ring closes around it: root 03dbd458… | `ui_confirm` on lock |
+| 15.0–18.5 | `proof` | Crane up and back from the pedestal toward Shell II hovering over the island (the Shell where sign #1 came true) | The island, the Shell, the sky | A dotted line runs from the token up to the Shell, where a node reads **ftf-seasons.testnet · leaf #3**. Climax line, large: **"Same leaf, sealed on NEAR testnet."** Small: mint 2nqGqiVf… · ftf-shards.testnet | `gift_chime`, music resolves 60 → 30 |
+
+Truth notes for v3: the three events, the token data, the root and the leaf are the verified values in the table
+above. The dotted line is "same leaf" (the shard contract stores it and does not call ftf-seasons), so the climax says
+"same leaf" and puts no check mark on the link. Shell II is chosen only as the visual anchor for the season contract,
+because sign #1 came true there; the diagram does not claim that the leaf lives in that Shell.
+
+GPU: the six in-engine shots render at 1080p60 ultra through `gpu-job.sh` on the RTX 4090. They are drafted first at
+480×270 on this container's CPU to check staging, labels and timing.
+
 ## Truth notes (checked against the engine and the README)
 
 - **The vote payouts use the game's rules (v3), not the 2D baseline.** The brief said gift +40 and survived +15. Those
