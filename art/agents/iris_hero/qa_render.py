@@ -101,6 +101,7 @@ def shot(path, loc, tgt, lens=50, ortho=None):
 
 if os.environ.get("QA_ONLY") == "deform":                 # a deformation check: one close full-body shot
     shot(out + "_deform.png", (1.1, -2.9, 1.05), (0, 0, 0.88), 45)
+    shot(out + "_deform_side.png", (3.1, 0.0, 1.05), (0, 0, 0.88), 45)
     sys.exit(0)
 shot(out + "_face.png", (0.30, -0.95, 1.66), (0.0, -0.03, 1.60), 85)
 shot(out + "_body.png", (1.5, -4.6, 1.25), (0, 0, 0.88), 42)
