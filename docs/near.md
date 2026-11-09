@@ -60,7 +60,9 @@ The on-chain `shard_svg` of shard 7 is byte-identical to the game's `shardSvg()`
 In the game (headless Chromium, 1280×800, 1920×1080, 390×844): `?demo=judge&mode=walk`, after trial 3 the revealed
 Sign #1 shows **Verified ✓** and, below the anchor, **Verified on NEAR testnet ✓** linking to the reveal transaction of
 leaf #0. No console errors. The game never signs: it only reads `get_season` and `get_revealed_leaf`.
-No HUD element shows the shard NFTs yet (request 9).
+Shard NFTs in the game (09.11, `claude/shard-nft-hud`): after Frost buys Iris's shard at the trial-6 auction a
+"Minted on NEAR testnet" toast appears, and the Memories panel shows the 3 shards as NFT cards (one `shards_of_season`
+view). Screens: `docs/screens/shard-nft/`.
 
 ### Control handed to the owner (09.11.2026)
 

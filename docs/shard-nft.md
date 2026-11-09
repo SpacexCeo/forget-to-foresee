@@ -1,8 +1,8 @@
 # Memory shards as NEP-171 NFTs
 
 Status (09.11): **deployed on testnet** as [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet), the judge playthrough's
-three shards minted (`793f6c05e89839f2-7`, `-10`, `-15`; hashes in `docs/near.md`). The game's read-only client and
-badge model read it; no HUD element shows shard NFTs yet (request 9 in `docs/collab-requests.md`).
+three shards minted (`793f6c05e89839f2-7`, `-10`, `-15`; hashes in `docs/near.md`). The game shows them: NFT cards in the
+Memories panel and a "Minted on NEAR testnet" toast on the judge path (see Game side).
 
 ## Design
 
@@ -26,7 +26,24 @@ cases). Transfers: the owner of a token moves it with `nft_transfer`; no approva
   auction)`, `createShardNftClient` (read-only views: `get_shard`, `shards_of_season`, `season_shard_count`, `nft_token`,
   `nft_metadata`), `createShardWatcher` (one view per season; `badge(auctionId)` → "Shard minted on NEAR testnet ✓" with
   the mint transaction link; silent when disabled, offline or for unlisted seasons).
-- HUD rendering: Task F, request 9 in `docs/collab-requests.md` (strings `wh.shard.near.*` in all five locales).
+- HUD (`game/src/ui/world-hud/shard-card-model.js`, `shard-card.js`, `shard-card.css`; wired in `game/src/play/world-hud.js`
+  and the Memories panel of `game/src/play/ui.js`):
+  - **Memories panel → "Memory shards on NEAR"**: one card per shard of the season that exists on-chain, Iris's first:
+    the ink ring (the token's `metadata.media`, compared byte for byte with `shardSvg()` of the on-chain data, then
+    drawn in stroke by stroke; a mismatch would show the chain's image unverified), "NFT · NEP-171 · ftf-shards.testnet",
+    token id, owner account (explorer link), the biography (who forgot which memory of which weight at which trial,
+    who bought it for how much at which auction), "Bound to the sealed season · leaf #N" linked to that leaf's reveal
+    transaction on `ftf-seasons.testnet`, and "View on nearblocks" (`/nft-token/ftf-shards.testnet/<token>`).
+  - **Toast "Minted on NEAR testnet"**: when a shard seen open in this session closes with a buyer and the token
+    exists on-chain (judge path: trial 6, Frost buys Iris's call for 13 silk; later Salt buys Frost's two insights).
+    It holds while hovered or focused; "Open card" opens the Memories panel.
+  - **Gating, never a fake token**: a card needs the token on-chain AND `shardExtra(local) === shardExtra(chain)`
+    (a judge who plays differently has a different shard #7, so nothing shows); open auctions never match. Live
+    seasons (not in `NEAR_DEPLOYMENT.shardMints`): no RPC call, one quiet line "Shard NFTs are on-chain for the judge
+    season only." RPC failure: nothing. Strings `shard.nft.*` in all five play locales.
+  - Tests: `game/tests/client/shard-nft-hud.test.mjs` (present, absent or different, live season, RPC error, the mint
+    moment, locales). Headless capture on the production build: `node tests/client/shard-hud-capture.mjs`
+    (screens in `docs/screens/shard-nft/`).
 
 ## Commands
 
