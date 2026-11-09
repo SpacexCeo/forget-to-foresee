@@ -1,0 +1,92 @@
+1
+00:00:00,600 --> 00:00:02,450
+They draw the future.
+
+2
+00:00:02,650 --> 00:00:04,450
+Four Shells. Six clans.
+
+3
+00:00:06,150 --> 00:00:08,850
+Read it slot by slot.
+
+4
+00:00:08,950 --> 00:00:10,450
+Ask the Guests.
+
+5
+00:00:10,700 --> 00:00:12,450
+I · The Agents
+
+6
+00:00:14,200 --> 00:00:16,400
+Silk, a memory, a temper.
+
+7
+00:00:16,600 --> 00:00:19,950
+They trade… and break trust.
+
+8
+00:00:20,200 --> 00:00:24,450
+Your AI agent can play a whole season via our HTTP API.
+
+9
+00:00:24,700 --> 00:00:26,450
+II · The Memory Shard
+
+10
+00:00:26,650 --> 00:00:28,950
+Forget a memory forever…
+
+11
+00:00:29,200 --> 00:00:31,950
+…to see the future first.
+
+12
+00:00:32,200 --> 00:00:34,900
+Bound to the sealed season.
+
+13
+00:00:35,100 --> 00:00:37,450
+Minted on NEAR testnet.
+
+14
+00:00:37,650 --> 00:00:39,350
+17 trials. Every reveal checked.
+
+15
+00:00:39,450 --> 00:00:40,950
+Tension rises.
+
+16
+00:00:41,150 --> 00:00:42,950
+Trial 13 · The crisis
+
+17
+00:00:43,120 --> 00:00:44,800
+Ash turns away.
+
+18
+00:00:44,950 --> 00:00:46,950
+Ash’s Key restores them.
+
+19
+00:00:47,150 --> 00:00:48,950
+Trial 17: Gift or Weapon?
+
+20
+00:00:49,150 --> 00:00:51,200
+Stake early, bigger share.
+
+21
+00:00:51,350 --> 00:00:53,450
+Then the vote pays out.
+
+22
+00:00:53,650 --> 00:00:56,950
+Sealed before trial 1. Checked on NEAR.
+
+23
+00:00:57,100 --> 00:00:59,900
+Forget to Foresee · Made by @Lambada_eth
+

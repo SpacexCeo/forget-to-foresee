@@ -20,6 +20,7 @@ Every shot's renderer: ANGLE (NVIDIA, Vulkan 1.4.329, RTX 4090); all passed the 
 | `clip-shell.mp4` (8 s, 9 MB) | ink, read (emerge excluded); 0 runner errors |
 | `clip-memory.mp4` (10 s, 6 MB) | memory, card; **1 runner error**: shot `memory`, same "no memory button" (its key moment is missing) |
 | `clip-verified.mp4` (12 s, 8 MB) | card, verified; 0 runner errors |
+| `jury.mp4` (60 s, 67 MB) + `jury-captions.mp4` (57 MB) + `.srt` + `jury-sheet.jpg` | **in `main` (owner's request, 10.11)**: the jury video of branch `claude/busy-ptolemy-kj2b2e` at 56acb37, 1080p60 tier ultra on the owner's RTX 2060 SUPER (ANGLE/D3D11); 27 shots, all passed the flicker check (`plate-proof` keeps 2 allowed luma jumps: the test shot's dolly clips through geometry at frames 29–30); **1 runner error**: shot `forget`, "no memory button (kind call)". The motion-graphics pages were rendered from the vite dev server (the production build has no `cine/jury.html` entry and, once added, hits a TDZ across the cyclic chunks `play ↔ ui`, `play ↔ client-core`); the captions version was burned from `jury.mp4` by hand (ffmpeg's `ass` filter rejects a Windows `fontsdir` path), so there is no `.report.json` |
 
 The burned-caption versions stay on the render server (`docs/art/server-inventory.md`). The earlier
 1080p drafts (b7e310b) flickered and were replaced.
