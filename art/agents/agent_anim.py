@@ -349,7 +349,7 @@ STYLE = {
     # knee: hip drop when standing (m); swing: walk arm swing scale; sway: pelvis
     # roll/yaw scale; bounce: vertical bob scale; tempo: speed of idle cycles (int)
     "iris": dict(track_run=0.062, track_walk=0.088, hips_walk=(-0.012, 0.010), hips_run=(-0.045, 0.025),
-                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.03, knee=0.003,
+                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.0, knee=0.003,
                  swing=1.1, sway=0.9, bounce=1.0, tempo=1, cloth=1.0),
     "sol": dict(lean=1, hunch=2, protract=2, chin=2, tilt=6, width=0.015, knee=0.01,
                 swing=0.6, sway=1.6, bounce=0.6, tempo=1, cloth=0.8),
