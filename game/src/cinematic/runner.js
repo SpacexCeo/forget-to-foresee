@@ -6,6 +6,7 @@
 // the public play API; it never evaluates a rule.
 import * as THREE from 'three';
 import { compileCamera } from './camera.js';
+import { createLayers } from './layers.js';
 import { createOverlay } from './overlay.js';
 
 const KEYUP_DELAY_FRAMES = 2;
@@ -185,6 +186,14 @@ export class ShotRunner {
     };
   }
 
+  /** A world point through this frame's camera, in 1920×1080 stage pixels: [x, y, in front of the camera]. */
+  project(w) {
+    const cam = this.game.rig.camera;
+    cam.updateMatrixWorld();
+    const v = new THREE.Vector3(w[0], w[1], w[2]).project(cam);
+    return [(v.x + 1) / 2 * 1920, (1 - v.y) / 2 * 1080, v.z < 1 && Math.abs(v.x) < 1.6 && Math.abs(v.y) < 1.6];
+  }
+
   /** Head position and heading (radians about +Y, 0 = facing +Z) of Iris or a clan agent. */
   targetOf(id) {
     const g = this.game, play = this.play;
@@ -216,6 +225,7 @@ export class ShotRunner {
     this.actions = (shot.actions || []).map((a, i) => ({ ...a, id: i, done: false }));
     if (!this.overlay) this.overlay = createOverlay(document);
     this.overlay.set(shot.overlays || []);
+    if (shot.layers || this.layers) { if (!this.layers) this.layers = createLayers(document); this.layers.set(shot.layers || []); }
     this.setUi(shot.ui || 'game');
     for (const h of shot.hide || []) this.hide(h);
     this.attach();
@@ -433,6 +443,7 @@ export class ShotRunner {
     await this.clock.settle(3);
     this.wrapAudio();
     if (this.overlay) this.overlay.update(this.t);
+    if (this.layers && this.game) this.layers.update(this.t, (w) => this.project(w), (id) => this.targetOf(id));
     for (const h of this.hidden) this.hide(h); // models that streamed in since bring their labels/nameplates back
     if (this.renderOn && this.t >= 0) {
       const cam = this.game.rig.camera;
