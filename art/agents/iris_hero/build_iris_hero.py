@@ -1249,7 +1249,7 @@ def bake_face(rig, body, actions):
     sk.animation_data_create()
     face_actions = {}
     for clip, act in actions.items():
-        n, loop, _ = agent_anim.CLIPS[clip]
+        n, loop, _ = agent_anim.clip_spec("iris", clip)
         curves, eyes = face_curves(clip, n, loop)
         fa = bpy.data.actions.new(clip + "_face")
         fa.use_fake_user = True

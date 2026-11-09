@@ -88,11 +88,11 @@ function accelLean(state, speed, dt, reduced, gain = 0.03, max = 0.1) {
   return state.pitch;
 }
 const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
-const WALK_REF = 1.7, RUN_REF = 3.57; // m/s the walk / run clips were authored at
+const WALK_REF = 1.7, RUN_REF = 3.3; // m/s the walk / run clips were authored at
 
 /**
  * Locomotion layer on a mixer: the walk and run actions always play, their weights follow the
- * actual ground speed (idle → walk by 0.6 m/s, walk → run from 1.7 to 3.57 m/s) and their playback
+ * actual ground speed (idle → walk by 0.6 m/s, walk → run from 1.7 to 3.3 m/s) and their playback
  * rate follows it too, so the stride matches the ground. `move` (0..1) is how much of the pose the
  * gait owns; the caller scales its idle / cue actions by 1 - move. Without a run clip the walk clip
  * carries the run at a higher rate; without a walk clip the layer is inert (procedural fallback).

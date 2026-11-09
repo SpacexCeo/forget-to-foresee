@@ -77,7 +77,7 @@ export function stepMotion(m, wish, maxSpeed, dt, p = DEFAULT_MOTION, grounded =
  * speed too). idle → walk completes by `walkOn` m/s, walk → run runs from `walkRef` to `runRef`.
  * `walkScale` / `runScale` are the clip playback rates (clips authored at walkRef / runRef).
  */
-export function gaitBlend(speed, { walkRef = 1.7, runRef = 3.57, walkOn = 0.6, idleBelow = 0.05 } = {}) {
+export function gaitBlend(speed, { walkRef = 1.7, runRef = 3.3, walkOn = 0.6, idleBelow = 0.05 } = {}) {
   const s = Math.max(0, speed);
   const run = clamp((s - walkRef) / (runRef - walkRef), 0, 1);
   const move = clamp((s - idleBelow) / (walkOn - idleBelow), 0, 1);

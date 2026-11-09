@@ -10,7 +10,7 @@ import { DEFAULT_MOTION, NPC_MOTION, createMotion, stepMotion, gaitBlend, turnRa
 import { CameraRig } from '../../src/render/camera-rig.js';
 import { floorWorld, makePlayer, simulate, measureAll } from './movement-measure.mjs';
 
-const WALK = 1.7, RUN = WALK * 2.1, DEG = 180 / Math.PI;
+const WALK = 1.7, RUN = WALK * 1.94, DEG = 180 / Math.PI;
 const place = (ch, pos) => { ch.pos = pos.slice(); ch.prevPos = pos.slice(); ch.lastSafe = pos.slice(); return ch; };
 
 test('quick start: 90 % of the walk speed within 0.3 s, run tops out at 2.1x and takes longer', () => {
@@ -226,10 +226,10 @@ test('gait blend: idle at rest, pure walk at the walk speed, pure run at the run
   const walk = gaitBlend(1.7);
   assert.deepEqual([walk.idle, walk.walk, walk.run], [0, 1, 0]);
   assert.ok(Math.abs(walk.walkScale - 1) < 1e-9);
-  const run = gaitBlend(3.57);
+  const run = gaitBlend(3.3);
   assert.deepEqual([run.idle, run.walk, run.run], [0, 0, 1]);
   assert.ok(Math.abs(run.runScale - 1) < 1e-9);
-  const mid = gaitBlend((1.7 + 3.57) / 2);
+  const mid = gaitBlend((1.7 + 3.3) / 2);
   assert.ok(Math.abs(mid.walk - 0.5) < 1e-9 && Math.abs(mid.run - 0.5) < 1e-9);
   const slow = gaitBlend(0.3);
   assert.ok(slow.idle > 0 && slow.walk > 0 && slow.run === 0 && Math.abs(slow.idle + slow.walk - 1) < 1e-9);
@@ -246,9 +246,9 @@ test('GaitLayer on a real mixer: weights follow the speed with a short easing, t
   const gait = new GaitLayer(mixer, clips);
   for (let i = 0; i < 60; i++) gait.update(1 / 60, 1.7);
   assert.ok(gait.weights.walk > 0.99 && gait.weights.run < 0.01);
-  gait.update(1 / 60, 3.57);
+  gait.update(1 / 60, 3.3);
   assert.ok(gait.run.time >= 0, 'run clip time was synced from the walk cycle');
-  for (let i = 0; i < 60; i++) gait.update(1 / 60, 3.57);
+  for (let i = 0; i < 60; i++) gait.update(1 / 60, 3.3);
   assert.ok(gait.weights.run > 0.99 && gait.weights.walk < 0.01);
 });
 
