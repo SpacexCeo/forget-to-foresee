@@ -1,6 +1,68 @@
-# Handoff: live state on 09.11.2026, ~10:00 UTC (12:00 Kyiv), lead session
+# Handoff: wrap-up on 09.11.2026, ~11:00 UTC (13:00 Kyiv), lead session
 
-Read this section first if a session, the usage limit or the container ended. Everything below "History" is older.
+**Start here.** All work was stopped and merged on the owner's order. `main` = PR #15 (`85dbc02`), live on Pages;
+508 game tests, 28 server tests. Every worker branch is merged (except the old MP4s, see below). Worker reports:
+`docs/handoff/agent-reports/` (`jury-video.md`, `gpu-art-session.md`, `shard-nft-hud.md`, `near-live.md`, ...).
+Sections 1–8 below the wrap-up are the detailed live state from 10:00 UTC (still valid unless the wrap-up says
+otherwise).
+
+## Wrap-up: done today (09.11)
+
+- NEAR live on testnet (season-commit + memory-shard), "Verified on NEAR testnet ✓" in the judge path, control
+  handed to `lambada_eth.testnet` (PR #8, `docs/near.md`).
+- Memory-shard NFTs visible in the game: NFT card with the on-chain SVG, owner, biography, sealed leaf, nearblocks
+  link; "Minted on NEAR testnet" toast; gated on the real token (PR #15, N2 report).
+- Iris: stylized-realism hero (PR #10), then **athletic sportswear WIP build in production** on the owner's order
+  (PR #15; `agent_iris.glb` 7.9 MB); cache-busted model URLs (PR #11); hair alpha-to-coverage (PR #12).
+- Chapter films: tap = next shot, hold = skip (PR #7).
+- No constant drone: Shell hum loops and the inside-Shell bed off (PR #15, owner).
+- HDR guard in the game's post chain: no black bloom squares (PR #14). NEAR watcher early-timer fix (PR #15).
+- Credit Lambada_eth everywhere; submission texts final (`docs/submission/x-post.md`, `apply-form.md`: idea 1,988
+  chars, tracks games + nfts).
+- Jury video: storyboard v3 + owner's art direction, depth-anchored layers, capture-only dusk look + DOF, black-block
+  gate, three 4K plates rounds (proxies in `docs/media/plates/`).
+
+## Wrap-up: NOT done (next agent, in priority order)
+
+1. **Jury video** (`docs/handoff/agent-reports/jury-video.md`): plates round 4 at commit `262cd3a` was never run
+   (`FTF_FORMAT=3840x2160@30 FTF_NO_LAYERS=1 bash tools/capture/gpu-job.sh 262cd3a /root/ftf-media/jury-test-4
+   jury-test` on the RTX 4090); then the detector on the proxies, the layers pass, the server-side 4K composite
+   (`bash tools/capture/jury-composite.sh jury-test /root/ftf-media/jury-test-4/work/jury-test-3840x2160-ultra
+   /root/ftf-media/jury-test-4/final 3840x2160 30`), deliverables A–F for the owner, then the full 60 s. Owner card
+   art and badges are still procedural stand-ins; the six-step shard fracture is not built; Iris 63 silk at trial 1 is
+   unexplained (cards show no silk numbers).
+2. **Submission**: the owner approves the video, posts the X thread, sends the post URL, the consent and "yes";
+   send the payload once (`docs/submission/apply-form.md`; owner values in section 3 below; email: ask the owner).
+   Then the `hackathon-submission` tag at freeze (13.11 20:00 Kyiv). Deadline 15.11 01:59 Kyiv.
+3. **Athletic Iris polish** (`gpu-art-session.md`): close-up hair cards (black streaks in the Cycles close-up),
+   pose deformation check, ribbed cuffs, knit normal detail, phone check on a real device.
+4. **Juror R2** (`session_01QfMhgDAKdSL1ErtGNuQjaQ`, `docs/jury/`): schedules paused (trig_01W1fqnBUpajNw2RddU5YpMn
+   :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45); re-enable with `update_trigger enabled=true` to get scorecards.
+5. Known gaps: live seasons are not on-chain; uk/it/zh native proofread; real-phone feel test; guest/emerge capture
+   hang on the GPU; QA-014, 015, 023–026.
+
+## Wrap-up: where the data is
+
+- **Code and docs:** `main` (everything merged). Lead helpers: `tools/lead/`.
+- **Old demo/trailer/clip MP4s (clean GPU renders, 09.11 night):** branch `claude/laughing-thompson-dc7r09`,
+  `docs/media/*.mp4` (kept out of `main` for size; `docs/media/README.md` says how to fetch).
+- **Art binaries that existed only on the server** (shell blends, raw glbs, textures, Guest, Iris blends, v2 1080p
+  videos): branch `art-sources` (Git LFS, with `SHA256SUMS`).
+- **Still only on the RTX 4090 server** (Clore order 2419013; do not stop it before the owner decides): 1,147
+  project files, 17.2 GB in total, listed with path, size and sha256 in `docs/art/server-only-files-2026-11-09.tsv`
+  and the important ones in `docs/art/server-inventory.md`. The 40 files over 100 MB (7.8 GB) are mostly the 4K
+  jury plates (`/root/ftf-media/jury-test*/work/jury-test-3840x2160-ultra/*.mp4`); they are reproducible from the
+  pinned commits with `tools/capture/gpu-job.sh`, and their 1080p proxies, stills and camera logs are in git.
+  The server is reached only through its Jupyter (URL and token with the owner, never in the repo).
+- **Sessions:** all workers stopped. J3 `session_01QfMhgE18GEabs5bp2KW1we`, GPU art session
+  `session_01QfMhgDiqET9W6zwun44weJ` (owner's desktop session, the only one with server access), N2
+  `session_01QfMhgFEsXrK8QJY4e2z3eh`, M `session_01QfMhgExsbgGFqMUCWf9EVh` (holds the original testnet keys), juror
+  R2. New workers: `claude-opus-5-5`, medium effort (Fable exhausted until ~12.11).
+
+
+# Live state at 10:00 UTC (detail)
+
+Everything below "History" is older.
 
 ## 1. Where things are
 
