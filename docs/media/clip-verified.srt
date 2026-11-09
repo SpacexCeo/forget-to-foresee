@@ -1,16 +1,12 @@
 1
-00:00:00,400 --> 00:00:03,400
-The clans lend, trade and break trust: agents with wallets and memory.
+00:00:02,200 --> 00:00:05,600
+Trial 3 ends: a Gift of 20 on Shell II, as Iris read it.
 
 2
-00:00:03,700 --> 00:00:06,900
-Trial 3 ends. A Gift of 20 on Shell II; your stake returns.
+00:00:06,000 --> 00:00:09,400
+The reveal is checked against the season’s seal.
 
 3
-00:00:07,400 --> 00:00:11,000
-The season was fixed before trial 1 and checked against that seal.
-
-4
-00:00:11,400 --> 00:00:13,600
+00:00:09,600 --> 00:00:11,800
 Verified ✓
 

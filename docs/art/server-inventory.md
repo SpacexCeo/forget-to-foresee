@@ -9,6 +9,10 @@ stop or close a server while it holds a server-only item the owner has not downl
 | Path | Size | sha256 | Produced by | Where |
 |---|---|---|---|---|
 | `/root/ftf-media-v2/demo-captions.mp4` | 84 007 666 | `5909ebef94442af27b6951669d75799ccdb8162a1f8f1dab05c33ad22648ba29` | `tools/gpu-server/full2.sh` on e104cab (guest shot excluded) | server-only (captionless version in git, `docs/media/demo.mp4`) |
+| `/root/ftf-media-v2/trailer-captions.mp4` | 38 433 937 | `332c2af586ab01e26bc151be1b65e6cb41291100245549245c8ccea0551531a5` | `tools/gpu-server/full2.sh` on e104cab (guest/emerge excluded) | server-only (captionless version in git) |
+| `/root/ftf-media-v2/clip-shell-captions.mp4` | 9 311 176 | `5526b85df680dffdcbce8e710853734f925f8bb3a88e3ef6b359f44ae77e1b42` | `tools/gpu-server/full2.sh` on e104cab (guest/emerge excluded) | server-only (captionless version in git) |
+| `/root/ftf-media-v2/clip-memory-captions.mp4` | 5 875 755 | `fd6598665dcb59cb44ca0ad1dbc51ffbfa61cf9330b89271b52d71627132dc7b` | `tools/gpu-server/full2.sh` on e104cab (guest/emerge excluded) | server-only (captionless version in git) |
+| `/root/ftf-media-v2/clip-verified-captions.mp4` | 8 316 769 | `883523e964484bb2ef7331f4f794ae0fc3faf251a4d52f4e6f381ab06208db98` | `tools/gpu-server/full2.sh` on e104cab (guest/emerge excluded) | server-only (captionless version in git) |
 | `/root/ftf-media/vk1080/demo-captions.mp4` | 65 289 520 | `14b94ecf607562ab58f38242a2ea772e86c376b2f1363687046d29cd85ba9452` | `tools/gpu-server/vkall.sh` on b7e310b | server-only (captionless version in git at 838b4e1, `docs/media/`) |
 | `/root/ftf-media/vk1080/trailer-captions.mp4` | 24 987 872 | `d64907ed44f5dd55991945a684c7a2cc38947d60c7ef666777d9ef917048935f` | same | server-only |
 | `/root/ftf-media/vk1080/clip-shell-captions.mp4` | 11 738 673 | `960d21fc43a7a2e9c064a6e947c775280bbbf802fbdcbc5ece8c75568aa652bb` | same | server-only |

@@ -1,20 +1,24 @@
 1
-00:00:01,600 --> 00:00:05,200
-A season fixed before trial 1 and checked against that seal.
+00:00:01,000 --> 00:00:05,600
+Behind the glass, the Guests draw round signs of what is coming.
 
 2
-00:00:06,400 --> 00:00:10,200
-The Guests draw round signs on the glass. Read them.
+00:00:08,200 --> 00:00:10,800
+Your agent Iris reads one. You stake silk on it.
 
 3
-00:00:11,400 --> 00:00:15,600
-Six clans of AI agents trade words, silk and trust. Stake on what you read.
+00:00:13,200 --> 00:00:15,800
+It comes true, and the seal checks it: Verified ✓
 
 4
-00:00:17,200 --> 00:00:21,400
-Your agent Iris forgets a memory forever to see the future.
+00:00:18,200 --> 00:00:21,800
+Forget a memory forever: the visions come early, and the memory goes to auction.
 
 5
-00:00:22,600 --> 00:00:25,200
-Stake 10 silk. Watch the sign come true. Verified ✓
+00:00:22,200 --> 00:00:25,800
+Six clans of AI agents with wallets and memory.
+
+6
+00:00:26,200 --> 00:00:28,800
+They meet, trade, lend and break trust.
 
