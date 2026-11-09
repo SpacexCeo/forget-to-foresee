@@ -13,7 +13,7 @@ import { createPlayUi } from './ui.js';
 import { attachWorldHud } from './world-hud.js';
 import { createHints } from './hints.js';
 import { ClanAgents } from './agents.js';
-import { reactionsFor } from './behaviour.js';
+import { newlyUnderstood, reactionsFor } from './behaviour.js';
 import { Hooks } from './hooks.js';
 import { attachPresentation } from './presentation.js';
 import { vfxTierFor } from './ambience.js';
@@ -288,6 +288,12 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // Chapter films (cinematic/chapters, docs/chapters.md): short in-engine cutscenes between the season's
   // chapters, built from this season's facts; they take the camera after the rig, hold Iris, pause the hub.
   const chapters = attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, camera, player, avatar, shell, agents, uiRoot, hooks, now: () => state.now, afterFilm: () => { lastSignKey = ''; syncVisuals(); } });
+  // Iris winks (`understand` clip) when a Guest's sign settles a word in her dictionary.
+  let prevObs = session.obs;
+  session.on('obs', () => {
+    if (newlyUnderstood(prevObs, session.obs) > 0) agents.irisReact('understand', state.now);
+    prevObs = session.obs;
+  });
 
   /** Per frame, after physics. */
   function update(dt, { focus, moving, speed = 0, running = false }) {

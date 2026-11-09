@@ -7,7 +7,10 @@
     agent_yantar.glb  Amber
     agent_iney.glb    Frost
 
-Run headless with Blender 4.5 LTS (from this folder or anywhere):
+Run headless with Blender 4.5 LTS or 5.1 (from this folder or anywhere). Without native
+toktx set FTF_COMPRESS to a missing path and compress the exported glbs afterwards with
+art/tools/compress-glb-wasm.mjs. Blender's Python needs Pillow (pip --target a folder,
+then PYTHONPATH=<folder> blender -b --python-use-system-env ...):
 
     blender -b -P build_agents.py -- preview [key ...]   # fast runtime-only renders
     blender -b -P build_agents.py -- build   [key ...]   # master, GPU bakes, glb export
