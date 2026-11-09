@@ -560,8 +560,8 @@ def render_strand_atlas(path, size=2048, seed=3):
     em = nt.nodes.new("ShaderNodeEmission")
     info = nt.nodes.new("ShaderNodeHairInfo")
     mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"
-    mix.inputs[6].default_value = (0.105, 0.052, 0.027, 1)        # root
-    mix.inputs[7].default_value = (0.230, 0.118, 0.058, 1)        # ends
+    mix.inputs[6].default_value = (0.070, 0.036, 0.020, 1)        # root
+    mix.inputs[7].default_value = (0.150, 0.080, 0.042, 1)        # ends
     nt.links.new(info.outputs["Intercept"], mix.inputs[0])
     var = nt.nodes.new("ShaderNodeMath"); var.operation = "MULTIPLY_ADD"
     nt.links.new(info.outputs["Random"], var.inputs[0]); var.inputs[1].default_value = 0.6; var.inputs[2].default_value = 0.7

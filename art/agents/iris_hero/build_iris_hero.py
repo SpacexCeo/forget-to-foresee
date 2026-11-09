@@ -957,6 +957,14 @@ def hair_textures(cards, size):
     """Card material: the strand atlas rendered from master-style strands (RGBA), flat ORM and normal."""
     import numpy as np
     p = H.render_strand_atlas(os.path.join(OUT, "agent_iris_hair_basecolor.png"), size)
+    # alpha coverage that survives the mip chain: grow each strand by a pixel and lift soft edges, so
+    # a card stays mostly opaque where its strands are dense when the game samples a small mip
+    from PIL import Image, ImageFilter
+    im = Image.open(p).convert("RGBA")
+    r, g, b2, a = im.split()
+    a = a.filter(ImageFilter.MaxFilter(3)).point(lambda x: min(255, int(x * 1.35)))
+    rgb = Image.merge("RGB", (r, g, b2)).filter(ImageFilter.MaxFilter(3))     # colour under the grown alpha
+    Image.merge("RGBA", (*rgb.split(), a)).save(p)
     base = bpy.data.images.load(p)
     base.name = "agent_iris_hair_basecolor"
     small = 64
@@ -1018,7 +1026,7 @@ def stage_full(shade=True, size=2048, samples=16):
         S.bake_set([bm], "M_Iris_Skin", S.skin_shader, size, OUT, "skin", samples, land=land)
         S.bake_set(cloth, "M_Iris_Garment", S.garment_shader, size, OUT, "garment", samples)
         hair_textures(hair[0], size)
-        cap = S.flat_material("M_Iris_HairCap", (0.085, 0.042, 0.022), 0.75)
+        cap = S.flat_material("M_Iris_HairCap", (0.095, 0.050, 0.027), 0.8)       # mid chestnut of the atlas
         hair[1].data.materials.clear()
         hair[1].data.materials.append(cap)
         S.bake_set(eye_objs, "M_Iris_Eye", S.eye_shader, 512, OUT, "eye", samples, ao=False)
