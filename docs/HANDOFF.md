@@ -1,4 +1,6 @@
-# Handoff: state on 09.11.2026, 00:10 Kyiv (lead session)
+# Handoff: state on 09.11.2026, 07:10 Kyiv (lead session)
+
+**Morning 09.11:** `main` = PR #6 (overnight integration, 493 tests, production-build headless checks clean), live on Pages. The hourly lead loop is off; the juror R2 keeps its :15/:45 schedule and starts scorecards at 15:00 UTC. Videos (demo, trailer, 3 clips) were sent to the owner and live on `claude/laughing-thompson-dc7r09` docs/media, not in `main`.
 
 ## Live state (read this first if the session or the usage limit ended)
 
