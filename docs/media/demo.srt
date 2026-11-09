@@ -56,5 +56,5 @@ What would you forget to see the future?
 
 15
 00:01:11,000 --> 00:01:14,400
-Play it in the browser. Built at NEAR HACKATHON by RAEN Computers.
+Play it in the browser. Built at NEAR HACKATHON by Lambada_eth.
 

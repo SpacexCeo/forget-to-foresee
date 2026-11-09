@@ -13,7 +13,7 @@ Last updated: 08.11.2026 (evening).
 
 ## 1. Hackathon
 - NEAR Hackathon, 1–14 November 2026. **Submission deadline: 15.11.2026 01:59 Kyiv.** Rules and checklist: `docs/hackathon-rules.md`.
-- Team: RAEN Computers. RAEN's core product is an NFT agent with its own wallet (an "NFT computer with an agent").
+- Team: Lambada_eth (the project was first presented as RAEN Computers; owner 09.11: credit Lambada_eth everywhere). RAEN's core product is an NFT agent with its own wallet (an "NFT computer with an agent").
 - Candidate tracks: **games**, **nfts**, possibly social.
 - Competitor snapshot (7.11): 229 submissions in the catalog; nfts — 13 tags, games — 10, social — 10.
   - NFT containers (the NFT owns a wallet or business): Deed, Logen, Torch, Outlive, Handover, Zinc, OneUp.
@@ -147,6 +147,7 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 08.11 | **Nothing from a rented server is ever lost (owner).** Sources, scripts, glbs, QA sheets and small outputs are committed and pushed as each piece finishes (containers restart on their own). Large binaries that do not belong in git (4K masters, raw frames) stay on the owner's server and are listed in `docs/art/server-inventory.md` (path, size, sha256, producing commit and command, git or server-only). No server or order is stopped while it holds a server-only item the owner has not downloaded; the lead gives the owner the download commands first. |
 | 09.11 | **Click through chapter films (owner).** Hold-to-skip alone made a film all or nothing. A quick tap or key press (under 0.35 s, `TAP_MAX_MS`) now cuts to the next shot, then to the final card, and a tap on the card ends the film; holding 0.7 s still skips the whole film. The hint reads "Tap: next shot · Hold: skip the film" in all five languages, shows once at 2.2 s and after each tap, and sits in the bottom letterbox bar so it never covers the subtitle. Captured stills (paused start) never show it. |
 | 09.11 | **External and business texts are always in English (owner).** Submission fields, posts, forms and any message to organizers or partners are written in English, names in Latin script. |
+| 09.11 | **Credit: Lambada_eth everywhere (owner).** README, LICENSE, CLAUDE.md, the X posts, the video end cards and the submission name Lambada_eth (X: @Lambada_eth) instead of RAEN Computers. `prototype-2d/` keeps its old brand label: it is frozen for the parity tests. |
 
 ## 5. Status
 - `prototype-2d/index.html` — the full 2D loop, playable. UI is still Russian; it is the frozen parity reference.

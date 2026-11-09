@@ -1,6 +1,6 @@
 # Forget to Foresee
 
-> A game by RAEN Computers. Built at NEAR HACKATHON (1–14 Nov 2026). Tracks: **games**, **nfts** (tentative, see [Tracks](#tracks)).
+> A game by Lambada_eth. Built at NEAR HACKATHON (1–14 Nov 2026). Tracks: **games**, **nfts** (see [Tracks](#tracks)).
 
 **The problem.** Games with "AI agents" and "on-chain economies" usually hide two lies: the AI secretly decides the outcome, and the chain is decoration. We wanted a strategy game where every prophecy is fixed before play begins and can be checked afterwards, and where the agent's biography is the currency.
 
@@ -190,7 +190,7 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
 ## Tracks
 
 - **games** ("Games With Real Economies"): the economy *is* the game loop. Six agent clans trade words, silk, promises and memories; anchors pay out from a Gift split exactly between those who staked; defection raises world tension until the Shells leave and everyone loses. The season's randomness is sealed before the first move, so no patch, no admin and no AI can bend an outcome.
-- **nfts** ("NFTs That Do Something"), tentative: the game is designed around an agent whose NFT card carries its biography (what it remembers, what it forgot, who bought the shard). Today that card is simulated in the engine; the only contract is the commitment contract above. The README says so, and the owner decides whether to list the track.
+- **nfts** ("NFTs That Do Something"): a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result) and the Merkle leaf of the sign its vision opened, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the judge playthrough's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. Not yet: no HUD element shows the shards, and live seasons mint nothing (see the real/mock table).
 
 ## Baseline and third-party code (Q-001–005)
 
