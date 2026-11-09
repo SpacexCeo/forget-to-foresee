@@ -1,0 +1,229 @@
+{
+ "finalLuma": {
+  "ok": true,
+  "frames": 1110,
+  "jumps": 0,
+  "at": [],
+  "maxJump": 12.2,
+  "min": 28,
+  "max": 42.2
+ },
+ "video": "jury-pillars",
+ "title": "Forget to Foresee: jury video, the two pillars (draft)",
+ "width": 1920,
+ "height": 1080,
+ "fps": 60,
+ "tier": "ultra",
+ "duration": 18.5,
+ "shots": [
+  {
+   "shot": "pillar-agents",
+   "frames": 120,
+   "secondsPerFrame": 0.9345583333333334,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "a054293578d6489a",
+    "119": "0fc7fdc04a44583f"
+   }
+  },
+  {
+   "shot": "agents",
+   "frames": 360,
+   "secondsPerFrame": 0.8232611111111112,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "db5eae7d7f21f9a4",
+    "359": "cfecaa2f4418fe4a"
+   }
+  },
+  {
+   "shot": "pillar-nft",
+   "frames": 120,
+   "secondsPerFrame": 0.9324666666666667,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "a054293578d6489a",
+    "119": "0fc7fdc04a44583f"
+   }
+  },
+  {
+   "shot": "shard",
+   "frames": 180,
+   "secondsPerFrame": 0.8527666666666666,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "405629e2cc50dacd",
+    "179": "4fb475e239f13c3f"
+   }
+  },
+  {
+   "shot": "nft",
+   "frames": 330,
+   "secondsPerFrame": 0.7781484848484848,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "a054293578d6489a",
+    "329": "17f9ef8312203465"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.45873325744830074,
+  "events": 10,
+  "wav": "/tmp/claude-0/-home-user-forget-to-foresee/059e2dd8-0a83-5595-9ed2-75587fee870d/scratchpad/pillars/jury-pillars-1920x1080-ultra/jury-pillars.wav",
+  "cues": 12
+ },
+ "files": {
+  "/tmp/claude-0/-home-user-forget-to-foresee/059e2dd8-0a83-5595-9ed2-75587fee870d/scratchpad/pillars-out/jury-pillars.mp4": {
+   "bytes": 5983013,
+   "mb": 5.7,
+   "duration": 18.5,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 284160,
+    "duration": "18.500000",
+    "bit_rate": "2318187",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "1110",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/tmp/claude-0/-home-user-forget-to-foresee/059e2dd8-0a83-5595-9ed2-75587fee870d/scratchpad/pillars-out/jury-pillars-captions.mp4": {
+   "bytes": 6124874,
+   "mb": 5.8,
+   "duration": 18.5,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 284160,
+    "duration": "18.500000",
+    "bit_rate": "2379553",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "1110",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/tmp/claude-0/-home-user-forget-to-foresee/059e2dd8-0a83-5595-9ed2-75587fee870d/scratchpad/pillars-out/jury-pillars.srt": {
+   "bytes": 396,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}
