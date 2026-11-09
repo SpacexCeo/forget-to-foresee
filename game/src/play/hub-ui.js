@@ -62,6 +62,10 @@ const CSS = `
 .hub-guide li + li::before { content: " \\2192  "; opacity: .55; }
 .hub-guide li.hub-done { color: var(--wh-text-2, #e6e3d7); }
 .hub-guide li.hub-now { color: var(--wh-gold-bright, #fbe6a6); }
+/* when the line does not fit (long eyebrows, phones), the other steps shrink to their numbers: "1 → Choose → 3" */
+.hub-guide.hub-guide--short li:not(.hub-now) { font-size: 0; }
+.hub-guide.hub-guide--short li::before, .hub-guide.hub-guide--short li:not(.hub-now)::after { font-size: 10.5px; }
+.hub-guide.hub-guide--short li:not(.hub-now)::after { content: attr(data-n); }
 /* "Iris thinks this because…": one line under each slot (play/reasons.js). */
 .hub-slots .hub-why { grid-column: 1 / -1; margin: -4px 0 0; font: 500 11.5px/1.3 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-muted, #c9c6b8); }
 .hub-slots .hub-why.hub-warn { color: var(--wh-gold, #e4c272); }
@@ -110,7 +114,11 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   .hub-host h3 { font-size: 17px; } .hub-host p { font-size: 12.5px; }
   .hub-slots li { grid-template-columns: 56px 44px 1fr 44px; gap: 6px; } .hub-slots li button { width: 44px; min-height: 44px; }
   .hub-status { top: calc(64px + env(safe-area-inset-top, 0px)); font-size: 13px; padding: 6px 6px 6px 12px; } .hub-status button { min-height: 36px; }
-  .hub-slots .hub-why { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+  .hub-slots li { row-gap: 2px; } .hub-slots .hub-why { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+  /* Stake / Leave stay in view while the card scrolls (the reason lines and the glossary make it taller) */
+  .hub-read > .hub-row { position: sticky; bottom: -12px; z-index: 1; margin: 8px -12px 0; padding: 8px 12px 12px; background: rgba(12,20,21,.97); border-top: 1px solid rgba(232,214,172,.18); flex-wrap: nowrap; }
+  .hub-read > .hub-row button { flex: 1 1 auto; min-width: 0; padding: 0 10px; white-space: normal; line-height: 1.15; }
+  .hub-read > .hub-row #hub-hop { flex: none; white-space: nowrap; }
   .hub-gloss summary { min-height: 44px; }
   .hub-gloss td { height: 34px; font-size: 12px; } .hub-gloss th[scope="row"] { width: 46px; }
 }
@@ -138,6 +146,7 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   html[data-vh="short"] .hub-dock .hub-row button kbd, html[data-vh="tiny"] .hub-dock .hub-row button kbd { display: none; }
   html[data-vh="short"] .hub-read, html[data-vh="tiny"] .hub-read { top: calc(88px + env(safe-area-inset-top, 0px)); max-height: calc(var(--vvh, 100vh) - 100px - env(safe-area-inset-top, 0px)); padding: 10px; }
   html[data-vh="short"] .hub-read h3, html[data-vh="tiny"] .hub-read h3 { font-size: 15px; }
+  html[data-vh="short"] .hub-read > .hub-row, html[data-vh="tiny"] .hub-read > .hub-row { bottom: -10px; margin: 6px -10px 0; padding: 6px 10px 10px; }
   html[data-vh="short"] .hub-sign, html[data-vh="tiny"] .hub-sign { grid-template-columns: 64px 1fr; } html[data-vh="short"] .hub-sign canvas, html[data-vh="tiny"] .hub-sign canvas { width: 64px; height: 64px; }
   html[data-vh="short"] .hub-slots, html[data-vh="tiny"] .hub-slots { gap: 6px; } html[data-vh="short"] .hub-slots li button, html[data-vh="tiny"] .hub-slots li button { width: 40px; min-height: 40px; }
   html[data-vh="short"] .hub-status, html[data-vh="tiny"] .hub-status { top: calc(148px + env(safe-area-inset-top, 0px)); font-size: 12.5px; padding: 4px 4px 4px 12px; } html[data-vh="short"] .hub-status button, html[data-vh="tiny"] .hub-status button { min-height: 32px; }
@@ -210,7 +219,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
     return el(doc, 'div', { class: 'hub-head' },
       el(doc, 'div', { class: 'hub-eyebrow', text: eyebrow }),
       el(doc, 'ol', { class: 'hub-guide', 'aria-label': t('hub.guide.title'), 'data-step': step }, GUIDE_STEPS.map((s, k) =>
-        el(doc, 'li', { class: k < i ? 'hub-done' : k === i ? 'hub-now' : null, 'aria-current': k === i ? 'step' : null, text: t('hub.guide.' + s) }))));
+        el(doc, 'li', { class: k < i ? 'hub-done' : k === i ? 'hub-now' : null, 'aria-current': k === i ? 'step' : null, 'data-n': String(k + 1), text: t('hub.guide.' + s) }))));
   }
 
   /** A short meaning for a glossary cell: Roman Shell, the action's name, the power, +delay. */
@@ -318,7 +327,8 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
         const s = p.reading ? p.reading.slots[k] : null;
         const edited = d.edited[k] && (!s || s.meaning !== d.slots[k]);
         const sub = edited ? t('hub.read.yours') : s ? t('hub.read.iris', { confidence: Math.round(s.confidence * 100) }) : '';
-        const why = slotReason(obs, p, k, edited ? d.slots[k] : null);
+        // no line for a slot the first-stake pre-fill changed (hub.prefillFirstDelay): it is policy, not Iris's evidence
+        const why = edited ? slotReason(obs, p, k, d.slots[k]) : s && s.meaning !== d.slots[k] ? null : slotReason(obs, p, k);
         const whyText = why ? t(why.key, why.args) : '';
         return el(doc, 'li', {},
           el(doc, 'span', { text: i18n.t('slot.' + k) }),
@@ -423,8 +433,12 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       if (st && !lastStatus) st.classList.add('hub-enter');
       lastStatus = !!st;
       const glossHadFocus = !!(doc.activeElement && doc.activeElement.closest && doc.activeElement.closest('.hub-gloss td'));
+      const oldRead = host.querySelector('.hub-read');
+      const readScroll = oldRead && kind === 'read' ? oldRead.scrollTop : 0;
       host.replaceChildren(...kids);
+      if (readScroll) { const nr = host.querySelector('.hub-read'); if (nr) nr.scrollTop = readScroll; } // a slot change keeps the card where it was
       if (glossHadFocus) { const td = host.querySelectorAll('.hub-gloss td[role="gridcell"]')[glossFocus]; if (td) td.focus(); }
+      for (const g of host.querySelectorAll('.hub-guide')) if (g.scrollWidth > g.clientWidth + 1) g.classList.add('hub-guide--short');
     } finally { rendering = false; }
   }
 

@@ -226,7 +226,7 @@ export default {
   'hub.why.lastLeft': 'The only meaning left after three “no”s from the Guests.',
   'hub.why.frost': 'A true word: Frost gave it from the chronicle.',
   'hub.why.shard': 'A true word, learned from a memory shard.',
-  'hub.why.seen': 'The {form} here meant {meaning} in {count} of {total, plural, one {# revealed sign} other {# revealed signs}}.',
+  'hub.why.seen': 'In {count} of {total, plural, one {# revealed sign} other {# revealed signs}}, the {form} here meant: {meaning}.',
   'hub.why.unseen': 'The {form} is in {total, plural, one {# revealed sign} other {# revealed signs}}, never as {meaning}: a weak guess.',
   'hub.why.bought': '{who} sold Iris this word; no revealed sign has contradicted it.',
   'hub.why.narrowed': 'Only {count} meanings are still possible for the {form}; this one is a guess.',

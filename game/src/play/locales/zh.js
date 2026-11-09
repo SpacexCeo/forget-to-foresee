@@ -225,7 +225,7 @@ export default {
   'hub.why.lastLeft': '来客三次说“不”之后，唯一剩下的含义。',
   'hub.why.frost': '真实的词：霜从编年史中给出。',
   'hub.why.shard': '真实的词，得自一枚记忆碎片。',
-  'hub.why.seen': '这里的笔画「{form}」在 {total, plural, other {# 个已揭示的符印}}中有 {count} 次意为{meaning}。',
+  'hub.why.seen': '在 {total, plural, other {# 个已揭示的符印}}中，这里的笔画「{form}」有 {count} 次意为：{meaning}。',
   'hub.why.unseen': '笔画「{form}」出现在 {total, plural, other {# 个已揭示的符印}}中，从未意为{meaning}：只是弱猜测。',
   'hub.why.bought': '{who}把这个词卖给了伊里斯；尚无已揭示的符印与之矛盾。',
   'hub.why.narrowed': '笔画「{form}」只剩 {count} 种可能的含义；这一个是猜测。',

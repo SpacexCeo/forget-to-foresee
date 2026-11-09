@@ -226,7 +226,7 @@ export default {
   'hub.why.lastLeft': 'L’unico significato rimasto dopo tre «no» degli Ospiti.',
   'hub.why.frost': 'Una parola vera: Brina l’ha data dalla cronaca.',
   'hub.why.shard': 'Una parola vera, imparata da un frammento di memoria.',
-  'hub.why.seen': 'Qui il tratto «{form}» ha significato {meaning} in {count} su {total, plural, one {# segno rivelato} other {# segni rivelati}}.',
+  'hub.why.seen': 'In {count} su {total, plural, one {# segno rivelato} other {# segni rivelati}} il tratto «{form}» qui significava: {meaning}.',
   'hub.why.unseen': 'Il tratto «{form}» compare in {total, plural, one {# segno rivelato} other {# segni rivelati}}, mai come {meaning}: un’ipotesi debole.',
   'hub.why.bought': '{who} ha venduto a Iris questa parola; nessun segno rivelato la smentisce.',
   'hub.why.narrowed': 'Per il tratto «{form}» restano possibili solo {count} significati; questo è un’ipotesi.',
