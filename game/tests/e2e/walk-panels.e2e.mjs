@@ -57,6 +57,8 @@ test('walk mode panels and text', { timeout: 900000 }, async (t) => {
     await t.test('QA-005 forgetting for a vision opens the HUD Signs & Visions, not the legacy panel (Novice)', async () => {
       await g.key('KeyM'); await g.wait(400);
       assert.equal(await g.click('.pl-panel [data-forget]'), 'ok');
+      assert.ok(await g.visible('.pl-panel [data-forget-confirm]'), 'forgetting asks first (cancel before a memory burn)');
+      assert.equal(await g.click('.pl-panel [data-forget-confirm]'), 'ok');
       await g.busIdle(); await g.wait(800);
       const legacy = await g.visible('.pl-panel');
       const legacyText = (await g.text('.pl-panel')).join(' ');
