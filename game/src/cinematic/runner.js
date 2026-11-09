@@ -341,6 +341,7 @@ export class ShotRunner {
         if (a.preset) ld.setPreset(a.preset);
         if (a.atm) { const base = TIME_PRESETS[ld.preset]; ld.applyAtmosphere({ ...base, ...a.atm, fog: { ...base.fog, ...(a.atm.fog || {}) } }); }
         if (a.tint) ld.sky.tint(a.tint, a.amount ?? 0.3);
+        if (a.lanterns != null) ld.lanternScale = a.lanterns; // lantern light spill (capture only)
         break;
       }
       // Capture-only depth of field: a bokeh pass after the scene render, focused every frame on a world point.
