@@ -4,6 +4,7 @@
 // to finish the frame, screenshots it over CDP and pipes the PNG into ffmpeg. Deterministic: the same shot
 // script gives the same frames (the harness records a hash of the first and last frame for the report).
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -51,7 +52,22 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
   const probes = [];
   mkdirSync(outDir, { recursive: true });
   const { chromium } = pw();
-  const browser = await chromium.launch({ args: browserArgs(gpu), headless: true });
+  // Watchdog: a call into the page, the GPU or ffmpeg that never returns (seen on the RTX 4090: the opening Shell shot sat
+  // for 30+ min with no frame) kills this shot's Chromium and ffmpeg after its phase's limit, so the shot fails loudly
+  // and capture.mjs retries it in a fresh browser. The tag marks this shot's Chromium processes for the kill.
+  const tag = `--ftf-capture-tag=${shot.name}-${process.pid}-${Date.now()}`;
+  const FRAME_LIMIT = Number(process.env.FTF_FRAME_TIMEOUT || 120) * 1000;
+  let pipe = null, hung = null;
+  const watch = { phase: 'launch', limit: 120_000, at: Date.now() };
+  const arm = (phase, limit) => { watch.phase = phase; watch.limit = limit; watch.at = Date.now(); };
+  const killAll = () => { try { execFileSync('pkill', ['-9', '-f', '--', tag]); } catch { /* none left */ } if (pipe) pipe.kill(); };
+  const dog = setInterval(() => {
+    if (hung || Date.now() - watch.at <= watch.limit) return;
+    hung = `stalled in ${watch.phase} for ${Math.round((Date.now() - watch.at) / 1000)} s in shot ${shot.name} (limit ${Math.round(watch.limit / 1000)} s): killed`;
+    log(`[${shot.name}] WATCHDOG: ${hung}`);
+    killAll();
+  }, 2000);
+  const browser = await chromium.launch({ args: [...browserArgs(gpu), tag], headless: true });
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   const consoleErrors = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleErrors.push(m.type() + ': ' + m.text().slice(0, 400)); });
@@ -62,6 +78,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     const q = new URLSearchParams({ cinematic: shot.name, tier, tex: 'full', profile: 'desktop', fps: String(fps), ...(shot.url || {}) });
     const url = baseUrl + '/?' + q.toString();
     log(`[${shot.name}] open ${url}`);
+    arm('page load', 420_000);
     await page.goto(url, { waitUntil: 'load', timeout: 120_000 });
     // Poll from Node: under the virtual clock the page's rAF and timers never fire on their own, so
     // Playwright's waitForFunction (rAF polling) would only evaluate once.
@@ -78,9 +95,17 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
       result.timings.loadMs = Date.now() - t;
       result.loaded = loaded.ok;
       if (!loaded.ok) log(`[${shot.name}] WARNING: not every model streamed in: ${JSON.stringify(loaded.streaming && loaded.streaming.list.filter((x) => x.state !== 'loaded').map((x) => x.name + ':' + x.state))}`);
+      arm('setup', 600_000);
       t = Date.now();
       const setupFrames = await page.evaluate((list) => window.__ftfCinematic.setup(list), shot.setup || []);
       result.timings.setupMs = Date.now() - t; result.setupFrames = setupFrames;
+      if ((shot.actions || []).some((a) => a.do === 'guests') || shot.needsGuests) {
+        arm('waiting for the Guests', 200_000);
+        const gw = await page.evaluate((ms) => window.__ftfCinematic.waitGuests(ms), 150_000);
+        result.timings.guestsMs = gw.ms;
+        if (!gw.ok) throw new Error(`shot ${shot.name} needs the Guests behind the glass, not ready after ${Math.round(gw.ms / 1000)} s: ${gw.why}`);
+      }
+      arm('first rendered frame', 300_000);
       await page.evaluate(() => window.__ftfCinematic.setRender(true));
       // The first rendered frame compiles every shader: run it off-camera, then wait for all models again
       // (the setup may have moved Iris into a Shell, whose interior and Guests load now).
@@ -95,7 +120,8 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     await page.evaluate(() => document.documentElement.classList.add('cine-layers'));
     const total = probe ? Math.min(Math.round(shot.duration * fps), probe.to + 1) : Math.round(shot.duration * fps);
     const preroll = Math.round((shot.preroll ?? 0) * fps);
-    const pipe = openLayerPipe(join(outDir, shot.name + '.mp4'), { fps });
+    arm('frame 0', FRAME_LIMIT * 2);
+    pipe = openLayerPipe(join(outDir, shot.name + '.mp4'), { fps });
     t = Date.now();
     const stepGrab = () => page.evaluate(() => window.__ftfCinematic.step({ grab: true }));
     for (let i = 0; i < preroll; i++) await stepGrab();
@@ -144,9 +170,11 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
       if (sampleEvery && (i % sampleEvery === 0 || i === total - 1)) { writeFileSync(join(outDir, `${shot.name}-f${String(i).padStart(5, '0')}.png`), canvasPng); writeFileSync(join(outDir, `${shot.name}-f${String(i).padStart(5, '0')}-ui.png`), uiPng); }
       await pipe.write(canvasPng, uiPng);
       result.frames++;
+      arm(`frame ${i + 1}`, FRAME_LIMIT);
       if (Date.now() - lastReport > 30_000) { lastReport = Date.now(); const per = (Date.now() - t) / (i + 1); log(`[${shot.name}] frame ${i + 1}/${total} · ${(per / 1000).toFixed(2)} s/frame · ETA ${Math.round(((total - i - 1) * per) / 60000)} min · luma ${st.mean.toFixed(0)} jumps ${check.jumps}`); }
     }
     result.check = check;
+    arm('encoding the intermediate', 900_000);
     if (probe) result.probes = probes.map((p) => ({ frame: p.frame, grab: p.grab.edgeBlack, variants: p.variants.map((v) => [v.name, v.stats && v.stats.edgeBlack]) }));
     await pipe.close();
     result.timings.captureMs = Date.now() - t;
@@ -156,12 +184,16 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify(result));
     log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages, luma ${result.check.minMean.toFixed(0)}–${result.check.maxMean.toFixed(0)} jumps ${result.check.jumps} (max ${result.check.maxJump.toFixed(1)}) edge-black ${(result.check.maxEdgeBlack * 100).toFixed(0)}% retries ${result.check.retries}`);
     return result;
-  } catch (e) {
+  } catch (e0) {
+    const e = hung ? new Error(hung + ' (' + e0.message.split('\n')[0] + ')') : e0;
+    if (pipe) pipe.kill();
     result.failed = String(e.message);
     try { Object.assign(result, { errors: await page.evaluate(() => window.__ftfCinematic.errors()), wallMs: Date.now() - wall0 }); } catch { /* page gone */ }
     writeFileSync(join(outDir, shot.name + '.failed.json'), JSON.stringify(result));
     throw e;
   } finally {
-    await browser.close();
+    clearInterval(dog);
+    await Promise.race([browser.close().catch(() => {}), new Promise((r) => setTimeout(r, 15_000))]);
+    killAll();
   }
 }

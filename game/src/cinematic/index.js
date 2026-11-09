@@ -27,6 +27,8 @@ export function boot(name = 'shot', { fps } = {}) {
     until: (pred, value, max) => runner.until(pred, value, max),
     /** Steps until every placed model has streamed in. */
     waitLoaded: (ms) => runner.waitLoaded(ms),
+    /** Steps until the Shell's Guests are built and loaded (shots that drive them). */
+    waitGuests: (ms) => runner.waitGuests(ms),
     /** Runs a shot's setup list with rendering off. */
     setup: (list) => runner.setup(list),
     setRender: (on) => runner.setRender(on),

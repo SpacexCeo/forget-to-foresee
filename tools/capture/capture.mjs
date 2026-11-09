@@ -127,7 +127,15 @@ async function main() {
     const list = await pool(shots, parallel, async (shot) => {
       const jsonPath = join(work, shot.name + '.json');
       if (args.resume && existsSync(jsonPath) && existsSync(join(work, shot.name + '.mp4'))) { log(`[${shot.name}] reusing ${jsonPath}`); return JSON.parse(readFileSync(jsonPath, 'utf8')); }
-      return renderShot({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, tier, gpu: !!args.gpu, sampleEvery: Number(args.sample || 0), log, probe: args.probe ? { from: Number(String(args.probe).split('-')[0]), to: Number(String(args.probe).split('-')[1] ?? String(args.probe).split('-')[0]) } : null } });
+      // A failed shot (watchdog kill, context loss, a frame that stays bad) is rendered again in a fresh browser.
+      const attempts = Number(process.env.FTF_SHOT_ATTEMPTS || 3);
+      for (let k = 1; ; k++) {
+        try { return await renderOnce(); } catch (e) {
+          if (k >= attempts || args.probe) throw e;
+          log(`[${shot.name}] attempt ${k} failed: ${String(e.message).split('\n')[0]} · retrying (${k + 1}/${attempts})`);
+        }
+      }
+      function renderOnce() { return renderShot({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, tier, gpu: !!args.gpu, sampleEvery: Number(args.sample || 0), log, probe: args.probe ? { from: Number(String(args.probe).split('-')[0]), to: Number(String(args.probe).split('-')[1] ?? String(args.probe).split('-')[0]) } : null } }); }
     });
     results.push(...list);
   } finally { server.stop(); }
