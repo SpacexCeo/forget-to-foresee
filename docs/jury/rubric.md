@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.9, 2026-11-09 (research cycle 9). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.10, 2026-11-09 (research cycle 10). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -269,6 +269,9 @@ From `notes/ai-screening-and-reproducibility.md`:
 - The single strongest predictor of a usable repo is a results table next to the exact commands that produce it.
 
 ## 5. Judging procedure the juror follows (phase 2)
+- Tooling (v0.10): `node docs/jury/tools/live-check.cjs <live URL>` prints cold-load time, time to first control,
+  LCP, transfer size and console errors for desktop (1920x1080) and an emulated Pixel 7; paste its two JSON lines
+  into the scorecard as C1/C7 evidence.
 - Step 0 (added in v0.8): a five-minute first pass from the X post, the README top and the live link only (no
   clone), giving a first-impression estimate out of 100. Organizers plan 3 to 5 minutes per project
   (`notes/judge-time-budget.md`); with about 311 entries most jurors see only this. A full score more than 15 points

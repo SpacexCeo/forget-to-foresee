@@ -108,3 +108,10 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   five-item README first-screen checklist (half a point per missing item). Added `scorecard-template.md` so phase 2
   passes start from a fixed shape (gates, five-minute first pass, weighted table, top 5 by points per hour, delta).
   No red flags.
+
+## Cycle 10: 2026-11-09 00:46 UTC
+- Research coverage is now saturated on every criterion (each has a note and a checklist); this cycle turned the
+  cycle-5 live-site checks into a tool so the 15:00 UTC judging pass is quick and repeatable.
+- 00:55 UTC: `tools/live-check.cjs` (Playwright, preinstalled Chromium) measures cold load, first control, LCP,
+  transfer size and console errors on desktop and an emulated Pixel 7; smoke-tested against https://example.com
+  (both profiles ok, 2,497 bytes, no errors). Rubric v0.10: section 5 names the tool. No red flags.
