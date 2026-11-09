@@ -2,6 +2,7 @@
 //   RenderPass (MSAA 4x, half-float, depth texture)
 //   -> GodRaysPass: screen-space light shafts from the sun through the sky mask (quarter/half res)
 //   -> GTAOPass (ultra full res, high half res): contact shadows under eaves, rims and roots
+//   -> HdrGuard: clamp, NaN/Inf to black (hdr-guard.js)
 //   -> UnrealBloomPass: threshold above diffuse white, so only emissives bloom (lanterns, amber floor
 //      lights, the glyph, the nacre rim of the Shells, the sun disc), never sunlit stone
 //   -> OutputPass: AgX tone mapping + sRGB (display referred from here on)
@@ -17,6 +18,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { createHdrGuardPass } from './hdr-guard.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { LAYER_OVERLAY } from './layers.js';
@@ -216,6 +218,11 @@ export class PostStack {
     }
     const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), BLOOM.strength, BLOOM.radius, BLOOM.threshold);
     bloom.enabled = !!cfg.bloom;
+    // NaN/Inf from the scene, the rays or the AO must not reach the bloom (black squares on the bloom grid):
+    // render/hdr-guard.js. It sits after the rays (they read the render target's depth as their read buffer) and
+    // before the bloom (the VFX soft-particle pass is inserted before the bloom too and reads renderTarget1's depth).
+    const guard = createHdrGuardPass();
+    composer.addPass(guard);
     composer.addPass(bloom);
     const output = new OutputPass();
     composer.addPass(output);
@@ -226,7 +233,7 @@ export class PostStack {
     grade.uniforms.uResolution.value.set(size.x, size.y);
     composer.addPass(grade);
     this.composer = composer;
-    this.passes = { render, rays, ao, bloom, output, smaa, grade };
+    this.passes = { render, guard, rays, ao, bloom, output, smaa, grade };
   }
 
   get active() { return !!this.composer; }

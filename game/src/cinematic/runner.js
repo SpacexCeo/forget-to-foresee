@@ -9,11 +9,8 @@ import { compileCamera } from './camera.js';
 import { createLayers } from './layers.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { TIME_PRESETS } from '../render/sky.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { createHdrGuardPass } from '../render/hdr-guard.js';
 
-/** HDR guard for the capture: clamps the scene's linear colour and zeroes NaN/Inf before bloom and bokeh. A single Inf
- *  sample (a low sun's disc) otherwise spreads through the bloom mip chain into solid black squares. */
-const HDR_GUARD = { uniforms: { tDiffuse: { value: null }, maxValue: { value: 64 } }, vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: 'uniform sampler2D tDiffuse; uniform float maxValue; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 r = c.rgb; if (any(isnan(r)) || any(isinf(r))) r = vec3(0.0); gl_FragColor = vec4(clamp(r, 0.0, maxValue), c.a); }' };
 import { createOverlay } from './overlay.js';
 
 const KEYUP_DELAY_FRAMES = 2;
@@ -347,7 +344,8 @@ export class ShotRunner {
         if (a.atm) { const base = TIME_PRESETS[ld.preset]; ld.applyAtmosphere({ ...base, ...a.atm, fog: { ...base.fog, ...(a.atm.fog || {}) } }); }
         if (a.tint) ld.sky.tint(a.tint, a.amount ?? 0.3);
         if (a.lanterns != null) ld.lanternScale = a.lanterns; // lantern light spill (capture only)
-        if (a.clampHdr && ld.post && ld.post.composer && !this.hdrGuard) { this.hdrGuard = new ShaderPass(HDR_GUARD); this.hdrGuard.uniforms.maxValue.value = a.clampHdr; ld.post.composer.insertPass(this.hdrGuard, 1); }
+        // The game's post chain already guards HDR (render/hdr-guard.js); older builds get one inserted for the capture.
+        if (a.clampHdr && ld.post && ld.post.composer) { this.hdrGuard = ld.post.passes.guard || this.hdrGuard; if (!this.hdrGuard) { this.hdrGuard = createHdrGuardPass(a.clampHdr); ld.post.composer.insertPass(this.hdrGuard, 1); } }
         break;
       }
       // Capture-only depth of field: a bokeh pass after the scene render, focused every frame on a world point.
@@ -356,7 +354,8 @@ export class ShotRunner {
         if (!post || !post.composer) break; // low tier / no post stack: no DOF (CPU drafts)
         if (this.dof) post.composer.removePass(this.dof.pass);
         const pass = new BokehPass(post.scene || g.scene, g.rig.camera, { focus: 3, aperture: a.aperture ?? 0.004, maxblur: a.maxblur ?? 0.012 });
-        post.composer.insertPass(pass, this.hdrGuard ? 2 : 1); // after the HDR guard
+        const guard = post.passes && post.passes.guard || this.hdrGuard;
+        post.composer.insertPass(pass, guard ? post.composer.passes.indexOf(guard) + 1 : 1); // right after the HDR guard
         this.dof = { pass, world: a.world };
         break;
       }
