@@ -69,7 +69,7 @@ export default {
       actions: [music(0, 52), cue(0.3, 'bid_tick_2', 0.7), cue(1.15, 'guest_spike', 0.5), cue(2.1, 'storm_crack', 0.8)],
       overlays: [...FRAME],
       layers: [
-        { kind: 'transfer', a: head('iris'), b: head('iney'), label: 'Frost wins the shard', amount: '13', from: 0.1, to: 1.75, arc: 200, ax: 1480, ay: 330 },
+        { kind: 'transfer', a: head('iris'), b: head('iney'), label: 'Frost wins the shard', amount: '13', from: 0.1, to: 1.75, arc: 200, ax: 1520, ay: 360 },
         { kind: 'quote', world: head('sol'), text: 'It is a weapon', who: 'Salt', color: ACCENT.salt, from: 0.95, to: 2.45, x: 520, y: 300 },
         { kind: 'fracture', a: head('pepel'), b: head('yantar'), label: 'Ash cheats Amber', amount: '16', from: 1.75, snap: 2.4, to: 3.0, arc: 80, ax: 1300, ay: 720 },
       ],
