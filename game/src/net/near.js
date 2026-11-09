@@ -210,7 +210,8 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
   let retryTimer = null;
   function scheduleRetry() {
     if (retryTimer || !autoRetry) return;
-    retryTimer = setTimeout(() => { retryTimer = null; if (lastObs) watcher.observe(lastObs); }, retryMs);
+    // a small margin: a timer may fire a millisecond before `now()` says retryMs have passed
+    retryTimer = setTimeout(() => { retryTimer = null; if (lastObs) watcher.observe(lastObs); }, retryMs + 5);
     if (retryTimer && typeof retryTimer.unref === 'function') retryTimer.unref();
   }
 
@@ -229,13 +230,15 @@ export function createNearWatcher({ season, proof, deployment = NEAR_DEPLOYMENT,
         pending = checkSeason(s).then(() => watcher.observe(lastObs));
         return;
       }
-      if (status.state === 'offline' && now() - lastFail >= retryMs) { pending = checkSeason(s).then(() => watcher.observe(lastObs)); return; }
+      if (status.state === 'offline') { if (now() - lastFail >= retryMs) pending = checkSeason(s).then(() => watcher.observe(lastObs)); else scheduleRetry(); return; }
       if (status.state !== 'committed') return;
       const revealed = (obs && obs.proofs) || [];
       // A leaf is asked once; one that failed on the network is asked again after `retryMs`.
       const due = (i) => { const l = leaves.get(i); return !l || (l.state === 'offline' && now() - lastFail >= retryMs); };
       for (const p of revealed) if (due(p.index)) pending = checkLeaf(p.index);
       for (const c of (obs && obs.chronicle) || []) if (due(c.index)) pending = checkLeaf(c.index);
+      // an offline leaf that was not due yet (an early timer, an observation in between) keeps a retry pending
+      for (const l of leaves.values()) if (l.state === 'offline') { scheduleRetry(); break; }
     },
     /** Resolves when the checks started so far have finished (tests, QA). */
     async settle() { let p = null; while (pending && pending !== p) { p = pending; await p; } return status; },
