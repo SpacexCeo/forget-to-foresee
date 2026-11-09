@@ -764,6 +764,7 @@ CHAIN_PARAMS = {
     "hood": (140.0, 9.0, 1.2, 0.75, 30.0, False),
     "skirt_F": (110.0, 9.0, 1.6, 0.70, 40.0, True),
     "skirt_B": (100.0, 8.5, 2.0, 0.70, 45.0, True),
+    "tail": (60.0, 5.0, 1.0, 0.65, 50.0, False),      # a tied ponytail (athletic Iris)
 }
 HANG = {"sol": (0.22, 50.0, 3.5), "moh": (0.28, 40.0, 3.0), "yantar": (0.12, 70.0, 2.5)}
 

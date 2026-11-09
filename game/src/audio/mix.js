@@ -44,10 +44,12 @@ export function zoneMix(zone) {
   let z = String(zone || 'plaza');
   if (z.startsWith('camp:')) z = z.slice(5);
   if (z === 'island' || z === 'scroll') z = 'plaza';
-  if (CAMP_IDS.includes(z)) return { zone: z, bed: 'amb_camp_' + z, wind: 0.55, hum: 0.8 };
-  if (z === 'shell') return { zone: z, bed: 'amb_shell_inside', wind: 0, hum: 0 };
-  if (z === 'balcony' || z === 'bridge') return { zone: z, bed: null, wind: 1.0, hum: 1.0 };
-  return { zone: 'plaza', bed: null, wind: 0.7, hum: 1.0 };
+  // Owner 09.11: no constant low drone anywhere (wind and music stay). The Shell hum loops and the 82 Hz
+  // inside-the-Shell bed were both steady drones, so `hum` is 0 and the Shell has no bed.
+  if (CAMP_IDS.includes(z)) return { zone: z, bed: 'amb_camp_' + z, wind: 0.55, hum: 0 };
+  if (z === 'shell') return { zone: z, bed: null, wind: 0, hum: 0 };
+  if (z === 'balcony' || z === 'bridge') return { zone: z, bed: null, wind: 1.0, hum: 0 };
+  return { zone: 'plaza', bed: null, wind: 0.7, hum: 0 };
 }
 
 /** Zone of a ground position [x, y, z] on the island (use 'shell' yourself when inside a Shell). */

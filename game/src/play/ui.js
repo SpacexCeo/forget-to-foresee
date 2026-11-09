@@ -7,6 +7,7 @@ import { renderMsg, reasonText } from './i18n.js';
 import { logogramCanvas } from './logogram.js';
 import { i18n as uiI18n } from '../ui/index.js';
 import { panelArbiterFor } from './panels.js';
+import { renderShardSection } from '../ui/world-hud/shard-card.js';
 
 const { effectEvent, renderEvent } = uiI18n;
 const CLAN_INDEX = { iris: 0, salt: 1, ash: 2, moss: 3, amber: 4, frost: 5 };
@@ -42,6 +43,16 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   root.append(goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info);
 
   let panel = null, panelData = null, endConfirm = 0, infoTimer = 0;
+  // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
+  // re-render on every observation does not restart the ink ring's drawing.
+  let shardSource = null, shardKey = '', shardNode = null;
+  function shardSection(obs) {
+    if (!shardSource) return null;
+    const v = shardSource(obs);
+    const key = i18n.locale + '|' + (v.judgeOnly ? 'j' : '') + v.cards.map((c) => c.card.tokenId + ':' + (c.card.owner || '')).join(',');
+    if (key !== shardKey) { shardKey = key; shardNode = renderShardSection(v, { t, doc: document }); }
+    return shardNode;
+  }
   const ask = { slot: 0, form: 0, meaning: 0 };
 
   /* ---------- goal ---------- */
@@ -144,7 +155,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
           el('button', { class: 'pl-btn pl-primary', type: 'button', 'data-forget': m.id, text: t('memory.forget'), onclick: () => forget(m.id, 'vision') }),
           keyOpen && m.weight >= 3 ? el('button', { class: 'pl-btn', type: 'button', text: t('memory.forgetKey'), onclick: () => forget(m.id, 'key') }) : null)))) : el('p', { text: t('memory.empty') });
       const forgotten = obs.iris.forgotten.length ? el('div', {}, el('h3', { text: t('memory.forgotten') }), el('ul', { class: 'pl-list pl-muted' }, obs.iris.forgotten.map((f) => el('li', { text: f.text + ' — ' + f.fate })))) : null;
-      panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten);
+      panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten, shardSection(obs));
     } else if (panel === 'vision') {
       const signs = obs.prophecies || [];
       const rules = el('div', { class: 'pl-row' }, el('span', { text: t('vision.rule') + ':' }), ['unknown', 'top', 'dots'].map((r) => el('button', {
@@ -290,5 +301,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   }
 
   update();
-  return { update, open, close, flash, handleKey, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
+  return { update, open, close, flash, handleKey,
+    /** The Memories panel's shard NFT cards: fn(obs) → {cards, judgeOnly} (shard-card-model.js shardCards). */
+    setShardSource(fn) { shardSource = fn; if (panel === 'memory') renderPanel(); }, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
 }

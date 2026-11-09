@@ -48,7 +48,8 @@ test('tension mix: equal power, calm -> uneasy -> crisis', () => {
 test('zones: camp beds, Shell interior, zoneAt from layout positions', () => {
   assert.equal(zoneMix('sol').bed, 'amb_camp_sol');
   assert.equal(zoneMix('camp:iney').bed, 'amb_camp_iney');
-  assert.equal(zoneMix('shell').bed, 'amb_shell_inside');
+  assert.equal(zoneMix('shell').bed, null, 'no drone bed inside the Shell (owner 09.11)');
+  for (const z of ['plaza', 'balcony', 'bridge', 'shell', 'sol', 'iney']) assert.equal(zoneMix(z).hum, 0, z + ': no Shell hum (owner 09.11)');
   assert.equal(zoneMix('nonsense').zone, 'plaza');
   for (const c of CAMPS) assert.equal(zoneAt(c.position), c.id);
   assert.equal(zoneAt([0, 0, 0]), 'plaza');
@@ -126,7 +127,7 @@ test('runtime: unlock, spatial play, ducking, zones, tension and persisted volum
   assert.equal(a.state.ducked, false);
   assert.equal(a._nodes().musicDuck.gain.value, 1);
   a.setZone('shell');
-  assert.equal(a.state.bed, 'amb_shell_inside');
+  assert.equal(a.state.bed, null, 'no drone bed inside a Shell (owner 09.11)');
   a.setListener({ matrixWorld: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7, 8, 9, 1] } });
   assert.equal(ctx.listener.positionX.value, 7);
   a.setVolume('music', 0.5);
@@ -138,22 +139,16 @@ test('runtime: unlock, spatial play, ducking, zones, tension and persisted volum
   assert.equal(a.state.unlocked, false);
 });
 
-test('runtime: one Shell hum per Shell follows the zone level; preload expands step groups', async () => {
+test('runtime: no constant Shell hum (owner 09.11); preload expands step groups', async () => {
   const a = createAudio({ AudioContextClass: FakeCtx, fetch: fakeFetch, storage: memoryStorage(), base: '/x/', music: false });
   const hums = a.setShellHums([[10, 14, 10], [-10, 22, 10], [-10, 17, -10], [10, 25, -10]]);
-  assert.equal(hums.length, 4);
-  assert.equal(a.state.hums, 4);
+  assert.equal(hums.length, 0, 'no hum loop is started while every zone has hum 0');
+  assert.equal(a.state.hums, 0);
   a.setZone('plaza');
   await a.unlock();
   await flush();
   const ctx = FakeCtx.last;
-  const humPanners = ctx.panners.filter((p) => p.positionY.value >= 14);
-  assert.equal(humPanners.length, 4, 'four positional hums started on unlock');
-  assert.equal(hums[0].inner.gainNode.gain.value, 1, 'full level on the plaza');
-  a.setZone('sol');
-  assert.equal(hums[0].inner.gainNode.gain.value, 0.8, 'lower at a camp');
-  a.setZone('shell');
-  assert.equal(hums[0].inner.gainNode.gain.value, 0, 'off inside a Shell');
+  assert.equal(ctx.panners.filter((p) => p.positionY.value >= 14).length, 0, 'no positional hum on unlock');
   const loaded = await a.preload(['step_stone', 'ui_click', 'nope']);
   assert.equal(loaded.length, AUDIO_MANIFEST.groups.step_stone.length + 1, 'every variant of the group plus the single sound');
   assert.equal(ctx.sources.filter((s) => !s.loop).length, 0, 'preload decodes without playing a one-shot');

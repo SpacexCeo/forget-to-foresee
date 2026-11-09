@@ -30,6 +30,9 @@ const CSS = `
 .cine-word { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; font-weight: 400; font-size: clamp(22px, 2.6vw, 54px); letter-spacing: .26em; text-transform: uppercase; text-shadow: 0 2px 22px rgba(0,0,0,.6); }
 .cine-word.low { bottom: 14vh; } .cine-word.high { top: 12vh; }
 .cine-word.small { top: auto; bottom: 6.5vh; left: 3vw; right: auto; text-align: left; text-transform: none; letter-spacing: .06em; font: 500 clamp(11px, 1.05vw, 20px)/1.4 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; color: #e6dfd3; padding: .35em .8em; background: rgba(6, 9, 10, .55); border-left: 2px solid #e4c272; border-radius: 3px; }
+.cine-caption { position: absolute; left: 4vw; right: 4vw; top: 8.9vh; text-align: center; opacity: 0; font: 700 3.34vw/1.15 'Atkinson Hyperlegible', 'Source Sans 3', system-ui, sans-serif; color: #f3e7c4; text-shadow: 0 2px 18px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.6); }
+.cine-caption em { font-style: normal; color: #f6c572; }
+.cine-caption.scrim::before { content: ''; position: absolute; left: 10vw; right: 10vw; top: -3vh; height: calc(100% + 6vh); z-index: -1; background: radial-gradient(closest-side, rgba(4,10,12,.55), rgba(4,10,12,0)); }
 body.cine-clean #ui, body.cine-clean #prompt, body.cine-clean #toast, body.cine-clean #badge, body.cine-clean #scene-controls, body.cine-clean #hud, body.cine-clean .hub-fade { visibility: hidden !important; }
 body.cine-nohub .hub-host, body.cine-nohub #prompt, body.cine-nohub #toast { visibility: hidden !important; }
 body.cine-nodev #badge, body.cine-nodev #hud { visibility: hidden !important; }
@@ -70,6 +73,8 @@ export function createOverlay(doc = document) {
         card.append(inner);
         return card;
       }
+      // The jury video's caption (docs/submission/jury-video.md): 64 px at 1080p, top-centred inside X's safe area.
+      case 'caption': return h(doc, 'div', 'cine-caption' + (item.scrim === false ? '' : ' scrim'), esc(item.text).replace(/\*(.+?)\*/g, '<em>$1</em>'));
       case 'word': return h(doc, 'div', 'cine-word ' + (item.small ? 'small' : (item.position || 'low')), esc(item.text));
       default: return null;
     }

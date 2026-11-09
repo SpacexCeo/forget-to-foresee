@@ -1,0 +1,4 @@
+00:32:39 [guest] open http://localhost:5179/?cinematic=guest&tier=ultra&tex=full&profile=desktop&fps=60&play=direct&demo=judge
+00:32:40 [guest] WebGL: ANGLE (NVIDIA, Vulkan 1.4.329 (NVIDIA NVIDIA GeForce RTX 4090 (0x00002684)), NVIDIA)
+00:32:43 [guest] frame 1: flagged (edge 78%, luma 1), re-rendering (guest-f00001-retry0.png kept)
+00:32:50 [guest] frame 29: flagged (edge 0%, luma 77), re-rendering (guest-f00029-retry0.png kept)

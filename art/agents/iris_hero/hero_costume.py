@@ -18,6 +18,11 @@ V = Vector
 TAU = 2 * math.pi
 
 
+def smooth01(a, b, x):
+    t = max(0.0, min(1.0, (x - a) / (b - a)))
+    return t * t * (3 - 2 * t)
+
+
 # ===================================================================== body sampling
 
 class BodyProbe:
@@ -82,11 +87,11 @@ def set_attr(o, name, fn):
         a.data[i].value = fn(i, v.co)
 
 
-def solidify(o, t, offset=-1.0):
+def solidify(o, t, offset=-1.0, even=True):
     m = o.modifiers.new("thick", "SOLIDIFY")
     m.thickness = t
     m.offset = offset
-    m.use_even_offset = True
+    m.use_even_offset = even                     # even offset spikes on pinched faces: off for body shells
     m.use_rim = True
     m.use_quality_normals = True
     bpy.context.view_layer.objects.active = o
@@ -130,7 +135,7 @@ def coat(P, hem=0.40, top=1.43):
         ring = []
         gap = math.radians(9 + 15 * (top - z) / (top - hem))     # the coat hangs open lower down
         for i in range(n):
-            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)
+            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)    # ends meet the zip plackets
             p = ellipse(c, rx, ry, th, 0.15)
             if z < 0.9:                          # soft vertical folds in the skirt
                 fold = 0.010 * math.sin(th * 9 + z * 3) * (0.9 - z) / 0.5
@@ -156,7 +161,7 @@ def collar(P, z0=1.40, z1=1.56):
         ring = []
         gap = math.radians(62 + 8 * k / 5)
         for i in range(n):
-            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)
+            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)    # ends meet the zip plackets
             ends = math.sin(math.pi * i / (n - 1)) ** 0.6           # lower and closer to the neck at the ends
             ring.append(ellipse(c, rx + flare * ends, ry + flare * ends, th))
         rings.append(ring)
@@ -199,7 +204,7 @@ def capelet(P, top=1.475, hem=1.17):
         ring = []
         gap = math.radians(14 + 16 * k)
         for i in range(n):
-            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)
+            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)    # ends meet the zip plackets
             zz = z - (0.025 * (0.5 + 0.5 * math.sin(th * 7 + 1.3)) * k ** 2)
             ring.append(ellipse(V((c.x, c.y + 0.01, zz)), rx2, ry2, th, 0.1))
         rings.append(ring)
@@ -277,6 +282,9 @@ def boots_from_body(body, keep_fn):
         v.co += v.normal * (0.009 if v.co.z > 0.02 else 0.004)
         if v.co.z < 0.012:
             v.co.z = 0.0
+    for _ in range(4):                                   # one smooth shoe shape, no toes
+        bmesh.ops.smooth_vert(b, verts=[v for v in b.verts if v.co.z > 0.004], factor=0.8,
+                              use_axis_x=True, use_axis_y=True, use_axis_z=True)
     b.to_mesh(o.data)
     b.free()
     for m in list(o.modifiers):
@@ -648,4 +656,615 @@ def hair_cap(body, scalp_idx, offset=0.006):
         o.modifiers.remove(m)
     o.parent = None
     smooth(o)
+    return o
+
+
+# ===================================================================== athletic sportswear (owner, 09.11)
+
+def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None, envelope=None,
+                    flatten=None, edge_relax=0, drape=None, loop_smooth=None, clear=None):
+    """A tight garment cut from the body surface: the kept faces are duplicated, pushed out along the
+    normals by `offset` and given cloth thickness. keep(index, co) decides per vertex; a face is kept
+    when all its vertices are. trim/accent(co, normal) -> 0..1 paint the trim and accent attributes."""
+    o = body.copy()
+    o.data = body.data.copy()
+    o.name = name
+    if o.data.shape_keys:
+        o.shape_key_clear()
+    bpy.context.scene.collection.objects.link(o)
+    for m in list(o.modifiers):
+        o.modifiers.remove(m)
+    o.parent = None
+    b = bmesh.new()
+    b.from_mesh(o.data)
+    b.verts.ensure_lookup_table()
+    keepv = {v.index for v in b.verts if keep(v.index, v.co)}
+    kill = [f for f in b.faces if not all(v.index in keepv for v in f.verts)]
+    bmesh.ops.delete(b, geom=kill, context="FACES")
+    bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
+    b.normal_update()
+    off_of = offset if callable(offset) else (lambda p, n: offset)
+    for v in b.verts:
+        v.co += v.normal * off_of(v.co, v.normal)
+    offset = off_of(V((0, 0, 1.2)), V((0, -1, 0))) if callable(offset) else offset
+    if envelope:                                 # front panels on the convex envelope of the torso, with ease
+        region, pts, ease = envelope
+        cache = {}
+        for v in b.verts:
+            p = v.co
+            if not region(p):
+                continue
+            key = round(p.z * 200)
+            if key not in cache:
+                sec = [(q.x, q.y) for q in pts if abs(q.z - p.z) < 0.007]
+                hull = _hull2d(sec) if len(sec) > 6 else None
+                cx = sum(h[0] for h in hull) / len(hull) if hull else 0
+                cy = sum(h[1] for h in hull) / len(hull) if hull else 0
+                cache[key] = (hull, cx, cy)
+            hull, cx, cy = cache[key]
+            if not hull:
+                continue
+            dx, dy = p.x - cx, p.y - cy
+            dl = math.hypot(dx, dy) or 1.0
+            dx, dy = dx / dl, dy / dl
+            best = None
+            for (ax, ay), (bx, by) in zip(hull, hull[1:] + hull[:1]):       # ray from the centre out
+                ex, ey = bx - ax, by - ay
+                den = dx * ey - dy * ex
+                if abs(den) < 1e-9:
+                    continue
+                t = ((ax - cx) * ey - (ay - cy) * ex) / den
+                u = ((ax - cx) * dy - (ay - cy) * dx) / den
+                if t > 0 and 0 <= u <= 1:
+                    best = t if best is None else max(best, t)
+            if best is not None and dl < best + ease < dl + 0.03:      # only fill hollows, never spike
+                p.x, p.y = cx + dx * (best + ease), cy + dy * (best + ease)
+    if curtain:                                  # fabric falls straight from the fullest point of the bust
+        region, pts, top = curtain[:3]
+        blend = curtain[3] if len(curtain) > 3 else (lambda z: 1.0)
+        for v in b.verts:
+            p = v.co
+            if not region(p):
+                continue
+            above = [q.y for q in pts if abs(q.x - p.x) < 0.02 and p.z <= q.z <= top]
+            if above:
+                target = min(p.y, min(above) - offset)
+                p.y = p.y + (target - p.y) * blend(p.z)
+    if flatten:                                  # fabric tension: the panel is a low-pass of the body under it
+        from mathutils.kdtree import KDTree as _KD
+        from mathutils.bvhtree import BVHTree as _BVH
+        region, radius = flatten
+        sel = [v for v in b.verts if region(v.co)]
+        kd = _KD(len(sel))
+        for i, v in enumerate(sel):
+            kd.insert(v.co, i)
+        kd.balance()
+        tree = _BVH.FromPolygons([vv.co.copy() for vv in body.data.vertices], [list(pp.vertices) for pp in body.data.polygons])
+        for rad in (radius, radius * 0.6):       # two passes: broad drape, then rounder tips
+            orig = [v.co.copy() for v in sel]
+            new_y = []
+            for v in sel:
+                acc = wsum = 0.0
+                for co, i, d in kd.find_range(v.co, rad):
+                    w = 1.0 - d / rad
+                    acc += orig[i].y * w
+                    wsum += w
+                new_y.append(acc / wsum if wsum else v.co.y)
+            for v, y in zip(sel, new_y):
+                v.co.y = y
+            for v in sel:
+                loc, nrm, _, d = tree.find_nearest(v.co)
+                if loc is not None and (v.co - loc).dot(nrm) < offset + 0.006:
+                    v.co = loc + nrm * (offset + 0.006)
+        tree = _BVH.FromPolygons([vv.co.copy() for vv in body.data.vertices], [list(pp.vertices) for pp in body.data.polygons])
+        for v in sel:                            # never inside the body (and the bra under it)
+            loc, nrm, _, d = tree.find_nearest(v.co)
+            if loc is not None and (v.co - loc).dot(nrm) < offset + 0.006:
+                v.co = loc + nrm * (offset + 0.006)
+    if edges:                                    # tidy the cut edges (straight hems, plackets)
+        bnd = [v for v in b.verts if v.is_boundary]
+        for v in bnd:
+            edges(v)
+        if edge_relax:                           # even out the rows next to the cut
+            ring = set(bnd)
+            for _ in range(2):
+                ring |= {e.other_vert(v) for v in list(ring) for e in v.link_edges}
+            inner = [v for v in ring if not v.is_boundary]
+            for _ in range(edge_relax):
+                bmesh.ops.smooth_vert(b, verts=inner, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    if loop_smooth:                              # a smooth cut line (neckline) without pulling flaps
+        region, iters = loop_smooth
+        lv = [v for v in b.verts if v.is_boundary and region(v.co)]
+        for _ in range(iters):
+            new = {}
+            for v in lv:
+                nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+                if len(nb) == 2:
+                    new[v] = v.co * 0.5 + (nb[0].co + nb[1].co) * 0.25
+            for v, q in new.items():
+                v.co = q
+        ring = set(lv)
+        ring |= {e.other_vert(v) for v in list(ring) for e in v.link_edges}
+        inner = [v for v in ring if not v.is_boundary]
+        for _ in range(4):
+            bmesh.ops.smooth_vert(b, verts=inner, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    if drape:                                    # the front laid on one constructed garment surface
+        weight, depth, edge_x, hem_z, iters = drape
+        w = {v: weight(v.co) for v in b.verts}
+        for v in b.verts:
+            if w[v] > 0:
+                t = depth(v.co.x, v.co.z)
+                v.co.y += (min(t, v.co.y) - v.co.y) * w[v]
+        core = [v for v in b.verts if w[v] > 0.999]
+        coreset = set(core)
+        for _ in range(iters):                   # even the grid over the surface (no pinches under the bust)
+            new = {}
+            for v in core:
+                nb = [e.other_vert(v) for e in v.link_edges]
+                if v.is_boundary:
+                    nb = [u for u in nb if u.is_boundary]
+                    if len(nb) != 2:
+                        continue
+                ax = sum(u.co.x for u in nb) / len(nb)
+                az = sum(u.co.z for u in nb) / len(nb)
+                x, z = v.co.x + (ax - v.co.x) * 0.5, v.co.z + (az - v.co.z) * 0.5
+                if v.is_boundary:
+                    if abs(v.co.z - hem_z) < 1e-4:
+                        z = hem_z                        # slides along the hem, the corner stays put
+                        x = math.copysign(max(abs(x), edge_x(hem_z)), v.co.x)
+                    else:
+                        x = math.copysign(edge_x(z), v.co.x)   # slides along the zip edge
+                new[v] = (x, z)
+            for v, (x, z) in new.items():
+                v.co.x, v.co.z = x, z
+                v.co.y = depth(x, z)
+        band = [v for v in b.verts if 0 < w[v] <= 0.999 and not v.is_boundary]
+        for _ in range(4):                       # blend the seam band into the shell
+            bmesh.ops.smooth_vert(b, verts=band, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    if relax:                                    # fabric bridges hollows instead of hugging every curve
+        region, iters = relax
+        sel = [v for v in b.verts if region(v.co) and not v.is_boundary]
+        for _ in range(iters):
+            bmesh.ops.smooth_vert(b, verts=sel, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        from mathutils.bvhtree import BVHTree   # ...but never inside the body
+        tree = BVHTree.FromPolygons([vv.co.copy() for vv in body.data.vertices], [list(pp.vertices) for pp in body.data.polygons])
+        for v in sel:
+            loc, nrm, _, d = tree.find_nearest(v.co)
+            if loc is not None and (v.co - loc).dot(nrm) < offset:
+                v.co = loc + nrm * offset
+    if clear:                                    # never through the layer underneath (the sports top)
+        from mathutils.bvhtree import BVHTree as _BVH
+        under, gap = clear
+        me_u = under.data
+        uco = [under.matrix_world @ v.co for v in me_u.vertices]
+        cen = sum(uco, Vector()) / len(uco)
+        outer = [list(f.vertices) for f in me_u.polygons                 # the outer layer only
+                 if f.normal.x * (f.center.x - cen.x) + f.normal.y * (f.center.y - cen.y) > 0]
+        tree = _BVH.FromPolygons(uco, outer)
+        for it in range(4):
+            moved = []
+            for v in b.verts:
+                loc, nrm, _, d = tree.find_nearest(v.co, 0.05)
+                if loc is None:
+                    continue
+                side = (v.co - loc).dot(nrm)
+                if side < gap:
+                    v.co = v.co + nrm * (gap - side)
+                    moved.append(v)
+            if not moved or it == 3:
+                break
+            near = set(moved)
+            near |= {e.other_vert(v) for v in moved for e in v.link_edges}
+            bmesh.ops.smooth_vert(b, verts=[v for v in near if not v.is_boundary], factor=0.5,
+                                  use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    b.to_mesh(o.data)
+    b.free()
+    if decimate:
+        dec = o.modifiers.new("lighter", "DECIMATE")
+        dec.ratio = decimate
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier=dec.name)
+    me = o.data
+    nr = {v.index: v.normal.copy() for v in me.vertices}
+    set_attr(o, "trim", (lambda i, co: trim(co, nr[i])) if trim else (lambda i, co: 0.0))
+    set_attr(o, "accent", (lambda i, co: accent(co, nr[i])) if accent else (lambda i, co: 0.0))
+    if thick:
+        solidify(o, thick, 1.0, even=False)
+    smooth(o, 50)
+    return o
+
+
+def stand_collar(P, z0=1.418, z1=1.478, gap_deg=26):
+    """The jacket's stand collar: a ring round the neck, open at the front for the zip."""
+    n = 36
+    rings = []
+    c0, rx0, ry0 = P.section(1.455, bones=("neck",))
+    for k in range(5):
+        z = z0 + (z1 - z0) * k / 4
+        c, rx, ry = c0, rx0, ry0                               # one clean ellipse, not the noisy section
+        c = V((c.x, c.y, z))
+        ring = []
+        gap = math.radians(gap_deg + 6 * k / 4)
+        for i in range(n):
+            th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)    # ends meet the zip plackets
+            lean = 0.004 * (k / 4) ** 2 + (0.005, 0.0012, 0, 0, 0)[k]    # a soft flare at the base, the top leans out
+            ring.append(ellipse(V((c.x, c.y, z)), rx + 0.016 + lean, ry + 0.017 + lean, th))
+        rings.append(ring)
+    o = loft("jacket_collar", rings, closed_u=False)
+    set_attr(o, "trim", lambda i, co: 1.0 if (i % n) in (0, n - 1) else 0.0)
+    set_attr(o, "accent", lambda i, co: 0.0)
+    solidify(o, 0.0024, 1.0, even=False)
+    smooth(o)
+    return o
+
+
+# ---------------------------------------------------------------- fitted garments from convex sections
+
+def _hull2d(pts):
+    """Monotone-chain convex hull of 2D points (x, y), counter-clockwise."""
+    pts = sorted(set(pts))
+    if len(pts) < 3:
+        return pts
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, hi = [], []
+    for p in pts:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(hi) >= 2 and cross(hi[-2], hi[-1], p) <= 0:
+            hi.pop()
+        hi.append(p)
+    return lo[:-1] + hi[:-1]
+
+
+def _resample_closed(poly, n, start_angle, c):
+    """n points evenly spaced along a closed polygon, starting at the point closest to start_angle."""
+    seg = [(poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly))]
+    L = [math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in seg]
+    total = sum(L)
+    out = []
+    for k in range(n):
+        d = total * k / n
+        for (a, b), l in zip(seg, L):
+            if d <= l:
+                t = d / l if l else 0
+                out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+                break
+            d -= l
+    angs = [math.atan2(p[1] - c[1], p[0] - c[0]) for p in out]
+    i0 = min(range(n), key=lambda i: abs(math.remainder(angs[i] - start_angle, TAU)))
+    out = out[i0:] + out[:i0]
+    if (math.atan2(out[1][1] - c[1], out[1][0] - c[0]) - angs[i0]) % TAU > math.pi:
+        out = [out[0]] + out[1:][::-1]                       # counter-clockwise from the front
+    return out
+
+
+def hull_loft(name, pts, zs, offset, n=56, open_deg=0.0, band=0.008, smooth=2):
+    """A fitted garment as a loft of convex body sections: the fabric bridges every hollow (cleavage,
+    under-bust, the small of the back) the way stretch knit does. open_deg leaves the front open."""
+    rings = []
+    for z in zs:
+        sec = [(p.x, p.y) for p in pts if abs(p.z - z) < band]
+        if len(sec) < 8:
+            continue
+        hull = _hull2d(sec)
+        cx = sum(p[0] for p in hull) / len(hull)
+        cy = sum(p[1] for p in hull) / len(hull)
+        grown = []
+        for (x, y) in hull:
+            dx, dy = x - cx, y - cy
+            dl = math.hypot(dx, dy) or 1.0
+            grown.append((x + dx / dl * offset, y + dy / dl * offset))
+        ring = _resample_closed(grown, n, -math.pi / 2, (cx, cy))
+        rings.append([V((x, y, z)) for x, y in ring])
+    for _ in range(smooth):                                  # soften section-to-section noise
+        rings = [rings[0]] + [[(a + b * 2 + c) / 4 for a, b, c in zip(r0, r1, r2)]
+                              for r0, r1, r2 in zip(rings, rings[1:], rings[2:])] + [rings[-1]]
+    if open_deg:
+        k = max(1, int(n * open_deg / 360 / 2))
+        rings = [r[k:n - k + 1] for r in rings]
+        return loft(name, rings, closed_u=False), len(rings[0])
+    return loft(name, rings), n
+
+
+def without_nipples(pts, r=0.020):
+    """Torso points minus the nipples: a compression top and a jacket never take their shape."""
+    tips = []
+    for sgn in (1, -1):
+        cand = [p for p in pts if 1.20 < p.z < 1.34 and 0.03 < sgn * p.x < 0.16]
+        if cand:
+            tips.append(min(cand, key=lambda p: p.y))
+    return [p for p in pts if all((p - t).length > r for t in tips)]
+
+
+def front_surface(torso_pts, ease, x_max=0.20, z_lo=1.10, z_hi=1.46, step=0.005):
+    """y(x, z) of the jacket front as one garment volume: per height the front of the convex hull of the
+    whole torso section (the cleavage bridged), per column the convex envelope along the height (straight
+    fabric from the bust apex down to the hem and up to the collarbone), lightly smoothed, plus ease."""
+    nzs = int((z_hi - z_lo) / step) + 1
+    nxs = int(2 * x_max / step) + 1
+    zs = [z_lo + i * step for i in range(nzs)]
+    xs = [-x_max + i * step for i in range(nxs)]
+    grid = [[None] * nzs for _ in xs]
+    for k, z in enumerate(zs):
+        sec = [(p.x, p.y) for p in torso_pts if abs(p.z - z) < 0.006]
+        if len(sec) < 8:
+            continue
+        h = _hull2d(sec)
+        lo_x, hi_x = min(q[0] for q in h), max(q[0] for q in h)
+        for j, x in enumerate(xs):
+            xc = min(max(x, lo_x + 1e-4), hi_x - 1e-4)
+            best = None
+            for (ax, ay), (bx, by) in zip(h, h[1:] + h[:1]):
+                if (ax - xc) * (bx - xc) <= 0 and ax != bx:
+                    y = ay + (by - ay) * (xc - ax) / (bx - ax)
+                    best = y if best is None else min(best, y)
+            grid[j][k] = best
+    for j in range(nxs):                                     # fill gaps, then the vertical envelope
+        col = grid[j]
+        last = next((y for y in col if y is not None), 0.0)
+        for k in range(nzs):
+            last = col[k] if col[k] is not None else last
+            col[k] = last
+        lo = []
+        for k in range(nzs):                                 # lower hull of (z, y): front-convex in z
+            p = (zs[k], col[k])
+            while len(lo) >= 2 and ((lo[-1][0] - lo[-2][0]) * (p[1] - lo[-2][1]) -
+                                    (lo[-1][1] - lo[-2][1]) * (p[0] - lo[-2][0])) <= 0:
+                lo.pop()
+            lo.append(p)
+        for k, z in enumerate(zs):
+            for a, b in zip(lo, lo[1:]):
+                if a[0] <= z <= b[0]:
+                    col[k] = a[1] + (b[1] - a[1]) * (z - a[0]) / ((b[0] - a[0]) or 1)
+                    break
+    raw = [col[:] for col in grid]
+    for _ in range(24):                                      # broad, soft volume (no point at the apex)
+        g = [[(grid[max(j - 1, 0)][k] + 2 * grid[j][k] + grid[min(j + 1, nxs - 1)][k]) / 4 for k in range(nzs)]
+             for j in range(nxs)]
+        grid = [[min(raw[j][k] + 0.006, (g[j][max(k - 1, 0)] + 2 * g[j][k] + g[j][min(k + 1, nzs - 1)]) / 4)
+                 for k in range(nzs)] for j in range(nxs)]
+
+    def depth(x, z):
+        fx = min(max((x + x_max) / step, 0), nxs - 1.001)
+        fz = min(max((z - z_lo) / step, 0), nzs - 1.001)
+        j, k = int(fx), int(fz)
+        tx, tz = fx - j, fz - k
+        y = (grid[j][k] * (1 - tx) * (1 - tz) + grid[j + 1][k] * tx * (1 - tz) +
+             grid[j][k + 1] * (1 - tx) * tz + grid[j + 1][k + 1] * tx * tz)
+        return y - (ease(x, z) if callable(ease) else ease)
+    return depth
+
+
+def edge_strip(name, rows_of, n, thick, trim=1.0):
+    """A sewn band (zip placket, ribbed hem) as a clean quad strip: rows_of(t) -> (a, b), the two
+    edge points of the band at t in 0..1 along it (None skips a sample)."""
+    me = bpy.data.meshes.new(name)
+    b = bmesh.new()
+    rows = []
+    for i in range(n):
+        ab = rows_of(i / (n - 1))
+        if ab is None:
+            rows.append(None)
+            continue
+        rows.append([b.verts.new(ab[0]), b.verts.new(ab[1])])
+    for r0, r1 in zip(rows, rows[1:]):
+        if r0 and r1:
+            b.faces.new((r0[0], r1[0], r1[1], r0[1]))
+    bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
+    bmesh.ops.recalc_face_normals(b, faces=b.faces)
+    b.to_mesh(me)
+    b.free()
+    o = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(o)
+    set_attr(o, "trim", lambda i, co: trim)
+    set_attr(o, "accent", lambda i, co: 0.0)
+    solidify(o, thick, 1.0, even=False)
+    smooth(o, 50)
+    return o
+
+
+def tube_along(name, path, radii, n=20, cuff=None):
+    """A fitted sleeve: rings around a bone path with per-ring radii."""
+    rings = []
+    for i, (p, r) in enumerate(zip(path, radii)):
+        d = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized()
+        a = d.orthogonal().normalized()
+        b = d.cross(a).normalized()
+        rings.append([p + (a * math.cos(TAU * j / n) + b * math.sin(TAU * j / n)) * r for j in range(n)])
+    return loft(name, rings), n
+
+
+def sneaker(name, heel, toe, width, side):
+    """A white high-top trainer modelled as footwear: a layered sole (outsole, flared midsole with a
+    rounded top edge), a rounded toe box with toe spring, a closed heel counter, high padded walls round
+    the ankle with the opening on top, a raised tongue, and a dark side stripe and heel tab (original
+    design, no brand marks). heel/toe: ground points under the heel and the toe tip."""
+    b = bmesh.new()
+    uv = b.loops.layers.uv.new("UVMap")
+    fwd = toe - heel
+    L = fwd.length
+    fwd.normalize()
+    lat = V((fwd.y, -fwd.x, 0)) * (-1 if side < 0 else 1)
+    up = V((0, 0, 1))
+    m, k = 40, 20
+    SOLE = 0.022
+
+    def hw(t):                                               # footprint half width, rounded heel and toe
+        core = 0.60 + 0.40 * math.sin(math.pi * min(1.0, t * 1.12)) ** 0.55
+        heel_round = math.sqrt(max(0.0, 1 - ((0.10 - min(t, 0.10)) / 0.10) ** 2))
+        toe_round = math.sqrt(max(0.0, 1 - (max(0.0, t - 0.80) / 0.20) ** 2))
+        return width / 2 * core * heel_round * toe_round
+
+    def centre(t):
+        return heel + fwd * (L * t) + up * (0.016 * max(0.0, (t - 0.78) / 0.22) ** 2)   # toe spring
+
+    # --- sole: rings of the footprint outline at several heights (outset = flare)
+    outline_t = [i / m for i in range(m + 1)]
+    def outline(scale, z):
+        pts = []
+        for t in outline_t:
+            pts.append(centre(t) + lat * hw(t) * scale + up * z)
+        for t in reversed(outline_t[1:-1]):
+            pts.append(centre(t) - lat * hw(t) * scale + up * z)
+        return pts
+    layers = [(0.95, 0.0), (1.00, 0.003), (1.02, 0.007), (1.01, 0.009), (1.03, 0.019), (0.99, SOLE)]
+    srings = [[b.verts.new(p) for p in outline(sc, z)] for sc, z in layers]
+    nO = len(srings[0])
+    for r0, r1 in zip(srings, srings[1:]):
+        for i in range(nO):
+            b.faces.new((r0[i], r0[(i + 1) % nO], r1[(i + 1) % nO], r1[i]))
+    b.faces.new(srings[0][::-1])
+    # --- upper: arcs over the foot from the outer to the inner sole edge
+    def heights(t):
+        side_h = 0.125 - 0.088 * smooth01(0.30, 0.75, t)               # high walls round the ankle
+        top_h = 0.060 + 0.045 * smooth01(0.30, 0.55, t) * (1 - smooth01(0.55, 1.0, t)) - 0.020 * smooth01(0.75, 1.0, t)
+        if t < 0.30:
+            top_h = side_h
+        return side_h, top_h
+    rows = []
+    for i in range(m + 1):
+        t = i / m
+        c = centre(t)
+        w = max(hw(t), 0.002)
+        sh, th = heights(t)
+        row = []
+        for j in range(k + 1):
+            a = math.pi * j / k
+            sa, ca = math.sin(a), math.cos(a)
+            se = abs(sa) ** 0.75                                     # a rounder, fuller last (superellipse)
+            zz = SOLE + (sh - SOLE) * (1 - se) + (th - SOLE) * se
+            bulge = 1.0 + 0.06 * se * (1 - smooth01(0.85, 1.0, t))
+            row.append(b.verts.new(c + lat * (math.copysign(abs(ca) ** 0.8, ca) * w * bulge) + up * zz))
+        rows.append(row)
+    for i in range(m):
+        t = (i + 0.5) / m
+        for j in range(k):
+            a = math.pi * (j + 0.5) / k
+            if 0.06 < t < 0.33 and math.sin(a) > 0.55:              # the ankle opening
+                continue
+            f = b.faces.new((rows[i][j], rows[i][j + 1], rows[i + 1][j + 1], rows[i + 1][j]))
+            for lo, (uu, vv) in zip(f.loops, ((i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j))):
+                lo[uv].uv = (uu / m, vv / k)
+    bmesh.ops.triangulate(b, faces=[f for f in b.faces if len(f.verts) > 4])
+    bmesh.ops.recalc_face_normals(b, faces=b.faces[:])
+    o = new_obj(name, b)
+    me = o.data
+    heel_w = heel + up * 0.0
+
+    def sole(i, co):                                        # off-white midsole + outsole, heel counter tab
+        if co.z < SOLE + 0.002:
+            return 1.0
+        t = (co - heel).dot(fwd) / L
+        return 1.0 if t < 0.05 and co.z > 0.09 else 0.0
+    def stripe(i, co):                                      # one pale violet diagonal on the walls
+        rel = co - heel
+        t = rel.dot(fwd) / L
+        if 0.035 < co.z < 0.11 and abs(rel.dot(lat)) > hw(max(0.0, min(1.0, t))) * 0.75:
+            along = t - (co.z - 0.035) * 2.2
+            return 1.0 if 0.33 < along < 0.39 else 0.0
+        return 0.0
+    set_attr(o, "trim", sole)
+    set_attr(o, "accent", stripe)
+    C_smooth = smooth
+    C_smooth(o, 45)
+    return o
+
+
+# ---------------------------------------------------------------- constructed jacket front panels
+
+def front_panel(name, torso_pts, side, z0, z1, x_edge, x_seam, ease, body, margin=0.010, nx=14, nz=26,
+                sigma_z=0.030, hem_rows=2, placket_cols=2):
+    """One front panel of the open jacket, built as a pattern piece rather than cut from the body.
+    The chest is one garment volume: at each height the front of the convex hull of the whole torso
+    section (both breasts bridged) is taken, then the depth is low-passed along the height so the panel
+    reads as continuous fabric, then held at least `margin` off the body. Quad grid: columns from the
+    zip edge (x_edge(z)) to the princess seam (x_seam(z)), rows from the hem (z0) to the top line
+    (z1(x)). A raised zip placket and a hem band are marked in "trim"."""
+    from mathutils.bvhtree import BVHTree
+    zs_s = [z0 - 0.01 + i * 0.004 for i in range(int((max(z1(0.07), z1(0.15)) - z0 + 0.03) / 0.004) + 1)]
+
+    def hull_front_y(z, x):
+        sec = [(p.x, p.y) for p in torso_pts if abs(p.z - z) < 0.006]
+        if len(sec) < 8:
+            return None
+        h = _hull2d(sec)
+        best = None
+        for (ax, ay), (bx, by) in zip(h, h[1:] + h[:1]):
+            if (ax - x) * (bx - x) <= 0 and ax != bx:
+                y = ay + (by - ay) * (x - ax) / (bx - ax)
+                best = y if best is None else min(best, y)        # the front crossing (most -y)
+        return best
+
+    # depth field on a fine (x, z) lattice, then smoothed along z
+    xs_s = [0.04 + i * 0.008 for i in range(int((0.20 - 0.04) / 0.008) + 1)]
+    field = {}
+    for x in xs_s:
+        col = [hull_front_y(z, side * x) for z in zs_s]
+        col = [c if c is not None else 0.0 for c in col]
+        sm = []
+        for i, z in enumerate(zs_s):
+            acc = w_ = 0.0
+            for j, z2 in enumerate(zs_s):
+                w = math.exp(-((z2 - z) / sigma_z) ** 2)
+                acc += col[j] * w
+                w_ += w
+            sm.append(min(col[i], acc / w_))                       # smooth, but never behind the hull
+        field[x] = sm
+
+    def depth(x, z):
+        xa = min(max(abs(x), xs_s[0]), xs_s[-1])
+        i = min(int((xa - xs_s[0]) / 0.008), len(xs_s) - 2)
+        tx = (xa - xs_s[i]) / 0.008
+        j = min(max(int((z - zs_s[0]) / 0.004), 0), len(zs_s) - 2)
+        tz = (z - zs_s[j]) / 0.004
+        a = field[xs_s[i]][j] * (1 - tz) + field[xs_s[i]][j + 1] * tz
+        b2 = field[xs_s[i + 1]][j] * (1 - tz) + field[xs_s[i + 1]][j + 1] * tz
+        return a * (1 - tx) + b2 * tx
+
+    tree = BVHTree.FromPolygons([v.co.copy() for v in body.data.vertices], [list(p.vertices) for p in body.data.polygons])
+    b = bmesh.new()
+    uv = b.loops.layers.uv.new("UVMap")
+    grid = []
+    for r in range(nz + 1):
+        v_ = r / nz
+        row = []
+        for cidx in range(nx + 1):
+            u = cidx / nx
+            z_b = z0
+            # top line follows the shoulder: a little lower toward the seam
+            xe, xs = x_edge(z0), x_seam(z0)
+            x = xe + (xs - xe) * u
+            z_t = z1(x)
+            z = z_b + (z_t - z_b) * v_
+            xe, xs = x_edge(z), x_seam(z)
+            x = xe + (xs - xe) * u
+            y = depth(x, z) - ease
+            if r < hem_rows:                                       # the hem band hugs a little
+                y += 0.003 * (1 - r / max(hem_rows, 1))
+            if cidx < placket_cols:                                # a raised zip placket
+                y -= 0.0018
+            p = V((side * x, y, z))
+            loc, nrm, _, d = tree.find_nearest(p)
+            if loc is not None and (p - loc).dot(nrm) < margin:
+                p = loc + nrm * margin
+            row.append(b.verts.new(p))
+        grid.append(row)
+    for r in range(nz):
+        for cidx in range(nx):
+            q = (grid[r][cidx], grid[r][cidx + 1], grid[r + 1][cidx + 1], grid[r + 1][cidx])
+            f = b.faces.new(q if side > 0 else q[::-1])
+            for lo, (uu, vv) in zip(f.loops, ((cidx, r), (cidx + 1, r), (cidx + 1, r + 1), (cidx, r + 1))):
+                lo[uv].uv = (uu / nx, vv / nz)
+    # one smoothing pass over the interior keeps the quads even
+    inner = [v for row in grid[1:-1] for v in row[1:-1]]
+    bmesh.ops.smooth_vert(b, verts=inner, factor=0.4, use_axis_x=False, use_axis_y=True, use_axis_z=False)
+    o = new_obj(name, b)
+    ncol = nx + 1
+    set_attr(o, "trim", lambda i, co: 1.0 if (i % ncol) < placket_cols or (i // ncol) < hem_rows else 0.0)
+    set_attr(o, "accent", lambda i, co: 1.0 if (i % ncol) == nx else 0.0)       # princess-seam piping
+    solidify(o, 0.0035, 1.0, even=False)
+    smooth(o, 60)
     return o

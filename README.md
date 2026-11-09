@@ -58,7 +58,7 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 501`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `# pass 508`; `cd server && npm test` → `# pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`.
 
 ---
 
@@ -86,7 +86,7 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 | Asset review page, UI preview page, HUD preview page (dev) | **work** | `game/review.html`, `game/ui-preview.html`, `game/hud-preview.html` |
 | Weekly tournament card and enrollment | **simulation**: local UI state, no server, no prizes | `game/src/ui/tournament.js` |
 | Browser prototype of the full game loop (2D) | **works**, the frozen parity reference (UI in Russian by design) | `prototype-2d/index.html` |
-| **Memory shards as NEP-171 NFTs** (`contracts/memory-shard`, Rust, near-contract-standards 5.30): coordinator-only mint of one token per shard carrying the season id, the memory's kind and weight, the trial it was forgotten, the auction result and the Merkle leaf of the sign its vision opened; a deterministic on-chain ink-ring SVG as media, byte-identical to the game's own (`game/src/net/shard-nft.js`, shared vectors); NEP-177 metadata, NEP-181 enumeration, `shards_of_season` views; read-only game client and badge model | **deployed on testnet** as [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet) (09.11) with the judge playthrough's 3 shards minted (`793f6c05e89839f2-7`, `-10`, `-15`); the on-chain SVG is byte-identical to the game's and shard 7's leaf equals leaf #3 revealed in `ftf-seasons.testnet`. 21 unit + mocked-chain tests, 5 game tests. The game's read-only shard client exists, but **no HUD element shows shard NFTs yet** (request 9 to the UI task) | `contracts/memory-shard/`, [docs/shard-nft.md](docs/shard-nft.md) |
+| **Memory shards as NEP-171 NFTs** (`contracts/memory-shard`, Rust, near-contract-standards 5.30): coordinator-only mint of one token per shard carrying the season id, the memory's kind and weight, the trial it was forgotten, the auction result and the Merkle leaf of the sign its vision opened; a deterministic on-chain ink-ring SVG as media, byte-identical to the game's own (`game/src/net/shard-nft.js`, shared vectors); NEP-177 metadata, NEP-181 enumeration, `shards_of_season` views; read-only game client and badge model | **deployed on testnet** as [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet) (09.11) with the judge playthrough's 3 shards minted (`793f6c05e89839f2-7`, `-10`, `-15`); the on-chain SVG is byte-identical to the game's and shard 7's leaf equals leaf #3 revealed in `ftf-seasons.testnet`. In the game (judge path): the Memories panel shows each minted shard as an NFT card (the contract's own SVG, read from `shards_of_season` and checked byte-identical before it is drawn in; token id, owner, the biography from the metadata, "bound to the sealed season · leaf #3" linked to the reveal on `ftf-seasons.testnet`, a nearblocks link), and a "Minted on NEAR testnet" toast appears when Frost buys Iris's shard at the trial-6 auction. A card shows only when the token exists on-chain and its data equals the local shard; live seasons show "on-chain for the judge season only"; an RPC failure shows nothing. 21 unit + mocked-chain tests, 12 game tests | `contracts/memory-shard/`, [docs/shard-nft.md](docs/shard-nft.md) |
 | Escrow, wallet sign-in | **not started** | — |
 
 ### Real / mock
@@ -95,7 +95,7 @@ Measured on 08.11.2026 from a fresh clone (`docs/handoff/agent-reports/submissio
 |---|---|
 | AI clans | deterministic heuristics with personalities, not an LLM (**mock AI, real rules**) |
 | Season commitment | the browser generates the season, commits the Merkle root before trial 1 and verifies every reveal against it: **real cryptography, local** ("browser verification against the root"). For the judge season the same root and all 15 leaves are also **on NEAR testnet, verified by the contract** (real, read back read-only by the game: "Verified on NEAR testnet ✓"). Live seasons stay local: their roots are not registered on-chain |
-| NFTs, shards, escrow | shards and their auctions are game state in the engine (**real rules, local**); the judge playthrough's 3 shards are **real NEP-171 NFTs on testnet** (`ftf-shards.testnet`, minted by the coordinator script, not by the player's session; live seasons mint nothing); escrow **mock** |
+| NFTs, shards, escrow | shards and their auctions are game state in the engine (**real rules, local**); the judge playthrough's 3 shards are **real NEP-171 NFTs on testnet** (`ftf-shards.testnet`, minted by the coordinator script, not by the player's session; the game reads them and shows them as NFT cards and a mint toast only when the on-chain shard equals the local one; live seasons mint nothing and the game says so); escrow **mock** |
 | Hashes and Merkle proofs | real SHA-256; the contract's test vectors are generated from the same engine (**real**) |
 | Money | in-game silk, no token, no payments |
 | 3D art | real models for everything listed above; any model that is missing or fails to load falls back to an unlabeled **greybox** stand-in (its "not final art" label shows only with `?dev=1`, the F3 dev HUD or on the asset review page) |
@@ -115,13 +115,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 501 tests, ~20 s
+npm test            # 508 tests, ~20 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `# tests 501` / `# pass 501` / `# fail 0`; `✓ built in …s`.
+**See:** `# tests 508` / `# pass 508` / `# fail 0`; `✓ built in …s`.
 
-What the 501 tests cover (the breakdown below is the 260 of the first measurement; 241 were added on 08.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers and QA regressions):
+What the 508 tests cover (the breakdown below is the 260 of the first measurement; 248 were added on 08.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers and QA regressions):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
@@ -190,7 +190,7 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
 ## Tracks
 
 - **games** ("Games With Real Economies"): the economy *is* the game loop. Six agent clans trade words, silk, promises and memories; anchors pay out from a Gift split exactly between those who staked; defection raises world tension until the Shells leave and everyone loses. The season's randomness is sealed before the first move, so no patch, no admin and no AI can bend an outcome.
-- **nfts** ("NFTs That Do Something"): a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result) and the Merkle leaf of the sign its vision opened, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the judge playthrough's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. Not yet: no HUD element shows the shards, and live seasons mint nothing (see the real/mock table).
+- **nfts** ("NFTs That Do Something"): a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result) and the Merkle leaf of the sign its vision opened, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the judge playthrough's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. In the game, the judge path shows the minted shards as NFT cards in the Memories panel (on-chain SVG, token id, owner, biography, leaf binding, explorer link) and a "Minted on NEAR testnet" toast when Frost buys Iris's shard; it reads only, never signs. Live seasons mint nothing and say so (see the real/mock table).
 
 ## Baseline and third-party code (Q-001–005)
 

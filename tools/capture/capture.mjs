@@ -18,6 +18,8 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { renderShot } from './lib/browser.mjs';
+import { renderPage } from './lib/page.mjs';
+import { compositeUnder, lumaCheck } from './lib/compose.mjs';
 import { mixVideo } from './lib/mix.mjs';
 import { toSrt, toAss, checkCaptions } from './lib/subtitles.mjs';
 import { assemble, timeline, ffprobe } from './lib/ffmpeg.mjs';
@@ -52,7 +54,7 @@ function listVideos() { return readdirSync(join(HERE, 'shots')).filter((f) => /\
 /** Static checks: camera moves compile and stay above the ground, actions in range, captions readable. */
 export function checkVideo(v) {
   const problems = [];
-  const tl = timeline(v.shots.map((s) => ({ duration: s.duration, transition: s.transition })));
+  const tl = timeline(v.shots.filter((s) => !s.hidden).map((s) => ({ duration: s.duration, transition: s.transition })));
   v.shots.forEach((s, i) => {
     if (!(s.duration > 0)) problems.push(`${s.name}: no duration`);
     const cams = Array.isArray(s.camera) ? s.camera : s.camera ? [{ from: 0, to: s.duration, ...s.camera }] : [];
@@ -72,8 +74,10 @@ export function checkVideo(v) {
     for (const ov of s.overlays || []) if (ov.to != null && ov.to > s.duration + 1.5) problems.push(`${s.name}: overlay ${ov.kind} ends at ${ov.to} after the shot`);
     void i;
   });
-  problems.push(...checkCaptions(v.captions || [], tl.duration));
-  return { problems, duration: tl.duration, starts: tl.shots.map((s, i) => ({ name: v.shots[i].name, start: +s.start.toFixed(3) })) };
+  problems.push(...checkCaptions(v.captions || [], tl.duration, v.reading));
+  // In-picture captions of in-engine shots obey the same reading rule.
+  if (v.reading) for (const s of v.shots) for (const ov of s.overlays || []) if (ov.kind === 'caption') problems.push(...checkCaptions([{ ...ov, text: ov.text.replace(/\*/g, '') }], s.duration + 1, v.reading).map((p) => `${s.name}: ${p}`));
+  return { problems, duration: tl.duration, starts: tl.shots.map((s, i) => ({ name: v.shots.filter((x) => !x.hidden)[i].name, start: +s.start.toFixed(3) })) };
 }
 
 async function startDevServer(log) {
@@ -135,13 +139,23 @@ async function main() {
           log(`[${shot.name}] attempt ${k} failed: ${String(e.message).split('\n')[0]} · retrying (${k + 1}/${attempts})`);
         }
       }
-      function renderOnce() { return renderShot({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, tier, gpu: !!args.gpu, sampleEvery: Number(args.sample || 0), log, probe: args.probe ? { from: Number(String(args.probe).split('-')[0]), to: Number(String(args.probe).split('-')[1] ?? String(args.probe).split('-')[0]) } : null } }); }
+      function renderOnce() { if (shot.page) return renderPage({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, sampleEvery: Number(args.sample || 0), log } }); return renderShot({ shot, baseUrl: server.base, outDir: work, opts: { width, height, fps, tier, gpu: !!args.gpu, sampleEvery: Number(args.sample || 0), log, probe: args.probe ? { from: Number(String(args.probe).split('-')[0]), to: Number(String(args.probe).split('-')[1] ?? String(args.probe).split('-')[0]) } : null } }); }
     });
     results.push(...list);
   } finally { server.stop(); }
+  // Page shots with `under` were rendered with alpha: composite each over its (hidden) source shot.
+  for (const s of shots) if (s.page && s.under) {
+    const src = shots.find((x) => x.name === s.under.shot);
+    if (!src) throw new Error(`${s.name}: under-shot ${s.under.shot} is not in this render`);
+    compositeUnder({ page: join(work, s.name + '.mkv'), under: join(work, src.name + '.mp4'), box: s.under, width, height, fps, duration: s.duration, out: join(work, s.name + '.mp4') });
+    log(`[${s.name}] composited over ${src.name}`);
+  }
+  for (const r of results) if (r && r.shot) { const f = join(work, r.shot + '.mp4'); if (existsSync(f)) { r.luma = lumaCheck(f, { allowJumps: shots.find((x) => x.name === r.shot)?.allowJumps ?? 3 }); if (!r.luma.ok) throw new Error(`luma check failed on ${r.shot}: ${JSON.stringify(r.luma)}`); } }
   if (args.shots) { log('partial render finished (no assembly): ' + results.map((r) => `${r.shot} ${r.frames}f`).join(', ')); writeFileSync(join(work, 'partial.json'), JSON.stringify(results, null, 1)); return; }
 
   // Assembly: timeline → mix → captions → encode (clean + captioned).
+  const visible = shots.map((s, i) => [s, results[i]]).filter(([s]) => !s.hidden);
+  shots = visible.map(([s]) => s); results.splice(0, results.length, ...visible.map(([, r]) => r));
   const tl = timeline(shots.map((s, i) => ({ name: s.name, file: join(work, s.name + '.mp4'), duration: s.duration, transition: s.transition, cues: results[i].cues, camLog: results[i].camLog })));
   log(`timeline ${tl.duration.toFixed(2)} s: ` + tl.shots.map((s) => `${s.name}@${s.start.toFixed(1)}`).join(' '));
   const wav = join(work, name + '.wav');
@@ -158,7 +172,9 @@ async function main() {
   const enc = { fps, width, height, crf: video.output?.crf ?? 17, preset: video.output?.preset ?? 'slow', grain: video.output?.grain ?? 0 };
   await assemble({ shots: tl.shots, audioWav: wav, out: clean, ...enc });
   await assemble({ shots: tl.shots, audioWav: wav, out: captioned, ass, fontsDir, ...enc });
-  const report = { video: name, title: video.title, width, height, fps, tier, duration: tl.duration, shots: results.map((r) => ({ shot: r.shot, frames: r.frames, secondsPerFrame: r.secondsPerFrame, loaded: r.loaded, setupFrames: r.setupFrames, errors: r.errors, consoleErrors: r.consoleErrors, hashes: r.hashes })), mix, files: {} };
+  const finalLuma = lumaCheck(clean, { allowJumps: tl.shots.length + 2 + shots.reduce((n, s) => n + (s.allowJumps ?? 0), 0) });
+  log(`final luma: ${JSON.stringify(finalLuma)}`);
+  const report = { finalLuma, video: name, title: video.title, width, height, fps, tier, duration: tl.duration, shots: results.map((r) => ({ shot: r.shot, frames: r.frames, secondsPerFrame: r.secondsPerFrame, loaded: r.loaded, setupFrames: r.setupFrames, errors: r.errors, consoleErrors: r.consoleErrors, hashes: r.hashes })), mix, files: {} };
   for (const f of [clean, captioned, srt]) { const st = statSync(f); const pr = f.endsWith('.mp4') ? ffprobe(f) : null; report.files[f] = { bytes: st.size, mb: +(st.size / 1048576).toFixed(1), duration: pr ? +pr.format.duration : null, video: pr ? pr.streams.find((s) => s.codec_type === 'video') : null }; }
   writeFileSync(join(work, name + '.report.json'), JSON.stringify(report, null, 1));
   copyFileSync(join(work, name + '.report.json'), join(outDir, name + '.report.json'));
