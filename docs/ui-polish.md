@@ -238,6 +238,7 @@ Console errors in every run: 0.
 | 1920×1080 × en, 12 states (final state, after the merge of 6f2f288) | 0 overlaps (the walk states re-run after a 30 s load timeout at this size) |
 | 390×844 × en, 12 states (final state) | 0 overlaps after two last fixes: the phone context menu also hides the trial card and the two fabs; inside a Shell the dialogue bar yields to the reading card |
 | 1280×800 × uk, ru, it, zh, 12 states (final state, after the QA-031 fix) | 0 overlaps in all 48 states; console: only the `lobby_bg.jpg` preload warning |
+| Round 5 (QA-011/033/035, after c6bb3b0; `.ch-fab` and `.a11y-recap-btn` now measured, 390×664 added): 390×664 × five locales, 1280×800 × five locales, 390×560 / 375×500 / 360×480 / 667×300 × en, 12 states each | 0 overlaps (390×844 × five locales was green before the last two layout tweaks, which do not apply at that height) |
 
 Console in the final runs: 0 errors; one warning, `assets/ui/lobby_bg.jpg` "preloaded but not used" (the lobby's preload
 link in the UI shell, not a play-layer file).
