@@ -471,7 +471,7 @@ def stage_body():
     mpfb_bones = {b.name for b in mrig.data.bones}
     bpy.data.objects.remove(mrig)
     bm.name = "body"
-    if COSTUME == "athletic":                      # the owner's athletic body profile (body_profile.py)
+    if COSTUME == "athletic":                      # the athletic body (owner reference: owner_athletic_body_reference.py)
         names = {g.index: g.name for g in bm.vertex_groups}
         dom0 = []
         for v in bm.data.vertices:
