@@ -1,24 +1,24 @@
 {
-  "device": "OPTIX",
-  "resolution": 1600,
-  "samples": 768,
+  "device": "CPU",
+  "resolution": 800,
+  "samples": 64,
   "seconds_per_render": {
-    "shard_front": 3.8,
-    "shard_side": 3.58,
-    "shard_three_quarter": 4.07,
-    "shard_top": 9.46,
-    "shard_close_tip": 7.01,
-    "shard_close_veins": 9.34,
-    "shard_close_base": 9.55,
-    "shard_inspect_close_tip": 7.06,
-    "shard_inspect_close_veins": 11.57,
-    "shard_inspect_close_base": 10.32,
-    "shard_collision_three_quarter": 5.56
+    "shard_front": 10.65,
+    "shard_side": 10.5,
+    "shard_three_quarter": 20.15,
+    "shard_top": 39.91,
+    "shard_close_tip": 23.74,
+    "shard_close_veins": 44.01,
+    "shard_close_base": 52.66,
+    "shard_inspect_close_tip": 23.14,
+    "shard_inspect_close_veins": 45.66,
+    "shard_inspect_close_base": 55.5,
+    "shard_collision_three_quarter": 24.53
   },
   "stages": [
     {
       "stage": "qa_renders",
-      "seconds": 81.4
+      "seconds": 350.77
     }
   ]
 }

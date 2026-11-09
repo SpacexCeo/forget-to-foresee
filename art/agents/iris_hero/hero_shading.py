@@ -40,6 +40,9 @@ ACCENT = {"jacket": NACRE, "jacket_collar": NACRE, "leggings": NACRE, "trainers"
 ROUGH = {"jacket": 0.70, "jacket_collar": 0.66, "sports_top": 0.80, "leggings": 0.74, "trainers": 0.62, "ankle_socks": 0.85,
          "hair_tie": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
 METAL = {"pendant": 1.0}
+KNIT = ("jacket",)          # garments of a fine knit: courses in the normal map (the leggings stay smooth)
+RIB_PERIOD = 0.0036         # metres per rib on ribbed bands (hem, cuffs): a 1x1 rib of a sports jacket
+KNIT_COURSE = 0.0050        # metres per knit course on the jacket body (2.4 mm aliased into moire in the 2K atlas)
 
 
 def _key(name):
@@ -68,6 +71,11 @@ def paint_garment_attrs(objs):
                 d.value = val
         if "trim" not in me.attributes:
             a = me.attributes.new("trim", "FLOAT", "POINT")
+        ribbed = "ribu" in me.attributes
+        for nm, val in (("knit", 1.0 if k in KNIT and not ribbed else 0.0), ("rib", 1.0 if ribbed else 0.0)):
+            a = me.attributes.get(nm) or me.attributes.new(nm, "FLOAT", "POINT")
+            for d in a.data:
+                d.value = val
 
 
 # ----------------------------------------------------------------- node helpers
@@ -251,6 +259,17 @@ def garment_shader(b):
     rough = b.math("SUBTRACT", b.attr("rough").outputs["Fac"], b.math("MULTIPLY", accent, 0.30))
     metal = b.attr("metal").outputs["Fac"]
     h = b.math("ADD", b.math("MULTIPLY", fib.outputs["Fac"], 0.5), b.math("MULTIPLY", weave.outputs["Fac"], 0.2))
+    # knit: horizontal courses on the jacket (wave period 2*pi / (20 * scale) metres), slightly broken
+    knit = b.attr("knit").outputs["Fac"]
+    course = b.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction="Z", wave_profile="SIN",
+                 in_Scale=2 * math.pi / (20 * KNIT_COURSE), in_Distortion=0.6, in_Detail=2.0)
+    b.l(pos, course.inputs["Vector"])
+    h = b.math("ADD", h, b.math("MULTIPLY", knit, b.math("MULTIPLY", course.outputs["Fac"], 0.28)))
+    # ribs across the ribbed bands: a sine of the arc length along the band (the `ribu` attribute)
+    rib = b.attr("rib").outputs["Fac"]
+    phase = b.math("MULTIPLY", b.attr("ribu").outputs["Fac"], math.pi / RIB_PERIOD)       # |sin| repeats every pi
+    ridge = b.math("POWER", b.math("ABSOLUTE", b.math("SINE", phase)), 0.6)      # rounded ridges, sharp valleys
+    h = b.math("ADD", h, b.math("MULTIPLY", rib, b.math("MULTIPLY", ridge, 1.1)))
     return mul.outputs[2], rough, metal, h, None
 
 
