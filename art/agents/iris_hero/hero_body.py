@@ -40,7 +40,7 @@ FEM = {
 BANDS = {
     "ribcage": (0.700, 0.050), "underbust": (0.685, 0.035), "chest": (0.725, 0.045),
     "waist": (0.625, 0.050), "lower_back": (0.640, 0.040),   # the curve sits at the waist, above the seat
-    "pelvis": (0.545, 0.045), "hip": (0.505, 0.060), "glute": (0.525, 0.080),
+    "pelvis": (0.545, 0.045), "hip": (0.505, 0.060), "glute": (0.555, 0.070),
     "upper_thigh": (0.430, 0.065), "calf": (0.205, 0.070),
 }
 
@@ -194,9 +194,12 @@ def inner_fill(cos, doms, s=None, step=0.02, z_full=0.43, z_none=0.30):
 # The reference's side view, measured on its back line relative to the back of the thigh at 0.36 H
 # (fractions of H): lower back -0.005 at 0.63, seat peak +0.029 at 0.51, fold +0.013 at 0.455.
 SEAT = {
-    "z_anchor": 0.360, "z_fold": 0.455, "z_peak": 0.510, "z_lumbar": 0.630,
-    "fold": 0.010, "peak": 0.052, "lumbar": -0.006,   # owner 09.11: "as in the reference" (its close-ups read fuller than the full-body view)
-    "round": 0.62,       # arc exponent: 0.5 = an ellipse, higher = fuller shoulders on the arc
+    # owner 09.11 (side crops compared): the reference's seat is compact and high, the fold at about 0.49 H
+    # (also measured on its back view), the peak at the wrist, full right under the waist
+    "z_anchor": 0.360, "z_fold": 0.485, "z_peak": 0.555, "z_lumbar": 0.655,
+    "fold": 0.016, "peak": 0.052, "lumbar": -0.006,
+    "round": 0.80,       # arc exponent of the lower arc: 0.5 = an ellipse, higher = a softer fold
+    "round_up": 0.45,    # the upper arc: fuller right under the waist
     "fade": 0.05,        # above the lumbar point and below the fold the change fades out over this height
     # each cheek is its own convex dome (owner 09.11: "no squareness, firm and convex"): the push is the
     # full profile change at the cheek centre and falls off as an ellipse toward the cleft and the side
@@ -235,7 +238,7 @@ def seat_profile(cos, doms, s=None, step=0.01):
     def target(zn):
         if zp <= zn <= zl:
             t = (zn - zp) / (zl - zp)
-            return y_l + (y_p - y_l) * max(0.0, 1.0 - t * t) ** e
+            return y_l + (y_p - y_l) * max(0.0, 1.0 - t * t) ** P["round_up"]
         t = (zp - zn) / (zp - zf)
         return y_f + (y_p - y_f) * max(0.0, 1.0 - t * t) ** e
 
@@ -274,7 +277,7 @@ def seat_profile(cos, doms, s=None, step=0.01):
 
 
 CHEEK = {
-    "z": 0.522,          # dome centre height, fraction of H
+    "z": 0.555,          # dome centre height, fraction of H (at the seat peak)
     "x": 0.060,          # dome centre from the midline, metres at 1.70 m
     "rx": 0.080, "ry": 0.088, "rz": 0.096,   # dome radii (across, depth, height), metres at 1.70 m
     "inflate": 0.75,     # inside the dome: how far a vertex moves to the dome surface (1 = all the way)
@@ -325,7 +328,7 @@ def cheek_domes(cos, doms, s=None):
     return res
 
 
-SIDE = {"z": 0.490, "h": 0.050, "amount": 0.009}   # fractions of H / metres at 1.70 m
+SIDE = {"z": 0.515, "h": 0.050, "amount": 0.009}   # fractions of H / metres at 1.70 m
 
 
 def side_fill(cos, doms, s=None):
