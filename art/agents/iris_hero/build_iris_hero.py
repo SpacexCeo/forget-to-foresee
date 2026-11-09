@@ -826,10 +826,11 @@ def athletic_costume(bm, P, dom, bones):
         else:                                                 # a level top edge, hidden in the waistband
             v.co.z = 1.020
     # compression fabric unifies the forms: the crotch and a restrained glute cleft are bridged
-    crotch = lambda p: abs(p.x) < 0.07 and 0.70 < p.z < 0.88 and p.y < c.y + 0.02      # the front crotch only; the back follows the cleft
+    crotch = lambda p: ((abs(p.x) < 0.07 and 0.70 < p.z < 0.88 and p.y < c.y + 0.02)   # the front crotch; the back follows the cleft,
+                        or (abs(p.x) < 0.03 and p.y > c.y and 0.935 < p.z < 1.0))     # except its deep top (no dark pit)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
-                                        trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
-                                        accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12))
+                                        trim=lambda p, nrm: leg_panel(p, nrm),   # one colour to the top edge (owner: one layer)
+                                        accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12))
     # (owner 09.11: one layer, pressed into the cleft between the cheeks: no bridge, no separate waistband)
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # piping, the centre back seam and the sleeve stripes as clean lines on the fabric (owner's reference 09.11)
