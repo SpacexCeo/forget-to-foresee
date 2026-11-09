@@ -182,24 +182,44 @@ def garment_shader(b):
 
 
 def hair_shader(b):
+    """Card atlas of 8 columns (hero_costume.HAIR_COLS): dense clumps (0-3), airy clumps (4-6) and single
+    flyaway strands (7). Hundreds of fine strands per column with gaps, ragged tips at different lengths,
+    a dark root, chestnut mid-lengths, sun-lighter tips and per-strand highlights."""
     uv = b.n("ShaderNodeUVMap", uv_map="UVMap")
     xyz = b.n("ShaderNodeSeparateXYZ")
     b.l(uv.outputs["UV"], xyz.inputs[0])
     u, v = xyz.outputs["X"], xyz.outputs["Y"]
-    # strands across u, a slight wave; tapered toward the tip (v=0)
-    wave = b.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction="X", in_Scale=55.0, in_Distortion=1.2,
-               in_Detail=3.0)
-    b.l(uv.outputs["UV"], wave.inputs["Vector"])
-    nz = b.n("ShaderNodeTexNoise", in_Scale=24.0, in_Detail=3.0)
-    b.l(uv.outputs["UV"], nz.inputs["Vector"])
-    strands = b.math("ADD", wave.outputs["Fac"], b.math("MULTIPLY", nz.outputs["Fac"], 0.5))
-    edge = b.math("MULTIPLY", b.math("SINE", b.math("MULTIPLY", b.math("FRACT", b.math("MULTIPLY", u, 4.0)), math.pi)), 1.6)
-    taper = b.math("POWER", v, 0.35)
-    alpha = b.math("MULTIPLY", b.math("MULTIPLY", b.math("GREATER_THAN", strands, b.math("SUBTRACT", 1.15, b.math("MULTIPLY", edge, 0.55))), 1.0),
-                   b.math("GREATER_THAN", taper, b.math("MULTIPLY", nz.outputs["Fac"], 0.55)))
-    root = b.mix(v, (0.055, 0.025, 0.014), (0.135, 0.058, 0.026))
-    col = b.mix(b.math("MULTIPLY", wave.outputs["Fac"], 0.35), root, (0.20, 0.095, 0.045))
-    return col, 0.62, 0.0, b.math("MULTIPLY", strands, 0.3), alpha
+    col_i = b.math("FLOOR", b.math("MULTIPLY", u, 8.0))
+    lu = b.math("FRACT", b.math("MULTIPLY", u, 8.0))                     # 0..1 across the card
+    # strands: thin bands across u, slightly wavy along v
+    sv = b.n("ShaderNodeCombineXYZ")
+    b.l(b.math("ADD", u, b.math("MULTIPLY", b.math("SINE", b.math("MULTIPLY", v, 9.0)), 0.004)), sv.inputs["X"])
+    b.l(b.math("MULTIPLY", v, 0.0015), sv.inputs["Y"])
+    fine = b.n("ShaderNodeTexNoise", in_Scale=900.0, in_Detail=2.0, in_Roughness=0.4)
+    b.l(sv.outputs[0], fine.inputs["Vector"])
+    coarse = b.n("ShaderNodeTexNoise", in_Scale=140.0, in_Detail=2.0)
+    b.l(sv.outputs[0], coarse.inputs["Vector"])
+    strand = b.math("ADD", b.math("MULTIPLY", fine.outputs["Fac"], 0.75), b.math("MULTIPLY", coarse.outputs["Fac"], 0.35))
+    # density per column: dense 0.47, airy 0.55, single strands 0.62 (higher = fewer strands)
+    thr = b.math("ADD", 0.47, b.math("MULTIPLY", b.math("GREATER_THAN", col_i, 3.5), 0.08))
+    thr = b.math("ADD", thr, b.math("MULTIPLY", b.math("GREATER_THAN", col_i, 6.5), 0.07))
+    edge = b.math("SUBTRACT", 1.0, b.math("POWER", b.math("ABSOLUTE", b.math("SUBTRACT", b.math("MULTIPLY", lu, 2.0), 1.0)), 3.0))
+    thr = b.math("ADD", thr, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, edge), 0.25))  # thinner at the card edges
+    hairs = b.math("GREATER_THAN", strand, thr)
+    # ragged tips: each strand ends at its own length (v = 0 is the tip)
+    tipn = b.n("ShaderNodeTexNoise", in_Scale=300.0, in_Detail=1.0)
+    tv = b.n("ShaderNodeCombineXYZ"); b.l(u, tv.inputs["X"])
+    b.l(tv.outputs[0], tipn.inputs["Vector"])
+    tips = b.math("GREATER_THAN", v, b.math("MULTIPLY", b.math("SUBTRACT", tipn.outputs["Fac"], 0.3), 0.55))
+    alpha = b.math("MULTIPLY", hairs, tips)
+    # colour: root -> mid -> tip, per-strand value variation and highlights
+    c = b.mix(b.math("POWER", v, 0.6), (0.20, 0.10, 0.050), (0.120, 0.052, 0.024))     # tip (v=0) -> mid
+    root = b.math("MULTIPLY", b.math("SUBTRACT", v, 0.82), 5.5, clamp=True)
+    c = b.mix(b.math("POWER", root, 1.5), c, (0.045, 0.020, 0.011))                     # dark roots
+    var = b.math("MULTIPLY", coarse.outputs["Fac"], 1.0)
+    c = b.mix(b.math("MULTIPLY", b.math("GREATER_THAN", fine.outputs["Fac"], 0.66), 0.45), c, (0.30, 0.16, 0.08))
+    c = b.mix(b.math("MULTIPLY", var, 0.3), c, (0.07, 0.032, 0.016))
+    return c, 0.55, 0.0, b.math("MULTIPLY", strand, 0.4), alpha
 
 
 def eye_shader(b):

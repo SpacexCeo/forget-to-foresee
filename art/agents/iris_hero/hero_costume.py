@@ -222,7 +222,9 @@ def hood_down(P):
             th = math.radians(20) + math.radians(140) * i / (n - 1)            # behind the neck
             base = V((c0.x + (rx + 0.075) * math.cos(th), c0.y + 0.02 + (ry + 0.085) * math.sin(th), 1.475))
             out = V((math.cos(th), math.sin(th), 0))
-            ring.append(base + out * (0.035 * math.cos(a)) + V((0, 0, 0.045 * math.sin(a))) + V((0, 0.02, 0)) * k / 6)
+            taper = math.sin(math.pi * i / (n - 1)) ** 0.7          # the roll thins out into the capelet
+            ring.append(base + out * (0.035 * math.cos(a) * taper) + V((0, 0, 0.045 * math.sin(a) * taper))
+                        + V((0, 0.02, 0)) * k / 6)
         rings[-1] = ring
     o = loft("hood", rings, closed_u=False)
     solidify(o, 0.008)
@@ -279,6 +281,10 @@ def boots_from_body(body, keep_fn):
     for m in list(o.modifiers):
         o.modifiers.remove(m)
     o.parent = None
+    dec = o.modifiers.new("lighter", "DECIMATE")
+    dec.ratio = 0.5
+    bpy.context.view_layer.objects.active = o
+    bpy.ops.object.modifier_apply(modifier=dec.name)
     set_attr(o, "trim", lambda i, co: 1.0 if co.z < 0.03 else 0.0)        # the sole
     smooth(o)
     return o
@@ -385,72 +391,95 @@ def belt_and_props(P):
 
 # ===================================================================== hair
 
-def hair_cards(scalp_pts, head_c, head_r, brow_z, seed=11, n_cards=260, length=0.25):
-    """Chestnut shoulder-length wavy hair from cards. Each strand slides down the skull (an ellipsoid a
-    little larger than the head) under gravity, then falls past the jaw with a soft outward flare and a
-    wave; cards lie flat on that surface (UV v: root -> tip). Front roots form a fringe swept to her
-    right that stops above the brows."""
+HAIR_COLS = 8          # texture columns: 0-3 dense clumps, 4-6 airy clumps, 7 single flyaway strands
+
+# layer: cards, surface offset (m), card width (m), segments, length scale, wave (m), lift, texture columns
+HAIR_LAYERS = (
+    ("base", 200, (0.004, 0.008), 0.022, 8, 0.95, 0.005, 0.0, (0, 1, 2, 3)),
+    ("mid", 170, (0.010, 0.018), 0.016, 10, 1.00, 0.014, 0.25, (1, 2, 4, 5)),
+    ("outer", 110, (0.018, 0.028), 0.012, 10, 1.05, 0.020, 0.45, (4, 5, 6)),
+    ("fly", 30, (0.022, 0.034), 0.005, 12, 1.10, 0.024, 0.9, (7,)),
+)
+
+
+def hair_cards(scalp_pts, head_c, head_r, brow_z, seed=11, length=0.33):
+    """Light, airy chestnut hair from layered cards (base, mid, outer, flyaways). Each strand slides
+    down the skull under gravity, then falls past the jaw with an S-wave growing toward the tip and a soft
+    outward lift; outer layers use sparser strand textures, so the silhouette stays broken and see-through.
+    A side parting, the front falls off the face, and a fringe sweeps to her right above the brows."""
     rnd = random.Random(seed)
     b = bmesh.new()
     uv = b.loops.layers.uv.new("UVMap")
-    roots = rnd.sample(scalp_pts, min(n_cards, len(scalp_pts)))
-    segs = 10
+    part_x = 0.022
 
     def shell(p, off):
         q = p - head_c
         e = V((q.x / (head_r[0] + off), q.y / (head_r[1] + off), q.z / (head_r[2] + off)))
-        return head_c + q * (1.0 / max(e.length, 1e-6)), e.length
+        return head_c + q * (1.0 / max(e.length, 1e-6))
 
-    part_x = 0.022                                   # side parting, a little to her left
-    roots = [r for r in roots if not ((r - head_c).y < -head_r[1] * 0.45 and (r - head_c).z < head_r[2] * 0.62)]
-    for ci, r in enumerate(roots):
-        out = (r - head_c).normalized()
-        q = r - head_c
-        side = 1.0 if r.x > part_x else -1.0
-        front = q.y < -head_r[1] * 0.25 and q.z > head_r[2] * 0.55 and side < 0 and rnd.random() < 0.7
-        layer = 0.008 + 0.010 * rnd.random()
-        if front:                                    # fringe: swept across to her right, above the brows
-            L = 0.11 + 0.04 * rnd.random()
-            pull = V((-0.8, -0.35, -0.45)).normalized()
-        else:
-            L = length * (0.85 + 0.3 * rnd.random())
-            fwd = max(0.0, -q.y / head_r[1])          # front roots fall to the side, off the face
-            pull = V((side * (0.25 + 0.9 * fwd), 0.15 + 0.4 * fwd, -1.0)).normalized()
-        pts = [shell(r, layer)[0]]
-        p = pts[0].copy()
-        for s in range(segs):
-            t = (s + 1) / segs
-            n = (p - head_c).normalized()
-            g = pull - n * pull.dot(n)                         # gravity along the surface
-            if g.length < 1e-3:
-                g = V((0, 0, -1))
-            p = p + g.normalized() * (L / segs)
-            below = p.z < head_c.z - head_r[2] * 0.35
-            if not below:
-                p = shell(p, layer + 0.004 * t)[0]
+    usable = [r for r in scalp_pts if not ((r - head_c).y < -head_r[1] * 0.45 and (r - head_c).z < head_r[2] * 0.62)]
+    ci = 0
+    for name, count, (o0, o1), width, segs, lk, wave_a, lift, cols in HAIR_LAYERS:
+        roots = [rnd.choice(usable) for _ in range(count)]
+        for r in roots:
+            ci += 1
+            q = r - head_c
+            side = 1.0 if r.x > part_x else -1.0
+            front = (q.y < -head_r[1] * 0.25 and q.z > head_r[2] * 0.55 and side < 0 and name != "fly"
+                     and rnd.random() < 0.55)
+            layer = o0 + (o1 - o0) * rnd.random()
+            if front:                                    # fringe: thin, close to the forehead, swept aside
+                layer = 0.003 + 0.006 * rnd.random()
+                L = (0.10 + 0.04 * rnd.random()) * lk
+                pull = V((-0.85, -0.2, -0.5)).normalized()
             else:
-                flare = V((p.x - head_c.x, p.y - head_c.y, 0)).normalized() * 0.012
-                p = p + flare * (L / segs) * 4
-            if front:
-                p.z = max(p.z, brow_z + 0.012)
-            wave = 0.006 * math.sin(t * 10 + ci * 1.7) * t
-            pts.append(p + (p - head_c).normalized() * wave)
-        w0 = (0.011 if front else 0.016) * (0.8 + 0.4 * rnd.random())
-        prev = None
-        u0 = (ci % 4) / 4
-        for s, p in enumerate(pts):
-            t = s / segs
-            w = w0 * (1.0 - 0.6 * t)
-            tang = (pts[min(s + 1, segs)] - pts[max(s - 1, 0)]).normalized()
-            nrm = (p - head_c).normalized()
-            side = tang.cross(nrm).normalized() * w
-            row = (b.verts.new(p - side), b.verts.new(p + side))
-            if prev:
-                f = b.faces.new((prev[0], prev[1], row[1], row[0]))
-                for lo, (uu, vv) in zip(f.loops, ((u0, 1 - (s - 1) / segs), (u0 + 0.25, 1 - (s - 1) / segs),
-                                                  (u0 + 0.25, 1 - s / segs), (u0, 1 - s / segs))):
-                    lo[uv].uv = (uu, vv)
-            prev = row
+                L = length * lk * (0.8 + 0.4 * rnd.random())
+                fwd = max(0.0, -q.y / head_r[1])
+                pull = V((side * (0.25 + 0.9 * fwd), 0.15 + 0.4 * fwd, -1.0)).normalized()
+            if name == "fly":
+                L *= 0.6 + 0.6 * rnd.random()
+            ph = rnd.uniform(0, math.tau)
+            freq = rnd.uniform(7.0, 11.0)
+            pts = [shell(r, layer)]
+            p = pts[0].copy()
+            for s in range(segs):
+                t = (s + 1) / segs
+                n = (p - head_c).normalized()
+                g = pull - n * pull.dot(n)
+                if g.length < 1e-3:
+                    g = V((0, 0, -1))
+                p = p + g.normalized() * (L / segs)
+                if p.z >= head_c.z - head_r[2] * 0.35:
+                    p = shell(p, layer + 0.004 * t)
+                else:
+                    radial = V((p.x - head_c.x, p.y - head_c.y, 0)).normalized()
+                    p = p + radial * (L / segs) * (0.05 + lift * 0.25 * t)
+                if front:
+                    p.z = max(p.z, brow_z + 0.012)
+                radial = (p - head_c).normalized()
+                tang_side = g.normalized().cross(radial).normalized()
+                w = wave_a * t ** 1.3
+                pts.append(p + radial * (w * math.sin(t * freq + ph)) + tang_side * (0.6 * w * math.cos(t * freq * 0.7 + ph)))
+            w0 = width * (0.8 + 0.4 * rnd.random()) * (0.7 if front else 1.0)
+            col = rnd.choice(cols)
+            u0 = col / HAIR_COLS
+            twist = rnd.uniform(-0.5, 0.5) if name in ("outer", "fly") and not front else 0.0
+            prev = None
+            for s, p in enumerate(pts):
+                t = s / segs
+                w = w0 * (1.0 - 0.55 * t)
+                tang = (pts[min(s + 1, segs)] - pts[max(s - 1, 0)]).normalized()
+                nrm = (p - head_c).normalized()
+                side_v = tang.cross(nrm).normalized()
+                side_v = (side_v * math.cos(twist * t) + nrm * math.sin(twist * t)).normalized() * w
+                row = (b.verts.new(p - side_v), b.verts.new(p + side_v))
+                if prev:
+                    f = b.faces.new((prev[0], prev[1], row[1], row[0]))
+                    du = 1.0 / HAIR_COLS
+                    for lo, (uu, vv) in zip(f.loops, ((u0, 1 - (s - 1) / segs), (u0 + du, 1 - (s - 1) / segs),
+                                                      (u0 + du, 1 - s / segs), (u0, 1 - s / segs))):
+                        lo[uv].uv = (uu, vv)
+                prev = row
     o = new_obj("hair", b)
     smooth(o, 80)
     return o
