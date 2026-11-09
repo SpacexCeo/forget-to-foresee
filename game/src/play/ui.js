@@ -10,6 +10,8 @@ import { panelArbiterFor } from './panels.js';
 import { renderShardSection } from '../ui/world-hud/shard-card.js';
 import { forgetConfirmModel } from './forget-confirm.js';
 import { biographyModel, biographyLines, biographyText } from './biography.js';
+import { renderAgentCard } from '../ui/world-hud/agent-card.js';
+import { loadAgentCard } from '../net/agent-nft.js';
 import { copyText } from './clipboard.js';
 
 const { effectEvent, renderEvent } = uiI18n;
@@ -46,6 +48,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   root.append(goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info);
 
   let panel = null, panelData = null, endConfirm = 0, infoTimer = 0;
+  let agentCard = { started: false, model: null };
   let forgetAsk = null; // { id, purpose }: the memory waiting for "Forget this memory" / "Keep it" (forget-confirm.js)
   // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
   // re-render on every observation does not restart the ink ring's drawing.
@@ -226,6 +229,8 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     } else if (panel === 'end') {
       // Iris's biography (biography.js): remembered, sacrificed with each fate, the shard NFT, the season record
       const shardsView = shardSource ? shardSource(obs) : null;
+      // Iris's agent card NFT (net/agent-nft.js): read once per season end; minted / not minted / offline / mismatch
+      if (!agentCard.started) { agentCard.started = true; loadAgentCard({ obs }).then((m) => { agentCard.model = m; if (panel === 'end') renderPanel(); }).catch((e) => console.warn('[play] agent card', e)); }
       const bio = biographyModel({ obs, nearStatus: nearSource ? nearSource() : null, shards: shardsView });
       const L = biographyLines(bio, t, i18n);
       const link = (href, text) => (href ? el('a', { class: 'pl-link', href, target: '_blank', rel: 'noopener', text }) : null);
@@ -243,6 +248,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         el('ul', { class: 'pl-list pl-muted', 'data-bio': 'remembered' }, L.remembered.length ? L.remembered.map((x) => el('li', { text: '✓ ' + x })) : el('li', { text: t('bio.none') })),
         el('h3', { text: t('bio.sacrificed') }),
         el('ul', { class: 'pl-list pl-muted', 'data-bio': 'sacrificed' }, L.sacrificed.length ? L.sacrificed.map((x) => el('li', { text: '✕ ' + x })) : el('li', { text: t('bio.none') })),
+        agentCard.model ? renderAgentCard(agentCard.model, { t, doc: document }) : null,
         L.shards.length ? el('ul', { class: 'pl-list', 'data-bio': 'shards' }, L.shards.map((x) => el('li', {}, el('span', { text: x.text + ' ' }), link(x.href, t('shard.nft.view'))))) : null,
         el('p', { 'data-bio': 'chain', 'data-state': bio.chain.state }, el('span', { text: L.chain.text + ' ' }), link(L.chain.href, t('bio.chain.link'))),
         L.chain.recorded ? el('p', { class: 'pl-muted' }, link(L.chain.recorded.href, L.chain.recorded.text)) : null,

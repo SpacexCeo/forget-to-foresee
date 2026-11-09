@@ -1,0 +1,108 @@
+{
+ "state": {
+  "spec": "ftf-agent/1",
+  "season_id": "793f6c05e89839f2",
+  "agent": "iris",
+  "rules": "v3",
+  "schedule_root": "03dbd4587b5d54fc3a6d4befe19920ba66236de11e786baa0a8678305075769a",
+  "version": 1,
+  "final_tick": 17,
+  "outcome": "weapon",
+  "vote": true,
+  "heir": null,
+  "traits": {
+   "reading_rule": "unknown",
+   "words_known": 0,
+   "confident_cells": 0,
+   "bought_words": 0,
+   "cells": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "wild": false,
+   "attention": 3,
+   "silk": 0,
+   "fragment": "dark",
+   "trust": [
+    {
+     "clan": "salt",
+     "trust": 50,
+     "trusted_by": 50,
+     "link_broken": false,
+     "remembers_betrayal": false
+    },
+    {
+     "clan": "ash",
+     "trust": 50,
+     "trusted_by": 50,
+     "link_broken": true,
+     "remembers_betrayal": false
+    },
+    {
+     "clan": "moss",
+     "trust": 65,
+     "trusted_by": 50,
+     "link_broken": false,
+     "remembers_betrayal": false
+    },
+    {
+     "clan": "amber",
+     "trust": 50,
+     "trusted_by": 50,
+     "link_broken": false,
+     "remembers_betrayal": false
+    },
+    {
+     "clan": "frost",
+     "trust": 50,
+     "trusted_by": 50,
+     "link_broken": false,
+     "remembers_betrayal": false
+    }
+   ]
+  },
+  "biography": {
+   "remembered": [
+    {
+     "id": 1,
+     "kind": "first",
+     "weight": 4,
+     "about": null
+    },
+    {
+     "id": 3,
+     "kind": "gift",
+     "weight": 1,
+     "about": "moss"
+    }
+   ],
+   "forgotten": [
+    {
+     "shard_id": 7,
+     "shard_token": "793f6c05e89839f2-7",
+     "kind": "call",
+     "weight": 2,
+     "forgotten_at_tick": 4,
+     "fate": "bought",
+     "buyer": "frost",
+     "price": 13,
+     "unlocked_index": 3
+    }
+   ]
+  }
+ }
+}

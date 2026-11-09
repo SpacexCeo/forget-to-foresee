@@ -1,5 +1,5 @@
-# Builds the season-commit contract and runs every test tier on Linux:
-# vectors vs engine.js, pure tests, near-sdk mocked-blockchain tests, sandbox integration tests.
+# Builds the contracts (season-commit, memory-shard, agent-card) and runs every test tier on Linux:
+# vectors vs engine.js and the JavaScript twins, pure tests, near-sdk mocked-blockchain tests, sandbox integration tests.
 name: contracts
 
 on:
@@ -12,6 +12,9 @@ on:
       - 'game/scripts/gen-shard-vectors.mjs'
       - 'game/tests/contract-vectors.test.mjs'
       - 'game/tests/client/shard-nft.test.mjs'
+      - 'game/src/net/agent-nft.js'
+      - 'game/scripts/gen-agent-vectors.mjs'
+      - 'game/tests/client/agent-nft.test.mjs'
       - '.github/workflows/contracts.yml'
   pull_request:
     paths:
@@ -77,3 +80,39 @@ jobs:
         run: cargo near build non-reproducible-wasm --no-abi
       - name: Vector and mocked-blockchain tests
         run: cargo test --lib
+  agent-card:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: contracts/agent-card
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Agent vectors and judge arguments match agent-nft.js and the engine
+        working-directory: game
+        run: npm ci && node --test tests/client/agent-nft.test.mjs
+      - name: Rust toolchain
+        run: rustup show && rustc --version
+      - name: Install cargo-near
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh
+      - name: Build wasm (agent-card, and season-commit for the sandbox root comparison)
+        run: |
+          cargo near build non-reproducible-wasm --no-abi
+          (cd ../season-commit && cargo near build non-reproducible-wasm --no-abi)
+      - name: Vector, mocked-blockchain and sandbox tests
+        shell: bash
+        run: |
+          set +e
+          cargo test -- --test-threads=2 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          enc() { sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g'; }
+          results=$(grep -E "^test result:|Running " test.log | enc)
+          echo "::notice title=cargo test results::$results"
+          if [ "$status" -ne 0 ]; then
+            details=$(grep -nE "^error|panicked|FAILED|left:|right:|-->|^failures:|^    [a-z_]+::" test.log | head -150 | enc)
+            echo "::error title=cargo test failed::$details"
+          fi
+          exit $status
