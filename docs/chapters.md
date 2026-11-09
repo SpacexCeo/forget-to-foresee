@@ -36,7 +36,9 @@ Each film is five shots of 6 s, a 2.6 s chapter title over the first shot and a 
 - **Spoken when the player asks for it.** The player's `narration.js` (Task Q) is loaded through a guarded
   import; when narration is on, each line is spoken on the `film` channel (it interrupts hints and clan lines)
   and cancelled on skip. Without the module, or with narration off, nothing changes but the voice.
-- **Skippable, never trapping.** Hold any key, or a finger, for 0.7 s to skip (a tap only shows "Hold to skip");
+- **Skippable, never trapping.** Hold any key, or a finger, for 0.7 s to skip the film; a quick tap or key press
+  (under 0.35 s) cuts to the next shot, then to the final card, so a viewer can click through a film. The hint
+  "Tap: next shot · Hold: skip the film" shows once at 2.2 s and after every tap;
   a tap on the final card ends the film. Every key and pointer event is captured on the window during a film,
   and Iris is held exactly where the film found her (any movement is undone each frame). The season clock
   pauses: the Shell hub's automatic trials stop after the current trial and resume after the film when nothing

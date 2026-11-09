@@ -295,7 +295,7 @@ export default {
   'wh.hint.endTick.hub': 'No attention left this trial. Leave the Shell or press T, and watch what the Guests promised.',
   'wh.hint.offer.hub': '{who} has an offer. Nothing {who} said has been checked yet; I will ask you before we answer.',
   // ---- chapter films (play/chapters.js, cinematic/chapters/): one calm line per shot, for ages 12 to 95 ----
-  'chapter.ui.hold': 'Hold to skip',
+  'chapter.ui.hold': 'Tap: next shot · Hold: skip the film',
   'chapter.ui.skip': 'Skip the film',
   'chapter.ui.continue': 'Tap to continue',
   'chapter.ui.matters': 'What matters now',

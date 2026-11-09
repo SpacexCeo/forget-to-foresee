@@ -2,7 +2,8 @@
 // film's length, holds Iris where she stands, visits the Shell interior for interior shots, poses the clan
 // agents named by a shot, speaks the narrator line (Task Q's narration, when present) and shows it as a
 // subtitle, plays the shot's sound cue from the game's own audio, and hands the camera back when the film
-// ends or is skipped (hold a key or a finger for SKIP_HOLD_MS; a tap on the final card ends it).
+// ends or is skipped (hold a key or a finger for SKIP_HOLD_MS). A quick tap or key press cuts to the next
+// shot, then to the final card, and a tap on the final card ends the film, so a viewer can click through.
 // Presentation only: it never sends a command and never reads a rule. The frame-stepped capture clock of
 // the trailer (src/cinematic/clock.js) drives it like any other animation, so the trailer can cut from it.
 import * as THREE from 'three';
@@ -20,6 +21,21 @@ export function timeline(film) {
     t += len;
   });
   return { shots, titleEnd: TITLE_SECONDS, cardStart: t, end: t + CARD_SECONDS };
+}
+
+/** A press shorter than this is a tap: it cuts to the next shot instead of starting the skip hold. */
+export const TAP_MAX_MS = 350;
+/** Film time (s) at which the tap/hold hint first appears, once the title has settled. */
+const HINT_AT = 2.2;
+
+/**
+ * Where a tap at film time t jumps to: the start of the next shot, the final card after the last shot,
+ * or null on the card (the tap ends the film).
+ */
+export function nextStop(tl, t) {
+  if (t >= tl.cardStart) return null;
+  for (const s of tl.shots) if (s.start > t + 1e-6) return s.start;
+  return tl.cardStart;
 }
 
 /** The shot index at film time t (the last shot keeps running under the final card). */
@@ -149,7 +165,20 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
     const held = wall() - hold.since;
     clearTimeout(hold.timer);
     hold = null;
+    if (held < TAP_MAX_MS) { cut(); return; }
     if (held < SKIP_HOLD_MS) overlay.showHint(t);
+  }
+  /** A tap: cut to the next shot (or the final card); the hint reminds that holding skips the whole film. */
+  function cut() {
+    if (!film) return;
+    const to = nextStop(tl, t);
+    if (to === null) { finish(false); return; }
+    t = to;
+    const i = shotAt(tl, t);
+    if (i !== shotIndex) startShot(i);
+    pinIris(); applyCamera();
+    overlay.showHint(t);
+    overlay.update(frameState());
   }
   function attachInput() {
     if (!win || !win.addEventListener) return;
@@ -187,6 +216,7 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
       setNameplates(false);
       startShot(0);
       applyCamera();
+      if (!startPaused) overlay.showHint(HINT_AT, 1.8); // teach the tap and the hold once per film (not in captured stills)
       overlay.update(frameState());
       return new Promise((r) => { resolveEnd = r; });
     },
@@ -206,6 +236,8 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
     /** Every key is swallowed while a film plays (the hold logic lives on the window listeners). */
     handleKey() { return !!film; },
     skip() { finish(true); },
+    /** Cuts to the next shot, or the final card; on the card it ends the film (what a tap does). */
+    next() { cut(); },
     pause(on = true) { paused = !!on; },
     /** Capture API: jumps to a film time and applies that frame (shots start as needed). */
     seek(seconds) {
