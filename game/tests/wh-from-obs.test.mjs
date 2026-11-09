@@ -78,7 +78,9 @@ test('from-obs: a revealed sign carries the chain check (Verified ✓)', async (
   for (const d of done) {
     assert.equal(d.verified, 'ok');
     assert.equal(i18n.t('wh.sign.verified.' + d.verified), 'Verified ✓');
-    assert.match(T(d.plain), /^Came true: /);
+    assert.match(T(d.plain), /^What happened: /, 'the event, apart from any reading (audit P2)');
+    assert.equal(d.details[0].id, 'sealed');
+    assert.match(T(d.details[0].text), /^Sealed before play ✓/);
   }
   assert.ok(cards.findIndex((x) => x.state === 'resolved') > cards.findLastIndex((x) => x.state === 'active'), 'active cards come first');
 });

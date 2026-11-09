@@ -329,6 +329,13 @@
   .wh-root .wh-sign__plain { margin-top: 4px; font-size: 12.5px; line-height: 16px; }
   .wh-root .wh-sign__verified { height: 20px; font-size: 11px; }
 }
+/* Revealed cards: the seal fact apart from the reading fact, the stake and what Iris learned (from-obs outcomeLines) */
+.wh-root .wh-sign__details { list-style: none; margin: calc(4 * var(--wh-px)) 0 0; padding: 0; display: grid; row-gap: calc(2 * var(--wh-px)); font-size: var(--wh-fs-tab); line-height: calc(16 * var(--wh-px)); color: var(--wh-text-2, var(--wh-text)); }
+.wh-root .wh-sign__line[data-tone="ok"] { color: var(--wh-gold-text); }
+.wh-root .wh-sign__line[data-tone="miss"] { color: var(--wh-notify-text, #f1b6a6); }
+.wh-root .wh-sign__line[data-tone="muted"] { color: var(--wh-text-muted); }
+.wh-root .wh-sign__line[data-tone="learn"] { color: var(--wh-gold-bright); }
+@media (max-width: 700px) { .wh-root .wh-sign__details { font-size: 11.5px; line-height: 15px; } }
 /* Novice cards carry one reading line instead of four stat rows: a shorter card */
 .wh-root .wh-sign:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: calc(112 * var(--wh-px)); }
 @media (max-width: 700px) { .wh-root .wh-sign--mobile:has(.wh-sign__plain):not(:has(.wh-sign__stats)) { min-height: 104px; } }

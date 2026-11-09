@@ -33,8 +33,58 @@ export function phaseOf(goal, obs) {
   return 'explore';
 }
 
+/**
+ * "See what changed" lines for one revealed sign (readiness audit P2): the proof fact apart from the reading
+ * fact. `report` is the play layer's outcome report (play/outcome.js); without one (a sign revealed before
+ * this page saw it) only the facts the observation still holds are shown. Every line is a TextRef whose
+ * args are a function, so a language switch re-renders it. Returns { title, sealed, happened, reading,
+ * slots, stake, learned, tutorial } (null where there is nothing to say).
+ */
+export function outcomeLines(c, report, i18n, proof = null) {
+  const meaning = (slot, m) => i18n.t(`meaning.${slot}.${m}`);
+  const m = c.meaning;
+  const ai = ACTION_INDEX[m.action] ?? 0;
+  const truth = () => ({ action: meaning(1, ai), power: m.power, place: meaning(0, m.place - 1), trial: c.tick });
+  const state = report ? report.proof : proof ? (proof.verified ? 'ok' : 'fail') : 'pending';
+  const out = {
+    title: { key: 'wh.outcome.title', args: truth },
+    sealed: { key: 'wh.outcome.sealed.' + state, args: {} },
+    happened: { key: 'wh.sign.revealed', args: truth },
+    reading: null, slots: null, stake: null, learned: null, tutorial: null,
+  };
+  if (!report) return out;
+  const r = report.reading;
+  if (r) {
+    out.reading = { key: 'wh.outcome.reading', args: () => ({ who: r.who, action: meaning(1, r.slots[1]), power: POWER[r.slots[2]], place: meaning(0, r.slots[0]), trial: r.tick }) };
+    if (report.verdict) {
+      const v = report.verdict;
+      out.slots = { key: 'wh.outcome.slots', args: () => ({ right: v.filter(Boolean).length, list: v.map((ok, k) => i18n.t('slot.' + k) + ' ' + (ok ? '✓' : '✗')).join(' · ') }) };
+    }
+  }
+  const st = report.stake;
+  if (st) {
+    const args = () => ({
+      amount: st.amount ?? 0, stake: st.stake ?? 10, trial: st.tick ?? c.tick,
+      place: meaning(0, m.place - 1), staked: st.shell ? meaning(0, st.shell - 1) : '', action: meaning(1, ai),
+    });
+    out.stake = { key: 'wh.outcome.stake.' + st.result, args };
+  }
+  const l = report.learned;
+  if (l) {
+    const args = () => ({
+      form: i18n.t('form.' + l.form), slot: i18n.t('slot.' + l.slot), meaning: meaning(l.slot, l.meaning),
+      was: l.was != null ? meaning(l.slot, l.was) : '', place: meaning(0, m.place - 1), trial: c.tick,
+      from: Math.round((l.from ?? 0) * 100), to: Math.round(l.to * 100),
+    });
+    out.learned = { key: l.was != null ? 'wh.outcome.learnedSwitch' : 'wh.outcome.learned', args };
+  }
+  // the first outcome of a season that the reading missed: a labelled teaching line (the season stays as sealed)
+  if (report.first && report.verdict && report.verdict.some((ok) => !ok) && st && st.result !== 'paid') out.tutorial = { key: 'wh.outcome.tutorial', args: {} };
+  return out;
+}
+
 /** Sign cards: visible prophecies (active) and the chronicle (resolved, with the proof check). */
-export function signsFromObs(obs, { i18n, mode = 'novice', near = null } = {}) {
+export function signsFromObs(obs, { i18n, mode = 'novice', near = null, outcomes = null } = {}) {
   const mine = (shell, t) => (obs.iris.anchors || []).some((a) => a.shell === shell && a.tick === t);
   const meaning = (slot, m) => i18n.t(`meaning.${slot}.${m}`);
   const items = [];
@@ -78,16 +128,27 @@ export function signsFromObs(obs, { i18n, mode = 'novice', near = null } = {}) {
     const proof = proofs.get(c.index);
     const m = c.meaning;
     const ai = ACTION_INDEX[m.action] ?? 0;
+    const report = outcomes && outcomes.get ? outcomes.get(c.index) || null : null;
+    const lines = outcomeLines(c, report, i18n, proof);
     items.push({
       id: 'sign-' + c.index,
       number: c.index + 1,
       type: 'revealed',
       state: 'resolved',
-      anchored: mine(m.place, c.tick),
+      // the observation drops Iris's anchors at the reveal; the outcome report remembers the stake
+      anchored: mine(m.place, c.tick) || !!(report && report.stake && ['paid', 'burned', 'calm'].includes(report.stake.result)),
       dueTrial: c.tick,
       confidence: 'certain',
-      verified: proof ? (proof.verified ? 'ok' : 'fail') : 'pending',
-      plain: mode === 'pro' ? undefined : { key: 'wh.sign.revealed', args: () => ({ action: meaning(1, ai), power: m.power, place: meaning(0, m.place - 1), trial: c.tick }) },
+      verified: proof ? (proof.verified ? 'ok' : 'fail') : report && report.proof !== 'pending' ? report.proof : 'pending',
+      plain: mode === 'pro' ? undefined : lines.happened,
+      // two facts kept apart (audit P2): the event matched the sealed season; your reading was right or wrong
+      details: [
+        { id: 'sealed', tone: lines.sealed.key.endsWith('.ok') ? 'ok' : lines.sealed.key.endsWith('.fail') ? 'miss' : 'muted', text: lines.sealed },
+        lines.reading ? { id: 'reading', tone: 'plain', text: lines.reading } : null,
+        lines.slots ? { id: 'slots', tone: report.verdict.every(Boolean) ? 'ok' : 'miss', text: lines.slots } : null,
+        lines.stake ? { id: 'stake', tone: report.stake.result === 'paid' ? 'ok' : report.stake.result === 'burned' ? 'miss' : 'muted', text: lines.stake } : null,
+        lines.learned ? { id: 'learned', tone: 'learn', text: lines.learned } : null,
+      ].filter(Boolean),
       stats: mode === 'pro' ? [
         { id: 'place', value: { key: 'wh.raw', args: () => ({ text: meaning(0, m.place - 1) }) } },
         { id: 'action', value: { key: 'wh.raw', args: () => ({ text: meaning(1, ai) }) } },
@@ -124,6 +185,7 @@ export function signsFromObs(obs, { i18n, mode = 'novice', near = null } = {}) {
  * @param {{shells: {n: number, signs: number}[], inShell: boolean, shell: number|null, busy: boolean, canPass: boolean}|null} [o.hub]
  *   the Shell hub's state (play/hub.js, passed by the host): the phone HUD draws the Shell selector and the quests sheet
  *   from it; `visible` is derived here (island or Shell, while the season is in play)
+ * @param {Map<number, object>} [o.outcomes]  outcome reports by chronicle index (play/outcome.js): what the reveal did to your reading and stake
  */
 export function buildHudModel(o) {
   const { obs, goal, options = [], defaultIndex = -1, i18n, render, mode = 'novice', hints, line } = o;
@@ -131,7 +193,7 @@ export function buildHudModel(o) {
   const s = obs.season;
   const iris = obs.iris;
   const words = obs.dictionary ? obs.dictionary.confidentCells : 0;
-  const signs = signsFromObs(obs, { i18n, mode, near: o.near || null });
+  const signs = signsFromObs(obs, { i18n, mode, near: o.near || null, outcomes: o.outcomes || null });
   const novice = mode !== 'pro';
   const layer = novice ? layerOf(obs) : 2;
 
@@ -222,7 +284,7 @@ export function buildHudModel(o) {
   const sig = {
     trial: JSON.stringify(trial),
     quests: goal ? [goal.id, goal.key, goal.hintKey, JSON.stringify(goal.args), JSON.stringify(goal.hintArgs)].join('|') : '-',
-    signs: [obs.version, mode, next.signs.open, next.signs.filter].join('|'),
+    signs: [obs.version, mode, next.signs.open, next.signs.filter, o.outcomes ? [...o.outcomes.values()].map((r) => r.index + r.proof).join(',') : ''].join('|'),
     journal: [obs.version, (hintState.journal || []).length, (hintState.lore || []).length, next.journal.unread].join('|'),
     prompt: opt ? [opt.id, JSON.stringify(opt.label), promptVisible].join('|') : '-',
     dialogue: line || null,
