@@ -24,7 +24,7 @@ export class CharacterController {
     // Legacy smoothing knob: a finite `accel` (1/s response rate) used to select exponential velocity
     // smoothing. Setting it now turns the full locomotion model on; Infinity keeps the exact mode.
     this._accel = Infinity;
-    this.run = false; this.runMultiplier = 2.1; this.vel = [0, 0];
+    this.run = false; this.runMultiplier = 1.94; this.vel = [0, 0];   // run 3.3 m/s (owner 09.11): Iris's run clip speed
     this.spawn = spawn.slice();
     this.killY = killY;
     this.lastSafe = spawn.slice();   // last position standing on solid ground with the center supported

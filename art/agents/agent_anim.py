@@ -27,6 +27,18 @@ WALK_SPEED = 1.7            # m/s (game: AGENT_SPEED)
 WALK_FRAMES = 24            # cycle 0.8 s -> stride 1.36 m
 RUN_SPEED = 3.8
 RUN_FRAMES = 20             # cycle 0.667 s -> stride 2.533 m
+# Iris's run (owner 09.11 brief): a light run at 3.3 m/s (the game's player run: walk 1.7 x 1.94),
+# 21 frames at 30 fps = a 0.70 s cycle = 171 steps/min, a 1.16 m step
+IRIS_RUN_SPEED = 3.3
+IRIS_RUN_FRAMES = 21
+CLIP_OVERRIDE = {"iris": {"run": (IRIS_RUN_FRAMES, True, None)}}
+
+
+def clip_spec(key, clip):
+    """(frames, loop, air) of a clip for this agent (CLIPS, with per-agent overrides)."""
+    frames, loop, air = CLIPS[clip]
+    o = CLIP_OVERRIDE.get(key, {}).get(clip)
+    return (o[0], o[1], air if o[2] is None else o[2]) if o else (frames, loop, air)
 
 # name: (frames, loop, air speed m/s)
 CLIPS = {
@@ -147,7 +159,7 @@ def hermite(p0, p1, m0, m1, s):
 
 
 def gait_foot(ph, side, speed, T, stance, lift, strike_pitch, off_pitch, width, tang=0.6,
-              fwd_bias=0.0):
+              fwd_bias=0.0, lift_pow=0.8):
     """One foot of a locomotion cycle. ph: foot phase (0 = heel strike).
     Returns dict(ankle, pitch, toe). The flat-foot reference moves back at exactly
     `speed` while planted (no foot sliding against the ground)."""
@@ -173,7 +185,7 @@ def gait_foot(ph, side, speed, T, stance, lift, strike_pitch, off_pitch, width, 
     D = (1 - stance) * T
     m = -speed * D * tang
     f = hermite(-A0.y, -A1.y, m, m, s)
-    z = lerp(A0.z, A1.z, sm(s)) + lift * math.sin(math.pi * min(1.0, s ** 0.8))
+    z = lerp(A0.z, A1.z, sm(s)) + lift * math.sin(math.pi * min(1.0, s ** lift_pow))   # lower pow: the heel rises early
     pitch = keys(s, [(0.0, off_pitch), (0.35, off_pitch * 0.25), (0.75, strike_pitch * 0.6),
                      (1.0, strike_pitch)])
     toe = keys(s, [(0.0, -off_pitch * 0.6), (0.3, 8.0), (1.0, 0.0)])
@@ -349,8 +361,8 @@ STYLE = {
     # chin: + looks down; tilt: head roll; width: extra stance per foot (m);
     # knee: hip drop when standing (m); swing: walk arm swing scale; sway: pelvis
     # roll/yaw scale; bounce: vertical bob scale; tempo: speed of idle cycles (int)
-    "iris": dict(track_run=0.062, track_walk=0.088, hips_walk=(-0.012, 0.010), hips_run=(-0.045, 0.025),
-                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.0, knee=0.003,
+    "iris": dict(track_run=0.062, track_walk=0.072, hips_walk=(-0.012, 0.010), hips_run=(-0.045, 0.025),
+                 lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=-0.020, knee=0.003,   # feet a little inside the hips: no gap under the seat
                  swing=1.1, sway=0.9, bounce=1.0, tempo=1, cloth=1.0),
     "sol": dict(lean=1, hunch=2, protract=2, chin=2, tilt=6, width=0.015, knee=0.01,
                 swing=0.6, sway=1.6, bounce=0.6, tempo=1, cloth=0.8),
@@ -498,37 +510,45 @@ def clip_idle(key, S, u):
 
 
 def clip_iris_run(key, S, u):
-    """Iris's run: graceful and athletic, not a model's catwalk. A narrow natural track (feet land
-    under the hips, never crossing), a soft midfoot strike, a light springy bob, an upright chest,
-    restrained pelvis/shoulder counter-rotation, relaxed elbows (~75 deg) swinging close to the body,
-    a steady head. Foot phases match the walk (left strike at u = 0) so walk<->run blends cleanly.
-    Character reference: the owner's iris_graceful_run.py (stride, knee recovery, arm and torso values)."""
-    T = RUN_FRAMES / FPS
+    """Iris's run (owner 09.11 brief "premium feminine running"): a light run at 3.3 m/s, 171 steps/min,
+    a compact 1.16 m step, a short contact with the foot landing near the centre of mass (no lunge), the
+    heel rising toward the seat in recovery, then the knee driving forward; a 5 deg forward lean, the
+    pelvis turning about the vertical with the swing leg and the shoulders countering it, a soft vertical
+    oscillation lowest just after contact, relaxed 80-95 deg elbows swinging close to the body (never across
+    the midline), a steady head looking ahead. Feet near one line (4.2 cm off the midline), never crossing.
+    Loops exactly; left strike at u = 0 like the walk so walk <-> run blends cleanly. The ponytail and the
+    jacket's hem follow through on their spring chains."""
+    T = IRIS_RUN_FRAMES / FPS
+    v = IRIS_RUN_SPEED
     P = base_pose(key, S, standing=False)
-    stance = 0.31                                           # longer flight: light, springy
-    for side, ph0 in ((1, 0.0), (-1, 0.5)):                 # the foot lands under the body, no overstride
-        P.feet[side] = gait_foot((u + ph0) % 1.0, side, RUN_SPEED, T, stance, 0.12, 4.0, -38.0,
-                                 0.042 - ANKLE_X, tang=0.45, fwd_bias=-0.13)   # ankles 4.2 cm off the midline: near one line
+    stance = 0.27                                           # contact ~0.19 s, flight ~0.16 s per step
+    for side, ph0 in ((1, 0.0), (-1, 0.5)):
+        P.feet[side] = gait_foot((u + ph0) % 1.0, side, v, T, stance, 0.20, 4.0, -36.0,
+                                 0.042 - ANKLE_X, tang=0.45, fwd_bias=-0.085,  # lands ~0.23 m ahead of the hip
+                                 lift_pow=0.5)              # heel recovery first, then the knee drive
     c, s_ = math.cos(TAU * u), math.sin(TAU * u)
-    # one low point per step, just after contact (weight accepted), lightest in flight
-    bob = math.cos(2 * TAU * (u - stance / 2) + math.pi)
-    P.hips.z = -0.024 + 0.013 * bob                         # tall: no sitting into the stance
-    lean = 8.0
-    P.hips.x = 0.006 * s_                                   # almost no lateral splay
-    # pelvis yaw follows the swing leg (2.5 deg), a slight drop on the swing side
-    P.hips_rot = V((lean * 0.25 + 1.0 * bob, -1.5 * s_, -2.5 * c))
-    P.r("spine", lean * 0.35, 0, 1.0 * c)
-    P.r("chest", lean * 0.30 + 0.8 * bob, 0.8 * math.sin(TAU * (u - 0.05)), 2.0 * math.cos(TAU * (u - 0.04)))
-    P.r("neck", -lean * 0.30 - 0.6 * bob, 0, -1.4 * c)       # the head stays steady
-    P.r("head", -lean * 0.35 + 0.4 * bob, 0, -1.2 * c)
-    lag = 0.04
+    # vertical: lowest just after each contact (loading), highest in flight; ~4.5 cm peak to peak
+    load = math.cos(2 * TAU * (u - stance * 0.55))
+    P.hips.z = -0.030 - 0.022 * load
+    lean = 5.0
+    P.hips.x = 0.005 * s_                                   # almost no lateral sway
+    # pelvis: yaw with the swing leg (+-6 deg), a slight drop on the swing side (+-2.5 deg), a little tilt with loading
+    P.hips_rot = V((lean * 0.30 + 1.2 * load, -2.5 * s_, -6.0 * c))
+    # spine and chest counter-rotate the pelvis (shoulders turn against the hips), lagging a touch
+    c1, c2 = math.cos(TAU * (u - 0.03)), math.cos(TAU * (u - 0.06))
+    P.r("spine", lean * 0.35 + 0.4 * load, 0.6 * s_, 3.0 * c1)
+    P.r("chest", lean * 0.30 + 0.8 * load, 0.8 * math.sin(TAU * (u - 0.05)), 7.0 * c2)
+    P.r("neck", -lean * 0.30 - 0.7 * load, 0, -4.5 * c2)   # the head stays on the line of travel
+    P.r("head", -lean * 0.35 + 0.3 * load, 0, -3.5 * c2)
+    lag = 0.035
     cl = math.cos(TAU * (u - lag))
     for side, sfx, sgn in ((1, "L", 1), (-1, "R", -1)):
-        sw_a = 22.0 * cl * sgn                              # + = backwards; opposite to the leg
-        P.r(f"upperarm_{sfx}", sw_a + 3.0, -side * 4.0, 0)   # close to the body, more back than forward
-        back = max(0.0, cl * sgn)                           # the elbow opens a little behind
-        P.r(f"forearm_{sfx}", -72.0 + 10.0 * back, 0, -side * 12.0)   # hands toward the midline, not across
-        P.r(f"hand_{sfx}", 5.0 * math.cos(TAU * (u - lag - 0.10)) * sgn, 0, -side * 4.0)
+        sw_a = 30.0 * cl * sgn                              # + = backwards; opposite to the same-side leg
+        P.r(f"shoulder_{sfx}", 0, 0, -side * 2.0 * cl * sgn)     # a little clavicle follow-through
+        P.r(f"upperarm_{sfx}", sw_a + 8.0, -side * 5.0, 0)   # close to the body, more back than forward
+        back = max(0.0, cl * sgn)                           # the elbow opens a little behind (80 -> 95 deg)
+        P.r(f"forearm_{sfx}", -95.0 + 15.0 * back, 0, -side * 8.0)   # hands pass the hip, toward but not over the midline
+        P.r(f"hand_{sfx}", 4.0 * math.cos(TAU * (u - lag - 0.10)) * sgn, 0, -side * 6.0)   # soft wrists
     return P
 
 
@@ -1007,7 +1027,7 @@ def _pulse(t, t0, half):
 def face_hands(key, clip, u, P):
     """Blinks, jaw, brows and finger curls layered on top of a clip pose.
     Rotations are in armature axes: +X tips a forward-pointing bone down."""
-    frames = CLIPS[clip][0]
+    frames = clip_spec(key, clip)[0]
     t = u * frames / FPS
     # holding hand (left) grips its prop, the free hand rests half-curled
     for side, sfx in ((1, "L"), (-1, "R")):
@@ -1076,7 +1096,7 @@ def face_hands(key, clip, u, P):
 
 
 def evaluate_clip(solver, key, clip):
-    frames, loop, air = CLIPS[clip]
+    frames, loop, air = clip_spec(key, clip)
     S = STYLE[key]
     fn = CLIP_FN[clip]
     n = frames if loop else frames + 1

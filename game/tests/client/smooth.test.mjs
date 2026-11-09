@@ -46,11 +46,11 @@ test('start and stop are smooth (no instant full speed, no instant halt)', () =>
   assert.ok(v[v.length - 1] < 0.01, 'comes to rest');
 });
 
-test('Shift runs at about 2.1x walk speed, still smooth', () => {
+test('Shift runs at about 1.94x walk speed (3.3 m/s), still smooth', () => {
   const { xs, dts } = run({ frameDt: () => 1 / 60, run: true });
   const n = xs.length, speeds = [];
   for (let i = Math.floor(n / 2); i < n; i++) speeds.push((xs[i] - xs[i - 1]) / dts[i]);
   const mean = speeds.reduce((a, b) => a + b, 0) / speeds.length;
-  assert.ok(Math.abs(mean - 1.7 * 2.1) < 0.1, `run speed ${mean.toFixed(3)}`);
+  assert.ok(Math.abs(mean - 1.7 * 1.94) < 0.1, `run speed ${mean.toFixed(3)}`);
   assert.ok(Math.max(...speeds.map((s) => Math.abs(s - mean))) < 0.08 * mean);
 });
