@@ -101,3 +101,10 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
   figure for asynchronous online judging). Rubric v0.8: section 5 gains step 0, a five-minute first pass (X post,
   README top, live link, no clone) scored beside the full score; a gap over 15 points is a presentation risk. No red
   flags.
+
+## Cycle 9: 2026-11-09 00:16 UTC
+- Weakest coverage chosen: the README's first screen (C6 named it in one clause, no checklist).
+- 00:25 UTC: `notes/readme-top.md` done (5 sources, organizer and vendor guides only). Rubric v0.9: C6 gains a
+  five-item README first-screen checklist (half a point per missing item). Added `scorecard-template.md` so phase 2
+  passes start from a fixed shape (gates, five-minute first pass, weighted table, top 5 by points per hour, delta).
+  No red flags.

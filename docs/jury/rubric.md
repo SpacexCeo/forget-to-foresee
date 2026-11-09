@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.8, 2026-11-08 (research cycle 8). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.9, 2026-11-09 (research cycle 9). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -216,6 +216,10 @@ originality 10 to 12 to match the consolidated table; polish 10 to 8.
   substitute, no TTS voice; burned-in captions; 2:00 to 2:20 for the X cut (free tier 140 s), never sped-up footage;
   1080p30 or better, HUD on; the post ends with a next step and carries "built at NEAR HACKATHON", @NEARProtocol and
   #NEARHackathon in the first post with the video attached.
+
+- README first screen (`notes/readme-top.md`): logline and tracks; live link and video link in the first ten lines;
+  a GIF of the signature moment; real/mock status in one sentence; quick start in 3 to 7 commands. Half a point off
+  C6 per missing item.
 
 ### C7. Polish, UX and accessibility (8)
 - **10/10**: no greybox or placeholder on the judge path; body text at least 18 px at 1080p; contrast 4.5:1 (text) and
