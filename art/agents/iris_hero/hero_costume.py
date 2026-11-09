@@ -425,17 +425,15 @@ def hair_cards(scalp_pts, head_c, head_r, brow_z, seed=11, length=0.33):
             ci += 1
             q = r - head_c
             side = 1.0 if r.x > part_x else -1.0
-            front = (q.y < -head_r[1] * 0.25 and q.z > head_r[2] * 0.55 and side < 0 and name != "fly"
-                     and rnd.random() < 0.55)
+            fwd = max(0.0, -q.y / head_r[1])
+            front = False                                # no fringe: the front is held back by the band
             layer = o0 + (o1 - o0) * rnd.random()
-            if front:                                    # fringe: thin, close to the forehead, swept aside
-                layer = 0.003 + 0.006 * rnd.random()
-                L = (0.10 + 0.04 * rnd.random()) * lk
-                pull = V((-0.85, -0.2, -0.5)).normalized()
+            L = length * lk * (0.8 + 0.4 * rnd.random())
+            if fwd > 0.2:                                # front half: swept back over the crown, under the band
+                pull = V((side * 0.35, 0.9, -0.35)).normalized()
+                L *= 1.0 + 0.4 * fwd
             else:
-                L = length * lk * (0.8 + 0.4 * rnd.random())
-                fwd = max(0.0, -q.y / head_r[1])
-                pull = V((side * (0.25 + 0.9 * fwd), 0.15 + 0.4 * fwd, -1.0)).normalized()
+                pull = V((side * 0.25, 0.15, -1.0)).normalized()
             if name == "fly":
                 L *= 0.6 + 0.6 * rnd.random()
             ph = rnd.uniform(0, math.tau)
@@ -445,6 +443,8 @@ def hair_cards(scalp_pts, head_c, head_r, brow_z, seed=11, length=0.33):
             for s in range(segs):
                 t = (s + 1) / segs
                 n = (p - head_c).normalized()
+                if pull.y > 0.5 and (p - head_c).y > head_r[1] * 0.15:
+                    pull = V((side * 0.3, 0.25, -1.0)).normalized()
                 g = pull - n * pull.dot(n)
                 if g.length < 1e-3:
                     g = V((0, 0, -1))
@@ -480,8 +480,51 @@ def hair_cards(scalp_pts, head_c, head_r, brow_z, seed=11, length=0.33):
                                                       (u0 + du, 1 - s / segs), (u0, 1 - s / segs))):
                         lo[uv].uv = (uu, vv)
                 prev = row
+    # loose face-framing strands at the temples, in front of the ears
+    for side in (1.0, -1.0):
+        for k in range(4):
+            r = head_c + V((side * head_r[0] * 0.86, -head_r[1] * (0.30 + 0.06 * k), head_r[2] * (0.35 - 0.05 * k)))
+            segs = 12
+            L = 0.20 + 0.04 * rnd.random()
+            pts = [r]
+            p = r.copy()
+            for s_ in range(segs):
+                t = (s_ + 1) / segs
+                p = p + V((side * 0.08, -0.05, -1.0)).normalized() * (L / segs)
+                pts.append(p + V((side, 0, 0)) * 0.006 * math.sin(t * 9 + k))
+            prev = None
+            for s_, p in enumerate(pts):
+                t = s_ / segs
+                w = 0.004 * (1 - 0.5 * t)
+                row = (b.verts.new(p - V((0, w, 0))), b.verts.new(p + V((0, w, 0))))
+                if prev:
+                    f = b.faces.new((prev[0], prev[1], row[1], row[0]))
+                    for lo, (uu, vv) in zip(f.loops, ((7 / 8, 1 - (s_ - 1) / segs), (1.0, 1 - (s_ - 1) / segs),
+                                                      (1.0, 1 - s_ / segs), (7 / 8, 1 - s_ / segs))):
+                        lo[uv].uv = (uu, vv)
+                prev = row
     o = new_obj("hair", b)
     smooth(o, 80)
+    return o
+
+
+def headband(head_c, head_r, lift=0.036, tilt=0.30, width=0.011, thick=0.0045):
+    """A slim band over the hair from ear to ear, about 4 cm behind the hairline (the hair runs under it)."""
+    n = 40
+    rings = []
+    for k in range(3):
+        off = lift + thick * (k == 1)
+        ring = []
+        for i in range(n):
+            a = math.pi * (0.06 + 0.88 * i / (n - 1))                    # from her left ear over the top
+            d = V((math.cos(a), math.sin(tilt) * math.sin(a), math.cos(tilt) * math.sin(a)))
+            p = head_c + V((d.x * (head_r[0] + off), d.y * (head_r[1] + off), d.z * (head_r[2] + off)))
+            along = V((0, math.cos(tilt), -math.sin(tilt)))              # across the band
+            ring.append(p + along * (width * (k - 1)))
+        rings.append(ring)
+    o = loft("headband", rings, closed_u=False)
+    solidify(o, thick, 0.0)
+    smooth(o)
     return o
 
 

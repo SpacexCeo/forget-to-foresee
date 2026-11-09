@@ -24,12 +24,12 @@ GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool,
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
     "scarf": (0.150, 0.075, 0.220), "belt": (0.035, 0.018, 0.010), "pouch": (0.200, 0.085, 0.032),
-    "pendant": (0.62, 0.62, 0.64),
+    "pendant": (0.62, 0.62, 0.64), "headband": (0.110, 0.055, 0.160),
 }
 TRIM = {"coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}
-ROUGH = {"pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
+ROUGH = {"headband": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
 METAL = {"pendant": 1.0}
 
 
@@ -137,23 +137,80 @@ def skin_shader(b, land):
         col = b.mix(b.math("MULTIPLY", b.blob(pos, e, 0.030, 1.2), 0.30), col, (0.66, 0.30, 0.25))
     lips = b.attr("lipsw").outputs["Fac"]
     col = b.mix(b.math("MULTIPLY", b.math("POWER", lips, 0.7), 0.75), col, (0.46, 0.17, 0.15))
-    # brows: soft strokes along an arc above each eye
-    for c, sx in land["brows"]:
-        sep = b.n("ShaderNodeVectorMath", operation="SUBTRACT")
-        b.l(pos, sep.inputs[0]); sep.inputs[1].default_value = c
-        xyz = b.n("ShaderNodeSeparateXYZ"); b.l(sep.outputs[0], xyz.inputs[0])
-        x = b.math("MULTIPLY", xyz.outputs["X"], sx)                    # along the brow, inner -> outer
-        arc = b.math("SUBTRACT", xyz.outputs["Z"], b.math("MULTIPLY", b.math("POWER", b.math("ABSOLUTE", b.math("SUBTRACT", x, 0.006)), 2.0), -9.0))
-        thick = b.math("ADD", 0.0042, b.math("MULTIPLY", b.math("SUBTRACT", 0.022, x), 0.06))
-        band = b.math("SUBTRACT", 1.0, b.math("DIVIDE", b.math("ABSOLUTE", arc), thick), clamp=True)
-        span = b.math("MULTIPLY", b.math("GREATER_THAN", x, -0.018), b.math("LESS_THAN", x, 0.030))
-        hairs = b.noise(900.0, 2.0, pos)
-        m = b.math("MULTIPLY", b.math("MULTIPLY", band, span), b.math("ADD", 0.45, b.math("MULTIPLY", hairs.outputs["Fac"], 0.8)))
-        col = b.mix(b.math("MINIMUM", m, 0.92), col, (0.075, 0.040, 0.025))
+    col = makeup(b, pos, col, land, lips)
     pores = b.noise(1600.0, 2.0, pos)
     rough = b.math("ADD", 0.48, b.math("MULTIPLY", pores.outputs["Fac"], 0.12))
-    rough = b.math("SUBTRACT", rough, b.math("MULTIPLY", lips, 0.15))
-    return col, rough, 0.0, b.math("MULTIPLY", pores.outputs["Fac"], 0.25), None
+    rough = b.math("SUBTRACT", rough, b.math("MULTIPLY", b.math("POWER", lips, 0.6), 0.28))   # glossy lips
+    mole = b.blob(pos, land["mole"], 0.0026, 0.7)
+    height = b.math("ADD", b.math("MULTIPLY", pores.outputs["Fac"], 0.25), b.math("MULTIPLY", mole, 0.6))
+    return col, rough, 0.0, height, None
+
+
+def _local(b, pos, origin, sx):
+    """(x outward from the nose, y, z) relative to an eye centre; sx = +1 for her left eye."""
+    d = b.n("ShaderNodeVectorMath", operation="SUBTRACT")
+    b.l(pos, d.inputs[0])
+    d.inputs[1].default_value = origin
+    xyz = b.n("ShaderNodeSeparateXYZ")
+    b.l(d.outputs[0], xyz.inputs[0])
+    return b.math("MULTIPLY", xyz.outputs["X"], sx), xyz.outputs["Y"], xyz.outputs["Z"], d.outputs[0]
+
+
+def _smooth_band(b, x, half, soft):
+    """1 inside |x| < half, fading to 0 over soft."""
+    return b.math("SUBTRACT", 1.0, b.math("DIVIDE", b.math("MAXIMUM", b.math("SUBTRACT", b.math("ABSOLUTE", x), half), 0.0),
+                                                     soft), clamp=True)
+
+
+def makeup(b, pos, col, land, lips):
+    """Groomed brows (full head, a soft arch peaking at two thirds, a tapered tail, fine hair strokes),
+    an upper lash line with a short wing, a soft lid shadow, defined lips and a beauty mark."""
+    for (E, r, sx) in land["eyes"]:
+        x, y, z, d = _local(b, pos, E, sx)
+        # brows: t = 0 at the head (above the inner corner) .. 1 at the tail
+        t = b.math("DIVIDE", b.math("ADD", x, 0.017), 0.052)
+        tc = b.math("MINIMUM", b.math("MAXIMUM", t, 0.0), 1.0)
+        rise = b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.66), 1.0), 0.0105)
+        fall = b.math("MULTIPLY", b.math("POWER", b.math("DIVIDE", b.math("MAXIMUM", b.math("SUBTRACT", tc, 0.66), 0.0), 0.34), 1.3), 0.0125)
+        zc = b.math("SUBTRACT", b.math("ADD", 0.0175, rise), fall)
+        half = b.math("ADD", 0.0011, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.6), 0.0036))
+        band = _smooth_band(b, b.math("SUBTRACT", z, zc), half, 0.0012)
+        inside = b.math("MULTIPLY", b.math("GREATER_THAN", t, -0.02), b.math("LESS_THAN", t, 1.02))
+        ombre = b.math("ADD", 0.45, b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.22), 1.0), 0.55))
+        sv = b.n("ShaderNodeCombineXYZ")                     # hair strokes: stretched along the brow, tilted up at the head
+        b.l(b.math("ADD", b.math("MULTIPLY", x, 130.0), b.math("MULTIPLY", z, b.math("ADD", 40.0, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, tc), 160.0)))), sv.inputs["X"])
+        b.l(b.math("MULTIPLY", b.math("SUBTRACT", z, b.math("MULTIPLY", x, 0.25)), 900.0), sv.inputs["Y"])
+        hairs = b.n("ShaderNodeTexNoise", in_Scale=1.0, in_Detail=2.0, in_Roughness=0.5)
+        b.l(sv.outputs[0], hairs.inputs["Vector"])
+        strokes = b.math("ADD", 0.55, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.6))
+        m = b.math("MINIMUM", b.math("MULTIPLY", b.math("MULTIPLY", b.math("MULTIPLY", band, inside), ombre), strokes), 0.95)
+        col = b.mix(m, col, (0.080, 0.048, 0.032))
+        # lid shadow: a soft mauve-brown wash between the lash line and the crease
+        sh = b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.003, E[1] - 0.004, E[2] + 0.009), 0.017, 1.4),
+                    b.math("GREATER_THAN", z, 0.002))
+        col = b.mix(b.math("MULTIPLY", sh, 0.35), col, (0.30, 0.16, 0.15))
+        # lash line: a thin dark line hugging the upper lid, thicker and winged at the outer corner
+        dist = b.n("ShaderNodeVectorMath", operation="LENGTH")
+        b.l(d, dist.inputs[0])
+        ring = b.math("DIVIDE", dist.outputs["Value"], r)
+        upper = b.math("GREATER_THAN", z, b.math("SUBTRACT", b.math("MULTIPLY", x, 0.35), 0.004))
+        wide = b.math("ADD", 1.10, b.math("MULTIPLY", b.math("MAXIMUM", b.math("DIVIDE", x, r), 0.0), 0.12))
+        line = b.math("MULTIPLY", b.math("MULTIPLY", b.math("GREATER_THAN", ring, 0.98), b.math("LESS_THAN", ring, wide)), upper)
+        wing = b.math("MULTIPLY", b.math("GREATER_THAN", x, r * 0.85), b.math("LESS_THAN", x, r * 1.45))
+        wing = b.math("MULTIPLY", wing, _smooth_band(b, b.math("SUBTRACT", z, b.math("MULTIPLY", b.math("SUBTRACT", x, r * 0.85), 0.55)), 0.0006, 0.0008))
+        col = b.mix(b.math("MINIMUM", b.math("ADD", line, wing), 0.9), col, (0.020, 0.013, 0.011))
+        lower = b.math("MULTIPLY", b.math("MULTIPLY", b.math("GREATER_THAN", ring, 0.98), b.math("LESS_THAN", ring, 1.05)),
+                       b.math("LESS_THAN", z, -0.002))
+        col = b.mix(b.math("MULTIPLY", lower, 0.30), col, (0.10, 0.06, 0.05))
+    # lips: a rosy tint, a slightly deeper liner at the edge
+    tint = b.math("MULTIPLY", b.math("POWER", lips, 0.45), 0.85)
+    col = b.mix(tint, col, (0.46, 0.12, 0.12))
+    edge = b.math("MULTIPLY", b.math("GREATER_THAN", lips, 0.12), b.math("LESS_THAN", lips, 0.45))
+    col = b.mix(b.math("MULTIPLY", edge, 0.35), col, (0.30, 0.07, 0.08))
+    # beauty mark: small, round, deep brown with a soft edge (her left cheek, above the mouth corner)
+    mole = b.blob(pos, land["mole"], 0.0026, 0.7)
+    col = b.mix(b.math("MINIMUM", b.math("MULTIPLY", mole, 1.6), 0.95), col, (0.035, 0.018, 0.012))
+    return col
 
 
 def garment_shader(b):

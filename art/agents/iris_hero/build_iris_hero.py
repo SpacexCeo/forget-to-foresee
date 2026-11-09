@@ -50,7 +50,10 @@ MACROS = {"gender": 0.0, "age": 0.48, "muscle": 0.5, "weight": 0.42, "height": 0
 # Stylization and slight asymmetry (MakeHuman detail targets, CC0): name -> weight.
 DETAIL = {
     "eyes/r-eye-scale-incr": 0.35, "eyes/l-eye-scale-incr": 0.32,
-    "eyes/r-eye-move-up": 0.10, "eyes/l-eye-move-up": 0.14,
+    "eyes/r-eye-trans-up": 0.10, "eyes/l-eye-trans-up": 0.14,
+    "eyes/r-eye-bag-decr": 0.8, "eyes/l-eye-bag-decr": 0.8,                 # a smaller lower lid
+    "eyes/r-eye-bag-height-decr": 0.6, "eyes/l-eye-bag-height-decr": 0.6,
+    "eyes/r-eye-corner2-up": 0.25, "eyes/l-eye-corner2-up": 0.22,           # a lifted outer corner
     "nose/nose-scale-horiz-decr": 0.25, "nose/nose-width2-decr": 0.2,
     "chin/chin-width-decr": 0.25, "mouth/mouth-lowerlip-volume-incr": 0.25,
     "cheek/l-cheek-bones-incr": 0.22, "cheek/r-cheek-bones-incr": 0.16,
@@ -219,7 +222,7 @@ def split_helpers(bm):
     keep = {}
     for part in ("helper-l-eye", "helper-r-eye"):
         keep[part] = group_verts(bm, part)
-    lashes = group_verts(bm, "helper-l-eyelashes-1") | group_verts(bm, "helper-r-eyelashes-1")
+    lashes = set()
     helpers = group_verts(bm, "HelperGeometry", 0.01) | group_verts(bm, "JointCubes", 0.01)
     eyes = {}
     for part, idx in keep.items():
@@ -559,6 +562,7 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     garments["hair_cap"] = C.hair_cap(bm, scalp)
     brow_z = max(c.z for c, _ in [(h, 0) for h in (bones["eye_L"][0], bones["eye_R"][0])]) + 0.028
     garments["hair"] = C.hair_cards(C.scalp_points(bm, scalp), head_c, head_r, brow_z)
+    garments["headband"] = C.headband(head_c, head_r)
 
     chains = hero_chains(P, garments["coat"], tail_pts, head_c)
     install_chains(chains)
@@ -798,6 +802,65 @@ def add_collision_and_sockets(rig):
     return col, socks
 
 
+def beauty_mark(body):
+    """A point on the skin of her left cheek, up and out from the left mouth corner."""
+    a = body.data.attributes["lipsw"]
+    pts = [body.matrix_world @ v.co for v in body.data.vertices if a.data[v.index].value > 0.5]
+    m = sum(pts, V()) / len(pts)
+    corner = max(pts, key=lambda p: p.x)
+    want = V((corner.x + 0.011, m.y, m.z + 0.019))
+    front = [body.matrix_world @ v.co for v in body.data.vertices
+             if (body.matrix_world @ v.co).y < m.y + 0.03 and abs((body.matrix_world @ v.co).z - want.z) < 0.03]
+    return tuple(min(front, key=lambda p: (p.x - want.x) ** 2 + (p.z - want.z) ** 2 + 0.05 * (p.y - want.y) ** 2))
+
+
+def add_lashes(body, rig):
+    """Upper lashes: a strip rooted on the upper lid margin, curling up and out, longer at the outer
+    corner. The strip is part of the body mesh, and every face morph moves it with its lid vertex."""
+    me = body.data
+    b = bmesh.new()
+    b.from_mesh(me)
+    b.verts.ensure_lookup_table()
+    layers = [b.verts.layers.shape[k.name] for k in me.shape_keys.key_blocks] if me.shape_keys else []
+    basis_l = layers[0] if layers else None
+    lash_a = b.verts.layers.float.get("lash") or b.verts.layers.float.new("lash")
+    for sfx, sx in (("L", 1), ("R", -1)):
+        E = rig.data.bones[f"eye_{sfx}"].head_local
+        r = max(bpy.data.objects[f"eyeball_{sfx}"].dimensions) / 2
+        bins = {}
+        for v in b.verts:
+            d = v.co - E
+            if not (r * 0.95 < d.length < r * 1.25 and d.y < -r * 0.35 and d.z > -r * 0.05):
+                continue
+            ang = math.atan2(d.z, d.x * sx)
+            k = int(ang / math.pi * 12)
+            if 0 <= k <= 11 and (k not in bins or d.length < (bins[k].co - E).length):
+                bins[k] = v
+        margin = [bins[k] for k in sorted(bins, reverse=True)]          # inner corner -> outer corner
+        prev = None
+        for i, mv in enumerate(margin):
+            t = i / max(len(margin) - 1, 1)
+            out = (mv.co - E).normalized()
+            dirn = (out * 0.55 + V((sx * 0.25 * t, -0.35, 0.85))).normalized()
+            L = 0.0055 + 0.0055 * t ** 1.4
+            row = []
+            for j, k in enumerate((0.0, 1.0)):
+                base = mv.co + dirn * (L * k) + V((0, 0, 0.0012 * k))
+                for w in (-0.0006, 0.0006):
+                    nv = b.verts.new(base + V((0, w, 0)))
+                    nv[lash_a] = 1.0
+                    for lay in layers:
+                        nv[lay] = mv[lay] + (nv.co - mv.co)
+                    row.append(nv)
+            if prev:
+                b.faces.new((prev[0], row[0], row[2], prev[2]))
+                b.faces.new((prev[1], prev[3], row[3], row[1]))
+            prev = row
+    b.to_mesh(me)
+    b.free()
+    me.update()
+
+
 def lips_attr(body):
     if "lips" not in body.vertex_groups:
         return
@@ -810,15 +873,18 @@ def lips_attr(body):
 def stage_full(shade=True, size=2048, samples=16):
     bm, rig, eye_objs, garments = stage_costume()
     lips_attr(bm)
+    add_lashes(bm, rig)
     hair = [garments.pop("hair"), garments.pop("hair_cap")]
     cloth = list(garments.values())
     if shade:
-        land = {"cheeks": [], "ears": [], "brows": []}
+        land = {"cheeks": [], "ears": [], "eyes": []}
         for s, sx in (("L", 1), ("R", -1)):
             e = rig.data.bones[f"eye_{s}"].head_local
+            r = max(bpy.data.objects[f"eyeball_{s}"].dimensions) / 2
             land["cheeks"].append((e.x + sx * 0.012, e.y - 0.006, e.z - 0.042))
             land["ears"].append((sx * 0.075, e.y + 0.09, e.z - 0.02))
-            land["brows"].append(((e.x - sx * 0.006, e.y - 0.004, e.z + 0.024), sx))
+            land["eyes"].append((tuple(e), r, sx))
+        land["mole"] = beauty_mark(bm)
         e = rig.data.bones["eye_L"].head_local
         land["nose"] = (0.0, e.y - 0.03, e.z - 0.035)
         sc = bpy.context.scene
