@@ -15,7 +15,7 @@ import { MODEL_FILES } from 'virtual:model-list';
 import { fetchGltf, prefetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
-import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
+import { CLAN_ASSET, CLAN_ORDER, ONE_SHOT_CLIPS, REACTION_SECONDS, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
 import { NAMEPLATE, platePlacement, plateBox, boxesIntersect } from './nameplate.js';
 import { PLAZA_RADIUS } from '../scenes/layout.js';
 import { NPC_MOTION, createMotion, stepMotion, gaitBlend, damp, avoidWish } from '../physics/motion.js';
@@ -278,7 +278,7 @@ class Agent {
     if (this.currentClip === clip.name) return used;
     let act = this.actions.get(clip.name);
     if (!act) { act = this.mixer.clipAction(clip); this.actions.set(clip.name, act); }
-    const once = used === 'celebrate' || used === 'defeat';
+    const once = ONE_SHOT_CLIPS.includes(used);
     act.reset(); act.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); act.clampWhenFinished = once;
     act.fadeIn(FADE).play();
     const prev = this.currentClip && this.actions.get(this.currentClip);
@@ -303,6 +303,7 @@ export class ClanAgents {
       this.agents.set(clan, new Agent(clan, { scene, color: camp.color, home: camp.position, homeYaw: camp.rotationY }));
     }
     this.irisModel = null;
+    this.irisReaction = null;
     this.director = null;   // created with the season's seed on the first observation (deterministic life)
     this.reducedMotion = false;
     this.lastObs = null;
@@ -357,13 +358,34 @@ export class ClanAgents {
   }
 
   /** Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips). */
+  /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */
+  irisReact(clip, now = 0) { this.irisReaction = { clip, until: now + (REACTION_SECONDS[clip] || 3) }; }
+
   updateIris(dt, moving, avatarGroup, t, speed = 0, running = false, reduced = this.reducedMotion) {
     const m = this.irisModel;
     if (!m) return;
     void running; // the blend follows the speed itself: the run clip appears above the walk speed
+    if (moving) this.irisReaction = null;            // walking away cancels the reaction
     if (m.mixer) {
       const move = m.gait ? m.gait.update(dt, speed) : 0;
-      if (m.idleAction) m.idleAction.weight = 1 - move;
+      // a reaction (one-shot) takes the idle's weight while she stands, then hands it back
+      const want = this.irisReaction && this.irisReaction.until > t ? this.irisReaction.clip : null;
+      const r = want ? resolveClip(m.clips, want) : null;
+      const rc = r && r.clip && r.name !== 'idle' ? r.clip : null;
+      if (rc && (!m.react || m.react.getClip() !== rc)) {
+        if (m.react) m.react.fadeOut(FADE);
+        m.react = m.mixer.clipAction(rc);
+        const once = ONE_SHOT_CLIPS.includes(r.name);
+        m.react.reset(); m.react.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); m.react.clampWhenFinished = once;
+        m.react.play();
+      }
+      if (!rc && this.irisReaction && this.irisReaction.until <= t) this.irisReaction = null;
+      m.reactW = (m.reactW || 0) + ((rc ? 1 : 0) - (m.reactW || 0)) * Math.min(1, dt / FADE);
+      if (m.react) {
+        m.react.setEffectiveWeight(m.reactW * (1 - move));
+        if (!rc && m.reactW < 0.01) { m.react.stop(); m.react = null; }
+      }
+      if (m.idleAction) m.idleAction.weight = (1 - move) * (1 - m.reactW);
       m.mixer.update(dt);
     } else {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;

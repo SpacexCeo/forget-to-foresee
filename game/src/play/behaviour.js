@@ -9,7 +9,7 @@ export const CLAN_ASSET = Object.freeze({ iris: 'iris', salt: 'sol', ash: 'pepel
 export const CLAN_ORDER = Object.freeze(['iris', 'salt', 'ash', 'moss', 'amber', 'frost']);
 
 /** The animation contract's clip names (docs/art/animation-contract.md). */
-export const CLIPS = Object.freeze(['idle', 'walk', 'talk', 'think', 'gesture_offer', 'celebrate', 'defeat']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'talk', 'think', 'gesture_offer', 'celebrate', 'defeat', 'understand']);
 
 /**
  * Temperaments (docs/decisions.md §2): Salt lies about words, Ash is paranoid, Moss is honest,
@@ -27,7 +27,10 @@ export const TEMPERAMENT = Object.freeze({
 });
 
 /** How long (seconds) a reaction to a public event stays on the agent. */
-export const REACTION_SECONDS = Object.freeze({ celebrate: 4, defeat: 5, talk: 6 });
+export const REACTION_SECONDS = Object.freeze({ celebrate: 4, defeat: 5, talk: 6, understand: 2.6 });
+
+/** Clips played once and held on their last frame; every other clip loops. */
+export const ONE_SHOT_CLIPS = Object.freeze(['celebrate', 'defeat', 'understand']);
 
 /**
  * Cue for one clan.
@@ -96,7 +99,21 @@ export function findClip(clips, name) {
 }
 
 /** Fallback chain when a clip is missing: a related clip, else idle, else none (procedural only). */
-export const CLIP_FALLBACK = Object.freeze({ gesture_offer: ['talk', 'idle'], celebrate: ['gesture_offer', 'idle'], defeat: ['think', 'idle'], think: ['idle'], talk: ['gesture_offer', 'idle'], walk: ['idle'], idle: [] });
+export const CLIP_FALLBACK = Object.freeze({ understand: ['think', 'idle'], gesture_offer: ['talk', 'idle'], celebrate: ['gesture_offer', 'idle'], defeat: ['think', 'idle'], think: ['idle'], talk: ['gesture_offer', 'idle'], walk: ['idle'], idle: [] });
+
+/**
+ * Dictionary words Iris has newly understood between two observations: cells that went from
+ * unknown to known (a Guest's "yes" or an outcome confirmed the reading). Her agent winks on it.
+ * @param {object|null} prev previous controller observation @param {object|null} obs current one
+ * @returns {number} how many cells became known
+ */
+export function newlyUnderstood(prev, obs) {
+  const cells = (o) => (o && o.dictionary && o.dictionary.cells) || null;
+  const before = cells(prev), now = cells(obs);
+  if (!before || !now) return 0;
+  const known = new Set(before.filter((c) => c.known != null).map((c) => c.slot + '_' + c.form));
+  return now.filter((c) => c.known != null && !known.has(c.slot + '_' + c.form)).length;
+}
 
 export function resolveClip(clips, name) {
   const direct = findClip(clips, name);
