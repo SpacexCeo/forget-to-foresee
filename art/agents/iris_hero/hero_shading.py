@@ -22,7 +22,8 @@ V = Vector
 GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool, near-black navy, dusty violet)
     # athletic sportswear (owner 09.11): graphite knit jacket, black top, graphite leggings, trainers
     "jacket": (0.022, 0.022, 0.025), "jacket_collar": (0.017, 0.017, 0.019), "sports_top": (0.006, 0.006, 0.007),
-    "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.014, 0.014, 0.016), "trainers": (0.034, 0.034, 0.037),
+    "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.014, 0.014, 0.016), "trainers": (0.60, 0.59, 0.57),
+    "ankle_socks": (0.13, 0.13, 0.135),
     "coat": (0.040, 0.040, 0.043), "collar": (0.040, 0.040, 0.043), "sleeve": (0.040, 0.040, 0.043),
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
@@ -30,13 +31,13 @@ GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool,
     "pendant": (0.62, 0.62, 0.64), "hair_tie": (0.110, 0.055, 0.160),
 }
 TRIM = {"jacket": (0.015, 0.015, 0.017), "jacket_collar": (0.015, 0.015, 0.017), "sports_top": (0.010, 0.010, 0.011),
-        "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.010, 0.010, 0.012), "trainers": (0.70, 0.69, 0.68),
+        "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.010, 0.010, 0.012), "trainers": (0.78, 0.77, 0.75),
         "coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}
 NACRE = (0.50, 0.47, 0.58)  # a restrained nacre-violet accent line (piping, stripes)
-ACCENT = {"jacket": NACRE, "jacket_collar": NACRE, "leggings": NACRE, "trainers": (0.36, 0.30, 0.50)}
-ROUGH = {"jacket": 0.70, "jacket_collar": 0.66, "sports_top": 0.80, "leggings": 0.74, "trainers": 0.62,
+ACCENT = {"jacket": NACRE, "jacket_collar": NACRE, "leggings": NACRE, "trainers": (0.30, 0.30, 0.31)}   # trainers: grey overlays
+ROUGH = {"jacket": 0.70, "jacket_collar": 0.66, "sports_top": 0.80, "leggings": 0.74, "trainers": 0.62, "ankle_socks": 0.85,
          "hair_tie": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
 METAL = {"pendant": 1.0}
 

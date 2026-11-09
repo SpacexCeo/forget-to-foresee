@@ -1077,6 +1077,174 @@ def tube_along(name, path, radii, n=20, cuff=None):
     return loft(name, rings), n
 
 
+def _ring_tube(b, path, r, n=10, closed=True):
+    """A tube (bmesh) along a polyline with a parallel-transported frame (no twist)."""
+    m = len(path)
+    rings = []
+    nrm = None
+    for i in range(m):
+        p0 = path[(i - 1) % m] if closed or i > 0 else path[i]
+        p1 = path[(i + 1) % m] if closed or i < m - 1 else path[i]
+        d = (p1 - p0).normalized()
+        if nrm is None:
+            nrm = d.orthogonal().normalized()
+        nrm = (nrm - d * nrm.dot(d)).normalized()
+        bi = d.cross(nrm)
+        rings.append([b.verts.new(path[i] + (nrm * math.cos(TAU * j / n) + bi * math.sin(TAU * j / n)) * r)
+                      for j in range(n)])
+    last = m if closed else m - 1
+    for i in range(last):
+        r0, r1 = rings[i], rings[(i + 1) % m]
+        for j in range(n):
+            b.faces.new((r0[j], r0[(j + 1) % n], r1[(j + 1) % n], r1[j]))
+
+
+def trainer(body, foot_idx, name, side):
+    """A low-top trainer built from the foot itself (owner 09.11: the old parametric shoe twisted and the
+    sole parted from the upper): the upper is the foot's skin smoothed into a last (no toes), kept a clear
+    gap off the foot, a fuller toe box, a clean collar line under the ankle bone; a flared off-white sole
+    with a grey outsole; a padded collar; five laces over the instep. One object, weights from the foot."""
+    from mathutils.bvhtree import BVHTree
+    me_b = body.data
+    tree = BVHTree.FromPolygons([v.co.copy() for v in me_b.vertices], [list(p.vertices) for p in me_b.polygons])
+    pts = [me_b.vertices[i].co for i in foot_idx]
+    heel_y = max(q.y for q in pts if q.z < 0.04)
+    toe_y = min(q.y for q in pts if q.z < 0.04)
+    L = heel_y - toe_y
+    cx = sum(q.x for q in pts) / len(pts)
+
+    def t_of(co):                                   # 0 at the heel, 1 at the toe
+        return (heel_y - co.y) / L
+
+    def collar(co):                                 # the opening line: under the ankle bone, low at the front
+        t = t_of(co)
+        return 0.072 - 0.010 * smooth01(0.0, 0.35, t) + 0.030 * smooth01(0.30, 0.42, t)
+
+    keep = set(i for i in foot_idx if me_b.vertices[i].co.z < collar(me_b.vertices[i].co))
+    b = bmesh.new()
+    b.from_mesh(me_b)
+    b.verts.ensure_lookup_table()
+    bmesh.ops.delete(b, geom=[f for f in b.faces if not all(v.index in keep for v in f.verts)], context="FACES")
+    bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
+    b.normal_update()
+    CLEAR = 0.0055
+
+    def push_out(extra=lambda co: 0.0):
+        for v in b.verts:
+            loc, nrm, _, d = tree.find_nearest(v.co)
+            if loc is None:
+                continue
+            want = CLEAR + extra(v.co)
+            if (v.co - loc).dot(nrm) < want:
+                v.co = loc + nrm * want
+    for v in b.verts:
+        v.co += v.normal * CLEAR
+    inner = [v for v in b.verts if not v.is_boundary]
+    toe_box = lambda co: 0.005 * smooth01(0.55, 0.85, t_of(co)) * smooth01(0.010, 0.030, co.z)
+    for k in range(6):                              # a last: toes and tendons smoothed away, never into the foot
+        for _ in range(6):
+            bmesh.ops.smooth_vert(b, verts=inner, factor=0.7, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        push_out(toe_box)
+    for v in b.verts:                               # the bottom sits inside the sole
+        if v.co.z < 0.010:
+            v.co.z = 0.010
+    bnd = [v for v in b.verts if v.is_boundary]
+    for _ in range(8):                              # a clean collar line
+        new = {}
+        for v in bnd:
+            nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+            if len(nb) == 2:
+                new[v] = v.co * 0.5 + (nb[0].co + nb[1].co) * 0.25
+        for v, q in new.items():
+            v.co = q
+    push_out()
+    # the collar loop, ordered, for the padding
+    loop = []
+    if bnd:
+        start = max(bnd, key=lambda v: v.co.y)
+        prev, cur = None, start
+        while True:
+            loop.append(cur.co.copy())
+            nxt = [e.other_vert(cur) for e in cur.link_edges if e.is_boundary and e.other_vert(cur) is not prev]
+            if not nxt or nxt[0] is start or len(loop) > 400:
+                break
+            prev, cur = cur, nxt[0]
+    upper_pts = [v.co.copy() for v in b.verts]
+    up = new_obj(name, b)
+    solidify(up, 0.003, 1.0, even=False)
+
+    def up_accent(i, co):                           # grey overlays: heel counter, toe cap, a mudguard band
+        t = t_of(co)
+        return 1.0 if (t < 0.20 and co.z < 0.060) or (t > 0.86 and co.z < 0.040) or co.z < 0.030 else 0.0
+    set_attr(up, "trim", lambda i, co: 0.0)
+    set_attr(up, "accent", up_accent)
+    parts = [up]
+    # --- sole: the footprint hull, flared, rounded, a grey outsole under an off-white midsole
+    foot2d = [(q.x, q.y) for q in upper_pts if q.z < 0.035]
+    hull = _hull2d(foot2d)
+    hc = (sum(h[0] for h in hull) / len(hull), sum(h[1] for h in hull) / len(hull))
+    ring2 = _resample_closed(hull, 72, math.pi / 2, hc)
+
+    def grown(dd):
+        out = []
+        for x, y in ring2:
+            dx, dy = x - hc[0], y - hc[1]
+            dl = math.hypot(dx, dy) or 1.0
+            out.append((x + dx / dl * dd, y + dy / dl * dd))
+        return out
+    layers = [(-0.006, 0.001), (-0.004, 0.004), (-0.002, 0.005), (0.004, 0.006), (0.014, 0.0075),
+              (0.020, 0.007), (0.024, 0.0055), (0.026, 0.003)]
+    sb = bmesh.new()
+    rings = [[sb.verts.new(V((x, y, z))) for x, y in grown(dd)] for z, dd in layers]
+    for r0, r1 in zip(rings, rings[1:]):
+        for j in range(len(r0)):
+            sb.faces.new((r0[j], r0[(j + 1) % len(r0)], r1[(j + 1) % len(r0)], r1[j]))
+    sb.faces.new(rings[0][::-1])
+    sb.faces.new(rings[-1])
+    bmesh.ops.triangulate(sb, faces=[f for f in sb.faces if len(f.verts) > 4])
+    bmesh.ops.recalc_face_normals(sb, faces=sb.faces[:])
+    sole = new_obj(name + "_sole", sb)
+    set_attr(sole, "trim", lambda i, co: 1.0 if co.z > -0.0035 else 0.0)
+    set_attr(sole, "accent", lambda i, co: 1.0 if co.z <= -0.0035 else 0.0)   # grey outsole
+    parts.append(sole)
+    # --- padded collar
+    if len(loop) > 8:
+        cb = bmesh.new()
+        _ring_tube(cb, loop, 0.0045, n=10, closed=True)
+        col = new_obj(name + "_collar", cb)
+        set_attr(col, "trim", lambda i, co: 0.0)
+        set_attr(col, "accent", lambda i, co: 1.0)
+        parts.append(col)
+    # --- laces: five bars over the instep, on the upper's top surface
+    lb = bmesh.new()
+    for t in (0.40, 0.46, 0.52, 0.58, 0.64):
+        y = heel_y - L * t
+        row = [q for q in upper_pts if abs(q.y - y) < 0.006 and abs(q.x - cx) < 0.03]
+        if len(row) < 3:
+            continue
+        path = []
+        for k in range(7):
+            x = cx - 0.016 + 0.032 * k / 6
+            near = [q for q in row if abs(q.x - x) < 0.008] or row
+            z = max(q.z for q in near) + 0.0035
+            path.append(V((x, y + 0.004 * (k % 2), z)))
+        _ring_tube(lb, path, 0.0017, n=6, closed=False)
+    if lb.verts:
+        lc = new_obj(name + "_laces", lb)
+        set_attr(lc, "trim", lambda i, co: 1.0)
+        set_attr(lc, "accent", lambda i, co: 0.0)
+        parts.append(lc)
+    else:
+        lb.free()
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = up
+    bpy.ops.object.join()
+    smooth(up, 50)
+    return up
+
+
 def sneaker(name, heel, toe, width, side):
     """A white high-top trainer modelled as footwear: a layered sole (outsole, flared midsole with a
     rounded top edge), a rounded toe box with toe spring, a closed heel counter, high padded walls round
