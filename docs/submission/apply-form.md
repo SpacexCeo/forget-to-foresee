@@ -17,7 +17,7 @@ Mistakes afterwards go through https://nearhackathon.com/request-changes.
 | `nearAddress` | `TODO(owner)` | **mainnet** account for the payout (`something.near` or 64 hex). Created by the owner in any NEAR wallet; never invented |
 | `projectUrl` | `https://github.com/SpacexCeo/forget-to-foresee` | public |
 | `demoUrl` | `TODO(owner)` | the X post URL once published (`docs/submission/x-post.md`) |
-| `idea` | text below | 20–2000 characters; the draft is 1,978 characters, re-count after edits |
+| `idea` | text below | 20–2000 characters; the draft is 1,979 characters, re-count after edits |
 | `consent` | `true` | only after the owner has read: "I agree that the organizers may use these details to review our submission and contact us about this hackathon." |
 | `requestId` | generate once | `node -e 'console.log(crypto.randomUUID())'`; keep it for retries after 503 |
 
@@ -25,19 +25,19 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 
 ## `idea` (project description, 20–2000 characters)
 
-> Forget to Foresee is a 3D browser strategy game about the price of knowing the future, and a demonstration that a game's prophecies can be fixed in advance and checked by anyone afterwards.
+> Forget to Foresee is a 3D browser strategy game about the price of knowing the future, built to prove that a game's prophecies can be fixed in advance and checked by anyone.
 >
 > Problem: in most AI and on-chain games the AI quietly decides the outcome and the chain is decoration. A player cannot tell a prophecy from a script.
 >
-> Product: above a floating archipelago, four alien Shells speak in round signs with four slots (place, action, power, delay). Six clans, each an agent with a wallet, a memory and a temper, read the signs, stake silk on where a Gift will land, trade words, keep or break pacts, and must assemble one message from six fragments before a crisis on trial 13 and a final vote. To see a sign early, your agent forgets a memory forever and that memory goes to auction as a shard: you pay for prophecy with your own biography. Simple, Novice and Pro modes, short films between chapters, five languages, phone play. AI agents play the same room over an open HTTP API with the same rules and proofs.
+> Product: above a floating archipelago, four alien Shells speak in round signs with four slots (place, action, power, delay). Six clans, each an agent with a wallet, a memory and a temper, read the signs, stake silk on where a Gift will land, trade words, keep or break pacts, and must assemble one message from six fragments before a crisis on trial 13 and a final vote. To see a sign early, your agent forgets a memory forever and that memory goes to auction as a shard: you pay for prophecy with your own biography. Simple, Novice and Pro modes, short films between chapters, five languages, phone play. Any AI agent can play a full season through our open HTTP API (run locally): same room module, rules and proofs.
 >
-> How NEAR fits in: the whole 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root is registered there and all 15 events have been revealed and proof-checked on-chain, byte for byte, plus a commit-reveal for the crisis key. Nobody, including us, can rewrite what the Guests said. The browser shows "Verified ✓" for each reveal, and anyone can re-check a proof offline with a Node or Python script. A second contract, memory-shard (NEP-171, live as ftf-shards.testnet), mints a forgotten memory as an NFT bound to the season root. The economy is closed in-game silk: no token, no payments.
+> How NEAR fits in: the whole 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root is registered there and all 15 events have been revealed and proof-checked on-chain, byte for byte, plus a commit-reveal for the crisis key. Nobody, us included, can rewrite what the Guests said. The browser shows "Verified ✓" per reveal; anyone can re-check a proof offline with a Node or Python script. A second contract, memory-shard (NEP-171, live as ftf-shards.testnet), mints a forgotten memory as an NFT bound to the season root. The economy is closed in-game silk: no token, no payments.
 >
 > Open source (MIT), reproducible from a clean clone: 495 game tests, 28 API tests, 56 + 21 contract tests, and a five-minute judge path in the README.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,975. Updated 09.11 after the
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,979. Updated 09.11 after the
 testnet deployment of season-commit. memory-shard went live as `ftf-shards.testnet` the same morning (3 judge shards minted). Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
 

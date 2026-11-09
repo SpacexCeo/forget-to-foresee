@@ -62,6 +62,32 @@ Sign #1 shows **Verified ✓** and, below the anchor, **Verified on NEAR testnet
 leaf #0. No console errors. The game never signs: it only reads `get_season` and `get_revealed_leaf`.
 No HUD element shows the shard NFTs yet (request 9).
 
+### Control handed to the owner (09.11.2026)
+
+At the owner's request the project's testnet control moved to the owner's account
+[`lambada_eth.testnet`](https://testnet.nearblocks.io/address/lambada_eth.testnet). Only public data is recorded here.
+Nothing was deleted: the original keys still work.
+
+| Step | Transaction |
+|---|---|
+| nft_transfer `793f6c05e89839f2-7` → lambada_eth.testnet | [`GEVd8yFZ65vCDg2svnzmgn5iiQHbUqDhpzT1jV4fZwDR`](https://testnet.nearblocks.io/txns/GEVd8yFZ65vCDg2svnzmgn5iiQHbUqDhpzT1jV4fZwDR) |
+| nft_transfer `793f6c05e89839f2-10` → lambada_eth.testnet | [`BmtfYVVdyPqsmiWAyEXFrph6Mxr2DUbxLt6BvCMHAvDt`](https://testnet.nearblocks.io/txns/BmtfYVVdyPqsmiWAyEXFrph6Mxr2DUbxLt6BvCMHAvDt) |
+| nft_transfer `793f6c05e89839f2-15` → lambada_eth.testnet | [`9gJNZ3oAeXsQYqNHZpb78UAwZn9QMgAnXmwJ3JfpNThe`](https://testnet.nearblocks.io/txns/9gJNZ3oAeXsQYqNHZpb78UAwZn9QMgAnXmwJ3JfpNThe) |
+| add_coordinator lambada_eth.testnet on ftf-seasons.testnet | [`3XFA567BHqiVEYngFgv8KEcQFwMsKBRjLbenVbqKnjK8`](https://testnet.nearblocks.io/txns/3XFA567BHqiVEYngFgv8KEcQFwMsKBRjLbenVbqKnjK8) |
+| add_coordinator lambada_eth.testnet on ftf-shards.testnet | [`3uxfFkWeXJij2SJYjJDiF7woSevRQsDRnbsJ26zeA2SK`](https://testnet.nearblocks.io/txns/3uxfFkWeXJij2SJYjJDiF7woSevRQsDRnbsJ26zeA2SK) |
+| owner's public key as full-access key on ftf-coordinator.testnet | [`AfpJpLA2JsMEuKWGEY6VTKn9nENiPCpWVkN3oqXYzqnW`](https://testnet.nearblocks.io/txns/AfpJpLA2JsMEuKWGEY6VTKn9nENiPCpWVkN3oqXYzqnW) |
+| owner's public key as full-access key on ftf-seasons.testnet | [`6wLLGk72iwcssMV9D5VXM4G4QaUaZwzb2ptRGpMs8sHu`](https://testnet.nearblocks.io/txns/6wLLGk72iwcssMV9D5VXM4G4QaUaZwzb2ptRGpMs8sHu) |
+| owner's public key as full-access key on ftf-shards.testnet | [`FUAjLVpwa1rBhXadnYcqxZL5TKDRbAeAFmFVNgEhJeDs`](https://testnet.nearblocks.io/txns/FUAjLVpwa1rBhXadnYcqxZL5TKDRbAeAFmFVNgEhJeDs) |
+
+Verified afterwards with read-only RPC:
+- `nft_tokens_for_owner(lambada_eth.testnet)` on ftf-shards.testnet returns the 3 judge shards; ftf-coordinator.testnet holds 0.
+- `get_coordinators` on both contracts returns `ftf-coordinator.testnet` and `lambada_eth.testnet`.
+- `view_access_key_list` on all three accounts lists two full-access keys: the original one and the owner's
+  `ed25519:7w8hrbbdxUFhxShfGBT4rP6k8W7j4Q1TTD6rP6ky5LTE`.
+
+The contracts' `owner_id` (which manages coordinators) is still `ftf-coordinator.testnet`, because neither contract has
+an owner-transfer method. The owner controls that account through the added full-access key.
+
 ## What runs where
 
 ```

@@ -105,7 +105,7 @@ export default {
       actions: [{ at: 0.0, do: 'cue', name: 'sting_survived', gain: 0.8 }, { at: 0.0, do: 'music', tension: 8, gain: 0.5 }],
       overlays: [
         ...FRAME, dim(-1, 6, 0.45),
-        { kind: 'title', from: 0.2, to: 6, fadeIn: 0.9, fadeOut: 0.6, eyebrow: 'RAEN Computers · built at NEAR HACKATHON', text: 'Forget', text2: 'to foresee', sub: 'The future costs a memory', lines: ['*spacexceo.github.io/forget-to-foresee', 'github.com/SpacexCeo/forget-to-foresee'] },
+        { kind: 'title', from: 0.2, to: 6, fadeIn: 0.9, fadeOut: 0.6, eyebrow: 'Lambada_eth · built at NEAR HACKATHON', text: 'Forget', text2: 'to foresee', sub: 'The future costs a memory', lines: ['*spacexceo.github.io/forget-to-foresee', 'github.com/SpacexCeo/forget-to-foresee'] },
         fadeOut(5.0, 1.0),
       ],
     },

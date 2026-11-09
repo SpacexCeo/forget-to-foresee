@@ -372,7 +372,10 @@ test('watcher: a leaf that failed on the network is asked again after retryMs (a
   w2.observe(obs); await w2.settle();
   assert.equal(w2.leaf(index).state, 'offline');
   leafUp = true;
-  await new Promise((r) => setTimeout(r, 80)); await w2.settle();
+  // the timer fires after retryMs; on a slow machine the retry chain may need longer, so wait for it (bounded)
+  for (let i = 0; i < 100 && w2.leaf(index).state !== 'on-chain'; i++) {
+    await new Promise((r) => setTimeout(r, 20)); await w2.settle();
+  }
   assert.equal(w2.leaf(index).state, 'on-chain', 'retried by the timer');
   w2.destroy();
 });
