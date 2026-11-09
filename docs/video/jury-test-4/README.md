@@ -5,11 +5,12 @@ The 18.5 s cinematic test from `docs/submission/jury-video.md` (v3), rendered by
 (`tools/capture/layers-pass.mjs`). All seven shots rendered with 0 runner errors and 0 console messages; `proof` needed
 three frame retries (one luma jump of 27 at its frame 17). Report: `jury-test.report.json`; the job log: `job-log.txt`.
 
-The rented server was returned right after the run, so the 4K masters (97 MB each) and the 4K per-shot plates (1.5 GB)
-could not be kept. Everything here was downscaled on the server to 1920×1080 (lanczos, H.264 CRF 16/17) before it went:
+The rented server was returned right after the run, so the 4K per-shot plates (1.5 GB) and the 4K captions master could not be
+kept; only the plain 4K master was pulled in time. Everything here was downscaled on the server to 1920×1080 (lanczos, H.264 CRF 16/17) before it went:
 
 | File | What |
 |---|---|
+| `jury-test-4k.mp4` | the 4K30 master as the GPU assembled it (97 MB; the one 4K file that fit under the GitHub limit) |
 | `jury-test-1080p.mp4` | the assembled test without data layers (plates + the mix), 1080p30 |
 | `jury-test-captions-1080p.mp4` | the same with the SRT burnt in |
 | `jury-test.srt`, `plates/jury-test.ass` | the captions |
