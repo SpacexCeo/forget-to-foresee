@@ -165,3 +165,7 @@ One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15
 
 ## Cycle 25: 2026-11-09 08:20 UTC
 - Checks only: HACKATHON.md byte-identical, `games` 28. No rubric change. No red flags.
+- 08:25 UTC: `games` rose to 28. New entry Ashes of the Ninth Heaven read (README only): a deployed, judge-ready
+  agent economy on NEAR testnet that overlaps our pitch on readable deterministic rules and JS-Rust parity. Recorded
+  in `notes/competitor-field.md`; rubric v0.12 recalibrates the top of C1/C3/C4 to it. Reported to the lead at once as
+  a competitive risk (not a gate).

@@ -1,6 +1,6 @@
 # Jury rubric for Forget to Foresee (NEAR Hackathon 2026)
 
-Version 0.11, 2026-11-09 (research cycle 11). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
+Version 0.12, 2026-11-09 (cycle 25). Owner: the juror agent (Task R, `docs/handoff/worker-tasks.md`).
 This rubric is **inferred**: the hackathon publishes no numeric rubric (`notes/near-hackathon-rules.md`,
 `notes/near-hackathon-tracks.md`). Every weight names the notes it rests on; `log.md` records each change.
 
@@ -53,6 +53,11 @@ an open flag is reported to the lead at once, and the score is marked provisiona
 
 - Field update 2026-11-09 01:20 UTC: 335 entries (`games` 27 unchanged, `nfts` 23, `open` 56); the `games`
   competition has not grown in eight hours, so the calibrations in `notes/competitor-field.md` still hold.
+
+- Field update 2026-11-09 08:25 UTC: `games` 28. New top rival, Ashes of the Ninth Heaven (`notes/competitor-field.md`):
+  deployed NEP-245/NEP-171 contract, judge page with one-click real transactions, brief mapped row by row, 283 tests,
+  live read-only chain verification. Calibration: "top of the `games` field" for C1, C3 and C4 now means this level;
+  an undeployed entry is scored against it, not against the median.
 
 ## 2. Criteria, weights and what a 10 looks like
 

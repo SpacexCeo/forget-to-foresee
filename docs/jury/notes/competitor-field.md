@@ -141,3 +141,19 @@ GitHub only, `nfts`: CrewPass ("NEAR NFT ambassador passes whose vaults follow o
   read via GitHub search, README not read; mapping is an inference). Not a game and no memory mechanic: no effect on
   our originality calibration. The second `nfts` addition matched an existing name variant (NEARlyHuman).
 - Live HACKATHON.md unchanged (sha256 903794f4…d381d9aed).
+
+## New strongest rival, 2026-11-09 08:25 UTC: Ashes of the Ninth Heaven
+- Directory: `games` count 27 -> 28; tracks agents, games, nfts, open; demo https://x.com/merajali206/status/2119698012339663045.
+- Repo https://github.com/merajali98-dev/ashes-of-the-ninth-heaven (README read 2026-11-09 08:22 UTC); live
+  https://ashes-ninth.duckdns.org with a `/judge` "Judge's Desk" (one click creates a throwaway testnet account, every
+  button sends a real transaction linked to the explorer).
+- Deployed: `items.ashes-ninth.testnet` (NEP-245 goods, NEP-171 Shop Deeds), per-merchant agent accounts with
+  function-call keys limited to three methods; NEP-366 relayed transactions, Google/email login, no wallet prompts.
+- Track brief mapped requirement by requirement with file and test per row; one readable pricing rules file
+  (`js/market/merchant-rules.js`, under 340 lines) generated into Rust with JS-Rust parity replays; "why?" tooltips;
+  a week fast-forward; `npm run verify` (221 node + 62 contract tests), `chain:verify` (read-only live checks),
+  `chain:e2e`; an "Honest limits" section.
+- Juror reading: this entry meets nearly every C1, C3 and C4 10/10 descriptor in our rubric and several C2 economy
+  legibility questions on its face (claims not yet independently run). It overlaps our pitch on deterministic,
+  readable agent rules and JS-Rust parity. Our remaining differentiators: the pre-committed season (Merkle root) and
+  memory-as-price; both depend on a deployed commit and a visible verification step.
