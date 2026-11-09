@@ -79,6 +79,15 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     const url = baseUrl + '/?' + q.toString();
     log(`[${shot.name}] open ${url}`);
     arm('page load', 420_000);
+    // No hot reload during a capture (a dev-server edit must not reload the game mid-shot): the vite client is a no-op
+    // with the same exports. The production build (vite preview, the GPU job) has no client and is unaffected.
+    await page.route('**/@vite/client', (r) => r.fulfill({ contentType: 'application/javascript', body: [
+      'export const createHotContext = () => ({ accept() {}, acceptExports() {}, dispose() {}, prune() {}, invalidate() {}, on() {}, off() {}, send() {}, data: {} });',
+      'const sheets = new Map();',
+      'export const updateStyle = (id, css) => { let s = sheets.get(id); if (!s) { s = document.createElement("style"); s.setAttribute("data-vite-dev-id", id); document.head.appendChild(s); sheets.set(id, s); } s.textContent = css; };',
+      'export const removeStyle = (id) => { const s = sheets.get(id); if (s) { s.remove(); sheets.delete(id); } };',
+      'export const injectQuery = (u) => u;',
+    ].join('\n') }));
     await page.goto(url, { waitUntil: 'load', timeout: 120_000 });
     // Poll from Node: under the virtual clock the page's rAF and timers never fire on their own, so
     // Playwright's waitForFunction (rAF polling) would only evaluate once.

@@ -21,7 +21,9 @@ window.__lp = {
     layers = createLayers(document); layers.set(items); log = layerLog;
     return log.length;
   },
-  render(i) {
+  /** Frame i: the plate frame behind (so frosted glass blurs the real world), then the layers from the recorded camera. */
+  async render(i, src) {
+    if (src) { const img = document.getElementById('plate'); img.src = src; await img.decode(); }
     const f = log[Math.min(i, log.length - 1)];
     layers.update(f.t, (w) => project(f.vp, w), (id) => (f.targets && f.targets[id] ? { pos: f.targets[id] } : null));
   },

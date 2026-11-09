@@ -8,6 +8,7 @@
 // for names and titles, Atkinson Hyperlegible for lines, Source Sans 3 for tracked labels; ink, pearl and nacre with
 // gold #e4c272 as the rare accent.
 import { drawLogogram } from '../play/logogram.js';
+import { MATERIAL } from '../../cine/jury-ds.js';
 
 const GOLD = '#e4c272', PEARL = '#ece6d8', MIST = '#a3b0ac', RUST = '#d0806a', NACRE = '#a9c6d4';
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -29,6 +30,21 @@ const CSS = `
 .cl-temper { display: block; font: 600 44px/1 'Source Sans 3', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: ${PEARL}; margin-top: 14px; text-shadow: 0 2px 16px rgba(0,0,0,.8); }
 .cl-line { font: 700 56px/1.15 'Atkinson Hyperlegible', 'Source Sans 3', sans-serif; text-shadow: 0 2px 24px rgba(0,0,0,.85); transform: translate(-50%, -50%); text-align: center; }
 .cl-small { font: 400 44px/1.2 'Atkinson Hyperlegible', 'Source Sans 3', sans-serif; color: ${MIST}; text-shadow: 0 2px 16px rgba(0,0,0,.85); }
+.cl-glass { background: linear-gradient(160deg, rgba(236,230,216,.12), rgba(16,24,24,.42) 55%, rgba(10,16,16,.5)); -webkit-backdrop-filter: blur(18px) saturate(1.15) brightness(.85); backdrop-filter: blur(18px) saturate(1.15) brightness(.85); border-radius: 24px; box-shadow: inset 0 0 0 1px rgba(236,230,216,.20), inset 0 1px 0 rgba(255,255,255,.22), 0 24px 60px rgba(0,0,0,.35); overflow: hidden; }
+.cl-lock { left: 0; right: 0; text-align: center; }
+.cl-lock .t { font: 400 112px/1 'Libre Caslon Text', Georgia, serif; text-shadow: 0 4px 40px rgba(0,0,0,.6); }
+.cl-lock .s { font: 600 44px/1 'Source Sans 3', sans-serif; letter-spacing: .42em; text-transform: uppercase; color: ${PEARL}; opacity: .9; margin-top: 30px; text-shadow: 0 2px 18px rgba(0,0,0,.7); }
+.cl-card { width: 560px; height: 210px; transform: translate(-50%, -100%); }
+.cl-card .n { position: absolute; left: 40px; top: 34px; font: 400 92px/1 'Libre Caslon Text', Georgia, serif; }
+.cl-card .m { position: absolute; left: 44px; top: 142px; font: 600 44px/1 'Source Sans 3', sans-serif; letter-spacing: .36em; text-transform: uppercase; color: ${PEARL}; opacity: .85; }
+.cl-card svg.v { position: absolute; left: 0; top: 0; }
+.cl-quote { font: italic 400 96px/1.1 'Libre Caslon Text', Georgia, serif; text-shadow: 0 4px 40px rgba(0,0,0,.75); transform: translate(-50%, -50%); text-align: center; }
+.cl-amount { transform: translate(-50%, -50%); text-align: center; }
+.cl-amount .v { font: 400 150px/1 'Libre Caslon Text', Georgia, serif; color: ${GOLD}; text-shadow: 0 4px 40px rgba(0,0,0,.7); }
+.cl-amount .u { font: 600 44px/1 'Source Sans 3', sans-serif; letter-spacing: .5em; color: ${PEARL}; margin-top: 6px; }
+.cl-amount .w { font: 700 52px/1.1 'Atkinson Hyperlegible', sans-serif; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,.8); }
+.cl-label { font: 600 40px/1 'Source Sans 3', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: ${GOLD}; }
+.cl-value { font: 400 54px/1.15 'Libre Caslon Text', Georgia, serif; color: ${PEARL}; margin: 10px 0 30px; }
 .cl-mono { font: 400 44px/1.2 'DejaVu Sans Mono', Menlo, monospace; color: ${NACRE}; text-shadow: 0 2px 16px rgba(0,0,0,.85); }
 `;
 
@@ -47,6 +63,116 @@ export function createLayers(doc = document) {
   let nodes = [];
 
   const builders = {
+    lockup(it) { // chapter lockup (style sheet): thin ring with a small top circle, serif title, wide-tracked caps line
+      const e = el(doc, 'div', 'cl-abs cl-lock', `<div class="t">${esc(it.text)}</div><div class="s">${esc(it.sub || '')}</div>`); e.style.top = (it.y ?? 390) + 'px'; root.append(e);
+      const R = it.r ?? 260, cx = 960, cy = (it.y ?? 390) + 60;
+      const ring = sv(doc, 'circle', { cx, cy, r: R, fill: 'none', stroke: 'rgba(236,230,216,.55)', 'stroke-width': 1.5 });
+      const top = sv(doc, 'circle', { cx, cy: cy - R, r: 9, fill: 'none', stroke: GOLD, 'stroke-width': 2 });
+      const num = el(doc, 'div', 'cl-abs', esc(it.eyebrow || '')); Object.assign(num.style, { left: '0', right: '0', textAlign: 'center', top: (cy - R - 70) + 'px', font: "600 44px/1 'Source Sans 3', sans-serif", letterSpacing: '.3em', color: GOLD }); root.append(num);
+      svg.append(ring, top);
+      return (t) => {
+        const a = env(t, it, 0.9, 0.4), k = out(P(t, it.from, 1.3)), C = 2 * Math.PI * R;
+        e.style.opacity = a.toFixed(3); e.style.filter = `blur(${(12 * (1 - k)).toFixed(2)}px)`; e.style.letterSpacing = `${(0.06 * (1 - k)).toFixed(3)}em`;
+        ring.setAttribute('stroke-dasharray', `${C}`); ring.setAttribute('stroke-dashoffset', (C * (1 - inOut(P(t, it.from - 0.1, 1.4)))).toFixed(1)); ring.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+        ring.style.opacity = (a * 0.8).toFixed(3); top.style.opacity = num.style.opacity = env(t, { ...it, from: it.from + 0.6 }).toFixed(3);
+      };
+    },
+    clanCard(it) { // a clan identity pinned above its agent: frosted glass, the clan's material, focus when it nears centre
+      const e = el(doc, 'div', 'cl-abs cl-glass cl-card', `<div class="n" style="color:${it.color}">${esc(it.name)}</div><div class="m">${esc(it.sub || '')}</div>`);
+      const W = 560, H = 210, mat = MATERIAL[it.clan] ? MATERIAL[it.clan](W, H) : null;
+      if (mat) { const v = sv(doc, 'svg', { class: 'v', width: W, height: H, viewBox: `0 0 ${W} ${H}` }); const id = 'm' + it.clan + Math.random().toString(36).slice(2, 6);
+        const defs = sv(doc, 'defs'), lg = sv(doc, 'linearGradient', { id: id + 'g', x1: 0, y1: 0, x2: 1, y2: 0 }); lg.append(sv(doc, 'stop', { offset: 0.4, 'stop-color': '#fff', 'stop-opacity': 0 }), sv(doc, 'stop', { offset: 0.85, 'stop-color': '#fff', 'stop-opacity': 1 }));
+        const mk = sv(doc, 'mask', { id }); mk.append(sv(doc, 'rect', { width: W, height: H, fill: `url(#${id}g)` })); defs.append(lg, mk); v.append(defs); const g = sv(doc, 'g', { mask: `url(#${id})` }); g.append(mat.g); v.append(g); e.prepend(v); }
+      root.append(e);
+      const stem = sv(doc, 'line', { stroke: 'rgba(236,230,216,.6)', 'stroke-width': 1.5 }), dot = sv(doc, 'circle', { r: 7, fill: 'none', stroke: it.color, 'stroke-width': 2 }); svg.append(stem, dot);
+      return (t, project, target) => {
+        const w = it.target ? (target(it.target) || {}).pos : it.world; if (!w) return;
+        const [x, y, on] = project(w); const a = on ? env(t, it, 0.5, 0.35) : 0, k = out(P(t, it.from, 0.7));
+        const focus = clamp(1 - Math.abs(x - 960) / 900); // nearer the centre: larger, brighter (only one card leads)
+        const sc = lerp(0.82, 1.06, focus) * lerp(0.94, 1, k), ty = y - (it.lift ?? 120) - (1 - k) * 30;
+        e.style.left = x.toFixed(1) + 'px'; e.style.top = ty.toFixed(1) + 'px'; e.style.transform = `translate(-50%, -100%) scale(${sc.toFixed(4)})`; e.style.transformOrigin = '50% 100%';
+        e.style.opacity = (a * lerp(0.55, 1, focus)).toFixed(3);
+        if (mat && mat.update) mat.update(t, {});
+        stem.setAttribute('x1', x.toFixed(1)); stem.setAttribute('y1', ty.toFixed(1)); stem.setAttribute('x2', x.toFixed(1)); stem.setAttribute('y2', (y - 10).toFixed(1));
+        dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1)); stem.style.opacity = dot.style.opacity = (a * 0.8).toFixed(3);
+      };
+    },
+    transfer(it) { // a thing moves between two places on a silk thread (Event A: the shard from Iris to Frost, 13 silk)
+      const thread = sv(doc, 'path', { fill: 'none', stroke: 'rgba(236,230,216,.75)', 'stroke-width': 2 }), glow = sv(doc, 'path', { fill: 'none', stroke: GOLD, 'stroke-width': 10, opacity: 0.18 });
+      const shard = sv(doc, 'polygon', { points: '0,-26 12,-4 6,26 -7,24 -12,-2', fill: 'rgba(214,226,236,.85)', stroke: GOLD, 'stroke-width': 1.5 });
+      svg.append(glow, thread, shard);
+      const amt = el(doc, 'div', 'cl-abs cl-amount', `<div class="w">${esc(it.label)}</div><div class="v">${esc(it.amount)}</div><div class="u">${esc(it.unit || 'SILK')}</div>`); root.append(amt);
+      return (t, project) => {
+        const [x1, y1] = project(it.a), [x2, y2] = project(it.b), mx = (x1 + x2) / 2, my = Math.min(y1, y2) - (it.arc ?? 220);
+        const d = `M${x1.toFixed(1)},${y1.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`; thread.setAttribute('d', d); glow.setAttribute('d', d);
+        const a = env(t, it), L = thread.getTotalLength(), k = out(P(t, it.from, 0.5)), u = inOut(P(t, it.from + 0.25, 0.9));
+        thread.setAttribute('stroke-dasharray', `${(L * k).toFixed(1)} ${L}`); thread.style.opacity = a.toFixed(3); glow.style.opacity = (a * 0.2).toFixed(3); glow.setAttribute('stroke-dasharray', `${(L * u).toFixed(1)} ${L}`);
+        const q = thread.getPointAtLength(L * u); shard.setAttribute('transform', `translate(${q.x.toFixed(1)},${q.y.toFixed(1)}) rotate(${(u * 220).toFixed(1)})`); shard.style.opacity = (u > 0 ? a : 0).toFixed(3);
+        amt.style.left = (it.ax ?? mx) + 'px'; amt.style.top = (it.ay ?? my + 40) + 'px'; amt.style.opacity = env(t, { ...it, from: it.from + 0.55 }).toFixed(3);
+      };
+    },
+    quote(it) { // a declaration given the weight of a line of dialogue (Event B: Salt, "It is a weapon")
+      const e = el(doc, 'div', 'cl-abs cl-quote', `“${esc(it.text)}”${it.who ? `<div style="font:600 44px/1 'Source Sans 3',sans-serif;letter-spacing:.36em;text-transform:uppercase;font-style:normal;color:${it.color || PEARL};margin-top:22px">${esc(it.who)}</div>` : ''}`); root.append(e);
+      const rs = [0, 1].map(() => sv(doc, 'ellipse', { fill: 'none', stroke: it.color || PEARL, 'stroke-width': 2 })); rs.forEach((r) => svg.append(r));
+      return (t, project) => {
+        const [x, y] = project(it.world), a = env(t, it, 0.5, 0.3), k = out(P(t, it.from, 0.8));
+        e.style.left = (it.x ?? x) + 'px'; e.style.top = (it.y ?? y - 220) + 'px'; e.style.opacity = a.toFixed(3); e.style.filter = `blur(${(8 * (1 - k)).toFixed(2)}px)`;
+        rs.forEach((r, i) => { const q = P(t, it.from + i * 0.35, 1.3); r.setAttribute('cx', x.toFixed(1)); r.setAttribute('cy', y.toFixed(1)); r.setAttribute('rx', (30 + 520 * out(q)).toFixed(1)); r.setAttribute('ry', (10 + 180 * out(q)).toFixed(1)); r.style.opacity = (q > 0 && q < 1 ? a * (1 - q) * 0.8 : 0).toFixed(3); });
+      };
+    },
+    fracture(it) { // a transfer, then the tie breaks (Event C: Ash cheats Amber of 16 silk; the tie cracks, amber flakes fall)
+      const line = sv(doc, 'path', { fill: 'none', stroke: 'rgba(236,230,216,.7)', 'stroke-width': 2.5 }); svg.append(line);
+      const crack = sv(doc, 'path', { fill: 'none', stroke: RUST, 'stroke-width': 3, 'stroke-linejoin': 'round' }); svg.append(crack);
+      const coin = sv(doc, 'circle', { r: 12, fill: GOLD }); svg.append(coin);
+      let a0 = 11; const r = () => { a0 = (a0 * 16807) % 2147483647; return a0 / 2147483647; };
+      const flakes = Array.from({ length: 14 }, () => ({ p: sv(doc, 'polygon', { points: `0,-${4 + r() * 6} ${3 + r() * 5},${r() * 4} -${3 + r() * 4},${2 + r() * 4}`, fill: `rgba(${200 + r() * 40 | 0},${140 + r() * 40 | 0},60,.85)` }), vx: (r() - 0.5) * 160, vy: 40 + r() * 140, rot: r() * 360 }));
+      flakes.forEach((f) => svg.append(f.p));
+      const amt = el(doc, 'div', 'cl-abs cl-amount', `<div class="w" style="color:#f0b9a8">${esc(it.label)}</div><div class="v">${esc(it.amount)}</div><div class="u">SILK</div>`); root.append(amt);
+      return (t, project) => {
+        const [x1, y1] = project(it.a), [x2, y2] = project(it.b), mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - (it.arc ?? 60);
+        const a = env(t, it), k = out(P(t, it.from, 0.45));
+        const sn = out(P(t, it.snap, 0.3)), gap = 90 * sn;
+        const d = `M${x1.toFixed(1)},${y1.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`; line.setAttribute('d', d);
+        const L = line.getTotalLength(); line.setAttribute('stroke-dasharray', sn > 0 ? `${(L / 2 - gap / 2).toFixed(1)} ${gap.toFixed(1)} ${L}` : `${(L * k).toFixed(1)} ${L}`);
+        line.setAttribute('stroke', sn > 0 ? 'rgba(208,128,106,.65)' : 'rgba(236,230,216,.7)'); line.style.opacity = a.toFixed(3);
+        // the silk moves from the victim to the cheat before the break (Amber → Ash)
+        const u = inOut(P(t, it.from + 0.2, it.snap - it.from - 0.25)); if (u > 0 && u < 1) { const q = line.getPointAtLength(L * (1 - u)); coin.setAttribute('cx', q.x.toFixed(1)); coin.setAttribute('cy', q.y.toFixed(1)); coin.style.opacity = a.toFixed(3); } else coin.style.opacity = 0;
+        const c = line.getPointAtLength(L / 2); let zz = `M${(c.x - 6).toFixed(1)},${(c.y - 40 * sn).toFixed(1)}`; for (let i = 1; i <= 5; i++) zz += ` L${(c.x + (i % 2 ? 10 : -10) * sn).toFixed(1)},${(c.y - 40 * sn + i * 16 * sn).toFixed(1)}`;
+        crack.setAttribute('d', zz); crack.style.opacity = (a * sn).toFixed(3);
+        flakes.forEach((f) => { const q = P(t, it.snap, 1.2); f.p.setAttribute('transform', `translate(${(c.x + f.vx * q).toFixed(1)},${(c.y + f.vy * q + 120 * q * q).toFixed(1)}) rotate(${(f.rot + q * 200).toFixed(1)})`); f.p.style.opacity = (q > 0 ? a * (1 - q) : 0).toFixed(3); });
+        amt.style.left = (it.ax ?? mx) + 'px'; amt.style.top = (it.ay ?? my - 170) + 'px'; amt.style.opacity = env(t, { ...it, from: it.from + 0.3 }).toFixed(3);
+      };
+    },
+    panel(it) { // the token panel (style sheet "on-chain proof"): frosted glass, the contract's own art drawing in, the fields
+      const S = it.art ?? 380, W = it.w ?? 1240, H = it.h ?? 560;
+      const e = el(doc, 'div', 'cl-abs cl-glass'); Object.assign(e.style, { left: it.x + 'px', top: it.y + 'px', width: W + 'px', height: H + 'px' });
+      const art = el(doc, 'div', 'cl-abs'); Object.assign(art.style, { left: '60px', top: ((H - S) / 2) + 'px', width: S + 'px', height: S + 'px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(236,230,216,.18), 0 0 60px rgba(127,179,213,.25)' });
+      art.innerHTML = it.svg.replace(/width="\d+" height="\d+"/, `width="${S}" height="${S}"`);
+      const strokes = [...art.querySelectorAll('circle, line')].map((n, i) => ({ n, i, L: n.getTotalLength ? n.getTotalLength() : 400 }));
+      strokes.forEach((o) => o.n.setAttribute('stroke-dasharray', `${o.L}`));
+      const col = el(doc, 'div', 'cl-abs', `<div style="font:400 64px/1.1 'Libre Caslon Text',Georgia,serif;margin-bottom:34px">${it.title}</div>` + (it.fields || []).map(([k, v]) => `<div class="cl-label">${esc(k)}</div><div class="cl-value">${esc(v)}</div>`).join(''));
+      Object.assign(col.style, { left: (60 + S + 70) + 'px', top: '56px' });
+      e.append(art, col); root.append(e);
+      const rows = [...col.children];
+      return (t) => {
+        const a = env(t, it, 0.6, 0.4), k = out(P(t, it.from, 0.8)); e.style.opacity = a.toFixed(3); e.style.transform = `translateY(${((1 - k) * 30).toFixed(1)}px) scale(${lerp(0.97, 1, k).toFixed(4)})`;
+        strokes.forEach((o) => o.n.setAttribute('stroke-dashoffset', (o.L * (1 - out(P(t, it.from + 0.2 + o.i * 0.06, 0.7)))).toFixed(1)));
+        rows.forEach((r, i) => { const q = out(P(t, it.from + 0.5 + i * 0.09, 0.5)); r.style.opacity = q.toFixed(3); r.style.transform = `translateY(${((1 - q) * 14).toFixed(1)}px)`; });
+      };
+    },
+    crumb(it) { // breadcrumb "Iris · Memory" with a five-dot progress rail, the current dot gold
+      const e = el(doc, 'div', 'cl-abs', `<span style="font:400 48px/1 'Libre Caslon Text',Georgia,serif;color:#b49be6">Iris</span> <span style="font:600 44px/1 'Source Sans 3',sans-serif;letter-spacing:.2em;color:${PEARL}"> · ${esc(it.text || 'Memory')}</span>`);
+      Object.assign(e.style, { right: '96px', top: '86px', textAlign: 'right' }); root.append(e);
+      const rail = sv(doc, 'line', { x1: 1430, y1: 170, x2: 1824, y2: 170, stroke: 'rgba(236,230,216,.4)', 'stroke-width': 1.5 }); svg.append(rail);
+      const dots = [0, 1, 2, 3, 4].map((i) => { const c = sv(doc, 'circle', { cx: 1430 + i * 98.5, cy: 170, r: i === (it.at ?? 3) ? 9 : 6, fill: i === (it.at ?? 3) ? GOLD : '#0b0f10', stroke: i === (it.at ?? 3) ? GOLD : 'rgba(236,230,216,.6)', 'stroke-width': 1.5 }); svg.append(c); return c; });
+      return (t) => { const a = env(t, it); e.style.opacity = a.toFixed(3); rail.style.opacity = a.toFixed(3); dots.forEach((d, i) => { d.style.opacity = (a * out(P(t, it.from + 0.1 + i * 0.08, 0.4))).toFixed(3); }); };
+    },
+    rule(it) { // a caption between thin gold rules with a centre diamond ("to see the future *first*")
+      const e = el(doc, 'div', 'cl-abs', `<div style="font:italic 400 72px/1.1 'Libre Caslon Text',Georgia,serif;text-shadow:0 3px 30px rgba(0,0,0,.8)">${it.html}</div>`);
+      Object.assign(e.style, { left: '0', right: '0', textAlign: 'center', top: (it.y ?? 860) + 'px' }); root.append(e);
+      const l1 = sv(doc, 'line', { stroke: GOLD, 'stroke-width': 1.2 }), l2 = sv(doc, 'line', { stroke: GOLD, 'stroke-width': 1.2 }), dm = sv(doc, 'rect', { width: 10, height: 10, fill: GOLD }); svg.append(l1, l2, dm);
+      return (t) => { const a = env(t, it), k = out(P(t, it.from, 0.8)), Y = (it.y ?? 860) + 120; [[l1, -1], [l2, 1]].forEach(([l, sgn]) => { l.setAttribute('x1', 960 + sgn * 24); l.setAttribute('x2', (960 + sgn * (24 + 360 * k)).toFixed(1)); l.setAttribute('y1', Y); l.setAttribute('y2', Y); l.style.opacity = a.toFixed(3); }); dm.setAttribute('transform', `translate(960,${Y}) rotate(45) translate(-5,-5)`); dm.style.opacity = a.toFixed(3); e.style.opacity = a.toFixed(3); };
+    },
     title(it) { // the chapter title emerging from the atmosphere: blur sharpens, the letters breathe apart a little
       const e = el(doc, 'div', 'cl-abs cl-title', (it.eyebrow ? `<div class="cl-eyebrow">${esc(it.eyebrow)}</div>` : '') + esc(it.text));
       e.style.top = (it.y ?? 400) + 'px'; root.append(e);
@@ -160,8 +286,8 @@ export function createLayers(doc = document) {
       };
     },
     node(it) { // a place the data goes to, pinned in the world (the season contract over its Shell)
-      const e = el(doc, 'div', 'cl-abs', `<div style="font:700 56px/1.1 'Atkinson Hyperlegible',sans-serif">${esc(it.title)}</div><div class="cl-mono" style="margin-top:8px">${esc(it.sub || '')}</div>`);
-      e.style.transform = 'translate(-50%, -100%)'; e.style.textAlign = 'center'; root.append(e);
+      const e = el(doc, 'div', 'cl-abs cl-glass', `<div style="font:400 60px/1.1 'Libre Caslon Text',Georgia,serif">${esc(it.title)}</div><div class="cl-mono" style="margin-top:10px">${esc(it.sub || '')}</div>`);
+      Object.assign(e.style, { transform: 'translate(-50%, -100%)', textAlign: 'center', padding: '24px 40px 26px' }); root.append(e);
       const ring = sv(doc, 'circle', { r: 16, fill: 'none', stroke: NACRE, 'stroke-width': 3 }); svg.append(ring);
       return (t, project) => { const [x, y, on] = project(it.world), a = on ? env(t, it) : 0; e.style.left = x.toFixed(1) + 'px'; e.style.top = (y - 40).toFixed(1) + 'px'; e.style.opacity = a.toFixed(3); ring.setAttribute('cx', x.toFixed(1)); ring.setAttribute('cy', y.toFixed(1)); ring.setAttribute('r', (16 + 10 * Math.sin(t * 3)).toFixed(2)); ring.style.opacity = a.toFixed(3); };
     },

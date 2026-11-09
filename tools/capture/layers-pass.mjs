@@ -8,7 +8,7 @@
 //   (plates-work-dir holds the GPU run's <shot>.mp4 + <shot>.json; out-work-dir gets the composited <shot>.mp4 + json)
 import { createRequire } from 'node:module';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, copyFileSync, existsSync, rmSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lumaCheck } from './lib/compose.mjs';
@@ -38,20 +38,22 @@ try {
     await page.goto(`${base}/cine/layers.html`, { waitUntil: 'load' });
     for (let k = 0; k < 200 && !(await page.evaluate(() => !!window.__lp)); k++) await new Promise((r) => setTimeout(r, 100));
     await page.evaluate(([items, log]) => window.__lp.load(items, log), [shot.layers, res.layerLog.slice(-res.frames)]);
+    // The plate's frames sit behind the layers in the page, so backdrop blur (frosted glass) sees the real world.
+    const frames = join(outDir, shot.name + '.frames'); mkdirSync(frames, { recursive: true });
+    execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', plate, '-q:v', '2', join(frames, '%05d.jpg')]);
+    await page.route('**/__plate/*', (r) => r.fulfill({ contentType: 'image/jpeg', body: readFileSync(join(frames, r.request().url().split('/').pop())) }));
     const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
-    const alpha = join(outDir, shot.name + '.layers.mkv');
-    const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', 'pipe:0', '-c:v', 'ffv1', '-pix_fmt', 'bgra', alpha], { stdio: ['pipe', 'inherit', 'inherit'] });
+    const out = join(outDir, shot.name + '.mp4');
+    const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', 'pipe:0', '-c:v', 'libx264', '-preset', 'faster', '-crf', '6', '-pix_fmt', 'yuv444p', '-r', String(fps), out], { stdio: ['pipe', 'inherit', 'inherit'] });
     const done = new Promise((r, j) => ff.on('close', (c) => (c === 0 ? r() : j(new Error('ffmpeg layers ' + c)))));
     for (let i = 0; i < res.frames; i++) {
-      await page.evaluate((k) => window.__lp.render(k), i);
+      await page.evaluate(([k, src]) => window.__lp.render(k, src), [i, `/__plate/${String(i + 1).padStart(5, '0')}.jpg`]);
       const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
       if (!ff.stdin.write(Buffer.from(data, 'base64'))) await new Promise((r) => ff.stdin.once('drain', r));
     }
     ff.stdin.end(); await done; await page.close();
+    rmSync(frames, { recursive: true, force: true });
     if (errs.length) throw new Error(`[${shot.name}] page errors: ${errs.join(' | ')}`);
-    const out = join(outDir, shot.name + '.mp4');
-    execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', plate, '-i', alpha, '-filter_complex', '[0:v][1:v]overlay=0:0:format=auto,format=yuv444p[v]', '-map', '[v]', '-c:v', 'libx264', '-preset', 'faster', '-crf', '6', '-r', String(fps), out], { stdio: 'inherit' });
     const luma = lumaCheck(out, { allowJumps: shot.allowJumps ?? 3 });
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify({ ...res, layersPass: { frames: res.frames, luma } }));
     console.log(`[${shot.name}] layers composited: ${res.frames} frames, luma ${JSON.stringify(luma)}`);

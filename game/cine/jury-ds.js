@@ -36,7 +36,7 @@ let uid = 0;
 const id = (p) => `${p}${++uid}`;
 
 /* ---------- materials: each returns an SVG <g> drawn in a w×h box; `update(t, state)` animates it where it means something ---------- */
-const MATERIAL = {
+export const MATERIAL = {
   salt(w, h) { // mineral prisms: cool, faceted, a little light on the upper faces
     const r = rng(11), g = s('g');
     for (let i = 0; i < 9; i++) {

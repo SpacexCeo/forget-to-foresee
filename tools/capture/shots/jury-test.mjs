@@ -36,14 +36,16 @@ export default {
       layers: [{ kind: 'title', eyebrow: 'I', text: 'The Agents', from: 1.0, to: 3.0, y: 380, fadeOut: 0.35 }],
     },
     { // 3–4.5 · the back of the ring: Salt, Iris, Frost, their names pinned above their heads
-      name: 'clans-back', duration: 1.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+      name: 'clans-back', duration: 1.5, allowJumps: 12, // a fast pan past light and dark camps: real luma steps, not flicker
+       url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
       camera: sweep(200, 340),
       actions: [music(0, 38), cue(0.1, 'ui_notify', 0.4)],
       overlays: [...FRAME],
       layers: [pin('salt', 'Salt', 'Cunning', 0.0, 1.5), pin('iris', 'Iris', 'You', 0.12, 1.5), pin('frost', 'Frost', 'Scholar', 0.24, 1.5)],
     },
     { // 4.5–6 · the front of the ring: Ash, Moss, Amber
-      name: 'clans-front', duration: 1.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+      name: 'clans-front', duration: 1.5, allowJumps: 12,
+       url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
       camera: sweep(20, 160),
       actions: [cue(0.1, 'ui_notify', 0.4)],
       overlays: [...FRAME],
