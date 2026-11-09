@@ -13,6 +13,9 @@ import { createNearWatcher } from '../net/near.js';
 import { createShardWatcher } from '../net/shard-nft.js';
 import { shardCards, createMintMoments } from '../ui/world-hud/shard-card-model.js';
 import { createMintToast } from '../ui/world-hud/shard-card.js';
+import { attachProofViews } from '../ui/world-hud/proof-model.js';
+import { buildProofExport, proofExportText } from '../net/verify-export.js';
+import { copyText } from './clipboard.js';
 
 const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
 
@@ -57,7 +60,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     const c = hints && hints.takeCoach();
     if (c) { line = { speaker: 'iris', text: c }; lineAge = 0; }
     const opts = session.options || [];
-    return buildHudModel({
+    const m = buildHudModel({
       obs, goal: session.goal, options: opts, defaultIndex: session.defaultIndex, i18n, mode: mode(),
       render, renderEvent, prev,
       hints: hints ? hints.view() : null,
@@ -68,6 +71,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       map: !!handlers.onMap,
       near,
     });
+    // the visible NEAR state and "What does this prove?" on every revealed sign (proof-model.js)
+    return attachProofViews(m, { near, merkleRoot: obs.season ? obs.season.merkleRoot : null });
   }
 
   function refresh() {
@@ -80,7 +85,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     prev = m;
   }
 
-  function onAction(action, id) {
+  function onAction(action, id, extra) {
     if (action === 'prompt') ui.handleKey('KeyE');
     else if (action === 'hotkey' || action === 'top') {
       if (id === 'memory' || id === 'journal') ui.handleKey('KeyM');
@@ -92,7 +97,15 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     else if (action === 'quest') { const g = session.goal; if (g && g.target && handlers.onGo) handlers.onGo(g.target); }
     else if (action === 'signsOpen') { claimSigns(); if (hints) hints.action('signsOpen'); }
     else if (action === 'signsClose') arb.release('signs');
+    else if (action === 'copyProof') copyProof(id, extra);
     if (hints && action !== 'signsClose') hints.action('ui');
+  }
+
+  /** "Copy proof" (net/verify-export.js): the sign's full proof as JSON; `done(ok)` updates the button. */
+  async function copyProof(index, done = () => {}) {
+    let ok = false;
+    try { ok = await copyText(proofExportText(await buildProofExport(session, index, { near })), doc); } catch (e) { console.warn('[play] copy proof failed', e); }
+    done(ok);
   }
 
   /** The desktop Signs panel reads alongside the hub dock (not modal); the phone sheet covers the screen (modal). */
