@@ -45,6 +45,19 @@ MPFB_TARGETS = os.path.join(os.path.dirname(MPFB.__file__), "data", "targets")
 EYE_HEIGHT = 1.640          # the agent rig's eye line (agent_geometry.FACE): the body is scaled to it
 ARM_DEG = 14.0              # agent rest stance: arms 14 deg off the body, hanging straight
 
+COSTUME = os.environ.get("IRIS_COSTUME", "athletic")    # athletic (owner 09.11) | wanderer (the coat)
+
+ATHLETIC = {                  # curvy athletic (owner's reference): narrow waist, full hips and glutes,
+    # shapely toned legs tapering to slim knees and ankles, a full bust (MakeHuman anatomy targets, CC0)
+    "torso/measure-waist-circ-decr": 0.55, "torso/measure-hips-circ-incr": 0.20, "hip/hip-scale-horiz-incr": 0.04,
+    "torso/measure-waisttohip-dist-incr": 0.35,           # a longer, softer waist-to-hip curve (no shelf)
+    "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.40,
+    "stomach/stomach-pregnant-decr": 0.60, "buttocks/buttocks-volume-incr": 1.0,
+    "legs/l-upperleg-fat-decr": 0.20, "legs/r-upperleg-fat-decr": 0.20,
+    "legs/l-lowerleg-fat-decr": 0.30, "legs/r-lowerleg-fat-decr": 0.30, "legs/measure-knee-circ-decr": 0.30,
+    "torso/measure-shoulder-dist-incr": 0.05,
+}
+
 MACROS = {"gender": 0.0, "age": 0.48, "muscle": 0.5, "weight": 0.42, "height": 0.62, "proportions": 0.75,
           "cupsize": 0.45, "firmness": 0.55, "race": {"african": 0.08, "asian": 0.17, "caucasian": 0.75}}
 
@@ -145,8 +158,10 @@ def detail_path(name):
 
 def make_human():
     bm = HumanService.create_human(mask_helpers=True, detailed_helpers=True, extra_vertex_groups=True,
-                                   feet_on_ground=True, scale=0.1, macro_detail_dict=MACROS)
-    for name, w in DETAIL.items():
+                                   feet_on_ground=True, scale=0.1,
+                                   macro_detail_dict={**MACROS, **({"muscle": 0.55, "weight": 0.42, "cupsize": 0.85,
+                                                                    "firmness": 0.85, "proportions": 1.0} if COSTUME == "athletic" else {})})
+    for name, w in {**DETAIL, **(ATHLETIC if COSTUME == "athletic" else {})}.items():
         p = detail_path(name)
         if os.path.exists(p):
             TargetService.load_target(bm, p, weight=w)
@@ -189,9 +204,13 @@ def repose(bm, rig):
         aim_pose_bone(rig, f"lowerarm02.{s}", fd)
         aim_pose_bone(rig, f"wrist.{s}", fd)
         hip = bone_world(rig, f"upperleg01.{s}")
-        ank = bone_world(rig, f"foot.{s}")
-        want = V((side * 0.095, hip.y, 0.0)) - hip
-        aim_pose_bone(rig, f"upperleg01.{s}", (want.normalized() + (ank - hip).normalized() * 0.0))
+        want = V((side * 0.085, hip.y, 0.0)) - hip
+        aim_pose_bone(rig, f"upperleg01.{s}", want.normalized())
+        aim_pose_bone(rig, f"upperleg02.{s}", want.normalized())
+        knee = bone_world(rig, f"lowerleg01.{s}")
+        down = V((side * 0.085, hip.y, 0.0)) - knee                # shins vertical: the body stands upright
+        aim_pose_bone(rig, f"lowerleg01.{s}", down.normalized())
+        aim_pose_bone(rig, f"lowerleg02.{s}", down.normalized())
     bpy.ops.object.mode_set(mode="OBJECT")
     # bake the pose into the mesh (the basemesh has no shape keys after bake_targets)
     bpy.context.view_layer.objects.active = bm
@@ -419,6 +438,28 @@ def make_eyes(eyes, k):
 
 # ===================================================================== stages
 
+def round_glutes(bm, dom, depth=0.014):
+    """A rounder seat: a soft dome pushed back (and a little up) over each gluteus, strongest at its
+    fullest point and fading smoothly into the lower back and the backs of the thighs, so the curve stays
+    round instead of forming a shelf."""
+    import math as _m
+    zs = [v.co.z for v in bm.data.vertices]
+    H = max(zs)
+    zc = 0.505 * H                                   # the fullest point of the seat
+    for v, d in zip(bm.data.vertices, dom):
+        if d not in ("pelvis", "spine", "thigh_L", "thigh_R"):
+            continue
+        p = v.co
+        if p.y <= 0.0:
+            continue
+        side = 1 if p.x > 0 else -1
+        r2 = ((p.x - side * 0.075 * H / 1.75) / 0.085) ** 2 + ((p.z - zc) / 0.095) ** 2
+        w = _m.exp(-r2 * 1.6)
+        back = min(1.0, p.y / 0.08)
+        v.co.y += depth * w * back
+        v.co.z += 0.004 * w * back * (1 if p.z < zc else 0.4)     # lifted, not dropped
+
+
 def stage_body():
     reset()
     bm, mrig = make_human()
@@ -430,6 +471,35 @@ def stage_body():
     mpfb_bones = {b.name for b in mrig.data.bones}
     bpy.data.objects.remove(mrig)
     bm.name = "body"
+    if COSTUME == "athletic":                      # the owner's athletic body profile (body_profile.py)
+        names = {g.index: g.name for g in bm.vertex_groups}
+        dom0 = []
+        for v in bm.data.vertices:
+            acc = {}
+            for g in v.groups:
+                n = names[g.group]
+                if n in mpfb_bones:
+                    b = agent_bone(n)
+                    acc[b] = acc.get(b, 0.0) + g.weight
+            dom0.append(max(acc, key=acc.get) if acc else "")
+        # (the owner's ring-profile script is a proportion reference only: no direct fit)
+        round_glutes(bm, dom0)
+        # soften the nipple detail so tight tops and the jacket lie smoothly over the bust
+        b = bmesh.new()
+        b.from_mesh(bm.data)
+        b.verts.ensure_lookup_table()
+        nip = set()
+        for gname in ("nipple", "nippleTip"):
+            if gname in bm.vertex_groups:
+                nip |= group_verts(bm, gname, 0.01)
+        ring = set(nip)
+        for _ in range(2):
+            ring |= {e.other_vert(b.verts[i]).index for i in list(ring) for e in b.verts[i].link_edges}
+        sel = [b.verts[i] for i in ring]
+        for _ in range(12):
+            bmesh.ops.smooth_vert(b, verts=sel, factor=0.7, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        b.to_mesh(bm.data)
+        b.free()
     keys = load_face_keys(bm)
     LAYOUT[:] = hero_layout(J, eyes_k)
     rig = build_armature(LAYOUT)
@@ -465,6 +535,116 @@ def weights_of(obj):
     names = {g.index: g.name for g in obj.vertex_groups}
     return [{names[g.group]: g.weight for g in v.groups if names[g.group] not in ("scalp", "lips", "ears")}
             for v in obj.data.vertices]
+
+
+def drape_front(o, P, soft=1.0):
+    """Fabric over the bust falls straight from its fullest point instead of hugging the under-bust:
+    each front vertex below the bust line is pulled forward to the bust's front plane (per x column)."""
+    import bmesh as _bm
+    me = o.data
+    c, _, _ = P.section(1.25)
+    pts = [o.matrix_world @ v.co for v in me.vertices]
+    front = [p for p in pts if p.y < c.y and 1.22 < p.z < 1.32]
+    if not front:
+        return
+    def bust_y(x):                                     # the most forward point near this column
+        near = [p.y for p in front if abs(p.x - x) < 0.02]
+        return min(near) if near else None
+    for v, p in zip(me.vertices, pts):
+        if p.y >= c.y or not (1.13 < p.z < 1.26):
+            continue
+        by = bust_y(p.x)
+        if by is None or p.y <= by:
+            continue
+        w = soft * (1.0 if p.z < 1.22 else (1.26 - p.z) / 0.04)
+        v.co.y += (by - p.y) * w * (0.85 if p.z > 1.18 else 1.0)
+    me.update()
+
+
+def athletic_chains(head_c, tie):
+    """Sportswear is tight: springs only for the hair, the ponytail and the jacket's open front."""
+    t = V(tie)
+    return (
+        ("hair_L", ((0.085, head_c.y, 1.62), (0.10, head_c.y + 0.01, 1.55), (0.105, head_c.y + 0.02, 1.50)), "head"),
+        ("hair_R", ((-0.085, head_c.y, 1.62), (-0.10, head_c.y + 0.01, 1.55), (-0.105, head_c.y + 0.02, 1.50)), "head"),
+        ("hair_B", ((0, head_c.y + 0.09, 1.66), (0, head_c.y + 0.10, 1.60), (0, head_c.y + 0.10, 1.56)), "head"),
+        ("tail", (tuple(t), tuple(t + V((0, 0.025, -0.06))), tuple(t + V((0, 0.045, -0.12))), tuple(t + V((0, 0.055, -0.18)))), "head"),
+    )
+
+
+def athletic_costume(bm, P, dom, bones):
+    """Premium fitted sportswear (owner 09.11): a cropped graphite zip jacket (continuous front panels
+    from convex torso sections, a stand collar, zip plackets, fitted sleeves with violet piping), a matte
+    black sports bra (one continuous compressing surface), high-rise leggings cut from the body with
+    anatomical side panels, and trainers modelled as footwear."""
+    co = {i: (bm.matrix_world @ v.co) for i, v in enumerate(bm.data.vertices)}
+    TORSO = ("chest", "spine", "pelvis")
+    torso_pts = [co[i] for i in co if dom[i] in TORSO]
+    c, rx, ry = P.section(1.25)
+    out = {}
+    # sports bra: continuous, bridging the cleavage and the under-bust, a supportive band at the bottom
+    zs = [1.168 + (1.372 - 1.168) * k / 16 for k in range(17)]
+    bra, n = C.hull_loft("sports_top", torso_pts, zs, 0.004, n=56, smooth=2)
+    C.set_attr(bra, "trim", lambda i, p: 1.0 if p.z < 1.19 else 0.0)
+    C.set_attr(bra, "accent", lambda i, p: 0.0)
+    C.solidify(bra, 0.003, 1.0)
+    C.smooth(bra, 50)
+    out["sports_top"] = bra
+    # jacket upper: shoulders, upper chest, upper back and sleeves follow the body (no boxy shoulders)
+    wrist = {sx: bones[f"hand_{sx}"][0] for sx in ("L", "R")}
+    ARM = ("shoulder_L", "shoulder_R", "upperarm_L", "upperarm_R", "forearm_L", "forearm_R")
+    def upper_keep(i, _):
+        p = co[i]
+        d = dom[i]
+        if d in TORSO + ("neck", "head"):
+            front = p.y < c.y
+            return 1.15 < p.z < 1.43 and not (front and abs(p.x) < 0.058)
+        if d in ARM:
+            sx = "L" if p.x > 0 else "R"
+            return (p - wrist[sx]).length > 0.012
+        return False
+    def upper_trim(p, nrm):
+        return 1.0 if (p.y < c.y and abs(p.x) < 0.072) or p.z < 1.165 else 0.0
+    def upper_accent(p, nrm):
+        side = 1 if p.x > 0 else -1
+        return 1.0 if abs(p.x) > 0.17 and nrm.x * side > 0.93 and p.z < 1.40 else 0.0
+    def upper_edges(v):
+        p = v.co
+        if p.z < 1.17 and abs(p.x) < 0.25:
+            p.z = 1.15
+        elif p.y < c.y and abs(p.x) < 0.10 and p.z > 1.17:
+            p.x = math.copysign(0.058, p.x)
+    front_body = [p for p in torso_pts if p.y < c.y]
+    bust = lambda p: p.y < c.y and 1.14 < p.z < 1.33 and abs(p.x) < 0.17
+    out["jacket"] = C.shell_from_body(bm, "jacket", upper_keep, 0.0085, 0.0035, trim=upper_trim,
+                                      accent=upper_accent, edges=upper_edges,
+                                      curtain=(bust, front_body, 1.33), relax=(bust, 3))
+    out["jacket_collar"] = C.stand_collar(P)
+    # leggings: from the body surface, high-rise, the crotch relaxed so it never cuts in
+    LEG = ("thigh_L", "thigh_R", "shin_L", "shin_R")
+    def leg_keep(i, _):
+        p = co[i]
+        return dom[i] in LEG + ("pelvis", "spine") and 0.095 < p.z < 1.045
+    def leg_panel(p, nrm):
+        side = 1 if p.x > 0 else -1
+        centre = side * (0.095 + 0.022 * math.sin((p.z - 0.2) * 3.5))
+        return 1.0 if 0.18 < p.z < 0.95 and side * (p.x - centre) > 0.016 else 0.0
+    def leg_edges(v):
+        v.co.z = 1.04 if v.co.z > 0.6 else 0.10
+    crotch = lambda p: abs(p.x) < 0.07 and 0.70 < p.z < 0.88
+    out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
+                                        trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
+                                        edges=leg_edges, relax=(crotch, 8))
+    # trainers: sized from each foot
+    for sfx, side in (("L", 1), ("R", -1)):
+        foot = [co[i] for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}") and co[i].z < 0.10]
+        heel_p = max(foot, key=lambda q: q.y)
+        toe_p = min(foot, key=lambda q: q.y)
+        width = (max(q.x for q in foot) - min(q.x for q in foot)) * 1.12
+        heel = V((heel_p.x, heel_p.y + 0.012, 0.0))
+        toe = V((toe_p.x, toe_p.y - 0.014, 0.0))
+        out[f"trainers_{sfx}"] = C.sneaker(f"trainers_{sfx}", heel, toe, width, side)
+    return out
 
 
 def hero_chains(P, coat_o, tail_pts, head_c):
@@ -552,27 +732,32 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     kd.balance()
 
     garments = {}
-    garments["coat"] = C.coat(P)
-    garments["collar"] = C.collar(P)
-    for s in ("L", "R"):
-        garments[f"sleeve_{s}"] = C.sleeve((bones[f"upperarm_{s}"][0] + V((0, 0, 0.02)), bones[f"forearm_{s}"][0],
-                                            bones[f"hand_{s}"][0] - (bones[f"hand_{s}"][1] - bones[f"hand_{s}"][0]).normalized() * 0.01),
-                                           1 if s == "L" else -1, f"sleeve_{s}")
-    garments["capelet"] = C.capelet(P)
-    garments["hood"] = C.hood_down(P)
-    garments["dress"] = C.dress(P)
-    garments["boots"] = C.boots_from_body(bm, lambda co: co.z < 0.30)
-    sc_objs, tail_pts = C.scarf(P, bones)
-    for o in sc_objs:
-        garments[o.name] = o
-    for o in C.belt_and_props(P):
-        garments[o.name] = o
+    if COSTUME == "athletic":
+        garments.update(athletic_costume(bm, P, dom, bones))
+        tail_pts = None
+    else:
+        garments["coat"] = C.coat(P)
+        garments["collar"] = C.collar(P)
+        for s in ("L", "R"):
+            garments[f"sleeve_{s}"] = C.sleeve((bones[f"upperarm_{s}"][0] + V((0, 0, 0.02)), bones[f"forearm_{s}"][0],
+                                                bones[f"hand_{s}"][0] - (bones[f"hand_{s}"][1] - bones[f"hand_{s}"][0]).normalized() * 0.01),
+                                               1 if s == "L" else -1, f"sleeve_{s}")
+        garments["capelet"] = C.capelet(P)
+        garments["hood"] = C.hood_down(P)
+        garments["dress"] = C.dress(P)
+        garments["boots"] = C.boots_from_body(bm, lambda co: co.z < 0.30)
+        sc_objs, tail_pts = C.scarf(P, bones)
+        for o in sc_objs:
+            garments[o.name] = o
+        for o in C.belt_and_props(P):
+            garments[o.name] = o
     scalp = hair_region(bm, dom)
     garments["hair_cap"] = C.hair_cap(bm, inset_region(bm, scalp, 0.008), offset=0.0015)
     brow_z = max(c.z for c, _ in [(h, 0) for h in (bones["eye_L"][0], bones["eye_R"][0])]) + 0.028
-    garments["hair"], _master = groom_hair(bm, rig, garments, scalp, head_c, head_r)
+    garments["hair"], _master, tie = groom_hair(bm, rig, garments, scalp, head_c, head_r)
 
-    chains = hero_chains(P, garments["coat"], tail_pts, head_c)
+    chains = (athletic_chains(head_c, tie) if COSTUME == "athletic"
+              else hero_chains(P, garments["coat"], tail_pts, head_c))
     install_chains(chains)
     bpy.data.objects.remove(rig)
     rig = rebuild_rig(bm)
@@ -601,6 +786,8 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
         return ("skirt_F" if p.y < c13.y else "skirt_B", 0.75 * smoothstep((0.92 - p.z) / 0.35))
 
     def hair_rule(p):
+        if COSTUME == "athletic" and p.y > tie.y - 0.015 and p.z < tie.z + 0.005:
+            return ("tail", smoothstep((tie.z + 0.005 - p.z) / 0.04))
         if p.z > head_c.z + 0.02:
             return None
         f = smoothstep((head_c.z + 0.02 - p.z) / 0.12)
@@ -616,13 +803,25 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
         bind(o, rig)
 
     # the body keeps the head, neck, hands and lashes; everything under the costume is removed
+    cz, crx, cry = P.section(1.10)
+
     def covered(i, co):
         d = dom[i]
         if co.z > 1.445:
             return False
         if d in HAND_BONES:
             return False
+        if COSTUME == "athletic" and d in ("spine", "pelvis", "chest"):
+            if 1.035 < co.z < 1.175:                   # the bare midriff between the top and the leggings
+                return False
+            if 1.36 < co.z and co.y < cz.y:             # the neckline above the top, inside the open jacket
+                return False
         return True
+    ref = bm.copy()                                   # the full body, for anatomy review only (not exported)
+    ref.data = bm.data.copy()
+    ref.name = "body_review_full"
+    bpy.context.scene.collection.objects.link(ref)
+    ref.hide_render = True
     delete_verts(bm, covered)
     log("costume", {n: len(o.data.polygons) for n, o in garments.items()})
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_costume.blend"))
@@ -688,7 +887,8 @@ def groom_hair(bm, rig, garments, scalp, head_c, head_r):
         head.modifiers.remove(m)
     head.parent = None
     delete_verts(head, lambda i, co: co.z < neck_z - 0.04)
-    body_parts = [garments[k] for k in ("collar", "hood", "capelet", "scarf_wrap_0", "scarf_wrap_1", "coat")]
+    body_parts = [garments[k] for k in ("collar", "hood", "capelet", "scarf_wrap_0", "scarf_wrap_1", "coat",
+                                        "jacket", "jacket_collar") if k in garments]
     cols = (H.Collider([head], 0.003), H.Collider(body_parts + [head], 0.010))
     G = H.Tied(bm, scalp, head_c, head_r, cols)
     strands, radii, guides = G.strands(None, 30000)
@@ -702,7 +902,7 @@ def groom_hair(bm, rig, garments, scalp, head_c, head_r):
     cards = H.cards_from_groom(guides, strands, head_c=head_c, tie=G.T)
     master["groom"] = "Hair Curves master: edit here, rebuild the cards with cards_from_groom"
     log("hair", len(guides), "guides", len(strands), "strands", len(cards.data.polygons), "card faces")
-    return cards, master
+    return cards, master, G.T
 
 
 def rebuild_rig(bm):

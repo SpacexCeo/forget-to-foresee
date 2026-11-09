@@ -20,21 +20,27 @@ from mathutils import Vector
 V = Vector
 
 GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool, near-black navy, dusty violet)
+    # athletic sportswear (owner 09.11): graphite knit jacket, black top, graphite leggings, trainers
+    "jacket": (0.018, 0.019, 0.024), "jacket_collar": (0.018, 0.019, 0.024), "sports_top": (0.008, 0.008, 0.010),
+    "leggings": (0.013, 0.014, 0.017), "trainers": (0.022, 0.022, 0.025),
     "coat": (0.040, 0.040, 0.043), "collar": (0.040, 0.040, 0.043), "sleeve": (0.040, 0.040, 0.043),
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
     "scarf": (0.150, 0.075, 0.220), "belt": (0.035, 0.018, 0.010), "pouch": (0.200, 0.085, 0.032),
     "pendant": (0.62, 0.62, 0.64), "hair_tie": (0.110, 0.055, 0.160),
 }
-TRIM = {"coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
+TRIM = {"jacket": (0.010, 0.010, 0.013), "jacket_collar": (0.010, 0.010, 0.013), "sports_top": (0.016, 0.016, 0.019),
+        "leggings": (0.007, 0.0075, 0.009), "trainers": (0.62, 0.62, 0.63),
+        "coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}
-ROUGH = {"hair_tie": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
+ROUGH = {"jacket": 0.76, "jacket_collar": 0.76, "sports_top": 0.72, "leggings": 0.80, "trainers": 0.60,
+         "hair_tie": 0.45, "pendant": 0.30, "belt": 0.55, "pouch": 0.55, "boots": 0.50, "scarf": 0.85}
 METAL = {"pendant": 1.0}
 
 
 def _key(name):
-    for k in GARMENT_COLORS:
+    for k in sorted(GARMENT_COLORS, key=len, reverse=True):
         if name.startswith(k):
             return k
     return "coat"
@@ -221,6 +227,8 @@ def garment_shader(b):
     tcol = b.attr("tcol").outputs["Color"]
     trim = b.attr("trim").outputs["Fac"]
     col = b.mix(b.math("GREATER_THAN", trim, 0.5), gcol, tcol)
+    accent = b.attr("accent").outputs["Fac"]
+    col = b.mix(b.math("GREATER_THAN", accent, 0.5), col, (0.20, 0.13, 0.32))      # violet pearl piping
     fib = b.noise(420.0, 8.0, pos, 0.7)
     weave = b.n("ShaderNodeTexWave", wave_type="BANDS", in_Scale=180.0, in_Distortion=2.0)
     b.l(pos, weave.inputs["Vector"])
@@ -233,7 +241,7 @@ def garment_shader(b):
     for s in ("Red", "Green", "Blue"):
         b.l(shade, comb.inputs[s])
     b.l(comb.outputs[0], mul.inputs[7])
-    rough = b.attr("rough").outputs["Fac"]
+    rough = b.math("SUBTRACT", b.attr("rough").outputs["Fac"], b.math("MULTIPLY", accent, 0.30))
     metal = b.attr("metal").outputs["Fac"]
     h = b.math("ADD", b.math("MULTIPLY", fib.outputs["Fac"], 0.5), b.math("MULTIPLY", weave.outputs["Fac"], 0.2))
     return mul.outputs[2], rough, metal, h, None
