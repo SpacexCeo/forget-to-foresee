@@ -40,9 +40,10 @@ const id = (p) => `${p}${++uid}`;
  * The art files are the owner's own frames (docs/submission/jury-video-ref/layers, copied to game/cine/ref). A clan
  * without a file yet gets a card drawn in the same language (dark glass, gold edge, serif name, spaced temper, the
  * programmatic material) until the owner's file lands. Same interface as clanCard, so the scenes can swap them. */
-export const OWNER_CARD_FILES = { salt: 'card-salt.png', iris: 'card-iris.png', frost: 'card-frost.png' };   // cropped to the card (600x800)
-export function ownerCard(clan, { x, y, w = 260, player = false } = {}) {
-  const c = CLAN[clan], h = Math.round(w * 4 / 3);
+// The owner's landscape cards from the layered asset pack (09.11 evening): all six clans, the sigil on the top edge.
+export const OWNER_CARD_FILES = Object.fromEntries(['salt', 'iris', 'frost', 'moss', 'ash', 'amber'].map((c) => [c, 'land-' + c + '.png']));
+export function ownerCard(clan, { x, y, w = 440, ratio = 0.5, player = false } = {}) {
+  const c = CLAN[clan], h = Math.round(w * ratio);
   const el = document.createElement('div');
   el.className = 'oc-card' + (player ? ' oc-player' : '');
   Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
@@ -220,7 +221,10 @@ export const CSS = `
 .oc-badge-line { font: 400 40px/1.15 "Libre Caslon Text", Georgia, serif; color: #f1e8d6; text-shadow: 0 2px 14px rgba(0,0,0,.7); }
 .oc-badge-num { margin-top: 6px; font: 400 40px/1 "Source Sans 3", sans-serif; letter-spacing: .34em; text-transform: uppercase; color: #e4c272; }
 .oc-badge-num i { display: block; font: italic 700 124px/1 "Libre Caslon Text", Georgia, serif; letter-spacing: 0; color: #e4c272; text-shadow: 0 0 28px rgba(228,194,114,.45); }
-.oc-quote { padding: 18px 44px 20px; border-radius: 999px; background: rgba(10,14,15,.86); box-shadow: 0 0 0 2px #e4c272, 0 0 24px rgba(228,194,114,.25), 0 12px 30px rgba(0,0,0,.5); font: italic 400 54px/1 "Libre Caslon Text", Georgia, serif; color: #f1e8d6; white-space: nowrap; }
+.oc-compact .oc-badge-line { font-size: 34px; }
+.oc-compact .oc-badge-num { margin-top: 0; font-size: 26px; letter-spacing: .3em; display: flex; align-items: baseline; justify-content: center; gap: 18px; }
+.oc-compact .oc-badge-num i { display: inline; font-size: 84px; }
+.oc-quote { padding: 14px 40px 16px; border-radius: 999px; background: rgba(10,14,15,.86); box-shadow: 0 0 0 2px #e4c272, 0 0 24px rgba(228,194,114,.25), 0 12px 30px rgba(0,0,0,.5); font: italic 400 46px/1 "Libre Caslon Text", Georgia, serif; color: #f1e8d6; white-space: nowrap; }
 .oc-quote small { display: block; margin-top: 10px; font: 600 24px/1 "Source Sans 3", sans-serif; font-style: normal; letter-spacing: .3em; text-transform: uppercase; color: #cfd6d2; text-align: center; }
 
 .ds-card { position: absolute; border-radius: ${T.radius}px; overflow: hidden;

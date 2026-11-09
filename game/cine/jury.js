@@ -218,28 +218,28 @@ SCENES.agents = { duration: 6.0, build() {
   // high, Ash low in the middle, Amber right, Moss low left; the three real moments as badges between the cards.
   const c1 = cap('Silk, a memory, a temper'), c2 = cap('They trade… and break <em>trust</em>');
   const svg = edgeLayer(stage);
-  const W = 260;
+  const W = 440, H = 220, TOP = 240, BOT = 600, X = [110, 740, 1370];
   const cards = {
-    salt: ownerCard('salt', { x: 100, y: 330, w: W }), iris: ownerCard('iris', { x: 540, y: 180, w: W, player: true }), frost: ownerCard('frost', { x: 1150, y: 180, w: W }),
-    moss: ownerCard('moss', { x: 600, y: 700, w: W }), ash: ownerCard('ash', { x: 900, y: 640, w: W }), amber: ownerCard('amber', { x: 1570, y: 390, w: W }),
+    salt: ownerCard('salt', { x: X[0], y: TOP, w: W }), iris: ownerCard('iris', { x: X[1], y: TOP, w: W, player: true }), frost: ownerCard('frost', { x: X[2], y: TOP, w: W }),
+    moss: ownerCard('moss', { x: X[0], y: BOT, w: W }), ash: ownerCard('ash', { x: X[1], y: BOT, w: W }), amber: ownerCard('amber', { x: X[2], y: BOT, w: W }),
   };
   Object.values(cards).forEach((c) => stage.append(c.el));
   const GOLD = '#e4c272';
   // Badge A: Frost wins the shard from Iris for 13 silk (the price goes to the seller: engine auction close).
   const badge = (x, y, w, line, num, cls = '') => { const el = h('div', { class: 'abs oc-badge ' + cls, style: { left: x + 'px', top: y + 'px', width: w + 'px' } },
     h('div', { class: 'oc-badge-line', html: line }), num != null ? h('div', { class: 'oc-badge-num', html: `<i>${num}</i><span>silk</span>` }) : null); stage.append(el); return el; };
-  const bA = badge(812, 250, 330, 'Frost wins the shard<br>from Iris for', D.shard.price);
-  const bB = h('div', { class: 'abs oc-quote', html: '“It is a weapon”<small>Salt, trial 13</small>' }); at(bB, 60, 760); stage.append(bB);
-  const bC = badge(1180, 700, 380, 'Ash cheats Amber for', 16);
+  const bA = badge(900, 466, 530, 'Frost wins the shard from Iris for', D.shard.price, 'oc-compact');
+  const bB = h('div', { class: 'abs oc-quote', html: '“It is a weapon”<small>Salt, trial 13</small>' }); at(bB, 100, 478); stage.append(bB);
+  const bC = badge(900, 826, 530, 'Ash cheats Amber for', 16, 'oc-compact');
   // Gold arcs between the cards: Iris → Frost over the badge; Ash → Amber as a dashed line that breaks.
   const arc = (a, b, lift, dash) => { const p = sv('path', { d: `M${a[0]},${a[1]} Q${(a[0] + b[0]) / 2},${Math.min(a[1], b[1]) - lift} ${b[0]},${b[1]}`, fill: 'none', stroke: GOLD, 'stroke-width': 3, 'stroke-linecap': 'round', ...(dash ? { 'stroke-dasharray': dash } : {}) }); svg.append(p); return p; };
-  const e1 = arc(cards.iris.anchor('right'), cards.frost.anchor('left'), 120);
+  const e1 = arc(cards.iris.anchor('right'), cards.frost.anchor('left'), 40);
   const e3 = sv('path', { d: `M${cards.ash.anchor('right')[0]},${cards.ash.anchor('right')[1]} L${cards.amber.anchor('left')[0]},${cards.amber.anchor('left')[1]}`, fill: 'none', stroke: GOLD, 'stroke-width': 3, 'stroke-dasharray': '16 12' }); svg.append(e3);
   const spark = sv('g', { opacity: 0 }, ...[0, 45, 90, 135].map((a) => sv('line', { x1: -22, y1: 0, x2: 22, y2: 0, stroke: GOLD, 'stroke-width': 2.5, transform: `rotate(${a})` }))); svg.append(spark);
-  const ring = sv('circle', { cx: cards.salt.x + W / 2, cy: cards.salt.y + 180, r: 200, fill: 'none', stroke: 'rgba(228,194,114,.55)', 'stroke-width': 2 }); svg.append(ring);
+  const ring = sv('circle', { cx: cards.salt.x + W / 2, cy: cards.salt.y + H / 2, r: 200, fill: 'none', stroke: 'rgba(228,194,114,.55)', 'stroke-width': 2 }); svg.append(ring);
   const p1 = packet(svg, GOLD, 9);
-  const delta = (card, txt, col, dx) => { const el = h('div', { class: 'abs', style: { left: card.x + dx + 'px', top: card.y + card.h + 6 + 'px', width: '140px', textAlign: 'center', font: '400 62px/1 var(--title)', color: col } , text: txt }); stage.append(el); return el; };
-  const dl = [[delta(cards.frost, '−13', '#d0806a', 60), 1.35], [delta(cards.iris, '+13', GOLD, 60), 1.5], [delta(cards.amber, '−16', '#d0806a', 60), 3.35], [delta(cards.ash, '+16', GOLD, 60), 3.5]];
+  const delta = (card, txt, col, dx) => { const el = h('div', { class: 'abs', style: { left: card.x + dx + 'px', top: card.y - 62 + 'px', width: '140px', textAlign: 'center', font: '400 56px/1 var(--title)', color: col } , text: txt }); stage.append(el); return el; };
+  const dl = [[delta(cards.frost, '−13', '#d0806a', W - 150), 1.35], [delta(cards.iris, '+13', GOLD, 10), 1.5], [delta(cards.amber, '−16', '#d0806a', W - 150), 3.35], [delta(cards.ash, '+16', GOLD, 10), 3.5]];
   return (t) => {
     drawBg(t);
     show(c1, t, 0.2, 2.4); show(c2, t, 2.6, 5.95);
@@ -275,7 +275,7 @@ function pillar(numeral, title, sub, image = null) { return { duration: 2.0, bui
     rl.style.transform = `scaleX(${ease.out(P(t, 0.35, 0.6)).toFixed(4)})`; rl.style.opacity = (1 - ease.in(P(t, 1.75, 0.2))).toFixed(3);
   };
 } }; }
-SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Six AI clans scheme around you', { src: '/cine/ref/lockup-agents.png', x: 410, y: 250, w: 1100, subY: 760 });
+SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Six AI clans scheme around you', { src: '/cine/ref/lockup-agents.png', x: 410, y: 200, w: 1100, subY: 870 });
 SCENES['pillar-nft'] = pillar('II', 'The Memory Shard', 'Your agent pays for prophecy with a memory');
 
 // 9 · Split screen: the browser (an in-engine shot composited into the hole) and an AI agent over the HTTP API (5.0 s).
@@ -366,11 +366,11 @@ SCENES.season = { duration: 3.5, build() {
 SCENES.ash = { duration: 4.0, build() {
   const c1 = cap('Ash turns away'), c2 = cap('Ash’s Key <em>restores them</em>');
   const svg = edgeLayer(stage);
-  const W = 220, H = Math.round(W * 4 / 3);   // the owner's portrait cards (ownerCard)
-  const TOP = 190, BOT = 690;
+  const W = 440, H = 220;   // the owner's landscape cards (ownerCard)
+  const TOP = 200, BOT = 700;
   const cards = {
-    salt: ownerCard('salt', { x: 150, y: TOP, w: W }), iris: ownerCard('iris', { x: 850, y: TOP, w: W, player: true }), frost: ownerCard('frost', { x: 1550, y: TOP, w: W }),
-    moss: ownerCard('moss', { x: 150, y: BOT, w: W }), ash: ownerCard('ash', { x: 850, y: BOT, w: W }), amber: ownerCard('amber', { x: 1550, y: BOT, w: W }),
+    salt: ownerCard('salt', { x: 110, y: TOP, w: W }), iris: ownerCard('iris', { x: 740, y: TOP, w: W, player: true }), frost: ownerCard('frost', { x: 1370, y: TOP, w: W }),
+    moss: ownerCard('moss', { x: 110, y: BOT, w: W }), ash: ownerCard('ash', { x: 740, y: BOT, w: W }), amber: ownerCard('amber', { x: 1370, y: BOT, w: W }),
   };
   Object.values(cards).forEach((c) => stage.append(c.el));
   const A = cards.ash;
@@ -380,7 +380,7 @@ SCENES.ash = { duration: 4.0, build() {
     frost: [[A.x + W - 70, A.y], cards.frost.anchor('bottom'), 'v'],
     moss: [A.anchor('left'), cards.moss.anchor('right'), 'h'], amber: [A.anchor('right'), cards.amber.anchor('left'), 'h'],
   };
-  const isoLabel = h('div', { class: 'abs', style: { left: A.x - 340 + 'px', width: '300px', top: BOT + 70 + 'px', textAlign: 'right', font: '600 40px/1 var(--label)', letterSpacing: '.26em', textTransform: 'uppercase', color: T.mist }, text: 'Isolated' });
+  const isoLabel = h('div', { class: 'abs', style: { left: A.x + 'px', width: W + 'px', top: BOT + H + 12 + 'px', textAlign: 'center', font: '600 40px/1 var(--label)', letterSpacing: '.26em', textTransform: 'uppercase', color: T.mist }, text: 'Isolated' });
   stage.append(isoLabel);
   const state = Object.fromEntries(D.crisis.edges.map((e) => [e.clan, e]));
   const brokenEarly = (c) => state[c].broken && !D.crisis.breaks.some((b) => b.tick === 13 && b.text.toLowerCase().includes(CLAN[c].name.toLowerCase()));
@@ -392,14 +392,14 @@ SCENES.ash = { duration: 4.0, build() {
     return { clan, p, glow, n1, n2, len: 0, broken: state[clan].broken, early: brokenEarly(clan) };
   });
   // The seal: a ring with the key, on the Iris–Ash tie; the commitment formula beside it.
-  const SX = 960, SY = 600, R = 58;
+  const SX = 960, SY = 560, R = 58;
   const halo = sv('circle', { cx: SX, cy: SY, r: R * 2.2, fill: 'url(#sealHalo)', opacity: 0 });
   svg.append(sv('defs', {}, sv('radialGradient', { id: 'sealHalo' }, sv('stop', { offset: 0, 'stop-color': T.amber, 'stop-opacity': 0.35 }), sv('stop', { offset: 1, 'stop-color': T.amber, 'stop-opacity': 0 }))));
   const disc = sv('circle', { cx: SX, cy: SY, r: R, fill: T.ground, stroke: T.hair, 'stroke-width': 1.5 });
   const ring = sv('circle', { cx: SX, cy: SY, r: R, fill: 'none', stroke: T.amber, 'stroke-width': 3, transform: `rotate(-90 ${SX} ${SY})` });
   const key = sv('g', {}, keyGlyph(T.amber)); // travels from Iris to the seal
   svg.append(halo, disc, ring, key);
-  const formula = h('div', { class: 'abs', style: { left: '1110px', top: '470px', width: '540px' } },
+  const formula = h('div', { class: 'abs', style: { left: '1230px', top: '450px', width: '560px' } },
     h('div', { style: { font: '400 30px/1 var(--mono)', color: 'var(--ink)' }, text: 'SHA-256(phrase · salt)' }),
     h('div', { style: { font: '400 30px/1 var(--mono)', color: T.amber, marginTop: '14px' }, text: `= ${D.near.ashKey.slice(0, 8)}…${D.near.ashKey.slice(-6)}` }),
     h('div', { style: { font: '600 34px/1.3 var(--label)', color: T.mist, letterSpacing: '.16em', textTransform: 'uppercase', marginTop: '18px' }, html: 'Committed on NEAR testnet<br>before trial 1' }));

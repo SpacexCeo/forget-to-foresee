@@ -65,3 +65,12 @@ Five more owner layers arrived only inside a message (not saved as files; descri
 - **Event C badge:** a gold dashed line through a large gold italic "16" over "SILK", breaking at the right end in a
   gold crack spark; "Ash cheats Amber for" above; a silk spool and violet ribbon at lower left; thin gold arcs.
 Moss is still to come.
+
+## Layered asset pack from the owner (09.11 evening, `pack/`)
+
+`agents_animation_layers.zip` as the owner sent it: six landscape clan cards with the sigil on the top edge
+(`02_clan_cards/`, about 410x210 px each, text baked in), the "I · The Agents" title with its sigil, the Iris figure, the
+floating islands and two environment concepts, detail elements (blossoms, crystal, snowflake, orb, ribbons, moss rock) and
+UI ornaments (orbit circle, golden frame, arcs, sigils, blank panel). `manifest.json` and `README.txt` are the pack's own
+notes. The video uses the six cards (copied to `game/cine/ref/land-*.png`) in the agents and crisis scenes and the ring
+lockup from `layers/` on the Agents title card; the environment concepts stay references (real footage is the base).

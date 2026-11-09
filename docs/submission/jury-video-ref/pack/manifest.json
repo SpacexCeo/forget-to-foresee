@@ -1,0 +1,35 @@
+{
+  "source": "generated matching sheet plus uploaded original reference",
+  "elements": [
+    "01_titles/title_and_sigil",
+    "02_clan_cards/Salt",
+    "02_clan_cards/Iris",
+    "02_clan_cards/Frost",
+    "02_clan_cards/Moss",
+    "02_clan_cards/Ash",
+    "02_clan_cards/Amber",
+    "03_character/iris_figure_and_rock",
+    "04_world/floating_main_island",
+    "04_world/floating_island_small_1",
+    "04_world/floating_island_small_2",
+    "05_details/blossom_branch",
+    "05_details/flowers",
+    "05_details/moss_rock",
+    "05_details/crystal",
+    "05_details/frost_snowflake",
+    "05_details/amber_orb",
+    "05_details/ash_ribbon",
+    "05_details/iris_ribbon",
+    "06_ui/orbit_circle",
+    "06_ui/empty_golden_frame",
+    "06_ui/upper_arc",
+    "06_ui/clan_sigils",
+    "06_ui/blank_info_panel",
+    "06_ui/reticle_arcs"
+  ],
+  "limitations": [
+    "cropped/reconstructed layers, not native scene layers",
+    "card text is baked in",
+    "some dark alpha edges imperfect"
+  ]
+}
