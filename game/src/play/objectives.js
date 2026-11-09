@@ -145,7 +145,9 @@ export function hubGoal(obs, flags = {}) {
       const slots = sign && sign.reading ? sign.reading.slots.map((x) => x.meaning) : null;
       if (slots) prefillFirstDelay(obs, sign, slots); // the same pre-fill the hub's reading card applies
       const ready = !!(slots && impliedTick(sign, slots) === FIRST_GIFT_TICK);
-      return g('stake', { tick: FIRST_GIFT_TICK }, null, {}, { ...step('stake'), hintKey: ready ? 'hub.goal.stake.hintReady' : 'hub.goal.stake.hint' });
+      // the first stake is framed as a test of Iris's guess, never a promise (readiness audit P2): before any
+      // reveal her prior is a coin toss per slot, and the hint says how sure she is
+      return g('stake', { tick: FIRST_GIFT_TICK }, null, { confidence: pct(meanConfidence(sign)) }, { ...step('stake'), hintKey: ready ? 'hub.goal.stake.hintReady' : 'hub.goal.stake.hint' });
     }
     if (inShell && s.tick === 1) return g('leave', {}, null, {}, step('leave'));
     if (!inShell && s.tick <= FIRST_GIFT_TICK && !firstProof(obs)) return g('verified', { tick: FIRST_GIFT_TICK }, null, {}, step('verified'));

@@ -13,6 +13,8 @@ import { createNearWatcher } from '../net/near.js';
 import { createShardWatcher } from '../net/shard-nft.js';
 import { shardCards, createMintMoments } from '../ui/world-hud/shard-card-model.js';
 import { createMintToast } from '../ui/world-hud/shard-card.js';
+import { createOutcomeTracker } from './outcome.js';
+import { createOutcomeToast } from './outcome-ui.js';
 
 const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
 
@@ -47,6 +49,18 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
     if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs }));
   } catch (e) { console.warn('[play] shard NFT watcher off', e); shards = null; }
   const showMints = () => { if (moments && mintToast) for (const m of moments.take(shards.status, session.obs)) mintToast.show(m.card); };
+  // "See what changed" (readiness audit P2): what each reveal did to the staked reading, the stake and Iris's
+  // dictionary, and what each forget changed; presentation state kept from consecutive observations (outcome.js)
+  const outcomes = createOutcomeTracker();
+  let outcomeToast = null;
+  try { outcomeToast = createOutcomeToast(host, { i18n, doc, onDetails: () => { if (hud) hud.signs.open(); } }); } catch (e) { console.warn('[play] outcome card off', e); }
+  function observeOutcomes(obs) {
+    const { outcomes: fresh, forgets } = outcomes.observe(obs);
+    if (!outcomeToast) return;
+    const last = fresh[fresh.length - 1];
+    if (last) outcomeToast.showOutcome(last, (obs.chronicle || []).find((c) => c.index === last.index));
+    if (forgets.length) outcomeToast.showForget(forgets[forgets.length - 1]);
+  }
   const renderEvent = (e) => uiI18n.renderEvent(e, i18n);
   const mode = () => (prefs && prefs.get().hudMode === 'pro' ? 'pro' : 'novice');
   let line = null, lineAge = 0, prev = null, hud = null;
@@ -67,6 +81,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       signsState: hud ? { open: hud.signs.isOpen() } : { open: mode() === 'pro' },
       map: !!handlers.onMap,
       near,
+      outcomes: outcomes.reports(),
     });
   }
 
@@ -100,6 +115,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
 
   const offs = [
     session.on('obs', () => {
+      observeOutcomes(session.obs);
       if (hints) hints.observe(session.obs); if (near) near.observe(session.obs);
       if (shards) { shards.observe(session.obs); moments.observe(session.obs); showMints(); }
       refresh();
@@ -113,6 +129,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
   ].filter(Boolean);
   if (hints && session.obs) hints.observe(session.obs);
   if (shards && session.obs) { shards.observe(session.obs); moments.observe(session.obs); }
+  if (session.obs) outcomes.observe(session.obs);
   refresh();
 
   return {
@@ -139,6 +156,8 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, handler
       if (hints && hints.tick(dt)) refresh();
     },
     refresh,
-    destroy() { offs.forEach((f) => f()); if (near && near.destroy) near.destroy(); if (mintToast) mintToast.destroy(); if (hud) hud.destroy(); host.remove(); doc.body.classList.remove('wh-on'); },
+    /** Outcome reports by chronicle index (play/outcome.js), for other surfaces and tests. */
+    outcomes,
+    destroy() { offs.forEach((f) => f()); if (outcomeToast) outcomeToast.destroy(); if (near && near.destroy) near.destroy(); if (mintToast) mintToast.destroy(); if (hud) hud.destroy(); host.remove(); doc.body.classList.remove('wh-on'); },
   };
 }
