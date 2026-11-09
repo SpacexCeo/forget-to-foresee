@@ -852,20 +852,20 @@ def athletic_costume(bm, P, dom, bones):
     for sx, side in (("L", 1), ("R", -1)):
         hip, knee = bones[f"thigh_{sx}"][0], bones[f"shin_{sx}"][0]
         def pipe_ray(t, side=side, hip=hip, knee=knee):
+            # one continuous path: rays from an axis that moves from the pelvis centre to the thigh's axis,
+            # turning from near the centre back (18 deg) round the cheek to the outside of the leg (92 deg)
             z = 0.985 - (0.985 - 0.30) * t
-            if z > 0.855:                                     # over the seat: from near the centre out round the cheek
-                x = side * (0.062 + 0.088 * sm(0.985, 0.855, z))
-                return V((x, 0.6, z)), V((0, -1, 0))
-            f = (hip.z - z) / max(hip.z - knee.z, 1e-3)        # down the back-outer thigh to the calf
-            cen = hip.lerp(knee, max(0.0, min(1.3, f)))
-            cen = V((cen.x, cen.y, z))
-            phi = math.radians(62 + 30 * sm(0.855, 0.50, z))   # from the back (0) toward the outside (90)
+            f = (hip.z - z) / max(hip.z - knee.z, 1e-3)
+            lc = hip.lerp(knee, max(0.0, min(1.3, f)))
+            k = sm(0.93, 0.82, z)
+            cen = V((lc.x * k, c.y * (1 - k) + lc.y * k, z))
+            phi = math.radians(18 + 44 * sm(0.985, 0.86, z) + 30 * sm(0.86, 0.50, z))
             d = V((side * math.sin(phi), math.cos(phi), 0))
             return cen + d * 0.4, -d
-        o = C.surface_line(f"leggings_piping_{sx}", leg, pipe_ray, 90, 0.0028)
+        o = C.surface_line(f"leggings_piping_{sx}", leg, pipe_ray, 180, 0.0028, lift=0.0012)
         if o:
             out[o.name] = o
-    o = C.surface_line("leggings_seam_back", leg, lambda t: (V((0.0, 0.6, 0.960 - 0.085 * t)), V((0, -1, 0))), 16, 0.0016,
+    o = C.surface_line("leggings_seam_back", leg, lambda t: (V((0.0, 0.6, 0.944 - 0.070 * t)), V((0, -1, 0))), 24, 0.0016, lift=0.0010,
                        trim=1.0, accent=0.0)
     if o:
         out[o.name] = o
@@ -880,7 +880,7 @@ def athletic_costume(bm, P, dom, bones):
                 out_d = V((side, 0.12, 0))
                 out_d = (out_d - axis * out_d.dot(axis)).normalized()
                 return a + out_d * 0.3, -out_d
-            o = C.surface_line(f"jacket_stripe_{sx}", jk, stripe_ray, 60, 0.011)
+            o = C.surface_line(f"jacket_stripe_{sx}", jk, stripe_ray, 120, 0.011, lift=0.0010)
             if o:
                 out[o.name] = o
     # trainers (built from the foot) and grey ankle socks that tuck under the leggings' hem (owner 09.11:
