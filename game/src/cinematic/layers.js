@@ -42,7 +42,7 @@ const CSS = `
 .cl-amount { transform: translate(-50%, -50%); text-align: center; }
 .cl-amount .v { font: 400 150px/1 'Libre Caslon Text', Georgia, serif; color: ${GOLD}; text-shadow: 0 4px 40px rgba(0,0,0,.7); }
 .cl-amount .u { font: 600 44px/1 'Source Sans 3', sans-serif; letter-spacing: .5em; color: ${PEARL}; margin-top: 6px; }
-.cl-amount .w { font: 700 52px/1.1 'Atkinson Hyperlegible', sans-serif; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,.8); }
+.cl-amount .w { font: 400 60px/1.1 'Libre Caslon Text', Georgia, serif; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,.8); }
 .cl-label { font: 600 40px/1 'Source Sans 3', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: ${GOLD}; }
 .cl-value { font: 400 50px/1.15 'Libre Caslon Text', Georgia, serif; color: ${PEARL}; margin: 8px 0 24px; white-space: nowrap; }
 .cl-quote::before, .cl-amount::before, .cl-lock::before { content: ''; position: absolute; left: -30%; right: -30%; top: -35%; bottom: -35%; z-index: -1; background: radial-gradient(closest-side, rgba(6,10,10,.42), rgba(6,10,10,0)); }
@@ -175,9 +175,9 @@ export function createLayers(doc = document) {
     },
     crumb(it) { // breadcrumb "Iris · Memory" with a five-dot progress rail, the current dot gold
       const e = el(doc, 'div', 'cl-abs', `<span style="font:400 48px/1 'Libre Caslon Text',Georgia,serif;color:#b49be6">Iris</span> <span style="font:600 44px/1 'Source Sans 3',sans-serif;letter-spacing:.2em;color:${PEARL}"> · ${esc(it.text || 'Memory')}</span>`);
-      Object.assign(e.style, { right: '96px', top: '86px', textAlign: 'right' }); root.append(e);
-      const rail = sv(doc, 'line', { x1: 1430, y1: 170, x2: 1824, y2: 170, stroke: 'rgba(236,230,216,.4)', 'stroke-width': 1.5 }); svg.append(rail);
-      const dots = [0, 1, 2, 3, 4].map((i) => { const c = sv(doc, 'circle', { cx: 1430 + i * 98.5, cy: 170, r: i === (it.at ?? 3) ? 9 : 6, fill: i === (it.at ?? 3) ? GOLD : '#0b0f10', stroke: i === (it.at ?? 3) ? GOLD : 'rgba(236,230,216,.6)', 'stroke-width': 1.5 }); svg.append(c); return c; });
+      Object.assign(e.style, { right: '96px', top: '86px', textAlign: 'right', textShadow: '0 2px 14px rgba(0,0,0,.85)' }); root.append(e);
+      const rail = sv(doc, 'line', { x1: 1430, y1: 170, x2: 1824, y2: 170, stroke: 'rgba(236,230,216,.85)', 'stroke-width': 2 }); svg.append(rail);
+      const dots = [0, 1, 2, 3, 4].map((i) => { const c = sv(doc, 'circle', { cx: 1430 + i * 98.5, cy: 170, r: i === (it.at ?? 3) ? 9 : 6, fill: i === (it.at ?? 3) ? GOLD : '#0b0f10', stroke: i === (it.at ?? 3) ? GOLD : 'rgba(236,230,216,.9)', 'stroke-width': 2 }); svg.append(c); return c; });
       return (t) => { const a = env(t, it); e.style.opacity = a.toFixed(3); rail.style.opacity = a.toFixed(3); dots.forEach((d, i) => { d.style.opacity = (a * out(P(t, it.from + 0.1 + i * 0.08, 0.4))).toFixed(3); }); };
     },
     rule(it) { // a caption between thin gold rules with a centre diamond ("to see the future *first*")
