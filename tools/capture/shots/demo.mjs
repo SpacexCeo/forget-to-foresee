@@ -3,10 +3,10 @@
 // its own URL (`?demo=judge&mode=walk`) in real time with plain cuts, the Shell hub as a labelled second segment,
 // and the wording "fixed before trial 1 and checked against that seal". Captions are the voice; the music and
 // every sound are the game's own. Times are shot seconds; captions are final-timeline seconds (`--check` prints the
-// shot starts: cold-open 0, archipelago 4, run 10, pad 19, hub 53, closing 67; end 75).
-import { JUDGE_URL, WALK_URL, BEAUTY_HIDE, SHELL_MID, GLYPH, fadeIn, fadeOut, WALK, segmentLabel } from './common.mjs';
+// shot starts: guest 0, cold-open 4, archipelago 8, run 10, pad 19, hub 53, closing 67; end 75).
+import { JUDGE_URL, WALK_URL, BEAUTY_HIDE, SHELL_MID, GLYPH, fadeIn, fadeOut, WALK, segmentLabel, IN_SHELL, guestSign, BEHIND_IRIS, IRIS_AT_GLASS } from './common.mjs';
 
-const COLD = 4.0, ARCH = 6.0, RUN = 9.0, PAD = 34.0, HUB = 14.0, CLOSE = 8.0;
+const GUEST = 4.0, COLD = 4.0, ARCH = 2.0, RUN = 9.0, PAD = 34.0, HUB = 14.0, CLOSE = 8.0;
 const JUDGE_LABEL = 'The judge path · spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk';
 const HUB_LABEL = 'The Shell hub · spacexceo.github.io/forget-to-foresee/?demo=judge';
 
@@ -17,6 +17,15 @@ export default {
   output: { crf: 17, preset: 'slow', grain: 0 },
   shots: [
     {
+      // The strongest image first: in Shell I the Guest comes forward through the mist and draws the ring sign on the
+      // glass, Iris small in the foreground (the hub URL, labelled).
+      name: 'guest', duration: GUEST, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      setup: [...IN_SHELL, ...IRIS_AT_GLASS],
+      camera: BEHIND_IRIS,
+      actions: [guestSign(3.0)],
+      overlays: [fadeIn(0.6), { kind: 'letterbox', ratio: 2.2 }, segmentLabel(HUB_LABEL, 0.3, GUEST)],
+    },
+    {
       // Cold open, the payoff: trial 4 on the judge path, Signs & Visions on Resolved, "Verified ✓" over Iris at the pad.
       name: 'cold-open', duration: COLD, url: WALK_URL, ui: 'game',
       setup: [...WALK.staked, ...WALK.trial4, ...WALK.resolved],
@@ -26,7 +35,7 @@ export default {
     {
       // Introduction: the archipelago from the cloud sea, no UI.
       name: 'archipelago', duration: ARCH, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
-      camera: { type: 'orbit', center: [0, 0, 0], radius: [96, 80], height: [38, 30], yawFrom: 108, yawTo: 80, lookHeight: 5, fov: [34, 38], ease: 'inOutSine' },
+      camera: { type: 'orbit', center: [0, 0, 0], radius: [84, 70], height: [34, 28], yawFrom: 104, yawTo: 92, lookHeight: 5, fov: [34, 37], ease: 'inOutSine' },
       overlays: [],
     },
     {
@@ -91,10 +100,11 @@ export default {
     },
   ],
   captions: [
-    { from: 0.4, to: 3.8, text: 'Trial 3 came true, exactly as the seal said: Verified ✓' },
-    { from: 4.4, to: 9.6, text: 'Forget to Foresee: the whole season is fixed before trial 1, and every reveal is checked against that seal.' },
-    { from: 10.4, to: 14.2, text: 'Your agent Iris. Six clans of AI agents with wallets and memory. Four Shells.' },
-    { from: 14.8, to: 18.6, text: 'The Guests draw round signs. Iris reads one: a Gift, two trials out.' },
+    { from: 0.4, to: 3.8, text: 'Behind the glass, a Guest draws a round sign of what is coming.' },
+    { from: 4.2, to: 7.8, text: 'Trial 3 came true, exactly as the seal said: Verified ✓' },
+    { from: 8.0, to: 13.0, text: 'Forget to Foresee: the whole season is fixed before trial 1, and every reveal is checked against that seal.' },
+    { from: 13.2, to: 16.0, text: 'Your agent Iris, among six clans of AI agents.' },
+    { from: 16.2, to: 18.8, text: 'Iris reads a sign: a Gift, two trials out.' },
     { from: 19.6, to: 23.2, text: 'At Shell I’s pad: stake 10 silk on trial 3.' },
     { from: 24.0, to: 27.4, text: 'Silk 63 to 53. Now end the trials; T ends one.' },
     { from: 28.2, to: 32.4, text: 'Trials 1 and 2 pass. The clans trade, lend and place their fragments.' },

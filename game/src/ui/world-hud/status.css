@@ -13,7 +13,11 @@
 .wh-root .wh-trial {
   left: calc(18 * var(--wh-px));
   top: calc(15 * var(--wh-px));
-  width: calc(246 * var(--wh-px));
+  /* the mockup's 246 u is the floor: longer labels and values (it "0 / 17 · 0%", ru title, walk "Words known: 0 / 16")
+     widen the card instead of clipping (QA-033); the cap keeps it clear of the quest banner */
+  width: max-content;
+  min-width: calc(246 * var(--wh-px));
+  max-width: calc(340 * var(--wh-px));
   padding: calc(16.4 * var(--wh-px)) calc(20 * var(--wh-px)) calc(17 * var(--wh-px)) calc(21 * var(--wh-px));
   border-radius: var(--wh-r-panel);
 }
@@ -242,6 +246,9 @@
   overflow: hidden;
   pointer-events: auto;
 }
+/* Short phones (QA-011, iPhone 13 at 390x664): the 124 px floor lifted the card's top to 197 px, under the Shell dock
+   (112-220 px). The card keeps its natural height (about 90 px in English) so its top stays below the dock. */
+@media (max-width: 700px) and (max-height: 760px) { html:not([data-vh="short"]):not([data-vh="tiny"]) .wh-root .wh-quest--mobile { min-height: 0; } }
 .wh-root .wh-quest--mobile::before { inset: 5px; border-radius: calc(var(--wh-r-mquest) - 5px); border-color: rgba(196, 186, 156, .06); }
 .wh-root .wh-quest--mobile .wh-quest__art {
   position: absolute;

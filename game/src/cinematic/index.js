@@ -16,11 +16,19 @@ export function boot(name = 'shot', { fps } = {}) {
     /** Loads a shot script (plain data). */
     load: (shot) => runner.load(shot),
     /** Advances one frame; resolves with the shot time of the frame now on screen. */
-    step: () => runner.step(),
+    step: (o) => runner.step(o),
+    /** The canvas as a PNG data URL plus frame statistics, read in the same task as the last render. */
+    grab: () => runner.grabCanvas(),
+    /** Renders and reads the current frame again (a flagged grab is retried before the capture fails). */
+    regrab: () => runner.regrab(),
+    /** GPU diagnosis of the frame just rendered: target sizes and the frame with each post pass off. */
+    probe: (o) => runner.probe(o),
     /** Steps until a predicate (see runner.js PREDICATES) holds. */
     until: (pred, value, max) => runner.until(pred, value, max),
     /** Steps until every placed model has streamed in. */
     waitLoaded: (ms) => runner.waitLoaded(ms),
+    /** Steps until the Shell's Guests are built and loaded (shots that drive them). */
+    waitGuests: (ms) => runner.waitGuests(ms),
     /** Runs a shot's setup list with rendering off. */
     setup: (list) => runner.setup(list),
     setRender: (on) => runner.setRender(on),

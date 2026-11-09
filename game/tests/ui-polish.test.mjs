@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createPanelArbiter, panelArbiterFor } from '../src/play/panels.js';
 import { signsFromObs } from '../src/ui/world-hud/from-obs.js';
 import { viewportTier, inAppBrowser, VH_TIERS } from '../src/ui/world-hud/index.js';
+import { createHints, resolveHintArgs } from '../src/play/hints.js';
 import { NAMEPLATE, plateOpacity, plateScale, platePosition, platePlacement, proximityOpacity, boxesIntersect, plateBox } from '../src/play/nameplate.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
@@ -240,4 +241,121 @@ test('short viewports: tiers by the measured visible height; in-app browsers are
   for (const sel of ['html[data-vh="short"] .wh-root .wh-quest--mobile', 'html[data-vh="tiny"] .wh-root .wh-trial--mobile { display: none; }', 'html[data-vh="short"] .hub-dock', 'body.in-world #ui { bottom: auto; height: var(--vvh, 100%); }']) {
     assert.ok(css.includes(sel), 'compact rule present: ' + sel);
   }
+});
+
+test('QA-006: a hint about a sign whose trial has passed is withdrawn, a newer sign re-issues it', () => {
+  let t = 0;
+  const i18n = { t: (k) => k };
+  const mem = new Map(); const storage = { getJSON: (k) => mem.get(k) ?? null, setJSON: (k, v) => mem.set(k, v) };
+  const hints = createHints({ storage, i18n, now: () => t });
+  const sign = (index, tick) => ({ index, reading: { slots: [{ meaning: 0 }, { meaning: 1 }, { meaning: 0 }, { meaning: 0 }] }, impliedAnchor: { shell: 1, tick } });
+  const obs = (tick, prophecies) => ({ season: { tick, phase: 'play', tension: 0 }, iris: { anchors: [], attention: 3, silk: 60 }, prophecies, proofs: [], offers: [], memories: [], dictionary: { confidentCells: 0 } });
+  hints.action('moved');
+  hints.observe(obs(1, [sign(0, 2)]));
+  t = 7000; hints.tick(0.1); hints.observe(obs(1, [sign(0, 2)]));
+  let v = hints.view();
+  const args = (x) => (typeof x.text.args === 'function' ? x.text.args() : x.text.args);
+  assert.equal(v.active && v.active.id, 'firstSign');
+  assert.equal(args(v.active).trial, 2);
+  // trial 4: the sign's trial has passed and no newer sign exists → the toast is withdrawn
+  t = 8000; hints.observe(obs(4, [sign(0, 2)]));
+  assert.equal(hints.view().active, null, 'stale hint withdrawn');
+  // a newer sign for trial 7 → the hint comes back with the new facts (after the 30 s repeat gap)
+  t = 60000; hints.observe(obs(4, [sign(0, 2), sign(1, 7)])); hints.tick(0.1);
+  v = hints.view();
+  assert.equal(v.active && v.active.id, 'firstSign');
+  assert.equal(args(v.active).trial, 7);
+  // the facts change while the toast is up → it is re-issued in place
+  t = 61000; hints.observe(obs(4, [sign(0, 2), sign(1, 7), sign(2, 9)]));
+  assert.equal(args(hints.view().active).trial, 9);
+});
+
+test('QA-019: hint args are raw ids resolved in the current language at render time', () => {
+  const en = { t: (k) => ({ 'shell.0': 'Shell I', 'meaning.1.1': 'Gift', 'meaning.0.0': 'Shell I', 'agent.moss': 'Moss' })[k] || k };
+  const ru = { t: (k) => ({ 'shell.0': 'Раковина I', 'meaning.1.1': 'Дар', 'meaning.0.0': 'Раковина I', 'agent.moss': 'Мох' })[k] || k };
+  const raw = { shell: 1, action: 1, place: 0, power: 10, trial: 2, who: 'moss' };
+  assert.deepEqual(resolveHintArgs(raw, en), { shell: 'Shell I', action: 'Gift', place: 'Shell I', power: 10, trial: 2, who: 'Moss' });
+  assert.deepEqual(resolveHintArgs(raw, ru), { shell: 'Раковина I', action: 'Дар', place: 'Раковина I', power: 10, trial: 2, who: 'Мох' });
+  assert.deepEqual(resolveHintArgs(raw, null), raw);
+  const hints = createHints({ i18n: en, now: () => 0 });
+  hints.action('moved');
+  hints.observe({ season: { tick: 1, phase: 'play', tension: 0 }, iris: { anchors: [], attention: 3, silk: 60 }, prophecies: [{ index: 0, reading: { slots: [{ meaning: 0 }, { meaning: 1 }, { meaning: 0 }, { meaning: 0 }] }, impliedAnchor: { shell: 1, tick: 2 } }], proofs: [], offers: [], memories: [], dictionary: { confidentCells: 0 } });
+  const row = hints.view().journal[0];
+  assert.ok(row, 'the hint reached the journal');
+  assert.deepEqual(row.time, { key: 'wh.log.trial', args: { n: 1 } }, 'the clock column is a TextRef');
+  assert.equal(typeof row.text.args, 'function', 'args resolve lazily');
+  assert.equal(row.text.args().action, 'Gift');
+});
+
+test('QA-012: the trial progress reaches 100 % once the season leaves play', () => {
+  const src = read('../src/ui/world-hud/from-obs.js');
+  assert.match(src, /progressDone: s\.phase === 'play' \? Math\.max\(0, s\.tick - 1\) : s\.ticks/);
+});
+
+
+/* ---------------- elements that borrow .wh-root for its tokens (QA-031) ---------------- */
+
+// tokens.css gives `.wh-root` `position: absolute; inset: 0; pointer-events: none`. On the lobby path Vite injects
+// that sheet after the Chronicle and map styles, so a single-class base rule (`.ch-fab { ... }`) lost and the
+// Chronicle button sat at the top-left corner over the trial card. Each borrower's base rule doubles the class.
+test('layout: an element that borrows .wh-root keeps its own position whatever the stylesheet order', () => {
+  const borrowers = [
+    ['../src/cinematic/chapters/chronicle.js', ['ch-fab', 'ch-menu']],
+    ['../src/play/map-ui.js', ['ftf-map-host']],
+  ];
+  for (const [file, classes] of borrowers) {
+    const src = read(file);
+    for (const cls of classes) {
+      assert.match(src, new RegExp(`class: '(${cls}[^']*\\bwh-root\\b|wh-root[^']*\\b${cls}\\b)`), `${cls} still borrows .wh-root (else drop it here)`);
+      const base = new RegExp(`(^|[\\s}])\\.${cls}\\s*\\{[^}]*(position|inset|top|bottom|pointer-events)`, 'm');
+      assert.doesNotMatch(src, base, `${file}: a single-class .${cls} rule sets layout; tokens.css .wh-root can override it`);
+      assert.match(src, new RegExp(`\\.${cls}\\.wh-root\\s*\\{[^}]*position: fixed`), `${cls}: the doubled base rule fixes the position`);
+    }
+  }
+  const chronicle = read('../src/cinematic/chapters/chronicle.js');
+  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*top: auto[^}]*left: calc\(80px[^}]*bottom: calc\(152px/, 'the Chronicle fab resets the inherited top: 0 and sits beside the recap ?, above the dialogue line');
+  assert.match(chronicle, /\.ch-fab\.wh-root \{[^}]*pointer-events: auto/, 'the fab stays clickable over .wh-root pointer-events: none');
+});
+
+// QA-005 / README step 6: "Forget it for a vision" opens the HUD's Signs & Visions panel (the new cards marked
+// Vision), not the greybox-era detail panel. Checked in Chromium at 1280x800 (hub and walk); this pins the wiring.
+test('panels: a vision sacrifice opens the HUD Signs & Visions panel, the detail panel only without a HUD', () => {
+  const ui = read('../src/play/ui.js');
+  const game = read('../src/play/game.js');
+  const forget = ui.slice(ui.indexOf('async function forget('), ui.indexOf('async function sendAsk('));
+  assert.match(forget, /if \(!r\.ok\) \{[^}]*return; \}/, 'a rejected sacrifice opens nothing');
+  assert.match(forget, /purpose === 'vision'\) \{ if \(handlers\.onSigns\) handlers\.onSigns\(\); else open\('vision'\); \}/);
+  assert.match(game, /onSigns: \(\) => \{ if \(worldHud && worldHud\.hud\) worldHud\.hud\.signs\.open\(\); \}/, 'game.js routes onSigns to the HUD Signs panel');
+});
+
+/* ---------------- phones and long values (QA-035, QA-011, QA-033) ---------------- */
+
+test('layout: on phones the Chronicle and recap fabs share the fab row with the map button and the run toggle (QA-035)', () => {
+  const chronicle = read('../src/cinematic/chapters/chronicle.js');
+  const a11y = read('../src/ui/a11y.css');
+  const mapUi = read('../src/play/map-ui.js');
+  const input = read('../src/ui/input.js');
+  // the row: map fab at left 8 (48 px), run toggle at right 8 (52 px), both at bottom 96 above the dialogue strip
+  assert.match(mapUi, /\.ftf-map-fab \{[^}]*left: calc\(8px[^}]*bottom: calc\(96px[^}]*width: 48px/);
+  assert.match(input, /\.ftf-run-toggle \{[^}]*right: calc\(8px[^}]*bottom: calc\(96px[^}]*width: 52px/);
+  assert.match(chronicle, /@media \(max-width: 700px\) \{ \.ch-fab\.wh-root \{ bottom: calc\(96px[^}]*left: calc\(64px/, 'Chronicle right of the map button');
+  assert.match(a11y, /\.a11y-recap-btn \{ left: auto; right: calc\(68px[^}]*bottom: calc\(96px/, 'recap left of the run toggle');
+  const html = read('../index.html');
+  assert.match(html, /body\.in-world:is\(\.pl-modal-open, \.pl-context-open, \.ftf-map-open\) :is\(\.ch-fab, \.a11y-recap-btn\) \{ visibility: hidden; \}/, 'both fabs step aside under panels, the context menu and the map, like the map button');
+  const overlap = read('../scripts/hud-overlap.mjs');
+  assert.match(overlap, /'\.ch-fab', '\.a11y-recap-btn'/, 'the overlap check measures both fabs');
+  assert.match(overlap, /390x664/, 'the overlap check covers the iPhone 13 viewport (390x664)');
+});
+
+test('layout: the phone quest card keeps its natural height on short phones so the Shell dock does not cover it (QA-011)', () => {
+  const status = read('../src/ui/world-hud/status.css');
+  assert.match(status, /@media \(max-width: 700px\) and \(max-height: 760px\) \{ html:not\(\[data-vh="short"\]\):not\(\[data-vh="tiny"\]\) \.wh-root \.wh-quest--mobile \{ min-height: 0; \} \}/);
+});
+
+test('layout: the desktop trial card widens for long values instead of clipping them (QA-033)', () => {
+  const status = read('../src/ui/world-hud/status.css');
+  const card = status.match(/\.wh-root \.wh-trial \{[^}]*\}/)[0];
+  assert.match(card, /width: max-content;/);
+  assert.match(card, /min-width: calc\(246 \* var\(--wh-px\)\);/, 'the mockup width is the floor');
+  assert.match(card, /max-width: calc\(340 \* var\(--wh-px\)\);/, 'capped clear of the quest banner');
 });

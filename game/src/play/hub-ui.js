@@ -69,7 +69,8 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
   .hub-dock p { display: none; }
   .hub-shells { margin-top: 8px; gap: 8px; } .hub-shells button { min-height: 56px; padding: 6px 2px; font-size: 18px; }
   .hub-read { left: 8px; right: 8px; width: auto; top: calc(112px + env(safe-area-inset-top, 0px)); bottom: auto; max-height: calc(100vh - 260px); padding: 12px; background: rgba(12,20,21,.96); }
-  body.hub-in-shell .wh-root .wh-quest-m, body.hub-in-shell .wh-root .wh-quest--mobile, body.hub-in-shell .wh-root .wh-trial--mobile, body.hub-in-shell .wh-root .wh-tiles { visibility: hidden; }
+  body.hub-in-shell .wh-root .wh-quest-m, body.hub-in-shell .wh-root .wh-quest--mobile, body.hub-in-shell .wh-root .wh-trial--mobile, body.hub-in-shell .wh-root .wh-tiles,
+  body.hub-in-shell .wh-root .wh-prompt, body.hub-in-shell .wh-root .wh-prompt--mobile, body.hub-in-shell .wh-root .wh-dialogue--mobile { visibility: hidden; } /* the reading card owns the phone screen: Leave / Stake are on it */
   body.hub-dock-on .wh-root .wh-signs { max-height: none; }
   .hub-dock h3, .hub-read .hub-sign p.hub-muted, .hub-read > p.hub-muted:last-child { display: none; }
   .hub-sign { grid-template-columns: 76px 1fr; } .hub-sign canvas { width: 76px; height: 76px; }
@@ -80,7 +81,7 @@ body.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 94 * var(--wh-px, 
 /* Short phones (QA-011): the bottom-anchored HUD stack rises to ~220 px on a 664 px screen, so the dock at 112 px
    gets compact: no eyebrow, 44 px Shell cells, a 40 px pass row; 112 + 8 + 44 + 6 + 40 + 8 = 218 px. */
 @media (max-width: 700px) and (max-height: 760px) {
-  .hub-dock { padding: 8px; }
+  .hub-dock { padding: 8px; top: calc(104px + env(safe-area-inset-top, 0px)); } /* 6 px under the top bar's buttons: a two-line quest title (uk, ru, it) still clears it */
   .hub-dock .hub-eyebrow { display: none; }
   .hub-shells { margin-top: 0; gap: 6px; } .hub-shells button { min-height: 44px; padding: 4px 2px 3px; font-size: 16px; gap: 3px; }
   .hub-shells button small { font-size: 9.5px; }

@@ -11,6 +11,8 @@ export default {
   'play.help.panels': '<kbd>M</kbd> ricordi · <kbd>V</kbd> segni e visioni · <kbd>T</kbd> termina il tick',
   'play.help.camera': '<kbd>←</kbd><kbd>→</kbd> o trascina col tasto destro per ruotare · <kbd>↑</kbd><kbd>↓</kbd> o rotella per lo zoom',
   'play.help.misc': '<kbd>L</kbd> lingua · <kbd>H</kbd> questo aiuto · <kbd>Esc</kbd> chiudi · <kbd>F3</kbd> HUD sviluppatore',
+  'play.help.hub': '<kbd>F</kbd> vola nella Conchiglia dorata · punta dentro con <kbd>F</kbd> · <kbd>T</kbd> esci dalla Conchiglia o lascia passare la prova',
+  'play.help.map': '<kbd>N</kbd> mappa dell’isola',
   'play.help.toggle': 'Aiuto (H)',
 
   // ---- objective card ----

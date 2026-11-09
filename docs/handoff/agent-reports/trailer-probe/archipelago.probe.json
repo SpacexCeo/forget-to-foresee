@@ -1,0 +1,7152 @@
+[
+ {
+  "frame": 205,
+  "t": 3.4166666666666594,
+  "grab": {
+   "mean": 180.40428966049518,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.40428966049518,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.40428966049518,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.11649182098898,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.69894290123617,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.38710385802605,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.7390555555532,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.43098503086551,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.58860617283864,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 206,
+  "t": 3.433333333333326,
+  "grab": {
+   "mean": 180.56142037037168,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.56142037037168,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.56142037037168,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.31961342592714,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.86798981481618,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.53293780864328,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.86329398147893,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.5879313271618,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.65406095678915,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 207,
+  "t": 3.4499999999999926,
+  "grab": {
+   "mean": 180.53388873456922,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.53388873456922,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.53388873456922,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.25887160493954,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.80380169753215,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.57900216049518,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.906204629627,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.5537248456803,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.7132385802459,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 208,
+  "t": 3.4666666666666592,
+  "grab": {
+   "mean": 180.51549645061863,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.5156604938285,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.51549645061863,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.22237854938405,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.73786558642115,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.54188271605076,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.8865674382692,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.54682145061864,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.5847029320979,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 209,
+  "t": 3.483333333333326,
+  "grab": {
+   "mean": 180.47627253086551,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.47627253086551,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.47627253086551,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.23002037037173,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.6691870370383,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.51334583333465,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.86999058641717,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.50902407407537,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.5057322530855,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 210,
+  "t": 3.4999999999999925,
+  "grab": {
+   "mean": 180.5048655864211,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.5048655864211,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.5048655864211,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.26168750000136,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.66354490740898,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.5451955246927,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.90558873456538,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.53109027777904,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.44665123456664,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 211,
+  "t": 3.516666666666659,
+  "grab": {
+   "mean": 180.6519052469148,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.6519052469148,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.6519052469148,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.35272932098894,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.78293888889021,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.629965123458,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 184.99462793209622,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.6777643518531,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.48866558641834,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 212,
+  "t": 3.5333333333333257,
+  "grab": {
+   "mean": 180.77316790123575,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.77316790123575,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.77316790123575,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.44280617284085,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.827177777779,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.78704753086538,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.07685972221975,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.80890370370483,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.62827268518393,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 213,
+  "t": 3.5499999999999923,
+  "grab": {
+   "mean": 180.80884212963076,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.80884212963076,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.80884212963076,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.47749953703826,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.82106929012477,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.81456219135913,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.12809043209654,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.83840601851963,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.51216805555438,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 214,
+  "t": 3.566666666666659,
+  "grab": {
+   "mean": 180.7510768518531,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.7510768518531,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.7510768518531,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.36439413580365,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.66844783950742,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.08019089506303,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.12065910493595,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.77655401234696,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.46262361110996,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 215,
+  "t": 3.5833333333333255,
+  "grab": {
+   "mean": 180.74823827160608,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.75944969135918,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.74823827160608,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.42704104938386,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.55552021605084,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.78311836419866,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.09230601851613,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.77245416666787,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.28037870370252,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 216,
+  "t": 3.599999999999992,
+  "grab": {
+   "mean": 180.73050648148256,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.73050648148256,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 124.62580092592626,
+     "black": 0.2623456790123457,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": [
+      0,
+      10,
+      19,
+      26
+     ],
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.41077854938382,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.5685734567914,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.8024032407418,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.05183564814578,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.76309305555662,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.16177299382616,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 217,
+  "t": 3.6166666666666587,
+  "grab": {
+   "mean": 180.69768549382832,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.6974657407419,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.6974657407419,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.38692160493943,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.48756265432235,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.66385339506286,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.05438070987407,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.71880046296408,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.07157314814702,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 218,
+  "t": 3.6333333333333253,
+  "grab": {
+   "mean": 180.73566388889,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.73566388889,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.73571959876656,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.44078981481604,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.47720077160628,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.7262436728406,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.08763194444194,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.76008719135913,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 168.97184953703592,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 219,
+  "t": 3.649999999999992,
+  "grab": {
+   "mean": 180.82687978395174,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 180.82687978395174,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 180.82687978395174,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.53794537037152,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.48846234568038,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 180.8139367283962,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.13954228394823,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 180.85532700617395,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 168.93757407407304,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 220,
+  "t": 3.6666666666666585,
+  "grab": {
+   "mean": 181.04037361111244,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 181.04037361111244,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 181.04037361111244,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 79.12312885802484,
+     "black": 0.5625,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": [
+      2,
+      0,
+      28,
+      26
+     ],
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.70543919753223,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.0501104938285,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.41170416666438,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 181.062151851853,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.22559999999896,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 221,
+  "t": 3.683333333333325,
+  "grab": {
+   "mean": 181.17043055555675,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 181.17048626543328,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 181.17048626543328,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.85736728395187,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.7720205246926,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.18177962963085,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.5092276234545,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 181.1975675925937,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.51491095678915,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 222,
+  "t": 3.6999999999999917,
+  "grab": {
+   "mean": 181.29359506172963,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 181.29359506172963,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 181.29359506172963,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.9403074074086,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.82943549382836,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.34224861111232,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.57410046296053,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 181.3231500000012,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.46907716049284,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 223,
+  "t": 3.7166666666666583,
+  "grab": {
+   "mean": 181.32300493827285,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 181.32300493827285,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 181.32300493827285,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.96193966049492,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.843918055557,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.3755103395074,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.65689737654077,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 181.34533194444558,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.42824243827042,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 224,
+  "t": 3.733333333333325,
+  "grab": {
+   "mean": 181.32577114197662,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 181.32577114197662,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 181.32577114197662,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.95530725308757,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.753868055557,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.33404212963094,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.61922685184925,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 181.35192885802599,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.2581941358013,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ },
+ {
+  "frame": 225,
+  "t": 3.7499999999999916,
+  "grab": {
+   "mean": 181.33294444444562,
+   "black": 0,
+   "edgeBlack": 0,
+   "edges": {
+    "top": 0,
+    "bottom": 0,
+    "left": 0,
+    "right": 0
+   },
+   "blackBox": null,
+   "width": 1920,
+   "height": 1080,
+   "lost": false
+  },
+  "sizes": {
+   "canvas": [
+    1920,
+    1080
+   ],
+   "css": [
+    1920,
+    1080
+   ],
+   "drawingBuffer": [
+    1920,
+    1080
+   ],
+   "pixelRatio": 1,
+   "dpr": 1,
+   "inner": [
+    1920,
+    1080
+   ],
+   "target": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "read": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "write": [
+    1920,
+    1080,
+    4,
+    1016
+   ],
+   "passes": [
+    {
+     "name": "wb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "an",
+     "enabled": true,
+     "rts": [
+      [
+       "rtA",
+       960,
+       540,
+       0,
+       1016
+      ],
+      [
+       "rtB",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Rn",
+     "enabled": true,
+     "rts": [
+      [
+       "gtaoRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "pdRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "normalRenderTarget",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Hs",
+     "enabled": true,
+     "rts": [
+      [
+       "renderTargetBright",
+       960,
+       540,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "Bb",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Rb",
+     "enabled": true,
+     "rts": [
+      [
+       "edgesRT",
+       1920,
+       1080,
+       0,
+       1016
+      ],
+      [
+       "weightsRT",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    },
+    {
+     "name": "qE",
+     "enabled": true,
+     "rts": []
+    },
+    {
+     "name": "Mt",
+     "enabled": true,
+     "rts": [
+      [
+       "rt",
+       1920,
+       1080,
+       0,
+       1016
+      ]
+     ]
+    }
+   ],
+   "bloomMips": [
+    [
+     960,
+     540
+    ],
+    [
+     480,
+     270
+    ],
+    [
+     240,
+     135
+    ],
+    [
+     120,
+     68
+    ],
+    [
+     60,
+     34
+    ]
+   ]
+  },
+  "variants": [
+   {
+    "name": "rerender",
+    "stats": {
+     "mean": 181.33294444444562,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-rays",
+    "stats": {
+     "mean": 181.33294444444562,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-ao",
+    "stats": {
+     "mean": 181.94425555555665,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-bloom",
+    "stats": {
+     "mean": 175.81645123456917,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-smaa",
+    "stats": {
+     "mean": 181.30434243827278,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-grade",
+    "stats": {
+     "mean": 185.67845046296043,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-mt",
+    "stats": {
+     "mean": 181.35913379629744,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   },
+   {
+    "name": "no-post",
+    "stats": {
+     "mean": 169.33342777777693,
+     "black": 0,
+     "edgeBlack": 0,
+     "edges": {
+      "top": 0,
+      "bottom": 0,
+      "left": 0,
+      "right": 0
+     },
+     "blackBox": null,
+     "width": 1920,
+     "height": 1080,
+     "lost": false
+    }
+   }
+  ],
+  "info": {
+   "calls": 1,
+   "triangles": 1,
+   "programs": 82
+  }
+ }
+]

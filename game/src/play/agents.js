@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
-import { fetchGltf } from '../render/assets.js';
+import { fetchGltf, prefetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
@@ -340,7 +340,7 @@ export class ClanAgents {
   async attachIris(avatarGroup) {
     if (!MODEL_FILES.agent_iris || this.irisModel) return;
     try {
-      const { gltf } = await fetchGltf('agent_iris');
+      const { gltf } = await prefetchGltf('agent_iris'); // started by boot-world.js before the camps (QA-030)
       const model = cloneSkinned(gltf.scene);
       upgradeAssetMaterials('agent_iris', model);
       model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = true; });
@@ -351,7 +351,7 @@ export class ClanAgents {
       const idleAction = idle ? mixer.clipAction(idle) : null;
       if (idleAction) idleAction.play();
       this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
-    } catch (e) { console.warn('[play] Iris model failed', e); }
+    } catch (e) { avatarGroup.userData.irisFailed = true; console.warn('[play] Iris model failed', e); }
   }
 
   /** Iris's gait: idle / walk / run blended by the actual ground speed (procedural bob when no clips). */

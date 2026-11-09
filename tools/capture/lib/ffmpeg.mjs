@@ -47,6 +47,39 @@ export function openFramePipe(out, { fps = 60, crf = 6, preset = 'faster' } = {}
   };
 }
 
+/**
+ * Two PNG streams (the 3D frame from the canvas on fd 3, the UI layer with alpha on fd 4) composited into one
+ * near-lossless intermediate. Returns {write(canvasPng, uiPng), close()}; write() honours backpressure on both pipes.
+ */
+export function openLayerPipe(out, { fps = 60, crf = 6, preset = 'faster' } = {}) {
+  const args = ['-y', '-v', 'error',
+    '-f', 'image2pipe', '-framerate', String(fps), '-i', 'pipe:3',
+    '-f', 'image2pipe', '-framerate', String(fps), '-i', 'pipe:4',
+    '-filter_complex', '[0:v][1:v]overlay=shortest=1:format=auto,format=yuv444p[v]', '-map', '[v]',
+    '-c:v', 'libx264', '-preset', preset, '-crf', String(crf), '-r', String(fps), '-g', String(fps), out];
+  const p = spawn('ffmpeg', args, { stdio: ['ignore', 'inherit', 'pipe', 'pipe', 'pipe'] });
+  let err = '', failed = null;
+  p.stderr.on('data', (d) => { err += d; });
+  const a = p.stdio[3], b = p.stdio[4];
+  a.on('error', (e) => { failed = e; }); b.on('error', (e) => { failed = e; });
+  const done = new Promise((resolve, reject) => { p.on('close', (code) => (code === 0 ? resolve() : reject(new Error('ffmpeg intermediate failed (' + code + '): ' + err)))); });
+  done.catch(() => {}); // a killed pipe nobody closes must not crash the process; close() still rejects
+  // ffmpeg probes input 0 (up to analyzeduration, dozens of frames) before it opens input 1, so waiting for
+  // pipe 4 to drain after every frame would deadlock. Frames are queued in Node and only a large backlog waits.
+  const drain = (stream) => new Promise((resolve, reject) => { if (failed) return reject(failed); stream.once('drain', resolve); });
+  return {
+    async write(canvasPng, uiPng) {
+      if (failed) throw failed;
+      a.write(canvasPng); b.write(uiPng);
+      while (!failed && a.writableLength + b.writableLength > 256 * 1024 * 1024) await drain(a.writableLength >= b.writableLength ? a : b);
+      if (failed) throw failed;
+    },
+    close() { a.end(); b.end(); return done; },
+    /** Hard stop (a hung shot): the partial intermediate is discarded by the caller. */
+    kill() { try { p.kill('SIGKILL'); } catch { /* gone */ } },
+  };
+}
+
 export function run(args, label = 'ffmpeg') {
   return new Promise((resolve, reject) => {
     const p = spawn('ffmpeg', ['-y', '-v', 'error', '-stats', ...args], { stdio: ['ignore', 'inherit', 'pipe'] });

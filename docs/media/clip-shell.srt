@@ -1,0 +1,16 @@
+1
+00:00:00,600 --> 00:00:03,700
+Fly into a Shell. The Guests draw a sign on the glass.
+
+2
+00:00:04,000 --> 00:00:07,600
+Four slots: Place, Action, Power, Delay. Iris guesses each one.
+
+3
+00:00:08,200 --> 00:00:11,000
+Her reading says trial 3. Change any slot you read differently.
+
+4
+00:00:11,400 --> 00:00:13,600
+Stake 10 silk on your reading.
+

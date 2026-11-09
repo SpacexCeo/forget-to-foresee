@@ -207,7 +207,8 @@ body.ftf-simple-on .wh-root .wh-prompt, body.ftf-simple-on #prompt { display: no
   .a11y-simple { --a11y-tx: 0px; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; padding: 12px 14px 14px; }
   .a11y-simple .a11y-sign { grid-template-columns: 56px 1fr; } .a11y-simple .a11y-sign canvas { width: 56px; height: 56px; }
   .ftf-a11y-host h3 { font-size: 19px; }
-  .a11y-recap-btn { left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
+  /* QA-035: the fab row above the dialogue strip, left of the run toggle (8 + 52 + 8 px), clear of the Lore tile */
+  .a11y-recap-btn { left: auto; right: calc(68px + env(safe-area-inset-right, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   body.ftf-simple-on .hub-host .hub-read { bottom: auto; max-height: calc(100vh - 330px); }
   body.ftf-simple-on .wh-root .wh-tiles, body.ftf-simple-on .ftf-map-fab, body.ftf-simple-on .ftf-run-toggle { display: none !important; } /* nobody walks in Simple mode: the card has the room */
 }

@@ -1,6 +1,37 @@
 # Task J report: trailer, demo video and clips (paused 08.11 18:00 UTC on the lead's order)
 
-## What exists
+## 09.11 night: the opening Shell shot hung on the GPU (43d672f)
+The demo's `guest` shot hung twice on the 4090: no frame came back and nothing timed out. Evidence: 122d3f3 on
+claude/laughing-thompson-dc7r09. Fixes:
+- **Watchdog per shot:** each phase (page load, setup, waiting for the Guests, the first frame, every frame at
+  `FTF_FRAME_TIMEOUT` = 120 s, the encode) has a limit. On a stall the shot's Chromium (marked by a tag) and its ffmpeg
+  are killed, and the shot fails with the phase named.
+- **Shot retries:** `capture.mjs` renders a failed shot again in a fresh browser (`FTF_SHOT_ATTEMPTS` = 3).
+- **Guests readiness:** a shot that drives the Guests waits for `runner.waitGuests` (Shell active, interior ready,
+  Guest models loaded; fails after 150 s with the reason), then cues the sign at shot time 0.
+- **Local checks:** with a 1 s frame limit the watchdog kills and retries as designed, with no leftover processes. The
+  guest shot renders clean (60 frames, 0 errors).
+
+## 08.11 late: rework "make the videos interesting" (Opus relaunch)
+- **Scripts reworked** (`tools/capture/shots/*`, `--check` green): every video opens on the Guest coming out of the
+  mist and drawing the ring sign on the glass, with Iris small in front. The trailer is 41 s, cut on whole seconds of
+  the 60 bpm music: sign → stake → card *I · Sealed* → Verified ✓ → card *II · The price of memory* → forget, vision,
+  shard to auction → three faces and one pair of hands (live `track` camera) → follow Moss after trial 1 → *Trial 13 ·
+  The crisis* (the Guests' crisis moment, cued) → the vote moment → title. Demo: the new 4 s Guest opener; the
+  archipelago is cut to 2 s; the real-time judge segment is unchanged (75 s). Clips: sign 12 s, memory 10 s,
+  verified 12 s.
+- **New vocabulary:** `track` camera (follows Iris or a clan head and turns with it), `guests` action (seed, cue,
+  warp, freeze).
+- **GPU black edge:** `--probe a-b` / `FTF_PROBE` on the 4090 (0b5c1e4 on claude/laughing-thompson-dc7r09): f205–f225
+  were clean on every post variant, so the 46% edge is intermittent. The capture now re-renders a flagged frame up to 3
+  times before failing the shot and keeps the PNG.
+- **Scouted locally** (SwiftShader, 480×270, low tier): emerge, ink, stake, faces, hands, clans, crisis, vote,
+  verified. 0 runner errors, 0 edge-black, 0 jumps. Walk setups need 60 fps: the T-confirm window expires at 5 fps.
+  Known: the Amber robe blows out (Task L), and the Guest is pale on the low tier.
+- **GPU job sent** (43d672f, FTF_SKIP_4K=1, 1080p60 ultra): the GPU session commits the files into `docs/media/`
+  and reports to the lead.
+
+## What exists (before the rework)
 - **Pipeline (done, pushed, `npm test` 371 green, `npm run build` green):** `?cinematic=<name>` puts the game on a
   frame-stepped virtual clock (`game/src/cinematic/`: clock, eases and splines, camera moves, DOM overlays in the game's
   typography, the shot runner; one guarded line in `game/src/main.js`). `tools/capture/` renders shot scripts in headless

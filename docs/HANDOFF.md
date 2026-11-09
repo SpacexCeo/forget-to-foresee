@@ -1,4 +1,4 @@
-# Handoff: state on 08.11.2026, 21:20 Kyiv (lead session)
+# Handoff: state on 09.11.2026, 00:10 Kyiv (lead session)
 
 ## Live state (read this first if the session or the usage limit ended)
 
@@ -40,9 +40,13 @@ no server is stopped while it holds a server-only item the owner has not downloa
    the form (or the API payload in `docs/submission/apply-form.md`, sent only after the owner confirms), the
    `hackathon-submission` tag. Deadline 15.11 01:59 Kyiv; freeze 13.11 20:00.
 
-**Schedules:** lead loops (trig_018op6gxTUumLXJX3eyDUuzr :09, trig_01U3rg64KhBguBy5gwNvtbHF :29,
-trig_01AujfoKaraCGtHz4VpeNp8r :49) and juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45) are
-disabled; a one-shot resume is set for 23:21 Kyiv (trig_01RvxgLVLa479pxgFuzfnQp4).
+**Schedules (since 23:21 Kyiv):** one lead loop per hour (trig_018op6gxTUumLXJX3eyDUuzr at :09; the :29/:49 loops trig_01U3rg64KhBguBy5gwNvtbHF, trig_01AujfoKaraCGtHz4VpeNp8r stay off to save tokens) and the juror (trig_01NgxosZwdE8uJkaqxuLtuT2 :15, trig_01VwHGk8L8MnWCVzByeVDpwM :45). Active workers: F (open QA UI items), K (re-test of main 1a17673), O (shell.js frame safety, phone stills), J's capture job on the RTX 4090 via the GPU session (demo, then trailer and clips, the agent rebuild, 4K). Others paused with next steps in their reports.
+
+**Model availability (09.11 00:10 Kyiv):** the Fable limit is exhausted until about 12.11 (seven-day window). All worker sessions created on Fable (A–V, the juror R) fail on their next turn; their pushed branches are intact. Only Opus 5.5 sessions run: this lead session and the GPU art session ("Завершение работы", running the video queue on the RTX 4090). Owner: new workers use Opus 5.5 at medium effort (`model: claude-opus-5-5` in create_session). Overnight in eco mode: the GPU queue (demo, trailer, clips with the flicker check; agent rebuild; 4K server-only) and one morning merge at 07:01 Kyiv (trig_014q6NjmK4V33rZkA98BBkHq); all other schedules are off.
+
+**Overnight relaunch on Opus 5.5 (09.11 00:05 Kyiv):** F2 `session_01QfMhgC3bXjG8v7dRm14NjA` (claude/ui-polish: QA-031, QA-005/README, overlap at 1280 in four locales), G2 `session_01QfMhgCFUQvCkLm6XJ3XYDN` (claude/first-seconds: QA-029/030/032), J2 `session_01QfMhgFJGfUrN6eJtU2qesA` (claude/trailer: interesting video scripts, one GPU job), R2 juror `session_01QfMhgDAKdSL1ErtGNuQjaQ` (claude/jury; schedules trig_01W1fqnBUpajNw2RddU5YpMn :15, trig_01MHsAmrnNpJbVJFJwWXL1Gs :45), GPU art session on the RTX 4090. The hourly lead loop (trig_018op6gxTUumLXJX3eyDUuzr :09) merges finished branches and starts one K2 QA session on Opus once F2 and G2 are in; the 07:01 Kyiv run (trig_014q6NjmK4V33rZkA98BBkHq) merges into main.
+
+**Videos (09.11 03:50 Kyiv):** clean 1080p60 GPU renders (ANGLE Vulkan, flicker check passed) of the demo (71 s), trailer (35 s) and three clips are on `claude/laughing-thompson-dc7r09` docs/media (b2c71ae, 2ed5956) and were sent to the owner; captioned versions are server-only (inventory). Two capture defects to fix before the final cut: the opening guest/emerge shot stalls on the GPU every run (excluded with FTF_SKIP_SHOTS), and the capture's "forget" action finds no memory button (trailer shot 'forget', clip-memory shot 'memory'). Keep the mp4s out of `main` unless the owner asks (repo size); link them instead.
 
 **Open items after resume (priority):** final videos without flicker and with a stronger story (J + GPU); NEAR deploy;
 K's open QA list; the juror's scorecards from 09.11 15:00 UTC; native-speaker pass of uk/it/zh; physical phone and GPU

@@ -5,17 +5,23 @@
 // opens and closes with the motion design system (src/ui/motion: the panel scales in, the rows rise in a
 // stagger, buttons lift and press; reduced motion cross-fades).
 import { installMotionStyles, enter, exit, stagger, MOTION } from '../../ui/motion/index.js';
+// The fab and the menu borrow `.wh-root` for its tokens, but tokens.css also gives `.wh-root` `position: absolute;
+// inset: 0; pointer-events: none`. Vite injects that sheet after this one on the lobby path, so each base rule below
+// doubles the class (`.ch-fab.wh-root`) to win whatever the order (QA-031: the fab sat at the top-left corner).
+// On desktop it sits beside the recap "?" (left 16, bottom 150, 52 px), above the dialogue line, which a long
+// locale (it) stretches to the left edge.
 const CSS = `
-.ch-fab { position: fixed; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); width: 48px; height: 48px; border-radius: 50%; z-index: 4;
+.ch-fab.wh-root { position: fixed; top: auto; right: auto; left: calc(80px + env(safe-area-inset-left, 0px)); bottom: calc(152px + env(safe-area-inset-bottom, 0px)); width: 48px; height: 48px; border-radius: 50%; z-index: 4;
   display: grid; place-items: center; cursor: pointer; color: var(--wh-gold, #e4c272); background: var(--wh-btn-bg, rgba(10,22,23,.78)); border: 1px solid var(--wh-frame-soft, rgba(196,186,156,.45));
   box-shadow: 0 6px 18px rgba(0,0,0,.35); backdrop-filter: blur(var(--wh-blur-sm, 8px)); pointer-events: auto; }
 .ch-fab:hover { border-color: var(--wh-gold, #e4c272); }
 .ch-fab:focus-visible { outline: 3px solid var(--wh-gold, #e4c272); outline-offset: 2px; }
 .ch-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 body.ftf-map-open .ch-fab { display: none; }
-@media (max-width: 700px) { .ch-fab { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); } }
-.ch-menu { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: var(--wh-scrim, rgba(0,0,0,.35)); pointer-events: auto; }
-.ch-menu[hidden] { display: none; }
+/* phones (QA-035): the fab row above the dialogue strip, right of the map button (8 + 48 + 8 px), clear of the tiles */
+@media (max-width: 700px) { .ch-fab.wh-root { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); left: calc(64px + env(safe-area-inset-left, 0px)); } }
+.ch-menu.wh-root { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: var(--wh-scrim, rgba(0,0,0,.35)); pointer-events: auto; }
+.ch-menu.wh-root[hidden] { display: none; }
 .ch-panel { width: min(520px, calc(100vw - 24px)); max-height: calc(100vh - 32px); overflow: auto; padding: 16px 18px 18px; border-radius: 12px; color: var(--wh-text, #faf7ee);
   background: var(--wh-panel-bg, rgba(16,26,27,.94)); border: 1px solid var(--wh-frame, rgba(232,214,172,.8)); box-shadow: 0 16px 40px rgba(0,0,0,.45); backdrop-filter: blur(var(--wh-panel-blur, 10px)); }
 .ch-panel .ch-eyebrow { font: 600 10.5px/1 var(--wh-font-body, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--wh-gold, #e4c272); }

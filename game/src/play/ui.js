@@ -199,7 +199,10 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   async function forget(id, purpose) {
     const r = await session.send('sacrifice_memory', { memoryId: id, purpose }, { key: session.bus.key('forget' + id) });
     if (!r.ok) { hud.showRejection(r.reason); return; }
-    if (purpose === 'vision') open('vision'); else close();
+    close();
+    // QA-005: the new visions show in the HUD's Signs & Visions panel (one plain line per sign in Novice), not in the
+    // greybox-era detail panel; without a world HUD the detail panel remains the fallback
+    if (purpose === 'vision') { if (handlers.onSigns) handlers.onSigns(); else open('vision'); }
   }
   async function sendAsk() {
     await session.syncPosition();
@@ -240,7 +243,9 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
       el('button', { class: 'pl-btn', type: 'button', text: i18n.locale === 'ru' ? 'EN' : 'RU', onclick: () => i18n.setLocale(i18n.locale === 'ru' ? 'en' : 'ru') }),
       el('button', { class: 'pl-btn', type: 'button', text: t('play.help.toggle'), onclick: () => showHelp(helpEl.hidden) }));
     badge.textContent = t('play.badge');
-    helpEl.replaceChildren(el('h3', { text: t('play.help.title') }), ...['move', 'go', 'context', 'panels', 'camera', 'misc'].map((k) => el('p', { html: i18n.t('play.help.' + k) })), el('p', { class: 'pl-muted', text: t('play.loop') }));
+    // QA-021: the hub's keys (F fly / stake, T leave or let the trial pass) and the map (N) are listed too
+    const rows = ['move', 'go', 'context', 'panels', ...(handlers.onEndTick ? ['hub'] : []), 'map', 'camera', 'misc'];
+    helpEl.replaceChildren(el('h3', { text: t('play.help.title') }), ...rows.map((k) => el('p', { html: i18n.t('play.help.' + k) })), el('p', { class: 'pl-muted', text: t('play.loop') }));
   }
   const toggle = (name) => (panel === name ? close() : open(name));
 

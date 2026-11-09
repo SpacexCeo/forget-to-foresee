@@ -10,6 +10,8 @@ export default {
   'play.help.panels': '<kbd>M</kbd> 记忆 · <kbd>V</kbd> 符号与幻象 · <kbd>T</kbd> 结束回合',
   'play.help.camera': '<kbd>←</kbd><kbd>→</kbd> 或右键拖动旋转 · <kbd>↑</kbd><kbd>↓</kbd> 或滚轮缩放',
   'play.help.misc': '<kbd>L</kbd> 语言 · <kbd>H</kbd> 本帮助 · <kbd>Esc</kbd> 关闭 · <kbd>F3</kbd> 开发者 HUD',
+  'play.help.hub': '<kbd>F</kbd> 飞入金色螺壳 · 在内部按 <kbd>F</kbd> 下注 · <kbd>T</kbd> 离开螺壳或让试炼过去',
+  'play.help.map': '<kbd>N</kbd> 岛屿地图',
   'play.help.toggle': '帮助（H）',
 
   // ---- objective card ----

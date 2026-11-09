@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MOTION, ease, createSpring, springSamples, springDuration, staggerDelay, flipDelta, tickValue, isReduced,
-  enter, exit, stagger, crossfade, flip, tickNumber, press, seal, parallax, motionVars, MOTION_CSS, installMotionStyles, ringFlash, drawOn,
+  enter, exit, stagger, crossfade, flip, tickNumber, press, seal, parallax, followFactor, FOLLOW_RATE, motionVars, MOTION_CSS, installMotionStyles, ringFlash, drawOn,
 } from '../src/ui/motion/index.js';
 
 /** A stub element: records animate() calls, has a style bag, a class set, listeners and a rect. */
@@ -168,8 +168,8 @@ test('seal: a spring-sampled stamp with linear timing under 700 ms; reduced moti
 
 test('parallax: moves layers by depth against the pointer (transform only), returns to rest, off under reduced motion', async () => {
   const doc = fakeDoc(); const cont = stub({ doc }); const a = stub({ doc }), b = stub({ doc });
-  let frame = null; doc.defaultView.requestAnimationFrame = (fn) => { frame = fn; return 1; };
-  const off = parallax(cont, [{ el: a, depth: 1 }, { el: b, depth: 0.5 }], { max: 10 });
+  let frame = null, clock = 0; doc.defaultView.requestAnimationFrame = (fn) => { frame = fn; clock += 1000 / 60; return 1; };
+  const off = parallax(cont, [{ el: a, depth: 1 }, { el: b, depth: 0.5 }], { max: 10, now: () => clock });
   cont.fire('pointermove', { clientX: 1000, clientY: 250 }); // far right, middle
   for (let i = 0; i < 80 && frame; i++) { const f = frame; frame = null; f(); }
   assert.match(a.style.transform, /^translate3d\(-(9\.\d+|10\.00)px, (-?0\.0\d|0\.00)px, 0\)$/, a.style.transform);
@@ -191,4 +191,23 @@ test('stylesheet: every token is a --mo-* variable, reduced-motion overrides exi
   assert.equal(installMotionStyles(null), false);
   const el = stub(); ringFlash(el); assert.ok(el.classList.contains('mo-ring--on'));
   const path = stub(); path.getTotalLength = () => 120; drawOn(path); assert.equal(path.style['--mo-length'], '120'); assert.ok(path.classList.contains('mo-draw'));
+});
+
+test('follow: wall-clock easing, the same distance after the same time at 60, 30 and 5 fps (QA-032)', () => {
+  assert.ok(Math.abs(followFactor(1 / 60) - 0.12) < 1e-9, '0.12 of the gap per 60 Hz frame');
+  assert.equal(followFactor(0), 0); assert.equal(followFactor(-1), 0);
+  const k1 = followFactor(0.1), kh = followFactor(0.05);
+  assert.ok(Math.abs(k1 - (1 - (1 - kh) * (1 - kh))) < 1e-12, 'two half steps equal one step');
+  assert.ok(FOLLOW_RATE > 7 && FOLLOW_RATE < 8);
+  const after = (fps, seconds) => {
+    const doc = fakeDoc(); const cont = stub({ doc }); const a = stub({ doc });
+    let frame = null, clock = 0; doc.defaultView.requestAnimationFrame = (fn) => { frame = fn; clock += 1000 / fps; return 1; };
+    parallax(cont, [{ el: a, depth: 1 }], { max: 10, now: () => clock });
+    cont.fire('pointermove', { clientX: 1000, clientY: 250 });
+    while (frame && clock <= seconds * 1000 + 1e-6) { const f = frame; frame = null; f(); }
+    return parseFloat(/translate3d\((-?[\d.]+)px/.exec(a.style.transform)[1]);
+  };
+  const x60 = after(60, 0.3), x30 = after(30, 0.3), x5 = after(5, 0.4);
+  assert.ok(Math.abs(x60 - x30) < 0.05, `60 fps ${x60} vs 30 fps ${x30}`);
+  assert.ok(Math.abs(after(60, 0.4) - x5) < 0.05, `60 fps vs 5 fps after 0.4 s: ${x5}`);
 });

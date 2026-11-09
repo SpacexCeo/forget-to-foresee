@@ -79,6 +79,15 @@ export class ShotRunner {
       if (seg && seg.pose) { ldUpdate(dt, self.camState.look, self.camState.pos.distanceTo(self.camState.look)); return; }
       ldUpdate(dt, focus, camDist);
     };
+    // Nothing adaptive during a capture: the frame-time governor, the resolution step and quality changes would alter the
+    // drawing-buffer size between frames (the owner saw it as black corner rectangles and brightness flicker).
+    lookdev.governor = null;
+    if (lookdev.pixelScale !== 1) lookdev.setPixelScale(1);
+    lookdev.setPixelScale = () => {};
+    const setQuality = lookdev.setQuality.bind(lookdev);
+    lookdev.setQuality = (tier) => (self.allowQualityChange ? setQuality(tier) : lookdev.tier);
+    const setSize = lookdev.setSize.bind(lookdev);
+    lookdev.setSize = (w, h) => { if (w === window.innerWidth && h === window.innerHeight) setSize(w, h); };
     // The occlusion fader dithers Shells between the camera and the player; a scripted camera fades nothing (its subject is often a Shell).
     if (lookdev.fader && lookdev.fader.update) {
       const faderUpdate = lookdev.fader.update.bind(lookdev.fader);
@@ -157,6 +166,36 @@ export class ShotRunner {
     cam.updateMatrixWorld(true);
   }
 
+  /**
+   * A live 'track' camera: compileCamera's pose around the target's estimated position (`at`), moved to where the
+   * target really is this frame (Iris or a clan agent's head) and turned with its heading when `local` is set, so a
+   * close-up keeps the face in frame while the agent walks or turns.
+   */
+  trackPose(spec) {
+    const base = compileCamera(spec);
+    const at = spec.at || [0, 0, 0];
+    return (u) => {
+      const p = base(u);
+      const live = this.targetOf(spec.target);
+      if (!live) return p;
+      const rel = (v) => [v[0] - at[0], v[1] - at[1], v[2] - at[2]];
+      let dp = rel(p.pos), dl = rel(p.look);
+      if (spec.local) { const c = Math.cos(live.yaw), sn = Math.sin(live.yaw); const rot = (v) => [v[0] * c + v[2] * sn, v[1], -v[0] * sn + v[2] * c]; dp = rot(dp); dl = rot(dl); }
+      return { ...p, pos: [live.pos[0] + dp[0], live.pos[1] + dp[1], live.pos[2] + dp[2]], look: [live.pos[0] + dl[0], live.pos[1] + dl[1], live.pos[2] + dl[2]] };
+    };
+  }
+
+  /** Head position and heading (radians about +Y, 0 = facing +Z) of Iris or a clan agent. */
+  targetOf(id) {
+    const g = this.game, play = this.play;
+    if (!g) return null;
+    if (!id || id === 'iris') { const p = g.player.pos; return { pos: [p[0], p[1] + 1.4, p[2]], yaw: g.player.heading || 0 }; }
+    const a = play && play.agents && play.agents.agents && play.agents.agents.get(id);
+    if (!a || !a.root) return null;
+    const r = a.root;
+    return { pos: [r.position.x, r.position.y + 1.4, r.position.z], yaw: r.rotation.y };
+  }
+
   currentSegment() {
     let seg = null;
     for (const s of this.segments) if (this.t >= s.from) seg = s;
@@ -172,7 +211,7 @@ export class ShotRunner {
     const cam = shot.camera;
     const list = Array.isArray(cam) ? cam : cam ? [{ from: 0, to: shot.duration, ...cam }] : [];
     // Segments may mix the game's own camera (`type: 'rig'`, pose null) with scripted moves; the latest one that has started wins.
-    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: compileCamera(c), spec: c }));
+    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: c.type === 'track' ? this.trackPose(c) : compileCamera(c), spec: c }));
     this.pose = this.segments.some((s) => s.pose) ? true : null;
     this.actions = (shot.actions || []).map((a, i) => ({ ...a, id: i, done: false }));
     if (!this.overlay) this.overlay = createOverlay(document);
@@ -265,17 +304,108 @@ export class ShotRunner {
         break;
       }
       case 'forget': { const b = document.querySelectorAll('[data-forget]')[a.index ?? 0]; if (!b) throw new Error('no memory button'); b.click(); break; }
-      case 'quality': g.setQuality(a.tier); break;
+      case 'quality': this.allowQualityChange = true; try { g.lookdev.setQuality(a.tier); } finally { this.allowQualityChange = false; } break;
       case 'motion': g.setReducedMotion(!!a.reduce); break;
+      case 'guests': {
+        // The Guests behind the glass (docs/guests-stage.md): seed, a moment (sign | reveal | crisis | vote | yes | no), warp, freeze.
+        const gs = play && play.shell && play.shell.guests;
+        if (!gs) throw new Error('no Guests stage (not inside a Shell?)');
+        if (a.seed != null) gs.setSeed(a.seed);
+        if (a.cue) gs.cue(a.cue, a.action ? { action: a.action } : {});
+        if (a.warp) gs.warp(a.warp);
+        if (a.freeze != null) gs.freeze(!!a.freeze);
+        break;
+      }
       default: throw new Error('unknown action ' + a.do);
     }
   }
 
   /**
-   * One frame: scripted actions, then the game's own frame through the virtual clock, then the overlay.
-   * Returns the shot time of the frame just rendered.
+   * Reads the finished frame out of the WebGL drawing buffer, in the same task as the render (the buffer is not
+   * preserved across tasks: after the browser composites it, its content is undefined). Returns the PNG as a data
+   * URL plus statistics for the capture's checks: mean luma, the fraction of black samples and the largest run of
+   * fully black rows or columns at an edge (a partially drawn frame shows as a black corner rectangle).
    */
-  async step() {
+  grabCanvas({ noPng = false } = {}) {
+    const renderer = this.game.renderer, gl = renderer.getContext(), canvas = renderer.domElement;
+    const w = canvas.width, h = canvas.height;
+    gl.finish();
+    if (!this.pixels || this.pixels.length !== w * h * 4) this.pixels = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, this.pixels);
+    const px = this.pixels, cols = 48, rows = 27;
+    const grid = new Float32Array(cols * rows);
+    let sum = 0, black = 0;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const x = Math.floor((i + 0.5) * w / cols), y = Math.floor((j + 0.5) * h / rows);
+      const o = (y * w + x) * 4;
+      const l = 0.2126 * px[o] + 0.7152 * px[o + 1] + 0.0722 * px[o + 2];
+      grid[j * cols + i] = l; sum += l; if (l < 8) black++;
+    }
+    const rowBlack = (j) => { for (let i = 0; i < cols; i++) if (grid[j * cols + i] >= 8) return false; return true; };
+    const colBlack = (i) => { for (let j = 0; j < rows; j++) if (grid[j * cols + i] >= 8) return false; return true; };
+    let top = 0, bottom = 0, left = 0, right = 0;
+    while (top < rows && rowBlack(top)) top++;
+    while (bottom < rows - top && rowBlack(rows - 1 - bottom)) bottom++;
+    while (left < cols && colBlack(left)) left++;
+    while (right < cols - left && colBlack(cols - 1 - right)) right++;
+    const edgeBlack = Math.max(top / rows, bottom / rows, left / cols, right / cols);
+    // Where the black region is (grid cells, for the probe): the bounding box of black cells.
+    let bx0 = cols, by0 = rows, bx1 = -1, by1 = -1;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) if (grid[j * cols + i] < 8) { bx0 = Math.min(bx0, i); by0 = Math.min(by0, j); bx1 = Math.max(bx1, i); by1 = Math.max(by1, j); }
+    const stats = { mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, edges: { top, bottom, left, right }, blackBox: bx1 < 0 ? null : [bx0, by0, bx1, by1], width: w, height: h, lost: gl.isContextLost() };
+    const png = noPng ? null : canvas.toDataURL('image/png');
+    return { png, stats };
+  }
+
+  /** Renders the current frame again (same virtual time, same state) and reads it: the retry for a flagged grab. */
+  regrab() {
+    const t = this.t - 1 / this.clock.fps; // step() has already moved the shot clock to the next frame
+    const keep = this.t; this.t = t;
+    try { this.applyCamera(); this.game.lookdev.render(); return { t, ...this.grabCanvas() }; } finally { this.t = keep; }
+  }
+
+  /**
+   * GPU diagnosis for a frame already rendered: the sizes of canvas, drawing buffer and every post target, then the
+   * same frame re-rendered with each post pass switched off in turn (and with no post stack), with the frame statistics
+   * of each variant. A pass whose removal clears a black region is the culprit. Restores every pass afterwards.
+   */
+  probe({ png = false } = {}) {
+    const g = this.game, r = g.renderer, gl = r.getContext(), post = g.lookdev.post;
+    const sz = (t) => (t ? [t.width, t.height, t.samples || 0, t.texture && t.texture.type] : null);
+    const sizes = {
+      canvas: [r.domElement.width, r.domElement.height], css: [r.domElement.clientWidth, r.domElement.clientHeight],
+      drawingBuffer: [gl.drawingBufferWidth, gl.drawingBufferHeight], pixelRatio: r.getPixelRatio(), dpr: window.devicePixelRatio,
+      inner: [window.innerWidth, window.innerHeight], target: sz(post.target),
+    };
+    if (post.composer) {
+      sizes.read = sz(post.composer.readBuffer); sizes.write = sz(post.composer.writeBuffer);
+      sizes.passes = post.composer.passes.map((p) => ({ name: p.constructor.name, enabled: p.enabled, rts: Object.entries(p).filter(([, v]) => v && v.isWebGLRenderTarget).map(([k, v]) => [k, ...sz(v)]) }));
+      const bloom = post.passes.bloom; if (bloom && bloom.renderTargetsHorizontal) sizes.bloomMips = bloom.renderTargetsHorizontal.map((t) => [t.width, t.height]);
+    }
+    const variants = [];
+    const run = (name, fn) => {
+      const undo = fn();
+      try { g.lookdev.render(); const { png: p, stats } = this.grabCanvas({ noPng: !png }); variants.push({ name, stats, png: p }); }
+      catch (e) { variants.push({ name, error: String(e && e.message) }); }
+      finally { if (undo) undo(); }
+    };
+    run('rerender', () => null);
+    const names = new Map(Object.entries(post.passes).filter(([, p]) => p).map(([k, p]) => [p, k]));
+    if (post.composer) for (const p of post.composer.passes) {
+      const k = names.get(p) || p.constructor.name.replace(/^_/, '').replace(/Pass$/, '').toLowerCase();
+      if (k === 'render' || k === 'output' || !p.enabled) continue;
+      run('no-' + k, () => { p.enabled = false; return () => { p.enabled = true; }; });
+    }
+    if (post.composer) run('no-post', () => { const c = post.composer; post.composer = null; return () => { post.composer = c; }; });
+    g.lookdev.render();
+    return { sizes, variants, info: { calls: r.info.render.calls, triangles: r.info.render.triangles, programs: r.info.programs ? r.info.programs.length : null } };
+  }
+
+  /**
+   * One frame: scripted actions, then the game's own frame through the virtual clock, the frame grab (same task),
+   * then the overlay. Returns the shot time of the frame just rendered, with the grab when asked for.
+   */
+  async step({ grab = false } = {}) {
     this.attach();
     this.wrapAudio();
     this.runActions();
@@ -283,8 +413,9 @@ export class ShotRunner {
     this.clock.step();
     if (before) {
       const after = this.game.player.pos;
-      if (Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2]) > 5) { this.snapCamera(); this.game.rig.update(0, new THREE.Vector3(after[0], after[1] + 1.1, after[2])); }
+      if (Math.hypot(after[0] - before[0], after[1] - before[1], after[2] - before[2]) > 5) { this.snapCamera(); this.game.rig.update(0, new THREE.Vector3(after[0], after[1] + 1.1, after[2])); this.game.lookdev.render(); }
     }
+    const grabbed = grab && this.renderOn && this.game ? this.grabCanvas() : null;
     await this.clock.settle(3);
     this.wrapAudio();
     if (this.overlay) this.overlay.update(this.t);
@@ -297,7 +428,7 @@ export class ShotRunner {
     const t = this.t;
     this.t += 1 / this.clock.fps;
     this.frame++;
-    return t;
+    return grabbed ? { t, ...grabbed } : t;
   }
 
   /** Steps virtual time until a predicate holds (or `maxFrames` pass); used before capture starts. */
@@ -332,6 +463,24 @@ export class ShotRunner {
         await wait(100);
       }
       if (this.clock.real.performanceNow() - start > maxMs) return { ok: false, frames, ms: this.clock.real.performanceNow() - start, streaming: g.streamer.stats() };
+    }
+  }
+
+  /**
+   * Waits (wall time, stepping frames) until the Shell is active and its Guests are built and loaded, so a shot that
+   * drives them never starts on a missing stage. Returns {ok, frames, ms, why}.
+   */
+  async waitGuests(maxMs = 120_000) {
+    const start = this.clock.real.performanceNow();
+    const wait = (ms) => new Promise((r) => this.clock.real.setTimeout(r, ms));
+    let frames = 0, why = 'no play';
+    for (;;) {
+      const p = this.play, gs = p && p.shell && p.shell.guests;
+      why = !p ? 'no play' : p.zone !== 'shell' ? 'not inside a Shell (zone ' + p.zone + ')' : !p.shell.ready ? 'Shell interior not ready' : !gs ? 'no Guests handle' : !gs.loaded ? 'Guest models not loaded' : null;
+      if (!why) return { ok: true, frames, ms: this.clock.real.performanceNow() - start };
+      if (this.clock.real.performanceNow() - start > maxMs) return { ok: false, frames, ms: this.clock.real.performanceNow() - start, why };
+      await this.step(); frames++;
+      await wait(100);
     }
   }
 

@@ -82,7 +82,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // World-driven presentation (play/presentation.js): Shell mist, hums and crack pulse, tension, the glass
   // sign as ink, footsteps, ambience zones, UI clicks, composer/tier/reduced-motion follow. The hub's flights
   // arrive through the same zone events, so they are covered too.
-  const presentation = attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session });
+  const presentation = attachPresentation({ hooks, scene, world3d, shell, lookdev, agents, player, uiRoot, session, rig });
 
   const useWorldHud = options.worldHud !== false;
   // The Shell hub (owner decision 08.11): fly into Shells, read and stake there, leaving ends the trial.
@@ -91,7 +91,11 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   if (hub) { session.flags.hub = true; session.recompute(); }
   const ui = createPlayUi({
     root: uiRoot, ctx, session, hud,
-    handlers: { onGo: walkTo, onEndTick: hub ? () => hubUi && hubUi.handleKey('KeyT') : null, contextHidden: () => !!(hub && (state.quiet || hub.card || hub.advancing || hub.busy)) },
+    handlers: {
+      onGo: walkTo, onEndTick: hub ? () => hubUi && hubUi.handleKey('KeyT') : null,
+      contextHidden: () => !!(hub && (state.quiet || hub.card || hub.advancing || hub.busy)),
+      onSigns: () => { if (worldHud && worldHud.hud) worldHud.hud.signs.open(); }, // QA-005: visions open the HUD Signs panel
+    },
     // with the world HUD a single action is the HUD prompt; the context menu lists two or more
     contextMin: useWorldHud ? 2 : 1,
   });
