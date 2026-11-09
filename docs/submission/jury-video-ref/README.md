@@ -37,3 +37,16 @@ Three more frames from the owner (sent mid-message, not saved as files; describe
    a centre circle or diamond; reticles. Palette: charcoal, deep grey-green, slate, nacre/iridescent, pearl white,
    amber gold. Type scale: Display (chapters), Title (sections), UI/label (system), Accent caps (meta). Material
    notes: glass/depth/soft bloom; nacre/iridescent accents; mist/atmosphere (layered); amber/selective emphasis.
+
+## Layer assets from the owner (09.11, `layers/`)
+
+Separated elements for compositing (AI-generated; RGBA with transparency except the plate):
+- `plate-archipelago.webp` (1672x941, RGB): a clean environment plate without UI. Not our game's island: use only
+  behind a chapter title or transition, never as gameplay.
+- `lockup-agents-and-seal-rail.webp` (1672x941, RGBA): the "The Agents / Memory · Prophecy · Betrayal" ring lockup
+  and the "Bound to the Sealed Season" rail with the third dot lit. Reference for the programmatic lockup; the
+  final text must be rendered by us.
+- `card-salt.webp`, `card-iris.webp`, `card-frost.webp` (1086x1448, RGBA): tilted gold-edged clan cards with their
+  material art (Salt crystal spires, Iris violet petals, Frost snowflake over peaks). The names are baked in: use
+  the art, but render the names and tempers programmatically (mask or repaint the baked text). Moss, Ash and
+  Amber cards are still to come.
