@@ -230,7 +230,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
       // Iris's biography (biography.js): remembered, sacrificed with each fate, the shard NFT, the season record
       const shardsView = shardSource ? shardSource(obs) : null;
       // Iris's agent card NFT (net/agent-nft.js): read once per season end; minted / not minted / offline / mismatch
-      if (!agentCard.started) { agentCard.started = true; loadAgentCard({ obs }).then((m) => { agentCard.model = m; if (panel === 'end') renderPanel(); }).catch((e) => console.warn('[play] agent card', e)); }
+      if (!agentCard.started && obs.season.phase === 'end') { agentCard.started = true; loadAgentCard({ obs }).then((m) => { agentCard.model = m; if (!m) agentCard.started = false; if (panel === 'end') renderPanel(); }).catch((e) => console.warn('[play] agent card', e)); }
       const bio = biographyModel({ obs, nearStatus: nearSource ? nearSource() : null, shards: shardsView });
       const L = biographyLines(bio, t, i18n);
       const link = (href, text) => (href ? el('a', { class: 'pl-link', href, target: '_blank', rel: 'noopener', text }) : null);
