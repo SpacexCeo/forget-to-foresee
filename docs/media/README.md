@@ -1,5 +1,10 @@
 # Media
 
+**Where the MP4s are:** to keep `main` small, the demo, trailer and clip MP4s listed below are not in `main`; they live on
+branch `claude/laughing-thompson-dc7r09` under `docs/media/` (fetch with `git show origin/claude/laughing-thompson-dc7r09:docs/media/demo.mp4 > demo.mp4`).
+The `.srt` and `.report.json` files are here. The jury video work is in `jury-test/`, `plates/` and `jury-pillars-*` (see
+`docs/handoff/agent-reports/jury-video.md`).
+
 Real-GPU renders (RTX 4090, Chromium on ANGLE/Vulkan, 1080p60, tier ultra) from Task J's capture pipeline
 on `claude/trailer` e104cab, with the per-frame flicker check (black edge regions, luma jumps; flagged
 frames re-rendered). **The Guest opening shot is excluded on GPU pending a fix** (it stalls on this GPU:
