@@ -338,7 +338,7 @@ STYLE = {
     # chin: + looks down; tilt: head roll; width: extra stance per foot (m);
     # knee: hip drop when standing (m); swing: walk arm swing scale; sway: pelvis
     # roll/yaw scale; bounce: vertical bob scale; tempo: speed of idle cycles (int)
-    "iris": dict(lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.03, knee=0.012,
+    "iris": dict(lean=4, hunch=0, protract=-3, chin=-1, tilt=0, width=0.012, knee=0.008,
                  swing=1.1, sway=0.9, bounce=1.0, tempo=1, cloth=1.0),
     "sol": dict(lean=1, hunch=2, protract=2, chin=2, tilt=6, width=0.015, knee=0.01,
                 swing=0.6, sway=1.6, bounce=0.6, tempo=1, cloth=0.8),
@@ -495,12 +495,12 @@ def clip_iris_run(key, S, u):
     P = base_pose(key, S, standing=False)
     stance = 0.31                                           # longer flight: light, springy
     for side, ph0 in ((1, 0.0), (-1, 0.5)):                 # the foot lands under the body, no overstride
-        P.feet[side] = gait_foot((u + ph0) % 1.0, side, RUN_SPEED, T, stance, 0.15, 4.0, -38.0,
-                                 -0.050, tang=0.45, fwd_bias=-0.13)
+        P.feet[side] = gait_foot((u + ph0) % 1.0, side, RUN_SPEED, T, stance, 0.12, 4.0, -38.0,
+                                 -0.072, tang=0.45, fwd_bias=-0.13)   # feet near one line, low knee lift
     c, s_ = math.cos(TAU * u), math.sin(TAU * u)
     # one low point per step, just after contact (weight accepted), lightest in flight
     bob = math.cos(2 * TAU * (u - stance / 2) + math.pi)
-    P.hips.z = -0.034 + 0.020 * bob                         # tall: no sitting into the stance
+    P.hips.z = -0.024 + 0.013 * bob                         # tall: no sitting into the stance
     lean = 8.0
     P.hips.x = 0.006 * s_                                   # almost no lateral splay
     # pelvis yaw follows the swing leg (2.5 deg), a slight drop on the swing side
