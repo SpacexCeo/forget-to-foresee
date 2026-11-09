@@ -491,6 +491,8 @@ def cards_from_groom(guides, strands, card_cols=(0, 1, 2, 3), fine_cols=(4, 5, 6
 
     step = 2                                                   # cards use every other guide point (10 rows)
     for g in guides:
+        if g.get("kind") == "wisp":                            # wisps stay strands-only (no card across the face)
+            continue
         pts = [V(x) for x in g["pts"][::step]] + [V(g["pts"][-1])]
         c = V((0, 0, 0))
         nrms = []
