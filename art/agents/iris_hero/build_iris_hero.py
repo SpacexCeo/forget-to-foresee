@@ -1026,7 +1026,7 @@ def stage_full(shade=True, size=2048, samples=16):
         S.bake_set([bm], "M_Iris_Skin", S.skin_shader, size, OUT, "skin", samples, land=land)
         S.bake_set(cloth, "M_Iris_Garment", S.garment_shader, size, OUT, "garment", samples)
         hair_textures(hair[0], size)
-        cap = S.flat_material("M_Iris_HairCap", (0.095, 0.050, 0.027), 0.8)       # mid chestnut of the atlas
+        cap = S.flat_material("M_Iris_HairCap", (0.140, 0.070, 0.036), 0.8)       # the hair hue (mid of the atlas)
         hair[1].data.materials.clear()
         hair[1].data.materials.append(cap)
         S.bake_set(eye_objs, "M_Iris_Eye", S.eye_shader, 512, OUT, "eye", samples, ao=False)
