@@ -34,7 +34,7 @@ import agent_anim  # noqa: E402
 import hero_costume as C  # noqa: E402
 import hero_shading as S  # noqa: E402
 import hero_hair as H  # noqa: E402
-import hero_body as B  # noqa: E402
+import hero_anatomy as A  # noqa: E402
 
 from bl_ext.user_default.mpfb.services.humanservice import HumanService  # noqa: E402
 from bl_ext.user_default.mpfb.services.targetservice import TargetService  # noqa: E402
@@ -48,19 +48,21 @@ ARM_DEG = 14.0              # agent rest stance: arms 14 deg off the body, hangi
 
 COSTUME = os.environ.get("IRIS_COSTUME", "athletic")    # athletic (owner 09.11) | wanderer (the coat)
 
-ATHLETIC = {                  # owner's body reference and brief 09.11: feminine athletic, one to one
+ATHLETIC = {                  # owner's body reference and anatomy brief 09.11 (proportions; volume in hero_anatomy.py)
     # waist: narrow and clean, a long soft curve into the hips; a flat, toned stomach
     "torso/measure-waist-circ-decr": 0.70, "torso/measure-underbust-circ-decr": 0.25,
     "torso/measure-waisttohip-dist-incr": 0.35, "stomach/stomach-pregnant-decr": 0.90,
     # pelvis: the reference's hips are about as wide as its shoulders (0.21 H from the back)
     "torso/measure-hips-circ-decr": 0.05,
-    # seat: volume; projection, lift and the S-curve from hero_body.py and round_glutes()
+    # seat: anatomical gluteal volume (the MakeHuman target places it on the gluteus maximus)
     "buttocks/buttocks-volume-incr": 0.60, "hip/hip-scale-depth-incr": 0.10,
-    # legs: a long line; soft athletic upper thighs, slim but not weak knees and calves
+    # legs: a long line; upper thighs full enough to balance the seat (the reference's thigh is 0.10-0.12 H
+    # deep in profile), quadriceps and hamstrings, a gradual taper to natural knees and calves
     "legs/upperlegs-height-incr": 0.15, "legs/lowerlegs-height-incr": 0.10,
-    "legs/l-upperleg-fat-decr": 0.20, "legs/r-upperleg-fat-decr": 0.20,
-    "legs/l-lowerleg-fat-decr": 0.35, "legs/r-lowerleg-fat-decr": 0.35, "legs/measure-knee-circ-decr": 0.35,
-    "legs/measure-calf-circ-decr": 0.10,
+    "legs/l-upperleg-muscle-incr": 0.40, "legs/r-upperleg-muscle-incr": 0.40,
+    "legs/l-upperleg-scale-depth-incr": 0.30, "legs/r-upperleg-scale-depth-incr": 0.30,
+    "legs/measure-thigh-circ-incr": 0.20,
+    "legs/l-lowerleg-fat-decr": 0.20, "legs/r-lowerleg-fat-decr": 0.20,
     # bust: natural, medium and lifted
     "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.80,
     # upper body: slightly narrower shoulders, lean arms
@@ -202,10 +204,33 @@ def aim_pose_bone(rig, n, direction):
     bpy.context.view_layer.update()
 
 
+# Posture (owner 09.11: "a hunched dog; stand her straight: a straight back, a curve in the small of the
+# back, the head over the shoulders, as in the reference"). MakeHuman's neutral stance has the neck and head
+# forward and the upper back rounded. Degrees about the body's X axis at each bone's head, applied root
+# to tip in the pose before it is baked, so the joints (and the agent rig built from them) move with the mesh;
+# negative = the part above leans back. The head is turned back by the sum so the gaze stays level.
+POSTURE = {"spine01": -1.0, "neck01": -12.0, "neck02": -4.0}   # neck and head only: the pelvis and lumbar stay neutral (owner brief: no posture to fake the seat)
+
+
+def lean_pose_bone(rig, n, deg):
+    pb = rig.pose.bones[n]
+    bpy.context.view_layer.update()
+    M = pb.matrix.copy()
+    t = M.translation.copy()
+    pb.matrix = Matrix.Translation(t) @ Matrix.Rotation(math.radians(deg), 4, "X") @ Matrix.Translation(-t) @ M
+    bpy.context.view_layer.update()
+
+
 def repose(bm, rig):
-    """Arms down to the agent stance, legs straight under the hips; the result becomes the rest mesh."""
+    """Upright posture, arms down to the agent stance, legs straight under the hips; the result becomes the
+    rest mesh."""
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode="POSE")
+    if COSTUME == "athletic":
+        for n in ("spine05", "spine04", "spine03", "spine02", "spine01", "neck01", "neck02", "neck03"):
+            if POSTURE.get(n):
+                lean_pose_bone(rig, n, POSTURE[n])
+        lean_pose_bone(rig, "head", -sum(POSTURE.values()))
     a = math.radians(ARM_DEG)
     for side, s in ((1, "L"), (-1, "R")):
         d = V((side * math.sin(a), 0.0, -math.cos(a)))
@@ -450,29 +475,38 @@ def make_eyes(eyes, k):
 
 # ===================================================================== stages
 
-def round_glutes(bm, dom, depth=0.006):
-    """A round seat without a shelf: each gluteus gets its own soft dome (narrow across, so the back
-    view reads two round forms), the push fades slowly downward into the back of the thigh and quickly
-    upward into the lower back, and the midline is eased in a little."""
-    import math as _m
-    H = max(v.co.z for v in bm.data.vertices)
-    zc = 0.555 * H                                     # a high seat (owner reference 09.11)
-    for v, d in zip(bm.data.vertices, dom):
-        if d not in ("pelvis", "spine", "thigh_L", "thigh_R"):
-            continue
-        p = v.co
-        if p.y <= 0.0:
-            continue
-        side = 1 if p.x > 0 else -1
-        sz = 0.080 if p.z > zc else 0.075                 # soft above (no shelf under the lower back), no low sag below
-        r2 = ((p.x - side * 0.068 * H / 1.75) / 0.058) ** 2 + ((p.z - zc) / sz) ** 2
-        w = _m.exp(-r2 * 1.4)
-        back = min(1.0, p.y / 0.08)
-        out = V((side * 0.35, 1.0, 0.0)).normalized()      # round to the sides as well as back
-        v.co += out * depth * w * back
-        v.co.z += 0.003 * w * back
-        cleft = _m.exp(-(p.x / 0.012) ** 2 - ((p.z - zc) / 0.08) ** 2)
-        v.co.y -= 0.003 * cleft * back
+def sculpt_body(bm, J):
+    """The anatomical volume pass (hero_anatomy.py) on the athletic body, and the editable body shape key:
+    iris_body_shape.blend holds the body before the pass as Basis and after it as BODY_FEM_TARGET."""
+    import json
+    me = bm.data
+    me.update()
+    H = max(v.co.z for v in me.vertices)
+    names = {g.index: g.name for g in bm.vertex_groups}
+    cos = [tuple(v.co) for v in me.vertices]
+    nrm = [tuple(v.normal) for v in me.vertices]
+    wts = [{names[g.group]: g.weight for g in v.groups} for v in me.vertices]
+    joints = {n: (list(h), list(t)) for n, (h, t) in J.items()}
+    off = A.offsets(cos, nrm, wts, joints, H)
+    off = A.smooth_field(off, [tuple(e.vertices) for e in me.edges])
+    for v, (dx, dy, dz) in zip(me.vertices, off):
+        v.co += V((dx, dy, dz))
+    # the editable shape key, in a copy of the body (the production body has no extra key)
+    tmp = bm.copy()
+    tmp.data = me.copy()
+    tmp.name = "body_shape"
+    bpy.context.scene.collection.objects.link(tmp)
+    tmp.shape_key_add(name="Basis", from_mix=False)
+    for v, c in zip(tmp.data.shape_keys.key_blocks["Basis"].data, cos):
+        v.co = V(c)
+    key = tmp.shape_key_add(name="BODY_FEM_TARGET", from_mix=False)
+    for v, c in zip(key.data, me.vertices):
+        v.co = c.co.copy()
+    key.value = 1.0
+    key.slider_max = 1.5
+    tmp["amounts"] = json.dumps(A.amounts())
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_body_shape.blend"), copy=True)
+    bpy.data.objects.remove(tmp)
 
 
 def stage_body():
@@ -508,40 +542,14 @@ def stage_body():
     mpfb_bones = {b.name for b in mrig.data.bones}
     bpy.data.objects.remove(mrig)
     bm.name = "body"
+    # the body before any sculpt, with its MPFB weights and the joints: the base for iterating on the sculpt
+    # (hero_anatomy.py) and the Basis of the editable body shape key
+    import json
+    bm["joints"] = json.dumps({n: [list(h), list(t)] for n, (h, t) in J.items()})
+    os.makedirs(OUT, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_body_pre.blend"), copy=True)
     if COSTUME == "athletic":                      # the athletic body (owner reference: owner_athletic_body_reference.py)
-        names = {g.index: g.name for g in bm.vertex_groups}
-        dom0 = []
-        for v in bm.data.vertices:
-            acc = {}
-            for g in v.groups:
-                n = names[g.group]
-                if n in mpfb_bones:
-                    b = agent_bone(n)
-                    acc[b] = acc.get(b, 0.0) + g.weight
-            dom0.append(max(acc, key=acc.get) if acc else "")
-        # (the owner's ring-profile script is a proportion reference only: no direct fit)
-        # the silhouette pass (hero_body.py, from the owner's shape-key script), then the two seat domes
-        cos = [tuple(v.co) for v in bm.data.vertices]
-        off = B.offsets(cos, dom0)
-        edges = [tuple(e.vertices) for e in bm.data.edges]
-        off = B.smooth_field(off, edges)
-        fill = B.smooth_field(B.inner_fill(cos, dom0), edges, iters=6)   # blends into the crotch (no fold)
-        off = [(a[0] + b[0], a[1] + b[1], a[2] + b[2]) for a, b in zip(off, fill)]
-        for v, (dx, dy, dz) in zip(bm.data.vertices, off):
-            v.co += V((dx, dy, dz))
-        round_glutes(bm, dom0)
-        # one round arc in profile (owner: "keep the roundness"), fitted after every other change
-        prof = B.smooth_field(B.seat_profile([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=4)
-        for v, (dx, dy, dz) in zip(bm.data.vertices, prof):
-            v.co += V((dx, dy, dz))
-        # each cheek a firm convex dome (owner: "no square corners")
-        dome = B.smooth_field(B.cheek_domes([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=3)
-        for v, (dx, dy, dz) in zip(bm.data.vertices, dome):
-            v.co += V((dx, dy, dz))
-        # no hollow where the lower seat turns into the side of the hip (owner)
-        side = B.smooth_field(B.side_fill([tuple(v.co) for v in bm.data.vertices], dom0), edges, iters=4)
-        for v, (dx, dy, dz) in zip(bm.data.vertices, side):
-            v.co += V((dx, dy, dz))
+        sculpt_body(bm, J)
         # soften the nipple detail so tight tops and the jacket lie smoothly over the bust
         b = bmesh.new()
         b.from_mesh(bm.data)
@@ -1369,6 +1377,8 @@ def stage_full(shade=True, size=2048, samples=16):
         sc = bpy.context.scene
         sc.render.engine = "CYCLES"
         try:
+            if os.environ.get("IRIS_CPU"):              # bake on the CPU (a GPU whose driver fails Cycles bakes)
+                raise RuntimeError("IRIS_CPU set")
             prefs = bpy.context.preferences.addons["cycles"].preferences
             prefs.compute_device_type = "OPTIX"
             prefs.get_devices()
@@ -1376,6 +1386,7 @@ def stage_full(shade=True, size=2048, samples=16):
                 d.use = True
             sc.cycles.device = "GPU"
         except Exception as e:
+            sc.cycles.device = "CPU"
             log("gpu", e)
         if not sc.world:
             sc.world = bpy.data.worlds.new("w")

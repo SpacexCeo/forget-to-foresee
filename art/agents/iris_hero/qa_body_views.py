@@ -111,7 +111,7 @@ key = light("key", 2.6, (50, 0, 0))
 rim = light("rim", 1.4, (70, 0, 0))
 
 # the body faces -Y; yaw 0 = camera behind the body (back view)
-VIEWS = {"back": 0.0, "back34": 35.0, "side": 90.0, "front": 180.0}
+VIEWS = {"back": 0.0, "back34": 45.0, "side": 90.0, "front": 180.0}   # back34: the brief's 45-degree rear three-quarter
 for name, yaw in VIEWS.items():
     a = math.radians(yaw)
     d = V((math.sin(a), math.cos(a), 0.0))                     # from the body towards the camera
