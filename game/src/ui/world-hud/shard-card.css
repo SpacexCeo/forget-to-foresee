@@ -1,0 +1,107 @@
+/* Shard NFT card + "Minted on NEAR testnet" toast (shard-card.js). World HUD palette and type (tokens.css) with
+   literal fallbacks, because the Memories panel lives outside .wh-root. Motion: --mo-* tokens (src/ui/motion);
+   reduced motion turns the drawing into a short fade. */
+.sh-section, .sh-toast-region, .sh-note {
+  --sh-gold: var(--wh-gold, #e4c272);
+  --sh-gold-text: var(--wh-gold-text, #f6df9b);
+  --sh-frame: var(--wh-frame-soft, rgba(196, 186, 156, .45));
+  --sh-dim: var(--wh-frame-dim, rgba(196, 186, 156, .28));
+  --sh-text: #ece6d6;
+  --sh-muted: rgba(236, 230, 214, .68);
+  --sh-serif: var(--wh-font, "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif);
+  --sh-sans: var(--wh-font-body, "Source Sans 3", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif);
+  --sh-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sh-ease: var(--mo-ease-out, cubic-bezier(.16, 1, .3, 1));
+  --sh-draw: var(--mo-seal, 640ms);
+}
+.sh-section { margin-top: 14px; }
+.sh-section > h3 { font-family: var(--sh-serif); color: var(--sh-gold-text); font-weight: 400; letter-spacing: .02em; }
+.sh-note { margin-top: 12px; font: 500 .82rem/1.4 var(--sh-sans); color: var(--sh-muted); font-style: italic; }
+
+.sh-card {
+  display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+  margin: 10px 0; padding: 12px;
+  background: rgba(8, 18, 21, .55);
+  border: 1px solid var(--sh-frame); border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
+  color: var(--sh-text); font-family: var(--sh-sans);
+  animation: sh-rise var(--mo-slow, 320ms) var(--sh-ease) both;
+}
+.sh-body { min-width: 0; }
+.sh-kicker { margin: 0 0 2px; font: 600 .68rem/1.3 var(--sh-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--sh-gold); }
+.sh-title { margin: 0 0 6px; font: 400 1.05rem/1.25 var(--sh-serif); color: var(--sh-gold-text); }
+.sh-facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 6px; font-size: .8rem; }
+.sh-facts dt { color: var(--sh-muted); }
+.sh-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.sh-mono { font-family: var(--sh-mono); font-size: .78rem; }
+.sh-bio { margin: 0 0 6px; font-size: .84rem; line-height: 1.45; color: var(--sh-text); }
+.sh-seal { margin: 0 0 8px; font-size: .8rem; }
+.sh-seal__link { color: var(--sh-gold-text); text-decoration: none; border-bottom: 1px dotted var(--sh-gold); }
+.sh-links { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 0; }
+.sh-btn {
+  display: inline-block; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--wh-pill-border, rgba(214, 206, 180, .62)); background: rgba(20, 26, 24, .7);
+  color: var(--sh-gold-text); font: 600 .78rem/1.3 var(--sh-sans); text-decoration: none;
+  transition: background var(--mo-fast, 120ms) var(--sh-ease);
+}
+.sh-btn:hover, .sh-btn:focus-visible { background: rgba(92, 86, 56, .6); }
+.sh-verified { font-size: .72rem; color: var(--sh-muted); }
+.sh-card a:focus-visible, .sh-toast a:focus-visible, .sh-toast button:focus-visible { outline: 2px solid var(--sh-gold); outline-offset: 2px; }
+
+/* the ink ring: strokes draw in one after another (pathLength=1 on every stroke) */
+.sh-ink { width: var(--sh-size, 132px); height: var(--sh-size, 132px); flex: none; border-radius: 8px; overflow: hidden; border: 1px solid var(--sh-dim); background: #141a1f; }
+.sh-ink svg, .sh-ink img { display: block; width: 100%; height: 100%; }
+.sh-ink svg circle, .sh-ink svg line {
+  stroke-dasharray: 1;
+  animation: sh-draw var(--sh-draw) var(--sh-ease) both;
+  animation-delay: calc(var(--sh-i, 0) * 45ms + 120ms);
+}
+.sh-ink svg circle[fill]:not([fill="none"]) { stroke-dasharray: none; animation-name: sh-fade; }
+.sh-ink svg text { animation: sh-fade var(--mo-slow, 320ms) var(--sh-ease) 700ms both; }
+/* once drawn, a re-inserted card (the panel re-renders per observation) does not draw again */
+.sh-drawn, .sh-drawn svg * { animation: none !important; }
+@keyframes sh-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes sh-fade { from { opacity: 0; } }
+@keyframes sh-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes sh-in { from { opacity: 0; transform: translate(-50%, -10px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* the toast: centred under the top edge, clear of the status card (left) and the Signs panel (right) */
+.sh-toast-region { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+.sh-toast {
+  position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 18px);
+  transform: translate(-50%, 0);
+  display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+  width: min(420px, calc(100vw - 32px)); padding: 10px 12px;
+  background: var(--wh-panel-bg, linear-gradient(180deg, rgba(11, 21, 23, .92), rgba(36, 44, 41, .88)));
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid; border-color: var(--wh-toast-border-quad, rgba(236, 222, 186, .9) rgba(214, 200, 164, .6) rgba(196, 186, 156, .4));
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  color: var(--sh-text); font-family: var(--sh-sans);
+  pointer-events: auto;
+  animation: sh-in var(--mo-slow, 320ms) var(--mo-ease-emphasized, cubic-bezier(.2, .9, .2, 1)) both;
+  transition: opacity var(--mo-base, 200ms) var(--sh-ease), transform var(--mo-base, 200ms) var(--sh-ease);
+}
+.sh-toast--out { opacity: 0; transform: translate(-50%, -8px); }
+.sh-toast .sh-ink { border-radius: 50%; }
+.sh-toast__body { min-width: 0; }
+.sh-toast__title { margin: 0; font: 400 1rem/1.25 var(--sh-serif); color: var(--sh-gold-text); letter-spacing: .02em; }
+.sh-toast__text { margin: 2px 0 4px; font-size: .82rem; line-height: 1.35; }
+.sh-toast__links { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0; font-size: .76rem; }
+.sh-toast__links .sh-mono { color: var(--sh-muted); font-size: .72rem; }
+.sh-toast__link { color: var(--sh-gold-text); background: none; border: 0; padding: 0; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; border-bottom: 1px dotted var(--sh-gold); }
+.sh-toast__close { align-self: start; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--sh-dim); background: transparent; color: var(--sh-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+
+/* phones (the world HUD's mobile layout): the toast sits under the top bar; the card stacks */
+@media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
+  .sh-toast { top: calc(env(safe-area-inset-top, 0px) + 64px); }
+  .sh-card { grid-template-columns: 1fr; justify-items: center; text-align: left; }
+  .sh-card .sh-body { justify-self: stretch; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-card { animation: sh-fade 160ms linear both; }
+  .sh-toast { animation: sh-fade 160ms linear both; }
+  .sh-ink svg circle, .sh-ink svg line, .sh-ink svg text { animation: sh-fade 160ms linear both; }
+}
+html[data-motion="reduce"] .sh-card, html[data-motion="reduce"] .sh-toast,
+html[data-motion="reduce"] .sh-ink svg circle, html[data-motion="reduce"] .sh-ink svg line, html[data-motion="reduce"] .sh-ink svg text { animation: sh-fade 160ms linear both; }
