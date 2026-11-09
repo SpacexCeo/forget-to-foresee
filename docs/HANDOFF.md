@@ -1,5 +1,7 @@
 # Handoff: state on 09.11.2026, 07:10 Kyiv (lead session)
 
+**09.11 morning, later:** `season-commit` is live on testnet (`ftf-seasons.testnet`, owner `ftf-coordinator.testnet`; judge season `793f6c05e89839f2` committed, 15/15 reveals, ash key; record in `contracts/season-commit/target/judge-deploy/` on worker M's machine). M (`session_01QfMhgExsbgGFqMUCWf9EVh`, `claude/near-live`) is finishing the HUD badge, `near-deployment.js` and memory-shard; the owner approved merging it to main when green. PR #7 merged to main (tap-through chapter films, submission drafts). The submission package for the owner: `docs/submission/x-post.md` and `apply-form.md` (owner fields still TODO; requestId kept outside the repo). Iris hero rework (owner reference + Blender blockout in `art/agents/reference/` on `claude/iris-hero`) went to the GPU art session (`session_01QfMhgDiqET9W6zwun44weJ`).
+
 **Morning 09.11:** `main` = PR #6 (overnight integration, 493 tests, production-build headless checks clean), live on Pages. The hourly lead loop is off; the juror R2 keeps its :15/:45 schedule and starts scorecards at 15:00 UTC. Videos (demo, trailer, 3 clips) were sent to the owner and live on `claude/laughing-thompson-dc7r09` docs/media, not in `main`.
 
 ## Live state (read this first if the session or the usage limit ended)
