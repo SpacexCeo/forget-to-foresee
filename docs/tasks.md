@@ -54,4 +54,5 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 |---|---|---|
 | Merge reviewed branches into an integration branch, then `main` with owner OK | lead | doing |
 | README real/mock table kept current | lead | ongoing |
-| Demo video, tag `hackathon-submission` | owner + lead | todo |
+| Jury video: tasks V1–V8 in `docs/handoff/jury-video-tasks.md` (plates round 4 next) | GPU session + lead + owner | doing |
+| Tag `hackathon-submission` | owner + lead | todo |
