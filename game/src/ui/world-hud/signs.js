@@ -93,6 +93,7 @@ function card(i18n, s, mobile, onAction) {
   plain,
   s.stats.length ? stats : null,
   anchor,
+  near, // its own row under the anchor: the head row has a fixed height and the label is long in every locale
   ic(icon('chevron-slim'), 'wh-sign__chev'));
 }
 

@@ -330,3 +330,49 @@ test('watcher: a new season in the same watcher resets the leaves and asks again
   assert.equal(w.status.state, 'mismatch');
   assert.equal(w.leaf(a.index), null);
 });
+
+test('watcher: an observation that arrives while the season check is in flight still gets its leaf badge', async () => {
+  // Real play: the first observation (no reveals yet) starts get_season; the reveal of trial 3 arrives before the
+  // RPC answers. The leaf must be checked as soon as the season is confirmed, without waiting for another action.
+  const { tr, obs, index, proof } = await playedJudgeSession();
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const views = { get_season: () => SEASON_VIEW, get_revealed_leaf: (a) => (a.index === index ? { leaf: proof.leaf } : null) };
+  const inner = fakeRpc({ views });
+  const fetch = async (url, init) => { if (JSON.parse(init.body).params.method_name === 'get_season') await gate; return inner(url, init); };
+  const w = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, fetch });
+  w.observe({ ...obs, proofs: [], chronicle: [] }); // before any reveal
+  w.observe(obs); // the reveal arrives while get_season is pending
+  release();
+  await w.settle();
+  assert.equal(w.status.state, 'committed');
+  assert.equal(w.leaf(index).state, 'on-chain', 'checked from the latest observation');
+  assert.equal(w.leafBadge(index).labelKey, 'wh.sign.near.leaf');
+});
+
+test('watcher: a leaf that failed on the network is asked again after retryMs (and on a timer when autoRetry is on)', async () => {
+  const { tr, obs, index, proof } = await playedJudgeSession();
+  let leafUp = false, t = 1000;
+  const views = { get_season: () => SEASON_VIEW, get_revealed_leaf: () => ({ leaf: proof.leaf }) };
+  const inner = fakeRpc({ views });
+  const fetch = async (url, init) => { if (!leafUp && JSON.parse(init.body).params.method_name === 'get_revealed_leaf') throw new TypeError('timeout'); return inner(url, init); };
+  const w = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, fetch, retryMs: 500, now: () => t, autoRetry: false });
+  w.observe(obs); await w.settle();
+  assert.equal(w.status.state, 'committed');
+  assert.equal(w.leaf(index).state, 'offline');
+  assert.equal(w.leafBadge(index), null);
+  leafUp = true;
+  w.observe(obs); await w.settle();
+  assert.equal(w.leaf(index).state, 'offline', 'not before retryMs');
+  t += 600; w.observe(obs); await w.settle();
+  assert.equal(w.leaf(index).state, 'on-chain', 'asked again after retryMs');
+  // autoRetry: a real timer re-observes the latest observation without any new player action.
+  leafUp = false;
+  const w2 = createNearWatcher({ season: () => obs.season, proof: tr.proof, deployment: DEPLOY, fetch, retryMs: 30, autoRetry: true });
+  w2.observe(obs); await w2.settle();
+  assert.equal(w2.leaf(index).state, 'offline');
+  leafUp = true;
+  await new Promise((r) => setTimeout(r, 80)); await w2.settle();
+  assert.equal(w2.leaf(index).state, 'on-chain', 'retried by the timer');
+  w2.destroy();
+});

@@ -1,8 +1,8 @@
 # Memory shards as NEP-171 NFTs
 
-Status (08.11): contract built and tested, game side ready, **not deployed and no shard minted**: the testnet transactions
-wait for the owner's permission path, like `season-commit` (`docs/near.md`). The game shows the shard badge only once
-`game/src/net/near-deployment.js` records a shard collection (`shardContractId`, `shardMints`).
+Status (09.11): **deployed on testnet** as [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet), the judge playthrough's
+three shards minted (`793f6c05e89839f2-7`, `-10`, `-15`; hashes in `docs/near.md`). The game's read-only client and
+badge model read it; no HUD element shows shard NFTs yet (request 9 in `docs/collab-requests.md`).
 
 ## Design
 
