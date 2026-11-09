@@ -24,7 +24,7 @@ python tools/near-social/post.py --account you.near --image shot.png --text-file
 ```
 
 Then follow the printed steps: upload the image, wait for `indexed: true` and for the FastFS URL
-to answer 200, send the post, and open `https://near.social/you.near/<post id>`.
+to answer 200, send the post, and open `https://near.social/you.near/post/<post id>`.
 
 ## Etiquette from the guide
 

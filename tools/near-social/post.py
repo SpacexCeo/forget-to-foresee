@@ -131,7 +131,7 @@ def main() -> None:
     print()
     print("# 4. Confirm and open")
     print("curl -s https://api2.near.social/v1/tx/<TX_HASH_2>")
-    print(f"https://near.social/{args.account}/{post_id}")
+    print(f"https://near.social/{args.account}/post/{post_id}")
 
 
 if __name__ == "__main__":
