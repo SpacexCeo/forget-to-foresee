@@ -50,3 +50,18 @@ Separated elements for compositing (AI-generated; RGBA with transparency except 
   material art (Salt crystal spires, Iris violet petals, Frost snowflake over peaks). The names are baked in: use
   the art, but render the names and tempers programmatically (mask or repaint the baked text). Moss, Ash and
   Amber cards are still to come.
+
+Five more owner layers arrived only inside a message (not saved as files; described for reproduction):
+- **Ash card:** same tilted gold-edged frame; black ground with drifting grey smoke and fine white ash flecks;
+  "Ash / WARY".
+- **Amber card:** dark stone ground split by glowing amber cracks radiating from a large glowing amber orb;
+  "Amber / GREEDY".
+- **Event A badge:** a violet-iridescent crystal shard inside a thin gold ring of dots, a violet silk ribbon sweeping
+  around, a small silk spool; "Frost wins the shard from Iris for" (serif) and a large gold italic "13" over
+  spaced caps "SILK", a small four-point star below.
+- **Event B badge:** a dark pill with a gold edge and violet threads holding the italic quote "It is a weapon",
+  joined to a dark disc with a gold reticle (four-point stars on a ring, dashed inner ring) pierced by a long pale
+  crystal blade.
+- **Event C badge:** a gold dashed line through a large gold italic "16" over "SILK", breaking at the right end in a
+  gold crack spark; "Ash cheats Amber for" above; a silk spool and violet ribbon at lower left; thin gold arcs.
+Moss is still to come.
