@@ -41,7 +41,7 @@ BLEND_PATH = os.path.join(HERE, f"{ASSET}.blend")
 STATS_PATH = os.path.join(QA_DIR, "build-stats.json")
 
 TEX_SIZE = 2048               # 0.4 m object: 2048 already gives ~0.2 mm per texel
-BAKE_SIZE = 4096
+BAKE_SIZE = int(os.environ.get("FTF_BAKE_SIZE", "4096"))   # 2048 for a CPU-only build (same texture size)
 RUNTIME_TRI_BUDGET = 16000
 INSPECT_TRI_BUDGET = 60000
 MASTER_EDGE = 0.0005
@@ -56,8 +56,11 @@ FRACTURE_TIP = ((0.0, 0.0, -0.050), (-0.72, -0.32, 0.62))   # offset from apex, 
 
 COL_CRYSTAL = (0.74, 0.84, 0.80)
 COL_FROST = (0.86, 0.90, 0.88)
-COL_VEIN = (0.86, 0.82, 0.72)       # pale ivory, faintly warm: a memory chosen by a human
-ATTENUATION = (0.66, 0.84, 0.78)
+COL_FLAKE = (0.86, 0.92, 0.94)      # cold white internal fractures (review 07.11: not ivory roots)
+GLOW_FLAKE = (0.70, 0.80, 0.86)     # a faint self-light so the fractures catch the eye through the glass
+ATTENUATION = (0.80, 0.90, 0.88)    # milky nacre-frost: light enough that a 40 cm ray is not extinguished
+ATTENUATION_DISTANCE = 0.75
+THICKNESS = 0.03
 
 
 def lean(z):
@@ -199,6 +202,55 @@ def grow_veins(planes, rng, primaries, step, max_steps, branch_p, margin):
     return lines
 
 
+def fracture_planes(rng, count):
+    """Two or three oblique cleavage planes through the crystal body (point, normal)."""
+    out = []
+    for z in (0.12, 0.20, 0.28)[:count]:
+        az = rng.uniform(0, 2 * math.pi)
+        tilt = math.radians(rng.uniform(38, 62))
+        n = Vector((math.sin(tilt) * math.cos(az), math.sin(tilt) * math.sin(az), math.cos(tilt)))
+        out.append((lean(z) + Vector((rng.uniform(-0.006, 0.006), rng.uniform(-0.006, 0.006), z)), n))
+    return out
+
+
+def fracture_flakes(name, planes, cleave, rng, per_plane, mat, col):
+    """Planar fracture flakes (review 07.11 fix 2): thin, slightly dished irregular polygons 0.5-1.5 cm
+    wide lying on a few cleavage planes, every vertex inside the crystal. Opaque on purpose: three.js
+    draws only opaque objects into the transmission pass, so a blended flake would vanish behind the glass."""
+    bm = bmesh.new()
+    made = 0
+    for (c, n), count in zip(cleave, per_plane):
+        u = n.orthogonal().normalized()
+        v = n.cross(u).normalized()
+        placed, tries = 0, 0
+        while placed < count and tries < count * 60:
+            tries += 1
+            a, b = rng.uniform(-0.034, 0.034), rng.uniform(-0.034, 0.034)
+            p = c + u * a + v * b
+            if not inside(planes, p, 0.005):
+                continue
+            R = rng.uniform(0.0025, 0.0075)
+            k = rng.choice((5, 6, 7))
+            ring = []
+            for i in range(k):
+                ang = 2 * math.pi * i / k + rng.uniform(-0.25, 0.25)
+                r = R * rng.uniform(0.55, 1.0)
+                q = p + (u * math.cos(ang) + v * math.sin(ang)) * r + n * rng.uniform(-0.0004, 0.0004)
+                while not inside(planes, q, 0.0015) and r > 0.0008:
+                    r *= 0.7
+                    q = p + (u * math.cos(ang) + v * math.sin(ang)) * r
+                ring.append(bm.verts.new(q))
+            mid = bm.verts.new(p + n * 0.0006)                       # a shallow conchoidal dish
+            for i in range(k):
+                bm.faces.new((mid, ring[i], ring[(i + 1) % k]))
+            placed += 1
+        made += placed
+    o = P.bm_object(name, bm, mat, col)
+    P.finish_shading(o, angle=80)
+    P.smart_uv(o, margin=0.002)
+    return o, made
+
+
 def veins_object(name, lines, sides, mat, col):
     bm = bmesh.new()
     for pts, r0, r1 in lines:
@@ -211,11 +263,14 @@ def veins_object(name, lines, sides, mat, col):
 def clasp_parts(col, m_bronze):
     parts = []
     bm = bmesh.new()
-    P.revolve(bm, [(0.060, 0.000), (0.0625, 0.004), (0.0625, 0.010), (0.059, 0.0145),
-                   (0.052, 0.0165), (0.049, 0.021), (0.0495, 0.031), (0.0535, 0.035),
-                   (0.0535, 0.039), (0.050, 0.0425), (0.044, 0.0435), (0.040, 0.041),
-                   (0.039, 0.030), (0.036, 0.017)],
-              48, cap_bottom=True, cap_top=True)
+    # two steps (review 07.11 fix 6: a bound relic, not a trophy), a bevelled inner rim
+    P.revolve(bm, [(0.0545, 0.000), (0.0565, 0.003), (0.0565, 0.011), (0.0535, 0.0145),
+                   (0.0505, 0.017), (0.0505, 0.036), (0.0525, 0.039), (0.0510, 0.0425),
+                   (0.0480, 0.0440), (0.0458, 0.0428), (0.0450, 0.0395), (0.0440, 0.030),
+                   (0.0420, 0.022)],
+              48, cap_bottom=True, cap_top=False)
+    # resin floor 1 cm under the rim: no black pit, no fan in sight
+    P.revolve(bm, [(0.0425, 0.0215), (0.0425, 0.0330)], 48, cap_top=True)
     o = P.bm_object("clasp_ring", bm, m_bronze, col)
     P.finish_shading(o, angle=35)
     parts.append(o)
@@ -235,7 +290,7 @@ def clasp_parts(col, m_bronze):
             nrm.normalize()
             bow = 0.0045 * math.sin(math.pi * min(t * 1.15, 1.0)) - 0.0015 * t ** 4
             pts.append(mid + nrm * (0.0032 + bow) + Vector((0, 0, 0)))
-        P.tube(bm, pts, lambda t: 0.0038 - 0.0019 * t, 6)
+        P.tube(bm, pts, lambda t: 0.0034 - 0.0022 * t, 3, twist=math.pi / 2)    # a wedge: 6 mm base, 2 mm tip
     o = P.bm_object("clasp_claws", bm, m_bronze, col)
     P.finish_shading(o, angle=50)
     parts.append(o)
@@ -299,7 +354,7 @@ def crystal_master_material(name, fracture, impact):
     streak_map.inputs["Scale"].default_value = (1.0, 1.0, 0.04)
     streaks = k.noise(streak_map.outputs["Vector"], 260.0, 2.0, 0.5)
     c = k.mix(k.maprange(n, 0.3, 0.7, 0.0, 0.25), COL_CRYSTAL, (0.68, 0.80, 0.76))
-    rough = k.math("ADD", k.maprange(n, 0.35, 0.65, 0.04, 0.09),
+    rough = k.math("ADD", k.maprange(n, 0.35, 0.65, 0.15, 0.22),
                    k.maprange(streaks, 0.62, 0.70, 0.0, 0.10), clamp=True)
     bump_h = k.math("ADD", k.math("MULTIPLY", k.noise(co, 140.0, 2.0, 0.4), 0.4),
                     k.maprange(streaks, 0.62, 0.70, 0.0, -0.5))
@@ -310,15 +365,15 @@ def crystal_final_material(name, tex, normal_img):
     m = P.textured_material(name, tex["base"], tex["orm"], normal_img, use_ao=False)
     nt = m.node_tree
     b = nt.nodes["Principled BSDF"]
-    b.inputs["Transmission Weight"].default_value = 1.0
+    b.inputs["Transmission Weight"].default_value = 0.82      # a frosted crystal, not clear glass (review fix 3)
     b.inputs["IOR"].default_value = 1.50
     vol = nt.nodes.new("ShaderNodeVolumeAbsorption")
     vol.inputs["Color"].default_value = (*ATTENUATION, 1.0)
-    vol.inputs["Density"].default_value = 1.0 / 0.14          # attenuation distance 0.14 m
+    vol.inputs["Density"].default_value = 1.0 / ATTENUATION_DISTANCE
     nt.links.new(vol.outputs["Volume"], nt.nodes["Material Output"].inputs["Volume"])
     grp = nt.nodes.new("ShaderNodeGroup")
     grp.node_tree = P.gltf_output_group()
-    grp.inputs["Thickness"].default_value = 0.06
+    grp.inputs["Thickness"].default_value = THICKNESS
     return m
 
 
@@ -351,15 +406,15 @@ def stage_build():
     m_facet = P.mat_simple("tmp_facet", COL_CRYSTAL, 0.05)
     m_frac = P.mat_simple("tmp_fracture", COL_FROST, 0.35)
     m_bronze = P.mat_simple("tmp_bronze", P.COL_BRONZE)
-    m_vein = P.mat_simple("M_Shard_Veins", COL_VEIN, rough=0.38)
+    m_vein = P.mat_simple("M_Shard_Fractures", COL_FLAKE, rough=0.16, emit=GLOW_FLAKE, emit_strength=0.25)
 
     bm, impact = main_crystal_bm(rng)
     crystal = P.bm_object("crystal", bm, m_facet, work)
     crystal.data.materials.append(m_frac)
     splinters = []
     for base, direction, length, radius, broken in (
-            (Vector((0.022, 0.024, 0.024)), (0.42, 0.50, 1.0), 0.150, 0.0125, False),
-            (Vector((-0.020, -0.026, 0.022)), (-0.55, -0.42, 1.0), 0.105, 0.0105, True)):
+            (Vector((0.016, 0.017, 0.020)), (0.40, 0.46, 1.0), 0.160, 0.0110, False),   # start inside the cup
+            (Vector((-0.015, -0.018, 0.020)), (-0.50, -0.38, 1.0), 0.115, 0.0095, True)):
         o = P.bm_object(f"splinter_{len(splinters)}", splinter_bm(rng, base, direction, length,
                                                                   radius, broken), m_facet, work)
         o.data.materials.append(m_frac)
@@ -378,8 +433,12 @@ def stage_build():
             P.log(f"part {o.name}: {nm} non-manifold edges")
     body = P.join([crystal] + splinters + clasp, f"{ASSET}_body")
     stats["ngons_triangulated"] = P.triangulate_ngons(body)
-    lines = grow_veins(planes, rng, primaries=9, step=0.0042, max_steps=110, branch_p=0.10, margin=0.0028)
-    veins = veins_object("veins", lines, 3, m_vein, work)
+    cleave = fracture_planes(random.Random(2211), 3)
+    flakes, stats["flakes"] = fracture_flakes("flakes", planes, cleave, random.Random(2212), (11, 13, 10), m_vein, work)
+    lines = grow_veins(planes, random.Random(2213), primaries=4, step=0.0042, max_steps=60, branch_p=0.04,
+                       margin=0.0028)[:12]                       # a few hairlines, not roots (review fix 7)
+    hair = veins_object("veins", [(pts, 0.00042, 0.00012) for pts, _, _ in lines], 3, m_vein, work)
+    veins = P.join([flakes, hair], "veins")
     stats["vein_lines"] = len(lines)
     stats["runtime_body_triangles"] = P.mesh_tris(body)
 
@@ -398,7 +457,7 @@ def stage_build():
     passes, n = P.densify(master, MASTER_EDGE)
     stats["master_densify"] = {"max_edge_m": MASTER_EDGE, "passes": passes, "triangles": n}
     P.groups_from_materials(master)
-    P.add_displace(master, "facet_wave", "CLOUDS", 0.020, 0.00012, "tmp_facet", noise_depth=2)
+    # no facet_wave: 0.12 mm of displacement only terraced the 8-bit normal map (review 07.11 fix 1)
     P.add_displace(master, "fracture_conch", "CLOUDS", 0.004, 0.00045, "tmp_fracture", noise_depth=3)
     P.add_displace(master, "bronze_hammer", "CLOUDS", 0.006, 0.00035, "tmp_bronze", noise_depth=2)
     h_facet, kit_f = crystal_master_material("H_Facet", False, impact)
@@ -428,9 +487,11 @@ def stage_build():
     P.finish_shading(bronze_i, angle=40)
     insp = P.join([glass, bronze_i], f"{ASSET}_inspect_body")
     P.triangulate_ngons(insp)
-    lines_i = grow_veins(planes, random.Random(1107), primaries=12, step=0.0032, max_steps=140,
-                         branch_p=0.12, margin=0.0025)
-    veins_i = veins_object("veins_i", lines_i, 5, m_vein, work)
+    flakes_i, _ = fracture_flakes("flakes_i", planes, cleave, random.Random(2212), (11, 13, 10), m_vein, work)
+    lines_i = grow_veins(planes, random.Random(2213), primaries=7, step=0.0032, max_steps=90,
+                         branch_p=0.06, margin=0.0025)[:24]
+    hair_i = veins_object("veins_i", [(pts, 0.00040, 0.00010) for pts, _, _ in lines_i], 4, m_vein, work)
+    veins_i = P.join([flakes_i, hair_i], "veins_i")
     P.smart_uv(veins_i, margin=0.002)
     stats["vein_lines_inspect"] = len(lines_i)
 
@@ -440,13 +501,14 @@ def stage_build():
     for o in (body, insp):
         for i, sl in enumerate(o.material_slots):
             sl.material = P.bake_target_material(f"bake_{o.name}_{i}")
+    cpu = stats["cycles_device"] == "CPU"                       # a CPU build: fewer samples, same maps
     imgs, stats["bakes"] = P.run_bakes(sc, master, kits, (
-        ("normal", "NORMAL", body, 64, "bsdf"),
-        ("normal_inspect", "NORMAL", insp, 64, "bsdf"),
-        ("color", "EMIT", body, 32, "color"),
-        ("rough", "EMIT", body, 32, "rough"),
-        ("metal", "EMIT", body, 16, "metal"),
-        ("ao", "AO", body, 1024, "bsdf")), BAKE_SIZE, cage=0.003, ray=0.008)
+        ("normal", "NORMAL", body, 16 if cpu else 64, "bsdf"),
+        ("normal_inspect", "NORMAL", insp, 16 if cpu else 64, "bsdf"),
+        ("color", "EMIT", body, 8 if cpu else 32, "color"),
+        ("rough", "EMIT", body, 8 if cpu else 32, "rough"),
+        ("metal", "EMIT", body, 4 if cpu else 16, "metal"),
+        ("ao", "AO", body, 128 if cpu else 1024, "bsdf")), BAKE_SIZE, cage=0.003, ray=0.008)
 
     clock.start("textures")
     paths, stats["texture_files"] = P.write_textures(imgs, BAKE_SIZE, TEX_SIZE, TEX_DIR, ASSET, REPO)
@@ -460,6 +522,8 @@ def stage_build():
     m_brz = P.textured_material("M_Shard_Bronze", tex["base"], tex["orm"], tex["normal"])
     m_brz_i = P.textured_material("M_Shard_Bronze_Inspect", tex["base"], tex["orm"],
                                   tex["normal_inspect"])
+    for m in (m_brz, m_brz_i):                                  # closed meshes: single-sided (review fix 8)
+        m.use_backface_culling = True
     table = {"tmp_facet": m_crys, "tmp_fracture": m_crys, "tmp_bronze": m_brz}
     table_i = {"tmp_facet": m_crys_i, "tmp_fracture": m_crys_i, "tmp_bronze": m_brz_i}
     for o, orig, tb in ((body, body_slots, table), (insp, insp_slots, table_i)):
@@ -542,7 +606,9 @@ CLOSE_VIEWS = {
 }
 
 
-def stage_render(res=1600, samples=768):
+def stage_render(res=None, samples=None):
+    res = res or int(os.environ.get("QA_RES", "1600"))              # 900 / 64 for a CPU check
+    samples = samples or int(os.environ.get("QA_SAMPLES", "768"))
     clock = P.StageClock()
     clock.start("qa_renders")
     sc = P.reset_scene()

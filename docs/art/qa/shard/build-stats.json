@@ -4,145 +4,147 @@
   "stages": [
     {
       "stage": "model_runtime",
-      "seconds": 0.19
+      "seconds": 3.64
     },
     {
       "stage": "uv_unwrap",
-      "seconds": 1.01
+      "seconds": 3.32
     },
     {
       "stage": "master_highpoly",
-      "seconds": 19.12
+      "seconds": 47.5
     },
     {
       "stage": "inspect_mesh",
-      "seconds": 1.43
+      "seconds": 7.31
     },
     {
       "stage": "bake_gpu",
-      "seconds": 48.49
+      "seconds": 632.56
     },
     {
       "stage": "textures",
-      "seconds": 6.9
+      "seconds": 41.73
     },
     {
       "stage": "materials",
-      "seconds": 0.01
+      "seconds": 0.03
     },
     {
       "stage": "assemble_export",
-      "seconds": 0.18
+      "seconds": 0.42
     }
   ],
-  "cycles_device": "OPTIX",
-  "ngons_triangulated": 8,
-  "vein_lines": 54,
-  "runtime_body_triangles": 1990,
+  "cycles_device": "CPU",
+  "ngons_triangulated": 2,
+  "flakes": 34,
+  "vein_lines": 12,
+  "runtime_body_triangles": 1738,
   "uv": {
     "texture_size": 2048,
     "texel_density_px_per_m": {
-      "median": 4071.9,
-      "p10": 3834.0,
-      "p90": 4182.3,
-      "coefficient_of_variation": 0.034
+      "median": 4328.5,
+      "p10": 4098.1,
+      "p90": 4463.7,
+      "coefficient_of_variation": 0.032
     },
     "uv_anisotropy": {
-      "median": 1.058,
-      "p95": 1.218,
+      "median": 1.066,
+      "p95": 1.226,
       "share_over_1_5": 0.0
     },
-    "triangles_measured": 1990
+    "triangles_measured": 1738,
+    "uv_fill": 0.6114
   },
   "master_densify": {
     "max_edge_m": 0.0005,
-    "passes": 8,
-    "triangles": 4480658
+    "passes": 7,
+    "triangles": 4422546
   },
-  "master_triangles": 4480658,
-  "vein_lines_inspect": 138,
+  "master_triangles": 4422546,
+  "vein_lines_inspect": 24,
   "bakes": {
     "normal": {
-      "seconds": 8.88,
-      "samples": 64,
-      "size": 4096
+      "seconds": 82.47,
+      "samples": 16,
+      "size": 2048
     },
     "normal_inspect": {
-      "seconds": 8.76,
-      "samples": 64,
-      "size": 4096
+      "seconds": 79.63,
+      "samples": 16,
+      "size": 2048
     },
     "color": {
-      "seconds": 8.93,
-      "samples": 32,
-      "size": 4096
+      "seconds": 41.45,
+      "samples": 8,
+      "size": 2048
     },
     "rough": {
-      "seconds": 8.66,
-      "samples": 32,
-      "size": 4096
+      "seconds": 42.71,
+      "samples": 8,
+      "size": 2048
     },
     "metal": {
-      "seconds": 3.79,
-      "samples": 16,
-      "size": 4096
+      "seconds": 18.35,
+      "samples": 4,
+      "size": 2048
     },
     "ao": {
-      "seconds": 9.4,
-      "samples": 1024,
-      "size": 4096
+      "seconds": 367.89,
+      "samples": 128,
+      "size": 2048
     }
   },
   "texture_files": {
     "base": {
       "file": "art/shard/textures/shard_basecolor.jpg",
-      "bytes": 651170
+      "bytes": 629516
     },
     "orm": {
       "file": "art/shard/textures/shard_orm.jpg",
-      "bytes": 1518217
+      "bytes": 1720665
     },
     "normal": {
       "file": "art/shard/textures/shard_normal.png",
-      "bytes": 2141705
+      "bytes": 3323515
     },
     "normal_inspect": {
       "file": "art/shard/textures/shard_inspect_normal.png",
-      "bytes": 2170982
+      "bytes": 3377042
     }
   },
   "ngons_triangulated_export": {
     "shard": 0,
-    "shard_inspect": 276
+    "shard_inspect": 0
   },
-  "runtime_triangles": 7048,
-  "inspect_triangles": 30853,
+  "runtime_triangles": 3153,
+  "inspect_triangles": 10302,
   "collision_triangles": {
     "shard_hull_col": 56
   },
   "materials_runtime": [
     "M_Shard_Crystal",
     "M_Shard_Bronze",
-    "M_Shard_Veins"
+    "M_Shard_Fractures"
   ],
   "materials_inspect": [
     "M_Shard_Crystal_Inspect",
     "M_Shard_Bronze_Inspect",
-    "M_Shard_Veins"
+    "M_Shard_Fractures"
   ],
   "bounds_blender_zup": {
     "min": [
-      -0.0634,
-      -0.0625,
+      -0.0608,
+      -0.0565,
       0.0
     ],
     "max": [
-      0.0733,
-      0.0884,
+      0.0697,
+      0.0813,
       0.3978
     ]
   },
-  "glb_bytes": 8743848,
+  "glb_bytes": 9791088,
   "glb": {
     "extensionsUsed": [
       "KHR_materials_transmission",
@@ -159,16 +161,16 @@
         "name": "M_Shard_Crystal",
         "extensions": {
           "KHR_materials_transmission": {
-            "transmissionFactor": 1
+            "transmissionFactor": 0.8199999928474426
           },
           "KHR_materials_volume": {
             "attenuationColor": [
-              0.6600000262260437,
-              0.8399999737739563,
-              0.7799999713897705
+              0.800000011920929,
+              0.8999999761581421,
+              0.8799999952316284
             ],
-            "attenuationDistance": 0.14000000133514406,
-            "thicknessFactor": 0.05999999865889549
+            "attenuationDistance": 0.7499999776482589,
+            "thicknessFactor": 0.029999999329447746
           }
         }
       },
@@ -177,23 +179,23 @@
         "extensions": {}
       },
       {
-        "name": "M_Shard_Veins",
+        "name": "M_Shard_Fractures",
         "extensions": {}
       },
       {
         "name": "M_Shard_Crystal_Inspect",
         "extensions": {
           "KHR_materials_transmission": {
-            "transmissionFactor": 1
+            "transmissionFactor": 0.8199999928474426
           },
           "KHR_materials_volume": {
             "attenuationColor": [
-              0.6600000262260437,
-              0.8399999737739563,
-              0.7799999713897705
+              0.800000011920929,
+              0.8999999761581421,
+              0.8799999952316284
             ],
-            "attenuationDistance": 0.14000000133514406,
-            "thicknessFactor": 0.05999999865889549
+            "attenuationDistance": 0.7499999776482589,
+            "thicknessFactor": 0.029999999329447746
           }
         }
       },
@@ -206,22 +208,22 @@
       {
         "name": "shard_normal",
         "mime": "image/png",
-        "bytes": 2141705
+        "bytes": 3323515
       },
       {
         "name": "shard_basecolor",
         "mime": "image/jpeg",
-        "bytes": 651170
+        "bytes": 629516
       },
       {
         "name": "shard_orm",
         "mime": "image/jpeg",
-        "bytes": 1518217
+        "bytes": 1720665
       },
       {
         "name": "shard_inspect_normal",
         "mime": "image/png",
-        "bytes": 2170982
+        "bytes": 3377042
       }
     ]
   },

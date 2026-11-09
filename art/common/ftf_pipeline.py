@@ -761,11 +761,16 @@ def to_srgb(c):
     return np.where(c <= 0.0031308, 12.92 * c, 1.055 * np.power(c, 1 / 2.4) - 0.055)
 
 
-def save_rgb(arr01, path, quality=None):
-    """Save a bottom-up float RGB array (Blender pixel order) with Pillow."""
+def save_rgb(arr01, path, quality=None, dither=False):
+    """Save a bottom-up float RGB array (Blender pixel order) with Pillow. dither=True adds +-0.5 LSB
+    triangular noise before rounding, so near-flat normal maps do not terrace into 8-bit bands."""
     import numpy as np
     from PIL import Image
-    u8 = (np.clip(arr01, 0, 1)[::-1] * 255.0 + 0.5).astype(np.uint8)
+    a = np.clip(arr01, 0, 1)[::-1] * 255.0
+    if dither:
+        rng = np.random.default_rng(7)
+        a = a + (rng.random(a.shape) - rng.random(a.shape)) * 0.5
+    u8 = np.clip(a + 0.5, 0, 255).astype(np.uint8)
     im = Image.fromarray(u8, "RGB")
     if path.endswith(".jpg"):
         im.save(path, quality=quality or 92, subsampling=0, optimize=True)
@@ -794,7 +799,7 @@ def write_textures(imgs, bake_size, tex_size, tex_dir, prefix, repo):
         n /= np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-6)
         tag = key[len("normal"):].strip("_")
         fname = f"{prefix}_{tag}_normal.png" if tag else f"{prefix}_normal.png"
-        paths[key] = save_rgb(n * 0.5 + 0.5, os.path.join(tex_dir, fname))
+        paths[key] = save_rgb(n * 0.5 + 0.5, os.path.join(tex_dir, fname), dither=True)
     files = {k: {"file": os.path.relpath(v, repo).replace("\\", "/"), "bytes": os.path.getsize(v)}
              for k, v in paths.items()}
     return paths, files
