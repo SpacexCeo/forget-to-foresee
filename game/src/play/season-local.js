@@ -40,8 +40,10 @@ export function buildSeasonSection({ t, i18n, doc = globalThis.document, fixedSe
     el.textContent = '';
     const h = doc.createElement('h4');
     h.textContent = t('season.title');
+    h.setAttribute('style', 'margin: 0 0 4px');
     const note = doc.createElement('p');
     note.className = 'ftf-muted';
+    note.setAttribute('style', 'margin: 0 0 8px');
     note.textContent = t('season.local.note');
     el.append(h, note);
     const row = doc.createElement('div');
