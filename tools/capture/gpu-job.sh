@@ -61,6 +61,18 @@ if [ "${FTF_TEST:-}" = "1" ]; then
   echo "== test done: see $OUT/test/demo-1920x1080-ultra/archipelago.mp4, archipelago.json (renderer, secondsPerFrame) and the sample PNGs"; exit 0
 fi
 
+# 5a. FTF_FORMAT=<W>x<H>@<fps> (e.g. 3840x2160@30): one pass in that format only, then stop. With FTF_NO_LAYERS=1 the
+#     shots' depth-anchored data layers are left out (clean plates plus each frame's camera in <shot>.json) for the CPU
+#     layers pass (tools/capture/layers-pass.mjs); deliver the whole $OUT/work/<video>-<W>x<H>-ultra folder.
+if [ -n "${FTF_FORMAT:-}" ]; then
+  FW="${FTF_FORMAT%%x*}"; REST="${FTF_FORMAT#*x}"; FH="${REST%%@*}"; FF="${REST#*@}"
+  for v in "${VIDEOS[@]}"; do
+    echo "== $(date -u +%FT%TZ) $v ${FW}x${FH}@${FF} (FTF_NO_LAYERS=${FTF_NO_LAYERS:-0})"
+    (cd "$SRC" && node tools/capture/capture.mjs "$v" $GPU_FLAG --tier ultra --width "$FW" --height "$FH" --fps "$FF" --parallel 1 --resume --sample $((FF * 3)) --base "http://localhost:$PORT" --out "$OUT" --work "$OUT/work")
+  done
+  echo "== $(date -u +%FT%TZ) done"; ls -la "$OUT" "$OUT/work"/*; exit 0
+fi
+
 # 5. Render: 1080p60 ultra deliverables, then 4K60 masters (kept only if under 90 MB each).
 for v in "${VIDEOS[@]}"; do
   echo "== $(date -u +%FT%TZ) $v 1080p"

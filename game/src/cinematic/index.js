@@ -37,6 +37,7 @@ export function boot(name = 'shot', { fps } = {}) {
     /** Resets the shot clock to -preroll so capture can start after the setup moved the game. */
     rewind: (preroll = 0) => runner.rewind(preroll),
     camLog: () => runner.camLog.slice(),
+    layerLog: () => (runner.layerLog || []).slice(),
     state: () => runner.state(),
     cues: () => runner.cues.slice(),
     marks: () => runner.marks.slice(),

@@ -216,16 +216,20 @@ export class ShotRunner {
     this.shot = shot;
     this.t = -(shot.preroll ?? 0);
     this.frame = 0;
-    this.cues = []; this.marks = []; this.camLog = [];
+    this.cues = []; this.marks = []; this.camLog = []; this.layerLog = [];
     const cam = shot.camera;
     const list = Array.isArray(cam) ? cam : cam ? [{ from: 0, to: shot.duration, ...cam }] : [];
     // Segments may mix the game's own camera (`type: 'rig'`, pose null) with scripted moves; the latest one that has started wins.
-    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: c.type === 'track' ? this.trackPose(c) : compileCamera(c), spec: c }));
+    // `from` / `to` of a segment are times; a push camera's `from` is its start position (an array), which must not be
+    // read as the segment start (it was, so every push camera sat at its end pose from the first frame).
+    const time = (v, d) => (typeof v === 'number' ? v : d);
+    this.segments = list.map((c) => ({ from: time(c.from, 0), to: time(c.to, shot.duration), pose: c.type === 'track' ? this.trackPose(c) : compileCamera(c), spec: c }));
     this.pose = this.segments.some((s) => s.pose) ? true : null;
     this.actions = (shot.actions || []).map((a, i) => ({ ...a, id: i, done: false }));
     if (!this.overlay) this.overlay = createOverlay(document);
     this.overlay.set(shot.overlays || []);
-    if (shot.layers || this.layers) { if (!this.layers) this.layers = createLayers(document); this.layers.set(shot.layers || []); }
+    // With ?nolayers=1 (GPU plates for the CPU layers pass) the layers are not even mounted: the plate stays clean.
+    if ((shot.layers || this.layers) && new URLSearchParams(location.search).get('nolayers') !== '1') { if (!this.layers) this.layers = createLayers(document); this.layers.set(shot.layers || []); }
     this.setUi(shot.ui || 'game');
     for (const h of shot.hide || []) this.hide(h);
     this.attach();
@@ -443,7 +447,17 @@ export class ShotRunner {
     await this.clock.settle(3);
     this.wrapAudio();
     if (this.overlay) this.overlay.update(this.t);
-    if (this.layers && this.game) this.layers.update(this.t, (w) => this.project(w), (id) => this.targetOf(id));
+    const noLayers = new URLSearchParams(location.search).get('nolayers') === '1';
+    if (this.layers && this.game && !noLayers) this.layers.update(this.t, (w) => this.project(w), (id) => this.targetOf(id));
+    // The camera of every captured frame (view-projection, column-major) and the tracked heads: the CPU layers pass
+    // (tools/capture/layers-pass.mjs) redraws the layers from this record over clean GPU plates.
+    if (this.shot && this.shot.layers && this.renderOn && this.t >= 0 && this.game) {
+      const cam = this.game.rig.camera; cam.updateMatrixWorld();
+      const vp = new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).elements.map((v) => +v.toPrecision(9));
+      const ids = [...new Set(this.shot.layers.flatMap((l) => [l.target, l.aTarget, l.bTarget]).filter(Boolean))];
+      const targets = Object.fromEntries(ids.map((id) => [id, (this.targetOf(id) || {}).pos]).filter(([, p]) => p));
+      this.layerLog.push({ t: +this.t.toFixed(5), vp, targets });
+    }
     for (const h of this.hidden) this.hide(h); // models that streamed in since bring their labels/nameplates back
     if (this.renderOn && this.t >= 0) {
       const cam = this.game.rig.camera;
@@ -511,7 +525,7 @@ export class ShotRunner {
 
   /** Resets the shot clock to -preroll after the setup moved the game; cue logs restart from the live state. */
   rewind(preroll = 0) {
-    this.t = -preroll; this.frame = 0; this.cues = []; this.marks = []; this.camLog = [];
+    this.t = -preroll; this.frame = 0; this.cues = []; this.marks = []; this.camLog = []; this.layerLog = [];
     for (const a of this.actions) a.done = false;
     const p = this.play, o = p && p.session.obs;
     if (o) this.cues.push({ t: this.t, kind: 'tension', tension: o.season.tension });

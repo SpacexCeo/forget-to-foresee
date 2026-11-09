@@ -37,7 +37,7 @@ try {
     const errs = []; page.on('pageerror', (e) => errs.push(e.message));
     await page.goto(`${base}/cine/layers.html`, { waitUntil: 'load' });
     for (let k = 0; k < 200 && !(await page.evaluate(() => !!window.__lp)); k++) await new Promise((r) => setTimeout(r, 100));
-    await page.evaluate(([items, log]) => window.__lp.load(items, log), [shot.layers, res.layerLog]);
+    await page.evaluate(([items, log]) => window.__lp.load(items, log), [shot.layers, res.layerLog.slice(-res.frames)]);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
     const alpha = join(outDir, shot.name + '.layers.mkv');

@@ -75,7 +75,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
   const wall0 = Date.now();
   const result = { shot: shot.name, width, height, fps, tier, frames: 0, consoleErrors, hashes: {}, timings: {} };
   try {
-    const q = new URLSearchParams({ cinematic: shot.name, tier, tex: 'full', profile: 'desktop', fps: String(fps), ...(shot.url || {}) });
+    const q = new URLSearchParams({ cinematic: shot.name, tier, tex: 'full', profile: 'desktop', fps: String(fps), ...(shot.url || {}), ...(process.env.FTF_NO_LAYERS === '1' ? { nolayers: '1' } : {}) });
     const url = baseUrl + '/?' + q.toString();
     log(`[${shot.name}] open ${url}`);
     arm('page load', 420_000);
@@ -181,8 +181,8 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     await pipe.close();
     result.timings.captureMs = Date.now() - t;
     result.secondsPerFrame = result.timings.captureMs / 1000 / Math.max(1, total);
-    const [cues, marks, camLog, errors, state] = await page.evaluate(() => [window.__ftfCinematic.cues(), window.__ftfCinematic.marks(), window.__ftfCinematic.camLog(), window.__ftfCinematic.errors(), window.__ftfCinematic.state()]);
-    Object.assign(result, { cues, marks, camLog, errors, finalState: state, wallMs: Date.now() - wall0 });
+    const [cues, marks, camLog, errors, state, layerLog] = await page.evaluate(() => [window.__ftfCinematic.cues(), window.__ftfCinematic.marks(), window.__ftfCinematic.camLog(), window.__ftfCinematic.errors(), window.__ftfCinematic.state(), window.__ftfCinematic.layerLog ? window.__ftfCinematic.layerLog() : []]);
+    Object.assign(result, { cues, marks, camLog, errors, finalState: state, layerLog, wallMs: Date.now() - wall0 });
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify(result));
     log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages, luma ${result.check.minMean.toFixed(0)}–${result.check.maxMean.toFixed(0)} jumps ${result.check.jumps} (max ${result.check.maxJump.toFixed(1)}) edge-black ${(result.check.maxEdgeBlack * 100).toFixed(0)}% retries ${result.check.retries}`);
     return result;
