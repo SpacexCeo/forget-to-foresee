@@ -145,6 +145,12 @@ test('minted: the token exists, sha256(extra) = state hash, root = committed roo
   assert.equal(m.links.seasonCommit, `https://testnet.nearblocks.io/txns/${NEAR_DEPLOYMENT.seasons[SEASON].commitTx}`);
   assert.deepEqual(m.traits.trust.map((e) => e.clan), ['salt', 'ash', 'moss', 'amber', 'frost']);
   assert.deepEqual(log.map((x) => x.method), ['get_agent', 'get_season']);
+  // the Heir is chosen after the season ends: a card minted before the choice still matches this playthrough
+  for (const heir of [true, false]) {
+    const after = await loadAgentCard({ obs: { ...JUDGE.obs, season: { ...JUDGE.obs.season, heir } }, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-agents.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
+    assert.equal(after.state, 'minted', `heir ${heir} chosen after the mint`);
+    assert.equal(after.heir, null, 'the card shows what was minted');
+  }
   // a configurable account id
   const other = await loadAgentCard({ obs: JUDGE.obs, deployment: { ...DEPLOY, agentContractId: 'ftf-agents.lambada_eth.testnet' }, fetch: fakeRpc({ 'ftf-agents.lambada_eth.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
   assert.equal(other.state, 'minted');

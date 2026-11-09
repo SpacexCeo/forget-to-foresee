@@ -46,7 +46,7 @@ In the game, the card's states are exactly these (`loadAgentCard`):
 
 | State | When | The card says |
 |---|---|---|
-| `minted` | the token exists, its hash is sha256 of its data, its root equals the committed root and the local one, and this browser's end state hashes the same | "Minted on NEAR testnet · verified", the link to nearblocks |
+| `minted` | the token exists, its hash is sha256 of its data, its root equals the committed root and the local one, and this browser's end state hashes the same (the Heir is chosen after the season: a card minted with `heir: null` is compared with the local heir left out) | "Minted on NEAR testnet · verified", the link to nearblocks |
 | `mismatch`, reason `playthrough` | the token is real and checked, but the judge played differently (any extra stake changes silk, trust or the dictionary) | "On NEAR testnet · the recorded judge playthrough", both hashes |
 | `mismatch`, reason `state-hash`, `root` or `invalid` | a check failed | "Does not match · not verified" and why |
 | `not-minted` | no contract or no token yet (before the owner's mint), or a live season (`judgeOnly`) | "Not minted yet" with a preview, or "agent cards exist for the judge season only"; a live season makes no RPC call |

@@ -304,7 +304,8 @@ function cardFrom(state, { deployment, contractId, tokenId, owner, links }) {
  * Loads the agent card of this season and checks it. `obs` is the season's end observation.
  * @returns {Promise<null|object>} null while the season is still running; otherwise a model with
  *   state: 'minted'     the token exists, its state hash is sha256 of its data, its root equals the committed season,
- *                       and this browser's own end-of-season state hashes to the same value;
+ *                       and this browser's own end-of-season state hashes to the same value (a card minted
+ *                       before the Heir choice, heir null, is compared with the local state's heir set to null);
  *          'not-minted' no deployment for this season (judgeOnly), no contract yet, or no token yet; traits and
  *                       biography are this browser's own state (a preview of what would be minted);
  *          'offline'    the RPC did not answer (or the season record could not be read): nothing verified;
@@ -361,6 +362,9 @@ export async function loadAgentCard({ obs, deployment = NEAR_DEPLOYMENT, contrac
   }
   const committedRoot = onChainSeason ? onChainSeason.schedule_root : null;
   if (!committedRoot || committedRoot !== chain.schedule_root || chain.schedule_root !== season.merkleRoot) return base('mismatch', { ...common, committedRoot, reason: 'root' }, chain, owner);
-  if (localHash !== chainHash) return base('mismatch', { ...common, committedRoot, reason: 'playthrough' }, chain, owner);
+  // A card minted before the Heir choice records `heir: null`; the choice comes after the season, so it does not make
+  // this browser's season a different one.
+  const compareHash = local && chain.heir === null && local.heir !== null ? agentStateHash({ ...local, heir: null }) : localHash;
+  if (compareHash !== chainHash) return base('mismatch', { ...common, committedRoot, reason: 'playthrough' }, chain, owner);
   return base('minted', { ...common, committedRoot }, chain, owner);
 }
