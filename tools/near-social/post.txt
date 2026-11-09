@@ -1,0 +1,12 @@
+Forget to Foresee: a strategy game where the future costs a memory. Built by Lambada_eth at NEAR Hackathon 2026.
+
+Shells hang over a floating archipelago. Six AI clans, each an agent with a wallet and a memory, read the signs the Guests draw, stake silk on where the next Gift lands, trade words and keep or break trust. To see the future early, your agent Iris forgets a memory forever, and the forgotten memory goes to auction as a shard.
+
+The whole season is generated before the first move and committed to a Merkle root. Every revealed event carries a proof: the browser checks it, and our season-commit contract on NEAR testnet (ftf-seasons.testnet) verifies the same leaf on-chain. No token, no paid entry: the economy is closed in-game silk.
+
+Play the judge demo in your browser (desktop, WebGL 2):
+https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk
+
+Code and proofs: https://github.com/SpacexCeo/forget-to-foresee
+
+#near #nearhackathon #gamedev #onchain
