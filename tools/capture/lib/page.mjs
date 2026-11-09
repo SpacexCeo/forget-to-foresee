@@ -5,7 +5,8 @@
 // exactly one frame), screenshots over CDP and pipes the PNG into ffmpeg. Nothing reads the wall clock, so two renders
 // give the same frames and a slow machine cannot drop or repeat one: no flicker by construction. The same luma check as
 // the in-engine path guards against a bad frame. A shot with `under` keeps an alpha channel: the page is composited over
-// another rendered shot (the browser half of the split screen) by capture.mjs.
+// another rendered shot (the browser half of the split screen) by capture.mjs; a shot with `plate` is laid over a full-frame
+// in-engine plate (owner 09.11: real footage behind the cards, never a drawn background).
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -43,7 +44,7 @@ export async function renderPage({ shot, baseUrl, outDir, opts }) {
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleErrors.push(m.type() + ': ' + m.text().slice(0, 300)); });
   page.on('pageerror', (e) => consoleErrors.push('pageerror: ' + e.message));
   const result = { shot: shot.name, kind: 'page', width, height, fps, frames: 0, consoleErrors, hashes: {}, errors: [], camLog: [], timings: {} };
-  const alpha = !!shot.under;
+  const alpha = !!shot.under || !!shot.plate;   // composited over another shot (a box or the whole frame)
   const file = join(outDir, shot.name + (alpha ? '.mkv' : '.mp4'));
   let pipe = null;
   const wall0 = Date.now();

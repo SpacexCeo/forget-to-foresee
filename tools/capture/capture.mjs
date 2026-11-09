@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { renderShot } from './lib/browser.mjs';
 import { renderPage } from './lib/page.mjs';
-import { compositeUnder, lumaCheck } from './lib/compose.mjs';
+import { compositeUnder, compositePlate, lumaCheck } from './lib/compose.mjs';
 import { mixVideo } from './lib/mix.mjs';
 import { toSrt, toAss, checkCaptions } from './lib/subtitles.mjs';
 import { assemble, timeline, ffprobe } from './lib/ffmpeg.mjs';
@@ -143,12 +143,20 @@ async function main() {
     });
     results.push(...list);
   } finally { server.stop(); }
-  // Page shots with `under` were rendered with alpha: composite each over its (hidden) source shot.
-  for (const s of shots) if (s.page && s.under) {
-    const src = shots.find((x) => x.name === s.under.shot);
-    if (!src) throw new Error(`${s.name}: under-shot ${s.under.shot} is not in this render`);
-    compositeUnder({ page: join(work, s.name + '.mkv'), under: join(work, src.name + '.mp4'), box: s.under, width, height, fps, duration: s.duration, out: join(work, s.name + '.mp4') });
-    log(`[${s.name}] composited over ${src.name}`);
+  // Page shots with `plate` or `under` were rendered with alpha: composite each over its (hidden) source shot(s).
+  for (const s of shots) if (s.page && (s.plate || s.under)) {
+    const src = s.under ? shots.find((x) => x.name === s.under.shot) : null;
+    if (s.under && !src) throw new Error(`${s.name}: under-shot ${s.under.shot} is not in this render`);
+    if (s.plate) {
+      const pl = shots.find((x) => x.name === s.plate.shot);
+      if (!pl) throw new Error(`${s.name}: plate shot ${s.plate.shot} is not in this render`);
+      compositePlate({ page: join(work, s.name + '.mkv'), plate: join(work, pl.name + '.mp4'), under: src ? join(work, src.name + '.mp4') : null, box: s.under || null,
+        width, height, fps, duration: s.duration, out: join(work, s.name + '.mp4'), from: s.plate.from ?? 0, slow: s.plate.slow ?? 1, dim: s.plate.dim ?? 0.58, blur: s.plate.blur ?? 2 });
+      log(`[${s.name}] composited over plate ${pl.name}${src ? ` and ${src.name}` : ''}`);
+    } else {
+      compositeUnder({ page: join(work, s.name + '.mkv'), under: join(work, src.name + '.mp4'), box: s.under, width, height, fps, duration: s.duration, out: join(work, s.name + '.mp4') });
+      log(`[${s.name}] composited over ${src.name}`);
+    }
   }
   for (const r of results) if (r && r.shot) { const f = join(work, r.shot + '.mp4'); if (existsSync(f)) { r.luma = lumaCheck(f, { allowJumps: shots.find((x) => x.name === r.shot)?.allowJumps ?? 3 }); if (!r.luma.ok) throw new Error(`luma check failed on ${r.shot}: ${JSON.stringify(r.luma)}`); } }
   if (args.shots) { log('partial render finished (no assembly): ' + results.map((r) => `${r.shot} ${r.frames}f`).join(', ')); writeFileSync(join(work, 'partial.json'), JSON.stringify(results, null, 1)); return; }

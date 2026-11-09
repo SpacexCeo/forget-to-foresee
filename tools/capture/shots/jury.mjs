@@ -3,7 +3,17 @@
 // the sign decoded, the shard, the agents, the API split screen, the season, the rewards, the NFT, the backend diagram,
 // the end card) that draw only real data (tools/capture/jury-data.mjs). Every line of text stays under 3 words per second
 // and on screen for at least 1.5 s (`reading`, enforced by --check), at 64 px inside X's mobile safe area.
+// v4 (owner 09.11 evening): the cards and diagrams stay, but behind every motion-graphics scene a real in-engine plate
+// plays (dimmed, never a drawn background). The plates are the cinematic test's shots (jury-test.mjs), rendered here as
+// hidden shots and, where a scene is longer than its plate, slowed with motion interpolation (`plate.slow`).
 import { JUDGE_URL, WALK_URL, BEAUTY_HIDE, WALK, IN_SHELL, IRIS_AT_GLASS, BEHIND_IRIS, guestSign, faceCam, fadeIn } from './common.mjs';
+import TEST from './jury-test.mjs';
+
+/** A hidden full-frame plate: a cinematic-test shot without its data layers and fades (the vignette stays). */
+const plateShot = (n) => { const t = TEST.shots.find((x) => x.name === n); if (!t) throw new Error('no test shot ' + n); return { ...t, name: 'plate-' + n, hidden: true, layers: [], overlays: (t.overlays || []).filter((o) => o.kind === 'vignette') }; };
+const PLATES = ['fly-in', 'clans-back', 'clans-front', 'conflict', 'shard-macro', 'token', 'proof'].map(plateShot);
+/** The plate under a page: which hidden shot, from which second, slowed how much (1 = real time), dimmed how much. */
+const over = (shot, { from = 0, slow = 1, dim = 0.58, blur = 2 } = {}) => ({ plate: { shot: 'plate-' + shot, from, slow, dim, blur } });
 
 const FRAME = [{ kind: 'vignette', amount: 0.4 }];
 /** A caption in the jury style; *text* is gold. */
@@ -24,7 +34,7 @@ const STAKE = {
 
 export default {
   title: 'Forget to Foresee: jury video (60 s)',
-  width: 1920, height: 1080, fps: 60,
+  width: 1920, height: 1080, fps: 30,   // 30 fps: the plates of the cinematic test are 30 fps (4K30 on the GPU)
   reading: { maxWps: 3, minHold: 1.5 },
   music: { gain: 1.0, fadeOut: 1.2 },
   output: { crf: 16, preset: 'slow', grain: 0 },
@@ -45,45 +55,46 @@ export default {
       camera: { type: 'push', from: [0.6, 303.8, -2.0], look: [0, 303.95, -10.75], dist1: 5.6, fov: [38, 34], ease: 'outSine', minHeight: 290 },
       actions: [guestSign(7.5)], overlays: [...FRAME],
     },
-    page('decode', 4.5, [music(0, 38), cue(0.1, 'guest_arc', 0.6), ...[0.9, 1.32, 1.74, 2.16].map((t) => cue(t, 'ui_click', 0.5)), cue(3.1, 'ui_notify', 0.6), cue(3.6, 'ui_confirm', 0.8)]),
+    page('decode', 4.5, [music(0, 38), cue(0.1, 'guest_arc', 0.6), ...[0.9, 1.32, 1.74, 2.16].map((t) => cue(t, 'ui_click', 0.5)), cue(3.1, 'ui_notify', 0.6), cue(3.6, 'ui_confirm', 0.8)], over('fly-in', { slow: 1.5 })),
     // PILLAR I · the agents (10.5–24.5)
-    page('pillar-agents', 2.0, [music(0, 45), cue(0.1, 'guest_arc', 0.6)]),
+    page('pillar-agents', 2.0, [music(0, 45), cue(0.1, 'guest_arc', 0.6)], over('conflict', { dim: 0.6 })),
     { // 12.5–14.0 · a clan agent up close (the round-5 faces)
       name: 'face-moss', duration: 1.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
       setup: [{ do: 'frames', n: 90 }], camera: faceCam('moss', 0.25),
       actions: [music(0, 50)], overlays: [...FRAME],
     },
-    page('agents', 6.0, [cue(1.0, 'bid_tick_2', 0.7), cue(1.9, 'ui_notify', 0.5), cue(3.0, 'ui_error', 0.7)]),
-    page('api', 4.5, [music(0, 52), cue(0.4, 'ui_click', 0.4), cue(1.2, 'anchor_plant', 0.8)], { under: { shot: 'api-browser', x: 60, y: 350, w: 880, h: 495 } }),
+    page('agents', 6.0, [cue(1.0, 'bid_tick_2', 0.7), cue(1.9, 'ui_notify', 0.5), cue(3.0, 'ui_error', 0.7)], over('conflict', { slow: 2 })),
+    page('api', 4.5, [music(0, 52), cue(0.4, 'ui_click', 0.4), cue(1.2, 'anchor_plant', 0.8)], { under: { shot: 'api-browser', x: 60, y: 350, w: 880, h: 495 }, ...over('clans-back', { slow: 3, dim: 0.6 }) }),
     STAKE,
     // PILLAR II · the memory shard (24.5–37.5)
-    page('pillar-nft', 2.0, [music(0, 40), cue(0.1, 'memory_dissolve', 0.6)]),
+    page('pillar-nft', 2.0, [music(0, 40), cue(0.1, 'memory_dissolve', 0.6)], over('shard-macro', { dim: 0.6 })),
     { // 26.5–29.0 · the walking judge path at trial 4: Memories, "Forget it for a vision", the vision arrives
       name: 'forget', duration: 2.5, url: WALK_URL, ui: 'game',
       setup: [...WALK.staked, ...WALK.trial4, { do: 'key', code: 'KeyM' }, { do: 'frames', n: 12 }],
       actions: [{ at: 0.0, do: 'rig', dist: 9, yaw: 0.4 }, { at: 0.35, do: 'forget', kind: 'call' }, music(0, 46)],
       overlays: [caption('Forget a memory forever…', 0.15, 2.45)],
     },
-    page('shard', 3.0, [cue(0.55, 'memory_dissolve', 0.9), cue(1.0, 'vision_whoosh', 0.7), cue(2.1, 'bid_tick_1', 0.7)]),
-    page('nft', 5.5, [music(0, 40), cue(0.1, 'vision_whoosh', 0.6), cue(1.9, 'ui_confirm', 0.5)]),
+    page('shard', 3.0, [cue(0.55, 'memory_dissolve', 0.9), cue(1.0, 'vision_whoosh', 0.7), cue(2.1, 'bid_tick_1', 0.7)], over('token')),
+    page('nft', 5.5, [music(0, 40), cue(0.1, 'vision_whoosh', 0.6), cue(1.9, 'ui_confirm', 0.5)], over('shard-macro', { slow: 2 })),
     // the season that holds them: sealed, tense, decided by a vote (37.5–57.0)
-    page('season', 3.5, [music(0, 66), cue(0.3, 'gift_chime', 0.5), cue(2.3, 'storm_crack', 0.6)]),
+    page('season', 3.5, [music(0, 66), cue(0.3, 'gift_chime', 0.5), cue(2.3, 'storm_crack', 0.6)], over('proof')),
     { // 41.0–43.0 · trial 13: the giants loom at the glass, the mist churns
       name: 'crisis', duration: 2.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: IN_SHELL,
       camera: { type: 'push', from: [-1.2, 302.4, 9.5], look: [0, 304.6, -10.7], dist1: 15.0, fov: [44, 40], roll: [0, -0.02], ease: 'inOutSine', minHeight: 290 },
       actions: [{ at: 0.0, do: 'guests', seed: 'trailer', cue: 'crisis', warp: 2.5 }, music(0, 92), cue(0.0, 'guest_spike', 0.9)],
       overlays: [...FRAME, caption('*Trial 13* · The crisis', 0.15, 1.95)],
     },
-    page('ash', 4.0, [cue(0.45, 'storm_crack', 0.8), cue(1.7, 'vision_whoosh', 0.5), cue(2.35, 'gift_chime', 0.7), music(2.35, 70)]),
+    page('ash', 4.0, [cue(0.45, 'storm_crack', 0.8), cue(1.7, 'vision_whoosh', 0.5), cue(2.35, 'gift_chime', 0.7), music(2.35, 70)], over('conflict', { from: 1.0, slow: 2 })),
     { // 47.0–49.0 · before the vote: every Guest faces the visitor
       name: 'vote', duration: 2.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
       setup: [...IN_SHELL, ...IRIS_AT_GLASS], camera: BEHIND_IRIS,
       actions: [{ at: 0.0, do: 'guests', seed: 'trailer', cue: 'vote', warp: 7.5 }, music(0, 45), cue(0.0, 'guest_call', 0.8)],
       overlays: [...FRAME, caption('Trial 17: *Gift or Weapon?*', 0.15, 1.95)],
     },
-    page('rewards', 4.5, [music(0, 40), cue(0.6, 'gift_chime', 0.6), cue(1.2, 'storm_crack', 0.5), ...[2.4, 2.54, 2.68, 2.82].map((t, i) => cue(t, `vote_stone_${(i % 3) + 1}`, 0.7))]),
-    page('backend', 3.5, [music(0, 30), cue(1.55, 'ui_notify', 0.5), cue(1.95, 'ui_confirm', 0.6)]),
-    page('end', 3.0, [music(0, 8, 0.6), cue(0.0, 'sting_survived', 0.8)]),
+    page('rewards', 4.5, [music(0, 40), cue(0.6, 'gift_chime', 0.6), cue(1.2, 'storm_crack', 0.5), ...[2.4, 2.54, 2.68, 2.82].map((t, i) => cue(t, `vote_stone_${(i % 3) + 1}`, 0.7))], over('clans-front', { slow: 3 })),
+    page('backend', 3.5, [music(0, 30), cue(1.55, 'ui_notify', 0.5), cue(1.95, 'ui_confirm', 0.6)], over('token', { slow: 2, from: 0.5 })),
+    page('end', 3.0, [music(0, 8, 0.6), cue(0.0, 'sting_survived', 0.8)], over('fly-in', { from: 1.5, slow: 2, dim: 0.55 })),
+    ...PLATES,
   ],
   // The SRT (players, X): the same lines the picture shows, at the same times.
   captions: [

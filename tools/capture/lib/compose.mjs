@@ -14,6 +14,30 @@ export function compositeUnder({ page, under, box, width, height, fps, duration,
     '-c:v', 'libx264', '-preset', 'faster', '-crf', '6', '-r', String(fps), out], { stdio: ['ignore', 'inherit', 'inherit'] });
 }
 
+/**
+ * A page rendered with alpha over a full-frame in-engine plate (owner 09.11: the cards and diagrams stay, a real
+ * screencast plays behind them). The plate is trimmed from `from`, held on its last frame if it is shorter than the
+ * page (`slow` > 1 plays it slower with motion interpolation), scaled to the frame, dimmed by `dim` (luma scale, 1 = untouched) and softened by `blur` px; an optional
+ * `under` box (the split screen) is laid on it before the page.
+ */
+export function compositePlate({ page, plate, under = null, box = null, width, height, fps, duration, out, from = 0, slow = 1, dim = 0.58, blur = 2 }) {
+  const soft = blur > 0 ? `,boxblur=${blur}:1` : '';
+  // slow > 1: the plate plays slower, with motion-interpolated in-between frames (no duplicated frames, no judder)
+  const pace = slow !== 1 ? `setpts=${slow}*PTS,minterpolate=fps=${fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,` : `fps=${fps},`;
+  let filter = `[1:v]trim=start=${from},setpts=PTS-STARTPTS,${pace}tpad=stop_mode=clone:stop_duration=${duration},trim=duration=${duration},` +
+    `scale=${width}:${height}:flags=lanczos,lutyuv=y=val*${dim}${soft}[bg];`;
+  let last = 'bg';
+  if (under && box) {
+    const { x, y, w, h, from: uf = 0 } = box;
+    filter += `[2:v]trim=start=${uf}:duration=${duration},setpts=PTS-STARTPTS,scale=${w}:${h}:flags=lanczos[u];[bg][u]overlay=${x}:${y}:shortest=1[b];`;
+    last = 'b';
+  }
+  filter += `[${last}][0:v]overlay=0:0:format=auto,format=yuv444p[v]`;
+  const inputs = ['-i', page, '-i', plate, ...(under && box ? ['-i', under] : [])];
+  execFileSync('ffmpeg', ['-y', '-v', 'error', ...inputs, '-filter_complex', filter, '-map', '[v]', '-t', String(duration),
+    '-c:v', 'libx264', '-preset', 'faster', '-crf', '6', '-r', String(fps), out], { stdio: ['ignore', 'inherit', 'inherit'] });
+}
+
 /** Per-frame mean luma (0..255) of a video file. */
 export function lumaSeries(file) {
   const txt = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-vf', 'scale=480:-2,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-', '-f', 'null', '-'], { maxBuffer: 256 << 20 }).toString();
