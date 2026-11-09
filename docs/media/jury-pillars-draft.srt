@@ -1,0 +1,28 @@
+1
+00:00:00,200 --> 00:00:01,950
+The Agents
+
+2
+00:00:02,200 --> 00:00:04,400
+Silk, a memory, a temper.
+
+3
+00:00:04,600 --> 00:00:07,950
+They trade… and break trust.
+
+4
+00:00:08,200 --> 00:00:09,950
+The Memory Shard
+
+5
+00:00:10,200 --> 00:00:12,950
+…to see the future first.
+
+6
+00:00:13,200 --> 00:00:15,900
+Bound to the sealed season.
+
+7
+00:00:16,100 --> 00:00:18,450
+Minted on NEAR testnet.
+

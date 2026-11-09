@@ -1,0 +1,44 @@
+session s-1a4b6a05a24b7d27 (rules v3, timeScale 1000)
+start season
+  walk to scroll
+tick 1: contribute fragment
+tick 1: end tick
+  walk to anchor_zone:1
+tick 2: anchor Shell 1 @ tick 3
+tick 2: end tick
+tick 3: anchor Shell 1 @ tick 4
+tick 3: end tick
+  walk to anchor_zone:4
+tick 4: anchor Shell 4 @ tick 5
+tick 4: end tick
+tick 5: end tick
+tick 6: end tick
+tick 7: end tick
+tick 8: end tick
+tick 9: end tick
+tick 10: end tick
+tick 11: end tick
+tick 12: end tick
+tick 13: end tick
+tick 14: end tick
+tick 15: end tick
+tick 16: end tick
+  walk to scroll
+vote: accept
+{
+  "sessionId": "s-1a4b6a05a24b7d27",
+  "outcome": "survived",
+  "tick": 17,
+  "silk": 145,
+  "stats": {
+    "commands": 26,
+    "rejected": 0,
+    "conflicts": 0,
+    "moves": 4,
+    "anchors": 3,
+    "contributed": true,
+    "voted": true
+  },
+  "historyLength": 26,
+  "firstProofVerified": true
+}

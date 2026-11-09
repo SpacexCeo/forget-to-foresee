@@ -75,16 +75,27 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
   const wall0 = Date.now();
   const result = { shot: shot.name, width, height, fps, tier, frames: 0, consoleErrors, hashes: {}, timings: {} };
   try {
-    const q = new URLSearchParams({ cinematic: shot.name, tier, tex: 'full', profile: 'desktop', fps: String(fps), ...(shot.url || {}) });
+    const q = new URLSearchParams({ cinematic: shot.name, tier, tex: 'full', profile: 'desktop', fps: String(fps), ...(shot.url || {}), ...(process.env.FTF_NO_LAYERS === '1' ? { nolayers: '1' } : {}) });
     const url = baseUrl + '/?' + q.toString();
     log(`[${shot.name}] open ${url}`);
     arm('page load', 420_000);
+    // No hot reload during a capture (a dev-server edit must not reload the game mid-shot): the vite client is a no-op
+    // with the same exports. The production build (vite preview, the GPU job) has no client and is unaffected.
+    await page.route('**/@vite/client', (r) => r.fulfill({ contentType: 'application/javascript', body: [
+      'export const createHotContext = () => ({ accept() {}, acceptExports() {}, dispose() {}, prune() {}, invalidate() {}, on() {}, off() {}, send() {}, data: {} });',
+      'const sheets = new Map();',
+      'export const updateStyle = (id, css) => { let s = sheets.get(id); if (!s) { s = document.createElement("style"); s.setAttribute("data-vite-dev-id", id); document.head.appendChild(s); sheets.set(id, s); } s.textContent = css; };',
+      'export const removeStyle = (id) => { const s = sheets.get(id); if (s) { s.remove(); sheets.delete(id); } };',
+      'export const injectQuery = (u) => u;',
+    ].join('\n') }));
     await page.goto(url, { waitUntil: 'load', timeout: 120_000 });
     // Poll from Node: under the virtual clock the page's rAF and timers never fire on their own, so
     // Playwright's waitForFunction (rAF polling) would only evaluate once.
     await pollPage(page, () => !!(window.__ftfCinematic && window.__ftf), 120_000, 'window.__ftf');
     if (!shot.lobby) await pollPage(page, () => !!(window.__ftf && window.__ftf.play), 180_000, 'window.__ftf.play');
     await page.evaluate(() => document.fonts.ready);
+    // The caption overlay's face is not used before the first caption: load it now so no frame shows a fallback font.
+    await page.evaluate(() => document.fonts.load('700 64px "Atkinson Hyperlegible"').catch(() => null));
     result.renderer = await page.evaluate(() => { try { const gl = window.__ftf.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch { return null; } });
     log(`[${shot.name}] WebGL: ${result.renderer}`);
     await page.evaluate((s) => window.__ftfCinematic.load(s), shot);
@@ -134,7 +145,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
       let r = await stepGrab();
       // An intermittent bad grab (seen once on the RTX 4090 / ANGLE Vulkan: a 46% black edge that a probe of the same frames
       // never reproduced) is read again from a fresh render of the same frame; only a frame that stays bad fails the shot.
-      const bad = (x) => x && x.stats && ((x.stats.edgeBlack > 0.3 && x.stats.mean > 30) || (prevMean != null && Math.abs(x.stats.mean - prevMean) > 24));
+      const bad = (x) => x && x.stats && ((x.stats.blackBlock || 0) > 0.01 || (x.stats.edgeBlack > 0.3 && x.stats.mean > 30) || (prevMean != null && Math.abs(x.stats.mean - prevMean) > 24));
       for (let k = 0; k < 3 && !probe && (bad(r) || (process.env.FTF_TEST_RETRY && i === 0 && k === 0)); k++) {
         check.retries = (check.retries || 0) + 1;
         const tag = `${shot.name}-f${String(i).padStart(5, '0')}-retry${k}`;
@@ -157,6 +168,7 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
         log(`[${shot.name}] probe f${i}: grab edge ${(st.edgeBlack * 100).toFixed(0)}% box ${JSON.stringify(st.blackBox)} · ` + pr.variants.map((v) => `${v.name} ${v.stats ? (v.stats.edgeBlack * 100).toFixed(0) + '%' : v.error}`).join(' · '));
       }
       if (probe) { /* diagnosis: no failing checks */ } else
+      if ((st.blackBlock || 0) > 0.01) throw new Error(`black block (${(st.blackBlock * 100).toFixed(1)}% of the frame, a solid rectangle in a lit frame) in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i})`);
       if (st.edgeBlack > 0.3 && st.mean > 30) throw new Error(`black edge region (${(st.edgeBlack * 100).toFixed(0)}% of the frame) in shot ${shot.name} at t=${r.t.toFixed(2)} (frame ${i})`);
       if (prevMean != null) { const d = Math.abs(st.mean - prevMean); if (d > check.maxJump) check.maxJump = d; if (d > 24) check.jumps++; }
       prevMean = st.mean; check.minMean = Math.min(check.minMean, st.mean); check.maxMean = Math.max(check.maxMean, st.mean); check.maxEdgeBlack = Math.max(check.maxEdgeBlack, st.edgeBlack);
@@ -179,8 +191,8 @@ export async function renderShot({ shot, baseUrl, outDir, opts }) {
     await pipe.close();
     result.timings.captureMs = Date.now() - t;
     result.secondsPerFrame = result.timings.captureMs / 1000 / Math.max(1, total);
-    const [cues, marks, camLog, errors, state] = await page.evaluate(() => [window.__ftfCinematic.cues(), window.__ftfCinematic.marks(), window.__ftfCinematic.camLog(), window.__ftfCinematic.errors(), window.__ftfCinematic.state()]);
-    Object.assign(result, { cues, marks, camLog, errors, finalState: state, wallMs: Date.now() - wall0 });
+    const [cues, marks, camLog, errors, state, layerLog] = await page.evaluate(() => [window.__ftfCinematic.cues(), window.__ftfCinematic.marks(), window.__ftfCinematic.camLog(), window.__ftfCinematic.errors(), window.__ftfCinematic.state(), window.__ftfCinematic.layerLog ? window.__ftfCinematic.layerLog() : []]);
+    Object.assign(result, { cues, marks, camLog, errors, finalState: state, layerLog, wallMs: Date.now() - wall0 });
     writeFileSync(join(outDir, shot.name + '.json'), JSON.stringify(result));
     log(`[${shot.name}] done: ${result.frames} frames in ${(result.wallMs / 60000).toFixed(1)} min (${result.secondsPerFrame.toFixed(2)} s/frame), ${cues.length} cues, ${errors.length} runner errors, ${consoleErrors.length} console messages, luma ${result.check.minMean.toFixed(0)}–${result.check.maxMean.toFixed(0)} jumps ${result.check.jumps} (max ${result.check.maxJump.toFixed(1)}) edge-black ${(result.check.maxEdgeBlack * 100).toFixed(0)}% retries ${result.check.retries}`);
     return result;

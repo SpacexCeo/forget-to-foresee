@@ -6,6 +6,11 @@
 // the public play API; it never evaluates a rule.
 import * as THREE from 'three';
 import { compileCamera } from './camera.js';
+import { createLayers } from './layers.js';
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
+import { TIME_PRESETS } from '../render/sky.js';
+import { createHdrGuardPass } from '../render/hdr-guard.js';
+
 import { createOverlay } from './overlay.js';
 
 const KEYUP_DELAY_FRAMES = 2;
@@ -164,6 +169,7 @@ export class ShotRunner {
     if (pose.roll) cam.rotateZ(pose.roll);
     if (Math.abs(cam.fov - pose.fov) > 1e-3) { cam.fov = pose.fov; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld(true);
+    if (this.dof && this.dof.world) this.dof.pass.uniforms.focus.value = cam.position.distanceTo(new THREE.Vector3(...this.dof.world));
   }
 
   /**
@@ -183,6 +189,14 @@ export class ShotRunner {
       if (spec.local) { const c = Math.cos(live.yaw), sn = Math.sin(live.yaw); const rot = (v) => [v[0] * c + v[2] * sn, v[1], -v[0] * sn + v[2] * c]; dp = rot(dp); dl = rot(dl); }
       return { ...p, pos: [live.pos[0] + dp[0], live.pos[1] + dp[1], live.pos[2] + dp[2]], look: [live.pos[0] + dl[0], live.pos[1] + dl[1], live.pos[2] + dl[2]] };
     };
+  }
+
+  /** A world point through this frame's camera, in 1920×1080 stage pixels: [x, y, in front of the camera]. */
+  project(w) {
+    const cam = this.game.rig.camera;
+    cam.updateMatrixWorld();
+    const v = new THREE.Vector3(w[0], w[1], w[2]).project(cam);
+    return [(v.x + 1) / 2 * 1920, (1 - v.y) / 2 * 1080, v.z < 1 && Math.abs(v.x) < 1.6 && Math.abs(v.y) < 1.6];
   }
 
   /** Head position and heading (radians about +Y, 0 = facing +Z) of Iris or a clan agent. */
@@ -207,15 +221,20 @@ export class ShotRunner {
     this.shot = shot;
     this.t = -(shot.preroll ?? 0);
     this.frame = 0;
-    this.cues = []; this.marks = []; this.camLog = [];
+    this.cues = []; this.marks = []; this.camLog = []; this.layerLog = [];
     const cam = shot.camera;
     const list = Array.isArray(cam) ? cam : cam ? [{ from: 0, to: shot.duration, ...cam }] : [];
     // Segments may mix the game's own camera (`type: 'rig'`, pose null) with scripted moves; the latest one that has started wins.
-    this.segments = list.map((c) => ({ from: c.from ?? 0, to: c.to ?? shot.duration, pose: c.type === 'track' ? this.trackPose(c) : compileCamera(c), spec: c }));
+    // `from` / `to` of a segment are times; a push camera's `from` is its start position (an array), which must not be
+    // read as the segment start (it was, so every push camera sat at its end pose from the first frame).
+    const time = (v, d) => (typeof v === 'number' ? v : d);
+    this.segments = list.map((c) => ({ from: time(c.from, 0), to: time(c.to, shot.duration), pose: c.type === 'track' ? this.trackPose(c) : compileCamera(c), spec: c }));
     this.pose = this.segments.some((s) => s.pose) ? true : null;
     this.actions = (shot.actions || []).map((a, i) => ({ ...a, id: i, done: false }));
     if (!this.overlay) this.overlay = createOverlay(document);
     this.overlay.set(shot.overlays || []);
+    // With ?nolayers=1 (GPU plates for the CPU layers pass) the layers are not even mounted: the plate stays clean.
+    if ((shot.layers || this.layers) && new URLSearchParams(location.search).get('nolayers') !== '1') { if (!this.layers) this.layers = createLayers(document); this.layers.set(shot.layers || []); }
     this.setUi(shot.ui || 'game');
     for (const h of shot.hide || []) this.hide(h);
     this.attach();
@@ -303,7 +322,43 @@ export class ShotRunner {
         for (let i = 0; i < (a.times ?? 1); i++) btns[a.dir < 0 ? 0 : btns.length - 1].click();
         break;
       }
-      case 'forget': { const b = document.querySelectorAll('[data-forget]')[a.index ?? 0]; if (!b) throw new Error('no memory button'); b.click(); break; }
+      case 'forget': {
+        // The Memories panel may be closed by the time the action fires (the M key in the setup can land while another
+        // surface holds the panel arbiter, as on the 1080p GPU renders): open it directly, then pick the memory by kind
+        // (`kind: 'call'`, the judge playthrough's shard 7) or by index, and click its "Forget it for a vision" button.
+        const pick = () => {
+          const mems = (play.session.obs && play.session.obs.memories) || [];
+          const m = a.kind ? mems.find((x) => x.kind === a.kind) : mems[a.index ?? 0];
+          return m ? document.querySelector(`[data-forget="${m.id}"]`) : null;
+        };
+        let b = pick();
+        if (!b && play.ui.open) { play.ui.open('memory'); b = pick(); }
+        if (!b) throw new Error(`no memory button (${a.kind ? 'kind ' + a.kind : 'index ' + (a.index ?? 0)}; memories: ${((play.session.obs && play.session.obs.memories) || []).map((x) => x.kind).join(',') || 'none'})`);
+        this.marks.push({ t: this.t, label: 'forget ' + b.getAttribute('data-forget') });
+        b.click(); break;
+      }
+      // Capture-only look (the jury video's dusk grade): a time-of-day preset and a mood tint, never the game's defaults.
+      case 'look': {
+        const ld = g.lookdev;
+        if (a.preset) ld.setPreset(a.preset);
+        if (a.atm) { const base = TIME_PRESETS[ld.preset]; ld.applyAtmosphere({ ...base, ...a.atm, fog: { ...base.fog, ...(a.atm.fog || {}) } }); }
+        if (a.tint) ld.sky.tint(a.tint, a.amount ?? 0.3);
+        if (a.lanterns != null) ld.lanternScale = a.lanterns; // lantern light spill (capture only)
+        // The game's post chain already guards HDR (render/hdr-guard.js); older builds get one inserted for the capture.
+        if (a.clampHdr && ld.post && ld.post.composer) { this.hdrGuard = ld.post.passes.guard || this.hdrGuard; if (!this.hdrGuard) { this.hdrGuard = createHdrGuardPass(a.clampHdr); ld.post.composer.insertPass(this.hdrGuard, 1); } }
+        break;
+      }
+      // Capture-only depth of field: a bokeh pass after the scene render, focused every frame on a world point.
+      case 'dof': {
+        const post = g.lookdev && g.lookdev.post;
+        if (!post || !post.composer) break; // low tier / no post stack: no DOF (CPU drafts)
+        if (this.dof) post.composer.removePass(this.dof.pass);
+        const pass = new BokehPass(post.scene || g.scene, g.rig.camera, { focus: 3, aperture: a.aperture ?? 0.004, maxblur: a.maxblur ?? 0.012 });
+        const guard = post.passes && post.passes.guard || this.hdrGuard;
+        post.composer.insertPass(pass, guard ? post.composer.passes.indexOf(guard) + 1 : 1); // right after the HDR guard
+        this.dof = { pass, world: a.world };
+        break;
+      }
       case 'quality': this.allowQualityChange = true; try { g.lookdev.setQuality(a.tier); } finally { this.allowQualityChange = false; } break;
       case 'motion': g.setReducedMotion(!!a.reduce); break;
       case 'guests': {
@@ -352,7 +407,21 @@ export class ShotRunner {
     // Where the black region is (grid cells, for the probe): the bounding box of black cells.
     let bx0 = cols, by0 = rows, bx1 = -1, by1 = -1;
     for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) if (grid[j * cols + i] < 8) { bx0 = Math.min(bx0, i); by0 = Math.min(by0, j); bx1 = Math.max(bx1, i); by1 = Math.max(by1, j); }
-    const stats = { mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, edges: { top, bottom, left, right }, blackBox: bx1 < 0 ? null : [bx0, by0, bx1, by1], width: w, height: h, lost: gl.isContextLost() };
+    // Interior black blocks (the bloom NaN artifact): connected near-black cells that fill their bounding box (a
+    // rectangle, not a shadow's shape) in a lit frame. The largest one's share of the frame.
+    let blackBlock = 0;
+    if (sum / (cols * rows) > 30) {
+      const seen = new Uint8Array(cols * rows);
+      for (let k = 0; k < cols * rows; k++) {
+        if (seen[k] || grid[k] >= 3) continue; // pure black only: the artifact is 0, a dusk shadow is not
+        const stack = [k]; seen[k] = 1; let n = 0, x0 = cols, y0 = rows, x1 = -1, y1 = -1;
+        while (stack.length) { const c = stack.pop(), ci = c % cols, cj = (c / cols) | 0; n++; x0 = Math.min(x0, ci); x1 = Math.max(x1, ci); y0 = Math.min(y0, cj); y1 = Math.max(y1, cj);
+          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue; const q = nj * cols + ni; if (!seen[q] && grid[q] < 3) { seen[q] = 1; stack.push(q); } } }
+        const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+        if (n >= 9 && n / area >= 0.9) blackBlock = Math.max(blackBlock, n / (cols * rows));
+      }
+    }
+    const stats = { blackBlock, mean: sum / (cols * rows), black: black / (cols * rows), edgeBlack, edges: { top, bottom, left, right }, blackBox: bx1 < 0 ? null : [bx0, by0, bx1, by1], width: w, height: h, lost: gl.isContextLost() };
     const png = noPng ? null : canvas.toDataURL('image/png');
     return { png, stats };
   }
@@ -419,6 +488,17 @@ export class ShotRunner {
     await this.clock.settle(3);
     this.wrapAudio();
     if (this.overlay) this.overlay.update(this.t);
+    const noLayers = new URLSearchParams(location.search).get('nolayers') === '1';
+    if (this.layers && this.game && !noLayers) this.layers.update(this.t, (w) => this.project(w), (id) => this.targetOf(id));
+    // The camera of every captured frame (view-projection, column-major) and the tracked heads: the CPU layers pass
+    // (tools/capture/layers-pass.mjs) redraws the layers from this record over clean GPU plates.
+    if (this.shot && this.shot.layers && this.renderOn && this.t >= 0 && this.game) {
+      const cam = this.game.rig.camera; cam.updateMatrixWorld();
+      const vp = new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).elements.map((v) => +v.toPrecision(9));
+      const ids = [...new Set(this.shot.layers.flatMap((l) => [l.target, l.aTarget, l.bTarget]).filter(Boolean))];
+      const targets = Object.fromEntries(ids.map((id) => [id, (this.targetOf(id) || {}).pos]).filter(([, p]) => p));
+      this.layerLog.push({ t: +this.t.toFixed(5), vp, targets });
+    }
     for (const h of this.hidden) this.hide(h); // models that streamed in since bring their labels/nameplates back
     if (this.renderOn && this.t >= 0) {
       const cam = this.game.rig.camera;
@@ -486,7 +566,7 @@ export class ShotRunner {
 
   /** Resets the shot clock to -preroll after the setup moved the game; cue logs restart from the live state. */
   rewind(preroll = 0) {
-    this.t = -preroll; this.frame = 0; this.cues = []; this.marks = []; this.camLog = [];
+    this.t = -preroll; this.frame = 0; this.cues = []; this.marks = []; this.camLog = []; this.layerLog = [];
     for (const a of this.actions) a.done = false;
     const p = this.play, o = p && p.session.obs;
     if (o) this.cues.push({ t: this.t, kind: 'tension', tension: o.season.tension });

@@ -280,7 +280,7 @@ export class LookDev {
   animateLight(t) {
     for (const l of this.lanternLights) {
       const p = l.userData.phase || 0;
-      l.intensity = 14 * (1 + 0.1 * (Math.sin(t * 7.3 + p) * 0.5 + Math.sin(t * 13.1 + p * 1.7) * 0.3 + Math.sin(t * 2.1 + p) * 0.2));
+      l.intensity = 14 * (this.lanternScale ?? 1) * (1 + 0.1 * (Math.sin(t * 7.3 + p) * 0.5 + Math.sin(t * 13.1 + p * 1.7) * 0.3 + Math.sin(t * 2.1 + p) * 0.2));
     }
     setNacreTime(t);
   }

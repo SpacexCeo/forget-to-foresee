@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jury video scenes</title>
+<!-- Motion-graphics scenes for the jury video (docs/submission/jury-video.md). Dev server only: not a build input.
+     ?scene=<name>&w=<px>&h=<px>[&alpha=1][&t=<seconds>] ; tools/capture/lib/page.mjs drives window.__cine. -->
+<style>
+  :root {
+    /* jury-ds.js tokens: charcoal ground, grey-green surfaces, pearl type, muted silver, amber only for what is confirmed */
+    --ink: #ece6d8; --ink-dim: #a3b0ac; --gold: #e4c272; --gold-deep: #b48d3c; --chip: #e4c272;
+    --bg0: #0b0f10; --bg1: #0f1716; --card: rgba(16, 26, 25, .94); --frame: rgba(220, 214, 196, .30); --frame-soft: rgba(220, 214, 196, .16);
+    --ok: #e4c272; --bad: #d0806a;
+    --title: "Libre Caslon Text", Georgia, serif; --body: "Atkinson Hyperlegible", "Source Sans 3", sans-serif; --label: "Source Sans 3", sans-serif;
+    --mono: "DejaVu Sans Mono", "Liberation Mono", Menlo, monospace;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); }
+  html.alpha, html.alpha body { background: transparent; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: var(--ink); font-family: var(--body); }
+  #bg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .abs { position: absolute; }
+  .cap { position: absolute; left: 0; right: 0; top: 96px; text-align: center; font: 700 64px/1.15 var(--body); letter-spacing: .005em; text-shadow: 0 2px 18px rgba(0, 0, 0, .65); }
+  .cap em { font-style: normal; color: var(--gold); }
+  .label { font: 600 44px/1.1 var(--label); letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+  .value { font: 400 76px/1.05 var(--title); color: var(--ink); }
+  .body { font: 400 46px/1.25 var(--body); }
+  /* A tag: hairline surface, pearl text, the meaning carried by one small mark in its colour (never a glowing outline). */
+  .chip { position: absolute; padding: 14px 26px 16px 50px; border-radius: 12px; background: rgba(15, 23, 22, .94); box-shadow: 0 0 0 1px var(--frame-soft), 0 12px 30px rgba(0, 0, 0, .4); font: 700 44px/1 var(--body); color: var(--ink); white-space: nowrap; }
+  .chip::before { content: ''; position: absolute; left: 22px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: var(--ink-dim); }
+  .chip.ok::before, .chip.gold::before { background: var(--gold); box-shadow: 0 0 12px rgba(228, 194, 114, .5); }
+  .chip.bad::before { background: var(--bad); }
+  .chip.ok, .chip.gold { color: #f3e3c0; }
+  .card { position: absolute; border-radius: 18px; background: linear-gradient(180deg, rgba(24, 36, 35, .96), rgba(14, 22, 22, .96)); box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 0 0 1px var(--frame-soft), 0 18px 40px rgba(0, 0, 0, .45); }
+  .mono { font-family: var(--mono); }
+  svg { overflow: visible; }
+  /* Scene transition: an ink ring opens the scene from the centre (the logogram's ring as the wipe). */
+  #wipe { position: absolute; left: 960px; top: 540px; width: 0; height: 0; border-radius: 50%; box-shadow: 0 0 0 2px #e4c272, 0 0 30px rgba(228, 194, 114, .45); transform: translate(-50%, -50%); pointer-events: none; z-index: 50; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="bg" width="960" height="540"></canvas></div>
+<script type="module" src="./jury.js"></script>
+</body>
+</html>

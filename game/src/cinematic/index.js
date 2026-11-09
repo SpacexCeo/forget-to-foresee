@@ -5,6 +5,8 @@
 // is loaded and the game runs exactly as before.
 import { installVirtualClock, hashString } from './clock.js';
 import { ShotRunner } from './runner.js';
+// The caption overlay's face (Atkinson Hyperlegible, as the game's readable mode); loaded with the cinematic module only.
+import '@fontsource/atkinson-hyperlegible/700.css';
 
 export function boot(name = 'shot', { fps } = {}) {
   const params = new URLSearchParams(location.search);
@@ -35,6 +37,7 @@ export function boot(name = 'shot', { fps } = {}) {
     /** Resets the shot clock to -preroll so capture can start after the setup moved the game. */
     rewind: (preroll = 0) => runner.rewind(preroll),
     camLog: () => runner.camLog.slice(),
+    layerLog: () => (runner.layerLog || []).slice(),
     state: () => runner.state(),
     cues: () => runner.cues.slice(),
     marks: () => runner.marks.slice(),
