@@ -151,6 +151,12 @@ export function route([x1, y1], [x2, y2], { via = 'h', r = 22, mid = null } = {}
   return `M${x1},${y1} L${x1},${my - sy * rr} Q${x1},${my} ${x1 + sx * rr},${my} L${x2 - sx * rr},${my} Q${x2},${my} ${x2},${my + sy * rr} L${x2},${y2}`;
 }
 
+/** The confirmation mark of the system (the same seal as Ash's Key, small): an amber ring with a fine check. */
+export function sealMark(r = 20, color = '#e8b25a') {
+  return s('g', { fill: 'none', stroke: color, 'stroke-width': Math.max(2, r / 9), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+    s('circle', { cx: 0, cy: 0, r }), s('path', { d: `M${-r * 0.42},${r * 0.02} L${-r * 0.1},${r * 0.34} L${r * 0.46},${-r * 0.3}` }));
+}
+
 /** The key glyph of the system: a fine-line key (ring bow, shaft, two bits), drawn at the origin, ~84 px long. */
 export function keyGlyph(color = T.amber) {
   return s('g', { fill: 'none', stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },

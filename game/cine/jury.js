@@ -12,7 +12,7 @@ import '@fontsource/source-sans-3/600.css';
 import '@fontsource/libre-caslon-text/400.css';
 import '@fontsource/libre-caslon-text/700.css';
 import D from './jury-data.json';
-import { T, CLAN, CSS as DS_CSS, clanCard, anchorNode, route, keyGlyph, s as sv } from './jury-ds.js';
+import { T, CLAN, CSS as DS_CSS, clanCard, anchorNode, route, keyGlyph, sealMark, s as sv } from './jury-ds.js';
 document.head.append(Object.assign(document.createElement('style'), { textContent: DS_CSS }));
 
 const Q = new URLSearchParams(location.search);
@@ -290,20 +290,20 @@ SCENES.season = { duration: 4.0, build() {
   const c1 = cap('17 trials. Every reveal checked <em>✓</em>'), c2 = cap('Tension rises');
   const svg = edgeLayer(stage);
   const X0 = 170, X1 = 1750, Y = 480, step = (X1 - X0) / 16;
-  svg.append(h('line', { x1: X0, y1: Y, x2: X1, y2: Y, stroke: 'rgba(232,214,172,.3)', 'stroke-width': 4 }));
-  const prog = h('line', { x1: X0, y1: Y, x2: X0, y2: Y, stroke: '#f6c572', 'stroke-width': 6 }); svg.append(prog);
+  svg.append(h('line', { x1: X0, y1: Y, x2: X1, y2: Y, stroke: T.hair, 'stroke-width': 2 }));
+  const prog = h('line', { x1: X0, y1: Y, x2: X0, y2: Y, stroke: T.amberSoft, 'stroke-width': 3 }); svg.append(prog);
   const nodes = Array.from({ length: 17 }, (_, i) => {
-    const x = X0 + i * step, n = i + 1, special = n === 13 ? '#ff7a66' : n === 17 ? '#ffe78e' : null;
-    const c = h('circle', { cx: x, cy: Y, r: special ? 26 : 18, fill: '#0e1b1f', stroke: special || 'rgba(232,214,172,.6)', 'stroke-width': 4 });
+    const x = X0 + i * step, n = i + 1, special = n === 13 ? '#c8735a' : n === 17 ? T.amber : null;
+    const c = h('circle', { cx: x, cy: Y, r: special ? 24 : 14, fill: T.ground, stroke: special || T.silver, 'stroke-width': special ? 3 : 2 });
     const num = h('text', { x, y: Y + 82, 'text-anchor': 'middle', fill: 'var(--ink)', style: 'font: 600 44px var(--label)' }); num.textContent = n;
-    const ck = h('text', { x, y: Y - 44, 'text-anchor': 'middle', fill: '#9fdc8c', style: 'font: 700 44px var(--body)' }); ck.textContent = n >= 3 ? '✓' : '';
+    const ck = sv('g', { transform: `translate(${x},${Y - 62})` }, n >= 3 ? sealMark(15) : null);
     svg.append(c, num, ck); return { c, ck, x, n, special };
   });
-  const cr = h('div', { class: 'abs label', style: { color: '#ff7a66' }, text: 'Crisis' }); at(cr, X0 + 12 * step - 80, Y - 150);
-  const vt = h('div', { class: 'abs label', style: { color: '#ffe78e' }, text: 'Vote' }); at(vt, X0 + 16 * step - 90, Y - 150);
+  const cr = h('div', { class: 'abs label', style: { color: '#c8735a' }, text: 'Crisis' }); at(cr, X0 + 12 * step - 80, Y - 150);
+  const vt = h('div', { class: 'abs label', style: { color: T.amber }, text: 'Vote' }); at(vt, X0 + 16 * step - 90, Y - 150);
   const tl = h('div', { class: 'abs label', style: { color: 'var(--ink-dim)' }, text: 'Tension' }); at(tl, X0, 700);
-  const bar = h('div', { class: 'abs', style: { left: X0 + 'px', top: '770px', width: X1 - X0 + 'px', height: '34px', borderRadius: '17px', background: 'rgba(70,68,58,.7)', overflow: 'hidden' } });
-  const fill = h('div', { style: { height: '100%', width: '0%', background: 'linear-gradient(90deg, #cf9846, #f6c572 55%, #ff7a66)' } }); bar.append(fill);
+  const bar = h('div', { class: 'abs', style: { left: X0 + 'px', top: '770px', width: X1 - X0 + 'px', height: '8px', borderRadius: '4px', background: T.hair, overflow: 'hidden' } });
+  const fill = h('div', { style: { height: '100%', width: '0%', background: 'linear-gradient(90deg, #9aa8a4, #e8b25a 60%, #c8735a)' } }); bar.append(fill);
   stage.append(cr, vt, tl, bar);
   // A tension curve shaped like the game's: slow rise, the trial-13 spike, a slight ease before the vote.
   const tension = (x) => x < 12 / 16 ? 0.12 + 0.45 * (x / (12 / 16)) : x < 13 / 16 ? 0.57 + 0.33 * ((x - 12 / 16) * 16) : 0.9 - 0.06 * ((x - 13 / 16) / (3 / 16));
@@ -313,9 +313,9 @@ SCENES.season = { duration: 4.0, build() {
     show(c1, t, 0.2, 2.25); show(c2, t, 2.4, 3.95);
     prog.setAttribute('x2', (X0 + (X1 - X0) * k).toFixed(1));
     nodes.forEach((o, i) => {
-      const reached = k * 16 >= i - 1e-6, kk = P(k * 16, i, 0.6);
-      o.c.setAttribute('fill', reached ? (o.special || '#f6c572') : '#0e1b1f');
-      o.c.setAttribute('r', ((o.special ? 26 : 18) * (1 + 0.35 * Math.sin(Math.PI * clamp(kk)))).toFixed(2));
+      const reached = k * 16 >= i - 1e-6, kk = P(k * 16, i - 0.6, 0.6);
+      o.c.setAttribute('fill', reached ? (o.special || T.pearl) : T.ground);
+      o.c.setAttribute('r', ((o.special ? 24 : 14) * (1 + 0.25 * Math.sin(Math.PI * clamp(kk)))).toFixed(2));
       o.ck.style.opacity = reached ? ease.out(kk).toFixed(3) : 0;
     });
     show(cr, t, 0.25 + 3.2 * 0.72); show(vt, t, 0.25 + 3.2 * 0.97);
@@ -490,8 +490,8 @@ SCENES.backend = { duration: 4.5, build() {
   const N = D.near;
   const c1 = cap('Sealed before trial 1. <em>Checked on NEAR.</em>');
   const svg = edgeLayer(stage);
-  const box = (x, y, w, title, sub, col = 'var(--frame-soft)') => {
-    const el = h('div', { class: 'card', style: { width: w + 'px', height: '150px', borderColor: col } },
+  const box = (x, y, w, title, sub) => {
+    const el = h('div', { class: 'card', style: { width: w + 'px', height: '150px' } },
       h('div', { class: 'abs', style: { left: '24px', top: '18px', font: '700 48px/1 var(--body)' }, text: title }),
       h('div', { class: 'abs', style: { left: '24px', top: '86px', font: '400 40px/1 var(--label)', color: 'var(--ink-dim)', whiteSpace: 'nowrap' }, text: sub }));
     at(el, x, y); stage.append(el); return { el, x, y, w, cx: x + w / 2, cy: y + 75 };
@@ -514,10 +514,15 @@ SCENES.backend = { duration: 4.5, build() {
   const lab = (x, y, s, col = 'var(--ink)') => { const el = h('div', { class: 'abs', style: { font: '600 40px/1 var(--label)', color: col, whiteSpace: 'nowrap' }, text: s }); at(el, x, y); stage.append(el); return el; };
   const la = [lab(1560, 625, 'mint', 'var(--ink-dim)'), lab(640, 628, 'commit + 15 reveals'), lab(-999, 0, '')];
   const lr = lab(-999, 0, '');
-  const ck1 = h('div', { class: 'chip ok', text: '✓ leaf + path checked' }); at(ck1, 800, 870);
-  const ck2 = h('div', { class: 'chip ok', text: 'Verified on NEAR testnet ✓' }); at(ck2, 40, 870);
+  // Approval points: the confirmation seal on the node that approves, its meaning in a tracked label beneath.
+  const over = edgeLayer(stage); // above the nodes
+  const approve = (b, html) => { const g = sv('g', { transform: `translate(${b.x + b.w - 40},${b.y + 40})` }, sealMark(20)); over.append(g);
+    const l = h('div', { class: 'abs label', style: { left: b.x + 'px', top: b.y + 168 + 'px', fontSize: '36px', lineHeight: '1.25' }, html }); stage.append(l);
+    return { el: l, g }; };
+  const A1 = approve(seas, 'Leaf + path checked'), A2 = approve(brow, 'Verified on<br>NEAR testnet');
+  const ck1 = A1.el, ck2 = A2.el;
   const note = h('div', { class: 'abs', style: { font: '400 40px/1.25 var(--body)', color: 'var(--ink-dim)', width: '440px' }, html: 'Only the judge season<br>is on testnet' }); at(note, 60, 450);
-  stage.append(ck1, ck2, note);
+  stage.append(note);
   const pk = L.map((_, i) => packet(svg, i === 7 ? '#9fc4d6' : '#ffe78e', 10));
   // Order of the story: seed → engine → root → coordinator → contract → browser; the agent API feeds the engine; the mint.
   const T0 = [0.3, 0.75, 1.15, 1.6, 2.35, 0.9, 2.1, 2.6];
@@ -532,7 +537,8 @@ SCENES.backend = { duration: 4.5, build() {
       moveOn(pk[i], p, t < T0[i] ? 0 : ((t - T0[i]) % 0.9) / 0.9);
     });
     show(la[0], t, 1.25); show(lr, t, 1.75); show(la[2], t, 2.75);
-    show(ck1, t, 2.0, 99, { scale: 0.9 }); show(ck2, t, 2.55, 99, { scale: 0.9 });
+    show(ck1, t, 2.0); show(ck2, t, 2.55);
+    [[A1.g, 2.0], [A2.g, 2.55]].forEach(([g, a]) => { const k = settle(P(t, a, 0.7)); g.style.opacity = t < a ? 0 : 1; g.querySelector('circle').setAttribute('r', (20 * lerp(1.35, 1, k)).toFixed(2)); });
     show(note, t, 1.0);
   };
 } };
