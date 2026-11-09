@@ -2,7 +2,7 @@
 
 ## State at hand-off (2026-11-09 10:32 UTC, wrap-up on the owner's order)
 - **Rubric:** `rubric.md` v0.12. Seven weighted criteria (C1 25, C2 20, C3 13, C4 12, C5 12, C6 10, C7 8), red-flag
-  gates, a five-minute first pass (step 0), and a checklist for every criterion. 16 research notes in `notes/`.
+  gates, a five-minute first pass (step 0), and a checklist for every criterion. 18 research notes in `notes/`.
 - **Ready to score from:** `main` (lead's instruction; `df8d80e` at 08:20 UTC). Use `scorecard-template.md` (opens with
   the highest-leverage change versus Ashes of the Ninth Heaven) and `tools/live-check.cjs <live URL>` for C1/C7 load
   evidence. Pre-checked: `ftf-seasons.testnet` and `ftf-shards.testnet` exist with contract code (testnet RPC, 08:30
