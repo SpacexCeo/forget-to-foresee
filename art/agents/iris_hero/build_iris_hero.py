@@ -826,22 +826,46 @@ def athletic_costume(bm, P, dom, bones):
         else:                                                 # a level top edge, hidden in the waistband
             v.co.z = 1.020
     # compression fabric unifies the forms: the crotch and a restrained glute cleft are bridged
-    crotch = lambda p: (abs(p.x) < 0.07 and 0.70 < p.z < 0.88) or (abs(p.x) < 0.045 and p.y > c.y and 0.78 < p.z < 0.99)
+    crotch = lambda p: ((abs(p.x) < 0.07 and 0.70 < p.z < 0.88 and p.y < c.y + 0.02)   # the front crotch; the back follows the cleft,
+                        or (abs(p.x) < 0.03 and p.y > c.y and 0.935 < p.z < 1.0))     # except its deep top (no dark pit)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
-                                        trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
-                                        accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12),
-                                        # compression knit lies over the glute cleft (owner: the cheeks rest together, no gap)
-                                        bridge=(lambda p: p.y > c.y and abs(p.x) < 0.06 and 0.855 < p.z < 1.0, 0.028, 0.003))
+                                        trim=lambda p, nrm: leg_panel(p, nrm),   # one colour to the top edge (owner: one layer)
+                                        accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12))
+    # (owner 09.11: one layer, pressed into the cleft between the cheeks: no bridge, no separate waistband)
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
-    # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
-    hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")]
-    zs = [0.972 + (1.050 - 0.972) * k / 6 for k in range(7)]   # a reinforced band over the leggings' top
-    wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0050, n=72, smooth=2)   # just over the leggings' top
-    C.set_attr(wb, "trim", lambda i, p: 1.0)
-    C.set_attr(wb, "accent", lambda i, p: 0.0)
-    C.solidify(wb, 0.0012, 1.0, even=False)
-    C.smooth(wb, 50)
-    out["leggings_band"] = wb
+    # piping, the centre back seam and the sleeve stripes as clean lines on the fabric (owner's reference 09.11)
+    sm = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(max(0.0, min(1.0, (x - a) / (b - a))))
+    leg = out["leggings"]
+    for sx, side in (("L", 1), ("R", -1)):
+        hip, knee = bones[f"thigh_{sx}"][0], bones[f"shin_{sx}"][0]
+        def pipe_ray(t, side=side, hip=hip, knee=knee):
+            # one continuous path: rays from an axis that moves from the pelvis centre to the thigh's axis,
+            # turning from near the centre back (18 deg) round the cheek to the outside of the leg (92 deg)
+            z = 0.985 - (0.985 - 0.30) * t
+            f = (hip.z - z) / max(hip.z - knee.z, 1e-3)
+            lc = hip.lerp(knee, max(0.0, min(1.3, f)))
+            k = sm(0.93, 0.82, z)
+            cen = V((lc.x * k, c.y * (1 - k) + lc.y * k, z))
+            phi = math.radians(18 + 44 * sm(0.985, 0.86, z) + 30 * sm(0.86, 0.50, z))
+            d = V((side * math.sin(phi), math.cos(phi), 0))
+            return cen + d * 0.4, -d
+        o = C.surface_line(f"leggings_piping_{sx}", leg, pipe_ray, 180, 0.0028, lift=0.0012)
+        if o:
+            out[o.name] = o
+    jk = out.get("jacket")
+    if jk:
+        for sx, side in (("L", 1), ("R", -1)):
+            sh, el = bones[f"upperarm_{sx}"]
+            wr = bones[f"forearm_{sx}"][1]
+            def stripe_ray(t, side=side, sh=sh, el=el, wr=wr):
+                a = sh.lerp(el, min(1.0, t * 2)) if t < 0.5 else el.lerp(wr, (t - 0.5) * 2 * 0.86)
+                axis = (el - sh).normalized() if t < 0.5 else (wr - el).normalized()
+                out_d = V((side, 0.12, 0))
+                out_d = (out_d - axis * out_d.dot(axis)).normalized()
+                return a + out_d * 0.3, -out_d
+            o = C.surface_line(f"jacket_stripe_{sx}", jk, stripe_ray, 120, 0.011, lift=0.0010)
+            if o:
+                out[o.name] = o
     # trainers (built from the foot) and grey ankle socks that tuck under the leggings' hem (owner 09.11:
     # the ankle under the hem was empty and the old shoe twisted)
     for sfx, side in (("L", 1), ("R", -1)):
@@ -1023,7 +1047,7 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
         if d in HAND_BONES:
             return False
         if COSTUME == "athletic" and d in ("spine", "pelvis", "chest"):
-            if (0.990 if co.y < cz.y else 1.035) < co.z < 1.205:   # the bare midriff, kept under the band's front and the top's hem
+            if 0.995 < co.z < 1.205:                      # the bare midriff down under the leggings' top edge (no gap)   # the bare midriff, kept under the band's front and the top's hem
                 return False                                        # (no see-through gap; never through the band at the back)
             if 1.27 < co.z and co.y < cz.y:             # the neckline and cleavage above the top, inside the open jacket
                 return False
