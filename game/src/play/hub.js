@@ -12,6 +12,8 @@
 // walk, and returns it afterwards. No rule is evaluated here and the engine is untouched.
 // No three.js and no DOM: node tests drive it end to end.
 
+import { guideStep, choseThisVisit } from './guide.js';
+
 const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Real milliseconds between two automatic trials, so each reveal can be seen. */
@@ -51,12 +53,20 @@ export function openSignsByShell(obs) {
   return m;
 }
 
-/** The sign the Guest of Shell `n` draws: one Iris reads for this Shell, else the newest visible sign. */
+/**
+ * The sign the Guest of Shell `n` draws: one Iris reads for this Shell (an open one first, else the newest),
+ * or null: a Shell the dock calls quiet stays quiet. It never borrows another Shell's sign (audit 09.11: a
+ * sign drawn in the wrong Shell reads as being about that Shell).
+ */
 export function signForShell(obs, n) {
   const own = signsByShell(obs).get(n) || [];
-  if (own.length) return own[0];
-  const all = ((obs && obs.prophecies) || []).slice().sort((a, b) => (b.vision - a.vision) || (b.publishedAt - a.publishedAt));
-  return all[0] || null;
+  return own.find((p) => isOpenSign(p, obs)) || own[0] || null;
+}
+
+/** Shells other than `n` with an open sign (the dock's gold Shells), in order I…IV. */
+export function waitingShells(obs, n = null) {
+  const by = openSignsByShell(obs);
+  return [1, 2, 3, 4].filter((s) => s !== n && by.get(s).length);
 }
 
 /** The trial a reading points at: publication tick + delay + 1 (the room's assemble_logogram rule). */
@@ -143,6 +153,8 @@ export class ShellHub {
     this.draft = null;       // {prophecy, slots[4]} for the reading inside a Shell
     this.lastStake = null;   // {ok, reason, shell, tick}
     this.notice = null;      // {key, args} one-line status for the UI
+    this.visit = null;       // {shell, forgotten, staked} recorded on landing in a Shell (the guide's "choose")
+    this.afterLeave = false; // trials passed since the last flight (the guide's "see what changed")
     this.listeners = new Map();
     this.stopRequested = false;
     session.on('obs', () => this.syncDraft());
@@ -186,6 +198,11 @@ export class ShellHub {
     const p = this.currentSign();
     if (!p || !this.draft) return null;
     return { shell: this.draft.slots[0] + 1, tick: impliedTick(p, this.draft.slots) };
+  }
+
+  /** The step of the Read → Choose → See guide the player is on (play/guide.js). */
+  guide() {
+    return guideStep({ inShell: this.inShell, chose: this.inShell && choseThisVisit(this.obs, this.visit, this.target()), afterLeave: this.afterLeave });
   }
 
   /** Claims the hub for a transition (the flight's fade) before any await, so input during it is refused. */
@@ -241,6 +258,7 @@ export class ShellHub {
       const mv = await this.session.bus.send('move', { to: 'anchor_zone:' + n }, { silent: true });
       if (!mv.ok) return mv;
       const r = await this.session.send('enter_shell', { shell: n });
+      if (r.ok) { this.visit = { shell: n, forgotten: ((this.obs.iris && this.obs.iris.forgotten) || []).length, staked: false }; this.afterLeave = false; }
       this.syncDraft();
       return r;
     });
@@ -260,7 +278,7 @@ export class ShellHub {
       const { shell, tick } = draft.impliedAnchor;
       if (!draft.anchorable) { this.lastStake = { ok: false, reason: 'tick_passed', shell, tick }; await this.session.refresh(); return { ok: false, reason: 'tick_passed' }; }
       const r = await this.runAt('anchor_zone:' + shell, 'place_anchor', { logogram: draft.id });
-      if (r.ok) this.session.flags.anchored = true;
+      if (r.ok) { this.session.flags.anchored = true; if (this.visit) this.visit.staked = true; }
       this.lastStake = { ok: r.ok, reason: r.reason, shell, tick };
       return r;
     });
@@ -282,7 +300,9 @@ export class ShellHub {
    */
   async advance({ max = MAX_AUTO } = {}) {
     if (this.advancing || this.busy || this.transit) return { ticks: 0, reason: 'busy' };
-    this.advancing = true; this.stopRequested = false; this.card = null; this.changed();
+    this.advancing = true; this.stopRequested = false; this.card = null;
+    if (!this.inShell) { this.visit = null; this.afterLeave = true; }
+    this.changed();
     let ticks = 0, reason = 'max';
     try {
       for (let i = 0; i < max; i++) {

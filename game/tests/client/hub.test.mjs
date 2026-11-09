@@ -28,7 +28,7 @@ test('hub: signs are grouped by the Shell Iris reads them for; the trial is publ
   const p = all[0];
   assert.equal(impliedTick(p, p.reading.slots.map((x) => x.meaning)), p.impliedAnchor.tick);
   assert.equal(signForShell(s.obs, p.impliedAnchor.shell).index, p.index);
-  assert.ok(signForShell(s.obs, 4), 'a Shell with no sign of its own still shows the newest sign');
+  for (const n of [1, 2, 3, 4]) if (!by.get(n).length) assert.equal(signForShell(s.obs, n), null, `quiet Shell ${n} draws no borrowed sign`);
   s.dispose();
 });
 
