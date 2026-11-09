@@ -1,5 +1,19 @@
 # Juror log
 
+## State at hand-off (2026-11-09 10:32 UTC, wrap-up on the owner's order)
+- **Rubric:** `rubric.md` v0.12. Seven weighted criteria (C1 25, C2 20, C3 13, C4 12, C5 12, C6 10, C7 8), red-flag
+  gates, a five-minute first pass (step 0), and a checklist for every criterion. 16 research notes in `notes/`.
+- **Ready to score from:** `main` (lead's instruction; `df8d80e` at 08:20 UTC). Use `scorecard-template.md` (opens with
+  the highest-leverage change versus Ashes of the Ninth Heaven) and `tools/live-check.cjs <live URL>` for C1/C7 load
+  evidence. Pre-checked: `ftf-seasons.testnet` and `ftf-shards.testnet` exist with contract code (testnet RPC, 08:30
+  UTC); reveal count, shard count and the "Verified on NEAR testnet" link are not yet verified. No scorecard written.
+- **Competitors:** `notes/competitor-field.md`. Directory at 08:25 UTC: `games` 28, `nfts` 23, 335+ total. Top rival:
+  Ashes of the Ninth Heaven (deployed NEP-245/NEP-171 agent economy, one-click judge page, 283 tests, live chain
+  verification; README read, not run). Our differentiators: pre-committed season verified on-chain, memory as price.
+- **Rules:** live HACKATHON.md byte-identical since 2026-11-08 (sha256 903794f4…d381d9aed); deadline
+  2026-11-14T23:59Z, judging from 2026-11-16.
+- **Schedules:** both juror wake-ups (:15, :45) paused by the lead; the next agent may re-enable them.
+
 One entry per cycle (30-minute wake-ups). Phase 1 (research) until 2026-11-09 15:00 UTC, then phase 2 (scorecards).
 
 ## Cycle 1: 2026-11-08 ~12:20 UTC
