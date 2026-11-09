@@ -26,9 +26,11 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
   **#NEARHackathon** (optionally @NearLegion and @NearBuilders), has the demo **video** attached (screenshots are
   not enough for a local-only demo, Q-012). **Owner action**: draft in `docs/submission/x-post.md`, shot list in
   `docs/submission/video-shot-list.md`.
-- [x] A concrete NEAR role (Q-011): an own contract that fits the track is enough. `contracts/season-commit`
-  (builds, 56 unit + 2 sandbox tests). Testnet deployment is an **owner action** and is not required for eligibility
-  (Q-010: testnet-only projects are eligible in every track).
+- [x] A concrete NEAR role (Q-011): our own contracts, **deployed on NEAR testnet** (09.11, owner-permitted; Q-010:
+  testnet-only projects are eligible in every track). `ftf-seasons.testnet` (`contracts/season-commit`): the judge
+  season committed, 15 leaves revealed and verified on-chain, read back by the game ("Verified on NEAR testnet ✓").
+  `ftf-shards.testnet` (`contracts/memory-shard`): 3 memory-shard NEP-171 NFTs tied to that season. Explorer links and
+  every transaction hash: `docs/near.md`.
 - [ ] Submission (Procedure §3): the form at https://nearhackathon.com/#apply or `POST
   https://nearhackathon.com/api/applications` with exactly the fields below. **One submission per repository, one
   attempt**: mistakes are fixed at https://nearhackathon.com/request-changes, never by submitting again.

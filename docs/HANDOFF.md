@@ -31,13 +31,8 @@ spent (order 2419219 closed 16:30 UTC). Rule: nothing server-only is lost; inven
 no server is stopped while it holds a server-only item the owner has not downloaded.
 
 **Waiting for the owner:**
-1. NEAR testnet deployment of `season-commit` and `memory-shard`: the owner allowed testnet transactions, but the cloud
-   auto-mode classifier refuses them. Either switch worker M's session ("Worker M: NEAR testnet live") from Auto to
-   Accept edits and approve the prompt, or say "добавь правило" (an allow rule for the two deploy scripts in
-   `.claude/settings.json`). Scripts: `contracts/season-commit/scripts/deploy-judge-season.sh`,
-   `contracts/memory-shard/scripts/deploy-judge-shards.sh`; then `node scripts/write-deployment.mjs` and update the
-   README real/mock rows. The juror: 15+ of 18 games-track rivals have a deployed testnet contract; this is the one
-   change that moves us above the field median on the NEAR axis.
+1. ~~NEAR testnet deployment~~ **done 09.11** (worker M, owner permission in the session): `ftf-seasons.testnet` and
+   `ftf-shards.testnet`, ids and hashes in `docs/near.md`, branch `claude/near-live`.
 2. Owner-only submission steps (`docs/submission/owner-steps.md`): mainnet payout account, X post with the final video,
    the form (or the API payload in `docs/submission/apply-form.md`, sent only after the owner confirms), the
    `hackathon-submission` tag. Deadline 15.11 01:59 Kyiv; freeze 13.11 20:00.
@@ -73,8 +68,8 @@ Read first: `CLAUDE.md`, `docs/decisions.md`, `docs/spec.md`, `docs/hackathon-ru
 | 3D client | archipelago with the play layer (goals, ticks, chronicle, Memories/Signs panels) running the same room code as the API; 360° camera; Shift to run; smooth acceleration and stopping; touch controls (tap to walk, drag to orbit, pinch to zoom); miniature HUD on phones; phones and `#play` skip the lobby | `game/index.html`, `game/src/main.js`, `game/src/play/` |
 | Lobby | matches the owner reference one to one (owner-supplied background art) | `game/src/ui/lobby.js`, `docs/ui/lobby-reference.jpg` |
 | Languages | EN, UA, RU, IT, 中文, all five fully translated (game and play strings; parity test `tests/ui-i18n-locales.test.mjs`). Open: CJK fallback in the HUD/UI font stacks (request 3 in `docs/collab-requests.md`); native-speaker proofreading of UA/IT/ZH | `game/src/locales/`, `game/src/play/locales/` |
-| NEAR contract `season-commit` | builds and passes tests; **not deployed** (one script: `contracts/season-commit/scripts/deploy-judge-season.sh`, `docs/near.md`). The game side is ready: reproducible judge commitment, read-only testnet client and badge model (`game/src/net/near*.js`), HUD rendering pending (request 7) | `contracts/season-commit/`, `game/src/net/near*.js`, `docs/near.md` |
-| NEAR NFT contract `memory-shard` (shards as NEP-171 tokens tied to the committed season, on-chain ink-ring image) | builds and passes tests (21); **not deployed**, no shard minted (`contracts/memory-shard/scripts/deploy-judge-shards.sh`, same permission path). Game: shard history in the observation, read-only client and badge model (`game/src/net/shard-nft.js`), HUD rendering pending (request 9) | `contracts/memory-shard/`, `docs/shard-nft.md` |
+| NEAR contract `season-commit` | **deployed on testnet** (`ftf-seasons.testnet`, 09.11): judge season committed, 15 leaves revealed on-chain; the HUD shows "Verified on NEAR testnet ✓" on revealed signs (checked headless at 1280, 1920 and 390 px) | `contracts/season-commit/`, `game/src/net/near*.js`, `docs/near.md` |
+| NEAR NFT contract `memory-shard` (shards as NEP-171 tokens tied to the committed season, on-chain ink-ring image) | **deployed on testnet** (`ftf-shards.testnet`, 09.11), 3 judge shards minted. Game: shard history in the observation, read-only client and badge model (`game/src/net/shard-nft.js`); HUD rendering pending (request 9) | `contracts/memory-shard/`, `docs/shard-nft.md` |
 | Audio | 60 procedurally synthesized sounds and a WebAudio runtime, **wired into the play layer** (branch `claude/audio-vfx-wiring`): music by tension, zone beds, one hum per Shell, footsteps by surface for Iris and the agents, event cues, UI sounds, volume sliders in the scene settings; not yet listened to by a human | `game/src/audio/`, `game/src/play/presentation.js`, `docs/audio.md` |
 | VFX | GPU particle system and 4 flipbooks, **wired into the play layer**: composer attach across tier changes, mist under every Shell, Shell IV crack pulse, tension by season tension with a sky tint, the Guest's sign as ink on the glass, event cues, the finale beams from the camps | `game/src/vfx/`, `game/src/play/presentation.js`, `docs/vfx.md` |
 

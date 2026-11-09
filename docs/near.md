@@ -5,17 +5,62 @@ no real funds, no wallet in the client, no key in the repository. The contract i
 [`contracts/season-commit/README.md`](../contracts/season-commit/README.md) (methods, byte format, what is and is not
 verified on-chain); this page covers the pieces around it.
 
-## Deployment status
+## Deployment status: live on testnet (09.11.2026)
 
-| Item | State |
+Deployed by worker M with the owner's permission ("деплой в testnet разрешаю"), testnet only, faucet-sponsored accounts,
+refundable storage deposits; keys stay in the deploying machine's `~/.near-credentials`, never in the repository.
+Records (account ids and public transaction hashes only): `contracts/deployments/`.
+
+| Account | Role |
 |---|---|
-| Contract build and tests | `cargo test --lib` 56/56 in this session (Linux); wasm build via `cargo near build` (see the report) |
-| Testnet accounts and deployment | **not done from the worker session**: the sandbox's permission layer refused `near account create-account sponsor-by-faucet-service …` as a real-world transaction (network to `rpc.testnet.near.org` and the faucet is open). One command does it, below. |
-| `game/src/net/near-deployment.js` | `contractId: null` → every NEAR lookup in the game is off until the deploy record is written |
-| Game client | read-only RPC client, watcher and badge model done and tested; the HUD renders the badge after Task F's step (request 7 in `docs/collab-requests.md`) |
+| [`ftf-seasons.testnet`](https://testnet.nearblocks.io/address/ftf-seasons.testnet) | `season-commit` contract |
+| [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet) | `memory-shard` NEP-171 contract (refers to `ftf-seasons.testnet`) |
+| [`ftf-coordinator.testnet`](https://testnet.nearblocks.io/address/ftf-coordinator.testnet) | owner and coordinator of both; holds the 3 shards (standing in for the AI clans) |
 
-Until the table's second row says *done*, the README keeps saying the contract is **not deployed**, and the game says only
-"Verified ✓" (browser verification against the root).
+The judge season (`?demo=judge`, seed `cc161d308faa67539af44205b56b6d4f`): season `793f6c05e89839f2`, root
+`03dbd4587b5d54fc3a6d4befe19920ba66236de11e786baa0a8678305075769a`, 15 leaves, Ash key commitment
+`d1a397141934211d4673b7db523824988957b5d2d06b1ab050341a4b545d99b6` (committed, not revealed: it is the tick-13 secret).
+
+| Transaction | Hash |
+|---|---|
+| deploy + init `ftf-seasons.testnet` | [`GaBgeb5uFwTqF1w7bXq9gFiEXvAaKKnS3svbXse9ir5C`](https://testnet.nearblocks.io/txns/GaBgeb5uFwTqF1w7bXq9gFiEXvAaKKnS3svbXse9ir5C) |
+| commit_season | [`6TtWeZ3WuHfhAEkPa9k7mfHAs6ayxqG4iY2iJyGLahbA`](https://testnet.nearblocks.io/txns/6TtWeZ3WuHfhAEkPa9k7mfHAs6ayxqG4iY2iJyGLahbA) |
+| commit_ash_key | [`E3ppFxXgvtEZbJeFUsa5dstyueCF85HqiBuG9wmVWXey`](https://testnet.nearblocks.io/txns/E3ppFxXgvtEZbJeFUsa5dstyueCF85HqiBuG9wmVWXey) |
+| reveal_leaf #0 | [`BQo9Rb1sLBqXxcRbyiw82owYbL9f2pgTdFbp1is5ZW7G`](https://testnet.nearblocks.io/txns/BQo9Rb1sLBqXxcRbyiw82owYbL9f2pgTdFbp1is5ZW7G) |
+| reveal_leaf #1 | [`EuE4iErrT1R6wXvJesAzPpANSi9odjAF5x59nw7RBrK7`](https://testnet.nearblocks.io/txns/EuE4iErrT1R6wXvJesAzPpANSi9odjAF5x59nw7RBrK7) |
+| reveal_leaf #2 | [`E1BAaCAisrxfZ5tsv8GNpz5nLmosuRnWCSf8SAUJjiTB`](https://testnet.nearblocks.io/txns/E1BAaCAisrxfZ5tsv8GNpz5nLmosuRnWCSf8SAUJjiTB) |
+| reveal_leaf #3 | [`FSBYd2RoirKgTuhjHBuVz3Y5YeLDQQhQfk3kQhySivGk`](https://testnet.nearblocks.io/txns/FSBYd2RoirKgTuhjHBuVz3Y5YeLDQQhQfk3kQhySivGk) |
+| reveal_leaf #4 | [`EPwSPojfpLANuEoLrsFZFt63AjejjY7HfP3rU39VUmYZ`](https://testnet.nearblocks.io/txns/EPwSPojfpLANuEoLrsFZFt63AjejjY7HfP3rU39VUmYZ) |
+| reveal_leaf #5 | [`GyNT7qqE4ETEDwHVhV5Rd3yjFKb311N2tt8SVYM6fDz9`](https://testnet.nearblocks.io/txns/GyNT7qqE4ETEDwHVhV5Rd3yjFKb311N2tt8SVYM6fDz9) |
+| reveal_leaf #6 | [`5XQTv3L6Rn62r2H89AQzqYKUi3ZH3YtDTE94xn6ocT9T`](https://testnet.nearblocks.io/txns/5XQTv3L6Rn62r2H89AQzqYKUi3ZH3YtDTE94xn6ocT9T) |
+| reveal_leaf #7 | [`69HJV7seGGrFQPGA6BBT5hpymW7aWBP1s8bVSZNjehrb`](https://testnet.nearblocks.io/txns/69HJV7seGGrFQPGA6BBT5hpymW7aWBP1s8bVSZNjehrb) |
+| reveal_leaf #8 | [`5LWv9soYdyVZLTS9XnHQeXAGELauYsA4dz28aScY6Jow`](https://testnet.nearblocks.io/txns/5LWv9soYdyVZLTS9XnHQeXAGELauYsA4dz28aScY6Jow) |
+| reveal_leaf #9 | [`4ndqwYLNeSjkoYuu1JA2kdnCjCjBHUvsiSnmYZTw9q9o`](https://testnet.nearblocks.io/txns/4ndqwYLNeSjkoYuu1JA2kdnCjCjBHUvsiSnmYZTw9q9o) |
+| reveal_leaf #10 | [`GP33yvHm7VYRTmAfSjUmk8UVXNug2MVbUxJhEeBi2Tcf`](https://testnet.nearblocks.io/txns/GP33yvHm7VYRTmAfSjUmk8UVXNug2MVbUxJhEeBi2Tcf) |
+| reveal_leaf #11 | [`BX5y5SdD7SsgLH9A9kuxUx5LUQjSkW6cZptgagphDNyy`](https://testnet.nearblocks.io/txns/BX5y5SdD7SsgLH9A9kuxUx5LUQjSkW6cZptgagphDNyy) |
+| reveal_leaf #12 | [`5T6QtFxJw6aohEkjFkyw3Vvuf13Nnbm7UWZePHZG2A9e`](https://testnet.nearblocks.io/txns/5T6QtFxJw6aohEkjFkyw3Vvuf13Nnbm7UWZePHZG2A9e) |
+| reveal_leaf #13 | [`5FodXX9DEnEaDFqAarZ7VNJcWh9w9xd3TJkrzhgTtpCG`](https://testnet.nearblocks.io/txns/5FodXX9DEnEaDFqAarZ7VNJcWh9w9xd3TJkrzhgTtpCG) |
+| reveal_leaf #14 | [`968wtGh9VTifeNfGQwAqw2MHkn1aYe6NYburABhwqBxQ`](https://testnet.nearblocks.io/txns/968wtGh9VTifeNfGQwAqw2MHkn1aYe6NYburABhwqBxQ) |
+| deploy + init `ftf-shards.testnet` | [`6RBYGycH8uf9ub519KPRriUKRxxs7gXDZ8Jp3FZy4eGt`](https://testnet.nearblocks.io/txns/6RBYGycH8uf9ub519KPRriUKRxxs7gXDZ8Jp3FZy4eGt) |
+| mint_shard `793f6c05e89839f2-7` | [`2nqGqiVfk8pQaC6ue9naxR8XDYAEHXcqRZ8DovHi7LLc`](https://testnet.nearblocks.io/txns/2nqGqiVfk8pQaC6ue9naxR8XDYAEHXcqRZ8DovHi7LLc) |
+| mint_shard `793f6c05e89839f2-10` | [`D279h9JSGt2iZhbwnGwTHhne3pEgJikPyR4ZTVZpeJgF`](https://testnet.nearblocks.io/txns/D279h9JSGt2iZhbwnGwTHhne3pEgJikPyR4ZTVZpeJgF) |
+| mint_shard `793f6c05e89839f2-15` | [`6BpYCfy8s5zBe1w2eBBabwGx8spwLwMd7oCzNfkmN5xR`](https://testnet.nearblocks.io/txns/6BpYCfy8s5zBe1w2eBBabwGx8spwLwMd7oCzNfkmN5xR) |
+
+Checked after the deploy with read-only RPC views (anyone can repeat them, no key needed):
+```bash
+near contract call-function as-read-only ftf-seasons.testnet get_season json-args '{"season_id":"793f6c05e89839f2"}' network-config testnet now
+# -> schedule_root 03dbd458…5075769a, leaf_count 15, revealed_count 15, ash_key_committed true
+near contract call-function as-read-only ftf-seasons.testnet check_leaf file-args <reveal-5 with one salt digit changed> network-config testnet now
+# -> {"valid": false, "error": "ERR_ROOT_MISMATCH: the proof does not lead to the committed schedule root"}
+near contract call-function as-read-only ftf-shards.testnet shards_of_season json-args '{"season_id":"793f6c05e89839f2"}' network-config testnet now
+# -> 3 shards; shard 7 (Iris's Call, bought by Frost for 13) carries unlocked_leaf 63903cca…, equal to leaf #3 in ftf-seasons.testnet
+```
+The on-chain `shard_svg` of shard 7 is byte-identical to the game's `shardSvg()` output.
+
+In the game (headless Chromium, 1280×800, 1920×1080, 390×844): `?demo=judge&mode=walk`, after trial 3 the revealed
+Sign #1 shows **Verified ✓** and, below the anchor, **Verified on NEAR testnet ✓** linking to the reveal transaction of
+leaf #0. No console errors. The game never signs: it only reads `get_season` and `get_revealed_leaf`.
+No HUD element shows the shard NFTs yet (request 9).
 
 ## What runs where
 
