@@ -39,12 +39,14 @@ AMOUNT = {
     "abs_line": 0.0020,   # owner 09.11 "muscles drawn": the linea alba, a shallow groove down the stomach
     "abs_side": 0.0013,   # the outer edges of the rectus abdominis
     "cleft": 0.010,       # owner 09.11: the cheeks rest against each other (no 1-3 cm gap between them)
+    "fold": 0.0035,       # a crisp gluteal fold under each cheek (owner's reference)
+    "erector": 0.0022,    # the spinal erectors either side of a shallow groove (lower-back definition)
 }
 
 # Region shapes in landmark coordinates (metres at 1.70 m): lat = lateral offset from the hip joint's
 # x (negative = toward the midline), dz = height above the hip joint, t = 0 at the hip joint, 1 at the knee.
 SHAPE = {
-    "gmax": {"lat": -0.025, "dz": -0.060, "r_lat": 0.070, "r_up": 0.075, "r_down": 0.050},
+    "gmax": {"lat": -0.025, "dz": -0.050, "r_lat": 0.070, "r_up": 0.075, "r_down": 0.050},
     "gmed": {"lat": 0.030, "dz": 0.050, "r_lat": 0.045, "r_z": 0.045},
     "quad": {"t": 0.55, "r_t": 0.35},
     "ham": {"t": 0.40, "r_t": 0.28, "t_min": 0.12},
@@ -160,6 +162,18 @@ def offsets(cos, normals, weights, joints, H, a=None):
             g = gate(w, ("pelvis", "upperleg01", "spine05")) * smoothstep(-0.005, 0.015, y - hy)   # the back half
             m = gauss((dz + 0.040 * k) / (0.060 * k)) * (1.0 - smoothstep(0.015 * k, 0.035 * k, abs(x)))
             d += a.get("cleft", 0.0) * m * smoothstep(0.2, 0.7, abs(nx)) * g
+        # the gluteal fold: a shallow crease along the underside of each cheek, back-facing, not at the sides
+        if n_back > 0.2:
+            g = gate(w, ("pelvis", "upperleg01", "upperleg02"))
+            fz = -0.085 * k - 0.012 * k * ((lat + 0.02 * k) / (0.05 * k)) ** 2   # rises a little toward the outside
+            m = gauss((dz - fz) / (0.008 * k)) * gauss((lat + 0.02 * k) / (0.055 * k)) * smoothstep(0.004 * k, 0.020 * k, abs(x))
+            d -= a.get("fold", 0.0) * m * g
+        # the spinal erectors: two soft ridges with a groove between them, the small of the back
+        if n_back > 0.5:
+            g = gate(w, ("spine05", "spine04", "spine03", "spine02"))
+            band = gauss((dz - 0.17 * k) / (0.08 * k))
+            ridge = gauss((abs(x) - 0.024 * k) / (0.010 * k)) - 0.8 * gauss(x / (0.006 * k))
+            d += a.get("erector", 0.0) * band * ridge * g
         # abdominal definition: the linea alba and the rectus edges, front-facing torso only
         if -n_back > 0.5 and 0.10 * k < dz < 0.32 * k:
             band = smoothstep(0.10 * k, 0.14 * k, dz) * (1.0 - smoothstep(0.27 * k, 0.32 * k, dz))

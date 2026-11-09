@@ -1103,6 +1103,33 @@ def edge_strip(name, rows_of, n, thick, trim=1.0, rib=False):
     return o
 
 
+def surface_line(name, target, rays, n, width, lift=0.0004, thick=0.0006, trim=0.0, accent=1.0):
+    """A seam, piping or stripe laid on a garment's outer surface (owner 09.11: clean lines that do not stand
+    proud of the fabric): rays(t) -> (origin, direction) for t in 0..1; each ray is cast at `target`, the
+    hits are joined into a strip `width` wide, lifted `lift` off the surface along its normal. Unlike
+    per-vertex paint, the line's edges are clean at any mesh density."""
+    from mathutils.bvhtree import BVHTree
+    me_t = target.data
+    tree = BVHTree.FromPolygons([target.matrix_world @ v.co for v in me_t.vertices], [list(p.vertices) for p in me_t.polygons])
+    hits = []
+    for i in range(n):
+        o, d = rays(i / (n - 1))
+        loc, nrm, _, _ = tree.ray_cast(V(o), V(d).normalized(), 1.0)
+        hits.append((loc, nrm) if loc is not None else None)
+    pts = [h for h in hits if h is not None]
+    if len(pts) < 3:
+        return None
+    rows = []
+    for i, (p_, nrm) in enumerate(pts):
+        tan = (pts[min(i + 1, len(pts) - 1)][0] - pts[max(i - 1, 0)][0]).normalized()
+        perp = tan.cross(nrm).normalized()
+        q = p_ + nrm * lift
+        rows.append((q - perp * width / 2, q + perp * width / 2))
+    o = edge_strip(name, lambda t: rows[min(len(rows) - 1, round(t * (len(rows) - 1)))], len(rows), thick, trim=trim)
+    set_attr(o, "accent", lambda i, co: accent)
+    return o
+
+
 def tube_along(name, path, radii, n=20, cuff=None):
     """A fitted sleeve: rings around a bone path with per-ring radii."""
     rings = []

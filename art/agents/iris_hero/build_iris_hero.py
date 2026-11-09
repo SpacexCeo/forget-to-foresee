@@ -839,9 +839,50 @@ def athletic_costume(bm, P, dom, bones):
     wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0050, n=72, smooth=2)   # just over the leggings' top
     C.set_attr(wb, "trim", lambda i, p: 1.0)
     C.set_attr(wb, "accent", lambda i, p: 0.0)
+    # the band's lower edge dips in a V at the centre back (owner's reference: the seam runs on into the cleft)
+    for v in wb.data.vertices:
+        if v.co.y > c.y and v.co.z < 0.990:
+            v.co.z -= 0.030 * max(0.0, 1.0 - abs(v.co.x) / 0.075) * min(1.0, (0.990 - v.co.z) / 0.016)
     C.solidify(wb, 0.0012, 1.0, even=False)
     C.smooth(wb, 50)
     out["leggings_band"] = wb
+    # piping, the centre back seam and the sleeve stripes as clean lines on the fabric (owner's reference 09.11)
+    sm = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(max(0.0, min(1.0, (x - a) / (b - a))))
+    leg = out["leggings"]
+    for sx, side in (("L", 1), ("R", -1)):
+        hip, knee = bones[f"thigh_{sx}"][0], bones[f"shin_{sx}"][0]
+        def pipe_ray(t, side=side, hip=hip, knee=knee):
+            z = 0.985 - (0.985 - 0.30) * t
+            if z > 0.855:                                     # over the seat: from near the centre out round the cheek
+                x = side * (0.062 + 0.088 * sm(0.985, 0.855, z))
+                return V((x, 0.6, z)), V((0, -1, 0))
+            f = (hip.z - z) / max(hip.z - knee.z, 1e-3)        # down the back-outer thigh to the calf
+            cen = hip.lerp(knee, max(0.0, min(1.3, f)))
+            cen = V((cen.x, cen.y, z))
+            phi = math.radians(62 + 30 * sm(0.855, 0.50, z))   # from the back (0) toward the outside (90)
+            d = V((side * math.sin(phi), math.cos(phi), 0))
+            return cen + d * 0.4, -d
+        o = C.surface_line(f"leggings_piping_{sx}", leg, pipe_ray, 90, 0.0028)
+        if o:
+            out[o.name] = o
+    o = C.surface_line("leggings_seam_back", leg, lambda t: (V((0.0, 0.6, 0.960 - 0.085 * t)), V((0, -1, 0))), 16, 0.0016,
+                       trim=1.0, accent=0.0)
+    if o:
+        out[o.name] = o
+    jk = out.get("jacket")
+    if jk:
+        for sx, side in (("L", 1), ("R", -1)):
+            sh, el = bones[f"upperarm_{sx}"]
+            wr = bones[f"forearm_{sx}"][1]
+            def stripe_ray(t, side=side, sh=sh, el=el, wr=wr):
+                a = sh.lerp(el, min(1.0, t * 2)) if t < 0.5 else el.lerp(wr, (t - 0.5) * 2 * 0.86)
+                axis = (el - sh).normalized() if t < 0.5 else (wr - el).normalized()
+                out_d = V((side, 0.12, 0))
+                out_d = (out_d - axis * out_d.dot(axis)).normalized()
+                return a + out_d * 0.3, -out_d
+            o = C.surface_line(f"jacket_stripe_{sx}", jk, stripe_ray, 60, 0.011)
+            if o:
+                out[o.name] = o
     # trainers (built from the foot) and grey ankle socks that tuck under the leggings' hem (owner 09.11:
     # the ankle under the hem was empty and the old shoe twisted)
     for sfx, side in (("L", 1), ("R", -1)):

@@ -563,7 +563,7 @@ def clip_iris_walk(key, S, u):
     stance = 0.61
     for side, ph0 in ((1, 0.0), (-1, 0.5)):
         P.feet[side] = gait_foot((u + ph0) % 1.0, side, WALK_SPEED, T, stance, 0.065, 14.0, -34.0,
-                                 0.050 - ANKLE_X, tang=0.6, fwd_bias=-0.06)   # the heel lands nearer: no drop at the strike
+                                 0.050 - ANKLE_X, tang=0.6, fwd_bias=-0.10)   # the heel lands nearer: no drop at the strike
     c, s_ = math.cos(TAU * u), math.sin(TAU * u)
     dip = math.cos(2 * TAU * (u - 0.10))                    # lowest just after each contact
     P.hips.z = -0.004 - 0.008 * dip                         # tall over the standing leg (knee ~10 deg at passing)
