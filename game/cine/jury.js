@@ -256,22 +256,26 @@ SCENES.agents = { duration: 6.0, build() {
 
 // Pillar title cards (2.0 s): the numeral, the title in the display face, one line; the season's real first sign draws
 // itself behind as the ring motif and turns slowly.
-function pillar(numeral, title, sub) { return { duration: 2.0, build() {
+function pillar(numeral, title, sub, image = null) { return { duration: 2.0, build() {
   const cv = signCanvas(D.sign, 820); cv.classList.add('abs'); at(cv, 550, 130); stage.append(cv);
   const eb = h('div', { class: 'abs label', style: { left: 0, right: 0, top: '330px', textAlign: 'center', letterSpacing: '.5em' }, text: numeral });
   const tt = h('div', { class: 'abs', style: { left: 0, right: 0, top: '400px', textAlign: 'center', font: '400 112px/1 var(--title)', color: 'var(--ink)', textShadow: '0 4px 40px rgba(0,0,0,.8)' }, text: title });
   const rl = h('div', { class: 'abs', style: { left: '760px', width: '400px', top: '556px', height: '1px', background: 'linear-gradient(90deg, rgba(228,194,114,0), #e4c272, rgba(228,194,114,0))' } });
   const sb = h('div', { class: 'abs', style: { left: 0, right: 0, top: '600px', textAlign: 'center', font: '400 52px/1.2 var(--body)', color: 'var(--ink)' }, text: sub });
+  // The owner's lockup (09.11): the ring with the title and the three words, as one image, instead of the drawn title.
+  const img = image ? h('img', { src: image.src, class: 'abs', style: { left: image.x + 'px', top: image.y + 'px', width: image.w + 'px', filter: 'drop-shadow(0 6px 24px rgba(0,0,0,.6))' } }) : null;
+  if (img) { eb.style.display = tt.style.display = rl.style.display = 'none'; stage.append(img); sb.style.top = image.subY + 'px'; }
   stage.append(eb, tt, rl, sb);
   return (t) => {
     drawBg(t);
+    if (img) show(img, t, 0.2, 1.95, { scale: 0.96 });
     cv.style.opacity = (0.28 * ease.out(P(t, 0, 0.5))).toFixed(3); cv.style.transform = `rotate(${(t * 6).toFixed(2)}deg) scale(${lerp(0.92, 1.02, ease.out(P(t, 0, 2))).toFixed(4)})`;
     cv.draw({ progress: ease.inOut(P(t, 0, 1.4)), time: t });
     show(eb, t, 0.15, 1.95); show(tt, t, 0.25, 1.95, { scale: 0.97 }); show(sb, t, 0.5, 1.95);
     rl.style.transform = `scaleX(${ease.out(P(t, 0.35, 0.6)).toFixed(4)})`; rl.style.opacity = (1 - ease.in(P(t, 1.75, 0.2))).toFixed(3);
   };
 } }; }
-SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Six AI clans scheme around you');
+SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Six AI clans scheme around you', { src: '/cine/ref/lockup-agents.png', x: 410, y: 250, w: 1100, subY: 760 });
 SCENES['pillar-nft'] = pillar('II', 'The Memory Shard', 'Your agent pays for prophecy with a memory');
 
 // 9 · Split screen: the browser (an in-engine shot composited into the hole) and an AI agent over the HTTP API (5.0 s).
