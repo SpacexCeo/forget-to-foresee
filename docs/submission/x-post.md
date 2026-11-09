@@ -9,33 +9,41 @@ complete moment, say concretely what NEAR enables, give a next step. The owner p
 An earlier, longer thread draft ("DAY ONE OR ONE DAY") lives in `docs/submission.md`; the version below is tightened
 to the rules and to what runs on 08.11. Use either, but keep the three required elements in the **first** post.
 
-## Post 1 (attach the 60–90 s video from `docs/submission/video-shot-list.md`)
+## Post 1 (attach the video: `trailer.mp4`, or `clip-verified.mp4` for the Verified moment)
 
-> In most "AI" games the AI quietly decides the ending. We built a game where the future is sealed before you move, and your agent pays for prophecy with its own memories.
+> In most AI games the AI quietly decides the ending.
 >
-> Forget to Foresee: read the aliens' signs, stake silk, watch the sign come true, verified against a Merkle root committed before trial 1.
+> In Forget to Foresee the future is sealed on NEAR before you move, and your agent pays for every prophecy with one of its own memories.
 >
-> Built at NEAR HACKATHON by RAEN Computers.
+> Built at NEAR HACKATHON by RAEN Computers
 > @NEARProtocol #NEARHackathon
 
-(≈ 420 characters. X Premium allows long posts; without Premium, split at the blank lines: the first two paragraphs,
-then the "Built at NEAR HACKATHON" line with the tags must stay in the first post.)
+(260 characters as X counts them; fits a standard post.)
 
 ## Post 2 (reply)
 
-> How NEAR fits in: our contract season-commit (Rust, near-sdk) recomputes every revealed event byte for byte and verifies its Merkle proof on-chain, with a commit-reveal for the crisis key. Today it is tested; testnet deploy is next. No token, no payments: the economy is in-game silk.
+> Why NEAR: the whole season is generated before trial 1 and committed as one Merkle root to our contract on NEAR testnet.
+>
+> Each event is then revealed and checked on-chain against that root, byte for byte. Nobody, us included, can rewrite the ending.
+>
+> https://testnet.nearblocks.io/address/ftf-seasons.testnet
+
+(274 characters. Updated 09.11 after `ftf-seasons.testnet` was deployed and the judge season committed and revealed.)
 
 ## Post 3 (reply)
 
-> Play it in the browser (5-minute judge path): https://spacexceo.github.io/forget-to-foresee/?demo=judge
-> Source, tests and the agent API (AI agents play the same room over HTTP): https://github.com/SpacexCeo/forget-to-foresee
+> Play in the browser, phone included (5-minute judge path): https://spacexceo.github.io/forget-to-foresee/?demo=judge
 >
-> What would you forget to see the future? @NearLegion @NearBuilders
+> Open source, 600 tests, AI agents play the same room over HTTP: https://github.com/SpacexCeo/forget-to-foresee
+>
+> What memory would you give up to see the future?
+> @NearLegion @NearBuilders
+
+(247 characters. "600 tests" = 495 game + 28 API + 56 season-commit + 21 memory-shard; recount before posting.)
 
 ## Checklist before posting (owner)
 - [ ] The video is attached to post 1 (not only a link).
 - [ ] "built at NEAR HACKATHON", @NEARProtocol and #NEARHackathon are in post 1.
 - [ ] The live link opens and reaches "Verified ✓" (re-run the README judge path once on the day).
-- [ ] If the testnet contract gets deployed before posting, post 2 may say "deployed on testnet" and link the
-  explorer page; otherwise it stays "tested; testnet deploy is next".
+- [ ] Open the explorer link in post 2 in a browser once (the bot check blocks scripted fetches).
 - [ ] Paste the post URL into `apply-form.md` → `demoUrl`.
