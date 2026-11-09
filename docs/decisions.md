@@ -152,6 +152,7 @@ To see the future, the agent **forgets a memory forever**. The human chooses wha
 | 09.11 | **Submission tracks `games` + `nfts`; NEAR control with the owner.** memory-shard is live (`ftf-shards.testnet`), so `nfts` is claimed. The 3 judge shards moved to `lambada_eth.testnet`, which is a coordinator on both contracts and holds a full-access key on the three project accounts. |
 | 09.11 | **Models load with a cache key** (`<name>.glb?v=<bytes>`): a phone kept the old Iris after a deploy (Pages `max-age=600`). |
 | 09.11 | **Iris look (owner).** Stylized-realism hero in the game (reddish chestnut hair stays: owner); next, on the owner's order, an athletic sportswear outfit on the same rig. |
+| 09.11 | **No constant drone (owner).** "Wind and music yes, the hum no": the four positional Shell hum loops (55 Hz) and the inside-the-Shell bed (82 Hz) were steady low drones, so every zone's hum level is 0, the Shell has no bed and no hum loop is started (`audio/mix.js`, `audio/audio.js`). The Guest's emergence swell (a short event) stays. |
 
 ## 5. Status
 - `prototype-2d/index.html` — the full 2D loop, playable. UI is still Russian; it is the frozen parity reference.

@@ -3,7 +3,7 @@
 // Nothing touches WebAudio until unlock() (call it from a user gesture). See docs/audio.md.
 import { AUDIO_MANIFEST } from './manifest.js';
 import { createSafeStorage } from '../ui/storage.js';
-import { loadVolumes, saveVolumes, sanitizeVolumes, sliderGain, dbToGain, tensionMix, zoneMix, resolveSound, guestPlan, listenerPose, BUSES } from './mix.js';
+import { loadVolumes, saveVolumes, sanitizeVolumes, sliderGain, dbToGain, tensionMix, zoneMix, ZONES as ZONES_WITH_HUM, resolveSound, guestPlan, listenerPose, BUSES } from './mix.js';
 
 const defaultBase = () => {
   let b = '/';
@@ -211,7 +211,10 @@ export function createAudio(opts = {}) {
      */
     setShellHums(positions) {
       for (const h of hums) h.stop(1);
-      hums = (positions || []).map((pos) => play('amb_shell_hum', { pos, loop: true, gain: zone ? zoneMix(zone).hum : 1 }));
+      // No loop is started while every zone's hum level is 0 (owner 09.11: no constant drone).
+      const level = (z) => zoneMix(z).hum;
+      if (!ZONES_WITH_HUM.some((z) => level(z) > 0)) { hums = []; return hums; }
+      hums = (positions || []).map((pos) => play('amb_shell_hum', { pos, loop: true, gain: zone ? level(zone) : 1 }));
       return hums;
     },
     setListener(camera, target) {
