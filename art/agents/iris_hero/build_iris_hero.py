@@ -616,7 +616,7 @@ def athletic_costume(bm, P, dom, bones):
     # sports bra: continuous compression top from convex sections, a scooped neckline (higher at the
     # sides and back), a supportive underbust band
     zs = [1.168 + (1.385 - 1.168) * k / 18 for k in range(19)]
-    bra, n = C.hull_loft("sports_top", torso_pts, zs, 0.004, n=60, smooth=2)
+    bra, n = C.hull_loft("sports_top", C.without_nipples(torso_pts), zs, 0.004, n=60, smooth=2)
     rows = len(zs)
     def neckline(th_front):                                   # top edge height by how frontal the column is
         return 1.385 - 0.060 * th_front ** 1.6
@@ -639,34 +639,45 @@ def athletic_costume(bm, P, dom, bones):
     C.solidify(bra, 0.0025, 1.0, even=False)
     C.smooth(bra, 50)
     out["sports_top"] = bra
-    # jacket upper: shoulders, upper chest, upper back and sleeves follow the body (no boxy shoulders)
+    # jacket: the front is laid on one constructed garment surface (the chest as one volume, straight
+    # fabric from the bust to the hem), the rest follows the body; clean zip plackets, a ribbed hem band,
+    # a neckline cut round the stand collar
+    x_edge = lambda z: 0.036 + 0.040 * (1.43 - z) / 0.28      # the zip edge: falls open toward the hem
+    HEM = 1.15
+    nc, nrx, nry = P.section(1.455, bones=("neck",))
+    def neck_r(p):                                            # 1.0 on the collar base ellipse
+        return math.hypot((p.x - nc.x) / (nrx + 0.010), (p.y - nc.y) / (nry + 0.011))
     wrist = {sx: bones[f"hand_{sx}"][0] for sx in ("L", "R")}
     ARM = ("shoulder_L", "shoulder_R", "upperarm_L", "upperarm_R", "forearm_L", "forearm_R")
     def upper_keep(i, _):
         p = co[i]
         d = dom[i]
-        if d in TORSO + ("neck", "head"):
-            front = p.y < c.y
-            return 1.15 < p.z < 1.43 and not (front and abs(p.x) < 0.062 + 0.012 * (1.43 - p.z) / 0.28)
+        if d in TORSO + ("neck", "head", "shoulder_L", "shoulder_R"):
+            if p.z < HEM or p.z > (1.460 if d == "head" else 1.470):
+                return False
+            if p.y < c.y and abs(p.x) < x_edge(min(p.z, 1.43)):
+                return False
+            if p.z > 1.38 and neck_r(p) < 1.0:
+                return False
+            return True
         if d in ARM:
             sx = "L" if p.x > 0 else "R"
             return (p - wrist[sx]).length > 0.012
         return False
     def upper_trim(p, nrm):
-        return 1.0 if (p.y < c.y and abs(p.x) < 0.072) or p.z < 1.165 else 0.0
+        return 0.0
     def upper_accent(p, nrm):                                 # a white stripe down the outer sleeve to the cuff,
         side = 1 if p.x > 0 else -1                           # carried over the shoulder to the collar
         sleeve = abs(p.x) > 0.16 and nrm.x * side > 0.90 and 1.02 < p.z < 1.40
-        shoulder = p.z > 1.38 and abs(p.y - (c.y + 0.01)) < 0.012 and abs(p.x) > 0.07
+        shoulder = p.z > 1.38 and abs(p.y - (c.y + 0.01)) < 0.012 and abs(p.x) > 0.085
         return 1.0 if sleeve or shoulder else 0.0
     def upper_edges(v):
         p = v.co
         if p.z < 1.17 and abs(p.x) < 0.25:
-            p.z = 1.15
-        elif p.y < c.y and abs(p.x) < 0.10 and p.z > 1.17:          # a straight zip edge (soft, no snap)
-            p.x = math.copysign(0.062 + 0.012 * (1.43 - p.z) / 0.28, p.x)
-    front_body = [p for p in torso_pts if p.y < c.y]
-    bust = lambda p: p.y < c.y and 1.14 < p.z < 1.33 and abs(p.x) < 0.17
+            p.z = HEM
+        elif p.y < c.y and abs(p.x) < x_edge(p.z) + 0.03 and p.z < 1.42:    # straight zip edges
+            p.x = math.copysign(x_edge(p.z), p.x)
+        # the neckline is tucked inside the stand collar, which hides it
     def ease(p, nrm):                                         # snug at shoulder, elbow and wrist
         if abs(p.x) < 0.15:
             return 0.0085
@@ -675,16 +686,52 @@ def athletic_costume(bm, P, dom, bones):
         dE, dW, dS = (p - E).length, (p - W).length, (p - S0).length
         k = min(1.0, dE / 0.06) * min(1.0, dW / 0.08) * min(1.0, dS / 0.07)
         return 0.0030 + 0.0050 * k
-    out["jacket"] = C.shell_from_body(bm, "jacket", upper_keep, ease, 0.0035, trim=upper_trim,
-                                      accent=upper_accent, edges=upper_edges,
-                                      envelope=(lambda p: abs(p.x) < 0.17 and 1.14 < p.z < 1.40,
-                                                torso_pts, 0.013),
-                                      curtain=(bust, front_body, 1.33,
-                                               lambda z: 0.45 + 0.55 * C.smooth01(1.15, 1.30, z)),
-                                      relax=(bust, 6),
-                                      flatten=(lambda p: p.y < c.y - 0.01 and 1.15 < p.z < 1.38 and abs(p.x) < 0.16, 0.055),
-                                      edge_relax=6)
-    out["jacket_collar"] = C.stand_collar(P)
+    under = C.without_nipples(torso_pts) + [bra.matrix_world @ v.co for v in bra.data.vertices]
+    depth = C.front_surface(under, 0.0050)                   # laid over the sports top, never through it
+    def drape_w(p):
+        if p.y > c.y or p.z < HEM - 0.01:
+            return 0.0
+        return (1.0 - C.smooth01(0.120, 0.172, abs(p.x))) * (1.0 - C.smooth01(1.355, 1.405, p.z))
+    jk = C.shell_from_body(bm, "jacket", upper_keep, ease, 0.0035, trim=upper_trim,
+                           accent=upper_accent, edges=upper_edges,
+                           envelope=(lambda p: abs(p.x) < 0.17 and 1.14 < p.z < 1.40 and p.y > c.y,
+                                     torso_pts, 0.013), edge_relax=4,
+                           drape=(drape_w, depth, x_edge, HEM, 40), clear=(bra, 0.0035),
+                           loop_smooth=(lambda p: p.z > 1.38 and not (p.y < c.y and abs(p.x) < x_edge(p.z) + 0.006
+                                                                       and p.z < 1.415), 15))
+    out["jacket"] = jk
+    from mathutils.bvhtree import BVHTree
+    jt = BVHTree.FromPolygons([jk.matrix_world @ v.co for v in jk.data.vertices], [list(f.vertices) for f in jk.data.polygons])
+    def hit_front(x, z):                                      # the jacket's outer surface seen from the front
+        h = jt.ray_cast(V((x, c.y - 0.5, z)), V((0, 1, 0)))
+        return h[0]
+    # zip plackets: a raised band on each front edge, edge to collar
+    for sx, side in (("L", 1), ("R", -1)):
+        def rows(t, side=side):
+            z = HEM + 0.0005 + (1.414 - HEM) * t
+            xe = x_edge(z)
+            a = hit_front(side * (xe + 0.0010), z)
+            b = hit_front(side * (xe + 0.0105), z)
+            if a is None or b is None:
+                return None
+            lift = V((0, -0.0011, 0))
+            return (a + lift + V((-side * 0.0012, 0, 0)), b + lift * 0.3)
+        out[f"jacket_placket_{sx}"] = C.edge_strip(f"jacket_placket_{sx}", rows, 40, 0.0018)
+    # ribbed hem band all round, open at the zip
+    def hit_round(th, z):                                     # from inside out: the torso, never a sleeve
+        d = V((math.cos(th), math.sin(th), 0))
+        h = jt.ray_cast(V((c.x, c.y, z)), d)
+        return None if h[0] is None else h[0] + d * 0.0035
+    def hem_rows(t):
+        th = -math.pi / 2 + math.radians(14) + t * (2 * math.pi - math.radians(28))
+        a, b = hit_round(th, HEM + 0.0008), hit_round(th, HEM + 0.017)
+        if a is None or b is None or (a.y < c.y and abs(a.x) < x_edge(HEM) + 0.001):
+            return None
+        d = V((math.cos(th), math.sin(th), 0)) * 0.0014
+        return (a + d, b + d)
+    out["jacket_hem"] = C.edge_strip("jacket_hem", hem_rows, 120, 0.0022)
+    gap = math.degrees(math.asin(min(0.95, (x_edge(1.42) + 0.004) / (nrx + 0.016))))
+    out["jacket_collar"] = C.stand_collar(P, z0=1.400, gap_deg=gap)
     # leggings: from the body surface, high-rise, the crotch relaxed so it never cuts in
     LEG = ("thigh_L", "thigh_R", "shin_L", "shin_R")
     def leg_keep(i, _):
@@ -703,14 +750,17 @@ def athletic_costume(bm, P, dom, bones):
     def leg_edges(v):
         if v.co.z < 0.6:
             v.co.z = 0.12
-    crotch = lambda p: abs(p.x) < 0.07 and 0.70 < p.z < 0.88
+        else:                                                 # a level top edge, hidden in the waistband
+            v.co.z = 1.020
+    # compression fabric unifies the forms: the crotch and a restrained glute cleft are bridged
+    crotch = lambda p: (abs(p.x) < 0.07 and 0.70 < p.z < 0.88) or (abs(p.x) < 0.045 and p.y > c.y and 0.78 < p.z < 0.99)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
-                                        accent=leg_stripes, edges=leg_edges, relax=(crotch, 8))
+                                        accent=leg_stripes, edges=leg_edges, relax=(crotch, 12))
     # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
-    hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine")]
-    zs = [0.990 + (1.050 - 0.990) * k / 5 for k in range(6)]
-    wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0045, n=64, smooth=1)
+    hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")]
+    zs = [0.972 + (1.050 - 0.972) * k / 6 for k in range(7)]   # a reinforced band over the leggings' top
+    wb, n = C.hull_loft("leggings_band", hip_pts, zs, 0.0095, n=72, smooth=2)
     C.set_attr(wb, "trim", lambda i, p: 1.0)
     C.set_attr(wb, "accent", lambda i, p: 0.0)
     C.solidify(wb, 0.0025, 1.0, even=False)

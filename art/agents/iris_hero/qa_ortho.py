@@ -102,10 +102,15 @@ if only:
     for o in sc.objects:
         if o.type == "MESH":
             o.hide_render = not o.name.startswith(only)
-    cam.data.ortho_scale = 0.75
-    for v, d in {"front": V((0, -1, 0)), "side": V((1, 0, 0)), "q3": V((0.7, -0.7, 0.12)).normalized()}.items():
-        cam.location = V((0, 0, 1.30)) + d * 6.0
-        cam.rotation_euler = (V((0, 0, 1.30)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    import os                                            # QA_ZOOM="scale,centre_z" for close-ups
+    zs_, zc_ = (float(t) for t in os.environ.get("QA_ZOOM", "0.75,1.30").split(","))
+    cam.data.ortho_scale = zs_
+    for v, d in {"front": V((0, -1, 0)), "side": V((1, 0, 0)), "q3": V((0.7, -0.7, 0.12)).normalized(),
+                 "top": V((0.0, -0.5, 0.85)).normalized()}.items():
+        if v == "top" and "QA_ZOOM" not in os.environ:
+            continue
+        cam.location = V((0, 0, zc_)) + d * 6.0
+        cam.rotation_euler = (V((0, 0, zc_)) - cam.location).to_track_quat("-Z", "Y").to_euler()
         key.location = cam.location * 0.4 + V((0, 0, 2.2))
         key.rotation_euler = (V((0, 0, 1.2)) - key.location).to_track_quat("-Z", "Y").to_euler()
         sc.render.resolution_x = sc.render.resolution_y = res
