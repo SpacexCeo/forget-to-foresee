@@ -8,6 +8,8 @@ import { JUDGE_URL, BEAUTY_HIDE, CAMP, SHELL } from './common.mjs';
 const D = JSON.parse(readFileSync(new URL('../../../game/cine/jury-data.json', import.meta.url), 'utf8'));
 const S = D.shard;
 const FRAME = [{ kind: 'vignette', amount: 0.42 }];
+// The capture-only look (lead 09.11): dusk, a cool grey-green mood tint; the game's defaults are untouched.
+const LOOK = { do: 'look', preset: 'dusk', atm: { elevation: 7, azimuth: 48, sunIntensity: 2.6, skyMean: 0.14, exposure: 0.35, cloudCover: 0.75, warmth: 0.75, envIntensity: 0.18, fog: { density: 0.028, falloff: 0.12, sunPower: 4, aerial: 0.55 } }, tint: '#4f625e', amount: 0.32 };
 const cue = (at, name, gain = 0.8) => ({ at, do: 'cue', name, gain });
 const music = (at, tension, gain) => ({ at, do: 'music', tension, ...(gain != null ? { gain } : {}) });
 const head = (camp) => [CAMP[camp][0], 1.6, CAMP[camp][2]];
@@ -34,20 +36,20 @@ export default {
   width: 1920, height: 1080, fps: 60,
   reading: { maxWps: 3, minHold: 1.5 },
   // The film grade of the plates (layers pass): deeper shadows, less milk in the fog, a cooler grey-green; per shot below.
-  grade: 'contrast(1.16) brightness(0.9) saturate(0.86) sepia(0.05)',
+  grade: 'contrast(1.2) brightness(0.92) saturate(0.85) sepia(0.04)',
   music: { gain: 1.0, fadeOut: 1.0 },
   output: { crf: 18, preset: 'slow', grain: 0 }, // a 4K30 master of 18.5 s stays under GitHub's 100 MB
   shots: [
     { // 0–3 · up out of the cloud sea; the archipelago opens; the chapter title emerges from the haze
-      name: 'fly-in', duration: 3.0, grade: 'contrast(1.42) brightness(0.8) saturate(0.8) sepia(0.06)', url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
-      camera: { type: 'dolly', path: [[118, -21, 146], [84, 4, 108], [52, 24, 72], [38, 30, 54]], look: [[40, -6, 40], [20, 2, 20], [4, 5, 4], [0, 6, 0]], fov: [46, 40], ease: 'inOutSine', minHeight: -40, allowLow: true },
+      name: 'fly-in', duration: 3.0, setup: [LOOK, { do: 'frames', n: 60 }], grade: 'contrast(1.3) brightness(0.86) saturate(0.82) sepia(0.04)', url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE,
+      camera: { type: 'dolly', path: [[124, -25, 152], [88, 2, 112], [52, 24, 72], [38, 30, 54]], look: [[40, -6, 40], [20, 2, 20], [4, 5, 4], [0, 6, 0]], fov: [46, 40], ease: 'inOutSine', minHeight: -40, allowLow: true },
       actions: [music(0, 28), cue(0.0, 'guest_arc', 0.4)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 0.6, fadeIn: 0, fadeOut: 0.6 }],
       layers: [{ kind: 'lockup', eyebrow: 'I', text: 'The Agents', sub: 'Memory · Prophecy · Betrayal', from: 0.9, to: 3.0, y: 400, fadeOut: 0.35 }],
     },
     { // 3–4.5 · the back of the ring: Salt, Iris, Frost, their names pinned above their heads
       name: 'clans-back', duration: 1.5, allowJumps: 12, // a fast pan past light and dark camps: real luma steps, not flicker
-       url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+       url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
       camera: sweep(200, 340),
       actions: [music(0, 38), cue(0.1, 'ui_notify', 0.4)],
       overlays: [...FRAME],
@@ -55,14 +57,14 @@ export default {
     },
     { // 4.5–6 · the front of the ring: Ash, Moss, Amber
       name: 'clans-front', duration: 1.5, allowJumps: 12,
-       url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+       url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
       camera: sweep(20, 160),
       actions: [cue(0.1, 'ui_notify', 0.4)],
       overlays: [...FRAME],
       layers: [card('amber', 'Amber', 'Greedy', 0.0, 1.5), card('moss', 'Moss', 'Honest', 0.15, 1.5), card('ash', 'Ash', 'Wary', 0.3, 1.5)],
     },
     { // 6–9 · deals, deception, conflict: the season's real moments drawn between the real camps
-      name: 'conflict', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+      name: 'conflict', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
       camera: { type: 'orbit', center: [0, 0, 0], radius: [58, 54], height: [44, 40], yawFrom: 62, yawTo: 80, lookHeight: -2, fov: [44, 42], ease: 'inOutSine' },
       actions: [music(0, 52), cue(0.3, 'bid_tick_2', 0.7), cue(1.15, 'guest_spike', 0.5), cue(2.1, 'storm_crack', 0.8)],
       overlays: [...FRAME],
@@ -73,9 +75,9 @@ export default {
       ],
     },
     { // 9–12 · macro on the physical shard: it cracks, two future signs rise out of it
-      name: 'shard-macro', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
-      camera: { type: 'push', from: [SHARD_AT[0] + IN[0] * 2.6, 1.55, SHARD_AT[2] + IN[1] * 2.6], look: SHARD_AT, dist1: 1.25, fov: [20, 13], ease: 'inOutSine', minHeight: 0.5 },
-      actions: [music(0, 36), cue(1.4, 'memory_dissolve', 0.9), cue(2.0, 'vision_whoosh', 0.7)],
+      name: 'shard-macro', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
+      camera: { type: 'push', from: [SHARD_AT[0] + IN[0] * 2.6, 1.32, SHARD_AT[2] + IN[1] * 2.6], look: [SHARD_AT[0], 1.26, SHARD_AT[2]], dist1: 1.35, fov: [15, 10], ease: 'inOutSine', minHeight: 0.5 },
+      actions: [{ at: 0, do: 'dof', world: SHARD_AT, aperture: 0.006, maxblur: 0.014 }, music(0, 36), cue(1.4, 'memory_dissolve', 0.9), cue(2.0, 'vision_whoosh', 0.7)],
       overlays: [...FRAME],
       layers: [
         { kind: 'lockup', eyebrow: 'II', text: 'The Memory Shard', sub: 'Memory is the price of prophecy', from: 0.1, to: 1.7, y: 330, fadeOut: 0.3 },
@@ -87,16 +89,16 @@ export default {
       ],
     },
     { // 12–15 · the token assembles out of the shard; the season seal closes around it
-      name: 'token', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+      name: 'token', duration: 3.0, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
       camera: { type: 'orbit', center: SHARD_AT, radius: [1.3, 1.45], height: [1.45, 1.6], yawFrom: 97, yawTo: 112, look: lookBeside(SHARD_AT, 0.42), fov: [30, 32], ease: 'inOutSine', minHeight: 0.5 },
-      actions: [cue(1.1, 'ui_confirm', 0.6), cue(2.0, 'gift_chime', 0.5)],
+      actions: [{ at: 0, do: 'dof', world: SHARD_AT, aperture: 0.005, maxblur: 0.012 }, cue(1.1, 'ui_confirm', 0.6), cue(2.0, 'gift_chime', 0.5)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 3.5, fadeIn: 0, fadeOut: 0, amount: 0.28 }],
       layers: [
         { ...PANEL, from: 0.1, to: 3.0 },
       ],
     },
     { // 15–18.5 · crane up toward Shell II: the token's leaf is the season's leaf #3 on NEAR testnet
-      name: 'proof', duration: 3.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [{ do: 'frames', n: 90 }],
+      name: 'proof', duration: 3.5, url: JUDGE_URL, ui: 'clean', hide: BEAUTY_HIDE, setup: [LOOK, { do: 'frames', n: 90 }],
       camera: { type: 'dolly', path: [[SHARD_AT[0] + IN[0] * 2.9, 1.9, SHARD_AT[2] + IN[1] * 2.9], [5, 10, -15], [6, 22, -4]], look: [lookBeside(SHARD_AT, 0.42), [-8, 14, 14], [SHELL2[0] + 16, SHELL2[1] - 2, SHELL2[2] + 17]], fov: [32, 44], ease: 'inOutSine', minHeight: 0.5 },
       actions: [music(0, 56), music(2.2, 30), cue(1.4, 'gift_chime', 0.7)],
       overlays: [...FRAME, { kind: 'black', from: -1, to: 4, fadeIn: 0, fadeOut: 0, amount: 0.22 }, { kind: 'black', from: 3.0, to: 4.5, fadeIn: 0.5, fadeOut: 0 }],

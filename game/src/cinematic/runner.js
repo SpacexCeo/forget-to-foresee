@@ -7,6 +7,8 @@
 import * as THREE from 'three';
 import { compileCamera } from './camera.js';
 import { createLayers } from './layers.js';
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
+import { TIME_PRESETS } from '../render/sky.js';
 import { createOverlay } from './overlay.js';
 
 const KEYUP_DELAY_FRAMES = 2;
@@ -165,6 +167,7 @@ export class ShotRunner {
     if (pose.roll) cam.rotateZ(pose.roll);
     if (Math.abs(cam.fov - pose.fov) > 1e-3) { cam.fov = pose.fov; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld(true);
+    if (this.dof && this.dof.world) this.dof.pass.uniforms.focus.value = cam.position.distanceTo(new THREE.Vector3(...this.dof.world));
   }
 
   /**
@@ -331,6 +334,24 @@ export class ShotRunner {
         if (!b) throw new Error(`no memory button (${a.kind ? 'kind ' + a.kind : 'index ' + (a.index ?? 0)}; memories: ${((play.session.obs && play.session.obs.memories) || []).map((x) => x.kind).join(',') || 'none'})`);
         this.marks.push({ t: this.t, label: 'forget ' + b.getAttribute('data-forget') });
         b.click(); break;
+      }
+      // Capture-only look (the jury video's dusk grade): a time-of-day preset and a mood tint, never the game's defaults.
+      case 'look': {
+        const ld = g.lookdev;
+        if (a.preset) ld.setPreset(a.preset);
+        if (a.atm) { const base = TIME_PRESETS[ld.preset]; ld.applyAtmosphere({ ...base, ...a.atm, fog: { ...base.fog, ...(a.atm.fog || {}) } }); }
+        if (a.tint) ld.sky.tint(a.tint, a.amount ?? 0.3);
+        break;
+      }
+      // Capture-only depth of field: a bokeh pass after the scene render, focused every frame on a world point.
+      case 'dof': {
+        const post = g.lookdev && g.lookdev.post;
+        if (!post || !post.composer) break; // low tier / no post stack: no DOF (CPU drafts)
+        if (this.dof) post.composer.removePass(this.dof.pass);
+        const pass = new BokehPass(post.scene || g.scene, g.rig.camera, { focus: 3, aperture: a.aperture ?? 0.004, maxblur: a.maxblur ?? 0.012 });
+        post.composer.insertPass(pass, 1);
+        this.dof = { pass, world: a.world };
+        break;
       }
       case 'quality': this.allowQualityChange = true; try { g.lookdev.setQuality(a.tier); } finally { this.allowQualityChange = false; } break;
       case 'motion': g.setReducedMotion(!!a.reduce); break;
