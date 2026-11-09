@@ -47,20 +47,28 @@ ARM_DEG = 14.0              # agent rest stance: arms 14 deg off the body, hangi
 
 COSTUME = os.environ.get("IRIS_COSTUME", "athletic")    # athletic (owner 09.11) | wanderer (the coat)
 
-ATHLETIC = {                  # curvy athletic (owner's references), shaped rather than enlarged
-    # waist: a narrower lower ribcage and a long soft curve into the hips; a flat, toned stomach
-    "torso/measure-waist-circ-decr": 0.70, "torso/measure-underbust-circ-decr": 0.25,
-    "torso/measure-waisttohip-dist-incr": 0.45, "torso/measure-hips-circ-incr": 0.15, "hip/hip-scale-horiz-incr": 0.03,
-    "stomach/stomach-pregnant-decr": 0.80,
-    # seat: volume kept, shape refined in round_glutes()
-    "buttocks/buttocks-volume-incr": 0.80,
-    # legs: lighter thighs front to back, a gradual taper through the knees to slim ankles
-    "legs/l-upperleg-scale-depth-decr": 0.30, "legs/r-upperleg-scale-depth-decr": 0.30,
-    "legs/l-upperleg-fat-decr": 0.40, "legs/r-upperleg-fat-decr": 0.40, "legs/measure-thigh-circ-decr": 0.15,
-    "legs/l-lowerleg-fat-decr": 0.40, "legs/r-lowerleg-fat-decr": 0.40, "legs/measure-knee-circ-decr": 0.35,
-    "legs/measure-calf-circ-decr": 0.10,
+ATHLETIC = {                  # owner's body reference 09.11 (six-view sportswear sheet): match it one to one
+    # waist: narrow, a long soft curve into the hips; a flat, toned stomach
+    "torso/measure-waist-circ-decr": 0.75, "torso/measure-underbust-circ-decr": 0.25,
+    "torso/measure-waisttohip-dist-incr": 0.35, "stomach/stomach-pregnant-decr": 0.90,
+    # hips: no side shelf at the trochanters; the widest point is the seat, not the upper thigh
+    "hip/hip-scale-horiz-decr": 0.12, "torso/measure-hips-circ-decr": 0.05,
+    # seat: high, round and projecting back (most of the shape comes from round_glutes / lumbar_curve)
+    "buttocks/buttocks-volume-incr": 1.00, "hip/hip-scale-depth-incr": 0.15,
+    # legs: long and slim, narrow thighs that taper to slim knees, calves and ankles
+    "legs/upperlegs-height-incr": 0.20, "legs/lowerlegs-height-incr": 0.15,
+    "legs/l-upperleg-scale-horiz-decr": 0.25, "legs/r-upperleg-scale-horiz-decr": 0.25,
+    "legs/l-upperleg-scale-depth-decr": 0.20, "legs/r-upperleg-scale-depth-decr": 0.20,
+    "legs/l-upperleg-fat-decr": 0.50, "legs/r-upperleg-fat-decr": 0.50, "legs/measure-thigh-circ-decr": 0.25,
+    "legs/l-lowerleg-fat-decr": 0.50, "legs/r-lowerleg-fat-decr": 0.50, "legs/measure-knee-circ-decr": 0.40,
+    "legs/measure-calf-circ-decr": 0.25,
+    # bust: medium and lifted
     "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.40,
-    "torso/measure-shoulder-dist-incr": 0.05,
+    # upper body: narrow shoulders, slim arms
+    "torso/measure-shoulder-dist-decr": 0.12, "torso/torso-vshape-decr": 0.10,
+    "arms/measure-upperarm-circ-decr": 0.25,
+    "arms/l-upperarm-fat-decr": 0.40, "arms/r-upperarm-fat-decr": 0.40,
+    "arms/l-lowerarm-fat-decr": 0.30, "arms/r-lowerarm-fat-decr": 0.30,
 }
 
 MACROS = {"gender": 0.0, "age": 0.48, "muscle": 0.5, "weight": 0.42, "height": 0.62, "proportions": 0.75,
@@ -444,13 +452,31 @@ def make_eyes(eyes, k):
 
 # ===================================================================== stages
 
-def round_glutes(bm, dom, depth=0.007):
+def lumbar_curve(bm, dom, depth=0.012):
+    """The reference's side view: a clear inward curve of the lower back that runs into a high seat.
+    Back-side vertices in a band around the waist move forward; the push fades to nothing at the
+    ribcage and at the top of the seat, so the front of the body is untouched."""
+    import math as _m
+    H = max(v.co.z for v in bm.data.vertices)
+    zc, sz = 0.600 * H, 0.050 * H
+    for v, d in zip(bm.data.vertices, dom):
+        if d not in ("pelvis", "spine", "chest"):
+            continue
+        p = v.co
+        if p.y <= 0.0:
+            continue
+        back = min(1.0, p.y / 0.07)
+        w = _m.exp(-((p.z - zc) / sz) ** 2) * _m.exp(-(p.x / 0.11) ** 2)
+        v.co.y -= depth * w * back
+
+
+def round_glutes(bm, dom, depth=0.020):
     """A round seat without a shelf: each gluteus gets its own soft dome (narrow across, so the back
     view reads two round forms), the push fades slowly downward into the back of the thigh and quickly
     upward into the lower back, and the midline is eased in a little."""
     import math as _m
     H = max(v.co.z for v in bm.data.vertices)
-    zc = 0.505 * H
+    zc = 0.515 * H                                     # a high seat (owner reference 09.11)
     for v, d in zip(bm.data.vertices, dom):
         if d not in ("pelvis", "spine", "thigh_L", "thigh_R"):
             continue
@@ -464,7 +490,7 @@ def round_glutes(bm, dom, depth=0.007):
         back = min(1.0, p.y / 0.08)
         out = V((side * 0.35, 1.0, 0.0)).normalized()      # round to the sides as well as back
         v.co += out * depth * w * back
-        v.co.z += 0.003 * w * back
+        v.co.z += 0.006 * w * back
         cleft = _m.exp(-(p.x / 0.012) ** 2 - ((p.z - zc) / 0.08) ** 2)
         v.co.y -= 0.003 * cleft * back
 
@@ -515,6 +541,7 @@ def stage_body():
             dom0.append(max(acc, key=acc.get) if acc else "")
         # (the owner's ring-profile script is a proportion reference only: no direct fit)
         round_glutes(bm, dom0)
+        lumbar_curve(bm, dom0)
         # soften the nipple detail so tight tops and the jacket lie smoothly over the bust
         b = bmesh.new()
         b.from_mesh(bm.data)
