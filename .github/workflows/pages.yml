@@ -1,0 +1,57 @@
+# Builds the browser game (game/) and publishes it to GitHub Pages:
+# https://spacexceo.github.io/forget-to-foresee/  (judges: /?demo=judge)
+# The whole season runs in the browser (same room code as the agent API), so a static host is enough.
+# One-time setup by the repository owner: Settings -> Pages -> Source: GitHub Actions.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: game
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: game/package-lock.json
+      - run: npm ci
+      - name: Tests (rules parity, HUD, play layer)
+        run: npm test
+      - name: Build for the Pages sub-path
+        run: npm run build
+        env:
+          FTF_BASE: /forget-to-foresee/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: game/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
