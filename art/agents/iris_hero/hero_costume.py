@@ -662,7 +662,7 @@ def hair_cap(body, scalp_idx, offset=0.006):
 # ===================================================================== athletic sportswear (owner, 09.11)
 
 def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None, envelope=None,
-                    flatten=None, edge_relax=0, drape=None, loop_smooth=None, clear=None):
+                    flatten=None, edge_relax=0, drape=None, loop_smooth=None, clear=None, bridge=None):
     """A tight garment cut from the body surface: the kept faces are duplicated, pushed out along the
     normals by `offset` and given cloth thickness. keep(index, co) decides per vertex; a face is kept
     when all its vertices are. trim/accent(co, normal) -> 0..1 paint the trim and accent attributes."""
@@ -857,6 +857,30 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
             near |= {e.other_vert(v) for v in moved for e in v.link_edges}
             bmesh.ops.smooth_vert(b, verts=[v for v in near if not v.is_boundary], factor=0.5,
                                   use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    if bridge:                                   # stretch knit over a cleft: (region, half_width, dip)
+        region, hw, dip = bridge
+        sel = [v for v in b.verts if region(v.co)]
+        rows = {}
+        for v in sel:
+            rows.setdefault(round(v.co.z * 100), []).append(v)
+        for key, vs in rows.items():
+            near = [v for z in (key - 1, key, key + 1) for v in rows.get(z, [])]
+            pl = [v.co.y for v in near if hw * 0.5 < v.co.x < hw * 2.2]
+            pr = [v.co.y for v in near if -hw * 2.2 < v.co.x < -hw * 0.5]
+            if not pl or not pr:
+                continue
+            top = min(max(pl), max(pr))                      # the lower of the two cheeks' fullest points
+            for v in vs:
+                u = abs(v.co.x) / hw
+                if u >= 1.0:
+                    continue
+                target = top - dip * (1.0 - u * u)           # a shallow arc from cheek to cheek
+                w = 1.0 - u ** 4
+                if v.co.y < target:
+                    v.co.y += (target - v.co.y) * w
+        inner = [v for v in sel if not v.is_boundary]
+        for _ in range(3):
+            bmesh.ops.smooth_vert(b, verts=inner, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     b.to_mesh(o.data)
     b.free()
     if decimate:

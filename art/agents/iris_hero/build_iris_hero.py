@@ -830,9 +830,8 @@ def athletic_costume(bm, P, dom, bones):
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 1.0 if p.z > 0.995 else leg_panel(p, nrm),
                                         accent=lambda p, nrm: 0.0, edges=leg_edges, relax=(crotch, 12),
-                                        # compression knit bridges the glute cleft (owner: no 1-3 cm gap between the cheeks)
-                                        envelope=(lambda p: p.y > c.y and abs(p.x) < 0.075 and 0.875 < p.z < 1.0,
-                                                  [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")], 0.0025))
+                                        # compression knit lies over the glute cleft (owner: the cheeks rest together, no gap)
+                                        bridge=(lambda p: p.y > c.y and abs(p.x) < 0.10 and 0.855 < p.z < 1.0, 0.045, 0.004))
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # waistband: a clean high-rise band over the leggings' top edge (no gaps at the waist)
     hip_pts = [co[i] for i in co if dom[i] in ("pelvis", "spine", "thigh_L", "thigh_R")]
@@ -1024,7 +1023,7 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
         if d in HAND_BONES:
             return False
         if COSTUME == "athletic" and d in ("spine", "pelvis", "chest"):
-            if (0.990 if co.y < cz.y else 1.055) < co.z < 1.205:   # the bare midriff, kept under the band's front and the top's hem
+            if (0.990 if co.y < cz.y else 1.035) < co.z < 1.205:   # the bare midriff, kept under the band's front and the top's hem
                 return False                                        # (no see-through gap; never through the band at the back)
             if 1.27 < co.z and co.y < cz.y:             # the neckline and cleavage above the top, inside the open jacket
                 return False
