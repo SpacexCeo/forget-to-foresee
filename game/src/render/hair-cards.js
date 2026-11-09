@@ -43,8 +43,8 @@ export function flatHair(root, color = HAIR_FLAT_COLOR, alphaTest = HAIR_ALPHA_T
       const flat = new THREE.MeshBasicMaterial({ name: m.name, color, side: m.side, toneMapped: false });
       if (cards) {
         flat.map = m.map;
-        flat.alphaTest = alphaTest;
-        flat.alphaToCoverage = true;
+        flat.alphaTest = alphaTest * 0.5;                   // fuller cards, no dithered see-through (owner 09.11)
+        flat.alphaToCoverage = false;
         // the texture gives only the strand shape (alpha); the colour stays the one flat brown
         flat.onBeforeCompile = (sh) => {
           sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>',

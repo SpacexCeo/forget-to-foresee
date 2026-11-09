@@ -552,9 +552,44 @@ def clip_iris_run(key, S, u):
     return P
 
 
+def clip_iris_walk(key, S, u):
+    """Iris's walk (owner 09.11: "not a robot; feminine"): femininity from rhythm and coordination, not a
+    catwalk. The feet land close to one line (5 cm off the midline, never crossing) with a heel-to-toe
+    roll; the pelvis turns with the swinging leg (+-7 deg), drops softly on the swing side (+-4 deg) and
+    shifts a little over the standing foot; the chest counter-rotates; relaxed arms swing close to the
+    body with soft elbows, hands trailing; a light dip after each contact; the head stays level."""
+    T = WALK_FRAMES / FPS
+    P = base_pose(key, S, standing=False)
+    stance = 0.61
+    for side, ph0 in ((1, 0.0), (-1, 0.5)):
+        P.feet[side] = gait_foot((u + ph0) % 1.0, side, WALK_SPEED, T, stance, 0.065, 14.0, -34.0,
+                                 0.050 - ANKLE_X, tang=0.6, fwd_bias=-0.06)   # the heel lands nearer: no drop at the strike
+    c, s_ = math.cos(TAU * u), math.sin(TAU * u)
+    dip = math.cos(2 * TAU * (u - 0.10))                    # lowest just after each contact
+    P.hips.z = -0.004 - 0.008 * dip                         # tall over the standing leg (knee ~10 deg at passing)
+    P.hips.x = 0.020 * s_                                   # the weight over the standing foot
+    lean = 2.0
+    P.hips_rot = V((lean * 0.3 + 0.6 * dip, -4.0 * s_, -7.0 * c))
+    c1, c2 = math.cos(TAU * (u - 0.04)), math.cos(TAU * (u - 0.08))
+    P.r("spine", lean * 0.3, 1.5 * s_, 2.5 * c1)           # the waist responds, then the chest counters
+    P.r("chest", lean * 0.3 + 0.6 * dip, -1.0 * math.sin(TAU * (u - 0.05)), 6.0 * c2)
+    P.r("neck", -0.4 * dip, -0.6 * s_, -4.0 * c2)
+    P.r("head", 0.3 * dip, 0.4 * s_, -3.0 * c2)            # level, looking ahead
+    lag = 0.05
+    cl = math.cos(TAU * (u - lag))
+    for side, sfx, sgn in ((1, "L", 1), (-1, "R", -1)):
+        sw_a = 17.0 * cl * sgn                              # + = backwards
+        P.r(f"shoulder_{sfx}", 0, 0, -side * 1.5 * cl * sgn)
+        P.r(f"upperarm_{sfx}", sw_a + 2.0, -side * 4.0, 0)
+        fwd = max(0.0, -cl * sgn)                           # the elbow bends a little more as the arm comes forward
+        P.r(f"forearm_{sfx}", -14.0 - 12.0 * fwd, 0, -side * 4.0)
+        P.r(f"hand_{sfx}", 8.0 * math.cos(TAU * (u - lag - 0.12)) * sgn, 0, -side * 5.0)   # trailing, relaxed
+    return P
+
+
 def clip_locomotion(key, S, u, run=False):
-    if run and key == "iris":
-        return clip_iris_run(key, S, u)
+    if key == "iris":
+        return clip_iris_run(key, S, u) if run else clip_iris_walk(key, S, u)
     T = (RUN_FRAMES if run else WALK_FRAMES) / FPS
     speed = RUN_SPEED if run else WALK_SPEED
     P = base_pose(key, S, standing=False)
