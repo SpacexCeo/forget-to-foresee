@@ -170,21 +170,22 @@ def makeup(b, pos, col, land, lips):
         # brows: t = 0 at the head (above the inner corner) .. 1 at the tail
         t = b.math("DIVIDE", b.math("ADD", x, 0.017), 0.052)
         tc = b.math("MINIMUM", b.math("MAXIMUM", t, 0.0), 1.0)
-        rise = b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.66), 1.0), 0.0105)
-        fall = b.math("MULTIPLY", b.math("POWER", b.math("DIVIDE", b.math("MAXIMUM", b.math("SUBTRACT", tc, 0.66), 0.0), 0.34), 1.3), 0.0125)
-        zc = b.math("SUBTRACT", b.math("ADD", 0.0175, rise), fall)
-        half = b.math("ADD", 0.0014, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.6), 0.0042))
-        band = _smooth_band(b, b.math("SUBTRACT", z, zc), half, 0.0012)
+        rise = b.math("MULTIPLY", b.math("SINE", b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.66), 1.0), math.pi / 2)), 0.0110)
+        fall = b.math("MULTIPLY", b.math("POWER", b.math("DIVIDE", b.math("MAXIMUM", b.math("SUBTRACT", tc, 0.66), 0.0), 0.34), 1.5), 0.0120)
+        zc = b.math("SUBTRACT", b.math("ADD", 0.0165, rise), fall)
+        half = b.math("ADD", 0.0010, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.5), 0.0033))
+        band = _smooth_band(b, b.math("SUBTRACT", z, zc), half, 0.0011)
         inside = b.math("MULTIPLY", b.math("GREATER_THAN", t, -0.02), b.math("LESS_THAN", t, 1.02))
-        ombre = b.math("ADD", 0.60, b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.22), 1.0), 0.40))
-        sv = b.n("ShaderNodeCombineXYZ")                     # hair strokes: stretched along the brow, tilted up at the head
-        b.l(b.math("ADD", b.math("MULTIPLY", x, 130.0), b.math("MULTIPLY", z, b.math("ADD", 40.0, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, tc), 160.0)))), sv.inputs["X"])
-        b.l(b.math("MULTIPLY", b.math("SUBTRACT", z, b.math("MULTIPLY", x, 0.25)), 900.0), sv.inputs["Y"])
+        ombre = b.math("ADD", 0.30, b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.28), 1.0), 0.70))
+        sv = b.n("ShaderNodeCombineXYZ")             # strokes: up and out at the head, along the arch after it
+        lean = b.math("ADD", 0.35, b.math("MULTIPLY", b.math("SUBTRACT", 1.0, b.math("MINIMUM", b.math("DIVIDE", tc, 0.3), 1.0)), 1.6))
+        b.l(b.math("MULTIPLY", b.math("SUBTRACT", x, b.math("MULTIPLY", z, lean)), 700.0), sv.inputs["X"])
+        b.l(b.math("MULTIPLY", b.math("ADD", z, b.math("MULTIPLY", x, 0.2)), 60.0), sv.inputs["Y"])
         hairs = b.n("ShaderNodeTexNoise", in_Scale=1.0, in_Detail=2.0, in_Roughness=0.5)
         b.l(sv.outputs[0], hairs.inputs["Vector"])
-        strokes = b.math("ADD", 0.92, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.3))
+        strokes = b.math("ADD", 0.85, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.4))
         m = b.math("MINIMUM", b.math("MULTIPLY", b.math("MULTIPLY", b.math("MULTIPLY", band, inside), ombre), strokes), 0.95)
-        col = b.mix(m, col, (0.055, 0.032, 0.022))
+        col = b.mix(m, col, (0.070, 0.036, 0.020))
         # lid shadow: a soft mauve-brown wash between the lash line and the crease
         sh = b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.003, E[1] - 0.004, E[2] + 0.009), 0.017, 1.4),
                     b.math("GREATER_THAN", z, 0.002))
