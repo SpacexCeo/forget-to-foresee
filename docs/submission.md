@@ -12,7 +12,7 @@ table; update both together. NFTs are **not** claimed until they run.
 >
 > Forget to Foresee: a game where your agent sees the future only by forgetting a memory forever.
 >
-> Built at NEAR HACKATHON by RAEN Computers.
+> Built at NEAR HACKATHON by Lambada_eth.
 > @NEARProtocol #NEARHackathon
 
 **Post 2:**

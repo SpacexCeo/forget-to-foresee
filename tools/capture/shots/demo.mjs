@@ -94,7 +94,7 @@ export default {
       actions: [{ at: 2.4, do: 'cue', name: 'gift_chime', gain: 0.7 }, { at: 2.2, do: 'music', gain: 0.55 }],
       overlays: [
         fadeIn(0.6),
-        { kind: 'title', from: 2.4, to: CLOSE + 1, fadeIn: 1.2, fadeOut: 0.6, eyebrow: 'RAEN Computers · built at NEAR HACKATHON', text: 'Forget', text2: 'to foresee', sub: 'The future costs a memory', lines: ['*spacexceo.github.io/forget-to-foresee', 'github.com/SpacexCeo/forget-to-foresee'] },
+        { kind: 'title', from: 2.4, to: CLOSE + 1, fadeIn: 1.2, fadeOut: 0.6, eyebrow: 'Lambada_eth · built at NEAR HACKATHON', text: 'Forget', text2: 'to foresee', sub: 'The future costs a memory', lines: ['*spacexceo.github.io/forget-to-foresee', 'github.com/SpacexCeo/forget-to-foresee'] },
         fadeOut(CLOSE, 1.2),
       ],
     },
@@ -115,6 +115,6 @@ export default {
     { from: 58.0, to: 62.0, text: 'Iris pre-reads each slot. Change any you doubt, then stake.' },
     { from: 62.4, to: 66.8, text: 'It all runs in your browser. The NEAR contract for the same check is tested, not yet deployed.', style: 'Quiet' },
     { from: 67.4, to: 70.6, text: 'What would you forget to see the future?' },
-    { from: 71.0, to: 74.4, text: 'Play it in the browser. Built at NEAR HACKATHON by RAEN Computers.', style: 'Quiet' },
+    { from: 71.0, to: 74.4, text: 'Play it in the browser. Built at NEAR HACKATHON by Lambada_eth.', style: 'Quiet' },
   ],
 };
