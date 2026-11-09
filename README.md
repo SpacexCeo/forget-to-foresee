@@ -17,3 +17,5 @@ Restore: `git clone -b art-sources <repo> art-sources && cd art-sources && git l
 
 Everything here can also be rebuilt from the scripts on `claude/iris-hero` and `main`
 (Blender 4.5.3 + MPFB 2.0.18; see `art/agents/iris_hero/README.md`).
+| `shells_raw_glb/` | the four shells' raw glb exports (before KTX2/meshopt), from `/root/w/` | input of `tools/compress-glb.sh` |
+| `media_v2/` | final 1080p videos from `/root/ftf-media-v2/` (demo, trailer, three clips; with and without burned captions) | release media |
