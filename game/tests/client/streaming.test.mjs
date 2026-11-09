@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { instancePriority, assetPriority, planStreaming, LruCache } from '../../src/render/streaming.js';
-import { ASSETS, classifyNodeName, classifyPath, isValidModelName, modelUrl, socketRole, assetByName } from '../../src/render/asset-catalog.js';
+import { ASSETS, classifyNodeName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole, assetByName } from '../../src/render/asset-catalog.js';
 
 test('on-screen instances outrank off-screen ones; larger apparent size first', () => {
   const near = instancePriority({ inFrustum: true, distance: 5, radius: 1, loadDistance: 70 });
@@ -79,6 +79,8 @@ test('model names are restricted to [a-z0-9_]', () => {
   for (const bad of ['../secret', 'Anchor', 'a.glb', 'a/b', '', 'x'.repeat(65), 'a b', 'a%2e', null]) assert.equal(isValidModelName(bad), false, String(bad));
   assert.equal(modelUrl('anchor'), '/assets/models/anchor.glb');
   assert.throws(() => modelUrl('../x'));
+  assert.equal(versionedModelUrl('agent_iris', '/x/', 8043676), '/x/assets/models/agent_iris.glb?v=8043676', 'a new build of a model gets a new URL');
+  assert.equal(versionedModelUrl('anchor', '/', undefined), '/assets/models/anchor.glb');
 });
 
 test('node name conventions: runtime, _inspect, _col, socket_*', () => {
