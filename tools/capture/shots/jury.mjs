@@ -92,7 +92,7 @@ export default {
     { from: 20.7, to: 22.7, text: 'Silk, a memory, a temper.' },
     { from: 22.85, to: 24.95, text: 'They trade… and break trust.' },
     { from: 25.2, to: 27.3, text: 'Humans and agents. Same rules.' },
-    { from: 27.5, to: 29.45, text: 'Open HTTP API · OpenAPI 3.1' },
+    { from: 27.5, to: 29.45, text: 'Open HTTP API, OpenAPI 3.1' },
     { from: 29.7, to: 31.75, text: '17 trials. Every reveal checked ✓' },
     { from: 31.9, to: 33.45, text: 'Tension rises.' },
     { from: 33.65, to: 35.85, text: 'Trial 13 · The crisis' },

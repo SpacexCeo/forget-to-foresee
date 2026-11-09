@@ -8,9 +8,10 @@
      ?scene=<name>&w=<px>&h=<px>[&alpha=1][&t=<seconds>] ; tools/capture/lib/page.mjs drives window.__cine. -->
 <style>
   :root {
-    --ink: #f3e7c4; --ink-dim: rgba(243, 231, 196, .62); --gold: #f6c572; --gold-deep: #cf9846; --chip: #ffe78e;
-    --bg0: #071013; --bg1: #0e1b1f; --card: rgba(8, 18, 21, .78); --frame: rgba(232, 214, 172, .82); --frame-soft: rgba(196, 186, 156, .45);
-    --ok: #9fdc8c; --bad: #ff7a66;
+    /* jury-ds.js tokens: charcoal ground, grey-green surfaces, pearl type, muted silver, amber only for what is confirmed */
+    --ink: #ece6d8; --ink-dim: #9aa8a4; --gold: #e8b25a; --gold-deep: #b98a3e; --chip: #e8b25a;
+    --bg0: #0b0f10; --bg1: #0f1716; --card: rgba(16, 26, 25, .94); --frame: rgba(220, 214, 196, .30); --frame-soft: rgba(220, 214, 196, .16);
+    --ok: #e8b25a; --bad: #c8735a;
     --title: "Libre Caslon Text", Georgia, serif; --body: "Atkinson Hyperlegible", "Source Sans 3", sans-serif; --label: "Source Sans 3", sans-serif;
     --mono: "DejaVu Sans Mono", "Liberation Mono", Menlo, monospace;
   }
@@ -21,14 +22,16 @@
   .abs { position: absolute; }
   .cap { position: absolute; left: 0; right: 0; top: 96px; text-align: center; font: 700 64px/1.15 var(--body); letter-spacing: .005em; text-shadow: 0 2px 18px rgba(0, 0, 0, .65); }
   .cap em { font-style: normal; color: var(--gold); }
-  .label { font: 600 44px/1.1 var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+  .label { font: 600 40px/1.1 var(--label); letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
   .value { font: 400 76px/1.05 var(--title); color: var(--ink); }
   .body { font: 400 46px/1.25 var(--body); }
-  .chip { position: absolute; padding: 14px 28px 16px; border-radius: 999px; border: 2px solid var(--frame); background: rgba(10, 22, 23, .92); font: 700 46px/1 var(--body); white-space: nowrap; box-shadow: 0 6px 30px rgba(0, 0, 0, .45); }
-  .chip.ok { border-color: var(--ok); color: var(--ok); }
-  .chip.bad { border-color: var(--bad); color: var(--bad); }
-  .chip.gold { border-color: var(--chip); color: var(--chip); }
-  .card { position: absolute; border-radius: 22px; border: 2px solid var(--frame-soft); background: var(--card); box-shadow: 0 10px 40px rgba(0, 0, 0, .5); }
+  /* A tag: hairline surface, pearl text, the meaning carried by one small mark in its colour (never a glowing outline). */
+  .chip { position: absolute; padding: 14px 26px 16px 50px; border-radius: 12px; background: rgba(15, 23, 22, .94); box-shadow: 0 0 0 1px var(--frame-soft), 0 12px 30px rgba(0, 0, 0, .4); font: 700 44px/1 var(--body); color: var(--ink); white-space: nowrap; }
+  .chip::before { content: ''; position: absolute; left: 22px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: var(--ink-dim); }
+  .chip.ok::before, .chip.gold::before { background: var(--gold); box-shadow: 0 0 12px rgba(232, 178, 90, .5); }
+  .chip.bad::before { background: var(--bad); }
+  .chip.ok, .chip.gold { color: #f3e3c0; }
+  .card { position: absolute; border-radius: 18px; background: linear-gradient(180deg, rgba(24, 36, 35, .96), rgba(14, 22, 22, .96)); box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 0 0 1px var(--frame-soft), 0 18px 40px rgba(0, 0, 0, .45); }
   .mono { font-family: var(--mono); }
   svg { overflow: visible; }
 </style>

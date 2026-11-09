@@ -62,19 +62,28 @@ const cap = (text) => stage.appendChild(h('div', { class: 'cap', html: text }));
 
 /* ---------- background: deep ink with slow nacre mist (deterministic in t) ---------- */
 const bg = document.getElementById('bg'), bgx = bg.getContext('2d');
-function drawBg(t, { tint = [232, 190, 110], heat = 0 } = {}) {
+// A static film grain (seeded once, identical on every frame: texture without shimmer).
+const grain = (() => { const c = document.createElement('canvas'); c.width = 960; c.height = 540; const x = c.getContext('2d'), im = x.createImageData(960, 540); let a = 99; for (let i = 0; i < im.data.length; i += 4) { a = (a * 1103515245 + 12345) & 0x7fffffff; const v = a % 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 10; } x.putImageData(im, 0, 0); return c; })();
+function drawBg(t, { tint = [232, 178, 90], heat = 0 } = {}) {
   if (ALPHA) { bgx.clearRect(0, 0, 960, 540); return; }
-  const g = bgx.createRadialGradient(480, 250, 40, 480, 270, 620);
-  g.addColorStop(0, '#13262a'); g.addColorStop(0.55, '#0b171a'); g.addColorStop(1, '#050b0d');
+  const g = bgx.createRadialGradient(480, 230, 30, 480, 300, 640);
+  g.addColorStop(0, '#16221f'); g.addColorStop(0.5, '#0f1716'); g.addColorStop(1, '#070a0b');
   bgx.fillStyle = g; bgx.fillRect(0, 0, 960, 540);
-  const blobs = [[0.22, 0.30, 260, 0.11], [0.78, 0.66, 300, 0.09], [0.55, 0.18, 220, 0.07]];
-  blobs.forEach(([x, y, r, a], i) => {
-    const cx = 960 * x + Math.sin(t * 0.21 + i * 2.1) * 40, cy = 540 * y + Math.cos(t * 0.17 + i) * 26;
-    const c = heat > 0 && i === 1 ? [lerp(tint[0], 255, heat), lerp(tint[1], 90, heat), lerp(tint[2], 70, heat)] : tint;
+  // atmosphere: two slow, faint pools of light; one warms toward rust with the season's heat
+  [[0.2, 0.28, 300, 0.06], [0.82, 0.7, 320, 0.05]].forEach(([x, y, r, a], i) => {
+    const cx = 960 * x + Math.sin(t * 0.18 + i * 2.1) * 30, cy = 540 * y + Math.cos(t * 0.14 + i) * 18;
+    const c = heat > 0 && i === 1 ? [lerp(tint[0], 200, heat), lerp(tint[1], 115, heat), lerp(tint[2], 90, heat)] : tint;
     const rg = bgx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    rg.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a + heat * 0.08})`); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    rg.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a + heat * 0.06})`); rg.addColorStop(1, 'rgba(0,0,0,0)');
     bgx.fillStyle = rg; bgx.fillRect(0, 0, 960, 540);
   });
+  // the horizon of a Shell: one fine arc, warm at its crown, fading at the sides
+  const arc = bgx.createLinearGradient(0, 0, 960, 0);
+  arc.addColorStop(0, 'rgba(232,178,90,0)'); arc.addColorStop(0.5, 'rgba(232,178,90,.16)'); arc.addColorStop(1, 'rgba(232,178,90,0)');
+  bgx.strokeStyle = arc; bgx.lineWidth = 1; bgx.beginPath(); bgx.arc(480, 760, 740, Math.PI * 1.12, Math.PI * 1.88); bgx.stroke();
+  const vg = bgx.createRadialGradient(480, 270, 260, 480, 270, 620); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
+  bgx.fillStyle = vg; bgx.fillRect(0, 0, 960, 540);
+  bgx.drawImage(grain, 0, 0);
 }
 
 /* ---------- shared pieces ---------- */
@@ -200,29 +209,38 @@ SCENES.shard = { duration: 3.0, build() {
   };
 } };
 
-// 8 · Six clan agents: silk, a memory, a temper; bids, pacts and a lie (4.5 s).
+// 8 · Six clan agents (4.5 s): the same six cards as the crisis scene (one cast, one layout), each with its silk and
+// temper; then three real moments of the judge season (its log): Frost wins Iris's shard for 13 silk (trial 6), Ash
+// cheats Amber out of 16 silk (trial 8, on their tie), Salt whispers to everyone that it is a weapon (trial 13: a
+// broadcast, so no tie is drawn, only a ring around Salt).
 SCENES.agents = { duration: 4.5, build() {
   const c1 = cap('Silk, a memory, a temper'), c2 = cap('They trade… and break <em>trust</em>');
   const svg = edgeLayer(stage);
-  const cards = clanCards(stage);
-  const e1 = edge(svg, 'frost', 'iris', { color: 'rgba(255,231,142,.9)', width: 6 });
-  const e2 = edge(svg, 'ash', 'iris', { color: 'rgba(159,220,140,.9)', width: 6 });
-  const e3 = edge(svg, 'salt', 'iris', { color: 'rgba(255,122,102,.95)', width: 6, dash: '18 16' });
-  const p1 = packet(svg), p2 = packet(svg, '#9fdc8c'), p3 = packet(svg, '#ff7a66');
-  const ch1 = h('div', { class: 'chip gold', text: 'Frost bids 13 silk' }); at(ch1, 1140, 470);
-  const ch2 = h('div', { class: 'chip ok', text: 'Ash: pact ✓' }); at(ch2, 500, 560);
-  const ch3 = h('div', { class: 'chip bad', text: 'Salt sold a lie ✗' }); at(ch3, 470, 170);
+  const TOP = 230, BOT = 700, W = 440, H = 164;
+  const cards = {
+    salt: clanCard('salt', { x: 110, y: TOP }), iris: clanCard('iris', { x: 740, y: TOP, player: true }), frost: clanCard('frost', { x: 1370, y: TOP }),
+    moss: clanCard('moss', { x: 110, y: BOT }), ash: clanCard('ash', { x: 740, y: BOT }), amber: clanCard('amber', { x: 1370, y: BOT }),
+  };
+  Object.values(cards).forEach((c) => stage.append(c.el));
+  const silk = Object.fromEntries(Object.entries(cards).map(([k, c]) => { const el = h('div', { class: 'abs', style: { left: c.x + 'px', width: W + 'px', top: c.y + H + 14 + 'px', textAlign: 'center', font: '400 40px/1 var(--body)', color: 'var(--ink-dim)' }, html: `<b style="color:var(--gold);font-weight:700">60</b> silk · memories` }); stage.append(el); return [k, el]; }));
+  const tie = (a, b, via = 'h') => { const p = sv('path', { d: route(a, b, { via }), fill: 'none', stroke: 'rgba(169,176,173,.75)', 'stroke-width': T.line, 'stroke-linecap': 'round' }); svg.append(p); anchorNode(svg, a); anchorNode(svg, b); return p; };
+  const e1 = tie(cards.frost.anchor('left'), cards.iris.anchor('right'));
+  const ring = sv('circle', { cx: cards.salt.x + W / 2, cy: TOP + H / 2, r: 260, fill: 'none', stroke: 'rgba(217,220,214,.5)', 'stroke-width': 2 }); svg.append(ring);
+  const e3 = tie(cards.ash.anchor('right'), cards.amber.anchor('left'));
+  const p1 = packet(svg, T.amber, 9), p3 = packet(svg, '#c8735a', 9);
+  const ch1 = h('div', { class: 'chip ok', text: 'Frost wins the shard · 13' }); at(ch1, 1150, 448);
+  const ch2 = h('div', { class: 'chip', text: 'Salt: “It is a weapon”' }); at(ch2, 110, 520);
+  const ch3 = h('div', { class: 'chip bad', text: 'Ash cheats Amber · 16' }); at(ch3, 1040, 905);
   stage.append(ch1, ch2, ch3);
-  const pathOf = (a, b) => { const [x1, y1] = SEAT[a], [x2, y2] = SEAT[b]; const p = h('path', { d: `M${x1},${y1} L${x2},${y2}`, fill: 'none' }); svg.append(p); return p; };
-  const q1 = pathOf('frost', 'iris'), q2 = pathOf('ash', 'iris'), q3 = pathOf('salt', 'iris');
   return (t) => {
     drawBg(t);
     show(c1, t, 0.2, 2.2); show(c2, t, 2.35, 4.45);
-    CLANS.forEach((c, i) => show(cards[c.id], t, 0.1 + i * 0.07, 99, { scale: 0.96 }));
-    e1.style.opacity = ease.out(P(t, 1.0, 0.3)); moveOn(p1, q1, P(t, 1.0, 0.7)); show(ch1, t, 1.25, 99, { scale: 0.92 });
-    e2.style.opacity = ease.out(P(t, 2.0, 0.3)); moveOn(p2, q2, P(t, 2.0, 0.7)); show(ch2, t, 2.25, 99, { scale: 0.92 });
-    e3.style.opacity = ease.out(P(t, 3.0, 0.3)); moveOn(p3, q3, P(t, 3.0, 0.7)); show(ch3, t, 3.25, 99, { scale: 0.92 });
-    e3.setAttribute('stroke-dashoffset', (t * 60).toFixed(1));
+    Object.entries(cards).forEach(([k, c], i) => { show(c.el, t, 0.1 + i * 0.07, 99, { scale: 0.97 }); c.set(t, {}); show(silk[k], t, 0.5 + i * 0.07, 2.4); });
+    const lit = (p, a, col) => { const L = p.getTotalLength(), k = ease.out(P(t, a, 0.45)); p.setAttribute('stroke-dasharray', `${L}`); p.setAttribute('stroke-dashoffset', (L * (1 - k)).toFixed(1)); if (t > a + 0.45) p.setAttribute('stroke', col); };
+    lit(e1, 1.0, T.amber); moveOn(p1, e1, P(t, 1.0, 0.7)); show(ch1, t, 1.3, 99);
+    const rk = P(t, 1.9, 0.9); ring.setAttribute('r', (230 + 260 * ease.out(rk)).toFixed(1)); ring.setAttribute('opacity', (rk > 0 ? 0.6 * (1 - rk) : 0).toFixed(3)); show(ch2, t, 2.1, 99);
+    lit(e3, 2.9, '#c8735a'); moveOn(p3, e3, P(t, 2.9, 0.7)); show(ch3, t, 3.2, 99);
+    if (t > 3.4) e3.setAttribute('stroke-dasharray', '14 14');
   };
 } };
 
@@ -391,44 +409,54 @@ SCENES.ash = { duration: 4.0, build() {
   };
 } };
 
-// 14 · How rewards are shared (6.0 s): the stake split, then the four vote outcomes.
+// 14 · How rewards are shared (6.0 s). Top: a Gift's pot as a ring that splits into arcs by how early each stake was
+// placed (the engine's weight: trials waited + 1; apportion(20, [3, 2]) = 12 + 8), with what a Storm and a Silence or
+// Call do to the stake. Bottom: the four vote outcomes as an editorial row (v3 numbers from the engine).
 SCENES.rewards = { duration: 6.0, build() {
   const R = D.rules;
   const c1 = cap('Stake early, <em>bigger share</em>'), c2 = cap('Then the vote pays out');
-  const pot = h('div', { class: 'card', style: { width: '500px', height: '150px', borderColor: '#ffe78e' } },
-    h('div', { class: 'abs label', style: { left: '30px', top: '22px' }, text: 'Gift · power 20' }),
-    h('div', { class: 'abs value', style: { left: '30px', top: '68px', fontSize: '64px' }, text: `pot ${R.pot[1]}` }));
-  at(pot, 140, 250);
-  const bar = (label, share, y, w) => {
-    const row = h('div', { class: 'abs', style: { left: '720px', top: y + 'px', width: '820px' } },
-      h('div', { class: 'body', style: { fontSize: '46px' }, text: label }),
-      h('div', { class: 'abs', style: { left: 0, top: '62px', height: '26px', width: w + 'px', borderRadius: '13px', background: 'linear-gradient(90deg,#cf9846,#f6c572)', transformOrigin: '0 50%' } }),
-      h('div', { class: 'abs', style: { left: w + 24 + 'px', top: '40px', font: '700 60px/1 var(--title)', color: 'var(--gold)' }, text: '+' + share }));
-    stage.append(row); return row;
-  };
-  const b1 = bar('Staked at trial 1', R.split[0], 230, 480), b2 = bar('Staked at trial 2', R.split[1], 360, 320);
-  const storm = h('div', { class: 'chip bad', text: 'Storm: stake burns' }); at(storm, 140, 470);
-  const calm = h('div', { class: 'chip', text: 'Silence · Call: stake back' }); at(calm, 760, 470);
-  const tiles = [
-    ['Gift', `+${R.finaleGift}`, 'each contributor', '#9fdc8c'],
-    ['Weapon', '0', 'everyone’s silk', '#ff7a66'],
-    ['Survived', `+${R.finaleSurvived}`, 'each contributor', '#ffe78e'],
-    ['Lost', '—', 'nothing paid', 'rgba(232,214,172,.8)'],
-  ].map(([n, v, s, col], i) => {
-    const el = h('div', { class: 'card', style: { width: '400px', height: '300px', borderColor: col } },
-      h('div', { class: 'abs label', style: { left: '30px', top: '26px', color: col }, text: n }),
-      h('div', { class: 'abs', style: { left: '28px', top: '86px', font: '700 104px/1 var(--title)', color: col }, text: v }),
-      h('div', { class: 'abs', style: { left: '30px', top: '220px', font: '400 44px/1 var(--body)' }, text: s }));
-    at(el, 120 + i * 440, 620); stage.append(el); return el;
+  const svg = edgeLayer(stage);
+  const CX = 470, CY = 420, RR = 130, C = 2 * Math.PI * RR;
+  svg.append(sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: T.hair, 'stroke-width': 18 }));
+  const tot = R.split[0] + R.split[1];
+  const arcA = sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: T.amber, 'stroke-width': 18, transform: `rotate(-90 ${CX} ${CY})` });
+  const arcB = sv('circle', { cx: CX, cy: CY, r: RR, fill: 'none', stroke: 'rgba(232,178,90,.45)', 'stroke-width': 18, transform: `rotate(${-90 + 360 * R.split[0] / tot + 1.5} ${CX} ${CY})` });
+  svg.append(arcA, arcB);
+  const potN = h('div', { class: 'abs', style: { left: CX - 120 + 'px', width: '240px', top: CY - 62 + 'px', textAlign: 'center' } },
+    h('div', { style: { font: '400 84px/1 var(--title)', color: 'var(--ink)' }, text: String(R.pot[1]) }),
+    h('div', { class: 'label', style: { fontSize: '30px', marginTop: '6px', color: 'var(--ink-dim)' }, text: 'Gift pot' }));
+  const leg = (y, col, big, txt) => { const el = h('div', { class: 'abs', style: { left: '700px', top: y + 'px' } },
+    h('span', { style: { display: 'inline-block', width: '44px', height: '6px', background: col, borderRadius: '3px', verticalAlign: 'middle', marginRight: '22px' } }),
+    h('span', { style: { font: '400 76px/1 var(--title)', color: col, verticalAlign: 'middle' }, text: big }),
+    h('span', { style: { font: '400 44px/1 var(--body)', color: 'var(--ink)', marginLeft: '22px', verticalAlign: 'middle' }, text: txt })); stage.append(el); return el; };
+  const lA = leg(300, T.amber, '+' + R.split[0], 'staked at trial 1'), lB = leg(410, 'rgba(232,178,90,.6)', '+' + R.split[1], 'staked at trial 2');
+  const rule = h('div', { class: 'abs', style: { left: '700px', top: '520px', width: '1080px', height: '1px', background: 'var(--frame-soft)' } });
+  const fates = h('div', { class: 'abs', style: { left: '700px', top: '548px', font: '400 44px/1.25 var(--body)', color: 'var(--ink-dim)' }, html: '<b style="color:#c8735a;font-weight:700">Storm</b> burns the stake · <b style="color:var(--ink);font-weight:700">Silence, Call</b> return it' });
+  stage.append(potN, rule, fates);
+  const cols = [
+    ['Gift', `+${R.finaleGift}`, 'each contributor', T.amber], ['Weapon', '0', 'everyone’s silk', '#c8735a'],
+    ['Survived', `+${R.finaleSurvived}`, 'each contributor', T.pearl], ['Lost', '—', 'nothing paid', T.mist],
+  ].map(([n, v, sub, col], i) => {
+    const x = 150 + i * 420;
+    const el = h('div', { class: 'abs', style: { left: x + 'px', top: '650px', width: '380px' } },
+      h('div', { class: 'label', style: { color: col }, text: n }),
+      h('div', { style: { font: '400 120px/1 var(--title)', color: col, marginTop: '14px' }, text: v }),
+      h('div', { style: { font: '400 44px/1 var(--body)', color: 'var(--ink-dim)', marginTop: '14px' }, text: sub }));
+    if (i) el.append(h('div', { class: 'abs', style: { left: '-40px', top: '0', width: '1px', height: '250px', background: 'var(--frame-soft)' } }));
+    stage.append(el); return el;
   });
-  stage.append(pot, storm, calm);
   return (t) => {
     drawBg(t);
     show(c1, t, 0.2, 2.75); show(c2, t, 2.95, 5.95);
-    const up = 2.8, fadeTop = 1 - ease.inOut(P(t, up, 0.4));
-    [pot, b1, b2, storm, calm].forEach((el, i) => { const a = show(el, t, [0.2, 0.55, 0.75, 1.5, 1.8][i]); el.style.opacity = (a * lerp(1, 0.32, 1 - fadeTop)).toFixed(3); });
-    [b1, b2].forEach((b, i) => { const g = b.children[1]; g.style.transform = `scaleX(${ease.out(P(t, 0.65 + i * 0.2, 0.6)).toFixed(4)})`; });
-    tiles.forEach((el, i) => show(el, t, up + 0.15 + i * 0.18, 99, { scale: 0.94 }));
+    const top = 1 - 0.6 * ease.inOut(P(t, 2.8, 0.4));
+    const k = ease.out(P(t, 0.3, 0.5)), sp = ease.inOut(P(t, 0.9, 0.6));
+    const fa = C * R.split[0] / tot, fb = C * R.split[1] / tot;
+    arcA.setAttribute('stroke-dasharray', `${(lerp(C * k, fa - 6, sp)).toFixed(1)} ${C}`);
+    arcB.setAttribute('stroke-dasharray', `${(fb - 6) * sp} ${C}`);
+    arcA.style.opacity = arcB.style.opacity = top.toFixed(3);
+    show(potN, t, 0.25); potN.style.opacity = (Number(potN.style.opacity) * top).toFixed(3);
+    [lA, lB, rule, fates].forEach((el, i) => { const a = show(el, t, [1.05, 1.25, 1.5, 1.6][i]); el.style.opacity = (a * top).toFixed(3); });
+    cols.forEach((el, i) => show(el, t, 3.0 + i * 0.16, 99));
   };
 } };
 
