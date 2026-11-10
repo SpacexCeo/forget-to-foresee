@@ -46,6 +46,12 @@ from trellis.pipelines import TrellisImageTo3DPipeline  # noqa: E402
 src, out = sys.argv[1], sys.argv[2]
 seed = int(sys.argv[3]) if len(sys.argv) > 3 else 1
 from huggingface_hub import snapshot_download  # noqa: E402
+import trellis.models as tmodels  # noqa: E402
+
+# only the mesh decoder is wanted: the gaussian and radiance-field decoders are not built (their renderers are stubs)
+_from_pretrained = tmodels.from_pretrained
+tmodels.from_pretrained = lambda path, **kw: (torch.nn.Identity() if ("slat_dec_gs" in path or "slat_dec_rf" in path)
+                                              else _from_pretrained(path, **kw))
 
 pipe = TrellisImageTo3DPipeline.from_pretrained(snapshot_download("microsoft/TRELLIS-image-large"))  # local files
 pipe.cuda()
