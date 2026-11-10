@@ -295,11 +295,11 @@ def sky_archipelago(tb, scale):
 
     def island(x, y, z, r, depth, k, seed):
         rr = random.Random(seed)
-        rock, rock_d, grass = haze((0.34, 0.36, 0.40), k), haze((0.22, 0.24, 0.29), k), haze((0.36, 0.52, 0.30), k)
+        rock, rock_d, grass = haze((0.20, 0.155, 0.12), k), haze((0.11, 0.09, 0.075), k), haze((0.10, 0.26, 0.05), k)
         n = 11
         ph = rr.uniform(0, 6)
         # grass cap and its overhanging rim (lighter from below), then three ragged rock tiers to a point
-        tb.cyl("sky", (x, y, z), r * 1.06, r * 0.98, r * 0.10, n, grass, cap_top=True, cap_bot=True, phase=ph, col_top=haze((0.46, 0.62, 0.36), k))
+        tb.cyl("sky", (x, y, z), r * 1.06, r * 0.98, r * 0.10, n, grass, cap_top=True, cap_bot=True, phase=ph, col_top=haze((0.16, 0.34, 0.07), k))
         tiers = [(1.0, 0.0), (0.80, 0.22), (0.50, 0.55), (0.22, 0.82), (0.0, 1.0)]
         for (ra, da), (rb, db) in zip(tiers, tiers[1:]):
             ox, oz = rr.uniform(-0.08, 0.08) * r, rr.uniform(-0.08, 0.08) * r
@@ -311,7 +311,7 @@ def sky_archipelago(tb, scale):
             tb.cyl("sky", (x + math.cos(a) * d, y - depth * rr.uniform(0.5, 0.75), z + math.sin(a) * d), 0.001, r * 0.16, depth * 0.45, 6, rock_d, cap_top=False, col_top=rock)
 
     def shell(x, y, z, hgt, k, i):
-        pale, lit = haze((0.80, 0.78, 0.76), k), haze((0.96, 0.93, 0.88), k)
+        pale, lit = haze((0.46, 0.40, 0.36), k), haze((0.74, 0.66, 0.56), k)
         segs = 8
         for q in range(segs):
             t0, t1 = q / segs, (q + 1) / segs
@@ -319,11 +319,11 @@ def sky_archipelago(tb, scale):
             r1 = hgt * 0.30 * (1 - t1) ** 0.8 + hgt * 0.02
             ox = math.sin(t0 * 5.0 + i) * hgt * 0.035
             tb.cyl("sky", (x + ox, y + t0 * hgt, z), r0 * 1.08, r1, hgt / segs, 10, pale, cap_top=(q == segs - 1), col_top=lit)
-        tb.cyl("sky", (x, y - hgt * 0.16, z), hgt * 0.04, hgt * 0.32, hgt * 0.16, 10, haze((0.6, 0.6, 0.62), k), cap_top=False, col_top=pale)
+        tb.cyl("sky", (x, y - hgt * 0.16, z), hgt * 0.04, hgt * 0.32, hgt * 0.16, 10, haze((0.36, 0.33, 0.32), k), cap_top=False, col_top=pale)
 
     s = scale
     # x, y, z offsets (m), radius, underside depth, haze amount
-    isles = [(0, 0, 0, 26, 30, 0.24), (-62, 14, -30, 16, 20, 0.42), (58, -10, 20, 18, 22, 0.20),
+    isles = [(0, 0, 0, 26, 30, 0.10), (-62, 14, -30, 16, 20, 0.36), (58, -10, 20, 18, 22, 0.06),
              (-30, 34, -90, 14, 18, 0.60), (84, 30, -70, 12, 15, 0.56)]
     for i, (x, y, z, r, d, k) in enumerate(isles):
         island(x * s, y * s, z * s, r * s, d * s, k, 100 + i)

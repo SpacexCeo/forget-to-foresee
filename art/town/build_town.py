@@ -227,7 +227,7 @@ def make_materials():
     mats["altar_core"] = ftf.simple_material("M_Altar_Core", (0.95, 0.52, 0.10), 0.22, emit=(1.0, 0.50, 0.08), emit_strength=4.5)
     mats["altar_metal"] = ftf.simple_material("M_Altar_Metal", (0.66, 0.44, 0.20), 0.38, metal=1.0)
     mats["pearl"] = vc_material("M_Town_Pearl", (0.93, 0.89, 0.82), rough=0.3, metal=0.0)
-    mats["sky"] = vc_material("M_Town_Sky", (1.0, 1.0, 1.0), rough=1.0, emit=0.22)
+    mats["sky"] = vc_material("M_Town_Sky", (1.0, 1.0, 1.0), rough=1.0)
     return mats, textured
 
 
@@ -368,7 +368,7 @@ def stage_render(which=None):
         "aerial": dict(loc=(64, 62, 86), tgt=(0, 4, -8), lens=32, res=(1920, 1200)),
         "square": dict(loc=(-11.5, 6.4, -3.6), tgt=(8, 7.0, -18), lens=24, res=(1920, 1200)),
         "lane": dict(loc=(-30, 4.2, 10.2), tgt=(0, 4.6, 9.0), lens=28, res=(1920, 1200)),
-        "temple": dict(loc=(-9, 11.4, -21.0), tgt=(1, 16.0, -44), lens=22, res=(1920, 1200)),
+        "temple": dict(loc=(-1.5, 11.4, -19.5), tgt=(5, 16.5, -44), lens=22, res=(1920, 1200)),
         "sky": dict(loc=(-4, 6.3, -4.5), tgt=(66, 92, -150), lens=30, res=(1920, 1200)),
     }
     samples = int(os.environ.get("TOWN_SAMPLES", "96"))

@@ -277,7 +277,7 @@
       ]
     },
     "town_sky": {
-      "raw_bytes": 221792,
+      "raw_bytes": 221716,
       "triangles": 2720,
       "collision_triangles": 0,
       "materials": [
@@ -289,12 +289,12 @@
       "sockets": [],
       "bounds_min": [
         71.47,
-        153.0,
+        168.0,
         -404.32
       ],
       "bounds_max": [
         246.71,
-        252.6,
+        267.6,
         -261.21
       ]
     }
@@ -306,11 +306,11 @@
     },
     {
       "stage": "objects",
-      "seconds": 1.43
+      "seconds": 1.41
     },
     {
       "stage": "export",
-      "seconds": 1.11
+      "seconds": 1.1
     }
   ],
   "total_triangles": 145825,
