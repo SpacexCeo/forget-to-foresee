@@ -26,7 +26,8 @@ export function sunDirection(elevationDeg, azimuthDeg) {
  *   skyMean       mean radiance of the upper sky hemisphere after normalisation (ambient level)
  *   mie           aerosol multiplier (golden haze); exposure in EV
  *   fog           height fog density (extinction per m at the cloud sea) and falloff (per m above it),
- *                 distance fog near/far (m), the sun lobe power and the aerial cool shift (render/fog.js)
+ *                 distance fog near/far (m), the sun lobe power and strength (`lobe`, default 1) and the aerial
+ *                 cool shift (render/fog.js); `cool` pulls the haze colour toward the zenith (blue hour)
  */
 export const TIME_PRESETS = Object.freeze({
   golden: Object.freeze({
@@ -44,10 +45,12 @@ export const TIME_PRESETS = Object.freeze({
     exposure: -0.3, envUrl: null, envIntensity: 0.4, cloudCover: 0.36, warmth: 0.2,
     fog: { density: 0.04, falloff: 0.1, near: 45, far: 520, sunPower: 5, aerial: 0.25 },
   }),
+  // Blue hour: the sun sits on the horizon and gives a last warm rim; the sky is the light, cool and dim, so lamps
+  // and lit windows carry the scene. Little aerosol (a heavy golden haze turned the whole frame orange).
   dusk: Object.freeze({
-    label: 'Dusk', elevation: 4.5, azimuth: 48, sunIntensity: 3.8, skyMean: 0.2, mie: 3.2, ozone: 1.4,
-    exposure: 0.7, envUrl: null, envIntensity: 0.22, cloudCover: 0.6, warmth: 1.3,
-    fog: { density: 0.075, falloff: 0.1, near: 25, far: 380, sunPower: 9, aerial: 0.4 },
+    label: 'Dusk', elevation: 3, azimuth: 48, sunIntensity: 1.1, skyMean: 0.13, mie: 1.3, ozone: 1.7,
+    exposure: 0.55, envUrl: null, envIntensity: 0.5, cloudCover: 0.5, warmth: 1.3,
+    fog: { density: 0.05, falloff: 0.1, near: 35, far: 480, sunPower: 9, aerial: 0.4, lobe: 0.45, cool: 0.7 },
   }),
 });
 export const DEFAULT_PRESET = 'golden';
@@ -68,7 +71,7 @@ export const LOCATION_LOOKS = Object.freeze({
       golden: { mie: 1.5, exposure: -0.1, cloudCover: 0.46, lamps: 0.8, windows: 1, bounce: 0.3, fog: { density: 0.035, falloff: 0.1, near: 60, far: 760, sunPower: 8, aerial: 0.45 } },
       morning: { lamps: 0.3, windows: 0.5, bounce: 0.25 },
       noon: { lamps: 0.15, windows: 0.3, bounce: 0.3 },
-      dusk: { lamps: 1.3, windows: 1.8, bounce: 0.15 },
+      dusk: { lamps: 1.3, windows: 1.8, bounce: 0.04 },
     }),
   }),
   town: Object.freeze({
@@ -78,10 +81,10 @@ export const LOCATION_LOOKS = Object.freeze({
         fog: { density: 0.02, falloff: 0.05, near: 70, far: 900, sunPower: 6, aerial: 0.45 } },
       noon: { elevation: 58, azimuth: -165, envIntensity: 0.46, lamps: 0.1, windows: 0.3, bounce: 0.55,
         fog: { density: 0.014, falloff: 0.05, near: 90, far: 1000, sunPower: 5, aerial: 0.35 } },
-      golden: { elevation: 15, azimuth: -118, sunIntensity: 5.0, envUrl: null, envIntensity: 0.34, lamps: 0.7, windows: 1.1, bounce: 0.45,
-        fog: { density: 0.03, falloff: 0.05, near: 50, far: 700, sunPower: 7, aerial: 0.5 } },
-      dusk: { elevation: 3.5, azimuth: -112, envIntensity: 0.3, lamps: 1.5, windows: 2.2, bounce: 0.2,
-        fog: { density: 0.04, falloff: 0.05, near: 40, far: 600, sunPower: 9, aerial: 0.5 } },
+      golden: { elevation: 19, azimuth: -124, sunIntensity: 5.0, mie: 1.6, exposure: 0.1, envUrl: null, envIntensity: 0.36, lamps: 0.7, windows: 1.1, bounce: 0.5,
+        fog: { density: 0.016, falloff: 0.05, near: 60, far: 850, sunPower: 7, aerial: 0.5 } },
+      dusk: { azimuth: -112, envIntensity: 0.55, lamps: 1.25, windows: 2.4, bounce: 0.05,
+        fog: { density: 0.02, falloff: 0.05, near: 50, far: 700, sunPower: 9, aerial: 0.5 } },
     }),
   }),
 });
@@ -342,7 +345,7 @@ export class SkyDome {
     if (this.derived) {
       const z = this.derived.zenith, h = this.derived.horizonSun;
       const l = (z.r + z.g + z.b) / 3 * 0.6 + (h.r + h.g + h.b) / 3 * 0.4;
-      m.uLid.value.setRGB(l * 1.02, l * 1.05, l * 1.1).multiplyScalar(1.25);
+      m.uLid.value.setRGB(l * 1.02, l * 1.05, l * 1.1).multiplyScalar(1.25 - 0.3 * overcast);
       if (fogColor && !(this.tintState && this.tintState.amount > 0)) m.uHorizon.value.copy(fogColor);
     }
   }

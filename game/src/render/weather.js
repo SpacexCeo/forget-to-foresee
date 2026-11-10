@@ -31,8 +31,8 @@ export const WIND_DIR = Object.freeze([0.83, -0.56]);
  */
 export const WEATHER = Object.freeze({
   clear: Object.freeze({ label: 'Clear', sun: 1, shadow: 1, ambient: 1, cover: null, overcast: 0, fog: 1, wet: 0, rain: 0, wind: 0.35, exposure: 0 }),
-  overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.9, cover: 0.97, overcast: 0.85, fog: 1.7, wet: 0, rain: 0, wind: 0.55, exposure: 0.25 }),
-  rain: Object.freeze({ label: 'Light rain', sun: 0.14, shadow: 0.45, ambient: 1.7, cover: 1, overcast: 1, fog: 2.3, wet: 1, rain: 1, wind: 0.8, exposure: 0.3 }),
+  overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.6, cover: 0.97, overcast: 0.85, fog: 1.12, wet: 0, rain: 0, wind: 0.55, exposure: 0.05 }),
+  rain: Object.freeze({ label: 'Light rain', sun: 0.14, shadow: 0.45, ambient: 1.25, cover: 1, overcast: 1, fog: 1.35, wet: 1, rain: 1, wind: 0.8, exposure: 0.0 }),
 });
 export const WEATHER_NAMES = Object.freeze(Object.keys(WEATHER));
 export const DEFAULT_WEATHER = 'clear';
@@ -158,6 +158,7 @@ export function installWetness() {
   THREE.ShaderChunk.fog_pars_fragment += /* glsl */`
 #ifdef USE_FOG
   uniform vec4 ftfWeather;
+  float ftfPuddleK = 0.0;
   float ftfHash21( vec2 p ) { vec3 p3 = fract( vec3( p.xyx ) * 0.1031 ); p3 += dot( p3, p3.yzx + 33.33 ); return fract( ( p3.x + p3.y ) * p3.z ); }
   float ftfValueNoise( vec2 p ) {
     vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
@@ -174,12 +175,19 @@ export function installWetness() {
     #endif
     float ftfWet = ftfWeather.x * smoothstep( 0.15, 0.75, ftfUp );
     // Puddles: low spots of a slow noise on nearly flat ground.
-    float ftfN = ftfValueNoise( vFogWorldPos.xz * 0.45 ) * 0.65 + ftfValueNoise( vFogWorldPos.xz * 1.9 + 7.3 ) * 0.35;
-    float ftfPuddle = ftfWeather.y * smoothstep( 0.93, 0.995, ftfUp ) * smoothstep( 0.56, 0.44, ftfN );
-    diffuseColor.rgb *= mix( 1.0, 0.58, ftfWet * clamp( roughnessFactor * 1.3, 0.0, 1.0 ) );
+    float ftfN = ftfValueNoise( vFogWorldPos.xz * 0.23 ) * 0.7 + ftfValueNoise( vFogWorldPos.xz * 0.9 + 7.3 ) * 0.3;
+    float ftfPuddle = ftfWeather.y * smoothstep( 0.93, 0.995, ftfUp ) * smoothstep( 0.55, 0.4, ftfN );
+    ftfPuddleK = ftfPuddle;
+    diffuseColor.rgb *= mix( 1.0, 0.5, ftfWet * clamp( roughnessFactor * 1.3, 0.0, 1.0 ) );
     roughnessFactor = mix( roughnessFactor, roughnessFactor * 0.5, ftfWet );
-    roughnessFactor = mix( roughnessFactor, 0.045, ftfPuddle );
+    roughnessFactor = mix( roughnessFactor, 0.1, ftfPuddle );
   }
+#endif`;
+  // Standing water is flat: inside a puddle the normal map gives way to the surface's own normal, so the puddle
+  // mirrors the sky as a calm sheen instead of sparkling on every bump.
+  THREE.ShaderChunk.normal_fragment_maps += /* glsl */`
+#if defined( USE_FOG ) && defined( STANDARD )
+  normal = normalize( mix( normal, nonPerturbedNormal, ftfPuddleK ) );
 #endif`;
 }
 
@@ -225,7 +233,9 @@ export class Rain {
           p = mod( p - cameraPosition + 0.5 * uBox, uBox ) - 0.5 * uBox + cameraPosition;
           vec3 dir = normalize( fall );
           vec3 side = normalize( cross( dir, cameraPosition - p ) );
-          float len = mix( 0.42, 0.12, uStill ) * aSeed.w, width = 0.012;
+          float len = mix( 0.7, 0.14, uStill ) * aSeed.w;
+          // Never thinner than about a pixel: far streaks would flicker in and out otherwise.
+          float width = max( 0.012, distance( cameraPosition, p ) * 0.0011 );
           vec3 wp = p - dir * position.y * len + side * position.x * width;
           vec4 mv = viewMatrix * vec4( wp, 1.0 );
           float d = - mv.z;
@@ -237,7 +247,7 @@ export class Rain {
         uniform vec3 uColor; varying float vAlpha; varying vec2 vQ;
         void main() {
           float a = vAlpha * ( 1.0 - abs( vQ.x ) * 2.0 ) * smoothstep( 0.0, 0.25, vQ.y ) * ( 1.0 - smoothstep( 0.6, 1.0, vQ.y ) );
-          gl_FragColor = vec4( uColor * a * 0.5, 0.0 );
+          gl_FragColor = vec4( uColor * a * 0.42, 0.0 );
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,

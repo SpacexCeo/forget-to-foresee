@@ -55,7 +55,7 @@ export function browserWeather() {
   try { const w = new URLSearchParams(location.search).get('weather'); return WEATHER[w] ? w : DEFAULT_WEATHER; } catch { return DEFAULT_WEATHER; }
 }
 
-const _c = new THREE.Color(), _white = new THREE.Color(1, 1, 1);
+const _c = new THREE.Color(), _c2 = new THREE.Color(), _white = new THREE.Color(1, 1, 1);
 /** Mean colour of what the sun hits in a street (plaster, cobbles, stone): the tint of the bounce light. */
 const _bounceAlbedo = new THREE.Color(0.62, 0.52, 0.42);
 
@@ -188,11 +188,12 @@ export class LookDev {
     this.renderer.toneMappingExposure = Math.pow(2, P.exposure + W.exposure);
     this.hemi.intensity = (0.12 + 0.5 * P.bounce) * (1 + (W.ambient - 1) * 0.6);
     // Haze: thicker and greyer under cloud, the sun's glow in it goes with the sun.
-    const grey = _c.setScalar((atm.fogColor.r * 0.2126 + atm.fogColor.g * 0.7152 + atm.fogColor.b * 0.0722) * 1.15);
-    this.baseFog = atm.fogColor.clone().lerp(grey, lid * 0.75);
+    const grey = _c.setScalar((atm.fogColor.r * 0.2126 + atm.fogColor.g * 0.7152 + atm.fogColor.b * 0.0722));
+    // Under a lid the haze is the lid's own grey, a little darker than the sky above it.
+    this.baseFog = atm.fogColor.clone().lerp(_c2.copy(atm.zenith).multiplyScalar(0.85), P.fog.cool || 0).lerp(grey.multiplyScalar(0.8), lid * 0.75);
     this.scene.fog.color.copy(this.baseFog);
     this.scene.fog.near = P.fog.near / W.fog; this.scene.fog.far = Math.max(this.scene.fog.near + 20, P.fog.far / W.fog);
-    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density * W.fog, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: 1 - lid * 0.9 });
+    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density * W.fog, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: (P.fog.lobe ?? 1) * (1 - lid * 0.9) });
     this.sky.setWeather({ cover: weatherCover(W, P.cloudCover), overcast: lid, fogColor: this.baseFog });
     this.post.setRays(1 - lid);
     // Lamps and windows come up as daylight goes down.
