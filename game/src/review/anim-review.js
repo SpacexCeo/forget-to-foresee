@@ -7,6 +7,7 @@
 //   &scenario=loco|walk|run|idle|turn|clip:<name>           what the characters do (see SCENARIOS)
 //   &views=side,front                                       camera columns (side, front, back, top, feet, game)
 //   &aclips=townsfolk                                       the shared townsfolk clips retargeted onto the model
+//   &body=elder&walkclip=elder_walk&walk=clip               townsfolk body type, the clip that drives the gait, move at the clip's speed
 //   &zoom=1.6&hscale=0.8&plant=0&once=1&walk=1.3            closer camera, lower aim, no planted-feet layer, one-shot, walk speed
 //
 // Page API for the capture script: window.__anim = { ready: Promise, frames, fps, step(i) → state, metrics() }.
@@ -88,8 +89,12 @@ class Subject {
     if (this.name === 'agent_iris') { flatHair(model); fabricSheen(model); }
     model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
     this.model = model; this.root.add(model); scene.add(this.root);
-    const extra = this.clipsUrl === 'townsfolk' ? await townsfolkClips(model, { key: this.name }) : this.clipsUrl ? await loadClips(this.clipsUrl) : [];
+    const extra = this.clipsUrl === 'townsfolk' ? await townsfolkClips(model, { key: this.name, body: Q.get('body') || 'adult' }) : this.clipsUrl ? await loadClips(this.clipsUrl) : [];
     this.clips = mergeClips(gltf.animations, extra);
+    for (const [as, q] of [['walk', 'walkclip'], ['run', 'runclip']]) {   // e.g. walkclip=elder_walk: that clip drives the gait
+      const c = Q.get(q) && this.clips.find((x) => x.name === Q.get(q));
+      if (c) { const k = c.clone(); k.name = as; k.userData = c.userData; this.clips = [...this.clips.filter((x) => x.name !== as), k]; }
+    }
     this.mixer = new THREE.AnimationMixer(model);
     const face = extra.length ? faceLayerClip(gltf.animations) : null;
     if (face) this.mixer.clipAction(face).play();
@@ -107,7 +112,9 @@ class Subject {
   step(input, t) {
     const wish = input.dir == null ? [0, 0] : [Math.sin(input.dir), Math.cos(input.dir)];
     const before = this.motion.heading;
-    stepMotion(this.motion, wish, input.speed || WALK, DT, DEFAULT_MOTION, true);
+    // walk=clip / run=clip: the scenario moves at the speed the clip was built (and retargeted) for
+    const ref = this.gait && Q.get('walk') === 'clip' ? (input.speed > WALK ? this.gait.runRef : this.gait.walkRef) : 0;
+    stepMotion(this.motion, wish, ref || input.speed || WALK, DT, DEFAULT_MOTION, true);
     this.root.position.x += this.motion.vel[0] * DT; this.root.position.z += this.motion.vel[1] * DT;
     this.root.rotation.y = this.motion.heading;
     const speed = Math.hypot(this.motion.vel[0], this.motion.vel[1]);
@@ -144,9 +151,15 @@ class Subject {
         if (a.y - low < 0.01 && b.y - low < 0.01) v.push(Math.hypot(b.x - a.x, b.z - a.z) / DT);
       }
     }
+    // every frame's speed of each ball of the foot: a foot that really stands has its slowest 30 % of frames near zero
+    const all = [];
+    for (const f of [0, 1]) for (let i = 1; i < this.track.length; i++) { const a = this.track[i - 1][f], b = this.track[i][f]; all.push(Math.hypot(b.x - a.x, b.z - a.z) / DT); }
+    all.sort((x, y) => x - y);
+    const stance = all.slice(0, Math.floor(all.length * 0.3));
+    this.stance = +(stance.reduce((q, x) => q + x, 0) / (stance.length || 1)).toFixed(3);
     v.sort((x, y) => x - y);
     const mean = v.reduce((s, x) => s + x, 0) / (v.length || 1);
-    return { planted_samples: v.length, slip_mean_m_s: +mean.toFixed(3), slip_p95_m_s: +(v[Math.floor(v.length * 0.95)] || 0).toFixed(3), slip_max_m_s: +(v[v.length - 1] || 0).toFixed(3) };
+    return { stance_speed_m_s: this.stance, planted_samples: v.length, slip_mean_m_s: +mean.toFixed(3), slip_p95_m_s: +(v[Math.floor(v.length * 0.95)] || 0).toFixed(3), slip_max_m_s: +(v[v.length - 1] || 0).toFixed(3) };
   }
 }
 

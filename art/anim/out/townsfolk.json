@@ -87,7 +87,7 @@
    ]
   }
  },
- "talk_a": {
+ "talk": {
   "take": "18_08",
   "frames": 161,
   "seconds": 5.37,
@@ -175,7 +175,7 @@
    ]
   }
  },
- "walk_elder": {
+ "elder_walk": {
   "take": "142_07",
   "slip_mean_m_s": 0.0014,
   "slip_max_m_s": 0.0606,
@@ -197,7 +197,7 @@
    ]
   }
  },
- "run_child": {
+ "child_run": {
   "take": "35_20",
   "slip_mean_m_s": 0.0,
   "slip_max_m_s": 0.0,

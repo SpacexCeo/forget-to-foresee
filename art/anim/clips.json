@@ -204,42 +204,6 @@
    "frames": 33,
    "speed": 1.3
   },
-  "walk_elder": {
-   "kind": "cycle",
-   "take": "142_07",
-   "frames_src": [
-    7113,
-    7248
-   ],
-   "frames": 34,
-   "speed": 0.45,
-   "style": {
-    "arm_swing": 0.9,
-    "track": 0.085,
-    "posture": {
-     "head": 0.6,
-     "neck": 0.8,
-     "chest": 0.9,
-     "spine": 0.9
-    }
-   }
-  },
-  "run_child": {
-   "kind": "cycle",
-   "take": "35_20",
-   "frames_src": [
-    29,
-    117
-   ],
-   "frames": 21,
-   "speed": 2.8,
-   "style": {
-    "bounce": 1.15,
-    "arm_swing": 1.0,
-    "hands": "loose_fist",
-    "lean": 2
-   }
-  },
   "carry": {
    "kind": "cycle",
    "take": "113_26",
@@ -254,21 +218,6 @@
     "arm_out": 0,
     "hands": "grip",
     "track": 0.08
-   }
-  },
-  "talk_a": {
-   "kind": "action",
-   "take": "18_08",
-   "frames_src": [
-    455,
-    1175
-   ],
-   "loop": 20,
-   "feet": "planted",
-   "style": {
-    "arms_down": null,
-    "hands": "open",
-    "gesture": 0.85
    }
   },
   "talk_b": {
@@ -619,6 +568,57 @@
      ]
     }
    ]
+  },
+  "talk": {
+   "kind": "action",
+   "take": "18_08",
+   "frames_src": [
+    455,
+    1175
+   ],
+   "loop": 20,
+   "feet": "planted",
+   "style": {
+    "arms_down": null,
+    "hands": "open",
+    "gesture": 0.85
+   }
+  },
+  "elder_walk": {
+   "kind": "cycle",
+   "take": "142_07",
+   "frames_src": [
+    7113,
+    7248
+   ],
+   "frames": 34,
+   "speed": 0.45,
+   "style": {
+    "arm_swing": 0.9,
+    "track": 0.085,
+    "posture": {
+     "head": 0.6,
+     "neck": 0.8,
+     "chest": 0.9,
+     "spine": 0.9
+    }
+   }
+  },
+  "child_run": {
+   "kind": "cycle",
+   "take": "35_20",
+   "frames_src": [
+    29,
+    117
+   ],
+   "frames": 21,
+   "speed": 2.8,
+   "style": {
+    "bounce": 1.15,
+    "arm_swing": 1.0,
+    "hands": "loose_fist",
+    "lean": 2
+   }
   }
  },
  "characters": {
@@ -692,12 +692,12 @@
     "walk": {
      "use": "walk_town"
     },
-    "talk_a": {},
+    "talk": {},
     "talk_b": {},
     "wave": {},
     "sit": {},
-    "walk_elder": {},
-    "run_child": {},
+    "elder_walk": {},
+    "child_run": {},
     "sweep": {},
     "carry": {},
     "play": {},

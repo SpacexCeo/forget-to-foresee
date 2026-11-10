@@ -67,9 +67,24 @@ export const hasFace = (clip) => clip.tracks.some((t) => FACE_TRACK.test(t.name)
 
 /** Names in townsfolk.glb (art/anim/clips.json → characters.townsfolk). Loops unless marked one-shot. */
 export const TOWNSFOLK_CLIPS = Object.freeze([
-  'idle', 'idle_shift', 'idle_look', 'walk', 'talk_a', 'talk_b', 'wave' /* one-shot */, 'sit',
-  'walk_elder', 'run_child', 'sweep', 'carry', 'play', 'salute' /* one-shot */, 'nod' /* one-shot */, 'counter',
+  'idle', 'idle_shift', 'idle_look', 'walk', 'talk', 'talk_b', 'wave' /* one-shot */, 'sit',
+  'elder_walk', 'child_run', 'sweep', 'carry', 'play' /* violin bowing */, 'salute' /* one-shot */, 'nod' /* one-shot */, 'counter',
 ]);
+
+/**
+ * Body types: how the shared motion is retimed and styled for a kind of person, on top of the proportions.
+ *   time    playback rate baked into the clip (an elder moves slower, a child quicker)
+ *   stride  stride length of the walks and runs relative to the legs (the ground speed follows: speed = base × scale × stride × time)
+ *   lean    degrees the upper body leans forward (+) or is held back, chest up (-)
+ *   bounce  scale of the hips' vertical travel (heavier < 1 < lighter)
+ *   armOut  degrees the arms are held further from the body
+ */
+export const BODY_STYLE = Object.freeze({
+  adult: { time: 1, stride: 1, lean: 0, bounce: 1, armOut: 0 },
+  elder: { time: 0.84, stride: 0.86, lean: 5, bounce: 0.75, armOut: 0 },
+  child: { time: 1.14, stride: 1.04, lean: 0, bounce: 1.25, armOut: 0 },
+  guard: { time: 0.94, stride: 1, lean: -2.5, bounce: 0.8, armOut: 3 },
+});
 
 const LIMB = /^(upperarm|forearm|thigh|shin)_[LR]$/;          // aligned to the reference's rest direction
 const HAND = /^(hand|thumb|index|fingers|prop)_([LR])$/;       // carried by the forearm's alignment
@@ -83,8 +98,9 @@ const retargeted = new Map();
  * THREE.AnimationMixer on the model. Each clip's `userData` has:
  *   loop      true for loops (idle, walk, talk, sit, ...), false for one-shots (wave, salute, nod: they start and
  *             end in the idle pose; play with LoopOnce and cross-fade back to an idle)
- *   speed     ground speed in m/s the feet match on THIS character (0 for clips in place); move the character at
- *             exactly this speed (times the action's timeScale) and the feet do not slide
+ *   speed     ground speed in m/s the feet match on THIS character and body type (0 for clips in place): move the
+ *             character at exactly this speed (times the action's timeScale) and the feet do not slide; or drive the
+ *             clip by distance: action.time += metresCovered / speed, modulo its duration
  *   pelvis_y  mean pelvis height in metres on this character (sit: the seat top is about 0.10 × scale below it)
  *   scale     this character's leg length over the reference's
  *   take      the motion-capture source
@@ -92,14 +108,15 @@ const retargeted = new Map();
  *   a clone made with SkeletonUtils.clone of the loaded scene is fine)
  * @param {object} [o]
  * @param {string[]} [o.names] only these clips (default: all of TOWNSFOLK_CLIPS)
- * @param {number} [o.armOut] degrees to hold the arms further from the body (bulky costumes), default 0
+ * @param {string|object} [o.body] 'adult' (default), 'elder', 'child', 'guard' or an object like BODY_STYLE's entries
+ * @param {number} [o.armOut] degrees to hold the arms further from the body (bulky costumes), added to the body type's
  * @param {string} [o.key] cache key: characters that share a skeleton (same asset) share the retargeted clips
  * @returns {Promise<THREE.AnimationClip[]>} [] when the file fails to load
  */
-export function townsfolkClips(model, { names = null, armOut = 0, key = null, base = baseUrl(), file = 'townsfolk' } = {}) {
-  const k = key ? `${file}|${key}|${armOut}|${names ? names.join(',') : '*'}` : null;
+export function townsfolkClips(model, { names = null, body = 'adult', armOut = 0, key = null, base = baseUrl(), file = 'townsfolk' } = {}) {
+  const k = key ? `${file}|${key}|${typeof body === 'string' ? body : JSON.stringify(body)}|${armOut}|${names ? names.join(',') : '*'}` : null;
   if (k && retargeted.has(k)) return retargeted.get(k);
-  const p = loadFile(file, base).then((g) => retargetClips(g, model, { names, armOut }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
+  const p = loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
   if (k) retargeted.set(k, p);
   return p;
 }
@@ -111,7 +128,7 @@ function restOf(bones, bindWorld) {
     const m = bindWorld(b);
     const wp = new THREE.Vector3(), wq = new THREE.Quaternion(), s = new THREE.Vector3();
     m.decompose(wp, wq, s);
-    rest.set(b.name, { bone: b, parent: null, wq, wp, q: wq.clone(), t: wp.clone() });
+    rest.set(b.name, { bone: b, parent: null, wq, wp, q: wq.clone(), t: wp.clone(), m });
   }
   for (const b of bones) {
     const r = rest.get(b.name), p = b.parent && rest.get(b.parent.name);
@@ -134,7 +151,9 @@ const legLength = (rest) => ['L', 'R'].reduce((s, x) => s + rest.get(`thigh_${x}
  * scaled by the leg-length ratio, then both legs are solved again onto the scaled ankle positions, so the feet stay
  * planted on a child as on a tall adult.
  */
-export function retargetClips(gltf, model, { names = null, armOut = 0 } = {}) {
+export function retargetClips(gltf, model, { names = null, body = 'adult', armOut = 0 } = {}) {
+  const style = { ...BODY_STYLE.adult, ...(typeof body === 'string' ? BODY_STYLE[body] : body) };
+  style.armOut += armOut;
   gltf.scene.updateMatrixWorld(true);
   const refBones = []; gltf.scene.traverse((o) => { if (o !== gltf.scene) refBones.push(o); });
   const ref = restOf(refBones, (b) => b.matrixWorld);
@@ -162,17 +181,24 @@ export function retargetClips(gltf, model, { names = null, armOut = 0 } = {}) {
     K.set(n, r.wq.clone().invert().multiply(align).multiply(t.wq));
   }
   const legs = ['L', 'R'].map((s) => ({ thigh: `thigh_${s}`, shin: `shin_${s}`, foot: `foot_${s}`, l1: tgt.get(`thigh_${s}`).wp.distanceTo(tgt.get(`shin_${s}`).wp), l2: tgt.get(`shin_${s}`).wp.distanceTo(tgt.get(`foot_${s}`).wp) }));
+  // the pelvis track is local to the pelvis' parent, whatever sits above it (a scaled armature on the townsfolk)
+  const pelvisParentInv = new THREE.Matrix4().multiplyMatrices(toModel, tgt.get('pelvis').bone.parent.matrixWorld).invert();
   const out = [];
   for (const clip of gltf.animations) {
     if (names && !names.includes(clip.name)) continue;
-    out.push(retargetClip(clip, ref, tgt, order, K, legs, scale, armOut));
+    out.push(retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParentInv));
   }
   return out;
 }
 
 function depth(rest, n) { let d = 0; for (let p = rest.get(n).parent; p; p = rest.get(p).parent) d++; return d; }
 
-function retargetClip(clip, ref, tgt, order, K, legs, scale, armOut) {
+const UPPER = /^(chest|neck|shoulder_[LR]|upperarm_[LR]|forearm_[LR]|hand_[LR]|thumb_[LR]|index_[LR]|fingers_[LR]|prop_[LR])$/;
+
+function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParentInv) {
+  const armOut = style.armOut, moving = (clip.userData && clip.userData.speed) > 0, stride = moving ? style.stride : 1;
+  const lean = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(style.lean));
+  const leanHalf = new THREE.Quaternion().slerp(lean, 0.5), leanHead = new THREE.Quaternion().slerp(lean, 0.3);
   const tracks = new Map(); let times = null, posTrack = null;
   for (const t of clip.tracks) {
     const dot = t.name.lastIndexOf('.'), bone = t.name.slice(0, dot), prop = t.name.slice(dot + 1);
@@ -208,15 +234,16 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, armOut) {
         tw.get(n).copy(rw.get(n)).multiply(K.get(n));
         const arm = armOut && ARM.exec(n);
         if (arm) tw.get(n).premultiply(armRot[arm[2]]);
+        if (style.lean) { if (UPPER.test(n)) tw.get(n).premultiply(lean); else if (n === 'spine') tw.get(n).premultiply(leanHalf); else if (n === 'head') tw.get(n).premultiply(leanHead); }
       } else tw.get(n).copy(pw).multiply(t.q);
-      if (n === 'pelvis') tp.get(n).copy(rp.get('pelvis')).sub(refPel.wp).multiplyScalar(scale).add(tgtPel.wp);
+      if (n === 'pelvis') { const p = tp.get(n).copy(rp.get('pelvis')).sub(refPel.wp).multiplyScalar(scale); p.y *= style.bounce; p.z *= stride; p.add(tgtPel.wp); }
       else if (t.parent) tp.get(n).copy(t.t).applyQuaternion(pw).add(tp.get(t.parent));
       else tp.get(n).copy(t.wp);
     }
     // the legs again, onto the reference's ankles at the model's scale
     for (const L of legs) {
       const hip = tp.get(L.thigh), want = v.copy(rp.get(L.foot)).multiplyScalar(scale);
-      want.y = (rp.get(L.foot).y - ankleRest.ref) * scale + ankleRest.tgt;
+      want.y = (rp.get(L.foot).y - ankleRest.ref) * scale + ankleRest.tgt; want.z *= stride;
       const thighW = tw.get(L.thigh), shinW = tw.get(L.shin);
       const d = v2.copy(want).sub(hip); let dist = d.length();
       const reach = (L.l1 + L.l2) * 0.999; dist = Math.min(Math.max(dist, Math.abs(L.l1 - L.l2) + 1e-4), reach);
@@ -241,14 +268,14 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, armOut) {
       q.toArray(o, f * 4);
     }
     // pelvis local translation (its parent, the root bone, stays at rest)
-    const par = tgtPel.parent ? tgt.get(tgtPel.parent) : null;
-    v.copy(tp.get('pelvis')); if (par) v.sub(par.wp).applyQuaternion(q.copy(par.wq).invert());
+    v.copy(tp.get('pelvis')).applyMatrix4(pelvisParentInv);
     v.toArray(outP, f * 3); pelvisY += tp.get('pelvis').y / F;
   }
-  const made = keyed.map((n) => new THREE.QuaternionKeyframeTrack(`${tgt.get(n).bone.name}.quaternion`, times, outQ.get(n)));
-  made.push(new THREE.VectorKeyframeTrack(`${tgtPel.bone.name}.position`, times, outP));
-  const c = new THREE.AnimationClip(clip.name, clip.duration, made);
+  const tt = style.time === 1 ? times : times.map((x) => x / style.time);
+  const made = keyed.map((n) => new THREE.QuaternionKeyframeTrack(`${tgt.get(n).bone.name}.quaternion`, tt, outQ.get(n)));
+  made.push(new THREE.VectorKeyframeTrack(`${tgtPel.bone.name}.position`, tt, outP));
+  const c = new THREE.AnimationClip(clip.name, clip.duration / style.time, made);
   const ud = clip.userData || {};
-  c.userData = { ...ud, speed: (ud.speed || 0) * scale, pelvis_y: +pelvisY.toFixed(3), scale };
+  c.userData = { ...ud, speed: (ud.speed || 0) * scale * stride * style.time, pelvis_y: +pelvisY.toFixed(3), scale };
   return c;
 }
