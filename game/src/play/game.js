@@ -23,7 +23,10 @@ import { planRoute, placePosition } from '../net/world-map.js';
 import { steerTo } from '../physics/character.js';
 import { CAMPS, ANCHOR_ZONES, SHARD } from '../scenes/layout.js';
 import { CLAN_ASSET } from './behaviour.js';
-import { ShellHub, signForShell } from './hub.js';
+import { ShellHub, signForShell, waitingShells } from './hub.js';
+import { shellBeaconLevels, pointerTarget, pointerPose } from './beacon-plan.js';
+import { ShellBeacons, GoalPointer } from '../render/beacons.js';
+import { warmModel } from '../render/warmup.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
@@ -296,9 +299,28 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     prevObs = session.obs;
   });
 
+  // Gold light over the Shells with a sign waiting, strongest on the one the goal names (docs/visual-guidance.md).
+  const beacons = new ShellBeacons({ shells: world3d.shells || [] });
+  for (const it of beacons.items) warmModel(it.group);
+  // ...and chevrons on the ground at Iris's feet toward that place: from the balcony no Shell is on screen.
+  const pointer = new GoalPointer({ scene });
+  warmModel(pointer.group);
+  const pointerPlaces = { shells: ANCHOR_ZONES.map((z) => z.shellPosition), anchors: ANCHOR_ZONES.map((z) => z.anchorPosition) };
+  let beaconTimer = 0;
+  function syncBeacons(dt) {
+    if ((beaconTimer -= dt) > 0) return;
+    beaconTimer = 0.25;
+    const o = session.obs;
+    beacons.setLevels(shellBeaconLevels({ waiting: o ? waitingShells(o) : [], goalTarget: session.goal && session.goal.target, zone: state.zone, filmPlaying: !!chapters.playing }));
+  }
+
   /** Per frame, after physics. */
   function update(dt, { focus, moving, speed = 0, running = false }) {
     state.now += dt;
+    syncBeacons(dt);
+    beacons.update(dt, lookdev.reducedMotion);
+    const aim = pointerTarget(session.goal && session.goal.target, pointerPlaces);
+    pointer.update(dt, avatar.position.toArray(), pointerPose(player.pos, aim && aim.position, { zone: state.zone, filmPlaying: !!chapters.playing }), lookdev.reducedMotion);
     const pos = player.pos;
     const inShell = state.zone === 'shell';
     const local = inShell ? shell.toLocal(pos) : pos;
@@ -338,7 +360,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, beacons, pointer, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {

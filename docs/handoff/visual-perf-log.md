@@ -17,11 +17,18 @@ visual cue needs a new string or a logic change, it is logged here as a request 
   shader programs compile in parallel, then the greybox is swapped; props, agents, Iris and the Guests. Measurements
   and method in `docs/smoothness.md`. Tests: `game/tests/client/warmup.test.mjs` (8).
 
+- 10.11 05:20 Kyiv. **Goal cues in the world** (`docs/visual-guidance.md`): gold chevrons on the ground ahead of Iris
+  toward the Shell or anchor zone the goal names, and a gold column, ring and diamond on Shells with an open sign
+  (strongest on the goal's Shell). Finding on the way: from the start balcony no Shell is ever on screen, so the
+  chevrons are the cue that matters; checked in the browser at the start view. The column was only seen faintly in a
+  dev camera angle (fog, software renderer): it needs an owner look on a real GPU. Tests:
+  `game/tests/client/beacons.test.mjs` (9).
+
 ## Backlog (in order of value)
 
-1. In-world guidance: a soft light beacon over the Shell the current goal points to, and a ground trail from Iris to
-   it (visual only, driven by the existing goal; no new strings).
+1. Look at the Shell column on a real GPU and at the high tier (bloom); tune or drop it.
 2. Light-first loading on desktop: show the `_m` (2048) files first, upgrade to the full set while idle.
 3. The light set complete before the first compile (no full recompile when the play layer starts).
 4. Warm the programs when the quality governor changes tier; warm the post chain's passes.
-5. Camp and anchor highlights when a goal or an offer refers to them.
+5. Camp and Scroll table highlights when a goal or an offer refers to them; an opening camera glance toward the
+   goal Shell (the Shells are off screen at the start).
