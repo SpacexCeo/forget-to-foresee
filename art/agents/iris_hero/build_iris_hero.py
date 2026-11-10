@@ -34,6 +34,9 @@ import agent_anim  # noqa: E402
 import hero_costume as C  # noqa: E402
 import hero_shading as S  # noqa: E402
 import hero_hair as H  # noqa: E402
+import hero_hair2 as H2  # noqa: E402
+import hero_face as F  # noqa: E402
+import hero_shoes as SH  # noqa: E402
 import hero_anatomy as A  # noqa: E402
 
 from bl_ext.user_default.mpfb.services.humanservice import HumanService  # noqa: E402
@@ -46,6 +49,10 @@ MPFB_TARGETS = os.path.join(os.path.dirname(MPFB.__file__), "data", "targets")
 EYE_HEIGHT = 1.640          # the agent rig's eye line (agent_geometry.FACE): the body is scaled to it
 ARM_DEG = 14.0              # agent rest stance: arms 14 deg off the body, hanging straight
 
+HEAD_SCALE = float(os.environ.get("IRIS_HEAD", "1.06"))   # head size against the MakeHuman body (7.6 heads -> about 7.1)
+SHOES = os.environ.get("IRIS_SHOES", "v2")          # v2 (hero_shoes: constructed) | shell (pulled off the foot mesh)
+LEG_HEM = 0.12 if SHOES == "shell" else 0.106       # the leggings' hem: down to the trainers' collar
+HAIR = os.environ.get("IRIS_HAIR", "v2")            # v2 (hero_hair2: volume, locks, tail) | cards (the first build)
 COSTUME = os.environ.get("IRIS_COSTUME", "athletic")    # athletic (owner 09.11) | wanderer (the coat)
 
 ATHLETIC = {                  # owner's body reference and anatomy brief 09.11 (proportions; volume in hero_anatomy.py)
@@ -55,13 +62,13 @@ ATHLETIC = {                  # owner's body reference and anatomy brief 09.11 (
     # pelvis: the reference's hips are about as wide as its shoulders (0.21 H from the back)
     "torso/measure-hips-circ-decr": 0.05,
     # seat: anatomical gluteal volume (the MakeHuman target places it on the gluteus maximus)
-    "buttocks/buttocks-volume-incr": 0.60, "hip/hip-scale-depth-incr": 0.10,
+    "buttocks/buttocks-volume-incr": 0.42, "hip/hip-scale-depth-incr": 0.10,
     # legs: a long line; upper thighs full enough to balance the seat (the reference's thigh is 0.10-0.12 H
     # deep in profile), quadriceps and hamstrings, a gradual taper to natural knees and calves
     "legs/upperlegs-height-incr": 0.15, "legs/lowerlegs-height-incr": 0.10,
-    "legs/l-upperleg-muscle-incr": 0.40, "legs/r-upperleg-muscle-incr": 0.40,
+    "legs/l-upperleg-muscle-incr": 0.28, "legs/r-upperleg-muscle-incr": 0.28,
     "legs/l-upperleg-scale-depth-incr": 0.30, "legs/r-upperleg-scale-depth-incr": 0.30,
-    "legs/measure-thigh-circ-incr": 0.20,
+    "legs/measure-thigh-circ-incr": 0.06,
     "legs/l-lowerleg-fat-decr": 0.20, "legs/r-lowerleg-fat-decr": 0.20,
     # bust: natural, medium and lifted
     "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.80,
@@ -71,8 +78,9 @@ ATHLETIC = {                  # owner's body reference and anatomy brief 09.11 (
     "arms/l-lowerarm-fat-decr": 0.20, "arms/r-lowerarm-fat-decr": 0.20,
 }
 
+# cupsize 11.11: a softer bust per the target sheet (0.45 before)
 MACROS = {"gender": 0.0, "age": 0.48, "muscle": 0.5, "weight": 0.42, "height": 0.62, "proportions": 0.75,
-          "cupsize": 0.45, "firmness": 0.55, "race": {"african": 0.08, "asian": 0.17, "caucasian": 0.75}}
+          "cupsize": float(os.environ.get("IRIS_CUP", "0.30")), "firmness": 0.55, "race": {"african": 0.08, "asian": 0.17, "caucasian": 0.75}}
 
 # Stylization and slight asymmetry (MakeHuman detail targets, CC0): name -> weight.
 DETAIL = {
@@ -327,6 +335,20 @@ def scale_to_eye_line(objs, eyes):
     return k
 
 
+def scale_head(bm, eyes, k, s):
+    """The owner's target sheet (11.11) draws her at about 7 heads; the body was 7.6. The head grows about
+    a point on the eye line (the eye line stays at 1.64 m, the look-at contract), blended in down the neck.
+    No body bone moves; the eye bones follow their eyeballs (under 5 mm). Returns the eyes at the new size."""
+    piv = V((0.0, -0.030, EYE_HEIGHT))
+    z0, z1 = 1.455, 1.535
+    for v in bm.data.vertices:
+        w = smoothstep((v.co.z - z0) / (z1 - z0))
+        if w > 0.0:
+            v.co = v.co + (v.co - piv) * ((s - 1.0) * w)
+    bm.data.update()
+    return {p: ((piv + (c * k - piv) * s) / k, r * s) for p, (c, r) in eyes.items()}
+
+
 def load_face_keys(bm):
     bm.shape_key_add(name="Basis", from_mix=False)
     for name, unit in FACE_KEYS.items():
@@ -340,6 +362,7 @@ def load_face_keys(bm):
                 if unit in k.name:
                     k.name = name
                     break
+    F.mix_smile(bm)
     return [k.name for k in keys][1:]
 
 
@@ -548,6 +571,8 @@ def stage_body():
             va.co = va.co.lerp(vr.co, t)
         bpy.data.objects.remove(ref)
         eyes, k = eyes_ref, k_ref
+    if HEAD_SCALE != 1.0:
+        eyes = scale_head(bm, eyes, k, HEAD_SCALE)
     J = {n: (h * k_body, t * k_body) for n, (h, t) in J.items()}
     eyes_k = {p: (c * k, r * k) for p, (c, r) in eyes.items()}
     mpfb_bones = {b.name for b in mrig.data.bones}
@@ -809,7 +834,7 @@ def athletic_costume(bm, P, dom, bones):
     LEG = ("thigh_L", "thigh_R", "shin_L", "shin_R")
     def leg_keep(i, _):
         p = co[i]
-        return dom[i] in LEG + ("pelvis", "spine") and 0.085 < p.z < 1.06     # a spare row past each plane cut
+        return dom[i] in LEG + ("pelvis", "spine") and 0.070 < p.z < 1.06     # a spare row past each plane cut
     def leg_panel(p, nrm):
         side = 1 if p.x > 0 else -1
         centre = side * (0.095 + 0.022 * math.sin((p.z - 0.2) * 3.5))
@@ -825,7 +850,7 @@ def athletic_costume(bm, P, dom, bones):
     back_y = max((p.y for p in (co.values() if hasattr(co, "values") else co) if 1.00 < p.z < 1.04 and 0.040 < abs(p.x) < 0.065 and p.y > c.y), default=c.y)
     def leg_edges(v):
         if v.co.z < 0.6:
-            v.co.z = 0.12
+            v.co.z = LEG_HEM
         else:                                                 # a level top edge, hidden in the waistband
             v.co.z = 1.020
             if v.co.y > c.y and abs(v.co.x) < 0.045:
@@ -837,7 +862,7 @@ def athletic_costume(bm, P, dom, bones):
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: 0.0,   # one colour everywhere (owner v13: nothing drawn on the leggings; the side panels were a lighter patch)
                                         accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12),
-                                        cuts=(((0, 0, 1.020), (0, 0, 1)), ((0, 0, 0.12), (0, 0, -1))))
+                                        cuts=(((0, 0, 1.020), (0, 0, 1)), ((0, 0, LEG_HEM), (0, 0, -1))))
     # (owner 09.11: one layer, pressed into the cleft between the cheeks: no bridge, no separate waistband)
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # owner 09.11 (v13): the leggings are seamless, nothing drawn on them: no piping, no stripes, no seam.
@@ -860,6 +885,10 @@ def athletic_costume(bm, P, dom, bones):
     # trainers (built from the foot) and grey ankle socks that tuck under the leggings' hem (owner 09.11:
     # the ankle under the hem was empty and the old shoe twisted)
     for sfx, side in (("L", 1), ("R", -1)):
+        if SHOES != "shell":                                # constructed trainers and a plain sock tube (hero_shoes)
+            out[f"trainers_{sfx}"] = SH.trainer(f"trainers_{sfx}", SH._measure(bm, dom, co, sfx, bones))
+            out[f"ankle_socks_{sfx}"] = SH.sock(f"ankle_socks_{sfx}", bm, dom, co, sfx)
+            continue
         foot_idx = [i for i in co if dom[i] in (f"foot_{sfx}", f"toe_{sfx}", f"shin_{sfx}") and co[i].z < 0.11]
         out[f"trainers_{sfx}"] = C.trainer(bm, foot_idx, f"trainers_{sfx}", side)
         sock_keep = lambda i, _, sfx=sfx: dom[i] in (f"foot_{sfx}", f"shin_{sfx}", f"toe_{sfx}") and 0.030 < co[i].z < 0.140
@@ -975,10 +1004,18 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
             garments[o.name] = o
         for o in C.belt_and_props(P):
             garments[o.name] = o
-    scalp = hair_region(bm, dom)
-    garments["hair_cap"] = C.hair_cap(bm, inset_region(bm, scalp, 0.008), offset=0.0015)
-    brow_z = max(c.z for c, _ in [(h, 0) for h in (bones["eye_L"][0], bones["eye_R"][0])]) + 0.028
-    garments["hair"], _master, tie = groom_hair(bm, rig, garments, scalp, head_c, head_r)
+    head_idx = [i for i, d in enumerate(dom) if d == "head"]
+    if HAIR == "cards":                                   # the first build: a groom turned into ~250 alpha cards
+        scalp = hair_region(bm, dom)
+        garments["hair_cap"] = C.hair_cap(bm, inset_region(bm, scalp, 0.008), offset=0.0015)
+        garments["hair"], _master, tie = groom_hair(bm, rig, garments, scalp, head_c, head_r)
+    else:                                                 # the target sheet's hair: a volume, locks and a tail (hero_hair2)
+        ear_idx = sorted(group_verts(bm, "ears", 0.3)) if "ears" in bm.vertex_groups else []
+        hair_objs, tie = H2.build(bm, head_idx, ear_idx, head_c, head_r,
+                                  colliders=[garments[k] for k in ("jacket", "jacket_collar") if k in garments], log=log)
+        garments.update(hair_objs)
+        garments["hair_tie"] = H.hair_tie(tie + V((0, 0.012, -0.004)), H2.tail_line(tie, 0.2) - H2.tail_line(tie, 0.0))
+        H2.scalp_attr(bm, head_c, head_r, head_idx)
 
     chains = (athletic_chains(head_c, tie) if COSTUME == "athletic"
               else hero_chains(P, garments["coat"], tail_pts, head_c))
@@ -1019,20 +1056,35 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
             return ("hair_B", f)
         return ("hair_L" if p.x > 0 else "hair_R", f)
 
-    rules = {"coat": coat_rule, "dress": dress_rule, "hair": hair_rule,
+    tail_rule = lambda p: ("tail", smoothstep((tie.z + 0.005 - p.z) / 0.04))
+    rules = {"coat": coat_rule, "dress": dress_rule, "hair": hair_rule if HAIR == "cards" else None,
+             "hair_tail": tail_rule, "hair_tail_cards": tail_rule, "hair_locks": None,
              "scarf_tail": lambda p: ("scarf", smoothstep((1.42 - p.z) / 0.06)) if p.z < 1.42 else None,
              "scarf_fringe": lambda p: ("scarf", 1.0), "hood": lambda p: ("hood", 0.6)}
     for name, o in garments.items():
         skin_garment(o, kd, wts, rules.get(name))
         bind(o, rig)
+    if "hair_locks" in garments:                      # scalp locks and the tail's core join the volume's mesh
+        bpy.ops.object.select_all(action="DESELECT")
+        for part in ("hair_locks", "hair_tail", "hair_cap"):
+            garments[part].select_set(True)
+        bpy.context.view_layer.objects.active = garments["hair_cap"]
+        bpy.ops.object.join()
+        del garments["hair_locks"], garments["hair_tail"]
+        garments["hair"] = garments.pop("hair_tail_cards")
+        garments["hair"].name = "hair"
 
     # the body keeps the head, neck, hands and lashes; everything under the costume is removed
     cz, crx, cry = P.section(1.10)
 
     wrists = {sx: rig.data.bones[f"hand_{sx}"].head_local.copy() for sx in ("L", "R")}
 
+    ear_set = group_verts(bm, "ears", 0.3) if "ears" in bm.vertex_groups else set()
+
     def covered(i, co):
         d = dom[i]
+        if HAIR != "cards" and d == "head" and i not in ear_set and H2.hairline_f(co - head_c, head_r) > 0.22:
+            return True                                 # the scalp well inside the hairline, under the hair volume
         if co.z > 1.445:
             return False
         if d in HAND_BONES:
@@ -1057,15 +1109,33 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     bpy.context.scene.collection.objects.link(ref)
     ref.hide_render = True
     delete_verts(bm, covered)
-    if COSTUME == "athletic":                         # the skin hidden under the leggings' top is tucked 6 mm inward,
-        nrm = [v.normal.copy() for v in bm.data.vertices]   # so it never shows through the knit (2.8 mm off the body)
+    if COSTUME == "athletic":
+        # The midriff skin under the leggings ends in a true cut 1 cm below their top edge (1.020). It used to
+        # run 6 cm down (whole body faces), and in a pose the knit, weighted from other body vertices where it
+        # bridges the cleft and the hip crease, let specks of that skin through.
+        b = bmesh.new()
+        b.from_mesh(bm.data)
+        dl = b.verts.layers.deform.verify()
+        arm = {g.index for g in bm.vertex_groups if g.name.split("_")[0] in ("hand", "forearm", "fingers", "thumb", "index", "upperarm")}
+        waist = [v for v in b.verts if 0.90 < v.co.z < 1.08 and not any(g in arm and w > 0.01 for g, w in v[dl].items())]
+        ws = set(waist)
+        geom = waist + [e for e in b.edges if e.verts[0] in ws and e.verts[1] in ws] \
+            + [f for f in b.faces if all(v in ws for v in f.verts)]
+        bmesh.ops.bisect_plane(b, geom=geom, dist=1e-5, plane_co=V((0, 0, 1.010)), plane_no=V((0, 0, 1)),
+                               clear_inner=True, clear_outer=False)
+        bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
+        b.to_mesh(bm.data)
+        b.free()
+        bm.data.update()
+        # what is left under the edge is tucked 8 mm inward, so it never shows through the knit (2.8 mm off the body)
+        nrm = [v.normal.copy() for v in bm.data.vertices]
         zs = [v.co.z for v in bm.data.vertices]
         blocks = bm.data.shape_keys.key_blocks if bm.data.shape_keys else [None]
         for kb in blocks:
             data = kb.data if kb else bm.data.vertices
             for i, z in enumerate(zs):
-                if 0.90 < z < 1.017:
-                    data[i].co = data[i].co - nrm[i] * 0.006 * smoothstep((1.017 - z) / 0.009)
+                if 0.90 < z < 1.0185:
+                    data[i].co = data[i].co - nrm[i] * 0.008 * smoothstep((1.0185 - z) / 0.0045)
         bm.data.update()
     log("costume", {n: len(o.data.polygons) for n, o in garments.items()})
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_costume.blend"))
@@ -1459,6 +1529,8 @@ def lips_attr(body):
 def stage_full(shade=True, size=2048, samples=16):
     bm, rig, eye_objs, garments = stage_costume()
     lips_attr(bm)
+    n_mouth, lip_c = F.mouth_attr(bm)
+    log("mouth cavity", n_mouth, "verts; lips centre", tuple(round(x, 4) for x in lip_c))
     hair = [garments.pop("hair"), garments.pop("hair_cap")]
     cloth = list(garments.values())
     if shade:
@@ -1492,18 +1564,26 @@ def stage_full(shade=True, size=2048, samples=16):
         S.pack_atlas(cloth)
         S.bake_set([bm], "M_Iris_Skin", S.skin_shader, size, OUT, "skin", samples, land=land)
         S.bake_set(cloth, "M_Iris_Garment", S.garment_shader, size, OUT, "garment", samples)
-        hair_textures(hair[0], size)
-        cap = S.flat_material("M_Iris_HairCap", (0.140, 0.070, 0.036), 0.8)       # the hair hue (mid of the atlas)
-        hair[1].data.materials.clear()
-        hair[1].data.materials.append(cap)
+        if HAIR == "cards":
+            hair_textures(hair[0], size)
+            cap = S.flat_material("M_Iris_HairCap", (0.140, 0.070, 0.036), 0.8)       # the hair hue (mid of the atlas)
+            hair[1].data.materials.clear()
+            hair[1].data.materials.append(cap)
         S.bake_set(eye_objs, "M_Iris_Eye", S.eye_shader, 512, OUT, "eye", samples, ao=False)
-        lash = S.flat_material("M_Iris_Lashes", (0.012, 0.008, 0.006), 0.8)
-        bm.data.materials.append(lash)
-        la = bm.data.attributes.get("lash")
-        if la:
-            for p in bm.data.polygons:
-                if all(la.data[i].value > 0.5 for i in p.vertices):
-                    p.material_index = 1
+    if HAIR != "cards":                                         # one atlas: opaque on the volume, alpha-tested on the locks
+        imgs = H2.load_images(H2.write_textures(OUT, size))
+        # M_Iris_Hair: the tail's cards and the lashes, seen from both sides. M_Iris_CapHair: the volume, the
+        # tail's core and the scalp locks, single-sided. Both names end in "Hair": the game's tuneHairCards
+        # gives both the lower alpha cutoff and alpha-to-coverage.
+        for o, nm, cull in ((hair[0], "M_Iris_Hair", False), (hair[1], "M_Iris_CapHair", True)):
+            o.data.materials.clear()
+            o.data.materials.append(S.final_material(nm, *imgs, alpha=True))
+            o.data.materials[0].use_backface_culling = cull
+        # lashes, teeth and tongue join the body after the skin bake (their UVs belong to other textures)
+        F.add_lashes(bm, rig, log=log)
+        F.add_mouth(bm, lip_c, log=log)
+        log("face slots", F.assign_slots(bm, S.flat_material("M_Iris_Skin", (0.46, 0.27, 0.18), 0.5),
+                                         hair[0].data.materials[0], F.mouth_material(OUT)))
     ank = rig.data.bones["shin_L"].tail_local                  # the clips' foot model on Iris's own ankle
     agent_anim.set_ankle(abs(ank.x), ank.z)
     log("ankle", round(abs(ank.x), 3), round(ank.z, 3))
@@ -1534,7 +1614,10 @@ def stage_full(shade=True, size=2048, samples=16):
         export_def_bones=False, export_animations=True, export_animation_mode="NLA_TRACKS",
         export_force_sampling=True, export_frame_step=1, export_morph=True, export_morph_normal=True,
         export_morph_animation=True, export_reset_pose_bones=True, export_optimize_animation_size=False,
-        export_rest_position_armature=True)
+        export_rest_position_armature=True,
+        # No vertex colours in the file: the bake attributes (gcol, tcol, acol) went out as COLOR_0..3, and the
+        # game multiplies a material by COLOR_0, so the charcoal knit rendered black and the white trainers grey.
+        export_vertex_color="NONE", export_all_vertex_colors=False)
     log("exported", path, os.path.getsize(path))
     return path
 

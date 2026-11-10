@@ -40,6 +40,26 @@ for kind in ("OPTIX", "CUDA"):
     except Exception as e:
         print("[audit] no", kind, e)
 sc.cycles.samples = int(os.environ.get("QA_SAMPLES", "48"))
+
+
+def cull_backfaces():
+    """Cycles draws both sides of every face; the game culls the back of a single-sided material. Make the
+    back faces of those materials transparent here, so a sheet shows what the game shows."""
+    for m in bpy.data.materials:
+        if not (m.use_nodes and m.use_backface_culling):
+            continue
+        nt = m.node_tree
+        out = next((n for n in nt.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output), None)
+        if not out or not out.inputs['Surface'].links:
+            continue
+        src = out.inputs['Surface'].links[0].from_socket
+        mix = nt.nodes.new('ShaderNodeMixShader')
+        geo = nt.nodes.new('ShaderNodeNewGeometry')
+        tr = nt.nodes.new('ShaderNodeBsdfTransparent')
+        nt.links.new(geo.outputs['Backfacing'], mix.inputs[0])
+        nt.links.new(src, mix.inputs[1])
+        nt.links.new(tr.outputs[0], mix.inputs[2])
+        nt.links.new(mix.outputs[0], out.inputs['Surface'])
 sc.cycles.transparent_max_bounces = 64
 sc.cycles.max_bounces = 8
 sc.cycles.use_denoising = True
@@ -52,6 +72,7 @@ w.use_nodes = True
 w.node_tree.nodes["Background"].inputs["Color"].default_value = (0.42, 0.45, 0.5, 1)
 w.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.55
 bpy.ops.import_scene.gltf(filepath=SRC)
+cull_backfaces()
 for o in bpy.data.objects:
     if o.name.endswith("_col"):
         o.hide_render = True

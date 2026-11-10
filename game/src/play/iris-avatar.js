@@ -5,14 +5,22 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
-import { prefetchGltf } from '../render/assets.js';
+import { prefetchGltf, getModelVariant } from '../render/assets.js';
 import { warmModel } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
-import { flatHair } from '../render/hair-cards.js';
+import { tuneHairCards } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { ONE_SHOT_CLIPS, REACTION_SECONDS, resolveClip } from './behaviour.js';
 import { FADE, GaitLayer, FootPlant, findLookBones, applyLookTo, accelLean } from './gait.js';
 import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace } from './anim-library.js';
+
+/**
+ * The file Iris loads: `agent_iris_m` (1024 textures, lighter mesh) on phones and the low tier when the build
+ * ships it, else the full `agent_iris`. boot-world.js prefetches the same name, so she is downloaded once.
+ */
+export function irisModelFile(files = MODEL_FILES, variant = getModelVariant()) {
+  return variant && files['agent_iris' + variant] ? 'agent_iris' + variant : 'agent_iris';
+}
 
 export class IrisAvatar {
   constructor() {
@@ -31,10 +39,12 @@ export class IrisAvatar {
 
   async load(avatarGroup) {
     try {
-      const { gltf } = await prefetchGltf('agent_iris'); // started by boot-world.js before the camps (QA-030)
+      const { gltf } = await prefetchGltf(irisModelFile()); // started by boot-world.js before the camps (QA-030)
       const model = cloneSkinned(gltf.scene);
       upgradeAssetMaterials('agent_iris', model);
-      flatHair(model);   // owner 09.11: flat brown hair, no shading
+      // 11.11 (target sheet): shaded hair. The strand atlas is lit like any other material; the locks stay
+      // alpha-tested with alpha-to-coverage. (09.11 it was drawn as one unlit brown: a cap with stepped edges.)
+      tuneHairCards(model);
       fabricSheen(model); // owner 09.11: a soft sheen on the knit
       model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = true; });
       await warmModel(model);

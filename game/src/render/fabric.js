@@ -1,9 +1,12 @@
 // Iris's garments read as matte technical knit with a soft sheen on the forms (owner's reference 09.11):
-// the baked garment material becomes a MeshPhysicalMaterial with a low, cool sheen; everything else
+// the baked garment material becomes a MeshPhysicalMaterial with a low sheen; everything else
 // (maps, colour, roughness, normal map, alpha) is carried over unchanged.
+// 11.11: sheen 0.55 with a pale lilac colour lifted the near-black knit to taupe velvet wherever the light
+// grazed it (brown from the front, black from the back). A weak sheen in a neutral dark grey keeps the
+// charcoal the same from every side and still rounds the forms a little.
 import * as THREE from 'three';
 
-export const FABRIC_SHEEN = Object.freeze({ sheen: 0.55, sheenRoughness: 0.6, sheenColor: 0x8f8a9c });
+export const FABRIC_SHEEN = Object.freeze({ sheen: 0.12, sheenRoughness: 0.6, sheenColor: 0x34343a });
 
 /** Replaces every `...Garment` standard material under root with a sheen variant. Returns the count. */
 export function fabricSheen(root, opts = FABRIC_SHEEN) {
