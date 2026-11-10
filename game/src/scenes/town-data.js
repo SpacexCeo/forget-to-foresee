@@ -179,5 +179,661 @@ export const TOWN_DATA = Object.freeze({
       ],
       "radius": 123.6
     }
+  ],
+  "npc": {
+    "points": {
+      "npc_gate_guard": {
+        "position": [
+          3.9,
+          0.0,
+          31.0
+        ],
+        "heading": 3.142,
+        "note": "post beside the lower gate, watching the court"
+      },
+      "npc_market_seller_gate": {
+        "position": [
+          19.5,
+          0.0,
+          14.6
+        ],
+        "heading": 0.0,
+        "note": "between the first two stalls of the lower lane"
+      },
+      "npc_market_customer_gate": {
+        "position": [
+          23.9,
+          0.0,
+          15.8
+        ],
+        "heading": 3.142,
+        "note": "facing the lower-lane stalls"
+      },
+      "npc_market_seller_square": {
+        "position": [
+          13.1,
+          4.5,
+          -4.6
+        ],
+        "heading": -1.571,
+        "note": "behind the north-east stall of the square"
+      },
+      "npc_market_seller_square_2": {
+        "position": [
+          13.1,
+          4.5,
+          -15.4
+        ],
+        "heading": -1.571,
+        "note": "behind the south-east stall of the square"
+      },
+      "npc_market_customer_square": {
+        "position": [
+          9.6,
+          4.5,
+          -15.4
+        ],
+        "heading": 1.571,
+        "note": "facing the south-east stall"
+      },
+      "npc_well": {
+        "position": [
+          -8.5,
+          4.5,
+          -24.5
+        ],
+        "heading": -2.356,
+        "note": "drawing water at the well"
+      },
+      "npc_shrine_keeper": {
+        "position": [
+          3.4,
+          4.5,
+          -7.4
+        ],
+        "heading": 0.0,
+        "note": "beside the altar approach, greeting who comes up the street"
+      },
+      "npc_musician": {
+        "position": [
+          6.4,
+          4.5,
+          -19.2
+        ],
+        "heading": -0.698,
+        "note": "playing toward the square, below the shrine stairs"
+      },
+      "npc_courier_rest": {
+        "position": [
+          -5.4,
+          0.0,
+          17.2
+        ],
+        "heading": 1.571,
+        "note": "catching breath at the foot of the first stairs"
+      },
+      "npc_chat_a": {
+        "position": [
+          -6.0,
+          4.5,
+          -18.6
+        ],
+        "heading": 1.571,
+        "note": "pair talking on the square (with npc_chat_b)"
+      },
+      "npc_chat_b": {
+        "position": [
+          -4.6,
+          4.5,
+          -18.6
+        ],
+        "heading": -1.571,
+        "note": "pair talking on the square (with npc_chat_a)"
+      },
+      "npc_chat_c": {
+        "position": [
+          20.0,
+          2.5,
+          9.8
+        ],
+        "heading": -1.571,
+        "note": "pair talking on the lane (with npc_chat_d)"
+      },
+      "npc_chat_d": {
+        "position": [
+          18.6,
+          2.5,
+          9.8
+        ],
+        "heading": 1.571,
+        "note": "pair talking on the lane (with npc_chat_c)"
+      },
+      "npc_bench_0": {
+        "position": [
+          -9.6,
+          4.5,
+          -12.0
+        ],
+        "heading": 1.571,
+        "sit": true,
+        "seatHeight": 0.46,
+        "note": "bench seat (sit clip)"
+      },
+      "npc_bench_1": {
+        "position": [
+          -32.4,
+          2.5,
+          7.2
+        ],
+        "heading": 0.0,
+        "sit": true,
+        "seatHeight": 0.46,
+        "note": "bench seat (sit clip)"
+      },
+      "npc_bench_2": {
+        "position": [
+          -22.5,
+          9.5,
+          -33.2
+        ],
+        "heading": 0.0,
+        "sit": true,
+        "seatHeight": 0.46,
+        "note": "bench seat (sit clip)"
+      },
+      "npc_bench_3": {
+        "position": [
+          9.4,
+          0.0,
+          19.6
+        ],
+        "heading": 3.142,
+        "sit": true,
+        "seatHeight": 0.46,
+        "note": "bench seat (sit clip)"
+      }
+    },
+    "areas": {
+      "npc_children_play": {
+        "center": [
+          -30.0,
+          0.0,
+          18.6
+        ],
+        "radius": 3.4,
+        "note": "two children play tag here (lower lane, west)"
+      },
+      "npc_children_play_2": {
+        "center": [
+          34.0,
+          4.5,
+          -22.0
+        ],
+        "radius": 3.0,
+        "note": "second play spot (east yard of the square terrace)"
+      }
+    },
+    "routes": {
+      "npc_route_sweeper": {
+        "loop": true,
+        "points": [
+          [
+            -30.0,
+            2.5,
+            9.6
+          ],
+          [
+            -6.0,
+            2.5,
+            9.6
+          ],
+          [
+            6.0,
+            2.5,
+            9.6
+          ],
+          [
+            30.0,
+            2.5,
+            9.6
+          ],
+          [
+            30.0,
+            2.5,
+            8.6
+          ],
+          [
+            -30.0,
+            2.5,
+            8.6
+          ]
+        ],
+        "note": "sweeping the middle lane, loop"
+      },
+      "npc_route_lamplighter": {
+        "loop": true,
+        "points": [
+          [
+            -6.6,
+            4.5,
+            -5.6
+          ],
+          [
+            6.6,
+            4.5,
+            -5.6
+          ],
+          [
+            6.6,
+            4.5,
+            -16.6
+          ],
+          [
+            -6.6,
+            4.5,
+            -16.6
+          ],
+          [
+            -6.6,
+            4.5,
+            -5.6
+          ],
+          [
+            0.0,
+            4.5,
+            -3.4
+          ],
+          [
+            0.0,
+            2.5,
+            3.4
+          ],
+          [
+            -13.0,
+            2.5,
+            10.2
+          ],
+          [
+            -34.8,
+            2.5,
+            10.2
+          ],
+          [
+            -13.0,
+            2.5,
+            10.2
+          ],
+          [
+            13.0,
+            2.5,
+            10.2
+          ],
+          [
+            35.8,
+            2.5,
+            10.2
+          ],
+          [
+            13.0,
+            2.5,
+            10.2
+          ],
+          [
+            0.0,
+            2.5,
+            3.4
+          ],
+          [
+            0.0,
+            4.5,
+            -3.4
+          ]
+        ],
+        "note": "lamp to lamp: the square, then the lane"
+      },
+      "npc_route_courier": {
+        "loop": false,
+        "points": [
+          [
+            0.0,
+            0.0,
+            29.0
+          ],
+          [
+            0.0,
+            0.0,
+            18.4
+          ],
+          [
+            0.0,
+            2.5,
+            11.6
+          ],
+          [
+            0.0,
+            2.5,
+            3.0
+          ],
+          [
+            0.0,
+            4.5,
+            -2.6
+          ],
+          [
+            -5.6,
+            4.5,
+            -6.0
+          ],
+          [
+            -5.6,
+            4.5,
+            -19.0
+          ],
+          [
+            0.0,
+            4.794,
+            -22.0
+          ],
+          [
+            0.0,
+            9.5,
+            -30.6
+          ],
+          [
+            0.0,
+            9.5,
+            -33.6
+          ]
+        ],
+        "note": "gate to the shrine steps and back"
+      },
+      "npc_route_stroll_lower": {
+        "loop": true,
+        "points": [
+          [
+            -8.0,
+            0.0,
+            20.0
+          ],
+          [
+            -44.0,
+            0.0,
+            20.0
+          ],
+          [
+            -44.0,
+            0.0,
+            16.4
+          ],
+          [
+            8.0,
+            0.0,
+            16.4
+          ],
+          [
+            44.0,
+            0.0,
+            16.4
+          ],
+          [
+            44.0,
+            0.0,
+            20.0
+          ],
+          [
+            8.0,
+            0.0,
+            20.0
+          ]
+        ],
+        "note": "a stroll along the lower lane"
+      },
+      "npc_route_square_round": {
+        "loop": true,
+        "points": [
+          [
+            -11.0,
+            4.5,
+            -6.0
+          ],
+          [
+            11.0,
+            4.5,
+            -6.0
+          ],
+          [
+            11.0,
+            4.5,
+            -19.5
+          ],
+          [
+            -11.0,
+            4.5,
+            -19.5
+          ]
+        ],
+        "note": "a slow round of the square, outside the dais"
+      },
+      "npc_route_west_loop": {
+        "loop": true,
+        "points": [
+          [
+            -30.5,
+            2.5,
+            10.0
+          ],
+          [
+            -30.5,
+            2.5,
+            13.4
+          ],
+          [
+            -33.0,
+            2.25,
+            13.4
+          ],
+          [
+            -41.0,
+            0.25,
+            13.4
+          ],
+          [
+            -44.0,
+            0.0,
+            16.4
+          ],
+          [
+            -20.0,
+            0.0,
+            17.6
+          ],
+          [
+            -6.0,
+            0.0,
+            17.6
+          ],
+          [
+            -1.5,
+            0.0,
+            18.4
+          ],
+          [
+            -1.5,
+            2.5,
+            11.6
+          ],
+          [
+            -6.0,
+            2.5,
+            10.0
+          ]
+        ],
+        "note": "terrace loop over the west ramp and the first stairs"
+      }
+    }
+  },
+  "shops": [
+    {
+      "id": "exchange",
+      "task": "S-001",
+      "house": "h15",
+      "piece": "town_shop_exchange",
+      "door": {
+        "position": [
+          12.8,
+          4.5,
+          -9.4
+        ],
+        "heading": 1.571,
+        "radius": 1.6
+      },
+      "interior": {
+        "size": [
+          9.0,
+          3.6,
+          11.0
+        ],
+        "spawn": {
+          "position": [
+            0,
+            0,
+            4.3
+          ],
+          "heading": 3.142
+        },
+        "exit": {
+          "position": [
+            0,
+            0,
+            5.0
+          ],
+          "radius": 1.1
+        },
+        "shopkeeper_stand": {
+          "position": [
+            0,
+            0,
+            -4.0
+          ],
+          "heading": 0.0
+        },
+        "counter": {
+          "position": [
+            0,
+            0,
+            -3.0
+          ],
+          "radius": 2.0
+        }
+      }
+    },
+    {
+      "id": "scribe",
+      "task": "S-002",
+      "house": "h13",
+      "piece": "town_shop_scribe",
+      "door": {
+        "position": [
+          -12.8,
+          4.5,
+          -9.0
+        ],
+        "heading": -1.571,
+        "radius": 1.6
+      },
+      "interior": {
+        "size": [
+          9.0,
+          3.6,
+          11.0
+        ],
+        "spawn": {
+          "position": [
+            0,
+            0,
+            4.3
+          ],
+          "heading": 3.142
+        },
+        "exit": {
+          "position": [
+            0,
+            0,
+            5.0
+          ],
+          "radius": 1.1
+        },
+        "shopkeeper_stand": {
+          "position": [
+            0,
+            0,
+            -4.0
+          ],
+          "heading": 0.0
+        },
+        "counter": {
+          "position": [
+            0,
+            0,
+            -3.0
+          ],
+          "radius": 2.0
+        }
+      }
+    },
+    {
+      "id": "inn",
+      "task": "S-003",
+      "house": "h07",
+      "piece": "town_shop_inn",
+      "door": {
+        "position": [
+          -9.6,
+          2.5,
+          8.6
+        ],
+        "heading": -3.142,
+        "radius": 1.6
+      },
+      "interior": {
+        "size": [
+          10.0,
+          3.6,
+          13.0
+        ],
+        "spawn": {
+          "position": [
+            0,
+            0,
+            5.3
+          ],
+          "heading": 3.142
+        },
+        "exit": {
+          "position": [
+            0,
+            0,
+            6.0
+          ],
+          "radius": 1.1
+        },
+        "shopkeeper_stand": {
+          "position": [
+            0,
+            0,
+            -5.0
+          ],
+          "heading": 0.0
+        },
+        "counter": {
+          "position": [
+            0,
+            0,
+            -4.0
+          ],
+          "radius": 2.0
+        }
+      }
+    }
   ]
 });

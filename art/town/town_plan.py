@@ -107,6 +107,50 @@ PAVED = {
 }
 
 
+# Benches: x, z, facing (degrees about +Y, the sitter looks along local +Z), terrace.
+BENCHES = [(-9.6, -12.0, 90.0, "t2"), (-32.4, 7.2, 0.0, "t1"), (-22.5, -33.2, 0.0, "t3"), (9.4, 19.6, 180.0, "t0")]
+
+# Shops (S-001..S-003): an existing house carries the sign and the door; the interior is its own piece,
+# streamed when Iris enters. `interior` sizes are metres (width x depth), the door is in the south wall.
+SHOPS = [
+    {"id": "exchange", "task": "S-001", "house": "h15", "piece": "town_shop_exchange", "interior": (9.0, 11.0), "icon": "shard"},
+    {"id": "scribe", "task": "S-002", "house": "h13", "piece": "town_shop_scribe", "interior": (9.0, 11.0), "icon": "ring"},
+    {"id": "inn", "task": "S-003", "house": "h07", "piece": "town_shop_inn", "interior": (10.0, 13.0), "icon": "cup"},
+]
+
+# Townsfolk points and routes (N-001), ground points x, z; heights and headings are filled in by npc_data().
+# heading in degrees about +Y: 0 looks +Z (south), 90 looks +X (east), 180 looks north.
+NPC_POINTS = [
+    ("npc_gate_guard", 3.9, 31.0, 180.0, "post beside the lower gate, watching the court"),
+    ("npc_market_seller_gate", 19.5, 14.6, 0.0, "between the first two stalls of the lower lane"),
+    ("npc_market_customer_gate", 23.9, 15.8, 180.0, "facing the lower-lane stalls"),
+    ("npc_market_seller_square", 13.1, -4.6, -90.0, "behind the north-east stall of the square"),
+    ("npc_market_seller_square_2", 13.1, -15.4, -90.0, "behind the south-east stall of the square"),
+    ("npc_market_customer_square", 9.6, -15.4, 90.0, "facing the south-east stall"),
+    ("npc_well", -8.5, -24.5, -135.0, "drawing water at the well"),
+    ("npc_shrine_keeper", 3.4, -7.4, 0.0, "beside the altar approach, greeting who comes up the street"),
+    ("npc_musician", 6.4, -19.2, -40.0, "playing toward the square, below the shrine stairs"),
+    ("npc_courier_rest", -5.4, 17.2, 90.0, "catching breath at the foot of the first stairs"),
+    ("npc_chat_a", -6.0, -18.6, 90.0, "pair talking on the square (with npc_chat_b)"),
+    ("npc_chat_b", -4.6, -18.6, -90.0, "pair talking on the square (with npc_chat_a)"),
+    ("npc_chat_c", 20.0, 9.8, -90.0, "pair talking on the lane (with npc_chat_d)"),
+    ("npc_chat_d", 18.6, 9.8, 90.0, "pair talking on the lane (with npc_chat_c)"),
+]
+NPC_AREAS = [
+    ("npc_children_play", -30.0, 18.6, 3.4, "two children play tag here (lower lane, west)"),
+    ("npc_children_play_2", 34.0, -22.0, 3.0, "second play spot (east yard of the square terrace)"),
+]
+# Routes are polylines of ground points that are free of obstacles (stairs taken on their centre line).
+NPC_ROUTES = [
+    ("npc_route_sweeper", True, [(-30.0, 9.6), (-6.0, 9.6), (6.0, 9.6), (30.0, 9.6), (30.0, 8.6), (-30.0, 8.6)], "sweeping the middle lane, loop"),
+    ("npc_route_lamplighter", True, [(-6.6, -5.6), (6.6, -5.6), (6.6, -16.6), (-6.6, -16.6), (-6.6, -5.6), (0.0, -3.4), (0.0, 3.4), (-13.0, 10.2), (-34.8, 10.2), (-13.0, 10.2), (13.0, 10.2), (35.8, 10.2), (13.0, 10.2), (0.0, 3.4), (0.0, -3.4)], "lamp to lamp: the square, then the lane"),
+    ("npc_route_courier", False, [(0.0, 29.0), (0.0, 18.4), (0.0, 11.6), (0.0, 3.0), (0.0, -2.6), (-5.6, -6.0), (-5.6, -19.0), (0.0, -22.0), (0.0, -30.6), (0.0, -33.6)], "gate to the shrine steps and back"),
+    ("npc_route_stroll_lower", True, [(-8.0, 20.0), (-44.0, 20.0), (-44.0, 16.4), (8.0, 16.4), (44.0, 16.4), (44.0, 20.0), (8.0, 20.0)], "a stroll along the lower lane"),
+    ("npc_route_square_round", True, [(-11.0, -6.0), (11.0, -6.0), (11.0, -19.5), (-11.0, -19.5)], "a slow round of the square, outside the dais"),
+    ("npc_route_west_loop", True, [(-30.5, 10.0), (-30.5, 13.4), (-33.0, 13.4), (-41.0, 13.4), (-44.0, 16.4), (-20.0, 17.6), (-6.0, 17.6), (-1.5, 18.4), (-1.5, 11.6), (-6.0, 10.0)], "terrace loop over the west ramp and the first stairs"),
+]
+
+
 def terrace_at(z):
     for name, y, z0, z1 in TERRACES:
         if z0 <= z <= z1:
@@ -183,7 +227,56 @@ def town_data(pieces):
         "route": route(),
         "routeLength": round(route_length(route()), 2),
         "pieces": pieces,
+        "npc": npc_data(),
+        "shops": shop_data(),
     }
+
+
+def _r(v):
+    return round(v, 3)
+
+
+def bench_seats():
+    """Seat points of the benches: position on the ground in front of the seat, heading in degrees."""
+    return [(f"npc_bench_{i}", x, z, rot) for i, (x, z, rot, _t) in enumerate(BENCHES)]
+
+
+def npc_data():
+    pts = {}
+    for name, x, z, hd, note in NPC_POINTS:
+        pts[name] = {"position": [x, _r(ground_y(x, z)), z], "heading": _r(math.radians(hd)), "note": note}
+    for name, x, z, rot in bench_seats():
+        pts[name] = {"position": [x, _r(ground_y(x, z)), z], "heading": _r(math.radians(rot)), "sit": True, "seatHeight": 0.46, "note": "bench seat (sit clip)"}
+    areas = {name: {"center": [x, _r(ground_y(x, z)), z], "radius": r, "note": note} for name, x, z, r, note in NPC_AREAS}
+    routes = {name: {"loop": loop, "points": [[x, _r(ground_y(x, z)), z] for x, z in pts_], "note": note} for name, loop, pts_, note in NPC_ROUTES}
+    return {"points": pts, "areas": areas, "routes": routes}
+
+
+def shop_door(shop):
+    """Town-side door point of a shop: just outside the house door, and the heading that looks at the door."""
+    h = next(h for h in HOUSES if h[0] == shop["house"])
+    _id, _b, tname, cx, cz, w, d, face, _k = h
+    a = math.radians(FACING[face])
+    fx, fz = math.sin(a), math.cos(a)          # the direction the facade looks
+    dist = d / 2 + 1.3
+    return [_r(cx + fx * dist), TERRACE_Y[tname], _r(cz + fz * dist)], _r(math.atan2(-fx, -fz))
+
+
+def shop_data():
+    out = []
+    for sp in SHOPS:
+        w, d = sp["interior"]
+        pos, heading = shop_door(sp)
+        out.append({
+            "id": sp["id"], "task": sp["task"], "house": sp["house"], "piece": sp["piece"],
+            "door": {"position": pos, "heading": heading, "radius": 1.6},
+            # interior-local metres: the room is centred on the origin, the door is in the +Z wall
+            "interior": {"size": [w, 3.6, d], "spawn": {"position": [0, 0, _r(d / 2 - 1.2)], "heading": _r(math.pi)},
+                         "exit": {"position": [0, 0, _r(d / 2 - 0.5)], "radius": 1.1},
+                         "shopkeeper_stand": {"position": [0, 0, _r(-d / 2 + 1.5)], "heading": 0.0},
+                         "counter": {"position": [0, 0, _r(-d / 2 + 2.5)], "radius": 2.0}},
+        })
+    return out
 
 
 def default_pieces():
