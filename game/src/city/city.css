@@ -12,6 +12,7 @@
   position: absolute; inset: 0; pointer-events: none; color: var(--c-text);
   font-family: var(--c-body); font-weight: 500; font-size: calc(15px * var(--ftf-ui-scale, 1)); line-height: 1.35;
 }
+.city-ui, .city-ui * { box-sizing: border-box; }
 .city-ui[hidden] { display: none; }
 .city-ui button { font: inherit; color: inherit; cursor: pointer; }
 .city-ui kbd { font-family: var(--c-font); font-size: .82em; padding: 1px 7px; border: 1px solid var(--c-frame); border-radius: 6px; background: rgba(42, 38, 30, .92); color: var(--c-gold-text); }
@@ -112,8 +113,10 @@
 .city-ui--veil > *:not(.city-cover) { display: none !important; }
 .city-cover[hidden] { display: none; } .city-cover.is-on { opacity: 1; }
 
+body.city-modal-open .ftf-run-toggle { display: none !important; }
+
 /* ---- the way back, shown inside a season ---- */
-.city-return { position: fixed; z-index: 30; left: 50%; top: 12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 12px; padding: 8px 10px 8px 16px; border: 1px solid #e4c272; border-radius: 999px; background: rgba(14, 22, 22, .95); color: #f6df9b; font: 500 15px "Source Sans 3", system-ui, sans-serif; pointer-events: auto; box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
+.city-return { position: fixed; z-index: 30; left: 50%; top: 62px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 12px; padding: 8px 10px 8px 16px; border: 1px solid #e4c272; border-radius: 999px; background: rgba(14, 22, 22, .95); color: #f6df9b; font: 500 15px "Source Sans 3", system-ui, sans-serif; pointer-events: auto; box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
 .city-return button, .city-return-row button { min-height: 36px; padding: 6px 14px; border: 1px solid #e4c272; border-radius: 999px; background: linear-gradient(180deg, #6f501b, #4a3410); color: #fff3cf; font: inherit; cursor: pointer; }
 .city-return-row { margin: 14px 0 4px; display: flex; }
 
@@ -126,7 +129,10 @@ html[data-motion="reduce"] .city-prompt, html[data-motion="reduce"] .city-toast,
   .city-status { top: 8px; left: 8px; padding: 8px 10px; gap: 4px; }
   .city-status__name b { font-size: 1.1em; } .city-status__name span { font-size: .78em; }
   .city-chip { min-height: 28px; padding: 3px 8px; font-size: .84em; } .city-meter { width: 40px; }
-  .city-quest { top: auto; bottom: 128px; left: 8px; right: 8px; max-width: none; }
+  .city-status { right: 8px; max-width: none; }
+  .city-quest { top: 96px; left: 8px; right: 8px; max-width: none; }
+  body.in-city .ftf-scene-tools { display: none; } /* the city bar has its own Settings button */
+  .city-return { top: auto; bottom: 96px; max-width: calc(100vw - 16px); }
   .city-local { display: none; }
   .city-prompt { bottom: 72px; font-size: 1em; }
   .city-bar { left: 8px; right: 8px; bottom: 8px; flex-wrap: nowrap; justify-content: space-between; gap: 6px; }

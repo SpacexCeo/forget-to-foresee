@@ -298,7 +298,7 @@ export function createCityUi({ root, ctx, city, feed, on }) {
     const fresh = !current || current.kind !== kind || current.arg !== arg;
     current = { kind, arg, sub };
     panel.hidden = false; scrim.hidden = false;
-    el.classList.add('city-ui--modal');
+    el.classList.add('city-ui--modal'); root.ownerDocument.body.classList.add('city-modal-open');
     render();
     if (fresh) { panel.scrollTop = 0; const first = panel.querySelector('.city-actions .city-btn, .city-row .city-btn, .city-table .city-btn'); if (first) first.focus({ preventScroll: true }); }
     if (on.openChange) on.openChange(kind, arg);
@@ -307,7 +307,7 @@ export function createCityUi({ root, ctx, city, feed, on }) {
     if (!current) return false;
     current = null;
     panel.hidden = true; scrim.hidden = true;
-    el.classList.remove('city-ui--modal');
+    el.classList.remove('city-ui--modal'); root.ownerDocument.body.classList.remove('city-modal-open');
     if (on.openChange) on.openChange(null, null);
     return true;
   }

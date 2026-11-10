@@ -250,7 +250,7 @@ export function createCityScene({ scene, mobile = false }) {
     solid('lamp' + i, prismTriangles(x, z, 0.14, 0, 3.4, 5), MASK_PLAYER);
     if (i < (mobile ? 2 : 4)) {
       const l = new THREE.PointLight(0xffa64d, 0, 13, 2);
-      l.position.set(x, 3.4, z); l.castShadow = false; l.name = 'city_lamp_light'; l.userData.phase = i * 2.4;
+      l.position.set(x, 3.4, z); l.castShadow = false; l.visible = false; l.name = 'city_lamp_light'; l.userData.phase = i * 2.4; // off until Iris is in town: a visible light changes every material's program
       root.add(l); lights.push(l);
     }
   });
