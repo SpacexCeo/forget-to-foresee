@@ -28,8 +28,9 @@ const report = (label) => loading.set(bootProgress({ chunksDone, chunksTotal, by
 /** Streamer stats → the first-frame byte gate (the cheap visible set, see firstFrameBudget). */
 function onProgress(stats) {
   if (!budget) {
-    const rows = stats.list.filter((a) => a.priority >= 100);
-    if (rows.length) budget = firstFrameBudget(rows);
+    // The town has no stand-ins: its first view is every piece around Iris (the light `_m` set first), all of it gated.
+    const rows = town ? stats.list.filter((a) => a.name.startsWith('town_') && a.priority >= 0 && a.state !== 'absent') : stats.list.filter((a) => a.priority >= 100);
+    if (rows.length) budget = town ? { names: rows.map((a) => a.name), bytes: rows.reduce((n, a) => n + (a.bytes || 0), 0) } : firstFrameBudget(rows);
   }
   if (budget) {
     let got = 0;
@@ -47,10 +48,26 @@ const startWorld = (ctx) => (worldP ||= import('./boot-world.js').then((m) => {
     onFirstFrame: () => { firstFrame = true; marks.firstFrame = Math.round(performance.now() - t0); } });
 }));
 
+/** The town is on the GPU (every piece around Iris real and warmed, Iris herself in), or `limit` ms have passed. */
+const townShown = (w, limit = 30000) => new Promise((resolve) => {
+  const start = performance.now();
+  const tick = () => { if (w.townReady || performance.now() - start > limit) resolve(); else setTimeout(tick, 100); };
+  tick();
+});
+
 ctxP.then(async (ctx) => {
   if (plan.lobby) {
     const ui = await import('./ui/index.js');
-    shellUi = ui.mountShell(uiRoot, { ctx, onFirstContact: () => startWorld(ctx).then((w) => w.enterWorld()) });
+    // Leaving the lobby before the town has streamed in: the loading screen comes back with the town's real progress,
+    // so the first thing the player sees is the finished street, never pieces popping in.
+    const enter = async () => {
+      const early = !worldP || !(await Promise.race([worldP.then((w) => w.townReady), new Promise((r) => setTimeout(() => r(false), 0))]));
+      const covered = town && early && loading.reopen('Loading the town');
+      const w = await startWorld(ctx);
+      await w.enterWorld();
+      if (covered) { report('Loading the town'); await townShown(w); await loading.finish(); }
+    };
+    shellUi = ui.mountShell(uiRoot, { ctx, onFirstContact: enter });
     marks.lobby = Math.round(performance.now() - t0);
     await loading.finish(); // the lobby is painted beneath: cross-fade, no flash
     startWorld(ctx);        // the world loads behind the lobby while the player reads it
@@ -58,13 +75,14 @@ ctxP.then(async (ctx) => {
     const w = await startWorld(ctx);
     const entered = w.enterWorld().then(() => { chunksDone++; marks.play = Math.round(performance.now() - t0); report(); });
     // Gate: the first frame is rendered and the cheap visible models are in, or six seconds have passed (greyboxes stand in).
-    // The town has no stand-ins and no ground before its terrain: the gate also waits for it, up to fifteen seconds.
+    // The town has no stand-ins and no ground before its terrain: the gate waits for every piece around Iris to be
+    // real and warmed (render/warmup.js) and for Iris herself, up to thirty seconds on a slow link.
     const gateStart = performance.now();
     await new Promise((resolve) => {
       const tick = () => {
         const bytesOk = budget ? bytesGot >= budget.bytes * 0.98 : false;
         const waited = performance.now() - gateStart;
-        if ((firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal && w.townReady) || waited > (town ? 15000 : 6000)) resolve(); else setTimeout(tick, 100);
+        if ((firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal && w.townReady) || waited > (town ? 30000 : 6000)) resolve(); else setTimeout(tick, 100);
       };
       tick();
     });

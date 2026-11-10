@@ -58,6 +58,7 @@ export class LookDev {
     this.preset = TIME_PRESETS[preset] ? preset : DEFAULT_PRESET;
     this.cloudLevel = cloudLevel;
     this.fogBaseY = cloudLevel; // setAtmosphereFloor moves it while Iris is in the town
+    this.zone = null;
     this.tintState = { hex: 0xffffff, amount: 0 };
 
     camera.layers.enable(LAYER_OVERLAY);
@@ -136,20 +137,38 @@ export class LookDev {
     this.scene.environmentIntensity = P.envIntensity;
     if (this.envHdr && this.envHdrPreset !== this.preset) { this.envHdr.dispose(); this.envHdr = null; }
     this.loadEnvHdr(P);
+    if (this.zone) this.applyZone();
     if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
   }
 
   /**
-   * Moves the floor of the atmosphere to another place in the same scene (the town on the ground, scenes/town.js):
-   * the height fog pools at `fogBaseY` and the cloud sea lies at `mistLevel` as a sea of mist (`mist: false` hides
-   * it). The sun, the sky and the time of day stay. `null` restores the archipelago's cloud level.
-   * @param {{fogBaseY: number, mistLevel?: number, mist?: boolean}|null} floor
+   * The atmosphere of another place in the same scene (the town on the ground, scenes/town.js). The height fog
+   * pools at `fogBaseY` and the cloud sea lies at `mistLevel` as a sea of mist (`mist: false` hides it); the
+   * optional values adjust the time-of-day preset for that place: `fogDensity` and `aerial` scale the preset's
+   * height-fog density and cool aerial shift, `fogNear` / `fogFar` replace the distance fog range, `fogColor`
+   * (hex) is mixed into the haze colour by `fogColorMix`, `exposure` is added in stops. The sun, the sky and the
+   * time of day stay. `null` restores the archipelago.
+   * @param {{fogBaseY: number, mistLevel?: number, mist?: boolean, fogDensity?: number, aerial?: number, fogNear?: number, fogFar?: number, fogColor?: number, fogColorMix?: number, exposure?: number}|null} floor
    */
   setAtmosphereFloor(floor) {
-    this.fogBaseY = floor ? floor.fogBaseY : this.cloudLevel;
-    setFog({ baseY: this.fogBaseY });
-    this.clouds.setLevel(floor && floor.mistLevel != null ? floor.mistLevel : this.cloudLevel);
-    this.clouds.group.visible = !(floor && floor.mist === false);
+    this.zone = floor || null;
+    this.applyZone();
+  }
+
+  /** The place's adjustments on top of the current preset (also after a time-of-day change). */
+  applyZone() {
+    const P = TIME_PRESETS[this.preset], z = this.zone;
+    this.fogBaseY = z ? z.fogBaseY : this.cloudLevel;
+    setFog({ baseY: this.fogBaseY, density: P.fog.density * (z && z.fogDensity != null ? z.fogDensity : 1), aerial: P.fog.aerial * (z && z.aerial != null ? z.aerial : 1) });
+    this.scene.fog.near = z && z.fogNear != null ? z.fogNear : P.fog.near;
+    this.scene.fog.far = z && z.fogFar != null ? z.fogFar : P.fog.far;
+    this.baseFog.copy(this.atm.fogColor);
+    if (z && z.fogColor != null) this.baseFog.lerp(new THREE.Color(z.fogColor), z.fogColorMix != null ? z.fogColorMix : 0.5);
+    this.scene.fog.color.copy(this.baseFog);
+    this.renderer.toneMappingExposure = Math.pow(2, P.exposure + (z && z.exposure ? z.exposure : 0));
+    this.clouds.setLevel(z && z.mistLevel != null ? z.mistLevel : this.cloudLevel);
+    this.clouds.group.visible = !(z && z.mist === false);
+    if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
   }
 
   /** Time of day: 'golden' (default, matches the baked HDR) | 'morning' | 'noon' | 'dusk'. Returns the active preset. */

@@ -251,7 +251,9 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
 
   return {
     origin: TOWN_ORIGIN, world, group, pieces, lamps, coreMaterials, routePoints: TOWN_ROUTE,
-    get ready() { return checkReady(); }, get flat() { return state.flat; }, get active() { return state.active; },
+    get ready() { return checkReady(); },
+    /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
+    get shown() { return checkReady() && (state.flat || pieces.every((x) => x.def.visualOnly || settled(x.def.name))); }, get flat() { return state.flat; }, get active() { return state.active; },
     get altar() { return state; },
     update, setFlare, setActive, setPointLights, groundAt, settled, status,
   };

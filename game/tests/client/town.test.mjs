@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TOWN_DATA } from '../../src/scenes/town-data.js';
-import { TOWN_ORIGIN, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ROUTE, TOWN_ROUTE_LENGTH, TOWN_KILL_Y, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL, TOWN_KINDS, TOWN_PIECES, TOWN_TERRAIN, TOWN_ALTAR_ASSET,
+import { TOWN_ORIGIN, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ROUTE, TOWN_ROUTE_LENGTH, TOWN_KILL_Y, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL, TOWN_ATMOSPHERE, TOWN_CAMERA, TOWN_SKY, yawToward, TOWN_KINDS, TOWN_PIECES, TOWN_TERRAIN, TOWN_ALTAR_ASSET,
   townToWorld, townToLocal, routeLength, altarDistance, inAltarRange, altarWake, townFlatGround, headingToward } from '../../src/scenes/town-layout.js';
 import { SPAWN, KILL_Y } from '../../src/scenes/layout.js';
 import { ASSETS, TOWN_ASSETS, ALL_ASSETS, LOAD_DISTANCE, TRIANGLE_BUDGET, assetByName, isValidModelName, isValidModelDir, modelUrl, versionedModelUrl } from '../../src/render/asset-catalog.js';
@@ -97,6 +97,15 @@ test('town layout: kill height, fog and mist sit below the town; the altar spawn
   assert.ok(TOWN_KILL_Y > KILL_Y + 500, 'an island kill height would never catch a fall in the town');
   const low = Math.min(...TOWN_DATA.route.map((p) => p[1]));
   assert.ok(TOWN_FOG_BASE_Y < TOWN_ORIGIN[1] + low && TOWN_MIST_LEVEL < TOWN_FOG_BASE_Y);
+  if (TOWN_SKY) {
+    const d = Math.hypot(TOWN_SKY.center[0] - TOWN_ALTAR.stand[0], TOWN_SKY.center[1] - TOWN_ALTAR.stand[1], TOWN_SKY.center[2] - TOWN_ALTAR.stand[2]);
+    assert.ok(d + TOWN_SKY.radius < TOWN_CAMERA.far, 'the islands in the sky fit inside the town camera far plane');
+    assert.ok(Math.hypot(...TOWN_ORIGIN) - TOWN_CAMERA.far > 200, 'the real archipelago stays out of the town camera');
+  }
+  assert.equal(yawToward([0, 0, 5], [0, 0, 0]), 0, 'yaw 0 looks toward -Z');
+  assert.equal(TOWN_ATMOSPHERE.fogBaseY, TOWN_FOG_BASE_Y);
+  assert.ok(TOWN_ATMOSPHERE.fogNear >= 60 && TOWN_ATMOSPHERE.fogDensity < 1, 'a wall 60 m away keeps its colours');
+  assert.ok(TOWN_CAMERA.dist >= 6 && TOWN_CAMERA.dist <= 7 && TOWN_CAMERA.minPitch < 0, 'a close street camera that can look up at the sky islands');
   assert.deepEqual(TOWN_ALTAR_SPAWN.position, TOWN_ALTAR.stand);
   const h = TOWN_ALTAR_SPAWN.heading, s = TOWN_ALTAR.stand, a = TOWN_ALTAR.position;
   const dot = Math.sin(h) * (a[0] - s[0]) + Math.cos(h) * (a[2] - s[2]);

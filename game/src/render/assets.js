@@ -241,6 +241,19 @@ export class AssetLibrary {
     }
   }
 
+  /**
+   * Puts the files the next load of these assets will fetch into the browser's HTTP cache, one at a time at low
+   * priority, without parsing them (the town warms the archipelago's files while Iris walks to the altar).
+   */
+  async prefetchHttp(names) {
+    for (const name of names) {
+      const e = this.entries.get(name);
+      if (!e || e.state !== 'idle') continue;
+      const file = this.fileFor(name, { lite: this.liteFirst && this.hasLite(name) });
+      try { const res = await fetch(versionedModelUrl(file, BASE, MODEL_FILES[file], (MODEL_DIRS && MODEL_DIRS[file]) || ''), { priority: 'low' }); if (res.ok) await res.arrayBuffer(); } catch { /* the real load reports it */ }
+    }
+  }
+
   /** The full-resolution template of an asset that currently shows its light file (the entry is not changed). */
   loadFull(name) { return this.fetchTemplate(name, this.fileFor(name)); }
 

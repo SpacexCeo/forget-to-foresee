@@ -53,12 +53,34 @@ export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 20;
 /** The cloud sea moves here while Iris is in the town: a sea of mist around the hill, below every walkable level. */
 export const TOWN_MIST_LEVEL = TOWN_ORIGIN[1] - 32;
 
-/** Camera distance in the streets (the archipelago's 30 m overview would sit inside the houses). */
-export const TOWN_CAMERA_DIST = 13;
-/** Camera pitch offset in the town (radians, added to the zoom-tied pitch): a lower, street-level look that keeps the sky above the roofs in frame. */
-export const TOWN_CAMERA_TILT = -0.16;
-/** Lowest camera pitch in the town (radians; the archipelago keeps the rig's 8 degrees): tilting down brings the archipelago in the sky into frame. */
-export const TOWN_CAMERA_MIN_PITCH = 2 * Math.PI / 180;
+/**
+ * The town's atmosphere on top of the time-of-day preset (LookDev.setAtmosphereFloor): daylight with a soft, warm
+ * haze. The archipelago's fog is tuned for a sea of clouds seen from above; in the streets it is thinner and
+ * warmer, the distance fog starts later (a wall 60 m away keeps its colours), the cool aerial shift is mostly off
+ * and the exposure is a third of a stop up.
+ */
+export const TOWN_ATMOSPHERE = Object.freeze({
+  fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL,
+  fogDensity: 0.35, aerial: 0.25, fogNear: 90, fogFar: 700, fogColor: 0xe6d8bf, fogColorMix: 0.55, exposure: 0.35,
+});
+
+/**
+ * The camera in the streets: a low, close third-person view (the archipelago's 30 m isometric overview would sit
+ * inside the houses and show only cobbles). `tilt` is added to the rig's zoom-tied pitch (about 19 degrees at this
+ * distance, so about 11 above the horizontal); `minPitch` lets the player tilt below the horizontal to look up at
+ * the dome and the islands in the sky (about 30 degrees up); the rig's own 8 degrees return on leaving.
+ */
+// `far`: the islands in the sky reach past the archipelago's 500 m far plane (the archipelago itself is 1200 m away).
+export const TOWN_CAMERA = Object.freeze({ dist: 6.5, tilt: -0.14, minPitch: -16 * Math.PI / 180, far: 800 });
+
+/** The sky piece's bounding sphere in world space (the archipelago seen from below), or null without one. */
+export const TOWN_SKY = (() => {
+  const p = TOWN_DATA.pieces.find((x) => x.kind === 'town_sky');
+  return p ? Object.freeze({ center: Object.freeze(townToWorld(p.center)), radius: p.radius }) : null;
+})();
+
+/** Camera rig yaw that looks from a world position toward a world point (the rig sits on the far side of its focus). */
+export const yawToward = (from, to) => Math.atan2(from[0] - to[0], from[2] - to[2]);
 
 /** Kinds a town piece may have (render/asset-catalog.js lists the same keys in LOAD_DISTANCE and TRIANGLE_BUDGET). */
 export const TOWN_KINDS = Object.freeze(['town_terrain', 'town_block', 'town_hero', 'town_sky']);
