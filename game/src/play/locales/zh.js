@@ -336,6 +336,7 @@ export default {
   'hub.goal.fly_next.hint': '{input, select, touch {点金色贝壳，读一读，信任就下注。} gamepad {选金色贝壳，读一读，信任就下注。} other {飞入（F），读一读，信任就下注。}}',
   'hub.goal.wait': '第 {tick} / {ticks} 场试炼：让时间流逝',
   'hub.goal.wait.hint': '{input, select, touch {没有符号在等。点“让试炼过去”：试炼会流逝，直到新符号或新决定。} gamepad {没有符号在等。选“让试炼过去”：试炼会流逝，直到新符号或新决定。} other {没有符号在等。按 T：试炼会流逝，直到新符号或新决定。}}',
+  'hub.goal.wait.hintSpent': '{input, select, touch {伊里斯的注意力已用完。点“让试炼过去”：贝壳 {shell} 仍在等。} gamepad {伊里斯的注意力已用完。选“让试炼过去”：贝壳 {shell} 仍在等。} other {伊里斯的注意力已用完。按 T：贝壳 {shell} 仍在等。}}',
   'hub.goal.ash_key': '灰烬转身离去。学会灰烬的钥匙',
   'hub.goal.ash_key.hint': '{input, select, touch {为一次钥匙幻象遗忘一段沉重的记忆（记忆）。伊里斯需要 {need} 个有把握的词；她现在有 {have} 个。} gamepad {为一次钥匙幻象遗忘一段沉重的记忆（记忆）。伊里斯需要 {need} 个有把握的词；她现在有 {have} 个。} other {为一次钥匙幻象遗忘一段沉重的记忆（M）。伊里斯需要 {need} 个有把握的词；她现在有 {have} 个。}}',
   'hub.goal.vote': '投票：馈赠还是武器？',

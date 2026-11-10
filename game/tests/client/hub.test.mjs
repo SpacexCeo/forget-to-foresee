@@ -124,6 +124,28 @@ test('hub goals and strings: every hub key exists in all five languages', async 
   s.dispose();
 });
 
+test('hub goal: with a waiting sign and no attention left the wait hint names the Shell instead of "no sign is waiting"', async () => {
+  const { s } = await setup();
+  const flags = { ...s.flags, skipOnboarding: true };
+  const n = [...openSignsByShell(s.obs)].find(([, v]) => v.length)[0];
+  const roman = ['I', 'II', 'III', 'IV'][n - 1];
+  assert.equal(hubGoal(s.obs, flags).id, 'fly_next', 'attention left: the goal is the flight');
+  const spent = { ...s.obs, iris: { ...s.obs.iris, attention: 0 } };
+  const g = hubGoal(spent, flags);
+  assert.equal(g.id, 'wait');
+  assert.equal(g.hintKey, 'hub.goal.wait.hintSpent');
+  assert.equal(g.hintArgs.shell, roman);
+  for (const loc of ['en', 'uk', 'ru', 'it', 'zh']) {
+    const i18n = createPlayI18n(loc, { onMissing: (k) => { throw new Error(`${loc} missing ${k}`); } });
+    const hint = i18n.t(g.hintKey, { ...g.args, ...g.hintArgs });
+    assert.ok(hint.includes(roman) && !/[{}]/.test(hint), `${loc}: ${hint}`);
+  }
+  // no sign waiting: the plain hint stays
+  const quiet = { ...spent, prophecies: [] };
+  assert.equal(hubGoal(quiet, flags).hintKey, 'hub.goal.wait.hint');
+  s.dispose();
+});
+
 test('hub: input during a flight is refused, not queued (QA-002)', async () => {
   const { s, hub } = await setup();
   const n = [...signsByShell(s.obs)].find(([, v]) => v.length)[0];

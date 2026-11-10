@@ -337,6 +337,7 @@ export default {
   'hub.goal.fly_next.hint': '{input, select, touch {Tap the gold Shell, read it, stake if you trust it.} gamepad {Choose the gold Shell, read it, stake if you trust it.} other {Fly in (F), read it, stake if you trust it.}}',
   'hub.goal.wait': 'Trial {tick} of {ticks}: let time pass',
   'hub.goal.wait.hint': '{input, select, touch {No sign is waiting. Tap “Let trial pass”: trials pass until a new sign or a decision.} gamepad {No sign is waiting. Choose “Let trial pass”: trials pass until a new sign or a decision.} other {No sign is waiting. Press T: trials pass until a new sign or a decision.}}',
+  'hub.goal.wait.hintSpent': '{input, select, touch {Iris has no attention left. Tap “Let trial pass”: Shell {shell} still waits.} gamepad {Iris has no attention left. Choose “Let trial pass”: Shell {shell} still waits.} other {Iris has no attention left. Press T: Shell {shell} still waits.}}',
   'hub.goal.ash_key': 'Ash has turned away. Learn Ash’s Key',
   'hub.goal.ash_key.hint': '{input, select, touch {Forget a heavy memory for a Key vision (Memories). Iris needs {need} confident words; she has {have}.} gamepad {Forget a heavy memory for a Key vision (Memories). Iris needs {need} confident words; she has {have}.} other {Forget a heavy memory for a Key vision (M). Iris needs {need} confident words; she has {have}.}}',
   'hub.goal.vote': 'Vote: gift or weapon?',

@@ -159,6 +159,8 @@ export function hubGoal(obs, flags = {}) {
   const ash = rel.find((c) => c.clan === 'ash');
   if (ash && ash.isolated && !(iris.ashKey && iris.ashKey.known)) return g('ash_key', { have: iris.keyVision ? iris.keyVision.confidentCells : 0, need: iris.keyVision ? iris.keyVision.needCells : 8 });
   if (wait && iris.attention > 0) return g('fly_next', { shell: ROMAN[wait - 1] }, 'shell:' + wait);
+  // a sign waits but Iris has no attention left this trial: the hint must not claim that nothing waits
+  if (wait) return g('wait', { tick: s.tick, ticks: s.ticks }, null, { shell: ROMAN[wait - 1] }, { hintKey: 'hub.goal.wait.hintSpent' });
   return g('wait', { tick: s.tick, ticks: s.ticks });
 }
 
