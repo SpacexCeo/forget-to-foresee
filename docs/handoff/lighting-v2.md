@@ -35,6 +35,11 @@ A fresh session can continue from this file and git alone. Last update: 11.11.20
 9. `npm test` and `npm run build` do not catch a chunk cycle (a boot-time TDZ error): after touching imports across
    `ui` / `scenes` / `play`, open the built page once (`npx vite preview`) before pushing.
 
+10. **Rigid swing of hanging signs and lanterns** (owner wish through the lead): not possible in the client alone,
+    the signs and lamp heads are merged into the block meshes by material. Needs `art/town` to export them as
+    separate nodes with a hook pivot (or a `_WIND` attribute); then a few degrees of damped rotation in
+    `town-life.js`. After the wind fix they are simply still.
+
 ## How to resume
 
 - Server (while rented): work dir `/root/w/light/` (`ftf/` is a source copy without git, `shots/` the captures);

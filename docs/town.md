@@ -92,10 +92,17 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 
 `game/src/scenes/town-life.js`, created by the town scene, plus the shared wind of `render/weather.js`:
 
-- **Cloth and trees** (`M_Town_Cloth`, `M_Town_Foliage`) sway with the wind. The town files carry no `_WIND`
-  attribute, so the client computes the weights when a model arrives (`windWeights`): each connected part of the
-  mesh (one banner, one awning, one canopy) is weighted by height, cloth pinned at its top edge, foliage rooted at
-  the bottom. A file that does carry `_WIND` keeps its authored weights.
+- **Cloth and plants** (`M_Town_Cloth`, `M_Town_Foliage`) move with the wind. The town files carry no `_WIND`
+  attribute, so the client computes the weights when a model arrives (`windWeights` in `render/weather.js`), and
+  the rule is that unknown geometry stays still. Connected parts whose boxes touch are one object (a banner and
+  its tail, an awning and its stripes). A tall hanging sheet (a banner) is pinned along its upper 55 %, where the
+  ring emblem of another material sits, and swings at the hem; a stretched sheet (awning, stall roof) breathes a
+  few centimetres at its lower edge; any other cloth (rugs, candles, books) does not move. A tree crown leans as
+  one body rooted at its bottom; window boxes and planters shiver. A file that carries `_WIND` keeps its authored
+  weights. The first version (11.11, weights per connected part by height alone) let banners swing away from
+  their emblems, awning stripes slide apart and small props bend: owner bug report, fixed the same day.
+  Hanging shop signs and lamp heads do not swing: they are merged into the block meshes, a rigid swing needs them
+  as separate nodes from the art build.
 - **Chimney smoke** at every `socket_smoke_*`: one `THREE.Points` draw call for the town, puffs rise 7 m and lean
   downwind with the gusts; 14 puffs on up to 24 chimneys on desktop, 7 on 8 on phones and the low tier.
 - **Birds**: 13 (7 on phones) in two loose flocks circling over the roofs, one instanced draw call.

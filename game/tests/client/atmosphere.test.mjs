@@ -7,7 +7,7 @@ import { QUALITY, PHONE_QUALITY } from '../../src/render/quality.js';
 import { NEAR_STEPS, nearRadius, cascadePlan, snapTexel, installCascadeShadows } from '../../src/render/shadows.js';
 import { TIME_PRESETS, LOCATION_LOOKS, LOCATIONS, lookFor, sunDirection } from '../../src/render/sky.js';
 import { GRADE, gradeColor, installGrade } from '../../src/render/grade.js';
-import { WEATHER, WEATHER_NAMES, DEFAULT_WEATHER, mixWeather, weatherCover, WeatherSystem, WIND_UNIFORMS, WEATHER_UNIFORMS, WIND_DIR, windAt, withWind, windWeights, installWetness, Rain } from '../../src/render/weather.js';
+import { WEATHER, WEATHER_NAMES, DEFAULT_WEATHER, mixWeather, weatherCover, WeatherSystem, WIND_UNIFORMS, WEATHER_UNIFORMS, WIND_DIR, windAt, withWind, windWeights, WIND_SHAPE, installWetness, Rain } from '../../src/render/weather.js';
 import { installHeightFog } from '../../src/render/fog.js';
 import { lookRole, registerLookMaterials, setEmissiveLevels, slotForMaterial } from '../../src/render/materials.js';
 import { BlobShadows } from '../../src/render/blobs.js';
@@ -244,15 +244,27 @@ test('blob shadows: one instance per tracked, visible character; strength 0 draw
   assert.ok(PHONE_QUALITY.low.blobs > QUALITY.ultra.blobs, 'stronger where there is no ambient occlusion');
 });
 
-test('wind weights without an authored attribute: each connected part sways by height (cloth hem free, tree crown free)', () => {
-  // Two separate quads: a banner hanging from y = 3 down to y = 1, and a low flat patch.
-  const P = [[0, 3, 0], [1, 3, 0], [0, 1, 0], [1, 1, 0], [5, 0, 0], [6, 0, 0], [5, 0, 1], [6, 0, 1]];
-  const position = { count: P.length, getX: (i) => P[i][0], getY: (i) => P[i][1], getZ: (i) => P[i][2] };
-  const I = [0, 1, 2, 1, 3, 2, 4, 5, 6, 5, 7, 6];
-  const index = { count: I.length, getX: (i) => I[i] };
-  const cloth = windWeights(position, index, 'cloth');
-  assert.deepEqual([...cloth.slice(0, 4)], [0, 0, 1, 1], 'top pinned, hem free');
-  assert.ok(cloth[4] > 0 && cloth[4] < 0.5 && cloth[4] === cloth[7], 'a flat part shivers evenly');
-  const tree = windWeights(position, index, 'foliage');
-  assert.deepEqual([...tree.slice(0, 4)], [1, 1, 0, 0], 'rooted at the bottom');
+test('wind weights without an authored attribute: only what is recognisably a banner, an awning or a plant moves', () => {
+  const geo = (boxes) => { // axis-aligned boxes as 8 corners + 12 triangles each: [x0, y0, z0, x1, y1, z1]
+    const P = [], I = [];
+    for (const [x0, y0, z0, x1, y1, z1] of boxes) {
+      const o = P.length;
+      for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [z0, z1]) P.push([x, y, z]);
+      for (const t of [[0, 1, 2], [1, 3, 2], [4, 6, 5], [5, 6, 7], [0, 4, 1], [1, 4, 5], [2, 3, 6], [3, 7, 6], [0, 2, 4], [2, 6, 4], [1, 5, 3], [3, 5, 7]]) I.push(...t.map((k) => k + o));
+    }
+    return [{ count: P.length, getX: (i) => P[i][0], getY: (i) => P[i][1], getZ: (i) => P[i][2] }, { count: I.length, getX: (i) => I[i] }, P];
+  };
+  // A banner (0.9 x 2.5) with a separate tail piece touching its hem; a candle; a rug; an awning with a stripe on top of it.
+  const [pos, idx, P] = geo([[0, 2, 0, 0.9, 4.5, 0.03], [0.1, 1.6, 0, 0.8, 2, 0.03], [10, 0, 0, 10.1, 0.34, 0.1], [20, 0, 0, 22, 0.01, 1.5], [30, 2, 0, 32.9, 2.6, 1.3], [30.5, 2, 0, 30.8, 2.61, 1.3]]);
+  const w = windWeights(pos, idx, 'cloth');
+  const at = (x, y) => w[P.findIndex((p) => p[0] === x && p[1] === y)];
+  assert.equal(at(0, 4.5), 0, 'banner top pinned (the emblem of another material sits on the upper part)'); assert.ok(at(0, 2) > 0.5 && at(0, 2) < 1, 'the lower part swings');
+  assert.equal(at(0.1, 1.6), 1, 'the hem of the tail is the free end of the same banner');
+  assert.equal(at(10, 0), 0); assert.equal(at(10, 0.34), 0, 'a candle does not move');
+  assert.equal(at(20, 0), 0, 'a rug does not move');
+  assert.ok(at(30, 2) > 0 && at(30, 2) <= WIND_SHAPE.awning + 1e-6 && at(30, 2.6) < 0.01, 'an awning only breathes at its lower edge');
+  assert.equal(at(30.5, 2), at(30, 2), 'a stripe moves with its awning');
+  const f = windWeights(pos, idx, 'foliage');
+  assert.equal(f[P.findIndex((p) => p[1] === 4.5)], 1, 'a tall crown leans, rooted at the bottom'); assert.equal(f[P.findIndex((p) => p[1] === 1.6)], 0);
+  assert.ok(f[P.findIndex((p) => p[0] === 10 && p[1] === 0.34)] <= WIND_SHAPE.smallFoliage + 1e-6, 'a small plant only shivers');
 });
