@@ -39,3 +39,22 @@ in-engine flow is verified), then `claude/atmosphere`, `claude/anim-rig`, `claud
 
 Clore order 2426592 (RTX 5090), started 16:05 UTC 10.11; cancelled at about 22:00 UTC unless the owner extends it.
 Rule: nothing may exist only on the server.
+
+## State at 10.11 22:10 UTC (after the merge into main)
+
+All first-wave branches are merged into `main` (commit 18511f9 and later). The first-wave workers stopped before
+finishing; their sessions are archived. Second wave (each pushes its branch and, when tests and build are green, `main`):
+
+| Worker | Branch | Scope | Progress log |
+|---|---|---|---|
+| Characters v2 | `claude/characters-v2` | Iris audit fixes and look per GPT `I-001_01_target`, phone variant; mocap idle/walk/run/start/stop/turn/register/greet as default; 13 townsfolk from GPT sheets placed in the town | `docs/handoff/characters-v2.md` |
+| Lighting v2 | `claude/lighting-v2` | start in the town + loading screen, spawn camera, shadows/sun/fog/grade polish, atmosphere and wind-driven life, weather and dusk presets, phone tiers | `docs/handoff/lighting-v2.md` |
+
+**Still open after both (for future workers):** shop interiors refined to GPT sheets `S-001..S-003` (refs on the board)
+and shop entry/exit in the client; the six clan agents on the mocap clips and rig correctives (twist bones,
+shoulder/elbow/hip/knee); README real/mock rows for the town, altar, shops and townsfolk; GPT board entries left
+open (`board.md`); full `npm test` and a check of the jury path by the owner.
+
+**Server backup:** the whole server state (board with all GPT refs, uncommitted worker diffs, every `.blend`) is packed
+on the server as `/root/ftf-server-backup.tar` by `/root/mkbackup.sh`; the owner downloads it locally. Re-run the script
+before the rental ends (about 22:00 UTC 11.11). The download command with the access token lives outside git.
