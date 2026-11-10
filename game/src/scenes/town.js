@@ -20,9 +20,10 @@ import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRA
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
 export const TOWN_LAMPS = 6;
 /** Altar core emissive intensity: asleep, awake (Iris inside the prompt radius) and the registration flare on top. */
-// Kept low on purpose: above about 1.5 the amber clips to cream under the tone mapping (the file's own strength, 3.0, is overwritten).
-export const CORE_GLOW = Object.freeze({ idle: 0.3, awake: 1.3, flare: 7, pulse: 0.14 });
+// The file's own strength is overwritten; the colour is forced to a deep amber (CORE_AMBER) so these levels stay amber, not cream.
+export const CORE_GLOW = Object.freeze({ idle: 0.9, awake: 2.4, flare: 9, pulse: 0.14 });
 const CORE_MATERIAL = /^M_Altar_Core/;
+const CORE_AMBER = 0xff7a16;
 const GLYPH_MATERIAL = /^M_Altar_Glyph/, EYE_MATERIAL = /^M_Altar_Eye/;
 const GLYPH_NODE = /altar_glyph_(\d+)/;
 /** Emissive hierarchy of the altar, relative to the core: glyph inlays (fully lit) and the waystone eyes. */
@@ -179,7 +180,9 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
       }
     });
     glyphs.sort((a, b) => a.index - b.index);
-    for (const m of coreMaterials) if (m.emissive && !m.emissive.getHex() && !m.emissiveMap) m.emissive.setHex(0xffa53a); // a core without any emission set still wakes
+    // The core glows deep amber: a pale authored emission clipped to cream under the tone mapping, a saturated one
+    // stays amber at the same brightness (a core with an emissive map keeps its own colours).
+    for (const m of coreMaterials) if (m.emissive && !m.emissiveMap) m.emissive.setHex(CORE_AMBER);
   }
 
   const pieces = [];

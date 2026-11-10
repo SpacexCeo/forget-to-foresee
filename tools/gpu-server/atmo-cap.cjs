@@ -27,11 +27,13 @@ const MOTION = PERF || !!args.motion;
 // Iris's yaw, `dist`/`yaw`/`pitch` camera rig values (pitch in degrees; null keeps the town's zoom-tied pitch).
 const TOWN_SHOTS = {
   gate: { at: [0, 30], heading: Math.PI, dist: 13, yaw: null, pitch: null },
+  spawn: { at: [0, 20.5], heading: Math.PI, dist: 6.5, yaw: 0, pitch: 9 },
   street: { at: [0, 8], heading: Math.PI, dist: 9, yaw: 0.35, pitch: 12 },
   stairs: { at: [0, 15], heading: Math.PI, dist: 7, yaw: -0.5, pitch: 18 },
   altar: { at: [0, -6.8], heading: Math.PI, dist: 8, yaw: 0.2, pitch: 8 },
   square: { at: [3, -4], heading: Math.PI, dist: 16, yaw: 2.2, pitch: 22 },
   high: { at: [0, 6], heading: Math.PI, dist: 26, yaw: 0.6, pitch: 38 },
+  sky: { at: [0, -3], heading: Math.PI, dist: 7, yaw: -0.7, pitch: -14 },
 };
 // Archipelago cameras (the same as tests/client/lookdev-capture.mjs).
 const ISLE_SHOTS = {
@@ -98,6 +100,8 @@ async function place(page, loc, shot) {
     else await page.waitForFunction(() => window.__ftf && window.__ftf.play, null, { timeout: 180000, polling: 250 });
     const gpu = await page.evaluate(() => { const c = document.createElement('canvas').getContext('webgl2'); const e = c && c.getExtension('WEBGL_debug_renderer_info'); return e ? c.getParameter(e.UNMASKED_RENDERER_WEBGL) : 'unknown'; });
     await settled(page);
+    // --look '{"town":{"elevation":40,"fog":{"density":0.01}},"isle":{...}}': look overrides for tuning without a rebuild
+    if (args.look) await page.evaluate((o) => { if (!o) return; const L = window.__ftf.lookdev; L.look = { ...L.look, ...o, fog: { ...L.look.fog, ...(o.fog || {}) } }; L.applyAtmosphere(L.look); }, JSON.parse(args.look)[loc] || null);
     await page.addStyleTag({ content: '#ui, #prompt, #toast, #hud, #scene-controls, .ftf-run-toggle, .ftf-town-objective, .ftf-town-prompt, .hub-host, .wh-host, .wh-root, .pl-badge { visibility: hidden !important; }' });
     const shots = loc === 'town' ? TOWN_SHOTS : ISLE_SHOTS;
     for (const [name, shot] of Object.entries(shots)) {

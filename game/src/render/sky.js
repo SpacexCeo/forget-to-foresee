@@ -40,6 +40,12 @@ export const TIME_PRESETS = Object.freeze({
     exposure: 0.0, envUrl: null, envIntensity: 0.34, cloudCover: 0.42, warmth: 0.6,
     fog: { density: 0.05, falloff: 0.1, near: 35, far: 460, sunPower: 6, aerial: 0.3 },
   }),
+  // The town's default hour: the sun still high enough to reach down between the houses, the light already warm.
+  afternoon: Object.freeze({
+    label: 'Afternoon', elevation: 38, azimuth: 60, sunIntensity: 5.0, skyMean: 0.36, mie: 1.4, ozone: 1.0,
+    exposure: -0.05, envUrl: null, envIntensity: 0.38, cloudCover: 0.4, warmth: 0.7, sunWarm: 0.35,
+    fog: { density: 0.045, falloff: 0.1, near: 40, far: 500, sunPower: 6, aerial: 0.3 },
+  }),
   noon: Object.freeze({
     label: 'Noon', elevation: 58, azimuth: 20, sunIntensity: 4.4, skyMean: 0.42, mie: 1.0, ozone: 1.0,
     exposure: -0.3, envUrl: null, envIntensity: 0.4, cloudCover: 0.36, warmth: 0.2,
@@ -54,6 +60,7 @@ export const TIME_PRESETS = Object.freeze({
   }),
 });
 export const DEFAULT_PRESET = 'golden';
+const SUN_WARM = new THREE.Color(1.0, 0.8, 0.56);
 
 /**
  * A look per location (docs/atmosphere.md). The archipelago floats in open sky and keeps the presets above. The
@@ -67,16 +74,22 @@ export const LOCATION_LOOKS = Object.freeze({
   archipelago: Object.freeze({
     default: 'golden', altitude: 1800,
     presets: Object.freeze({
-      // Less aerosol and a lower exposure than the 08.11 pass: the haze keeps the far islands soft, the sky keeps its blue.
-      golden: { mie: 1.5, exposure: -0.1, cloudCover: 0.46, lamps: 0.8, windows: 1, bounce: 0.3, fog: { density: 0.035, falloff: 0.1, near: 60, far: 760, sunPower: 8, aerial: 0.45 } },
+      // Less aerosol than the 08.11 pass (the haze keeps the far islands soft, the sky keeps its blue), a dimmer sky
+      // against a stronger, warmer sun: gold on the stone and the cloud tops, cool shade, visible cast shadows.
+      golden: { mie: 1.3, exposure: 0.0, sunIntensity: 6.2, sunWarm: 0.8, skyMean: 0.22, cloudCover: 0.4, lamps: 0.8, windows: 1, bounce: 0.55, fog: { density: 0.026, falloff: 0.1, near: 60, far: 760, sunPower: 8, aerial: 0.45 } },
       morning: { lamps: 0.3, windows: 0.5, bounce: 0.25 },
+      afternoon: { lamps: 0.25, windows: 0.45, bounce: 0.3 },
       noon: { lamps: 0.15, windows: 0.3, bounce: 0.3 },
       dusk: { lamps: 1.3, windows: 1.8, bounce: 0.04 },
     }),
   }),
   town: Object.freeze({
-    default: 'morning', altitude: 420,
+    default: 'afternoon', altitude: 420,
     presets: Object.freeze({
+      // The sun stands in the south-south-west, almost along the main street: both sides of it are lit and the house
+      // shadows fall up the street, not across it.
+      afternoon: { elevation: 43, azimuth: 160, sunIntensity: 5.6, sunWarm: 0.7, skyMean: 0.3, mie: 1.6, exposure: 0.15, envIntensity: 0.5, cloudCover: 0.4, lamps: 0.25, windows: 0.5, bounce: 1.0,
+        fog: { density: 0.018, falloff: 0.05, near: 70, far: 900, sunPower: 6, aerial: 0.45 } },
       morning: { elevation: 34, azimuth: -142, sunIntensity: 5.2, skyMean: 0.34, mie: 1.5, exposure: 0.0, envIntensity: 0.42, cloudCover: 0.4, lamps: 0.2, windows: 0.45, bounce: 0.5,
         fog: { density: 0.02, falloff: 0.05, near: 70, far: 900, sunPower: 6, aerial: 0.45 } },
       noon: { elevation: 58, azimuth: -165, envIntensity: 0.46, lamps: 0.1, windows: 0.3, bounce: 0.55,
@@ -393,6 +406,8 @@ export class SkyDome {
     const T = sunTransmittance(preset.elevation, { mie: preset.mie, ozone: preset.ozone, altitude: preset.altitude ?? OBSERVER_ALTITUDE });
     const tMax = Math.max(...T, 1e-6);
     const sunColor = new THREE.Color(T[0] / tMax, T[1] / tMax, T[2] / tMax);
+    // Art direction on top of the physics: `sunWarm` pulls the sun toward late-afternoon amber (a high sun is near white).
+    if (preset.sunWarm) sunColor.lerp(SUN_WARM, Math.min(1, preset.sunWarm));
     const sunRadiance = sunColor.clone().multiplyScalar(preset.sunIntensity / Math.PI);
     const m = this.material.uniforms;
     m.uSunDir.value.copy(sun); m.uScale.value = scale; m.uCover.value = preset.cloudCover;

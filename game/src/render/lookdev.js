@@ -112,7 +112,7 @@ export class LookDev {
     this.shadows = new SunShadows({ scene });
     this.sun = this.shadows.sun;
     scene.add(this.hemi);
-    this.heroLight = new THREE.PointLight(0xff9a3c, 0, 26, 1.6);
+    this.heroLight = new THREE.PointLight(0xff8a2a, 0, 26, 1.6);
     this.heroLight.name = 'hero_light'; this.heroLight.castShadow = false;
     this.heroBase = 0;
     scene.add(this.heroLight);
@@ -399,7 +399,7 @@ export class LookDev {
       l.intensity = 14 * (this.lanternScale ?? 1) * (1 + 0.1 * (Math.sin(t * 7.3 + p) * 0.5 + Math.sin(t * 13.1 + p * 1.7) * 0.3 + Math.sin(t * 2.1 + p) * 0.2));
     }
     // The hero light breathes a little; it grows as daylight fades so the amber is always the strongest local light.
-    this.heroLight.intensity = this.heroBase * (5 + 15 * Math.min(1.5, this.light.lamps)) * (1 + 0.05 * Math.sin(t * 1.7));
+    this.heroLight.intensity = this.heroBase * (16 + 14 * Math.min(1.5, this.light.lamps)) * (1 + 0.05 * Math.sin(t * 1.7));
     setNacreTime(t);
   }
 

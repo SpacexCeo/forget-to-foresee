@@ -63,8 +63,8 @@ test('the light loop patch applies to this three.js and keeps the one-cascade pa
 
 test('looks per location: the town turns the sun to its open side and has its own air; the archipelago keeps golden hour', () => {
   assert.deepEqual(LOCATIONS, ['archipelago', 'town']);
-  assert.equal(lookFor('archipelago').name, 'golden'); assert.equal(lookFor('town').name, 'morning');
-  assert.equal(lookFor('nowhere').location, 'archipelago'); assert.equal(lookFor('town', 'bogus').name, 'morning');
+  assert.equal(lookFor('archipelago').name, 'golden'); assert.equal(lookFor('town').name, 'afternoon');
+  assert.equal(lookFor('nowhere').location, 'archipelago'); assert.equal(lookFor('town', 'bogus').name, 'afternoon');
   // The baked HDR was rendered for the archipelago's golden hour: its sun must not drift.
   const g = lookFor('archipelago', 'golden');
   assert.equal(g.elevation, 13); assert.equal(g.azimuth, 34); assert.ok(g.envUrl);
