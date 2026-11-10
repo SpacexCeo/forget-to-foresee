@@ -5,6 +5,7 @@
 // No world HUD, no hub and no hints exist here: the season has not begun. No game rule is evaluated.
 import { steerTo } from '../physics/character.js';
 import { TOWN_ROUTE, inAltarRange } from './town-layout.js';
+import { createInkBar } from '../ui/ink-bar.js';
 
 const CSS = `
 .ftf-town { position: fixed; inset: 0; pointer-events: none; z-index: 9; font-family: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; }
@@ -29,10 +30,8 @@ const CSS = `
 .ftf-town-cover.is-on span { opacity: 1; transform: none; }
 html[data-motion="reduce"] .ftf-town-cover span, .ftf-town-cover.is-plain span { transform: none; transition: opacity .3s linear; }
 .ftf-town-cover { flex-direction: column; gap: 22px; }
-.ftf-town-cover-bar { width: min(240px, 56vw); height: 3px; border-radius: 2px; background: rgba(58, 42, 13, .16); overflow: hidden; opacity: 0; transition: opacity .5s ease .9s; }
-.ftf-town-cover.is-on .ftf-town-cover-bar { opacity: 1; }
-.ftf-town-cover-bar b { display: block; height: 100%; width: 100%; background: #8a5a12; transform-origin: 0 50%; transform: scaleX(0); transition: transform .35s ease-out; }
-html[dir="rtl"] .ftf-town-cover-bar b { transform-origin: 100% 50%; }
+.ftf-town-cover-ink { opacity: 0; transition: opacity .5s ease .7s; }
+.ftf-town-cover.is-on .ftf-town-cover-ink { opacity: 1; }
 @media (max-width: 700px) { .ftf-town-objective { font-size: 14px; max-width: calc(100% - 120px); } .ftf-town-prompt { font-size: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-height: 440px) { .ftf-town-prompt { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); } }
 `;
@@ -49,9 +48,10 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => Promise<void>} o.leave moves Iris to the archipelago and starts the season (called under the cover)
  * @param {() => boolean} [o.islandReady] the archipelago's first models are in (the cover waits for it, bounded)
  * @param {() => number} [o.islandProgress] 0..1, how much of that first view has arrived (the cover's bar)
+ * @param {() => string[]} [o.islandLog] `loading.log.*` keys of what is loading right now (the cover's log)
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, coarse = false }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -131,11 +131,12 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     cover.setAttribute('role', 'status');
     cover.style.setProperty('--ftf-town-fade', (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) + 's');
     cover.append(doc.createElement('span'));
-    // Real progress of the archipelago's first view (the same promise as the loading screen: nothing appears unfinished).
-    const bar = doc.createElement('div'); bar.className = 'ftf-town-cover-bar'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100');
-    const fill = doc.createElement('b'); bar.append(fill); cover.append(bar);
+    // The hand-drawn bar with the real progress of the archipelago's first view, and the log of what is loading
+    // (ui/ink-bar.js: the same pair as on the loading screen; nothing appears unfinished).
+    const ink = createInkBar(doc, { t: (k) => i18n.t(k) });
+    ink.el.classList.add('ftf-town-cover-ink'); cover.append(ink.el);
     let shown = 0;
-    const progress = (v) => { shown = Math.max(shown, Math.min(1, v)); fill.style.transform = `scaleX(${shown.toFixed(3)})`; bar.setAttribute('aria-valuenow', String(Math.round(shown * 100))); };
+    const progress = (v) => { shown = Math.max(shown, Math.min(1, v)); ink.set(shown); };
     renderText();
     doc.body.append(cover);
     town.setFlare(1);
@@ -148,13 +149,13 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     town.setFlare(0);
     try { await leave(); } catch (e) { console.error('[town] the season failed to start', e); }
     const t0 = performance.now();
-    while (!islandReady() && performance.now() - t0 < TOWN_TRANSITION.islandWait * 1000) { progress(Math.min(0.97, islandProgress())); await sleep(0.1); }
-    progress(1);
+    while (!islandReady() && performance.now() - t0 < TOWN_TRANSITION.islandWait * 1000) { progress(Math.min(0.97, islandProgress())); for (const k of islandLog().slice(0, 1)) ink.log(k); await sleep(0.1); }
+    progress(1); ink.log('loading.log.ready');
     await sleep(TOWN_TRANSITION.hold);
     state.phase = 'done';
     cover.classList.remove('is-on');
     const gone = cover;
-    setTimeout(() => { gone.remove(); root.remove(); prompt.remove(); if (unsubscribe) unsubscribe(); }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
+    setTimeout(() => { ink.destroy(); gone.remove(); root.remove(); prompt.remove(); if (unsubscribe) unsubscribe(); }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
     cover = null;
     return true;
   }

@@ -108,8 +108,18 @@ as still plumes, birds hold their place) and the wind strength is zero.
 ## Loading and the altar transition
 
 Iris starts `SPAWN_ADVANCE` (4.5 m) up the street from the plan's gate point: right in front of the gate arch the
-arch pushed the follow camera into her back. The altar's cover carries a thin progress bar with the real state of
-the archipelago's first view (bytes downloaded, then warmed), the same promise as the loading screen.
+arch pushed the follow camera into her back.
+
+The loading screen and the altar's cover keep their looks (owner) and share one pair of elements from
+`game/src/ui/ink-bar.js`: a **hand-drawn progress bar** and a **log of what is loading**. The bar is a sprite
+atlas rendered in Blender (`art/ui/loading_bar/build_bar.py` → `game/public/assets/ui/loading_bar.webp`, 337 KB):
+25 rows of progress by 3 columns of the same drawing redrawn with another hand tremor. The row follows real
+progress (the loading screen's own value; on the cover the bytes and warm-up of the archipelago's first view), the
+column cycles every 190 ms for the line boil and holds still under reduced motion. On the dark loading screen the
+bar sits on a parchment plaque, because its ink is the game's warm brown. The log shows the last three lines
+(`loading.log.*` keys in all five locales; English until the locale chunk is in), read from the streamer: the
+asset in flight with the highest priority, "Warming shaders…" while something is warming. `ink-bar.js` lives in
+the `boot` chunk (`game/build/chunks.js`): in the `ui` chunk it closed a chunk cycle and the build did not boot.
 `tools/gpu-server/flow-cap.cjs` records the whole start as a frame sequence (loading, first town frames, cover).
 
 ## Not in this version

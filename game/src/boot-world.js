@@ -26,6 +26,7 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
+import { logKeysFromStats } from './ui/ink-bar.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
@@ -146,7 +147,7 @@ if (townMode.town) {
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
   townFlow = createTownFlow({
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
-    islandProgress,
+    islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
   });
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play

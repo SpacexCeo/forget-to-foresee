@@ -15,6 +15,9 @@ A fresh session can continue from this file and git alone. Last update: 11.11.20
 | Wind on banners, awnings and trees from computed weights; chimney smoke, birds, drifting sky islands | `game/src/render/weather.js` (`windWeights`), `game/src/scenes/town-life.js` |
 | Weather (`?weather=overcast|rain`) and dusk (`?tod=dusk`) checked in the town; frame time per tier | `docs/atmosphere.md` section 3 |
 
+| Hand-drawn progress bar (Blender atlas) and a loading log on the loading screen and the altar cover (lead message 10.11 22:29 UTC, owner correction: keep both screens, add only these) | `art/ui/loading_bar/build_bar.py`, `game/src/ui/ink-bar.js`, `game/src/ui/loading.js`, `game/src/scenes/town-flow.js` |
+| GPT sheets `L-001_01…03` read (they arrived late): colour keys and ambient-motion timings agree with what is built; nothing changed for them | `/root/board/refs/` on the server (not copied into git by this worker) |
+
 ## Half-done / not done
 
 1. **Well water** (`M_Town_Water`) has no shimmer.
@@ -28,7 +31,9 @@ A fresh session can continue from this file and git alone. Last update: 11.11.20
 6. Frame times are from the RTX 5090 server only; the minimum machine and a real phone are not measured.
 7. The first metres inside the gate (behind the spawn point) lie in the gate tower's shadow with the afternoon sun
    in the south; the spawn frame itself is sunlit (`docs/atmosphere/v2/after-town-spawn.jpg`).
-8. No GPT colour references (`L-001_*`) had arrived on the board when this pass was done.
+8. The cover's log mostly reads "Archipelago…": island asset names are not mapped to finer lines yet (`logKeyFor`).
+9. `npm test` and `npm run build` do not catch a chunk cycle (a boot-time TDZ error): after touching imports across
+   `ui` / `scenes` / `play`, open the built page once (`npx vite preview`) before pushing.
 
 ## How to resume
 

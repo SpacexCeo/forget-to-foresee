@@ -152,3 +152,19 @@ test('Iris stand-in: no capsule while her model is on its way, the capsule only 
   assert.equal(irisStandInVisible({ hasModel: true, waited: IRIS_STANDIN_AFTER }), true, 'a slow network shows it after the wait');
   assert.equal(irisStandInVisible({ hasModel: true, fetched: true, waited: 60 }), false, 'downloaded and waiting for the play layer: still hidden');
 });
+
+test('ink bar: the atlas row follows progress; the log names what is loading, in every locale', async () => {
+  const { inkRow, logKeyFor, logKeysFromStats, LOG_EN, INK_ATLAS } = await import('../../src/ui/ink-bar.js');
+  assert.equal(inkRow(0), 0); assert.equal(inkRow(1), INK_ATLAS.steps - 1); assert.equal(inkRow(0.5), 12); assert.equal(inkRow(7), INK_ATLAS.steps - 1);
+  assert.equal(logKeyFor('town_terrain'), 'loading.log.terrain'); assert.equal(logKeyFor('town_block_mid'), 'loading.log.houses');
+  assert.equal(logKeyFor('town_temple'), 'loading.log.shrine'); assert.equal(logKeyFor('shell_a'), 'loading.log.shells');
+  const stats = { list: [{ name: 'town_sky', state: 'loading', priority: 1 }, { name: 'town_terrain', state: 'loading', priority: 200 }, { name: 'town_altar', state: 'warming', priority: 150 }, { name: 'town_temple', state: 'loaded', priority: 300 }] };
+  assert.deepEqual(logKeysFromStats(stats), ['loading.log.terrain', 'loading.log.sky', 'loading.log.shaders']);
+  // The English fallback is the en locale's own text, and all five locales carry every key.
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) {
+    const messages = (await import(`../../src/play/locales/${loc}.js`)).default;
+    for (const k of Object.keys(LOG_EN)) assert.ok(typeof messages[k] === 'string' && messages[k].length, `${loc} ${k}`);
+    if (loc === 'en') for (const k of Object.keys(LOG_EN)) assert.equal(messages[k], LOG_EN[k]);
+    if (loc === 'ru') assert.match(messages['loading.log.terrain'], /[а-я]/);
+  }
+});

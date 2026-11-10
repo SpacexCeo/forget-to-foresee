@@ -9,6 +9,7 @@
 // Play starts in the town on the ground (docs/town.md); ?skip=town and the deep links above go straight to the
 // archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
 import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
+import { logKeysFromStats } from './ui/ink-bar.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
@@ -36,6 +37,7 @@ function onProgress(stats) {
     let got = 0;
     for (const a of stats.list) if (budget.names.includes(a.name)) got += (a.state === 'loaded' || a.state === 'cold' ? 1 : a.progress || 0) * (a.bytes || 0);
     bytesGot = got;
+    for (const k of logKeysFromStats(stats, (a) => budget.names.includes(a.name)).slice(0, 1)) loading.log(k); // the log under the bar: what is loading now
   }
   report();
 }
@@ -56,6 +58,7 @@ const townShown = (w, limit = 30000) => new Promise((resolve) => {
 });
 
 ctxP.then(async (ctx) => {
+  loading.setTranslator((k) => ctx.i18n.t(k));
   if (plan.lobby) {
     const ui = await import('./ui/index.js');
     // Leaving the lobby before the town has streamed in: the loading screen comes back with the town's real progress,
