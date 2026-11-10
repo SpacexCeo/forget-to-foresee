@@ -109,7 +109,7 @@ test('townsfolk: deterministic; walkers walk at their clip speed without jumps; 
 
 test('townsfolk: the two keepers of the square meet and take turns talking', () => {
   const { log } = run(420);
-  for (const k of ['shardkeeper', 'scribe']) { assert.ok(log.get(k).clips.has('talk'), k + ' talks'); assert.ok(log.get(k).clips.has('listen'), k + ' listens'); }
+  for (const k of ['shardkeeper', 'scribe']) { assert.ok(log.get(k).clips.has('talk') || log.get(k).clips.has('talk_b'), k + ' talks'); assert.ok(log.get(k).clips.has('listen'), k + ' listens'); }
 });
 
 test('townsfolk: Iris is greeted, saluted and never walked through; reduced motion holds everyone still', () => {

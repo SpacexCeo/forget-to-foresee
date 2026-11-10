@@ -42,11 +42,11 @@ export const TOWNSFOLK = Object.freeze([
 /** Clip fallbacks: the shared side-car set (docs/art/animation-pipeline.md) first, then the model's own clips. */
 export const CLIP_FALLBACK = Object.freeze({
   idle: ['idle'], idle_shift: ['idle_shift', 'weight_shift', 'idle'], walk: ['walk'], run: ['child_run', 'run', 'walk'],
-  elder_walk: ['elder_walk', 'walk'], talk: ['talk', 'idle'], listen: ['nod', 'understand', 'think', 'idle'],
+  elder_walk: ['elder_walk', 'walk'], talk: ['talk', 'idle'], talk_b: ['talk_b', 'talk', 'idle'], listen: ['idle_look', 'idle_shift', 'think', 'idle'],
   wave: ['wave', 'gesture_offer', 'talk', 'idle'], salute: ['salute', 'gesture_offer', 'idle'],
   nod: ['nod', 'understand', 'idle'], sweep: ['sweep', 'think', 'idle'], carry: ['carry', 'idle'],
   play: ['play_instrument', 'play', 'talk', 'idle'], counter: ['counter', 'counter_loop', 'think', 'idle'],
-  sit: ['sit', 'sit_loop', 'idle'], think: ['think', 'idle'],
+  sit: ['sit', 'sit_loop', 'idle'], think: ['idle_look', 'think', 'idle'],
 });
 
 /** The first clip of the chain that the list of available names has (or null). */
@@ -113,7 +113,7 @@ function programs() {
     shardkeeper: { home: ex.position, heading: ex.heading, steps: [stay(40, 'idle', { heading: ex.heading, greet: 'wave' }), stay(12, 'idle_shift', { heading: ex.heading, greet: 'wave' }),
       { walk: exOut }, { meet: 'scribe', seconds: 34, clip: 'talk', face: P.npc_chat_a.position }, { walk: exOut.slice().reverse() }] },
     scribe: { home: sc.position, heading: sc.heading, steps: [stay(30, 'idle', { heading: sc.heading, greet: 'wave' }), stay(14, 'think', { heading: sc.heading, greet: 'wave' }),
-      { walk: scOut }, { meet: 'shardkeeper', seconds: 34, clip: 'talk', face: P.npc_chat_b.position }, { walk: scOut.slice().reverse() }] },
+      { walk: scOut }, { meet: 'shardkeeper', seconds: 34, clip: 'talk_b', face: P.npc_chat_b.position }, { walk: scOut.slice().reverse() }] },
     innkeeper: post(inn, [stay(18, 'idle', { greet: 'wave' }), stay(10, 'counter', { greet: 'wave' }), stay(8, 'idle_shift', { greet: 'wave' })]),
     baker: post(P.npc_market_seller_square, [stay(14, 'counter', { greet: 'wave' }), stay(10, 'idle', { greet: 'wave' }), stay(6, 'idle_shift', { greet: 'wave' })]),
     shrinekeeper: post(P.npc_shrine_keeper, [stay(20, 'idle', { greet: 'nod' }), stay(10, 'idle_shift', { greet: 'nod' })]),
@@ -161,6 +161,7 @@ export class PersonPlan {
     this.rng = seededRng(seed + ':' + def.key);
     this.x = program.home[0]; this.y = program.home[1]; this.z = program.home[2];
     this.yaw = program.heading || 0; this.speed = 0; this.gait = 'walk'; this.clip = 'idle'; this.sit = 0;
+    this.walkSpeed = def.walk; this.runSpeed = def.run || 0; // the renderer sets them to the loaded clips' own speeds
     this.index = -1; this.t = 0; this.until = 0; this.s = 0; this.len = 0; this.side = 0;
     this.meeting = false; this.waited = 0; this.greeted = false; this.greetUntil = 0; this.yielding = false;
     this._p = { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 };
@@ -186,7 +187,7 @@ export class PersonPlan {
     this.t += dt;
     if (st.walk) {
       const run = st.gait === 'run' && this.def.run;
-      const top = run ? this.def.run : (st.speed || this.def.walk);
+      const top = run ? this.runSpeed : (st.speed || this.walkSpeed);
       const p = polyAt(st.walk, this.s, this._p);
       // slow into sharp corners and the end of the path, ease out of the start
       let v = top * Math.min(1, 0.35 + p.corner * 1.3, 0.3 + (this.len - this.s) * 1.5, 0.3 + this.t * 1.6);

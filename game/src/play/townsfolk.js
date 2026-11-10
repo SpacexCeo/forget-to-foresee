@@ -15,13 +15,13 @@ import { warmModel } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { TOWN_ORIGIN } from '../scenes/town-layout.js';
 import { FADE, findLookBones, applyLookTo } from './gait.js';
-import { sidecarClips, mergeClips, faceLayerClip } from './anim-library.js';
+import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 import { TOWNSFOLK, PROGRAMS, PersonPlan, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
 
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
 const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
-/** Side-car file shared by every townsperson (art/anim); absent until the animation pipeline ships it. */
-const SIDECAR_ASSET = 'townsfolk';
+/** Body type of the shared mocap set (anim-library.js townsfolkClips): posture and stride per kind of person. */
+const BODY = { elder: 'elder', child_a: 'child', child_b: 'child', guard: 'guard' };
 
 class Person {
   constructor(def, scene) {
@@ -39,8 +39,10 @@ class Person {
   }
 
   /** Puts a parsed file on this person (the light one first, the full one later): same state, new meshes. */
-  setModel(gltf, extraClips) {
+  async setModel(gltf, file) {
     const model = cloneSkinned(gltf.scene);
+    // the shared mocap clips, retargeted to this body while it is still in its rest pose ([] when the file is missing)
+    const extraClips = await townsfolkClips(model, { key: file, body: BODY[this.def.key] || 'adult' });
     upgradeAssetMaterials(this.def.asset, model);
     model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
     return warmModel(model).then(() => {
@@ -56,6 +58,12 @@ class Person {
       this.actions.clear(); this.current = null; this.walkAct = null; this.walkName = null;
       const face = extraClips && extraClips.length ? faceLayerClip(own) : null; // body clips from the side-car: the face keeps its own layer
       if (face) this.mixer.clipAction(face).play();
+      // move at the speed the clips walk at, so the feet never slide; sit at the height the sit clip sits at
+      const speedOf = (want) => { const c = this.clips.get(pickClip(this.names, want)); return c && c.userData && c.userData.speed > 0 ? c.userData.speed : 0; };
+      this.clipSpeed = { walk: speedOf(this.def.key === 'elder' ? 'elder_walk' : 'walk') || this.def.walk, run: speedOf('run') || this.def.run || 2.6 };
+      this.plan.walkSpeed = this.clipSpeed.walk; if (this.def.run) this.plan.runSpeed = this.clipSpeed.run;
+      const sit = this.clips.get('sit');
+      this.sitDrop = sit && sit.userData && sit.userData.pelvis_y ? sit.userData.pelvis_y - 0.10 * (sit.userData.scale || 1) : null;
       this.state = 'loaded';
     });
   }
@@ -93,7 +101,7 @@ class Person {
     const cur = this.current && this.actions.get(this.current);
     if (cur) cur.setEffectiveWeight(1 - this.moveW);
     // the clip was authored at clipSpeed metres per second: advance it by the distance really covered
-    const clipSpeed = (name === 'run' || name === 'child_run') ? (this.def.run || 2.6) : this.def.walk;
+    const clipSpeed = (name === 'run' || name === 'child_run') ? this.clipSpeed.run : this.clipSpeed.walk;
     const d = this.walkAct.getClip().duration;
     this.walkAct.time = (this.walkAct.time + (speed * dt) / clipSpeed) % d;
   }
@@ -108,21 +116,16 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
   const plans = new Map(people.map((p) => [p.def.key, p.plan]));
   const ctx = { iris: null, reduced: false, others: plans };
   const phone = () => getModelVariant() === '_m';
-  let started = false, loading = false, upgraded = false, frame = 0, extra = null, active = true;
+  let started = false, loading = false, upgraded = false, frame = 0, active = true;
   const fileOf = (def, lite) => (library && library.fileFor ? library.fileFor(def.asset, { lite }) : def.asset);
   const has = (def) => !!MODEL_FILES[def.asset];
-
-  function sidecar() {
-    if (!extra) extra = sidecarClips(SIDECAR_ASSET).catch(() => []);
-    return extra;
-  }
 
   async function loadOne(p, lite) {
     const file = fileOf(p.def, lite);
     if (p.file === file) return;
     try {
-      const [{ gltf }, clips] = await Promise.all([fetchGltf(file), sidecar()]);
-      await p.setModel(gltf, clips);
+      const { gltf } = await fetchGltf(file);
+      await p.setModel(gltf, file);
       p.file = file;
     } catch (e) {
       if (p.state !== 'loaded') p.state = 'failed';
@@ -174,7 +177,8 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
         p.groundY = g !== null && Math.abs(g - TOWN_ORIGIN[1] - plan.y) < 1.3 ? g - TOWN_ORIGIN[1] : null;
         p.groundAtXZ[0] = plan.x; p.groundAtXZ[1] = plan.z;
       }
-      if (p.groundY !== null) y = p.groundY;
+      if (p.groundY !== null && !plan.sit) y = p.groundY;
+      if (plan.sit && p.sitDrop !== null && p.sitDrop !== undefined) y += plan.sit - p.sitDrop; // the seat top meets the sitting pelvis
       const canSit = !!plan.sit && !!pickClip(p.names, 'sit') && pickClip(p.names, 'sit') !== 'idle';
       let x = plan.x, z = plan.z;
       if (plan.sit && !canSit) { x += Math.sin(plan.yaw) * 0.6; z += Math.cos(plan.yaw) * 0.6; } // no sit clip: stand in front of the bench
