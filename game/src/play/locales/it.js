@@ -240,6 +240,7 @@ export default {
   'hub.dock.signs': '{count, plural, one {un segno} other {# segni}}',
   'hub.dock.quiet': 'quieta',
   'hub.dock.pass': 'Lascia passare la prova {tick}',
+  'hub.dock.passShort': 'Passa',
   'hub.flying': 'Conchiglia {shell}',
   'hub.read.eyebrow': 'Dentro la Conchiglia {shell}',
   'hub.read.title': 'Leggi il segno',

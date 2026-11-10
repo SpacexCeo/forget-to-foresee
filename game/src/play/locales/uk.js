@@ -239,6 +239,7 @@ export default {
   'hub.dock.signs': '{count, plural, =1 {знак} one {# знак} few {# знаки} many {# знаків} other {# знака}}',
   'hub.dock.quiet': 'тихо',
   'hub.dock.pass': 'Пропустити випробування {tick}',
+  'hub.dock.passShort': 'Пропустити',
   'hub.flying': 'Мушля {shell}',
   'hub.read.eyebrow': 'Усередині Мушлі {shell}',
   'hub.read.title': 'Прочитайте знак',

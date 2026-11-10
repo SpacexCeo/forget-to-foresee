@@ -239,6 +239,7 @@ export default {
   'hub.dock.signs': '{count, plural, other {# 个符印}}',
   'hub.dock.quiet': '寂静',
   'hub.dock.pass': '让第 {tick} 场试炼过去',
+  'hub.dock.passShort': '跳过',
   'hub.flying': '贝壳 {shell}',
   'hub.read.eyebrow': '贝壳 {shell} 内部',
   'hub.read.title': '解读符印',

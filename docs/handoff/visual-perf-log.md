@@ -40,6 +40,12 @@ compile): the actual frame-time gain of the warm-up, the look of the Shell colum
 upgrade. `?warm=off`, `?lite=off` compare old and new on the owner's machine. The other worker's lane (play logic,
 copy, HUD layout) was not touched; `main` did not move during the night.
 
+## After the night (owner requests in the session)
+
+- 10.11 ~10:40 Kyiv. The three night commits were fast-forwarded into `main` on the owner's word.
+- 10.11 ~11:40 Kyiv. **Compact desktop HUD** from the owner's mockup (`docs/ui-compact-hud.md`). This is HUD layout,
+  the release polish worker's lane at night; done here on the owner's direct request.
+
 ## Backlog (in order of value)
 
 1. Owner look on a real GPU: warm-up gain, the Shell column at the high tier, the light-to-full swap; tune or drop.

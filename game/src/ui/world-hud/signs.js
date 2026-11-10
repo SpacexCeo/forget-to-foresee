@@ -140,7 +140,9 @@ export function mountSigns(root, o) {
   let filter = FILTERS.includes(model.signs.filter) ? model.signs.filter : 'all';
   let modelFilter = model.signs.filter;
   const compact = () => { try { return !!(win.matchMedia && win.matchMedia(COMPACT_QUERY).matches); } catch { return false; } };
-  let desktopOpen = model.signs.open !== false && !compact();
+  // the compact desktop skin (body.wh-compact) keeps the world clear: Signs opens from the hotbar (V)
+  const compactSkin = () => { try { return !!doc.body.classList.contains('wh-compact'); } catch { return false; } };
+  let desktopOpen = model.signs.open !== false && !compact() && !compactSkin();
   let isOpenNow = layout === 'desktop' ? desktopOpen : false;
   let opener = null;
   /** Current DOM refs. */

@@ -25,6 +25,7 @@ const CSS = `
   border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); -webkit-backdrop-filter: blur(var(--wh-panel-blur, 10px)); backdrop-filter: blur(var(--wh-panel-blur, 10px)); color: var(--wh-text, #faf7ee); }
 .hub-host h3 { margin: 0; font: 400 20px/1.2 var(--wh-font, Georgia, serif); color: var(--wh-text, #faf7ee); -webkit-text-stroke: .3px currentColor; }
 .hub-host p { margin: 4px 0 0; font: var(--wh-font-body-weight, 500) 13.5px/1.4 var(--wh-font-body, system-ui, sans-serif); color: var(--wh-text-2, #e6e3d7); }
+.hub-host .hub-pass-short { display: none; }
 .hub-host .hub-eyebrow { margin-bottom: 4px; font: 600 11px/1 var(--wh-font-body, system-ui, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--wh-gold, #e4c272); }
 .hub-host .hub-muted { color: var(--wh-text-muted, #c9c6b8); font-size: 12.5px; }
 .hub-host .hub-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -211,7 +212,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
           shellLabel(n), el(doc, 'small', { text: k ? t('hub.dock.signs', { count: k }) : t('hub.dock.quiet') }));
       })),
       el(doc, 'div', { class: 'hub-row' },
-        btn({ class: by.size && [...by.values()].some((v) => v.length) ? null : 'hub-primary', id: 'hub-pass', disabled: busy || !canPass || null, onclick: () => hub.advance() }, el(doc, 'kbd', { text: 'T' }), t('hub.dock.pass', { tick: obs.season.tick }))));
+        btn({ class: by.size && [...by.values()].some((v) => v.length) ? null : 'hub-primary', id: 'hub-pass', disabled: busy || !canPass || null, onclick: () => hub.advance() }, el(doc, 'kbd', { text: 'T' }), el(doc, 'span', { class: 'hub-pass-long', text: t('hub.dock.pass', { tick: obs.season.tick }) }), el(doc, 'span', { class: 'hub-pass-short', 'aria-hidden': 'true', text: t('hub.dock.passShort') }))));
   }
 
   /** The card header: the eyebrow and, on the same line, the Read → Choose → See guide. */

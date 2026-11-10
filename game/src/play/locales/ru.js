@@ -238,6 +238,7 @@ export default {
   'hub.dock.signs': '{count, plural, =1 {знак} one {# знак} few {# знака} many {# знаков} other {# знака}}',
   'hub.dock.quiet': 'тихо',
   'hub.dock.pass': 'Пропустить испытание {tick}',
+  'hub.dock.passShort': 'Пропустить',
   'hub.flying': 'Раковина {shell}',
   'hub.read.eyebrow': 'Внутри Раковины {shell}',
   'hub.read.title': 'Прочтите знак',

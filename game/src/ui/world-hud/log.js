@@ -53,6 +53,11 @@ export function mountLog(root, o = {}) {
   let tab = validTab(model && model.journal && model.journal.tab);
   /** @type {{tabs?: HTMLElement[], body?: HTMLElement, list?: HTMLElement, dot?: HTMLElement, srUnread?: HTMLElement}} */
   let refs = {};
+  // Compact desktop skin (body.wh-compact): the journal is a row of tabs until one is clicked; the Log tab counts
+  // the entries that arrived while it was closed.
+  let collapsed = true;
+  const seen = new Set();
+  const compactSkin = () => { try { return !!(el.ownerDocument || document).body.classList.contains('wh-compact'); } catch { return false; } };
 
   function validTab(t) { return TABS.some((x) => x.id === t) ? t : 'log'; }
 
@@ -70,8 +75,14 @@ export function mountLog(root, o = {}) {
       const b = h('button', {
         class: 'wh-log__tab',
         attrs: { type: 'button', role: 'tab', id: `${id}-tab-${t.id}`, 'aria-controls': `${id}-panel`, 'data-tab': t.id },
-        on: { click: () => { setTab(t.id); emit('tab', t.id); } },
-      }, ic(t.icon, 'wh-log__tab-icon'), h('span', { class: 'wh-log__tab-label wh-heavy-sm', i18n: 'wh.tabs.' + t.id }));
+        on: { click: () => {
+          if (compactSkin()) {
+            if (collapsed) collapsed = false; else if (t.id === tab) collapsed = true;
+          }
+          setTab(t.id); syncCollapsed(); emit('tab', t.id);
+        } },
+      }, ic(t.icon, 'wh-log__tab-icon'), h('span', { class: 'wh-log__tab-label wh-heavy-sm', i18n: 'wh.tabs.' + t.id }),
+      t.id === 'log' ? h('span', { class: 'wh-log__count wh-heavy-sm', attrs: { hidden: '' } }) : null);
       return b;
     });
     const tablist = h('div', {
@@ -87,8 +98,25 @@ export function mountLog(root, o = {}) {
     }, list);
     const panel = h('section', { class: 'wh-log wh-interactive', i18nAttrs: { 'aria-label': 'wh.log.label' } }, tablist, body);
     el.appendChild(panel);
-    refs = { tabs, body, list };
+    refs = { tabs, body, list, panel, count: tabs[0].querySelector('.wh-log__count') };
     syncTab();
+    syncCollapsed();
+  }
+
+  /** Compact skin: hides the body while collapsed and keeps the Log tab's unread count. */
+  function syncCollapsed() {
+    if (!refs.panel) return;
+    const shut = compactSkin() && collapsed;
+    refs.panel.classList.toggle('wh-log--collapsed', shut);
+    if (shut) refs.body.setAttribute('hidden', ''); else refs.body.removeAttribute('hidden');
+    for (const b of refs.tabs) b.setAttribute('aria-expanded', shut || b.dataset.tab !== tab ? 'false' : 'true');
+    const entries = (model && model.journal && model.journal.log) || [];
+    if (!shut && tab === 'log') for (const it of entries) seen.add(it.id);
+    const unread = compactSkin() ? entries.filter((it) => !seen.has(it.id)).length : 0;
+    if (refs.count) {
+      refs.count.textContent = unread ? String(Math.min(unread, 99)) : '';
+      if (unread) refs.count.removeAttribute('hidden'); else refs.count.setAttribute('hidden', '');
+    }
   }
 
   function syncTab() {
@@ -185,6 +213,9 @@ export function mountLog(root, o = {}) {
     el,
     get tab() { return tab; },
     setTab,
+    /** Compact skin: whether the journal body is hidden behind its tabs. */
+    get collapsed() { return compactSkin() && collapsed; },
+    setCollapsed(on) { collapsed = !!on; syncCollapsed(); },
     update(next, nextLayout) {
       const l = nextLayout === 'mobile' ? 'mobile' : nextLayout === 'desktop' ? 'desktop' : layout;
       const prevJournal = model && model.journal;
@@ -195,7 +226,7 @@ export function mountLog(root, o = {}) {
       if (l !== layout) { layout = l; render(); return; }
       if (nj === prevJournal) return;
       // Desktop keeps the tab buttons (and their focus) and re-renders the rows only.
-      if (layout === 'desktop' && refs.list) { syncTab(); applyI18n(refs.list, i18n); return; }
+      if (layout === 'desktop' && refs.list) { syncTab(); syncCollapsed(); applyI18n(refs.list, i18n); return; }
       if (layout === 'mobile' && refs.logTile) { syncUnread(); return; }
       render();
     },

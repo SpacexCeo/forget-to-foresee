@@ -86,7 +86,15 @@ export function mountWorldHud(root, o) {
   // .wh-root clips (overflow hidden) but still scrolls programmatically: a focus() on a sheet that is translated off
   // screen, or on a control under the keyboard, would shift the whole HUD. The overlay never scrolls.
   wrap.addEventListener('scroll', () => { if (wrap.scrollTop) wrap.scrollTop = 0; if (wrap.scrollLeft) wrap.scrollLeft = 0; });
-  const bodyClass = (on) => { if (doc && doc.body && doc.body.classList) doc.body.classList.toggle('wh-mobile', on); };
+  // The compact desktop skin (compact.css, docs/ui-compact-hud.md): one-line status and quest pills, the Shell row
+  // under the status, a collapsed journal. ?hud=classic keeps the large mockup panels.
+  const classic = (() => { try { return new URLSearchParams(doc.defaultView.location.search).get('hud') === 'classic'; } catch { return false; } })();
+  if (!classic && doc && doc.head) { try { ensureWhStyle('compact', new URL('./compact.css', import.meta.url).href, doc); } catch { /* no DOM (tests) */ } }
+  const bodyClass = (on) => {
+    if (!doc || !doc.body || !doc.body.classList) return;
+    doc.body.classList.toggle('wh-mobile', on);
+    doc.body.classList.toggle('wh-compact', !on && !classic);
+  };
   bodyClass(layout === 'mobile');
 
   let api;

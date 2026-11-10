@@ -1,0 +1,157 @@
+/* World HUD — the compact desktop skin (docs/ui-compact-hud.md, owner mockup of 10.11.2026).
+   body.wh-compact is set by index.js on the desktop layout (?hud=classic keeps the large panels). The same DOM as
+   the mockup-sized HUD, restyled: one-line status and quest pills, the Shell row under the status, the journal as
+   a row of tabs that opens on a click, a slimmer hotbar and dialogue line. Lengths are "u" like the other
+   packages: calc(N * var(--wh-px)). */
+
+body.wh-compact { --whc-top: calc(16 * var(--wh-px, 1px)); --whc-side: calc(20 * var(--wh-px, 1px)); --whc-pill: calc(42 * var(--wh-px, 1px)); }
+
+/* ---------------------------------------------------------------- status: "Trial 1 of 17 · Explore · Silk 63" */
+body.wh-compact .wh-root .wh-trial {
+  left: var(--whc-side); top: var(--whc-top);
+  display: flex; align-items: center;
+  width: max-content; min-width: 0; max-width: 38vw; height: var(--whc-pill);
+  padding: 0 calc(20 * var(--wh-px)) 0 calc(16 * var(--wh-px));
+  border-radius: 999px;
+}
+body.wh-compact .wh-root .wh-trial__head { height: auto; flex: none; }
+body.wh-compact .wh-root .wh-trial__rule,
+body.wh-compact .wh-root .wh-trial__progress,
+body.wh-compact .wh-root .wh-trial__ricon { display: none; }
+body.wh-compact .wh-root .wh-trial__row { height: auto; gap: 0; flex: none; }
+body.wh-compact .wh-root .wh-trial__row::before { content: '·'; margin: 0 calc(11 * var(--wh-px)); color: var(--wh-gold, #e4c272); opacity: .8; }
+/* the phase needs no label: "Explore" says it */
+body.wh-compact .wh-root .wh-trial__rule--a + .wh-trial__row .wh-trial__k { display: none; }
+body.wh-compact .wh-root .wh-trial__k::after { content: none; }
+body.wh-compact .wh-root .wh-trial__v { color: var(--wh-gold-bright, #fbe6a6); }
+body.wh-compact .wh-root .wh-trial__rule--a + .wh-trial__row .wh-trial__v { color: var(--wh-text, #faf7ee); }
+
+/* ---------------------------------------------------------------- quest: key | title · hint */
+body.wh-compact .wh-root .wh-quest {
+  top: var(--whc-top); left: 50%; right: auto; transform: translateX(-50%);
+  display: flex; align-items: center;
+  width: max-content; max-width: min(44vw, calc(820 * var(--wh-px))); height: calc(46 * var(--wh-px)); min-height: 0;
+  padding: 0 calc(26 * var(--wh-px)) 0 calc(18 * var(--wh-px));
+  border-radius: 999px;
+}
+body.wh-compact .wh-root .wh-quest .wh-frame__corner,
+body.wh-compact .wh-root .wh-quest__art,
+body.wh-compact .wh-root .wh-quest__tag { display: none; }
+body.wh-compact .wh-root .wh-quest__key {
+  position: static; flex: none; width: calc(26 * var(--wh-px)); height: calc(26 * var(--wh-px)); margin: 0;
+  padding-right: calc(14 * var(--wh-px)); margin-right: calc(16 * var(--wh-px)); box-sizing: content-box;
+  border-right: 1px solid var(--wh-hairline, rgba(226,214,186,.34));
+}
+body.wh-compact .wh-root .wh-quest .wh-quest__body {
+  position: static; inset: auto; display: flex; flex-direction: row; align-items: baseline; gap: 0; min-width: 0; padding: 0; margin: 0;
+  white-space: nowrap;
+}
+body.wh-compact .wh-root .wh-quest__title { flex: none; margin: 0; font-size: calc(22 * var(--wh-px)); line-height: 1.2; }
+body.wh-compact .wh-root .wh-quest__text { min-width: 0; margin: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; }
+body.wh-compact .wh-root .wh-quest__line { display: none; margin: 0; }
+body.wh-compact .wh-root .wh-quest__line:first-child { display: inline; }
+body.wh-compact .wh-root .wh-quest__line:first-child::before { content: '·'; margin: 0 calc(14 * var(--wh-px)); color: var(--wh-gold, #e4c272); }
+
+/* ---------------------------------------------------------------- toast: one line, the full text on hover or focus */
+body.wh-compact .wh-root .wh-toast {
+  top: var(--whc-top); right: var(--whc-side);
+  max-width: min(26vw, calc(460 * var(--wh-px))); min-height: var(--whc-pill); border-radius: calc(21 * var(--wh-px));
+  pointer-events: auto;
+}
+body.wh-compact .wh-root .wh-toast__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.wh-compact .wh-root .wh-toast:hover .wh-toast__text,
+body.wh-compact .wh-root .wh-toast:focus-within .wh-toast__text { white-space: normal; }
+
+/* ---------------------------------------------------------------- the Shell row under the status */
+body.wh-compact .hub-host .hub-dock {
+  left: var(--whc-side); right: auto; bottom: auto;
+  top: calc(var(--whc-top) + var(--whc-pill) + 8 * var(--wh-px, 1px));
+  width: auto; padding: 5px 6px; border-radius: 999px;
+  display: flex; align-items: center; gap: 8px;
+}
+body.wh-compact .hub-host .hub-dock .hub-head,
+body.wh-compact .hub-host .hub-dock h3,
+body.wh-compact .hub-host .hub-dock p { display: none; }
+body.wh-compact .hub-host .hub-dock .hub-shells { display: flex; gap: 6px; margin: 0; }
+body.wh-compact .hub-host .hub-dock .hub-shells button {
+  display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px;
+  width: auto; min-width: 46px; height: 32px; min-height: 0; padding: 0 10px; border-radius: 999px;
+  font-size: 15px; line-height: 1;
+}
+body.wh-compact .hub-host .hub-dock .hub-shells button small { display: none; }
+body.wh-compact .hub-host .hub-dock .hub-shells button.hub-wait::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--wh-gold-bright, #fbe6a6); }
+body.wh-compact .hub-host .hub-dock .hub-row { margin: 0; padding-left: 8px; border-left: 1px solid rgba(226,214,186,.34); }
+body.wh-compact .hub-host .hub-dock .hub-row button { height: 32px; min-height: 0; padding: 0 12px 0 8px; border-radius: 999px; font-size: 13.5px; gap: 8px; }
+body.wh-compact .hub-host .hub-dock .hub-pass-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+body.wh-compact .hub-host .hub-dock .hub-pass-short { display: inline; }
+/* 44 px hit zones behind the 32 px drawing */
+body.wh-compact .hub-host .hub-dock button { position: relative; }
+body.wh-compact .hub-host .hub-dock button::before { content: ''; position: absolute; inset: -6px -2px; }
+body.wh-compact.hub-dock-on .wh-root .wh-signs { max-height: calc(100% - 180 * var(--wh-px, 1px)); }
+
+/* the recap and Chronicle buttons: small, on a third row under the Shells */
+body.wh-compact .a11y-recap-btn, body.wh-compact .ch-fab.wh-root {
+  top: calc(var(--whc-top) + var(--whc-pill) + 8 * var(--wh-px, 1px) + 42px + 10px) !important; bottom: auto !important; right: auto !important;
+  width: 34px !important; height: 34px !important; min-width: 0 !important; min-height: 0 !important; font-size: 15px !important; line-height: 1 !important;
+}
+body.wh-compact .a11y-recap-btn { left: var(--whc-side) !important; }
+body.wh-compact .ch-fab.wh-root { left: calc(var(--whc-side) + 42px) !important; }
+body.wh-compact .ch-fab.wh-root svg { width: 16px; height: 16px; }
+body.wh-compact:not(.hub-dock-on) .a11y-recap-btn, body.wh-compact:not(.hub-dock-on) .ch-fab.wh-root { top: calc(var(--whc-top) + var(--whc-pill) + 8 * var(--wh-px, 1px)) !important; }
+
+/* ---------------------------------------------------------------- journal: a row of tabs; the body opens above it */
+body.wh-compact .wh-root .wh-log {
+  left: var(--whc-side); bottom: var(--whc-side); top: auto; width: auto; height: auto;
+  display: flex; flex-direction: column-reverse; gap: calc(8 * var(--wh-px));
+}
+body.wh-compact .wh-root .wh-log__tabs {
+  position: static; align-self: flex-start; width: auto; height: var(--whc-pill); padding: 0 calc(6 * var(--wh-px)); margin: 0;
+  display: flex; align-items: center;
+  border: 1px solid var(--wh-hairline, rgba(226,214,186,.34)); border-radius: 999px;
+  background: var(--wh-panel-bg, rgba(16,26,27,.92)); box-shadow: 0 4px 18px rgba(0,0,0,.35);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+body.wh-compact .wh-root .wh-log__tab {
+  width: auto; height: calc(32 * var(--wh-px)); margin: 0; padding: 0 calc(14 * var(--wh-px)); gap: calc(8 * var(--wh-px));
+  border: 0; border-radius: 999px; background: none; box-shadow: none; clip-path: none;
+}
+body.wh-compact .wh-root .wh-log__tab::before, body.wh-compact .wh-root .wh-log__tab::after { content: none; }
+body.wh-compact .wh-root .wh-log__tab-icon { width: calc(20 * var(--wh-px)); height: calc(20 * var(--wh-px)); }
+body.wh-compact .wh-root .wh-log__tab + .wh-log__tab { border-left: 1px solid rgba(226,214,186,.22); border-radius: 0 999px 999px 0; }
+body.wh-compact .wh-root .wh-log:not(.wh-log--collapsed) .wh-log__tab--active { background: var(--wh-chip-active-bg, #5b4215); border-radius: 999px; border-left-color: transparent; }
+body.wh-compact .wh-root .wh-log__count { color: var(--wh-gold-bright, #fbe6a6); font-variant-numeric: tabular-nums; }
+body.wh-compact .wh-root .wh-log__count[hidden] { display: none; }
+body.wh-compact .wh-root .wh-log__body { position: static; inset: auto; margin: 0; width: calc(400 * var(--wh-px)); height: calc(230 * var(--wh-px)); border-radius: calc(16 * var(--wh-px)); }
+body.wh-compact .wh-root .wh-log__body[hidden] { display: none; }
+
+/* ---------------------------------------------------------------- hotbar and dialogue: slimmer */
+body.wh-compact .wh-root .wh-hotbar { right: var(--whc-side); bottom: var(--whc-side); height: calc(48 * var(--wh-px)); padding: 0 calc(6 * var(--wh-px)); border-radius: 999px; align-items: center; }
+body.wh-compact .wh-root .wh-hotbar__btn { height: calc(36 * var(--wh-px)); border-radius: 999px; background: none; border-color: transparent; box-shadow: none; }
+body.wh-compact .wh-root .wh-hotbar__btn + .wh-hotbar__btn { border-left: 1px solid rgba(226,214,186,.22); border-radius: 0; }
+body.wh-compact .wh-root .wh-hotbar__btn:hover, body.wh-compact .wh-root .wh-hotbar__btn:focus-visible { background: rgba(228,194,114,.12); border-radius: 999px; }
+body.wh-compact .wh-root .wh-dialogue__line { border-radius: 999px; }
+
+/* ---------------------------------------------------------------- the "Local demo" label: one quiet line, bottom centre */
+body.wh-compact .pl-badge {
+  left: 50%; right: auto; bottom: 4px; transform: translateX(-50%); width: auto; max-width: 40vw;
+  padding: 0 8px; background: none; border: 0; box-shadow: none;
+  font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+
+/* the recap button is round like the Chronicle one */
+body.wh-compact .a11y-recap-btn { border-radius: 50% !important; padding: 0 !important; }
+
+/* inside a Shell: the reading card starts right under the top row and may use the height the large panels took */
+body.wh-compact .hub-host .hub-read { top: calc(var(--whc-top) + 46 * var(--wh-px, 1px) + 12px); max-height: calc(100vh - var(--whc-top) - 46 * var(--wh-px, 1px) - 12px - 96px); }
+
+/* ---------------------------------------------------------------- narrower desktops: the quest moves right of the status, the toast under it */
+@media (max-width: 1320px) {
+  body.wh-compact .wh-root .wh-quest { left: auto; right: var(--whc-side); transform: none; max-width: calc(100vw - 2 * var(--whc-side) - 330px); }
+  body.wh-compact .wh-root .wh-toast { top: calc(var(--whc-top) + 46 * var(--wh-px) + 8px); max-width: min(46vw, 420px); }
+  body.wh-compact .hub-host .hub-read { top: calc(var(--whc-top) + 46 * var(--wh-px, 1px) + 12px); }
+}
+@media (max-width: 900px) {
+  body.wh-compact .wh-root .wh-quest__text { display: none; }
+  body.wh-compact .wh-root .wh-hotbar__label { display: none; }
+  body.wh-compact .wh-root .wh-hotbar__btn:last-child .wh-hotbar__label { display: none; }
+}
