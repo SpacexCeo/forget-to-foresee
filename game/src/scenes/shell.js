@@ -20,6 +20,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { CollisionWorld } from '../physics/collision.js';
 import { PropInstance, fetchGltf } from '../render/assets.js';
+import { warmModel } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { drawLogogram } from '../play/logogram.js';
 import { GuestsStage, QUALITY, SLOTS, DRAWING_SLOT, resolveClip, inkPenPoint, guardFrame } from '../play/guests-stage.js';
@@ -227,6 +228,7 @@ export function createShellScene({ scene, streamer }) {
     try {
       const { gltf } = await fetchGltf('guest');
       upgradeAssetMaterials('guest', gltf.scene);
+      await warmModel(gltf.scene);
       guestTemplate = gltf.scene;
       guestClips = gltf.animations || [];
       guestTemplate.updateMatrixWorld(true);

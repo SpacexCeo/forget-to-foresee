@@ -22,6 +22,7 @@ import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible } from './render/streaming.js';
+import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { CAMPS } from './scenes/layout.js';
 
 /**
@@ -78,6 +79,14 @@ const lookdev = new LookDev({
   tier: params.get('tier') || detectedTier, autoTier: !params.has('tier'), preset: params.get('tod') || undefined,
   reducedMotion: params.get('motion') === 'reduce' || systemReduced,
 });
+// Streamed models warm up on the GPU before they replace their greybox (render/warmup.js, docs/smoothness.md):
+// textures a few per frame, shader programs compiled in parallel. ?warm=off restores the old one-frame swap (QA).
+const warmup = new GpuWarmup({ renderer, camera, scene, target: () => lookdev.post.target, frameBytes: (mobileDevice ? 8 : 24) * 1024 * 1024 });
+if (params.get('warm') !== 'off') { streamer.warm = (template) => warmup.warm(template); setActiveWarmup(warmup); }
+// The island's own programs (sky, clouds, grass, greyboxes) compile in parallel too, while the loading screen or
+// the lobby is up, so the first frame is not one long shader build. Rendering starts when they are ready.
+let sceneReady = params.get('warm') === 'off';
+if (!sceneReady) warmup.compile(scene).then(() => { sceneReady = true; });
 // ---- end of render setup ----
 // Shells between the camera and Iris dither down instead of hiding her (visual only).
 for (const s of shells) {
@@ -317,6 +326,7 @@ function frame() {
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
+  warmup.update();
   updateIrisStandIn();
   lookdev.update(dt, focus, rig.actualDist);
   // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
@@ -336,8 +346,9 @@ function frame() {
   promptEl.hidden = !promptEl.innerHTML || !!inspecting;
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
-  if (play || !(boot.lobbyOpen && boot.lobbyOpen())) lookdev.render(); // the lobby covers the canvas: no GPU work behind it
-  if (!firstFrameDone) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
+  const drawn = sceneReady && (play || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
+  if (drawn) lookdev.render();
+  if (!firstFrameDone && (drawn || sceneReady)) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
   hud.frame(dt);
   hud.update(dt, { info: renderer.info, physics, streaming: streamer.stats(), events: streamer.events, camera: rig, lookdev: lookdev.stats() });
@@ -347,7 +358,7 @@ function frame() {
 
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
-  scene, world, streamer, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier,
+  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier,
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
 };
 requestAnimationFrame(frame);

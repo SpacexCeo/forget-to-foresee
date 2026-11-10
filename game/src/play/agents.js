@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { fetchGltf, prefetchGltf } from '../render/assets.js';
+import { warmModel } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
 import { CLAN_ASSET, CLAN_ORDER, ONE_SHOT_CLIPS, REACTION_SECONDS, TEMPERAMENT, clanCue, resolveClip } from './behaviour.js';
@@ -254,6 +255,7 @@ class Agent {
         if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false;
         if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
       });
+      await warmModel(model); // textures and shaders reach the GPU before the stand-in is swapped (docs/smoothness.md)
       this.body.remove(this.stand);
       this.body.add(model);
       this.model = model;
@@ -349,6 +351,7 @@ export class ClanAgents {
       flatHair(model);   // owner 09.11: flat brown hair, no shading
       fabricSheen(model); // owner 09.11: a soft sheen on the knit
       model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = true; });
+      await warmModel(model);
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
       const mixer = gltf.animations.length ? new THREE.AnimationMixer(model) : null;

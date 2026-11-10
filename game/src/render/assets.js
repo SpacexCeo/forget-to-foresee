@@ -382,6 +382,8 @@ export class AssetStreamer {
     this.unwanted = new Map();
     this.priority = new Map();
     this.events = [];
+    /** Optional GPU warm-up (render/warmup.js): `(template) => Promise`, awaited between download and swap. */
+    this.warm = null;
   }
 
   add(instance) {
@@ -453,11 +455,14 @@ export class AssetStreamer {
 
   startLoad(name) {
     this.log('loading ' + name);
-    this.library.load(name).then((e) => {
+    this.library.load(name).then(async (e) => {
       this.lru.touch(name, e.bytes);
+      this.log(`loaded ${name} (${(e.bytes / 1048576).toFixed(1)} MB, ${Math.round(e.loadMs)} ms)`);
+      // Textures and shader programs go to the GPU before the swap, spread over frames (no frozen frame on pop-in).
+      if (this.warm) { e.state = 'warming'; e.progress = 1; try { await this.warm(e.template); } catch { /* attach anyway */ } }
+      if (!e.template) return;
       if ((this.priority.get(name) ?? -1) >= 0) this.attach(name);
       else { e.state = 'cold'; this.lru.cool(name); }
-      this.log(`loaded ${name} (${(e.bytes / 1048576).toFixed(1)} MB, ${Math.round(e.loadMs)} ms)`);
     }).catch(() => { this.log('failed ' + name); });
   }
 
@@ -478,7 +483,7 @@ export class AssetStreamer {
   }
 
   stats() {
-    const s = { absent: 0, idle: 0, loading: 0, loaded: 0, cold: 0, failed: 0, cachedBytes: this.lru.bytes, list: [] };
+    const s = { absent: 0, idle: 0, loading: 0, warming: 0, loaded: 0, cold: 0, failed: 0, cachedBytes: this.lru.bytes, list: [] };
     const names = [...this.byAsset.keys()];
     for (const name of [...names]) { const i = this.library.inspectName(name); if (i) names.push(i); }
     for (const name of names) {

@@ -37,6 +37,21 @@ export function byteFactor(bytes) {
   return mb <= 4 ? 1 : Math.sqrt(4 / mb);
 }
 
+/**
+ * How many queued GPU uploads fit in this frame (render/warmup.js). Takes items in order while they fit the byte
+ * budget; with `atLeastOne` the first item is always taken, so one texture larger than the whole budget still moves.
+ * @param {number[]} sizes bytes of the queued items, in order
+ * @param {number} budget bytes left this frame
+ */
+export function takeFrameBatch(sizes, budget, { atLeastOne = true } = {}) {
+  let n = 0, left = budget;
+  for (const size of sizes) {
+    if (size > left && !(atLeastOne && n === 0)) break;
+    n++; left -= size;
+  }
+  return n;
+}
+
 /** An asset's priority is the best priority among its instances. */
 export function assetPriority(instancePriorities) {
   let best = -1;
@@ -47,7 +62,8 @@ export function assetPriority(instancePriorities) {
 /**
  * Plans one streaming tick.
  * @param {Array<{name:string, state:string, priority:number, unwantedFor:number}>} assets
- *   state: 'absent' (no file), 'idle' (file exists, not loaded), 'queued', 'loading', 'loaded'
+ *   state: 'absent' (no file), 'idle' (file exists, not loaded), 'queued', 'loading', 'warming' (downloaded,
+ *   textures and shaders going to the GPU ahead of the swap; holds no download slot), 'loaded'
  *   (template ready, instances real), 'cold' (template cached, instances greybox), 'failed'
  * @returns {{load:string[], attach:string[], release:string[]}}
  *   load: start downloading; attach: cached template becomes visible again; release: show greybox
