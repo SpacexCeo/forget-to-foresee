@@ -4,6 +4,8 @@
 //           Step onto the island; expects one lobby, then the lobby gone, body.in-world, window.__ftf.play and
 //           no UI-preview controls (the preview entry once leaked into the shared ui chunk and mounted its own lobby).
 //   direct: /?play=direct&mode=walk&demo=judge; expects the loading screen gone and window.__ftf.play.
+//   city:   / (no season named) → the same lobby steps; expects Evermind (window.__ftf.city, body.in-city, no play layer
+//           yet), then T → Enter the tournament; expects window.__ftf.play on the island and the city hidden.
 // Exits 1 on any failure or console error. Under SwiftShader the game clock runs at about a third of wall time.
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
@@ -14,7 +16,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright/index.js'); } })();
 const GAME = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const port = Number(process.argv[2]) || 4196;
-const NOISE = /GPU stall due to ReadPixels/;
+const NOISE = /GPU stall due to ReadPixels|status of 429|api\.coingecko\.com/; // a public price source refusing a request is the feed's fallback case, not a boot failure
 const STEPS = ['Play as guest', 'Skip tutorial', 'Begin', 'Step onto the island'];
 
 const server = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: GAME, stdio: 'ignore' });
@@ -66,6 +68,23 @@ await run('direct', async (page) => {
   await page.waitForFunction(() => window.__ftf && window.__ftf.play && !document.getElementById('boot'), null, { timeout: 180000 });
   const s = await snapshot(page);
   return { ok: s.play && s.inWorld && !s.boot && s.lobbies === 0 && !s.previewControls, ...s };
+});
+
+await run('city', async (page) => {
+  await page.goto(`http://localhost:${port}/`, { waitUntil: 'commit' });
+  await page.waitForSelector('#ftf-enter', { timeout: 60000 });
+  await page.click('#ftf-enter', { timeout: 15000 });
+  for (const name of STEPS) await page.getByRole('button', { name, exact: true }).first().click({ timeout: 30000 });
+  await page.waitForFunction(() => window.__ftf && window.__ftf.city && document.body.classList.contains('in-city'), null, { timeout: 180000 });
+  await page.waitForTimeout(1500);
+  const inCity = await page.evaluate(() => ({ lobbies: document.querySelectorAll('.ftf-lobby').length, play: !!window.__ftf.play, zone: window.__ftf.city.zone, hud: !!document.querySelector('.city-status'), cityVisible: window.__ftf.scene.getObjectByName('city_scene').visible }));
+  await page.keyboard.press('KeyT');
+  await page.getByRole('button', { name: 'Enter the tournament', exact: true }).click({ timeout: 15000 });
+  await page.waitForFunction(() => window.__ftf.play && !document.body.classList.contains('in-city'), null, { timeout: 180000 });
+  await page.waitForTimeout(1500);
+  const inSeason = await page.evaluate(() => ({ zone: window.__ftf.play.zone, cityVisible: window.__ftf.scene.getObjectByName('city_scene').visible, intro: window.__ftf.city.city.data.intro }));
+  const ok = inCity.lobbies === 0 && !inCity.play && inCity.zone === 'city' && inCity.hud && inCity.cityVisible && inSeason.zone === 'island' && !inSeason.cityVisible && inSeason.intro.includes('gate');
+  return { ok, inCity, inSeason };
 });
 
 console.log(JSON.stringify(out, null, 1));

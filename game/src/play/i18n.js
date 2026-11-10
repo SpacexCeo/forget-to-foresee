@@ -8,12 +8,13 @@ import playRu from './locales/ru.js';
 import playUk from './locales/uk.js';
 import playIt from './locales/it.js';
 import playZh from './locales/zh.js';
+import { CITY_MESSAGES } from '../city/locales/index.js';
 
 const { MESSAGES, createI18n, BASE_LOCALE, resolveArg } = uiI18n;
 
 export const PLAY_MESSAGES = { en: playEn, ru: playRu, uk: playUk, it: playIt, zh: playZh };
 export const MERGED_MESSAGES = Object.fromEntries(Object.entries(MESSAGES).map(([locale, messages]) =>
-  [locale, { ...playEn, ...messages, ...(PLAY_MESSAGES[locale] || {}) }]));
+  [locale, { ...playEn, ...CITY_MESSAGES.en, ...messages, ...(PLAY_MESSAGES[locale] || {}), ...(CITY_MESSAGES[locale] || {}) }]));
 
 /** English unless `locale` is given (the player's saved choice or `?lang=`): the browser language is not consulted. */
 export function createPlayI18n(locale, { onMissing } = {}) {

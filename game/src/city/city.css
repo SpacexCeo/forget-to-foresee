@@ -1,0 +1,138 @@
+/* Evermind city UI (src/city/ui.js). Same visual language as the world HUD: dark glass surfaces, a thin
+   warm frame, serif titles, sans body copy, gold for the player's decisions. Colour never carries a state
+   alone: rising/falling prices also carry ▲/▼ and a sign. */
+.city-ui {
+  --c-font: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif;
+  --c-body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --c-bg: linear-gradient(180deg, rgba(11, 21, 23, .93) 0%, rgba(24, 34, 34, .93) 55%, rgba(36, 44, 41, .93) 100%);
+  --c-frame: rgba(232, 214, 172, .55);
+  --c-frame-soft: rgba(196, 186, 156, .28);
+  --c-gold: #e4c272; --c-gold-text: #f6df9b; --c-text: #ece6d4; --c-dim: #a9ad9f;
+  --c-up: #8fd3ff; --c-down: #ff8c6b;
+  position: absolute; inset: 0; pointer-events: none; color: var(--c-text);
+  font-family: var(--c-body); font-weight: 500; font-size: calc(15px * var(--ftf-ui-scale, 1)); line-height: 1.35;
+}
+.city-ui[hidden] { display: none; }
+.city-ui button { font: inherit; color: inherit; cursor: pointer; }
+.city-ui kbd { font-family: var(--c-font); font-size: .82em; padding: 1px 7px; border: 1px solid var(--c-frame); border-radius: 6px; background: rgba(42, 38, 30, .92); color: var(--c-gold-text); }
+.city-ui > * { pointer-events: auto; }
+.city-ui .is-up { color: var(--c-up); } .city-ui .is-down { color: var(--c-down); }
+.city-dim { color: var(--c-dim); }
+.city-silk { color: var(--c-gold-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---- status ---- */
+.city-status { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; border: 1px solid var(--c-frame-soft); border-radius: 14px; background: var(--c-bg); backdrop-filter: blur(10px); max-width: min(560px, calc(100vw - 24px)); }
+.city-status__name { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.city-status__name b { font-family: var(--c-font); font-weight: 400; font-size: 1.35em; letter-spacing: .04em; color: var(--c-gold-text); }
+.city-status__name span { color: var(--c-dim); font-size: .86em; font-variant-numeric: tabular-nums; }
+.city-status__row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.city-chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; min-height: 30px; border: 1px solid var(--c-frame-soft); border-radius: 999px; background: rgba(16, 28, 30, .82); font-size: .9em; font-variant-numeric: tabular-nums; }
+.city-chip--near b { font-weight: 600; }
+.city-chip--near.is-live b { color: var(--c-gold-text); }
+.city-chip--near.is-offline, .city-chip--near.is-stale { color: var(--c-dim); }
+.city-chip--near:hover { border-color: var(--c-frame); }
+.city-meter { display: inline-block; width: 64px; height: 6px; border-radius: 3px; background: #242d2a; overflow: hidden; }
+.city-meter > i { display: block; height: 100%; background: var(--c-gold); border-radius: 3px; transition: width .4s ease; }
+.city-chip--sat.is-fed .city-meter > i { background: var(--c-up); }
+.city-chip--sat.is-hungry { border-color: var(--c-down); } .city-chip--sat.is-hungry .city-meter > i { background: var(--c-down); }
+
+/* ---- quest tracker ---- */
+.city-quest { position: absolute; top: 108px; left: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 14px; max-width: min(420px, calc(100vw - 24px)); border: 1px solid var(--c-frame-soft); border-left: 3px solid var(--c-gold); border-radius: 10px; background: var(--c-bg); backdrop-filter: blur(10px); }
+.city-quest small { color: var(--c-dim); font-size: .8em; letter-spacing: .03em; }
+.city-quest b { font-weight: 600; }
+.city-quest:hover { border-color: var(--c-frame); border-left-color: var(--c-gold); }
+.city-local { position: absolute; left: 12px; bottom: 10px; max-width: 46vw; font-size: .76em; color: var(--c-dim); text-shadow: 0 1px 2px rgba(0, 0, 0, .7); pointer-events: none; }
+
+/* ---- prompt, hotbar, toasts ---- */
+.city-prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; min-height: 44px; border: 1px solid var(--c-gold); border-radius: 999px; background: rgba(14, 22, 22, .92); font-size: 1.05em; white-space: nowrap; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); animation: city-rise .2s ease-out; }
+.city-prompt[hidden] { display: none; }
+.city-prompt:hover { background: rgba(30, 36, 30, .96); }
+.city-bar { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.city-bar__btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--c-frame-soft); border-radius: 10px; background: rgba(10, 22, 23, .86); backdrop-filter: blur(8px); transition: border-color .12s, transform .12s; }
+.city-bar__btn:hover { border-color: var(--c-frame); } .city-bar__btn:active { transform: scale(.97); }
+.city-bar__btn--gold { border-color: var(--c-gold); color: var(--c-gold-text); }
+.city-toasts { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; z-index: 3; }
+.city-toast { padding: 8px 16px; border: 1px solid var(--c-frame); border-radius: 999px; background: rgba(14, 22, 22, .94); color: var(--c-gold-text); animation: city-rise .2s ease-out; transition: opacity .4s; max-width: 86vw; text-align: center; }
+.city-toast--bad { color: var(--c-down); border-color: var(--c-down); }
+.city-toast--out { opacity: 0; }
+
+/* ---- panels ---- */
+.city-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .35); }
+.city-scrim[hidden] { display: none; }
+.city-panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100vw - 24px)); max-height: min(78vh, calc(var(--vvh, 100vh) - 32px)); overflow-y: auto; padding: 18px 20px 20px; border: 1px solid var(--c-frame); border-radius: 14px; background: var(--c-bg); backdrop-filter: blur(12px); box-shadow: 0 18px 60px rgba(0, 0, 0, .5); animation: city-pop .2s cubic-bezier(.16, 1, .3, 1); }
+.city-panel[hidden] { display: none; }
+.city-panel[data-kind="exchange"] { width: min(700px, calc(100vw - 24px)); }
+.city-panel__head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--c-frame-soft); }
+.city-panel__head > div:first-child { flex: 1; min-width: 0; }
+.city-panel h2 { margin: 0; font-family: var(--c-font); font-weight: 400; font-size: 1.5em; color: var(--c-gold-text); letter-spacing: .02em; }
+.city-panel__head p { margin: 2px 0 0; color: var(--c-dim); font-size: .92em; }
+.city-panel__purse { padding-top: 6px; white-space: nowrap; }
+.city-panel h3 { margin: 16px 0 6px; font-family: var(--c-font); font-weight: 400; font-size: 1.08em; color: var(--c-text); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.city-x { width: 40px; height: 40px; border: 1px solid var(--c-frame-soft); border-radius: 10px; background: transparent; font-size: 1.4em; line-height: 1; }
+.city-x:hover { border-color: var(--c-frame); }
+.city-meta { margin: 0 0 10px; color: var(--c-dim); font-size: .9em; font-variant-numeric: tabular-nums; }
+.city-say { margin: 8px 0 12px; padding: 12px 14px; border-left: 3px solid var(--c-gold); background: rgba(8, 18, 21, .55); border-radius: 0 10px 10px 0; font-size: 1.05em; }
+.city-note { margin: -4px 0 12px; color: var(--c-gold-text); font-size: .92em; }
+.city-help { margin: 8px 0; }
+.city-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.city-row > div { display: flex; flex-direction: column; min-width: 0; }
+.city-row small { color: var(--c-dim); font-size: .86em; }
+.city-step { display: flex; align-items: center; gap: 10px; padding: 5px 0; color: var(--c-dim); }
+.city-step > span:nth-child(2) { flex: 1; }
+.city-step i { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--c-frame-soft); border-radius: 50%; font-style: normal; font-size: .82em; }
+.city-step.is-done { text-decoration: line-through; opacity: .7; } .city-step.is-done i { color: var(--c-up); text-decoration: none; }
+.city-step.is-now { color: var(--c-text); } .city-step.is-now i { border-color: var(--c-gold); color: var(--c-gold-text); }
+.city-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.city-btn { min-height: 40px; padding: 8px 16px; border: 1px solid var(--c-frame); border-radius: 10px; background: rgba(10, 22, 23, .78); transition: background .12s, transform .12s, border-color .12s; }
+.city-btn:hover { background: rgba(30, 44, 44, .9); } .city-btn:active { transform: scale(.97); }
+.city-btn:focus-visible, .city-bar__btn:focus-visible, .city-x:focus-visible, .city-quest:focus-visible, .city-prompt:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 2px; }
+.city-btn--small { min-height: 34px; padding: 5px 12px; font-size: .92em; white-space: nowrap; }
+.city-btn--ghost { border-color: var(--c-frame-soft); background: transparent; }
+.city-btn--gold { border-color: var(--c-gold); background: linear-gradient(180deg, #6f501b 0%, #5b4215 55%, #4a3410 100%); color: #fff3cf; }
+.city-btn--gold:hover { background: linear-gradient(180deg, #80601f 0%, #6a4d18 55%, #563d12 100%); }
+.city-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.city-table th { text-align: left; font-weight: 500; font-size: .8em; color: var(--c-dim); padding: 4px 6px; border-bottom: 1px solid var(--c-frame-soft); letter-spacing: .03em; }
+.city-table td { padding: 6px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.city-td-name { font-weight: 600; } .city-td-name a { color: var(--c-gold-text); }
+.city-td-num { text-align: right; white-space: nowrap; } .city-table th:nth-child(n+2) { text-align: right; }
+.city-panel[data-kind="market"] .city-table th:nth-child(n+2), .city-panel[data-kind="market"] .city-table td:nth-child(n+2) { text-align: center; }
+.city-td-trend { white-space: nowrap; font-size: .9em; }
+.city-ex__big { display: flex; align-items: baseline; gap: 14px; margin: 2px 0 4px; }
+.city-ex__big b { font-family: var(--c-font); font-weight: 400; font-size: 2.2em; color: var(--c-gold-text); }
+.city-tag { font-family: var(--c-body); font-size: .72em; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--c-frame-soft); color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.city-tag.is-live { color: var(--c-up); border-color: var(--c-up); } .city-tag.is-offline { color: var(--c-down); border-color: var(--c-down); }
+.city-hearts { white-space: nowrap; letter-spacing: 2px; } .city-hearts i { font-style: normal; color: rgba(255, 255, 255, .18); } .city-hearts i.is-on { color: var(--c-gold); }
+
+/* ---- nameplates and the crossing veil ---- */
+.city-plate { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; padding: 4px 12px; border-radius: 10px; background: rgba(10, 18, 20, .78); border: 1px solid rgba(196, 186, 156, .35); pointer-events: none; white-space: nowrap; will-change: transform, opacity; color: #ece6d4; }
+.city-plate[hidden] { display: none; }
+.city-plate b { font-family: "Libre Caslon Text", "WH Cyrillic", Georgia, serif; font-weight: 400; font-size: 15px; color: #f6df9b; }
+.city-plate span { font: 500 11px "Source Sans 3", system-ui, sans-serif; color: #a9ad9f; }
+.city-cover { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: #0b1416; color: #f6df9b; font-family: var(--c-font); font-size: 1.5em; letter-spacing: .03em; opacity: 0; transition: opacity .4s ease; pointer-events: auto; }
+.city-ui--veil > *:not(.city-cover) { display: none !important; }
+.city-cover[hidden] { display: none; } .city-cover.is-on { opacity: 1; }
+
+/* ---- the way back, shown inside a season ---- */
+.city-return { position: fixed; z-index: 30; left: 50%; top: 12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 12px; padding: 8px 10px 8px 16px; border: 1px solid #e4c272; border-radius: 999px; background: rgba(14, 22, 22, .95); color: #f6df9b; font: 500 15px "Source Sans 3", system-ui, sans-serif; pointer-events: auto; box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
+.city-return button, .city-return-row button { min-height: 36px; padding: 6px 14px; border: 1px solid #e4c272; border-radius: 999px; background: linear-gradient(180deg, #6f501b, #4a3410); color: #fff3cf; font: inherit; cursor: pointer; }
+.city-return-row { margin: 14px 0 4px; display: flex; }
+
+@keyframes city-rise { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+@keyframes city-pop { from { opacity: 0; scale: .97; } to { opacity: 1; scale: 1; } }
+html[data-motion="reduce"] .city-prompt, html[data-motion="reduce"] .city-toast, html[data-motion="reduce"] .city-panel { animation: none; }
+
+/* ---- phones ---- */
+@media (max-width: 700px), (pointer: coarse) and (max-height: 500px) {
+  .city-status { top: 8px; left: 8px; padding: 8px 10px; gap: 4px; }
+  .city-status__name b { font-size: 1.1em; } .city-status__name span { font-size: .78em; }
+  .city-chip { min-height: 28px; padding: 3px 8px; font-size: .84em; } .city-meter { width: 40px; }
+  .city-quest { top: auto; bottom: 128px; left: 8px; right: 8px; max-width: none; }
+  .city-local { display: none; }
+  .city-prompt { bottom: 72px; font-size: 1em; }
+  .city-bar { left: 8px; right: 8px; bottom: 8px; flex-wrap: nowrap; justify-content: space-between; gap: 6px; }
+  .city-bar__btn { flex: 1; justify-content: center; padding: 6px 4px; min-height: 48px; font-size: .8em; text-align: center; }
+  .city-bar__btn kbd { display: none; }
+  .city-panel { top: auto; bottom: 0; left: 0; transform: none; width: 100vw; max-height: 82vh; border-radius: 16px 16px 0 0; padding: 14px 14px 18px; }
+  .city-btn { min-height: 44px; } .city-btn--small { min-height: 40px; }
+  .city-ui--modal .city-quest, .city-ui--modal .city-prompt { display: none; }
+}

@@ -29,9 +29,9 @@ export function chunkFor(id) {
   if (/\.css(\?|$)/.test(p)) return undefined; // stylesheets stay with their importer: a CSS import must not bind the entry to a chunk
   if (p.includes('/src/ui/loading.js') || p.includes('/src/ui/motion/') || p.includes('vite/preload-helper')) return 'boot'; // tiny, static with the entry
   if (p.includes('/node_modules/three/')) return 'three';
-  if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/') || p.includes('/src/play/logogram.js')) return 'client-core';
-  if (p.includes('/src/locales/') || p.includes('/src/play/locales/')) return 'locales';
-  if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/ui/world-hud/')) return 'play';
+  if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/') || p.includes('/src/play/logogram.js') || p.includes('/src/city/layout.js')) return 'client-core'; // the city scene reads its layout
+  if (p.includes('/src/locales/') || p.includes('/src/play/locales/') || p.includes('/src/city/locales/')) return 'locales';
+  if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/ui/world-hud/') || p.includes('/src/city/')) return 'play'; // the city layer reuses the agents' models and the HUD fonts
   if (p.includes('/src/ui/') || p.includes('/src/game/')) return 'ui';
   return undefined;
 }

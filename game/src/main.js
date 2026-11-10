@@ -60,7 +60,8 @@ ctxP.then(async (ctx) => {
       const tick = () => {
         const bytesOk = budget ? bytesGot >= budget.bytes * 0.98 : false;
         const waited = performance.now() - gateStart;
-        if ((firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal) || waited > 6000) resolve(); else setTimeout(tick, 100);
+        // the city is built in code: nothing to download before its first frame
+        if ((firstFrame && (w.startsInCity || bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal) || waited > 6000) resolve(); else setTimeout(tick, 100);
       };
       tick();
     });

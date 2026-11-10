@@ -23,7 +23,9 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
-import { CAMPS } from './scenes/layout.js';
+import { CAMPS, SPAWN } from './scenes/layout.js';
+import { createCityScene } from './scenes/city.js';
+import { CITY_CAMERA } from './city/layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -63,6 +65,12 @@ if (irisLoad.hasModel) prefetchGltf('agent_iris').then(() => { irisLoad.fetched 
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
+// Evermind, the open city (owner 10.11, scenes/city.js): the same scene far away with its own collision world.
+// The game lands there (the lobby's "Enter the world", phones); the season starts at its Shell Gate. Links that
+// name a season (?demo=judge, ?seed=, ?play=direct, #play, ?cinematic=) still open the season at once; ?start=city|season forces either.
+const cityScene = createCityScene({ scene, mobile: mobileDevice });
+const judge = params.get('demo') === 'judge';
+const startInCity = (params.get('start') || (judge || params.get('play') === 'direct' || params.has('seed') || params.has('cinematic') || location.hash === '#play' ? 'season' : 'city')) === 'city';
 // Light first (docs/smoothness.md): desktop shows the 2048-texture files first (about half the bytes), then swaps
 // in the full set, one model at a time, once everything in view is there. ?lite=off: full files at once (the old
 // order); ?lite=only: never upgrade. Save-Data and 2G/3G-class links keep the light set.
@@ -110,18 +118,56 @@ const toastEl = document.getElementById('toast');
 // ?demo=judge: a fixed v3 season whose first sign is visible on trial 1 and whose trial-3 Gift lands on
 // Shell II with a verified proof (docs/design/clarity-layers.md §6a item 8). Presentation only.
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
-const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, entering = null;
-async function enterWorld() {
+// The city layer (src/city/city.js). Iris stands in the city from the first frame, so the island's models are
+// not downloaded until she walks through the Shell Gate; the layer itself (residents, UI, prices) loads behind the lobby.
+let city = null, cityShown = false, cityLoad = null, enteringCity = null;
+/** The layer that owns input and the per-frame update: the season's play layer, else the city once it is shown. */
+const layer = () => play || (cityShown ? city : null);
+function leaveCityScene() {
+  cityScene.setActive(false);
+  player.world = world; rig.world = world; rig.saved = null; rig.dist = rig.defaultDist; rig.pitchOffset = 0;
+  player.teleport(SPAWN, 0);
+}
+if (startInCity) {
+  cityScene.setActive(true, true);
+  player.world = cityScene.world; rig.world = cityScene.world; rig.dist = CITY_CAMERA.dist; rig.pitchOffset = CITY_CAMERA.pitchOffset;
+  const sp = cityScene.spawn();
+  player.teleport(sp.pos, sp.heading);
+  cityLoad = import('./city/city.js').then((m) => {
+    city = m.startCity({ cityScene, rig, player, avatar, lookdev, camera, uiRoot, ctx, island: { world, spawn: SPAWN }, onSettings: () => controls.open(), onTournament: () => enterSeason() });
+    city.enter();
+    window.__ftf.city = city;
+  });
+}
+function enterCity() {
+  return (enteringCity ||= (async () => {
+    if (boot.closeLobby) boot.closeLobby();
+    document.body.classList.add('in-world');
+    try {
+      await cityLoad;
+      city.show(); cityShown = true;
+    } catch (e) {
+      console.error('[city] failed to start', e);
+      leaveCityScene();
+      await enterSeason();
+    }
+  })());
+}
+/** Lobby's first contact, or the direct path: the city when the game lands there, else the season. */
+function enterWorld() { return startInCity ? enterCity() : enterSeason(); }
+async function enterSeason() {
   if (entering) return entering;
   entering = (async () => {
   if (boot.closeLobby) boot.closeLobby();
   document.body.classList.add('in-world');
+  if (city && city.active) city.leave();
+  cityShown = false;
   try {
     // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
-    const [{ startPlay }, { mountAudioSettings }, { attachAllAges }] = await Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
+    const [{ startPlay }, { mountAudioSettings }, { attachAllAges }, { attachSeasonBridge }] = await Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js'), import('./city/city.js')]);
     play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
       seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
       resetHints: judge || params.get('hints') === 'reset',
@@ -133,6 +179,7 @@ async function enterWorld() {
     // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
     mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
     attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog }); // Task Q: recap, Simple mode, in-world Settings, narration (docs/accessibility.md)
+    attachSeasonBridge({ play, ctx, uiRoot, settingsDialog: controls.dialog }); // the city's purse for a finished season and the way back to Evermind
   } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
   })();
   return entering;
@@ -176,7 +223,8 @@ function nearestInteractable() {
 function stopSteering() {
   moveTarget = null;
   marker.visible = false;
-  if (play) play.cancelRoute();
+  const L = layer();
+  if (L) L.cancelRoute();
 }
 
 function clearWorldInput() {
@@ -189,7 +237,7 @@ document.addEventListener('visibilitychange', stopSteering);
 /** I: close inspection orbit of a hero object (E belongs to the play layer's context actions). */
 function handleInspect() {
   if (inspecting) { leaveInspect(); return; }
-  const it = play && play.zone === 'shell' ? null : nearestInteractable();
+  const it = !layer() || layer().zone !== 'island' ? null : nearestInteractable();
   if (!it || !it.inspect || !it.instance) return;
   clearWorldInput();
   inspecting = it;
@@ -205,24 +253,25 @@ function handleInput(dt) {
   if (input.hit('F3')) hud.toggle();
   const modal = document.querySelector('dialog[open]');
   if (modal) { navigateGamepadMenu(modal, pad); return false; }
-  if (!play) { navigateGamepadMenu(uiRoot, pad); return false; }
+  const L = layer();
+  if (!L) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (inspecting) leaveInspect();
-    else if (play.handleKey('Escape')) clearWorldInput();
-    else if (moveTarget || play.routeActive) stopSteering();
+    else if (L.handleKey('Escape')) clearWorldInput();
+    else if (moveTarget || L.routeActive) stopSteering();
     else controls.open();
     return false;
   }
   if (input.hit('KeyI') || pad.hit(PAD.inspect)) handleInspect();
   if (!inspecting) {
-    for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
-    if (play.ui.panel) {
-      navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
+    for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) L.handleKey(k);
+    if (L.ui.panel) {
+      navigateGamepadMenu(L.ui.panelEl || uiRoot.querySelector('.pl-panel'), pad);
       stopSteering();
       return false;
     }
-    if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
+    if (pad.hit(PAD.interact)) { L.handleKey('KeyE'); if (L.ui.panel) return false; }
   }
   if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
   const [lookX, lookY] = pad.look;
@@ -240,13 +289,13 @@ function handleInput(dt) {
       ndc.set((c.x / window.innerWidth) * 2 - 1, -(c.y / window.innerHeight) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
       const o = raycaster.ray.origin, d = raycaster.ray.direction;
-      const hit = rayCast(world, [o.x, o.y, o.z], [d.x, d.y, d.z], 300, MASK_PLAYER);
+      const hit = rayCast(player.world, [o.x, o.y, o.z], [d.x, d.y, d.z], 300, MASK_PLAYER); // the world Iris stands in: the island, or the city
       if (hit && hit.normal[1] > 0.7) {
         const now = performance.now();
         const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
         lastTap = { t: now, x: c.x, y: c.y };
         moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
-        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; play.cancelRoute();
+        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; L.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
       }
@@ -262,7 +311,7 @@ function wishVector() {
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
-  const rw = play && play.routeWish();
+  const rw = layer() && layer().routeWish();
   if (rw) return rw;
   if (!moveTarget) return [0, 0];
   const w = steerTo(player.pos, moveTarget);
@@ -299,7 +348,8 @@ function frame() {
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
-  player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive));
+  const L = layer();
+  player.run = (input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(L && L.routeActive))) && (!L || L.canRun !== false); // a hungry Iris walks (city)
   for (let i = 0; live && i < f.steps; i++) {
     const wish = wishVector();
     if (wish[0] || wish[1]) moving = true;
@@ -343,17 +393,17 @@ function frame() {
   const speed = animSpeed;
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
-  if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
+  if (L) L.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
 
   controls.update(input.device, null, inspecting);
-  const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
+  const near = inspecting || !L || L.zone !== 'island' ? null : nearestInteractable();
   promptEl.innerHTML = inspecting
     ? `Inspecting <b>${inspecting.label}</b> · drag or arrows to orbit · wheel to zoom · <kbd>I</kbd>/<kbd>Esc</kbd> to leave`
     : near && near.inspect ? `<kbd>I</kbd> inspect <b>${near.label}</b> up close` : '';
   promptEl.hidden = !promptEl.innerHTML || !!inspecting;
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
-  const drawn = sceneReady && (play || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
+  const drawn = sceneReady && (L || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
   if (drawn) lookdev.render();
   if (!firstFrameDone && (drawn || sceneReady)) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
@@ -369,5 +419,5 @@ window.__ftf = {
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
 };
 requestAnimationFrame(frame);
-return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; } };
+return { enterWorld, enterSeason, startsInCity: startInCity, world3d, cityScene, player, rig, lookdev, renderer, streamer, get play() { return play; }, get city() { return city; } };
 }
