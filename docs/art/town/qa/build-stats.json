@@ -2,12 +2,13 @@
   "textured": true,
   "pieces": {
     "town_terrain": {
-      "raw_bytes": 12038744,
-      "triangles": 9889,
+      "raw_bytes": 13193364,
+      "triangles": 11905,
       "collision_triangles": 424,
       "materials": [
         "M_Town_Cloth",
         "M_Town_Cobble",
+        "M_Town_Foliage",
         "M_Town_Ground",
         "M_Town_Rock",
         "M_Town_Roof",
@@ -17,11 +18,12 @@
       "nodes": {
         "town_terrain_cloth": 20,
         "town_terrain_cobble": 1776,
+        "town_terrain_foliage": 1800,
         "town_terrain_ground": 3054,
         "town_terrain_rock": 330,
         "town_terrain_roof": 62,
         "town_terrain_stone": 4596,
-        "town_terrain_timber": 51,
+        "town_terrain_timber": 267,
         "town_terrain_col": 424
       },
       "sockets": [
@@ -47,9 +49,9 @@
       ]
     },
     "town_block_gate": {
-      "raw_bytes": 15913504,
-      "triangles": 33176,
-      "collision_triangles": 462,
+      "raw_bytes": 15957624,
+      "triangles": 33256,
+      "collision_triangles": 472,
       "materials": [
         "M_Town_Cloth",
         "M_Town_Foliage",
@@ -72,14 +74,18 @@
         "town_block_gate_plaster": 110,
         "town_block_gate_roof": 288,
         "town_block_gate_stone": 5468,
-        "town_block_gate_timber": 23466,
-        "town_block_gate_col": 462
+        "town_block_gate_timber": 23546,
+        "town_block_gate_col": 472
       },
       "sockets": [
         "socket_lamp_court_e",
         "socket_lamp_court_w",
         "socket_lamp_h01",
-        "socket_lamp_h04"
+        "socket_lamp_h04",
+        "socket_smoke_h01",
+        "socket_smoke_h02",
+        "socket_smoke_h03",
+        "socket_smoke_h05"
       ],
       "bounds_min": [
         -50.85,
@@ -89,14 +95,15 @@
       "bounds_max": [
         50.5,
         15.79,
-        32.77
+        33.85
       ]
     },
     "town_block_mid": {
-      "raw_bytes": 15783448,
-      "triangles": 31396,
-      "collision_triangles": 358,
+      "raw_bytes": 15884124,
+      "triangles": 32346,
+      "collision_triangles": 368,
       "materials": [
+        "M_Altar_Metal",
         "M_Town_Cloth",
         "M_Town_Foliage",
         "M_Town_Glass",
@@ -109,17 +116,18 @@
         "M_Town_Timber"
       ],
       "nodes": {
+        "town_block_mid_altar_metal": 324,
         "town_block_mid_cloth": 100,
-        "town_block_mid_foliage": 2120,
-        "town_block_mid_glass": 224,
-        "town_block_mid_glass_lit": 50,
+        "town_block_mid_foliage": 2360,
+        "town_block_mid_glass": 216,
+        "town_block_mid_glass_lit": 80,
         "town_block_mid_ground": 4,
         "town_block_mid_lamp": 72,
         "town_block_mid_plaster": 128,
         "town_block_mid_roof": 392,
-        "town_block_mid_stone": 5494,
-        "town_block_mid_timber": 22812,
-        "town_block_mid_col": 358
+        "town_block_mid_stone": 5528,
+        "town_block_mid_timber": 23142,
+        "town_block_mid_col": 368
       },
       "sockets": [
         "socket_lamp_h07",
@@ -127,10 +135,17 @@
         "socket_lamp_lane_0",
         "socket_lamp_lane_1",
         "socket_lamp_lane_2",
-        "socket_lamp_lane_3"
+        "socket_lamp_lane_3",
+        "socket_lamp_shop_cup",
+        "socket_smoke_h07",
+        "socket_smoke_h08",
+        "socket_smoke_h09",
+        "socket_smoke_h10",
+        "socket_smoke_h11",
+        "socket_smoke_h12"
       ],
       "bounds_min": [
-        -48.67,
+        -49.13,
         2.42,
         -1.36
       ],
@@ -141,10 +156,11 @@
       ]
     },
     "town_block_square": {
-      "raw_bytes": 15689428,
-      "triangles": 31044,
-      "collision_triangles": 404,
+      "raw_bytes": 15787272,
+      "triangles": 31912,
+      "collision_triangles": 414,
       "materials": [
+        "M_Altar_Metal",
         "M_Town_Cloth",
         "M_Town_Foliage",
         "M_Town_Glass",
@@ -154,32 +170,41 @@
         "M_Town_Plaster",
         "M_Town_Roof",
         "M_Town_Stone",
-        "M_Town_Timber"
+        "M_Town_Timber",
+        "M_Town_Water"
       ],
       "nodes": {
+        "town_block_square_altar_metal": 612,
         "town_block_square_cloth": 352,
         "town_block_square_foliage": 2500,
-        "town_block_square_glass": 256,
-        "town_block_square_glass_lit": 66,
+        "town_block_square_glass": 214,
+        "town_block_square_glass_lit": 150,
         "town_block_square_ground": 4,
         "town_block_square_lamp": 84,
         "town_block_square_plaster": 102,
         "town_block_square_roof": 292,
-        "town_block_square_stone": 5744,
-        "town_block_square_timber": 21644,
-        "town_block_square_col": 404
+        "town_block_square_stone": 5782,
+        "town_block_square_timber": 21808,
+        "town_block_square_water": 12,
+        "town_block_square_col": 414
       },
       "sockets": [
         "socket_lamp_h13",
         "socket_lamp_h16",
         "socket_lamp_h18",
+        "socket_lamp_shop_ring",
+        "socket_lamp_shop_shard",
         "socket_lamp_square_0",
         "socket_lamp_square_1",
         "socket_lamp_square_2",
-        "socket_lamp_square_3"
+        "socket_lamp_square_3",
+        "socket_smoke_h15",
+        "socket_smoke_h16",
+        "socket_smoke_h17",
+        "socket_smoke_h18"
       ],
       "bounds_min": [
-        -39.66,
+        -41.16,
         4.42,
         -29.28
       ],
@@ -190,9 +215,9 @@
       ]
     },
     "town_temple": {
-      "raw_bytes": 15230556,
-      "triangles": 30112,
-      "collision_triangles": 622,
+      "raw_bytes": 14799560,
+      "triangles": 26497,
+      "collision_triangles": 632,
       "materials": [
         "M_Altar_Core",
         "M_Altar_Metal",
@@ -210,25 +235,27 @@
       ],
       "nodes": {
         "town_temple_altar_core": 28,
-        "town_temple_altar_metal": 4012,
+        "town_temple_altar_metal": 3361,
         "town_temple_cloth": 28,
         "town_temple_foliage": 3640,
-        "town_temple_glass": 96,
-        "town_temple_glass_lit": 312,
+        "town_temple_glass": 102,
+        "town_temple_glass_lit": 306,
         "town_temple_ground": 4,
         "town_temple_lamp": 56,
-        "town_temple_pearl": 5620,
+        "town_temple_pearl": 2640,
         "town_temple_plaster": 118,
         "town_temple_roof": 232,
         "town_temple_stone": 6370,
-        "town_temple_timber": 9596,
-        "town_temple_col": 622
+        "town_temple_timber": 9612,
+        "town_temple_col": 632
       },
       "sockets": [
         "socket_lamp_temple_e",
         "socket_lamp_temple_w",
         "socket_lamp_terrace_e",
-        "socket_lamp_terrace_w"
+        "socket_lamp_terrace_w",
+        "socket_smoke_h19",
+        "socket_smoke_h20"
       ],
       "bounds_min": [
         -47.55,
@@ -237,23 +264,42 @@
       ],
       "bounds_max": [
         45.97,
-        25.64,
+        25.27,
         -30.7
       ]
     },
     "town_altar": {
-      "raw_bytes": 2242740,
-      "triangles": 7488,
+      "raw_bytes": 2129376,
+      "triangles": 6280,
       "collision_triangles": 276,
       "materials": [
         "M_Altar_Core",
+        "M_Altar_Eye",
+        "M_Altar_Glyph",
         "M_Altar_Metal",
         "M_Altar_Stone"
       ],
       "nodes": {
-        "town_altar_altar_core": 2044,
-        "town_altar_altar_metal": 2528,
-        "town_altar_altar_stone": 2916,
+        "town_altar_altar_core": 16,
+        "town_altar_altar_eye": 40,
+        "town_altar_altar_glyph_00": 164,
+        "town_altar_altar_glyph_01": 212,
+        "town_altar_altar_glyph_02": 22,
+        "town_altar_altar_glyph_03": 36,
+        "town_altar_altar_glyph_04": 164,
+        "town_altar_altar_glyph_05": 22,
+        "town_altar_altar_glyph_06": 36,
+        "town_altar_altar_glyph_07": 212,
+        "town_altar_altar_glyph_08": 22,
+        "town_altar_altar_glyph_09": 164,
+        "town_altar_altar_glyph_10": 212,
+        "town_altar_altar_glyph_11": 36,
+        "town_altar_altar_glyph_12": 212,
+        "town_altar_altar_glyph_13": 164,
+        "town_altar_altar_glyph_14": 36,
+        "town_altar_altar_glyph_15": 22,
+        "town_altar_altar_metal": 2522,
+        "town_altar_altar_stone": 1966,
         "town_altar_col": 276
       },
       "sockets": [
@@ -266,53 +312,53 @@
         "socket_lamp_altar_core"
       ],
       "bounds_min": [
-        -4.22,
+        -3.32,
         4.5,
-        -15.22
+        -14.32
       ],
       "bounds_max": [
-        4.22,
-        8.42,
-        -6.78
+        3.32,
+        8.36,
+        -7.68
       ]
     },
     "town_sky": {
-      "raw_bytes": 221716,
-      "triangles": 2720,
+      "raw_bytes": 262972,
+      "triangles": 3236,
       "collision_triangles": 0,
       "materials": [
         "M_Town_Sky"
       ],
       "nodes": {
-        "town_sky_sky": 2720
+        "town_sky_sky": 3236
       },
       "sockets": [],
       "bounds_min": [
-        71.47,
-        168.0,
-        -404.32
+        45.63,
+        160.0,
+        -547.37
       ],
       "bounds_max": [
-        246.71,
-        267.6,
-        -261.21
+        277.53,
+        277.05,
+        -228.61
       ]
     }
   },
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.3
+      "seconds": 1.83
     },
     {
       "stage": "objects",
-      "seconds": 1.36
+      "seconds": 1.95
     },
     {
       "stage": "export",
-      "seconds": 1.0
+      "seconds": 1.62
     }
   ],
-  "total_triangles": 145825,
-  "route_length_m": 39.93
+  "total_triangles": 145432,
+  "route_length_m": 40.04
 }

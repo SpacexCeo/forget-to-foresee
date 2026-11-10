@@ -25,15 +25,15 @@ export const TOWN_DATA = Object.freeze({
     ],
     "stand": [
       0.0,
-      5.04,
-      -8.95
+      4.98,
+      -9.04
     ],
     "focus": [
       0.0,
-      7.04,
+      6.98,
       -11.0
     ],
-    "radius": 5.6
+    "radius": 5.0
   },
   "route": [
     [
@@ -64,15 +64,15 @@ export const TOWN_DATA = Object.freeze({
     [
       0.0,
       4.5,
-      -6.8
+      -7.7
     ],
     [
       0.0,
-      5.04,
-      -8.95
+      4.98,
+      -9.04
     ]
   ],
-  "routeLength": 39.93,
+  "routeLength": 40.04,
   "pieces": [
     {
       "name": "town_terrain",
@@ -100,9 +100,9 @@ export const TOWN_DATA = Object.freeze({
       "center": [
         -0.17,
         7.85,
-        22.65
+        23.19
       ],
-      "radius": 52.3
+      "radius": 52.4
     },
     {
       "name": "town_block_mid",
@@ -113,11 +113,11 @@ export const TOWN_DATA = Object.freeze({
         4.0
       ],
       "center": [
-        1.7,
+        1.47,
         10.69,
         4.98
       ],
-      "radius": 51.4
+      "radius": 51.7
     },
     {
       "name": "town_block_square",
@@ -128,11 +128,11 @@ export const TOWN_DATA = Object.freeze({
         -14.0
       ],
       "center": [
-        4.13,
+        3.38,
         12.96,
         -15.83
       ],
-      "radius": 46.6
+      "radius": 47.3
     },
     {
       "name": "town_temple",
@@ -144,7 +144,7 @@ export const TOWN_DATA = Object.freeze({
       ],
       "center": [
         -0.79,
-        17.27,
+        17.09,
         -42.72
       ],
       "radius": 49.0
@@ -159,10 +159,10 @@ export const TOWN_DATA = Object.freeze({
       ],
       "center": [
         0.0,
-        6.46,
+        6.43,
         -11.0
       ],
-      "radius": 6.3
+      "radius": 5.1
     },
     {
       "name": "town_sky",
@@ -173,11 +173,11 @@ export const TOWN_DATA = Object.freeze({
         -300.0
       ],
       "center": [
-        159.09,
-        217.8,
-        -332.76
+        161.58,
+        218.52,
+        -387.99
       ],
-      "radius": 123.6
+      "radius": 205.6
     }
   ],
   "npc": {

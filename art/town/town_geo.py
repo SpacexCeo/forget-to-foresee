@@ -207,6 +207,34 @@ class TownBuilder:
             g.poly(pts, uvs, cols)
         bm.free()
 
+    def tube(self, mat, pts, radii, n=8, col=WHITE, cap_end=True):
+        """A smooth tube through local points with a radius per point (0 closes it to a tip)."""
+        P = [Vector(p) for p in pts]
+        rings = []
+        ref = Vector((0, 0, 1))
+        for i, p in enumerate(P):
+            d = (P[min(i + 1, len(P) - 1)] - P[max(i - 1, 0)]).normalized()
+            x = ref.cross(d)
+            if x.length < 1e-4:
+                x = Vector((1, 0, 0)).cross(d)
+            x.normalize()
+            y = d.cross(x)
+            rings.append([p + (x * math.cos(math.tau * k / n) + y * math.sin(math.tau * k / n)) * radii[i] for k in range(n)])
+        g = self.geo(mat)
+        ln = 0.0
+        for i in range(len(P) - 1):
+            seg = (P[i + 1] - P[i]).length
+            for k in range(n):
+                k2 = (k + 1) % n
+                quad = [rings[i][k], rings[i][k2], rings[i + 1][k2], rings[i + 1][k]]
+                if radii[i + 1] < 1e-5:
+                    quad = quad[:3]
+                uv = [(k / n, ln), ((k + 1) / n, ln), ((k + 1) / n, ln + seg), (k / n, ln + seg)][:len(quad)]
+                g.poly([bl(self.w(q)) for q in quad], uv, [col] * len(quad))
+            ln += seg
+        if cap_end and radii[0] > 1e-5:
+            self.poly(mat, list(reversed(rings[0])), col)
+
     # ------------------------------------------------------------ collision
     def colbm(self):
         if self.piece not in self.cols:

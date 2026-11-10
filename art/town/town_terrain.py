@@ -346,7 +346,11 @@ def cliff(tb):
         n = vnoise(x, ir * 7.0, 9.0, 31) - 0.5
         n2 = vnoise(x, ir * 3.0, 3.5, 32) - 0.5
         edge = 1.0 if ir > 0 else 0.0
-        hh = h * (0.8 + 0.5 * vnoise(x, 0.0, 22.0, 33)) if ir == len(rows) - 1 else h
+        # three broad ledges break the skyline (GPT review): a shoulder in the west, a saddle behind the
+        # shrine, a higher mass in the east
+        ledge = 0.72 if x < -34 else (0.56 if x < 8 else (1.0 if x < 40 else 0.8))
+        ledge += 0.10 * (vnoise(x, 5.0, 18.0, 35) - 0.5)
+        hh = h * ledge if ir >= 3 else h * (1.0 + (ledge - 1.0) * ir / 3.0)
         return (x + n2 * 1.2 * edge, y0 + hh + n2 * 0.8 * edge, P.Z_NORTH + back + n * 3.2 * edge - (2.0 if abs(x) > 54 else 0.0) * 0)
     for ix in range(len(xs) - 1):
         for ir in range(len(rows) - 1):
@@ -357,6 +361,16 @@ def cliff(tb):
         # top: grass running back and down
         a, b = pt(ix, len(rows) - 1), pt(ix + 1, len(rows) - 1)
         tb.quad("ground", a, b, (b[0], b[1] - 6.0, b[2] - 34.0), (a[0], a[1] - 6.0, a[2] - 34.0), tint(GRASS, 0.8))
+    # vegetation groups on the ledges: a few broad clumps, not noise everywhere
+    import random
+    rr = random.Random(77)
+    for (gx, gz, gy, count, rad) in ((-48.0, -66.5, y0 + 10.6, 5, 2.6), (-12.0, -66.0, y0 + 8.4, 4, 2.2), (26.0, -67.0, y0 + 14.6, 6, 2.8), (50.0, -66.0, y0 + 11.8, 3, 2.4)):
+        for _i in range(count):
+            px, pz = gx + rr.uniform(-6, 6), gz + rr.uniform(-1.5, 2.5)
+            col = rr.choice([(0.50, 0.70, 0.34), (0.44, 0.64, 0.30), (0.62, 0.72, 0.34)])
+            tb.cyl("timber", (px, gy - 0.6, pz), 0.22, 0.12, 2.6, 6, tint(TIMBER_DARK, 0.9), cap_top=False)
+            tb.blob("foliage", (px, gy + 2.6, pz), rad * rr.uniform(0.7, 1.05), col, seed=rr.randrange(1 << 30), sub=2)
+            tb.blob("foliage", (px + rr.uniform(-1, 1), gy + 0.5, pz + 0.8), rad * 0.5, tint(col, 0.9), seed=rr.randrange(1 << 30), sub=1)
     tb.col_poly([(P.X_IN + 8, y0 - 1, P.Z_NORTH), (-P.X_IN - 8, y0 - 1, P.Z_NORTH), (-P.X_IN - 8, y0 + 26, P.Z_NORTH - 4), (P.X_IN + 8, y0 + 26, P.Z_NORTH - 4)])
 
 

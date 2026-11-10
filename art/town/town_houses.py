@@ -15,13 +15,14 @@ STONE = (0.90, 0.88, 0.84)
 STONE_DARK = (0.62, 0.61, 0.58)
 GLASS = "glass"
 PLASTERS = {
-    "cream": (0.98, 0.93, 0.80), "white": (1.0, 0.98, 0.94), "ochre": (0.96, 0.82, 0.58),
-    "rose": (0.96, 0.82, 0.74), "sand": (0.92, 0.86, 0.72), "grey": (0.86, 0.87, 0.84),
+    "ivory": (1.0, 0.96, 0.84), "ivory2": (0.98, 0.93, 0.80), "ochre": (0.92, 0.76, 0.50), "ochre2": (0.96, 0.82, 0.58),
 }
+# Three restrained roof families (targets #A45D42 terracotta, #B97A49 muted amber, #795448 aged brown),
+# as tints over the tile texture.
 ROOFS = {
-    "terracotta": (1.0, 0.86, 0.76), "amber": (1.0, 0.90, 0.62), "rust": (0.86, 0.66, 0.58),
-    "brown": (0.74, 0.62, 0.54), "honey": (1.0, 0.96, 0.72),
+    "terracotta": (0.86, 0.52, 0.40), "amber": (1.0, 0.76, 0.44), "brown": (0.56, 0.42, 0.42),
 }
+ROOF_ORDER = ["terracotta", "amber", "terracotta", "brown", "amber", "terracotta", "brown", "amber"]
 SHUTTERS = {
     "teal": (0.30, 0.52, 0.50), "green": (0.34, 0.48, 0.28), "red": (0.58, 0.24, 0.18),
     "blue": (0.30, 0.40, 0.58), "wood": (0.55, 0.40, 0.26), "ochre": (0.75, 0.55, 0.22),
@@ -196,12 +197,52 @@ def _roof(tb, length, span, pitch, col, plaster, rr, ring_window=False, frame_co
     return rise
 
 
-def house(tb, w, d, kind, seed, lamp_name=None):
-    """One house in the current transform (origin on the ground at the footprint centre, front +Z)."""
+def shop_sign(tb, x, y, icon):
+    """A hanging sign on an iron bracket: a round board with an icon in relief, no text."""
+    tb.beam("stone", (x, y, 0.0), (x, y, 1.15), 0.06, 0.06, (0.16, 0.15, 0.15))
+    tb.beam("stone", (x, y - 0.5, 0.05), (x, y - 0.04, 0.6), 0.04, 0.04, (0.16, 0.15, 0.15))
+    with tb.at(T(x, y - 0.62, 0.86), RY(90)):
+        tb.ring("altar_metal", (0, 0, 0), 0.46, 0.4, 0.07, 20, (1, 1, 1))
+        tb.poly("timber", [(math.cos(math.tau * i / 20) * 0.4, math.sin(math.tau * i / 20) * 0.4, 0.02) for i in range(20)], TIMBER)
+        tb.poly("timber", [(math.cos(math.tau * i / 20) * 0.4, math.sin(math.tau * i / 20) * 0.4, -0.02) for i in range(19, -1, -1)], TIMBER)
+        for zz, flip in ((0.035, 1), (-0.035, -1)):
+            with tb.at(RY(0 if flip > 0 else 180)):
+                z = abs(zz)
+                if icon == "shard":     # a memory shard: a tall crystal
+                    tb.poly("glass_lit", [(-0.1, 0.0, z), (0.0, -0.26, z), (0.1, 0.0, z), (0.0, 0.28, z)])
+                    tb.poly("altar_metal", [(-0.2, -0.3, z), (0.2, -0.3, z), (0.14, -0.24, z), (-0.14, -0.24, z)], (1, 1, 1))
+                elif icon == "ring":    # the round sign with four strokes
+                    tb.ring("altar_metal", (0, 0, z), 0.26, 0.19, 0.02, 18, (1, 1, 1))
+                    for k in range(4):
+                        a = math.pi / 4 + k * math.pi / 2
+                        tb.box("glass_lit", (math.cos(a) * 0.225, math.sin(a) * 0.225, z + 0.012), (0.06, 0.06, 0.01), skip="z")
+                else:                   # a cup with a curl of steam
+                    tb.poly("altar_metal", [(-0.16, 0.02, z), (-0.11, -0.22, z), (0.11, -0.22, z), (0.16, 0.02, z)], (1, 1, 1))
+                    tb.ring("altar_metal", (0.2, -0.08, z), 0.09, 0.055, 0.02, 10, (1, 1, 1))
+                    tb.box("glass_lit", (0.0, 0.16, z + 0.006), (0.05, 0.16, 0.01), skip="z")
+    tb.socket(f"socket_lamp_shop_{icon}", (x, y - 0.4, 0.9))
+
+
+def bench(tb, x, z, y, rot=0.0):
+    """A timber bench with a back; the sitter looks along local +Z."""
+    with tb.at(T(x, y, z), RY(rot)):
+        tb.box("timber", (0, 0.44, 0.0), (1.8, 0.06, 0.46), TIMBER_LIGHT, uv_dir=(1, 0, 0))
+        for sx in (-1, 1):
+            tb.box("timber", (sx * 0.8, 0.22, 0.0), (0.08, 0.44, 0.42), TIMBER, skip="y", uv_dir=(0, 1, 0))
+            tb.beam("timber", (sx * 0.8, 0.44, -0.2), (sx * 0.8, 0.98, -0.3), 0.07, 0.07, TIMBER)
+        for yy in (0.66, 0.86):
+            tb.box("timber", (0, yy, -0.26 - (yy - 0.66) * 0.2), (1.8, 0.12, 0.04), TIMBER_LIGHT, uv_dir=(1, 0, 0))
+        tb.col_box((0, 0.3, -0.05), (1.8, 0.6, 0.5))
+
+
+def house(tb, w, d, kind, seed, lamp_name=None, roof=None, plaster=None, shop=None, smoke_name=None):
+    """One house in the current transform (origin on the ground at the footprint centre, front +Z).
+    `shop`: an icon name: the door is centred and a hanging sign is added."""
     rr = random.Random(seed)
     rc = RECIPES[kind]
-    plaster = PLASTERS[rr.choice(list(PLASTERS))]
-    roofc = ROOFS[rr.choice(list(ROOFS))]
+    plaster = PLASTERS[plaster or rr.choice(list(PLASTERS))]
+    roofc = ROOFS[roof or rr.choice(list(ROOFS))]
+    rr.random()
     shut = SHUTTERS[rr.choice(list(SHUTTERS))]
     frame_col = tint(TIMBER, rr.uniform(0.8, 1.15))
     floors = rc["floors"]
@@ -209,6 +250,8 @@ def house(tb, w, d, kind, seed, lamp_name=None):
     zc = 0.0
     dd = d
     door_x = rr.choice([-1, 1]) * w * rr.uniform(0.12, 0.26)
+    if shop:
+        door_x = 0.0
     for fl in range(floors):
         h = FLOOR_H[min(fl, 2)]
         if fl > 0 and rc["jetty"]:
@@ -244,7 +287,7 @@ def house(tb, w, d, kind, seed, lamp_name=None):
                     _door(tb, door_x, 1.15, 2.2, rr)
                     if "awning" in rc["extras"]:
                         sx = -1 if door_x > 0 else 1
-                        cxw = sx * w * 0.24
+                        cxw = sx * w * (0.30 if shop else 0.24)
                         opens.append((cxw, 2.6))
                         _window(tb, cxw, 0.95, 2.2, 1.25, rr, lit=True)
                         tb.box("timber", (cxw, 0.86, 0.3), (2.5, 0.08, 0.5), TIMBER_LIGHT, uv_dir=(1, 0, 0))
@@ -257,9 +300,11 @@ def house(tb, w, d, kind, seed, lamp_name=None):
                             tb.beam("timber", (cxw + px, 0, 1.3), (cxw + px, 2.05, 1.3), 0.07, 0.07, TIMBER)
                     else:
                         sx = -1 if door_x > 0 else 1
-                        cxw = sx * w * 0.25
+                        cxw = sx * w * (0.31 if shop else 0.25)
                         opens.append((cxw, 1.3))
                         _window(tb, cxw, 1.0, 1.0, 1.25, rr, shutter=shut, lit=rr.random() < 0.3, flowers=rr.random() < 0.5)
+                    if shop:
+                        shop_sign(tb, -1.25, 3.05, shop)
                     if "lantern" in rc["extras"] and lamp_name:
                         _lantern(tb, door_x + (1.1 if door_x < 0 else -1.1), 2.75, lamp_name)
                 else:
@@ -309,6 +354,8 @@ def house(tb, w, d, kind, seed, lamp_name=None):
             tb.box("stone", (cx, top + 0.07, cz), (1.05, 0.14, 1.05), STONE_DARK)
             for px in (-0.2, 0.2):
                 tb.cyl("roof", (cx + px, top + 0.14, cz), 0.13, 0.10, 0.34, 8, (0.9, 0.7, 0.6), cap_top=True)
+            if smoke_name:
+                tb.socket(smoke_name, (cx, top + 0.55, cz))
     total = y + rise
     tb.col_box((0, total / 2 - 0.5, zc * 0.0), (w, total + 1.0, d))
     return total
@@ -418,7 +465,7 @@ def well(tb, x, z, y):
         n = 14
         tb.ring("stone", (0, 0.68, 0), 1.0, 0.72, 0.8, n, STONE, axis="y")
         tb.ring("stone", (0, 1.12, 0), 1.06, 0.68, 0.1, n, (1, 0.98, 0.94), axis="y")
-        tb.cyl("glass", (0, 0.5, 0), 0.72, 0.72, 0.01, n, (0.5, 0.6, 0.6), cap_top=True)
+        tb.cyl("water", (0, 0.62, 0), 0.72, 0.72, 0.0, n, (1, 1, 1), cap_top=True)
         for sx in (-1, 1):
             tb.beam("timber", (sx * 0.92, 1.1, 0), (sx * 0.92, 2.6, 0), 0.13, 0.13, TIMBER)
         tb.beam("timber", (-1.05, 2.25, 0), (1.05, 2.25, 0), 0.1, 0.1, TIMBER_LIGHT)
