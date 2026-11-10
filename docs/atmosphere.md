@@ -49,3 +49,31 @@ Archipelago:
 | Fog and grade | fog settings per location (valley haze under the town, lighter distance fog, sky-coloured aerial perspective on the far islands), the grade moved into the tone mapping so every tier and phone shares it, richer colour |
 | Weather and wind | clear / overcast / light rain, one shared wind uniform for banners, trees and smoke, `?weather=` and `?tod=` switches |
 | Tiers and numbers | frame time per tier on desktop and the phone layout |
+
+## 3. Second pass, 11.11 (branch `claude/lighting-v2`)
+
+The first pass (shadow cascades, per-location looks, fog, grade in the tone mapping, weather, wind uniform) was
+merged into `main` half-verified. This pass re-captured everything on real WebGL and fixed what the frames showed.
+Sheets: `docs/atmosphere/v2/` (`before-*.jpg`, `after-*.jpg`, `weather-town.jpg`).
+
+| Finding in the "before" frames | Change |
+|---|---|
+| Town at the `morning` preset: the sun stood 38° off the street axis at 34°, so the east row of houses shadowed half of the main street and the stairs; the light was near white and the shade deep blue | New hour `afternoon`, the town's default: sun at 43° in the south-south-west, 20° off the street axis (house shadows fall up the street, both sides are lit), pulled toward amber (`sunWarm` 0.7), a dimmer sky (`skyMean` 0.30), bounce 1.0 so shade is filled warm from the paving, exposure +0.15 |
+| Archipelago golden hour read as white haze: grey stone, white cloud sea, faint shadows | Sun 6.2 and `sunWarm` 0.8 against a dimmer sky (`skyMean` 0.22), less aerosol (`mie` 1.3), thinner fog (0.026), bounce 0.55: gold on stone and cloud tops, cool shade, clear cast shadows |
+| Altar core clipped to cream and lit nothing in daylight | Core emission forced to deep amber (`#ff7a16`, files with an emissive map keep theirs) at 0.9 asleep / 2.4 awake / flare 9; the hero point light is 16 + 14 × lamps (was 5 + 15), amber `#ff8a2a`: the dais is visibly lit by it at noon and it dominates at dusk |
+| `sunWarm` | New optional preset key (`sky.js`): lerps the physically derived sun colour toward amber; the presets that do not set it are unchanged |
+
+Checked and left as they were: the two shadow cascades are stable while the camera moves (texel snapping); the
+town's camera far plane is 900 m; the sky islands (330–600 m) stay visible and hazed; `?weather=overcast|rain`
+and `?tod=dusk` work in the town (lamps and windows take over, wet paving reflects the altar); the grade is in the
+tone mapping, so the low and phone tiers show the same colours as the post tiers.
+
+Tuning without a rebuild: `atmo-cap.cjs --look '{"town":{"elevation":40,"fog":{"density":0.01}},"isle":{…}}'`
+merges overrides into the running look.
+
+### Frame time per tier (11.11, RTX 5090 through ANGLE/Vulkan, headless, frame-rate limit off)
+
+These are from the rented server, not from the minimum machine (RTX 2060 Super) or a real phone: they show the
+relative cost of the tiers and that nothing regressed, not the frame rate a player gets.
+
+FRAME_TABLE

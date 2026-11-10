@@ -88,16 +88,38 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 - `tests/client/assets-budget.test.mjs` checks the town folder too. `TOWN_BLOCKOUT_OK` (now `false`: the final files are in) would tolerate an
   uncompressed blockout round.
 
+## Ambient life
+
+`game/src/scenes/town-life.js`, created by the town scene, plus the shared wind of `render/weather.js`:
+
+- **Cloth and trees** (`M_Town_Cloth`, `M_Town_Foliage`) sway with the wind. The town files carry no `_WIND`
+  attribute, so the client computes the weights when a model arrives (`windWeights`): each connected part of the
+  mesh (one banner, one awning, one canopy) is weighted by height, cloth pinned at its top edge, foliage rooted at
+  the bottom. A file that does carry `_WIND` keeps its authored weights.
+- **Chimney smoke** at every `socket_smoke_*`: one `THREE.Points` draw call for the town, puffs rise 7 m and lean
+  downwind with the gusts; 14 puffs on up to 24 chimneys on desktop, 7 on 8 on phones and the low tier.
+- **Birds**: 13 (7 on phones) in two loose flocks circling over the roofs, one instanced draw call.
+- **Sky islands** (`town_sky`) drift slowly (a 2 m bob, a 5 m sway, an 80 s period).
+- **Altar**: core pulse, the sixteen glyphs lighting in sequence as Iris approaches, flare on registration (above).
+
+All of it runs in vertex shaders from one time value; under reduced motion that value stands still (smoke hangs
+as still plumes, birds hold their place) and the wind strength is zero.
+
+## Loading and the altar transition
+
+Iris starts `SPAWN_ADVANCE` (4.5 m) up the street from the plan's gate point: right in front of the gate arch the
+arch pushed the follow camera into her back. The altar's cover carries a thin progress bar with the real state of
+the archipelago's first view (bytes downloaded, then warmed), the same promise as the loading screen.
+`tools/gpu-server/flow-cap.cjs` records the whole start as a frame sequence (loading, first town frames, cover).
+
 ## Not in this version
 
 - **Shops are not enterable.** `TOWN_DATA.shops` and `TOWN_DATA.interiors` are data only; the interior files
   (`town_shop_*.glb`) ship in the folder but the client neither lists them in the catalog nor loads them, and
   there is no prompt at the shop doors.
 - **Townsfolk** (`TOWN_DATA.npc`) are another lane; none are placed.
-- **Ambient motion** beyond the altar (core pulse, glyph sequence, flare) and the lamp flicker is not built: no
-  cloth or tree sway, chimney smoke (`socket_smoke_*`), birds, drifting sky islands or water shimmer.
-- **Grading** (fog colour, exposure, tint, weather) belongs to the look-dev lane; the town only moves the fog
-  base and the mist level. Footsteps and other audio are silent in the town.
+- **Well water** (`M_Town_Water`) does not shimmer yet. The rest of the ambient motion is in: see "Ambient life".
+- Footsteps and other audio are silent in the town. Light, fog, grade and weather: `docs/atmosphere.md`.
 - No way back from the archipelago to the town.
 
 ## QA hooks
