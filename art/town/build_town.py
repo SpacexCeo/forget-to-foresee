@@ -62,7 +62,7 @@ FLAT = {  # blockout colours (linear) standing in for the tiling base colour
     "foliage": (0.20, 0.32, 0.10), "altar_stone": (0.40, 0.38, 0.34),
 }
 MAT_NAME = {"altar_stone": "M_Altar_Stone", "altar_core": "M_Altar_Core", "altar_metal": "M_Altar_Metal"}
-SHADE_ANGLE = {"foliage": 80, "sky": 50, "pearl": 55}
+SHADE_ANGLE = {"foliage": 80, "sky": 50, "pearl": 42}
 
 
 def log(*a):
@@ -226,8 +226,8 @@ def make_materials():
     mats["lamp"] = ftf.simple_material("M_Town_Lamp", (1.0, 0.72, 0.38), 0.4, emit=(1.0, 0.62, 0.26), emit_strength=3.5)
     mats["altar_core"] = ftf.simple_material("M_Altar_Core", (0.95, 0.52, 0.10), 0.22, emit=(1.0, 0.50, 0.08), emit_strength=4.5)
     mats["altar_metal"] = ftf.simple_material("M_Altar_Metal", (0.66, 0.44, 0.20), 0.38, metal=1.0)
-    mats["pearl"] = vc_material("M_Town_Pearl", (0.92, 0.88, 0.82), rough=0.24, metal=0.0)
-    mats["sky"] = vc_material("M_Town_Sky", (1.0, 1.0, 1.0), rough=1.0, emit=0.30)
+    mats["pearl"] = vc_material("M_Town_Pearl", (0.93, 0.89, 0.82), rough=0.3, metal=0.0)
+    mats["sky"] = vc_material("M_Town_Sky", (1.0, 1.0, 1.0), rough=1.0, emit=0.22)
     return mats, textured
 
 
@@ -369,7 +369,7 @@ def stage_render(which=None):
         "square": dict(loc=(-11.5, 6.4, -3.6), tgt=(8, 7.0, -18), lens=24, res=(1920, 1200)),
         "lane": dict(loc=(-30, 4.2, 10.2), tgt=(0, 4.6, 9.0), lens=28, res=(1920, 1200)),
         "temple": dict(loc=(-9, 11.4, -21.0), tgt=(1, 16.0, -44), lens=22, res=(1920, 1200)),
-        "sky": dict(loc=(-8, 6.4, 6), tgt=(60, 70, -150), lens=26, res=(1920, 1200)),
+        "sky": dict(loc=(-4, 6.3, -4.5), tgt=(66, 92, -150), lens=30, res=(1920, 1200)),
     }
     samples = int(os.environ.get("TOWN_SAMPLES", "96"))
     times = {}

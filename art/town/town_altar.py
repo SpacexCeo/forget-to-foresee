@@ -234,26 +234,41 @@ def shrine(tb):
                 [tint(ROOF_HONEY, 0.84)] * 2 + [ROOF_HONEY] * 2)
         tb.quad("timber", pr(a1, r_lo, y_lo - 0.14), pr(a0, r_lo, y_lo - 0.14), pr(a0, r_hi, y_hi - 0.14), pr(a1, r_hi, y_hi - 0.14), tint(TIMBER, 0.6))
         tb.quad("timber", pr(a0, r_lo, y_lo - 0.14), pr(a1, r_lo, y_lo - 0.14), pr(a1, r_lo, y_lo), pr(a0, r_lo, y_lo), tint(TIMBER, 0.85))
-    # the dome: a low shell with spiral growth ridges and an open oculus
+    # the dome: a low shell (owner: the Shell echo, not an egg): ten raised ribs spiral from the drum to
+    # the oculus, stepped growth lines run between them, warm off-white with a pearl tint
     dome_y = y0 + cella_h
-    R0, H, R_OC = R_CELLA + 0.35, 4.3, 1.15
-    rows, segs = 12, 64
-    def dome_pt(i, j):
-        t = j / rows
-        ang = math.tau * i / segs
-        r = R0 + (R_OC - R0) * (1 - math.cos(t * math.pi / 2))
-        y = dome_y + H * math.sin(t * math.pi / 2)
-        ridge = 0.5 + 0.5 * math.sin(7 * ang + 4.4 * t)
-        r *= 1.0 + 0.085 * (ridge ** 2) * (1 - 0.5 * t)
-        y += 0.10 * (ridge ** 2)
-        return (math.cos(ang) * r, y, -math.sin(ang) * r), ridge, t, ang
-    def pearl(ridge, t, ang):
-        k = 0.70 + 0.30 * ridge
-        return ((1.0 + 0.10 * math.sin(ang * 3 + t * 6)) * k, (0.95 + 0.05 * math.sin(ang * 2 + 2)) * k, (0.90 + 0.12 * math.cos(ang * 3 + t * 5)) * k)
-    for i in range(segs):
-        for j in range(rows):
-            q = [dome_pt(i, j), dome_pt(i + 1, j), dome_pt(i + 1, j + 1), dome_pt(i, j + 1)]
-            tb.quad("pearl", *[p[0] for p in q], [pearl(*p[1:]) for p in q])
+    R0, H, R_OC = R_CELLA + 0.35, 3.0, 1.15
+    rows, segs, nrib, twist = 14, 60, 10, 1.9
+    def dome_rz(t):
+        return R0 + (R_OC - R0) * (1 - math.cos(t * math.pi / 2)) ** 0.9, dome_y + H * math.sin(t * math.pi / 2)
+    def pearl(t, ang, k=1.0):
+        return ((1.0 + 0.07 * math.sin(ang * 2 + t * 5)) * k, (0.93 + 0.04 * math.sin(ang * 3 + 2)) * k, (0.82 + 0.10 * math.cos(ang * 2 + t * 4)) * k)
+    for j in range(rows):
+        t0, t1 = j / rows, (j + 1) / rows
+        (ra, ya), (rb, yb) = dome_rz(t0), dome_rz(t1)
+        lip = 0.07 * (1 - 0.5 * t0)          # each growth band overlaps the next one like a shell's lines
+        for i in range(segs):
+            a0, a1 = math.tau * i / segs, math.tau * (i + 1) / segs
+            def dp(a, r, y):
+                return (math.cos(a) * r, y, -math.sin(a) * r)
+            tb.quad("pearl", dp(a0, ra + lip, ya), dp(a1, ra + lip, ya), dp(a1, rb, yb), dp(a0, rb, yb),
+                    [pearl(t0, a0, 0.78), pearl(t0, a1, 0.78), pearl(t1, a1, 1.0), pearl(t1, a0, 1.0)])
+            if j:
+                tb.quad("pearl", dp(a0, ra, ya - 0.03), dp(a1, ra, ya - 0.03), dp(a1, ra + lip, ya), dp(a0, ra + lip, ya), pearl(t0, a0, 0.6))
+    for k in range(nrib):
+        base = math.tau * k / nrib
+        n = 18
+        prev = None
+        for q in range(n + 1):
+            t = q / n
+            r, y = dome_rz(t)
+            a = base + twist * t
+            w = 0.34 * (1 - 0.55 * t)
+            p = (math.cos(a) * (r + 0.1), y + 0.06, -math.sin(a) * (r + 0.1))
+            if prev:
+                tb.beam("pearl", prev[0], p, w, 0.26 * (1 - 0.4 * t), pearl(t, a, 1.12), up=(prev[0][0], 2.0, prev[0][2]))
+            prev = (p, w)
+        tb.cyl("pearl", (math.cos(base) * (R0 + 0.12), dome_y - 0.05, -math.sin(base) * (R0 + 0.12)), 0.26, 0.2, 0.3, 8, pearl(0, base, 1.1), cap_top=True)
     oc_y = dome_y + H
     tb.ring("glass_lit", (0, oc_y + 0.04, 0), R_OC + 0.16, R_OC - 0.02, 0.1, 32, (1, 1, 1), axis="y")
     tb.cyl("stone", (0, oc_y - 0.9, 0), R_OC, R_OC, 0.0, 24, (0.05, 0.05, 0.06), cap_top=True)
@@ -269,34 +284,52 @@ def shrine(tb):
 
 
 def sky_archipelago(tb, scale):
-    """The archipelago far above, as a hazy impostor: plateaus on rock pillars, bridges and the four
-    Shells, at reduced scale. Vertex colours carry the haze; the client draws it without fog."""
-    haze_top, haze_low = (0.56, 0.66, 0.80), (0.50, 0.60, 0.76)
-    rock = (0.40, 0.50, 0.66)
-    def plateau(x, z, r, depth):
-        tb.cyl("sky", (x, -0.9, z), r * 0.92, r, 0.9, 14, rock, cap_top=True, col_top=haze_top)
-        tb.cyl("sky", (x, -depth * 0.45, z), r * 0.55, r * 0.9, depth * 0.45 - 0.9, 10, tint(rock, 1.12), cap_top=False, col_top=rock)
-        tb.cyl("sky", (x, -depth, z), r * 0.2, r * 0.55, depth * 0.55, 8, haze_low, cap_top=False, cap_bot=True, col_top=tint(rock, 1.12))
-    with tb.at(T(0, 0, 0)):
-        s = scale
-        plateau(0, 0, 9 * s, 20 * s)
-        for ang in (270, 210, 150, 90, 30, 330):
-            a = math.radians(ang)
-            x, z = math.cos(a) * 30 * s, math.sin(a) * 30 * s
-            plateau(x, z, 6.5 * s, 15 * s)
-            tb.beam("sky", (math.cos(a) * 8.6 * s, -0.3 * s, math.sin(a) * 8.6 * s), (math.cos(a) * 23.9 * s, -0.3 * s, math.sin(a) * 23.9 * s), 2.4 * s, 0.6 * s, tint(rock, 1.05))
-        a = math.radians(120)
-        plateau(math.cos(a) * 46 * s, math.sin(a) * 46 * s, 5 * s, 12 * s)
-        tb.beam("sky", (math.cos(a) * 8.6 * s, -0.3 * s, math.sin(a) * 8.6 * s), (math.cos(a) * 41.4 * s, -0.3 * s, math.sin(a) * 41.4 * s), 2.4 * s, 0.6 * s, tint(rock, 1.05))
-        # Shells: tall tapering spirals of stacked rings (distinct heights), pale
-        for i, (ang, rr, hy) in enumerate(((45, 52, 14), (135, 50, 22), (225, 54, 17), (315, 50, 25))):
-            a = math.radians(ang)
-            x, z = math.cos(a) * rr * s, math.sin(a) * rr * s
-            segs = 7
-            for k in range(segs):
-                t0, t1 = k / segs, (k + 1) / segs
-                r0 = (5.2 - 4.4 * t0 ** 1.3) * s * (1.0 + 0.2 * (i == 1))
-                r1 = (5.2 - 4.4 * t1 ** 1.3) * s * (1.0 + 0.2 * (i == 1))
-                ox = math.sin(t0 * 5.0 + i) * 0.9 * s
-                tb.cyl("sky", (x + ox, (hy + t0 * 18) * s, z), r0 * 1.05, r1, 18 * s / segs, 10, (0.62, 0.70, 0.84), cap_top=(k == segs - 1), col_top=(0.80, 0.84, 0.92))
-            tb.cyl("sky", (x, (hy - 3.5) * s, z), 0.5 * s, 5.4 * s, 3.5 * s, 10, haze_low, cap_top=False, col_top=(0.62, 0.70, 0.84))
+    """The archipelago far above, seen from below (visual only): five islands at different depths, each a
+    grassy rim over a rocky inverted-cone underside, with the Shells standing above four of them. Vertex
+    colours carry the haze, stronger with distance; the client draws it without fog."""
+    import random
+    sky_c = (0.60, 0.70, 0.86)
+
+    def haze(c, k):
+        return tuple(c[i] * (1 - k) + sky_c[i] * k for i in range(3))
+
+    def island(x, y, z, r, depth, k, seed):
+        rr = random.Random(seed)
+        rock, rock_d, grass = haze((0.34, 0.36, 0.40), k), haze((0.22, 0.24, 0.29), k), haze((0.36, 0.52, 0.30), k)
+        n = 11
+        ph = rr.uniform(0, 6)
+        # grass cap and its overhanging rim (lighter from below), then three ragged rock tiers to a point
+        tb.cyl("sky", (x, y, z), r * 1.06, r * 0.98, r * 0.10, n, grass, cap_top=True, cap_bot=True, phase=ph, col_top=haze((0.46, 0.62, 0.36), k))
+        tiers = [(1.0, 0.0), (0.80, 0.22), (0.50, 0.55), (0.22, 0.82), (0.0, 1.0)]
+        for (ra, da), (rb, db) in zip(tiers, tiers[1:]):
+            ox, oz = rr.uniform(-0.08, 0.08) * r, rr.uniform(-0.08, 0.08) * r
+            tb.cyl("sky", (x + ox, y - depth * db, z + oz), max(rb * r, 0.001) * rr.uniform(0.9, 1.1), ra * r * rr.uniform(0.92, 1.0), depth * (db - da), n,
+                   rock_d if db > 0.5 else rock, cap_top=False, phase=ph + rr.uniform(-0.3, 0.3), col_top=rock)
+        for _i in range(3):   # hanging rock teeth
+            a = rr.uniform(0, math.tau)
+            d = rr.uniform(0.35, 0.7) * r
+            tb.cyl("sky", (x + math.cos(a) * d, y - depth * rr.uniform(0.5, 0.75), z + math.sin(a) * d), 0.001, r * 0.16, depth * 0.45, 6, rock_d, cap_top=False, col_top=rock)
+
+    def shell(x, y, z, hgt, k, i):
+        pale, lit = haze((0.80, 0.78, 0.76), k), haze((0.96, 0.93, 0.88), k)
+        segs = 8
+        for q in range(segs):
+            t0, t1 = q / segs, (q + 1) / segs
+            r0 = hgt * 0.30 * (1 - t0) ** 0.8 + hgt * 0.02
+            r1 = hgt * 0.30 * (1 - t1) ** 0.8 + hgt * 0.02
+            ox = math.sin(t0 * 5.0 + i) * hgt * 0.035
+            tb.cyl("sky", (x + ox, y + t0 * hgt, z), r0 * 1.08, r1, hgt / segs, 10, pale, cap_top=(q == segs - 1), col_top=lit)
+        tb.cyl("sky", (x, y - hgt * 0.16, z), hgt * 0.04, hgt * 0.32, hgt * 0.16, 10, haze((0.6, 0.6, 0.62), k), cap_top=False, col_top=pale)
+
+    s = scale
+    # x, y, z offsets (m), radius, underside depth, haze amount
+    isles = [(0, 0, 0, 26, 30, 0.24), (-62, 14, -30, 16, 20, 0.42), (58, -10, 20, 18, 22, 0.20),
+             (-30, 34, -90, 14, 18, 0.60), (84, 30, -70, 12, 15, 0.56)]
+    for i, (x, y, z, r, d, k) in enumerate(isles):
+        island(x * s, y * s, z * s, r * s, d * s, k, 100 + i)
+        if i:
+            shell(x * s, (y + r * 0.9) * s, z * s, r * 1.5 * s, min(0.8, k + 0.08), i)
+    # a few stones adrift between them
+    rr = random.Random(9)
+    for _i in range(7):
+        island(rr.uniform(-80, 90) * s, rr.uniform(-18, 26) * s, rr.uniform(-80, 30) * s, rr.uniform(2.0, 4.5) * s, rr.uniform(3, 6) * s, rr.uniform(0.4, 0.7), 200 + _i)

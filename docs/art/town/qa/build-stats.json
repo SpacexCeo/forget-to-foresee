@@ -190,8 +190,8 @@
       ]
     },
     "town_temple": {
-      "raw_bytes": 14725352,
-      "triangles": 26028,
+      "raw_bytes": 15230556,
+      "triangles": 30112,
       "collision_triangles": 622,
       "materials": [
         "M_Altar_Core",
@@ -217,7 +217,7 @@
         "town_temple_glass_lit": 312,
         "town_temple_ground": 4,
         "town_temple_lamp": 56,
-        "town_temple_pearl": 1536,
+        "town_temple_pearl": 5620,
         "town_temple_plaster": 118,
         "town_temple_roof": 232,
         "town_temple_stone": 6370,
@@ -237,7 +237,7 @@
       ],
       "bounds_max": [
         45.97,
-        26.94,
+        25.64,
         -30.7
       ]
     },
@@ -277,42 +277,42 @@
       ]
     },
     "town_sky": {
-      "raw_bytes": 108808,
-      "triangles": 1412,
+      "raw_bytes": 221792,
+      "triangles": 2720,
       "collision_triangles": 0,
       "materials": [
         "M_Town_Sky"
       ],
       "nodes": {
-        "town_sky_sky": 1412
+        "town_sky_sky": 2720
       },
       "sockets": [],
       "bounds_min": [
-        121.42,
-        160.0,
-        -368.38
+        71.47,
+        153.0,
+        -404.32
       ],
       "bounds_max": [
-        207.45,
-        223.0,
-        -280.29
+        246.71,
+        252.6,
+        -261.21
       ]
     }
   },
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.25
+      "seconds": 1.32
     },
     {
       "stage": "objects",
-      "seconds": 1.36
+      "seconds": 1.43
     },
     {
       "stage": "export",
-      "seconds": 1.14
+      "seconds": 1.11
     }
   ],
-  "total_triangles": 140433,
+  "total_triangles": 145825,
   "route_length_m": 39.93
 }
