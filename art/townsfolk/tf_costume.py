@@ -34,6 +34,14 @@ LEGS = ("thigh_L", "thigh_R", "shin_L", "shin_R")
 HEAD = ("head", "jaw", "eye_L", "eye_R")
 
 
+SOLID = True          # False in the game build: big garments stay single-sided (half the triangles)
+
+
+def _solid(o, t, offset=-1.0, even=True):
+    if SOLID or o.name.startswith(("hat", "shoes")):
+        C.solidify(o, t, offset, even)
+
+
 def sm01(a, b, x):
     return C.smooth01(a, b, x)
 
@@ -158,7 +166,7 @@ class Ctx:
     # ------------------------------------------------------------ shells
 
     def shell(self, name, keep, offset=0.008, thick=0.004, relax=0, trim=None, edges=None, decimate=None):
-        o = C.shell_from_body(self.bm, name, keep, offset, thick, trim=trim, edges=edges, decimate=decimate,
+        o = C.shell_from_body(self.bm, name, keep, offset, thick if SOLID else 0.0, trim=trim, edges=edges, decimate=decimate,
                               relax=((lambda p: True), relax) if relax else None,
                               edge_relax=3 if edges else 0, loop_smooth=((lambda p: True), 14))
         return o
@@ -197,7 +205,7 @@ class Ctx:
             if abs(p.z - hem_z) < 0.03 and abs(p.x) < rx + 0.06:
                 p.z = hem_z
         off = (lambda p, n: (arm_ease if arm_ease is not None and abs(p.x) > rx + 0.02 else ease))
-        o = C.shell_from_body(self.bm, name, keep, off, thick, edges=edges, edge_relax=3,
+        o = C.shell_from_body(self.bm, name, keep, off, thick if SOLID else 0.0, edges=edges, edge_relax=3,
                               relax=((lambda p: True), relax) if relax else None,
                               trim=lambda p, n: 0.0, loop_smooth=((lambda p: abs(p.z - hem_z) > 0.004), 14))
         return o
@@ -259,7 +267,7 @@ class Ctx:
                 rings.append(ring)
             o = C.loft(f"{name}_{sx}", rings)
             C.set_attr(o, "trim", lambda i, co, n=n, m=len(path): 1.0 if i >= n * (m - 2) else 0.0)
-            C.solidify(o, thick, 1.0)
+            _solid(o, thick, 1.0)
             C.smooth(o)
             objs.append(o)
         return objs
@@ -304,7 +312,7 @@ class Ctx:
                         q.x = 0.004 * side
                     v.co = q
         o.data.update()
-        C.solidify(o, thick, 1.0, even=False)
+        _solid(o, thick, 1.0, even=False)
         C.smooth(o, 50)
         return o
 
@@ -370,7 +378,7 @@ class Ctx:
             C.set_attr(o, "trim", lambda i, co: 1.0 if i in bnd else 0.0)
         else:
             C.set_attr(o, "trim", lambda i, co: 1.0 if co.z <= zcut + hem_wave else 0.0)
-        C.solidify(o, thick, 1.0)
+        _solid(o, thick, 1.0)
         C.smooth(o)
         return o
 
@@ -412,7 +420,7 @@ class Ctx:
         o = C.loft(name, rings, closed_u=False)
         self.clear(o, 0.005, over)
         C.set_attr(o, "trim", lambda i, co: 1.0 if i >= n * rows or (i % n) in (0, n - 1) else 0.0)
-        C.solidify(o, thick, 1.0)
+        _solid(o, thick, 1.0)
         C.smooth(o)
         return o
 
@@ -443,7 +451,7 @@ class Ctx:
         o = C.loft(name, rings)
         self.clear(o, 0.004, over, 0.003)
         C.set_attr(o, "trim", lambda i, co: 0.0)
-        C.solidify(o, thick, 1.0)
+        _solid(o, thick, 1.0)
         C.smooth(o)
         return o
 
@@ -457,9 +465,9 @@ class Ctx:
              "sandals": 0.014, "wraps": L.ankle + 0.03}[kind]
         ease = {"clogs": 0.010, "boots_tall": 0.008, "boots": 0.007}.get(kind, 0.005)
         n = 28
-        b = bmesh.new()
-        import bisect
+        outs = []
         for sx in ("L", "R"):
+            b = bmesh.new()
             bones = (f"foot_{sx}", f"toe_{sx}", f"shin_{sx}")
             A = self.bones[f"foot_{sx}"][0]
             pts_all = [self.co[i] for i in range(len(self.co)) if self.dom[i] in bones and self.co[i].z < h + 0.03]
@@ -491,13 +499,12 @@ class Ctx:
             b.faces.new(rings[-1])
             if kind == "sandals":
                 b.faces.new(rings[0][::-1])
-        b.normal_update()
-        o = C.new_obj("shoes", b)
-        C.set_attr(o, "trim", lambda i, co: 1.0 if co.z < 0.02 else 0.0)
-        if kind != "sandals":
-            C.solidify(o, 0.003, 1.0)
-        C.smooth(o, 50)
-        return o
+            b.normal_update()
+            o = C.new_obj("shoes_" + sx, b)
+            C.set_attr(o, "trim", lambda i, co: 1.0 if co.z < 0.02 else 0.0)
+            C.smooth(o, 50)
+            outs.append(o)
+        return outs
 
     def straps(self, name, bands):
         """Sandal straps: thin shells over the feet in the given (y0, y1) bands relative to the ankle."""
@@ -545,7 +552,7 @@ class Ctx:
         for v in o.data.vertices:
             v.co = cen + R @ (v.co - cen)
         C.set_attr(o, "trim", lambda i, co: 1.0 if crown_rows and n * crown_rows[0] <= i < n * crown_rows[1] else 0.0)
-        C.solidify(o, thick, -1.0)
+        _solid(o, thick, -1.0)
         C.smooth(o, 50)
         return o
 
@@ -564,17 +571,28 @@ class Ctx:
         if not polys:
             return 0
         tree = BVHTree.FromPolygons(co_all, polys)
-        keepers = set(HEAD) | IH.HAND_BONES | {"neck"}
+        hco, hpolys = [], []                             # the scalp under a hat, a scarf or the hair cap
+        for o in self.garments.values():
+            if o.get("rule") == "head" and not o.name.startswith(("hair_shape", "hat_pin", "hat_knot", "hat_visor")):
+                base = len(hco)
+                hco.extend(o.matrix_world @ v.co for v in o.data.vertices)
+                hpolys.extend([base + i for i in f.vertices] for f in o.data.polygons)
+        htree = BVHTree.FromPolygons(hco, hpolys) if hpolys else None
+        keepers = IH.HAND_BONES | {"neck"}
         me = self.bm.data
         kill = set()
         for i, v in enumerate(me.vertices):
-            if self.dom[i] in keepers:
+            if self.dom[i] in keepers or self.dom[i] in ("jaw", "eye_L", "eye_R"):
                 continue
             p, n = self.co[i], v.normal
             a = n.orthogonal().normalized()
             b2 = n.cross(a)
             dirs = [n] + [(n * 0.64 + (a * math.cos(q) + b2 * math.sin(q)) * 0.77).normalized()
                           for q in (0.3, 0.3 + TAU / 4, 0.3 + TAU / 2, 0.3 + 3 * TAU / 4)]
+            if self.dom[i] in HEAD:
+                if htree and p.z > self.L.eye.z + 0.035 and all(htree.ray_cast(p + n * 0.0005, d, 0.035)[0] is not None for d in dirs):
+                    kill.add(i)
+                continue
             if all(tree.ray_cast(p + n * 0.0015, d, margin)[0] is not None for d in dirs):
                 kill.add(i)
         IH.delete_verts(self.bm, lambda i, co: i in kill)

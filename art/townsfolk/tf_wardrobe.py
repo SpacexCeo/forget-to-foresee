@@ -173,12 +173,13 @@ def dress(ctx, e):
 
     # ---- feet
     kind, scol = r["shoes"]
-    shoe = ctx.shoes(kind)
-    ctx.add(shoe, scol, "leather_dark" if scol != "leather_dark" else "leather", mat="wood" if kind == "clogs" else "leather", rule="fit")
+    for shoe in ctx.shoes(kind):
+        ctx.add(shoe, scol, "leather_dark" if scol != "leather_dark" else "leather", mat="wood" if kind == "clogs" else "leather", rule="fit")
+        if kind == "sandals":
+            shoe["nocover"] = 1
     if kind == "wraps":
         ctx.add(ctx.leg_wraps("leg_wraps", L.ankle + 0.02, L.ankle + 0.40 * (L.knee - L.ankle)), "linen", rule="fit")
     if kind == "sandals":
-        shoe["nocover"] = 1
         ctx.add(ctx.straps("sandal_straps", ((-0.115, -0.085), (-0.045, -0.02), (0.02, 0.05))), scol, mat="leather", rule="fit")
 
     hat_line = hat(ctx, e)
@@ -275,7 +276,8 @@ def hair(ctx, e, hat_line):
     if style in ("bald_ring", "fringe_low"):
         zcut = hc.z + hr[2] * (0.30 if style == "bald_ring" else 0.42)
         idx = [i for i in scalp if co[i].z < zcut and co[i].y > hc.y - hr[1] * 0.55]
-    off = {"shaved": 0.0012, "short_messy": 0.010, "short_curly": 0.012, "covered": 0.004}.get(style, 0.007)
+    off = {"shaved": 0.0012, "short_messy": 0.012, "short_curly": 0.012, "covered": 0.004, "bald_ring": 0.013,
+           "fringe_low": 0.014}.get(style, 0.007)
     if under_hat:
         off = min(off, 0.005)
     cap = C.hair_cap(bm, idx, offset=off)
@@ -286,7 +288,11 @@ def hair(ctx, e, hat_line):
         colour = "stubble_" + ctx.key
     if style in ("short_messy", "short_curly", "bald_ring", "fringe_low") and not under_hat:
         for v in cap.data.vertices:
-            v.co += v.normal * 0.004 * noise.noise(v.co * 60)
+            v.co += v.normal * 0.005 * noise.noise(v.co * 38)
+        if style in ("bald_ring", "fringe_low"):       # the ring thins out to the skin along its upper edge
+            zc_ = max(v.co.z for v in cap.data.vertices)
+            for v in cap.data.vertices:
+                v.co -= v.normal * (off - 0.001) * sm01(zc_ - 0.035, zc_, v.co.z)
     ctx.add(cap, colour, mat="hair", rule="head")
     cap["nocover"] = 1
     lim = hat_line if under_hat else 9.0
@@ -294,8 +300,8 @@ def hair(ctx, e, hat_line):
     rnd = ctx.rnd
     b = bmesh.new()
     made = False
-    if style in ("short_messy", "bald_ring", "fringe_low"):
-        n_t = 110 if style == "short_messy" else 60
+    if style in ("short_messy",) and not under_hat:
+        n_t = 70
         for _ in range(n_t):
             p, nr = rnd.choice(pts)
             if p.z > lim - 0.01:
@@ -396,11 +402,10 @@ def beard(ctx, colour, style):
         w = W[kd_src[j]]
         chin = sm01(m.z - 0.03, m.z - 0.07, v.co.z) if style != "short" else 0.0
         v.co += v.normal * (0.0015 + length * w ** 0.8) + V((0, -0.2, -1.0)) * (length * 0.9 * chin * w)
-        v.co += v.normal * 0.0035 * noise.noise(v.co * 45)
     o.data.update()
     bb = bmesh.new()
     bb.from_mesh(o.data)
-    for _ in range(3):
+    for _ in range(8):
         bmesh.ops.smooth_vert(bb, verts=[v for v in bb.verts if not v.is_boundary], factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     bb.to_mesh(o.data)
     bb.free()

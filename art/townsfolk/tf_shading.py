@@ -89,13 +89,13 @@ def skin_shader(b, land=None, tone=(0.5, 0.3, 0.2), blush=0.4, brow=(0.05, 0.03,
 
 
 def eye_shader(b, iris=((0.10, 0.11, 0.07), (0.30, 0.25, 0.12))):
-    uv = b.n("ShaderNodeUVMap", uv_map="UVMap")
+    uv = b.attr("eyeuv")                              # eye_attr(): survives the atlas packing
     d = b.n("ShaderNodeVectorMath", operation="DISTANCE")
-    b.l(uv.outputs["UV"], d.inputs[0])
+    b.l(uv.outputs["Vector"], d.inputs[0])
     d.inputs[1].default_value = (0.5, 0.5, 0.0)
     r = d.outputs["Value"]
     streak = b.n("ShaderNodeTexNoise", in_Scale=60.0, in_Detail=4.0)
-    b.l(uv.outputs["UV"], streak.inputs["Vector"])
+    b.l(uv.outputs["Vector"], streak.inputs["Vector"])
     ic = b.mix(streak.outputs["Fac"], iris[0], iris[1])
     ic = b.mix(b.math("SMOOTH_MAX", b.math("SUBTRACT", b.math("MULTIPLY", r, 6.0), 0.9), 0.0), ic, (0.04, 0.035, 0.03))
     col = b.mix(b.math("GREATER_THAN", r, 0.205), ic, (0.80, 0.76, 0.72))
@@ -115,6 +115,8 @@ def surface_shader(b, gcol=(0.5, 0.5, 0.5), tcol=(0.3, 0.3, 0.3), kind="cloth"):
     geo = b.n("ShaderNodeNewGeometry")
     pos = geo.outputs["Position"]
     trim = b.attr("trim").outputs["Fac"]
+    if gcol is None:                                # per-object colours painted as attributes (the atlas bake)
+        gcol, tcol = b.attr("gcol").outputs["Color"], b.attr("tcol").outputs["Color"]
     col = b.mix(b.math("GREATER_THAN", trim, 0.5), gcol, tcol)
     fib = b.noise(scale, 8.0, pos, 0.7)
     big = b.noise(7.0, 3.0, pos)
@@ -162,6 +164,42 @@ def live(name, fn, **kw):
     return m
 
 
+def eye_attr(o):
+    """Iris coordinates of an eyeball as a vertex attribute: (0.5, 0.5) at the pupil, looking along -Y."""
+    me = o.data
+    n = len(me.vertices)
+    c = sum((v.co for v in me.vertices), __import__("mathutils").Vector()) / n
+    r = max((v.co - c).length for v in me.vertices)
+    a = me.attributes.get("eyeuv") or me.attributes.new("eyeuv", "FLOAT_VECTOR", "POINT")
+    for v in me.vertices:
+        p = v.co - c
+        a.data[v.index].vector = (0.5 + p.x / (2.2 * r), 0.5 + p.z / (2.2 * r), 0.0) if p.y < 0 else (0.02, 0.02, 0.0)
+
+
+def trim_field(o, width=0.25):
+    """Turn the 0/1 trim flags into a smooth signed field (0.5 on the trim's edge) so the edge stays a clean
+    line in the bake after the mesh is reduced."""
+    from mathutils.kdtree import KDTree
+    me = o.data
+    a = me.attributes.get("trim")
+    if a is None:
+        return
+    flag = [d.value > 0.5 for d in a.data]
+    if not any(flag) or all(flag):
+        return
+    kin, kout = KDTree(sum(flag)), KDTree(len(flag) - sum(flag))
+    for v in me.vertices:
+        (kin if flag[v.index] else kout).insert(v.co, v.index)
+    kin.balance()
+    kout.balance()
+    for v in me.vertices:
+        if flag[v.index]:
+            s_ = kout.find(v.co)[2] * 0.5
+        else:
+            s_ = -kin.find(v.co)[2] * 0.5
+        a.data[v.index].value = max(0.0, min(1.0, 0.5 + s_ / width))
+
+
 def landmarks(rig, body):
     land = {"cheeks": [], "ears": [], "eyes": []}
     for s, sx in (("L", 1), ("R", -1)):
@@ -194,6 +232,7 @@ def assign_live(entry, rig, body, eye_objs, garments):
     body.data.materials.append(skin)
     eye = live("M_eye", eye_shader, iris=IRIS[entry["skin"]])
     for o in eye_objs:
+        eye_attr(o)
         o.data.materials.clear()
         o.data.materials.append(eye)
     cache = {}
@@ -208,3 +247,136 @@ def assign_live(entry, rig, body, eye_objs, garments):
             cache[key] = live(f"M_{g}_{t}_{kind}", surface_shader, gcol=gc, tcol=tc, kind=kind)
         o.data.materials.clear()
         o.data.materials.append(cache[key])
+
+
+# ===================================================================== one texture set per person
+
+def paint_colours(garments):
+    """gcol / tcol colour attributes from each garment's palette keys (read by surface_shader in the bake)."""
+    for o in garments:
+        kind = o.get("mat", "cloth")
+        look = HAIR if kind == "hair" else PALETTE
+        for nm, key in (("gcol", o["gcol"]), ("tcol", o["tcol"])):
+            val = look.get(key) or PALETTE.get(key) or HAIR[key]
+            a = o.data.color_attributes.get(nm) or o.data.color_attributes.new(nm, "FLOAT_COLOR", "POINT")
+            for d in a.data:
+                d.color = (*val, 1.0)
+        if "trim" not in o.data.attributes:
+            o.data.attributes.new("trim", "FLOAT", "POINT")
+
+
+def pack_one_atlas(skin_objs, other_objs, boost=(), margin=0.003):
+    """One UV space for the whole person: garments are unwrapped (smart project), the skin keeps the
+    MakeHuman islands; equal texel density, the objects in `boost` (the face, the eyes) get 1.5x."""
+    if other_objs:
+        S.pack_atlas(other_objs, margin)
+    objs = list(skin_objs) + list(other_objs)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+        o.data.uv_layers.active = o.data.uv_layers[0]
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for o in boost:
+        uv = o.data.uv_layers.active.data
+        for d in uv:
+            d.uv = d.uv * 1.5
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.pack_islands(rotate=True, margin=margin)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for o in objs:                                   # one UV layer name everywhere (the meshes are joined later)
+        o.data.uv_layers[0].name = "UVMap"
+        for extra in list(o.data.uv_layers)[1:]:
+            o.data.uv_layers.remove(extra)
+
+
+def bake_atlas(groups, name, size, out_dir, samples=16):
+    """groups: [(objects, shader_fn, kwargs)]. Every group bakes with its own shader into the same
+    base colour / ORM / normal images -> one final glTF material on everything."""
+    import numpy as np
+    import os
+    sc = bpy.context.scene
+    tmp = S._image(f"_tmp_{name}", size)
+    mats, bake_mats = [], []
+    for gi, (objs, fn, kw) in enumerate(groups):
+        mat = bpy.data.materials.new(f"_bake_{name}_{gi}")
+        b = NB(mat)
+        col, rough, metal, height, alpha = fn(b, **kw)
+        em = b.n("ShaderNodeEmission")
+        bsdf = b.n("ShaderNodeBsdfPrincipled")
+        if height is not None:
+            bump = b.n("ShaderNodeBump", in_Strength=0.35, in_Distance=0.002)
+            b.l(height, bump.inputs["Height"])
+            b.l(bump.outputs["Normal"], bsdf.inputs["Normal"])
+        tex = b.n("ShaderNodeTexImage")
+        b.nt.nodes.active = tex
+        for o in objs:
+            o.data.materials.clear()
+            o.data.materials.append(mat)
+        mats.append((b, em, bsdf, tex, col, rough, metal))
+        bake_mats.append(mat)
+    allobjs = [o for objs, _, _ in groups for o in objs]
+
+    def run(kind, img, which=None):
+        for b, em, bsdf, tex, col, rough, metal in mats:
+            tex.image = img
+            for lk in list(b.out.inputs["Surface"].links):
+                b.nt.links.remove(lk)
+            if which is None:
+                b.l(bsdf.outputs[0], b.out.inputs["Surface"])
+                continue
+            x = {"col": col, "rough": rough, "metal": metal}[which]
+            for lk in list(em.inputs["Color"].links):
+                b.nt.links.remove(lk)
+            if isinstance(x, (int, float)):
+                em.inputs["Color"].default_value = (x, x, x, 1)
+            elif isinstance(x, tuple):
+                em.inputs["Color"].default_value = (*x, 1)
+            elif which == "col":
+                b.l(x, em.inputs["Color"])
+            else:
+                c = b.n("ShaderNodeCombineColor")
+                for s_ in ("Red", "Green", "Blue"):
+                    b.l(x, c.inputs[s_])
+                b.l(c.outputs[0], em.inputs["Color"])
+            b.l(em.outputs[0], b.out.inputs["Surface"])
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in allobjs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = allobjs[0]
+        sc.cycles.samples = samples
+        bpy.ops.object.bake(type=kind, pass_filter={"COLOR"} if kind == "DIFFUSE" else set(), use_clear=True, margin=6)
+        return np.array(img.pixels[:]).reshape(size, size, 4)
+
+    base = run("EMIT", tmp, "col").copy()
+    r = run("EMIT", tmp, "rough")[..., 0].copy()
+    m = run("EMIT", tmp, "metal")[..., 0].copy()
+    sc.world.light_settings.distance = 0.25
+    occ = 0.40 + 0.60 * run("AO", tmp)[..., 0].copy()
+    nimg = S._image(f"{name}_normal", size)
+    nimg.colorspace_settings.name = "Non-Color"
+    run("NORMAL", nimg)
+    bimg = S._image(f"{name}_basecolor", size)
+    base[..., 3] = 1.0
+    bimg.pixels[:] = base.ravel()
+    oimg = S._image(f"{name}_orm", size)
+    oimg.colorspace_settings.name = "Non-Color"
+    oimg.pixels[:] = np.stack([occ, r, m, np.ones_like(r)], -1).ravel()
+    for img in (bimg, oimg, nimg):
+        img.filepath_raw = os.path.join(out_dir, img.name + ".png")
+        img.file_format = "PNG"
+        img.save()
+    bpy.data.images.remove(tmp)
+    final = S.final_material("M_" + name, bimg, oimg, nimg)
+    for o in allobjs:
+        o.data.materials.clear()
+        o.data.materials.append(final)
+    for mat in bake_mats:
+        bpy.data.materials.remove(mat)
+    return final

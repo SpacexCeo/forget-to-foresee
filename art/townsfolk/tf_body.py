@@ -63,7 +63,7 @@ def repose(bm, rig):
         IH.aim_pose_bone(rig, f"lowerarm02.{s}", fd)
         IH.aim_pose_bone(rig, f"wrist.{s}", fd)
         hip = IH.bone_world(rig, f"upperleg01.{s}")
-        fx = side * max(0.06, abs(hip.x) * 0.92)
+        fx = side * max(0.075, abs(hip.x) * 1.0)
         want = V((fx, hip.y, 0.0)) - hip
         IH.aim_pose_bone(rig, f"upperleg01.{s}", want.normalized())
         IH.aim_pose_bone(rig, f"upperleg02.{s}", want.normalized())
