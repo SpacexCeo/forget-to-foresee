@@ -33,7 +33,7 @@ html[data-motion="reduce"] .ftf-town-cover span, .ftf-town-cover.is-plain span {
 `;
 
 /** Seconds of the registration sequence (docs/town.md): flare and camera lift, cover in, hold, cover out. */
-export const TOWN_TRANSITION = Object.freeze({ flare: 0.8, fade: 0.9, hold: 0.45, reducedFade: 0.4, islandWait: 6 });
+export const TOWN_TRANSITION = Object.freeze({ flare: 0.8, fade: 0.9, hold: 0.45, reducedFade: 0.4, islandWait: 20 });
 
 const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
 
@@ -94,7 +94,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
         // the camera lifts off Iris toward the altar while the core flares
         state.focusK = Math.min(1, state.focusK + dt / TOWN_TRANSITION.flare);
         rig.dist = Math.min(state.liftFrom + 7, rig.dist + dt * 5.5);
-        rig.tilt(dt * 0.22);
+        rig.tilt(dt * 0.3);
       }
       return;
     }

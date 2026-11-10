@@ -9,7 +9,8 @@
 // Names this module looks for inside the files:
 //   socket_lamp_*          empties for warm lamp lights: the TOWN_LAMPS nearest Iris are lit (point lights, no shadows)
 //   altar_focus, altar_stand   empties in town_altar.glb (camera focus, where Iris stands); the data is the fallback
-//   M_Altar_Core           the altar's emissive material: its emissiveIntensity is driven here
+//   M_Altar_Core           the altar's crystal: its emissiveIntensity is driven here (sleep, wake, pulse, flare)
+//   town_altar_altar_glyph_00..15 (M_Altar_Glyph)  ring glyphs, lit in sequence as Iris approaches; M_Altar_Eye follows dimly
 // Visual only apart from the collision world: no game rule lives in the town.
 import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
@@ -22,6 +23,10 @@ export const TOWN_LAMPS = 6;
 // Kept low on purpose: above about 1.5 the amber clips to cream under the tone mapping (the file's own strength, 3.0, is overwritten).
 export const CORE_GLOW = Object.freeze({ idle: 0.3, awake: 1.3, flare: 7, pulse: 0.14 });
 const CORE_MATERIAL = /^M_Altar_Core/;
+const GLYPH_MATERIAL = /^M_Altar_Glyph/, EYE_MATERIAL = /^M_Altar_Eye/;
+const GLYPH_NODE = /altar_glyph_(\d+)/;
+/** Emissive hierarchy of the altar, relative to the core: glyph inlays (fully lit) and the waystone eyes. */
+export const ALTAR_RATIO = Object.freeze({ glyph: 0.35, glyphUnlit: 0.04, eye: 0.1 });
 const LAMP_SOCKET = /^socket_lamp_/;
 const LAMP_COLOR = 0xffb268;
 
@@ -82,7 +87,8 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     /** World points; replaced by the altar_focus / altar_stand empties when the model has them. */
     focus: TOWN_ALTAR.focus.slice(), stand: TOWN_ALTAR.stand.slice(),
   };
-  const coreMaterials = [];
+  const coreMaterials = [], eyeMaterials = [];
+  const glyphs = []; // {index, material}: one cloned material per glyph node, sorted by index
   const lampPoints = new Map(); // instance id -> world positions of its socket_lamp_* empties
   let lampSockets = [];         // all of them, flat
   const lampWanted = new Int16Array(TOWN_LAMPS).fill(-1);
@@ -150,7 +156,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     if (pts.length) lampPoints.set(inst.id, pts); else lampPoints.delete(inst.id);
     placeLamps();
     if (def.name !== TOWN_ALTAR_ASSET) return;
-    coreMaterials.length = 0;
+    coreMaterials.length = 0; eyeMaterials.length = 0; glyphs.length = 0;
     state.focus = TOWN_ALTAR.focus.slice(); state.stand = TOWN_ALTAR.stand.slice();
     if (!real) return;
     real.updateWorldMatrix(true, true);
@@ -159,8 +165,20 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
       if (name === 'altar_focus') state.focus = o.getWorldPosition(_v).toArray();
       else if (name === 'altar_stand') state.stand = o.getWorldPosition(_v).toArray();
       if (!o.isMesh) return;
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m && CORE_MATERIAL.test(m.name || '') && !coreMaterials.includes(m)) coreMaterials.push(m);
+      // A glyph node (or the primitive under it) gets its own copy of the glyph material so each one lights alone.
+      const g = GLYPH_NODE.exec(name) || (o.parent && GLYPH_NODE.exec(o.parent.userData.name || o.parent.name || ''));
+      if (g && !Array.isArray(o.material) && o.material && GLYPH_MATERIAL.test(o.material.name || '')) {
+        o.material = o.material.clone();
+        glyphs.push({ index: Number(g[1]), material: o.material });
+        return;
+      }
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (!m) continue;
+        if (CORE_MATERIAL.test(m.name || '') && !coreMaterials.includes(m)) coreMaterials.push(m);
+        else if ((EYE_MATERIAL.test(m.name || '') || GLYPH_MATERIAL.test(m.name || '')) && !eyeMaterials.includes(m)) eyeMaterials.push(m); // glyph material outside a glyph node: steady and dim
+      }
     });
+    glyphs.sort((a, b) => a.index - b.index);
     for (const m of coreMaterials) if (m.emissive && !m.emissive.getHex() && !m.emissiveMap) m.emissive.setHex(0xffa53a); // a core without any emission set still wakes
   }
 
@@ -223,6 +241,13 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     const pulse = reducedMotion ? 1 : 1 + CORE_GLOW.pulse * (0.5 + 0.5 * state.wake) * Math.sin(t * 1.7);
     state.glow = (CORE_GLOW.idle + (CORE_GLOW.awake - CORE_GLOW.idle) * state.wake) * pulse + CORE_GLOW.flare * state.flare;
     for (let i = 0; i < coreMaterials.length; i++) coreMaterials[i].emissiveIntensity = state.glow;
+    for (let i = 0; i < eyeMaterials.length; i++) eyeMaterials[i].emissiveIntensity = state.glow * ALTAR_RATIO.eye;
+    // The ring glyphs light one after another as she comes closer (00 first), all of them at the stand; the flare lights all.
+    const n = glyphs.length, front = Math.max(state.wake, state.flare) * (n + 1);
+    for (let i = 0; i < n; i++) {
+      const lit = Math.min(1, Math.max(0, front - i));
+      glyphs[i].material.emissiveIntensity = state.glow * (ALTAR_RATIO.glyphUnlit + (ALTAR_RATIO.glyph - ALTAR_RATIO.glyphUnlit) * lit);
+    }
     updateLamps(t, dt, playerPos, reducedMotion, lampScale);
   }
 
@@ -253,8 +278,10 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   }
 
   return {
-    origin: TOWN_ORIGIN, world, group, pieces, lamps, coreMaterials, routePoints: TOWN_ROUTE,
-    get ready() { return checkReady(); }, get flat() { return state.flat; }, get active() { return state.active; },
+    origin: TOWN_ORIGIN, world, group, pieces, lamps, coreMaterials, glyphs, routePoints: TOWN_ROUTE,
+    get ready() { return checkReady(); },
+    /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
+    get shown() { return checkReady() && (state.flat || pieces.every((x) => x.def.visualOnly || settled(x.def.name))); }, get flat() { return state.flat; }, get active() { return state.active; },
     get altar() { return state; },
     update, setFlare, setActive, setPointLights, groundAt, settled, status,
   };

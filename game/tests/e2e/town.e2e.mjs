@@ -11,7 +11,7 @@ import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { openGame, intersects, consoleProblems, shutdown, GAME_ROOT } from './lib/env.mjs';
 import { SPAWN, KILL_Y } from '../../src/scenes/layout.js';
-import { TOWN_SPAWN, TOWN_ALTAR, TOWN_KILL_Y, TOWN_FOG_BASE_Y, altarDistance } from '../../src/scenes/town-layout.js';
+import { TOWN_SPAWN, TOWN_ALTAR, TOWN_KILL_Y, TOWN_FOG_BASE_Y, TOWN_SKY, yawToward, altarDistance } from '../../src/scenes/town-layout.js';
 
 after(shutdown);
 
@@ -74,18 +74,26 @@ test('town: spawn at the gate, walk the jury route, register with E, the season 
     assert.deepEqual(await g.text('.ftf-town-prompt'), ['E Register for the Tournament']);
     await shot(g, '03-altar');
 
+    if (TOWN_SKY) { // the camera can look up at the archipelago in the sky from the altar
+      const before = await g.page.evaluate(() => ({ yaw: window.__ftf.rig.yaw, tilt: window.__ftf.rig.pitchOffset }));
+      await g.page.evaluate((yaw) => { const r = window.__ftf.rig; r.yaw = yaw; r.tilt(-2); }, yawToward(s.pos, TOWN_SKY.center));
+      await g.page.waitForFunction(() => window.__ftf.town.status().find((x) => x.name === 'town_sky').real, null, { timeout: 120000, polling: 250 });
+      await g.wait(2500);
+      await shot(g, '04-sky');
+      await g.page.evaluate((b) => { window.__ftf.rig.yaw = b.yaw; window.__ftf.rig.pitchOffset = b.tilt; }, before);
+    }
     await g.page.keyboard.press('KeyE'); // the real key: boot-world.js reads it and calls the flow
     await g.page.waitForFunction(() => window.__ftf.town.phase === 'transition', null, { timeout: 60000, polling: 100 });
     await g.page.waitForFunction(() => { const c = document.querySelector('.ftf-town-cover'); return c && getComputedStyle(c).opacity > 0.95; }, null, { timeout: 60000, polling: 100 });
     assert.deepEqual(await g.text('.ftf-town-cover'), ['The Tournament begins']);
-    await shot(g, '04-transition');
+    await shot(g, '05-transition');
     await seasonReady(g);
     await g.page.waitForFunction(() => !document.querySelector('.ftf-town-cover') && !document.querySelector('.ftf-town-prompt'), null, { timeout: 60000, polling: 250 });
     await g.wait(1500);
     await assertOnArchipelago(g);
-    await shot(g, '05-archipelago');
+    await shot(g, '06-archipelago');
     perf.island = await g.page.evaluate(() => window.__ftf.perf());
-    console.log('# frame time (ms avg / p95, tier): town ' + [perf.town.avgMs.toFixed(0), perf.town.p95Ms.toFixed(0), perf.town.tier] + ' draw calls ' + perf.town.drawCalls + ' triangles ' + perf.town.triangles + '; archipelago ' + [perf.island.avgMs.toFixed(0), perf.island.p95Ms.toFixed(0), perf.island.tier] + ' draw calls ' + perf.island.drawCalls + ' triangles ' + perf.island.triangles);
+    console.log('# frame time (ms avg / p95, tier): town ' + [perf.town.avgMs.toFixed(0), perf.town.p95Ms.toFixed(0), perf.town.tier] + ' draw calls ' + perf.town.drawCalls + ' triangles ' + perf.town.triangles + '; archipelago ' + [perf.island.avgMs.toFixed(0), perf.island.p95Ms.toFixed(0), perf.island.tier] + ' draw calls ' + perf.island.drawCalls + ' triangles ' + perf.island.triangles + ' gpu ' + perf.island.gpu);
     assert.equal(consoleProblems(g), '');
     assert.deepEqual(g.log.failed, [], 'no failed request');
   } finally { await g.close(); }
@@ -99,6 +107,38 @@ test('town: ?play=direct alone still goes straight to the archipelago', { timeou
     assert.ok(near(s.pos, SPAWN, 3) && s.onIsland);
     assert.equal(s.killY, KILL_Y);
     assert.equal(s.ui, 0);
+    assert.equal(consoleProblems(g), '');
+  } finally { await g.close(); }
+});
+
+test('town: ?demo=judge&play=direct still goes straight to the archipelago', { timeout: 600000 }, async () => {
+  const g = await openGame('?demo=judge&play=direct');
+  try {
+    const s = await g.page.evaluate(() => ({ town: window.__ftf.town, pos: window.__ftf.player.pos.slice(), onIsland: window.__ftf.player.world === window.__ftf.world }));
+    assert.equal(s.town, null);
+    assert.ok(near(s.pos, SPAWN, 3) && s.onIsland);
+    assert.equal(consoleProblems(g), '');
+  } finally { await g.close(); }
+});
+
+test('town: the jury link (?demo=judge) goes through the lobby into the town, with the loading screen until the town is shown', { timeout: 900000 }, async () => {
+  const g = await openGame('?demo=judge', { ready: false });
+  try {
+    await g.page.waitForFunction(() => document.querySelector('#ui button') && !document.getElementById('boot'), null, { timeout: 120000, polling: 250 });
+    assert.equal(await g.page.evaluate(() => document.body.classList.contains('in-world')), false, 'the lobby first');
+    // click through the lobby and the onboarding the way a guest does
+    for (let i = 0; i < 14; i++) {
+      if (await g.page.evaluate(() => !!(window.__ftf && window.__ftf.town && window.__ftf.town.phase !== 'off'))) break;
+      await g.page.evaluate(() => { const bs = [...document.querySelectorAll('#ui button')].filter((b) => !b.disabled && b.offsetParent); const pick = bs.find((b) => /enter the world|play as guest|skip tutorial|begin|step onto|continue|next/i.test(b.textContent)); if (pick) pick.click(); });
+      await g.wait(1200);
+    }
+    await townReady(g);
+    await g.page.waitForFunction(() => !document.getElementById('boot'), null, { timeout: 120000, polling: 250 });
+    const s = await townState(g);
+    assert.ok(near(s.pos, TOWN_SPAWN.position, 2.5) && s.inTownWorld && !s.play, 'the jury starts in the town');
+    assert.ok(s.status.filter((x) => x.name !== 'town_sky').every((x) => x.real), 'every street piece is in when the loading screen leaves: ' + JSON.stringify(s.status));
+    assert.equal(await g.visible('.ftf-town-objective'), 1);
+    await shot(g, '08-lobby-town');
     assert.equal(consoleProblems(g), '');
   } finally { await g.close(); }
 });
@@ -126,7 +166,7 @@ test('town: the jury seed survives the town (?demo=judge&play=direct&town=altar)
 });
 
 test('town on a phone: the prompt is a tappable button clear of the run toggle; reduced motion gets a plain cross-fade', { timeout: 900000 }, async () => {
-  const g = await openGame('?town=altar&lang=ru', { ready: false, device: 'iPhone 13', reducedMotion: true });
+  const g = await openGame('?town=altar&lang=ru&layout=mobile', { ready: false, device: 'iPhone 13', reducedMotion: true });
   try {
     await townReady(g);
     await g.page.waitForFunction(() => window.__ftf.town.promptVisible, null, { timeout: 60000, polling: 250 });
@@ -139,7 +179,9 @@ test('town on a phone: the prompt is a tappable button clear of the run toggle; 
     assert.equal(prompt.text, 'Зарегистрироваться на Турнир', 'no key cap on touch, Russian text');
     assert.equal(objective.text, 'Дойдите до алтаря Турнира');
     if (run) assert.ok(!intersects(prompt.rect, run.rect, 0), 'the prompt does not overlap the run toggle');
-    await shot(g, '06-phone-altar');
+    await shot(g, '07-phone-altar');
+    const pp = await g.page.evaluate(() => window.__ftf.perf());
+    console.log('# frame time on the phone layout (ms avg / p95, tier): town ' + [pp.avgMs.toFixed(0), pp.p95Ms.toFixed(0), pp.tier] + ' draw calls ' + pp.drawCalls + ' triangles ' + pp.triangles + ' pixel ratio ' + pp.pixelRatio + ' gpu ' + pp.gpu);
     assert.equal(await g.click('.ftf-town-prompt'), 'ok');
     await g.page.waitForFunction(() => document.querySelector('.ftf-town-cover.is-plain'), null, { timeout: 60000, polling: 100 });
     await seasonReady(g);

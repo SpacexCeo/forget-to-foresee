@@ -26,7 +26,7 @@ def ring_center_y():
     return P.ALTAR["step_h"] * 3 + PLINTH_H + RING_R_OUT - 0.10
 
 
-def _ring_profile(tb, mat, cy, r_out, r_in, thick, n, col, chamfer=0.07):
+def _ring_profile(tb, mat, cy, r_out, r_in, thick, n, col, chamfer=0.07, blocks=16):
     """Upright ring around the local Z axis with chamfered edges; u follows the angle."""
     h = thick / 2
     c = chamfer
@@ -40,7 +40,7 @@ def _ring_profile(tb, mat, cy, r_out, r_in, thick, n, col, chamfer=0.07):
                 return (math.cos(a) * r, cy + math.sin(a) * r, z)
             # winding: outward for this profile order (clockwise in the r-z plane seen along +theta)
             shade = 1.0 if k in (5, 1) else 0.86
-            tb.quad(mat, pt(a0, r0, z0), pt(a1, r0, z0), pt(a1, r1, z1), pt(a0, r1, z1), tint(col, shade * (0.94 + 0.08 * ((i * 7) % 5) / 4)))
+            tb.quad(mat, pt(a0, r0, z0), pt(a1, r0, z0), pt(a1, r1, z1), pt(a0, r1, z1), tint(col, shade * (0.90 + 0.14 * (((i * blocks // n) * 7) % 5) / 4)))
 
 
 def _glyph(tb, kind, r_mid, a, cy, z, s=0.15, m="altar_core", t=0.018, wline=0.034):
@@ -62,80 +62,112 @@ def _glyph(tb, kind, r_mid, a, cy, z, s=0.15, m="altar_core", t=0.018, wline=0.0
         tb.box(m, (0, -s - 0.045, 0), (0.022, 0.022, t), skip="z")
 
 
+def _horn(tb, pts, w0, w1, mat="altar_metal"):
+    """A curved, tapering bronze horn through the given points (thick at the root, a point at the tip)."""
+    n = len(pts) - 1
+    radii = [(w0 + (w1 - w0) * (i / n) ** 0.8) / 2 for i in range(n)] + [0.0]
+    tb.tube(mat, pts, radii, 8, BRONZE)
+
+
 def altar(tb):
-    """Builds the altar into the current piece at the current transform."""
+    """Builds the altar into the current piece at the current transform (GPT refinement sheet
+    A-001_01, 10.11: emission hierarchy core > glyphs > waystone eyes, a faceted crystal, three curved
+    bronze horns, a bevelled ring of stone blocks, radial dais slabs)."""
     sh = P.ALTAR["step_h"]
     radii = P.ALTAR["dais_r"]
     n = 48
+    wedges = 16
     y = 0.0
     for i, r in enumerate(radii):
         tb.cyl("altar_stone", (0, y, 0), r + 0.02, r, sh, n, tint(STONE_DARK, 1.0 + 0.12 * i), cap_top=False)
-        r_next = radii[i + 1] if i + 1 < len(radii) else 0.0
-        if r_next:
-            tb.ring("altar_stone", (0, y + sh - 0.005, 0), r, r_next - 0.02, 0.01, n, tint(STONE, 0.92 + 0.04 * i), axis="y")
-        else:
-            # the top floor: radial slabs in two tones around a bronze inlay ring
-            for (ra, rb, shade) in ((r, 2.46, 0.98), (2.34, 1.2, 1.06)):
-                tb.ring("altar_stone", (0, y + sh - 0.005, 0), ra, rb, 0.01, n, tint(STONE_WARM, shade), axis="y")
-            tb.ring("altar_metal", (0, y + sh - 0.001, 0), 2.46, 2.34, 0.012, n, BRONZE, axis="y")
-            tb.cyl("altar_stone", (0, y + sh - 0.01, 0), 1.2, 1.2, 0.0, 24, tint(STONE_WARM, 0.9), cap_top=True)
+        r_next = radii[i + 1] if i + 1 < len(radii) else 1.15
+        # radial slabs: alternating tones per wedge, offset by half a wedge on every step
+        for k in range(wedges):
+            a0 = math.tau * (k + 0.5 * (i % 2)) / wedges
+            a1 = a0 + math.tau / wedges
+            shade = (0.90, 1.0, 0.94, 1.04)[k % 4] * (0.94 + 0.04 * i)
+            sub = 3
+            for q in range(sub):
+                b0, b1 = a0 + (a1 - a0) * q / sub, a0 + (a1 - a0) * (q + 1) / sub
+                gap = 0.012 if q == 0 else 0.0
+                def pr(a, rr):
+                    return (math.cos(a) * rr, y + sh, -math.sin(a) * rr)
+                tb.quad("altar_stone", pr(b0 + gap, r_next - 0.02), pr(b0 + gap, r), pr(b1, r), pr(b1, r_next - 0.02), tint(STONE_WARM, shade))
+        if i + 1 == len(radii):
+            tb.ring("altar_metal", (0, y + sh + 0.004, 0), 1.98, 1.86, 0.012, n, BRONZE, axis="y")
         tb.col_cyl((0, y - (0.3 if i == 0 else 0.0), 0), r, sh + (0.3 if i == 0 else 0.0), 20)
         y += sh
     top = y
-    # twelve small amber studs around the top step (the count of a logogram ring's ticks)
-    for k in range(12):
-        a = math.tau * k / 12 + math.tau / 24
-        tb.cyl("altar_core", (math.cos(a) * 2.72, top - 0.004, math.sin(a) * 2.72), 0.07, 0.05, 0.02, 8, cap_top=True)
-    # drum plinth and cradle
-    tb.cyl("altar_stone", (0, top, 0), 1.22, 1.12, 0.16, 16, STONE_DARK, cap_top=True)
-    tb.cyl("altar_stone", (0, top + 0.16, 0), 1.02, 0.98, PLINTH_H - 0.30, 16, STONE, cap_top=False)
-    tb.cyl("altar_stone", (0, top + PLINTH_H - 0.14, 0), 1.14, 1.14, 0.14, 16, STONE_WARM, cap_top=True, cap_bot=True)
-    tb.ring("altar_metal", (0, top + 0.42, 0), 1.03, 0.9, 0.06, 16, BRONZE, axis="y")
+    # drum plinth, bronze band and the two cradle blocks
+    tb.cyl("altar_stone", (0, top, 0), 1.24, 1.16, 0.16, 16, STONE_DARK, cap_top=True)
+    tb.cyl("altar_stone", (0, top + 0.16, 0), 1.04, 1.0, PLINTH_H - 0.30, 16, STONE, cap_top=False)
+    tb.cyl("altar_stone", (0, top + PLINTH_H - 0.14, 0), 1.16, 1.16, 0.14, 16, STONE_WARM, cap_top=True, cap_bot=True)
+    tb.ring("altar_metal", (0, top + 0.40, 0), 1.05, 0.92, 0.07, 16, BRONZE, axis="y")
     cy = ring_center_y()
     for sx in (-1, 1):
-        with tb.at(T(sx * 0.62, top + PLINTH_H, 0), RZ(-sx * 24)):
-            tb.box("altar_stone", (0, 0.2, 0), (0.5, 0.5, RING_T + 0.24), STONE_DARK, skip="y")
-    # the standing ring with its logogram marks on both faces
-    _ring_profile(tb, "altar_stone", cy, RING_R_OUT, RING_R_IN, RING_T, 48, STONE_WARM)
+        with tb.at(T(sx * 0.74, top + PLINTH_H, 0), RZ(-sx * 28)):
+            tb.box("altar_stone", (0, 0.26, 0), (0.56, 0.62, RING_T + 0.26), STONE_DARK, skip="y")
+    # the standing ring: sixteen stone blocks, a broad bevel, bronze inlay circles
+    _ring_profile(tb, "altar_stone", cy, RING_R_OUT, RING_R_IN, RING_T, 48, STONE_WARM, chamfer=0.11)
     kinds = ["arc", "spike", "loop", "drop"]
     marks = [0, 2, 1, 3, 0, 1, 3, 2, 1, 0, 2, 3, 2, 0, 3, 1]
-    for face, zz in ((1, RING_T / 2 + 0.008), (-1, -RING_T / 2 - 0.008)):
+    r_mid = (RING_R_OUT + RING_R_IN) / 2
+    for face in (1, -1):
         with tb.at(RY(0 if face > 0 else 180)):
+            zz = RING_T / 2 + 0.008
             for k, mk in enumerate(marks):
-                a = math.tau * (k + 0.5) / len(marks)
-                _glyph(tb, kinds[mk], (RING_R_OUT + RING_R_IN) / 2, a, cy, abs(zz))
-            tb.ring("altar_metal", (0, cy, abs(zz) - 0.004), RING_R_OUT - 0.075, RING_R_OUT - 0.105, 0.012, 48, BRONZE)
-            tb.ring("altar_metal", (0, cy, abs(zz) - 0.004), RING_R_IN + 0.105, RING_R_IN + 0.075, 0.012, 48, BRONZE)
-    # the amber core: a long faceted crystal in a bronze claw
-    rc, hc = 0.30, 0.56
-    tb.cyl("altar_core", (0, cy, 0), rc, 0.0, hc, 6, cap_top=False, phase=math.pi / 6)
-    # lower pyramid (pointing down): mirrored by hand to keep the winding outward
-    for i in range(6):
-        a0, a1 = math.pi / 6 + math.tau * i / 6, math.pi / 6 + math.tau * (i + 1) / 6
-        p0 = (math.cos(a0) * rc, cy, -math.sin(a0) * rc)
-        p1 = (math.cos(a1) * rc, cy, -math.sin(a1) * rc)
-        tb.poly("altar_core", [p1, p0, (0, cy - hc, 0)])
-    for k in range(4):
-        a = math.pi / 4 + k * math.pi / 2
-        tb.beam("altar_metal", (math.cos(a) * RING_R_IN, cy + math.sin(a) * RING_R_IN, 0), (math.cos(a) * rc * 1.02, cy + math.sin(a) * rc * 1.02, 0), 0.05, 0.05, BRONZE)
-        tb.box("altar_metal", (math.cos(a) * rc * 0.98, cy + math.sin(a) * rc * 0.98, 0), (0.09, 0.09, 0.09), BRONZE)
+                # the same index sits at the same place seen from either face: the sequence runs clockwise from the top
+                a = math.pi / 2 - math.tau * (k + 0.5) / len(marks) * face
+                _glyph(tb, kinds[mk], r_mid, a, cy, zz, s=0.13, m=f"altar_glyph_{k:02d}", t=0.02, wline=0.036)
+            for k in range(16):   # block joints
+                a = math.tau * k / 16
+                tb.beam("altar_stone", (math.cos(a) * (RING_R_IN + 0.12), cy + math.sin(a) * (RING_R_IN + 0.12), zz - 0.012),
+                        (math.cos(a) * (RING_R_OUT - 0.12), cy + math.sin(a) * (RING_R_OUT - 0.12), zz - 0.012), 0.016, 0.012, tint(STONE_DARK, 0.6), up=(0, 0, 1))
+            tb.ring("altar_metal", (0, cy, zz - 0.004), RING_R_OUT - 0.115, RING_R_OUT - 0.145, 0.012, 48, BRONZE)
+            tb.ring("altar_metal", (0, cy, zz - 0.004), RING_R_IN + 0.145, RING_R_IN + 0.115, 0.012, 48, BRONZE)
+    # the amber core: a long faceted crystal (eight sides, a waist above the middle), its own material
+    rc, up_h, dn_h, cyc = 0.25, 0.36, 0.52, cy + 0.10
+    seg = 8
+    def cpt(k, r, yy):
+        a = math.tau * k / seg + math.pi / 8
+        return (math.cos(a) * r, yy, -math.sin(a) * r)
+    for k in range(seg):
+        lit = (1.0, 0.72, 0.88, 0.66)[k % 4]
+        c_hi, c_lo = (1.0 * lit, 0.86 * lit, 0.62 * lit), (0.92 * lit, 0.58 * lit, 0.30 * lit)
+        tb.poly("altar_core", [cpt(k, rc, cyc), cpt(k + 1, rc, cyc), (0, cyc + up_h, 0)], [c_lo, c_lo, c_hi])
+        tb.poly("altar_core", [cpt(k + 1, rc, cyc), cpt(k, rc, cyc), (0, cyc - dn_h, 0)], [c_lo, c_lo, (0.8 * lit, 0.42 * lit, 0.16 * lit)])
+    # three curved bronze horns from the lower ring: a centre spike under the crystal and two crescents
+    def arc_pts(x0, y0, x1, y1, bulge, nseg=7, zoff=0.0):
+        pts = []
+        for q in range(nseg + 1):
+            t = q / nseg
+            bx = x0 + (x1 - x0) * t
+            by = y0 + (y1 - y0) * t
+            off = math.sin(t * math.pi) * bulge
+            nx, ny = -(y1 - y0), (x1 - x0)
+            ln = math.hypot(nx, ny) or 1.0
+            pts.append((bx + nx / ln * off, by + ny / ln * off, zoff))
+        return pts
+    _horn(tb, arc_pts(0.0, cy - RING_R_IN + 0.02, 0.0, cyc - dn_h - 0.05, 0.0, 6), 0.20, 0.03)
+    for sx in (-1, 1):
+        root = (sx * 0.52, cy - math.sqrt(max(0.0, RING_R_IN ** 2 - 0.52 ** 2)) + 0.03)
+        tip = (sx * 0.47, cyc + 0.02)
+        _horn(tb, arc_pts(root[0], root[1], tip[0], tip[1], -sx * 0.26, 12), 0.19, 0.025)
     tb.col_box((0, top + 1.9, 0), (2 * RING_R_OUT, 3.8, 0.9))
-    tb.col_cyl((0, top, 0), 1.15, PLINTH_H, 10)
-    # four waystones around the dais with an amber eye each
+    tb.col_cyl((0, top, 0), 1.18, PLINTH_H, 10)
+    # four low waystones outside the dais, each with a thin amber slit (the weakest glow)
+    r_way = radii[0] + 0.75
     for k in range(4):
         a = math.pi / 4 + k * math.pi / 2
-        x, z = math.cos(a) * 5.0, math.sin(a) * 5.0
+        x, z = math.cos(a) * r_way, math.sin(a) * r_way
         with tb.at(T(x, 0, z), RY(-math.degrees(a) + 90)):
-            tb.cyl("altar_stone", (0, 0, 0), 0.42, 0.36, 0.22, 8, STONE_DARK, cap_top=True)
-            tb.cyl("altar_stone", (0, 0.22, 0), 0.28, 0.2, 1.25, 4, STONE, cap_top=True, phase=math.pi / 4)
-            tb.cyl("altar_stone", (0, 1.47, 0), 0.2, 0.0, 0.3, 4, STONE_WARM, cap_top=False, phase=math.pi / 4)
-            tb.ring("altar_metal", (0, 1.05, -0.185), 0.13, 0.09, 0.03, 12, BRONZE)
-            tb.cyl("altar_core", (0, 1.05, -0.17), 0.085, 0.085, 0.0, 10, cap_top=False)
-            tb.poly("altar_core", [(math.cos(math.tau * i / 10) * 0.085, 1.05 + math.sin(math.tau * i / 10) * 0.085, -0.186) for i in range(9, -1, -1)])
-            tb.col_cyl((0, 0, 0), 0.36, 1.7, 6)
-        tb.socket(f"socket_lamp_altar_{k}", (x * 0.97, 1.05, z * 0.97))
+            tb.cyl("altar_stone", (0, 0, 0), 0.46, 0.4, 0.14, 4, STONE_DARK, cap_top=True, phase=math.pi / 4)
+            tb.cyl("altar_stone", (0, 0.14, 0), 0.36, 0.2, 0.72, 4, STONE, cap_top=True, phase=math.pi / 4, col_top=STONE_WARM)
+            tb.box("altar_eye", (0, 0.5, -0.215), (0.05, 0.34, 0.03), skip="Z")
+            tb.col_cyl((0, 0, 0), 0.34, 0.9, 6)
+        tb.socket(f"socket_lamp_altar_{k}", (x * 0.94, 0.55, z * 0.94))
     tb.socket("altar_focus", (0, cy, 0))
-    tb.socket("altar_stand", (0, top, 2.05))
+    tb.socket("altar_stand", (0, top, radii[-1] - 0.62))
     tb.socket("socket_lamp_altar_core", (0, cy, 0.6))
 
 
@@ -182,16 +214,16 @@ def shrine(tb):
     tb.ring("stone", (0, ent_y + 0.5, 0), R_COL + 0.75, R_COL - 0.7, 1.0, 48, STONE, axis="y")
     tb.ring("stone", (0, ent_y + 1.08, 0), R_COL + 1.0, R_COL - 0.8, 0.16, 48, STONE_WARM, axis="y")
     kinds = ["arc", "spike", "loop", "drop"]
-    seq = [0, 2, 1, 3, 0, 1, 3, 2, 1, 0, 2, 3, 2, 0, 3, 1, 0, 3, 1, 2, 3, 1, 0, 2]
+    seq = [0, 2, 1, 3, 0, 2, 1, 3, 0, 2, 1, 3]
     for k, mk in enumerate(seq):
         ang = 360.0 * (k + 0.5) / len(seq)
         with tb.at(RY(ang), T(0, ent_y + 0.5, R_COL + 0.75)):
-            _glyph(tb, kinds[mk], 0.0, math.pi / 2, 0.0, 0.02, s=0.27, m="altar_metal", t=0.04, wline=0.06)
+            _glyph(tb, kinds[mk], 0.0, math.pi / 2, 0.0, 0.02, s=0.36, m="altar_metal", t=0.05, wline=0.085)
     # the round cella: stone below, plaster above, lit lancets, the entrance with its ring of strokes
     y0 = ph
     n = 32
-    tb.cyl("stone", (0, y0, 0), R_CELLA + 0.04, R_CELLA, 3.2, n, tint(STONE, 0.72), cap_top=False, col_top=STONE)
-    tb.cyl("plaster", (0, y0 + 3.2, 0), R_CELLA, R_CELLA, cella_h - 3.2, n, (1.0, 0.96, 0.86), cap_top=False)
+    tb.cyl("stone", (0, y0, 0), R_CELLA + 0.04, R_CELLA, 3.2, n, tint(STONE, 0.5), cap_top=False, col_top=tint(STONE, 0.66))
+    tb.cyl("plaster", (0, y0 + 3.2, 0), R_CELLA, R_CELLA, cella_h - 3.2, n, (0.60, 0.55, 0.47), cap_top=False)
     tb.cyl("stone", (0, y0 + 3.1, 0), R_CELLA + 0.12, R_CELLA + 0.12, 0.26, n, STONE_WARM, cap_top=True, cap_bot=True)
     tb.cyl("stone", (0, y0 + cella_h - 0.5, 0), R_CELLA + 0.16, R_CELLA + 0.16, 0.5, n, STONE_WARM, cap_top=True, cap_bot=True)
     tb.col_cyl((0, y0, 0), R_CELLA + 0.1, cella_h, 16)
@@ -234,11 +266,13 @@ def shrine(tb):
                 [tint(ROOF_HONEY, 0.84)] * 2 + [ROOF_HONEY] * 2)
         tb.quad("timber", pr(a1, r_lo, y_lo - 0.14), pr(a0, r_lo, y_lo - 0.14), pr(a0, r_hi, y_hi - 0.14), pr(a1, r_hi, y_hi - 0.14), tint(TIMBER, 0.6))
         tb.quad("timber", pr(a0, r_lo, y_lo - 0.14), pr(a1, r_lo, y_lo - 0.14), pr(a1, r_lo, y_lo), pr(a0, r_lo, y_lo), tint(TIMBER, 0.85))
-    # the dome: a low shell (owner: the Shell echo, not an egg): ten raised ribs spiral from the drum to
-    # the oculus, stepped growth lines run between them, warm off-white with a pearl tint
+    # the dome: a low shell (owner: the Shell echo, not an egg; GPT review 10.11): one dominant ridge
+    # sweeps a full turn and a quarter from the drum to the oculus, two lesser ridges fade out on the
+    # way; rise 0.21 of the outside diameter; warm off-white with a pearl tint
     dome_y = y0 + cella_h
-    R0, H, R_OC = R_CELLA + 0.35, 3.0, 1.15
-    rows, segs, nrib, twist = 14, 60, 10, 1.9
+    R0, R_OC = R_CELLA + 0.35, 1.15
+    H = 0.21 * 2 * R0
+    rows, segs = 12, 60
     def dome_rz(t):
         return R0 + (R_OC - R0) * (1 - math.cos(t * math.pi / 2)) ** 0.9, dome_y + H * math.sin(t * math.pi / 2)
     def pearl(t, ang, k=1.0):
@@ -246,29 +280,25 @@ def shrine(tb):
     for j in range(rows):
         t0, t1 = j / rows, (j + 1) / rows
         (ra, ya), (rb, yb) = dome_rz(t0), dome_rz(t1)
-        lip = 0.07 * (1 - 0.5 * t0)          # each growth band overlaps the next one like a shell's lines
         for i in range(segs):
             a0, a1 = math.tau * i / segs, math.tau * (i + 1) / segs
             def dp(a, r, y):
                 return (math.cos(a) * r, y, -math.sin(a) * r)
-            tb.quad("pearl", dp(a0, ra + lip, ya), dp(a1, ra + lip, ya), dp(a1, rb, yb), dp(a0, rb, yb),
-                    [pearl(t0, a0, 0.78), pearl(t0, a1, 0.78), pearl(t1, a1, 1.0), pearl(t1, a0, 1.0)])
-            if j:
-                tb.quad("pearl", dp(a0, ra, ya - 0.03), dp(a1, ra, ya - 0.03), dp(a1, ra + lip, ya), dp(a0, ra + lip, ya), pearl(t0, a0, 0.6))
-    for k in range(nrib):
-        base = math.tau * k / nrib
-        n = 18
+            tb.quad("pearl", dp(a0, ra, ya), dp(a1, ra, ya), dp(a1, rb, yb), dp(a0, rb, yb),
+                    [pearl(t0, a0, 0.80), pearl(t0, a1, 0.80), pearl(t1, a1, 0.92), pearl(t1, a0, 0.92)])
+    for base, turns, w0, w1, t_end, k_col in ((math.pi * 0.5, 1.25, 1.25, 0.36, 1.0, 1.12), (math.pi * 0.5 + math.tau / 3, 0.7, 0.42, 0.10, 0.62, 1.0), (math.pi * 0.5 + 2 * math.tau / 3, 0.55, 0.34, 0.08, 0.5, 1.0)):
+        nseg = int(40 * turns)
         prev = None
-        for q in range(n + 1):
-            t = q / n
+        for q in range(nseg + 1):
+            u = q / nseg
+            t = u * t_end
             r, y = dome_rz(t)
-            a = base + twist * t
-            w = 0.34 * (1 - 0.55 * t)
-            p = (math.cos(a) * (r + 0.1), y + 0.06, -math.sin(a) * (r + 0.1))
+            a = base + math.tau * turns * u
+            w = w0 + (w1 - w0) * u
+            p = (math.cos(a) * (r + 0.02), y + 0.18 * w, -math.sin(a) * (r + 0.02))
             if prev:
-                tb.beam("pearl", prev[0], p, w, 0.26 * (1 - 0.4 * t), pearl(t, a, 1.12), up=(prev[0][0], 2.0, prev[0][2]))
-            prev = (p, w)
-        tb.cyl("pearl", (math.cos(base) * (R0 + 0.12), dome_y - 0.05, -math.sin(base) * (R0 + 0.12)), 0.26, 0.2, 0.3, 8, pearl(0, base, 1.1), cap_top=True)
+                tb.beam("pearl", prev, p, w, 0.62 * w, pearl(t, a, k_col), up=(prev[0], 3.0, prev[2]))
+            prev = p
     oc_y = dome_y + H
     tb.ring("glass_lit", (0, oc_y + 0.04, 0), R_OC + 0.16, R_OC - 0.02, 0.1, 32, (1, 1, 1), axis="y")
     tb.cyl("stone", (0, oc_y - 0.9, 0), R_OC, R_OC, 0.0, 24, (0.05, 0.05, 0.06), cap_top=True)
@@ -315,20 +345,22 @@ def sky_archipelago(tb, scale):
         segs = 8
         for q in range(segs):
             t0, t1 = q / segs, (q + 1) / segs
-            r0 = hgt * 0.30 * (1 - t0) ** 0.8 + hgt * 0.02
-            r1 = hgt * 0.30 * (1 - t1) ** 0.8 + hgt * 0.02
+            r0 = hgt * 0.40 * (1 - t0) ** 0.7 + hgt * 0.02
+            r1 = hgt * 0.40 * (1 - t1) ** 0.7 + hgt * 0.02
             ox = math.sin(t0 * 5.0 + i) * hgt * 0.035
             tb.cyl("sky", (x + ox, y + t0 * hgt, z), r0 * 1.08, r1, hgt / segs, 10, pale, cap_top=(q == segs - 1), col_top=lit)
         tb.cyl("sky", (x, y - hgt * 0.16, z), hgt * 0.04, hgt * 0.32, hgt * 0.16, 10, haze((0.36, 0.33, 0.32), k), cap_top=False, col_top=pale)
 
     s = scale
     # x, y, z offsets (m), radius, underside depth, haze amount
-    isles = [(0, 0, 0, 26, 30, 0.10), (-62, 14, -30, 16, 20, 0.36), (58, -10, 20, 18, 22, 0.06),
-             (-30, 34, -90, 14, 18, 0.60), (84, 30, -70, 12, 15, 0.56)]
+    # three depth groups (GPT review): near and large, middle, far and small; haze grows with depth
+    isles = [(0, 0, 0, 15, 17, 0.30), (-52, 6, -14, 10, 12, 0.36),
+             (70, 22, -70, 11, 13, 0.52), (-18, 30, -110, 9, 11, 0.58),
+             (118, 44, -150, 7, 9, 0.72), (-96, 52, -170, 6, 8, 0.77), (40, 62, -190, 5, 7, 0.82)]
     for i, (x, y, z, r, d, k) in enumerate(isles):
         island(x * s, y * s, z * s, r * s, d * s, k, 100 + i)
-        if i:
-            shell(x * s, (y + r * 0.9) * s, z * s, r * 1.5 * s, min(0.8, k + 0.08), i)
+        if i not in (1, 5):
+            shell(x * s, (y + r * 0.9) * s, z * s, r * (1.0 if i == 0 else 1.25) * s, min(0.85, k + 0.06), i)
     # a few stones adrift between them
     rr = random.Random(9)
     for _i in range(7):

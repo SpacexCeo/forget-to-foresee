@@ -81,10 +81,12 @@ export function townPlan({ skip = null, town = null, play = null, cinematic = nu
  * @param {Document} doc
  */
 export function createLoadingScreen(doc = globalThis.document) {
-  const root = doc && doc.getElementById ? doc.getElementById('boot') : null;
-  const ring = root ? root.querySelector('.boot-ring-fg') : null;
-  const label = root ? root.querySelector('.boot-label') : null;
-  const pct = root ? root.querySelector('.boot-pct') : null;
+  let root = doc && doc.getElementById ? doc.getElementById('boot') : null;
+  let ring = null, label = null, pct = null;
+  const bind = () => { ring = root ? root.querySelector('.boot-ring-fg') : null; label = root ? root.querySelector('.boot-label') : null; pct = root ? root.querySelector('.boot-pct') : null; };
+  bind();
+  // A pristine copy for reopen(): the town may still be streaming when the player leaves the lobby (docs/town.md).
+  const spare = root && typeof root.cloneNode === 'function' ? root.cloneNode(true) : null;
   const circumference = 2 * Math.PI * 54; // r = 54 in the inline SVG
   let shown = 0.04, real = 0, last = 0, raf = 0, finished = false, done = null; // a visible start before any byte
   const win = (doc && doc.defaultView) || globalThis;
@@ -118,6 +120,22 @@ export function createLoadingScreen(doc = globalThis.document) {
         .then(() => exit(root, { to: 'fade', duration: MOTION.duration.screen }))
         .then(() => { root.remove(); if (doc.body && doc.body.classList) doc.body.classList.remove('booting'); });
       return done;
+    },
+    /**
+     * Shows the screen again after finish(), opaque at once and with its progress back at the start: the lobby is
+     * done but the place the player is about to enter is not on the GPU yet. Follow with set() and finish().
+     * @returns {boolean} whether a screen is up
+     */
+    reopen(text) {
+      if (!finished) { if (label && text != null) label.textContent = text; return !!root; }
+      if (!spare || !doc.body) return false;
+      root = spare.cloneNode(true); bind();
+      shown = 0.04; real = 0; last = 0; finished = false; done = null;
+      if (label && text != null) label.textContent = text;
+      doc.body.append(root);
+      root.classList.add('boot--live');
+      frame();
+      return true;
     },
     /** A failure keeps the screen with a message (the page is not blank). */
     fail(text) { finished = true; if (label) label.textContent = text; if (root) root.classList.add('boot--failed'); },

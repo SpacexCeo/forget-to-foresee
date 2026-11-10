@@ -25,15 +25,15 @@ export const TOWN_DATA = Object.freeze({
     ],
     "stand": [
       0.0,
-      5.04,
-      -8.95
+      4.98,
+      -9.04
     ],
     "focus": [
       0.0,
-      7.04,
+      6.98,
       -11.0
     ],
-    "radius": 5.6
+    "radius": 5.0
   },
   "route": [
     [
@@ -64,15 +64,15 @@ export const TOWN_DATA = Object.freeze({
     [
       0.0,
       4.5,
-      -6.8
+      -7.7
     ],
     [
       0.0,
-      5.04,
-      -8.95
+      4.98,
+      -9.04
     ]
   ],
-  "routeLength": 39.93,
+  "routeLength": 40.04,
   "pieces": [
     {
       "name": "town_terrain",
@@ -100,9 +100,9 @@ export const TOWN_DATA = Object.freeze({
       "center": [
         -0.17,
         7.85,
-        22.65
+        23.19
       ],
-      "radius": 52.3
+      "radius": 52.4
     },
     {
       "name": "town_block_mid",
@@ -113,11 +113,11 @@ export const TOWN_DATA = Object.freeze({
         4.0
       ],
       "center": [
-        1.7,
+        1.47,
         10.69,
         4.98
       ],
-      "radius": 51.4
+      "radius": 51.7
     },
     {
       "name": "town_block_square",
@@ -128,11 +128,11 @@ export const TOWN_DATA = Object.freeze({
         -14.0
       ],
       "center": [
-        4.13,
+        3.38,
         12.96,
         -15.83
       ],
-      "radius": 46.6
+      "radius": 47.3
     },
     {
       "name": "town_temple",
@@ -144,7 +144,7 @@ export const TOWN_DATA = Object.freeze({
       ],
       "center": [
         -0.79,
-        17.27,
+        17.09,
         -42.72
       ],
       "radius": 49.0
@@ -159,25 +159,72 @@ export const TOWN_DATA = Object.freeze({
       ],
       "center": [
         0.0,
-        6.46,
+        6.43,
         -11.0
       ],
-      "radius": 6.3
+      "radius": 5.1
     },
     {
       "name": "town_sky",
       "kind": "town_sky",
       "position": [
-        150.0,
-        200.0,
-        -300.0
+        165.0,
+        225.0,
+        -320.0
       ],
       "center": [
-        159.09,
-        217.8,
-        -332.76
+        176.57,
+        252.05,
+        -409.78
       ],
-      "radius": 123.6
+      "radius": 161.8
+    }
+  ],
+  "interiors": [
+    {
+      "name": "town_shop_exchange",
+      "kind": "town_interior",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "center": [
+        0.0,
+        1.8,
+        0.0
+      ],
+      "radius": 7.5
+    },
+    {
+      "name": "town_shop_scribe",
+      "kind": "town_interior",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "center": [
+        0.0,
+        1.8,
+        0.0
+      ],
+      "radius": 7.5
+    },
+    {
+      "name": "town_shop_inn",
+      "kind": "town_interior",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "center": [
+        0.0,
+        1.9,
+        0.0
+      ],
+      "radius": 8.5
     }
   ],
   "npc": {
@@ -721,9 +768,9 @@ export const TOWN_DATA = Object.freeze({
           "position": [
             0,
             0,
-            -3.0
+            -2.0
           ],
-          "radius": 2.0
+          "radius": 1.8
         }
       }
     },
@@ -775,9 +822,9 @@ export const TOWN_DATA = Object.freeze({
           "position": [
             0,
             0,
-            -3.0
+            -2.0
           ],
-          "radius": 2.0
+          "radius": 1.8
         }
       }
     },
@@ -829,9 +876,9 @@ export const TOWN_DATA = Object.freeze({
           "position": [
             0,
             0,
-            -4.0
+            -3.0
           ],
-          "radius": 2.0
+          "radius": 1.8
         }
       }
     }

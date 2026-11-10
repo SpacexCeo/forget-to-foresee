@@ -27,10 +27,11 @@ import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVa
 import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
+import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
-import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_CAMERA_TILT, TOWN_CAMERA_MIN_PITCH, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
+import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -138,23 +139,43 @@ if (townMode.town) {
   player.world = town.world; rig.world = town.world;
   player.teleport(sp.position, sp.heading);
   player.killY = TOWN_KILL_Y; // absolute: the island's kill height would never catch a fall here
-  const islandMinPitch = rig.minPitch;
-  restoreCamera = () => { rig.minPitch = islandMinPitch; };
-  rig.minPitch = TOWN_CAMERA_MIN_PITCH; rig.dist = TOWN_CAMERA_DIST; rig.pitchOffset = TOWN_CAMERA_TILT; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
-  lookdev.setAtmosphereFloor({ fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL });
+  const islandMinPitch = rig.minPitch, islandFar = camera.far;
+  restoreCamera = () => { rig.minPitch = islandMinPitch; camera.far = islandFar; camera.updateProjectionMatrix(); };
+  camera.far = TOWN_CAMERA.far; camera.updateProjectionMatrix();
+  rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
+  lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
   townFlow = createTownFlow({
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
-    islandReady: () => { const e = world3d.library.get('island'); return !e || e.state === 'loaded' || e.state === 'absent' || e.state === 'failed'; },
+    islandReady, // the cover stays until the archipelago's first view is loaded and warmed
   });
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
   import('./play/iris-avatar.js').then((m) => { irisAvatar = new m.IrisAvatar(); return irisAvatar.attach(avatar); }).catch((e) => console.warn('[town] Iris model unavailable', e));
   loadPlayLayer().catch(() => {});
+  // Once the town is shown, the archipelago's files go into the HTTP cache at low priority, so the registration
+  // cover has little left to download (skipped on Save-Data and 2G/3G-class links).
+  if (!conn.saveData && !/(^|-)(2g|3g)$/.test(conn.effectiveType || '')) {
+    const warmIsland = () => { if (!town.shown) { setTimeout(warmIsland, 1500); return; } world3d.library.prefetchHttp(ISLAND_FIRST_VIEW); };
+    setTimeout(warmIsland, 3000);
+  }
 }
 
+/**
+ * The archipelago's first view is in: every asset on screen from the island spawn is real (downloaded, warmed on
+ * the GPU, attached) or will never come. Read from the streamer two ticks after the teleport, so the priorities
+ * are those of the island view. No per-frame cost: the flow polls it only under the cover.
+ */
+let leftTownAt = 0;
+function islandReady() {
+  if (inTown || performance.now() - leftTownAt < 700) return false;
+  for (const a of streamer.stats().list) if (a.priority >= 100 && a.state !== 'loaded' && a.state !== 'absent' && a.state !== 'failed') return false;
+  return true;
+}
+
+const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) => a.name);
 /** Under the transition's cover: Iris leaves the town for the archipelago and the season starts as it always did. */
 async function leaveTown() {
-  inTown = false;
+  inTown = false; leftTownAt = performance.now();
   clearWorldInput();
   town.setActive(false);
   player.world = world; rig.world = world;
@@ -469,5 +490,7 @@ window.__ftf = {
   } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, get townReady() { return !town || (town.ready && townGrounded); } };
+return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
+  /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
+  get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || irisLoad.failed)); } };
 }

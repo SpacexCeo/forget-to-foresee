@@ -39,11 +39,18 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 
 ## Flow
 
-1. `createWorld` builds the town when `townPlan` says so, teleports Iris to the spawn and sets the camera behind
-   her at 13 m. The archipelago's models are not loaded: they are out of the frustum and the streamer ignores them.
+1. `createWorld` builds the town when `townPlan` says so, teleports Iris to the spawn and sets a close street
+   camera behind her (`TOWN_CAMERA`: 6.5 m, about 11 degrees above the horizontal, tilt allowed below the
+   horizontal to look up at the islands in the sky, far plane 900 m; the island rig values return on leaving).
+   The archipelago's models are not loaded: they are out of the frustum and the streamer ignores them.
 2. There is no ground until `town_terrain` has streamed in. Iris is held (no physics steps) and the objective line
    reads "The town is taking shape…". When the terrain is real, a ray cast from the spawn finds the ground and she
-   is set on it. The loading screen of the direct path also waits for this, up to 15 s.
+   is set on it.
+   The loading screen (`ui/loading.js`, the gate in `main.js`) stays up until the first town view is complete:
+   every street piece real and warmed through `render/warmup.js` (the light `_m` files first), ground under
+   Iris, her model in; its ring shows the real bytes of the town pieces. Cap: 30 s, then the town appears as it
+   is and the line above covers the rest. When the player leaves the lobby before that, the same loading screen
+   comes back (`reopen`) instead of an empty street.
 3. The player walks with the normal input: keyboard, click or tap to move, gamepad, Shift or the touch toggle to run.
    The objective reads "Walk to the Tournament altar". Iris's model and gait come from `IrisAvatar`.
 4. Inside `altar.radius` of the altar the prompt "Register for the Tournament" appears: key `E`, the gamepad's
@@ -51,7 +58,9 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 5. Registration (`TOWN_TRANSITION`, about 3 s): Iris is held, the amber core flares and the camera lifts toward
    `altar_focus` (0.8 s), a warm cover fades in with "The Tournament begins" (0.9 s), then under the cover Iris is
    teleported to the island `SPAWN`, the island world, kill height, camera and atmosphere are restored and
-   `startPlay` runs. The cover waits for the island model (at most 6 s) and fades out. Under reduced motion there
+   `startPlay` runs. The cover waits until every archipelago asset in view from the island spawn is loaded and
+   warmed (at most 20 s) and fades out. While Iris walks the town, the archipelago's files are fetched into the
+   HTTP cache at low priority (not on Save-Data or 2G/3G links), so that wait is short. Under reduced motion there
    is no flare wait and no camera move: a plain 0.4 s cross-fade.
 6. There is no way back to the town in v1. The streamer releases the town's models by itself a few seconds later.
 
@@ -67,14 +76,29 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 - Inside a `.glb`: `*_col` meshes become colliders (never rendered); `socket_lamp_*` empties get up to six warm
   point lights without shadows on the six nearest Iris (they fade as they move); `town_sky` is visual only (its colliders,
   if any, are ignored and it casts no shadow).
-- `town_altar.glb`: material `M_Altar_Core` (emissive, with its mask) is driven by code: `emissiveIntensity` 0.3
-  asleep, 1.3 awake (eased from 2.5 radii down to the prompt radius), a slow pulse (steady under reduced motion),
-  and a flare during registration. The authored emissive strength is overwritten; colour and mask are kept.
-  Empties `altar_focus` and `altar_stand` replace the data's points when present.
+- `town_altar.glb`: material `M_Altar_Core` (the crystal) is driven by code: `emissiveIntensity` 0.3 asleep, 1.3
+  awake (eased from 2.5 radii down to the prompt radius), a slow pulse (steady under reduced motion), and a flare
+  during registration. The authored emissive strength is overwritten; colour is kept. The ring glyphs (nodes
+  `town_altar_altar_glyph_00..15`, material `M_Altar_Glyph`, cloned per node) light in sequence as Iris
+  approaches, all lit at the stand, at 0.35 of the core; `M_Altar_Eye` follows at 0.1. Without those nodes only
+  the core is driven. Empties `altar_focus` and `altar_stand` replace the data's points when present.
+- `town_sky` is drawn with fog off (it carries its own painted haze).
 - Atmosphere: `LookDev.setAtmosphereFloor` moves the height fog base to `TOWN_ORIGIN.y − 20` and the cloud sea to
   `TOWN_ORIGIN.y − 32` as mist around the hill; the sun, sky and time of day stay. Restored on leaving.
 - `tests/client/assets-budget.test.mjs` checks the town folder too. `TOWN_BLOCKOUT_OK` (now `false`: the final files are in) would tolerate an
   uncompressed blockout round.
+
+## Not in this version
+
+- **Shops are not enterable.** `TOWN_DATA.shops` and `TOWN_DATA.interiors` are data only; the interior files
+  (`town_shop_*.glb`) ship in the folder but the client neither lists them in the catalog nor loads them, and
+  there is no prompt at the shop doors.
+- **Townsfolk** (`TOWN_DATA.npc`) are another lane; none are placed.
+- **Ambient motion** beyond the altar (core pulse, glyph sequence, flare) and the lamp flicker is not built: no
+  cloth or tree sway, chimney smoke (`socket_smoke_*`), birds, drifting sky islands or water shimmer.
+- **Grading** (fog colour, exposure, tint, weather) belongs to the look-dev lane; the town only moves the fog
+  base and the mist level. Footsteps and other audio are silent in the town.
+- No way back from the archipelago to the town.
 
 ## QA hooks
 

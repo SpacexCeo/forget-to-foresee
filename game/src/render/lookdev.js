@@ -254,7 +254,8 @@ export class LookDev {
   /**
    * Moves the floor of the atmosphere to another place in the same scene (the town on the ground, scenes/town.js):
    * the height fog pools at `fogBaseY` and the cloud sea lies at `mistLevel` as a sea of mist (`mist: false` hides
-   * it). The sun, the sky and the time of day stay. `null` restores the archipelago's cloud level.
+   * it). The look follows the place too (`setLocation`): the town has its own sun position and air for the same hour.
+   * `null` restores the archipelago's cloud level and look.
    * @param {{fogBaseY: number, mistLevel?: number, mist?: boolean}|null} floor
    */
   setAtmosphereFloor(floor) {
