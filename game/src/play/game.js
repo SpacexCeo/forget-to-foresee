@@ -27,6 +27,7 @@ import { ShellHub, signForShell, waitingShells } from './hub.js';
 import { shellBeaconLevels, pointerTarget, pointerPose } from './beacon-plan.js';
 import { ShellBeacons, GoalPointer } from '../render/beacons.js';
 import { warmModel } from '../render/warmup.js';
+import { attachFun, CHAPTER_KEY } from './fun-ui.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
@@ -314,6 +315,14 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     beacons.setLevels(shellBeaconLevels({ waiting: o ? waitingShells(o) : [], goalTarget: session.goal && session.goal.target, zone: state.zone, filmPlaying: !!chapters.playing }));
   }
 
+  // The fun layer (docs/fun-layer.md): the dictionary as a collection, the new-word moment, the streak, the burning
+  // memory, the "who lied to me?" file and the first-chapter card. Presentation only.
+  let fun = null;
+  try {
+    fun = attachFun({ root: uiRoot, ctx, session, hooks, hub, reducedMotion: () => !!lookdev.reducedMotion,
+      firstRun: !!options.resetHints || !(storage && (storage.getJSON(CHAPTER_KEY, null) || {}).shown) });
+  } catch (e) { console.warn('[play] fun layer off', e); }
+
   /** Per frame, after physics. */
   function update(dt, { focus, moving, speed = 0, running = false }) {
     state.now += dt;
@@ -349,6 +358,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   /** Keyboard for the play UI; returns true when used. */
   function handleKey(code) {
     if (chapters.playing) return chapters.handleKey(code); // a film swallows every key (hold to skip)
+    if (fun && fun.handleKey(code)) return true;
     if (code === 'KeyN') return map.handleKey(code);
     if (map.isOpen()) {
       if (code === 'Escape') return map.handleKey(code);
@@ -360,7 +370,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, beacons, pointer, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, beacons, pointer, fun, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {

@@ -28,6 +28,9 @@ What changed outside CSS: `log.js` has a collapsed state and an unread count (on
 closed under the skin, the pass button carries a long label (kept for screen readers) and a short one
 (`hub.dock.passShort`, five locales).
 
+The third row also holds the dictionary chip and the streak (`docs/fun-layer.md`); the status pill hides its "Words
+known" row there and is capped at 28 vw so it never runs under the quest pill.
+
 Tests: `game/tests/wh-compact.test.mjs` (journal collapse and count, the classic fallback, the short label in every
 locale, every CSS rule scoped to `body.wh-compact`). Checked in headless Chromium at 1684×934, 1280×720 (Russian) and
 860×640, on the island, with the journal open, with Signs open and inside a Shell; console clean.

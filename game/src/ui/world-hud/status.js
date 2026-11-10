@@ -54,7 +54,7 @@ function bar(i18n, trial, cls, segments) {
 // ---------------------------------------------------------------- desktop
 
 function trialDesktop(i18n, t) {
-  const row = (iconName, labelKey, value) => h('div', { class: 'wh-trial__row' },
+  const row = (iconName, labelKey, value, id = '') => h('div', { class: 'wh-trial__row', dataset: id ? { row: id } : undefined },
     ic(iconName, 'wh-trial__ricon wh-trial__ricon--' + iconName),
     h('span', { class: 'wh-trial__text wh-heavy-sm' }, h('span', { class: 'wh-trial__k', i18n: labelKey }), value));
   const v = (key, args, num) => tx(h('span', { class: 'wh-trial__v' + (num ? ' wh-trial__v--num' : '') }), i18n, key, args);
@@ -65,7 +65,7 @@ function trialDesktop(i18n, t) {
     h('div', { class: 'wh-divider wh-trial__rule wh-trial__rule--a' }),
     // live model (from-obs.js) lists its rows; the mockup model uses the four fixed rows
     ...(t.rows
-      ? t.rows.map((r) => row(r.icon, r.label, ref(i18n, r.value, 'wh-trial__v' + (r.id === 'attention' || r.id === 'words' ? ' wh-trial__v--num' : ''))))
+      ? t.rows.map((r) => row(r.icon, r.label, ref(i18n, r.value, 'wh-trial__v' + (r.id === 'attention' || r.id === 'words' ? ' wh-trial__v--num' : '')), r.id))
       : [
         row('crosshair', 'wh.trial.phase', v('wh.trial.phase.' + t.phase)),
         row('bar-chart', 'wh.trial.skillTier', h('span', { class: 'wh-trial__v', text: String(t.skillTier) })),

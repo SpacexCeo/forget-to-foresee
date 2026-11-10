@@ -14,6 +14,9 @@ body.wh-compact .wh-root .wh-trial {
   padding: 0 calc(20 * var(--wh-px)) 0 calc(16 * var(--wh-px));
   border-radius: 999px;
 }
+body.wh-compact .wh-root .wh-trial { max-width: calc(28vw - var(--whc-side) - 12px); overflow: hidden; }
+/* the dictionary chip under the Shell row carries the word count (play/fun-ui.js) */
+body.wh-compact .wh-root .wh-trial__row[data-row="words"] { display: none; }
 body.wh-compact .wh-root .wh-trial__head { height: auto; flex: none; }
 body.wh-compact .wh-root .wh-trial__rule,
 body.wh-compact .wh-root .wh-trial__progress,
@@ -146,6 +149,7 @@ body.wh-compact .hub-host .hub-read { top: calc(var(--whc-top) + 46 * var(--wh-p
 
 /* ---------------------------------------------------------------- narrower desktops: the quest moves right of the status, the toast under it */
 @media (max-width: 1320px) {
+  body.wh-compact .wh-root .wh-trial { max-width: 318px; }
   body.wh-compact .wh-root .wh-quest { left: auto; right: var(--whc-side); transform: none; max-width: calc(100vw - 2 * var(--whc-side) - 330px); }
   body.wh-compact .wh-root .wh-toast { top: calc(var(--whc-top) + 46 * var(--wh-px) + 8px); max-width: min(46vw, 420px); }
   body.wh-compact .hub-host .hub-read { top: calc(var(--whc-top) + 46 * var(--wh-px, 1px) + 12px); }
