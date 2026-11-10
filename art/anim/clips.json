@@ -1,13 +1,47 @@
 {
   "clips": {
-    "walk": { "kind": "cycle", "take": "08_01", "frames_src": [84, 205], "frames": 30, "speed": 1.7 },
-    "run": { "kind": "cycle", "take": "35_20", "frames_src": [29, 117], "frames": 22, "speed": 3.3 }
+    "walk": {
+      "kind": "cycle",
+      "take": "08_01",
+      "frames_src": [
+        84,
+        205
+      ],
+      "frames": 30,
+      "speed": 1.7
+    },
+    "run": {
+      "kind": "cycle",
+      "take": "35_20",
+      "frames_src": [
+        29,
+        117
+      ],
+      "frames": 22,
+      "speed": 3.3
+    }
   },
   "characters": {
     "iris": {
       "model": "game/public/assets/models/agent_iris.glb",
-      "style": {},
-      "clips": { "walk": {}, "run": {} }
+      "style": {
+        "track": 0.055,
+        "arm_swing": 0.8,
+        "arm_out": -3,
+        "pelvis_rot": 1.1,
+        "head_level": 0.6
+      },
+      "clips": {
+        "walk": {},
+        "run": {
+          "style": {
+            "track": 0.045,
+            "arm_swing": 0.9,
+            "hands": "loose_fist",
+            "lean": 3
+          }
+        }
+      }
     }
   }
 }

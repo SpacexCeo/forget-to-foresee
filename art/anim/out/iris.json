@@ -9,7 +9,7 @@
   "src_speed": 1.693,
   "stride_scale": 0.996,
   "time_scale": 1.008,
-  "hip_drop_max_m": 0.0134,
+  "hip_drop_max_m": 0.0117,
   "contact": {
    "L": [
     0,
@@ -31,7 +31,7 @@
   "src_speed": 3.329,
   "stride_scale": 0.991,
   "time_scale": 1.0,
-  "hip_drop_max_m": 0.0049,
+  "hip_drop_max_m": 0.005,
   "contact": {
    "L": [
     2,

@@ -123,14 +123,14 @@ class Subject {
     if (this.feet.length === 4) this.track.push([2, 3].map((i) => this.feet[i].getWorldPosition(new THREE.Vector3())));
   }
 
-  /** Foot slip: horizontal speed of a ball of the foot over the ground while it is planted (within 2.5 cm of its lowest height). */
+  /** Foot slip: horizontal speed of a ball of the foot over the ground while it is planted (within 1 cm of its lowest height). */
   slipStats() {
     const v = [];
     for (const f of [0, 1]) {
       const low = Math.min(...this.track.map((fr) => fr[f].y));
       for (let i = 1; i < this.track.length; i++) {
         const a = this.track[i - 1][f], b = this.track[i][f];
-        if (a.y - low < 0.025 && b.y - low < 0.025) v.push(Math.hypot(b.x - a.x, b.z - a.z) / DT);
+        if (a.y - low < 0.01 && b.y - low < 0.01) v.push(Math.hypot(b.x - a.x, b.z - a.z) / DT);
       }
     }
     v.sort((x, y) => x - y);

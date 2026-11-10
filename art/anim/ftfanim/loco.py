@@ -86,9 +86,24 @@ DEFAULT_STYLE = {
     'chest_rot': 1.0,       # scale of the chest's counter-rotation about its mean
     'head_level': 0.5,      # 0 = the take's head motion, 1 = head held to its mean orientation
     'lean': 0.0,            # extra forward lean of the spine and chest, degrees
+    'posture': {'head': 0.0, 'neck': 0.0, 'chest': 0.35, 'spine': 0.5},   # how much of the take's mean posture is kept (0 = our rest posture)
+    'head_pitch': 0.0,      # degrees the head looks down (+) from the rest posture
     'hip_drop': 0.0,        # lowers (+) the hips, m
     'foot_out': None,       # toe-out angle of the planted foot, degrees; None keeps the take's
 }
+
+
+def recenter(rig, wr, st):
+    """Moves the mean orientation of the spine, neck and head toward the rig's own rest posture (the take's T-pose is
+    only a guess, so its mean posture carries a constant error), keeping the motion about the mean."""
+    for b, keep in st['posture'].items():
+        if b not in wr:
+            continue
+        q = continuous(wr[b]); mean = qnorm(q.mean(0))
+        want = rig.rest_wr[rig.index[b]]
+        if b == 'head' and st.get('head_pitch'):
+            want = qmul(axis_angle(np.array([1.0, 0, 0]), np.radians(st['head_pitch'])), want)
+        wr[b] = qnorm(qmul(qmul(qslerp(want, mean, keep), qinv(mean)), q))
 
 
 def _scale_about_mean(q, s, wrap=True):
@@ -146,6 +161,7 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
         feet[s][:, 2] = (feet[s][:, 2] - hip_z_mean) * k_stride
         feet[s][:, 0] -= mid_x
     # --- style on the upper body
+    recenter(rig, wr, st)
     yawless = lambda q: q
     wr['pelvis'] = _scale_about_mean(wr['pelvis'], st['pelvis_rot'])
     for b in ('spine', 'chest'):
@@ -295,12 +311,10 @@ def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
                 via_heel = np.array([x0, 0, zb]) - fwd * flat_len - off['heel'][i]
                 xz = via_ball * wb[i] + via_heel * (1 - wb[i])
                 lock[i] = [xz[0], -low_pt, xz[2]]
-        a = a * (1 - wgt[:, None]) + lock * wgt[:, None]
         if st.get('track') is not None and speed:
             # the swing foot passes on the same narrow track instead of swinging wide
-            x_t = (st['track']) * (1 if s == 'L' else -1)
-            a[:, 0] = np.where(wgt >= 1, a[:, 0], a[:, 0] * wgt + (x_t + (a[:, 0] - a[:, 0].mean()) * 0.5) * (1 - wgt))
-            a[:, 0] = gauss_filter(a[:, 0], 0.8, cyclic)
+            a[:, 0] = st['track'] * (1 if s == 'L' else -1) + (a[:, 0] - a[:, 0].mean()) * 0.5
+        a = a * (1 - wgt[:, None]) + lock * wgt[:, None]
         lowest = np.minimum(np.minimum(off['heel'][:, 1], off['ball'][:, 1]), off['tip'][:, 1])
         a[:, 1] = np.maximum(a[:, 1], -lowest + 0.002)
         ank_target[s] = a
@@ -419,6 +433,7 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
             out = q[:n].copy(); out[:loop] = qslerp(q[n:n + loop], q[:loop], w); return out
         hip = xf_p(hip); feet = {s: xf_p(feet[s]) for s in 'LR'}; wr = {k: xf_q(v) for k, v in wr.items()}
     cyc = bool(loop)
+    recenter(rig, wr, st)
     for b in ('neck', 'head'):
         if st['head_level'] and cyc:
             wr[b] = _scale_about_mean(wr[b], 1.0 - 0.5 * st['head_level'] * (1.0 if b == 'head' else 0.5))

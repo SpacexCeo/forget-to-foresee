@@ -12,6 +12,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ftfanim import chains                   # noqa: E402
 from ftfanim.bvh import Bvh                      # noqa: E402
 from ftfanim.gltfio import write_clips_glb       # noqa: E402
 from ftfanim.loco import build_action, build_cycle             # noqa: E402
@@ -49,7 +50,12 @@ def main():
             r = build_action(rt, spec['frames_src'][0], spec['frames_src'][1], style, loop=spec.get('loop', 0), feet_mode=spec.get('feet', 'auto'), log=lambda *x: None)
         else:
             raise SystemExit('unknown clip kind ' + spec['kind'])
-        bones = [b for b in rig.names if b in rt.mapped or b.startswith(('toe_', 'thumb_', 'index_', 'fingers_'))]
+        loop = spec['kind'] == 'cycle' or bool(spec.get('loop'))
+        body = r['local'][:-1] if loop else r['local']
+        sim = chains.simulate(rig, body, r['pelvis'][:len(body)], loop=loop, air_speed=spec.get('speed', 0))
+        r['local'] = __import__('numpy').concatenate([sim, sim[:1]]) if loop else sim
+        chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
+        bones = chain + [b for b in rig.names if b in rt.mapped or b.startswith(('toe_', 'thumb_', 'index_', 'fingers_'))]
         clips.append({'name': name, 'local': r['local'], 'pelvis': rig.pelvis_local(r['pelvis']), 'bones': bones,
                       'extras': {'take': 'CMU ' + take, 'speed': spec.get('speed', 0), 'loop': spec['kind'] == 'cycle' or bool(spec.get('loop'))}})
         report[name] = {'take': take, **r['stats']}
