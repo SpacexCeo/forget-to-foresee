@@ -18,6 +18,7 @@ import { flatHair } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { resolveClip } from '../play/behaviour.js';
 import { GaitLayer } from '../play/gait.js';
+import { mergeClips, faceLayerClip } from '../play/anim-library.js';
 import * as gaitModule from '../play/gait.js';
 import { DEFAULT_MOTION, createMotion, stepMotion } from '../physics/motion.js';
 
@@ -82,8 +83,11 @@ class Subject {
     if (this.name === 'agent_iris') { flatHair(model); fabricSheen(model); }
     model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
     this.model = model; this.root.add(model); scene.add(this.root);
-    this.clips = this.clipsUrl ? await loadClips(this.clipsUrl) : gltf.animations;
+    const extra = this.clipsUrl ? await loadClips(this.clipsUrl) : [];
+    this.clips = mergeClips(gltf.animations, extra);
     this.mixer = new THREE.AnimationMixer(model);
+    const face = extra.length ? faceLayerClip(gltf.animations) : null;
+    if (face) this.mixer.clipAction(face).play();
     const Rt = this.runtime === 'v2' && gaitModule.Locomotion ? gaitModule.Locomotion : null;
     this.loco = Rt ? new Rt(this.mixer, this.clips, model) : null;
     this.gait = Rt ? null : new GaitLayer(this.mixer, this.clips);

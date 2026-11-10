@@ -19,6 +19,16 @@
       ],
       "frames": 22,
       "speed": 3.3
+    },
+    "idle": {
+      "kind": "action",
+      "take": "82_08",
+      "frames_src": [
+        215,
+        1015
+      ],
+      "loop": 20,
+      "feet": "planted"
     }
   },
   "characters": {
@@ -26,12 +36,17 @@
       "model": "game/public/assets/models/agent_iris.glb",
       "style": {
         "track": 0.055,
-        "arm_swing": 0.8,
-        "arm_out": -3,
+        "arm_swing": 0.72,
+        "arm_out": 2,
         "pelvis_rot": 1.1,
         "head_level": 0.6
       },
       "clips": {
+        "idle": {
+          "style": {
+            "track": 0.075
+          }
+        },
         "walk": {},
         "run": {
           "style": {

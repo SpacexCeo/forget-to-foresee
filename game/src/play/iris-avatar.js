@@ -12,6 +12,7 @@ import { flatHair } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { ONE_SHOT_CLIPS, REACTION_SECONDS, resolveClip } from './behaviour.js';
 import { FADE, GaitLayer, findLookBones, applyLookTo, accelLean } from './gait.js';
+import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace } from './anim-library.js';
 
 export class IrisAvatar {
   constructor() {
@@ -39,11 +40,16 @@ export class IrisAvatar {
       await warmModel(model);
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
-      const mixer = gltf.animations.length ? new THREE.AnimationMixer(model) : null;
-      const idle = mixer ? resolveClip(gltf.animations, 'idle').clip : null;
+      // Motion-capture clips from the side-car file replace the model's own clips of the same name (anim-library.js).
+      const extra = sidecarEnabled() ? await sidecarClips('agent_iris') : [];
+      const clips = mergeClips(gltf.animations, extra);
+      const mixer = clips.length ? new THREE.AnimationMixer(model) : null;
+      const idle = mixer ? resolveClip(clips, 'idle').clip : null;
       const idleAction = idle ? mixer.clipAction(idle) : null;
       if (idleAction) idleAction.play();
-      this.irisModel = { model, mixer, clips: gltf.animations, idleAction, gait: mixer ? new GaitLayer(mixer, gltf.animations) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
+      const face = mixer && extra.length ? faceLayerClip(gltf.animations) : null;   // blinks and gaze under the body clips
+      const faceAction = face ? mixer.clipAction(face).play() : null;
+      this.irisModel = { model, mixer, clips, idleAction, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { avatarGroup.userData.irisFailed = true; console.warn('[play] Iris model failed', e); }
   }
 
@@ -79,6 +85,8 @@ export class IrisAvatar {
         if (!rc && m.reactW < 0.01) { m.react.stop(); m.react = null; }
       }
       if (m.idleAction) m.idleAction.weight = (1 - move) * (1 - m.reactW);
+      // a reaction with its own face (the wink) takes the face over from the always-on layer
+      if (m.faceAction) m.faceAction.weight = m.react && hasFace(m.react.getClip()) ? 1 - m.reactW * (1 - move) : 1;
       m.mixer.update(dt);
     } else {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;

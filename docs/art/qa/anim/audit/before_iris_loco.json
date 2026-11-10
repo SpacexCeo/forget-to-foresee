@@ -1,0 +1,32 @@
+{
+ "query": "a=agent_iris&scenario=loco&views=side,front",
+ "size": [
+  1920,
+  1080
+ ],
+ "frames": 330,
+ "fps": 30,
+ "clips": {
+  "A": [
+   "idle",
+   "walk",
+   "run",
+   "talk",
+   "think",
+   "gesture_offer",
+   "celebrate",
+   "defeat",
+   "understand"
+  ]
+ },
+ "every": 1,
+ "metrics": {
+  "A": {
+   "planted_samples": 207,
+   "slip_mean_m_s": 0.166,
+   "slip_p95_m_s": 0.972,
+   "slip_max_m_s": 3.775
+  }
+ },
+ "errors": []
+}
