@@ -1,0 +1,13 @@
+{
+  "clips": {
+    "walk": { "kind": "cycle", "take": "08_01", "frames_src": [84, 205], "frames": 30, "speed": 1.7 },
+    "run": { "kind": "cycle", "take": "35_20", "frames_src": [29, 117], "frames": 22, "speed": 3.3 }
+  },
+  "characters": {
+    "iris": {
+      "model": "game/public/assets/models/agent_iris.glb",
+      "style": {},
+      "clips": { "walk": {}, "run": {} }
+    }
+  }
+}
