@@ -49,12 +49,14 @@ export const TOWN_ROUTE_LENGTH = routeLength(TOWN_DATA.route);
 export const TOWN_KILL_Y = TOWN_ORIGIN[1] + TOWN_DATA.killY;
 
 /** Height fog base in the town: mist pools below the hill (render/fog.js; the archipelago uses its cloud level). */
-export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 14;
+export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 20;
 /** The cloud sea moves here while Iris is in the town: a sea of mist around the hill, below every walkable level. */
-export const TOWN_MIST_LEVEL = TOWN_ORIGIN[1] - 26;
+export const TOWN_MIST_LEVEL = TOWN_ORIGIN[1] - 32;
 
 /** Camera distance in the streets (the archipelago's 30 m overview would sit inside the houses). */
 export const TOWN_CAMERA_DIST = 13;
+/** Camera pitch offset in the town (radians, added to the zoom-tied pitch): a lower, street-level look that keeps the sky above the roofs in frame. */
+export const TOWN_CAMERA_TILT = -0.16;
 
 /** Kinds a town piece may have (render/asset-catalog.js lists the same keys in LOAD_DISTANCE and TRIANGLE_BUDGET). */
 export const TOWN_KINDS = Object.freeze(['town_terrain', 'town_block', 'town_hero', 'town_sky']);

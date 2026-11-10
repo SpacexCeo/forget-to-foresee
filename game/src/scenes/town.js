@@ -7,7 +7,7 @@
 // island. Town pieces have no greybox: nothing shows and nothing collides until the file is in, which is why
 // `ready` (the terrain piece is real) gates Iris's physics. Each .glb carries its own *_col meshes.
 // Names this module looks for inside the files:
-//   socket_lamp_*          empties for warm lamp lights (up to TOWN_LAMPS point lights, no shadows)
+//   socket_lamp_*          empties for warm lamp lights: the TOWN_LAMPS nearest Iris are lit (point lights, no shadows)
 //   altar_focus, altar_stand   empties in town_altar.glb (camera focus, where Iris stands); the data is the fallback
 //   M_Altar_Core           the altar's emissive material: its emissiveIntensity is driven here
 // Visual only apart from the collision world: no game rule lives in the town.
@@ -26,31 +26,22 @@ const LAMP_COLOR = 0xffb268;
 
 const _v = new THREE.Vector3();
 
-/** Squared ground distance from a point to the jury route's vertices (lamps near the walk are lit first). */
-function routeDistance2(p) {
-  let best = Infinity;
-  for (const r of TOWN_ROUTE) { const d = (p[0] - r[0]) ** 2 + (p[2] - r[2]) ** 2; if (d < best) best = d; }
-  return best;
-}
-
 /**
- * Chooses up to `count` lamp positions out of all sockets: the dozen nearest the route, then spread apart
- * (farthest-point sampling from the one nearest the altar), so six lights cover the walk instead of one corner.
- * @param {number[][]} points world positions @returns {number[][]}
+ * The `count` sockets nearest a point, written into `out` as indices (-1 pads a short list). No allocations: the
+ * town calls it a few times a second to move its lamp lights with Iris.
+ * @param {number[][]} points @param {number[]} pos @param {Int16Array|number[]} out
  */
-export function pickLamps(points, count = TOWN_LAMPS) {
-  const near = points.slice().sort((a, b) => routeDistance2(a) - routeDistance2(b)).slice(0, count * 2);
-  if (near.length <= count) return near;
-  const out = [near.slice().sort((a, b) => altarDistance(a) - altarDistance(b))[0]];
-  while (out.length < count) {
-    let best = null, bestD = -1;
-    for (const p of near) {
-      if (out.includes(p)) continue;
-      let d = Infinity;
-      for (const o of out) d = Math.min(d, Math.hypot(p[0] - o[0], p[1] - o[1], p[2] - o[2]));
-      if (d > bestD) { bestD = d; best = p; }
+export function nearestLamps(points, pos, out) {
+  for (let k = 0; k < out.length; k++) {
+    let best = -1, bestD = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      let taken = false;
+      for (let j = 0; j < k; j++) if (out[j] === i) { taken = true; break; }
+      if (taken) continue;
+      const p = points[i], d = (p[0] - pos[0]) ** 2 + (p[1] - pos[1]) ** 2 + (p[2] - pos[2]) ** 2;
+      if (d < bestD) { bestD = d; best = i; }
     }
-    out.push(best);
+    out[k] = best;
   }
   return out;
 }
@@ -92,30 +83,64 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   };
   const coreMaterials = [];
   const lampPoints = new Map(); // instance id -> world positions of its socket_lamp_* empties
+  let lampSockets = [];         // all of them, flat
+  const lampWanted = new Int16Array(TOWN_LAMPS).fill(-1);
+  let lampTimer = 0;
   const lamps = [];
   for (let i = 0; i < TOWN_LAMPS; i++) {
     const l = new THREE.PointLight(LAMP_COLOR, 0, 13, 2);
     l.name = 'town_lamp_light'; l.castShadow = false; l.visible = !!pointLights;
     l.position.set(TOWN_ORIGIN[0], TOWN_ORIGIN[1] + 3, TOWN_ORIGIN[2]);
-    l.userData.on = false; l.userData.phase = i * 2.399;
+    l.userData.socket = -1; l.userData.level = 0; l.userData.phase = i * 2.399;
     group.add(l); lamps.push(l);
   }
 
+  /** The socket list changed (a piece arrived or left): every light lets go and is handed out again. */
   function placeLamps() {
-    const all = [];
-    for (const list of lampPoints.values()) for (const p of list) all.push(p);
-    const picked = pickLamps(all);
-    lamps.forEach((l, i) => {
-      const p = picked[i];
-      l.userData.on = !!p;
-      if (p) l.position.set(p[0], p[1], p[2]); else l.intensity = 0;
-    });
+    lampSockets = [];
+    for (const list of lampPoints.values()) for (const p of list) lampSockets.push(p);
+    for (const l of lamps) { l.userData.socket = -1; l.userData.level = 0; l.intensity = 0; }
+    lampTimer = 0;
+  }
+
+  /**
+   * The six lights follow Iris: a light whose socket is no longer among the nearest fades out, then moves to a
+   * socket that has none and fades in, so nothing pops. No allocations.
+   */
+  function updateLamps(t, dt, playerPos, reducedMotion) {
+    if ((lampTimer -= dt) <= 0) { lampTimer = 0.4; nearestLamps(lampSockets, playerPos, lampWanted); }
+    const k = 1 - Math.exp(-dt * 3);
+    for (let i = 0; i < lamps.length; i++) {
+      const l = lamps[i], u = l.userData;
+      let wanted = false;
+      for (let j = 0; j < lampWanted.length; j++) if (u.socket >= 0 && lampWanted[j] === u.socket) { wanted = true; break; }
+      if (!wanted && u.level < 0.02) {
+        // free: take a wanted socket no light holds
+        u.socket = -1;
+        for (let j = 0; j < lampWanted.length && u.socket < 0; j++) {
+          const want = lampWanted[j];
+          if (want < 0) continue;
+          let held = false;
+          for (let m = 0; m < lamps.length; m++) if (lamps[m].userData.socket === want) { held = true; break; }
+          if (!held) { u.socket = want; const p = lampSockets[want]; l.position.set(p[0], p[1], p[2]); wanted = true; }
+        }
+      }
+      u.level += ((wanted ? 1 : 0) - u.level) * k;
+      l.intensity = u.socket < 0 ? 0 : 11 * u.level * (reducedMotion ? 1 : 1 + 0.07 * Math.sin(t * 6.1 + u.phase) + 0.04 * Math.sin(t * 11.3 + u.phase * 1.7));
+    }
   }
 
   /** A piece changed between nothing and its real model (also the light -> full swap): re-read what the file exposes. */
   function onPiece(def, inst) {
     const real = inst.real;
-    if (def.visualOnly && real) real.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    if (def.visualOnly && real) {
+      // The archipelago in the sky: no shadows, and no fog on top of its own painted haze (it is about 330 m away).
+      real.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = false; o.receiveShadow = false;
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m && m.fog !== false) { m.fog = false; m.needsUpdate = true; }
+      });
+    }
     const pts = [];
     if (real) for (const [name, node] of inst.sockets) if (LAMP_SOCKET.test(name)) pts.push(node.getWorldPosition(_v).toArray());
     if (pts.length) lampPoints.set(inst.id, pts); else lampPoints.delete(inst.id);
@@ -194,11 +219,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     const pulse = reducedMotion ? 1 : 1 + CORE_GLOW.pulse * (0.5 + 0.5 * state.wake) * Math.sin(t * 1.7);
     state.glow = (CORE_GLOW.idle + (CORE_GLOW.awake - CORE_GLOW.idle) * state.wake) * pulse + CORE_GLOW.flare * state.flare;
     for (let i = 0; i < coreMaterials.length; i++) coreMaterials[i].emissiveIntensity = state.glow;
-    for (let i = 0; i < lamps.length; i++) {
-      const l = lamps[i];
-      if (!l.userData.on) continue;
-      l.intensity = 11 * (reducedMotion ? 1 : 1 + 0.07 * Math.sin(t * 6.1 + l.userData.phase) + 0.04 * Math.sin(t * 11.3 + l.userData.phase * 1.7));
-    }
+    updateLamps(t, dt, playerPos, reducedMotion);
   }
 
   /** The registration flare of the amber core: 1 ramps it up, 0 lets it settle. */
@@ -228,7 +249,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   }
 
   return {
-    origin: TOWN_ORIGIN, world, group, pieces, lamps, coreMaterials,
+    origin: TOWN_ORIGIN, world, group, pieces, lamps, coreMaterials, routePoints: TOWN_ROUTE,
     get ready() { return checkReady(); }, get flat() { return state.flat; }, get active() { return state.active; },
     get altar() { return state; },
     update, setFlare, setActive, setPointLights, groundAt, settled, status,

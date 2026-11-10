@@ -30,7 +30,7 @@ import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
-import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
+import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_CAMERA_TILT, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -136,7 +136,7 @@ if (townMode.town) {
   player.world = town.world; rig.world = town.world;
   player.teleport(sp.position, sp.heading);
   player.killY = TOWN_KILL_Y; // absolute: the island's kill height would never catch a fall here
-  rig.dist = TOWN_CAMERA_DIST; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
+  rig.dist = TOWN_CAMERA_DIST; rig.pitchOffset = TOWN_CAMERA_TILT; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
   lookdev.setAtmosphereFloor({ fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL });
   townFlow = createTownFlow({
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
