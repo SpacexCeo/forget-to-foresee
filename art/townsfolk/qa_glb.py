@@ -24,6 +24,7 @@ meshes = [o for o in bpy.data.objects if o.type == "MESH"]
 R.setup(samples=32, res=(560, 1000))
 R.floor(color=(0.30, 0.29, 0.28))
 bpy.context.scene.world.node_tree.nodes["Background"].inputs[1].default_value = 0.35
+bpy.context.scene.view_settings.exposure = -0.7
 bpy.context.view_layer.update()
 top = max((o.matrix_world @ Vector(c)).z for o in meshes for c in o.bound_box)
 sc = bpy.context.scene

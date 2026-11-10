@@ -43,6 +43,21 @@ def decimate(o, ratio):
         return
     m = o.modifiers.new("lod", "DECIMATE")
     m.ratio = max(0.03, ratio)
+    # open edges (hems, cuffs, necklines, panel edges) are cut lines the eye follows: the collapse spends its
+    # budget inside the cloth and leaves them alone (group weight 0 = protected)
+    bb = bmesh.new()
+    bb.from_mesh(o.data)
+    bnd = [v.index for v in bb.verts if v.is_boundary]
+    near = {w.index for v in bb.verts if v.is_boundary for e in v.link_edges for w in e.verts} - set(bnd)
+    n_all = len(bb.verts)
+    bb.free()
+    if bnd and len(bnd) < 0.5 * n_all:
+        g = o.vertex_groups.get("tf_keep") or o.vertex_groups.new(name="tf_keep")
+        g.add(list(range(n_all)), 1.0, "REPLACE")
+        g.add(list(near), 0.6, "REPLACE")
+        g.add(bnd, 0.0, "REPLACE")
+        m.vertex_group = "tf_keep"
+        m.vertex_group_factor = 8.0
     bpy.context.view_layer.objects.active = o
     bpy.ops.object.modifier_apply(modifier=m.name)
 
@@ -241,6 +256,7 @@ def build(key, out_root, shade=True, size=2048, budget=16000, samples=16):
     W.dress(ctx, e)
     IH.lips_attr(bm)
     facts["stripped_body_vertices"] = ctx.strip_covered()
+    facts["stripped_layer_faces"] = tf_costume.strip_layers(ctx)
     skin = split_skin(bm)
     facts["triangles_full"] = sum(tris(o) for o in [bm, skin, *eyes, *ctx.garments.values()])
     facts["reduce_ratio"] = reduce(bm, skin, eyes, ctx.garments, budget)

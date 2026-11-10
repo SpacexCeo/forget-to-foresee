@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
 import { PropInstance } from '../render/assets.js';
+import { createTownsfolk } from '../play/townsfolk.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
@@ -216,6 +217,11 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     return hit ? hit.point[1] : null;
   }
 
+  // The townsfolk (N-001): fetched only after the town's first view, never on the flat dev ground.
+  const townsfolk = flat ? null : createTownsfolk({ scene, library, groundAt });
+  const folkFrame = { playerPos: null, reducedMotion: false, camera: null, shown: false };
+  const shown = () => checkReady() && (state.flat || pieces.every((x) => x.def.visualOnly || settled(x.def.name)));
+
   function checkReady() {
     if (state.ready) return true;
     if (!state.flat && terrain) {
@@ -231,8 +237,9 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
    * @param {number} t seconds (frozen under reduced motion by the caller is fine: the pulse is skipped anyway)
    * @param {number} dt @param {{playerPos: number[], reducedMotion?: boolean}} o
    */
-  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1 }) {
+  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1, camera = null }) {
     if (!state.active) return;
+    if (townsfolk) { folkFrame.playerPos = playerPos; folkFrame.reducedMotion = reducedMotion; folkFrame.camera = camera; folkFrame.shown = shown(); townsfolk.update(dt, folkFrame); }
     state.time = t;
     checkReady();
     const target = altarWake(altarDistance(playerPos));
@@ -257,6 +264,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   /** Leaving for the archipelago: lights off, dev ground hidden; the streamer releases the pieces by itself. */
   function setActive(on) {
     state.active = !!on;
+    if (townsfolk) townsfolk.setActive(state.active);
     for (const l of lamps) l.visible = state.active && !!pointLights;
     if (flatGroup) flatGroup.visible = state.active;
   }
@@ -281,8 +289,8 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     origin: TOWN_ORIGIN, world, group, pieces, lamps, coreMaterials, glyphs, routePoints: TOWN_ROUTE,
     get ready() { return checkReady(); },
     /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
-    get shown() { return checkReady() && (state.flat || pieces.every((x) => x.def.visualOnly || settled(x.def.name))); }, get flat() { return state.flat; }, get active() { return state.active; },
+    get shown() { return shown(); }, get flat() { return state.flat; }, get active() { return state.active; },
     get altar() { return state; },
-    update, setFlare, setActive, setPointLights, groundAt, settled, status,
+    update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
   };
 }

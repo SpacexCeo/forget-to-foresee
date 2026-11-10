@@ -305,7 +305,9 @@ class Ctx:
                 c = H + ax * t
                 r = p - c
                 u = sm01(L.crotch - 0.05, cz, p.z)
-                want = r_top * (1 - (1 - taper) * u) * sm01(L.crotch, L.crotch - 0.10, p.z)
+                want = r_top * (1 - (1 - taper) * u) * sm01(L.crotch, L.crotch - (0.10 if width < 1.1 else 0.22), p.z)
+                if width >= 1.1:                     # gathered into the boot
+                    want *= 1 - 0.30 * sm01(cz + 0.10, cz, p.z)
                 if 1e-6 < r.length < want:
                     q = c + r * (want / r.length)
                     if q.x * side < 0.004:
@@ -427,7 +429,7 @@ class Ctx:
     # ------------------------------------------------------------ bands
 
     def band(self, name, z_of, width=0.04, ease=0.012, bones=TORSO, n=48, thick=0.006, over=(), tilt_w=None,
-             round_=0.0):
+             round_=0.0, over_gap=0.003):
         """A ring round the body whose height follows z_of(theta) (theta = 0 at the front, radians)."""
         cache = {}
 
@@ -449,7 +451,7 @@ class Ctx:
                 ring.append(V((self.axis.x + r * math.cos(th), self.axis.y + r * math.sin(th), z)))
             rings.append(ring)
         o = C.loft(name, rings)
-        self.clear(o, 0.004, over, 0.003)
+        self.clear(o, 0.004, over, over_gap)
         C.set_attr(o, "trim", lambda i, co: 0.0)
         _solid(o, thick, 1.0)
         C.smooth(o)
@@ -597,6 +599,73 @@ class Ctx:
                 kill.add(i)
         IH.delete_verts(self.bm, lambda i, co: i in kill)
         return len(kill)
+
+
+def strip_layers(ctx, keep_above_hem=0.12):
+    """Remove the parts of a garment that a later (outer) garment covers: trousers under a skirt, a shirt under
+    a vest, a skirt under an apron. Two layers that are both kept always fight after the reduction (patches of
+    the inner one poke through), so only the outer one stays, with a margin kept round every opening and above
+    every hem. -> number of faces removed."""
+    L = ctx.L
+    names = list(ctx.garments)
+    removed = 0
+    for gi, name in enumerate(names):
+        o = ctx.garments[name]
+        if o.get("mat") in ("hair", "metal", "amber", "shell", "wood", "straw", "bread") or str(o.get("rule", "")).startswith("rigid") \
+                or o.get("rule") == "head" or len(o.data.polygons) < 60:
+            continue
+        outer = [ctx.garments[n] for n in names[gi + 1:]]
+        outer = [q for q in outer if len(q.data.polygons) >= 60 and q.get("mat", "cloth") in ("cloth", "leather")
+                 and not str(q.get("rule", "")).startswith("rigid") and q.get("rule") != "head"]
+        if not outer:
+            continue
+        co, polys, owner = [], [], []
+        for q in outer:
+            base = len(co)
+            co.extend(q.matrix_world @ v.co for v in q.data.vertices)
+            hem = min(v.co.z for v in q.data.vertices)
+            for f in q.data.polygons:
+                polys.append([base + i for i in f.vertices])
+                owner.append(hem)
+        tree = BVHTree.FromPolygons(co, polys)
+        legwear = name in ("trousers", "underskirt", "socks") or name.endswith("_skirt")
+        me = o.data
+        covered = set()
+        for v in me.vertices:
+            p, n = v.co, v.normal
+            reach = 0.30 if legwear and p.z < L.waist else 0.06
+            a = n.orthogonal().normalized()
+            b2 = n.cross(a)
+            dirs = [n] + [(n * 0.8 + (a * math.cos(q) + b2 * math.sin(q)) * 0.6).normalized()
+                          for q in (0.3, 0.3 + TAU / 4, 0.3 + TAU / 2, 0.3 + 3 * TAU / 4)]
+            ok = True
+            for d in dirs:
+                h = tree.ray_cast(p + n * 0.001, d, reach)
+                if h[0] is None or p.z < owner[h[2]] + keep_above_hem:
+                    ok = False
+                    break
+            if ok:
+                covered.add(v.index)
+        for _ in range(2):                           # keep a margin of the inner layer round every opening
+            keep = set()
+            for e in me.edges:
+                a_, b_ = e.vertices
+                if (a_ in covered) != (b_ in covered):
+                    keep.add(a_)
+                    keep.add(b_)
+            covered -= keep
+        if not covered:
+            continue
+        bmx = bmesh.new()
+        bmx.from_mesh(me)
+        dead = [f for f in bmx.faces if all(v.index in covered for v in f.verts)]
+        removed += len(dead)
+        bmesh.ops.delete(bmx, geom=dead, context="FACES")
+        bmesh.ops.delete(bmx, geom=[v for v in bmx.verts if not v.link_faces], context="VERTS")
+        bmx.to_mesh(me)
+        bmx.free()
+        me.update()
+    return removed
 
 
 # ===================================================================== small solid props (bmesh helpers)

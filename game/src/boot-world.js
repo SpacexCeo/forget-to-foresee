@@ -382,7 +382,7 @@ function groundInTown() {
   if (y != null) player.teleport([player.pos[0], y, player.pos[2]], player.heading);
   townGrounded = true;
 }
-const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1 }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
+const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camera }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
 function frame() {
