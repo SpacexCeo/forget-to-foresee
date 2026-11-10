@@ -354,9 +354,9 @@ def sky_archipelago(tb, scale):
     s = scale
     # x, y, z offsets (m), radius, underside depth, haze amount
     # three depth groups (GPT review): near and large, middle, far and small; haze grows with depth
-    isles = [(20, -6, 40, 30, 34, 0.05), (-58, 4, 10, 17, 21, 0.12),
-             (74, 22, -60, 15, 18, 0.34), (-18, 30, -110, 13, 16, 0.44),
-             (118, 44, -170, 9, 11, 0.64), (-96, 52, -200, 8, 10, 0.70), (40, 62, -240, 7, 9, 0.76)]
+    isles = [(0, 0, 0, 15, 17, 0.30), (-52, 6, -14, 10, 12, 0.36),
+             (70, 22, -70, 11, 13, 0.52), (-18, 30, -110, 9, 11, 0.58),
+             (118, 44, -150, 7, 9, 0.72), (-96, 52, -170, 6, 8, 0.77), (40, 62, -190, 5, 7, 0.82)]
     for i, (x, y, z, r, d, k) in enumerate(isles):
         island(x * s, y * s, z * s, r * s, d * s, k, 100 + i)
         if i not in (1, 5):

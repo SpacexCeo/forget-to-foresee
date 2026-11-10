@@ -323,7 +323,7 @@
       ]
     },
     "town_sky": {
-      "raw_bytes": 262972,
+      "raw_bytes": 262976,
       "triangles": 3236,
       "collision_triangles": 0,
       "materials": [
@@ -334,14 +334,14 @@
       },
       "sockets": [],
       "bounds_min": [
-        45.63,
-        160.0,
-        -547.37
+        62.72,
+        206.34,
+        -515.27
       ],
       "bounds_max": [
-        277.53,
-        277.05,
-        -228.61
+        290.41,
+        297.75,
+        -304.3
       ]
     },
     "town_shop_exchange": {
@@ -522,11 +522,11 @@
     },
     {
       "stage": "objects",
-      "seconds": 1.59
+      "seconds": 1.61
     },
     {
       "stage": "export",
-      "seconds": 1.28
+      "seconds": 1.31
     }
   ],
   "total_triangles": 162261,

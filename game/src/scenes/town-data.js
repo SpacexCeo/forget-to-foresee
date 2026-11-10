@@ -168,16 +168,16 @@ export const TOWN_DATA = Object.freeze({
       "name": "town_sky",
       "kind": "town_sky",
       "position": [
-        150.0,
-        200.0,
-        -300.0
+        165.0,
+        225.0,
+        -320.0
       ],
       "center": [
-        161.58,
-        218.52,
-        -387.99
+        176.57,
+        252.05,
+        -409.78
       ],
-      "radius": 205.6
+      "radius": 161.8
     }
   ],
   "interiors": [
