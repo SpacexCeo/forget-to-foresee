@@ -258,7 +258,7 @@ def garment_shader(b):
     b.l(comb.outputs[0], mul.inputs[7])
     rough = b.math("SUBTRACT", b.attr("rough").outputs["Fac"], b.math("MULTIPLY", accent, 0.30))
     metal = b.attr("metal").outputs["Fac"]
-    h = b.math("ADD", b.math("MULTIPLY", fib.outputs["Fac"], 0.5), b.math("MULTIPLY", weave.outputs["Fac"], 0.2))
+    h = b.math("ADD", b.math("MULTIPLY", fib.outputs["Fac"], 0.5), b.math("MULTIPLY", weave.outputs["Fac"], 0.0))   # the 1.7 mm weave aliased into contour moire in the 2K atlas
     # knit: horizontal courses on the jacket (wave period 2*pi / (20 * scale) metres), slightly broken
     knit = b.attr("knit").outputs["Fac"]
     course = b.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction="Z", wave_profile="SIN",
