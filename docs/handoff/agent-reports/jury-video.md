@@ -82,7 +82,7 @@ The Agents, II · The Memory Shard) is built and runs end to end. Its final 4K r
 | 1 | 44ed2fd | `/root/ftf-media/jury-test/` | `docs/media/plates/jury-test-44ed2fd/` | old framing, old light |
 | 2 | 5b64ae9 | `/root/ftf-media/jury-test-2/` | `docs/media/plates/jury-test-5b64ae9/` | new framing, old light |
 | 3 | 8e35537 | `/root/ftf-media/jury-test-3b/` | `docs/media/plates/jury-test-8e35537/` | dusk look; **black squares** in fly-in, clans-back, clans-front, shard-macro, proof; conflict and token clean |
-| 4 | b79d261 or the branch head | `/root/ftf-media/jury-test-4/` | (pending) | the HDR guard plus the gate. If it ran at b79d261, its capture guard sits right after the render and the god-ray depth may be blanked: check the proxies for missing light shafts, and if they are missing, re-run from the head |
+| 4 | 45ac336 (main head, Iris v7) | `/root/ftf-media/jury-test-4/` on order 2423705 | `docs/media/plates/jury-test-45ac336/` (log excerpt and two stills only) | rendered clean on 09.11 (0 runner errors, no black-block re-render, retries only on proof frame 17, ANGLE gl-egl without a context loss), then the order expired 48 min later before the proxies were pulled: masters, json and proxies lost. Re-run from the head on the next server; pull each shot as it finishes |
 
 The 4K masters (98–234 MB per shot) stay on the server. The proxies are 1080p mp4 files plus the json files (with
 `layerLog`) plus mid stills.

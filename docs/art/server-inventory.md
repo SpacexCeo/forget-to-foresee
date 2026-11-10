@@ -55,6 +55,16 @@ Not listed (rebuildable or public, safe to lose): git clones `/root/ftf*` (no un
 `/root/w/nv` and the NVIDIA installer (public download), `_raw` agent glbs (rebuilt by `build_agents.py`),
 old transfer bundles `/root/w/*.tgz`, `/root/r5.tgz`, `/root/r6.tgz`.
 
+## Clore order 2423705 (RTX 4090, Jupyter image), expired 09.11.2026 20:32 UTC
+
+Created 17:39 UTC, ended at 20:32 UTC by the Clore API's `order_end` (2 h 53 min in, spend 1.27 USD; not ended by the
+jury-video session, which only ran jobs on it). Nothing on it survives. It held the Iris art builds of the gpu-art
+session (`/root/build*.sh`, `/root/iris-body`, `/root/src3`..`/root/src7`, `*.blend`, `*.png`, `agent_iris.glb`; a
+Blender build was still running at 19:16 UTC) and the jury plates round 4 (`/root/ftf-media/jury-test-4/`: 4K
+masters of all seven shots, rendered clean at 19:44 UTC, never downloaded). What was pulled before the end is in
+`docs/media/plates/jury-test-45ac336/` (the log excerpt and two fly-in stills). The round 1-3 masters were already lost
+with order 2419013.
+
 ## Full sweep 09.11.2026 10:40 UTC (gpu-art session wrap-up)
 
 Every file over 1 MB on the server that no git checkout tracks: **1165 files, 17.48 GB**. Each one with path, bytes and sha256 is in [`server-only-files-2026-11-09.tsv`](server-only-files-2026-11-09.tsv). Files over 100 MB: **40, 7.84 GB** (4K plate masters, work segments, the driver installer, the tarballs); they stay on the server and can be downloaded over Jupyter (`/files/<path>` relative to `/root`).

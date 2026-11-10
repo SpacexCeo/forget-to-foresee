@@ -1,0 +1,61 @@
+== 2026-11-09T19:24:44Z job start: ref=45ac33614ad31ac0a1d419616678e41477622c66 out=/root/ftf-media/jury-test-4 videos=jury-test
+== commit 45ac336: Merge pull request #32 from SpacexCeo/claude/great-lovelace-jl1v3l
+== build ok
+const { chromium } = (() => { for (const p of [process.env.PLAYWRIGHT_PATH, 'playwright', '/opt/node-tools/node_modules/playwright/index.js'].filter(Boolean)) { try { return require(p); } catch { /* next */ } } throw new Error('playwright not installed (set PLAYWRIGHT_PATH to its package directory)'
+Error: playwright not installed (set PLAYWRIGHT_PATH to its package directory)
+WARNING: no hardware WebGL; rendering on SwiftShader (slow)
+== 2026-11-09T19:26:01Z jury-test 3840x2160@30 (FTF_NO_LAYERS=1)
+19:26:01 [fly-in] attempt 1 failed: playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory) · retrying (2/3)
+19:26:01 [fly-in] attempt 2 failed: playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory) · retrying (3/3)
+Error: playwright is not installed (npm i -g playwright, or set PLAYWRIGHT_PATH to its package directory)
+== 2026-11-09T19:29:11Z job start: ref=45ac33614ad31ac0a1d419616678e41477622c66 out=/root/ftf-media/jury-test-4 videos=jury-test
+== commit 45ac336: Merge pull request #32 from SpacexCeo/claude/great-lovelace-jl1v3l
+== playwright from /root/pw/node_modules/playwright
+== build ok
+GPU   angle-gl-egl   ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2)
+GPU   angle-vulkan   ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 4090 (0x00002684)), NVIDIA)
+soft  egl            ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+soft  angle-gl       ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+soft  angle-default  ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+soft  swiftshader    ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+using angle-gl-egl: ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4090/PCIe/SSE2, OpenGL ES 3.2) (saved to /root/ftf-jury-tools/tools/capture/.gpu-args.json)
+== 2026-11-09T19:29:22Z jury-test 3840x2160@30 (FTF_NO_LAYERS=1)
+19:30:08 [fly-in] frame 24/90 · 1.26 s/frame · ETA 1 min · luma 176 jumps 0
+19:30:40 [fly-in] frame 44/90 · 1.40 s/frame · ETA 1 min · luma 180 jumps 0
+19:31:10 [fly-in] frame 66/90 · 1.40 s/frame · ETA 1 min · luma 155 jumps 0
+19:31:41 [fly-in] frame 89/90 · 1.38 s/frame · ETA 0 min · luma 124 jumps 0
+19:31:44 [fly-in] done: 90 frames in 2.4 min (1.40 s/frame), 6 cues, 0 runner errors, 0 console messages, luma 123–184 jumps 0 (max 7.5) edge-black 0% retries 0
+19:32:22 [clans-back] frame 23/45 · 1.32 s/frame · ETA 0 min · luma 119 jumps 0
+19:32:52 [clans-back] frame 43/45 · 1.40 s/frame · ETA 0 min · luma 120 jumps 0
+19:32:57 [clans-back] done: 45 frames in 1.2 min (1.46 s/frame), 5 cues, 0 runner errors, 0 console messages, luma 105–162 jumps 0 (max 10.7) edge-black 0% retries 0
+19:33:36 [clans-front] frame 20/45 · 1.56 s/frame · ETA 1 min · luma 117 jumps 0
+19:34:07 [clans-front] frame 40/45 · 1.56 s/frame · ETA 0 min · luma 97 jumps 0
+19:34:16 [clans-front] done: 45 frames in 1.3 min (1.58 s/frame), 4 cues, 0 runner errors, 0 console messages, luma 96–135 jumps 0 (max 7.5) edge-black 0% retries 0
+19:34:54 [conflict] frame 23/90 · 1.32 s/frame · ETA 1 min · luma 122 jumps 0
+19:35:25 [conflict] frame 44/90 · 1.39 s/frame · ETA 1 min · luma 119 jumps 0
+19:35:56 [conflict] frame 64/90 · 1.44 s/frame · ETA 1 min · luma 114 jumps 0
+19:36:27 [conflict] frame 85/90 · 1.44 s/frame · ETA 0 min · luma 111 jumps 0
+19:36:35 [conflict] done: 90 frames in 2.3 min (1.46 s/frame), 7 cues, 0 runner errors, 0 console messages, luma 111–123 jumps 0 (max 0.9) edge-black 0% retries 0
+19:37:13 [shard-macro] frame 24/90 · 1.27 s/frame · ETA 1 min · luma 117 jumps 0
+19:37:43 [shard-macro] frame 48/90 · 1.27 s/frame · ETA 1 min · luma 125 jumps 0
+19:38:14 [shard-macro] frame 72/90 · 1.27 s/frame · ETA 0 min · luma 130 jumps 0
+19:38:39 [shard-macro] done: 90 frames in 2.0 min (1.29 s/frame), 6 cues, 0 runner errors, 0 console messages, luma 111–131 jumps 0 (max 0.7) edge-black 0% retries 0
+19:39:16 [token] frame 23/90 · 1.34 s/frame · ETA 1 min · luma 52 jumps 0
+19:39:46 [token] frame 46/90 · 1.32 s/frame · ETA 1 min · luma 49 jumps 0
+19:40:17 [token] frame 69/90 · 1.32 s/frame · ETA 0 min · luma 46 jumps 0
+19:40:47 [token] done: 90 frames in 2.1 min (1.35 s/frame), 5 cues, 0 runner errors, 0 console messages, luma 44–54 jumps 0 (max 0.8) edge-black 0% retries 0
+19:41:18 [proof] frame 17: flagged (edge 0%, luma 87), re-rendering (proof-f00017-retry0.png kept)
+19:41:19 [proof] frame 17: flagged (edge 0%, luma 87), re-rendering (proof-f00017-retry1.png kept)
+19:41:19 [proof] frame 17: flagged (edge 0%, luma 87), re-rendering (proof-f00017-retry2.png kept)
+19:41:25 [proof] frame 21/105 · 1.49 s/frame · ETA 2 min · luma 111 jumps 1
+19:41:55 [proof] frame 45/105 · 1.38 s/frame · ETA 1 min · luma 133 jumps 1
+19:42:26 [proof] frame 69/105 · 1.34 s/frame · ETA 1 min · luma 143 jumps 1
+19:42:56 [proof] frame 93/105 · 1.32 s/frame · ETA 0 min · luma 142 jumps 1
+19:43:12 [proof] done: 105 frames in 2.4 min (1.32 s/frame), 6 cues, 0 runner errors, 0 console messages, luma 32–143 jumps 1 (max 27.0) edge-black 0% retries 3
+19:44:32 final luma: {"ok":true,"frames":555,"jumps":1,"at":[360],"maxJump":73.1,"min":23,"max":167.3}
+19:44:32 done:
+== 2026-11-09T19:44:32Z done
+-rw-r--r-- 1 root root  12258664 Nov  9 19:41 proof-f00017-retry0.png
+-rw-r--r-- 1 root root  12258664 Nov  9 19:41 proof-f00017-retry1.png
+-rw-r--r-- 1 root root  12258664 Nov  9 19:41 proof-f00017-retry2.png
+JOB_FINISHED
