@@ -1,8 +1,8 @@
 {
-  "textured": false,
+  "textured": true,
   "pieces": {
     "town_terrain": {
-      "raw_bytes": 889248,
+      "raw_bytes": 12039104,
       "triangles": 9889,
       "collision_triangles": 424,
       "materials": [
@@ -47,7 +47,7 @@
       ]
     },
     "town_block_gate": {
-      "raw_bytes": 3863308,
+      "raw_bytes": 15913500,
       "triangles": 33176,
       "collision_triangles": 462,
       "materials": [
@@ -93,7 +93,7 @@
       ]
     },
     "town_block_mid": {
-      "raw_bytes": 3733252,
+      "raw_bytes": 15783448,
       "triangles": 31396,
       "collision_triangles": 358,
       "materials": [
@@ -141,7 +141,7 @@
       ]
     },
     "town_block_square": {
-      "raw_bytes": 3639236,
+      "raw_bytes": 15689424,
       "triangles": 31044,
       "collision_triangles": 404,
       "materials": [
@@ -190,7 +190,7 @@
       ]
     },
     "town_temple": {
-      "raw_bytes": 2240820,
+      "raw_bytes": 14291008,
       "triangles": 21220,
       "collision_triangles": 416,
       "materials": [
@@ -240,7 +240,7 @@
       ]
     },
     "town_altar": {
-      "raw_bytes": 760176,
+      "raw_bytes": 2242736,
       "triangles": 7488,
       "collision_triangles": 276,
       "materials": [
@@ -300,15 +300,15 @@
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.25
+      "seconds": 1.27
     },
     {
       "stage": "objects",
-      "seconds": 1.31
+      "seconds": 1.32
     },
     {
       "stage": "export",
-      "seconds": 0.61
+      "seconds": 1.13
     }
   ],
   "total_triangles": 135577,

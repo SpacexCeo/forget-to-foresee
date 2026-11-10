@@ -71,17 +71,17 @@ def plaster(s):
     c = lerp3((0.74, 0.72, 0.66), (0.86, 0.84, 0.79), big * 0.6 + mid * 0.4)
     c *= (1 - 0.10 * stain)[..., None]
     c *= (0.94 + 0.12 * fine)[..., None]
-    c *= (1 - 0.5 * crk)[..., None]
-    h = trowel * 0.45 + mid * 0.3 + fine * 0.18 - crk * 0.5
+    c *= (1 - 0.16 * crk)[..., None]
+    h = trowel * 0.45 + mid * 0.3 + fine * 0.18 - crk * 0.15
     rough = 0.88 + 0.08 * fine - 0.05 * stain
     return c, rough, h, 9.0, (5, 2.0)
 
 
 def timber(s):
-    grain = fbm(s, 1.2, 11, ax=0.035, ay=1.0, lo=4, hi=400)
-    grain2 = fbm(s, 1.0, 12, ax=0.02, ay=1.0, lo=40)
-    tone = fbm(s, 2.2, 13, ax=0.3, ay=1.0, hi=10)
-    crack = sstep(0.80, 0.90, fbm(s, 1.4, 14, ax=0.03, ay=1.0, lo=6, hi=60))
+    grain = fbm(s, 1.2, 11, ax=1.0, ay=0.035, lo=4, hi=400)
+    grain2 = fbm(s, 1.0, 12, ax=1.0, ay=0.02, lo=40)
+    tone = fbm(s, 2.2, 13, ax=1.0, ay=0.3, hi=10)
+    crack = sstep(0.80, 0.90, fbm(s, 1.4, 14, ax=1.0, ay=0.03, lo=6, hi=60))
     lines = sstep(0.35, 0.75, grain)
     c = lerp3((0.40, 0.36, 0.31), (0.66, 0.62, 0.56), lines * 0.7 + tone * 0.3)
     c *= (0.9 + 0.2 * grain2)[..., None]
@@ -219,9 +219,9 @@ def rock(s):
     c *= (0.84 + 0.26 * mid)[..., None]
     lichen = sstep(0.66, 0.8, fbm(s, 2.2, 66, hi=20)) * 0.45
     c = lerp3(c, np.asarray((0.42, 0.46, 0.28), np.float32), lichen)
-    c *= (1 - 0.6 * crack)[..., None]
+    c *= (1 - 0.25 * crack)[..., None]
     c *= (0.95 + 0.1 * fine)[..., None]
-    h = strata * 0.5 + big * 0.3 + mid * 0.2 - crack * 0.4
+    h = strata * 0.5 + big * 0.3 + mid * 0.2 - crack * 0.2
     rough = 0.88 + 0.08 * fine
     return c, rough, h, 16.0, (8, 2.6)
 

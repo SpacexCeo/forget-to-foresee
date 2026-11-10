@@ -55,7 +55,9 @@ def _frame(tb, width, h, pattern, col, rr, openings=()):
     """Timber frame on a wall (wall space: X along the wall, Y up, +Z out)."""
     z, dp = 0.02, 0.14
     def bx(cx, cy, sx, sy, grain):
-        tb.box("timber", (cx, cy, z), (sx, sy, dp), tint(col, rr.uniform(0.86, 1.08)), skip="z", uv_dir=grain)
+        # horizontals stand a little prouder than verticals: crossing members never share a plane
+        d = dp if grain[0] else dp - 0.024
+        tb.box("timber", (cx, cy, z), (sx, sy, d), tint(col, rr.uniform(0.86, 1.08)), skip="z", uv_dir=grain)
     bx(0, 0.11, width + 0.1, 0.22, (1, 0, 0))
     bx(0, h - 0.10, width + 0.1, 0.20, (1, 0, 0))
     bx(-width / 2 + 0.11, h / 2, 0.22, h, (0, 1, 0))
@@ -76,7 +78,7 @@ def _frame(tb, width, h, pattern, col, rr, openings=()):
             b = (sx * (width / 2 - 0.2 - min(1.1, width / n)), h - 0.2, z)
             if pattern == "cross" and h > 2.4:
                 b = (b[0], h * 0.42, z)
-            tb.beam("timber", a, b, 0.13, dp, tint(col, 0.95), up=(0, 0, 1), skip="y")
+            tb.beam("timber", a, b, 0.13, dp - 0.05, tint(col, 0.95), up=(0, 0, 1), skip="y")
 
 
 def _window(tb, cx, sill, w, h, rr, shutter=None, lit=False, flowers=False, glass_dark=1.0):
@@ -167,19 +169,19 @@ def _roof(tb, length, span, pitch, col, plaster, rr, ring_window=False, frame_co
             z, dp = 0.02, 0.14
             tb.box("timber", (0, 0.1, z), (w, 0.2, dp), frame_col, skip="z", uv_dir=(1, 0, 0))
             for s2 in (-1, 1):
-                tb.beam("timber", (s2 * (w / 2 - 0.12), 0.12, z), (s2 * 0.08, rise - 0.2, z), 0.16, dp, frame_col, up=(0, 0, 1), skip="y")
+                tb.beam("timber", (s2 * (w / 2 - 0.12), 0.12, z), (s2 * 0.08, rise - 0.2, z), 0.16, dp - 0.05, frame_col, up=(0, 0, 1), skip="y")
             ky = rise * 0.56
-            tb.box("timber", (0, ky, z), (w * (1 - ky / rise) - 0.1, 0.14, dp), frame_col, skip="z", uv_dir=(1, 0, 0))
+            tb.box("timber", (0, ky, z), (w * (1 - ky / rise) - 0.1, 0.14, dp + 0.02), frame_col, skip="z", uv_dir=(1, 0, 0))
             if ring_window and rise > 2.3:
                 cy = ky * 0.52 + 0.1
                 tb.ring("timber", (0, cy, 0.06), 0.46, 0.33, 0.16, 16, TIMBER_LIGHT)
                 tb.poly(GLASS, [(math.cos(math.tau * i / 16) * 0.33, cy + math.sin(math.tau * i / 16) * 0.33, 0.05) for i in range(16)])
                 for s2 in (-1, 1):
-                    tb.box("timber", (s2 * (w * 0.25 + 0.2), ky / 2, z), (0.13, ky, dp), frame_col, skip="z", uv_dir=(0, 1, 0))
+                    tb.box("timber", (s2 * (w * 0.25 + 0.2), ky / 2, z), (0.13, ky, dp - 0.024), frame_col, skip="z", uv_dir=(0, 1, 0))
             else:
-                tb.box("timber", (0, rise / 2, z), (0.14, rise - 0.2, dp), frame_col, skip="z", uv_dir=(0, 1, 0))
+                tb.box("timber", (0, rise / 2, z), (0.14, rise - 0.2, dp - 0.024), frame_col, skip="z", uv_dir=(0, 1, 0))
                 for s2 in (-1, 1):
-                    tb.box("timber", (s2 * w * 0.24, ky / 2, z), (0.13, ky, dp), frame_col, skip="z", uv_dir=(0, 1, 0))
+                    tb.box("timber", (s2 * w * 0.24, ky / 2, z), (0.13, ky, dp - 0.024), frame_col, skip="z", uv_dir=(0, 1, 0))
     if dormer:
         dz = span * 0.27
         dy = (span / 2 - dz) * tp

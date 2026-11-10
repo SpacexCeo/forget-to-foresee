@@ -53,7 +53,7 @@ STATS_PATH = os.path.join(QA_DIR, "build-stats.json")
 TAG = "town"
 
 # Tiling sets: metres per texture repeat. Vertex colour multiplies the base colour.
-TILE = {"cobble": 4.0, "ground": 6.0, "stone": 3.0, "rock": 9.0, "timber": 1.6, "roof": 2.4,
+TILE = {"cobble": 3.0, "ground": 6.0, "stone": 3.0, "rock": 9.0, "timber": 1.6, "roof": 2.4,
         "plaster": 3.5, "cloth": 1.2, "foliage": 2.5, "altar_stone": 2.4}
 TEX_OF = {"altar_stone": "stone"}          # material key -> texture set when it differs
 FLAT = {  # blockout colours (linear) standing in for the tiling base colour
@@ -360,7 +360,7 @@ def stage_render(which=None):
         o.data.materials.append(ftf.simple_material(f"Human{i}", (0.30, 0.20, 0.50), 0.7))
     views = {
         "top": dict(loc=(0, 190, -10), tgt=(0, 0, -10.01), ortho=128, res=(2000, 2000)),
-        "spawn": dict(loc=(0, 3.6, 39.5), tgt=(0, 5.0, 0), lens=30, res=(1920, 1200)),
+        "spawn": dict(loc=(0, 2.9, 32.0), tgt=(0, 5.2, 0), lens=22, res=(1920, 1200)),
         "altar": dict(loc=(0.8, 7.0, 4.0), tgt=(0, 8.4, -14), lens=34, res=(1920, 1200)),
         "altar_close": dict(loc=(3.4, 6.6, -5.2), tgt=(0, 7.0, -11), lens=40, res=(1920, 1200)),
         "aerial": dict(loc=(64, 62, 86), tgt=(0, 4, -8), lens=32, res=(1920, 1200)),
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     stage = argv[0]
     if stage in ("textures", "all"):
         import town_textures
-        town_textures.stage_textures(TEX_DIR, QA_DIR)
+        town_textures.stage_textures(TEX_DIR, QA_DIR, (argv[1:] or None) if stage == "textures" else None)
     if stage in ("build", "all"):
         stage_build()
     if stage in ("render", "all"):
