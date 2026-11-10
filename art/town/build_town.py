@@ -250,10 +250,24 @@ def make_materials():
     for k in range(16):
         mats[f"altar_glyph_{k:02d}"] = glyph
     mats["altar_eye"] = ftf.simple_material("M_Altar_Eye", (0.9, 0.55, 0.18), 0.35, emit=(1.0, 0.55, 0.14), emit_strength=0.2)
-    mats["window_day"] = ftf.simple_material("M_Shop_Daylight", (0.80, 0.86, 0.90), 0.5, emit=(0.86, 0.92, 1.0), emit_strength=1.6)
-    mats["shard"] = ftf.simple_material("M_Shop_Shard", (0.74, 0.70, 0.92), 0.12, emit=(0.72, 0.66, 1.0), emit_strength=1.2)
     mats["ink"] = ftf.simple_material("M_Shop_Ink", (0.02, 0.022, 0.03), 0.5)
     mats["fire"] = ftf.simple_material("M_Shop_Fire", (1.0, 0.5, 0.1), 0.5, emit=(1.0, 0.42, 0.06), emit_strength=5.0)
+    # Interior-only materials (S-001..S-003). Interiors are lit by their baked vertex colour under a plain
+    # ambient light in the client, so nothing here is a true metal (a metal has no diffuse and would go black).
+    mats["window_day"] = vc_material("M_Shop_Daylight", (1.0, 1.0, 1.0), rough=0.9)          # painted daylight, never baked
+    mats["bronze"] = vc_material("M_Shop_Bronze", (0.80, 0.56, 0.26), rough=0.38, metal=0.2)
+    mats["iron"] = vc_material("M_Shop_Iron", (0.10, 0.095, 0.09), rough=0.6)
+    mats["ceramic"] = vc_material("M_Shop_Ceramic", (1.0, 1.0, 1.0), rough=0.45)
+    mats["paper"] = vc_material("M_Shop_Paper", (0.93, 0.87, 0.72), rough=0.9, double_sided=True)
+    mats["wax"] = vc_material("M_Shop_Wax", (1.0, 0.95, 0.84), rough=0.5)
+    for key, name, base, emit in (("shard", "M_Shop_Shard", (0.62, 0.50, 0.98), (0.30, 0.20, 0.62)),
+                                  ("shard_amber", "M_Shop_ShardAmber", (1.0, 0.66, 0.30), (0.62, 0.30, 0.06))):
+        m = vc_material(name, base, rough=0.14)
+        mb = m.node_tree.nodes["Principled BSDF"]
+        mb.inputs["Emission Color"].default_value = (*emit, 1.0)
+        mb.inputs["Emission Strength"].default_value = 1.0
+        mats[key] = m
+    mats["case_glass"] = ftf.simple_material("M_Shop_CaseGlass", (0.80, 0.90, 0.96), 0.06, alpha=0.16, double_sided=True)
     mats["water"] = ftf.simple_material("M_Town_Water", (0.05, 0.10, 0.11), 0.06)
     mats["altar_metal"] = ftf.simple_material("M_Altar_Metal", (0.66, 0.44, 0.20), 0.38, metal=1.0)
     mats["pearl"] = vc_material("M_Town_Pearl", (0.93, 0.89, 0.82), rough=0.3, metal=0.0)
@@ -263,7 +277,7 @@ def make_materials():
 
 def color_fn_for(piece, mat):
     """Cheap grounding: vertical faces darken toward the ground they stand on, undersides darken."""
-    if mat in ("sky", "pearl", "foliage", "lamp", "glass", "glass_lit", "altar_metal", "altar_eye", "water", "window_day", "shard", "ink", "fire") or mat.startswith(("altar_glyph", "altar_core")) or piece == "town_sky":
+    if mat in ("sky", "pearl", "foliage", "lamp", "glass", "glass_lit", "altar_metal", "altar_eye", "water", "window_day", "shard", "shard_amber", "ink", "fire", "bronze", "iron", "ceramic", "paper", "wax", "case_glass") or piece.startswith("town_shop_") or mat.startswith(("altar_glyph", "altar_core")) or piece == "town_sky":
         return None
     px, py, pz = PIVOT[piece]
     terrain = piece == "town_terrain"
@@ -284,10 +298,11 @@ def color_fn_for(piece, mat):
 def build_objects(tb, mats):
     out = ftf.new_collection("Export")
     pieces = {}
-    for (piece, mat), geo in sorted(tb.geos.items()):
+    node_meshes = {}
+    for (piece, mat, node), geo in sorted(tb.geos.items(), key=lambda kv: (kv[0][0], kv[0][1], kv[0][2] or "")):
         if not geo.f:
             continue
-        o = geo.to_object(f"{piece}_{mat}", mats[mat], out, uv_tile=TILE.get(mat, 1.0), color_fn=color_fn_for(piece, mat))
+        o = geo.to_object(f"{node or piece}_{mat}", mats[mat], out, uv_tile=TILE.get(mat, 1.0), color_fn=color_fn_for(piece, mat))
         bm = bmesh.new()
         bm.from_mesh(o.data)
         bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.0005)
@@ -295,7 +310,11 @@ def build_objects(tb, mats):
         bm.free()
         ftf.triangulate_ngons(o)
         ftf.finish_shading(o, angle=SHADE_ANGLE.get(mat, 38))
-        pieces.setdefault(piece, {"meshes": [], "cols": [], "sockets": []})["meshes"].append(o)
+        MAT_KEY[o.name] = mat
+        grp = pieces.setdefault(piece, {"meshes": [], "cols": [], "sockets": [], "nodes": []})
+        grp["meshes"].append(o)
+        if node:
+            node_meshes.setdefault((piece, node), []).append(o)
     for piece, bm in tb.cols.items():
         bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.0005)
         o = ftf.bm_object(f"{piece}_col", bm, None, out)
@@ -312,10 +331,179 @@ def build_objects(tb, mats):
             o.data.transform(Matrix.Translation(-pv))
         for e in grp["sockets"]:
             e.location = Vector(e.location) - pv
+    # separate rigid nodes (hanging signs, lantern heads): an empty at the hook, the meshes as its children
+    for (piece, node), info in sorted(tb.nodes.items()):
+        meshes = node_meshes.get((piece, node), [])
+        if not meshes:
+            continue
+        hook = Vector(bl(info["pivot"])) - Vector(bl(PIVOT[piece]))
+        e = ftf.add_empty(node, hook, out, 0.0, dict(info["props"], swing=node.split("_")[1]), 0.2)
+        for o in meshes:
+            o.data.transform(Matrix.Translation(-hook))
+            o.parent = e
+        pieces[piece]["nodes"].append(e)
+    bpy.context.view_layer.update()
     return pieces
 
 
-def stage_build():
+MAT_KEY = {}   # object name -> material key
+
+
+# ------------------------------------------------------------------ interior light bake
+
+# Mean albedo per material key for the bounce light of the bake (the tiling base colours are not sampled there).
+BAKE_ALBEDO = {"timber": (0.34, 0.24, 0.16), "stone": (0.42, 0.40, 0.36), "plaster": (0.70, 0.66, 0.58), "cloth": (0.62, 0.60, 0.56),
+               "cobble": (0.30, 0.28, 0.25), "foliage": (0.20, 0.30, 0.10), "bronze": (0.55, 0.38, 0.18), "iron": (0.08, 0.08, 0.08),
+               "ceramic": (0.8, 0.8, 0.8), "paper": (0.80, 0.74, 0.60), "wax": (0.85, 0.80, 0.70), "ink": (0.03, 0.03, 0.04),
+               "shard": (0.5, 0.4, 0.8), "shard_amber": (0.8, 0.5, 0.2), "altar_metal": (0.5, 0.35, 0.16)}
+BAKE_EMIT = {"lamp": ((1.0, 0.62, 0.26), 6.0), "fire": ((1.0, 0.40, 0.08), 14.0), "shard": ((0.55, 0.42, 1.0), 1.5),
+             "shard_amber": ((1.0, 0.55, 0.16), 1.5), "window_day": (None, 5.0)}
+BAKE_SKIP = ("lamp", "fire", "window_day", "case_glass", "glass_lit", "glass")   # keep their authored colour
+BAKE_EDGE = float(os.environ.get("TOWN_BAKE_EDGE", "0.34"))       # longest edge after tessellation, metres
+BAKE_SAMPLES = int(os.environ.get("TOWN_BAKE_SAMPLES", "768"))
+BAKE_MID = 0.50                                                     # where the median lit surface lands (0..1)
+
+
+def _bake_material(key):
+    m = bpy.data.materials.new("Bake_" + key)
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    outn = nt.nodes.new("ShaderNodeOutputMaterial")
+    vc = nt.nodes.new("ShaderNodeVertexColor")
+    vc.layer_name = "Col"
+    if key == "window_day":
+        em = nt.nodes.new("ShaderNodeEmission")
+        em.inputs["Strength"].default_value = BAKE_EMIT[key][1]
+        nt.links.new(vc.outputs["Color"], em.inputs["Color"])
+        nt.links.new(em.outputs[0], outn.inputs["Surface"])
+        return m
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Factor"].default_value = 1.0
+    mix.inputs[7].default_value = (*BAKE_ALBEDO.get(key, (0.5, 0.5, 0.5)), 1.0)
+    nt.links.new(vc.outputs["Color"], mix.inputs[6])
+    dif = nt.nodes.new("ShaderNodeBsdfDiffuse")
+    nt.links.new(mix.outputs[2], dif.inputs["Color"])
+    if key in BAKE_EMIT:
+        col, strength = BAKE_EMIT[key]
+        em = nt.nodes.new("ShaderNodeEmission")
+        em.inputs["Color"].default_value = (*col, 1.0)
+        em.inputs["Strength"].default_value = strength
+        add = nt.nodes.new("ShaderNodeAddShader")
+        nt.links.new(dif.outputs[0], add.inputs[0])
+        nt.links.new(em.outputs[0], add.inputs[1])
+        nt.links.new(add.outputs[0], outn.inputs["Surface"])
+    else:
+        nt.links.new(dif.outputs[0], outn.inputs["Surface"])
+    return m
+
+
+def tessellate(o, max_edge):
+    """Splits long edges so the per-vertex light bake has something to hold the falloff."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    for _ in range(8):
+        long_edges = [e for e in bm.edges if e.calc_length() > max_edge]
+        if not long_edges:
+            break
+        bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=1, use_grid_fill=True)
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    bm.to_mesh(o.data)
+    bm.free()
+
+
+def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
+    """Bakes the room's own lamps, hearth and window light (Cycles, diffuse direct + indirect, no colour)
+    into the vertex colour of every mesh of an interior: Col = tint x light. The client shows interiors
+    under a plain ambient light, so this is the whole lighting of the room on every quality tier."""
+    import numpy as np
+    meshes = [o for o in grp["meshes"]]
+    for o in all_objects:
+        o.hide_render = o not in meshes
+    lights = []
+    for i, L in enumerate(tb.lights.get(piece, [])):
+        lt = bpy.data.lights.new(f"bake_{piece}_{i}", "POINT")
+        lt.energy = L["power"]
+        lt.color = L["color"]
+        lt.shadow_soft_size = L["radius"]
+        lo = bpy.data.objects.new(lt.name, lt)
+        sc.collection.objects.link(lo)
+        lo.location = bl(L["pos"])
+        lights.append(lo)
+    world = bpy.data.worlds.new("BakeWorld")
+    world.use_nodes = True
+    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.9, 0.75, 0.6, 1.0)
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.012
+    sc.world = world
+    sc.render.engine = "CYCLES"
+    sc.cycles.samples = BAKE_SAMPLES
+    sc.cycles.use_adaptive_sampling = False
+    sc.cycles.max_bounces = 6
+    sc.cycles.diffuse_bounces = 4
+    sc.cycles.sample_clamp_indirect = 8.0
+    sc.render.bake.target = "VERTEX_COLORS"
+    sc.render.bake.use_pass_direct = True
+    sc.render.bake.use_pass_indirect = True
+    sc.render.bake.use_pass_color = False
+    bake_mats, keep = {}, {}
+    for o in meshes:
+        key = MAT_KEY[o.name]
+        if key not in BAKE_SKIP:
+            tessellate(o, BAKE_EDGE)
+        keep[o.name] = o.data.materials[0]
+        if key == "case_glass":
+            o.hide_render = True
+            continue
+        if key not in bake_mats:
+            bake_mats[key] = _bake_material(key)
+        o.data.materials[0] = bake_mats[key]
+    lit = [o for o in meshes if MAT_KEY[o.name] not in BAKE_SKIP]
+    for o in lit:
+        la = o.data.color_attributes.new("Light", "FLOAT_COLOR", "CORNER")
+        o.data.color_attributes.active_color = la
+        ftf.select_only([o], o)
+        bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, target="VERTEX_COLORS")
+    # exposure from the median lit wall / floor / furniture corner, then a soft shoulder per channel
+    data = {}
+    lum_all = []
+    for o in lit:
+        n = len(o.data.loops)
+        a = np.zeros(n * 4, dtype=np.float32)
+        o.data.color_attributes["Light"].data.foreach_get("color", a)
+        a = a.reshape(n, 4)[:, :3]
+        data[o.name] = a
+        if MAT_KEY[o.name] in ("plaster", "timber", "stone"):
+            lum_all.append(a @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32))
+    med = float(np.median(np.concatenate(lum_all)))
+    k = -math.log(1.0 - BAKE_MID) / max(med, 1e-6) * exposure
+    for o in lit:
+        n = len(o.data.loops)
+        c = np.zeros(n * 4, dtype=np.float32)
+        o.data.color_attributes["Col"].data.foreach_get("color", c)
+        c = c.reshape(n, 4)
+        light = np.maximum(1.0 - np.exp(-k * data[o.name]), 0.03)
+        c[:, :3] = np.clip(c[:, :3] * light, 0.0, 1.0)
+        o.data.color_attributes["Col"].data.foreach_set("color", c.ravel())
+        o.data.color_attributes.remove(o.data.color_attributes["Light"])
+        o.data.color_attributes.active_color = o.data.color_attributes["Col"]
+        try:
+            o.data.color_attributes.render_color_index = o.data.color_attributes.active_color_index
+        except AttributeError:
+            pass
+    for o in meshes:
+        o.data.materials[0] = keep[o.name]
+        o.hide_render = False
+    for lo in lights:
+        bpy.data.objects.remove(lo, do_unlink=True)
+    for o in all_objects:
+        o.hide_render = False
+    log("bake", piece, "objects", len(lit), "lights", len(lights), "median", round(med, 4), "k", round(k, 3))
+    return {"median": med, "k": k, "lights": len(lights)}
+
+
+def stage_build(only=None):
     clock = ftf.StageClock(TAG)
     clock.start("geometry")
     ftf.reset_scene()
@@ -330,10 +518,23 @@ def stage_build():
     data_pieces = []
     order = ["town_terrain", "town_block_gate", "town_block_mid", "town_block_square", "town_temple", "town_altar", "town_sky"] + [sp["piece"] for sp in P.SHOPS]
     data_interiors = []
+    only = set(only or [])
+    all_meshes = [o for g in pieces.values() for o in g["meshes"]]
+    if not os.environ.get("TOWN_NO_BAKE"):
+        clock.start("bake")
+        sc = bpy.context.scene
+        ftf.use_gpu(sc, TAG)
+        for sp in P.SHOPS:
+            if only and sp["piece"] not in only:
+                continue
+            stats.setdefault("bake", {})[sp["piece"]] = bake_interior(sc, sp["piece"], pieces[sp["piece"]], tb, all_meshes, sp.get("exposure", 1.0))
+        clock.start("export")
     for piece in order:
         grp = pieces[piece]
         path = os.path.join(OUT_DIR, piece + ".glb")
-        size = ftf.export_glb(path, grp["meshes"] + grp["cols"] + grp["sockets"])
+        if only and piece not in only:
+            continue
+        size = ftf.export_glb(path, grp["meshes"] + grp["cols"] + grp["sockets"] + grp["nodes"])
         info = ftf.inspect_glb(path)
         lo, hi = ftf.world_bounds(grp["meshes"])
         pv = PIVOT[piece]
@@ -346,20 +547,107 @@ def stage_build():
         radius = round(0.5 * math.dist(gmin, gmax), 1)
         stats["pieces"][piece] = {"raw_bytes": size, "triangles": info["triangles_render"], "collision_triangles": info["triangles_collision"],
                                   "materials": [m["name"] for m in info["materials"]], "nodes": {k: v["triangles"] for k, v in info["nodes"].items()},
-                                  "sockets": sorted(e.name for e in grp["sockets"]), "bounds_min": [round(v, 2) for v in gmin], "bounds_max": [round(v, 2) for v in gmax]}
+                                  "sockets": sorted(e.name for e in grp["sockets"]), "swing": sorted(e.name for e in grp["nodes"]), "bounds_min": [round(v, 2) for v in gmin], "bounds_max": [round(v, 2) for v in gmax]}
         entry = {"name": piece, "kind": KIND.get(piece, "town_block"), "position": [round(v, 3) for v in pv], "center": center, "radius": radius}
         (data_interiors if piece.startswith("town_shop_") else data_pieces).append(entry)
         log(piece, "tris", info["triangles_render"], "col", info["triangles_collision"], "bytes", size)
     clock.stop()
     stats["stages"] = clock.stages
-    stats["total_triangles"] = sum(p["triangles"] for p in stats["pieces"].values())
-    data = P.write_town_data(DATA_JS, data_pieces, data_interiors)
-    stats["route_length_m"] = data["routeLength"]
     os.makedirs(QA_DIR, exist_ok=True)
-    with open(STATS_PATH, "w") as fh:
-        json.dump(stats, fh, indent=2)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "town.blend"))
-    log("total tris", stats["total_triangles"])
+    if only:   # a partial rebuild (art iteration): the contract and the full stats are left alone
+        with open(os.path.join(OUT_DIR, "partial-stats.json"), "w") as fh:
+            json.dump(stats, fh, indent=2)
+    else:
+        stats["total_triangles"] = sum(p["triangles"] for p in stats["pieces"].values())
+        data = P.write_town_data(DATA_JS, data_pieces, data_interiors)
+        stats["route_length_m"] = data["routeLength"]
+        with open(STATS_PATH, "w") as fh:
+            json.dump(stats, fh, indent=2)
+        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "town.blend"))
+        log("total tris", stats["total_triangles"])
+    if os.environ.get("TOWN_PREVIEW"):
+        preview_interiors(pieces, only)
+
+
+def _preview_material(src):
+    """What the client shows inside a shop: base colour x baked vertex colour under a flat light, plus emission."""
+    m = src.copy()
+    m.name = "Pv_" + src.name
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    outn = next(n for n in nt.nodes if n.type == "OUTPUT_MATERIAL")
+    em = nt.nodes.new("ShaderNodeEmission")
+    base = b.inputs["Base Color"]
+    if base.is_linked:
+        nt.links.new(base.links[0].from_socket, em.inputs["Color"])
+    else:
+        em.inputs["Color"].default_value = base.default_value
+    shader = em.outputs[0]
+    es = b.inputs["Emission Strength"].default_value
+    if es > 0:
+        em2 = nt.nodes.new("ShaderNodeEmission")
+        em2.inputs["Color"].default_value = b.inputs["Emission Color"].default_value
+        em2.inputs["Strength"].default_value = es
+        add = nt.nodes.new("ShaderNodeAddShader")
+        nt.links.new(shader, add.inputs[0])
+        nt.links.new(em2.outputs[0], add.inputs[1])
+        shader = add.outputs[0]
+    alpha = b.inputs["Alpha"].default_value
+    if alpha < 1.0:
+        tr = nt.nodes.new("ShaderNodeBsdfTransparent")
+        mx = nt.nodes.new("ShaderNodeMixShader")
+        mx.inputs[0].default_value = alpha
+        nt.links.new(tr.outputs[0], mx.inputs[1])
+        nt.links.new(shader, mx.inputs[2])
+        shader = mx.outputs[0]
+    nt.links.new(shader, outn.inputs["Surface"])
+    return m
+
+
+def preview_interiors(pieces, only=None):
+    """Fast QA frames of the baked interiors as the game lights them (no lights: albedo x baked colour)."""
+    sc = bpy.context.scene
+    ftf.use_gpu(sc, TAG)
+    col = ftf.new_collection("Preview")
+    world = bpy.data.worlds.new("PreviewWorld")
+    world.use_nodes = True
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.0
+    sc.world = world
+    pv = {}
+    every = [o for g in pieces.values() for o in g["meshes"] + g["cols"]]
+    out_dir = os.environ.get("TOWN_PREVIEW")
+    if out_dir in ("1", "qa"):
+        out_dir = QA_DIR
+    os.makedirs(out_dir, exist_ok=True)
+    for sp in P.SHOPS:
+        if only and sp["piece"] not in only:
+            continue
+        mine = pieces[sp["piece"]]["meshes"]
+        for o in every:
+            o.hide_render = o not in mine
+        for o in mine:
+            src = o.data.materials[0]
+            if src.name not in pv:
+                pv[src.name] = _preview_material(src)
+            o.data.materials[0] = pv[src.name]
+        w, d = sp["interior"]
+        h = sp.get("height", 3.6)
+        views = [("door", (0.0, 1.62, d / 2 - 0.35), (0.0, 1.35, -d / 2), 15, None),
+                 ("counter", (sp["stand"][0] - 0.5, 1.75, sp["stand"][1] - 0.35), (0.0, 1.0, d / 2), 15, None),
+                 ("play", (0.9, 2.6, d / 2 - 2.2), (sp["stand"][0] * 0.6, 1.0, -d / 2 + 2.0), 20, None),
+                 ("top", (0.0, h - 0.45, 0.0), (0.0, 0.0, -0.001), None, max(w, d) * 1.08)]
+        for name, loc, tgt, lens, ortho in views:
+            if os.environ.get("TOWN_PREVIEW_VIEWS") and name not in os.environ["TOWN_PREVIEW_VIEWS"].split(","):
+                continue
+            ftf.setup_cycles(sc, 1600, 1000 if not ortho else 1600, 24, look="None")
+            sc.view_settings.view_transform = "Standard"
+            sc.view_settings.exposure = 0.0
+            sc.cycles.max_bounces = 8
+            sc.cycles.transparent_max_bounces = 8
+            cam = ftf.add_camera(f"pv_{sp['id']}_{name}", bl(loc), bl(tgt), lens=lens or 35, ortho=ortho, col=col, clip_end=200)
+            cam.data.clip_start = 0.05
+            t = ftf.render_to(sc, cam, os.path.join(out_dir, f"shop_{sp['id']}_{name}.jpg"))
+            log("preview", sp["id"], name, t, "s")
 
 
 # ------------------------------------------------------------------ render
@@ -459,7 +747,7 @@ if __name__ == "__main__":
         import town_textures
         town_textures.stage_textures(TEX_DIR, QA_DIR, (argv[1:] or None) if stage == "textures" else None)
     if stage in ("build", "all"):
-        stage_build()
+        stage_build((argv[1:] or None) if stage == "build" else None)
     if stage in ("render", "all"):
         stage_render(argv[1:] or None)
     if stage in ("shops", "all"):

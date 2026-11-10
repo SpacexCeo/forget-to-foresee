@@ -119,3 +119,121 @@ export function altarWake(distance, radius = TOWN_ALTAR.radius) {
   const t = Math.min(1, Math.max(0, (far - distance) / (far - radius)));
   return t * t * (3 - 2 * t);
 }
+
+/* ---------------- shops: walk-in interiors (docs/town.md "Shops") ---------------- */
+
+/**
+ * Where the shop interiors live: far beside the town in the same THREE.Scene (the Shell interior at SHELL_ORIGIN is
+ * the precedent), one every SHOP_SPACING metres along +X, each with its own collision world (scenes/town-shops.js).
+ * 2 km is beyond every camera far plane, so no room is ever seen from the town or the archipelago, or from another room.
+ */
+export const SHOP_ORIGIN_BASE = Object.freeze([TOWN_ORIGIN[0] + 2000, TOWN_ORIGIN[1], TOWN_ORIGIN[2]]);
+export const SHOP_SPACING = 200;
+export const TOWN_INTERIOR_KIND = 'town_interior';
+
+/**
+ * Light inside a shop (tuned from screenshots; the only place these numbers live). The interiors carry their light
+ * baked into vertex colour, so indoors the sun, the sky fill, the environment map, fog, mist, clouds, rain, wetness
+ * and sun shafts are all off (LookDev.setInterior) and the room is lit by:
+ *   ambient   one neutral white AmbientLight. Math.PI makes a vertex colour of 1.0 show the unlit albedo of a
+ *             dielectric (three.js divides Lambert by pi) before tone mapping;
+ *   exposure  stops (EV) for the tone mapping while indoors: 0 is exposure 1.0, whatever the hour and weather outside;
+ *   lamp      up to `max` warm point lights without shadows at the room's `socket_lamp_*` empties nearest Iris
+ *             (tiers with `pointLights` only), so she and the speculars feel lit: intensity (cd), reach (m), colour.
+ */
+export const SHOP_LIGHT = Object.freeze({
+  ambient: Math.PI,
+  exposure: 0,
+  lamp: Object.freeze({ intensity: 5, distance: 9, color: 0xffb070, max: 6 }),
+});
+
+/**
+ * The camera in a 9 x 11 m room under a 3.6 m ceiling: close behind Iris and nearly level, so it stays under the
+ * beams; the rig's sphere sweep against the room's own colliders keeps it out of the walls. `pitch` is the angle
+ * above the horizontal at `dist` (the rig's zoom-tied pitch is cancelled); zoom is limited to minDist..maxDist.
+ */
+export const SHOP_CAMERA = Object.freeze({ dist: 4.2, minDist: 2.4, maxDist: 6.5, pitch: 5 * Math.PI / 180, minPitch: -10 * Math.PI / 180 });
+
+/**
+ * Seconds of the door transition: fade to dark and back (`reducedFade` under reduced motion: a plain short
+ * cross-fade, no camera push), the longest wait for a room to stream in (or for the street to come back) before the
+ * door gives up, how long a shopkeeper's line stays, and how near a door (m) the room's file is put into the HTTP cache.
+ */
+export const SHOP_TRANSITION = Object.freeze({ fade: 0.45, reducedFade: 0.2, wait: 25, line: 7, prefetch: 9, push: 1.2 });
+
+/** Who keeps each shop and what talking to them opens, until scenes/town-data.js carries `keeper` and `opens` itself. */
+const SHOP_KEEPERS = Object.freeze({ exchange: 'maren', scribe: 'odo', inn: 'bram' });
+const SHOP_OPENS = Object.freeze({ exchange: 'shards', scribe: 'dictionary', inn: null });
+/** What a counter may open: the Memories panel (shards), Iris's dictionary book, or nothing (a line of talk). */
+export const SHOP_VIEWS = Object.freeze(['shards', 'dictionary']);
+
+const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+
+/** Where Iris stands after leaving: `back` metres out of the door point, facing away from the door. */
+export function shopStreetReturn(door, back = 0.6) {
+  const h = door.heading; // the direction she faces walking in
+  return { position: [door.position[0] - Math.sin(h) * back, door.position[1], door.position[2] - Math.cos(h) * back], heading: h + Math.PI };
+}
+
+/**
+ * One shop of the data in world space. `door` is on the street (town world); `origin` is where the interior file is
+ * placed; `spawn`, `exit`, `counter`, `keeperStand` are inside (interior-local + origin) and are replaced by the
+ * file's own empties when it has them. `street` is where Iris returns to.
+ */
+export function shopFromData(s, index) {
+  const origin = [SHOP_ORIGIN_BASE[0] + index * SHOP_SPACING, SHOP_ORIGIN_BASE[1], SHOP_ORIGIN_BASE[2]];
+  const it = s.interior || {};
+  const size = it.size || [9, 3.6, 11];
+  const pt = (p, fallback) => add3(origin, (p && p.position) || fallback);
+  const opens = 'opens' in s ? s.opens : (s.id in SHOP_OPENS ? SHOP_OPENS[s.id] : null);
+  const door = { position: townToWorld(s.door.position), heading: s.door.heading, radius: s.door.radius ?? 1.6 };
+  return Object.freeze({
+    id: s.id, index, piece: s.piece,
+    keeper: s.keeper || SHOP_KEEPERS[s.id] || null,
+    opens: SHOP_VIEWS.includes(opens) ? opens : null,
+    origin: Object.freeze(origin), size: Object.freeze(size.slice()),
+    door: Object.freeze(door), street: Object.freeze(shopStreetReturn(door)),
+    spawn: Object.freeze({ position: pt(it.spawn, [0, 0, size[2] / 2 - 1.2]), heading: (it.spawn && it.spawn.heading) ?? Math.PI }),
+    exit: Object.freeze({ position: pt(it.exit, [0, 0, size[2] / 2 - 0.5]), radius: (it.exit && it.exit.radius) ?? 1.1 }),
+    counter: Object.freeze({ position: pt(it.counter, [0, 0, -2]), radius: (it.counter && it.counter.radius) ?? 1.8 }),
+    keeperStand: Object.freeze({ position: pt(it.shopkeeper_stand, [0, 0, -4]), heading: (it.shopkeeper_stand && it.shopkeeper_stand.heading) ?? 0 }),
+    killY: origin[1] - 10,
+  });
+}
+
+/** The shops Iris can walk into (empty when the data has none). */
+export const TOWN_SHOPS = Object.freeze((TOWN_DATA.shops || []).map(shopFromData));
+export const shopById = (id, shops = TOWN_SHOPS) => shops.find((s) => s.id === id) || null;
+
+/** The shop whose street door Iris stands at (ground distance inside the door radius, on the same level), or null. */
+export function shopDoorAt(pos, shops = TOWN_SHOPS) {
+  let best = null, bestD = Infinity;
+  for (const s of shops) {
+    const d = Math.hypot(pos[0] - s.door.position[0], pos[2] - s.door.position[2]);
+    if (d <= s.door.radius && Math.abs(pos[1] - s.door.position[1]) <= 2 && d < bestD) { best = s; bestD = d; }
+  }
+  return best;
+}
+
+/** Inside a shop: 'counter' (the customer side of the counter), 'exit' (at the door) or null. The counter wins a tie. */
+export function shopZoneAt(points, pos) {
+  const within = (z) => !!z && Math.hypot(pos[0] - z.position[0], pos[2] - z.position[2]) <= z.radius;
+  return within(points.counter) ? 'counter' : within(points.exit) ? 'exit' : null;
+}
+
+/** Phases of a shop visit, in order (scenes/town-shops.js). */
+export const SHOP_PHASES = Object.freeze(['street', 'entering', 'inside', 'talking', 'leaving']);
+
+/**
+ * The one prompt a moment offers: enter at a street door, talk at the counter, leave at the interior door; nothing
+ * during a fade or while a view is open. Returns `{action, key, fallback}`: `key` is the locale key for this shop or
+ * keeper, `fallback` the generic one for a shop or keeper the locales do not name yet.
+ * @param {{phase: string, near?: object|null, shop?: object|null, zone?: string|null}} s
+ */
+export function shopPrompt({ phase, near = null, shop = null, zone = null }) {
+  if (phase === 'street') return near ? { action: 'enter', key: 'town.shop.enter.' + near.id, fallback: 'town.shop.enter' } : null;
+  if (phase !== 'inside' || !shop) return null;
+  if (zone === 'counter') return { action: 'talk', key: 'town.shop.talk.' + (shop.keeper || 'keeper'), fallback: 'town.shop.talk' };
+  if (zone === 'exit') return { action: 'leave', key: 'town.shop.leave', fallback: 'town.shop.leave' };
+  return null;
+}
