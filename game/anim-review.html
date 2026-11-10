@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Animation review (dev)</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #2f3532; color: #e9efe9; font: 14px/1.4 ui-monospace, Consolas, monospace; }
+    #app, #app canvas { position: fixed; inset: 0; display: block; }
+    .tag { position: fixed; padding: 6px 10px; background: rgba(14, 18, 16, .78); border-radius: 6px; white-space: pre; }
+    #hud { left: 10px; bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="labels"></div>
+  <div id="hud" class="tag">loading…</div>
+  <script type="module" src="/src/review/anim-review.js"></script>
+</body>
+</html>

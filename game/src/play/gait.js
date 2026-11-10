@@ -67,12 +67,17 @@ export function accelLean(state, speed, dt, reduced, gain = 0.03, max = 0.1) {
 const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
 const WALK_REF = 1.7, RUN_REF = 3.3; // m/s the walk / run clips were authored at
 
+const START_PHASE = 0.22;    // a stride starts from rest at the passing pose, where the feet are closest to the idle stance
+
 /**
  * Locomotion layer on a mixer: the walk and run actions always play, their weights follow the
- * actual ground speed (idle → walk by 0.6 m/s, walk → run from 1.7 to 3.3 m/s) and their playback
- * rate follows it too, so the stride matches the ground. `move` (0..1) is how much of the pose the
- * gait owns; the caller scales its idle / cue actions by 1 - move. Without a run clip the walk clip
- * carries the run at a higher rate; without a walk clip the layer is inert (procedural fallback).
+ * actual ground speed (idle → walk by 0.6 m/s, walk → run from 1.7 to 3.3 m/s). Both clips are driven
+ * by one shared stride phase (0..1, each clip is exactly one stride starting on the same foot), so the
+ * feet stay in step through the whole walk ↔ run blend whatever the two clips' lengths are; the phase
+ * advances with the ground speed against the blended stride, so the stride matches the ground.
+ * `move` (0..1) is how much of the pose the gait owns; the caller scales its idle / cue actions by
+ * 1 - move. Without a run clip the walk clip carries the run at a higher rate; without a walk clip
+ * the layer is inert (procedural fallback).
  */
 export class GaitLayer {
   constructor(mixer, clips) {
@@ -80,9 +85,10 @@ export class GaitLayer {
     const w = resolveClip(clips, 'walk'), r = resolveClip(clips, 'run');
     this.walk = w.clip && w.name === 'walk' ? mixer.clipAction(w.clip) : null;
     this.run = r.clip && r.name === 'run' ? mixer.clipAction(r.clip) : null;
-    for (const a of [this.walk, this.run]) if (a) { a.play(); a.weight = 0; a.enabled = true; }
+    for (const a of [this.walk, this.run]) if (a) { a.play(); a.weight = 0; a.enabled = true; a.timeScale = 0; }
     this.weights = { walk: 0, run: 0 };
     this.move = 0;
+    this.phase = START_PHASE;
   }
 
   /** @param {number} speed actual ground speed in m/s @returns {number} move weight 0..1 */
@@ -91,19 +97,18 @@ export class GaitLayer {
     let walkW = g.walk, runW = g.run;
     if (!this.run) { walkW += runW; runW = 0; }
     if (!this.walk) walkW = 0;
+    if (this.move < 0.01 && walkW + runW > 0) this.phase = START_PHASE; // a fresh start from rest
     this.weights.walk = damp(this.weights.walk, walkW, GAIT_RATE, dt);
     this.weights.run = damp(this.weights.run, runW, GAIT_RATE, dt);
     this.move = Math.min(1, this.weights.walk + this.weights.run);
-    if (this.walk) {
-      this.walk.weight = this.weights.walk;
-      this.walk.timeScale = this.run ? g.walkScale : Math.min(2.2, Math.max(0.55, Math.max(speed, 0.6) / WALK_REF));
-    }
-    if (this.run) {
-      // Keep the two gait cycles in phase so the feet stay planted through the walk → run blend.
-      if (this.weights.run < 0.01 && runW > 0 && this.walk) this.run.time = (this.walk.time / this.walk.getClip().duration) * this.run.getClip().duration;
-      this.run.weight = this.weights.run;
-      this.run.timeScale = g.runScale;
-    }
+    const sum = this.weights.walk + this.weights.run;
+    const k = this.run && sum > 1e-4 ? this.weights.run / sum : 0;       // 0 = walk stride, 1 = run stride
+    const walkT = this.walk ? this.walk.getClip().duration : 1, runT = this.run ? this.run.getClip().duration : walkT;
+    const strideT = walkT + (runT - walkT) * k, ref = WALK_REF + (RUN_REF - WALK_REF) * k;
+    const rate = this.run ? Math.min(1.6, Math.max(0.55, Math.max(speed, 0.6) / ref)) : Math.min(2.2, Math.max(0.55, Math.max(speed, 0.6) / WALK_REF));
+    if (sum > 1e-4) this.phase = (this.phase + (dt * rate) / strideT) % 1;
+    if (this.walk) { this.walk.weight = this.weights.walk; this.walk.timeScale = 0; this.walk.time = this.phase * walkT; }
+    if (this.run) { this.run.weight = this.weights.run; this.run.timeScale = 0; this.run.time = this.phase * runT; }
     return this.move;
   }
 }

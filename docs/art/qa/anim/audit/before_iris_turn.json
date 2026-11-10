@@ -1,0 +1,32 @@
+{
+ "query": "a=agent_iris&scenario=turn&views=game,top",
+ "size": [
+  1920,
+  1080
+ ],
+ "frames": 300,
+ "fps": 30,
+ "clips": {
+  "A": [
+   "idle",
+   "walk",
+   "run",
+   "talk",
+   "think",
+   "gesture_offer",
+   "celebrate",
+   "defeat",
+   "understand"
+  ]
+ },
+ "every": 1,
+ "metrics": {
+  "A": {
+   "planted_samples": 36,
+   "slip_mean_m_s": 0.973,
+   "slip_p95_m_s": 3.389,
+   "slip_max_m_s": 3.621
+  }
+ },
+ "errors": []
+}

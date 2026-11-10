@@ -1,0 +1,68 @@
+{
+ "idle": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "walk": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0102,
+  "slip_max_m_s": 0.1084,
+  "ball_min_y": 0.0381,
+  "src_stride_m": 1.707,
+  "src_T_s": 1.008,
+  "src_speed": 1.693,
+  "stride_scale": 0.996,
+  "time_scale": 1.008,
+  "hip_drop_max_m": 0.0117,
+  "contact": {
+   "L": [
+    0,
+    16
+   ],
+   "R": [
+    15,
+    16
+   ]
+  }
+ },
+ "run": {
+  "take": "35_20",
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0001,
+  "ball_min_y": 0.042,
+  "src_stride_m": 2.441,
+  "src_T_s": 0.733,
+  "src_speed": 3.329,
+  "stride_scale": 0.991,
+  "time_scale": 1.0,
+  "hip_drop_max_m": 0.005,
+  "contact": {
+   "L": [
+    2,
+    6
+   ],
+   "R": [
+    13,
+    7
+   ]
+  }
+ }
+}
