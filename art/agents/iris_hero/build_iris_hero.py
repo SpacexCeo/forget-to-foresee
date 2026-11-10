@@ -1185,6 +1185,8 @@ def face_curves(clip, n, loop):
         t += rnd.uniform(1.6, 4.2)
     if clip in ("walk", "run"):
         blinks = [] if T < 1.0 else blinks
+    if clip == "understand":
+        blinks = []                                              # the wink is the only lid action of the clip
     sacc, t = [(0.0, 0.0, 0.0)], 0.0
     while t < T:
         t += rnd.uniform(0.6, 1.8)
@@ -1250,6 +1252,20 @@ def face_curves(clip, n, loop):
         elif clip == "defeat":
             out["brow_inner_L"][f] = out["brow_inner_R"][f] = 0.7 * min(1.0, u * 3)
             out["frown"][f] = 0.5 * min(1.0, u * 3)
+        elif clip == "understand":
+            # the hero's lids and brows are morphs (the lid and brow bones carry no weights), so the wink of
+            # agent_anim.clip_understand is replayed here on the same beats: study, aha, wink (her left eye)
+            ub = agent_anim._understand_beats(u)
+            st, aha, wk = ub["study"], ub["aha"], ub["wink"]
+            out["squint_L"][f] = 0.30 * st + 0.20 * wk
+            out["squint_R"][f] = 0.30 * st + 0.35 * wk            # the open eye smiles
+            out["brow_inner_L"][f] = out["brow_inner_R"][f] = 0.30 * st
+            out["blink_L"][f] = wk
+            out["brow_down_L"][f] = 0.55 * wk
+            out["brow_up_L"][f] = 0.55 * aha * (1 - wk)
+            out["brow_up_R"][f] = 0.55 * aha + 0.15 * wk
+            out["smile"][f] = 0.10 + 0.45 * aha + 0.15 * wk
+            out["press"][f] = 0.20 * st
         elif clip in ("walk", "run"):
             out["smile"][f] = 0.08
             out["mouth_open"][f] = 0.12 if clip == "run" else 0.0

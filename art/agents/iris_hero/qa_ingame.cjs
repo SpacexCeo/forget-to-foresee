@@ -20,7 +20,7 @@ const VIEWS = [ // name, distance, yaw offset, pitch (rad) or null for the game'
     ['town', '?play=direct&town=1', () => window.__ftf && window.__ftf.town && window.__ftf.town.ready],
     ['isles', '?demo=judge&play=direct&mode=walk', () => window.__ftf && window.__ftf.play && window.__ftf.play.session && window.__ftf.play.session.obs],
   ]) {
-    const p = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+    const p = await b.newPage({ viewport: { width: Number(process.env.QA_W || 1920), height: Number(process.env.QA_H || 1080) }, deviceScaleFactor: 1 });
     p.setDefaultTimeout(600000);
     p.on('console', (m) => { if (m.type() === 'error') errors.push(scene + ': ' + m.text()); });
     p.on('pageerror', (e) => errors.push(scene + ': pageerror ' + e.message));
@@ -34,7 +34,9 @@ const VIEWS = [ // name, distance, yaw offset, pitch (rad) or null for the game'
         const r = window.__ftf.rig; r.minDist = Math.min(r.minDist, 2); r.yawLimit = Infinity; r.distTarget = null;
         r.dist = dist; r.yaw = yaw; r.pitchOverride = pitch;
       }, [dist, yaw0 + dyaw, pitch]);
-      await p.waitForTimeout(Number(process.env.QA_WAIT || 6000));
+      // wait in rendered frames, not seconds: software GL runs at a few frames per second and the rig eases
+      await p.evaluate((n) => new Promise((res) => { let i = 0; const f = () => (++i >= n ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), Number(process.env.QA_FRAMES || 45));
+      console.log('rig', name, await p.evaluate(() => { const r = window.__ftf.rig, c = r.camera.position, q = window.__ftf.player.pos; return JSON.stringify({ dist: r.dist, actual: r.actualDist, yaw: r.yaw, fov: r.camera.fov, cam: [c.x, c.y, c.z].map((v) => +v.toFixed(2)), player: Array.from(q).map((v) => +v.toFixed(2)) }); }));
       await p.screenshot({ path: `${out}/${prefix}_${scene}_${name}.jpg`, quality: 90, timeout: 300000 });
       console.log('shot', scene, name);
     }
