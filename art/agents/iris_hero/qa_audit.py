@@ -44,6 +44,7 @@ sc.cycles.transparent_max_bounces = 64
 sc.cycles.max_bounces = 8
 sc.cycles.use_denoising = True
 sc.view_settings.view_transform = "AgX"
+sc.view_settings.exposure = float(os.environ.get("QA_EXPOSURE", "-1.4"))   # the light rig is hot: at 0 black knit reads grey and tan skin white
 sc.render.image_settings.file_format = "PNG"
 w = bpy.data.worlds.new("w")
 sc.world = w
