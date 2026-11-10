@@ -662,7 +662,7 @@ def hair_cap(body, scalp_idx, offset=0.006):
 # ===================================================================== athletic sportswear (owner, 09.11)
 
 def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, decimate=None, relax=None, edges=None, curtain=None, envelope=None,
-                    flatten=None, edge_relax=0, drape=None, loop_smooth=None, clear=None, bridge=None):
+                    flatten=None, edge_relax=0, drape=None, loop_smooth=None, clear=None, bridge=None, cuts=None):
     """A tight garment cut from the body surface: the kept faces are duplicated, pushed out along the
     normals by `offset` and given cloth thickness. keep(index, co) decides per vertex; a face is kept
     when all its vertices are. trim/accent(co, normal) -> 0..1 paint the trim and accent attributes."""
@@ -682,6 +682,13 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
     kill = [f for f in b.faces if not all(v.index in keepv for v in f.verts)]
     bmesh.ops.delete(b, geom=kill, context="FACES")
     bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
+    for pco, pno in cuts or ():                  # a true plane cut: (point, normal); the side the normal points to goes.
+        # The per-vertex keep leaves a staircase boundary on the body's quads; snapping it to a level line folds
+        # faces over (dark shards on the edge). keep() should leave one spare row beyond each cut plane.
+        bmesh.ops.bisect_plane(b, geom=b.verts[:] + b.edges[:] + b.faces[:], dist=1e-5, plane_co=Vector(pco),
+                               plane_no=Vector(pno), clear_outer=True, clear_inner=False)
+        bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
+    b.verts.ensure_lookup_table()
     b.normal_update()
     off_of = offset if callable(offset) else (lambda p, n: offset)
     for v in b.verts:

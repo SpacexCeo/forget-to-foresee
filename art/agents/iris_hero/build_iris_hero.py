@@ -809,7 +809,7 @@ def athletic_costume(bm, P, dom, bones):
     LEG = ("thigh_L", "thigh_R", "shin_L", "shin_R")
     def leg_keep(i, _):
         p = co[i]
-        return dom[i] in LEG + ("pelvis", "spine") and 0.115 < p.z < 1.03
+        return dom[i] in LEG + ("pelvis", "spine") and 0.085 < p.z < 1.06     # a spare row past each plane cut
     def leg_panel(p, nrm):
         side = 1 if p.x > 0 else -1
         centre = side * (0.095 + 0.022 * math.sin((p.z - 0.2) * 3.5))
@@ -836,7 +836,8 @@ def athletic_costume(bm, P, dom, bones):
                         or (abs(p.x) < 0.03 and p.y > c.y and 0.935 < p.z < 1.0))     # except its deep top (no dark pit)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
                                         trim=lambda p, nrm: leg_panel(p, nrm),   # one colour to the top edge (owner: one layer)
-                                        accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12))
+                                        accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12),
+                                        cuts=(((0, 0, 1.020), (0, 0, 1)), ((0, 0, 0.12), (0, 0, -1))))
     # (owner 09.11: one layer, pressed into the cleft between the cheeks: no bridge, no separate waistband)
     # (leg_stripes is off: per-vertex stripes read as jagged blocks on this mesh density; clean leggings)
     # owner 09.11 (v13): the leggings are seamless, nothing drawn on them: no piping, no stripes, no seam.
@@ -1036,8 +1037,14 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
             return False
         if d in HAND_BONES:
             return False
+        # The midriff skin runs 6 cm down under the leggings' top edge (1.020). A face is kept only when all its
+        # vertices are, and the body's rows slant here, so with the old 0.995 limit the skin's own lower boundary
+        # rose to 1.031 at the front and back: holes above the leggings' edge that showed the dark inside (the
+        # "dark band" at the waist). The band also keeps vertices led by a thigh bone (the hip crease).
+        if COSTUME == "athletic" and d in ("thigh_L", "thigh_R") and 0.960 < co.z < 1.205:
+            return False
         if COSTUME == "athletic" and d in ("spine", "pelvis", "chest"):
-            if 0.995 < co.z < 1.205:                      # the bare midriff down under the leggings' top edge (no gap)   # the bare midriff, kept under the band's front and the top's hem
+            if 0.960 < co.z < 1.205:                      # the bare midriff down under the leggings' top edge (no gap)   # the bare midriff, kept under the band's front and the top's hem
                 return False                                        # (no see-through gap; never through the band at the back)
             if 1.27 < co.z and co.y < cz.y:             # the neckline and cleavage above the top, inside the open jacket
                 return False
@@ -1050,6 +1057,16 @@ def stage_costume(bm=None, rig=None, eye_objs=None):
     bpy.context.scene.collection.objects.link(ref)
     ref.hide_render = True
     delete_verts(bm, covered)
+    if COSTUME == "athletic":                         # the skin hidden under the leggings' top is tucked 6 mm inward,
+        nrm = [v.normal.copy() for v in bm.data.vertices]   # so it never shows through the knit (2.8 mm off the body)
+        zs = [v.co.z for v in bm.data.vertices]
+        blocks = bm.data.shape_keys.key_blocks if bm.data.shape_keys else [None]
+        for kb in blocks:
+            data = kb.data if kb else bm.data.vertices
+            for i, z in enumerate(zs):
+                if 0.90 < z < 1.017:
+                    data[i].co = data[i].co - nrm[i] * 0.006 * smoothstep((1.017 - z) / 0.009)
+        bm.data.update()
     log("costume", {n: len(o.data.polygons) for n, o in garments.items()})
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "iris_costume.blend"))
     return bm, rig, eye_objs, garments
@@ -1185,6 +1202,8 @@ def face_curves(clip, n, loop):
         t += rnd.uniform(1.6, 4.2)
     if clip in ("walk", "run"):
         blinks = [] if T < 1.0 else blinks
+    if clip == "understand":
+        blinks = []                                              # the wink is the only lid action of the clip
     sacc, t = [(0.0, 0.0, 0.0)], 0.0
     while t < T:
         t += rnd.uniform(0.6, 1.8)
@@ -1250,6 +1269,20 @@ def face_curves(clip, n, loop):
         elif clip == "defeat":
             out["brow_inner_L"][f] = out["brow_inner_R"][f] = 0.7 * min(1.0, u * 3)
             out["frown"][f] = 0.5 * min(1.0, u * 3)
+        elif clip == "understand":
+            # the hero's lids and brows are morphs (the lid and brow bones carry no weights), so the wink of
+            # agent_anim.clip_understand is replayed here on the same beats: study, aha, wink (her left eye)
+            ub = agent_anim._understand_beats(u)
+            st, aha, wk = ub["study"], ub["aha"], ub["wink"]
+            out["squint_L"][f] = 0.30 * st + 0.20 * wk
+            out["squint_R"][f] = 0.30 * st + 0.35 * wk            # the open eye smiles
+            out["brow_inner_L"][f] = out["brow_inner_R"][f] = 0.30 * st
+            out["blink_L"][f] = wk
+            out["brow_down_L"][f] = 0.55 * wk
+            out["brow_up_L"][f] = 0.55 * aha * (1 - wk)
+            out["brow_up_R"][f] = 0.55 * aha + 0.15 * wk
+            out["smile"][f] = 0.10 + 0.45 * aha + 0.15 * wk
+            out["press"][f] = 0.20 * st
         elif clip in ("walk", "run"):
             out["smile"][f] = 0.08
             out["mouth_open"][f] = 0.12 if clip == "run" else 0.0
