@@ -277,18 +277,18 @@ def sky_archipelago(tb, scale):
     rock = (0.52, 0.58, 0.64)
     def plateau(x, z, r, depth):
         tb.cyl("sky", (x, -0.9, z), r * 0.92, r, 0.9, 14, rock, cap_top=True, col_top=haze_top)
-        tb.cyl("sky", (x, -depth * 0.45, z), r * 0.45, r * 0.9, depth * 0.45 - 0.9, 10, tint(rock, 1.12), cap_top=False, col_top=rock)
-        tb.cyl("sky", (x, -depth, z), r * 0.12, r * 0.45, depth * 0.55, 8, haze_low, cap_top=False, col_top=tint(rock, 1.12))
+        tb.cyl("sky", (x, -depth * 0.45, z), r * 0.55, r * 0.9, depth * 0.45 - 0.9, 10, tint(rock, 1.12), cap_top=False, col_top=rock)
+        tb.cyl("sky", (x, -depth, z), r * 0.2, r * 0.55, depth * 0.55, 8, haze_low, cap_top=False, cap_bot=True, col_top=tint(rock, 1.12))
     with tb.at(T(0, 0, 0)):
         s = scale
-        plateau(0, 0, 9 * s, 42 * s)
+        plateau(0, 0, 9 * s, 20 * s)
         for ang in (270, 210, 150, 90, 30, 330):
             a = math.radians(ang)
             x, z = math.cos(a) * 30 * s, math.sin(a) * 30 * s
-            plateau(x, z, 6.5 * s, 38 * s)
+            plateau(x, z, 6.5 * s, 15 * s)
             tb.beam("sky", (math.cos(a) * 8.6 * s, -0.3 * s, math.sin(a) * 8.6 * s), (math.cos(a) * 23.9 * s, -0.3 * s, math.sin(a) * 23.9 * s), 2.4 * s, 0.6 * s, tint(rock, 1.05))
         a = math.radians(120)
-        plateau(math.cos(a) * 46 * s, math.sin(a) * 46 * s, 5 * s, 30 * s)
+        plateau(math.cos(a) * 46 * s, math.sin(a) * 46 * s, 5 * s, 12 * s)
         tb.beam("sky", (math.cos(a) * 8.6 * s, -0.3 * s, math.sin(a) * 8.6 * s), (math.cos(a) * 41.4 * s, -0.3 * s, math.sin(a) * 41.4 * s), 2.4 * s, 0.6 * s, tint(rock, 1.05))
         # Shells: tall tapering spirals of stacked rings (distinct heights), pale
         for i, (ang, rr, hy) in enumerate(((45, 52, 14), (135, 50, 22), (225, 54, 17), (315, 50, 25))):

@@ -2,7 +2,7 @@
   "textured": true,
   "pieces": {
     "town_terrain": {
-      "raw_bytes": 12039104,
+      "raw_bytes": 12038744,
       "triangles": 9889,
       "collision_triangles": 424,
       "materials": [
@@ -275,42 +275,42 @@
       ]
     },
     "town_sky": {
-      "raw_bytes": 104708,
-      "triangles": 1364,
+      "raw_bytes": 108836,
+      "triangles": 1412,
       "collision_triangles": 0,
       "materials": [
         "M_Town_Sky"
       ],
       "nodes": {
-        "town_sky_sky": 1364
+        "town_sky_sky": 1412
       },
       "sockets": [],
       "bounds_min": [
-        -37.02,
-        151.96,
-        -326.89
+        77.98,
+        159.6,
+        -316.89
       ],
       "bounds_max": [
-        16.32,
-        204.66,
-        -272.28
+        131.32,
+        198.66,
+        -262.28
       ]
     }
   },
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.23
+      "seconds": 1.26
     },
     {
       "stage": "objects",
-      "seconds": 1.32
+      "seconds": 1.33
     },
     {
       "stage": "export",
-      "seconds": 1.11
+      "seconds": 1.1
     }
   ],
-  "total_triangles": 135577,
+  "total_triangles": 135625,
   "route_length_m": 39.93
 }

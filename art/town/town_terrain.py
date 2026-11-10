@@ -338,7 +338,7 @@ def gatehouse(tb):
 def cliff(tb):
     """The rock face behind the temple and its grassy top."""
     y0 = P.TERRACE_Y["t3"]
-    rows = [(0.0, 0.0), (3.0, -1.2), (7.0, -2.2), (12.0, -4.4), (17.0, -6.0), (21.0, -9.5)]
+    rows = [(0.0, 0.0), (2.5, -1.0), (5.5, -2.0), (9.0, -4.0), (12.0, -6.0), (14.5, -9.5)]
     xs = [-66 + i * 4.0 for i in range(34)]
     def pt(ix, ir):
         x = xs[ix]

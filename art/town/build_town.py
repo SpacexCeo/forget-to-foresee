@@ -347,9 +347,10 @@ def stage_render(which=None):
                 o.location = Vector(o.location) + Vector(bl(pv))
             if o.name.endswith("_col") or "_col." in o.name:
                 o.hide_render = True
-    sc.world = ftf.sky_world("TownSky", zenith=(0.10, 0.17, 0.30), horizon=(0.80, 0.66, 0.50), ground=(0.42, 0.42, 0.44), strength=0.9)
-    ftf.add_sun(col, energy=4.2, color=(1.0, 0.86, 0.68), elev=28, azim=-128, angle=2)
-    for i, (x, z) in enumerate(((0.0, 27.0), (0.0, -6.5), (2.5, 8.0), (-3.0, -15.0))):
+    # daylight (brief): a clear pale sky and a warm sun from the south-west; the haze is the game's own fog
+    sc.world = ftf.sky_world("TownSky", zenith=(0.16, 0.34, 0.62), horizon=(0.80, 0.84, 0.86), ground=(0.50, 0.52, 0.52), strength=1.25)
+    ftf.add_sun(col, energy=5.0, color=(1.0, 0.93, 0.80), elev=46, azim=-140, angle=2)
+    for i, (x, z) in enumerate(((3.6, 26.0), (-6.2, -7.6), (2.5, 8.0), (9.0, -12.0))):
         hp = bpy.data.meshes.new(f"human{i}")
         bm = bmesh.new()
         bmesh.ops.create_cone(bm, cap_ends=True, segments=10, radius1=0.28, radius2=0.2, depth=1.7)
@@ -361,13 +362,13 @@ def stage_render(which=None):
     views = {
         "top": dict(loc=(0, 190, -10), tgt=(0, 0, -10.01), ortho=128, res=(2000, 2000)),
         "spawn": dict(loc=(0, 2.9, 32.0), tgt=(0, 5.2, 0), lens=22, res=(1920, 1200)),
-        "altar": dict(loc=(0.8, 7.0, 4.0), tgt=(0, 8.4, -14), lens=34, res=(1920, 1200)),
+        "altar": dict(loc=(-2.2, 6.6, 3.2), tgt=(2.4, 11.6, -14), lens=24, res=(1920, 1200)),
         "altar_close": dict(loc=(3.4, 6.6, -5.2), tgt=(0, 7.0, -11), lens=40, res=(1920, 1200)),
         "aerial": dict(loc=(64, 62, 86), tgt=(0, 4, -8), lens=32, res=(1920, 1200)),
         "square": dict(loc=(-11.5, 6.4, -3.6), tgt=(8, 7.0, -18), lens=24, res=(1920, 1200)),
         "lane": dict(loc=(-30, 4.2, 10.2), tgt=(0, 4.6, 9.0), lens=28, res=(1920, 1200)),
         "temple": dict(loc=(0, 11.4, -22.5), tgt=(0, 16.5, -44), lens=24, res=(1920, 1200)),
-        "sky": dict(loc=(0, 6.2, 12), tgt=(-18, 78, -200), lens=30, res=(1920, 1200)),
+        "sky": dict(loc=(-6, 6.4, 2), tgt=(40, 70, -150), lens=28, res=(1920, 1200)),
     }
     samples = int(os.environ.get("TOWN_SAMPLES", "96"))
     times = {}
@@ -375,7 +376,7 @@ def stage_render(which=None):
         if which and name not in which:
             continue
         ftf.setup_cycles(sc, v["res"][0], v["res"][1], samples)
-        sc.view_settings.exposure = -0.3
+        sc.view_settings.exposure = -0.6
         cam = ftf.add_camera("cam_" + name, bl(v["loc"]), bl(v["tgt"]), lens=v.get("lens", 35), ortho=v.get("ortho"), col=col, clip_end=3000)
         times[name] = ftf.render_to(sc, cam, os.path.join(QA_DIR, f"town_{name}.jpg"))
         log("render", name, times[name], "s", dev)
