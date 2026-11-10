@@ -121,7 +121,7 @@ def retaining_walls(tb):
             # end posts beside the openings
             for px in (a, b):
                 if abs(px - x0) > 0.1 and abs(px - x1) > 0.1:
-                    tb.box("stone", (px + (0.3 if px == a else -0.3), y_hi + 0.65, z_edge - 0.22), (0.6, 1.3, 0.6), STONE_DARK, skip="y")
+                    tb.box("stone", (px + (0.3 if px == a else -0.3), y_hi + 0.65, z_edge - 0.22), (0.7, 1.3, 0.72), STONE_DARK, skip="y")
                     tb.cyl("stone", (px + (0.3 if px == a else -0.3), y_hi + 1.3, z_edge - 0.22), 0.34, 0.0, 0.36, 4, STONE_CAP, cap_top=False, phase=math.pi / 4)
 
 

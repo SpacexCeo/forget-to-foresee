@@ -1,4 +1,4 @@
-"""The Tournament altar (A-001), the temple and the far archipelago impostor.
+"""The Tournament altar (A-001), the round shrine and the far archipelago impostor.
 
 Altar: a round stone dais with three steps; on a drum plinth stands an upright stone ring carved with
 a ring of logogram marks (arc, spike, loop, drop: the four strokes of the game's signs), and in its
@@ -43,19 +43,17 @@ def _ring_profile(tb, mat, cy, r_out, r_in, thick, n, col, chamfer=0.07):
             tb.quad(mat, pt(a0, r0, z0), pt(a1, r0, z0), pt(a1, r1, z1), pt(a0, r1, z1), tint(col, shade * (0.94 + 0.08 * ((i * 7) % 5) / 4)))
 
 
-def _glyph(tb, kind, r_mid, a, cy, z, s=0.15):
+def _glyph(tb, kind, r_mid, a, cy, z, s=0.15, m="altar_core", t=0.018, wline=0.034):
     """One logogram mark on the ring face at angle a (radians), as a thin inlay proud of the stone."""
     cx, cyy = math.cos(a) * r_mid, cy + math.sin(a) * r_mid
     with tb.at(T(cx, cyy, z), RZ(math.degrees(a) - 90)):
-        m = "altar_core"
-        t = 0.018
         if kind == "arc":
             n = 6
             for i in range(n):
                 b0, b1 = math.pi * (0.15 + 0.7 * i / n), math.pi * (0.15 + 0.7 * (i + 1) / n)
-                tb.beam(m, (math.cos(b0) * s, math.sin(b0) * s - s * 0.5, 0), (math.cos(b1) * s, math.sin(b1) * s - s * 0.5, 0), 0.034, t, up=(0, 0, 1))
+                tb.beam(m, (math.cos(b0) * s, math.sin(b0) * s - s * 0.5, 0), (math.cos(b1) * s, math.sin(b1) * s - s * 0.5, 0), wline, t, up=(0, 0, 1))
         elif kind == "spike":
-            tb.poly(m, [(-0.035, -s, t / 2), (0.035, -s, t / 2), (0.0, s, t / 2)])
+            tb.poly(m, [(-wline, -s, t / 2), (wline, -s, t / 2), (0.0, s, t / 2)])
         elif kind == "loop":
             tb.ring(m, (0, 0, 0), s * 0.62, s * 0.36, t, 12)
         else:  # drop
@@ -141,140 +139,140 @@ def altar(tb):
     tb.socket("socket_lamp_altar_core", (0, cy, 0.6))
 
 
-def temple(tb):
-    """The temple above the square: a stone hall on a platform, a six-column portico whose pediment
-    carries the great carved ring, a honey-tiled roof and a bell tower with a ring finial.
-    Local frame: origin at the temple centre on the terrace, the front faces +Z."""
-    W, D = P.TEMPLE["w"], P.TEMPLE["d"]
-    ph = 1.0                                   # platform height
-    hw, hd = W / 2, D / 2
-    # platform and the front steps
-    tb.box("stone", (0, ph / 2, 0.8), (W + 2.4, ph, D + 4.6), STONE, skip="y")
-    tb.box("stone", (0, ph - 0.07, 0.8), (W + 2.7, 0.16, D + 4.9), STONE_WARM)
-    tb.col_box((0, ph / 2, 0.8), (W + 2.4, ph, D + 4.6))
-    zf = 0.8 + (D + 4.6) / 2
+def shrine(tb):
+    """The round shrine above the square (owner decision 10.11, option C): a ring colonnade of twelve
+    columns around a round cella on a raised stone drum, a tiled ring roof, and a low dome with spiral
+    growth ridges and a pearl sheen that echoes the Shells; an open oculus with an amber rim under a
+    bronze tripod carrying the round sign. A frieze of logogram strokes runs around the entablature and
+    above the entrance. Local frame: origin at the shrine centre on the terrace, the entrance faces +Z."""
+    ph = 1.0                      # drum platform height
+    R_PLAT, R_COL, R_CELLA = 9.6, 7.8, 5.0
+    col_h, cella_h = 6.0, 8.4
+    # platform drum with a cap course and the front steps
+    tb.cyl("stone", (0, -0.6, 0), R_PLAT + 0.1, R_PLAT, ph + 0.6, 40, tint(STONE, 0.72), cap_top=False, col_top=STONE)
+    tb.cyl("stone", (0, ph - 0.16, 0), R_PLAT + 0.22, R_PLAT + 0.22, 0.16, 40, STONE_WARM, cap_top=True, cap_bot=True)
+    tb.col_cyl((0, 0, 0), R_PLAT + 0.1, ph, 20)
+    zf = R_PLAT - 0.3
     ns = 6
     for i in range(ns):
-        yy = ph * (ns - i) / (ns + 0)
-        tb.box("stone", (0, yy / 2 - ph / ns / 2, zf + 0.17 + i * 0.34), (9.0, yy, 0.34), tint(STONE_WARM, 0.9 + 0.03 * i), skip="yz")
-    tb.col_poly([(-4.5, 0, zf + ns * 0.34 + 0.2), (4.5, 0, zf + ns * 0.34 + 0.2), (4.5, ph, zf), (-4.5, ph, zf)])
+        yy = ph * (ns - i) / ns
+        tb.box("stone", (0, yy / 2, zf + 0.17 + i * 0.34), (8.4, yy, 0.34), tint(STONE_WARM, 0.9 + 0.03 * i), skip="yz")
+    tb.col_poly([(-4.2, 0, zf + ns * 0.34 + 0.2), (4.2, 0, zf + ns * 0.34 + 0.2), (4.2, ph, zf), (-4.2, ph, zf)])
     for sx in (-1, 1):
-        tb.box("stone", (sx * 5.0, ph / 2 + 0.2, zf + 1.0), (1.0, ph + 0.4, 2.2), STONE_DARK, skip="y")
-        tb.col_box((sx * 5.0, ph / 2 + 0.3, zf + 1.0), (1.0, ph + 0.6, 2.2))
-        tb.socket(f"socket_lamp_temple_{'w' if sx < 0 else 'e'}", (sx * 5.0, ph + 1.6, zf + 1.0))
-        tb.cyl("altar_metal", (sx * 5.0, ph + 0.4, zf + 1.0), 0.34, 0.42, 0.3, 10, BRONZE, cap_top=True)
-        tb.cyl("lamp", (sx * 5.0, ph + 0.7, zf + 1.0), 0.3, 0.05, 0.5, 8, cap_top=False)
-    # hall
-    wall_h = 8.0
+        tb.box("stone", (sx * 4.7, ph / 2 + 0.2, zf + 0.9), (1.0, ph + 0.4, 2.4), STONE_DARK, skip="y")
+        tb.col_box((sx * 4.7, ph / 2 + 0.3, zf + 0.9), (1.0, ph + 0.6, 2.4))
+        tb.cyl("altar_metal", (sx * 4.7, ph + 0.4, zf + 0.9), 0.34, 0.42, 0.3, 10, BRONZE, cap_top=True)
+        tb.cyl("lamp", (sx * 4.7, ph + 0.7, zf + 0.9), 0.3, 0.05, 0.5, 8, cap_top=False)
+        tb.socket(f"socket_lamp_temple_{'w' if sx < 0 else 'e'}", (sx * 4.7, ph + 1.5, zf + 0.9))
+    # inlaid ring in the platform floor between the columns and the cella
+    tb.ring("altar_metal", (0, ph + 0.004, 0), 6.55, 6.4, 0.012, 48, BRONZE, axis="y")
+    # twelve columns; the entrance bay is centred on +Z
+    ncol = 12
+    for k in range(ncol):
+        a = math.tau * (k + 0.5) / ncol + math.pi / 2
+        cx, cz = math.cos(a) * R_COL, -math.sin(a) * R_COL
+        tb.cyl("stone", (cx, ph, cz), 0.62, 0.56, 0.36, 12, STONE_DARK, cap_top=True)
+        tb.cyl("stone", (cx, ph + 0.36, cz), 0.44, 0.36, col_h - 0.86, 14, tint(STONE_WARM, 0.9), cap_top=False, col_top=STONE_WARM)
+        tb.cyl("stone", (cx, ph + col_h - 0.5, cz), 0.38, 0.6, 0.3, 14, STONE_WARM, cap_top=False)
+        tb.cyl("stone", (cx, ph + col_h - 0.2, cz), 0.66, 0.66, 0.2, 12, STONE_WARM, cap_top=True, cap_bot=True)
+        tb.ring("altar_metal", (cx, ph + col_h - 0.62, cz), 0.43, 0.37, 0.08, 14, BRONZE, axis="y")
+        tb.col_cyl((cx, ph, cz), 0.46, col_h, 8)
+    # entablature ring with the frieze of strokes (bronze; amber is kept for the entrance and the oculus)
+    ent_y = ph + col_h
+    tb.ring("stone", (0, ent_y + 0.5, 0), R_COL + 0.75, R_COL - 0.7, 1.0, 48, STONE, axis="y")
+    tb.ring("stone", (0, ent_y + 1.08, 0), R_COL + 1.0, R_COL - 0.8, 0.16, 48, STONE_WARM, axis="y")
+    kinds = ["arc", "spike", "loop", "drop"]
+    seq = [0, 2, 1, 3, 0, 1, 3, 2, 1, 0, 2, 3, 2, 0, 3, 1, 0, 3, 1, 2, 3, 1, 0, 2]
+    for k, mk in enumerate(seq):
+        ang = 360.0 * (k + 0.5) / len(seq)
+        with tb.at(RY(ang), T(0, ent_y + 0.5, R_COL + 0.75)):
+            _glyph(tb, kinds[mk], 0.0, math.pi / 2, 0.0, 0.02, s=0.27, m="altar_metal", t=0.04, wline=0.06)
+    # the round cella: stone below, plaster above, lit lancets, the entrance with its ring of strokes
     y0 = ph
-    for name, m, ww in (("front", T(0, 0, hd), W), ("right", T(hw, 0, 0) @ RY(90), D), ("back", T(0, 0, -hd) @ RY(180), W), ("left", T(-hw, 0, 0) @ RY(-90), D)):
-        with tb.at(T(0, y0, 0), m):
-            tb.quad("stone", (-ww / 2, 0, 0), (ww / 2, 0, 0), (ww / 2, 3.2, 0), (-ww / 2, 3.2, 0), [tint(STONE, 0.7), tint(STONE, 0.7), STONE, STONE])
-            tb.quad("plaster", (-ww / 2, 3.2, 0), (ww / 2, 3.2, 0), (ww / 2, wall_h, 0), (-ww / 2, wall_h, 0), (1.0, 0.96, 0.86))
-            tb.box("stone", (0, 3.2, 0.06), (ww + 0.2, 0.3, 0.14), STONE_WARM, skip="z")
-            tb.box("stone", (0, wall_h - 0.25, 0.1), (ww + 0.3, 0.5, 0.22), STONE_WARM, skip="z")
-            npil = 5 if ww > 14 else 4
-            for i in range(npil + 1):
-                px = -ww / 2 + ww * i / npil
-                tb.box("stone", (px, wall_h / 2, 0.1), (0.7, wall_h, 0.22), STONE, skip="zy")
-            if name != "front":
-                for i in range(npil):
-                    px = -ww / 2 + ww * (i + 0.5) / npil
-                    # tall lancet windows glowing amber, with a ring at the head
-                    tb.quad("glass_lit", (px - 0.38, 3.9, 0.03), (px + 0.38, 3.9, 0.03), (px + 0.38, 6.6, 0.03), (px - 0.38, 6.6, 0.03))
-                    tb.box("stone", (px, 5.25, 0.07), (0.07, 2.7, 0.08), STONE_DARK, skip="z")
-                    for sx in (-1, 1):
-                        tb.box("stone", (px + sx * 0.44, 5.25, 0.08), (0.12, 2.9, 0.12), STONE_WARM, skip="z")
-                    tb.ring("stone", (px, 6.95, 0.08), 0.42, 0.27, 0.12, 14, STONE_WARM)
-            else:
-                # the great doors
-                tb.box("timber", (0, 2.5, 0.05), (3.2, 5.0, 0.12), tint(TIMBER, 0.85), skip="zy", uv_dir=(0, 1, 0))
-                tb.box("timber", (0, 2.5, 0.12), (0.08, 5.0, 0.03), tint(TIMBER, 0.4), skip="z")
-                for sx in (-1, 1):
-                    tb.box("stone", (sx * 1.85, 2.6, 0.14), (0.5, 5.2, 0.3), STONE_WARM, skip="zy")
-                    tb.ring("altar_metal", (sx * 0.55, 2.3, 0.14), 0.24, 0.16, 0.05, 14, BRONZE)
-                    for yy in (0.8, 4.2):
-                        tb.box("altar_metal", (sx * 0.82, yy, 0.12), (1.4, 0.14, 0.03), BRONZE, skip="z")
-                tb.box("stone", (0, 5.45, 0.16), (4.6, 0.5, 0.34), STONE_WARM, skip="z")
-                tb.ring("stone", (0, 6.5, 0.1), 0.62, 0.42, 0.14, 20, STONE_WARM)
-                tb.poly("glass_lit", [(math.cos(math.tau * i / 20) * 0.42, 6.5 + math.sin(math.tau * i / 20) * 0.42, 0.04) for i in range(20)])
-    tb.col_box((0, y0 + wall_h / 2, 0), (W, wall_h, D))
-    # portico: six columns, entablature, pediment with the great ring
-    pz = hd + 3.0
-    cols_x = [-6.5 + i * 2.6 for i in range(6)]
-    col_h = 6.6
-    for cx in cols_x:
-        tb.box("stone", (cx, y0 + 0.2, pz), (1.1, 0.4, 1.1), STONE_DARK, skip="y")
-        tb.cyl("stone", (cx, y0 + 0.4, pz), 0.46, 0.38, col_h - 0.9, 14, tint(STONE_WARM, 0.9), cap_top=False, col_top=STONE_WARM)
-        tb.cyl("stone", (cx, y0 + col_h - 0.5, pz), 0.4, 0.6, 0.3, 14, STONE_WARM, cap_top=False)
-        tb.box("stone", (cx, y0 + col_h - 0.1, pz), (1.2, 0.2, 1.2), STONE_WARM)
-        tb.ring("altar_metal", (cx, y0 + col_h - 0.62, pz), 0.44, 0.38, 0.08, 14, BRONZE, axis="y")
-        tb.col_cyl((cx, y0, pz), 0.46, col_h, 8)
-    ent_y = y0 + col_h
-    tb.box("stone", (0, ent_y + 0.45, pz - 0.1), (W + 0.6, 0.9, 1.5), STONE, skip="")
-    tb.box("stone", (0, ent_y + 0.98, pz - 0.05), (W + 1.0, 0.18, 1.9), STONE_WARM)
-    # roof: ridge along Z, gable to the front; pediment over the portico
-    eave = y0 + wall_h
-    pitch = math.tan(math.radians(38))
-    span = W + 1.4
-    rise = pitch * span / 2
-    zb, zfr = -hd - 0.7, pz + 0.9
-    th = 0.22
-    for sx in (-1, 1):
-        a, b, c, d = (sx * span / 2, eave - 0.3, zfr), (sx * span / 2, eave - 0.3, zb), (0, eave + rise, zb), (0, eave + rise, zfr)
-        pts = [a, b, c, d] if sx > 0 else [b, a, d, c]
-        tb.poly("roof", pts, [tint(ROOF_HONEY, 0.85)] * 2 + [ROOF_HONEY] * 2 if sx > 0 else [tint(ROOF_HONEY, 0.85)] * 2 + [ROOF_HONEY] * 2, uv_dir=(0, 0, 1))
-        tb.poly("timber", [(p[0], p[1] - th, p[2]) for p in reversed(pts)], tint(TIMBER, 0.6))
-        tb.beam("timber", (sx * span / 2, eave - 0.3 - th / 2, zfr), (0, eave + rise - th / 2, zfr), 0.12, 0.36, TIMBER, up=(0, 1, 0))
-        tb.beam("stone", (sx * span / 2, eave - 0.42, zb), (sx * span / 2, eave - 0.42, zfr), 0.3, 0.26, STONE_WARM)
-    tb.beam("roof", (0, eave + rise + 0.04, zb - 0.05), (0, eave + rise + 0.04, zfr + 0.05), 0.5, 0.24, tint(ROOF_HONEY, 0.7))
-    # pediment (front) and the back gable
-    for zz, front in ((pz + 0.55, True), (zb + 0.75, False)):
-        base_y = ent_y + 1.07 if front else eave
-        apex = eave + rise - 0.25
-        hwid = (apex - base_y) / pitch
-        tri = [(-hwid, base_y, zz), (hwid, base_y, zz), (0, apex, zz)]
-        tb.poly("stone" if front else "plaster", tri if front else list(reversed(tri)), STONE if front else (1.0, 0.96, 0.86))
-        if front:
-            cyr = base_y + (apex - base_y) * 0.40
-            tb.ring("stone", (0, cyr, zz + 0.14), 1.55, 1.12, 0.28, 36, STONE_WARM)
-            tb.ring("altar_metal", (0, cyr, zz + 0.285), 1.42, 1.25, 0.02, 36, BRONZE)
-            for k in range(12):
-                a = math.tau * k / 12
-                tb.box("altar_core", (math.cos(a) * 1.335, cyr + math.sin(a) * 1.335, zz + 0.29), (0.09, 0.09, 0.03), skip="z")
-            tb.poly("glass_lit", [(math.cos(math.tau * i / 24) * 1.12, cyr + math.sin(math.tau * i / 24) * 1.12, zz + 0.02) for i in range(24)])
-    # side fill between entablature and roof over the portico
-    for sx in (-1, 1):
-        tb.box("stone", (sx * (hw + 0.1), (ent_y + 1.07 + eave) / 2, hd + 1.6), (0.5, max(0.1, eave - ent_y - 1.07), 3.2), STONE, skip="")
-    # bell tower at the back-left with an open belfry and a ring finial
-    tx, tz, ts, tH = -hw + 1.2, -hd - 1.6, 5.0, 19.0
-    tb.box("stone", (tx, tH / 2, tz), (ts, tH, ts), STONE, skip="yY")
-    tb.col_box((tx, tH / 2, tz), (ts, tH, ts))
-    for yy in (6.0, 12.0, tH - 0.2):
-        tb.box("stone", (tx, yy, tz), (ts + 0.4, 0.4, ts + 0.4), STONE_WARM)
-    for name, m in (("f", T(tx, 0, tz + ts / 2)), ("r", T(tx + ts / 2, 0, tz) @ RY(90)), ("b", T(tx, 0, tz - ts / 2) @ RY(180)), ("l", T(tx - ts / 2, 0, tz) @ RY(-90))):
-        with tb.at(m):
-            tb.quad("glass_lit", (-0.3, 13.2, 0.03), (0.3, 13.2, 0.03), (0.3, 15.4, 0.03), (-0.3, 15.4, 0.03))
-            tb.ring("stone", (0, 16.2, 0.07), 0.5, 0.33, 0.12, 14, STONE_WARM)
-            tb.box("stone", (0, 9.0, 0.05), (0.5, 1.6, 0.08), (0.14, 0.13, 0.12), skip="z")
-    by = tH
-    for sx in (-1, 1):
-        for sz in (-1, 1):
-            tb.box("stone", (tx + sx * (ts / 2 - 0.45), by + 1.6, tz + sz * (ts / 2 - 0.45)), (0.9, 3.2, 0.9), STONE, skip="y")
-    tb.box("stone", (tx, by + 3.4, tz), (ts + 0.5, 0.4, ts + 0.5), STONE_WARM)
-    tb.cyl("altar_metal", (tx, by + 1.3, tz), 0.75, 0.3, 1.3, 10, BRONZE, cap_top=True)       # the bell
-    tb.cyl("roof", (tx, by + 3.6, tz), (ts + 1.2) * 0.7071, 0.0, 6.2, 4, ROOF_HONEY, cap_top=False, phase=math.pi / 4, col_top=tint(ROOF_HONEY, 0.75))
-    tb.cyl("altar_metal", (tx, by + 9.6, tz), 0.09, 0.06, 0.9, 6, BRONZE)
-    tb.ring("altar_metal", (tx, by + 11.2, tz), 0.78, 0.6, 0.1, 24, BRONZE)
-    tb.cyl("altar_core", (tx, by + 11.2 - 0.14, tz), 0.14, 0.14, 0.28, 8, cap_top=True, cap_bot=True)
-    _ = RX
+    n = 32
+    tb.cyl("stone", (0, y0, 0), R_CELLA + 0.04, R_CELLA, 3.2, n, tint(STONE, 0.72), cap_top=False, col_top=STONE)
+    tb.cyl("plaster", (0, y0 + 3.2, 0), R_CELLA, R_CELLA, cella_h - 3.2, n, (1.0, 0.96, 0.86), cap_top=False)
+    tb.cyl("stone", (0, y0 + 3.1, 0), R_CELLA + 0.12, R_CELLA + 0.12, 0.26, n, STONE_WARM, cap_top=True, cap_bot=True)
+    tb.cyl("stone", (0, y0 + cella_h - 0.5, 0), R_CELLA + 0.16, R_CELLA + 0.16, 0.5, n, STONE_WARM, cap_top=True, cap_bot=True)
+    tb.col_cyl((0, y0, 0), R_CELLA + 0.1, cella_h, 16)
+    for k in range(1, 12):
+        ang = 360.0 * k / 12
+        if 1 < k < 11 or k in (1, 10):
+            with tb.at(RY(ang + 15.0), T(0, y0, R_CELLA)):
+                tb.box("stone", (0, cella_h / 2, 0.06), (0.5, cella_h, 0.2), STONE, skip="zy")
+        if k % 2 == 0:
+            continue
+        with tb.at(RY(ang), T(0, y0, R_CELLA - 0.03)):
+            tb.quad("glass_lit", (-0.34, 3.9, 0.06), (0.34, 3.9, 0.06), (0.34, 6.3, 0.06), (-0.34, 6.3, 0.06))
+            for sx in (-1, 1):
+                tb.box("stone", (sx * 0.4, 5.1, 0.1), (0.12, 2.6, 0.14), STONE_WARM, skip="z")
+            tb.ring("stone", (0, 6.62, 0.1), 0.4, 0.26, 0.12, 14, STONE_WARM)
+    with tb.at(T(0, y0, R_CELLA - 0.02)):
+        tb.box("timber", (0, 2.3, 0.08), (2.6, 4.6, 0.14), tint(TIMBER, 0.85), skip="zy", uv_dir=(0, 1, 0))
+        tb.box("timber", (0, 2.3, 0.16), (0.07, 4.6, 0.03), tint(TIMBER, 0.4), skip="z")
+        for sx in (-1, 1):
+            tb.box("stone", (sx * 1.55, 2.4, 0.2), (0.5, 4.8, 0.4), STONE_WARM, skip="zy")
+            tb.ring("altar_metal", (sx * 0.5, 2.2, 0.18), 0.22, 0.15, 0.05, 14, BRONZE)
+            for yy in (0.8, 3.9):
+                tb.box("altar_metal", (sx * 0.66, yy, 0.16), (1.1, 0.13, 0.03), BRONZE, skip="z")
+        tb.box("stone", (0, 4.95, 0.24), (4.0, 0.5, 0.46), STONE_WARM, skip="z")
+        # the entrance ring: stone ring, amber eye (weaker than the altar core), eight strokes around it
+        cyr = 6.35
+        tb.ring("stone", (0, cyr, 0.2), 1.0, 0.66, 0.3, 28, STONE_WARM)
+        tb.poly("glass_lit", [(math.cos(math.tau * i / 24) * 0.66, cyr + math.sin(math.tau * i / 24) * 0.66, 0.12) for i in range(24)])
+        for k in range(8):
+            _glyph(tb, kinds[(k * 3) % 4], 0.83, math.tau * (k + 0.5) / 8, cyr, 0.36, s=0.1, m="altar_metal", t=0.03, wline=0.03)
+    # ring roof over the colonnade (honey tiles), from the cella wall down to the entablature
+    r_hi, y_hi = R_CELLA + 0.1, y0 + cella_h - 0.55
+    r_lo, y_lo = R_COL + 1.25, ent_y + 1.12
+    m = 48
+    for i in range(m):
+        a0, a1 = math.tau * i / m, math.tau * (i + 1) / m
+        def pr(a, r, y):
+            return (math.cos(a) * r, y, -math.sin(a) * r)
+        tb.quad("roof", pr(a0, r_lo, y_lo), pr(a1, r_lo, y_lo), pr(a1, r_hi, y_hi), pr(a0, r_hi, y_hi),
+                [tint(ROOF_HONEY, 0.84)] * 2 + [ROOF_HONEY] * 2)
+        tb.quad("timber", pr(a1, r_lo, y_lo - 0.14), pr(a0, r_lo, y_lo - 0.14), pr(a0, r_hi, y_hi - 0.14), pr(a1, r_hi, y_hi - 0.14), tint(TIMBER, 0.6))
+        tb.quad("timber", pr(a0, r_lo, y_lo - 0.14), pr(a1, r_lo, y_lo - 0.14), pr(a1, r_lo, y_lo), pr(a0, r_lo, y_lo), tint(TIMBER, 0.85))
+    # the dome: a low shell with spiral growth ridges and an open oculus
+    dome_y = y0 + cella_h
+    R0, H, R_OC = R_CELLA + 0.35, 4.3, 1.15
+    rows, segs = 12, 64
+    def dome_pt(i, j):
+        t = j / rows
+        ang = math.tau * i / segs
+        r = R0 + (R_OC - R0) * (1 - math.cos(t * math.pi / 2))
+        y = dome_y + H * math.sin(t * math.pi / 2)
+        ridge = 0.5 + 0.5 * math.sin(7 * ang + 4.4 * t)
+        r *= 1.0 + 0.085 * (ridge ** 2) * (1 - 0.5 * t)
+        y += 0.10 * (ridge ** 2)
+        return (math.cos(ang) * r, y, -math.sin(ang) * r), ridge, t, ang
+    def pearl(ridge, t, ang):
+        k = 0.70 + 0.30 * ridge
+        return ((1.0 + 0.10 * math.sin(ang * 3 + t * 6)) * k, (0.95 + 0.05 * math.sin(ang * 2 + 2)) * k, (0.90 + 0.12 * math.cos(ang * 3 + t * 5)) * k)
+    for i in range(segs):
+        for j in range(rows):
+            q = [dome_pt(i, j), dome_pt(i + 1, j), dome_pt(i + 1, j + 1), dome_pt(i, j + 1)]
+            tb.quad("pearl", *[p[0] for p in q], [pearl(*p[1:]) for p in q])
+    oc_y = dome_y + H
+    tb.ring("glass_lit", (0, oc_y + 0.04, 0), R_OC + 0.16, R_OC - 0.02, 0.1, 32, (1, 1, 1), axis="y")
+    tb.cyl("stone", (0, oc_y - 0.9, 0), R_OC, R_OC, 0.0, 24, (0.05, 0.05, 0.06), cap_top=True)
+    tb.cyl("stone", (0, oc_y - 0.9, 0), R_OC + 0.02, R_OC + 0.02, 0.92, 24, (0.3, 0.29, 0.27), cap_top=False)
+    # bronze tripod over the oculus carrying the round sign
+    apex = oc_y + 2.3
+    for k in range(3):
+        a = math.tau * k / 3 + math.pi / 2
+        tb.beam("altar_metal", (math.cos(a) * (R_OC + 0.08), oc_y + 0.05, -math.sin(a) * (R_OC + 0.08)), (0, apex, 0), 0.09, 0.09, BRONZE)
+    tb.ring("altar_metal", (0, apex + 0.72, 0), 0.72, 0.55, 0.1, 24, BRONZE)
+    tb.cyl("altar_core", (0, apex + 0.62, 0), 0.1, 0.1, 0.2, 8, cap_top=True, cap_bot=True)
+    _ = (RX, RZ)
 
 
 def sky_archipelago(tb, scale):
     """The archipelago far above, as a hazy impostor: plateaus on rock pillars, bridges and the four
     Shells, at reduced scale. Vertex colours carry the haze; the client draws it without fog."""
-    haze_top, haze_low = (0.74, 0.80, 0.86), (0.90, 0.92, 0.95)
-    rock = (0.52, 0.58, 0.64)
+    haze_top, haze_low = (0.56, 0.66, 0.80), (0.50, 0.60, 0.76)
+    rock = (0.40, 0.50, 0.66)
     def plateau(x, z, r, depth):
         tb.cyl("sky", (x, -0.9, z), r * 0.92, r, 0.9, 14, rock, cap_top=True, col_top=haze_top)
         tb.cyl("sky", (x, -depth * 0.45, z), r * 0.55, r * 0.9, depth * 0.45 - 0.9, 10, tint(rock, 1.12), cap_top=False, col_top=rock)
@@ -300,5 +298,5 @@ def sky_archipelago(tb, scale):
                 r0 = (5.2 - 4.4 * t0 ** 1.3) * s * (1.0 + 0.2 * (i == 1))
                 r1 = (5.2 - 4.4 * t1 ** 1.3) * s * (1.0 + 0.2 * (i == 1))
                 ox = math.sin(t0 * 5.0 + i) * 0.9 * s
-                tb.cyl("sky", (x + ox, (hy + t0 * 18) * s, z), r0 * 1.05, r1, 18 * s / segs, 10, (0.86, 0.87, 0.9), cap_top=(k == segs - 1), col_top=(0.95, 0.94, 0.92))
-            tb.cyl("sky", (x, (hy - 3.5) * s, z), 0.5 * s, 5.4 * s, 3.5 * s, 10, haze_low, cap_top=False, col_top=(0.86, 0.87, 0.9))
+                tb.cyl("sky", (x + ox, (hy + t0 * 18) * s, z), r0 * 1.05, r1, 18 * s / segs, 10, (0.62, 0.70, 0.84), cap_top=(k == segs - 1), col_top=(0.80, 0.84, 0.92))
+            tb.cyl("sky", (x, (hy - 3.5) * s, z), 0.5 * s, 5.4 * s, 3.5 * s, 10, haze_low, cap_top=False, col_top=(0.62, 0.70, 0.84))

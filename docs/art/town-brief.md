@@ -1,6 +1,6 @@
 # Town on the ground + Tournament altar — task brief
 
-Task IDs: **T-001 town v1**, **A-001 Tournament altar v1**. Brief version 1, 10.11.2026.
+Task IDs: **T-001 town v1**, **A-001 Tournament altar v1**. Brief version 2, 10.11.2026 (round shrine).
 Owner decisions behind it: `docs/decisions.md` (10.11, "Town on the ground"). Process: `docs/art/gpt-claude-gpu-workflow.md`.
 Assignee: the Claude worker session (Blender, export, Three.js integration). References and visual review: GPT
 (storyboards arrive in `docs/art/town/refs/`). Art direction: the owner, through the lead session.
@@ -31,8 +31,11 @@ our own plan, names, silhouettes and details (same rule as `docs/art/brief.md` f
 
 - Playable area about 120 × 120 m; walls, cliffs or houses close the edges (no invisible walls on open ground).
 - Spawn at the lower gate. A clear main street climbs to **the square with the altar** (the jury walk from
-  spawn to the altar: about 20 s at walk speed, about 10 s running). The temple sits above the square as the
-  backdrop of the altar shot.
+  spawn to the altar: about 20 s at walk speed, about 10 s running). **The round shrine** sits above the square
+  as the backdrop of the altar shot (owner decision 10.11, option C, replacing the classical temple): a ring
+  colonnade around a round cella on a raised stone drum, a low dome with spiral growth ridges and a pearl sheen
+  echoing the Shells, an open oculus, a frieze of round-sign strokes; its amber accents stay weaker than the
+  altar core; no bell tower.
 - 12–20 houses from a modular kit (walls, timber frame, roofs, doors, windows, chimneys, balconies, awnings)
   with variation, plus props: well, market stalls, crates, barrels, lamps, banners, trees and planters.
 - Iris's scale: the existing agent rig (height about 1.7 m). Doors 2.1–2.4 m, street width 4–8 m.

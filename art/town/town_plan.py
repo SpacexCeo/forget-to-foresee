@@ -94,7 +94,7 @@ BLOCKS = {
 }
 
 # The archipelago seen far up in the sky to the north (an impostor at reduced scale, visual only).
-SKY = {"x": 105.0, "y": 172.0, "z": -290.0, "scale": 0.62}
+SKY = {"x": 165.0, "y": 180.0, "z": -325.0, "scale": 1.0}
 
 # Paved rectangles (x0, x1, z0, z1) per terrace; everything else is grass and packed earth.
 PAVED = {

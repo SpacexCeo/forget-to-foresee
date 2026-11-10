@@ -47,7 +47,7 @@
       ]
     },
     "town_block_gate": {
-      "raw_bytes": 15913500,
+      "raw_bytes": 15913504,
       "triangles": 33176,
       "collision_triangles": 462,
       "materials": [
@@ -141,7 +141,7 @@
       ]
     },
     "town_block_square": {
-      "raw_bytes": 15689424,
+      "raw_bytes": 15689428,
       "triangles": 31044,
       "collision_triangles": 404,
       "materials": [
@@ -190,9 +190,9 @@
       ]
     },
     "town_temple": {
-      "raw_bytes": 14291008,
-      "triangles": 21220,
-      "collision_triangles": 416,
+      "raw_bytes": 14725352,
+      "triangles": 26028,
+      "collision_triangles": 622,
       "materials": [
         "M_Altar_Core",
         "M_Altar_Metal",
@@ -202,25 +202,27 @@
         "M_Town_GlassLit",
         "M_Town_Ground",
         "M_Town_Lamp",
+        "M_Town_Pearl",
         "M_Town_Plaster",
         "M_Town_Roof",
         "M_Town_Stone",
         "M_Town_Timber"
       ],
       "nodes": {
-        "town_temple_altar_core": 148,
-        "town_temple_altar_metal": 1516,
+        "town_temple_altar_core": 28,
+        "town_temple_altar_metal": 4012,
         "town_temple_cloth": 28,
         "town_temple_foliage": 3640,
         "town_temple_glass": 96,
-        "town_temple_glass_lit": 96,
+        "town_temple_glass_lit": 312,
         "town_temple_ground": 4,
         "town_temple_lamp": 56,
-        "town_temple_plaster": 63,
-        "town_temple_roof": 156,
-        "town_temple_stone": 5985,
-        "town_temple_timber": 9432,
-        "town_temple_col": 416
+        "town_temple_pearl": 1536,
+        "town_temple_plaster": 118,
+        "town_temple_roof": 232,
+        "town_temple_stone": 6370,
+        "town_temple_timber": 9596,
+        "town_temple_col": 622
       },
       "sockets": [
         "socket_lamp_temple_e",
@@ -230,17 +232,17 @@
       ],
       "bounds_min": [
         -47.55,
-        9.42,
-        -55.7
+        8.9,
+        -54.75
       ],
       "bounds_max": [
         45.97,
-        40.48,
+        26.94,
         -30.7
       ]
     },
     "town_altar": {
-      "raw_bytes": 2242736,
+      "raw_bytes": 2242740,
       "triangles": 7488,
       "collision_triangles": 276,
       "materials": [
@@ -275,7 +277,7 @@
       ]
     },
     "town_sky": {
-      "raw_bytes": 108836,
+      "raw_bytes": 108808,
       "triangles": 1412,
       "collision_triangles": 0,
       "materials": [
@@ -286,31 +288,31 @@
       },
       "sockets": [],
       "bounds_min": [
-        77.98,
-        159.6,
-        -316.89
+        121.42,
+        160.0,
+        -368.38
       ],
       "bounds_max": [
-        131.32,
-        198.66,
-        -262.28
+        207.45,
+        223.0,
+        -280.29
       ]
     }
   },
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.26
+      "seconds": 1.25
     },
     {
       "stage": "objects",
-      "seconds": 1.33
+      "seconds": 1.36
     },
     {
       "stage": "export",
-      "seconds": 1.1
+      "seconds": 1.14
     }
   ],
-  "total_triangles": 135625,
+  "total_triangles": 140433,
   "route_length_m": 39.93
 }

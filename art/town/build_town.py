@@ -16,7 +16,7 @@ Pieces (one .glb each, pivot on the ground, Y up, metres):
     town_block_gate     houses and props of the gate court and the lower lane
     town_block_mid      houses and props of the middle terrace
     town_block_square   houses and props around the square
-    town_temple         the temple, its two houses and trees
+    town_temple         the round shrine, its two houses and trees
     town_altar          the Tournament altar (hero): dais, ring, amber core; altar_focus, altar_stand
     town_sky            the far archipelago in the sky (impostor, visual only)
 Every piece carries `<piece>_col` collision meshes and `socket_lamp_*` empties for warm lights.
@@ -62,7 +62,7 @@ FLAT = {  # blockout colours (linear) standing in for the tiling base colour
     "foliage": (0.20, 0.32, 0.10), "altar_stone": (0.40, 0.38, 0.34),
 }
 MAT_NAME = {"altar_stone": "M_Altar_Stone", "altar_core": "M_Altar_Core", "altar_metal": "M_Altar_Metal"}
-SHADE_ANGLE = {"foliage": 80, "sky": 50}
+SHADE_ANGLE = {"foliage": 80, "sky": 50, "pearl": 55}
 
 
 def log(*a):
@@ -139,13 +139,13 @@ def populate(tb):
 
     tb.piece = P.BLOCKS["temple"]["name"]
     with tb.at(T(P.TEMPLE["x"], P.TEMPLE["y"], P.TEMPLE["z"])):
-        town_altar.temple(tb)
+        town_altar.shrine(tb)
     for i, (x, z, hh, r) in enumerate(((-18.5, -34.6, 5.6, 2.2), (18.5, -34.6, 5.8, 2.3), (-44.5, -36.0, 6.6, 2.6), (44.0, -37.5, 6.2, 2.4), (42.0, -51.0, 7.0, 2.8), (-45.0, -52.0, 6.8, 2.7), (-16.0, -52.5, 6.0, 2.4), (20.0, -53.0, 6.4, 2.5))):
         H.tree(tb, x, z, y3, seed=31 + i, h=hh, r=r)
-    H.banner(tb, -11.4, -33.2, y3, rot=0, h=6.0)
-    H.banner(tb, 11.4, -33.2, y3, rot=180, h=6.0)
-    H.lamp_post(tb, -13.0, -31.2, y3, "socket_lamp_terrace_w")
-    H.lamp_post(tb, 13.0, -31.2, y3, "socket_lamp_terrace_e")
+    H.banner(tb, -12.6, -33.4, y3, rot=0, h=6.0)
+    H.banner(tb, 12.6, -33.4, y3, rot=180, h=6.0)
+    H.lamp_post(tb, -16.0, -31.2, y3, "socket_lamp_terrace_w")
+    H.lamp_post(tb, 16.0, -31.2, y3, "socket_lamp_terrace_e")
     H.planter(tb, -22.0, -31.0, y3, w=2.4, seed=7)
     H.planter(tb, 22.0, -31.0, y3, w=2.4, seed=8)
 
@@ -222,17 +222,18 @@ def make_materials():
         else:
             mats[key] = vc_material(name, FLAT[key], double_sided=(key in ("foliage", "cloth")))
     mats["glass"] = ftf.simple_material("M_Town_Glass", (0.035, 0.05, 0.06), 0.12, metal=0.0)
-    mats["glass_lit"] = ftf.simple_material("M_Town_GlassLit", (0.55, 0.36, 0.14), 0.4, emit=(1.0, 0.62, 0.24), emit_strength=2.2)
-    mats["lamp"] = ftf.simple_material("M_Town_Lamp", (1.0, 0.72, 0.38), 0.4, emit=(1.0, 0.62, 0.26), emit_strength=6.0)
-    mats["altar_core"] = ftf.simple_material("M_Altar_Core", (0.95, 0.52, 0.10), 0.22, emit=(1.0, 0.50, 0.08), emit_strength=3.0)
+    mats["glass_lit"] = ftf.simple_material("M_Town_GlassLit", (0.55, 0.36, 0.14), 0.4, emit=(1.0, 0.62, 0.24), emit_strength=1.3)
+    mats["lamp"] = ftf.simple_material("M_Town_Lamp", (1.0, 0.72, 0.38), 0.4, emit=(1.0, 0.62, 0.26), emit_strength=3.5)
+    mats["altar_core"] = ftf.simple_material("M_Altar_Core", (0.95, 0.52, 0.10), 0.22, emit=(1.0, 0.50, 0.08), emit_strength=4.5)
     mats["altar_metal"] = ftf.simple_material("M_Altar_Metal", (0.66, 0.44, 0.20), 0.38, metal=1.0)
-    mats["sky"] = vc_material("M_Town_Sky", (1.0, 1.0, 1.0), rough=1.0, emit=0.55)
+    mats["pearl"] = vc_material("M_Town_Pearl", (0.92, 0.88, 0.82), rough=0.24, metal=0.0)
+    mats["sky"] = vc_material("M_Town_Sky", (1.0, 1.0, 1.0), rough=1.0, emit=0.30)
     return mats, textured
 
 
 def color_fn_for(piece, mat):
     """Cheap grounding: vertical faces darken toward the ground they stand on, undersides darken."""
-    if mat in ("sky", "foliage", "lamp", "glass", "glass_lit", "altar_core", "altar_metal") or piece == "town_sky":
+    if mat in ("sky", "pearl", "foliage", "lamp", "glass", "glass_lit", "altar_core", "altar_metal") or piece == "town_sky":
         return None
     px, py, pz = PIVOT[piece]
     terrain = piece == "town_terrain"
@@ -349,7 +350,7 @@ def stage_render(which=None):
                 o.hide_render = True
     # daylight (brief): a clear pale sky and a warm sun from the south-west; the haze is the game's own fog
     sc.world = ftf.sky_world("TownSky", zenith=(0.16, 0.34, 0.62), horizon=(0.80, 0.84, 0.86), ground=(0.50, 0.52, 0.52), strength=1.25)
-    ftf.add_sun(col, energy=5.0, color=(1.0, 0.93, 0.80), elev=46, azim=-140, angle=2)
+    ftf.add_sun(col, energy=5.0, color=(1.0, 0.90, 0.72), elev=46, azim=-140, angle=2)
     for i, (x, z) in enumerate(((3.6, 26.0), (-6.2, -7.6), (2.5, 8.0), (9.0, -12.0))):
         hp = bpy.data.meshes.new(f"human{i}")
         bm = bmesh.new()
@@ -362,13 +363,13 @@ def stage_render(which=None):
     views = {
         "top": dict(loc=(0, 190, -10), tgt=(0, 0, -10.01), ortho=128, res=(2000, 2000)),
         "spawn": dict(loc=(0, 2.9, 32.0), tgt=(0, 5.2, 0), lens=22, res=(1920, 1200)),
-        "altar": dict(loc=(-2.2, 6.6, 3.2), tgt=(2.4, 11.6, -14), lens=24, res=(1920, 1200)),
+        "altar": dict(loc=(-0.6, 6.5, 4.6), tgt=(2.2, 11.4, -14), lens=22, res=(1920, 1200)),
         "altar_close": dict(loc=(3.4, 6.6, -5.2), tgt=(0, 7.0, -11), lens=40, res=(1920, 1200)),
         "aerial": dict(loc=(64, 62, 86), tgt=(0, 4, -8), lens=32, res=(1920, 1200)),
         "square": dict(loc=(-11.5, 6.4, -3.6), tgt=(8, 7.0, -18), lens=24, res=(1920, 1200)),
         "lane": dict(loc=(-30, 4.2, 10.2), tgt=(0, 4.6, 9.0), lens=28, res=(1920, 1200)),
-        "temple": dict(loc=(0, 11.4, -22.5), tgt=(0, 16.5, -44), lens=24, res=(1920, 1200)),
-        "sky": dict(loc=(-6, 6.4, 2), tgt=(40, 70, -150), lens=28, res=(1920, 1200)),
+        "temple": dict(loc=(-9, 11.4, -21.0), tgt=(1, 16.0, -44), lens=22, res=(1920, 1200)),
+        "sky": dict(loc=(-8, 6.4, 6), tgt=(60, 70, -150), lens=26, res=(1920, 1200)),
     }
     samples = int(os.environ.get("TOWN_SAMPLES", "96"))
     times = {}
@@ -377,6 +378,9 @@ def stage_render(which=None):
             continue
         ftf.setup_cycles(sc, v["res"][0], v["res"][1], samples)
         sc.view_settings.exposure = -0.6
+        for o in col.objects:
+            if o.name.startswith("human"):
+                o.hide_render = name not in ("aerial", "lane", "square", "top")
         cam = ftf.add_camera("cam_" + name, bl(v["loc"]), bl(v["tgt"]), lens=v.get("lens", 35), ortho=v.get("ortho"), col=col, clip_end=3000)
         times[name] = ftf.render_to(sc, cam, os.path.join(QA_DIR, f"town_{name}.jpg"))
         log("render", name, times[name], "s", dev)

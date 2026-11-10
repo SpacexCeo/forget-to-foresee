@@ -144,10 +144,10 @@ export const TOWN_DATA = Object.freeze({
       ],
       "center": [
         -0.79,
-        24.95,
-        -43.2
+        17.92,
+        -42.72
       ],
-      "radius": 50.8
+      "radius": 49.1
     },
     {
       "name": "town_altar",
@@ -168,16 +168,16 @@ export const TOWN_DATA = Object.freeze({
       "name": "town_sky",
       "kind": "town_sky",
       "position": [
-        105.0,
-        172.0,
-        -290.0
+        165.0,
+        180.0,
+        -325.0
       ],
       "center": [
-        104.65,
-        179.13,
-        -289.59
+        164.43,
+        191.5,
+        -324.33
       ],
-      "radius": 42.9
+      "radius": 69.2
     }
   ]
 });
