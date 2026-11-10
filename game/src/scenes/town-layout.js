@@ -53,16 +53,8 @@ export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 20;
 /** The cloud sea moves here while Iris is in the town: a sea of mist around the hill, below every walkable level. */
 export const TOWN_MIST_LEVEL = TOWN_ORIGIN[1] - 32;
 
-/**
- * The town's atmosphere on top of the time-of-day preset (LookDev.setAtmosphereFloor): daylight with a soft, warm
- * haze. The archipelago's fog is tuned for a sea of clouds seen from above; in the streets it is thinner and
- * warmer, the distance fog starts later (a wall 60 m away keeps its colours), the cool aerial shift is mostly off
- * and the exposure is a third of a stop up.
- */
-export const TOWN_ATMOSPHERE = Object.freeze({
-  fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL,
-  fogDensity: 0.35, aerial: 0.25, fogNear: 90, fogFar: 700, fogColor: 0xe6d8bf, fogColorMix: 0.55, exposure: 0.35,
-});
+/** The town's atmosphere floor (LookDev.setAtmosphereFloor). Fog colour, exposure and grading belong to the look-dev lane. */
+export const TOWN_ATMOSPHERE = Object.freeze({ fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL });
 
 /**
  * The camera in the streets: a low, close third-person view (the archipelago's 30 m isometric overview would sit
@@ -71,7 +63,7 @@ export const TOWN_ATMOSPHERE = Object.freeze({
  * the dome and the islands in the sky (about 30 degrees up); the rig's own 8 degrees return on leaving.
  */
 // `far`: the islands in the sky reach past the archipelago's 500 m far plane (the archipelago itself is 1200 m away).
-export const TOWN_CAMERA = Object.freeze({ dist: 6.5, tilt: -0.14, minPitch: -16 * Math.PI / 180, far: 800 });
+export const TOWN_CAMERA = Object.freeze({ dist: 6.5, tilt: -0.14, minPitch: -16 * Math.PI / 180, far: 900 });
 
 /** The sky piece's bounding sphere in world space (the archipelago seen from below), or null without one. */
 export const TOWN_SKY = (() => {
