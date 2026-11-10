@@ -45,7 +45,9 @@ from trellis.pipelines import TrellisImageTo3DPipeline  # noqa: E402
 
 src, out = sys.argv[1], sys.argv[2]
 seed = int(sys.argv[3]) if len(sys.argv) > 3 else 1
-pipe = TrellisImageTo3DPipeline.from_pretrained("microsoft/TRELLIS-image-large")
+from huggingface_hub import snapshot_download  # noqa: E402
+
+pipe = TrellisImageTo3DPipeline.from_pretrained(snapshot_download("microsoft/TRELLIS-image-large"))  # local files
 pipe.cuda()
 img = Image.open(src)
 res = pipe.run(img, seed=seed, formats=["mesh"],
