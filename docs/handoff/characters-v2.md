@@ -27,6 +27,10 @@ push the branch and `main`. Never push red. The lighting worker (`claude/lightin
   and the low tier (one download).
 - QA: `docs/art/iris/final/` (Cycles sheets, before/after, in-game town and archipelago; 0 console errors).
 
+**On `main`:** the Iris commits are cherry-picked onto `main` (7cb3695, tests and build green there). A full merge of
+`main` into this branch conflicts in `game/src/scenes/town.js`, `town-flow.js`, `boot-world.js` and `docs/decisions.md`
+(townsfolk here against `town-life` from the lighting branch): left for the townsfolk worker or the lead.
+
 **Rest pose:** the body skeleton is unchanged (`qa_restpose.py`: the 36 bones the side-car rotates and `pelvis` are
 identical). Only children of `head` moved: `eye_*`, `lid_*`, `brow_*` 3 mm, `tail_0` 7 mm, `hair_*_0` 1 mm. The
 side-car `game/public/assets/anim/iris.glb` has rotation tracks and one `pelvis` translation, so it does **not**
