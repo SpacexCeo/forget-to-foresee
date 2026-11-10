@@ -835,7 +835,7 @@ def athletic_costume(bm, P, dom, bones):
     crotch = lambda p: ((abs(p.x) < 0.07 and 0.70 < p.z < 0.88 and p.y < c.y + 0.02)   # the front crotch; the back follows the cleft,
                         or (abs(p.x) < 0.03 and p.y > c.y and 0.935 < p.z < 1.0))     # except its deep top (no dark pit)
     out["leggings"] = C.shell_from_body(bm, "leggings", leg_keep, 0.0028, 0.0018,
-                                        trim=lambda p, nrm: leg_panel(p, nrm),   # one colour to the top edge (owner: one layer)
+                                        trim=lambda p, nrm: 0.0,   # one colour everywhere (owner v13: nothing drawn on the leggings; the side panels were a lighter patch)
                                         accent=lambda p, nrm: 0.0, edges=leg_edges, edge_relax=4, relax=(crotch, 12),
                                         cuts=(((0, 0, 1.020), (0, 0, 1)), ((0, 0, 0.12), (0, 0, -1))))
     # (owner 09.11: one layer, pressed into the cleft between the cheeks: no bridge, no separate waistband)
