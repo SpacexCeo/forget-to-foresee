@@ -5,7 +5,9 @@
 //   ?a=agent_iris[&aclips=/assets/anim/x.glb][&art=v1|v2]   left character (clips from the model, or a side-car file)
 //   &b=agent_iris&bclips=...&brt=...                        optional second character (rows: a on top, b below)
 //   &scenario=loco|walk|run|idle|turn|clip:<name>           what the characters do (see SCENARIOS)
-//   &views=side,front                                       camera columns (side, front, back, top)
+//   &views=side,front                                       camera columns (side, front, back, top, feet, game)
+//   &aclips=townsfolk                                       the shared townsfolk clips retargeted onto the model
+//   &zoom=1.6&hscale=0.8&plant=0&once=1&walk=1.3            closer camera, lower aim, no planted-feet layer, one-shot, walk speed
 //
 // Page API for the capture script: window.__anim = { ready: Promise, frames, fps, step(i) → state, metrics() }.
 import * as THREE from 'three';
@@ -17,14 +19,15 @@ import { upgradeAssetMaterials } from '../render/materials.js';
 import { flatHair } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { resolveClip } from '../play/behaviour.js';
-import { GaitLayer } from '../play/gait.js';
-import { mergeClips, faceLayerClip } from '../play/anim-library.js';
+import { GaitLayer, FootPlant } from '../play/gait.js';
+import { mergeClips, faceLayerClip, townsfolkClips } from '../play/anim-library.js';
 import * as gaitModule from '../play/gait.js';
 import { DEFAULT_MOTION, createMotion, stepMotion } from '../physics/motion.js';
 
 const Q = new URLSearchParams(location.search);
 const FPS = 30, DT = 1 / FPS;
-const WALK = 1.7, RUN = 3.3;
+const WALK = Number(Q.get('walk')) || 1.7, RUN = 3.3;
+const ZOOM = Number(Q.get('zoom')) || 1, HSCALE = Number(Q.get('hscale')) || 1;
 
 /** Each scenario: seconds, and input(t) → { speed: wished m/s, dir: wished heading (radians) or null, clip?: name }. */
 const SCENARIOS = {
@@ -36,6 +39,8 @@ const SCENARIOS = {
   // stand, reverse direction on the spot (the game pivots at up to 690 °/s), walk, a 90° corner, a reversal at a run
   turn: { seconds: 10, input: (t) => (t < 1 ? { speed: 0, dir: null } : t < 1.06 ? { speed: 0.01, dir: Math.PI } : t < 2.2 ? { speed: 0, dir: null } : t < 4 ? { speed: WALK, dir: Math.PI } : t < 6 ? { speed: WALK, dir: Math.PI / 2 } : t < 8 ? { speed: RUN, dir: -Math.PI / 2 } : { speed: 0, dir: null }) },
 };
+
+SCENARIOS.pivot = { seconds: 5, input: (t) => (t >= 0.5 && t < 0.8 ? { speed: 0.01, dir: Math.PI } : t >= 2.5 && t < 2.75 ? { speed: 0.01, dir: Math.PI / 2 } : { speed: 0, dir: null }) }; // half turn and quarter turn on the spot
 
 function scenario() {
   const name = Q.get('scenario') || 'loco';
@@ -83,7 +88,7 @@ class Subject {
     if (this.name === 'agent_iris') { flatHair(model); fabricSheen(model); }
     model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
     this.model = model; this.root.add(model); scene.add(this.root);
-    const extra = this.clipsUrl ? await loadClips(this.clipsUrl) : [];
+    const extra = this.clipsUrl === 'townsfolk' ? await townsfolkClips(model, { key: this.name }) : this.clipsUrl ? await loadClips(this.clipsUrl) : [];
     this.clips = mergeClips(gltf.animations, extra);
     this.mixer = new THREE.AnimationMixer(model);
     const face = extra.length ? faceLayerClip(gltf.animations) : null;
@@ -94,6 +99,7 @@ class Subject {
     const idle = resolveClip(this.clips, 'idle').clip;
     this.idle = !Rt && idle ? this.mixer.clipAction(idle) : null;
     if (this.idle) this.idle.play();
+    this.plant = Q.get('plant') === '0' ? null : new FootPlant(model);
     this.feet = ['foot_L', 'foot_R', 'toe_L', 'toe_R'].map((n) => model.getObjectByName(n)).filter(Boolean);
     this.clipNames = this.clips.map((c) => c.name);
   }
@@ -111,11 +117,12 @@ class Subject {
       const move = this.gait.update(DT, speed);
       if (input.clip && (!this.one || this.one.getClip().name !== input.clip)) {
         const c = resolveClip(this.clips, input.clip).clip;
-        if (c) { this.one = this.mixer.clipAction(c); this.one.reset().play(); }
+        if (c) { this.one = this.mixer.clipAction(c); this.one.reset().play(); if (Q.get('once')) { this.one.setLoop(THREE.LoopOnce, 1); this.one.clampWhenFinished = true; } }
       }
       if (this.one) this.one.weight = 1 - move;
       if (this.idle) this.idle.weight = this.one ? 0 : 1 - move;
       this.mixer.update(DT);
+      if (this.plant) this.plant.update(DT, this.root, move);
     }
     this.root.updateMatrixWorld(true);
     this.measure();
@@ -176,10 +183,10 @@ async function main() {
     renderer.setScissorTest(true);
     subjects.forEach((s, r) => views.forEach((vn, c) => {
       const v = VIEW[vn], p = s.root.position;
-      const d = new THREE.Vector3(...v.dir).normalize().multiplyScalar(v.dist);
+      const d = new THREE.Vector3(...v.dir).normalize().multiplyScalar(v.dist / ZOOM);
       if (vn === 'game') d.applyAxisAngle(new THREE.Vector3(0, 1, 0), s.root.rotation.y);
       cam.fov = v.fov; cam.aspect = cw / rh; cam.updateProjectionMatrix();
-      cam.position.set(p.x + d.x, v.h + d.y, p.z + d.z); cam.lookAt(p.x, v.h, p.z);
+      cam.position.set(p.x + d.x, v.h * HSCALE + d.y, p.z + d.z); cam.lookAt(p.x, v.h * HSCALE, p.z);
       sun.position.set(p.x + 4, 9, p.z + 5); sun.target.position.set(p.x, 0, p.z); sun.target.updateMatrixWorld();
       renderer.setViewport(c * cw, H - (r + 1) * rh, cw, rh); renderer.setScissor(c * cw, H - (r + 1) * rh, cw, rh);
       renderer.render(scene, cam);

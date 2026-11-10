@@ -25,6 +25,9 @@ def main():
     if not takes:
         for c in cfg['clips'].values():
             takes.add(c['take'])
+            for layer in c.get('layers', []):
+                if 'take' in layer:
+                    takes.add(layer['take'])
         for ch in cfg['characters'].values():
             for c in ch['clips'].values():
                 if 'take' in c:

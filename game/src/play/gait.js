@@ -86,6 +86,9 @@ export class GaitLayer {
     this.walk = w.clip && w.name === 'walk' ? mixer.clipAction(w.clip) : null;
     this.run = r.clip && r.name === 'run' ? mixer.clipAction(r.clip) : null;
     for (const a of [this.walk, this.run]) if (a) { a.play(); a.weight = 0; a.enabled = true; a.timeScale = 0; }
+    // the ground speed each clip's stride was built for (side-car clips carry it; the model's own clips use the defaults)
+    this.walkRef = (w.clip && w.clip.userData && w.clip.userData.speed) || WALK_REF;
+    this.runRef = (r.clip && r.name === 'run' && r.clip.userData && r.clip.userData.speed) || RUN_REF;
     this.weights = { walk: 0, run: 0 };
     this.move = 0;
     this.phase = START_PHASE;
@@ -93,6 +96,7 @@ export class GaitLayer {
 
   /** @param {number} speed actual ground speed in m/s @returns {number} move weight 0..1 */
   update(dt, speed) {
+    const WALK_REF = this.walkRef, RUN_REF = this.runRef;
     const g = gaitBlend(speed, { walkRef: WALK_REF, runRef: RUN_REF });
     let walkW = g.walk, runW = g.run;
     if (!this.run) { walkW += runW; runW = 0; }
@@ -110,5 +114,115 @@ export class GaitLayer {
     if (this.walk) { this.walk.weight = this.weights.walk; this.walk.timeScale = 0; this.walk.time = this.phase * walkT; }
     if (this.run) { this.run.weight = this.weights.run; this.run.timeScale = 0; this.run.time = this.phase * runT; }
     return this.move;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Planted feet while standing (docs/art/animation-pipeline.md, "Runtime"): the game turns a character on the spot
+// and stops it faster than any clip could follow, so the feet are held in the world and re-placed by short steps.
+
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
+const _ab = new THREE.Vector3(), _ac = new THREE.Vector3(), _at = new THREE.Vector3(), _cb = new THREE.Vector3(), _ax0 = new THREE.Vector3(), _ax1 = new THREE.Vector3();
+const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _qh = new THREE.Quaternion(), _qs = new THREE.Quaternion(), _qk = new THREE.Quaternion();
+const _home = new THREE.Vector3(), _tgt = new THREE.Vector3(), _hq = new THREE.Quaternion();
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const wrapPi = (a) => { a = (a + Math.PI) % (2 * Math.PI); return (a < 0 ? a + 2 * Math.PI : a) - Math.PI; };
+const smooth = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+
+/**
+ * Two-bone IK in world space: turns `upper` and `lower` so the head of `end` reaches `target`, keeping the bend
+ * plane the animation has (the knee keeps pointing where the clip points it). The bones' world matrices must be
+ * current; the chain's matrices are current again on return.
+ */
+export function solveTwoBone(upper, lower, end, target) {
+  upper.getWorldPosition(_a); lower.getWorldPosition(_b); end.getWorldPosition(_c);
+  const lab = _a.distanceTo(_b), lcb = _b.distanceTo(_c);
+  const lat = clamp(_a.distanceTo(target), Math.abs(lab - lcb) + 1e-3, (lab + lcb) * 0.999);
+  _ab.subVectors(_b, _a).normalize(); _ac.subVectors(_c, _a).normalize(); _at.subVectors(target, _a).normalize(); _cb.subVectors(_c, _b).normalize();
+  const acAb0 = Math.acos(clamp(_ac.dot(_ab), -1, 1)), baBc0 = Math.acos(clamp(-_ab.dot(_cb), -1, 1)), acAt0 = Math.acos(clamp(_ac.dot(_at), -1, 1));
+  const acAb1 = Math.acos(clamp((lcb * lcb - lab * lab - lat * lat) / (-2 * lab * lat), -1, 1));
+  const baBc1 = Math.acos(clamp((lat * lat - lab * lab - lcb * lcb) / (-2 * lab * lcb), -1, 1));
+  upper.getWorldQuaternion(_qa); lower.getWorldQuaternion(_qb);
+  _ax0.crossVectors(_ac, _ab);
+  if (_ax0.lengthSq() < 1e-8) _ax0.set(1, 0, 0).applyQuaternion(_qa);   // a straight limb bends about its own side axis
+  _ax0.normalize();
+  _ax1.crossVectors(_ac, _at);
+  // world space: open or close the angle at the root, the same at the middle joint, then swing the limb onto the target
+  _qh.setFromAxisAngle(_ax0, acAb1 - acAb0);
+  _qk.setFromAxisAngle(_ax0, (acAb1 - acAb0) + (baBc1 - baBc0));
+  if (_ax1.lengthSq() > 1e-10) _qs.setFromAxisAngle(_ax1.normalize(), acAt0); else _qs.identity();
+  _qa.premultiply(_qh).premultiply(_qs);                                  // new world rotation of the upper bone
+  _qb.premultiply(_qk).premultiply(_qs);                                  // new world rotation of the lower bone
+  lower.quaternion.copy(_qh.copy(_qa).invert().multiply(_qb));
+  upper.parent.getWorldQuaternion(_qk);
+  upper.quaternion.copy(_qk.invert().multiply(_qa));
+  upper.updateWorldMatrix(false, true);
+}
+
+const TURN_RATE = 5.6;        // rad/s (320°/s): how fast the body follows the game's heading while it stands
+const STEP_DIST = 0.085, STEP_YAW = 0.4, STEP_TIME = 0.2, STEP_LIFT = 0.045;
+
+/**
+ * Feet planted in the world while a character stands (turning on the spot, the last moments of a stop):
+ * - the model follows the game's heading at a human rate (`TURN_RATE`) instead of spinning with it;
+ * - each foot stays where it stands; when the body has turned or drifted too far from it, the foot steps to its
+ *   place under the body (one foot at a time, a short arc), so a pivot reads as two or three quick steps;
+ * - the legs are solved with two-bone IK onto the held feet.
+ * The layer fades out with the gait's weight (`move`): a walking or running character is driven by its clips alone.
+ * Call `update` after the mixer and after the avatar group has its position and heading for the frame.
+ */
+export class FootPlant {
+  constructor(model) {
+    const bone = (n) => model.getObjectByName(n);
+    this.model = model;
+    this.legs = ['L', 'R'].map((s) => ({ thigh: bone(`thigh_${s}`), shin: bone(`shin_${s}`), foot: bone(`foot_${s}`), pos: new THREE.Vector3(), from: new THREE.Vector3(), yaw: 0, fromYaw: 0, active: false, stepping: false, u: 0 }));
+    this.ok = this.legs.every((l) => l.thigh && l.shin && l.foot);
+    this.yaw = null;            // the model's own world heading (lags the group's while standing)
+    this.baseYaw = model.rotation.y;
+    model.updateWorldMatrix(true, true);
+    this.restFootY = this.ok ? this.legs[0].foot.getWorldPosition(_a).y - model.getWorldPosition(_b).y : 0;
+    this.weight = 0;
+  }
+
+  /** @param {THREE.Object3D} group the avatar group (position = the ground point, rotation.y = the game's heading) */
+  update(dt, group, move, reduced = false) {
+    if (!this.ok) return;
+    const heading = group.rotation.y;
+    const stand = reduced ? 0 : smooth(1 - move * 1.6);
+    this.weight = stand;
+    if (this.yaw === null) this.yaw = heading;
+    const diff = wrapPi(heading - this.yaw);
+    const rate = TURN_RATE + (1 - stand) * 12, ease = 10 + (1 - stand) * 20;
+    this.yaw += clamp(diff * (1 - Math.exp(-ease * dt)), -rate * dt, rate * dt);
+    if (stand < 1e-3 && Math.abs(wrapPi(heading - this.yaw)) < 0.02) this.yaw = heading;
+    this.model.rotation.y = this.baseYaw + wrapPi(this.yaw - heading);
+    group.updateMatrixWorld(true);
+    if (stand < 1e-3) { for (const l of this.legs) l.active = l.stepping = false; return; }
+    const groundY = group.position.y;
+    for (let i = 0; i < 2; i++) {
+      const l = this.legs[i], other = this.legs[1 - i];
+      l.foot.getWorldPosition(_home); l.foot.getWorldQuaternion(_hq);
+      if (!l.active) {
+        l.active = true; l.pos.copy(_home); l.yaw = this.yaw; l.stepping = false;
+        if (_home.y - groundY > this.restFootY + 0.03) { l.stepping = true; l.u = 0.5; l.from.copy(_home); l.fromYaw = this.yaw; } // caught in the air: it lands
+      }
+      const d = Math.hypot(l.pos.x - _home.x, l.pos.z - _home.z), dy = Math.abs(wrapPi(this.yaw - l.yaw));
+      if (!l.stepping && (d > STEP_DIST || dy > STEP_YAW) && (!other.stepping || other.u > 0.75)) { l.stepping = true; l.u = 0; l.from.copy(l.pos); l.fromYaw = l.yaw; }
+      if (l.stepping) {
+        l.u += dt / STEP_TIME;
+        const k = smooth(l.u);
+        l.pos.lerpVectors(l.from, _home, k);
+        l.pos.y = _home.y + STEP_LIFT * Math.sin(Math.PI * clamp(l.u, 0, 1));
+        l.yaw = l.fromYaw + wrapPi(this.yaw - l.fromYaw) * k;
+        if (l.u >= 1) { l.stepping = false; l.pos.copy(_home); l.yaw = this.yaw; }
+      } else l.pos.y = _home.y;
+      _tgt.lerpVectors(_home, l.pos, stand);
+      solveTwoBone(l.thigh, l.shin, l.foot, _tgt);
+      // the foot keeps the clip's own tilt, turned to where it was planted
+      _qs.setFromAxisAngle(UP, wrapPi(l.yaw - this.yaw) * stand);
+      _hq.premultiply(_qs);
+      l.shin.getWorldQuaternion(_qk);
+      l.foot.quaternion.copy(_qk.invert().multiply(_hq));
+    }
   }
 }

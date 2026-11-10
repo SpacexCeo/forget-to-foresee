@@ -21,6 +21,28 @@
    ]
   }
  },
+ "idle2": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
  "walk": {
   "take": "08_01",
   "slip_mean_m_s": 0.0102,
@@ -62,6 +84,50 @@
    "R": [
     13,
     7
+   ]
+  }
+ },
+ "register": {
+  "take": "82_08",
+  "frames": 101,
+  "seconds": 3.37,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     101
+    ]
+   ],
+   "R": [
+    [
+     0,
+     101
+    ]
+   ]
+  }
+ },
+ "greet": {
+  "take": "141_16",
+  "frames": 69,
+  "seconds": 2.3,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0526,
+  "contacts": {
+   "L": [
+    [
+     0,
+     69
+    ]
+   ],
+   "R": [
+    [
+     0,
+     69
+    ]
    ]
   }
  }

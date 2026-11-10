@@ -1,7 +1,7 @@
 // Deterministic capture of the animation review page (game/anim-review.html): steps the page frame by frame,
 // saves PNG frames, an mp4 and a contact sheet, and prints the foot-slip metrics.
 //   node art/anim/capture.mjs --out <dir> --name <base> --query "a=agent_iris&scenario=loco" [--size 1920x1080]
-//        [--url http://127.0.0.1:5199] [--every 3] [--sheet 12] [--gpu]
+//        [--url http://127.0.0.1:5199] [--every 3] [--from 0 --to <frames>] [--sheet 12] [--gpu]
 // Needs a running `npx vite --port 5199` in game/ (the page is a dev page), Playwright and ffmpeg.
 import { createRequire } from 'node:module';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -30,7 +30,8 @@ if (await page.evaluate(() => document.body.dataset.ready) !== '1') { console.er
 const info = await page.evaluate(() => ({ frames: window.__anim.frames, fps: window.__anim.fps, clips: window.__anim.clips }));
 const every = Number(arg('every', 1));
 let n = 0;
-for (let i = 0; i < info.frames; i += every) {
+const from = Number(arg('from', 0)), to = Math.min(info.frames, Number(arg('to', info.frames)));
+for (let i = from; i < to; i += every) {
   await page.evaluate((i) => window.__anim.step(i), i);
   await page.screenshot({ path: join(frames, String(n++).padStart(4, '0') + '.png') });
 }

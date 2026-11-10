@@ -44,8 +44,9 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => Promise<void>} o.leave moves Iris to the archipelago and starts the season (called under the cover)
  * @param {() => boolean} [o.islandReady] the archipelago's first models are in (the cover waits for it, bounded)
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
+ * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, coarse = false }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, coarse = false, onRegister = null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -128,6 +129,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     renderText();
     doc.body.append(cover);
     town.setFlare(1);
+    if (onRegister) { try { onRegister(); } catch (e) { console.warn('[town] register cue failed', e); } }
     if (!reduced) { state.lift = 1; state.liftFrom = rig.dist; await sleep(TOWN_TRANSITION.flare); }
     void cover.offsetWidth; // the opacity transition starts from 0
     cover.classList.add('is-on');

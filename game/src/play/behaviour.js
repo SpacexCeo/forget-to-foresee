@@ -27,10 +27,10 @@ export const TEMPERAMENT = Object.freeze({
 });
 
 /** How long (seconds) a reaction to a public event stays on the agent. */
-export const REACTION_SECONDS = Object.freeze({ celebrate: 4, defeat: 5, talk: 6, understand: 2.6 });
+export const REACTION_SECONDS = Object.freeze({ celebrate: 4, defeat: 5, talk: 6, understand: 2.6, register: 3.4, greet: 2.3 });
 
 /** Clips played once and held on their last frame; every other clip loops. */
-export const ONE_SHOT_CLIPS = Object.freeze(['celebrate', 'defeat', 'understand']);
+export const ONE_SHOT_CLIPS = Object.freeze(['celebrate', 'defeat', 'understand', 'register', 'greet']);
 
 /**
  * Cue for one clan.

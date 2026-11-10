@@ -11,7 +11,7 @@ import { upgradeAssetMaterials } from '../render/materials.js';
 import { flatHair } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { ONE_SHOT_CLIPS, REACTION_SECONDS, resolveClip } from './behaviour.js';
-import { FADE, GaitLayer, findLookBones, applyLookTo, accelLean } from './gait.js';
+import { FADE, GaitLayer, FootPlant, findLookBones, applyLookTo, accelLean } from './gait.js';
 import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace } from './anim-library.js';
 
 export class IrisAvatar {
@@ -49,7 +49,7 @@ export class IrisAvatar {
       if (idleAction) idleAction.play();
       const face = mixer && extra.length ? faceLayerClip(gltf.animations) : null;   // blinks and gaze under the body clips
       const faceAction = face ? mixer.clipAction(face).play() : null;
-      this.irisModel = { model, mixer, clips, idleAction, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
+      this.irisModel = { model, mixer, clips, idleAction, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { avatarGroup.userData.irisFailed = true; console.warn('[play] Iris model failed', e); }
   }
 
@@ -96,5 +96,7 @@ export class IrisAvatar {
     if (m.lean) m.model.rotation.x = accelLean(m.lean, speed, dt, reduced);
     // Look-at: the clan Iris is talking to (world.dialogue), else the look fades out.
     if (m.bones && avatarGroup) applyLookTo(m.bones, m.look, avatarGroup.position, avatarGroup.rotation.y, lookTarget, dt, reduced);
+    // Planted feet while she stands: a pivot on the spot and the end of a stop become short steps (gait.js).
+    if (m.plant && avatarGroup) m.plant.update(dt, avatarGroup, m.gait ? m.gait.move : 0, reduced);
   }
 }

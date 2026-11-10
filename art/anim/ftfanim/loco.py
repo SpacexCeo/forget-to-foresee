@@ -106,6 +106,27 @@ def recenter(rig, wr, st):
         wr[b] = qnorm(qmul(qmul(qslerp(want, mean, keep), qinv(mean)), q))
 
 
+def arms_down(wr, spec):
+    """Hangs the arms relaxed along the body: the mean direction of each upper arm, forearm and hand is replaced by a
+    set one (degrees from straight down: `out` away from the body, `fwd` forward; the forearm bends `elbow` more
+    forward and comes `in` back toward the body), keeping `keep` of the take's motion about the mean. This removes
+    the actor's own held-out elbows ("winged" arms) while the breathing and the small sways stay."""
+    out, fwd, elbow, in_, keep = (spec.get(k, d) for k, d in (('out', 8.0), ('fwd', 1.0), ('elbow', 12.0), ('in', 3.0), ('keep', 0.8)))
+    up = np.array([0.0, 1.0, 0.0])
+
+    def direction(o, f, side):
+        o, f = np.radians(o), np.radians(f)
+        d = np.array([side * np.sin(o), -np.cos(o) * np.cos(f), np.cos(o) * np.sin(f)])
+        return d / np.linalg.norm(d)
+    for s, side in (('L', 1.0), ('R', -1.0)):
+        if s not in spec.get('sides', 'LR'):
+            continue
+        for b, d in ((f'upperarm_{s}', direction(out, fwd, side)), (f'forearm_{s}', direction(out - in_, fwd + elbow, side)), (f'hand_{s}', direction(out - in_ - 2, fwd + elbow + 4, side))):
+            q = continuous(wr[b]); mean = qnorm(q.mean(0))
+            want = qmul(swing(qrot(mean, up), d), mean)
+            wr[b] = qnorm(qmul(want, qpow(qmul(qinv(mean), q), keep)))
+
+
 def _scale_about_mean(q, s, wrap=True):
     """Scales a rotation track's deviation from its mean by s."""
     if s == 1.0:
@@ -400,7 +421,7 @@ def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, loc
             loc[bone] = qnorm(qmul(qinv(rig.rest_wr[i_h]), qmul(r, rig.rest_wr[rig.index[bone]])))
 
 
-def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma=1.2, keep_root=True, log=print):
+def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma=1.2, keep_root=True, log=print, pre_layers=None, post_layers=None):
     """An in-place action (idle, gesture, work loop) from source frames [f0, f1]: resampled to `fps`, turned to face
     +Z at its start, feet planted wherever they stand still. `loop` > 0 cross-fades that many frames of the end into
     the start for a seamless loop. feet_mode 'planted' keeps both feet locked for the whole clip (idles)."""
@@ -437,12 +458,22 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
     for b in ('neck', 'head'):
         if st['head_level'] and cyc:
             wr[b] = _scale_about_mean(wr[b], 1.0 - 0.5 * st['head_level'] * (1.0 if b == 'head' else 0.5))
+    if st.get('arms_down'):
+        arms_down(wr, st['arms_down'])
+    if st.get('gesture', 1.0) != 1.0:      # calmer (or broader) hand gestures: the arms' motion about their mean pose
+        for s in 'LR':
+            for b in (f'shoulder_{s}', f'upperarm_{s}', f'forearm_{s}', f'hand_{s}'):
+                wr[b] = _scale_about_mean(wr[b], st['gesture'])
     for s in 'LR':
         if st['arm_out']:
             r = axis_angle(np.array([0, 0, 1.0]), np.radians(st['arm_out']) * (1 if s == 'L' else -1))
             for b in (f'upperarm_{s}', f'forearm_{s}', f'hand_{s}'):
                 wr[b] = qmul(r, wr[b])
     hip[:, 1] -= st['hip_drop']
+    if pre_layers:               # animator layers in world space (layers.py): a held pose, a weight shift
+        pre_layers(rig, wr, hip, feet, n, fps)
+        if st.get('posture_after'):          # a held pose from another take: bring its spine and head toward our posture
+            recenter(rig, wr, {**st, 'posture': st['posture_after']})
     if feet_mode == 'planted':
         contacts = {s: [(0, n)] for s in 'LR'}
         for s in 'LR':   # a planted idle foot is flat: keep only its mean heading
@@ -456,6 +487,8 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
     local, world = assemble(rig, wr, n)
     pel = pelvis_from_hips(rig, wr['pelvis'], hip)
     slip, low = check_slip(rig, local, pel, contacts, 0.0, fps, cyc)
+    if post_layers:              # animator layers on the finished body: a reach, a nod, a look
+        post_layers(rig, local, pel, n, fps)
     if loop:
         local = np.concatenate([local, local[:1]]); pel = np.concatenate([pel, pel[:1]])
     stats = {'frames': int(n), 'seconds': round(n / fps, 2), 'slip_mean_m_s': round(float(np.mean(slip)), 4), 'slip_max_m_s': round(float(np.max(slip)), 4),

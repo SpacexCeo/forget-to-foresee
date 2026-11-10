@@ -147,6 +147,7 @@ if (townMode.town) {
   townFlow = createTownFlow({
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
+    onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
   });
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
