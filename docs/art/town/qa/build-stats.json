@@ -343,22 +343,192 @@
         277.05,
         -228.61
       ]
+    },
+    "town_shop_exchange": {
+      "raw_bytes": 8211700,
+      "triangles": 3784,
+      "collision_triangles": 122,
+      "materials": [
+        "M_Altar_Metal",
+        "M_Town_Cloth",
+        "M_Town_Lamp",
+        "M_Town_Plaster",
+        "M_Shop_Shard",
+        "M_Town_Stone",
+        "M_Town_Timber",
+        "M_Shop_Daylight"
+      ],
+      "nodes": {
+        "town_shop_exchange_altar_metal": 780,
+        "town_shop_exchange_cloth": 326,
+        "town_shop_exchange_lamp": 54,
+        "town_shop_exchange_plaster": 744,
+        "town_shop_exchange_shard": 80,
+        "town_shop_exchange_stone": 404,
+        "town_shop_exchange_timber": 1382,
+        "town_shop_exchange_window_day": 14,
+        "town_shop_exchange_col": 122
+      },
+      "sockets": [
+        "shop_counter",
+        "shop_exit",
+        "shop_pedestal",
+        "shop_spawn",
+        "shopkeeper_stand",
+        "socket_lamp_case_0",
+        "socket_lamp_case_1",
+        "socket_lamp_case_2",
+        "socket_lamp_case_3",
+        "socket_lamp_case_4",
+        "socket_lamp_case_5",
+        "socket_lamp_ceiling",
+        "socket_lamp_pedestal",
+        "socket_lamp_wall_east",
+        "socket_lamp_wall_west"
+      ],
+      "bounds_min": [
+        -4.59,
+        0.0,
+        -5.59
+      ],
+      "bounds_max": [
+        4.59,
+        3.6,
+        5.59
+      ]
+    },
+    "town_shop_scribe": {
+      "raw_bytes": 8669548,
+      "triangles": 8575,
+      "collision_triangles": 112,
+      "materials": [
+        "M_Altar_Metal",
+        "M_Town_Cloth",
+        "M_Shop_Ink",
+        "M_Town_Lamp",
+        "M_Town_Plaster",
+        "M_Town_Stone",
+        "M_Town_Timber",
+        "M_Shop_Daylight"
+      ],
+      "nodes": {
+        "town_shop_scribe_altar_metal": 2168,
+        "town_shop_scribe_cloth": 1531,
+        "town_shop_scribe_ink": 2810,
+        "town_shop_scribe_lamp": 74,
+        "town_shop_scribe_plaster": 170,
+        "town_shop_scribe_stone": 168,
+        "town_shop_scribe_timber": 1640,
+        "town_shop_scribe_window_day": 14,
+        "town_shop_scribe_col": 112
+      },
+      "sockets": [
+        "npc_seat_scribe_0",
+        "npc_seat_scribe_1",
+        "npc_seat_scribe_2",
+        "npc_seat_scribe_3",
+        "shop_counter.001",
+        "shop_exit.001",
+        "shop_spawn.001",
+        "shopkeeper_stand.001",
+        "socket_lamp_ceiling.001",
+        "socket_lamp_desk_0",
+        "socket_lamp_desk_1",
+        "socket_lamp_desk_2",
+        "socket_lamp_desk_3",
+        "socket_lamp_wall_east.001",
+        "socket_lamp_wall_west.001"
+      ],
+      "bounds_min": [
+        -4.59,
+        -0.0,
+        -5.59
+      ],
+      "bounds_max": [
+        4.59,
+        3.6,
+        5.59
+      ]
+    },
+    "town_shop_inn": {
+      "raw_bytes": 8245788,
+      "triangles": 4470,
+      "collision_triangles": 126,
+      "materials": [
+        "M_Altar_Metal",
+        "M_Town_Cloth",
+        "M_Shop_Fire",
+        "M_Town_Lamp",
+        "M_Town_Plaster",
+        "M_Town_Stone",
+        "M_Town_Timber",
+        "M_Shop_Daylight"
+      ],
+      "nodes": {
+        "town_shop_inn_altar_metal": 928,
+        "town_shop_inn_cloth": 70,
+        "town_shop_inn_fire": 20,
+        "town_shop_inn_lamp": 64,
+        "town_shop_inn_plaster": 138,
+        "town_shop_inn_stone": 560,
+        "town_shop_inn_timber": 2682,
+        "town_shop_inn_window_day": 8,
+        "town_shop_inn_col": 126
+      },
+      "sockets": [
+        "npc_seat_inn_0",
+        "npc_seat_inn_1",
+        "npc_seat_inn_10",
+        "npc_seat_inn_11",
+        "npc_seat_inn_12",
+        "npc_seat_inn_13",
+        "npc_seat_inn_14",
+        "npc_seat_inn_15",
+        "npc_seat_inn_16",
+        "npc_seat_inn_17",
+        "npc_seat_inn_2",
+        "npc_seat_inn_3",
+        "npc_seat_inn_4",
+        "npc_seat_inn_5",
+        "npc_seat_inn_6",
+        "npc_seat_inn_7",
+        "npc_seat_inn_8",
+        "npc_seat_inn_9",
+        "shop_counter.002",
+        "shop_exit.002",
+        "shop_spawn.002",
+        "shopkeeper_stand.002",
+        "socket_lamp_ceiling.002",
+        "socket_lamp_hearth",
+        "socket_lamp_wall_east.002",
+        "socket_lamp_wall_west.002"
+      ],
+      "bounds_min": [
+        -5.09,
+        -0.0,
+        -6.59
+      ],
+      "bounds_max": [
+        5.09,
+        3.8,
+        6.59
+      ]
     }
   },
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.83
+      "seconds": 1.42
     },
     {
       "stage": "objects",
-      "seconds": 1.95
+      "seconds": 1.59
     },
     {
       "stage": "export",
-      "seconds": 1.62
+      "seconds": 1.28
     }
   ],
-  "total_triangles": 145432,
+  "total_triangles": 162261,
   "route_length_m": 40.04
 }

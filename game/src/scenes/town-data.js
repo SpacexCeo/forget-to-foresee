@@ -180,6 +180,53 @@ export const TOWN_DATA = Object.freeze({
       "radius": 205.6
     }
   ],
+  "interiors": [
+    {
+      "name": "town_shop_exchange",
+      "kind": "town_interior",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "center": [
+        0.0,
+        1.8,
+        0.0
+      ],
+      "radius": 7.5
+    },
+    {
+      "name": "town_shop_scribe",
+      "kind": "town_interior",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "center": [
+        0.0,
+        1.8,
+        0.0
+      ],
+      "radius": 7.5
+    },
+    {
+      "name": "town_shop_inn",
+      "kind": "town_interior",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "center": [
+        0.0,
+        1.9,
+        0.0
+      ],
+      "radius": 8.5
+    }
+  ],
   "npc": {
     "points": {
       "npc_gate_guard": {
@@ -721,9 +768,9 @@ export const TOWN_DATA = Object.freeze({
           "position": [
             0,
             0,
-            -3.0
+            -2.0
           ],
-          "radius": 2.0
+          "radius": 1.8
         }
       }
     },
@@ -775,9 +822,9 @@ export const TOWN_DATA = Object.freeze({
           "position": [
             0,
             0,
-            -3.0
+            -2.0
           ],
-          "radius": 2.0
+          "radius": 1.8
         }
       }
     },
@@ -829,9 +876,9 @@ export const TOWN_DATA = Object.freeze({
           "position": [
             0,
             0,
-            -4.0
+            -3.0
           ],
-          "radius": 2.0
+          "radius": 1.8
         }
       }
     }
