@@ -13,7 +13,7 @@ export const TOWN_DATA = Object.freeze({
     "position": [
       0.0,
       0.0,
-      30.0
+      25.0
     ],
     "heading": 3.141593
   },
@@ -39,7 +39,7 @@ export const TOWN_DATA = Object.freeze({
     [
       0.0,
       0.0,
-      30.0
+      25.0
     ],
     [
       0.0,
@@ -72,7 +72,7 @@ export const TOWN_DATA = Object.freeze({
       -9.04
     ]
   ],
-  "routeLength": 40.04,
+  "routeLength": 35.04,
   "pieces": [
     {
       "name": "town_terrain",

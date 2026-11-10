@@ -51,7 +51,7 @@ RAMPS = [
 ]
 
 ALTAR = {"x": 0.0, "z": -11.0, "y": TERRACE_Y["t2"], "dais_r": (3.3, 2.94, 2.58), "step_h": 0.16}
-SPAWN = {"x": 0.0, "z": 30.0, "y": 0.0, "heading": math.pi}   # heading 0 faces +Z; she looks north
+SPAWN = {"x": 0.0, "z": 25.0, "y": 0.0, "heading": math.pi}   # heading 0 faces +Z; she looks north
 TEMPLE = {"x": 0.0, "z": -44.5, "y": TERRACE_Y["t3"], "w": 16.0, "d": 13.0}
 
 FACING = {"S": 0.0, "E": 90.0, "N": 180.0, "W": -90.0}   # rotation about +Y: local +Z (the front) turns to that side

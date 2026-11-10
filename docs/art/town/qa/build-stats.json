@@ -518,17 +518,17 @@
   "stages": [
     {
       "stage": "geometry",
-      "seconds": 1.42
+      "seconds": 1.74
     },
     {
       "stage": "objects",
-      "seconds": 1.61
+      "seconds": 1.91
     },
     {
       "stage": "export",
-      "seconds": 1.31
+      "seconds": 1.55
     }
   ],
   "total_triangles": 162261,
-  "route_length_m": 40.04
+  "route_length_m": 35.04
 }
