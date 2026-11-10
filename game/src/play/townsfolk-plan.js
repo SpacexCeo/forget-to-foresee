@@ -91,7 +91,7 @@ export function playLoop(area, seed, n = 10) {
 
 function programs() {
   const post = (pt, steps) => ({ home: pt.position, heading: pt.heading, steps });
-  const ex = doorStand('exchange'), sc = doorStand('scribe', -1.4), inn = doorStand('inn');
+  const ex = doorStand('exchange'), sc = doorStand('scribe', 1.4), inn = doorStand('inn');
   const sq = R.npc_route_square_round.points; // [NW, NE, SE, SW] corners of the walk round the square
   const zS = sq[2][2], y = sq[0][1];
   // The two shopkeepers of the square meet at the chat points, talk, and walk back to their doors.

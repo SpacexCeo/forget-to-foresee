@@ -9,18 +9,25 @@ Run from a checkout of github.com/microsoft/TRELLIS (MIT) on PYTHONPATH.
 """
 import os
 import sys
-import types
 
 os.environ.setdefault("ATTN_BACKEND", "xformers")
 os.environ.setdefault("SPARSE_BACKEND", "spconv")
 os.environ.setdefault("SPCONV_ALGO", "native")
 
-# stubs for optional modules of the paths this trial does not use
-kaolin = types.ModuleType("kaolin")
-kaolin.utils = types.ModuleType("kaolin.utils")
-kaolin.utils.testing = types.ModuleType("kaolin.utils.testing")
-kaolin.utils.testing.check_tensor = lambda *a, **k: True
-sys.modules.update({"kaolin": kaolin, "kaolin.utils": kaolin.utils, "kaolin.utils.testing": kaolin.utils.testing})
+# Optional modules of the paths this trial does not use (background removal, textured-GLB baking, gaussian and
+# radiance-field rendering) are replaced by inert stubs when they are not installed.
+import importlib.util  # noqa: E402
+from unittest import mock  # noqa: E402
+
+for _name in ("rembg", "kaolin", "kaolin.utils", "kaolin.utils.testing", "nvdiffrast", "nvdiffrast.torch", "diff_gaussian_rasterization",
+              "diffoctreerast", "open3d", "xatlas", "pyvista", "pymeshfix", "igraph", "plyfile", "utils3d", "utils3d.torch"):
+    try:
+        found = importlib.util.find_spec(_name) is not None
+    except (ImportError, ValueError):
+        found = False
+    if not found:
+        sys.modules[_name] = mock.MagicMock(name=_name)
+        print("stubbed", _name)
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402

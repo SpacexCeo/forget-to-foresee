@@ -43,6 +43,8 @@ class Person {
     const model = cloneSkinned(gltf.scene);
     // the shared mocap clips, retargeted to this body while it is still in its rest pose ([] when the file is missing)
     const extraClips = await townsfolkClips(model, { key: file, body: BODY[this.def.key] || 'adult' });
+    // one baked cloth-and-skin material per person: named so that no look slot (amber for 'lamp…', glass) claims it
+    model.traverse((o) => { if (o.isMesh && o.material) o.material.name = 'townsfolk_cloth'; });
     upgradeAssetMaterials(this.def.asset, model);
     model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
     return warmModel(model).then(() => {

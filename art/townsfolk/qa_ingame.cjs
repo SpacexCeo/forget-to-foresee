@@ -5,7 +5,7 @@
 const { chromium } = require('playwright');
 
 const STOPS = [ // [name, town-local position, heading, camera distance]
-  ['01_gate_guard', [1.5, 0, 28.0], 0.9, 9],
+  ['01_gate_guard', [3.2, 0, 27.6], 0.3, 8, Math.PI],
   ['02_children', [-26.0, 0, 20.5], -1.6, 12],
   ['03_inn_door', [-7.0, 2.5, 10.4], -2.4, 9],
   ['04_lane_sweeper', [-24.0, 2.5, 10.4], 1.57, 12],
@@ -35,15 +35,16 @@ const STOPS = [ // [name, town-local position, heading, camera distance]
   console.log('status', JSON.stringify(await folk()));
   await p.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .wh-prompt { display: none !important; }' });
   const tag = phone ? 'phone_' : '';
-  for (const [name, pos, heading, dist] of STOPS) {
-    await p.evaluate(([pos, heading, dist]) => {
+  for (const [name, pos, heading, dist, turn = 0] of STOPS) {
+    await p.evaluate(([pos, heading, dist, turn]) => {
       const f = window.__ftf, o = f.town.scene.origin;
+      if (f.rig.baseYaw !== undefined) f.rig.yaw = f.rig.baseYaw + turn;
       f.player.teleport([pos[0] + o[0], pos[1] + o[1] + 0.3, pos[2] + o[2]], heading);
       f.rig.dist = dist; if ('distTarget' in f.rig) f.rig.distTarget = null;
-    }, [pos, heading, dist]);
+    }, [pos, heading, dist, turn]);
     await p.waitForTimeout(3500);
     await p.screenshot({ path: `${out}/${tag}${name}.jpg`, quality: 88 });
-    console.log(name, 'perf', JSON.stringify(await p.evaluate(() => { const q = window.__ftf.perf(); return q && { tier: q.tier, fps: +q.fps.toFixed(1), avgMs: +q.avgMs.toFixed(2), p95Ms: +q.p95Ms.toFixed(2), calls: q.drawCalls, tris: q.triangles }; })));
+    console.log(name, 'perf', JSON.stringify(await p.evaluate(() => { const q = window.__ftf.perf(); return q && { gpu: q.gpu, tier: q.tier, fps: +q.fps.toFixed(1), avgMs: +q.avgMs.toFixed(2), p95Ms: +q.p95Ms.toFixed(2), calls: q.drawCalls, tris: q.triangles }; })));
   }
   console.log('status', JSON.stringify((await folk()).map((s) => [s.key, s.state, s.file, s.clip, s.walk])));
   console.log('errors', logs.length, logs.slice(0, 12).join(' | '));
