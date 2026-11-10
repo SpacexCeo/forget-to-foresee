@@ -146,6 +146,7 @@ if (townMode.town) {
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
   townFlow = createTownFlow({
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
+    islandProgress,
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
   });
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
@@ -170,6 +171,18 @@ function islandReady() {
   if (inTown || performance.now() - leftTownAt < 700) return false;
   for (const a of streamer.stats().list) if (a.priority >= 100 && a.state !== 'loaded' && a.state !== 'absent' && a.state !== 'failed') return false;
   return true;
+}
+
+/** 0..1: bytes of the island's first view that are in (downloaded counts 0.8, warmed and attached the rest). */
+function islandProgress() {
+  if (inTown) return 0;
+  let all = 0, got = 0;
+  for (const a of streamer.stats().list) {
+    if (a.priority < 100 || a.state === 'absent' || a.state === 'failed') continue;
+    const b = a.bytes || 1e5; all += b;
+    got += a.state === 'loaded' ? b : 0.8 * b * (a.state === 'warming' ? 1 : a.progress || 0);
+  }
+  return all > 0 ? got / all : 0;
 }
 
 const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) => a.name);

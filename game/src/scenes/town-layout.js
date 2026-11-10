@@ -20,8 +20,16 @@ export const townToLocal = (p) => [p[0] - TOWN_ORIGIN[0], p[1] - TOWN_ORIGIN[1],
 /** Heading (CharacterController: 0 faces +Z) that looks from `from` toward `to` on the ground plane. */
 export const headingToward = (from, to) => Math.atan2(to[0] - from[0], to[2] - from[2]);
 
-/** Where Iris starts: the lower gate. */
-export const TOWN_SPAWN = Object.freeze({ position: Object.freeze(townToWorld(TOWN_DATA.spawn.position)), heading: TOWN_DATA.spawn.heading });
+/**
+ * Where Iris starts: inside the lower gate. The plan's point stands right in front of the gate arch, where the
+ * arch pushed the follow camera into her back (she was cut at the hips); she starts a few steps up the street
+ * instead, so the camera has its full distance behind her and the first frame shows her whole with the street ahead.
+ */
+export const SPAWN_ADVANCE = 4.5;
+export const TOWN_SPAWN = (() => {
+  const h = TOWN_DATA.spawn.heading, p = TOWN_DATA.spawn.position;
+  return Object.freeze({ position: Object.freeze(townToWorld([p[0] + Math.sin(h) * SPAWN_ADVANCE, p[1], p[2] + Math.cos(h) * SPAWN_ADVANCE])), heading: h });
+})();
 
 /** The Tournament altar in world space: its pivot, the spot where Iris stands, the camera focus, the prompt radius. */
 export const TOWN_ALTAR = Object.freeze({

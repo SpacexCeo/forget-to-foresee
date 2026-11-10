@@ -28,6 +28,11 @@ const CSS = `
 .ftf-town-cover span { opacity: 0; transform: translateY(6px); transition: opacity .7s ease .25s, transform .7s ease .25s; }
 .ftf-town-cover.is-on span { opacity: 1; transform: none; }
 html[data-motion="reduce"] .ftf-town-cover span, .ftf-town-cover.is-plain span { transform: none; transition: opacity .3s linear; }
+.ftf-town-cover { flex-direction: column; gap: 22px; }
+.ftf-town-cover-bar { width: min(240px, 56vw); height: 3px; border-radius: 2px; background: rgba(58, 42, 13, .16); overflow: hidden; opacity: 0; transition: opacity .5s ease .9s; }
+.ftf-town-cover.is-on .ftf-town-cover-bar { opacity: 1; }
+.ftf-town-cover-bar b { display: block; height: 100%; width: 100%; background: #8a5a12; transform-origin: 0 50%; transform: scaleX(0); transition: transform .35s ease-out; }
+html[dir="rtl"] .ftf-town-cover-bar b { transform-origin: 100% 50%; }
 @media (max-width: 700px) { .ftf-town-objective { font-size: 14px; max-width: calc(100% - 120px); } .ftf-town-prompt { font-size: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-height: 440px) { .ftf-town-prompt { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); } }
 `;
@@ -43,9 +48,10 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => boolean} o.reducedMotion @param {object} o.ctx play context (i18n) @param {Document} [o.doc]
  * @param {() => Promise<void>} o.leave moves Iris to the archipelago and starts the season (called under the cover)
  * @param {() => boolean} [o.islandReady] the archipelago's first models are in (the cover waits for it, bounded)
+ * @param {() => number} [o.islandProgress] 0..1, how much of that first view has arrived (the cover's bar)
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, coarse = false }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, coarse = false }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -125,6 +131,11 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     cover.setAttribute('role', 'status');
     cover.style.setProperty('--ftf-town-fade', (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) + 's');
     cover.append(doc.createElement('span'));
+    // Real progress of the archipelago's first view (the same promise as the loading screen: nothing appears unfinished).
+    const bar = doc.createElement('div'); bar.className = 'ftf-town-cover-bar'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100');
+    const fill = doc.createElement('b'); bar.append(fill); cover.append(bar);
+    let shown = 0;
+    const progress = (v) => { shown = Math.max(shown, Math.min(1, v)); fill.style.transform = `scaleX(${shown.toFixed(3)})`; bar.setAttribute('aria-valuenow', String(Math.round(shown * 100))); };
     renderText();
     doc.body.append(cover);
     town.setFlare(1);
@@ -137,7 +148,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     town.setFlare(0);
     try { await leave(); } catch (e) { console.error('[town] the season failed to start', e); }
     const t0 = performance.now();
-    while (!islandReady() && performance.now() - t0 < TOWN_TRANSITION.islandWait * 1000) await sleep(0.1);
+    while (!islandReady() && performance.now() - t0 < TOWN_TRANSITION.islandWait * 1000) { progress(Math.min(0.97, islandProgress())); await sleep(0.1); }
+    progress(1);
     await sleep(TOWN_TRANSITION.hold);
     state.phase = 'done';
     cover.classList.remove('is-on');

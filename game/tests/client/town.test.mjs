@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TOWN_DATA } from '../../src/scenes/town-data.js';
 import { TOWN_ORIGIN, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ROUTE, TOWN_ROUTE_LENGTH, TOWN_KILL_Y, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL, TOWN_ATMOSPHERE, TOWN_CAMERA, TOWN_SKY, yawToward, TOWN_KINDS, TOWN_PIECES, TOWN_TERRAIN, TOWN_ALTAR_ASSET,
-  townToWorld, townToLocal, routeLength, altarDistance, inAltarRange, altarWake, townFlatGround, headingToward } from '../../src/scenes/town-layout.js';
+  townToWorld, townToLocal, routeLength, altarDistance, inAltarRange, altarWake, townFlatGround, headingToward, SPAWN_ADVANCE } from '../../src/scenes/town-layout.js';
 import { SPAWN, KILL_Y } from '../../src/scenes/layout.js';
 import { ASSETS, TOWN_ASSETS, ALL_ASSETS, LOAD_DISTANCE, TRIANGLE_BUDGET, assetByName, isValidModelName, isValidModelDir, modelUrl, versionedModelUrl } from '../../src/render/asset-catalog.js';
 import { townPlan } from '../../src/ui/loading.js';
@@ -36,7 +36,10 @@ test('town layout: far from the archipelago and the Shell interior, beyond the c
   assert.ok(Math.hypot(...TOWN_ORIGIN) - reach - 80 > CAMERA_FAR, 'the island never enters a town frame');
   assert.ok(Math.hypot(TOWN_ORIGIN[0] - SHELL_ORIGIN[0], TOWN_ORIGIN[1] - SHELL_ORIGIN[1], TOWN_ORIGIN[2] - SHELL_ORIGIN[2]) > 700);
   assert.deepEqual(townToLocal(townToWorld([1, 2, 3])), [1, 2, 3]);
-  assert.deepEqual(townToLocal(TOWN_SPAWN.position), TOWN_DATA.spawn.position);
+  // Iris starts SPAWN_ADVANCE metres up the street from the plan's gate point (the gate arch squeezed the camera there).
+  const local = townToLocal(TOWN_SPAWN.position), plan = TOWN_DATA.spawn.position;
+  assert.ok(Math.abs(Math.hypot(local[0] - plan[0], local[2] - plan[2]) - SPAWN_ADVANCE) < 1e-6 && local[1] === plan[1]);
+  assert.ok(local[2] < plan[2], 'toward the altar');
 });
 
 test('town layout: pieces have valid unique names and kinds the catalog knows', () => {
