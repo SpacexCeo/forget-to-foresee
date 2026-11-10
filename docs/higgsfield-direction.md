@@ -18,6 +18,42 @@ Facts from the attached 110 s video (watched frame by frame):
   the training dummy 3 times"); a compass strip at the top; warm lit windows; fireflies and floating motes everywhere.
 - No boss fight and no cutscene appear in the video itself.
 
+The thread under the post (5 replies, read in full via api.fxtwitter.com on 10.11):
+1. Game link: https://sunwarden.higgsfield.app/ ("Sunwarden — The Hollow Bell", desktop browser).
+2. World: an 896 m map with 19 named sites (camp, town, castle, harbour, marsh); terrain generated in web workers;
+   rocks, stone walls and roofs are **CC0 scans placed by code**; a temple with 8 stages; the final boss fight in 3 acts.
+3. Characters: Higgsfield MCP produced only **references** (a three-view character sheet and a 360° turn). Blender
+   scripts build every character on **one shared rig**, so any clip plays on any creature; the boss has no
+   animations of his own, his dashes, leaps and spins are code.
+4. Engine: Vite + three.js, a self-written HDR pipeline (volumetric fog with sun shadows, bloom, depth of field,
+   auto-exposure), collision on three-mesh-bvh, **zero audio files**: music and effects are synthesized at runtime.
+   A "full breakdown" link (higgsfield.ai/@adilinthewildtempo/blogs/…) answered 404 on 10.11.
+5. Building: Higgsfield MCP "generates the art, publishes the game and ships every update".
+- The image attached to reply 4 is the one-sentence prompt: *"Build a small 3D action-adventure that runs in the
+  browser with three.js: a hero with a sword and a shield, one village, one dungeon with two puzzles and a boss at
+  the end. Use only CC0 models and textures, and write bots that play it from start to finish in headless Chrome to
+  check every change. When it works, publish it on Higgsfield as a website of type game."*
+
+What the live game's own `LICENSES.txt` says (fetched 10.11) — this is the real reason it took hours, not weeks:
+- **Base bodies, hairstyles, rig and all animations: Quaternius** "Universal Base Characters" and "Universal
+  Animation Library 1 and 2", CC0.
+- **Scanned props, PBR textures and HDRI skies: Poly Haven**, CC0.
+- Fonts: Cinzel, Cinzel Decorative, Cormorant Garamond (OFL). Code: three.js, three-mesh-bvh (MIT).
+- "Outfits, armour, monsters, boss, sound and music: made for this project."
+
+Same stack as ours, side by side:
+
+| Theirs | Ours today |
+|---|---|
+| Vite + three.js | same |
+| Headless-Chrome bots play start to finish | `game/tests/e2e/hub-season.e2e.mjs` plays a whole judge season in Playwright; `server/examples/agent.mjs` plays over HTTP. Not run in CI (`npm run e2e`, ~15 min on SwiftShader) |
+| HDR: volumetric fog + sun shadows, bloom, DoF, auto-exposure | volumetric light shafts, UnrealBloom, bokeh DoF, per-preset exposure (`game/src/render/lookdev.js`); no auto-exposure |
+| three-mesh-bvh collision | own swept capsule at 30 Hz |
+| Runtime-synthesized audio | 60 procedurally synthesized `.ogg` (`art/audio/`) |
+| Characters: CC0 Quaternius bodies + rig + animation library, outfits by Blender scripts from Higgsfield reference sheets | everything procedural from scratch: own armature, **8 hand-coded clips** + `understand`; Iris rebuilt a dozen times against a third-party reference sheet |
+| World dressing: CC0 Poly Haven scans placed by code | procedural Blender island and camps, no scans |
+| 19 named sites with title cards | 13 places, no title cards |
+
 What Higgsfield MCP is (vendor and third-party pages, see §8; treat as vendor claims):
 - A hosted MCP server (`https://mcp.higgsfield.ai/mcp`, OAuth with a Higgsfield account, added in claude.ai as a
   custom connector). Claude writes the code; the MCP generates images, textures, audio, video and, by some listings,
@@ -29,11 +65,14 @@ What Higgsfield MCP is (vendor and third-party pages, see §8; treat as vendor c
 
 ## 2. Direction
 
-**Take the presentation, not the genre.** The video's strength is not its game (a generic sword-and-slime loop) but
-how cheaply it *reads* as a finished game: every place is named on arrival, every conversation is framed like a
-film, every reward is announced. Our game already has more depth (a committed season, verified proofs, NFT shards,
-six agents); judges and players still see "a scene with panels". We borrow the devices that make a world read as
-authored and use Higgsfield, if the owner connects it, only for 2D, motion and audio assets around the game.
+**Take the presentation and the CC0 shortcut, not the genre.** The video's strength is not its game (a generic
+sword-and-slime loop) but how cheaply it *reads* as a finished game: every place is named on arrival, every
+conversation is framed like a film, every reward is announced, and the characters move with a full library of
+ready animation instead of a handful of coded clips. Our game already has more depth (a committed season, verified
+proofs, NFT shards, six agents); judges and players still see "a scene with panels". We borrow the devices that make
+a world read as authored (HF-1…HF-4), take the CC0 libraries that saved them weeks where they fit our pipeline
+(HF-10, HF-11), and use Higgsfield, if the owner connects it, the way they did: for references and 2D, motion and
+audio around the game, never as shipped hero geometry.
 
 Hard boundaries (from `docs/spec.md` §E "Cut" and the decision log, unchanged):
 - No combat, no boss fight with HP, no open world, no genre pivot. The "3-act boss fight" maps onto our existing
@@ -57,6 +96,10 @@ Hard boundaries (from `docs/spec.md` §E "Cut" and the decision log, unchanged):
 | Produced music and SFX | Music stems and Guest voice upgrade, procedural kept as fallback | 60 procedural `.ogg` | HF-7 |
 | Dense set dressing | Non-hero props for camps (image→3D) | Procedural camps | HF-8 (optional) |
 | Fireflies, motes, lit windows | Already have motes; tune density near camps at golden hour | `game/src/render/motes.js` | folded into HF-1 QA |
+| Quaternius CC0 animation library on one shared rig | Retarget selected CC0 clips (idle variants, talk gestures, looks, turns) onto our agent armature | 8 coded clips | HF-10 |
+| Poly Haven CC0 scans placed by code | Scanned rocks and ruins on the pillars and plateau rims, a CC0 HDRI check | none | HF-11 |
+| Higgsfield three-view sheets + 360° turn as Blender references | Own reference sheets for the clans and the Guest (replaces third-party reference images) | owner-supplied third-party sheets | HF-5 |
+| Bots play every change in headless Chrome | Fast judge-path e2e on every push | full-season e2e exists, manual only | HF-12 |
 
 ## 4. Work packages
 
@@ -118,9 +161,14 @@ Done when: a new cloud session lists Higgsfield tools, the cap and the licence a
 - Acceptance: both branches reachable on seeds from the parity fixtures; skip never skips a rule or consent; films
   and chapters ledger stay consistent (`docs/chapters.md`).
 
-### HF-5 — Generated 2D: portraits, shard art, title plates (P1, after HF-0, ~0.5 day)
-- Inputs are **our own renders** (QA renders of `agent_*.glb`, the Guest, the Shells) used as image references, so
-  the portraits match the 3D models. Outputs: 7 dialogue portraits (Iris + 5 clans + Guest silhouette), 1 per
+### HF-5 — Generated 2D: reference sheets, portraits, shard art, title plates (P1, after HF-0, ~0.5 day)
+- **Reference sheets first** (what Sunwarden actually used Higgsfield for): a three-view sheet (front, side, back)
+  and a 360° turn per clan agent and for the Guest, generated from our current renders plus the decision-log
+  descriptions. They become the art references in `docs/art/character-guide.md` for any further Blender pass, so we
+  stop depending on third-party reference images. No rebuild of shipped characters before the freeze unless the
+  owner asks.
+- Portraits and card art use **our own renders** (QA renders of `agent_*.glb`, the Guest, the Shells) as image
+  references, so they match the 3D models. Outputs: 7 dialogue portraits (Iris + 5 clans + Guest silhouette), 1 per
   memory type for shard NFT card art, 13 zone title backdrops (optional, subtle).
 - Style prompt follows the decision log: hybrid faceted silhouettes, golden hour against cool shadows, restrained
   palette with gold accents, Elden Ring as mood only, no third-party names, characters or motifs in prompts.
@@ -144,6 +192,32 @@ Done when: a new cloud session lists Higgsfield tools, the cap and the licence a
   `tests/client/assets-budget.test.mjs` (KTX2, meshopt, phone variant), triangle budgets, have simple `_col`
   colliders, and survive close inspection or stay out of the inspect range. Anything that fails is not shipped.
 
+### HF-10 — CC0 animation library on our rig (P0/P1, ~1 day, owner gate: CC0 assets in the characters)
+- Source: Quaternius "Universal Animation Library" 1 and 2 (CC0; verify the licence file in the downloaded pack and
+  keep it in `art/third_party/quaternius/`). No Higgsfield needed.
+- Retarget in Blender onto the shared agent armature (same bone, clip, socket and node names; the face rig and the
+  `understand` clip stay ours). Take only non-combat clips: 2–3 idle variants, talk gestures, look around, turn in
+  place, sit/kneel at the Scroll, a cheer and a slump for the finale. Iris keeps her own stance and run tuning.
+- Clips are added beside the current 8, not instead of them; `game/src/play/behaviour.js` picks idle variants and
+  talk gestures. Each glb stays inside its budget (KTX2, meshopt, triangle cap; animation data size checked).
+- Acceptance: foot-slip check passes, no hand/face intersections in the review contact sheets (`review_anim.py`),
+  the films and NPC director still play, manifest and README name Quaternius CC0.
+
+### HF-11 — CC0 scans for the island (P1, ~0.5 day)
+- Poly Haven CC0 rock and ruin scans, placed by code on pillar faces, plateau rims and under the bridges (the
+  "monumental weathered stone" of the style reference), through the existing streaming and greybox rules; compress
+  with `art/tools/compress-glb-wasm.mjs`, phone variants via `glb_mobile.py`. Optionally compare a CC0 golden-hour
+  HDRI with `assets/env/golden_1k.hdr`.
+- Acceptance: draw calls and triangles stay inside spec §10 on desktop and phone tiers; no collision changes on
+  walkable surfaces; manifest rows with the Poly Haven asset names.
+
+### HF-12 — Judge-path bot on every push (P0, ~0.5 day)
+- Their prompt's last rule ("bots play it from start to finish in headless Chrome to check every change") is the
+  one AI judges reward. We already have the bots; make a short one run in CI: `smoke` + `proof-line` on
+  `?demo=judge` (lobby → trial 3 → "Verified ✓" → testnet ✓ line) in the Pages workflow, with the full season staying
+  manual. Document the commands and expected output in the README "Judge in 5 minutes" section.
+- Acceptance: the job is green on `main`, takes under 10 minutes, and fails if "Verified ✓" never appears.
+
 ### HF-9 — "How it was made" thread (owner, optional)
 - The Higgsfield post went far because it showed the process. Our X demo post (required by the rules, draft in
   `docs/submission/x-post.md`) can carry a short reply thread: one season committed on NEAR before the first move,
@@ -163,23 +237,30 @@ Done when: a new cloud session lists Higgsfield tools, the cap and the licence a
 | When (Kyiv) | Work |
 |---|---|
 | 10.11 evening | Owner answers §7; HF-0 if Higgsfield is a yes |
-| 11.11 | HF-1, HF-3 (one worker); HF-2 (one worker); HF-5 generation starts after HF-0 |
-| 12.11 | HF-4; HF-6, HF-7 A/B; HF-5 portraits wired into HF-2 |
+| 11.11 | HF-1, HF-3 (one worker); HF-2 (one worker); HF-12 (one worker); HF-10 retarget on the GPU/Blender machine; HF-5 generation starts after HF-0 |
+| 12.11 | HF-4; HF-10 clips wired into the NPC director; HF-11; HF-6, HF-7 A/B; HF-5 portraits wired into HF-2 |
 | 13.11 until 20:00 | QA pass on the judge path, README check, merge; HF-8 only if everything else is green |
 | after freeze | No new assets; the jury video is re-rendered only if the owner wants the new framing in it |
 
-Cut order if late: HF-8 → HF-7 → HF-6 → HF-5 → HF-4 Act indicator. HF-1, HF-2, HF-3 are the core of this direction.
+Cut order if late: HF-8 → HF-7 → HF-6 → HF-11 → HF-5 → HF-4 act indicator → HF-10. HF-1, HF-2, HF-3 and HF-12 are
+the core of this direction.
 
 ## 7. Owner decisions needed
 1. Approve the direction "presentation, not genre" (P0 packages HF-1…HF-4 need no Higgsfield).
 2. Higgsfield: yes or no. If yes — connect the connector (HF-0) and set a credit cap (proposal: 25 USD total).
 3. Licence: confirm that the Higgsfield plan allows shipping its outputs in this public MIT repository and demo.
-4. Which generated sets you want: portraits (HF-5), lobby loop (HF-6), music A/B (HF-7), props (HF-8).
+4. Which generated sets you want: reference sheets and portraits (HF-5), lobby loop (HF-6), music A/B (HF-7),
+   props (HF-8).
 5. HF-9: whether the X post gets a "how it was made" thread.
+6. CC0 libraries: may Quaternius CC0 animations go onto our agents (HF-10) and Poly Haven CC0 scans onto the island
+   (HF-11)? The README then says "own procedural art plus named CC0 assets" instead of "made from scratch".
+7. HF-12: may the Pages workflow get a ~10-minute browser job (it runs on every push to `main`)?
 
 ## 8. Sources
-- The post and its video: https://x.com/higgsfield_ai/status/2119926932343324795 (text and media via
-  api.fxtwitter.com; video watched as 3 s contact sheets).
+- The post, its video and the 5-reply thread: https://x.com/higgsfield_ai/status/2119926932343324795 (text and media
+  via api.fxtwitter.com `/2/thread/`; videos watched as contact sheets; the prompt image read).
+- The live game and its licence file: https://sunwarden.higgsfield.app/ , https://sunwarden.higgsfield.app/LICENSES.txt
+- Quaternius (CC0 characters and animation libraries): https://quaternius.com ; Poly Haven (CC0): https://polyhaven.com/license
 - Higgsfield Games: https://higgsfield.ai/blog/higgsfield-ai-games
 - Higgsfield academy, "Build 3D Games with MCP": https://higgsfield.ai/academy/courses/build-3d-games-mcp/intro-three-games-no-code
 - Third-party workflow write-up: https://www.developersdigest.tech/blog/claude-opus-5-5-3d-world-higgsfield-mcp
