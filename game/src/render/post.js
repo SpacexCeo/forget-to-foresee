@@ -5,9 +5,9 @@
 //   -> HdrGuard: clamp, NaN/Inf to black (hdr-guard.js)
 //   -> UnrealBloomPass: threshold above diffuse white, so only emissives bloom (lanterns, amber floor
 //      lights, the glyph, the nacre rim of the Shells, the sun disc), never sunlit stone
-//   -> OutputPass: AgX tone mapping + sRGB (display referred from here on)
+//   -> OutputPass: the game's tone mapping and grade (render/grade.js) + sRGB (display referred from here on)
 //   -> SMAAPass (ultra): edge smoothing on top of the MSAA, no temporal pass, so nothing smears
-//   -> GradePass: gentle film curve, cool shadows / warm highlights, vignette, fine grain
+//   -> GradePass: vignette and fine grain (the colour grade itself lives in the tone mapping, shared with the direct path)
 // The VFX module inserts its soft-particle pass before the bloom (vfx.attachToComposer): it looks
 // for a pass whose class name contains Bloom or OutputPass and reads renderTarget1.depthTexture, so
 // those two stay and the render target keeps its depth texture.
@@ -18,6 +18,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { OutputShader } from 'three/examples/jsm/shaders/OutputShader.js';
 import { createHdrGuardPass } from './hdr-guard.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
@@ -27,6 +28,9 @@ const COPY_VS = /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position
 
 /** Bloom threshold in linear HDR: diffuse white under the sun stays below it, emissives are above. */
 export const BLOOM = Object.freeze({ strength: 0.42, radius: 0.62, threshold: 1.18 });
+
+/** Strength of the light shafts under a clear sky. */
+const RAYS = 0.24;
 
 /** Light shafts: sky pixels near the sun form a mask, two radial blurs smear it toward the sun, added back. */
 export class GodRaysPass extends Pass {
@@ -135,8 +139,8 @@ export class GodRaysPass extends Pass {
  */
 export const GradeShader = {
   uniforms: {
-    tDiffuse: { value: null }, uVignette: { value: 0.26 }, uSaturation: { value: 1.1 }, uContrast: { value: 1.08 },
-    uShadowTint: { value: new THREE.Color(0.94, 0.975, 1.035) }, uHighlightTint: { value: new THREE.Color(1.035, 1.005, 0.955) },
+    tDiffuse: { value: null }, uVignette: { value: 0.22 }, uSaturation: { value: 1.0 }, uContrast: { value: 1.0 },
+    uShadowTint: { value: new THREE.Color(1, 1, 1) }, uHighlightTint: { value: new THREE.Color(1, 1, 1) },
     uGrain: { value: 0.028 }, uTime: { value: 0 }, uResolution: { value: new THREE.Vector2(1, 1) },
   },
   vertexShader: COPY_VS,
@@ -158,6 +162,18 @@ export const GradeShader = {
       gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
     }`,
 };
+
+/**
+ * three.js's OutputPass knows the built-in tone mappings only; the game's grade is the custom one (render/grade.js),
+ * so the pass's tone mapping switch is replaced by a call to it. Still an OutputPass: the VFX module looks for it.
+ */
+function createOutputPass() {
+  const pass = new OutputPass();
+  const fs = OutputShader.fragmentShader;
+  const a = fs.indexOf('#ifdef LINEAR_TONE_MAPPING'), b = fs.indexOf('// color space');
+  if (a > 0 && b > a) { pass.material.fragmentShader = fs.slice(0, a) + 'gl_FragColor.rgb = CustomToneMapping( gl_FragColor.rgb );\n\n\t\t\t' + fs.slice(b); pass.material.needsUpdate = true; }
+  return pass;
+}
 
 export class PostStack {
   /** @param {{renderer:THREE.WebGLRenderer, scene:THREE.Scene, camera:THREE.Camera}} o */
@@ -186,6 +202,7 @@ export class PostStack {
     const rays = new GodRaysPass({ scale: cfg.raysScale || 0.25 });
     rays.enabled = !!cfg.godRays;
     rays.setSunColor(this.sunColor);
+    rays.intensity = RAYS * (this.raysScale ?? 1);
     composer.addPass(rays);
     let ao = null;
     if (cfg.ao) {
@@ -224,7 +241,7 @@ export class PostStack {
     const guard = createHdrGuardPass();
     composer.addPass(guard);
     composer.addPass(bloom);
-    const output = new OutputPass();
+    const output = createOutputPass();
     composer.addPass(output);
     let smaa = null;
     if (cfg.smaa) { smaa = new SMAAPass(size.x, size.y); composer.addPass(smaa); }
@@ -248,6 +265,9 @@ export class PostStack {
 
   /** The sun colour for the light shafts (sky.js derived value). */
   setSunColor(color) { this.sunColor.copy(color); if (this.passes.rays) this.passes.rays.setSunColor(color); }
+
+  /** Weather: light shafts fade with the sun (0 under a closed sky). */
+  setRays(k) { this.raysScale = Math.max(0, Math.min(1, k)); if (this.passes.rays) this.passes.rays.intensity = RAYS * this.raysScale; }
 
   /** Advances the grain seed; pass dt = 0 under reduced motion (static grain, no flicker). */
   update(dt) { this.time += dt; if (this.passes.grade) this.passes.grade.uniforms.uTime.value = this.time; }

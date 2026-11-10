@@ -2,13 +2,16 @@
 // decisions 07.11: minimum spec RTX 2060 Super, quality first). Pure data plus a GPU-string
 // heuristic and a frame-time governor, no three.js, so the tier rules are covered by node tests.
 //
-//   ultra  RTX 3060 Ti class and up: 1.5x pixel ratio cap, MSAA 4x + SMAA, 4k shadows, full-res
+//   ultra  RTX 3060 Ti class and up: 1.5x pixel ratio cap, MSAA 4x + SMAA, 2k near + 4k far shadows, full-res
 //          GTAO (4 slices), 28-step raymarched cloud sea, half-res god rays, dense grass.
-//   high   the minimum spec (RTX 2060 Super, 1080p, 60 fps): MSAA 4x, 2k shadows, half-res GTAO
+//   high   the minimum spec (RTX 2060 Super, 1080p, 60 fps): MSAA 4x, 2k near + 2k far shadows, half-res GTAO
 //          (2 slices), 16-step clouds, quarter-res god rays, half the grass. Same look, cheaper.
 //   low    direct render (no post stack), 1k shadows, flat-shaded cloud deck, sparse grass, no
 //          transmission/iridescence, the sky-dome PMREM instead of the baked HDR.
 //   motes  air specks drifting around the camera (render/motes.js), one draw call; 0 hides it.
+//   cascades / shadowFarMap / shadowFarEvery  sun shadow cascades (render/shadows.js): two on ultra and high (the far
+//          one redrawn every N frames), one on low and on phones. blobs: strength of the discs under characters'
+//          feet (render/blobs.js). rain: most rain streaks drawn at once (render/weather.js).
 // Reduced motion (spec 1/3) is orthogonal: it freezes the cloud drift, wind, motes, flicker and Shell hover.
 // Per-pass costs and how they were estimated: docs/rendering.md.
 //
@@ -25,7 +28,8 @@ export const PROFILES = Object.freeze(['desktop', 'phone']);
 
 export const QUALITY = Object.freeze({
   ultra: Object.freeze({
-    pixelRatioCap: 1.5, msaa: 4, smaa: true, shadowMap: 4096, shadowRadius: 2, shadowDistance: 150,
+    pixelRatioCap: 1.5, msaa: 4, smaa: true, shadowMap: 2048, shadowRadius: 2, shadowDistance: 150,
+    cascades: 2, shadowFarMap: 4096, shadowFarEvery: 2, blobs: 0.3, rain: 6000,
     post: true, ao: true, aoScale: 1, aoSlices: 4, aoSteps: 6, bloom: true, bloomMips: 6,
     godRays: true, raysScale: 0.5, grade: true, cloudSteps: 28, envHdr: true,
     grassBlades: 36000, flowers: 1400, grassFadeDistance: 70,
@@ -33,13 +37,15 @@ export const QUALITY = Object.freeze({
   }),
   high: Object.freeze({
     pixelRatioCap: 1, msaa: 4, smaa: false, shadowMap: 2048, shadowRadius: 1.5, shadowDistance: 110,
+    cascades: 2, shadowFarMap: 2048, shadowFarEvery: 4, blobs: 0.3, rain: 3500,
     post: true, ao: true, aoScale: 0.5, aoSlices: 2, aoSteps: 5, bloom: true, bloomMips: 5,
     godRays: true, raysScale: 0.25, grade: true, cloudSteps: 16, envHdr: true,
     grassBlades: 18000, flowers: 800, grassFadeDistance: 55,
     cloudLayers: 2, transmission: true, iridescence: true, pointLights: true, motes: 300,
   }),
   low: Object.freeze({
-    pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 1024, shadowRadius: 1, shadowDistance: 70,
+    pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 1024, shadowRadius: 1, shadowDistance: 60,
+    cascades: 1, shadowFarMap: 0, shadowFarEvery: 0, blobs: 0.42, rain: 1500,
     post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
     godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
     grassBlades: 5000, flowers: 250, grassFadeDistance: 40,
@@ -50,14 +56,16 @@ export const QUALITY = Object.freeze({
 /** Phone profile (docs/mobile.md). 'ultra' resolves to `high` here: the best a phone should run. */
 export const PHONE_QUALITY = Object.freeze({
   high: Object.freeze({
-    pixelRatioCap: 1.5, msaa: 0, smaa: false, shadowMap: 1024, shadowRadius: 1, shadowDistance: 50,
+    pixelRatioCap: 1.5, msaa: 0, smaa: false, shadowMap: 1024, shadowRadius: 1, shadowDistance: 40,
+    cascades: 1, shadowFarMap: 0, shadowFarEvery: 0, blobs: 0.45, rain: 900,
     post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
     godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
     grassBlades: 1800, flowers: 90, grassFadeDistance: 32,
     cloudLayers: 1, transmission: false, iridescence: false, pointLights: false, motes: 80,
   }),
   low: Object.freeze({
-    pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 512, shadowRadius: 1, shadowDistance: 35,
+    pixelRatioCap: 1, msaa: 0, smaa: false, shadowMap: 512, shadowRadius: 1, shadowDistance: 28,
+    cascades: 1, shadowFarMap: 0, shadowFarEvery: 0, blobs: 0.5, rain: 400,
     post: false, ao: false, aoScale: 0.5, aoSlices: 0, aoSteps: 0, bloom: false, bloomMips: 0,
     godRays: false, raysScale: 0.25, grade: false, cloudSteps: 0, envHdr: false,
     grassBlades: 700, flowers: 30, grassFadeDistance: 24,

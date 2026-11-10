@@ -124,14 +124,15 @@ test('quality knobs the look reads exist on every tier and profile and keep thei
   assert.ok(PHONE_QUALITY.high.motes > 0 && PHONE_QUALITY.high.motes < QUALITY.low.motes); assert.equal(PHONE_QUALITY.low.motes, 0, 'phone/low: no extra draw call');
 });
 
-test('post defaults: bloom threshold sits above diffuse white, the grade is mild, grain is fine', () => {
+test('post defaults: bloom threshold sits above diffuse white, the pass leaves colour alone, grain is fine', () => {
   assert.ok(BLOOM.threshold > 1.0 && BLOOM.threshold < 1.5, 'sunlit stone (< 1.0 linear) never blooms, emissives (> 1.5) do');
   assert.ok(BLOOM.strength > 0.2 && BLOOM.strength < 0.6);
   const u = GradeShader.uniforms;
-  assert.ok(u.uContrast.value >= 1 && u.uContrast.value <= 1.15 && u.uSaturation.value >= 1 && u.uSaturation.value <= 1.12);
+  // The colour grade lives in the tone mapping (render/grade.js, tests/client/atmosphere.test.mjs); the pass adds vignette and grain only.
+  assert.equal(u.uContrast.value, 1); assert.equal(u.uSaturation.value, 1);
   assert.ok(u.uVignette.value > 0.1 && u.uVignette.value < 0.4);
   assert.ok(u.uGrain.value > 0 && u.uGrain.value < 0.05, 'grain is felt, not seen');
-  assert.ok(u.uShadowTint.value.b > u.uShadowTint.value.r && u.uHighlightTint.value.r > u.uHighlightTint.value.b, 'cool shadows, warm highlights');
+  assert.equal(u.uShadowTint.value.getHex(), 0xffffff); assert.equal(u.uHighlightTint.value.getHex(), 0xffffff);
 });
 
 test('nacre shimmer stays within the pearl range and is a pure function of time', () => {
