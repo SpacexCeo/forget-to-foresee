@@ -46,6 +46,7 @@ async function assertOnArchipelago(g) {
 test('town: spawn at the gate, walk the jury route, register with E, the season starts on the archipelago', { timeout: 900000 }, async () => {
   const g = await openGame('?play=direct&town=1', { ready: false });
   try {
+    const perf = {};
     await townReady(g);
     await g.wait(1500);
     let s = await townState(g);
@@ -60,6 +61,9 @@ test('town: spawn at the gate, walk the jury route, register with E, the season 
     await shot(g, '01-spawn');
 
     assert.ok(await g.page.evaluate(() => window.__ftf.town.walkRoute()));
+    await g.page.waitForFunction((half) => { const p = window.__ftf.player.pos, a = window.__ftf.town.scene.altar.stand; return Math.hypot(p[0] - a[0], p[2] - a[2]) < half; }, altarDistance(TOWN_SPAWN.position) / 2, { timeout: 480000, polling: 250 });
+    await shot(g, '02-street');
+    perf.town = await g.page.evaluate(() => window.__ftf.perf());
     await g.page.waitForFunction(() => window.__ftf.town.promptVisible && !window.__ftf.town.flow.routeActive, null, { timeout: 480000, polling: 250 });
     await g.wait(1500);
     s = await townState(g);
@@ -68,18 +72,20 @@ test('town: spawn at the gate, walk the jury route, register with E, the season 
     assert.ok(s.pos[1] > TOWN_KILL_Y + 3 && s.grounded, 'she stands on the ground');
     assert.ok(s.glow > 1.0, 'the amber core is awake, glow ' + s.glow.toFixed(2));
     assert.deepEqual(await g.text('.ftf-town-prompt'), ['E Register for the Tournament']);
-    await shot(g, '02-altar');
+    await shot(g, '03-altar');
 
     await g.page.keyboard.press('KeyE'); // the real key: boot-world.js reads it and calls the flow
     await g.page.waitForFunction(() => window.__ftf.town.phase === 'transition', null, { timeout: 60000, polling: 100 });
     await g.page.waitForFunction(() => { const c = document.querySelector('.ftf-town-cover'); return c && getComputedStyle(c).opacity > 0.95; }, null, { timeout: 60000, polling: 100 });
     assert.deepEqual(await g.text('.ftf-town-cover'), ['The Tournament begins']);
-    await shot(g, '03-transition');
+    await shot(g, '04-transition');
     await seasonReady(g);
     await g.page.waitForFunction(() => !document.querySelector('.ftf-town-cover') && !document.querySelector('.ftf-town-prompt'), null, { timeout: 60000, polling: 250 });
     await g.wait(1500);
     await assertOnArchipelago(g);
-    await shot(g, '04-archipelago');
+    await shot(g, '05-archipelago');
+    perf.island = await g.page.evaluate(() => window.__ftf.perf());
+    console.log('# frame time (ms avg / p95, tier): town ' + [perf.town.avgMs.toFixed(0), perf.town.p95Ms.toFixed(0), perf.town.tier] + ' draw calls ' + perf.town.drawCalls + ' triangles ' + perf.town.triangles + '; archipelago ' + [perf.island.avgMs.toFixed(0), perf.island.p95Ms.toFixed(0), perf.island.tier] + ' draw calls ' + perf.island.drawCalls + ' triangles ' + perf.island.triangles);
     assert.equal(consoleProblems(g), '');
     assert.deepEqual(g.log.failed, [], 'no failed request');
   } finally { await g.close(); }
@@ -133,7 +139,7 @@ test('town on a phone: the prompt is a tappable button clear of the run toggle; 
     assert.equal(prompt.text, 'Зарегистрироваться на Турнир', 'no key cap on touch, Russian text');
     assert.equal(objective.text, 'Дойдите до алтаря Турнира');
     if (run) assert.ok(!intersects(prompt.rect, run.rect, 0), 'the prompt does not overlap the run toggle');
-    await shot(g, '05-phone-altar');
+    await shot(g, '06-phone-altar');
     assert.equal(await g.click('.ftf-town-prompt'), 'ok');
     await g.page.waitForFunction(() => document.querySelector('.ftf-town-cover.is-plain'), null, { timeout: 60000, polling: 100 });
     await seasonReady(g);
