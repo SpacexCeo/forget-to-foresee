@@ -26,7 +26,9 @@ A fresh session can continue from this file and git alone. Last update: 11.11.20
 5. **Transition camera** lifts toward `altar_focus` and can clip the shrine roof for a few frames just before the
    cover is opaque.
 6. Frame times are from the RTX 5090 server only; the minimum machine and a real phone are not measured.
-7. No GPT colour references (`L-001_*`) had arrived on the board when this pass was done.
+7. The first metres inside the gate (behind the spawn point) lie in the gate tower's shadow with the afternoon sun
+   in the south; the spawn frame itself is sunlit (`docs/atmosphere/v2/after-town-spawn.jpg`).
+8. No GPT colour references (`L-001_*`) had arrived on the board when this pass was done.
 
 ## How to resume
 

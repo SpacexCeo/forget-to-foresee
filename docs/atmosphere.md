@@ -76,4 +76,25 @@ merges overrides into the running look.
 These are from the rented server, not from the minimum machine (RTX 2060 Super) or a real phone: they show the
 relative cost of the tiers and that nothing regressed, not the frame rate a player gets.
 
-FRAME_TABLE
+| Layout | Tier | Camera | Mean ms | p95 ms | Drawing buffer |
+|---|---|---|---|---|---|
+| desktop | ultra | town street | 3.06 | 3.3 | 1920×1080 @ 1 |
+| desktop | ultra | town altar | 3.17 | 3.4 | 1920×1080 @ 1 |
+| desktop | high | town street | 3.07 | 3.3 | 1920×1080 @ 1 |
+| desktop | high | town altar | 3 | 3.3 | 1920×1080 @ 1 |
+| desktop | low | town street | 1.82 | 2.7 | 1920×1080 @ 1 |
+| desktop | low | town altar | 1.46 | 1.7 | 1920×1080 @ 1 |
+| desktop | ultra | isle plaza | 10.56 | 20.5 | 1920×1080 @ 1 |
+| desktop | high | isle plaza | 8.57 | 17 | 1920×1080 @ 1 |
+| desktop | low | isle plaza | 3.44 | 7.5 | 1920×1080 @ 1 |
+| phone | ultra | town street | 1.94 | 5.2 | 585×1266 @ 1.5 |
+| phone | ultra | town altar | 4.65 | 7.7 | 585×1266 @ 1.5 |
+| phone | high | town street | 3.99 | 10.9 | 585×1266 @ 1.5 |
+| phone | high | town altar | 3.43 | 8.5 | 585×1266 @ 1.5 |
+| phone | low | town street | 3.01 | 8.7 | 390×844 @ 1 |
+| phone | low | town altar | 7.47 | 24 | 390×844 @ 1 |
+| phone | ultra | isle plaza | 8.39 | 20.3 | 585×1266 @ 1.5 |
+| phone | high | isle plaza | 10.73 | 33.5 | 585×1266 @ 1.5 |
+| phone | low | isle plaza | 7.19 | 15.2 | 390×844 @ 1 |
+
+The phone layout is a 390×844 viewport at device pixel ratio 3 in the same headless browser (phone knob set, touch UI); its p95 is noisy there.
