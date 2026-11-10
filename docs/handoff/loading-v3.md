@@ -33,6 +33,13 @@ teal progress line with a head dot and a percentage, Iris as a rim-lit silhouett
    `docs/handoff/lighting-v2.md`, then merge `main`, `cd game && npm test && npm run build`, push to `main`, and
    two lines to the lead (the main commit and the screenshot paths).
 
+8. **Shell drawing must change (lead message, reported as an owner decision, 10.11 23:12 UTC):** all four Shells are
+   one identical design, a long slender upright spiral seashell (auger or spindle-like: tight whorls tapering to a
+   sharp apex, a flared aperture lip near the bottom, about 1 : 3.5 width to height). `shell()` in
+   `art/ui/loading/build_diagram.mjs` still draws a round hull with a flat spiral: redraw it as four identical
+   elongated spiral shells of that silhouette (clearly spiral, not smooth ovals). The 3D model is built by another
+   worker on `claude/shells-v2`.
+
 ## Planned layout (not built)
 
 Desktop: a 100 x 56.25 unit stage (`--u: min(1vw, 1.7778vh)`), diagram top left, log under it, Iris on the right
