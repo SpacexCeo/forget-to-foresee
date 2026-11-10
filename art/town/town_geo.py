@@ -46,6 +46,9 @@ class TownBuilder:
         self.sockets = {}    # piece -> [(name, game position, rot_y_deg, props)]
         self.stack = [Matrix.Identity(4)]
         self.piece = None
+        self.node = None     # current separate node (see `swing`); None = merged into the piece by material
+        self.nodes = {}      # (piece, node) -> dict(pivot=game position, props)
+        self.lights = {}     # piece -> [dict(pos, color, power, radius)]: bake-only lights of the interiors
 
     # ------------------------------------------------------------ transforms
     @property
@@ -67,10 +70,36 @@ class TownBuilder:
         return self.M @ Vector(p)
 
     def geo(self, mat):
-        key = (self.piece, mat)
+        key = (self.piece, mat, self.node)
         if key not in self.geos:
             self.geos[key] = Geo()
         return self.geos[key]
+
+    @contextlib.contextmanager
+    def swing(self, name, pivot, **props):
+        """Everything built inside becomes its own node `swing_<name>` with its origin at `pivot` (a local
+        point: the hook it hangs from), instead of being merged into the piece. The client swings it as a
+        rigid body. props: hinge=(x, y, z) a local direction (the bar the thing hangs on; without it the
+        thing swings freely like a lantern on a hook), length (m, hook to the centre of mass)."""
+        if self.node is not None:
+            raise RuntimeError("nested swing nodes")
+        full = "swing_" + name
+        if (self.piece, full) in self.nodes:
+            raise RuntimeError("duplicate swing node " + full)
+        hinge = props.pop("hinge", None)
+        if hinge is not None:
+            hv = (self.M.to_3x3() @ Vector(hinge)).normalized()
+            props["hinge"] = [round(hv.x, 4), round(hv.y, 4), round(hv.z, 4)]   # game space, Y up
+        self.nodes[(self.piece, full)] = {"pivot": tuple(self.w(pivot)), "props": props}
+        self.node = full
+        try:
+            yield
+        finally:
+            self.node = None
+
+    def light(self, pos, color, power, radius=0.08):
+        """A bake-only light of an interior (never exported): local position, linear colour, watts."""
+        self.lights.setdefault(self.piece, []).append({"pos": tuple(self.w(pos)), "color": tuple(color), "power": float(power), "radius": float(radius)})
 
     # ------------------------------------------------------------ faces
     def poly(self, mat, pts, col=WHITE, uv=None, uv_off=(0.0, 0.0), uv_dir=None):
@@ -182,6 +211,40 @@ class TownBuilder:
             self.quad(mat, pt(a1, r_in, -h), pt(a1, r_out, -h), pt(a0, r_out, -h), pt(a0, r_in, -h), col)   # back
             self.quad(mat, pt(a0, r_out, h), pt(a0, r_out, -h), pt(a1, r_out, -h), pt(a1, r_out, h), col)   # outer
             self.quad(mat, pt(a0, r_in, -h), pt(a0, r_in, h), pt(a1, r_in, h), pt(a1, r_in, -h), col)       # inner
+
+    def lathe(self, mat, base, profile, n=12, col=WHITE, cap_top=False, cap_bot=False, cols=None):
+        """A surface of revolution on the local Y axis: profile = [(radius, height above base), ...] bottom
+        to top. cols: one colour per profile point (else `col`)."""
+        bx, by, bz = base
+        g = self.geo(mat)
+        rings = [[(bx + math.cos(math.tau * i / n) * r, by + y, bz - math.sin(math.tau * i / n) * r) for i in range(n)] for r, y in profile]
+        v = 0.0
+        for k in range(len(profile) - 1):
+            (r0, y0), (r1, y1) = profile[k], profile[k + 1]
+            seg = math.hypot(r1 - r0, y1 - y0)
+            per = math.tau * max(r0, r1, 0.01) / n
+            c0, c1 = (cols[k], cols[k + 1]) if cols else (col, col)
+            for i in range(n):
+                j = (i + 1) % n
+                pts, uv, cc = [rings[k][i], rings[k][j], rings[k + 1][j], rings[k + 1][i]], [(i * per, v), ((i + 1) * per, v), ((i + 1) * per, v + seg), (i * per, v + seg)], [c0, c0, c1, c1]
+                if r1 < 1e-5:
+                    pts, uv, cc = pts[:3], uv[:3], cc[:3]
+                elif r0 < 1e-5:
+                    pts, uv, cc = [pts[0], pts[2], pts[3]], [uv[0], uv[2], uv[3]], [cc[0], cc[2], cc[3]]
+                g.poly([bl(self.w(q)) for q in pts], uv, cc)
+            v += seg
+        if cap_top and profile[-1][0] > 1e-5:
+            self.poly(mat, rings[-1], cols[-1] if cols else col)
+        if cap_bot and profile[0][0] > 1e-5:
+            self.poly(mat, list(reversed(rings[0])), cols[0] if cols else col)
+
+    def disc(self, mat, center, r, n=16, col=WHITE, axis="y"):
+        """A flat disc facing +Y (axis 'y') or +Z (axis 'z')."""
+        cx, cy, cz = center
+        if axis == "y":
+            self.poly(mat, [(cx + math.cos(math.tau * i / n) * r, cy, cz - math.sin(math.tau * i / n) * r) for i in range(n)], col)
+        else:
+            self.poly(mat, [(cx + math.cos(math.tau * i / n) * r, cy + math.sin(math.tau * i / n) * r, cz) for i in range(n)], col)
 
     def blob(self, mat, center, r, col=WHITE, seed=0, squash=0.8, sub=2, col_var=0.18):
         """A lumpy icosphere (tree crowns, bushes): vertex colour darker below, jittered per vertex."""
