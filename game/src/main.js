@@ -6,7 +6,9 @@
 // ?view=overview|camp|close (camera presets), ?play=direct (skip the lobby), ?seed=<32 hex> (fixed
 // test season), ?lang=en|ru, ?hud=old (greybox overlay instead of the world HUD), ?hints=reset (Novice hints
 // fire again), ?demo=judge (the judges' 3-minute path: fixed season, Novice, fresh hints).
-import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget } from './ui/loading.js';
+// Play starts in the town on the ground (docs/town.md); ?skip=town and the deep links above go straight to the
+// archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
+import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
@@ -14,6 +16,7 @@ if (params.has('cinematic')) await import('./cinematic/index.js').then((m) => m.
 const uiRoot = document.getElementById('ui');
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
 const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse });
+const town = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') }).town;
 const loading = createLoadingScreen(document);
 if (window.__ftfBoot) window.__ftfBoot.stop();
 const t0 = performance.now();
@@ -36,7 +39,7 @@ function onProgress(stats) {
   report();
 }
 
-const ctxP = import('./play/i18n.js').then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report('Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
+const ctxP = import('./play/i18n.js').then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
 let shellUi = null, worldP = null;
 const startWorld = (ctx) => (worldP ||= import('./boot-world.js').then((m) => {
   chunksDone++; marks.world = Math.round(performance.now() - t0); report();
@@ -55,12 +58,13 @@ ctxP.then(async (ctx) => {
     const w = await startWorld(ctx);
     const entered = w.enterWorld().then(() => { chunksDone++; marks.play = Math.round(performance.now() - t0); report(); });
     // Gate: the first frame is rendered and the cheap visible models are in, or six seconds have passed (greyboxes stand in).
+    // The town has no stand-ins and no ground before its terrain: the gate also waits for it, up to fifteen seconds.
     const gateStart = performance.now();
     await new Promise((resolve) => {
       const tick = () => {
         const bytesOk = budget ? bytesGot >= budget.bytes * 0.98 : false;
         const waited = performance.now() - gateStart;
-        if ((firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal) || waited > 6000) resolve(); else setTimeout(tick, 100);
+        if ((firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal && w.townReady) || waited > (town ? 15000 : 6000)) resolve(); else setTimeout(tick, 100);
       };
       tick();
     });

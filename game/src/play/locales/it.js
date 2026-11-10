@@ -637,4 +637,9 @@ export default {
   'fun.chapter.go': "Continua la stagione ({n} prove rimaste)",
   'fun.chapter.new': "Inizia una nuova stagione",
   'fun.close': "Chiudi",
+  // ---- the town on the ground (docs/town.md): before the season starts ----
+  'town.objective': "Raggiungi l’altare del Torneo",
+  'town.loading': "La città sta prendendo forma…",
+  'town.altar.prompt': "Iscriviti al Torneo",
+  'town.transition.title': "Il Torneo ha inizio",
 };

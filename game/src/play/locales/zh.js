@@ -636,4 +636,9 @@ export default {
   'fun.chapter.go': "继续本赛季（还剩 {n} 次试炼）",
   'fun.chapter.new': "开始新赛季",
   'fun.close': "关闭",
+  // ---- the town on the ground (docs/town.md): before the season starts ----
+  'town.objective': "走到锦标赛祭坛前",
+  'town.loading': "城镇正在显现……",
+  'town.altar.prompt': "报名参加锦标赛",
+  'town.transition.title': "锦标赛开始",
 };

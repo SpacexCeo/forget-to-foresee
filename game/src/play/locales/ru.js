@@ -636,4 +636,9 @@ export default {
   'fun.chapter.go': "Продолжить сезон (осталось испытаний: {n})",
   'fun.chapter.new': "Начать новый сезон",
   'fun.close': "Закрыть",
+  // ---- the town on the ground (docs/town.md): before the season starts ----
+  'town.objective': "Дойдите до алтаря Турнира",
+  'town.loading': "Город проявляется…",
+  'town.altar.prompt': "Зарегистрироваться на Турнир",
+  'town.transition.title': "Турнир начинается",
 };

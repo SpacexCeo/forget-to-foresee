@@ -57,6 +57,7 @@ export class LookDev {
     this.governor = autoTier ? new TierGovernor(GOVERNORS[this.profile]) : null;
     this.preset = TIME_PRESETS[preset] ? preset : DEFAULT_PRESET;
     this.cloudLevel = cloudLevel;
+    this.fogBaseY = cloudLevel; // setAtmosphereFloor moves it while Iris is in the town
     this.tintState = { hex: 0xffffff, amount: 0 };
 
     camera.layers.enable(LAYER_OVERLAY);
@@ -122,7 +123,7 @@ export class LookDev {
     this.hemi.color.copy(atm.zenith); this.hemi.groundColor.copy(atm.fogColor).multiplyScalar(0.45);
     this.baseFog = atm.fogColor.clone(); this.baseHemi = this.hemi.color.clone();
     this.scene.fog.color.copy(atm.fogColor); this.scene.fog.near = P.fog.near; this.scene.fog.far = P.fog.far;
-    setFog({ baseY: this.cloudLevel, falloff: P.fog.falloff, density: P.fog.density, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: 1 });
+    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: 1 });
     this.clouds.setLighting({ sun: atm.sun, sunRadiance: atm.sunRadiance, zenith: atm.zenith, fogColor: atm.fogColor, cover: P.cloudCover });
     this.foliage.setSun(this.sunDir, atm.sunColor);
     this.motes.setSun(this.sunDir, atm.sunColor);
@@ -136,6 +137,19 @@ export class LookDev {
     if (this.envHdr && this.envHdrPreset !== this.preset) { this.envHdr.dispose(); this.envHdr = null; }
     this.loadEnvHdr(P);
     if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
+  }
+
+  /**
+   * Moves the floor of the atmosphere to another place in the same scene (the town on the ground, scenes/town.js):
+   * the height fog pools at `fogBaseY` and the cloud sea lies at `mistLevel` as a sea of mist (`mist: false` hides
+   * it). The sun, the sky and the time of day stay. `null` restores the archipelago's cloud level.
+   * @param {{fogBaseY: number, mistLevel?: number, mist?: boolean}|null} floor
+   */
+  setAtmosphereFloor(floor) {
+    this.fogBaseY = floor ? floor.fogBaseY : this.cloudLevel;
+    setFog({ baseY: this.fogBaseY });
+    this.clouds.setLevel(floor && floor.mistLevel != null ? floor.mistLevel : this.cloudLevel);
+    this.clouds.group.visible = !(floor && floor.mist === false);
   }
 
   /** Time of day: 'golden' (default, matches the baked HDR) | 'morning' | 'noon' | 'dusk'. Returns the active preset. */

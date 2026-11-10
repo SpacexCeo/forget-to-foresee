@@ -182,6 +182,13 @@ export class CloudSea {
     this.time = 0;
   }
 
+  /** Moves the cloud base (m, world): the town on the ground borrows the sea as mist around its hill (LookDev.setAtmosphereFloor). */
+  setLevel(level) {
+    this.level = level;
+    this.deck.position.y = level; this.slab.position.y = level + this.thickness;
+    for (const m of this.layers) { m.material.uniforms.uBottom.value = level; m.material.uniforms.uTop.value = level + this.thickness; }
+  }
+
   /** Visible layers: 1 = the deck alone (low tier, phones), 2 = deck + raymarched slab. */
   setLayers(n) { this.slab.visible = n >= 2; }
 

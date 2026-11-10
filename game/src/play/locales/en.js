@@ -638,4 +638,9 @@ export default {
   'fun.chapter.go': "Continue the season ({n} trials left)",
   'fun.chapter.new': "Start a new season",
   'fun.close': "Close",
+  // ---- the town on the ground (docs/town.md): before the season starts ----
+  'town.objective': "Walk to the Tournament altar",
+  'town.loading': "The town is taking shape…",
+  'town.altar.prompt': "Register for the Tournament",
+  'town.transition.title': "The Tournament begins",
 };

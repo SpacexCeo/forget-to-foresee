@@ -46,10 +46,11 @@ const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
  * @param {object} o.world3d island scene (scenes/island.js) @param {object} o.rig camera rig
  * @param {object} o.player CharacterController @param {THREE.Object3D} o.avatar @param {object} o.lookdev
  * @param {HTMLElement} o.uiRoot @param {object} o.ctx play context (play/i18n.js createPlayContext)
- * @param {{seedHex?: string, rules?: string, worldHud?: boolean, hub?: boolean, onSettings?: Function, resetHints?: boolean, devLabels?: boolean}} [o.options]
+ * @param {{seedHex?: string, rules?: string, worldHud?: boolean, hub?: boolean, onSettings?: Function, resetHints?: boolean, devLabels?: boolean, iris?: object}} [o.options]
  *   `hub: false` keeps the walking play (no Shell hub, ticks only by End trial)
  *   `worldHud: false` keeps the greybox overlay (goal card, chronicle, action bar) instead of the world HUD
  *   `devLabels: true` (?dev=1) shows the greybox "not final art" labels; the F3 dev HUD shows them too
+ *   `iris`: the IrisAvatar (play/iris-avatar.js) that already wears her model (the session began in the town)
  */
 export async function startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options = {} }) {
   const transport = createLocalTransport({ rules: options.rules, seedHex: options.seedHex });
@@ -66,7 +67,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   });
 
   const shell = createShellScene({ scene, streamer: world3d.streamer });
-  const agents = new ClanAgents({ scene, i18n: ctx.i18n });
+  const agents = new ClanAgents({ scene, i18n: ctx.i18n, iris: options.iris || null }); // iris: the avatar the town already attached
   agents.attachIris(avatar);
 
   // HUD from the UI shell: status and subtitles over the room's observation (no raw engine state).

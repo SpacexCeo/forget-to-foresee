@@ -6,6 +6,9 @@
 // ?view=overview|camp|close (camera presets), ?play=direct (skip the lobby), ?seed=<32 hex> (fixed
 // test season), ?lang=en|ru, ?hud=old (greybox overlay instead of the world HUD), ?hints=reset (Novice hints
 // fire again), ?demo=judge (the judges' 3-minute path: fixed season, Novice, fresh hints).
+// The session starts in the town on the ground (scenes/town.js, docs/town.md) unless the URL skips it
+// (ui/loading.js townPlan: ?skip=town, or a deep link such as ?play=direct without ?town=1); the season starts
+// when Iris registers at the Tournament altar. ?town=altar spawns at the altar, ?town=flat uses a flat dev ground.
 import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
@@ -23,7 +26,11 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
-import { CAMPS } from './scenes/layout.js';
+import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
+import { townPlan } from './ui/loading.js';
+import { createTownScene } from './scenes/town.js';
+import { createTownFlow } from './scenes/town-flow.js';
+import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -113,27 +120,78 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
-let play = null, entering = null;
-async function enterWorld() {
-  if (entering) return entering;
-  entering = (async () => {
-  if (boot.closeLobby) boot.closeLobby();
-  document.body.classList.add('in-world');
+let play = null, entering = null, season = null, entered = false;
+// The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
+const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
+
+// ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
+const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
+let town = null, townFlow = null, inTown = false, townGrounded = false, irisAvatar = null;
+const islandStart = { heading: player.heading };
+if (townMode.town) {
+  town = createTownScene({ scene, streamer, flat: townMode.flat, pointLights: !!lookdev.cfg.pointLights });
+  lookdev.onQualityChange(() => town.setPointLights(!!lookdev.cfg.pointLights));
+  inTown = true;
+  const sp = townMode.spawn === 'altar' ? TOWN_ALTAR_SPAWN : TOWN_SPAWN;
+  player.world = town.world; rig.world = town.world;
+  player.teleport(sp.position, sp.heading);
+  player.killY = TOWN_KILL_Y; // absolute: the island's kill height would never catch a fall here
+  rig.dist = TOWN_CAMERA_DIST; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
+  lookdev.setAtmosphereFloor({ fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL });
+  townFlow = createTownFlow({
+    town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
+    islandReady: () => { const e = world3d.library.get('island'); return !e || e.state === 'loaded' || e.state === 'absent' || e.state === 'failed'; },
+  });
+  // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
+  // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
+  import('./play/iris-avatar.js').then((m) => { irisAvatar = new m.IrisAvatar(); return irisAvatar.attach(avatar); }).catch((e) => console.warn('[town] Iris model unavailable', e));
+  loadPlayLayer().catch(() => {});
+}
+
+/** Under the transition's cover: Iris leaves the town for the archipelago and the season starts as it always did. */
+async function leaveTown() {
+  inTown = false;
+  clearWorldInput();
+  town.setActive(false);
+  player.world = world; rig.world = world;
+  player.killY = KILL_Y;
+  player.teleport(SPAWN.slice(), islandStart.heading);
+  rig.reset();
+  lookdev.setAtmosphereFloor(null);
+  await startSeason();
+}
+
+function startSeason() {
+  if (season) return season;
+  season = (async () => {
   try {
-    // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
-    const [{ startPlay }, { mountAudioSettings }, { attachAllAges }] = await Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
+    const [{ startPlay }, { mountAudioSettings }, { attachAllAges }] = await loadPlayLayer();
     play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
       seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
       resetHints: judge || params.get('hints') === 'reset',
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
       hub: params.get('mode') !== 'walk', // ?mode=walk: walking play without the Shell hub
       onSettings: () => controls.open(),
+      iris: irisAvatar, // the town already attached her model (null on the paths that skip the town)
     } });
     window.__ftf.play = play;
     // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
     mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
     attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog }); // Task Q: recap, Simple mode, in-world Settings, narration (docs/accessibility.md)
   } catch (e) { console.error('[play] failed to start', e); toast('The local season failed to start: ' + e.message); }
+  })();
+  return season;
+}
+
+/** The player enters the world (the lobby's first contact, or at once on the direct path): the town, else the season. */
+async function enterWorld() {
+  if (entering) return entering;
+  entering = (async () => {
+    if (boot.closeLobby) boot.closeLobby();
+    document.body.classList.add('in-world');
+    entered = true;
+    if (inTown) { townFlow.begin(); return; }
+    await startSeason();
   })();
   return entering;
 }
@@ -177,6 +235,7 @@ function stopSteering() {
   moveTarget = null;
   marker.visible = false;
   if (play) play.cancelRoute();
+  if (townFlow) townFlow.cancelRoute();
 }
 
 function clearWorldInput() {
@@ -205,17 +264,20 @@ function handleInput(dt) {
   if (input.hit('F3')) hud.toggle();
   const modal = document.querySelector('dialog[open]');
   if (modal) { navigateGamepadMenu(modal, pad); return false; }
-  if (!play) { navigateGamepadMenu(uiRoot, pad); return false; }
+  const townOn = inTown && entered; // walking the town: movement and the camera, no play keys (the season has not begun)
+  if (!play && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
+  if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (inspecting) leaveInspect();
-    else if (play.handleKey('Escape')) clearWorldInput();
-    else if (moveTarget || play.routeActive) stopSteering();
+    else if (play && play.handleKey('Escape')) clearWorldInput();
+    else if (moveTarget || (play && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
     else controls.open();
     return false;
   }
-  if (input.hit('KeyI') || pad.hit(PAD.inspect)) handleInspect();
-  if (!inspecting) {
+  if (!play) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (play && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
+  if (play && !inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
     if (play.ui.panel) {
       navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
@@ -240,13 +302,13 @@ function handleInput(dt) {
       ndc.set((c.x / window.innerWidth) * 2 - 1, -(c.y / window.innerHeight) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
       const o = raycaster.ray.origin, d = raycaster.ray.direction;
-      const hit = rayCast(world, [o.x, o.y, o.z], [d.x, d.y, d.z], 300, MASK_PLAYER);
+      const hit = rayCast(inTown ? town.world : world, [o.x, o.y, o.z], [d.x, d.y, d.z], 300, MASK_PLAYER);
       if (hit && hit.normal[1] > 0.7) {
         const now = performance.now();
         const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
         lastTap = { t: now, x: c.x, y: c.y };
         moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
-        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; play.cancelRoute();
+        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
       }
@@ -262,7 +324,7 @@ function wishVector() {
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
-  const rw = play && play.routeWish();
+  const rw = play ? play.routeWish() : inTown ? townFlow.routeWish() : null;
   if (rw) return rw;
   if (!moveTarget) return [0, 0];
   const w = steerTo(player.pos, moveTarget);
@@ -284,6 +346,19 @@ function perf() {
   };
 }
 
+/**
+ * The town has no ground until its terrain piece has streamed in: Iris waits at the spawn (no physics steps), then
+ * is set on the ground under it (the data's spawn is on the ground, give or take a few centimetres).
+ */
+function groundInTown() {
+  if (townGrounded || !town.ready) return;
+  if (townMode.spawn === 'altar' && !town.settled(TOWN_ALTAR_ASSET)) return; // the stand is on the altar's own steps
+  const y = town.groundAt(player.pos[0], player.pos[2], player.pos[1] + 3);
+  if (y != null) player.teleport([player.pos[0], y, player.pos[2]], player.heading);
+  townGrounded = true;
+}
+const townFrame = { playerPos: player.pos, reducedMotion: false }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
+
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.25);
@@ -300,7 +375,9 @@ function frame() {
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
   player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive));
-  for (let i = 0; live && i < f.steps; i++) {
+  if (inTown) groundInTown();
+  const held = inTown && !townGrounded; // no ground yet: she does not fall
+  for (let i = 0; live && !held && i < f.steps; i++) {
     const wish = wishVector();
     if (wish[0] || wish[1]) moving = true;
     player.step(wish, PHYSICS_DT);
@@ -316,7 +393,7 @@ function frame() {
     }
   }
   physics.grounded = player.grounded;
-  physics.colliders = world.liveCount;
+  physics.colliders = player.world.liveCount;
 
   const p = player.renderPos(f.alpha);
   avatar.position.set(p[0], p[1], p[2]);
@@ -329,8 +406,13 @@ function frame() {
   lean = damp(lean, lookdev.reducedMotion ? 0 : leanTarget, 8, dt);
   avatar.rotation.z = lean;
   focus.set(p[0], p[1] + 1.1, p[2]);
+  if (inTown && townFlow.focusK > 0) { // registering: the camera leaves Iris for the altar while its core flares
+    const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
+    focus.set(focus.x + (a[0] - focus.x) * k, focus.y + (a[1] - focus.y) * k, focus.z + (a[2] - focus.z) * k);
+  }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
+  if (town && town.active) { townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; town.update(clock.elapsedTime, dt, townFrame); }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
   warmup.update();
@@ -344,6 +426,8 @@ function frame() {
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
   if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
+  else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
+  if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
@@ -367,7 +451,15 @@ function frame() {
 window.__ftf = {
   scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier,
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
+  // The town on the ground (docs/town.md), null on the paths that skip it. register() is the code path of pressing E at
+  // the altar (it resolves false when the prompt is not offered); walkRoute() steers Iris along the jury route (QA).
+  town: town ? {
+    scene: town, flow: townFlow, plan: townMode,
+    get ready() { return town.ready && townGrounded; }, get active() { return inTown; }, get registered() { return townFlow.registered; },
+    get promptVisible() { return townFlow.promptVisible; }, get phase() { return townFlow.phase; }, get walkMs() { return townFlow.walkMs; },
+    register: () => townFlow.register(), walkRoute: () => townFlow.walkRoute(), status: () => town.status(),
+  } : null,
 };
 requestAnimationFrame(frame);
-return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; } };
+return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, get townReady() { return !town || (town.ready && townGrounded); } };
 }
