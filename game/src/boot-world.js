@@ -68,7 +68,9 @@ if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice 
 // QA-030: the heroine streams before the camps and props, and her greybox capsule stays hidden while her model is
 // on its way (shown only without a file, after a failure, or after IRIS_STANDIN_AFTER seconds).
 const irisLoad = { hasModel: hasModelFile('agent_iris'), fetched: false, loaded: false, failed: false, t0: performance.now() };
-if (irisLoad.hasModel) prefetchGltf('agent_iris').then(() => { irisLoad.fetched = true; }, () => { irisLoad.failed = true; });
+// The same file play/iris-avatar.js irisModelFile() picks: the phone variant when the build ships it.
+const irisFile = getModelVariant() && hasModelFile('agent_iris' + getModelVariant()) ? 'agent_iris' + getModelVariant() : 'agent_iris';
+if (irisLoad.hasModel) prefetchGltf(irisFile).then(() => { irisLoad.fetched = true; }, () => { irisLoad.failed = true; });
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;

@@ -43,6 +43,34 @@ Stages: `body` (MPFB body, re-pose, rig, face morphs), `costume` (+ garments, ha
    right eye a frame late), gaze saccades, brow and lip motion per clip, syllables in `talk`. Morph and
    bone curves are exported as one glTF animation per clip (NLA tracks merged by name).
 
+## Final look pass (11.11, target sheet `docs/art/iris/refs/I-001_01_target.png`)
+
+The athletic costume (cropped jacket, top, leggings, trainers) is the default (`IRIS_COSTUME=athletic`); the coat
+described above is the older `wanderer` costume. The pass of 11.11 added four modules; each old path is still
+selectable by an environment variable for comparison.
+
+| Module | What it builds | Old path |
+|---|---|---|
+| `hero_hair2.py` | Hair as a solid volume over the scalp (cut along a smooth hairline, a 5 mm strand fringe on its edge), broad overlapping locks on it, a ponytail with an opaque core and soft-tipped cards. One 2048 atlas made in numpy: opaque strand field on top, seven lock strips and the lash strip below. Flow is polar round the axis tie -> a point under the hairline over her left brow (a side parting). | `IRIS_HAIR=cards` |
+| `hero_face.py` | Upper lashes rooted on the lid's outer rim (found from the blink morph), teeth and tongue inside the mouth cavity (the lower arch and tongue ride the jaw rotation fitted from `mouth_open`), the cavity marked for the skin bake, `smile` blended with the retraction unit. All inside the body mesh, so every morph moves them. | - |
+| `hero_shoes.py` | Constructed trainers (a height field sliced into rings: sole band, toe bumper, heel tab, padded collar, lace bars; about 1,750 triangles each) and plain sock tubes. | `IRIS_SHOES=shell` |
+| `ship.sh` | The two shipped files: `agent_iris.glb` and the phone variant `agent_iris_m.glb` (1024 textures, simplified meshes). | - |
+
+Other changes of the pass: the head is 6 % larger (`IRIS_HEAD`, about 7.1 heads; grown about a point on the eye
+line), a softer seat, flank, thigh and bust (`hero_anatomy.AMOUNT`, `ATHLETIC`, `IRIS_CUP`); the midriff skin
+ends in a true cut 1 cm under the leggings' edge; the leggings reach the trainers' collar; the face bake has a
+soft contour, defined lips, a scalp tone under the hair and a dark mouth; the eyes have a larger green-grey
+iris with a limbal ring, a darker sclera, a lid shadow and a catchlight; no vertex colours are exported (the
+bake attributes went out as `COLOR_0..3` and the game multiplied the garment by them).
+
+Materials: `M_Iris_Skin`, `M_Iris_Garment`, `M_Iris_Eye`, `M_Iris_CapHair` (volume, locks, tail core:
+alpha-tested, single-sided), `M_Iris_Hair` (tail cards and lashes: alpha-tested, double-sided), `M_Iris_Mouth`.
+
+QA: `qa_audit.py` (Cycles sheets; back faces of single-sided materials are made transparent, as in the game),
+`qa_ingame.cjs` (the real renderer), `qa_restpose.py old.glb new.glb` (skeleton rest pose diff). Against the
+build shipped on 10.11 only `eye_*`, `lid_*`, `brow_*` (3 mm), `tail_0` (7 mm) and `hair_*_0` (1 mm) moved, all
+children of `head`; the 36 bones the mocap side-car rotates and `pelvis` are unchanged.
+
 ## Standing stance adjustment
 
 Iris's six standing clips use no additional outward foot offset: each foot is 3 cm

@@ -20,3 +20,10 @@ test('fabric sheen: the garment material becomes physical with sheen, maps and c
   assert.equal(g.sheen, FABRIC_SHEEN.sheen);
   assert.equal(meshes[2].material, skin);
 });
+
+test('fabric sheen: weak and neutral, so the charcoal knit does not turn brown where light grazes it', () => {
+  assert.ok(FABRIC_SHEEN.sheen <= 0.15);
+  const c = new THREE.Color(FABRIC_SHEEN.sheenColor);
+  assert.ok(Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) < 0.02, 'neutral');
+  assert.ok(Math.max(c.r, c.g, c.b) < 0.1, 'dark');
+});

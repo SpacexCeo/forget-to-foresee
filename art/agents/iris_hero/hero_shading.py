@@ -22,8 +22,8 @@ V = Vector
 GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool, near-black navy, dusty violet)
     # athletic sportswear (owner 09.11): graphite knit jacket, black top, graphite leggings, trainers
     "jacket": (0.022, 0.022, 0.025), "jacket_collar": (0.017, 0.017, 0.019), "sports_top": (0.006, 0.006, 0.007),
-    "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.014, 0.014, 0.016), "trainers": (0.60, 0.59, 0.57),
-    "ankle_socks": (0.13, 0.13, 0.135),
+    "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.014, 0.014, 0.016), "trainers": (0.56, 0.555, 0.54),
+    "ankle_socks": (0.46, 0.455, 0.45),
     "coat": (0.040, 0.040, 0.043), "collar": (0.040, 0.040, 0.043), "sleeve": (0.040, 0.040, 0.043),
     "capelet": (0.052, 0.051, 0.053), "hood": (0.052, 0.051, 0.053),
     "dress": (0.010, 0.012, 0.022), "boots": (0.022, 0.013, 0.009),
@@ -31,10 +31,11 @@ GARMENT_COLORS = {          # linear RGB base colours (reference: charcoal wool,
     "pendant": (0.62, 0.62, 0.64), "hair_tie": (0.110, 0.055, 0.160),
 }
 TRIM = {"jacket": (0.015, 0.015, 0.017), "jacket_collar": (0.015, 0.015, 0.017), "sports_top": (0.010, 0.010, 0.011),
-        "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.010, 0.010, 0.012), "trainers": (0.78, 0.77, 0.75),
+        "leggings_band": (0.011, 0.011, 0.013), "leggings": (0.010, 0.010, 0.012), "trainers": (0.74, 0.73, 0.70),
         "coat": (0.105, 0.102, 0.100), "collar": (0.105, 0.102, 0.100), "sleeve": (0.105, 0.102, 0.100),
         "capelet": (0.115, 0.112, 0.110), "dress": (0.030, 0.034, 0.055), "boots": (0.010, 0.008, 0.006),
         "scarf": (0.175, 0.090, 0.250)}
+SCALP = (0.110, 0.055, 0.030)   # hero_hair2.SCALP: the hair's shadow tone on the skin under it
 NACRE = (0.50, 0.47, 0.58)  # a restrained nacre-violet accent line (piping, stripes)
 ACCENT = {"jacket": NACRE, "jacket_collar": NACRE, "leggings": NACRE, "trainers": (0.30, 0.30, 0.31)}   # trainers: grey overlays
 ROUGH = {"jacket": 0.70, "jacket_collar": 0.66, "sports_top": 0.80, "leggings": 0.74, "trainers": 0.62, "ankle_socks": 0.85,
@@ -156,12 +157,26 @@ def skin_shader(b, land):
     col = b.mix(b.math("MULTIPLY", b.blob(pos, land["nose"], 0.020, 1.4), 0.25), col, (0.50, 0.23, 0.17))
     for e in land["ears"]:
         col = b.mix(b.math("MULTIPLY", b.blob(pos, e, 0.030, 1.2), 0.30), col, (0.48, 0.23, 0.17))
+    # soft contour (the face was one tone): shade under the cheekbones, at the temples and under the jaw,
+    # a little light down the bridge of the nose and on the forehead
+    for (E, r, sx) in land["eyes"]:
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.030, E[1] + 0.020, E[2] - 0.062), 0.034, 1.3), 0.30), col, (0.33, 0.17, 0.11))
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.042, E[1] + 0.030, E[2] + 0.020), 0.030, 1.3), 0.22), col, (0.36, 0.19, 0.12))
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] - sx * 0.010, E[1] - 0.006, E[2] + 0.004), 0.016, 1.2), 0.22), col, (0.36, 0.18, 0.13))   # the eye socket's inner corner
+    ex, ey, ez = land["eyes"][0][0]
+    col = b.mix(b.math("MULTIPLY", b.blob(pos, (0.0, ey + 0.035, ez - 0.135), 0.060, 1.2), 0.30), col, (0.34, 0.18, 0.12))   # under the jaw
+    col = b.mix(b.math("MULTIPLY", b.blob(pos, (0.0, ey - 0.030, ez - 0.012), 0.014, 1.5), 0.20), col, (0.56, 0.35, 0.25))   # nose bridge
+    col = b.mix(b.math("MULTIPLY", b.blob(pos, (0.0, ey - 0.012, ez + 0.040), 0.035, 1.5), 0.14), col, (0.54, 0.33, 0.23))   # forehead
     lips = b.attr("lipsw").outputs["Fac"]
-    col = b.mix(b.math("MULTIPLY", b.math("POWER", lips, 0.7), 0.75), col, (0.46, 0.17, 0.15))
     col = makeup(b, pos, col, land, lips)
+    # under the hair and in a soft band below the hairline: the hair's own dark brown (no pale rim at the cap's edge)
+    col = b.mix(b.math("MULTIPLY", b.attr("scalpw").outputs["Fac"], 0.92), col, SCALP)
+    # the inside of the mouth: dark, wet red
+    mouth = b.attr("mouthw").outputs["Fac"]
+    col = b.mix(b.math("MINIMUM", b.math("MULTIPLY", mouth, 1.3), 1.0), col, (0.085, 0.018, 0.020))
     pores = b.noise(1600.0, 2.0, pos)
     rough = b.math("ADD", 0.48, b.math("MULTIPLY", pores.outputs["Fac"], 0.12))
-    rough = b.math("SUBTRACT", rough, b.math("MULTIPLY", b.math("POWER", lips, 0.6), 0.28))   # glossy lips
+    rough = b.math("SUBTRACT", rough, b.math("MULTIPLY", b.math("POWER", lips, 2.0), 0.12))   # a soft gloss on the lips
     mole = b.blob(pos, land["mole"], 0.0021, 0.7)
     height = b.math("ADD", b.math("MULTIPLY", pores.outputs["Fac"], 0.25), b.math("MULTIPLY", mole, 0.6))
     return col, rough, 0.0, height, None
@@ -206,7 +221,7 @@ def makeup(b, pos, col, land, lips):
         b.l(sv.outputs[0], hairs.inputs["Vector"])
         strokes = b.math("ADD", 1.0, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.2))
         m = b.math("MINIMUM", b.math("MULTIPLY", b.math("MULTIPLY", b.math("MULTIPLY", band, inside), ombre), strokes), 0.95)
-        col = b.mix(m, col, (0.045, 0.024, 0.014))
+        col = b.mix(m, col, (0.060, 0.033, 0.020))
         # lid shadow: a soft mauve-brown wash between the lash line and the crease
         sh = b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.003, E[1] - 0.004, E[2] + 0.009), 0.017, 1.4),
                     b.math("GREATER_THAN", z, 0.002))
@@ -225,10 +240,14 @@ def makeup(b, pos, col, land, lips):
                        b.math("LESS_THAN", z, -0.002))
         col = b.mix(b.math("MULTIPLY", lower, 0.30), col, (0.10, 0.06, 0.05))
     # lips: a rosy tint, a slightly deeper liner at the edge
-    tint = b.math("MULTIPLY", b.math("POWER", lips, 0.45), 0.85)
-    col = b.mix(tint, col, (0.46, 0.12, 0.12))
-    edge = b.math("MULTIPLY", b.math("GREATER_THAN", lips, 0.12), b.math("LESS_THAN", lips, 0.45))
-    col = b.mix(b.math("MULTIPLY", edge, 0.35), col, (0.30, 0.07, 0.08))
+    core = b.n("ShaderNodeMapRange", interpolation_type="SMOOTHSTEP")
+    b.l(lips, core.inputs["Value"])
+    core.inputs["From Min"].default_value = 0.30
+    core.inputs["From Max"].default_value = 0.85
+    core = core.outputs["Result"]
+    col = b.mix(b.math("MULTIPLY", core, 0.82), col, (0.285, 0.082, 0.076))          # muted rose, deeper than the skin
+    edge = b.math("MULTIPLY", b.math("GREATER_THAN", lips, 0.30), b.math("LESS_THAN", lips, 0.55))
+    col = b.mix(b.math("MULTIPLY", edge, 0.22), col, (0.26, 0.08, 0.075))           # the lip line
     # beauty mark: small, round, deep brown with a soft edge (her left cheek, above the mouth corner)
     mole = b.blob(pos, land["mole"], 0.0021, 0.7)
     col = b.mix(b.math("MINIMUM", b.math("MULTIPLY", mole, 1.6), 0.95), col, (0.035, 0.018, 0.012))
@@ -326,10 +345,41 @@ def eye_shader(b):
     b.l(uv.outputs["UV"], rad.inputs["Vector"])
     streak = b.n("ShaderNodeTexNoise", in_Scale=60.0, in_Detail=4.0)
     b.l(uv.outputs["UV"], streak.inputs["Vector"])
-    iris = b.mix(streak.outputs["Fac"], (0.10, 0.11, 0.07), (0.30, 0.25, 0.12))
-    iris = b.mix(b.math("SMOOTH_MAX", b.math("SUBTRACT", b.math("MULTIPLY", r, 6.0), 0.9), 0.0, ), iris, (0.04, 0.035, 0.03))
-    col = b.mix(b.math("GREATER_THAN", r, 0.205), iris, (0.80, 0.76, 0.72))
-    col = b.mix(b.math("LESS_THAN", r, 0.075), col, (0.01, 0.01, 0.01))
+    RI, RP = 0.238, 0.082            # iris and pupil radius in UV (the eye spans 2.2 radii): a larger, darker iris
+
+    def ramp(x, a, c):
+        m = b.n("ShaderNodeMapRange", interpolation_type="SMOOTHSTEP")
+        b.l(x, m.inputs["Value"])
+        m.inputs["From Min"].default_value = a
+        m.inputs["From Max"].default_value = c
+        return m.outputs["Result"]
+
+    sep = b.n("ShaderNodeSeparateXYZ")
+    b.l(uv.outputs["UV"], sep.inputs[0])
+    # radial fibres: noise stretched along the radius
+    fv = b.n("ShaderNodeCombineXYZ")
+    b.l(b.math("MULTIPLY", rad.outputs["Fac"], 46.0), fv.inputs["X"])
+    b.l(b.math("MULTIPLY", r, 5.0), fv.inputs["Y"])
+    fib = b.n("ShaderNodeTexNoise", in_Scale=1.0, in_Detail=3.0)
+    b.l(fv.outputs[0], fib.inputs["Vector"])
+    iris = b.mix(ramp(fib.outputs["Fac"], 0.30, 0.72), (0.050, 0.075, 0.058), (0.165, 0.200, 0.135))   # green-grey
+    iris = b.mix(b.math("MULTIPLY", streak.outputs["Fac"], 0.25), iris, (0.20, 0.17, 0.08))            # a few warm flecks
+    iris = b.mix(b.math("MULTIPLY", b.math("SUBTRACT", 1.0, ramp(r, RP, RP + 0.05)), 0.75), iris, (0.16, 0.12, 0.05))   # warm ring at the pupil
+    iris = b.mix(ramp(r, RI - 0.062, RI - 0.004), iris, (0.012, 0.014, 0.014))                        # limbal ring
+    # sclera: off-white, warmer and darker toward the corners, shaded under the upper lid
+    scl = b.mix(ramp(r, RI + 0.02, 0.46), (0.56, 0.53, 0.50), (0.36, 0.27, 0.25))
+    col = b.mix(ramp(r, RI - 0.004, RI + 0.012), iris, scl)
+    col = b.mix(b.math("SUBTRACT", 1.0, ramp(r, RP - 0.006, RP + 0.006)), col, (0.004, 0.004, 0.004))
+    lid = b.math("MULTIPLY", ramp(sep.outputs["Y"], 0.56, 0.74), 0.62)                                # the upper lid's shadow
+    col = b.mix(lid, col, (0.020, 0.014, 0.012))
+    # catchlight: a small bright window up and to one side, the same side on both eyes, and a faint second one
+    def spot(cx, cy, rr):
+        d2 = b.n("ShaderNodeVectorMath", operation="DISTANCE")
+        b.l(uv.outputs["UV"], d2.inputs[0])
+        d2.inputs[1].default_value = (cx, cy, 0.0)
+        return b.math("SUBTRACT", 1.0, ramp(d2.outputs["Value"], rr * 0.55, rr))
+    col = b.mix(b.math("MULTIPLY", spot(0.452, 0.572, 0.030), 0.92), col, (0.95, 0.95, 0.93))
+    col = b.mix(b.math("MULTIPLY", spot(0.556, 0.452, 0.016), 0.35), col, (0.80, 0.80, 0.78))
     return col, 0.08, 0.0, None, None
 
 
