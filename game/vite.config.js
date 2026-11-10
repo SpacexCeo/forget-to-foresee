@@ -1,10 +1,10 @@
 // Vite config: game, UI preview and asset review entry points and a virtual module that
-// lists the .glb files present in public/assets/models/, so the client only requests models that
+// lists the .glb files present in public/assets/models/ (and its town/ subfolder), so the client only requests models that
 // exist and shows a labeled greybox for the rest (no 404 noise, no SPA fallback confusion).
 import { defineConfig } from 'vite';
 import { chunkFor } from './build/chunks.js';
 import { resolve } from 'node:path';
-import { readdirSync, statSync, existsSync } from 'node:fs';
+import { modelListSource } from './build/model-list.js';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -13,23 +13,13 @@ const MODELS_DIR = resolve(ROOT, 'public/assets/models');
 const VIRTUAL_ID = 'virtual:model-list';
 const RESOLVED_ID = '\0' + VIRTUAL_ID;
 
-function listModels() {
-  if (!existsSync(MODELS_DIR)) return {};
-  const out = {};
-  for (const f of readdirSync(MODELS_DIR)) {
-    const m = /^([a-z0-9_]{1,64})\.glb$/.exec(f);
-    if (m) out[m[1]] = statSync(resolve(MODELS_DIR, f)).size;
-  }
-  return out;
-}
-
 function modelListPlugin() {
   return {
     name: 'ftf-model-list',
     resolveId(id) { return id === VIRTUAL_ID ? RESOLVED_ID : null; },
     load(id) {
       if (id !== RESOLVED_ID) return null;
-      return 'export const MODEL_FILES = ' + JSON.stringify(listModels()) + ';\n';
+      return modelListSource(MODELS_DIR); // MODEL_FILES (name -> bytes) and MODEL_DIRS (name -> subfolder, e.g. 'town/')
     },
     configureServer(server) {
       // Dropping a .glb into the folder reloads the page with the new list.

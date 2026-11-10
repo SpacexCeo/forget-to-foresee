@@ -1,5 +1,5 @@
 // Asset system for the 3D client.
-//  - AssetLibrary: loads /assets/models/<name>.glb by exact catalog name, keeps parsed templates,
+//  - AssetLibrary: loads /assets/models/<name>.glb (town pieces: /assets/models/town/<name>.glb) by exact catalog name, keeps parsed templates,
 //    disposes them on eviction. Only files listed by the build (virtual:model-list) are requested.
 //  - PropInstance: one placed object. Shows a labeled greybox until its asset is attached, then a
 //    clone of the template (geometry, materials and textures are shared between clones). Swaps the
@@ -11,8 +11,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
-import { MODEL_FILES } from 'virtual:model-list';
-import { ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
+import { MODEL_FILES, MODEL_DIRS } from 'virtual:model-list';
+import { ALL_ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
 import { instancePriority, assetPriority, planStreaming, planUpgrade, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
 import { transformTriangles, MASK_ALL } from '../physics/collision.js';
@@ -138,7 +138,7 @@ function loader() {
 
 /** Fetches and parses one model; rejects with a readable error (404, not a GLB, parse failure). */
 export async function fetchGltf(name, { onProgress } = {}) {
-  const url = versionedModelUrl(name, BASE, MODEL_FILES[name]);
+  const url = versionedModelUrl(name, BASE, MODEL_FILES[name], (MODEL_DIRS && MODEL_DIRS[name]) || '');
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   const total = Number(res.headers.get('content-length')) || 0;
@@ -193,7 +193,7 @@ export class AssetLibrary {
     this.available = available;
     /** Desktop light-first pass: load `<name>_m.glb` first, the streamer upgrades to the full file later. */
     this.liteFirst = false;
-    for (const def of ASSETS) {
+    for (const def of ALL_ASSETS) {
       const bytes = available[def.name];
       this.entries.set(def.name, { name: def.name, def, bytes: bytes || 0, state: bytes ? 'idle' : 'absent', template: null, stats: null, error: null, loadMs: 0, progress: 0 });
       // Optional separate close-up file <name>_inspect.glb, streamed only while the player inspects.
@@ -298,7 +298,8 @@ export class PropInstance {
     scene.add(this.root);
     this.root.updateMatrixWorld(true);
 
-    const grey = buildGreybox(name);
+    // Town pieces (asset-catalog.js TOWN_ASSETS) have no greybox art: nothing shows and nothing collides until the file arrives.
+    const grey = this.def.noGreybox ? { object: new THREE.Group(), sockets: new Map(), colliders: [] } : buildGreybox(name);
     this.greybox = grey.object;
     this.greySockets = grey.sockets;
     this.greyColliders = grey.colliders.map((c) => ({ tris: transformTriangles(c.tris, this.root.matrixWorld.elements), mask: c.mask }));
@@ -310,12 +311,20 @@ export class PropInstance {
     this.sockets = this.greySockets;
     this.inspecting = false;
     this.socketListeners = [];
-    this.center = new THREE.Vector3(position[0], position[1] + this.def.height / 2, position[2]);
-    this.radius = this.def.radius;
+    this.center = new THREE.Vector3();
+    this.resetBounds();
     this.addColliders('grey', this.greyColliders);
   }
 
   get isReal() { return !!this.real; }
+
+  /** Streaming bounds before the real model is in: the catalog's sphere (`centerOffset` from the pivot, else half the height up). */
+  resetBounds() {
+    const p = this.root.position, c = this.def.centerOffset;
+    if (c) this.center.set(p.x + c[0], p.y + c[1], p.z + c[2]);
+    else this.center.set(p.x, p.y + this.def.height / 2, p.z);
+    this.radius = this.def.radius;
+  }
 
   addColliders(tag, list) {
     for (const c of list) this.world.addTriangles(this.id + ':' + tag, c.tris, c.mask);
@@ -367,8 +376,7 @@ export class PropInstance {
     this.real = null; this.parts = null;
     this.greybox.visible = true;
     this.sockets = this.greySockets;
-    this.center.set(this.root.position.x, this.root.position.y + this.def.height / 2, this.root.position.z);
-    this.radius = this.def.radius;
+    this.resetBounds();
     this.emitSockets();
   }
 

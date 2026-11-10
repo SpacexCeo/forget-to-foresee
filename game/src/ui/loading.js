@@ -57,6 +57,26 @@ export function bootPlan({ play = null, hash = '', coarse = false } = {}) {
 }
 
 /**
+ * Whether this URL starts in the town on the ground (docs/town.md) and how (pure; tested).
+ * The town is the default, the lobby and the jury link (`?demo=judge`) included. `?skip=town` goes straight to
+ * the archipelago. The dev and QA deep links keep their old meaning and skip the town too: `?play=direct`,
+ * `?cinematic=`, `?view=`, `?film=`; adding `?town=1` to any of them enters the town after all
+ * (`?play=direct&town=1` is the direct QA link into the town). `?town=altar` spawns at the altar stand,
+ * `?town=flat` replaces the models with a flat dev ground; the two combine as `?town=altar,flat`.
+ * @param {{skip?: string|null, town?: string|null, play?: string|null, cinematic?: string|null, view?: string|null, film?: string|null}} p
+ * @returns {{town: boolean, spawn: 'gate'|'altar', flat: boolean}}
+ */
+export function townPlan({ skip = null, town = null, play = null, cinematic = null, view = null, film = null } = {}) {
+  const flags = town == null ? [] : String(town).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const off = { town: false, spawn: 'gate', flat: false };
+  if (skip === 'town' || flags.includes('0') || flags.includes('off')) return off;
+  const asked = town != null;
+  const deepLink = play === 'direct' || cinematic != null || view != null || film != null;
+  if (deepLink && !asked) return off;
+  return { town: true, spawn: flags.includes('altar') ? 'altar' : 'gate', flat: flags.includes('flat') };
+}
+
+/**
  * Binds to the inline screen (#boot in index.html). Returns a controller; all methods are safe without a DOM.
  * @param {Document} doc
  */

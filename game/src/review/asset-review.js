@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { MODEL_FILES } from 'virtual:model-list';
-import { ASSETS, TRIANGLE_BUDGET, assetByName, isValidModelName } from '../render/asset-catalog.js';
+import { ALL_ASSETS, TRIANGLE_BUDGET, assetByName, isValidModelName } from '../render/asset-catalog.js';
 import { fetchGltf, splitAssetScene, analyzeAssetScene, configureTextureSupport } from '../render/assets.js';
 import { buildGreybox, makeLabel, setGreyboxLabels } from '../render/greybox.js';
 setGreyboxLabels(true); // the review page is a dev surface: greybox labels stay on here
@@ -20,7 +20,7 @@ const name = isValidModelName(requested) ? requested : null;
 
 /* ---------- model picker ---------- */
 const picker = $('model');
-for (const a of ASSETS) {
+for (const a of ALL_ASSETS) {
   const o = document.createElement('option');
   o.value = a.name; o.textContent = a.name + (MODEL_FILES[a.name] ? '' : '  (no file)');
   picker.appendChild(o);

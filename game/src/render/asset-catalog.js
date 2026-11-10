@@ -7,6 +7,7 @@
 //   *_col             collision meshes, never rendered, extracted into the physics world
 //   socket_*          empties for code-drawn content (e.g. the anchor's Shell number and tick pads);
 //                     glTF extras arrive in userData (e.g. pad_size_m: [w, h], outward_normal_gltf)
+import { TOWN_DATA } from '../scenes/town-data.js';
 
 /** Exact filenames the code looks up in /assets/models/ (brief "Slice object list"). */
 export const ASSETS = Object.freeze([
@@ -27,8 +28,26 @@ export const ASSETS = Object.freeze([
   { name: 'island', kind: 'terrain', label: 'Island', height: 4, radius: 75 },
 ]);
 
+const TOWN_LABELS = Object.freeze({ town_terrain: 'Town: terrain', town_block: 'Town: block', town_hero: 'Town: hero', town_sky: 'Town: sky' });
+const townLabel = (p) => (p.name === 'town_altar' ? 'Tournament altar' : (TOWN_LABELS[p.kind] || 'Town') + ' (' + p.name.replace(/^town_/, '').replace(/_/g, ' ') + ')');
+
+/**
+ * The town on the ground (docs/town.md): one entry per piece of scenes/town-data.js, a .glb in the `town/`
+ * subfolder. Town pieces have no greybox art (`noGreybox`): nothing is shown and nothing collides until the file
+ * has streamed in. `centerOffset` / `radius` are the streaming bounds from the data (pivot -> bounding sphere).
+ */
+export const TOWN_ASSETS = Object.freeze(TOWN_DATA.pieces.map((p) => Object.freeze({
+  name: p.name, kind: p.kind, label: townLabel(p), town: true, noGreybox: true,
+  height: Math.max(1, 2 * (p.center[1] - p.position[1])), radius: p.radius,
+  centerOffset: Object.freeze([p.center[0] - p.position[0], p.center[1] - p.position[1], p.center[2] - p.position[2]]),
+  ...(p.kind === 'town_hero' ? { inspectDistance: 7 } : {}),
+})));
+
+/** Every asset the library knows: the archipelago slice list and the town pieces. */
+export const ALL_ASSETS = Object.freeze([...ASSETS, ...TOWN_ASSETS]);
+
 /** Load distance (meters from the camera to the bounding sphere surface) per kind, when on screen. */
-export const LOAD_DISTANCE = Object.freeze({ hero: 70, camp: 110, shell: 260, interior: 60, terrain: 400 });
+export const LOAD_DISTANCE = Object.freeze({ hero: 70, camp: 110, shell: 260, interior: 60, terrain: 400, town_terrain: 400, town_block: 220, town_hero: 140, town_sky: 600 });
 
 /** Doubled brief budgets (docs/decisions.md 07.11): runtime / _inspect triangles per asset kind. */
 export const TRIANGLE_BUDGET = Object.freeze({
@@ -37,21 +56,35 @@ export const TRIANGLE_BUDGET = Object.freeze({
   interior: { runtime: 160000 },
   camp: { runtime: 24000 },
   terrain: { runtime: 120000 },
+  town_terrain: { runtime: 120000 },
+  town_block: { runtime: 120000 },
+  town_hero: { runtime: 16000, inspect: 60000 },
+  town_sky: { runtime: 20000 },
 });
 
-export const assetByName = (name) => ASSETS.find((a) => a.name === name) || null;
+export const assetByName = (name) => ALL_ASSETS.find((a) => a.name === name) || null;
 
 /** Model names accepted by URLs and the review page: lowercase letters, digits, underscore. */
 export function isValidModelName(name) {
   return typeof name === 'string' && /^[a-z0-9_]{1,64}$/.test(name);
 }
 
-/** URL of a model by exact name; throws on anything outside [a-z0-9_]. */
-export function modelUrl(name, base = '/') {
+/** Subfolder of a model inside assets/models/: '' (flat) or one lowercase folder with a trailing slash ('town/'). */
+export function isValidModelDir(dir) {
+  return dir === '' || (typeof dir === 'string' && /^[a-z0-9_]{1,32}\/$/.test(dir));
+}
+
+/**
+ * URL of a model by exact name; throws on anything outside [a-z0-9_].
+ * @param {string} [dir] subfolder from the build's MODEL_DIRS (virtual:model-list), '' for the flat folder
+ */
+export function modelUrl(name, base = '/', dir = '') {
   if (!isValidModelName(name)) throw new Error('invalid model name: ' + JSON.stringify(name));
+  dir = dir || '';
+  if (!isValidModelDir(dir)) throw new Error('invalid model folder: ' + JSON.stringify(dir));
   // Hosts that do not serve .glb can ship the same bytes under another extension (build-time VITE_MODEL_EXT).
   const ext = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_MODEL_EXT) || '.glb';
-  return base + 'assets/models/' + name + ext;
+  return base + 'assets/models/' + dir + name + ext;
 }
 
 /**
@@ -59,8 +92,8 @@ export function modelUrl(name, base = '/') {
  * Pages let browsers and phones keep a .glb for a while; a new build of a model has a new size, so the
  * new file is fetched instead of a stale copy (the owner's phone kept the old Iris after a deploy).
  */
-export function versionedModelUrl(name, base = '/', bytes) {
-  const url = modelUrl(name, base);
+export function versionedModelUrl(name, base = '/', bytes, dir = '') {
+  const url = modelUrl(name, base, dir);
   return Number.isFinite(bytes) && bytes > 0 ? url + '?v=' + bytes : url;
 }
 
