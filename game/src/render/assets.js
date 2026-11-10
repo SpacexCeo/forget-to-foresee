@@ -13,7 +13,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
-import { instancePriority, assetPriority, planStreaming, LruCache, createPrefetch } from './streaming.js';
+import { instancePriority, assetPriority, planStreaming, planUpgrade, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
 import { transformTriangles, MASK_ALL } from '../physics/collision.js';
 
@@ -166,11 +166,24 @@ export class AssetLibrary {
    * @param {{available?:Record<string,number>, onTemplate?:(name:string, scene:THREE.Object3D)=>void}} o
    *   onTemplate: look-dev hook run once per parsed template (material upgrades), before instances clone it.
    */
-  /** Build-time size in bytes of the file an asset name resolves to (variant and override aware), or undefined. */
-  bytesOf(name) {
+  /**
+   * The file an asset name resolves to: review override, then the texture variant ('_m' on phones and the low
+   * tier, or for the light first pass on desktop), each only when the build ships that file.
+   */
+  fileFor(name, { lite = false } = {}) {
     const base = modelOverrides[name] && this.available[modelOverrides[name]] ? modelOverrides[name] : name;
-    const file = modelVariant && this.available[base + modelVariant] ? base + modelVariant : base;
-    const v = this.available[file];
+    const variant = modelVariant || (lite ? '_m' : '');
+    return variant && this.available[base + variant] ? base + variant : base;
+  }
+
+  /** Whether a lighter file than the full one exists for this asset (desktop light-first pass). */
+  hasLite(name) { const e = this.entries.get(name); return !!e && !e.inspectOf && !modelVariant && this.fileFor(name, { lite: true }) !== this.fileFor(name); }
+
+  /** Build-time size in bytes of the file the next load of this asset fetches (variant, override and light-first aware), or undefined. */
+  bytesOf(name) {
+    const e = this.entries.get(name);
+    const lite = this.liteFirst && this.hasLite(name) && !(e && e.full);
+    const v = this.available[this.fileFor(name, { lite })];
     return typeof v === 'number' ? v : undefined;
   }
 
@@ -178,6 +191,8 @@ export class AssetLibrary {
     this.entries = new Map();
     this.onTemplate = onTemplate;
     this.available = available;
+    /** Desktop light-first pass: load `<name>_m.glb` first, the streamer upgrades to the full file later. */
+    this.liteFirst = false;
     for (const def of ASSETS) {
       const bytes = available[def.name];
       this.entries.set(def.name, { name: def.name, def, bytes: bytes || 0, state: bytes ? 'idle' : 'absent', template: null, stats: null, error: null, loadMs: 0, progress: 0 });
@@ -192,24 +207,31 @@ export class AssetLibrary {
   /** Name of the separate inspect file for an asset, if the build lists one. */
   inspectName(name) { return this.entries.has(name + '_inspect') ? name + '_inspect' : null; }
 
+  /** Fetches and prepares one template without touching the entry (used by load and by the light-first upgrade). */
+  async fetchTemplate(name, file, onProgress) {
+    const e = this.entries.get(name);
+    const { gltf, bytes } = await fetchGltf(file, { onProgress });
+    const scene = gltf.scene;
+    scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = true; o.receiveShadow = true;
+    });
+    if (this.onTemplate) this.onTemplate((e && e.inspectOf) || name, scene);
+    return { scene, bytes, stats: analyzeAssetScene(scene) };
+  }
+
   async load(name) {
     const e = this.entries.get(name);
     if (!e || !isValidModelName(name)) throw new Error('unknown asset ' + name);
     e.state = 'loading'; e.progress = 0;
     const t0 = performance.now();
     try {
-      const base = modelOverrides[name] && this.available[modelOverrides[name]] ? modelOverrides[name] : name;
-      const file = modelVariant && this.available[base + modelVariant] ? base + modelVariant : base;
-      const { gltf, bytes } = await fetchGltf(file, { onProgress: (got, total) => { e.progress = total ? got / total : 0; } });
-      const scene = gltf.scene;
-      scene.traverse((o) => {
-        if (!o.isMesh) return;
-        o.castShadow = true; o.receiveShadow = true;
-      });
-      if (this.onTemplate) this.onTemplate(e.inspectOf || name, scene);
-      e.template = scene;
-      e.stats = analyzeAssetScene(scene);
-      e.bytes = bytes;
+      const lite = this.liteFirst && this.hasLite(name);
+      const t = await this.fetchTemplate(name, this.fileFor(name, { lite }), (got, total) => { e.progress = total ? got / total : 0; });
+      e.template = t.scene;
+      e.stats = t.stats;
+      e.bytes = t.bytes;
+      e.lite = lite; e.full = !lite;
       e.loadMs = performance.now() - t0;
       return e;
     } catch (err) {
@@ -219,23 +241,40 @@ export class AssetLibrary {
     }
   }
 
+  /** The full-resolution template of an asset that currently shows its light file (the entry is not changed). */
+  loadFull(name) { return this.fetchTemplate(name, this.fileFor(name)); }
+
+  /** Replaces an entry's template (light -> full); the caller has moved every instance over. Frees the old one. */
+  adopt(name, t) {
+    const e = this.entries.get(name);
+    if (!e) return;
+    const old = e.template;
+    e.template = t.scene; e.stats = t.stats; e.bytes = t.bytes; e.lite = false; e.full = true;
+    if (old) disposeTemplate(old);
+  }
+
   /** Frees GPU and CPU memory of a template (all instances must have detached first). */
   dispose(name) {
     const e = this.entries.get(name);
     if (!e || !e.template) return;
-    const seen = new Set();
-    e.template.traverse((o) => {
-      if (!o.isMesh) return;
-      o.geometry?.dispose();
-      for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
-        if (!mat || seen.has(mat)) continue;
-        seen.add(mat);
-        for (const v of Object.values(mat)) if (v && v.isTexture) v.dispose();
-        mat.dispose();
-      }
-    });
-    e.template = null; e.stats = null; e.state = 'idle';
+    disposeTemplate(e.template);
+    e.template = null; e.stats = null; e.state = 'idle'; e.lite = false; e.full = false;
   }
+}
+
+/** Frees the geometries, materials and textures of a parsed template. */
+export function disposeTemplate(template) {
+  const seen = new Set();
+  template.traverse((o) => {
+    if (!o.isMesh) return;
+    o.geometry?.dispose();
+    for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!mat || seen.has(mat)) continue;
+      seen.add(mat);
+      for (const v of Object.values(mat)) if (v && v.isTexture) v.dispose();
+      mat.dispose();
+    }
+  });
 }
 
 /* ---------- placed instances ---------- */
@@ -310,6 +349,13 @@ export class PropInstance {
     this.emitSockets();
   }
 
+  /** Light -> full: the same model with its full-resolution textures takes over in one step (no greybox frame). */
+  swapReal(template) {
+    if (!this.real) { this.showReal(template); return; }
+    this.showGreybox();
+    this.showReal(template);
+  }
+
   /** Back to the greybox (asset released or evicted). */
   showGreybox() {
     if (!this.real) return;
@@ -382,6 +428,9 @@ export class AssetStreamer {
     this.unwanted = new Map();
     this.priority = new Map();
     this.events = [];
+    /** Light-first upgrades (set by boot-world.js with library.liteFirst): full files replace the light ones when idle. */
+    this.upgrade = false;
+    this.upgrading = new Set();
     /** Optional GPU warm-up (render/warmup.js): `(template) => Promise`, awaited between download and swap. */
     this.warm = null;
   }
@@ -444,6 +493,28 @@ export class AssetStreamer {
     for (const name of plan.attach) this.attach(name);
     for (const name of plan.release) this.release(name);
     for (const name of this.lru.evict()) { this.library.dispose(name); this.log('evicted ' + name); }
+    if (this.upgrade) {
+      const up = planUpgrade(rows.map((r) => { const e = this.library.get(r.name); return { ...r, state: e.state, lite: !!e.lite, upgrading: this.upgrading.has(r.name) }; }));
+      if (up) this.startUpgrade(up);
+    }
+  }
+
+  /** Light-first: fetch the full file of a shown asset, warm it, then swap it in behind the player's back. */
+  startUpgrade(name) {
+    this.upgrading.add(name);
+    this.log('upgrading ' + name);
+    const e = this.library.get(name);
+    const lite = e.template;
+    this.library.loadFull(name).then(async (t) => {
+      if (this.warm) { try { await this.warm(t.scene); } catch { /* swap anyway */ } }
+      if (e.template !== lite) { disposeTemplate(t.scene); return; } // released and evicted meanwhile: the next load decides again
+      if (e.state === 'loaded') for (const inst of this.targets(name)) inst.swapReal(t.scene);
+      this.library.adopt(name, t);
+      this.lru.touch(name, t.bytes);
+      if (e.state !== 'loaded') this.lru.cool(name);
+      this.log(`upgraded ${name} (${(t.bytes / 1048576).toFixed(1)} MB)`);
+    }).catch(() => { this.log('upgrade failed ' + name); e.lite = false; /* keep the light file, do not retry in a loop */ })
+      .finally(() => { this.upgrading.delete(name); });
   }
 
   /** Instances that an entry attaches to: the asset's own, or (for an _inspect file) the inspecting ones. */
@@ -489,7 +560,7 @@ export class AssetStreamer {
     for (const name of names) {
       const e = this.library.get(name);
       s[e.state] = (s[e.state] || 0) + 1;
-      s.list.push({ name, state: e.state, progress: e.progress, priority: this.priority.get(name) ?? -1, error: e.error, bytes: this.library.bytesOf(name) });
+      s.list.push({ name, state: e.state, lite: !!e.lite, progress: e.progress, priority: this.priority.get(name) ?? -1, error: e.error, bytes: this.library.bytesOf(name) });
     }
     return s;
   }

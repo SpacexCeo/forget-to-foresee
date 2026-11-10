@@ -24,11 +24,28 @@ visual cue needs a new string or a logic change, it is logged here as a request 
   dev camera angle (fog, software renderer): it needs an owner look on a real GPU. Tests:
   `game/tests/client/beacons.test.mjs` (9).
 
+- 10.11 09:10 Kyiv. **Light-first loading on desktop**: the `_m` (2048) files first (39 MB instead of 73 MB for the
+  first view of the judge path), then the full files one at a time when idle, swapped in without a greybox frame.
+  Skipped on Save-Data and 2G/3G links; `?lite=off` / `?lite=only`. `docs/smoothness.md`. Tests:
+  `game/tests/client/lite-first.test.mjs` (4).
+
+## Night summary (10.11, 03:00 to 10:00 Kyiv; the schedule is now off)
+
+Three tasks, all on this branch, nothing pushed to `main`, 578 tests green (21 new):
+1. GPU warm-up before a streamed model is shown (staged texture uploads, parallel shader compile).
+2. Goal cues in the world (ground chevrons toward the goal, gold beacons on Shells with an open sign).
+3. Light-first loading on desktop with idle upgrades to the full files.
+Not verified here: anything that needs a real GPU (the container renders in software, without parallel shader
+compile): the actual frame-time gain of the warm-up, the look of the Shell column with bloom, the texture swap on
+upgrade. `?warm=off`, `?lite=off` compare old and new on the owner's machine. The other worker's lane (play logic,
+copy, HUD layout) was not touched; `main` did not move during the night.
+
 ## Backlog (in order of value)
 
-1. Look at the Shell column on a real GPU and at the high tier (bloom); tune or drop it.
-2. Light-first loading on desktop: show the `_m` (2048) files first, upgrade to the full set while idle.
-3. The light set complete before the first compile (no full recompile when the play layer starts).
-4. Warm the programs when the quality governor changes tier; warm the post chain's passes.
-5. Camp and Scroll table highlights when a goal or an offer refers to them; an opening camera glance toward the
+1. Owner look on a real GPU: warm-up gain, the Shell column at the high tier, the light-to-full swap; tune or drop.
+2. The light set complete before the first compile (a 13th light joins when the play layer starts and recompiles
+   every lit material once).
+3. Warm the programs when the quality governor changes tier; warm the post chain's passes and shadow variants.
+4. Camp and Scroll table highlights when a goal or an offer refers to them; an opening camera glance toward the
    goal Shell (the Shells are off screen at the start).
+5. `_m` files for the island and the agents (art task).

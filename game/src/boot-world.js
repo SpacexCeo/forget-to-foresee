@@ -20,8 +20,8 @@ import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
-import { configureTextureSupport, setModelVariant, setModelOverrides, hasModelFile, prefetchGltf } from './render/assets.js';
-import { irisStandInVisible } from './render/streaming.js';
+import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
+import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { CAMPS } from './scenes/layout.js';
 
@@ -63,6 +63,13 @@ if (irisLoad.hasModel) prefetchGltf('agent_iris').then(() => { irisLoad.fetched 
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
+// Light first (docs/smoothness.md): desktop shows the 2048-texture files first (about half the bytes), then swaps
+// in the full set, one model at a time, once everything in view is there. ?lite=off: full files at once (the old
+// order); ?lite=only: never upgrade. Save-Data and 2G/3G-class links keep the light set.
+const conn = navigator.connection || {};
+const litePolicy = liteFirstPolicy({ variant: getModelVariant(), param: params.get('lite'), saveData: !!conn.saveData, effectiveType: conn.effectiveType || '' });
+world3d.library.liteFirst = litePolicy.liteFirst;
+streamer.upgrade = litePolicy.upgrade;
 const irisStandIn = [...avatar.children];
 function updateIrisStandIn() {
   if (irisLoad.loaded) return;

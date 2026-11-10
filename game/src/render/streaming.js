@@ -79,6 +79,34 @@ export function planStreaming(assets, { maxConcurrent = 2, releaseAfter = 8 } = 
   return { load, attach, release };
 }
 
+/**
+ * Light-first loading (docs/smoothness.md): which shown asset gets its full-resolution file next, or null.
+ * An upgrade starts only when the first pass is over (nothing wanted is still idle, loading or warming), one at
+ * a time, for an asset that is on screen (priority >= 100) and still shows its light file; largest on screen first.
+ * @param {Array<{name:string, state:string, priority:number, lite?:boolean, upgrading?:boolean}>} assets
+ */
+export function planUpgrade(assets, { maxConcurrent = 1 } = {}) {
+  const busy = assets.some((a) => a.state === 'loading' || a.state === 'warming' || ((a.state === 'idle' || a.state === 'queued') && a.priority >= 0));
+  if (busy) return null;
+  if (assets.filter((a) => a.upgrading).length >= maxConcurrent) return null;
+  const next = assets
+    .filter((a) => a.state === 'loaded' && a.lite && !a.upgrading && a.priority >= 100)
+    .sort((a, b) => b.priority - a.priority || (a.name < b.name ? -1 : 1))[0];
+  return next ? next.name : null;
+}
+
+/**
+ * Whether the light files go first on this device. Phones and the low tier already load only the light set
+ * (`variant` '_m'); a visitor who asked the browser to save data, or sits on a 2G/3G-class link, keeps the light
+ * set and never pays for the second download.
+ * @returns {{liteFirst:boolean, upgrade:boolean}}
+ */
+export function liteFirstPolicy({ variant = '', param = null, saveData = false, effectiveType = '' } = {}) {
+  if (variant || param === 'off') return { liteFirst: false, upgrade: false };
+  const slow = saveData || /(^|-)(2g|3g)$/.test(effectiveType || '');
+  return { liteFirst: true, upgrade: !slow && param !== 'only' };
+}
+
 /** LRU cache of loaded templates by byte size. Only cold (unused) entries can be evicted. */
 export class LruCache {
   constructor(maxBytes) { this.maxBytes = maxBytes; this.map = new Map(); this.bytes = 0; }

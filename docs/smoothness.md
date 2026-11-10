@@ -42,11 +42,30 @@ Program cache keys were compared before and after every frame: with the warm-up,
 material program in that frame (before: five to ten). Time to the playable frame on the software renderer did not get
 worse (15.6 s with, 21.9 s without, one run each). A real GPU measurement is still owed: the container has no GPU.
 
+## Light first (10.11, third round)
+
+Desktop used to fetch the full 4096-texture files straight away. Now the first pass fetches the `_m` files (the same
+models with 2048 textures, already built for phones) and shows them; when everything wanted is in, the streamer
+fetches the full file of each model on screen, one at a time, warms it and swaps it in without a greybox frame
+(`planUpgrade` in `streaming.js`, `AssetStreamer.startUpgrade`, `PropInstance.swapReal`). The light template is freed
+after the swap.
+
+| first view of the judge path (build-time file sizes) | before | light first |
+|---|---|---|
+| four camps, Scroll table, anchor, island | 73 MB | 39 MB |
+| after the idle upgrades (total downloaded) | 73 MB | 105 MB |
+
+The price is the second download, so it is skipped when the browser reports Save-Data or a 2G/3G-class link
+(`liteFirstPolicy`); phones and the low tier load only the light set, as before. `?lite=off` restores the old order,
+`?lite=only` never upgrades. Checked in headless Chromium (`?tier=low&tex=full`): the requests are `camp_*_m`,
+`scroll_table_m`, `anchor_m` first, then the full files in turn; console clean; 578 tests green. Tests:
+`game/tests/client/lite-first.test.mjs`. Models without an `_m` file (the island, agents, props) load as before.
+
 ## Open (next rounds)
 
 - A light joining the scene after the first frame (12 → 13 lights when the play layer starts) recompiles every lit
   material once. The light set should be complete before the first compile.
 - Shadow depth variants and the post chain's passes still compile on first use (small programs).
 - A quality tier change to or from `low` switches the output target, so every program is rebuilt in one frame.
-- Desktop still downloads the full 4096 texture set first; a light-first order (the `_m` files, then the full set
-  while idle) is the next loading step.
+- The island (6.7 MB) and the agents (about 5 MB each) have no `_m` file; building them is an art task.
+- An asset evicted from the cache and looked at again starts light and upgrades again (the HTTP cache holds both).
