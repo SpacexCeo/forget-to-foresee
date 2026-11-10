@@ -6,7 +6,7 @@ import { QUALITY, PHONE_QUALITY, TIERS, PROFILES, GOVERNORS, qualityFor, detectT
 test('desktop tiers keep their knobs (the phone profile never changes them)', () => {
   assert.deepEqual(TIERS, ['ultra', 'high', 'low']);
   assert.deepEqual(PROFILES, ['desktop', 'phone']);
-  assert.equal(QUALITY.ultra.pixelRatioCap, 1.5); assert.equal(QUALITY.ultra.shadowMap, 4096); assert.equal(QUALITY.ultra.grassBlades, 36000); assert.equal(QUALITY.ultra.ao, true);
+  assert.equal(QUALITY.ultra.pixelRatioCap, 1.5); assert.equal(QUALITY.ultra.shadowMap, 2048); assert.equal(QUALITY.ultra.shadowFarMap, 4096); assert.equal(QUALITY.ultra.grassBlades, 36000); assert.equal(QUALITY.ultra.ao, true);
   assert.equal(QUALITY.high.pixelRatioCap, 1); assert.equal(QUALITY.high.shadowMap, 2048); assert.equal(QUALITY.high.grassBlades, 18000); assert.equal(QUALITY.high.post, true);
   assert.equal(QUALITY.low.pixelRatioCap, 1); assert.equal(QUALITY.low.shadowMap, 1024); assert.equal(QUALITY.low.grassBlades, 5000); assert.equal(QUALITY.low.post, false);
   for (const t of TIERS) assert.equal(qualityFor(t, 'desktop'), QUALITY[t]);

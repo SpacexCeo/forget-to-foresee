@@ -108,7 +108,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
    * The six lights follow Iris: a light whose socket is no longer among the nearest fades out, then moves to a
    * socket that has none and fades in, so nothing pops. No allocations.
    */
-  function updateLamps(t, dt, playerPos, reducedMotion) {
+  function updateLamps(t, dt, playerPos, reducedMotion, scale = 1) {
     if ((lampTimer -= dt) <= 0) { lampTimer = 0.4; nearestLamps(lampSockets, playerPos, lampWanted); }
     const k = 1 - Math.exp(-dt * 3);
     for (let i = 0; i < lamps.length; i++) {
@@ -127,7 +127,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
         }
       }
       u.level += ((wanted ? 1 : 0) - u.level) * k;
-      l.intensity = u.socket < 0 ? 0 : 11 * u.level * (reducedMotion ? 1 : 1 + 0.07 * Math.sin(t * 6.1 + u.phase) + 0.04 * Math.sin(t * 11.3 + u.phase * 1.7));
+      l.intensity = u.socket < 0 ? 0 : 11 * scale * u.level * (reducedMotion ? 1 : 1 + 0.07 * Math.sin(t * 6.1 + u.phase) + 0.04 * Math.sin(t * 11.3 + u.phase * 1.7));
     }
   }
 
@@ -143,7 +143,10 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
       });
     }
     const pts = [];
-    if (real) for (const [name, node] of inst.sockets) if (LAMP_SOCKET.test(name)) pts.push(node.getWorldPosition(_v).toArray());
+    if (real) for (const [name, node] of inst.sockets) {
+      if (name === 'socket_lamp_altar_core') { state.core = node.getWorldPosition(_v).toArray(); continue; } // the amber core has its own light (LookDev.setHeroLight)
+      if (LAMP_SOCKET.test(name)) pts.push(node.getWorldPosition(_v).toArray());
+    }
     if (pts.length) lampPoints.set(inst.id, pts); else lampPoints.delete(inst.id);
     placeLamps();
     if (def.name !== TOWN_ALTAR_ASSET) return;
@@ -210,7 +213,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
    * @param {number} t seconds (frozen under reduced motion by the caller is fine: the pulse is skipped anyway)
    * @param {number} dt @param {{playerPos: number[], reducedMotion?: boolean}} o
    */
-  function update(t, dt, { playerPos, reducedMotion = false }) {
+  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1 }) {
     if (!state.active) return;
     state.time = t;
     checkReady();
@@ -220,7 +223,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     const pulse = reducedMotion ? 1 : 1 + CORE_GLOW.pulse * (0.5 + 0.5 * state.wake) * Math.sin(t * 1.7);
     state.glow = (CORE_GLOW.idle + (CORE_GLOW.awake - CORE_GLOW.idle) * state.wake) * pulse + CORE_GLOW.flare * state.flare;
     for (let i = 0; i < coreMaterials.length; i++) coreMaterials[i].emissiveIntensity = state.glow;
-    updateLamps(t, dt, playerPos, reducedMotion);
+    updateLamps(t, dt, playerPos, reducedMotion, lampScale);
   }
 
   /** The registration flare of the amber core: 1 ramps it up, 0 lets it settle. */

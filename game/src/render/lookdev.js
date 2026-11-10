@@ -9,13 +9,18 @@
 //   tier, profile, reducedMotion, sky, post.composer, hemi, sun, sunDir, clouds, foliage
 //   setQuality(tier), onQualityChange(fn), setReducedMotion(on), setPixelScale(s), setSize(w, h)
 //   setPreset(name)           time of day (sky.js TIME_PRESETS): sky, sun, fog, clouds, IBL, exposure
+//   setLocation(name)         'archipelago' | 'town': each has its own sun and air for the same hour (sky.js LOCATION_LOOKS)
+//   setWeather(name)          'clear' | 'overcast' | 'rain' (weather.js); eases in, at once under reduced motion
+//   light                     { lamps, windows }: what street lamps and lit windows should give now (scenes read it)
+//   setHeroLight(pos, k)      the one strong local light (the Tournament altar's amber); null switches it off
+//   blobs.track(object)       a soft disc under a character's feet (blobs.js)
 //   sky.tint(hex, amount)     mood tint of haze, fill and cloud ambient (the tension effect)
 //   update(dt, focus, camDist), render(), stats(), trackOccluder(spec)
 // setReducedMotion() freezes the clouds, wind, Shell hover and grain (spec 1/3: reduced motion never blocks input).
 import * as THREE from 'three';
 import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor } from './quality.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
-import { SkyDome, TIME_PRESETS, DEFAULT_PRESET } from './sky.js';
+import { SkyDome, TIME_PRESETS, LOCATION_LOOKS, lookFor } from './sky.js';
 import { CloudSea } from './clouds.js';
 import { PostStack } from './post.js';
 import { Foliage } from './foliage.js';
@@ -24,6 +29,11 @@ import { applyMaterialQuality, setTextureAnisotropy, setNacreTime } from './mate
 import { AirMotes } from './motes.js';
 import { installHeightFog, setFog, setFogTint, tickFog } from './fog.js';
 import { LAYER_OVERLAY } from './layers.js';
+import { SunShadows } from './shadows.js';
+import { BlobShadows } from './blobs.js';
+import { installGrade } from './grade.js';
+import { WeatherSystem, Rain, installWetness, weatherCover, WEATHER, DEFAULT_WEATHER } from './weather.js';
+import { setEmissiveLevels } from './materials.js';
 
 /**
  * Render profile of this browser (docs/mobile.md): phones get the phone knob set for every tier name.
@@ -40,13 +50,22 @@ export function browserProfile() {
   } catch { return 'desktop'; }
 }
 
+/** `?weather=clear|overcast|rain`: the weather at start (QA and previews; the jury path has none, so it is clear). */
+export function browserWeather() {
+  try { const w = new URLSearchParams(location.search).get('weather'); return WEATHER[w] ? w : DEFAULT_WEATHER; } catch { return DEFAULT_WEATHER; }
+}
+
+const _c = new THREE.Color(), _white = new THREE.Color(1, 1, 1);
+/** Mean colour of what the sun hits in a street (plaster, cobbles, stone): the tint of the bounce light. */
+const _bounceAlbedo = new THREE.Color(0.62, 0.52, 0.42);
+
 export class LookDev {
   /**
    * @param {{renderer:THREE.WebGLRenderer, scene:THREE.Scene, camera:THREE.PerspectiveCamera, cloudLevel:number,
    *          grassPatches:{center:number[], radius:number, tint?:number}[], lanterns:number[][],
    *          tier?:string, profile?:string, reducedMotion?:boolean, autoTier?:boolean, preset?:string}} o
    */
-  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', profile = browserProfile(), reducedMotion = false, autoTier = false, preset = DEFAULT_PRESET }) {
+  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', profile = browserProfile(), reducedMotion = false, autoTier = false, preset = undefined, weather = browserWeather(), location = 'archipelago' }) {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
     this.profile = isProfile(profile) ? profile : 'desktop';
     this.tier = isTier(tier) ? tier : 'ultra';
@@ -55,14 +74,21 @@ export class LookDev {
     this.reducedMotion = reducedMotion;
     this.listeners = new Set();
     this.governor = autoTier ? new TierGovernor(GOVERNORS[this.profile]) : null;
-    this.preset = TIME_PRESETS[preset] ? preset : DEFAULT_PRESET;
+    // An hour asked for explicitly (?tod=, setPreset) holds in both locations; without one each location shows its own default.
+    this.timeOverride = TIME_PRESETS[preset] ? preset : null;
+    this.location = LOCATION_LOOKS[location] ? location : 'archipelago';
+    this.look = lookFor(this.location, this.timeOverride);
+    this.preset = this.look.name;
+    this.weather = new WeatherSystem({ name: weather });
+    /** What street lamps and lit windows give at this hour and in this weather (1 = as authored). Read by the scenes. */
+    this.light = { lamps: 1, windows: 1 };
     this.cloudLevel = cloudLevel;
     this.fogBaseY = cloudLevel; // setAtmosphereFloor moves it while Iris is in the town
     this.tintState = { hex: 0xffffff, amount: 0 };
 
     camera.layers.enable(LAYER_OVERLAY);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.AgXToneMapping;
+    installGrade(renderer); // AgX plus the game's grade, the same on every tier (render/grade.js)
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     if ('transmissionResolutionScale' in renderer) renderer.transmissionResolutionScale = 0.5;
@@ -76,15 +102,24 @@ export class LookDev {
 
     // Fog chunks are patched before the first material compiles; the values follow the preset.
     installHeightFog({ baseY: cloudLevel });
+    installWetness();
     scene.fog = new THREE.Fog(0x9aa3ad, 30, 420);
 
     // Low cool fill so shadow sides stay blue-grey (the IBL carries most of the ambient).
     this.hemi = new THREE.HemisphereLight(0x8fa0b4, 0x3a4048, 0.12);
-    this.sun = new THREE.DirectionalLight(0xffffff, 3.6);
-    this.sun.castShadow = true;
-    this.sun.shadow.bias = -0.00025; this.sun.shadow.normalBias = 0.04;
-    this.sun.shadow.camera.near = 1; this.sun.shadow.camera.far = 320;
-    scene.add(this.hemi, this.sun, this.sun.target);
+    // The sun and its two shadow cascades (render/shadows.js). The whole light set exists from the first frame:
+    // a light joining later would recompile every lit material (docs/smoothness.md).
+    this.shadows = new SunShadows({ scene });
+    this.sun = this.shadows.sun;
+    scene.add(this.hemi);
+    this.heroLight = new THREE.PointLight(0xff9a3c, 0, 26, 1.6);
+    this.heroLight.name = 'hero_light'; this.heroLight.castShadow = false;
+    this.heroBase = 0;
+    scene.add(this.heroLight);
+    this.blobs = new BlobShadows();
+    scene.add(this.blobs.mesh);
+    this.rain = new Rain();
+    scene.add(this.rain.mesh);
 
     this.clouds = new CloudSea({ level: cloudLevel });
     scene.add(this.clouds.group);
@@ -106,7 +141,7 @@ export class LookDev {
     this.post = new PostStack({ renderer, scene, camera });
     this.fader = new OcclusionFader({ camera });
     this.envFallback = null; this.envHdr = null; this.envHdrPreset = null;
-    this.applyAtmosphere(TIME_PRESETS[this.preset]);
+    this.applyAtmosphere(this.look);
     this.applyTier();
   }
 
@@ -118,25 +153,101 @@ export class LookDev {
     const atm = this.sky.setAtmosphere(this.renderer, P);
     this.atm = atm;
     this.sunDir.copy(atm.sun);
-    this.renderer.toneMappingExposure = Math.pow(2, P.exposure);
-    this.sun.color.copy(atm.sunColor); this.sun.intensity = atm.sunIntensity;
-    this.hemi.color.copy(atm.zenith); this.hemi.groundColor.copy(atm.fogColor).multiplyScalar(0.45);
-    this.baseFog = atm.fogColor.clone(); this.baseHemi = this.hemi.color.clone();
-    this.scene.fog.color.copy(atm.fogColor); this.scene.fog.near = P.fog.near; this.scene.fog.far = P.fog.far;
-    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: 1 });
+    this.shadows.setDirection(this.sunDir);
+    this.sun.color.copy(atm.sunColor);
+    // The fill from above is the sky's colour pulled halfway to neutral: shade reads cool, never cyan.
+    this.hemi.color.copy(atm.zenith).lerp(_c.setScalar((atm.zenith.r + atm.zenith.g + atm.zenith.b) / 3), 0.5);
+    // Shade is filled from below by what the sun throws back off walls and paving: warm, stronger between houses.
+    this.hemi.groundColor.copy(atm.sunColor).multiply(_bounceAlbedo).multiplyScalar(P.bounce * 3.0).lerp(_c.copy(atm.fogColor).multiplyScalar(0.45), 0.3);
+    this.baseHemi = this.hemi.color.clone();
     this.clouds.setLighting({ sun: atm.sun, sunRadiance: atm.sunRadiance, zenith: atm.zenith, fogColor: atm.fogColor, cover: P.cloudCover });
     this.foliage.setSun(this.sunDir, atm.sunColor);
     this.motes.setSun(this.sunDir, atm.sunColor);
     this.post.setSunColor(atm.sunColor);
     for (const l of this.lanternLights) l.color.setHex(0xffa64d);
-    // IBL: sky-dome PMREM right away; the Blender-baked HDR (art/env/bake_env.py) replaces it on tiers that allow it.
-    if (this.envFallback) this.envFallback.dispose();
-    this.envFallback = this.sky.bakeEnvironment(this.renderer);
-    this.scene.environment = this.envFallback.texture;
-    this.scene.environmentIntensity = P.envIntensity;
-    if (this.envHdr && this.envHdrPreset !== this.preset) { this.envHdr.dispose(); this.envHdr = null; }
+    if (this.envHdr && this.envHdrPreset !== this.envKey()) { this.envHdr.dispose(); this.envHdr = null; }
+    this.applyWeather(true);
     this.loadEnvHdr(P);
     if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
+  }
+
+  /** Identity of the baked HDR in use: it belongs to one hour of one location. */
+  envKey() { return this.location + '/' + this.preset; }
+
+  /**
+   * Everything the weather scales, on top of the hour's look: sun strength and shadow softness, ambient, the
+   * grey lid on the sky, haze, exposure, lamps and windows, rain. Runs on the frames a weather change is easing
+   * in and once per look change; `rebake` also re-renders the sky into the ambient light (when the change settles).
+   */
+  applyWeather(rebake = false) {
+    const P = this.look, W = this.weather.state, atm = this.atm;
+    if (!atm) return;
+    const lid = W.overcast;
+    this.sun.intensity = atm.sunIntensity * W.sun;
+    this.sun.shadow.intensity = W.shadow; this.shadows.far.shadow.intensity = W.shadow;
+    this.renderer.toneMappingExposure = Math.pow(2, P.exposure + W.exposure);
+    this.hemi.intensity = (0.12 + 0.5 * P.bounce) * (1 + (W.ambient - 1) * 0.6);
+    // Haze: thicker and greyer under cloud, the sun's glow in it goes with the sun.
+    const grey = _c.setScalar((atm.fogColor.r * 0.2126 + atm.fogColor.g * 0.7152 + atm.fogColor.b * 0.0722) * 1.15);
+    this.baseFog = atm.fogColor.clone().lerp(grey, lid * 0.75);
+    this.scene.fog.color.copy(this.baseFog);
+    this.scene.fog.near = P.fog.near / W.fog; this.scene.fog.far = Math.max(this.scene.fog.near + 20, P.fog.far / W.fog);
+    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density * W.fog, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: 1 - lid * 0.9 });
+    this.sky.setWeather({ cover: weatherCover(W, P.cloudCover), overcast: lid, fogColor: this.baseFog });
+    this.post.setRays(1 - lid);
+    // Lamps and windows come up as daylight goes down.
+    const dim = 1 - W.sun;
+    this.light.lamps = P.lamps + dim * 0.6; this.light.windows = P.windows + dim * 0.9;
+    this.lanternScale = this.light.lamps;
+    setEmissiveLevels(this.light);
+    this.rain.setAmount(W.rain, this.reducedMotion);
+    this.foliage.setWind(this.reducedMotion ? 0 : Math.min(2.4, W.wind / 0.35)); // the calm default is the grass as it always was
+    this.rain.setColor(_c.copy(atm.zenith).lerp(_white, 0.6).multiplyScalar(1.4));
+    // Ambient light from the sky: the dome baked into a PMREM. The Blender-baked HDR (art/env/bake_env.py) is a clear
+    // golden hour on the archipelago, so it serves only there and only while the sky is clear.
+    const useHdr = this.cfg.envHdr && this.envHdr && this.envHdrPreset === this.envKey() && lid < 0.3;
+    if (rebake || !this.envFallback) {
+      if (this.envFallback) this.envFallback.dispose();
+      this.envFallback = this.sky.bakeEnvironment(this.renderer);
+    }
+    this.scene.environment = useHdr ? this.envHdr.texture : this.envFallback.texture;
+    // While a change eases in the baked sky is the old one: its level follows the weather, the rebake at the end takes over.
+    this.scene.environmentIntensity = P.envIntensity * (this.envWeather == null || rebake ? 1 : 1 + (W.ambient - this.envAmbient) * 0.5);
+    if (rebake) { this.envWeather = this.weather.name; this.envAmbient = W.ambient; }
+    this.weather.dirty = false;
+  }
+
+  /** 'clear' | 'overcast' | 'rain'. Eases in over a few seconds; at once under reduced motion or with `immediate`. */
+  setWeather(name, { immediate = false } = {}) {
+    if (!WEATHER[name]) return this.weather.name;
+    this.weather.set(name, { immediate: immediate || this.reducedMotion });
+    this.weatherSettled = false;
+    this.applyWeather(this.weather.k >= 1);
+    return name;
+  }
+
+  /**
+   * Which place the camera is in: 'archipelago' | 'town'. Each has its own sun position and air for the same hour
+   * (sky.js LOCATION_LOOKS); without an explicit hour each also has its own default (morning below, golden hour above).
+   */
+  setLocation(name) {
+    if (!LOCATION_LOOKS[name] || name === this.location) return this.location;
+    this.location = name;
+    this.look = lookFor(name, this.timeOverride);
+    this.preset = this.look.name;
+    this.applyAtmosphere(this.look);
+    return name;
+  }
+
+  /**
+   * The one strong local light of a place (the Tournament altar's amber core): a warm point light without a shadow.
+   * @param {THREE.Vector3|number[]|null} position world position, or null to switch it off
+   * @param {number} [level] 0..1 and above (the altar's flare); scaled by the hour (stronger as daylight fades)
+   */
+  setHeroLight(position, level = 1) {
+    if (!position) { this.heroBase = 0; this.heroLight.intensity = 0; return; }
+    if (Array.isArray(position)) this.heroLight.position.fromArray(position); else this.heroLight.position.copy(position);
+    this.heroBase = Math.max(0, Number(level) || 0);
   }
 
   /**
@@ -150,14 +261,22 @@ export class LookDev {
     setFog({ baseY: this.fogBaseY });
     this.clouds.setLevel(floor && floor.mistLevel != null ? floor.mistLevel : this.cloudLevel);
     this.clouds.group.visible = !(floor && floor.mist === false);
+    // The only caller that moves the floor is the town (scenes/town.js via boot-world.js): the look follows the place.
+    this.setLocation(floor ? (floor.location || 'town') : 'archipelago');
+    if (!floor) this.setHeroLight(null);
   }
 
-  /** Time of day: 'golden' (default, matches the baked HDR) | 'morning' | 'noon' | 'dusk'. Returns the active preset. */
+  /** Time of day: 'golden' | 'morning' | 'noon' | 'dusk', held in both locations; null returns to each location's default. Returns the active preset. */
   setPreset(name) {
-    if (!TIME_PRESETS[name] || name === this.preset) return this.preset;
-    this.preset = name;
-    this.applyAtmosphere(TIME_PRESETS[name]);
-    return name;
+    if (name != null && !TIME_PRESETS[name]) return this.preset;
+    const override = name || null;
+    if (override === this.timeOverride) return this.preset;
+    this.timeOverride = override;
+    const look = lookFor(this.location, override);
+    if (look.name === this.preset) { this.look = look; return this.preset; } // the hour on show already
+    this.look = look; this.preset = look.name;
+    this.applyAtmosphere(look);
+    return this.preset;
   }
 
   /** Mood tint from sky.tint(): fog uniforms, the scene fog colour and the fill light follow the sky dome. */
@@ -173,16 +292,16 @@ export class LookDev {
   loadEnvHdr(P) {
     if (!P.envUrl || !this.cfg.envHdr || this.envHdr || this.envLoading) return;
     this.envLoading = true;
-    const forPreset = this.preset;
+    const forPreset = this.envKey();
     const base = import.meta.env?.BASE_URL || '/';
     new RGBELoader().load(base + P.envUrl, (tex) => {
       this.envLoading = false;
       const pmrem = new THREE.PMREMGenerator(this.renderer);
       const rt = pmrem.fromEquirectangular(tex);
       pmrem.dispose(); tex.dispose();
-      if (forPreset !== this.preset) { rt.dispose(); return; }
+      if (forPreset !== this.envKey()) { rt.dispose(); return; }
       this.envHdr = rt; this.envHdrPreset = forPreset;
-      if (this.cfg.envHdr) this.scene.environment = this.envHdr.texture;
+      this.applyWeather(false);
     }, undefined, () => { this.envLoading = false; /* keep the dome PMREM */ });
   }
 
@@ -197,7 +316,7 @@ export class LookDev {
 
   onQualityChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
 
-  setReducedMotion(on) { this.reducedMotion = !!on; this.foliage.setWind(on ? 0 : 1); }
+  setReducedMotion(on) { this.reducedMotion = !!on; this.applyWeather(false); }
 
   /** Governor step on the bottom tier (phones): render at a fraction of the tier's pixel ratio. */
   setPixelScale(scale) {
@@ -217,11 +336,10 @@ export class LookDev {
     const cfg = this.cfg, r = this.renderer;
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatioCap) * this.pixelScale);
     r.setSize(window.innerWidth, window.innerHeight);
-    const map = this.sun.shadow.map;
-    if (map && (map.width !== cfg.shadowMap)) { map.dispose(); this.sun.shadow.map = null; }
-    this.sun.castShadow = cfg.shadowMap > 0; // a 0 shadow map turns the sun shadow off
-    this.sun.shadow.mapSize.set(Math.max(1, cfg.shadowMap), Math.max(1, cfg.shadowMap));
-    this.sun.shadow.radius = cfg.shadowRadius;
+    this.shadows.configure(cfg); // a 0 shadow map turns the sun shadow off
+    this.blobs.setStrength(cfg.blobs || 0);
+    this.rain.setMax(cfg.rain || 0); this.rain.setAmount(this.weather.state.rain, this.reducedMotion);
+    this.heroLight.visible = !!cfg.pointLights;
     this.clouds.setLayers(cfg.cloudLayers);
     this.clouds.setSteps(cfg.cloudSteps);
     this.foliage.rebuild({ blades: cfg.grassBlades, flowers: cfg.flowers, fadeDistance: cfg.grassFadeDistance });
@@ -230,11 +348,7 @@ export class LookDev {
     this.motes.setPixelRatio(r.getPixelRatio());
     applyMaterialQuality(cfg);
     this.post.configure(cfg);
-    if (this.envFallback) {
-      if (cfg.envHdr && this.envHdr) this.scene.environment = this.envHdr.texture;
-      else if (!cfg.envHdr) this.scene.environment = this.envFallback.texture;
-      else this.loadEnvHdr(TIME_PRESETS[this.preset]);
-    }
+    if (this.envFallback) { this.applyWeather(false); this.loadEnvHdr(this.look); }
   }
 
   setSize(w, h) {
@@ -245,25 +359,6 @@ export class LookDev {
 
   /** Tracks an object for the occlusion fade (see fade.js). */
   trackOccluder(spec) { this.fader.track(spec); }
-
-  /**
-   * Fits the sun's shadow frustum around the focus (the player) scaled by the camera distance and
-   * snaps it to shadow texels so the shadows do not swim as the camera moves.
-   */
-  fitShadow(focus, camDist) {
-    const R = THREE.MathUtils.clamp(camDist * 1.15, 16, 64);
-    const sc = this.sun.shadow.camera;
-    if (sc.right !== R) { sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.updateProjectionMatrix(); }
-    const texel = (2 * R) / Math.max(1, this.cfg.shadowMap);
-    // Snap the focus in light space.
-    const lightView = new THREE.Matrix4().lookAt(this.sunDir, new THREE.Vector3(), new THREE.Vector3(0, 1, 0)).invert();
-    const f = focus.clone().applyMatrix4(lightView);
-    f.x = Math.round(f.x / texel) * texel; f.y = Math.round(f.y / texel) * texel;
-    f.applyMatrix4(lightView.clone().invert());
-    this.sun.target.position.copy(f);
-    this.sun.position.copy(f).addScaledVector(this.sunDir, 150);
-    this.sun.target.updateMatrixWorld();
-  }
 
   /** @param {number} dt seconds; @param {THREE.Vector3} focus the player's chest; @param {number} camDist camera distance */
   update(dt, focus, camDist) {
@@ -280,10 +375,15 @@ export class LookDev {
     this.foliage.update(motion, this.camera);
     this.post.update(motion);
     this.motes.update(motion);
+    this.weather.update(dt, motion);
+    if (this.weather.dirty || this.weather.changing) this.applyWeather(false);
+    else if (!this.weatherSettled) { this.weatherSettled = true; if (this.envWeather !== this.weather.name) this.applyWeather(true); }
+    this.rain.update(motion);
     tickFog(motion);
     this.time += motion;
     this.animateLight(this.time);
-    this.fitShadow(focus, camDist);
+    this.shadows.update(focus, camDist);
+    this.blobs.update();
     this.fader.update(dt, focus);
   }
 
@@ -296,11 +396,13 @@ export class LookDev {
       const p = l.userData.phase || 0;
       l.intensity = 14 * (this.lanternScale ?? 1) * (1 + 0.1 * (Math.sin(t * 7.3 + p) * 0.5 + Math.sin(t * 13.1 + p * 1.7) * 0.3 + Math.sin(t * 2.1 + p) * 0.2));
     }
+    // The hero light breathes a little; it grows as daylight fades so the amber is always the strongest local light.
+    this.heroLight.intensity = this.heroBase * (5 + 15 * Math.min(1.5, this.light.lamps)) * (1 + 0.05 * Math.sin(t * 1.7));
     setNacreTime(t);
   }
 
   render() { this.post.render(this.sunDir); }
 
   /** Numbers for the HUD / measurement: tier, profile, pixel ratio (after the governor's scale), whether the post stack is active. */
-  stats() { return { tier: this.tier, profile: this.profile, preset: this.preset, pixelRatio: this.renderer.getPixelRatio(), pixelScale: this.pixelScale, post: this.post.active, reducedMotion: this.reducedMotion }; }
+  stats() { return { tier: this.tier, profile: this.profile, preset: this.preset, location: this.location, weather: this.weather.name, shadows: this.shadows.stats(), pixelRatio: this.renderer.getPixelRatio(), pixelScale: this.pixelScale, post: this.post.active, reducedMotion: this.reducedMotion }; }
 }

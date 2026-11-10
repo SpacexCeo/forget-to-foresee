@@ -126,6 +126,9 @@ export function applyMaterialQuality(cfg) {
  */
 export function slotForMaterial(assetName, materialName) {
   const name = String(materialName || '');
+  // The town's kit keeps its authored materials: its window glass is a dark reflective pane, not a transmissive one
+  // (transmission renders the scene a second time), and its lamps and lit windows follow the hour (setEmissiveLevels).
+  if (/^M_Town_/.test(name)) return null;
   const isShell = /^shell_[1-4](_r2|_m)?$/.test(assetName);
   if (/stone|rock|floor|atlas|_body|wood|cloth|rope|soil|grass|foliage|bark|leaf/i.test(name)) return null;
   if (/nacre|pearl/i.test(name)) return 'nacre';
@@ -145,6 +148,7 @@ export function slotForMaterial(assetName, materialName) {
  */
 export function upgradeAssetMaterials(assetName, root) {
   const done = new Map();
+  registerLookMaterials(root);
   const upgrade = (mat) => {
     if (!mat || done.has(mat)) return done.get(mat) || mat;
     const name = mat.name || '';
@@ -194,4 +198,56 @@ export function applyTextureQuality(root, anisotropy = textureAnisotropy) {
       }
     }
   });
+}
+
+
+// ---- Materials that follow the hour, the weather and the wind (docs/atmosphere.md) ----
+/** Material name -> role. Lit windows and lamp panes follow LookDev.light; cloth and foliage move with the wind. */
+export const LOOK_ROLES = Object.freeze([
+  [/^M_Town_GlassLit/, 'window'],
+  [/^M_Town_Lamp/, 'lamp'],
+  [/^M_Town_Cloth/, 'cloth'],
+  [/^M_Town_Foliage/, 'foliage'],
+]);
+export function lookRole(materialName) {
+  for (const [re, role] of LOOK_ROLES) if (re.test(materialName || '')) return role;
+  return null;
+}
+
+const emissive = { window: new Set(), lamp: new Set() };
+const levels = { windows: 1, lamps: 1 };
+/** Authored lamp panes are far above the bloom threshold; windows sit just under it by day and cross it at dusk. */
+const EMISSIVE_GAIN = { window: 1.0, lamp: 0.9 };
+
+function applyEmissive(mat, role) {
+  const base = mat.userData.ftfEmissiveBase ?? (mat.userData.ftfEmissiveBase = mat.emissiveIntensity || 1);
+  mat.emissiveIntensity = base * EMISSIVE_GAIN[role] * (role === 'window' ? levels.windows : Math.min(1.6, 0.35 + levels.lamps));
+}
+
+/**
+ * Finds the materials of a loaded model that play a look role and wires them: emissive level by the hour, wind on
+ * cloth and foliage. Called for every streamed template (and safe to call again: each material is wired once).
+ */
+export function registerLookMaterials(root) {
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!mat || mat.userData.ftfRole !== undefined) continue;
+      const role = lookRole(mat.name);
+      mat.userData.ftfRole = role;
+      if (role === 'window' || role === 'lamp') { emissive[role].add(mat); applyEmissive(mat, role); }
+      else if (role === 'cloth' || role === 'foliage') windHook(mat, { kind: role, weight: o.geometry && o.geometry.getAttribute('_wind') ? 'attribute' : 'constant' });
+    }
+  });
+}
+
+let windHook = () => {};
+/** render/weather.js registers its withWind here (materials.js stays free of the weather module's imports). */
+export function setWindHook(fn) { windHook = fn; }
+
+/** @param {{windows: number, lamps: number}} l what lit windows and lamps give now (LookDev.light) */
+export function setEmissiveLevels(l) {
+  if (levels.windows === l.windows && levels.lamps === l.lamps) return;
+  levels.windows = l.windows; levels.lamps = l.lamps;
+  for (const role of ['window', 'lamp']) for (const m of emissive[role]) applyEmissive(m, role);
 }

@@ -28,7 +28,7 @@ import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { townPlan } from './ui/loading.js';
-import { createTownScene } from './scenes/town.js';
+import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
 import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_CAMERA_TILT, TOWN_CAMERA_MIN_PITCH, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
 
@@ -95,6 +95,7 @@ const lookdev = new LookDev({
 });
 // Streamed models warm up on the GPU before they replace their greybox (render/warmup.js, docs/smoothness.md):
 // textures a few per frame, shader programs compiled in parallel. ?warm=off restores the old one-frame swap (QA).
+lookdev.blobs.track(avatar, { radius: 0.46, visible: () => player.grounded !== false }); // a soft contact shadow under Iris (render/blobs.js)
 const warmup = new GpuWarmup({ renderer, camera, scene, target: () => lookdev.post.target, frameBytes: (mobileDevice ? 8 : 24) * 1024 * 1024 });
 if (params.get('warm') !== 'off') { streamer.warm = (template) => warmup.warm(template); setActiveWarmup(warmup); }
 // The island's own programs (sky, clouds, grass, greyboxes) compile in parallel too, while the loading screen or
@@ -360,7 +361,7 @@ function groundInTown() {
   if (y != null) player.teleport([player.pos[0], y, player.pos[2]], player.heading);
   townGrounded = true;
 }
-const townFrame = { playerPos: player.pos, reducedMotion: false }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
+const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1 }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
 function frame() {
@@ -415,7 +416,11 @@ function frame() {
   }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
-  if (town && town.active) { townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; town.update(clock.elapsedTime, dt, townFrame); }
+  if (town && town.active) {
+    townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
+    town.update(clock.elapsedTime, dt, townFrame);
+    lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
+  }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
   warmup.update();

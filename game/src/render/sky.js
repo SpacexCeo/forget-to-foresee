@@ -52,6 +52,54 @@ export const TIME_PRESETS = Object.freeze({
 });
 export const DEFAULT_PRESET = 'golden';
 
+/**
+ * A look per location (docs/atmosphere.md). The archipelago floats in open sky and keeps the presets above. The
+ * town climbs a hill toward -Z with a cliff behind it, so a sun in the north (the archipelago's golden hour) leaves
+ * every street in the hill's shadow: the town turns the sun to its open south-east side, starts in the morning by
+ * default, and has its own air (valley haze below the hill instead of mist pooling on a cloud sea, a longer view).
+ *   lamps / windows   how much street lamps and lit windows give at that hour (1 = as authored, at dusk they take over)
+ *   bounce            warm light thrown back by sunlit walls and paving into the shade (hemisphere ground term)
+ */
+export const LOCATION_LOOKS = Object.freeze({
+  archipelago: Object.freeze({
+    default: 'golden', altitude: 1800,
+    presets: Object.freeze({
+      // Less aerosol and a lower exposure than the 08.11 pass: the haze keeps the far islands soft, the sky keeps its blue.
+      golden: { mie: 1.5, exposure: -0.1, cloudCover: 0.46, lamps: 0.8, windows: 1, bounce: 0.3, fog: { density: 0.035, falloff: 0.1, near: 60, far: 760, sunPower: 8, aerial: 0.45 } },
+      morning: { lamps: 0.3, windows: 0.5, bounce: 0.25 },
+      noon: { lamps: 0.15, windows: 0.3, bounce: 0.3 },
+      dusk: { lamps: 1.3, windows: 1.8, bounce: 0.15 },
+    }),
+  }),
+  town: Object.freeze({
+    default: 'morning', altitude: 420,
+    presets: Object.freeze({
+      morning: { elevation: 34, azimuth: -142, sunIntensity: 5.2, skyMean: 0.34, mie: 1.5, exposure: 0.0, envIntensity: 0.42, cloudCover: 0.4, lamps: 0.2, windows: 0.45, bounce: 0.5,
+        fog: { density: 0.02, falloff: 0.05, near: 70, far: 900, sunPower: 6, aerial: 0.45 } },
+      noon: { elevation: 58, azimuth: -165, envIntensity: 0.46, lamps: 0.1, windows: 0.3, bounce: 0.55,
+        fog: { density: 0.014, falloff: 0.05, near: 90, far: 1000, sunPower: 5, aerial: 0.35 } },
+      golden: { elevation: 15, azimuth: -118, sunIntensity: 5.0, envUrl: null, envIntensity: 0.34, lamps: 0.7, windows: 1.1, bounce: 0.45,
+        fog: { density: 0.03, falloff: 0.05, near: 50, far: 700, sunPower: 7, aerial: 0.5 } },
+      dusk: { elevation: 3.5, azimuth: -112, envIntensity: 0.3, lamps: 1.5, windows: 2.2, bounce: 0.2,
+        fog: { density: 0.04, falloff: 0.05, near: 40, far: 600, sunPower: 9, aerial: 0.5 } },
+    }),
+  }),
+});
+export const LOCATIONS = Object.freeze(Object.keys(LOCATION_LOOKS));
+
+/**
+ * The preset a location shows at a time of day: the shared preset with the location's overrides on top.
+ * Unknown input falls back to the archipelago and to the location's own default hour.
+ * @param {string} location 'archipelago' | 'town' @param {string} [time] a TIME_PRESETS key
+ */
+export function lookFor(location, time) {
+  const loc = LOCATION_LOOKS[location] ? location : 'archipelago';
+  const L = LOCATION_LOOKS[loc];
+  const name = TIME_PRESETS[time] ? time : L.default;
+  const base = TIME_PRESETS[name], over = L.presets[name] || {};
+  return Object.freeze({ lamps: 1, windows: 1, bounce: 0.25, ...base, ...over, fog: Object.freeze({ ...base.fog, ...(over.fog || {}) }), name, location: loc, altitude: L.altitude });
+}
+
 /** Back-compat exports (golden hour). */
 export const SUN_DIRECTION = Object.freeze(sunDirection(TIME_PRESETS.golden.elevation, TIME_PRESETS.golden.azimuth));
 export const SUN_COLOR = 0xffd2a0;
@@ -172,7 +220,8 @@ const DOME_VS = /* glsl */`
 const DOME_FS = /* glsl */`
   uniform sampler2D tLut, tNoise;
   uniform vec3 uSunDir, uSunDisc, uCloudSun, uCloudAmb, uHorizon;
-  uniform float uScale, uTime, uCover, uDiscOn, uCosDisc;
+  uniform float uScale, uTime, uCover, uDiscOn, uCosDisc, uOvercast;
+  uniform vec3 uLid;
   varying vec3 vDir;
   ${GLSL_COMMON}
   float hg(float mu, float g) { float g2 = g * g; return (1.0 - g2) / (4.0 * PI * pow(1.0 + g2 - 2.0 * g * mu, 1.5)); }
@@ -181,10 +230,10 @@ const DOME_FS = /* glsl */`
     vec3 sky = texture2D(tLut, ftfLutUv(d)).rgb * uScale;
     float mu = dot(d, uSunDir);
     // Sun disc with limb darkening; off while baking the environment (the light is the sun).
-    if (uDiscOn > 0.5) {
+    if (uDiscOn > 0.5 && uOvercast < 0.98) {
       float k = smoothstep(uCosDisc, mix(uCosDisc, 1.0, 0.25), mu);
       float r = clamp((1.0 - mu) / (1.0 - uCosDisc), 0.0, 1.0);
-      sky += uSunDisc * k * (1.0 - 0.6 * (1.0 - sqrt(1.0 - r * r)));
+      sky += uSunDisc * k * (1.0 - 0.6 * (1.0 - sqrt(1.0 - r * r))) * (1.0 - uOvercast) * (1.0 - uOvercast);
     }
     // Two cloud layers on planes above the observer: high altocumulus (2.5 km, fine billows carved by
     // cellular puffs) and a lower band of heavier cumulus (1.1 km) that only shows near the horizon,
@@ -208,6 +257,14 @@ const DOME_FS = /* glsl */`
         float fade = layer == 0 ? smoothstep(0.015, 0.14, d.y) : smoothstep(0.012, 0.06, d.y) * (1.0 - smoothstep(0.16, 0.3, d.y));
         sky = mix(sky, lit, dens * fade * 0.92);
       }
+    }
+    // Overcast: a grey lid with slow, soft structure; a little brighter toward the hidden sun.
+    if (uOvercast > 0.0) {
+      vec2 lp = d.xz / max(d.y + 0.25, 0.25) * 0.5 + vec2(uTime * 0.0011, uTime * 0.0004);
+      vec4 ln = texture2D(tNoise, lp);
+      float mott = ln.r * 0.6 + ln.b * 0.4;
+      vec3 lid = uLid * (0.78 + 0.4 * mott) * (1.0 + 0.35 * pow(max(mu, 0.0), 3.0));
+      sky = mix(sky, lid, uOvercast * smoothstep(-0.04, 0.12, d.y + 0.02));
     }
     // Below the horizon the cloud sea covers the dome; keep it the horizon haze so any gap matches the fog.
     sky = mix(uHorizon, sky, smoothstep(-0.06, 0.005, d.y));
@@ -235,6 +292,7 @@ export class SkyDome {
         uSunDir: { value: SUN_DIRECTION.clone() }, uSunDisc: { value: new THREE.Color() }, uCloudSun: { value: new THREE.Color() },
         uCloudAmb: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color(HAZE_COLOR) },
         uScale: { value: 1 }, uTime: { value: 0 }, uCover: { value: 0.45 }, uDiscOn: { value: 1 }, uCosDisc: { value: Math.cos(0.75 * DEG) },
+        uOvercast: { value: 0 }, uLid: { value: new THREE.Color(0.4, 0.42, 0.45) },
       },
       vertexShader: DOME_VS, fragmentShader: DOME_FS,
       side: THREE.BackSide, depthWrite: false, depthTest: true, fog: false,
@@ -274,6 +332,22 @@ export class SkyDome {
   setTime(t) { this.material.uniforms.uTime.value = t; }
 
   /**
+   * Weather on the dome (render/weather.js): cloud cover, the grey lid of an overcast sky, and the haze colour the
+   * horizon blends into. The lid's brightness comes from the clear sky's own mean, so it follows the hour.
+   * @param {{cover: number, overcast: number, fogColor?: THREE.Color}} w
+   */
+  setWeather({ cover, overcast, fogColor }) {
+    const m = this.material.uniforms;
+    m.uCover.value = cover; m.uOvercast.value = overcast;
+    if (this.derived) {
+      const z = this.derived.zenith, h = this.derived.horizonSun;
+      const l = (z.r + z.g + z.b) / 3 * 0.6 + (h.r + h.g + h.b) / 3 * 0.4;
+      m.uLid.value.setRGB(l * 1.02, l * 1.05, l * 1.1).multiplyScalar(1.25);
+      if (fogColor && !(this.tintState && this.tintState.amount > 0)) m.uHorizon.value.copy(fogColor);
+    }
+  }
+
+  /**
    * Re-renders the sky-view LUT for a preset and derives the sun colour, the sky normalisation and
    * the fog colours from it. Returns `derived`.
    * @param {THREE.WebGLRenderer} renderer
@@ -282,7 +356,7 @@ export class SkyDome {
   setAtmosphere(renderer, preset) {
     const sun = sunDirection(preset.elevation, preset.azimuth);
     const u = this.lutMat.uniforms;
-    u.uSunDir.value.copy(sun); u.uMie.value = preset.mie; u.uOzone.value = preset.ozone;
+    u.uSunDir.value.copy(sun); u.uMie.value = preset.mie; u.uOzone.value = preset.ozone; u.uAlt.value = preset.altitude ?? OBSERVER_ALTITUDE;
     const prevTarget = renderer.getRenderTarget();
     renderer.setRenderTarget(this.lut); this.lutQuad.render(renderer);
     // Read back (once per preset) to normalise and to sample horizon colours.
@@ -313,7 +387,7 @@ export class SkyDome {
     // Fog: the cool anti-sun horizon is the base; the gold toward the sun is added by the phase lobe.
     const base = awaySun.map((v, k) => 0.45 * v + 0.4 * side[k] + 0.15 * towardSun[k]);
     const sunTint = towardSun.map((v, k) => Math.max(0, v - base[k]));
-    const T = sunTransmittance(preset.elevation, preset);
+    const T = sunTransmittance(preset.elevation, { mie: preset.mie, ozone: preset.ozone, altitude: preset.altitude ?? OBSERVER_ALTITUDE });
     const tMax = Math.max(...T, 1e-6);
     const sunColor = new THREE.Color(T[0] / tMax, T[1] / tMax, T[2] / tMax);
     const sunRadiance = sunColor.clone().multiplyScalar(preset.sunIntensity / Math.PI);
