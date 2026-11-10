@@ -41,6 +41,12 @@ The last commit on which `npm test` and `npm run build` are known green is `main
 - Client: shop entry and exit (see the plan below), catalog entries for the interiors, locale texts, tests, e2e.
 - `README.md` real/mock rows and `docs/town.md` for the town start, altar registration, shops and townsfolk.
 
+- Lead message (10.11 23:18 UTC, not acted on): read board entry `T-001 VIDEO01` in `/root/board/board.md` (GPT's
+  notes on the owner's street video). (1) Wind scope: only cloth free edges, foliage tips and light smoke move;
+  stone, timber, roofs, lamp posts and walls stay rigid; signs and lanterns swing rigidly. (2) Prove it with a fixed
+  5-10 s camera on one facade with a roof ridge, a lamp and a banner, wind off against wind on, saved under
+  `docs/atmosphere/`. (3) Its lighting and Iris-framing notes, where they are quick client fixes.
+
 ## Plan that was being followed
 
 **Lighting contract for interiors.** The whole lighting of a room is baked into vertex colour, so it looks the same
