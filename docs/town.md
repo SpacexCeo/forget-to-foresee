@@ -88,16 +88,55 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 - `tests/client/assets-budget.test.mjs` checks the town folder too. `TOWN_BLOCKOUT_OK` (now `false`: the final files are in) would tolerate an
   uncompressed blockout round.
 
+## Ambient life
+
+`game/src/scenes/town-life.js`, created by the town scene, plus the shared wind of `render/weather.js`:
+
+- **Cloth and plants** (`M_Town_Cloth`, `M_Town_Foliage`) move with the wind. The town files carry no `_WIND`
+  attribute, so the client computes the weights when a model arrives (`windWeights` in `render/weather.js`), and
+  the rule is that unknown geometry stays still. Connected parts whose boxes touch are one object (a banner and
+  its tail, an awning and its stripes). A tall hanging sheet (a banner) is pinned along its upper 55 %, where the
+  ring emblem of another material sits, and swings at the hem; a stretched sheet (awning, stall roof) breathes a
+  few centimetres at its lower edge; any other cloth (rugs, candles, books) does not move. A tree crown leans as
+  one body rooted at its bottom; window boxes and planters shiver. A file that carries `_WIND` keeps its authored
+  weights. The first version (11.11, weights per connected part by height alone) let banners swing away from
+  their emblems, awning stripes slide apart and small props bend: owner bug report, fixed the same day.
+  Hanging shop signs and lamp heads do not swing: they are merged into the block meshes, a rigid swing needs them
+  as separate nodes from the art build.
+- **Chimney smoke** at every `socket_smoke_*`: one `THREE.Points` draw call for the town, puffs rise 7 m and lean
+  downwind with the gusts; 14 puffs on up to 24 chimneys on desktop, 7 on 8 on phones and the low tier.
+- **Birds**: 13 (7 on phones) in two loose flocks circling over the roofs, one instanced draw call.
+- **Sky islands** (`town_sky`) drift slowly (a 2 m bob, a 5 m sway, an 80 s period).
+- **Altar**: core pulse, the sixteen glyphs lighting in sequence as Iris approaches, flare on registration (above).
+
+All of it runs in vertex shaders from one time value; under reduced motion that value stands still (smoke hangs
+as still plumes, birds hold their place) and the wind strength is zero.
+
+## Loading and the altar transition
+
+Iris starts `SPAWN_ADVANCE` (4.5 m) up the street from the plan's gate point: right in front of the gate arch the
+arch pushed the follow camera into her back.
+
+The loading screen and the altar's cover keep their looks (owner) and share one pair of elements from
+`game/src/ui/ink-bar.js`: a **hand-drawn progress bar** and a **log of what is loading**. The bar is a sprite
+atlas rendered in Blender (`art/ui/loading_bar/build_bar.py` → `game/public/assets/ui/loading_bar.webp`, 337 KB):
+25 rows of progress by 3 columns of the same drawing redrawn with another hand tremor. The row follows real
+progress (the loading screen's own value; on the cover the bytes and warm-up of the archipelago's first view), the
+column cycles every 190 ms for the line boil and holds still under reduced motion. On the dark loading screen the
+bar sits on a parchment plaque, because its ink is the game's warm brown. The log shows the last three lines
+(`loading.log.*` keys in all five locales; English until the locale chunk is in), read from the streamer: the
+asset in flight with the highest priority, "Warming shaders…" while something is warming. `ink-bar.js` lives in
+the `boot` chunk (`game/build/chunks.js`): in the `ui` chunk it closed a chunk cycle and the build did not boot.
+`tools/gpu-server/flow-cap.cjs` records the whole start as a frame sequence (loading, first town frames, cover).
+
 ## Not in this version
 
 - **Shops are not enterable.** `TOWN_DATA.shops` and `TOWN_DATA.interiors` are data only; the interior files
   (`town_shop_*.glb`) ship in the folder but the client neither lists them in the catalog nor loads them, and
   there is no prompt at the shop doors.
 - **Townsfolk** (`TOWN_DATA.npc`) are another lane; none are placed.
-- **Ambient motion** beyond the altar (core pulse, glyph sequence, flare) and the lamp flicker is not built: no
-  cloth or tree sway, chimney smoke (`socket_smoke_*`), birds, drifting sky islands or water shimmer.
-- **Grading** (fog colour, exposure, tint, weather) belongs to the look-dev lane; the town only moves the fog
-  base and the mist level. Footsteps and other audio are silent in the town.
+- **Well water** (`M_Town_Water`) does not shimmer yet. The rest of the ambient motion is in: see "Ambient life".
+- Footsteps and other audio are silent in the town. Light, fog, grade and weather: `docs/atmosphere.md`.
 - No way back from the archipelago to the town.
 
 ## QA hooks

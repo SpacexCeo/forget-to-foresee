@@ -49,3 +49,52 @@ Archipelago:
 | Fog and grade | fog settings per location (valley haze under the town, lighter distance fog, sky-coloured aerial perspective on the far islands), the grade moved into the tone mapping so every tier and phone shares it, richer colour |
 | Weather and wind | clear / overcast / light rain, one shared wind uniform for banners, trees and smoke, `?weather=` and `?tod=` switches |
 | Tiers and numbers | frame time per tier on desktop and the phone layout |
+
+## 3. Second pass, 11.11 (branch `claude/lighting-v2`)
+
+The first pass (shadow cascades, per-location looks, fog, grade in the tone mapping, weather, wind uniform) was
+merged into `main` half-verified. This pass re-captured everything on real WebGL and fixed what the frames showed.
+Sheets: `docs/atmosphere/v2/` (`before-*.jpg`, `after-*.jpg`, `weather-town.jpg`).
+
+| Finding in the "before" frames | Change |
+|---|---|
+| Town at the `morning` preset: the sun stood 38° off the street axis at 34°, so the east row of houses shadowed half of the main street and the stairs; the light was near white and the shade deep blue | New hour `afternoon`, the town's default: sun at 43° in the south-south-west, 20° off the street axis (house shadows fall up the street, both sides are lit), pulled toward amber (`sunWarm` 0.7), a dimmer sky (`skyMean` 0.30), bounce 1.0 so shade is filled warm from the paving, exposure +0.15 |
+| Archipelago golden hour read as white haze: grey stone, white cloud sea, faint shadows | Sun 6.2 and `sunWarm` 0.8 against a dimmer sky (`skyMean` 0.22), less aerosol (`mie` 1.3), thinner fog (0.026), bounce 0.55: gold on stone and cloud tops, cool shade, clear cast shadows |
+| Altar core clipped to cream and lit nothing in daylight | Core emission forced to deep amber (`#ff7a16`, files with an emissive map keep theirs) at 0.9 asleep / 2.4 awake / flare 9; the hero point light is 16 + 14 × lamps (was 5 + 15), amber `#ff8a2a`: the dais is visibly lit by it at noon and it dominates at dusk |
+| `sunWarm` | New optional preset key (`sky.js`): lerps the physically derived sun colour toward amber; the presets that do not set it are unchanged |
+
+Checked and left as they were: the two shadow cascades are stable while the camera moves (texel snapping); the
+town's camera far plane is 900 m; the sky islands (330–600 m) stay visible and hazed; `?weather=overcast|rain`
+and `?tod=dusk` work in the town (lamps and windows take over, wet paving reflects the altar); the grade is in the
+tone mapping, so the low and phone tiers show the same colours as the post tiers.
+
+Tuning without a rebuild: `atmo-cap.cjs --look '{"town":{"elevation":40,"fog":{"density":0.01}},"isle":{…}}'`
+merges overrides into the running look.
+
+### Frame time per tier (11.11, RTX 5090 through ANGLE/Vulkan, headless, frame-rate limit off)
+
+These are from the rented server, not from the minimum machine (RTX 2060 Super) or a real phone: they show the
+relative cost of the tiers and that nothing regressed, not the frame rate a player gets.
+
+| Layout | Tier | Camera | Mean ms | p95 ms | Drawing buffer |
+|---|---|---|---|---|---|
+| desktop | ultra | town street | 3.06 | 3.3 | 1920×1080 @ 1 |
+| desktop | ultra | town altar | 3.17 | 3.4 | 1920×1080 @ 1 |
+| desktop | high | town street | 3.07 | 3.3 | 1920×1080 @ 1 |
+| desktop | high | town altar | 3 | 3.3 | 1920×1080 @ 1 |
+| desktop | low | town street | 1.82 | 2.7 | 1920×1080 @ 1 |
+| desktop | low | town altar | 1.46 | 1.7 | 1920×1080 @ 1 |
+| desktop | ultra | isle plaza | 10.56 | 20.5 | 1920×1080 @ 1 |
+| desktop | high | isle plaza | 8.57 | 17 | 1920×1080 @ 1 |
+| desktop | low | isle plaza | 3.44 | 7.5 | 1920×1080 @ 1 |
+| phone | ultra | town street | 1.94 | 5.2 | 585×1266 @ 1.5 |
+| phone | ultra | town altar | 4.65 | 7.7 | 585×1266 @ 1.5 |
+| phone | high | town street | 3.99 | 10.9 | 585×1266 @ 1.5 |
+| phone | high | town altar | 3.43 | 8.5 | 585×1266 @ 1.5 |
+| phone | low | town street | 3.01 | 8.7 | 390×844 @ 1 |
+| phone | low | town altar | 7.47 | 24 | 390×844 @ 1 |
+| phone | ultra | isle plaza | 8.39 | 20.3 | 585×1266 @ 1.5 |
+| phone | high | isle plaza | 10.73 | 33.5 | 585×1266 @ 1.5 |
+| phone | low | isle plaza | 7.19 | 15.2 | 390×844 @ 1 |
+
+The phone layout is a 390×844 viewport at device pixel ratio 3 in the same headless browser (phone knob set, touch UI); its p95 is noisy there.

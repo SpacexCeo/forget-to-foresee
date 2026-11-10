@@ -16,19 +16,21 @@ import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
 import { PropInstance } from '../render/assets.js';
 import { createTownsfolk } from '../play/townsfolk.js';
+import { createTownLife } from './town-life.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
 export const TOWN_LAMPS = 6;
 /** Altar core emissive intensity: asleep, awake (Iris inside the prompt radius) and the registration flare on top. */
-// Kept low on purpose: above about 1.5 the amber clips to cream under the tone mapping (the file's own strength, 3.0, is overwritten).
-export const CORE_GLOW = Object.freeze({ idle: 0.3, awake: 1.3, flare: 7, pulse: 0.14 });
+// The file's own strength is overwritten; the colour is forced to a deep amber (CORE_AMBER) so these levels stay amber, not cream.
+export const CORE_GLOW = Object.freeze({ idle: 0.9, awake: 2.4, flare: 9, pulse: 0.14 });
 const CORE_MATERIAL = /^M_Altar_Core/;
+const CORE_AMBER = 0xff7a16;
 const GLYPH_MATERIAL = /^M_Altar_Glyph/, EYE_MATERIAL = /^M_Altar_Eye/;
 const GLYPH_NODE = /altar_glyph_(\d+)/;
 /** Emissive hierarchy of the altar, relative to the core: glyph inlays (fully lit) and the waystone eyes. */
 export const ALTAR_RATIO = Object.freeze({ glyph: 0.35, glyphUnlit: 0.04, eye: 0.1 });
-const LAMP_SOCKET = /^socket_lamp_/;
+const LAMP_SOCKET = /^socket_lamp_/, SMOKE_SOCKET = /^socket_smoke_/;
 const LAMP_COLOR = 0xffb268;
 
 const _v = new THREE.Vector3();
@@ -74,12 +76,13 @@ function buildFlatTown(group, ground) {
  * @param {{scene: THREE.Scene, streamer: import('../render/assets.js').AssetStreamer, flat?: boolean, pointLights?: boolean}} o
  *   flat: no models, a flat dev ground (?town=flat); pointLights: the quality tier allows lamp lights
  */
-export function createTownScene({ scene, streamer, flat = false, pointLights = true }) {
+export function createTownScene({ scene, streamer, flat = false, pointLights = true, detail = 1 }) {
   const world = new CollisionWorld({ cellSize: 2 });
   const skyWorld = new CollisionWorld({ cellSize: 8 }); // the sky impostor never collides, whatever its file holds
   const group = new THREE.Group();
   group.name = 'town';
   scene.add(group);
+  const life = createTownLife({ parent: group, origin: TOWN_ORIGIN, center: TOWN_ALTAR.stand, detail });
 
   const library = streamer.library;
   const state = {
@@ -155,6 +158,11 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
       if (LAMP_SOCKET.test(name)) pts.push(node.getWorldPosition(_v).toArray());
     }
     if (pts.length) lampPoints.set(inst.id, pts); else lampPoints.delete(inst.id);
+    // Ambient life (scenes/town-life.js): chimney smoke at the smoke sockets, the sky islands drifting.
+    const smoke = [];
+    if (real) for (const [name, node] of inst.sockets) if (SMOKE_SOCKET.test(name)) smoke.push(node.getWorldPosition(_v).toArray());
+    life.setChimneys(inst.id, smoke);
+    if (def.visualOnly) life.setSky(real || null);
     placeLamps();
     if (def.name !== TOWN_ALTAR_ASSET) return;
     coreMaterials.length = 0; eyeMaterials.length = 0; glyphs.length = 0;
@@ -180,7 +188,9 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
       }
     });
     glyphs.sort((a, b) => a.index - b.index);
-    for (const m of coreMaterials) if (m.emissive && !m.emissive.getHex() && !m.emissiveMap) m.emissive.setHex(0xffa53a); // a core without any emission set still wakes
+    // The core glows deep amber: a pale authored emission clipped to cream under the tone mapping, a saturated one
+    // stays amber at the same brightness (a core with an emissive map keeps its own colours).
+    for (const m of coreMaterials) if (m.emissive && !m.emissiveMap) m.emissive.setHex(CORE_AMBER);
   }
 
   const pieces = [];
@@ -237,8 +247,9 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
    * @param {number} t seconds (frozen under reduced motion by the caller is fine: the pulse is skipped anyway)
    * @param {number} dt @param {{playerPos: number[], reducedMotion?: boolean}} o
    */
-  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1, camera = null }) {
+  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1, light = null, camera = null }) {
     if (!state.active) return;
+    life.update(reducedMotion ? 0 : dt, light);
     if (townsfolk) { folkFrame.playerPos = playerPos; folkFrame.reducedMotion = reducedMotion; folkFrame.camera = camera; folkFrame.shown = shown(); townsfolk.update(dt, folkFrame); }
     state.time = t;
     checkReady();
@@ -266,6 +277,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     state.active = !!on;
     if (townsfolk) townsfolk.setActive(state.active);
     for (const l of lamps) l.visible = state.active && !!pointLights;
+    life.setActive(state.active);
     if (flatGroup) flatGroup.visible = state.active;
   }
 
@@ -291,6 +303,6 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
     get shown() { return shown(); }, get flat() { return state.flat; }, get active() { return state.active; },
     get altar() { return state; },
-    update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
+    life, update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
   };
 }

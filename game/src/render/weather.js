@@ -140,7 +140,92 @@ export function withWind(material, { kind = 'cloth', amplitude, weight = 'attrib
   return material;
 }
 
-setWindHook(withWind);
+/** How computed sway weights are shaped (windWeights). Lengths in metres (model units). */
+export const WIND_SHAPE = Object.freeze({
+  touch: 0.03,        // parts whose boxes come this close are one object (a banner and its tail, an awning and its stripes)
+  hangHeight: 1.2,    // a cloth at least this tall and taller than it is wide hangs free (a banner)
+  hangFree: 0.45,     // only its lower part swings: the upper part carries an emblem made of another material
+  awning: 0.3,        // a stretched sheet (awning, stall roof) only breathes a little at its lower edge
+  crown: 1.5,         // foliage at least this tall is a tree crown or a big bush: it leans as one body
+  smallFoliage: 0.4,  // window boxes, planters: a shiver
+});
+
+/**
+ * Sway weights for a mesh whose file has no `_WIND` attribute (the town kit). Unknown geometry stays still: a part
+ * moves only when its shape says what it is.
+ *   1. The geometry is split into connected parts, and parts whose bounding boxes touch are joined into objects, so
+ *      everything that belongs to one banner or one awning gets one answer and cannot slide apart.
+ *   2. Cloth: a tall hanging sheet (a banner) is pinned along its upper part and free at the hem; a wide stretched
+ *      sheet (an awning) breathes slightly at its lower edge; anything else made of cloth (rugs, candles, books) is 0.
+ *   3. Foliage is rooted at the bottom of its object: a crown leans, small plants shiver.
+ * Pure maths on the position attribute; runs once per geometry.
+ * @param {{count:number, getX:(i:number)=>number, getY:(i:number)=>number, getZ:(i:number)=>number}} position
+ * @param {{count:number, getX:(i:number)=>number}|null} index @param {'cloth'|'foliage'} kind
+ * @returns {Float32Array} one weight per vertex, 0 = still
+ */
+export function windWeights(position, index, kind = 'cloth') {
+  const n = position.count, parent = new Int32Array(n), S = WIND_SHAPE;
+  const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  // Vertices at the same place are one point of the surface (seams split them for normals and UVs).
+  const seen = new Map();
+  for (let i = 0; i < n; i++) {
+    const key = Math.round(position.getX(i) * 2000) + '_' + Math.round(position.getY(i) * 2000) + '_' + Math.round(position.getZ(i) * 2000);
+    const j = seen.get(key);
+    if (j === undefined) { seen.set(key, i); parent[i] = i; } else parent[i] = j;
+  }
+  const tris = index ? index.count : n;
+  for (let t = 0; t + 2 < tris; t += 3) {
+    const a = find(index ? index.getX(t) : t), b = find(index ? index.getX(t + 1) : t + 1), c = find(index ? index.getX(t + 2) : t + 2);
+    if (b !== a) parent[b] = a;
+    const c2 = find(c); if (c2 !== a) parent[c2] = a;
+  }
+  // Bounding box per part, then parts that touch become one object.
+  const boxes = new Map();
+  for (let i = 0; i < n; i++) {
+    const r = find(i), x = position.getX(i), y = position.getY(i), z = position.getZ(i);
+    let B = boxes.get(r);
+    if (!B) boxes.set(r, B = [x, y, z, x, y, z, r]);
+    else { if (x < B[0]) B[0] = x; if (y < B[1]) B[1] = y; if (z < B[2]) B[2] = z; if (x > B[3]) B[3] = x; if (y > B[4]) B[4] = y; if (z > B[5]) B[5] = z; }
+  }
+  const list = [...boxes.values()].sort((p, q) => p[0] - q[0]);
+  for (let merged = true, pass = 0; merged && pass < 8; pass++) {
+    merged = false;
+    for (let i = 0; i < list.length; i++) {
+      const A = list[i];
+      for (let j = i + 1; j < list.length && list[j][0] <= A[3] + S.touch; j++) {
+        const B = list[j], ra = find(A[6]), rb = find(B[6]);
+        if (ra === rb || B[1] > A[4] + S.touch || A[1] > B[4] + S.touch || B[2] > A[5] + S.touch || A[2] > B[5] + S.touch) continue;
+        parent[rb] = ra; merged = true;
+      }
+    }
+  }
+  const obj = new Map();
+  for (const B of list) {
+    const r = find(B[6]); const O = obj.get(r);
+    if (!O) obj.set(r, B.slice(0, 6));
+    else { for (let k = 0; k < 3; k++) { if (B[k] < O[k]) O[k] = B[k]; if (B[k + 3] > O[k + 3]) O[k + 3] = B[k + 3]; } }
+  }
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const O = obj.get(find(i)), h = O[4] - O[1], wide = Math.max(O[3] - O[0], O[5] - O[2]);
+    if (h < 1e-4) continue;
+    const k = (position.getY(i) - O[1]) / h; // 0 at the bottom of the object, 1 at its top
+    if (kind === 'foliage') out[i] = k * (h >= S.crown ? 1 : S.smallFoliage);
+    else if (h >= S.hangHeight && h >= wide * 1.2) out[i] = Math.max(0, 1 - k / S.hangFree);
+    else if (wide >= 1.5 && h >= 0.2 && h < wide * 0.6) out[i] = S.awning * (1 - k);
+  }
+  return out;
+}
+
+/** The look-material hook: a cloth or foliage mesh without authored weights gets computed ones, then the material sways. */
+setWindHook((material, o = {}) => {
+  const g = o.geometry;
+  if (g && g.getAttribute && !g.getAttribute('_wind') && g.getAttribute('position')) {
+    try { g.setAttribute('_wind', new THREE.BufferAttribute(windWeights(g.getAttribute('position'), g.index, o.kind), 1)); } catch { /* keeps the constant shiver */ }
+  }
+  if (!material) return material;
+  return withWind(material, { kind: o.kind, weight: g && g.getAttribute && g.getAttribute('_wind') ? 'attribute' : o.weight });
+});
 
 let wetInstalled = false;
 

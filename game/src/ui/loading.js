@@ -4,6 +4,7 @@
 // below the end), and hands off to the lobby or the island with a cross-fade and no flash. Pure helpers are
 // exported for the tests; the DOM part degrades to nothing when #boot is absent.
 import { MOTION, exit, isReduced } from './motion/index.js';
+import { createInkBar } from './ink-bar.js';
 
 /** Weights of the two progress sources: the code chunks arrive first, then the first frame's model bytes. */
 export const BOOT_WEIGHTS = Object.freeze({ chunks: 0.35, bytes: 0.65 });
@@ -84,9 +85,17 @@ export function createLoadingScreen(doc = globalThis.document) {
   let root = doc && doc.getElementById ? doc.getElementById('boot') : null;
   let ring = null, label = null, pct = null;
   const bind = () => { ring = root ? root.querySelector('.boot-ring-fg') : null; label = root ? root.querySelector('.boot-label') : null; pct = root ? root.querySelector('.boot-pct') : null; };
-  bind();
   // A pristine copy for reopen(): the town may still be streaming when the player leaves the lobby (docs/town.md).
   const spare = root && typeof root.cloneNode === 'function' ? root.cloneNode(true) : null;
+  // The hand-drawn bar and the log of what is loading (ui/ink-bar.js), under the ring; the same pair is on the altar cover.
+  let ink = null, translate = null;
+  const attachInk = () => {
+    if (ink) { ink.destroy(); ink = null; }
+    const host = root && root.querySelector ? root.querySelector('.boot-inner') : null;
+    if (!host || !doc.createElement || !doc.head) return;
+    try { ink = createInkBar(doc, { dark: true, t: translate }); host.append(ink.el); ink.log('loading.log.code'); } catch { ink = null; }
+  };
+  bind(); attachInk();
   const circumference = 2 * Math.PI * 54; // r = 54 in the inline SVG
   let shown = 0.04, real = 0, last = 0, raf = 0, finished = false, done = null; // a visible start before any byte
   const win = (doc && doc.defaultView) || globalThis;
@@ -96,6 +105,7 @@ export function createLoadingScreen(doc = globalThis.document) {
     if (ring) ring.style.strokeDashoffset = String(circumference * (1 - shown));
     if (pct) pct.textContent = Math.round(shown * 100) + '%';
     root.style.setProperty('--boot-p', shown.toFixed(3));
+    if (ink) ink.set(shown);
   };
   const frame = () => {
     raf = 0;
@@ -110,6 +120,10 @@ export function createLoadingScreen(doc = globalThis.document) {
     get finished() { return finished; },
     /** Real progress 0..1 and an optional label. */
     set(p, text) { real = Math.max(real, Math.min(1, p || 0)); if (label && text != null) label.textContent = text; },
+    /** A line for the log under the bar: a `loading.log.*` key (what is loading right now). */
+    log(key) { if (ink) ink.log(key); },
+    /** The locale arrived: the log's lines are shown in the player's language from now on. */
+    setTranslator(fn) { translate = fn; if (ink) ink.setTranslator(fn); },
     /** Hands off: the ring completes, the screen cross-fades out over the screen duration; resolves when gone. */
     finish() {
       if (finished) return done;
@@ -118,7 +132,7 @@ export function createLoadingScreen(doc = globalThis.document) {
       const reduced = isReduced(doc);
       done = new Promise((r) => (win.setTimeout || setTimeout)(r, reduced ? 60 : 140)) // let the full ring be seen
         .then(() => exit(root, { to: 'fade', duration: MOTION.duration.screen }))
-        .then(() => { root.remove(); if (doc.body && doc.body.classList) doc.body.classList.remove('booting'); });
+        .then(() => { if (ink) { ink.destroy(); ink = null; } root.remove(); if (doc.body && doc.body.classList) doc.body.classList.remove('booting'); });
       return done;
     },
     /**
@@ -129,7 +143,7 @@ export function createLoadingScreen(doc = globalThis.document) {
     reopen(text) {
       if (!finished) { if (label && text != null) label.textContent = text; return !!root; }
       if (!spare || !doc.body) return false;
-      root = spare.cloneNode(true); bind();
+      root = spare.cloneNode(true); bind(); attachInk();
       shown = 0.04; real = 0; last = 0; finished = false; done = null;
       if (label && text != null) label.textContent = text;
       doc.body.append(root);
@@ -139,6 +153,6 @@ export function createLoadingScreen(doc = globalThis.document) {
     },
     /** A failure keeps the screen with a message (the page is not blank). */
     fail(text) { finished = true; if (label) label.textContent = text; if (root) root.classList.add('boot--failed'); },
-    destroy() { finished = true; if (raf && win.cancelAnimationFrame) win.cancelAnimationFrame(raf); },
+    destroy() { finished = true; if (ink) ink.destroy(); if (raf && win.cancelAnimationFrame) win.cancelAnimationFrame(raf); },
   };
 }
