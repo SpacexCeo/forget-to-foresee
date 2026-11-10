@@ -23,6 +23,7 @@ export class CameraRig {
     this.maxDist = opts.maxDist ?? 90;     // far enough for the whole-archipelago view
     this.radius = opts.radius ?? 0.35;           // camera collision sphere
     this.defaultDist = opts.dist ?? 30;
+    this.minPitch = (opts.minPitch ?? 8) * DEG;   // lowest look-down angle; the town lowers it so the sky above the roofs can be seen
     this.reset();
     this.focus = new THREE.Vector3();
     this.smoothFocus = new THREE.Vector3();
@@ -82,7 +83,7 @@ export class CameraRig {
       return;
     }
     const base = this.pitchFor(this.dist);
-    this.pitchOffset = THREE.MathUtils.clamp(base + this.pitchOffset + delta, 8 * DEG, 75 * DEG) - base;
+    this.pitchOffset = THREE.MathUtils.clamp(base + this.pitchOffset + delta, this.minPitch, 75 * DEG) - base;
   }
 
   reset(heading = this.baseYaw) {
@@ -149,7 +150,7 @@ export class CameraRig {
       if (la.lengthSq() > this.lookAheadMax * this.lookAheadMax) la.setLength(this.lookAheadMax);
       this.lookAhead.lerp(la, 1 - Math.exp(-dt * 3));
       center = sf.clone().add(this.lookAhead).add(new THREE.Vector3(0, this.focusHeightFor(this.dist), 0));
-      yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? THREE.MathUtils.clamp(this.pitchFor(dist) + this.pitchOffset, 8 * DEG, 75 * DEG);
+      yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? THREE.MathUtils.clamp(this.pitchFor(dist) + this.pitchOffset, this.minPitch, 75 * DEG);
       const fov = this.fovFor(dist);
       if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     }

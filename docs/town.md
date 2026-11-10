@@ -67,14 +67,14 @@ A phone (coarse pointer) has no lobby and starts in the town directly.
 - Inside a `.glb`: `*_col` meshes become colliders (never rendered); `socket_lamp_*` empties get up to six warm
   point lights without shadows on the six nearest Iris (they fade as they move); `town_sky` is visual only (its colliders,
   if any, are ignored and it casts no shadow).
-- `town_altar.glb`: material `M_Altar_Core` (emissive, with its mask) is driven by code: `emissiveIntensity` 0.35
-  asleep, 2.4 awake (eased from 2.5 radii down to the prompt radius), a slow pulse (steady under reduced motion),
+- `town_altar.glb`: material `M_Altar_Core` (emissive, with its mask) is driven by code: `emissiveIntensity` 0.3
+  asleep, 1.3 awake (eased from 2.5 radii down to the prompt radius), a slow pulse (steady under reduced motion),
   and a flare during registration. The authored emissive strength is overwritten; colour and mask are kept.
   Empties `altar_focus` and `altar_stand` replace the data's points when present.
 - Atmosphere: `LookDev.setAtmosphereFloor` moves the height fog base to `TOWN_ORIGIN.y − 20` and the cloud sea to
   `TOWN_ORIGIN.y − 32` as mist around the hill; the sun, sky and time of day stay. Restored on leaving.
-- `tests/client/assets-budget.test.mjs` checks the town folder too. `TOWN_BLOCKOUT_OK = true` tolerates the
-  uncompressed blockout; set it to `false` when the final KTX2 + meshopt files are in.
+- `tests/client/assets-budget.test.mjs` checks the town folder too. `TOWN_BLOCKOUT_OK` (now `false`: the final files are in) would tolerate an
+  uncompressed blockout round.
 
 ## QA hooks
 

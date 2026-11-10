@@ -66,7 +66,7 @@ test('town: spawn at the gate, walk the jury route, register with E, the season 
     assert.ok(altarDistance(s.pos) <= TOWN_ALTAR.radius, 'Iris reached the altar');
     assert.equal(s.respawns, 0, 'she never fell out of the town');
     assert.ok(s.pos[1] > TOWN_KILL_Y + 3 && s.grounded, 'she stands on the ground');
-    assert.ok(s.glow > 1.5, 'the amber core is awake, glow ' + s.glow.toFixed(2));
+    assert.ok(s.glow > 1.0, 'the amber core is awake, glow ' + s.glow.toFixed(2));
     assert.deepEqual(await g.text('.ftf-town-prompt'), ['E Register for the Tournament']);
     await shot(g, '02-altar');
 

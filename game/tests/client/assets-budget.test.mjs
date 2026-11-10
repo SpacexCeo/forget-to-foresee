@@ -27,10 +27,10 @@ function textures({ json, bin }) {
   });
 }
 const files = readdirSync(DIR).filter((f) => f.endsWith('.glb'));
-// The town (public/assets/models/town/, docs/town.md) follows the same rules, for the files that exist. While the
-// Blender blockout is in that folder (uncompressed grey models, a few hours on the way to the final art), this
-// switch lets town files without KTX2 textures, meshopt geometry or a phone variant pass. The art session sets it
-// to false when the final compressed files land; from then on the town is held to the budget like every model.
+// The town (public/assets/models/town/, docs/town.md) follows the same rules, for the files that exist. The switch
+// was true while the uncompressed Blender blockout sat in that folder; the final KTX2 + meshopt files with their
+// phone variants are in, so the town is held to the budget like every model. Set it to true again only for a
+// short blockout round of new pieces.
 const TOWN_BLOCKOUT_OK = false;
 const TOWN_DIR = new URL('town/', DIR);
 const townFiles = existsSync(TOWN_DIR) ? readdirSync(TOWN_DIR).filter((f) => f.endsWith('.glb')).map((f) => 'town/' + f) : [];

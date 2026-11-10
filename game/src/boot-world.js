@@ -30,7 +30,7 @@ import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
-import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_CAMERA_TILT, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
+import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA_DIST, TOWN_CAMERA_TILT, TOWN_CAMERA_MIN_PITCH, TOWN_FOG_BASE_Y, TOWN_MIST_LEVEL } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -127,6 +127,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
 let town = null, townFlow = null, inTown = false, townGrounded = false, irisAvatar = null;
+let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
   town = createTownScene({ scene, streamer, flat: townMode.flat, pointLights: !!lookdev.cfg.pointLights });
@@ -136,7 +137,9 @@ if (townMode.town) {
   player.world = town.world; rig.world = town.world;
   player.teleport(sp.position, sp.heading);
   player.killY = TOWN_KILL_Y; // absolute: the island's kill height would never catch a fall here
-  rig.dist = TOWN_CAMERA_DIST; rig.pitchOffset = TOWN_CAMERA_TILT; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
+  const islandMinPitch = rig.minPitch;
+  restoreCamera = () => { rig.minPitch = islandMinPitch; };
+  rig.minPitch = TOWN_CAMERA_MIN_PITCH; rig.dist = TOWN_CAMERA_DIST; rig.pitchOffset = TOWN_CAMERA_TILT; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
   lookdev.setAtmosphereFloor({ fogBaseY: TOWN_FOG_BASE_Y, mistLevel: TOWN_MIST_LEVEL });
   townFlow = createTownFlow({
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
@@ -156,7 +159,7 @@ async function leaveTown() {
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
   player.teleport(SPAWN.slice(), islandStart.heading);
-  rig.reset();
+  restoreCamera(); rig.reset();
   lookdev.setAtmosphereFloor(null);
   await startSeason();
 }

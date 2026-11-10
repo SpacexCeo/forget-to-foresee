@@ -57,6 +57,8 @@ export const TOWN_MIST_LEVEL = TOWN_ORIGIN[1] - 32;
 export const TOWN_CAMERA_DIST = 13;
 /** Camera pitch offset in the town (radians, added to the zoom-tied pitch): a lower, street-level look that keeps the sky above the roofs in frame. */
 export const TOWN_CAMERA_TILT = -0.16;
+/** Lowest camera pitch in the town (radians; the archipelago keeps the rig's 8 degrees): tilting down brings the archipelago in the sky into frame. */
+export const TOWN_CAMERA_MIN_PITCH = 2 * Math.PI / 180;
 
 /** Kinds a town piece may have (render/asset-catalog.js lists the same keys in LOAD_DISTANCE and TRIANGLE_BUDGET). */
 export const TOWN_KINDS = Object.freeze(['town_terrain', 'town_block', 'town_hero', 'town_sky']);

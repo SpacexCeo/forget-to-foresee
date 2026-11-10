@@ -19,7 +19,8 @@ import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRA
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
 export const TOWN_LAMPS = 6;
 /** Altar core emissive intensity: asleep, awake (Iris inside the prompt radius) and the registration flare on top. */
-export const CORE_GLOW = Object.freeze({ idle: 0.35, awake: 2.4, flare: 9, pulse: 0.14 });
+// Kept low on purpose: above about 1.5 the amber clips to cream under the tone mapping (the file's own strength, 3.0, is overwritten).
+export const CORE_GLOW = Object.freeze({ idle: 0.3, awake: 1.3, flare: 7, pulse: 0.14 });
 const CORE_MATERIAL = /^M_Altar_Core/;
 const LAMP_SOCKET = /^socket_lamp_/;
 const LAMP_COLOR = 0xffb268;
