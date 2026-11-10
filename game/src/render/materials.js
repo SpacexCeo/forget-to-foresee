@@ -232,11 +232,14 @@ export function registerLookMaterials(root) {
   root.traverse((o) => {
     if (!o.isMesh) return;
     for (const mat of Array.isArray(o.material) ? o.material : [o.material]) {
-      if (!mat || mat.userData.ftfRole !== undefined) continue;
+      if (!mat) continue;
+      // A wind material is wired once, but every mesh that wears it needs its own sway weights.
+      if (mat.userData.ftfRole === 'cloth' || mat.userData.ftfRole === 'foliage') { windHook(null, { kind: mat.userData.ftfRole, geometry: o.geometry }); continue; }
+      if (mat.userData.ftfRole !== undefined) continue;
       const role = lookRole(mat.name);
       mat.userData.ftfRole = role;
       if (role === 'window' || role === 'lamp') { emissive[role].add(mat); applyEmissive(mat, role); }
-      else if (role === 'cloth' || role === 'foliage') windHook(mat, { kind: role, weight: o.geometry && o.geometry.getAttribute('_wind') ? 'attribute' : 'constant' });
+      else if (role === 'cloth' || role === 'foliage') windHook(mat, { kind: role, geometry: o.geometry, weight: o.geometry && o.geometry.getAttribute('_wind') ? 'attribute' : 'constant' });
     }
   });
 }

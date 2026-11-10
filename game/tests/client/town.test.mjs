@@ -193,3 +193,14 @@ test('chunks: the town scene and its flow stay in the world chunk, never in the 
   assert.equal(chunkFor('/repo/game/src/scenes/town-data.js'), 'client-core');
   assert.equal(chunkFor('/repo/game/src/scenes/town-flow.js'), 'client-core');
 });
+
+test('town life: smoke rises and leans downwind, budgets shrink on phones', async () => {
+  const { puffOffset, TOWN_LIFE } = await import('../../src/scenes/town-life.js');
+  const wind = { x: 0.83, z: -0.56, strength: 0.35 };
+  assert.deepEqual(puffOffset(0, wind), [0, 0, 0]);
+  const mid = puffOffset(0.5, wind), end = puffOffset(1, wind);
+  assert.ok(end[1] > mid[1] && mid[1] > 0, 'rises');
+  assert.ok(end[0] * wind.x + end[2] * wind.z > mid[0] * wind.x + mid[2] * wind.z, 'leans further downwind with age');
+  assert.equal(puffOffset(1, { ...wind, strength: 0 }, 0.25)[1], end[1], 'calm air changes the lean, not the rise');
+  for (const k of ['puffs', 'chimneys', 'birds']) assert.ok(TOWN_LIFE[k][0] < TOWN_LIFE[k][1], k);
+});

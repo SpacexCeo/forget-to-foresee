@@ -132,7 +132,7 @@ let town = null, townFlow = null, inTown = false, townGrounded = false, irisAvat
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
-  town = createTownScene({ scene, streamer, flat: townMode.flat, pointLights: !!lookdev.cfg.pointLights });
+  town = createTownScene({ scene, streamer, flat: townMode.flat, pointLights: !!lookdev.cfg.pointLights, detail: lookdev.profile === 'phone' || lookdev.tier === 'low' ? 0 : 1 });
   lookdev.onQualityChange(() => town.setPointLights(!!lookdev.cfg.pointLights));
   inTown = true;
   const sp = townMode.spawn === 'altar' ? TOWN_ALTAR_SPAWN : TOWN_SPAWN;
@@ -395,7 +395,7 @@ function groundInTown() {
   if (y != null) player.teleport([player.pos[0], y, player.pos[2]], player.heading);
   townGrounded = true;
 }
-const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1 }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
+const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, light: { sun: null, daylight: 1, pixelsPerMetre: 900 } }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
 function frame() {
@@ -452,6 +452,7 @@ function frame() {
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   if (town && town.active) {
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
+    townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
   }

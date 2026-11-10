@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
 import { PropInstance } from '../render/assets.js';
+import { createTownLife } from './town-life.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
@@ -28,7 +29,7 @@ const GLYPH_MATERIAL = /^M_Altar_Glyph/, EYE_MATERIAL = /^M_Altar_Eye/;
 const GLYPH_NODE = /altar_glyph_(\d+)/;
 /** Emissive hierarchy of the altar, relative to the core: glyph inlays (fully lit) and the waystone eyes. */
 export const ALTAR_RATIO = Object.freeze({ glyph: 0.35, glyphUnlit: 0.04, eye: 0.1 });
-const LAMP_SOCKET = /^socket_lamp_/;
+const LAMP_SOCKET = /^socket_lamp_/, SMOKE_SOCKET = /^socket_smoke_/;
 const LAMP_COLOR = 0xffb268;
 
 const _v = new THREE.Vector3();
@@ -74,12 +75,13 @@ function buildFlatTown(group, ground) {
  * @param {{scene: THREE.Scene, streamer: import('../render/assets.js').AssetStreamer, flat?: boolean, pointLights?: boolean}} o
  *   flat: no models, a flat dev ground (?town=flat); pointLights: the quality tier allows lamp lights
  */
-export function createTownScene({ scene, streamer, flat = false, pointLights = true }) {
+export function createTownScene({ scene, streamer, flat = false, pointLights = true, detail = 1 }) {
   const world = new CollisionWorld({ cellSize: 2 });
   const skyWorld = new CollisionWorld({ cellSize: 8 }); // the sky impostor never collides, whatever its file holds
   const group = new THREE.Group();
   group.name = 'town';
   scene.add(group);
+  const life = createTownLife({ parent: group, origin: TOWN_ORIGIN, center: TOWN_ALTAR.stand, detail });
 
   const library = streamer.library;
   const state = {
@@ -155,6 +157,11 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
       if (LAMP_SOCKET.test(name)) pts.push(node.getWorldPosition(_v).toArray());
     }
     if (pts.length) lampPoints.set(inst.id, pts); else lampPoints.delete(inst.id);
+    // Ambient life (scenes/town-life.js): chimney smoke at the smoke sockets, the sky islands drifting.
+    const smoke = [];
+    if (real) for (const [name, node] of inst.sockets) if (SMOKE_SOCKET.test(name)) smoke.push(node.getWorldPosition(_v).toArray());
+    life.setChimneys(inst.id, smoke);
+    if (def.visualOnly) life.setSky(real || null);
     placeLamps();
     if (def.name !== TOWN_ALTAR_ASSET) return;
     coreMaterials.length = 0; eyeMaterials.length = 0; glyphs.length = 0;
@@ -234,8 +241,9 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
    * @param {number} t seconds (frozen under reduced motion by the caller is fine: the pulse is skipped anyway)
    * @param {number} dt @param {{playerPos: number[], reducedMotion?: boolean}} o
    */
-  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1 }) {
+  function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1, light = null }) {
     if (!state.active) return;
+    life.update(reducedMotion ? 0 : dt, light);
     state.time = t;
     checkReady();
     const target = altarWake(altarDistance(playerPos));
@@ -261,6 +269,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   function setActive(on) {
     state.active = !!on;
     for (const l of lamps) l.visible = state.active && !!pointLights;
+    life.setActive(state.active);
     if (flatGroup) flatGroup.visible = state.active;
   }
 
@@ -286,6 +295,6 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
     get shown() { return checkReady() && (state.flat || pieces.every((x) => x.def.visualOnly || settled(x.def.name))); }, get flat() { return state.flat; }, get active() { return state.active; },
     get altar() { return state; },
-    update, setFlare, setActive, setPointLights, groundAt, settled, status,
+    life, update, setFlare, setActive, setPointLights, groundAt, settled, status,
   };
 }

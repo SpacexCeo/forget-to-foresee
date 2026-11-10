@@ -7,7 +7,7 @@ import { QUALITY, PHONE_QUALITY } from '../../src/render/quality.js';
 import { NEAR_STEPS, nearRadius, cascadePlan, snapTexel, installCascadeShadows } from '../../src/render/shadows.js';
 import { TIME_PRESETS, LOCATION_LOOKS, LOCATIONS, lookFor, sunDirection } from '../../src/render/sky.js';
 import { GRADE, gradeColor, installGrade } from '../../src/render/grade.js';
-import { WEATHER, WEATHER_NAMES, DEFAULT_WEATHER, mixWeather, weatherCover, WeatherSystem, WIND_UNIFORMS, WEATHER_UNIFORMS, WIND_DIR, windAt, withWind, installWetness, Rain } from '../../src/render/weather.js';
+import { WEATHER, WEATHER_NAMES, DEFAULT_WEATHER, mixWeather, weatherCover, WeatherSystem, WIND_UNIFORMS, WEATHER_UNIFORMS, WIND_DIR, windAt, withWind, windWeights, installWetness, Rain } from '../../src/render/weather.js';
 import { installHeightFog } from '../../src/render/fog.js';
 import { lookRole, registerLookMaterials, setEmissiveLevels, slotForMaterial } from '../../src/render/materials.js';
 import { BlobShadows } from '../../src/render/blobs.js';
@@ -242,4 +242,17 @@ test('blob shadows: one instance per tracked, visible character; strength 0 draw
   blobs.setStrength(0); blobs.update(); assert.equal(blobs.mesh.visible, false);
   for (const cfg of [QUALITY.ultra, QUALITY.high, QUALITY.low, PHONE_QUALITY.high, PHONE_QUALITY.low]) assert.ok(cfg.blobs > 0);
   assert.ok(PHONE_QUALITY.low.blobs > QUALITY.ultra.blobs, 'stronger where there is no ambient occlusion');
+});
+
+test('wind weights without an authored attribute: each connected part sways by height (cloth hem free, tree crown free)', () => {
+  // Two separate quads: a banner hanging from y = 3 down to y = 1, and a low flat patch.
+  const P = [[0, 3, 0], [1, 3, 0], [0, 1, 0], [1, 1, 0], [5, 0, 0], [6, 0, 0], [5, 0, 1], [6, 0, 1]];
+  const position = { count: P.length, getX: (i) => P[i][0], getY: (i) => P[i][1], getZ: (i) => P[i][2] };
+  const I = [0, 1, 2, 1, 3, 2, 4, 5, 6, 5, 7, 6];
+  const index = { count: I.length, getX: (i) => I[i] };
+  const cloth = windWeights(position, index, 'cloth');
+  assert.deepEqual([...cloth.slice(0, 4)], [0, 0, 1, 1], 'top pinned, hem free');
+  assert.ok(cloth[4] > 0 && cloth[4] < 0.5 && cloth[4] === cloth[7], 'a flat part shivers evenly');
+  const tree = windWeights(position, index, 'foliage');
+  assert.deepEqual([...tree.slice(0, 4)], [1, 1, 0, 0], 'rooted at the bottom');
 });

@@ -140,7 +140,55 @@ export function withWind(material, { kind = 'cloth', amplitude, weight = 'attrib
   return material;
 }
 
-setWindHook(withWind);
+/**
+ * Sway weights for a mesh whose file has no `_WIND` attribute (the town kit): the geometry is split into its
+ * connected parts (one banner, one awning, one canopy) and each vertex gets 0..1 by its height inside its part.
+ * Cloth hangs from its top edge (top pinned, hem free); foliage is rooted (bottom still, crown free). A part too
+ * flat to tell (a stretched awning) shivers evenly. Pure maths on the position attribute; runs once per geometry.
+ * @param {{count:number, getX:(i:number)=>number, getY:(i:number)=>number, getZ:(i:number)=>number}} position
+ * @param {{count:number, getX:(i:number)=>number}|null} index @param {'cloth'|'foliage'} kind
+ * @returns {Float32Array} one weight per vertex
+ */
+export function windWeights(position, index, kind = 'cloth') {
+  const n = position.count, parent = new Int32Array(n);
+  const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  // Vertices at the same place are one point of the surface (seams split them for normals and UVs).
+  const seen = new Map();
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < n; i++) { const y = position.getY(i); if (y < lo) lo = y; if (y > hi) hi = y; }
+  const q = 2000 / Math.max(1e-6, hi - lo, 1); // about half a millimetre per metre of extent
+  for (let i = 0; i < n; i++) {
+    const key = Math.round(position.getX(i) * q) + '_' + Math.round(position.getY(i) * q) + '_' + Math.round(position.getZ(i) * q);
+    const j = seen.get(key);
+    if (j === undefined) { seen.set(key, i); parent[i] = i; } else parent[i] = j;
+  }
+  const tris = index ? index.count : n;
+  for (let t = 0; t + 2 < tris; t += 3) {
+    const a = find(index ? index.getX(t) : t), b = find(index ? index.getX(t + 1) : t + 1), c = find(index ? index.getX(t + 2) : t + 2);
+    if (b !== a) parent[b] = a;
+    const c2 = find(c); if (c2 !== a) parent[c2] = a;
+  }
+  const min = new Float32Array(n).fill(Infinity), max = new Float32Array(n).fill(-Infinity);
+  for (let i = 0; i < n; i++) { const r = find(i), y = position.getY(i); if (y < min[r]) min[r] = y; if (y > max[r]) max[r] = y; }
+  const out = new Float32Array(n), flat = (hi - lo) * 0.004 + 1e-6;
+  for (let i = 0; i < n; i++) {
+    const r = find(i), h = max[r] - min[r];
+    if (h < flat) { out[i] = 0.35; continue; }
+    const k = (position.getY(i) - min[r]) / h;
+    out[i] = kind === 'foliage' ? k : 1 - k;
+  }
+  return out;
+}
+
+/** The look-material hook: a cloth or foliage mesh without authored weights gets computed ones, then the material sways. */
+setWindHook((material, o = {}) => {
+  const g = o.geometry;
+  if (g && g.getAttribute && !g.getAttribute('_wind') && g.getAttribute('position')) {
+    try { g.setAttribute('_wind', new THREE.BufferAttribute(windWeights(g.getAttribute('position'), g.index, o.kind), 1)); } catch { /* keeps the constant shiver */ }
+  }
+  if (!material) return material;
+  return withWind(material, { kind: o.kind, weight: g && g.getAttribute && g.getAttribute('_wind') ? 'attribute' : o.weight });
+});
 
 let wetInstalled = false;
 
