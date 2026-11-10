@@ -10,7 +10,7 @@ Run from a checkout of github.com/microsoft/TRELLIS (MIT) on PYTHONPATH.
 import os
 import sys
 
-os.environ.setdefault("ATTN_BACKEND", "xformers")
+os.environ.setdefault("ATTN_BACKEND", "sdpa")       # dense attention: PyTorch's own
 os.environ.setdefault("SPARSE_BACKEND", "spconv")
 os.environ.setdefault("SPCONV_ALGO", "native")
 
@@ -32,6 +32,14 @@ for _name in ("rembg", "kaolin", "kaolin.utils", "kaolin.utils.testing", "nvdiff
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 from PIL import Image  # noqa: E402
+
+import xformers.ops as xops  # noqa: E402
+
+# xformers 0.0.31 picks its bundled flash-attention kernel first, which fails on the RTX 5090 ("invalid argument");
+# the sparse blocks go through the cutlass kernel instead
+_mea = xops.memory_efficient_attention
+xops.memory_efficient_attention = lambda q, k, v, attn_bias=None, p=0.0, scale=None, **kw: _mea(
+    q, k, v, attn_bias, p, scale, op=xops.MemoryEfficientAttentionCutlassOp)
 
 from trellis.pipelines import TrellisImageTo3DPipeline  # noqa: E402
 
