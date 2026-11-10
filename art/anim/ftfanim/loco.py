@@ -168,85 +168,146 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
                 wr[b] = qmul(r, wr[b])
     hip[:, 1] = hip[:, 1].mean() + (hip[:, 1] - hip[:, 1].mean()) * st['bounce'] - st['hip_drop']
     hip[:, 0] *= st['sway']
-    # --- contacts: a foot is planted while it moves with the ground (which runs at -speed) and is low
-    t = np.arange(n) / fps
-    foot_pts = {}
-    contacts = {}
+    contacts = detect_contacts(rig, wr, feet, speed, fps, True, single=True)
+    hip, ank_target, drop = plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, True, st)
+    fingers(rig, wr, n, st.get('hands', 'relaxed'), True)
+    local, world = assemble(rig, wr, n)
+    pel = pelvis_from_hips(rig, wr['pelvis'], hip)
+    slip, low = check_slip(rig, local, pel, contacts, speed, fps, True)
+    # repeat the first frame at the end so the clip's last key equals its first
+    local = np.concatenate([local, local[:1]]); pel = np.concatenate([pel, pel[:1]])
+    contacts = {s: contacts[s][0] for s in 'LR'}
+    stats = {'slip_mean_m_s': round(float(np.mean(slip)), 4), 'slip_max_m_s': round(float(np.max(slip)), 4), 'ball_min_y': round(low, 4), 'src_stride_m': round(L_src, 3), 'src_T_s': round((f1 - f0) * rt.dt, 3), 'src_speed': round(L_src / ((f1 - f0) * rt.dt), 3),
+             'stride_scale': round(k_stride, 3), 'time_scale': round((f1 - f0) * rt.dt / T, 3), 'hip_drop_max_m': round(float(drop.max()), 4),
+             'contact': {s: [int(contacts[s][0]), int(contacts[s][1])] for s in 'LR'}}
+    log('cycle', stats)
+    return {'local': local, 'pelvis': pel, 'contacts': contacts, 'stats': stats, 'ankles': ank_target, 'hip': hip}
+
+
+def pts_x_offset(rig, s):
+    """Lateral offset of the ball of the foot from the ankle at rest (so `track` is measured at the ankle)."""
+    return abs(rig.rest_wp[rig.index[f'toe_{s}'], 0]) - abs(rig.rest_wp[rig.index[f'foot_{s}'], 0])
+
+
+def foot_points(rig, s):
+    """Sole contact points (heel, ball, toe tip) in the foot bone's local space."""
+    i_f, i_t = rig.index[f'foot_{s}'], rig.index[f'toe_{s}']
+    ank_rest, ball_rest = rig.rest_wp[i_f], rig.rest_wp[i_t]
+    inv = qinv(rig.rest_wr[i_f])
+    loc = lambda p: qrot(inv, p - ank_rest)
+    heel_back = 0.3 * float(np.linalg.norm((ball_rest - ank_rest)[[0, 2]]))
+    return {'heel': loc(np.array([ank_rest[0], 0.0, ank_rest[2] - heel_back])),
+            'ball': loc(np.array([ball_rest[0], 0.0, ball_rest[2]])),
+            'tip': loc(np.array([ball_rest[0], 0.0, ball_rest[2] + 0.07]))}
+
+
+def _runs(mask, cyclic):
+    if cyclic:
+        return _circ_intervals(mask)
+    out, i, n = [], 0, len(mask)
+    while i < n:
+        if mask[i]:
+            j = i
+            while j < n and mask[j]:
+                j += 1
+            out.append((i, j - i)); i = j
+        else:
+            i += 1
+    return out
+
+
+def detect_contacts(rig, wr, feet, speed, fps, cyclic, single=False, v_thr=None, h_thr=0.05, min_len=3):
+    """Per foot, the intervals (start, length) in which the heel or the ball is low and moves with the ground
+    (the ground runs backwards at `speed` for in-place locomotion; 0 for actions)."""
+    n = len(feet['L'])
+    v_thr = v_thr if v_thr is not None else (0.4 * speed if speed else 0.18)
+    out = {}
     for s in 'LR':
-        i_f, i_t = rig.index[f'foot_{s}'], rig.index[f'toe_{s}']
-        ank_rest, ball_rest = rig.rest_wp[i_f], rig.rest_wp[i_t]
-        inv = qinv(rig.rest_wr[i_f])
-        loc = lambda p: qrot(inv, p - ank_rest)
-        heel_back = 0.3 * float(np.linalg.norm((ball_rest - ank_rest)[[0, 2]]))
-        pts = {'heel': loc(np.array([ank_rest[0], 0.0, ank_rest[2] - heel_back])),
-               'ball': loc(np.array([ball_rest[0], 0.0, ball_rest[2]])),
-               'tip': loc(np.array([ball_rest[0], 0.0, ball_rest[2] + 0.07]))}
-        foot_pts[s] = pts
-        # a point of the sole is planted while it is low and moves with the ground; the stance is heel or ball planted
+        pts = foot_points(rig, s)
         wf = wr[f'foot_{s}']
         mask = np.zeros(n, bool)
         for key in ('heel', 'ball'):
             p = feet[s] + qrot(wf, pts[key])
-            vz = (np.roll(p[:, 2], -1) - np.roll(p[:, 2], 1)) * fps / 2 + speed
-            vx = (np.roll(p[:, 0], -1) - np.roll(p[:, 0], 1)) * fps / 2
-            mask |= (np.hypot(vz, vx) < 0.4 * speed) & (p[:, 1] - p[:, 1].min() < 0.05)
-        runs = _circ_intervals(mask)
-        if not runs:
-            raise RuntimeError('no contact found for foot ' + s)
-        start, length = max(runs, key=lambda r: r[1])
-        contacts[s] = (start, length)
-    # --- planted feet: the ball of the foot is locked to the moving ground; heel-strike and toe-off pivot on the lower point
+            if cyclic:
+                d = (np.roll(p, -1, 0) - np.roll(p, 1, 0)) * fps / 2
+            else:
+                d = np.gradient(p, axis=0) * fps
+            mask |= (np.hypot(d[:, 2] + speed, d[:, 0]) < v_thr) & (p[:, 1] - np.percentile(p[:, 1], 2) < h_thr)
+        runs = _runs(mask, cyclic)
+        if not cyclic:
+            # close short gaps, drop short runs
+            merged = []
+            for r in runs:
+                if merged and r[0] - (merged[-1][0] + merged[-1][1]) <= 3:
+                    merged[-1] = (merged[-1][0], r[0] + r[1] - merged[-1][0])
+                else:
+                    merged.append(r)
+            runs = [r for r in merged if r[1] >= min_len]
+        if single:
+            if not runs:
+                raise RuntimeError('no contact found for foot ' + s)
+            runs = [max(runs, key=lambda r: r[1])]
+        out[s] = runs
+    return out
+
+
+def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
+    """Locks the planted feet to the ground, keeps every sole above it, lowers the hips where a leg would
+    over-extend, solves both legs and lays the toes on the ground. Mutates `wr`; returns (hip, ankles, drop)."""
+    n = len(hip)
+    wrap = (lambda i: i % n) if cyclic else (lambda i: i)
     ank_target = {}
     for s in 'LR':
         a = feet[s].copy()
-        start, length = contacts[s]
-        idx = (start + np.arange(length)) % n
-        tt = np.arange(length) / fps
+        pts = foot_points(rig, s)
         wf = wr[f'foot_{s}']
-        if st['foot_out'] is not None:
-            # replace the planted foot's heading by the styled toe-out, eased in over the swing
-            fwd = qrot(wf, foot_pts[s]['ball'] - foot_pts[s]['heel']); yaw = np.arctan2(fwd[:, 0], fwd[:, 2])
+        if st.get('foot_out') is not None:
+            fwd = qrot(wf, pts['ball'] - pts['heel']); yaw = np.arctan2(fwd[:, 0], fwd[:, 2])
             want = np.radians(st['foot_out']) * (1 if s == 'L' else -1)
             wf = qmul(yaw_quat((want - yaw) * 0.8), wf)
             wr[f'foot_{s}'] = wf
-        pts = foot_pts[s]
         off = {k: qrot(wf, v) for k, v in pts.items()}                 # contact points relative to the ankle
-        ball = a + off['ball']
         # pivot: the heel while the toes are still up, the ball once the foot is flat or the heel peels off
         wb = smoothstep((off['heel'][:, 1] - off['ball'][:, 1] + 0.012) / 0.024)
-        flat_len = float(np.linalg.norm((pts['ball'] - pts['heel'])))
-        # lock position: best fit of the planted point to the ground moving at -speed
-        piv = a + off['ball']
-        z0 = float(np.mean(piv[idx, 2] + speed * tt))
-        x0 = float(np.mean(ball[idx, 0]))
-        if st['track'] is not None:
-            x0 = (st['track'] + pts_x_offset(rig, s)) * (1 if s == 'L' else -1)
+        flat_len = float(np.linalg.norm(pts['ball'] - pts['heel']))
         R = max(2, int(round(0.07 * fps)))
         wgt = np.zeros(n); lock = np.zeros((n, 3))
-        for j in range(-R, length + R):
-            i = (start + j) % n
-            wgt[i] = max(wgt[i], 1.0 if 0 <= j < length else float(smoothstep((R + 1 + min(j, length - 1 - j)) / (R + 1))))
-            zb = z0 - speed * (j / fps)
-            low_pt = np.minimum(off['heel'][i, 1], off['ball'][i, 1])
-            fwd = off['ball'][i] - off['heel'][i]; fwd[1] = 0; fwd /= np.linalg.norm(fwd)
-            heel_lock = np.array([x0, 0, zb]) - fwd * flat_len
-            via_ball = np.array([x0, 0, zb]) - off['ball'][i]
-            via_heel = heel_lock - off['heel'][i]
-            xz = via_ball * wb[i] + via_heel * (1 - wb[i])
-            lock[i] = [xz[0], -low_pt, xz[2]]
+        for start, length in contacts[s]:
+            idx = np.array([wrap(start + j) for j in range(length)])
+            tt = np.arange(length) / fps
+            piv = a[idx] + off['ball'][idx]
+            # lock position: best fit of the planted point to the ground (moving at -speed for locomotion)
+            z0 = float(np.mean(piv[:, 2] + speed * tt)); x0 = float(np.mean(piv[:, 0]))
+            if st.get('track') is not None:
+                x0 = (st['track'] + pts_x_offset(rig, s)) * (1 if s == 'L' else -1)
+            for j in range(-R, length + R):
+                i = wrap(start + j)
+                if i < 0 or i >= n:
+                    continue
+                w_j = 1.0 if 0 <= j < length else float(smoothstep((R + 1 + min(j, length - 1 - j)) / (R + 1)))
+                if w_j < wgt[i]:
+                    continue
+                wgt[i] = w_j
+                zb = z0 - speed * (j / fps)
+                low_pt = min(off['heel'][i, 1], off['ball'][i, 1])
+                fwd = off['ball'][i] - off['heel'][i]; fwd[1] = 0; fwd /= np.linalg.norm(fwd)
+                via_ball = np.array([x0, 0, zb]) - off['ball'][i]
+                via_heel = np.array([x0, 0, zb]) - fwd * flat_len - off['heel'][i]
+                xz = via_ball * wb[i] + via_heel * (1 - wb[i])
+                lock[i] = [xz[0], -low_pt, xz[2]]
         a = a * (1 - wgt[:, None]) + lock * wgt[:, None]
-        # never below the ground
+        if st.get('track') is not None and speed:
+            # the swing foot passes on the same narrow track instead of swinging wide
+            x_t = (st['track']) * (1 if s == 'L' else -1)
+            a[:, 0] = np.where(wgt >= 1, a[:, 0], a[:, 0] * wgt + (x_t + (a[:, 0] - a[:, 0].mean()) * 0.5) * (1 - wgt))
+            a[:, 0] = gauss_filter(a[:, 0], 0.8, cyclic)
         lowest = np.minimum(np.minimum(off['heel'][:, 1], off['ball'][:, 1]), off['tip'][:, 1])
         a[:, 1] = np.maximum(a[:, 1], -lowest + 0.002)
-        if st['track'] is not None:
-            # the swing foot follows the same narrower track
-            pull = (1 - wgt) * 0.0
-            a[:, 0] = a[:, 0] * (1 - pull)
         ank_target[s] = a
-    # --- legs: lower the hips where a leg would over-extend, then two-bone IK toward the retargeted knee
     wp_pel = wr['pelvis']
     i_p = rig.index['pelvis']
-    hip_local = {s: qrot(qinv(rig.rest_wr[i_p]), rig.rest_wp[rig.index[f'thigh_{s}']] - 0.5 * (rig.rest_wp[rig.index['thigh_L']] + rig.rest_wp[rig.index['thigh_R']])) for s in 'LR'}
+    mid = 0.5 * (rig.rest_wp[rig.index['thigh_L']] + rig.rest_wp[rig.index['thigh_R']])
+    hip_local = {s: qrot(qinv(rig.rest_wr[i_p]), rig.rest_wp[rig.index[f'thigh_{s}']] - mid) for s in 'LR'}
     l1 = {s: rig.length(f'thigh_{s}', f'shin_{s}') for s in 'LR'}; l2 = {s: rig.length(f'shin_{s}', f'foot_{s}') for s in 'LR'}
     drop = np.zeros(n)
     for s in 'LR':
@@ -255,8 +316,7 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
         horiz = np.hypot(d[:, 0], d[:, 2]); reach = (l1[s] + l2[s]) * 0.992
         max_y = ank_target[s][:, 1] + np.sqrt(np.maximum(reach ** 2 - horiz ** 2, 0.0))
         drop = np.maximum(drop, hj[:, 1] - max_y)
-    drop = gauss_filter(np.maximum(drop, 0), 1.2, True)
-    drop = np.maximum(drop, 0)
+    drop = np.maximum(gauss_filter(np.maximum(drop, 0), 1.2, cyclic), 0)
     hip = hip.copy(); hip[:, 1] -= drop
     for s in 'LR':
         hj = hip + qrot(wp_pel, hip_local[s])
@@ -268,42 +328,123 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
         s2 = swing(qrot(shin, Y), tgt - knee)
         wr[f'shin_{s}'] = qnorm(qmul(s2, shin))
         ank_target[s] = tgt
-    # --- toes: stay on the ground while the heel peels off
+    # toes: stay on the ground while the heel peels off
     for s in 'LR':
+        pts = foot_points(rig, s)
         i_t = rig.index[f'toe_{s}']
         rel = qmul(qinv(rig.rest_wr[rig.index[f'foot_{s}']]), rig.rest_wr[i_t])
         wt = qmul(wr[f'foot_{s}'], rel)
         d = qrot(wt, Y)
         rest_y = rig.dir(f'toe_{s}')[1]
         flat = d.copy(); flat[:, 1] = np.maximum(d[:, 1], rest_y)
-        ball_y = ank_target[s][:, 1] + qrot(wr[f'foot_{s}'], foot_pts[s]['ball'])[:, 1]
+        ball_y = ank_target[s][:, 1] + qrot(wr[f'foot_{s}'], pts['ball'])[:, 1]
         near = smoothstep(1 - ball_y / 0.05)[:, None]
-        tgt_d = d * (1 - near) + flat * near
-        wr[f'toe_{s}'] = qnorm(qmul(swing(d, tgt_d), wt))
-    local, world = assemble(rig, wr, n)
-    pel = pelvis_from_hips(rig, wr['pelvis'], hip)
-    # repeat the first frame at the end so the clip's last key equals its first
-    local = np.concatenate([local, local[:1]]); pel = np.concatenate([pel, pel[:1]])
-    # --- check on the final pose: speed of the sole's planted point against the ground
-    wr_f, wp_f = rig.fk(local[:-1], pel[:-1])
+        wr[f'toe_{s}'] = qnorm(qmul(swing(d, d * (1 - near) + flat * near), wt))
+    return hip, ank_target, drop
+
+
+def check_slip(rig, local, pel, contacts, speed, fps, cyclic):
+    """Speed of the sole's planted point against the ground over the contact intervals, and the lowest ball height."""
+    n = len(local)
+    wr_f, wp_f = rig.fk(local, pel)
     slip = []
     for s in 'LR':
         i_f = rig.index[f'foot_{s}']
-        start, length = contacts[s]
-        pts = foot_pts[s]
+        pts = foot_points(rig, s)
         hp = wp_f[:, i_f] + qrot(wr_f[:, i_f], pts['heel']); bp = wp_f[:, i_f] + qrot(wr_f[:, i_f], pts['ball'])
-        for j in range(length - 1):
-            i, i2 = (start + j) % n, (start + j + 1) % n
-            p = bp if bp[i, 1] <= hp[i, 1] + 0.004 else hp
-            slip.append(float(np.hypot(p[i2, 0] - p[i, 0], p[i2, 2] - p[i, 2] + speed / fps) * fps))
+        for start, length in contacts[s]:
+            for j in range(length - 1):
+                i, i2 = start + j, start + j + 1
+                if cyclic:
+                    i, i2 = i % n, i2 % n
+                p = bp if bp[i, 1] <= hp[i, 1] + 0.004 else hp
+                slip.append(float(np.hypot(p[i2, 0] - p[i, 0], p[i2, 2] - p[i, 2] + speed / fps) * fps))
     low = min(float(np.min(wp_f[:, rig.index[f'toe_{s}'], 1])) for s in 'LR')
-    stats = {'slip_mean_m_s': round(float(np.mean(slip)), 4), 'slip_max_m_s': round(float(np.max(slip)), 4), 'ball_min_y': round(low, 4), 'src_stride_m': round(L_src, 3), 'src_T_s': round((f1 - f0) * rt.dt, 3), 'src_speed': round(L_src / ((f1 - f0) * rt.dt), 3),
-             'stride_scale': round(k_stride, 3), 'time_scale': round((f1 - f0) * rt.dt / T, 3), 'hip_drop_max_m': round(float(drop.max()), 4),
-             'contact': {s: [int(contacts[s][0]), int(contacts[s][1])] for s in 'LR'}}
-    log('cycle', stats)
-    return {'local': local, 'pelvis': pel, 'contacts': contacts, 'stats': stats, 'ankles': ank_target, 'hip': hip}
+    return (slip or [0.0]), low
 
 
-def pts_x_offset(rig, s):
-    """Lateral offset of the ball of the foot from the ankle at rest (so `track` is measured at the ankle)."""
-    return abs(rig.rest_wp[rig.index[f'toe_{s}'], 0]) - abs(rig.rest_wp[rig.index[f'foot_{s}'], 0])
+HAND_POSES = {            # degrees of curl: (fingers, index, thumb)
+    'relaxed': (26, 18, 10), 'loose_fist': (58, 50, 26), 'open': (8, 4, 0), 'grip': (64, 58, 30), 'flat': (2, 0, -6),
+}
+
+
+def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, local_out=None):
+    """Finger bones: a held curl (HAND_POSES name or per-side dict) with a small breathing motion. Returns
+    {bone: [n, 4] local rotations} for assemble() via `wr_or_local['__local']`."""
+    loc = wr_or_local.setdefault('__local', {})
+    u = np.arange(n) / n
+    for s, side in (('L', 1), ('R', -1)):
+        p = pose[s] if isinstance(pose, dict) else pose
+        cf, ci, ct = HAND_POSES[p] if isinstance(p, str) else p
+        w = np.sin(2 * np.pi * (u + (0.25 if side > 0 else 0.75))) * (swing_amp if cyclic else 0.0)
+        i_h = rig.index[f'hand_{s}']
+        for bone, axis, ang in ((f'fingers_{s}', (0, 0, -1.0), side * (cf + w)), (f'index_{s}', (0, 0, -1.0), side * (ci + 0.7 * w)),
+                                (f'thumb_{s}', (0, 1.0, 0), -side * (ct + 0.4 * w))):
+            if bone not in rig.index:
+                continue
+            r = axis_angle(np.array(axis), np.radians(ang))
+            loc[bone] = qnorm(qmul(qinv(rig.rest_wr[i_h]), qmul(r, rig.rest_wr[rig.index[bone]])))
+
+
+def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma=1.2, keep_root=True, log=print):
+    """An in-place action (idle, gesture, work loop) from source frames [f0, f1]: resampled to `fps`, turned to face
+    +Z at its start, feet planted wherever they stand still. `loop` > 0 cross-fades that many frames of the end into
+    the start for a seamless loop. feet_mode 'planted' keeps both feet locked for the whole clip (idles)."""
+    st = dict(DEFAULT_STYLE); st.update(style or {})
+    rig = rt.rig
+    step = int(round(1.0 / (fps * rt.dt)))
+    src = np.arange(f0, f1 + 1, step)
+    n_all = len(src)
+    pre = max(1.0, step * 0.5)
+    filt_q = lambda q: qfilter(q[f0:f1 + 1], pre)[::step][:n_all]
+    filt_p = lambda p: gauss_filter(p[f0:f1 + 1], pre)[::step][:n_all]
+    wr = {k: filt_q(v) for k, v in rt.wr.items()}
+    hip = filt_p(rt.hip_mid); feet = {s: filt_p(rt.ankles[s]) for s in 'LR'}
+    # face +Z: by the mean heading of the pelvis over the clip, origin under the mean of the feet
+    fw = qrot(wr['pelvis'], np.array([0, 0, 1.0])).mean(0)
+    qy = yaw_quat(-np.arctan2(fw[0], fw[2]))
+    origin = 0.5 * (feet['L'] + feet['R'])[: max(2, n_all // 8)].mean(0) if keep_root else 0.5 * (feet['L'] + feet['R']).mean(0)
+    origin[1] = 0
+
+    def place(p):
+        q = qrot(qy, p - origin); return q
+    hip = place(hip); feet = {s: place(feet[s]) for s in 'LR'}
+    wr = {k: qmul(qy, v) for k, v in wr.items()}
+    n = n_all - loop
+    if loop:
+        w = smoothstep(np.arange(loop) / loop)
+        def xf_p(p):
+            out = p[:n].copy(); out[:loop] = p[n:n + loop] * (1 - w[:, None]) + p[:loop] * w[:, None]; return out
+        def xf_q(q):
+            out = q[:n].copy(); out[:loop] = qslerp(q[n:n + loop], q[:loop], w); return out
+        hip = xf_p(hip); feet = {s: xf_p(feet[s]) for s in 'LR'}; wr = {k: xf_q(v) for k, v in wr.items()}
+    cyc = bool(loop)
+    for b in ('neck', 'head'):
+        if st['head_level'] and cyc:
+            wr[b] = _scale_about_mean(wr[b], 1.0 - 0.5 * st['head_level'] * (1.0 if b == 'head' else 0.5))
+    for s in 'LR':
+        if st['arm_out']:
+            r = axis_angle(np.array([0, 0, 1.0]), np.radians(st['arm_out']) * (1 if s == 'L' else -1))
+            for b in (f'upperarm_{s}', f'forearm_{s}', f'hand_{s}'):
+                wr[b] = qmul(r, wr[b])
+    hip[:, 1] -= st['hip_drop']
+    if feet_mode == 'planted':
+        contacts = {s: [(0, n)] for s in 'LR'}
+        for s in 'LR':   # a planted idle foot is flat: keep only its mean heading
+            wf = wr[f'foot_{s}']; pts = foot_points(rig, s)
+            fwd = qrot(wf, pts['ball'] - pts['heel']).mean(0)
+            wr[f'foot_{s}'] = np.broadcast_to(qmul(yaw_quat(np.arctan2(fwd[0], fwd[2])), rig.rest_wr[rig.index[f'foot_{s}']]), (n, 4)).copy()
+    else:
+        contacts = detect_contacts(rig, wr, feet, 0.0, fps, cyc)
+    hip, ank, drop = plant_and_solve(rig, wr, hip, feet, contacts, 0.0, fps, cyc, st)
+    fingers(rig, wr, n, st.get('hands', 'relaxed'), False)
+    local, world = assemble(rig, wr, n)
+    pel = pelvis_from_hips(rig, wr['pelvis'], hip)
+    slip, low = check_slip(rig, local, pel, contacts, 0.0, fps, cyc)
+    if loop:
+        local = np.concatenate([local, local[:1]]); pel = np.concatenate([pel, pel[:1]])
+    stats = {'frames': int(n), 'seconds': round(n / fps, 2), 'slip_mean_m_s': round(float(np.mean(slip)), 4), 'slip_max_m_s': round(float(np.max(slip)), 4),
+             'hip_drop_max_m': round(float(drop.max()), 4), 'contacts': {s: [[int(a), int(b)] for a, b in contacts[s]] for s in 'LR'}}
+    log('action', stats)
+    return {'local': local, 'pelvis': pel, 'stats': stats}
+

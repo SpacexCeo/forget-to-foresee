@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ftfanim.bvh import Bvh                      # noqa: E402
 from ftfanim.gltfio import write_clips_glb       # noqa: E402
-from ftfanim.loco import build_cycle             # noqa: E402
+from ftfanim.loco import build_action, build_cycle             # noqa: E402
 from ftfanim.retarget import retarget            # noqa: E402
 from ftfanim.rig import Rig                      # noqa: E402
 
@@ -45,11 +45,13 @@ def main():
         style = dict(ch.get('style', {})); style.update(spec.get('style', {}))
         if spec['kind'] == 'cycle':
             r = build_cycle(rt, spec['frames_src'][0], spec['frames_src'][1], spec['frames'], spec['speed'], style, log=lambda *x: None)
+        elif spec['kind'] == 'action':
+            r = build_action(rt, spec['frames_src'][0], spec['frames_src'][1], style, loop=spec.get('loop', 0), feet_mode=spec.get('feet', 'auto'), log=lambda *x: None)
         else:
             raise SystemExit('unknown clip kind ' + spec['kind'])
-        bones = [b for b in rig.names if b in rt.mapped or b.startswith('toe_')]
+        bones = [b for b in rig.names if b in rt.mapped or b.startswith(('toe_', 'thumb_', 'index_', 'fingers_'))]
         clips.append({'name': name, 'local': r['local'], 'pelvis': rig.pelvis_local(r['pelvis']), 'bones': bones,
-                      'extras': {'take': 'CMU ' + take, 'speed': spec.get('speed', 0), 'loop': True}})
+                      'extras': {'take': 'CMU ' + take, 'speed': spec.get('speed', 0), 'loop': spec['kind'] == 'cycle' or bool(spec.get('loop'))}})
         report[name] = {'take': take, **r['stats']}
         print(name, json.dumps(report[name]))
     out = a.out or os.path.join(REPO, 'game/public/assets/anim', a.char + '.glb')

@@ -88,6 +88,8 @@ def assemble(rig, wr, F):
         pr = world[:, p] if p >= 0 else np.broadcast_to(rig.base_r, (F, 4))
         if name in wr:
             world[:, i] = wr[name]; local[:, i] = qmul(qinv(pr), wr[name])
+        elif name in wr.get('__local', {}):
+            local[:, i] = wr['__local'][name]; world[:, i] = qmul(pr, local[:, i])
         else:
             local[:, i] = rig.rest_r[i]; world[:, i] = qmul(pr, local[:, i])
     return qnorm(local), world
