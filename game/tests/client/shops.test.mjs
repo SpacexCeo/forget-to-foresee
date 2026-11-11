@@ -42,7 +42,7 @@ test('swing: tilts with the wind, bounded, still under reduced motion', () => {
 });
 
 test('props: the board beside the Exchange door, the wheel beside the Inn door, facing the street; E at the wheel opens it', async () => {
-  const { besideDoor, BOARD_SPOT, WHEEL_SPOT } = await import('../../src/scenes/town-props.js');
+  const { besideDoor, BOARD_SPOT, WHEEL_SPOT } = await import('../../src/scenes/town-layout.js');
   const door = { position: [10, 0, 0], heading: Math.PI / 2 }; // walking in faces +X
   const at = besideDoor(door, 1, 2);
   assert.ok(Math.abs(at.position[0] - 9) < 1e-9, 'out of the door, into the street');

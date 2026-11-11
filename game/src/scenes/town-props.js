@@ -4,15 +4,9 @@
 // (_m) load on phones. Visual only (no colliders): both stand against the house fronts, off the walking line.
 import * as THREE from 'three';
 import { fetchGltfUrl } from '../render/assets.js';
-import { TOWN_SHOPS } from './town-layout.js';
+import { TOWN_SHOPS, besideDoor, BOARD_SPOT, WHEEL_SPOT } from './town-layout.js';
+export { besideDoor, BOARD_SPOT, WHEEL_SPOT };
 
-/** Where a prop stands, from a shop door: `out` metres out into the street, `side` metres along the house front. */
-export function besideDoor(door, out, side) {
-  const h = door.heading, fx = Math.sin(h), fz = Math.cos(h); // the way Iris faces walking in
-  return { position: [door.position[0] - fx * out + fz * side, door.position[1], door.position[2] - fz * out - fx * side], heading: h + Math.PI };
-}
-export const BOARD_SPOT = Object.freeze({ shop: 'exchange', out: 0.9, side: 2.1 });
-export const WHEEL_SPOT = Object.freeze({ shop: 'inn', out: 1.0, side: -2.2, reach: 1.8 });
 
 /**
  * @param {{scene: THREE.Scene, town: object, ledger?: object, i18n?: object, mobile?: boolean, base?: string, doc?: Document}} o
