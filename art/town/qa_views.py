@@ -1,4 +1,5 @@
-"""QA frames of exported town pieces at game-camera positions (Cycles, low samples, afternoon sun):
+"""QA frames of exported town pieces at game-camera positions (EEVEE: one-sided faces are culled as in the game,
+so floating or back-facing faces show; afternoon sun from the south-west):
 
     blender -b -P art/town/qa_views.py -- <out_prefix> <glb> [<glb> ...]
 
@@ -22,15 +23,8 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 for src in SRCS:
     bpy.ops.import_scene.gltf(filepath=src)
-sc.render.engine = "CYCLES"
-prefs = bpy.context.preferences.addons["cycles"].preferences
-prefs.compute_device_type = "OPTIX"
-prefs.get_devices()
-for d in prefs.devices:
-    d.use = d.type == "OPTIX"
-sc.cycles.device = "GPU"
-sc.cycles.samples = 48
-sc.cycles.use_denoising = True
+sc.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items] else "BLENDER_EEVEE"
+# the glTF importer already sets use_backface_culling on every single-sided material, as three.js renders them
 sc.render.resolution_x, sc.render.resolution_y = 1280, 720
 sc.view_settings.view_transform = "AgX"
 w = bpy.data.worlds.new("w")
@@ -39,11 +33,11 @@ w.use_nodes = True
 sky = w.node_tree.nodes.new("ShaderNodeTexSky")
 sky.sky_type = "NISHITA" if hasattr(sky, "sky_type") else sky.sky_type
 w.node_tree.links.new(sky.outputs[0], w.node_tree.nodes["Background"].inputs[0])
-w.node_tree.nodes["Background"].inputs[1].default_value = 0.25
+w.node_tree.nodes["Background"].inputs[1].default_value = 0.6
 sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
 sun.data.energy = 3.5
 sun.data.angle = math.radians(1.5)
-sun.rotation_euler = (math.radians(52), 0, math.radians(-140))
+sun.rotation_euler = (math.radians(50), 0, math.radians(35))   # light from the south-west onto the south faces
 sc.collection.objects.link(sun)
 for name, (eye, tgt, lens) in VIEWS.items():
     cam = bpy.data.objects.new("cam_" + name, bpy.data.cameras.new(name))
