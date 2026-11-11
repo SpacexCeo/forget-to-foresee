@@ -64,7 +64,7 @@ before = {n: tris(o) for n, o in O.items()}
 # the phone model (LOD < 1, 24k triangles with the hull): the hands are protected less (at full protection the body
 # stops near 6.5k whatever the target) and the head is reduced a little further
 decim(body, int(BUD['elise_body'] * LOD), '_keep', 4.0 if LOD >= 1 else 1.0); decim(head, int(HEAD_T * (LOD if LOD >= 1 else LOD * 0.9)))
-if tris(body) > 1.15 * BUD['elise_body'] * LOD: decim(body, int(BUD['elise_body'] * LOD))
+if LOD < 1 and tris(body) > 1.15 * BUD['elise_body'] * LOD: decim(body, int(BUD['elise_body'] * LOD))
 for n in ('elise_gown', 'elise_stockings', 'elise_shoes', 'elise_ribbons', 'elise_lacing'): decim(O[n], int(BUD[n] * LOD))
 print('triangles by layer:', {n.replace('elise_', ''): (before[n], tris(o)) for n, o in O.items()})
 # ---------------- join; each face remembers its layer
