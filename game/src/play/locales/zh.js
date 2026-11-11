@@ -589,7 +589,6 @@ export default {
   "day1.hint.tournament": "锦标赛已开放。先问神龛守护人规则，再到祭坛登记。",
   "day1.skin.iris": "艾瑞斯",
   "day1.skin.elise": "伊莉丝",
-  "day1.skin.note": "在伊莉丝拥有自己的模型之前，她穿着艾瑞斯的身体和自己的配色。",
   "day1.altar.timer": "下一轮锦标赛",
   "day1.altar.open": "现在开放",
   "day1.trailer.hero.1": "她只记得在阳台上醒来，之前的一切都不记得。",
