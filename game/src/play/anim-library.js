@@ -11,7 +11,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
 /** Model name → side-car file (without extension) shipped in public/assets/anim/. */
-export const SIDECAR = Object.freeze({ agent_iris: 'iris' });
+export const SIDECAR = Object.freeze({ agent_iris: 'iris', agent_elise: 'elise' });
 
 /** The motion-capture clips are the default (decision 11.11.2026); `?anim=classic` keeps the model's own clips. */
 export function sidecarEnabled(search = typeof location !== 'undefined' ? location.search : '') {

@@ -28,6 +28,22 @@ export const ASSETS = Object.freeze([
   { name: 'island', kind: 'terrain', label: 'Island', height: 4, radius: 75 },
 ]);
 
+/**
+ * Playable heroines. `model` is the .glb in /assets/models/ (the phone variant adds `_m`), `sidecar` the clip
+ * file in /assets/anim/. `toon`: cel-shaded materials, the ink outline is geometry inside the .glb.
+ * `gate: 'nft'` marks a heroine meant for holders; the gate itself is not wired yet, `?hero=<id>` picks her.
+ */
+export const HEROES = Object.freeze([
+  Object.freeze({ id: 'iris', label: 'Iris', model: 'agent_iris', sidecar: 'iris', toon: false, gate: null }),
+  Object.freeze({ id: 'elise', label: 'Elise', model: 'agent_elise', sidecar: 'elise', toon: true, gate: 'nft' }),
+]);
+
+/** The heroine named by `?hero=<id>` (Iris when absent or unknown). */
+export function heroFromSearch(search = typeof location !== 'undefined' ? location.search : '') {
+  const id = new URLSearchParams(search || '').get('hero');
+  return HEROES.find((h) => h.id === id) || HEROES[0];
+}
+
 const TOWN_LABELS = Object.freeze({ town_terrain: 'Town: terrain', town_block: 'Town: block', town_hero: 'Town: hero', town_sky: 'Town: sky' });
 const townLabel = (p) => (p.name === 'town_altar' ? 'Tournament altar' : (TOWN_LABELS[p.kind] || 'Town') + ' (' + p.name.replace(/^town_/, '').replace(/_/g, ' ') + ')');
 
