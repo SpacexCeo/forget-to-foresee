@@ -565,7 +565,6 @@ export default {
   "day1.pick": "选一张卡",
   "day1.elise": "伊莉丝",
   "day1.elise.sub": "女主角 · Forget to Foresee",
-  "day1.elise.art": "她的 NFT-001 肖像即将到来；这是占位图。",
   "day1.mint.keygen": "正在此浏览器中生成你的密钥……",
   "day1.mint.sending": "正在 NEAR 测试网上铸造……",
   "day1.mint.checking": "正在 NEAR 测试网上确认……",

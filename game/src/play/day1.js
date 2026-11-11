@@ -23,10 +23,8 @@ const CSS = `
 .d1-card .d1-face { position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden; display: grid; place-items: center; overflow: hidden; }
 .d1-card .d1-back { background: conic-gradient(from 0deg, #7a5cff, #3ad6ff, #ffd27a, #ff7ad9, #7a5cff); box-shadow: 0 0 30px rgba(122, 92, 255, .6); animation: d1-holo 4s linear infinite; }
 .d1-card .d1-back b { font: 900 64px/1 Georgia, serif; color: #fff; text-shadow: 0 0 16px rgba(255,255,255,.9); }
-.d1-card .d1-front { transform: rotateY(180deg); background: radial-gradient(circle at 50% 35%, #4a2f7a, #241640 55%, #0e2b3a); border: 3px solid #ffd27a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 6px; box-sizing: border-box; }
-.d1-card .d1-front img { height: 68%; max-width: 90%; object-fit: contain; filter: drop-shadow(0 0 12px rgba(95, 211, 198, .6)) hue-rotate(250deg) saturate(1.4); }
-.d1-card .d1-front strong { font: 700 20px/1 Georgia, serif; color: #ffd27a; }
-.d1-card .d1-front small { font: 11px/1.2 system-ui, sans-serif; color: #cfe; padding: 0 8px; }
+.d1-card .d1-front { transform: rotateY(180deg); background: #e9e4f2; box-shadow: 0 0 34px rgba(255, 210, 122, .55); }
+.d1-card .d1-front img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .d1-free { margin-top: 8px; font: 800 14px/1 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: #ffe08a; }
 .d1-status { min-height: 1.5em; margin: 12px 0 0; font-weight: 700; }
 .d1-status.is-busy { background: linear-gradient(90deg, #fff7e6 30%, #ffd27a 50%, #fff7e6 70%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: d1-shimmer 1.4s linear infinite; }
@@ -90,8 +88,8 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
       const c = el(doc, 'button', 'd1-card'); c.type = 'button'; c.setAttribute('aria-label', t('day1.free') + ' ' + (i + 1));
       const back = el(doc, 'div', 'd1-face d1-back'); back.append(el(doc, 'b', null, '?'));
       const front = el(doc, 'div', 'd1-face d1-front');
-      const img = el(doc, 'img'); img.src = 'assets/ui/loading_iris.webp'; img.alt = '';
-      front.append(img, el(doc, 'strong', null, t('day1.elise')), el(doc, 'small', null, t('day1.elise.art')));
+      const img = el(doc, 'img'); img.src = 'assets/cards/elise.webp'; img.alt = t('day1.elise');
+      front.append(img);
       c.append(back, front);
       const holder = el(doc, 'div'); holder.append(c, el(doc, 'div', 'd1-free', t('day1.free')));
       c.addEventListener('click', () => { if (wrap.dataset.picked) return; wrap.dataset.picked = '1'; c.classList.add('is-flipped'); for (const o of cards.querySelectorAll('.d1-card')) if (o !== c) o.parentElement.style.opacity = '.25'; resolve({ c, wrap }); }, { once: true });

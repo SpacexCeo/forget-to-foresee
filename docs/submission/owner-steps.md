@@ -16,7 +16,9 @@ bash contracts/agent-card/scripts/mint-judge-card.sh   # agents.ftf-coordinator.
 ```
 
 They write only public account ids and the guest key's public part to `game/src/net/day1-deployment.js`. The guest
-key's private part goes to `game/.env.local` (git-ignored); for Pages, add it as the repository secret `FTF_GUEST_KEY`.
+key's private part never goes into the page: it is the `FTF_GUEST_KEY` environment variable of the relayer
+(`relayer/README.md`). Then set the repository variable `FTF_RELAYER_URL` (Settings → Secrets and variables → Actions →
+Variables) to the relayer's URL; the Pages build passes it as `VITE_FTF_RELAYER_URL`.
 
 ## Already done (no action)
 

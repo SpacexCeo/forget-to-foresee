@@ -567,7 +567,6 @@ export default {
   "day1.pick": "Pick a card",
   "day1.elise": "Elise",
   "day1.elise.sub": "Heroine · Forget to Foresee",
-  "day1.elise.art": "Her NFT-001 portrait arrives soon; this is a placeholder.",
   "day1.mint.keygen": "Making your key in this browser…",
   "day1.mint.sending": "Minting on NEAR testnet…",
   "day1.mint.checking": "Confirming on NEAR testnet…",

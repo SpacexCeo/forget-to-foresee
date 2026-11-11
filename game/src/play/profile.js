@@ -11,7 +11,9 @@ const CSS = `
 .ftf-prof { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(6, 10, 12, .6); font: 15px/1.45 system-ui, sans-serif; color: #f3ead6; }
 .ftf-prof-panel { width: min(680px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; box-sizing: border-box; padding: 18px 20px; border-radius: 14px; background: rgba(14, 20, 22, .95); border: 1px solid rgba(233, 180, 76, .45); }
 .ftf-prof-head { display: flex; gap: 16px; align-items: center; }
-.ftf-prof-head img { width: 64px; height: 180px; object-fit: contain; }
+.ftf-prof-head img { width: 96px; height: 144px; object-fit: cover; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
+.ftf-prof-chain { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
+.ftf-prof-chain img { width: 40px; height: 60px; object-fit: cover; border-radius: 6px; }
 .ftf-prof h2 { margin: 0; font: 600 22px/1.2 Georgia, serif; }
 .ftf-prof h3 { margin: 14px 0 6px; font: 600 13px/1.2 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e9b44c; }
 .ftf-prof .ftf-prof-bar { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .1); overflow: hidden; margin: 6px 0; width: 260px; max-width: 100%; }
@@ -87,7 +89,7 @@ export function openProfile({ doc = document, t, ledger, quest = null, obs = () 
   const dl = (rows) => { const d = el('dl'); for (const [k, v] of rows) d.append(el('dt', null, k), el('dd', null, v)); return d; };
 
   const head = el('div', 'ftf-prof-head');
-  const img = el('img'); img.src = 'assets/ui/loading_iris.webp'; img.alt = '';
+  const img = el('img'); img.src = 'assets/cards/iris.webp'; img.alt = '';
   const info = el('div');
   const bar = el('div', 'ftf-prof-bar'); const fill = el('i'); fill.style.width = Math.round((lv.into / lv.need) * 100) + '%'; bar.append(fill);
   info.append(el('h2', null, t('profile.heading', { level: lv.level, title: t('profile.title.' + lv.title) })), bar, el('p', 'ftf-prof-note', t('profile.xp', { into: lv.into, need: lv.need })), el('p', 'ftf-prof-note', t('profile.titlesNote')));
@@ -148,7 +150,8 @@ export function openProfile({ doc = document, t, ledger, quest = null, obs = () 
     if (r.state !== 'loaded' || !r.items.length) { chainBox.append(el('p', 'ftf-prof-note', t(r.state === 'offline' ? 'inv.onchain.offline' : 'inv.onchain.none'))); return; }
     chainBox.append(el('p', 'ftf-prof-note', t('inv.onchain.note')));
     for (const it of r.items) {
-      const p = el('p'); const a = el('a', null, it.tokenId); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      const p = el('p', it.kind === 'heroine' ? 'ftf-prof-chain' : null); const a = el('a', null, it.tokenId);
+      if (it.kind === 'heroine') { const th = el('img'); th.src = 'assets/cards/elise.webp'; th.alt = ''; p.append(th); } a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer';
       p.append(a, doc.createTextNode(' · ' + (it.mine ? t('inv.elise') + ' · ' : it.label ? it.label + ' · ' : '') + t('inv.owner', { owner: it.owner || '—' })));
       chainBox.append(p);
     }
