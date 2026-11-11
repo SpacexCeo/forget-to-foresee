@@ -885,7 +885,8 @@
     "arm_out": 7,
     "pelvis_rot": 1.0,
     "head_level": 0.6,
-    "step_lift": 0.75
+    "step_lift": 0.75,
+    "knee_fwd": 0.3
    },
    "action_style": {
     "track": 0.09,
@@ -908,20 +909,15 @@
      "use": "idle_shift"
     },
     "idle_look": {},
-    "walk": {
-     "speed": 1.4,
-     "frames": 27
-    },
+    "walk": {"speed": 1.4, "frames": 19, "style": {"arm_swing": 0.36, "step_lift": 0.5}, "note": "the owner asked for a gliding walk: a shorter step at a quicker pace (stride 0.89 m, was 1.26)"},
     "run": {
      "use": "walk",
      "speed": 2.4,
-     "frames": 18,
+     "frames": 13,
      "fps": 120,
      "style": {
       "track": 0.045,
-      "arm_swing": 0.62,
-      "lean": 3,
-      "step_lift": 0.85
+      "arm_swing": 0.45, "lean": 3, "step_lift": 0.6
      },
      "note": "a fast walk: the gown stays floor-length (sheets 08, 09)"
     },

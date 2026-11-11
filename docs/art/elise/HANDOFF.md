@@ -200,3 +200,59 @@ the feet moved by FootPlant at run time, and the thigh above 0.66 m (see "Capsul
   upper arms, forearms, pelvis, spine, chest, neck, head.
 - Run it after FootPlant (it moves the legs). Keep the gown's top row fixed to the pelvis; a soft pull to the rest
   shape (stronger on the two slit edges) keeps the open gown from sliding off the legs.
+
+## Pass 4: one whole character (11.11.2026, branch `claude/elise-v2`), stage log
+
+- body: `art/agents/elise/v2/a1_body.py`; one closed quad mesh from the neck to the toes (CC0 MakeHuman base mesh, 13 378 quads, posed on her skeleton and fitted to the generated torso, hips, seat and legs: mean residual 0.6 mm, 0 open edges); hands and feet keep the base mesh's shape, the foot stands in a 5 cm heel. The script also fits a face (first by landmarks, then by grafting the first version's face surface); the owner then asked for the first version's whole head instead, so that part of the result is cut away in the next stage.
+- head: the owner's decision, in his words "just put the v1 head into the new body": the first version's head mesh (face, hair, bun, pin; 12 441 triangles, its own paint) replaces the body's head and is sewn to the neck rim under the collar (`v2/b1_layers.py`); left: that head is the generated shell as it was (triangles, no edge loops, hair fused with the face, 173 open and 229 non-manifold edges inside the hair), so the whole character is not watertight above the neck and bun / braids / fringe / pin are not separate meshes.
+- layers: `v2/b1_layers.py`; each its own mesh over the body: gown as ONE 61 x 60 quad grid from the collar to the hem (halter front, open back V, laced opening, slit, turned-in lip on every free edge; skirt rows and bone grid as in pass 3), stockings (the legs' surface lifted 1.2 mm), lofted closed-toe pumps with 5 cm heels, wrist wraps with two tails each, lacing cords with a bow; 90 bones (names and hierarchy of pass 3; feet and hands re-seated on the new body; the two face-strand chains weight the old head as before); left: the bodice has no folds, no earrings as separate meshes.
+- texture: `v2/c1_tex.py`; one 2048 atlas for every layer: the head and the face patches copy their texels from the first version's texture, skin is flat, the gown is black with thin lighter lines (princess seams, centre back, waist, collar, hem, folds toward the hem, the turned-in rim), stockings are sheer with a scalloped lace top, shoes, burgundy ribbons, black lacing; left: no shading or nails on the skin, the lace is a procedural net.
+- export: `v2/d1_export.py`; body faces under the bodice and the stockings and the stocking toes are removed (3 793 + 1 392 faces), layers reduced to a budget, joined, inverted-hull outline (2.5 mm; face 0.6, hair 0.62, pin 0.45, hands 0.6, fingers 0.42, lacing 0.35, then limited by local thickness), 10 morph targets on the face patches as in pass 2.
+
+### Pass 4 finished by the next executor (12.11.2026, 01:40 Kyiv)
+
+- **Leg-vs-gown check passes on all 11 clips** (minimum 0.0047 m on stairs_up to 0.0073 m, no frame with a leg through
+  the cloth). Causes found and fixed (not by disabling the check):
+  1. walk/run: at the end of stance the FK knee fell behind the hip-ankle line on the new skeleton and the leg IK flipped
+     the knee backward (a 0.3 m jump in two frames); the cloth could not follow and the right leg ended outside the gown.
+     `loco.py` style `knee_fwd` (Elise 0.3) moves the IK knee hint forward.
+  2. stairs_up: the thigh capsules were fitted at the centre of the leg section, 3 cm towards the crotch; that thinner
+     inner capsule swept the front slit edge off the left thigh and behind the right knee. `b1_layers.py` now starts
+     them under the hip joint (as pass 3); gown, cloth rig and models rebuilt.
+  3. stairs_down: the longer v2 heel, lifted behind, cut the back panel: the feet get 1.5 cm more collision margin in the
+     cloth bake (`skirt.py`; a wider margin on the thighs brings back problem 2).
+- Phone model 23 042 triangles (was 31 674): the hands are protected less on the phone LOD and the head reduced a little more.
+- New clip file `game/public/assets/anim/elise.glb`, bake `art/anim/out/elise_cloth.npz`, `elise.json`.
+- In-game check on the GPU server (real WebGL, built from `claude/elise-v2`): no page errors, main model 49 130 tris and
+  phone model 23 042 tris load with all 11 clips; walk, run, stairs up/down look right, no poke-through in the frames
+  (`wip/v2_ingame_frames.jpg`, `wip/v2_ingame_phone.jpg`, video `elise_ingame.mp4`). `npm test` 703 pass, 0 fail.
+- New turnaround sheet `elise_sheet.jpg` (v2 model, new clips).
+- Known: the face strands of hair swing across the face in the walk (sheet WALK 0/4 and 2/4, also in the video): the
+  strand chains need a stiffer hold or a face collider (`STRIPS` in `skirt.py`).
+
+### HANDOVER (11.11.2026, 22:15 Kyiv): state for the next executor of pass 4
+
+The owner asked to hand the work over urgently. Everything below is in git on `claude/elise-v2`; nothing needed exists
+only on the server.
+
+**In git now** (rebuilt at 22:30 with the wider skirt)
+- `game/public/assets/models/agent_elise.glb` (49 128 triangles with the outline hull: 25 204 base + 23 924 hull; 90 bones; 10 morphs; 2 materials; 2048 KTX2 texture) and `agent_elise_m.glb` (1024 texture; **31 674 triangles, over the 24k target**: lower the phone budget in `d1_export.py`, the hands are protected from reduction by the `_keep` group). Built by `v2/all.sh`.
+- `art/agents/elise/elise.blend`: the editable layered scene (`elise_body` with the old head sewn on, `elise_gown`, `elise_stockings`, `elise_shoes`, `elise_ribbons`, `elise_lacing`, `elise_face` (morph patches), `elise_rig`), texture packed.
+- `art/agents/elise/cloth_rig.npz`: the gown grid and capsules of the NEW body.
+- Scripts: `art/agents/elise/v2/` (`a1_prep.py`, `a1_body.py`, `b1_layers.py`, `c1_tex.py`, `d1_export.py`, `all.sh`, `vid.sh`, `sheet.py`, `rend.py`, `ezones.py`, `glb_face.py`).
+
+**NOT done (in this order)**
+1. **Clips: the leg-against-gown check FAILS, so no new clip file exists.** `game/public/assets/anim/elise.glb`, `art/anim/out/elise.json` and `elise_cloth.npz` in git are still pass 3's (old skeleton rest pose for feet and hands, old gown): in the game the feet and the gown will be wrong until this is solved. Two full builds with a fresh cloth bake were run (`FROM=clips BAKE=1 bash s/all.sh 2.5`, about 10 minutes, log `/root/w/elise4/clips.log`):
+   - first, with a skirt built tight on the new legs: failed on walk, run, stairs_up, stairs_down (run minimum -0.0057 m);
+   - then with the skirt as wide as the first version's gown (`ENVS` in `b1_layers.py`; rest clearance to the leg capsules 0.014 to 0.062 m) and the owner's new gait (he asked for "a shorter step but quicker": `clips.json` walk 19 frames at 1.4 m/s = stride 0.89 m, run 13 frames at 2.4 m/s = stride 1.04 m, `step_lift` 0.5 / 0.6): still failed. Per clip, minimum distance m / frames with the right knee through the cloth: idle 0.0066 / 0, idle2 0.0066 / 0, idle_look 0.0064 / 0, walk 0.0061 / 38, run **-0.052** / 3, register 0.0064 / 0, greet 0.0066 / 0, turn_l 0.0066 / 0, turn_r 0.0066 / 0, stairs_up 0.0061 / 21, stairs_down -0.0004 / 0.
+   - Not investigated. What differs from pass 3, where the same check passed: the leg capsules are fitted to the new legs (`b1_layers.py`, printed as `capsule ...`: the thigh capsules start at x = +-0.057 at height 0.66, further in than pass 3's; shin 0.071 to 0.051), the feet are longer (ball 0.10 m ahead of the ankle, was 0.065) and the quicker cadence. Look first at run frame with -0.052 (`gown_min_at` in `clips.log`) and at why the right knee counts as "through the cloth" in the walk (`ClothRig.inside` in `art/anim/ftfanim/skirt.py`).
+2. **In-game check and video**: push, then on the server `bash /root/w/elise4/s/vid.sh claude/elise-v2` (output `/root/w/elise4/elise_ingame.mp4`, log `vid.log`); copy to `docs/art/elise/elise_ingame.mp4`. Not run for the new model at all: "loads with no console errors" is NOT verified.
+3. **Sheet**: `cd /root/w/elise4 && blender -b agent_elise.blend -P s/sheet.py -- r/sheet.jpg clips_dump.npz` then copy `r/sheet.jpg` to `docs/art/elise/elise_sheet.jpg` (the file in git is pass 3's). A plain textured check render of the new model is `docs/art/elise/wip/v2_textured.jpg`.
+4. `cd game && npm test`: 703 pass, 0 fail (run at 22:20 with the new models and the old clips).
+5. Weights were NOT checked in extreme poses (raised arms, deep knee bend, turns). Body weights are the base mesh's painted weights merged onto her bones; the bodice copies the nearest body vertex.
+6. Known visual defects: skin shows through the bodice at the sides of the bust in the layered `.blend` (in the game model the body under the cloth is removed, check it there); the skirt has little flare and no folds; skin is flat colour; the neck seam sits under the collar and was not looked at closely; the phone model is a plain reduction, not checked.
+7. Old pass-3 scripts in `art/agents/elise/*.py` (`b_build.py`, `c_bake.py`, `d_final.py`, `all.sh` ...) are superseded by `v2/` but still there; `v2/ezones.py`, `v2/glb_face.py`, `v2/sheet.py` are copies of them.
+
+**How to rebuild** (server `/root/w/elise4`, scripts from `art/agents/elise/v2/` copied to `s/`, plus `art/tools/compress-glb.sh`; `repo/` holds `art/` and the motion-capture takes): `bash s/all.sh 2.5` (all stages) or `FROM=b|c|d|clips`. Sources read: `/root/w/elise3/work` (pass-3 targets), `src.npz` (dump of pass 3's `agent_elise.blend` by `a0_dump.py`), `mh/` (MakeHuman `base.obj`, `default.mhskel`, `default_weights.mhw`, CC0, fetched from the makehumancommunity/makehuman repository).
+
+**Licence note**: the body is the MakeHuman base mesh (CC0); the head is still the Hunyuan3D-2mv shape (see above).
