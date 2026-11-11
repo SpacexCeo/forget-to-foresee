@@ -89,14 +89,17 @@ State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.
 - Captures: `docs/art/qa/anim/chars-v2/`.
 
 **Half-done / open**
-- In-game check on the GPU browser is incomplete: the server went down (HTTP 522, about 03:30 UTC 11.11) after one
-  run that showed Iris walking and turning in the town with the side-car clips and no console errors (before her
-  final-look model landed). Everything after that was verified in the review page only (same runtime classes,
-  software WebGL). To finish: `node art/anim/ingame.mjs --out <dir> --gpu` on a GPU machine (prints the stance speed
-  per gait measured on the rendered frames, saves stills); the full town is too slow for software WebGL.
+- In-game check done on software WebGL only (`docs/art/qa/anim/chars-v2/ingame/`, `art/anim/ingame.mjs`): no
+  console errors (desktop, altar, phone), idle upright with arms along the body, wink over the mocap idle, `register`
+  cued by the flow, 13 townsfolk on the ground, phone files `_m`. Not checked there: foot sliding and the turn on
+  the spot in the game itself (4 frames a second); run `node art/anim/ingame.mjs --out <dir> --gpu` on a GPU machine.
+- Fixed in that pass: the idle stood with the hips 13 cm ahead of the ankles (`stance` in `clips.json`); a greeting
+  made the seated elder stand up inside the bench (`townsfolk-plan.js`); `idle2` now takes every third idle loop
+  (`iris-avatar.js`).
+- Model-side findings for the model workers: spikes on the scribe's coat hem while he waves; the musician stands
+  tight against a post; Iris's jacket shoulders look boxy from the front.
 - `townsfolk.js` calls `townsfolkClips(model, { key, body })` and takes the walking speed from
   `clip.userData.speed` (done by the townsfolk worker); the per-body values live in `BODY_STYLE` (anim-library.js).
-- `idle2` is in the file but nothing plays it yet (an idle picker in `iris-avatar.js` would alternate it).
 - `play` is violin bowing; the musician carries a lute. A plucked-instrument loop would need another take
   (CMU has no lute or guitar; 79_17 / 80_36 are violin, 80_13 drums).
 - Clan agents still use their procedural clips (no side-cars); the same build makes them: add a character to

@@ -476,6 +476,14 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
             recenter(rig, wr, {**st, 'posture': st['posture_after']})
     if feet_mode == 'planted':
         contacts = {s: [(0, n)] for s in 'LR'}
+        if st.get('stance'):     # stand over the feet: the hips' mean place relative to the ankles and to the rest height
+            mid = 0.5 * (feet['L'].mean(0) + feet['R'].mean(0))
+            hip[:, 0] += mid[0] - hip[:, 0].mean()
+            if st['stance'].get('fwd') is not None:
+                hip[:, 2] += mid[2] + st['stance']['fwd'] - hip[:, 2].mean()
+            if st['stance'].get('height') is not None:
+                rest_hip = 0.5 * (rig.rest_wp[rig.index['thigh_L'], 1] + rig.rest_wp[rig.index['thigh_R'], 1])
+                hip[:, 1] += rest_hip + st['stance']['height'] - hip[:, 1].mean()
         for s in 'LR':   # a planted idle foot is flat: keep only its mean heading
             wf = wr[f'foot_{s}']; pts = foot_points(rig, s)
             fwd = qrot(wf, pts['ball'] - pts['heel']).mean(0)

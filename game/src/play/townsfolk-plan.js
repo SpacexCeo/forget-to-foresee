@@ -227,7 +227,7 @@ export class PersonPlan {
       // greet Iris once each time she comes close
       if (st.greet && dIris < 4.2 && !this.greeted) { this.greeted = true; this.greetUntil = this.t + 2.6; }
       if (dIris > 8) this.greeted = false;
-      if (this.t < this.greetUntil) { this.clip = st.greet; if (iris && !st.sit) face = iris; }
+      if (this.t < this.greetUntil) { if (!st.sit) { this.clip = st.greet; if (iris) face = iris; } } // seated people greet with their look only: the greeting clips stand
       else this.greetUntil = 0;
       if (this.key === 'guard' && dIris < 5 && !this.saluted) { this.saluted = true; this.greetUntil = this.t + 2.4; this._salute = true; }
       if (this.key === 'guard') { if (dIris > 9) this.saluted = false; if (this.t < this.greetUntil && this._salute) this.clip = 'salute'; else this._salute = false; }

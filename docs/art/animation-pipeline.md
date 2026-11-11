@@ -53,7 +53,8 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
 7. **Style per character** (`clips.json` → `DEFAULT_STYLE`): foot track width, arm swing, pelvis and chest
    rotation, bounce, lean, head stabilisation, hand poses, gesture size; the spine, neck and head are re-centred on
    our rig's own posture; `arms_down` hangs the arms along the body at a set clearance (no held-out elbows) while
-   the take's small motion stays.
+   the take's small motion stays; `stance` puts the hips of a standing clip over the ankles at the rest height
+   (an actor's own forward stance would slant the legs).
 8. **Animator layers** (`layers.py`, listed per clip in `clips.json`): a held pose from another take (`pose`: the
    seated loop), a contrapposto weight shift (`shift`), an arm reach solved with two-bone IK toward a target in
    character space or relative to a bone (`reach`: register, salute), eased additive rotations (`rotate`: nod, look,
@@ -105,4 +106,5 @@ a checker ground, frame by frame and deterministically; `capture.mjs` saves an m
 1 cm of the lowest height). Scenarios: `idle`, `walk`, `run`, `loco` (stand → walk → run → walk → stop), `turn`,
 `pivot` (half and quarter turn on the spot), `clip:<name>`. Townsfolk: `?a=townsfolk_elder&aclips=townsfolk&body=elder
 &walkclip=elder_walk&walk=clip&scenario=walk`. `ingame.mjs` records Iris in the real town (walk, run, stop, pivots,
-the registration) through the keyboard.
+the registration, the wink), every townsperson and a phone run through the keyboard and a spy camera on the game's own
+renderer (works on software WebGL; results in `docs/art/qa/anim/chars-v2/ingame/`).

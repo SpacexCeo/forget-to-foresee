@@ -285,7 +285,8 @@
      "neck": 0.2,
      "chest": 0.35,
      "spine": 0.45
-    }
+    },
+    "stance": null
    }
   },
   "sweep": {
@@ -305,7 +306,8 @@
      "neck": 0.8,
      "chest": 1,
      "spine": 1
-    }
+    },
+    "stance": null
    }
   },
   "play": {
@@ -326,7 +328,8 @@
      "neck": 1,
      "chest": 1,
      "spine": 1
-    }
+    },
+    "stance": null
    }
   },
   "counter": {
@@ -347,7 +350,8 @@
      "neck": 0.8,
      "chest": 1,
      "spine": 1
-    }
+    },
+    "stance": null
    }
   },
   "salute": {
@@ -641,6 +645,10 @@
      "elbow": 11,
      "in": 3,
      "keep": 0.8
+    },
+    "stance": {
+     "fwd": 0.03,
+     "height": -0.006
     }
    },
    "clips": {
@@ -682,6 +690,10 @@
      "elbow": 11,
      "in": 3,
      "keep": 0.8
+    },
+    "stance": {
+     "fwd": 0.03,
+     "height": -0.006
     }
    },
    "clips": {

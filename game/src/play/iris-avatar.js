@@ -57,9 +57,13 @@ export class IrisAvatar {
       const idle = mixer ? resolveClip(clips, 'idle').clip : null;
       const idleAction = idle ? mixer.clipAction(idle) : null;
       if (idleAction) idleAction.play();
+      // A second idle (weight on the other leg) takes every third loop; both loops start from the same pose.
+      const idle2 = extra.find((c) => c.name === 'idle2' && idle && Math.abs(c.duration - idle.duration) < 0.05);
+      const idle2Action = idle2 && idleAction ? mixer.clipAction(idle2) : null;
+      if (idle2Action) { idle2Action.play(); idle2Action.weight = 0; }
       const face = mixer && extra.length ? faceLayerClip(gltf.animations) : null;   // blinks and gaze under the body clips
       const faceAction = face ? mixer.clipAction(face).play() : null;
-      this.irisModel = { model, mixer, clips, idleAction, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
+      this.irisModel = { model, mixer, clips, idleAction, idle2Action, idleLoops: 0, idleK: 0, idleT: 0, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { avatarGroup.userData.irisFailed = true; console.warn('[play] Iris model failed', e); }
   }
 
@@ -94,7 +98,18 @@ export class IrisAvatar {
         m.react.setEffectiveWeight(m.reactW * (1 - move));
         if (!rc && m.reactW < 0.01) { m.react.stop(); m.react = null; }
       }
-      if (m.idleAction) m.idleAction.weight = (1 - move) * (1 - m.reactW);
+      if (m.idleAction) {
+        const w = (1 - move) * (1 - m.reactW);
+        if (m.idle2Action) {
+          if (m.idleAction.time < m.idleT) m.idleLoops++;                 // the loop came round
+          m.idleT = m.idleAction.time;
+          if (move > 0.5) m.idleLoops = 0;                                // after a walk she starts with the first idle
+          m.idleK += ((m.idleLoops % 3 === 2 ? 1 : 0) - m.idleK) * Math.min(1, dt / 0.5);
+          m.idle2Action.time = m.idleAction.time;                         // in step, so the hand-over is seamless
+          m.idle2Action.weight = w * m.idleK;
+        }
+        m.idleAction.weight = w * (1 - (m.idle2Action ? m.idleK : 0));
+      }
       // a reaction with its own face (the wink) takes the face over from the always-on layer
       if (m.faceAction) m.faceAction.weight = m.react && hasFace(m.react.getClip()) ? 1 - m.reactW * (1 - move) : 1;
       m.mixer.update(dt);
