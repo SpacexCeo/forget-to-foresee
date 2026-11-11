@@ -96,13 +96,16 @@ export function carveBox(flat, min, max, keepFloors = true) {
   return out;
 }
 
-/** Keeps the triangles of a flat list whose centroid satisfies `keep(x, z)` (town-local, given the origin). */
+/**
+ * Keeps the triangles of a flat list with at least one vertex where `keep(x, z)` holds (town-local, given the
+ * origin). Any vertex, not the centroid: the road's first strip past the gate shares long triangles with the street.
+ */
 export function filterTriangles(flat, origin, keep) {
   const out = [];
   for (let i = 0; i + 8 < flat.length; i += 9) {
-    const x = (flat[i] + flat[i + 3] + flat[i + 6]) / 3 - origin[0];
-    const z = (flat[i + 2] + flat[i + 5] + flat[i + 8]) / 3 - origin[2];
-    if (keep(x, z)) for (let j = 0; j < 9; j++) out.push(flat[i + j]);
+    let any = false;
+    for (let v = 0; v < 9 && !any; v += 3) any = keep(flat[i + v] - origin[0], flat[i + v + 2] - origin[2]);
+    if (any) for (let j = 0; j < 9; j++) out.push(flat[i + j]);
   }
   return out;
 }
