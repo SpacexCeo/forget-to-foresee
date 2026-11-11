@@ -13,8 +13,8 @@ import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
-import { cycleAt, mixLooks, BLEND_STEP } from './render/daycycle.js';
-import { lookFor } from './render/sky.js';
+import { cycleLook, KEYS as CYCLE_KEYS } from './render/daycycle.js';
+import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
@@ -615,18 +615,24 @@ function groundInTown() {
 const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camera, light: { sun: null, daylight: 1, pixelsPerMetre: 900 } }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
-// The town's day cycle (render/daycycle.js, owner 11.11): afternoon → dusk → afternoon, rain every second loop.
-// Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
+// The town's day cycle (render/daycycle.js, owner 11.11): early morning → evening → night with mist and moon → early
+// morning, continuous every frame (the sky statistics of the five hours are read once, outside the frame loop, then
+// blended). Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
 const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
-  ? { t: Number(params.get('cycle')) || 0, k: -1, weather: null } : null;
+  ? { t: Number(params.get('cycle')) || 0, weather: null, ready: false } : null;
+function prepareDayCycle() {
+  if (!dayCycle || dayCycle.ready || lookdev.location !== 'town') return;
+  lookdev.prepareCycle('town', CYCLE_KEYS.map((k) => k[0]));
+  dayCycle.ready = true;
+}
+if (dayCycle) setTimeout(prepareDayCycle, 0); // under the loading screen, not in a frame
 function tickDayCycle(dt) {
   if (lookdev.location !== 'town') return;
+  if (!dayCycle.ready) { setTimeout(prepareDayCycle, 0); return; }
   dayCycle.t += dt;
-  const c = cycleAt(dayCycle.t);
-  if (Math.abs(c.k - dayCycle.k) >= BLEND_STEP || (c.k !== dayCycle.k && (c.k === 0 || c.k === 1))) {
-    dayCycle.k = c.k;
-    lookdev.applyLook(mixLooks(lookFor('town', null), lookFor('town', 'dusk'), c.k));
-  }
+  const c = cycleLook(dayCycle.t, (h) => lookFor('town', h));
+  const S = lookdev.cycleStats;
+  lookdev.applyLookLive(c.look, mixStats(S[c.a], S[c.b], c.k), clock.elapsedTime);
   if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
 }
 

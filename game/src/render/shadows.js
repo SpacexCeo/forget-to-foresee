@@ -12,6 +12,9 @@
 // The pure parts (sizes, snapping, bias) are covered by tests/client/atmosphere.test.mjs.
 import * as THREE from 'three';
 
+/** How far (cosine of 0.3°) the sun may turn before the far cascade is rendered again. */
+const FAR_TURN_COS = Math.cos(0.3 * Math.PI / 180);
+
 /** Half-sizes (m) the near cascade may take: fixed steps, so zooming does not resize texels continuously. */
 export const NEAR_STEPS = Object.freeze([12, 18, 26, 38, 56]);
 
@@ -110,7 +113,15 @@ export class SunShadows {
     this.frame = 0; this.farKey = '';
   }
 
-  setDirection(dir) { this.dir.copy(dir).normalize(); this.farKey = ''; }
+  /**
+   * The sun's direction. The day cycle moves it every frame: the near cascade follows every frame (texel-snapped), the
+   * far cascade (rendered on demand) only re-renders once the light has turned by FAR_TURN since its last render.
+   */
+  setDirection(dir) {
+    this.dir.copy(dir).normalize();
+    if (!this.farDir) this.farDir = this.dir.clone();
+    if (this.farDir.dot(this.dir) < FAR_TURN_COS) { this.farDir.copy(this.dir); this.farKey = ''; }
+  }
 
   /** @param {object} cfg the tier's knobs (quality.js) */
   configure(cfg) {
