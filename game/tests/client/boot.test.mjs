@@ -164,8 +164,8 @@ test('loading v3: the log names what is loading in the world\'s voice, in every 
   assert.equal(LOG_LINES, 4);
   const { readFileSync } = await import('node:fs');
   const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
-  for (const cls of ['boot-diagram', 'boot-log', 'boot-halo', 'boot-iris', 'boot-sub', 'boot-word', 'boot-line', 'boot-pct']) assert.ok(html.includes(cls), cls);
-  assert.ok(html.includes('assets/ui/loading_iris.webp'));
+  for (const cls of ['boot-diagram', 'boot-bodies', 'boot-log', 'boot-halo', 'boot-world', 'boot-globe', 'boot-constellation', 'boot-sub', 'boot-word', 'boot-line', 'boot-pct']) assert.ok(html.includes(cls), cls);
+  assert.ok(!html.includes('boot-iris'), 'no Iris silhouette on the loading screen (owner, 11.11)');
   const { execFileSync } = await import('node:child_process');
   execFileSync(process.execPath, [new URL('../../../art/ui/loading/build_diagram.mjs', import.meta.url).pathname, '--check']); // the inline art is up to date
   assert.deepEqual(logKeysFromStats({ list: [{ name: 'shell_1', state: 'warming', priority: 9 }] }), ['loading.log.shadersIsland'], 'the archipelago has its own warming line');
