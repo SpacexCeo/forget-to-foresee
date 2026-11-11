@@ -1,0 +1,189 @@
+{
+  "asset": "shell_1",
+  "numeral": "I",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.13
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 13.46
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 15.26
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 104.91
+    },
+    {
+      "stage": "textures",
+      "seconds": 29.61
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.33
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "geometry": {
+    "aperture": [
+      0.5277542471885681,
+      0.0,
+      2.2615833282470703
+    ],
+    "forward": [
+      0.9102551341056824,
+      0.0,
+      0.4140477180480957
+    ],
+    "aperture_radius": 1.9211902942699186,
+    "frames": 298,
+    "scale": 4.3538
+  },
+  "runtime_triangles": 21456,
+  "nonmanifold_edges": 0,
+  "uv_seams": 2372,
+  "uv_exterior": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 196.8,
+      "p10": 151.7,
+      "p90": 219.7,
+      "coefficient_of_variation": 0.134
+    },
+    "uv_anisotropy": {
+      "median": 1.042,
+      "p95": 1.123,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 10746,
+    "uv_fill": 0.7443
+  },
+  "uv_nacre": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 93.7,
+      "p10": 78.2,
+      "p90": 106.6,
+      "coefficient_of_variation": 0.131
+    },
+    "uv_anisotropy": {
+      "median": 1.033,
+      "p95": 1.162,
+      "share_over_1_5": 0.0076
+    },
+    "triangles_measured": 10710,
+    "uv_fill": 0.7443
+  },
+  "master_densify": {
+    "max_edge_m": 0.03,
+    "passes": 7,
+    "triangles": 3884928
+  },
+  "master_triangles": 3884928,
+  "bakes": {
+    "normal": {
+      "seconds": 22.63,
+      "samples": 32,
+      "size": 8192
+    },
+    "color": {
+      "seconds": 22.47,
+      "samples": 32,
+      "size": 8192
+    },
+    "rough": {
+      "seconds": 18.58,
+      "samples": 16,
+      "size": 8192
+    },
+    "ao": {
+      "seconds": 41.07,
+      "samples": 512,
+      "size": 8192
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/shells/textures/shell_1_basecolor.jpg",
+      "bytes": 1787061
+    },
+    "orm": {
+      "file": "art/shells/textures/shell_1_orm.jpg",
+      "bytes": 2443451
+    },
+    "normal": {
+      "file": "art/shells/textures/shell_1_normal.png",
+      "bytes": 12839446
+    }
+  },
+  "collision_triangles": {
+    "shell_1_hull_a_col": 96,
+    "shell_1_hull_b_col": 52
+  },
+  "materials": [
+    "M_Shell_Exterior",
+    "M_Shell_Nacre"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -5.316,
+      -1.206,
+      0.0
+    ],
+    "max": [
+      5.316,
+      1.206,
+      18.0
+    ]
+  },
+  "glb_bytes": 17968536,
+  "glb": {
+    "extensionsUsed": [],
+    "nodes": [
+      "shell_1",
+      "shell_1_hull_a_col",
+      "shell_1_hull_b_col",
+      "socket_aperture"
+    ],
+    "materials": [
+      {
+        "name": "M_Shell_Exterior",
+        "extensions": {}
+      },
+      {
+        "name": "M_Shell_Nacre",
+        "extensions": {}
+      }
+    ],
+    "images": [
+      {
+        "name": "shell_1_normal",
+        "mime": "image/png",
+        "bytes": 12839446
+      },
+      {
+        "name": "shell_1_orm",
+        "mime": "image/jpeg",
+        "bytes": 2443451
+      },
+      {
+        "name": "shell_1_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 1787061
+      }
+    ]
+  },
+  "budget_ok": {
+    "runtime": true,
+    "materials_per_object": true
+  }
+}

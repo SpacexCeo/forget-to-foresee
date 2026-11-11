@@ -1,0 +1,215 @@
+{
+  "asset": "camp_yantar.glb",
+  "clan": "Amber",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.36
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.27
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 63.05
+    },
+    {
+      "stage": "textures",
+      "seconds": 1.54
+    },
+    {
+      "stage": "materials_assemble",
+      "seconds": 0.29
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 94,
+  "kinds": [
+    "brass",
+    "cloth_canvas",
+    "cloth_red",
+    "deck_warm",
+    "iron",
+    "paper",
+    "rope",
+    "salt",
+    "shingle_warm",
+    "stone",
+    "wood",
+    "wood_warm"
+  ],
+  "bakes": {
+    "normal": {
+      "seconds": 9.38,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 7.58,
+      "samples": 16,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 6.96,
+      "samples": 8,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 4.96,
+      "samples": 8,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 34.08,
+      "samples": 256,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/camps/textures/yantar/camp_yantar_basecolor.jpg",
+      "bytes": 3761460,
+      "size": 4096
+    },
+    "orm": {
+      "file": "art/camps/textures/yantar/camp_yantar_orm.jpg",
+      "bytes": 5826526,
+      "size": 4096
+    },
+    "normal": {
+      "file": "art/camps/textures/yantar/camp_yantar_normal.jpg",
+      "bytes": 1539857,
+      "size": 4096
+    }
+  },
+  "runtime_triangles_blender": 8015,
+  "collision_triangles_blender": 560,
+  "bounds_blender_zup": {
+    "min": [
+      -4.35,
+      -4.35,
+      -0.02
+    ],
+    "max": [
+      4.35,
+      4.702,
+      4.37
+    ]
+  },
+  "details": [
+    "octagonal warm-wood pavilion with a shingle roof, balustrade and brass finial",
+    "four padlocked chests with iron/brass bands and price tags",
+    "beam balance on a timber frame with pans and iron weights",
+    "iron strongbox chained shut",
+    "ledger desk with coin stacks and a hanging amber lantern"
+  ],
+  "glb_bytes": 11779820,
+  "glb": {
+    "bytes": 11779820,
+    "nodes": {
+      "camp_yantar": {
+        "triangles": 8015,
+        "materials": [
+          "M_Amber_Atlas",
+          "M_Amber_AtlasDS",
+          "M_Amber_Glow"
+        ],
+        "attributes": [
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "camp_yantar_col": {
+        "triangles": 560,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Amber_Atlas",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Amber_AtlasDS",
+        "doubleSided": true,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Amber_Glow",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      }
+    ],
+    "images": [
+      {
+        "name": "camp_yantar_normal",
+        "mime": "image/jpeg",
+        "bytes": 1539857,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_yantar_orm",
+        "mime": "image/jpeg",
+        "bytes": 5826526,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_yantar_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 3761460,
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_agent": {
+        "translation_gltf": [
+          0,
+          0.12,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "agent_hologram",
+          "free_radius_m": 1.0
+        }
+      }
+    },
+    "triangles_render": 8015,
+    "triangles_collision": 560,
+    "max_materials_per_node": 3
+  },
+  "runtime_triangles": 8015,
+  "materials": [
+    "M_Amber_Atlas",
+    "M_Amber_AtlasDS",
+    "M_Amber_Glow"
+  ],
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "agent_circle_free": true
+  }
+}

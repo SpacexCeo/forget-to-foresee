@@ -1,0 +1,42 @@
+{
+ "query": "a=agent_iris&alabel=BEFORE (procedural clips)&b=agent_iris&bclips=/assets/anim/iris.glb&blabel=AFTER (motion capture retarget)&scenario=loco",
+ "size": [
+  1920,
+  1080
+ ],
+ "frames": 330,
+ "fps": 30,
+ "clips": {
+  "A": [
+   "idle",
+   "walk",
+   "run",
+   "talk",
+   "think",
+   "gesture_offer",
+   "celebrate",
+   "defeat",
+   "understand"
+  ],
+  "B": [
+   "walk",
+   "run"
+  ]
+ },
+ "every": 1,
+ "metrics": {
+  "A": {
+   "planted_samples": 9,
+   "slip_mean_m_s": 0.412,
+   "slip_p95_m_s": 1.862,
+   "slip_max_m_s": 1.862
+  },
+  "B": {
+   "planted_samples": 116,
+   "slip_mean_m_s": 0.097,
+   "slip_p95_m_s": 0.907,
+   "slip_max_m_s": 2.329
+  }
+ },
+ "errors": []
+}

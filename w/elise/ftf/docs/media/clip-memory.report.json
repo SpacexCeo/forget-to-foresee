@@ -1,0 +1,207 @@
+{
+ "video": "clip-memory",
+ "title": "Forget to Foresee: clip, the Price of Memory (10 s)",
+ "width": 1920,
+ "height": 1080,
+ "fps": 60,
+ "tier": "ultra",
+ "duration": 10,
+ "shots": [
+  {
+   "shot": "memory",
+   "frames": 420,
+   "secondsPerFrame": 0.27863809523809524,
+   "loaded": true,
+   "setupFrames": 235,
+   "errors": [
+    "action forget: no memory button"
+   ],
+   "consoleErrors": [
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [cinematic] action failed {at: 0.6, do: forget, index: 1, id: 1, done: true} Error: no memory button\n    at Z.perform (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:11393)\n    at Z.runActions (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:9054)\n    at Z.step (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:14856)\n    at Z.setup (http://localhost:5179/assets/cinematic-DfKYIKzQ",
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3d64000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "43369ecfe1613462",
+    "419": "2d82667d7720ec25"
+   }
+  },
+  {
+   "shot": "card",
+   "frames": 180,
+   "secondsPerFrame": 0.2465388888888889,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x944000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "d62eaa29d56208ae",
+    "179": "41a233ccf35b9f33"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.3612587836235762,
+  "events": 45,
+  "wav": "/root/ftf-media-v2/work/clip-memory-1920x1080-ultra/clip-memory.wav",
+  "cues": 53
+ },
+ "files": {
+  "/root/ftf-media-v2/clip-memory.mp4": {
+   "bytes": 5769731,
+   "mb": 5.5,
+   "duration": 9.983333,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 153344,
+    "duration": "9.983333",
+    "bit_rate": "4354142",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "599",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media-v2/clip-memory-captions.mp4": {
+   "bytes": 5875755,
+   "mb": 5.6,
+   "duration": 9.983333,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 153344,
+    "duration": "9.983333",
+    "bit_rate": "4439103",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "599",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media-v2/clip-memory.srt": {
+   "bytes": 182,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}

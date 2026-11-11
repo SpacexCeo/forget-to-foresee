@@ -1,0 +1,215 @@
+{
+  "asset": "camp_moh.glb",
+  "clan": "Moss",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.41
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 0.87
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 59.3
+    },
+    {
+      "stage": "textures",
+      "seconds": 1.73
+    },
+    {
+      "stage": "materials_assemble",
+      "seconds": 0.24
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 56,
+  "kinds": [
+    "clay",
+    "cloth_canvas",
+    "cloth_cream",
+    "ground_moss",
+    "iron",
+    "leaf",
+    "moss",
+    "mushroom",
+    "petal_mix",
+    "rope",
+    "stone",
+    "wood"
+  ],
+  "bakes": {
+    "normal": {
+      "seconds": 8.26,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 5.73,
+      "samples": 16,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 6.29,
+      "samples": 8,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 6.21,
+      "samples": 8,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 32.74,
+      "samples": 256,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/camps/textures/moh/camp_moh_basecolor.jpg",
+      "bytes": 4669153,
+      "size": 4096
+    },
+    "orm": {
+      "file": "art/camps/textures/moh/camp_moh_orm.jpg",
+      "bytes": 7221979,
+      "size": 4096
+    },
+    "normal": {
+      "file": "art/camps/textures/moh/camp_moh_normal.jpg",
+      "bytes": 1748170,
+      "size": 4096
+    }
+  },
+  "runtime_triangles_blender": 14576,
+  "collision_triangles_blender": 352,
+  "bounds_blender_zup": {
+    "min": [
+      -4.35,
+      -4.35,
+      -0.02
+    ],
+    "max": [
+      4.35,
+      4.682,
+      3.081
+    ]
+  },
+  "details": [
+    "open dome of six bent arches overgrown with leaves, moss and flowers",
+    "shared iron cauldron on a stone hearth with glowing brew (special) and bowls",
+    "three mossy log benches around the hologram circle",
+    "moss beds and a hammock under the dome",
+    "mushrooms, ferns and flower patches, a mossy stump"
+  ],
+  "glb_bytes": 14677500,
+  "glb": {
+    "bytes": 14677500,
+    "nodes": {
+      "camp_moh": {
+        "triangles": 14576,
+        "materials": [
+          "M_Moss_Atlas",
+          "M_Moss_AtlasDS",
+          "M_Moss_Brew"
+        ],
+        "attributes": [
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "camp_moh_col": {
+        "triangles": 352,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Moss_Atlas",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Moss_AtlasDS",
+        "doubleSided": true,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Moss_Brew",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      }
+    ],
+    "images": [
+      {
+        "name": "camp_moh_normal",
+        "mime": "image/jpeg",
+        "bytes": 1748170,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_moh_orm",
+        "mime": "image/jpeg",
+        "bytes": 7221979,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_moh_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 4669153,
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_agent": {
+        "translation_gltf": [
+          0,
+          0.12,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "agent_hologram",
+          "free_radius_m": 1.0
+        }
+      }
+    },
+    "triangles_render": 14576,
+    "triangles_collision": 352,
+    "max_materials_per_node": 3
+  },
+  "runtime_triangles": 14576,
+  "materials": [
+    "M_Moss_Atlas",
+    "M_Moss_AtlasDS",
+    "M_Moss_Brew"
+  ],
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "agent_circle_free": true
+  }
+}

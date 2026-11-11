@@ -1,0 +1,23 @@
+{
+  "network": "testnet",
+  "contractId": "ftf-shards.testnet",
+  "ownerId": "ftf-coordinator.testnet",
+  "coordinatorId": "ftf-coordinator.testnet",
+  "receiverId": "ftf-coordinator.testnet",
+  "seasonContract": "ftf-seasons.testnet",
+  "seedHex": "cc161d308faa67539af44205b56b6d4f",
+  "seasonId": "793f6c05e89839f2",
+  "scheduleRoot": "03dbd4587b5d54fc3a6d4befe19920ba66236de11e786baa0a8678305075769a",
+  "deployTx": "6RBYGycH8uf9ub519KPRriUKRxxs7gXDZ8Jp3FZy4eGt",
+  "mintTx": {
+    "7": "2nqGqiVfk8pQaC6ue9naxR8XDYAEHXcqRZ8DovHi7LLc",
+    "10": "D279h9JSGt2iZhbwnGwTHhne3pEgJikPyR4ZTVZpeJgF",
+    "15": "6BpYCfy8s5zBe1w2eBBabwGx8spwLwMd7oCzNfkmN5xR"
+  },
+  "tokens": [
+    "793f6c05e89839f2-7",
+    "793f6c05e89839f2-10",
+    "793f6c05e89839f2-15"
+  ],
+  "recordedAt": "2026-11-09T07:13:05.311Z"
+}

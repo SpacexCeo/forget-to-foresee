@@ -1,0 +1,123 @@
+{
+  "iris": {
+    "tris": 15440,
+    "seconds": 0.3,
+    "parts": {
+      "body": 1844,
+      "face_eye_L": 154,
+      "face_iris_L": 80,
+      "face_pupil_L": 36,
+      "face_lidup_L": 168,
+      "face_lidlo_L": 140,
+      "face_lidup_L_lash": 88,
+      "face_brow_L": 108,
+      "face_eye_R": 154,
+      "face_iris_R": 80,
+      "face_pupil_R": 36,
+      "face_lidup_R": 168,
+      "face_lidlo_R": 140,
+      "face_lidup_R_lash": 88,
+      "face_brow_R": 108,
+      "face_lipup": 132,
+      "face_jaw_lip": 132,
+      "face_mouth": 48,
+      "face_teeth": 72,
+      "head": 1864,
+      "tunic": 864,
+      "tunic_trim": 288,
+      "sleeve_l": 320,
+      "sleeve_r": 320,
+      "boot_-1": 240,
+      "boot_cuff_-1": 120,
+      "boot_1": 240,
+      "boot_cuff_1": 120,
+      "belt": 256,
+      "buckle": 12,
+      "pouch": 12,
+      "bracer_-1": 200,
+      "bracer_1": 200,
+      "hair_cap": 200,
+      "hair": 1632,
+      "cloak": 1920,
+      "cloak_trim": 440,
+      "cape": 740,
+      "cape_trim": 368,
+      "hood_down": 140,
+      "clasp": 160,
+      "clasp_gem": 20,
+      "scarf": 576,
+      "scarf_tail": 152,
+      "scarf_front": 80,
+      "tassels": 120,
+      "pin": 60
+    },
+    "bounds": [
+      [
+        -0.356,
+        -0.27,
+        0.001
+      ],
+      [
+        0.356,
+        0.338,
+        1.791
+      ]
+    ]
+  },
+  "moh": {
+    "tris": 15942,
+    "seconds": 0.21,
+    "parts": {
+      "body": 1844,
+      "face_eye_L": 154,
+      "face_iris_L": 80,
+      "face_pupil_L": 36,
+      "face_lidup_L": 168,
+      "face_lidlo_L": 140,
+      "face_lidup_L_lash": 88,
+      "face_brow_L": 108,
+      "face_eye_R": 154,
+      "face_iris_R": 80,
+      "face_pupil_R": 36,
+      "face_lidup_R": 168,
+      "face_lidlo_R": 140,
+      "face_lidup_R_lash": 88,
+      "face_brow_R": 108,
+      "face_lipup": 132,
+      "face_jaw_lip": 132,
+      "face_mouth": 48,
+      "face_teeth": 72,
+      "head": 1864,
+      "tunic": 1664,
+      "sleeve_l": 384,
+      "sleeve_r": 384,
+      "belt": 256,
+      "cloak": 1920,
+      "cloak_trim": 440,
+      "capelet": 1152,
+      "capelet_trim": 432,
+      "hood_down": 140,
+      "hair_cap": 200,
+      "hair": 1360,
+      "moss": 440,
+      "mushroom_caps": 352,
+      "mushroom_stems": 96,
+      "leaves": 416,
+      "cauldron": 336,
+      "bail": 250,
+      "ladle": 80
+    },
+    "bounds": [
+      [
+        -0.414,
+        -0.261,
+        0.001
+      ],
+      [
+        0.437,
+        0.326,
+        1.79
+      ]
+    ]
+  }
+}

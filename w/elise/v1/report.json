@@ -1,0 +1,27 @@
+{
+ "info": {
+  "tris": 46990,
+  "mats": [
+   "MeshToonMaterial:elise_toon",
+   "MeshBasicMaterial:elise_outline"
+  ],
+  "bones": 42,
+  "clips": [
+   "idle",
+   "idle2",
+   "idle_look",
+   "walk",
+   "run",
+   "register",
+   "greet"
+  ]
+ },
+ "errors": [],
+ "reqs": [
+  "models/agent_iris.glb?v=5544056",
+  "models/agent_elise.glb?v=1253152",
+  "anim/elise.glb",
+  "models/camp_iris_m.glb?v=4043328"
+ ],
+ "frames": 1990
+}

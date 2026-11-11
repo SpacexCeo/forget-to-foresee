@@ -1,0 +1,26 @@
+{
+  "device": "OPTIX",
+  "resolution": 1400,
+  "samples": 256,
+  "seconds_per_render": {
+    "front": 17.22,
+    "three_quarter": 16.23,
+    "top": 18.15,
+    "game_iso": 9.94,
+    "close_a": 12.35,
+    "close_b": 15.03,
+    "hologram_circle": 6.04,
+    "collision": 4.14
+  },
+  "render_only": [
+    "plateau disc",
+    "1.75 m figure",
+    "hologram circle marker"
+  ],
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 99.16
+    }
+  ]
+}

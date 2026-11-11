@@ -1,0 +1,213 @@
+{
+  "asset": "camp_sol.glb",
+  "clan": "Salt",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.32
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.15
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 51.47
+    },
+    {
+      "stage": "textures",
+      "seconds": 1.38
+    },
+    {
+      "stage": "materials_assemble",
+      "seconds": 0.22
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 21,
+  "kinds": [
+    "brass",
+    "cloth_cream",
+    "iron",
+    "marble",
+    "paper",
+    "paving_white",
+    "rope",
+    "salt",
+    "stone",
+    "wood"
+  ],
+  "bakes": {
+    "normal": {
+      "seconds": 8.37,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 6.58,
+      "samples": 16,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 5.78,
+      "samples": 8,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 6.03,
+      "samples": 8,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 24.63,
+      "samples": 256,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/camps/textures/sol/camp_sol_basecolor.jpg",
+      "bytes": 3206547,
+      "size": 4096
+    },
+    "orm": {
+      "file": "art/camps/textures/sol/camp_sol_orm.jpg",
+      "bytes": 4896802,
+      "size": 4096
+    },
+    "normal": {
+      "file": "art/camps/textures/sol/camp_sol_normal.jpg",
+      "bytes": 1423157,
+      "size": 4096
+    }
+  },
+  "runtime_triangles_blender": 9523,
+  "collision_triangles_blender": 464,
+  "bounds_blender_zup": {
+    "min": [
+      -4.35,
+      -4.35,
+      -0.124
+    ],
+    "max": [
+      4.35,
+      4.35,
+      3.14
+    ]
+  },
+  "details": [
+    "five quartz clusters (special material), the largest 3.1 m",
+    "six-column marble colonnade with a curved architrave",
+    "trade table with a brass balance, salt in one pan and weights in the other",
+    "stacked salt blocks, a salt cone and sacks",
+    "a padlocked chest hidden under a cloth behind the columns"
+  ],
+  "glb_bytes": 10185944,
+  "glb": {
+    "bytes": 10185944,
+    "nodes": {
+      "camp_sol": {
+        "triangles": 9523,
+        "materials": [
+          "M_Salt_Atlas",
+          "M_Salt_AtlasDS",
+          "M_Salt_Quartz"
+        ],
+        "attributes": [
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "camp_sol_col": {
+        "triangles": 464,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Salt_Atlas",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Salt_AtlasDS",
+        "doubleSided": true,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Salt_Quartz",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      }
+    ],
+    "images": [
+      {
+        "name": "camp_sol_normal",
+        "mime": "image/jpeg",
+        "bytes": 1423157,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_sol_orm",
+        "mime": "image/jpeg",
+        "bytes": 4896802,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_sol_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 3206547,
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_agent": {
+        "translation_gltf": [
+          0,
+          0.12,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "agent_hologram",
+          "free_radius_m": 1.0
+        }
+      }
+    },
+    "triangles_render": 9523,
+    "triangles_collision": 464,
+    "max_materials_per_node": 3
+  },
+  "runtime_triangles": 9523,
+  "materials": [
+    "M_Salt_Atlas",
+    "M_Salt_AtlasDS",
+    "M_Salt_Quartz"
+  ],
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "agent_circle_free": true
+  }
+}

@@ -1,0 +1,203 @@
+{
+ "video": "clip-verified",
+ "title": "Forget to Foresee: clip, Verified (12 s)",
+ "width": 1920,
+ "height": 1080,
+ "fps": 60,
+ "tier": "ultra",
+ "duration": 12,
+ "shots": [
+  {
+   "shot": "card",
+   "frames": 120,
+   "secondsPerFrame": 0.24535833333333334,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0xedc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xedc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xedc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xedc000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "26c3ff4bd08ff265",
+    "119": "0ebc60df00318d41"
+   }
+  },
+  {
+   "shot": "verified",
+   "frames": 600,
+   "secondsPerFrame": 0.26641,
+   "loaded": true,
+   "setupFrames": 150,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x2a14000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2a14000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2a14000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2a14000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "a59531d9ce2f0a50",
+    "599": "a35ab572e61fc5eb"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.3217164497226477,
+  "events": 60,
+  "wav": "/root/ftf-media-v2/work/clip-verified-1920x1080-ultra/clip-verified.wav",
+  "cues": 70
+ },
+ "files": {
+  "/root/ftf-media-v2/clip-verified.mp4": {
+   "bytes": 8247394,
+   "mb": 7.9,
+   "duration": 11.983333,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 184064,
+    "duration": "11.983333",
+    "bit_rate": "5236320",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "719",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media-v2/clip-verified-captions.mp4": {
+   "bytes": 8316769,
+   "mb": 7.9,
+   "duration": 11.983333,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 184064,
+    "duration": "11.983333",
+    "bit_rate": "5282634",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "719",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media-v2/clip-verified.srt": {
+   "bytes": 220,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}

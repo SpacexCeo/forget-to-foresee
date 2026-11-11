@@ -1,0 +1,221 @@
+{
+ "note": "art/anim/ingame.mjs on software WebGL (SwiftShader), 640x400, main 248da5f + this commit",
+ "errors": {
+  "desk": [],
+  "altar": [],
+  "phone": []
+ },
+ "iris": {
+  "walkSpeed": 1.7,
+  "runSpeed": 3.3,
+  "fps": 5.7,
+  "wink": {
+   "clip": "understand",
+   "time": 1.47
+  },
+  "altar": {
+   "offered": true,
+   "register": {
+    "clip": "register",
+    "time": 1.18
+   },
+   "flowCuesRegister": true
+  }
+ },
+ "phone": {
+  "fps": 7,
+  "loaded": 13,
+  "files": [
+   "townsfolk_guard_m",
+   "townsfolk_shardkeeper_m",
+   "townsfolk_scribe_m",
+   "townsfolk_innkeeper_m",
+   "townsfolk_baker_m",
+   "townsfolk_shrinekeeper_m",
+   "townsfolk_elder_m",
+   "townsfolk_musician_m",
+   "townsfolk_sweeper_m",
+   "townsfolk_lamplighter_m",
+   "townsfolk_courier_m",
+   "townsfolk_child_a_m",
+   "townsfolk_child_b_m"
+  ],
+  "glb": [
+   "agent_iris_m.glb",
+   "iris.glb",
+   "townsfolk_courier_m.glb",
+   "townsfolk.glb",
+   "townsfolk_guard_m.glb",
+   "camp_iris_m.glb",
+   "townsfolk_innkeeper_m.glb",
+   "townsfolk_lamplighter_m.glb",
+   "townsfolk_sweeper_m.glb",
+   "townsfolk_child_a_m.glb",
+   "townsfolk_shrinekeeper_m.glb",
+   "townsfolk_baker_m.glb",
+   "townsfolk_child_b_m.glb",
+   "townsfolk_scribe_m.glb",
+   "townsfolk_shardkeeper_m.glb",
+   "townsfolk_elder_m.glb",
+   "townsfolk_musician_m.glb"
+  ]
+ },
+ "townsfolk": [
+  {
+   "key": "guard",
+   "state": "loaded",
+   "file": "townsfolk_guard",
+   "clip": "salute",
+   "walk": "walk",
+   "visible": true,
+   "y": 1200,
+   "ground": 1200,
+   "pelvis_above": 1.07,
+   "foot_above": 0.09
+  },
+  {
+   "key": "shardkeeper",
+   "state": "loaded",
+   "file": "townsfolk_shardkeeper",
+   "clip": "wave",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 0.87,
+   "foot_above": 0.08
+  },
+  {
+   "key": "scribe",
+   "state": "loaded",
+   "file": "townsfolk_scribe",
+   "clip": "wave",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 0.92,
+   "foot_above": 0.08
+  },
+  {
+   "key": "innkeeper",
+   "state": "loaded",
+   "file": "townsfolk_innkeeper",
+   "clip": "wave",
+   "walk": "walk",
+   "visible": true,
+   "y": 1202.5,
+   "ground": 1202.5,
+   "pelvis_above": 0.93,
+   "foot_above": 0.09
+  },
+  {
+   "key": "baker",
+   "state": "loaded",
+   "file": "townsfolk_baker",
+   "clip": "wave",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 0.89,
+   "foot_above": 0.08
+  },
+  {
+   "key": "shrinekeeper",
+   "state": "loaded",
+   "file": "townsfolk_shrinekeeper",
+   "clip": "nod",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 0.82,
+   "foot_above": 0.08
+  },
+  {
+   "key": "elder",
+   "state": "loaded",
+   "file": "townsfolk_elder",
+   "clip": "sit",
+   "walk": "elder_walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1205.1,
+   "pelvis_above": 0.55,
+   "foot_above": 0.01
+  },
+  {
+   "key": "musician",
+   "state": "loaded",
+   "file": "townsfolk_musician",
+   "clip": "idle_shift",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 0.92,
+   "foot_above": 0.08
+  },
+  {
+   "key": "sweeper",
+   "state": "loaded",
+   "file": "townsfolk_sweeper",
+   "clip": "idle",
+   "walk": "walk",
+   "visible": true,
+   "y": 1202.5,
+   "ground": 1202.5,
+   "pelvis_above": 0.82,
+   "foot_above": 0.11
+  },
+  {
+   "key": "lamplighter",
+   "state": "loaded",
+   "file": "townsfolk_lamplighter",
+   "clip": "idle",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 1.02,
+   "foot_above": 0.25
+  },
+  {
+   "key": "courier",
+   "state": "loaded",
+   "file": "townsfolk_courier",
+   "clip": "idle",
+   "walk": "walk",
+   "visible": true,
+   "y": 1204.5,
+   "ground": 1204.5,
+   "pelvis_above": 0.87,
+   "foot_above": 0.09
+  },
+  {
+   "key": "child_a",
+   "state": "loaded",
+   "file": "townsfolk_child_a",
+   "clip": "idle",
+   "walk": "child_run",
+   "visible": true,
+   "y": 1200,
+   "ground": 1200,
+   "pelvis_above": 0.62,
+   "foot_above": 0.3
+  },
+  {
+   "key": "child_b",
+   "state": "loaded",
+   "file": "townsfolk_child_b",
+   "clip": "idle",
+   "walk": "child_run",
+   "visible": false,
+   "y": 1200,
+   "ground": 1200,
+   "pelvis_above": 0.62,
+   "foot_above": 0.22
+  }
+ ]
+}

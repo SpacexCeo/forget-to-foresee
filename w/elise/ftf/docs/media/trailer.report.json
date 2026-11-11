@@ -1,0 +1,435 @@
+{
+ "video": "trailer",
+ "title": "Forget to Foresee: trailer (41 s)",
+ "width": 1920,
+ "height": 1080,
+ "fps": 60,
+ "tier": "ultra",
+ "duration": 35,
+ "shots": [
+  {
+   "shot": "ink",
+   "frames": 120,
+   "secondsPerFrame": 0.2678083333333333,
+   "loaded": true,
+   "setupFrames": 31,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0xfc000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xfc000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xfc000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0xfc000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "81ce673973a88c56",
+    "119": "99c58107dba4d387"
+   }
+  },
+  {
+   "shot": "stake",
+   "frames": 180,
+   "secondsPerFrame": 0.27092777777777777,
+   "loaded": true,
+   "setupFrames": 151,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x30c4000cdc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x30c4000cdc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x30c4000cdc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x30c4000cdc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "e93b5839f9de82e6",
+    "179": "020489796d692588"
+   }
+  },
+  {
+   "shot": "card-seal",
+   "frames": 120,
+   "secondsPerFrame": 0.25125,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x361c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x361c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x361c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x361c000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "8437189dd96bf09e",
+    "119": "d7ca36ae92e5a4cb"
+   }
+  },
+  {
+   "shot": "verified",
+   "frames": 180,
+   "secondsPerFrame": 0.2707333333333333,
+   "loaded": true,
+   "setupFrames": 264,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x3dac000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3dac000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3dac000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3dac000cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "33361d1d750934cc",
+    "179": "0787b9d71c57d977"
+   }
+  },
+  {
+   "shot": "card-memory",
+   "frames": 120,
+   "secondsPerFrame": 0.2508416666666667,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x3ec4000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3ec4000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3ec4000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3ec4000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "bceb26bf360c324d",
+    "119": "7ef9caef21a2c282"
+   }
+  },
+  {
+   "shot": "forget",
+   "frames": 240,
+   "secondsPerFrame": 0.298875,
+   "loaded": true,
+   "setupFrames": 235,
+   "errors": [
+    "action forget: no memory button"
+   ],
+   "consoleErrors": [
+    "warning: [.WebGL-0x2ac4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [cinematic] action failed {at: 0.4, do: forget, index: 1, id: 1, done: true} Error: no memory button\n    at Z.perform (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:11393)\n    at Z.runActions (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:9054)\n    at Z.step (http://localhost:5179/assets/cinematic-DfKYIKzQ.js:33:14856)\n    at Z.setup (http://localhost:5179/assets/cinematic-DfKYIKzQ",
+    "warning: [.WebGL-0x2ac4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.",
+    "warning: [.WebGL-0x2ac4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2ac4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "8b8d61271f1d0d35",
+    "239": "c485b87aa8258a00"
+   }
+  },
+  {
+   "shot": "face-moss",
+   "frames": 60,
+   "secondsPerFrame": 0.2677,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x36cc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x36cc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x36cc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x36cc000cf800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "249352063c1b280c",
+    "59": "cf6843c800de5add"
+   }
+  },
+  {
+   "shot": "face-salt",
+   "frames": 60,
+   "secondsPerFrame": 0.28031666666666666,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x3a14000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3a14000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3a14000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x3a14000cd500]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "8eec4e929511df23",
+    "59": "954fb5ae6c158993"
+   }
+  },
+  {
+   "shot": "hands-amber",
+   "frames": 60,
+   "secondsPerFrame": 0.24566666666666667,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x29a4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x29a4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x29a4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x29a4000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "f40612127ac65142",
+    "59": "41f561665414c783"
+   }
+  },
+  {
+   "shot": "face-frost",
+   "frames": 60,
+   "secondsPerFrame": 0.2692,
+   "loaded": true,
+   "setupFrames": 90,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x14ac000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x14ac000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x14ac000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x14ac000cc700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "30fae3da2cb28dce",
+    "59": "bb4e44cdee0d78ad"
+   }
+  },
+  {
+   "shot": "clans",
+   "frames": 180,
+   "secondsPerFrame": 0.2755666666666666,
+   "loaded": true,
+   "setupFrames": 148,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x9e4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x9e4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x9e4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x9e4000ce300]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "93170b6e9d115af2",
+    "179": "d70e0c18af72b2db"
+   }
+  },
+  {
+   "shot": "crisis",
+   "frames": 240,
+   "secondsPerFrame": 0.2701333333333333,
+   "loaded": true,
+   "setupFrames": 31,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x2d74000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2d74000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2d74000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x2d74000cce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "ba801f6cd9db8e67",
+    "239": "329f15d7f35275ee"
+   }
+  },
+  {
+   "shot": "vote",
+   "frames": 180,
+   "secondsPerFrame": 0.2709166666666667,
+   "loaded": true,
+   "setupFrames": 42,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x1724000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x1724000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x1724000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x1724000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "73e6b3a3800faa54",
+    "179": "3ec5b9436968343a"
+   }
+  },
+  {
+   "shot": "title",
+   "frames": 300,
+   "secondsPerFrame": 0.25966333333333336,
+   "loaded": true,
+   "setupFrames": 0,
+   "errors": [],
+   "consoleErrors": [
+    "warning: [.WebGL-0x314000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x314000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x314000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "warning: [.WebGL-0x314000cf100]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "warning: The resource http://localhost:5179/assets/ui/lobby_bg.jpg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+   ],
+   "hashes": {
+    "0": "33b841299b86a783",
+    "299": "f34178f9f14bfe50"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.4464742638766766,
+  "events": 63,
+  "wav": "/root/ftf-media-v2/work/trailer-1920x1080-ultra/trailer.wav",
+  "cues": 102
+ },
+ "files": {
+  "/root/ftf-media-v2/trailer.mp4": {
+   "bytes": 38112987,
+   "mb": 36.3,
+   "duration": 34.983333,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 537344,
+    "duration": "34.983333",
+    "bit_rate": "8446990",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "2099",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media-v2/trailer-captions.mp4": {
+   "bytes": 38433937,
+   "mb": 36.7,
+   "duration": 34.983333,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 1920,
+    "height": 1080,
+    "coded_width": 1920,
+    "coded_height": 1080,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 537344,
+    "duration": "34.983333",
+    "bit_rate": "8520380",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "2099",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media-v2/trailer.srt": {
+   "bytes": 533,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}

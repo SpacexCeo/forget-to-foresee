@@ -1,0 +1,21 @@
+{
+  "outcomes": {
+    "gift": 20,
+    "survived": 6,
+    "lost": 21,
+    "weapon": 2,
+    "gone": 11
+  },
+  "burned": {
+    "first:key": 20,
+    "call": 20,
+    "debt": 19,
+    "first": 20,
+    "betrayal": 20,
+    "gift": 20,
+    "promise": 15
+  },
+  "crisis": 60,
+  "keySpoken": 20,
+  "intents": 2779
+}

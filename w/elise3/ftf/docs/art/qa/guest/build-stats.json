@@ -1,0 +1,46 @@
+{
+  "design": "ink guest (owner input 08.11)",
+  "triangles": {
+    "guest_body": 7296,
+    "guest_core": 1256,
+    "guest_eyes": 336,
+    "guest_ink": 3957
+  },
+  "triangles_total": 12845,
+  "budget_ok": true,
+  "clips": [
+    "approach",
+    "draw",
+    "idle",
+    "react",
+    "recede"
+  ],
+  "sockets": {
+    "socket_draw_tip": [
+      -0.303,
+      -1.483,
+      0.792
+    ],
+    "socket_core": [
+      0.0,
+      0.0,
+      3.85
+    ],
+    "socket_head": [
+      0.0,
+      0.0,
+      6.4
+    ]
+  },
+  "tendrils": 11,
+  "draw_tendril": 10,
+  "patched": {
+    "M_Guest_Skin": [
+      "KHR_materials_volume"
+    ],
+    "M_Guest_Core": [
+      "KHR_materials_emissive_strength"
+    ]
+  },
+  "glb_raw_bytes": 1293016
+}

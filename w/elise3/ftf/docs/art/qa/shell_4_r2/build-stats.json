@@ -1,0 +1,278 @@
+{
+  "asset": "shell_4",
+  "numeral": "IV",
+  "blender": "4.5.3 LTS",
+  "round": 2,
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.13
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 11.27
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 3.71
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 125.68
+    },
+    {
+      "stage": "textures",
+      "seconds": 44.43
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.45
+    }
+  ],
+  "cycles_device": "CUDA",
+  "scale": 6.3591,
+  "geometry": {
+    "break_ribs": [
+      57,
+      65
+    ],
+    "break_extent_rad": {
+      "57": [
+        -1.08,
+        0.72
+      ],
+      "58": [
+        -1.4,
+        1.1
+      ],
+      "59": [
+        -1.59,
+        1.16
+      ],
+      "60": [
+        -1.63,
+        1.39
+      ],
+      "61": [
+        -1.99,
+        1.29
+      ],
+      "62": [
+        -1.77,
+        1.27
+      ],
+      "63": [
+        -1.61,
+        0.89
+      ],
+      "64": [
+        -1.03,
+        0.91
+      ]
+    },
+    "outer_cells_culled": 1538,
+    "outer_cells_total": 5856,
+    "hole_rim_faces": 116,
+    "septa": 4,
+    "fragments": 10
+  },
+  "runtime_triangles": 16476,
+  "nonmanifold_edges": 54,
+  "uv_seams": 4260,
+  "uv_exterior": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 112.8,
+      "p10": 110.5,
+      "p90": 116.7,
+      "coefficient_of_variation": 0.027
+    },
+    "uv_anisotropy": {
+      "median": 1.013,
+      "p95": 1.095,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 10592,
+    "uv_fill": 0.5052
+  },
+  "uv_nacre": {
+    "texture_size": 4096,
+    "texel_density_px_per_m": {
+      "median": 62.4,
+      "p10": 59.0,
+      "p90": 68.2,
+      "coefficient_of_variation": 0.207
+    },
+    "uv_anisotropy": {
+      "median": 1.019,
+      "p95": 1.056,
+      "share_over_1_5": 0.0
+    },
+    "triangles_measured": 5884,
+    "uv_fill": 0.5052
+  },
+  "master_triangles": 2761356,
+  "bakes": {
+    "normal": {
+      "seconds": 26.23,
+      "samples": 24,
+      "size": 8192
+    },
+    "color": {
+      "seconds": 22.33,
+      "samples": 24,
+      "size": 8192
+    },
+    "rough": {
+      "seconds": 17.14,
+      "samples": 12,
+      "size": 8192
+    },
+    "ao": {
+      "seconds": 59.75,
+      "samples": 384,
+      "size": 8192
+    }
+  },
+  "bake": {
+    "size": 8192,
+    "supersample": 2,
+    "cage_m": 0.035,
+    "ray_m": 0.09
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/shells/textures/shell_4_basecolor.jpg",
+      "bytes": 3390449
+    },
+    "orm": {
+      "file": "art/shells/textures/shell_4_orm.jpg",
+      "bytes": 6322289
+    },
+    "normal": {
+      "file": "art/shells/textures/shell_4_normal.png",
+      "bytes": 18382940
+    }
+  },
+  "socket_aperture": {
+    "position": [
+      1.698,
+      -1.192,
+      4.519
+    ],
+    "forward": [
+      0.871,
+      -0.463,
+      -0.164
+    ],
+    "radius_m": 4.416
+  },
+  "collision_triangles": {
+    "shell_4_hull_col": 76
+  },
+  "materials": [
+    "M_Shell_Exterior",
+    "M_Shell_Nacre",
+    "M_Shell_Glow"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -6.553,
+      -8.521,
+      0.0
+    ],
+    "max": [
+      12.604,
+      4.608,
+      22.837
+    ]
+  },
+  "inward_facing_faces": {
+    "checked": 2657,
+    "suspect": 257
+  },
+  "glb_raw_bytes": 28824972,
+  "glb": {
+    "extensionsUsed": [
+      "KHR_materials_clearcoat",
+      "KHR_materials_emissive_strength",
+      "KHR_materials_iridescence"
+    ],
+    "nodes": [
+      "shell_4",
+      "shell_4_hull_col",
+      "socket_aperture"
+    ],
+    "materials": [
+      {
+        "name": "M_Shell_Exterior",
+        "extensions": {
+          "KHR_materials_iridescence": {
+            "iridescenceFactor": 1.0,
+            "iridescenceIor": 1.3,
+            "iridescenceThicknessMinimum": 150.0,
+            "iridescenceThicknessMaximum": 400.0,
+            "iridescenceThicknessTexture": {
+              "index": 1
+            }
+          },
+          "KHR_materials_clearcoat": {
+            "clearcoatFactor": 0.6,
+            "clearcoatRoughnessFactor": 0.15
+          }
+        }
+      },
+      {
+        "name": "M_Shell_Nacre",
+        "extensions": {
+          "KHR_materials_iridescence": {
+            "iridescenceFactor": 1.0,
+            "iridescenceIor": 1.3,
+            "iridescenceThicknessMinimum": 200.0,
+            "iridescenceThicknessMaximum": 460.0,
+            "iridescenceThicknessTexture": {
+              "index": 4
+            }
+          },
+          "KHR_materials_clearcoat": {
+            "clearcoatFactor": 0.8,
+            "clearcoatRoughnessFactor": 0.08
+          }
+        }
+      },
+      {
+        "name": "M_Shell_Glow",
+        "extensions": {
+          "KHR_materials_emissive_strength": {
+            "emissiveStrength": 3.2
+          }
+        }
+      }
+    ],
+    "images": [
+      {
+        "name": "shell_4_normal",
+        "mime": "image/png",
+        "bytes": 18382940
+      },
+      {
+        "name": "shell_4_orm",
+        "mime": "image/jpeg",
+        "bytes": 6322289
+      },
+      {
+        "name": "shell_4_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 3390449
+      }
+    ]
+  },
+  "budget_ok": {
+    "runtime": true,
+    "materials_per_object": true
+  }
+}

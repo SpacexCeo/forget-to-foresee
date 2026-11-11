@@ -1,0 +1,19 @@
+{
+  "device": "CUDA",
+  "resolution": 1400,
+  "samples": 256,
+  "lighting": "golden hour",
+  "seconds_per_render": {
+    "shell_2_three_quarter": 4.89,
+    "shell_2_front": 3.98,
+    "shell_2_top": 6.4,
+    "shell_2_close_aperture": 11.23,
+    "shell_2_close_flank": 7.99
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 34.56
+    }
+  ]
+}

@@ -1,0 +1,2427 @@
+{
+  "agents": {
+    "iris": {
+      "clan": "Iris",
+      "file": "game/public/assets/models/agent_iris.glb",
+      "cycles_device": "CUDA",
+      "part_triangles": {
+        "body": 2220,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_glint_L": 20,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_glint_R": 20,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "head": 1864,
+        "tunic": 864,
+        "tunic_trim": 288,
+        "sleeve_l": 320,
+        "sleeve_r": 320,
+        "boot_-1": 240,
+        "boot_cuff_-1": 120,
+        "boot_1": 240,
+        "boot_cuff_1": 120,
+        "belt": 256,
+        "buckle": 12,
+        "pouch": 12,
+        "bracer_-1": 200,
+        "bracer_1": 200,
+        "hair_cap": 200,
+        "hair": 1632,
+        "cloak": 1920,
+        "cloak_trim": 440,
+        "cape": 740,
+        "cape_trim": 368,
+        "hood_down": 140,
+        "clasp": 160,
+        "clasp_gem": 20,
+        "scarf": 576,
+        "scarf_tail": 152,
+        "scarf_front": 80,
+        "tassels": 120,
+        "pin": 60
+      },
+      "ngons_triangulated": 72,
+      "runtime_triangles": 15856,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 336.4,
+          "p10": 317.3,
+          "p90": 349.0
+        },
+        "uv_anisotropy": {
+          "median": 1.088,
+          "p95": 1.281
+        }
+      },
+      "master_triangles": 5349776,
+      "bakes": {
+        "ao": {
+          "seconds": 22.01,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 11.38,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 11.12,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 9.21,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 7.39,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_iris_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 851065
+        },
+        "orm": {
+          "file": "agent_iris_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1559541
+        },
+        "normal": {
+          "file": "agent_iris_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1548008
+        }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_glint_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_glint_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "head": "head",
+          "tunic": "skirt",
+          "tunic_trim": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "boot_-1": "fit",
+          "boot_cuff_-1": "fit",
+          "boot_1": "fit",
+          "boot_cuff_1": "fit",
+          "belt": "fit",
+          "buckle": "fit",
+          "pouch": "comp",
+          "bracer_-1": "fit",
+          "bracer_1": "fit",
+          "hair_cap": "hair",
+          "hair": "hair",
+          "cloak": "cloak",
+          "cloak_trim": "cloak",
+          "cape": "cloak:0.35",
+          "cape_trim": "cloak",
+          "hood_down": "fit",
+          "clasp": "comp",
+          "clasp_gem": "comp",
+          "scarf": "fit",
+          "scarf_tail": "chain:scarf",
+          "scarf_front": "fit",
+          "tassels": "fit",
+          "pin": "fit"
+        },
+        "finger_vertices": 294,
+        "bones_used": [
+          "brow_L",
+          "brow_R",
+          "chest",
+          "cloak_0",
+          "cloak_1",
+          "cloak_2",
+          "cloak_L_0",
+          "cloak_L_1",
+          "cloak_R_0",
+          "cloak_R_1",
+          "fingers_L",
+          "fingers_R",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
+          "neck",
+          "pelvis",
+          "scarf_0",
+          "scarf_1",
+          "scarf_2",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "thumb_L",
+          "thumb_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
+      },
+      "collision": {
+        "name": "agent_iris_col",
+        "radius_m": 0.297,
+        "height_m": 1.791,
+        "triangles": 144
+      },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0395,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0779,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 53,
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          0.003,
+          0.114
+        ],
+        "socket_hand_r": [
+          0.0,
+          -0.0,
+          0.1
+        ]
+      },
+      "materials": [
+        "M_Iris_Body",
+        "M_Iris_Garment",
+        "M_Iris_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          -0.356,
+          0.001,
+          -0.291
+        ],
+        "max": [
+          0.356,
+          1.791,
+          0.223
+        ]
+      },
+      "raw_glb_bytes": 6568288,
+      "glb_bytes": 4763304,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "iris:model",
+          "seconds": 0.25
+        },
+        {
+          "stage": "iris:uv",
+          "seconds": 1.16
+        },
+        {
+          "stage": "iris:master",
+          "seconds": 19.91
+        },
+        {
+          "stage": "iris:bake_gpu",
+          "seconds": 61.41
+        },
+        {
+          "stage": "iris:textures",
+          "seconds": 2.39
+        },
+        {
+          "stage": "iris:export",
+          "seconds": 0.0
+        },
+        {
+          "stage": "iris:rig",
+          "seconds": 0.18
+        },
+        {
+          "stage": "iris:anim",
+          "seconds": 0.75
+        },
+        {
+          "stage": "iris:export",
+          "seconds": 4.87
+        }
+      ],
+      "total_seconds": 90.92
+    },
+    "sol": {
+      "clan": "Salt",
+      "file": "game/public/assets/models/agent_sol.glb",
+      "cycles_device": "CUDA",
+      "part_triangles": {
+        "body": 2220,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_glint_L": 20,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_glint_R": 20,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "head": 1864,
+        "robe": 1768,
+        "tier_0": 768,
+        "tier_0_trim": 384,
+        "tier_1": 768,
+        "tier_1_trim": 384,
+        "tier_2": 768,
+        "tier_2_trim": 384,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "belt": 256,
+        "hood": 1372,
+        "veil": 140,
+        "shoulder_plates": 264,
+        "crystals": 880,
+        "balance": 192,
+        "pans": 280,
+        "cords": 48,
+        "satchel_strap": 84,
+        "satchel": 24,
+        "clasp": 12,
+        "pouch_0": 96,
+        "pouch_1": 96,
+        "pouch_2": 96
+      },
+      "ngons_triangulated": 82,
+      "runtime_triangles": 15888,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 290.9,
+          "p10": 280.2,
+          "p90": 299.2
+        },
+        "uv_anisotropy": {
+          "median": 1.067,
+          "p95": 1.183
+        }
+      },
+      "master_triangles": 6274160,
+      "bakes": {
+        "ao": {
+          "seconds": 22.62,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 12.37,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 12.25,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 10.65,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 7.86,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_sol_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1218745
+        },
+        "orm": {
+          "file": "agent_sol_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1692726
+        },
+        "normal": {
+          "file": "agent_sol_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1751353
+        }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_glint_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_glint_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "head": "head",
+          "robe": "skirt",
+          "tier_0": "skirt",
+          "tier_0_trim": "skirt",
+          "tier_1": "skirt",
+          "tier_1_trim": "skirt",
+          "tier_2": "skirt",
+          "tier_2_trim": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "belt": "fit",
+          "hood": "hood",
+          "veil": "head",
+          "shoulder_plates": "fit",
+          "crystals": "comp",
+          "balance": "rigid:prop_L",
+          "pans": "rigid:prop_L",
+          "cords": "rigid:prop_L",
+          "satchel_strap": "fit",
+          "satchel": "comp",
+          "clasp": "comp",
+          "pouch_0": "comp",
+          "pouch_1": "comp",
+          "pouch_2": "comp"
+        },
+        "finger_vertices": 330,
+        "bones_used": [
+          "brow_L",
+          "brow_R",
+          "chest",
+          "fingers_L",
+          "fingers_R",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "hood_0",
+          "hood_1",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "thumb_L",
+          "thumb_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
+      },
+      "collision": {
+        "name": "agent_sol_col",
+        "radius_m": 0.326,
+        "height_m": 1.859,
+        "triangles": 144
+      },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0413,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0645,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 53,
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          0.003,
+          0.114
+        ],
+        "socket_hand_r": [
+          0.0,
+          -0.0,
+          0.1
+        ]
+      },
+      "materials": [
+        "M_Salt_Body",
+        "M_Salt_Garment",
+        "M_Salt_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          -0.412,
+          0.001,
+          -0.269
+        ],
+        "max": [
+          0.405,
+          1.859,
+          0.293
+        ]
+      },
+      "raw_glb_bytes": 7374556,
+      "glb_bytes": 4928100,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "sol:model",
+          "seconds": 0.23
+        },
+        {
+          "stage": "sol:uv",
+          "seconds": 1.03
+        },
+        {
+          "stage": "sol:master",
+          "seconds": 26.35
+        },
+        {
+          "stage": "sol:bake_gpu",
+          "seconds": 66.07
+        },
+        {
+          "stage": "sol:textures",
+          "seconds": 2.56
+        },
+        {
+          "stage": "sol:export",
+          "seconds": 0.0
+        },
+        {
+          "stage": "sol:rig",
+          "seconds": 0.19
+        },
+        {
+          "stage": "sol:anim",
+          "seconds": 0.8
+        },
+        {
+          "stage": "sol:export",
+          "seconds": 4.99
+        }
+      ],
+      "total_seconds": 102.23
+    },
+    "pepel": {
+      "clan": "Ash",
+      "file": "game/public/assets/models/agent_pepel.glb",
+      "cycles_device": "CUDA",
+      "part_triangles": {
+        "body": 2220,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_glint_L": 20,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_glint_R": 20,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "face_hair": 264,
+        "head": 1864,
+        "tunic": 1664,
+        "coat": 1316,
+        "coat_trim": 392,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "wraps_-1": 384,
+        "wraps_1": 384,
+        "belt": 256,
+        "hood": 1264,
+        "scarf": 288,
+        "palisade": 468,
+        "binding": 306,
+        "shield": 260,
+        "shield_bars": 24
+      },
+      "ngons_triangulated": 60,
+      "runtime_triangles": 14094,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 368.6,
+          "p10": 353.7,
+          "p90": 379.4
+        },
+        "uv_anisotropy": {
+          "median": 1.068,
+          "p95": 1.182
+        }
+      },
+      "master_triangles": 5103088,
+      "bakes": {
+        "ao": {
+          "seconds": 21.95,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 11.48,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 11.39,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 9.5,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 7.51,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_pepel_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 826306
+        },
+        "orm": {
+          "file": "agent_pepel_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1725557
+        },
+        "normal": {
+          "file": "agent_pepel_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1895380
+        }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_glint_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_glint_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "face_hair": "head",
+          "head": "head",
+          "tunic": "skirt",
+          "coat": "skirt",
+          "coat_trim": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "wraps_-1": "fit",
+          "wraps_1": "fit",
+          "belt": "fit",
+          "hood": "hood",
+          "scarf": "fit",
+          "palisade": "comp",
+          "binding": "fit",
+          "shield": "rigid:forearm_L",
+          "shield_bars": "rigid:forearm_L"
+        },
+        "finger_vertices": 294,
+        "bones_used": [
+          "brow_L",
+          "brow_R",
+          "chest",
+          "fingers_L",
+          "fingers_R",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "hood_0",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
+          "neck",
+          "pelvis",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "thumb_L",
+          "thumb_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
+      },
+      "collision": {
+        "name": "agent_pepel_col",
+        "radius_m": 0.328,
+        "height_m": 1.864,
+        "triangles": 144
+      },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0386,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0845,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 53,
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          0.003,
+          0.114
+        ],
+        "socket_hand_r": [
+          0.0,
+          -0.0,
+          0.1
+        ]
+      },
+      "materials": [
+        "M_Ash_Body",
+        "M_Ash_Garment",
+        "M_Ash_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          -0.468,
+          0.001,
+          -0.482
+        ],
+        "max": [
+          0.45,
+          1.864,
+          0.268
+        ]
+      },
+      "raw_glb_bytes": 6961216,
+      "glb_bytes": 5238708,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "pepel:model",
+          "seconds": 0.22
+        },
+        {
+          "stage": "pepel:uv",
+          "seconds": 1.16
+        },
+        {
+          "stage": "pepel:master",
+          "seconds": 20.27
+        },
+        {
+          "stage": "pepel:bake_gpu",
+          "seconds": 62.11
+        },
+        {
+          "stage": "pepel:textures",
+          "seconds": 2.41
+        },
+        {
+          "stage": "pepel:export",
+          "seconds": 0.0
+        },
+        {
+          "stage": "pepel:rig",
+          "seconds": 0.16
+        },
+        {
+          "stage": "pepel:anim",
+          "seconds": 0.8
+        },
+        {
+          "stage": "pepel:export",
+          "seconds": 4.97
+        }
+      ],
+      "total_seconds": 92.1
+    },
+    "moh": {
+      "clan": "Moss",
+      "file": "game/public/assets/models/agent_moh.glb",
+      "cycles_device": "CUDA",
+      "part_triangles": {
+        "body": 2220,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_glint_L": 20,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_glint_R": 20,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "head": 1864,
+        "tunic": 1280,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "belt": 256,
+        "cloak": 1920,
+        "cloak_trim": 440,
+        "capelet": 1024,
+        "capelet_trim": 384,
+        "hood_down": 140,
+        "hair_cap": 200,
+        "hair": 1360,
+        "moss": 440,
+        "mushroom_caps": 352,
+        "mushroom_stems": 96,
+        "leaves": 416,
+        "cauldron": 336,
+        "bail": 250,
+        "ladle": 80
+      },
+      "ngons_triangulated": 80,
+      "runtime_triangles": 15798,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 335.1,
+          "p10": 313.5,
+          "p90": 347.6
+        },
+        "uv_anisotropy": {
+          "median": 1.093,
+          "p95": 1.312
+        }
+      },
+      "master_triangles": 5257776,
+      "bakes": {
+        "ao": {
+          "seconds": 22.48,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 11.39,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 11.7,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 9.16,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 7.16,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_moh_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1066641
+        },
+        "orm": {
+          "file": "agent_moh_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1668368
+        },
+        "normal": {
+          "file": "agent_moh_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1603899
+        }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_glint_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_glint_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "head": "head",
+          "tunic": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "belt": "fit",
+          "cloak": "cloak",
+          "cloak_trim": "cloak",
+          "capelet": "cloak:0.35",
+          "capelet_trim": "cloak",
+          "hood_down": "fit",
+          "hair_cap": "hair",
+          "hair": "hair",
+          "moss": "follow",
+          "mushroom_caps": "follow_comp",
+          "mushroom_stems": "follow_comp",
+          "leaves": "follow",
+          "cauldron": "rigid:prop_L",
+          "bail": "rigid:prop_L",
+          "ladle": "comp"
+        },
+        "finger_vertices": 294,
+        "bones_used": [
+          "brow_L",
+          "brow_R",
+          "chest",
+          "cloak_0",
+          "cloak_1",
+          "cloak_2",
+          "cloak_L_0",
+          "cloak_L_1",
+          "cloak_R_0",
+          "cloak_R_1",
+          "fingers_L",
+          "fingers_R",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "thumb_L",
+          "thumb_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
+      },
+      "collision": {
+        "name": "agent_moh_col",
+        "radius_m": 0.339,
+        "height_m": 1.79,
+        "triangles": 144
+      },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0424,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0698,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 53,
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          0.003,
+          0.114
+        ],
+        "socket_hand_r": [
+          0.0,
+          -0.0,
+          0.1
+        ]
+      },
+      "materials": [
+        "M_Moss_Body",
+        "M_Moss_Garment",
+        "M_Moss_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          -0.414,
+          0.001,
+          -0.326
+        ],
+        "max": [
+          0.437,
+          1.79,
+          0.261
+        ]
+      },
+      "raw_glb_bytes": 6980768,
+      "glb_bytes": 4930264,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "moh:model",
+          "seconds": 0.22
+        },
+        {
+          "stage": "moh:uv",
+          "seconds": 1.2
+        },
+        {
+          "stage": "moh:master",
+          "seconds": 20.9
+        },
+        {
+          "stage": "moh:bake_gpu",
+          "seconds": 62.19
+        },
+        {
+          "stage": "moh:textures",
+          "seconds": 2.51
+        },
+        {
+          "stage": "moh:export",
+          "seconds": 0.0
+        },
+        {
+          "stage": "moh:rig",
+          "seconds": 0.17
+        },
+        {
+          "stage": "moh:anim",
+          "seconds": 0.8
+        },
+        {
+          "stage": "moh:export",
+          "seconds": 5.1
+        }
+      ],
+      "total_seconds": 93.1
+    },
+    "yantar": {
+      "clan": "Amber",
+      "file": "game/public/assets/models/agent_yantar.glb",
+      "cycles_device": "CUDA",
+      "part_triangles": {
+        "body": 2220,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_glint_L": 20,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_glint_R": 20,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "head": 1864,
+        "robe": 2016,
+        "coat": 1772,
+        "coat_trim": 440,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "cuff_-1": 140,
+        "cuff_1": 140,
+        "belt": 256,
+        "collar": 460,
+        "hat": 192,
+        "hat_band": 128,
+        "chest": 56,
+        "chest_bands": 288,
+        "strap_-1": 68,
+        "strap_1": 68,
+        "padlocks": 60,
+        "shackles": 478,
+        "keys": 464,
+        "gems": 60
+      },
+      "ngons_triangulated": 62,
+      "runtime_triangles": 13910,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 360.7,
+          "p10": 347.5,
+          "p90": 370.1
+        },
+        "uv_anisotropy": {
+          "median": 1.06,
+          "p95": 1.183
+        }
+      },
+      "master_triangles": 5497776,
+      "bakes": {
+        "ao": {
+          "seconds": 22.03,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 11.97,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 11.75,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 9.91,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 7.73,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_yantar_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1294849
+        },
+        "orm": {
+          "file": "agent_yantar_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1689360
+        },
+        "normal": {
+          "file": "agent_yantar_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1803132
+        }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_glint_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_glint_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "head": "head",
+          "robe": "skirt",
+          "coat": "skirt",
+          "coat_trim": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "cuff_-1": "fit",
+          "cuff_1": "fit",
+          "belt": "fit",
+          "collar": "fit",
+          "hat": "head",
+          "hat_band": "head",
+          "chest": "rigid:chest",
+          "chest_bands": "rigid:chest",
+          "strap_-1": "fit",
+          "strap_1": "fit",
+          "padlocks": "follow_comp",
+          "shackles": "follow_comp",
+          "keys": "rigid:prop_L",
+          "gems": "follow_comp"
+        },
+        "finger_vertices": 294,
+        "bones_used": [
+          "brow_L",
+          "brow_R",
+          "chest",
+          "fingers_L",
+          "fingers_R",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "thumb_L",
+          "thumb_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
+      },
+      "collision": {
+        "name": "agent_yantar_col",
+        "radius_m": 0.333,
+        "height_m": 1.781,
+        "triangles": 144
+      },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0334,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0862,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 53,
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          0.003,
+          0.114
+        ],
+        "socket_hand_r": [
+          0.0,
+          -0.0,
+          0.1
+        ]
+      },
+      "materials": [
+        "M_Amber_Body",
+        "M_Amber_Garment",
+        "M_Amber_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          -0.396,
+          0.001,
+          -0.419
+        ],
+        "max": [
+          0.404,
+          1.781,
+          0.3
+        ]
+      },
+      "raw_glb_bytes": 7322668,
+      "glb_bytes": 5227140,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "yantar:model",
+          "seconds": 0.22
+        },
+        {
+          "stage": "yantar:uv",
+          "seconds": 1.25
+        },
+        {
+          "stage": "yantar:master",
+          "seconds": 21.0
+        },
+        {
+          "stage": "yantar:bake_gpu",
+          "seconds": 63.68
+        },
+        {
+          "stage": "yantar:textures",
+          "seconds": 2.44
+        },
+        {
+          "stage": "yantar:export",
+          "seconds": 0.0
+        },
+        {
+          "stage": "yantar:rig",
+          "seconds": 0.16
+        },
+        {
+          "stage": "yantar:anim",
+          "seconds": 0.81
+        },
+        {
+          "stage": "yantar:export",
+          "seconds": 5.12
+        }
+      ],
+      "total_seconds": 94.68
+    },
+    "iney": {
+      "clan": "Frost",
+      "file": "game/public/assets/models/agent_iney.glb",
+      "cycles_device": "CUDA",
+      "part_triangles": {
+        "body": 2220,
+        "face_eye_L": 154,
+        "face_iris_L": 80,
+        "face_pupil_L": 36,
+        "face_glint_L": 20,
+        "face_lidup_L": 168,
+        "face_lidlo_L": 140,
+        "face_lidup_L_lash": 88,
+        "face_brow_L": 108,
+        "face_eye_R": 154,
+        "face_iris_R": 80,
+        "face_pupil_R": 36,
+        "face_glint_R": 20,
+        "face_lidup_R": 168,
+        "face_lidlo_R": 140,
+        "face_lidup_R_lash": 88,
+        "face_brow_R": 108,
+        "face_lipup": 132,
+        "face_jaw_lip": 132,
+        "face_mouth": 48,
+        "face_teeth": 72,
+        "face_hair": 264,
+        "head": 1864,
+        "robe": 2400,
+        "robe_trim": 480,
+        "sleeve_l": 384,
+        "sleeve_r": 384,
+        "belt": 256,
+        "mantle": 1600,
+        "mantle_trim": 480,
+        "hood": 1436,
+        "lens_frame": 148,
+        "staff": 52,
+        "armillary": 876,
+        "glass": 176,
+        "tablet": 12,
+        "signs": 696,
+        "tablet_cord": 20,
+        "vials": 144,
+        "vial_caps": 114
+      },
+      "ngons_triangulated": 49,
+      "runtime_triangles": 15978,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 339.3,
+          "p10": 325.1,
+          "p90": 349.1
+        },
+        "uv_anisotropy": {
+          "median": 1.07,
+          "p95": 1.196
+        }
+      },
+      "master_triangles": 4879072,
+      "bakes": {
+        "ao": {
+          "seconds": 18.65,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 10.63,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 10.67,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 9.21,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 7.27,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_iney_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1229706
+        },
+        "orm": {
+          "file": "agent_iney_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1709960
+        },
+        "normal": {
+          "file": "agent_iney_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1579092
+        }
+      },
+      "skin": {
+        "heat_empty_vertices": 0,
+        "rules": {
+          "body": "body",
+          "face_eye_L": "head",
+          "face_iris_L": "head",
+          "face_pupil_L": "head",
+          "face_glint_L": "head",
+          "face_lidup_L": "rigid:lid_up_L",
+          "face_lidlo_L": "rigid:lid_lo_L",
+          "face_lidup_L_lash": "rigid:lid_up_L",
+          "face_brow_L": "rigid:brow_L",
+          "face_eye_R": "head",
+          "face_iris_R": "head",
+          "face_pupil_R": "head",
+          "face_glint_R": "head",
+          "face_lidup_R": "rigid:lid_up_R",
+          "face_lidlo_R": "rigid:lid_lo_R",
+          "face_lidup_R_lash": "rigid:lid_up_R",
+          "face_brow_R": "rigid:brow_R",
+          "face_lipup": "head",
+          "face_jaw_lip": "rigid:jaw",
+          "face_mouth": "mouth",
+          "face_teeth": "head",
+          "face_hair": "head",
+          "head": "head",
+          "robe": "skirt",
+          "robe_trim": "skirt",
+          "sleeve_l": "fit",
+          "sleeve_r": "fit",
+          "belt": "fit",
+          "mantle": "cloak:0.45",
+          "mantle_trim": "cloak",
+          "hood": "hood",
+          "lens_frame": "head",
+          "staff": "rigid:prop_L",
+          "armillary": "rigid:prop_L",
+          "glass": "pick:head,prop_L",
+          "tablet": "follow_comp",
+          "signs": "follow_comp",
+          "tablet_cord": "follow_comp",
+          "vials": "follow_comp",
+          "vial_caps": "follow_comp"
+        },
+        "finger_vertices": 294,
+        "bones_used": [
+          "brow_L",
+          "brow_R",
+          "chest",
+          "cloak_0",
+          "cloak_1",
+          "cloak_L_0",
+          "cloak_L_1",
+          "cloak_R_0",
+          "cloak_R_1",
+          "fingers_L",
+          "fingers_R",
+          "foot_L",
+          "foot_R",
+          "forearm_L",
+          "forearm_R",
+          "hand_L",
+          "hand_R",
+          "head",
+          "hood_0",
+          "hood_1",
+          "index_L",
+          "index_R",
+          "jaw",
+          "lid_lo_L",
+          "lid_lo_R",
+          "lid_up_L",
+          "lid_up_R",
+          "neck",
+          "pelvis",
+          "prop_L",
+          "shin_L",
+          "shin_R",
+          "shoulder_L",
+          "shoulder_R",
+          "skirt_B_0",
+          "skirt_B_1",
+          "skirt_F_0",
+          "skirt_F_1",
+          "spine",
+          "thigh_L",
+          "thigh_R",
+          "thumb_L",
+          "thumb_R",
+          "toe_L",
+          "toe_R",
+          "upperarm_L",
+          "upperarm_R"
+        ],
+        "max_influences": 4
+      },
+      "collision": {
+        "name": "agent_iney_col",
+        "radius_m": 0.327,
+        "height_m": 2.02,
+        "triangles": 144
+      },
+      "clips": {
+        "idle": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 4.0
+        },
+        "walk": {
+          "frames": 24,
+          "loop": true,
+          "max_hip_clamp_m": 0.0444,
+          "seconds": 0.8
+        },
+        "run": {
+          "frames": 20,
+          "loop": true,
+          "max_hip_clamp_m": 0.0723,
+          "seconds": 0.6667
+        },
+        "talk": {
+          "frames": 90,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 3.0
+        },
+        "think": {
+          "frames": 120,
+          "loop": true,
+          "max_hip_clamp_m": 0.0012,
+          "seconds": 4.0
+        },
+        "gesture_offer": {
+          "frames": 60,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "celebrate": {
+          "frames": 60,
+          "loop": true,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.0
+        },
+        "defeat": {
+          "frames": 75,
+          "loop": false,
+          "max_hip_clamp_m": 0.0,
+          "seconds": 2.5
+        }
+      },
+      "walk_foot_check": {
+        "L": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "R": {
+          "planted_samples": 23,
+          "planted_drift_m": 0.0,
+          "lowest_contact_z_m": -0.0
+        },
+        "stride_m": 1.36
+      },
+      "bones": 53,
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          0.003,
+          0.114
+        ],
+        "socket_hand_r": [
+          0.0,
+          -0.0,
+          0.1
+        ]
+      },
+      "materials": [
+        "M_Frost_Body",
+        "M_Frost_Garment",
+        "M_Frost_Ornament"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          -0.424,
+          -0.0,
+          -0.309
+        ],
+        "max": [
+          0.428,
+          2.02,
+          0.309
+        ]
+      },
+      "raw_glb_bytes": 7289356,
+      "glb_bytes": 4949172,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "iney:model",
+          "seconds": 0.23
+        },
+        {
+          "stage": "iney:uv",
+          "seconds": 1.05
+        },
+        {
+          "stage": "iney:master",
+          "seconds": 18.52
+        },
+        {
+          "stage": "iney:bake_gpu",
+          "seconds": 56.71
+        },
+        {
+          "stage": "iney:textures",
+          "seconds": 2.48
+        },
+        {
+          "stage": "iney:export",
+          "seconds": 0.0
+        },
+        {
+          "stage": "iney:rig",
+          "seconds": 0.18
+        },
+        {
+          "stage": "iney:anim",
+          "seconds": 0.79
+        },
+        {
+          "stage": "iney:export",
+          "seconds": 5.1
+        }
+      ],
+      "total_seconds": 85.04
+    },
+    "suit": {
+      "clan": "Suit",
+      "file": "game/public/assets/models/agent_suit.glb",
+      "cycles_device": "OPTIX",
+      "part_triangles": {
+        "body": 1844,
+        "head": 440,
+        "chest_plate": 416,
+        "back_plate": 416,
+        "abdomen_0": 192,
+        "abdomen_1": 192,
+        "abdomen_2": 192,
+        "upper_arm_-1": 192,
+        "forearm_-1": 240,
+        "elbow_-1": 20,
+        "glove_-1": 20,
+        "pauldron_-1": 152,
+        "thigh_-1": 240,
+        "shin_-1": 240,
+        "boot_-1": 192,
+        "boot_toe_-1": 12,
+        "knee_-1": 20,
+        "upper_arm_1": 192,
+        "forearm_1": 240,
+        "elbow_1": 20,
+        "glove_1": 20,
+        "pauldron_1": 152,
+        "thigh_1": 240,
+        "shin_1": 240,
+        "boot_1": 192,
+        "boot_toe_1": 12,
+        "knee_1": 20,
+        "belt": 224,
+        "pouch_0": 12,
+        "pouch_1": 12,
+        "pouch_2": 12,
+        "pouch_3": 12,
+        "helmet": 540,
+        "visor": 256,
+        "neck_ring": 240,
+        "backpack": 60,
+        "backpack_parts": 256,
+        "strap_-1": 68,
+        "strap_1": 68,
+        "light_strip": 12
+      },
+      "ngons_triangulated": 4,
+      "runtime_triangles": 8120,
+      "uv": {
+        "texel_density_px_per_m": {
+          "median": 490.0,
+          "p10": 470.3,
+          "p90": 502.1
+        },
+        "uv_anisotropy": {
+          "median": 1.056,
+          "p95": 1.178
+        }
+      },
+      "master_triangles": 2928480,
+      "bakes": {
+        "ao": {
+          "seconds": 10.45,
+          "samples": 512,
+          "size": 4096,
+          "exploded": false
+        },
+        "normal": {
+          "seconds": 7.34,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "color": {
+          "seconds": 7.0,
+          "samples": 32,
+          "size": 4096,
+          "exploded": true
+        },
+        "rough": {
+          "seconds": 6.96,
+          "samples": 16,
+          "size": 4096,
+          "exploded": true
+        },
+        "metal": {
+          "seconds": 5.81,
+          "samples": 8,
+          "size": 4096,
+          "exploded": true
+        }
+      },
+      "textures": {
+        "base": {
+          "file": "agent_suit_basecolor.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 743879
+        },
+        "orm": {
+          "file": "agent_suit_orm.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 1307789
+        },
+        "normal": {
+          "file": "agent_suit_normal.jpg",
+          "size": [
+            2048,
+            2048
+          ],
+          "bytes": 367730
+        }
+      },
+      "collision": {
+        "name": "agent_suit_col",
+        "radius_m": 0.311,
+        "height_m": 1.798,
+        "triangles": 144
+      },
+      "sockets_gltf": {
+        "socket_head": [
+          0.0,
+          1.636,
+          0.008
+        ],
+        "socket_hand_r": [
+          -0.2818,
+          0.8209,
+          -0.0
+        ],
+        "socket_backpack_light": [
+          0.0,
+          1.3,
+          -0.32
+        ]
+      },
+      "materials": [
+        "M_Suit_Body",
+        "M_Suit_Garment",
+        "M_Suit_Light"
+      ],
+      "bounds_gltf_yup": {
+        "min": [
+          5.658,
+          0.0,
+          -0.324
+        ],
+        "max": [
+          240.1,
+          1.798,
+          0.16
+        ]
+      },
+      "glb_bytes": 3278728,
+      "budget_ok": {
+        "triangles": true,
+        "materials": true,
+        "textures": true
+      },
+      "stages": [
+        {
+          "stage": "suit:model",
+          "seconds": 0.11
+        },
+        {
+          "stage": "suit:uv",
+          "seconds": 1.03
+        },
+        {
+          "stage": "suit:master",
+          "seconds": 1.79
+        },
+        {
+          "stage": "suit:bake_gpu",
+          "seconds": 37.8
+        },
+        {
+          "stage": "suit:textures",
+          "seconds": 4.69
+        },
+        {
+          "stage": "suit:export",
+          "seconds": 0.08
+        }
+      ],
+      "total_seconds": 45.52
+    }
+  },
+  "blender": "4.5.3 LTS",
+  "budgets": {
+    "runtime_triangles": 16000,
+    "materials": 3,
+    "texture_px": 2048,
+    "bake_px": 4096
+  },
+  "qa_render": {
+    "iris+sol+pepel+moh+yantar+iney": {
+      "device": "OPTIX",
+      "resolution": 1400,
+      "samples": 256,
+      "seconds_per_render": {
+        "agent_iris_front": 1.82,
+        "agent_iris_side": 1.73,
+        "agent_iris_back": 1.75,
+        "agent_iris_three_quarter": 1.9,
+        "agent_iris_iso": 2.12,
+        "agent_sol_front": 1.85,
+        "agent_sol_side": 1.79,
+        "agent_sol_back": 1.87,
+        "agent_sol_three_quarter": 3.94,
+        "agent_sol_iso": 3.9,
+        "agent_pepel_front": 2.05,
+        "agent_pepel_side": 4.09,
+        "agent_pepel_back": 3.13,
+        "agent_pepel_three_quarter": 4.92,
+        "agent_pepel_iso": 3.6,
+        "agent_moh_front": 2.23,
+        "agent_moh_side": 4.56,
+        "agent_moh_back": 1.79,
+        "agent_moh_three_quarter": 1.93,
+        "agent_moh_iso": 2.16,
+        "agent_yantar_front": 1.76,
+        "agent_yantar_side": 1.77,
+        "agent_yantar_back": 1.77,
+        "agent_yantar_three_quarter": 1.9,
+        "agent_yantar_iso": 2.15,
+        "agent_iney_front": 1.86,
+        "agent_iney_side": 1.88,
+        "agent_iney_back": 1.82,
+        "agent_iney_three_quarter": 1.97,
+        "agent_iney_iso": 2.2,
+        "agent_iris_collision_front": 0.71,
+        "agent_sol_collision_front": 0.73,
+        "agent_pepel_collision_front": 0.71,
+        "agent_moh_collision_front": 0.73,
+        "agent_yantar_collision_front": 0.71,
+        "agent_iney_collision_front": 0.75,
+        "lineup_front": 3.23,
+        "lineup_iso": 4.16
+      },
+      "total_seconds": 85.08
+    },
+    "suit": {
+      "device": "OPTIX",
+      "resolution": 1400,
+      "samples": 256,
+      "seconds_per_render": {
+        "agent_suit_front": 1.98,
+        "agent_suit_side": 1.75,
+        "agent_suit_back": 3.01,
+        "agent_suit_three_quarter": 2.94,
+        "agent_suit_iso": 3.36,
+        "agent_suit_collision_front": 1.08
+      },
+      "total_seconds": 14.27
+    }
+  }
+}

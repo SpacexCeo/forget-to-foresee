@@ -1,0 +1,22 @@
+{
+  "device": "OPTIX",
+  "resolution": 1600,
+  "samples": 384,
+  "seconds_per_render": {
+    "shell_2_front": 3.1,
+    "shell_2_side": 3.24,
+    "shell_2_three_quarter": 3.41,
+    "shell_2_top": 4.03,
+    "shell_2_low": 3.2,
+    "shell_2_close_aperture": 5.66,
+    "shell_2_close_flank": 3.95,
+    "shell_2_close_umbilicus": 3.85,
+    "shell_2_collision_three_quarter": 3.59
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 34.13
+    }
+  ]
+}

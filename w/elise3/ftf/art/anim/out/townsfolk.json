@@ -1,0 +1,354 @@
+{
+ "idle": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0029,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "idle_shift": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0119,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "idle_look": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0029,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "walk": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0129,
+  "slip_max_m_s": 0.1077,
+  "ball_min_y": 0.0379,
+  "src_stride_m": 1.707,
+  "src_T_s": 1.008,
+  "src_speed": 1.693,
+  "stride_scale": 0.838,
+  "time_scale": 0.917,
+  "hip_drop_max_m": 0.0002,
+  "contact": {
+   "L": [
+    65,
+    37
+   ],
+   "R": [
+    32,
+    36
+   ]
+  }
+ },
+ "talk": {
+  "take": "18_08",
+  "frames": 161,
+  "seconds": 5.37,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.004,
+  "contacts": {
+   "L": [
+    [
+     0,
+     161
+    ]
+   ],
+   "R": [
+    [
+     0,
+     161
+    ]
+   ]
+  }
+ },
+ "talk_b": {
+  "take": "18_08",
+  "frames": 161,
+  "seconds": 5.37,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0052,
+  "contacts": {
+   "L": [
+    [
+     0,
+     161
+    ]
+   ],
+   "R": [
+    [
+     0,
+     161
+    ]
+   ]
+  }
+ },
+ "wave": {
+  "take": "141_16",
+  "frames": 69,
+  "seconds": 2.3,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.032,
+  "contacts": {
+   "L": [
+    [
+     0,
+     69
+    ]
+   ],
+   "R": [
+    [
+     0,
+     69
+    ]
+   ]
+  }
+ },
+ "sit": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "elder_walk": {
+  "take": "142_07",
+  "slip_mean_m_s": 0.0008,
+  "slip_max_m_s": 0.0657,
+  "ball_min_y": 0.0378,
+  "src_stride_m": 0.419,
+  "src_T_s": 1.125,
+  "src_speed": 0.372,
+  "stride_scale": 1.218,
+  "time_scale": 0.993,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    67,
+    48
+   ],
+   "R": [
+    32,
+    46
+   ]
+  }
+ },
+ "child_run": {
+  "take": "35_20",
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.001,
+  "ball_min_y": 0.0392,
+  "src_stride_m": 2.441,
+  "src_T_s": 0.733,
+  "src_speed": 3.329,
+  "stride_scale": 0.803,
+  "time_scale": 1.048,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    5,
+    25
+   ],
+   "R": [
+    48,
+    25
+   ]
+  }
+ },
+ "sweep": {
+  "take": "79_55",
+  "frames": 78,
+  "seconds": 2.6,
+  "slip_mean_m_s": 0.0316,
+  "slip_max_m_s": 0.153,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     78
+    ]
+   ],
+   "R": [
+    [
+     0,
+     78
+    ]
+   ]
+  }
+ },
+ "carry": {
+  "take": "113_26",
+  "slip_mean_m_s": 0.0264,
+  "slip_max_m_s": 0.2166,
+  "ball_min_y": 0.0375,
+  "src_stride_m": 1.308,
+  "src_T_s": 1.283,
+  "src_speed": 1.02,
+  "stride_scale": 0.968,
+  "time_scale": 1.013,
+  "hip_drop_max_m": 0.0211,
+  "contact": {
+   "L": [
+    75,
+    43
+   ],
+   "R": [
+    37,
+    45
+   ]
+  }
+ },
+ "play": {
+  "take": "80_36",
+  "frames": 118,
+  "seconds": 3.93,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.024,
+  "contacts": {
+   "L": [
+    [
+     0,
+     118
+    ]
+   ],
+   "R": [
+    [
+     0,
+     118
+    ]
+   ]
+  }
+ },
+ "salute": {
+  "take": "82_08",
+  "frames": 79,
+  "seconds": 2.63,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0021,
+  "contacts": {
+   "L": [
+    [
+     0,
+     79
+    ]
+   ],
+   "R": [
+    [
+     0,
+     79
+    ]
+   ]
+  }
+ },
+ "nod": {
+  "take": "82_08",
+  "frames": 61,
+  "seconds": 2.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.002,
+  "contacts": {
+   "L": [
+    [
+     0,
+     61
+    ]
+   ],
+   "R": [
+    [
+     0,
+     61
+    ]
+   ]
+  }
+ },
+ "counter": {
+  "take": "79_14",
+  "frames": 89,
+  "seconds": 2.97,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     89
+    ]
+   ],
+   "R": [
+    [
+     0,
+     89
+    ]
+   ]
+  }
+ }
+}

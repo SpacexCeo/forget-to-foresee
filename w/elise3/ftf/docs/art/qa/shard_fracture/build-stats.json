@@ -1,0 +1,73 @@
+{
+  "seeds": 13,
+  "pieces": [
+    {
+      "name": "piece_00",
+      "triangles": 24,
+      "travel_m": 0.032
+    },
+    {
+      "name": "piece_01",
+      "triangles": 42,
+      "travel_m": 0.037
+    },
+    {
+      "name": "piece_02",
+      "triangles": 50,
+      "travel_m": 0.039
+    },
+    {
+      "name": "piece_03",
+      "triangles": 34,
+      "travel_m": 0.045
+    },
+    {
+      "name": "piece_04",
+      "triangles": 40,
+      "travel_m": 0.044
+    },
+    {
+      "name": "piece_05",
+      "triangles": 28,
+      "travel_m": 0.074
+    },
+    {
+      "name": "piece_06",
+      "triangles": 26,
+      "travel_m": 0.036
+    },
+    {
+      "name": "piece_07",
+      "triangles": 34,
+      "travel_m": 0.044
+    },
+    {
+      "name": "piece_08",
+      "triangles": 24,
+      "travel_m": 0.062
+    },
+    {
+      "name": "piece_09",
+      "triangles": 40,
+      "travel_m": 0.054
+    },
+    {
+      "name": "piece_10",
+      "triangles": 44,
+      "travel_m": 0.06
+    },
+    {
+      "name": "piece_11",
+      "triangles": 48,
+      "travel_m": 0.037
+    },
+    {
+      "name": "piece_12",
+      "triangles": 32,
+      "travel_m": 0.067
+    }
+  ],
+  "triangles": 466,
+  "glb_bytes": 103944,
+  "seconds": 4.0
+}

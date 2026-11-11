@@ -1,0 +1,211 @@
+{
+  "asset": "camp_pepel.glb",
+  "clan": "Ash",
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model",
+      "seconds": 0.32
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 0.83
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 60.85
+    },
+    {
+      "stage": "textures",
+      "seconds": 1.63
+    },
+    {
+      "stage": "materials_assemble",
+      "seconds": 0.26
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 118,
+  "kinds": [
+    "cloth_red",
+    "ground_ash",
+    "iron",
+    "rope",
+    "shingle_dark",
+    "stone",
+    "wood",
+    "wood_dark"
+  ],
+  "bakes": {
+    "normal": {
+      "seconds": 7.33,
+      "samples": 16,
+      "size": 4096
+    },
+    "color": {
+      "seconds": 5.98,
+      "samples": 16,
+      "size": 4096
+    },
+    "rough": {
+      "seconds": 6.78,
+      "samples": 8,
+      "size": 4096
+    },
+    "metal": {
+      "seconds": 6.57,
+      "samples": 8,
+      "size": 4096
+    },
+    "ao": {
+      "seconds": 34.13,
+      "samples": 256,
+      "size": 4096
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/camps/textures/pepel/camp_pepel_basecolor.jpg",
+      "bytes": 3517384,
+      "size": 4096
+    },
+    "orm": {
+      "file": "art/camps/textures/pepel/camp_pepel_orm.jpg",
+      "bytes": 6130283,
+      "size": 4096
+    },
+    "normal": {
+      "file": "art/camps/textures/pepel/camp_pepel_normal.jpg",
+      "bytes": 2066331,
+      "size": 4096
+    }
+  },
+  "runtime_triangles_blender": 9117,
+  "collision_triangles_blender": 404,
+  "bounds_blender_zup": {
+    "min": [
+      -4.35,
+      -4.35,
+      -0.02
+    ],
+    "max": [
+      4.35,
+      4.35,
+      4.321
+    ]
+  },
+  "details": [
+    "charred pagoda shelter with a concave hip roof and upturned corners",
+    "palisade of 64 sharpened stakes with lashed rails, open toward the plaza",
+    "iron brazier with glowing embers (special material)",
+    "alarm bell under the front eave",
+    "woodpile, chopping block with an axe, spears leaning on the stakes"
+  ],
+  "glb_bytes": 12370920,
+  "glb": {
+    "bytes": 12370920,
+    "nodes": {
+      "camp_pepel": {
+        "triangles": 9117,
+        "materials": [
+          "M_Ash_Atlas",
+          "M_Ash_AtlasDS",
+          "M_Ash_Ember"
+        ],
+        "attributes": [
+          "NORMAL",
+          "POSITION",
+          "TANGENT",
+          "TEXCOORD_0"
+        ]
+      },
+      "camp_pepel_col": {
+        "triangles": 404,
+        "materials": [],
+        "attributes": [
+          "NORMAL",
+          "POSITION"
+        ]
+      }
+    },
+    "materials": [
+      {
+        "name": "M_Ash_Atlas",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Ash_AtlasDS",
+        "doubleSided": true,
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "M_Ash_Ember",
+        "doubleSided": false,
+        "alphaMode": "OPAQUE"
+      }
+    ],
+    "images": [
+      {
+        "name": "camp_pepel_normal",
+        "mime": "image/jpeg",
+        "bytes": 2066331,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_pepel_orm",
+        "mime": "image/jpeg",
+        "bytes": 6130283,
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "camp_pepel_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 3517384,
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ],
+    "sockets": {
+      "socket_agent": {
+        "translation_gltf": [
+          0,
+          0.12,
+          0
+        ],
+        "rotation_gltf": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "extras": {
+          "socket": "agent_hologram",
+          "free_radius_m": 1.0
+        }
+      }
+    },
+    "triangles_render": 9117,
+    "triangles_collision": 404,
+    "max_materials_per_node": 3
+  },
+  "runtime_triangles": 9117,
+  "materials": [
+    "M_Ash_Atlas",
+    "M_Ash_AtlasDS",
+    "M_Ash_Ember"
+  ],
+  "budget_ok": {
+    "triangles": true,
+    "materials": true,
+    "agent_circle_free": true
+  }
+}

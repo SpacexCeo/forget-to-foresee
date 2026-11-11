@@ -1,0 +1,267 @@
+{
+ "finalLuma": {
+  "ok": true,
+  "frames": 555,
+  "jumps": 1,
+  "at": [
+   360
+  ],
+  "maxJump": 73.1,
+  "min": 23,
+  "max": 167.3
+ },
+ "video": "jury-test",
+ "title": "Forget to Foresee: jury video, cinematic test (18.5 s)",
+ "width": 3840,
+ "height": 2160,
+ "fps": 30,
+ "tier": "ultra",
+ "duration": 18.5,
+ "shots": [
+  {
+   "shot": "fly-in",
+   "frames": 90,
+   "secondsPerFrame": 1.402188888888889,
+   "loaded": true,
+   "setupFrames": 61,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "3a0a0de7a0df4e2a",
+    "89": "749957e5dac44d2e"
+   }
+  },
+  {
+   "shot": "clans-back",
+   "frames": 45,
+   "secondsPerFrame": 1.4618666666666669,
+   "loaded": true,
+   "setupFrames": 91,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "42b1852d8a5db9ff",
+    "44": "3d5ddddaa45e76b3"
+   }
+  },
+  {
+   "shot": "clans-front",
+   "frames": 45,
+   "secondsPerFrame": 1.5814444444444447,
+   "loaded": true,
+   "setupFrames": 91,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "d6c4df27504e1d9c",
+    "44": "9d0b393a96071459"
+   }
+  },
+  {
+   "shot": "conflict",
+   "frames": 90,
+   "secondsPerFrame": 1.4613666666666667,
+   "loaded": true,
+   "setupFrames": 91,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "c1c7409fb1d65374",
+    "89": "34962c524b61469b"
+   }
+  },
+  {
+   "shot": "shard-macro",
+   "frames": 90,
+   "secondsPerFrame": 1.2949555555555556,
+   "loaded": true,
+   "setupFrames": 91,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "f37a64f0696f5ccf",
+    "89": "895af922b9587162"
+   }
+  },
+  {
+   "shot": "token",
+   "frames": 90,
+   "secondsPerFrame": 1.3496444444444444,
+   "loaded": true,
+   "setupFrames": 91,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "99a8bf646fd428a0",
+    "89": "594fd0a57b4245b2"
+   }
+  },
+  {
+   "shot": "proof",
+   "frames": 105,
+   "secondsPerFrame": 1.3243809523809524,
+   "loaded": true,
+   "setupFrames": 91,
+   "errors": [],
+   "consoleErrors": [],
+   "hashes": {
+    "0": "5541ef493ea14299",
+    "104": "6ca163fd20cc260f"
+   }
+  }
+ ],
+ "mix": {
+  "peak": 0.48840287950119904,
+  "events": 17,
+  "wav": "/root/ftf-media/jury-test-4/work/jury-test-3840x2160-ultra/jury-test.wav",
+  "cues": 39
+ },
+ "files": {
+  "/root/ftf-media/jury-test-4/jury-test.mp4": {
+   "bytes": 97185153,
+   "mb": 92.7,
+   "duration": 18.5,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 3840,
+    "height": 2160,
+    "coded_width": 3840,
+    "coded_height": 2160,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "30/1",
+    "avg_frame_rate": "30/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 284160,
+    "duration": "18.500000",
+    "bit_rate": "41760481",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "555",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media/jury-test-4/jury-test-captions.mp4": {
+   "bytes": 96575145,
+   "mb": 92.1,
+   "duration": 18.5,
+   "video": {
+    "index": 0,
+    "codec_name": "h264",
+    "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "profile": "High",
+    "codec_type": "video",
+    "codec_tag_string": "avc1",
+    "codec_tag": "0x31637661",
+    "width": 3840,
+    "height": 2160,
+    "coded_width": 3840,
+    "coded_height": 2160,
+    "closed_captions": 0,
+    "film_grain": 0,
+    "has_b_frames": 2,
+    "pix_fmt": "yuv420p",
+    "level": 42,
+    "color_range": "tv",
+    "color_space": "bt709",
+    "color_transfer": "bt709",
+    "color_primaries": "bt709",
+    "chroma_location": "left",
+    "field_order": "progressive",
+    "refs": 1,
+    "is_avc": "true",
+    "nal_length_size": "4",
+    "id": "0x1",
+    "r_frame_rate": "30/1",
+    "avg_frame_rate": "30/1",
+    "time_base": "1/15360",
+    "start_pts": 0,
+    "start_time": "0.000000",
+    "duration_ts": 284160,
+    "duration": "18.500000",
+    "bit_rate": "41496499",
+    "bits_per_raw_sample": "8",
+    "nb_frames": "555",
+    "extradata_size": 50,
+    "disposition": {
+     "default": 1,
+     "dub": 0,
+     "original": 0,
+     "comment": 0,
+     "lyrics": 0,
+     "karaoke": 0,
+     "forced": 0,
+     "hearing_impaired": 0,
+     "visual_impaired": 0,
+     "clean_effects": 0,
+     "attached_pic": 0,
+     "timed_thumbnails": 0,
+     "non_diegetic": 0,
+     "captions": 0,
+     "descriptions": 0,
+     "metadata": 0,
+     "dependent": 0,
+     "still_image": 0
+    },
+    "tags": {
+     "language": "und",
+     "handler_name": "VideoHandler",
+     "vendor_id": "[0][0][0][0]",
+     "encoder": "Lavc60.31.102 libx264"
+    }
+   }
+  },
+  "/root/ftf-media/jury-test-4/jury-test.srt": {
+   "bytes": 456,
+   "mb": 0,
+   "duration": null,
+   "video": null
+  }
+ }
+}

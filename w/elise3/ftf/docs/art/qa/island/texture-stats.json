@@ -1,0 +1,62 @@
+{
+  "device": "OPTIX",
+  "files": {
+    "rock": {
+      "basecolor": {
+        "file": "art/island/textures/island_rock_basecolor.jpg",
+        "bytes": 292215,
+        "size": 2048
+      },
+      "orm": {
+        "file": "art/island/textures/island_rock_orm.jpg",
+        "bytes": 416668,
+        "size": 2048
+      },
+      "normal": {
+        "file": "art/island/textures/island_rock_normal.jpg",
+        "bytes": 1538381,
+        "size": 2048
+      }
+    },
+    "stone": {
+      "basecolor": {
+        "file": "art/island/textures/island_stone_basecolor.jpg",
+        "bytes": 339389,
+        "size": 2048
+      },
+      "orm": {
+        "file": "art/island/textures/island_stone_orm.jpg",
+        "bytes": 430777,
+        "size": 2048
+      },
+      "normal": {
+        "file": "art/island/textures/island_stone_normal.jpg",
+        "bytes": 1171279,
+        "size": 2048
+      }
+    },
+    "foliage": {
+      "basecolor": {
+        "file": "art/island/textures/island_foliage_basecolor.jpg",
+        "bytes": 323045,
+        "size": 2048
+      },
+      "orm": {
+        "file": "art/island/textures/island_foliage_orm.jpg",
+        "bytes": 326109,
+        "size": 2048
+      },
+      "normal": {
+        "file": "art/island/textures/island_foliage_normal.jpg",
+        "bytes": 1520217,
+        "size": 2048
+      }
+    }
+  },
+  "stages": [
+    {
+      "stage": "textures_bake",
+      "seconds": 76.79
+    }
+  ]
+}

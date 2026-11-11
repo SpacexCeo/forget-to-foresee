@@ -1,0 +1,714 @@
+{
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_boundary",
+      "seconds": 0.49
+    },
+    {
+      "stage": "split_parts",
+      "seconds": 0.07
+    },
+    {
+      "stage": "collision_sockets",
+      "seconds": 0.03
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 0.24
+    },
+    {
+      "stage": "nacre_tile_master",
+      "seconds": 8.7
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 234.1
+    },
+    {
+      "stage": "textures",
+      "seconds": 11.34
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.45
+    },
+    {
+      "stage": "validate_shipped",
+      "seconds": 0.62
+    }
+  ],
+  "hall": {
+    "rows": 215,
+    "ribs": 14,
+    "pitches": [
+      1.542,
+      1.167,
+      1.354,
+      1.313,
+      1.066,
+      1.206,
+      1.472,
+      1.453,
+      1.346,
+      1.291,
+      1.164,
+      1.086,
+      1.569,
+      1.371
+    ],
+    "rib_heights": [
+      0.923,
+      0.643,
+      0.829,
+      0.551,
+      0.802,
+      0.894,
+      0.8,
+      0.813,
+      0.687,
+      0.619,
+      0.759,
+      0.905,
+      0.872,
+      0.771
+    ],
+    "wall_faces": 34240,
+    "floor_faces": 5992
+  },
+  "closure_generated": {
+    "non_manifold_edges": 0,
+    "boundary_edges": 0,
+    "loose_verts": 0,
+    "signed_volume_m3": -6773.1,
+    "normals": "inward",
+    "euler_characteristic": 2,
+    "faces": 51700
+  },
+  "ray_escape_generated": {
+    "points": 98,
+    "directions": 2562,
+    "rays": 251076,
+    "escaped": 0,
+    "back_face_hits": 10,
+    "back_face_hit_examples": [
+      [
+        -6.82,
+        -1.47,
+        0.51
+      ],
+      [
+        -6.91,
+        2.56,
+        0.48
+      ],
+      [
+        6.91,
+        0.87,
+        0.51
+      ],
+      [
+        -7.01,
+        5.2,
+        0.46
+      ],
+      [
+        -6.88,
+        2.56,
+        0.53
+      ],
+      [
+        6.98,
+        3.37,
+        0.48
+      ],
+      [
+        7.02,
+        4.49,
+        0.48
+      ],
+      [
+        6.88,
+        -0.5,
+        0.55
+      ]
+    ],
+    "escaping_points": []
+  },
+  "cycles_device": "OPTIX",
+  "uv_stone": {
+    "texel_density_px_per_m_median": 113.4,
+    "p10": 113.4,
+    "p90": 113.4
+  },
+  "nacre_tile_master_triangles": 11520000,
+  "nacre_tile": {
+    "size_m": 2.4,
+    "texture_px": 2048,
+    "height_range_mm": 5.88
+  },
+  "bakes": {
+    "nacre_tile_normal": 8.7,
+    "nacre_ao": 11.61,
+    "stone_color": 43.46,
+    "stone_rough": 31.2,
+    "stone_metal": 30.2,
+    "stone_emission": 30.11,
+    "stone_normal": 34.05,
+    "stone_ao": 44.5
+  },
+  "texture_files": {
+    "stone_base": {
+      "file": "art/shell_interior/textures/stone_basecolor.jpg",
+      "bytes": 1294989
+    },
+    "stone_orm": {
+      "file": "art/shell_interior/textures/stone_orm.jpg",
+      "bytes": 2073710
+    },
+    "stone_normal": {
+      "file": "art/shell_interior/textures/stone_normal.jpg",
+      "bytes": 1609138
+    },
+    "stone_emissive": {
+      "file": "art/shell_interior/textures/stone_emissive.jpg",
+      "bytes": 214428
+    },
+    "nacre_ao": {
+      "file": "art/shell_interior/textures/nacre_ao.jpg",
+      "bytes": 1364735
+    },
+    "nacre_normal": {
+      "file": "art/shell_interior/textures/nacre_normal.png",
+      "bytes": 7247044
+    },
+    "nacre_base": {
+      "file": "art/shell_interior/textures/nacre_basecolor.jpg",
+      "bytes": 302127
+    },
+    "nacre_orm": {
+      "file": "art/shell_interior/textures/nacre_orm.jpg",
+      "bytes": 1373208
+    }
+  },
+  "triangles_by_object": {
+    "shell_interior_walls": 98720,
+    "shell_interior_floor": 16884,
+    "shell_interior_stairs": 740,
+    "floor_light_bezels": 1012,
+    "floor_lights": 46,
+    "logogram_glass": 2
+  },
+  "triangles_runtime": 117404,
+  "collision_triangles": 860,
+  "collision_objects": [
+    "wall_s0_000_col",
+    "wall_s0_012_col",
+    "wall_s0_024_col",
+    "ceiling_s0_036_col",
+    "ceiling_s0_048_col",
+    "ceiling_s0_060_col",
+    "ceiling_s0_072_col",
+    "ceiling_s0_084_col",
+    "ceiling_s0_096_col",
+    "ceiling_s0_108_col",
+    "wall_s0_120_col",
+    "wall_s0_132_col",
+    "wall_s0_144_col",
+    "wall_s0_156_col",
+    "wall_s1_000_col",
+    "wall_s1_012_col",
+    "wall_s1_024_col",
+    "ceiling_s1_036_col",
+    "ceiling_s1_048_col",
+    "ceiling_s1_060_col",
+    "ceiling_s1_072_col",
+    "ceiling_s1_084_col",
+    "ceiling_s1_096_col",
+    "ceiling_s1_108_col",
+    "wall_s1_120_col",
+    "wall_s1_132_col",
+    "wall_s1_144_col",
+    "wall_s1_156_col",
+    "wall_s2_000_col",
+    "wall_s2_012_col",
+    "wall_s2_024_col",
+    "ceiling_s2_036_col",
+    "ceiling_s2_048_col",
+    "ceiling_s2_060_col",
+    "ceiling_s2_072_col",
+    "ceiling_s2_084_col",
+    "ceiling_s2_096_col",
+    "ceiling_s2_108_col",
+    "wall_s2_120_col",
+    "wall_s2_132_col",
+    "wall_s2_144_col",
+    "wall_s2_156_col",
+    "wall_s3_000_col",
+    "wall_s3_012_col",
+    "wall_s3_024_col",
+    "ceiling_s3_036_col",
+    "ceiling_s3_048_col",
+    "ceiling_s3_060_col",
+    "ceiling_s3_072_col",
+    "ceiling_s3_084_col",
+    "ceiling_s3_096_col",
+    "ceiling_s3_108_col",
+    "wall_s3_120_col",
+    "wall_s3_132_col",
+    "wall_s3_144_col",
+    "wall_s3_156_col",
+    "floor_col",
+    "glass_col",
+    "endwall_glass_col",
+    "endwall_entrance_l_col",
+    "endwall_entrance_r_col",
+    "endwall_entrance_top_col",
+    "landing_col",
+    "stairs_col",
+    "stairs_cheek_l_col",
+    "stairs_cheek_r_col",
+    "vestibule_floor_col",
+    "vestibule_wall_l_col",
+    "vestibule_wall_r_col",
+    "vestibule_ceiling_col",
+    "vestibule_door_col"
+  ],
+  "materials": [
+    "M_Shell_Nacre",
+    "M_Shell_Stone",
+    "logogram_glass"
+  ],
+  "sockets": {
+    "socket_spawn": [
+      0.0,
+      1.2,
+      11.3
+    ],
+    "socket_logogram_center": [
+      0.0,
+      3.95,
+      -10.748
+    ],
+    "socket_guest_1": [
+      -4.4,
+      -0.3,
+      -15.75
+    ],
+    "socket_guest_2": [
+      0.4,
+      -0.3,
+      -17.95
+    ],
+    "socket_guest_3": [
+      4.6,
+      -0.3,
+      -15.35
+    ]
+  },
+  "bounds_blender_zup": {
+    "min": [
+      -9.0,
+      -14.348,
+      -0.4
+    ],
+    "max": [
+      9.0,
+      26.4,
+      14.1
+    ]
+  },
+  "glb_patched_extensions": {
+    "M_Shell_Nacre": [
+      "KHR_materials_iridescence"
+    ]
+  },
+  "glb_bytes": 21483320,
+  "glb_summary": {
+    "meshes": {
+      "ceiling_s0_036_col": 12,
+      "ceiling_s0_048_col": 12,
+      "ceiling_s0_060_col": 12,
+      "ceiling_s0_072_col": 12,
+      "ceiling_s0_084_col": 12,
+      "ceiling_s0_096_col": 12,
+      "ceiling_s0_108_col": 12,
+      "ceiling_s1_036_col": 12,
+      "ceiling_s1_048_col": 12,
+      "ceiling_s1_060_col": 12,
+      "ceiling_s1_072_col": 12,
+      "ceiling_s1_084_col": 12,
+      "ceiling_s1_096_col": 12,
+      "ceiling_s1_108_col": 12,
+      "ceiling_s2_036_col": 12,
+      "ceiling_s2_048_col": 12,
+      "ceiling_s2_060_col": 12,
+      "ceiling_s2_072_col": 12,
+      "ceiling_s2_084_col": 12,
+      "ceiling_s2_096_col": 12,
+      "ceiling_s2_108_col": 12,
+      "ceiling_s3_036_col": 12,
+      "ceiling_s3_048_col": 12,
+      "ceiling_s3_060_col": 12,
+      "ceiling_s3_072_col": 12,
+      "ceiling_s3_084_col": 12,
+      "ceiling_s3_096_col": 12,
+      "ceiling_s3_108_col": 12,
+      "endwall_entrance_l_col": 12,
+      "endwall_entrance_r_col": 12,
+      "endwall_entrance_top_col": 12,
+      "endwall_glass_col": 12,
+      "floor_col": 12,
+      "floor_light_bezels.001": 1012,
+      "floor_lights": 46,
+      "glass_col": 12,
+      "landing_col": 12,
+      "logogram_glass": 2,
+      "shell_interior_floor": 16884,
+      "shell_interior_stairs.001": 740,
+      "shell_interior_walls": 98720,
+      "stairs_cheek_l_col": 16,
+      "stairs_cheek_r_col": 16,
+      "stairs_col": 12,
+      "vestibule_ceiling_col": 12,
+      "vestibule_door_col": 12,
+      "vestibule_floor_col": 12,
+      "vestibule_wall_l_col": 12,
+      "vestibule_wall_r_col": 12,
+      "wall_s0_000_col": 12,
+      "wall_s0_012_col": 12,
+      "wall_s0_024_col": 12,
+      "wall_s0_120_col": 12,
+      "wall_s0_132_col": 12,
+      "wall_s0_144_col": 12,
+      "wall_s0_156_col": 12,
+      "wall_s1_000_col": 12,
+      "wall_s1_012_col": 12,
+      "wall_s1_024_col": 12,
+      "wall_s1_120_col": 12,
+      "wall_s1_132_col": 12,
+      "wall_s1_144_col": 12,
+      "wall_s1_156_col": 12,
+      "wall_s2_000_col": 12,
+      "wall_s2_012_col": 12,
+      "wall_s2_024_col": 12,
+      "wall_s2_120_col": 12,
+      "wall_s2_132_col": 12,
+      "wall_s2_144_col": 12,
+      "wall_s2_156_col": 12,
+      "wall_s3_000_col": 12,
+      "wall_s3_012_col": 12,
+      "wall_s3_024_col": 12,
+      "wall_s3_120_col": 12,
+      "wall_s3_132_col": 12,
+      "wall_s3_144_col": 12,
+      "wall_s3_156_col": 12
+    },
+    "materials": [
+      {
+        "name": "M_Shell_Stone",
+        "alphaMode": "OPAQUE",
+        "doubleSided": true,
+        "extensions": [
+          "KHR_materials_emissive_strength"
+        ],
+        "texCoord": {
+          "baseColor": 0,
+          "metallicRoughness": 0,
+          "normal": 0,
+          "occlusion": 0,
+          "emissive": 0
+        }
+      },
+      {
+        "name": "logogram_glass",
+        "alphaMode": "BLEND",
+        "doubleSided": true,
+        "extensions": [],
+        "texCoord": {}
+      },
+      {
+        "name": "M_Shell_Nacre",
+        "alphaMode": "OPAQUE",
+        "doubleSided": true,
+        "extensions": [
+          "KHR_materials_iridescence"
+        ],
+        "texCoord": {
+          "baseColor": 0,
+          "metallicRoughness": 0,
+          "normal": 0,
+          "occlusion": 1
+        }
+      }
+    ],
+    "images": [
+      {
+        "name": "stone_emissive",
+        "mime": "image/jpeg",
+        "bytes": 214428
+      },
+      {
+        "name": "stone_normal",
+        "mime": "image/jpeg",
+        "bytes": 1609138
+      },
+      {
+        "name": "stone_orm",
+        "mime": "image/jpeg",
+        "bytes": 2073710
+      },
+      {
+        "name": "stone_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 1294989
+      },
+      {
+        "name": "nacre_normal",
+        "mime": "image/png",
+        "bytes": 7247044
+      },
+      {
+        "name": "nacre_ao",
+        "mime": "image/jpeg",
+        "bytes": 1364735
+      },
+      {
+        "name": "nacre_basecolor",
+        "mime": "image/jpeg",
+        "bytes": 302127
+      },
+      {
+        "name": "nacre_orm",
+        "mime": "image/jpeg",
+        "bytes": 1373208
+      }
+    ],
+    "nodes": [
+      "ceiling_s0_036_col",
+      "ceiling_s0_048_col",
+      "ceiling_s0_060_col",
+      "ceiling_s0_072_col",
+      "ceiling_s0_084_col",
+      "ceiling_s0_096_col",
+      "ceiling_s0_108_col",
+      "ceiling_s1_036_col",
+      "ceiling_s1_048_col",
+      "ceiling_s1_060_col",
+      "ceiling_s1_072_col",
+      "ceiling_s1_084_col",
+      "ceiling_s1_096_col",
+      "ceiling_s1_108_col",
+      "ceiling_s2_036_col",
+      "ceiling_s2_048_col",
+      "ceiling_s2_060_col",
+      "ceiling_s2_072_col",
+      "ceiling_s2_084_col",
+      "ceiling_s2_096_col",
+      "ceiling_s2_108_col",
+      "ceiling_s3_036_col",
+      "ceiling_s3_048_col",
+      "ceiling_s3_060_col",
+      "ceiling_s3_072_col",
+      "ceiling_s3_084_col",
+      "ceiling_s3_096_col",
+      "ceiling_s3_108_col",
+      "endwall_entrance_l_col",
+      "endwall_entrance_r_col",
+      "endwall_entrance_top_col",
+      "endwall_glass_col",
+      "floor_col",
+      "floor_light_bezels",
+      "floor_lights",
+      "glass_col",
+      "landing_col",
+      "logogram_glass",
+      "shell_interior_floor",
+      "shell_interior_stairs",
+      "shell_interior_walls",
+      "socket_guest_1",
+      "socket_guest_2",
+      "socket_guest_3",
+      "socket_logogram_center",
+      "socket_spawn",
+      "stairs_cheek_l_col",
+      "stairs_cheek_r_col",
+      "stairs_col",
+      "vestibule_ceiling_col",
+      "vestibule_door_col",
+      "vestibule_floor_col",
+      "vestibule_wall_l_col",
+      "vestibule_wall_r_col",
+      "wall_s0_000_col",
+      "wall_s0_012_col",
+      "wall_s0_024_col",
+      "wall_s0_120_col",
+      "wall_s0_132_col",
+      "wall_s0_144_col",
+      "wall_s0_156_col",
+      "wall_s1_000_col",
+      "wall_s1_012_col",
+      "wall_s1_024_col",
+      "wall_s1_120_col",
+      "wall_s1_132_col",
+      "wall_s1_144_col",
+      "wall_s1_156_col",
+      "wall_s2_000_col",
+      "wall_s2_012_col",
+      "wall_s2_024_col",
+      "wall_s2_120_col",
+      "wall_s2_132_col",
+      "wall_s2_144_col",
+      "wall_s2_156_col",
+      "wall_s3_000_col",
+      "wall_s3_012_col",
+      "wall_s3_024_col",
+      "wall_s3_120_col",
+      "wall_s3_132_col",
+      "wall_s3_144_col",
+      "wall_s3_156_col",
+      "shell_interior"
+    ],
+    "extensionsUsed": [
+      "KHR_materials_emissive_strength",
+      "KHR_materials_iridescence"
+    ],
+    "glb_bytes": 21483320,
+    "has_tangents": false,
+    "animations": 0
+  },
+  "shipped_glb_checks": {
+    "boundary_after_reimport": {
+      "non_manifold_edges": 0,
+      "boundary_edges": 0,
+      "loose_verts": 0,
+      "signed_volume_m3": -6735.92,
+      "normals": "inward",
+      "euler_characteristic": 12,
+      "faces": 115604
+    },
+    "ray_escape_visual": {
+      "points": 98,
+      "directions": 1442,
+      "rays": 141316,
+      "escaped": 0,
+      "back_face_hits": 2,
+      "back_face_hit_examples": [
+        [
+          6.95,
+          2.19,
+          0.5
+        ],
+        [
+          6.97,
+          3.38,
+          0.48
+        ]
+      ],
+      "escaping_points": []
+    },
+    "ray_escape_collision": {
+      "points": 131,
+      "directions": 1442,
+      "rays": 188902,
+      "escaped": 0,
+      "back_face_hit_examples": [],
+      "escaping_points": []
+    },
+    "collision_floor_probe": {
+      "cells": 897,
+      "holes": 0
+    },
+    "collision_objects": 71,
+    "triangles_by_object": {
+      "ceiling_s0_036_col": 12,
+      "ceiling_s0_048_col": 12,
+      "ceiling_s0_060_col": 12,
+      "ceiling_s0_072_col": 12,
+      "ceiling_s0_084_col": 12,
+      "ceiling_s0_096_col": 12,
+      "ceiling_s0_108_col": 12,
+      "ceiling_s1_036_col": 12,
+      "ceiling_s1_048_col": 12,
+      "ceiling_s1_060_col": 12,
+      "ceiling_s1_072_col": 12,
+      "ceiling_s1_084_col": 12,
+      "ceiling_s1_096_col": 12,
+      "ceiling_s1_108_col": 12,
+      "ceiling_s2_036_col": 12,
+      "ceiling_s2_048_col": 12,
+      "ceiling_s2_060_col": 12,
+      "ceiling_s2_072_col": 12,
+      "ceiling_s2_084_col": 12,
+      "ceiling_s2_096_col": 12,
+      "ceiling_s2_108_col": 12,
+      "ceiling_s3_036_col": 12,
+      "ceiling_s3_048_col": 12,
+      "ceiling_s3_060_col": 12,
+      "ceiling_s3_072_col": 12,
+      "ceiling_s3_084_col": 12,
+      "ceiling_s3_096_col": 12,
+      "ceiling_s3_108_col": 12,
+      "endwall_entrance_l_col": 12,
+      "endwall_entrance_r_col": 12,
+      "endwall_entrance_top_col": 12,
+      "endwall_glass_col": 12,
+      "floor_col": 12,
+      "floor_light_bezels": 1012,
+      "floor_lights": 46,
+      "glass_col": 12,
+      "landing_col": 12,
+      "logogram_glass": 2,
+      "shell_interior_floor": 16884,
+      "shell_interior_stairs": 740,
+      "shell_interior_walls": 98720,
+      "stairs_cheek_l_col": 16,
+      "stairs_cheek_r_col": 16,
+      "stairs_col": 12,
+      "vestibule_ceiling_col": 12,
+      "vestibule_door_col": 12,
+      "vestibule_floor_col": 12,
+      "vestibule_wall_l_col": 12,
+      "vestibule_wall_r_col": 12,
+      "wall_s0_000_col": 12,
+      "wall_s0_012_col": 12,
+      "wall_s0_024_col": 12,
+      "wall_s0_120_col": 12,
+      "wall_s0_132_col": 12,
+      "wall_s0_144_col": 12,
+      "wall_s0_156_col": 12,
+      "wall_s1_000_col": 12,
+      "wall_s1_012_col": 12,
+      "wall_s1_024_col": 12,
+      "wall_s1_120_col": 12,
+      "wall_s1_132_col": 12,
+      "wall_s1_144_col": 12,
+      "wall_s1_156_col": 12,
+      "wall_s2_000_col": 12,
+      "wall_s2_012_col": 12,
+      "wall_s2_024_col": 12,
+      "wall_s2_120_col": 12,
+      "wall_s2_132_col": 12,
+      "wall_s2_144_col": 12,
+      "wall_s2_156_col": 12,
+      "wall_s3_000_col": 12,
+      "wall_s3_012_col": 12,
+      "wall_s3_024_col": 12,
+      "wall_s3_120_col": 12,
+      "wall_s3_132_col": 12,
+      "wall_s3_144_col": 12,
+      "wall_s3_156_col": 12
+    }
+  },
+  "budget_ok": {
+    "runtime_triangles": true,
+    "materials": true,
+    "closed_boundary": true,
+    "no_ray_escape_visual": true,
+    "no_ray_escape_collision": true
+  }
+}

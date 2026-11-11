@@ -1,0 +1,50 @@
+{
+  "size": 1024,
+  "files": {
+    "plaster": {
+      "basecolor": 139317,
+      "orm": 501620,
+      "normal": 1403202
+    },
+    "timber": {
+      "basecolor": 287258,
+      "orm": 799773,
+      "normal": 1529679
+    },
+    "roof": {
+      "basecolor": 182682,
+      "orm": 320639,
+      "normal": 370572
+    },
+    "stone": {
+      "basecolor": 192050,
+      "orm": 356538,
+      "normal": 933454
+    },
+    "cobble": {
+      "basecolor": 192971,
+      "orm": 284443,
+      "normal": 432080
+    },
+    "ground": {
+      "basecolor": 314101,
+      "orm": 507708,
+      "normal": 1562794
+    },
+    "rock": {
+      "basecolor": 151188,
+      "orm": 373627,
+      "normal": 745284
+    },
+    "cloth": {
+      "basecolor": 107241,
+      "orm": 490674,
+      "normal": 1011820
+    },
+    "foliage": {
+      "basecolor": 203933,
+      "orm": 366281,
+      "normal": 465549
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "blender": "4.5.3 LTS",
+  "stages": [
+    {
+      "stage": "model_runtime",
+      "seconds": 0.06
+    },
+    {
+      "stage": "uv_unwrap",
+      "seconds": 1.41
+    },
+    {
+      "stage": "master_highpoly",
+      "seconds": 1.48
+    },
+    {
+      "stage": "inspect_mesh",
+      "seconds": 1.73
+    },
+    {
+      "stage": "bake_gpu",
+      "seconds": 193.15
+    },
+    {
+      "stage": "textures",
+      "seconds": 22.78
+    },
+    {
+      "stage": "materials",
+      "seconds": 0.01
+    },
+    {
+      "stage": "assemble_export",
+      "seconds": 0.56
+    }
+  ],
+  "cycles_device": "OPTIX",
+  "ngons_triangulated": 74,
+  "uv": {
+    "texel_density_px_per_m": {
+      "median": 1238.7,
+      "p10": 1174.2,
+      "p90": 1283.6,
+      "coefficient_of_variation": 0.039
+    },
+    "uv_anisotropy": {
+      "median": 1.084,
+      "p95": 1.27,
+      "share_over_1_5": 0.003
+    },
+    "triangles_measured": 12144
+  },
+  "master_base_faces": 93248,
+  "master_triangles": 11836928,
+  "bakes": {
+    "normal": {
+      "seconds": 30.38,
+      "samples": 64,
+      "size": 8192
+    },
+    "normal_inspect": {
+      "seconds": 29.68,
+      "samples": 64,
+      "size": 8192
+    },
+    "color": {
+      "seconds": 32.59,
+      "samples": 64,
+      "size": 8192
+    },
+    "rough": {
+      "seconds": 29.72,
+      "samples": 32,
+      "size": 8192
+    },
+    "metal": {
+      "seconds": 20.05,
+      "samples": 32,
+      "size": 8192
+    },
+    "ao": {
+      "seconds": 50.5,
+      "samples": 1024,
+      "size": 8192
+    }
+  },
+  "texture_files": {
+    "base": {
+      "file": "art/anchor/textures/anchor_basecolor.jpg",
+      "bytes": 3369002
+    },
+    "orm": {
+      "file": "art/anchor/textures/anchor_orm.jpg",
+      "bytes": 8259689
+    },
+    "normal": {
+      "file": "art/anchor/textures/anchor_normal.png",
+      "bytes": 13651807
+    },
+    "normal_inspect": {
+      "file": "art/anchor/textures/anchor_inspect_normal.png",
+      "bytes": 13386370
+    }
+  },
+  "runtime_triangles": 12340,
+  "inspect_triangles": 49936,
+  "collision_triangles": {
+    "anchor_plinth_col": 44,
+    "anchor_body_col": 28,
+    "anchor_cap_col": 28,
+    "anchor_fin_a_col": 16,
+    "anchor_fin_b_col": 16,
+    "anchor_fin_c_col": 16
+  },
+  "materials": [
+    "M_Anchor_Body",
+    "M_Anchor_Body_Inspect",
+    "M_Anchor_Lens",
+    "M_Anchor_Pad"
+  ],
+  "bounds_blender_zup": {
+    "min": [
+      -0.4161,
+      -0.3,
+      0.0
+    ],
+    "max": [
+      0.4161,
+      0.468,
+      1.6
+    ]
+  },
+  "glb_bytes": 41640408,
+  "budget_ok": {
+    "runtime": true,
+    "inspect": true,
+    "materials_per_object": true
+  }
+}

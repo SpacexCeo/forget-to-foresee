@@ -1,0 +1,367 @@
+{
+ "note": "art/anim/ingame-gpu.mjs, RTX 5090 (ANGLE on Vulkan), headless Chromium; loco/face/altar/folk at 60 fps (vsync), perf runs with --uncapped",
+ "errors": {
+  "loco": [],
+  "face": [],
+  "altar": [],
+  "folk": [],
+  "perf_desktop": [],
+  "perf_phone": []
+ },
+ "runs": {
+  "loco": {
+   "fps": 59.378,
+   "marks": {
+    "idle": -0.015,
+    "walk": 0.986,
+    "run": 4.191,
+    "slow": 7.199,
+    "stop": 8.802,
+    "pivot180": 10.807,
+    "pivot90": 13.136,
+    "runstop": 15.25,
+    "stop2": 19.055,
+    "corner": 19.257,
+    "end": 22.485,
+    "done": 23.988
+   },
+   "walk": {
+    "frames": 131,
+    "seconds": 2.205,
+    "stance_speed_m_s": 0.036,
+    "ground_slide_m": 0.006,
+    "speed": 1.7
+   },
+   "run": {
+    "frames": 121,
+    "seconds": 2.008,
+    "stance_speed_m_s": 0.193,
+    "ground_slide_m": 0.054,
+    "speed": 3.298
+   },
+   "stop": {
+    "frames": 113,
+    "seconds": 1.905,
+    "stance_speed_m_s": 0,
+    "ground_slide_m": 0.073
+   },
+   "runstop": {
+    "frames": 94,
+    "seconds": 1.705,
+    "stance_speed_m_s": 0,
+    "ground_slide_m": 0.039
+   },
+   "pivot180": {
+    "frames": 139,
+    "seconds": 2.329,
+    "stance_speed_m_s": 0,
+    "ground_slide_m": 0.009,
+    "max_yaw_deg_s": 411.57
+   },
+   "pivot90": {
+    "frames": 125,
+    "seconds": 2.114,
+    "stance_speed_m_s": 0,
+    "ground_slide_m": 0.072,
+    "max_yaw_deg_s": 11.147
+   },
+   "corner": {
+    "max_yaw_deg_s": 378.251,
+    "speed_min": 0
+   }
+  },
+  "face": {
+   "wink": {
+    "max_weight": 1,
+    "lid_change_max": 0.443,
+    "lid_peak_clip_time": 1.38,
+    "clip_time_at_end": 2.5,
+    "lid_peak_wall": 1.38,
+    "still_wall": 1.38,
+    "still_weight": 0.98
+   },
+   "idle2": {
+    "has": true,
+    "k_max": 1,
+    "k_first_above_half_s": 5.11,
+    "k_back_below_half_s": 11.14,
+    "hand_speed_max_m_s": 0.194,
+    "pelvis_speed_max_m_s": 0.134,
+    "pelvis_x_range": [
+     1000000000,
+     -1000000000
+    ]
+   }
+  },
+  "altar": {
+   "offered": true,
+   "register": {
+    "max_weight": 0.985,
+    "clip": "register",
+    "at": [
+     [
+      0.47,
+      0.46,
+      "transition"
+     ],
+     [
+      0.92,
+      0.91,
+      "transition"
+     ],
+     [
+      1.42,
+      1.41,
+      "transition"
+     ]
+    ]
+   }
+  },
+  "folk": {
+   "walkers": {
+    "courier": {
+     "clip": "walk",
+     "speed_m_s": 1.144,
+     "frames": 166,
+     "seconds": 3.65,
+     "stance_speed_m_s": 0.033,
+     "ground_slide_m": 0.018
+    },
+    "lamplighter": {
+     "clip": "walk",
+     "speed_m_s": 1.442,
+     "frames": 214,
+     "seconds": 3.617,
+     "stance_speed_m_s": 0.037,
+     "ground_slide_m": 0.035
+    },
+    "sweeper": {
+     "clip": "walk",
+     "speed_m_s": 0,
+     "frames": 184,
+     "seconds": 3.601,
+     "stance_speed_m_s": 0.005,
+     "ground_slide_m": 0.089
+    },
+    "child_a": {
+     "clip": "child_run",
+     "speed_m_s": 1.401,
+     "frames": 67,
+     "seconds": 3.6,
+     "stance_speed_m_s": 0.082,
+     "ground_slide_m": 0
+    },
+    "child_b": {
+     "clip": "child_run",
+     "speed_m_s": 0,
+     "frames": 216,
+     "seconds": 3.6,
+     "stance_speed_m_s": 0,
+     "ground_slide_m": 0.006
+    },
+    "elder": {
+     "moving": false,
+     "clip": "sit"
+    }
+   },
+   "look": {
+    "shrinekeeper": {
+     "a": {
+      "head_minus_chest_deg": 34.6,
+      "to_iris_minus_chest_deg": 67.9
+     },
+     "b": {
+      "head_minus_chest_deg": -47.5,
+      "to_iris_minus_chest_deg": -61.2
+     },
+     "far": {
+      "head_minus_chest_deg": -6.6,
+      "to_iris_minus_chest_deg": 47.5
+     }
+    },
+    "baker": {
+     "a": {
+      "head_minus_chest_deg": 6,
+      "to_iris_minus_chest_deg": 146.2
+     },
+     "b": {
+      "head_minus_chest_deg": 17.9,
+      "to_iris_minus_chest_deg": 29.4
+     },
+     "far": {
+      "head_minus_chest_deg": -6.7,
+      "to_iris_minus_chest_deg": 134.2
+     }
+    },
+    "innkeeper": {
+     "a": {
+      "head_minus_chest_deg": 39,
+      "to_iris_minus_chest_deg": 59.3
+     },
+     "b": {
+      "head_minus_chest_deg": -37.4,
+      "to_iris_minus_chest_deg": -53.6
+     },
+     "far": {
+      "head_minus_chest_deg": 15.1,
+      "to_iris_minus_chest_deg": 37
+     }
+    }
+   }
+  },
+  "perf_desktop_uncapped": {
+   "spots": {
+    "start": {
+     "fps": 245.7,
+     "frame_ms_avg": 4.07,
+     "frame_ms_p95": 5.7,
+     "frame_ms_max": 27.1,
+     "draw_calls": 538,
+     "triangles": 2022953,
+     "skinned_meshes_visible": 41,
+     "skinned_bones_visible": 1894,
+     "mixer_updates_per_frame": 6.25,
+     "townsfolk_visible": 9,
+     "townsfolk_loaded": 13,
+     "files": "full",
+     "tier": "ultra",
+     "pixelRatio": 1,
+     "size": [
+      1920,
+      1080
+     ],
+     "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 5090 (0x00002B85)), NVIDIA)"
+    },
+    "square": {
+     "fps": 333.5,
+     "frame_ms_avg": 3,
+     "frame_ms_p95": 3.2,
+     "frame_ms_max": 6.7,
+     "draw_calls": 500,
+     "triangles": 1746187,
+     "skinned_meshes_visible": 33,
+     "skinned_bones_visible": 1534,
+     "mixer_updates_per_frame": 5.5,
+     "townsfolk_visible": 5,
+     "townsfolk_loaded": 13,
+     "files": "full",
+     "tier": "ultra",
+     "pixelRatio": 1,
+     "size": [
+      1920,
+      1080
+     ],
+     "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 5090 (0x00002B85)), NVIDIA)"
+    },
+    "shrine": {
+     "fps": 412.6,
+     "frame_ms_avg": 2.42,
+     "frame_ms_p95": 2.6,
+     "frame_ms_max": 5.8,
+     "draw_calls": 400,
+     "triangles": 1556955,
+     "skinned_meshes_visible": 31,
+     "skinned_bones_visible": 1448,
+     "mixer_updates_per_frame": 5,
+     "townsfolk_visible": 4,
+     "townsfolk_loaded": 13,
+     "files": "full",
+     "tier": "ultra",
+     "pixelRatio": 1,
+     "size": [
+      1920,
+      1080
+     ],
+     "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 5090 (0x00002B85)), NVIDIA)"
+    }
+   }
+  },
+  "perf_phone_uncapped": {
+   "spots": {
+    "start": {
+     "fps": 750.2,
+     "frame_ms_avg": 1.33,
+     "frame_ms_p95": 1.4,
+     "frame_ms_max": 1.8,
+     "draw_calls": 220,
+     "triangles": 554180,
+     "skinned_meshes_visible": 35,
+     "skinned_bones_visible": 1636,
+     "mixer_updates_per_frame": 3,
+     "townsfolk_visible": 6,
+     "townsfolk_loaded": 13,
+     "files": "m",
+     "tier": "high",
+     "pixelRatio": 1.5,
+     "size": [
+      585,
+      996
+     ],
+     "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 5090 (0x00002B85)), NVIDIA)"
+    },
+    "square": {
+     "fps": 955.1,
+     "frame_ms_avg": 1.05,
+     "frame_ms_p95": 1.1,
+     "frame_ms_max": 1.4,
+     "draw_calls": 180,
+     "triangles": 425062,
+     "skinned_meshes_visible": 27,
+     "skinned_bones_visible": 1276,
+     "mixer_updates_per_frame": 2.5,
+     "townsfolk_visible": 2,
+     "townsfolk_loaded": 13,
+     "files": "m",
+     "tier": "high",
+     "pixelRatio": 1.5,
+     "size": [
+      585,
+      996
+     ],
+     "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 5090 (0x00002B85)), NVIDIA)"
+    },
+    "shrine": {
+     "fps": 1075.3,
+     "frame_ms_avg": 0.93,
+     "frame_ms_p95": 1,
+     "frame_ms_max": 6.9,
+     "draw_calls": 154,
+     "triangles": 382437,
+     "skinned_meshes_visible": 25,
+     "skinned_bones_visible": 1190,
+     "mixer_updates_per_frame": 2,
+     "townsfolk_visible": 1,
+     "townsfolk_loaded": 13,
+     "files": "m",
+     "tier": "high",
+     "pixelRatio": 1.5,
+     "size": [
+      585,
+      996
+     ],
+     "gpu": "ANGLE (NVIDIA, Vulkan 1.4.351 (NVIDIA NVIDIA GeForce RTX 5090 (0x00002B85)), NVIDIA)"
+    }
+   }
+  },
+  "perf_desktop_vsync": {
+   "start": {
+    "fps": 60.1,
+    "frame_ms_avg": 16.63,
+    "frame_ms_p95": 19.6,
+    "frame_ms_max": 42.7
+   },
+   "square": {
+    "fps": 60.1,
+    "frame_ms_avg": 16.64,
+    "frame_ms_p95": 17.2,
+    "frame_ms_max": 18
+   },
+   "shrine": {
+    "fps": 60.1,
+    "frame_ms_avg": 16.64,
+    "frame_ms_p95": 17.2,
+    "frame_ms_max": 17.9
+   }
+  }
+ }
+}

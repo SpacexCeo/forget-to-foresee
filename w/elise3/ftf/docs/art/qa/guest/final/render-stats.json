@@ -1,0 +1,16 @@
+{
+  "device": "CUDA",
+  "samples": 96,
+  "seconds_per_render": {
+    "front": 8.89,
+    "three_quarter": 4.82,
+    "back_three_quarter": 4.76
+  },
+  "stages": [
+    {
+      "stage": "qa_renders",
+      "seconds": 34.93
+    }
+  ],
+  "note": "Review lighting (golden key, blue rim, thin haze, 1.75 m proxy) is render-only."
+}

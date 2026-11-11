@@ -1,0 +1,32 @@
+{
+ "query": "a=agent_sol&scenario=idle",
+ "size": [
+  1920,
+  1080
+ ],
+ "frames": 180,
+ "fps": 30,
+ "clips": {
+  "A": [
+   "celebrate",
+   "defeat",
+   "gesture_offer",
+   "idle",
+   "run",
+   "talk",
+   "think",
+   "understand",
+   "walk"
+  ]
+ },
+ "every": 1,
+ "metrics": {
+  "A": {
+   "planted_samples": 358,
+   "slip_mean_m_s": 0.006,
+   "slip_p95_m_s": 0.011,
+   "slip_max_m_s": 0.014
+  }
+ },
+ "errors": []
+}

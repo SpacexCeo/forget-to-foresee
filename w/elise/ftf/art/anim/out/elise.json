@@ -1,0 +1,156 @@
+{
+ "idle": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.004,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "idle2": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0085,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "idle_look": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0002,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  }
+ },
+ "walk": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0053,
+  "slip_max_m_s": 0.0573,
+  "ball_min_y": 0.0222,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 1.03,
+  "time_scale": 1.008,
+  "hip_drop_max_m": 0.0282,
+  "contact": {
+   "L": [
+    0,
+    31
+   ],
+   "R": [
+    29,
+    32
+   ]
+  }
+ },
+ "run": {
+  "take": "35_20",
+  "slip_mean_m_s": 0.0002,
+  "slip_max_m_s": 0.001,
+  "ball_min_y": 0.0237,
+  "src_stride_m": 2.36,
+  "src_T_s": 0.733,
+  "src_speed": 3.219,
+  "stride_scale": 1.025,
+  "time_scale": 1.0,
+  "hip_drop_max_m": 0.0056,
+  "contact": {
+   "L": [
+    6,
+    22
+   ],
+   "R": [
+    50,
+    22
+   ]
+  }
+ },
+ "register": {
+  "take": "82_08",
+  "frames": 101,
+  "seconds": 3.37,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     101
+    ]
+   ],
+   "R": [
+    [
+     0,
+     101
+    ]
+   ]
+  }
+ },
+ "greet": {
+  "take": "141_16",
+  "frames": 69,
+  "seconds": 2.3,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0314,
+  "contacts": {
+   "L": [
+    [
+     0,
+     69
+    ]
+   ],
+   "R": [
+    [
+     0,
+     69
+    ]
+   ]
+  }
+ }
+}
