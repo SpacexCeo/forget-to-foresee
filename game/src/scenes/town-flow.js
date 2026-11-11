@@ -7,6 +7,8 @@ import { steerTo } from '../physics/character.js';
 import { TOWN_ROUTE, inAltarRange } from './town-layout.js';
 import { talkTarget, TALK_LEAVE } from './town-quest.js';
 import { HIRE } from '../game/town-economy.js';
+import { matchIntent, replyFor } from '../game/intents.js';
+import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createInkBar } from '../ui/ink-bar.js';
 
 const CSS = `
@@ -197,8 +199,31 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       if (why) kids.push(el('p', 'ftf-local', T('hire.why.' + why)));
       row.append(b('hire.hire', () => { const r = ledger.hire(npc); if (r.ok && onHireChange) onHireChange(npc, true); renderText(); renderVisibility(); }, true, !!why), b('quest.close', closeFolk));
     }
-    kids.push(el('p', 'ftf-local', T('hire.local')), row);
+    // scripted dialogue (game/intents.js): type a question, the townsperson answers from a script and its real state
+    const form = el('form'); form.style.cssText = 'display:flex;gap:6px;margin:4px 0 8px';
+    const input = el('input'); input.type = 'text'; input.maxLength = 120; input.placeholder = T('chat.placeholder', { name: T('folk.name.' + npc) });
+    input.setAttribute('aria-label', input.placeholder);
+    input.style.cssText = 'flex:1;min-height:36px;padding:4px 10px;border-radius:8px;border:1px solid rgba(233,180,76,.5);background:#1c2426;color:#f3ead6;font:15px system-ui,sans-serif';
+    const send = el('button', null, T('chat.send')); send.type = 'submit'; send.style.background = 'rgba(233,180,76,.14)'; send.style.color = '#f3ead6';
+    form.append(input, send);
+    form.addEventListener('submit', (e) => { e.preventDefault(); folkTalk.reply = chatReply(npc, input.value); folkTalk.asked = input.value; renderFolk(); const i = talkEl.querySelector('input'); if (i) i.focus(); });
+    form.addEventListener('keydown', (e) => e.stopPropagation());
+    if (folkTalk.reply) kids.push(el('p', 'ftf-local', '“' + folkTalk.asked + '”'), el('p', null, folkTalk.reply));
+    kids.push(form, el('p', 'ftf-local', T('hire.local')), row);
     talkEl.replaceChildren(...kids);
+  }
+  /** The scripted answer to a typed question: the player's language and English words both match. */
+  function chatReply(npc, text) {
+    const en = PLAY_MESSAGES.en;
+    const lex = (k) => (i18n.t(k) === k ? '' : i18n.t(k)) + '|' + (en[k] || '');
+    const m = matchIntent(text, lex);
+    const last = ledger.log(npc)[0] || null;
+    const r = replyFor(m, { agent: ledger.agent(npc), lastTrade: last, rounds: HIRE.rounds });
+    const a = { ...r.args };
+    if (a.echo) a.echo = i18n.t('exch.echo.' + a.echo);
+    if (a.side) a.side = i18n.t('log.side.' + a.side);
+    if (a.reason) a.reason = i18n.t('log.reason.' + a.reason);
+    return i18n.t(r.key, a);
   }
   /** A town spot's panel: the Exchange door, the Scribe's glossary, the Inn's hiring board, the notice board. */
   function renderSpot() {
