@@ -10,7 +10,7 @@ from town_geo import RY, T, tint
 
 STONE = (0.92, 0.90, 0.86)
 STONE_DARK = (0.66, 0.65, 0.62)
-STONE_CAP = (1.0, 0.98, 0.94)
+STONE_CAP = (0.88, 0.86, 0.82)   # was (1.0, 0.98, 0.94): cap stones read pure white in sun (QA sweep 11.11)
 WALL_STONE = (0.66, 0.63, 0.58)     # town wall and gatehouse: the old STONE tint blew out to white in full sun (owner 11.11)
 COBBLE = (0.95, 0.93, 0.90)
 GRASS = (0.85, 0.95, 0.75)
