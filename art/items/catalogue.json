@@ -1,0 +1,102 @@
+[
+ {
+  "id": "shard_pearl_drop",
+  "kind": "shard",
+  "rarity": "common"
+ },
+ {
+  "id": "shard_pearl_tablet",
+  "kind": "shard",
+  "rarity": "common"
+ },
+ {
+  "id": "shard_teal_twin",
+  "kind": "shard",
+  "rarity": "uncommon"
+ },
+ {
+  "id": "shard_teal_octa",
+  "kind": "shard",
+  "rarity": "uncommon"
+ },
+ {
+  "id": "shard_violet_cluster",
+  "kind": "shard",
+  "rarity": "rare"
+ },
+ {
+  "id": "shard_violet_spire",
+  "kind": "shard",
+  "rarity": "rare"
+ },
+ {
+  "id": "shard_amber_crown",
+  "kind": "shard",
+  "rarity": "legendary"
+ },
+ {
+  "id": "shard_amber_blade",
+  "kind": "shard",
+  "rarity": "legendary"
+ },
+ {
+  "id": "part_gear",
+  "kind": "part",
+  "rarity": "common"
+ },
+ {
+  "id": "part_spring_coil",
+  "kind": "part",
+  "rarity": "common"
+ },
+ {
+  "id": "part_chain_link",
+  "kind": "part",
+  "rarity": "common"
+ },
+ {
+  "id": "part_rivet_plate",
+  "kind": "part",
+  "rarity": "common"
+ },
+ {
+  "id": "part_spindle",
+  "kind": "part",
+  "rarity": "uncommon"
+ },
+ {
+  "id": "part_crank",
+  "kind": "part",
+  "rarity": "uncommon"
+ },
+ {
+  "id": "part_valve",
+  "kind": "part",
+  "rarity": "uncommon"
+ },
+ {
+  "id": "part_gauge",
+  "kind": "part",
+  "rarity": "rare"
+ },
+ {
+  "id": "part_brass_lens",
+  "kind": "part",
+  "rarity": "rare"
+ },
+ {
+  "id": "part_glyph_cogring",
+  "kind": "part",
+  "rarity": "legendary"
+ },
+ {
+  "id": "prop_wheel_of_fortune",
+  "kind": "prop",
+  "rarity": null
+ },
+ {
+  "id": "trading_board",
+  "kind": "prop",
+  "rarity": null
+ }
+]

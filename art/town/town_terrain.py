@@ -100,8 +100,9 @@ def retaining_walls(tb):
             a, b = x0 + i * seg, x0 + (i + 1) * seg
             ca = tint(STONE, 0.86 + 0.22 * vnoise(a, y_lo, 6.0, 5))
             cb = tint(STONE, 0.86 + 0.22 * vnoise(b, y_lo, 6.0, 5))
-            tb.quad("stone", (a, y_lo, z_edge), (b, y_lo, z_edge), (b, y_hi, z_edge), (a, y_hi, z_edge),
-                    [tint(ca, 0.62), tint(cb, 0.62), cb, ca])
+            # sunk 0.4 m below the lower terrace so no light line shows at the foot (owner 11.11)
+            tb.quad("stone", (a, y_lo - 0.4, z_edge), (b, y_lo - 0.4, z_edge), (b, y_hi, z_edge), (a, y_hi, z_edge),
+                    [tint(ca, 0.55), tint(cb, 0.55), cb, ca])
         tb.col_poly([(x0, y_lo - 0.5, z_edge), (x1, y_lo - 0.5, z_edge), (x1, y_hi, z_edge), (x0, y_hi, z_edge)])
         # pilasters every 8 m (skipping the stairs) and a cap course
         opens = _openings(z_edge)
@@ -109,8 +110,10 @@ def retaining_walls(tb):
             px = x0 + 2.0 + k * 8.0
             if px > x1 - 1 or any(o0 - 1.2 <= px <= o1 + 1.2 for o0, o1 in opens):
                 continue
-            tb.box("stone", (px, (y_lo + y_hi) / 2, z_edge + 0.2), (0.9, y_hi - y_lo, 0.4), STONE_DARK, skip="yzY")
-            tb.box("stone", (px, y_lo + 0.25, z_edge + 0.3), (1.2, 0.5, 0.6), STONE_DARK, skip="yz")
+            # pilaster with its own top (it stands proud of the wall), on a plinth aligned with it, both sunk into the
+            # ground and set 2 cm into the wall face so no seam or offset shows (owner 11.11, town-v2 item 7)
+            tb.box("stone", (px, (y_lo - 0.4 + y_hi) / 2, z_edge + 0.19), (0.9, y_hi - y_lo + 0.4, 0.42), STONE_DARK, skip="yz")
+            tb.box("stone", (px, y_lo + 0.1, z_edge + 0.24), (1.1, 1.0, 0.52), STONE_DARK, skip="yz")
         # parapet with openings
         cuts = [x0] + [v for o in opens for v in o] + [x1]
         for a, b in zip(cuts[0::2], cuts[1::2]):
@@ -126,43 +129,64 @@ def retaining_walls(tb):
                     tb.cyl("stone", (px + (0.3 if px == a else -0.3), y_hi + 1.3, z_edge - 0.22), 0.34, 0.0, 0.36, 4, STONE_CAP, cap_top=False, phase=math.pi / 4)
 
 
+def _solid(tb, mat, verts, faces, col=STONE):
+    """A closed convex solid from local vertices and faces (index lists in any order): every face is wound to point
+    away from the solid's centroid, so nothing is one-sided or back-facing from any camera."""
+    from mathutils import Vector as _V
+    c = sum((_V(v) for v in verts), _V()) / len(verts)
+    for f in faces:
+        pts = [_V(verts[k]) for k in f]
+        n = (pts[1] - pts[0]).cross(pts[2] - pts[0])
+        fc = sum(pts, _V()) / len(pts)
+        if n.dot(fc - c) < 0:
+            f = list(reversed(f))
+        cc = col[f[0]] if isinstance(col, dict) else col
+        tb.poly(mat, [tuple(verts[k]) for k in f], cc)
+
+
+def _slab(tb, mat, x0, x1, z_front, z_back, y_lo_f, y_hi_f, y_lo_b, y_hi_b, col=STONE, top_col=None):
+    """A closed block between x0..x1 whose front (z_front) and back (z_back) heights may differ (a sloped wall)."""
+    v = [(x0, y_lo_f, z_front), (x1, y_lo_f, z_front), (x1, y_hi_f, z_front), (x0, y_hi_f, z_front),
+         (x0, y_lo_b, z_back), (x1, y_lo_b, z_back), (x1, y_hi_b, z_back), (x0, y_hi_b, z_back)]
+    faces = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [4, 5, 1, 0]]
+    _solid(tb, mat, v, faces, col)
+    _solid(tb, mat, v, [[3, 2, 6, 7]], top_col or col)      # the sloped top (the centroid still comes from all 8 points)
+
+
 def stairs(tb):
+    """The main-axis stairs as one closed mass (owner 11.11: no floating slabs, no gaps, no see-through): every
+    step is a solid block down into the ground, flanked by solid stone cheek walls that follow the slope."""
     for s in P.STAIRS:
         rise = s["y_top"] - s["y_bot"]
         run = s["z_bot"] - s["z_top"]
         n = max(2, round(rise / 0.165))
         r, t = rise / n, run / n
         x0, x1 = s["x0"], s["x1"]
+        ybase = s["y_bot"] - 0.3
         for i in range(n):
             zf = s["z_bot"] - i * t          # front (south) edge of this step
             yt = s["y_bot"] + (i + 1) * r
             k = 0.9 + 0.14 * _hash(i, int(x0 * 7), 21)
-            tb.quad("stone", (x0, yt - r, zf), (x1, yt - r, zf), (x1, yt, zf), (x0, yt, zf), tint(STONE_DARK, k))          # riser
-            tb.quad("stone", (x0, yt, zf), (x1, yt, zf), (x1, yt, zf - t), (x0, yt, zf - t), tint(STONE_CAP, k))            # tread
+            # one block per step, reaching back under the next one (overlap 2 cm) and down below the ground
+            zb = zf - t - (0.02 if i < n - 1 else 0.0)
+            tb.quad("stone", (x0, ybase, zf), (x1, ybase, zf), (x1, yt, zf), (x0, yt, zf), tint(STONE_DARK, k))           # riser (down to the base)
+            tb.quad("stone", (x0, yt, zf), (x1, yt, zf), (x1, yt, zb), (x0, yt, zb), tint(STONE_CAP, k))                 # tread
+        # the underside / back is closed by the terrace wall behind; the sides by the cheek walls below
         tb.col_poly([(x0, s["y_bot"], s["z_bot"]), (x1, s["y_bot"], s["z_bot"]), (x1, s["y_top"], s["z_top"]), (x0, s["y_top"], s["z_top"])])
-        # cheek walls following the slope
+        # cheek walls: solid sloped stone blocks 0.55 m wide, 0.55 m above the nosing line, down into the ground
         for side, xa in ((-1, x0), (1, x1)):
             xi, xo = xa, xa + side * 0.55
+            lo, hi = sorted((xi, xo))
             zb, zt = s["z_bot"] + 0.3, s["z_top"]
             yb, ytp = s["y_bot"], s["y_top"]
             h = 0.55
-            A, B = (xi, yb, zb), (xi, ytp, zt)
-            lo, hi = sorted((xi, xo))
-            # top slope, inner face, outer face, front face
-            tb.quad("stone", (lo, yb + h, zb), (hi, yb + h, zb), (hi, ytp + h, zt), (lo, ytp + h, zt), STONE_CAP)
-            for xx, flip in ((xi, side > 0), (xo, side < 0)):
-                pts = [(xx, yb, zb), (xx, yb + h, zb), (xx, ytp + h, zt), (xx, ytp, zt), (xx, yb, zt)]
-                if not flip:
-                    pts = list(reversed(pts))
-                tb.poly("stone", pts, STONE)
-            tb.quad("stone", (lo, yb, zb), (hi, yb, zb), (hi, yb + h, zb), (lo, yb + h, zb), STONE_DARK)
+            _slab(tb, "stone", lo, hi, zb, zt, ybase, yb + h, ybase, ytp + h, STONE, STONE_CAP)
             tb.col_poly([(xi, yb, zb), (xi, yb + 1.2, zb), (xi, ytp + 1.2, zt), (xi, ytp, zt)])
-            # a low pier at the foot with a cap
-            tb.box("stone", ((xi + xo) / 2, yb + 0.6, zb + 0.35), (0.8, 1.2, 0.8), STONE_DARK, skip="y")
+            # a low pier at the foot with a cap (closed, sunk into the ground)
+            tb.box("stone", ((xi + xo) / 2, yb + 0.45, zb + 0.35), (0.8, 1.5, 0.8), STONE_DARK, skip="y")
             tb.box("stone", ((xi + xo) / 2, yb + 1.27, zb + 0.35), (0.96, 0.14, 0.96), STONE_CAP)
             tb.col_box(((xi + xo) / 2, yb + 0.7, zb + 0.35), (0.8, 1.4, 0.8))
             tb.socket(f"socket_lamp_{s['id']}_{'w' if side < 0 else 'e'}", ((xi + xo) / 2, yb + 2.3, zb + 0.35))
-            _ = (A, B)
 
 
 def ramps(tb):
