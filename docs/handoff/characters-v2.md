@@ -89,10 +89,16 @@ State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.
 - Captures: `docs/art/qa/anim/chars-v2/`.
 
 **Half-done / open**
-- In-game check done on software WebGL only (`docs/art/qa/anim/chars-v2/ingame/`, `art/anim/ingame.mjs`): no
-  console errors (desktop, altar, phone), idle upright with arms along the body, wink over the mocap idle, `register`
-  cued by the flow, 13 townsfolk on the ground, phone files `_m`. Not checked there: foot sliding and the turn on
-  the spot in the game itself (4 frames a second); run `node art/anim/ingame.mjs --out <dir> --gpu` on a GPU machine.
+- In-game checks: software WebGL pass in `docs/art/qa/anim/chars-v2/ingame/` (`art/anim/ingame.mjs`) and the
+  real-time pass on the new GPU server in `docs/art/qa/anim/chars-v2/ingame-gpu/` (`art/anim/ingame-gpu.mjs`): foot
+  numbers for Iris and three walkers, start / stop / turn frame by frame, the wink in its 2.6 s window, idle2
+  hand-over, `register`, look-at, frame cost and the animation LOD. No console errors. `FootPlant` was tightened
+  there (feet hold as soon as the body's real speed is zero; a tap no longer lets the body snap round).
+- Open after the GPU pass: the stop from a run is abrupt because the game decelerates in 0.25 s (motion model, not
+  animation); a corner at a run has no lean; each townsperson is about 4 skinned meshes (model-side merge would cut
+  the skinned draws); the sweeper, child_b and the elder were not measured walking.
+- New GPU server (RTX 5090, driver 615.78.08): browser capture lives in `/root/w/chars/anim` (Playwright +
+  `tools/gpu-server/egl.sh` with the version changed to 615.78.08); nothing else lives only there.
 - Fixed in that pass: the idle stood with the hips 13 cm ahead of the ankles (`stance` in `clips.json`); a greeting
   made the seated elder stand up inside the bench (`townsfolk-plan.js`); `idle2` now takes every third idle loop
   (`iris-avatar.js`).

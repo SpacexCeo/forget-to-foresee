@@ -95,7 +95,8 @@ Picking takes without a browser: `take_info.py` (time line of hip height, hand h
   - `FootPlant`: while a character stands, the model follows the game's heading at a human rate (320°/s, the game
     itself pivots at up to 690°/s), each foot stays where it stands in the world and steps to its place when the
     body has turned or drifted too far (one foot at a time), legs solved with two-bone IK (`solveTwoBone`). It fades
-    out with the gait's weight, so it also settles the feet at the end of a stop. Off under reduced motion.
+    out with the gait's weight, and holds fully once the body's real speed is zero, so it also settles the feet at
+    the end of a stop. Off under reduced motion.
 - `iris-avatar.js` uses all of the above; the town flow cues `register` at the altar (`createTownFlow({ onRegister })`).
 
 ## Review (`game/anim-review.html`, `art/anim/capture.mjs`, `art/anim/ingame.mjs`)
@@ -107,4 +108,6 @@ a checker ground, frame by frame and deterministically; `capture.mjs` saves an m
 `pivot` (half and quarter turn on the spot), `clip:<name>`. Townsfolk: `?a=townsfolk_elder&aclips=townsfolk&body=elder
 &walkclip=elder_walk&walk=clip&scenario=walk`. `ingame.mjs` records Iris in the real town (walk, run, stop, pivots,
 the registration, the wink), every townsperson and a phone run through the keyboard and a spy camera on the game's own
-renderer (works on software WebGL; results in `docs/art/qa/anim/chars-v2/ingame/`).
+renderer (works on software WebGL; results in `docs/art/qa/anim/chars-v2/ingame/`). `ingame-gpu.mjs` is the real-time pass on
+a GPU browser: foot speeds in the game for Iris and the walkers, bursts of side stills for start, stop and turns, the
+wink and the registration on the wall clock, look-at angles and the frame cost (`.../ingame-gpu/`).

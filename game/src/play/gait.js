@@ -182,6 +182,8 @@ export class FootPlant {
     model.updateWorldMatrix(true, true);
     this.restFootY = this.ok ? this.legs[0].foot.getWorldPosition(_a).y - model.getWorldPosition(_b).y : 0;
     this.weight = 0;
+    this.last = null;           // the group's position last frame (its real speed over the ground)
+    this.speed = 0;
   }
 
   /** @param {THREE.Object3D} group the avatar group (position = the ground point, rotation.y = the game's heading) */
@@ -190,9 +192,15 @@ export class FootPlant {
     const heading = group.rotation.y;
     const stand = reduced ? 0 : smooth(1 - move * 1.6);
     this.weight = stand;
+    // the body's real speed over the ground: the game stops and taps faster than the gait's weight can follow
+    if (this.last && dt > 1e-4) this.speed = Math.hypot(group.position.x - this.last.x, group.position.z - this.last.z) / dt;
+    (this.last ||= new THREE.Vector3()).copy(group.position);
+    const going = Math.min(1 - stand, clamp(this.speed / 1.2, 0, 1));   // 0 = standing (a tap is not a walk), 1 = really moving
+    // once the body has stopped, a foot holds its place fully even while the stride's weight is still fading out
+    const hold = reduced ? 0 : this.speed < 0.12 && stand > 1e-3 ? 1 : stand;
     if (this.yaw === null) this.yaw = heading;
     const diff = wrapPi(heading - this.yaw);
-    const rate = TURN_RATE + (1 - stand) * 12, ease = 10 + (1 - stand) * 20;
+    const rate = TURN_RATE + going * 12, ease = 10 + going * 20;
     this.yaw += clamp(diff * (1 - Math.exp(-ease * dt)), -rate * dt, rate * dt);
     if (stand < 1e-3 && Math.abs(wrapPi(heading - this.yaw)) < 0.02) this.yaw = heading;
     this.model.rotation.y = this.baseYaw + wrapPi(this.yaw - heading);
@@ -216,10 +224,10 @@ export class FootPlant {
         l.yaw = l.fromYaw + wrapPi(this.yaw - l.fromYaw) * k;
         if (l.u >= 1) { l.stepping = false; l.pos.copy(_home); l.yaw = this.yaw; }
       } else l.pos.y = _home.y;
-      _tgt.lerpVectors(_home, l.pos, stand);
+      _tgt.lerpVectors(_home, l.pos, hold);
       solveTwoBone(l.thigh, l.shin, l.foot, _tgt);
       // the foot keeps the clip's own tilt, turned to where it was planted
-      _qs.setFromAxisAngle(UP, wrapPi(l.yaw - this.yaw) * stand);
+      _qs.setFromAxisAngle(UP, wrapPi(l.yaw - this.yaw) * hold);
       _hq.premultiply(_qs);
       l.shin.getWorldQuaternion(_qk);
       l.foot.quaternion.copy(_qk.invert().multiply(_hq));
