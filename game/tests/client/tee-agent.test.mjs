@@ -45,3 +45,27 @@ test('askTee: verified answers only; no relayer TEE, errors and forged proofs gi
   assert.equal(await askTee('say', {}, { base: 'https://r.example', fetch: async () => { throw new Error('offline'); } }), null);
   _resetTeeHealth();
 });
+
+test('tee.* strings: all five locales carry every key with the same placeholders', async () => {
+  const load = async (l) => (await import(`../../src/play/locales/${l}.js`)).default;
+  const en = await load('en');
+  const keys = Object.keys(en).filter((k) => k.startsWith('tee.'));
+  assert.ok(keys.length >= 30);
+  const args = (s) => [...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+  for (const l of ['ru', 'uk', 'it', 'zh']) {
+    const m = await load(l);
+    for (const k of keys) {
+      assert.ok(typeof m[k] === 'string' && m[k].length, `${l} ${k}`);
+      assert.equal(args(m[k]), args(en[k]), `${l} ${k} placeholders`);
+    }
+  }
+  assert.match((await load('ru'))['tee.badge'], /Проверено/);
+});
+
+test('teeRecordBlocker: no ledger, no guest, ready', async () => {
+  const { teeRecordBlocker } = await import('../../src/net/tee-agent.js');
+  const guest = { getItem: () => JSON.stringify({ minted: true, guest: { account_id: 'a.testnet' }, playerKey: { secretKey: 'ed25519:x' } }) };
+  assert.equal(teeRecordBlocker(guest, {}), 'not_deployed');
+  assert.equal(teeRecordBlocker({ getItem: () => null }, { ledger: 'l.testnet' }), 'need_guest');
+  assert.equal(teeRecordBlocker(guest, { ledger: 'l.testnet' }), null);
+});

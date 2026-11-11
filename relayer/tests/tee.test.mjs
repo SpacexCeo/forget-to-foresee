@@ -122,3 +122,17 @@ test('server.js loads relayer/.env without overriding the environment', async ()
   assert.deepEqual(env, { ALREADY: 'set', NEARAI_API_KEY: 'sk-test', FTF_TEE_DAILY_CAP: '10' });
   assert.equal(loadDotEnv(f + '.missing', {}), 0);
 });
+
+test('handlers: answers in flight are capped (503 tee_busy), and the slot frees afterwards', async () => {
+  const env = { NEARAI_API_KEY: 'k', TRUST_PROXY: '0', FTF_TEE_MAX_INFLIGHT: '1' };
+  let release; const gate = new Promise((r) => { release = r; });
+  const slow = async (url, init) => { if (String(url).endsWith('/v1/chat/completions')) await gate; return mockCloud()(url, init); };
+  const opts = { env, fetch: slow, attest: passAttest, daily: { take: () => true }, bucket: createBucket({ capacity: 9 }) };
+  const first = call(teeHandler('say', opts), { npc: 'baker', question: 'hi' });
+  await new Promise((r) => setTimeout(r, 20));
+  const busy = await call(teeHandler('say', opts), { npc: 'baker', question: 'hi' });
+  assert.equal(busy.status, 503); assert.equal(busy.body.error, 'tee_busy');
+  release();
+  assert.equal((await first).status, 200);
+  assert.equal((await call(teeHandler('say', { ...opts, fetch: mockCloud() }), { npc: 'baker', question: 'hi' })).status, 200);
+});

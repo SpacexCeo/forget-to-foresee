@@ -51,7 +51,7 @@ Townsfolk speech and a trader's buy/sell/hold come from a model that runs inside
   relayer's own check of both hashes and the signature, and the attestation of that address (Intel TDX quote chain to
   the Intel root, report data binding the address and a fresh nonce, RTMR replay, the measured docker compose, GPU
   evidence). `verified: true` only when all of these pass. `node tools/verify-tee/verify.mjs` re-checks independently.
-- Errors: `400` (bad body), `429` (per-IP limit: 6, then one per 20 s; or the daily cap), `502` (upstream), `503` (no key).
+- Errors: `400` (bad body), `429` (per-IP limit: 6, then one per 20 s; or the daily cap), `502` (upstream), `503` (no key, or `tee_busy`: more than `FTF_TEE_MAX_INFLIGHT`, default 8, answers in flight).
   The game always falls back to its scripted lines.
 - Optional env: `NEARAI_MODEL` (default `Qwen/Qwen3-VL-30B-A3B-Instruct`), `FTF_TEE_DAILY_CAP` (default 1500),
   `FTF_TEE_NRAS=0` to skip the GPU vendor's online attestation check, `NEARAI_BASE_URL`.
