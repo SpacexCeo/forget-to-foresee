@@ -203,10 +203,29 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     }
   }
 
+  // A hired townsperson (game/town-economy.js) wears a small gold badge over the head while working for Iris.
+  let badgeTex = null;
+  function setBadge(key, on) {
+    const p = byKey.get(key);
+    if (!p) return;
+    if (on && !p.badge) {
+      if (!badgeTex && typeof document !== 'undefined') {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const g = c.getContext('2d'); g.fillStyle = 'rgba(233,180,76,0.95)'; g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#1d1708'; g.font = 'bold 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('✦', 32, 34);
+        badgeTex = new THREE.CanvasTexture(c); badgeTex.colorSpace = THREE.SRGBColorSpace;
+      }
+      p.badge = new THREE.Sprite(new THREE.SpriteMaterial({ map: badgeTex, depthTest: false, transparent: true }));
+      p.badge.scale.set(0.32, 0.32, 1); p.badge.position.set(0, p.def.height + 0.32, 0); p.badge.renderOrder = 10;
+      p.root.add(p.badge);
+    }
+    if (p.badge) p.badge.visible = !!on;
+  }
+
   function setActive(on) { active = !!on; for (const p of people) if (!active) p.root.visible = false; }
 
   return {
-    people, byKey, update, setActive,
+    people, byKey, update, setActive, setBadge,
     /** For QA and the dev HUD: per person key -> state, file, position, clip. */
     status() { return people.map((p) => ({ key: p.def.key, state: p.state, file: p.file, clip: p.current, walk: p.walkName, at: [p.plan.x, p.plan.y, p.plan.z], visible: p.root.visible })); },
     get loaded() { return people.filter((p) => p.state === 'loaded').length; },

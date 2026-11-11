@@ -111,6 +111,19 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
   // the phone HUD (docs/ui-mobile-hud.md) draws the Shell selector and the quests sheet from the hub and flies / passes through it
+  // Town XP (game/town-economy.js) for play actions: a stake placed on a sign, a verified trial, a forgotten memory.
+  const townLedger = options.townLedger || null;
+  if (townLedger) {
+    let anchors = 0, verified = 0, forgotten = 0;
+    session.on('obs', (o) => {
+      const a = ((o.iris && o.iris.anchors) || []).length, v = (o.proofs || []).filter((p) => p.verified).length, f = ((o.iris && o.iris.forgotten) || []).length;
+      for (let i = anchors; i < a; i++) townLedger.addXp('signRead');
+      for (let i = verified; i < v; i++) townLedger.addXp('trialVerified');
+      for (let i = forgotten; i < f; i++) townLedger.addXp('memoryForgotten');
+      anchors = a; verified = Math.max(verified, v); forgotten = Math.max(forgotten, f);
+    });
+    if (ui.setProfileOpener && options.openProfile) ui.setProfileOpener(options.openProfile);
+  }
   // Season replay link (net/replay.js): the seed (public once the season ends, or fixed on the judge link) and the
   // accepted rules commands; the Biography copies it.
   if (ui.setReplaySource) ui.setReplaySource(() => {

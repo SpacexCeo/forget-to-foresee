@@ -35,9 +35,11 @@ import { townPlan } from './ui/loading.js';
 import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
+import { createTownLedger } from './game/town-economy.js';
+import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { townToWorld, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -130,6 +132,9 @@ const toastEl = document.getElementById('toast');
 // ?demo=judge: a fixed v3 season whose first sign is visible on trial 1 and whose trial-3 Gift lands on
 // Shell II with a verified proof (docs/design/clarity-layers.md §6a item 8). Presentation only.
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
+// The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
+const townLedger = createTownLedger({ storage: ctx.storage });
+const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -171,7 +176,20 @@ if (townMode.town) {
     ? createTownQuest({ storage: ctx.storage }) : null;
   let signFn = null;
   if (quest) import('./ui/onboarding.js').then((m) => { signFn = m.tutorialSignSvg; }).catch(() => {});
+  if (quest) { let prev = quest.step; quest.subscribe(() => { if (quest.step !== prev && prev !== 'start') townLedger.addXp('questStep'); prev = quest.step; }); }
+  // the nearest townsperson Iris can talk to (live positions: walkers move), for the hire talk
+  const folkPos = (p) => [p.plan.x + TOWN_ORIGIN_W[0], p.plan.y + TOWN_ORIGIN_W[1], p.plan.z + TOWN_ORIGIN_W[2]];
+  const folkNear = (pos) => {
+    const tf = town.townsfolk; if (!tf) return null;
+    let best = null, bd = TALK_RADIUS;
+    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < bd) { bd = d; best = p.def.key; } }
+    return best;
+  };
+  const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
+  const badge = (key, on) => { if (town.townsfolk) town.townsfolk.setBadge(key, on); };
+  for (const h of townLedger.hires()) badge(h.npc, true);
   townFlow = createTownFlow({
+    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest),
     quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
@@ -243,6 +261,7 @@ function startSeason() {
     play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
       seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
       resetHints: judge || params.get('hints') === 'reset',
+      townLedger, openProfile: () => openProfileFor(null),
       judge, // ?demo=judge: the shard card opens by itself after the trial-6 auction (hackathon spec P1-C)
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
       hub: params.get('mode') !== 'walk', // ?mode=walk: walking play without the Shell hub

@@ -45,5 +45,5 @@ test('judge path: the terminal opens after the shard beat only with exchange=1; 
   assert.match(w, /exchangeShort = \/\[\?&\]exchange=1/);
   assert.match(w, /if \(exchangeShort\) setTimeout\(openExchange/);
   const ui = src('play/ui.js');
-  assert.match(ui, /list, forgotten, shardSection\(obs\),\n\s+exchangeOpener \?/, 'the memory list, the forgotten list and the shard cards stay first');
+  assert.match(ui, /list, forgotten, shardSection\(obs\),\n\s+\(exchangeOpener \|\| profileOpener\) \?/, 'the memory list, the forgotten list and the shard cards stay first');
 });
