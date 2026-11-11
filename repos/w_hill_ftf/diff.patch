@@ -1,0 +1,108 @@
+diff --cc docs/decisions.md
+index 5b2f409,e5bfc8a..0000000
+--- a/docs/decisions.md
++++ b/docs/decisions.md
+@@@ -302,4 -302,4 +302,8 @@@ Owner requested a slightly narrower sta
+  | 11.11 | **Iris: the owner rejected the proportion change ("return Iris's normal shape and stance").** The body goes back to the athletic body approved on 09.11 (seat, flank, thighs, bust, head size); the GPT target sheet is the authority for hair and face only, never for body proportions. Stance: her standing clips let the arms hang along the body instead of the rig's A-pose; the rest pose and the skeleton stay as the mocap side-car was built against. Hair, face, eyes, lashes, teeth, trainers, sheen, the export without vertex colours and the phone variant stay. |
+  | 11.11 | **Town fixes from the owner's screenshots.** The lower gate now stands open: two thick timber leaves swung in against the jambs under a raised iron portcullis (the old leaves had no face toward the town, so only their bands and ring pulls showed); the collider across the passage stays, the gate is still not an exit. The emblem above the arch is a proud honey-stone ring on a sunk round field. The cart carries a crate, two sacks and cabbages, none of them foliage. Wind: a foliage part lower than 0.75 m is a small plant, never joins a crown it touches, and only its tips stir (weight 0.22, ripple with the square of the weight); no town geometry changed for this. Rebuilt pieces: `town_terrain`, `town_block_gate`, `town_block_square`. Sheet: `docs/art/town/qa/fixes/town_fixes_before_after.jpg`. |
+  | 11.11 | **Owner plan for the next stage (recorded before any work on it).** (1) Iris learns magic: skillshots after achrefelouafi/LinearAbiltyCastingThreeJS (MIT), cast on the field outside the town walls; the lower gate becomes an exit (branch `claude/festive-faraday-2ga2wb`, supersedes "the gate is still not an exit" above). (2) A few test monsters outside the walls, of different levels, each fighting and aggroing differently. (3) A level system: every character levels separately, for now only by fighting monsters outside the castle; every character has its own skills. (4) No lobby: after loading the player enters the town directly. (5) No guide at the start; the guide lives at the Tournament as a book statue that opens it in a popup. (6) On entry the player is offered a free skin. (7) A second playable heroine, original anime style (black hair with blue streaks, dark sleeveless dress), unlocked by owning an NFT; switch between characters. The owner's designer (ChatGPT) draws the NFT card and her storyboards; Fable builds her model, rig, animation and cast clips. (8) A daily spin wheel that wins silk and shards; shards assemble into an NFT and can be sold; on-chain wherever possible, all on testnet. (9) The loading screen: smoke with glyphs fills the bar. Process: one narrow task per session; Fable only for rigs, 3D models and animation, no subagents, no review loops (the lead checks); Opus for integration, code, copy and tests. Board: `docs/tasks.md`, "Owner plan 11.11". |
+++<<<<<<< HEAD
+ +| 11.11 | **Board item 10: "where did the effects and lighting go".** Nothing was lost in git: `render/lookdev`, `claude/lookdev` and `claude/audio-vfx-wiring` are all merged into main. Two runtime causes. (a) The frame-time governor (render/quality.js) watched the first 40 s of the session, which is now the town with its model streaming; on the owner's RTX 2060 SUPER (detected `high`) the loading hitches pushed it to `low`, which renders without the post stack (bloom, GTAO, grading, grain) and without the lamp lights, and with a flat cloud deck. Fix: on desktop a GPU detected as `high` or `ultra` never drops below `high` on its own (`governorFloor`); phones and weak desktops keep the full range. (b) The settings' Quality (auto/high/low) never reached the 3D tier: `tierForPreference` existed but was not called. Fix: boot-world reads the preference at start and on change; a fixed choice switches the governor off. Still true and not changed: the named VFX module (src/vfx, Shell mist, crack pulse, tension, glyph sign) is created only when the season starts at the Tournament altar, so the town shows the look-dev atmosphere but none of those effects. Checks: `npm test` green, 643 (one more governor-floor case in tests/client/quality.test.mjs); not measured on the owner's PC (the GPU server is an RTX 4090, which never trips the governor). |
+++=======
++ | 11.11 | **The hillside outside the lower gate is rebuilt (ENV).** `art/town/town_outside.py` replaces the bare 44° slope: a winding cobbled road (grade 11°), a footpath to a level 26 m casting field, two more terraces, trees, shrubs, grass, wildflowers, rocks, the edge falling into the cloud sea. Worker decisions: (1) the shipped `town_terrain` files were patched with `art/town/merge_outside.mjs` instead of rebuilt, so the town inside the walls is byte-for-byte the same geometry and textures; (2) the floor contract stays the mesh-name rule (`town_terrain_ground_outside`, `town_terrain_cobble_outside`), plus `town_terrain_outside_col` for trunks and boulders; (3) flower heads use a new untextured `M_Town_Foliage_Flower`; (4) two ambient animals ship as models only (`fauna_grazer`, `fauna_bird`), placement is the client's lane. Details: `docs/town.md`, "Outside the walls". |
+++>>>>>>> origin/claude/town-outside-env
+diff --git a/game/src/boot-world.js b/game/src/boot-world.js
+index ab16eb6..82346fb 100644
+--- a/game/src/boot-world.js
++++ b/game/src/boot-world.js
+@@ -13,6 +13,8 @@ import * as THREE from 'three';
+ import { createIslandScene } from './scenes/island.js';
+ import { LookDev } from './render/lookdev.js';
+ import { detectTier, tierForPreference } from './render/quality.js';
++import { cycleAt, mixLooks, BLEND_STEP } from './render/daycycle.js';
++import { lookFor } from './render/sky.js';
+ import { CameraRig } from './render/camera-rig.js';
+ import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
+ import { PHYSICS_DT, steerTo } from './physics/character.js';
+@@ -426,6 +428,21 @@ function groundInTown() {
+ const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camera, light: { sun: null, daylight: 1, pixelsPerMetre: 900 } }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
+ 
+ let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
++// The town's day cycle (render/daycycle.js, owner 11.11): afternoon → dusk → afternoon, rain every second loop.
++// Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
++const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
++  ? { t: Number(params.get('cycle')) || 0, k: -1, weather: null } : null;
++function tickDayCycle(dt) {
++  if (lookdev.location !== 'town') return;
++  dayCycle.t += dt;
++  const c = cycleAt(dayCycle.t);
++  if (Math.abs(c.k - dayCycle.k) >= BLEND_STEP || (c.k !== dayCycle.k && (c.k === 0 || c.k === 1))) {
++    dayCycle.k = c.k;
++    lookdev.applyLook(mixLooks(lookFor('town', null), lookFor('town', 'dusk'), c.k));
++  }
++  if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
++}
++
+ function frame() {
+   const dt = Math.min(clock.getDelta(), 0.25);
+   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
+@@ -484,6 +501,7 @@ function frame() {
+     town.update(clock.elapsedTime, dt, townFrame);
+     if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy);
+     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
++    if (dayCycle && !lookdev.reducedMotion) tickDayCycle(dt);
+   }
+   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
+   streamer.update(dt, focus);
+diff --git a/game/src/render/lookdev.js b/game/src/render/lookdev.js
+index 98c089d..fdf815a 100644
+--- a/game/src/render/lookdev.js
++++ b/game/src/render/lookdev.js
+@@ -281,6 +281,15 @@ export class LookDev {
+     return this.preset;
+   }
+ 
++  /**
++   * A blended look (render/daycycle.js mixLooks of two lookFor() results) for the town's day cycle. The hour on
++   * show becomes the nearer preset's name; leaving the place (setLocation) returns to its preset as before.
++   */
++  applyLook(look) {
++    this.look = look; this.preset = look.name;
++    this.applyAtmosphere(look);
++  }
++
+   /** Mood tint from sky.tint(): fog uniforms, the scene fog colour and the fill light follow the sky dome. */
+   applyTint(hex, k) {
+     this.tintState = { hex, amount: k };
+diff --git a/game/src/scenes/town.js b/game/src/scenes/town.js
+index 1d46a22..00999c7 100644
+--- a/game/src/scenes/town.js
++++ b/game/src/scenes/town.js
+@@ -202,6 +202,19 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
+   const gateMin = GATE_PASSAGE.min.map((v, k) => v + TOWN_ORIGIN[k]), gateMax = GATE_PASSAGE.max.map((v, k) => v + TOWN_ORIGIN[k]);
+   const openGate = (tris) => carveBox(tris, gateMin, gateMax);
+   const OUTSIDE_OWNER = 'town:outside-ground';
++  // The passage floor is a collider box with no visual piece of its own: the terrain's cobbles stop short of the
++  // gate and the street ends at the inner leaves, so the fog showed through a strip under the arch (seen in-game
++  // 11.11). A plane with the road's cobble material covers GATE_FLOOR at street level.
++  let gateFloor = null;
++  function gateFloorVisual(cobble) {
++    if (gateFloor || !cobble || !cobble.material) return;
++    const w = GATE_FLOOR.max[0] - GATE_FLOOR.min[0], d = GATE_FLOOR.max[2] - GATE_FLOOR.min[2];
++    const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2);
++    const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 2, uv.getY(i) * d / 2); // about 2 m per tile
++    gateFloor = new THREE.Mesh(g, cobble.material); gateFloor.name = 'town_gate_floor'; gateFloor.receiveShadow = true;
++    gateFloor.position.set(TOWN_ORIGIN[0] + (GATE_FLOOR.min[0] + GATE_FLOOR.max[0]) / 2, TOWN_ORIGIN[1] + GATE_FLOOR.max[1] + 0.005, TOWN_ORIGIN[2] + (GATE_FLOOR.min[2] + GATE_FLOOR.max[2]) / 2);
++    group.add(gateFloor);
++  }
+   function outsideGround(inst) {
+     world.removeOwner(OUTSIDE_OWNER);
+     if (!inst.real || !inst.parts) return;
+@@ -209,6 +222,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
+     const meshes = inst.parts.runtime.filter(named);
+     const tris = filterTriangles(meshesToTriangles(meshes), TOWN_ORIGIN, beyondWalls);
+     world.addBox(OUTSIDE_OWNER, GATE_FLOOR.min.map((v, k) => v + TOWN_ORIGIN[k]), GATE_FLOOR.max.map((v, k) => v + TOWN_ORIGIN[k]));
++    gateFloorVisual(meshes.find((m) => /cobble/.test(m.userData.name || m.name || '')));
+     if (tris.length) world.addTriangles(OUTSIDE_OWNER, tris);
+     state.outsideTriangles = tris.length / 9;
+   }

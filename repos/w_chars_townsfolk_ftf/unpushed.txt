@@ -1,0 +1,4 @@
+be741be Merge origin/claude/characters-v2 into main line (animation GPU checks)
+93c7d4d Real-time character checks on the GPU browser: feet hold as soon as the body stops, capture script, numbers and sheets
+e9511a3 Townsfolk round 2 (wip): boots keep the trousers, sash and cords sit on the cloth, smoother contact shading, keepers in front of their doors, musician off the post, paper-toned QA
+d5c2995 Townsfolk round 2 (wip): woven cloth, seams, wear and contact shading in the bakes, muted palette, tall boots, hems off the arm weights, flour, shawl

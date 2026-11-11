@@ -1,0 +1,6 @@
+c27a454 Gate passage: a street-level floor collider spans the gap between the street and the road
+1bff520 Record the owner's plan of 11.11 and the task board for it
+62f948b Outside ground: take every road and ground triangle that reaches beyond the walls (the first strip past the gate)
+acc36ed Gate passage: the closing plane and slab live in the terrain's colliders; carve them there too
+3ea9cec Gate passage: cut the slabs and sills down to their feet, keep the walkable street whole
+05a2400 Outside the walls: the lower gate is an exit, the hillside is walkable, Iris casts Frost Lance and Storm Snare beyond the walls
