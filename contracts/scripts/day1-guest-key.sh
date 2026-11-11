@@ -24,7 +24,7 @@ echo "    public key $PUB"
 
 echo "2/3 Adding it to $GUESTS (create_guest only, allowance $ALLOWANCE NEAR)…"
 if rpc '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_access_key","finality":"final","account_id":"'"$GUESTS"'","public_key":"'"$PUB"'"}}' | grep -q '"permission"'; then echo "    already added"; else
-  near account add-key "$GUESTS" grant-function-call-access --allowance "$ALLOWANCE NEAR" --receiver-account-id "$GUESTS" --method-names create_guest use-manually-provided-public-key "$PUB" "${SIGN[@]}"
+  near account add-key "$GUESTS" grant-function-call-access --allowance "$ALLOWANCE NEAR" --contract-account-id "$GUESTS" --function-names create_guest use-manually-provided-public-key "$PUB" "${SIGN[@]}"
 fi
 
 echo "3/3 Writing the public part to game/src/net/day1-deployment.js…"
