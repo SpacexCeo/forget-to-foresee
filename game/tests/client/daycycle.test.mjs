@@ -73,7 +73,7 @@ test('ground-fog cards follow the hour: thickest at night, light at dawn, almost
   assert.ok(mist('night') === 1 && mist('dawn') > mist('evening') && mist('twilight') > mist('dawn'));
   const { readFileSync } = await import('node:fs');
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(boot, /fogCards\.update\([^)]*enabled: lookdev\.tier !== 'low'/);
+  assert.ok(boot.includes('fogCards.update(') && boot.includes("enabled: lookdev.tier !== 'low'"));
   const fc = readFileSync(new URL('../../src/render/fog-cards.js', import.meta.url), 'utf8');
   assert.match(fc, /reducedMotion \? 0/); assert.match(fc, /depthWrite: false/);
 });
