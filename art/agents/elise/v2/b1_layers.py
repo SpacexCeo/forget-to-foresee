@@ -126,6 +126,11 @@ def renv(th, z):
     th = np.asarray(th, float); z = np.asarray(z, float); ft = ((th + 180) / 360 * NTH - 0.5) % NTH; t0 = np.floor(ft).astype(int); a = ft - t0
     fz = np.clip((z - EZ[0]) / 0.01, 0, len(EZ) - 1.001); z0 = np.floor(fz).astype(int); b = fz - z0
     g = lambda zz, tt: ENV[zz, tt % NTH]; return (g(z0, t0) * (1 - a) + g(z0, t0 + 1) * a) * (1 - b) + (g(z0 + 1, t0) * (1 - a) + g(z0 + 1, t0 + 1) * a) * b
+# the skirt keeps the width of the first version's gown: the outer envelope of the generated dress (as in pass 3),
+# never closer to the new legs than their own outline
+ENVS = Z.envelope(np.load('/root/w/elise3/work/body_hi_pts.npy').astype(float), co[((legw['L'] + legw['R']) > 0.5) & (co[:, 2] > 0.1)], co[(co[:, 2] > 0.79) & (co[:, 2] < 0.83) & (armw < 0.3)])
+print('gown envelope of the first version: mean radius at 0.8 / 0.5 / 0.1: %.3f %.3f %.3f; the new legs alone: %.3f %.3f %.3f' % (ENVS[80].mean(), ENVS[50].mean(), ENVS[10].mean(), renv(TH, 0.8).mean(), renv(TH, 0.5).mean(), renv(TH, 0.12).mean()))
+def rskirt(th, z): return max(float(Z.env_at(ENVS, th, z)), float(renv(th, max(z, EZ[0]))) + 0.004)
 ZC0, ZC1 = 1.438, 1.482                      # the collar band
 def slit(z):
     t1, t2 = (float(v) for v in Z.gown_slit(min(z, 0.955)))
@@ -145,7 +150,7 @@ for jj in range(NR + 1):
         t1, t2 = slit(z); th = t2 + u * (360 - (t2 - t1)); tn = (th + 180) % 360 - 180
         if z > 1.10 and z < ZC0 and abs(tn) > edge_deg(z) and abs(tn) < edge_deg(z) + 360 / NU * 1.01 * (360 - (t2 - t1)) / 360: tn = math.copysign(edge_deg(z), tn); th = tn      # the row's last vertex lies exactly on the edge
         r = float(renv(th, max(z, EZ[0])))
-        if z < Z.ZT + 1e-6: r += 0.002 * min(1, max(0, (z - 0.74) / 0.06)) + float(Z.gown_ease(th, z))
+        if z < Z.ZT + 1e-6: r = rskirt(th, z) + 0.002 * min(1, max(0, (z - 0.74) / 0.06)) + float(Z.gown_ease(th, z))
         else: r += 0.004 + (0.004 if z >= ZC0 else 0.0)
         p = np.array([r * math.sin(math.radians(th)), 0.005 - r * math.cos(math.radians(th)), z])
         if z < 0.80:
@@ -268,7 +273,7 @@ def cord(a_, b_, w=0.0022, lift=0.0025):
         for q in (p + nrm * lift - s_, p + nrm * lift + s_, p + nrm * (lift + 0.0016) + s_, p + nrm * (lift + 0.0016) - s_): lv.append(tuple(q))
     lf.extend([(n0 + a2, n0 + (a2 + 1) % 4, n0 + 4 + (a2 + 1) % 4, n0 + 4 + a2) for a2 in range(4)] + [(n0 + 3, n0 + 2, n0 + 1, n0), (n0 + 4, n0 + 5, n0 + 6, n0 + 7)])
 def edge_pt(z, side):
-    t1, t2 = slit(z); th = t2 if side == 0 else t1; r = float(renv(th, z)) + (0.004 if z > Z.ZT else 0.002 * min(1, max(0, (z - 0.74) / 0.06)) + float(Z.gown_ease(th, z))); return np.array([r * math.sin(math.radians(th)), 0.005 - r * math.cos(math.radians(th)), z])
+    t1, t2 = slit(z); th = t2 if side == 0 else t1; r = float(renv(th, z)) + 0.004 if z > Z.ZT else rskirt(th, z) + 0.002 * min(1, max(0, (z - 0.74) / 0.06)) + float(Z.gown_ease(th, z)); return np.array([r * math.sin(math.radians(th)), 0.005 - r * math.cos(math.radians(th)), z])
 zl = np.linspace(0.812, 0.948, 7)
 for k in range(len(zl) - 1): cord(edge_pt(zl[k], 0), edge_pt(zl[k + 1], 1)); cord(edge_pt(zl[k], 1), edge_pt(zl[k + 1], 0))
 bot = (edge_pt(zl[0], 0) + edge_pt(zl[0], 1)) / 2; cord(edge_pt(zl[0], 0), edge_pt(zl[0], 1))
