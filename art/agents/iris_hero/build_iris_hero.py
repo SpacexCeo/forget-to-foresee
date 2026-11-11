@@ -1551,8 +1551,48 @@ def relax_arms():
     agent_anim._iris_relaxed = True
 
 
+def smooth_cleft_normals(o, log=print):
+    """Shading only (owner 11.11: a small spot at the top of the gluteal cleft lit like a separate piece).
+    Where the leggings' level top edge crosses the cleft, the cut and the bridge leave a knot of small faces whose
+    vertex normals point straight back while the fabric round them faces up and back: a kink in the normals, not
+    in the outline. The outer normals in that patch are replaced by a low-pass of the normals round it, stored as
+    custom normals. No vertex moves."""
+    me = o.data
+    cn = [V(c.vector) for c in me.corner_normals]
+    vs = me.vertices
+    patch = lambda co: abs(co.x) < 0.050 and co.y > 0.03 and 0.975 < co.z < 1.0215
+    outer = {}                                                  # vertex -> its outward (back-facing) loop normal
+    for lo, n in zip(me.loops, cn):
+        if n.y > 0.25 and n.z < 0.80 and patch(vs[lo.vertex_index].co):
+            outer.setdefault(lo.vertex_index, []).append(n)
+    if not outer:
+        return 0
+    avg = {i: sum(ns, V()).normalized() for i, ns in outer.items()}
+    new = {}
+    for i in avg:
+        p = vs[i].co
+        acc = V()
+        for j, n in avg.items():
+            d = (vs[j].co - p).length
+            if d < 0.030:
+                acc += n * math.exp(-(d / 0.014) ** 2)
+        k = min(1.0, (0.050 - abs(p.x)) / 0.015, (p.z - 0.975) / 0.012)   # fades out at the patch's sides and bottom
+        k = max(0.0, k)
+        new[i] = (avg[i] * (1 - k) + acc.normalized() * k).normalized()
+    out = []
+    for lo, n in zip(me.loops, cn):
+        i = lo.vertex_index
+        out.append(tuple(new[i]) if (i in new and n.y > 0.25 and n.z < 0.80) else tuple(n))
+    me.normals_split_custom_set(out)
+    me.update()
+    log("cleft normals smoothed on", len(new), "vertices")
+    return len(new)
+
+
 def stage_full(shade=True, size=2048, samples=16):
     bm, rig, eye_objs, garments = stage_costume()
+    if "leggings" in garments:
+        smooth_cleft_normals(garments["leggings"], log)
     lips_attr(bm)
     n_mouth, lip_c = F.mouth_attr(bm)
     log("mouth cavity", n_mouth, "verts; lips centre", tuple(round(x, 4) for x in lip_c))
