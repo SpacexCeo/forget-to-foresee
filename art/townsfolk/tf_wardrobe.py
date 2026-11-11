@@ -191,6 +191,27 @@ def dress(ctx, e):
     if r.get("capelet"):
         o = ctx.cape("capelet", L.bust - 0.03, ease=0.022, open_deg=8, flare=0.035, over=torso_garments(ctx), folds=0.006)
         torso(o, *r["capelet"], rule="cape")
+    # clan agents (C-001): mantles over the shoulders down to a given level, with an icicle or scalloped hem; several
+    # tiers make Salt's layered robe. (col, tcol, hem z as an offset from the waist, hem style)
+    for k, mt in enumerate(r.get("mantles", ())):
+        col, tcol, dz, hem = mt
+        o = ctx.cape(f"mantle_{k}", L.waist + dz, ease=0.024 + 0.008 * k, open_deg=4, flare=0.04 + 0.01 * k,
+                     over=torso_garments(ctx), folds=0.008)
+        zmin = min(v.co.z for v in o.data.vertices)
+        for v in o.data.vertices:
+            if v.co.z < zmin + 0.07:
+                a = math.atan2(v.co.y - ctx.axis.y, v.co.x - ctx.axis.x)
+                w = 1.0 - (v.co.z - zmin) / 0.07
+                if hem == "icicle":
+                    tri = abs(((a * 11 / TAU) % 1.0) - 0.5) * 2.0          # 0 at the tip, 1 between tips
+                    v.co.z -= 0.075 * (1.0 - tri) * w
+                elif hem == "scallop":
+                    v.co.z -= 0.028 * abs(math.sin(a * 7)) * w
+        C.set_attr(o, "trim", lambda i, p, zmin=zmin: 1.0 if p.z < zmin + 0.05 else 0.0)
+        torso(o, col, tcol, rule="cape")
+    if r.get("cowl"):                                   # a hood worn down: a soft roll round the back of the neck
+        ctx.add(ctx.band("cowl", lambda t: L.neck - 0.005 - 0.05 * (0.5 + 0.5 * math.cos(t)), 0.09, 0.03, bones=NECK,
+                         over=torso_garments(ctx), thick=0.012, round_=0.02), r["cowl"][0], rule="fit")
     if r.get("scarf"):
         ctx.add(ctx.band("scarf", lambda t: L.neck + 0.02 - 0.03 * (0.5 + 0.5 * math.cos(t)), 0.075, 0.012, bones=NECK,
                          over=torso_garments(ctx), thick=0.008, round_=0.012), r["scarf"][0], rule="fit")
@@ -260,6 +281,25 @@ def hat(ctx, e):
         C.set_attr(o, "trim", lambda i, p: 1.0 if p.z < line + 0.026 else 0.0)
         ctx.add(o, col, tcol, rule="head")
         return line + 0.012
+    if kind in ("hood", "hood_point"):              # clan agents (C-001): a deep hood round the face, down the nape
+        ears = IH.group_verts(ctx.bm, "ears", 0.2) if "ears" in ctx.bm.vertex_groups else set()
+        region = set(scalp) | {i for i in ears}
+        region |= {i for i, p in enumerate(co) if ctx.dom[i] in HEAD and p.y > ctx.head_c.y - 0.02 and p.z > L.mouth.z - 0.06}
+        region |= {i for i, p in enumerate(co) if ctx.dom[i] in HEAD and p.y > ctx.head_c.y + 0.01}
+        region |= {i for i, p in enumerate(co) if ctx.dom[i] == "neck" and p.y > ctx.head_c.y - 0.01}
+        region |= {i for i, p in enumerate(co) if ctx.dom[i] in HEAD and p.z > L.eye.z + 0.045}   # a clean brow edge
+        o = ctx.head_shell("hat", region, 0.022, 0.005, relax=10)
+        hc, hr = ctx.head_c, ctx.head_r
+        if kind == "hood_point":                      # Frost: the crown drawn up into a soft point, tipped back
+            top = max(v.co.z for v in o.data.vertices)
+            for v in o.data.vertices:
+                u = max(0.0, (v.co.z - (top - 0.10)) / 0.10)
+                v.co.z += 0.11 * u ** 2
+                v.co.y += 0.05 * u ** 2
+                v.co.x *= 1.0 - 0.45 * u ** 2
+        C.set_attr(o, "trim", lambda i, p: 1.0 if p.y < hc.y - hr[1] * 0.35 else 0.0)
+        ctx.add(o, col, tcol, rule="head")
+        return 9.0
     if kind in ("headscarf", "kerchief"):
         ears = IH.group_verts(ctx.bm, "ears", 0.2) if "ears" in ctx.bm.vertex_groups else set()
         region = set(scalp) | {i for i in ears}
@@ -780,6 +820,99 @@ def props(ctx, e):
         for vv in b.verts:
             vv.co = c + tilt @ vv.co
         ctx.add(obj("lute", b), "leather_tan", "wood", mat="wood", rule="rigid:chest")
+    # ---- clan agents (C-001)
+    hc, hr = ctx.head_c, ctx.head_r
+    for nm in ("veil", "mouthwrap"):                  # a cloth over the lower face, below the eyes
+        if nm in ex:
+            region = [i for i, p in enumerate(ctx.co) if ctx.dom[i] in HEAD and p.y < hc.y - 0.015
+                      and L.mouth.z - (0.075 if nm == "veil" else 0.055) < p.z < L.eye.z - 0.018]
+            o = ctx.head_shell(nm, region, 0.011, 0.003, relax=4)
+            C.set_attr(o, "trim", lambda i, p: 1.0 if p.z > L.eye.z - 0.03 else 0.0)
+            ctx.add(o, *r_cols(e, nm), rule="head")
+    if "quartz_shoulders" in ex:                      # Salt: milky quartz clusters on both shoulders
+        b = bmesh.new()
+        for s_ in (-1, 1):
+            sh = ctx.bones["shoulder_L" if s_ > 0 else "shoulder_R"][1]
+            for k in range(5):
+                a = k * 1.3
+                base_ = sh + V((s_ * (0.02 + 0.015 * math.cos(a)), 0.02 * math.sin(a), 0.03))
+                tip = base_ + V((s_ * (0.03 + 0.02 * (k % 2)), -0.005 * k, 0.07 + 0.025 * (k % 3)))
+                tube_path(b, [base_, tip], [0.016, 0.0], n=6)
+        ctx.add(obj("quartz", b, smooth=False), "shell_white", mat="shell", rule="rigid:chest")
+    if "stake_collar" in ex:                          # Ash: a collar of charred stakes fanned round the shoulders
+        b = bmesh.new()
+        nk = ctx.bones["neck"][0]
+        for k in range(9):
+            a = math.pi * (0.10 + 0.80 * k / 8)
+            d = V((math.cos(a), 0.35 * math.sin(a) + 0.12, 0))
+            base_ = nk + V((d.x * 0.17, d.y * 0.12, -0.06))
+            tip = base_ + V((d.x * 0.10, 0.08, 0.30 + 0.06 * (k % 2)))
+            tube_path(b, [base_, tip], [0.018, 0.0], n=6)
+        ctx.add(obj("stake_collar", b, smooth=False), "charred", "ember", mat="wood", rule="rigid:chest")
+    if "stake_shield" in ex:                          # Ash: a bundle of stakes bound across the left forearm
+        b = bmesh.new()
+        el, wr = ctx.bones["forearm_L"][0], ctx.bones["forearm_L"][1]
+        mid = (el + wr) / 2 + V((0.04, -0.02, 0))
+        for k in range(6):
+            off = V((0.0, -0.03 + 0.012 * k, -0.06 + 0.024 * k))
+            tube_path(b, [mid + off + V((-0.16, 0, 0)), mid + off + V((0.16, 0, 0)), mid + off + V((0.21, 0, 0))], [0.014, 0.014, 0.0], n=6)
+        ctx.add(obj("stake_shield", b, smooth=False), "charred", "ember", mat="wood", rule="rigid:forearm_L")
+    if "leaves_shoulders" in ex:                      # Moss: broad leaves and small mushrooms on the cloak's shoulders
+        b = bmesh.new()
+        for s_ in (-1, 1):
+            sh = ctx.bones["shoulder_L" if s_ > 0 else "shoulder_R"][1]
+            for k in range(4):
+                c = sh + V((s_ * (0.01 + 0.03 * k), -0.03 + 0.03 * (k % 2), 0.035))
+                ball(b, c, 0.045, 1.0, 0.55, 0.12)
+        ctx.add(obj("leaves", b), "moss_c", mat="cloth", rule="rigid:chest")
+        b = bmesh.new()
+        for s_ in (-1, 1):
+            sh = ctx.bones["shoulder_L" if s_ > 0 else "shoulder_R"][1]
+            for k in range(3):
+                c = sh + V((s_ * (0.03 + 0.025 * k), -0.01, 0.05))
+                tube_path(b, [c, c + V((0, 0, 0.025))], [0.006, 0.006], n=5)
+                ball(b, c + V((0, 0, 0.03)), 0.016, 1.0, 1.0, 0.55)
+        ctx.add(obj("mushrooms", b), "linen_c", mat="cloth", rule="rigid:chest")
+    if "cauldron" in ex:                              # Moss: a small cauldron carried in the left hand
+        b = bmesh.new()
+        gp = gL + V((0.0, -0.01, -0.13))
+        ball(b, gp, 0.075, 1.0, 1.0, 0.85)
+        torus(b, gp + V((0, 0, 0.06)), 0.062, 0.008, axis=V((0, 0, 1)), n=18, m=5)
+        torus(b, gp + V((0, 0, 0.09)), 0.07, 0.004, axis=V((1, 0, 0)), n=16, m=4, arc=math.pi)
+        ctx.add(obj("cauldron", b), "iron", "copper", mat="metal", rule="rigid:prop_L")
+    if "strongbox" in ex:                             # Amber: a brass-bound strongbox strapped on the back
+        b = bmesh.new()
+        ch = ctx.bones["chest"][1] if "chest" in ctx.bones else V((0, 0, L.bust))
+        c = V((0, hc.y + 0.17, L.bust - 0.02))
+        box(b, c, 0.30, 0.18, 0.24)
+        ctx.add(obj("strongbox", b, smooth=False), "leather_d", "brass", mat="wood", rule="rigid:chest")
+        b = bmesh.new()
+        for x in (-0.1, 0.1):
+            box(b, c + V((x, 0, 0)), 0.025, 0.19, 0.25)
+        box(b, c + V((0, -0.095, 0.0)), 0.05, 0.02, 0.06)
+        ctx.add(obj("strongbox_bands", b, smooth=False), "brass", mat="metal", rule="rigid:chest")
+    if "keys" in ex:                                  # Amber: a ring of keys at the belt
+        b = bmesh.new()
+        kc = V((0.13, ctx.axis.y - 0.09, L.waist - 0.06))
+        torus(b, kc, 0.03, 0.004, axis=V((0, 1, 0)), n=14, m=4)
+        for k in range(3):
+            a = -0.6 + 0.6 * k
+            tube_path(b, [kc + V((math.sin(a) * 0.03, 0, -0.03)), kc + V((math.sin(a) * 0.05, 0, -0.10))], [0.004, 0.004], n=4)
+        ctx.add(obj("keys", b), "brass", mat="metal", rule="rigid:pelvis")
+    if "monocle" in ex:                               # Frost: a monocle on the right eye
+        b = bmesh.new()
+        # on the right eye: the eye centre is about 3 cm off the midline, the ring rests on the cheek and brow
+        eyes_r = [ctx.co[i] for i in range(len(ctx.co)) if ctx.dom[i] in HEAD and ctx.co[i].x < -0.012
+                  and abs(ctx.co[i].z - L.eye.z) < 0.012 and ctx.co[i].y < hc.y - hr[1] * 0.75]
+        exr = sum((q.x for q in eyes_r), 0.0) / len(eyes_r) if eyes_r else -0.031
+        eyr = min((q.y for q in eyes_r), default=hc.y - hr[1])
+        ey = V((exr * 0.95, eyr - 0.010, L.eye.z))
+        torus(b, ey, 0.017, 0.0025, axis=V((0, 1, 0)), n=16, m=4)
+        ctx.add(obj("monocle", b), "silver", mat="metal", rule="head")
+    if "slate_tablet" in ex:                          # Frost: a slate sign-tablet in the left hand
+        b = bmesh.new()
+        box(b, gL + V((0.0, -0.03, -0.06)), 0.03, 0.18, 0.24)
+        ctx.add(obj("tablet", b, smooth=False), "slate_c", "silver", mat="wood", rule="rigid:prop_L")
     if "lantern" in ex:                               # carried in the left hand, hanging from its ring
         gp = gL + V((0.0, -0.01, -0.085))
         b = bmesh.new()
@@ -823,6 +956,31 @@ def props(ctx, e):
             v.co.y = base.y + (v.co.y - base.y) * 0.28
         torus(b2, t0 - V((0, 0, 0.075)), 0.036, 0.006, axis=V((0, 1, 0)), n=18, m=6)
         ctx.add(obj("spear_head", b2, angle=30), "iron", "amber", mat="metal", rule="rigid:prop_R")
+    elif "armillary_staff" in ex:                     # Frost: a tall silver staff crowned by an armillary
+        top = L.top + 0.45
+        tube_path(b, [base, V((base.x, base.y, top))], 0.012, n=8)
+        stick = ("staff", "silver", "silver")
+        b2 = bmesh.new()
+        t0 = V((base.x, base.y, top + 0.11))
+        for ax in (V((1, 0, 0)), V((0, 1, 0)), V((0.7, 0.7, 0))):
+            torus(b2, t0, 0.10, 0.006, axis=ax, n=22, m=4)
+        ball(b2, t0, 0.025)
+        ctx.add(obj("armillary", b2), "silver", "ice", mat="metal", rule="rigid:prop_R")
+    elif "balance" in ex:                             # Salt: a brass balance held up in the right hand
+        top = gR.z + 0.20
+        tube_path(b, [base + V((0, 0, gR.z - 0.02)), V((base.x, base.y, top))], 0.008, n=6)
+        stick = ("balance", "brass", "brass")
+        b2 = bmesh.new()
+        t0 = V((base.x, base.y, top))
+        tube_path(b2, [t0 + V((-0.13, 0, 0)), t0 + V((0.13, 0, 0))], 0.006, n=6)
+        for s_ in (-1, 1):
+            pc = t0 + V((s_ * 0.13, 0, -0.14))
+            for k in range(3):
+                a = TAU * k / 3
+                tube_path(b2, [t0 + V((s_ * 0.13, 0, 0)), pc + V((math.cos(a) * 0.04, math.sin(a) * 0.04, 0))], 0.0018, n=3)
+            torus(b2, pc, 0.045, 0.006, axis=V((0, 0, 1)), n=16, m=4)
+            ball(b2, pc + V((0, 0, -0.004)), 0.044, 1.0, 1.0, 0.18)
+        ctx.add(obj("balance_beam", b2), "brass", mat="metal", rule="rigid:prop_R")
     elif "cane" in ex:
         top = gR.z + 0.03
         hook = [V((base.x, base.y, top)) + V((0, -0.035 * (1 - math.cos(a)), 0.035 * math.sin(a))) for a in (0.5, 1.0, 1.6, 2.2, 2.8)]
@@ -894,3 +1052,9 @@ def props(ctx, e):
         for vv in b.verts:
             vv.co = c + tilt @ vv.co
         ctx.add(obj("ring_lute", b), "wood", "amber", mat="wood", rule="rigid:chest")
+
+
+def r_cols(e, nm):
+    """Colours for an agent extra: costume key `<name>_col` = (col, tcol), else ivory."""
+    c = e["costume"].get(nm + "_col", ("ivory", "ivory"))
+    return c[0], c[1] if len(c) > 1 else c[0]
