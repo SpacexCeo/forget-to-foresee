@@ -64,3 +64,25 @@ honest. Redeploying the relayer on the owner's server needs the owner's local ex
 
 **Spare (any agent that runs out):** bug hunt on the judge path; flaky-test check (run `npm test` 3×); docs/STATS.md
 refresh; screenshots for the README at 1280×800 and phone.
+
+## Loot chests from monsters (owner, 11.11 23:45 Kyiv: on tonight's list, after the item in hand)
+Combat outside the castle walls stays and grows. Monsters killed outside the walls drop **chests**; opening one is a
+high-quality "open case" moment. **Season 1 supply: 10,000 chests, of which 10% (1,000) give an NFT**; the rest give
+in-game rewards (items, shards, mechanical parts, silk, XP, titles from `game/public/assets/items/manifest.json`). The
+randomness is verifiable through the TEE. Lead design (workers may refine, never claim more than it proves):
+- **Exact supply, not just odds:** a season deck of 10,000 outcomes with exactly 1,000 NFT slots, committed on chain
+  as a Merkle root before the season (the `season-commit` pattern); each opened chest takes the next index and reveals
+  its leaf + proof, so anyone can check the 10% and that no outcome was changed.
+- **Who gets which slot:** the shuffle seed is fixed only after the commit, from a TEE-signed value (NEAR AI Cloud
+  signature, verified as in `docs/tee.md`) mixed with the NEAR block random seed in the contract; the seed, signature
+  and attestation are public, so the deck order is reproducible and nobody (including us) could pick it in advance.
+- **On chain:** a chest contract (or an extension of an existing one) counts opened chests (cap 10,000) and NFTs minted
+  (cap 1,000), mints the loot NFT to the player's Day-1 guest account, and records each opening (index, leaf, seed
+  ref); off-chain rewards go to the inventory. Testnet only; deploy through the lead.
+
+| Worker | Part |
+|---|---|
+| TZ code | monsters outside the walls drop a chest (loot table client, pickup, inventory), the open-case UI: reel/spin or lid burst with rarity reveal, sound + haptics, a clear "Verified" link; reduced motion static |
+| TEE | seed from the TEE signature + block seed, the deck generator + Merkle commit script, the chest contract (caps, mint, records), relayer endpoint to open a chest for a guest, `tools/verify-chest` (PASS/FAIL for any opening), tests |
+| Art | chest model (3 rarity variants) with open animation + glow, loot NFT card frames, monster drop VFX; compressed glb + _m |
+| Jury | README row and judge-guide step once it runs live; numbers from STATS |
