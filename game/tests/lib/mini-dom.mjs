@@ -61,6 +61,10 @@ export function installDom() {
     }
     click() { this.dispatchEvent({ type: 'click' }); }
     focus() { doc.activeElement = this; }
+    get style() { return (this._style ||= { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } }); }
+    set style(v) { this._style = v; }
+    get lastChild() { return this.childNodes[this.childNodes.length - 1] || null; }
+    replaceChildren(...ns) { for (const n of [...this.childNodes]) n.remove(); this.append(...ns); }
     get descendants() { return this.children.flatMap((c) => [c, ...c.descendants]); }
     matches(sel) { return sel.split(',').some((s) => matchSel(this, s.trim())); }
     querySelectorAll(sel) { return this.descendants.filter((e) => e.matches(sel)); }

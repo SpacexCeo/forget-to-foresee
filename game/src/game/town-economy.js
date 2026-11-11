@@ -237,6 +237,12 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
     /** The best agent by measured return (at least 5 rounds), or null. */
     bestAgent() { let best = null; for (const [npc, a] of Object.entries(st.agents)) { const m = measuredReturn(a); if (a.rounds >= 5 && m != null && (!best || m > best.measured)) best = { npc, measured: m, experience: a.rounds }; } return best; },
     agentsKnown() { return Object.keys(st.agents); },
+    /** A wheel prize (game/wheel.js): town silk in cents and/or XP. Never the season's silk. */
+    grant({ silk = 0, xp = 0 } = {}) {
+      st.silk += Math.max(0, Math.round(silk)); st.xp += Math.max(0, Math.round(xp));
+      save();
+      return { silk: st.silk, xp: st.xp };
+    },
     /** XP for a play action (XP keys); counted in the profile stats too. */
     addXp(kind, persist = true) {
       st.xp += XP[kind] || 0;
