@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = new Set(process.argv.slice(2));
-export const CONTRACTS = ['season-commit', 'memory-shard', 'agent-card', 'guests', 'character-nft', 'token-account'];
+export const CONTRACTS = ['season-commit', 'memory-shard', 'agent-card', 'guests', 'character-nft', 'token-account', 'agent-ledger'];
 
 /** Parses `node --test` or `cargo test` output into {pass, fail}. */
 export function parseCounts(out) {
