@@ -336,8 +336,14 @@ def build(key, out_root, shade=True, size=2048, budget=16000, samples=16):
         o.select_set(True)
     bpy.context.view_layer.objects.active = skin
     bpy.ops.object.join()
-    skin.name = f"{name}_body"
-    bm.name = f"{name}_face"
+    # one skinned mesh per person (one draw call per pass): the face, which carries the morphs, takes the rest in
+    bpy.ops.object.select_all(action="DESELECT")
+    skin.select_set(True)
+    bm.select_set(True)
+    bpy.context.view_layer.objects.active = bm
+    bpy.ops.object.join()
+    skin = bm
+    bm.name = name
     rig.name = "rig"
     rig["chains"] = json.dumps([[n, [list(p) for p in pts], par] for n, pts, par in chains])
     k = facts["export_scale"]
@@ -351,7 +357,7 @@ def build(key, out_root, shade=True, size=2048, budget=16000, samples=16):
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
     path = os.path.join(out, name + ".glb")
     bpy.ops.object.select_all(action="DESELECT")
-    for o in (rig, bm, skin):
+    for o in (rig, bm):
         o.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.export_scene.gltf(

@@ -113,7 +113,7 @@ def dress(ctx, e):
         hem_z = {"tucked": L.waist - 0.005, "blouse": L.waist - 0.02}.get(hemk, L.hip + 0.03)
         slv = "short" if sl == "wide" else sl
         if r.get("under"):
-            ease += 0.006
+            ease += 0.011
         top = ctx.top("shirt", hem_z, slv, ease=ease, neck=neck, relax=9 if hemk == "blouse" else 6, thick=thick)
         ctx.clear(top, 0.004, [G["trousers"]] + ([G["under_shirt"]] if r.get("under") else []), 0.004)
         torso(top, *sh)
