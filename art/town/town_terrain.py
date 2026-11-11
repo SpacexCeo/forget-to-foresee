@@ -4,6 +4,7 @@ Everything is emitted into the piece `town_terrain` in game space (see town_geo.
 
 import math
 
+import town_outside
 import town_plan as P
 from town_geo import RY, T, tint
 
@@ -407,8 +408,10 @@ def _edge_y(z):
     return pts[0][1] if z > pts[0][0] else pts[-1][1]
 
 
-def skirt(tb):
-    """Slopes outside the walls falling into the mist; the road leaves the gate and winds down."""
+def skirt(tb, legacy_front=False):
+    """Slopes outside the east, west and north walls falling into the mist. The hillside in front of the lower
+    gate (z beyond the south wall) is town_outside.py; `legacy_front` rebuilds the bare slope with the straight
+    44-degree road that stood there before (only for the before / after sheet)."""
     xo = P.X_IN + P.WALL_T
     xs = sorted(set([-118, -104, -90, -78, -68, -60, -xo, -44, -33, -22, -12, -2.6, 2.6, 12, 22, 33, 44, xo, 60, 68, 78, 90, 104, 118]))
     zs = sorted(set([-66, -56, -44, -30, -16, -2, 12, 23, P.Z_SOUTH + P.WALL_T, 42, 50, 60, 72, 86, 102, 118]))
@@ -427,6 +430,8 @@ def skirt(tb):
                 continue
             if cz < P.Z_NORTH - 2 and abs(cx) < 66:
                 continue
+            if z0 >= P.Z_SOUTH + P.WALL_T - 0.01 and not legacy_front:
+                continue
             road = abs(cx) < 2.7 and cz > P.Z_SOUTH
             cols = []
             pts = []
@@ -442,7 +447,7 @@ def skirt(tb):
             tb.quad("cobble" if road else "ground", *pts, cols)
 
 
-def build(tb):
+def build(tb, legacy_front=False):
     tb.piece = "town_terrain"
     terraces(tb)
     retaining_walls(tb)
@@ -451,6 +456,8 @@ def build(tb):
     town_walls(tb)
     gatehouse(tb)
     cliff(tb)
-    skirt(tb)
+    skirt(tb, legacy_front)
+    if not legacy_front:
+        town_outside.build(tb)
     tb.socket("socket_spawn", (P.SPAWN["x"], P.SPAWN["y"], P.SPAWN["z"]), 180.0)
     _ = (RY, T)
