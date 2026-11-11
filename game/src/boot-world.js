@@ -240,9 +240,7 @@ if (townMode.town) {
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
   });
-  // Outside the walls (docs/town.md): skillshots on the hillside beyond the lower gate.
-  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
-    onCast: () => { if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+  mountCasting();
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
   import('./play/iris-avatar.js').then((m) => { irisAvatar = new m.IrisAvatar(); return irisAvatar.attach(avatar); }).catch((e) => console.warn('[town] Iris model unavailable', e));
@@ -285,6 +283,12 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
  * Return to town (owner, 11.11): from the archipelago back to the town with the season kept in memory; registering at
  * the altar again resumes the same season (startSeason is memoized). The play layer's UI hides and its keys sleep.
  */
+/** Outside the walls (docs/town.md): skillshots on the hillside beyond the lower gate; the first two skill-bar slots. */
+function mountCasting() {
+  if (townCasting || !town) return;
+  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
+    onCast: () => { if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+}
 function returnToTown() {
   if (!town || !townFlow || inTown || !play) return;
   clearWorldInput(); stopSteering();
@@ -297,6 +301,7 @@ function returnToTown() {
   player.teleport(TOWN_ALTAR_SPAWN.position.slice(), TOWN_ALTAR_SPAWN.heading);
   rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.reset();
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
+  mountCasting(); // leaveTown disposed it: without this the two skills were gone after Return to town
   townFlow.reenter();
 }
 /** Start over: a new local season (the judge link rebuilds the same fixed season). */

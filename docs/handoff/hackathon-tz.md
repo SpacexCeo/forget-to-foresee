@@ -40,3 +40,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - NFT-001 cards: in the game (Day 1 flip, profile, on-chain Elise row); no-name art at `assets/nft/elise.webp` = the deployed `elise_media` URL. Left: NFTs/inventory tabs with (d).
 - Relayer (relayer/): signs create_guest server-side; client POSTs when VITE_FTF_RELAYER_URL is set; Pages passes vars.FTF_RELAYER_URL, no key in the page. Left: lead deploys, sets the variable.
 - Relayer standalone: node relayer/server.js + Dockerfile, ALLOWED_ORIGIN, TRUST_PROXY. Left: owner hosts it, sets FTF_RELAYER_URL.
+- Casts restored: Return to town now remounts Frost Lance / Storm Snare (leaveTown disposed them); first two skill-bar slots, placeholder art. Left: UI-003 icons.
