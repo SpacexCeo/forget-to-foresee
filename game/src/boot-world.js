@@ -78,7 +78,9 @@ if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice 
 const irisLoad = { hasModel: hasModelFile('agent_iris'), fetched: false, loaded: false, failed: false, t0: performance.now() };
 // The same file play/iris-avatar.js irisModelFile() picks: the phone variant when the build ships it.
 const irisFile = getModelVariant() && hasModelFile('agent_iris' + getModelVariant()) ? 'agent_iris' + getModelVariant() : 'agent_iris';
-if (irisLoad.hasModel) prefetchGltf(irisFile).then(() => { irisLoad.fetched = true; }, () => { irisLoad.failed = true; });
+// A failed download is retried (a slow or lossy link); players never see the greybox capsule in her place.
+const fetchIris = (attempt = 0) => prefetchGltf(irisFile).then(() => { irisLoad.fetched = true; irisLoad.failed = false; }, () => { irisLoad.failed = true; if (attempt < 4) setTimeout(() => fetchIris(attempt + 1), 2000 * (attempt + 1)); });
+if (irisLoad.hasModel) fetchIris();
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
@@ -94,7 +96,7 @@ function updateIrisStandIn() {
   if (irisLoad.loaded) return;
   irisLoad.loaded = avatar.children.length > irisStandIn.length; // attachIris (play/agents.js) added her model
   if (avatar.userData.irisFailed) irisLoad.failed = true;
-  const show = irisStandInVisible({ ...irisLoad, waited: (performance.now() - irisLoad.t0) / 1000 });
+  const show = irisStandInVisible({ ...irisLoad, waited: (performance.now() - irisLoad.t0) / 1000, players: !import.meta.env.DEV && params.get('greybox') !== '1' });
   for (const c of irisStandIn) c.visible = show;
 }
 updateIrisStandIn();
@@ -243,7 +245,11 @@ if (townMode.town) {
   mountCasting();
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
-  import('./play/iris-avatar.js').then((m) => { irisAvatar = new m.IrisAvatar(); return irisAvatar.attach(avatar); }).catch((e) => console.warn('[town] Iris model unavailable', e));
+  // A failed attach (a dropped download) is tried again a few times; the loading screen covers the wait.
+  const attachIris = (attempt = 0) => import('./play/iris-avatar.js').then((m) => { irisAvatar = irisAvatar || new m.IrisAvatar(); return irisAvatar.attach(avatar); }).then(() => {
+    if (avatar.userData.irisFailed && attempt < 4) { setTimeout(() => { avatar.userData.irisFailed = false; irisLoad.failed = false; attachIris(attempt + 1); }, 3000 * (attempt + 1)); }
+  }).catch((e) => console.warn('[town] Iris model unavailable', e));
+  attachIris();
   loadPlayLayer().catch(() => {});
   // Once the town is shown, the archipelago's files go into the HTTP cache at low priority, so the registration
   // cover has little left to download (skipped on Save-Data and 2G/3G-class links).
@@ -510,6 +516,7 @@ function handleInput(dt) {
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
+    if (townOn && townFlow && townFlow.closePanel()) return false; // close the open talk panel
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
@@ -517,6 +524,7 @@ function handleInput(dt) {
     return false;
   }
   if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (townOn && townFlow && input.hit('KeyO')) townFlow.expandPill(); // O: the newest minimised panel
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
@@ -737,5 +745,5 @@ window.__ftf = {
 requestAnimationFrame(frame);
 return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
-  get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || irisLoad.failed)); } };
+  get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }
