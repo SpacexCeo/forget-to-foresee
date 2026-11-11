@@ -213,8 +213,8 @@ def dress(ctx, e):
         ctx.add(obj("buckle", b), bc[1], mat="metal", rule="fit")
     if r.get("sash"):
         sc = r["sash"][0]
-        torso(ctx.band("sash", lambda t: L.waist + 0.01 * math.sin(t), 0.085, 0.018, over=tg, thick=0.006, round_=0.008,
-                       over_gap=0.010), sc, rule="fit")
+        torso(ctx.band("sash", lambda t: L.waist + 0.01 * math.sin(t), 0.085, 0.026, over=tg, thick=0.006, round_=0.008,
+                       over_gap=0.014), sc, rule="fit")
         tree = surface_tree(ctx)                    # the knot at the left hip
         dk = V((0.62, -0.78, 0)).normalized()
         pk, _ = hit(tree, V((0, ctx.axis.y, L.waist)) + dk * 0.7, -dk, V((0, ctx.axis.y, L.waist)) + dk * 0.17)
@@ -319,7 +319,7 @@ def scalp_path(ctx, a0, a1, lat, n=10, off=0.01):
     return out
 
 
-def blob(name, b, voxel=0.007, target=1400, smooth_it=2):
+def blob(name, b, voxel=0.007, target=1400, smooth_it=4):
     """One clean closed shell from overlapping primitives (curls, buns, braids): voxel remesh, relax, reduce."""
     import bpy
     o = obj(name, b)
@@ -618,7 +618,7 @@ def beard(ctx, colour, style):
 
 # ===================================================================== props and small details
 
-def necklace(ctx, name, z_front, z_back, r_bead=0.0, ease=0.012, n=40):
+def necklace(ctx, name, z_front, z_back, r_bead=0.0, ease=0.005, n=40):
     """Points of a cord round the neck resting on what is worn (tilted ring), optionally with beads."""
     tree = surface_tree(ctx)
     pts = []
@@ -696,10 +696,10 @@ def props(ctx, e):
         bmx.from_mesh(o.data)
         bnd = {v.index for v in bmx.verts if v.is_boundary}
         bmx.free()
-        zs_ = (L.bust + 0.005, (L.bust + zb) / 2 + 0.01)
-        C.set_attr(o, "trim", lambda i, p: 1.0 if i in bnd or any(abs(p.z - z) < 0.006 for z in zs_) else 0.0)
+        zs_ = [zb + (zt - zb) * f for f in (0.22, 0.44, 0.66)]          # the plate rows
+        C.set_attr(o, "trim", lambda i, p: 1.0 if i in bnd or any(abs(p.z - z) < 0.011 for z in zs_) else 0.0)
         o["layer"] = "torso"
-        ctx.add(o, "leather_tan", "bronze", mat="leather", rule="fit")
+        ctx.add(o, "leather", "leather_dark", mat="leather", rule="fit")
     for nm, sides in (("pauldron", ("L",)), ("pauldrons", ("L", "R"))):
         if nm not in ex:
             continue
@@ -717,7 +717,7 @@ def props(ctx, e):
             ctx.add(o, "leather", "bronze", mat="leather", rule="fit")
     if "bracers" in ex:
         co, dom = ctx.co, ctx.dom
-        o = ctx.shell("bracers", lambda i, _: dom[i] in ("forearm_L", "forearm_R") and 0.62 < ctx.arm_s(co[i]) < 0.94, 0.019, 0.004, relax=2)
+        o = ctx.shell("bracers", lambda i, _: dom[i] in ("forearm_L", "forearm_R") and 0.58 < ctx.arm_s(co[i]) < 0.95, 0.027, 0.004, relax=3)
         ctx.add(o, "leather_dark", mat="leather", rule="fit")
     for nm, deg in (("pouch", 55), ("pouch_r", -60)):     # belt pouches
         if nm in ex:

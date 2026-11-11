@@ -399,6 +399,8 @@ def bake_atlas(groups, name, size, out_dir, samples=16):
     m = run("EMIT", tmp, "metal")[..., 0].copy()
     sc.world.light_settings.distance = 0.25
     ao = run("AO", tmp)[..., 0].copy()
+    for _ in range(3):                                # the few-sample AO is grainy: a small blur before it tints the colour
+        ao = (ao + np.roll(ao, 1, 0) + np.roll(ao, -1, 0) + np.roll(ao, 1, 1) + np.roll(ao, -1, 1)) / 5.0
     occ = 0.40 + 0.60 * ao
     base[..., :3] *= (0.50 + 0.50 * ao)[..., None]      # contact shading in the colour too: folds, under belts and aprons
     nimg = S._image(f"{name}_normal", size)

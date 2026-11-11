@@ -617,6 +617,7 @@ def strip_layers(ctx, keep_above_hem=0.12):
             continue
         outer = [ctx.garments[n] for n in names[gi + 1:]]
         outer = [q for q in outer if len(q.data.polygons) >= 60 and q.get("mat", "cloth") in ("cloth", "leather")
+                 and not q.name.startswith(("shoes", "socks", "bracers", "pauldron"))
                  and not str(q.get("rule", "")).startswith("rigid") and q.get("rule") != "head"]
         if not outer:
             continue

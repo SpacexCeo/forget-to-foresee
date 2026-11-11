@@ -15,7 +15,7 @@ Each entry is plain data read by the build scripts in this folder:
 # Town palette (linear RGB): linen, wool, leather, dyed felt in terracotta, ochre, moss, indigo.
 PALETTE = {
     "linen": (0.55, 0.49, 0.38), "linen_dark": (0.38, 0.32, 0.24), "cream": (0.60, 0.54, 0.43),
-    "undyed_wool": (0.36, 0.31, 0.25), "charcoal": (0.045, 0.045, 0.05), "slate": (0.12, 0.13, 0.15),
+    "undyed_wool": (0.20, 0.15, 0.105), "charcoal": (0.045, 0.045, 0.05), "slate": (0.12, 0.13, 0.15),
     "terracotta": (0.30, 0.095, 0.055), "brick": (0.21, 0.065, 0.04), "ochre": (0.42, 0.25, 0.07),
     "straw": (0.50, 0.38, 0.17), "moss": (0.10, 0.115, 0.05), "sage": (0.28, 0.33, 0.20),
     "indigo": (0.05, 0.06, 0.105), "indigo_light": (0.09, 0.11, 0.18), "plum": (0.16, 0.06, 0.10),

@@ -125,7 +125,7 @@ def reduce(bm, skin, eyes, garments, budget, face_target=5000):
         SH.trim_field(o)
     keep = [o for o in rest if tris(o) < 260 or o.get("mat") == "hair" or o.name.startswith("hat")]
     for o in keep:
-        if tris(o) > 900:
+        if tris(o) > 1800:
             decimate(o, 0.6)
     big = [o for o in rest if o not in keep]
     want = budget - fixed - sum(tris(o) for o in keep)
