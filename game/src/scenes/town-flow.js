@@ -334,7 +334,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     box.append(el('p', null, i18n.t('tee.advice', { echo: i18n.t('exch.echo.' + d.echo), action: i18n.t('tee.action.' + d.action), reason: d.reason || '' })));
     const chainNote = () => {
       if (!st.chain || st.chain.state === 'sending') return [];
-      const p = el('p', null, st.chain.ok ? i18n.t('tee.recorded') : i18n.t('tee.recordFailed', { reason: st.chain.reason || '' }));
+      const reason = st.chain.reason && i18n.has && i18n.has('ledger.why.' + st.chain.reason) ? i18n.t('ledger.why.' + st.chain.reason) : String(st.chain.reason || '').replace(/_/g, ' ');
+      const p = el('p', null, st.chain.ok ? i18n.t('tee.recorded') : i18n.t('tee.recordFailed', { reason }));
       if (!st.chain.hash) return [p];
       const a = el('a', null, i18n.t('ledger.view')); a.href = 'https://testnet.nearblocks.io/txns/' + st.chain.hash; a.target = '_blank'; a.rel = 'noopener noreferrer';
       return [p, a];
@@ -342,6 +343,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     box.append(teeLine(st, el, b, chainNote));
     if (st.chain && st.chain.state === 'sending') box.append(el('p', null, i18n.t('tee.recording')));
     else if (st.chain) box.append(...chainNote());
+    else if (teeMod.teeRecordBlocker(ctx.storage || globalThis.localStorage)) box.append(el('p', null, i18n.t('ledger.why.' + teeMod.teeRecordBlocker(ctx.storage || globalThis.localStorage))));
     else box.append(b('tee.record', () => {
       const talk = folkTalk; st.chain = { state: 'sending' }; renderFolk();
       teeMod.recordTeeDecision({ storage: ctx.storage || globalThis.localStorage, npc, decision: d, tee: st.tee })
@@ -582,6 +584,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     get walkMs() { return state.arrivedAt ? Math.round(state.arrivedAt - state.startedAt) : null; },
     /** The townsperson the prompt offers a talk with, or null. */
     get talkNpc() { return talkNpc; },
+    /** A talk or a spot panel is open (the barks hold back). */
+    get talking() { return !!((quest && quest.talk) || folkTalk || spotPanel); },
     elements: { root, objective, prompt, talk: talkEl, questMeta: meta },
   };
 }

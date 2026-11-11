@@ -50,11 +50,14 @@ export async function askTee(kind, payload, { base = relayerUrl(), fetch = globa
 /** The JSON a person or tools/verify-tee/verify.mjs checks (the answer's proof, nothing private). */
 export const answerJson = (tee) => JSON.stringify({ tee }, null, 2);
 
+/** What stops recording a TEE decision right now, or null: 'not_deployed' | 'need_guest'. */
+export const teeRecordBlocker = (storage, deployment = DAY1_DEPLOYMENT) => (!ledgerContract(deployment) ? 'not_deployed' : !guestFrom(storage) ? 'need_guest' : null);
+
 /** Records a TEE decision on the ledger with the guest key. Resolves {ok, hash?, reason?}. */
 export async function recordTeeDecision({ storage, npc, decision, tee, deployment = DAY1_DEPLOYMENT, fetch = globalThis.fetch, rpcUrls = NEAR_DEPLOYMENT.rpcUrls }) {
-  if (!ledgerContract(deployment)) return { ok: false, reason: 'not_deployed' };
+  const why = teeRecordBlocker(storage, deployment);
+  if (why) return { ok: false, reason: why };
   const g = guestFrom(storage);
-  if (!g) return { ok: false, reason: 'need_guest' };
   const client = createTxClient({ rpcUrls, fetch });
   const key = await importSecretKey(g.secretKey);
   const args = { npc, action: decision.action, decision_hash: decision.decision_hash, model: tee.model, chat_id: tee.chat_id, signed_text: tee.signed_text, response_hash: tee.response_hash, signature: tee.signature, signing_address: tee.signing_address };
