@@ -60,7 +60,16 @@ cov = lambda d, w, aa=0.0003: np.clip((w - d) / aa + 0.5, 0, 1)          # soft-
 over = lambda c, k, a_: c * (1 - a_[:, None]) + np.asarray(k, float) * a_[:, None]
 def seg_d(p, a_, b_):
     a_ = np.asarray(a_, float); ab = np.asarray(b_, float) - a_; t = np.clip(((p - a_) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(p - a_ - t[:, None] * ab, axis=1)
-col[pp == 6] = dress
+# the gown: flat black with cel folds (a shadow wedge, a crisp line, a thin light edge), a side and a back seam, a light trim on the hem and the slit
+m = pp == 6
+if m.any():
+    a_ = th[m]; z_ = zz[m]; c = np.tile(dress, (int(m.sum()), 1)); SHD = dress * 0.5; LINE = np.array([0.035, 0.035, 0.045]); HI = np.array([0.30, 0.29, 0.34]); dd = lambda t0: (a_ - t0 + 180) % 360 - 180
+    for t0, z0, w, sg in ((-150, 0.50, 7, 1), (-115, 0.42, 5, -1), (-70, 0.55, 8, 1), (-35, 0.38, 6, -1), (-8, 0.60, 5, 1), (105, 0.50, 6, 1), (140, 0.40, 7, -1), (172, 0.55, 5, 1)):
+        g = np.clip((z0 - z_) / z0, 0, 1); d = dd(t0 + 3 * np.sin(z_ * 9 + t0)) * sg; wd = np.maximum(w * g, 1e-6)
+        c = over(c, SHD, (d > 0) * np.clip((wd - d) / 1.2, 0, 1) * (g > 0)); c = over(c, HI, np.clip(1 - abs(d + 0.9) / 0.5, 0, 1) * np.clip(g * 3, 0, 1) * 0.6); c = over(c, LINE, np.clip(1.5 - abs(d) / 0.3, 0, 1) * np.clip(g * 6, 0, 1))
+    c = over(c, LINE, np.clip(1.5 - abs(dd(-90)) / 0.3, 0, 1)); c = over(c, LINE, np.clip(1.5 - abs(dd(180)) / 0.3, 0, 1) * (z_ > 0.3))
+    t1, t2 = Z.slit(z_); e = np.minimum(abs(a_ - t1), abs(a_ - t2)); c = over(c, HI, np.clip(1.5 - e / 0.8, 0, 1) * (z_ < 0.80))
+    c = over(c, HI, np.clip(1.5 - (z_ - (0.03 + 0.015 * np.cos(np.radians(a_)))) / 0.004, 0, 1)); col[m] = c
 m = (pp == 0) & (zz < 0.94) & (rr < 0.215)             # the hips of the shell: the gown's flat black, so the join to the loft does not show
 f = np.clip((0.94 - zz[m]) / 0.06, 0, 1)[:, None]; col[m] = col[m] * (1 - f) + dress * f
 # the laced opening on the left hip: skin between the two edges, cross-lacing, a bow at the bottom

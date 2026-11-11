@@ -207,8 +207,7 @@ for sd, sg in (('L', 1), ('R', -1)):
     set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['hand' + sd] = ob
     for k, (h_, t_) in hb.items(): bones_extra[k] = (T(h_), T(t_), 'hand_' + sd if k != 'hand_' + sd else 'forearm_' + sd)
     top = np.array(P['arm'][sd]['wrap_mid']) + [sg * (P['arm'][sd]['radius'] - 0.004), 0.004, -0.012]
-    G = ribbons(sd, top, sg); ob = make_obj('elise_ribbon_' + sd, G.v, G.f); recalc(ob)
-    set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['ribbon' + sd] = ob
+    # the hanging ribbon tails are not built (owner, fix pass 2): the wrist wraps stay, the ribbon bones stay in the skeleton
     bones_extra[f'ribbon_{sd}_0'] = (top, top + [sg * 0.008, 0, -0.14], 'forearm_' + sd); bones_extra[f'ribbon_{sd}_1'] = (top + [sg * 0.008, 0, -0.14], top + [sg * 0.018, 0, -0.28], f'ribbon_{sd}_0')
 
 # ---------------- weights: head
@@ -322,7 +321,7 @@ bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); 
 me = el.data; nf = len(me.polygons); pa = np.empty(nf, np.int32); me.attributes['part'].data.foreach_get('value', pa)
 fc = np.empty(nf * 3); me.polygons.foreach_get('center', fc); fx_, fy_, fz = fc.reshape(-1, 3).T; fth = Z.ang(fx_, fy_)
 # texel density by zone; every zone is unwrapped on its own, so an island never mixes two densities
-zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.55, 7: 3.5, 8: 5.0, 9: 1.1}
+zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.9, 7: 3.5, 8: 5.0, 9: 1.1}
 zone[pa == 1] = 1; zone[(pa == 1) & (fy_ < -0.03) & (fz > 1.49) & (fz < 1.68) & (abs(fx_) < 0.08)] = 2; zone[pa == 2] = 3
 zone[pa == 4] = 9; zone[(pa == 4) & (fz > 0.59) & (fz < 0.85)] = 4; zone[pa == 5] = 5; zone[pa == 6] = 6
 zone[(pa == 0) & (fz > 0.79) & (fz < 0.99) & (fth > 12) & (fth < 104) & (np.hypot(fx_, fy_) < 0.215)] = 7; zone[pa >= Z.PART0] = 8
