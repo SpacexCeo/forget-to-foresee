@@ -202,6 +202,19 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   const gateMin = GATE_PASSAGE.min.map((v, k) => v + TOWN_ORIGIN[k]), gateMax = GATE_PASSAGE.max.map((v, k) => v + TOWN_ORIGIN[k]);
   const openGate = (tris) => carveBox(tris, gateMin, gateMax);
   const OUTSIDE_OWNER = 'town:outside-ground';
+  // The passage floor is a collider box with no visual piece of its own: the terrain's cobbles stop short of the
+  // gate and the street ends at the inner leaves, so the fog showed through a strip under the arch (seen in-game
+  // 11.11). A plane with the road's cobble material covers GATE_FLOOR at street level.
+  let gateFloor = null;
+  function gateFloorVisual(cobble) {
+    if (gateFloor || !cobble || !cobble.material) return;
+    const w = GATE_FLOOR.max[0] - GATE_FLOOR.min[0], d = GATE_FLOOR.max[2] - GATE_FLOOR.min[2];
+    const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2);
+    const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 2, uv.getY(i) * d / 2); // about 2 m per tile
+    gateFloor = new THREE.Mesh(g, cobble.material); gateFloor.name = 'town_gate_floor'; gateFloor.receiveShadow = true;
+    gateFloor.position.set(TOWN_ORIGIN[0] + (GATE_FLOOR.min[0] + GATE_FLOOR.max[0]) / 2, TOWN_ORIGIN[1] + GATE_FLOOR.max[1] + 0.005, TOWN_ORIGIN[2] + (GATE_FLOOR.min[2] + GATE_FLOOR.max[2]) / 2);
+    group.add(gateFloor);
+  }
   function outsideGround(inst) {
     world.removeOwner(OUTSIDE_OWNER);
     if (!inst.real || !inst.parts) return;
@@ -209,6 +222,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     const meshes = inst.parts.runtime.filter(named);
     const tris = filterTriangles(meshesToTriangles(meshes), TOWN_ORIGIN, beyondWalls);
     world.addBox(OUTSIDE_OWNER, GATE_FLOOR.min.map((v, k) => v + TOWN_ORIGIN[k]), GATE_FLOOR.max.map((v, k) => v + TOWN_ORIGIN[k]));
+    gateFloorVisual(meshes.find((m) => /cobble/.test(m.userData.name || m.name || '')));
     if (tris.length) world.addTriangles(OUTSIDE_OWNER, tris);
     state.outsideTriangles = tris.length / 9;
   }
