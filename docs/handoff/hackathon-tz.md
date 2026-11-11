@@ -24,6 +24,10 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - Server: `tests/demo.test.mjs` runs on a fixed seed (it failed on about 1 run in 4 on main: some seeds end at tick
   16 as `gone`, with no vote).
 
+- After the lead's competitor-map note: on `?demo=judge`, Memories opens by itself on Iris's shard card after
+  the trial-6 auction (checked headless: a real token when the call is forgotten, the preview otherwise). Copy pass
+  §7 is in `docs/submission/copy-alignment.md` (`ent.wallet` fixed; the repo description is the owner's to change).
+
 ## Next
 - Not done and not asked: P1-D (owner mint), P2. After the freeze: copy pass (spec section 7), video shot list.
 - Not walked on the GPU yet: the town quest and the shard preview toast (only headless/unit).

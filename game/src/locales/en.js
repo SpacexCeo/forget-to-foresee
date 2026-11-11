@@ -130,7 +130,7 @@ export default {
   'ent.title': 'Demo access',
   'ent.badge': 'Synthetic entitlement · testnet demo · no payment',
   'ent.body': 'The full game will check a paid account on the server. This hackathon build is a guest demo: you get a free synthetic entitlement instead. It lives only in this browser and costs nothing.',
-  'ent.wallet': 'A NEAR wallet is optional and only used later for a voluntary testnet action. It never sees a seed phrase.',
+  'ent.wallet': "No NEAR wallet is needed, and the game never asks for one or for a seed phrase. The testnet records are read-only.",
   'ent.accept': 'Continue as guest',
 
   // ---- tutorial ----

@@ -136,7 +136,7 @@ export default {
   'ent.title': 'Accesso demo',
   'ent.badge': 'Diritto sintetico · demo su testnet · nessun pagamento',
   'ent.body': 'Il gioco completo verificherà un account a pagamento sul server. Questa build per l’hackathon è una demo ospite: ricevi invece un diritto sintetico gratuito. Vive solo in questo browser e non costa nulla.',
-  'ent.wallet': 'Un wallet NEAR è facoltativo e serve solo più avanti per un’azione volontaria su testnet. Non vede mai una frase seed.',
+  'ent.wallet': "Non serve un wallet NEAR e il gioco non chiede mai un wallet né una frase seed. I dati su testnet sono di sola lettura.",
   'ent.accept': 'Continua come ospite',
 
   // ---- tutorial ----
