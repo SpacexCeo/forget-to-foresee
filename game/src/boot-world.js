@@ -28,7 +28,7 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
-import { logKeysFromStats } from './ui/ink-bar.js';
+import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';

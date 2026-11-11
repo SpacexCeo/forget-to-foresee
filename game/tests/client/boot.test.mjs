@@ -156,9 +156,16 @@ test('Iris stand-in: no capsule while her model is on its way, the capsule only 
   assert.equal(irisStandInVisible({ hasModel: true, fetched: true, waited: 60 }), false, 'downloaded and waiting for the play layer: still hidden');
 });
 
-test('ink bar: the atlas row follows progress; the log names what is loading, in every locale', async () => {
-  const { inkRow, logKeyFor, logKeysFromStats, LOG_EN, INK_ATLAS } = await import('../../src/ui/ink-bar.js');
-  assert.equal(inkRow(0), 0); assert.equal(inkRow(1), INK_ATLAS.steps - 1); assert.equal(inkRow(0.5), 12); assert.equal(inkRow(7), INK_ATLAS.steps - 1);
+test('loading v3: the log names what is loading in the world\'s voice, in every locale; the screen markup and art are in place', async () => {
+  const { logKeyFor, logKeysFromStats, LOG_EN, LOG_LINES } = await import('../../src/ui/loading.js');
+  assert.equal(LOG_LINES, 4);
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  for (const cls of ['boot-diagram', 'boot-log', 'boot-halo', 'boot-iris', 'boot-sub', 'boot-word', 'boot-line', 'boot-pct']) assert.ok(html.includes(cls), cls);
+  assert.ok(html.includes('assets/ui/loading_iris.webp'));
+  const { execFileSync } = await import('node:child_process');
+  execFileSync(process.execPath, [new URL('../../../art/ui/loading/build_diagram.mjs', import.meta.url).pathname, '--check']); // the inline art is up to date
+  assert.deepEqual(logKeysFromStats({ list: [{ name: 'shell_1', state: 'warming', priority: 9 }] }), ['loading.log.shadersIsland'], 'the archipelago has its own warming line');
   assert.equal(logKeyFor('town_terrain'), 'loading.log.terrain'); assert.equal(logKeyFor('town_block_mid'), 'loading.log.houses');
   assert.equal(logKeyFor('town_temple'), 'loading.log.shrine'); assert.equal(logKeyFor('shell_a'), 'loading.log.shells');
   const stats = { list: [{ name: 'town_sky', state: 'loading', priority: 1 }, { name: 'town_terrain', state: 'loading', priority: 200 }, { name: 'town_altar', state: 'warming', priority: 150 }, { name: 'town_temple', state: 'loaded', priority: 300 }] };

@@ -9,7 +9,7 @@ import { talkTarget, TALK_LEAVE } from './town-quest.js';
 import { HIRE } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
 import { PLAY_MESSAGES } from '../play/i18n.js';
-import { createInkBar } from '../ui/ink-bar.js';
+import { createVeil } from '../ui/loading.js';
 
 const CSS = `
 .ftf-town { position: fixed; inset: 0; pointer-events: none; z-index: 9; font-family: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; }
@@ -26,16 +26,11 @@ const CSS = `
 .ftf-town-prompt:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .ftf-town-prompt kbd { border: 1px solid rgba(29, 23, 8, .55); border-bottom-width: 2px; border-radius: 5px; padding: 1px 8px; font: 600 14px ui-monospace, Consolas, monospace; color: #1d1708; background: rgba(255, 255, 255, .35); }
 .ftf-town-prompt kbd[hidden] { display: none; }
-.ftf-town-cover { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; pointer-events: auto;
-  background: radial-gradient(circle at 50% 54%, #fffaf0 0%, #fbe7b4 46%, #eebf6c 100%); color: #3a2a0d; opacity: 0; transition: opacity var(--ftf-town-fade, .9s) ease-in-out;
-  font: 400 clamp(24px, 4.2vw, 40px)/1.25 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; letter-spacing: .02em; }
+.ftf-town-cover { z-index: 9000; pointer-events: auto; opacity: 0; transition: opacity var(--ftf-town-fade, .9s) ease-in-out; }
 .ftf-town-cover.is-on { opacity: 1; }
-.ftf-town-cover span { opacity: 0; transform: translateY(6px); transition: opacity .7s ease .25s, transform .7s ease .25s; }
-.ftf-town-cover.is-on span { opacity: 1; transform: none; }
-html[data-motion="reduce"] .ftf-town-cover span, .ftf-town-cover.is-plain span { transform: none; transition: opacity .3s linear; }
-.ftf-town-cover { flex-direction: column; gap: 22px; }
-.ftf-town-cover-ink { opacity: 0; transition: opacity .5s ease .7s; }
-.ftf-town-cover.is-on .ftf-town-cover-ink { opacity: 1; }
+.ftf-town-cover .boot-sub { opacity: 0; transform: translateY(6px); transition: opacity .7s ease .25s, transform .7s ease .25s; }
+.ftf-town-cover.is-on .boot-sub { opacity: 1; transform: none; }
+html[data-motion="reduce"] .ftf-town-cover .boot-sub, .ftf-town-cover.is-plain .boot-sub { transform: none; transition: opacity .3s linear; }
 /* the town quest (town-quest.js): one talk panel, bottom centre */
 .ftf-quest-talk { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 13; width: min(560px, calc(100% - 32px));
   box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(14, 18, 20, .92); border: 1px solid rgba(233, 180, 76, .45); color: #f3ead6; font: 16px/1.45 system-ui, sans-serif; pointer-events: auto; }
@@ -117,7 +112,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     }
     cap.textContent = state.device === 'gamepad' ? 'A' : 'E';
     cap.hidden = state.device === 'touch';
-    if (cover) cover.firstChild.textContent = i18n.t('town.transition.title');
+    if (cover) { const sb = cover.querySelector('.boot-sub'); if (sb) sb.textContent = i18n.t('town.transition.title'); }
   }
   function renderVisibility() {
     const on = state.phase === 'town';
@@ -344,14 +339,15 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (quest) quest.close();
     folkTalk = null; spotPanel = null;
     renderVisibility();
-    cover = doc.createElement('div'); cover.className = 'ftf-town-cover' + (reduced ? ' is-plain' : '');
+    // The cover is the loading screen itself (ui/loading.js createVeil): the same dark screen, its line following the
+    // archipelago's real first-view progress, its log what is loading now, the subtitle "The Tournament begins".
+    const veil = createVeil(doc, { sub: i18n.t('town.transition.title'), t: (k) => i18n.t(k) });
+    cover = veil ? veil.el : doc.createElement('div');
+    cover.classList.add('ftf-town-cover'); if (reduced) cover.classList.add('is-plain');
     cover.setAttribute('role', 'status');
     cover.style.setProperty('--ftf-town-fade', (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) + 's');
-    cover.append(doc.createElement('span'));
-    // The hand-drawn bar with the real progress of the archipelago's first view, and the log of what is loading
-    // (ui/ink-bar.js: the same pair as on the loading screen; nothing appears unfinished).
-    const ink = createInkBar(doc, { t: (k) => i18n.t(k) });
-    ink.el.classList.add('ftf-town-cover-ink'); cover.append(ink.el);
+    if (!veil) { const sp = doc.createElement('span'); sp.className = 'boot-sub'; cover.append(sp); }
+    const ink = { set: (v) => { if (veil) veil.set(v); }, log: (k) => { if (veil) veil.log(k); }, destroy() {} };
     let shown = 0;
     const progress = (v) => { shown = Math.max(shown, Math.min(1, v)); ink.set(shown); };
     renderText();

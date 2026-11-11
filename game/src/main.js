@@ -9,7 +9,7 @@
 // Play starts in the town on the ground (docs/town.md); ?skip=town and the deep links above go straight to the
 // archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
 import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
-import { logKeysFromStats } from './ui/ink-bar.js';
+import { logKeysFromStats } from './ui/loading.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
