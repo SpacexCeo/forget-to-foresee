@@ -86,3 +86,9 @@ Keepers on the sheets: Maren (Exchange), Odo (Scribe), Bram (Inn). QA hooks plan
   `TOWN_NO_BAKE=1` skips the light bake.
 - **Checks**: `cd game && npm test && npm run build`; then open the built page once (`npx vite preview`), because
   the tests do not catch a chunk cycle.
+
+## Owner-reported art defects (11.11, screenshots in the lead session)
+
+1. Market cart: the cargo is a single lumpy green blob that reads as a rock or a giant leaf. Replace with readable goods (cabbages, sacks, crates) or remove.
+2. Lower gate: the open gate shows only thin dark bars and two ring handles floating in the arch (the door leaves are missing or zero-thickness); above the arch a ghostly ring outline is barely visible (a decal or emblem that renders as an outline). Give the gate real door leaves (open, against the walls) or an iron portcullis raised, and either a proper carved ring emblem or nothing.
+3. The gate walls read washed out / overexposed in daylight; check albedo and the sun preset there.
