@@ -204,6 +204,8 @@ def build_skitter(col):
     plate(mb, (0, -0.30, H + 0.06), (0, -0.7, 0.7), (0, -1, -0.25), 0.2, 0.15, 0.04, "body", 0, sides=5)
     mb.gem((0, 0.0, H - 0.02), Y, 0.56, 0.11, sides=8, mat=3, tag="body")            # underbody
     for sx in (1, -1):
+        mb.gem((sx * 0.2, 0.0, H - 0.005), Y, 0.46, 0.008, sides=4, mat=2, tag="body")     # teal seam along the rim (weak point)
+    for sx in (1, -1):
         mb.gem((sx * 0.05, -0.335, H + 0.03), Vector((sx * 0.6, -0.2, 0.1)), 0.06, 0.008, sides=4, mat=2, tag="body")   # teal slits
     for side, i, hip, knee, foot in legs:
         ta, tb = f"leg{side}{i}_a", f"leg{side}{i}_b"
@@ -291,6 +293,8 @@ def build_hulker(col):
     a, b = seg("chest"); mb.tube([a, b], lambda s: 0.36 + 0.14 * s, 8, mat=1, tag="chest"); shell(mb, a, b, lambda s: 0.4 + 0.16 * s, 10, 4, "chest", seed=2, size=1.1)
     plate(mb, (0, -0.55, 1.5), (0, -1, 0.1), (0, 0.15, 1), 0.7, 0.42, 0.08, "chest", 0)                   # breastplate
     mb.gem((0, -0.6, 1.5), Vector((0, 0.1, 1)), 0.42, 0.025, sides=4, mat=2, tag="chest")                 # amber seam
+    for (x, y, z, ax) in ((0.28, -0.42, 1.62, (0.4, 0, 1)), (-0.3, -0.38, 1.35, (-0.3, 0, 1)), (0.2, 0.25, 1.05, (0.6, 0.2, 1))):
+        mb.gem((x, y, z), Vector(ax), 0.26, 0.018, sides=4, mat=2, tag="chest" if z > 1.2 else "pelvis")      # glowing cracks
     a, b = seg("head"); plate(mb, (0, -0.55, 1.66), (0, -0.6, 0.8), (0, -1, 0.2), 0.42, 0.3, 0.1, "head", 0, sides=5)
     mb.gem((0, -0.62, 1.60), Vector((0, 0, 1)), 0.16, 0.012, sides=4, mat=2, tag="head")
     tags = ["pelvis", "chest", "head"]
@@ -361,7 +365,7 @@ def build_veilbell(col):
     """MOB-001_03 Veilbell (caster): 1.65 m, a porous stone bell over hollow ribs, two planted root legs, four veil
     ribbons, a small teal light; the attack holds one charged seed (bone `seed`) before it launches."""
     A = "mob_veilbell"
-    mats = [mat_stone(A, "Bell", 31, (0.72, 0.69, 0.60), crack=0.35, lichen=0.3, pores=1.0), mat_stone(A, "Root", 32, (0.43, 0.39, 0.31), crack=0.1, streak=1.0),
+    mats = [BF.tex_material(A, "Bell", stone_maps(31, (0.72, 0.69, 0.60), crack=0.35, lichen=0.3, pores=1.0), double_sided=True, size=TEX), mat_stone(A, "Root", 32, (0.43, 0.39, 0.31), crack=0.1, streak=1.0),
             mat_glow(A, (0.42, 0.85, 0.80), 6.0), BF.tex_material(A, "Veil", stone_maps(33, (0.84, 0.82, 0.74), crack=0.0, streak=0.4), double_sided=True, size=TEX),
             mat_stone(A, "Rib", 34, (0.74, 0.70, 0.60), crack=0.1)]
     B = {"root": ((0, 0, 0), (0, 0.2, 0), None), "body": ((0, 0, 0.72), (0, 0, 1.12), "root"), "bell": ((0, 0, 1.1), (0, 0, 1.65), "body"),
@@ -383,12 +387,25 @@ def build_veilbell(col):
     tags = ["body", "bell", "seed"]
     # the bell: a faceted, slightly tilted hood with a pointed crown
     prof = [(0.05, 0.56), (0.13, 0.52), (0.2, 0.44), (0.25, 0.32), (0.3, 0.2), (0.37, 0.08), (0.44, -0.02), (0.46, -0.08), (0.43, -0.1)]
-    R = []
-    for r, h in prof:
-        R.append([Vector((r * math.sin(TAU * j / 11) * (1.0 + 0.08 * math.sin(3 * TAU * j / 11)), -r * math.cos(TAU * j / 11), 1.1 + h)) for j in range(11)])
-    mb.rings(R, mat=0, tag="bell", cap0=(0, 0, 1.72))
-    Rin = [[p * 0.92 + Vector((0, 0, 0.1)) * 0.0 for p in ring] for ring in R[-3:]]
-    mb.rings([[Vector((p.x * 0.9, p.y * 0.9, p.z - 0.02)) for p in ring] for ring in R[-2:]][::-1], mat=0, tag="bell")
+    NA = 18
+    rows = []
+    for i in range(len(prof) - 1):                      # two rows per profile step
+        for q in (0.0, 0.5):
+            rows.append(tuple(prof[i][k] + (prof[i + 1][k] - prof[i][k]) * q for k in (0, 1)))
+    rows.append(prof[-1])
+    G = [[mb.vert(Vector((r * math.sin(TAU * j / NA) * (1.0 + 0.07 * math.sin(3 * TAU * j / NA)), -r * math.cos(TAU * j / NA), 1.1 + h)), "bell") for j in range(NA)] for r, h in rows]
+    import random
+    rnd = random.Random(7)
+    for i in range(len(G) - 1):
+        for j in range(NA):
+            l = (j + 1) % NA
+            hole = 2 <= i <= len(G) - 4 and rnd.random() < 0.3 and (i + j) % 2 == 0      # the porous bell: open cells, no holes at the crown or rim
+            if not hole:
+                mb.face([G[i][j], G[i][l], G[i + 1][l], G[i + 1][j]], [(j / NA, 1 - i / len(G)), ((j + 1) / NA, 1 - i / len(G)), ((j + 1) / NA, 1 - (i + 1) / len(G)), (j / NA, 1 - (i + 1) / len(G))], 0)
+    top = mb.vert((0, 0, 1.72), "bell")
+    for j in range(NA):
+        mb.face([G[0][(j + 1) % NA], G[0][j], top], [(0, 0.95), (1, 0.95), (0.5, 1)], 0)
+    mb.gem((0, 0.02, 0.94), Z, 0.12, 0.06, sides=8, mat=2, tag="body")                    # the teal core inside the ribs (a weak point)
     mb.gem((0, -0.14, 1.1), Vector((0, -1, 0)), 0.08, 0.035, sides=6, mat=2, tag="bell")          # the teal light
     # hollow ribs around a spine
     mb.tube([(0, 0.02, 0.72), (0, 0.04, 1.12)], 0.035, 6, mat=4, tag="body")
@@ -500,7 +517,7 @@ def build_crownrift(col):
     LEG = []
     for s, sx in (("L", 1), ("R", -1)):
         for i, y in ((0, -0.25), (1, 0.75)):
-            hip, knee, ankle, foot = (sx * 0.28, y, BZ - 0.05), (sx * 0.75, y - 0.1 + 0.25 * i, BZ + 0.35), (sx * 0.95, y - 0.05 + 0.35 * i, 0.55), (sx * 1.0, y + 0.3 * i, 0.0)
+            hip, knee, ankle, foot = (sx * 0.28, y, BZ - 0.05), (sx * 0.8, y - 0.15 + 0.3 * i, BZ + 0.62), (sx * 1.1, y - 0.1 + 0.4 * i, 0.62), (sx * 1.12, y + 0.3 * i, 0.0)
             B[f"leg{s}{i}_a"] = (hip, knee, "body"); B[f"leg{s}{i}_b"] = (knee, ankle, f"leg{s}{i}_a"); B[f"leg{s}{i}_c"] = (ankle, foot, f"leg{s}{i}_b")
             LEG.append((s, i, sx))
         B[f"blade{s}_a"] = ((sx * 0.25, -0.55, BZ - 0.05), (sx * 0.5, -0.85, BZ - 0.55), "body")
@@ -529,6 +546,11 @@ def build_crownrift(col):
             mb.tube([a, b], lambda q, r=r: r * (1 - 0.35 * q), 6, mat=1, tag=n)
             if part == "a":
                 shell(mb, a, b, 0.11, 4, 2, n, seed=hash(n) % 31, size=1.2)
+                mb.gem(b, Vector((sx, 0, 0.3)), 0.2, 0.09, sides=7, mat=1, tag=n)                                # knee joint
+                mb.gem(b + Vector((sx * 0.07, 0, 0.0)), Vector((sx, 0, 0)), 0.06, 0.05, sides=6, mat=3, tag=n)    # amber weak point
+            if part == "b":
+                shell(mb, a, b, 0.075, 3, 3, n, seed=hash(n) % 37, size=1.1, arc=(-60, 120))
+                mb.gem(b, Vector((sx, 0, 0.2)), 0.13, 0.065, sides=6, mat=1, tag=n)                               # ankle joint
             tags.append(n)
         mb.gem(Vector(B[f"leg{s}{i}_c"][1]) + Vector((0, 0, 0.06)), Vector((0, 0, -1)), 0.16, 0.035, sides=5, mat=2, tag=f"leg{s}{i}_c")
     for s, sx in (("L", 1), ("R", -1)):

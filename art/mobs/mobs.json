@@ -6,8 +6,8 @@
   "height_m": 0.42,
   "length_m": 0.65,
   "glow": "teal",
-  "tris": 1864,
-  "tris_m": 1022,
+  "tris": 1880,
+  "tris_m": 1030,
   "clips": {
    "idle": {
     "frames": 60,
@@ -53,8 +53,8 @@
   "height_m": 2.25,
   "length_m": 1.7,
   "glow": "amber",
-  "tris": 5140,
-  "tris_m": 2824,
+  "tris": 5116,
+  "tris_m": 2807,
   "clips": {
    "idle": {
     "frames": 90,
@@ -100,8 +100,8 @@
   "height_m": 1.65,
   "length_m": 0.95,
   "glow": "teal",
-  "tris": 1145,
-  "tris_m": 629,
+  "tris": 1478,
+  "tris_m": 812,
   "clips": {
    "idle": {
     "frames": 75,
@@ -147,8 +147,8 @@
   "height_m": 2.8,
   "length_m": 2.6,
   "glow": "amber",
-  "tris": 3204,
-  "tris_m": 1762,
+  "tris": 4252,
+  "tris_m": 2338,
   "clips": {
    "idle": {
     "frames": 90,
