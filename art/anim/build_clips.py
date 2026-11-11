@@ -14,7 +14,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ftfanim import chains, layers               # noqa: E402
+from ftfanim import chains, layers, skirt        # noqa: E402
 from ftfanim.bvh import Bvh                      # noqa: E402
 from ftfanim.gltfio import write_clips_glb       # noqa: E402
 from ftfanim.loco import build_action, build_cycle, fingers             # noqa: E402
@@ -98,6 +98,8 @@ def main():
             sim = chains.simulate(rig, body, r['pelvis'][:len(body)], fps=spec.get('fps', 30) if spec['kind'] == 'cycle' else 30, loop=loop, air_speed=spec.get('speed', 0))
             r['local'] = np.concatenate([sim, sim[:1]]) if loop else sim
             chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
+            if ch.get('skirt'):          # the skirt panels follow the legs instead of the spring chains (ftfanim/skirt.py)
+                r['local'] = skirt.envelope(rig, r['local'])
         bones = chain + [b for b in rig.names if b in rt.mapped or b.startswith(('toe_', 'thumb_', 'index_', 'fingers_'))]
         extras = {'take': 'CMU ' + take, 'speed': spec.get('speed', 0), 'loop': loop, 'pelvis_y': round(float(np.mean(r['pelvis'][:, 1])), 3)}
         for k in ('seat', 'note'):

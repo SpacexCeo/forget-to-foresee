@@ -142,14 +142,22 @@ for sd, sg, pid in (('L', 1, 2), ('R', -1, 3)):
 sL = ramp(x, -0.05, 0.05); side = abs(x)
 isarm = body & (side > np.interp(z, GZ, GX)) & (z < 1.25)
 tor = body & ~isarm
-wth = ramp(0.90 - z, 0, 0.26); hem = ramp(0.28 - z, 0, 0.28) * 0.6; fy = ramp(-y, -0.03, 0.03)
+wth = ramp(0.93 - z, 0, 0.13)
+def seg_dist(P_, A_, B_):
+    ab = B_ - A_; t_ = np.clip(((P_ - A_) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(P_ - A_ - np.outer(t_, ab), axis=1)
+prox = {sd: 1 - ramp(np.minimum(seg_dist(V, J['hip' + sd], J['knee' + sd]), seg_dist(V, J['knee' + sd], J['ank' + sd])), 0.075, 0.105) for sd in 'LR'}
+tot = np.maximum(prox['L'] + prox['R'], 1.0); prox = {k: v / tot for k, v in prox.items()}; rem = 1 - prox['L'] - prox['R']
+rxy = np.maximum(np.hypot(x, y), 1e-6); ux, uy = x / rxy, y / rxy
+sec = {'F': np.where(uy < 0, uy * uy, 0.0), 'B': np.where(uy > 0, uy * uy, 0.0), 'L': np.where(ux > 0, ux * ux, 0.0), 'R': np.where(ux < 0, ux * ux, 0.0)}
 a_sh = ramp(side, 0.075, 0.125) * ramp(z, 1.24, 1.30) * (1 - ramp(z, 1.45, 1.49)); shb = 0.5 * ramp(side, 0.03, 0.08) * (1 - a_sh) * ramp(z, 1.33, 1.40) * (1 - ramp(z, 1.45, 1.49))
 core = tor * (1 - a_sh - shb)
 add('pelvis', core * (1 - ramp(z, 0.98, 1.06)) * (1 - wth)); add('spine', core * ramp(z, 0.98, 1.06) * (1 - ramp(z, 1.16, 1.24)))
 add('chest', core * ramp(z, 1.16, 1.24) * (1 - ramp(z, 1.44, 1.49))); add('neck', core * ramp(z, 1.44, 1.49))
+for nm in 'FB':
+    add(f'skirt_{nm}_0', core * wth * rem * sec[nm] * tk); add(f'skirt_{nm}_1', core * wth * rem * sec[nm] * (1 - tk))
 for sd, sg, s_ in (('L', 1, sL), ('R', -1, 1 - sL)):
-    add('thigh_' + sd, core * wth * s_ * tk); add('shin_' + sd, core * wth * s_ * (1 - tk) * (1 - hem))
-    add(f'skirt_F{sd}_0', core * wth * s_ * (1 - tk) * hem * fy); add(f'skirt_B{sd}_0', core * wth * s_ * (1 - tk) * hem * (1 - fy))
+    own = prox[sd] + rem * sec[sd]
+    add('thigh_' + sd, core * wth * own * tk); add('shin_' + sd, core * wth * own * (1 - tk))
     ms = (x * sg > 0)
     S, E, Wr = J['S' + sd], J['E' + sd], J['W' + sd]; u1 = unit(E - S); u2 = unit(Wr - E); L1 = np.linalg.norm(E - S); L2 = np.linalg.norm(Wr - E)
     fore = ramp((V - S) @ u1, L1 - 0.04, L1 + 0.04); hd = ramp((V - E) @ u2, L2 - 0.02, L2 + 0.02) * 0.6
@@ -192,8 +200,9 @@ for sd, sg in (('L', 1), ('R', -1)):
     bone('foot_' + sd, J['ank' + sd], J['ball' + sd], 'shin_' + sd); bone('toe_' + sd, J['ball' + sd], J['tip' + sd], 'foot_' + sd)
     bone('shoulder_' + sd, (sg * 0.022, 0.02, 1.405), J['S' + sd], 'chest'); bone('upperarm_' + sd, J['S' + sd], J['E' + sd], 'shoulder_' + sd)
     bone('forearm_' + sd, J['E' + sd], J['W' + sd], 'upperarm_' + sd)
-    for hx, hy0, hy1, nm in ((0.085, -0.10, -0.135, 'F'), (0.10, 0.07, 0.125, 'B')):
-        bone(f'skirt_{nm}{sd}_0', (sg * hx, hy0, 0.30), (sg * (hx + 0.015), hy1, 0.03), 'shin_' + sd)
+mid = lambda k: (J[k + 'L'] + J[k + 'R']) / 2
+for nm in 'FB':     # skirt panels: pivots on the hip line and the knee line (art/anim/ftfanim/skirt.py drives them)
+    bone(f'skirt_{nm}_0', mid('hip'), mid('knee'), 'pelvis'); bone(f'skirt_{nm}_1', mid('knee'), mid('ank'), f'skirt_{nm}_0')
 order = sorted(bones_extra, key=lambda k: (k.startswith(('thumb', 'index', 'fingers', 'prop')), k.endswith('_1')))
 for k in order:
     h_, t_, par = bones_extra[k]; bone(k, h_, t_, par)

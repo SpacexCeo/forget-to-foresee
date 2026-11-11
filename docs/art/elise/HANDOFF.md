@@ -50,8 +50,11 @@ In the game: loads with no console errors, 46 990 triangles, `MeshToonMaterial` 
 7. **Skeleton**: Iris's names and hierarchy for the body (root, pelvis, spine, chest, neck, head, shoulder,
    upperarm, forearm, hand, thumb, index, fingers, prop, thigh, shin, foot, toe), her own joint positions, heel
    rest pose (ankle 0.108 m). Extra chains: `hair_L_0/1`, `hair_R_0/1` (face strands), `ribbon_L_0/1`,
-   `ribbon_R_0/1`, `skirt_FL_0`, `skirt_BL_0`, `skirt_FR_0`, `skirt_BR_0` (hem, children of the shins).
-   No face bones. Weights are analytic (by region and height) and smoothed; the skirt follows the thighs and shins.
+   `ribbon_R_0/1`, `skirt_F_0/1`, `skirt_B_0/1` (front and back skirt panels, pivots on the hip and knee lines).
+   No face bones. Weights are analytic (by region and height) and smoothed.
+   **Skirt against the legs** (`art/anim/ftfanim/skirt.py`, `"skirt": true` in `clips.json`): the cloth next to each leg is
+   weighted to that leg; the front panel takes the motion of whichever thigh and shin swing further forward, the back
+   panel of whichever swing further back. Checked in the game in walk and run: no leg comes through the skirt.
 8. **Clips**: `elise` in `art/anim/clips.json`, built by `art/anim/build_clips.py --char elise`. Walk slip
    0.005 m/s mean, 0.057 max; run 0.0002 mean.
 
@@ -62,7 +65,8 @@ Rebuild on the server: `bash s/all.sh 2.5 parts` in `/root/w/elise/work` (script
 - **Expressions (sheet 07): not done.** The face is a static shell with painted eyes; no morphs, no blink.
 - **Hair, dress and accessories are one fused surface each** (head shell, body shell). They are separated only by
   weights and by the `part` face attribute, not as layered geometry. The butterfly, flowers and earrings are relief.
-- **Run**: the skirt follows the shins, so it flares and stretches badly; the gown is not made for running.
+- **Run**: the legs stay inside, but the back panel lifts with the trailing shin, so the skirt balloons behind her.
+  The game's foot-plant correction moves the legs a little after the clip; the panels do not see that.
 - **Hem**: ragged in places where the inner wall was removed; visible in the walk.
 - **Ribbon tails** keep their rest direction relative to the forearm (the chain solver has no gravity), so they
   stick out when the arms swing or rise.
@@ -89,3 +93,4 @@ sheet, video, `.blend` and scripts are in git; the server holds only the untouch
 - rig: fa7725b; left: face bones and expression morphs (sheet 07), gravity for the ribbon tails.
 - animation: fa7725b; left: a skirt solution for the run, turn-in-place clips.
 - export and game hook: fa7725b, video and handoff e347c01; left: the NFT gate, the Iris prefetch under `?hero=elise`, a device check of `_m`.
+- skirt against the legs (owner request): this commit; left: the ballooning back panel in the run, the ragged hem.
