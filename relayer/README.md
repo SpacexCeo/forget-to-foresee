@@ -29,6 +29,8 @@ PORT=8787 TRUST_PROXY=1 node server.js       # or: docker build -t ftf-relayer .
 address is used. The same handlers also run as serverless functions from `api/` (`vercel.json`); set `FTF_GUEST_KEY`
 in that host's environment.
 
+`server.js` also reads `relayer/.env` (git-ignored; variables already set in the environment win).
+
 Optional env: `FTF_GUESTS_CONTRACT` (default `guests.ftf-coordinator.testnet`), `FTF_RPC_URLS` (comma-separated),
 `HOST` (default `0.0.0.0`).
 

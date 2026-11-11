@@ -1,6 +1,22 @@
 // Standalone relayer: plain Node http serving the same handlers as the serverless entry points in api/.
 // node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, ALLOWED_ORIGIN, PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
+
+/** KEY=value lines from relayer/.env (never committed); variables already set in the environment win. */
+export function loadDotEnv(path = new URL('./.env', import.meta.url), env = process.env) {
+  let text = '';
+  try { text = readFileSync(path, 'utf8'); } catch { return 0; }
+  let n = 0;
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!m || line.trim().startsWith('#')) continue;
+    const v = m[2].replace(/^(['"])(.*)\1$/, '$2');
+    if (env[m[1]] === undefined) { env[m[1]] = v; n++; }
+  }
+  return n;
+}
+loadDotEnv();
 import createGuest from './api/create-guest.js';
 import health from './api/health.js';
 import agentSay from './api/agent/say.js';

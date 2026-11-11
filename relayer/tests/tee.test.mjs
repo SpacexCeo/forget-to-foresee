@@ -110,3 +110,15 @@ test('handlers: validation, no key, decision with hash, daily cap', async () => 
   const capped = teeHandler('say', { env, fetch: mockCloud(), attest: passAttest, daily: { take: () => false }, bucket: createBucket({ capacity: 9 }) });
   assert.equal((await call(capped, { npc: 'baker', question: 'hi' })).body.error, 'daily_cap');
 });
+
+test('server.js loads relayer/.env without overriding the environment', async () => {
+  const { loadDotEnv } = await import('../server.js');
+  const { writeFileSync, mkdtempSync } = await import('node:fs');
+  const { join } = await import('node:path'); const { tmpdir } = await import('node:os');
+  const f = join(mkdtempSync(join(tmpdir(), 'ftf-env-')), '.env');
+  writeFileSync(f, '# comment\nNEARAI_API_KEY="sk-test"\nexport FTF_TEE_DAILY_CAP=10\nALREADY=file\n');
+  const env = { ALREADY: 'set' };
+  assert.equal(loadDotEnv(f, env), 2);
+  assert.deepEqual(env, { ALREADY: 'set', NEARAI_API_KEY: 'sk-test', FTF_TEE_DAILY_CAP: '10' });
+  assert.equal(loadDotEnv(f + '.missing', {}), 0);
+});
