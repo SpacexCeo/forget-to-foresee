@@ -13,7 +13,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MODEL_FILES, MODEL_DIRS } from 'virtual:model-list';
 import { ALL_ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
-import { instancePriority, assetPriority, planStreaming, planUpgrade, LruCache, createPrefetch } from './streaming.js';
+import { instancePriority, assetPriority, pinnedPriority, heroLast, planStreaming, planUpgrade, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
 import { transformTriangles, MASK_ALL } from '../physics/collision.js';
 
@@ -454,7 +454,12 @@ export class AssetStreamer {
     this.upgrading = new Set();
     /** Optional GPU warm-up (render/warmup.js): `(template) => Promise`, awaited between download and swap. */
     this.warm = null;
+    /** Assets wanted regardless of the camera (streaming.js JUDGE_PINS): name -> priority. */
+    this.pins = new Map();
   }
+
+  /** Keeps an asset wanted at `priority` whatever the camera sees (null removes the pin). */
+  pin(name, priority) { if (priority == null) this.pins.delete(name); else this.pins.set(name, priority); this.timer = 0; }
 
   add(instance) {
     this.instances.push(instance);
@@ -491,7 +496,7 @@ export class AssetStreamer {
           bytes: this.library.bytesOf(name),
         });
       });
-      const p = assetPriority(ps);
+      const p = heroLast(name, pinnedPriority(assetPriority(ps), this.pins.get(name)));
       this.priority.set(name, p);
       const u = p < 0 ? (this.unwanted.get(name) || 0) + this.interval : 0;
       this.unwanted.set(name, u);

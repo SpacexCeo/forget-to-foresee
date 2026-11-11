@@ -24,7 +24,7 @@ import { mountSceneControls } from './ui/scene-controls.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
-import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
+import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { logKeysFromStats } from './ui/ink-bar.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
@@ -160,7 +160,7 @@ if (townMode.town) {
   // Once the town is shown, the archipelago's files go into the HTTP cache at low priority, so the registration
   // cover has little left to download (skipped on Save-Data and 2G/3G-class links).
   if (!conn.saveData && !/(^|-)(2g|3g)$/.test(conn.effectiveType || '')) {
-    const warmIsland = () => { if (!town.shown) { setTimeout(warmIsland, 1500); return; } world3d.library.prefetchHttp(ISLAND_FIRST_VIEW); };
+    const warmIsland = () => { if (!town.shown) { setTimeout(warmIsland, 1500); return; } world3d.library.prefetchHttp([...ISLAND_FIRST_VIEW, 'shell_interior']); };
     setTimeout(warmIsland, 3000);
   }
 }
@@ -205,6 +205,9 @@ async function leaveTown() {
 
 function startSeason() {
   if (season) return season;
+  // On the archipelago the four Shells and the Shell hall are wanted even off screen (after the first view,
+  // before the full-resolution upgrades), so the first flight lands in the real hall (docs/smoothness.md).
+  for (const [name, priority] of Object.entries(JUDGE_PINS)) streamer.pin(name, priority);
   season = (async () => {
   try {
     const [{ startPlay }, { mountAudioSettings }, { attachAllAges }] = await loadPlayLayer();
@@ -217,6 +220,7 @@ function startSeason() {
       iris: irisAvatar, // the town already attached her model (null on the paths that skip the town)
     } });
     window.__ftf.play = play;
+    setTimeout(() => { try { play.shell.preload(); } catch { /* the first visit loads them */ } }, 2500); // the Guests' model, ahead of the first flight
     // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
     mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
     attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog }); // Task Q: recap, Simple mode, in-world Settings, narration (docs/accessibility.md)

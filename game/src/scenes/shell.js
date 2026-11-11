@@ -23,23 +23,10 @@ import { PropInstance, fetchGltf } from '../render/assets.js';
 import { warmModel } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { drawLogogram } from '../play/logogram.js';
+import { REAL, GREY, layoutFor, shouldRespawn } from './shell-layout.js';
 import { GuestsStage, QUALITY, SLOTS, DRAWING_SLOT, resolveClip, inkPenPoint, guardFrame } from '../play/guests-stage.js';
 
 export const SHELL_ORIGIN = Object.freeze([0, 300, 0]);
-
-// Sockets of the real interior (art/shells interior handoff); the greybox has its own smaller room.
-// `chamber`: the volume behind the glass where the Guests stand, from the glass (zNear: a Guest at
-// depth 1 stands here) to the far wall (zFar: depth 0); slot x positions left / centre / right.
-const REAL = {
-  spawn: [0, 1.2, 11.3], glass: [0, 3.95, -10.748], glassSize: [12.1, 7.1], stand: [0, -8.6],
-  guests: [[-4.4, -0.3, -15.75, 0.247, 0.969], [0.4, -0.3, -17.95, 0, 1], [4.6, -0.3, -15.35, -0.296, 0.955]],
-  chamber: { zNear: -13.4, zFar: -24.8, xHalf: 9, top: 13.5 },
-};
-const GREY = {
-  spawn: [0, 0, 4.5], glass: [0, 5, -5.84], glassSize: [12, 7], stand: [0, -4.5],
-  guests: REAL.guests.map(([x, y, , dx, dz]) => [x * 0.8, 0, -7.4, dx, dz]),
-  chamber: { zNear: -6.9, zFar: -9.6, xHalf: 7, top: 11 },
-};
 
 /** Sumi-ink palette: warm off-white mist near the glass, grey deeper in, a soft pale light at the far end. */
 const MIST_NEAR = new THREE.Color(0xb9b7ae), MIST_MID = new THREE.Color(0x8e9092), MIST_FAR = new THREE.Color(0x63676c);
@@ -298,13 +285,15 @@ export function createShellScene({ scene, streamer }) {
     back.visible = vol;
   }
 
-  const layout = () => (interior.isReal ? REAL : GREY);
+  const layout = () => layoutFor(interior.isReal);
   let lastReal = null, lastLayers = -1;
   function applyLayout() {
     const L = layout();
     const n = QUALITY[stage.quality].mistLayers;
     if (lastReal === interior.isReal && lastLayers === n) return;
+    const becameReal = lastReal === false && interior.isReal;
     lastReal = interior.isReal; lastLayers = n;
+    if (becameReal && active && api.onRealLayout) { try { api.onRealLayout(); } catch (e) { console.warn('[play] shell layout swap', e); } }
     glyph.position.set(L.glass[0], L.glass[1], L.glass[2] + 0.06);
     const s = Math.min(L.glassSize[0], L.glassSize[1]) * 0.92;
     glyph.scale.set(s / 6.4, s / 6.4, 1);
@@ -404,8 +393,26 @@ export function createShellScene({ scene, streamer }) {
     },
     deactivate() { active = false; root.visible = false; ink.visible = false; stage.exit(); },
     get ready() { return interior.isReal; },
+    /** Starts the Guests' download ahead of the first visit (the hall itself is pinned in the streamer). */
+    preload() { try { loadGuests(); } catch (e) { console.warn('[play] guests preload', e); } },
+    /**
+     * Resolves true once the real hall is shown, or false after `ms` (the greybox is then the fallback). The
+     * flight's cover waits on this, so the first judged view of a Shell is the hall and not a grey room.
+     */
+    whenReady(ms = 8000) {
+      if (interior.isReal) return Promise.resolve(true);
+      return new Promise((resolve) => {
+        const t0 = performance.now();
+        const poll = () => { if (interior.isReal) resolve(true); else if (performance.now() - t0 >= ms) resolve(false); else setTimeout(poll, 100); };
+        poll();
+      });
+    },
+    /** Called once when the real hall replaces the greybox during a visit: `(shouldRespawn) => void` (play/game.js). */
+    onRealLayout: null,
+    /** Whether a visitor standing at `local` (shell space) is still where the greybox put them. */
+    atGreySpawn(local) { return shouldRespawn(local, GREY); },
     /** World-space spawn point and yaw for the current interior (real art or greybox). */
-    spawn() { const L = layout(); return { pos: [SHELL_ORIGIN[0] + L.spawn[0], SHELL_ORIGIN[1] + L.spawn[1], SHELL_ORIGIN[2] + L.spawn[2]], heading: Math.PI }; },
+    spawn() { const L = layout(); return { pos: [SHELL_ORIGIN[0] + L.spawn[0], SHELL_ORIGIN[1] + L.spawn[1], SHELL_ORIGIN[2] + L.spawn[2]], heading: L.heading }; },
     /** Local (shell-space) glass standing spot for the interaction layer. */
     spots() { const L = layout(); return { glass: L.stand.slice(), radius: 4 }; },
     toLocal(p) { return [p[0] - SHELL_ORIGIN[0], p[1] - SHELL_ORIGIN[1], p[2] - SHELL_ORIGIN[2]]; },

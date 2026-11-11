@@ -39,6 +39,8 @@ import { attachChapters } from '../cinematic/chapters/index.js';
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
 const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
+/** How long a flight's cover waits for the real Shell hall before falling back to the greybox room (ms). */
+const SHELL_WAIT_MS = 8000;
 
 /**
  * @param {object} o
@@ -147,6 +149,10 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     let r;
     try {
       await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
+      // The cover stays until the real hall is shown (it is pinned in the streamer, so this is normally
+      // instant); after the timeout the greybox room is the fallback and onRealLayout fixes the spawn.
+      shell.preload();
+      await shell.whenReady(SHELL_WAIT_MS);
       r = await hub.flyTo(n);
     } finally { hub.endTransit(); }
     setTimeout(() => hubUi.uncover(), 160);
@@ -252,6 +258,14 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     rig.yaw = rig.baseYaw; rig.dist = Math.min(rig.dist, 9);
     presentation.onZone('shell');
   }
+  // A late swap from the greybox to the real hall (slow link, the wait above timed out): Iris moves to the
+  // real arrival point unless the player has already walked on.
+  shell.onRealLayout = () => {
+    if (state.zone !== 'shell' || !shell.atGreySpawn(shell.toLocal(player.pos))) return;
+    const sp = shell.spawn();
+    teleport(sp.pos, sp.heading);
+    rig.yaw = rig.baseYaw;
+  };
   function exitShell(position) {
     shell.deactivate();
     state.zone = 'island'; state.entering = null;

@@ -52,6 +52,28 @@ export function takeFrameBatch(sizes, budget, { atLeastOne = true } = {}) {
   return n;
 }
 
+/**
+ * Judge-path pins on the archipelago (docs/hackathon-tz.md P0-A): the four Shell exteriors and the Shell
+ * interior are wanted even when off screen, so the first flight into a Shell lands in the real hall. Their
+ * priority sits under everything on screen (>= 100: the first view still comes first) and above the prefetch
+ * class (about 1) and the light-first upgrades (which wait until nothing wanted is pending; on desktop that is
+ * where the two 20 MB hero files load). A pinned asset is never released.
+ */
+export const JUDGE_PINS = Object.freeze({ shell_1: 96, shell_2: 95, shell_3: 95, shell_4: 95, shell_interior: 90 });
+
+/** Priority of an asset with an optional pin: the better of what the camera says and the pin. */
+export function pinnedPriority(base, pin) { return pin == null ? base : Math.max(base, pin); }
+
+/**
+ * The two heavy heroes (anchor, scroll_table) go last among what is on screen: they stay in the on-screen class
+ * (the first view still waits for them, no greybox on the judge camera) but every other visible asset, the
+ * Shells included, is fetched before them.
+ */
+export const HEAVY_HEROES = Object.freeze(['anchor', 'scroll_table']);
+export function heroLast(name, priority) {
+  return HEAVY_HEROES.includes(name) && priority >= 100 ? 100 + (priority - 100) * 0.001 : priority;
+}
+
 /** An asset's priority is the best priority among its instances. */
 export function assetPriority(instancePriorities) {
   let best = -1;
