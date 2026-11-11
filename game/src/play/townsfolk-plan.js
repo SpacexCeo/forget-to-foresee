@@ -91,7 +91,10 @@ export function playLoop(area, seed, n = 10) {
 
 function programs() {
   const post = (pt, steps) => ({ home: pt.position, heading: pt.heading, steps });
-  const ex = doorStand('exchange'), sc = doorStand('scribe', 1.4), inn = doorStand('inn');
+  // The keepers of the square stand in front of their doors, clear of the crates and stalls along the house walls.
+  const ex = doorStand('exchange', 0, 2.3), sc = doorStand('scribe', 0, 2.3), inn = doorStand('inn');
+  // The musician steps away from the post beside the exported point, toward the square.
+  const mu = { position: add(P.npc_musician.position, fwd(P.npc_musician.heading), 1.0), heading: P.npc_musician.heading };
   const sq = R.npc_route_square_round.points; // [NW, NE, SE, SW] corners of the walk round the square
   const zS = sq[2][2], y = sq[0][1];
   // The two shopkeepers of the square meet at the chat points, talk, and walk back to their doors.
@@ -118,7 +121,7 @@ function programs() {
     baker: post(P.npc_market_seller_square, [stay(14, 'counter', { greet: 'wave' }), stay(10, 'idle', { greet: 'wave' }), stay(6, 'idle_shift', { greet: 'wave' })]),
     shrinekeeper: post(P.npc_shrine_keeper, [stay(20, 'idle', { greet: 'nod' }), stay(10, 'idle_shift', { greet: 'nod' })]),
     elder: post(P.npc_bench_0, [stay(60, 'sit', { sit: P.npc_bench_0.seatHeight, greet: 'nod' })]),
-    musician: post(P.npc_musician, [stay(26, 'play'), stay(6, 'idle_shift'), stay(18, 'play'), stay(5, 'idle', { greet: 'wave' })]),
+    musician: post(mu, [stay(26, 'play'), stay(6, 'idle_shift'), stay(18, 'play'), stay(5, 'idle', { greet: 'wave' })]),
     sweeper: { home: R.npc_route_sweeper.points[0], heading: null, steps: sweep },
     lamplighter: { home: R.npc_route_lamplighter.points[0], heading: null, steps: lamp },
     courier: { home: cr[0], heading: null, steps: courier },
