@@ -89,24 +89,13 @@ for l in open(WD + '/mh/base.obj'):
     if p and p[0] == 'g': g = p[1]
     elif p and p[0] == 'f' and g in ('helper-l-eye', 'helper-r-eye'): hq.append(tuple(int(x.split('/')[0]) - 1 for x in p[1:]))
 bvh_eye = BVHTree.FromPolygons([tuple(p) for p in A], [tuple(map(int, f)) for f in F] + hq)
+EYEC = {}
 for sd in 'LR':
-    c = A[list(EYEV[sd])].mean(0); r = np.linalg.norm(A[list(EYEV[sd])] - c, axis=1).mean()
+    c = A[list(EYEV[sd])].mean(0); r = np.linalg.norm(A[list(EYEV[sd])] - c, axis=1).mean(); EYEC[sd] = (c, r)
     if (c[0] > 0) != (sd == 'L'): print('EYE SIDE SWAPPED')
-    PK['eye' + sd] = pocket(c, 1.9 * r, bvh_eye); print('eye', sd, 'centre', c.round(3), 'r %.4f' % r, 'pocket', len(PK['eye' + sd][0]), 'rim', len(PK['eye' + sd][1]))
 mc = (jh('oris05') + jh('oris01')) / 2
-def mouth_bag():
-    """The inner mouth: vertices no outside direction can see, connected to the point behind the lips."""
-    near = np.nonzero(np.linalg.norm(X0 - (mc + [0, 0.02, 0]), axis=1) < 0.05)[0]; hid = set()
-    dirs = [Vector((math.sin(a_) * math.cos(b_), -math.cos(a_) * math.cos(b_), math.sin(b_))) for a_, b_ in ((0, 0), (0.6, 0), (-0.6, 0), (0, 0.6), (0, -0.6), (0.4, 0.4), (-0.4, 0.4), (0.4, -0.4), (-0.4, -0.4), (0, 1.1), (0, -1.1), (1.1, 0), (-1.1, 0))]
-    for i in near:
-        if all(bvh0.ray_cast(Vector(X0[i]) + d_ * 2e-4, d_, 0.3)[0] is not None for d_ in dirs): hid.add(int(i))
-    seed = min(hid, key=lambda i: np.linalg.norm(X0[i] - (mc + [0, 0.03, 0]))); comp = set(); st = [seed]
-    while st:
-        i = st.pop()
-        if i in comp: continue
-        comp.add(i); st += [j for j in adj[i] if j in hid]
-    rim = sorted({j for i in comp for j in adj[i]} - comp); return np.array(sorted(comp)), np.array(rim)
-PK['mouth'] = mouth_bag(); r_ = X0[PK['mouth'][1]]; print('mouth', mc.round(3), 'bag', len(PK['mouth'][0]), 'rim', len(r_), 'rim x %.3f..%.3f z %.3f..%.3f y %.3f..%.3f' % (r_[:, 0].min(), r_[:, 0].max(), r_[:, 2].min(), r_[:, 2].max(), r_[:, 1].min(), r_[:, 1].max()))
+# cavities of the base mesh (inner mouth, nostrils): the outward normal meets the mesh again within 2.5 cm
+n0 = None
 I_NOSE = np.nonzero((abs(X0[:, 0]) < 0.008) & (X0[:, 2] > mc[2] + 0.015) & (X0[:, 2] < 1.545))[0]; I_NOSE = int(I_NOSE[np.argmin(X0[I_NOSE, 1])]); print('nose tip of the base mesh', X0[I_NOSE].round(3))
 # ---------------- pose and proportions on Elise's skeleton
 S = np.load(WD + '/src.npz'); BN = [str(x) for x in S['bone_names']]; BH = dict(zip(BN, S['bone_head'])); BT = dict(zip(BN, S['bone_tail']))
@@ -123,7 +112,7 @@ ZM = [0.0, 0.80, 0.865, 0.90, 1.05, 1.20, 1.341, 1.406, 1.514, 1.70]; ZE = [0.0,
 KZ = [0.80, 0.865, 1.05, 1.341, 1.406, 1.514]; KX = [0.80, 0.77, 0.72, 0.64, 0.75, 0.90]
 def torso(p):
     k = np.interp(p[:, 2], KZ, KX); return np.stack([p[:, 0] * k, (p[:, 1] + 0.012) * k * 1.08 + 0.006, np.interp(p[:, 2], ZM, ZE)], 1)
-HS = np.array([1.10, 0.86, 1.06]); HC_M = jh('head'); HC_E = np.array([0.0, 0.012, 1.555])
+HS = np.array([1.14, 0.90, 1.06]); HC_M = jh('head'); HC_E = np.array([0.0, 0.012, 1.555])
 head_T = lambda p: HC_E + (p - HC_M) * HS
 TF = {k: torso for k in ('pelvis', 'spine', 'chest', 'neck')}; TF['head'] = head_T; NEWB = {}
 for sd in 'LR':
@@ -150,24 +139,26 @@ for k in ('foot_', 'toe_'):          # the sole of the shoe: both feet end exact
     pass
 # ---------------- targets
 T = np.load(WD + '/tgt.npz'); hv, hf, hc = T['hv'], T['hf'], T['hc']; bv, bf, bc = T['bv'], T['bf'], T['bc']
+T2 = np.load(WD + '/tgt_head.npz'); hv, hf = T2['v'].astype(float), T2['f']; hc = T2['c'][hf].mean(1) / 255.0
 bvh_h = BVHTree.FromPolygons([tuple(p) for p in hv], [tuple(map(int, f)) for f in hf])
 bvh_b = BVHTree.FromPolygons([tuple(p) for p in bv], [tuple(map(int, f)) for f in bf]); btc = bc[bf].mean(1)
 bvh_l = {sd: BVHTree.FromPolygons([tuple(p) for p in T['lv']], [tuple(map(int, f)) for f in T['lf' + sd]]) for sd in 'LR'}
 def skin(c): return (c[..., 0] > 0.62) & (c[..., 1] > 0.45) & (c[..., 2] > 0.38) & (c[..., 0] - c[..., 2] < 0.42) & (c[..., 1] > 0.55 * c[..., 0])
 ribbon = lambda c: (c[..., 0] > 0.3) & (c[..., 0] > 1.7 * c[..., 1]) & (c[..., 0] > 1.7 * c[..., 2])
-# the face: depth of the deepest front-facing surface (the skin behind the fringe), 1 mm grid
+# ---------------- the face of the first version, kept as it is: a depth map of its skin (the deepest front-facing
+# surface, so the fringe in front of it does not count), 1 mm grid, from the full-resolution generated head
 GX0, GZ0, GS = -0.095, 1.46, 0.001; NX, NZ = 191, 251
 HY = np.full((NZ, NX), np.nan); HCc = np.zeros((NZ, NX, 3))
 for j in range(NZ):
     for i in range(NX):
         o = Vector((GX0 + i * GS, -0.3, GZ0 + j * GS)); d = Vector((0, 1, 0)); best = None
-        for _ in range(40):
+        for _ in range(60):
             loc, nor, fi, dist = bvh_h.ray_cast(o, d)
             if loc is None or loc.y > 0.03: break
-            if nor.y < -0.3: best = (loc.y, fi)
+            if nor.y < -0.08: best = (loc.y, fi)
             o = loc + d * 1e-4
         if best: HY[j, i] = best[0]; HCc[j, i] = hc[best[1]]
-EF = json.load(open(WD + '/face_fit.json'))['eye']; MOUTH = (0.001, 1.522)
+EF = json.load(open(WD + '/face_fit.json'))['eye']; MOUTH = (0.001, 1.522); MW = 0.0125
 gx = GX0 + np.arange(NX) * GS; gz = GZ0 + np.arange(NZ) * GS; GXX, GZZ = np.meshgrid(gx, gz)
 box = np.zeros((NZ, NX), bool)
 for sd in 'LR':
@@ -175,80 +166,179 @@ for sd in 'LR':
 box |= (abs(GXX - MOUTH[0]) < 0.022) & (abs(GZZ - MOUTH[1]) < 0.012)
 sk_ = skin(HCc) & ~np.isnan(HY); ok = sk_ | (box & ~np.isnan(HY))
 from PIL import Image
-# non-skin pixels on the skin's own depth (brows, the nose line) belong to the face too
 def boxmean(a, m, r):
     a = np.where(m, a, 0); c = np.cumsum(np.cumsum(np.pad(a, r + 1), 0), 1); n = np.cumsum(np.cumsum(np.pad(m.astype(float), r + 1), 0), 1)
     s = lambda q: q[2 * r + 1:-1, 2 * r + 1:-1] - q[:-2 * r - 2, 2 * r + 1:-1] - q[2 * r + 1:-1, :-2 * r - 2] + q[:-2 * r - 2, :-2 * r - 2]
     return s(c) / np.maximum(s(n), 1e-9), s(n)
-mu, cnt = boxmean(np.nan_to_num(HY), sk_, 4); ok |= ~np.isnan(HY) & (cnt > 20) & (abs(HY - mu) < 0.002) & (GZZ < 1.64)
+mu, cnt = boxmean(np.nan_to_num(HY), sk_, 4); ok |= ~np.isnan(HY) & (cnt > 20) & (abs(HY - mu) < 0.002) & (GZZ < 1.66)      # brows, lashes, the nose line: not skin-coloured but on the skin
 jump = np.zeros((NZ, NX), bool); Hn = np.where(ok, HY, np.nan)
-jump[1:, :] |= abs(Hn[1:, :] - Hn[:-1, :]) > 0.0035; jump[:, 1:] |= abs(Hn[:, 1:] - Hn[:, :-1]) > 0.0035
+jump[1:, :] |= abs(Hn[1:, :] - Hn[:-1, :]) > 0.006; jump[:, 1:] |= abs(Hn[:, 1:] - Hn[:, :-1]) > 0.006
 for _ in range(2): jump[1:, :] |= jump[:-1, :]; jump[:-1, :] |= jump[1:, :]; jump[:, 1:] |= jump[:, :-1]; jump[:, :-1] |= jump[:, 1:]
 ok &= ~jump
-# keep the face only: the valid area connected to the cheeks (no neck under the chin, no ears behind the strands)
 lab = np.zeros((NZ, NX), bool); st = [(int((1.555 - GZ0) / GS), int((0.03 - GX0) / GS)), (int((1.555 - GZ0) / GS), int((-0.03 - GX0) / GS))]
 while st:
     j, i = st.pop()
     if j < 0 or i < 0 or j >= NZ or i >= NX or lab[j, i] or not ok[j, i]: continue
     lab[j, i] = True; st += [(j + 1, i), (j - 1, i), (j, i + 1), (j, i - 1)]
-print('depth map: valid', int(ok.sum()), 'face component', int(lab.sum())); ok = lab
-HYs = np.where(ok, HY, 0)
-for _ in range(2):          # a light blur of the depth inside the valid area (the generated surface is noisy)
-    mu, cnt = boxmean(HYs, ok, 1); HYs = np.where(ok, mu, 0)
-Image.fromarray((np.clip(HCc, 0, 1) * 255 * ok[:, :, None]).astype(np.uint8)[::-1]).resize((NX * 3, NZ * 3)).save(WD + '/r/a1_facemap.png')
-HF = HYs.copy(); known = ok.copy()          # the same depth continued over the unknown pixels (for the eye sockets)
-for _ in range(400):
+print('depth map: valid', int(ok.sum()), 'face component', int(lab.sum())); ok = lab; real = ok.copy()
+HYs = np.where(ok, HY, 0); mu, cnt = boxmean(HYs, ok, 1); HYs = np.where(ok, 0.5 * HYs + 0.5 * mu, 0)
+# where a strand hides one cheek, the other cheek is used (mirror about the middle of the two eyes)
+ic = int(round(((EF['L'][0] + EF['R'][0]) / 2 - GX0) / GS)); mi = np.clip(2 * ic - np.arange(NX), 0, NX - 1); mir = ~ok & ok[:, mi] & (2 * ic - np.arange(NX) >= 0)[None, :] & (2 * ic - np.arange(NX) < NX)[None, :]
+wm = sstep((GXX - gx[ic] - 0.005) / 0.02) * sstep((1.575 - GZZ) / 0.01); both = ok & ok[:, mi]            # her left cheek below the eye had a strand lying on it: the right cheek's shape is used there
+HYs = np.where(both, (1 - wm) * HYs + wm * HYs[:, mi], HYs); drop = ok & ~ok[:, mi] & (wm > 0.5); ok &= ~drop; mir = ~ok & ok[:, mi] & (2 * ic - np.arange(NX) >= 0)[None, :] & (2 * ic - np.arange(NX) < NX)[None, :]
+HYs[mir] = HYs[:, mi][mir]; ok |= mir; band = mir.copy()
+for _ in range(5): band[1:, :] |= band[:-1, :]; band[:-1, :] |= band[1:, :]; band[:, 1:] |= band[:, :-1]; band[:, :-1] |= band[:, 1:]
+band &= ok
+for _ in range(4): mu, cnt = boxmean(HYs, ok, 2); HYs = np.where(band, mu, HYs)          # the seam between the real and the mirrored cheek is smoothed
+print('mirrored pixels', int(mir.sum()))
+Image.fromarray((np.clip(HCc, 0, 1) * 255 * (0.35 + 0.65 * real[:, :, None]) * ~np.isnan(HY)[:, :, None]).astype(np.uint8)[::-1]).resize((NX * 3, NZ * 3)).save(WD + '/r/a1_facemap.png')
+HF = HYs.copy(); known = ok.copy()          # the same depth continued over the unknown pixels
+for _ in range(60):
     P_ = np.pad(np.where(known, HF, 0), 1); C_ = np.pad(known.astype(float), 1); s_ = P_[2:, 1:-1] + P_[:-2, 1:-1] + P_[1:-1, 2:] + P_[1:-1, :-2]; c_ = C_[2:, 1:-1] + C_[:-2, 1:-1] + C_[1:-1, 2:] + C_[1:-1, :-2]
-    new = ~ok & (c_ > 0); HF[new] = (s_ / np.maximum(c_, 1))[new]; known |= new
-def Hfill(x, z):
-    i = np.clip(np.round((np.asarray(x) - GX0) / GS).astype(int), 0, NX - 1); j = np.clip(np.round((np.asarray(z) - GZ0) / GS).astype(int), 0, NZ - 1); return HF[j, i]
+    new = ~known & (c_ > 0); HF[new] = (s_ / np.maximum(c_, 1))[new]; known |= new
+def bil(M, x, z):
+    fx = np.clip((np.asarray(x) - GX0) / GS, 0, NX - 1.001); fz = np.clip((np.asarray(z) - GZ0) / GS, 0, NZ - 1.001); i = np.floor(fx).astype(int); j = np.floor(fz).astype(int); a = fx - i; b = fz - j
+    return (M[j, i] * (1 - a) + M[j, i + 1] * a) * (1 - b) + (M[j + 1, i] * (1 - a) + M[j + 1, i + 1] * a) * b
+Hfill = lambda x, z: bil(HF, x, z)
 def Hy(x, z):
-    """Depth of the face skin at x, z and whether it is known there."""
-    fx = (np.asarray(x) - GX0) / GS; fz = (np.asarray(z) - GZ0) / GS; i = np.clip(np.floor(fx).astype(int), 0, NX - 2); j = np.clip(np.floor(fz).astype(int), 0, NZ - 2); a = np.clip(fx - i, 0, 1); b = np.clip(fz - j, 0, 1)
-    v = ok[j, i] & ok[j, i + 1] & ok[j + 1, i] & ok[j + 1, i + 1] & (fx > 0) & (fx < NX - 1) & (fz > 0) & (fz < NZ - 1)
-    return (HYs[j, i] * (1 - a) + HYs[j, i + 1] * a) * (1 - b) + (HYs[j + 1, i] * (1 - a) + HYs[j + 1, i + 1] * a) * b, v
+    v = bil(ok.astype(float), x, z) > 0.999; return bil(HYs, x, z), v
 for z_ in (1.50, 1.52, 1.55, 1.585, 1.61, 1.64):
     j = int(round((z_ - GZ0) / GS)); m = ok[j]; print('face z %.3f: x %.3f..%.3f, front y %.3f' % (z_, gx[m].min(), gx[m].max(), np.nanmin(np.where(m, HY[j], np.nan))) if m.any() else ('face z %.3f none' % z_))
-col = np.nanmin(np.where(ok & (abs(GXX) < 0.004), HY, np.nan), 1); jn = np.nanargmin(np.where((gz > 1.535) & (gz < 1.575), col, np.nan)); NOSE = np.array([0.0, col[jn], gz[jn]])
-zc = gz[~np.isnan(col)]; CHIN_Z = zc.min(); print('nose tip', NOSE.round(4), 'chin (lowest face skin on the centre line)', CHIN_Z.round(4))
-isH = W['head'] > 0.5; pk_all = np.concatenate([PK[k][0] for k in PK]); inpk = np.zeros(NB, bool); inpk[pk_all] = True
-# ---------------- head: coarse depth fit, landmarks, sockets, fine depth fit
-def face_step(X, K, gain=1.0, only=None):
-    n = normals(X); y, v = Hy(X[:, 0], X[:, 2]); val = isH & v & (((n[:, 1] < -0.25) & ~inpk) | (only if only is not None else False))
-    d = np.zeros_like(X); d[val, 1] = y[val] - X[val, 1]; D = diffuse(d, val | ~((W['head'] + W['neck']) > 0.02), K); X += gain * D * ((W['head'] + W['neck']) > 0.02)[:, None]; return val
+col = np.where(ok[:, ic - 3:ic + 4].all(1), HYs[:, ic - 3:ic + 4].min(1), np.nan); jn = np.nanargmin(np.where((gz > 1.535) & (gz < 1.575), col, np.nan)); NOSE = np.array([gx[ic], col[jn], gz[jn]])
+CHIN_Z = gz[~np.isnan(col)].min(); print('nose tip', NOSE.round(4), 'chin (lowest face skin on the centre line)', CHIN_Z.round(4))
+isH = W['head'] > 0.5
+# cavities of the base mesh
+n0 = normals(X0); n0 *= 1 if n0[np.argmax(X0[:, 2]), 2] > 0 else -1; NSIGN = 1 if normals(X0)[np.argmax(X0[:, 2]), 2] > 0 else -1
+# cavities (the mouth bag behind the lips, the nostrils): vertices the front cannot see
+CAV = np.zeros(NB, bool)
+for i in np.nonzero((X0[:, 2] > 1.42) & (X0[:, 1] < -0.03))[0]:
+    CAV[i] = bvh0.ray_cast(Vector(X0[i]) + Vector((0, -3e-4, 0)), Vector((0, -1, 0)), 0.3)[0] is not None
+EDIST = {}
+def eye_socket(sd):
+    """Rings of vertices around the bottom of the eye socket; the lid loop is the first ring that faces the front."""
+    c, r = EYEC[sd]; seed = int(np.argmin(np.linalg.norm(X0 - (c + [0, r * 1.05, 0]), axis=1))); dist = np.full(NB, -1); dist[seed] = 0; fr = [seed]; k = 0; tab = []
+    while fr and k < 30:
+        k += 1; nx_ = sorted({j for i in fr for j in adj[i] if dist[j] < 0})
+        for j in nx_: dist[j] = k
+        fr = nx_; ff = float((n0[fr, 1] < -0.35).mean()); tab.append((k, len(fr), round(ff, 2), round(float(np.linalg.norm(X0[fr] - c, axis=1).mean() / r), 2)))
+        if ff > 0.9 and k > 3: break
+    print('eye', sd, 'rings (k, verts, part facing front, distance / eyeball radius):', tab[-8:])
+    EDIST[sd] = (dist.copy(), k); return np.nonzero((dist >= 0) & (dist < k))[0], np.array(fr)
+for sd in 'LR': PK['eye' + sd] = eye_socket(sd)
+def comp_of(seed_pt, mask):
+    ids = np.nonzero(mask)[0]; seed = int(ids[np.argmin(np.linalg.norm(X0[ids] - seed_pt, axis=1))]); comp = set(); st = [seed]
+    while st:
+        i = st.pop()
+        if i in comp: continue
+        comp.add(i); st += [j for j in adj[i] if mask[j]]
+    rim = sorted({j for i in comp for j in adj[i]} - comp); return np.array(sorted(comp)), np.array(rim)
+PK['mouth'] = comp_of(mc + [0, 0.025, 0], CAV); r_ = X0[PK['mouth'][1]]
+print('cavity verts', int(CAV.sum()), 'mouth', len(PK['mouth'][0]), 'rim', len(r_), 'rim x %.3f..%.3f z %.3f..%.3f y %.3f..%.3f' % (r_[:, 0].min(), r_[:, 0].max(), r_[:, 2].min(), r_[:, 2].max(), r_[:, 1].min(), r_[:, 1].max()))
+bagm = np.zeros(NB, bool); bagm[PK['mouth'][0]] = True          # only the mouth bag and the nostrils count as cavities
+CAV = bagm | (CAV & (abs(X0[:, 0]) < 0.024) & (X0[:, 2] > mc[2] + 0.012) & (X0[:, 2] < 1.535) & (X0[:, 1] < -0.12)); print('cavities kept: mouth bag', int(bagm.sum()), 'nostrils', int((CAV & ~bagm).sum()))
+I_CHIN = np.nonzero((abs(X0[:, 0]) < 0.004) & (X0[:, 1] < -0.115) & (X0[:, 2] < mc[2] - 0.02) & (X0[:, 2] > 1.40))[0]; I_CHIN = int(I_CHIN[np.argmin(X0[I_CHIN, 2])]); print('chin of the base mesh', X0[I_CHIN].round(3))
+# ---------------- head: coarse depth fit, landmark warp, then the whole face is laid out on the first version's surface
+hn = (W['head'] + W['neck']) > 0.02
+def stat(tag): print('  head bbox after', tag, X[isH].min(0).round(3), X[isH].max(0).round(3))
+inpk = np.zeros(NB, bool); inpk[np.concatenate([PK[k][0] for k in PK])] = True; noface = CAV | inpk
+def face_step(X, K, gain=1.0):
+    n = normals(X) * NSIGN; y, v = Hy(X[:, 0], X[:, 2]); val = isH & v & (n[:, 1] < -0.25) & ~noface
+    d = np.zeros_like(X); d[val, 1] = y[val] - X[val, 1]; D = diffuse(d, val | ~hn, K); X += gain * D * hn[:, None]; return val
 for it in range(6): val = face_step(X, 60)
-print('coarse face fit: verts on the depth map', int(val.sum()))
+print('coarse face fit: verts on the depth map', int(val.sum())); stat('coarse')
+# the face disc of the base mesh: everything in front of a plane before the ears, with its cavities
+Sset = ((X0[:, 1] < -0.058) & (X0[:, 2] > 1.42)) | CAV | inpk; outside = np.zeros(NB, bool); st = [int(np.argmin(X0[:, 2]))]
+while st:
+    i = st.pop()
+    if outside[i] or Sset[i]: continue
+    outside[i] = True; st += adj[i]
+REG = ~outside; keep = np.zeros(NB, bool); st = [I_NOSE]
+while st:
+    i = st.pop()
+    if keep[i] or not REG[i]: continue
+    keep[i] = True; st += adj[i]
+REG = keep; outside = ~REG; bnd = REG & (nsum(outside.astype(float)) > 0); fin = np.array([REG[f].all() for f in F]); ne = len({tuple(sorted((int(f[k]), int(f[(k + 1) % 4])))) for f in F[fin] for k in range(4)})
+print('face disc: verts', int(REG.sum()), 'border', int(bnd.sum()), 'quads', int(fin.sum()), 'Euler characteristic', int(len(np.unique(F[fin])) - ne + fin.sum()))
+xc = gx[ic]; hw_row = np.array([np.abs(gx[ok[j]] - xc).max() if ok[j].any() else np.nan for j in range(NZ)])
 con = {}                                   # vertex -> target x, z
-for sd in 'LR':
-    pk, rim = PK['eye' + sd]; cx, cz, a_, b_ = EF[sd]; r = X[rim]; c0 = (r.max(0) + r.min(0)) / 2; h0 = (r.max(0) - r.min(0)) / 2
-    ph = np.arctan2((r[:, 2] - c0[2]) / h0[2], (r[:, 0] - c0[0]) / h0[0])
-    for i, p_ in zip(rim, ph): con[int(i)] = (cx + a_ * 1.04 * math.cos(p_), cz + b_ * 1.10 * math.sin(p_))
-pk, rim = PK['mouth']; r = X[rim]; c0 = (r.max(0) + r.min(0)) / 2; h0x = (r[:, 0].max() - r[:, 0].min()) / 2; MW = 0.0125; i_nose = I_NOSE; con[i_nose] = (NOSE[0], NOSE[2])
-for i in rim: con[int(i)] = (MOUTH[0] + MW * (X[i, 0] - c0[0]) / h0x, MOUTH[1] + 0.0008 * math.cos(1.5 * (X[i, 0] - c0[0]) / h0x))
-print('landmarks:', len(con), 'nose', X[i_nose].round(3), '->', NOSE.round(3), 'mouth rim half width %.4f -> %.4f' % (h0x, MW))
+vf = [[] for _ in range(NB)]
+for fi_, f in enumerate(F):
+    for i in f: vf[i].append(fi_)
+def walk_loop(rim):
+    """Order a ring of vertices that follow each other across shared faces."""
+    rs = set(int(i) for i in rim); nb = {i: sorted({int(j) for fi_ in vf[i] for j in F[fi_] if int(j) in rs and int(j) != i}) for i in rs}
+    order = [int(rim[0])]; prev = None
+    while True:
+        cand = [j for j in nb[order[-1]] if j != prev and j not in order[1:]]
+        if not cand or cand[0] == order[0]: break
+        prev = order[-1]; order.append(cand[0])
+    return order, sorted(set(len(v) for v in nb.values()))
+for sd, sg in (('L', 1), ('R', -1)):          # the lid loop goes onto the outline of the painted eye, in its own order, by arc length
+    pk, rim = PK['eye' + sd]; cx, cz, a_, b_ = EF[sd]; order, nbc = walk_loop(rim); r = X[order]
+    area = sum(r[k, 0] * r[(k + 1) % len(r), 2] - r[(k + 1) % len(r), 0] * r[k, 2] for k in range(len(r))); dr_ = 1 if area > 0 else -1
+    k0 = int(np.argmin(r[:, 0] * sg)); seg_ = np.linalg.norm(np.roll(r, -1, 0) - r, axis=1); cum = np.cumsum(np.r_[0, seg_[:-1]]); cum = (cum - cum[k0]) % seg_.sum() / seg_.sum()
+    kq = int(np.argmin(abs(cum - 0.25))); up = r[kq, 2] > r[:, 2].mean(); dr2 = (-1 if up else 1) * sg; print('   eye', sd, 'direction by area', dr_, 'by the quarter point', dr2, 'quarter z - mean %.4f' % (r[kq, 2] - r[:, 2].mean())); dr_ = dr2
+    for i, f_ in zip(order, cum):
+        t_ = (math.pi if sg > 0 else 0.0) + dr_ * 2 * math.pi * f_; con[int(i)] = (cx + a_ * 1.04 * math.cos(t_), cz + b_ * 1.10 * math.sin(t_))
+    print('eye', sd, 'lid loop: verts', len(rim), 'ordered', len(order), 'ring neighbours per vert', nbc, 'direction', dr_)
+pk, rim = PK['mouth']; r = X[rim]; c0 = (r.max(0) + r.min(0)) / 2; h0x = (r[:, 0].max() - r[:, 0].min()) / 2
+for i in rim: con[int(i)] = (MOUTH[0] + MW * (X[i, 0] - c0[0]) / h0x, MOUTH[1] - 0.0012 * (1 - ((X[i, 0] - c0[0]) / h0x) ** 2))
+con[I_NOSE] = (NOSE[0], NOSE[2]); con[I_CHIN] = (NOSE[0], CHIN_Z + 0.003)
+nclamp = 0
+for i in np.nonzero(bnd)[0]:               # the border of the disc stays just behind the first version's silhouette (her narrow jaw)
+    j = int(round((X[i, 2] - GZ0) / GS))
+    if 0 <= j < NZ and CHIN_Z + 0.012 < X[i, 2] < min(EF['L'][1], EF['R'][1]) - 0.022 and not np.isnan(hw_row[j]) and abs(X[i, 0] - xc) > hw_row[j] + 0.004:
+        con[int(i)] = (xc + np.sign(X[i, 0] - xc) * (hw_row[j] + 0.004), X[i, 2]); nclamp += 1
+print('landmarks:', len(con), 'nose', X[I_NOSE].round(3), '->', NOSE.round(3), 'chin z %.3f -> %.3f' % (X[I_CHIN, 2], CHIN_Z + 0.003), 'mouth rim half width %.4f -> %.4f' % (h0x, MW), 'border verts drawn in', nclamp)
 ci = np.array(sorted(con)); d = np.zeros_like(X); d[ci, 0] = [con[i][0] - X[i, 0] for i in ci]; d[ci, 2] = [con[i][1] - X[i, 2] for i in ci]
-cen = np.array([[EF['L'][0], EF['L'][1]], [EF['R'][0], EF['R'][1]], [MOUTH[0], MOUTH[1]], [0, NOSE[2]]])
-far = np.min(np.linalg.norm(X[:, None, [0, 2]] - cen[None], axis=2), 1) > 0.062; far |= ~isH | (X[:, 1] > 0.0)
-fix = far.copy(); fix[ci] = True; D = d.copy(); free = ~fix
-for _ in range(1500):                      # harmonic interpolation of the landmark shifts over the face
+fix = ~isH | (X[:, 1] > 0.03) | (X[:, 2] > 1.68); fix[ci] = True; D = d.copy(); free = ~fix
+for _ in range(3000):                      # harmonic interpolation of the landmark shifts over the face and jaw
     D[free] = (nsum(D) / deg[:, None])[free]
-X += D
-for key in PK:                             # sockets and mouth bag: a flat disc spread inside its loop
-    pk, rim = PK[key]; m = np.zeros(NB, bool); m[pk] = True
-    for _ in range(600): X[m] = (nsum(X) / deg[:, None])[m]
-    if key == 'mouth':                     # the bag stays behind the lips
-        y, v = Hy(X[pk, 0], X[pk, 2]); X[pk, 1] = np.where(v, y, X[pk, 1]) + 0.004 + 0.012 * sstep(1 - np.abs(X[pk, 0] - MOUTH[0]) / (MW * 0.95))
-eyepk = np.zeros(NB, bool); eyepk[np.concatenate([PK['eyeL'][0], PK['eyeR'][0]])] = True
-for it in range(14): val = face_step(X, [30, 20, 14, 10, 7, 5, 4, 3, 3, 2, 2, 2, 1, 1][it], only=eyepk)
-m = eyepk; X[m, 1] = Hfill(X[m, 0], X[m, 2])
-print('fine face fit: verts on the depth map', int(val.sum()))
+X += D; stat('landmark warp')
+for it in range(3): face_step(X, 20)
+for i in ci: X[i, 0], X[i, 2] = con[int(i)]
+# inside each loop (eye sockets, the mouth bag, nostrils) x, z of every vertex is the mean of its neighbours: a flat disc
+# without folds (the mouth's disc closes to the lip line). The skin around keeps the smooth landmark warp.
+pinm = bnd.copy(); pinm[[i for i in ci if REG[i]]] = True
+cavm = np.zeros(NB, bool); cavm[np.concatenate([PK[k][0] for k in PK])] = True; cavm |= CAV & REG; cavm &= ~pinm
+for _ in range(3000):
+    Xn = nsum(X) / deg[:, None]; X[cavm, 0] = Xn[cavm, 0]; X[cavm, 2] = Xn[cavm, 2]
+eyem = np.zeros(NB, bool); eyem[np.concatenate([PK['eyeL'][0], PK['eyeR'][0]])] = True; deep = cavm & ~eyem
+def snap():
+    y, v = Hy(X[:, 0], X[:, 2]); onf = REG & v & ~bnd & ~deep; X[onf, 1] = y[onf]; return onf
+onf = snap(); fl = F[fin]; mfree = REG & ~pinm & ~deep; skinf = ~deep[fl].any(1)
+film = REG & ~onf & ~bnd & ~deep
+Xb = X.copy(); jt_ = np.nonzero(ok[:, ic - 15:ic + 16].any(1))[0].max(); ytop = float(np.median(HYs[jt_ - 3:jt_ + 1, ic - 15:ic + 16][ok[jt_ - 3:jt_ + 1, ic - 15:ic + 16]])); ztop = gz[jt_]
+fh = isH & (X[:, 2] > ztop) & (X[:, 1] < 0.0) & ~onf; lim = ytop + 0.30 * (X[:, 2] - ztop) + 0.10 * np.abs(X[:, 0] - xc)       # the forehead under the fringe leans back from the brow
+X[fh, 1] = np.maximum(X[fh, 1], lim[fh]); print('forehead: top of the known face z %.3f y %.3f, verts moved back' % (ztop, ytop), int((X[fh, 1] > Xb[fh, 1] + 1e-6).sum()), 'largest %.4f' % (X[:, 1] - Xb[:, 1]).max())
+film &= ~fh
+for _ in range(3000): X[film, 1] = (nsum(X) / deg[:, None])[film, 1]
+X[deep, 1] = Hfill(X[deep, 0], X[deep, 2]) + 0.002          # the mouth bag and nostrils sit just behind the skin
+mv = mfree
+mb = deep
+R = onf.copy(); fl = F[fin]; fn_ = np.cross(X[fl[:, 2]] - X[fl[:, 0]], X[fl[:, 3]] - X[fl[:, 1]]) * NSIGN; ar = np.linalg.norm(fn_, axis=1)
+bw = (fn_[:, 1] > 0) & (ar > 1e-9) & skinf
+for key in PK:
+    m = np.zeros(NB, bool); m[PK[key][0]] = True; m[PK[key][1]] = True; inm = m[fl].all(1); print('   ', key, 'quads', int(inm.sum()), 'backwards', int((bw & inm).sum()), 'pocket bbox x %.3f..%.3f z %.3f..%.3f' % (X[PK[key][0], 0].min(), X[PK[key][0], 0].max(), X[PK[key][0], 2].min(), X[PK[key][0], 2].max()), 'rim bbox x %.3f..%.3f z %.3f..%.3f' % (X[PK[key][1], 0].min(), X[PK[key][1], 0].max(), X[PK[key][1], 2].min(), X[PK[key][1], 2].max()))
+oth = ~np.any([np.isin(fl, np.r_[PK[k][0], PK[k][1]]).all(1) for k in PK], 0); cb = X[fl[bw & oth]].mean(1) if (bw & oth).any() else np.zeros((0, 3)); print('    elsewhere backwards', int((bw & oth).sum()), 'centres bbox', cb.min(0).round(3) if len(cb) else '', cb.max(0).round(3) if len(cb) else '', 'of them cavity', int(CAV[fl[bw & oth]].any(1).sum()))
+from PIL import ImageDraw
+im_ = Image.new('RGB', (1500, 1500), (255, 255, 255)); dr = ImageDraw.Draw(im_); px = lambda p_: ((p_[0] + 0.1) * 7500, (1.66 - p_[2]) * 7500)
+for f_, b_ in zip(fl, bw):
+    pts = [px(X[i]) for i in f_]
+    if b_: dr.polygon(pts, fill=(255, 170, 170))
+for f_ in fl:
+    pts = [px(X[i]) for i in f_]; dr.line(pts + [pts[0]], fill=(60, 60, 60), width=1)
+for i in np.nonzero(pinm)[0]: x_, y_ = px(X[i]); dr.ellipse((x_ - 3, y_ - 3, x_ + 3, y_ + 3), fill=(0, 90, 255))
+im_.save(WD + '/r/a1_layout.png')
+dx_ = np.abs(X - nsum(X) / deg[:, None])[mv][:, [0, 2]].max(); print('    layout convergence: max distance to the neighbours mean %.6f' % dx_)
+print('face layout: verts exactly on the first version', int(onf.sum()), 'on the film', int(film.sum()), 'quads facing backwards', int(((fn_[:, 1] > 0) & (ar > 1e-9)).sum()), 'collapsed (the closed mouth)', int((ar <= 1e-9).sum())); stat('layout')
 # ---------------- body: closest point on the generated shells
 th = np.degrees(np.arctan2(X[:, 0], -X[:, 1]))
 limb = lambda k: sum(W[k + sd] for sd in 'LR')
 nofit = (limb('hand_') + limb('thumb_') + limb('index_') + limb('fingers_') + limb('foot_') + limb('toe_') > 0.35)
 legw = {sd: W['thigh_' + sd] + W['shin_' + sd] for sd in 'LR'}
 def body_step(X, K, maxd, gain=0.8):
-    n = normals(X); d = np.zeros_like(X); val = np.zeros(NB, bool); zone = np.zeros(NB, int); z_all = X[:, 2]
+    n = normals(X) * NSIGN; d = np.zeros_like(X); val = np.zeros(NB, bool); zone = np.zeros(NB, int); z_all = X[:, 2]
     for i in range(NB):
         if nofit[i] or isH[i] or z_all[i] > 1.495: continue
         p = Vector(X[i]); z = X[i, 2]
@@ -287,15 +377,16 @@ for sd in 'LR':
 ft = sum(W[k + sd] for k in ('foot_', 'toe_') for sd in 'LR') > 0.5; X[ft, 2] = np.maximum(X[ft, 2], 0.004)
 zmin = X[:, 2].min(); print('lowest point %.4f; height of the body (no hair) %.3f' % (zmin, X[:, 2].max()))
 np.savez_compressed(WD + '/body.npz', V=X, F=F, FT=FT, VT=VT, w_names=np.array(list(W)), w=np.stack([W[k] for k in W], 1).astype(np.float32),
-                    **{'pk_' + k: v[0] for k, v in PK.items()}, **{'rim_' + k: v[1] for k, v in PK.items()}, newb_names=np.array(list(NEWB)), newb=np.array([np.r_[NEWB[k][0], NEWB[k][1]] for k in NEWB]),
-                    landmarks=np.array([i_nose]))
+                    face_region=R, cav=CAV, **{'pk_' + k: v[0] for k, v in PK.items()}, **{'rim_' + k: v[1] for k, v in PK.items()}, newb_names=np.array(list(NEWB)), newb=np.array([np.r_[NEWB[k][0], NEWB[k][1]] for k in NEWB]),
+                    landmarks=np.array([I_NOSE, I_CHIN]))
 # ---------------- check images
 def mk(name, V_, F_, col):
     me = bpy.data.meshes.new(name); me.from_pydata([tuple(map(float, v)) for v in V_], [], [tuple(map(int, f)) for f in F_]); me.update()
     o = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(o); o.color = col
     for p in me.polygons: p.use_smooth = True
     return o
-ob = mk('body', X, F, (0.86, 0.72, 0.66, 1)); src = mk('src', S['V'], S['F'], (0.45, 0.5, 0.62, 1)); cam = rend.setup()
+ob = mk('body', X, F if NSIGN > 0 else F[:, ::-1], (0.86, 0.72, 0.66, 1)); src = mk('src', S['V'], S['F'], (0.45, 0.5, 0.62, 1)); cam = rend.setup()
+v1 = mk('v1face', hv, hf, (0.86, 0.72, 0.66, 1)); v1.hide_render = True
 bm = bmesh.new(); bm.from_mesh(ob.data); print('manifold check: boundary edges', sum(1 for e_ in bm.edges if e_.is_boundary), 'non-manifold', sum(1 for e_ in bm.edges if not e_.is_manifold), 'quads', sum(1 for f in bm.faces if len(f.verts) == 4), 'of', len(bm.faces)); bm.free()
 rows = []; src.hide_render = True
 rows.append([(n, rend.shot(cam, f'{WD}/r/_a{n}.png', v, 420, 800)) for n, v in (('front', [0, 0, 0.88, 1.8, 0, 0]), ('left', [0, 0, 0.88, 1.8, 90, 0]), ('back', [0, 0, 0.88, 1.8, 180, 0]), ('3q', [0, 0, 0.88, 1.8, 35, 5]))])
@@ -308,8 +399,12 @@ ob.data.materials.append(bpy.data.materials.new('m'));
 def wshot(n, v, w, h):
     # wire overlay: a second render with a wireframe modifier copy
     return (n, rend.shot(cam, f'{WD}/r/_a{n}.png', v, w, h))
-wo = ob.copy(); wo.data = ob.data.copy(); bpy.context.scene.collection.objects.link(wo); md = wo.modifiers.new('w', 'WIREFRAME'); md.thickness = 0.0006; md.use_replace = True; wo.color = (0.1, 0.1, 0.12, 1)
+wo = ob.copy(); wo.data = ob.data.copy(); bpy.context.scene.collection.objects.link(wo); b2 = bmesh.new(); b2.from_mesh(wo.data); b2.verts.ensure_lookup_table(); bmesh.ops.delete(b2, geom=[v for v in b2.verts if deep[v.index]], context='VERTS'); b2.to_mesh(wo.data); b2.free(); md = wo.modifiers.new('w', 'WIREFRAME'); md.thickness = 0.0006; md.use_replace = True; wo.color = (0.1, 0.1, 0.12, 1)
 rows.append([wshot(n, v, 560, 560) for n, v in (('wface', [0, 0, 1.575, 0.24, 0, 0]), ('face 3q', [0, 0, 1.575, 0.26, 40, 5]), ('head left', [0, 0, 1.60, 0.34, 90, 0]), ('hand', [0.29, -0.02, 0.88, 0.2, 90, 0]), ('hand front', [0.29, -0.02, 0.88, 0.2, 0, 0]), ('hips back', [0, 0, 0.9, 0.6, 180, 0]))])
 wo.hide_render = True
 rows.append([wshot(n, v, 560, 560) for n, v in (('face', [0, 0, 1.575, 0.24, 0, 0]), ('face left', [0, 0, 1.575, 0.24, 90, 0]), ('torso', [0, 0, 1.25, 0.7, 30, 5]), ('shoulder back', [0, 0, 1.3, 0.7, 200, 10]), ('hips 3q', [0, 0, 0.85, 0.7, 40, 0]), ('hand s', [0.29, -0.02, 0.88, 0.2, 60, 10]))])
+ob.hide_render = True; v1.hide_render = False; FV = (('front', [0, 0, 1.575, 0.24, 0, 0]), ('3q', [0, 0, 1.575, 0.26, 40, 5]), ('left', [0, 0, 1.575, 0.26, 90, 0]), ('3q right', [0, 0, 1.575, 0.26, -40, 5]), ('low', [0, 0, 1.56, 0.26, 20, -25]))
+r1 = [wshot('v1 ' + n, v, 560, 560) for n, v in FV]; ob.hide_render = False; v1.hide_render = True
+r2 = [wshot('new ' + n, v, 560, 560) for n, v in FV]; wo.hide_render = False; r3 = [wshot('new wire ' + n, v, 560, 560) for n, v in FV]
+rend.montage([r1, r2, r3], WD + '/r/a1_face.jpg')
 rend.montage(rows, WD + '/r/a1_body.jpg')
