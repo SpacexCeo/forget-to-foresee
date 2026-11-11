@@ -4,15 +4,19 @@
 `apply-form.md` (the form values and payload), `jury-video.md` (the video for the post) and the video pipeline notes
 (`trailer.md`, `video-shot-list.md`). Dates: freeze 13.11 20:00 Kyiv, deadline 15.11 01:59 Kyiv (14.11 23:59 UTC).
 
-## 0. Mint Iris's agent card (one command, testnet)
+## 0. Day 1 contracts and the agent card (testnet, signed by ftf-coordinator.testnet)
+
+All three scripts are idempotent (safe to re-run) and sign with the keys in `~/.near-credentials` (`SIGNER`, default
+`ftf-coordinator.testnet`). They need the near CLI and cargo-near.
 
 ```bash
-bash contracts/agent-card/scripts/mint-judge-card.sh
+bash contracts/scripts/day1-deploy.sh        # heroine, companions, guests contracts + settings
+bash contracts/scripts/day1-guest-key.sh     # the client's create_guest-only key (private part -> game/.env.local)
+bash contracts/agent-card/scripts/mint-judge-card.sh   # agents.ftf-coordinator.testnet + the judge Iris card
 ```
 
-Creates `ftf-agents.testnet` (faucet), deploys `contracts/agent-card`, checks the state hash and mints
-`793f6c05e89839f2-agent-iris` to `lambada_eth.testnet`, signing with the keys in this machine's NEAR keychain. The game
-shows the card as minted by itself; nothing to edit. Details: `docs/agent-nft.md`.
+They write only public account ids and the guest key's public part to `game/src/net/day1-deployment.js`. The guest
+key's private part goes to `game/.env.local` (git-ignored); for Pages, add it as the repository secret `FTF_GUEST_KEY`.
 
 ## Already done (no action)
 
