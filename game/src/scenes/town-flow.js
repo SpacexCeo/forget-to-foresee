@@ -518,6 +518,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     get walkMs() { return state.arrivedAt ? Math.round(state.arrivedAt - state.startedAt) : null; },
     /** The townsperson the prompt offers a talk with, or null. */
     get talkNpc() { return talkNpc; },
+    /** A talk or a spot panel is open (the barks hold back). */
+    get talking() { return !!((quest && quest.talk) || folkTalk || spotPanel); },
     elements: { root, objective, prompt, talk: talkEl, questMeta: meta },
   };
 }

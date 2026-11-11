@@ -44,6 +44,7 @@ import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_OR
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
 import { createTownProps } from './scenes/town-props.js';
+import { createBarks } from './scenes/barks.js';
 import { cue } from './audio/town-audio.js';
 
 /**
@@ -179,7 +180,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null, townProps = null, townAudio = null;
+let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null;
 const lastStepPos = [0, 0, 0];
 /** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
 function mountTownAudio() {
@@ -230,6 +231,12 @@ if (townMode.town) {
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
+    const people = [];
+    townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
+      hired: () => townLedger.hires().map((h) => h.npc),
+      people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
+  }
   mountTownAudio();
   import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
   const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
@@ -340,6 +347,7 @@ async function leaveTown() {
   clearWorldInput();
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
+  if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
@@ -428,6 +436,7 @@ function updateAltarTimer() {
  * reduced motion never show it. Remembered in this browser. Resolves when it is over.
  */
 const INTRO_KEY = 'ftf.intro.v1';
+let introOn = false; // the intro flight is on screen (the barks wait)
 function introFly(ms = 6500) {
   let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
   if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off') return Promise.resolve(false);
@@ -439,9 +448,9 @@ function introFly(ms = 6500) {
     const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
     skip.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;transform:none;z-index:31';
     document.body.append(skip);
-    let done = false, last = 0;
+    let done = false, last = 0; introOn = true;
     const end = () => {
-      if (done) return; done = true;
+      if (done) return; done = true; introOn = false;
       rig.pitchOverride = null; rig.dist = TOWN_CAMERA.dist; rig.rotate(startYaw - rig.yaw);
       skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end);
       resolve(true);
@@ -762,6 +771,7 @@ function frame() {
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
+    if (townBarks) townBarks.update(player.pos, entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
@@ -820,6 +830,7 @@ window.__ftf = {
     get casting() { return townCasting; }, // the field beyond the walls (QA: aimAt, release)
     get shops() { return townShops; }, // walk-in shops (QA: enter('exchange'), leave())
     get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
+    get barks() { return townBarks; }, // townsfolk lines (QA: current)
   } : null,
 };
 requestAnimationFrame(frame);
