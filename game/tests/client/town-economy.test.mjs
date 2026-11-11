@@ -125,3 +125,18 @@ test('rental, profile and inventory strings: five locales, the local label, the 
   assert.equal(PLAY_MESSAGES.en['hire.hire'], 'Hire me as your agent');
   assert.doesNotMatch(keys.map((k) => PLAY_MESSAGES.en[k]).join(' '), /\b(RTP|bet|jackpot|gamble|casino)\b/i);
 });
+
+test('Judge Echo board: a learning agent is scored by the drill rules on published bars only, deterministically', async () => {
+  const { echoDrillScore } = await import('../../src/game/town-economy.js');
+  const rules = await import('../../src/game/exchange.js');
+  const { JUDGE_WINDOW } = await import('../../src/net/exchange-deployment.js');
+  let ag = null;
+  for (let h = 0; h < 40; h++) ag = hireResult({ seed: 'echo' + h, temperament: 'steady', agent: ag }).agent;
+  const a = echoDrillScore(ag, JUDGE_WINDOW, rules), b = echoDrillScore(JSON.parse(JSON.stringify(ag)), JUDGE_WINDOW, rules);
+  assert.equal(a, b);
+  assert.ok(Number.isInteger(a));
+  assert.equal(echoDrillScore(freshAgent(), JUDGE_WINDOW, rules), 10000, 'a novice (no learned edge) stands aside: 100 practice silk');
+  const src = readFileSync(new URL('../../src/game/town-economy.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('export function echoDrillScore'), src.indexOf('/** Measured return'));
+  assert.match(fn, /publishedView\(snapshotSeries, echo, i\)/, 'the decision reads the published view of bar i');
+});

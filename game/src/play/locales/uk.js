@@ -551,6 +551,7 @@ export default {
   'shard.nft.toast': "Осколок #{id} · {kind} → {clan} за {price} шовку",
   'shard.nft.close': "Закрити",
   'shard.nft.open': "Відкрити картку",
+  "spot.exchange.board": "Торгова дошка: останні угоди агентів",
   "spot.exchange": "Увійти до Обміну осколків",
   "spot.scribe": "Зайти до писаря",
   "spot.inn": "Зайти до шинку",

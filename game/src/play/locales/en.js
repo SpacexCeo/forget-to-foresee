@@ -553,6 +553,7 @@ export default {
   'shard.nft.toast': "Shard #{id} · {kind} → {clan} for {price} silk",
   'shard.nft.close': "Close",
   'shard.nft.open': "Open card",
+  "spot.exchange.board": "Trading board: the last agent trades",
   "spot.exchange": "Enter the Shard Exchange",
   "spot.scribe": "Visit the Scribe",
   "spot.inn": "Visit the Inn",

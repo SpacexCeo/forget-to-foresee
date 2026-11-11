@@ -552,6 +552,7 @@ export default {
   'shard.nft.toast': "Frammento #{id} · {kind} → {clan} per {price} seta",
   'shard.nft.close': "Chiudi",
   'shard.nft.open': "Apri la scheda",
+  "spot.exchange.board": "Tabellone: le ultime operazioni degli agenti",
   "spot.exchange": "Entra nello Scambio dei frammenti",
   "spot.scribe": "Visita lo scrivano",
   "spot.inn": "Visita la locanda",

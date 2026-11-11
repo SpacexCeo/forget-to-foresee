@@ -211,6 +211,13 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (id === 'exchange') {
       kids.push(el('p', null, T('spot.exchange.line')));
       row.append(b('spot.exchange.shards', () => { closeSpot(); if (onProfile) onProfile(); }, true), b('spot.exchange.echo', () => { closeSpot(); if (onExchange) onExchange(); }, true));
+      // the trading board on the wall: the last agent trades
+      if (ledger) {
+        const lines = ledger.log().slice(0, 6);
+        kids.push(el('p', 'ftf-local', T('spot.exchange.board')));
+        for (const l of lines) kids.push(el('p', 'ftf-local', T('log.line', { time: new Date(l.at).toLocaleTimeString(), name: T('folk.name.' + l.npc), echo: T('exch.echo.' + l.echo), side: T('log.side.' + l.side), size: l.size, entry: (l.entry / 100).toFixed(2), exit: (l.exit / 100).toFixed(2), result: (l.result >= 0 ? '+' : '') + (l.result / 100).toFixed(2), reason: T('log.reason.' + l.reason) })));
+        if (!lines.length) kids.push(el('p', 'ftf-local', T('open.none')));
+      }
     } else if (id === 'scribe') {
       const dl = el('dl');
       for (const k of ['sign', 'slots', 'silk', 'shell', 'trial', 'seal', 'memory', 'shard']) dl.append(el('dt', null, T('gloss.' + k)), el('dd', null, T('gloss.' + k + '.def')));

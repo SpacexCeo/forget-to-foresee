@@ -33,3 +33,22 @@ test('wiring: quest talk first, then a spot, then a townsperson, then the altar;
   assert.match(boot, /onMainMenu: openMainMenu/);
   assert.match(readFileSync(new URL('../../src/ui/scene-controls.js', import.meta.url), 'utf8'), /Main menu/);
 });
+
+test('hired agents walk to the Shard Exchange, trade at its door, then walk home and resume their own loop', async () => {
+  const { PersonPlan, TOWNSFOLK, PROGRAMS, tradePath, tradeProgram, homeProgram } = await import('../../src/play/townsfolk-plan.js');
+  const { shopById } = await import('../../src/scenes/town-layout.js');
+  const def = TOWNSFOLK.find((p) => p.key === 'baker');
+  const plan = new PersonPlan(def);
+  const door = shopById('exchange').door.position, local = [door[0], door[1] - 1200, door[2]];
+  const { path } = tradePath([plan.x, plan.y, plan.z]);
+  const end = path[path.length - 1];
+  assert.ok(Math.hypot(end[0] - local[0], end[2] - local[2]) < 3, 'ends at the Exchange door');
+  const original = plan.program;
+  plan.program = tradeProgram(plan); plan.index = -1; plan.next();
+  for (let i = 0; i < 30 * 60; i++) plan.step(1 / 30, { iris: null, reduced: false });
+  assert.ok(Math.hypot(plan.x - end[0], plan.z - end[2]) < 0.5, 'arrived and trading at the door');
+  plan.program = homeProgram(plan, original); plan.index = -1; plan.next();
+  for (let i = 0; i < 30 * 90 && plan.program !== original; i++) plan.step(1 / 30, { iris: null, reduced: false });
+  assert.equal(plan.program, original, 'back home: its own loop again');
+  assert.ok(Math.hypot(plan.x - PROGRAMS.baker.home[0], plan.z - PROGRAMS.baker.home[2]) < 1.5);
+});

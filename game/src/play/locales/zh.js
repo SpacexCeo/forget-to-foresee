@@ -551,6 +551,7 @@ export default {
   'shard.nft.toast': "碎片 #{id} · {kind} → {clan}，{price} 丝",
   'shard.nft.close': "关闭",
   'shard.nft.open': "打开卡片",
+  "spot.exchange.board": "交易板：代理的最近交易",
   "spot.exchange": "进入碎片交易所",
   "spot.scribe": "拜访书记员",
   "spot.inn": "拜访旅店",

@@ -38,6 +38,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': 'ESCI',
+  "exch.townAgent": "agente cittadino che impara",
   "exch.lobby": "BORSA DELLA PREVEGGENZA",
   "exch.open": "Allena la preveggenza (esercizio locale)",
   "exch.title": "Borsa della preveggenza",

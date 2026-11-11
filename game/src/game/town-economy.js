@@ -116,6 +116,31 @@ export function hireResult({ seed, temperament = 'steady', price = HIRE.price, r
   return { seed, temperament, price: price * 100, rounds: out, back, net: back - price * 100, agent: ag };
 }
 
+/**
+ * A learning agent's score on an Echo drill window (Judge Echo board), by the drill's own rules: 100 practice silk,
+ * long only, buy 1 unit at the ask when its best learned arm says "up" on the last published change, sell at the next
+ * bar's bid, the drill fee on each fill. It decides from bars up to the current one only. Integer cents.
+ */
+export function echoDrillScore(agent, { startIndex, barCount }, { feeCents, askOf, bidOf } = {}) {
+  const a = agent || freshAgent();
+  let best = ARMS.indexOf('aside'); a.arms.forEach((x, i) => { if (x.mean > 0 && x.mean > (a.arms[best].mean > 0 ? a.arms[best].mean : 0)) best = i; }); // no learned edge: stand aside
+  let cash = 10000;
+  for (let b = 0; b < barCount - 1; b++) {
+    const i = startIndex + b;
+    if (i < 1) continue;
+    let pick = null;
+    for (const echo of ECHO_IDS) {
+      const v = publishedView(snapshotSeries, echo, i);
+      const up = ARMS[best] === 'follow' ? v.lastChange > 0 : ARMS[best] === 'fade' ? v.lastChange < 0 : false;
+      if (up && (!pick || Math.abs(v.lastChange) > Math.abs(pick.v.lastChange))) pick = { echo, v };
+    }
+    if (!pick) continue;
+    const buy = askOf(snapshotSeries(pick.echo, i)), sell = bidOf(snapshotSeries(pick.echo, i + 1));
+    cash += sell - buy - feeCents(buy) - feeCents(sell);
+  }
+  return cash;
+}
+
 /** Measured return over an agent's recent rounds (null before any). */
 export const measuredReturn = (agent) => (agent && agent.recent && agent.recent.length ? agent.recent.reduce((s, x) => s + x, 0) / agent.recent.length : null);
 
@@ -149,6 +174,8 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
     get stats() { return { ...st.stats }; },
     get results() { return st.results.slice(); },
     get equity() { return st.equity.slice(); },
+    /** The raw learning state of an agent (for the Judge Echo board). */
+    agentState(npc) { return st.agents[npc] ? JSON.parse(JSON.stringify(st.agents[npc])) : null; },
     temperamentOf(npc) { return FOLK_TEMPERAMENT[npc] || null; },
     /** An agent's learning state, experience, measured return and current hire price. */
     agent(npc) { const a = agentOf(npc); return { experience: a.rounds, measured: measuredReturn(a), price: priceFor(a.rounds), arms: a.arms.map((x, i) => ({ arm: ARMS[i], mean: x.mean, n: x.n })), recent: a.recent.slice() }; },

@@ -29,6 +29,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': 'ВЫХОД',
+  "exch.townAgent": "обучающийся агент из города",
   "exch.lobby": "БИРЖА ПРЕДВИДЕНИЯ",
   "exch.open": "Потренировать предвидение (локальная тренировка)",
   "exch.title": "Биржа предвидения",

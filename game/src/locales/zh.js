@@ -38,6 +38,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': '退出',
+  "exch.townAgent": "会学习的镇民代理",
   "exch.lobby": "预见交易所",
   "exch.open": "练习预见（本地演练）",
   "exch.title": "预见交易所",

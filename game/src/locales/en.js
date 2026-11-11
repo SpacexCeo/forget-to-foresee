@@ -32,6 +32,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': 'EXIT',
+  "exch.townAgent": "learning townsfolk agent",
   "exch.lobby": "FORESIGHT EXCHANGE",
   "exch.open": "Practice foresight (local drill)",
   "exch.title": "Foresight Exchange",

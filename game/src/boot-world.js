@@ -144,6 +144,7 @@ const toastEl = document.getElementById('toast');
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
+ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
 const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
@@ -196,7 +197,7 @@ if (townMode.town) {
     return best;
   };
   const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
-  const badge = (key, on) => { if (town.townsfolk) town.townsfolk.setBadge(key, on); };
+  const badge = (key, on) => { if (town.townsfolk) { town.townsfolk.setBadge(key, on); town.townsfolk.sendToTrade(key, on); } };
   for (const h of townLedger.hires()) badge(h.npc, true);
   // Town spots (owner, 11.11: the town is the menu): the three shop doors, the notice board after the stairs, and a
   // mirror by the gate for the optional look picker.
@@ -206,7 +207,7 @@ if (townMode.town) {
     { id: 'board', near: spotAt(TOWN_SPOTS.board, 2.2) },
     { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
   ];
-  const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage })).catch((e) => console.warn('[town] exchange', e));
+  const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
   const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
     const wrap = document.createElement('div');
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', ctx.i18n.t('spot.mirror'));
