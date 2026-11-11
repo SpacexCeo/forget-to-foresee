@@ -19,7 +19,14 @@
      181
     ]
    ]
-  }
+  },
+  "gown_min_m": 0.0072,
+  "gown_min_at": [
+   36,
+   "thigh_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
  },
  "idle2": {
   "take": "82_08",
@@ -41,7 +48,14 @@
      181
     ]
    ]
-  }
+  },
+  "gown_min_m": 0.0061,
+  "gown_min_at": [
+   16,
+   "thigh_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
  },
  "idle_look": {
   "take": "82_08",
@@ -63,51 +77,72 @@
      181
     ]
    ]
-  }
+  },
+  "gown_min_m": 0.0071,
+  "gown_min_at": [
+   36,
+   "thigh_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
  },
  "walk": {
   "take": "08_01",
-  "slip_mean_m_s": 0.0053,
-  "slip_max_m_s": 0.0573,
-  "ball_min_y": 0.0222,
+  "slip_mean_m_s": 0.0052,
+  "slip_max_m_s": 0.0591,
+  "ball_min_y": 0.022,
   "src_stride_m": 1.651,
   "src_T_s": 1.008,
   "src_speed": 1.637,
-  "stride_scale": 1.03,
-  "time_scale": 1.008,
-  "hip_drop_max_m": 0.0282,
+  "stride_scale": 0.763,
+  "time_scale": 1.12,
+  "hip_drop_max_m": 0.0,
   "contact": {
    "L": [
     0,
-    31
+    29
    ],
    "R": [
-    29,
-    32
+    26,
+    30
    ]
-  }
+  },
+  "gown_min_m": 0.0061,
+  "gown_min_at": [
+   2,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 12,
+  "gown_leg_through_cloth_frames": 0
  },
  "run": {
-  "take": "35_20",
-  "slip_mean_m_s": 0.0002,
-  "slip_max_m_s": 0.001,
-  "ball_min_y": 0.0237,
-  "src_stride_m": 2.36,
-  "src_T_s": 0.733,
-  "src_speed": 3.219,
-  "stride_scale": 1.025,
-  "time_scale": 1.0,
-  "hip_drop_max_m": 0.0056,
+  "take": "08_01",
+  "slip_mean_m_s": 0.0063,
+  "slip_max_m_s": 0.0599,
+  "ball_min_y": 0.022,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.872,
+  "time_scale": 1.681,
+  "hip_drop_max_m": 0.004,
   "contact": {
    "L": [
-    6,
-    22
+    0,
+    38
    ],
    "R": [
-    50,
-    22
+    36,
+    38
    ]
-  }
+  },
+  "gown_min_m": 0.0061,
+  "gown_min_at": [
+   7,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 9,
+  "gown_leg_through_cloth_frames": 0
  },
  "register": {
   "take": "82_08",
@@ -129,7 +164,14 @@
      101
     ]
    ]
-  }
+  },
+  "gown_min_m": 0.007,
+  "gown_min_at": [
+   36,
+   "thigh_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
  },
  "greet": {
   "take": "141_16",
@@ -151,6 +193,129 @@
      69
     ]
    ]
-  }
+  },
+  "gown_min_m": 0.0062,
+  "gown_min_at": [
+   46,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "turn_l": {
+  "take": "82_08",
+  "frames": 51,
+  "seconds": 1.7,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     51
+    ]
+   ],
+   "R": [
+    [
+     0,
+     51
+    ]
+   ]
+  },
+  "gown_min_m": 0.0071,
+  "gown_min_at": [
+   29,
+   "thigh_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "turn_r": {
+  "take": "82_08",
+  "frames": 51,
+  "seconds": 1.7,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0,
+  "contacts": {
+   "L": [
+    [
+     0,
+     51
+    ]
+   ],
+   "R": [
+    [
+     0,
+     51
+    ]
+   ]
+  },
+  "gown_min_m": 0.007,
+  "gown_min_at": [
+   36,
+   "thigh_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "stairs_up": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0016,
+  "slip_max_m_s": 0.0559,
+  "ball_min_y": 0.0221,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.347,
+  "time_scale": 0.917,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    5,
+    24
+   ],
+   "R": [
+    39,
+    18
+   ]
+  },
+  "gown_min_m": 0.0039,
+  "gown_min_at": [
+   3,
+   "shin_R"
+  ],
+  "gown_knee_in_slit_frames": 6,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "stairs_down": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0016,
+  "slip_max_m_s": 0.0559,
+  "ball_min_y": 0.0221,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.347,
+  "time_scale": 0.917,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    5,
+    24
+   ],
+   "R": [
+    39,
+    18
+   ]
+  },
+  "gown_min_m": 0.0055,
+  "gown_min_at": [
+   19,
+   "shin_R"
+  ],
+  "gown_knee_in_slit_frames": 14,
+  "gown_leg_through_cloth_frames": 0
  }
 }

@@ -630,6 +630,158 @@
     "lean": 2
    },
    "fps": 120
+  },
+  "stairs_up": {
+   "kind": "cycle",
+   "take": "08_01",
+   "frames_src": [
+    84,
+    205
+   ],
+   "frames": 33,
+   "speed": 0.52,
+   "fps": 60,
+   "stairs": {
+    "slope": 0.45,
+    "lift": 0.02
+   }
+  },
+  "stairs_down": {
+   "kind": "cycle",
+   "take": "08_01",
+   "frames_src": [
+    84,
+    205
+   ],
+   "frames": 33,
+   "speed": 0.52,
+   "fps": 60,
+   "stairs": {
+    "slope": -0.45,
+    "lift": 0.02
+   }
+  },
+  "turn_l": {
+   "kind": "action",
+   "take": "82_08",
+   "frames_src": [
+    215,
+    415
+   ],
+   "feet": "planted",
+   "ease": [
+    6,
+    10
+   ],
+   "sim": {
+    "yaw": [
+     [
+      0.15,
+      0
+     ],
+     [
+      1.0,
+      70
+     ],
+     [
+      1.6,
+      70
+     ]
+    ]
+   },
+   "layers": [
+    {
+     "type": "rotate",
+     "bones": {
+      "chest": [
+       0,
+       6,
+       0
+      ],
+      "head": [
+       0,
+       16,
+       0
+      ]
+     },
+     "keys": [
+      [
+       0.05,
+       0
+      ],
+      [
+       0.45,
+       1
+      ],
+      [
+       1.05,
+       0
+      ]
+     ]
+    }
+   ],
+   "note": "upper body and cloth of a 70 degree turn on the spot; the game turns the root and steps the feet (FootPlant)"
+  },
+  "turn_r": {
+   "kind": "action",
+   "take": "82_08",
+   "frames_src": [
+    215,
+    415
+   ],
+   "feet": "planted",
+   "ease": [
+    6,
+    10
+   ],
+   "sim": {
+    "yaw": [
+     [
+      0.15,
+      0
+     ],
+     [
+      1.0,
+      -70
+     ],
+     [
+      1.6,
+      -70
+     ]
+    ]
+   },
+   "layers": [
+    {
+     "type": "rotate",
+     "bones": {
+      "chest": [
+       0,
+       -6,
+       0
+      ],
+      "head": [
+       0,
+       -16,
+       0
+      ]
+     },
+     "keys": [
+      [
+       0.05,
+       0
+      ],
+      [
+       0.45,
+       1
+      ],
+      [
+       1.05,
+       0
+      ]
+     ]
+    }
+   ],
+   "note": "upper body and cloth of a 70 degree turn on the spot; the game turns the root and steps the feet (FootPlant)"
   }
  },
  "characters": {
@@ -729,10 +881,11 @@
    "model": "game/public/assets/models/agent_elise.glb",
    "style": {
     "track": 0.05,
-    "arm_swing": 0.6,
+    "arm_swing": 0.5,
     "arm_out": 7,
     "pelvis_rot": 1.0,
-    "head_level": 0.6
+    "head_level": 0.6,
+    "step_lift": 0.75
    },
    "action_style": {
     "track": 0.09,
@@ -755,19 +908,35 @@
      "use": "idle_shift"
     },
     "idle_look": {},
-    "walk": {},
+    "walk": {
+     "speed": 1.4,
+     "frames": 27
+    },
     "run": {
+     "use": "walk",
+     "speed": 2.4,
+     "frames": 18,
+     "fps": 120,
      "style": {
       "track": 0.045,
-      "arm_swing": 0.8,
-      "hands": "loose_fist",
-      "lean": 3
-     }
+      "arm_swing": 0.62,
+      "lean": 3,
+      "step_lift": 0.85
+     },
+     "note": "a fast walk: the gown stays floor-length (sheets 08, 09)"
     },
     "register": {},
     "greet": {
      "use": "wave"
-    }
+    },
+    "turn_l": {},
+    "turn_r": {},
+    "stairs_up": {},
+    "stairs_down": {}
+   },
+   "cloth": {
+    "rig": "art/agents/elise/cloth_rig.npz",
+    "bake": "art/anim/out/elise_cloth.npz"
    }
   }
  }

@@ -206,6 +206,9 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
                 wr[b] = qmul(r, wr[b])
     hip[:, 1] = hip[:, 1].mean() + (hip[:, 1] - hip[:, 1].mean()) * st['bounce'] - st['hip_drop']
     hip[:, 0] *= st['sway']
+    if st.get('step_lift', 1.0) != 1.0:      # a lower step: the ankles' height above their lowest point is scaled
+        for s_ in 'LR':
+            y0 = feet[s_][:, 1].min(); feet[s_][:, 1] = y0 + (feet[s_][:, 1] - y0) * st['step_lift']
     contacts = detect_contacts(rig, wr, feet, speed, fps, True, single=True)
     hip, ank_target, drop = plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, True, st)
     fingers(rig, wr, n, st.get('hands', 'relaxed'), True)
