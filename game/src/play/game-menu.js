@@ -8,6 +8,7 @@ import { createWheel, SEGMENTS, odds } from '../game/wheel.js';
 import { createInventory, RARITIES } from '../game/inventory.js';
 import { achievementsFor } from '../game/achievements.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
+import { cue } from '../audio/town-audio.js';
 
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
@@ -228,7 +229,9 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           const turns = reduced(doc) ? 0 : 5;
           angle = angle - (angle % 360) + turns * 360 + (360 - r.index * step);
           spinner.style.transform = `rotate(${angle}deg)`;
+          if (turns) { let at = 0; for (let k = 0; k < 18; k++) { at += 60 + k * k * 9; setTimeout(() => cue('bid_tick'), at); } } // ticks slowing with the wheel
           const finish = () => {
+            cue('gift_chime');
             if (r.item) inv.add(r.item.id, 1, 'wheel');
             if (r.segment.kind === 'silk') ledger.grant({ silk: r.segment.amount });
             if (r.segment.kind === 'xp') ledger.grant({ xp: r.segment.amount });
