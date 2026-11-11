@@ -129,6 +129,23 @@ asset in flight with the highest priority, "Warming shaders…" while something 
 the `boot` chunk (`game/build/chunks.js`): in the `ui` chunk it closed a chunk cycle and the build did not boot.
 `tools/gpu-server/flow-cap.cjs` records the whole start as a frame sequence (loading, first town frames, cover).
 
+## Outside the walls
+
+The lower gate is an exit (`scenes/town-outside.js`, pure, `tests/client/town-outside.test.mjs`):
+- The passage box (`GATE_PASSAGE`) is carved out of the colliders of `town_block_gate` and `town_terrain` (the
+  wall-line plane and the slab across the passage live in the terrain file); walkable floors are never cut. A
+  street-level box (`GATE_FLOOR`) bridges the 1.6 m between the street plane and the road.
+- Beyond the walls the terrain's visual `town_terrain_ground` and `town_terrain_cobble` triangles are the floor
+  (any triangle with a vertex outside the walls). The road drops at about 44°, just under the 45.6° walkable limit;
+  the rebuild of the hillside (ENV, Fable) should ship a `_col` with paths ≤ 30°, after which this falls away.
+- The town kill height is `OUTSIDE_KILL_Y` (−118 m), below the foot of the hill.
+
+Casting field (`scenes/town-casting.js`, visuals `scenes/town-casting-fx.js`, after achrefelouafi/
+LinearAbiltyCastingThreeJS, MIT): only when Iris is clear of the gatehouse (`onField`). Q/1 Frost Lance (aim
+arrow, crystals erupt along the line), V/2 Storm Snare (targeting circle, lightning column and tendrils). Click or
+tap casts, Esc or the same key puts it away; the indicators follow the slope (sampled by ray casts). QA:
+`__ftf.town.casting.aimAt(id, point)` and `.release()`. No damage, monsters or levels yet (board: MOB, levels).
+
 ## Not in this version
 
 - **Shops are not enterable.** `TOWN_DATA.shops` and `TOWN_DATA.interiors` are data only; the interior files
