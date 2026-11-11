@@ -200,10 +200,12 @@ export const IRIS_STANDIN_AFTER = 8;
  * the play layer to attach it; shown only without a model file, after a failure, or when the download itself has taken
  * longer than IRIS_STANDIN_AFTER seconds (a slow network); never once her model is in.
  * @param {{hasModel:boolean, fetched?:boolean, loaded?:boolean, failed?:boolean, waited?:number}} s
- *   fetched = the file is downloaded and parsed; waited = seconds since the world began
+ *   fetched = the file is downloaded and parsed; waited = seconds since the world began; players = a production
+ *   build (the loading screen covers the wait instead)
  */
-export function irisStandInVisible({ hasModel, fetched = false, loaded = false, failed = false, waited = 0 }) {
+export function irisStandInVisible({ hasModel, fetched = false, loaded = false, failed = false, waited = 0, players = false }) {
   if (loaded) return false;
+  if (players) return !hasModel; // a player build never shows the greybox for a model that exists: it waits and retries
   if (!hasModel || failed) return true;
   return !fetched && waited >= IRIS_STANDIN_AFTER;
 }
