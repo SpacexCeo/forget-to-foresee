@@ -25,6 +25,20 @@ hang near vertical, wrists 23 cm from the midline, elbows pointing back, hands a
 thighs (`RELAXED_WRIST`). Lip tone checked under a warm low sun and a backlight beside the target sheet
 (`06_lips_two_lights_and_target.jpg`, `qa_lips.py`): a muted rose in both, kept.
 
+**Seat shading spot (owner, 11.11):** a small lit spot at the top of the gluteal cleft on the leggings. Found in the
+exported mesh: where the level top edge crosses the cleft there is a knot of small faces whose outer vertex normals
+pointed straight back (0, 0, -1) while the fabric round them faces up and back (about 0.5 up): a kink in the
+normals, also the place where the UV unwrap breaks into many small islands. `smooth_cleft_normals()` in
+`build_iris_hero.py` replaces the outer normals of that patch (21 vertices) with a low-pass, as custom normals; no
+vertex moves (`qa_silhouette.py` 0.0 mm, `qa_restpose.py` 0 joints). Checked only in Cycles with a warm low light
+from behind (`qa_seat.py`, `docs/art/iris/final/07_seat_shading_before_after.jpg`), where the difference is
+subtle; **not checked in the game** (no GPU browser in the build container). If the spot is still there in the
+game, the next suspects are the UV island borders in that patch (AO and normal bake seams: unwrap the top of the
+leggings' back as one island) and the 1.8 mm rim of the leggings' top edge.
+
+**Open with the owner:** the body shape. The owner may send a new reference for it; until then the 09.11 athletic
+body stays and nothing takes proportions from the GPT sheet.
+
 **Done (11.11, in the game):**
 
 - Hair per the target sheet: a solid strand-textured volume with a soft fringe at the hairline, overlapping locks, a
