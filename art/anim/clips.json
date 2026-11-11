@@ -724,6 +724,51 @@
     "nod": {},
     "counter": {}
    }
+  },
+  "elise": {
+   "model": "game/public/assets/models/agent_elise.glb",
+   "style": {
+    "track": 0.05,
+    "arm_swing": 0.6,
+    "arm_out": 7,
+    "pelvis_rot": 1.0,
+    "head_level": 0.6
+   },
+   "action_style": {
+    "track": 0.09,
+    "arm_out": 0,
+    "arms_down": {
+     "out": 15,
+     "fwd": 1,
+     "elbow": 11,
+     "in": 3,
+     "keep": 0.8
+    },
+    "stance": {
+     "fwd": 0.03,
+     "height": -0.006
+    }
+   },
+   "clips": {
+    "idle": {},
+    "idle2": {
+     "use": "idle_shift"
+    },
+    "idle_look": {},
+    "walk": {},
+    "run": {
+     "style": {
+      "track": 0.045,
+      "arm_swing": 0.8,
+      "hands": "loose_fist",
+      "lean": 3
+     }
+    },
+    "register": {},
+    "greet": {
+     "use": "wave"
+    }
+   }
   }
  }
 }

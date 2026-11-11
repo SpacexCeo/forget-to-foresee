@@ -12,14 +12,30 @@ import { tuneHairCards } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { ONE_SHOT_CLIPS, REACTION_SECONDS, resolveClip } from './behaviour.js';
 import { FADE, GaitLayer, FootPlant, findLookBones, applyLookTo, accelLean } from './gait.js';
+import { heroFromSearch } from '../render/asset-catalog.js';
 import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace } from './anim-library.js';
 
 /**
  * The file Iris loads: `agent_iris_m` (1024 textures, lighter mesh) on phones and the low tier when the build
  * ships it, else the full `agent_iris`. boot-world.js prefetches the same name, so she is downloaded once.
  */
-export function irisModelFile(files = MODEL_FILES, variant = getModelVariant()) {
-  return variant && files['agent_iris' + variant] ? 'agent_iris' + variant : 'agent_iris';
+export function irisModelFile(files = MODEL_FILES, variant = getModelVariant(), hero = heroFromSearch()) {
+  const base = files[hero.model] ? hero.model : 'agent_iris';
+  return variant && files[base + variant] ? base + variant : base;
+}
+
+/** Cel shading for a heroine whose .glb carries flat colours and an inverted-hull outline (Elise). */
+export function toonify(model) {
+  const steps = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
+  steps.minFilter = steps.magFilter = THREE.NearestFilter; steps.needsUpdate = true;
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    const outline = /outline/.test(o.material.name);
+    o.material = outline
+      ? new THREE.MeshBasicMaterial({ name: o.material.name, color: 0x06060a })
+      : new THREE.MeshToonMaterial({ name: o.material.name, map: o.material.map, gradientMap: steps });
+    o.userData.outline = outline;
+  });
 }
 
 export class IrisAvatar {
@@ -33,7 +49,7 @@ export class IrisAvatar {
 
   /** Adds her model to the avatar group when the build has it; safe to call again (one attach per avatar). */
   attach(avatarGroup) {
-    if (!MODEL_FILES.agent_iris || this.irisModel) return Promise.resolve();
+    if (!MODEL_FILES[irisModelFile()] || this.irisModel) return Promise.resolve();
     return (this.attaching ||= this.load(avatarGroup));
   }
 
@@ -41,17 +57,18 @@ export class IrisAvatar {
     try {
       const { gltf } = await prefetchGltf(irisModelFile()); // started by boot-world.js before the camps (QA-030)
       const model = cloneSkinned(gltf.scene);
-      upgradeAssetMaterials('agent_iris', model);
+      const hero = heroFromSearch();
+      const toon = hero.toon && MODEL_FILES[hero.model];
+      if (toon) toonify(model); else upgradeAssetMaterials('agent_iris', model);
       // 11.11 (target sheet): shaded hair. The strand atlas is lit like any other material; the locks stay
       // alpha-tested with alpha-to-coverage. (09.11 it was drawn as one unlit brown: a cap with stepped edges.)
-      tuneHairCards(model);
-      fabricSheen(model); // owner 09.11: a soft sheen on the knit
-      model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = true; });
+      if (!toon) { tuneHairCards(model); fabricSheen(model); } // owner 09.11: a soft sheen on the knit
+      model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = !o.userData.outline; });
       await warmModel(model);
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
       // Motion-capture clips from the side-car file replace the model's own clips of the same name (anim-library.js).
-      const extra = sidecarEnabled() ? await sidecarClips('agent_iris') : [];
+      const extra = sidecarEnabled() ? await sidecarClips(toon ? hero.model : 'agent_iris') : [];
       const clips = mergeClips(gltf.animations, extra);
       const mixer = clips.length ? new THREE.AnimationMixer(model) : null;
       const idle = mixer ? resolveClip(clips, 'idle').clip : null;
