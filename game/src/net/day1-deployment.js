@@ -6,5 +6,6 @@ export const DAY1_DEPLOYMENT = {
   "companions": "companions.ftf-coordinator.testnet",
   "guests": "guests.ftf-coordinator.testnet",
   "guestKeyAccount": "guests.ftf-coordinator.testnet",
-  "guestKeyPublic": "ed25519:3aViGk5NRgNqojA67rNfUqN5g7VyGkDXYZytfvuHyPgA"
+  "guestKeyPublic": "ed25519:3aViGk5NRgNqojA67rNfUqN5g7VyGkDXYZytfvuHyPgA",
+  "agents": "agents.ftf-coordinator.testnet"
 };
