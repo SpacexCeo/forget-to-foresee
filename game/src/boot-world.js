@@ -40,7 +40,8 @@ import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE } from './scenes/town-layout.js';
+import { createFogCards } from './render/fog-cards.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -174,6 +175,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
+let fogCards = null;
 let town = null, townFlow = null, townCasting = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -243,6 +245,7 @@ if (townMode.town) {
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
   });
   mountCasting();
+  fogCards = createFogCards(scene, TOWN_ROUTE); // ground fog along the street and stairs (night, early morning)
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
   // A failed attach (a dropped download) is tried again a few times; the loading screen covers the wait.
@@ -693,6 +696,7 @@ function frame() {
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
+    if (fogCards) fogCards.update(clock.elapsedTime, camera, (lookdev.look.mistCards || 0) + lookdev.weather.state.rain * 0.3, scene.fog.color, { reducedMotion: lookdev.reducedMotion, enabled: lookdev.tier !== 'low' });
     if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy);
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
     if (dayCycle && !lookdev.reducedMotion) tickDayCycle(dt);

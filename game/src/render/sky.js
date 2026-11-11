@@ -124,10 +124,10 @@ export const LOCATION_LOOKS = Object.freeze({
       dusk: { azimuth: -112, envIntensity: 0.55, lamps: 1.25, windows: 2.4, bounce: 0.05,
         fog: { density: 0.02, falloff: 0.05, near: 50, far: 700, sunPower: 9, aerial: 0.5 } },
       // The day cycle's hours (render/daycycle.js): low sun only, then the moon.
-      dawn: { lamps: 0.6, windows: 0.9, bounce: 0.5, fog: { density: 0.024, falloff: 0.06, near: 50, far: 800, sunPower: 8, aerial: 0.55 } },
-      evening: { sunWarm: 1.0, lamps: 0.8, windows: 1.2, bounce: 0.45, fog: { density: 0.02, falloff: 0.05, near: 55, far: 820, sunPower: 9, aerial: 0.5 } },
-      twilight: { lamps: 1.4, windows: 2.4, bounce: 0.05, fog: { density: 0.026, falloff: 0.07, near: 40, far: 650, sunPower: 6, aerial: 0.5, cool: 0.8 } },
-      night: { lamps: 1.9, windows: 2.8, bounce: 0.1, fog: { density: 0.05, falloff: 0.11, near: 22, far: 420, sunPower: 2, aerial: 0.55, cool: 1.0, lobe: 0.3 } },
+      dawn: { mistCards: 0.45, lamps: 0.6, windows: 0.9, bounce: 0.5, fog: { density: 0.024, falloff: 0.06, near: 50, far: 800, sunPower: 8, aerial: 0.55 } },
+      evening: { mistCards: 0.12, sunWarm: 1.0, lamps: 0.8, windows: 1.2, bounce: 0.45, fog: { density: 0.02, falloff: 0.05, near: 55, far: 820, sunPower: 9, aerial: 0.5 } },
+      twilight: { mistCards: 0.6, lamps: 1.4, windows: 2.4, bounce: 0.05, fog: { density: 0.026, falloff: 0.07, near: 40, far: 650, sunPower: 6, aerial: 0.5, cool: 0.8 } },
+      night: { mistCards: 1, lamps: 1.9, windows: 2.8, bounce: 0.1, fog: { density: 0.05, falloff: 0.11, near: 22, far: 420, sunPower: 2, aerial: 0.55, cool: 1.0, lobe: 0.3 } },
     }),
   }),
 });

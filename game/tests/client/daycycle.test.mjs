@@ -67,3 +67,13 @@ test('sky statistics blend between keyframes; no pixels gives neutral defaults',
   assert.ok(Math.abs(m.scale - (s0.scale + s1.scale) / 2) < 1e-9);
   assert.equal(m.zenith.length, 3);
 });
+
+test('ground-fog cards follow the hour: thickest at night, light at dawn, almost none in the evening; off on low', async () => {
+  const mist = (h) => town(h).mistCards || 0;
+  assert.ok(mist('night') === 1 && mist('dawn') > mist('evening') && mist('twilight') > mist('dawn'));
+  const { readFileSync } = await import('node:fs');
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /fogCards\.update\([^)]*enabled: lookdev\.tier !== 'low'/);
+  const fc = readFileSync(new URL('../../src/render/fog-cards.js', import.meta.url), 'utf8');
+  assert.match(fc, /reducedMotion \? 0/); assert.match(fc, /depthWrite: false/);
+});
