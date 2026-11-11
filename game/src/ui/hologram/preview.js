@@ -167,15 +167,15 @@ export function createHologramPreview(canvas, opts = {}) {
   }
 
   const hidden = () => typeof document !== 'undefined' && document.hidden;
-  function frame(now) { raf = 0; if (reduced || hidden()) return; draw((now - t0) / 1000); raf = requestAnimationFrame(frame); }
+  function frame(now) { raf = 0; if (reduced || document.hidden) return; draw((now - t0) / 1000); raf = requestAnimationFrame(frame); }
   function restart() {
     cancelAnimationFrame(raf); raf = 0;
     profile = renderProfile(recipe, tier);
     resize();
     // Always paint now: a look is on screen the moment it is chosen, even when the animation loop is
     // starved (a busy main thread, a hidden tab) or off (reduced motion: this one still frame).
-    draw(reduced ? 1.7 : Math.max(0, (performance.now() - t0) / 1000));
-    if (!reduced) raf = requestAnimationFrame(frame);
+    if (reduced) draw(1.7);
+    else { draw(Math.max(0, (performance.now() - t0) / 1000)); raf = requestAnimationFrame(frame); }
   }
   // Coming back to the tab resumes the loop (frame() stops itself while the document is hidden).
   const onVisible = () => { if (!hidden() && !reduced && !raf) raf = requestAnimationFrame(frame); };
