@@ -86,3 +86,14 @@ randomness is verifiable through the TEE. Lead design (workers may refine, never
 | TEE | seed from the TEE signature + block seed, the deck generator + Merkle commit script, the chest contract (caps, mint, records), relayer endpoint to open a chest for a guest, `tools/verify-chest` (PASS/FAIL for any opening), tests |
 | Art | chest model (3 rarity variants) with open animation + glow, loot NFT card frames, monster drop VFX; compressed glb + _m |
 | Jury | README row and judge-guide step once it runs live; numbers from STATS |
+
+## Profile look (owner, 11.11 23:50 Kyiv; reference `docs/art/ui/profile-owner-ref.jpg`)
+The owner wants the Profile to look like this reference: dark green-black panels with thin borders and soft rounded
+corners, a serif display face for the name and numbers, small gold small-caps labels ("YOUR STORY BEGINS", "TOWN
+SILK"), the player's character portrait with a teal rim light on the left, level + title + XP bar, an honest line
+("Titles are cosmetic only: no power, nothing to buy"), a highlighted Town silk card ("Stored in this browser",
+"In-game currency only. No real money"), three stat tiles (net silk from agents, agents hired, rounds played by
+agents), a "Town silk over time" chart with an empty state ("Your history starts here"), a stats grid (signs read,
+trials verified, memories forgotten, best agent) and Open trades / Trade log tabs with empty states. Real data only;
+empty states where there is none. **TZ worker builds it tonight (code and mechanics in any case)**; GPT may send a
+refined mockup (UI-004 follow-up), and the owner tunes the design in the morning. Keep phone and desktop layouts.
