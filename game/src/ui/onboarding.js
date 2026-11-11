@@ -169,6 +169,9 @@ function ring(i18n, o) {
   return svg;
 }
 
+/** The tutorial's example sign with its numbers and slot names (the town quest's innkeeper shows it). */
+export function tutorialSignSvg(i18n) { return ring(i18n, { dots: TUTORIAL_SIGN.dots, lit: new Set(), numbers: true, labels: true }); }
+
 /**
  * @param {HTMLElement} root
  * @param {{ctx?: object, flow?: object, onFirstContact?: (info) => void, onExit?: () => void, firstContactNoteKey?: string}} opts

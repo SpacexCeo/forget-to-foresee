@@ -32,7 +32,9 @@ import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
-import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
+import { PROGRAMS } from './play/townsfolk-plan.js';
+import { townToWorld, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -147,7 +149,14 @@ if (townMode.town) {
   camera.far = TOWN_CAMERA.far; camera.updateProjectionMatrix();
   rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
+  // The town quest (scenes/town-quest.js, hackathon spec P1-B): three talks on the way to the altar, once per device,
+  // never on the judge link (?quest=1 forces it, ?quest=0 skips). The purse is a teaching prop: no engine, no chain.
+  const quest = questPlan({ demo: params.get('demo'), quest: params.get('quest'), stored: ctx.storage ? ctx.storage.getItem(QUEST_KEY) : null })
+    ? createTownQuest({ storage: ctx.storage }) : null;
+  let signFn = null;
+  if (quest) import('./ui/onboarding.js').then((m) => { signFn = m.tutorialSignSvg; }).catch(() => {});
   townFlow = createTownFlow({
+    quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
