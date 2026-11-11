@@ -31,3 +31,9 @@ Ledger never touches engine state; distribution mean/variance; seed reproducibil
 - The same learning agents trade in the Judge Echo drill and show on its leaderboard.
 - Optional "smart speech" (button, WebGPU devices only, lazy download): a small open-licence instruct model (~0.5–1B, check the licence, e.g. a small Qwen instruct) runs in the browser via WebLLM or transformers.js and phrases the agent's explanation of its trades and its hire dialogue. It never makes decisions; the policy decides. Off by default; the game works fully without it.
 - Tests: on a synthetic series with a learnable pattern the policy's return improves over rounds; it never reads unpublished bars; reproducible from seed + history; the LLM path is not loaded unless enabled.
+
+## Update 2 (owner, 11.11): where agents trade, log, stats, open trades
+- **A place:** hired agents physically walk to the trading spot — the Shard Exchange (its door on the square; the Echo terminal is there) — trade there (a short "at the counter" idle with the terminal glowing), and walk back to their post. Until the interior is enterable, they gather at its door under a trading board on the wall.
+- **Trade log:** every agent action is a log line (time, agent, instrument, buy/sell, size, price, result, reason line from the policy or the smart-speech model). A Log tab in the menu, filter by agent; the last lines also scroll on the trading board at the Exchange.
+- **Open trades:** a view of each agent's open positions (instrument, entry, size, current mark, unrealised result) and the ones that closed this session.
+- **Player panel stats:** net town silk, total hired rounds, best agent, win rate, return per agent (measured), level/XP, and a small equity curve. All local, clearly labeled.

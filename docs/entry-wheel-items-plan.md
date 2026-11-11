@@ -14,3 +14,4 @@ Model in Blender, original designs, our world (pearl, amber, bronze, the round-s
 - **Mechanical parts (10):** gears, a spring coil, a brass lens, a valve, a cog-ring with glyphs, a chain link, a gauge, a crank, a rivet plate, a spindle — Shell-age machinery, bronze/iron/amber.
 - **Wheel of fortune prop** (for the square or the Inn): a brass ring wheel with glyph segments and an amber pointer.
 - Deliver small game GLBs (≤3k tris each, KTX2) plus transparent 256×256 and 128×128 icon renders for every item (one light setup, consistent), in game/public/assets/items/ with a JSON manifest (id, name key, rarity, icon path, glb path).
+- **Trading board** at the Shard Exchange (3D, Fable): a wall board/stand where the log and prices scroll, plus a counter spot agents stand at.
