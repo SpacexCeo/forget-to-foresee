@@ -17,9 +17,13 @@ on the 09.11 athletic body: `qa_silhouette.py` against the 10.11 build gives 0.0
 trainers and the ponytail differ), `qa_restpose.py` against the glb before 7cb3695 gives 0 joints differ. Her
 standing clips hold the arms down along the body (`relax_arms()`: wrist targets for the arm IK); the rest pose is
 untouched. Built on CPU in the lead's container (Blender 4.5.3, MPFB 2.0.18, `IRIS_CPU=1`, about 4 min) because the
-GPU server answers HTTP 522. Three-way turnaround: `docs/art/iris/final/00_body_restored_turnaround.jpg`. The other
-sheets in that folder (01-05, `sheet_*`, `ingame_*`) still show the rejected body and need a re-render. Not re-shot
-in the game after this rebuild (no GPU browser here).
+GPU server answers HTTP 522. Three-way turnaround: `docs/art/iris/final/00_body_restored_turnaround.jpg`. All sheets
+in that folder are re-rendered from this build (Cycles on CPU, 16 samples); the in-game shots of the rejected body
+are removed, and no new in-game or phone shot exists for this build (no GPU browser here; the server runs before it
+had 0 console errors and the phone run requested `agent_iris_m.glb` only). Standing pose, second pass: the arms
+hang near vertical, wrists 23 cm from the midline, elbows pointing back, hands a few centimetres clear of the
+thighs (`RELAXED_WRIST`). Lip tone checked under a warm low sun and a backlight beside the target sheet
+(`06_lips_two_lights_and_target.jpg`, `qa_lips.py`): a muted rose in both, kept.
 
 **Done (11.11, in the game):**
 
@@ -48,8 +52,10 @@ back); `tail_*` drives the ponytail.
 
 **Half-done / not done:**
 
-- Jacket (audit item 9): the front edges still meet the collar in a stepped corner, the bust drape is softer only
-  because the bust is smaller, the armpit lining is untouched. Next: plane cuts for the front edges and neckline in
+- Jacket (audit item 9): untouched. The front edges still meet the collar in a stepped corner, the bust drape
+  shows two cones, the armpit lining is as it was. One attempt (plane cuts on the front edges through
+  `shell_from_body(cuts=(point, normal, region))`, a tapered thicker collar) broke the plackets, which are cast
+  onto the jacket's old edge, and hid the collar ends: reverted, the region option of `cuts` stays in the code. Next: plane cuts for the front edges and neckline in
   `athletic_costume` (`hero_costume.shell_from_body(cuts=...)`, as the leggings use).
 - `game/src/review/anim-review.js` still calls `flatHair` for Iris (the review page, animation worker's file): switch
   it to `tuneHairCards` to see the shipped look there.
