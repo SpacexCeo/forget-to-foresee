@@ -155,7 +155,8 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
-const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, owner: (loadDay1(ctx.storage).guest || {}).account_id || null, exportKey: loadDay1(ctx.storage).playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
+// The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off

@@ -42,9 +42,9 @@ test('record with the guest key, read back, re-compute: verified; a chain that r
     else if (b.method === 'block') result = { header: { hash: b58encode(new Uint8Array(32).fill(4)) } };
     else if (b.method === 'send_tx') {
       sent.push(b);
-      const bytes = Buffer.from(b.params.signed_tx_base64, 'base64').toString('latin1');
-      const json = bytes.slice(bytes.indexOf('{"npc"'), bytes.lastIndexOf('}') + 1);
-      stored = JSON.parse(json);
+      const buf = Buffer.from(b.params.signed_tx_base64, 'base64');
+      const at = buf.indexOf(Buffer.from('{"npc"')); // the borsh args are length-prefixed (u32 little-endian)
+      stored = JSON.parse(buf.subarray(at, at + buf.readUInt32LE(at - 4)).toString('utf8'));
       result = { status: { SuccessValue: '' }, receipts_outcome: [] };
     } else if (b.method === 'query' && b.params.method_name === 'get_track') {
       const v = stored ? { ...stored, ...(tamper ? { pnl_bp: stored.pnl_bp + 7 } : {}), account_id: 'ann-1.guests.c.testnet', trades: 5 } : null;
