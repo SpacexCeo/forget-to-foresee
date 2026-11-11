@@ -125,7 +125,7 @@ def reduce(bm, skin, eyes, garments, budget, face_target=5000):
         SH.trim_field(o)
     keep = [o for o in rest if tris(o) < 260 or o.get("mat") == "hair" or o.name.startswith("hat")]
     for o in keep:
-        if tris(o) > 900:
+        if tris(o) > 1800:
             decimate(o, 0.6)
     big = [o for o in rest if o not in keep]
     want = budget - fixed - sum(tris(o) for o in keep)
@@ -233,7 +233,7 @@ def skin_all(ctx, rig, skin_obj):
             bone = "head" if r == "head" else r.split(":")[1]
             o.vertex_groups.new(name=bone).add(list(range(len(o.data.vertices))), 1.0, "REPLACE")
         else:
-            src = kd if o.name.startswith(SLEEVED) or "_cord" in o.name else Side
+            src = kd if (o.name.startswith(SLEEVED) and not o.name.endswith(("_skirt", "_tails"))) or "_cord" in o.name else Side
             if o.name.endswith(("_L", "_R")) and not o.name.startswith(SLEEVED):
                 src = kd_side[o.name[-1]]              # a shoe never reads the other foot, wherever its inner edge is
             IH.skin_garment(o, src, ctx.wts, rules.get(r))
@@ -291,7 +291,7 @@ def build(key, out_root, shade=True, size=2048, budget=16000, samples=16):
         tone, blush = SKIN[e["skin"]]
         hairc = HAIR[e["hair"][0]]
         brow = SH._lerp(hairc, SH._mul(tone, 0.25), 0.35) if e["hair"][0] not in ("white", "grey") else (0.45, 0.44, 0.42)
-        skin_kw = dict(land=SH.landmarks(rig, bm), tone=tone, blush=blush, brow=brow, brow_w=e.get("brows", 1.0),
+        skin_kw = dict(land=SH.landmarks(rig, bm), tone=tone, blush=blush, brow=brow, brow_w=e.get("brows", 1.0) * 0.62,
                        age=e["macros"]["age"], freckles=e.get("freckles", 0.0),
                        stubble=SH._lerp(HAIR[e["beard"][0]], tone, 0.35) if e.get("beard", ("", ""))[1] == "short" else None)
         groups = [([bm, skin], SH.skin_shader, skin_kw), (list(eyes), SH.eye_shader, dict(iris=SH.IRIS[e["skin"]]))]
@@ -336,8 +336,14 @@ def build(key, out_root, shade=True, size=2048, budget=16000, samples=16):
         o.select_set(True)
     bpy.context.view_layer.objects.active = skin
     bpy.ops.object.join()
-    skin.name = f"{name}_body"
-    bm.name = f"{name}_face"
+    # one skinned mesh per person (one draw call per pass): the face, which carries the morphs, takes the rest in
+    bpy.ops.object.select_all(action="DESELECT")
+    skin.select_set(True)
+    bm.select_set(True)
+    bpy.context.view_layer.objects.active = bm
+    bpy.ops.object.join()
+    skin = bm
+    bm.name = name
     rig.name = "rig"
     rig["chains"] = json.dumps([[n, [list(p) for p in pts], par] for n, pts, par in chains])
     k = facts["export_scale"]
@@ -351,7 +357,7 @@ def build(key, out_root, shade=True, size=2048, budget=16000, samples=16):
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
     path = os.path.join(out, name + ".glb")
     bpy.ops.object.select_all(action="DESELECT")
-    for o in (rig, bm, skin):
+    for o in (rig, bm):
         o.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.export_scene.gltf(

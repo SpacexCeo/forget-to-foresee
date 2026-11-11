@@ -12,6 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'МАЙБУТНЄ КОШТУЄ СПОГАДУ',
+  'premise.line': 'Плати за пророцтво своїми спогадами. Кожне пророцтво запечатане в NEAR testnet до початку гри.',
+  'premise.hint': 'Піднімися сходами до вівтаря, щоб почати.',
 
   // ---- common ----
   'common.close': 'Закрити',
@@ -38,6 +40,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': 'ВИХІД',
+  "exch.townAgent": "агент із міста, що навчається",
   "exch.lobby": "БІРЖА ПЕРЕДБАЧЕННЯ",
   "exch.open": "Потренувати передбачення (локальне тренування)",
   "exch.title": "Біржа передбачення",
@@ -804,4 +807,26 @@ export default {
   'preview.autoPlay': 'Автогра на один тик',
   'preview.newSeason': 'Новий локальний сезон',
   'preview.localDemo': 'Локальне демо · рушій без графіки в браузері',
+
+  // ---- collectible items ----
+  'item.shard_pearl_drop': 'Перлинний уламок-крапля',
+  'item.shard_pearl_tablet': 'Перлинний уламок-табличка',
+  'item.shard_teal_twin': 'Бірюзовий уламок-близнюк',
+  'item.shard_teal_octa': 'Бірюзовий октаедр',
+  'item.shard_violet_cluster': 'Фіолетова друза',
+  'item.shard_violet_spire': 'Фіолетовий шпиль',
+  'item.shard_amber_crown': 'Бурштиновий уламок-корона',
+  'item.shard_amber_blade': 'Бурштиновий уламок-клинок',
+  'item.part_gear': 'Бронзова шестерня',
+  'item.part_spring_coil': 'Пружина',
+  'item.part_brass_lens': 'Латунна лінза',
+  'item.part_valve': 'Вентиль',
+  'item.part_glyph_cogring': 'Зубчасте кільце зі знаками',
+  'item.part_chain_link': 'Ланки ланцюга',
+  'item.part_gauge': 'Манометр',
+  'item.part_crank': 'Рукоятка',
+  'item.part_rivet_plate': 'Клепана пластина',
+  'item.part_spindle': 'Веретено',
+  'item.prop_wheel_of_fortune': 'Колесо фортуни',
+  'item.trading_board': 'Торгове табло',
 };

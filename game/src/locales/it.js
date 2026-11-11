@@ -12,6 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'IL FUTURO COSTA UN RICORDO',
+  'premise.line': 'Paga la profezia con i tuoi ricordi. Ogni profezia è sigillata su NEAR testnet prima di giocare.',
+  'premise.hint': 'Sali le scale fino all\'altare per iniziare.',
 
   // ---- common ----
   'common.close': 'Chiudi',
@@ -38,6 +40,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': 'ESCI',
+  "exch.townAgent": "agente cittadino che impara",
   "exch.lobby": "BORSA DELLA PREVEGGENZA",
   "exch.open": "Allena la preveggenza (esercizio locale)",
   "exch.title": "Borsa della preveggenza",
@@ -804,4 +807,26 @@ export default {
   'preview.autoPlay': 'Gioca un tick in automatico',
   'preview.newSeason': 'Nuova stagione locale',
   'preview.localDemo': 'Demo locale · motore senza grafica nel browser',
+
+  // ---- collectible items ----
+  'item.shard_pearl_drop': 'Frammento goccia di perla',
+  'item.shard_pearl_tablet': 'Frammento tavoletta di perla',
+  'item.shard_teal_twin': 'Frammento gemello verde acqua',
+  'item.shard_teal_octa': 'Ottaedro verde acqua',
+  'item.shard_violet_cluster': 'Druso viola',
+  'item.shard_violet_spire': 'Guglia viola',
+  'item.shard_amber_crown': 'Frammento corona d’ambra',
+  'item.shard_amber_blade': 'Frammento lama d’ambra',
+  'item.part_gear': 'Ingranaggio di bronzo',
+  'item.part_spring_coil': 'Molla',
+  'item.part_brass_lens': 'Lente d’ottone',
+  'item.part_valve': 'Valvola',
+  'item.part_glyph_cogring': 'Anello dentato con glifi',
+  'item.part_chain_link': 'Anelli di catena',
+  'item.part_gauge': 'Manometro a quadrante',
+  'item.part_crank': 'Manovella',
+  'item.part_rivet_plate': 'Piastra rivettata',
+  'item.part_spindle': 'Fuso',
+  'item.prop_wheel_of_fortune': 'Ruota della fortuna',
+  'item.trading_board': 'Tabellone degli scambi',
 };

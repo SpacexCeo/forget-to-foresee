@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-11",
+  "commit": "b5e40c4",
+  "suites": [
+    {
+      "name": "game",
+      "command": "cd game && npm test",
+      "pass": 765,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "server",
+      "command": "cd server && npm test",
+      "pass": 31,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "relayer",
+      "command": "cd relayer && npm test",
+      "pass": 7,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract season-commit",
+      "command": "cd contracts/season-commit && cargo test --lib",
+      "pass": 56,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract memory-shard",
+      "command": "cd contracts/memory-shard && cargo test --lib",
+      "pass": 21,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract agent-card",
+      "command": "cd contracts/agent-card && cargo test --lib",
+      "pass": 21,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract guests",
+      "command": "cd contracts/guests && cargo test --lib",
+      "pass": 9,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract character-nft",
+      "command": "cd contracts/character-nft && cargo test --lib",
+      "pass": 9,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract token-account",
+      "command": "cd contracts/token-account && cargo test --lib",
+      "pass": 2,
+      "fail": 0,
+      "ok": true
+    },
+    {
+      "name": "contract agent-ledger",
+      "command": "cd contracts/agent-ledger && cargo test --lib",
+      "pass": 7,
+      "fail": 0,
+      "ok": true
+    }
+  ],
+  "distBytes": 402773164
+}

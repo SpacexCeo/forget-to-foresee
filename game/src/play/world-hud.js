@@ -52,7 +52,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     shards = createShardWatcher();
     moments = createMintMoments();
     mintToast = createMintToast(host, { t: render, doc, onOpen: () => ui.open('memory') });
-    if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs }));
+    if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs, judge: autoOpenShard }));
   } catch (e) { console.warn('[play] shard NFT watcher off', e); shards = null; }
   // The Foresight Exchange (Judge Echo): optional, from Memories; with ?exchange=1 it also opens (not started) after the
   // judge path's shard-card beat, on the short 4-bar window. Never part of the default judge table.
@@ -60,7 +60,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
   let exchangeOpen = null;
   const openExchange = () => {
     if (exchangeOpen && exchangeOpen.open) return;
-    import('../ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc, i18n: ctx.i18n, storage: ctx.storage, short: exchangeShort })).then((x) => { exchangeOpen = x; }).catch((e) => console.warn('[play] exchange', e));
+    import('../ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc, i18n: ctx.i18n, storage: ctx.storage, short: exchangeShort, ledger: ctx.townLedger || null })).then((x) => { exchangeOpen = x; }).catch((e) => console.warn('[play] exchange', e));
   };
   if (ui.setExchangeOpener) ui.setExchangeOpener(openExchange);
   if (ui.setNearSource) ui.setNearSource(() => (near ? near.status : null)); // the Biography's season record

@@ -28,7 +28,8 @@ town and the island's `KILL_Y` afterwards; the last safe point is always inside 
 
 | URL | Result |
 | --- | --- |
-| *(none)*, `?demo=judge` | Lobby, then the town. This is the default and the jury link. |
+| *(none)*, `?demo=judge` | Straight into the town (no lobby or onboarding screens). This is the default and the jury link. The lobby is under Esc → Main menu. |
+| `?lobby=1` | The lobby first, then the town (the old start). |
 | `?skip=town` | Straight to the archipelago. |
 | `?play=direct`, `?cinematic=…`, `?view=…`, `?film=…` | Dev and QA deep links: the archipelago as before, no town. |
 | `?play=direct&town=1` | The direct QA link into the town (also with `demo=judge`). |

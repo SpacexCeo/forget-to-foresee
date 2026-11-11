@@ -205,6 +205,9 @@ export function shopFromData(s, index) {
   });
 }
 
+/** Town spots without a model of their own, in town-local metres: the notice board after the stairs, the mirror by the gate. */
+export const TOWN_SPOTS = Object.freeze({ board: Object.freeze([1.6, 2.5, 4.0]), mirror: Object.freeze([2.0, 0, 21.5]) });
+
 /** The shops Iris can walk into (empty when the data has none). */
 export const TOWN_SHOPS = Object.freeze((TOWN_DATA.shops || []).map(shopFromData));
 export const shopById = (id, shops = TOWN_SHOPS) => shops.find((s) => s.id === id) || null;
@@ -241,3 +244,13 @@ export function shopPrompt({ phase, near = null, shop = null, zone = null }) {
   if (zone === 'exit') return { action: 'leave', key: 'town.shop.leave', fallback: 'town.shop.leave' };
   return null;
 }
+
+/* ---------------- props from the items set (scenes/town-props.js) ---------------- */
+
+/** Where a prop stands, from a shop door: `out` metres out into the street, `side` metres along the house front. */
+export function besideDoor(door, out, side) {
+  const h = door.heading, fx = Math.sin(h), fz = Math.cos(h); // the way Iris faces walking in
+  return { position: [door.position[0] - fx * out + fz * side, door.position[1], door.position[2] - fz * out - fx * side], heading: h + Math.PI };
+}
+export const BOARD_SPOT = Object.freeze({ shop: 'exchange', out: 0.9, side: 2.1 });
+export const WHEEL_SPOT = Object.freeze({ shop: 'inn', out: 1.0, side: -2.2, reach: 1.8 });

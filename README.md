@@ -1,220 +1,129 @@
 # Forget to Foresee
 
-> A game by Lambada_eth. Built at NEAR HACKATHON (1–14 Nov 2026). Tracks: **games** (primary), **nfts** (for the memory shards; see [Tracks](#tracks)).
+A 3D strategy game where an AI clan agent, **Iris**, pays for prophecy with her own memories. Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
 
-**The problem.** Games with "AI agents" and "on-chain economies" usually hide two lies: the AI secretly decides the outcome, and the chain is decoration. We wanted a strategy game where every prophecy is fixed before play begins and can be checked afterwards, and where the agent's memories are the currency.
+- **Play it now (no install, desktop browser with WebGL 2):** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk
+- **Built at NEAR HACKATHON** (1–14 Nov 2026) by Lambada_eth. Tracks: **Games** (primary) and **NFTs** (memory shards); see [Tracks](#tracks).
+- **Licence:** MIT. **AI use:** see [Baseline, third-party code and AI disclosure](#baseline-third-party-code-and-ai-disclosure).
+- **Numbers** (test counts, build size) are generated, not typed: [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs --write`).
 
-**The product.** Shells hang over a floating archipelago. The Guests inside speak in round signs of four slots (Place, Action, Power, Delay). Six clans read the signs, stake silk on where a Gift will land, trade words, keep or break trust, and must assemble one message from six fragments before the crisis on trial 13. You guide one clan's agent, Iris; the other five are computer-run agents (deterministic heuristics with tempers, not an LLM), each with an in-game silk balance and a memory. To see the future early, Iris **forgets a memory forever**, and the forgotten memory goes to the clans' auction as a shard: Iris pays for prophecy with her own biography.
+## The problem
 
-**What ships today** (each item runs; details in [What works today](#what-works-today)):
-1. **A playable local economy.** A full 17-trial season runs in your browser tab (Three.js client, headless engine, rules `v3`): signs, stakes, Gift splits, trust, debts, memory auctions, the crisis and the vote, all in closed in-game silk. The same room module plays over a local HTTP API for AI agents.
-2. **Verifiable testnet records.** Our contract `season-commit` runs on NEAR testnet as [`ftf-seasons.testnet`](https://testnet.nearblocks.io/address/ftf-seasons.testnet): the judge season is committed, all 15 of its leaves were revealed and verified on-chain, and Ash's key is committed (not revealed: it is the trial-13 secret).
-3. **Memory-shard NFTs.** `memory-shard` (NEP-171) runs as [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet) with the judge season's three shards, minted by the coordinator script (not by the player's session); the game shows them as NFT cards on the judge path. Any other playthrough still gets a card for Iris's forgotten memory, labeled **Unminted shard preview** (no token id, no explorer link).
+Games that advertise "AI agents" and "on-chain economies" often hide two lies: the AI secretly decides the outcome, and the chain is decoration. Forget to Foresee fixes the future before play begins and lets anyone check it afterwards. The agent's memories are the currency.
 
-**Not built (future work):** a persistent, player-owned agent NFT (Iris is not an NFT today); live minting of shards in every season (an ordinary season mints nothing; its shard card is labeled *Unminted shard preview*); wallet-controlled play (the browser never signs; a coordinator vault stands in for the clans' accounts); on-chain escrow; live weekly tournaments (the tournament card is a [UI simulation](#real--mock)); multiplayer (one human per season; the other clans are computer-run).
+## What you do in the game (30 seconds)
 
-**How NEAR fits in.** The whole season is generated before the first move and committed to a SHA-256 Merkle root. Every revealed event carries a proof; the game checks it in the browser ("Verified ✓"), and our NEAR contract `season-commit` recomputes the same leaf byte for byte and verifies the proof on-chain, with a separate commit-reveal for the crisis key. For the judge season (`?demo=judge`, season `793f6c05e89839f2`) the root is committed on testnet ([commit tx](https://testnet.nearblocks.io/txns/6TtWeZ3WuHfhAEkPa9k7mfHAs6ayxqG4iY2iJyGLahbA)), all 15 leaves were revealed and verified there by the coordinator script, and the game reads the records back (read-only) to show **"Verified on NEAR testnet ✓"** under a revealed sign, linked to that leaf's reveal transaction.
+Six clans read round signs of four slots (Place, Action, Power, Delay), stake silk on where a Gift will land, trade, trust, betray, and must assemble one message before trial 13. You guide Iris; the other five clans are computer-run agents. To see the future early she can **forget a memory forever**; the forgotten memory is auctioned as a **shard** and, on the judge path, is a NEP-171 NFT bound to the sealed season.
 
-**What is proven, and what is not.** Proven: the schedule of events was fixed before play (the root is shown before trial 1 and, for the judge season, committed on-chain); each revealed event matches the committed root (its Merkle proof checks); the contract recomputes each leaf from the event's bytes itself. Not proven: the client runs the game rules locally in your browser, so silk, stakes, trust, auctions and the season's outcome are not on-chain and a modified client could change them; the commitment only stops anyone from changing *what the Guests said* after the root was shown. It also does not prove the season was chosen fairly: the judge season is a fixed public seed by design; live seasons mix in the player's nonce under the seed protocol (below), and a live season's root is not registered on-chain (no server holds a coordinator key). No token, no paid entry, no real money: the economy is closed in-game silk.
+<a id="no-gpu"></a>
+## Verify in 60 seconds (no GPU, no browser)
 
-**Verify it yourself, without this code.** Every revealed sign exports as one JSON: open Signs & Visions, open a revealed sign's
-**What does this prove?** panel and press **Copy proof** (the document comes from `game/src/net/verify-export.js`): full hashes, the byte recipe, the Merkle path.
-Check it with a one-file verifier that imports nothing from the game: `node tools/verify/verify.mjs proof.json` or
-`python3 tools/verify/verify.py proof.json` → every line `✓` and `OK` (exit 0); change one digit → `✗` and `FAIL` (exit 1).
-The leaf alone needs only a shell: the `recipe.shell` line of the file is a `printf … | sha256sum` command whose output is the
-leaf hash. Live seasons (not the fixed judge season) follow a seed protocol in which the room commits to its random bytes
-before the player's nonce is sent and reveals them at the end, so anyone can recompute the seed and regenerate the schedule
-(`node game/scripts/replay-season.mjs <seed> season.json`). Details, limits and what each check proves: [docs/verify.md](docs/verify.md).
+```bash
+git clone --depth 1 https://github.com/SpacexCeo/forget-to-foresee && cd forget-to-foresee
+bash scripts/verify-all.sh --skip-rust   # game, server and relayer tests; prints one table, exit 0 when all pass
+bash scripts/verify-all.sh               # the same plus the six Rust contracts (Rust, pkg-config, OpenSSL headers)
+```
 
----
+Each line of the table is one suite; the counts it prints are the ones recorded in [docs/STATS.md](docs/STATS.md). Node.js 20+ is enough for `--skip-rust`; missing prerequisites are reported in one line each.
 
-## Judge in 5 minutes
+<a id="agent-api"></a>
+Play a whole season through the agent HTTP API (no dependencies):
 
-Everything runs in the browser from the published build (desktop Chrome, Edge or Firefox with WebGL 2; the loading screen paints at once, the lobby appears after about 145 KB of JavaScript (gzipped) and the 3D world loads behind it; the models stream in afterwards, the first view's camps and terrain first and the two 20 MB heroes later, with unlabeled greybox stand-ins until they arrive; place names are on the map, key **N**). The published build comes from `main` through `.github/workflows/pages.yml`. The same path works locally with `cd game && npm ci && npm run dev` and `http://localhost:5173/?demo=judge&mode=walk`.
+```bash
+cd server && npm start                         # "Forget to Foresee agent API listening on http://127.0.0.1:8787/v1"
+node examples/agent.mjs --time-scale 1000      # second terminal, about 1 s
+# expect a JSON summary with "tick": 17, "rejected": 0, "firstProofVerified": true ("outcome" varies by season)
+```
 
-**Judge link:** https://spacexceo.github.io/forget-to-foresee/?demo=judge — the fixed judge season in Novice mode with fresh hints, in the default Shell hub mode ([Play through the Shell hub](#play-through-the-shell-hub)). The step-by-step table below was verified on the walking variant of the same season: **open** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk. The game always opens in English; another language only when the player picks one (lobby, Settings, **L**) or with `&lang=uk|ru|it|zh`.
+Check the on-chain commitment without our code (public testnet RPC, read-only):
 
-**The season lives in this browser tab.** Nothing about the season is saved: a refresh or a closed tab loses the season (trial, silk, stakes, forgotten memories, shards, log). What this browser keeps (`localStorage`, keys `ftf.*`): preferences (language, Novice/Pro/Simple, accessibility, quality), audio volumes, the tutorial's progress and the first-loop flag, hint flags, chapter films seen, the hologram look, the synthetic guest entitlement and the tournament simulation's enrollment. **To restart**, use **Settings → Season → Start a new season** (it asks first) or reload the page: a new local session starts at trial 1 (the judge link always rebuilds the same fixed season, with fresh hints); `&play=direct` skips the lobby. At the season's end the **Biography** lists what Iris remembered and sacrificed (buyer and price, or burned), her shard NFT when it is on testnet for this playthrough and the committed season link, with **Copy biography** and **Copy replay link**: a `?replay=r1.…` URL carries the seed and your accepted commands. Opening it replays the season command by command in the browser (the same room module) and shows where it ended and its Merkle root. For the judge season it checks that root against the commitment on `ftf-seasons.testnet`, recorded and then re-read live. Any other season says it was never committed. **Share postcard** (on each shard card and in the Biography) draws a 1200×630 image with Iris, the sign, the biography line and the game link on a 2D canvas, only when pressed. It offers **Download PNG** and **Copy text for X**. The testnet records and shard NFTs are separate: they are fixed on-chain and do not change with your play.
+```bash
+curl -s https://rpc.testnet.near.org -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"ftf-seasons.testnet","method_name":"get_season","args_base64":"eyJzZWFzb25faWQiOiI3OTNmNmMwNWU4OTgzOWYyIn0="}}' \
+ | python3 -c 'import sys,json;print(bytes(json.load(sys.stdin)["result"]["result"]).decode())'
+# expect: "leaf_count":15, "revealed_count":15, "ash_key_committed":true
+```
+
+One-file proof verifiers (they import nothing from the game): `node tools/verify/verify.mjs proof.json` or `python3 tools/verify/verify.py proof.json` (copy `proof.json` from **Signs & Visions → What does this prove? → Copy proof**). Exit 0 and every line `✓` means the leaf and the Merkle path match. Details: [docs/verify.md](docs/verify.md).
+
+## Judge path (about 5 minutes)
+
+Open https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk (fixed judge season `793f6c05e89839f2`, Novice mode). The game starts in the town.
 
 | # | Do | See |
 |---|---|---|
-| 1 | The lobby: **ENTER THE WORLD** → **Play as guest** → the five tutorial beats (tap the four strokes → **Next**; tap the core once → **Next**; tap the strokes 1 to 4 → **Next**; **Stake 10 silk on Shell II, trial 3**, watch trials 1–3 pass and the ring seal **Verified ✓** → **Next**; **Forget it for a vision** → **Guide me (Novice)**) → **Begin** (the hologram look picker) → **Step into the town**. Every beat has **Skip tutorial**; a returning player goes straight to the town. In the town, walk Iris up the main street to the Tournament altar (objective *Walk to the Tournament altar*; WASD, click the ground) and press **E** to register: the cover *The Tournament begins* carries her up to the archipelago. | The island with Iris on the balcony. HUD top-left: **Trial 1 of 17**, Silk **63**. Main quest: **Stake 10 silk at Shell I’s pad** · *G walks there. At the pad choose “Anchor here for trial 3”.* Log: *Owner's Key committed: 0x…* (a salted commitment; the hex differs on every run). |
-| 2 | Press **G** (Iris walks to the pad of Shell I on the plaza rim; about 30 s, hold **Shift** to run; or **WASD** / click the ground) | At the pad the context menu lists **E Anchor here for trial 3 · 2 Anchor here for trial 2 (as your reading says) · 3 … trial 1 · 4 … trial 4 · 5 Enter Shell I · 6 Look at the zone** (before the first reveal the trial-3 stake is the highlighted one: the first Gift of every season lands on trial 3, and a stake on trial 1 or 2 can never pay). |
-| 3 | Press **E** | Silk drops to **53**, log: *Anchor: Shell I, tick 3.* Quest: **End trial 1** · *Press T twice. Trials pass; trial 3 reveals the sign.* |
-| 4 | Press **T** twice (the second press confirms "End the tick anyway?") | **Trial 2 of 17**, silk 56. Quest: **Watch trial 3 come true** · *Keep pressing T. The reveal is checked against the seal.* |
-| 5 | Press **T** twice more, twice (to **Trial 4 of 17**) | Silk **72** (the stake came back: the Gift fell on Shell II). Log: ***Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓***. Hint: *It came true, and the seal matches: this future was written before we arrived.* Press **V** → **Resolved** tab: **Sign #1 · Revealed · Verified ✓ · Came true: Gift of 20 at Shell II, trial 3.** Quest: **The Price of Memory** · *Press M. Forget a memory: Iris sees the next signs early.* |
-| 6 | Press **M**, click **Forget it for a vision** on any memory (heavier memories show more signs); the panel asks *Forget “…” forever?* with what changes for Iris, what she gains and that it cannot be undone; click **Forget this memory** (**Keep it** or Esc cancels) | Signs & Visions opens with one to four new cards marked *vision*; log: *Vision: Iris sees N future signs before anyone else.* and *Shard "…" is up for auction.* Quest: **Decide your fragment at the Scroll** · *Give it for a share, or hold it: 40 silk at trial 13.* (**G** walks there; **E** gives it.) |
-| 7 | Press **T** (twice each) until the trial-6 auction closes | A toast in the upper middle of the screen. If the forgotten memory was the **call** (as in the recorded judge playthrough), it reads **Minted on NEAR testnet** · *Shard #7 · call → Frost for 13 silk* with the token id and **View on nearblocks**. With any other memory, once a clan buys the shard, it reads **Unminted shard preview**, with no token or link; an unsold shard shows the same preview in Memories. On the judge link Memories opens by itself on the card a moment later (elsewhere, **Open card** does it): the full card (biography, ink ring; on the real token also owner, the bound leaf #3 and explorer links). |
+| 1 | Walk Iris up the main street stairs to the altar (WASD or click the ground; Shift runs). Press **E** at the altar. | HUD chip "Walk to the Tournament altar", then a short cover and the floating archipelago. Top left: **Trial 1 of 17**, **Silk 63**. Quest: *Test Iris’s guess at Shell I’s pad*. |
+| 2 | Press **G** (Iris walks to the pad of Shell I; hold **Shift** to run). At the pad press **E** (the highlighted option is *Anchor here for trial 3*). | Silk **53**. Quest: *End trial 1*. |
+| 3 | Press **T** twice (the second press confirms). | **Trial 2 of 17**, silk **56**. Quest: *Watch trial 3 come true*. |
+| 4 | Press **T** twice, then **T** twice again. | **Trial 4 of 17**. Quest: *The Price of Memory*. Press **V** for Signs & Visions: revealed signs show "Verified ✓" (the event matched the root committed before you arrived). |
+| 5 | **While the HUD still reads Trial 4**, press **M** and click **Forget it for a vision** on *The Shells' Call on the night of arrival* (weight 2). Confirm with **Forget this memory**. | A dialog states what changes, what Iris gains and that it cannot be undone. Signs & Visions shows new cards marked *vision*. |
+| 6 | Press **T** (twice each time) until trial 6. | A toast **Minted on NEAR testnet** and, in Memories, the card **Shard #7 · call**: token `793f6c05e89839f2-7`, owner `lambada_eth.testnet`, "Bound to the sealed season · leaf #3", **View on nearblocks**. |
 
-That is the loop: read a sign → stake silk on it → the trial ends → the event is revealed with its Merkle proof against the root committed before you arrived. Then the Price of Memory: forget a memory, see the next signs early. From here: **V** shows every sign (Novice: one plain line; Pro: the four slots with confidence), at an anchor zone **E → Enter Shell** takes you inside to the glass where the Guest draws the sign and you can **Ask the Guests** whether a stroke means a meaning; **H** lists every key; **L** cycles the UI language (EN → UA → RU → IT → 中文); **Settings** switches Novice/Pro and the five UI languages.
+If you forget a different memory, or later than trial 4, the game shows an honest **Unminted shard preview** for Iris's shard: any playthrough that diverges from the recorded one gets no token. Two shortcuts that do not depend on timing:
 
-**Chapter films.** In a normal season a short in-engine film (about 37 s, built from this season's events, subtitled) opens each chapter: Arrival, The Language, Trust, The Crisis, The Vote and an ending. The judge link skips them so the table above stays a timed, gameplay-first path; add `&films=full` to watch them, tap to cut to the next shot, hold any key or the screen for 0.7 s to skip the whole film, and press **C** for the Chronicle to replay them.
+- On `?demo=judge`, Memories has a button **Open the judge playthrough's on-chain shard (#7)**: it reads `ftf-shards.testnet` and shows the real token card, labelled "From the recorded judge playthrough: minted by the coordinator, not by your session".
+- **The NFT does something (holder access):** open **Profile** (top right) → **NFTs** → *Holder access* → **Try the judge account**. The page reads `nft_tokens_for_owner` on `ftf-shards.testnet`, `agents.ftf-coordinator.testnet` and `heroine.ftf-coordinator.testnet` for `lambada_eth.testnet`, lists the tokens with nearblocks links and unlocks "Unlocked: Shard keeper"; the **Profile** tab then shows the *Shard keeper* title and an ink-ring frame on the portrait. Any testnet account id works; an account that holds nothing unlocks nothing. Read-only and cosmetic: no wallet, no signature, kept in this browser.
+- The **replay link** of the recorded judge playthrough replays it command by command in your browser and checks its Merkle root against `ftf-seasons.testnet`: [open the judge replay](https://spacexceo.github.io/forget-to-foresee/?replay=r1.eyJzIjoiY2MxNjFkMzA4ZmFhNjc1MzlhZjQ0MjA1YjU2YjZkNGYiLCJyIjoidjMiLCJjIjpbWyJzdGFydF9zZWFzb24iLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbInNhY3JpZmljZV9tZW1vcnkiLHsibWVtb3J5SWQiOjJ9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJjYXN0X3ZvdGUiLHsiYWNjZXB0Ijp0cnVlfV1dfQ) (generated by `node game/scripts/judge-replay-link.mjs`).
 
-### Play through the Shell hub
+Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **E** do the highlighted action, **T** end the trial, **M** memories, **V** signs and visions, **N** map, **H** help. Outside the town walls **Q** and **V** cast Iris's two skills. Gamepad and touch are supported.
 
-The default mode (owner design, 08.11): open `/?demo=judge` without `&mode=walk`.
+## Real vs mock
 
-1. **Fly into a Shell.** Quest: *Fly into Shell I · A sign waits there. Press F or tap the gold Shell.* The Shell dock on the right shows the four Shells; a gold one has a sign waiting. Click it or press <kbd>F</kbd>.
-2. **Read the sign.** Inside, the Guest draws a round logogram on the glass. The reading card shows Iris's guess for each of the four slots (Place, Action, Power, Delay) and how sure she is. Change any slot you read differently with ‹ ›. Before the first reveal the card's Delay is pre-filled so the stake lands on trial 3 (the first Gift of every season lands there; a stake on trial 1 or 2 could never pay). Quest: *Stake 10 silk on the sign · Iris read it: trial 3. Press F to stake 10 silk.*
-3. **Stake 10 silk on your reading** (<kbd>F</kbd>). The card shows where it lands ("Gift at Shell I, trial 3"). Quest: *Leave and let time pass.*
-4. **Leave the Shell** (<kbd>T</kbd>). Leaving ends the trial. Quest: *Watch trial 3 come true · Let trials pass (T).* Trials with no new sign pass on their own; they stop for a new sign or a one-click decision (Moss's loan at trial 3: any answer). At trial 4 the log reads *Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓*, the stake is back, and "Verified ✓" shows in Signs & Visions (<kbd>V</kbd>).
-5. **The Price of Memory** (<kbd>M</kbd>): forget a memory forever to see future signs as a vision. The memory goes to auction as a shard.
-
-**See:** silk changes after each reveal, the log fills with the clans' moves, and from trial 3 the revealed signs carry "Verified ✓". The season ends after the vote on trial 17. `tests/client/hub.test.mjs` plays a whole season only through the hub with zero rejected commands.
-
-**Second path, the agent API (no browser, about 1 minute):**
-```bash
-cd game && npm ci
-cd ../server && npm start                    # Forget to Foresee agent API listening on http://127.0.0.1:8787/v1
-node examples/agent.mjs --time-scale 1000    # second terminal
-```
-**See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
-
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `pass 668`, `fail 0`; `cd server && npm test` → `pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`; `cd contracts/memory-shard && cargo test --lib` → `test result: ok. 21 passed`.
-
----
-
-## What works today
-
-Test counts measured on 11.11.2026 (Node 22): `cd game && npm ci && npm test` → 668 passed, 0 failed; `cd server && npm test` → 28 passed. The first fresh-clone measurement (08.11) and its raw output: `docs/handoff/agent-reports/submission.md`.
-
-| Part | Status | Where |
+| What | Status | Evidence |
 |---|---|---|
-| Headless game engine with three rule modes: `baseline-2d-1` (bit-exact with the 2D prototype on 60 recorded seasons), `v2` (32-byte CSPRNG salts, domain separation, defect fixes), `v3` (owner-approved: success-conditional prizes, exact Gift split, proof-bound reveal, 128-bit CSPRNG seed, funded-bid fallback, debt timing, the Shells leaving wipes silk) | **works**; 93 engine tests | `game/src/game/engine.js`, [docs/rules-baseline.md](docs/rules-baseline.md) |
-| SHA-256, Merkle root of the season's events, proof of every reveal, negative tests for tampering | **works** | `game/src/game/crypto.js` |
-| **3D client (Three.js):** the floating archipelago (island, 6 camps, 4 levitating Shells, bridges, balcony spawn), isometric camera that zooms to third person, swept kinematic capsule at 30 Hz, model streaming (KTX2 + meshopt, phone `_m` variants), look-dev stack with quality tiers | **works** | `game/index.html`, `game/src/main.js`, `game/src/render/` |
-| **Play layer:** a full 17-trial season in the 3D client through the same room module as the agent API (local transport; rules `v3`), goals and A-to-Z hints, context actions (E / 1–9), Memories and Signs & Visions panels, clan agents walking to their camps, the Scroll, anchor zones, shard pedestal | **works** (local session held in memory: a reload starts the season over; the browser does not talk to the HTTP server). Forgetting asks first: *Forget “…” forever?* with what changes for Iris, what she gains and that it cannot be undone; **Keep it** cancels (`play/forget-confirm.js`) | `game/src/play/`, `game/src/net/room.js` |
-| **Inside a Shell:** enter from an anchor zone, the Guest behind the glass draws the current sign stroke by stroke, Ask the Guests (a "no" refunds the silk) | **works**; the hall model is pinned in the loader, so the flight lands in the real hall with the glass ahead and the Guests behind it (checked on real WebGL 11.11); a greybox room is only the fallback when the model has not arrived within 8 s | `game/src/play/game.js`, `game/src/play/logogram.js` |
-| **World HUD** to the owner's mockups (desktop): trial card, quest banner, Signs & Visions with plain readings (Novice) or the four slots (Pro), "Verified ✓" on revealed signs, log / hints / lore tabs, dialogue strip, hotkey bar. **Phone HUD** in two modes: Exploration (slim status bar, Shell selector I–IV, one objective line, Iris's line, bottom navigation) and Command (bottom sheets for quests and Shells, journal, Signs, Memories, the map; the navigation stays) | **works**; `?hud=old` shows the previous greybox overlay, `?layout=mobile` forces the phone HUD on a desktop | `game/src/ui/world-hud/`, `game/src/play/world-hud.js`, `docs/ui-mobile-hud.md` |
-| **Novice / Pro** presentation modes (same rules; Novice unlocks HUD layers L0→L2 as the season advances) and 15 hint rows | **works** | `game/src/play/hints.js`, `docs/design/clarity-layers.md` |
-| Lobby and onboarding: guest demo entitlement → a five-beat interactive tutorial (tap the slots, the dot, read the sign, stake and watch trial 3 verified, forget a memory; skippable, resumes after a reload) → hologram look picker over the full constructor (canonical recipe hash) → first contact; a returning player skips all of it | **works**; the entitlement is synthetic and labeled; design and audit in [docs/tutorial.md](docs/tutorial.md) | `game/src/ui/`, `game/ui-preview.html` |
-| UI languages | **EN, UA, RU, IT, 中文 complete** (UA, IT and 中文 AI-translated, not yet proofread by native speakers; key and placeholder parity enforced by `tests/ui-i18n-locales.test.mjs`); switch mid-season without losing the season | `game/src/locales/`, `game/src/play/locales/` |
-| Input | keyboard + mouse (WASD, click-to-move, arrows / right-drag, wheel), **Shift** to run, gamepad, touch (tap to walk, drag to orbit, pinch to zoom; run button, double tap or a far tap to run); phones get the two-mode touch HUD (`docs/ui-mobile-hud.md`), a phone quality profile and skip the lobby | `game/src/ui/input.js`, `game/src/ui/gamepad.js` |
-| **Agent-playable HTTP API:** OpenAPI 3.1, action catalog with JSON Schemas, idempotent version-checked commands, per-viewer redacted observations, navigation-bound movement, SSE, audit history, Merkle proofs, an example agent that plays a whole season | **works** locally; 28 tests | `server/`, `game/src/net/`, [docs/api/](docs/api/README.md) |
-| **NEAR contract `season-commit`** (Rust, near-sdk 5.30, testnet only): immutable season root commitment, on-chain recomputation and verification of each revealed leaf and Merkle path, Ash's key commit-reveal, NEP-297 events | **deployed on testnet** as [`ftf-seasons.testnet`](https://testnet.nearblocks.io/address/ftf-seasons.testnet) (09.11): the judge season's root and Ash key committed, all 15 leaves revealed and verified on-chain (`get_season` → `revealed_count: 15`), a tampered leaf rejected by `check_leaf` with `ERR_ROOT_MISMATCH`; the game shows "Verified on NEAR testnet ✓" on revealed signs of `?demo=judge`. 56 unit + mocked-chain tests, 2 sandbox tests in CI. Ids and every tx hash: [docs/near.md](docs/near.md) | `contracts/season-commit/`, [its README](contracts/season-commit/README.md) |
-| 3D art: island, 6 camps, 4 Shell exteriors (+ unused round-2 variants), Shell interior, anchor, Scroll table, shard, 6 rigged clan agents (8 clips each) + suit, the Guest (idle / draw / react), 23 props and relics, 5 fauna; all textures KTX2, geometry meshopt | **67 glb files load by name**; several are not yet reviewed by a human (faces up close, interior coordinates, Guest core glow: `docs/HANDOFF.md`) | `game/public/assets/models/`, `art/`, [docs/art/](docs/art/) |
-| Audio: 60 procedurally synthesized sounds (ambience, three music stems, Guest voice, UI, footsteps, stingers) and a WebAudio runtime | **wired**: unlock on first input, tension-driven music, the Guest speaks the strokes, zone ambience, one positional hum per Shell, footsteps by surface (Iris and agents), UI click/confirm/error, music/SFX/master volume sliders in the scene controls dialog; not yet tuned by a human listener | `game/src/audio/`, [docs/audio.md](docs/audio.md) |
-| VFX: GPU particle system, 4 flipbooks, presets (memory burn, vision, mist, logogram, vote finale, …) | **wired**: mist under every Shell, Shell IV crack pulse, season-tension tint, logogram on the Shell glass, vote-finale beams, cue effects; follows the quality tier and reduced motion; every cue is mapped or listed as silent (enforced by a test) | `game/src/vfx/`, [docs/vfx.md](docs/vfx.md) |
-| Asset review page, UI preview page, HUD preview page (dev) | **work** | `game/review.html`, `game/ui-preview.html`, `game/hud-preview.html` |
-| Weekly tournament card and enrollment | **UI simulation only, not part of the judged loop**: a synthetic weekly schedule, enrollment stored on the device and a results table derived from hashed labels, not from played seasons; no server, no other players, no prizes; every screen says "Simulation" | `game/src/ui/tournament.js` |
-| Browser prototype of the full game loop (2D) | **works**, the frozen parity reference (English since 09.11, except Ash's four secret phrases, which stay in their original Russian because they are committed hash preimages; its brand label still reads RAEN, the project's earlier name; the engine's `baseline-2d-1` rules stay bit-exact with it) | `prototype-2d/index.html` |
-| **Memory shards as NEP-171 NFTs** (`contracts/memory-shard`, Rust, near-contract-standards 5.30): coordinator-only mint of one token per shard carrying the season id, the memory's kind and weight, the trial it was forgotten, the auction result and the Merkle leaf of the sign its vision opened; a deterministic on-chain ink-ring SVG as media, byte-identical to the game's own (`game/src/net/shard-nft.js`, shared vectors); NEP-177 metadata, NEP-181 enumeration, `shards_of_season` views; read-only game client and badge model | **deployed on testnet** as [`ftf-shards.testnet`](https://testnet.nearblocks.io/address/ftf-shards.testnet) (09.11) with the judge playthrough's 3 shards minted by the coordinator script (`793f6c05e89839f2-7`, `-10`, `-15`; transferred to the owner's `lambada_eth.testnet` the same day); the on-chain SVG is byte-identical to the game's and shard 7's leaf equals leaf #3 revealed in `ftf-seasons.testnet`. In the game (judge path): the Memories panel shows each minted shard as an NFT card (the contract's own SVG, read from `shards_of_season` and checked byte-identical before it is drawn in; token id, owner, the biography from the metadata, "bound to the sealed season · leaf #3" linked to the reveal on `ftf-seasons.testnet`, a nearblocks link), and a "Minted on NEAR testnet" toast appears when Frost buys Iris's shard at the trial-6 auction. A token card shows only when the token exists on-chain and its data equals the local shard. Otherwise (another seed, a judge playthrough that diverges, an RPC failure) Iris's closed shard gets an **Unminted shard preview**: the same biography and ink ring drawn by the game, a dashed frame, "On-chain mint is for the published judge season only", no token id, owner, explorer or mint link, and no "Minted" toast. 21 unit + mocked-chain tests, 12 game tests | `contracts/memory-shard/`, [docs/shard-nft.md](docs/shard-nft.md) |
-| Agent card NFT (Iris's end-of-season state: traits, biography, state hash, version; one NEP-171 token per season, `contracts/agent-card`) | **built and tested, not deployed**: the Biography shows "Not minted yet" with a local preview. Once the owner mints it, the judge season's card is real on testnet, coordinator-minted, not player-owned; the game shows it as verified only when the on-chain hash and root equal its own season ([docs/agent-nft.md](docs/agent-nft.md)) | `contracts/agent-card`, `game/src/net/agent-nft.js` |
-| On-chain escrow, wallet sign-in, a player-owned agent NFT, live shard minting, multiplayer | **not started** (see "Not built" at the top) | — |
+| Game rules, 17-trial season | **Real, local**: runs in your browser tab with a headless engine; nothing about silk, stakes or outcomes is on-chain | `game/src/game/engine.js` |
+| Clan agents (5 computer clans) | **Scripted, real rules**: deterministic heuristics with tempers, not an LLM; in-game silk only | `game/src/play/` |
+| Season commitment | **Real**: SHA-256 Merkle root fixed before trial 1, each reveal checked in the browser; for the judge season the root and all 15 leaves are on NEAR testnet and verified by the contract | `ftf-seasons.testnet`, `contracts/season-commit/` |
+| Live (non-judge) seasons | Commitment is local only; not registered on-chain | [docs/verify.md](docs/verify.md) |
+| Memory-shard NFTs | **Real on testnet** for the judge season: 3 NEP-171 tokens minted by the coordinator script, not by your session, held by `lambada_eth.testnet`; the game reads them | `ftf-shards.testnet`, `contracts/memory-shard/` |
+| Holder access (NFT-gated perk) | **Real, read-only**: the game reads which Forget to Foresee NFTs any testnet account holds and unlocks a cosmetic title and portrait frame in this browser; not a wallet login, nothing signed or written | `game/src/net/holder.js`, `game/src/play/holder-panel.js` |
+| Shards in other playthroughs | **Preview only**, labelled "Unminted shard preview" | `game/src/ui/world-hud/shard-card-model.js` |
+| Agent card NFT (Iris's end-of-season state) | **Real on testnet**, coordinator-minted, owned by the owner's account | `agents.ftf-coordinator.testnet`, `contracts/agent-card/` |
+| Day 1 free mint (player-owned guest account + Elise NFT) | **Contracts deployed; the relayer is live** (a test guest was created and minted through it on 11 Nov). The hosted page calls it (its public URL is in `game/src/net/day1-deployment.js`; a `VITE_FTF_RELAYER_URL` build variable overrides it); limits: 200 new guests a day, 0.05 testnet NEAR each | `contracts/guests/`, `relayer/`, `game/src/play/day1-mint.js` |
+| Agent track records (a hired agent's trades and PnL, re-computable by anyone) | **Deployed on testnet** (`ledger.ftf-coordinator.testnet`; checked end to end on 11 Nov with a test guest account: the game's recording code signed the record and re-verified it, and `node tools/verify-agent/verify.mjs ledgercheck-5.guests.ftf-coordinator.testnet baker 1` prints PASS): the player's guest account records a hire on the `agent-ledger` contract; the page shows "Verified" only after it re-computes the record read back from the chain; `node tools/verify-agent/verify.mjs` does the same | `contracts/agent-ledger/`, `game/src/game/track-record.js`, [docs/api/verify-agent.md](docs/api/verify-agent.md) |
+| Wallet sign-in, on-chain escrow, player-owned agent NFT, multiplayer | **Not built** | — |
+| Agent HTTP API | **Real**: OpenAPI, idempotent commands, redacted observations, Merkle proofs, an example agent that plays a whole season; in-memory test sessions, no accounts | `server/`, [docs/api/](docs/api/README.md) |
+| Foresight Exchange (practice drill) | **Real rules, practice silk**: three Echoes follow a sealed snapshot of public reference rates; no prizes, no real money, not on NEAR | `game/src/game/exchange.js` |
+| Weekly tournament card | **UI simulation**, labelled "Simulation"; not part of the judged loop | [docs/status.md](docs/status.md) |
+| Townsfolk, hired agents, level, profile | **Local**: scripted or learning agents, in-game town silk only | `game/src/game/town-economy.js` |
+| Art, audio, VFX | Own procedural work; one exception: CMU motion-capture clips in a review build | [docs/art/manifest.md](docs/art/manifest.md) |
+| Money | In-game silk only. No token sale, no payment, testnet only | — |
 
-### Real / mock
+The full feature table and every detail of the old README: [docs/status.md](docs/status.md).
 
-| What | Now |
-|---|---|
-| AI clans | deterministic heuristics with personalities, not an LLM (**mock AI, real rules**); each clan's "wallet" is an in-game silk balance, not a NEAR account |
-| Season state | **local**: the season lives in the browser tab's memory; a reload starts it over; only preferences, tutorial, hint and similar flags persist (`localStorage` keys `ftf.*`) |
-| Game rules and outcomes | **local**: the browser runs the rules (stakes, silk, trust, auctions, the vote); none of it is on-chain, so the commitment proves the events, not the outcomes |
-| Season commitment | the browser generates the season, commits the Merkle root before trial 1 and verifies every reveal against it: **real cryptography, local** ("browser verification against the root"). For the judge season the same root and all 15 leaves are also **on NEAR testnet, verified by the contract** (real, read back read-only by the game: "Verified on NEAR testnet ✓"). Live seasons stay local: their roots are not registered on-chain |
-| NFTs, shards, escrow | shards and their auctions are game state in the engine (**real rules, local**); the judge playthrough's 3 shards are **real NEP-171 NFTs on testnet** (`ftf-shards.testnet`, minted by the coordinator script, not by the player's session; the game reads them and shows them as NFT cards and a mint toast only when the on-chain shard equals the local one; live seasons mint nothing and Iris's shard shows as a labeled *Unminted shard preview*; there is no player-owned agent NFT: Iris is game state, not a token); escrow: Amber's in-game silk escrow offer is a local rule, **on-chain escrow is not built** |
-| Hashes and Merkle proofs | real SHA-256; the contract's test vectors are generated from the same engine (**real**) |
-| Money | in-game silk, no token, no payments |
-| 3D art | real models for everything listed above; any model that is missing or fails to load falls back to an unlabeled **greybox** stand-in (its "not final art" label shows only with `?dev=1`, the F3 dev HUD or on the asset review page) |
-| Townsfolk | **real models, scripted behaviour**: 13 townspeople stand, walk, sweep, sit and talk on fixed loops in the starting town and look at Iris; presentation only, except the **town quest**: on a first visit (not on the judge link, which goes straight to the altar; `?quest=1` forces it, **Skip the town quest** ends it) the innkeeper asks Iris to read a four-slot sign, the baker gives a 5-silk practice purse and trades 2 of it for a sealed word, and the shrinekeeper by the altar takes the word and sends her to register. About 3 minutes. The purse is a teaching prop held in the town UI: nothing goes to the engine or to a chain, and the altar works at any step. No other dialogue; the shop interiors are not enterable |
-| Hired townsfolk, level, profile, inventory | **local, real rules, in-game currency only**: walk up to any townsperson and press **E** → **Hire me as your agent**. The card shows the temperament (cautious / steady / bold: the spread, not the mean), the terms (10 town silk for 5 rounds) and the expected return of 98 % of the price over many rounds (2 % guild fee). Each result is deterministic from the seed shown on the result card. Up to 3 agents at once, one per townsperson, and a hired townsperson wears a gold badge. Town silk is a separate ledger in this browser (`ftf.town.v1`, 100 to start); it never touches the season's silk, and there is no purchase or cash-out. XP comes from stakes, verified trials, forgets, quest steps and finished hires; levels unlock cosmetic titles only. The **Profile** (town button, or Memories → **Profile and inventory**) shows level, XP and stats. Its inventory is split: **On-chain** lists only what a live read of `ftf-shards.testnet` confirms (the judge season's 3 coordinator-minted shards, with token, owner and nearblocks link, and nothing if the read fails); **Off-chain** shows town silk, season silk, hires, memories, words, quest items and the title. `game/src/game/town-economy.js`, mean tested over 100 000 rounds |
-| Foresight Exchange (Judge Echo) | **local drill, real rules, practice silk only**: three Echoes follow a sealed snapshot of historical ECB reference rates. USD/EUR, USD/JPY and USD/CHF, 2 Jan–29 Feb 2024, via Frankfurter; ECB data with attribution; the snapshot and its sha256 are committed in `game/public/data/exchange-snapshot-v1.json`, and nothing is fetched at runtime. Each Echo moves 25× the rate's change. You trade against three scripted clan agents (Salt, Amber, Frost) that see only published bars, in an 8-bar (~90 s) or 4-bar (~40 s) drill, with a board at the end and a result you can copy as JSON. No prizes, no real money, not financial advice, and the season and its silk are untouched. Opens from the lobby (**FORESIGHT EXCHANGE**) and from Memories (**Practice foresight**). `?demo=judge&exchange=1` offers the 4-bar drill after the shard card, while plain `?demo=judge` never opens it. Agents use the same actions over HTTP (`start_exchange`, `place_order`, `advance_exchange_bar`; `server/examples/exchange-agent.mjs`). Not on NEAR, and the town's Exchange shop counter is not wired yet (overlay only) |
-| Access check | **mock**: a free synthetic guest entitlement stored in the browser, labeled |
-| Weekly tournament | **UI simulation**: synthetic schedule, enrollment and results on the device, labeled "Simulation"; not part of the judged loop |
-| Agent NFT, live minting, wallet play, on-chain escrow, multiplayer | **not built** (future work) |
-| Agent API sessions | **real** server logic; test sessions only: in-memory, per-session tokens, no accounts |
-| Season seed | `v3` (the client's and the API's default): a 128-bit CSPRNG seed, SHA-256 counter-mode RNG, no secret in the client projection. `v2` / baseline: 32-bit seed (parity with the prototype) |
-| Audio / VFX | present and wired as listed above; nothing else is claimed |
+## How NEAR is used
 
----
+1. **Commit-reveal of the season** (`season-commit`): the contract stores the Merkle root, recomputes each revealed leaf byte for byte and verifies the proof on-chain; a separate commit-reveal covers the crisis key. The game reads the records back and shows "Verified on NEAR testnet ✓".
+2. **NEP-171 memory shards** (`memory-shard`): token metadata carries the season id, the memory's kind and weight, the trial it was forgotten, the auction result and the Merkle leaf of the sign its vision opened; the on-chain ink-ring SVG is byte-identical to the game's own.
+3. **NFT as account, Day 1** (`guests`, `character-nft`, `token-account`): a browser-made key becomes the full-access key of a guest sub-account that owns the player's Elise NFT; heroine tokens can have their own sub-account through which the owner acts (`act_as_token`). Status in the table above.
+4. **Invisible chain:** the normal game loop never shows a wallet, a seed phrase or a gas prompt.
 
-## Run from a clean clone
+Explicitly not proven: the browser runs the rules, so a modified client could change silk and outcomes; the commitment fixes what the Guests said, not what you did. See [docs/verify.md](docs/verify.md).
 
-Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract.
+## Prerequisites
 
-### Game: tests, dev server, production build
-```bash
-cd game
-npm ci
-npm test            # 668 tests, ~35 s
-npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
-npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
-```
-**See:** `tests 667` / `pass 668` / `fail 0` (Node 22+ prefixes them with `ℹ`, older Node with `#`); `✓ built in …s`.
-
-What the 668 tests cover (the breakdown below is the 260 of the first measurement; 256 were added on 08.11–09.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers, the shard NFT cards, the forget confirmation and QA regressions, and 152 on 10.11–11.11 for the townsfolk, the atmosphere and the hackathon spec: tutorial, Shell hall, read-backs, shard previews, hitch-proof stairs, the town quest):
-- 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
-- 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
-- UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
-
-Dev URL parameters: `?demo=judge`, `?mode=walk` (walking play instead of the Shell hub), `?play=direct`, `?seed=<32 hex>`, `?lang=en|uk|ru|it|zh`, `?hud=old`, `?hints=reset`, `?tier=ultra|high|low`, `?motion=reduce`, `?view=overview|camp|close`. **F3** opens the dev HUD (draw calls and triangles against the 120 / 500k budgets, asset states).
-
-### Agent API
-```bash
-cd game && npm ci          # once; the server has no dependencies and reuses ../game
-cd ../server
-npm test                   # 28 tests, ~2 s
-npm start                  # API on http://127.0.0.1:8787/v1 (OpenAPI: /v1/openapi.yaml, catalog: /v1/actions)
-node examples/agent.mjs --time-scale 1000 [--rules v2]   # second terminal
-```
-**See:** `# pass 28`; the agent's step log and JSON summary as in the judge section. Full reference: [docs/api/README.md](docs/api/README.md).
-
-### NEAR contract
-```bash
-cd contracts/season-commit
-cargo test --lib                                   # 56 tests: 13 pure vector tests + 43 on near-sdk's mocked chain
-cargo near build non-reproducible-wasm --no-abi    # -> target/near/season_commit.wasm (needs cargo-near)
-cargo test                                         # adds the 2 near-workspaces sandbox tests (Linux/macOS; they need the wasm above)
-cargo test --lib --target wasm32-wasip1            # Windows: the 13 pure tests under Node's WASI
-```
-**See:** `test result: ok. 56 passed`. CI runs every tier on Ubuntu (`.github/workflows/contracts.yml`, green on `main`). Build, test and testnet deploy details, and the exact list of what is and is not verified on-chain: [contracts/season-commit/README.md](contracts/season-commit/README.md).
-
-### 2D prototype (no install)
-Open `prototype-2d/index.html` in a browser. It is the frozen rules reference the engine is tested against; its English text matches the engine's byte for byte. Being frozen, its intro still describes the original concept ("Iris is an NFT with a wallet and a memory"); that agent NFT is not built (see "Not built" at the top).
-**Do:** enter any Key phrase → "Start season" → pick the reading rule "The dots in the core set the start" → end ticks.
-**See:** Iris's dictionary becomes confident, anchors on a Gift pay silk, and from tick 3 the "Contract" panel shows "✓ verified": the reveal matched the Merkle root published before the season began.
-
-### UI and HUD previews (dev)
-With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → onboarding → chronicle with "Auto-play one tick", EN/RU switch), `http://localhost:5173/hud-preview.html` (`?live=1` drives the HUD from a real local season), `http://localhost:5173/review.html?model=anchor` (one model next to a 1.75 m figure, runtime / `_inspect` / `_col` / socket toggles). Details: [docs/ui.md](docs/ui.md), [docs/ui-world-hud.md](docs/ui-world-hud.md).
-
----
-
-## Controls
-
-| Key | Action |
-|---|---|
-| **W A S D** / click the ground / tap | walk; **Shift** run; on phones the run button (mid-right), a double tap or a far tap runs |
-| **F** | Shell hub: fly into the gold Shell; inside, stake 10 silk on your reading |
-| **G** | walk to the current goal |
-| **N** | the island map: camps, the Scroll, anchor zones, the four Shells with their state, your position and goal; click a place to walk there (in the Shell hub a Shell click flies) |
-| **E** | do the highlighted action; **1–9** pick another from the context menu |
-| **M** / **V** / **T** | Memories · Signs & Visions · end the trial (press twice to confirm while attention is left); in the Shell hub **T** leaves the Shell, which ends the trial |
-| **← →** / right-drag / one-finger drag | rotate the camera (limited); **↑ ↓** / wheel / pinch / **+ −** zoom from the overview down to third person (never first person) |
-| **I** | inspect the nearest hero object up close; **R** resets the camera |
-| **H** / **L** / **Esc** / **F3** | help · next UI language (EN → UA → RU → IT → 中文) · close / stop / menu · dev HUD |
-| Gamepad | left stick walk, right stick look, A interact, B back, menu button settings |
-
----
+- Node.js 20+ (`.nvmrc`: 22). Rust only for the contracts: the toolchain is pinned in `contracts/*/rust-toolchain.toml`; `cargo test --lib` also needs `pkg-config` and OpenSSL headers (`apt-get install pkg-config libssl-dev`).
+- Use `git clone --depth 1`: the full history is large because of videos.
+- `cd game && npm run build` writes the production build (size in [docs/STATS.md](docs/STATS.md), mostly compressed 3D models). The first load of the judge page streams a large part of it; on a machine without a GPU the page runs at a low frame rate and says so, and every step above still completes. Without WebGL 2 the page explains it and links the paths that need no GPU.
 
 ## Repository map
 
 | Path | What |
 |---|---|
-| `game/` | Vite + Three.js client, engine, play layer, UI, tests |
-| `server/` | the agent API (`node:http`, no dependencies) |
-| `contracts/season-commit/` | the season-commitment NEAR contract (Rust), live as `ftf-seasons.testnet` |
-| `contracts/memory-shard/` | the memory-shard NEP-171 contract (Rust), live as `ftf-shards.testnet` |
-| `contracts/deployments/` | testnet deployment records (account ids and public transaction hashes only) |
-| `tools/verify/` | one-file proof verifiers (Node and Python) that import nothing from the game |
-| `prototype-2d/` | the 2D reference prototype (frozen) |
-| `art/` | procedural Blender sources and tools for every model, audio synthesis |
-| `docs/` | spec, decisions, rules baseline, API, art, audio, VFX, design, hackathon checklist; the submission package is `docs/submission/` |
-| `.github/workflows/` | `pages.yml` (tests + build + deploy to GitHub Pages on every push to `main`), `contracts.yml` (wasm build + all contract test tiers) |
+| `game/` | Vite + Three.js client, headless engine, play layer, UI, tests |
+| `server/` | agent HTTP API (`node:http`, no dependencies) |
+| `relayer/` | signs `guests.create_guest` server-side so no key ships to the browser |
+| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account`, `agent-ledger` (Rust, near-sdk 5.30) and deployment records |
+| `scripts/` | `verify-all.sh` (every suite, one table) and `stats.mjs` (writes docs/STATS.md) |
+| `tools/verify/` | one-file proof verifiers (Node and Python) |
+| `prototype-2d/` | the frozen 2D reference prototype the engine is tested against |
+| `art/`, `docs/` | procedural art sources; specs, decisions, API, QA, submission package |
 
 ## Tracks
 
-- **games** ("Games With Real Economies"), the primary track: the economy *is* the game loop. Six clans (yours and five computer-run agents) trade words, silk, promises and memories; anchors pay out from a Gift split exactly between those who staked; forgotten memories are sold at auction; defection raises world tension until the Shells leave and everyone loses. The season's events are sealed before the first move, so neither we nor the clan agents can change what the Guests said once the root is shown; the rules themselves run locally in the browser ("What is proven, and what is not" at the top of this README).
-- **nfts** ("NFTs That Do Something"), claimed for the memory shards only: a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result), the season's schedule root and, when its vision opened a sign (Iris's shard 7), that sign's Merkle leaf, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the judge playthrough's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. In the game, the judge path shows the minted shards as NFT cards in the Memories panel (on-chain SVG, token id, owner, biography, leaf binding, explorer link) and a "Minted on NEAR testnet" toast when Frost buys Iris's shard; it reads only, never signs. Live seasons mint nothing and say so (see the real/mock table). Not claimed: a persistent, player-owned agent NFT; that is future work.
+- **games** ("Games With Real Economies"), the primary track: the economy *is* the game loop. Six clans (yours and five computer-run agents) trade words, silk, promises and memories; anchors pay out from a Gift split exactly between those who staked; forgotten memories are sold at auction; defection raises world tension until the Shells leave and everyone loses. The season's events are sealed before the first move, so neither we nor the clan agents can change what the Guests said once the root is shown; the rules themselves run locally in the browser ([How NEAR is used](#how-near-is-used)).
+- **nfts** ("NFTs That Do Something"), claimed for the memory shards only: a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result), the season's schedule root and, when its vision opened a sign (Iris's shard 7), that sign's Merkle leaf, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the judge playthrough's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. In the game, the judge path shows the minted shards as NFT cards in the Memories panel (on-chain SVG, token id, owner, biography, leaf binding, explorer link) and a "Minted on NEAR testnet" toast when Frost buys Iris's shard; it reads only, never signs. Holding a shard (or the agent card, or a Day 1 Elise) unlocks a visible perk through *Holder access* (read-only check of any testnet account; cosmetic). Live seasons mint nothing and say so (see the real/mock table). Not claimed: a persistent, player-owned agent NFT; that is future work.
 
-## Baseline and third-party code (Q-001–005)
+## Baseline, third-party code and AI disclosure
 
 - All code was written **after 19.10.2026**, inside the hackathon window. There is no earlier code or template: the game, engine, server, contract and art pipeline were started for this hackathon.
 - **Tags.** `pre-hackathon` exists and points to the empty root commit. `hackathon-submission` is created by the owner at the freeze on the commit that is submitted:
@@ -223,13 +132,13 @@ With `npm run dev` running: `http://localhost:5173/ui-preview.html` (lobby → o
   git push origin hackathon-submission
   ```
   The diff between them is the whole work: https://github.com/SpacexCeo/forget-to-foresee/compare/pre-hackathon...hackathon-submission (live once the tag is pushed).
-- **Libraries** (from the lockfiles): [three](https://threejs.org) 0.170 (MIT), [Vite](https://vitejs.dev) 6 (MIT, dev only), `@fontsource/libre-caslon-text`, `@fontsource/old-standard-tt`, `@fontsource/source-sans-3` 5.3 (SIL OFL 1.1, bundled fonts), Cormorant Garamond and Noto Serif SC from Google Fonts for the lobby (SIL OFL 1.1, loaded from fonts.googleapis.com). The server has no dependencies. Contract: [near-sdk](https://github.com/near/near-sdk-rs) 5.30 (MIT / Apache-2.0); tests: [near-workspaces](https://github.com/near/near-workspaces-rs) 0.24, tokio 1, anyhow 1, serde_json 1 (all MIT / Apache-2.0); build: [cargo-near](https://github.com/near/cargo-near). Art tools (not shipped): Blender 4.5, toktx / Basis Universal, gltf-transform, numpy / scipy, ffmpeg (Opus). Every model and sound is our own procedural work; the motion-capture animation clips in `game/public/assets/anim/` (review build, `?anim=mocap`) are retargeted from the CMU Graphics Lab Motion Capture Database: the data used in this project was obtained from mocap.cs.cmu.edu, the database was created with funding from NSF EIA-0196217. Sources and licences per asset: [docs/art/manifest.md](docs/art/manifest.md).
+- **Libraries** (from the lockfiles): [three](https://threejs.org) 0.170 (MIT), [Vite](https://vitejs.dev) 6 (MIT, dev only), `@fontsource/libre-caslon-text`, `@fontsource/old-standard-tt`, `@fontsource/source-sans-3` 5.3 (SIL OFL 1.1, bundled fonts), `@fontsource/cormorant-garamond` 5 (SIL OFL 1.1, bundled; no third-party font requests; Chinese text uses the system serif). The server has no dependencies. Contract: [near-sdk](https://github.com/near/near-sdk-rs) 5.30 (MIT / Apache-2.0); tests: [near-workspaces](https://github.com/near/near-workspaces-rs) 0.24, tokio 1, anyhow 1, serde_json 1 (all MIT / Apache-2.0); build: [cargo-near](https://github.com/near/cargo-near). Art tools (not shipped): Blender 4.5, toktx / Basis Universal, gltf-transform, numpy / scipy, ffmpeg (Opus). Every model and sound is our own procedural work; the motion-capture animation clips in `game/public/assets/anim/` (review build, `?anim=mocap`) are retargeted from the CMU Graphics Lab Motion Capture Database: the data used in this project was obtained from mocap.cs.cmu.edu, the database was created with funding from NSF EIA-0196217. Sources and licences per asset: [docs/art/manifest.md](docs/art/manifest.md).
 - **AI-generated code and content.** The code, documentation, 3D models (procedural Blender scripts), sounds and most texts were produced with AI assistance under the owner's direction: Claude Code (Claude Opus 5.5 and Claude Fable 5.1, multi-agent sessions) wrote the engine, client, server, contract, art pipeline and docs; Codex worked on the UI polish branch (`codex/premium-ui`); independent reviewer agents did the game-design and economy reviews (`docs/math/`). The owner designed the game, made every product decision (`docs/decisions.md`), supplied the lobby background art and the HUD mockups, and reviewed the results.
 - The theme is inspired by the film *Arrival* (2016). No names, characters or visuals from the film are used.
 
 ## Related projects
 
-None. Forget to Foresee is the only NEAR Hackathon submission of its developer, Lambada_eth (owner and CEO of RAEN, the company behind it); RAEN is not a separate project.
+None. Forget to Foresee is the only NEAR Hackathon submission of its developer, Lambada_eth.
 
 ## License
 

@@ -86,3 +86,19 @@ Keepers on the sheets: Maren (Exchange), Odo (Scribe), Bram (Inn). QA hooks plan
   `TOWN_NO_BAKE=1` skips the light bake.
 - **Checks**: `cd game && npm test && npm run build`; then open the built page once (`npx vite preview`), because
   the tests do not catch a chunk cycle.
+
+## Owner-reported art defects (11.11, screenshots in the lead session)
+
+1. Market cart: the cargo is a single lumpy green blob that reads as a rock or a giant leaf. Replace with readable goods (cabbages, sacks, crates) or remove.
+2. Lower gate: the open gate shows only thin dark bars and two ring handles floating in the arch (the door leaves are missing or zero-thickness); above the arch a ghostly ring outline is barely visible (a decal or emblem that renders as an outline). Give the gate real door leaves (open, against the walls) or an iron portcullis raised, and either a proper carved ring emblem or nothing.
+3. The gate walls read washed out / overexposed in daylight; check albedo and the sun preset there.
+4. Window-box plants misbehave (owner: "the greenery on the windows also behaves badly") — likely the small-plant wind shiver or detached/oversized leaf cards. Small plants should be nearly still (a subtle sway at the tips only), attached to their boxes.
+
+**These are not isolated (owner).** Before new shops work, do a full town art QA sweep: walk every street at the game camera and close up, list every prop, plant, door, decal, emblem, window, cart, banner and wall that looks unfinished, floats, is zero-thickness, overexposed, z-fights or moves wrongly in the wind; fix them in art/town/ (and the wind weights in game/src/render/weather.js if motion is the cause); a before/after contact sheet per fix in docs/art/town/qa/sweep/. 3D work: Fable.
+
+## Fix queue after the limit reset (owner, 11.11; screenshots on the GPU server /root/board/renders/owner_defect_1..4)
+
+5. Gate seen from above (owner_defect_1): the gate passage has no ceiling and its inner arch wall is cut open — sky and an untextured slanted panel show through; the ground beyond the gate is a flat untextured strip; the open door leaf clips into the tower corner. Close the passage (vault/ceiling, two-sided inner walls), dress the ground outside, keep the leaf clear of the wall.
+6. Main stair (owner_defect_2): along the left edge of the wide stair a bright diagonal strip floats — a stringer/side plane that is flat, overlit or z-fighting. Give the stair proper side walls or a solid stringer.
+7. Retaining wall (owner_defect_3): a block juts out of the wall foot with a visible gap/offset (a misplaced pilaster or buttress). Align or remove it.
+8. Seated elder (owner_defect_4, characters): on the bench he sits too far back / on the back rail, legs through the seat. Fix the sit pose against the bench (seat height 0.46 m, seat depth, facing) — a townsfolk/animation fix.

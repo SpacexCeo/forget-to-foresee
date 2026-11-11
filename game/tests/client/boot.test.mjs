@@ -8,8 +8,10 @@ import { chunkFor, ENTRY_MODULES } from '../../build/chunks.js';
 
 const MB = 1048576;
 
-test('boot plan: the lobby first unless the URL or a touch device goes straight into the world', () => {
-  assert.deepEqual(bootPlan({}), { first: 'lobby', lobby: true, gate: 'lobby', background: ['world'] });
+test('boot plan: town first (no lobby, onboarding or tutorial screens); the lobby leads only with ?lobby=1', () => {
+  assert.deepEqual(bootPlan({}), { first: 'world', lobby: false, gate: 'firstFrame', background: [] });
+  assert.deepEqual(bootPlan({ lobby: '1' }), { first: 'lobby', lobby: true, gate: 'lobby', background: ['world'] });
+  assert.equal(bootPlan({ lobby: '1', coarse: true }).lobby, false, 'a phone still goes straight in');
   assert.equal(bootPlan({ play: 'direct' }).first, 'world');
   assert.equal(bootPlan({ hash: '#play' }).first, 'world');
   assert.equal(bootPlan({ coarse: true }).gate, 'firstFrame');
@@ -101,6 +103,9 @@ test('chunk plan: the graph stays acyclic (rules with ui, logogram with client-c
   assert.equal(chunkFor(root + '/src/game/engine.js'), 'ui'); // ui modules read engine tables at module level
   assert.equal(chunkFor(root + '/src/play/logogram.js'), 'client-core'); // scenes draw logograms
   assert.equal(chunkFor(root + '/src/play/game.js'), 'play');
+  assert.equal(chunkFor(root + '/src/play/narration.js'), 'ui'); // a11y and settings read it
+  assert.equal(chunkFor(root + '/src/net/exchange-deployment.js'), 'ui'); // the exchange terminal reads it
+  assert.equal(chunkFor(root + '/src/ui/replay-view.js'), 'play'); // pulls the rules API; opened lazily from main.js
   assert.equal(chunkFor(root + '/src/ui/loading.js'), 'boot');
   assert.equal(chunkFor(root + '/src/ui/motion/index.js'), 'boot');
   assert.equal(chunkFor(root + '/node_modules/vite/preload-helper.js'), 'boot');
@@ -122,8 +127,9 @@ test('index.html preloads the lobby art only on the lobby path (QA-029: no unuse
     vm.runInNewContext(src, { document: doc, location: { search, hash }, URLSearchParams, matchMedia: () => ({ matches: coarse }) });
     return added;
   };
-  for (const c of [{}, { search: '?demo=judge' }, { search: '?play=direct' }, { hash: '#play' }, { coarse: true }]) {
-    const plan = bootPlan({ play: new URLSearchParams(c.search || '').get('play'), hash: c.hash || '', coarse: !!c.coarse });
+  for (const c of [{}, { search: '?demo=judge' }, { search: '?play=direct' }, { hash: '#play' }, { coarse: true }, { search: '?lobby=1' }, { search: '?lobby=1&demo=judge' }]) {
+    const q = new URLSearchParams(c.search || '');
+    const plan = bootPlan({ play: q.get('play'), hash: c.hash || '', coarse: !!c.coarse, lobby: q.get('lobby') });
     const added = run(c);
     assert.equal(added.length, plan.lobby ? 1 : 0, JSON.stringify(c));
     if (added.length) assert.match(added[0].href, /assets\/ui\/lobby_bg\.jpg$/);
@@ -153,9 +159,16 @@ test('Iris stand-in: no capsule while her model is on its way, the capsule only 
   assert.equal(irisStandInVisible({ hasModel: true, fetched: true, waited: 60 }), false, 'downloaded and waiting for the play layer: still hidden');
 });
 
-test('ink bar: the atlas row follows progress; the log names what is loading, in every locale', async () => {
-  const { inkRow, logKeyFor, logKeysFromStats, LOG_EN, INK_ATLAS } = await import('../../src/ui/ink-bar.js');
-  assert.equal(inkRow(0), 0); assert.equal(inkRow(1), INK_ATLAS.steps - 1); assert.equal(inkRow(0.5), 12); assert.equal(inkRow(7), INK_ATLAS.steps - 1);
+test('loading v3: the log names what is loading in the world\'s voice, in every locale; the screen markup and art are in place', async () => {
+  const { logKeyFor, logKeysFromStats, LOG_EN, LOG_LINES } = await import('../../src/ui/loading.js');
+  assert.equal(LOG_LINES, 4);
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  for (const cls of ['boot-diagram', 'boot-bodies', 'boot-log', 'boot-halo', 'boot-world', 'boot-globe', 'boot-constellation', 'boot-sub', 'boot-word', 'boot-line', 'boot-pct']) assert.ok(html.includes(cls), cls);
+  assert.ok(!html.includes('boot-iris'), 'no Iris silhouette on the loading screen (owner, 11.11)');
+  const { execFileSync } = await import('node:child_process');
+  execFileSync(process.execPath, [new URL('../../../art/ui/loading/build_diagram.mjs', import.meta.url).pathname, '--check']); // the inline art is up to date
+  assert.deepEqual(logKeysFromStats({ list: [{ name: 'shell_1', state: 'warming', priority: 9 }] }), ['loading.log.shadersIsland'], 'the archipelago has its own warming line');
   assert.equal(logKeyFor('town_terrain'), 'loading.log.terrain'); assert.equal(logKeyFor('town_block_mid'), 'loading.log.houses');
   assert.equal(logKeyFor('town_temple'), 'loading.log.shrine'); assert.equal(logKeyFor('shell_a'), 'loading.log.shells');
   const stats = { list: [{ name: 'town_sky', state: 'loading', priority: 1 }, { name: 'town_terrain', state: 'loading', priority: 200 }, { name: 'town_altar', state: 'warming', priority: 150 }, { name: 'town_temple', state: 'loaded', priority: 300 }] };
@@ -167,4 +180,21 @@ test('ink bar: the atlas row follows progress; the log names what is loading, in
     if (loc === 'en') for (const k of Object.keys(LOG_EN)) assert.equal(messages[k], LOG_EN[k]);
     if (loc === 'ru') assert.match(messages['loading.log.terrain'], /[а-я]/);
   }
+});
+
+test('chunk plan: no ui-chunk module statically imports a play-chunk module (a ui -> play edge is a boot TDZ)', async () => {
+  const { readFileSync, readdirSync, statSync } = await import('node:fs');
+  const { join, resolve, dirname } = await import('node:path');
+  const src = resolve(dirname(new URL(import.meta.url).pathname), '../../src');
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.js') ? [p] : []; });
+  const bad = [];
+  for (const file of walk(src)) {
+    if (chunkFor(file) !== 'ui') continue;
+    const text = readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/^\s*import\s[^;]*?from\s+['"](\.[^'"]+)['"]/gm)) {
+      const target = resolve(dirname(file), m[1]);
+      if (chunkFor(target) === 'play') bad.push(file.slice(src.length) + ' -> ' + target.slice(src.length));
+    }
+  }
+  assert.deepEqual(bad, []);
 });

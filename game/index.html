@@ -1,16 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- The web fonts never block the first paint: the stylesheet loads as print media and switches to all when it arrives (font-display: swap). -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+SC:wght@300;400&display=swap"></noscript>
   <!-- The lobby art is preloaded only when the lobby will show (QA-029): this mirrors bootPlan() in src/ui/loading.js
        (?play=direct, #play and touch devices go straight into the world and never use it). -->
   <script id="lobby-preload">
     (function () {
       var coarse = false; try { coarse = matchMedia('(pointer: coarse)').matches; } catch (e) {}
-      var direct = new URLSearchParams(location.search).get('play') === 'direct' || location.hash === '#play' || coarse;
+      var q = new URLSearchParams(location.search);
+      var direct = q.get('play') === 'direct' || location.hash === '#play' || coarse || q.get('lobby') !== '1'; // town first; the lobby leads only with ?lobby=1
       if (direct) return;
       var l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = '%BASE_URL%assets/ui/lobby_bg.jpg';
       l.setAttribute('fetchpriority', 'high'); document.head.appendChild(l);
@@ -19,7 +16,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Forget to Foresee</title>
-  <link rel="icon" href="data:,">
+  <meta name="description" content="A strategy game where an AI clan agent pays for prophecy with her own memories. Seasons are sealed on NEAR testnet before play.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Forget to Foresee">
+  <meta property="og:description" content="An agent pays for prophecy with her memories. Seasons are sealed on NEAR testnet; forgotten memories become NEP-171 shards. Plays in the browser.">
+  <meta property="og:url" content="https://spacexceo.github.io/forget-to-foresee/">
+  <meta property="og:image" content="https://spacexceo.github.io/forget-to-foresee/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Forget to Foresee">
+  <meta name="twitter:description" content="An agent pays for prophecy with her memories. Seasons sealed on NEAR testnet.">
+  <meta name="twitter:image" content="https://spacexceo.github.io/forget-to-foresee/og.jpg">
+  <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg">
   <style>
     :root { --ink: #e9efe9; --panel: rgba(20, 24, 22, 0.72); --amber: #d9a441; --muted: #a9b5ae;
       /* Play-layer surfaces follow the world HUD tokens (docs/ui-world-hud.md §2): opaque enough that nothing reads through. */
@@ -40,22 +49,63 @@
     html, body { margin: 0; height: 100%; overflow: hidden; background: #c9d3d0; font: 14px/1.4 system-ui, sans-serif; color: var(--ink); }
     #app, #app canvas { position: fixed; inset: 0; display: block; }
     /* ---- the first seconds: an inline loading screen that paints before any script (docs/first-seconds.md) ---- */
-    #boot { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 42%, #22282a 0%, #141a1c 58%, #0c1113 100%); color: #ece6da; font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif; }
-    #boot .boot-inner { display: grid; justify-items: center; gap: 22px; transform: translateY(-4vh); }
-    #boot .boot-title { margin: 0; font-weight: 300; letter-spacing: .32em; font-size: clamp(1.1rem, 2.6vw, 1.7rem); line-height: 1.35; text-align: center; text-indent: .32em; color: #efe9df; }
-    #boot .boot-title span { display: block; }
-    #boot .boot-ring { width: 128px; height: 128px; display: block; overflow: visible; }
-    #boot .boot-ring-bg { fill: none; stroke: rgba(236,230,218,.14); stroke-width: 1.5; }
-    #boot .boot-ring-fg { fill: none; stroke: #e4c272; stroke-width: 2; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; stroke-dasharray: 339.29; stroke-dashoffset: 339.29; filter: drop-shadow(0 0 6px rgba(228,194,114,.45)); transition: stroke-dashoffset 240ms cubic-bezier(.16, 1, .3, 1); }
-    #boot .boot-ring-ink { fill: none; stroke: rgba(236,230,218,.55); stroke-width: 1; stroke-dasharray: 2 7; animation: boot-breathe 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
-    #boot .boot-core { fill: #e4c272; opacity: .9; animation: boot-core 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
-    #boot .boot-meta { display: flex; gap: 14px; align-items: baseline; font: 400 12px/1 system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: rgba(236,230,218,.62); }
-    #boot .boot-pct { font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; color: #e4c272; }
-    #boot.boot--failed .boot-label { color: #ff8a7a; letter-spacing: .04em; text-transform: none; }
-    @keyframes boot-breathe { 0%, 100% { transform: scale(.94) rotate(0deg); opacity: .5; } 50% { transform: scale(1.02) rotate(12deg); opacity: .9; } }
-    @keyframes boot-core { 0%, 100% { transform: scale(.85); opacity: .55; } 50% { transform: scale(1); opacity: 1; } }
-    @media (prefers-reduced-motion: reduce) { #boot .boot-ring-ink, #boot .boot-core { animation: none; } #boot .boot-ring-fg { transition: none; } }
-    html[data-motion="reduce"] #boot .boot-ring-ink, html[data-motion="reduce"] #boot .boot-core { animation: none; }
+    /* Loading v3: one dark terminal-style screen (also the altar cover): nebula and dust, a line-art diagram of our
+       world, a "> " log driven by the real loader, LOADING, a thin teal line with a head dot, Iris as a silhouette. */
+    #boot, .boot { position: fixed; inset: 0; z-index: 20; overflow: hidden; color: #cfe7e4; font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif; --u: min(1vw, 1.7778vh); --teal: #5fd3c6; --boot-p: .04;
+      background: radial-gradient(ellipse 60% 45% at 72% 38%, rgba(48, 110, 120, .28), transparent 70%), radial-gradient(ellipse 50% 40% at 18% 70%, rgba(80, 60, 120, .22), transparent 70%), radial-gradient(ellipse at 50% 50%, #0d1518 0%, #070b0d 70%, #040607 100%); }
+    .boot::before { content: ""; position: absolute; inset: 0; opacity: .5; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .7 0 0 0 0 .9 0 0 0 0 .9 0 0 0 14 -12.6'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"); }
+    .boot .boot-stage { position: absolute; left: 50%; top: 50%; width: calc(100 * var(--u)); height: calc(56.25 * var(--u)); transform: translate(-50%, -50%); }
+    .boot .boot-diagram { position: absolute; left: calc(4 * var(--u)); top: calc(4 * var(--u)); width: calc(52 * var(--u)); height: auto; fill: none; stroke: rgba(160, 225, 218, .62); stroke-width: 1.1; }
+    .boot .boot-diagram .bd-thin, .boot .boot-halo .bd-thin { stroke-width: .6; opacity: .7; }
+    .boot .bd-dash { stroke-dasharray: 2 4; } .boot .bd-dot { fill: rgba(160, 225, 218, .8); stroke: none; } .boot .bd-ink { fill: rgba(160, 225, 218, .35); }
+    .boot .bd-star { stroke: rgba(220, 245, 240, .85); stroke-width: .9; } .boot .bd-orbit { opacity: .55; }
+    .boot .boot-log { position: absolute; left: calc(5 * var(--u)); top: calc(34 * var(--u)); width: calc(46 * var(--u)); margin: 0; padding: 0; list-style: none; font: 400 calc(1.25 * var(--u))/1.6 ui-monospace, 'SFMono-Regular', Consolas, monospace; color: rgba(190, 235, 228, .78); }
+    .boot .boot-log li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .4s ease; }
+    .boot .boot-log li::before { content: "> "; color: var(--teal); }
+    .boot .boot-log li:nth-child(2) { opacity: .6; } .boot .boot-log li:nth-child(3) { opacity: .38; } .boot .boot-log li:nth-child(4) { opacity: .2; }
+    .boot .boot-world { position: absolute; right: calc(-6 * var(--u)); top: calc(1 * var(--u)); height: calc(50 * var(--u)); aspect-ratio: 400 / 480; }
+    .boot .boot-globe { position: absolute; left: 30%; top: 8%; width: 115%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 30% 32%, rgba(120, 200, 190, .22), rgba(24, 60, 58, .28) 45%, rgba(4, 12, 12, .9) 72%); box-shadow: inset calc(1.4 * var(--u)) 0 calc(3 * var(--u)) rgba(160, 225, 218, .16), 0 0 calc(4 * var(--u)) rgba(95, 211, 198, .08); border: 1px solid rgba(160, 225, 218, .22); }
+    .boot .boot-constellation { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: rgba(160, 225, 218, .4); stroke-width: .8; }
+    .boot .boot-bodies { position: absolute; left: calc(4 * var(--u)); top: calc(4 * var(--u)); width: calc(52 * var(--u)); height: auto; pointer-events: none; }
+    .boot::after { content: ""; position: absolute; inset: -10%; pointer-events: none; background: radial-gradient(40% 30% at 30% 40%, rgba(40, 120, 90, .16), transparent 70%), radial-gradient(35% 28% at 70% 65%, rgba(30, 100, 110, .12), transparent 70%); animation: boot-nebula 60s ease-in-out infinite alternate; }
+    @keyframes boot-nebula { from { transform: translate(0, 0) scale(1); } to { transform: translate(2%, -1.5%) scale(1.05); } }
+    .boot .boot-diagram .bd-sign { animation: boot-glyph 1.4s ease-out both; }
+    .boot .boot-diagram .bd-sign:nth-of-type(2n) { animation-delay: .25s; } .boot .boot-diagram .bd-sign:nth-of-type(3n) { animation-delay: .5s; } .boot .boot-diagram .bd-sign:nth-of-type(5n) { animation-delay: .8s; }
+    @keyframes boot-glyph { from { opacity: 0; } to { opacity: 1; } }
+    .boot .boot-log li:first-child { color: #9ff3e6; }
+    .boot .boot-log li:first-child::after { content: ""; display: inline-block; width: .55em; height: 1em; margin-left: .2em; vertical-align: -.15em; background: #9ff3e6; animation: boot-cursor 1s steps(1) infinite; }
+    @keyframes boot-cursor { 50% { opacity: 0; } }
+    .boot .boot-line b { animation: boot-head 1.6s ease-in-out infinite; }
+    @keyframes boot-head { 50% { box-shadow: 0 0 14px 3px var(--teal); } }
+    .boot .boot-halo { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: rgba(160, 225, 218, .45); stroke-width: 1; }
+    .boot .boot-bottom { position: absolute; left: 50%; bottom: calc(3.5 * var(--u)); width: calc(54 * var(--u)); transform: translateX(-50%); display: grid; justify-items: center; gap: calc(.9 * var(--u)); }
+    .boot .boot-sub { margin: 0; font: italic 400 calc(2.2 * var(--u))/1.2 'Cormorant Garamond', Georgia, serif; color: #e8f3f1; letter-spacing: .04em; }
+    .boot .boot-word { margin: 0; font: 500 calc(1.1 * var(--u))/1 system-ui, sans-serif; letter-spacing: .6em; text-indent: .6em; color: rgba(190, 235, 228, .7); }
+    .boot .boot-bar { position: relative; width: 100%; display: flex; align-items: center; gap: calc(1.2 * var(--u)); }
+    .boot .boot-line { position: relative; flex: 1; height: 1px; background: rgba(160, 225, 218, .18); }
+    .boot .boot-line i { position: absolute; left: 0; top: 0; height: 1px; width: calc(var(--boot-p) * 100%); background: var(--teal); box-shadow: 0 0 6px rgba(95, 211, 198, .8); transition: width 240ms cubic-bezier(.16, 1, .3, 1); }
+    .boot .boot-line b { position: absolute; top: -3px; left: calc(var(--boot-p) * 100% - 3px); width: 7px; height: 7px; border-radius: 50%; background: #dffaf6; box-shadow: 0 0 8px var(--teal); transition: left 240ms cubic-bezier(.16, 1, .3, 1); }
+    .boot .boot-pct { font: 500 calc(1.15 * var(--u))/1 ui-monospace, Consolas, monospace; color: var(--teal); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
+    .boot .boot-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    #boot.boot--failed .boot-sub { color: #ff8a7a; font-style: normal; }
+    #boot.boot--failed .boot-word, #boot.boot--failed .boot-bar { display: none; }
+    #boot .boot-nogl { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; position: relative; z-index: 3; }
+    #boot .boot-nogl a { color: #9fd8ff; font: 15px/1.3 system-ui, sans-serif; }
+    #boot .boot-retry { position: relative; z-index: 3; margin: 14px auto 0; display: block; min-height: 44px; padding: 8px 22px; border-radius: 22px; border: 1px solid #5fd3c6; background: rgba(95, 211, 198, .12); color: #e8f3f1; font: 600 15px/1 system-ui, sans-serif; cursor: pointer; }
+    @media (max-aspect-ratio: 4/5) {
+      .boot { --u: min(2.2vw, 1.2vh); }
+      .boot .boot-stage { width: calc(44 * var(--u)); height: calc(78 * var(--u)); }
+      .boot .boot-diagram { left: 0; top: 0; width: 100%; }
+      .boot .boot-world { right: calc(-22 * var(--u)); top: calc(20 * var(--u)); height: calc(40 * var(--u)); opacity: .6; }
+      .boot .boot-bodies { left: 0; top: 0; width: 100%; }
+      .boot .boot-log { left: calc(2 * var(--u)); top: calc(24 * var(--u)); width: calc(40 * var(--u)); font-size: calc(1.6 * var(--u)); }
+      .boot .boot-bottom { width: calc(40 * var(--u)); bottom: calc(2 * var(--u)); }
+      .boot .boot-sub { font-size: calc(2.8 * var(--u)); } .boot .boot-word, .boot .boot-pct { font-size: calc(1.5 * var(--u)); }
+    }
+    @media (prefers-reduced-motion: reduce) { .boot .boot-line i, .boot .boot-line b, .boot .boot-log li { transition: none; } .boot::after, .boot .boot-line b, .boot .boot-diagram .bd-sign, .boot .boot-log li:first-child::after { animation: none; } }
+    html[data-motion="reduce"] .boot .boot-line i, html[data-motion="reduce"] .boot .boot-line b { transition: none; }
+    html[data-motion="reduce"] .boot::after, html[data-motion="reduce"] .boot .boot-line b, html[data-motion="reduce"] .boot .boot-diagram .bd-sign, html[data-motion="reduce"] .boot .boot-log li:first-child::after { animation: none; }
     body.booting #badge { display: none; }
     .panel { position: fixed; background: var(--panel); border-radius: 8px; padding: 8px 12px; pointer-events: none; }
     #objective { position: fixed; top: 14px; left: 18px; max-width: calc(100% - 175px); font: 500 18px/1.3 Georgia, serif; pointer-events: none; }
@@ -225,27 +275,37 @@
   </style>
 </head>
 <body class="booting">
-  <div id="boot" role="status" aria-live="polite" aria-label="Loading">
-    <div class="boot-inner">
-      <svg class="boot-ring" viewBox="0 0 120 120" aria-hidden="true">
-        <circle class="boot-ring-bg" cx="60" cy="60" r="54"/>
-        <circle class="boot-ring-ink" cx="60" cy="60" r="46"/>
-        <circle class="boot-ring-fg" cx="60" cy="60" r="54"/>
-        <circle class="boot-core" cx="60" cy="60" r="3.5"/>
-      </svg>
-      <h1 class="boot-title"><span>Forget</span><span>to Foresee</span></h1>
-      <div class="boot-meta"><span class="boot-label">Loading the island</span><span class="boot-pct">4%</span></div>
+  <div id="boot" class="boot" role="status" aria-live="polite" aria-label="Loading">
+    <div class="boot-stage">
+      <!-- loading-art:diagram -->
+      <svg class="boot-diagram" viewBox="0 0 760 300" aria-hidden="true"><path class="bd-rail" d="M14 150H93M131 150H187M225 150H276M484 150H535M573 150H629M667 150H746"/><path class="bd-rail bd-thin" d="M60 96H296M464 96H700M60 204H296M464 204H700"/><circle class="bd-dot" cx="38" cy="150" r="1.5"/><circle class="bd-dot" cx="159" cy="150" r="1.5"/><circle class="bd-dot" cx="268" cy="150" r="1.5"/><circle class="bd-dot" cx="492" cy="150" r="1.5"/><circle class="bd-dot" cx="601" cy="150" r="1.5"/><circle class="bd-dot" cx="722" cy="150" r="1.5"/><circle class="bd-dot" cx="60" cy="96" r="1.3"/><circle class="bd-dot" cx="60" cy="204" r="1.3"/><circle class="bd-dot" cx="700" cy="96" r="1.3"/><circle class="bd-dot" cx="700" cy="204" r="1.3"/><g class="bd-shell"><path d="M111.29 118.8L110.29 123.06L109.5 127.33L108.76 131.59L108.06 135.86L107.39 140.12L106.74 144.38L106.1 148.65L105.48 152.91L104.86 157.18L104.26 161.44L103.67 165.7L103.09 169.97L120.91 169.97L120.33 165.7L119.74 161.44L119.14 157.18L118.52 152.91L117.9 148.65L117.26 144.38L116.61 140.12L115.94 135.86L115.24 131.59L114.5 127.33L113.71 123.06L112.71 118.8Z"/><path class="bd-thin" d="M110.39 122.04Q112 123.49 113.61 122.76"/><path class="bd-thin" d="M109.41 126.94Q112 129.27 114.59 128.1"/><path class="bd-thin" d="M108.39 132.55Q112 135.8 115.61 134.18"/><path class="bd-thin" d="M107.36 138.69Q112 142.87 116.64 140.78"/><path class="bd-thin" d="M106.31 145.24Q112 150.36 117.69 147.8"/><path class="bd-thin" d="M105.25 152.15Q112 158.23 118.75 155.19"/><path class="bd-thin" d="M104.17 159.36Q112 166.41 119.83 162.89"/><path d="M103.09 169.97Q100.86 177.46 110.66 181.2Q120.02 178.7 124.93 168.72"/><path class="bd-thin" d="M110.22 171.22Q115.12 175.58 112.89 179.33"/></g><g class="bd-shell"><path d="M205.29 118.8L204.29 123.06L203.5 127.33L202.76 131.59L202.06 135.86L201.39 140.12L200.74 144.38L200.1 148.65L199.48 152.91L198.86 157.18L198.26 161.44L197.67 165.7L197.09 169.97L214.91 169.97L214.33 165.7L213.74 161.44L213.14 157.18L212.52 152.91L211.9 148.65L211.26 144.38L210.61 140.12L209.94 135.86L209.24 131.59L208.5 127.33L207.71 123.06L206.71 118.8Z"/><path class="bd-thin" d="M204.39 122.04Q206 123.49 207.61 122.76"/><path class="bd-thin" d="M203.41 126.94Q206 129.27 208.59 128.1"/><path class="bd-thin" d="M202.39 132.55Q206 135.8 209.61 134.18"/><path class="bd-thin" d="M201.36 138.69Q206 142.87 210.64 140.78"/><path class="bd-thin" d="M200.31 145.24Q206 150.36 211.69 147.8"/><path class="bd-thin" d="M199.25 152.15Q206 158.23 212.75 155.19"/><path class="bd-thin" d="M198.17 159.36Q206 166.41 213.83 162.89"/><path d="M197.09 169.97Q194.86 177.46 204.66 181.2Q214.02 178.7 218.93 168.72"/><path class="bd-thin" d="M204.22 171.22Q209.12 175.58 206.89 179.33"/></g><g class="bd-shell"><path d="M553.29 118.8L552.29 123.06L551.5 127.33L550.76 131.59L550.06 135.86L549.39 140.12L548.74 144.38L548.1 148.65L547.48 152.91L546.86 157.18L546.26 161.44L545.67 165.7L545.09 169.97L562.91 169.97L562.33 165.7L561.74 161.44L561.14 157.18L560.52 152.91L559.9 148.65L559.26 144.38L558.61 140.12L557.94 135.86L557.24 131.59L556.5 127.33L555.71 123.06L554.71 118.8Z"/><path class="bd-thin" d="M552.39 122.04Q554 123.49 555.61 122.76"/><path class="bd-thin" d="M551.41 126.94Q554 129.27 556.59 128.1"/><path class="bd-thin" d="M550.39 132.55Q554 135.8 557.61 134.18"/><path class="bd-thin" d="M549.36 138.69Q554 142.87 558.64 140.78"/><path class="bd-thin" d="M548.31 145.24Q554 150.36 559.69 147.8"/><path class="bd-thin" d="M547.25 152.15Q554 158.23 560.75 155.19"/><path class="bd-thin" d="M546.17 159.36Q554 166.41 561.83 162.89"/><path d="M545.09 169.97Q542.86 177.46 552.66 181.2Q562.02 178.7 566.93 168.72"/><path class="bd-thin" d="M552.22 171.22Q557.12 175.58 554.89 179.33"/></g><g class="bd-shell"><path d="M647.29 118.8L646.29 123.06L645.5 127.33L644.76 131.59L644.06 135.86L643.39 140.12L642.74 144.38L642.1 148.65L641.48 152.91L640.86 157.18L640.26 161.44L639.67 165.7L639.09 169.97L656.91 169.97L656.33 165.7L655.74 161.44L655.14 157.18L654.52 152.91L653.9 148.65L653.26 144.38L652.61 140.12L651.94 135.86L651.24 131.59L650.5 127.33L649.71 123.06L648.71 118.8Z"/><path class="bd-thin" d="M646.39 122.04Q648 123.49 649.61 122.76"/><path class="bd-thin" d="M645.41 126.94Q648 129.27 650.59 128.1"/><path class="bd-thin" d="M644.39 132.55Q648 135.8 651.61 134.18"/><path class="bd-thin" d="M643.36 138.69Q648 142.87 652.64 140.78"/><path class="bd-thin" d="M642.31 145.24Q648 150.36 653.69 147.8"/><path class="bd-thin" d="M641.25 152.15Q648 158.23 654.75 155.19"/><path class="bd-thin" d="M640.17 159.36Q648 166.41 655.83 162.89"/><path d="M639.09 169.97Q636.86 177.46 646.66 181.2Q656.02 178.7 660.93 168.72"/><path class="bd-thin" d="M646.22 171.22Q651.12 175.58 648.89 179.33"/></g><path class="bd-thin bd-dash" d="M112 110A62 62 0 0 1 206 110M554 190A62 62 0 0 0 648 190"/><g class="bd-hub"><circle cx="380" cy="150" r="47"/><path d="M363 146H397Q387.65 153.5 381.7 161Q371.5 154.25 363 146ZM347 130H363Q358.6 133.5 355.8 137Q351 133.85 347 130ZM395 133H413Q408.05 137 404.9 141Q399.5 137.4 395 133ZM350 166H368Q363.05 170 359.9 174Q354.5 170.4 350 166ZM396 165H410Q406.15 168.5 403.7 172Q399.5 168.85 396 165ZM376 119H388Q384.7 121.5 382.6 124Q379 121.75 376 119Z"/><path class="bd-thin" d="M380 146V136M377 136H383M363 146Q361 140 363 130M397 146Q398 141 395 133M368 166Q372 162 374 156M396 165Q391 162 388 155"/></g><circle class="bd-orbit bd-dash" cx="380" cy="150" r="72"/><circle class="bd-orbit bd-thin" cx="380" cy="150" r="98"/><path class="bd-thin" d="M380 24V103M380 197V276"/><path class="bd-star" d="M380 23V53M365 38H395M375.2 33.2L384.8 42.8M375.2 42.8L384.8 33.2"/><circle class="bd-dot" cx="380" cy="78" r="1.6"/><circle class="bd-dot" cx="452" cy="150" r="1.6"/><circle cx="478" cy="150" r="5"/><circle class="bd-dot" cx="478" cy="150" r="1.2"/><circle cx="380" cy="262" r="7"/><circle class="bd-dot" cx="380" cy="262" r="1.6"/><g class="bd-sign" transform="translate(86 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(270)"/><circle cx="-1.87" r="0.9" class="bd-dot"/><circle cx="0" r="0.9" class="bd-dot"/><circle cx="1.87" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(152 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(270)"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(218 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(90)" class="bd-ink"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(180)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(270)"/><circle cx="-0.93" r="0.9" class="bd-dot"/><circle cx="0.94" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(284 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(90)"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(180)"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(270)"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(476 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(270)"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(542 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" class="bd-ink"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(90)" class="bd-ink"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(180)" class="bd-ink"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(270)"/><circle cx="-0.93" r="0.9" class="bd-dot"/><circle cx="0.94" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(608 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(270)" class="bd-ink"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(674 66)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(90)"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(180)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(270)"/><circle cx="-0.93" r="0.9" class="bd-dot"/><circle cx="0.94" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(112 236)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" class="bd-ink"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(90)"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(180)" class="bd-ink"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(270)" class="bd-ink"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(196 236)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(90)"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(180)" class="bd-ink"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(270)"/><circle cx="-0.93" r="0.9" class="bd-dot"/><circle cx="0.94" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(280 236)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(270)"/><circle cx="-0.93" r="0.9" class="bd-dot"/><circle cx="0.94" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(480 236)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" transform="rotate(270)" class="bd-ink"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(564 236)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(90)"/><path d="M-3.3 -11.22Q0 -14.3 3.3 -11.22" transform="rotate(180)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(270)"/><circle cx="0" r="0.9" class="bd-dot"/></g><g class="bd-sign" transform="translate(648 236)"><circle r="11"/><circle r="3.3" class="bd-thin"/><path d="M0 -14.96C1.54 -12.54 1.54 -11 0 -10.67C-1.54 -11 -1.54 -12.54 0 -14.96Z" class="bd-ink"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(90)"/><path d="M-1.43 -12.65a1.43 1.43 0 1 0 2.86 0a1.43 1.43 0 1 0 -2.86 0" transform="rotate(180)"/><path d="M-1.54 -10.67L0 -14.96L1.54 -10.67" transform="rotate(270)"/><circle cx="-1.87" r="0.9" class="bd-dot"/><circle cx="0" r="0.9" class="bd-dot"/><circle cx="1.87" r="0.9" class="bd-dot"/></g></svg>
+      <!-- /loading-art:diagram -->
+      <svg class="boot-bodies" viewBox="0 0 760 300" aria-hidden="true"><defs><radialGradient id="bb-s" cx=".35" cy=".32" r=".75"><stop offset="0" stop-color="#cfeee9"/><stop offset=".45" stop-color="#4c8f88"/><stop offset="1" stop-color="#0b1d1d"/></radialGradient><radialGradient id="bb-w" cx=".36" cy=".32" r=".8"><stop offset="0" stop-color="rgba(190,240,232,.55)"/><stop offset=".55" stop-color="rgba(60,130,122,.35)"/><stop offset="1" stop-color="rgba(8,24,24,.2)"/></radialGradient></defs><circle cx="380" cy="150" r="40" fill="url(#bb-w)"/><circle cx="38" cy="150" r="6" fill="url(#bb-s)"/><circle cx="268" cy="150" r="8" fill="url(#bb-s)"/><circle cx="492" cy="150" r="7" fill="url(#bb-s)"/><circle cx="722" cy="150" r="5.5" fill="url(#bb-s)"/></svg>
+      <ul class="boot-log" aria-hidden="true"><li>Reading the Guests’ signs…</li></ul>
+      <div class="boot-world" aria-hidden="true">
+        <div class="boot-globe"></div>
+        <svg class="boot-constellation" viewBox="0 0 400 480" aria-hidden="true"><path class="bd-thin" d="M234.7 97.2L206.8 110.5 M206.8 110.5L174.4 98.4 M174.4 98.4L151.0 98.5 M132.0 120.6L135.0 158.6 M135.0 158.6L62.8 156.8 M62.8 156.8L100.5 197.1 M31.3 222.4L76.3 254.5 M76.3 254.5L109.9 282.5 M109.9 282.5L97.1 309.9 M116.0 316.3L82.2 372.1 M82.2 372.1L116.7 381.8 M116.7 381.8L158.0 392.8"/><circle class="bd-dot" cx="234.7" cy="97.2" r="2.4"/><circle class="bd-dot" cx="206.8" cy="110.5" r="1.6"/><circle class="bd-dot" cx="174.4" cy="98.4" r="1.6"/><circle class="bd-dot" cx="151.0" cy="98.5" r="2.4"/><circle class="bd-dot" cx="132.0" cy="120.6" r="1.6"/><circle class="bd-dot" cx="135.0" cy="158.6" r="1.6"/><circle class="bd-dot" cx="62.8" cy="156.8" r="2.4"/><circle class="bd-dot" cx="100.5" cy="197.1" r="1.6"/><circle class="bd-dot" cx="31.3" cy="222.4" r="1.6"/><circle class="bd-dot" cx="76.3" cy="254.5" r="2.4"/><circle class="bd-dot" cx="109.9" cy="282.5" r="1.6"/><circle class="bd-dot" cx="97.1" cy="309.9" r="1.6"/><circle class="bd-dot" cx="116.0" cy="316.3" r="2.4"/><circle class="bd-dot" cx="82.2" cy="372.1" r="1.6"/><circle class="bd-dot" cx="116.7" cy="381.8" r="1.6"/><circle class="bd-dot" cx="158.0" cy="392.8" r="2.4"/></svg>
+        <!-- loading-art:halo -->
+      <svg class="boot-halo" viewBox="0 0 400 480" aria-hidden="true"><circle class="bd-thin" cx="200" cy="250" r="150"/><circle class="bd-dash bd-orbit" cx="200" cy="250" r="192"/><circle class="bd-thin" cx="286" cy="150" r="96"/><path class="bd-thin" d="M306 8V470M40 110H396"/><path class="bd-star" d="M306 90V130M286 110H326M299.6 103.6L312.4 116.4M299.6 116.4L312.4 103.6"/><path class="bd-star bd-thin" d="M86 383V401M77 392H95M83.12 389.12L88.88 394.88M83.12 394.88L88.88 389.12"/><circle class="bd-dot" cx="200" cy="58" r="1.6"/><circle class="bd-dot" cx="392" cy="250" r="1.6"/><circle class="bd-dot" cx="64" cy="114" r="1.6"/><circle class="bd-dot" cx="306" cy="244" r="1.6"/><circle class="bd-dot" cx="130" cy="110" r="1.6"/><circle class="bd-dot" cx="354" cy="362" r="1.6"/><g class="bd-sign" transform="translate(350 300)"><circle r="10"/><circle r="3" class="bd-thin"/><path d="M-1.3 -11.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0 -2.6 0"/><path d="M-3 -10.2Q0 -13 3 -10.2" transform="rotate(90)"/><path d="M0 -13.6C1.4 -11.4 1.4 -10 0 -9.7C-1.4 -10 -1.4 -11.4 0 -13.6Z" transform="rotate(180)" class="bd-ink"/><path d="M-1.4 -9.7L0 -13.6L1.4 -9.7" transform="rotate(270)"/><circle cx="-0.85" r="0.9" class="bd-dot"/><circle cx="0.85" r="0.9" class="bd-dot"/></g></svg>
+      <!-- /loading-art:halo -->
+      </div>
+      <div class="boot-bottom">
+        <p class="boot-sub">Forget to Foresee</p>
+        <p class="boot-word">LOADING</p>
+        <div class="boot-bar"><div class="boot-line" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="4"><i></i><b></b></div><span class="boot-pct">4%</span></div>
+        <span class="boot-label">Loading the town</span>
+      </div>
     </div>
   </div>
   <script>
-    // Before the module graph arrives: a slow trickle on the ring, so the first second is never a frozen bar.
+    // Before the module graph arrives: a slow trickle on the line, so the first second is never a frozen bar.
     (function () {
-      var ring = document.querySelector('#boot .boot-ring-fg'), pct = document.querySelector('#boot .boot-pct'), p = 0.04, C = 339.29, t0 = Date.now();
+      var boot = document.getElementById('boot'), pct = document.querySelector('#boot .boot-pct'), bar = document.querySelector('#boot .boot-line'), p = 0.04, t0 = Date.now();
       window.__ftfBoot = { shown: function () { return p; }, stop: function () { clearInterval(id); } };
       var id = setInterval(function () {
         if (!document.getElementById('boot')) { clearInterval(id); return; }
         p = Math.min(0.3, 0.04 + (Date.now() - t0) / 1000 * 0.05);
-        ring.style.strokeDashoffset = String(C * (1 - p)); pct.textContent = Math.round(p * 100) + '%';
+        boot.style.setProperty('--boot-p', p.toFixed(3)); pct.textContent = Math.round(p * 100) + '%'; bar.setAttribute('aria-valuenow', String(Math.round(p * 100)));
       }, 120);
     })();
   </script>

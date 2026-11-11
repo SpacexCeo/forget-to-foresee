@@ -212,3 +212,42 @@ test('the shard section says "on NEAR" only when a real token is in it', async (
   const real = await watcher(fakeRpc(ONCHAIN));
   assert.equal(renderShardSection(shardCards({ status: real.status, obs: PLAY.final }), { t, doc }).attrs['aria-label'], 'Memory shards on NEAR');
 });
+
+test('?demo=judge: the recorded on-chain judge shard is one click away when this playthrough diverged (audit QW-3)', async () => {
+  const { renderShardSection } = await import('../../src/ui/world-hud/shard-card.js');
+  const other = { ...PLAY.final, shards: PLAY.final.shards.map((s) => (s.id === 7 ? { ...s, winner: 'salt' } : s)) };
+  const w = await watcher(fakeRpc(ONCHAIN));
+  // not on the judge link: no button
+  assert.equal(shardCards({ status: w.status, obs: other }).recorded, null);
+  const v = shardCards({ status: w.status, obs: other, judge: true });
+  assert.equal(v.recorded.state, 'minted');
+  const c = v.recorded.card;
+  assert.equal(c.recorded, true); assert.equal(c.state, 'minted');
+  assert.equal(c.tokenId, `${SEASON}-7`); assert.equal(c.owner, 'lambada_eth.testnet'); assert.equal(c.leaf.index, 3);
+  assert.equal(c.tokenHref, `https://testnet.nearblocks.io/nft-token/ftf-shards.testnet/${SEASON}-7`);
+  assert.equal(c.svgVerified, true);
+  assert.equal(v.cards.find((x) => x.card.shardId === 7).card.state, 'preview', 'the player\'s own shard stays an Unminted preview');
+  // the playthrough matched: its own card already is the token, no second button
+  assert.equal(shardCards({ status: w.status, obs: PLAY.final, judge: true }).recorded, null);
+  // RPC failure: the honest reason, no fake data
+  const dead = await watcher(async () => { throw new TypeError('fetch failed'); }, other);
+  assert.deepEqual(shardCards({ status: dead.status, obs: other, judge: true }).recorded, { state: 'offline' });
+  // a live season: nothing recorded to show
+  const live = { ...other, season: { ...other.season, seasonId: '0000000000000000' } };
+  assert.equal(shardCards({ status: w.status, obs: live, judge: true }).recorded, null);
+  // DOM: a button that opens the labelled card
+  const listeners = [];
+  const mk = (tag) => ({ tag, attrs: {}, kids: [], className: '', textContent: '', hidden: false, style: { setProperty() {} }, classList: { add() {} }, dataset: {},
+    get firstChild() { return this.kids[0] || null; }, setAttribute(k, val) { this.attrs[k] = val; if (k === 'hidden') this.hidden = true; }, addEventListener(e, fn) { listeners.push([this, e, fn]); }, append(...k) { this.kids.push(...k); } });
+  const doc = { createElement: mk, head: { appendChild() {} }, querySelector: () => null };
+  const en = createPlayI18n('en'); const t = (k, a) => renderMsg(en, k, a);
+  const node = renderShardSection(v, { t, doc });
+  const all = []; const walk = (n) => { if (!n || typeof n !== 'object') return; all.push(n); (n.kids || []).forEach(walk); }; walk(node);
+  const btn = all.find((n) => n.className && n.className.includes('sh-recorded-open'));
+  assert.equal(btn.textContent, "Open the judge playthrough's on-chain shard (#7)");
+  listeners.find(([n]) => n === btn)[2]();
+  const after = []; const walk2 = (n) => { if (!n || typeof n !== 'object') return; after.push(n); (n.kids || []).forEach(walk2); }; walk2(node);
+  const text = after.map((n) => n.textContent).join(' | ');
+  assert.match(text, /recorded judge playthrough: minted by the coordinator, not by your session/);
+  assert.ok(after.some((n) => n.attrs && n.attrs['data-token'] === `${SEASON}-7`), 'the token card is rendered');
+});

@@ -37,3 +37,21 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
   server: `/root/w/tz/ftf` (clone of this branch), `bash /root/w/tzbuild.sh` rebuilds and serves port 4311,
   `. /root/w/tz/env.sh && node /root/w/tz/shellcap.cjs shots/<name>` flies into Shell I and takes frames.
 - Local: `cd game && npm run dev`, headless Chromium works for the onboarding screens (SwiftShader).
+- NFT-001 cards: in the game (Day 1 flip, profile, on-chain Elise row); no-name art at `assets/nft/elise.webp` = the deployed `elise_media` URL. Left: NFTs/inventory tabs with (d).
+- Relayer (relayer/): signs create_guest server-side; client POSTs when VITE_FTF_RELAYER_URL is set; Pages passes vars.FTF_RELAYER_URL, no key in the page. Left: lead deploys, sets the variable.
+- Relayer standalone: node relayer/server.js + Dockerfile, ALLOWED_ORIGIN, TRUST_PROXY. Left: owner hosts it, sets FTF_RELAYER_URL.
+- Casts restored: Return to town now remounts Frost Lance / Storm Snare (leaveTown disposed them); first two skill-bar slots, placeholder art. Left: UI-003 icons.
+- QW-4: og/twitter meta, og.jpg (town still), favicon.svg, test. Left: owner updates the GitHub description/topics/homepage.
+- QW-5: WebGL 2 check before the world chunk (?forceNoGL=1), no-GPU links on the boot screen, software-renderer note; tests.
+- QW-3: ?demo=judge Memories button opens the recorded on-chain shard #7 (labelled coordinator-minted), offline honest; scripts/judge-replay-link.mjs. README link with QW-1.
+- QW-1/QW-12/QW-7: README rewritten for the screener (old one = docs/status.md), numbers from docs/STATS.md (scripts/stats.mjs), scripts/verify-all.sh, Rust pinned 1.99.1, engines/.nvmrc. Left: cargo-near version pin (no release list reachable here).
+- Collapsible town panels: chevron → pill at the right edge with live hire progress, stack, O expands, Esc closes, remembered; tests + headless.
+- China/greybox: self-hosted Cormorant (no Google Fonts), town never revealed half-loaded (slow-link note at 30 s, Reload at 90 s), no greybox capsule for players (Iris fetch/attach retried), jsDelivr asset mirror (China time zones / ?mirror=1 start on it, errors and timeouts switch). Mobile first view ~18 MB models.
+- Day cycle: early morning → evening → dusk → twilight → night (moon, stars, mist, lamps) → morning, per-frame blend with keyframe sky stats (no per-frame readback), far shadow re-render only after 0.3° turn; tests + headless shots.
+- Live-build TDZ fix: webgl-guard in the boot chunk; chunk-rule test; built-page smoke (game/scripts/smoke-built.mjs) as a Pages CI step; #43 re-applied over the main revert.
+- Atmosphere: ground-fog cards along the street/stairs (night strongest, dawn light, +rain), tiered off on low, still under reduced motion; rain/wetness/haze reuse the eased weather system. Left: eave drips.
+- Loading screen restyle (mood brief): Iris silhouette dropped; shaded bodies on the orbit line, partial world sphere with constellation lines, drifting green nebula, bright log line with cursor, glyph fade-in, pulsing head dot; reduced motion static; phone stacks.
+- Agent track records: contracts/agent-ledger (7 tests) + ledger-deploy.sh, game/track-record.js (replay/verify), net/agent-ledger.js (record with the guest key, verified only after read-back), tools/verify-agent/verify.mjs, verify intent + copy steps, docs/api/verify-agent.md. Left: lead deploys (bash contracts/scripts/ledger-deploy.sh).
+- (d) Game menu: tabs Profile/Achievements/NFTs/Inventory(+wheel)/Agents/Log, bright style, items manifest merged (art files only), wheel (daily free + earned spins, odds table, seeded), inventory, achievements; tests + headless. Left: UI-004 mockup match, trading-board/wheel props in town, shops walk-in.
+- Ledger live: guest record failed NotEnoughBalance (50 Tgas prepaid); gas now 20 Tgas; live record + verifier PASS (ledgercheck-5 baker 1).
+- Walk-in shops: E at the door → fade → streamed interior (own colliders, baked light, day cycle/casts paused) → counter opens the door panel → leave; swing_* nodes rock with windAt (town + rooms). Left: camera near the chandelier at the counter.

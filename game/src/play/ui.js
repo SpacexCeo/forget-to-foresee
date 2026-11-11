@@ -57,7 +57,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   function shardSection(obs) {
     if (!shardSource) return null;
     const v = shardSource(obs);
-    const key = i18n.locale + '|' + (v.judgeOnly ? 'j' : '') + v.cards.map((c) => (c.card.tokenId || c.card.key) + ':' + (c.card.owner || '')).join(',');
+    const key = i18n.locale + '|' + (v.judgeOnly ? 'j' : '') + '|' + (v.recorded ? v.recorded.state : '') + '|' + v.cards.map((c) => (c.card.tokenId || c.card.key) + ':' + (c.card.owner || '')).join(',');
     if (key !== shardKey) { shardKey = key; shardNode = renderShardSection(v, { t, doc: document }); }
     return shardNode;
   }

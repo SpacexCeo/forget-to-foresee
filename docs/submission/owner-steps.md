@@ -4,15 +4,21 @@
 `apply-form.md` (the form values and payload), `jury-video.md` (the video for the post) and the video pipeline notes
 (`trailer.md`, `video-shot-list.md`). Dates: freeze 13.11 20:00 Kyiv, deadline 15.11 01:59 Kyiv (14.11 23:59 UTC).
 
-## 0. Mint Iris's agent card (one command, testnet)
+## 0. Day 1 contracts and the agent card (testnet, signed by ftf-coordinator.testnet)
+
+All three scripts are idempotent (safe to re-run) and sign with the keys in `~/.near-credentials` (`SIGNER`, default
+`ftf-coordinator.testnet`). They need the near CLI and cargo-near.
 
 ```bash
-bash contracts/agent-card/scripts/mint-judge-card.sh
+bash contracts/scripts/day1-deploy.sh        # heroine, companions, guests contracts + settings
+bash contracts/scripts/day1-guest-key.sh     # the client's create_guest-only key (private part -> game/.env.local)
+bash contracts/agent-card/scripts/mint-judge-card.sh   # agents.ftf-coordinator.testnet + the judge Iris card
 ```
 
-Creates `ftf-agents.testnet` (faucet), deploys `contracts/agent-card`, checks the state hash and mints
-`793f6c05e89839f2-agent-iris` to `lambada_eth.testnet`, signing with the keys in this machine's NEAR keychain. The game
-shows the card as minted by itself; nothing to edit. Details: `docs/agent-nft.md`.
+They write only public account ids and the guest key's public part to `game/src/net/day1-deployment.js`. The guest
+key's private part never goes into the page: it is the `FTF_GUEST_KEY` environment variable of the relayer
+(`relayer/README.md`). Then set the repository variable `FTF_RELAYER_URL` (Settings → Secrets and variables → Actions →
+Variables) to the relayer's URL; the Pages build passes it as `VITE_FTF_RELAYER_URL`.
 
 ## Already done (no action)
 
@@ -29,8 +35,9 @@ shows the card as minted by itself; nothing to edit. Details: `docs/agent-nft.md
 ```bash
 git fetch origin main
 git checkout main && git pull --ff-only origin main
-cd game && npm ci && npm test && npm run build && cd ..      # must be green: pass 516, fail 0 (09.11 count)
-cd server && npm test && cd ..                               # pass 28
+(cd game && npm ci && npm run build)                          # the production build (its size goes into docs/STATS.md)
+bash scripts/verify-all.sh --write                           # every suite must be ok (fail 0); refreshes docs/STATS.md
+git add docs/STATS.md docs/stats.json && git commit -m "Numbers at the freeze" && git push origin main
 git tag -a hackathon-submission -m "NEAR Hackathon submission" main
 git push origin hackathon-submission
 ```
@@ -51,12 +58,19 @@ posting: nothing may say the contract is "not yet deployed", that the clans have
 shards are minted in every season. The older 75 s demo cut (`video-shot-list.md`) carries a stale caption; do not post
 it without re-rendering.
 
+### 3b. Repository settings (GitHub → the repo → About ⚙, 2 minutes; audit QW-4)
+- **Description:** `Strategy game where an AI clan agent pays for prophecy with her own memories. Seasons are sealed on NEAR testnet before play; forgotten memories become NEP-171 shards. Built at NEAR HACKATHON.`
+  (the current one says "NFT agents", which the README contradicts: Iris is game state, not a token).
+- **Website:** `https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk`
+- **Topics:** `near`, `near-protocol`, `nft`, `nep-171`, `game`, `threejs`, `ai-agents`, `merkle-tree`, `nearhackathon`
+- Check the link preview after the next Pages deploy: the page already has `og:` / `twitter:` tags and `og.jpg`.
+
 ### 4. Post on X
 `docs/submission/x-post.md`. Post 1 must contain the video, "built at NEAR HACKATHON", @NEARProtocol and
 #NEARHackathon. Copy the post URL.
 
 ### 5. Related project
-Settled 09.11: none. RAEN is the company; Lambada_eth is its owner, CEO and this game's developer. One submission only.
+Settled 09.11: none. One submission only.
 
 ### 6. Submit (once)
 `docs/submission/apply-form.md`: fill the TODO(owner) values, generate the `requestId`, read the consent sentence,

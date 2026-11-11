@@ -48,9 +48,14 @@ export function shardCardModel({ status, season, shard, deployment = NEAR_DEPLOY
   let chain;
   try { chain = shardData(rec.data); } catch { return preview(); }
   if (shardExtra(local) !== shardExtra(chain)) return preview(); // someone else's token #id: never claimed
+  return chainShardCard({ rec, chain, tokenId, seasonId: season.seasonId, deployment });
+}
+
+/** A real token's card from the chain record alone (the contract's data, owner and media). */
+export function chainShardCard({ rec, chain, tokenId, seasonId, deployment = NEAR_DEPLOYMENT }) {
   const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
-  const rec2 = deployment.seasons && deployment.seasons[season.seasonId];
-  const mintTx = deployment.shardMints && deployment.shardMints[season.seasonId] ? deployment.shardMints[season.seasonId][String(shard.id)] || null : null;
+  const rec2 = deployment.seasons && deployment.seasons[seasonId];
+  const mintTx = deployment.shardMints && deployment.shardMints[seasonId] ? deployment.shardMints[seasonId][String(chain.shard_id)] || null : null;
   const revealTx = chain.unlocked_index != null && rec2 && rec2.revealTx ? rec2.revealTx[String(chain.unlocked_index)] || null : null;
   return {
     state: 'minted',
@@ -115,7 +120,7 @@ function verifiedSvg(tokenId, data, metadata) {
  * The shard cards for the Memories panel: Iris's shards first, then the other clans' minted shards of the season.
  * Returns {cards: [{shard, card}], judgeOnly: false} (judgeOnly is kept for callers; previews replaced that line).
  */
-export function shardCards({ status, obs, deployment = NEAR_DEPLOYMENT }) {
+export function shardCards({ status, obs, deployment = NEAR_DEPLOYMENT, judge = false }) {
   const season = obs && obs.season;
   const shards = (obs && obs.shards) || [];
   const cards = [];
@@ -128,7 +133,31 @@ export function shardCards({ status, obs, deployment = NEAR_DEPLOYMENT }) {
   // Iris's first, real tokens before previews, then by shard id
   const rank = (c) => (c.shard.from === 'iris' ? 0 : 2) + (c.card.state === 'minted' ? 0 : 1);
   cards.sort((a, b) => rank(a) - rank(b) || a.shard.id - b.shard.id);
-  return { cards, judgeOnly: false };
+  return { cards, judgeOnly: false, recorded: judge ? recordedJudgeShard({ status, season, deployment, shown: cards }) : null };
+}
+
+/** The shard of the recorded judge playthrough that is minted on testnet (Iris's forgotten Call). */
+export const JUDGE_SHARD_ID = 7;
+
+/**
+ * On ?demo=judge only (audit QW-3): the recorded judge playthrough's on-chain shard, one click away even when this
+ * session played differently. {state: 'minted', card} | {state: 'offline'} | {state: 'checking'} | null (not this
+ * season, not minted, or this playthrough already shows the same token as its own card).
+ */
+export function recordedJudgeShard({ status, season, deployment = NEAR_DEPLOYMENT, shown = [] }) {
+  if (!season || !deployment || !deployment.shardContractId) return null;
+  const mints = deployment.shardMints && deployment.shardMints[season.seasonId];
+  if (!mints || !mints[String(JUDGE_SHARD_ID)]) return null;
+  const tokenId = `${season.seasonId}-${JUDGE_SHARD_ID}`;
+  if (shown.some((c) => c.card && c.card.tokenId === tokenId)) return null;
+  if (!status || status.state === 'disabled') return null;
+  if (status.state === 'offline') return { state: 'offline' };
+  if (status.state !== 'loaded' || status.seasonId !== season.seasonId) return { state: 'checking' };
+  const rec = status.minted.get(tokenId);
+  if (!rec || !rec.data) return null;
+  let chain;
+  try { chain = shardData(rec.data); } catch { return null; }
+  return { state: 'minted', card: { ...chainShardCard({ rec, chain, tokenId, seasonId: season.seasonId, deployment }), recorded: true } };
 }
 
 /**

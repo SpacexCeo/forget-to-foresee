@@ -13,8 +13,8 @@ import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
-import { cycleAt, mixLooks, BLEND_STEP } from './render/daycycle.js';
-import { lookFor } from './render/sky.js';
+import { cycleLook, KEYS as CYCLE_KEYS } from './render/daycycle.js';
+import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
@@ -28,7 +28,7 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
-import { logKeysFromStats } from './ui/ink-bar.js';
+import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
@@ -36,10 +36,16 @@ import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
+import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
-import { PROGRAMS } from './play/townsfolk-plan.js';
+import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { townToWorld, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE } from './scenes/town-layout.js';
+import { createFogCards } from './render/fog-cards.js';
+import { createTownShops } from './scenes/town-shops.js';
+import { createTownProps } from './scenes/town-props.js';
+import { createBarks } from './scenes/barks.js';
+import { cue } from './audio/town-audio.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -70,14 +76,16 @@ const mobileDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || ((
 const detectedTier = detectTier({ gpu: gpuName(), mobile: /Mobi|Android/i.test(navigator.userAgent), deviceMemory: navigator.deviceMemory, cores: navigator.hardwareConcurrency });
 const systemReduced = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } })();
 
-if (params.get('shells') === 'r2') setModelOverrides({ shell_1: 'shell_1_r2', shell_2: 'shell_2_r2', shell_3: 'shell_3_r2', shell_4: 'shell_4_r2' }); // review round 2
+if (import.meta.env.DEV && params.get('shells') === 'r2') setModelOverrides({ shell_1: 'shell_1_r2', shell_2: 'shell_2_r2', shell_3: 'shell_3_r2', shell_4: 'shell_4_r2' }); // review round 2
 if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice || (params.get('tier') || detectedTier) === 'low'))) setModelVariant('_m');
 // QA-030: the heroine streams before the camps and props, and her greybox capsule stays hidden while her model is
 // on its way (shown only without a file, after a failure, or after IRIS_STANDIN_AFTER seconds).
 const irisLoad = { hasModel: hasModelFile('agent_iris'), fetched: false, loaded: false, failed: false, t0: performance.now() };
 // The same file play/iris-avatar.js irisModelFile() picks: the phone variant when the build ships it.
 const irisFile = getModelVariant() && hasModelFile('agent_iris' + getModelVariant()) ? 'agent_iris' + getModelVariant() : 'agent_iris';
-if (irisLoad.hasModel) prefetchGltf(irisFile).then(() => { irisLoad.fetched = true; }, () => { irisLoad.failed = true; });
+// A failed download is retried (a slow or lossy link); players never see the greybox capsule in her place.
+const fetchIris = (attempt = 0) => prefetchGltf(irisFile).then(() => { irisLoad.fetched = true; irisLoad.failed = false; }, () => { irisLoad.failed = true; if (attempt < 4) setTimeout(() => fetchIris(attempt + 1), 2000 * (attempt + 1)); });
+if (irisLoad.hasModel) fetchIris();
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.2, 500);
 const world3d = createIslandScene(renderer, camera);
 const { scene, world, streamer, interactables, player, avatar, marker, shells } = world3d;
@@ -93,7 +101,7 @@ function updateIrisStandIn() {
   if (irisLoad.loaded) return;
   irisLoad.loaded = avatar.children.length > irisStandIn.length; // attachIris (play/agents.js) added her model
   if (avatar.userData.irisFailed) irisLoad.failed = true;
-  const show = irisStandInVisible({ ...irisLoad, waited: (performance.now() - irisLoad.t0) / 1000 });
+  const show = irisStandInVisible({ ...irisLoad, waited: (performance.now() - irisLoad.t0) / 1000, players: !import.meta.env.DEV && params.get('greybox') !== '1' });
   for (const c of irisStandIn) c.visible = show;
 }
 updateIrisStandIn();
@@ -125,7 +133,23 @@ const rig = new CameraRig(camera, world);
 const input = new Input(renderer.domElement);
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
-const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput });
+// The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
+// the town (ui/loading.js bootPlan). Entering from it returns to the world.
+let menuLobby = null;
+const openMainMenu = () => {
+  if (menuLobby) return;
+  Promise.all([import('./ui/index.js'), import('./ui/flow.js')]).then(([ui, fl]) => {
+    const flow = fl.createOnboardingFlow(ctx.storage);
+    const host = document.createElement('div'); host.className = 'ftf-root-menu'; uiRoot.append(host);
+    menuLobby = ui.mountLobby(host, { ctx, flow, onEnter: () => { if (menuLobby) { menuLobby.destroy(); menuLobby = null; host.remove(); } } });
+  }).catch((e) => console.warn('[menu] lobby', e));
+};
+const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu,
+  extra: [
+    { label: 'Return to town (your season is kept: register at the altar to go back)', visible: () => !!(town && play && !inTown), onClick: () => returnToTown() },
+    { label: 'Start over (a new season)', visible: () => !!play, onClick: () => { if (window.confirm('Start a new season? The current one is lost.')) startOver(); } },
+  ] });
+{ const st = document.createElement('style'); st.textContent = '.ftf-play-away #ui > *:not(.ftf-root-menu) { display: none !important; }'; document.head.append(st); }
 const toastEl = document.getElementById('toast');
 
 // The play layer starts on entering the world (from the lobby's first contact, or at once with ?play=direct).
@@ -134,7 +158,9 @@ const toastEl = document.getElementById('toast');
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
-const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
+ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
+// The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -154,6 +180,13 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
+let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null;
+const lastStepPos = [0, 0, 0];
+/** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
+function mountTownAudio() {
+  if (townAudio) return;
+  Promise.all([import('./audio/audio.js'), import('./audio/town-audio.js')]).then(([a, t]) => { if (!townAudio && inTown) townAudio = t.createTownAudio({ createAudio: a.createAudio }); }).catch((e) => console.warn('[town] audio', e));
+}
 let town = null, townFlow = null, townCasting = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -186,22 +219,64 @@ if (townMode.town) {
     return best;
   };
   const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
-  const badge = (key, on) => { if (town.townsfolk) town.townsfolk.setBadge(key, on); };
+  const badge = (key, on) => { if (town.townsfolk) { town.townsfolk.setBadge(key, on); town.townsfolk.sendToTrade(key, on); } };
   for (const h of townLedger.hires()) badge(h.npc, true);
+  // Town spots (owner, 11.11: the town is the menu): the three shop doors, the notice board after the stairs, and a
+  // mirror by the gate for the optional look picker.
+  const spotAt = (local, radius) => { const w = townToWorld(local); return (pos) => Math.hypot(pos[0] - w[0], pos[2] - w[2]) <= radius && Math.abs(pos[1] - w[1]) <= 2.5; };
+  const spots = [
+    ...TOWN_SHOPS.filter((s) => ['exchange', 'scribe', 'inn'].includes(s.id)).map((s) => ({ id: s.id, near: (pos) => { const d = shopDoorAt(pos); return !!d && d.id === s.id; } })),
+    { id: 'board', near: spotAt(TOWN_SPOTS.board, 2.2) },
+    { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
+    { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
+  ];
+  townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
+    const people = [];
+    townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
+      hired: () => townLedger.hires().map((h) => h.npc),
+      people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
+  }
+  mountTownAudio();
+  import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
+  const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
+  const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
+    const wrap = document.createElement('div');
+    wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', ctx.i18n.t('spot.mirror'));
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:rgba(6,10,12,.6);overflow:auto';
+    const box = document.createElement('div'); box.style.cssText = 'max-width:min(980px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;background:rgba(14,20,22,.96);border-radius:14px;padding:12px';
+    const done = document.createElement('button'); done.type = 'button'; done.textContent = ctx.i18n.t('mirror.done');
+    done.style.cssText = 'min-height:40px;padding:4px 16px;margin-top:10px;border-radius:8px;border:1px solid rgba(233,180,76,.6);background:rgba(233,180,76,.92);color:#1d1708;font:500 15px system-ui,sans-serif;cursor:pointer';
+    const host = document.createElement('div'); box.append(host, done); wrap.append(box);
+    wrap.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.append(wrap);
+    const child = m.mountConstructor(host, { ctx });
+    const close = () => { try { child.save(); child.destroy(); } catch { /* gone */ } wrap.remove(); };
+    done.addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
+    done.focus();
+  }).catch((e) => console.warn('[town] mirror', e));
   townFlow = createTownFlow({
-    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest),
+    spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
+    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; }, onWheel: () => openProfileFor(null, 'wheel'),
     quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
   });
-  // Outside the walls (docs/town.md): skillshots on the hillside beyond the lower gate.
-  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
-    onCast: () => { if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+  mountCasting();
+  // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
+  townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, reducedMotion: () => lookdev.reducedMotion,
+    onCounter: (id) => townFlow.openSpot(id), street: { world: () => town.world, killY: TOWN_KILL_Y } });
+  fogCards = createFogCards(scene, TOWN_ROUTE); // ground fog along the street and stairs (night, early morning)
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
-  import('./play/iris-avatar.js').then((m) => { irisAvatar = new m.IrisAvatar(); return irisAvatar.attach(avatar); }).catch((e) => console.warn('[town] Iris model unavailable', e));
+  // A failed attach (a dropped download) is tried again a few times; the loading screen covers the wait.
+  const attachIris = (attempt = 0) => import('./play/iris-avatar.js').then((m) => { irisAvatar = irisAvatar || new m.IrisAvatar(); return irisAvatar.attach(avatar); }).then(() => {
+    if (avatar.userData.irisFailed && attempt < 4) { setTimeout(() => { avatar.userData.irisFailed = false; irisLoad.failed = false; attachIris(attempt + 1); }, 3000 * (attempt + 1)); }
+  }).catch((e) => console.warn('[town] Iris model unavailable', e));
+  attachIris();
   loadPlayLayer().catch(() => {});
   // Once the town is shown, the archipelago's files go into the HTTP cache at low priority, so the registration
   // cover has little left to download (skipped on Save-Data and 2G/3G-class links).
@@ -237,11 +312,43 @@ function islandProgress() {
 
 const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) => a.name);
 /** Under the transition's cover: Iris leaves the town for the archipelago and the season starts as it always did. */
+/**
+ * Return to town (owner, 11.11): from the archipelago back to the town with the season kept in memory; registering at
+ * the altar again resumes the same season (startSeason is memoized). The play layer's UI hides and its keys sleep.
+ */
+/** Outside the walls (docs/town.md): skillshots on the hillside beyond the lower gate; the first two skill-bar slots. */
+function mountCasting() {
+  if (townCasting || !town) return;
+  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
+    onCast: (id) => { cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+}
+function returnToTown() {
+  if (!town || !townFlow || inTown || !play) return;
+  clearWorldInput(); stopSteering();
+  if (play.ui && play.ui.panel) play.ui.close();
+  inTown = true; townGrounded = true;
+  document.body.classList.add('ftf-play-away');
+  town.setActive(true);
+  player.world = town.world; rig.world = town.world;
+  player.killY = TOWN_KILL_Y;
+  player.teleport(TOWN_ALTAR_SPAWN.position.slice(), TOWN_ALTAR_SPAWN.heading);
+  rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.reset();
+  lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
+  mountCasting(); // leaveTown disposed it: without this the two skills were gone after Return to town
+  mountTownAudio();
+  townFlow.reenter();
+}
+/** Start over: a new local season (the judge link rebuilds the same fixed season). */
+function startOver() { location.reload(); }
+
 async function leaveTown() {
   inTown = false; leftTownAt = performance.now();
+  document.body.classList.remove('ftf-play-away');
   clearWorldInput();
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
+  if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
+  if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
   player.teleport(SPAWN.slice(), islandStart.heading);
@@ -278,6 +385,118 @@ function startSeason() {
   return season;
 }
 
+// ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
+const day1Mint = createDay1Mint({ storage: ctx.storage });
+const day1On = () => {
+  const q = params.get('day1');
+  if (q === '0') return false;
+  if (q === '1') return true;
+  return !judge && !loadDay1(ctx.storage).claimed;
+};
+// Elise's own model is not in yet: she wears Iris's body in her colors (said in the hint and the toast).
+const ELISE_TINT = new THREE.Color(0.78, 0.6, 1.0);
+function applySkin(skin) {
+  avatar.traverse((o) => {
+    if (!o.isMesh || !o.material || !o.material.color) return;
+    if (!o.userData.irisColor) o.userData.irisColor = o.material.color.clone();
+    o.material.color.copy(o.userData.irisColor);
+    if (skin === 'elise') o.material.color.multiply(ELISE_TINT);
+  });
+}
+function toggleSkin() {
+  const next = (loadDay1(ctx.storage).skin || 'iris') === 'iris' ? 'elise' : 'iris';
+  day1Mint.setRecord({ skin: next });
+  applySkin(next);
+  toast(ctx.i18n.t('day1.skin.' + next) + (next === 'elise' ? ' · ' + ctx.i18n.t('day1.skin.note') : ''));
+}
+/** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
+let altarTimer = null;
+const _altarP = new THREE.Vector3();
+function updateAltarTimer() {
+  if (!town || !inTown) { if (altarTimer) altarTimer.hidden = true; return; }
+  if (!altarTimer) {
+    altarTimer = document.createElement('div'); altarTimer.className = 'ftf-altar-timer'; altarTimer.setAttribute('aria-hidden', 'true');
+    altarTimer.style.cssText = 'position:fixed;left:0;top:0;z-index:6;pointer-events:none;transform:translate(-50%,-100%);padding:6px 12px;border-radius:14px;background:rgba(20,14,40,.78);border:1px solid rgba(255,210,122,.7);color:#fff7e6;font:600 13px/1.25 system-ui,sans-serif;text-align:center;white-space:nowrap';
+    document.body.append(altarTimer);
+  }
+  const a = TOWN_ALTAR.position;
+  _altarP.set(a[0], a[1] + 4.2, a[2]).project(camera);
+  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1;
+  altarTimer.hidden = !visible;
+  if (!visible) return;
+  const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
+  if (altarTimer.textContent !== text) altarTimer.textContent = text;
+  altarTimer.style.left = ((_altarP.x + 1) / 2 * innerWidth).toFixed(0) + 'px';
+  altarTimer.style.top = ((1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+}
+
+/**
+ * The intro fly-through (feature 5): on the first visit the camera sweeps down from high above the town, circling a
+ * third of the way round, and settles behind Iris. Any key or tap, or Skip, ends it; ?skip=intro, the jury path and
+ * reduced motion never show it. Remembered in this browser. Resolves when it is over.
+ */
+const INTRO_KEY = 'ftf.intro.v1';
+let introOn = false; // the intro flight is on screen (the barks wait)
+function introFly(ms = 6500) {
+  let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
+  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off') return Promise.resolve(false);
+  // the town is entered under the loading screen: fly only once the screen is gone (main.js sets __ftfBootMarks.done)
+  const revealed = () => new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__ftfBootMarks && window.__ftfBootMarks.done) || performance.now() - t0 > 180000 ? res() : setTimeout(tick, 150)); tick(); });
+  return revealed().then(() => new Promise((resolve) => {
+    try { if (ctx.storage) ctx.storage.setItem(INTRO_KEY, '1'); } catch { /* memory only */ }
+    let t0 = 0; const turn = (2 * Math.PI) / 3, startYaw = rig.yaw; // t0: the first frame (a slow first frame must not eat the flight)
+    const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
+    skip.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;transform:none;z-index:31';
+    document.body.append(skip);
+    let done = false, last = 0; introOn = true;
+    const end = () => {
+      if (done) return; done = true; introOn = false;
+      rig.pitchOverride = null; rig.dist = TOWN_CAMERA.dist; rig.rotate(startYaw - rig.yaw);
+      skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end);
+      resolve(true);
+    };
+    skip.addEventListener('click', end);
+    window.addEventListener('keydown', end); window.addEventListener('pointerdown', end);
+    rig.rotate(-turn);
+    const step = () => {
+      if (done) return;
+      if (!t0) t0 = performance.now();
+      const p = Math.min(1, (performance.now() - t0) / ms), e = p * p * (3 - 2 * p);
+      rig.dist = 70 + (TOWN_CAMERA.dist - 70) * e;
+      rig.pitchOverride = (62 - 50 * e) * Math.PI / 180;
+      const target = turn * e; rig.rotate(target - last); last = target;
+      if (p < 1) requestAnimationFrame(step); else end();
+    };
+    requestAnimationFrame(step);
+  }));
+}
+
+/** The camera settles on the heroine from high above the gate (Day 1 arrival). */
+function flyIn(ms) {
+  if (!ms) return;
+  const from = 26, to = TOWN_CAMERA.dist, t0 = performance.now();
+  const step = () => { const p = Math.min(1, (performance.now() - t0) / ms), e = 1 - Math.pow(1 - p, 3); rig.dist = from + (to - from) * e; if (p < 1) requestAnimationFrame(step); };
+  rig.dist = from; requestAnimationFrame(step);
+}
+async function startDay1() {
+  if (loadDay1(ctx.storage).skin === 'elise') applySkin('elise');
+  if (!day1On()) return;
+  const t = (k, a) => ctx.i18n.t(k, a);
+  const m = await import('./play/day1.js');
+  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
+  const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
+  await m.runHints({ t, steps: [
+    { key: 'day1.hint.skin' },
+    { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
+    { key: 'day1.hint.trailers', buttons: [{ key: 'day1.hint.watch', fn: async () => {
+      await m.playTrailer({ t, keys: ['day1.trailer.hero.1', 'day1.trailer.hero.2', 'day1.trailer.hero.3'], camera: orbit(0.004) });
+      await m.playTrailer({ t, keys: ['day1.trailer.town.1', 'day1.trailer.town.2', 'day1.trailer.town.3'], camera: orbit(-0.004) });
+      rig.dist = TOWN_CAMERA.dist;
+    } }] },
+    { key: 'day1.hint.tournament' },
+  ] });
+}
+
 /** The player enters the world (the lobby's first contact, or at once on the direct path): the town, else the season. */
 async function enterWorld() {
   if (entering) return entering;
@@ -285,7 +504,7 @@ async function enterWorld() {
     if (boot.closeLobby) boot.closeLobby();
     document.body.classList.add('in-world');
     entered = true;
-    if (inTown) { townFlow.begin(); return; }
+    if (inTown) { townFlow.begin(); introFly().then(startDay1); return; } // the first visit flies in, then Day 1
     await startSeason();
   })();
   return entering;
@@ -362,24 +581,28 @@ function handleInput(dt) {
   const modal = document.querySelector('dialog[open]');
   if (modal) { navigateGamepadMenu(modal, pad); return false; }
   const townOn = inTown && entered; // walking the town: movement and the camera, no play keys (the season has not begun)
-  if (!play && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
+  const playOn = play && !inTown; // back in the town after Return to town: the season waits, its keys sleep
+  if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
+    if (townOn && townFlow && townFlow.closePanel()) return false; // close the open talk panel
     if (inspecting) leaveInspect();
-    else if (play && play.handleKey('Escape')) clearWorldInput();
-    else if (moveTarget || (play && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
+    else if (playOn && play.handleKey('Escape')) clearWorldInput();
+    else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
     else controls.open();
     return false;
   }
-  if (!play) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (townShops && townShops.busy) return false; // the shop door's fade holds Iris
+  if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) { if (!(townShops && townShops.inside && townShops.interact())) townFlow.interact(); } } // E at the Tournament altar, a shop door or counter
+  if (townOn && townFlow && input.hit('KeyO')) townFlow.expandPill(); // O: the newest minimised panel
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
   }
-  if (play && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
-  if (play && !inspecting) {
+  if (playOn && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
+  if (playOn && !inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
     if (play.ui.panel) {
       navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
@@ -388,6 +611,7 @@ function handleInput(dt) {
     }
     if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
   }
+  if (input.hit('KeyK') && (townOn || playOn)) toggleSkin(); // Day 1: Iris <-> Elise
   if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
   const [lookX, lookY] = pad.look;
   const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
@@ -427,7 +651,7 @@ function wishVector() {
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
-  const rw = play ? play.routeWish() : inTown ? townFlow.routeWish() : null;
+  const rw = play && !inTown ? play.routeWish() : inTown ? townFlow.routeWish() : null;
   if (rw) return rw;
   if (!moveTarget) return [0, 0];
   const w = steerTo(player.pos, moveTarget);
@@ -463,18 +687,24 @@ function groundInTown() {
 const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camera, light: { sun: null, daylight: 1, pixelsPerMetre: 900 } }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
-// The town's day cycle (render/daycycle.js, owner 11.11): afternoon → dusk → afternoon, rain every second loop.
-// Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
+// The town's day cycle (render/daycycle.js, owner 11.11): early morning → evening → night with mist and moon → early
+// morning, continuous every frame (the sky statistics of the five hours are read once, outside the frame loop, then
+// blended). Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
 const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
-  ? { t: Number(params.get('cycle')) || 0, k: -1, weather: null } : null;
+  ? { t: Number(params.get('cycle')) || 0, weather: null, ready: false } : null;
+function prepareDayCycle() {
+  if (!dayCycle || dayCycle.ready || lookdev.location !== 'town') return;
+  lookdev.prepareCycle('town', CYCLE_KEYS.map((k) => k[0]));
+  dayCycle.ready = true;
+}
+if (dayCycle) setTimeout(prepareDayCycle, 0); // under the loading screen, not in a frame
 function tickDayCycle(dt) {
   if (lookdev.location !== 'town') return;
+  if (!dayCycle.ready) { setTimeout(prepareDayCycle, 0); return; }
   dayCycle.t += dt;
-  const c = cycleAt(dayCycle.t);
-  if (Math.abs(c.k - dayCycle.k) >= BLEND_STEP || (c.k !== dayCycle.k && (c.k === 0 || c.k === 1))) {
-    dayCycle.k = c.k;
-    lookdev.applyLook(mixLooks(lookFor('town', null), lookFor('town', 'dusk'), c.k));
-  }
+  const c = cycleLook(dayCycle.t, (h) => lookFor('town', h));
+  const S = lookdev.cycleStats;
+  lookdev.applyLookLive(c.look, mixStats(S[c.a], S[c.b], c.k), clock.elapsedTime);
   if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
 }
 
@@ -535,9 +765,19 @@ function frame() {
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
-    if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy);
+    if (fogCards) fogCards.update(clock.elapsedTime, camera, (lookdev.look.mistCards || 0) + lookdev.weather.state.rain * 0.3, scene.fog.color, { reducedMotion: lookdev.reducedMotion, enabled: lookdev.tier !== 'low' });
+    if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy && !(townShops && townShops.inside)); // no casts indoors
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
-    if (dayCycle && !lookdev.reducedMotion) tickDayCycle(dt);
+    if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
+    if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
+    if (townProps) townProps.update(dt, lookdev.reducedMotion);
+    if (townBarks) townBarks.update(player.pos, entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
+      const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
+      if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
+      lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
+      townAudio.setListener(camera, avatar.position);
+    }
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
@@ -551,9 +791,10 @@ function frame() {
   const speed = animSpeed;
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
-  if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
+  if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
+  updateAltarTimer();
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();
@@ -587,10 +828,13 @@ window.__ftf = {
     get promptVisible() { return townFlow.promptVisible; }, get phase() { return townFlow.phase; }, get walkMs() { return townFlow.walkMs; },
     register: () => townFlow.register(), walkRoute: () => townFlow.walkRoute(), status: () => town.status(),
     get casting() { return townCasting; }, // the field beyond the walls (QA: aimAt, release)
+    get shops() { return townShops; }, // walk-in shops (QA: enter('exchange'), leave())
+    get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
+    get barks() { return townBarks; }, // townsfolk lines (QA: current)
   } : null,
 };
 requestAnimationFrame(frame);
 return { enterWorld, world3d, player, rig, lookdev, renderer, streamer, get play() { return play; }, town, townMode, 
   /** The first town view is complete: ground under Iris, every street piece real and warmed, her own model in (main.js gates the loading screen on it). */
-  get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || irisLoad.failed)); } };
+  get townReady() { return !town || !inTown || (town.shown && townGrounded && (!irisLoad.hasModel || irisLoad.loaded || (irisLoad.failed && import.meta.env.DEV))); } };
 }

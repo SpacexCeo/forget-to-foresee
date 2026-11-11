@@ -1,0 +1,25 @@
+[package]
+name = "agent-ledger"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Forget to Foresee (NEAR testnet): the track records of hired townsperson-agents."
+repository = "https://github.com/SpacexCeo/forget-to-foresee"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = { version = "5.30", features = ["unstable"] }
+
+[target.'cfg(not(any(windows, target_family = "wasm")))'.dev-dependencies]
+near-sdk = { version = "5.30", features = ["unit-testing", "unstable"] }
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

@@ -1551,6 +1551,50 @@ def relax_arms():
     agent_anim._iris_relaxed = True
 
 
+def recess_cleft(o, log=print, depth=0.012, hw=0.040):
+    """Owner 11.11: on the leggings the gluteal cleft recesses naturally inward from the volume of the cheeks: a
+    soft crease that sinks in, not a flat bridge or a bulging seam. The body's own cleft is about 3 cm deep with the
+    cheeks touching; the compression fabric spans it. Per 1 cm height row of the back of the seat, the fabric's
+    midline is pulled toward the body to `depth` below the cheeks' crest (the fabric at |x| ~ hw), with a smooth
+    (1 - u^2)^2 profile across and fades at the top (the waistband: the smoothed spot there stays as it is) and
+    under the seat (the gluteal fold). Both faces of the fabric move together; nothing outside the midline band
+    moves, so the body shape and the rest of the garment are unchanged."""
+    me = o.data
+    co = [v.co.copy() for v in me.vertices]
+    sm = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(max(0.0, min(1.0, (x - a) / (b - a))))
+    band = [i for i, p in enumerate(co) if abs(p.x) < hw * 1.6 and 0.76 < p.z < 1.018 and p.y > 0.03]
+    rows = {}
+    for i in band:
+        rows.setdefault(round(co[i].z * 100), []).append(i)
+    delta = {}
+    for key, ids in rows.items():
+        near = [i for z in (key - 1, key, key + 1) for i in rows.get(z, [])]
+        crest = [co[i].y for i in near if hw < abs(co[i].x) < hw * 1.5]
+        if len(crest) < 2:
+            continue
+        top = sorted(crest)[len(crest) // 2]
+        if os.environ.get("IRIS_CLEFT_DEBUG"):
+            mid = [co[i] for i in ids if abs(co[i].x) < hw * 0.3]
+            log("cleft row", key, "crest", round(top, 4), "mid", [(round(q.x, 3), round(q.y, 4)) for q in mid][:4], "n", len(ids))
+        for i in ids:
+            p = co[i]
+            u = abs(p.x) / hw
+            if u >= 1.0:
+                continue
+            fade = (1.0 - sm(0.990, 1.016, p.z)) * sm(0.785, 0.845, p.z)   # up to just under the waistband (1.02)
+            target = top - depth * fade * (1.0 - u * u) ** 2
+            if p.y > target:
+                delta[i] = target - p.y
+    keys = me.shape_keys.key_blocks if me.shape_keys else []
+    for i, dy in delta.items():
+        me.vertices[i].co.y += dy
+        for kb in keys:
+            kb.data[i].co.y += dy
+    me.update()
+    log("cleft recessed on", len(delta), "vertices, deepest", round(-min(delta.values(), default=0.0) * 1000, 1), "mm")
+    return len(delta)
+
+
 def smooth_cleft_normals(o, log=print):
     """Shading only (owner 11.11: a small spot at the top of the gluteal cleft lit like a separate piece).
     Where the leggings' level top edge crosses the cleft, the cut and the bridge leave a knot of small faces whose
@@ -1592,6 +1636,7 @@ def smooth_cleft_normals(o, log=print):
 def stage_full(shade=True, size=2048, samples=16):
     bm, rig, eye_objs, garments = stage_costume()
     if "leggings" in garments:
+        recess_cleft(garments["leggings"], log)
         smooth_cleft_normals(garments["leggings"], log)
     lips_attr(bm)
     n_mouth, lip_c = F.mouth_attr(bm)

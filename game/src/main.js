@@ -8,15 +8,22 @@
 // fire again), ?demo=judge (the judges' 3-minute path: fixed season, Novice, fresh hints).
 // Play starts in the town on the ground (docs/town.md); ?skip=town and the deep links above go straight to the
 // archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
+// Self-hosted fonts (no third-party font requests: Google Fonts is unreachable in some regions). CJK text uses the
+// system serif (Songti SC, SimSun, Noto Serif CJK) through the CSS fallbacks.
+import '@fontsource/cormorant-garamond/300.css';
+import '@fontsource/cormorant-garamond/400.css';
+import '@fontsource/cormorant-garamond/400-italic.css';
 import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
-import { logKeysFromStats } from './ui/ink-bar.js';
+import { logKeysFromStats } from './ui/loading.js';
+import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
+import { showPremise } from './ui/premise.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
 if (params.has('cinematic')) await import('./cinematic/index.js').then((m) => m.boot(params.get('cinematic')));
 const uiRoot = document.getElementById('ui');
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
-const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse });
+const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse, lobby: params.get('lobby') });
 const town = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') }).town;
 const loading = createLoadingScreen(document);
 if (window.__ftfBoot) window.__ftfBoot.stop();
@@ -42,19 +49,58 @@ function onProgress(stats) {
   report();
 }
 
+// WebGL 2 first (audit QW-5): without it nothing heavy loads, and the boot screen offers the no-GPU paths.
+const gl = detectWebGL(document, { force: params.get('forceNoGL') === '1' });
+if (!gl.ok) {
+  loading.fail(NO_GL_TEXT);
+  appendNoGpuLinks(document, document.getElementById('boot'));
+  throw new Error('[boot] no WebGL 2');
+}
+if (gl.software) showSoftwareNote(document);
+
 const ctxP = import('./play/i18n.js').then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
 let shellUi = null, worldP = null;
 const startWorld = (ctx) => (worldP ||= import('./boot-world.js').then((m) => {
+  worldP.then((w) => { worldHandle = w; }, () => {});
   chunksDone++; marks.world = Math.round(performance.now() - t0); report();
   return m.createWorld({ params, ctx, uiRoot, onProgress, lobbyOpen: () => !!shellUi, closeLobby: () => { if (shellUi) { shellUi.destroy(); shellUi = null; } },
     onFirstFrame: () => { firstFrame = true; marks.firstFrame = Math.round(performance.now() - t0); } });
 }));
 
-/** The town is on the GPU (every piece around Iris real and warmed, Iris herself in), or `limit` ms have passed. */
-const townShown = (w, limit = 30000) => new Promise((resolve) => {
-  const start = performance.now();
-  const tick = () => { if (w.townReady || performance.now() - start > limit) resolve(); else setTimeout(tick, 100); };
+// A slow link (owner, 11.11: a player in China saw the greybox): the world is never revealed half-loaded. After
+// SLOW_MS the loading screen says so and the light files stay (no full-resolution upgrades); after RETRY_MS a Reload
+// button joins it. The screen keeps its real progress the whole time.
+const SLOW_MS = 30000, RETRY_MS = 90000;
+let slowShown = false, retryShown = false;
+function slowLink(w, waited) {
+  if (!slowShown && waited > SLOW_MS) {
+    slowShown = true;
+    loading.setSub('Slow connection: loading the light assets…');
+    try { if (w && w.streamer) w.streamer.upgrade = false; } catch { /* keep going */ }
+  }
+  if (!retryShown && waited > RETRY_MS) {
+    retryShown = true;
+    const root = document.getElementById('boot');
+    if (root) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'boot-retry'; b.textContent = 'Reload';
+      b.addEventListener('click', () => location.reload());
+      const sub = root.querySelector('.boot-sub'); if (sub && sub.after) sub.after(b); else root.append(b);
+    }
+  }
+}
+// The slow-link note counts from the page start (on a slow link the code chunks themselves take long); it stops once
+// the loading screen is gone.
+let worldHandle = null;
+const slowTimer = setInterval(() => { if (!loading || loading.finished) { clearInterval(slowTimer); return; } slowLink(worldHandle, performance.now()); }, 1000); // performance.now() counts from the navigation
+/** The town is on the GPU (every piece around Iris real and warmed, Iris herself in); never revealed earlier. */
+const townShown = (w) => new Promise((resolve) => {
+  const tick = () => { if (w.townReady) resolve(); else setTimeout(tick, 100); };
   tick();
+});
+
+/** Title and premise once the town is revealed (ui/premise.js); never blocks input. */
+const premise = (ctx) => showPremise(document, (k) => ctx.i18n.t(k), {
+  params, reducedMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
 });
 
 ctxP.then(async (ctx) => {
@@ -71,6 +117,7 @@ ctxP.then(async (ctx) => {
       const w = await startWorld(ctx);
       await w.enterWorld();
       if (covered) { report('Loading the town'); await townShown(w); await loading.finish(); }
+      if (town) premise(ctx);
     };
     shellUi = ui.mountShell(uiRoot, { ctx, onFirstContact: enter });
     marks.lobby = Math.round(performance.now() - t0);
@@ -81,20 +128,24 @@ ctxP.then(async (ctx) => {
     const entered = w.enterWorld().then(() => { chunksDone++; marks.play = Math.round(performance.now() - t0); report(); });
     // Gate: the first frame is rendered and the cheap visible models are in, or six seconds have passed (greyboxes stand in).
     // The town has no stand-ins and no ground before its terrain: the gate waits for every piece around Iris to be
-    // real and warmed (render/warmup.js) and for Iris herself, up to thirty seconds on a slow link.
+    // real and warmed (render/warmup.js) and for Iris herself, however long a slow link takes (slowLink above).
     const gateStart = performance.now();
     await new Promise((resolve) => {
       const tick = () => {
         const bytesOk = budget ? bytesGot >= budget.bytes * 0.98 : false;
         const waited = performance.now() - gateStart;
-        if ((firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal && w.townReady) || waited > (town ? 30000 : 6000)) resolve(); else setTimeout(tick, 100);
+        if (firstFrame && (bytesOk || (budget && budget.bytes === 0)) && chunksDone >= chunksTotal && w.townReady) resolve();
+        else if (!town && waited > 6000) resolve(); // the archipelago has greybox stand-ins; the town has none and waits
+        else setTimeout(tick, 100);
       };
       tick();
     });
     await entered.catch(() => {});
     marks.gate = Math.round(performance.now() - t0);
     await loading.finish();
+    if (town) premise(ctx);
   }
+  clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);
   window.__ftfBootMarks = marks;
 }).catch((e) => { console.error('[boot] failed', e); loading.fail('Something went wrong while loading. Reload the page.'); });

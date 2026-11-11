@@ -52,7 +52,7 @@ const townLabel = (p) => (p.name === 'town_altar' ? 'Tournament altar' : (TOWN_L
  * subfolder. Town pieces have no greybox art (`noGreybox`): nothing is shown and nothing collides until the file
  * has streamed in. `centerOffset` / `radius` are the streaming bounds from the data (pivot -> bounding sphere).
  */
-export const TOWN_ASSETS = Object.freeze(TOWN_DATA.pieces.map((p) => Object.freeze({
+export const TOWN_ASSETS = Object.freeze([...TOWN_DATA.pieces, ...(TOWN_DATA.interiors || [])].map((p) => Object.freeze({
   name: p.name, kind: p.kind, label: townLabel(p), town: true, noGreybox: true,
   height: Math.max(1, 2 * (p.center[1] - p.position[1])), radius: p.radius,
   centerOffset: Object.freeze([p.center[0] - p.position[0], p.center[1] - p.position[1], p.center[2] - p.position[2]]),
@@ -63,7 +63,7 @@ export const TOWN_ASSETS = Object.freeze(TOWN_DATA.pieces.map((p) => Object.free
 export const ALL_ASSETS = Object.freeze([...ASSETS, ...TOWN_ASSETS]);
 
 /** Load distance (meters from the camera to the bounding sphere surface) per kind, when on screen. */
-export const LOAD_DISTANCE = Object.freeze({ hero: 70, camp: 110, shell: 260, interior: 60, terrain: 400, town_terrain: 400, town_block: 220, town_hero: 140, town_sky: 600 });
+export const LOAD_DISTANCE = Object.freeze({ hero: 70, camp: 110, shell: 260, interior: 60, town_interior: 60, terrain: 400, town_terrain: 400, town_block: 220, town_hero: 140, town_sky: 600 });
 
 /** Doubled brief budgets (docs/decisions.md 07.11): runtime / _inspect triangles per asset kind. */
 export const TRIANGLE_BUDGET = Object.freeze({
@@ -73,6 +73,7 @@ export const TRIANGLE_BUDGET = Object.freeze({
   camp: { runtime: 24000 },
   terrain: { runtime: 120000 },
   town_terrain: { runtime: 120000 },
+  town_interior: { runtime: 60000 },
   town_block: { runtime: 120000 },
   town_hero: { runtime: 16000, inspect: 60000 },
   town_sky: { runtime: 20000 },

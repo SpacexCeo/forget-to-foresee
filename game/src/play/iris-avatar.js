@@ -33,7 +33,7 @@ export function toonify(model) {
     const outline = /outline/.test(o.material.name);
     o.material = outline
       ? new THREE.MeshBasicMaterial({ name: o.material.name, color: 0x06060a })
-      : new THREE.MeshToonMaterial({ name: o.material.name, map: o.material.map, gradientMap: steps });
+      : new THREE.MeshToonMaterial({ name: o.material.name, map: o.material.map, gradientMap: steps, side: o.material.side });
     o.userData.outline = outline;
   });
 }
@@ -81,7 +81,7 @@ export class IrisAvatar {
       const face = mixer && extra.length ? faceLayerClip(gltf.animations) : null;   // blinks and gaze under the body clips
       const faceAction = face ? mixer.clipAction(face).play() : null;
       this.irisModel = { model, mixer, clips, idleAction, idle2Action, idleLoops: 0, idleK: 0, idleT: 0, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
-    } catch (e) { avatarGroup.userData.irisFailed = true; console.warn('[play] Iris model failed', e); }
+    } catch (e) { avatarGroup.userData.irisFailed = true; this.attaching = null; console.warn('[play] Iris model failed', e); } // attach() may try again
   }
 
   /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */

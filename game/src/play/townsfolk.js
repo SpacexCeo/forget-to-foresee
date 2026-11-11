@@ -16,7 +16,11 @@ import { upgradeAssetMaterials } from '../render/materials.js';
 import { TOWN_ORIGIN } from '../scenes/town-layout.js';
 import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+
+const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
+const SIT_PELVIS_Z = -0.07;    // hip joint along the 0.46 m deep seat (bench local, the sitter faces +Z; back rail at -0.26)
+const _pelvis = new THREE.Vector3();
 
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
 const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
@@ -66,6 +70,9 @@ class Person {
       this.plan.walkSpeed = this.clipSpeed.walk; if (this.def.run) this.plan.runSpeed = this.clipSpeed.run;
       const sit = this.clips.get('sit');
       this.sitDrop = sit && sit.userData && sit.userData.pelvis_y ? sit.userData.pelvis_y - 0.10 * (sit.userData.scale || 1) : null;
+      // where the sit clip really puts the pelvis on this body is measured once in the pose (sitFix), then the root
+      // is moved so the pelvis lands on the seat (owner 11.11: the elder sat on the back rail, legs through the seat)
+      this.pelvis = model.getObjectByName('pelvis') || null; this.sitFix = null; this.sitScale = (sit && sit.userData && sit.userData.scale) || 1;
       this.state = 'loaded';
     });
   }
@@ -180,9 +187,13 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
         p.groundAtXZ[0] = plan.x; p.groundAtXZ[1] = plan.z;
       }
       if (p.groundY !== null && !plan.sit) y = p.groundY;
-      if (plan.sit && p.sitDrop !== null && p.sitDrop !== undefined) y += plan.sit - p.sitDrop; // the seat top meets the sitting pelvis
       const canSit = !!plan.sit && !!pickClip(p.names, 'sit') && pickClip(p.names, 'sit') !== 'idle';
       let x = plan.x, z = plan.z;
+      const fix = plan.sit && canSit ? p.sitFix : null;
+      if (fix) { // the measured pelvis: SIT_PELVIS_ABOVE above the seat top, SIT_PELVIS_Z along the seat (bench local, +Z = facing)
+        y += plan.sit + SIT_PELVIS_ABOVE * p.sitScale - fix.y;
+        x += Math.sin(plan.yaw) * (SIT_PELVIS_Z - fix.z); z += Math.cos(plan.yaw) * (SIT_PELVIS_Z - fix.z);
+      } else if (plan.sit && p.sitDrop !== null && p.sitDrop !== undefined) y += plan.sit - p.sitDrop; // the seat top meets the sitting pelvis
       if (plan.sit && !canSit) { x += Math.sin(plan.yaw) * 0.6; z += Math.cos(plan.yaw) * 0.6; } // no sit clip: stand in front of the bench
       p.root.position.set(x + TOWN_ORIGIN[0], y + TOWN_ORIGIN[1], z + TOWN_ORIGIN[2]);
       p.root.rotation.y = plan.yaw;
@@ -198,6 +209,14 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
       const cur = p.current && p.actions.get(p.current);
       if (cur) cur.paused = reducedMotion; // steady under reduced motion: the pose holds, cross-fades still finish
       p.mixer.update(step);
+      if (plan.sit && canSit && !p.sitFix && p.pelvis && p.current === pickClip(p.names, 'sit')) {
+        const act = p.actions.get(p.current);
+        if (act && act.getEffectiveWeight() > 0.999) {
+          p.root.updateMatrixWorld(true);
+          p.root.worldToLocal(p.pelvis.getWorldPosition(_pelvis));
+          p.sitFix = { y: _pelvis.y, z: _pelvis.z };
+        }
+      }
       if (dist < LOOK_RADIUS && plan.speed < 2 && !reducedMotion) { _target[0] = playerPos[0]; _target[1] = playerPos[1] + 1.5; _target[2] = playerPos[2]; applyLookTo(p.bones, p.look, p.root.position, plan.yaw, _target, step, false); }
       else if (p.look.w > 0.01) applyLookTo(p.bones, p.look, p.root.position, plan.yaw, null, step, reducedMotion);
     }
@@ -222,10 +241,19 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     if (p.badge) p.badge.visible = !!on;
   }
 
+  /** A hired agent walks to the Shard Exchange and trades there; `false` walks it home to its own loop. */
+  function sendToTrade(key, on) {
+    const p = byKey.get(key);
+    if (!p) return;
+    const plan = p.plan;
+    if (on && !plan.trading) { plan.original = plan.original || plan.program; plan.trading = true; plan.program = tradeProgram(plan, [...byKey.values()].filter((x) => x.plan.trading).length - 1); plan.index = -1; plan.next(); }
+    else if (!on && plan.trading) { plan.trading = false; plan.program = homeProgram(plan, plan.original); plan.index = -1; plan.next(); }
+  }
+
   function setActive(on) { active = !!on; for (const p of people) if (!active) p.root.visible = false; }
 
   return {
-    people, byKey, update, setActive, setBadge,
+    people, byKey, update, setActive, setBadge, sendToTrade,
     /** For QA and the dev HUD: per person key -> state, file, position, clip. */
     status() { return people.map((p) => ({ key: p.def.key, state: p.state, file: p.file, clip: p.current, walk: p.walkName, at: [p.plan.x, p.plan.y, p.plan.z], visible: p.root.visible })); },
     get loaded() { return people.filter((p) => p.state === 'loaded').length; },

@@ -92,7 +92,10 @@ export function playLoop(area, seed, n = 10) {
 
 function programs() {
   const post = (pt, steps) => ({ home: pt.position, heading: pt.heading, steps });
-  const ex = doorStand('exchange'), sc = doorStand('scribe', 1.4), inn = doorStand('inn');
+  // The keepers of the square stand in front of their doors, clear of the crates and stalls along the house walls.
+  const ex = doorStand('exchange', 0, 2.3), sc = doorStand('scribe', 0, 2.3), inn = doorStand('inn');
+  // The musician steps away from the post beside the exported point, toward the square.
+  const mu = { position: add(P.npc_musician.position, fwd(P.npc_musician.heading), 1.0), heading: P.npc_musician.heading };
   const sq = R.npc_route_square_round.points; // [NW, NE, SE, SW] corners of the walk round the square
   const zS = sq[2][2], y = sq[0][1];
   // The two shopkeepers of the square meet at the chat points, talk, and walk back to their doors.
@@ -119,7 +122,7 @@ function programs() {
     baker: post(P.npc_market_seller_square, [stay(14, 'counter', { greet: 'wave' }), stay(10, 'idle', { greet: 'wave' }), stay(6, 'idle_shift', { greet: 'wave' })]),
     shrinekeeper: post(P.npc_shrine_keeper, [stay(20, 'idle', { greet: 'nod' }), stay(10, 'idle_shift', { greet: 'nod' })]),
     elder: post(P.npc_bench_0, [stay(60, 'sit', { sit: P.npc_bench_0.seatHeight, greet: 'nod' })]),
-    musician: post(P.npc_musician, [stay(26, 'play'), stay(6, 'idle_shift'), stay(18, 'play'), stay(5, 'idle', { greet: 'wave' })]),
+    musician: post(mu, [stay(26, 'play'), stay(6, 'idle_shift'), stay(18, 'play'), stay(5, 'idle', { greet: 'wave' })]),
     sweeper: { home: R.npc_route_sweeper.points[0], heading: null, steps: sweep },
     lamplighter: { home: R.npc_route_lamplighter.points[0], heading: null, steps: lamp },
     courier: { home: cr[0], heading: null, steps: courier },
@@ -129,6 +132,34 @@ function programs() {
 }
 
 export const PROGRAMS = Object.freeze(programs());
+
+/**
+ * Hired agents trade at the Shard Exchange (owner update, 11.11): the walk from where a townsperson stands to the
+ * Exchange door, by the main street and across the square (town-local metres). Until the shop interior opens, they
+ * stand at the door under the trading board.
+ */
+export function tradePath(from, slot = 0) {
+  const route = TOWN_DATA.route, ex = doorStand('exchange', -1.2 + slot * 0.9, 1.6), sq = R.npc_route_square_round.points;
+  let near = 0, best = Infinity;
+  for (let i = 0; i < route.length; i++) { const d = Math.hypot(route[i][0] - from[0], route[i][2] - from[2]); if (d < best) { best = d; near = i; } }
+  const squareIn = route.findIndex((p) => p[2] < 0); // the first route point on the square
+  const path = [from.slice()];
+  if (near <= squareIn) for (let i = near; i <= squareIn; i++) path.push(route[i].slice());
+  else path.push(route[squareIn].slice());
+  path.push([sq[1][0], ex.position[1], ex.position[2]], ex.position.slice());
+  return { path, heading: ex.heading };
+}
+
+/** The temporary program of a hired agent: walk to the Exchange, trade at the door; `back` walks home and resumes. */
+export function tradeProgram(plan, slot = 0) {
+  const { path, heading } = tradePath([plan.x, plan.y, plan.z], slot);
+  return { home: path[0], heading, steps: [{ walk: path }, { stay: 1e9, clip: 'idle', heading }] };
+}
+export function homeProgram(plan, original) {
+  const { path } = tradePath(original.home, 0);
+  const back = path.slice().reverse(); back[0] = [plan.x, plan.y, plan.z];
+  return { home: back[0], heading: original.heading, steps: [{ walk: back }, { restore: original }] };
+}
 
 const polyLength = (pts) => { let s = 0; for (let i = 0; i + 1 < pts.length; i++) s += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1], pts[i + 1][2] - pts[i][2]); return s; };
 
@@ -173,6 +204,7 @@ export class PersonPlan {
 
   next() {
     this.index = (this.index + 1) % this.program.steps.length;
+    if (this.current.restore) { this.program = this.current.restore; this.index = -1; return this.next(); } // back home: the own loop again
     const st = this.current;
     this.t = 0; this.s = 0; this.meeting = false; this.waited = 0;
     if (st.walk) this.len = polyLength(st.walk);

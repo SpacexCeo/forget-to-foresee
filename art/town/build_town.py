@@ -422,8 +422,11 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
     under a plain ambient light, so this is the whole lighting of the room on every quality tier."""
     import numpy as np
     meshes = [o for o in grp["meshes"]]
-    for o in all_objects:
-        o.hide_render = o not in meshes
+    # everything else that renders (other pieces, every *_col collision mesh) is hidden during the bake: the
+    # collision floor and furniture boxes would otherwise occlude the room
+    others = [o for o in bpy.data.objects if o.type == "MESH" and o not in meshes and not o.hide_render]
+    for o in others:
+        o.hide_render = True
     lights = []
     for i, L in enumerate(tb.lights.get(piece, [])):
         lt = bpy.data.lights.new(f"bake_{piece}_{i}", "POINT")
@@ -466,7 +469,9 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
         la = o.data.color_attributes.new("Light", "FLOAT_COLOR", "CORNER")
         o.data.color_attributes.active_color = la
         ftf.select_only([o], o)
-        bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, target="VERTEX_COLORS")
+        r = bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, target="VERTEX_COLORS")
+        if r != {"FINISHED"}:
+            log("bake", o.name, "returned", r)
     # exposure from the median lit wall / floor / furniture corner, then a soft shoulder per channel
     data = {}
     lum_all = []
@@ -476,6 +481,8 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
         o.data.color_attributes["Light"].data.foreach_get("color", a)
         a = a.reshape(n, 4)[:, :3]
         data[o.name] = a
+        if os.environ.get("TOWN_BAKE_DEBUG"):
+            log("bake max", o.name, MAT_KEY[o.name], float(a.max()), "zero", round(float((a.max(axis=1) <= 0).mean()), 3), "n", len(a), "active", o.data.color_attributes.active_color.name, "render", o.hide_render)
         if MAT_KEY[o.name] in ("plaster", "timber", "stone"):
             lum_all.append(a @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32))
     med = float(np.median(np.concatenate(lum_all)))
@@ -499,7 +506,7 @@ def bake_interior(sc, piece, grp, tb, all_objects, exposure=1.0):
         o.hide_render = False
     for lo in lights:
         bpy.data.objects.remove(lo, do_unlink=True)
-    for o in all_objects:
+    for o in others:
         o.hide_render = False
     log("bake", piece, "objects", len(lit), "lights", len(lights), "median", round(med, 4), "k", round(k, 3))
     return {"median": med, "k": k, "lights": len(lights)}

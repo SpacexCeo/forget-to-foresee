@@ -12,6 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': '未来以记忆为代价',
+  'premise.line': '用你的记忆换取预言。每条预言在开局前都已封存在 NEAR 测试网上。',
+  'premise.hint': '走上台阶到祭坛开始。',
 
   // ---- common ----
   'common.close': '关闭',
@@ -38,6 +40,7 @@ export default {
   'lang.short.it': 'IT',
   'lang.short.zh': '中文',
   'lobby.exit': '退出',
+  "exch.townAgent": "会学习的镇民代理",
   "exch.lobby": "预见交易所",
   "exch.open": "练习预见（本地演练）",
   "exch.title": "预见交易所",
@@ -804,4 +807,26 @@ export default {
   'preview.autoPlay': '自动进行一回合',
   'preview.newSeason': '新的本地赛季',
   'preview.localDemo': '本地演示 · 浏览器内的无图形引擎',
+
+  // ---- collectible items ----
+  'item.shard_pearl_drop': '珍珠水滴碎片',
+  'item.shard_pearl_tablet': '珍珠石板碎片',
+  'item.shard_teal_twin': '青绿双生碎片',
+  'item.shard_teal_octa': '青绿八面碎片',
+  'item.shard_violet_cluster': '紫晶簇碎片',
+  'item.shard_violet_spire': '紫晶尖塔碎片',
+  'item.shard_amber_crown': '琥珀王冠碎片',
+  'item.shard_amber_blade': '琥珀刃碎片',
+  'item.part_gear': '青铜齿轮',
+  'item.part_spring_coil': '弹簧',
+  'item.part_brass_lens': '黄铜透镜',
+  'item.part_valve': '阀门',
+  'item.part_glyph_cogring': '符文齿环',
+  'item.part_chain_link': '链环',
+  'item.part_gauge': '压力表',
+  'item.part_crank': '曲柄',
+  'item.part_rivet_plate': '铆钉板',
+  'item.part_spindle': '纺锤',
+  'item.prop_wheel_of_fortune': '幸运之轮',
+  'item.trading_board': '交易板',
 };

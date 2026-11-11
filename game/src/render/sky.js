@@ -58,9 +58,34 @@ export const TIME_PRESETS = Object.freeze({
     exposure: 0.55, envUrl: null, envIntensity: 0.5, cloudCover: 0.5, warmth: 1.3,
     fog: { density: 0.05, falloff: 0.1, near: 35, far: 480, sunPower: 9, aerial: 0.4, lobe: 0.45, cool: 0.7 },
   }),
+  // The town's day cycle (owner 11.11: no bright midday; early morning → evening → night with fog and moon → early
+  // morning). Generic values here; the town's own values are in LOCATION_LOOKS.town.
+  dawn: Object.freeze({
+    label: 'Early morning', elevation: 7, azimuth: -150, sunIntensity: 3.6, skyMean: 0.22, mie: 1.8, ozone: 1.0,
+    exposure: 0.25, envUrl: null, envIntensity: 0.4, cloudCover: 0.45, warmth: 1.0, sunWarm: 0.75,
+    fog: { density: 0.05, falloff: 0.1, near: 30, far: 420, sunPower: 8, aerial: 0.4 },
+  }),
+  evening: Object.freeze({
+    label: 'Evening', elevation: 9, azimuth: -112, sunIntensity: 4.2, skyMean: 0.24, mie: 2.3, ozone: 1.2,
+    exposure: 0.2, envUrl: null, envIntensity: 0.4, cloudCover: 0.5, warmth: 1.2, sunWarm: 0.9,
+    fog: { density: 0.05, falloff: 0.1, near: 30, far: 420, sunPower: 9, aerial: 0.4 },
+  }),
+  // The sun just under the light: almost no direct light, the sky the last glow (the hand-over to the moon).
+  twilight: Object.freeze({
+    label: 'Twilight', elevation: 1, azimuth: -118, sunIntensity: 0.15, skyMean: 0.06, mie: 1.3, ozone: 2.0,
+    exposure: 1.0, envUrl: null, envIntensity: 0.55, cloudCover: 0.45, warmth: 1.2, disc: 0.2,
+    fog: { density: 0.06, falloff: 0.12, near: 25, far: 380, sunPower: 6, aerial: 0.45, cool: 0.8 },
+  }),
+  // Night: the moon is the key light (cool, soft shadows), stars, ground mist; lamps and windows carry the streets.
+  night: Object.freeze({
+    label: 'Night', elevation: 16, azimuth: -165, sunIntensity: 0.55, skyMean: 0.012, mie: 1.0, ozone: 2.4,
+    exposure: 1.45, envUrl: null, envIntensity: 0.6, cloudCover: 0.3, warmth: 0.0, sunCool: 0.9, disc: 0.012, stars: 1,
+    fog: { density: 0.09, falloff: 0.16, near: 18, far: 300, sunPower: 2, aerial: 0.5, cool: 1.0, lobe: 0.3 },
+  }),
 });
 export const DEFAULT_PRESET = 'golden';
 const SUN_WARM = new THREE.Color(1.0, 0.8, 0.56);
+const MOON_COOL = new THREE.Color(0.62, 0.74, 1.0);
 
 /**
  * A look per location (docs/atmosphere.md). The archipelago floats in open sky and keeps the presets above. The
@@ -98,6 +123,11 @@ export const LOCATION_LOOKS = Object.freeze({
         fog: { density: 0.016, falloff: 0.05, near: 60, far: 850, sunPower: 7, aerial: 0.5 } },
       dusk: { azimuth: -112, envIntensity: 0.55, lamps: 1.25, windows: 2.4, bounce: 0.05,
         fog: { density: 0.02, falloff: 0.05, near: 50, far: 700, sunPower: 9, aerial: 0.5 } },
+      // The day cycle's hours (render/daycycle.js): low sun only, then the moon.
+      dawn: { mistCards: 0.45, lamps: 0.6, windows: 0.9, bounce: 0.5, fog: { density: 0.024, falloff: 0.06, near: 50, far: 800, sunPower: 8, aerial: 0.55 } },
+      evening: { mistCards: 0.12, sunWarm: 1.0, lamps: 0.8, windows: 1.2, bounce: 0.45, fog: { density: 0.02, falloff: 0.05, near: 55, far: 820, sunPower: 9, aerial: 0.5 } },
+      twilight: { mistCards: 0.6, lamps: 1.4, windows: 2.4, bounce: 0.05, fog: { density: 0.026, falloff: 0.07, near: 40, far: 650, sunPower: 6, aerial: 0.5, cool: 0.8 } },
+      night: { mistCards: 1, lamps: 1.9, windows: 2.8, bounce: 0.1, fog: { density: 0.05, falloff: 0.11, near: 22, far: 420, sunPower: 2, aerial: 0.55, cool: 1.0, lobe: 0.3 } },
     }),
   }),
 });
@@ -236,7 +266,7 @@ const DOME_VS = /* glsl */`
 const DOME_FS = /* glsl */`
   uniform sampler2D tLut, tNoise;
   uniform vec3 uSunDir, uSunDisc, uCloudSun, uCloudAmb, uHorizon;
-  uniform float uScale, uTime, uCover, uDiscOn, uCosDisc, uOvercast;
+  uniform float uScale, uTime, uCover, uDiscOn, uCosDisc, uOvercast, uStars;
   uniform vec3 uLid;
   varying vec3 vDir;
   ${GLSL_COMMON}
@@ -282,6 +312,13 @@ const DOME_FS = /* glsl */`
       vec3 lid = uLid * (0.78 + 0.4 * mott) * (1.0 + 0.35 * pow(max(mu, 0.0), 3.0));
       sky = mix(sky, lid, uOvercast * smoothstep(-0.04, 0.12, d.y + 0.02));
     }
+    // Night: a fine star field (hashed cells on the dome), fading toward the horizon and under the lid.
+    if (uStars > 0.0 && d.y > 0.0) {
+      vec3 q = floor(d * 420.0);
+      float h = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      float tw = 0.75 + 0.25 * sin(uTime * 0.7 + h * 40.0);
+      sky += vec3(0.85, 0.9, 1.0) * step(0.9982, h) * tw * uStars * smoothstep(0.02, 0.25, d.y) * (1.0 - uOvercast) * 0.9;
+    }
     // Below the horizon the cloud sea covers the dome; keep it the horizon haze so any gap matches the fog.
     sky = mix(uHorizon, sky, smoothstep(-0.06, 0.005, d.y));
     gl_FragColor = vec4(sky, 1.0);
@@ -295,6 +332,43 @@ const LUT_W = 256, LUT_H = 128;
 export function lutKey(sun, preset) {
   const r = (v) => Math.round(v * 1e4) / 1e4;
   return [r(sun.x), r(sun.y), r(sun.z), r(preset.mie), r(preset.ozone), r(preset.altitude ?? OBSERVER_ALTITUDE)].join('|');
+}
+
+/**
+ * Normalisation and horizon colours of one sky-view LUT read-back (null pixels: neutral defaults). Pure.
+ * @returns {{scale:number, mean:number, towardSun:number[], base:number[], sunTint:number[], zenith:number[]}}
+ */
+export function skyStats(px, preset) {
+  const at = (uvx, uvy) => {
+    if (!px) return [0.3, 0.33, 0.38];
+    const x = ((Math.round(uvx * LUT_W - 0.5) % LUT_W) + LUT_W) % LUT_W, y = Math.min(LUT_H - 1, Math.max(0, Math.round(uvy * LUT_H - 0.5)));
+    const i = (y * LUT_W + x) * 4; return [px[i], px[i + 1], px[i + 2]];
+  };
+  const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  // Solid-angle weighted mean of the upper hemisphere.
+  let sum = 0, wsum = 0;
+  for (let y = LUT_H / 2; y < LUT_H; y++) {
+    const s0 = (y / LUT_H) * 2 - 1, s1 = ((y + 1) / LUT_H) * 2 - 1;
+    const l0 = s0 * s0 * Math.PI / 2, l1 = s1 * s1 * Math.PI / 2;
+    const w = Math.cos((l0 + l1) / 2) * (l1 - l0);
+    for (let x = 0; x < LUT_W; x += 4) { sum += lum(at((x + 0.5) / LUT_W, (y + 0.5) / LUT_H)) * w; wsum += w; }
+  }
+  const mean = px ? sum / wsum : 0.3;
+  const scale = mean > 1e-6 ? preset.skyMean / mean : 1;
+  const dirUv = (d) => [Math.atan2(d.z, d.x) / (2 * Math.PI) + 0.5, 0.5 + 0.5 * Math.sign(Math.asin(d.y)) * Math.sqrt(Math.abs(Math.asin(d.y)) / (Math.PI / 2))];
+  const sample = (d) => at(...dirUv(d)).map((v) => v * scale);
+  const horiz = (azOffset, el = 2) => sunDirection(el, preset.azimuth + azOffset);
+  const towardSun = sample(horiz(0, 3)), awaySun = sample(horiz(180, 3)), side = sample(horiz(90, 3)), zenith = sample(new THREE.Vector3(0, 1, 0));
+  // Fog: the cool anti-sun horizon is the base; the gold toward the sun is added by the phase lobe.
+  const base = awaySun.map((v, k) => 0.45 * v + 0.4 * side[k] + 0.15 * towardSun[k]);
+  const sunTint = towardSun.map((v, k) => Math.max(0, v - base[k]));
+  return { scale, mean, towardSun, base, sunTint, zenith };
+}
+
+/** Keyframe statistics blended for a moment between them (numbers and colour triples). */
+export function mixStats(a, b, k) {
+  const l = (x, y) => x + (y - x) * k, v = (x, y) => [l(x[0], y[0]), l(x[1], y[1]), l(x[2], y[2])];
+  return { scale: l(a.scale, b.scale), mean: l(a.mean, b.mean), towardSun: v(a.towardSun, b.towardSun), base: v(a.base, b.base), sunTint: v(a.sunTint, b.sunTint), zenith: v(a.zenith, b.zenith) };
 }
 
 export class SkyDome {
@@ -314,7 +388,7 @@ export class SkyDome {
         uSunDir: { value: SUN_DIRECTION.clone() }, uSunDisc: { value: new THREE.Color() }, uCloudSun: { value: new THREE.Color() },
         uCloudAmb: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color(HAZE_COLOR) },
         uScale: { value: 1 }, uTime: { value: 0 }, uCover: { value: 0.45 }, uDiscOn: { value: 1 }, uCosDisc: { value: Math.cos(0.75 * DEG) },
-        uOvercast: { value: 0 }, uLid: { value: new THREE.Color(0.4, 0.42, 0.45) },
+        uOvercast: { value: 0 }, uLid: { value: new THREE.Color(0.4, 0.42, 0.45) }, uStars: { value: 0 },
       },
       vertexShader: DOME_VS, fragmentShader: DOME_FS,
       side: THREE.BackSide, depthWrite: false, depthTest: true, fog: false,
@@ -393,41 +467,43 @@ export class SkyDome {
       try { renderer.readRenderTargetPixels(this.lut, 0, 0, LUT_W, LUT_H, raw); px = Float32Array.from(raw, THREE.DataUtils.fromHalfFloat); this.lutCache.set(key, px); this.lutReads++; } catch { px = null; }
     }
     renderer.setRenderTarget(prevTarget);
-    const at = (uvx, uvy) => {
-      if (!px) return [0.3, 0.33, 0.38];
-      const x = ((Math.round(uvx * LUT_W - 0.5) % LUT_W) + LUT_W) % LUT_W, y = Math.min(LUT_H - 1, Math.max(0, Math.round(uvy * LUT_H - 0.5)));
-      const i = (y * LUT_W + x) * 4; return [px[i], px[i + 1], px[i + 2]];
-    };
-    const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-    // Solid-angle weighted mean of the upper hemisphere.
-    let sum = 0, wsum = 0;
-    for (let y = LUT_H / 2; y < LUT_H; y++) {
-      const s0 = (y / LUT_H) * 2 - 1, s1 = ((y + 1) / LUT_H) * 2 - 1;
-      const l0 = s0 * s0 * Math.PI / 2, l1 = s1 * s1 * Math.PI / 2;
-      const w = Math.cos((l0 + l1) / 2) * (l1 - l0);
-      for (let x = 0; x < LUT_W; x += 4) { sum += lum(at((x + 0.5) / LUT_W, (y + 0.5) / LUT_H)) * w; wsum += w; }
-    }
-    const mean = px ? sum / wsum : 0.3;
-    const scale = mean > 1e-6 ? preset.skyMean / mean : 1;
-    const dirUv = (d) => [Math.atan2(d.z, d.x) / (2 * Math.PI) + 0.5, 0.5 + 0.5 * Math.sign(Math.asin(d.y)) * Math.sqrt(Math.abs(Math.asin(d.y)) / (Math.PI / 2))];
-    const sample = (d) => at(...dirUv(d)).map((v) => v * scale);
-    const horiz = (azOffset, el = 2) => sunDirection(el, preset.azimuth + azOffset);
-    const towardSun = sample(horiz(0, 3)), awaySun = sample(horiz(180, 3)), side = sample(horiz(90, 3)), zenith = sample(new THREE.Vector3(0, 1, 0));
-    // Fog: the cool anti-sun horizon is the base; the gold toward the sun is added by the phase lobe.
-    const base = awaySun.map((v, k) => 0.45 * v + 0.4 * side[k] + 0.15 * towardSun[k]);
-    const sunTint = towardSun.map((v, k) => Math.max(0, v - base[k]));
-    const T = sunTransmittance(preset.elevation, { mie: preset.mie, ozone: preset.ozone, altitude: preset.altitude ?? OBSERVER_ALTITUDE });
+    this.lastStats = skyStats(px, preset);
+    return this.applyStats(preset, sun, this.lastStats);
+  }
+
+  /**
+   * The day cycle's per-frame path (render/daycycle.js): the LUT is re-rendered for the moving sun on the GPU (no
+   * read-back), and the normalisation and horizon colours come from `stats`, interpolated between keyframes that
+   * setAtmosphere() read once (mixStats).
+   */
+  setAtmosphereLive(renderer, preset, stats) {
+    const sun = sunDirection(preset.elevation, preset.azimuth);
+    const lu = this.lutMat.uniforms;
+    lu.uSunDir.value.copy(sun); lu.uMie.value = preset.mie; lu.uOzone.value = preset.ozone; lu.uAlt.value = preset.altitude ?? OBSERVER_ALTITUDE;
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(this.lut); this.lutQuad.render(renderer);
+    renderer.setRenderTarget(prev);
+    return this.applyStats(preset, sun, stats);
+  }
+
+  /** Uniforms and the derived lighting from the sky statistics of one atmosphere. */
+  applyStats(preset, sun, stats) {
+    const { scale, mean, towardSun, base, sunTint, zenith } = stats;
+    const T = sunTransmittance(Math.max(0.5, preset.elevation), { mie: preset.mie, ozone: preset.ozone, altitude: preset.altitude ?? OBSERVER_ALTITUDE });
     const tMax = Math.max(...T, 1e-6);
     const sunColor = new THREE.Color(T[0] / tMax, T[1] / tMax, T[2] / tMax);
-    // Art direction on top of the physics: `sunWarm` pulls the sun toward late-afternoon amber (a high sun is near white).
+    // Art direction on top of the physics: `sunWarm` pulls the sun toward late-afternoon amber (a high sun is near white),
+    // `sunCool` toward moonlight blue (the night's key light is the moon).
     if (preset.sunWarm) sunColor.lerp(SUN_WARM, Math.min(1, preset.sunWarm));
+    if (preset.sunCool) sunColor.lerp(MOON_COOL, Math.min(1, preset.sunCool));
     const sunRadiance = sunColor.clone().multiplyScalar(preset.sunIntensity / Math.PI);
     const m = this.material.uniforms;
     m.uSunDir.value.copy(sun); m.uScale.value = scale; m.uCover.value = preset.cloudCover;
-    m.uSunDisc.value.copy(sunColor).multiplyScalar(60 * Math.max(0.15, tMax));
+    m.uSunDisc.value.copy(sunColor).multiplyScalar(60 * Math.max(0.15, tMax) * (preset.disc ?? 1));
     m.uCloudSun.value.copy(sunRadiance);
     m.uCloudAmb.value.setRGB(...zenith).multiplyScalar(0.9);
     m.uHorizon.value.setRGB(...base);
+    m.uStars.value = preset.stars || 0;
     this.derived = {
       sun, sunColor, sunIntensity: preset.sunIntensity, sunRadiance, scale, rawMean: mean,
       fogColor: new THREE.Color(...base), fogSunTint: new THREE.Color(...sunTint),
