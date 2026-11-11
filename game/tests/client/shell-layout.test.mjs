@@ -56,10 +56,10 @@ test('shell layout: the real numbers agree with shell_interior.glb (glass, entra
   // the entrance is at +Z and the glass at -Z: Iris arrives at the entrance end, not at the glass
   assert.ok(door.t[2] > entrance.t[2] && entrance.t[2] > 0 && glass.t[2] < 0);
   const [sx, sy, sz] = REAL.spawn;
-  assert.ok(sz < door.t[2] - 1 && sz > stairs.t[2] + stairs.half[2] - 0.05, 'the spawn is inside, behind the head of the stairs and clear of the outer door');
-  assert.ok(sz >= landing.t[2] - landing.half[2] && sz <= landing.t[2] + landing.half[2], 'on the landing at the head of the stairs');
-  assert.ok(Math.abs(landing.t[1] + landing.half[1] - sy) < 0.05 && Math.abs(sy - HALL.landingY) < 1e-9, 'standing on the landing surface');
-  assert.ok(Math.abs(sx) < landing.half[0], 'within the landing width');
+  assert.ok(sz < entrance.t[2] - 4, 'inside the hall, with at least 4 m behind Iris for the camera before the entrance wall');
+  assert.ok(sz < stairs.t[2] - stairs.half[2] && sz > stairs.t[2] - stairs.half[2] - 2, 'on the hall floor at the foot of the stairs');
+  assert.ok(Math.abs(sy - HALL.floorY) < 1e-9 && Math.abs(sx) < landing.half[0], 'on the floor, on the centre line');
+  assert.ok(Math.abs(landing.t[1] + landing.half[1] - HALL.landingY) < 0.05, 'landing height');
   assert.ok(Math.abs(floor.t[1] + floor.half[1] - HALL.floorY) < 0.05, 'hall floor height');
   // the reading spot is on the hall floor, in front of the glass, inside the walls
   assert.ok(REAL.stand[1] > glass.t[2] + 1 && REAL.stand[1] < stairs.t[2] - stairs.half[2], 'the reading spot is on the hall floor between the stairs and the glass');

@@ -4,8 +4,9 @@
 //
 // The real hall (shell_interior.glb) runs along Z: the entrance vestibule (door at z = 14.2, floor at
 // y = 1.2), a landing and five steps down into the hall (floor y = 0, z from 10.25 to -10.75), and the glass
-// end wall at z = -10.75 with the Guests' chamber behind it. Iris arrives at the head of the stairs with the
-// whole hall and the glass in front of her. The greybox is a smaller room used only until the model is in.
+// end wall at z = -10.75 with the Guests' chamber behind it. Iris arrives on the hall floor at the foot of the
+// stairs, the whole hall and the glass in front of her and room for the camera behind her (checked on real
+// WebGL: from the landing the camera is pinned against the entrance wall and she is out of frame). The greybox is a smaller room used only until the model is in.
 
 /** Extents of the real model that the layout must respect (read from the .glb nodes; verified by the test). */
 export const HALL = Object.freeze({
@@ -22,7 +23,7 @@ export const HALL = Object.freeze({
  * stands here) to the far wall (zFar: depth 0); slot x positions left / centre / right.
  */
 export const REAL = Object.freeze({
-  spawn: [0, 1.2, 9.6], heading: Math.PI, glass: [0, 3.95, -10.748], glassSize: [12.1, 7.1], stand: [0, -8.6],
+  spawn: [0, 0, 4.8], heading: Math.PI, glass: [0, 3.95, -10.748], glassSize: [12.1, 7.1], stand: [0, -8.6],
   guests: [[-4.4, -0.3, -15.75, 0.247, 0.969], [0.4, -0.3, -17.95, 0, 1], [4.6, -0.3, -15.35, -0.296, 0.955]],
   chamber: { zNear: -13.4, zFar: -24.8, xHalf: 9, top: 13.5 },
 });
