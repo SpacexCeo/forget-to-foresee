@@ -259,7 +259,7 @@ def town_walls(tb):
 
 
 def gatehouse(tb):
-    """The lower gate: two piers, a round arch with voussoirs, closed timber doors, a carved ring above."""
+    """The lower gate: two piers, a round arch with voussoirs, open timber doors under a raised portcullis, a carved ring above."""
     z0, z1 = P.Z_SOUTH - 1.2, P.Z_SOUTH + 4.2     # north and south faces
     half, pier = 2.4, 3.3                          # half opening, pier width
     spring, top = 3.3, 10.6
@@ -297,24 +297,47 @@ def gatehouse(tb):
     for sx in (-1, 1):   # jambs
         pts = [(sx * half, 0, z0), (sx * half, 0, z1), (sx * half, spring, z1), (sx * half, spring, z0)]
         tb.poly("stone", pts if sx < 0 else list(reversed(pts)), STONE_DARK)
-    # closed doors, recessed, with iron bands and a ring pull
+    # open doors: two thick timber leaves swung in against the jambs (a little off the wall so they read
+    # as doors), iron bands and a ring pull on the face that looks into the passage
     zd = z0 + 2.2
+    IRON = (0.16, 0.15, 0.15)
+    leaf, zh = half - 0.1, z0 + 2.5
     for sx in (-1, 1):
-        tb.box("timber", (sx * half / 2, spring / 2, zd), (half - 0.04, spring, 0.22), TIMBER_DARK, skip="yz", uv_dir=(0, 1, 0))
-        for yy in (0.7, 1.9, 3.0):
-            tb.box("stone", (sx * half / 2, yy, zd - 0.13), (half - 0.2, 0.14, 0.05), (0.16, 0.15, 0.15))
-        tb.ring("stone", (sx * 0.5, 1.5, zd - 0.16), 0.2, 0.13, 0.05, 10, (0.55, 0.42, 0.2))
-    tymp = [(arc[i][0], arc[i][1], zd) for i in range(n + 1)]
-    tb.poly("timber", tymp, tint(TIMBER_DARK, 0.9))
+        with tb.at(T(sx * (half - 0.05), 0, zh), RY(sx * 8)):
+            xc = -sx * 0.13                                   # leaf centre: 0.22 thick, hinged on the jamb
+            tb.box("timber", (xc, spring / 2 + 0.03, -leaf / 2), (0.22, spring - 0.06, leaf), TIMBER_DARK, uv_dir=(0, 1, 0))
+            xf = xc - sx * 0.11                               # the face toward the passage
+            for i in range(1, 5):                             # plank joints
+                tb.box("timber", (xf - sx * 0.006, spring / 2 + 0.03, -i * leaf / 5), (0.012, spring - 0.2, 0.03), tint(TIMBER_DARK, 0.5), uv_dir=(0, 1, 0))
+            for yy in (0.7, 1.9, 3.0):                        # iron bands, wrapped over the free edge
+                tb.box("stone", (xc, yy, -leaf / 2 - 0.02), (0.30, 0.14, leaf + 0.06), IRON)
+            for yy in (0.7, 1.9, 3.0):                        # hinge pins
+                tb.cyl("stone", (xc, yy - 0.16, 0.04), 0.06, 0.06, 0.32, 8, IRON, cap_bot=True)
+            with tb.at(T(xf - sx * 0.05, 1.5, -leaf + 0.5), RY(90)):
+                tb.ring("stone", (0, 0, 0), 0.2, 0.13, 0.05, 12, (0.55, 0.42, 0.2))
+    # the raised portcullis: an iron grille drawn up into the arch, its spiked feet hanging below the springing
+    zp = z0 + 2.9
+    for i in range(-4, 5):
+        x = i * 0.5
+        tb.box("stone", (x, (spring + 0.2 + spring + math.sqrt(half * half - x * x)) / 2, zp), (0.09, math.sqrt(half * half - x * x) - 0.2, 0.09), IRON, skip="Y")
+        tb.cyl("stone", (x, spring + 0.02, zp), 0.005, 0.065, 0.18, 4, IRON, cap_top=False)
+    for yy in (0.55, 1.45):
+        cw = math.sqrt(half * half - yy * yy)
+        tb.box("stone", (0, spring + yy, zp), (2 * cw, 0.1, 0.07), IRON, skip="xX")
     tb.col_box((0, spring / 2 + 1, zd), (2 * half, spring + 2 + half, 0.4))
     tb.col_box((0, top / 2, (z0 + z1) / 2 + 2.0), (2 * half + 2 * pier, top, 1.0))
     for sx in (-1, 1):
         tb.col_box((sx * (half + pier / 2), top / 2, (z0 + z1) / 2), (pier, top, z1 - z0))
     # carved ring above the arch (the round sign), a cap band and a hipped roof
-    tb.ring("stone", (0, arch_top + 2.1, z0 - 0.07), 1.05, 0.72, 0.16, 28, STONE_CAP)
+    # the emblem stands well proud of the wall on a dark round field, so it reads as carved stone
+    ey = arch_top + 2.1
+    tb.ring("stone", (0, ey, z0 - 0.03), 1.32, 0.001, 0.06, 28, tint(STONE_DARK, 0.62))           # sunk field
+    tb.ring("stone", (0, ey, z0 - 0.09), 1.44, 1.26, 0.18, 28, STONE_CAP)                         # moulded rim
+    tb.ring("stone", (0, ey, z0 - 0.16), 1.02, 0.66, 0.32, 28, (1.0, 0.86, 0.60))                 # the ring
+    tb.ring("stone", (0, ey, z0 - 0.34), 0.93, 0.75, 0.05, 28, (0.80, 0.62, 0.36))                # chiselled band
     for k in range(4):
         a = math.pi / 4 + k * math.pi / 2
-        tb.box("stone", (math.cos(a) * 0.88, arch_top + 2.1 + math.sin(a) * 0.88, z0 - 0.1), (0.16, 0.16, 0.14), (0.75, 0.55, 0.25))
+        tb.box("stone", (math.cos(a) * 0.84, ey + math.sin(a) * 0.84, z0 - 0.35), (0.2, 0.2, 0.1), (0.78, 0.52, 0.2))
     w = 2 * (half + pier)
     tb.box("stone", (0, top + 0.3, (z0 + z1) / 2), (w + 0.6, 0.6, z1 - z0 + 0.6), STONE_DARK)
     ridge = top + 0.6 + 2.6
