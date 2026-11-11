@@ -55,3 +55,17 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 | Merge reviewed branches into an integration branch, then `main` with owner OK | lead | doing |
 | README real/mock table kept current | lead | ongoing |
 | Demo video, tag `hackathon-submission` | owner + lead | todo |
+
+## Owner plan 11.11 (one narrow task per session; Fable = rigs, 3D, animation only; the lead checks)
+| # | Task | Lane / branch | Status |
+|---|---|---|---|
+| 1 | Lower gate is an exit, walkable hillside, Iris casts Frost Lance (Q) and Storm Snare (V) outside the walls | Opus / `claude/festive-faraday-2ga2wb` | doing |
+| 2 | Second heroine (NFT skin): model on Iris's skeleton, rig, existing clips play on her, contact sheet | Fable / `claude/heroine2` | todo |
+| 3 | Second heroine: her own cast clips and skills | Fable (clips) + Opus (skills) | todo, after 2 |
+| 4 | No lobby: straight into the town after loading; free-skin offer on entry instead of the guide | Opus | todo |
+| 5 | Guide as a book statue at the Tournament, opens in a popup | Fable (statue) + Opus (popup) | todo |
+| 6 | Character switching, per-character levels and skills | Opus | todo |
+| 7 | Test monsters outside the walls: levels, aggro and fighting styles | Fable (models, clips) + Opus (behaviour) | todo |
+| 8 | Daily spin wheel (silk, shards), shards → NFT, shard sale on testnet | Opus | todo |
+| 9 | Loading screen: smoke with glyphs fills the bar | Opus (+ Fable if a sprite bake is needed) | todo |
+| 10 | Owner report: effects and lighting not visible in the game — find which branch or setting lost them | Opus | todo |
