@@ -6,8 +6,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-CONTRACT=ftf-agents.testnet
-OWNER=lambada_eth.testnet
+# Deployed and signed by the coordinator (Day 1): SIGNER's keys from ~/.near-credentials; the contract is its sub-account.
+SIGNER=${SIGNER:-ftf-coordinator.testnet}
+CONTRACT=${CONTRACT:-agents.$SIGNER}
+OWNER=${OWNER:-lambada_eth.testnet}
+SIGN_WITH=${SIGN_WITH:-sign-with-legacy-keychain}
 SEASON=793f6c05e89839f2
 TOKEN="$SEASON-agent-iris"
 JUDGE="judge/$SEASON"
@@ -30,16 +33,20 @@ echo "1/5 Checking the generated mint arguments against the real engine…"
 node scripts/judge-agent-args.mjs --check
 
 if exists; then echo "2/5 $CONTRACT exists"; else
-  echo "2/5 Creating $CONTRACT through the testnet faucet…"
-  near account create-account sponsor-by-faucet-service "$CONTRACT" autogenerate-new-keypair save-to-keychain network-config testnet create
+  echo "2/5 Creating $CONTRACT…"
+  if [[ "$CONTRACT" == *".$SIGNER" ]]; then
+    near account create-account fund-myself "$CONTRACT" '5 NEAR' autogenerate-new-keypair save-to-legacy-keychain sign-as "$SIGNER" network-config testnet "$SIGN_WITH" send
+  else
+    near account create-account sponsor-by-faucet-service "$CONTRACT" autogenerate-new-keypair save-to-keychain network-config testnet create
+  fi
   sleep 3
 fi
 
 if has_code; then echo "3/5 Contract already deployed"; else
   echo "3/5 Building and deploying the contract…"
   cargo near deploy build-non-reproducible-wasm --no-abi "$CONTRACT" with-init-call new json-args \
-    '{"owner_id":"'"$OWNER"'","coordinators":["'"$OWNER"'"],"season_contract":"ftf-seasons.testnet","shard_contract":"ftf-shards.testnet"}' \
-    prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-keychain send
+    '{"owner_id":"'"$SIGNER"'","coordinators":["'"$SIGNER"'","'"$OWNER"'"],"season_contract":"ftf-seasons.testnet","shard_contract":"ftf-shards.testnet"}' \
+    prepaid-gas '30.0 Tgas' attached-deposit '0 NEAR' network-config testnet "$SIGN_WITH" send
   sleep 3
 fi
 
@@ -52,11 +59,12 @@ echo "    state hash $got ✓"
 if minted; then echo "5/5 $TOKEN is already minted"; else
   echo "5/5 Minting $TOKEN to $OWNER…"
   near contract call-function as-transaction "$CONTRACT" mint_agent file-args "$JUDGE/mint-agent.json" \
-    prepaid-gas '100.0 Tgas' attached-deposit '0.5 NEAR' sign-as "$OWNER" network-config testnet sign-with-keychain send
+    prepaid-gas '100.0 Tgas' attached-deposit '0.5 NEAR' sign-as "$SIGNER" network-config testnet "$SIGN_WITH" send
   sleep 3
   minted || { echo "STOP: the token is not visible yet; re-run this script in a minute"; exit 1; }
 fi
 
 echo
 echo "Done: https://testnet.nearblocks.io/address/$CONTRACT?tab=nfts"
-echo "The game finds the card by itself (game/src/net/agent-nft.js reads $CONTRACT); nothing else to edit."
+node ../scripts/day1-write.mjs agents="$CONTRACT"
+echo "The game finds the card by itself (game/src/net/agent-nft.js reads agents from game/src/net/day1-deployment.js)."

@@ -4,6 +4,8 @@
 // fails. Off-chain (this browser): town silk, season silk, hired agents, memories, words, quest items, the title.
 import { createShardNftClient } from '../net/shard-nft.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
+import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
+import { createTxClient } from '../net/near-tx.js';
 
 const CSS = `
 .ftf-prof { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(6, 10, 12, .6); font: 15px/1.45 system-ui, sans-serif; color: #f3ead6; }
@@ -26,7 +28,21 @@ const CSS = `
  * Reads the on-chain items: the judge season's shards that the contract confirms. Resolves {state, items}.
  * state: 'loaded' | 'offline' | 'disabled'. Never invents an item.
  */
-export async function readOnChain({ deployment = NEAR_DEPLOYMENT, fetch = globalThis.fetch } = {}) {
+export async function readOnChain({ deployment = NEAR_DEPLOYMENT, fetch = globalThis.fetch, owner = null, day1 = DAY1_DEPLOYMENT } = {}) {
+  // Day 1: the player's own Elise, read from the heroine contract (only what it returns for the guest account)
+  const mine = [];
+  if (owner && day1 && day1.heroine && typeof fetch === 'function') {
+    try {
+      const list = await createTxClient({ rpcUrls: deployment.rpcUrls, fetch, timeoutMs: 8000 }).view(day1.heroine, 'nft_tokens_for_owner', { account_id: owner });
+      const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
+      for (const t of list || []) mine.push({ kind: 'heroine', mine: true, tokenId: t.token_id, owner: t.owner_id, contractId: day1.heroine, href: `${explorer}/nft-token/${day1.heroine}/${t.token_id}`, label: (t.metadata && t.metadata.title) || 'Elise' });
+    } catch { /* the shard read below still runs; nothing invented */ }
+  }
+  const shards = await readShards({ deployment, fetch });
+  return { state: shards.state === 'loaded' || mine.length ? 'loaded' : shards.state, items: [...mine, ...shards.items] };
+}
+
+async function readShards({ deployment = NEAR_DEPLOYMENT, fetch = globalThis.fetch } = {}) {
   const seasons = Object.keys((deployment && deployment.shardMints) || {});
   if (!deployment || !deployment.shardContractId || !seasons.length || typeof fetch !== 'function') return { state: 'disabled', items: [] };
   try {
@@ -58,7 +74,7 @@ function spark(doc, values, w, h) {
 /**
  * @param {{doc?: Document, t: Function, ledger: object, quest?: object|null, obs?: () => object|null, onChain?: Promise}} o
  */
-export function openProfile({ doc = document, t, ledger, quest = null, obs = () => null, onChain = null }) {
+export function openProfile({ doc = document, t, ledger, quest = null, obs = () => null, onChain = null, owner = null, exportKey = null }) {
   if (!doc.getElementById('ftf-prof-style')) { const st = doc.createElement('style'); st.id = 'ftf-prof-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ftf-prof'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('profile.title'));
@@ -127,13 +143,13 @@ export function openProfile({ doc = document, t, ledger, quest = null, obs = () 
   const chainBox = el('div');
   chainBox.append(el('p', 'ftf-prof-note', t('inv.onchain.checking')));
   panel.append(chainBox);
-  (onChain || readOnChain()).then((r) => {
+  (onChain || readOnChain({ owner })).then((r) => {
     chainBox.replaceChildren();
     if (r.state !== 'loaded' || !r.items.length) { chainBox.append(el('p', 'ftf-prof-note', t(r.state === 'offline' ? 'inv.onchain.offline' : 'inv.onchain.none'))); return; }
     chainBox.append(el('p', 'ftf-prof-note', t('inv.onchain.note')));
     for (const it of r.items) {
       const p = el('p'); const a = el('a', null, it.tokenId); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      p.append(a, doc.createTextNode(' · ' + (it.label ? it.label + ' · ' : '') + t('inv.owner', { owner: it.owner || '—' })));
+      p.append(a, doc.createTextNode(' · ' + (it.mine ? t('inv.elise') + ' · ' : it.label ? it.label + ' · ' : '') + t('inv.owner', { owner: it.owner || '—' })));
       chainBox.append(p);
     }
   });
@@ -151,6 +167,12 @@ export function openProfile({ doc = document, t, ledger, quest = null, obs = () 
     [t('inv.questItems'), quest && quest.items && quest.items.length ? quest.items.map((i) => t('inv.item.' + i)).join(', ') : t('inv.none')],
     [t('inv.cosmetics'), t('profile.title.' + lv.title)],
   ]));
+  if (exportKey) {
+    // Day 1: the player's testnet key lives in this browser; a copy keeps the guest account if the browser data goes
+    const kb = el('button', null, t('profile.exportKey')); kb.type = 'button'; kb.style.marginRight = '8px';
+    kb.addEventListener('click', async () => { try { await navigator.clipboard.writeText(exportKey()); kb.textContent = t('profile.exportKey.done'); } catch { kb.textContent = t('profile.exportKey.failed'); } });
+    panel.append(el('p', 'ftf-prof-note', t('profile.exportKey.note')), kb);
+  }
   panel.append(el('p', 'ftf-prof-note', t('hire.local')));
   const cb = el('button', null, t('quest.close')); cb.type = 'button'; cb.addEventListener('click', close); panel.append(cb);
   cb.focus();

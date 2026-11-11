@@ -61,3 +61,11 @@ test('Return to town: the pause menu offers it on the archipelago, the season is
   assert.match(boot, /function startSeason\(\) \{\n  if \(season\) return season;/, 'registering again resumes the same season');
   for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of ['town.objective.resume', 'town.altar.resume']) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
 });
+
+test('the shrinekeeper guide is animated: one picture per page, still under reduced motion', async () => {
+  const { GUIDE_ANIM_PAGES } = await import('../../src/scenes/guide-anim.js');
+  assert.equal(GUIDE_ANIM_PAGES, GUIDE_PAGES);
+  const src = readFileSync(new URL('../../src/scenes/guide-anim.js', import.meta.url), 'utf8');
+  assert.match(src, /html\[data-motion="reduce"\] \.ftf-guide-anim \* \{ animation: none !important;/);
+  assert.match(readFileSync(new URL('../../src/scenes/town-flow.js', import.meta.url), 'utf8'), /const anim = guideAnim\(doc, pg \+ 1\)/);
+});

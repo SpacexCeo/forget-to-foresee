@@ -36,10 +36,11 @@ import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
+import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -151,7 +152,7 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
-const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
+const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, owner: (loadDay1(ctx.storage).guest || {}).account_id || null, exportKey: loadDay1(ctx.storage).playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -343,6 +344,77 @@ function startSeason() {
   return season;
 }
 
+// ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
+const day1Mint = createDay1Mint({ storage: ctx.storage });
+const day1On = () => {
+  const q = params.get('day1');
+  if (q === '0') return false;
+  if (q === '1') return true;
+  return !judge && !loadDay1(ctx.storage).claimed;
+};
+// Elise's own model is not in yet: she wears Iris's body in her colors (said in the hint and the toast).
+const ELISE_TINT = new THREE.Color(0.78, 0.6, 1.0);
+function applySkin(skin) {
+  avatar.traverse((o) => {
+    if (!o.isMesh || !o.material || !o.material.color) return;
+    if (!o.userData.irisColor) o.userData.irisColor = o.material.color.clone();
+    o.material.color.copy(o.userData.irisColor);
+    if (skin === 'elise') o.material.color.multiply(ELISE_TINT);
+  });
+}
+function toggleSkin() {
+  const next = (loadDay1(ctx.storage).skin || 'iris') === 'iris' ? 'elise' : 'iris';
+  day1Mint.setRecord({ skin: next });
+  applySkin(next);
+  toast(ctx.i18n.t('day1.skin.' + next) + (next === 'elise' ? ' · ' + ctx.i18n.t('day1.skin.note') : ''));
+}
+/** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
+let altarTimer = null;
+const _altarP = new THREE.Vector3();
+function updateAltarTimer() {
+  if (!town || !inTown) { if (altarTimer) altarTimer.hidden = true; return; }
+  if (!altarTimer) {
+    altarTimer = document.createElement('div'); altarTimer.className = 'ftf-altar-timer'; altarTimer.setAttribute('aria-hidden', 'true');
+    altarTimer.style.cssText = 'position:fixed;left:0;top:0;z-index:6;pointer-events:none;transform:translate(-50%,-100%);padding:6px 12px;border-radius:14px;background:rgba(20,14,40,.78);border:1px solid rgba(255,210,122,.7);color:#fff7e6;font:600 13px/1.25 system-ui,sans-serif;text-align:center;white-space:nowrap';
+    document.body.append(altarTimer);
+  }
+  const a = TOWN_ALTAR.position;
+  _altarP.set(a[0], a[1] + 4.2, a[2]).project(camera);
+  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1;
+  altarTimer.hidden = !visible;
+  if (!visible) return;
+  const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
+  if (altarTimer.textContent !== text) altarTimer.textContent = text;
+  altarTimer.style.left = ((_altarP.x + 1) / 2 * innerWidth).toFixed(0) + 'px';
+  altarTimer.style.top = ((1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+}
+
+/** The camera settles on the heroine from high above the gate (Day 1 arrival). */
+function flyIn(ms) {
+  if (!ms) return;
+  const from = 26, to = TOWN_CAMERA.dist, t0 = performance.now();
+  const step = () => { const p = Math.min(1, (performance.now() - t0) / ms), e = 1 - Math.pow(1 - p, 3); rig.dist = from + (to - from) * e; if (p < 1) requestAnimationFrame(step); };
+  rig.dist = from; requestAnimationFrame(step);
+}
+async function startDay1() {
+  if (loadDay1(ctx.storage).skin === 'elise') applySkin('elise');
+  if (!day1On()) return;
+  const t = (k, a) => ctx.i18n.t(k, a);
+  const m = await import('./play/day1.js');
+  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
+  const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
+  await m.runHints({ t, steps: [
+    { key: 'day1.hint.skin' },
+    { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
+    { key: 'day1.hint.trailers', buttons: [{ key: 'day1.hint.watch', fn: async () => {
+      await m.playTrailer({ t, keys: ['day1.trailer.hero.1', 'day1.trailer.hero.2', 'day1.trailer.hero.3'], camera: orbit(0.004) });
+      await m.playTrailer({ t, keys: ['day1.trailer.town.1', 'day1.trailer.town.2', 'day1.trailer.town.3'], camera: orbit(-0.004) });
+      rig.dist = TOWN_CAMERA.dist;
+    } }] },
+    { key: 'day1.hint.tournament' },
+  ] });
+}
+
 /** The player enters the world (the lobby's first contact, or at once on the direct path): the town, else the season. */
 async function enterWorld() {
   if (entering) return entering;
@@ -350,7 +422,7 @@ async function enterWorld() {
     if (boot.closeLobby) boot.closeLobby();
     document.body.classList.add('in-world');
     entered = true;
-    if (inTown) { townFlow.begin(); return; }
+    if (inTown) { townFlow.begin(); startDay1(); return; }
     await startSeason();
   })();
   return entering;
@@ -454,6 +526,7 @@ function handleInput(dt) {
     }
     if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
   }
+  if (input.hit('KeyK') && (townOn || playOn)) toggleSkin(); // Day 1: Iris <-> Elise
   if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
   const [lookX, lookY] = pad.look;
   const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
@@ -620,6 +693,7 @@ function frame() {
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
+  updateAltarTimer();
 
   controls.update(input.device, null, inspecting);
   const near = inspecting || !play || play.zone === 'shell' ? null : nearestInteractable();

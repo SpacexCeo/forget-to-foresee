@@ -12,6 +12,7 @@ import {
 import { buildVectors, serialize, OUT } from '../../scripts/gen-agent-vectors.mjs';
 import { buildJudgeArgs, judgeAgent, outDir, DEFAULTS } from '../../../contracts/agent-card/scripts/judge-agent-args.mjs';
 import { NEAR_DEPLOYMENT } from '../../src/net/near-deployment.js';
+import { DAY1_DEPLOYMENT } from '../../src/net/day1-deployment.js';
 import { sha256 } from '../../src/game/crypto.js';
 import { PLAY_MESSAGES, createPlayI18n } from '../../src/play/i18n.js';
 import { installDom } from '../lib/mini-dom.mjs';
@@ -102,17 +103,23 @@ function fakeRpc(routes, log = []) {
     return v && typeof v.json === 'function' ? v : ok(v);
   };
 }
-const DEPLOY = { ...NEAR_DEPLOYMENT, rpcUrls: ['https://a.example'], agentMints: { [SEASON]: 'MintTxAgent' } };
+// Fixtures, independent of the live deployment files: a contract that is not deployed yet, and the deployed one as it
+// really is on testnet (agents.ftf-coordinator.testnet, the judge card minted by ftf-coordinator.testnet).
+const AGENTS = 'agents.ftf-coordinator.testnet';
+const UNDEPLOYED = { ...NEAR_DEPLOYMENT, rpcUrls: ['https://a.example'], agentContractId: 'ftf-agents.testnet', agentMints: {} };
+const DEPLOY = { ...NEAR_DEPLOYMENT, rpcUrls: ['https://a.example'], agentContractId: AGENTS, agentMints: { [SEASON]: 'MintTxAgent' } };
 const onChainCard = (state = JUDGE.state, patch = {}) => {
   const s = agentState(state);
-  return { token_id: TOKEN, owner_id: 'lambada_eth.testnet', state: s, state_hash: agentStateHash(s), minted_at_ns: '1', minted_at_block: '2', minted_by: 'lambada_eth.testnet', metadata: { ...agentMetadata(s), issued_at: '1' }, ...patch };
+  return { token_id: TOKEN, owner_id: 'lambada_eth.testnet', state: s, state_hash: agentStateHash(s), minted_at_ns: '1794410742085393145', minted_at_block: '277233646', minted_by: 'ftf-coordinator.testnet', metadata: { ...agentMetadata(s), issued_at: '1' }, ...patch };
 };
 const seasons = (root = ROOT) => ({ get_season: (a) => (a.season_id === SEASON ? { season_id: SEASON, schedule_root: root, leaf_count: 15 } : null) });
 
 test('before the owner deploys: not-minted (a preview of this season’s card), never a fake success', async () => {
   const log = [];
-  const m = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-seasons.testnet': seasons() }, log) });
-  assert.equal(agentContractOf(DEPLOY), 'ftf-agents.testnet');
+  const m = await loadAgentCard({ obs: JUDGE.obs, deployment: UNDEPLOYED, fetch: fakeRpc({ 'ftf-seasons.testnet': seasons() }, log) });
+  assert.equal(agentContractOf(UNDEPLOYED), 'ftf-agents.testnet');
+  // with no explicit id the client follows the committed Day 1 deployment (whatever it holds)
+  assert.equal(agentContractOf({ ...NEAR_DEPLOYMENT, agentContractId: undefined }), DAY1_DEPLOYMENT.agents || DEFAULT_AGENT_CONTRACT);
   assert.equal(m.state, 'not-minted');
   assert.equal(m.judgeOnly, false);
   assert.equal(m.tokenId, TOKEN);
@@ -126,13 +133,13 @@ test('before the owner deploys: not-minted (a preview of this season’s card), 
   assert.equal(m.biography.forgotten[0].shardHref, `https://testnet.nearblocks.io/nft-token/ftf-shards.testnet/${SEASON}-7`);
   assert.deepEqual(log.map((x) => [x.account, x.method]), [['ftf-agents.testnet', 'get_agent']]);
   // a deployed contract without the token: not-minted too
-  const empty = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-agents.testnet': { get_agent: () => null } }) });
+  const empty = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ [AGENTS]: { get_agent: () => null } }) });
   assert.equal(empty.state, 'not-minted');
 });
 
 test('minted: the token exists, sha256(extra) = state hash, root = committed root = local root, and this playthrough hashes the same', async () => {
   const log = [];
-  const m = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-agents.testnet': { get_agent: (a) => (a.token_id === TOKEN ? onChainCard() : null) }, 'ftf-seasons.testnet': seasons() }, log) });
+  const m = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'agents.ftf-coordinator.testnet': { get_agent: (a) => (a.token_id === TOKEN ? onChainCard() : null) }, 'ftf-seasons.testnet': seasons() }, log) });
   assert.equal(m.state, 'minted');
   assert.equal(m.reason, null);
   assert.equal(m.owner, 'lambada_eth.testnet');
@@ -140,14 +147,14 @@ test('minted: the token exists, sha256(extra) = state hash, root = committed roo
   assert.equal(m.stateHash, JUDGE_HASH);
   assert.equal(m.committedRoot, ROOT);
   assert.equal(m.svgVerified, true);
-  assert.equal(m.links.token, `https://testnet.nearblocks.io/nft-token/ftf-agents.testnet/${TOKEN}`);
+  assert.equal(m.links.token, `https://testnet.nearblocks.io/nft-token/agents.ftf-coordinator.testnet/${TOKEN}`);
   assert.equal(m.links.mintTx, 'https://testnet.nearblocks.io/txns/MintTxAgent');
   assert.equal(m.links.seasonCommit, `https://testnet.nearblocks.io/txns/${NEAR_DEPLOYMENT.seasons[SEASON].commitTx}`);
   assert.deepEqual(m.traits.trust.map((e) => e.clan), ['salt', 'ash', 'moss', 'amber', 'frost']);
   assert.deepEqual(log.map((x) => x.method), ['get_agent', 'get_season']);
   // the Heir is chosen after the season ends: a card minted before the choice still matches this playthrough
   for (const heir of [true, false]) {
-    const after = await loadAgentCard({ obs: { ...JUDGE.obs, season: { ...JUDGE.obs.season, heir } }, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-agents.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
+    const after = await loadAgentCard({ obs: { ...JUDGE.obs, season: { ...JUDGE.obs.season, heir } }, deployment: DEPLOY, fetch: fakeRpc({ 'agents.ftf-coordinator.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
     assert.equal(after.state, 'minted', `heir ${heir} chosen after the mint`);
     assert.equal(after.heir, null, 'the card shows what was minted');
   }
@@ -155,13 +162,13 @@ test('minted: the token exists, sha256(extra) = state hash, root = committed roo
   const other = await loadAgentCard({ obs: JUDGE.obs, deployment: { ...DEPLOY, agentContractId: 'ftf-agents.lambada_eth.testnet' }, fetch: fakeRpc({ 'ftf-agents.lambada_eth.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
   assert.equal(other.state, 'minted');
   assert.equal(other.contractId, 'ftf-agents.lambada_eth.testnet');
-  const client = createAgentNftClient({ contractId: 'ftf-agents.testnet', rpcUrls: ['https://a.example'], fetch: fakeRpc({ 'ftf-agents.testnet': { agent_of_season: () => onChainCard(), nft_token: () => ({ token_id: TOKEN }), nft_metadata: () => ({ symbol: 'FTFAGENT' }) } }) });
+  const client = createAgentNftClient({ contractId: 'agents.ftf-coordinator.testnet', rpcUrls: ['https://a.example'], fetch: fakeRpc({ 'agents.ftf-coordinator.testnet': { agent_of_season: () => onChainCard(), nft_token: () => ({ token_id: TOKEN }), nft_metadata: () => ({ symbol: 'FTFAGENT' }) } }) });
   assert.equal((await client.agentOfSeason(SEASON)).token_id, TOKEN);
   assert.equal((await client.nftMetadata()).symbol, 'FTFAGENT');
 });
 
 test('mismatch: another playthrough, a forged hash, a wrong root, invalid data; offline and live seasons stay honest', async () => {
-  const routes = (card, root) => ({ 'ftf-agents.testnet': { get_agent: () => card }, 'ftf-seasons.testnet': seasons(root) });
+  const routes = (card, root) => ({ 'agents.ftf-coordinator.testnet': { get_agent: () => card }, 'ftf-seasons.testnet': seasons(root) });
   // the judge played differently: the token is real and checked, but it is not this browser's agent
   const otherObs = { ...JUDGE.obs, iris: { ...JUDGE.obs.iris, silk: 41 } };
   const diff = await loadAgentCard({ obs: otherObs, deployment: DEPLOY, fetch: fakeRpc(routes(onChainCard(), ROOT)) });
@@ -174,7 +181,7 @@ test('mismatch: another playthrough, a forged hash, a wrong root, invalid data; 
   assert.equal((await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc(routes(badExtra, ROOT)) })).reason, 'state-hash');
   const wrongRoot = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc(routes(onChainCard(), sha256('another root'))) });
   assert.equal(wrongRoot.state, 'mismatch'); assert.equal(wrongRoot.reason, 'root');
-  const uncommitted = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-agents.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': { get_season: () => null } }) });
+  const uncommitted = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'agents.ftf-coordinator.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': { get_season: () => null } }) });
   assert.equal(uncommitted.reason, 'root');
   const invalid = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc(routes({ ...onChainCard(), state: { ...JUDGE.state, outcome: 'won' } }, ROOT)) });
   assert.equal(invalid.state, 'mismatch'); assert.equal(invalid.reason, 'invalid');
@@ -215,14 +222,14 @@ test('agent card strings: present in all five locales, every one formats; the DO
   const t = (k, a) => i18n.t(k, a);
   const text = (n) => (n.childNodes || []).map((c) => (c.data != null ? c.data : text(c))).join(' ');
   assert.equal(renderAgentCard(null, { t, doc }), null);
-  const minted = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'ftf-agents.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
+  const minted = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({ 'agents.ftf-coordinator.testnet': { get_agent: () => onChainCard() }, 'ftf-seasons.testnet': seasons() }) });
   const node = renderAgentCard(minted, { t, doc });
   assert.equal(node.getAttribute('data-state'), 'minted');
   const s = text(node);
   for (const want of ['Iris · agent card', 'Minted on NEAR testnet · verified', TOKEN, 'lambada_eth.testnet', 'Reading rule: try all starts', 'Words known: 0 of 16', 'Obedient', 'Trusts Moss most (65)', 'Broken links: Ash', 'first word · weight 4', 'gift (Moss) · weight 1', 'call · weight 2: bought by Frost for 13 silk', `shard ${SEASON}-7`, 'the message was a weapon', 'no Heir chosen', 'View on nearblocks', 'not owned by the player yet']) {
     assert.ok(s.includes(want), `card shows "${want}"`);
   }
-  const pre = await loadAgentCard({ obs: JUDGE.obs, deployment: DEPLOY, fetch: fakeRpc({}) });
+  const pre = await loadAgentCard({ obs: JUDGE.obs, deployment: UNDEPLOYED, fetch: fakeRpc({}) });
   const preText = text(renderAgentCard(pre, { t, doc }));
   assert.ok(preText.includes('Not minted yet') && preText.includes('A preview of the card'));
   assert.ok(!preText.includes('View on nearblocks') && !preText.includes('verified'), 'no link, no "verified" before a mint');

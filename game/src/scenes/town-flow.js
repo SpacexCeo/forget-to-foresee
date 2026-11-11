@@ -8,6 +8,7 @@ import { TOWN_ROUTE, inAltarRange } from './town-layout.js';
 import { talkTarget, TALK_LEAVE } from './town-quest.js';
 import { HIRE } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
+import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
 import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createVeil } from '../ui/loading.js';
 
@@ -158,6 +159,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (folkTalk.view === 'guide') {
       // the shrinekeeper is the guide (owner, 11.11): what the tutorial screens used to say, as four short talks
       const last = GUIDE_PAGES - 1, pg = folkTalk.page;
+      const anim = guideAnim(doc, pg + 1); if (anim) kids.push(anim);
       kids.push(el('p', null, T('guide.' + (pg + 1))));
       if (pg < last) row.append(b('quest.next', () => { folkTalk.page++; renderFolk(); }, true));
       row.append(b('quest.close', closeFolk, pg === last));
@@ -406,7 +408,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   }
 
   return {
-    begin, update, reenter, interact, register, walkRoute, cancelRoute, routeWish,
+    begin, update, reenter,
+    get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
     get busy() { return state.phase === 'transition'; },

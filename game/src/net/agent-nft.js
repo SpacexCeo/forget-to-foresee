@@ -12,6 +12,7 @@
 // Rules of the client part (same as near.js): read-only JSON-RPC views, no wallet, no key, no transaction; never a fake
 // success: before the owner deploys and mints, the model says 'not-minted'.
 // Integer arithmetic and ASCII enums only, so the two languages cannot drift.
+import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { sha256 } from '../game/crypto.js';
 import { NEAR_DEPLOYMENT } from './near-deployment.js';
 import { createNearClient } from './near.js';
@@ -265,7 +266,7 @@ export function createAgentNftClient({ contractId = DEFAULT_AGENT_CONTRACT, rpcU
 /** The account id of the agent-card contract for a deployment (an explicit `agentContractId: null` disables it). */
 export function agentContractOf(deployment = NEAR_DEPLOYMENT) {
   if (!deployment) return null;
-  return deployment.agentContractId === undefined ? DEFAULT_AGENT_CONTRACT : deployment.agentContractId;
+  return deployment.agentContractId === undefined ? DAY1_DEPLOYMENT.agents || DEFAULT_AGENT_CONTRACT : deployment.agentContractId;
 }
 
 // RPC answers that mean "there is no such contract or token yet" (the owner has not deployed or minted): not-minted.

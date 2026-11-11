@@ -42,6 +42,8 @@ jobs:
         run: npm run build
         env:
           FTF_BASE: /forget-to-foresee/
+          # Day 1: the limited create_guest key of guests.ftf-coordinator.testnet (contracts/scripts/day1-guest-key.sh)
+          VITE_FTF_GUEST_KEY: ${{ secrets.FTF_GUEST_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: game/dist
