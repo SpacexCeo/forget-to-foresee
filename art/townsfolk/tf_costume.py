@@ -16,6 +16,7 @@ Front is -Y, the person's left is +X; angles around the body are degrees from th
 """
 
 import math
+import os
 import random
 
 import bmesh
@@ -306,8 +307,16 @@ class Ctx:
                 r = p - c
                 u = sm01(L.crotch - 0.05, cz, p.z)
                 want = r_top * (1 - (1 - taper) * u) * sm01(L.crotch, L.crotch - (0.10 if width < 1.1 else 0.22), p.z)
-                if width >= 1.1:                     # gathered into the boot
-                    want *= 1 - 0.40 * sm01(cz + 0.09, cz, p.z)
+                if width >= 1.1 and p.z < cz + 0.10 and r.length > 1e-6:
+                    # gathered into the boot: the full leg closes down onto the shin, just inside the boot shaft (the
+                    # hem sits 3 cm inside the boot; it used to stay full width and poke through it as a flat disc)
+                    g = sm01(cz + 0.10, cz + 0.015, p.z)
+                    want = want * (1 - g) + max(r.length - 0.009, 0.01) * g
+                    q = c + r * (want / r.length)
+                    if q.x * side < 0.004:
+                        q.x = 0.004 * side
+                    v.co = q
+                    continue
                 if 1e-6 < r.length < want:
                     q = c + r * (want / r.length)
                     if q.x * side < 0.004:
@@ -472,7 +481,11 @@ class Ctx:
             b = bmesh.new()
             bones = (f"foot_{sx}", f"toe_{sx}", f"shin_{sx}")
             A = self.bones[f"foot_{sx}"][0]
-            pts_all = [self.co[i] for i in range(len(self.co)) if self.dom[i] in bones and self.co[i].z < h + 0.03]
+            # only this leg's side: near the knees the other shin falls inside the slice and stretched the boot's
+            # top ring toward it (a flat disc at every boot top)
+            side = 1.0 if A.x > 0 else -1.0
+            pts_all = [self.co[i] for i in range(len(self.co)) if self.dom[i] in bones and self.co[i].z < h + 0.03
+                       and self.co[i].x * side > 0.004]
 
             def sup(z0, z1):
                 pts = [(p.x - A.x, p.y - A.y) for p in pts_all if z0 <= p.z <= z1]
@@ -482,13 +495,29 @@ class Ctx:
                         for k in range(n)]
             sole = sup(-1, 0.035)
             zs = [h - (h - 0.03) * r / max(1, int((h - 0.03) / 0.018)) for r in range(max(1, int((h - 0.03) / 0.018)) + 1)] if h > 0.03 else []
-            rows = []
-            last = sole
+            # a slice with too few body points used to fall back to the previous ring, which for the top ring was the
+            # sole outline: a foot-sized flat disc at every boot top. Widen the slice first, then take the nearest
+            # valid ring by height.
+            sec = {}
             for z in zs:
-                hh = sup(z - 0.012, z + 0.012) or last
-                last = hh
+                for wdt in (0.012, 0.022, 0.035):
+                    hh = sup(z - wdt, z + wdt)
+                    if hh:
+                        sec[z] = hh
+                        break
+            rows = []
+            for z in zs:
+                hh = sec.get(z) or (sec[min(sec, key=lambda zz: abs(zz - z))] if sec else sole)
                 cuff = 0.007 if (kind.startswith("boots") and z > h - 0.045) else 0.0   # a turned-down cuff
                 rows.append((z, [x + ease + cuff for x in hh]))
+            # smooth the rings round and up the shaft: the per-slice support of the sparse body points was jagged
+            for _ in range(2):
+                rows = [(z, [0.25 * rr[k - 1] + 0.5 * rr[k] + 0.25 * rr[(k + 1) % n] for k in range(n)]) for z, rr in rows]
+            if len(rows) > 2:
+                rows = [rows[0]] + [(rows[i][0], [0.25 * a + 0.5 * b + 0.25 * c for a, b, c in zip(rows[i - 1][1], rows[i][1], rows[i + 1][1])])
+                                    for i in range(1, len(rows) - 1)] + [rows[-1]]
+            if os.environ.get("TF_SHOE_DEBUG"):
+                print("SHOE", sx, kind, "A", tuple(round(c, 3) for c in A), "x", round(min(p.x for p in pts_all), 3), round(max(p.x for p in pts_all), 3), "y", round(min(p.y for p in pts_all), 3), round(max(p.y for p in pts_all), 3), "h", round(h, 3), [(round(z, 3), round(max(rr), 3), round(min(rr), 3)) for z, rr in rows[:6]], "npts", len(pts_all))
             lip = 0.006 if kind != "sandals" else 0.004
             rows.append((0.016, [x + ease + lip for x in sole]))
             rows.append((0.0, [x + ease + lip for x in sole]))
