@@ -29,6 +29,7 @@ import { ShellBeacons, GoalPointer } from '../render/beacons.js';
 import { warmModel } from '../render/warmup.js';
 import { attachFun, CHAPTER_KEY } from './fun-ui.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
+import { replayLink, replayCommands } from '../net/replay.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
 import { panelArbiterFor } from './panels.js';
@@ -110,6 +111,13 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
   // the phone HUD (docs/ui-mobile-hud.md) draws the Shell selector and the quests sheet from the hub and flies / passes through it
+  // Season replay link (net/replay.js): the seed (public once the season ends, or fixed on the judge link) and the
+  // accepted rules commands; the Biography copies it.
+  if (ui.setReplaySource) ui.setReplaySource(() => {
+    const o = session.obs, ent = o && o.season && o.season.entropy;
+    if (!ent || !ent.seedHex || typeof location === 'undefined') return null;
+    return replayLink(location.href, { seedHex: ent.seedHex, rules: (o.session && o.session.rules) || 'v3', commands: replayCommands(transport.history().body.history) });
+  });
   const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, hub, autoOpenShard: !!options.judge, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle(), onFly: (n) => fly(n), onPass: () => hubUi && hubUi.handleKey('KeyT') } }) : null;
   // living agents (Task N): meeting and contribution beats reach the dialogue strip when they actually happen
   agents.onSay = (l) => { if (worldHud) worldHud.say(l); };
