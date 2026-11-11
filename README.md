@@ -76,7 +76,7 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 | Memory-shard NFTs | **Real on testnet** for the judge season: 3 NEP-171 tokens minted by the coordinator script, not by your session, held by `lambada_eth.testnet`; the game reads them | `ftf-shards.testnet`, `contracts/memory-shard/` |
 | Shards in other playthroughs | **Preview only**, labelled "Unminted shard preview" | `game/src/ui/world-hud/shard-card-model.js` |
 | Agent card NFT (Iris's end-of-season state) | **Real on testnet**, coordinator-minted, owned by the owner's account | `agents.ftf-coordinator.testnet`, `contracts/agent-card/` |
-| Day 1 free mint (player-owned guest account + Elise NFT) | **Contracts deployed; the relayer is live** (a test guest was created and minted through it on 11 Nov). The hosted page uses it once the owner sets the `FTF_RELAYER_URL` Actions variable; until then it says "not connected in this build" | `contracts/guests/`, `relayer/`, `game/src/play/day1-mint.js` |
+| Day 1 free mint (player-owned guest account + Elise NFT) | **Contracts deployed; the relayer is live** (a test guest was created and minted through it on 11 Nov). The hosted page calls it (its public URL is in `game/src/net/day1-deployment.js`; a `VITE_FTF_RELAYER_URL` build variable overrides it); limits: 200 new guests a day, 0.05 testnet NEAR each | `contracts/guests/`, `relayer/`, `game/src/play/day1-mint.js` |
 | Agent track records (a hired agent's trades and PnL, re-computable by anyone) | **Deployed on testnet** (`ledger.ftf-coordinator.testnet`; checked end to end on 11 Nov with a test guest account: the game's recording code signed the record and re-verified it, and `node tools/verify-agent/verify.mjs ledgercheck-5.guests.ftf-coordinator.testnet baker 1` prints PASS): the player's guest account records a hire on the `agent-ledger` contract; the page shows "Verified" only after it re-computes the record read back from the chain; `node tools/verify-agent/verify.mjs` does the same | `contracts/agent-ledger/`, `game/src/game/track-record.js`, [docs/api/verify-agent.md](docs/api/verify-agent.md) |
 | Wallet sign-in, on-chain escrow, player-owned agent NFT, multiplayer | **Not built** | — |
 | Agent HTTP API | **Real**: OpenAPI, idempotent commands, redacted observations, Merkle proofs, an example agent that plays a whole season; in-memory test sessions, no accounts | `server/`, [docs/api/](docs/api/README.md) |
@@ -110,7 +110,7 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 | `game/` | Vite + Three.js client, headless engine, play layer, UI, tests |
 | `server/` | agent HTTP API (`node:http`, no dependencies) |
 | `relayer/` | signs `guests.create_guest` server-side so no key ships to the browser |
-| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account` (Rust, near-sdk 5.30) and deployment records |
+| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account`, `agent-ledger` (Rust, near-sdk 5.30) and deployment records |
 | `scripts/` | `verify-all.sh` (every suite, one table) and `stats.mjs` (writes docs/STATS.md) |
 | `tools/verify/` | one-file proof verifiers (Node and Python) |
 | `prototype-2d/` | the frozen 2D reference prototype the engine is tested against |

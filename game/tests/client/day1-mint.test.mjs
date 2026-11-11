@@ -88,3 +88,10 @@ test('with a relayer: the page holds no guest key, POSTs the player key, and sti
   const liar = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine }, relayerUrl: 'https://relay.example', rpcUrls: ['https://r'], fetch: async (url, init) => (url.includes('/api/') ? { ok: true, status: 200, json: async () => ({}) } : fakeRpc({ guestSeq: [null], calls: [] })(url, init)) });
   await liar.mint('Cy'); assert.equal(liar.phase, 'failed');
 });
+
+test('day1 mint: the deployment record carries the public relayer URL, so the hosted page mints without a build variable', async () => {
+  const { DAY1_DEPLOYMENT } = await import('../../src/net/day1-deployment.js');
+  assert.match(DAY1_DEPLOYMENT.relayer, /^https:\/\//);
+  const m = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine, relayer: 'https://relay.example' }, guestSecret: undefined, fetch: async () => { throw new Error('offline'); } });
+  assert.equal(m.available, true);
+});
