@@ -64,7 +64,7 @@ FLAT = {  # blockout colours (linear) standing in for the tiling base colour
     "foliage": (0.20, 0.32, 0.10), "altar_stone": (0.40, 0.38, 0.34),
 }
 MAT_NAME = {"altar_stone": "M_Altar_Stone", "altar_core": "M_Altar_Core", "altar_metal": "M_Altar_Metal"}
-SHADE_ANGLE = {"foliage": 80, "sky": 50, "pearl": 42}
+SHADE_ANGLE = {"foliage": 80, "flower": 80, "sky": 50, "pearl": 42}
 
 
 def log(*a):
@@ -237,6 +237,8 @@ def make_materials():
                                          vertex_color=True, double_sided=(key in ("foliage", "cloth")))
         else:
             mats[key] = vc_material(name, FLAT[key], double_sided=(key in ("foliage", "cloth")))
+    # wildflower heads: no texture, the vertex colour is the petal; the name keeps them in the foliage wind
+    mats["flower"] = vc_material("M_Town_Foliage_Flower", (1.0, 1.0, 1.0), rough=0.8, double_sided=True)
     mats["glass"] = ftf.simple_material("M_Town_Glass", (0.035, 0.05, 0.06), 0.12, metal=0.0)
     mats["glass_lit"] = ftf.simple_material("M_Town_GlassLit", (0.55, 0.36, 0.14), 0.4, emit=(1.0, 0.62, 0.24), emit_strength=0.9)
     mats["lamp"] = ftf.simple_material("M_Town_Lamp", (1.0, 0.72, 0.38), 0.4, emit=(1.0, 0.62, 0.26), emit_strength=1.6)
@@ -277,7 +279,7 @@ def make_materials():
 
 def color_fn_for(piece, mat):
     """Cheap grounding: vertical faces darken toward the ground they stand on, undersides darken."""
-    if mat in ("sky", "pearl", "foliage", "lamp", "glass", "glass_lit", "altar_metal", "altar_eye", "water", "window_day", "shard", "shard_amber", "ink", "fire", "bronze", "iron", "ceramic", "paper", "wax", "case_glass") or piece.startswith("town_shop_") or mat.startswith(("altar_glyph", "altar_core")) or piece == "town_sky":
+    if mat in ("sky", "pearl", "foliage", "flower", "lamp", "glass", "glass_lit", "altar_metal", "altar_eye", "water", "window_day", "shard", "shard_amber", "ink", "fire", "bronze", "iron", "ceramic", "paper", "wax", "case_glass") or piece.startswith("town_shop_") or mat.startswith(("altar_glyph", "altar_core")) or piece == "town_sky":
         return None
     px, py, pz = PIVOT[piece]
     terrain = piece == "town_terrain"
