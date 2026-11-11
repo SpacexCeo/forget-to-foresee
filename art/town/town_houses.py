@@ -130,9 +130,12 @@ def _door(tb, cx, w, h, rr, col=TIMBER, arch=False):
 def _lantern(tb, x, y, name):
     tb.beam("timber", (x, y, 0.0), (x, y, 0.62), 0.07, 0.07, TIMBER)
     tb.beam("timber", (x, y - 0.42, 0.06), (x, y - 0.02, 0.5), 0.05, 0.05, TIMBER)
-    tb.box("stone", (x, y - 0.12, 0.55), (0.26, 0.05, 0.26), (0.2, 0.19, 0.18))
-    tb.box("lamp", (x, y - 0.33, 0.55), (0.2, 0.34, 0.2), (1, 1, 1))
-    tb.box("stone", (x, y - 0.52, 0.55), (0.24, 0.05, 0.24), (0.2, 0.19, 0.18))
+    # the lantern head hangs from a hook at the arm's end and swings as a rigid node (town-v2 handoff)
+    with tb.swing(name.replace("socket_", ""), (x, y - 0.04, 0.55), length=0.29):
+        tb.beam("stone", (x, y - 0.04, 0.55), (x, y - 0.1, 0.55), 0.025, 0.025, (0.16, 0.15, 0.15))
+        tb.box("stone", (x, y - 0.12, 0.55), (0.26, 0.05, 0.26), (0.2, 0.19, 0.18))
+        tb.box("lamp", (x, y - 0.33, 0.55), (0.2, 0.34, 0.2), (1, 1, 1))
+        tb.box("stone", (x, y - 0.52, 0.55), (0.24, 0.05, 0.24), (0.2, 0.19, 0.18))
     tb.socket(name, (x, y - 0.33, 0.55))
 
 
@@ -201,7 +204,10 @@ def shop_sign(tb, x, y, icon):
     """A hanging sign on an iron bracket: a round board with an icon in relief, no text."""
     tb.beam("stone", (x, y, 0.0), (x, y, 1.15), 0.06, 0.06, (0.16, 0.15, 0.15))
     tb.beam("stone", (x, y - 0.5, 0.05), (x, y - 0.04, 0.6), 0.04, 0.04, (0.16, 0.15, 0.15))
-    with tb.at(T(x, y - 0.62, 0.86), RY(90)):
+    # the board hangs on two short chains from the bracket and swings about the bracket bar (town-v2 handoff)
+    with tb.swing("sign_" + icon, (x, y - 0.03, 0.86), hinge=(0, 0, 1), length=0.59), tb.at(T(x, y - 0.62, 0.86), RY(90)):
+        for cz in (-0.26, 0.26):
+            tb.beam("stone", (cz, 0.59, 0.0), (cz, 0.44, 0.0), 0.018, 0.018, (0.16, 0.15, 0.15))
         tb.ring("altar_metal", (0, 0, 0), 0.46, 0.4, 0.07, 20, (1, 1, 1))
         tb.poly("timber", [(math.cos(math.tau * i / 20) * 0.4, math.sin(math.tau * i / 20) * 0.4, 0.02) for i in range(20)], TIMBER)
         tb.poly("timber", [(math.cos(math.tau * i / 20) * 0.4, math.sin(math.tau * i / 20) * 0.4, -0.02) for i in range(19, -1, -1)], TIMBER)
@@ -392,9 +398,11 @@ def lamp_post(tb, x, z, y, name, h=3.3):
     tb.beam("timber", (x, y + h - 0.08, z), (x + 0.6, y + h - 0.08, z), 0.07, 0.07, TIMBER)
     tb.beam("timber", (x + 0.08, y + h - 0.5, z), (x + 0.45, y + h - 0.1, z), 0.05, 0.05, TIMBER)
     lx = x + 0.55
-    tb.box("stone", (lx, y + h - 0.2, z), (0.28, 0.05, 0.28), (0.2, 0.19, 0.18))
-    tb.box("lamp", (lx, y + h - 0.42, z), (0.22, 0.38, 0.22), (1, 1, 1))
-    tb.box("stone", (lx, y + h - 0.63, z), (0.26, 0.05, 0.26), (0.2, 0.19, 0.18))
+    with tb.swing(name.replace("socket_", ""), (lx, y + h - 0.12, z), length=0.3):
+        tb.beam("stone", (lx, y + h - 0.12, z), (lx, y + h - 0.18, z), 0.025, 0.025, (0.16, 0.15, 0.15))
+        tb.box("stone", (lx, y + h - 0.2, z), (0.28, 0.05, 0.28), (0.2, 0.19, 0.18))
+        tb.box("lamp", (lx, y + h - 0.42, z), (0.22, 0.38, 0.22), (1, 1, 1))
+        tb.box("stone", (lx, y + h - 0.63, z), (0.26, 0.05, 0.26), (0.2, 0.19, 0.18))
     tb.col_cyl((x, y, z), 0.2, 2.2, 6)
     tb.socket(name, (lx, y + h - 0.42, z))
 
