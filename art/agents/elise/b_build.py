@@ -124,6 +124,7 @@ for f, p in zip(bf, bpart[bf].max(1)):
     try: fc = bm.faces.new([vs[i] for i in f])
     except ValueError: continue
     fc[LP] = {2: 4, 3: 5}.get(int(p), 0)
+bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[LP] == 4 and min(v.co.z for v in f.verts) > 0.15], context='FACES')   # the left leg above the ankle is rebuilt clean below (the generated shell was tangled)
 shell = [f for f in bm.faces if f[LP] == 0]
 bmesh.ops.bisect_plane(bm, geom=shell + list({e for f in shell for e in f.edges}) + list({v for f in shell for v in f.verts}), dist=1e-5,
                        plane_co=(0, 0, Z.ZJ), plane_no=(0, 0, 1), clear_inner=True, clear_outer=False)
@@ -135,8 +136,20 @@ zone = [(v, w) for v, w in zone if w > 0]
 for _ in range(10):
     new = [v.co.lerp(sum((e.other_vert(v).co for e in v.link_edges), Vector()) / len(v.link_edges), 0.6 * w) for v, w in zone]
     for (v, w), c in zip(zone, new): v.co = c
+# the generated legs: consistent outward faces and the small holes of the decimated shell closed (they showed as black slivers)
+for pid in (4, 5):
+    lf = [f for f in bm.faces if f[LP] == pid]; bmesh.ops.recalc_face_normals(bm, faces=lf)
+    sd_ = 'L' if pid == 4 else 'R'; inw = 0; hi_ = [f for f in lf if f.calc_center_median().z > 0.2]
+    for f in hi_:
+        c = f.calc_center_median(); ax, ay, ar = Z.leg_axis(P, sd_, c.z); inw += f.normal.x * (c.x - float(ax)) + f.normal.y * (c.y - float(ay)) < 0
+    if inw > len(hi_) / 2: bmesh.ops.reverse_faces(bm, faces=lf); print('leg', pid, 'was inside out, reversed')        # an open shell: recalc may pick either side
+    be = [e for e in bm.edges if e.is_boundary and all(f[LP] == pid for f in e.link_faces)]
+    new = bmesh.ops.holes_fill(bm, edges=be, sides=10)['faces']
+    for f in new: f[LP] = pid
+    print('leg', pid, 'faces', len(lf), 'holes filled with', len(new), 'faces')
 bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.verts.index_update()
 bv = np.array([v.co[:] for v in bm.verts]); bf = np.array([[v.index for v in f.verts] for f in bm.faces]); bfp = np.array([f[LP] for f in bm.faces]); bm.free()
+nohull = np.zeros(len(bf), np.int32)
 vleg = np.zeros(len(bv), int); vleg[bf[bfp == 4].ravel()] = 4; vleg[bf[bfp == 5].ravel()] = 5
 print('shell', len(bv), 'verts', np.bincount(bfp).tolist(), 'faces by part; lacing zone verts smoothed', len(zone))
 ENV = Z.envelope(np.load(WD + '/body_hi_pts.npy').astype(float), bv[(vleg >= 4) & (bv[:, 2] > 0.1)], bv[(vleg == 0) & (bv[:, 2] < 0.82)]); renv = lambda th, z: Z.env_at(ENV, th, z)
@@ -161,21 +174,24 @@ inn = {}
 for j in range(NV + 1):
     for i in range(NU + 1):
         if j >= NV - 1 or i <= 1 or i >= NU - 1:
-            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.004 * rad))
+            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.003 * rad))
 rim = [(gi[NV, i], gi[NV, i + 1]) for i in range(NU)] + [(gi[j + 1, 0], gi[j, 0]) for j in range(NV)] + [(gi[j, NU], gi[j + 1, NU]) for j in range(NV)]
 LF += [(a_, b_, inn[b_], inn[a_]) for a_, b_ in rim]
 LF += [(inn[gi[j, i]], inn[gi[j, i + 1]], inn[gi[j + 1, i + 1]], inn[gi[j + 1, i]]) for j in range(NV) for i in range(NU) if j == NV - 1 or i == 0 or i == NU - 1]
 LV = np.array(LV); objs['loft'] = make_obj('elise_gown', LV, LF); recalc(objs['loft']); outward(objs['loft'], LV)
-# the left thigh continues up behind the laced opening (the generated leg stops at 0.70)
-TV, TF = [], []; NS = 16; tz = [0.66, 0.70, 0.735, 0.77, 0.80, 0.835]
+# the left leg from the ankle to the hip: clean rings on the measured axis and radius (parts.json), up behind the laced opening
+TV, TF = [], []; NS = 16; tz = [0.13] + [round(v, 3) for v in np.arange(0.16, 0.70, 0.03)] + [0.70, 0.735, 0.77, 0.80, 0.835]
 for k, z in enumerate(tz):
-    ax, ay, ar = (float(v) for v in Z.leg_axis(P, 'L', z)); ar *= 1.04 - 0.04 * min(1, max(0, (z - 0.70) / 0.07)); t1, t2 = Z.slit(z)   # the lower rings sleeve the ragged top of the generated leg
+    ax, ay, ar = (float(v) for v in Z.leg_axis(P, 'L', z)); ar *= 1.04 - 0.04 * min(1, max(0, (z - 0.13) / 0.06)); t1, t2 = Z.slit(z)   # the lowest rings sleeve the generated ankle
     for i in range(NS):
         t = 2 * math.pi * i / NS; p = np.array([ax + ar * math.sin(t), ay - ar * math.cos(t)]); r = math.hypot(*p); th = float(Z.ang(p[0], p[1])); rm = float(renv(th, z)) - 0.012
-        if r > rm and not (t1 - 10 < th < t2 + 10): p *= rm / r          # kept under the cloth, free where the slit shows it
+        if r > rm: p *= 1 + (rm / r - 1) * min(1.0, max(0.0, (max(t1 - th, th - t2) + 5) / 8))      # kept under the cloth, free where the slit shows it, eased between
         TV.append((p[0], p[1], z))
     if k: TF += [((k - 1) * NS + i, (k - 1) * NS + (i + 1) % NS, k * NS + (i + 1) % NS, k * NS + i) for i in range(NS)]
 TV = np.array(TV); objs['thigh'] = make_obj('elise_thigh', TV, TF); recalc(objs['thigh'])
+tm_ = objs['thigh'].data; tc_ = TV[:, :2].mean(0)            # wind the tube away from its own axis (recalc may pick either side on an open tube)
+if sum(1 for p in tm_.polygons if p.normal.x * (p.center.x - tc_[0]) + p.normal.y * (p.center.y - tc_[1]) < 0) > len(tm_.polygons) / 2:
+    b_ = bmesh.new(); b_.from_mesh(tm_); bmesh.ops.reverse_faces(b_, faces=b_.faces[:]); b_.to_mesh(tm_); b_.free(); print('thigh tube flipped')
 # face patches: grids laid on the face skin (found from the front, behind the fringe)
 bvh = BVHTree.FromPolygons([tuple(map(float, v)) for v in hv], [tuple(map(int, f)) for f in hf])
 def face_y(x, z):
@@ -304,7 +320,8 @@ lock = (tor & (z < 0.87)) | ~shm
 W = smooth_w(W, bf, n, 3, lock)
 set_weights(objs['body'], W)
 set_weights(objs['loft'], Z.skirt_weights(LV[:, 0], LV[:, 1], LV[:, 2]))
-wt = Z.sstep((0.93 - TV[:, 2]) / 0.25); set_weights(objs['thigh'], {'thigh_L': wt, 'pelvis': 1 - wt})
+tz_ = TV[:, 2]; wt = Z.sstep((0.93 - tz_) / 0.25); tk_ = Z.sstep((tz_ - (KZ - 0.06)) / 0.12); ta_ = ramp(tz_, 0.085, 0.135)
+set_weights(objs['thigh'], {'thigh_L': wt * tk_, 'pelvis': (1 - wt) * tk_, 'shin_L': (1 - tk_) * ta_, 'foot_L': (1 - tk_) * (1 - ta_)})
 set_weights(objs['patch'], {'head': np.ones(len(PV))})
 # ---------------- join, modifiers, UV
 part_id = {'body': 0, 'head': 1, 'handL': 2, 'handR': 2, 'ribbonL': 3, 'ribbonR': 3, 'loft': 6, 'thigh': 4, 'patch': 0}
@@ -313,6 +330,7 @@ for k, o in objs.items():
     if k == 'body': pv[:] = bfp
     if k == 'patch': pv[:] = PP
     at.data.foreach_set('value', pv)
+    nh = o.data.attributes.new('nohull', 'INT', 'FACE'); nh.data.foreach_set('value', nohull if k == 'body' else np.zeros(len(o.data.polygons), np.int32))
     for p in o.data.polygons: p.use_smooth = True
 bpy.ops.object.select_all(action='DESELECT')
 for o in objs.values(): o.select_set(True)
