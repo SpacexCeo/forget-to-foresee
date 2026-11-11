@@ -167,15 +167,16 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       kids.push(el('p', null, T('hire.back')));
       row.append(b('hire.seeResult', () => { folkTalk.view = 'result'; const r = ledger.collect(npc); if (r.ok) { folkTalk.result = r.result; if (onHireChange) onHireChange(npc, false); } else folkTalk.view = 'card'; renderFolk(); renderText(); renderVisibility(); }, true), b('quest.close', closeFolk));
     } else if (h) {
-      kids.push(el('p', null, T('hire.working', { s: Math.max(1, Math.ceil((h.endsAt - Date.now()) / 1000)) })));
+      kids.push(el('p', null, T('hire.working', { s: Math.max(1, Math.ceil((h.endsAt - Date.now()) / 1000)) })), el('p', 'ftf-local', T('open.line', { name: T('folk.name.' + npc), done: h.done, total: h.rounds, u: (h.unrealised / 100).toFixed(2) })));
       row.append(b('quest.close', closeFolk, true));
     } else {
       const temp = ledger.temperamentOf ? ledger.temperamentOf(npc) : null;
+      const ag = ledger.agent(npc);
       kids.push(el('p', null, T('hire.greet')));
       const dl = el('dl');
       dl.append(el('dt', null, T('hire.card.temperament')), el('dd', null, T('hire.temp.' + (temp || 'steady'))),
-        el('dt', null, T('hire.card.terms')), el('dd', null, T('hire.card.termsLine', { price: HIRE.price, rounds: HIRE.rounds, seconds: HIRE.rounds * HIRE.roundSeconds })),
-        el('dt', null, T('hire.card.return')), el('dd', null, T('hire.card.returnLine')),
+        el('dt', null, T('hire.card.terms')), el('dd', null, T('hire.card.termsLine', { price: ag.price, rounds: HIRE.rounds, seconds: HIRE.rounds * HIRE.roundSeconds })),
+        el('dt', null, T('hire.card.return')), el('dd', null, ag.measured == null ? T('hire.card.returnLine') : T('hire.card.measured', { pct: (ag.measured * 100).toFixed(1), n: ag.recent.length, exp: ag.experience })),
         el('dt', null, T('hire.card.purse')), el('dd', null, (ledger.silk / 100).toFixed(2)));
       kids.push(dl);
       const why = ledger.canHire(npc);
