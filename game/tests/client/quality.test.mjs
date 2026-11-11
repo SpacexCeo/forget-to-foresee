@@ -1,7 +1,7 @@
 // Quality tiers and the phone profile (docs/mobile.md): pure functions, no WebGL.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { QUALITY, PHONE_QUALITY, TIERS, PROFILES, GOVERNORS, qualityFor, detectTier, detectProfile, lowerTier, tierForPreference, TierGovernor } from '../../src/render/quality.js';
+import { QUALITY, PHONE_QUALITY, TIERS, PROFILES, GOVERNORS, qualityFor, detectTier, detectProfile, lowerTier, tierForPreference, TierGovernor, governorFloor } from '../../src/render/quality.js';
 
 test('desktop tiers keep their knobs (the phone profile never changes them)', () => {
   assert.deepEqual(TIERS, ['ultra', 'high', 'low']);
@@ -123,4 +123,19 @@ test('phone governor: 30 fps budget, a tier step after three bad seconds, then t
   const late = new TierGovernor(g);
   run(late, 'high', 20, Math.ceil(g.windowEnd * 1000 / 20) + 1);
   assert.deepEqual(run(late, 'high', 60, 500).changes, [], 'after windowEnd the governor no longer judges');
+});
+
+test('the governor keeps a minimum-spec desktop on high (the look-dev stack never drops on its own)', () => {
+  assert.equal(governorFloor('high', 'desktop'), 'high');
+  assert.equal(governorFloor('ultra', 'desktop'), 'high');
+  assert.equal(governorFloor('low', 'desktop'), null);
+  assert.equal(governorFloor('high', 'phone'), null);
+  const gov = new TierGovernor({ ...GOVERNORS.desktop, floor: 'high' });
+  let tier = 'ultra';
+  for (let i = 0; i < 3000; i++) { const c = gov.step(40, tier); if (c?.tier) tier = c.tier; }
+  assert.equal(tier, 'high', 'slow frames step ultra to high and stop there');
+  const free = new TierGovernor(GOVERNORS.desktop);
+  tier = 'high';
+  for (let i = 0; i < 3000; i++) { const c = free.step(40, tier); if (c?.tier) tier = c.tier; }
+  assert.equal(tier, 'low', 'without a floor the old behaviour holds');
 });

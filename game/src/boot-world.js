@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
-import { detectTier } from './render/quality.js';
+import { detectTier, tierForPreference } from './render/quality.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo } from './physics/character.js';
@@ -92,10 +92,13 @@ function updateIrisStandIn() {
 }
 updateIrisStandIn();
 player.smooth = true; // the locomotion model: speed-dependent acceleration, braking, turn rate (docs/movement.md)
+// The settings' Quality (ui/prefs.js: auto | high | low) drives the 3D tier; only 'auto' lets the frame-time governor step it down.
+const qualityPref = (ctx.prefs && ctx.prefs.get().quality) || 'auto';
 const lookdev = new LookDev({
   renderer, scene, camera,
   cloudLevel: world3d.cloudLevel, grassPatches: world3d.grassPatches, lanterns: world3d.lanterns,
-  tier: params.get('tier') || detectedTier, autoTier: !params.has('tier'), preset: params.get('tod') || undefined,
+  tier: params.get('tier') || (qualityPref === 'auto' ? detectedTier : tierForPreference(qualityPref, detectedTier)),
+  autoTier: !params.has('tier') && qualityPref === 'auto', detectedTier, preset: params.get('tod') || undefined,
   reducedMotion: params.get('motion') === 'reduce' || systemReduced,
 });
 // Streamed models warm up on the GPU before they replace their greybox (render/warmup.js, docs/smoothness.md):
@@ -125,6 +128,16 @@ const toastEl = document.getElementById('toast');
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
+if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
+  let lastPref = qualityPref;
+  ctx.prefs.subscribe(() => {
+    const pref = ctx.prefs.get().quality || 'auto';
+    if (pref === lastPref) return;
+    lastPref = pref;
+    if (pref !== 'auto') lookdev.governor = null;
+    lookdev.setQuality(pref === 'auto' ? detectedTier : tierForPreference(pref, detectedTier));
+  });
+}
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, entering = null, season = null, entered = false;
 // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
