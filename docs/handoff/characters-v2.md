@@ -57,7 +57,40 @@ against `vite preview`. Everything needed to rebuild is in git except MPFB 2.0.1
 
 ## 2. Animation (mocap pipeline, Iris clips, side-cars)
 
-Not started.
+State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.md`.
+
+**Done**
+- Iris side-car `game/public/assets/anim/iris.glb`: `idle` and `idle2` (6 s, weight shift, arms along the body),
+  `walk` 1.7 m/s, `run` 3.3 m/s, `register` (right hand to the altar ring; cued by `town-flow.js` through
+  `onRegister` in `boot-world.js`), `greet`. Default in the game; `?anim=classic` opts out. The wink (`understand`)
+  still comes from the model's own clip.
+- Run-time start / stop / turn: `gait.js: FootPlant` (body follows the heading at 320°/s, feet planted in the world,
+  steps one foot at a time, two-bone IK) on top of `GaitLayer` (stride starts at the passing pose).
+- Shared townsfolk clips `game/public/assets/anim/townsfolk.glb` (16: idle, idle_shift, idle_look, walk, elder_walk,
+  child_run, carry, talk, talk_b, wave, salute, nod, sit, sweep, play, counter) and the loader
+  `anim-library.js: townsfolkClips(model, { body, key })` with body types (`BODY_STYLE`: adult, elder, child, guard).
+  Checked on child_a, elder, guard, baker, sweeper, musician, innkeeper, courier in the review page.
+- Layers on the mocap base (`art/anim/ftfanim/layers.py`), take pickers, `capture.mjs --from/--to`, `ingame.mjs`.
+- Captures: `docs/art/qa/anim/chars-v2/`.
+
+**Half-done / open**
+- `game/src/play/townsfolk.js` (townsfolk worker's file) still loads the shared clips with `sidecarClips` (not
+  retargeted): it has to call `townsfolkClips(model, { key, body })` in `setModel` before the mixer and take the
+  walking speed from `clip.userData.speed`. Until then the townsfolk play their own clips or wrong-scaled ones.
+- `idle2` is in the file but nothing plays it yet (an idle picker in `iris-avatar.js` would alternate it).
+- `play` is violin bowing; the musician carries a lute. A plucked-instrument loop would need another take
+  (CMU has no lute or guitar; 79_17 / 80_36 are violin, 80_13 drums).
+- Clan agents still use their procedural clips (no side-cars); the same build makes them: add a character to
+  `art/anim/clips.json` and to `SIDECAR` in `anim-library.js`.
+- If `agent_iris.glb` is rebuilt with other bone names or another rest pose: `python3 art/anim/build_clips.py
+  --char iris` (and `--char townsfolk`, whose reference skeleton is hers), then the captures.
+
+**How to resume**
+1. `python3 art/anim/fetch_mocap.py` (takes into `art/anim/src/`, git-ignored), `python3 art/anim/build_clips.py
+   --char iris|townsfolk` (seconds, numpy only).
+2. Review: `cd game && npx vite --port 5199`, then `node art/anim/capture.mjs --out <dir> --name x --query
+   "a=agent_iris&aclips=/assets/anim/iris.glb&scenario=loco"`; in the game: `node art/anim/ingame.mjs --out <dir>`.
+   On the GPU server the tree was `/root/w/chars/anim/ftf` (vite on port 5299); nothing lives only there.
 
 ## 3. Townsfolk (13 people, clips, behaviour in the town)
 
