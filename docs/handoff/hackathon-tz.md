@@ -15,7 +15,9 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
   (`tests/client/readback.test.mjs`, `docs/smoothness.md`).
 
 ## Next
-- Walk `/?demo=judge` and `&mode=walk` end to end on the GPU once more before calling P0 done (README judge table).
+- P0 walked end to end on the RTX 5090 (`/root/w/tz/judge.cjs`, 11.11): town -> altar -> island -> Shell I first frame is the
+  real hall, stake, leave, Controls opens in 14 ms; the only ReadPixels warnings are the two cached sky-LUT reads at boot.
+  README judge row 1 now describes the town start.
 - **P1-C** honest shard card for every player, **P1-A** hitch-proof stairs + `KeyW`/`ц` test, **P1-B** town quest
   (spec sections). Update the PR #34 checklist as tasks land; report to the lead when P0 and P1 are done.
 
