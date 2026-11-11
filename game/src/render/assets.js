@@ -169,6 +169,14 @@ export async function fetchGltf(name, { onProgress } = {}) {
   return { gltf, bytes: buffer.byteLength };
 }
 
+/** A .glb by URL under the page's base (items, props), through the same loader and mirror as the models. */
+export async function fetchGltfUrl(url) {
+  const res = await mirrorFetch.fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  return loader().parseAsync(buffer, url.slice(0, url.split('?')[0].lastIndexOf('/') + 1));
+}
+
 /** Whether the build ships a model file for this name (any variant falls back to the base file). */
 export function hasModelFile(name) { return !!MODEL_FILES[name]; }
 

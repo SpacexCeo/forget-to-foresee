@@ -43,6 +43,7 @@ import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
 import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE, TOWN_ROUTE } from './scenes/town-layout.js';
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
+import { createTownProps } from './scenes/town-props.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -177,7 +178,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null;
+let fogCards = null, townShops = null, townProps = null;
 let town = null, townFlow = null, townCasting = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -219,7 +220,9 @@ if (townMode.town) {
     ...TOWN_SHOPS.filter((s) => ['exchange', 'scribe', 'inn'].includes(s.id)).map((s) => ({ id: s.id, near: (pos) => { const d = shopDoorAt(pos); return !!d && d.id === s.id; } })),
     { id: 'board', near: spotAt(TOWN_SPOTS.board, 2.2) },
     { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
+    { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
+  townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
   const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
     const wrap = document.createElement('div');
@@ -239,7 +242,7 @@ if (townMode.town) {
   }).catch((e) => console.warn('[town] mirror', e));
   townFlow = createTownFlow({
     spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
-    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; },
+    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; }, onWheel: () => openProfileFor(null, 'wheel'),
     quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
@@ -707,6 +710,7 @@ function frame() {
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
+    if (townProps) townProps.update(dt, lookdev.reducedMotion);
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);
@@ -758,6 +762,7 @@ window.__ftf = {
     register: () => townFlow.register(), walkRoute: () => townFlow.walkRoute(), status: () => town.status(),
     get casting() { return townCasting; }, // the field beyond the walls (QA: aimAt, release)
     get shops() { return townShops; }, // walk-in shops (QA: enter('exchange'), leave())
+    get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
   } : null,
 };
 requestAnimationFrame(frame);

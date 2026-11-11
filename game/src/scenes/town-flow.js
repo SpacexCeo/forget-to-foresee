@@ -77,7 +77,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -410,6 +410,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if ((quest && quest.talk) || folkTalk || spotPanel) return Promise.resolve(false); // the talk's own buttons answer
     if (spotNear && !talkNpc) {
       if (spotNear.id === 'mirror') { if (onMirror) onMirror(); return Promise.resolve(false); }
+      if (spotNear.id === 'wheel') { if (onWheel) onWheel(); return Promise.resolve(false); }
       if (onDoor && DOORS.has(spotNear.id) && onDoor(spotNear.id)) return Promise.resolve(false); // walk into the shop (scenes/town-shops.js)
       spotPanel = spotNear.id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled])'); if (b && b.focus) b.focus(); return Promise.resolve(false);
     }

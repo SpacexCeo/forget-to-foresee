@@ -40,3 +40,16 @@ test('swing: tilts with the wind, bounded, still under reduced motion', () => {
   set.update(1, true); assert.ok(sign.quaternion.equals(new THREE.Quaternion()), 'reduced motion: at rest');
   set.set('h15', null); assert.equal(set.count, 0);
 });
+
+test('props: the board beside the Exchange door, the wheel beside the Inn door, facing the street; E at the wheel opens it', async () => {
+  const { besideDoor, BOARD_SPOT, WHEEL_SPOT } = await import('../../src/scenes/town-props.js');
+  const door = { position: [10, 0, 0], heading: Math.PI / 2 }; // walking in faces +X
+  const at = besideDoor(door, 1, 2);
+  assert.ok(Math.abs(at.position[0] - 9) < 1e-9, 'out of the door, into the street');
+  assert.ok(Math.abs(Math.abs(at.position[2]) - 2) < 1e-9, 'along the house front');
+  assert.ok(Math.abs(at.heading - (Math.PI / 2 + Math.PI)) < 1e-9, 'facing the street');
+  assert.equal(BOARD_SPOT.shop, 'exchange'); assert.equal(WHEEL_SPOT.shop, 'inn');
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /onWheel: \(\) => openProfileFor\(null, 'wheel'\)/);
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok(PLAY_MESSAGES[loc]['spot.wheel'], loc);
+});
