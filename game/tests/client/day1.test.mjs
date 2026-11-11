@@ -9,7 +9,7 @@ const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), '
 
 test('every Day 1 string exists in all five locales; the mint states never claim a mint they did not see', () => {
   const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('day1.'));
-  assert.ok(keys.length >= 40);
+  assert.ok(keys.length >= 39);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
   assert.match(PLAY_MESSAGES.en['day1.mint.failed'], /^Unminted preview/);
   assert.match(PLAY_MESSAGES.en['day1.mint.unavailable'], /^Unminted preview/);
@@ -22,7 +22,8 @@ test('plan and wiring: first visit, not on ?demo=judge unless &day1=1, ?day1=0 s
   assert.match(boot, /if \(q === '0'\) return false;\n\s+if \(q === '1'\) return true;\n\s+return !judge && !loadDay1\(ctx\.storage\)\.claimed;/);
   assert.match(boot, /if \(input\.hit\('KeyK'\) && \(townOn \|\| playOn\)\) toggleSkin\(\);/);
   assert.match(boot, /day1Mint\.setRecord\(\{ skin: next \}\)/);
-  assert.match(boot, /if \(loadDay1\(ctx\.storage\)\.skin === 'elise'\) applySkin\('elise'\);/, 'the skin is restored on the next visit');
+  assert.match(boot, /heroById\(loadDay1\(ctx\.storage\)\.skin === 'elise' \? 'elise' : 'iris'\)/, 'the skin is restored on the next visit');
+  assert.match(boot, /irisAvatar\.setHero\(avatar, heroById\(next\)\)/, 'K swaps in the heroine\'s own model');
   assert.match(boot, /ctx\.i18n\.t\('day1\.altar\.timer'\) \+ ' · ' \+ ctx\.i18n\.t\('day1\.altar\.open'\)/);
   assert.match(readFileSync(new URL('../../src/ui/input.js', import.meta.url), 'utf8'), /'KeyK'/);
   // the hints come in the owner's order

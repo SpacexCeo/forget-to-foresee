@@ -227,8 +227,15 @@ the feet moved by FootPlant at run time, and the thigh above 0.66 m (see "Capsul
   phone model 23 042 tris load with all 11 clips; walk, run, stairs up/down look right, no poke-through in the frames
   (`wip/v2_ingame_frames.jpg`, `wip/v2_ingame_phone.jpg`, video `elise_ingame.mp4`). `npm test` 703 pass, 0 fail.
 - New turnaround sheet `elise_sheet.jpg` (v2 model, new clips).
-- Known: the face strands of hair swing across the face in the walk (sheet WALK 0/4 and 2/4, also in the video): the
-  strand chains need a stiffer hold or a face collider (`STRIPS` in `skirt.py`).
+- Face strands held firmly in the bake (`STRIPS` in `skirt.py`): they no longer swing across her face (tip deviation
+  in walk/run 0.21 m -> 0.05 m); clips, bake, sheet and video rebuilt with it.
+- **Day 1 skin is Elise herself** (`IrisAvatar.setHero`, `boot-world.js`): K swaps Iris for Elise's own model, clips and
+  cel shading, the choice persists (the next visit starts as her and downloads only her file). Checked in the real game
+  by `art/agents/elise/skin_check.mjs`: Iris -> K -> Elise (49 130 tris, toon, 11 clips) -> reload -> Elise, no page
+  errors (`wip/v2_skin_toggle.jpg`).
+- Character card rendered from the final model: `game/public/assets/cards/elise_model.webp` (named, 600x900) and
+  `assets/nft/elise_model.webp` (token, 1200x1800), by `v2/card.py` + `v2/card_compose.py`. NOT wired: the painted
+  NFT-001 card stays in the game until the owner chooses.
 
 ### HANDOVER (11.11.2026, 22:15 Kyiv): state for the next executor of pass 4
 

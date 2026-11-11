@@ -30,7 +30,7 @@ import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/stream
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
-import { ASSETS } from './render/asset-catalog.js';
+import { ASSETS, heroById } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
@@ -81,9 +81,12 @@ if (import.meta.env.DEV && params.get('shells') === 'r2') setModelOverrides({ sh
 if (params.get('tex') === 'm' || (params.get('tex') !== 'full' && (mobileDevice || (params.get('tier') || detectedTier) === 'low'))) setModelVariant('_m');
 // QA-030: the heroine streams before the camps and props, and her greybox capsule stays hidden while her model is
 // on its way (shown only without a file, after a failure, or after IRIS_STANDIN_AFTER seconds).
-const irisLoad = { hasModel: hasModelFile('agent_iris'), fetched: false, loaded: false, failed: false, t0: performance.now() };
+// The heroine she starts as: `?hero=<id>`, else the Day 1 skin the player chose last time (K switches it).
+const startHero = params.get('hero') ? heroById(params.get('hero')) : heroById(loadDay1(ctx.storage).skin === 'elise' ? 'elise' : 'iris');
+const heroModel = hasModelFile(startHero.model) ? startHero.model : 'agent_iris';
+const irisLoad = { hasModel: hasModelFile(heroModel), fetched: false, loaded: false, failed: false, t0: performance.now() };
 // The same file play/iris-avatar.js irisModelFile() picks: the phone variant when the build ships it.
-const irisFile = getModelVariant() && hasModelFile('agent_iris' + getModelVariant()) ? 'agent_iris' + getModelVariant() : 'agent_iris';
+const irisFile = getModelVariant() && hasModelFile(heroModel + getModelVariant()) ? heroModel + getModelVariant() : heroModel;
 // A failed download is retried (a slow or lossy link); players never see the greybox capsule in her place.
 const fetchIris = (attempt = 0) => prefetchGltf(irisFile).then(() => { irisLoad.fetched = true; irisLoad.failed = false; }, () => { irisLoad.failed = true; if (attempt < 4) setTimeout(() => fetchIris(attempt + 1), 2000 * (attempt + 1)); });
 if (irisLoad.hasModel) fetchIris();
@@ -275,7 +278,7 @@ if (townMode.town) {
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
   // A failed attach (a dropped download) is tried again a few times; the loading screen covers the wait.
-  const attachIris = (attempt = 0) => import('./play/iris-avatar.js').then((m) => { irisAvatar = irisAvatar || new m.IrisAvatar(); return irisAvatar.attach(avatar); }).then(() => {
+  const attachIris = (attempt = 0) => import('./play/iris-avatar.js').then((m) => { irisAvatar = irisAvatar || new m.IrisAvatar(startHero); return irisAvatar.attach(avatar); }).then(() => {
     if (avatar.userData.irisFailed && attempt < 4) { setTimeout(() => { avatar.userData.irisFailed = false; irisLoad.failed = false; attachIris(attempt + 1); }, 3000 * (attempt + 1)); }
   }).catch((e) => console.warn('[town] Iris model unavailable', e));
   attachIris();
@@ -396,21 +399,12 @@ const day1On = () => {
   if (q === '1') return true;
   return !judge && !loadDay1(ctx.storage).claimed;
 };
-// Elise's own model is not in yet: she wears Iris's body in her colors (said in the hint and the toast).
-const ELISE_TINT = new THREE.Color(0.78, 0.6, 1.0);
-function applySkin(skin) {
-  avatar.traverse((o) => {
-    if (!o.isMesh || !o.material || !o.material.color) return;
-    if (!o.userData.irisColor) o.userData.irisColor = o.material.color.clone();
-    o.material.color.copy(o.userData.irisColor);
-    if (skin === 'elise') o.material.color.multiply(ELISE_TINT);
-  });
-}
+// The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 function toggleSkin() {
-  const next = (loadDay1(ctx.storage).skin || 'iris') === 'iris' ? 'elise' : 'iris';
+  const next = (irisAvatar ? irisAvatar.hero.id : startHero.id) === 'iris' ? 'elise' : 'iris';
   day1Mint.setRecord({ skin: next });
-  applySkin(next);
-  toast(ctx.i18n.t('day1.skin.' + next) + (next === 'elise' ? ' · ' + ctx.i18n.t('day1.skin.note') : ''));
+  if (irisAvatar) irisAvatar.setHero(avatar, heroById(next)).catch((e) => console.warn('[skin]', e));
+  toast(ctx.i18n.t('day1.skin.' + next));
 }
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
@@ -482,7 +476,6 @@ function flyIn(ms) {
   rig.dist = from; requestAnimationFrame(step);
 }
 async function startDay1() {
-  if (loadDay1(ctx.storage).skin === 'elise') applySkin('elise');
   if (!day1On()) return;
   const t = (k, a) => ctx.i18n.t(k, a);
   const m = await import('./play/day1.js');

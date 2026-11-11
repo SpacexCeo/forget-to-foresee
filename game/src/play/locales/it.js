@@ -599,7 +599,6 @@ export default {
   "day1.hint.tournament": "Il Torneo è aperto. Chiedi al custode del santuario come funziona, poi iscriviti all'altare.",
   "day1.skin.iris": "Iris",
   "day1.skin.elise": "Elise",
-  "day1.skin.note": "Elise indossa il corpo di Iris nei suoi colori finché non arriva il suo modello.",
   "day1.altar.timer": "Prossimo turno del Torneo",
   "day1.altar.open": "Aperto ora",
   "day1.trailer.hero.1": "Ricorda di essersi svegliata sul balcone, e niente prima.",
