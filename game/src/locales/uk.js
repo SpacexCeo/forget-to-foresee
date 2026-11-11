@@ -12,6 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'МАЙБУТНЄ КОШТУЄ СПОГАДУ',
+  'premise.line': 'Плати за пророцтво своїми спогадами. Кожне пророцтво запечатане в NEAR testnet до початку гри.',
+  'premise.hint': 'Піднімися сходами до вівтаря, щоб почати.',
 
   // ---- common ----
   'common.close': 'Закрити',
