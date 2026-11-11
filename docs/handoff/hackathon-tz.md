@@ -50,3 +50,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - Day cycle: early morning → evening → dusk → twilight → night (moon, stars, mist, lamps) → morning, per-frame blend with keyframe sky stats (no per-frame readback), far shadow re-render only after 0.3° turn; tests + headless shots.
 - Live-build TDZ fix: webgl-guard in the boot chunk; chunk-rule test; built-page smoke (game/scripts/smoke-built.mjs) as a Pages CI step; #43 re-applied over the main revert.
 - Atmosphere: ground-fog cards along the street/stairs (night strongest, dawn light, +rain), tiered off on low, still under reduced motion; rain/wetness/haze reuse the eased weather system. Left: eave drips.
+- Loading screen restyle (mood brief): Iris silhouette dropped; shaded bodies on the orbit line, partial world sphere with constellation lines, drifting green nebula, bright log line with cursor, glyph fade-in, pulsing head dot; reduced motion static; phone stacks.
