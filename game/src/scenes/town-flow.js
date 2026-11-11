@@ -406,7 +406,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   }
 
   return {
-    begin, update, reenter, interact, register, walkRoute, cancelRoute, routeWish,
+    begin, update, reenter,
+    get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
     get busy() { return state.phase === 'transition'; },
