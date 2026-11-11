@@ -231,6 +231,7 @@ if (townMode.town) {
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   mountTownAudio();
+  import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
   const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
   const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
     const wrap = document.createElement('div');
