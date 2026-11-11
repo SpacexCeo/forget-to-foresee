@@ -53,9 +53,19 @@ function spark(doc, history) {
  * Opens the terminal. Resolves the transport lazily (the room stack lives in the play chunk).
  * @param {{doc?: Document, i18n: {t: Function}, storage?: object, short?: boolean, onClose?: () => void, transport?: object}} o
  */
-export async function openExchangeTerminal({ doc = document, i18n, storage = null, short = false, onClose = null, transport = null } = {}) {
+export async function openExchangeTerminal({ doc = document, i18n, storage = null, short = false, onClose = null, transport = null, ledger = null } = {}) {
   if (!doc.getElementById('ftf-xch-style')) { const st = doc.createElement('style'); st.id = 'ftf-xch-style'; st.textContent = CSS; doc.head.append(st); }
   const t = (k, a) => i18n.t(k, a);
+  // The player's learning townsfolk agents (game/town-economy.js) join the board, scored locally on the same window by
+  // the drill's rules from published bars only; the room's own board (the HTTP-equivalent one) is unchanged.
+  const econ = ledger ? await import('../game/town-economy.js') : null;
+  const rules = econ ? await import('../game/exchange.js') : null;
+  const townRows = (x) => {
+    if (!econ || !ledger || !x || x.phase === 'idle') return [];
+    const agents = ledger.agentsKnown().map((npc) => ({ npc, a: ledger.agent(npc) })).sort((p, q) => q.a.experience - p.a.experience).slice(0, 3);
+    const upto = x.phase === 'settled' ? x.barCount : x.bar; // only bars already published
+    return agents.map(({ npc }) => ({ id: 'town:' + npc, kind: 'town', name: i18n.t('folk.name.' + npc), mark: econ.echoDrillScore(ledger.agentState ? ledger.agentState(npc) : null, { startIndex: x.startIndex, barCount: upto }, rules) }));
+  };
   const tr = transport || (await import('../play/transport-local.js')).createLocalTransport({ rules: 'v3' });
   let n = 0, timer = 0, left = 0, mode = short ? 'short' : 'full', msg = '', closed = false;
   const obs = () => tr.observe().body.observation;
@@ -141,7 +151,7 @@ export async function openExchangeTerminal({ doc = document, i18n, storage = nul
       kids.push(table, el('p', 'ftf-xch-msg', msg));
       const b = el('div', 'ftf-xch-board'); b.append(el('strong', null, t('exch.board')));
       const ol = el('ol');
-      for (const r of x.board) { const li = el('li'); li.append(el('span', null, r.kind === 'human' ? t('exch.you') : r.name + ' · ' + t('exch.agent')), el('span', 'ftf-xch-num', silk(r.mark))); ol.append(li); }
+      for (const r of [...x.board, ...townRows(x)].sort((p, q) => q.mark - p.mark)) { const li = el('li'); li.append(el('span', null, r.kind === 'human' ? t('exch.you') : r.kind === 'town' ? r.name + ' · ' + t('exch.townAgent') : r.name + ' · ' + t('exch.agent')), el('span', 'ftf-xch-num', silk(r.mark))); ol.append(li); }
       b.append(ol); kids.push(b);
       const row = el('div', 'ftf-xch-row');
       if (x.phase === 'settled') {

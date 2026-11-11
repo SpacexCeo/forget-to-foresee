@@ -37,11 +37,27 @@ function star(x, y, r, cls = 'bd-star') {
   return `<path class="${cls}" d="M${x} ${f(y - r)}V${f(y + r)}M${f(x - r)} ${y}H${f(x + r)}M${f(x - s)} ${f(y - s)}L${f(x + s)} ${f(y + s)}M${f(x - s)} ${f(y + s)}L${f(x + s)} ${f(y - s)}"/>`;
 }
 
-/** A Shell: a round hull with the spiral of its chambers and a short keel line under it. */
-function shell(x, y, R, turn) {
-  const pts = [];
-  for (let i = 0; i <= 44; i++) { const t = i / 44, a = turn + t * Math.PI * 3.4, r = R * (0.1 + 0.8 * t); pts.push(`${f(x + Math.cos(a) * r)} ${f(y + Math.sin(a) * r)}`); }
-  return `<g class="bd-shell"><circle cx="${x}" cy="${y}" r="${R}"/><polyline class="bd-thin" points="${pts.join(' ')}"/><path class="bd-thin" d="M${f(x - R * 0.5)} ${f(y + R + 5)}H${f(x + R * 0.5)}"/></g>`;
+/**
+ * A Shell (owner, 10.11: all four identical): a long slender upright spiral seashell, auger-like, tight whorls
+ * tapering to a sharp apex, a flared aperture lip near the bottom, about 1 : 3.5 width to height. R sets the size.
+ */
+function shell(x, y, R) {
+  const h = R * 2.6, w = h / 3.5, top = y - h / 2, bot = y + h / 2;
+  const half = (t) => (w / 2) * (0.08 + 0.92 * Math.pow(t, 0.85)); // half-width at t (0 apex .. 1 base)
+  const at = (t) => top + t * (h * 0.82); // the body ends where the aperture begins
+  const left = [], right = [];
+  for (let i = 0; i <= 12; i++) { const t = i / 12; left.push(`${f(x - half(t))} ${f(at(t))}`); right.push(`${f(x + half(t))} ${f(at(t))}`); }
+  const o = [`<path d="M${left.join('L')}L${right.reverse().join('L')}Z"/>`];
+  // whorls: sutures slanting across the body, closer together toward the apex
+  for (let k = 1; k <= 7; k++) {
+    const t = Math.pow(k / 8, 1.25), yy = at(t), hw = half(t);
+    o.push(`<path class="bd-thin" d="M${f(x - hw)} ${f(yy - hw * 0.35)}Q${f(x)} ${f(yy + hw * 0.55)} ${f(x + hw)} ${f(yy + hw * 0.1)}"/>`);
+  }
+  // the aperture with its flared lip, and the short siphonal canal under it
+  const ay = at(1), hw = half(1);
+  o.push(`<path d="M${f(x - hw)} ${f(ay)}Q${f(x - hw * 1.25)} ${f(ay + h * 0.12)} ${f(x - hw * 0.15)} ${f(bot)}Q${f(x + hw * 0.9)} ${f(ay + h * 0.14)} ${f(x + hw * 1.45)} ${f(ay - h * 0.02)}"/>`);
+  o.push(`<path class="bd-thin" d="M${f(x - hw * 0.2)} ${f(ay + h * 0.02)}Q${f(x + hw * 0.35)} ${f(ay + h * 0.09)} ${f(x + hw * 0.1)} ${f(bot - h * 0.03)}"/>`);
+  return `<g class="bd-shell">${o.join('')}</g>`;
 }
 
 /** A floating island: a flat top and a hanging keel of rock. */
@@ -50,7 +66,7 @@ const isle = (x, y, w, h) => `M${f(x - w)} ${f(y)}H${f(x + w)}Q${f(x + w * 0.45)
 function diagram() {
   const W = 760, H = 300, cy = 150, cx = 380, r = rng(11);
   const o = [];
-  const shells = [[112, 15], [206, 21], [554, 21], [648, 15]];
+  const shells = [[112, 12], [206, 12], [554, 12], [648, 12]]; // [x, half-width of the gap in the orbit line]
   // the orbit line, broken where a body sits on it, with a bead between neighbours
   const gaps = [...shells.map(([x, R]) => [x - R - 7, x + R + 7]), [cx - 104, cx + 104]].sort((a, b) => a[0] - b[0]);
   let x = 14; const segs = [];
@@ -61,7 +77,7 @@ function diagram() {
   for (const bx of [38, 159, 268, 492, 601, 722]) o.push(`<circle class="bd-dot" cx="${bx}" cy="${cy}" r="1.5"/>`);
   for (const bx of [60, 700]) o.push(`<circle class="bd-dot" cx="${bx}" cy="96" r="1.3"/><circle class="bd-dot" cx="${bx}" cy="204" r="1.3"/>`);
   // the Shells, two on each side, and the pair arcs that tie neighbours
-  shells.forEach(([sx, R], i) => o.push(shell(sx, cy, R, i * 1.7)));
+  shells.forEach(([sx]) => o.push(shell(sx, cy, 24)));
   o.push(`<path class="bd-thin bd-dash" d="M112 ${cy - 40}A62 62 0 0 1 206 ${cy - 40}M554 ${cy + 40}A62 62 0 0 0 648 ${cy + 40}"/>`);
   // the archipelago: the hub island with the Scroll's mast, five more around it, rope bridges between
   o.push(`<g class="bd-hub"><circle cx="${cx}" cy="${cy}" r="47"/>`

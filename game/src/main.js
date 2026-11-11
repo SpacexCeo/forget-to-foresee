@@ -9,14 +9,14 @@
 // Play starts in the town on the ground (docs/town.md); ?skip=town and the deep links above go straight to the
 // archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
 import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
-import { logKeysFromStats } from './ui/ink-bar.js';
+import { logKeysFromStats } from './ui/loading.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
 if (params.has('cinematic')) await import('./cinematic/index.js').then((m) => m.boot(params.get('cinematic')));
 const uiRoot = document.getElementById('ui');
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
-const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse });
+const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse, lobby: params.get('lobby') });
 const town = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') }).town;
 const loading = createLoadingScreen(document);
 if (window.__ftfBoot) window.__ftfBoot.stop();

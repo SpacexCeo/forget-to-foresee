@@ -16,7 +16,7 @@ import { upgradeAssetMaterials } from '../render/materials.js';
 import { TOWN_ORIGIN } from '../scenes/town-layout.js';
 import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
 
 const _sphere = new THREE.Sphere(), _frustum = new THREE.Frustum(), _m = new THREE.Matrix4(), _target = [0, 0, 0], _local = [0, 0, 0];
 const ONE_SHOT = new Set(['wave', 'salute', 'nod', 'gesture_offer', 'understand']);
@@ -222,10 +222,19 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     if (p.badge) p.badge.visible = !!on;
   }
 
+  /** A hired agent walks to the Shard Exchange and trades there; `false` walks it home to its own loop. */
+  function sendToTrade(key, on) {
+    const p = byKey.get(key);
+    if (!p) return;
+    const plan = p.plan;
+    if (on && !plan.trading) { plan.original = plan.original || plan.program; plan.trading = true; plan.program = tradeProgram(plan, [...byKey.values()].filter((x) => x.plan.trading).length - 1); plan.index = -1; plan.next(); }
+    else if (!on && plan.trading) { plan.trading = false; plan.program = homeProgram(plan, plan.original); plan.index = -1; plan.next(); }
+  }
+
   function setActive(on) { active = !!on; for (const p of people) if (!active) p.root.visible = false; }
 
   return {
-    people, byKey, update, setActive, setBadge,
+    people, byKey, update, setActive, setBadge, sendToTrade,
     /** For QA and the dev HUD: per person key -> state, file, position, clip. */
     status() { return people.map((p) => ({ key: p.def.key, state: p.state, file: p.file, clip: p.current, walk: p.walkName, at: [p.plan.x, p.plan.y, p.plan.z], visible: p.root.visible })); },
     get loaded() { return people.filter((p) => p.state === 'loaded').length; },

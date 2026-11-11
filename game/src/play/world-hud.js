@@ -60,7 +60,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
   let exchangeOpen = null;
   const openExchange = () => {
     if (exchangeOpen && exchangeOpen.open) return;
-    import('../ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc, i18n: ctx.i18n, storage: ctx.storage, short: exchangeShort })).then((x) => { exchangeOpen = x; }).catch((e) => console.warn('[play] exchange', e));
+    import('../ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc, i18n: ctx.i18n, storage: ctx.storage, short: exchangeShort, ledger: ctx.townLedger || null })).then((x) => { exchangeOpen = x; }).catch((e) => console.warn('[play] exchange', e));
   };
   if (ui.setExchangeOpener) ui.setExchangeOpener(openExchange);
   if (ui.setNearSource) ui.setNearSource(() => (near ? near.status : null)); // the Biography's season record

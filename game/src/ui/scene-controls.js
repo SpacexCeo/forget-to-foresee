@@ -23,7 +23,8 @@ export function controlsReference(device) {
 }
 
 /** Presentation only. World actions remain with the scene owner. */
-export function mountSceneControls(root, { onContext, onTransition }) {
+export function mountSceneControls(root, { onContext, onTransition, onMainMenu = null, extra = [] }) {
+  const extras = extra.map((x) => ({ ...x, el: actionButton({ label: x.label, symbol: 'arrow', onClick: () => { dialog.close(); x.onClick(); } }) }));
   const hint = h('span', { class: 'ftf-scene-hint', attrs: { 'aria-hidden': 'true' }, text: 'Esc' });
   const opener = actionButton({ label: 'Controls', symbol: 'settings', attrs: { 'aria-haspopup': 'dialog' }, onClick: open });
   opener.append(hint);
@@ -35,7 +36,9 @@ export function mountSceneControls(root, { onContext, onTransition }) {
       h('h2', { text: 'Exploration controls', attrs: { id: 'ftf-scene-controls-title' } })),
     h('div', { class: 'ftf-dialog-body' }, source, bindings,
       h('p', { class: 'ftf-muted', text: 'Gamepad labels describe button positions. Menu opens this reference.' }),
-      resume));
+      resume,
+      ...extras.map((x) => x.el),
+      onMainMenu ? actionButton({ label: 'Main menu (language, settings, Foresight Exchange)', symbol: 'arrow', onClick: () => { dialog.close(); onMainMenu(); } }) : null));
   const cue = h('div', { class: 'ftf-scene-cue', attrs: { hidden: true } });
   const announcer = h('div', { class: 'sr-only', attrs: { role: 'status' } });
   root.append(h('div', { class: 'ftf-scene-tools' }, opener), dialog, cue, announcer);
@@ -46,6 +49,7 @@ export function mountSceneControls(root, { onContext, onTransition }) {
     if (dialog.open) return;
     // The dialog shows first and waits on nothing (no renderer call, no canvas read); the world's input is
     // cleared right after, and a failure there can never keep the dialog closed.
+    for (const x of extras) x.el.hidden = !x.visible();
     dialog.showModal();
     resume.focus();
     try { onTransition(); } catch (e) { console.warn('[controls] transition', e); }

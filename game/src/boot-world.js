@@ -28,7 +28,7 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
-import { logKeysFromStats } from './ui/ink-bar.js';
+import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
@@ -37,9 +37,9 @@ import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
-import { PROGRAMS } from './play/townsfolk-plan.js';
+import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { townToWorld, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -125,7 +125,23 @@ const rig = new CameraRig(camera, world);
 const input = new Input(renderer.domElement);
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
-const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput });
+// The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
+// the town (ui/loading.js bootPlan). Entering from it returns to the world.
+let menuLobby = null;
+const openMainMenu = () => {
+  if (menuLobby) return;
+  Promise.all([import('./ui/index.js'), import('./ui/flow.js')]).then(([ui, fl]) => {
+    const flow = fl.createOnboardingFlow(ctx.storage);
+    const host = document.createElement('div'); host.className = 'ftf-root-menu'; uiRoot.append(host);
+    menuLobby = ui.mountLobby(host, { ctx, flow, onEnter: () => { if (menuLobby) { menuLobby.destroy(); menuLobby = null; host.remove(); } } });
+  }).catch((e) => console.warn('[menu] lobby', e));
+};
+const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu,
+  extra: [
+    { label: 'Return to town (your season is kept: register at the altar to go back)', visible: () => !!(town && play && !inTown), onClick: () => returnToTown() },
+    { label: 'Start over (a new season)', visible: () => !!play, onClick: () => { if (window.confirm('Start a new season? The current one is lost.')) startOver(); } },
+  ] });
+{ const st = document.createElement('style'); st.textContent = '.ftf-play-away #ui > *:not(.ftf-root-menu) { display: none !important; }'; document.head.append(st); }
 const toastEl = document.getElementById('toast');
 
 // The play layer starts on entering the world (from the lobby's first contact, or at once with ?play=direct).
@@ -134,6 +150,7 @@ const toastEl = document.getElementById('toast');
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
+ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
 const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
@@ -186,9 +203,35 @@ if (townMode.town) {
     return best;
   };
   const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
-  const badge = (key, on) => { if (town.townsfolk) town.townsfolk.setBadge(key, on); };
+  const badge = (key, on) => { if (town.townsfolk) { town.townsfolk.setBadge(key, on); town.townsfolk.sendToTrade(key, on); } };
   for (const h of townLedger.hires()) badge(h.npc, true);
+  // Town spots (owner, 11.11: the town is the menu): the three shop doors, the notice board after the stairs, and a
+  // mirror by the gate for the optional look picker.
+  const spotAt = (local, radius) => { const w = townToWorld(local); return (pos) => Math.hypot(pos[0] - w[0], pos[2] - w[2]) <= radius && Math.abs(pos[1] - w[1]) <= 2.5; };
+  const spots = [
+    ...TOWN_SHOPS.filter((s) => ['exchange', 'scribe', 'inn'].includes(s.id)).map((s) => ({ id: s.id, near: (pos) => { const d = shopDoorAt(pos); return !!d && d.id === s.id; } })),
+    { id: 'board', near: spotAt(TOWN_SPOTS.board, 2.2) },
+    { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
+  ];
+  const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
+  const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
+    const wrap = document.createElement('div');
+    wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', ctx.i18n.t('spot.mirror'));
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:rgba(6,10,12,.6);overflow:auto';
+    const box = document.createElement('div'); box.style.cssText = 'max-width:min(980px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;background:rgba(14,20,22,.96);border-radius:14px;padding:12px';
+    const done = document.createElement('button'); done.type = 'button'; done.textContent = ctx.i18n.t('mirror.done');
+    done.style.cssText = 'min-height:40px;padding:4px 16px;margin-top:10px;border-radius:8px;border:1px solid rgba(233,180,76,.6);background:rgba(233,180,76,.92);color:#1d1708;font:500 15px system-ui,sans-serif;cursor:pointer';
+    const host = document.createElement('div'); box.append(host, done); wrap.append(box);
+    wrap.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.append(wrap);
+    const child = m.mountConstructor(host, { ctx });
+    const close = () => { try { child.save(); child.destroy(); } catch { /* gone */ } wrap.remove(); };
+    done.addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
+    done.focus();
+  }).catch((e) => console.warn('[town] mirror', e));
   townFlow = createTownFlow({
+    spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
     ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest),
     quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
@@ -237,8 +280,30 @@ function islandProgress() {
 
 const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) => a.name);
 /** Under the transition's cover: Iris leaves the town for the archipelago and the season starts as it always did. */
+/**
+ * Return to town (owner, 11.11): from the archipelago back to the town with the season kept in memory; registering at
+ * the altar again resumes the same season (startSeason is memoized). The play layer's UI hides and its keys sleep.
+ */
+function returnToTown() {
+  if (!town || !townFlow || inTown || !play) return;
+  clearWorldInput(); stopSteering();
+  if (play.ui && play.ui.panel) play.ui.close();
+  inTown = true; townGrounded = true;
+  document.body.classList.add('ftf-play-away');
+  town.setActive(true);
+  player.world = town.world; rig.world = town.world;
+  player.killY = TOWN_KILL_Y;
+  player.teleport(TOWN_ALTAR_SPAWN.position.slice(), TOWN_ALTAR_SPAWN.heading);
+  rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.reset();
+  lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
+  townFlow.reenter();
+}
+/** Start over: a new local season (the judge link rebuilds the same fixed season). */
+function startOver() { location.reload(); }
+
 async function leaveTown() {
   inTown = false; leftTownAt = performance.now();
+  document.body.classList.remove('ftf-play-away');
   clearWorldInput();
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
@@ -362,24 +427,25 @@ function handleInput(dt) {
   const modal = document.querySelector('dialog[open]');
   if (modal) { navigateGamepadMenu(modal, pad); return false; }
   const townOn = inTown && entered; // walking the town: movement and the camera, no play keys (the season has not begun)
-  if (!play && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
+  const playOn = play && !inTown; // back in the town after Return to town: the season waits, its keys sleep
+  if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
     if (inspecting) leaveInspect();
-    else if (play && play.handleKey('Escape')) clearWorldInput();
-    else if (moveTarget || (play && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
+    else if (playOn && play.handleKey('Escape')) clearWorldInput();
+    else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
     else controls.open();
     return false;
   }
-  if (!play) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
   }
-  if (play && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
-  if (play && !inspecting) {
+  if (playOn && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
+  if (playOn && !inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
     if (play.ui.panel) {
       navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
@@ -427,7 +493,7 @@ function wishVector() {
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
-  const rw = play ? play.routeWish() : inTown ? townFlow.routeWish() : null;
+  const rw = play && !inTown ? play.routeWish() : inTown ? townFlow.routeWish() : null;
   if (rw) return rw;
   if (!moveTarget) return [0, 0];
   const w = steerTo(player.pos, moveTarget);
@@ -551,7 +617,7 @@ function frame() {
   const speed = animSpeed;
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
-  if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
+  if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
 

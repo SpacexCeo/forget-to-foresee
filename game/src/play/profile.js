@@ -18,6 +18,7 @@ const CSS = `
 .ftf-prof dt { color: #a8a194; } .ftf-prof dd { margin: 0; word-break: break-word; }
 .ftf-prof .ftf-prof-note { color: #a8a194; font-size: 13px; margin: 4px 0; }
 .ftf-prof a { color: #e9b44c; }
+.ftf-prof select { min-height: 36px; margin: 4px 0; background: #1c2426; color: #f3ead6; border: 1px solid rgba(233, 180, 76, .5); border-radius: 6px; }
 .ftf-prof button { min-height: 40px; padding: 4px 14px; border-radius: 8px; border: 1px solid rgba(233, 180, 76, .6); background: rgba(233, 180, 76, .9); color: #1d1708; font: 500 15px system-ui, sans-serif; cursor: pointer; margin-top: 12px; }
 `;
 
@@ -37,6 +38,21 @@ export async function readOnChain({ deployment = NEAR_DEPLOYMENT, fetch = global
   } catch {
     return { state: 'offline', items: [] };
   }
+}
+
+/** Rolling mean of the last 10 values (an agent's learning curve). */
+const rolling = (xs) => xs.map((_, i) => { const w = xs.slice(Math.max(0, i - 9), i + 1); return w.reduce((s, x) => s + x, 0) / w.length; });
+/** A small line chart. */
+function spark(doc, values, w, h) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = doc.createElementNS(NS, 'svg'); svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('aria-hidden', 'true'); svg.style.verticalAlign = 'middle';
+  if (values.length > 1) {
+    const lo = Math.min(...values), hi = Math.max(...values), span = hi - lo || 1;
+    const pl = doc.createElementNS(NS, 'polyline');
+    pl.setAttribute('points', values.map((v, i) => `${(i / (values.length - 1)) * (w - 4) + 2},${h - 2 - ((v - lo) / span) * (h - 4)}`).join(' '));
+    pl.setAttribute('fill', 'none'); pl.setAttribute('stroke', '#e9b44c'); pl.setAttribute('stroke-width', '1.6'); svg.append(pl);
+  }
+  return svg;
 }
 
 /**
@@ -67,6 +83,44 @@ export function openProfile({ doc = document, t, ledger, quest = null, obs = () 
     [t('profile.stat.memoriesForgotten'), String(st.memoriesForgotten)], [t('profile.stat.agentsHired'), String(st.agentsHired)],
     [t('profile.stat.net'), (st.net >= 0 ? '+' : '') + (st.net / 100).toFixed(2)],
   ]));
+
+  // Player stats from the town ledger: rounds, win rate, best agent, return per agent, the equity curve
+  const best = ledger.bestAgent();
+  panel.append(dl([
+    [t('profile.stat.rounds'), String(st.rounds || 0)],
+    [t('profile.stat.winRate'), st.rounds ? Math.round((100 * st.wins) / st.rounds) + ' %' : '—'],
+    [t('profile.stat.bestAgent'), best ? t('profile.agentLine', { name: t('folk.name.' + best.npc), pct: (best.measured * 100).toFixed(1), exp: best.experience }) : '—'],
+  ]));
+  panel.append(el('p', 'ftf-prof-note', t('profile.equity')), spark(doc, ledger.equity, 260, 40));
+  const known = ledger.agentsKnown();
+  if (known.length) {
+    panel.append(el('h3', null, t('profile.agents')));
+    for (const npc of known) {
+      const a = ledger.agent(npc);
+      const row = el('p'); row.append(doc.createTextNode(t('profile.agentLine', { name: t('folk.name.' + npc), pct: a.measured == null ? '—' : (a.measured * 100).toFixed(1), exp: a.experience }) + ' '), spark(doc, rolling(a.recent), 120, 20));
+      panel.append(row);
+    }
+  }
+  // Open trades (active hires, rounds revealed so far) and the ones closed in this session
+  panel.append(el('h3', null, t('open.heading')));
+  const open = ledger.hires();
+  if (!open.length) panel.append(el('p', 'ftf-prof-note', t('open.none')));
+  for (const h of open) panel.append(el('p', null, t('open.line', { name: t('folk.name.' + h.npc), done: h.done, total: h.rounds, u: (h.unrealised / 100).toFixed(2) })));
+  for (const c of ledger.closed) panel.append(el('p', 'ftf-prof-note', t('closed.line', { name: t('folk.name.' + c.npc), net: (c.net >= 0 ? '+' : '') + (c.net / 100).toFixed(2), n: c.rounds })));
+  // The trade log, filterable by agent
+  panel.append(el('h3', null, t('log.heading')));
+  const sel = el('select'); sel.setAttribute('aria-label', t('log.filter'));
+  sel.append(new (doc.defaultView || globalThis).Option(t('log.all'), ''));
+  for (const npc of known) sel.append(new (doc.defaultView || globalThis).Option(t('folk.name.' + npc), npc));
+  const logBox = el('div');
+  const drawLog = () => {
+    logBox.replaceChildren();
+    const lines = ledger.log(sel.value || null).slice(0, 40);
+    if (!lines.length) logBox.append(el('p', 'ftf-prof-note', t('open.none')));
+    for (const l of lines) logBox.append(el('p', 'ftf-prof-note', t('log.line', { time: new Date(l.at).toLocaleTimeString(), name: t('folk.name.' + l.npc), echo: t('exch.echo.' + l.echo), side: t('log.side.' + l.side), size: l.size, entry: (l.entry / 100).toFixed(2), exit: (l.exit / 100).toFixed(2), result: (l.result >= 0 ? '+' : '') + (l.result / 100).toFixed(2), reason: t('log.reason.' + l.reason) })));
+  };
+  sel.addEventListener('change', drawLog); drawLog();
+  panel.append(sel, logBox);
 
   // On-chain: confirmed by a read, or nothing
   panel.append(el('h3', null, t('inv.onchain')));
