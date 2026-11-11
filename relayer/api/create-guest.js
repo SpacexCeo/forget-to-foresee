@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method' });
   const v = validateBody(await readBody(req));
   if (!v.ok) return json(res, 400, { error: v.error });
-  const lim = bucket.take(clientIp(req));
+  const lim = bucket.take(clientIp(req, process.env.TRUST_PROXY !== '0'));
   if (!lim.ok) { res.setHeader('Retry-After', String(lim.retryAfterS)); return json(res, 429, { error: 'rate_limited' }); }
   try {
     const r = await createGuest(v, { ...cfg, queue });

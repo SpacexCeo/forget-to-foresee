@@ -1,6 +1,6 @@
 // The Day 1 relayer's logic, free of any platform: validation (the guests contract's own rules), CORS, a per-IP token
 // bucket, and the create-guest flow with injected RPC so it is unit-tested without a network. The serverless entry
-// points in api/ only adapt Vercel's req/res to these functions.
+// points in api/ and server.js only adapt the platform's req/res to these functions.
 import { b58decode, createTxClient, importSecretKey } from './near-tx.js';
 
 export const DEFAULTS = Object.freeze({
@@ -101,7 +101,8 @@ export const envConfig = (env = process.env) => ({
   secretKey: env.FTF_GUEST_KEY || '',
   guests: env.FTF_GUESTS_CONTRACT || DEFAULTS.guests,
   rpcUrls: env.FTF_RPC_URLS ? env.FTF_RPC_URLS.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULTS.rpcUrls,
-  origins: env.FTF_ALLOWED_ORIGINS ? env.FTF_ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULTS.origins,
+  origins: (env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN) ? (env.FTF_ALLOWED_ORIGINS || env.ALLOWED_ORIGIN).split(',').map((s) => s.trim()).filter(Boolean) : DEFAULTS.origins,
 });
 
-export const clientIp = (req) => String((req.headers && (req.headers['x-real-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0])) || (req.socket && req.socket.remoteAddress) || 'unknown').trim();
+/** The client IP for the rate limit; forwarded headers are trusted only behind a proxy (`trustProxy`). */
+export const clientIp = (req, trustProxy = true) => String((trustProxy && req.headers && (req.headers['x-real-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0])) || (req.socket && req.socket.remoteAddress) || 'unknown').trim();
