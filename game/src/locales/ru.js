@@ -5,6 +5,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'БУДУЩЕЕ СТОИТ ВОСПОМИНАНИЯ',
+  'premise.line': 'Плати за пророчество своими воспоминаниями. Каждое пророчество запечатано в NEAR testnet до начала игры.',
+  'premise.hint': 'Поднимись по лестнице к алтарю, чтобы начать.',
 
   'common.close': 'Закрыть',
   'common.back': 'Назад',

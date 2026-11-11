@@ -12,6 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': '未来以记忆为代价',
+  'premise.line': '用你的记忆换取预言。每条预言在开局前都已封存在 NEAR 测试网上。',
+  'premise.hint': '走上台阶到祭坛开始。',
 
   // ---- common ----
   'common.close': '关闭',
