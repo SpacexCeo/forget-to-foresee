@@ -1527,22 +1527,25 @@ def lips_attr(body):
         a.data[v.index].value = next((g.weight for g in v.groups if g.group == gi), 0.0)
 
 
-ARM_IN = 5.5        # degrees: her standing clips bring the upper arms in from the rest stance (14 deg off the body)
+RELAXED_WRIST = (0.200, -0.075, 0.925)   # her left wrist in the standing clips (the rest stance has it at 0.261, -0.042, 0.932)
 
 
 def relax_arms():
     """Iris's standing clips (idle, talk, think, the one-shots) held the arms in the rig's rest stance: an A-pose,
-    wrists 26 cm from the midline. Her own standing pose lets them hang along the body with a slight bend at the
-    elbow (as close as her hips allow). The rest pose and the walk and run cycles are not touched."""
+    wrists 26 cm from the midline. Her own standing pose lets them hang along the body, a little forward of the
+    hip, with a slight bend at the elbow (wrist targets for the arm IK; a clip that places a hand itself still
+    does). The rest pose and the walk and run cycles are not touched."""
     if getattr(agent_anim, "_iris_relaxed", False):
         return
     base = agent_anim.base_pose
+    x, y, z = RELAXED_WRIST
+    agent_anim.REST_WRIST_L, agent_anim.REST_WRIST_R = V((x, y, z)), V((-x, y, z))
 
     def base_pose(key, S, standing=True):
         P = base(key, S, standing)
         if key == "iris" and standing:
-            P.r("upperarm_L", 0, 0, ARM_IN).r("upperarm_R", 0, 0, -ARM_IN)
-            P.r("forearm_L", -6, 0, 0).r("forearm_R", -6, 0, 0)
+            P.ik[1] = (V((x, y, z)), agent_anim.POLE_L)
+            P.ik[-1] = (V((-x, y, z)), agent_anim.POLE_R)
         return P
     agent_anim.base_pose = base_pose
     agent_anim._iris_relaxed = True

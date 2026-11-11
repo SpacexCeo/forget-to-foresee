@@ -12,18 +12,14 @@ push the branch and `main`. Never push red. The lighting worker (`claude/lightin
 
 ## 1. Iris (model, look, phone variant)
 
-**OPEN, urgent (11.11 03:40 UTC): the owner rejected the proportion change ("return Iris's normal shape and stance").**
-The sources are already back on the approved 09.11 athletic body (be39d69: seat, flank, thighs, bust and head size at
-their old values; `relax_arms()` in `build_iris_hero.py` brings the arms in for her standing clips, rest pose
-untouched). The rebuilt files exist only on the GPU server, which stopped answering (HTTP 522) before they were
-fetched: `/root/w/chars/iris/ftf/game/public/assets/models/agent_iris.glb` and `agent_iris_m.glb` (run `r4`: build,
-ship, sheets and in-game shots all exit 0, 0 console errors; the phone run requested `agent_iris_m.glb` only), raw
-export `/root/w/chars/iris/keep/agent_iris_r4.glb`, sheets `/root/w/chars/iris/out/r4/`, shots
-`/root/w/chars/iris/out/ingame_r4/`. **The glb files in git are still the rejected body.** To finish: fetch the two
-files (or rebuild: `build_iris_hero.py -- full`, then `ship.sh`), check `qa_silhouette.py <raw shipped 10.11> <new raw>`
-(body rows within 2 mm; on the server `keep/agent_iris_v0.glb` is the 10.11 body) and `qa_restpose.py` (0 joints
-differ expected), look at the turnaround (arms along the body), commit, cherry-pick to `main`. Not verified by eye yet:
-the relaxed arms (5.5 degrees in; her hips are 18 cm from the midline, the wrists end about 22 cm out).
+**Body restored (11.11 04:10 UTC, owner: "return Iris's normal shape and stance").** The shipped files are rebuilt
+on the 09.11 athletic body: `qa_silhouette.py` against the 10.11 build gives 0.0 mm on every body row (only the
+trainers and the ponytail differ), `qa_restpose.py` against the glb before 7cb3695 gives 0 joints differ. Her
+standing clips hold the arms down along the body (`relax_arms()`: wrist targets for the arm IK); the rest pose is
+untouched. Built on CPU in the lead's container (Blender 4.5.3, MPFB 2.0.18, `IRIS_CPU=1`, about 4 min) because the
+GPU server answers HTTP 522. Three-way turnaround: `docs/art/iris/final/00_body_restored_turnaround.jpg`. The other
+sheets in that folder (01-05, `sheet_*`, `ingame_*`) still show the rejected body and need a re-render. Not re-shot
+in the game after this rebuild (no GPU browser here).
 
 **Done (11.11, in the game):**
 
