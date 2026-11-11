@@ -12,6 +12,19 @@ push the branch and `main`. Never push red. The lighting worker (`claude/lightin
 
 ## 1. Iris (model, look, phone variant)
 
+**OPEN, urgent (11.11 03:40 UTC): the owner rejected the proportion change ("return Iris's normal shape and stance").**
+The sources are already back on the approved 09.11 athletic body (be39d69: seat, flank, thighs, bust and head size at
+their old values; `relax_arms()` in `build_iris_hero.py` brings the arms in for her standing clips, rest pose
+untouched). The rebuilt files exist only on the GPU server, which stopped answering (HTTP 522) before they were
+fetched: `/root/w/chars/iris/ftf/game/public/assets/models/agent_iris.glb` and `agent_iris_m.glb` (run `r4`: build,
+ship, sheets and in-game shots all exit 0, 0 console errors; the phone run requested `agent_iris_m.glb` only), raw
+export `/root/w/chars/iris/keep/agent_iris_r4.glb`, sheets `/root/w/chars/iris/out/r4/`, shots
+`/root/w/chars/iris/out/ingame_r4/`. **The glb files in git are still the rejected body.** To finish: fetch the two
+files (or rebuild: `build_iris_hero.py -- full`, then `ship.sh`), check `qa_silhouette.py <raw shipped 10.11> <new raw>`
+(body rows within 2 mm; on the server `keep/agent_iris_v0.glb` is the 10.11 body) and `qa_restpose.py` (0 joints
+differ expected), look at the turnaround (arms along the body), commit, cherry-pick to `main`. Not verified by eye yet:
+the relaxed arms (5.5 degrees in; her hips are 18 cm from the midline, the wrists end about 22 cm out).
+
 **Done (11.11, in the game):**
 
 - Hair per the target sheet: a solid strand-textured volume with a soft fringe at the hairline, overlapping locks, a
@@ -21,7 +34,7 @@ push the branch and `main`. Never push red. The lighting worker (`claude/lightin
 - Outfit: sheen 0.12 in neutral dark grey (`game/src/render/fabric.js`); no vertex colours in the export (the game
   multiplied the garment by `COLOR_0`: black knit, grey trainers); leggings one colour, no moire; no skin specks at
   the waist; constructed trainers (3.5k triangles the pair) and sock tubes (`hero_shoes.py`).
-- Proportions per the sheet: head +6 % (about 7.1 heads), softer seat, flank, thighs, bust.
+- Proportions per the sheet (head +6 %, softer seat, flank, thighs, bust): **rejected by the owner, reverted in the sources** (see above).
 - Files: `agent_iris.glb` and the phone variant `agent_iris_m.glb` (`art/agents/iris_hero/ship.sh`); sizes and
   triangles in `docs/art/manifest.md`. `iris-avatar.js` `irisModelFile()` and `boot-world.js` load `_m` on phones
   and the low tier (one download).
