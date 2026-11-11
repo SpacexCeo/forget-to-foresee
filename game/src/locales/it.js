@@ -12,6 +12,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'IL FUTURO COSTA UN RICORDO',
+  'premise.line': 'Paga la profezia con i tuoi ricordi. Ogni profezia è sigillata su NEAR testnet prima di giocare.',
+  'premise.hint': 'Sali le scale fino all\'altare per iniziare.',
 
   // ---- common ----
   'common.close': 'Chiudi',

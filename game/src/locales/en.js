@@ -6,6 +6,8 @@ export default {
   'app.title.line2': 'TO FORESEE',
   'app.title.full': 'Forget to Foresee',
   'app.tagline': 'THE FUTURE COSTS A MEMORY',
+  'premise.line': 'Pay for prophecy with your memories. Every prophecy is sealed on NEAR testnet before play.',
+  'premise.hint': 'Walk up the stairs to the altar to begin.',
 
   // ---- common ----
   'common.close': 'Close',
