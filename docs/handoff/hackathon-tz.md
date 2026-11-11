@@ -43,3 +43,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - Casts restored: Return to town now remounts Frost Lance / Storm Snare (leaveTown disposed them); first two skill-bar slots, placeholder art. Left: UI-003 icons.
 - QW-4: og/twitter meta, og.jpg (town still), favicon.svg, test. Left: owner updates the GitHub description/topics/homepage.
 - QW-5: WebGL 2 check before the world chunk (?forceNoGL=1), no-GPU links on the boot screen, software-renderer note; tests.
+- QW-3: ?demo=judge Memories button opens the recorded on-chain shard #7 (labelled coordinator-minted), offline honest; scripts/judge-replay-link.mjs. README link with QW-1.
