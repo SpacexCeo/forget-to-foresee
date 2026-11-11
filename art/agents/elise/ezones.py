@@ -48,7 +48,7 @@ def envelope(hp, leg=None, shell=None):
     E[:6] = E[6] + 0.25 * (0.06 - (np.arange(6)[:, None] + 0.5) * DZ)
     out = np.array([(tc < slit((j + 0.5) * DZ)[0] - 8) | (tc > slit((j + 0.5) * DZ)[1] + 8) for j in range(NZ)]); Lm = None
     if leg is not None:
-        Lm = _bins(leg, np.fmax); Q = np.stack([np.roll(np.roll(Lm, a_, 0), b_, 1) for a_ in (-1, 0, 1) for b_ in (-1, 0, 1)]); Lm = np.where(out, np.nanmax(np.where(np.isnan(Q), 0, Q), 0), 0)
+        Lm = _bins(leg, np.fmax); Q = np.stack([np.roll(np.roll(Lm, a_, 0), b_, 1) for a_ in (-1, 0, 1) for b_ in (-1, 0, 1)]); edge_ = np.array([(tc < slit((j + 0.5) * DZ)[0] + 4) | (tc > slit((j + 0.5) * DZ)[1] - 4) for j in range(NZ)]); Lm = np.where(edge_, np.nanmax(np.where(np.isnan(Q), 0, Q), 0), 0)   # up to the slit edges: the turned-in lip must clear the leg too
         E = np.maximum(E, Lm + 0.016)
     k = np.array([1, 4, 6, 4, 1]) / 16
     for _ in range(2):

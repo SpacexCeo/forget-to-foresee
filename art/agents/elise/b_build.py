@@ -124,6 +124,7 @@ for f, p in zip(bf, bpart[bf].max(1)):
     try: fc = bm.faces.new([vs[i] for i in f])
     except ValueError: continue
     fc[LP] = {2: 4, 3: 5}.get(int(p), 0)
+bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[LP] == 4 and min(v.co.z for v in f.verts) > 0.15], context='FACES')   # the left leg above the ankle is rebuilt clean below (the generated shell was tangled)
 shell = [f for f in bm.faces if f[LP] == 0]
 bmesh.ops.bisect_plane(bm, geom=shell + list({e for f in shell for e in f.edges}) + list({v for f in shell for v in f.verts}), dist=1e-5,
                        plane_co=(0, 0, Z.ZJ), plane_no=(0, 0, 1), clear_inner=True, clear_outer=False)
@@ -142,6 +143,7 @@ for pid in (4, 5):                    # the generated legs and shoes: every open
     print('leg part', pid, 'open rim edges closed', len(rim))
 bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.verts.index_update()
 bv = np.array([v.co[:] for v in bm.verts]); bf = np.array([[v.index for v in f.verts] for f in bm.faces]); bfp = np.array([f[LP] for f in bm.faces]); bm.free()
+nohull = np.zeros(len(bf), np.int32)
 vleg = np.zeros(len(bv), int); vleg[bf[bfp == 4].ravel()] = 4; vleg[bf[bfp == 5].ravel()] = 5
 print('shell', len(bv), 'verts', np.bincount(bfp).tolist(), 'faces by part; lacing zone verts smoothed', len(zone))
 ENV = Z.envelope(np.load(WD + '/body_hi_pts.npy').astype(float), bv[(vleg >= 4) & (bv[:, 2] > 0.1)], bv[(vleg == 0) & (bv[:, 2] < 0.82)]); renv = lambda th, z: Z.env_at(ENV, th, z)
@@ -187,7 +189,7 @@ inn = {}
 for j in range(NV + 1):
     for i in range(NU + 1):
         if j >= NV - 1 or i <= 1 or i >= NU - 1:
-            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.004 * rad))
+            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.003 * rad))
 rim = [(gi[NV, i], gi[NV, i + 1]) for i in range(NU)] + [(gi[j + 1, 0], gi[j, 0]) for j in range(NV)] + [(gi[j, NU], gi[j + 1, NU]) for j in range(NV)]
 LF += [(a_, b_, inn[b_], inn[a_]) for a_, b_ in rim]
 LF += [(inn[gi[j, i]], inn[gi[j, i + 1]], inn[gi[j + 1, i + 1]], inn[gi[j + 1, i]]) for j in range(NV) for i in range(NU) if j == NV - 1 or i == 0 or i == NU - 1]
@@ -236,8 +238,7 @@ for sd, sg in (('L', 1), ('R', -1)):
     set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['hand' + sd] = ob
     for k, (h_, t_) in hb.items(): bones_extra[k] = (T(h_), T(t_), 'hand_' + sd if k != 'hand_' + sd else 'forearm_' + sd)
     top = np.array(P['arm'][sd]['wrap_mid']) + [sg * (P['arm'][sd]['radius'] - 0.004), 0.004, -0.012]
-    G = ribbons(sd, top, sg); ob = make_obj('elise_ribbon_' + sd, G.v, G.f); recalc(ob)
-    set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['ribbon' + sd] = ob
+    # the hanging ribbon tails are not built (owner, fix pass 2): the wrist wraps stay, the ribbon bones stay in the skeleton
     bones_extra[f'ribbon_{sd}_0'] = (top, top + [sg * 0.008, 0, -0.14], 'forearm_' + sd); bones_extra[f'ribbon_{sd}_1'] = (top + [sg * 0.008, 0, -0.14], top + [sg * 0.018, 0, -0.28], f'ribbon_{sd}_0')
 
 # ---------------- weights: head
@@ -371,6 +372,7 @@ for k, o in objs.items():
     if k == 'body': pv[:] = bfp
     if k == 'patch': pv[:] = PP
     at.data.foreach_set('value', pv)
+    nh = o.data.attributes.new('nohull', 'INT', 'FACE'); nh.data.foreach_set('value', nohull if k == 'body' else np.zeros(len(o.data.polygons), np.int32))
     for p in o.data.polygons: p.use_smooth = True
 bpy.ops.object.select_all(action='DESELECT')
 for o in objs.values(): o.select_set(True)
@@ -379,7 +381,7 @@ bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); 
 me = el.data; nf = len(me.polygons); pa = np.empty(nf, np.int32); me.attributes['part'].data.foreach_get('value', pa)
 fc = np.empty(nf * 3); me.polygons.foreach_get('center', fc); fx_, fy_, fz = fc.reshape(-1, 3).T; fth = Z.ang(fx_, fy_)
 # texel density by zone; every zone is unwrapped on its own, so an island never mixes two densities
-zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.55, 7: 3.5, 8: 5.0, 9: 1.1}
+zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.9, 7: 3.5, 8: 5.0, 9: 1.1}
 zone[pa == 1] = 1; zone[(pa == 1) & (fy_ < -0.03) & (fz > 1.49) & (fz < 1.68) & (abs(fx_) < 0.08)] = 2; zone[pa == 2] = 3
 zone[pa == 4] = 9; zone[(pa == 4) & (fz > 0.59) & (fz < 0.85)] = 4; zone[pa == 5] = 5; zone[pa == 6] = 6
 zone[(pa == 0) & (fz > 0.79) & (fz < 0.99) & (fth > 12) & (fth < 104) & (np.hypot(fx_, fy_) < 0.215)] = 7; zone[pa >= Z.PART0] = 8
