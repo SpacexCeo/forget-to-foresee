@@ -45,6 +45,7 @@ import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
 import { createTownProps } from './scenes/town-props.js';
 import { createBarks } from './scenes/barks.js';
+import { createPhotoMode } from './render/photo-mode.js';
 import { cue } from './audio/town-audio.js';
 
 /**
@@ -180,7 +181,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null;
+let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null;
 const lastStepPos = [0, 0, 0];
 /** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
 function mountTownAudio() {
@@ -231,6 +232,7 @@ if (townMode.town) {
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
     const people = [];
     townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
@@ -348,6 +350,7 @@ async function leaveTown() {
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
   if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
+  if (photo) { photo.toggle(false); photo.setAvailable(false); }
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
@@ -574,6 +577,18 @@ const PLAY_KEYS = ['KeyE', 'KeyF', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG
 
 function leaveInspect() { clearWorldInput(); inspecting = null; rig.exitInspect(); }
 
+/** Orbit, tilt and zoom from keys, drag, wheel and the stick (play, the town and photo mode). */
+function cameraInput(dt, pad) {
+  const [lookX, lookY] = pad.look;
+  const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
+  const tilt = Number(input.down('ArrowUp')) - Number(input.down('ArrowDown')) + lookY;
+  const lookDt = Math.min(dt, 0.05);
+  if (rot || input.dragX) rig.rotate(rot * lookDt * 1.8 - input.dragX * 0.005);
+  if (tilt || input.dragY) rig.tilt(tilt * lookDt * 1.35 + input.dragY * 0.005);
+  if (input.wheel) rig.zoom(Math.pow(1.12, input.wheel));
+  if (input.down('Equal', 'NumpadAdd') || pad.down(PAD.zoomIn)) rig.zoom(Math.pow(0.5, lookDt));
+  if (input.down('Minus', 'NumpadSubtract') || pad.down(PAD.zoomOut)) rig.zoom(Math.pow(2, lookDt));
+}
 function handleInput(dt) {
   input.poll();
   const { pad } = input;
@@ -584,6 +599,12 @@ function handleInput(dt) {
   const playOn = play && !inTown; // back in the town after Return to town: the season waits, its keys sleep
   if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
+  if (photo && townOn && input.hit('KeyP')) photo.toggle();
+  if (photo && photo.on) { // photo mode: Iris holds still, the camera orbits freely, a click saves nothing (the bar's button does)
+    if (input.hit('Escape') || pad.hit(PAD.cancel)) photo.toggle(false);
+    cameraInput(dt, pad);
+    return false;
+  }
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
@@ -613,15 +634,7 @@ function handleInput(dt) {
   }
   if (input.hit('KeyK') && (townOn || playOn)) toggleSkin(); // Day 1: Iris <-> Elise
   if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
-  const [lookX, lookY] = pad.look;
-  const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
-  const tilt = Number(input.down('ArrowUp')) - Number(input.down('ArrowDown')) + lookY;
-  const lookDt = Math.min(dt, 0.05);
-  if (rot || input.dragX) rig.rotate(rot * lookDt * 1.8 - input.dragX * 0.005);
-  if (tilt || input.dragY) rig.tilt(tilt * lookDt * 1.35 + input.dragY * 0.005);
-  if (input.wheel) rig.zoom(Math.pow(1.12, input.wheel));
-  if (input.down('Equal', 'NumpadAdd') || pad.down(PAD.zoomIn)) rig.zoom(Math.pow(0.5, lookDt));
-  if (input.down('Minus', 'NumpadSubtract') || pad.down(PAD.zoomOut)) rig.zoom(Math.pow(2, lookDt));
+  cameraInput(dt, pad);
 
   if (!inspecting) {
     for (const c of input.clicks) {
@@ -771,7 +784,8 @@ function frame() {
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
-    if (townBarks) townBarks.update(player.pos, entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
+    if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
@@ -806,6 +820,7 @@ function frame() {
 
   const drawn = sceneReady && (play || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
   if (drawn) lookdev.render();
+  if (drawn && photo && photo.pending) photo.capture(); // the frame just drawn, before the buffer is cleared
   if (!firstFrameDone && (drawn || sceneReady)) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
   hud.frame(dt);
@@ -831,6 +846,7 @@ window.__ftf = {
     get shops() { return townShops; }, // walk-in shops (QA: enter('exchange'), leave())
     get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
     get barks() { return townBarks; }, // townsfolk lines (QA: current)
+    get photo() { return photo; }, // photo mode (QA: toggle, setFilter, requestCapture)
   } : null,
 };
 requestAnimationFrame(frame);
