@@ -857,6 +857,8 @@ export default {
   'town.objective': "走到锦标赛祭坛前",
   'town.loading': "城镇正在显现……",
   'town.altar.prompt': "报名参加锦标赛",
+  "town.objective.resume": "你的赛季在等你：祭坛会带你回去",
+  "town.altar.resume": "返回锦标赛",
   "quest.obj.read": "可选：下街的旅店老板有一个符号要读",
   "quest.obj.trade": "把旅店老板的便条交给广场上的面包师",
   "quest.obj.deliver": "把封印的词交给祭坛旁的神龛守护人",

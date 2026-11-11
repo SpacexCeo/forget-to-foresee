@@ -106,8 +106,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   const state = { phase: 'off', ready: false, near: false, device: coarse ? 'touch' : 'keyboard', route: null, lift: 0, liftFrom: 0, focusK: 0, registering: null, startedAt: 0, arrivedAt: 0 };
 
   function renderText() {
-    objective.textContent = i18n.t(state.ready ? (quest ? quest.objective : 'town.objective') : 'town.loading');
-    promptText.textContent = spotNear && !talkNpc ? i18n.t('spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t('town.altar.prompt');
+    objective.textContent = i18n.t(state.ready ? (state.resume ? 'town.objective.resume' : quest ? quest.objective : 'town.objective') : 'town.loading');
+    promptText.textContent = spotNear && !talkNpc ? i18n.t('spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
     if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
     if (quest) {
       meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
@@ -373,7 +373,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     state.phase = 'done';
     cover.classList.remove('is-on');
     const gone = cover;
-    setTimeout(() => { ink.destroy(); gone.remove(); root.remove(); prompt.remove(); talkEl.remove(); if (unsubscribe) unsubscribe(); if (unQuest) unQuest(); if (unLedger) unLedger(); }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
+    setTimeout(() => { ink.destroy(); gone.remove(); if (state.phase !== 'town') { root.remove(); prompt.remove(); talkEl.remove(); } }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
     cover = null;
     return true;
   }
@@ -402,8 +402,15 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     return null;
   }
 
+  /** Back from the archipelago (Return to town): the town UI again; the altar resumes the same season. */
+  function reenter() {
+    doc.body.append(root, prompt, talkEl);
+    state.phase = 'town'; state.resume = true; state.registering = null; state.lift = 0; state.focusK = 0; state.near = false;
+    renderText(); renderVisibility();
+  }
+
   return {
-    begin, update, interact, register, walkRoute, cancelRoute, routeWish,
+    begin, update, reenter, interact, register, walkRoute, cancelRoute, routeWish,
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
     get busy() { return state.phase === 'transition'; },

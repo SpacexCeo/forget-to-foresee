@@ -52,3 +52,12 @@ test('hired agents walk to the Shard Exchange, trade at its door, then walk home
   assert.equal(plan.program, original, 'back home: its own loop again');
   assert.ok(Math.hypot(plan.x - PROGRAMS.baker.home[0], plan.z - PROGRAMS.baker.home[2]) < 1.5);
 });
+
+test('Return to town: the pause menu offers it on the archipelago, the season is kept and the altar resumes it', () => {
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /label: 'Return to town[^']*', visible: \(\) => !!\(town && play && !inTown\)/);
+  assert.match(boot, /label: 'Start over[^']*'/);
+  assert.match(boot, /if \(play && !inTown\) play\.update/, 'the season waits while Iris is in the town');
+  assert.match(boot, /function startSeason\(\) \{\n  if \(season\) return season;/, 'registering again resumes the same season');
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of ['town.objective.resume', 'town.altar.resume']) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
+});

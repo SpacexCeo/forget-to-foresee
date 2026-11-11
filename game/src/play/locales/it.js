@@ -858,6 +858,8 @@ export default {
   'town.objective': "Raggiungi l’altare del Torneo",
   'town.loading': "La città sta prendendo forma…",
   'town.altar.prompt': "Iscriviti al Torneo",
+  "town.objective.resume": "La tua stagione ti aspetta: l'altare ti riporta lassù",
+  "town.altar.resume": "Torna al Torneo",
   "quest.obj.read": "Facoltativo: l'oste nella via bassa ha un segno da leggere",
   "quest.obj.trade": "Porta il biglietto dell'oste alla fornaia in piazza",
   "quest.obj.deliver": "Porta la parola sigillata al custode del santuario vicino all'altare",

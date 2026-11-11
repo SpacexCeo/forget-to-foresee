@@ -132,10 +132,16 @@ const openMainMenu = () => {
   if (menuLobby) return;
   Promise.all([import('./ui/index.js'), import('./ui/flow.js')]).then(([ui, fl]) => {
     const flow = fl.createOnboardingFlow(ctx.storage);
-    menuLobby = ui.mountLobby(uiRoot, { ctx, flow, onEnter: () => { if (menuLobby) { menuLobby.destroy(); menuLobby = null; } } });
+    const host = document.createElement('div'); host.className = 'ftf-root-menu'; uiRoot.append(host);
+    menuLobby = ui.mountLobby(host, { ctx, flow, onEnter: () => { if (menuLobby) { menuLobby.destroy(); menuLobby = null; host.remove(); } } });
   }).catch((e) => console.warn('[menu] lobby', e));
 };
-const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu });
+const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu,
+  extra: [
+    { label: 'Return to town (your season is kept: register at the altar to go back)', visible: () => !!(town && play && !inTown), onClick: () => returnToTown() },
+    { label: 'Start over (a new season)', visible: () => !!play, onClick: () => { if (window.confirm('Start a new season? The current one is lost.')) startOver(); } },
+  ] });
+{ const st = document.createElement('style'); st.textContent = '.ftf-play-away #ui > *:not(.ftf-root-menu) { display: none !important; }'; document.head.append(st); }
 const toastEl = document.getElementById('toast');
 
 // The play layer starts on entering the world (from the lobby's first contact, or at once with ?play=direct).
@@ -274,8 +280,30 @@ function islandProgress() {
 
 const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) => a.name);
 /** Under the transition's cover: Iris leaves the town for the archipelago and the season starts as it always did. */
+/**
+ * Return to town (owner, 11.11): from the archipelago back to the town with the season kept in memory; registering at
+ * the altar again resumes the same season (startSeason is memoized). The play layer's UI hides and its keys sleep.
+ */
+function returnToTown() {
+  if (!town || !townFlow || inTown || !play) return;
+  clearWorldInput(); stopSteering();
+  if (play.ui && play.ui.panel) play.ui.close();
+  inTown = true; townGrounded = true;
+  document.body.classList.add('ftf-play-away');
+  town.setActive(true);
+  player.world = town.world; rig.world = town.world;
+  player.killY = TOWN_KILL_Y;
+  player.teleport(TOWN_ALTAR_SPAWN.position.slice(), TOWN_ALTAR_SPAWN.heading);
+  rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.reset();
+  lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
+  townFlow.reenter();
+}
+/** Start over: a new local season (the judge link rebuilds the same fixed season). */
+function startOver() { location.reload(); }
+
 async function leaveTown() {
   inTown = false; leftTownAt = performance.now();
+  document.body.classList.remove('ftf-play-away');
   clearWorldInput();
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
@@ -399,24 +427,25 @@ function handleInput(dt) {
   const modal = document.querySelector('dialog[open]');
   if (modal) { navigateGamepadMenu(modal, pad); return false; }
   const townOn = inTown && entered; // walking the town: movement and the camera, no play keys (the season has not begun)
-  if (!play && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
+  const playOn = play && !inTown; // back in the town after Return to town: the season waits, its keys sleep
+  if (!playOn && !townOn) { navigateGamepadMenu(uiRoot, pad); return false; }
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
     if (inspecting) leaveInspect();
-    else if (play && play.handleKey('Escape')) clearWorldInput();
-    else if (moveTarget || (play && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
+    else if (playOn && play.handleKey('Escape')) clearWorldInput();
+    else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
     else controls.open();
     return false;
   }
-  if (!play) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
   }
-  if (play && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
-  if (play && !inspecting) {
+  if (playOn && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
+  if (playOn && !inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
     if (play.ui.panel) {
       navigateGamepadMenu(uiRoot.querySelector('.pl-panel'), pad);
@@ -464,7 +493,7 @@ function wishVector() {
     const { fwd, right } = rig.groundAxes();
     return [fwd.x * ay + right.x * ax, fwd.y * ay + right.y * ax];
   }
-  const rw = play ? play.routeWish() : inTown ? townFlow.routeWish() : null;
+  const rw = play && !inTown ? play.routeWish() : inTown ? townFlow.routeWish() : null;
   if (rw) return rw;
   if (!moveTarget) return [0, 0];
   const w = steerTo(player.pos, moveTarget);
@@ -588,7 +617,7 @@ function frame() {
   const speed = animSpeed;
   movingState = movingState ? speed > 0.08 : speed > 0.25;
   void moving;
-  if (play) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
+  if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
 

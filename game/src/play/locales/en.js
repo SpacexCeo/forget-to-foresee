@@ -859,6 +859,8 @@ export default {
   'town.objective': "Walk to the Tournament altar",
   'town.loading': "The town is taking shape…",
   'town.altar.prompt': "Register for the Tournament",
+  "town.objective.resume": "Your season waits: the altar takes you back",
+  "town.altar.resume": "Return to the Tournament",
   "quest.obj.read": "Optional: the innkeeper on the lower street has a sign to read",
   "quest.obj.trade": "Bring the innkeeper's note to the baker on the square",
   "quest.obj.deliver": "Take the sealed word to the shrinekeeper by the altar",
