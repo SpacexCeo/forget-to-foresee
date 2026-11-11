@@ -45,3 +45,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - QW-5: WebGL 2 check before the world chunk (?forceNoGL=1), no-GPU links on the boot screen, software-renderer note; tests.
 - QW-3: ?demo=judge Memories button opens the recorded on-chain shard #7 (labelled coordinator-minted), offline honest; scripts/judge-replay-link.mjs. README link with QW-1.
 - QW-1/QW-12/QW-7: README rewritten for the screener (old one = docs/status.md), numbers from docs/STATS.md (scripts/stats.mjs), scripts/verify-all.sh, Rust pinned 1.99.1, engines/.nvmrc. Left: cargo-near version pin (no release list reachable here).
+- Collapsible town panels: chevron → pill at the right edge with live hire progress, stack, O expands, Esc closes, remembered; tests + headless.

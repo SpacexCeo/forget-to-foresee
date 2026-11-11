@@ -510,6 +510,7 @@ function handleInput(dt) {
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
+    if (townOn && townFlow && townFlow.closePanel()) return false; // close the open talk panel
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
@@ -517,6 +518,7 @@ function handleInput(dt) {
     return false;
   }
   if (!playOn && townFlow) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (townOn && townFlow && input.hit('KeyO')) townFlow.expandPill(); // O: the newest minimised panel
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
