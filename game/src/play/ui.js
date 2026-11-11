@@ -52,7 +52,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   let forgetAsk = null; // { id, purpose }: the memory waiting for "Forget this memory" / "Keep it" (forget-confirm.js)
   // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
   // re-render on every observation does not restart the ink ring's drawing.
-  let shardSource = null, shardKey = '', shardNode = null;
+  let shardSource = null, shardKey = '', shardNode = null, exchangeOpener = null;
   let nearSource = null; // () => the NEAR watcher's status (world-hud.js): the Biography's season record
   function shardSection(obs) {
     if (!shardSource) return null;
@@ -187,7 +187,8 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
           el('button', { class: 'pl-btn pl-primary', type: 'button', 'data-forget': m.id, text: t('memory.forget'), onclick: () => askForget(m.id, 'vision') }),
           keyOpen && m.weight >= 3 ? el('button', { class: 'pl-btn', type: 'button', text: t('memory.forgetKey'), onclick: () => askForget(m.id, 'key') }) : null)))) : el('p', { text: t('memory.empty') });
       const forgotten = obs.iris.forgotten.length ? el('div', {}, el('h3', { text: t('memory.forgotten') }), el('ul', { class: 'pl-list pl-muted' }, obs.iris.forgotten.map((f) => el('li', { text: f.text + ' — ' + f.fate })))) : null;
-      panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten, shardSection(obs));
+      panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten, shardSection(obs),
+        exchangeOpener ? el('div', { class: 'pl-row' }, el('button', { class: 'pl-btn pl-small', type: 'button', 'data-exchange': '', text: t('exch.open'), onclick: () => exchangeOpener() })) : null);
     } else if (panel === 'vision') {
       const signs = obs.prophecies || [];
       const rules = el('div', { class: 'pl-row' }, el('span', { text: t('vision.rule') + ':' }), ['unknown', 'top', 'dots'].map((r) => el('button', {
@@ -370,6 +371,8 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   return { update, open, close, flash, handleKey,
     /** The Memories panel's shard NFT cards: fn(obs) → {cards, judgeOnly} (shard-card-model.js shardCards). */
     setShardSource(fn) { shardSource = fn; if (panel === 'memory' || panel === 'end') renderPanel(); },
+    /** The Foresight Exchange (a local drill, ui/exchange-terminal.js): a button under the Memories panel. */
+    setExchangeOpener(fn) { exchangeOpener = fn; if (panel === 'memory') renderPanel(); },
     /** The Biography's season record: fn() → the NEAR watcher's status (net/near.js). */
     setNearSource(fn) { nearSource = fn; if (panel === 'end') renderPanel(); }, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
 }

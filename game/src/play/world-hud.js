@@ -54,6 +54,15 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     mintToast = createMintToast(host, { t: render, doc, onOpen: () => ui.open('memory') });
     if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs }));
   } catch (e) { console.warn('[play] shard NFT watcher off', e); shards = null; }
+  // The Foresight Exchange (Judge Echo): optional, from Memories; with ?exchange=1 it also opens (not started) after the
+  // judge path's shard-card beat, on the short 4-bar window. Never part of the default judge table.
+  const exchangeShort = /[?&]exchange=1\b/.test((doc.defaultView || globalThis).location ? (doc.defaultView || globalThis).location.search : '');
+  let exchangeOpen = null;
+  const openExchange = () => {
+    if (exchangeOpen && exchangeOpen.open) return;
+    import('../ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc, i18n: ctx.i18n, storage: ctx.storage, short: exchangeShort })).then((x) => { exchangeOpen = x; }).catch((e) => console.warn('[play] exchange', e));
+  };
+  if (ui.setExchangeOpener) ui.setExchangeOpener(openExchange);
   if (ui.setNearSource) ui.setNearSource(() => (near ? near.status : null)); // the Biography's season record
   // On the judge link Iris's first shard moment also opens Memories on its card a beat after the toast (P1-C: the
   // NFT moment must be hard to miss). Once per session; never for other clans' shards.
@@ -66,6 +75,7 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
         if (ui.panel !== 'memory') ui.open('memory');
         // the card sits under the memory list: bring it into view
         setTimeout(() => { const c = doc.querySelector('.sh-card'); if (c && c.scrollIntoView) c.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 120);
+        if (exchangeShort) setTimeout(openExchange, 6000); // ?exchange=1: the drill is offered after the card beat
       }, 1600); }
     }
   };

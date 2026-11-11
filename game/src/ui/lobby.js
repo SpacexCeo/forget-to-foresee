@@ -94,10 +94,12 @@ export function mountLobby(root, opts = {}) {
 
   const exitStatus = h('p', { class: 'ftf-exit-status', attrs: { role: 'status' } });
   const exit = () => { try { window.close(); } catch { /* browsers only close script-opened tabs */ } setTimeout(() => tx(exitStatus, i18n, 'lobby.exitHint'), 150); };
+  // The Foresight Exchange: a local practice-silk drill (ui/exchange-terminal.js), loaded on demand.
+  const openExchange = () => { import('./exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc: document, i18n, storage: ctx.storage })).catch((e) => console.warn('[lobby] exchange', e)); };
   const item = (key, onClick, extra = {}) => h('li', {}, h('button', { class: 'ftf-menu-item', i18n: key, attrs: { type: 'button', ...extra }, on: { click: onClick } }));
   const menu = h('nav', { class: 'ftf-menu', i18nAttrs: { 'aria-label': 'lobby.nav.label' } },
     enterBtn,
-    h('ul', { class: 'ftf-menu-list' }, item('lobby.settings', open('settings'), { 'aria-haspopup': 'dialog' }), item('lobby.exit', exit)),
+    h('ul', { class: 'ftf-menu-list' }, item('lobby.settings', open('settings'), { 'aria-haspopup': 'dialog' }), item('exch.lobby', openExchange, { 'aria-haspopup': 'dialog', 'data-exchange': '' }), item('lobby.exit', exit)),
     exitStatus);
   rovingArrows(menu);
 
