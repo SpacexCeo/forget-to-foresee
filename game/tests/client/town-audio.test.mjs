@@ -26,3 +26,13 @@ test('cues play through the engine, unknown names are ignored; steps on stone ou
   assert.deepEqual(played, ['gift_chime', 'step_stone', 'step_wood']);
   for (const c of TOWN_CUES) assert.ok(AUDIO_MANIFEST.sounds[c] || (AUDIO_MANIFEST.groups && AUDIO_MANIFEST.groups[c]), c);
 });
+
+test('intro fly-through: once per browser, skippable, never on the jury path, ?skip=intro or reduced motion', async () => {
+  const { readFileSync } = await import('node:fs');
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  const body = boot.slice(boot.indexOf('function introFly('), boot.indexOf('/** The camera settles on the heroine'));
+  for (const want of ['INTRO_KEY', 'judge', 'lookdev.reducedMotion', "params.get('skip') === 'intro'", "addEventListener('keydown', end)", "ctx.i18n.t('intro.skip')"]) assert.ok(body.includes(want), want);
+  assert.match(boot, /introFly\(\)\.then\(startDay1\)/);
+  const { PLAY_MESSAGES } = await import('../../src/play/i18n.js');
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok(PLAY_MESSAGES[loc]['intro.skip'], loc);
+});

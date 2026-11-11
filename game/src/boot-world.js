@@ -421,6 +421,46 @@ function updateAltarTimer() {
   altarTimer.style.top = ((1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
+/**
+ * The intro fly-through (feature 5): on the first visit the camera sweeps down from high above the town, circling a
+ * third of the way round, and settles behind Iris. Any key or tap, or Skip, ends it; ?skip=intro, the jury path and
+ * reduced motion never show it. Remembered in this browser. Resolves when it is over.
+ */
+const INTRO_KEY = 'ftf.intro.v1';
+function introFly(ms = 6500) {
+  let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
+  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off') return Promise.resolve(false);
+  // the town is entered under the loading screen: fly only once the screen is gone (main.js sets __ftfBootMarks.done)
+  const revealed = () => new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__ftfBootMarks && window.__ftfBootMarks.done) || performance.now() - t0 > 180000 ? res() : setTimeout(tick, 150)); tick(); });
+  return revealed().then(() => new Promise((resolve) => {
+    try { if (ctx.storage) ctx.storage.setItem(INTRO_KEY, '1'); } catch { /* memory only */ }
+    let t0 = 0; const turn = (2 * Math.PI) / 3, startYaw = rig.yaw; // t0: the first frame (a slow first frame must not eat the flight)
+    const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
+    skip.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;transform:none;z-index:31';
+    document.body.append(skip);
+    let done = false, last = 0;
+    const end = () => {
+      if (done) return; done = true;
+      rig.pitchOverride = null; rig.dist = TOWN_CAMERA.dist; rig.rotate(startYaw - rig.yaw);
+      skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end);
+      resolve(true);
+    };
+    skip.addEventListener('click', end);
+    window.addEventListener('keydown', end); window.addEventListener('pointerdown', end);
+    rig.rotate(-turn);
+    const step = () => {
+      if (done) return;
+      if (!t0) t0 = performance.now();
+      const p = Math.min(1, (performance.now() - t0) / ms), e = p * p * (3 - 2 * p);
+      rig.dist = 70 + (TOWN_CAMERA.dist - 70) * e;
+      rig.pitchOverride = (62 - 50 * e) * Math.PI / 180;
+      const target = turn * e; rig.rotate(target - last); last = target;
+      if (p < 1) requestAnimationFrame(step); else end();
+    };
+    requestAnimationFrame(step);
+  }));
+}
+
 /** The camera settles on the heroine from high above the gate (Day 1 arrival). */
 function flyIn(ms) {
   if (!ms) return;
@@ -454,7 +494,7 @@ async function enterWorld() {
     if (boot.closeLobby) boot.closeLobby();
     document.body.classList.add('in-world');
     entered = true;
-    if (inTown) { townFlow.begin(); startDay1(); return; }
+    if (inTown) { townFlow.begin(); introFly().then(startDay1); return; } // the first visit flies in, then Day 1
     await startSeason();
   })();
   return entering;
