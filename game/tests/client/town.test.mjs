@@ -66,7 +66,8 @@ test('town layout: pieces have valid unique names and kinds the catalog knows', 
 });
 
 test('town catalog: one entry per piece, bounds from the data, no greybox', () => {
-  assert.equal(TOWN_ASSETS.length, TOWN_DATA.pieces.length);
+  assert.equal(TOWN_ASSETS.length, TOWN_DATA.pieces.length + (TOWN_DATA.interiors || []).length, 'the pieces and the shop interiors');
+  for (const it of TOWN_DATA.interiors || []) assert.ok(assetByName(it.name).noGreybox, it.name);
   assert.equal(ALL_ASSETS.length, ASSETS.length + TOWN_ASSETS.length);
   for (const p of TOWN_DATA.pieces) {
     const a = assetByName(p.name);
