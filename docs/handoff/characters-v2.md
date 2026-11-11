@@ -140,34 +140,56 @@ State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.
 
 ## 3. Townsfolk (13 people, clips, behaviour in the town)
 
-State 11.11.2026 about 04:00 UTC. Full record: `docs/townsfolk.md`.
+State 11.11.2026 about 09:15 UTC (stopped by the lead in the middle of quality round 2). Full record of round 1:
+`docs/townsfolk.md` (not yet updated for round 2).
 
-**Done (in git, on `claude/characters-v2` and `main`)**
-- The cast is the 13 GPT sheets (`docs/art/townsfolk/refs/`). `art/townsfolk/cast.py` holds them as data; the
-  pipeline builds all 13 (`bash art/townsfolk/run_all.sh <work_dir>`): 15,990 triangles, one 2048² set, KTX2 +
-  meshopt, `_m` 1024². Game files: `game/public/assets/models/townsfolk_<key>.glb` and `_m`.
-- Client: `game/src/play/townsfolk-plan.js` (cast, programs on `TOWN_DATA.npc`, pure state machine),
-  `townsfolk.js` (lazy loading, `_m` first, mocap clips through `townsfolkClips`, clip-speed walking, look-at,
-  animation LOD), hook in `scenes/town.js` (`townsfolk`, next to the lighting branch's `life`), `camera` in
-  `townFrame` (`boot-world.js`). Tests: `game/tests/client/townsfolk.test.mjs` (in `npm test`).
-- QA images: `docs/art/townsfolk/qa/`.
+**In the game (main and this branch): round 1, unchanged**
+- The 13 from the GPT sheets, `game/public/assets/models/townsfolk_<key>.glb` + `_m` (15,990 triangles, one 2048²
+  set, two skinned meshes per person: face and body). **No glb of round 2 is in the repository**: the set is whole
+  and consistent, all thirteen are round-1 files.
+- Client: `game/src/play/townsfolk-plan.js`, `townsfolk.js`, hook in `scenes/town.js`, tests in
+  `game/tests/client/townsfolk.test.mjs`.
 
-**Half-done / not verified**
-- The last in-game pass on the server ran before two fixes (lamplighter drawn amber, scribe standing in a crate)
-  and before the merge with `main`; tests and the build are green after them, but there is no screenshot.
-- Frame time is not measured: the server was overloaded during the pass (about 190 ms a frame everywhere).
-- The elder's seat height on the bench with the mocap `sit` clip was not looked at.
-- QA renders next to the sheets are one build older than the shipped files.
-- TRELLIS trial: parked. Scripts in `art/townsfolk/trellis/`; the hybrid `to_game.py` has never run.
+**Round 2 (quality pass): sources only, on this branch, NOT on main, not built as a full batch**
+- Surfaces (`tf_shading.py`): woven cloth (crossed thread bands) in colour and bump, darker seams at trims, wear
+  toward the lower edge of each piece (`hemz` attribute), scuffed leather, flour on the baker's apron (`dust`), a
+  blurred AO multiplied into the base colour; palette in `cast.py` muted toward the sheets.
+- Construction (`tf_costume.py`, `tf_wardrobe.py`, `cast.py`): mid-calf boots with a cuff, full trousers gathered
+  onto the boot top, shard keeper's robe open over a linen underskirt, sash with more clearance, cuirass with plate
+  rows, larger bracers, longer shawl with a lower band, necklace cords on the cloth, `strip_layers` no longer lets
+  boots, socks, bracers or pauldrons remove what is under them (floating trouser rings on the scribe).
+- Weights (`build_townsfolk.py`): hems of tunics, coats and scarf tails no longer read the arm bones (the scribe's
+  hem spikes while waving); brows 0.62 × lighter; hair shells keep up to 1,800 triangles and are smoothed more.
+- One skinned mesh per person (the face takes the rest in a join; lead's finding: too many draw calls) and more
+  room between a tunic and its under-shirt (lamplighter's white patch): **written, never built**.
+- Placement (`townsfolk-plan.js`): square keepers stand 2.3 m in front of their doors (not beside them), the
+  musician 1 m off the post. Tests pass; **not looked at in the game**.
+- Seen so far (local CPU builds, before the last fixes): guard, shard keeper, scribe, innkeeper
+  (`docs/art/townsfolk/qa/round2_wip_shopkeepers.jpg`): clearly less flat (fabric, boots, muted colours, clean
+  innkeeper hem). Not seen: the other nine, the single-mesh export, anything in the game.
+
+**Not done from the lead's round-2 list**
+- Hair silhouettes and strand shading beyond smoothing; distinct faces and age cues; belts with rings; rolled
+  cuffs; the elder's real fringe; hem motifs; refreshed `<key>_vs_sheet.jpg`, lineup and in-game stills; frame
+  times; the TRELLIS hybrid retry.
 
 **Next**
-1. `NODE_PATH=<playwright> node art/townsfolk/qa_ingame.cjs <out> <port> [phone]` on a built game: look at every
-   stop, note frame times for desktop and phone, fix what shows (bench height, door positions).
-2. Costume polish in `tf_wardrobe.py` / `cast.py` (shawl fringe, satchel, apron halter, faces), then rebuild.
-3. If the owner wants the image-to-3D look: finish the hybrid (see the trial section of `docs/townsfolk.md`).
+1. Build all 13 from this branch, look at every `qa_turn.jpg`, fix, then replace the 26 game files in one commit.
+2. Check the single-mesh glb in the game (morphs and blink still play, file size, draw calls), then the in-game
+   stills and frame times with `art/anim/ingame-gpu.mjs` (the animation worker's capture setup, `/root/w/chars/anim`).
+3. `npm test` + build, merge main, push branch and main; update `docs/townsfolk.md` and the QA images.
 
 **How to resume**
-- GPU server work dir was `/root/w/chars/townsfolk/` (`ftf` clone with the sources, `build/<key>/` with the
-  `.blend` files, `pub/` with the game files, `trellis/` with the venv and the weights). The server stopped
-  answering about 03:30 UTC 11.11; nothing needed for the game exists only there. A fresh machine needs
-  Blender 4.5 with the MPFB add-on (`mpfb.zip` was in `/root/w/townsfolk/`), gltf-transform and toktx.
+- New GPU server (RTX 5090, 32 threads): Blender was missing after the lead's setup (the download had failed);
+  installed by `wget` of `blender-4.5.3-linux-x64.tar.xz` into `/opt` with a link in `/usr/local/bin`, plus
+  Playwright in `/root/pw`. MPFB 2.0.18: the zip was uploaded to `/root/w/chars/townsfolk/mpfb.zip` and is installed
+  with `blender -b --command extension install-file -r user_default -e mpfb.zip`. Work dir
+  `/root/w/chars/townsfolk/` (`ftf` clone of this branch). One command builds everything:
+  `bash art/townsfolk/run_all.sh /root/w/chars/townsfolk` → `build/<key>/qa_turn.jpg`, `pub/*.glb`. A batch was
+  started at 09:08 UTC from commit e9511a3 (one commit before the single-mesh change); the server had rebooted
+  once at about 09:01 and killed the batch before it. Nothing there is needed.
+- Local CPU fallback (works, about 4 min a person alone, 10 min three at a time on 4 cores): Blender 4.5.3 with
+  MPFB already installed in the lead's container (scratchpad `iris-cpu/`), `TF_CPU=1`, then the same three steps
+  as `run_all.sh` (build, `qa_glb.py`, `compress-glb.sh` + `glb_mobile.py`).
+- TRELLIS: the old server and its venv are gone; scripts and notes in `art/townsfolk/trellis/` and
+  `docs/townsfolk.md`.
