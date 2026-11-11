@@ -35,8 +35,9 @@ Variables) to the relayer's URL; the Pages build passes it as `VITE_FTF_RELAYER_
 ```bash
 git fetch origin main
 git checkout main && git pull --ff-only origin main
-cd game && npm ci && npm test && npm run build && cd ..      # must be green: pass 516, fail 0 (09.11 count)
-cd server && npm test && cd ..                               # pass 28
+(cd game && npm ci && npm run build)                          # the production build (its size goes into docs/STATS.md)
+bash scripts/verify-all.sh --write                           # every suite must be ok (fail 0); refreshes docs/STATS.md
+git add docs/STATS.md docs/stats.json && git commit -m "Numbers at the freeze" && git push origin main
 git tag -a hackathon-submission -m "NEAR Hackathon submission" main
 git push origin hackathon-submission
 ```

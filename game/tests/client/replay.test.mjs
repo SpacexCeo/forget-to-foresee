@@ -79,3 +79,16 @@ test('replay strings exist in all five locales and never claim a check for an un
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
   assert.match(PLAY_MESSAGES.en['replay.check.not-committed'], /never committed/);
 });
+
+test('the README links the recorded judge replay, and it replays to the committed root (audit QW-3)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { judgeReplay, PAGE } = await import('../../scripts/judge-replay-link.mjs');
+  const { replayLink, runReplay, rootCheck } = await import('../../src/net/replay.js');
+  const link = replayLink(PAGE, judgeReplay());
+  const readme = readFileSync(new URL('../../../README.md', import.meta.url), 'utf8');
+  assert.ok(readme.includes(link), 'README carries the current judge replay link (node game/scripts/judge-replay-link.mjs)');
+  const r = runReplay(judgeReplay());
+  assert.equal(r.ok, true); assert.equal(rootCheck(r), 'match');
+  // numbers come from docs/STATS.md, not typed into the README
+  assert.doesNotMatch(readme, /\b\d{3} (tests|pass)\b|tests \d{3}\b/);
+});
