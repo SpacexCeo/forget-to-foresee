@@ -44,6 +44,7 @@ import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_OR
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
 import { createTownProps } from './scenes/town-props.js';
+import { cue } from './audio/town-audio.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -178,7 +179,13 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null, townProps = null;
+let fogCards = null, townShops = null, townProps = null, townAudio = null;
+const lastStepPos = [0, 0, 0];
+/** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
+function mountTownAudio() {
+  if (townAudio) return;
+  Promise.all([import('./audio/audio.js'), import('./audio/town-audio.js')]).then(([a, t]) => { if (!townAudio && inTown) townAudio = t.createTownAudio({ createAudio: a.createAudio }); }).catch((e) => console.warn('[town] audio', e));
+}
 let town = null, townFlow = null, townCasting = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -223,6 +230,8 @@ if (townMode.town) {
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  mountTownAudio();
+  import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
   const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage, ledger: townLedger })).catch((e) => console.warn('[town] exchange', e));
   const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
     const wrap = document.createElement('div');
@@ -304,7 +313,7 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
-    onCast: () => { if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+    onCast: (id) => { cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
 }
 function returnToTown() {
   if (!town || !townFlow || inTown || !play) return;
@@ -319,6 +328,7 @@ function returnToTown() {
   rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.reset();
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
   mountCasting(); // leaveTown disposed it: without this the two skills were gone after Return to town
+  mountTownAudio();
   townFlow.reenter();
 }
 /** Start over: a new local season (the judge link rebuilds the same fixed season). */
@@ -330,6 +340,7 @@ async function leaveTown() {
   clearWorldInput();
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
+  if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
   player.teleport(SPAWN.slice(), islandStart.heading);
@@ -411,6 +422,46 @@ function updateAltarTimer() {
   altarTimer.style.top = ((1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
+/**
+ * The intro fly-through (feature 5): on the first visit the camera sweeps down from high above the town, circling a
+ * third of the way round, and settles behind Iris. Any key or tap, or Skip, ends it; ?skip=intro, the jury path and
+ * reduced motion never show it. Remembered in this browser. Resolves when it is over.
+ */
+const INTRO_KEY = 'ftf.intro.v1';
+function introFly(ms = 6500) {
+  let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
+  if (seen || judge || lookdev.reducedMotion || params.get('skip') === 'intro' || params.get('intro') === 'off') return Promise.resolve(false);
+  // the town is entered under the loading screen: fly only once the screen is gone (main.js sets __ftfBootMarks.done)
+  const revealed = () => new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__ftfBootMarks && window.__ftfBootMarks.done) || performance.now() - t0 > 180000 ? res() : setTimeout(tick, 150)); tick(); });
+  return revealed().then(() => new Promise((resolve) => {
+    try { if (ctx.storage) ctx.storage.setItem(INTRO_KEY, '1'); } catch { /* memory only */ }
+    let t0 = 0; const turn = (2 * Math.PI) / 3, startYaw = rig.yaw; // t0: the first frame (a slow first frame must not eat the flight)
+    const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ftf-town-prompt'; skip.textContent = ctx.i18n.t('intro.skip');
+    skip.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;transform:none;z-index:31';
+    document.body.append(skip);
+    let done = false, last = 0;
+    const end = () => {
+      if (done) return; done = true;
+      rig.pitchOverride = null; rig.dist = TOWN_CAMERA.dist; rig.rotate(startYaw - rig.yaw);
+      skip.remove(); window.removeEventListener('keydown', end); window.removeEventListener('pointerdown', end);
+      resolve(true);
+    };
+    skip.addEventListener('click', end);
+    window.addEventListener('keydown', end); window.addEventListener('pointerdown', end);
+    rig.rotate(-turn);
+    const step = () => {
+      if (done) return;
+      if (!t0) t0 = performance.now();
+      const p = Math.min(1, (performance.now() - t0) / ms), e = p * p * (3 - 2 * p);
+      rig.dist = 70 + (TOWN_CAMERA.dist - 70) * e;
+      rig.pitchOverride = (62 - 50 * e) * Math.PI / 180;
+      const target = turn * e; rig.rotate(target - last); last = target;
+      if (p < 1) requestAnimationFrame(step); else end();
+    };
+    requestAnimationFrame(step);
+  }));
+}
+
 /** The camera settles on the heroine from high above the gate (Day 1 arrival). */
 function flyIn(ms) {
   if (!ms) return;
@@ -444,7 +495,7 @@ async function enterWorld() {
     if (boot.closeLobby) boot.closeLobby();
     document.body.classList.add('in-world');
     entered = true;
-    if (inTown) { townFlow.begin(); startDay1(); return; }
+    if (inTown) { townFlow.begin(); introFly().then(startDay1); return; } // the first visit flies in, then Day 1
     await startSeason();
   })();
   return entering;
@@ -711,6 +762,12 @@ function frame() {
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
+    if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
+      const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
+      if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
+      lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
+      townAudio.setListener(camera, avatar.position);
+    }
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);

@@ -622,6 +622,7 @@ export default {
   'ledger.copy': "Copia i passi di verifica",
   'ledger.copied': "Copiato",
   'ledger.view': "Apri la transazione",
+  'intro.skip': "Salta",
   'spot.wheel': "Gira la ruota",
   'item.prop_wheel_of_fortune': "Ruota della fortuna",
   'item.trading_board': "Tabellone delle operazioni",

@@ -2,6 +2,7 @@
 // face-down "Free mint" cards; the picked one flips into Elise and the real mint runs (play/day1-mint.js) with honest
 // states; "Claim to inventory" flies the card to the Profile button. Then the hints, in order, and the two 10-second
 // story trailers (in-engine camera moves with subtitles, skippable). DOM only; the camera moves are callbacks.
+import { cue } from '../audio/town-audio.js';
 
 const CSS = `
 .d1 { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; font: 16px/1.45 system-ui, sans-serif; color: #fff7e6; pointer-events: none; }
@@ -54,6 +55,7 @@ function btn(doc, text, fn, ghost = false) { const b = el(doc, 'button', 'd1-btn
  * The arrival: title, name, burst, the two cards, the mint, the claim. Resolves when the card is claimed.
  * @param {{doc?: Document, t: Function, mint: object, flyIn?: (ms: number) => void, reduced?: () => boolean, inventoryEl?: () => Element|null, nickname?: string}} o
  */
+let chimed = false;
 export async function runArrival({ doc = document, t, mint, flyIn = null, reduced = () => false, inventoryEl = () => null, nickname = '' }) {
   ensureStyle(doc);
   const root = el(doc, 'div', 'd1'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('day1.welcome'));
@@ -112,6 +114,7 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
     status.replaceChildren();
     if (ph === 'minted') {
       status.append(doc.createTextNode(t('day1.mint.minted') + ' '));
+      if (!chimed) { chimed = true; cue('gift_chime'); } // sound and a pulse when the mint is confirmed on-chain
       const l = mint.links; if (l) { const a = el(doc, 'a', null, t('day1.mint.view')); a.href = l.token; a.target = '_blank'; a.rel = 'noopener noreferrer'; status.append(a); }
     } else if (ph === 'failed') {
       const r = el(doc, 'button', 'd1-btn d1-ghost', t('day1.mint.failed')); r.type = 'button'; r.addEventListener('click', () => mint.retry()); status.append(r);

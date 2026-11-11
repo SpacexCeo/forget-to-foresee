@@ -621,6 +621,7 @@ export default {
   'ledger.copy': "复制验证步骤",
   'ledger.copied': "已复制",
   'ledger.view': "查看交易",
+  'intro.skip': "跳过",
   'spot.wheel': "转动转盘",
   'item.prop_wheel_of_fortune': "幸运转盘",
   'item.trading_board': "交易看板",

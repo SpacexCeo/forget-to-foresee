@@ -621,6 +621,7 @@ export default {
   'ledger.copy': "Скопировать шаги проверки",
   'ledger.copied': "Скопировано",
   'ledger.view': "Открыть транзакцию",
+  'intro.skip': "Пропустить",
   'spot.wheel': "Крутить колесо",
   'item.prop_wheel_of_fortune': "Колесо фортуны",
   'item.trading_board': "Доска сделок",

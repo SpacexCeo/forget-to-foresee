@@ -623,6 +623,7 @@ export default {
   'ledger.copy': "Copy verification steps",
   'ledger.copied': "Copied",
   'ledger.view': "View the transaction",
+  'intro.skip': "Skip",
   'spot.wheel': "Spin the wheel",
   'item.prop_wheel_of_fortune': "Wheel of fortune",
   'item.trading_board': "Trading board",
