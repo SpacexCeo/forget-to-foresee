@@ -44,6 +44,15 @@ jobs:
           FTF_BASE: /forget-to-foresee/
           # Day 1: the relayer that signs create_guest server-side (relayer/); no key is built into the page
           VITE_FTF_RELAYER_URL: ${{ vars.FTF_RELAYER_URL }}
+      - name: Smoke the built page (fails on any page error or a stuck loading screen)
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1.49.1
+          npx playwright install --with-deps chromium
+          (npx vite preview --port 4173 --strictPort --host 127.0.0.1 > /tmp/preview.log 2>&1 &)
+          sleep 4
+          node scripts/smoke-built.mjs "http://127.0.0.1:4173/forget-to-foresee/?day1=0&quest=0" 300
+        env:
+          FTF_BASE: /forget-to-foresee/ # the preview serves the sub-path the build was made for
       - uses: actions/upload-pages-artifact@v3
         with:
           path: game/dist

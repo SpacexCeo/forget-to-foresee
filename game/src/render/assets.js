@@ -15,9 +15,23 @@ import { MODEL_FILES, MODEL_DIRS } from 'virtual:model-list';
 import { ALL_ASSETS, LOAD_DISTANCE, assetByName, classifyPath, isValidModelName, modelUrl, versionedModelUrl, socketRole } from './asset-catalog.js';
 import { instancePriority, assetPriority, pinnedPriority, heroLast, shouldRetry, planStreaming, planUpgrade, LruCache, createPrefetch } from './streaming.js';
 import { buildGreybox } from './greybox.js';
+import { createMirrorFetch, preferMirrorAtStart, DEFAULT_MIRROR, MIRROR_STICKY_KEY } from './mirror.js';
 import { transformTriangles, MASK_ALL } from '../physics/collision.js';
 
 const BASE = import.meta.env.BASE_URL || '/';
+// Model downloads go through the mirror-aware fetch (render/mirror.js): the page's host first, jsDelivr on failure.
+const mirrorFetch = (() => {
+  let params = null, storage = null, zone = null;
+  try { params = new URLSearchParams(globalThis.location ? globalThis.location.search : ''); } catch { /* none */ }
+  try { storage = globalThis.sessionStorage || null; } catch { /* none */ }
+  try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* none */ }
+  const p = params ? params.get('mirror') : null;
+  const env = (import.meta.env && import.meta.env.VITE_FTF_ASSET_MIRROR) || null;
+  const mirror = p && /^https:\/\//.test(p) ? p : p === '0' ? null : env || DEFAULT_MIRROR;
+  let sticky = null; try { sticky = storage ? storage.getItem(MIRROR_STICKY_KEY) : null; } catch { /* none */ }
+  return createMirrorFetch({ base: BASE, mirror: import.meta.env && import.meta.env.DEV && p !== '1' ? null : mirror, storage, preferMirror: preferMirrorAtStart({ param: p && p.length === 1 ? p : null, timeZone: zone, sticky }) });
+})();
+export const assetMirror = mirrorFetch;
 
 /**
  * Texture budget variant. On phones and the low tier main.js sets '_m': an asset loads <name>_m.glb
@@ -139,7 +153,7 @@ function loader() {
 /** Fetches and parses one model; rejects with a readable error (404, not a GLB, parse failure). */
 export async function fetchGltf(name, { onProgress } = {}) {
   const url = versionedModelUrl(name, BASE, MODEL_FILES[name], (MODEL_DIRS && MODEL_DIRS[name]) || '');
-  const res = await fetch(url);
+  const res = await mirrorFetch.fetch(url, MODEL_FILES[name] || 0);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   const total = Number(res.headers.get('content-length')) || 0;
   let buffer;

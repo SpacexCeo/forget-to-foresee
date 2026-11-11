@@ -109,15 +109,31 @@ export function renderShardCard(card, { t, doc = document } = {}) {
 }
 
 /** The Memories panel section: heading + cards (real tokens and labeled unminted previews). */
-export function renderShardSection({ cards, judgeOnly }, { t, doc = document } = {}) {
-  if (!cards.length && !judgeOnly) return null;
+export function renderShardSection({ cards, judgeOnly, recorded = null }, { t, doc = document } = {}) {
+  if (!cards.length && !judgeOnly && !recorded) return null;
   ensureShardCardStyle(doc);
-  if (!cards.length) return el(doc, 'p', { class: 'sh-note', text: t('shard.nft.judgeOnly') });
+  if (!cards.length && !recorded) return el(doc, 'p', { class: 'sh-note', text: t('shard.nft.judgeOnly') });
   // "on NEAR" only when at least one card is a real token
-  const heading = t(cards.some(({ card }) => card.state === 'minted') ? 'shard.nft.heading' : 'shard.nft.headingLocal');
+  const heading = t(cards.some(({ card }) => card.state === 'minted') || (recorded && recorded.state === 'minted') ? 'shard.nft.heading' : 'shard.nft.headingLocal');
   return el(doc, 'section', { class: 'sh-section', 'aria-label': heading },
     el(doc, 'h3', { text: heading }),
-    cards.map(({ card }) => renderShardCard(card, { t, doc })));
+    cards.map(({ card }) => renderShardCard(card, { t, doc })),
+    recorded ? renderRecorded(recorded, { t, doc }) : null);
+}
+
+/** ?demo=judge: the recorded judge playthrough's on-chain shard behind one button, clearly not this session's token. */
+function renderRecorded(recorded, { t, doc }) {
+  if (recorded.state !== 'minted') return el(doc, 'p', { class: 'sh-note sh-recorded-note', text: t(recorded.state === 'offline' ? 'shard.nft.recorded.offline' : 'shard.nft.recorded.checking') });
+  const box = el(doc, 'div', { class: 'sh-recorded' });
+  const body = el(doc, 'div', { class: 'sh-recorded-body', hidden: true });
+  const btn = el(doc, 'button', { type: 'button', class: 'pl-btn sh-recorded-open', text: t('shard.nft.recorded.open', { id: recorded.card.shardId }), 'aria-expanded': 'false' });
+  btn.addEventListener('click', () => {
+    const open = body.hidden;
+    body.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+    if (open && !body.firstChild) body.append(el(doc, 'p', { class: 'sh-note', text: t('shard.nft.recorded.caption') }), renderShardCard(recorded.card, { t, doc }));
+  });
+  box.append(btn, body);
+  return box;
 }
 
 /**
