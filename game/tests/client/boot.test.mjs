@@ -103,6 +103,9 @@ test('chunk plan: the graph stays acyclic (rules with ui, logogram with client-c
   assert.equal(chunkFor(root + '/src/game/engine.js'), 'ui'); // ui modules read engine tables at module level
   assert.equal(chunkFor(root + '/src/play/logogram.js'), 'client-core'); // scenes draw logograms
   assert.equal(chunkFor(root + '/src/play/game.js'), 'play');
+  assert.equal(chunkFor(root + '/src/play/narration.js'), 'ui'); // a11y and settings read it
+  assert.equal(chunkFor(root + '/src/net/exchange-deployment.js'), 'ui'); // the exchange terminal reads it
+  assert.equal(chunkFor(root + '/src/ui/replay-view.js'), 'play'); // pulls the rules API; opened lazily from main.js
   assert.equal(chunkFor(root + '/src/ui/loading.js'), 'boot');
   assert.equal(chunkFor(root + '/src/ui/motion/index.js'), 'boot');
   assert.equal(chunkFor(root + '/node_modules/vite/preload-helper.js'), 'boot');
@@ -177,4 +180,21 @@ test('loading v3: the log names what is loading in the world\'s voice, in every 
     if (loc === 'en') for (const k of Object.keys(LOG_EN)) assert.equal(messages[k], LOG_EN[k]);
     if (loc === 'ru') assert.match(messages['loading.log.terrain'], /[а-я]/);
   }
+});
+
+test('chunk plan: no ui-chunk module statically imports a play-chunk module (a ui -> play edge is a boot TDZ)', async () => {
+  const { readFileSync, readdirSync, statSync } = await import('node:fs');
+  const { join, resolve, dirname } = await import('node:path');
+  const src = resolve(dirname(new URL(import.meta.url).pathname), '../../src');
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.js') ? [p] : []; });
+  const bad = [];
+  for (const file of walk(src)) {
+    if (chunkFor(file) !== 'ui') continue;
+    const text = readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/^\s*import\s[^;]*?from\s+['"](\.[^'"]+)['"]/gm)) {
+      const target = resolve(dirname(file), m[1]);
+      if (chunkFor(target) === 'play') bad.push(file.slice(src.length) + ' -> ' + target.slice(src.length));
+    }
+  }
+  assert.deepEqual(bad, []);
 });
