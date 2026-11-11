@@ -605,14 +605,17 @@ let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progre
 // The town's day cycle (render/daycycle.js, owner 11.11): afternoon → dusk → afternoon, rain every second loop.
 // Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
 const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
-  ? { t: Number(params.get('cycle')) || 0, k: -1, weather: null } : null;
+  ? { t: Number(params.get('cycle')) || 0, stepAt: 0, k: -1, weather: null } : null;
 function tickDayCycle(dt) {
   if (lookdev.location !== 'town') return;
   dayCycle.t += dt;
   const c = cycleAt(dayCycle.t);
   if (Math.abs(c.k - dayCycle.k) >= BLEND_STEP || (c.k !== dayCycle.k && (c.k === 0 || c.k === 1))) {
     dayCycle.k = c.k;
-    lookdev.applyLook(mixLooks(lookFor('town', null), lookFor('town', 'dusk'), c.k));
+    // The lights ease over the time since the last step, so the sun glides from step to step instead of jumping.
+    const ease = Math.min(3, dayCycle.t - dayCycle.stepAt);
+    dayCycle.stepAt = dayCycle.t;
+    lookdev.applyLook(mixLooks(lookFor('town', null), lookFor('town', 'dusk'), c.k), { ease: ease > 0.05 ? ease : 0 });
   }
   if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
 }

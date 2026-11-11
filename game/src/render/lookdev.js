@@ -34,6 +34,7 @@ import { BlobShadows } from './blobs.js';
 import { installGrade } from './grade.js';
 import { WeatherSystem, Rain, installWetness, weatherCover, WEATHER, DEFAULT_WEATHER } from './weather.js';
 import { setEmissiveLevels } from './materials.js';
+import { mixLooks } from './daycycle.js';
 
 /**
  * Render profile of this browser (docs/mobile.md): phones get the phone knob set for every tier name.
@@ -56,6 +57,25 @@ export function browserWeather() {
 }
 
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _white = new THREE.Color(1, 1, 1);
+
+/** The light a sky LUT read-back derives (sky.js setAtmosphere `derived`): a fresh holder to blend into. */
+const newAtm = () => ({ sun: new THREE.Vector3(), sunColor: new THREE.Color(), sunIntensity: 0, sunRadiance: new THREE.Color(), scale: 1, rawMean: 0, fogColor: new THREE.Color(), fogSunTint: new THREE.Color(), zenith: new THREE.Color(), horizonSun: new THREE.Color() });
+const ATM_VEC = ['sun', 'sunColor', 'sunRadiance', 'fogColor', 'fogSunTint', 'zenith', 'horizonSun'], ATM_NUM = ['sunIntensity', 'scale', 'rawMean'];
+/** Copies `src` into `out` (allocated on first use). */
+export function copyAtm(out, src) {
+  out = out || newAtm();
+  for (const f of ATM_VEC) out[f].copy(src[f]);
+  for (const f of ATM_NUM) out[f] = src[f];
+  return out;
+}
+/** `a` → `b` at `k` into `out`; the sun direction stays a unit vector. */
+export function mixAtm(out, a, b, k) {
+  out = out || newAtm();
+  out.sun.lerpVectors(a.sun, b.sun, k).normalize();
+  for (const f of ATM_VEC) if (f !== 'sun') out[f].lerpColors(a[f], b[f], k);
+  for (const f of ATM_NUM) out[f] = a[f] + (b[f] - a[f]) * k;
+  return out;
+}
 /** Mean colour of what the sun hits in a street (plaster, cobbles, stone): the tint of the bounce light. */
 const _bounceAlbedo = new THREE.Color(0.62, 0.52, 0.42);
 
@@ -150,8 +170,22 @@ export class LookDev {
    * Everything that depends on the sun is derived from the same LUT read-back so it all agrees.
    */
   applyAtmosphere(P) {
+    this.ease = null; // a full re-apply lands on the look at once
     const atm = this.sky.setAtmosphere(this.renderer, P);
     this.atm = atm;
+    this.applySunLight(P, atm);
+    if (this.envHdr && this.envHdrPreset !== this.envKey()) { this.envHdr.dispose(); this.envHdr = null; }
+    this.applyWeather(true);
+    this.loadEnvHdr(P);
+    if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
+  }
+
+  /**
+   * The cheap half of a look: sun direction and colour, shadows, fill, cloud and grass lighting. No GPU read and no
+   * re-bake, so the day cycle can run it every frame while it eases between two baked steps (owner 11.11: the sun
+   * set in jerks).
+   */
+  applySunLight(P, atm) {
     this.sunDir.copy(atm.sun);
     this.shadows.setDirection(this.sunDir);
     this.sun.color.copy(atm.sunColor);
@@ -165,10 +199,6 @@ export class LookDev {
     this.motes.setSun(this.sunDir, atm.sunColor);
     this.post.setSunColor(atm.sunColor);
     for (const l of this.lanternLights) l.color.setHex(0xffa64d);
-    if (this.envHdr && this.envHdrPreset !== this.envKey()) { this.envHdr.dispose(); this.envHdr = null; }
-    this.applyWeather(true);
-    this.loadEnvHdr(P);
-    if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
   }
 
   /** Identity of the baked HDR in use: it belongs to one hour of one location. */
@@ -285,9 +315,30 @@ export class LookDev {
    * A blended look (render/daycycle.js mixLooks of two lookFor() results) for the town's day cycle. The hour on
    * show becomes the nearer preset's name; leaving the place (setLocation) returns to its preset as before.
    */
-  applyLook(look) {
+  applyLook(look, { ease = 0 } = {}) {
+    const from = ease > 0 && this.atm && this.look ? { look: this.look, atm: copyAtm(this.easeFrom, this.atm) } : null;
     this.look = look; this.preset = look.name;
-    this.applyAtmosphere(look);
+    this.applyAtmosphere(look); // the sky dome and the ambient bake take the new step at once (a few percent of the blend)
+    if (!from) return;
+    // The lights start where they were and ease to the new step over `ease` seconds: with steps that come about
+    // as often as the ease lasts, the sun moves without a visible step.
+    this.easeFrom = from.atm;
+    this.ease = { from: from.look, to: look, toAtm: this.atm, t: 0, dur: ease };
+    this.stepEase(0);
+  }
+
+  /** One frame of the eased look (applyLook with `ease`): blends the look and the derived light, cheap parts only. */
+  stepEase(dt) {
+    const e = this.ease;
+    e.t += dt;
+    const k = Math.min(1, e.t / e.dur);
+    if (k >= 1) this.ease = null;
+    const P = k >= 1 ? e.to : mixLooks(e.from, e.to, k);
+    const atm = k >= 1 ? e.toAtm : (this.easeAtm = mixAtm(this.easeAtm, this.easeFrom, e.toAtm, k));
+    this.look = P; this.atm = atm;
+    this.applySunLight(P, atm);
+    this.applyWeather(false);
+    if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount);
   }
 
   /** Mood tint from sky.tint(): fog uniforms, the scene fog colour and the fill light follow the sky dome. */
@@ -387,6 +438,7 @@ export class LookDev {
     this.post.update(motion);
     this.motes.update(motion);
     this.weather.update(dt, motion);
+    if (this.ease) this.stepEase(dt);
     if (this.weather.dirty || this.weather.changing) this.applyWeather(false);
     else if (!this.weatherSettled) { this.weatherSettled = true; if (this.envWeather !== this.weather.name) this.applyWeather(true); }
     this.rain.update(motion);

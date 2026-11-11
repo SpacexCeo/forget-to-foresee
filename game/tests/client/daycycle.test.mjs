@@ -34,3 +34,20 @@ test('mixLooks blends numbers and the fog, keeps the ends exact', () => {
   assert.equal(mixLooks(a, b, 0.4).name, a.name);
   assert.equal(mixLooks(a, b, 0.6).name, 'dusk');
 });
+
+test('eased day-cycle light: the sun glides between two baked steps and stays a unit vector', async () => {
+  const THREE = await import('three');
+  const { mixAtm, copyAtm } = await import('../../src/render/lookdev.js');
+  const atm = (el, warm) => ({ sun: new THREE.Vector3(0, Math.sin(el), Math.cos(el)), sunColor: new THREE.Color(1, 1 - warm, 1 - 2 * warm), sunIntensity: 3 - warm, sunRadiance: new THREE.Color(1, 1, 1), scale: 1, rawMean: 0.3, fogColor: new THREE.Color(0.5, 0.5, 0.6), fogSunTint: new THREE.Color(0.1, 0.05, 0), zenith: new THREE.Color(0.2, 0.3, 0.6), horizonSun: new THREE.Color(0.8, 0.6, 0.4) });
+  const a = atm(0.6, 0), b = atm(0.2, 0.3);
+  const from = copyAtm(null, a);
+  a.sun.set(9, 9, 9); // the copy does not follow the source (the sky reuses nothing, the ease must not either)
+  const half = mixAtm(null, from, b, 0.5);
+  assert.ok(Math.abs(half.sun.length() - 1) < 1e-9);
+  assert.ok(half.sun.y < from.sun.y && half.sun.y > b.sun.y, 'the sun sits between the two steps');
+  assert.ok(Math.abs(half.sunIntensity - 2.85) < 1e-9);
+  assert.ok(Math.abs(half.sunColor.g - 0.85) < 1e-9);
+  const end = mixAtm(half, from, b, 1);
+  assert.equal(end, half, 'blends into the holder it is given: no per-frame objects');
+  assert.ok(end.sun.distanceTo(b.sun) < 1e-9);
+});
