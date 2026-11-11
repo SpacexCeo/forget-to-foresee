@@ -58,9 +58,6 @@ for _ in range(2):
 k = np.minimum(k, ks)
 print('outline k: head mean %.2f min %.2f, hands mean %.2f, body mean %.2f' % (k[head].mean(), k[head].min(), k[hand].mean(), k[~head & ~hand].mean()))
 off = no * (MM * 0.001 * k)[:, None]
-rad = co[fv].mean(1) * [1, 1, 0]; outer = (pa == 6) & ((fn * rad).sum(1) > 0.3 * np.linalg.norm(rad, axis=1))
-t1, t2 = Z.slit(z); inslit = (Z.ang(x, y) > t1 - 12) & (Z.ang(x, y) < t2 + 12)          # the thigh is meant to show there
-np.savez(f'{WD}/{NAME}_check.npz', leg=co[((vp == 4) | (vp == 5)) & (z > 0.12) & ~inslit], gown=co[fv[outer]])     # for skirt_check.py
 # ---------------- inverted hull, then the patches
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
 geom = bmesh.ops.duplicate(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:])['geom']
@@ -68,6 +65,9 @@ nv = [g for g in geom if isinstance(g, bmesh.types.BMVert)]; nf = [g for g in ge
 for i, v in enumerate(nv): v.co = (co[i] + off[i]).tolist()          # duplicate() keeps the order of the input vertices
 for f in nf: f.material_index = 1
 bmesh.ops.reverse_faces(bm, faces=nf)
+# no hull where it can never show: the right leg above the shin (the gown encloses it) and the top of both thighs (under the hips)
+LPh = bm.faces.layers.int['part']; hid = [f for f in nf if (f[LPh] == 5 and f.calc_center_median().z > 0.30) or (f[LPh] in (4, 5) and f.calc_center_median().z > 0.74)]
+hs = set(hid); nf = [f for f in nf if f not in hs]; bmesh.ops.delete(bm, geom=hid, context='FACES'); bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
 LP = bm.faces.layers.int['part']; LU = bm.loops.layers.uv.active; LD = bm.verts.layers.deform.verify(); pv = {}; shown = {}
 for part, loops in PT:
     vs = []
