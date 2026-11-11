@@ -48,3 +48,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - Collapsible town panels: chevron → pill at the right edge with live hire progress, stack, O expands, Esc closes, remembered; tests + headless.
 - China/greybox: self-hosted Cormorant (no Google Fonts), town never revealed half-loaded (slow-link note at 30 s, Reload at 90 s), no greybox capsule for players (Iris fetch/attach retried), jsDelivr asset mirror (China time zones / ?mirror=1 start on it, errors and timeouts switch). Mobile first view ~18 MB models.
 - Day cycle: early morning → evening → dusk → twilight → night (moon, stars, mist, lamps) → morning, per-frame blend with keyframe sky stats (no per-frame readback), far shadow re-render only after 0.3° turn; tests + headless shots.
+- Live-build TDZ fix: webgl-guard in the boot chunk; chunk-rule test; built-page smoke (game/scripts/smoke-built.mjs) as a Pages CI step; #43 re-applied over the main revert.

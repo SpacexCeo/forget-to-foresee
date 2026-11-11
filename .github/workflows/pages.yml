@@ -51,6 +51,8 @@ jobs:
           (npx vite preview --port 4173 --strictPort --host 127.0.0.1 > /tmp/preview.log 2>&1 &)
           sleep 4
           node scripts/smoke-built.mjs "http://127.0.0.1:4173/forget-to-foresee/?day1=0&quest=0" 300
+        env:
+          FTF_BASE: /forget-to-foresee/ # the preview serves the sub-path the build was made for
       - uses: actions/upload-pages-artifact@v3
         with:
           path: game/dist
