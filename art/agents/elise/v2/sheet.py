@@ -29,7 +29,9 @@ if npz and 'expr' not in a:      # a row of walk and run frames: the baked clips
     def pose(clip, u):
         L = D[clip + '/local']; f = int(round(u * (len(L) - 1))) % (len(L) - 1)
         for i, n in enumerate(names):
-            pb = ao.pose.bones[n]; q = qmul(rr[i] * [-1, -1, -1, 1], L[f, i]); pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (q[3], q[0], q[1], q[2])
+            pb = ao.pose.bones.get(n)
+            if pb is None: continue      # the glTF exporter's neutral_bone has no pose bone
+            q = qmul(rr[i] * [-1, -1, -1, 1], L[f, i]); pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (q[3], q[0], q[1], q[2])
         d = qrot(D['pelvis_rest_wr'] * [-1, -1, -1, 1], D[clip + '/pelvis'][f] - D['pelvis_rest']); ao.pose.bones['pelvis'].location = tuple(d)
         bpy.context.view_layer.update()
     r = []

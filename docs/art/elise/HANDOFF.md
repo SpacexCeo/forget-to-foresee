@@ -222,7 +222,9 @@ the feet moved by FootPlant at run time, and the thigh above 0.66 m (see "Capsul
 - In-game check on the GPU server (real WebGL, built from `claude/elise-v2`): no page errors, main model 49 130 tris and
   phone model 23 042 tris load with all 11 clips; walk, run, stairs up/down look right, no poke-through in the frames
   (`wip/v2_ingame_frames.jpg`, `wip/v2_ingame_phone.jpg`, video `elise_ingame.mp4`). `npm test` 703 pass, 0 fail.
-- Known: a face strand of hair sometimes crosses the mouth in motion (seen in the video).
+- New turnaround sheet `elise_sheet.jpg` (v2 model, new clips).
+- Known: the face strands of hair swing across the face in the walk (sheet WALK 0/4 and 2/4, also in the video): the
+  strand chains need a stiffer hold or a face collider (`STRIPS` in `skirt.py`).
 
 ### HANDOVER (11.11.2026, 22:15 Kyiv): state for the next executor of pass 4
 
