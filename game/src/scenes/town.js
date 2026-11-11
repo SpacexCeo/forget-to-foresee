@@ -33,7 +33,9 @@ const GLYPH_NODE = /altar_glyph_(\d+)/;
 export const ALTAR_RATIO = Object.freeze({ glyph: 0.35, glyphUnlit: 0.04, eye: 0.1 });
 const LAMP_SOCKET = /^socket_lamp_/, SMOKE_SOCKET = /^socket_smoke_/;
 const LAMP_COLOR = 0xffb268;
-const TOWN_GATE_PIECE = 'town_block_gate'; // its passage is carved out of the colliders (scenes/town-outside.js)
+// Pieces whose colliders close the lower gate's passage (the wall-line plane and the slab are in the terrain file);
+// the passage is carved out of them (scenes/town-outside.js).
+const GATE_CARVED = new Set(['town_block_gate', 'town_terrain']);
 
 const _v = new THREE.Vector3();
 
@@ -214,7 +216,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   let terrain = null;
   if (!flat) {
     for (const def of TOWN_PIECES) {
-      const instance = streamer.add(new PropInstance({ name: def.name, scene, world: def.visualOnly ? skyWorld : world, position: def.position, colliderFilter: def.name === TOWN_GATE_PIECE ? openGate : null }));
+      const instance = streamer.add(new PropInstance({ name: def.name, scene, world: def.visualOnly ? skyWorld : world, position: def.position, colliderFilter: GATE_CARVED.has(def.name) ? openGate : null }));
       pieces.push({ def, instance });
       if (def.name === TOWN_TERRAIN) terrain = instance;
       instance.onSockets((_s, inst) => { onPiece(def, inst); if (def.name === TOWN_TERRAIN) outsideGround(inst); });
