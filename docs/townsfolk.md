@@ -136,3 +136,6 @@ One character (the guard) was taken through Microsoft TRELLIS on the server's RT
 - The elder's shawl is a short cape without the fringe; the baker's apron halter is a wide band; the satchel and
   pouches are boxes.
 - Shopkeepers use the 2048² set like everyone (the brief allows 4096² for them).
+
+
+**Town quest (11.11).** The innkeeper, the baker and the shrinekeeper also have one short talk each in the first-visit town quest (`docs/town.md`, "The town quest"). Their programs are unchanged: they keep their posts and loops.

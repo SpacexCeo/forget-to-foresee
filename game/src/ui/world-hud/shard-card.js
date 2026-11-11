@@ -38,7 +38,7 @@ export function shardImage(doc, card, size = 132) {
       const svg = doc.importNode(parsed, true);
       svg.removeAttribute('width'); svg.removeAttribute('height');
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', card.tokenId);
+      svg.setAttribute('aria-label', card.tokenId || card.key || 'shard');
       let i = 0;
       for (const s of svg.querySelectorAll('circle, line')) {
         s.setAttribute('pathLength', '1');
@@ -49,8 +49,22 @@ export function shardImage(doc, card, size = 132) {
       return box;
     }
   }
-  if (card.media) box.append(el(doc, 'img', { src: card.media, alt: card.tokenId, width: size, height: size }));
+  if (card.media) box.append(el(doc, 'img', { src: card.media, alt: card.tokenId || '', width: size, height: size }));
   return box;
+}
+
+/** The game's own page (no query): the link a postcard carries. */
+const gameLink = () => { try { const u = new URL(location.href); return u.origin + u.pathname; } catch { return 'https://spacexceo.github.io/forget-to-foresee/'; } };
+
+/** "Share postcard": a 1200×630 image of this card, drawn on demand (ui/postcard.js). */
+function shareButton(doc, t, card, line) {
+  if (typeof location === 'undefined') return null;
+  return el(doc, 'button', { class: 'sh-btn', type: 'button', 'data-share': '', text: t('postcard.share'), onclick: () => {
+    import('../postcard.js').then((m) => m.openPostcard({ doc, t,
+      kicker: card.state === 'minted' ? t('postcard.kicker.minted') : t('shard.nft.preview.title'),
+      title: t('shard.nft.title', { id: card.shardId, kind: t('shard.nft.kind.' + card.kind) }),
+      line, link: gameLink(), signSvg: card.svg || null })).catch((e) => console.warn('[shard] postcard', e));
+  } });
 }
 
 /** A full card: image, the NFT line, token id and owner, the biography, the season binding, links. */
@@ -63,7 +77,20 @@ export function renderShardCard(card, { t, doc = document } = {}) {
   const sale = card.winner
     ? t('shard.nft.sold', { clan: clan(card.winner), price: card.price ?? 0, trial: card.closesAt })
     : t('shard.nft.burned', { trial: card.closesAt });
-  const node = el(doc, 'article', { class: 'sh-card', 'data-token': card.tokenId },
+  if (card.state === 'preview') {
+    // Unminted: the word and the absence of any token id or link are the point (docs/hackathon-tz.md P1-C)
+    const node = el(doc, 'article', { class: 'sh-card sh-card--preview', 'data-state': 'preview', 'data-preview': card.key },
+      shardImage(doc, card),
+      el(doc, 'div', { class: 'sh-body' },
+        el(doc, 'p', { class: 'sh-kicker', text: t('shard.nft.preview.title') }),
+        el(doc, 'h4', { class: 'sh-title', text: t('shard.nft.title', { id: card.shardId, kind }) }),
+        el(doc, 'p', { class: 'sh-bio', text: bio + ' ' + sale }),
+        el(doc, 'p', { class: 'sh-note', text: t('shard.nft.preview.note') }),
+        el(doc, 'p', { class: 'sh-links' }, shareButton(doc, t, card, bio + ' ' + sale))));
+    setTimeout(() => node.classList.add('sh-drawn'), 2000);
+    return node;
+  }
+  const node = el(doc, 'article', { class: 'sh-card', 'data-state': 'minted', 'data-token': card.tokenId },
     shardImage(doc, card),
     el(doc, 'div', { class: 'sh-body' },
       el(doc, 'p', { class: 'sh-kicker', text: `NFT · ${card.standard} · ${card.contractId}` }),
@@ -75,18 +102,21 @@ export function renderShardCard(card, { t, doc = document } = {}) {
       card.leaf ? el(doc, 'p', { class: 'sh-seal' }, link(doc, card.leaf.href, t('shard.nft.leaf', { index: card.leaf.index }), 'sh-seal__link')) : null,
       el(doc, 'p', { class: 'sh-links' },
         link(doc, card.tokenHref, t('shard.nft.view'), 'sh-btn'),
+        shareButton(doc, t, card, bio + ' ' + sale),
         card.svgVerified ? el(doc, 'span', { class: 'sh-verified', text: t('shard.nft.verified') }) : null)));
   setTimeout(() => node.classList.add('sh-drawn'), 2000);
   return node;
 }
 
-/** The Memories panel section: heading + cards, or the quiet "judge season only" line. */
+/** The Memories panel section: heading + cards (real tokens and labeled unminted previews). */
 export function renderShardSection({ cards, judgeOnly }, { t, doc = document } = {}) {
   if (!cards.length && !judgeOnly) return null;
   ensureShardCardStyle(doc);
   if (!cards.length) return el(doc, 'p', { class: 'sh-note', text: t('shard.nft.judgeOnly') });
-  return el(doc, 'section', { class: 'sh-section', 'aria-label': t('shard.nft.heading') },
-    el(doc, 'h3', { text: t('shard.nft.heading') }),
+  // "on NEAR" only when at least one card is a real token
+  const heading = t(cards.some(({ card }) => card.state === 'minted') ? 'shard.nft.heading' : 'shard.nft.headingLocal');
+  return el(doc, 'section', { class: 'sh-section', 'aria-label': heading },
+    el(doc, 'h3', { text: heading }),
     cards.map(({ card }) => renderShardCard(card, { t, doc })));
 }
 
@@ -111,14 +141,15 @@ export function createMintToast(host, { t, doc = host.ownerDocument || document,
       setTimeout(() => { node.remove(); next(); }, 260);
     };
     const kind = t('shard.nft.kind.' + card.kind);
-    current = el(doc, 'div', { class: 'sh-toast', 'data-token': card.tokenId },
+    const minted = card.state === 'minted';
+    current = el(doc, 'div', { class: 'sh-toast' + (minted ? '' : ' sh-toast--preview'), 'data-state': minted ? 'minted' : 'preview', 'data-token': minted ? card.tokenId : null },
       shardImage(doc, card, 56),
       el(doc, 'div', { class: 'sh-toast__body' },
-        el(doc, 'p', { class: 'sh-toast__title', text: t('shard.nft.minted') }),
+        el(doc, 'p', { class: 'sh-toast__title', text: t(minted ? 'shard.nft.minted' : 'shard.nft.preview.title') }),
         el(doc, 'p', { class: 'sh-toast__text', text: t('shard.nft.toast', { id: card.shardId, kind, clan: t('agent.' + card.winner), price: card.price ?? 0 }) }),
         el(doc, 'p', { class: 'sh-toast__links' },
-          el(doc, 'span', { class: 'sh-mono', text: card.tokenId }),
-          link(doc, card.tokenHref, t('shard.nft.view'), 'sh-toast__link'),
+          minted ? el(doc, 'span', { class: 'sh-mono', text: card.tokenId }) : null,
+          minted ? link(doc, card.tokenHref, t('shard.nft.view'), 'sh-toast__link') : null,
           onOpen ? el(doc, 'button', { class: 'sh-toast__link', type: 'button', text: t('shard.nft.open'), onclick: () => { close(); onOpen(card); } }) : null)),
       el(doc, 'button', { class: 'sh-toast__close', type: 'button', 'aria-label': t('shard.nft.close'), text: '×', onclick: close }));
     region.append(current);

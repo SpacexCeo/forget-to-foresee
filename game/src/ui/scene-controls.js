@@ -44,9 +44,11 @@ export function mountSceneControls(root, { onContext, onTransition }) {
   let lastKey;
   function open() {
     if (dialog.open) return;
-    onTransition();
+    // The dialog shows first and waits on nothing (no renderer call, no canvas read); the world's input is
+    // cleared right after, and a failure there can never keep the dialog closed.
     dialog.showModal();
     resume.focus();
+    try { onTransition(); } catch (e) { console.warn('[controls] transition', e); }
   }
   dialog.addEventListener('close', () => {
     onTransition();

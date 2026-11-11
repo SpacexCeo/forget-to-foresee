@@ -4,7 +4,7 @@
 // action, immediate feedback, at most about twelve words of body per beat; "Skip tutorial" on every
 // beat; the beat index is saved so a reload resumes; a returning player (every step done) goes
 // straight to the island with no screen at all.
-import { h, tx, bindI18n, ensureStyles, applyI18n } from './dom.js';
+import { h, tx, bindI18n, ensureStyles } from './dom.js';
 import { MOTION, installMotionStyles, enter, exit, stagger, press, seal, tickNumber, ringFlash } from './motion/index.js';
 import { getUiContext } from './context.js';
 import { createOnboardingFlow, createTutorial, FLOW_STEPS, TUTORIAL_BEATS, TUTORIAL_SIGN } from './flow.js';
@@ -55,7 +55,7 @@ const CSS = `
 .ftf-tut-dots i[data-state="current"] { background: var(--ftf-amber); box-shadow: 0 0 0 3px rgba(212,161,95,.25); }
 .ftf-ring { position: relative; width: min(320px, 100%); margin: 0 auto; aspect-ratio: 1; }
 .ftf-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.ftf-ring .ftf-slotbtn { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 1px solid transparent; background: transparent; cursor: pointer; padding: 0; }
+.ftf-ring .ftf-slotbtn { position: absolute; width: 30%; height: 30%; margin: -15% 0 0 -15%; border-radius: 50%; border: 1px solid transparent; background: transparent; cursor: pointer; padding: 0; }
 .ftf-ring .ftf-slotbtn:hover:enabled { border-color: rgba(212,161,95,.55); background: rgba(212,161,95,.08); }
 .ftf-ring .ftf-slotbtn[disabled] { cursor: default; }
 .ftf-ring .ftf-slotbtn[data-expected="true"] { animation: ftf-pulse 1.2s ease-in-out infinite; border-color: rgba(212,161,95,.7); }
@@ -71,6 +71,11 @@ const CSS = `
 .ftf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .ftf-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 12px; border: 1px solid var(--ftf-stone); border-radius: 17px; color: var(--ftf-mist); font-size: .95rem; }
 .ftf-chip[data-on="true"] { border-color: var(--ftf-amber); color: var(--ftf-pearl); }
+button.ftf-chip { min-height: 40px; min-width: 40px; padding: 6px 14px; border-radius: 20px; background: transparent; font: inherit; font-size: .95rem; cursor: pointer; }
+button.ftf-chip:hover, button.ftf-chip:focus-visible { border-color: var(--ftf-amber); background: rgba(212,161,95,.08); }
+button.ftf-chip[data-expected="true"] { border-color: rgba(212,161,95,.7); animation: ftf-pulse 1.2s ease-in-out infinite; }
+button.ftf-chip[data-hint="true"] { box-shadow: 0 0 0 2px rgba(212,161,95,.3); }
+.ftf-slot-hint { margin: 0; color: var(--ftf-pearl); font-size: 1rem; min-height: 1.5em; }
 .ftf-chip[data-on="true"]::before { content: "✓"; color: var(--ftf-amber); }
 .ftf-readrow { display: grid; grid-template-columns: 1.6em 1fr; gap: 6px 10px; margin: 0; padding: 0; list-style: none; font-size: 1.02rem; }
 .ftf-readrow li { display: contents; }
@@ -106,8 +111,6 @@ html[data-motion="reduce"] .ftf-tut-dots i, html[data-motion="reduce"] .ftf-tria
 .ftf-look-swatch i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.35); }
 .ftf-ctor-compact .ftf-ctor-preview { max-width: 380px; margin: 0 auto; position: static; }
 .ftf-ctor-compact .ftf-ctor-canvas { max-height: 300px; max-width: 300px; margin: 0 auto; }
-.ftf-look-begin { margin-top: 6px; }
-.ftf-look-begin .ftf-btn { width: 100%; }
 .ftf-ctor-compact:not(.ftf-ctor-open) { grid-template-columns: minmax(0, 1fr); }
 .ftf-ctor-detail { display: grid; gap: 10px; }
 .ftf-ctor-detail[hidden], .ftf-ctor-controls[hidden] { display: none; }
@@ -125,7 +128,7 @@ function ensureTutStyles(doc = document) {
 const posOf = (k, dots) => (dots + k) % 4;
 /** The reading index of the stroke at position p (0 = top), or -1 when there are no dots to read from. */
 const readAt = (p, dots) => (p - dots + 4) % 4;
-const SLOT_POS = [[50, 12], [88, 50], [50, 88], [12, 50]]; // % of the ring box per position
+const SLOT_POS = [[50, 19], [81, 50], [50, 81], [19, 50]]; // % of the ring box per position: the middle of a stroke and its name, so one target covers both
 
 /**
  * The example sign. `o.dots` dots in the core; strokes keep their ring positions (the example's
@@ -148,8 +151,8 @@ function ring(i18n, o) {
       tEl.textContent = String(n);
       g.appendChild(tEl);
     }
-    if (o.labels && lit) {
-      const tEl = s('text', { x: 0, y: -56, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: AMBER, 'font-size': 10.5, 'letter-spacing': 0.8, transform: `rotate(${-p * 90} 0 -56)` });
+    if (o.labels) {
+      const tEl = s('text', { x: 0, y: -56, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: lit ? AMBER : MIST, 'font-size': 10.5, 'letter-spacing': 0.8, transform: `rotate(${-p * 90} 0 -56)` });
       tEl.textContent = i18n.t('slot.' + slot).toUpperCase();
       g.appendChild(tEl);
     }
@@ -165,6 +168,9 @@ function ring(i18n, o) {
   }
   return svg;
 }
+
+/** The tutorial's example sign with its numbers and slot names (the town quest's innkeeper shows it). */
+export function tutorialSignSvg(i18n) { return ring(i18n, { dots: TUTORIAL_SIGN.dots, lit: new Set(), numbers: true, labels: true }); }
 
 /**
  * @param {HTMLElement} root
@@ -265,6 +271,12 @@ export function mountOnboarding(root, opts = {}) {
         ringBox.appendChild(b);
       });
     }
+    // The slot names are buttons too: the same action as the stroke (flow.js tapLabel), in slot order.
+    const slotChips = () => h('div', { class: 'ftf-chips', attrs: { role: 'group' }, i18nAttrs: { 'aria-label': 'tut.slots.names' } }, [0, 1, 2, 3].map((slot) => h('button', {
+      class: 'ftf-chip', i18n: 'slot.' + slot, dataset: { on: String(lit.has(slot)) },
+      attrs: { type: 'button', 'data-slot-label': slot, 'data-expected': expected === slot ? 'true' : null, 'data-hint': v.hintSlot === slot ? 'true' : null, 'aria-pressed': lit.has(slot) ? 'true' : 'false' },
+      on: { click: () => { tut.tapLabel(slot); render(); } } })));
+    const slotHint = () => h('p', { class: 'ftf-slot-hint', i18n: `slot.${v.hintSlot}.hint`, attrs: { 'data-slot-hint': v.hintSlot } });
     if (id === 'dots') ringBox.appendChild(h('button', { class: 'ftf-corebtn', attrs: { type: 'button', 'data-core': true, 'data-expected': v.done ? null : 'true' }, i18nAttrs: { 'aria-label': 'tut.dots.core' }, attrArgs: () => ({ input: input() }), on: { click: () => { tut.tapCore(); render(); } } }));
 
     // text column
@@ -272,14 +284,14 @@ export function mountOnboarding(root, opts = {}) {
     const stageEl = h('div', { class: 'ftf-tut-stage' });
     const fb = h('p', { class: 'ftf-tut-fb', attrs: { 'aria-live': 'polite' } });
     if (id === 'slots') {
-      stageEl.append(h('div', { class: 'ftf-chips' }, [0, 1, 2, 3].map((slot) => h('span', { class: 'ftf-chip', dataset: { on: String(v.slots.includes(slot)) }, i18n: 'slot.' + slot }))));
+      stageEl.append(slotChips(), slotHint());
       if (v.done) tx(fb, i18n, 'tut.slots.done'); else tx(fb, i18n, 'tut.slots.left', { n: 4 - v.slots.length });
     } else if (id === 'dots') {
       tx(fb, i18n, v.done ? 'tut.dots.one' : 'tut.dots', { count: v.dots });
       if (!v.done) stageEl.append(h('p', { class: 'ftf-muted', attrs: { style: 'margin:0' }, i18n: 'tut.dots.want' }));
     } else if (id === 'read') {
       const rows = TUTORIAL_SIGN.read.slice(0, v.readIndex).map(([slot, , m], k) => h('li', {}, h('span', { class: 'ftf-n', text: String(k + 1) }), h('span', {}, h('span', { class: 'ftf-k', i18n: 'slot.' + slot }), ': ', h('span', { i18n: `meaning.${slot}.${m}` }))));
-      stageEl.append(h('ol', { class: 'ftf-readrow' }, rows));
+      stageEl.append(slotChips(), slotHint(), h('ol', { class: 'ftf-readrow' }, rows));
       if (v.done) { stageEl.append(h('p', { class: 'ftf-sentence', i18n: 'tut.read.sentence' })); tx(fb, i18n, 'tut.read.done'); }
       else if (v.lastRead && v.lastRead.ok === false) tx(fb, i18n, 'tut.read.wrong', { n: v.lastRead.step });
       else tx(fb, i18n, 'tut.read.next', { n: v.readIndex + 1 });
@@ -338,17 +350,13 @@ export function mountOnboarding(root, opts = {}) {
   function viewCustomization() {
     narrate(['onb.look.title', 'onb.look.body']);
     const begin = () => { saveRecipe(storage, child ? child.getRecipe() : DEFAULT_RECIPE); flow.complete('customization'); };
-    // The primary button sits beside the title (QA-016: never below the fold) and once more under the tiles.
+    // One Begin, beside the title (QA-016: never below the fold); the tiles and Customize stay secondary.
     const box = h('section', {},
       h('div', { class: 'ftf-spread' }, heading('onb.look.title'), primary('onb.look.begin', begin)),
       h('p', { class: 'ftf-tut-body ftf-muted', i18n: 'onb.look.body' }));
     const host = h('div', { class: 'ftf-card' });
     box.append(host);
-    queueMicrotask(() => {
-      child = mountConstructor(host, { ctx, compact: true });
-      const looks = host.querySelector('.ftf-looks');
-      if (looks) { const row = h('div', { class: 'ftf-row ftf-look-begin' }, primary('onb.look.begin', begin)); looks.after(row); applyI18n(row, i18n); }
-    });
+    queueMicrotask(() => { child = mountConstructor(host, { ctx, compact: true }); });
     return box;
   }
 
@@ -368,7 +376,7 @@ export function mountOnboarding(root, opts = {}) {
     renderStepper();
     const st = flow.step;
     const prev = view;
-    const beat = st === 'tutorial' && tut ? tut.index : -1;
+    const beat = st === 'tutorial' ? (tut ? tut.index : flow.beat) : -1; // the machine is created by the first tutorial render, at the saved beat
     const newScreen = st !== lastStep || beat !== lastBeat; // a step or beat change animates; a re-render in place does not
     lastStep = st; lastBeat = beat;
     view = st === 'entitlement' ? viewEntitlement() : st === 'tutorial' ? viewTutorial() : st === 'customization' ? viewCustomization() : st === 'firstContact' ? viewFirstContact() : null;

@@ -291,9 +291,15 @@ const DOME_FS = /* glsl */`
 `;
 
 const LUT_W = 256, LUT_H = 128;
+/** What the sky-view LUT depends on: one read-back per distinct key (see setAtmosphere). */
+export function lutKey(sun, preset) {
+  const r = (v) => Math.round(v * 1e4) / 1e4;
+  return [r(sun.x), r(sun.y), r(sun.z), r(preset.mie), r(preset.ozone), r(preset.altitude ?? OBSERVER_ALTITUDE)].join('|');
+}
 
 export class SkyDome {
   constructor() {
+    this.lutCache = new Map(); this.lutReads = 0; // read-backs by lutKey; lutReads counts the GPU reads actually made
     this.lut = new THREE.WebGLRenderTarget(LUT_W, LUT_H, { type: THREE.HalfFloatType, depthBuffer: false, magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter, generateMipmaps: false });
     this.lut.texture.wrapS = THREE.RepeatWrapping;
     this.lutMat = new THREE.ShaderMaterial({
@@ -375,10 +381,17 @@ export class SkyDome {
     u.uSunDir.value.copy(sun); u.uMie.value = preset.mie; u.uOzone.value = preset.ozone; u.uAlt.value = preset.altitude ?? OBSERVER_ALTITUDE;
     const prevTarget = renderer.getRenderTarget();
     renderer.setRenderTarget(this.lut); this.lutQuad.render(renderer);
-    // Read back (once per preset) to normalise and to sample horizon colours.
-    const raw = new Uint16Array(LUT_W * LUT_H * 4);
-    let px = null;
-    try { renderer.readRenderTargetPixels(this.lut, 0, 0, LUT_W, LUT_H, raw); px = Float32Array.from(raw, THREE.DataUtils.fromHalfFloat); } catch { px = null; }
+    // Read back to normalise and to sample horizon colours: the game's only synchronous GPU read outside
+    // the ?cinematic= capture runner. It is 256×128, runs once per distinct atmosphere (the LUT depends only on
+    // the sun direction, Mie, ozone and altitude) and is cached, so going back to an hour already seen (town
+    // afternoon <-> archipelago golden hour, weather, the Controls dialog) never reads the GPU again. It happens
+    // at boot and under the altar's transition cover, never in the frame loop (tests/client/readback.test.mjs).
+    const key = lutKey(sun, preset);
+    let px = this.lutCache.get(key) || null;
+    if (!px) {
+      const raw = new Uint16Array(LUT_W * LUT_H * 4);
+      try { renderer.readRenderTargetPixels(this.lut, 0, 0, LUT_W, LUT_H, raw); px = Float32Array.from(raw, THREE.DataUtils.fromHalfFloat); this.lutCache.set(key, px); this.lutReads++; } catch { px = null; }
+    }
     renderer.setRenderTarget(prevTarget);
     const at = (uvx, uvy) => {
       if (!px) return [0.3, 0.33, 0.38];

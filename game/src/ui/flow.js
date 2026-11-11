@@ -104,6 +104,7 @@ export function createTutorial({ beat = 0 } = {}) {
   let dots = i > 1 ? TUTORIAL_SIGN.dots : 0; // beat 2: dots in the core (the example's dot once that beat is behind)
   let readIndex = 0;                   // beat 3: strokes read so far, in reading order
   let lastRead = null;                 // {ok, slot, meaning} of the last tap in beat 3
+  let lastSlot = null;                 // the slot last picked in beat 1 (drives the one-line slot hint)
   let staked = false, trial = 0, sealed = false; // beat 4
   let forgotten = false;               // beat 5
   const subs = new Set();
@@ -132,7 +133,7 @@ export function createTutorial({ beat = 0 } = {}) {
     /** Beat 1: tap a stroke. Beat 3: tap the strokes in reading order (wrong taps are reported, not punished). */
     tap(slot) {
       if (!(slot >= 0 && slot <= 3)) return { ok: false };
-      if (this.id === 'slots') { slots.add(slot); emit(); return { ok: true, slot }; }
+      if (this.id === 'slots') { slots.add(slot); lastSlot = slot; emit(); return { ok: true, slot }; }
       if (this.id === 'read') {
         if (readIndex >= 4) return { ok: false, slot, finished: true };
         const [want, , meaning] = order[readIndex];
@@ -143,6 +144,17 @@ export function createTutorial({ beat = 0 } = {}) {
         return lastRead;
       }
       return { ok: false, slot };
+    },
+    /** A slot's name (Place, Action, Power, Delay) is the same hit target as its stroke, in both beats. */
+    tapLabel(slot) { return this.tap(slot); },
+    /**
+     * The slot whose one-line hint is on screen: beat 1 explains the slot just picked (the first one before
+     * any pick), beat 3 the stroke to read next (the last one once the sign is read). Null in other beats.
+     */
+    hintSlot() {
+      if (this.id === 'slots') return lastSlot ?? 0;
+      if (this.id === 'read') return order[Math.min(readIndex, 3)][0];
+      return null;
     },
     /** Beat 2: tapping the core cycles the dots 0 → 1 → 2 → 3 → 0. */
     tapCore() { if (this.id !== 'dots') return dots; dots = (dots + 1) % 4; emit(); return dots; },
@@ -164,7 +176,7 @@ export function createTutorial({ beat = 0 } = {}) {
     expected() { return this.id === 'read' && readIndex < 4 ? order[readIndex][0] : null; },
     view() {
       const silk = !staked ? TUTORIAL_SIGN.silk.start : sealed ? TUTORIAL_SIGN.silk.paid : TUTORIAL_SIGN.silk.staked;
-      return { index: i, id: TUTORIAL_BEATS[i], count: TUTORIAL_BEATS.length, done: done(), slots: [...slots], dots, readIndex, lastRead, staked, trial, sealed, silk, forgotten };
+      return { index: i, id: TUTORIAL_BEATS[i], count: TUTORIAL_BEATS.length, done: done(), slots: [...slots], hintSlot: this.hintSlot(), dots, readIndex, lastRead, staked, trial, sealed, silk, forgotten };
     },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   };

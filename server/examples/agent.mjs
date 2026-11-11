@@ -97,7 +97,7 @@ export async function playSeason({ url = 'http://127.0.0.1:8787', rules = 'v3', 
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('agent.mjs')) {
+if (import.meta.url === `file://${process.argv[1]}` || (process.argv[1]?.endsWith('agent.mjs') && !process.argv[1]?.endsWith('exchange-agent.mjs'))) {
   const argv = process.argv.slice(2);
   const opt = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; };
   playSeason({ url: opt('url', 'http://127.0.0.1:8787'), rules: opt('rules', 'v3'), timeScale: Number(opt('time-scale', 500)), log: (s) => console.log(s) })

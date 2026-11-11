@@ -72,7 +72,7 @@ test('planned actions answer 501 and are listed as planned in the catalog', () =
   assert.equal(r.body.error.code, 'not_implemented');
   const cat = api.catalog().body;
   const planned = cat.actions.filter((a) => a.status === 'planned').map((a) => a.type);
-  assert.deepEqual(planned.sort(), ['chat', 'helper_contribute', 'mint_final_card', 'propose_trade']);
+  assert.deepEqual(planned.sort(), ['cancel_order', 'chat', 'helper_contribute', 'mint_final_card', 'propose_trade']);
   assert.ok(cat.actions.filter((a) => a.status === 'implemented').every((a) => a.backedBy));
 });
 

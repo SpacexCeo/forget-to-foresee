@@ -186,3 +186,24 @@ tap casts, Esc or the same key puts it away; the indicators follow the slope (sa
 Tests: `tests/client/town.test.mjs` (layout contract, catalog, `townPlan`, model list) in `npm test`;
 `tests/e2e/town.e2e.mjs` (browser: walk, register, archipelago, phone prompt). With `FTF_TOWN_SHOTS=blockout` (or
 `v1`) the e2e run saves its screenshots to `docs/art/town/qa/ingame/`.
+
+## The town quest (hackathon spec P1-B)
+
+`game/src/scenes/town-quest.js` (pure, `tests/client/town-quest.test.mjs`) and its UI in `town-flow.js`.
+Three townspeople who already stand at fixed posts on the way up teach the loop before the season:
+
+1. **Innkeeper** (lower street, west of the gate road): shows the tutorial's example sign and asks for a reading.
+   A wrong answer explains the stroke order and shows the sign again. The right one gives a note for the baker.
+2. **Baker** (the square stall): takes the note, gives a 5-silk practice purse ("town coins, nothing on a chain"),
+   and trades 2 of it for a sealed word.
+3. **Shrinekeeper** (beside the altar): takes the word and sends Iris to register at the altar.
+
+- Steps `start -> read -> trade -> deliver -> done`. The objective line follows the step, then reads "Walk to the
+  Tournament altar" again. Within `TALK_RADIUS` (2.4 m) of the townsperson the step waits for, the prompt reads
+  "Talk to the …". It takes precedence over the altar prompt (the shrinekeeper stands beside the altar). A talk
+  closes on **Later** or when Iris walks more than 4.5 m away; the step stays.
+- Played once per device (`ftf.townquest.v1` = `done` or `skipped`). **Skip the town quest** sits under the
+  objective. Never on `?demo=judge`, so the README's 5-minute table is unchanged. `?quest=1` forces it (QA),
+  `?quest=0` skips it.
+- No rule changes: the quest sends no engine command, the purse lives in the town UI only and is labeled "a
+  teaching prop, not on-chain", and the altar registers at any step.

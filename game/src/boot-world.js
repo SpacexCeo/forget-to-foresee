@@ -17,7 +17,7 @@ import { cycleAt, mixLooks, BLEND_STEP } from './render/daycycle.js';
 import { lookFor } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
-import { PHYSICS_DT, steerTo } from './physics/character.js';
+import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
 import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
@@ -26,7 +26,7 @@ import { mountSceneControls } from './ui/scene-controls.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
-import { irisStandInVisible, liteFirstPolicy } from './render/streaming.js';
+import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { logKeysFromStats } from './ui/ink-bar.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
@@ -34,8 +34,12 @@ import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
+import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
+import { createTownLedger } from './game/town-economy.js';
+import { TALK_RADIUS } from './scenes/town-quest.js';
+import { PROGRAMS } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -128,6 +132,9 @@ const toastEl = document.getElementById('toast');
 // ?demo=judge: a fixed v3 season whose first sign is visible on trial 1 and whose trial-3 Gift lands on
 // Shell II with a verified proof (docs/design/clarity-layers.md §6a item 8). Presentation only.
 const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
+// The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
+const townLedger = createTownLedger({ storage: ctx.storage });
+const openProfileFor = (quest = null) => import('./play/profile.js').then((m) => m.openProfile({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, quest, obs: () => (play && play.session ? play.session.obs : null) })).catch((e) => console.warn('[profile]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -163,7 +170,27 @@ if (townMode.town) {
   camera.far = TOWN_CAMERA.far; camera.updateProjectionMatrix();
   rig.minPitch = TOWN_CAMERA.minPitch; rig.dist = TOWN_CAMERA.dist; rig.pitchOffset = TOWN_CAMERA.tilt; rig.yaw = rig.baseYaw; rig.rotate(sp.heading + Math.PI - rig.baseYaw); // behind Iris, looking up the street
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
+  // The town quest (scenes/town-quest.js, hackathon spec P1-B): three talks on the way to the altar, once per device,
+  // never on the judge link (?quest=1 forces it, ?quest=0 skips). The purse is a teaching prop: no engine, no chain.
+  const quest = questPlan({ demo: params.get('demo'), quest: params.get('quest'), stored: ctx.storage ? ctx.storage.getItem(QUEST_KEY) : null })
+    ? createTownQuest({ storage: ctx.storage }) : null;
+  let signFn = null;
+  if (quest) import('./ui/onboarding.js').then((m) => { signFn = m.tutorialSignSvg; }).catch(() => {});
+  if (quest) { let prev = quest.step; quest.subscribe(() => { if (quest.step !== prev && prev !== 'start') townLedger.addXp('questStep'); prev = quest.step; }); }
+  // the nearest townsperson Iris can talk to (live positions: walkers move), for the hire talk
+  const folkPos = (p) => [p.plan.x + TOWN_ORIGIN_W[0], p.plan.y + TOWN_ORIGIN_W[1], p.plan.z + TOWN_ORIGIN_W[2]];
+  const folkNear = (pos) => {
+    const tf = town.townsfolk; if (!tf) return null;
+    let best = null, bd = TALK_RADIUS;
+    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < bd) { bd = d; best = p.def.key; } }
+    return best;
+  };
+  const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
+  const badge = (key, on) => { if (town.townsfolk) town.townsfolk.setBadge(key, on); };
+  for (const h of townLedger.hires()) badge(h.npc, true);
   townFlow = createTownFlow({
+    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest),
+    quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
@@ -179,7 +206,7 @@ if (townMode.town) {
   // Once the town is shown, the archipelago's files go into the HTTP cache at low priority, so the registration
   // cover has little left to download (skipped on Save-Data and 2G/3G-class links).
   if (!conn.saveData && !/(^|-)(2g|3g)$/.test(conn.effectiveType || '')) {
-    const warmIsland = () => { if (!town.shown) { setTimeout(warmIsland, 1500); return; } world3d.library.prefetchHttp(ISLAND_FIRST_VIEW); };
+    const warmIsland = () => { if (!town.shown) { setTimeout(warmIsland, 1500); return; } world3d.library.prefetchHttp([...ISLAND_FIRST_VIEW, 'shell_interior']); };
     setTimeout(warmIsland, 3000);
   }
 }
@@ -225,18 +252,24 @@ async function leaveTown() {
 
 function startSeason() {
   if (season) return season;
+  // On the archipelago the four Shells and the Shell hall are wanted even off screen (after the first view,
+  // before the full-resolution upgrades), so the first flight lands in the real hall (docs/smoothness.md).
+  for (const [name, priority] of Object.entries(JUDGE_PINS)) streamer.pin(name, priority);
   season = (async () => {
   try {
     const [{ startPlay }, { mountAudioSettings }, { attachAllAges }] = await loadPlayLayer();
     play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
       seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
       resetHints: judge || params.get('hints') === 'reset',
+      townLedger, openProfile: () => openProfileFor(null),
+      judge, // ?demo=judge: the shard card opens by itself after the trial-6 auction (hackathon spec P1-C)
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
       hub: params.get('mode') !== 'walk', // ?mode=walk: walking play without the Shell hub
       onSettings: () => controls.open(),
       iris: irisAvatar, // the town already attached her model (null on the paths that skip the town)
     } });
     window.__ftf.play = play;
+    setTimeout(() => { try { play.shell.preload(); } catch { /* the first visit loads them */ } }, 2500); // the Guests' model, ahead of the first flight
     // Volume sliders in the scene settings dialog (the audio module loads lazily: the getter resolves it later).
     mountAudioSettings(controls.dialog, { audio: () => (play && play.hooks.audio) || null, i18n: ctx.i18n, storage: ctx.storage });
     attachAllAges({ play, ctx, uiRoot, settingsDialog: controls.dialog }); // Task Q: recap, Simple mode, in-world Settings, narration (docs/accessibility.md)
@@ -265,7 +298,9 @@ let toastTimer = 0;
 function toast(text) { toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
 
 // moveRun: phones have no Shift, so a tap far away (or a double tap) runs there
-let moveTarget = null, stuckTime = 0, lastDist = Infinity, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
+const PHYSICS_CARRY = 1.0; // seconds of a long frame that physics catches up on (fixedSteps carry)
+const stuck = { stuckTime: 0, lastDist: Infinity }; // click-to-move give-up state (character.js clickStuck)
+let moveTarget = null, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -376,7 +411,7 @@ function handleInput(dt) {
         const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
         lastTap = { t: now, x: c.x, y: c.y };
         moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
-        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
+        moveTarget = hit.point; stuck.stuckTime = 0; stuck.lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
       }
@@ -444,7 +479,8 @@ function tickDayCycle(dt) {
 }
 
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.25);
+  const rawDt = clock.getDelta();
+  const dt = Math.min(rawDt, 0.25); // render, camera and animation delta
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
   // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
@@ -453,7 +489,9 @@ function frame() {
     if (play.session.flags.input !== dev) { play.session.flags.input = dev; play.session.recompute(); }
   }
 
-  const f = fixedSteps(accumulator, dt, PHYSICS_DT, 8);
+  // Physics keeps up to 1 s of a long frame and pays it back at <= 8 steps per frame (hackathon spec P1-A): a hitch
+  // delays a stair climb or a click-to-move walk instead of deleting it (tests/client/movement.test.mjs).
+  const f = fixedSteps(accumulator, Math.min(rawDt, PHYSICS_CARRY), PHYSICS_DT, 8, PHYSICS_CARRY);
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
@@ -470,9 +508,7 @@ function frame() {
       // progress. Braking and pivoting toward a target behind us also makes no progress, so a wall
       // contact is required (otherwise a reversal would cancel its own order).
       const d = Math.hypot(moveTarget[0] - player.pos[0], moveTarget[2] - player.pos[2]);
-      stuckTime = player.lastHitWall && d > lastDist - 0.01 ? stuckTime + PHYSICS_DT : 0;
-      lastDist = Math.min(lastDist, d);
-      if (stuckTime > 0.6) { moveTarget = null; marker.visible = false; }
+      if (clickStuck(stuck, player.lastHitWall, d)) { moveTarget = null; marker.visible = false; }
     }
   }
   physics.grounded = player.grounded;

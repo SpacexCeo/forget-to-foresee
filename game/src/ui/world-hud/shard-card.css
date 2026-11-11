@@ -111,3 +111,6 @@
 }
 html[data-motion="reduce"] .sh-card, html[data-motion="reduce"] .sh-toast,
 html[data-motion="reduce"] .sh-ink svg circle, html[data-motion="reduce"] .sh-ink svg line, html[data-motion="reduce"] .sh-ink svg text { animation: sh-fade 160ms linear both; }
+/* Unminted preview (P1-C): dashed frame, muted kicker, so it never reads as a token */
+.sh-card--preview { border-style: dashed; }
+.sh-card--preview .sh-kicker, .sh-toast--preview .sh-toast__title { color: var(--sh-muted); }

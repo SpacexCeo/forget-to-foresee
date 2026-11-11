@@ -5,7 +5,7 @@
 // read and write positions, discoveries and drafts and never change a rules outcome.
 
 export const API_VERSION = 'v1';
-export const CATALOG_VERSION = '1.0.0';
+export const CATALOG_VERSION = '1.1.0';
 
 const CLAN = { type: 'string', enum: ['salt', 'ash', 'moss', 'amber', 'frost'], description: 'Clan id (not Iris).' };
 const IDX4 = (what, names) => ({ type: 'integer', minimum: 0, maximum: 3, description: `${what}: ${names.map((n, i) => `${i} = ${n}`).join(', ')}.` });
@@ -33,6 +33,7 @@ export const PRECONDITIONS = {
   near_target: { mode: 'proximity', param: 'target', description: 'The avatar is close enough to the inspected target.' },
   prophecy_visible: { param: 'prophecy', description: 'The prophecy (event index) is visible to this player: published, or seen in one of Iris\'s visions.' },
   logogram_exists: { param: 'logogram', description: 'The logogram draft exists and belongs to this player.' },
+  near_exchange: { mode: 'proximity', description: 'Reserved: the avatar stands at the town Exchange counter. Not enforced in Scope A (the drill opens from an overlay).' },
   engine_guards: { description: 'The engine\'s own guards accept the action (rejection reasons listed under errors.rules). Evaluated by the engine itself.' },
 };
 
@@ -54,6 +55,8 @@ export const COMMON_ERRORS = {
 
 const rules = (o) => ({ kind: 'rules', status: 'implemented', roles: ['controller'], mutates: true, ...o, preconditions: ['role_controller', ...(o.preconditions || []), 'engine_guards'] });
 const world = (o) => ({ kind: 'world', status: 'implemented', roles: ['controller', 'helper'], mutates: true, ...o });
+const exchange = (o) => ({ kind: 'exchange', status: 'implemented', roles: ['controller'], mutates: true, preconditions: ['role_controller'], costs: {}, ...o });
+const ECHO_IDS = ['salt', 'amber', 'frost'];
 const planned = (o) => ({ status: 'planned', roles: ['controller'], mutates: true, preconditions: [], costs: {}, errors: { rules: [], world: [] }, params: { type: 'object' }, ...o });
 
 export const ACTIONS = [
@@ -186,6 +189,23 @@ export const ACTIONS = [
     preconditions: ['role_controller', 'prophecy_visible'], costs: {}, errors: { rules: [], world: ['not_visible'] },
   }),
 
+  /* ---------- Foresight Exchange (kind 'exchange'): a local practice-silk drill; never touches the season ---------- */
+  exchange({
+    type: 'start_exchange', summary: 'Start a Foresight Exchange drill (local, practice silk only, no prizes) on a window of the sealed snapshot of historical reference rates. Each player and agent gets 100 practice silk; the season is untouched.',
+    params: { type: 'object', properties: { snapshotId: { type: 'string', maxLength: 40 }, startIndex: { type: 'integer', minimum: 0, maximum: 60 }, barCount: { type: 'integer', minimum: 2, maximum: 12 } }, additionalProperties: false },
+    errors: { rules: [], world: [], exchange: ['already_open', 'bad_snapshot', 'bad_window'] },
+  }),
+  exchange({
+    type: 'place_order', summary: 'Market order on an Echo at the house quote (fills at once and in full; long only; fee 1 % of notional, at least 1 practice silk; at most 3 orders per bar).',
+    params: { type: 'object', required: ['echo', 'side', 'qty'], properties: { echo: { type: 'string', enum: ECHO_IDS }, side: { type: 'string', enum: ['buy', 'sell'] }, qty: { type: 'integer', minimum: 1, maximum: 5 } }, additionalProperties: false },
+    errors: { rules: [], world: [], exchange: ['phase', 'bad_echo', 'no_silk', 'no_position', 'qty', 'too_many_orders'] },
+  }),
+  exchange({
+    type: 'advance_exchange_bar', summary: 'Publish the next bar of the drill (the agents act on it), or settle the drill after the last bar: every position closes at the last bid.',
+    params: EMPTY, errors: { rules: [], world: [], exchange: ['phase'] },
+  }),
+  planned({ type: 'cancel_order', kind: 'exchange', summary: 'Planned: there are no resting orders in Scope A (market orders fill at once), so there is nothing to cancel.' }),
+
   /* ---------- planned (not backed by rules yet; commands return 501) ---------- */
   planned({ type: 'propose_trade', kind: 'rules', summary: 'Planned: player-initiated trade proposals to a clan. The engine models only clan-initiated offers (accept_offer / decline_offer) today.' }),
   planned({ type: 'chat', kind: 'world', roles: ['controller', 'helper'], summary: 'Planned: free-text dialogue with a clan (LLM with a template fallback, never computing outcomes). Today: talk returns template dialogue.' }),
@@ -204,6 +224,6 @@ export function catalogDocument(rulesVersions = []) {
     preconditions: PRECONDITIONS,
     commonErrors: COMMON_ERRORS,
     enums: { slots: SLOT_NAMES, forms: FORM_NAMES, meanings: MEANING_NAMES, clans: ['iris', 'salt', 'ash', 'moss', 'amber', 'frost'], places: PLACES, inspectTargets: INSPECT_TARGETS },
-    actions: ACTIONS.map(({ engine, fixedArgs, ...a }) => ({ ...a, backedBy: a.status === 'planned' ? null : a.kind === 'rules' ? `engine.${engine}` : 'world layer (no rules outcome)' })),
+    actions: ACTIONS.map(({ engine, fixedArgs, ...a }) => ({ ...a, backedBy: a.status === 'planned' ? null : a.kind === 'rules' ? `engine.${engine}` : a.kind === 'exchange' ? 'exchange module (practice silk, no rules outcome)' : 'world layer (no rules outcome)' })),
   };
 }

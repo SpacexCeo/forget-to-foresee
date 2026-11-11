@@ -52,12 +52,12 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   let forgetAsk = null; // { id, purpose }: the memory waiting for "Forget this memory" / "Keep it" (forget-confirm.js)
   // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
   // re-render on every observation does not restart the ink ring's drawing.
-  let shardSource = null, shardKey = '', shardNode = null;
+  let shardSource = null, shardKey = '', shardNode = null, exchangeOpener = null, replaySource = null, profileOpener = null;
   let nearSource = null; // () => the NEAR watcher's status (world-hud.js): the Biography's season record
   function shardSection(obs) {
     if (!shardSource) return null;
     const v = shardSource(obs);
-    const key = i18n.locale + '|' + (v.judgeOnly ? 'j' : '') + v.cards.map((c) => c.card.tokenId + ':' + (c.card.owner || '')).join(',');
+    const key = i18n.locale + '|' + (v.judgeOnly ? 'j' : '') + v.cards.map((c) => (c.card.tokenId || c.card.key) + ':' + (c.card.owner || '')).join(',');
     if (key !== shardKey) { shardKey = key; shardNode = renderShardSection(v, { t, doc: document }); }
     return shardNode;
   }
@@ -187,7 +187,8 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
           el('button', { class: 'pl-btn pl-primary', type: 'button', 'data-forget': m.id, text: t('memory.forget'), onclick: () => askForget(m.id, 'vision') }),
           keyOpen && m.weight >= 3 ? el('button', { class: 'pl-btn', type: 'button', text: t('memory.forgetKey'), onclick: () => askForget(m.id, 'key') }) : null)))) : el('p', { text: t('memory.empty') });
       const forgotten = obs.iris.forgotten.length ? el('div', {}, el('h3', { text: t('memory.forgotten') }), el('ul', { class: 'pl-list pl-muted' }, obs.iris.forgotten.map((f) => el('li', { text: f.text + ' — ' + f.fate })))) : null;
-      panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten, shardSection(obs));
+      panelShell(t('memory.title'), el('p', { text: t('memory.intro') }), el('p', { class: 'pl-muted', text: t('memory.attention', { n: obs.iris.attention }) }), list, forgotten, shardSection(obs),
+        (exchangeOpener || profileOpener) ? el('div', { class: 'pl-row' }, exchangeOpener ? el('button', { class: 'pl-btn pl-small', type: 'button', 'data-exchange': '', text: t('exch.open'), onclick: () => exchangeOpener() }) : null, profileOpener ? el('button', { class: 'pl-btn pl-small', type: 'button', 'data-profile': '', text: t('profile.open'), onclick: () => profileOpener() }) : null) : null);
     } else if (panel === 'vision') {
       const signs = obs.prophecies || [];
       const rules = el('div', { class: 'pl-row' }, el('span', { text: t('vision.rule') + ':' }), ['unknown', 'top', 'dots'].map((r) => el('button', {
@@ -253,7 +254,19 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         el('p', { 'data-bio': 'chain', 'data-state': bio.chain.state }, el('span', { text: L.chain.text + ' ' }), link(L.chain.href, t('bio.chain.link'))),
         L.chain.recorded ? el('p', { class: 'pl-muted' }, link(L.chain.recorded.href, L.chain.recorded.text)) : null,
         el('p', { class: 'pl-muted', 'data-bio': 'note', text: L.note }),
-        el('div', { class: 'pl-row' }, copyBtn),
+        el('div', { class: 'pl-row' }, copyBtn, el('button', { class: 'pl-btn pl-small', type: 'button', 'data-share': '', text: t('postcard.share'), onclick: () => {
+          const irisCard = shardsView && shardsView.cards.find((c) => c.shard.from === 'iris');
+          let link = 'https://spacexceo.github.io/forget-to-foresee/'; try { const u = new URL(location.href); link = u.origin + u.pathname; } catch { /* default */ }
+          import('../ui/postcard.js').then((m) => m.openPostcard({ doc: document, t, kicker: t('postcard.kicker.biography'), title: t('postcard.finaleTitle'), line: L.outcome, link, signSvg: irisCard ? irisCard.card.svg : null })).catch((e) => console.warn('[play] postcard', e));
+        } }), replaySource ? (() => {
+          const b = el('button', { class: 'pl-btn pl-small', type: 'button', 'data-replay-copy': '', text: t('replay.copy'), onclick: async () => {
+            const link = replaySource();
+            const ok = link ? await copyText(link) : false;
+            b.textContent = t(ok ? 'replay.copied' : 'replay.unavailable');
+            setTimeout(() => { if (b.isConnected) b.textContent = t('replay.copy'); }, 2500);
+          } });
+          return b;
+        })() : null),
         obs.season.heir == null ? el('div', { class: 'pl-row' },
           el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('end.heir'), onclick: () => session.send('set_heir', { heir: true }) }),
           el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) }))
@@ -370,6 +383,12 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   return { update, open, close, flash, handleKey,
     /** The Memories panel's shard NFT cards: fn(obs) → {cards, judgeOnly} (shard-card-model.js shardCards). */
     setShardSource(fn) { shardSource = fn; if (panel === 'memory' || panel === 'end') renderPanel(); },
+    /** The Foresight Exchange (a local drill, ui/exchange-terminal.js): a button under the Memories panel. */
+    /** The season replay link (net/replay.js) for the Biography's Copy replay link: fn() -> url | null. */
+    setReplaySource(fn) { replaySource = fn; if (panel === 'end') renderPanel(); },
+    /** Profile and inventory (ui/profile.js): a button under the Memories panel. */
+    setProfileOpener(fn) { profileOpener = fn; if (panel === 'memory') renderPanel(); },
+    setExchangeOpener(fn) { exchangeOpener = fn; if (panel === 'memory') renderPanel(); },
     /** The Biography's season record: fn() → the NEAR watcher's status (net/near.js). */
     setNearSource(fn) { nearSource = fn; if (panel === 'end') renderPanel(); }, get panel() { return panel; }, destroy() { offs.forEach((f) => f()); document.body.classList.remove('pl-context-open'); for (const e of [goalEl, ctxEl, panelEl, chronEl, helpEl, bar, badge, info]) e.remove(); } };
 }

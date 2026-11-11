@@ -32,7 +32,7 @@ const LINE_TTL = 12; // seconds a spoken line stays in the dialogue strip
  *   part in the one-panel-at-a-time rule through panelArbiterFor(uiRoot).claim('map', close).
  *   `onFly(n)` / `onPass()` serve the phone HUD's Shell selector and "let the trial pass" (docs/ui-mobile-hud.md).
  */
-export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = null, handlers = {} }) {
+export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = null, handlers = {}, autoOpenShard = false }) {
   const { i18n, prefs } = ctx;
   const arb = panelArbiterFor(uiRoot); // Signs is one of the exclusive surfaces (panels.js)
   const doc = uiRoot.ownerDocument || document;
@@ -54,8 +54,31 @@ export function attachWorldHud({ uiRoot, ctx, session, ui, hints = null, hub = n
     mintToast = createMintToast(host, { t: render, doc, onOpen: () => ui.open('memory') });
     if (ui.setShardSource) ui.setShardSource((obs) => shardCards({ status: shards.status, obs }));
   } catch (e) { console.warn('[play] shard NFT watcher off', e); shards = null; }
+  // The Foresight Exchange (Judge Echo): optional, from Memories; with ?exchange=1 it also opens (not started) after the
+  // judge path's shard-card beat, on the short 4-bar window. Never part of the default judge table.
+  const exchangeShort = /[?&]exchange=1\b/.test((doc.defaultView || globalThis).location ? (doc.defaultView || globalThis).location.search : '');
+  let exchangeOpen = null;
+  const openExchange = () => {
+    if (exchangeOpen && exchangeOpen.open) return;
+    import('../ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ doc, i18n: ctx.i18n, storage: ctx.storage, short: exchangeShort })).then((x) => { exchangeOpen = x; }).catch((e) => console.warn('[play] exchange', e));
+  };
+  if (ui.setExchangeOpener) ui.setExchangeOpener(openExchange);
   if (ui.setNearSource) ui.setNearSource(() => (near ? near.status : null)); // the Biography's season record
-  const showMints = () => { if (moments && mintToast) for (const m of moments.take(shards.status, session.obs)) mintToast.show(m.card); };
+  // On the judge link Iris's first shard moment also opens Memories on its card a beat after the toast (P1-C: the
+  // NFT moment must be hard to miss). Once per session; never for other clans' shards.
+  let autoOpened = false;
+  const showMints = () => {
+    if (!moments || !mintToast) return;
+    for (const m of moments.take(shards.status, session.obs)) {
+      mintToast.show(m.card);
+      if (autoOpenShard && !autoOpened && m.shard.from === 'iris') { autoOpened = true; setTimeout(() => {
+        if (ui.panel !== 'memory') ui.open('memory');
+        // the card sits under the memory list: bring it into view
+        setTimeout(() => { const c = doc.querySelector('.sh-card'); if (c && c.scrollIntoView) c.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 120);
+        if (exchangeShort) setTimeout(openExchange, 6000); // ?exchange=1: the drill is offered after the card beat
+      }, 1600); }
+    }
+  };
   // "See what changed" (readiness audit P2): what each reveal did to the staked reading, the stake and Iris's
   // dictionary, and what each forget changed; presentation state kept from consecutive observations (outcome.js)
   const outcomes = createOutcomeTracker();

@@ -151,3 +151,34 @@ test('orbit, tilt and reset preserve camera-relative axes and sweep close obstac
   assert.equal(rig.pitchOffset, 0);
   assert.equal(rig.dist, 4.5);
 });
+
+test('keyboard layouts: KeyW on a Russian layout (key "ц") moves forward exactly like "w"; WASD never reads e.key', async () => {
+  const globals = ['window', 'document', 'navigator'];
+  const descriptors = globals.map((name) => Object.getOwnPropertyDescriptor(globalThis, name));
+  const axes = (key, code) => {
+    const win = new EventTarget();
+    Object.defineProperties(globalThis, {
+      window: { configurable: true, value: win },
+      document: { configurable: true, value: new EventTarget() },
+      navigator: { configurable: true, value: { getGamepads: () => [] } },
+    });
+    const input = new Input(new EventTarget());
+    win.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { code, key }));
+    return input.moveAxes();
+  };
+  try {
+    assert.deepEqual(axes('ц', 'KeyW'), [0, 1]);
+    assert.deepEqual(axes('ц', 'KeyW'), axes('w', 'KeyW'));
+    assert.deepEqual(axes('ф', 'KeyA'), axes('a', 'KeyA'));
+    assert.deepEqual(axes('і', 'KeyS'), axes('s', 'KeyS'), 'Ukrainian layout');
+    assert.deepEqual(axes('w', 'KeyZ'), [0, 0], 'a "w" typed on another physical key is not forward');
+  } finally {
+    globals.forEach((name, i) => { if (descriptors[i]) Object.defineProperty(globalThis, name, descriptors[i]); else delete globalThis[name]; });
+  }
+  // Static: no movement code compares e.key to a WASD letter.
+  const { readFileSync } = await import('node:fs');
+  for (const f of ['src/ui/input.js', 'src/boot-world.js', 'src/play/game.js', 'src/play/hub-ui.js', 'src/ui/flow.js', 'src/ui/onboarding.js']) {
+    const src = readFileSync(new URL('../../' + f, import.meta.url), 'utf8');
+    assert.doesNotMatch(src, /\.key\s*===?\s*['"][wasdWASD]['"]/, f + ' reads e.key for a movement letter');
+  }
+});

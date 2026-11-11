@@ -53,6 +53,8 @@ number of commands, zero rejections and `firstProofVerified: true`.
 |---|---|
 | `start_season`, `set_reading_rule`, `place_anchor`, `ask_guests`, `sacrifice_memory`, `speak_key`, `mend`, `mediate`, `accept_offer`, `decline_offer`, `bid_shard`, `contribute_fragment`, `end_tick`, `cast_vote`, `set_heir` | **implemented**, engine-backed |
 | `move`, `inspect`, `talk`, `enter_shell`, `exit_shell`, `assemble_logogram` | **implemented**, world layer (never changes a rules outcome) |
+| `start_exchange`, `place_order`, `advance_exchange_bar` | **implemented**, kind `exchange`: the Foresight Exchange, a local practice-silk drill on a sealed snapshot of historical ECB reference rates (`game/src/game/exchange.js`). It never touches the season. The observation carries `exchange` with only the bars already published. Example: `server/examples/exchange-agent.mjs` |
+| `cancel_order` | **planned** (501): market orders fill at once, so there is nothing to cancel |
 | `propose_trade`, `chat`, `helper_contribute` | **planned** (501) |
 | `mint_final_card` | **planned**, never exposed to agents |
 

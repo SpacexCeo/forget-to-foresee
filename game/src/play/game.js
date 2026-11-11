@@ -29,6 +29,7 @@ import { ShellBeacons, GoalPointer } from '../render/beacons.js';
 import { warmModel } from '../render/warmup.js';
 import { attachFun, CHAPTER_KEY } from './fun-ui.js';
 import { FIRST_LOOP_KEY } from './objectives.js';
+import { replayLink, replayCommands } from '../net/replay.js';
 import { createHubUi } from './hub-ui.js';
 import { createMapPanel } from './map-ui.js';
 import { panelArbiterFor } from './panels.js';
@@ -39,6 +40,8 @@ import { attachChapters } from '../cinematic/chapters/index.js';
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
 const AUDIO_MODULES = import.meta.glob('../audio/audio.js');
+/** How long a flight's cover waits for the real Shell hall before falling back to the greybox room (ms). */
+const SHELL_WAIT_MS = 8000;
 
 /**
  * @param {object} o
@@ -108,7 +111,27 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   const hints = useWorldHud ? createHints({ storage: ctx.storage, mode: () => (ctx.prefs ? ctx.prefs.get().hudMode : 'novice'), i18n: ctx.i18n, hub: hubMode }) : null;
   if (hints && options.resetHints) hints.reset();
   // the phone HUD (docs/ui-mobile-hud.md) draws the Shell selector and the quests sheet from the hub and flies / passes through it
-  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, hub, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle(), onFly: (n) => fly(n), onPass: () => hubUi && hubUi.handleKey('KeyT') } }) : null;
+  // Town XP (game/town-economy.js) for play actions: a stake placed on a sign, a verified trial, a forgotten memory.
+  const townLedger = options.townLedger || null;
+  if (townLedger) {
+    let anchors = 0, verified = 0, forgotten = 0;
+    session.on('obs', (o) => {
+      const a = ((o.iris && o.iris.anchors) || []).length, v = (o.proofs || []).filter((p) => p.verified).length, f = ((o.iris && o.iris.forgotten) || []).length;
+      for (let i = anchors; i < a; i++) townLedger.addXp('signRead');
+      for (let i = verified; i < v; i++) townLedger.addXp('trialVerified');
+      for (let i = forgotten; i < f; i++) townLedger.addXp('memoryForgotten');
+      anchors = a; verified = Math.max(verified, v); forgotten = Math.max(forgotten, f);
+    });
+    if (ui.setProfileOpener && options.openProfile) ui.setProfileOpener(options.openProfile);
+  }
+  // Season replay link (net/replay.js): the seed (public once the season ends, or fixed on the judge link) and the
+  // accepted rules commands; the Biography copies it.
+  if (ui.setReplaySource) ui.setReplaySource(() => {
+    const o = session.obs, ent = o && o.season && o.season.entropy;
+    if (!ent || !ent.seedHex || typeof location === 'undefined') return null;
+    return replayLink(location.href, { seedHex: ent.seedHex, rules: (o.session && o.session.rules) || 'v3', commands: replayCommands(transport.history().body.history) });
+  });
+  const worldHud = useWorldHud ? attachWorldHud({ uiRoot, ctx, session, ui, hints, hub, autoOpenShard: !!options.judge, handlers: { onGo: walkTo, onSettings: options.onSettings, onMap: () => map.toggle(), onFly: (n) => fly(n), onPass: () => hubUi && hubUi.handleKey('KeyT') } }) : null;
   // living agents (Task N): meeting and contribution beats reach the dialogue strip when they actually happen
   agents.onSay = (l) => { if (worldHud) worldHud.say(l); };
   let movedReported = 0;
@@ -147,6 +170,10 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     let r;
     try {
       await hubUi.cover(ctx.i18n.t('hub.flying', { shell: ['I', 'II', 'III', 'IV'][n - 1] }));
+      // The cover stays until the real hall is shown (it is pinned in the streamer, so this is normally
+      // instant); after the timeout the greybox room is the fallback and onRealLayout fixes the spawn.
+      shell.preload();
+      await shell.whenReady(SHELL_WAIT_MS);
       r = await hub.flyTo(n);
     } finally { hub.endTransit(); }
     setTimeout(() => hubUi.uncover(), 160);
@@ -252,6 +279,14 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     rig.yaw = rig.baseYaw; rig.dist = Math.min(rig.dist, 9);
     presentation.onZone('shell');
   }
+  // A late swap from the greybox to the real hall (slow link, the wait above timed out): Iris moves to the
+  // real arrival point unless the player has already walked on.
+  shell.onRealLayout = () => {
+    if (state.zone !== 'shell' || !shell.atGreySpawn(shell.toLocal(player.pos))) return;
+    const sp = shell.spawn();
+    teleport(sp.pos, sp.heading);
+    rig.yaw = rig.baseYaw;
+  };
   function exitShell(position) {
     shell.deactivate();
     state.zone = 'island'; state.entering = null;

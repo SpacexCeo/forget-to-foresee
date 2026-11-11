@@ -5,6 +5,8 @@
 // No world HUD, no hub and no hints exist here: the season has not begun. No game rule is evaluated.
 import { steerTo } from '../physics/character.js';
 import { TOWN_ROUTE, inAltarRange } from './town-layout.js';
+import { talkTarget, TALK_LEAVE } from './town-quest.js';
+import { HIRE } from '../game/town-economy.js';
 import { createInkBar } from '../ui/ink-bar.js';
 
 const CSS = `
@@ -32,6 +34,24 @@ html[data-motion="reduce"] .ftf-town-cover span, .ftf-town-cover.is-plain span {
 .ftf-town-cover { flex-direction: column; gap: 22px; }
 .ftf-town-cover-ink { opacity: 0; transition: opacity .5s ease .7s; }
 .ftf-town-cover.is-on .ftf-town-cover-ink { opacity: 1; }
+/* the town quest (town-quest.js): one talk panel, bottom centre */
+.ftf-quest-talk { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 13; width: min(560px, calc(100% - 32px));
+  box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(14, 18, 20, .92); border: 1px solid rgba(233, 180, 76, .45); color: #f3ead6; font: 16px/1.45 system-ui, sans-serif; pointer-events: auto; }
+.ftf-quest-talk[hidden], .ftf-quest-meta[hidden] { display: none; }
+.ftf-quest-talk h3 { margin: 0 0 4px; font: 600 13px/1.3 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e9b44c; }
+.ftf-quest-talk p { margin: 0 0 10px; }
+.ftf-quest-talk .ftf-quest-sign { width: 132px; height: 132px; margin: 0 auto 8px; display: block; }
+.ftf-quest-talk .ftf-quest-sign svg { width: 100%; height: 100%; }
+.ftf-quest-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.ftf-quest-choices button, .ftf-quest-meta button { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(233, 180, 76, .6); background: rgba(233, 180, 76, .14); color: #f3ead6; font: 500 15px system-ui, sans-serif; cursor: pointer; }
+.ftf-quest-choices button:first-child { background: rgba(233, 180, 76, .9); color: #1d1708; }
+.ftf-quest-choices button:focus-visible, .ftf-quest-meta button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ftf-quest-meta { position: absolute; top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: center; color: #f3ead6; font: 14px system-ui, sans-serif; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); pointer-events: auto; }
+.ftf-town-profile { position: absolute; top: calc(62px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); min-height: 36px; padding: 4px 12px; border-radius: 18px; border: 1px solid rgba(233, 180, 76, .6); background: rgba(14, 18, 20, .82); color: #f3ead6; font: 500 14px system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+.ftf-quest-talk dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 8px; font-size: 14px; }
+.ftf-quest-talk dt { color: #b9b2a2; } .ftf-quest-talk dd { margin: 0; }
+.ftf-quest-talk .ftf-local { font-size: 12px; color: #b9b2a2; margin: 0 0 8px; }
+.ftf-quest-meta button { min-height: 32px; padding: 2px 10px; font-size: 13px; }
 @media (max-width: 700px) { .ftf-town-objective { font-size: 14px; max-width: calc(100% - 120px); } .ftf-town-prompt { font-size: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-height: 440px) { .ftf-town-prompt { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); } }
 `;
@@ -52,7 +72,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -60,16 +80,36 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   const prompt = doc.createElement('button'); prompt.type = 'button'; prompt.className = 'ftf-town-prompt'; prompt.hidden = true;
   const cap = doc.createElement('kbd'); const promptText = doc.createElement('span');
   prompt.append(cap, promptText);
-  root.append(objective);
-  doc.body.append(root, prompt);
+  // The town quest (optional): the purse and Skip under the objective, and one talk panel.
+  const meta = doc.createElement('div'); meta.className = 'ftf-quest-meta'; meta.hidden = true;
+  const purseEl = doc.createElement('span'); const skipBtn = doc.createElement('button'); skipBtn.type = 'button';
+  meta.append(purseEl, skipBtn);
+  const talkEl = doc.createElement('section'); talkEl.className = 'ftf-quest-talk'; talkEl.hidden = true; talkEl.setAttribute('aria-live', 'polite');
+  talkEl.addEventListener('pointerdown', (e) => e.stopPropagation()); meta.addEventListener('pointerdown', (e) => e.stopPropagation());
+  skipBtn.addEventListener('click', () => { skipBtn.blur(); if (quest) quest.skip(); });
+  root.append(objective, meta);
+  doc.body.append(root, prompt, talkEl);
+  let talkNpc = null, talkKind = null; // the townsperson the prompt offers a talk with ('quest' | 'folk')
+  let folkTalk = null; // a hire talk with any townsperson (game/town-economy.js): {npc, view: 'card' | 'result', result}
+  const profileBtn = doc.createElement('button'); profileBtn.type = 'button'; profileBtn.className = 'ftf-town-profile';
+  profileBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  profileBtn.addEventListener('click', () => { profileBtn.blur(); if (onProfile) onProfile(); });
+  if (onProfile) root.append(profileBtn);
   let cover = null;
 
   // phase: 'off' (not entered yet) -> 'town' -> 'transition' -> 'done'
   const state = { phase: 'off', ready: false, near: false, device: coarse ? 'touch' : 'keyboard', route: null, lift: 0, liftFrom: 0, focusK: 0, registering: null, startedAt: 0, arrivedAt: 0 };
 
   function renderText() {
-    objective.textContent = i18n.t(state.ready ? 'town.objective' : 'town.loading');
-    promptText.textContent = i18n.t('town.altar.prompt');
+    objective.textContent = i18n.t(state.ready ? (quest ? quest.objective : 'town.objective') : 'town.loading');
+    promptText.textContent = talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t('town.altar.prompt');
+    if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
+    if (quest) {
+      meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
+      purseEl.textContent = quest.purse > 0 || quest.step === 'deliver' ? i18n.t('quest.purse', { n: quest.purse }) : '';
+      skipBtn.textContent = i18n.t('quest.skip'); skipBtn.hidden = !quest.active;
+      renderTalk();
+    }
     cap.textContent = state.device === 'gamepad' ? 'A' : 'E';
     cap.hidden = state.device === 'touch';
     if (cover) cover.firstChild.textContent = i18n.t('town.transition.title');
@@ -77,8 +117,77 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   function renderVisibility() {
     const on = state.phase === 'town';
     root.hidden = !on;
-    prompt.hidden = !(on && state.ready && state.near);
+    const talking = !!((quest && quest.talk) || folkTalk);
+    prompt.hidden = !(on && state.ready && (talkNpc || state.near) && !talking);
+    talkEl.hidden = !(on && talking);
   }
+  /** The open talk: speaker, line, the sign when the line asks to read it, and the choices as buttons. */
+  function renderTalk() {
+    if (folkTalk) { renderFolk(); return; }
+    const tk = quest && quest.talk;
+    if (!tk) { talkEl.replaceChildren(); return; }
+    const h = doc.createElement('h3'); h.textContent = i18n.t('quest.name.' + tk.npc);
+    const line = doc.createElement('p'); line.textContent = i18n.t(tk.node.line);
+    const kids = [h];
+    if (tk.node.sign && signSvg) {
+      const box = doc.createElement('div'); box.className = 'ftf-quest-sign'; box.setAttribute('role', 'img'); box.setAttribute('aria-label', i18n.t('quest.signAlt'));
+      try { const el = signSvg(); if (el) box.append(el); } catch (e) { console.warn('[town] quest sign', e); }
+      kids.push(box);
+    }
+    const row = doc.createElement('div'); row.className = 'ftf-quest-choices';
+    tk.node.choices.forEach((c, i) => {
+      const b = doc.createElement('button'); b.type = 'button'; b.textContent = i18n.t(c.key); b.dataset.choice = String(i);
+      b.addEventListener('click', () => { b.blur(); quest.choose(i); });
+      row.append(b);
+    });
+    const close = doc.createElement('button'); close.type = 'button'; close.textContent = i18n.t('quest.close'); close.addEventListener('click', () => quest.close());
+    row.append(close);
+    kids.push(line, row);
+    talkEl.replaceChildren(...kids);
+  }
+  /** The hire talk: the townsperson's card, then the result card (docs/agent-rental-plan.md). */
+  function renderFolk() {
+    const { npc } = folkTalk;
+    const T = (k, a) => i18n.t(k, a);
+    const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const b = (key, fn, primary = false, disabled = false) => { const x = el('button', null, T(key)); x.type = 'button'; x.disabled = disabled; if (!primary) x.style.background = 'rgba(233,180,76,.14)', x.style.color = '#f3ead6'; x.addEventListener('click', () => { x.blur(); fn(); }); return x; };
+    const kids = [el('h3', null, T('folk.name.' + npc))];
+    const row = el('div', 'ftf-quest-choices');
+    const h = ledger.hireOf(npc);
+    if (folkTalk.view === 'result' && !folkTalk.result) { talkEl.replaceChildren(); return; } // collecting: the result follows
+    if (folkTalk.view === 'result' && folkTalk.result) {
+      const r = folkTalk.result;
+      kids.push(el('p', null, T('hire.result.title', { name: T('folk.name.' + npc) })));
+      const dl = el('dl');
+      for (const x of r.rounds) dl.append(el('dt', null, T('hire.result.round', { n: x.n })), el('dd', null, T('hire.result.roundLine', { stake: (x.stake / 100).toFixed(2), back: (x.back / 100).toFixed(2) })));
+      dl.append(el('dt', null, T('hire.result.net')), el('dd', null, (r.net >= 0 ? '+' : '') + (r.net / 100).toFixed(2)), el('dt', null, T('hire.result.seed')), el('dd', null, r.seed));
+      kids.push(dl);
+      row.append(b('quest.close', closeFolk, true));
+    } else if (h && h.ready) {
+      kids.push(el('p', null, T('hire.back')));
+      row.append(b('hire.seeResult', () => { folkTalk.view = 'result'; const r = ledger.collect(npc); if (r.ok) { folkTalk.result = r.result; if (onHireChange) onHireChange(npc, false); } else folkTalk.view = 'card'; renderFolk(); renderText(); renderVisibility(); }, true), b('quest.close', closeFolk));
+    } else if (h) {
+      kids.push(el('p', null, T('hire.working', { s: Math.max(1, Math.ceil((h.endsAt - Date.now()) / 1000)) })));
+      row.append(b('quest.close', closeFolk, true));
+    } else {
+      const temp = ledger.temperamentOf ? ledger.temperamentOf(npc) : null;
+      kids.push(el('p', null, T('hire.greet')));
+      const dl = el('dl');
+      dl.append(el('dt', null, T('hire.card.temperament')), el('dd', null, T('hire.temp.' + (temp || 'steady'))),
+        el('dt', null, T('hire.card.terms')), el('dd', null, T('hire.card.termsLine', { price: HIRE.price, rounds: HIRE.rounds, seconds: HIRE.rounds * HIRE.roundSeconds })),
+        el('dt', null, T('hire.card.return')), el('dd', null, T('hire.card.returnLine')),
+        el('dt', null, T('hire.card.purse')), el('dd', null, (ledger.silk / 100).toFixed(2)));
+      kids.push(dl);
+      const why = ledger.canHire(npc);
+      if (why) kids.push(el('p', 'ftf-local', T('hire.why.' + why)));
+      row.append(b('hire.hire', () => { const r = ledger.hire(npc); if (r.ok && onHireChange) onHireChange(npc, true); renderText(); renderVisibility(); }, true, !!why), b('quest.close', closeFolk));
+    }
+    kids.push(el('p', 'ftf-local', T('hire.local')), row);
+    talkEl.replaceChildren(...kids);
+  }
+  function closeFolk() { folkTalk = null; renderText(); renderVisibility(); }
+  const unLedger = ledger && ledger.subscribe ? ledger.subscribe(() => { if (folkTalk) renderFolk(); renderText(); }) : null;
+  const unQuest = quest ? quest.subscribe(() => { renderText(); renderVisibility(); }) : null;
   const unsubscribe = typeof i18n.subscribe === 'function' ? i18n.subscribe(renderText) : null;
   prompt.addEventListener('click', () => { prompt.blur(); interact(); });
   prompt.addEventListener('pointerdown', (e) => e.stopPropagation()); // never a walk order
@@ -88,6 +197,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   function begin() {
     if (state.phase !== 'off') return;
     state.phase = 'town'; state.startedAt = performance.now();
+    if (quest) quest.begin();
     renderText(); renderVisibility();
   }
 
@@ -110,11 +220,24 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     const ready = !!town.ready, near = ready && inAltarRange(player.pos);
     if (near && !state.arrivedAt) state.arrivedAt = performance.now();
     if (dev !== state.device || ready !== state.ready) { state.device = dev; state.ready = ready; renderText(); }
-    if (near !== state.near || prompt.hidden === (ready && near)) { state.near = near; renderVisibility(); }
+    // the quest's townsperson in reach comes first (the shrinekeeper stands beside the altar), then the altar
+    const qNpc = quest && ready ? talkTarget(quest, player.pos, npcAt) : null;
+    const fNpc = !qNpc && ledger && ready ? folkNear(player.pos) : null;
+    const npc = qNpc || fNpc, kind = qNpc ? 'quest' : fNpc ? 'folk' : null;
+    if (npc !== talkNpc || kind !== talkKind) { talkNpc = npc; talkKind = kind; renderText(); renderVisibility(); }
+    if (quest && quest.talk) { const p = npcAt(quest.talk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) quest.close(); }
+    if (folkTalk) { const p = folkAt(folkTalk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) closeFolk(); }
+    const talking = !!((quest && quest.talk) || folkTalk);
+    if (near !== state.near || prompt.hidden === (ready && (near || !!talkNpc) && !talking)) { state.near = near; renderVisibility(); }
   }
 
   /** E, the gamepad's interact button or a tap on the prompt: registers when the prompt is offered. */
-  function interact() { return register(); }
+  function interact() {
+    if ((quest && quest.talk) || folkTalk) return Promise.resolve(false); // the talk's own buttons answer
+    if (talkNpc && talkKind === 'folk') { folkTalk = { npc: talkNpc, view: 'card', result: null }; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled])'); if (b && b.focus) b.focus(); return Promise.resolve(false); }
+    if (talkNpc && quest.talkTo(talkNpc)) { const b = talkEl.querySelector('button'); if (b && b.focus) b.focus(); return Promise.resolve(false); }
+    return register();
+  }
 
   /** The registration sequence. Resolves true once the season runs on the archipelago, false when not offered. */
   function register() {
@@ -127,6 +250,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   async function run() {
     const reduced = !!reducedMotion();
     state.phase = 'transition'; state.route = null;
+    if (quest) quest.close();
+    folkTalk = null;
     renderVisibility();
     cover = doc.createElement('div'); cover.className = 'ftf-town-cover' + (reduced ? ' is-plain' : '');
     cover.setAttribute('role', 'status');
@@ -157,7 +282,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     state.phase = 'done';
     cover.classList.remove('is-on');
     const gone = cover;
-    setTimeout(() => { ink.destroy(); gone.remove(); root.remove(); prompt.remove(); if (unsubscribe) unsubscribe(); }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
+    setTimeout(() => { ink.destroy(); gone.remove(); root.remove(); prompt.remove(); talkEl.remove(); if (unsubscribe) unsubscribe(); if (unQuest) unQuest(); if (unLedger) unLedger(); }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
     cover = null;
     return true;
   }
@@ -198,6 +323,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     get focusK() { return state.focusK; },
     /** Milliseconds from entering the town to first standing in the prompt radius (QA: the jury walk), or null. */
     get walkMs() { return state.arrivedAt ? Math.round(state.arrivedAt - state.startedAt) : null; },
-    elements: { root, objective, prompt },
+    /** The townsperson the prompt offers a talk with, or null. */
+    get talkNpc() { return talkNpc; },
+    elements: { root, objective, prompt, talk: talkEl, questMeta: meta },
   };
 }

@@ -59,6 +59,8 @@ const townShown = (w, limit = 30000) => new Promise((resolve) => {
 
 ctxP.then(async (ctx) => {
   loading.setTranslator((k) => ctx.i18n.t(k));
+  // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
+  if (params.has('replay')) import('./ui/replay-view.js').then((m) => m.openReplayView({ param: params.get('replay'), i18n: ctx.i18n })).catch((e) => console.warn('[replay]', e));
   if (plan.lobby) {
     const ui = await import('./ui/index.js');
     // Leaving the lobby before the town has streamed in: the loading screen comes back with the town's real progress,

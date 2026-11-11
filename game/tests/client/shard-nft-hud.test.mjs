@@ -1,6 +1,6 @@
 // Shard NFT cards and the mint toast (src/ui/world-hud/shard-card-model.js): the view model and its gating. A card
-// shows only when the token exists on-chain AND its data equals this playthrough's shard; live seasons get the quiet
-// "judge season only" line; RPC failures show nothing. No network: every fetch is a fake.
+// is a real token only when it exists on-chain AND its data equals this playthrough's shard; otherwise Iris's closed
+// shard is an "Unminted shard preview" with no token id or link (docs/hackathon-tz.md P1-C). No network: fakes only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApi } from '../../src/net/api.js';
@@ -83,43 +83,68 @@ test('on-chain media that differs from the game is shown as an image and not mar
   assert.equal(c.svgVerified, false); assert.equal(c.svg, null); assert.equal(c.media, 'data:image/svg+xml;base64,PHN2Zy8+');
 });
 
-test('on-chain absent or different: no card, never a fake token', async () => {
+/** A preview never carries anything that could pass for a token. */
+function assertPreview(card, id) {
+  assert.equal(card.state, 'preview');
+  assert.equal(card.shardId, id);
+  for (const k of ['tokenId', 'contractId', 'standard', 'owner', 'ownerHref', 'tokenHref', 'mintTxHref', 'leaf']) assert.equal(card[k], null, k);
+  assert.equal(card.svgVerified, false);
+  assert.ok(card.svg && card.svg.startsWith('<svg'), 'the game draws its own ink ring');
+}
+
+test('on-chain absent or different: Iris gets an "Unminted shard preview", never a fake token', async () => {
   const none = await watcher(fakeRpc([]));
-  assert.deepEqual(shardCards({ status: none.status, obs: PLAY.final }), { cards: [], judgeOnly: false });
+  const v = shardCards({ status: none.status, obs: PLAY.final });
+  assert.deepEqual(v.cards.map((c) => [c.shard.id, c.card.state]), [[7, 'preview']], 'other clans\' unminted shards stay quiet');
+  assertPreview(v.cards[0].card, 7);
+  assert.deepEqual([v.cards[0].card.ownerClan, v.cards[0].card.kind, v.cards[0].card.winner, v.cards[0].card.price], ['iris', 'call', 'frost', 13]);
   // A judge who plays differently: shard #7 on-chain is Iris's call, the local shard #7 is something else.
   const other = { ...PLAY.final, shards: PLAY.final.shards.map((s) => (s.id === 7 ? { ...s, winner: 'salt' } : s)) };
   const w = await watcher(fakeRpc(ONCHAIN));
-  assert.deepEqual(shardCards({ status: w.status, obs: other }).cards.map((c) => c.card.shardId), [10, 15]);
+  const diverged = shardCards({ status: w.status, obs: other }).cards;
+  assert.deepEqual(diverged.map((c) => [c.card.shardId, c.card.state]), [[7, 'preview'], [10, 'minted'], [15, 'minted']]);
+  assertPreview(diverged[0].card, 7);
   // Before the auction closes the shard is not minted yet: no card even though the token exists.
   const open = PLAY.seen.find((o) => o.shards.some((s) => s.id === 7 && s.open));
   assert.ok(open);
   assert.equal(localShardData(open.season, open.shards.find((s) => s.id === 7)), null);
   assert.equal(shardCardModel({ status: w.status, season: open.season, shard: open.shards.find((s) => s.id === 7) }), null);
-  // On-chain data that fails validation is ignored.
+  // On-chain data that fails validation is ignored: a preview, not a token.
   const broken = await watcher(fakeRpc([{ ...ONCHAIN[0], data: { ...ONCHAIN[0].data, kind: 'dream' } }]));
-  assert.equal(shardCards({ status: broken.status, obs: PLAY.final }).cards.length, 0);
-  // No shard deployment at all: nothing.
-  assert.equal(shardCardModel({ status: w.status, season: PLAY.final.season, shard: PLAY.final.shards[0], deployment: { ...NEAR_DEPLOYMENT, shardContractId: null } }), null);
+  assert.deepEqual(shardCards({ status: broken.status, obs: PLAY.final }).cards.map((c) => c.card.state), ['preview']);
+  // No shard deployment at all: a preview.
+  assertPreview(shardCardModel({ status: w.status, season: PLAY.final.season, shard: PLAY.final.shards[0], deployment: { ...NEAR_DEPLOYMENT, shardContractId: null } }), 7);
+  // While the watcher is still checking: nothing yet (no preview flashing before the real token).
+  assert.equal(shardCardModel({ status: { state: 'checking', seasonId: SEASON }, season: PLAY.final.season, shard: PLAY.final.shards[0] }), null);
 });
 
-test('live season: "on-chain for the judge season only", no card and no RPC call', async () => {
+test('other seed (live season): an unminted preview, no RPC call', async () => {
   let calls = 0;
   const live = { ...PLAY.final, season: { ...PLAY.final.season, seasonId: 'aaaaaaaaaaaaaaaa' } };
   const w = await watcher(async () => { calls++; throw new Error('no'); }, live);
   assert.equal(w.status.state, 'other-season');
   assert.equal(calls, 0);
-  assert.deepEqual(shardCards({ status: w.status, obs: live }), { cards: [], judgeOnly: true });
-  assert.deepEqual(shardCardModel({ status: w.status, season: live.season, shard: live.shards[0] }), { state: 'judge-only' });
+  const v = shardCards({ status: w.status, obs: live });
+  assert.equal(v.judgeOnly, false);
+  assert.deepEqual(v.cards.map((c) => c.card.state), ['preview']);
+  assertPreview(v.cards[0].card, 7);
+  const m = createMintMoments();
+  for (const o of PLAY.seen) m.observe({ ...o, season: { ...o.season, seasonId: live.season.seasonId } });
+  const out = m.take(w.status, live);
+  assert.deepEqual(out.map((x) => [x.shard.id, x.card.state]), [[7, 'preview']], 'the moment still happens, as a preview, never as minted');
 });
 
-test('RPC error: silent (no card, no judge-only line, no toast)', async () => {
+test('RPC error on the judge path: no fake card; only the labeled preview of Iris\'s shard', async () => {
   const w = await watcher(async () => { throw new TypeError('fetch failed'); });
   assert.equal(w.status.state, 'offline');
-  assert.deepEqual(shardCards({ status: w.status, obs: PLAY.final }), { cards: [], judgeOnly: false });
+  const v = shardCards({ status: w.status, obs: PLAY.final });
+  assert.ok(v.cards.every((c) => c.card.state === 'preview'));
+  assert.deepEqual(v.cards.map((c) => c.shard.id), [7]);
   const m = createMintMoments();
   for (const o of PLAY.seen) m.observe(o);
   assert.equal(m.pending.length, 3);
-  assert.deepEqual(m.take(w.status, PLAY.final), []);
+  const out = m.take(w.status, PLAY.final);
+  assert.deepEqual(out.map((x) => [x.shard.id, x.card.state]), [[7, 'preview']], 'no minted toast without a token');
   assert.equal(m.pending.length, 0, 'dropped, not retried as a late toast');
 });
 
@@ -127,7 +152,7 @@ test('mint moment: the toast fires once, when Frost buys Iris\'s call for 13 sil
   const w = await watcher(fakeRpc(ONCHAIN));
   const m = createMintMoments();
   const fired = [];
-  for (const o of PLAY.seen) { m.observe(o); for (const x of m.take(w.status, o)) fired.push({ tick: o.season.tick, id: x.card.shardId, winner: x.card.winner, price: x.card.price }); }
+  for (const o of PLAY.seen) { m.observe(o); for (const x of m.take(w.status, o)) if (x.card.state === 'minted') fired.push({ tick: o.season.tick, id: x.card.shardId, winner: x.card.winner, price: x.card.price }); }
   assert.deepEqual(fired.map((f) => f.id), [7, 10, 15], 'each shard once');
   assert.deepEqual(fired[0], { tick: fired[0].tick, id: 7, winner: 'frost', price: 13 });
   assert.ok(fired[0].tick >= 6, 'after the trial-6 auction closed');
@@ -137,7 +162,7 @@ test('mint moment: the toast fires once, when Frost buys Iris\'s call for 13 sil
   assert.deepEqual(waiting.take({ state: 'checking' }, PLAY.final), []);
   assert.equal(waiting.pending.length, 3);
   const empty = await watcher(fakeRpc([]));
-  assert.deepEqual(waiting.take(empty.status, PLAY.final), []);
+  assert.deepEqual(waiting.take(empty.status, PLAY.final).map((x) => [x.shard.id, x.card.state]), [[7, 'preview']], 'no token: Iris\'s moment is a preview');
   // A shard first seen already sold (a reload mid-season) does not toast.
   const late = createMintMoments(); late.observe(PLAY.final);
   assert.deepEqual(late.take(w.status, PLAY.final), []);
@@ -145,6 +170,8 @@ test('mint moment: the toast fires once, when Frost buys Iris\'s call for 13 sil
 
 test('every shard NFT string exists in all five locales and renders', () => {
   const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('shard.nft.'));
+  assert.match(PLAY_MESSAGES.en['shard.nft.preview.title'], /^Unminted/);
+  assert.ok(keys.includes('shard.nft.preview.note'));
   assert.ok(keys.length >= 20);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
   const en = createPlayI18n('en'), ru = createPlayI18n('ru');
@@ -152,4 +179,36 @@ test('every shard NFT string exists in all five locales and renders', () => {
   assert.equal(renderMsg(en, 'shard.nft.toast', { id: 7, kind: 'call', clan: 'Frost', price: 13 }), 'Shard #7 · call → Frost for 13 silk');
   assert.match(renderMsg(ru, 'shard.nft.minted'), /Отчеканен в NEAR testnet/);
   assert.match(renderMsg(ru, 'shard.nft.bio', { clan: renderMsg(ru, 'agent.iris'), kind: renderMsg(ru, 'shard.nft.kind.call'), weight: 2, trial: 4 }), /забыта память «зов» весом 2 на испытании 4/);
+});
+
+test('preview card DOM: the word Unminted, no token id, no link, no verified mark', async () => {
+  const { renderShardCard } = await import('../../src/ui/world-hud/shard-card.js');
+  const mk = (tag) => ({ tag, attrs: {}, kids: [], className: '', textContent: '', style: { setProperty() {} }, classList: { add() {} },
+    setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {}, append(...c) { this.kids.push(...c); } });
+  const doc = { createElement: mk };
+  const none = await watcher(fakeRpc([]));
+  const card = shardCards({ status: none.status, obs: PLAY.final }).cards[0].card;
+  const en = createPlayI18n('en');
+  const node = renderShardCard(card, { t: (k, a) => renderMsg(en, k, a), doc });
+  const all = []; const walk = (n) => { if (!n || typeof n !== 'object') return; all.push(n); (n.kids || []).forEach(walk); }; walk(node);
+  const text = all.map((n) => n.textContent).join(' | ');
+  assert.equal(node.attrs['data-state'], 'preview');
+  assert.equal(node.attrs['data-token'], undefined);
+  assert.match(text, /Unminted shard preview/);
+  assert.match(text, /judge season only/);
+  assert.ok(!all.some((n) => n.tag === 'a'), 'no explorer link');
+  assert.doesNotMatch(text, /nearblocks|NEP-171|Minted on NEAR|identical to the game/);
+});
+
+test('the shard section says "on NEAR" only when a real token is in it', async () => {
+  const { renderShardSection } = await import('../../src/ui/world-hud/shard-card.js');
+  const mk = (tag) => ({ tag, attrs: {}, kids: [], className: '', textContent: '', style: { setProperty() {} }, classList: { add() {} },
+    setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {}, append(...c) { this.kids.push(...c); } });
+  const doc = { createElement: (tag) => Object.assign(mk(tag), { dataset: {} }), head: { appendChild() {} }, querySelector: () => null };
+  const en = createPlayI18n('en'); const t = (k, a) => renderMsg(en, k, a);
+  const none = await watcher(fakeRpc([]));
+  const prev = renderShardSection(shardCards({ status: none.status, obs: PLAY.final }), { t, doc });
+  assert.equal(prev.attrs['aria-label'], 'Memory shards');
+  const real = await watcher(fakeRpc(ONCHAIN));
+  assert.equal(renderShardSection(shardCards({ status: real.status, obs: PLAY.final }), { t, doc }).attrs['aria-label'], 'Memory shards on NEAR');
 });

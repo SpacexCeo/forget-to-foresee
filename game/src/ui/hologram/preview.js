@@ -62,22 +62,25 @@ export function createHologramPreview(canvas, opts = {}) {
   let reduced = !!opts.reducedMotion;
   let profile = renderProfile(recipe, tier);
   let particles = [];
-  let raf = 0, size = 0, t0 = performance.now();
+  let raf = 0, size = 0, t0 = performance.now(), frames = 0;
 
   function seedParticles() {
     const rand = seeded(parseInt(recipeHash(recipe).slice(0, 8), 16));
     particles = Array.from({ length: recipe.particles.count }, () => ({ a: rand() * TAU, r: 0.25 + rand() * 0.85, s: 0.3 + rand(), p: rand() * TAU }));
   }
   function resize() {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, profile.maxDpr);
-    size = Math.max(64, Math.round(rect.width || 320));
+    // The backing store follows the CSS box. Before layout (a zero box: the card is still mounting or
+    // animating in) the picker's nominal 300 px is used, so the first paint is never a blank frame.
+    const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 0 };
+    const dpr = Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, profile.maxDpr);
+    size = Math.max(64, Math.round(rect.width || canvas.clientWidth || 300));
     canvas.width = Math.round(size * dpr); canvas.height = Math.round(size * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#0b1110'; ctx.fillRect(0, 0, size, size);
   }
 
   function draw(t) {
+    frames++;
     const r = recipe, L = new Set(profile.layers);
     const warm = rgb('#d4a15f');
     const prim = mix(rgb(r.palette.primary), warm, Math.max(0, r.light.warmth) * 0.5);
@@ -113,14 +116,17 @@ export function createHologramPreview(canvas, opts = {}) {
     const bloom = L.has('bloom');
     ctx.shadowColor = css(prim, 0.9);
     ctx.shadowBlur = bloom ? 16 * intensity : 0;
-    ctx.lineWidth = 1.6;
+    const lw = Math.max(1.6, size / 120); // the figure reads at any box size (300 px in the picker)
+    ctx.lineWidth = lw;
     if (L.has('chromatic')) {
       ctx.globalCompositeOperation = 'lighter';
       for (const [dx, col] of [[-1.6, [220, 80, 90]], [1.6, [80, 140, 230]]]) { ctx.save(); ctx.translate(dx, 0); shapePath(ctx, r.shape, R, t); ctx.strokeStyle = css(col, 0.35 * intensity); ctx.stroke(); ctx.restore(); }
       ctx.globalCompositeOperation = 'source-over';
     }
     shapePath(ctx, r.shape, R, t);
-    ctx.strokeStyle = css(prim, Math.min(1, 0.55 + 0.35 * intensity));
+    ctx.fillStyle = css(prim, 0.07 + 0.05 * Math.min(1, intensity)); // a faint body under the line work
+    ctx.fill();
+    ctx.strokeStyle = css(prim, Math.min(1, 0.7 + 0.3 * intensity));
     ctx.stroke();
     if (L.has('outline')) { ctx.shadowBlur = 0; ctx.lineWidth = 0.8; ctx.strokeStyle = css(acc, 0.7); shapePath(ctx, r.shape, R * 1.04, t); ctx.stroke(); }
     ctx.shadowBlur = 0;
@@ -160,13 +166,20 @@ export function createHologramPreview(canvas, opts = {}) {
     if (L.has('dither')) { ctx.fillStyle = 'rgba(11,17,16,0.18)'; for (let y = 0; y < size; y += 4) for (let x = (y / 4) % 2 ? 2 : 0; x < size; x += 4) ctx.fillRect(x, y, 2, 2); }
   }
 
+  const hidden = () => typeof document !== 'undefined' && document.hidden;
   function frame(now) { raf = 0; if (reduced || document.hidden) return; draw((now - t0) / 1000); raf = requestAnimationFrame(frame); }
   function restart() {
     cancelAnimationFrame(raf); raf = 0;
     profile = renderProfile(recipe, tier);
     resize();
-    if (reduced) draw(1.7); else raf = requestAnimationFrame(frame);
+    // Always paint now: a look is on screen the moment it is chosen, even when the animation loop is
+    // starved (a busy main thread, a hidden tab) or off (reduced motion: this one still frame).
+    if (reduced) draw(1.7);
+    else { draw(Math.max(0, (performance.now() - t0) / 1000)); raf = requestAnimationFrame(frame); }
   }
+  // Coming back to the tab resumes the loop (frame() stops itself while the document is hidden).
+  const onVisible = () => { if (!hidden() && !reduced && !raf) raf = requestAnimationFrame(frame); };
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', onVisible);
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => restart()) : null;
   if (ro) ro.observe(canvas);
   seedParticles();
@@ -177,6 +190,8 @@ export function createHologramPreview(canvas, opts = {}) {
     setTier(next) { tier = next; restart(); },
     setReduced(v) { reduced = !!v; restart(); },
     get profile() { return profile; },
-    destroy() { cancelAnimationFrame(raf); if (ro) ro.disconnect(); },
+    /** Frames painted so far (tests and the picker's "is it drawn" check). */
+    get frames() { return frames; },
+    destroy() { cancelAnimationFrame(raf); if (ro) ro.disconnect(); if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', onVisible); },
   };
 }

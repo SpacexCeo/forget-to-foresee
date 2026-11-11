@@ -28,7 +28,7 @@ before the change: `docs/tutorial/before/`.
 | Interactions in the tutorial | 0 (read and press Next) | 0 |
 | Actions until the first "Verified ✓" | 4 (fly, stake, leave, one decision card) + 1 "let trial pass" | 7 (walk, E, M, forget, walk, E, T×6) |
 | Time to "Verified ✓" at 4 fps with the hub's 1.4 s auto-trials | 125 s after arrival | n/a (walks replaced by teleports) |
-| Console errors / warnings in the states touched | 0 errors; 2 SwiftShader "GPU stall due to ReadPixels" warnings (driver, not the game) | same |
+| Console errors / warnings in the states touched | 0 errors; 2 SwiftShader "GPU stall due to ReadPixels" warnings (11.11: one of them was the game: the sky LUT read-back at each atmosphere change, now cached, `docs/smoothness.md`; the boot-time read remains) | same |
 
 ### 1.2 Confusions, dead ends and walls of text (in play order)
 
@@ -121,11 +121,28 @@ The five tutorial beats (`flow.js` `TUTORIAL_BEATS`, rendered by `onboarding.js`
 
 | # | Beat | The player does | Feedback | Words |
 |---|---|---|---|---|
-| 1 | Four slots | taps the four strokes of the ring | each lights and names its slot: Place, Action, Power, Delay | 9 |
+| 1 | Four strokes, four answers | taps the four strokes of the ring **or their names** | each lights; a one-line hint says what that slot means ("Delay: how many turns until it happens.") | 6 |
 | 2 | The dots | taps the core until one dot shows | the numbers 1–4 turn: reading starts at the dot's slot, then clockwise | 11 |
-| 3 | Read it | taps the strokes in reading order 1→4 | each meaning appears; the line "Gift of 20 at Shell II, in 2 trials" assembles | 8 |
-| 4 | Stake and watch | presses "Stake 10 silk on Shell II, trial 3" | silk 63 → 53; trials 1, 2, 3 pass; the ring seals "Verified ✓"; silk → 73 | 10 |
+| 3 | Read it | taps the strokes or their names in reading order 1→4 | each meaning appears; the hint explains the stroke to read next; the line "A gift of 20 at the second Shell, in two turns." assembles | 11 |
+| 4 | Stake and watch | presses "Stake 10 silk on the second Shell" | silk 63 → 53; trials 1, 2, 3 pass; the ring seals "Verified ✓"; silk → 83 | 11 |
 | 5 | The Price of Memory | presses "Forget it for a vision" on a memory card | the card dissolves, a ghost sign appears; then the Novice/Pro question | 12 |
+
+**Terms are taught where they appear (11.11, `docs/hackathon-tz.md` P0-C).** The beats no longer front-load the
+game's vocabulary: silk is introduced as coins ("Bet ten coins, called silk"), a trial as a turn ("Turns pass; here
+a turn is a trial"), the Shell by its position ("the second Shell") and a memory's weight in plain words ("A heavy
+memory: forgetting it shows more."). Each term is explained once, in the beat where the player uses it.
+
+**Slot names are hit targets (P0-D).** In beats 1 and 3 the names Place, Action, Power, Delay are buttons (40 px
+high) that do exactly what the stroke does (`flow.js` `tapLabel`), a wrong-order name in beat 3 gets the same "Not
+yet. Stroke N comes first." answer, and each stroke's target on the ring covers the stroke and its printed name.
+One hint line (`slot.N.hint`) is always visible: the slot just picked in beat 1, the stroke to read next in beat 3.
+
+**The look picker has one Begin (P0-E)**, beside the title; the preview paints the chosen look at once (also under
+reduced motion and before the card has a layout box), and Customize unfolds the full constructor as before.
+
+**First contact matches the town start (P0-B).** The last screen says "The town wakes. Walk Iris to the Tournament
+altar." with the button "Step into the town"; the first objective in the world is "Walk to the Tournament altar".
+The balcony is the start of the archipelago after the altar, not the spawn.
 
 Beat 4 teaches two facts the player needs in the first minute of play: the first Gift always lands on trial 3
 (a rule of the season, `docs/rules-baseline.md` §2.2), and the reveal is checked against a seal written before the
@@ -218,8 +235,8 @@ Screenshots after the change: `docs/tutorial/after/` (1280×800, 1920×1080, 390
 - **Plain words for 12 to 95.** The strings use *stake* (the button says "Stake 10 silk"), *seal* for the Merkle root ("checked
   against the seal from the start", "sealed before you arrived"), *sign*, *Shell*, *trial*, *silk*; no "Merkle", "proof",
   "entitlement" or "logogram" outside the folded details of the access card.
-- **QA-016** (Begin below the fold): the look picker's primary button sits beside the title and again under the tiles; both are
-  inside 1280×800 (checked: tops 125 and 646). **QA-017**: the season-end hint no longer says "(panel below)".
+- **QA-016** (Begin below the fold): the look picker's primary button sits beside the title (one Begin since 11.11; the
+  copy under the tiles was removed as a duplicate), inside 1280×800. **QA-017**: the season-end hint no longer says "(panel below)".
 - Merged `origin/claude/loving-curie-ihasft` at `17bf2de` (map, NEAR client, QA fixes); 352 tests, build green.
 
 ## 5. The first stake fixed at the source (branch `claude/first-loop`, 08.11, later)

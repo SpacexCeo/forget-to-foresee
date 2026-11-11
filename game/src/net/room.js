@@ -26,6 +26,9 @@ const worldFor = (zone) => (zone === 'shell' ? (shellWorld ||= W.buildShellWorld
 const r3 = (v) => Math.round(v * 1000) / 1000;
 const canon = (v) => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
 
+import { startDrill, placeOrder, advanceBar, board, exchangeView, ECHO_IDS, RULES as EXCHANGE_RULES } from '../game/exchange.js';
+import { SNAPSHOT, SNAPSHOTS, DEFAULT_WINDOW } from './exchange-deployment.js';
+const EXCHANGE_TEXT = { already_open: 'A drill is already open.', bad_snapshot: 'Unknown snapshot.', bad_window: 'That window is not inside the snapshot.', phase: 'No drill is open.', bad_echo: 'Unknown Echo.', no_silk: 'Not enough practice silk for that order and its fee.', no_position: 'You do not hold that many units (long only).', qty: 'Quantity must be 1 to 5.', too_many_orders: 'At most 3 orders per bar.' };
 /** Engine call for each rules action. Returns the engine's {ok, reason}. */
 const ENGINE_CALLS = {
   start_season: (E, a) => { E.startGame(a.phrase || ''); return { ok: true }; },
@@ -64,7 +67,7 @@ export class Room {
    * @param {() => number} [o.clock] milliseconds; injectable for tests
    * @param {number} [o.seed] @param {string} [o.seedHex] @param {(n:number)=>Uint8Array} [o.randomBytes]  test sessions only
    */
-  constructor({ id, rules = DEFAULT_RULES, worldRules = 'proximity', timeScale = 1, clock = () => Date.now(), seed, seedHex, randomBytes, label = 'test session' } = {}) {
+  constructor({ id, rules = DEFAULT_RULES, worldRules = 'proximity', timeScale = 1, clock = () => Date.now(), seed, seedHex, randomBytes, label = 'test session', exchangeWindow = null } = {}) {
     if (!RULES_VERSIONS.includes(rules)) throw Object.assign(new Error(`unknown rules "${rules}"`), { code: 'unknown_rules' });
     if (!WORLD_RULES.includes(worldRules)) throw Object.assign(new Error(`unknown worldRules "${worldRules}"`), { code: 'invalid_params' });
     this.id = id;
@@ -100,6 +103,8 @@ export class Room {
     // Shards: the engine keeps a shard only until the tick after its auction; the room remembers every shard of the
     // season (last snapshot) and, for Iris's shards, which future sign the vision opened (docs/shard-nft.md).
     this.shardLog = new Map();
+    this.exchangeWindow = exchangeWindow; // a fixed drill window (judge): client-supplied windows are ignored
+    this.exchange = null; // Foresight Exchange drill (game/exchange.js): its own practice-silk ledger, never the season
     this.shardMeta = new Map();
     this.emit('season.created', 'all', { rules, worldRules, timeScale, merkleRoot: this.entropy.sealed ? state.root : null, entropyProtocol: this.entropy.protocol, entropyCommitment: this.entropy.commitment ?? null });
     this.emitFx(fx);
@@ -326,8 +331,8 @@ export class Room {
       return finish(422, rejected(type, actionId, this.version, failed[0].reason, failed[0].source, failed), false, failed[0].reason);
     }
     if (type === 'start_season') this.sealSeason(args);
-    const res = def.kind === 'rules' ? this.runRules(def, args, m) : this.runWorld(def, args, m);
-    if (!res.ok) return finish(422, rejected(type, actionId, this.version, res.reason, res.source, [{ id: res.source === 'rules' ? 'engine_guards' : 'world', source: res.source, reason: res.reason, message: res.message || T.reasonText(res.reason) }]), false, res.reason);
+    const res = def.kind === 'rules' ? this.runRules(def, args, m) : def.kind === 'exchange' ? this.runExchange(def, args) : this.runWorld(def, args, m);
+    if (!res.ok) return finish(422, rejected(type, actionId, this.version, res.reason, res.source, [{ id: res.source === 'rules' ? 'engine_guards' : res.source === 'exchange' ? 'exchange' : 'world', source: res.source, reason: res.reason, message: res.message || T.reasonText(res.reason) }]), false, res.reason);
     if (def.mutates !== false) this.version++;
     return finish(200, { ok: true, actionId, type, version: this.version, result: res.result || {} }, true);
   }
@@ -383,6 +388,30 @@ export class Room {
     this.deriveEvents(pre, digest(S), S);
     this.emitFx(fx);
     return { ok: true, result: { engine: def.engine, tick: S.tick, phase: S.phase } };
+  }
+
+  /** Foresight Exchange commands: the drill module only (no ENGINE_CALLS, no season state). */
+  runExchange(def, args) {
+    const fail = (reason) => ({ ok: false, source: 'exchange', reason, message: EXCHANGE_TEXT[reason] || reason });
+    if (def.type === 'start_exchange') {
+      if (this.exchange && this.exchange.phase === 'open') return fail('already_open');
+      const snap = SNAPSHOTS[args.snapshotId || SNAPSHOT.id];
+      if (!snap) return fail('bad_snapshot');
+      const w = this.exchangeWindow || { startIndex: args.startIndex ?? DEFAULT_WINDOW.startIndex, barCount: args.barCount ?? DEFAULT_WINDOW.barCount };
+      const r = startDrill(snap, w);
+      if (!r.ok) return fail(r.reason);
+      this.exchange = r.drill;
+      this.emit('exchange.started', 'all', { snapshotId: snap.id, startIndex: r.drill.startIndex, barCount: r.drill.barCount });
+      return { ok: true, result: { phase: 'open', bar: 1, barCount: r.drill.barCount } };
+    }
+    if (def.type === 'place_order') {
+      const r = placeOrder(this.exchange, 'iris', args);
+      return r.ok ? { ok: true, result: { fill: r.fill } } : fail(r.reason);
+    }
+    const r = advanceBar(this.exchange);
+    if (!r.ok) return fail(r.reason);
+    if (r.settled) this.emit('exchange.settled', 'all', { board: board(this.exchange).map((b) => ({ id: b.id, mark: b.mark })) });
+    return { ok: true, result: { phase: this.exchange.phase, bar: this.exchange.bar + 1 } };
   }
 
   runWorld(def, args, m) {
@@ -532,7 +561,7 @@ export class Room {
     this.lastActivityMs = this.clock();
     const now = this.simNow();
     const you = { ...this.memberView(m, now), place: W.campAt(this.avatarPos(m, now)) ? 'camp:' + W.campAt(this.avatarPos(m, now)) : null };
-    return project(this.state, m, {
+    const obs = project(this.state, m, {
       session: this.sessionInfo(),
       entropy: this.entropyView(),
       shardLog: [...this.shardLog.values()],
@@ -545,6 +574,8 @@ export class Room {
       logograms: [...m.logograms.values()],
       availableActions: this.availableActions(playerId, { onlyAvailable: true }),
     });
+    obs.exchange = exchangeView(this.exchange, 'iris'); // public mids only (bars already published)
+    return obs;
   }
 
   /** Candidate argument sets per action type for this member, from what the member can see. */
@@ -552,6 +583,15 @@ export class Room {
     const S = this.state, isC = m.role === 'controller';
     const visible = S.events.map((_, i) => (this.visibleProphecy(m, i) ? i : -1)).filter((i) => i >= 0);
     switch (def.type) {
+      case 'start_exchange': return isC && !(this.exchange && this.exchange.phase === 'open') ? [{}] : [];
+      case 'advance_exchange_bar': return isC && this.exchange && this.exchange.phase === 'open' ? [{}] : [];
+      case 'place_order': {
+        const d = this.exchange;
+        if (!isC || !d || d.phase !== 'open' || d.accounts.iris.orders >= EXCHANGE_RULES.humanOrdersPerBar) return [];
+        const out = [];
+        for (const e of ECHO_IDS) { out.push({ echo: e, side: 'buy', qty: 1 }); if (d.accounts.iris.pos[e] > 0) out.push({ echo: e, side: 'sell', qty: d.accounts.iris.pos[e] }); }
+        return out;
+      }
       case 'start_season': case 'speak_key': case 'contribute_fragment': case 'end_tick': case 'exit_shell': return [{}];
       case 'set_reading_rule': return ['unknown', 'top', 'dots'].filter((r) => r !== S.rule).map((rule) => ({ rule }));
       case 'place_anchor': {

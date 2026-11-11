@@ -125,6 +125,103 @@ test('tutorial: five beats in order, each one action, Next only when the beat is
   assert.equal(t.view().sealed, true, 'going back keeps what was done');
 });
 
+test('tutorial: a slot name is the same hit target as its stroke, in beat 1 and beat 3 (P0-D)', () => {
+  // beat 1: names and strokes fill the same set
+  const byStroke = createTutorial(), byLabel = createTutorial();
+  for (const slot of [0, 1, 2, 3]) assert.deepEqual(byLabel.tapLabel(slot), byStroke.tap(slot));
+  assert.deepEqual(byLabel.view(), byStroke.view());
+  assert.equal(byLabel.done(), true);
+  const mixed = createTutorial();
+  mixed.tap(0); mixed.tapLabel(1); mixed.tapLabel(1); mixed.tap(2);
+  assert.equal(mixed.done(), false);
+  mixed.tapLabel(3);
+  assert.equal(mixed.done(), true);
+  // beat 3: a wrong-order name gets the same "Stroke N comes first" report as a wrong stroke
+  const a = createTutorial({ beat: 2 }), b = createTutorial({ beat: 2 });
+  const order = TUTORIAL_SIGN.read.map(([slot]) => slot);
+  assert.deepEqual(b.tapLabel(order[2]), a.tap(order[2]));
+  assert.deepEqual([b.view().lastRead.ok, b.view().lastRead.step], [false, 1]);
+  assert.equal(format(MESSAGES.en['tut.read.wrong'], { n: b.view().lastRead.step }, 'en'), 'Not yet. Stroke 1 comes first.');
+  for (const slot of order) assert.deepEqual(b.tapLabel(slot), a.tap(slot));
+  assert.equal(b.done(), true);
+  assert.equal(b.tapLabel(9).ok, false, 'not a slot');
+});
+
+test('tutorial: one slot hint is always on screen in the slot beats, and exists in five languages (P0-D)', () => {
+  const t = createTutorial();
+  assert.equal(t.view().hintSlot, 0, 'before any pick the first slot is explained');
+  t.tapLabel(2); assert.equal(t.view().hintSlot, 2, 'the slot just picked');
+  t.tap(3); assert.equal(t.hintSlot(), 3);
+  for (const slot of [0, 1]) t.tap(slot);
+  t.next(); assert.equal(t.view().hintSlot, null, 'the dots beat has no slot hint');
+  t.tapCore(); t.next();
+  const order = TUTORIAL_SIGN.read.map(([slot]) => slot);
+  for (const slot of order) { assert.equal(t.view().hintSlot, slot, 'the stroke to read next'); t.tapLabel(slot); }
+  assert.equal(t.view().hintSlot, order[3], 'the last one stays once the sign is read');
+  for (const loc of LOCALES) for (const slot of [0, 1, 2, 3]) {
+    const hint = MESSAGES[loc][`slot.${slot}.hint`];
+    assert.ok(hint && hint.length > 4, `${loc}: slot.${slot}.hint`);
+    assert.ok(hint.startsWith(MESSAGES[loc]['slot.' + slot]), `${loc}: the hint names its slot`);
+    if (loc === 'en') assert.ok(words(hint) <= 12, `slot.${slot}.hint is one short line`);
+  }
+});
+
+test('first contact copy matches the town start: no balcony, the altar named, one story (P0-B)', async () => {
+  const BALCONY = /balcon|балкон|露台|观景台|阳台/i;
+  for (const loc of LOCALES) for (const k of ['onb.fc.body', 'fc.enter', 'fc.body']) {
+    assert.ok(!BALCONY.test(MESSAGES[loc][k]), `${loc}:${k} does not mention the balcony`);
+    assert.ok(!/island|остров|острів|isola|岛/i.test(MESSAGES[loc][k]), `${loc}:${k} does not send the player to the island`);
+  }
+  assert.match(MESSAGES.en['onb.fc.body'], /town/i);
+  assert.match(MESSAGES.en['onb.fc.body'], /Tournament altar/);
+  assert.match(MESSAGES.en['fc.enter'], /town/i);
+  assert.match(PLAY_MESSAGES.en['town.objective'], /Tournament altar/, 'the first in-world objective still names the altar');
+  assert.equal(PLAY_MESSAGES.en['map.balcony'], 'Balcony', 'the island map keeps its balcony');
+});
+
+test('terms are taught where they appear: the tutorial names silk, Shell and trial in plain words once (P0-C)', () => {
+  const en = MESSAGES.en;
+  assert.match(en['tut.stake.body'], /coins/i, 'silk is introduced as coins');
+  assert.match(en['tut.stake.staked'], /turn/i, 'a trial is introduced as a turn');
+  assert.ok(!/Shell II\b/.test(en['tut.read.sentence'] + en['tut.stake.button'] + en['tut.stake.sealed']), 'no Roman-numeral Shell before the world is seen');
+  assert.ok(!/weight \d/.test(en['tut.price.memoryNote']), 'no bare "weight 4"');
+  assert.match(en['tut.stake.sealed'], /Verified ✓/, 'the stake beat still demonstrates Verified');
+});
+
+test('hologram picker: exactly one Begin on the compact look page; Customize keeps the full constructor (P0-E)', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const onboarding = await readFile(new URL('../src/ui/onboarding.js', import.meta.url), 'utf8');
+  const ctor = await readFile(new URL('../src/ui/hologram/constructor.js', import.meta.url), 'utf8');
+  assert.equal(onboarding.split("'onb.look.begin'").length - 1, 1, 'one button is bound to onb.look.begin');
+  assert.ok(!ctor.includes('onb.look.begin'), 'the constructor adds no second Begin');
+  assert.ok(ctor.includes("'onb.look.customize'") && ctor.includes('ftf-ctor-controls'), 'Customize still unfolds the full constructor');
+});
+
+test('hologram preview: paints at once after setRecipe, with reduced motion and before layout (P0-E)', async () => {
+  const calls = { stroke: 0, fill: 0, fillRect: 0 };
+  const ctx2d = new Proxy({}, { get: (_, k) => (k in calls ? () => { calls[k]++; } : k === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}), set: () => true });
+  const canvasOf = (width) => ({ width: 0, height: 0, clientWidth: width, getContext: () => ctx2d, getBoundingClientRect: () => ({ width }) });
+  const saved = { raf: globalThis.requestAnimationFrame, caf: globalThis.cancelAnimationFrame };
+  let queued = 0;
+  globalThis.requestAnimationFrame = () => ++queued; globalThis.cancelAnimationFrame = () => {};
+  try {
+    const { createHologramPreview } = await import('../src/ui/hologram/preview.js');
+    for (const reducedMotion of [false, true]) for (const width of [300, 0]) {
+      const canvas = canvasOf(width);
+      const p = createHologramPreview(canvas, { recipe: LOOK_PRESETS.mist, reducedMotion });
+      assert.ok(p.frames >= 1, 'the first frame is painted synchronously, no animation frame needed');
+      assert.ok(canvas.width >= 64 && canvas.width === canvas.height, 'the backing store is sized, never zero');
+      if (width === 0) assert.ok(canvas.width >= 300, 'a zero box falls back to the nominal picker size');
+      const before = { frames: p.frames, stroke: calls.stroke };
+      p.setRecipe(LOOK_PRESETS.ember);
+      assert.ok(p.frames > before.frames, 'choosing a look repaints at once');
+      assert.ok(calls.stroke > before.stroke, 'the figure is actually stroked (not a blank box)');
+      p.destroy();
+    }
+    assert.ok(queued > 0, 'the animated preview still schedules its loop');
+  } finally { globalThis.requestAnimationFrame = saved.raf; globalThis.cancelAnimationFrame = saved.caf; }
+});
+
 test('tutorial: resuming at a later beat shows the example sign with its dot', () => {
   const t = createTutorial({ beat: 2 });
   assert.equal(t.id, 'read');

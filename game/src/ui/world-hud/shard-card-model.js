@@ -1,7 +1,10 @@
 // Shard NFT card: the view model (pure, node-testable). Turns the shard watcher's status (src/net/shard-nft.js,
 // createShardWatcher) and one shard of the local observation into what the HUD shows:
-//   - null: nothing to show (no deployment, still checking, RPC failed, or no matching token on-chain);
-//   - {state: 'judge-only'}: a live season, which mints nothing ("on-chain for the judge season only");
+//   - null: nothing to show (the auction is still open, or the watcher is still checking the chain);
+//   - {state: 'preview', ...}: an "Unminted shard preview" built from the local shard alone (docs/hackathon-tz.md
+//     P1-C): any closed shard that is not a matching on-chain token (a live season, a judge playthrough that
+//     diverged, an RPC failure, no deployment). It has no token id, no owner and no explorer link, and the HUD labels
+//     it Unminted; it is never shown as on-chain;
 //   - {state: 'minted', ...}: a real token. Shown only when the token exists on-chain AND its stored shard data equals
 //     this playthrough's shard field for field (a judge who plays differently gets a different shard #7, and the
 //     game never claims someone else's token as theirs).
@@ -32,16 +35,19 @@ export function localShardData(season, shard) {
  * @param {object} [o.deployment]
  */
 export function shardCardModel({ status, season, shard, deployment = NEAR_DEPLOYMENT }) {
-  if (!status || !deployment || !deployment.shardContractId || !season || !shard) return null;
-  if (status.state === 'other-season') return status.seasonId === season.seasonId ? { state: 'judge-only' } : null;
-  if (status.state !== 'loaded' || status.seasonId !== season.seasonId) return null; // checking, offline, disabled: silent
+  if (!season || !shard) return null;
+  const local = localShardData(season, shard);
+  if (!local) return null; // the auction is still open: nothing is minted or previewed yet
+  const preview = () => previewCard(local);
+  if (!deployment || !deployment.shardContractId || !status || status.state === 'disabled') return preview();
+  if (status.state === 'idle' || status.state === 'checking') return null; // wait for the one view call
+  if (status.state !== 'loaded' || status.seasonId !== season.seasonId) return preview(); // live season, offline
   const tokenId = `${season.seasonId}-${shard.id}`;
   const rec = status.minted.get(tokenId);
-  if (!rec || !rec.data) return null;
+  if (!rec || !rec.data) return preview();
   let chain;
-  try { chain = shardData(rec.data); } catch { return null; }
-  const local = localShardData(season, shard);
-  if (!local || shardExtra(local) !== shardExtra(chain)) return null;
+  try { chain = shardData(rec.data); } catch { return preview(); }
+  if (shardExtra(local) !== shardExtra(chain)) return preview(); // someone else's token #id: never claimed
   const explorer = (deployment.explorer || 'https://testnet.nearblocks.io').replace(/\/$/, '');
   const rec2 = deployment.seasons && deployment.seasons[season.seasonId];
   const mintTx = deployment.shardMints && deployment.shardMints[season.seasonId] ? deployment.shardMints[season.seasonId][String(shard.id)] || null : null;
@@ -70,6 +76,28 @@ export function shardCardModel({ status, season, shard, deployment = NEAR_DEPLOY
 }
 
 /**
+ * The unminted preview of a closed shard: the same biography and the game's own ink ring, and nothing that could
+ * pass for a token (no token id, contract, owner, standard, explorer or mint link, no "verified" mark).
+ */
+export function previewCard(local) {
+  return {
+    state: 'preview',
+    key: `preview-${local.season_id}-${local.shard_id}`,
+    tokenId: null, contractId: null, standard: null, owner: null, ownerHref: null,
+    shardId: local.shard_id,
+    ownerClan: local.owner_clan,
+    kind: local.kind,
+    weight: local.weight,
+    forgottenAt: local.forgotten_at_tick,
+    closesAt: local.closes_at_tick,
+    winner: local.winner_clan,
+    price: local.price,
+    leaf: null, tokenHref: null, mintTxHref: null,
+    svg: shardSvg(local), media: null, svgVerified: false,
+  };
+}
+
+/**
  * The image: the contract's own media, read from the chain. When it is byte-identical to the game's `shardSvg()` of the
  * same data (always, for an honest contract) the card draws that SVG inline so it can animate; otherwise it shows
  * the chain's media as an image and marks it unverified.
@@ -85,27 +113,29 @@ function verifiedSvg(tokenId, data, metadata) {
 
 /**
  * The shard cards for the Memories panel: Iris's shards first, then the other clans' minted shards of the season.
- * Returns {cards: [{shard, card}], judgeOnly: boolean}.
+ * Returns {cards: [{shard, card}], judgeOnly: false} (judgeOnly is kept for callers; previews replaced that line).
  */
 export function shardCards({ status, obs, deployment = NEAR_DEPLOYMENT }) {
   const season = obs && obs.season;
   const shards = (obs && obs.shards) || [];
   const cards = [];
-  let judgeOnly = false;
   for (const shard of shards) {
     const card = shardCardModel({ status, season, shard, deployment });
     if (!card) continue;
-    if (card.state === 'judge-only') { if (shard.from === 'iris') judgeOnly = true; continue; }
+    if (card.state === 'preview' && shard.from !== 'iris') continue; // previews are for Iris's own shards only
     cards.push({ shard, card });
   }
-  cards.sort((a, b) => (a.shard.from === 'iris' ? 0 : 1) - (b.shard.from === 'iris' ? 0 : 1) || a.shard.id - b.shard.id);
-  return { cards, judgeOnly: judgeOnly && !cards.length };
+  // Iris's first, real tokens before previews, then by shard id
+  const rank = (c) => (c.shard.from === 'iris' ? 0 : 2) + (c.card.state === 'minted' ? 0 : 1);
+  cards.sort((a, b) => rank(a) - rank(b) || a.shard.id - b.shard.id);
+  return { cards, judgeOnly: false };
 }
 
 /**
- * The "Minted on NEAR testnet" moment. Feed it every observation; it remembers which shards it saw open and returns
- * the ids that closed with a buyer since the last call. `take(status, obs)` then turns pending ids into cards once the
- * watcher has loaded (dropping them if the token is absent, the RPC failed or the season is live).
+ * The shard moment. Feed it every observation; it remembers which shards it saw open and returns the ids that closed
+ * with a buyer since the last call. `take(status, obs)` then turns pending ids into cards once the watcher has
+ * answered: a real token ("Minted on NEAR testnet") for any clan's shard, or, for Iris's own shard only, the
+ * "Unminted shard preview" (token absent or different, RPC failed, live season). Never a minted toast without a token.
  */
 export function createMintMoments() {
   const seenOpen = new Set();
@@ -125,7 +155,7 @@ export function createMintMoments() {
       for (const id of pending) {
         const shard = ((obs && obs.shards) || []).find((s) => s.id === id);
         const card = shard ? shardCardModel({ status, season: obs.season, shard, deployment }) : null;
-        if (card && card.state === 'minted') out.push({ shard, card });
+        if (card && (card.state === 'minted' || shard.from === 'iris')) out.push({ shard, card });
       }
       pending = [];
       return out;
