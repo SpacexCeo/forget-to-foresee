@@ -53,6 +53,20 @@ export function shardImage(doc, card, size = 132) {
   return box;
 }
 
+/** The game's own page (no query): the link a postcard carries. */
+const gameLink = () => { try { const u = new URL(location.href); return u.origin + u.pathname; } catch { return 'https://spacexceo.github.io/forget-to-foresee/'; } };
+
+/** "Share postcard": a 1200×630 image of this card, drawn on demand (ui/postcard.js). */
+function shareButton(doc, t, card, line) {
+  if (typeof location === 'undefined') return null;
+  return el(doc, 'button', { class: 'sh-btn', type: 'button', 'data-share': '', text: t('postcard.share'), onclick: () => {
+    import('../postcard.js').then((m) => m.openPostcard({ doc, t,
+      kicker: card.state === 'minted' ? t('postcard.kicker.minted') : t('shard.nft.preview.title'),
+      title: t('shard.nft.title', { id: card.shardId, kind: t('shard.nft.kind.' + card.kind) }),
+      line, link: gameLink(), signSvg: card.svg || null })).catch((e) => console.warn('[shard] postcard', e));
+  } });
+}
+
 /** A full card: image, the NFT line, token id and owner, the biography, the season binding, links. */
 export function renderShardCard(card, { t, doc = document } = {}) {
   const clan = (c) => t('agent.' + c);
@@ -71,7 +85,8 @@ export function renderShardCard(card, { t, doc = document } = {}) {
         el(doc, 'p', { class: 'sh-kicker', text: t('shard.nft.preview.title') }),
         el(doc, 'h4', { class: 'sh-title', text: t('shard.nft.title', { id: card.shardId, kind }) }),
         el(doc, 'p', { class: 'sh-bio', text: bio + ' ' + sale }),
-        el(doc, 'p', { class: 'sh-note', text: t('shard.nft.preview.note') })));
+        el(doc, 'p', { class: 'sh-note', text: t('shard.nft.preview.note') }),
+        el(doc, 'p', { class: 'sh-links' }, shareButton(doc, t, card, bio + ' ' + sale))));
     setTimeout(() => node.classList.add('sh-drawn'), 2000);
     return node;
   }
@@ -87,6 +102,7 @@ export function renderShardCard(card, { t, doc = document } = {}) {
       card.leaf ? el(doc, 'p', { class: 'sh-seal' }, link(doc, card.leaf.href, t('shard.nft.leaf', { index: card.leaf.index }), 'sh-seal__link')) : null,
       el(doc, 'p', { class: 'sh-links' },
         link(doc, card.tokenHref, t('shard.nft.view'), 'sh-btn'),
+        shareButton(doc, t, card, bio + ' ' + sale),
         card.svgVerified ? el(doc, 'span', { class: 'sh-verified', text: t('shard.nft.verified') }) : null)));
   setTimeout(() => node.classList.add('sh-drawn'), 2000);
   return node;

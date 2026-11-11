@@ -254,7 +254,11 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
         el('p', { 'data-bio': 'chain', 'data-state': bio.chain.state }, el('span', { text: L.chain.text + ' ' }), link(L.chain.href, t('bio.chain.link'))),
         L.chain.recorded ? el('p', { class: 'pl-muted' }, link(L.chain.recorded.href, L.chain.recorded.text)) : null,
         el('p', { class: 'pl-muted', 'data-bio': 'note', text: L.note }),
-        el('div', { class: 'pl-row' }, copyBtn, replaySource ? (() => {
+        el('div', { class: 'pl-row' }, copyBtn, el('button', { class: 'pl-btn pl-small', type: 'button', 'data-share': '', text: t('postcard.share'), onclick: () => {
+          const irisCard = shardsView && shardsView.cards.find((c) => c.shard.from === 'iris');
+          let link = 'https://spacexceo.github.io/forget-to-foresee/'; try { const u = new URL(location.href); link = u.origin + u.pathname; } catch { /* default */ }
+          import('../ui/postcard.js').then((m) => m.openPostcard({ doc: document, t, kicker: t('postcard.kicker.biography'), title: t('postcard.finaleTitle'), line: L.outcome, link, signSvg: irisCard ? irisCard.card.svg : null })).catch((e) => console.warn('[play] postcard', e));
+        } }), replaySource ? (() => {
           const b = el('button', { class: 'pl-btn pl-small', type: 'button', 'data-replay-copy': '', text: t('replay.copy'), onclick: async () => {
             const link = replaySource();
             const ok = link ? await copyText(link) : false;

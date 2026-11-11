@@ -16,7 +16,12 @@ const READBACK = /\b(readPixels|readRenderTargetPixels(Async)?|toDataURL|toBlob|
 
 test('read-backs: outside the capture runner the only GPU read is the sky LUT, once per atmosphere', () => {
   const hits = walk(SRC).map((p) => relative(SRC, p).replace(/\\/g, '/')).filter((f) => READBACK.test(code(read(f))));
-  const play = hits.filter((f) => !f.startsWith('cinematic/'));
+  // ui/postcard.js encodes its own 2D canvas (the share postcard) when Download is clicked: no WebGL, no frame loop
+  const post = code(read('ui/postcard.js'));
+  assert.match(post, /getContext\('2d'\)/);
+  assert.doesNotMatch(post, /webgl|requestAnimationFrame/i);
+  assert.match(post, /btn\('postcard\.download', \(\) => canvas\.toBlob/, 'encoded only from the Download button');
+  const play = hits.filter((f) => !f.startsWith('cinematic/') && f !== 'ui/postcard.js');
   assert.deepEqual(play, ['render/sky.js'], 'no module on the play path reads the canvas or a render target back');
   const sky = code(read('render/sky.js'));
   assert.equal(sky.match(new RegExp(READBACK.source, 'g')).length, 1, 'one read-back site in sky.js');
