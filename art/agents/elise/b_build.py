@@ -1,9 +1,12 @@
-"""Elise stage B: Blender build from the cut parts (a3_parts.py): procedural hands and ribbon tails, her own
-armature (Iris's bone names and hierarchy, her proportions), analytic weights, UVs. Saves elise_build.blend and
-bake_in.npz for the texture bake.   blender -b -P b_build.py -- <work dir> <tris scale, 1 = main>"""
-import bpy, bmesh, sys, json, math
+"""Elise stage B: Blender build from the cut parts (a3_parts.py): procedural hands and ribbon tails, the gown below
+the hips as a clean loft (closed hem, side slit), her own armature (Iris's bone names and hierarchy, her proportions),
+weights (bone heat on the torso and arms, analytic on the gown and legs), face patches, UVs. Saves elise_build.blend
+and bake_in.npz for the texture bake.   blender -b -P b_build.py -- <work dir>"""
+import bpy, bmesh, sys, json, math, os
 import numpy as np
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import ezones as Z
 a = sys.argv[sys.argv.index("--") + 1:]; WD = a[0]; LOD = float(a[1]) if len(a) > 1 else 1.0
 bpy.ops.wm.read_factory_settings(use_empty=True)
 P = json.load(open(WD + '/parts.json'))
@@ -115,8 +118,87 @@ print({k: np.round(v, 3).tolist() for k, v in J.items()})
 # ---------------- meshes
 hv, hf = read_ply(WD + '/head_dec.ply')
 bd = np.load(WD + '/body_dec.npz'); bv, bf, bpart = bd['V'], bd['F'], bd['part']
+# body shell: cut at the hips (the gown below is rebuilt), the hidden right leg dropped, the lacing relief smoothed
+bm = bmesh.new(); vs = [bm.verts.new(tuple(map(float, p))) for p in bv]; LP = bm.faces.layers.int.new('part')
+for f, p in zip(bf, bpart[bf].max(1)):
+    try: fc = bm.faces.new([vs[i] for i in f])
+    except ValueError: continue
+    fc[LP] = {2: 4, 3: 5}.get(int(p), 0)
+bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[LP] == 5 and max(v.co.z for v in f.verts) > 0.20], context='FACES')
+shell = [f for f in bm.faces if f[LP] == 0]
+bmesh.ops.bisect_plane(bm, geom=shell + list({e for f in shell for e in f.edges}) + list({v for f in shell for v in f.verts}), dist=1e-5,
+                       plane_co=(0, 0, Z.ZJ), plane_no=(0, 0, 1), clear_inner=True, clear_outer=False)
+bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+def zone_w(v):
+    th = float(Z.ang(v.co.x, v.co.y)); return max(0.0, min(1, (v.co.z - 0.80) / 0.03, (1.0 - v.co.z) / 0.04, (th - 12) / 12, (104 - th) / 12))
+zone = [(v, zone_w(v)) for v in bm.verts if 0.80 < v.co.z < 1.0 and math.hypot(v.co.x, v.co.y) < 0.215 and not v.is_boundary and all(f[LP] == 0 for f in v.link_faces)]
+zone = [(v, w) for v, w in zone if w > 0]
+for _ in range(10):
+    new = [v.co.lerp(sum((e.other_vert(v).co for e in v.link_edges), Vector()) / len(v.link_edges), 0.6 * w) for v, w in zone]
+    for (v, w), c in zip(zone, new): v.co = c
+bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.verts.index_update()
+bv = np.array([v.co[:] for v in bm.verts]); bf = np.array([[v.index for v in f.verts] for f in bm.faces]); bfp = np.array([f[LP] for f in bm.faces]); bm.free()
+vleg = np.zeros(len(bv), int); vleg[bf[bfp == 4].ravel()] = 4; vleg[bf[bfp == 5].ravel()] = 5
+print('shell', len(bv), 'verts', np.bincount(bfp).tolist(), 'faces by part; lacing zone verts smoothed', len(zone))
+ENV = Z.envelope(np.load(WD + '/body_hi_pts.npy').astype(float), bv[(vleg == 4) & (bv[:, 2] > 0.1)], bv[(vleg == 0) & (bv[:, 2] < 0.82)]); renv = lambda th, z: Z.env_at(ENV, th, z)
+print('gown radius at 0.8 / 0.5 / 0.1: %.3f %.3f %.3f (mean), min clearance over the leg rows ok' % (ENV[80].mean(), ENV[50].mean(), ENV[10].mean()))
 objs = {}
 objs['head'] = make_obj('elise_head', hv, hf); objs['body'] = make_obj('elise_body', bv, bf)
+def outward(o, V):
+    """Faces of a tube around the body axis: wind them to face away from it."""
+    me = o.data; flip = sum(1 for p in me.polygons if p.normal.x * p.center.x + p.normal.y * p.center.y < 0) > len(me.polygons) / 2
+    if flip:
+        b_ = bmesh.new(); b_.from_mesh(me); bmesh.ops.reverse_faces(b_, faces=b_.faces[:]); b_.to_mesh(me); b_.free()
+# the gown from the hips to the floor: a clean grid on the outer envelope, open along the slit, with a turned-in lip
+# along the hem and the slit edges (a closed edge with thickness)
+NU, NV = 60, 30; LV = []; gi = np.zeros((NV + 1, NU + 1), int)
+for j in range(NV + 1):
+    for i in range(NU + 1):
+        u = i / NU; thl = 88.0 + u * (360 - 61.0); zh = 0.03 + 0.015 * math.cos(math.radians(thl)); z = Z.ZT + (zh - Z.ZT) * j / NV
+        t1, t2 = Z.slit(z); th = math.radians(t2 + u * (360 - (t2 - t1))); r = float(renv(math.degrees(th), z)) + 0.002 * min(1, max(0, (z - 0.74) / 0.06))
+        gi[j, i] = len(LV); LV.append((r * math.sin(th), -r * math.cos(th), z))
+LF = [(gi[j, i], gi[j + 1, i], gi[j + 1, i + 1], gi[j, i + 1]) for j in range(NV) for i in range(NU)]
+inn = {}
+for j in range(NV + 1):
+    for i in range(NU + 1):
+        if j >= NV - 1 or i <= 1 or i >= NU - 1:
+            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.004 * rad))
+rim = [(gi[NV, i], gi[NV, i + 1]) for i in range(NU)] + [(gi[j + 1, 0], gi[j, 0]) for j in range(NV)] + [(gi[j, NU], gi[j + 1, NU]) for j in range(NV)]
+LF += [(a_, b_, inn[b_], inn[a_]) for a_, b_ in rim]
+LF += [(inn[gi[j, i]], inn[gi[j, i + 1]], inn[gi[j + 1, i + 1]], inn[gi[j + 1, i]]) for j in range(NV) for i in range(NU) if j == NV - 1 or i == 0 or i == NU - 1]
+LV = np.array(LV); objs['loft'] = make_obj('elise_gown', LV, LF); recalc(objs['loft']); outward(objs['loft'], LV)
+# the left thigh continues up behind the laced opening (the generated leg stops at 0.70)
+TV, TF = [], []; NS = 16; tz = [0.66, 0.70, 0.735, 0.77, 0.80, 0.835]
+for k, z in enumerate(tz):
+    ax, ay, ar = (float(v) for v in Z.leg_axis(P, 'L', z)); ar *= 1.04 - 0.04 * min(1, max(0, (z - 0.70) / 0.07)); t1, t2 = Z.slit(z)   # the lower rings sleeve the ragged top of the generated leg
+    for i in range(NS):
+        t = 2 * math.pi * i / NS; p = np.array([ax + ar * math.sin(t), ay - ar * math.cos(t)]); r = math.hypot(*p); th = float(Z.ang(p[0], p[1])); rm = float(renv(th, z)) - 0.012
+        if r > rm and not (t1 - 10 < th < t2 + 10): p *= rm / r          # kept under the cloth, free where the slit shows it
+        TV.append((p[0], p[1], z))
+    if k: TF += [((k - 1) * NS + i, (k - 1) * NS + (i + 1) % NS, k * NS + (i + 1) % NS, k * NS + i) for i in range(NS)]
+TV = np.array(TV); objs['thigh'] = make_obj('elise_thigh', TV, TF); recalc(objs['thigh'])
+# face patches: grids laid on the face skin (found from the front, behind the fringe)
+bvh = BVHTree.FromPolygons([tuple(map(float, v)) for v in hv], [tuple(map(int, f)) for f in hf])
+def face_y(x, z):
+    o = Vector((x, -0.3, z)); d = Vector((0, 1, 0)); best = None
+    for _ in range(60):
+        loc, nor, fi, dist = bvh.ray_cast(o, d)
+        if loc is None or loc.y > 0.0: break
+        if nor.y < -0.15: best = loc.y
+        o = loc + d * 1e-4
+    return best
+PV, PF, PP = [], [], []
+for k, name in enumerate(Z.PATCHES):
+    cx, cz, hw, zlo, zhi, nx, nz, h = Z.patch_geo(name)
+    ys = np.array([[face_y(cx - hw + 2 * hw * i / nx, cz + zlo + (zhi - zlo) * j / nz) or np.nan for i in range(nx + 1)] for j in range(nz + 1)])
+    med = np.nanmedian(ys); ys[np.isnan(ys) | (abs(ys - med) > 0.025)] = med; b0 = len(PV)
+    for j in range(nz + 1):
+        for i in range(nx + 1): PV.append((cx - hw + 2 * hw * i / nx, ys[j, i] - h, cz + zlo + (zhi - zlo) * j / nz))
+    g = lambda i, j: b0 + j * (nx + 1) + i
+    for j in range(nz):
+        for i in range(nx): PF += [(g(i, j), g(i + 1, j), g(i + 1, j + 1)), (g(i, j), g(i + 1, j + 1), g(i, j + 1))]; PP += [Z.PART0 + k] * 2
+    print('patch', name, 'skin y at the centre %.4f, range %.4f %.4f' % (ys[nz // 2, nx // 2], ys.min(), ys.max()))
+PV = np.array(PV); objs['patch'] = make_obj('elise_face', PV, PF)
 bones_extra = {}
 for sd, sg in (('L', 1), ('R', -1)):
     G, hb = hand(sd)
@@ -130,33 +212,6 @@ for sd, sg in (('L', 1), ('R', -1)):
     set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['ribbon' + sd] = ob
     bones_extra[f'ribbon_{sd}_0'] = (top, top + [sg * 0.008, 0, -0.14], 'forearm_' + sd); bones_extra[f'ribbon_{sd}_1'] = (top + [sg * 0.008, 0, -0.14], top + [sg * 0.018, 0, -0.28], f'ribbon_{sd}_0')
 
-# ---------------- weights: body
-V = bv; x, y, z = V[:, 0], V[:, 1], V[:, 2]; n = len(V); W = {}
-def add(k, w): W[k] = W.get(k, np.zeros(n)) + w
-legm = bpart >= 2; body = ~legm
-tk = ramp(z, KZ - 0.05, KZ + 0.05)
-for sd, sg, pid in (('L', 1, 2), ('R', -1, 3)):
-    m = (bpart == pid).astype(float); ta = ramp(z, 0.085, 0.135); by = J['ball' + sd][1]
-    toe = ramp(-y, -by - 0.012, -by + 0.012) * (1 - ramp(z, 0.05, 0.09)); foot = 1 - ta
-    add('thigh_' + sd, m * tk); add('shin_' + sd, m * ta * (1 - tk)); add('foot_' + sd, m * foot * (1 - toe)); add('toe_' + sd, m * foot * toe)
-sL = ramp(x, -0.05, 0.05); side = abs(x)
-isarm = body & (side > np.interp(z, GZ, GX)) & (z < 1.25)
-tor = body & ~isarm
-wth = ramp(0.90 - z, 0, 0.26); hem = ramp(0.28 - z, 0, 0.28) * 0.6; fy = ramp(-y, -0.03, 0.03)
-a_sh = ramp(side, 0.075, 0.125) * ramp(z, 1.24, 1.30) * (1 - ramp(z, 1.45, 1.49)); shb = 0.5 * ramp(side, 0.03, 0.08) * (1 - a_sh) * ramp(z, 1.33, 1.40) * (1 - ramp(z, 1.45, 1.49))
-core = tor * (1 - a_sh - shb)
-add('pelvis', core * (1 - ramp(z, 0.98, 1.06)) * (1 - wth)); add('spine', core * ramp(z, 0.98, 1.06) * (1 - ramp(z, 1.16, 1.24)))
-add('chest', core * ramp(z, 1.16, 1.24) * (1 - ramp(z, 1.44, 1.49))); add('neck', core * ramp(z, 1.44, 1.49))
-for sd, sg, s_ in (('L', 1, sL), ('R', -1, 1 - sL)):
-    add('thigh_' + sd, core * wth * s_ * tk); add('shin_' + sd, core * wth * s_ * (1 - tk) * (1 - hem))
-    add(f'skirt_F{sd}_0', core * wth * s_ * (1 - tk) * hem * fy); add(f'skirt_B{sd}_0', core * wth * s_ * (1 - tk) * hem * (1 - fy))
-    ms = (x * sg > 0)
-    S, E, Wr = J['S' + sd], J['E' + sd], J['W' + sd]; u1 = unit(E - S); u2 = unit(Wr - E); L1 = np.linalg.norm(E - S); L2 = np.linalg.norm(Wr - E)
-    fore = ramp((V - S) @ u1, L1 - 0.04, L1 + 0.04); hd = ramp((V - E) @ u2, L2 - 0.02, L2 + 0.02) * 0.6
-    am = (isarm & ms).astype(float)
-    add('upperarm_' + sd, am * (1 - fore) + tor * ms * a_sh); add('forearm_' + sd, am * fore * (1 - hd)); add('hand_' + sd, am * fore * hd); add('shoulder_' + sd, tor * ms * shb)
-W = smooth_w(W, bf, n, 3)
-set_weights(objs['body'], W)
 # ---------------- weights: head
 V = hv; x, y, z = V[:, 0], V[:, 1], V[:, 2]; n = len(V); W = {}
 rax = np.hypot(x, y - 0.002)
@@ -199,24 +254,89 @@ for k in order:
     h_, t_, par = bones_extra[k]; bone(k, h_, t_, par)
 for b in arm.edit_bones: b.roll = 0.0
 bpy.ops.object.mode_set(mode='OBJECT')
+# ---------------- weights: body
+V = bv; x, y, z = V[:, 0], V[:, 1], V[:, 2]; n = len(V); W = {}
+def add(k, w): W[k] = W.get(k, np.zeros(n)) + w
+shm = vleg == 0
+for sd, pid in (('L', 4), ('R', 5)):
+    m = (vleg == pid).astype(float); ta = ramp(z, 0.085, 0.135); by = J['ball' + sd][1]; tk = Z.sstep((z - (KZ - 0.06)) / 0.12); wth = Z.sstep((0.93 - z) / 0.25)
+    toe = ramp(-y, -by - 0.012, -by + 0.012) * (1 - ramp(z, 0.05, 0.09)); foot = 1 - ta
+    add('thigh_' + sd, m * tk * wth); add('pelvis', m * tk * (1 - wth)); add('shin_' + sd, m * ta * (1 - tk)); add('foot_' + sd, m * foot * (1 - toe)); add('toe_' + sd, m * foot * toe)
+side = abs(x); isarm = shm & (side > np.interp(z, GZ, GX)) & (z < 1.25); tor = shm & ~isarm
+def analytic_shell():
+    """The first pass's weights by region and height; the fallback when bone heat finds no solution."""
+    A = {}
+    def ad(k, w): A[k] = A.get(k, np.zeros(n)) + w
+    a_sh = ramp(side, 0.075, 0.125) * ramp(z, 1.24, 1.30) * (1 - ramp(z, 1.45, 1.49)); shb = 0.5 * ramp(side, 0.03, 0.08) * (1 - a_sh) * ramp(z, 1.33, 1.40) * (1 - ramp(z, 1.45, 1.49))
+    core = tor * (1 - a_sh - shb)
+    ad('pelvis', core * (1 - ramp(z, 0.98, 1.06))); ad('spine', core * ramp(z, 0.98, 1.06) * (1 - ramp(z, 1.16, 1.24)))
+    ad('chest', core * ramp(z, 1.16, 1.24) * (1 - ramp(z, 1.44, 1.49))); ad('neck', core * ramp(z, 1.44, 1.49))
+    for sd, sg in (('L', 1), ('R', -1)):
+        ms = (x * sg > 0); S, E, Wr = J['S' + sd], J['E' + sd], J['W' + sd]; u1 = unit(E - S); u2 = unit(Wr - E); L1 = np.linalg.norm(E - S); L2 = np.linalg.norm(Wr - E)
+        fore = Z.sstep(((V - S) @ u1 - (L1 - 0.04)) / 0.08); hd = ramp((V - E) @ u2, L2 - 0.02, L2 + 0.02) * 0.6; am = (isarm & ms).astype(float)
+        ad('upperarm_' + sd, am * (1 - fore) + tor * ms * a_sh); ad('forearm_' + sd, am * fore * (1 - hd)); ad('hand_' + sd, am * fore * hd); ad('shoulder_' + sd, tor * ms * shb)
+    return A
+HEAT = ['pelvis', 'spine', 'chest', 'neck'] + [b + s_ for b in ('shoulder_', 'upperarm_', 'forearm_', 'hand_', 'thigh_') for s_ in 'LR']
+def heat_shell():
+    """Blender's bone-heat weights of the torso and arms on a copy of the shell."""
+    ids = np.nonzero(shm)[0]; rem = np.full(n, -1); rem[ids] = np.arange(len(ids)); fs = bf[(bfp == 0)]
+    o = make_obj('tmp_heat', V[ids], rem[fs]); recalc(o)
+    for b in arm.bones: b.use_deform = b.name in HEAT
+    bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); ao.select_set(True); bpy.context.view_layer.objects.active = ao
+    try: bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    except Exception as ex: print('bone heat raised', ex)
+    A = {g.name: np.zeros(n) for g in o.vertex_groups}; names = [g.name for g in o.vertex_groups]
+    for v in o.data.vertices:
+        for g in v.groups: A[names[g.group]][ids[v.index]] = g.weight
+    for b in arm.bones: b.use_deform = True
+    bpy.data.objects.remove(o)
+    tot = sum(A.values()) if A else np.zeros(n); bad = shm & (tot < 0.5); print('bone heat: groups', len(A), 'unweighted shell verts', int(bad.sum()), 'of', int(shm.sum()))
+    if not A or bad.sum() > 0.25 * shm.sum(): return None
+    good = np.nonzero(shm & ~bad)[0]
+    for i in np.nonzero(bad)[0]:
+        j = good[np.argmin(((V[good] - V[i]) ** 2).sum(1))]
+        for k in A: A[k][i] = A[k][j]
+    tot = np.maximum(sum(A.values()), 1e-9)
+    return {k: w / tot * shm for k, w in A.items()}
+A = heat_shell(); print('shell weights:', 'bone heat' if A else 'ANALYTIC FALLBACK')
+A = A or analytic_shell()
+SK = Z.skirt_weights(x, y, z); bl = np.where(tor, Z.sstep((z - 0.86) / 0.12), 1.0)      # hips: the gown's own weights, as on the loft
+for k in set(A) | set(SK): add(k, shm * (bl * A.get(k, 0) + (1 - bl) * SK.get(k, 0)))
+lock = (tor & (z < 0.87)) | ~shm
+W = smooth_w(W, bf, n, 3, lock)
+set_weights(objs['body'], W)
+set_weights(objs['loft'], Z.skirt_weights(LV[:, 0], LV[:, 1], LV[:, 2]))
+wt = Z.sstep((0.93 - TV[:, 2]) / 0.25); set_weights(objs['thigh'], {'thigh_L': wt, 'pelvis': 1 - wt})
+set_weights(objs['patch'], {'head': np.ones(len(PV))})
 # ---------------- join, modifiers, UV
-part_id = {'body': 0, 'head': 1, 'handL': 2, 'handR': 2, 'ribbonL': 3, 'ribbonR': 3}
+part_id = {'body': 0, 'head': 1, 'handL': 2, 'handR': 2, 'ribbonL': 3, 'ribbonR': 3, 'loft': 6, 'thigh': 4, 'patch': 0}
 for k, o in objs.items():
     at = o.data.attributes.new('part', 'INT', 'FACE'); pv = np.full(len(o.data.polygons), part_id[k], np.int32)
-    if k == 'body':
-        fv = np.array([list(p.vertices)[:3] for p in o.data.polygons]); lp = bpart[fv].max(1); pv[lp == 2] = 4; pv[lp == 3] = 5
+    if k == 'body': pv[:] = bfp
+    if k == 'patch': pv[:] = PP
     at.data.foreach_set('value', pv)
     for p in o.data.polygons: p.use_smooth = True
 bpy.ops.object.select_all(action='DESELECT')
 for o in objs.values(): o.select_set(True)
 bpy.context.view_layer.objects.active = objs['body']; bpy.ops.object.join(); el = objs['body']; el.name = 'elise'; el.data.name = 'elise'
-bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.mesh.quads_convert_to_tris()
-bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0, area_weight=0.0, scale_to_bounds=False)
-bpy.ops.uv.average_islands_scale(); bpy.ops.object.mode_set(mode='OBJECT')
-me = el.data; pa = np.empty(len(me.polygons), np.int32); me.attributes['part'].data.foreach_get('value', pa)
+bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.mesh.quads_convert_to_tris(); bpy.ops.object.mode_set(mode='OBJECT')
+me = el.data; nf = len(me.polygons); pa = np.empty(nf, np.int32); me.attributes['part'].data.foreach_get('value', pa)
+fc = np.empty(nf * 3); me.polygons.foreach_get('center', fc); fx_, fy_, fz = fc.reshape(-1, 3).T; fth = Z.ang(fx_, fy_)
+# texel density by zone; every zone is unwrapped on its own, so an island never mixes two densities
+zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.55, 7: 3.5, 8: 5.0, 9: 1.1}
+zone[pa == 1] = 1; zone[(pa == 1) & (fy_ < -0.03) & (fz > 1.49) & (fz < 1.68) & (abs(fx_) < 0.08)] = 2; zone[pa == 2] = 3
+zone[pa == 4] = 9; zone[(pa == 4) & (fz > 0.59) & (fz < 0.85)] = 4; zone[pa == 5] = 5; zone[pa == 6] = 6
+zone[(pa == 0) & (fz > 0.79) & (fz < 0.99) & (fth > 12) & (fth < 104) & (np.hypot(fx_, fy_) < 0.215)] = 7; zone[pa >= Z.PART0] = 8
+me.uv_layers.new(name='UVMap')
+bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_mode(type='FACE')
+for zid in sorted(set(zone.tolist())):
+    b_ = bmesh.from_edit_mesh(me); b_.faces.ensure_lookup_table()
+    for f in b_.faces: f.select_set(bool(zone[f.index] == zid))
+    b_.select_flush_mode(); bmesh.update_edit_mesh(me)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0, area_weight=0.0, scale_to_bounds=False)
+bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.select_all(action='SELECT'); bpy.ops.uv.average_islands_scale(); bpy.ops.object.mode_set(mode='OBJECT')
 uv = me.uv_layers.active.data; lt = np.empty(len(me.loops) * 2); uv.foreach_get('uv', lt); lt = lt.reshape(-1, 2)
-ls = np.array([p.loop_start for p in me.polygons]); fz = np.array([p.center.z for p in me.polygons]); fy_ = np.array([p.center.y for p in me.polygons]); fx_ = np.array([p.center.x for p in me.polygons])
-k = np.ones(len(me.polygons)); k[pa == 1] = 1.5; k[(pa == 1) & (fy_ < -0.03) & (fz > 1.52) & (fz < 1.68) & (abs(fx_) < 0.08)] = 2.6; k[pa == 5] = 0.6; k[pa == 2] = 0.8
+ls = np.array([p.loop_start for p in me.polygons]); k = np.array([dens[z_] for z_ in zone])
 for j in range(3): lt[ls + j] *= k[:, None]
 uv.foreach_set('uv', lt.ravel())
 bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.select_all(action='SELECT')
