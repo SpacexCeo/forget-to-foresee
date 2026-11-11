@@ -60,7 +60,7 @@ print('outline k: head mean %.2f min %.2f, hands mean %.2f, body mean %.2f' % (k
 off = no * (MM * 0.001 * k)[:, None]
 rad = co[fv].mean(1) * [1, 1, 0]; outer = (pa == 6) & ((fn * rad).sum(1) > 0.3 * np.linalg.norm(rad, axis=1))
 t1, t2 = Z.slit(z); inslit = (Z.ang(x, y) > t1 - 12) & (Z.ang(x, y) < t2 + 12)          # the thigh is meant to show there
-np.savez(f'{WD}/{NAME}_check.npz', leg=co[(vp == 4) & (z > 0.12) & ~inslit], gown=co[fv[outer]])     # for skirt_check.py
+np.savez(f'{WD}/{NAME}_check.npz', leg=co[((vp == 4) | (vp == 5)) & (z > 0.12) & ~inslit], gown=co[fv[outer]])     # for skirt_check.py
 # ---------------- inverted hull, then the patches
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
 geom = bmesh.ops.duplicate(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:])['geom']

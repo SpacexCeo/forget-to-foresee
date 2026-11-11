@@ -1,4 +1,4 @@
-"""Elise: does the visible (left) leg ever come through the gown? Skins the exported model with every clip of the
+"""Elise: does a leg ever come through the gown? Skins the exported model with every clip of the
 side-car file (plain linear blend skinning, as the engine does) and measures, per frame, how far each leg vertex
 stands outside the nearest gown triangle (open slit and hem edges excluded). Exits 1 if any clip exceeds the limit.
     python3 skirt_check.py <model_raw.glb> <clips.glb> <model>_check.npz [limit m, default 0.004]"""

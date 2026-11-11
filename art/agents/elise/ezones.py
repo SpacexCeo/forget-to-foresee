@@ -11,15 +11,13 @@ def slit(z):
     hw = np.interp(z, [0.62, 0.80, 0.955], [30.5, 13.0, 2.5]); c = np.interp(z, [0.62, 0.80, 0.955], [57.5, 54.0, 50.0])
     return c - hw, c + hw
 def skirt_weights(x, y, z):
-    """Cloth below the waist: pelvis to thigh by height, thigh to shin exactly as the leg under it. The split between
-    the legs sits right of the centre, so the whole left leg (the only one that is modelled above the ankle) lies under
-    cloth that follows it; the right side follows its leg by half only, so a crossing right leg does not drag the
-    cloth through the left one (numbers: skirt_check.py)."""
+    """Cloth below the waist: pelvis to thigh by height, thigh to shin exactly as the leg under it, one leg per side
+    with a narrow blend just right of the centre (numbers: skirt_check.py)."""
     x, y, z = (np.asarray(v, float) for v in (x, y, z))
-    wth = sstep((0.93 - z) / 0.25); sL = np.clip((x + 0.075) / 0.03 + 0.5, 0, 1)
+    wth = sstep((0.93 - z) / 0.25); sL = np.clip((x + 0.045) / 0.03, 0, 1)
     tk = sstep((z - (KZ - 0.06)) / 0.12); fr = np.clip((-y + 0.04) / 0.08, 0, 1); hem = np.clip((0.28 - z) / 0.28, 0, 1) * 0.6
     W = {}
-    for sd, s in (('L', sL), ('R', (1 - sL) * 0.5)):
+    for sd, s in (('L', sL), ('R', 1 - sL)):
         W['thigh_' + sd] = wth * s * tk; W['shin_' + sd] = wth * s * (1 - tk) * (1 - hem)
         W[f'skirt_F{sd}_0'] = wth * s * (1 - tk) * hem * fr; W[f'skirt_B{sd}_0'] = wth * s * (1 - tk) * hem * (1 - fr)
     W['pelvis'] = 1 - sum(W.values()); return W

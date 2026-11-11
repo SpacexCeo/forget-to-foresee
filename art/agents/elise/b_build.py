@@ -118,13 +118,12 @@ print({k: np.round(v, 3).tolist() for k, v in J.items()})
 # ---------------- meshes
 hv, hf = read_ply(WD + '/head_dec.ply')
 bd = np.load(WD + '/body_dec.npz'); bv, bf, bpart = bd['V'], bd['F'], bd['part']
-# body shell: cut at the hips (the gown below is rebuilt), the hidden right leg dropped, the lacing relief smoothed
+# body shell: cut at the hips (the gown below is rebuilt), the lacing relief smoothed
 bm = bmesh.new(); vs = [bm.verts.new(tuple(map(float, p))) for p in bv]; LP = bm.faces.layers.int.new('part')
 for f, p in zip(bf, bpart[bf].max(1)):
     try: fc = bm.faces.new([vs[i] for i in f])
     except ValueError: continue
     fc[LP] = {2: 4, 3: 5}.get(int(p), 0)
-bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[LP] == 5 and max(v.co.z for v in f.verts) > 0.20], context='FACES')
 shell = [f for f in bm.faces if f[LP] == 0]
 bmesh.ops.bisect_plane(bm, geom=shell + list({e for f in shell for e in f.edges}) + list({v for f in shell for v in f.verts}), dist=1e-5,
                        plane_co=(0, 0, Z.ZJ), plane_no=(0, 0, 1), clear_inner=True, clear_outer=False)
@@ -140,7 +139,7 @@ bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.verts.index_update()
 bv = np.array([v.co[:] for v in bm.verts]); bf = np.array([[v.index for v in f.verts] for f in bm.faces]); bfp = np.array([f[LP] for f in bm.faces]); bm.free()
 vleg = np.zeros(len(bv), int); vleg[bf[bfp == 4].ravel()] = 4; vleg[bf[bfp == 5].ravel()] = 5
 print('shell', len(bv), 'verts', np.bincount(bfp).tolist(), 'faces by part; lacing zone verts smoothed', len(zone))
-ENV = Z.envelope(np.load(WD + '/body_hi_pts.npy').astype(float), bv[(vleg == 4) & (bv[:, 2] > 0.1)], bv[(vleg == 0) & (bv[:, 2] < 0.82)]); renv = lambda th, z: Z.env_at(ENV, th, z)
+ENV = Z.envelope(np.load(WD + '/body_hi_pts.npy').astype(float), bv[(vleg >= 4) & (bv[:, 2] > 0.1)], bv[(vleg == 0) & (bv[:, 2] < 0.82)]); renv = lambda th, z: Z.env_at(ENV, th, z)
 print('gown radius at 0.8 / 0.5 / 0.1: %.3f %.3f %.3f (mean), min clearance over the leg rows ok' % (ENV[80].mean(), ENV[50].mean(), ENV[10].mean()))
 objs = {}
 objs['head'] = make_obj('elise_head', hv, hf); objs['body'] = make_obj('elise_body', bv, bf)
