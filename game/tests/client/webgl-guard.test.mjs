@@ -31,3 +31,25 @@ test('the boot screen gets the no-GPU links; main.js checks before the world chu
   assert.ok(main.indexOf('detectWebGL(document') < main.indexOf("import('./boot-world.js')"), 'the check runs before the heavy import');
   assert.match(main, /forceNoGL/);
 });
+
+// Title and premise in the first seconds (src/ui/premise.js, audit QW-11).
+import { premisePolicy } from '../../src/ui/premise.js';
+import en from '../../src/locales/en.js';
+test('premise lower-third: shown once on a normal load, off in captures, still with reduced motion', () => {
+  const P = (q, o) => premisePolicy(new URLSearchParams(q), o);
+  assert.deepEqual(P('demo=judge&mode=walk'), { show: true, animate: true });
+  assert.deepEqual(P('demo=judge', { reducedMotion: true }), { show: true, animate: false });
+  for (const q of ['films=a', 'cinematic=1', 'capture=1', 'replay=r1.x', 'premise=0']) assert.equal(P(q).show, false, q);
+  assert.equal(P('', { shown: true }).show, false);
+  assert.match(en['premise.line'], /prophecy/);
+  assert.ok(en['premise.hint']);
+  const src = readFileSync(new URL('../../src/ui/premise.js', import.meta.url), 'utf8');
+  assert.match(src, /pointer-events:none/, 'never takes input');
+});
+
+test('dev-only review models stay out of the production build (audit QW-8)', () => {
+  const cfg = readFileSync(new URL('../../vite.config.js', import.meta.url), 'utf8');
+  assert.match(cfg, /dropDevOnlyModelsPlugin\(\)/);
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /import\.meta\.env\.DEV && params\.get\('shells'\) === 'r2'/);
+});

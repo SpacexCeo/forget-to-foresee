@@ -13,16 +13,36 @@ from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 OUT, SRCS = argv[0], argv[1:]
+import os
+VIEW_SETS = {}
 VIEWS = {   # game space: eye, target, lens
     "stair_c_follow": ((0.0, 7.6, -13.0), (0.0, 6.2, -27.0), 28),
     "stair_c_oblique": ((8.5, 7.2, -18.5), (1.0, 6.4, -26.5), 28),
     "wall_foot": ((13.0, 6.3, -21.5), (19.0, 5.0, -30.0), 30),
 }
+# the lower gate (town-v2 defect 5): from above inside the town, from the passage looking up, from outside
+ZS = 34.0
+VIEW_SETS["gate"] = {
+    "gate_above": ((3.5, 12.0, ZS - 9.0), (0.0, 2.0, ZS + 1.5), 30),
+    "gate_above_side": ((-7.0, 10.0, ZS - 4.0), (0.5, 3.0, ZS + 1.5), 28),
+    "gate_passage_up": ((0.6, 1.6, ZS - 3.0), (0.0, 6.5, ZS + 2.0), 22),
+    "gate_outside": ((2.5, 6.0, ZS + 16.0), (0.0, 4.0, ZS + 2.0), 30),
+}
+VIEW_SETS["gate_diag"] = {   # steep views over the passage (the owner's camera was high above the town side)
+    "gate_steep_n": ((1.0, 16.0, ZS - 6.0), (0.0, 0.0, ZS + 2.0), 30),
+    "gate_steep_s": ((1.0, 16.0, ZS + 10.0), (0.0, 0.0, ZS + 1.0), 30),
+    "gate_low_s": ((1.5, 3.0, ZS + 9.0), (0.0, 2.0, ZS), 30),
+}
+VIEW_SETS["stairs"] = dict(VIEWS)
+VIEWS = VIEW_SETS[os.environ.get("QA_VIEWS", "stairs")]
 gb = lambda p: Vector((p[0], -p[2], p[1]))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 for src in SRCS:
     bpy.ops.import_scene.gltf(filepath=src)
+for o in bpy.data.objects:            # collision meshes are never drawn in the game
+    if o.name.endswith("_col") or "_col." in o.name:
+        o.hide_render = True
 sc.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items] else "BLENDER_EEVEE"
 # the glTF importer already sets use_backface_culling on every single-sided material, as three.js renders them
 sc.render.resolution_x, sc.render.resolution_y = 1280, 720
@@ -32,10 +52,13 @@ sc.world = w
 w.use_nodes = True
 sky = w.node_tree.nodes.new("ShaderNodeTexSky")
 sky.sky_type = "NISHITA" if hasattr(sky, "sky_type") else sky.sky_type
-w.node_tree.links.new(sky.outputs[0], w.node_tree.nodes["Background"].inputs[0])
+if os.environ.get("QA_MAGENTA"):     # holes show as magenta, washed-out faces stay stone-coloured
+    w.node_tree.nodes["Background"].inputs[0].default_value = (1.0, 0.0, 1.0, 1.0)
+else:
+    w.node_tree.links.new(sky.outputs[0], w.node_tree.nodes["Background"].inputs[0])
 w.node_tree.nodes["Background"].inputs[1].default_value = 0.6
 sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
-sun.data.energy = 3.5
+sun.data.energy = 2.2
 sun.data.angle = math.radians(1.5)
 sun.rotation_euler = (math.radians(50), 0, math.radians(35))   # light from the south-west onto the south faces
 sc.collection.objects.link(sun)

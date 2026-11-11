@@ -6,6 +6,7 @@ import { chunkFor } from './build/chunks.js';
 import { resolve } from 'node:path';
 import { modelListSource } from './build/model-list.js';
 import { fileURLToPath } from 'node:url';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 
@@ -37,12 +38,28 @@ function modelListPlugin() {
   };
 }
 
+// Dev-only review rounds (?shells=r2) stay out of the production build: about 55 MB nobody loads (audit QW-8).
+const DEV_ONLY_MODELS = /^shell_[1-4]_r2(_m)?\.glb$/;
+function dropDevOnlyModelsPlugin() {
+  let outDir = '';
+  return {
+    name: 'ftf-drop-dev-only-models',
+    apply: 'build',
+    configResolved(cfg) { outDir = resolve(cfg.root, cfg.build.outDir); },
+    closeBundle() {
+      const dir = resolve(outDir, 'assets/models');
+      if (!existsSync(dir)) return;
+      for (const f of readdirSync(dir)) if (DEV_ONLY_MODELS.test(f)) rmSync(resolve(dir, f));
+    },
+  };
+}
+
 export default defineConfig({
   // Public path: '/' locally; the GitHub Pages workflow builds with FTF_BASE=/forget-to-foresee/.
   base: process.env.FTF_BASE || '/',
   // 'mpa': a missing file is a real 404, never index.html.
   appType: 'mpa',
-  plugins: [modelListPlugin()],
+  plugins: [modelListPlugin(), dropDevOnlyModelsPlugin()],
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 900,
