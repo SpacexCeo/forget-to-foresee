@@ -50,8 +50,9 @@ export function firstFrameBudget(assets, { maxBytes = 16 * 1024 * 1024, maxItems
 }
 
 /** The boot plan: what to load first for a URL (pure; tested). */
-export function bootPlan({ play = null, hash = '', coarse = false } = {}) {
-  const direct = play === 'direct' || hash === '#play' || coarse;
+export function bootPlan({ play = null, hash = '', coarse = false, lobby = null } = {}) {
+  // Town first (owner, 11.11): every URL starts in the town; the lobby opens from the pause menu, or first with ?lobby=1.
+  const direct = play === 'direct' || hash === '#play' || coarse || lobby !== '1';
   return direct
     ? { first: 'world', lobby: false, gate: 'firstFrame', background: [] }
     : { first: 'lobby', lobby: true, gate: 'lobby', background: ['world'] };

@@ -16,7 +16,7 @@ const params = new URLSearchParams(location.search);
 if (params.has('cinematic')) await import('./cinematic/index.js').then((m) => m.boot(params.get('cinematic')));
 const uiRoot = document.getElementById('ui');
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
-const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse });
+const plan = bootPlan({ play: params.get('play'), hash: location.hash, coarse, lobby: params.get('lobby') });
 const town = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') }).town;
 const loading = createLoadingScreen(document);
 if (window.__ftfBoot) window.__ftfBoot.stop();

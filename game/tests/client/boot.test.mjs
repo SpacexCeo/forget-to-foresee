@@ -8,8 +8,10 @@ import { chunkFor, ENTRY_MODULES } from '../../build/chunks.js';
 
 const MB = 1048576;
 
-test('boot plan: the lobby first unless the URL or a touch device goes straight into the world', () => {
-  assert.deepEqual(bootPlan({}), { first: 'lobby', lobby: true, gate: 'lobby', background: ['world'] });
+test('boot plan: town first (no lobby, onboarding or tutorial screens); the lobby leads only with ?lobby=1', () => {
+  assert.deepEqual(bootPlan({}), { first: 'world', lobby: false, gate: 'firstFrame', background: [] });
+  assert.deepEqual(bootPlan({ lobby: '1' }), { first: 'lobby', lobby: true, gate: 'lobby', background: ['world'] });
+  assert.equal(bootPlan({ lobby: '1', coarse: true }).lobby, false, 'a phone still goes straight in');
   assert.equal(bootPlan({ play: 'direct' }).first, 'world');
   assert.equal(bootPlan({ hash: '#play' }).first, 'world');
   assert.equal(bootPlan({ coarse: true }).gate, 'firstFrame');
@@ -122,8 +124,9 @@ test('index.html preloads the lobby art only on the lobby path (QA-029: no unuse
     vm.runInNewContext(src, { document: doc, location: { search, hash }, URLSearchParams, matchMedia: () => ({ matches: coarse }) });
     return added;
   };
-  for (const c of [{}, { search: '?demo=judge' }, { search: '?play=direct' }, { hash: '#play' }, { coarse: true }]) {
-    const plan = bootPlan({ play: new URLSearchParams(c.search || '').get('play'), hash: c.hash || '', coarse: !!c.coarse });
+  for (const c of [{}, { search: '?demo=judge' }, { search: '?play=direct' }, { hash: '#play' }, { coarse: true }, { search: '?lobby=1' }, { search: '?lobby=1&demo=judge' }]) {
+    const q = new URLSearchParams(c.search || '');
+    const plan = bootPlan({ play: q.get('play'), hash: c.hash || '', coarse: !!c.coarse, lobby: q.get('lobby') });
     const added = run(c);
     assert.equal(added.length, plan.lobby ? 1 : 0, JSON.stringify(c));
     if (added.length) assert.match(added[0].href, /assets\/ui\/lobby_bg\.jpg$/);

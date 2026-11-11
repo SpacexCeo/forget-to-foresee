@@ -37,9 +37,9 @@ import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
-import { PROGRAMS } from './play/townsfolk-plan.js';
+import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
-import { townToWorld, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
+import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_ORIGIN_W, TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -125,7 +125,17 @@ const rig = new CameraRig(camera, world);
 const input = new Input(renderer.domElement);
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
-const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput });
+// The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
+// the town (ui/loading.js bootPlan). Entering from it returns to the world.
+let menuLobby = null;
+const openMainMenu = () => {
+  if (menuLobby) return;
+  Promise.all([import('./ui/index.js'), import('./ui/flow.js')]).then(([ui, fl]) => {
+    const flow = fl.createOnboardingFlow(ctx.storage);
+    menuLobby = ui.mountLobby(uiRoot, { ctx, flow, onEnter: () => { if (menuLobby) { menuLobby.destroy(); menuLobby = null; } } });
+  }).catch((e) => console.warn('[menu] lobby', e));
+};
+const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu });
 const toastEl = document.getElementById('toast');
 
 // The play layer starts on entering the world (from the lobby's first contact, or at once with ?play=direct).
@@ -188,7 +198,33 @@ if (townMode.town) {
   const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
   const badge = (key, on) => { if (town.townsfolk) town.townsfolk.setBadge(key, on); };
   for (const h of townLedger.hires()) badge(h.npc, true);
+  // Town spots (owner, 11.11: the town is the menu): the three shop doors, the notice board after the stairs, and a
+  // mirror by the gate for the optional look picker.
+  const spotAt = (local, radius) => { const w = townToWorld(local); return (pos) => Math.hypot(pos[0] - w[0], pos[2] - w[2]) <= radius && Math.abs(pos[1] - w[1]) <= 2.5; };
+  const spots = [
+    ...TOWN_SHOPS.filter((s) => ['exchange', 'scribe', 'inn'].includes(s.id)).map((s) => ({ id: s.id, near: (pos) => { const d = shopDoorAt(pos); return !!d && d.id === s.id; } })),
+    { id: 'board', near: spotAt(TOWN_SPOTS.board, 2.2) },
+    { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
+  ];
+  const onExchange = () => import('./ui/exchange-terminal.js').then((m) => m.openExchangeTerminal({ i18n: ctx.i18n, storage: ctx.storage })).catch((e) => console.warn('[town] exchange', e));
+  const onMirror = () => import('./ui/hologram/constructor.js').then((m) => {
+    const wrap = document.createElement('div');
+    wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', ctx.i18n.t('spot.mirror'));
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:rgba(6,10,12,.6);overflow:auto';
+    const box = document.createElement('div'); box.style.cssText = 'max-width:min(980px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;background:rgba(14,20,22,.96);border-radius:14px;padding:12px';
+    const done = document.createElement('button'); done.type = 'button'; done.textContent = ctx.i18n.t('mirror.done');
+    done.style.cssText = 'min-height:40px;padding:4px 16px;margin-top:10px;border-radius:8px;border:1px solid rgba(233,180,76,.6);background:rgba(233,180,76,.92);color:#1d1708;font:500 15px system-ui,sans-serif;cursor:pointer';
+    const host = document.createElement('div'); box.append(host, done); wrap.append(box);
+    wrap.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.append(wrap);
+    const child = m.mountConstructor(host, { ctx });
+    const close = () => { try { child.save(); child.destroy(); } catch { /* gone */ } wrap.remove(); };
+    done.addEventListener('click', close);
+    wrap.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
+    done.focus();
+  }).catch((e) => console.warn('[town] mirror', e));
   townFlow = createTownFlow({
+    spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
     ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest),
     quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,

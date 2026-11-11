@@ -23,7 +23,7 @@ export function controlsReference(device) {
 }
 
 /** Presentation only. World actions remain with the scene owner. */
-export function mountSceneControls(root, { onContext, onTransition }) {
+export function mountSceneControls(root, { onContext, onTransition, onMainMenu = null }) {
   const hint = h('span', { class: 'ftf-scene-hint', attrs: { 'aria-hidden': 'true' }, text: 'Esc' });
   const opener = actionButton({ label: 'Controls', symbol: 'settings', attrs: { 'aria-haspopup': 'dialog' }, onClick: open });
   opener.append(hint);
@@ -35,7 +35,8 @@ export function mountSceneControls(root, { onContext, onTransition }) {
       h('h2', { text: 'Exploration controls', attrs: { id: 'ftf-scene-controls-title' } })),
     h('div', { class: 'ftf-dialog-body' }, source, bindings,
       h('p', { class: 'ftf-muted', text: 'Gamepad labels describe button positions. Menu opens this reference.' }),
-      resume));
+      resume,
+      onMainMenu ? actionButton({ label: 'Main menu (language, settings, Foresight Exchange)', symbol: 'arrow', onClick: () => { dialog.close(); onMainMenu(); } }) : null));
   const cue = h('div', { class: 'ftf-scene-cue', attrs: { hidden: true } });
   const announcer = h('div', { class: 'sr-only', attrs: { role: 'status' } });
   root.append(h('div', { class: 'ftf-scene-tools' }, opener), dialog, cue, announcer);

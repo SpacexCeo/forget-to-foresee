@@ -10,7 +10,8 @@
   <script id="lobby-preload">
     (function () {
       var coarse = false; try { coarse = matchMedia('(pointer: coarse)').matches; } catch (e) {}
-      var direct = new URLSearchParams(location.search).get('play') === 'direct' || location.hash === '#play' || coarse;
+      var q = new URLSearchParams(location.search);
+      var direct = q.get('play') === 'direct' || location.hash === '#play' || coarse || q.get('lobby') !== '1'; // town first; the lobby leads only with ?lobby=1
       if (direct) return;
       var l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = '%BASE_URL%assets/ui/lobby_bg.jpg';
       l.setAttribute('fetchpriority', 'high'); document.head.appendChild(l);
