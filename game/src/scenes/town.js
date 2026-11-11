@@ -17,7 +17,7 @@ import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
 import { PropInstance, meshesToTriangles } from '../render/assets.js';
 import { createTownsfolk } from '../play/townsfolk.js';
 import { createTownLife } from './town-life.js';
-import { GATE_PASSAGE, OUTSIDE_GROUND_MESH, beyondWalls, carveBox, filterTriangles } from './town-outside.js';
+import { GATE_PASSAGE, GATE_FLOOR, OUTSIDE_GROUND_MESH, beyondWalls, carveBox, filterTriangles } from './town-outside.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
@@ -208,6 +208,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     const named = (o) => OUTSIDE_GROUND_MESH.test(o.userData.name || o.name || '') || (o.parent && OUTSIDE_GROUND_MESH.test(o.parent.userData.name || o.parent.name || ''));
     const meshes = inst.parts.runtime.filter(named);
     const tris = filterTriangles(meshesToTriangles(meshes), TOWN_ORIGIN, beyondWalls);
+    world.addBox(OUTSIDE_OWNER, GATE_FLOOR.min.map((v, k) => v + TOWN_ORIGIN[k]), GATE_FLOOR.max.map((v, k) => v + TOWN_ORIGIN[k]));
     if (tris.length) world.addTriangles(OUTSIDE_OWNER, tris);
     state.outsideTriangles = tris.length / 9;
   }

@@ -2,7 +2,7 @@
 // kill height of the hillside. Pure.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GATE_PASSAGE, OUTSIDE_KILL_Y, beyondWalls, onField, carveBox, filterTriangles } from '../../src/scenes/town-outside.js';
+import { GATE_PASSAGE, GATE_FLOOR, OUTSIDE_KILL_Y, beyondWalls, onField, carveBox, filterTriangles } from '../../src/scenes/town-outside.js';
 import { TOWN_DATA } from '../../src/scenes/town-data.js';
 import { TOWN_KILL_Y, TOWN_ORIGIN, TOWN_SPAWN, TOWN_ALTAR } from '../../src/scenes/town-layout.js';
 import { CAST_KEYS } from '../../src/scenes/town-casting.js';
@@ -52,6 +52,12 @@ test('the field is beyond the walls; the street, the spawn and the altar are not
   assert.ok(beyondWalls(0, 36) && !onField(0, 36), 'the gatehouse passage itself is beyond the wall line but no casting field');
   const tris = [0, 0, 40, 1, 0, 40, 0, 0, 41, 0, 0, 0, 1, 0, 0, 0, 0, 1].map((v, i) => v + TOWN_ORIGIN[i % 3]);
   assert.equal(filterTriangles(tris, TOWN_ORIGIN, beyondWalls).length, 9, 'only the triangle outside becomes ground');
+});
+
+test('the passage has a floor at street level that spans the gap to the road', () => {
+  assert.equal(GATE_FLOOR.max[1], 0);
+  assert.ok(GATE_FLOOR.min[2] < 34 && GATE_FLOOR.max[2] > 35.6, 'from the street plane (ends z 34) to the road (starts z 35.6)');
+  assert.ok(GATE_FLOOR.min[0] <= GATE_PASSAGE.min[0] && GATE_FLOOR.max[0] >= GATE_PASSAGE.max[0]);
 });
 
 test('the hillside below the gate does not respawn Iris, the void below it does', () => {

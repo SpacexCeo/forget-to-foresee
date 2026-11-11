@@ -11,6 +11,9 @@
 /** The passage through the lower gate: x across, y up from the street, z out of town. */
 export const GATE_PASSAGE = Object.freeze({ min: [-2.4, -2.0, 32.5], max: [2.4, 4.2, 39.0] });
 
+/** The passage floor (street level): neither the gate nor the terrain carries a collider under it. */
+export const GATE_FLOOR = Object.freeze({ min: [-2.6, -0.6, 33.5], max: [2.6, 0, 36.4] });
+
 /** Ground beyond the walls: in front of the lower gate, or past the side walls. */
 export const OUTSIDE_FRONT_Z = 33.5;
 export const OUTSIDE_SIDE_X = 53;
