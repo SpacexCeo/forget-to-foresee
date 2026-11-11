@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REAL, GREY, HALL, layoutFor, layoutProblems, shouldRespawn } from '../../src/scenes/shell-layout.js';
-import { JUDGE_PINS, HEAVY_HEROES, pinnedPriority, heroLast, planStreaming, planUpgrade, instancePriority } from '../../src/render/streaming.js';
+import { JUDGE_PINS, HEAVY_HEROES, RETRY_DELAYS, shouldRetry, pinnedPriority, heroLast, planStreaming, planUpgrade, instancePriority } from '../../src/render/streaming.js';
 
 /** Node table of a .glb (JSON chunk only): name -> {translation, scale, half-extents of its first mesh}. */
 function glbNodes(file) {
@@ -109,4 +109,15 @@ test('streaming order: the two heavy heroes go last among what is on screen but 
   assert.equal(heroLast('anchor', 1.02), 1.02, 'prefetch class untouched');
   assert.equal(heroLast('shell_1', 109), 109);
   assert.ok(heroLast('scroll_table', 110) < 100.2, 'a hero filling the screen still loads after a small visible prop');
+});
+
+test('streaming: a failed download of a wanted asset is retried after 2, 6 and 15 s, then left failed', () => {
+  assert.deepEqual([...RETRY_DELAYS], [2, 6, 15]);
+  assert.equal(shouldRetry({ failures: 1, sinceFailure: 1.9, priority: 90 }), false);
+  assert.equal(shouldRetry({ failures: 1, sinceFailure: 2, priority: 90 }), true, 'the pinned hall comes back after a dropped connection');
+  assert.equal(shouldRetry({ failures: 2, sinceFailure: 5, priority: 104 }), false);
+  assert.equal(shouldRetry({ failures: 3, sinceFailure: 15, priority: 104 }), true);
+  assert.equal(shouldRetry({ failures: 4, sinceFailure: 999, priority: 104 }), false, 'a broken file does not loop');
+  assert.equal(shouldRetry({ failures: 1, sinceFailure: 999, priority: -1 }), false, 'not wanted: no retry');
+  assert.equal(shouldRetry({ failures: 0, sinceFailure: 999, priority: 104 }), false);
 });

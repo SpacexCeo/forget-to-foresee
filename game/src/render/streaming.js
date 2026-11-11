@@ -74,6 +74,18 @@ export function heroLast(name, priority) {
   return HEAVY_HEROES.includes(name) && priority >= 100 ? 100 + (priority - 100) * 0.001 : priority;
 }
 
+/**
+ * A failed download is tried again while the asset is still wanted: after 2 s, 6 s and 15 s, then it stays
+ * failed (a missing or broken file must not loop). One dropped connection no longer leaves a greybox for the
+ * rest of the session (the Shell hall on the judge path, docs/hackathon-tz.md P0-A).
+ * @returns {boolean} whether to put the asset back in the queue now
+ */
+export const RETRY_DELAYS = Object.freeze([2, 6, 15]);
+export function shouldRetry({ failures = 0, sinceFailure = 0, priority = -1 } = {}) {
+  if (priority < 0 || failures < 1 || failures > RETRY_DELAYS.length) return false;
+  return sinceFailure >= RETRY_DELAYS[failures - 1];
+}
+
 /** An asset's priority is the best priority among its instances. */
 export function assetPriority(instancePriorities) {
   let best = -1;
