@@ -273,6 +273,9 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
     # firmly along the two slit edges (a bound edge: it must not slide off the left thigh and uncover the right knee)
     edge = np.minimum(np.arange(C), C - 1 - np.arange(C)) / 4.0; hold = (0.04 + 0.2 * np.clip(1 - edge, 0, 1) ** 2)[None, :] * np.ones((R, 1)); hold = hold.ravel(); hold[:C] = 1.0
     ca, cb, r0, r1 = colliders(0); nm = [c[6] for c in cr.caps if c[5] == 0]
+    # the feet keep 1.5 cm more air than the legs: at the legs' 2 cm the heel of the longer v2 foot, lifted behind on
+    # the way down the stairs, ends in the back panel (a wider margin on the thighs drags the front slit edge off them)
+    foot = np.array([n_.startswith('foot_') for n_ in nm]); r0 = r0 + 0.015 * foot; r1 = r1 + 0.015 * foot
     x = cloth.simulate(rest, cloth.grid_constraints(X0), carried(rig.index['pelvis'], rest), hold, (ca, cb, r0, r1), fps, wind=wind, drag=1.2, margin=0.02)
     x = qrot(qinv(qy)[:, None], x)
 
