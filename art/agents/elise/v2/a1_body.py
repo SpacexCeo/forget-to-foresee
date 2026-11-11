@@ -379,13 +379,138 @@ zmin = X[:, 2].min(); print('lowest point %.4f; height of the body (no hair) %.3
 np.savez_compressed(WD + '/body.npz', V=X, F=F, FT=FT, VT=VT, w_names=np.array(list(W)), w=np.stack([W[k] for k in W], 1).astype(np.float32),
                     face_region=R, cav=CAV, **{'pk_' + k: v[0] for k, v in PK.items()}, **{'rim_' + k: v[1] for k, v in PK.items()}, newb_names=np.array(list(NEWB)), newb=np.array([np.r_[NEWB[k][0], NEWB[k][1]] for k in NEWB]),
                     landmarks=np.array([I_NOSE, I_CHIN]))
-# ---------------- check images
+# ---------------- the face of the first version itself, grafted in: its skin surface (the depth map of the generated
+# head at 1 mm, i.e. the same shape) replaces the base mesh's face and is sewn to the hole without a gap
+M = ok.copy(); reach = np.zeros((NZ, NX), bool); st = [(0, 0), (0, NX - 1), (NZ - 1, 0), (NZ - 1, NX - 1)]
+while st:
+    j, i = st.pop()
+    if j < 0 or i < 0 or j >= NZ or i >= NX or reach[j, i] or M[j, i]: continue
+    reach[j, i] = True; st += [(j + 1, i), (j - 1, i), (j, i + 1), (j, i - 1)]
+M = ~reach                                  # holes filled
+def erode(m, n_):
+    for _ in range(n_):
+        p_ = np.pad(m, 1); m = p_[1:-1, 1:-1] & p_[2:, 1:-1] & p_[:-2, 1:-1] & p_[1:-1, 2:] & p_[1:-1, :-2]
+    return m
+def dilate(m, n_):
+    for _ in range(n_):
+        p_ = np.pad(m, 1); m = p_[1:-1, 1:-1] | p_[2:, 1:-1] | p_[:-2, 1:-1] | p_[1:-1, 2:] | p_[1:-1, :-2]
+    return m
+M = dilate(erode(M, 3), 3); HP = np.where(ok, HYs, HF)
+# a smooth outline of the face around its centre (the fringe leaves the top ragged; the brows are kept under it)
+CZ = 1.558; NTH = 360; tha = (np.arange(NTH) + 0.5) / NTH * 2 * math.pi; rr_ = np.zeros(NTH)
+for k, t_ in enumerate(tha):
+    r_ = 0.0; gap = 0
+    for q_ in np.arange(0.0, 0.14, 0.0005):
+        i_ = int(round((xc + q_ * math.cos(t_) - GX0) / GS)); j_ = int(round((CZ + q_ * math.sin(t_) - GZ0) / GS))
+        if 0 <= i_ < NX and 0 <= j_ < NZ and M[j_, i_]: r_ = q_; gap = 0
+        else:
+            gap += 1
+            if gap > 5: break
+    need = (1.628 - CZ) / max(math.sin(t_), 1e-6) if math.sin(t_) > 0.55 else 0.0; rr_[k] = max(r_, min(need, 0.085))
+for _ in range(2): rr_ = np.median(np.stack([np.roll(rr_, d_) for d_ in range(-6, 7)]), 0)
+for _ in range(6): rr_ = (np.roll(rr_, 1) + rr_ + np.roll(rr_, -1)) / 3
+def r_out(x_, z_):
+    t_ = np.arctan2(np.asarray(z_) - CZ, np.asarray(x_) - xc) % (2 * math.pi); f_ = t_ / (2 * math.pi) * NTH - 0.5; k0 = np.floor(f_).astype(int); a_ = f_ - k0
+    return rr_[k0 % NTH] * (1 - a_) + rr_[(k0 + 1) % NTH] * a_
+rad_ = np.hypot(GXX - xc, GZZ - CZ); Mp = rad_ < r_out(GXX, GZZ) - 0.0015
+# the fitted body's own surface under the same pixels: used where the first version has no skin (under the fringe) and
+# as the meeting line at the rim, so the graft joins the head without a step
+bvh_m = BVHTree.FromPolygons([tuple(p_) for p_ in X], [tuple(map(int, f)) for f in F[~deep[F].any(1)]]); HM = np.full((NZ, NX), np.nan)
+for j_, i_ in zip(*np.nonzero(dilate(Mp, 4))):
+    loc = bvh_m.ray_cast(Vector((gx[i_], -0.4, gz[j_])), Vector((0, 1, 0)), 0.6)[0]
+    if loc is not None: HM[j_, i_] = loc.y
+hm_ok = ~np.isnan(HM); HMf = np.where(hm_ok, HM, 0.0); kn2 = hm_ok.copy()
+for _ in range(30):
+    P_ = np.pad(np.where(kn2, HMf, 0), 1); C_ = np.pad(kn2.astype(float), 1); s_ = P_[2:, 1:-1] + P_[:-2, 1:-1] + P_[1:-1, 2:] + P_[1:-1, :-2]; c_ = C_[2:, 1:-1] + C_[:-2, 1:-1] + C_[1:-1, 2:] + C_[1:-1, :-2]
+    new = ~kn2 & (c_ > 0); HMf[new] = (s_ / np.maximum(c_, 1))[new]; kn2 |= new
+okp = ok & (GZZ < 1.610); soft = okp.astype(float)
+for _ in range(6): P_ = np.pad(soft, 1, mode='edge'); soft = (P_[1:-1, 1:-1] * 2 + P_[2:, 1:-1] + P_[:-2, 1:-1] + P_[1:-1, 2:] + P_[1:-1, :-2]) / 6
+wv1 = np.clip((soft - 0.5) * 2, 0, 1) * okp * sstep((r_out(GXX, GZZ) - rad_ - 0.0015) / 0.007)          # 1 on the first version's skin, 0 at the rim and where it has none
+HP = wv1 * np.where(ok, HYs, 0.0) + (1 - wv1) * HMf
+print('face outline: radius min %.3f max %.3f, pixels %d, of them purely the first version %d, blended %d, body surface %d' % (rr_.min(), rr_.max(), Mp.sum(), (Mp & (wv1 > 0.99)).sum(), (Mp & (wv1 > 0.01) & (wv1 <= 0.99)).sum(), (Mp & (wv1 <= 0.01)).sum()))
+
+gidp = -np.ones((NZ, NX), int); gidp[Mp] = np.arange(int(Mp.sum())); PVv = np.stack([GXX[Mp], HP[Mp], GZZ[Mp]], 1)
+q = Mp[:-1, :-1] & Mp[1:, :-1] & Mp[:-1, 1:] & Mp[1:, 1:]; qa, qb, qc, qd = gidp[:-1, :-1][q], gidp[:-1, 1:][q], gidp[1:, 1:][q], gidp[1:, :-1][q]
 def mk(name, V_, F_, col):
     me = bpy.data.meshes.new(name); me.from_pydata([tuple(map(float, v)) for v in V_], [], [tuple(map(int, f)) for f in F_]); me.update()
     o = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(o); o.color = col
     for p in me.polygons: p.use_smooth = True
     return o
-ob = mk('body', X, F if NSIGN > 0 else F[:, ::-1], (0.86, 0.72, 0.66, 1)); src = mk('src', S['V'], S['F'], (0.45, 0.5, 0.62, 1)); cam = rend.setup()
+po = mk('patch', PVv, np.c_[qa, qb, qc, qd], (0.86, 0.72, 0.66, 1)); bpy.context.view_layer.objects.active = po
+bq = bmesh.new(); bq.from_mesh(po.data); bvs = [v for v in bq.verts if v.is_boundary]
+for _ in range(12):                         # the pixel staircase of the rim becomes a smooth curve
+    new = {v: sum((e_.other_vert(v).co for e_ in v.link_edges if e_.is_boundary), Vector()) / 2 for v in bvs}
+    for v, c_ in new.items(): v.co = v.co.lerp(c_, 0.5)
+for v in bvs: v.co.y = float(bil(HP, v.co.x, v.co.z))
+bq.to_mesh(po.data); bq.free()
+FACE_TRIS = 5200; md = po.modifiers.new('d', 'DECIMATE'); md.ratio = FACE_TRIS / (2.0 * len(qa)); md.use_collapse_triangulate = True; bpy.ops.object.modifier_apply(modifier='d')
+bp = bmesh.new(); bp.from_mesh(po.data); bmesh.ops.triangulate(bp, faces=bp.faces[:])
+def loops_of(b_):
+    """Boundary loops as ordered vertex lists, longest first."""
+    be = [e_ for e_ in b_.edges if e_.is_boundary]; nxt = {}
+    for e_ in be:
+        l = e_.link_loops[0]; nxt.setdefault(l.vert, []).append(l.link_loop_next.vert)          # along the face's winding
+    out = []; seen = set()
+    for v0 in list(nxt):
+        if v0 in seen: continue
+        lp = [v0]; seen.add(v0); cur = v0
+        while True:
+            cand = [w for w in nxt.get(cur, []) if w not in seen]
+            if not cand: break
+            cur = cand[0]; lp.append(cur); seen.add(cur)
+        out.append(lp)
+    return sorted(out, key=len, reverse=True)
+if sum(f.normal.y for f in bp.faces) > 0: bmesh.ops.reverse_faces(bp, faces=bp.faces[:])
+bp.normal_update(); pl = loops_of(bp); print('face patch: verts', len(bp.verts), 'tris', len(bp.faces), 'boundary loops', [len(l) for l in pl][:4])
+# the hole: base-mesh face vertices that lie under the patch go away
+inside = np.hypot(X[:, 0] - xc, X[:, 2] - CZ) < r_out(X[:, 0], X[:, 2]) + 0.0025; DEL = REG & ~bnd & inside & (X[:, 1] < 0.0)
+bm = bmesh.new(); LD = bm.verts.layers.deform.verify(); LU = bm.loops.layers.uv.new('UVMap'); vs = [bm.verts.new(tuple(map(float, p_))) for p_ in X]; bm.verts.index_update(); wn = list(W); Wm_ = np.stack([W[k] for k in wn], 1)
+for i, v in enumerate(vs):
+    for g_ in np.nonzero(Wm_[i] > 0.003)[0]: v[LD][int(g_)] = float(Wm_[i, g_])
+for f, ft in zip(F, FT):
+    fc = bm.faces.new([vs[i] for i in (f if NSIGN > 0 else f[::-1])])
+    for l, t in zip(fc.loops, ft if NSIGN > 0 else ft[::-1]): l[LU].uv = tuple(VT[t])
+    fc.smooth = True
+bmesh.ops.delete(bm, geom=[vs[i] for i in np.nonzero(DEL)[0]], context='VERTS')
+for _ in range(6):                          # no vertex may sit on two rims at once
+    bad = [v for v in bm.verts if sum(1 for e_ in v.link_edges if e_.is_boundary) > 2]
+    if not bad: break
+    bmesh.ops.delete(bm, geom=bad, context='VERTS')
+hl = loops_of(bm); print('hole in the base mesh: verts removed', int(DEL.sum()), 'rims', [len(l) for l in hl][:5])
+for extra in hl[1:]:
+    es = [e_ for e_ in bm.edges if e_.is_boundary and e_.verts[0] in extra and e_.verts[1] in extra]; bmesh.ops.holes_fill(bm, edges=es, sides=0)
+hl = loops_of(bm); hole = hl[0]; hid = wn.index('head')
+# sew: both rims in the same direction, started at the chin, walked together by arc length
+pv_new = {v: bm.verts.new(v.co) for v in bp.verts}
+for v in pv_new.values(): v[LD][hid] = 1.0
+for f in bp.faces:
+    fc = bm.faces.new([pv_new[v] for v in f.verts]); fc.smooth = True
+    for l in fc.loops: l[LU].uv = (0.0, 0.0)
+prim = [pv_new[v] for v in pl[0]]
+def prep_loop(lp):
+    c = np.array([v.co[:] for v in lp]); area = sum(c[k, 0] * c[(k + 1) % len(c), 2] - c[(k + 1) % len(c), 0] * c[k, 2] for k in range(len(c)))
+    if area < 0: lp = lp[::-1]; c = c[::-1]
+    k0 = int(np.argmin(abs(((np.arctan2(c[:, 2] - CZ, c[:, 0] - xc) + math.pi / 2 + math.pi) % (2 * math.pi)) - math.pi))); lp = lp[k0:] + lp[:k0]; c = np.roll(c, -k0, 0)
+    an = np.unwrap(np.arctan2(c[:, 2] - CZ, c[:, 0] - xc)); an = np.maximum.accumulate(an - an[0]); t = np.r_[an, 2 * math.pi] / (2 * math.pi); return lp, t
+A_, ta = prep_loop(hole); B_, tb = prep_loop(prim); i = j = 0; na, nb_ = len(A_), len(B_); cen_ = Vector((xc, 0.01, 1.57)); nz = 0
+while i < na or j < nb_:
+    if j >= nb_ or (i < na and ta[i + 1] <= tb[j + 1]): tri = (A_[i % na], A_[(i + 1) % na], B_[j % nb_]); i += 1
+    else: tri = (B_[j % nb_], B_[(j + 1) % nb_], A_[i % na]); j += 1
+    try: fc = bm.faces.new(tri)
+    except ValueError: continue
+    fc.smooth = True; nz += 1
+    for l in fc.loops: l[LU].uv = (0.0, 0.0)
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:]); bm.normal_update()
+if sum(f.normal.dot(f.calc_center_median() - Vector((0, 0, 0.9))) for f in bm.faces) < 0: bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+print('sewn: seam triangles', nz, '| whole body: verts', len(bm.verts), 'faces', len(bm.faces), 'quads', sum(1 for f in bm.faces if len(f.verts) == 4), 'tris', sum(1 for f in bm.faces if len(f.verts) == 3), 'boundary edges', sum(1 for e_ in bm.edges if e_.is_boundary), 'non-manifold edges', sum(1 for e_ in bm.edges if not e_.is_manifold))
+bme = bpy.data.meshes.new('elise_body'); bm.to_mesh(bme); bobj = bpy.data.objects.new('elise_body', bme); bpy.context.scene.collection.objects.link(bobj); bobj.color = (0.86, 0.72, 0.66, 1)
+for k in wn: bobj.vertex_groups.new(name=k)
+fpat = bme.attributes.new('face_patch', 'BOOLEAN', 'POINT'); npv = len(pv_new); fpat.data.foreach_set('value', [i >= len(bme.vertices) - npv for i in range(len(bme.vertices))])
+bpy.data.objects.remove(po); bp.free(); bm.free()
+bpy.ops.wm.save_as_mainfile(filepath=WD + '/body.blend')
+np.savez_compressed(WD + '/face.npz', HP=HP, rr=rr_, xc=xc, CZ=CZ, grid=np.array([GX0, GZ0, GS, NX, NZ]), newb_names=np.array(list(NEWB)), newb=np.array([np.r_[NEWB[k][0], NEWB[k][1]] for k in NEWB]))
+# ---------------- check images
+ob = bobj; src = mk('src', S['V'], S['F'], (0.45, 0.5, 0.62, 1)); cam = rend.setup()
 v1 = mk('v1face', hv, hf, (0.86, 0.72, 0.66, 1)); v1.hide_render = True
 bm = bmesh.new(); bm.from_mesh(ob.data); print('manifold check: boundary edges', sum(1 for e_ in bm.edges if e_.is_boundary), 'non-manifold', sum(1 for e_ in bm.edges if not e_.is_manifold), 'quads', sum(1 for f in bm.faces if len(f.verts) == 4), 'of', len(bm.faces)); bm.free()
 rows = []; src.hide_render = True
@@ -399,7 +524,7 @@ ob.data.materials.append(bpy.data.materials.new('m'));
 def wshot(n, v, w, h):
     # wire overlay: a second render with a wireframe modifier copy
     return (n, rend.shot(cam, f'{WD}/r/_a{n}.png', v, w, h))
-wo = ob.copy(); wo.data = ob.data.copy(); bpy.context.scene.collection.objects.link(wo); b2 = bmesh.new(); b2.from_mesh(wo.data); b2.verts.ensure_lookup_table(); bmesh.ops.delete(b2, geom=[v for v in b2.verts if deep[v.index]], context='VERTS'); b2.to_mesh(wo.data); b2.free(); md = wo.modifiers.new('w', 'WIREFRAME'); md.thickness = 0.0006; md.use_replace = True; wo.color = (0.1, 0.1, 0.12, 1)
+wo = ob.copy(); wo.data = ob.data.copy(); bpy.context.scene.collection.objects.link(wo);  md = wo.modifiers.new('w', 'WIREFRAME'); md.thickness = 0.0006; md.use_replace = True; wo.color = (0.1, 0.1, 0.12, 1)
 rows.append([wshot(n, v, 560, 560) for n, v in (('wface', [0, 0, 1.575, 0.24, 0, 0]), ('face 3q', [0, 0, 1.575, 0.26, 40, 5]), ('head left', [0, 0, 1.60, 0.34, 90, 0]), ('hand', [0.29, -0.02, 0.88, 0.2, 90, 0]), ('hand front', [0.29, -0.02, 0.88, 0.2, 0, 0]), ('hips back', [0, 0, 0.9, 0.6, 180, 0]))])
 wo.hide_render = True
 rows.append([wshot(n, v, 560, 560) for n, v in (('face', [0, 0, 1.575, 0.24, 0, 0]), ('face left', [0, 0, 1.575, 0.24, 90, 0]), ('torso', [0, 0, 1.25, 0.7, 30, 5]), ('shoulder back', [0, 0, 1.3, 0.7, 200, 10]), ('hips 3q', [0, 0, 0.85, 0.7, 40, 0]), ('hand s', [0.29, -0.02, 0.88, 0.2, 60, 10]))])

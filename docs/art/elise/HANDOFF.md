@@ -196,3 +196,7 @@ the feet moved by FootPlant at run time, and the thigh above 0.66 m (see "Capsul
   upper arms, forearms, pelvis, spine, chest, neck, head.
 - Run it after FootPlant (it moves the legs). Keep the gown's top row fixed to the pelvis; a soft pull to the rest
   shape (stronger on the two slit edges) keeps the open gown from sliding off the legs.
+
+## Pass 4: one whole character (11.11.2026, branch `claude/elise-v2`), stage log
+
+- body: `art/agents/elise/v2/a1_body.py`; one closed mesh from head to toes (CC0 MakeHuman base mesh posed on her skeleton and fitted to the generated torso, hips, seat and legs, mean residual 0.6 mm), with the first version's own face surface grafted in and sewn (the owner chose the first version's face as it is): 13 493 vertices, 10 686 quads + 5 582 triangles (face graft and seam), 0 open edges; left: 3 non-manifold edges at the seam, the forehead under the fringe is the base mesh's, hands and feet keep the base mesh's shape.
