@@ -23,3 +23,11 @@
 
 ## Tests
 Ledger never touches engine state; distribution mean/variance; seed reproducibility; one agent per person, max 3; UI strings present in all five locales; On-chain section empty when the RPC check fails.
+
+## Update (owner, 11.11): agents learn; 98% is a guideline, not fixed
+- Each townsperson-agent has its own small learning policy in the browser (Thompson-sampling bandit or tiny tabular/linear RL over features of the PUBLISHED bars/signs only — never future data). It updates from its own results and persists in localStorage per agent.
+- A novice agent starts near 98% expected return; with experience its measured return can rise (or fall if it learns badly). Temperament sets learning rate, risk and exploration. Keep the economy sane with a soft cap (e.g. returns clamp to 90–110%) and the 2% guild fee.
+- The hire card shows the agent's measured return over its last N rounds and its experience, not a promised number; the profile shows a learning curve per agent. Hire price scales with experience.
+- The same learning agents trade in the Judge Echo drill and show on its leaderboard.
+- Optional "smart speech" (button, WebGPU devices only, lazy download): a small open-licence instruct model (~0.5–1B, check the licence, e.g. a small Qwen instruct) runs in the browser via WebLLM or transformers.js and phrases the agent's explanation of its trades and its hire dialogue. It never makes decisions; the policy decides. Off by default; the game works fully without it.
+- Tests: on a synthetic series with a learnable pattern the policy's return improves over rounds; it never reads unpublished bars; reproducible from seed + history; the LLM path is not loaded unless enabled.
