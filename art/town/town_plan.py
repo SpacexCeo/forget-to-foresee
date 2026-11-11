@@ -118,9 +118,9 @@ BENCHES = [(-9.6, -12.0, 90.0, "t2"), (-32.4, 7.2, 0.0, "t1"), (-22.5, -33.2, 0.
 # Shops (S-001..S-003): an existing house carries the sign and the door; the interior is its own piece,
 # streamed when Iris enters. `interior` sizes are metres (width x depth), the door is in the south wall.
 SHOPS = [
-    {"id": "exchange", "task": "S-001", "house": "h15", "piece": "town_shop_exchange", "interior": (9.0, 11.0), "icon": "shard"},
-    {"id": "scribe", "task": "S-002", "house": "h13", "piece": "town_shop_scribe", "interior": (9.0, 11.0), "icon": "ring"},
-    {"id": "inn", "task": "S-003", "house": "h07", "piece": "town_shop_inn", "interior": (10.0, 13.0), "icon": "cup"},
+    {"id": "exchange", "task": "S-001", "house": "h15", "piece": "town_shop_exchange", "interior": (9.0, 11.0), "icon": "shard", "stand": (0.0, -4.0), "height": 3.6},
+    {"id": "scribe", "task": "S-002", "house": "h13", "piece": "town_shop_scribe", "interior": (9.0, 11.0), "icon": "ring", "stand": (0.0, -4.0), "height": 3.6},
+    {"id": "inn", "task": "S-003", "house": "h07", "piece": "town_shop_inn", "interior": (10.0, 13.0), "icon": "cup", "stand": (1.2, -5.0), "height": 3.8},
 ]
 
 # Townsfolk points and routes (N-001), ground points x, z; heights and headings are filled in by npc_data().
