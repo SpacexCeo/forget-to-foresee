@@ -298,10 +298,12 @@ let nextId = 1;
 export class PropInstance {
   /**
    * @param {{name:string, scene:THREE.Object3D, world:import('../physics/collision.js').CollisionWorld,
-   *          position?:number[], rotationY?:number}} o
+   *          position?:number[], rotationY?:number, colliderFilter?:(tris:number[])=>number[]}} o
+   *   colliderFilter: rewrites the file's world-space collision triangles before they enter the physics world
    */
-  constructor({ name, scene, world, position = [0, 0, 0], rotationY = 0 }) {
+  constructor({ name, scene, world, position = [0, 0, 0], rotationY = 0, colliderFilter = null }) {
     this.id = 'prop' + nextId++;
+    this.colliderFilter = colliderFilter;
     this.name = name;
     this.def = assetByName(name) || { name, kind: 'hero', label: name, height: 1, radius: 1 };
     this.world = world;
@@ -357,7 +359,8 @@ export class PropInstance {
     this.root.updateMatrixWorld(true);
     const parts = splitAssetScene(real);
     for (const m of parts.collision) m.visible = false;
-    const colTris = parts.collision.length ? meshesToTriangles(parts.collision) : null;
+    let colTris = parts.collision.length ? meshesToTriangles(parts.collision) : null;
+    if (colTris && this.colliderFilter) colTris = this.colliderFilter(colTris);
     this.world.removeOwner(this.id + ':grey');
     if (colTris) this.world.addTriangles(this.id + ':col', colTris, MASK_ALL);
     else this.addColliders('grey', this.greyColliders); // no _col in the file: keep the greybox colliders

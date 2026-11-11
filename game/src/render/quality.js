@@ -89,6 +89,16 @@ export const GOVERNORS = Object.freeze({
   phone: Object.freeze({ budgetMs: 1000 / 30, warmup: 6, window: 90, windowEnd: 120, cooldown: 8, pixelScales: Object.freeze([0.85, 0.7]) }),
 });
 
+/**
+ * The lowest tier the frame-time governor may reach on its own. A desktop GPU detected as 'high' or 'ultra'
+ * (the minimum spec, RTX 2060 Super, and up) never loses the look-dev stack automatically: 'low' renders
+ * without the post stack and the lamp lights, and loading hitches in the town used to push the owner's
+ * minimum-spec machine there in the first seconds (decisions 11.11). Phones and weak desktops keep the full range.
+ */
+export function governorFloor(detected, profile = 'desktop') {
+  return profile === 'desktop' && (detected === 'high' || detected === 'ultra') ? 'high' : null;
+}
+
 /** One step cheaper, or null at the bottom. */
 export const lowerTier = (t) => (t === 'ultra' ? 'high' : t === 'high' ? 'low' : null);
 
@@ -168,9 +178,10 @@ export class TierGovernor {
    * @param {{budgetMs?:number, warmup?:number, window?:number, windowEnd?:number, cooldown?:number,
    *          pixelScales?:readonly number[]}} o `pixelScales`: render-resolution steps (fractions of the
    *          tier's pixel ratio) taken once the bottom tier is reached, e.g. [0.85, 0.7]; empty on desktop.
+   *          `floor`: the lowest tier the governor may step down to (null: down to 'low'); see governorFloor().
    */
-  constructor({ budgetMs = 1000 / 58, warmup = 4, window = 90, windowEnd = 40, cooldown = 5, pixelScales = [] } = {}) {
-    Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown, pixelScales: [...pixelScales] });
+  constructor({ budgetMs = 1000 / 58, warmup = 4, window = 90, windowEnd = 40, cooldown = 5, pixelScales = [], floor = null } = {}) {
+    Object.assign(this, { budgetMs, warmup, windowSize: window, windowEnd, cooldown, pixelScales: [...pixelScales], floor });
     this.t = 0; this.samples = []; this.lastChange = -Infinity; this.done = false;
     this.pixelScale = 1; this.pixelStep = 0;
   }
@@ -191,7 +202,7 @@ export class TierGovernor {
     const sorted = [...this.samples].sort((a, b) => a - b);
     const p75 = sorted[Math.floor(sorted.length * 0.75)];
     if (p75 <= this.budgetMs * 1.12) return null;
-    const next = lowerTier(tier);
+    const next = tier === this.floor ? null : lowerTier(tier);
     this.lastChange = this.t; this.samples = [];
     if (next) return { tier: next };
     if (this.pixelStep < this.pixelScales.length) { this.pixelScale = this.pixelScales[this.pixelStep++]; return { pixelScale: this.pixelScale }; }

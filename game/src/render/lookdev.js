@@ -18,7 +18,7 @@
 //   update(dt, focus, camDist), render(), stats(), trackOccluder(spec)
 // setReducedMotion() freezes the clouds, wind, Shell hover and grain (spec 1/3: reduced motion never blocks input).
 import * as THREE from 'three';
-import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor } from './quality.js';
+import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor, governorFloor } from './quality.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { SkyDome, TIME_PRESETS, LOCATION_LOOKS, lookFor } from './sky.js';
 import { CloudSea } from './clouds.js';
@@ -63,9 +63,9 @@ export class LookDev {
   /**
    * @param {{renderer:THREE.WebGLRenderer, scene:THREE.Scene, camera:THREE.PerspectiveCamera, cloudLevel:number,
    *          grassPatches:{center:number[], radius:number, tint?:number}[], lanterns:number[][],
-   *          tier?:string, profile?:string, reducedMotion?:boolean, autoTier?:boolean, preset?:string}} o
+   *          tier?:string, profile?:string, reducedMotion?:boolean, autoTier?:boolean, detectedTier?:string|null, preset?:string}} o
    */
-  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', profile = browserProfile(), reducedMotion = false, autoTier = false, preset = undefined, weather = browserWeather(), location = 'archipelago' }) {
+  constructor({ renderer, scene, camera, cloudLevel, grassPatches, lanterns = [], tier = 'ultra', profile = browserProfile(), reducedMotion = false, autoTier = false, detectedTier = null, preset = undefined, weather = browserWeather(), location = 'archipelago' }) {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
     this.profile = isProfile(profile) ? profile : 'desktop';
     this.tier = isTier(tier) ? tier : 'ultra';
@@ -73,7 +73,7 @@ export class LookDev {
     this.pixelScale = 1; // the governor's render-resolution step (phones), on top of the tier's pixel ratio cap
     this.reducedMotion = reducedMotion;
     this.listeners = new Set();
-    this.governor = autoTier ? new TierGovernor(GOVERNORS[this.profile]) : null;
+    this.governor = autoTier ? new TierGovernor({ ...GOVERNORS[this.profile], floor: governorFloor(detectedTier, this.profile) }) : null;
     // An hour asked for explicitly (?tod=, setPreset) holds in both locations; without one each location shows its own default.
     this.timeOverride = TIME_PRESETS[preset] ? preset : null;
     this.location = LOCATION_LOOKS[location] ? location : 'archipelago';
@@ -279,6 +279,15 @@ export class LookDev {
     this.look = look; this.preset = look.name;
     this.applyAtmosphere(look);
     return this.preset;
+  }
+
+  /**
+   * A blended look (render/daycycle.js mixLooks of two lookFor() results) for the town's day cycle. The hour on
+   * show becomes the nearer preset's name; leaving the place (setLocation) returns to its preset as before.
+   */
+  applyLook(look) {
+    this.look = look; this.preset = look.name;
+    this.applyAtmosphere(look);
   }
 
   /** Mood tint from sky.tint(): fog uniforms, the scene fog colour and the fill light follow the sky dome. */

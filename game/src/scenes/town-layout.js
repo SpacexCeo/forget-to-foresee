@@ -6,6 +6,7 @@
 // (the precedent is the Shell interior at SHELL_ORIGIN, scenes/shell.js). The archipelago sits at the origin, the
 // Shell interior at [0, 300, 0] and the camera far plane is 500 m, so neither place ever sees the other.
 import { TOWN_DATA } from './town-data.js';
+import { OUTSIDE_KILL_Y } from './town-outside.js';
 
 export { TOWN_DATA };
 
@@ -53,8 +54,11 @@ export function routeLength(points) {
 }
 export const TOWN_ROUTE_LENGTH = routeLength(TOWN_DATA.route);
 
-/** Below this world height Iris respawns at her last safe point (CharacterController.killY is absolute). */
-export const TOWN_KILL_Y = TOWN_ORIGIN[1] + TOWN_DATA.killY;
+/**
+ * Below this world height Iris respawns at her last safe point (CharacterController.killY is absolute). The plan's
+ * kill height sits under the streets; the hillside beyond the gate runs much lower (scenes/town-outside.js).
+ */
+export const TOWN_KILL_Y = TOWN_ORIGIN[1] + Math.min(TOWN_DATA.killY, OUTSIDE_KILL_Y);
 
 /** Height fog base in the town: mist pools below the hill (render/fog.js; the archipelago uses its cloud level). */
 export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 20;

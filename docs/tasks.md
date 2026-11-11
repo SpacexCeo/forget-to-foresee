@@ -55,3 +55,23 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 | Merge reviewed branches into an integration branch, then `main` with owner OK | lead | doing |
 | README real/mock table kept current | lead | ongoing |
 | Demo video, tag `hackathon-submission` | owner + lead | todo |
+
+## Owner plan 11.11 (one narrow task per session; Fable = rigs, 3D, animation only; the lead checks)
+| # | Task | Lane / branch | Status |
+|---|---|---|---|
+| 1 | Lower gate is an exit, walkable hillside, Iris casts Frost Lance (Q) and Storm Snare (V) outside the walls | Opus / `claude/festive-faraday-2ga2wb` | done, in main 11.11 (808f4e0) |
+| 2 | Second heroine (NFT skin): model on Iris's skeleton, rig, existing clips play on her, contact sheet | Fable / `claude/heroine2` | doing — **current focus (owner 11.11: only heroine 2 and her model until it is done)** |
+| 3 | Second heroine: her own cast clips and skills | Fable (clips) + Opus (skills) | todo, after 2 |
+| 4 | No lobby: straight into the town after loading; free-skin offer on entry instead of the guide | Opus | todo |
+| 5 | Guide as a book statue at the Tournament, opens in a popup | Fable (statue) + Opus (popup) | todo |
+| 6 | Character switching, per-character levels and skills | Opus | todo |
+| 7 | Test monsters outside the walls: levels, aggro and fighting styles | Fable (models, clips) + Opus (behaviour) | todo |
+| 8 | Daily spin wheel (silk, shards), shards → NFT, shard sale on testnet | Opus | todo |
+| 9 | Loading screen: smoke with glyphs fills the bar | Opus (+ Fable if a sprite bake is needed) | todo |
+| 10 | Owner report: effects and lighting not visible in the game — find which branch or setting lost them | Opus | done 11.11 (59c643c): governor floor + settings Quality; see decisions 11.11 |
+| 11 | Rebuild the hillside outside the gate: walkable paths ≤ 30°, meadow, trees, rocks, ambient fauna | Fable / `claude/town-outside-env` | done, checked in-game, in main 11.11 (808f4e0); gate-arch floor fixed |
+| 13 | Place the fauna models (grazer, bird) on the hillside with simple idle/walk/fly behaviour | Opus (Fable models exist) | todo, parked |
+| 14 | Town has no named VFX (Shell mist, tension, glyph sign start only at the altar): decide which belong in the town | Opus | todo, parked |
+| 15 | Phone terrain `town_terrain_m.glb` grew 1.9 → 3.7 MB: check phone load time | Opus | todo, parked |
+| 16 | Gate-arch floor plane reads dark: check its look with the owner | Opus | todo, parked |
+| 12 | GPT design tasks (FX-001, HER-001, NFT-001, LOAD-001, SKIN-001, SPIN-001, MOB-001, ENV-001) | GPT via `board/board.md` | open |

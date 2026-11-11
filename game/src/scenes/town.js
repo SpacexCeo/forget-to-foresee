@@ -14,9 +14,10 @@
 // Visual only apart from the collision world: no game rule lives in the town.
 import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
-import { PropInstance } from '../render/assets.js';
+import { PropInstance, meshesToTriangles } from '../render/assets.js';
 import { createTownsfolk } from '../play/townsfolk.js';
 import { createTownLife } from './town-life.js';
+import { GATE_PASSAGE, GATE_FLOOR, OUTSIDE_GROUND_MESH, beyondWalls, carveBox, filterTriangles } from './town-outside.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
@@ -32,6 +33,9 @@ const GLYPH_NODE = /altar_glyph_(\d+)/;
 export const ALTAR_RATIO = Object.freeze({ glyph: 0.35, glyphUnlit: 0.04, eye: 0.1 });
 const LAMP_SOCKET = /^socket_lamp_/, SMOKE_SOCKET = /^socket_smoke_/;
 const LAMP_COLOR = 0xffb268;
+// Pieces whose colliders close the lower gate's passage (the wall-line plane and the slab are in the terrain file);
+// the passage is carved out of them (scenes/town-outside.js).
+const GATE_CARVED = new Set(['town_block_gate', 'town_terrain']);
 
 const _v = new THREE.Vector3();
 
@@ -193,14 +197,44 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     for (const m of coreMaterials) if (m.emissive && !m.emissiveMap) m.emissive.setHex(CORE_AMBER);
   }
 
+  // Outside the walls (scenes/town-outside.js): the lower gate's passage is carved out of its colliders, and the
+  // terrain's visual ground beyond the walls becomes the floor of the hillside.
+  const gateMin = GATE_PASSAGE.min.map((v, k) => v + TOWN_ORIGIN[k]), gateMax = GATE_PASSAGE.max.map((v, k) => v + TOWN_ORIGIN[k]);
+  const openGate = (tris) => carveBox(tris, gateMin, gateMax);
+  const OUTSIDE_OWNER = 'town:outside-ground';
+  // The passage floor is a collider box with no visual piece of its own: the terrain's cobbles stop short of the
+  // gate and the street ends at the inner leaves, so the fog showed through a strip under the arch (seen in-game
+  // 11.11). A plane with the road's cobble material covers GATE_FLOOR at street level.
+  let gateFloor = null;
+  function gateFloorVisual(cobble) {
+    if (gateFloor || !cobble || !cobble.material) return;
+    const w = GATE_FLOOR.max[0] - GATE_FLOOR.min[0], d = GATE_FLOOR.max[2] - GATE_FLOOR.min[2];
+    const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2);
+    const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 2, uv.getY(i) * d / 2); // about 2 m per tile
+    gateFloor = new THREE.Mesh(g, cobble.material); gateFloor.name = 'town_gate_floor'; gateFloor.receiveShadow = true;
+    gateFloor.position.set(TOWN_ORIGIN[0] + (GATE_FLOOR.min[0] + GATE_FLOOR.max[0]) / 2, TOWN_ORIGIN[1] + GATE_FLOOR.max[1] + 0.005, TOWN_ORIGIN[2] + (GATE_FLOOR.min[2] + GATE_FLOOR.max[2]) / 2);
+    group.add(gateFloor);
+  }
+  function outsideGround(inst) {
+    world.removeOwner(OUTSIDE_OWNER);
+    if (!inst.real || !inst.parts) return;
+    const named = (o) => OUTSIDE_GROUND_MESH.test(o.userData.name || o.name || '') || (o.parent && OUTSIDE_GROUND_MESH.test(o.parent.userData.name || o.parent.name || ''));
+    const meshes = inst.parts.runtime.filter(named);
+    const tris = filterTriangles(meshesToTriangles(meshes), TOWN_ORIGIN, beyondWalls);
+    world.addBox(OUTSIDE_OWNER, GATE_FLOOR.min.map((v, k) => v + TOWN_ORIGIN[k]), GATE_FLOOR.max.map((v, k) => v + TOWN_ORIGIN[k]));
+    gateFloorVisual(meshes.find((m) => /cobble/.test(m.userData.name || m.name || '')));
+    if (tris.length) world.addTriangles(OUTSIDE_OWNER, tris);
+    state.outsideTriangles = tris.length / 9;
+  }
+
   const pieces = [];
   let terrain = null;
   if (!flat) {
     for (const def of TOWN_PIECES) {
-      const instance = streamer.add(new PropInstance({ name: def.name, scene, world: def.visualOnly ? skyWorld : world, position: def.position }));
+      const instance = streamer.add(new PropInstance({ name: def.name, scene, world: def.visualOnly ? skyWorld : world, position: def.position, colliderFilter: GATE_CARVED.has(def.name) ? openGate : null }));
       pieces.push({ def, instance });
       if (def.name === TOWN_TERRAIN) terrain = instance;
-      instance.onSockets((_s, inst) => onPiece(def, inst));
+      instance.onSockets((_s, inst) => { onPiece(def, inst); if (def.name === TOWN_TERRAIN) outsideGround(inst); });
     }
   }
 
@@ -302,6 +336,8 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     get ready() { return checkReady(); },
     /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
     get shown() { return shown(); }, get flat() { return state.flat; }, get active() { return state.active; },
+    /** Collision triangles laid on the hillside beyond the walls (0 until the terrain is in). */
+    get outsideTriangles() { return state.outsideTriangles || 0; },
     get altar() { return state; },
     life, update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
   };

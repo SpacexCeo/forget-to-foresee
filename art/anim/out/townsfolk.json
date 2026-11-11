@@ -67,23 +67,23 @@
  },
  "walk": {
   "take": "08_01",
-  "slip_mean_m_s": 0.0151,
-  "slip_max_m_s": 0.1038,
-  "ball_min_y": 0.038,
+  "slip_mean_m_s": 0.0129,
+  "slip_max_m_s": 0.1077,
+  "ball_min_y": 0.0379,
   "src_stride_m": 1.707,
   "src_T_s": 1.008,
   "src_speed": 1.693,
   "stride_scale": 0.838,
   "time_scale": 0.917,
-  "hip_drop_max_m": 0.0007,
+  "hip_drop_max_m": 0.0002,
   "contact": {
    "L": [
-    0,
-    18
+    65,
+    37
    ],
    "R": [
-    16,
-    18
+    32,
+    36
    ]
   }
  },
@@ -177,8 +177,8 @@
  },
  "elder_walk": {
   "take": "142_07",
-  "slip_mean_m_s": 0.0014,
-  "slip_max_m_s": 0.0606,
+  "slip_mean_m_s": 0.0008,
+  "slip_max_m_s": 0.0657,
   "ball_min_y": 0.0378,
   "src_stride_m": 0.419,
   "src_T_s": 1.125,
@@ -188,34 +188,34 @@
   "hip_drop_max_m": 0.0,
   "contact": {
    "L": [
-    0,
-    24
+    67,
+    48
    ],
    "R": [
-    16,
-    23
+    32,
+    46
    ]
   }
  },
  "child_run": {
   "take": "35_20",
   "slip_mean_m_s": 0.0,
-  "slip_max_m_s": 0.0,
-  "ball_min_y": 0.0422,
+  "slip_max_m_s": 0.001,
+  "ball_min_y": 0.0392,
   "src_stride_m": 2.441,
   "src_T_s": 0.733,
   "src_speed": 3.329,
   "stride_scale": 0.803,
   "time_scale": 1.048,
-  "hip_drop_max_m": 0.0024,
+  "hip_drop_max_m": 0.0,
   "contact": {
    "L": [
-    2,
-    6
+    5,
+    25
    ],
    "R": [
-    12,
-    7
+    48,
+    25
    ]
   }
  },
@@ -243,23 +243,23 @@
  },
  "carry": {
   "take": "113_26",
-  "slip_mean_m_s": 0.0228,
-  "slip_max_m_s": 0.2011,
+  "slip_mean_m_s": 0.0264,
+  "slip_max_m_s": 0.2166,
   "ball_min_y": 0.0375,
   "src_stride_m": 1.308,
   "src_T_s": 1.283,
   "src_speed": 1.02,
   "stride_scale": 0.968,
   "time_scale": 1.013,
-  "hip_drop_max_m": 0.0187,
+  "hip_drop_max_m": 0.0211,
   "contact": {
    "L": [
-    0,
-    21
+    75,
+    43
    ],
    "R": [
-    19,
-    22
+    37,
+    45
    ]
   }
  },

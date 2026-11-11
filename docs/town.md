@@ -129,6 +129,40 @@ asset in flight with the highest priority, "Warming shaders…" while something 
 the `boot` chunk (`game/build/chunks.js`): in the `ui` chunk it closed a chunk cycle and the build did not boot.
 `tools/gpu-server/flow-cap.cjs` records the whole start as a frame sequence (loading, first town frames, cover).
 
+## Outside the walls
+
+The lower gate is an exit (`scenes/town-outside.js`, pure, `tests/client/town-outside.test.mjs`):
+- The passage box (`GATE_PASSAGE`) is carved out of the colliders of `town_block_gate` and `town_terrain` (the
+  wall-line plane and the slab across the passage live in the terrain file); walkable floors are never cut. A
+  street-level box (`GATE_FLOOR`) bridges the 1.6 m between the street plane and the road.
+- Beyond the walls the terrain's visual `town_terrain_ground` and `town_terrain_cobble` triangles are the floor
+  (any triangle with a vertex outside the walls). The road drops at about 44°, just under the 45.6° walkable limit;
+  the rebuild of the hillside (ENV, Fable) should ship a `_col` with paths ≤ 30°, after which this falls away.
+- The town kill height is `OUTSIDE_KILL_Y` (−118 m), below the foot of the hill.
+- **The hillside (ENV, 11.11)** is `art/town/town_outside.py`: a meadow shoulder below the south wall, built into
+  `town_terrain` beyond z 35.6. A cobbled road winds from the gate in two switchbacks (160 m, grade 11°, steepest
+  point on it 19°) to a lookout; a footpath (≤ 21°) leaves it for the casting field, a level clearing 26 m across
+  38 m from the gate (floor y −4.8); a second terrace sits on the first bend. Past z ≈ 108 the edge drops into the
+  cloud sea (foot at −110 m). 29 trees, 70 shrubs, 46 rocks, 4200 grass tufts, 625 wildflowers.
+  Floors are the meshes `town_terrain_ground_outside` and `town_terrain_cobble_outside` (they match
+  `OUTSIDE_GROUND_MESH`, so the client's collider rule is unchanged); trunks and big boulders are in
+  `town_terrain_outside_col`. Plants use `M_Town_Foliage`; flower heads use the untextured `M_Town_Foliage_Flower`
+  (same wind role by name). The file now has about 70k render triangles (budget 120k).
+  The shipped file was patched, not rebuilt: `build_outside.py export` → `gltf-transform meshopt` →
+  `merge_outside.mjs` drops the old front skirt and appends the new meshes with the file's own textured
+  materials, for both `town_terrain.glb` and `_m.glb`; nothing inside the walls was touched. A full
+  `build_town.py build` gives the same hillside inside the regular meshes.
+- **Fauna** (`art/town/build_fauna.py`, models only, not placed yet): `town/fauna_grazer.glb` (deer-like, 0.8 m at
+  the shoulder, 478 triangles, clips `idle_graze` 4 s and `walk` 1 s) and `town/fauna_bird.glb` (0.7 m wingspan,
+  112 triangles, clip `fly` 0.5 s); rigid skinning, vertex colour, front +Z, origin at the feet / body centre.
+  QA sheet of the hillside (Blender, flat materials): `docs/art/town/qa/outside/outside_before_after.jpg`.
+
+Casting field (`scenes/town-casting.js`, visuals `scenes/town-casting-fx.js`, after achrefelouafi/
+LinearAbiltyCastingThreeJS, MIT): only when Iris is clear of the gatehouse (`onField`). Q/1 Frost Lance (aim
+arrow, crystals erupt along the line), V/2 Storm Snare (targeting circle, lightning column and tendrils). Click or
+tap casts, Esc or the same key puts it away; the indicators follow the slope (sampled by ray casts). QA:
+`__ftf.town.casting.aimAt(id, point)` and `.release()`. No damage, monsters or levels yet (board: MOB, levels).
+
 ## Not in this version
 
 - **Shops are not enterable.** `TOWN_DATA.shops` and `TOWN_DATA.interiors` are data only; the interior files

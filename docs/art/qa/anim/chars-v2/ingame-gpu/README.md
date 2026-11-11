@@ -61,3 +61,10 @@ The animation LOD engages: with 9 people and Iris in view only 6.25 mixers updat
 fourth frame beyond 22 m and 45 m, none off screen), 3 on the phone profile. These frame times say nothing about a
 phone's GPU; what carries over is the load: about 4 skinned meshes per person, so 9 people cost some 36 skinned
 draws per pass and 1900 bones. Merging each person's skinned meshes into one is the model-side saving.
+
+## After this pass: the run's keys (review page, deterministic)
+
+The run's planted foot wandered between keys (30 keys a second, linear interpolation of joint angles). The cycles
+are now keyed at 120 (runs) and 60 (walks) a second: sole speed near the ground 0.136 -> 0.080 m/s, and inside the
+clip's own planted intervals 0.000 m/s for the run, 0.008 m/s for the walk (`planted_slip_mean_m_s` in
+`game/anim-review.html`). Not re-measured in the game on the GPU at 60 frames a second.

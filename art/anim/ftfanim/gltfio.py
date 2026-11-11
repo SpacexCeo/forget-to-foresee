@@ -31,7 +31,7 @@ def write_clips_glb(path, rig, clips, fps=30, extras=None):
 
     for c in clips:
         F = c['local'].shape[0]
-        t_acc = add(np.arange(F, dtype=np.float32) / fps, 'SCALAR', True)
+        t_acc = add(np.arange(F, dtype=np.float32) / c.get('fps', fps), 'SCALAR', True)
         samplers, channels = [], []
         for name in c['bones']:
             i = rig.index[name]

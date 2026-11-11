@@ -45,6 +45,11 @@ async function open(name, query, ctxOptions) {
     window.__burst = (name, frames = 16, every = 3) => { const p = f.player, a = p.heading + Math.PI / 2, off = [Math.sin(a) * 3.3, 0.2, Math.cos(a) * 3.3], o = { imgs: [] }; let i = 0;
       const tick = () => { if (i++ % every === 0) { const at = [p.pos[0], p.pos[1] + 0.75, p.pos[2]]; o.imgs.push(window.__spy(at, [at[0] + off[0], at[1] + off[1], at[2] + off[2]], 34)); } if (o.imgs.length < frames) requestAnimationFrame(tick); };
       requestAnimationFrame(tick); window.__bursts[name] = o; };
+    /** The same from a camera that stays where it was put (the ground does not move in the picture: a planted foot must not either). */
+    window.__burstFixed = (name, frames = 24, every = 1, ahead = 1.4, h = 0.35, dist = 2.6) => { const p = f.player, hd = p.heading, a = hd + Math.PI / 2, o = { imgs: [] }; let i = 0;
+      const at = [p.pos[0] + Math.sin(hd) * ahead, p.pos[1] + h, p.pos[2] + Math.cos(hd) * ahead], from = [at[0] + Math.sin(a) * dist, at[1] + 0.25, at[2] + Math.cos(a) * dist];
+      const tick = () => { if (i++ % every === 0) o.imgs.push(window.__spy(at, from, 40)); if (o.imgs.length < frames) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); window.__bursts[name] = o; };
     window.__irisBones = () => ['toe_L', 'toe_R', 'foot_L', 'foot_R'].map((n) => f.iris.irisModel.model.getObjectByName(n));
   });
   await page.waitForTimeout(2500);
@@ -85,14 +90,18 @@ if (only.includes('loco')) {
   const dir = arg('dir', 'KeyD'), back = dir === 'KeyD' ? 'KeyA' : 'KeyD';
   await step('idle', null, 1.0);
   await step('walk', async () => { await page.evaluate(() => window.__burst('start', 16, 3)); await page.keyboard.down(dir); }, 3.2);
-  await step('run', () => page.keyboard.down('ShiftLeft'), 3.0);
+  await step('run', () => page.keyboard.down('ShiftLeft'), 1.4);
+  await page.evaluate(() => window.__burstFixed('runfeet', 24, 1, 1.5));
+  await wait(page, 0.8);
+  await page.evaluate(() => window.__burst('runbody', 8, 4));
+  await wait(page, 0.8);
   await step('slow', () => page.keyboard.up('ShiftLeft'), 1.6);
   await step('stop', async () => { await page.evaluate(() => window.__burst('stop', 16, 3)); await page.keyboard.up(dir); }, 2.0);
   await step('pivot180', async () => { await page.evaluate(() => window.__burst('pivot180', 16, 4)); await page.keyboard.down(back); await wait(page, 0.12); await page.keyboard.up(back); }, 2.2);
   await step('pivot90', async () => { await page.evaluate(() => window.__burst('pivot90', 12, 4)); await page.keyboard.down('KeyW'); await wait(page, 0.1); await page.keyboard.up('KeyW'); }, 2.0);
-  await step('runstop', async () => { await page.keyboard.down('ShiftLeft'); await page.keyboard.down(dir); await wait(page, 2.0); await page.evaluate(() => window.__burst('runstop', 16, 3)); await page.keyboard.up(dir); await page.keyboard.up('ShiftLeft'); }, 1.8);
+  await step('runstop', async () => { await page.keyboard.down('ShiftLeft'); await page.keyboard.down(dir); await wait(page, 2.0); await page.evaluate(() => window.__burst('runstop', 24, 3)); await page.keyboard.up(dir); await page.keyboard.up('ShiftLeft'); }, 1.8);
   await step('stop2', () => page.keyboard.up(back), 0.2);
-  await step('corner', async () => { await page.keyboard.down('ShiftLeft'); await page.keyboard.down(back); await wait(page, 1.6); await page.evaluate(() => window.__burst('corner', 16, 3)); await page.keyboard.down('KeyS'); await page.keyboard.up(back); }, 1.6);
+  await step('corner', async () => { await page.keyboard.down('ShiftLeft'); await page.keyboard.down(back); await wait(page, 1.6); await page.evaluate(() => { const p = window.__ftf.player; window.__bursts.corner = { imgs: [] }; let i = 0; const hd = p.heading; const tick = () => { if (i++ % 3 === 0) { const at = [p.pos[0], p.pos[1] + 0.9, p.pos[2]]; window.__bursts.corner.imgs.push(window.__spy(at, [at[0] + Math.sin(hd) * 4.2, at[1] + 0.4, at[2] + Math.cos(hd) * 4.2], 34)); } if (window.__bursts.corner.imgs.length < 16) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }); await page.keyboard.down('KeyS'); await page.keyboard.up(back); }, 1.6);
   await step('end', async () => { await page.keyboard.up('KeyS'); await page.keyboard.up('ShiftLeft'); }, 1.5);
   marks.done = await now();
   const rows = await page.evaluate(() => { window.__s.on = false; return window.__s.rows; });
@@ -100,7 +109,7 @@ if (only.includes('loco')) {
   run.fps = r3((rows.length - 1) / (rows[rows.length - 1][0] - rows[0][0]));
   run.marks = Object.fromEntries(Object.entries(marks).map(([k, v]) => [k, r3(v - t0)]));
   run.walk = { ...feet(rows, marks.walk + 1.0, marks.run, { lo: 1.6, hi: 1.8 }), speed: r3(Math.max(...rows.filter((r) => r[0] > marks.walk + 1 && r[0] < marks.run).map((r) => r[1]))) };
-  run.run = { ...feet(rows, marks.run + 1.0, marks.slow, { lo: 3.2, hi: 3.4 }), speed: r3(Math.max(...rows.filter((r) => r[0] > marks.run + 1 && r[0] < marks.slow).map((r) => r[1]))) };
+  run.run = { ...feet(rows, marks.run + 1.0, marks.run + 2.9, { lo: 3.2, hi: 3.4 }), speed: r3(Math.max(...rows.filter((r) => r[0] > marks.run + 1 && r[0] < marks.slow).map((r) => r[1]))) };
   run.stop = feet(rows, marks.stop + 0.1, marks.pivot180, { hi: 0.05 });
   run.runstop = feet(rows, marks.runstop + 2.1, marks.stop2, { hi: 0.05 });
   run.pivot180 = feet(rows, marks.pivot180, marks.pivot90);

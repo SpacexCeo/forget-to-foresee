@@ -246,7 +246,7 @@ class TownBuilder:
         else:
             self.poly(mat, [(cx + math.cos(math.tau * i / n) * r, cy + math.sin(math.tau * i / n) * r, cz) for i in range(n)], col)
 
-    def blob(self, mat, center, r, col=WHITE, seed=0, squash=0.8, sub=2, col_var=0.18):
+    def blob(self, mat, center, r, col=WHITE, seed=0, squash=0.8, sub=2, col_var=0.18, jitter=0.16):
         """A lumpy icosphere (tree crowns, bushes): vertex colour darker below, jittered per vertex."""
         import random
         rr = random.Random(seed)
@@ -254,7 +254,7 @@ class TownBuilder:
         bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
         jit = {}
         for v in bm.verts:
-            k = 1.0 + rr.uniform(-0.16, 0.16)
+            k = 1.0 + rr.uniform(-jitter, jitter)
             jit[v.index] = rr.uniform(-col_var, col_var)
             v.co = Vector((v.co.x * k, v.co.y * k, v.co.z * k))
         g = self.geo(mat)

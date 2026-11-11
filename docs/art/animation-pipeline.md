@@ -62,7 +62,8 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
 9. **Secondary motion** (`chains.py`): hair, tail, scarf, cloak and skirt chains are damped springs simulated over
    the baked body motion with warm-up passes, so loops close (per-character files only).
 10. **Export** (`gltfio.py`): a side-car `game/public/assets/anim/<name>.glb` with the skeleton and the clips
-    (rotations for the body, fingers and chains, translation for the pelvis only; 30 fps). Each animation's `extras`
+    (rotations for the body, fingers and chains, translation for the pelvis only; 30 keys a second, cycles 60 or
+    120: the engine interpolates joint angles linearly, and a fast planted foot wanders between sparse keys). Each animation's `extras`
     carry `take`, `speed`, `loop`, `pelvis_y`.
 
 Build: `python3 art/anim/fetch_mocap.py`, then `python3 art/anim/build_clips.py --char iris` and `--char townsfolk`;

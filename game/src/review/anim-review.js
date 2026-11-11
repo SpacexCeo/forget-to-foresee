@@ -71,6 +71,8 @@ let sidecarLoader = null;
 async function loadClips(url) {
   sidecarLoader ||= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const gltf = await sidecarLoader.loadAsync(url);
+  const extras = (gltf.parser.json.animations || []).map((x) => x.extras || {});
+  gltf.animations.forEach((c, i) => { c.userData = { ...extras[i] }; });   // speed, contact intervals
   return gltf.animations;
 }
 
@@ -107,6 +109,17 @@ class Subject {
     this.plant = Q.get('plant') === '0' ? null : new FootPlant(model);
     this.feet = ['foot_L', 'foot_R', 'toe_L', 'toe_R'].map((n) => model.getObjectByName(n)).filter(Boolean);
     this.clipNames = this.clips.map((c) => c.name);
+    // the sole's contact points (under the ball joint and under the heel) in each foot bone's space, from the rest pose
+    this.soles = [];
+    if (this.feet.length === 4) {
+      this.root.updateMatrixWorld(true);
+      for (const i of [0, 1]) {
+        const foot = this.feet[i], toe = this.feet[i + 2], a = foot.getWorldPosition(new THREE.Vector3()), t = toe.getWorldPosition(new THREE.Vector3());
+        const back = new THREE.Vector3(a.x - (t.x - a.x) * 0.3, 0, a.z - (t.z - a.z) * 0.3);
+        this.soles.push({ foot, ball: foot.worldToLocal(new THREE.Vector3(t.x, 0, t.z)), heel: foot.worldToLocal(back) });
+      }
+    }
+    this.soleTrack = []; this.phases = [];
   }
 
   step(input, t) {
@@ -139,6 +152,8 @@ class Subject {
   /** Records the balls of the feet (toe bone heads) each frame; `slipStats` turns them into the slip numbers. */
   measure() {
     if (this.feet.length === 4) this.track.push([2, 3].map((i) => this.feet[i].getWorldPosition(new THREE.Vector3())));
+    if (this.soles.length) this.phases.push(this.gait ? [this.gait.phase, this.gait.weights.walk, this.gait.weights.run] : [0, 0, 0]);
+    if (this.soles.length) this.soleTrack.push(this.soles.map((s) => [s.foot.localToWorld(s.ball.clone()), s.foot.localToWorld(s.heel.clone())]));
   }
 
   /** Foot slip: horizontal speed of a ball of the foot over the ground while it is planted (within 1 cm of its lowest height). */
@@ -157,9 +172,34 @@ class Subject {
     all.sort((x, y) => x - y);
     const stance = all.slice(0, Math.floor(all.length * 0.3));
     this.stance = +(stance.reduce((q, x) => q + x, 0) / (stance.length || 1)).toFixed(3);
+    // the sole itself: the lower of the ball and heel points while it is within 8 mm of the lowest it ever gets
+    const sole = [];
+    const floor = Math.min(...this.soleTrack.flatMap((fr) => fr.flatMap((pt) => [pt[0].y, pt[1].y])), 1);
+    for (const f of [0, 1]) for (let i = 1; i < this.soleTrack.length; i++) {
+      const a = this.soleTrack[i - 1][f], b = this.soleTrack[i][f], k = b[0].y <= b[1].y ? 0 : 1;
+      if (a[k].y - floor < 0.008 && b[k].y - floor < 0.008) sole.push(Math.hypot(b[k].x - a[k].x, b[k].z - a[k].z) / DT);
+    }
+    const minY = (k) => +Math.min(...this.soleTrack.flatMap((fr) => fr.map((pt) => pt[k].y))).toFixed(3);
+    this.sole = { ball_min_y: minY(0), heel_min_y: minY(1), samples: sole.length, mean: +(sole.reduce((q, x) => q + x, 0) / (sole.length || 1)).toFixed(3), max: +(Math.max(0, ...sole)).toFixed(3) };
+    // the same inside the clip's own planted intervals (userData.contact, fractions of the stride), one key inside each end:
+    // this is the slip of a foot that is meant to stand, without the frames in which it lands or leaves
+    const planted = [];
+    for (const [name, wi] of [['walk', 1], ['run', 2]]) {
+      const c = this.clips.find((x) => x.name === name), ct = c && c.userData && c.userData.contact;
+      if (!ct) continue;
+      ['L', 'R'].forEach((side, f) => { const [s0, len] = ct[side], pad = 0.012;
+        for (let i = 1; i < this.soleTrack.length; i++) {
+          if (this.phases[i][wi] < 0.98 || this.phases[i - 1][wi] < 0.98) continue;
+          const inside = (ph) => { const u = ((ph - s0) % 1 + 1) % 1; return u > pad && u < len - pad; };
+          if (!inside(this.phases[i][0]) || !inside(this.phases[i - 1][0])) continue;
+          const a = this.soleTrack[i - 1][f], b = this.soleTrack[i][f], k = b[0].y <= b[1].y ? 0 : 1;
+          planted.push(Math.hypot(b[k].x - a[k].x, b[k].z - a[k].z) / DT);
+        } });
+    }
+    this.planted = { samples: planted.length, mean: +(planted.reduce((q, x) => q + x, 0) / (planted.length || 1)).toFixed(3), max: +(Math.max(0, ...planted)).toFixed(3) };
     v.sort((x, y) => x - y);
     const mean = v.reduce((s, x) => s + x, 0) / (v.length || 1);
-    return { stance_speed_m_s: this.stance, planted_samples: v.length, slip_mean_m_s: +mean.toFixed(3), slip_p95_m_s: +(v[Math.floor(v.length * 0.95)] || 0).toFixed(3), slip_max_m_s: +(v[v.length - 1] || 0).toFixed(3) };
+    return { planted_slip_mean_m_s: this.planted.mean, planted_slip_max_m_s: this.planted.max, planted_frames: this.planted.samples, sole_ball_min_y: this.sole.ball_min_y, sole_heel_min_y: this.sole.heel_min_y, sole_slip_mean_m_s: this.sole.mean, sole_slip_max_m_s: this.sole.max, sole_samples: this.sole.samples, stance_speed_m_s: this.stance, planted_samples: v.length, slip_mean_m_s: +mean.toFixed(3), slip_p95_m_s: +(v[Math.floor(v.length * 0.95)] || 0).toFixed(3), slip_max_m_s: +(v[v.length - 1] || 0).toFixed(3) };
   }
 }
 
@@ -214,7 +254,7 @@ async function main() {
   };
   // warm-up: let steady scenarios reach speed before frame 0 (not measured)
   for (let i = 0; i < Math.round((sc.warm || 0) * FPS); i++) { const input = sc.input(0); subjects.forEach((s) => s.step(input, 0)); }
-  subjects.forEach((s) => { s.track = []; });
+  subjects.forEach((s) => { s.track = []; s.soleTrack = []; s.phases = []; });
   const api = {
     fps: FPS, frames: Math.round(sc.seconds * FPS), clips: Object.fromEntries(subjects.map((s) => [s.tag, s.clipNames])),
     step(i) { while (frame < i) advance(); draw(); return states[i]; },

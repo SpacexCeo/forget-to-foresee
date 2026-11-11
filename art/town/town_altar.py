@@ -313,6 +313,29 @@ def shrine(tb):
     _ = (RX, RZ)
 
 
+_SHELL_RINGS = None
+
+
+def _shell_v2_rings(seg=8, sides=7, g_min=0.15):
+    """Low-resolution rings of the Shell surface, unit height, pivot at the bottom centre:
+    (rings[q][j] points, section centres per ring, psi per side)."""
+    global _SHELL_RINGS
+    if _SHELL_RINGS is None:
+        import os
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shells"))
+        import numpy as np
+        import shell_v2_geo as G
+        whorls = math.log(1.0 / g_min) / math.log(G.W)
+        th = G.THETA_END - np.arange(int(whorls * seg), -1, -1) * (math.tau / seg)
+        ps = G.psi_samples(sides)
+        pts = G.to_world(G.surface(th[:, None], ps[None, :], ribs=False)) / G.TARGET_H
+        g = G.scale_of(th)
+        cen = G.to_world(np.stack([g * G.RHO * np.cos(th), -g * G.RHO * np.sin(th), -g * G.H], -1)) / G.TARGET_H
+        _SHELL_RINGS = (pts.tolist(), cen.tolist(), [float(a) for a in ps])
+    return _SHELL_RINGS
+
+
 def sky_archipelago(tb, scale):
     """The archipelago far above, seen from below (visual only): five islands at different depths, each a
     grassy rim over a rocky inverted-cone underside, with the Shells standing above four of them. Vertex
@@ -341,15 +364,33 @@ def sky_archipelago(tb, scale):
             tb.cyl("sky", (x + math.cos(a) * d, y - depth * rr.uniform(0.5, 0.75), z + math.sin(a) * d), 0.001, r * 0.16, depth * 0.45, 6, rock_d, cap_top=False, col_top=rock)
 
     def shell(x, y, z, hgt, k, i):
-        pale, lit = haze((0.46, 0.40, 0.36), k), haze((0.74, 0.66, 0.56), k)
-        segs = 8
-        for q in range(segs):
-            t0, t1 = q / segs, (q + 1) / segs
-            r0 = hgt * 0.40 * (1 - t0) ** 0.7 + hgt * 0.02
-            r1 = hgt * 0.40 * (1 - t1) ** 0.7 + hgt * 0.02
-            ox = math.sin(t0 * 5.0 + i) * hgt * 0.035
-            tb.cyl("sky", (x + ox, y + t0 * hgt, z), r0 * 1.08, r1, hgt / segs, 10, pale, cap_top=(q == segs - 1), col_top=lit)
-        tb.cyl("sky", (x, y - hgt * 0.16, z), hgt * 0.04, hgt * 0.32, hgt * 0.16, 10, haze((0.36, 0.33, 0.32), k), cap_top=False, col_top=pale)
+        # The Shell (v2): the game model's own surface (art/shells/shell_v2_geo.py) sampled at low
+        # resolution, so the far silhouette is the same slender spire with its whorls, lip and canal.
+        pale, lit, gold = haze((0.50, 0.45, 0.40), k), haze((0.80, 0.74, 0.64), k), haze((0.95, 0.74, 0.40), k)
+        hgt = hgt * 1.5
+        y = y + hgt * 0.10                      # it levitates over its island
+        yaw = 0.9 + 1.7 * i
+        cy, sy = math.cos(yaw), math.sin(yaw)
+
+        def put(p):                              # Shell build space (Z up, unit height) -> town space
+            px, py = p[0] * cy - p[1] * sy, p[0] * sy + p[1] * cy
+            return (x + px * hgt, y + p[2] * hgt, z - py * hgt)
+
+        rings, cen, psi = _shell_v2_rings()
+        cols = [gold if abs(a - 0.352 * math.pi) < 0.05 else tuple(pale[c] + (lit[c] - pale[c]) * (0.5 + 0.5 * math.sin(a)) for c in range(3)) for a in psi]
+        n = len(psi) - 1
+        for q in range(len(rings) - 1):
+            for j in range(n):
+                a, b, c, d = rings[q][j], rings[q][j + 1], rings[q + 1][j + 1], rings[q + 1][j]
+                mid = [(a[t] + b[t] + c[t] + d[t]) / 4 - (cen[q][t] + cen[q + 1][t]) / 2 for t in range(3)]
+                e1, e2 = [c[t] - a[t] for t in range(3)], [b[t] - d[t] for t in range(3)]
+                nrm = (e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0])
+                pts, cc = [put(a), put(b), put(c), put(d)], [cols[j], cols[j + 1], cols[j + 1], cols[j]]
+                if sum(nrm[t] * mid[t] for t in range(3)) > 0:   # put() mirrors nothing, but keep the front outward
+                    pts, cc = pts[::-1], cc[::-1]
+                tb.poly("sky", pts, cc)
+        for j in range(n):                       # the fine apex whorls: one spike
+            tb.poly("sky", [put(rings[0][j + 1]), put(rings[0][j]), put((0.0, 0.0, 1.0))], [cols[j + 1], cols[j], lit])
 
     s = scale
     # x, y, z offsets (m), radius, underside depth, haze amount

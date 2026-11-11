@@ -131,7 +131,7 @@ export function withWind(material, { kind = 'cloth', amplitude, weight = 'attrib
           // World-space push brought back into object space (rotation only), plus a ripple along the normal.
           vec3 ftfPush = vec3( ftfW.x, - abs( ftfW.x ) * 0.15 - abs( ftfW.y ) * 0.15, ftfW.y ) * ${amp.toFixed(4)} * ftfK * ftfK;
           transformed += ( vec4( ftfPush, 0.0 ) * modelMatrix ).xyz / max( dot( modelMatrix[ 0 ].xyz, modelMatrix[ 0 ].xyz ), 1e-6 );
-          transformed += objectNormal * sin( dot( ftfWp, vec3( 2.3, 1.7, 2.9 ) ) - ftfWind.w * 5.1 ) * ${K.ripple.toFixed(4)} * ftfK * ftfWind.z;
+          transformed += objectNormal * sin( dot( ftfWp, vec3( 2.3, 1.7, 2.9 ) ) - ftfWind.w * 5.1 ) * ${K.ripple.toFixed(4)} * ${kind === 'foliage' ? 'ftfK * ftfK' : 'ftfK'} * ftfWind.z;
         }`);
   };
   const key = material.customProgramCacheKey ? material.customProgramCacheKey.bind(material) : () => '';
@@ -147,7 +147,8 @@ export const WIND_SHAPE = Object.freeze({
   hangFree: 0.45,     // only its lower part swings: the upper part carries an emblem made of another material
   awning: 0.3,        // a stretched sheet (awning, stall roof) only breathes a little at its lower edge
   crown: 1.5,         // foliage at least this tall is a tree crown or a big bush: it leans as one body
-  smallFoliage: 0.4,  // window boxes, planters: a shiver
+  smallFoliage: 0.22, // window boxes, planters: the tips barely stir (the push goes with the square of the weight)
+  smallPart: 0.75,    // a foliage part lower than this is a small plant: it never joins a crown, whatever it touches
 });
 
 /**
@@ -157,7 +158,8 @@ export const WIND_SHAPE = Object.freeze({
  *      everything that belongs to one banner or one awning gets one answer and cannot slide apart.
  *   2. Cloth: a tall hanging sheet (a banner) is pinned along its upper part and free at the hem; a wide stretched
  *      sheet (an awning) breathes slightly at its lower edge; anything else made of cloth (rugs, candles, books) is 0.
- *   3. Foliage is rooted at the bottom of its object: a crown leans, small plants shiver.
+ *   3. Foliage is rooted at the bottom of its object: a crown leans, small plants only stir at the tips and are
+ *      never joined to a crown they touch.
  * Pure maths on the position attribute; runs once per geometry.
  * @param {{count:number, getX:(i:number)=>number, getY:(i:number)=>number, getZ:(i:number)=>number}} position
  * @param {{count:number, getX:(i:number)=>number}|null} index @param {'cloth'|'foliage'} kind
@@ -187,6 +189,10 @@ export function windWeights(position, index, kind = 'cloth') {
     if (!B) boxes.set(r, B = [x, y, z, x, y, z, r]);
     else { if (x < B[0]) B[0] = x; if (y < B[1]) B[1] = y; if (z < B[2]) B[2] = z; if (x > B[3]) B[3] = x; if (y > B[4]) B[4] = y; if (z > B[5]) B[5] = z; }
   }
+  // Small plants (window boxes, planters) keep to themselves: a flower touching a tree crown or a bush must not
+  // become part of it, or it would lean with the crown and leave its box.
+  const small = new Uint8Array(n);
+  if (kind === 'foliage') for (const B of boxes.values()) if (B[4] - B[1] < S.smallPart) small[B[6]] = 1;
   const list = [...boxes.values()].sort((p, q) => p[0] - q[0]);
   for (let merged = true, pass = 0; merged && pass < 8; pass++) {
     merged = false;
@@ -194,7 +200,7 @@ export function windWeights(position, index, kind = 'cloth') {
       const A = list[i];
       for (let j = i + 1; j < list.length && list[j][0] <= A[3] + S.touch; j++) {
         const B = list[j], ra = find(A[6]), rb = find(B[6]);
-        if (ra === rb || B[1] > A[4] + S.touch || A[1] > B[4] + S.touch || B[2] > A[5] + S.touch || A[2] > B[5] + S.touch) continue;
+        if (ra === rb || small[A[6]] !== small[B[6]] || B[1] > A[4] + S.touch || A[1] > B[4] + S.touch || B[2] > A[5] + S.touch || A[2] > B[5] + S.touch) continue;
         parent[rb] = ra; merged = true;
       }
     }
@@ -210,7 +216,7 @@ export function windWeights(position, index, kind = 'cloth') {
     const O = obj.get(find(i)), h = O[4] - O[1], wide = Math.max(O[3] - O[0], O[5] - O[2]);
     if (h < 1e-4) continue;
     const k = (position.getY(i) - O[1]) / h; // 0 at the bottom of the object, 1 at its top
-    if (kind === 'foliage') out[i] = k * (h >= S.crown ? 1 : S.smallFoliage);
+    if (kind === 'foliage') out[i] = k * (h >= S.crown && !small[find(i)] ? 1 : S.smallFoliage);
     else if (h >= S.hangHeight && h >= wide * 1.2) out[i] = Math.max(0, 1 - k / S.hangFree);
     else if (wide >= 1.5 && h >= 0.2 && h < wide * 0.6) out[i] = S.awning * (1 - k);
   }

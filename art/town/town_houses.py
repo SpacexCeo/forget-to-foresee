@@ -489,7 +489,23 @@ def cart(tb, x, z, y, rot=0.0):
                     a = k * math.pi / 4
                     tb.beam("timber", (-math.cos(a) * 0.45, 0, -math.sin(a) * 0.45), (math.cos(a) * 0.45, 0, math.sin(a) * 0.45), 0.05, 0.05, TIMBER)
             tb.beam("timber", (sx * 0.45, 0.72, 1.1), (sx * 0.45, 0.5, 2.5), 0.06, 0.06, TIMBER)
-        tb.blob("foliage", (0, 1.05, 0.2), 0.6, (0.9, 0.8, 0.45), seed=5, squash=0.5, sub=1)
+        # goods (none of them foliage: nothing on the cart sways): a crate, two sacks, a heap of cabbages
+        top = 0.80
+        with tb.at(T(-0.24, top, -0.72), RY(12)):
+            tb.box("timber", (0, 0.21, 0), (0.56, 0.42, 0.5), tint(TIMBER_LIGHT, 1.15), skip="y", uv_dir=(1, 0, 0))
+            for yy in (0.07, 0.35):
+                tb.box("timber", (0, yy, 0), (0.6, 0.07, 0.54), TIMBER, skip="yY", uv_dir=(1, 0, 0))
+            for sx in (-1, 1):
+                tb.box("timber", (sx * 0.17, 0.43, 0), (0.07, 0.025, 0.54), TIMBER, skip="y", uv_dir=(0, 0, 1))
+        SACK = (0.74, 0.60, 0.38)
+        tb.blob("plaster", (0.28, top + 0.30, -0.62), 0.27, SACK, seed=11, squash=1.15, sub=2, col_var=0.06, jitter=0.07)
+        tb.cyl("plaster", (0.28, top + 0.57, -0.62), 0.07, 0.12, 0.13, 8, tint(SACK, 0.9))
+        tb.box("timber", (0.28, top + 0.60, -0.62), (0.16, 0.03, 0.16), tint(TIMBER, 0.7), skip="yY")      # the tie
+        tb.blob("plaster", (0.02, top + 0.19, 0.84), 0.32, tint(SACK, 0.92), seed=12, squash=0.62, sub=2, col_var=0.06, jitter=0.07)
+        for i, (gx, gz, gy, gr) in enumerate(((-0.34, -0.12, 0, 0.17), (0.02, -0.2, 0, 0.16), (0.36, -0.06, 0, 0.17), (-0.18, 0.2, 0, 0.16),
+                                              (0.2, 0.26, 0, 0.17), (-0.38, 0.44, 0, 0.15), (0.0, 0.03, 0.24, 0.16))):
+            cab = tint((0.62, 0.90, 0.46), 1.0 - 0.09 * (i % 3))
+            tb.blob("plaster", (gx, top + gr * 0.86 + gy, gz), gr, cab, seed=20 + i, squash=0.88, sub=2, col_var=0.10, jitter=0.03)
         tb.col_box((0, 0.7, 0.2), (1.5, 1.4, 2.6))
 
 

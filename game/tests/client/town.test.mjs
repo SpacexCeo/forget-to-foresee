@@ -12,6 +12,7 @@ import { TOWN_ORIGIN, TOWN_SPAWN, TOWN_ALTAR, TOWN_ALTAR_SPAWN, TOWN_ROUTE, TOWN
 import { SPAWN, KILL_Y } from '../../src/scenes/layout.js';
 import { ASSETS, TOWN_ASSETS, ALL_ASSETS, LOAD_DISTANCE, TRIANGLE_BUDGET, assetByName, isValidModelName, isValidModelDir, modelUrl, versionedModelUrl } from '../../src/render/asset-catalog.js';
 import { townPlan } from '../../src/ui/loading.js';
+import { OUTSIDE_KILL_Y } from '../../src/scenes/town-outside.js';
 import { scanModels, modelListSource, MODEL_SUBDIRS } from '../../build/model-list.js';
 import { chunkFor } from '../../build/chunks.js';
 
@@ -96,7 +97,7 @@ test('town layout: the jury walk is 30 to 50 m, starts at the spawn, ends at the
 });
 
 test('town layout: kill height, fog and mist sit below the town; the altar spawn faces the altar', () => {
-  assert.equal(TOWN_KILL_Y, TOWN_ORIGIN[1] + TOWN_DATA.killY);
+  assert.equal(TOWN_KILL_Y, TOWN_ORIGIN[1] + Math.min(TOWN_DATA.killY, OUTSIDE_KILL_Y)); // the hillside beyond the gate runs lower than the streets
   assert.ok(TOWN_KILL_Y > KILL_Y + 500, 'an island kill height would never catch a fall in the town');
   const low = Math.min(...TOWN_DATA.route.map((p) => p[1]));
   assert.ok(TOWN_FOG_BASE_Y < TOWN_ORIGIN[1] + low && TOWN_MIST_LEVEL < TOWN_FOG_BASE_Y);

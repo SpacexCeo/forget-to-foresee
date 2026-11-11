@@ -62,7 +62,10 @@ def main():
         rt = take_rt(take)
         lay = spec.get('layers', [])
         if spec['kind'] == 'cycle':
-            r = build_cycle(rt, spec['frames_src'][0], spec['frames_src'][1], spec['frames'], spec['speed'], style, log=lambda *x: None)
+            # cycles are keyed densely (the engine interpolates joint angles linearly between keys: at 30 keys a second
+            # a planted foot of the run wanders by millimetres between them, which reads as slip)
+            kf = spec.get('fps', 30)
+            r = build_cycle(rt, spec['frames_src'][0], spec['frames_src'][1], spec['frames'] * kf // 30, spec['speed'], style, fps=kf, log=lambda *x: None)
         elif spec['kind'] == 'action':
             def pre(rig_, wr, hip, feet, n, fps):
                 for L in lay:
@@ -92,7 +95,7 @@ def main():
         body = r['local'][:-1] if loop else r['local']
         chain = []
         if ch.get('chains', True):
-            sim = chains.simulate(rig, body, r['pelvis'][:len(body)], loop=loop, air_speed=spec.get('speed', 0))
+            sim = chains.simulate(rig, body, r['pelvis'][:len(body)], fps=spec.get('fps', 30) if spec['kind'] == 'cycle' else 30, loop=loop, air_speed=spec.get('speed', 0))
             r['local'] = np.concatenate([sim, sim[:1]]) if loop else sim
             chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
         bones = chain + [b for b in rig.names if b in rt.mapped or b.startswith(('toe_', 'thumb_', 'index_', 'fingers_'))]
@@ -100,7 +103,10 @@ def main():
         for k in ('seat', 'note'):
             if k in spec:
                 extras[k] = spec[k]
-        clips.append({'name': name, 'local': r['local'], 'pelvis': r['pelvis'] if ch.get('world_pelvis') else rig.pelvis_local(r['pelvis']), 'bones': bones, 'extras': extras})
+        if spec['kind'] == 'cycle':     # the planted intervals as fractions of the stride: [start, length] per foot
+            n_c = len(r['local']) - 1
+            extras['contact'] = {s: [round(r['stats']['contact'][s][0] / n_c, 4), round(r['stats']['contact'][s][1] / n_c, 4)] for s in 'LR'}
+        clips.append({'fps': spec.get('fps', 30) if spec['kind'] == 'cycle' else 30, 'name': name, 'local': r['local'], 'pelvis': r['pelvis'] if ch.get('world_pelvis') else rig.pelvis_local(r['pelvis']), 'bones': bones, 'extras': extras})
         report[name] = {'take': take, **r['stats']}
         print(name, json.dumps(report[name]))
     out = a.out or os.path.join(REPO, 'game/public/assets/anim', ch.get('out', a.char) + '.glb')
