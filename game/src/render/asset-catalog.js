@@ -31,12 +31,18 @@ export const ASSETS = Object.freeze([
 /**
  * Playable heroines. `model` is the .glb in /assets/models/ (the phone variant adds `_m`), `sidecar` the clip
  * file in /assets/anim/. `toon`: cel-shaded materials, the ink outline is geometry inside the .glb.
- * `gate: 'nft'` marks a heroine meant for holders; the gate itself is not wired yet, `?hero=<id>` picks her.
+ * `gate: 'nft'` marks a heroine meant for holders; the gate itself is not wired yet. `?hero=<id>` picks her, else the
+ * Day 1 skin the player chose (K, boot-world.js).
  */
 export const HEROES = Object.freeze([
   Object.freeze({ id: 'iris', label: 'Iris', model: 'agent_iris', sidecar: 'iris', toon: false, gate: null }),
   Object.freeze({ id: 'elise', label: 'Elise', model: 'agent_elise', sidecar: 'elise', toon: true, gate: 'nft' }),
 ]);
+
+/** A heroine by id (Iris when unknown). */
+export function heroById(id) {
+  return HEROES.find((h) => h.id === id) || HEROES[0];
+}
 
 /** The heroine named by `?hero=<id>` (Iris when absent or unknown). */
 export function heroFromSearch(search = typeof location !== 'undefined' ? location.search : '') {

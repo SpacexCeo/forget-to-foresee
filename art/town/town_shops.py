@@ -230,21 +230,21 @@ def door_surround(tb, w, d):
 
 def hanging_ring_lamp(tb, name, x, z, h, r=0.8, candles=8):
     """The sheets' bronze ring chandelier on four chains, candles on the ring; a swing node off the ceiling hook."""
-    with tb.swing(name.replace("socket_", ""), (x, h - 0.02, z), length=1.15):
-        tb.cyl("iron", (x, h - 0.45, z), 0.02, 0.02, 0.45, 5, cap_top=False)
+    with tb.swing(name.replace("socket_", ""), (x, h - 0.02, z), length=0.72):
+        tb.cyl("iron", (x, h - 0.25, z), 0.02, 0.02, 0.25, 5, cap_top=False)
         for k in range(4):
             a = math.tau * k / 4 + 0.4
-            tb.beam("iron", (x, h - 0.45, z), (x + math.cos(a) * r, h - 1.15, z + math.sin(a) * r), 0.012, 0.012)
-        tb.ring("bronze", (x, h - 1.15, z), r + 0.04, r - 0.04, 0.07, 28, axis="y")
-        tb.ring("bronze", (x, h - 1.22, z), r * 0.35, r * 0.3, 0.04, 14, axis="y")
+            tb.beam("iron", (x, h - 0.25, z), (x + math.cos(a) * r, h - 0.72, z + math.sin(a) * r), 0.012, 0.012)
+        tb.ring("bronze", (x, h - 0.72, z), r + 0.04, r - 0.04, 0.07, 28, axis="y")
+        tb.ring("bronze", (x, h - 0.79, z), r * 0.35, r * 0.3, 0.04, 14, axis="y")
         for k in range(candles):
             a = math.tau * (k + 0.5) / candles
             cx, cz = x + math.cos(a) * r, z + math.sin(a) * r
-            tb.cyl("bronze", (cx, h - 1.11, cz), 0.05, 0.04, 0.02, 6)
-            tb.cyl("wax", (cx, h - 1.09, cz), 0.022, 0.022, 0.14, 6)
-            tb.cyl("lamp", (cx, h - 0.95, cz), 0.018, 0.0, 0.06, 5, cap_top=False)
-    tb.socket(name, (x, h - 1.05, z))
-    tb.light((x, h - 0.98, z), (1.0, 0.70, 0.40), 260.0, 0.5)
+            tb.cyl("bronze", (cx, h - 0.68, cz), 0.05, 0.04, 0.02, 6)
+            tb.cyl("wax", (cx, h - 0.66, cz), 0.022, 0.022, 0.14, 6)
+            tb.cyl("lamp", (cx, h - 0.52, cz), 0.018, 0.0, 0.06, 5, cap_top=False)
+    tb.socket(name, (x, h - 0.62, z))
+    tb.light((x, h - 0.55, z), (1.0, 0.70, 0.40), 260.0, 0.5)
 
 
 def sconce(tb, name, wall_m, off, y=2.25):
@@ -388,8 +388,12 @@ def build_exchange(tb):
             tb.cyl("stone", (0, i * 0.16, 0), r, r - 0.02, hh, 28, tint(STONE, 1.0 + 0.05 * i), cap_top=True)
         tb.ring("bronze", (0, 0.165, 0), 1.22, 1.15, 0.012, 28, axis="y")
         tb.cyl("stone", (0, 0.48, 0), 0.32, 0.26, 0.5, 12, STONE_DARK, cap_top=True)
-        for sx in (-1, 1):
-            tb.beam("bronze", (sx * 0.28, 0.9, 0), (sx * 0.62, 1.2, 0), 0.07, 0.07)
+        for k3 in range(3):                                   # three curved bronze supports (S-004_01)
+            a3 = math.tau * k3 / 3 + math.pi / 2
+            ca3, sa3 = math.cos(a3), math.sin(a3)
+            pts3 = [(ca3 * (0.30 + 0.30 * u), 0.98 + 0.55 * u * u, sa3 * 0.30 * (1 - u) * 0.6) for u in (0.0, 0.33, 0.66, 1.0)]
+            for (p0, p1) in zip(pts3, pts3[1:]):
+                tb.beam("bronze", p0, p1, 0.06, 0.06)
         tb.ring("bronze", (0, 1.78, 0), 0.82, 0.72, 0.1, 36, (0.62, 0.48, 0.34))
         tb.ring("bronze", (0, 1.78, 0), 0.7, 0.68, 0.12, 36)
         for k2 in range(8):
@@ -588,6 +592,8 @@ def build_inn(tb):
             for row, yy in enumerate((0.39, 1.14)):
                 with tb.at(T(-0.8 + i * 0.8, yy + 0.3, 0), RX(90)):
                     H.barrel(tb, 0, 0, -0.3, 0.3, 0.6, rr)
+                tb.cyl("bronze", (-0.8 + i * 0.8, yy + 0.22, 0.30), 0.025, 0.025, 0.09, 6)          # spigot (S-004_03)
+                tb.box("bronze", (-0.8 + i * 0.8, yy + 0.30, 0.37), (0.06, 0.03, 0.03))
         tb.col_box((0, 0.9, 0), (2.4, 1.8, 0.6))
     # the hearth on the left wall: stone surround, a kettle on a hook, logs, a bench nook beside it
     with tb.at(T(-w / 2, 0, -0.6), RY(90)):

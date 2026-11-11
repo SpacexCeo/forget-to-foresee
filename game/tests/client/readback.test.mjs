@@ -21,7 +21,13 @@ test('read-backs: outside the capture runner the only GPU read is the sky LUT, o
   assert.match(post, /getContext\('2d'\)/);
   assert.doesNotMatch(post, /webgl|requestAnimationFrame/i);
   assert.match(post, /btn\('postcard\.download', \(\) => canvas\.toBlob/, 'encoded only from the Download button');
-  const play = hits.filter((f) => !f.startsWith('cinematic/') && f !== 'ui/postcard.js');
+  // render/photo-mode.js (feature 9) copies one frame to a 2D canvas only when Save photo was pressed in photo mode
+  const photo = code(read('render/photo-mode.js'));
+  assert.match(photo, /btn\('ftf-photo-save', t\('photo\.save'\), \(\) => requestCapture\(\)\)/, 'a capture is asked only by the Save button');
+  assert.match(photo, /function requestCapture\(\) \{ if \(state\.on\) state\.pending = true; \}/);
+  assert.match(photo, /if \(!state\.pending\) return false;/, 'no pending capture: no read');
+  assert.match(code(read('boot-world.js')), /if \(drawn && photo && photo\.pending\) photo\.capture\(\);/, 'the frame loop reads only a pending capture');
+  const play = hits.filter((f) => !f.startsWith('cinematic/') && f !== 'ui/postcard.js' && f !== 'render/photo-mode.js');
   assert.deepEqual(play, ['render/sky.js'], 'no module on the play path reads the canvas or a render target back');
   const sky = code(read('render/sky.js'));
   assert.equal(sky.match(new RegExp(READBACK.source, 'g')).length, 1, 'one read-back site in sky.js');

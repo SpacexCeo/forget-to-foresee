@@ -22,6 +22,7 @@ const SAME_IT = new Set(['day1.elise', 'panel.pill.hire', 'ach.elise', 'day1.ski
   'ctor.palette', 'line.askNo', 'wh.trial.arena', 'wh.sign.seconds', 'wh.top.menu']);
 const SAME_AS_EN = new Set([
   'hub.card.offer.body', // pure placeholder: '{offer}'
+  'profile.xpOf', // numbers and the unit: '{into} / {need} XP'
   'app.title.line1', 'app.title.line2', 'app.title.full', 'lang.en', 'lang.ru', 'lang.uk', 'lang.it', 'lang.zh',
   'lang.short.en', 'lang.short.ru', 'lang.short.uk', 'lang.short.it', 'lang.short.zh',
   'shell.0', 'shell.1', 'shell.2', 'shell.3', 'tut.readLine', 'wh.raw', 'wh.trial.wordsValue', 'wh.sign.reading',

@@ -192,3 +192,23 @@ export function createMintMoments() {
     get pending() { return pending.slice(); },
   };
 }
+
+/**
+ * The shard's history as a timeline (feature 8), built only from the card (public state: the room's observation and,
+ * for a real token, the chain record): forgotten -> auctioned -> bought or burned -> the vision it opened -> minted.
+ * A preview ends with an "unminted" step and carries no link. Each step: {id, trial|null, key, args, href|null}.
+ */
+export function shardTimeline(card) {
+  if (!card) return [];
+  const steps = [];
+  steps.push({ id: 'forgotten', trial: card.forgottenAt ?? null, key: 'shard.tl.forgotten', args: { clan: card.ownerClan, weight: card.weight ?? 0 }, href: null });
+  if (card.closesAt != null) steps.push({ id: 'auction', trial: card.forgottenAt ?? null, key: 'shard.tl.auction', args: { from: card.forgottenAt ?? 0, to: card.closesAt }, href: null });
+  steps.push(card.winner
+    ? { id: 'sold', trial: card.closesAt ?? null, key: 'shard.tl.sold', args: { clan: card.winner, price: card.price ?? 0 }, href: null }
+    : { id: 'burned', trial: card.closesAt ?? null, key: 'shard.tl.burned', args: {}, href: null });
+  if (card.leaf) steps.push({ id: 'vision', trial: null, key: 'shard.tl.vision', args: { index: card.leaf.index }, href: card.leaf.href || null });
+  steps.push(card.state === 'minted'
+    ? { id: 'minted', trial: null, key: 'shard.tl.minted', args: { owner: card.owner || '—' }, href: card.mintTxHref || card.tokenHref || null }
+    : { id: 'unminted', trial: null, key: 'shard.tl.unminted', args: {}, href: null });
+  return steps;
+}
