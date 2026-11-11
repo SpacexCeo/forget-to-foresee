@@ -165,7 +165,7 @@ const chip = (root, f) => root.querySelector(`[data-filter="${f}"]`);
 const norm = (s) => s.replace(/\s+/g, ' ').trim();
 
 const DEMO_TEXTS = [
-  'Signs and Visions', 'Read the signs, interpret their meaning, and find what lies beyond.',
+  'Signs and Visions',
   'All Signs (4)', 'Active', 'Resolved', 'Anchors',
   'Sign #10', 'Sign #11', 'Sign #13', 'Sign #9', 'Elemental', 'Conditional',
   'Shell stability:', 'Anchor strength:', 'Power range:', 'Delay:',
