@@ -10,6 +10,9 @@ import { HIRE } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
 import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
 import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
+
+/** Town spots that are shop doors: with walk-in shops (onDoor) E goes inside instead of opening the panel here. */
+const DOORS = new Set(['exchange', 'scribe', 'inn']);
 import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createVeil } from '../ui/loading.js';
 
@@ -74,7 +77,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [] }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -141,7 +144,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   function renderText() {
     objective.textContent = i18n.t(state.ready ? (state.resume ? 'town.objective.resume' : quest ? quest.objective : 'town.objective') : 'town.loading');
-    promptText.textContent = spotNear && !talkNpc ? i18n.t('spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
+    promptText.textContent = spotNear && !talkNpc ? i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
     if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
     if (quest) {
       meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
@@ -407,6 +410,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if ((quest && quest.talk) || folkTalk || spotPanel) return Promise.resolve(false); // the talk's own buttons answer
     if (spotNear && !talkNpc) {
       if (spotNear.id === 'mirror') { if (onMirror) onMirror(); return Promise.resolve(false); }
+      if (spotNear.id === 'wheel') { if (onWheel) onWheel(); return Promise.resolve(false); }
+      if (onDoor && DOORS.has(spotNear.id) && onDoor(spotNear.id)) return Promise.resolve(false); // walk into the shop (scenes/town-shops.js)
       spotPanel = spotNear.id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled])'); if (b && b.focus) b.focus(); return Promise.resolve(false);
     }
     if (talkNpc && talkKind === 'folk') { folkTalk = { npc: talkNpc, view: talkNpc === 'shrinekeeper' ? 'guide' : 'card', result: null, page: 0 }; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled])'); if (b && b.focus) b.focus(); return Promise.resolve(false); }
@@ -498,6 +503,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     begin, update, reenter,
     /** Esc: closes the open talk panel. O: expands the newest minimised panel. */
     closePanel: () => closeOpen(), expandPill: () => pills.expandLatest(), get pills() { return pills; }, minimise,
+    /** The shop counter (scenes/town-shops.js): opens the panel the door used to open. */
+    openSpot(id) { if (spotPanel || folkTalk) closeOpen(); remote = true; spotPanel = id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled]):not(.ftf-panel-min)'); if (b && b.focus) b.focus(); },
     get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
