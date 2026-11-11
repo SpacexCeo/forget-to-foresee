@@ -537,6 +537,7 @@ export default {
   'simple.why.heir': 'Forget everything for an Heir, or keep my memory. This one is yours alone to decide.',
   // shard NFT cards and the mint toast (ui/world-hud/shard-card.js)
   'shard.nft.heading': "Memory shards on NEAR",
+  'shard.nft.headingLocal': "Memory shards",
   'shard.nft.title': "Shard #{id} · {kind}",
   'shard.nft.token': "Token",
   'shard.nft.owner': "Owner",

@@ -535,6 +535,7 @@ export default {
   'simple.why.heir': '为继承者忘掉一切，还是保留我的记忆。这只能由你决定。',
   // shard NFT cards and the mint toast (ui/world-hud/shard-card.js)
   'shard.nft.heading': "NEAR 上的记忆碎片",
+  'shard.nft.headingLocal': "记忆碎片",
   'shard.nft.title': "碎片 #{id} · {kind}",
   'shard.nft.token': "代币",
   'shard.nft.owner': "持有者",

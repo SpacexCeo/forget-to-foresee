@@ -97,8 +97,10 @@ export function renderShardSection({ cards, judgeOnly }, { t, doc = document } =
   if (!cards.length && !judgeOnly) return null;
   ensureShardCardStyle(doc);
   if (!cards.length) return el(doc, 'p', { class: 'sh-note', text: t('shard.nft.judgeOnly') });
-  return el(doc, 'section', { class: 'sh-section', 'aria-label': t('shard.nft.heading') },
-    el(doc, 'h3', { text: t('shard.nft.heading') }),
+  // "on NEAR" only when at least one card is a real token
+  const heading = t(cards.some(({ card }) => card.state === 'minted') ? 'shard.nft.heading' : 'shard.nft.headingLocal');
+  return el(doc, 'section', { class: 'sh-section', 'aria-label': heading },
+    el(doc, 'h3', { text: heading }),
     cards.map(({ card }) => renderShardCard(card, { t, doc })));
 }
 

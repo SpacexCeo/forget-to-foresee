@@ -199,3 +199,16 @@ test('preview card DOM: the word Unminted, no token id, no link, no verified mar
   assert.ok(!all.some((n) => n.tag === 'a'), 'no explorer link');
   assert.doesNotMatch(text, /nearblocks|NEP-171|Minted on NEAR|identical to the game/);
 });
+
+test('the shard section says "on NEAR" only when a real token is in it', async () => {
+  const { renderShardSection } = await import('../../src/ui/world-hud/shard-card.js');
+  const mk = (tag) => ({ tag, attrs: {}, kids: [], className: '', textContent: '', style: { setProperty() {} }, classList: { add() {} },
+    setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {}, append(...c) { this.kids.push(...c); } });
+  const doc = { createElement: (tag) => Object.assign(mk(tag), { dataset: {} }), head: { appendChild() {} }, querySelector: () => null };
+  const en = createPlayI18n('en'); const t = (k, a) => renderMsg(en, k, a);
+  const none = await watcher(fakeRpc([]));
+  const prev = renderShardSection(shardCards({ status: none.status, obs: PLAY.final }), { t, doc });
+  assert.equal(prev.attrs['aria-label'], 'Memory shards');
+  const real = await watcher(fakeRpc(ONCHAIN));
+  assert.equal(renderShardSection(shardCards({ status: real.status, obs: PLAY.final }), { t, doc }).attrs['aria-label'], 'Memory shards on NEAR');
+});

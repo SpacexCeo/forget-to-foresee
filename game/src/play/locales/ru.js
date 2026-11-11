@@ -535,6 +535,7 @@ export default {
   'simple.why.heir': 'Забыть всё ради Наследника или сохранить мою память. Это решаете только вы.',
   // shard NFT cards and the mint toast (ui/world-hud/shard-card.js)
   'shard.nft.heading': "Осколки памяти в NEAR",
+  'shard.nft.headingLocal': "Осколки памяти",
   'shard.nft.title': "Осколок #{id} · {kind}",
   'shard.nft.token': "Токен",
   'shard.nft.owner': "Владелец",

@@ -536,6 +536,7 @@ export default {
   'simple.why.heir': 'Dimenticare tutto per un Erede, o conservare la mia memoria. Questo lo decidi solo tu.',
   // shard NFT cards and the mint toast (ui/world-hud/shard-card.js)
   'shard.nft.heading': "Frammenti di memoria su NEAR",
+  'shard.nft.headingLocal': "Frammenti di memoria",
   'shard.nft.title': "Frammento #{id} · {kind}",
   'shard.nft.token': "Gettone",
   'shard.nft.owner': "Proprietario",

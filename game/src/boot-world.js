@@ -223,6 +223,7 @@ function startSeason() {
     play = await startPlay({ scene, camera, renderer, world3d, rig, player, avatar, lookdev, uiRoot, ctx, options: {
       seedHex: /^[0-9a-f]{32}$/.test(seedParam) ? seedParam : undefined,
       resetHints: judge || params.get('hints') === 'reset',
+      judge, // ?demo=judge: the shard card opens by itself after the trial-6 auction (hackathon spec P1-C)
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
       hub: params.get('mode') !== 'walk', // ?mode=walk: walking play without the Shell hub
       onSettings: () => controls.open(),

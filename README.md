@@ -44,7 +44,7 @@ Everything runs in the browser from the published build (desktop Chrome, Edge or
 | 4 | Press **T** twice (the second press confirms "End the tick anyway?") | **Trial 2 of 17**, silk 56. Quest: **Watch trial 3 come true** · *Keep pressing T. The reveal is checked against the seal.* |
 | 5 | Press **T** twice more, twice (to **Trial 4 of 17**) | Silk **72** (the stake came back: the Gift fell on Shell II). Log: ***Tick 3 · Shell II: Gift, power 20. Leaf #0 checked against the root ✓***. Hint: *It came true, and the seal matches: this future was written before we arrived.* Press **V** → **Resolved** tab: **Sign #1 · Revealed · Verified ✓ · Came true: Gift of 20 at Shell II, trial 3.** Quest: **The Price of Memory** · *Press M. Forget a memory: Iris sees the next signs early.* |
 | 6 | Press **M**, click **Forget it for a vision** on any memory (heavier memories show more signs); the panel asks *Forget “…” forever?* with what changes for Iris, what she gains and that it cannot be undone; click **Forget this memory** (**Keep it** or Esc cancels) | Signs & Visions opens with one to four new cards marked *vision*; log: *Vision: Iris sees N future signs before anyone else.* and *Shard "…" is up for auction.* Quest: **Decide your fragment at the Scroll** · *Give it for a share, or hold it: 40 silk at trial 13.* (**G** walks there; **E** gives it.) |
-| 7 | Press **T** (twice each) until the trial-6 auction closes | A toast in the upper middle of the screen. If the forgotten memory was the **call** (as in the recorded judge playthrough), it reads **Minted on NEAR testnet** · *Shard #7 · call → Frost for 13 silk* with the token id and **View on nearblocks**. With any other memory, once a clan buys the shard, it reads **Unminted shard preview**, with no token or link; an unsold shard shows the same preview in Memories. **Open card** opens Memories with the full card (biography, ink ring; on the real token also owner, the bound leaf #3 and explorer links). |
+| 7 | Press **T** (twice each) until the trial-6 auction closes | A toast in the upper middle of the screen. If the forgotten memory was the **call** (as in the recorded judge playthrough), it reads **Minted on NEAR testnet** · *Shard #7 · call → Frost for 13 silk* with the token id and **View on nearblocks**. With any other memory, once a clan buys the shard, it reads **Unminted shard preview**, with no token or link; an unsold shard shows the same preview in Memories. On the judge link Memories opens by itself on the card a moment later (elsewhere, **Open card** does it): the full card (biography, ink ring; on the real token also owner, the bound leaf #3 and explorer links). |
 
 That is the loop: read a sign → stake silk on it → the trial ends → the event is revealed with its Merkle proof against the root committed before you arrived. Then the Price of Memory: forget a memory, see the next signs early. From here: **V** shows every sign (Novice: one plain line; Pro: the four slots with confidence), at an anchor zone **E → Enter Shell** takes you inside to the glass where the Guest draws the sign and you can **Ask the Guests** whether a stroke means a meaning; **H** lists every key; **L** cycles the UI language (EN → UA → RU → IT → 中文); **Settings** switches Novice/Pro and the five UI languages.
 
@@ -70,13 +70,13 @@ node examples/agent.mjs --time-scale 1000    # second terminal
 ```
 **See:** `session s-… (rules v3, timeScale 1000)`, then `walk to scroll`, `tick 1: contribute fragment`, `tick 1: anchor Shell 1 @ tick 2`, `tick N: end tick` … and a JSON summary with `"rejected": 0` and `"firstProofVerified": true`. The outcome varies by season (`gift`, `weapon`, `lost`, or `gone` when the Shells leave before the vote; then `"voted": false`).
 
-**Third path, the tests (about 1 minute):** `cd game && npm test` → `pass 667`, `fail 0`; `cd server && npm test` → `pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`; `cd contracts/memory-shard && cargo test --lib` → `test result: ok. 21 passed`.
+**Third path, the tests (about 1 minute):** `cd game && npm test` → `pass 668`, `fail 0`; `cd server && npm test` → `pass 28`; `cd contracts/season-commit && cargo test --lib` → `test result: ok. 56 passed`; `cd contracts/memory-shard && cargo test --lib` → `test result: ok. 21 passed`.
 
 ---
 
 ## What works today
 
-Test counts measured on 11.11.2026 (Node 22): `cd game && npm ci && npm test` → 667 passed, 0 failed; `cd server && npm test` → 28 passed. The first fresh-clone measurement (08.11) and its raw output: `docs/handoff/agent-reports/submission.md`.
+Test counts measured on 11.11.2026 (Node 22): `cd game && npm ci && npm test` → 668 passed, 0 failed; `cd server && npm test` → 28 passed. The first fresh-clone measurement (08.11) and its raw output: `docs/handoff/agent-reports/submission.md`.
 
 | Part | Status | Where |
 |---|---|---|
@@ -132,13 +132,13 @@ Requires **Node.js 20+** (checked with 22). Rust is only needed for the contract
 ```bash
 cd game
 npm ci
-npm test            # 667 tests, ~35 s
+npm test            # 668 tests, ~35 s
 npm run dev         # http://localhost:5173/        (judge path: /?demo=judge&mode=walk; skip the lobby: /?play=direct)
 npm run build       # game/dist (~295 MB, mostly models); FTF_BASE=/forget-to-foresee/ for the Pages sub-path
 ```
-**See:** `tests 667` / `pass 667` / `fail 0` (Node 22+ prefixes them with `ℹ`, older Node with `#`); `✓ built in …s`.
+**See:** `tests 667` / `pass 668` / `fail 0` (Node 22+ prefixes them with `ℹ`, older Node with `#`); `✓ built in …s`.
 
-What the 667 tests cover (the breakdown below is the 260 of the first measurement; 256 were added on 08.11–09.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers, the shard NFT cards, the forget confirmation and QA regressions, and 151 on 10.11–11.11 for the townsfolk, the atmosphere and the hackathon spec: tutorial, Shell hall, read-backs, shard previews, hitch-proof stairs, the town quest):
+What the 668 tests cover (the breakdown below is the 260 of the first measurement; 256 were added on 08.11–09.11 for the Shell hub, the uk/it/zh locales, mobile play, audio/VFX cues, locomotion and camera, the island map, the NEAR read-only client, the tutorial and first loop, the living agents, the motion system, the independent verifiers, the shard NFT cards, the forget confirmation and QA regressions, and 152 on 10.11–11.11 for the townsfolk, the atmosphere and the hackathon spec: tutorial, Shell hall, read-backs, shard previews, hitch-proof stairs, the town quest):
 - 60 parity seasons replayed from the 2D prototype (20 seeds × 3 strategies), 8 edge cases and tampered proofs, 7 rules-v2 tests, 18 rules-v3 tests (each proposal and each of the six review findings), 3 Monte Carlo harness pins (`npm run sim -- --quick`; analysis in [docs/math/economy-report.md](docs/math/economy-report.md)), 2 contract-vector checks.
 - 3D client logic (no WebGL needed): 15 swept-collision tests (no tunneling at 15 m/s or in a 20 m step, same end point at 10 and 144 FPS), 9 streaming (priority, load plan, LRU), 5 smooth motion, 7 world layout, 8 play layer, 6 input, 7 hints, 2 asset budgets (KTX2-only textures, meshopt, phone variants), 6 audio, 14 VFX.
 - UI: 16 i18n (ICU subset, en/ru parity, no raw keys, the engine-text adapter over 120 scripted seasons), 13 UI logic (flow order, recipe hash, tournament idempotency), 6 accessibility (contrast, colour-independent tells), 48 world HUD (status, signs, log, actions, shared, view model from observations).
