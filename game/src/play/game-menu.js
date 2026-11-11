@@ -1,6 +1,6 @@
-// The game menu (owner, 11.11; docs/ui-style-and-dialogue.md): one bright, tabbed panel for Profile, Achievements,
-// NFTs, Inventory (with the wheel), Agents and Log / Stats. White frosted glass, rarity colour frames, big rounded
-// tabs, 40 px+ targets; reduced motion = static (no spin animation, no confetti, no pop). Honest by construction: the
+// The game menu (owner, 11.11; docs/ui-style-and-dialogue.md): one tabbed panel for Profile, Achievements, NFTs,
+// Inventory (with the wheel), Agents and Log / Stats. Dark green-black glass to the owner's Profile reference
+// (docs/art/ui/profile-owner-ref.jpg, 12.11), thin borders, gold labels, rarity colour frames, 40 px+ targets; reduced motion = static (no spin animation, no confetti, no pop). Honest by construction: the
 // NFTs tab lists only what a testnet read confirms right now (play/profile.js readOnChain), everything else is
 // labelled local. Items come from the items manifest (game/public/assets/items/manifest.json).
 import { readOnChain } from './profile.js';
@@ -10,6 +10,7 @@ import { achievementsFor } from '../game/achievements.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
 import { loadHolder } from '../net/holder.js';
 import { holderSection } from './holder-panel.js';
+import { renderProfileView } from './profile-view.js';
 import { cue } from '../audio/town-audio.js';
 
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
@@ -22,57 +23,58 @@ export function loadManifest(base = (import.meta.env && import.meta.env.BASE_URL
 }
 
 const CSS = `
-.gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(18, 22, 40, .45); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #1d2340; }
-.gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 28px; overflow: hidden;
-  background: rgba(255, 255, 255, .82); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); box-shadow: 0 24px 60px rgba(20, 24, 60, .35), inset 0 0 0 1px rgba(255,255,255,.7); }
-@supports not (backdrop-filter: blur(1px)) { .gm-panel { background: #f7f8fc; } }
+.gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e9e6dc; }
+.gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 20px; overflow: hidden;
+  background: rgba(13, 19, 18, .95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }
+@supports not (backdrop-filter: blur(1px)) { .gm-panel { background: #0f1615; } }
 .gm-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 8px; }
-.gm-head h2 { margin: 0; flex: 1; font: 800 22px/1.1 system-ui, sans-serif; background: linear-gradient(90deg, #6d5efc, #e0479e, #f2a516); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.gm-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: #eef0f8; font: 700 20px/1 system-ui; color: #4a5072; cursor: pointer; }
+.gm-head h2 { margin: 0; flex: 1; font: 600 19px/1.1 "Cormorant Garamond", Georgia, serif; letter-spacing: .08em; text-transform: uppercase; color: #e9e6dc; }
+.gm-head h2::before { content: '✧'; color: #d9b26a; margin-right: 10px; }
+.gm-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(233, 230, 220, .08); font: 500 20px/1 system-ui; color: #e9e6dc; cursor: pointer; }
 .gm-tabs { display: flex; gap: 8px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
-.gm-tab { flex: 0 0 auto; min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 0; background: #eef0f8; color: #3a4166; font: 700 14px/1 system-ui; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform .12s ease, background .12s ease; }
+.gm-tab { flex: 0 0 auto; min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .14); background: transparent; color: rgba(233, 230, 220, .7); font: 600 14px/1 system-ui; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform .12s ease, background .12s ease; }
 .gm-tab:hover { transform: translateY(-2px); } .gm-tab:active { transform: scale(.96); }
-.gm-tab[aria-selected="true"] { background: linear-gradient(135deg, #6d5efc, #9b5cf6); color: #fff; box-shadow: 0 6px 16px rgba(109, 94, 252, .35); }
+.gm-tab[aria-selected="true"] { background: rgba(217, 178, 106, .14); border-color: rgba(217, 178, 106, .7); color: #d9b26a; }
 .gm-body { overflow-y: auto; padding: 4px 18px 18px; }
-.gm-note { color: #6a7090; font-size: 13px; margin: 6px 0; }
+.gm-note { color: rgba(233, 230, 220, .62); font-size: 13px; margin: 6px 0; }
 .gm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
-.gm-card { position: relative; border-radius: 18px; padding: 10px 8px 8px; text-align: center; background: linear-gradient(160deg, #fff, var(--rb, #eef0f6)); box-shadow: 0 4px 12px rgba(30, 36, 80, .1), inset 0 0 0 2px var(--rc, #d3d7e3); overflow: hidden; }
+.gm-card { position: relative; border-radius: 18px; padding: 10px 8px 8px; text-align: center; background: linear-gradient(160deg, #18211f, var(--rb, #131c1b)); box-shadow: 0 4px 12px rgba(0, 0, 0, .3), inset 0 0 0 1px var(--rc, rgba(214, 226, 214, .18)); overflow: hidden; }
 .gm-card img { width: 72px; height: 72px; object-fit: contain; display: block; margin: 0 auto 4px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
-.gm-card b { display: block; font: 700 13px/1.2 system-ui; } .gm-card small { display: block; color: #6a7090; font-size: 11px; }
-.gm-count { position: absolute; top: 6px; right: 8px; min-width: 22px; padding: 2px 6px; border-radius: 11px; background: #1d2340; color: #fff; font: 700 11px/1.4 system-ui; }
-.gm-card[data-rarity="rare"]::after, .gm-card[data-rarity="epic"]::after, .gm-card[data-rarity="legendary"]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.65) 50%, transparent 60%); transform: translateX(-120%); animation: gm-shine 3.2s ease-in-out infinite; }
+.gm-card b { display: block; font: 700 13px/1.2 system-ui; } .gm-card small { display: block; color: rgba(233, 230, 220, .62); font-size: 11px; }
+.gm-count { position: absolute; top: 6px; right: 8px; min-width: 22px; padding: 2px 6px; border-radius: 11px; background: #0b100f; color: #e9e6dc; font: 700 11px/1.4 system-ui; }
+.gm-card[data-rarity="rare"]::after, .gm-card[data-rarity="epic"]::after, .gm-card[data-rarity="legendary"]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.22) 50%, transparent 60%); transform: translateX(-120%); animation: gm-shine 3.2s ease-in-out infinite; }
 @keyframes gm-shine { 60%, 100% { transform: translateX(120%); } }
 .gm-card.gm-new { animation: gm-pop .5s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes gm-pop { from { transform: scale(.6); } to { transform: scale(1); } }
-.gm-btn { min-height: 44px; padding: 10px 20px; border-radius: 22px; border: 0; cursor: pointer; font: 800 15px/1 system-ui; color: #fff; background: linear-gradient(135deg, #ff8a3d, #f2a516); box-shadow: 0 6px 16px rgba(242, 165, 22, .35); transition: transform .12s ease; }
+.gm-btn { min-height: 44px; padding: 10px 20px; border-radius: 10px; border: 0; cursor: pointer; font: 700 15px/1 system-ui; color: #14201c; background: linear-gradient(135deg, #e6c27e, #c99a48); box-shadow: 0 6px 16px rgba(217, 178, 106, .22); transition: transform .12s ease; }
 .gm-btn:hover { transform: translateY(-2px); } .gm-btn:active { transform: scale(.96); } .gm-btn[disabled] { opacity: .45; cursor: default; transform: none; }
-.gm-btn.gm-ghost { color: #3a4166; background: #eef0f8; box-shadow: none; }
+.gm-btn.gm-ghost { color: #e9e6dc; background: transparent; border: 1px solid rgba(214, 226, 214, .2); box-shadow: none; }
 .gm-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
 .gm-prof { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; }
 .gm-prof img { width: 150px; border-radius: 16px; box-shadow: 0 8px 22px rgba(30, 36, 80, .25); }
 .gm-prof img.gm-ring-frame { outline: 4px solid #3fd0c9; outline-offset: 3px; box-shadow: 0 0 0 9px rgba(63, 208, 201, .25), 0 8px 22px rgba(30, 36, 80, .25); }
-.gm-holder { margin-top: 18px; } .gm-holder input { flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 10px; border: 1px solid #c9cde0; font: inherit; }
+.gm-holder { margin-top: 18px; } .gm-holder input { flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .2); background: #0b100f; color: #e9e6dc; font: inherit; }
 .gm-holder .gm-row { flex-wrap: wrap; gap: 8px; } .gm-holder-list { margin: 6px 0; padding-left: 18px; }
-.gm-ring { --p: 0; width: 64px; height: 64px; border-radius: 50%; background: conic-gradient(var(--c, #6d5efc) calc(var(--p) * 1turn), #e6e8f2 0); display: grid; place-items: center; }
-.gm-ring > span { width: 50px; height: 50px; border-radius: 50%; background: #fff; display: grid; place-items: center; font: 800 16px/1 system-ui; }
-.gm-medal { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 10px 6px; border-radius: 18px; background: #f6f7fc; }
-.gm-medal[data-done="true"] { background: linear-gradient(160deg, #fff7e0, #ffe7a8); }
-.gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #f0e9ff, #e3f7ff, #fff1f8); box-shadow: 0 6px 18px rgba(30, 36, 80, .15); padding: 10px; }
+.gm-ring { --p: 0; width: 64px; height: 64px; border-radius: 50%; background: conic-gradient(var(--c, #2fc4b2) calc(var(--p) * 1turn), rgba(233, 230, 220, .12) 0); display: grid; place-items: center; }
+.gm-ring > span { width: 50px; height: 50px; border-radius: 50%; background: #131c1b; display: grid; place-items: center; font: 600 16px/1 "Cormorant Garamond", Georgia, serif; }
+.gm-medal { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 10px 6px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .1); }
+.gm-medal[data-done="true"] { background: linear-gradient(160deg, #2a2716, #1a211b); border-color: rgba(217, 178, 106, .4); }
+.gm-nft { position: relative; border-radius: 16px; overflow: hidden; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 6px 18px rgba(0, 0, 0, .3); padding: 10px; }
 .gm-nft img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; }
-.gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #1d2340; color: #fff; text-decoration: none; }
-.gm-chip.gm-near { background: linear-gradient(135deg, #00c08b, #1a9cf0); }
-.gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 18px; background: #f6f7fc; margin-bottom: 10px; }
+.gm-chip { display: inline-block; margin: 4px 4px 0 0; padding: 3px 9px; border-radius: 10px; font: 700 11px/1.5 system-ui; background: #0b100f; color: #e9e6dc; border: 1px solid rgba(214, 226, 214, .16); text-decoration: none; }
+.gm-chip.gm-near { background: transparent; border-color: rgba(47, 196, 178, .5); color: #2fc4b2; }
+.gm-agent { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .1); margin-bottom: 10px; }
 .gm-agent b { font-size: 15px; }
 .gm-wheelwrap { display: grid; grid-template-columns: minmax(240px, 340px) 1fr; gap: 18px; align-items: start; }
 .gm-wheel { position: relative; width: 100%; aspect-ratio: 1; }
 .gm-wheel svg { width: 100%; height: 100%; }
 .gm-wheel .gm-spinner { transform-origin: 50% 50%; transition: transform 4.2s cubic-bezier(.12, .8, .18, 1); }
 .gm-pointer { position: absolute; top: -6px; left: 50%; width: 0; height: 0; transform: translateX(-50%); border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 26px solid #f2a516; filter: drop-shadow(0 3px 4px rgba(0,0,0,.3)); }
-.gm-odds { width: 100%; border-collapse: collapse; font-size: 13px; } .gm-odds td { padding: 3px 6px; border-bottom: 1px solid #eceef6; } .gm-odds td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.gm-odds { width: 100%; border-collapse: collapse; font-size: 13px; } .gm-odds td { padding: 3px 6px; border-bottom: 1px solid rgba(214, 226, 214, .1); } .gm-odds td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .gm-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .gm-confetti i { position: absolute; top: 40%; left: 50%; width: 8px; height: 12px; border-radius: 2px; animation: gm-burst 1.1s ease-out forwards; }
 @keyframes gm-burst { to { transform: translate(var(--dx), var(--dy)) rotate(540deg); opacity: 0; } }
-.gm-prize { padding: 12px 14px; border-radius: 16px; background: linear-gradient(135deg, #fff7e0, #ffe0f0); font-weight: 700; }
+.gm-prize { padding: 12px 14px; border-radius: 16px; background: linear-gradient(135deg, #2a2716, #1a211b); border: 1px solid rgba(217, 178, 106, .4); font-weight: 600; }
 @media (max-width: 640px) { .gm-prof, .gm-wheelwrap { grid-template-columns: 1fr; } .gm-prof img { width: 120px; } }
 @media (prefers-reduced-motion: reduce) { .gm-wheel .gm-spinner { transition: none; } .gm-card::after, .gm-card.gm-new, .gm-confetti i { animation: none !important; } .gm-tab, .gm-btn { transition: none; } }
 html[data-motion="reduce"] .gm-wheel .gm-spinner { transition: none; } html[data-motion="reduce"] .gm-card::after, html[data-motion="reduce"] .gm-confetti i { animation: none !important; }
@@ -83,7 +85,7 @@ const svgEl = (doc, tag) => (doc.createElementNS ? doc.createElementNS('http://w
 const reduced = (doc) => { try { return doc.documentElement.dataset.motion === 'reduce' || (doc.defaultView && doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } };
 
 /** A polyline sparkline in an inline SVG. */
-function spark(doc, values, w = 220, h = 44, color = '#6d5efc') {
+function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
   const svg = svgEl(doc, 'svg');
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`); svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('aria-hidden', 'true');
   if (values && values.length > 1) {
@@ -126,28 +128,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
 
   const views = {
     profile() {
-      const lv = ledger.level, st = ledger.stats;
-      const top = el('div', 'gm-prof');
       const holder = loadHolder(storage); // holder access (net/holder.js): cosmetic perks from a read-only NFT check
-      const img = el('img'); img.src = base + 'assets/cards/' + (eliseMinted || (holder && holder.perks.includes('elise')) ? 'elise' : 'iris') + '.webp'; img.alt = '';
-      if (holder && holder.perks.includes('ring')) img.className = 'gm-ring-frame';
-      const info = el('div');
-      const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(lv.into / lv.need)); ring.append(el('span', null, String(lv.level)));
-      const r = el('div', 'gm-row'); r.append(ring, el('div', null, t('profile.heading', { level: lv.level, title: t('profile.title.' + lv.title) })));
-      info.append(el('h3', null, nickname || t('menu.traveller')), r,
-        ...(holder && holder.title ? [el('span', 'gm-chip gm-near', t('holder.title.' + holder.title))] : []), el('p', 'gm-note', t('profile.xp', { into: lv.into, need: lv.need })), el('p', 'gm-note', t('menu.localProfile')));
-      top.append(img, info);
-      const g = el('div', 'gm-grid');
-      for (const [k, v] of [['signsRead', st.signsRead], ['trialsVerified', st.trialsVerified], ['memoriesForgotten', st.memoriesForgotten], ['agentsHired', st.agentsHired]]) {
-        const c = el('div', 'gm-card'); c.append(el('b', null, String(v)), el('small', null, t('profile.stat.' + k))); g.append(c);
-      }
-      const out = [top, el('h3', null, t('profile.stats')), g];
-      if (wheel.titles.length) out.push(el('p', 'gm-note', t('menu.titles', { list: wheel.titles.map((x) => t('wheel.title.' + x)).join(', ') })));
-      if (exportKey) {
-        const kb = btn(t('profile.exportKey'), async (b) => { try { await navigator.clipboard.writeText(exportKey()); b.textContent = t('profile.exportKey.done'); } catch { b.textContent = t('profile.exportKey.failed'); } }, 'gm-btn gm-ghost');
-        out.push(el('p', 'gm-note', t('profile.exportKey.note')), kb);
-      }
-      return out;
+      return renderProfileView({ doc, t, ledger, base, nickname, elise: eliseMinted || !!(holder && holder.perks.includes('elise')), holder, titles: wheel.titles, exportKey });
     },
     achievements() {
       return items.then((list) => {
@@ -155,7 +137,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const g = el('div', 'gm-grid');
         for (const a of achievementsFor(st)) {
           const m = el('div', 'gm-medal'); m.dataset.done = String(a.done);
-          const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(a.progress)); ring.style.setProperty('--c', a.done ? '#f2a516' : '#6d5efc');
+          const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(a.progress)); ring.style.setProperty('--c', a.done ? '#d9b26a' : '#2fc4b2');
           ring.append(el('span', null, a.done ? '★' : Math.round(a.progress * 100) + '%'));
           m.append(ring, el('b', null, t('ach.' + a.id)), el('small', 'gm-note', t('ach.' + a.id + '.desc', { goal: a.goal })));
           g.append(m);
@@ -288,7 +270,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       const lines = el('div');
       for (const l of ledger.log().slice(0, 40)) lines.append(el('p', 'gm-note', t('log.line', { time: new Date(l.at).toLocaleTimeString(), name: t('folk.name.' + l.npc), echo: t('exch.echo.' + l.echo), side: t('log.side.' + l.side), size: l.size, entry: (l.entry / 100).toFixed(2), exit: (l.exit / 100).toFixed(2), result: (l.result >= 0 ? '+' : '') + (l.result / 100).toFixed(2), reason: t('log.reason.' + l.reason) })));
       if (!lines.childNodes.length) lines.append(el('p', 'gm-note', t('open.none')));
-      return [g, el('h3', null, t('profile.equity')), spark(doc, ledger.equity, 320, 60, '#f2a516'), el('h3', null, t('log.heading')), lines];
+      return [g, el('h3', null, t('profile.equity')), spark(doc, ledger.equity, 320, 60, '#d9b26a'), el('h3', null, t('log.heading')), lines];
     },
   };
   const fresh = new Set();

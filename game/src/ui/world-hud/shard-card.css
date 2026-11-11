@@ -114,3 +114,11 @@ html[data-motion="reduce"] .sh-ink svg circle, html[data-motion="reduce"] .sh-in
 /* Unminted preview (P1-C): dashed frame, muted kicker, so it never reads as a token */
 .sh-card--preview { border-style: dashed; }
 .sh-card--preview .sh-kicker, .sh-toast--preview .sh-toast__title { color: var(--sh-muted); }
+/* The shard's history (feature 8): a thin gold rail with one dot per step */
+.sh-timeline { list-style: none; margin: 4px 0 8px; padding: 0 0 0 12px; border-left: 1px solid var(--sh-dim, rgba(236,230,214,.25)); font-size: .78rem; line-height: 1.35; }
+.sh-tl { position: relative; display: grid; grid-template-columns: 4.6em 1fr; gap: 6px; padding: 2px 0; }
+.sh-tl::before { content: ''; position: absolute; left: -16px; top: .55em; width: 7px; height: 7px; border-radius: 50%; background: var(--sh-gold, #e9b44c); }
+.sh-tl--burned::before, .sh-tl--unminted::before { background: transparent; border: 1px solid var(--sh-muted); }
+.sh-tl__when { color: var(--sh-muted); font-variant-numeric: tabular-nums; }
+.sh-tl__what { color: var(--sh-text); }
+a.sh-tl__what { color: var(--sh-gold-text, #e9b44c); text-decoration: none; border-bottom: 1px dotted var(--sh-gold, #e9b44c); }

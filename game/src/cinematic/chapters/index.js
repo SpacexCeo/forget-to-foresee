@@ -121,6 +121,8 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
   const api = {
     director, player: filmPlayer, chronicle, overlay,
     get playing() { return filmPlayer.playing; },
+    /** Films are on for this page (off: the narrator's subtitle lines stand in, play/narrator.js). */
+    get enabled() { return enabled; },
     get pending() { return state.pending; },
     /** Per frame after the camera rig (the film overrides the camera here). */
     update(dt) {
