@@ -21,6 +21,8 @@ import * as THREE from 'three';
 import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor, governorFloor } from './quality.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { SkyDome, TIME_PRESETS, LOCATION_LOOKS, lookFor } from './sky.js';
+/** Seconds between re-bakes of the sky's ambient light while the day cycle moves the sun. */
+const LIVE_ENV_SECONDS = 2.5;
 import { CloudSea } from './clouds.js';
 import { PostStack } from './post.js';
 import { Foliage } from './foliage.js';
@@ -149,8 +151,33 @@ export class LookDev {
    * Sky LUT, sun, fill, fog, clouds, light shafts, exposure and IBL from a time-of-day preset.
    * Everything that depends on the sun is derived from the same LUT read-back so it all agrees.
    */
-  applyAtmosphere(P) {
-    const atm = this.sky.setAtmosphere(this.renderer, P);
+  /**
+   * The day cycle's keyframes (render/daycycle.js KEYS): reads each hour's sky statistics once (one LUT read-back per
+   * hour, cached), so the per-frame path never reads the GPU. Called when the town is set up, under the loading
+   * screen. Returns {hour: stats}.
+   */
+  prepareCycle(location, hours) {
+    const out = {};
+    for (const h of hours) { this.sky.setAtmosphere(this.renderer, lookFor(location, h)); out[h] = this.sky.lastStats; }
+    this.cycleStats = out;
+    this.applyAtmosphere(this.look); // back to the hour on show
+    return out;
+  }
+
+  /**
+   * One frame of the day cycle: the blended look with sky statistics blended between the same two keyframes. The sun,
+   * its colour and strength, fog, exposure, lamps and windows follow every frame; the sky's ambient light (a PMREM
+   * re-bake) every LIVE_ENV_SECONDS.
+   */
+  applyLookLive(look, stats, now = 0) {
+    this.look = look; this.preset = look.name;
+    const rebake = !this.liveEnvAt || now - this.liveEnvAt > LIVE_ENV_SECONDS;
+    if (rebake) this.liveEnvAt = now;
+    this.applyAtmosphere(look, { stats, rebake });
+  }
+
+  applyAtmosphere(P, live = null) {
+    const atm = live ? this.sky.setAtmosphereLive(this.renderer, P, live.stats) : this.sky.setAtmosphere(this.renderer, P);
     this.atm = atm;
     this.sunDir.copy(atm.sun);
     this.shadows.setDirection(this.sunDir);
@@ -165,6 +192,7 @@ export class LookDev {
     this.motes.setSun(this.sunDir, atm.sunColor);
     this.post.setSunColor(atm.sunColor);
     for (const l of this.lanternLights) l.color.setHex(0xffa64d);
+    if (live) { this.applyWeather(live.rebake); if (this.tintState.amount > 0) this.applyTint(this.tintState.hex, this.tintState.amount); return; }
     if (this.envHdr && this.envHdrPreset !== this.envKey()) { this.envHdr.dispose(); this.envHdr = null; }
     this.applyWeather(true);
     this.loadEnvHdr(P);

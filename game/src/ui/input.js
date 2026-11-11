@@ -69,7 +69,7 @@ export function mountRunToggle(input, doc = globalThis.document) {
 
 const WORLD_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'KeyQ', 'KeyK', 'F3',
-  'KeyI', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'ShiftLeft', 'ShiftRight',
+  'KeyI', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'KeyO', 'ShiftLeft', 'ShiftRight',
   ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1)),
   'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract',

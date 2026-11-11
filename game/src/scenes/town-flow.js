@@ -9,6 +9,7 @@ import { talkTarget, TALK_LEAVE } from './town-quest.js';
 import { HIRE } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
 import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
+import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
 import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createVeil } from '../ui/loading.js';
 
@@ -34,6 +35,7 @@ const CSS = `
 html[data-motion="reduce"] .ftf-town-cover .boot-sub, .ftf-town-cover.is-plain .boot-sub { transform: none; transition: opacity .3s linear; }
 /* the town quest (town-quest.js): one talk panel, bottom centre */
 .ftf-quest-talk { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 13; width: min(560px, calc(100% - 32px));
+.ftf-quest-talk > h3 { padding-right: 44px; }
   box-sizing: border-box; padding: 14px 16px; border-radius: 12px; background: rgba(14, 18, 20, .92); border: 1px solid rgba(233, 180, 76, .45); color: #f3ead6; font: 16px/1.45 system-ui, sans-serif; pointer-events: auto; }
 .ftf-quest-talk[hidden], .ftf-quest-meta[hidden] { display: none; }
 .ftf-quest-talk h3 { margin: 0 0 4px; font: 600 13px/1.3 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #e9b44c; }
@@ -97,6 +99,42 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   profileBtn.addEventListener('click', () => { profileBtn.blur(); if (onProfile) onProfile(); });
   if (onProfile) root.append(profileBtn);
   let cover = null;
+  let remote = false; // the open panel came from a pill: walking away does not close it
+  // Collapsible panels (scenes/panel-pills.js): the chevron minimises the open panel into a pill at the right edge.
+  const minBtn = doc.createElement('button'); minBtn.type = 'button'; minBtn.className = 'ftf-panel-min'; minBtn.textContent = '⌄';
+  minBtn.addEventListener('click', () => { minBtn.blur(); minimise(); });
+  const setTalk = (...kids) => { minBtn.setAttribute('aria-label', i18n.t('panel.minimise')); minBtn.title = i18n.t('panel.minimise'); talkEl.replaceChildren(minBtn, ...kids); };
+  const openKey = () => (spotPanel ? pillKey('spot', spotPanel) : folkTalk ? pillKey('folk', folkTalk.npc) : quest && quest.talk ? pillKey('quest', quest.talk.npc) : null);
+  function pillLabel(key) {
+    const k = parsePillKey(key);
+    if (!k) return key;
+    if (k.kind === 'spot') return i18n.t('spot.' + k.id + '.title');
+    if (k.kind === 'quest') return i18n.t('quest.name.' + k.id);
+    const name = i18n.t('folk.name.' + k.id);
+    const h = ledger && ledger.hireOf ? ledger.hireOf(k.id) : null;
+    if (h && h.ready) return i18n.t('panel.pill.ready', { name });
+    if (h) return i18n.t('panel.pill.hire', { name, done: h.done, total: h.rounds, s: Math.max(1, Math.ceil((h.endsAt - Date.now()) / 1000)), u: (h.unrealised >= 0 ? '+' : '') + (h.unrealised / 100).toFixed(2) });
+    return name;
+  }
+  function closeOpen() {
+    if (spotPanel) closeSpot(); else if (folkTalk) closeFolk(); else if (quest && quest.talk) quest.close(); else return false;
+    return true;
+  }
+  function minimise() { const key = openKey(); if (!key) return false; closeOpen(); pills.add(key); return true; }
+  function expandPill(key) {
+    const k = parsePillKey(key);
+    if (!k) return;
+    if (spotPanel || folkTalk || (quest && quest.talk)) { const cur = openKey(); closeOpen(); if (cur && cur !== key) pills.add(cur); }
+    remote = true;
+    if (k.kind === 'spot') spotPanel = k.id;
+    else if (k.kind === 'folk') folkTalk = { npc: k.id, view: k.id === 'shrinekeeper' ? 'guide' : 'card', result: null, page: 0 };
+    else if (k.kind === 'quest' && quest) { remote = false; if (!quest.talkTo(k.id)) return; }
+    renderTalk(); renderVisibility();
+    const b = talkEl.querySelector('button:not([disabled]):not(.ftf-panel-min)'); if (b && b.focus) b.focus();
+  }
+  const pills = createPillStack({ doc, storage: ctx.storage || null, label: pillLabel, onExpand: expandPill, expandLabel: (text) => i18n.t('panel.expand', { name: text }) });
+  pills.setVisible(false);
+  let pillClock = 0;
 
   // phase: 'off' (not entered yet) -> 'town' -> 'transition' -> 'done'
   const state = { phase: 'off', ready: false, near: false, device: coarse ? 'touch' : 'keyboard', route: null, lift: 0, liftFrom: 0, focusK: 0, registering: null, startedAt: 0, arrivedAt: 0 };
@@ -121,9 +159,11 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     const talking = !!((quest && quest.talk) || folkTalk || spotPanel);
     prompt.hidden = !(on && state.ready && (talkNpc || spotNear || state.near) && !talking);
     talkEl.hidden = !(on && talking);
+    pills.setVisible(on);
   }
   /** The open talk: speaker, line, the sign when the line asks to read it, and the choices as buttons. */
   function renderTalk() {
+    { const k = openKey(); if (k && pills.has(k)) pills.remove(k); }
     if (spotPanel) { renderSpot(); return; }
     if (folkTalk) { renderFolk(); return; }
     const tk = quest && quest.talk;
@@ -145,7 +185,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     const close = doc.createElement('button'); close.type = 'button'; close.textContent = i18n.t('quest.close'); close.addEventListener('click', () => quest.close());
     row.append(close);
     kids.push(line, row);
-    talkEl.replaceChildren(...kids);
+    setTalk(...kids);
   }
   /** The hire talk: the townsperson's card, then the result card (docs/agent-rental-plan.md). */
   function renderFolk() {
@@ -164,7 +204,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       if (pg < last) row.append(b('quest.next', () => { folkTalk.page++; renderFolk(); }, true));
       row.append(b('quest.close', closeFolk, pg === last));
       kids.push(row);
-      talkEl.replaceChildren(...kids);
+      setTalk(...kids);
       return;
     }
     if (folkTalk.view === 'result' && !folkTalk.result) { talkEl.replaceChildren(); return; } // collecting: the result follows
@@ -207,7 +247,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     form.addEventListener('keydown', (e) => e.stopPropagation());
     if (folkTalk.reply) kids.push(el('p', 'ftf-local', '“' + folkTalk.asked + '”'), el('p', null, folkTalk.reply));
     kids.push(form, el('p', 'ftf-local', T('hire.local')), row);
-    talkEl.replaceChildren(...kids);
+    setTalk(...kids);
   }
   /** The scripted answer to a typed question: the player's language and English words both match. */
   function chatReply(npc, text) {
@@ -263,10 +303,10 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (id === 'inn' || id === 'exchange') kids.push(el('p', 'ftf-local', T('hire.local')));
     row.append(b('quest.close', closeSpot));
     kids.push(row);
-    talkEl.replaceChildren(...kids);
+    setTalk(...kids);
   }
-  function closeSpot() { spotPanel = null; renderText(); renderVisibility(); }
-  function closeFolk() { folkTalk = null; renderText(); renderVisibility(); }
+  function closeSpot() { spotPanel = null; remote = false; renderText(); renderVisibility(); }
+  function closeFolk() { folkTalk = null; remote = false; renderText(); renderVisibility(); }
   const unLedger = ledger && ledger.subscribe ? ledger.subscribe(() => { if (spotPanel === 'inn') renderSpot(); else if (folkTalk) renderFolk(); renderText(); }) : null;
   const unQuest = quest ? quest.subscribe(() => { renderText(); renderVisibility(); }) : null;
   const unsubscribe = typeof i18n.subscribe === 'function' ? i18n.subscribe(renderText) : null;
@@ -305,12 +345,13 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     const qNpc = quest && ready ? talkTarget(quest, player.pos, npcAt) : null;
     const sp = !qNpc && ready ? spots.find((s) => s.near(player.pos)) || null : null;
     if (sp !== spotNear) { spotNear = sp; renderText(); renderVisibility(); }
-    if (spotPanel && !sp) closeSpot(); // walked away from the door or the board
+    if (spotPanel && !sp && !remote) closeSpot(); // walked away from the door or the board
     const fNpc = !qNpc && !sp && ledger && ready ? folkNear(player.pos) : null;
     const npc = qNpc || fNpc, kind = qNpc ? 'quest' : fNpc ? 'folk' : null;
     if (npc !== talkNpc || kind !== talkKind) { talkNpc = npc; talkKind = kind; renderText(); renderVisibility(); }
     if (quest && quest.talk) { const p = npcAt(quest.talk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) quest.close(); }
-    if (folkTalk) { const p = folkAt(folkTalk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) closeFolk(); }
+    if (folkTalk && !remote) { const p = folkAt(folkTalk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) closeFolk(); }
+    pillClock += dt; if (pillClock > 0.5) { pillClock = 0; pills.refresh(); }
     const talking = !!((quest && quest.talk) || folkTalk || spotPanel);
     if (near !== state.near || prompt.hidden === (ready && (near || !!talkNpc || !!spotNear) && !talking)) { state.near = near; renderVisibility(); }
   }
@@ -409,6 +450,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   return {
     begin, update, reenter,
+    /** Esc: closes the open talk panel. O: expands the newest minimised panel. */
+    closePanel: () => closeOpen(), expandPill: () => pills.expandLatest(), get pills() { return pills; }, minimise,
     get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
