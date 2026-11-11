@@ -28,13 +28,13 @@ import os
 
 # Peak displacement along the normal, metres at a 1.70 m body; IRIS_ANAT='{"gmax": 0.02}' overrides any of them.
 AMOUNT = {
-    "gmax": 0.044,      # owner 11.11 (the GPT target sheet): a softer seat projection (09.11 v13 had 0.084)
+    "gmax": 0.084,      # owner 09.11 (v13): a rounder, fuller athletic seat, as in the reference
     "gmed": 0.005,        # subtle: the reference's pelvis is narrow above the trochanter
     "quad": 0.008,
     "ham": 0.008,
     "add": 0.006,
     "lumbar": -0.020,     # negative = filled: the reference's lower back is 2.5 cm shallower (no exaggerated S)
-    "flank": 0.036,       # taken out: narrow down to about 0.58 H, then flares (0.050 before the 11.11 target sheet)
+    "flank": 0.050,       # taken out: the reference stays narrow down to about 0.58 H, then flares
     "knee": 0.010,        # vastus medialis and lateralis above the knee
     "abs_line": 0.0020,   # owner 09.11 "muscles drawn": the linea alba, a shallow groove down the stomach
     "abs_side": 0.0013,   # the outer edges of the rectus abdominis

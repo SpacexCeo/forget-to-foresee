@@ -49,7 +49,7 @@ MPFB_TARGETS = os.path.join(os.path.dirname(MPFB.__file__), "data", "targets")
 EYE_HEIGHT = 1.640          # the agent rig's eye line (agent_geometry.FACE): the body is scaled to it
 ARM_DEG = 14.0              # agent rest stance: arms 14 deg off the body, hanging straight
 
-HEAD_SCALE = float(os.environ.get("IRIS_HEAD", "1.06"))   # head size against the MakeHuman body (7.6 heads -> about 7.1)
+HEAD_SCALE = float(os.environ.get("IRIS_HEAD", "1.0"))    # 1.0 = the approved head; 1.06 was tried on 11.11 and rejected by the owner
 SHOES = os.environ.get("IRIS_SHOES", "v2")          # v2 (hero_shoes: constructed) | shell (pulled off the foot mesh)
 LEG_HEM = 0.12 if SHOES == "shell" else 0.106       # the leggings' hem: down to the trainers' collar
 HAIR = os.environ.get("IRIS_HAIR", "v2")            # v2 (hero_hair2: volume, locks, tail) | cards (the first build)
@@ -62,13 +62,13 @@ ATHLETIC = {                  # owner's body reference and anatomy brief 09.11 (
     # pelvis: the reference's hips are about as wide as its shoulders (0.21 H from the back)
     "torso/measure-hips-circ-decr": 0.05,
     # seat: anatomical gluteal volume (the MakeHuman target places it on the gluteus maximus)
-    "buttocks/buttocks-volume-incr": 0.42, "hip/hip-scale-depth-incr": 0.10,
+    "buttocks/buttocks-volume-incr": 0.60, "hip/hip-scale-depth-incr": 0.10,
     # legs: a long line; upper thighs full enough to balance the seat (the reference's thigh is 0.10-0.12 H
     # deep in profile), quadriceps and hamstrings, a gradual taper to natural knees and calves
     "legs/upperlegs-height-incr": 0.15, "legs/lowerlegs-height-incr": 0.10,
-    "legs/l-upperleg-muscle-incr": 0.28, "legs/r-upperleg-muscle-incr": 0.28,
+    "legs/l-upperleg-muscle-incr": 0.40, "legs/r-upperleg-muscle-incr": 0.40,
     "legs/l-upperleg-scale-depth-incr": 0.30, "legs/r-upperleg-scale-depth-incr": 0.30,
-    "legs/measure-thigh-circ-incr": 0.06,
+    "legs/measure-thigh-circ-incr": 0.20,
     "legs/l-lowerleg-fat-decr": 0.20, "legs/r-lowerleg-fat-decr": 0.20,
     # bust: natural, medium and lifted
     "breast/breast-trans-up": 0.35, "breast/breast-volume-vert-up": 0.30, "breast/breast-point-decr": 0.80,
@@ -78,9 +78,10 @@ ATHLETIC = {                  # owner's body reference and anatomy brief 09.11 (
     "arms/l-lowerarm-fat-decr": 0.20, "arms/r-lowerarm-fat-decr": 0.20,
 }
 
-# cupsize 11.11: a softer bust per the target sheet (0.45 before)
+# The body is the owner-approved athletic body of 09.11. A softer bust, seat and thighs and a larger head were
+# tried on 11.11 after the GPT sheet and rejected by the owner the same day: do not take proportions from the sheet.
 MACROS = {"gender": 0.0, "age": 0.48, "muscle": 0.5, "weight": 0.42, "height": 0.62, "proportions": 0.75,
-          "cupsize": float(os.environ.get("IRIS_CUP", "0.30")), "firmness": 0.55, "race": {"african": 0.08, "asian": 0.17, "caucasian": 0.75}}
+          "cupsize": float(os.environ.get("IRIS_CUP", "0.45")), "firmness": 0.55, "race": {"african": 0.08, "asian": 0.17, "caucasian": 0.75}}
 
 # Stylization and slight asymmetry (MakeHuman detail targets, CC0): name -> weight.
 DETAIL = {
@@ -1526,6 +1527,27 @@ def lips_attr(body):
         a.data[v.index].value = next((g.weight for g in v.groups if g.group == gi), 0.0)
 
 
+ARM_IN = 5.5        # degrees: her standing clips bring the upper arms in from the rest stance (14 deg off the body)
+
+
+def relax_arms():
+    """Iris's standing clips (idle, talk, think, the one-shots) held the arms in the rig's rest stance: an A-pose,
+    wrists 26 cm from the midline. Her own standing pose lets them hang along the body with a slight bend at the
+    elbow (as close as her hips allow). The rest pose and the walk and run cycles are not touched."""
+    if getattr(agent_anim, "_iris_relaxed", False):
+        return
+    base = agent_anim.base_pose
+
+    def base_pose(key, S, standing=True):
+        P = base(key, S, standing)
+        if key == "iris" and standing:
+            P.r("upperarm_L", 0, 0, ARM_IN).r("upperarm_R", 0, 0, -ARM_IN)
+            P.r("forearm_L", -6, 0, 0).r("forearm_R", -6, 0, 0)
+        return P
+    agent_anim.base_pose = base_pose
+    agent_anim._iris_relaxed = True
+
+
 def stage_full(shade=True, size=2048, samples=16):
     bm, rig, eye_objs, garments = stage_costume()
     lips_attr(bm)
@@ -1586,6 +1608,7 @@ def stage_full(shade=True, size=2048, samples=16):
                                          hair[0].data.materials[0], F.mouth_material(OUT)))
     ank = rig.data.bones["shin_L"].tail_local                  # the clips' foot model on Iris's own ankle
     agent_anim.set_ankle(abs(ank.x), ank.z)
+    relax_arms()
     log("ankle", round(abs(ank.x), 3), round(ank.z, 3))
     acts = agent_anim.bake_clips(rig, "iris", log=log)
     actions = {c: bpy.data.actions[c] for c in agent_anim.CLIPS}

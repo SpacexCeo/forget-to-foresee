@@ -245,7 +245,7 @@ def makeup(b, pos, col, land, lips):
     core.inputs["From Min"].default_value = 0.30
     core.inputs["From Max"].default_value = 0.85
     core = core.outputs["Result"]
-    col = b.mix(b.math("MULTIPLY", core, 0.82), col, (0.285, 0.082, 0.076))          # muted rose, deeper than the skin
+    col = b.mix(b.math("MULTIPLY", core, 0.78), col, (0.325, 0.118, 0.102))          # muted rose, deeper than the skin
     edge = b.math("MULTIPLY", b.math("GREATER_THAN", lips, 0.30), b.math("LESS_THAN", lips, 0.55))
     col = b.mix(b.math("MULTIPLY", edge, 0.22), col, (0.26, 0.08, 0.075))           # the lip line
     # beauty mark: small, round, deep brown with a soft edge (her left cheek, above the mouth corner)

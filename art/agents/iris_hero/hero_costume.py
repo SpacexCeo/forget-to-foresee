@@ -682,10 +682,19 @@ def shell_from_body(body, name, keep, offset, thick, trim=None, accent=None, dec
     kill = [f for f in b.faces if not all(v.index in keepv for v in f.verts)]
     bmesh.ops.delete(b, geom=kill, context="FACES")
     bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
-    for pco, pno in cuts or ():                  # a true plane cut: (point, normal); the side the normal points to goes.
+    for cut in cuts or ():                       # a true plane cut: (point, normal[, region]); the side the normal points to goes.
         # The per-vertex keep leaves a staircase boundary on the body's quads; snapping it to a level line folds
         # faces over (dark shards on the edge). keep() should leave one spare row beyond each cut plane.
-        bmesh.ops.bisect_plane(b, geom=b.verts[:] + b.edges[:] + b.faces[:], dist=1e-5, plane_co=Vector(pco),
+        # region(co) limits the cut to the faces whose vertices all lie in it (a front edge, not the whole garment).
+        pco, pno = cut[0], cut[1]
+        if len(cut) > 2:
+            vs = [v for v in b.verts if cut[2](v.co)]
+            vset = set(vs)
+            geom = vs + [e for e in b.edges if e.verts[0] in vset and e.verts[1] in vset] \
+                + [f for f in b.faces if all(v in vset for v in f.verts)]
+        else:
+            geom = b.verts[:] + b.edges[:] + b.faces[:]
+        bmesh.ops.bisect_plane(b, geom=geom, dist=1e-5, plane_co=Vector(pco),
                                plane_no=Vector(pno), clear_outer=True, clear_inner=False)
         bmesh.ops.delete(b, geom=[v for v in b.verts if not v.link_faces], context="VERTS")
     b.verts.ensure_lookup_table()
@@ -912,12 +921,11 @@ def stand_collar(P, z0=1.418, z1=1.478, gap_deg=26):
     rings = []
     c0, rx0, ry0 = P.section(1.455, bones=("neck",))
     for k in range(5):
-        z = z0 + (z1 - z0) * k / 4
         c, rx, ry = c0, rx0, ry0                               # one clean ellipse, not the noisy section
-        c = V((c.x, c.y, z))
         ring = []
         gap = math.radians(gap_deg + 6 * k / 4)
         for i in range(n):
+            z = z0 + (z1 - z0) * k / 4
             th = -math.pi / 2 + gap + (TAU - 2 * gap) * i / (n - 1)    # ends meet the zip plackets
             lean = 0.004 * (k / 4) ** 2 + (0.005, 0.0012, 0, 0, 0)[k]    # a soft flare at the base, the top leans out
             ring.append(ellipse(V((c.x, c.y, z)), rx + 0.016 + lean, ry + 0.017 + lean, th))

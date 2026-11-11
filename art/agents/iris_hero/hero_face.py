@@ -119,7 +119,7 @@ def add_lashes(body, rig, strip=H2.STRIPS - 1, log=print):
             out = (mv.co - E).normalized()
             dirn = (out * 0.35 + V((sx * 0.22 * (t - 0.3), -0.80, 0.42))).normalized()
             # 3.5 to 6 mm, longest two thirds of the way out, short again at both corners
-            L = (0.0034 + 0.0022 * t) * (0.30 + 0.70 * math.sin(math.pi * (0.10 + 0.78 * t)) ** 0.8)
+            L = (0.0029 + 0.0018 * t) * (0.30 + 0.70 * math.sin(math.pi * (0.10 + 0.78 * t)) ** 0.8)
             row = []
             for k in (0.0, 0.55, 1.0):
                 co = mv.co + out * 0.0004 + dirn * (L * k) + V((0, 0, 0.0010 * k * k))
