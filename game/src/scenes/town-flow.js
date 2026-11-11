@@ -6,7 +6,7 @@
 import { steerTo } from '../physics/character.js';
 import { TOWN_ROUTE, inAltarRange } from './town-layout.js';
 import { talkTarget, TALK_LEAVE } from './town-quest.js';
-import { HIRE } from '../game/town-economy.js';
+import { HIRE, snapshotSeries } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
 import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
 import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
@@ -217,7 +217,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       const dl = el('dl');
       for (const x of r.rounds) dl.append(el('dt', null, T('hire.result.round', { n: x.n })), el('dd', null, T('hire.result.roundLine', { stake: (x.stake / 100).toFixed(2), back: (x.back / 100).toFixed(2) })));
       dl.append(el('dt', null, T('hire.result.net')), el('dd', null, (r.net >= 0 ? '+' : '') + (r.net / 100).toFixed(2)), el('dt', null, T('hire.result.seed')), el('dd', null, r.seed));
-      kids.push(dl, ledgerRow(npc, r, el, b));
+      kids.push(dl, ledgerRow(npc, r, el, b), teeAdvisorRow(npc, r, el, b));
       row.append(b('quest.close', closeFolk, true));
     } else if (h && h.ready) {
       kids.push(el('p', null, T('hire.back')));
@@ -246,9 +246,10 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     input.style.cssText = 'flex:1;min-height:36px;padding:4px 10px;border-radius:8px;border:1px solid rgba(233,180,76,.5);background:#1c2426;color:#f3ead6;font:15px system-ui,sans-serif';
     const send = el('button', null, T('chat.send')); send.type = 'submit'; send.style.background = 'rgba(233,180,76,.14)'; send.style.color = '#f3ead6';
     form.append(input, send);
-    form.addEventListener('submit', (e) => { e.preventDefault(); folkTalk.replyIntent = chatIntent(input.value); folkTalk.reply = chatReply(npc, input.value); folkTalk.asked = input.value; renderFolk(); const i = talkEl.querySelector('input'); if (i) i.focus(); });
+    form.addEventListener('submit', (e) => { e.preventDefault(); folkTalk.replyIntent = chatIntent(input.value); folkTalk.reply = chatReply(npc, input.value); folkTalk.asked = input.value; teeSay(npc, input.value); renderFolk(); const i = talkEl.querySelector('input'); if (i) i.focus(); });
     form.addEventListener('keydown', (e) => e.stopPropagation());
     if (folkTalk.reply) kids.push(el('p', 'ftf-local', '“' + folkTalk.asked + '”'), el('p', null, folkTalk.reply));
+    if (folkTalk.reply && folkTalk.tee) kids.push(teeLine(folkTalk.tee, el, b));
     if (folkTalk.replyIntent === 'verify') kids.push(copyStepsButton(npc, folkTalk.result || (ledger.results ? ledger.results(npc)[0] : null), el, b));
     kids.push(form, el('p', 'ftf-local', T('hire.local')), row);
     setTalk(...kids);
@@ -284,6 +285,69 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
           .finally(() => { if (folkTalk === talk) renderFolk(); });
       }, true));
     }
+    return box;
+  }
+  // TEE agents (net/tee-agent.js, ui/tee-panel.js; docs/tee.md), loaded on first use. The scripted line shows at once;
+  // a TEE line replaces it only when the relayer and this browser both verified its signature.
+  let teeMod = null;
+  const withTee = () => Promise.all([import('../net/tee-agent.js'), import('../ui/tee-panel.js')]).then(([a, p]) => (teeMod = { ...a, ...p }));
+  function teeSay(npc, question) {
+    const talk = folkTalk, facts = talk.reply;
+    if (typeof globalThis.fetch !== 'function') return;
+    withTee().then(async (m) => {
+      if (!(await m.teeAvailable())) return;
+      if (folkTalk !== talk || talk.reply !== facts) return;
+      talk.tee = { state: 'asking' }; renderFolk();
+      const r = await m.askTee('say', { npc, question, facts, lang: i18n.locale });
+      if (talk.reply !== facts) return;
+      if (r && r.body.text) { talk.reply = r.body.text; talk.tee = { state: 'ok', tee: r.body.tee, check: r.check }; } else talk.tee = { state: 'scripted' };
+      if (folkTalk === talk) renderFolk();
+    }).catch(() => {});
+  }
+  /** Under a line: "Asking the TEE…", the "Verified in TEE ✓" button that opens the detail panel, or the scripted note. */
+  function teeLine(st, el, b, extra = () => []) {
+    if (st.state === 'asking') return el('p', 'ftf-local', i18n.t('tee.asking'));
+    if (st.state !== 'ok' || !teeMod) return el('p', 'ftf-local', i18n.t('tee.scripted'));
+    return b('tee.badge', () => teeMod.openTeePanel({ doc, t: (k, a) => i18n.t(k, a), tee: st.tee, check: st.check, extra: extra() }));
+  }
+  /** Under a hire result: ask the TEE advisor for buy/sell/hold on the last market the trader worked; record it on-chain. */
+  function teeAdvisorRow(npc, r, el, b) {
+    const box = el('div', 'ftf-local');
+    const last = r && r.rounds && r.rounds[r.rounds.length - 1];
+    if (!last || !last.echo || typeof globalThis.fetch !== 'function') return box;
+    const st = folkTalk.advice || null;
+    if (!st) {
+      box.append(b('tee.advise', () => {
+        const talk = folkTalk; talk.advice = { state: 'asking' }; renderFolk();
+        const t = last.t, bars = [];
+        for (let i = Math.max(0, t - 15); i <= t; i++) bars.push(Math.round(snapshotSeries(last.echo, i)));
+        withTee().then((m) => m.askTee('decide', { npc, echo: last.echo, bars, position: 0 }))
+          .then((x) => { talk.advice = x && x.body.decision ? { state: 'ok', decision: x.body.decision, tee: x.body.tee, check: x.check } : { state: 'none' }; })
+          .catch(() => { talk.advice = { state: 'none' }; })
+          .finally(() => { if (folkTalk === talk) renderFolk(); });
+      }));
+      return box;
+    }
+    if (st.state === 'asking') { box.append(el('p', null, i18n.t('tee.asking'))); return box; }
+    if (st.state === 'none') { box.append(el('p', null, i18n.t('tee.adviceNone'))); return box; }
+    const d = st.decision;
+    box.append(el('p', null, i18n.t('tee.advice', { echo: i18n.t('exch.echo.' + d.echo), action: i18n.t('tee.action.' + d.action), reason: d.reason || '' })));
+    const chainNote = () => {
+      if (!st.chain || st.chain.state === 'sending') return [];
+      const p = el('p', null, st.chain.ok ? i18n.t('tee.recorded') : i18n.t('tee.recordFailed', { reason: st.chain.reason || '' }));
+      if (!st.chain.hash) return [p];
+      const a = el('a', null, i18n.t('ledger.view')); a.href = 'https://testnet.nearblocks.io/txns/' + st.chain.hash; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      return [p, a];
+    };
+    box.append(teeLine(st, el, b, chainNote));
+    if (st.chain && st.chain.state === 'sending') box.append(el('p', null, i18n.t('tee.recording')));
+    else if (st.chain) box.append(...chainNote());
+    else box.append(b('tee.record', () => {
+      const talk = folkTalk; st.chain = { state: 'sending' }; renderFolk();
+      teeMod.recordTeeDecision({ storage: ctx.storage || globalThis.localStorage, npc, decision: d, tee: st.tee })
+        .then((x) => { st.chain = x; }).catch((e) => { st.chain = { ok: false, reason: String((e && e.message) || e).slice(0, 60) }; })
+        .finally(() => { if (folkTalk === talk) renderFolk(); });
+    }));
     return box;
   }
   /** Copies the verification steps (for a person or any AI agent) for this agent's latest recorded hire. */

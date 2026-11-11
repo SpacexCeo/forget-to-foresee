@@ -9,6 +9,7 @@ import { CollisionWorld } from '../physics/collision.js';
 import { PropInstance } from '../render/assets.js';
 import { setFog } from '../render/fog.js';
 import { createSwingSet } from '../render/swing.js';
+import { cue } from '../audio/town-audio.js';
 import { TOWN_SHOPS, SHOP_LIGHT, SHOP_CAMERA, SHOP_TRANSITION, shopZoneAt, shopPrompt } from './town-layout.js';
 
 /**
@@ -65,6 +66,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     state.busy = true; state.phase = 'entering'; state.shop = shop; render();
     const r = room(shop);
     streamer.pin(shop.piece, 1000);
+    cue('ui_confirm');
     await fadeTo(true);
     const t0 = performance.now();
     while (!r.inst.real && performance.now() - t0 < SHOP_TRANSITION.wait * 1000) await wait(100);
@@ -86,6 +88,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     if (state.busy || state.phase !== 'inside') return false;
     const shop = state.shop;
     state.busy = true; state.phase = 'leaving'; render();
+    cue('ui_click');
     await fadeTo(true);
     ambient.visible = false;
     player.world = street.world(); rig.world = street.world(); player.killY = street.killY;

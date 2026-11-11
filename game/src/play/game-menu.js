@@ -8,6 +8,9 @@ import { createWheel, SEGMENTS, odds } from '../game/wheel.js';
 import { createInventory, RARITIES } from '../game/inventory.js';
 import { achievementsFor } from '../game/achievements.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
+import { loadHolder } from '../net/holder.js';
+import { holderSection } from './holder-panel.js';
+import { cue } from '../audio/town-audio.js';
 
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
@@ -47,6 +50,9 @@ const CSS = `
 .gm-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
 .gm-prof { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; }
 .gm-prof img { width: 150px; border-radius: 16px; box-shadow: 0 8px 22px rgba(30, 36, 80, .25); }
+.gm-prof img.gm-ring-frame { outline: 4px solid #3fd0c9; outline-offset: 3px; box-shadow: 0 0 0 9px rgba(63, 208, 201, .25), 0 8px 22px rgba(30, 36, 80, .25); }
+.gm-holder { margin-top: 18px; } .gm-holder input { flex: 1; min-width: 160px; padding: 8px 10px; border-radius: 10px; border: 1px solid #c9cde0; font: inherit; }
+.gm-holder .gm-row { flex-wrap: wrap; gap: 8px; } .gm-holder-list { margin: 6px 0; padding-left: 18px; }
 .gm-ring { --p: 0; width: 64px; height: 64px; border-radius: 50%; background: conic-gradient(var(--c, #6d5efc) calc(var(--p) * 1turn), #e6e8f2 0); display: grid; place-items: center; }
 .gm-ring > span { width: 50px; height: 50px; border-radius: 50%; background: #fff; display: grid; place-items: center; font: 800 16px/1 system-ui; }
 .gm-medal { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 10px 6px; border-radius: 18px; background: #f6f7fc; }
@@ -122,11 +128,14 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     profile() {
       const lv = ledger.level, st = ledger.stats;
       const top = el('div', 'gm-prof');
-      const img = el('img'); img.src = base + 'assets/cards/' + (eliseMinted ? 'elise' : 'iris') + '.webp'; img.alt = '';
+      const holder = loadHolder(storage); // holder access (net/holder.js): cosmetic perks from a read-only NFT check
+      const img = el('img'); img.src = base + 'assets/cards/' + (eliseMinted || (holder && holder.perks.includes('elise')) ? 'elise' : 'iris') + '.webp'; img.alt = '';
+      if (holder && holder.perks.includes('ring')) img.className = 'gm-ring-frame';
       const info = el('div');
       const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(lv.into / lv.need)); ring.append(el('span', null, String(lv.level)));
       const r = el('div', 'gm-row'); r.append(ring, el('div', null, t('profile.heading', { level: lv.level, title: t('profile.title.' + lv.title) })));
-      info.append(el('h3', null, nickname || t('menu.traveller')), r, el('p', 'gm-note', t('profile.xp', { into: lv.into, need: lv.need })), el('p', 'gm-note', t('menu.localProfile')));
+      info.append(el('h3', null, nickname || t('menu.traveller')), r,
+        ...(holder && holder.title ? [el('span', 'gm-chip gm-near', t('holder.title.' + holder.title))] : []), el('p', 'gm-note', t('profile.xp', { into: lv.into, need: lv.need })), el('p', 'gm-note', t('menu.localProfile')));
       top.append(img, info);
       const g = el('div', 'gm-grid');
       for (const [k, v] of [['signsRead', st.signsRead], ['trialsVerified', st.trialsVerified], ['memoriesForgotten', st.memoriesForgotten], ['agentsHired', st.agentsHired]]) {
@@ -172,7 +181,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         box.append(g);
       });
-      return [box];
+      return [box, holderSection({ doc, t, storage, owner })];
     },
     inventory() {
       return items.then((list) => {
@@ -228,7 +237,9 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           const turns = reduced(doc) ? 0 : 5;
           angle = angle - (angle % 360) + turns * 360 + (360 - r.index * step);
           spinner.style.transform = `rotate(${angle}deg)`;
+          if (turns) { let at = 0; for (let k = 0; k < 18; k++) { at += 60 + k * k * 9; setTimeout(() => cue('bid_tick'), at); } } // ticks slowing with the wheel
           const finish = () => {
+            cue('gift_chime');
             if (r.item) inv.add(r.item.id, 1, 'wheel');
             if (r.segment.kind === 'silk') ledger.grant({ silk: r.segment.amount });
             if (r.segment.kind === 'xp') ledger.grant({ xp: r.segment.amount });

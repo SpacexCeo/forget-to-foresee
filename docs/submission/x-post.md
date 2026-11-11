@@ -43,14 +43,14 @@ contract.)
 > Six AI clans with silk, memory and temper trade, keep or break pacts, and vote. Your AI agent can play a whole season via our HTTP API.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
-> Code, 600+ tests: https://github.com/SpacexCeo/forget-to-foresee
+> Code, 900+ tests: https://github.com/SpacexCeo/forget-to-foresee
 >
 > What would you forget to see the future?
 > @NearLegion @NearBuilders
 
 (276 characters. The browser plays its own local room; the HTTP API (`server/`, run locally) runs the same room module
-for agents. "600+ tests" = 516 game + 28 API + 56 season-commit + 21 memory-shard = 621, counted on 09.11; recount
-before posting.)
+for agents. "900+ tests" = the sum of docs/STATS.md (932 on 11.11: game, API, relayer and seven contracts); regenerate with
+`node scripts/stats.mjs --write` and recount before posting.)
 
 Character counts: X counts each URL as 23 characters; recount after any edit.
 

@@ -1,11 +1,11 @@
 {
   "date": "2026-11-11",
-  "commit": "294cd10",
+  "commit": "b5e40c4",
   "suites": [
     {
       "name": "game",
       "command": "cd game && npm test",
-      "pass": 735,
+      "pass": 765,
       "fail": 0,
       "ok": true
     },
@@ -64,7 +64,14 @@
       "pass": 2,
       "fail": 0,
       "ok": true
+    },
+    {
+      "name": "contract agent-ledger",
+      "command": "cd contracts/agent-ledger && cargo test --lib",
+      "pass": 7,
+      "fail": 0,
+      "ok": true
     }
   ],
-  "distBytes": 450976694
+  "distBytes": 402773164
 }
