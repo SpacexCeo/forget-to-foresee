@@ -33,6 +33,16 @@ VIEW_SETS["gate_diag"] = {   # steep views over the passage (the owner's camera 
     "gate_steep_s": ((1.0, 16.0, ZS + 10.0), (0.0, 0.0, ZS + 1.0), 30),
     "gate_low_s": ((1.5, 3.0, ZS + 9.0), (0.0, 2.0, ZS), 30),
 }
+# the town sweep: the game camera (about 3.5 m up, 6 m behind Iris) along the route and the lanes
+_route = [((0, 0.0, 30.0), 180), ((0, 0.0, 20.0), 180), ((0, 2.5, 8.0), 180), ((-18, 2.5, 6.0), 90), ((18, 2.5, 6.0), -90),
+          ((0, 4.5, -6.0), 180), ((-8, 4.5, -18.0), 135), ((8, 4.5, -18.0), -135), ((0, 4.5, -20.0), 180),
+          ((0, 9.5, -33.0), 180), ((-30, 2.5, 9.0), 90), ((30, 2.5, 9.0), -90), ((-36, 0.0, 20.0), 45), ((24, 0.0, 22.0), -45),
+          ((0, 4.5, -8.0), 0), ((-22, 4.5, -24.0), 120)]
+VIEW_SETS["sweep"] = {}
+for k, ((x, y, z), hd) in enumerate(_route):
+    a = math.radians(hd)
+    fx, fz = math.sin(a), math.cos(a)            # heading 0 looks +Z (south), 180 looks north
+    VIEW_SETS["sweep"]["sweep_%02d" % k] = ((x - fx * 6.0, y + 3.6, z - fz * 6.0), (x + fx * 8.0, y + 1.2, z + fz * 8.0), 24)
 VIEW_SETS["stairs"] = dict(VIEWS)
 VIEWS = VIEW_SETS[os.environ.get("QA_VIEWS", "stairs")]
 gb = lambda p: Vector((p[0], -p[2], p[1]))
