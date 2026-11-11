@@ -1,10 +1,12 @@
 // Standalone relayer: plain Node http serving the same handlers as the serverless entry points in api/.
-// node server.js   (env: FTF_GUEST_KEY, ALLOWED_ORIGIN, PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
+// node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, ALLOWED_ORIGIN, PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
 import http from 'node:http';
 import createGuest from './api/create-guest.js';
 import health from './api/health.js';
+import agentSay from './api/agent/say.js';
+import agentDecide from './api/agent/decide.js';
 
-const routes = { '/api/create-guest': createGuest, '/api/health': health };
+const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide };
 if (!process.env.TRUST_PROXY) process.env.TRUST_PROXY = '0'; // direct exposure: do not trust X-Forwarded-For
 
 export function createServer() {
@@ -18,5 +20,5 @@ export function createServer() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT) || 8787, host = process.env.HOST || '0.0.0.0';
-  createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'})`));
+  createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'}, TEE ${process.env.NEARAI_API_KEY ? 'set' : 'NOT set'})`));
 }

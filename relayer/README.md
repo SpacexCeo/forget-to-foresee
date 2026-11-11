@@ -35,6 +35,26 @@ Optional env: `FTF_GUESTS_CONTRACT` (default `guests.ftf-coordinator.testnet`), 
 Then in the game repository set the Actions variable `FTF_RELAYER_URL=https://<host>`; the Pages build passes it as
 `VITE_FTF_RELAYER_URL`. For a local game build put the same line in `game/.env.local`.
 
+## TEE agents (NEAR AI Cloud)
+
+Townsfolk speech and a trader's buy/sell/hold come from a model that runs inside a TEE on NEAR AI Cloud
+(`https://cloud-api.near.ai/v1`, OpenAI-compatible). The key stays on this server (`NEARAI_API_KEY`).
+
+- `POST /api/agent/say` `{ npc, question, facts?, lang? }` → `{ text, tee }`. `facts` is the game's own scripted answer
+  (true state); the model only rephrases it in character.
+- `POST /api/agent/decide` `{ npc, echo, bars: [cents…] (2–32 published bars), position: -1|0|1 }` →
+  `{ decision: { action, reason, decision_hash }, text, tee }`.
+- `tee` carries everything needed to check the answer without trusting this relayer: the exact `request_body` and
+  `response_body`, `signed_text` (`sha256(request):sha256(response)`), the ECDSA `signature`, the `signing_address`, the
+  relayer's own check of both hashes and the signature, and the attestation of that address (Intel TDX quote chain to
+  the Intel root, report data binding the address and a fresh nonce, RTMR replay, the measured docker compose, GPU
+  evidence). `verified: true` only when all of these pass. `node tools/verify-tee/verify.mjs` re-checks independently.
+- Errors: `400` (bad body), `429` (per-IP limit: 6, then one per 20 s; or the daily cap), `502` (upstream), `503` (no key).
+  The game always falls back to its scripted lines.
+- Optional env: `NEARAI_MODEL` (default `Qwen/Qwen3-VL-30B-A3B-Instruct`), `FTF_TEE_DAILY_CAP` (default 1500),
+  `FTF_TEE_NRAS=0` to skip the GPU vendor's online attestation check, `NEARAI_BASE_URL`.
+- Details and the verification chain: `docs/tee.md`.
+
 ## Test
 
 ```bash
