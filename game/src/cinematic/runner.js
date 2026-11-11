@@ -385,6 +385,9 @@ export class ShotRunner {
    * URL plus statistics for the capture's checks: mean luma, the fraction of black samples and the largest run of
    * fully black rows or columns at an edge (a partially drawn frame shows as a black corner rectangle).
    */
+  // CAPTURE ONLY (docs/hackathon-tz.md P0-F): gl.finish + readPixels stall the GPU by design. This runner is
+  // loaded only with ?cinematic= (main.js) and a grab is asked for only by tools/capture; boot-world.js and
+  // play/game.js must never import the runner or call this (tests/client/readback.test.mjs).
   grabCanvas({ noPng = false } = {}) {
     const renderer = this.game.renderer, gl = renderer.getContext(), canvas = renderer.domElement;
     const w = canvas.width, h = canvas.height;

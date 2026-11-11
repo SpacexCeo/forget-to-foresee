@@ -2,31 +2,22 @@
 
 Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never push or tag `main`). State: 11.11.2026.
 
-## Done (tests green: `cd game && npm test`, 649)
+## Done (tests green: `cd game && npm test`, 653)
 - **P0-B** first-contact copy for the town start; **P0-C** terms taught in context; **P0-D** slot names are buttons
   with a one-line hint (`flow.js` `tapLabel`, `hintSlot`); **P0-E** one Begin, preview paints at once. Five locales,
   tests in `game/tests/tutorial.test.mjs`, notes in `docs/tutorial.md` §2.1.
 - Signs panel test fixed after the subtitle removal.
 
-## In progress: P0-A (Shell interior + streaming order)
-- Finding (real WebGL, RTX 5090): the real hall is **not** mixed up (entrance at +Z, glass at -Z, Guests behind it).
-  The defect was order: the flight entered before `shell_interior.glb` had streamed, so the first frame was the
-  greybox and Iris stood at the greybox spawn.
-- Code in place: `scenes/shell-layout.js` (pure layout + `layoutProblems`), streamer pins (`streaming.js`
-  `JUDGE_PINS`, `heroLast`; `assets.js` `pin()`), pins set in `boot-world.js` `startSeason`, the flight cover waits
-  on `shell.whenReady()` (`play/game.js`), late-swap respawn (`shell.onRealLayout`). Tests:
-  `tests/client/shell-layout.test.mjs`.
-- Checked on the GPU: the first frame after the flight is the real hall. The landing spawn pinned the camera to the
-  entrance wall (Iris out of frame), so the real spawn is the hall floor at the foot of the stairs, `[0, 0, 4.8]`.
-- Still to do for P0-A: README row 86 (interior note) and the judge table, `docs/smoothness.md` note on the pins,
-  a decisions row, walk `/?demo=judge` and `&mode=walk` on the GPU.
+- **P0-A** Shell hall: the model was never mixed up; the flight entered before it streamed. Pins (`JUDGE_PINS`),
+  the flight cover waits for the hall, arrival on the hall floor at the foot of the stairs (`scenes/shell-layout.js`,
+  `tests/client/shell-layout.test.mjs`). Checked on real WebGL.
+- **P0-F** the only play-path read-back was the sky LUT: cached per atmosphere; Controls shows first
+  (`tests/client/readback.test.mjs`, `docs/smoothness.md`).
 
 ## Next
-- **P0-F**: a real play-path readback exists: "GPU stall due to ReadPixels" was logged on the RTX 5090 on
-  `?demo=judge&play=direct` without `?cinematic=`. Find it (lookdev / hdr-guard / warmup / post), remove or defer;
-  make `scene-controls.js` `open()` show the dialog first; static test that `boot-world.js` and `play/game.js`
-  never reach `grabCanvas`.
-- Then P1-C, P1-A, P1-B in that order (spec sections). Update the PR checklist as tasks land.
+- Walk `/?demo=judge` and `&mode=walk` end to end on the GPU once more before calling P0 done (README judge table).
+- **P1-C** honest shard card for every player, **P1-A** hitch-proof stairs + `KeyW`/`ц` test, **P1-B** town quest
+  (spec sections). Update the PR #34 checklist as tasks land; report to the lead when P0 and P1 are done.
 
 ## How to resume
 - GPU server (real WebGL): `tools/gpu-server/jx.py` with the host and token in an uncommitted directory. On the

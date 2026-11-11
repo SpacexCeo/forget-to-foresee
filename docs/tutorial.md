@@ -28,7 +28,7 @@ before the change: `docs/tutorial/before/`.
 | Interactions in the tutorial | 0 (read and press Next) | 0 |
 | Actions until the first "Verified ✓" | 4 (fly, stake, leave, one decision card) + 1 "let trial pass" | 7 (walk, E, M, forget, walk, E, T×6) |
 | Time to "Verified ✓" at 4 fps with the hub's 1.4 s auto-trials | 125 s after arrival | n/a (walks replaced by teleports) |
-| Console errors / warnings in the states touched | 0 errors; 2 SwiftShader "GPU stall due to ReadPixels" warnings (driver, not the game) | same |
+| Console errors / warnings in the states touched | 0 errors; 2 SwiftShader "GPU stall due to ReadPixels" warnings (11.11: one of them was the game: the sky LUT read-back at each atmosphere change, now cached, `docs/smoothness.md`; the boot-time read remains) | same |
 
 ### 1.2 Confusions, dead ends and walls of text (in play order)
 

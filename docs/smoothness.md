@@ -69,3 +69,24 @@ The price is the second download, so it is skipped when the browser reports Save
 - A quality tier change to or from `low` switches the output target, so every program is rebuilt in one frame.
 - The island (6.7 MB) and the agents (about 5 MB each) have no `_m` file; building them is an art task.
 - An asset evicted from the cache and looked at again starts light and upgrades again (the HTTP cache holds both).
+
+## Judge-path order and GPU read-backs (11.11, `docs/hackathon-tz.md` P0-A and P0-F)
+
+- **Pins.** On the archipelago the four Shell exteriors and `shell_interior` are wanted even off screen
+  (`streaming.js` `JUDGE_PINS`, set in `boot-world.js` `startSeason`): they load right after the first view, ahead of
+  the prefetch ring and of the full-resolution upgrades (on desktop the two 20 MB hero files are upgrades, so the
+  hall is in before them), and are never released. `anchor` and `scroll_table` go last among what is on screen
+  (`heroLast`) but are not deferred: a stand-in on the judge camera would look worse than a later hero. The hall's
+  file is also put in the HTTP cache while the player crosses the town.
+- **The flight waits for the hall.** `play/game.js` `fly()` keeps its cover until `shell.whenReady()` (at most 8 s;
+  then the greybox room is the fallback and `shell.onRealLayout` moves Iris to the real arrival point if she has
+  not walked on). Measured on real WebGL (RTX 5090): the hall is loaded before the first flight and the first
+  frame under the fade is the real hall.
+- **Read-backs.** A search of `game/src` finds two synchronous GPU reads: the capture runner
+  (`cinematic/runner.js`, loaded only with `?cinematic=`) and the sky LUT in `render/sky.js` (256×128, needed to
+  derive the sun, fog and sky colours). The LUT read used to run at every atmosphere change; it is now cached per
+  atmosphere (`lutKey`), so it happens once at boot and once under the altar's transition cover, and never in
+  the frame loop or when Controls opens. Chromium still prints one "GPU stall due to ReadPixels" line per read.
+  `tests/client/readback.test.mjs` fails if another read-back appears outside `cinematic/`.
+- **Controls** (`ui/scene-controls.js` `open()`): `showModal()` first, then the input reset; no renderer call.
+
