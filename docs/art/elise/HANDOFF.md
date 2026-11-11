@@ -205,6 +205,25 @@ the feet moved by FootPlant at run time, and the thigh above 0.66 m (see "Capsul
 - texture: `v2/c1_tex.py`; one 2048 atlas for every layer: the head and the face patches copy their texels from the first version's texture, skin is flat, the gown is black with thin lighter lines (princess seams, centre back, waist, collar, hem, folds toward the hem, the turned-in rim), stockings are sheer with a scalloped lace top, shoes, burgundy ribbons, black lacing; left: no shading or nails on the skin, the lace is a procedural net.
 - export: `v2/d1_export.py`; body faces under the bodice and the stockings and the stocking toes are removed (3 793 + 1 392 faces), layers reduced to a budget, joined, inverted-hull outline (2.5 mm; face 0.6, hair 0.62, pin 0.45, hands 0.6, fingers 0.42, lacing 0.35, then limited by local thickness), 10 morph targets on the face patches as in pass 2.
 
+### Pass 4 finished by the next executor (12.11.2026, 01:40 Kyiv)
+
+- **Leg-vs-gown check passes on all 11 clips** (minimum 0.0047 m on stairs_up to 0.0073 m, no frame with a leg through
+  the cloth). Causes found and fixed (not by disabling the check):
+  1. walk/run: at the end of stance the FK knee fell behind the hip-ankle line on the new skeleton and the leg IK flipped
+     the knee backward (a 0.3 m jump in two frames); the cloth could not follow and the right leg ended outside the gown.
+     `loco.py` style `knee_fwd` (Elise 0.3) moves the IK knee hint forward.
+  2. stairs_up: the thigh capsules were fitted at the centre of the leg section, 3 cm towards the crotch; that thinner
+     inner capsule swept the front slit edge off the left thigh and behind the right knee. `b1_layers.py` now starts
+     them under the hip joint (as pass 3); gown, cloth rig and models rebuilt.
+  3. stairs_down: the longer v2 heel, lifted behind, cut the back panel: the feet get 1.5 cm more collision margin in the
+     cloth bake (`skirt.py`; a wider margin on the thighs brings back problem 2).
+- Phone model 23 042 triangles (was 31 674): the hands are protected less on the phone LOD and the head reduced a little more.
+- New clip file `game/public/assets/anim/elise.glb`, bake `art/anim/out/elise_cloth.npz`, `elise.json`.
+- In-game check on the GPU server (real WebGL, built from `claude/elise-v2`): no page errors, main model 49 130 tris and
+  phone model 23 042 tris load with all 11 clips; walk, run, stairs up/down look right, no poke-through in the frames
+  (`wip/v2_ingame_frames.jpg`, `wip/v2_ingame_phone.jpg`, video `elise_ingame.mp4`). `npm test` 703 pass, 0 fail.
+- Known: a face strand of hair sometimes crosses the mouth in motion (seen in the video).
+
 ### HANDOVER (11.11.2026, 22:15 Kyiv): state for the next executor of pass 4
 
 The owner asked to hand the work over urgently. Everything below is in git on `claude/elise-v2`; nothing needed exists
