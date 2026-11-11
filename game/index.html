@@ -20,7 +20,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Forget to Foresee</title>
-  <link rel="icon" href="data:,">
+  <meta name="description" content="A strategy game where an AI clan agent pays for prophecy with her own memories. Seasons are sealed on NEAR testnet before play.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Forget to Foresee">
+  <meta property="og:description" content="An agent pays for prophecy with her memories. Seasons are sealed on NEAR testnet; forgotten memories become NEP-171 shards. Plays in the browser.">
+  <meta property="og:url" content="https://spacexceo.github.io/forget-to-foresee/">
+  <meta property="og:image" content="https://spacexceo.github.io/forget-to-foresee/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Forget to Foresee">
+  <meta name="twitter:description" content="An agent pays for prophecy with her memories. Seasons sealed on NEAR testnet.">
+  <meta name="twitter:image" content="https://spacexceo.github.io/forget-to-foresee/og.jpg">
+  <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg">
   <style>
     :root { --ink: #e9efe9; --panel: rgba(20, 24, 22, 0.72); --amber: #d9a441; --muted: #a9b5ae;
       /* Play-layer surfaces follow the world HUD tokens (docs/ui-world-hud.md §2): opaque enough that nothing reads through. */
@@ -70,6 +82,9 @@
     .boot .boot-pct { font: 500 calc(1.15 * var(--u))/1 ui-monospace, Consolas, monospace; color: var(--teal); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
     .boot .boot-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     #boot.boot--failed .boot-sub { color: #ff8a7a; font-style: normal; }
+    #boot.boot--failed .boot-word, #boot.boot--failed .boot-bar { display: none; }
+    #boot .boot-nogl { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; position: relative; z-index: 3; }
+    #boot .boot-nogl a { color: #9fd8ff; font: 15px/1.3 system-ui, sans-serif; }
     @media (max-aspect-ratio: 4/5) {
       .boot { --u: min(2.2vw, 1.2vh); }
       .boot .boot-stage { width: calc(44 * var(--u)); height: calc(78 * var(--u)); }

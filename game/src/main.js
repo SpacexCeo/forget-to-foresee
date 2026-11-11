@@ -10,6 +10,7 @@
 // archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
 import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
 import { logKeysFromStats } from './ui/loading.js';
+import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
@@ -41,6 +42,15 @@ function onProgress(stats) {
   }
   report();
 }
+
+// WebGL 2 first (audit QW-5): without it nothing heavy loads, and the boot screen offers the no-GPU paths.
+const gl = detectWebGL(document, { force: params.get('forceNoGL') === '1' });
+if (!gl.ok) {
+  loading.fail(NO_GL_TEXT);
+  appendNoGpuLinks(document, document.getElementById('boot'));
+  throw new Error('[boot] no WebGL 2');
+}
+if (gl.software) showSoftwareNote(document);
 
 const ctxP = import('./play/i18n.js').then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
 let shellUi = null, worldP = null;

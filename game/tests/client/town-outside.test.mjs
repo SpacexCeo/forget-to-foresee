@@ -71,3 +71,14 @@ test('cast keys and tuning', () => {
   assert.ok(!('KeyE' in CAST_KEYS) && !('KeyR' in CAST_KEYS), 'E stays the altar, R the camera reset');
   for (const c of Object.values(CASTS)) assert.ok(c.range > 0 && c.cooldown > 0 && c.minRange < c.range);
 });
+
+test('Return to town mounts the casting field again (leaveTown disposes it), and the slots are full-art skill buttons', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  const back = src.slice(src.indexOf('function returnToTown('), src.indexOf('function startOver('));
+  assert.match(back, /mountCasting\(\)/, 'returnToTown remounts the two casts');
+  assert.match(src.slice(src.indexOf('async function leaveTown('), src.indexOf('function startSeason(')), /townCasting\.dispose\(\)/);
+  const cast = readFileSync(new URL('../../src/scenes/town-casting.js', import.meta.url), 'utf8');
+  assert.match(cast, /lance: '<svg/); assert.match(cast, /snare: '<svg/);
+  assert.deepEqual(Object.values(CAST_KEYS).sort(), ['lance', 'lance', 'snare', 'snare']);
+});

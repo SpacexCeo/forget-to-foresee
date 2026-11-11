@@ -1,6 +1,7 @@
 // The casting field outside the town walls (docs/town.md, "Outside the walls"): arm a cast, aim it on the ground
 // with the mouse, click to throw it. Only beyond the walls (scenes/town-outside.js `onField`); inside the town the
-// keys do nothing and an armed cast is put away. Visuals: scenes/town-casting-fx.js.
+// keys do nothing and an armed cast is put away. Visuals: scenes/town-casting-fx.js. The two casts are the first two
+// slots of the skill bar: full-art buttons with the key on a dark plate.
 //
 //   Q / 1  Frost Lance (aim arrow)        V / 2  Storm Snare (targeting circle)
 //   Left click or tap: cast. Esc, or the same key again: put it away. A touch tap on a button arms; the next tap
@@ -14,20 +15,29 @@ import { CASTS, createCastEffects } from './town-casting-fx.js';
 export const CAST_KEYS = Object.freeze({ KeyQ: 'lance', Digit1: 'lance', KeyV: 'snare', Digit2: 'snare' });
 const SLOTS = [['lance', 'Q'], ['snare', 'V']];
 
+// Placeholder full-art icons (until the UI-003 skill icons land): a frost lance and a storm snare.
+const ICONS = {
+  lance: '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="ftf-ic-l" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0b3a63"/><stop offset="1" stop-color="#4fc3ff"/></linearGradient></defs><rect width="64" height="64" fill="url(#ftf-ic-l)"/><path d="M12 52 L44 20 L50 14 L48 22 L16 54 Z" fill="#e8f7ff"/><path d="M44 20 L54 10 L50 22 Z" fill="#fff"/><path d="M20 40 l-6 -2 M26 34 l-6 -3 M32 28 l-5 -4" stroke="#bfeaff" stroke-width="2" stroke-linecap="round"/><circle cx="50" cy="14" r="6" fill="#fff" opacity=".35"/></svg>',
+  snare: '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="ftf-ic-s" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="#7a4dff"/><stop offset="1" stop-color="#1c0f45"/></radialGradient></defs><rect width="64" height="64" fill="url(#ftf-ic-s)"/><ellipse cx="32" cy="44" rx="20" ry="7" fill="none" stroke="#d6c4ff" stroke-width="3"/><path d="M34 8 L24 30 L32 30 L26 48 L42 24 L34 24 L40 8 Z" fill="#fff4b0" stroke="#ffe066" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+};
+
 const CSS = `
-.ftf-cast { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; z-index: 5; }
+.ftf-cast { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; z-index: 5; }
 .ftf-cast[hidden] { display: none; }
-.ftf-cast-bar { display: flex; gap: 10px; }
-.ftf-cast-slot { pointer-events: auto; position: relative; overflow: hidden; display: flex; align-items: center; gap: 9px; padding: 8px 14px 8px 9px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(20, 24, 30, 0.62); color: #f3efe6; font: 500 15px/1.2 inherit; cursor: pointer; backdrop-filter: blur(6px); }
-.ftf-cast-slot kbd { min-width: 22px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.14); font: 600 13px/1.3 inherit; text-align: center; }
-.ftf-cast-slot[data-id="lance"] { box-shadow: inset 0 -2px 0 rgba(140, 210, 255, 0.55); }
-.ftf-cast-slot[data-id="snare"] { box-shadow: inset 0 -2px 0 rgba(180, 140, 255, 0.55); }
-.ftf-cast-slot[aria-pressed="true"] { border-color: rgba(255, 233, 180, 0.9); background: rgba(52, 46, 32, 0.78); }
-.ftf-cast-slot .ftf-cast-cd { position: absolute; left: 0; bottom: 0; height: 100%; background: rgba(0,0,0,0.42); pointer-events: none; }
+.ftf-cast-bar { display: flex; gap: 10px; padding: 6px; border-radius: 18px; background: rgba(12, 14, 20, 0.55); backdrop-filter: blur(6px); }
+.ftf-cast-slot { pointer-events: auto; position: relative; overflow: hidden; width: 64px; height: 64px; padding: 0; border-radius: 14px; border: 2px solid rgba(255,255,255,0.25);
+  background: #111; cursor: pointer; transition: transform .12s ease, border-color .12s ease; }
+.ftf-cast-slot svg { display: block; width: 100%; height: 100%; }
+.ftf-cast-slot:hover { transform: translateY(-2px); }
+.ftf-cast-slot:active { transform: scale(.95); }
+.ftf-cast-slot kbd { position: absolute; left: 3px; bottom: 3px; min-width: 18px; padding: 1px 5px; border-radius: 5px; background: rgba(8, 10, 14, 0.82); color: #f3efe6; font: 700 12px/1.3 system-ui, sans-serif; text-align: center; }
+.ftf-cast-slot .ftf-cast-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ftf-cast-slot[aria-pressed="true"] { border-color: #ffe9b4; box-shadow: 0 0 14px rgba(255, 220, 140, 0.8); }
+.ftf-cast-slot .ftf-cast-cd { position: absolute; left: 0; bottom: 0; height: 100%; background: rgba(0,0,0,0.55); pointer-events: none; }
 .ftf-cast-hint { color: #f3efe6; font: 400 13px/1.3 inherit; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
 .ftf-cast-hint[hidden] { display: none; }
-@media (max-width: 700px) { .ftf-cast { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); } .ftf-cast-slot { font-size: 14px; } }
+@media (max-width: 700px) { .ftf-cast { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); } .ftf-cast-slot { width: 56px; height: 56px; } }
+@media (prefers-reduced-motion: reduce) { .ftf-cast-slot { transition: none; } .ftf-cast-slot:hover, .ftf-cast-slot:active { transform: none; } }
 `;
 
 /**
@@ -47,8 +57,9 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
   for (const [id, key] of SLOTS) {
     const b = doc.createElement('button'); b.type = 'button'; b.className = 'ftf-cast-slot'; b.dataset.id = id; b.setAttribute('aria-pressed', 'false');
     const cap = doc.createElement('kbd'); cap.textContent = key; cap.hidden = coarse;
-    const name = doc.createElement('span'); const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd';
-    b.append(cap, name, cd);
+    const art = doc.createElement('span'); art.innerHTML = ICONS[id];
+    const name = doc.createElement('span'); name.className = 'ftf-cast-name'; const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd';
+    b.append(art.firstChild, cd, cap, name);
     b.addEventListener('click', (e) => { e.stopPropagation(); toggle(id); });
     slots[id] = { button: b, name, cd };
     bar.append(b);
@@ -60,7 +71,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
 
   function renderText() {
-    for (const [id] of SLOTS) slots[id].name.textContent = i18n.t('town.cast.' + id);
+    for (const [id, key] of SLOTS) { const n = i18n.t('town.cast.' + id); slots[id].name.textContent = n; slots[id].button.title = coarse ? n : `${n} (${key})`; }
     hint.textContent = i18n.t(coarse ? 'town.cast.hint.touch' : 'town.cast.hint');
   }
   const unsubscribe = typeof i18n.subscribe === 'function' ? i18n.subscribe(renderText) : null;
