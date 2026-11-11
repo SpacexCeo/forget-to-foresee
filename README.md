@@ -113,6 +113,7 @@ Test counts measured on 09.11.2026 (Node 24): `cd game && npm ci && npm test` â†
 | Hashes and Merkle proofs | real SHA-256; the contract's test vectors are generated from the same engine (**real**) |
 | Money | in-game silk, no token, no payments |
 | 3D art | real models for everything listed above; any model that is missing or fails to load falls back to an unlabeled **greybox** stand-in (its "not final art" label shows only with `?dev=1`, the F3 dev HUD or on the asset review page) |
+| Townsfolk | **real models, scripted behaviour**: 13 townspeople stand, walk, sweep, sit and talk on fixed loops in the starting town and look at Iris; presentation only (no dialogue, no trade, the shop interiors are not enterable) |
 | Access check | **mock**: a free synthetic guest entitlement stored in the browser, labeled |
 | Weekly tournament | **UI simulation**: synthetic schedule, enrollment and results on the device, labeled "Simulation"; not part of the judged loop |
 | Agent NFT, live minting, wallet play, on-chain escrow, multiplayer | **not built** (future work) |

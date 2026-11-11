@@ -94,4 +94,34 @@ State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.
 
 ## 3. Townsfolk (13 people, clips, behaviour in the town)
 
-Not started.
+State 11.11.2026 about 04:00 UTC. Full record: `docs/townsfolk.md`.
+
+**Done (in git, on `claude/characters-v2` and `main`)**
+- The cast is the 13 GPT sheets (`docs/art/townsfolk/refs/`). `art/townsfolk/cast.py` holds them as data; the
+  pipeline builds all 13 (`bash art/townsfolk/run_all.sh <work_dir>`): 15,990 triangles, one 2048² set, KTX2 +
+  meshopt, `_m` 1024². Game files: `game/public/assets/models/townsfolk_<key>.glb` and `_m`.
+- Client: `game/src/play/townsfolk-plan.js` (cast, programs on `TOWN_DATA.npc`, pure state machine),
+  `townsfolk.js` (lazy loading, `_m` first, mocap clips through `townsfolkClips`, clip-speed walking, look-at,
+  animation LOD), hook in `scenes/town.js` (`townsfolk`, next to the lighting branch's `life`), `camera` in
+  `townFrame` (`boot-world.js`). Tests: `game/tests/client/townsfolk.test.mjs` (in `npm test`).
+- QA images: `docs/art/townsfolk/qa/`.
+
+**Half-done / not verified**
+- The last in-game pass on the server ran before two fixes (lamplighter drawn amber, scribe standing in a crate)
+  and before the merge with `main`; tests and the build are green after them, but there is no screenshot.
+- Frame time is not measured: the server was overloaded during the pass (about 190 ms a frame everywhere).
+- The elder's seat height on the bench with the mocap `sit` clip was not looked at.
+- QA renders next to the sheets are one build older than the shipped files.
+- TRELLIS trial: parked. Scripts in `art/townsfolk/trellis/`; the hybrid `to_game.py` has never run.
+
+**Next**
+1. `NODE_PATH=<playwright> node art/townsfolk/qa_ingame.cjs <out> <port> [phone]` on a built game: look at every
+   stop, note frame times for desktop and phone, fix what shows (bench height, door positions).
+2. Costume polish in `tf_wardrobe.py` / `cast.py` (shawl fringe, satchel, apron halter, faces), then rebuild.
+3. If the owner wants the image-to-3D look: finish the hybrid (see the trial section of `docs/townsfolk.md`).
+
+**How to resume**
+- GPU server work dir was `/root/w/chars/townsfolk/` (`ftf` clone with the sources, `build/<key>/` with the
+  `.blend` files, `pub/` with the game files, `trellis/` with the venv and the weights). The server stopped
+  answering about 03:30 UTC 11.11; nothing needed for the game exists only there. A fresh machine needs
+  Blender 4.5 with the MPFB add-on (`mpfb.zip` was in `/root/w/townsfolk/`), gltf-transform and toktx.

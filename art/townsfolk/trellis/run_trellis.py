@@ -12,6 +12,7 @@ import sys
 
 os.environ.setdefault("ATTN_BACKEND", "sdpa")       # dense attention: PyTorch's own
 os.environ.setdefault("SPARSE_BACKEND", "spconv")
+os.environ.setdefault("SPARSE_ATTN_BACKEND", "xformers")   # the default, flash_attn, is not installed
 os.environ.setdefault("SPCONV_ALGO", "native")
 
 # Optional modules of the paths this trial does not use (background removal, textured-GLB baking, gaussian and
@@ -50,8 +51,20 @@ import trellis.models as tmodels  # noqa: E402
 
 # only the mesh decoder is wanted: the gaussian and radiance-field decoders are not built (their renderers are stubs)
 _from_pretrained = tmodels.from_pretrained
-tmodels.from_pretrained = lambda path, **kw: (torch.nn.Identity() if ("slat_dec_gs" in path or "slat_dec_rf" in path)
-                                              else _from_pretrained(path, **kw))
+
+
+def _load(path, **kw):
+    if "slat_dec_gs" in path or "slat_dec_rf" in path:
+        return torch.nn.Identity()
+    try:
+        return _from_pretrained(path, **kw)
+    except Exception:
+        import traceback
+        traceback.print_exc()                       # the pipeline swallows this and retries the name as a hub repository
+        raise
+
+
+tmodels.from_pretrained = _load
 
 pipe = TrellisImageTo3DPipeline.from_pretrained(snapshot_download("microsoft/TRELLIS-image-large"))  # local files
 pipe.cuda()
