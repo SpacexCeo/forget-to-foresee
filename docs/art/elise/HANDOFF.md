@@ -76,3 +76,16 @@ Rebuild on the server: `bash s/all.sh 2.5 parts` in `/root/w/elise/work` (script
 Licence note: the shapes come from Hunyuan3D-2mv (Tencent Hunyuan 3D Community License: not for EU / UK / South Korea).
 
 Branch: `claude/heroine2`. Server access: `tools/gpu-server/jx.py` with the host and token kept outside the repository.
+
+## Stage log
+
+All stages were finished in one pass and landed together; nothing needed exists only on the server (models, clips,
+sheet, video, `.blend` and scripts are in git; the server holds only the untouched sources and rebuildable intermediates).
+
+- assembly: fa7725b; left: the neck step seen from the side.
+- retopology: fa7725b; left: hand-made edge loops (weighted decimation only), ragged hem.
+- UV / paint: fa7725b; left: paint-over of projected strand lines, higher-resolution face.
+- outline: fa7725b; left: nothing known (2.5 mm, 1.5 mm on face and hands).
+- rig: fa7725b; left: face bones and expression morphs (sheet 07), gravity for the ribbon tails.
+- animation: fa7725b; left: a skirt solution for the run, turn-in-place clips.
+- export and game hook: fa7725b, video and handoff e347c01; left: the NFT gate, the Iris prefetch under `?hero=elise`, a device check of `_m`.
