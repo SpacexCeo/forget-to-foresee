@@ -25,20 +25,20 @@ test('carving the passage keeps the wall on both sides and the lintel, and remov
   const { min, max } = GATE_PASSAGE;
   const plane = wall(-52, 52, -1, 12.5, 34); // the wall-line plane the gate file carries across the passage
   const cut = carveBox(plane, min, max);
-  const hole = (max[0] - min[0]) * (max[1] - min[1]);
+  const hole = (max[0] - min[0]) * (max[1] - Math.max(min[1], -1)); // the plane starts 1 m under the street
   assert.ok(Math.abs(area(cut) - (area(plane) - hole)) < 1e-6, 'exactly the doorway is removed');
   for (let i = 0; i < cut.length; i += 9) {
     const cx = (cut[i] + cut[i + 3] + cut[i + 6]) / 3, cy = (cut[i + 1] + cut[i + 4] + cut[i + 7]) / 3, cz = (cut[i + 2] + cut[i + 5] + cut[i + 8]) / 3;
     assert.ok(!inBox(cx, cy, cz, min, max), 'no piece left inside the passage');
   }
-  // the slab between the gate leaves loses its doorway part; only a sill under the street and the lintel remain
+  // the slab between the gate leaves loses its doorway part down to its foot; only the lintel remains
   const slab = wall(-2.4, 2.4, -1.2, 6.5, 35);
-  assert.ok(Math.abs(area(carveBox(slab, min, max)) - 4.8 * (1.5 + 2.3)) < 1e-6);
+  assert.ok(Math.abs(area(carveBox(slab, min, max)) - 4.8 * (6.5 - max[1])) < 1e-6);
   // the gatehouse side faces (x = ±2.4, along z) are on the boundary and stay whole
   const side = [-2.4, 0, 32.8, -2.4, 10.6, 32.8, -2.4, 10.6, 38.2];
   assert.deepEqual(carveBox(side, min, max), side);
-  // the street floor (y = 0) is below the box and stays whole
-  const floor = [-5, 0, 30, 5, 0, 30, 0, 0, 38];
+  // the street floor is walkable and stays whole even inside the box
+  const floor = [-5, 0, 30, 0, 0, 38, 5, 0, 30];
   assert.deepEqual(carveBox(floor, min, max), floor);
 });
 

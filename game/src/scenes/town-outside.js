@@ -9,7 +9,7 @@
 // (`town_terrain_ground`, `town_terrain_cobble`) become the walkable floor there. Coordinates are town-local metres.
 
 /** The passage through the lower gate: x across, y up from the street, z out of town. */
-export const GATE_PASSAGE = Object.freeze({ min: [-2.4, 0.3, 32.5], max: [2.4, 4.2, 39.0] });
+export const GATE_PASSAGE = Object.freeze({ min: [-2.4, -2.0, 32.5], max: [2.4, 4.2, 39.0] });
 
 /** Ground beyond the walls: in front of the lower gate, or past the side walls. */
 export const OUTSIDE_FRONT_Z = 33.5;
@@ -57,10 +57,11 @@ function polyArea2(p) {
 }
 
 /**
- * Removes an axis-aligned box from a flat triangle list ([x,y,z, x,y,z, x,y,z, ...]). Triangles that miss the box
+ * Removes an axis-aligned box from a flat triangle list. Walkable floors (normal within ~45° of up) are never cut, so
+ * the street through the passage stays while the slabs and sills across it go down to their feet. ([x,y,z, x,y,z, x,y,z, ...]). Triangles that miss the box
  * are kept as they are; the others are split into the pieces outside it (same winding). Returns a new array.
  */
-export function carveBox(flat, min, max) {
+export function carveBox(flat, min, max, keepFloors = true) {
   const out = [];
   // The outside of the box as six disjoint convex regions: x below, x above, then inside x: y below, y above,
   // then inside x and y: z below, z above. Each is a list of half-spaces [axis, value, sign].
@@ -78,6 +79,12 @@ export function carveBox(flat, min, max) {
     for (const p of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
     let touches = true;
     for (let k = 0; k < 3; k++) if (hi[k] <= min[k] || lo[k] >= max[k]) touches = false;
+    if (touches && keepFloors) {
+      const ax = tri[1][0] - tri[0][0], ay = tri[1][1] - tri[0][1], az = tri[1][2] - tri[0][2];
+      const bx = tri[2][0] - tri[0][0], by = tri[2][1] - tri[0][1], bz = tri[2][2] - tri[0][2];
+      const ny = az * bx - ax * bz, len = Math.hypot(ay * bz - az * by, ny, ax * by - ay * bx);
+      if (len > 0 && Math.abs(ny) / len > 0.7) touches = false; // a floor (or a ceiling): keep it whole
+    }
     if (!touches) { for (let j = 0; j < 9; j++) out.push(flat[i + j]); continue; }
     for (const region of regions) {
       let poly = tri;
