@@ -18,6 +18,9 @@ export const ENTRY_MODULES = [
   '/src/ui/world-hud/preview.js',
 ];
 
+/** Modules outside src/ui that ui modules import statically; they import nothing from play or net. */
+export const UI_LEAVES = ['/src/play/narration.js', '/src/net/exchange-deployment.js'];
+
 /**
  * Name of the manual chunk a module belongs to, or undefined to let Rollup decide.
  * @param {string} id module id as Rollup passes it (absolute path, possibly with a query)
@@ -31,6 +34,10 @@ export function chunkFor(id) {
   if (p.includes('/node_modules/three/')) return 'three';
   if (p.includes('/src/render/') || p.includes('/src/physics/') || p.includes('/src/scenes/') || p.includes('/src/play/logogram.js')) return 'client-core';
   if (p.includes('/src/locales/') || p.includes('/src/play/locales/')) return 'locales';
+  // ui never imports play (rule 2): the leaf modules ui reads go with ui; the lazily opened replay screen, which pulls
+  // the rules API (net/replay.js -> net/api.js), goes with play.
+  if (UI_LEAVES.some((m) => p.includes(m))) return 'ui';
+  if (p.includes('/src/ui/replay-view.js')) return 'play';
   if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/ui/world-hud/')) return 'play';
   if (p.includes('/src/ui/') || p.includes('/src/game/')) return 'ui';
   return undefined;
