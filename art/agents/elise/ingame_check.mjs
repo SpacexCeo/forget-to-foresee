@@ -42,7 +42,7 @@ if (video) {
   await shot('idle_front', 0); await shot('idle_34', PI * 0.22); await shot('idle_back', PI); await shot('face', 0.15, 1.1, 1.58, 30, 0.02);
   await shot('game_cam', PI, 6.5, 1.2, 50, 1.6);
   await page.keyboard.down('KeyW'); await wait(2.5); await shot('walk_side', PI / 2); await shot('walk_34', PI * 0.25); await shot('walk_back', PI * 0.9);
-  await page.keyboard.down('ShiftLeft'); await wait(2.5); await shot('run_side', PI / 2); await shot('run_34', PI * 0.25);
+  await page.keyboard.down('ShiftLeft'); await wait(2.5); await shot('run_side', PI / 2); await shot('run_34', PI * 0.25); await shot('run_back', PI * 0.85); await shot('run_front', 0.1); await wait(0.13); await shot('run_side2', PI / 2); await wait(0.11); await shot('run_side3', -PI / 2);
   await page.keyboard.up('ShiftLeft'); await page.keyboard.up('KeyW'); await wait(1.5);
   await page.keyboard.down('KeyS'); await wait(0.3); await page.keyboard.up('KeyS'); await wait(0.3); await shot('turn', PI * 0.25);
 }
