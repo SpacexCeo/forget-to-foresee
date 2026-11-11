@@ -68,6 +68,6 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 | 7 | Test monsters outside the walls: levels, aggro and fighting styles | Fable (models, clips) + Opus (behaviour) | todo |
 | 8 | Daily spin wheel (silk, shards), shards → NFT, shard sale on testnet | Opus | todo |
 | 9 | Loading screen: smoke with glyphs fills the bar | Opus (+ Fable if a sprite bake is needed) | todo |
-| 10 | Owner report: effects and lighting not visible in the game — find which branch or setting lost them | Opus | todo |
+| 10 | Owner report: effects and lighting not visible in the game — find which branch or setting lost them | Opus | done 11.11 (59c643c): governor floor + settings Quality; see decisions 11.11 |
 | 11 | Rebuild the hillside outside the gate: walkable paths ≤ 30°, meadow, trees, rocks, ambient fauna | Fable / `claude/town-outside-env` | doing |
 | 12 | GPT design tasks (FX-001, HER-001, NFT-001, LOAD-001, SKIN-001, SPIN-001, MOB-001, ENV-001) | GPT via `board/board.md` | open |
