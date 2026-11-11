@@ -169,6 +169,7 @@ def dress(ctx, e):
         ac = r["apron"]
         bib = ctx.key != "innkeeper"
         z0 = L.bust + 0.02 if bib else L.waist + 0.01
+        dusty = "flour" in r.get("extras", ())
         if bib:
             torso(ctx.tube("apron_bib", z0, L.waist - 0.01, ease=0.030, spans=[(0, 26)], over=tg, thick=0.004, trim_rows=0,
                            edge_trim=True, bones=TORSO), *ac)
@@ -178,8 +179,14 @@ def dress(ctx, e):
                        over=tg, thick=0.004, flare=0.03 if bib else 0.085, folds=0.004 if bib else 0.0, edge_trim=True,
                        flare_from=None if bib else L.waist), *ac, rule="skirt")
         torso(ctx.band("apron_ties", lambda t: L.waist + 0.005, 0.022, 0.034, over=tg, thick=0.003), ac[1], rule="fit")
+        if dusty:
+            for nm in ("apron", "apron_bib"):
+                if nm in G:
+                    G[nm]["dust"] = 1.0
     if r.get("shawl"):
-        o = ctx.cape("shawl", L.waist + 0.06, ease=0.024, open_deg=10, flare=0.02, over=torso_garments(ctx), folds=0.010)
+        o = ctx.cape("shawl", L.waist - 0.04, ease=0.026, open_deg=9, flare=0.03, over=torso_garments(ctx), folds=0.013)
+        zmin = min(v.co.z for v in o.data.vertices)
+        C.set_attr(o, "trim", lambda i, p: 1.0 if p.z < zmin + 0.075 else 0.0)
         torso(o, *r["shawl"], rule="cape")
     if r.get("capelet"):
         o = ctx.cape("capelet", L.bust - 0.03, ease=0.022, open_deg=8, flare=0.035, over=torso_garments(ctx), folds=0.006)

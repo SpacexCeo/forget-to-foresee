@@ -104,8 +104,8 @@ def eye_shader(b, iris=((0.10, 0.11, 0.07), (0.30, 0.25, 0.12))):
 
 
 MAT = {   # kind: (roughness, metal, fibre scale, fibre strength, bump)
-    "cloth": (0.85, 0.0, 420.0, 0.28, 0.5), "leather": (0.55, 0.0, 160.0, 0.22, 0.35), "metal": (0.38, 1.0, 90.0, 0.12, 0.15),
-    "wood": (0.65, 0.0, 60.0, 0.30, 0.4), "straw": (0.75, 0.0, 240.0, 0.40, 0.9), "hair": (0.50, 0.0, 300.0, 0.35, 0.6),
+    "cloth": (0.88, 0.0, 150.0, 0.30, 0.9), "leather": (0.52, 0.0, 70.0, 0.34, 0.6), "metal": (0.38, 1.0, 90.0, 0.12, 0.15),
+    "wood": (0.65, 0.0, 60.0, 0.30, 0.4), "straw": (0.75, 0.0, 240.0, 0.40, 0.9), "hair": (0.46, 0.0, 120.0, 0.30, 0.9),
     "amber": (0.18, 0.0, 30.0, 0.15, 0.0), "shell": (0.30, 0.0, 40.0, 0.10, 0.1), "bread": (0.8, 0.0, 80.0, 0.35, 0.5),
 }
 
@@ -120,8 +120,27 @@ def surface_shader(b, gcol=(0.5, 0.5, 0.5), tcol=(0.3, 0.3, 0.3), kind="cloth"):
     col = b.mix(b.math("GREATER_THAN", trim, 0.5), gcol, tcol)
     fib = b.noise(scale, 8.0, pos, 0.7)
     big = b.noise(7.0, 3.0, pos)
-    shade = b.math("ADD", 1.0 - strength * 0.5, b.math("MULTIPLY", fib.outputs["Fac"], strength))
-    shade = b.math("MULTIPLY", shade, b.math("ADD", 0.88, b.math("MULTIPLY", big.outputs["Fac"], 0.24)))
+    height = fib.outputs["Fac"]
+    if kind == "cloth":                               # a woven surface: warp and weft threads crossing
+        wv = []
+        for d in ("X", "Z"):
+            w = b.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction=d, in_Scale=95.0, in_Distortion=1.2, in_Detail=1.0)
+            b.l(pos, w.inputs["Vector"])
+            wv.append(w.outputs["Fac"])
+        weave = b.math("MULTIPLY", b.math("ADD", wv[0], wv[1]), 0.5)
+        height = b.math("ADD", b.math("MULTIPLY", weave, 0.65), b.math("MULTIPLY", fib.outputs["Fac"], 0.35))
+    shade = b.math("ADD", 1.0 - strength * 0.5, b.math("MULTIPLY", height, strength))
+    shade = b.math("MULTIPLY", shade, b.math("ADD", 0.82, b.math("MULTIPLY", big.outputs["Fac"], 0.36)))
+    # worn and dusty toward the lower edge of the piece; a darker seam where a trim meets the cloth
+    hemz = b.attr("hemz").outputs["Fac"]
+    grime = b.noise(11.0, 4.0, pos)
+    low = b.math("MULTIPLY", b.math("POWER", hemz, 2.5), b.math("ADD", 0.45, grime.outputs["Fac"]))
+    shade = b.math("MULTIPLY", shade, b.math("SUBTRACT", 1.0, b.math("MULTIPLY", low, 0.30 if kind in ("cloth", "leather") else 0.0)))
+    seam = b.math("SUBTRACT", 1.0, b.math("MINIMUM", 1.0, b.math("MULTIPLY", b.math("ABSOLUTE", b.math("SUBTRACT", trim, 0.5)), 16.0)))
+    shade = b.math("MULTIPLY", shade, b.math("SUBTRACT", 1.0, b.math("MULTIPLY", seam, 0.30 if kind in ("cloth", "leather") else 0.0)))
+    if kind == "leather":                             # scuffed lighter along edges and in patches
+        scuff = b.noise(23.0, 5.0, pos)
+        shade = b.math("MULTIPLY", shade, b.math("ADD", 0.86, b.math("MULTIPLY", b.math("POWER", scuff.outputs["Fac"], 3.0), 1.3)))
     if kind in ("straw", "hair", "wood"):
         w = b.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction="Z" if kind != "straw" else "DIAGONAL",
                 in_Scale=120.0 if kind != "wood" else 40.0, in_Distortion=3.0, in_Detail=2.0)
@@ -134,7 +153,17 @@ def surface_shader(b, gcol=(0.5, 0.5, 0.5), tcol=(0.3, 0.3, 0.3), kind="cloth"):
     for s in ("Red", "Green", "Blue"):
         b.l(shade, comb.inputs[s])
     b.l(comb.outputs[0], mul.inputs[7])
-    return mul.outputs[2], rough, metal, b.math("MULTIPLY", fib.outputs["Fac"], bump), None
+    out = mul.outputs[2]
+    # flour (the baker's apron): pale dusty patches, thicker toward the middle and the lower half
+    dust = b.attr("dust").outputs["Fac"]
+    patch_ = b.noise(6.5, 5.0, pos, 0.75)
+    amount = b.math("MULTIPLY", dust, b.math("MINIMUM", 1.0, b.math("MAXIMUM", 0.0, b.math("MULTIPLY", b.math("SUBTRACT", patch_.outputs["Fac"], 0.42), 5.0))))
+    fl = b.n("ShaderNodeMix", data_type="RGBA", blend_type="MIX")
+    b.l(b.math("MULTIPLY", amount, 0.8), fl.inputs[0])
+    b.l(out, fl.inputs[6])
+    fl.inputs[7].default_value = (0.74, 0.72, 0.68, 1.0)
+    rough_out = b.math("ADD", rough - 0.10, b.math("MULTIPLY", big.outputs["Fac"], 0.20))
+    return fl.outputs[2], rough_out, metal, b.math("MULTIPLY", height, bump), None
 
 
 def live(name, fn, **kw):
@@ -263,6 +292,17 @@ def paint_colours(garments):
                 d.color = (*val, 1.0)
         if "trim" not in o.data.attributes:
             o.data.attributes.new("trim", "FLOAT", "POINT")
+        # hemz: 0 at the top of the piece .. 1 at its lower edge (wear and dust gather there); dust: flour
+        zs = [v.co.z for v in o.data.vertices] or [0.0]
+        z0, z1 = min(zs), max(zs)
+        tall = (z1 - z0) > 0.22 and kind in ("cloth", "leather")
+        for nm in ("hemz", "dust"):
+            if nm not in o.data.attributes:
+                o.data.attributes.new(nm, "FLOAT", "POINT")
+        a, d = o.data.attributes["hemz"], o.data.attributes["dust"]   # fetched after both exist (a new one moves the others)
+        for v in o.data.vertices:
+            a.data[v.index].value = (z1 - v.co.z) / (z1 - z0) if tall else 0.0
+            d.data[v.index].value = float(o.get("dust", 0.0))
 
 
 def pack_one_atlas(skin_objs, other_objs, boost=(), margin=0.003):
@@ -311,7 +351,7 @@ def bake_atlas(groups, name, size, out_dir, samples=16):
         em = b.n("ShaderNodeEmission")
         bsdf = b.n("ShaderNodeBsdfPrincipled")
         if height is not None:
-            bump = b.n("ShaderNodeBump", in_Strength=0.35, in_Distance=0.002)
+            bump = b.n("ShaderNodeBump", in_Strength=0.6, in_Distance=0.004)
             b.l(height, bump.inputs["Height"])
             b.l(bump.outputs["Normal"], bsdf.inputs["Normal"])
         tex = b.n("ShaderNodeTexImage")
@@ -358,7 +398,9 @@ def bake_atlas(groups, name, size, out_dir, samples=16):
     r = run("EMIT", tmp, "rough")[..., 0].copy()
     m = run("EMIT", tmp, "metal")[..., 0].copy()
     sc.world.light_settings.distance = 0.25
-    occ = 0.40 + 0.60 * run("AO", tmp)[..., 0].copy()
+    ao = run("AO", tmp)[..., 0].copy()
+    occ = 0.40 + 0.60 * ao
+    base[..., :3] *= (0.50 + 0.50 * ao)[..., None]      # contact shading in the colour too: folds, under belts and aprons
     nimg = S._image(f"{name}_normal", size)
     nimg.colorspace_settings.name = "Non-Color"
     run("NORMAL", nimg)
