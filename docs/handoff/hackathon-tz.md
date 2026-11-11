@@ -37,3 +37,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
   server: `/root/w/tz/ftf` (clone of this branch), `bash /root/w/tzbuild.sh` rebuilds and serves port 4311,
   `. /root/w/tz/env.sh && node /root/w/tz/shellcap.cjs shots/<name>` flies into Shell I and takes frames.
 - Local: `cd game && npm run dev`, headless Chromium works for the onboarding screens (SwiftShader).
+- NFT-001 cards: in the game (Day 1 flip, profile, on-chain Elise row); no-name art at `assets/nft/elise.webp` = the deployed `elise_media` URL. Left: NFTs/inventory tabs with (d).

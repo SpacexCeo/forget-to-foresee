@@ -565,7 +565,6 @@ export default {
   "day1.pick": "Оберіть карту",
   "day1.elise": "Еліза",
   "day1.elise.sub": "Героїня · Forget to Foresee",
-  "day1.elise.art": "Її портрет NFT-001 незабаром буде; зараз це заглушка.",
   "day1.mint.keygen": "Створюємо ваш ключ у цьому браузері…",
   "day1.mint.sending": "Карбуємо в NEAR testnet…",
   "day1.mint.checking": "Підтверджуємо в NEAR testnet…",
