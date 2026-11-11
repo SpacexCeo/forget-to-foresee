@@ -236,7 +236,8 @@ def stairs(rig, local, pelvis, slope, lift=0.04):
     return rig.to_local(wr)
 
 
-STRIPS = {'ribbon': dict(parent=None, bend=0.03, hold=0.0, drag=3.0, margin=0.006), 'hair': dict(parent=None, bend=0.6, hold=0.5, drag=2.0, margin=0.004)}
+# per chain kind: bending stiffness, pull back to the rest shape, air drag (1/s), collision margin
+STRIPS = {'ribbon': dict(bend=0.03, hold=0.0, drag=0.9, margin=0.006), 'hair': dict(bend=0.6, hold=0.5, drag=0.8, margin=0.004)}
 
 
 def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
