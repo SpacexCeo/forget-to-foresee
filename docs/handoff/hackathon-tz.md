@@ -2,7 +2,7 @@
 
 Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never push or tag `main`). State: 11.11.2026.
 
-## Done (tests green: `cd game && npm test`, 653)
+## Done (tests green: `cd game && npm test` 667, `cd server && npm test` 28)
 - **P0-B** first-contact copy for the town start; **P0-C** terms taught in context; **P0-D** slot names are buttons
   with a one-line hint (`flow.js` `tapLabel`, `hintSlot`); **P0-E** one Begin, preview paints at once. Five locales,
   tests in `game/tests/tutorial.test.mjs`, notes in `docs/tutorial.md` §2.1.
@@ -14,12 +14,19 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - **P0-F** the only play-path read-back was the sky LUT: cached per atmosphere; Controls shows first
   (`tests/client/readback.test.mjs`, `docs/smoothness.md`).
 
+## P1 (done 11.11)
+- **P1-C** honest shard card: `previewCard` in `ui/world-hud/shard-card-model.js`, the DOM in `shard-card.js`, tests
+  in `tests/client/shard-nft-hud.test.mjs`; README judge row 7.
+- **P1-A** `fixedSteps(..., carry)` + `PHYSICS_CARRY` in `boot-world.js`, `clickStuck` in `physics/character.js`;
+  tests in `movement.test.mjs` and `input.test.mjs` (`KeyW` + `ц`); `docs/movement.md`.
+- **P1-B** the full three-NPC quest: `scenes/town-quest.js` + `town-flow.js`, `tests/client/town-quest.test.mjs`,
+  `docs/town.md`. Checked in headless Chromium with `?play=direct&town=1&quest=1` (all three talks, no errors).
+- Server: `tests/demo.test.mjs` runs on a fixed seed (it failed on about 1 run in 4 on main: some seeds end at tick
+  16 as `gone`, with no vote).
+
 ## Next
-- P0 walked end to end on the RTX 5090 (`/root/w/tz/judge.cjs`, 11.11): town -> altar -> island -> Shell I first frame is the
-  real hall, stake, leave, Controls opens in 14 ms; the only ReadPixels warnings are the two cached sky-LUT reads at boot.
-  README judge row 1 now describes the town start.
-- **P1-C** honest shard card for every player, **P1-A** hitch-proof stairs + `KeyW`/`ц` test, **P1-B** town quest
-  (spec sections). Update the PR #34 checklist as tasks land; report to the lead when P0 and P1 are done.
+- Not done and not asked: P1-D (owner mint), P2. After the freeze: copy pass (spec section 7), video shot list.
+- Not walked on the GPU yet: the town quest and the shard preview toast (only headless/unit).
 
 ## How to resume
 - GPU server (real WebGL): `tools/gpu-server/jx.py` with the host and token in an uncommitted directory. On the
