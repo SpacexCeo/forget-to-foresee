@@ -66,3 +66,25 @@ test('a build without the guest key or the deployment is "unavailable" and sends
   assert.equal(m.phase, 'unavailable');
   assert.equal(calls.length, 0);
 });
+
+test('with a relayer: the page holds no guest key, POSTs the player key, and still confirms the mint on-chain', async () => {
+  const calls = []; const posts = [];
+  const rpc = fakeRpc({ guestSeq: [null, { account_id: 'ann-1.guests.c.testnet', token_id: 'elise-ann-1', minted: true }], calls });
+  const fetch = async (url, init) => {
+    if (url === 'https://relay.example/api/create-guest') { posts.push(JSON.parse(init.body)); return { ok: true, status: 200, json: async () => ({ account_id: 'ann-1.guests.c.testnet', token_id: 'elise-ann-1', tx_hash: 'TxR' }) }; }
+    return rpc(url, init);
+  };
+  const m = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine }, relayerUrl: 'https://relay.example/', guestSecret: undefined, rpcUrls: ['https://r'], fetch });
+  assert.equal(m.available, true);
+  await m.mint('Ann');
+  assert.equal(m.phase, 'minted');
+  assert.equal(posts.length, 1); assert.match(posts[0].public_key, /^ed25519:/); assert.equal(posts[0].nickname, 'Ann');
+  assert.equal(m.record.playerKey.publicKey, posts[0].public_key, 'the browser key becomes the account key');
+  assert.ok(!calls.includes('send_tx'), 'the browser signs nothing');
+  assert.equal(m.links.tx, 'https://testnet.nearblocks.io/txns/TxR');
+  // the relayer refuses (rate limit) or answers 200 but the chain disagrees: failed, never minted
+  const bad = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine }, relayerUrl: 'https://relay.example', fetch: async (url, init) => (url.includes('/api/') ? { ok: false, status: 429, json: async () => ({ error: 'rate_limited' }) } : fakeRpc({ guestSeq: [null], calls: [] })(url, init)), rpcUrls: ['https://r'] });
+  await bad.mint('Bo'); assert.equal(bad.phase, 'failed'); assert.equal(bad.reason, 'rate_limited');
+  const liar = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine }, relayerUrl: 'https://relay.example', rpcUrls: ['https://r'], fetch: async (url, init) => (url.includes('/api/') ? { ok: true, status: 200, json: async () => ({}) } : fakeRpc({ guestSeq: [null], calls: [] })(url, init)) });
+  await liar.mint('Cy'); assert.equal(liar.phase, 'failed');
+});

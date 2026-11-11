@@ -1,0 +1,8 @@
+{
+  "name": "ftf-relayer",
+  "private": true,
+  "type": "module",
+  "description": "Forget to Foresee Day 1 relayer: signs guests.create_guest server-side so no key ships to the browser",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}
