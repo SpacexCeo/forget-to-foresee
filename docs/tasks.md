@@ -59,8 +59,8 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 ## Owner plan 11.11 (one narrow task per session; Fable = rigs, 3D, animation only; the lead checks)
 | # | Task | Lane / branch | Status |
 |---|---|---|---|
-| 1 | Lower gate is an exit, walkable hillside, Iris casts Frost Lance (Q) and Storm Snare (V) outside the walls | Opus / `claude/festive-faraday-2ga2wb` | doing |
-| 2 | Second heroine (NFT skin): model on Iris's skeleton, rig, existing clips play on her, contact sheet | Fable / `claude/heroine2` | todo |
+| 1 | Lower gate is an exit, walkable hillside, Iris casts Frost Lance (Q) and Storm Snare (V) outside the walls | Opus / `claude/festive-faraday-2ga2wb` | review (owner merges) |
+| 2 | Second heroine (NFT skin): model on Iris's skeleton, rig, existing clips play on her, contact sheet | Fable / `claude/heroine2` | doing |
 | 3 | Second heroine: her own cast clips and skills | Fable (clips) + Opus (skills) | todo, after 2 |
 | 4 | No lobby: straight into the town after loading; free-skin offer on entry instead of the guide | Opus | todo |
 | 5 | Guide as a book statue at the Tournament, opens in a popup | Fable (statue) + Opus (popup) | todo |
@@ -69,3 +69,5 @@ Deadlines (Kyiv): models 11.11 evening · QA 12.11 · code freeze 13.11 20:00 ·
 | 8 | Daily spin wheel (silk, shards), shards → NFT, shard sale on testnet | Opus | todo |
 | 9 | Loading screen: smoke with glyphs fills the bar | Opus (+ Fable if a sprite bake is needed) | todo |
 | 10 | Owner report: effects and lighting not visible in the game — find which branch or setting lost them | Opus | todo |
+| 11 | Rebuild the hillside outside the gate: walkable paths ≤ 30°, meadow, trees, rocks, ambient fauna | Fable / `claude/town-outside-env` | doing |
+| 12 | GPT design tasks (FX-001, HER-001, NFT-001, LOAD-001, SKIN-001, SPIN-001, MOB-001, ENV-001) | GPT via `board/board.md` | open |
