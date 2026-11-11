@@ -2,6 +2,7 @@
 // draws it. The ink ring is the contract's own SVG (verified byte-identical to the game's shardSvg before it is drawn
 // inline), and its strokes draw themselves in (stroke-dashoffset, motion tokens; reduced motion: a short fade).
 import { ensureWhStyle } from './index.js';
+import { shardTimeline } from './shard-card-model.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -67,6 +68,17 @@ function shareButton(doc, t, card, line) {
   } });
 }
 
+/** The shard's history (feature 8): one row per step, the trial on the left, a link where the chain has one. */
+export function renderTimeline(card, { t, doc = document } = {}) {
+  const steps = shardTimeline(card);
+  if (!steps.length) return null;
+  const arg = (a) => { const o = { ...a }; if (o.clan) o.clan = t('agent.' + o.clan); return o; };
+  return el(doc, 'ol', { class: 'sh-timeline', 'aria-label': t('shard.tl.heading') },
+    steps.map((s) => el(doc, 'li', { class: 'sh-tl sh-tl--' + s.id, 'data-step': s.id },
+      el(doc, 'span', { class: 'sh-tl__when', text: s.trial != null ? t('shard.tl.trial', { trial: s.trial }) : '' }),
+      link(doc, s.href, t(s.key, arg(s.args)), 'sh-tl__what'))));
+}
+
 /** A full card: image, the NFT line, token id and owner, the biography, the season binding, links. */
 export function renderShardCard(card, { t, doc = document } = {}) {
   const clan = (c) => t('agent.' + c);
@@ -85,6 +97,8 @@ export function renderShardCard(card, { t, doc = document } = {}) {
         el(doc, 'p', { class: 'sh-kicker', text: t('shard.nft.preview.title') }),
         el(doc, 'h4', { class: 'sh-title', text: t('shard.nft.title', { id: card.shardId, kind }) }),
         el(doc, 'p', { class: 'sh-bio', text: bio + ' ' + sale }),
+      renderTimeline(card, { t, doc }),
+        renderTimeline(card, { t, doc }),
         el(doc, 'p', { class: 'sh-note', text: t('shard.nft.preview.note') }),
         el(doc, 'p', { class: 'sh-links' }, shareButton(doc, t, card, bio + ' ' + sale))));
     setTimeout(() => node.classList.add('sh-drawn'), 2000);

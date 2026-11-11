@@ -36,6 +36,7 @@ import { panelArbiterFor } from './panels.js';
 import { CLAN_ORDER } from './behaviour.js';
 import { setGreyboxLabels } from '../render/greybox.js';
 import { attachChapters } from '../cinematic/chapters/index.js';
+import { attachNarrator } from './narrator.js';
 
 // Optional modules written by other agents: present → used, absent → silently skipped.
 const VFX_MODULES = import.meta.glob('../vfx/index.js');
@@ -329,6 +330,12 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   // Chapter films (cinematic/chapters, docs/chapters.md): short in-engine cutscenes between the season's
   // chapters, built from this season's facts; they take the camera after the rig, hold Iris, pause the hub.
   const chapters = attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, camera, player, avatar, shell, agents, uiRoot, hooks, now: () => state.now, afterFilm: () => { lastSignKey = ''; syncVisuals(); } });
+  // Narrator subtitles (feature 10): the first Shell, the trial-13 crisis and the finale, when films do not tell them.
+  let narratorLines = null;
+  try {
+    narratorLines = attachNarrator({ root: uiRoot, session, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage,
+      filmsOn: () => !!chapters.enabled, filmPlaying: () => !!chapters.playing, narration: () => chapters.narration });
+  } catch (e) { console.warn('[play] narrator off', e); }
   // Iris winks (`understand` clip) when a Guest's sign settles a word in her dictionary.
   let prevObs = session.obs;
   session.on('obs', () => {
@@ -406,7 +413,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     return ui.handleKey(code);
   }
 
-  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, beacons, pointer, fun, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
+  return { session, transport, ui, hud, worldHud, hub, hubUi, map, chapters, fly, agents, shell, hooks, presentation, beacons, pointer, fun, get narrator() { return narratorLines; }, update, handleKey, routeWish, cancelRoute, walkTo, get zone() { return state.zone; }, get routeActive() { return !!state.route; } };
 }
 
 async function loadModule(mods) {

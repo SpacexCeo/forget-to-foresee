@@ -43,6 +43,19 @@ NEARAI_API_KEY=sk-...
 
 Optional lines: `NEARAI_MODEL=Qwen/Qwen3-VL-30B-A3B-Instruct` (the default), `FTF_TEE_DAILY_CAP=1500`.
 
+## 3b. Make the chest-opener key (loot chests, `docs/chests.md`)
+
+The relayer opens loot chests on `chests.ftf-coordinator.testnet` with its own key, made on this server so the private
+part never leaves it:
+
+```bash
+cd <checkout>/relayer
+node scripts/chest-key.mjs        # writes FTF_CHEST_KEY=… to relayer/.env (once) and prints ONLY the public key
+```
+
+Send the printed `ed25519:…` public key to the lead. The lead adds it to the chest contract as an open_chest-only key
+(`OPENER_PUB=ed25519:… bash contracts/scripts/chest-deploy.sh`). Until then `/api/chest/open` answers `403`/`502`.
+
 ## 4. Restart
 
 - **plain Node / systemd:** `sudo systemctl restart <service>` (or stop the old `node server.js` and start it again
@@ -56,21 +69,22 @@ Optional lines: `NEARAI_MODEL=Qwen/Qwen3-VL-30B-A3B-Instruct` (the default), `FT
   (keep any `-e FTF_GUEST_KEY` / `-e ALLOWED_ORIGIN` the old container had — `docker inspect <old name>` shows them;
   copy them into `.env` before removing it).
 
-The start line prints `relayer on http://… (key set, TEE set)`.
+The start line prints `relayer on http://… (key set, TEE set, chests set)`.
 
 ## 5. Health checks (from any machine)
 
 ```bash
 H=https://<relayer host>
-curl -s $H/api/health                      # "configured": true (mint key) and "tee": {"configured": true, "model": "..."}
+curl -s $H/api/health                      # "configured": true (mint key), "tee": {"configured": true, ...}, "chests": {"configured": true, ...}
 curl -s -X POST $H/api/agent/say -H 'Content-Type: application/json' \
   -d '{"npc":"baker","question":"Good morning!","facts":"The bakery sells bread for silk.","lang":"en"}' > answer.json
 node -e 'const j=require("./answer.json");console.log(j.text, "| verified:", j.tee && j.tee.verified)'
 node tools/verify-tee/verify.mjs answer.json   # from the repo root: every line ok, then PASS
+curl -s -o /dev/null -w '%{http_code}\n' -X POST $H/api/chest/open -H 'Content-Type: application/json' -d '{}'   # 400 (chest route alive)
 curl -s -o /dev/null -w '%{http_code}\n' -X POST $H/api/create-guest -H 'Content-Type: application/json' -d '{"public_key":"nope"}'   # 400 (mint route alive)
 ```
 
-Report back to the lead: the health JSON (it never contains the key), the `text` and `verified` line, and the
+Report back to the lead: the chest-opener PUBLIC key from step 3b, the health JSON (it never contains the key), the `text` and `verified` line, and the
 verifier's last line. If `say` returns `502` with `upstream_status: 402`, the NEAR AI Cloud account needs credits; if
 `503 tee_not_configured`, the key did not reach the process (check step 3/4).
 
