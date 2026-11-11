@@ -9,6 +9,8 @@ import { trackArgs, verifyTrack } from '../game/track-record.js';
 
 /** 0.01 NEAR for storage (a record is a few hundred bytes; the contract refunds the rest). */
 export const LEDGER_DEPOSIT = 10n ** 22n;
+/** 20 Tgas: the record needs a few; the guest account holds only 0.05 NEAR, and prepaid gas counts against it. */
+export const LEDGER_GAS = 20_000_000_000_000n;
 const DAY1_KEY = 'ftf.day1.v1';
 const REPO = 'https://github.com/SpacexCeo/forget-to-foresee';
 
@@ -49,7 +51,7 @@ export async function recordHire({ storage, npc, result, deployment = DAY1_DEPLO
   const g = guestFrom(storage);
   const client = createTxClient({ rpcUrls, fetch });
   const key = await importSecretKey(g.secretKey);
-  const r = await client.call({ key, signerId: g.accountId, receiverId: ledgerContract(deployment), methodName: 'record_track', args: trackArgs(npc, result), gas: 50_000_000_000_000n, deposit: LEDGER_DEPOSIT });
+  const r = await client.call({ key, signerId: g.accountId, receiverId: ledgerContract(deployment), methodName: 'record_track', args: trackArgs(npc, result), gas: LEDGER_GAS, deposit: LEDGER_DEPOSIT });
   if (!r.ok) return { ok: false, reason: 'tx_failed', hash: r.hash, failure: r.failure };
   const v = await verifyOnChain({ accountId: g.accountId, npc, epoch: result.epoch, deployment, fetch, rpcUrls });
   return { ok: true, hash: r.hash, verified: v.ok, reason: v.ok ? null : v.reason, accountId: g.accountId, epoch: result.epoch };
