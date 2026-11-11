@@ -570,7 +570,7 @@ def beard(ctx, colour, style):
             mo = sm01(m.z + 0.002, m.z + 0.007, p.z) * (1 - sm01(m.z + 0.014, m.z + 0.020, p.z)) * (1 - sm01(0.03, 0.045, ax)) * front
             return max(w, mo * 0.45)
         w = low * front
-        side = sm01(0.040, 0.055, ax) * sm01(m.z + 0.075, m.z + 0.035, p.z) * sm01(hc.y + 0.05, hc.y + 0.015, p.y)
+        side = sm01(0.040, 0.055, ax) * sm01(m.z + 0.050, m.z + 0.020, p.z) * sm01(hc.y + 0.05, hc.y + 0.015, p.y)   # side whiskers stay below the cheekbone
         mo = sm01(m.z + 0.002, m.z + 0.007, p.z) * (1 - sm01(m.z + 0.016, m.z + 0.022, p.z)) * (1 - sm01(0.035, 0.05, ax)) * front
         return max(w, side * 0.7, mo * (0.55 if style == "full" else 0.8))
     W = {i: w_of(i) for i in range(len(co))}
