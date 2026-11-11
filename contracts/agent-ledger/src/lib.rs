@@ -19,11 +19,15 @@ pub const ERR_FIELD: &str = "ERR_FIELD: a field is empty or too long";
 pub const ERR_HASH: &str = "ERR_HASH: params_hash and snapshot_sha256 are 64 lowercase hex characters";
 pub const ERR_TRADES: &str = "ERR_TRADES: 1-50 trades of five integers each";
 pub const ERR_BARS: &str = "ERR_BARS: bar_from must be below bar_to";
+pub const ERR_TEE_FIELD: &str = "ERR_TEE_FIELD: a TEE decision field is empty, too long or malformed";
+pub const ERR_TEE_SIG: &str = "ERR_TEE_SIG: the signature does not recover to signing_address";
+pub const ERR_TEE_HASH: &str = "ERR_TEE_HASH: response_hash is not the response hash in signed_text";
+pub const MAX_TEE_PER_AGENT: usize = 50;
 pub const ERR_DEPOSIT: &str = "ERR_DEPOSIT: attach enough NEAR for the record's storage";
 
 #[derive(BorshStorageKey)]
 #[near]
-enum StorageKey { Tracks, Lists, Summaries }
+enum StorageKey { Tracks, Lists, Summaries, TeeDecisions }
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
@@ -48,6 +52,45 @@ pub struct Track {
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Summary { pub epochs: u32, pub trades: u32, pub pnl_bp_sum: i64 }
+
+/// One decision an agent took through a model in a TEE (docs/tee.md). The contract checks that `signature` is a valid
+/// secp256k1 personal_sign of `signed_text` by `signing_address` and that `response_hash` is the one signed; the
+/// attestation of `signing_address` (that the key lives in a real TEE) is checked off-chain by tools/verify-tee.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct TeeDecision {
+    pub account_id: AccountId,
+    pub npc: String,
+    pub action: String,
+    pub decision_hash: String,
+    pub model: String,
+    pub chat_id: String,
+    pub signed_text: String,
+    pub response_hash: String,
+    pub signature: String,
+    pub signing_address: String,
+    pub recorded_at_ns: U64,
+    pub block: U64,
+}
+
+fn unhex(s: &str) -> Option<Vec<u8>> {
+    if s.len() % 2 != 0 { return None; }
+    (0..s.len()).step_by(2).map(|i| u8::from_str_radix(s.get(i..i + 2)?, 16).ok()).collect()
+}
+
+/// EIP-191 personal_sign recovery: the 0x-prefixed lowercase address that signed `text`, or None.
+pub fn recover_personal(text: &str, signature_hex: &str) -> Option<String> {
+    let sig = unhex(signature_hex.strip_prefix("0x").unwrap_or(signature_hex))?;
+    if sig.len() != 65 { return None; }
+    let v = if sig[64] >= 27 { sig[64] - 27 } else { sig[64] };
+    if v > 1 { return None; }
+    let mut msg = format!("\x19Ethereum Signed Message:\n{}", text.len()).into_bytes();
+    msg.extend_from_slice(text.as_bytes());
+    let hash = env::keccak256_array(&msg);
+    let pk = env::ecrecover(&hash, &sig[..64], v, true)?;
+    let addr = env::keccak256_array(&pk);
+    Some(format!("0x{}", addr[12..].iter().map(|b| format!("{:02x}", b)).collect::<String>()))
+}
 
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
@@ -117,6 +160,50 @@ impl Contract {
             "EVENT_JSON:{{\"standard\":\"ftf_ledger\",\"version\":\"1.0.0\",\"event\":\"track_recorded\",\"data\":[{{\"account_id\":\"{}\",\"npc\":\"{}\",\"epoch\":{},\"trades\":{},\"pnl_bp\":{}}}]}}",
             account_id, npc, epoch, trades, pnl_bp));
         track
+    }
+
+    /// Records a TEE decision of `npc` for the calling account after checking its signature on-chain.
+    /// Payable: storage comes from the deposit. Returns the stored record.
+    #[payable]
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_tee_decision(&mut self, npc: String, action: String, decision_hash: String, model: String, chat_id: String,
+                               signed_text: String, response_hash: String, signature: String, signing_address: String) -> TeeDecision {
+        require!(valid_npc(&npc), ERR_NPC);
+        require!(matches!(action.as_str(), "buy" | "sell" | "hold"), ERR_TEE_FIELD);
+        require!(is_hex64(&decision_hash) && is_hex64(&response_hash), ERR_HASH);
+        require!(!model.is_empty() && model.len() <= 80 && !chat_id.is_empty() && chat_id.len() <= 80 && !signed_text.is_empty() && signed_text.len() <= 220, ERR_TEE_FIELD);
+        let addr = signing_address.to_ascii_lowercase();
+        require!(addr.len() == 42 && addr.starts_with("0x") && unhex(&addr[2..]).is_some(), ERR_TEE_FIELD);
+        require!(signed_text.rsplit(':').next() == Some(response_hash.as_str()), ERR_TEE_HASH);
+        require!(recover_personal(&signed_text, &signature).as_deref() == Some(addr.as_str()), ERR_TEE_SIG);
+        let account_id = env::predecessor_account_id();
+        let ak = agent_key(&account_id, &npc);
+        let mut map: LookupMap<String, Vec<TeeDecision>> = LookupMap::new(StorageKey::TeeDecisions);
+        let mut list = map.get(&ak).cloned().unwrap_or_default();
+        require!(list.len() < MAX_TEE_PER_AGENT, ERR_TEE_FIELD);
+        require!(!list.iter().any(|d| d.chat_id == chat_id), ERR_EXISTS);
+        let before = env::storage_usage();
+        let d = TeeDecision { account_id: account_id.clone(), npc: npc.clone(), action, decision_hash, model, chat_id, signed_text, response_hash, signature,
+            signing_address: addr, recorded_at_ns: U64(env::block_timestamp()), block: U64(env::block_height()) };
+        list.push(d.clone());
+        map.insert(ak, list);
+        map.flush();
+        let used = env::storage_usage().saturating_sub(before);
+        let cost = env::storage_byte_cost().saturating_mul(used as u128);
+        let deposit = env::attached_deposit();
+        require!(deposit >= cost, ERR_DEPOSIT);
+        let refund = deposit.saturating_sub(cost);
+        if refund > NearToken::from_yoctonear(1) { let _ = Promise::new(account_id.clone()).transfer(refund); }
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"ftf_ledger\",\"version\":\"1.1.0\",\"event\":\"tee_decision_recorded\",\"data\":[{{\"account_id\":\"{}\",\"npc\":\"{}\",\"action\":\"{}\",\"decision_hash\":\"{}\",\"signing_address\":\"{}\"}}]}}",
+            account_id, npc, d.action, d.decision_hash, d.signing_address));
+        d
+    }
+
+    pub fn list_tee_decisions(&self, account_id: AccountId, npc: String, from_index: Option<u32>, limit: Option<u32>) -> Vec<TeeDecision> {
+        let map: LookupMap<String, Vec<TeeDecision>> = LookupMap::new(StorageKey::TeeDecisions);
+        let list = map.get(&agent_key(&account_id, &npc)).cloned().unwrap_or_default();
+        list.into_iter().skip(from_index.unwrap_or(0) as usize).take(limit.unwrap_or(20).min(50) as usize).collect()
     }
 
     pub fn get_track(&self, account_id: AccountId, npc: String, epoch: u32) -> Option<Track> {

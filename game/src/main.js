@@ -16,6 +16,7 @@ import '@fontsource/cormorant-garamond/400-italic.css';
 import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan } from './ui/loading.js';
 import { logKeysFromStats } from './ui/loading.js';
 import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
+import { showPremise } from './ui/premise.js';
 
 const params = new URLSearchParams(location.search);
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
@@ -97,6 +98,11 @@ const townShown = (w) => new Promise((resolve) => {
   tick();
 });
 
+/** Title and premise once the town is revealed (ui/premise.js); never blocks input. */
+const premise = (ctx) => showPremise(document, (k) => ctx.i18n.t(k), {
+  params, reducedMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
+});
+
 ctxP.then(async (ctx) => {
   loading.setTranslator((k) => ctx.i18n.t(k));
   // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
@@ -111,6 +117,7 @@ ctxP.then(async (ctx) => {
       const w = await startWorld(ctx);
       await w.enterWorld();
       if (covered) { report('Loading the town'); await townShown(w); await loading.finish(); }
+      if (town) premise(ctx);
     };
     shellUi = ui.mountShell(uiRoot, { ctx, onFirstContact: enter });
     marks.lobby = Math.round(performance.now() - t0);
@@ -136,6 +143,7 @@ ctxP.then(async (ctx) => {
     await entered.catch(() => {});
     marks.gate = Math.round(performance.now() - t0);
     await loading.finish();
+    if (town) premise(ctx);
   }
   clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);

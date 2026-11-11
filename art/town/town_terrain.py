@@ -10,7 +10,8 @@ from town_geo import RY, T, tint
 
 STONE = (0.92, 0.90, 0.86)
 STONE_DARK = (0.66, 0.65, 0.62)
-STONE_CAP = (1.0, 0.98, 0.94)
+STONE_CAP = (0.88, 0.86, 0.82)   # was (1.0, 0.98, 0.94): cap stones read pure white in sun (QA sweep 11.11)
+WALL_STONE = (0.66, 0.63, 0.58)     # town wall and gatehouse: the old STONE tint blew out to white in full sun (owner 11.11)
 COBBLE = (0.95, 0.93, 0.90)
 GRASS = (0.85, 0.95, 0.75)
 EARTH = (0.80, 0.70, 0.55)
@@ -267,7 +268,7 @@ def town_walls(tb):
     for sx in (-1, 1):
         for tname, y, zn, zs in P.TERRACES:
             top = y + P.WALL_H
-            tb.box("stone", (sx * xw, (top + y - 4.0) / 2, (zn + zs) / 2), (P.WALL_T, top - (y - 4.0), zs - zn), STONE, skip="y")
+            tb.box("stone", (sx * xw, (top + y - 4.0) / 2, (zn + zs) / 2), (P.WALL_T, top - (y - 4.0), zs - zn), WALL_STONE, skip="y")
             tb.box("stone", (sx * (P.X_IN - 0.12), top - 0.25, (zn + zs) / 2), (0.24, 0.3, zs - zn), STONE_DARK, skip="")
             tb.col_poly([(sx * P.X_IN, y - 1, zs), (sx * P.X_IN, y - 1, zn), (sx * P.X_IN, top + 3, zn), (sx * P.X_IN, top + 3, zs)][::(1 if sx > 0 else -1)])
             _merlons(tb, sx * (xw + 0.45), zn, sx * (xw + 0.45), zs, top, 0.5)
@@ -277,7 +278,7 @@ def town_walls(tb):
     # south wall, both sides of the gatehouse
     zc = P.Z_SOUTH + P.WALL_T / 2
     for a, b in ((-P.X_IN, -5.6), (5.6, P.X_IN)):
-        tb.box("stone", ((a + b) / 2, (P.WALL_H - 4.0) / 2, zc), (b - a, P.WALL_H + 4.0, P.WALL_T), STONE, skip="y")
+        tb.box("stone", ((a + b) / 2, (P.WALL_H - 4.0) / 2, zc), (b - a, P.WALL_H + 4.0, P.WALL_T), WALL_STONE, skip="y")
         tb.box("stone", ((a + b) / 2, P.WALL_H - 0.25, P.Z_SOUTH + 0.12), (b - a, 0.3, 0.24), STONE_DARK)
         _merlons(tb, a, zc + 0.5, b, zc + 0.5, P.WALL_H, 0.5)
     tb.col_poly([(P.X_IN, -1, P.Z_SOUTH), (-P.X_IN, -1, P.Z_SOUTH), (-P.X_IN, P.WALL_H + 6, P.Z_SOUTH), (P.X_IN, P.WALL_H + 6, P.Z_SOUTH)])
@@ -291,7 +292,7 @@ def gatehouse(tb):
     arch_top = spring + half
     for sx in (-1, 1):
         cx = sx * (half + pier / 2)
-        tb.box("stone", (cx, top / 2 - 1.0, (z0 + z1) / 2), (pier, top + 2.0, z1 - z0), STONE, skip="yY")
+        tb.box("stone", (cx, top / 2 - 1.0, (z0 + z1) / 2), (pier, top + 2.0, z1 - z0), WALL_STONE, skip="yY")
         tb.box("stone", (cx, 0.5, (z0 + z1) / 2), (pier + 0.3, 1.0, z1 - z0 + 0.3), STONE_DARK, skip="y")
     # wall above the arch: the two faces as fans around the semicircle, and the intrados
     n = 12
@@ -309,13 +310,20 @@ def gatehouse(tb):
             if not front:
                 q, w = list(reversed(q)), list(reversed(w))
             off = 0.06 if front else -0.06
-            tb.poly("stone", [(p[0], p[1], p[2] + off) for p in q], tint(STONE_CAP, k))
-            tb.poly("stone", w, STONE)
-        # fill beside the voussoir band up to the pier line
-        for sx in (-1, 1):
-            xa = sx * (half + 0.55)
-            q = [(sx * half, spring, zf), (xa, spring, zf), (xa, top, zf), (sx * half, top, zf)]
-            _ = q
+            # the voussoir band stands 6 cm proud as a closed band (its outer and inner edges reach back to the wall
+            # face): the loose offset polygons read as a ghost arc floating in front of the gate (owner 11.11)
+            band = tint(tint(STONE_CAP, k), 0.70)
+            tb.poly("stone", [(p[0], p[1], p[2] + off) for p in q], band)
+            ia, ib, oa, ob = (xa, ya), (xb, yb), va, vb
+            for (pa, pb) in ((ia, ib), (ob, oa)):
+                e = [(pa[0], pa[1], zf), (pb[0], pb[1], zf), (pb[0], pb[1], zf + off), (pa[0], pa[1], zf + off)]
+                cen = ((xa + xb) / 2 * 1.13, spring + ((ya + yb) / 2 - spring) * 1.13)   # a point mid-band
+                mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
+                dx, dy = pb[0] - pa[0], pb[1] - pa[1]
+                if (dy * off) * (mid[0] - cen[0]) + (-dx * off) * (mid[1] - cen[1]) < 0:   # face away from the band
+                    e = list(reversed(e))
+                tb.poly("stone", e, tint(band, 0.8))
+            tb.poly("stone", w, WALL_STONE)
     for i in range(n):
         (xa, ya), (xb, yb) = arc[i], arc[i + 1]
         tb.quad("stone", (xa, ya, z1), (xb, yb, z1), (xb, yb, z0), (xa, ya, z0), STONE_DARK)
@@ -326,7 +334,11 @@ def gatehouse(tb):
     # as doors), iron bands and a ring pull on the face that looks into the passage
     zd = z0 + 2.2
     IRON = (0.16, 0.15, 0.15)
-    leaf, zh = half - 0.1, z0 + 2.5
+    # the passage floor: cobbles from the town ground (z 34) under the arch to the outside road (z 35.6), which
+    # had left a bare strip (owner 11.11, seen from above)
+    tb.quad("cobble", (-half, 0.0, P.Z_SOUTH + 1.7), (half, 0.0, P.Z_SOUTH + 1.7), (half, 0.0, z0 - 0.1), (-half, 0.0, z0 - 0.1), COBBLE)
+    tb.col_poly([(-half, 0.0, P.Z_SOUTH + 1.7), (half, 0.0, P.Z_SOUTH + 1.7), (half, 0.0, z0 - 0.1), (-half, 0.0, z0 - 0.1)])
+    leaf, zh = half - 0.25, z0 + 2.5          # leaves 0.15 m shorter: the free end stays inside the passage
     for sx in (-1, 1):
         with tb.at(T(sx * (half - 0.05), 0, zh), RY(sx * 8)):
             xc = -sx * 0.13                                   # leaf centre: 0.22 thick, hinged on the jamb

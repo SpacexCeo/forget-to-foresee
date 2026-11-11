@@ -25,3 +25,42 @@ time on the server. Nothing lives only on the server.
 Hourly: merge finished work, smoke the live page. 05:00 Kyiv: full verification (npm test, contract tests,
 live judge path `?demo=judge`, Day 1 mint, README truth table), summary for the owner by 06:00.
 Owner only (not doable by agents): QW-10 re-cut 60 s video, repo description/topics/homepage, X post, submission form.
+
+## Extended queues (owner, 11.11 23:00 Kyiv: five agents, a long list each, TEE in; everything we claim must be a strength)
+Work top to bottom; when a list is done, report and take the next item from "Spare" below.
+
+**1. Jury readiness (`claude/jury-ready`)** — the items above, then: a 2-minute judge guide (`docs/judge-guide.md`) that matches
+the live site step by step; cross-browser smoke (Chromium, Firefox, WebKit via Playwright) and the phone layout; load
+time and fps on a throttled profile with the numbers in docs/STATS.md; accessibility pass (focus order, labels,
+reduced motion); X post draft, 60 s video shot list and the submission-form values as notes for the owner; final
+JUDGE-SIM on the live site at about 04:00 Kyiv.
+
+**2. TZ code (`claude/hackathon-tz`)** — counter camera in the chandelier; trading board + wheel props in the town; features
+4–10; then: the Day-1 flow end to end on the live relayer (fly-in → welcome → nickname → two free-mint cards → flip →
+claim to inventory → skin hint → quest); Tournament exit logic checked; console clean (no warnings) on the judge path;
+5 locales complete (no missing keys); phone fps on the low tier; dragon companions client per
+`docs/companion-nft-plan.md` (contracts first, then the in-game follow + card).
+
+**3. Art (`claude/art-queue`)** — town-v2 defects 1–5 + QA sweep; townsfolk round 2 + seated elder; clan agents; then: the
+new Shell look (alien object, not identical elongated forms) in game; shop interiors polish at the game camera;
+three original dragons (pearl wind, teal tide, amber ember, 40–70 cm) rigged with a follow/idle/fly clip set for the
+companion client.
+
+**4. Elise v2 (`claude/elise-v2`)** — poke-through fixed, new clips, phone model ≤ 24k, in-game check, sheet + video; then
+Elise as a selectable skin in the game (after the Day-1 claim) and her NFT card render from the final model.
+
+**5. TEE agents (`claude/tee-agents`, new)** — LLM agents inside a NEAR TEE (lead proposal in `docs/decisions.md`, owner
+approved the direction 11.11): NEAR AI Cloud confidential inference (OpenAI-compatible API, responses signed inside
+the TEE + Intel TDX / NVIDIA attestation). Server side in `relayer/` (the key only on the server): `/api/agent/say`
+(townsfolk speech) and `/api/agent/decide` (hired trader buy/sell/hold), each returning the text/decision, the chat
+id, the TEE signature and the attestation summary; rate limits and a daily cap like the mint. Verification:
+signature → signing address → attestation (tools/verify-tee, Node, prints PASS/FAIL), and the decision hash +
+signature recorded on the ledger (`ledger.ftf-coordinator.testnet`, new method or a field in the track record).
+Client: townsfolk talk and hired traders use it when available, with a "Verified in TEE ✓" detail panel (model,
+attestation, signature, explorer link) and the scripted fallback when not. Tests with recorded fixtures; README row
+honest. Redeploying the relayer on the owner's server needs the owner's local executor: write the task as
+`docs/handoff/relayer-tee-deploy.md` (git pull, the key into `.env`, restart, health check). Stretch: Shade Agent
+(relayer in a TEE on Phala with an agent contract checking the codehash) — needs a Phala account from the owner.
+
+**Spare (any agent that runs out):** bug hunt on the judge path; flaky-test check (run `npm test` 3×); docs/STATS.md
+refresh; screenshots for the README at 1280×800 and phone.
