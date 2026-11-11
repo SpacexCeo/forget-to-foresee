@@ -583,9 +583,14 @@ def beard(ctx, colour, style):
         for i in ids[::step]:
             w = W[i]
             p = co[i]
+            # keep the mouth readable: no balls on the lip line, a thinner moustache above it (the baker's full
+            # beard was one blob over the mouth)
+            if abs(p.x) < 0.030 and m.z - 0.013 < p.z < m.z + 0.007:
+                continue
+            above = p.z > m.z
             chin = sm01(m.z - 0.03, m.z - 0.07, p.z)
-            c = p + nrm[i].normal * (length * 0.45 * w) + V((0, -0.2, -1.0)) * (length * 0.7 * chin * w)
-            ball(b, c, 0.007 + length * 0.55 * w, u=7, v=5)
+            c = p + nrm[i].normal * (length * (0.30 if above else 0.45) * w) + V((0, -0.2, -1.0)) * (length * 0.7 * chin * w)
+            ball(b, c, (0.005 + length * 0.30 * w) if above else (0.007 + length * 0.55 * w), u=7, v=5)
         o = blob("beard", b, 0.005, 800, smooth_it=3)
         ctx.add(o, colour, mat="hair", rule="fit")
         o["nocover"] = 1

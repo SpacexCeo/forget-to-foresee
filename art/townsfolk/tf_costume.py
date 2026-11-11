@@ -306,8 +306,16 @@ class Ctx:
                 r = p - c
                 u = sm01(L.crotch - 0.05, cz, p.z)
                 want = r_top * (1 - (1 - taper) * u) * sm01(L.crotch, L.crotch - (0.10 if width < 1.1 else 0.22), p.z)
-                if width >= 1.1:                     # gathered into the boot
-                    want *= 1 - 0.40 * sm01(cz + 0.09, cz, p.z)
+                if width >= 1.1 and p.z < cz + 0.10 and r.length > 1e-6:
+                    # gathered into the boot: the full leg closes down onto the shin, just inside the boot shaft (the
+                    # hem sits 3 cm inside the boot; it used to stay full width and poke through it as a flat disc)
+                    g = sm01(cz + 0.10, cz + 0.015, p.z)
+                    want = want * (1 - g) + max(r.length - 0.009, 0.01) * g
+                    q = c + r * (want / r.length)
+                    if q.x * side < 0.004:
+                        q.x = 0.004 * side
+                    v.co = q
+                    continue
                 if 1e-6 < r.length < want:
                     q = c + r * (want / r.length)
                     if q.x * side < 0.004:
@@ -489,6 +497,12 @@ class Ctx:
                 last = hh
                 cuff = 0.007 if (kind.startswith("boots") and z > h - 0.045) else 0.0   # a turned-down cuff
                 rows.append((z, [x + ease + cuff for x in hh]))
+            # smooth the rings round and up the shaft: the per-slice support of the sparse body points was jagged
+            for _ in range(2):
+                rows = [(z, [0.25 * rr[k - 1] + 0.5 * rr[k] + 0.25 * rr[(k + 1) % n] for k in range(n)]) for z, rr in rows]
+            if len(rows) > 2:
+                rows = [rows[0]] + [(rows[i][0], [0.25 * a + 0.5 * b + 0.25 * c for a, b, c in zip(rows[i - 1][1], rows[i][1], rows[i + 1][1])])
+                                    for i in range(1, len(rows) - 1)] + [rows[-1]]
             lip = 0.006 if kind != "sandals" else 0.004
             rows.append((0.016, [x + ease + lip for x in sole]))
             rows.append((0.0, [x + ease + lip for x in sole]))
