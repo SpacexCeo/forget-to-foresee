@@ -1,12 +1,14 @@
 // The example agent plays a complete season over HTTP, without a browser.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startHttp } from './helpers.mjs';
+import { startHttp, seededBytes } from './helpers.mjs';
 import { playSeason } from '../examples/agent.mjs';
 
 for (const rules of ['v3', 'v2']) {
   test(`example agent finishes a ${rules} season through the HTTP API`, { timeout: 60000 }, async (t) => {
-    const { app, base } = await startHttp();
+    // A fixed season: with fresh randomness some seasons end at tick 16 with outcome "gone" (no vote, a valid end),
+    // which made this test fail about one run in four.
+    const { app, base } = await startHttp({ registry: { seasonRandomBytes: seededBytes(1) } });
     t.after(() => app.close());
     const r = await playSeason({ url: base, rules, timeScale: 1000 });
     assert.ok(['survived', 'weapon', 'gone'].includes(r.outcome) || typeof r.outcome === 'string', `outcome: ${r.outcome}`);
