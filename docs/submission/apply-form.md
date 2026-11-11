@@ -34,13 +34,13 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 >
 > How NEAR fits in: the 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root and crisis key are committed, and all 15 events were revealed and proof-checked on-chain (the contract recomputes each leaf). This proves the events were fixed before play and match the root; the rules run in the browser, so silk and outcomes are not on-chain.
 >
-> NFTs: memory-shard (NEP-171, live as ftf-shards.testnet) turns a forgotten memory into an NFT whose metadata is its biography (which memory, the trial it was forgotten, the buyer) plus the Merkle leaf of the sign it opened, binding it to the sealed season. Its ink-ring art is drawn on-chain, byte-identical to the game's. The judge season's 3 shards are minted by our coordinator and shown in-game as NFT cards; live minting and a player-owned agent NFT are future work. No token, no payments.
+> NFTs: memory-shard (NEP-171, live as ftf-shards.testnet) turns a forgotten memory into an NFT whose metadata is its biography (which memory, the trial it was forgotten, the buyer) plus the Merkle leaf of the sign it opened, binding it to the sealed season. Its ink-ring art is drawn on-chain, byte-identical to the game's. The judge season's 3 shards are minted by our coordinator and shown in-game as NFT cards; holding one unlocks an in-game perk. Live minting and a player-owned agent NFT are future work. No token, no payments.
 >
-> MIT; 516 game, 28 API and 56 + 21 contract tests; a 5-minute judge path.
+> MIT; 900+ tests; a 5-minute judge path.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,987. Updated 09.11
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,991. Updated 09.11, 11.11 (tests, holder perk),
 (readiness audit): exact scope (the season runs locally; testnet records and shard NFTs for the judge season; live
 minting and a player-owned agent NFT are future work), what the commitment proves and what it does not, test counts
 from `npm test` on 09.11. Re-count before sending:

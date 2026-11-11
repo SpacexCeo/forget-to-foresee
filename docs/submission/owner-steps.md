@@ -58,12 +58,19 @@ posting: nothing may say the contract is "not yet deployed", that the clans have
 shards are minted in every season. The older 75 s demo cut (`video-shot-list.md`) carries a stale caption; do not post
 it without re-rendering.
 
+### 3b. Repository settings (GitHub → the repo → About ⚙, 2 minutes; audit QW-4)
+- **Description:** `Strategy game where an AI clan agent pays for prophecy with her own memories. Seasons are sealed on NEAR testnet before play; forgotten memories become NEP-171 shards. Built at NEAR HACKATHON.`
+  (the current one says "NFT agents", which the README contradicts: Iris is game state, not a token).
+- **Website:** `https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk`
+- **Topics:** `near`, `near-protocol`, `nft`, `nep-171`, `game`, `threejs`, `ai-agents`, `merkle-tree`, `nearhackathon`
+- Check the link preview after the next Pages deploy: the page already has `og:` / `twitter:` tags and `og.jpg`.
+
 ### 4. Post on X
 `docs/submission/x-post.md`. Post 1 must contain the video, "built at NEAR HACKATHON", @NEARProtocol and
 #NEARHackathon. Copy the post URL.
 
 ### 5. Related project
-Settled 09.11: none. RAEN is the company; Lambada_eth is its owner, CEO and this game's developer. One submission only.
+Settled 09.11: none. One submission only.
 
 ### 6. Submit (once)
 `docs/submission/apply-form.md`: fill the TODO(owner) values, generate the `requestId`, read the consent sentence,
