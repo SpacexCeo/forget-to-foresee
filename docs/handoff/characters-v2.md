@@ -87,23 +87,29 @@ State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.
 - Captures: `docs/art/qa/anim/chars-v2/`.
 
 **Half-done / open**
-- `game/src/play/townsfolk.js` (townsfolk worker's file) still loads the shared clips with `sidecarClips` (not
-  retargeted): it has to call `townsfolkClips(model, { key, body })` in `setModel` before the mixer and take the
-  walking speed from `clip.userData.speed`. Until then the townsfolk play their own clips or wrong-scaled ones.
+- In-game check on the GPU browser is incomplete: the server went down (HTTP 522, about 03:30 UTC 11.11) after one
+  run that showed Iris walking and turning in the town with the side-car clips and no console errors (before her
+  final-look model landed). Everything after that was verified in the review page only (same runtime classes,
+  software WebGL). To finish: `node art/anim/ingame.mjs --out <dir> --gpu` on a GPU machine (prints the stance speed
+  per gait measured on the rendered frames, saves stills); the full town is too slow for software WebGL.
+- `townsfolk.js` calls `townsfolkClips(model, { key, body })` and takes the walking speed from
+  `clip.userData.speed` (done by the townsfolk worker); the per-body values live in `BODY_STYLE` (anim-library.js).
 - `idle2` is in the file but nothing plays it yet (an idle picker in `iris-avatar.js` would alternate it).
 - `play` is violin bowing; the musician carries a lute. A plucked-instrument loop would need another take
   (CMU has no lute or guitar; 79_17 / 80_36 are violin, 80_13 drums).
 - Clan agents still use their procedural clips (no side-cars); the same build makes them: add a character to
   `art/anim/clips.json` and to `SIDECAR` in `anim-library.js`.
 - If `agent_iris.glb` is rebuilt with other bone names or another rest pose: `python3 art/anim/build_clips.py
-  --char iris` (and `--char townsfolk`, whose reference skeleton is hers), then the captures.
+  --char iris` (and `--char townsfolk`, whose reference skeleton is hers), then the captures. Rebuilt 11.11 on the model of e05407b
+  (rest pose within 7 mm and 0.1° of the previous one).
 
 **How to resume**
 1. `python3 art/anim/fetch_mocap.py` (takes into `art/anim/src/`, git-ignored), `python3 art/anim/build_clips.py
    --char iris|townsfolk` (seconds, numpy only).
 2. Review: `cd game && npx vite --port 5199`, then `node art/anim/capture.mjs --out <dir> --name x --query
    "a=agent_iris&aclips=/assets/anim/iris.glb&scenario=loco"`; in the game: `node art/anim/ingame.mjs --out <dir>`.
-   On the GPU server the tree was `/root/w/chars/anim/ftf` (vite on port 5299); nothing lives only there.
+   Captures also run locally: `npm i playwright && npx playwright install chromium` (software WebGL is enough for
+   the review page). On the GPU server the tree was `/root/w/chars/anim/ftf`; nothing lives only there.
 
 ## 3. Townsfolk (13 people, clips, behaviour in the town)
 
