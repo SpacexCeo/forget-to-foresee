@@ -20,7 +20,7 @@ export function loadDay1(storage) {
 /**
  * @param {{storage?: object, deployment?: object, relayerUrl?: string, guestSecret?: string, fetch?: Function, rpcUrls?: string[], keygen?: Function}} [o]
  */
-export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, relayerUrl = envRelayer(), guestSecret = envGuestKey(), fetch = globalThis.fetch, rpcUrls = NEAR_DEPLOYMENT.rpcUrls, keygen = generateKeyPair } = {}) {
+export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, relayerUrl = envRelayer() || (deployment && deployment.relayer), guestSecret = envGuestKey(), fetch = globalThis.fetch, rpcUrls = NEAR_DEPLOYMENT.rpcUrls, keygen = generateKeyPair } = {}) {
   let rec = loadDay1(storage);
   const st = { phase: rec.minted ? 'minted' : 'idle', reason: null, txHash: rec.txHash || null };
   const listeners = new Set();
