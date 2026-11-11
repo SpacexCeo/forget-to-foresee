@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { CollisionWorld, fixedSteps, moveCapsule } from '../../src/physics/collision.js';
-import { CharacterController, PHYSICS_DT, steerTo } from '../../src/physics/character.js';
+import { CharacterController, PHYSICS_DT, steerTo, clickStuck } from '../../src/physics/character.js';
 import { DEFAULT_MOTION, NPC_MOTION, createMotion, stepMotion, gaitBlend, turnRateAt, wrapAngle } from '../../src/physics/motion.js';
 import { CameraRig } from '../../src/render/camera-rig.js';
 import { floorWorld, makePlayer, simulate, measureAll } from './movement-measure.mjs';
@@ -321,4 +321,65 @@ test('camera: a Shell visit remembers the pre-flight zoom and eases back to it o
 test('measureAll runs end to end (the docs table)', () => {
   const m = measureAll();
   assert.ok(m.accel_walk.t90 && m.brake_run.d && m['step_0.3'].climbed && m.edge.walkOffFell && m.camera);
+});
+
+/** A straight stair: 12 risers of 0.3 m (under stepHeight 0.35), 0.45 m treads, starting at x = 2, then a landing. */
+function stairWorld() {
+  const w = floorWorld();
+  for (let i = 0; i < 12; i++) w.addBox('stair' + i, [2 + i * 0.45, 0, -2], [30, 0.3 * (i + 1), 2]);
+  return w;
+}
+const TOP = [2 + 12 * 0.45 + 2, 3.6, 0];
+
+/**
+ * Click-to-move up the stair with the game's frame loop: render delta as measured, fixedSteps with the given carry,
+ * clickStuck as boot-world applies it. Every `hitchEvery`-th frame takes `hitch` seconds. Returns where Iris ends.
+ */
+function climb({ carry, fps = 60, hitch = 1.0, hitchEvery = 20, seconds = 14 }) {
+  const ch = place(makePlayer(stairWorld()), [0, 0, 0]);
+  const target = TOP.slice();
+  const s = { stuckTime: 0, lastDist: Infinity };
+  let acc = 0, t = 0, frame = 0, cancelled = false, maxSteps = 0;
+  while (t < seconds) {
+    const dt = ++frame % hitchEvery === 0 ? hitch : 1 / fps;
+    t += dt;
+    const f = fixedSteps(acc, dt, PHYSICS_DT, 8, carry);
+    acc = f.accumulator; maxSteps = Math.max(maxSteps, f.steps);
+    for (let i = 0; i < f.steps && !cancelled; i++) {
+      const wish = steerTo(ch.pos, target);
+      ch.step(wish || [0, 0], PHYSICS_DT);
+      if (wish && clickStuck(s, ch.lastHitWall, Math.hypot(target[0] - ch.pos[0], target[2] - ch.pos[2]))) cancelled = true;
+    }
+  }
+  return { pos: ch.pos, cancelled, maxSteps };
+}
+
+test('hitch-proof stairs: 1 s frames every 20 frames, click-to-move still reaches the top; no frame runs more than 8 steps', () => {
+  const r = climb({ carry: 1.0, seconds: 12 });
+  assert.equal(r.cancelled, false, 'the click target is not cancelled at the stair foot');
+  assert.ok(Math.abs(r.pos[1] - 3.6) < 0.02 && Math.hypot(r.pos[0] - TOP[0], r.pos[2] - TOP[2]) < 0.3, 'on the landing: ' + r.pos.map((v) => v.toFixed(2)));
+  assert.ok(r.maxSteps <= 8, 'wall-clock budget: at most 8 physics steps (~267 ms of game time) per frame');
+  // Same wall-clock time with the excess dropped (the old loop) gets visibly less far: the carry is what keeps the walk.
+  const dropped = climb({ carry: 0, seconds: 4 }), kept = climb({ carry: 1.0, seconds: 4 });
+  assert.ok(kept.pos[0] > dropped.pos[0] + 0.5, `carry ${kept.pos[0].toFixed(2)} vs drop ${dropped.pos[0].toFixed(2)}`);
+});
+
+test('hitch-proof stairs: the carry never changes a smooth run (10 vs 144 FPS still agree)', () => {
+  const run = (fps, carry) => {
+    const ch = place(makePlayer(stairWorld()), [0, 0, 0]);
+    let acc = 0;
+    for (let n = 0; n < fps * 6; n++) { const f = fixedSteps(acc, 1 / fps, PHYSICS_DT, 8, carry); acc = f.accumulator; for (let i = 0; i < f.steps; i++) ch.step([1, 0], PHYSICS_DT); }
+    return ch.pos;
+  };
+  const a = run(10, 1), b = run(144, 1), c = run(144, 0);
+  assert.ok(Math.abs(a[0] - b[0]) < 0.05 && Math.abs(a[1] - b[1]) < 0.02, a + ' vs ' + b);
+  assert.deepEqual(b, c, 'no hitch: carry and no carry are identical');
+});
+
+test('fixedSteps carry: a 5 s stall is capped at the carry and paid back at most 8 steps per frame', () => {
+  let f = fixedSteps(0, 5, PHYSICS_DT, 8, 1.0);
+  assert.equal(f.steps, 8);
+  let total = f.steps, frames = 1, acc = f.accumulator;
+  while (acc >= PHYSICS_DT - 1e-9 && frames < 100) { f = fixedSteps(acc, 0, PHYSICS_DT, 8, 1.0); acc = f.accumulator; total += f.steps; frames++; assert.ok(f.steps <= 8); }
+  assert.equal(total, 30, '1.0 s of motion kept (30 steps), the other 4 s dropped');
 });

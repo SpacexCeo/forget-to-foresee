@@ -386,8 +386,13 @@ export function rayCast(world, origin, direction, maxDist, mask = MASK_ALL) {
 }
 
 /** Fixed-timestep accumulator. Returns how many steps to run this frame, the leftover time and the interpolation alpha. */
-export function fixedSteps(accumulator, frameDt, step = 1 / 30, maxSteps = 8) {
-  let acc = accumulator + Math.min(Math.max(frameDt, 0), step * maxSteps);
+export function fixedSteps(accumulator, frameDt, step = 1 / 30, maxSteps = 8, carry = 0) {
+  // `carry` (seconds, optional): after a long frame the time beyond this frame's maxSteps is kept, up to `carry`,
+  // and paid back over the next frames at no more than maxSteps each, so a hitch (texture upload, shader compile, a
+  // software renderer) delays motion instead of deleting it: a stair climb or a click-to-move walk still arrives.
+  // The per-frame step cap bounds the wall-clock cost (no spiral of death); with carry = 0 the excess is dropped.
+  const cap = Math.max(step * maxSteps, carry);
+  let acc = Math.min(accumulator + Math.min(Math.max(frameDt, 0), cap), cap);
   let steps = 0;
   while (acc >= step - 1e-9 && steps < maxSteps) { acc -= step; steps++; }
   if (acc < 0) acc = 0;

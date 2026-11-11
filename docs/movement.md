@@ -207,3 +207,17 @@ None of this was felt at 60 fps. Candidates for re-tuning, each one number in `D
   Souls-style camera, stays as is).
 - `game/src/play/game.js` (Task A) still calls `steerTo(pos, target, radius)` for routes; the new braking profile
   applies through `steerTo`'s defaults, no change there was needed.
+
+## Long frames and keyboard layouts (hackathon spec P1-A, 11.11)
+
+- **Hitch catch-up.** `fixedSteps(acc, dt, PHYSICS_DT, 8, carry)` keeps up to `carry` seconds of a long frame
+  (`boot-world.js` `PHYSICS_CARRY = 1.0`) and pays it back at no more than 8 physics steps per frame (about 267 ms
+  of game time, a few ms of CPU), so a texture upload, a shader compile or a software renderer delays motion instead
+  of deleting it. Physics gets the raw frame delta (up to 1 s); render, camera and animation keep the 0.25 s cap.
+  Without a hitch the result is bit-identical to the old loop. The click-to-move give-up rule is `clickStuck` in
+  `physics/character.js`: a step-up on a stair riser makes progress, so it never cancels a climb.
+  Tests (`tests/client/movement.test.mjs`): click-to-move up a 12-riser stair with a 1 s frame every 20 frames
+  reaches the landing, never more than 8 steps a frame; 10 and 144 FPS still agree; a 5 s stall keeps 1 s.
+- **Layouts.** World movement keys use `KeyboardEvent.code` only: `{code: 'KeyW', key: 'ц'}` equals
+  `{code: 'KeyW', key: 'w'}` (`tests/client/input.test.mjs`, with a static check that no movement code compares
+  `e.key` to a WASD letter). Arrows / Home / End in the hub and dialogs stay on `e.key`, which is layout-safe.

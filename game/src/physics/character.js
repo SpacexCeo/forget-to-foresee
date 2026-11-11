@@ -181,6 +181,17 @@ export class CharacterController {
  * (the run speed by default, so a running arrival slows in time and a walking one barely notices),
  * so the controller brakes into the target instead of easing in on a long exponential tail.
  */
+/**
+ * Click-to-move give-up rule (no pathfinding): `s` = {stuckTime, lastDist}; call once per physics step with the
+ * wall contact and the distance left. Pressed against a wall with no progress for 0.6 s: returns true (cancel).
+ * A step-up contact on a stair riser makes progress, so it never cancels a climb.
+ */
+export function clickStuck(s, hitWall, dist, dt = PHYSICS_DT) {
+  s.stuckTime = hitWall && dist > s.lastDist - 0.01 ? s.stuckTime + dt : 0;
+  s.lastDist = Math.min(s.lastDist, dist);
+  return s.stuckTime > 0.6;
+}
+
 export function steerTo(pos, target, arriveRadius = 0.15, { speedRef = 3.6, decel = 6 } = {}) {
   const dx = target[0] - pos[0], dz = target[2] - pos[2];
   const d = Math.hypot(dx, dz);

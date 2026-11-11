@@ -15,7 +15,7 @@ import { LookDev } from './render/lookdev.js';
 import { detectTier } from './render/quality.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
-import { PHYSICS_DT, steerTo } from './physics/character.js';
+import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
 import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
@@ -249,7 +249,9 @@ let toastTimer = 0;
 function toast(text) { toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
 
 // moveRun: phones have no Shift, so a tap far away (or a double tap) runs there
-let moveTarget = null, stuckTime = 0, lastDist = Infinity, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
+const PHYSICS_CARRY = 1.0; // seconds of a long frame that physics catches up on (fixedSteps carry)
+const stuck = { stuckTime: 0, lastDist: Infinity }; // click-to-move give-up state (character.js clickStuck)
+let moveTarget = null, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -354,7 +356,7 @@ function handleInput(dt) {
         const doubleTap = now - lastTap.t < 350 && Math.hypot(c.x - lastTap.x, c.y - lastTap.y) < 40;
         lastTap = { t: now, x: c.x, y: c.y };
         moveRun = doubleTap || (coarse && Math.hypot(hit.point[0] - player.pos[0], hit.point[2] - player.pos[2]) > 8);
-        moveTarget = hit.point; stuckTime = 0; lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
+        moveTarget = hit.point; stuck.stuckTime = 0; stuck.lastDist = Infinity; if (play) play.cancelRoute(); if (townFlow) townFlow.cancelRoute();
         marker.position.set(hit.point[0], hit.point[1] + 0.06, hit.point[2]);
         marker.visible = true;
       }
@@ -407,7 +409,8 @@ const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camer
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.25);
+  const rawDt = clock.getDelta();
+  const dt = Math.min(rawDt, 0.25); // render, camera and animation delta
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
   // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
@@ -416,7 +419,9 @@ function frame() {
     if (play.session.flags.input !== dev) { play.session.flags.input = dev; play.session.recompute(); }
   }
 
-  const f = fixedSteps(accumulator, dt, PHYSICS_DT, 8);
+  // Physics keeps up to 1 s of a long frame and pays it back at <= 8 steps per frame (hackathon spec P1-A): a hitch
+  // delays a stair climb or a click-to-move walk instead of deleting it (tests/client/movement.test.mjs).
+  const f = fixedSteps(accumulator, Math.min(rawDt, PHYSICS_CARRY), PHYSICS_DT, 8, PHYSICS_CARRY);
   accumulator = f.accumulator;
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
@@ -433,9 +438,7 @@ function frame() {
       // progress. Braking and pivoting toward a target behind us also makes no progress, so a wall
       // contact is required (otherwise a reversal would cancel its own order).
       const d = Math.hypot(moveTarget[0] - player.pos[0], moveTarget[2] - player.pos[2]);
-      stuckTime = player.lastHitWall && d > lastDist - 0.01 ? stuckTime + PHYSICS_DT : 0;
-      lastDist = Math.min(lastDist, d);
-      if (stuckTime > 0.6) { moveTarget = null; marker.visible = false; }
+      if (clickStuck(stuck, player.lastHitWall, d)) { moveTarget = null; marker.visible = false; }
     }
   }
   physics.grounded = player.grounded;
