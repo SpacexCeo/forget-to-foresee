@@ -42,3 +42,4 @@ Branch `claude/hackathon-tz`, draft PR #34 to `main` (the owner merges; never pu
 - Relayer standalone: node relayer/server.js + Dockerfile, ALLOWED_ORIGIN, TRUST_PROXY. Left: owner hosts it, sets FTF_RELAYER_URL.
 - Casts restored: Return to town now remounts Frost Lance / Storm Snare (leaveTown disposed them); first two skill-bar slots, placeholder art. Left: UI-003 icons.
 - QW-4: og/twitter meta, og.jpg (town still), favicon.svg, test. Left: owner updates the GitHub description/topics/homepage.
+- QW-5: WebGL 2 check before the world chunk (?forceNoGL=1), no-GPU links on the boot screen, software-renderer note; tests.

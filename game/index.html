@@ -82,6 +82,9 @@
     .boot .boot-pct { font: 500 calc(1.15 * var(--u))/1 ui-monospace, Consolas, monospace; color: var(--teal); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
     .boot .boot-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     #boot.boot--failed .boot-sub { color: #ff8a7a; font-style: normal; }
+    #boot.boot--failed .boot-word, #boot.boot--failed .boot-bar { display: none; }
+    #boot .boot-nogl { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; position: relative; z-index: 3; }
+    #boot .boot-nogl a { color: #9fd8ff; font: 15px/1.3 system-ui, sans-serif; }
     @media (max-aspect-ratio: 4/5) {
       .boot { --u: min(2.2vw, 1.2vh); }
       .boot .boot-stage { width: calc(44 * var(--u)); height: calc(78 * var(--u)); }
