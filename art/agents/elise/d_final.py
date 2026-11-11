@@ -42,6 +42,7 @@ x, y, z = co.T; head = vp == 1; hand = vp == 2; k = np.ones(n0)
 k[head] = 0.62; k[head & (x < -0.05) & (z > 1.60) & (z < 1.76) & (y > -0.07) & (y < 0.08)] = 0.45      # hair and bun; the butterfly pin
 k[head & (y < -0.02) & (z > 1.52) & (z < 1.68) & (abs(x) < 0.085)] = 0.6                                # face
 k[hand] = 0.6; k[hand & (fing > 0.3)] = 0.42
+leg = (vp == 4) | (vp == 5); k[leg] = 0.5                                                             # the generated legs: a thin line, no slivers
 # thin features (hair tips, pin wings, fingers): no more than a fraction of the local thickness
 bvh = BVHTree.FromPolygons([tuple(p) for p in co], [tuple(map(int, f)) for f in fv])
 thin = np.ones(n0)
@@ -50,24 +51,28 @@ for i in np.nonzero(head | hand)[0]:
     if hit[0] is not None: thin[i] = min(1.0, max(0.2, hit[3] / 0.014))
 # sharp creases and fins of the hair: the vertex normal disagrees with its faces, the hull would stick out as a shard
 acc = np.zeros(n0); cnt = np.zeros(n0); dt = (no[fv] * fn[:, None, :]).sum(2); np.add.at(acc, fv.ravel(), dt.ravel()); np.add.at(cnt, fv.ravel(), 1)
-crease = np.where(head, np.clip(acc / np.maximum(cnt, 1), 0.35, 1), 1.0)
+crease = np.where(head, np.clip(acc / np.maximum(cnt, 1), 0.35, 1), 1.0); crease = np.where(leg, np.clip((acc / np.maximum(cnt, 1) - 0.8) / 0.15, 0, 1), crease)
 k = k * thin * crease
 e = np.concatenate([fv[:, [0, 1]], fv[:, [1, 2]], fv[:, [2, 0]]]); e = np.concatenate([e, e[:, ::-1]]); ks = k.copy()
 for _ in range(2):
     s_ = np.zeros(n0); c_ = np.zeros(n0); np.add.at(s_, e[:, 0], ks[e[:, 1]]); np.add.at(c_, e[:, 0], 1); ks = 0.5 * ks + 0.5 * s_ / np.maximum(c_, 1)
 k = np.minimum(k, ks)
 print('outline k: head mean %.2f min %.2f, hands mean %.2f, body mean %.2f' % (k[head].mean(), k[head].min(), k[hand].mean(), k[~head & ~hand].mean()))
+gv = vp == 6; rad_ = co * [1, 1, 0]; rad_ /= np.maximum(np.linalg.norm(rad_, axis=1, keepdims=True), 1e-9); no = np.where(gv[:, None], rad_, no)   # the gown's hull goes straight out
 off = no * (MM * 0.001 * k)[:, None]
-rad = co[fv].mean(1) * [1, 1, 0]; outer = (pa == 6) & ((fn * rad).sum(1) > 0.3 * np.linalg.norm(rad, axis=1))
-t1, t2 = Z.slit(z); inslit = (Z.ang(x, y) > t1 - 12) & (Z.ang(x, y) < t2 + 12)          # the thigh is meant to show there
-np.savez(f'{WD}/{NAME}_check.npz', leg=co[((vp == 4) | (vp == 5)) & (z > 0.12) & ~inslit], gown=co[fv[outer]])     # for skirt_check.py
 # ---------------- inverted hull, then the patches
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
 geom = bmesh.ops.duplicate(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:])['geom']
 nv = [g for g in geom if isinstance(g, bmesh.types.BMVert)]; nf = [g for g in geom if isinstance(g, bmesh.types.BMFace)]
 for i, v in enumerate(nv): v.co = (co[i] + off[i]).tolist()          # duplicate() keeps the order of the input vertices
 for f in nf: f.material_index = 1
+LPh = bm.faces.layers.int['part']; lipf = [f for f in nf if f[LPh] == 6 and (f.normal.x * f.calc_center_median().x + f.normal.y * f.calc_center_median().y) < 0.3 * (f.calc_center_median().x ** 2 + f.calc_center_median().y ** 2) ** 0.5]
+LN = bm.faces.layers.int.get('nohull'); lipf += [f for f in nf if LN is not None and f[LN] == 1]     # the legs' turned inner wall
+bmesh.ops.delete(bm, geom=lipf, context='FACES'); nf = [f for f in nf if f.is_valid]            # no hull on the turned-in lip of the hem and slit, nor on the legs' inner wall (both showed as black slivers)
 bmesh.ops.reverse_faces(bm, faces=nf)
+# no hull where it can never show: the right leg above the shin (the gown encloses it) and the top of both thighs (under the hips)
+LPh = bm.faces.layers.int['part']; hid = [f for f in nf if (f[LPh] == 5 and f.calc_center_median().z > 0.30) or (f[LPh] in (4, 5) and f.calc_center_median().z > 0.74)]
+hs = set(hid); nf = [f for f in nf if f not in hs]; bmesh.ops.delete(bm, geom=hid, context='FACES'); bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
 LP = bm.faces.layers.int['part']; LU = bm.loops.layers.uv.active; LD = bm.verts.layers.deform.verify(); pv = {}; shown = {}
 for part, loops in PT:
     vs = []

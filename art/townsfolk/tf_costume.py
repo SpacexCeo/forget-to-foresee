@@ -276,7 +276,7 @@ class Ctx:
         """Trousers: a shell over the hips whose legs are widened to straight tubes (not leggings)."""
         L, dom, co = self.L, self.dom, self.co
         cz = {"ankle": L.ankle + 0.035, "cropped": L.ankle + 0.42 * (L.knee - L.ankle), "knee": L.knee - 0.05,
-              "boot": L.ankle + 0.10}[cut]
+              "boot": L.ankle + 0.44 * (L.knee - L.ankle) - 0.03}[cut]
         top = L.waist + 0.015
 
         def keep(i, _):
@@ -307,7 +307,7 @@ class Ctx:
                 u = sm01(L.crotch - 0.05, cz, p.z)
                 want = r_top * (1 - (1 - taper) * u) * sm01(L.crotch, L.crotch - (0.10 if width < 1.1 else 0.22), p.z)
                 if width >= 1.1:                     # gathered into the boot
-                    want *= 1 - 0.30 * sm01(cz + 0.10, cz, p.z)
+                    want *= 1 - 0.40 * sm01(cz + 0.09, cz, p.z)
                 if 1e-6 < r.length < want:
                     q = c + r * (want / r.length)
                     if q.x * side < 0.004:
@@ -463,7 +463,7 @@ class Ctx:
         """Footwear lofted round each foot: a sole outline, an upper that follows the foot and, for boots, a
         shaft up the shin. No toes, a clean sole edge (trim)."""
         L = self.L
-        h = {"boots": L.ankle + 0.15, "boots_tall": L.knee - 0.07, "slippers": L.ankle - 0.012, "clogs": L.ankle - 0.008,
+        h = {"boots": L.ankle + 0.44 * (L.knee - L.ankle), "boots_tall": L.knee - 0.07, "slippers": L.ankle - 0.012, "clogs": L.ankle - 0.008,
              "sandals": 0.014, "wraps": L.ankle + 0.03}[kind]
         ease = {"clogs": 0.010, "boots_tall": 0.008, "boots": 0.007}.get(kind, 0.005)
         n = 28
@@ -487,7 +487,8 @@ class Ctx:
             for z in zs:
                 hh = sup(z - 0.012, z + 0.012) or last
                 last = hh
-                rows.append((z, [x + ease for x in hh]))
+                cuff = 0.007 if (kind.startswith("boots") and z > h - 0.045) else 0.0   # a turned-down cuff
+                rows.append((z, [x + ease + cuff for x in hh]))
             lip = 0.006 if kind != "sandals" else 0.004
             rows.append((0.016, [x + ease + lip for x in sole]))
             rows.append((0.0, [x + ease + lip for x in sole]))
@@ -503,7 +504,7 @@ class Ctx:
                 b.faces.new(rings[0][::-1])
             b.normal_update()
             o = C.new_obj("shoes_" + sx, b)
-            C.set_attr(o, "trim", lambda i, co: 1.0 if co.z < 0.02 else 0.0)
+            C.set_attr(o, "trim", lambda i, co: 1.0 if (co.z < 0.02 or (kind.startswith("boots") and co.z > h - 0.045)) else 0.0)
             C.smooth(o, 50)
             outs.append(o)
         return outs
@@ -616,6 +617,7 @@ def strip_layers(ctx, keep_above_hem=0.12):
             continue
         outer = [ctx.garments[n] for n in names[gi + 1:]]
         outer = [q for q in outer if len(q.data.polygons) >= 60 and q.get("mat", "cloth") in ("cloth", "leather")
+                 and not q.name.startswith(("shoes", "socks", "bracers", "pauldron"))
                  and not str(q.get("rule", "")).startswith("rigid") and q.get("rule") != "head"]
         if not outer:
             continue

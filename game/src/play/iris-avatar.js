@@ -33,7 +33,7 @@ export function toonify(model) {
     const outline = /outline/.test(o.material.name);
     o.material = outline
       ? new THREE.MeshBasicMaterial({ name: o.material.name, color: 0x06060a })
-      : new THREE.MeshToonMaterial({ name: o.material.name, map: o.material.map, gradientMap: steps });
+      : new THREE.MeshToonMaterial({ name: o.material.name, map: o.material.map, gradientMap: steps, side: o.material.side });
     o.userData.outline = outline;
   });
 }

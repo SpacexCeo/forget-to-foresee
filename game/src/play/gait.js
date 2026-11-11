@@ -159,6 +159,21 @@ export function solveTwoBone(upper, lower, end, target) {
   upper.updateWorldMatrix(false, true);
 }
 
+const BANK_GAIN = 0.011, BANK_MAX = 0.13;   // lean into a turn: radians per m/s² of sideways acceleration, and its cap (7.5°)
+const LEAD_GAIN = 0.035, LEAD_MAX = 0.2;    // the chest turns ahead of the hips: radians per rad/s of turn rate, cap
+const BRAKE_DIP = 0.06, BRAKE_PITCH = 0.16; // a stop from a run: the hips sink (m) and the chest tips forward (rad), then recover
+const _ax = new THREE.Vector3(), _qw = new THREE.Quaternion(), _qd = new THREE.Quaternion();
+
+/** Turns a bone about a world axis by `angle`, on top of what the clip gave it (children follow). */
+function turnBone(bone, axis, angle) {
+  if (!bone || !bone.parent || Math.abs(angle) < 1e-4) return;
+  bone.parent.updateWorldMatrix(true, false);
+  bone.parent.getWorldQuaternion(_qw);
+  _qd.setFromAxisAngle(axis, angle);
+  bone.quaternion.premultiply(_qk.copy(_qw).invert().multiply(_qd).multiply(_qw));
+}
+
+const BANK_SIGN = -1;                       // model.rotation.z < 0 leans to the character's left
 const TURN_RATE = 5.6;        // rad/s (320°/s): how fast the body follows the game's heading while it stands
 const STEP_DIST = 0.085, STEP_YAW = 0.4, STEP_TIME = 0.2, STEP_LIFT = 0.045;
 
@@ -168,7 +183,10 @@ const STEP_DIST = 0.085, STEP_YAW = 0.4, STEP_TIME = 0.2, STEP_LIFT = 0.045;
  * - each foot stays where it stands; when the body has turned or drifted too far from it, the foot steps to its
  *   place under the body (one foot at a time, a short arc), so a pivot reads as two or three quick steps;
  * - the legs are solved with two-bone IK onto the held feet.
- * The layer fades out with the gait's weight (`move`): a walking or running character is driven by its clips alone.
+ * The layer fades out with the gait's weight (`move`): a walking or running character is driven by its clips, with
+ * two small additions that follow the game's motion: the body leans into a turn and the chest leads it (in
+ * proportion to the turn rate and the speed, capped and smoothed), and a stop from a run is absorbed: the hips sink
+ * over the held feet and the chest tips forward, then both recover. None of this under reduced motion.
  * Call `update` after the mixer and after the avatar group has its position and heading for the frame.
  */
 export class FootPlant {
@@ -184,6 +202,10 @@ export class FootPlant {
     this.weight = 0;
     this.last = null;           // the group's position last frame (its real speed over the ground)
     this.speed = 0;
+    this.spine = bone('spine'); this.chest = bone('chest');
+    this.baseY = model.position.y; this.baseRoll = model.rotation.z;
+    this.prevHeading = null; this.bank = 0; this.lead = 0;
+    this.recent = 0; this.brake = 0; this.braked = false; this.dip = 0; this.tip = 0;
   }
 
   /** @param {THREE.Object3D} group the avatar group (position = the ground point, rotation.y = the game's heading) */
@@ -198,6 +220,26 @@ export class FootPlant {
     const going = Math.min(1 - stand, clamp(this.speed / 1.2, 0, 1));   // 0 = standing (a tap is not a walk), 1 = really moving
     // once the body has stopped, a foot holds its place fully even while the stride's weight is still fading out
     const hold = reduced ? 0 : this.speed < 0.12 && stand > 1e-3 ? 1 : stand;
+    // turning while moving: lean into the turn, chest ahead of the hips
+    const omega = this.prevHeading === null || dt < 1e-4 ? 0 : clamp(wrapPi(heading - this.prevHeading) / dt, -12, 12);
+    this.prevHeading = heading;
+    const k8 = 1 - Math.exp(-8 * dt);
+    this.bank += ((reduced ? 0 : clamp(omega * this.speed * BANK_GAIN, -BANK_MAX, BANK_MAX)) - this.bank) * k8;
+    this.lead += ((reduced ? 0 : clamp(omega * LEAD_GAIN, -LEAD_MAX, LEAD_MAX) * clamp(this.speed / 1.7, 0, 1)) - this.lead) * k8;
+    // a stop from a run: the fastest recent speed against the speed now
+    this.recent = Math.max(this.recent - dt * 8, this.speed);
+    if (this.speed > 1) this.braked = false;
+    if (!reduced && !this.braked && this.speed < 0.3 && this.recent > 2.2) { this.brake = clamp((this.recent - 1.5) / 1.8, 0, 1); this.braked = true; }
+    this.brake *= Math.exp(-dt * 4.5);
+    this.dip += (BRAKE_DIP * this.brake - this.dip) * (1 - Math.exp(-13 * dt));
+    this.tip += (BRAKE_PITCH * this.brake - this.tip) * (1 - Math.exp(-11 * dt));
+    this.model.position.y = this.baseY - this.dip;
+    this.model.rotation.z = this.baseRoll + this.bank * BANK_SIGN;
+    if (Math.abs(this.lead) > 1e-4 || this.tip > 1e-4) {
+      _ax.set(Math.cos(heading), 0, -Math.sin(heading));                 // the character's left axis: a positive turn about it tips forward
+      turnBone(this.spine, UP, this.lead * 0.4); turnBone(this.chest, UP, this.lead * 0.6);
+      turnBone(this.spine, _ax, this.tip * 0.45); turnBone(this.chest, _ax, this.tip * 0.55);
+    }
     if (this.yaw === null) this.yaw = heading;
     const diff = wrapPi(heading - this.yaw);
     const rate = TURN_RATE + going * 12, ease = 10 + going * 20;
@@ -210,6 +252,7 @@ export class FootPlant {
     for (let i = 0; i < 2; i++) {
       const l = this.legs[i], other = this.legs[1 - i];
       l.foot.getWorldPosition(_home); l.foot.getWorldQuaternion(_hq);
+      _home.y += this.dip;                                              // the hips sink, the feet stay on the ground
       if (!l.active) {
         l.active = true; l.pos.copy(_home); l.yaw = this.yaw; l.stepping = false;
         if (_home.y - groundY > this.restFootY + 0.03) { l.stepping = true; l.u = 0.5; l.from.copy(_home); l.fromYaw = this.yaw; } // caught in the air: it lands
