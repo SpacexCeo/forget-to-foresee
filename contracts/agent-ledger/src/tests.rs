@@ -77,3 +77,55 @@ fn npc_names_are_checked() {
     let mut c = Contract::new("owner.testnet".parse().unwrap());
     c.record_track("Inn Keeper".into(), 1, "s".into(), "town-ts-1".into(), "{}".into(), H.into(), H.into(), 0, 1, "0,1,0,1,1".into(), 0);
 }
+
+const TEE_TEXT: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const TEE_SIG: &str = "0xd47644539acec3da5e3ecf5fe8863c628a9c97e8b71e9ea9167a6f4f83c03c3243ae1786b94340698cc46ca33276da33c14b2b58281c7f4d1c5628c4557ce6751c";
+const TEE_ADDR: &str = "0x2c7536E3605D9C16a7a3D7b1898e529396a65c23";
+fn tee(c: &mut Contract, chat: &str, text: &str, resp: &str, sig: &str) -> TeeDecision {
+    c.record_tee_decision("courier".into(), "sell".into(), H.into(), "Qwen/Qwen3-VL-30B-A3B-Instruct".into(), chat.into(), text.into(), resp.into(), sig.into(), TEE_ADDR.into())
+}
+
+#[test]
+fn ethereum_personal_sign_vector_recovers() {
+    ctx("ann-1.guests.x.testnet", NearToken::from_millinear(20));
+    assert_eq!(recover_personal("Some data", "0xb91467e570a6466aa9e9876cbcd013baba02900b8979d43fe208a4a4f339f5fd6007e74cd82e037b800186422fc2da167c747ef045e5d18a5f5d4300f8e1a0291c").unwrap(), TEE_ADDR.to_ascii_lowercase());
+    assert_eq!(recover_personal("Some data", "0x00"), None);
+}
+
+#[test]
+fn tee_decision_recorded_after_signature_check() {
+    ctx("ann-1.guests.x.testnet", NearToken::from_millinear(20));
+    let mut c = Contract::new("owner.testnet".parse().unwrap());
+    let d = tee(&mut c, "chatcmpl-1", TEE_TEXT, &"bb".repeat(32), TEE_SIG);
+    assert_eq!(d.signing_address, TEE_ADDR.to_ascii_lowercase());
+    let acc: AccountId = "ann-1.guests.x.testnet".parse().unwrap();
+    assert_eq!(c.list_tee_decisions(acc.clone(), "courier".into(), None, None), vec![d]);
+    assert!(c.list_tee_decisions(acc, "baker".into(), None, None).is_empty());
+    assert_eq!(c.stats().0, 0); // track records unchanged
+}
+
+#[test]
+#[should_panic(expected = "ERR_TEE_SIG")]
+fn tee_decision_with_another_text_fails() {
+    ctx("ann-1.guests.x.testnet", NearToken::from_millinear(20));
+    let mut c = Contract::new("owner.testnet".parse().unwrap());
+    let other = TEE_TEXT.replacen('a', "c", 1);
+    tee(&mut c, "chatcmpl-1", &other, &"bb".repeat(32), TEE_SIG);
+}
+
+#[test]
+#[should_panic(expected = "ERR_TEE_HASH")]
+fn tee_decision_with_another_response_hash_fails() {
+    ctx("ann-1.guests.x.testnet", NearToken::from_millinear(20));
+    let mut c = Contract::new("owner.testnet".parse().unwrap());
+    tee(&mut c, "chatcmpl-1", TEE_TEXT, &"cc".repeat(32), TEE_SIG);
+}
+
+#[test]
+#[should_panic(expected = "ERR_EXISTS")]
+fn tee_decision_twice_fails() {
+    ctx("ann-1.guests.x.testnet", NearToken::from_millinear(20));
+    let mut c = Contract::new("owner.testnet".parse().unwrap());
+    tee(&mut c, "chatcmpl-1", TEE_TEXT, &"bb".repeat(32), TEE_SIG);
+    tee(&mut c, "chatcmpl-1", TEE_TEXT, &"bb".repeat(32), TEE_SIG);
+}
