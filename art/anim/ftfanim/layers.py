@@ -92,6 +92,9 @@ def reach(rig, local, pel, side, target, keys, fps, rel=None, hand_tilt=35.0, el
         goal = goal + wp[:, rig.index[rel]]
     aim = goal - sh; aim /= np.linalg.norm(aim, axis=-1, keepdims=True)
     goal_w = goal - aim * wrist_back                                   # the wrist stops short: the palm reaches the target
+    # never a locked elbow: the wrist's goal stays within 96 % of the arm's length
+    away = goal_w - sh; dist = np.linalg.norm(away, axis=-1, keepdims=True)
+    goal_w = sh + away / np.maximum(dist, 1e-9) * np.minimum(dist, 0.96 * (l1 + l2))
     tgt = wri * (1 - w[:, None]) + goal_w * w[:, None]
     tgt[:, 1] += arc * np.sin(np.pi * w)                               # a raised path on the way out and back
     hint_goal = sh + 0.5 * (goal_w - sh) + np.array([sg * elbow[0], elbow[1], elbow[2]])

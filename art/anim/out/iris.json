@@ -72,7 +72,7 @@
   "ball_min_y": 0.042,
   "src_stride_m": 2.441,
   "src_T_s": 0.733,
-  "src_speed": 3.329,
+  "src_speed": 3.328,
   "stride_scale": 0.991,
   "time_scale": 1.0,
   "hip_drop_max_m": 0.005,
@@ -115,7 +115,7 @@
   "seconds": 2.3,
   "slip_mean_m_s": 0.0,
   "slip_max_m_s": 0.0,
-  "hip_drop_max_m": 0.0526,
+  "hip_drop_max_m": 0.0473,
   "contacts": {
    "L": [
     [

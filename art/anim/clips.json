@@ -543,8 +543,8 @@
      "side": "R",
      "target": [
       -0.2,
-      1.5,
-      0.6
+      1.47,
+      0.72
      ],
      "hand": "open",
      "hand_tilt": 38,
@@ -565,7 +565,8 @@
        3.15,
        0
       ]
-     ]
+     ],
+     "wrist_back": 0.05
     }
    ]
   },
@@ -632,7 +633,7 @@
     "head_level": 0.6
    },
    "action_style": {
-    "track": 0.075,
+    "track": 0.105,
     "arm_out": 0,
     "arms_down": {
      "out": 9,
@@ -673,7 +674,7 @@
     "head_level": 0.5
    },
    "action_style": {
-    "track": 0.085,
+    "track": 0.1,
     "arm_out": 0,
     "arms_down": {
      "out": 9,

@@ -17,7 +17,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { configureTextureSupport, fetchGltf } from '../render/assets.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
-import { flatHair } from '../render/hair-cards.js';
+import { tuneHairCards } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { resolveClip } from '../play/behaviour.js';
 import { GaitLayer, FootPlant } from '../play/gait.js';
@@ -86,7 +86,7 @@ class Subject {
     const { gltf } = await fetchGltf(this.name);
     const model = cloneSkinned(gltf.scene);
     upgradeAssetMaterials(this.name, model);
-    if (this.name === 'agent_iris') { flatHair(model); fabricSheen(model); }
+    if (this.name === 'agent_iris') { tuneHairCards(model); fabricSheen(model); }
     model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
     this.model = model; this.root.add(model); scene.add(this.root);
     const extra = this.clipsUrl === 'townsfolk' ? await townsfolkClips(model, { key: this.name, body: Q.get('body') || 'adult' }) : this.clipsUrl ? await loadClips(this.clipsUrl) : [];
