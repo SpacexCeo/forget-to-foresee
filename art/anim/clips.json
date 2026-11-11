@@ -885,7 +885,8 @@
     "arm_out": 7,
     "pelvis_rot": 1.0,
     "head_level": 0.6,
-    "step_lift": 0.75
+    "step_lift": 0.75,
+    "knee_fwd": 0.3
    },
    "action_style": {
     "track": 0.09,

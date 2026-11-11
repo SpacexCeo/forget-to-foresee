@@ -76,7 +76,10 @@ caps = []
 for sd in 'LR':
     pts = co[(legw[sd] > 0.5) & (co[:, 2] < 0.672)]
     hb = np.array([J['ank' + sd][0], J['ank' + sd][1] + 0.045, 0.004])
-    lx = co[(legw[sd] > 0.5) & (abs(co[:, 2] - 0.66) < 0.012)]; top = np.array([(lx[:, 0].max() + lx[:, 0].min()) / 2, (lx[:, 1].max() + lx[:, 1].min()) / 2, 0.66])
+    # the thigh capsule starts under the hip joint, not at the centre of the leg's cross section: that centre sits
+    # 3 cm in towards the crotch, and a thinner capsule there sweeps the gown's front slit edge off the left thigh
+    # and behind the right knee on the stairs (the radius below still covers the whole section)
+    top = np.array([J['hip' + sd][0], J['hip' + sd][1], 0.66])
     segs = [('thigh_' + sd, top, J['knee' + sd]), ('shin_' + sd, J['knee' + sd], J['ank' + sd]), ('foot_' + sd, J['ank' + sd] + [0, 0, -0.03], J['tip' + sd] + [0, 0.02, 0.012]), ('foot_' + sd, J['ank' + sd] + [0, 0, -0.03], hb + [0, 0, 0.02])]
     D = np.stack([seg_d(pts, a_, b_)[0] for _, a_, b_ in segs], 1); own = D.argmin(1)
     for q, (bn, a_, b_) in enumerate(segs):

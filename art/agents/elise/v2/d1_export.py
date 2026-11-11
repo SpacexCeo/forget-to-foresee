@@ -41,11 +41,11 @@ sc = vcol(stock); del_faces(stock, (wsum(stock, ('toe',)) > 0.6) & (sc[:, 2] < 0
 BUD = {'elise_body': 5400, 'elise_gown': 3700, 'elise_stockings': 1700, 'elise_shoes': 560, 'elise_ribbons': 440, 'elise_lacing': 250, 'elise_face': 1280}
 HEAD_T = 10800
 def tris(o): o.data.calc_loop_triangles(); return len(o.data.loop_triangles)
-def decim(o, target, vgroup=None):
+def decim(o, target, vgroup=None, factor=4.0):
     n = tris(o)
     if n <= target: return
     bpy.context.view_layer.objects.active = o; md = o.modifiers.new('lod', 'DECIMATE'); md.ratio = target / n; md.use_collapse_triangulate = True
-    if vgroup: md.vertex_group = vgroup; md.invert_vertex_group = True; md.vertex_group_factor = 4.0
+    if vgroup: md.vertex_group = vgroup; md.invert_vertex_group = True; md.vertex_group_factor = factor
     while o.modifiers[0].name != 'lod': bpy.ops.object.modifier_move_up(modifier='lod')
     bpy.ops.object.modifier_apply(modifier='lod')
 # the body: its own part and the old head are reduced separately (the head keeps its triangles on the main model)
@@ -61,7 +61,10 @@ for l in [l for l in fo.data.uv_layers if l.name != 'UVMap']: fo.data.uv_layers.
 keep_w = wsum(body, ('hand', 'thumb', 'index', 'fingers')); vg = body.vertex_groups.new(name='_keep');
 for i in np.nonzero(keep_w > 0.3)[0]: vg.add([int(i)], 1.0, 'REPLACE')
 before = {n: tris(o) for n, o in O.items()}
-decim(body, int(BUD['elise_body'] * LOD), '_keep'); decim(head, int(HEAD_T * LOD))
+# the phone model (LOD < 1, 24k triangles with the hull): the hands are protected less (at full protection the body
+# stops near 6.5k whatever the target) and the head is reduced a little further
+decim(body, int(BUD['elise_body'] * LOD), '_keep', 4.0 if LOD >= 1 else 1.0); decim(head, int(HEAD_T * (LOD if LOD >= 1 else LOD * 0.9)))
+if tris(body) > 1.15 * BUD['elise_body'] * LOD: decim(body, int(BUD['elise_body'] * LOD))
 for n in ('elise_gown', 'elise_stockings', 'elise_shoes', 'elise_ribbons', 'elise_lacing'): decim(O[n], int(BUD[n] * LOD))
 print('triangles by layer:', {n.replace('elise_', ''): (before[n], tris(o)) for n, o in O.items()})
 # ---------------- join; each face remembers its layer
