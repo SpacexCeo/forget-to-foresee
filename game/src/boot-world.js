@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
+import { cycleAt, mixLooks, BLEND_STEP } from './render/daycycle.js';
+import { lookFor } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo } from './physics/character.js';
@@ -426,6 +428,21 @@ function groundInTown() {
 const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camera, light: { sun: null, daylight: 1, pixelsPerMetre: 900 } }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
+// The town's day cycle (render/daycycle.js, owner 11.11): afternoon → dusk → afternoon, rain every second loop.
+// Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
+const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
+  ? { t: Number(params.get('cycle')) || 0, k: -1, weather: null } : null;
+function tickDayCycle(dt) {
+  if (lookdev.location !== 'town') return;
+  dayCycle.t += dt;
+  const c = cycleAt(dayCycle.t);
+  if (Math.abs(c.k - dayCycle.k) >= BLEND_STEP || (c.k !== dayCycle.k && (c.k === 0 || c.k === 1))) {
+    dayCycle.k = c.k;
+    lookdev.applyLook(mixLooks(lookFor('town', null), lookFor('town', 'dusk'), c.k));
+  }
+  if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
+}
+
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.25);
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
@@ -484,6 +501,7 @@ function frame() {
     town.update(clock.elapsedTime, dt, townFrame);
     if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy);
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
+    if (dayCycle && !lookdev.reducedMotion) tickDayCycle(dt);
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   streamer.update(dt, focus);

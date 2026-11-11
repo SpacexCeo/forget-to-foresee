@@ -281,6 +281,15 @@ export class LookDev {
     return this.preset;
   }
 
+  /**
+   * A blended look (render/daycycle.js mixLooks of two lookFor() results) for the town's day cycle. The hour on
+   * show becomes the nearer preset's name; leaving the place (setLocation) returns to its preset as before.
+   */
+  applyLook(look) {
+    this.look = look; this.preset = look.name;
+    this.applyAtmosphere(look);
+  }
+
   /** Mood tint from sky.tint(): fog uniforms, the scene fog colour and the fill light follow the sky dome. */
   applyTint(hex, k) {
     this.tintState = { hex, amount: k };
