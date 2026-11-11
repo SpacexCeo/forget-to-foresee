@@ -213,8 +213,7 @@ export function mountSigns(root, o) {
     const head = h('header', { class: 'wh-signs__head' },
       eye,
       h('div', { class: 'wh-signs__text' },
-        h('h2', { class: 'wh-signs__title wh-heavy', i18n: 'wh.signs.title', attrs: { id: titleId } }),
-        h('p', { class: 'wh-signs__sub wh-body', i18n: 'wh.signs.subtitle' })));
+        h('h2', { class: 'wh-signs__title wh-heavy', i18n: 'wh.signs.title', attrs: { id: titleId } })));
     const close = mobile
       ? h('button', {
         class: 'wh-btn-icon wh-btn-icon--round wh-signs__close wh-signs__close--round',
