@@ -20,6 +20,23 @@ rows = []
 if 'expr' not in a:
     rows.append([shot(n, v, 600, 1125) for n, v in (('front', [0, 0, 0.9, 1.85, 0, 0]), ('back', [0, 0, 0.9, 1.85, 180, 0]), ('left', [0, 0, 0.9, 1.85, 90, 0]), ('right', [0, 0, 0.9, 1.85, 270, 0]), ('three-quarter', [0, 0, 0.9, 1.85, 35, 5]))])
     rows.append([shot(n, v, 600, 600) for n, v in (('face', [0, 0.02, 1.61, 0.34, 0, 0]), ('bun (back)', [0, 0.05, 1.62, 0.38, 180, 10]), ('butterfly', [-0.05, 0.03, 1.66, 0.26, 290, 10]), ('lacing and stocking top', [0.12, -0.05, 0.80, 0.42, 40, 0]), ('hem and slit', [0.02, 0, 0.22, 0.56, 35, 8]))])
+npz = [x for x in a if x.endswith('.npz')]
+if npz and 'expr' not in a:      # a row of walk and run frames: the baked clips posed on the rig (build_clips.py with FTF_DUMP)
+    import numpy as np
+    D = np.load(npz[0]); ao = bpy.data.objects['elise_rig']; names = [str(x) for x in D['names']]; rr = D['rest_r']
+    def qmul(p, q): return np.array([p[3] * q[0] + p[0] * q[3] + p[1] * q[2] - p[2] * q[1], p[3] * q[1] - p[0] * q[2] + p[1] * q[3] + p[2] * q[0], p[3] * q[2] + p[0] * q[1] - p[1] * q[0] + p[2] * q[3], p[3] * q[3] - p[0] * q[0] - p[1] * q[1] - p[2] * q[2]])
+    def qrot(q, v): return qmul(qmul(q, np.array([v[0], v[1], v[2], 0.0])), q * [-1, -1, -1, 1])[:3]
+    def pose(clip, u):
+        L = D[clip + '/local']; f = int(round(u * (len(L) - 1))) % (len(L) - 1)
+        for i, n in enumerate(names):
+            pb = ao.pose.bones[n]; q = qmul(rr[i] * [-1, -1, -1, 1], L[f, i]); pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = (q[3], q[0], q[1], q[2])
+        d = qrot(D['pelvis_rest_wr'] * [-1, -1, -1, 1], D[clip + '/pelvis'][f] - D['pelvis_rest']); ao.pose.bones['pelvis'].location = tuple(d)
+        bpy.context.view_layer.update()
+    r = []
+    for clip, az in (('walk', 35), ('run', 90)):
+        for k in range(4): pose(clip, k / 4); r.append(shot('%s %d/4' % (clip, k), [0, 0, 0.9, 1.85, az, 4], 375, 700))
+    for pb in ao.pose.bones: pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
+    bpy.context.view_layer.update(); rows.append(r)
 keys = el.data.shape_keys.key_blocks if el.data.shape_keys else []; r3 = [shot('neutral', [0, 0, 1.575, 0.19, 0, 0], 272, 272)]
 for k in keys[1:]:
     k.value = 1.0; r3.append(shot(k.name, [0, 0, 1.575, 0.19, 0, 0], 272, 272)); k.value = 0.0

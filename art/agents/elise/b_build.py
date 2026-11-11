@@ -124,6 +124,7 @@ for f, p in zip(bf, bpart[bf].max(1)):
     try: fc = bm.faces.new([vs[i] for i in f])
     except ValueError: continue
     fc[LP] = {2: 4, 3: 5}.get(int(p), 0)
+bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[LP] == 4 and min(v.co.z for v in f.verts) > 0.15], context='FACES')   # the left leg above the ankle is rebuilt clean below (the generated shell was tangled)
 shell = [f for f in bm.faces if f[LP] == 0]
 bmesh.ops.bisect_plane(bm, geom=shell + list({e for f in shell for e in f.edges}) + list({v for f in shell for v in f.verts}), dist=1e-5,
                        plane_co=(0, 0, Z.ZJ), plane_no=(0, 0, 1), clear_inner=True, clear_outer=False)
@@ -135,8 +136,14 @@ zone = [(v, w) for v, w in zone if w > 0]
 for _ in range(10):
     new = [v.co.lerp(sum((e.other_vert(v).co for e in v.link_edges), Vector()) / len(v.link_edges), 0.6 * w) for v, w in zone]
     for (v, w), c in zip(zone, new): v.co = c
+for pid in (4, 5):                    # the generated legs and shoes: every open rim is filled, each leg is a closed mesh
+    rim = [e for e in bm.edges if e.is_boundary and e.link_faces[0][LP] == pid]
+    if rim:
+        for f in bmesh.ops.holes_fill(bm, edges=rim, sides=0)['faces']: f[LP] = pid
+    print('leg part', pid, 'open rim edges closed', len(rim))
 bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.verts.index_update()
 bv = np.array([v.co[:] for v in bm.verts]); bf = np.array([[v.index for v in f.verts] for f in bm.faces]); bfp = np.array([f[LP] for f in bm.faces]); bm.free()
+nohull = np.zeros(len(bf), np.int32)
 vleg = np.zeros(len(bv), int); vleg[bf[bfp == 4].ravel()] = 4; vleg[bf[bfp == 5].ravel()] = 5
 print('shell', len(bv), 'verts', np.bincount(bfp).tolist(), 'faces by part; lacing zone verts smoothed', len(zone))
 ENV = Z.envelope(np.load(WD + '/body_hi_pts.npy').astype(float), bv[(vleg >= 4) & (bv[:, 2] > 0.1)], bv[(vleg == 0) & (bv[:, 2] < 0.82)]); renv = lambda th, z: Z.env_at(ENV, th, z)
@@ -148,34 +155,58 @@ def outward(o, V):
     me = o.data; flip = sum(1 for p in me.polygons if p.normal.x * p.center.x + p.normal.y * p.center.y < 0) > len(me.polygons) / 2
     if flip:
         b_ = bmesh.new(); b_.from_mesh(me); bmesh.ops.reverse_faces(b_, faces=b_.faces[:]); b_.to_mesh(me); b_.free()
+g2 = lambda p: np.stack([np.asarray(p, float)[..., 0], np.asarray(p, float)[..., 2], -np.asarray(p, float)[..., 1]], -1)
+def seg_d(p, a_, b_):
+    ab = b_ - a_; t = np.clip(((p - a_) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(p - (a_ + t[:, None] * ab), axis=1), t
+# leg capsules (thigh from the crotch down, shin, foot, heel), fitted to the generated legs; the gown is built clear of them
+caps = []
+for sd, pid in (('L', 4), ('R', 5)):
+    pts = bv[vleg == pid]; pts = pts[pts[:, 2] < 0.72]; heel = pts[(pts[:, 2] < 0.012) & (pts[:, 1] > J['ank' + sd][1] - 0.01)]
+    hb = heel.mean(0) if len(heel) else J['ank' + sd] * [1, 1, 0] + [0, 0.03, 0.005]
+    top = np.array([float(v) for v in Z.leg_axis(P, sd, 0.66)[:2]] + [0.66])        # the capsules follow the leg's own axis and start where the leg leaves the hips (the crotch); above it the hips are skin-tight and skinned
+    segs = [('thigh_' + sd, top, J['knee' + sd]), ('shin_' + sd, J['knee' + sd], J['ank' + sd]), ('foot_' + sd, J['ank' + sd] + [0, 0, -0.03], J['tip' + sd] + [0, 0.03, 0.02]), ('foot_' + sd, J['ank' + sd] + [0, 0, -0.03], hb + [0, 0, 0.02])]
+    D = np.stack([seg_d(pts, a_, b_)[0] for _, a_, b_ in segs], 1); own = D.argmin(1)
+    for q, (bn, a_, b_) in enumerate(segs):
+        d_, t_ = seg_d(pts[own == q], a_, b_); pc = lambda v: float(np.percentile(v, 98)) if len(v) else float(np.percentile(d_, 98)); lo = pc(d_[t_ < 0.4]); hi = pc(d_[t_ > 0.6])
+        r0 = pc(d_ - (hi - lo) * t_) + 0.002; caps.append((bn, a_, b_, r0, r0 + hi - lo, 0)); print('capsule', bn, np.round(a_, 3), np.round(b_, 3), 'radii %.3f %.3f' % (r0, r0 + hi - lo), 'verts', int((own == q).sum()))
+def leg_sd(p):
+    """Signed distance of points to the nearest leg capsule."""
+    out = np.full(len(p), 9.0)
+    for bn, a_, b_, r0, r1, st in caps:
+        d_, t_ = seg_d(p, a_, b_); out = np.minimum(out, d_ - (r0 + (r1 - r0) * t_))
+    return out
 # the gown from the hips to the floor: a clean grid on the outer envelope, open along the slit, with a turned-in lip
 # along the hem and the slit edges (a closed edge with thickness)
-NU, NV = 60, 30; LV = []; gi = np.zeros((NV + 1, NU + 1), int)
+NU, NV = Z.NU, Z.NV; LV = []; gi = np.zeros((NV + 1, NU + 1), int)
 for j in range(NV + 1):
     for i in range(NU + 1):
-        u = i / NU; thl = 88.0 + u * (360 - 61.0); zh = 0.03 + 0.015 * math.cos(math.radians(thl)); z = Z.ZT + (zh - Z.ZT) * j / NV
-        t1, t2 = Z.slit(z); th = math.radians(t2 + u * (360 - (t2 - t1))); r = float(renv(math.degrees(th), z)) + 0.002 * min(1, max(0, (z - 0.74) / 0.06))
+        u = i / NU; thl = 114.0 + u * (360 - 108.0); zh = 0.045 + 0.008 * math.cos(math.radians(thl)); z = Z.ZT + (zh - Z.ZT) * j / NV
+        t1, t2 = (float(v) for v in Z.gown_slit(z)); th = math.radians(t2 + u * (360 - (t2 - t1))); r = float(renv(math.degrees(th), z)) + 0.002 * min(1, max(0, (z - 0.74) / 0.06)) + float(Z.gown_ease(math.degrees(th), z))
+        while leg_sd(np.array([[r * math.sin(th), -r * math.cos(th), z]]))[0] < 0.014: r += 0.003      # never closer than 1.4 cm to a leg capsule at rest
         gi[j, i] = len(LV); LV.append((r * math.sin(th), -r * math.cos(th), z))
 LF = [(gi[j, i], gi[j + 1, i], gi[j + 1, i + 1], gi[j, i + 1]) for j in range(NV) for i in range(NU)]
 inn = {}
 for j in range(NV + 1):
     for i in range(NU + 1):
         if j >= NV - 1 or i <= 1 or i >= NU - 1:
-            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.004 * rad))
+            p = np.array(LV[gi[j, i]]); rad = np.array([p[0], p[1], 0]) / math.hypot(p[0], p[1]); inn[gi[j, i]] = len(LV); LV.append(tuple(p - 0.003 * rad))
 rim = [(gi[NV, i], gi[NV, i + 1]) for i in range(NU)] + [(gi[j + 1, 0], gi[j, 0]) for j in range(NV)] + [(gi[j, NU], gi[j + 1, NU]) for j in range(NV)]
 LF += [(a_, b_, inn[b_], inn[a_]) for a_, b_ in rim]
 LF += [(inn[gi[j, i]], inn[gi[j, i + 1]], inn[gi[j + 1, i + 1]], inn[gi[j + 1, i]]) for j in range(NV) for i in range(NU) if j == NV - 1 or i == 0 or i == NU - 1]
 LV = np.array(LV); objs['loft'] = make_obj('elise_gown', LV, LF); recalc(objs['loft']); outward(objs['loft'], LV)
-# the left thigh continues up behind the laced opening (the generated leg stops at 0.70)
-TV, TF = [], []; NS = 16; tz = [0.66, 0.70, 0.735, 0.77, 0.80, 0.835]
-for k, z in enumerate(tz):
-    ax, ay, ar = (float(v) for v in Z.leg_axis(P, 'L', z)); ar *= 1.04 - 0.04 * min(1, max(0, (z - 0.70) / 0.07)); t1, t2 = Z.slit(z)   # the lower rings sleeve the ragged top of the generated leg
-    for i in range(NS):
-        t = 2 * math.pi * i / NS; p = np.array([ax + ar * math.sin(t), ay - ar * math.cos(t)]); r = math.hypot(*p); th = float(Z.ang(p[0], p[1])); rm = float(renv(th, z)) - 0.012
-        if r > rm and not (t1 - 10 < th < t2 + 10): p *= rm / r          # kept under the cloth, free where the slit shows it
-        TV.append((p[0], p[1], z))
-    if k: TF += [((k - 1) * NS + i, (k - 1) * NS + (i + 1) % NS, k * NS + (i + 1) % NS, k * NS + i) for i in range(NS)]
-TV = np.array(TV); objs['thigh'] = make_obj('elise_thigh', TV, TF); recalc(objs['thigh'])
+# both thighs continue up from the generated legs (they stop at 0.70) and are closed on top: each leg is its own closed mesh
+NS = 16; tz = [0.66, 0.70, 0.735, 0.77, 0.80, 0.835]; TVs = {}
+for sd in 'LR':
+    TV, TF = [], []
+    for k, z in enumerate(tz):
+        ax, ay, ar = (float(v) for v in Z.leg_axis(P, sd, z)); ar *= 1.04 - 0.04 * min(1, max(0, (z - 0.70) / 0.07)); t1, t2 = Z.slit(z)   # the lower rings sleeve the ragged top of the generated leg
+        for i in range(NS):
+            t = 2 * math.pi * i / NS; p = np.array([ax + ar * math.sin(t), ay - ar * math.cos(t)]); r = math.hypot(*p); th = float(Z.ang(p[0], p[1])); rm = float(renv(th, z)) - 0.012
+            if r > rm and not (sd == 'L' and t1 - 10 < th < t2 + 10): p *= rm / r          # kept under the hip shell, free where the laced opening shows it
+            TV.append((p[0], p[1], z))
+        if k: TF += [((k - 1) * NS + i, (k - 1) * NS + (i + 1) % NS, k * NS + (i + 1) % NS, k * NS + i) for i in range(NS)]
+    top = np.mean(TV[-NS:], 0) + [0, 0, 0.012]; TV.append(tuple(top)); TF += [((len(tz) - 1) * NS + i, (len(tz) - 1) * NS + (i + 1) % NS, len(TV) - 1) for i in range(NS)]
+    TVs[sd] = np.array(TV); objs['thigh' + sd] = make_obj('elise_thigh_' + sd, TVs[sd], TF); recalc(objs['thigh' + sd])
 # face patches: grids laid on the face skin (found from the front, behind the fringe)
 bvh = BVHTree.FromPolygons([tuple(map(float, v)) for v in hv], [tuple(map(int, f)) for f in hf])
 def face_y(x, z):
@@ -207,8 +238,7 @@ for sd, sg in (('L', 1), ('R', -1)):
     set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['hand' + sd] = ob
     for k, (h_, t_) in hb.items(): bones_extra[k] = (T(h_), T(t_), 'hand_' + sd if k != 'hand_' + sd else 'forearm_' + sd)
     top = np.array(P['arm'][sd]['wrap_mid']) + [sg * (P['arm'][sd]['radius'] - 0.004), 0.004, -0.012]
-    G = ribbons(sd, top, sg); ob = make_obj('elise_ribbon_' + sd, G.v, G.f); recalc(ob)
-    set_weights(ob, {k: np.array([g.get(k, 0) for g in G.g]) for k in {k for g in G.g for k in g}}); objs['ribbon' + sd] = ob
+    # the hanging ribbon tails are not built (owner, fix pass 2): the wrist wraps stay, the ribbon bones stay in the skeleton
     bones_extra[f'ribbon_{sd}_0'] = (top, top + [sg * 0.008, 0, -0.14], 'forearm_' + sd); bones_extra[f'ribbon_{sd}_1'] = (top + [sg * 0.008, 0, -0.14], top + [sg * 0.018, 0, -0.28], f'ribbon_{sd}_0')
 
 # ---------------- weights: head
@@ -246,8 +276,9 @@ for sd, sg in (('L', 1), ('R', -1)):
     bone('foot_' + sd, J['ank' + sd], J['ball' + sd], 'shin_' + sd); bone('toe_' + sd, J['ball' + sd], J['tip' + sd], 'foot_' + sd)
     bone('shoulder_' + sd, (sg * 0.022, 0.02, 1.405), J['S' + sd], 'chest'); bone('upperarm_' + sd, J['S' + sd], J['E' + sd], 'shoulder_' + sd)
     bone('forearm_' + sd, J['E' + sd], J['W' + sd], 'upperarm_' + sd)
-    for hx, hy0, hy1, nm in ((0.085, -0.10, -0.135, 'F'), (0.10, 0.07, 0.125, 'B')):
-        bone(f'skirt_{nm}{sd}_0', (sg * hx, hy0, 0.30), (sg * (hx + 0.015), hy1, 0.03), 'shin_' + sd)
+for c, col in enumerate(Z.CH_COLS):          # the gown's bone grid: one chain per fifth column, hanging from the pelvis
+    for k in range(len(Z.CH_ROWS) - 1):
+        bone(Z.bone_name(c, k), LV[gi[Z.CH_ROWS[k], col]], LV[gi[Z.CH_ROWS[k + 1], col]], Z.bone_name(c, k - 1) if k else 'pelvis')
 order = sorted(bones_extra, key=lambda k: (k.startswith(('thumb', 'index', 'fingers', 'prop')), k.endswith('_1')))
 for k in order:
     h_, t_, par = bones_extra[k]; bone(k, h_, t_, par)
@@ -299,21 +330,49 @@ def heat_shell():
     return {k: w / tot * shm for k, w in A.items()}
 A = heat_shell(); print('shell weights:', 'bone heat' if A else 'ANALYTIC FALLBACK')
 A = A or analytic_shell()
-SK = Z.skirt_weights(x, y, z); bl = np.where(tor, Z.sstep((z - 0.86) / 0.12), 1.0)      # hips: the gown's own weights, as on the loft
+sL = np.clip((x + 0.045) / 0.03, 0, 1); wth = Z.sstep((0.93 - z) / 0.25) * ramp(z, 0.825, 0.875)      # the hips follow the thighs a little, and end on the pelvis alone: the gown hangs from it
+SK = {'thigh_L': wth * sL, 'thigh_R': wth * (1 - sL), 'pelvis': 1 - wth}; bl = np.where(tor, Z.sstep((z - 0.86) / 0.12), 1.0)
 for k in set(A) | set(SK): add(k, shm * (bl * A.get(k, 0) + (1 - bl) * SK.get(k, 0)))
 lock = (tor & (z < 0.87)) | ~shm
 W = smooth_w(W, bf, n, 3, lock)
 set_weights(objs['body'], W)
-set_weights(objs['loft'], Z.skirt_weights(LV[:, 0], LV[:, 1], LV[:, 2]))
-wt = Z.sstep((0.93 - TV[:, 2]) / 0.25); set_weights(objs['thigh'], {'thigh_L': wt, 'pelvis': 1 - wt})
+GW = Z.grid_weights(); LW = {}                 # gown: skirt bones only; the turned-in lip copies its outer vertex
+for nm, w in GW.items():
+    a_ = np.zeros(len(LV)); a_[gi] = w
+    for o_, i_ in inn.items(): a_[i_] = a_[o_]
+    LW[nm] = a_
+set_weights(objs['loft'], LW)
+for sd in 'LR':
+    wt = Z.sstep((0.86 - TVs[sd][:, 2]) / 0.14); set_weights(objs['thigh' + sd], {'thigh_' + sd: wt, 'pelvis': 1 - wt})
 set_weights(objs['patch'], {'head': np.ones(len(PV))})
+# ---------------- cloth rig: what the bake (cloth_bake.py), the build check (art/anim/ftfanim/skirt.py) and a later
+# runtime solver need. glTF axes (Y up, +Z front). Capsules: the bone that carries them, two rest points, two radii.
+for sd in 'LR':
+    th_, sh_ = [c for c in caps if c[0] == 'thigh_' + sd][0], [c for c in caps if c[0] == 'shin_' + sd][0]
+    caps.append((th_[0], th_[1], th_[2], th_[3] + 0.05, th_[4] + 0.06, 1)); caps.append((sh_[0], sh_[1], sh_[2], sh_[3] + 0.08, sh_[4] + 0.10, 1))
+    S_, E_, W_ = J['S' + sd], J['E' + sd], J['W' + sd]
+    caps += [('upperarm_' + sd, S_, E_, 0.045, 0.038, 1), ('forearm_' + sd, E_, E_ + (W_ - E_) * 0.8, 0.038, 0.030, 1)]
+sx = np.hypot(hv[:, 0], hv[:, 1] - 0.012); hr = float(np.percentile(sx[(hv[:, 2] > 1.57) & (hv[:, 2] < 1.66) & (hv[:, 1] < 0.0)], 30))
+caps += [('pelvis', np.array([-0.075, 0.01, 0.90]), np.array([0.075, 0.01, 0.90]), 0.115, 0.115, 1), ('spine', np.array([0, 0.0, 1.0]), np.array([0, 0.0, 1.16]), 0.105, 0.10, 1),
+         ('chest', np.array([-0.055, -0.02, 1.30]), np.array([0.055, -0.02, 1.30]), 0.12, 0.12, 1), ('neck', np.array([0, 0.008, 1.44]), np.array([0, 0.012, 1.55]), 0.042, 0.042, 1),
+         ('head', np.array([0, 0.012, 1.60]), np.array([0, 0.012, 1.66]), hr, hr, 1)]
+gridv = LV[gi]; dmin = {}
+for bn, a_, b_, r0, r1, st in caps:
+    if st == 0:
+        d_, t_ = seg_d(gridv.reshape(-1, 3), a_, b_); dmin[bn] = min(dmin.get(bn, 9), float((d_ - (r0 + (r1 - r0) * t_)).min()))
+print('rest clearance, gown to leg capsules (m):', {k: round(v, 4) for k, v in dmin.items()})
+bnames = [b.name for b in arm.bones]; tails = np.array([ao.matrix_world @ b.tail_local for b in arm.bones])
+np.savez_compressed(WD + '/cloth_rig.npz', grid=g2(gridv), gw_names=np.array(list(GW)), gw=np.stack([GW[k] for k in GW], -1).astype(np.float32),
+                    ch_cols=np.array(Z.CH_COLS), ch_rows=np.array(Z.CH_ROWS), cap_bone=np.array([c[0] for c in caps]), cap_p0=g2([c[1] for c in caps]), cap_p1=g2([c[2] for c in caps]),
+                    cap_r=np.array([[c[3], c[4]] for c in caps]), cap_set=np.array([c[5] for c in caps]), tail_names=np.array(bnames), tail_pos=g2(tails))
 # ---------------- join, modifiers, UV
-part_id = {'body': 0, 'head': 1, 'handL': 2, 'handR': 2, 'ribbonL': 3, 'ribbonR': 3, 'loft': 6, 'thigh': 4, 'patch': 0}
+part_id = {'body': 0, 'head': 1, 'handL': 2, 'handR': 2, 'ribbonL': 3, 'ribbonR': 3, 'loft': 6, 'thighL': 4, 'thighR': 5, 'patch': 0}
 for k, o in objs.items():
     at = o.data.attributes.new('part', 'INT', 'FACE'); pv = np.full(len(o.data.polygons), part_id[k], np.int32)
     if k == 'body': pv[:] = bfp
     if k == 'patch': pv[:] = PP
     at.data.foreach_set('value', pv)
+    nh = o.data.attributes.new('nohull', 'INT', 'FACE'); nh.data.foreach_set('value', nohull if k == 'body' else np.zeros(len(o.data.polygons), np.int32))
     for p in o.data.polygons: p.use_smooth = True
 bpy.ops.object.select_all(action='DESELECT')
 for o in objs.values(): o.select_set(True)
@@ -322,7 +381,7 @@ bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); 
 me = el.data; nf = len(me.polygons); pa = np.empty(nf, np.int32); me.attributes['part'].data.foreach_get('value', pa)
 fc = np.empty(nf * 3); me.polygons.foreach_get('center', fc); fx_, fy_, fz = fc.reshape(-1, 3).T; fth = Z.ang(fx_, fy_)
 # texel density by zone; every zone is unwrapped on its own, so an island never mixes two densities
-zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.55, 7: 3.5, 8: 5.0, 9: 1.1}
+zone = np.zeros(nf, int); dens = {0: 1.0, 1: 1.5, 2: 2.6, 3: 0.8, 4: 3.0, 5: 0.6, 6: 0.9, 7: 3.5, 8: 5.0, 9: 1.1}
 zone[pa == 1] = 1; zone[(pa == 1) & (fy_ < -0.03) & (fz > 1.49) & (fz < 1.68) & (abs(fx_) < 0.08)] = 2; zone[pa == 2] = 3
 zone[pa == 4] = 9; zone[(pa == 4) & (fz > 0.59) & (fz < 0.85)] = 4; zone[pa == 5] = 5; zone[pa == 6] = 6
 zone[(pa == 0) & (fz > 0.79) & (fz < 0.99) & (fth > 12) & (fth < 104) & (np.hypot(fx_, fy_) < 0.215)] = 7; zone[pa >= Z.PART0] = 8

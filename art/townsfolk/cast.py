@@ -14,11 +14,11 @@ Each entry is plain data read by the build scripts in this folder:
 
 # Town palette (linear RGB): linen, wool, leather, dyed felt in terracotta, ochre, moss, indigo.
 PALETTE = {
-    "linen": (0.62, 0.55, 0.42), "linen_dark": (0.40, 0.34, 0.25), "cream": (0.72, 0.66, 0.54),
-    "undyed_wool": (0.36, 0.31, 0.25), "charcoal": (0.045, 0.045, 0.05), "slate": (0.12, 0.13, 0.15),
-    "terracotta": (0.36, 0.09, 0.045), "brick": (0.24, 0.06, 0.035), "ochre": (0.52, 0.29, 0.05),
-    "straw": (0.60, 0.46, 0.20), "moss": (0.105, 0.135, 0.045), "sage": (0.28, 0.33, 0.20),
-    "indigo": (0.045, 0.06, 0.13), "indigo_light": (0.09, 0.12, 0.22), "plum": (0.16, 0.06, 0.10),
+    "linen": (0.55, 0.49, 0.38), "linen_dark": (0.38, 0.32, 0.24), "cream": (0.60, 0.54, 0.43),
+    "undyed_wool": (0.20, 0.15, 0.105), "charcoal": (0.045, 0.045, 0.05), "slate": (0.12, 0.13, 0.15),
+    "terracotta": (0.30, 0.095, 0.055), "brick": (0.21, 0.065, 0.04), "ochre": (0.42, 0.25, 0.07),
+    "straw": (0.50, 0.38, 0.17), "moss": (0.10, 0.115, 0.05), "sage": (0.28, 0.33, 0.20),
+    "indigo": (0.05, 0.06, 0.105), "indigo_light": (0.09, 0.11, 0.18), "plum": (0.16, 0.06, 0.10),
     "leather": (0.16, 0.085, 0.04), "leather_dark": (0.07, 0.04, 0.025), "leather_tan": (0.33, 0.19, 0.09),
     "amber": (0.80, 0.42, 0.05), "bronze": (0.35, 0.22, 0.09), "pearl": (0.70, 0.68, 0.66),
     "shell_white": (0.78, 0.74, 0.66), "wood": (0.20, 0.12, 0.06), "iron": (0.10, 0.10, 0.11),
@@ -62,6 +62,7 @@ CAST = {
                 "eyes/r-eye-scale-incr": 0.2},
         skin="warm", hair=("dark_brown", "curly_bob"), brows=1.0,
         costume=dict(base="dress", dress=("indigo", "ochre"), hem=0.30, sleeves="none", collar="wrap", under=("cream",),
+                     underskirt=("cream", 0.36),
                      trousers=("undyed_wool", "leather"), sash=("ochre",), shoes=("boots", "leather"),
                      extras=("ring_pendant",), **BAGGY),
         style=style(lean=-1, protract=-2, chin=-2, swing=0.8, sway=1.1, bounce=0.9, walk=1.20, cycle=30),
@@ -169,7 +170,7 @@ CAST = {
         skin="fair", hair=("white", "swept"), beard=("white", "full"), brows=1.3,
         costume=dict(base="shirt_trousers", shirt=("cream", "linen_dark"), sleeves="long", trousers=("linen_dark", "leather"),
                      over="vest_long", over_col=("indigo", "ochre"), over_len=0.15, over_open=0.02,
-                     shawl=("ochre", "straw"), shoes=("boots", "leather"), extras=("cane", "ring_brooch"), **BAGGY),
+                     shawl=("ochre", "ochre"), shoes=("boots", "leather"), extras=("cane", "ring_brooch"), **BAGGY),
         style=style(lean=10, hunch=6, protract=6, chin=-9, tilt=2, width=0.02, knee=0.026, swing=0.4, sway=0.9,
                     bounce=0.5, cloth=0.8, walk=0.65, cycle=40),
     ),

@@ -48,7 +48,7 @@ def envelope(hp, leg=None, shell=None):
     E[:6] = E[6] + 0.25 * (0.06 - (np.arange(6)[:, None] + 0.5) * DZ)
     out = np.array([(tc < slit((j + 0.5) * DZ)[0] - 8) | (tc > slit((j + 0.5) * DZ)[1] + 8) for j in range(NZ)]); Lm = None
     if leg is not None:
-        Lm = _bins(leg, np.fmax); Q = np.stack([np.roll(np.roll(Lm, a_, 0), b_, 1) for a_ in (-1, 0, 1) for b_ in (-1, 0, 1)]); Lm = np.where(out, np.nanmax(np.where(np.isnan(Q), 0, Q), 0), 0)
+        Lm = _bins(leg, np.fmax); Q = np.stack([np.roll(np.roll(Lm, a_, 0), b_, 1) for a_ in (-1, 0, 1) for b_ in (-1, 0, 1)]); edge_ = np.array([(tc < slit((j + 0.5) * DZ)[0] + 4) | (tc > slit((j + 0.5) * DZ)[1] - 4) for j in range(NZ)]); Lm = np.where(edge_, np.nanmax(np.where(np.isnan(Q), 0, Q), 0), 0)   # up to the slit edges: the turned-in lip must clear the leg too
         E = np.maximum(E, Lm + 0.016)
     k = np.array([1, 4, 6, 4, 1]) / 16
     for _ in range(2):
@@ -81,3 +81,26 @@ def patch_geo(name):
 MORPHS = [('blink', ['blink_L', 'blink_R']), ('blink_L', ['blink_L']), ('blink_R', ['blink_R']), ('smile', ['m_smile']),
           ('surprise', ['m_O']), ('sad', ['sad_L', 'sad_R', 'm_sad']), ('angry', ['angry_L', 'angry_R', 'm_angry']),
           ('talk_A', ['m_A']), ('talk_O', ['m_O']), ('talk_M', ['m_M'])]
+# ---- gown rework (pass 3): the gown is a free cloth on its own bone grid; the left leg stands outside it through the slit
+NU, NV = 60, 30                              # grid cells around (rear slit edge -> back -> right -> front slit edge) and down
+CH_COLS = list(range(0, NU + 1, 5))          # 13 bone chains: 0 on the rear slit edge, 12 on the front slit edge
+CH_ROWS = [0, 8, 15, 22, 30]                 # bone heads on the first four rows, the last bone ends on the hem
+def gown_slit(z):
+    """Edges of the gown's open slit at height z, degrees: the laced opening above 0.80, then wide enough for the
+    whole left leg to stand in it (sheet 01)."""
+    z = np.asarray(z, float); zs = [0.0, 0.30, 0.62, 0.80, 0.955]
+    return np.interp(z, zs, [6.0, 10.0, 22.0, 41.0, 47.5]), np.interp(z, zs, [114.0, 112.0, 102.0, 67.0, 52.5])
+def gown_ease(th, z):
+    """Slack added to the fitted envelope: 3 cm around the legs, then a flare to the hem (more at the back)."""
+    z = np.asarray(z, float); back = np.maximum(0.0, -np.cos(np.radians(th)))
+    return 0.030 * sstep((0.815 - z) / 0.13) + (0.075 + 0.04 * back) * np.clip((0.50 - z) / 0.50, 0, 1) ** 1.6
+def bone_name(c, k): return 'skirt_%02d_%d' % (c, k)
+def grid_weights():
+    """{bone name: [NV + 1, NU + 1] weight}: every gown vertex is held by at most two chains and two bones of each."""
+    j = np.arange(NV + 1)[:, None] * np.ones((1, NU + 1)); i = np.ones((NV + 1, 1)) * np.arange(NU + 1)[None, :]
+    b = [np.ones_like(j)] + [sstep((j - (r - 2.5)) / 5.0) for r in CH_ROWS[1:-1]] + [np.zeros_like(j)]
+    W = {}
+    for c, col in enumerate(CH_COLS):
+        hat = np.clip(1 - abs(i - col) / (CH_COLS[1] - CH_COLS[0]), 0, 1)
+        for k in range(len(CH_ROWS) - 1): W[bone_name(c, k)] = hat * (b[k] - b[k + 1])
+    return W
