@@ -3,7 +3,7 @@
 // works in the player's language and falls back to English words. A reply is a locale key plus arguments built from
 // the agent's real state (measured return, last trade, price). Pure and deterministic.
 
-export const INTENTS = Object.freeze(['greet', 'hire', 'status', 'trade', 'explain', 'where', 'help', 'bye']);
+export const INTENTS = Object.freeze(['greet', 'hire', 'status', 'trade', 'verify', 'explain', 'where', 'help', 'bye']);
 export const TOPICS = Object.freeze(['silk', 'shell', 'sign', 'trial', 'seal', 'shard', 'memory', 'slots']);
 export const PLACES = Object.freeze(['exchange', 'scribe', 'inn', 'altar', 'board', 'mirror']);
 
@@ -36,6 +36,7 @@ export function matchIntent(text, lex) {
   const scores = Object.fromEntries(INTENTS.map((i) => [i, score('chat.lex.' + i)]));
   // a named place with a "where" word, or a word to explain, decides the topic
   if (place[1] && (scores.where || !topic[1])) return { intent: 'where', topic: place[0], score: place[1] + scores.where };
+  if (scores.verify && scores.verify > topic[1]) return { intent: 'verify', topic: null, score: scores.verify }; // "verify you" beats the seal topic
   if (topic[1]) return { intent: 'explain', topic: topic[0], score: topic[1] + scores.explain };
   const best = INTENTS.filter((i) => !['explain', 'where'].includes(i)).map((i) => [i, scores[i]]).sort((a, b) => b[1] - a[1])[0];
   return best[1] ? { intent: best[0], topic: null, score: best[1] } : { intent: 'unknown', topic: null, score: 0 };
@@ -55,6 +56,7 @@ export function replyFor(match, { agent = null, lastTrade = null, rounds = 5 } =
     case 'trade': return lastTrade ? { key: 'chat.trade', args: { echo: lastTrade.echo, side: lastTrade.side, result: (lastTrade.result >= 0 ? '+' : '') + (lastTrade.result / 100).toFixed(2), reason: lastTrade.reason } } : { key: 'chat.trade.none', args: {} };
     case 'explain': return { key: 'gloss.' + match.topic + '.def', args: {} };
     case 'where': return { key: 'chat.where.' + match.topic, args: {} };
+    case 'verify': return { key: 'chat.verify', args: {} }; // how anyone can check this agent's record on-chain
     case 'bye': return { key: 'chat.bye', args: {} };
     case 'help': return { key: 'chat.help', args: {} };
     default: return { key: 'chat.unknown', args: {} };

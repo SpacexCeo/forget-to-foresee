@@ -203,7 +203,7 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
       const temperament = FOLK_TEMPERAMENT[npc];
       const plan = hireResult({ seed, temperament, price, rounds: HIRE.rounds, agent: agentOf(npc), npc });
       st.silk -= price * 100;
-      st.hires[npc] = { seed, temperament, price, startedAt: now(), endsAt: now() + HIRE.rounds * HIRE.roundSeconds * 1000, plan: { rounds: plan.rounds, back: plan.back, net: plan.net, agent: plan.agent } };
+      st.hires[npc] = { seed, epoch: st.counter, temperament, price, before: agentOf(npc), startedAt: now(), endsAt: now() + HIRE.rounds * HIRE.roundSeconds * 1000, plan: { rounds: plan.rounds, back: plan.back, net: plan.net, agent: plan.agent } };
       st.stats.agentsHired++;
       save();
       return { ok: true, seed, price };
@@ -213,7 +213,8 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
       const h = st.hires[npc];
       if (!h) return { ok: false, reason: 'none' };
       if (now() < h.endsAt) return { ok: false, reason: 'working' };
-      const r = { seed: h.seed, temperament: h.temperament, price: h.price * 100, rounds: h.plan.rounds, back: h.plan.back, net: h.plan.net };
+      // `before` and `epoch` let the hire be recorded on-chain and replayed by anyone (game/track-record.js)
+      const r = { seed: h.seed, epoch: h.epoch || 0, temperament: h.temperament, price: h.price * 100, rounds: h.plan.rounds, back: h.plan.back, net: h.plan.net, before: h.before || null };
       st.silk += r.back; st.stats.net += r.net;
       st.agents[npc] = h.plan.agent;
       for (const x of r.rounds) { st.stats.rounds++; if (x.back > x.stake) st.stats.wins++; }
@@ -227,6 +228,8 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
       save();
       return { ok: true, result: { npc, ...r } };
     },
+    /** Collected hire results, newest first (the last 10); `npc` filters. */
+    results(npc = null) { return (st.results || []).filter((r) => !npc || r.npc === npc); },
     /** Every agent action, newest first; `npc` filters. */
     log(npc = null) { return st.log.filter((l) => !npc || l.npc === npc); },
     /** Hires closed in this session (open ones: hires()). */
@@ -234,6 +237,12 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
     /** The best agent by measured return (at least 5 rounds), or null. */
     bestAgent() { let best = null; for (const [npc, a] of Object.entries(st.agents)) { const m = measuredReturn(a); if (a.rounds >= 5 && m != null && (!best || m > best.measured)) best = { npc, measured: m, experience: a.rounds }; } return best; },
     agentsKnown() { return Object.keys(st.agents); },
+    /** A wheel prize (game/wheel.js): town silk in cents and/or XP. Never the season's silk. */
+    grant({ silk = 0, xp = 0 } = {}) {
+      st.silk += Math.max(0, Math.round(silk)); st.xp += Math.max(0, Math.round(xp));
+      save();
+      return { silk: st.silk, xp: st.xp };
+    },
     /** XP for a play action (XP keys); counted in the profile stats too. */
     addXp(kind, persist = true) {
       st.xp += XP[kind] || 0;

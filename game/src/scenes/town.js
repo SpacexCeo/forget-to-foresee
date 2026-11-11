@@ -17,6 +17,7 @@ import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
 import { PropInstance, meshesToTriangles } from '../render/assets.js';
 import { createTownsfolk } from '../play/townsfolk.js';
 import { createTownLife } from './town-life.js';
+import { createSwingSet } from '../render/swing.js';
 import { GATE_PASSAGE, GATE_FLOOR, OUTSIDE_GROUND_MESH, beyondWalls, carveBox, filterTriangles } from './town-outside.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
@@ -87,6 +88,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   group.name = 'town';
   scene.add(group);
   const life = createTownLife({ parent: group, origin: TOWN_ORIGIN, center: TOWN_ALTAR.stand, detail });
+  const swing = createSwingSet(); // signs, lanterns and chandeliers rock with the wind (render/swing.js)
 
   const library = streamer.library;
   const state = {
@@ -166,6 +168,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     const smoke = [];
     if (real) for (const [name, node] of inst.sockets) if (SMOKE_SOCKET.test(name)) smoke.push(node.getWorldPosition(_v).toArray());
     life.setChimneys(inst.id, smoke);
+    swing.set(inst.id, real || null);
     if (def.visualOnly) life.setSky(real || null);
     placeLamps();
     if (def.name !== TOWN_ALTAR_ASSET) return;
@@ -284,6 +287,7 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
   function update(t, dt, { playerPos, reducedMotion = false, lamps: lampScale = 1, light = null, camera = null }) {
     if (!state.active) return;
     life.update(reducedMotion ? 0 : dt, light);
+    swing.update(t, reducedMotion);
     if (townsfolk) { folkFrame.playerPos = playerPos; folkFrame.reducedMotion = reducedMotion; folkFrame.camera = camera; folkFrame.shown = shown(); townsfolk.update(dt, folkFrame); }
     state.time = t;
     checkReady();

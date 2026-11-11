@@ -18,7 +18,7 @@ function ownKeys(locale, source) {
 }
 
 // Italian words spelled like the English ones (not untranslated copies).
-const SAME_IT = new Set(['day1.elise', 'panel.pill.hire', 'day1.skin.iris', 'day1.skin.elise', 'common.demo', 'lobby.nav.clan', 'panel.clan.title', 'settings.quality.auto', 'flow.step.tutorial',
+const SAME_IT = new Set(['day1.elise', 'panel.pill.hire', 'ach.elise', 'day1.skin.iris', 'day1.skin.elise', 'common.demo', 'lobby.nav.clan', 'panel.clan.title', 'settings.quality.auto', 'flow.step.tutorial',
   'ctor.palette', 'line.askNo', 'wh.trial.arena', 'wh.sign.seconds', 'wh.top.menu']);
 const SAME_AS_EN = new Set([
   'hub.card.offer.body', // pure placeholder: '{offer}'

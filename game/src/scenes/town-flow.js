@@ -10,6 +10,9 @@ import { HIRE } from '../game/town-economy.js';
 import { matchIntent, replyFor } from '../game/intents.js';
 import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
 import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
+
+/** Town spots that are shop doors: with walk-in shops (onDoor) E goes inside instead of opening the panel here. */
+const DOORS = new Set(['exchange', 'scribe', 'inn']);
 import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createVeil } from '../ui/loading.js';
 
@@ -74,7 +77,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [] }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -141,7 +144,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   function renderText() {
     objective.textContent = i18n.t(state.ready ? (state.resume ? 'town.objective.resume' : quest ? quest.objective : 'town.objective') : 'town.loading');
-    promptText.textContent = spotNear && !talkNpc ? i18n.t('spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
+    promptText.textContent = spotNear && !talkNpc ? i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
     if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
     if (quest) {
       meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
@@ -214,7 +217,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       const dl = el('dl');
       for (const x of r.rounds) dl.append(el('dt', null, T('hire.result.round', { n: x.n })), el('dd', null, T('hire.result.roundLine', { stake: (x.stake / 100).toFixed(2), back: (x.back / 100).toFixed(2) })));
       dl.append(el('dt', null, T('hire.result.net')), el('dd', null, (r.net >= 0 ? '+' : '') + (r.net / 100).toFixed(2)), el('dt', null, T('hire.result.seed')), el('dd', null, r.seed));
-      kids.push(dl);
+      kids.push(dl, ledgerRow(npc, r, el, b));
       row.append(b('quest.close', closeFolk, true));
     } else if (h && h.ready) {
       kids.push(el('p', null, T('hire.back')));
@@ -243,11 +246,57 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     input.style.cssText = 'flex:1;min-height:36px;padding:4px 10px;border-radius:8px;border:1px solid rgba(233,180,76,.5);background:#1c2426;color:#f3ead6;font:15px system-ui,sans-serif';
     const send = el('button', null, T('chat.send')); send.type = 'submit'; send.style.background = 'rgba(233,180,76,.14)'; send.style.color = '#f3ead6';
     form.append(input, send);
-    form.addEventListener('submit', (e) => { e.preventDefault(); folkTalk.reply = chatReply(npc, input.value); folkTalk.asked = input.value; renderFolk(); const i = talkEl.querySelector('input'); if (i) i.focus(); });
+    form.addEventListener('submit', (e) => { e.preventDefault(); folkTalk.replyIntent = chatIntent(input.value); folkTalk.reply = chatReply(npc, input.value); folkTalk.asked = input.value; renderFolk(); const i = talkEl.querySelector('input'); if (i) i.focus(); });
     form.addEventListener('keydown', (e) => e.stopPropagation());
     if (folkTalk.reply) kids.push(el('p', 'ftf-local', '“' + folkTalk.asked + '”'), el('p', null, folkTalk.reply));
+    if (folkTalk.replyIntent === 'verify') kids.push(copyStepsButton(npc, folkTalk.result || (ledger.results ? ledger.results(npc)[0] : null), el, b));
     kids.push(form, el('p', 'ftf-local', T('hire.local')), row);
     setTalk(...kids);
+  }
+  /** The matched intent of a typed question (the verify intent adds the copy button). */
+  function chatIntent(text) {
+    const en = PLAY_MESSAGES.en;
+    return matchIntent(text, (k) => (i18n.t(k) === k ? '' : i18n.t(k)) + '|' + (en[k] || '')).intent;
+  }
+  // Track records on NEAR testnet (net/agent-ledger.js, loaded on first use: it stays out of this chunk).
+  let ledgerMod = null, ledgerLoading = null;
+  const withLedger = () => ledgerMod ? Promise.resolve(ledgerMod) : (ledgerLoading ||= import('../net/agent-ledger.js').then((m) => { ledgerMod = m; if (folkTalk) renderFolk(); return m; }));
+  /** Record / status row under a hire result: honest states only ("Verified" after the read-back re-computes). */
+  function ledgerRow(npc, r, el, b) {
+    const box = el('div', 'ftf-local');
+    if (!ledgerMod) { withLedger(); return box; }
+    const st = folkTalk.chain || null;
+    const why = ledgerMod.recordBlocker({ storage: ctx.storage || globalThis.localStorage, result: r });
+    if (st && st.state === 'sending') box.append(el('p', null, i18n.t('ledger.sending')));
+    else if (st && st.state === 'done') {
+      box.append(el('p', null, st.verified ? i18n.t('ledger.verified') : i18n.t('ledger.mismatch', { reason: st.reason })));
+      if (st.hash) { const a = el('a', null, i18n.t('ledger.view')); a.href = 'https://testnet.nearblocks.io/txns/' + st.hash; a.target = '_blank'; a.rel = 'noopener noreferrer'; box.append(a); }
+      box.append(copyStepsButton(npc, r, el, b));
+    } else if (why) box.append(el('p', null, i18n.t('ledger.why.' + why)));
+    else {
+      if (st && st.state === 'failed') box.append(el('p', null, i18n.t('ledger.failed', { reason: st.reason })));
+      box.append(b('ledger.record', () => {
+        folkTalk.chain = { state: 'sending' }; renderFolk();
+        const talk = folkTalk;
+        ledgerMod.recordHire({ storage: ctx.storage || globalThis.localStorage, npc, result: r })
+          .then((x) => { talk.chain = x.ok ? { state: 'done', verified: x.verified, reason: x.reason, hash: x.hash } : { state: 'failed', reason: x.reason }; })
+          .catch((e) => { talk.chain = { state: 'failed', reason: String((e && e.message) || e).slice(0, 60) }; })
+          .finally(() => { if (folkTalk === talk) renderFolk(); });
+      }, true));
+    }
+    return box;
+  }
+  /** Copies the verification steps (for a person or any AI agent) for this agent's latest recorded hire. */
+  function copyStepsButton(npc, r, el, b) {
+    const btn = b('ledger.copy', () => {
+      withLedger().then((m) => {
+        const g = m.guestFrom(ctx.storage || globalThis.localStorage);
+        const text = m.verificationSteps({ accountId: g ? g.accountId : '<your guest account>', npc, epoch: r && r.epoch != null ? r.epoch : '<epoch>' });
+        const done = () => { btn.textContent = i18n.t('ledger.copied'); };
+        try { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(done, () => { globalThis.prompt && globalThis.prompt('', text); }); } catch { /* no clipboard */ }
+      });
+    });
+    return btn;
   }
   /** The scripted answer to a typed question: the player's language and English words both match. */
   function chatReply(npc, text) {
@@ -361,6 +410,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if ((quest && quest.talk) || folkTalk || spotPanel) return Promise.resolve(false); // the talk's own buttons answer
     if (spotNear && !talkNpc) {
       if (spotNear.id === 'mirror') { if (onMirror) onMirror(); return Promise.resolve(false); }
+      if (spotNear.id === 'wheel') { if (onWheel) onWheel(); return Promise.resolve(false); }
+      if (onDoor && DOORS.has(spotNear.id) && onDoor(spotNear.id)) return Promise.resolve(false); // walk into the shop (scenes/town-shops.js)
       spotPanel = spotNear.id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled])'); if (b && b.focus) b.focus(); return Promise.resolve(false);
     }
     if (talkNpc && talkKind === 'folk') { folkTalk = { npc: talkNpc, view: talkNpc === 'shrinekeeper' ? 'guide' : 'card', result: null, page: 0 }; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled])'); if (b && b.focus) b.focus(); return Promise.resolve(false); }
@@ -452,6 +503,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     begin, update, reenter,
     /** Esc: closes the open talk panel. O: expands the newest minimised panel. */
     closePanel: () => closeOpen(), expandPill: () => pills.expandLatest(), get pills() { return pills; }, minimise,
+    /** The shop counter (scenes/town-shops.js): opens the panel the door used to open. */
+    openSpot(id) { if (spotPanel || folkTalk) closeOpen(); remote = true; spotPanel = id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled]):not(.ftf-panel-min)'); if (b && b.focus) b.focus(); },
     get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
