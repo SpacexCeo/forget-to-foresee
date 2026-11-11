@@ -58,3 +58,7 @@ open (`board.md`); full `npm test` and a check of the jury path by the owner.
 **Server backup:** the whole server state (board with all GPT refs, uncommitted worker diffs, every `.blend`) is packed
 on the server as `/root/ftf-server-backup.tar` by `/root/mkbackup.sh`; the owner downloads it locally. Re-run the script
 before the rental ends (about 22:00 UTC 11.11). The download command with the access token lives outside git.
+
+## Model rule (owner, 11.11)
+
+Fable 5.2 only for 3D work (Blender models, textures, bakes, rigs, animation, art renders). All other work on Opus 5.5, medium effort. One agent at a time.
