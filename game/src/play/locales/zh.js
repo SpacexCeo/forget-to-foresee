@@ -550,6 +550,8 @@ export default {
   'shard.nft.toast': "碎片 #{id} · {kind} → {clan}，{price} 丝",
   'shard.nft.close': "关闭",
   'shard.nft.open': "打开卡片",
+  'shard.nft.preview.title': '未铸造碎片预览',
+  'shard.nft.preview.note': '只有已发布的评审赛季会在链上铸造。没有代币，也没有交易。',
   'shard.nft.kind.first': "第一句话",
   'shard.nft.kind.call': "召唤",
   'shard.nft.kind.gift': "馈赠",

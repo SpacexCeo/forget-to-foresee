@@ -551,6 +551,8 @@ export default {
   'shard.nft.toast': "Frammento #{id} · {kind} → {clan} per {price} seta",
   'shard.nft.close': "Chiudi",
   'shard.nft.open': "Apri la scheda",
+  'shard.nft.preview.title': 'Anteprima di frammento non coniato',
+  'shard.nft.preview.note': 'Il conio on-chain è solo per la stagione pubblicata della giuria. Nessun token, nessuna transazione.',
   'shard.nft.kind.first': "prima parola",
   'shard.nft.kind.call': "richiamo",
   'shard.nft.kind.gift': "dono",

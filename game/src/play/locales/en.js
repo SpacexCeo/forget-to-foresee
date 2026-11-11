@@ -552,6 +552,8 @@ export default {
   'shard.nft.toast': "Shard #{id} · {kind} → {clan} for {price} silk",
   'shard.nft.close': "Close",
   'shard.nft.open': "Open card",
+  'shard.nft.preview.title': 'Unminted shard preview',
+  'shard.nft.preview.note': 'On-chain mint is for the published judge season only. No token, no transaction.',
   'shard.nft.kind.first': "first word",
   'shard.nft.kind.call': "call",
   'shard.nft.kind.gift': "gift",

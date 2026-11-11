@@ -6,7 +6,7 @@ Memories panel and a "Minted on NEAR testnet" toast on the judge path (see Game 
 
 Scope, exactly: the three tokens were minted by the coordinator script (`ftf-coordinator.testnet`) for the recorded judge
 playthrough, not by a player's session, and were transferred to the owner's `lambada_eth.testnet` the same day. An
-ordinary season mints nothing (the game says "on-chain for the judge season only"); the player never signs. Iris is
+ordinary season mints nothing (Iris's shard shows as an "Unminted shard preview" with no token id or link); the player never signs. Iris is
 not an NFT: a persistent, player-owned agent NFT, live minting per season and wallet-controlled play are future work.
 
 ## Design
@@ -43,11 +43,17 @@ cases). Transfers: the owner of a token moves it with `nft_transfer`; no approva
     exists on-chain (judge path: trial 6, Frost buys Iris's call for 13 silk; later Salt buys Frost's two insights).
     It holds while hovered or focused; "Open card" opens the Memories panel.
   - **Gating, never a fake token**: a card needs the token on-chain AND `shardExtra(local) === shardExtra(chain)`
-    (a judge who plays differently has a different shard #7, so nothing shows); open auctions never match. Live
-    seasons (not in `NEAR_DEPLOYMENT.shardMints`): no RPC call, one quiet line "Shard NFTs are on-chain for the judge
-    season only." RPC failure: nothing. Strings `shard.nft.*` in all five play locales.
+    (a judge who plays differently has a different shard #7); open auctions never match. Live seasons (not in
+    `NEAR_DEPLOYMENT.shardMints`) make no RPC call.
+  - **Unminted shard preview** (hackathon spec P1-C): every closed shard of Iris's that is not a matching token
+    (another seed, a diverging judge playthrough, an RPC failure, no deployment) still gets a card and a toast built
+    from the local `shardData` / `shardSvg`: kicker "Unminted shard preview", the biography, "On-chain mint is for
+    the published judge season only. No token, no transaction.", a dashed frame. It has no token id, contract,
+    owner, explorer or mint link and no "verified" mark (`previewCard` in `shard-card-model.js`). While the watcher
+    is still checking, nothing shows, so the judge path never flashes a preview before its real token. Other clans'
+    unminted shards stay quiet. Strings `shard.nft.*` in all five play locales.
   - Tests: `game/tests/client/shard-nft-hud.test.mjs` (present, absent or different, live season, RPC error, the mint
-    moment, locales). Headless capture on the production build: `node tests/client/shard-hud-capture.mjs`
+    moment, the preview DOM, locales). Headless capture on the production build: `node tests/client/shard-hud-capture.mjs`
     (screens in `docs/screens/shard-nft/`).
 
 ## Commands

@@ -550,6 +550,8 @@ export default {
   'shard.nft.toast': "Осколок #{id} · {kind} → {clan} за {price} шёлка",
   'shard.nft.close': "Закрыть",
   'shard.nft.open': "Открыть карточку",
+  'shard.nft.preview.title': 'Превью неотчеканенного осколка',
+  'shard.nft.preview.note': 'В блокчейне чеканятся только осколки опубликованного сезона жюри. Токена и транзакции нет.',
   'shard.nft.kind.first': "первое слово",
   'shard.nft.kind.call': "зов",
   'shard.nft.kind.gift': "дар",
