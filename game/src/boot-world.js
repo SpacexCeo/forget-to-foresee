@@ -32,6 +32,7 @@ import { ASSETS } from './render/asset-catalog.js';
 import { townPlan } from './ui/loading.js';
 import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
+import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
 import { TOWN_SPAWN, TOWN_ALTAR_SPAWN, TOWN_ALTAR_ASSET, TOWN_KILL_Y, TOWN_CAMERA, TOWN_ATMOSPHERE } from './scenes/town-layout.js';
 
 /**
@@ -131,7 +132,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let town = null, townFlow = null, inTown = false, townGrounded = false, irisAvatar = null;
+let town = null, townFlow = null, townCasting = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -153,6 +154,9 @@ if (townMode.town) {
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
   });
+  // Outside the walls (docs/town.md): skillshots on the hillside beyond the lower gate.
+  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
+    onCast: () => { if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
   // layer. Importing it also brings the play chunk in while the player crosses the town, so registering does not stall.
   import('./play/iris-avatar.js').then((m) => { irisAvatar = new m.IrisAvatar(); return irisAvatar.attach(avatar); }).catch((e) => console.warn('[town] Iris model unavailable', e));
@@ -195,6 +199,7 @@ async function leaveTown() {
   inTown = false; leftTownAt = performance.now();
   clearWorldInput();
   town.setActive(false);
+  if (townCasting) { townCasting.dispose(); townCasting = null; }
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
   player.teleport(SPAWN.slice(), islandStart.heading);
@@ -311,6 +316,7 @@ function handleInput(dt) {
   if (townFlow && townFlow.busy) return false; // the registration sequence holds Iris and the camera
   if (pad.hit(PAD.menu)) { controls.open(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
+    if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
     if (inspecting) leaveInspect();
     else if (play && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (play && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
@@ -318,6 +324,10 @@ function handleInput(dt) {
     return false;
   }
   if (!play) { if (input.hit('KeyE') || pad.hit(PAD.interact)) townFlow.interact(); } // E at the Tournament altar
+  if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
+    for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
+    townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
+  }
   if (play && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
   if (play && !inspecting) {
     for (const k of PLAY_KEYS) if (k !== 'Escape' && input.hit(k)) play.handleKey(k);
@@ -341,6 +351,7 @@ function handleInput(dt) {
 
   if (!inspecting) {
     for (const c of input.clicks) {
+      if (inTown && townCasting && townCasting.click(c.x, c.y)) continue; // an armed cast takes the click
       ndc.set((c.x / window.innerWidth) * 2 - 1, -(c.y / window.innerHeight) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
       const o = raycaster.ray.origin, d = raycaster.ray.direction;
@@ -458,6 +469,7 @@ function frame() {
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
+    if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy);
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
@@ -507,6 +519,7 @@ window.__ftf = {
     get ready() { return town.ready && townGrounded; }, get active() { return inTown; }, get registered() { return townFlow.registered; },
     get promptVisible() { return townFlow.promptVisible; }, get phase() { return townFlow.phase; }, get walkMs() { return townFlow.walkMs; },
     register: () => townFlow.register(), walkRoute: () => townFlow.walkRoute(), status: () => town.status(),
+    get casting() { return townCasting; }, // the field beyond the walls (QA: aimAt, release)
   } : null,
 };
 requestAnimationFrame(frame);

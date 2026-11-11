@@ -68,7 +68,7 @@ export function mountRunToggle(input, doc = globalThis.document) {
 }
 
 const WORLD_KEYS = new Set([
-  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'F3',
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'KeyQ', 'F3',
   'KeyI', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'ShiftLeft', 'ShiftRight',
   ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1)),
   'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
@@ -122,6 +122,10 @@ export class Input {
       }
       if (e.button === 0 && e.isPrimary) this.downAt = { id: e.pointerId, x: e.clientX, y: e.clientY };
     });
+    // Mouse hover over the canvas (aiming a cast beyond the town walls); null while away or on touch.
+    this.hover = null;
+    target.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { if (!this.hover) this.hover = { x: 0, y: 0 }; this.hover.x = e.clientX; this.hover.y = e.clientY; } });
+    target.addEventListener('pointerleave', () => { this.hover = null; });
     target.addEventListener('pointermove', (e) => {
       if (e.pointerId !== this.dragPointer) return;
       this.device = 'keyboard';

@@ -14,9 +14,10 @@
 // Visual only apart from the collision world: no game rule lives in the town.
 import * as THREE from 'three';
 import { CollisionWorld, rayCast, MASK_PLAYER } from '../physics/collision.js';
-import { PropInstance } from '../render/assets.js';
+import { PropInstance, meshesToTriangles } from '../render/assets.js';
 import { createTownsfolk } from '../play/townsfolk.js';
 import { createTownLife } from './town-life.js';
+import { GATE_PASSAGE, OUTSIDE_GROUND_MESH, beyondWalls, carveBox, filterTriangles } from './town-outside.js';
 import { TOWN_DATA, TOWN_ORIGIN, TOWN_PIECES, TOWN_ALTAR, TOWN_ROUTE, TOWN_TERRAIN, TOWN_ALTAR_ASSET, townFlatGround, altarDistance, altarWake } from './town-layout.js';
 
 /** Most lamp lights lit at once (docs/town.md): point lights are paid by every lit material in view. */
@@ -32,6 +33,7 @@ const GLYPH_NODE = /altar_glyph_(\d+)/;
 export const ALTAR_RATIO = Object.freeze({ glyph: 0.35, glyphUnlit: 0.04, eye: 0.1 });
 const LAMP_SOCKET = /^socket_lamp_/, SMOKE_SOCKET = /^socket_smoke_/;
 const LAMP_COLOR = 0xffb268;
+const TOWN_GATE_PIECE = 'town_block_gate'; // its passage is carved out of the colliders (scenes/town-outside.js)
 
 const _v = new THREE.Vector3();
 
@@ -193,14 +195,29 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     for (const m of coreMaterials) if (m.emissive && !m.emissiveMap) m.emissive.setHex(CORE_AMBER);
   }
 
+  // Outside the walls (scenes/town-outside.js): the lower gate's passage is carved out of its colliders, and the
+  // terrain's visual ground beyond the walls becomes the floor of the hillside.
+  const gateMin = GATE_PASSAGE.min.map((v, k) => v + TOWN_ORIGIN[k]), gateMax = GATE_PASSAGE.max.map((v, k) => v + TOWN_ORIGIN[k]);
+  const openGate = (tris) => carveBox(tris, gateMin, gateMax);
+  const OUTSIDE_OWNER = 'town:outside-ground';
+  function outsideGround(inst) {
+    world.removeOwner(OUTSIDE_OWNER);
+    if (!inst.real || !inst.parts) return;
+    const named = (o) => OUTSIDE_GROUND_MESH.test(o.userData.name || o.name || '') || (o.parent && OUTSIDE_GROUND_MESH.test(o.parent.userData.name || o.parent.name || ''));
+    const meshes = inst.parts.runtime.filter(named);
+    const tris = filterTriangles(meshesToTriangles(meshes), TOWN_ORIGIN, beyondWalls);
+    if (tris.length) world.addTriangles(OUTSIDE_OWNER, tris);
+    state.outsideTriangles = tris.length / 9;
+  }
+
   const pieces = [];
   let terrain = null;
   if (!flat) {
     for (const def of TOWN_PIECES) {
-      const instance = streamer.add(new PropInstance({ name: def.name, scene, world: def.visualOnly ? skyWorld : world, position: def.position }));
+      const instance = streamer.add(new PropInstance({ name: def.name, scene, world: def.visualOnly ? skyWorld : world, position: def.position, colliderFilter: def.name === TOWN_GATE_PIECE ? openGate : null }));
       pieces.push({ def, instance });
       if (def.name === TOWN_TERRAIN) terrain = instance;
-      instance.onSockets((_s, inst) => onPiece(def, inst));
+      instance.onSockets((_s, inst) => { onPiece(def, inst); if (def.name === TOWN_TERRAIN) outsideGround(inst); });
     }
   }
 
@@ -302,6 +319,8 @@ export function createTownScene({ scene, streamer, flat = false, pointLights = t
     get ready() { return checkReady(); },
     /** Every piece that carries the streets is in (or will never come): nothing is left to pop in around Iris. */
     get shown() { return shown(); }, get flat() { return state.flat; }, get active() { return state.active; },
+    /** Collision triangles laid on the hillside beyond the walls (0 until the terrain is in). */
+    get outsideTriangles() { return state.outsideTriangles || 0; },
     get altar() { return state; },
     life, update, setFlare, setActive, setPointLights, groundAt, settled, status, townsfolk,
   };
