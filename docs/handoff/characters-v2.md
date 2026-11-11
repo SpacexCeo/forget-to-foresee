@@ -94,11 +94,27 @@ State 11.11 (worker: animation). Pipeline and API: `docs/art/animation-pipeline.
   numbers for Iris and three walkers, start / stop / turn frame by frame, the wink in its 2.6 s window, idle2
   hand-over, `register`, look-at, frame cost and the animation LOD. No console errors. `FootPlant` was tightened
   there (feet hold as soon as the body's real speed is zero; a tap no longer lets the body snap round).
+- Last polish round (stopped by the lead's one-agent rule, 11.11):
+  - Done, on main: the cycles are keyed densely (`fps` per clip in `clips.json`: run and child_run 120, walks 60).
+    The engine interpolates joint angles linearly between keys, so at 30 keys a second the run's planted foot wandered
+    between keys; the review page's sole metric went 0.136 -> 0.080 m/s and inside the clip's own planted intervals
+    (`planted_slip_*`, from `userData.contact`) the run is 0.000 m/s, the walk 0.008 m/s. The musician no longer bows
+    an invisible violin: `play` falls back to `idle_look` (her lute is on her back; `CLIP_FALLBACK` in
+    `townsfolk-plan.js`). The shared `play` clip stays in the file, unused. Neither was re-captured in the game.
+  - Half-done, on `claude/characters-v2` only as a WIP commit: `gait.js: FootPlant` lean into a turn, chest lead, and
+    the absorbed stop from a run (hips sink over the held feet, chest tips forward). It runs without errors, but the
+    one GPU capture of it ran at 22 frames a second (the server was shared) and shows no clear gain, so it is NOT
+    judged: look at `burst_runstop` / `burst_corner` from `node art/anim/ingame-gpu.mjs --only loco` at 60 fps, check
+    the sign of the lean (`BANK_SIGN`), then keep or drop the commit. Not merged to main.
+  - Not done: the run's arm carriage, hands, mouth and hair tail were only glanced at in one side burst (bent arms,
+    loose fists, tail trailing; the mouth was not visible); the run's feet stay 4-7 mm above the ground in stance.
 - Open after the GPU pass: the stop from a run is abrupt because the game decelerates in 0.25 s (motion model, not
-  animation); a corner at a run has no lean; each townsperson is about 4 skinned meshes (model-side merge would cut
-  the skinned draws); the sweeper, child_b and the elder were not measured walking.
+  animation); each townsperson is about 4 skinned meshes (model-side merge would cut the skinned draws); the sweeper,
+  child_b and the elder were not measured walking.
 - New GPU server (RTX 5090, driver 615.78.08): browser capture lives in `/root/w/chars/anim` (Playwright +
-  `tools/gpu-server/egl.sh` with the version changed to 615.78.08); nothing else lives only there.
+  `tools/gpu-server/egl.sh` with the version changed to 615.78.08; vite on port 5199 from `/root/ftf/game`; run
+  `NODE_PATH=/root/w/chars/anim/node_modules node ../art/anim/ingame-gpu.mjs --out <dir>` in `game/`); nothing else
+  lives only there.
 - Fixed in that pass: the idle stood with the hips 13 cm ahead of the ankles (`stance` in `clips.json`); a greeting
   made the seated elder stand up inside the bench (`townsfolk-plan.js`); `idle2` now takes every third idle loop
   (`iris-avatar.js`).

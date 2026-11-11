@@ -142,6 +142,7 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
     st = dict(DEFAULT_STYLE); st.update(style or {})
     rig = rig_ = rt.rig
     n = frames
+    sigma = sigma * fps / 30.0          # the filters are set in 30 fps frames
     T = n / fps
     sl = slice(f0, f1 + 1)
     # --- heading: travel along +Z
@@ -351,7 +352,7 @@ def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
         horiz = np.hypot(d[:, 0], d[:, 2]); reach = (l1[s] + l2[s]) * 0.992
         max_y = ank_target[s][:, 1] + np.sqrt(np.maximum(reach ** 2 - horiz ** 2, 0.0))
         drop = np.maximum(drop, hj[:, 1] - max_y)
-    drop = np.maximum(gauss_filter(np.maximum(drop, 0), 1.2, cyclic), 0)
+    drop = np.maximum(gauss_filter(np.maximum(drop, 0), 1.2 * fps / 30.0, cyclic), 0)
     hip = hip.copy(); hip[:, 1] -= drop
     for s in 'LR':
         hj = hip + qrot(wp_pel, hip_local[s])

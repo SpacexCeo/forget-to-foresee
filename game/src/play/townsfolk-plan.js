@@ -45,7 +45,8 @@ export const CLIP_FALLBACK = Object.freeze({
   elder_walk: ['elder_walk', 'walk'], talk: ['talk', 'idle'], talk_b: ['talk_b', 'talk', 'idle'], listen: ['idle_look', 'idle_shift', 'think', 'idle'],
   wave: ['wave', 'gesture_offer', 'talk', 'idle'], salute: ['salute', 'gesture_offer', 'idle'],
   nod: ['nod', 'understand', 'idle'], sweep: ['sweep', 'think', 'idle'], carry: ['carry', 'idle'],
-  play: ['play_instrument', 'play', 'talk', 'idle'], counter: ['counter', 'counter_loop', 'think', 'idle'],
+  // the musician's lute hangs on her back: no playing pose (the shared `play` clip bows a violin)
+  play: ['play_instrument', 'idle_look', 'idle_shift', 'idle'], counter: ['counter', 'counter_loop', 'think', 'idle'],
   sit: ['sit', 'sit_loop', 'idle'], think: ['idle_look', 'think', 'idle'],
 });
 
