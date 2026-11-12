@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
 // --step 60: frame by frame: the page's clock and its animation frames are driven by this script (each frame is
 // exactly 1/60 s of game time and is saved), so the film is a true 60 fps whatever the renderer's speed is.
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
@@ -33,7 +33,7 @@ if (STEP) await page.addInitScript(() => {
   window.__manual = () => { vt = realNow(); manual = true; };
   window.__frame = (dt) => { vt += dt; const c = q; q = []; for (const f of c) { try { f(vt); } catch (e) { console.error(e); } } return c.length; };
 });
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${scenario === 'combat' || scenario === 'dash' ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -138,6 +138,32 @@ else if (scenario === 'skid') {
       mark(name + ' ' + id + ' out of the run'); await aim(id); await wait(2300);
     }
   }
+}
+else if (scenario === 'strikes') {
+  // the owner's four checks (12.11): F tapped three times fast, F held, a strike out of a run, a strike and at once a
+  // step; after each the report says which action clip is still on her and how far the chest is turned off the hips
+  const tap = async (ms = 60) => { await page.keyboard.down('KeyF'); await wait(ms); await page.keyboard.up('KeyF'); };
+  const state = (name) => page.evaluate((name) => {
+    const m = window.__ftf.iris.irisModel, q = (n) => m.model.getObjectByName(n).getWorldQuaternion(new (m.model.quaternion.constructor)());
+    const fwd = (n) => { const v = m.model.position.clone().set(0, 0, 1).applyQuaternion(q(n)); return Math.atan2(v.x, v.z); };
+    let d = (fwd('chest') - fwd('pelvis')) * 180 / Math.PI; d = ((d + 540) % 360) - 180;
+    return { after: name, clip: m.combat ? m.combat.name : null, pending: m.pendingHold ? m.pendingHold.name : null, chest_vs_hips_deg: +d.toFixed(1) };
+  }, name);
+  const res = [];
+  for (const s of [{ angle: 0.5, dist: 4.4, h: 0.9, up: 0.3 }, { angle: Math.PI / 2, dist: 4.6, h: 0.9, up: 0.2 }]) {
+    await back(); await shot(s); await wait(2000);
+    mark('three fast taps'); for (let i = 0; i < 3; i++) { await tap(60); await wait(150); }
+    await wait(1800); res.push(await state('three fast taps'));
+    mark('two fast taps'); for (let i = 0; i < 2; i++) { await tap(60); await wait(120); }
+    await wait(1800); res.push(await state('two fast taps'));
+    mark('three taps in rhythm'); for (let i = 0; i < 3; i++) { await tap(60); await wait(330); }
+    await wait(1600); res.push(await state('three taps in rhythm'));
+    mark('hold'); await tap(800); await wait(1900); res.push(await state('hold 0.8 s'));
+    await back(); await wait(500);
+    mark('strike out of a run'); await go(1100, true); await tap(60); await wait(1700); res.push(await state('strike out of a run'));
+    mark('strike then a step'); await tap(60); await wait(150); await go(900, false); await wait(900); res.push(await state('strike then a step'));
+  }
+  marks.push({ strikes: res });
 }
 else if (scenario === 'shoulders') {
   // the shoulders and arms (Elise): close from the front and from behind while she stands, waves, walks and runs

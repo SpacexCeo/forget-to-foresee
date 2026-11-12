@@ -57,6 +57,7 @@ import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
 import { createCompanion } from './scenes/companion.js';
+import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 
 /**
@@ -228,7 +229,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+let fogCards = null, doorGlow = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
@@ -372,6 +373,8 @@ if (townMode.town) {
     camForward: () => { const v = camera.getWorldDirection(_camFwd); return [v.x, v.z]; },
     casting: () => townCasting, mobs: () => townMobs, flow: () => townFlow, wish: wishVector });
   // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
+  // the doors that lead inside glow warm gold (scenes/door-glow.js: exactly the shops' doors, the list the walk-in uses)
+  if (!doorGlow) doorGlow = createDoorGlow({ scene, reducedMotion: () => lookdev.reducedMotion, daylight: () => lookdev.weather.state.sun * (1 - Math.min(1, (lookdev.look && lookdev.look.moonFill) || 0)) });
   townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, mobile: mobileDevice, reducedMotion: () => lookdev.reducedMotion,
     onCounter: (id) => townFlow.openSpot(id), street: { world: () => town.world, killY: TOWN_KILL_Y } });
   fogCards = createFogCards(scene, TOWN_ROUTE); // ground fog along the street and stairs (night, early morning)
@@ -478,7 +481,7 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
-      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => !!(irisAvatar && irisAvatar.combat(n)), irisEnd: () => irisAvatar && irisAvatar.endAction(),
+      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; return !!(irisAvatar && irisAvatar.combat(n)); }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
       onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
     // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are
@@ -986,6 +989,7 @@ function frame() {
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
+    if (doorGlow) doorGlow.update(dt, player.pos, !(townShops && townShops.inside));
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
     if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
     // Phones and the low tier (jury low-tier pass, 12.11): beyond the walls the inner blocks hide behind them; the gate,
