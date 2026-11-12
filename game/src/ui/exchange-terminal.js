@@ -53,7 +53,7 @@ function spark(doc, history) {
  * Opens the terminal. Resolves the transport lazily (the room stack lives in the play chunk).
  * @param {{doc?: Document, i18n: {t: Function}, storage?: object, short?: boolean, onClose?: () => void, transport?: object}} o
  */
-export async function openExchangeTerminal({ doc = document, i18n, storage = null, short = false, onClose = null, transport = null, ledger = null } = {}) {
+export async function openExchangeTerminal({ doc = document, i18n, storage = null, short = false, onClose = null, transport = null, ledger = null, onTownWorks = null } = {}) {
   if (!doc.getElementById('ftf-xch-style')) { const st = doc.createElement('style'); st.id = 'ftf-xch-style'; st.textContent = CSS; doc.head.append(st); }
   const t = (k, a) => i18n.t(k, a);
   // The player's learning townsfolk agents (game/town-economy.js) join the board, scored locally on the same window by
@@ -129,6 +129,7 @@ export async function openExchangeTerminal({ doc = document, i18n, storage = nul
       const row = el('div', 'ftf-xch-row');
       row.append(btn(t('exch.startShort'), () => { mode = 'short'; start(); }, mode === 'short' ? 'ftf-xch-primary' : ''), btn(t('exch.startFull'), () => { mode = 'full'; start(); }, mode === 'full' ? 'ftf-xch-primary' : ''), btn(t('exch.close'), close));
       kids.push(row);
+      if (onTownWorks) { const w = el('div', 'ftf-xch-row'); w.style.marginTop = '12px'; w.append(el('span', 'ftf-xch-sub', t('works.counter')), btn(t('works.open'), () => { close(); onTownWorks(); })); kids.push(w); } // the live town works (NEAR testnet), apart from the practice drill
     } else {
       const top = el('div', 'ftf-xch-top');
       top.append(el('span', null, t('exch.bar', { n: x.bar, total: x.barCount, date: x.date })), el('span', 'ftf-xch-timer', x.phase === 'open' ? `${left}s` : t('exch.settled')), el('span', 'ftf-xch-num', t('exch.purse', { n: silk(x.you.practiceSilk) })));
