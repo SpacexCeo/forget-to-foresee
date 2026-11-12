@@ -157,6 +157,10 @@ export class Input {
     // Touch (phones/tablets): tap = walk there (the click path above), one-finger drag = orbit the camera,
     // two-finger pinch = zoom. Pointer events give every finger its own pointerId.
     if (target.style) target.style.touchAction = 'none';
+    // iOS Safari: a second finger (pinch, or the camera finger while the stick is held) must not turn into page zoom
+    const multi = (e) => { if (e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault(); };
+    target.addEventListener('touchstart', multi, { passive: false });
+    target.addEventListener('touchmove', multi, { passive: false });
     const touches = this.touches = new Map();
     let pinch = 0;
     target.addEventListener('pointerdown', (e) => {
