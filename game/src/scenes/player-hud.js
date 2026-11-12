@@ -29,7 +29,9 @@ const CSS = `
 .ph-quest { position: absolute; top: calc(98px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); max-width: 290px; }
 .ph-wallet { position: absolute; top: calc(62px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; align-items: center; pointer-events: auto; }
 .ph-coin, .ph-chest { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 4px 14px 4px 6px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-radius: 20px; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); cursor: pointer; }
-.ph-coin img, .ph-coin svg { width: 30px; height: 30px; flex: none; }
+.ph-coin i { width: 30px; height: 30px; flex: none; background: var(--ph-coin) center / 30px 30px no-repeat; }
+.ph-coin.ph-spin i { background-image: var(--ph-coin-spin); background-size: 240px 30px; background-position: 0 0; animation: ph-spin .5s steps(8) 2; }
+@keyframes ph-spin { to { background-position: -240px 0; } }
 .ph-coin b { font: 600 17px/1 Georgia, "Libre Caslon Text", serif; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
 .ph-coin.ph-bump b { color: var(--ph-gold); }
 .ph-chest { padding: 4px 12px 4px 8px; font-weight: 700; color: var(--ph-gold); }
@@ -66,10 +68,6 @@ body.ph-on .ftf-hp { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .ph-delta, .ph-toast { animation: none; } .ph-hp > i { transition: none; } }
 `;
-
-const COIN_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><defs><radialGradient id="phc" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fbe6a8"/><stop offset=".6" stop-color="#d8a948"/><stop offset="1" stop-color="#8a6420"/></radialGradient></defs>'
-  + '<circle cx="16" cy="16" r="14.5" fill="url(#phc)" stroke="#6b4c17" stroke-width="1.2"/><circle cx="16" cy="16" r="10.5" fill="none" stroke="#fff2c6" stroke-opacity=".55" stroke-width="1.2"/>'
-  + '<path d="M11 19c2.5 2.2 7.5 2.2 10 0M11 13c2.5-2.2 7.5-2.2 10 0M16 9v14" stroke="#6b4c17" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>';
 
 /** Silk in hundredths → the shown text (two decimals, as the profile shows it). */
 export const formatSilk = (cents) => (Math.round(cents) / 100).toFixed(2);
@@ -109,7 +107,10 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
 
   const wallet = el('div', 'ph-wallet');
   const coin = el('button', 'ph-coin'); coin.type = 'button';
-  const icon = el('img'); icon.alt = ''; icon.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(COIN_SVG.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')); // placeholder until assets/ui/icons/silk_coin.webp lands
+  // the coin (art/ui: silk_coin_96 at 2x) and its half-turn spin strip (8 frames of 96 px) played on a gain
+  const icon = el('i'); icon.setAttribute('aria-hidden', 'true');
+  coin.style.setProperty('--ph-coin', `url("${base}assets/ui/icons/silk_coin_96.webp")`);
+  coin.style.setProperty('--ph-coin-spin', `url("${base}assets/ui/icons/silk_coin_spin.webp")`);
   const count = el('b');
   coin.append(icon, count);
   const chest = el('button', 'ph-chest'); chest.type = 'button'; chest.hidden = true;
@@ -152,6 +153,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     if (reducedMotion()) { shown = target; setCount(target); return; }
     const from = shown, t0 = performance.now(), dur = 650;
     coin.classList.add('ph-bump');
+    if (target > from) { coin.classList.remove('ph-spin'); void coin.offsetWidth; coin.classList.add('ph-spin'); setTimeout(() => coin.classList.remove('ph-spin'), 1050); }
     if (anim) cancelAnimationFrame(anim);
     const step = (now) => {
       const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
