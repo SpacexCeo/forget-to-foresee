@@ -729,7 +729,7 @@ export default {
   'wheel.cap': "NFT, {n} in all",
   'wheel.left': "NFT · {n} of {cap} left",
   'wheel.skin.reason.failed': "The mint did not go through; try again.",
-  'wheel.skin.reason.recorded': "Your win is recorded by the relayer; the token is minted to your account as soon as the minter is switched on.",
+  'wheel.skin.reason.recorded': "Prize verified · mint pending: the skin is reserved for you and will be minted to your account.",
   'wheel.kind.title': "Title",
   'wheel.seg.skin_sheriffchenko': "Sheriffchenko skin",
   'wheel.seg.chest': "Chest",
