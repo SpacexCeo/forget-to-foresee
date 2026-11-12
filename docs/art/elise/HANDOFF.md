@@ -307,3 +307,25 @@ strike_charge,strike_super --legs 0.27 --cloth art/agents/elise/cloth_rig.npz`, 
 steps and the hips' drop are scaled to 0.27 under the gown (at 0.4 the release lunge cut the cloth by 1 cm; the
 script stops when a leg cuts it), the gown is baked over both. Clip file 713 444 bytes, 17 clips.
 
+
+## 12.11: v3, rebuilt from zero (owner: "a body, a pretty face, nothing dotted, then dress her"; "do not trace")
+
+Plan and review gates: `docs/art/elise/v3-plan.md`. Scripts: `art/agents/elise/v3/` (`all.sh` runs everything on the
+GPU server). **Not in the game yet**: the shipped `agent_elise*.glb` and `anim/elise.glb` stay until the owner
+approves; the v3 files are in `art/agents/elise/v3/out/`.
+
+| Stage | Script | What it makes | Sheet |
+|---|---|---|---|
+| Body and face | `a1_body.py`, `face_art.py` | The CC0 base human mesh shaped with its own targets, posed on her skeleton (`skeleton.json`, her 90 bones unchanged), feet in a 5 cm heel. The eye, mouth and nostril pockets of the base mesh are cut out and patched (a depth map of the face, a grey opening fills the hollows). The face is drawn from shapes: no projected paint | `docs/art/elise/v3/a_body_face.jpg` |
+| Hair | `b1_hair.py` | Cap, 11 fringe locks, two face locks, bun with a braid wreath, a coil and two side braids, two stray hairs; butterfly, flower, earrings. 4 808 + 396 triangles | `v3/b_hair.jpg` |
+| Outfit | `c1_outfit.py` | Gown as one quad grid (columns close in with the open back and the halter line, so the edges are grid lines), a separate collar band, stockings, pumps, wrist wraps, lacing; armature; `cloth_rig.npz` | `v3/c_dressed.jpg` |
+| Paint and export | `d1_export.py` | One drawn 2048 atlas (face block, hair gradient strip, flat swatches); hidden body faces removed; reduction by region with a guard that fails the build if an arm, a hand or the neck collapses; outline hull | `v3/d_painted.jpg` |
+
+What is different from v2, by design:
+- No generated mesh, no projected texture anywhere: skin is one colour, so there is nothing to speckle.
+- The skirt's width is a designed profile (`rskirt` in `c1_outfit.py`), not the outline of the generated dress.
+- The whole body is never decimated in one pass (that is how the arms were lost): hands, skull under the hair and the
+  rest are reduced separately, and the counts are checked.
+
+Left for later: face morphs (blink, talk) are not in the v3 export; no folds on the bodice; the hair has no drawn
+highlight band.

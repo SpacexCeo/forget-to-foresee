@@ -12,7 +12,7 @@ if st b; then blender -b body.blend -P $S/b1_hair.py -- $W 2>&1 | grep -v -E "$Q
 if st c; then blender -b head.blend -P $S/c1_outfit.py -- $W 2>&1 | grep -v -E "$Q" > c.log; fi
 if st d; then
   blender -b dressed.blend -P $S/d1_export.py -- $W agent_elise $MM 1 2>&1 | grep -v -E "$Q" > d.log
-  blender -b dressed.blend -P $S/d1_export.py -- $W agent_elise_m $MM 0.5 2>&1 | grep -v -E "$Q" >> d.log
+  blender -b dressed.blend -P $S/d1_export.py -- $W agent_elise_m $MM 0.46 2>&1 | grep -v -E "$Q" >> d.log
   gltf-transform resize agent_elise_m_raw.glb agent_elise_m_1k.glb --width 1024 --height 1024 >> d.log 2>&1
   bash $R/art/tools/compress-glb.sh agent_elise_raw.glb out/agent_elise.glb agent_elise >> d.log 2>&1
   bash $R/art/tools/compress-glb.sh agent_elise_m_1k.glb out/agent_elise_m.glb agent_elise >> d.log 2>&1
