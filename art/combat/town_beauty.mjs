@@ -29,7 +29,7 @@ await page.evaluate((secs) => {
   f.rig.update = (...a) => {
     orig(...a);
     const u = ease(Math.min(1, (performance.now() - t0) / (secs * 1000))), p = f.player.pos;
-    const cam = [1.8 - 1.0 * u, 1202.6 + 2.4 * u, 35.5 - 9 * u];          // centred: the gate guard and the banner poles stay out of frame
+    const cam = [0.4 - 0.4 * u, 1202.6 + 2.4 * u, 35.0 - 8.5 * u];          // centred: the gate guard and the banner poles stay out of frame
     const look = [p[0] * 0.6, p[1] + 1.2 + 0.6 * u, p[2] - 3 - 4 * u];
     f.rig.camera.position.set(...cam); f.rig.camera.lookAt(...look); f.rig.camera.fov = 42; f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
   };
