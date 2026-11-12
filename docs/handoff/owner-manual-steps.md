@@ -24,9 +24,9 @@ Done together with the lead (owner gives access; SSH from the cloud session is b
 
 The contract is built and tested (36 tests). Before the lead deploys it, answer:
 - [ ] Scope P0 and the cut line Fri 14:00 approved?
-- [ ] AMM (wool/silk pool) in P0, or rewards from fees at a fixed rate first?
+- [x] One currency, silk (owner): no wool, no wool/silk pool; rewards are a share of the silk fees.
 - [ ] Words in the game: "pledge / reward share" (recommended) or "stake"?
-- [ ] Wool moves between players only as whole deeds (recommended), or as a free token?
+- [x] (no wool) silk pledges move only as whole deeds.
 - [ ] Deploy `ftf-town` on testnet and fund 20 trader accounts (about 6 to 7 testnet NEAR per day): yes / no.
 
 ## D. Story, quests, endgame pass (spec rev 2)
