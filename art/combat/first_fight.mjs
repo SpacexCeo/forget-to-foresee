@@ -81,11 +81,13 @@ await page.evaluate(async () => {
     f.rig.camera.position.set(...c.pos); f.rig.camera.lookAt(...c.look); f.rig.camera.updateMatrixWorld(true);
   };
 });
-// v3: a chest dropped right under her would be picked up mid-fight before the camera sees it; such a drop waits
-// until she has stepped away (the kill -> drop hook itself is the game's)
+// v3: chests dropped mid-fight get picked up as she runs to the next creature, before the camera sees them: the
+// drops are held until the pack is down and she has stepped back, then land where the creatures fell (the kill ->
+// drop hook itself is the game's)
 if (V3) await page.evaluate(() => {
-  const M = window.__ftf.town.monsters, d = M.drop.bind(M);
-  M.drop = (pos, elite) => { const go = () => { const q = window.__ftf.player.pos; if (Math.hypot(q[0] - pos[0], q[2] - pos[2]) > 2.4) d(pos, elite); else setTimeout(go, 150); }; go(); return true; };
+  const M = window.__ftf.town.monsters, d = M.drop.bind(M), q = window.__heldDrops = [];
+  M.drop = (pos, elite) => { if (q) q.push([pos, elite]); return true; };
+  window.__releaseDrops = () => { M.drop = d; q.forEach(([p, e], i) => setTimeout(() => d(p, e), i * 180)); return q.length; };
 });
 // capture in the background
 let capturing = true, n = 0; const t0 = Date.now();
@@ -122,7 +124,7 @@ if (V3) {
   // the chest the pack's kill dropped (play/mobs.js 'ftf:mob-killed' -> town-monsters drop): walk onto it, then the
   // labelled open-case preview (its button is clicked from script and kept off screen: the reel and the card show)
   await page.evaluate(() => Promise.all([import('/src/play/chest-open.js'), import('/src/play/game-menu.js')]));
-  await walkTo(L(-4, 46), 1.0, 2500, false); log.push('stepped back');   // a drop held under her lands now
+  await walkTo(L(-4, 46), 1.0, 2500, false); log.push('stepped back, drops ' + await page.evaluate(() => window.__releaseDrops()));
   const chests = () => page.evaluate(() => window.__ftf.town.monsters ? window.__ftf.town.monsters.chests.map((c) => c.at) : []);
   let cs = []; for (let i = 0; i < 40 && !(cs = await chests()).length; i++) await wait(250);
   log.push('chests ' + cs.length);
