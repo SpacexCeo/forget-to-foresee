@@ -96,7 +96,7 @@ export function createEndgamePass({ t, client, deployment, storage = null, demo 
     const row = el('div', 'ep-row');
     const closeBtn = el('button', 'ghost', t('pass.close')); closeBtn.type = 'button'; closeBtn.addEventListener('click', () => close());
     if (s.state === 'idle' || s.state === 'validating') {
-      box.append(el('p', null, tt('pass.lead')));
+      box.append(el('p', null, t('pass.utility')), el('p', null, tt('pass.lead')));
       const lab = el('label', null, t('pass.label')); lab.htmlFor = 'ep-wallet';
       const inp = el('input'); inp.id = 'ep-wallet'; inp.type = 'text'; inp.autocomplete = 'off'; inp.spellcheck = false; inp.setAttribute('autocapitalize', 'none');
       inp.placeholder = tt('pass.placeholder'); inp.value = s.wallet; inp.setAttribute('aria-invalid', s.inline ? 'true' : 'false'); inp.setAttribute('aria-describedby', 'ep-inline');
@@ -122,7 +122,7 @@ export function createEndgamePass({ t, client, deployment, storage = null, demo 
         const a = el('a', null, t('pass.view')); a.href = vm.explorer; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.style.color = '#f6d892';
         box.append(a);
       }
-      box.append(el('p', null, t('pass.keep')));
+      box.append(el('p', null, t('pass.utility')), el('p', null, t('pass.keep')));
       row.append(closeBtn); box.append(row);
     } else if (s.state === 'queued') {
       box.append(el('p', null, t(s.vm.key, s.vm.args)));

@@ -116,4 +116,5 @@ test('pass copy: every pass.* key in five locales; no price, resale, value or in
   assert.match(PLAY_MESSAGES.en['pass.safety'], /never ask for a seed phrase or a private key/);
   assert.match(PLAY_MESSAGES.en['pass.lead.mainnet'], /free: no purchase, no seed phrase, no signature/);
   assert.match(PLAY_MESSAGES.en['pass.demo'], /^Demo only\./);
+  assert.equal(PLAY_MESSAGES.en['pass.utility'], 'The pass gives its holder a free NFT mint at the official launch.', 'the one promised utility (owner decision)');
 });

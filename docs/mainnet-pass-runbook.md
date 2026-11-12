@@ -21,8 +21,8 @@ node contracts/whitelist-pass/scripts/deploy-args.mjs --network testnet --contra
 | `cap`, `daily_cap` | 1000, 100 | bound the total cost (§3 below) |
 | approvals (NEP-178) | **off** | marketplaces cannot list it; adding them later is impossible once keys are deleted |
 | royalties | none | |
-| utility text | early access to the next testnet and board season; the next access list if one exists | no monetary value promised |
-| allowlist snapshot rule | holders at a block you announce in advance; one spot per wallet | |
+| utility text | **a free NFT mint at the official launch, for the current holder** (owner decision) | no monetary value promised |
+| launch snapshot rule | holders at a block you announce in advance; one free mint per wallet | |
 | image URL | `set_media` after deploy | |
 
 ## 2. Testnet rehearsal (throwaway accounts)
@@ -39,15 +39,15 @@ node contracts/whitelist-pass/scripts/deploy-args.mjs --network testnet --contra
    ([`pass-claim-api.md`](pass-claim-api.md)): wrong id, missing account, a second claim, `FTF_PASS_ENABLED=0`, a
    `STOP` file, `pause`.
 6. **READ-ONLY:** measure from the rehearsal transactions: `storage_usage` change per mint (the unit tests measured
-   **1042 bytes**; a transfer **0 bytes** net) and `gas_burnt` per mint (on the NearBlocks receipt).
+   **990 bytes**; a transfer **0 bytes** net) and `gas_burnt` per mint (on the NearBlocks receipt).
 
 ## 3. Cost: method, not a quote
 
 `cost per mint ≈ bytes_added × 1e19 yoctoNEAR + gas_burnt × gas_price` ([VERIFY] the storage price, 1e19 yoctoNEAR
 per byte, and the gas price on the day). Fixed part: the wasm's locked storage (size in bytes × 1e19; the local build
-is 275,109 bytes ≈ 2.75 NEAR, [VERIFY] with the cargo-near build) plus the three accounts' minimum balances and the
-0.05 NEAR reserve. Budget = `fixed + cap × per_mint`, plus 25 %. *Illustrative only:* at 1042 bytes ≈ 0.0104 NEAR of
-storage plus about 0.001 to 0.003 NEAR of gas, 1,000 passes are about 11 to 14 NEAR plus the fixed part. Locked
+is 275,053 bytes ≈ 2.75 NEAR, [VERIFY] with the cargo-near build) plus the three accounts' minimum balances and the
+0.05 NEAR reserve. Budget = `fixed + cap × per_mint`, plus 25 %. *Illustrative only:* at 990 bytes ≈ 0.0099 NEAR of
+storage plus about 0.001 to 0.003 NEAR of gas, 1,000 passes are about 11 to 13 NEAR plus the fixed part. Locked
 storage is not returned (this contract cannot delete tokens): treat it as spent. Convert to fiat only on the day.
 
 ## 4. Mainnet, in order
