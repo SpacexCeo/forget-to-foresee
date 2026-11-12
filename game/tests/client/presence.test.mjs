@@ -70,3 +70,17 @@ test('mp.* strings: five locales, same placeholders', async () => {
   const args = (s) => [...new Set([...String(s).matchAll(/\{(\w+)[,}]/g)].map((m) => m[1]))].sort().join(',');
   for (const l of ['ru', 'uk', 'it', 'zh']) { const m = await load(l); for (const k of keys) { assert.ok(m[k], `${l} ${k}`); assert.equal(args(m[k]), args(en[k]), `${l} ${k}`); } }
 });
+
+test('demo walkers: on the jury route, walking and pausing; ?bots never touches the network', async () => {
+  const { botAt, BOT_ROUTE } = await import('../../src/net/bot-walk.js');
+  const { TOWN_ROUTE, TOWN_ORIGIN } = await import('../../src/scenes/town-layout.js');
+  assert.deepEqual(BOT_ROUTE.map((p) => p.slice()), TOWN_ROUTE.map((p) => p.map((v, i) => Math.round((v - TOWN_ORIGIN[i]) * 10) / 10)));
+  const a = botAt(0, 0), b = botAt(0, 1);
+  assert.equal(a.a, 'walk'); assert.ok(Math.hypot(b.p[0] - a.p[0], b.p[2] - a.p[2]) > 1.2);
+  assert.ok([...Array(60).keys()].some((s) => botAt(0, s).a === 'idle'), 'a pause at the end of the route');
+  const { createDemoPresence } = await import('../../src/net/presence.js');
+  let t = 0; const d = createDemoPresence({ count: 3, now: () => t });
+  assert.equal(d.status, 'demo'); assert.equal(d.count, 4);
+  t = 2000; const ps = d.positions(); assert.equal(ps.length, 3); assert.ok(ps[0].speed > 1 && ps[0].speed < 2.5);
+  assert.equal(new Set(ps.map((p) => p.name)).size, 3);
+});

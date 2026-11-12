@@ -863,7 +863,7 @@ function frame() {
   if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
-    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {

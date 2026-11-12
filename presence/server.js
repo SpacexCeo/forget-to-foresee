@@ -1,5 +1,5 @@
 // Presence service: the shared sky town for up to 15 players per room (docs/multiplayer.md). Plain Node, no deps.
-//   node server.js   (env: PORT=8788, HOST=0.0.0.0, ALLOWED_ORIGIN (comma list; localhost always allowed), TRUST_PROXY=1 behind Caddy)
+//   node server.js   (env: PER_IP (local tests only; default 3), PORT=8788, HOST=0.0.0.0, ALLOWED_ORIGIN (comma list; localhost always allowed), TRUST_PROXY=1 behind Caddy)
 // GET /health -> counts only. WebSocket on /presence (or /).
 import http from 'node:http';
 import { createHash } from 'node:crypto';
@@ -15,7 +15,9 @@ export function originAllowed(origin, origins = DEFAULT_ORIGINS) {
 }
 
 /** The service; returns the http server (not yet listening) and the hub. */
-export function createPresence({ env = process.env, now = () => Date.now(), log = (...a) => console.log(new Date().toISOString(), ...a), net = NET } = {}) {
+export function createPresence({ env = process.env, now = () => Date.now(), log = (...a) => console.log(new Date().toISOString(), ...a), net: base = NET } = {}) {
+  // PER_IP raises the per-IP socket cap for a local test server (presence/tools/bots.mjs); production keeps 3
+  const net = Number(env.PER_IP) > 0 ? { ...base, perIp: Number(env.PER_IP), newPerIpPerMin: Math.max(base.newPerIpPerMin, 2 * Number(env.PER_IP)) } : base;
   const origins = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULT_ORIGINS;
   const trustProxy = env.TRUST_PROXY === '1';
   const hub = createHub({ now, log });

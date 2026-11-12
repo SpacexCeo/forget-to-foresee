@@ -2,20 +2,21 @@
 // chat. Positions travel in town coordinates (world minus TOWN_ORIGIN). boot-world.js creates it once Iris has
 // entered the town, never on the judge link; when the service is not reachable the town stays single-player and the
 // chip says so.
-import { createPresence, presenceUrl, animFor } from '../net/presence.js';
+import { createPresence, createDemoPresence, presenceUrl, animFor } from '../net/presence.js';
 import { createRemotePlayers } from './remote-players.js';
 import { createChatPanel } from '../ui/chat-panel.js';
 import { TOWN_ORIGIN } from '../scenes/town-layout.js';
 
 
 /**
- * @param {{scene: THREE.Scene, t: Function, storage?: Storage, name?: string, skin?: string, phone?: boolean, url?: string}} o
- * @returns {object|null} null when no presence URL is configured
+ * @param {{scene: THREE.Scene, t: Function, storage?: Storage, name?: string, skin?: string, phone?: boolean, url?: string, bots?: number}} o
+ * @returns {object|null} null when no presence URL is configured and no ?bots=N demo was asked for
  */
-export function createMultiplayer({ scene, t, storage = null, name = '', skin = 'iris', phone = false, url = presenceUrl() }) {
-  if (!url) return null; // no service deployed: the town is single-player, as before
+export function createMultiplayer({ scene, t, storage = null, name = '', skin = 'iris', phone = false, url = presenceUrl(), bots = 0 }) {
+  if (!url && !bots) return null; // no service deployed: the town is single-player, as before
   let panel = null;
-  const presence = createPresence({ url, name, skin, storage, onChange: () => panel && panel.render() });
+  // ?bots=N with no service: demo walkers simulated here (never sent anywhere); with a service the real room wins
+  const presence = url ? createPresence({ url, name, skin, storage, onChange: () => panel && panel.render() }) : createDemoPresence({ count: bots, onChange: () => panel && panel.render() });
   panel = createChatPanel({ t, presence, phone });
   const remote = createRemotePlayers({ scene, phone });
   const local = [0, 0, 0], from = [0, 0, 0];
