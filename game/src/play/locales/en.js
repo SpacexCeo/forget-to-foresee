@@ -1412,4 +1412,11 @@ export default {
   'set.startOverConfirm': "Start a new season? The current one is lost.",
   'set.returnTown': "Return to town",
   'set.resume': "Resume",
+  'tw.title': "Entering the Tournament",
+  'tw.body': "The Tournament lasts at least 3 minutes. You can return to the town any time via Settings → End the Tournament (the season starts anew).",
+  'tw.enter': "Enter the Tournament",
+  'tw.stay': "Stay in town",
+  'tw.dontShow': "Don't show this again",
+  'set.endTourney': "End the Tournament and return to town",
+  'set.endTourneyConfirm': "End the Tournament and return to town? This season is lost; the next one starts anew.",
 };
