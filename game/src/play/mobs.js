@@ -19,7 +19,9 @@ export const MOB_TYPES = Object.freeze({
   skitter: Object.freeze({ clip: [0.83, 1.63], scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.55, cooldown: 1.6, stagger: true }),
   hulker: Object.freeze({ clip: [1.01, 2.14], hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: false, heavy: true }),   // a brute powers through light hits
   veilbell: Object.freeze({ clip: [0.84, 1.64], hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
-  crownrift: Object.freeze({ clip: [1.2, 2.76], hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
+  crownrift: Object.freeze({ clip: [1.2, 2.76], hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true,
+    // no safe spot (owner 12.11): out of melee it closes in faster and answers from range with a crown bolt
+    surge: 1.5, answer: Object.freeze({ range: 18, minRange: 5, damage: 14, windup: 1.1, cooldown: 3.2, after: 1.2 }) }),
 });
 
 /** Packs: type, count (phone count), home in town-local metres (x, z), respawn seconds after the last one fell. */
@@ -32,7 +34,14 @@ export const PACKS = Object.freeze([
   { type: 'crownrift', count: 1, phone: 1, home: [12, 102], respawn: 120 },   // the elite on the lookout
 ]);
 
-export const LEASH = 16;            // a monster never strays further than this from its pack's home
+export const LEASH = 16;            // a monster never strays further than this from its pack's home (unless provoked)
+/**
+ * Provoked pursuit (owner 12.11: "I hit the boss from far away and it never came"): ANY damage, from any distance,
+ * provokes the creature: it chases the attacker at once, out to `radius` m from its home (walls still hold), and
+ * gives up only after she has been out of reach (beyond `radius` from home, back in the town, or `vertical` m above
+ * or below) for `lose` seconds; then it walks home and heals back `heal` of its health per second.
+ */
+export const PURSUIT = Object.freeze({ radius: 42, vertical: 10, lose: 6, heal: 0.5 });
 export const WANDER = 4.5;          // idle wander radius
 export const IRIS_HP = 100;
 export const STAGGER_SECONDS = 0.45;
@@ -134,7 +143,7 @@ export class MobBrain {
     const T = MOB_TYPES[pack.type], a = (k / Math.max(1, n)) * Math.PI * 2 + this.rand() * 0.8, r = n > 1 ? 1.2 + this.rand() * 1.5 : 0;
     const pos = [pack.home[0] + Math.cos(a) * r, pack.home[1], pack.home[2] + Math.sin(a) * r];
     return { id: `${pack.type}${pack.index}_${k}`, type: pack.type, pack, T, hp: T.hp, pos, heading: this.rand() * Math.PI * 2, state: 'idle',
-      t: 0, goal: null, cooldown: 0, root: 0, speed: 0, struckAt: 0, freeze: 0, target: null };
+      t: 0, goal: null, cooldown: 0, root: 0, speed: 0, struckAt: 0, freeze: 0, target: null, provoked: false, lost: 0, reset: false, answer: false, far: 0 };
   }
 
   /** Town-local check: a world point lies on the field beyond the walls. */
@@ -146,7 +155,8 @@ export class MobBrain {
     m.hp -= amount; m.freeze = HIT_STOP_SECONDS; m.root = Math.max(m.root, root);
     events.push({ kind: 'hit', mob: m, amount, crit: amount >= 26 });
     if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.t = 0; events.push({ kind: 'death', mob: m }); return; }
-    if (m.state === 'idle') m.state = 'chase';                                   // a hit always draws it in
+    m.provoked = true; m.lost = 0; m.reset = false;                               // any hit, any distance: it comes for her
+    if (m.state === 'idle' || m.state === 'recover') { m.state = 'chase'; m.t = 0; m.goal = null; }
     if (m.T.stagger && m.state !== 'windup') { m.state = 'stagger'; m.t = 0; }
     else if (m.T.stagger && m.state === 'windup' && m.t < m.T.windup * m.T.impact * 0.6) { m.state = 'stagger'; m.t = 0; }   // interrupted early in the telegraph
   }
@@ -249,7 +259,14 @@ export class MobBrain {
     if (m.freeze > 0) { m.freeze -= dt; return; }                                // hit-stop
     m.t += dt; m.cooldown = Math.max(0, m.cooldown - dt); m.root = Math.max(0, m.root - dt);
     const T = m.T, home = m.pack.home;
-    const sees = iris && iris.alive && iris.outside && dist2(iris.pos, m.pos) < T.aggro && dist2(iris.pos, home) < LEASH + T.attack && Math.abs(iris.pos[1] - m.pos[1]) < 6;   // not through a cliff
+    let sees = iris && iris.alive && iris.outside && dist2(iris.pos, m.pos) < T.aggro && dist2(iris.pos, home) < LEASH + T.attack && Math.abs(iris.pos[1] - m.pos[1]) < 6;   // not through a cliff
+    if (m.provoked) {                                                              // provoked: it keeps coming until she is truly gone
+      const reach = iris && iris.alive && iris.outside && dist2(iris.pos, home) < PURSUIT.radius && Math.abs(iris.pos[1] - m.pos[1]) < PURSUIT.vertical;
+      m.lost = reach ? 0 : (m.lost || 0) + dt;
+      if ((iris && !iris.alive) || m.lost >= PURSUIT.lose) { m.provoked = false; m.lost = 0; m.reset = true; sees = false; }
+      else sees = !!iris;                                                         // (no player given: it stands provoked, nothing to chase)
+    }
+    if (m.reset && m.state === 'idle') { m.hp = Math.min(T.hp, m.hp + T.hp * PURSUIT.heal * dt); if (m.hp >= T.hp) m.reset = false; }   // the leash reset heals it back
     m.speed = 0;
     switch (m.state) {
       case 'dead':                                                                   // the view reports the end of the death clip
@@ -260,13 +277,15 @@ export class MobBrain {
         return;
       case 'windup': {
         if (iris) m.heading = turn(m.heading, Math.atan2(iris.pos[0] - m.pos[0], iris.pos[2] - m.pos[2]), dt * 3);
-        const hitAt = T.windup * T.impact;
+        const A = m.answer ? T.answer : null, windup = A ? A.windup : T.windup;
+        const hitAt = windup * T.impact;
         if (m.t >= hitAt && !m.struck) {
           m.struck = true;
-          if (T.ranged) ev.push({ kind: 'shot', mob: m, to: iris ? iris.pos.slice() : null });
+          if (A) ev.push({ kind: 'shot', mob: m, to: iris ? iris.pos.slice() : null, damage: A.damage });
+          else if (T.ranged) ev.push({ kind: 'shot', mob: m, to: iris ? iris.pos.slice() : null });
           else ev.push({ kind: 'impact', mob: m, hit: !!(iris && iris.alive && dist2(iris.pos, m.pos) < T.attack + 0.6 && Math.abs(iris.pos[1] - m.pos[1]) < 2.5 && facing(m, iris.pos)) });
         }
-        if (m.t >= T.windup) { m.state = 'recover'; m.t = 0; m.cooldown = T.cooldown; }
+        if (m.t >= windup) { m.state = 'recover'; m.t = 0; m.cooldown = A ? A.cooldown : T.cooldown; m.answer = false; m.far = 0; }
         return;
       }
       case 'recover':
@@ -277,7 +296,12 @@ export class MobBrain {
         const d = dist2(iris.pos, m.pos);
         m.heading = turn(m.heading, Math.atan2(iris.pos[0] - m.pos[0], iris.pos[2] - m.pos[2]), dt * 6);
         if (d <= T.attack && m.cooldown <= 0) { m.state = 'windup'; m.t = 0; m.struck = false; ev.push({ kind: 'attack', mob: m }); return; }
-        if (d > T.attack * 0.85 && m.root <= 0) this.move(m, T.run, dt, ground);
+        m.far = d > T.attack * 1.6 ? (m.far || 0) + dt : 0;                          // how long she has kept out of its melee
+        const A = T.answer;
+        if (A && m.provoked && m.far >= A.after && d >= A.minRange && d <= A.range && m.cooldown <= 0) {   // no free kiting: a ranged answer
+          m.state = 'windup'; m.t = 0; m.struck = false; m.answer = true; ev.push({ kind: 'attack', mob: m, ranged: true }); return;
+        }
+        if (d > T.attack * 0.85 && m.root <= 0) this.move(m, T.run * (m.provoked && T.surge && d > T.attack * 2 ? T.surge : 1), dt, ground);
         return;
       }
       default: break;
@@ -296,8 +320,8 @@ export class MobBrain {
 
   move(m, speed, dt, ground) {
     const nx = m.pos[0] + Math.sin(m.heading) * speed * dt, nz = m.pos[2] + Math.cos(m.heading) * speed * dt;
-    const home = m.pack.home, dh = Math.hypot(nx - home[0], nz - home[2]);
-    if (dh > LEASH || !this.outside([nx, 0, nz])) return;                         // the leash and the walls hold it
+    const home = m.pack.home, dh = Math.hypot(nx - home[0], nz - home[2]), limit = m.provoked ? PURSUIT.radius : LEASH;
+    if ((dh > limit && dh >= dist2(m.pos, home)) || !this.outside([nx, 0, nz])) return;   // the leash (wider when provoked) and the walls hold it; back home is always allowed
     for (const o of this.mobs) {                                                  // do not walk into a pack mate
       if (o === m || o.state === 'gone' || o.state === 'dead') continue;
       if (Math.hypot(nx - o.pos[0], nz - o.pos[2]) < (m.T.radius + o.T.radius) * 0.9 && Math.hypot(nx - o.pos[0], nz - o.pos[2]) < dist2(m.pos, o.pos)) return;
@@ -512,14 +536,14 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   function handle(ev) {
     for (const e of ev) {
       const v = views.get(e.mob);
-      if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !e.mob.T.ranged; if (onFeedback) onFeedback('attack', e.mob); }
+      if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !(e.ranged || e.mob.T.ranged); if (onFeedback) onFeedback('attack', e.mob); }
       else if (e.kind === 'impact') { if (v) v.ring.visible = false; if (e.hit) hurt(e.mob.T.damage, !!e.mob.T.heavy); }
       else if (e.kind === 'shot' && e.to && v) {
         const s = new THREE.Mesh(seedGeo, seedMat); const from = new THREE.Vector3(); v.model.getObjectByName('seed')?.getWorldPosition(from);
-        if (!from.lengthSq()) from.set(e.mob.pos[0], e.mob.pos[1] + 1, e.mob.pos[2]);
+        if (!from.lengthSq()) from.set(e.mob.pos[0], e.mob.pos[1] + (e.mob.T.elite ? 2.2 : 1), e.mob.pos[2]);
         s.position.copy(from); group.add(s);
         const to = new THREE.Vector3(e.to[0], e.to[1] + 1.0, e.to[2]);
-        shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
+        shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.damage || e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
         v.fx.hit(); number(e.mob, e.amount, e.crit); if (!reduced()) hitSpark(e.mob, false); if (onFeedback) onFeedback('hit', e.mob, e);
