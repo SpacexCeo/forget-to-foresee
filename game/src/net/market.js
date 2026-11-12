@@ -14,7 +14,7 @@ export function normalizeStats(j) {
   if (!j || typeof j !== 'object') return { live: false, today: null, recent: [] };
   const today = Number.isFinite(j.today) ? j.today : (j.chain && Number.isFinite(j.chain.today) ? j.chain.today : null);
   const recent = (Array.isArray(j.recent) ? j.recent : []).filter((r) => r && KEYS.test(r.buyer) && KEYS.test(r.seller) && KEYS.test(r.item) && Number.isInteger(r.qty) && Number.isInteger(r.price))
-    .slice(0, 10).map((r) => ({ buyer: r.buyer, seller: r.seller, item: r.item, qty: r.qty, price: r.price, at: Number(r.at) || 0, hash: HASH.test(r.hash || '') ? r.hash : null, url: txUrl(r.hash) }));
+    .slice(0, 10).map((r) => ({ buyer: r.buyer, seller: r.seller, item: r.item, qty: r.qty, price: r.price, silk: Number.isInteger(r.silk) && r.silk > 0 ? r.silk : null, at: Number(r.at) || 0, hash: HASH.test(r.hash || '') ? r.hash : null, url: txUrl(r.hash) }));
   return { live: !!j.enabled && !j.paused, today, recent };
 }
 
@@ -33,5 +33,7 @@ export async function fetchMarket({ base = relayerUrl(), fetch = globalThis.fetc
 /** A line for one trade in the current language: names and goods come from the locale (mk.t.*, mk.i.*). */
 export function tradeLine(t, r) {
   const name = (k) => t('mk.t.' + k);
-  return t('mk.line', { buyer: name(r.buyer), seller: name(r.seller), item: t('mk.i.' + r.item), qty: r.qty, price: r.price });
+  // ftf-town rows carry the silk paid (micro-units): show it as silk; the parked market contract's rows a unit price
+  const price = r.silk ? (Math.round(r.silk / 10_000) / 100).toString() : r.price;
+  return t('mk.line', { buyer: name(r.buyer), seller: name(r.seller), item: t('mk.i.' + r.item), qty: r.qty, price });
 }

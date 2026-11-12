@@ -41,6 +41,7 @@ test('market: every trader and good has a name in every language, and lines read
   }
   const en = createPlayI18n('en');
   assert.equal(tradeLine((k, a) => en.t(k, a), row()), 'the guard bought 3 × bread from the baker for 4');
+  assert.equal(tradeLine((k, a) => en.t(k, a), row({ silk: 1_234_000 })), 'the guard bought 3 × bread from the baker for 1.23');
   const ru = createPlayI18n('ru');
   assert.equal(ru.t('mk.today', { n: 5 }), '5 сделок сегодня');
 });
