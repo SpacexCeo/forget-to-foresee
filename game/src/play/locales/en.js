@@ -922,6 +922,8 @@ export default {
   "hire.result.net": "Net",
   "hire.result.seed": "Seed (same seed, same result)",
   "profile.button": "Profile · Lv {level}",
+  "xp.gain": "+{n} XP",
+  "xp.levelUp": "Level {level}!",
   "profile.open": "Profile and inventory",
   "profile.title": "Profile",
   "profile.heading": "Level {level} · {title}",
