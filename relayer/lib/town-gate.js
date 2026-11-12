@@ -14,7 +14,8 @@
 //     gate_id, sha256(request)). The contract burns the price, records the request hash once and logs gate_paid.
 //
 // Keys: FTF_TOWN_COORD (an account the owner added to the town's coordinators) and FTF_TOWN_COORD_KEY (its
-// function-call key: register, credit_silk, pay_gate_for) live only on the relayer's server.
+// function-call key: register, credit_silk, pay_gate_for) live only on the relayer's server; without them both are
+// read from data/coord-key.json, which scripts/coord-key.mjs writes (mode 600) and only ever prints the public key of.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -33,12 +34,19 @@ export const gateMessage = (accountId, gateId, at) => `ftf-gate|${accountId}|${g
 export const creditMessage = (accountId, at) => `ftf-town-credit|${accountId}|${at}`;
 export const requestHash = (message, signature) => createHash('sha256').update(message + '|' + signature).digest('hex');
 
-export const townGateEnv = (env = process.env) => ({
+/** Where scripts/coord-key.mjs keeps the coordinator key on the server: {account, secretKey}. */
+export const coordKeyFile = (env = process.env) => env.FTF_TOWN_COORD_FILE || join(env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname, 'coord-key.json');
+const readCoordFile = (env) => { try { const r = JSON.parse(readFileSync(coordKeyFile(env), 'utf8')); return r && typeof r.secretKey === 'string' ? r : null; } catch { return null; } };
+
+export const townGateEnv = (env = process.env) => {
+  const f = env.FTF_TOWN_COORD_KEY ? null : readCoordFile(env);
+  return {
   town: env.FTF_TOWN_CONTRACT || 'ftf-town.testnet',
-  coord: env.FTF_TOWN_COORD || '', coordKey: env.FTF_TOWN_COORD_KEY || '',
+  coord: env.FTF_TOWN_COORD || (f ? f.account : ''), coordKey: env.FTF_TOWN_COORD_KEY || (f ? f.secretKey : ''),
   logDir: env.FTF_EXPEDITION_DIR || '', dataDir: env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname,
   guestDaySilk: Math.max(1, Number(env.FTF_GUEST_CREDIT_DAY) || GATE.guestDaySilk),
-});
+  };
+};
 
 /** Shape check of a signed request. */
 export function validateRequest(b, now = Date.now(), { gate = false } = {}) {
