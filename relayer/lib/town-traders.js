@@ -4,9 +4,9 @@
 // town treasury and, through the daily sweep, funds the works' rewards. Scripted rules, not an LLM.
 // DRY RUN BY DEFAULT: nothing is signed or sent unless FTF_TOWN_SEND=1; keys only on the relayer's server.
 import { ITEMS, START_BALANCE, traderKey } from '../market/catalog.js';
-import { priceOf, restocked, nextDemand, stallClosed, STOCK_START, RESTOCK_PER_HOUR } from '../market/prices.js';
+import { priceOf, nextDemand, stallClosed, choiceWeight, STOCK_START, STOCK_CAP, RESTOCK_PER_HOUR, CLOSED_MAKES } from '../market/prices.js';
 
-export const TOWN_TARGET = 24_000; // attempts a day: ~1,200 per trader; stock-outs and closed stalls skip ~9 %, so ~22,000 trades land
+export const TOWN_TARGET = 22_000; // attempts a day: ~1,100 per trader (the spec's margin over 20,000); a stock-out skips an attempt
 export const MICRO = 1_000_000;
 export const MIN_TRADE = MICRO / 2; // the contract's min_trade
 export const FEE_BPS = 12;
@@ -24,13 +24,17 @@ function tick(st) {
   const minutes = (now - st.at) / 60_000;
   if (minutes <= 0) return;
   st.at = now;
-  const makerOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.maker]));
+  const makerOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.maker])), baseOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.base]));
   for (const id of Object.keys(st.stock)) {
-    if (st.closed && st.closed[makerOf[id]]) { st.demand[id] = nextDemand(st.demand[id] ?? 0, minutes); continue; } // a closed stall makes nothing
-    // fractional production carries over, so slow ticks still restock
-    const made = (st.prod[id] ?? 0) + (minutes / 60) * RESTOCK_PER_HOUR;
+    // supply answers price (a good selling dear is made faster, up to 2x; a cheap one slower), a poor stall works
+    // harder (up to 3x), a closed stall at CLOSED_MAKES of its pace; fractional production carries over
+    const maker = makerOf[id];
+    const ratio = Math.max(0.5, Math.min(2, (st.prices[id] ?? baseOf[id]) / baseOf[id]));
+    const need = Math.max(1, Math.min(3, (START_BALANCE * MICRO) / Math.max(1, st.balances[maker] ?? 1)));
+    const rate = RESTOCK_PER_HOUR * ratio * need * (st.closed && st.closed[maker] ? CLOSED_MAKES : 1);
+    const made = (st.prod[id] ?? 0) + (minutes / 60) * rate;
     const whole = Math.floor(made); st.prod[id] = made - whole;
-    st.stock[id] = restocked(st.stock[id], whole / RESTOCK_PER_HOUR);
+    if (st.stock[id] < STOCK_CAP) st.stock[id] = Math.min(STOCK_CAP, st.stock[id] + whole); // a flood above the cap stays until it sells
     st.demand[id] = nextDemand(st.demand[id] ?? 0, minutes);
   }
 }
@@ -53,14 +57,17 @@ export const TOWN_POLICY = Object.freeze({
   pick(st, key, rand, keys, strat = null) {
     tick(st);
     const balance = st.balances[key] ?? 0;
-    if (closedNow(st, key)) return null; // a closed (bankrupt) stall buys nothing; it sells off what it has, makes nothing new
+    if (closedNow(st, key)) return null; // a closed (bankrupt) stall buys nothing; it keeps selling and makes goods at half pace
     const options = ITEMS.filter((i) => i.maker !== key && keys.includes(i.maker) && (st.stock[i.id] ?? 0) > 0);
     if (!options.length || balance < MIN_TRADE) return null;
     // quiet stalls draw buyers: a seller with less silk than the start is picked more often (keeps the town solvent)
     const S0 = START_BALANCE * MICRO;
     // a clan's strategy (lib/clan-strategy.js, bounded) only reweights the same choice: staples or dear goods, a favoured stall
     const style = (i) => (!strat ? 1 : strat.buy === 'staples' ? (STAPLES[i.id] ? 1.8 : 0.7) : strat.buy === 'dear' ? Math.sqrt(i.base) / 2 : 1) * (strat && strat.favour === i.maker ? 2.5 : 1);
-    const w = options.map((i) => ((STAPLES[i.id] || 1) / Math.sqrt(i.base)) * Math.max(0.2, Math.min(5, (S0 / Math.max(1, st.balances[i.maker] ?? S0)) ** 1.5)) * style(i));
+    // price elasticity (market/prices.js choiceWeight): a dear good is bought less, a cheap one more — the loop that
+    // lets flooded goods clear and empties shelves refill
+    const w = options.map((i) => ((STAPLES[i.id] || 1) / Math.sqrt(i.base)) * Math.max(0.2, Math.min(5, (S0 / Math.max(1, st.balances[i.maker] ?? S0)) ** 1.5)) * style(i)
+      * choiceWeight(i, priceOf(i, st.stock[i.id] ?? 0, st.demand[i.id] ?? 0).price));
     let r = rand() * w.reduce((a, b) => a + b, 0), k = 0;
     while (k < options.length - 1 && r >= w[k]) { r -= w[k]; k++; }
     const item = options[k];
@@ -68,7 +75,7 @@ export const TOWN_POLICY = Object.freeze({
     const { price, reason } = priceOf(item, stock, st.demand[item.id] ?? 0);
     // a richer buyer buys more at once, a poorer one less: silk flows back toward the middle
     const risk = strat ? Math.max(0.5, Math.min(1.5, Number(strat.risk) || 1)) : 1;
-    const qty = Math.min(stock, 1 + Math.floor(rand() * 3.5 * risk * Math.min(3, balance / (START_BALANCE * MICRO))));
+    const qty = Math.min(stock, 1 + Math.floor(rand() * 3 * risk * Math.min(8, (balance / (START_BALANCE * MICRO)) ** 1.5)));
     const silk = Math.max(MIN_TRADE, qty * price * PRICE_UNIT);
     if (silk > balance) return null;
     return { buyer: key, seller: item.maker, item: item.id, qty, price, silk, reason, stock: stock - qty };
