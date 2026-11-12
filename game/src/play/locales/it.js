@@ -728,6 +728,7 @@ export default {
   'wheel.cap': "NFT, {n} in tutto",
   'wheel.left': "NFT · ne restano {n} su {cap}",
   'wheel.skin.reason.failed': "Il mint non è andato a buon fine; riprova.",
+  'wheel.skin.reason.recorded': "La vincita è registrata dal relayer; il token sarà coniato nel tuo account non appena il minter sarà attivo.",
   'wheel.kind.title': "Titolo",
   'wheel.seg.skin_sheriffchenko': "Skin Sheriffchenko",
   'wheel.seg.chest': "Forziere",
