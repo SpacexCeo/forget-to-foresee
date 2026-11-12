@@ -154,6 +154,8 @@ else if (scenario === 'strikes') {
     await back(); await shot(s); await wait(2000);
     mark('three fast taps'); for (let i = 0; i < 3; i++) { await tap(60); await wait(150); }
     await wait(1800); res.push(await state('three fast taps'));
+    mark('two fast taps'); for (let i = 0; i < 2; i++) { await tap(60); await wait(120); }
+    await wait(1800); res.push(await state('two fast taps'));
     mark('three taps in rhythm'); for (let i = 0; i < 3; i++) { await tap(60); await wait(330); }
     await wait(1600); res.push(await state('three taps in rhythm'));
     mark('hold'); await tap(800); await wait(1900); res.push(await state('hold 0.8 s'));
