@@ -18,8 +18,18 @@ import { createLoadingScreen, bootPlan, bootProgress, firstFrameBudget, townPlan
 import { logKeysFromStats } from './ui/loading.js';
 import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
 import { showPremise } from './ui/premise.js';
+import { features } from './features.js';
 
 const params = new URLSearchParams(location.search);
+// remote feature flags (features.js): fetched at once, never waited for; ?debug=1 shows where they came from
+features.load().then(() => {
+  // the loading ritual (flag loadRitual): only while the loading screen is still up
+  if (features.on('loadRitual') && document.getElementById('boot')) import('./ui/load-ritual.js').then((m) => m.mountLoadRitual({ lang: params.get('lang') || navigator.language, touch: !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches), reduced: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) })).catch(() => {});
+  if (params.get('debug') !== '1') return;
+  const d = document.createElement('div'); d.id = 'ftf-flags-debug'; d.textContent = 'flags: ' + features.source;
+  d.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99999;font:11px ui-monospace,monospace;color:#9fb;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px;pointer-events:none';
+  document.body.append(d);
+});
 // Cinematic capture (docs/submission/trailer.md, tools/capture): a frame-stepped clock and scripted shots, only with ?cinematic=<name>.
 if (params.has('cinematic')) await import('./cinematic/index.js').then((m) => m.boot(params.get('cinematic')));
 const uiRoot = document.getElementById('ui');

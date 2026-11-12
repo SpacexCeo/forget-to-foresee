@@ -1,0 +1,12 @@
+{
+  "_doc": "Feature flags (docs/features.md). Only names the build defines count, only true/false. Edit and redeploy this file alone to switch a feature on or off; the game reads it at boot (3 s timeout, defaults on failure).",
+  "flags": {
+    "damageNumbers": false,
+    "loadRitual": false,
+    "register": false,
+    "loomMeter": false,
+    "presenceChip": false,
+    "tuneOverlay": false,
+    "statusBanner": false
+  }
+}

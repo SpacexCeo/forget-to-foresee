@@ -45,6 +45,7 @@ import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
+import { features as featureFlags } from './features.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
@@ -210,7 +211,7 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -261,7 +262,7 @@ let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
-let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null;
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -410,8 +411,16 @@ if (townMode.town) {
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
   if (params.get('story') !== '0' && !endgamePass) mountEndgamePass();
+  // The monster-resource stalls (ui/stall-panel.js): a stall keeper's card dispatches 'ftf:stall-open' {npc}
+  if (!stallMounted) { stallMounted = true; let panel = null; window.addEventListener('ftf:stall-open', (e) => {
+    const npc = e && e.detail && e.detail.npc; if (!npc) return;
+    Promise.all([import('./net/stall-client.js'), import('./ui/stall-panel.js')]).then(([c, u]) => {
+      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }) });
+      panel.open(npc);
+    }).catch((err) => console.warn('[stall]', err));
+  }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
-  if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
+  if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown, floatNumber: numbersHook }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
   if (!touchSticks) touchSticks = createTouchControls({ input, t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, storage: ctx.storage, player,
     camForward: () => { const v = camera.getWorldDirection(_camFwd); return [v.x, v.z]; },
@@ -525,9 +534,9 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
-      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; return !!(irisAvatar && irisAvatar.combat(n)); }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
+      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
-      onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
+      onFeedback: (k, mob, ev) => combatSound(k, mob, ev), floatNumber: numbersHook });
     // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are
     // never refused (the first fight stays fair)
     const rawDash = townMobs.dash.bind(townMobs), rawUp = townMobs.attackUp ? townMobs.attackUp.bind(townMobs) : null, rawStrike = townMobs.strike.bind(townMobs);
@@ -746,6 +755,21 @@ if (typeof ResizeObserver === 'function' && renderer.domElement.parentElement) n
 fitView();
 
 let toastTimer = 0;
+// Floating numbers (flag damageNumbers; ui/float-numbers.js): damage and crits from the mobs, XP from kills, silk gained
+// and spent from the town ledger. Off: the old per-module numbers stay exactly as they were.
+let floatNumbers = null, floatLoading = false, lastSilk = null;
+function numbersHook(ev) {
+  if (!featureFlags.on('damageNumbers')) return false;
+  if (floatNumbers) { floatNumbers.push(ev); return true; }
+  if (!floatLoading) { floatLoading = true; import('./ui/float-numbers.js').then((m) => { floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP' }); }).catch(() => { floatLoading = false; }); }
+  return false; // the first number of a session shows the old way while the layer loads
+}
+townLedger.subscribe(() => {
+  const s = townLedger.silk; const prev = lastSilk; lastSilk = s;
+  if (prev == null || s === prev || !inTown || !featureFlags.on('damageNumbers')) return;
+  const p = player.pos; numbersHook({ kind: s > prev ? 'silk_gain' : 'silk_spend', amount: Math.abs(s - prev) / 100, pos: [p[0], p[1] + 2.0, p[2]] });
+});
+
 function mountEndgamePass() {
   endgamePass = 'loading';
   Promise.all([import('./net/pass-deployment.js'), import('./net/pass-client.js'), import('./ui/endgame-pass.js'), import('./audio/town-audio.js')]).then(([d, c, u, a]) => {
@@ -1159,6 +1183,7 @@ function frame() {
   stamina.update(dt, { running: !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside && player.run && movingState) });
   document.body.classList.toggle('st-winded', stamina.winded);
   if (killXp) killXp.update(dt);
+  if (floatNumbers) floatNumbers.update();
   if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100, stamina });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
@@ -1184,10 +1209,12 @@ function frame() {
 
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
+  get features() { return featureFlags; },
   scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
-  get iris() { return irisAvatar; }, irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },
+  get iris() { return irisAvatar; }, get storyProps() { return { portal: townPortal, board: townBoard }; },   // QA: the Gate-Loom and the Shell monument
+  irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },
   // The town on the ground (docs/town.md), null on the paths that skip it. register() is the code path of pressing E at
   // the altar (it resolves false when the prompt is not offered); walkRoute() steers Iris along the jury route (QA).
   town: town ? {

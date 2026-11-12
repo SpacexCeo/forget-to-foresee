@@ -51,6 +51,19 @@ pub const ERR_ENTERED: &str = "ERR_ENTERED: already entered this season";
 pub const ERR_SETTLED: &str = "ERR_SETTLED: the season is settled";
 pub const ERR_PAYOUT_CAP: &str = "ERR_PAYOUT_CAP: one payout is above the per-account cap";
 pub const ERR_NO_STALL: &str = "ERR_NO_STALL: that account has no stall";
+pub const ERR_GATE_PAID: &str = "ERR_GATE_PAID: this account has already paid this gate";
+pub const ERR_SCRIPTED: &str = "ERR_SCRIPTED: the town's own wallets do not pay the gate";
+pub const ERR_GATE_REQUEST: &str = "ERR_GATE_REQUEST: this signed request was already used";
+pub const ERR_GATE_PRICE: &str = "ERR_GATE_PRICE: the gate price is 20-5,000 silk";
+/** Default portal price (rev 4): 200 silk, burned. */
+pub const GATE_PRICE_DEFAULT: u128 = 200 * UNIT;
+// Upgrade v2 (pay_gate) keeps the deployed state untouched: its numbers live under their own raw storage keys and its
+// records under two NEW collection prefixes, never as fields of `Town` (adding a field would break the stored root).
+const K_GATE_PRICE: &[u8] = b"g:price";
+const K_GATE_BURNED: &[u8] = b"g:burned";
+const K_GATE_COUNT: &[u8] = b"g:count";
+fn raw_u128(k: &[u8], default: u128) -> u128 { env::storage_read(k).and_then(|v| v.try_into().ok()).map(u128::from_le_bytes).unwrap_or(default) }
+fn set_raw_u128(k: &[u8], v: u128) { env::storage_write(k, &v.to_le_bytes()); }
 pub const ERR_PURSE: &str = "ERR_PURSE: the payouts exceed the purse plus the season's mint ceiling";
 pub const ERR_SEASON_ROOT: &str = "ERR_SEASON_ROOT: a season keeps the schedule root it was opened with";
 pub const ERR_PARAMS: &str = "ERR_PARAMS: a parameter is outside its bounds";
@@ -61,7 +74,8 @@ pub const WORKS: [&str; 4] = ["loom", "caravan", "archive", "observatory"];
 
 #[derive(BorshStorageKey)]
 #[near]
-enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions }
+// New variants go at the END only: a variant's index is its storage prefix (state-compatible upgrades, docs/town-upgrades.md).
+enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions, Gates, GateOf, GateRequests }
 
 /// One account's row: silk, entry credit (spendable only on tournament entry) and pledge totals.
 #[near(serializers = [borsh, json])]
@@ -85,6 +99,11 @@ pub struct Stall { pub invested: u128, pub index: u128, pub rewards: u128 }
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Default)]
 pub struct StallPosition { pub amount: u128, pub snapshot: u128, pub pending: u128 }
+
+/// One paid portal gate (upgrade v2).
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct GateRecord { pub gate_id: String, pub price: U, pub at_ms: u64, pub season_id: String }
 
 /// A sealed season: its schedule root, entrants and settlement.
 #[near(serializers = [borsh, json])]
@@ -165,6 +184,9 @@ pub struct Pulse {
     pub season_id: String,
     pub schedule_root: String,
     pub season_entrants: u32,
+    /// Silk burned by the portal gate (kept apart from burned_silk: it does not feed the season mint-match).
+    pub gate_burned: String,
+    pub gates_paid: u64,
     pub entry_fee: String,
     pub paused: bool,
 }
@@ -432,6 +454,62 @@ impl Town {
         event("trade", format!(r#"{{"from":"{}","to":"{}","silk":"{}","fee":"{}","ref":"{}","n":{}}}"#, me, counterparty, silk.0, fee, reference.replace('"', ""), self.counters.trade));
     }
 
+    // ---------- the portal gate (upgrade v2; City Economy rev 4 §2.13) ----------
+    /// Pays the portal: burns the gate price (default 200 silk) from the caller's own silk (never entry credit), once per
+    /// account and gate. The town's own wallets (stalls, clan wallets) cannot pay. The burn is counted in `gate_burned`,
+    /// apart from `burned_silk`, so it does not raise the next season's mint ceiling.
+    pub fn pay_gate(&mut self, gate_id: String) -> GateRecord {
+        let me = env::predecessor_account_id();
+        self.gate_inner(me, gate_id, None)
+    }
+    /// v3: pays the portal FOR a guest whose browser key cannot sign to this contract (it is a function-call key of the
+    /// guests contract). Only a coordinator (the relayer) may call it, after checking the guest's own signed portal
+    /// request; `request_hash` (sha256 of that request) is recorded so the same request can never pay twice. Same burn,
+    /// once-per-gate rule and event as pay_gate, with `by` and `request_hash` added.
+    pub fn pay_gate_for(&mut self, account_id: AccountId, gate_id: String, request_hash: String) -> GateRecord {
+        self.only_coordinator();
+        require!(request_hash.len() == 64 && request_hash.bytes().all(|b| b.is_ascii_hexdigit()), ERR_REF);
+        let mut used: LookupMap<String, AccountId> = LookupMap::new(StorageKey::GateRequests);
+        require!(!used.contains_key(&request_hash), ERR_GATE_REQUEST);
+        used.insert(request_hash.clone(), account_id.clone()); used.flush();
+        self.gate_inner(account_id, gate_id, Some(request_hash))
+    }
+    fn gate_inner(&mut self, me: AccountId, gate_id: String, request_hash: Option<String>) -> GateRecord {
+        self.live();
+        require!(!gate_id.is_empty() && gate_id.len() <= 32 && gate_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-'), ERR_REF);
+        let suffix = format!(".{}", env::current_account_id());
+        require!(!self.stalls.contains_key(&me) && !me.as_str().ends_with(&suffix), ERR_SCRIPTED);
+        let mut book: LookupMap<String, GateRecord> = LookupMap::new(StorageKey::Gates);
+        let key = format!("{}:{}", me, gate_id);
+        require!(!book.contains_key(&key), ERR_GATE_PAID);
+        let price = raw_u128(K_GATE_PRICE, GATE_PRICE_DEFAULT);
+        let mut row = self.acc(&me);
+        require!(row.silk >= price, ERR_FUNDS);
+        row.silk -= price; row.spent += price; self.put(&me, row);
+        set_raw_u128(K_GATE_BURNED, raw_u128(K_GATE_BURNED, 0) + price);
+        set_raw_u128(K_GATE_COUNT, raw_u128(K_GATE_COUNT, 0) + 1);
+        let rec = GateRecord { gate_id: gate_id.clone(), price: U(price), at_ms: env::block_timestamp_ms(), season_id: self.season_id.clone() };
+        book.insert(key, rec.clone()); book.flush();
+        let mut latest: LookupMap<AccountId, GateRecord> = LookupMap::new(StorageKey::GateOf);
+        latest.insert(me.clone(), rec.clone()); latest.flush();
+        let extra = request_hash.map(|h| format!(r#","by":"{}","request_hash":"{}""#, env::predecessor_account_id(), h)).unwrap_or_default();
+        event("gate_paid", format!(r#"{{"account":"{}","gate_id":"{}","price":"{}","season_id":"{}"{}}}"#, me, gate_id, price, self.season_id, extra));
+        rec
+    }
+    /// The account's latest paid gate (the relayer reads this for the whitelist pass and the story's eligibility).
+    pub fn gate_paid_of(&self, account_id: AccountId) -> Option<GateRecord> { LookupMap::<AccountId, GateRecord>::new(StorageKey::GateOf).get(&account_id).cloned() }
+    pub fn gate_paid_for(&self, account_id: AccountId, gate_id: String) -> bool { LookupMap::<String, GateRecord>::new(StorageKey::Gates).contains_key(&format!("{}:{}", account_id, gate_id)) }
+    pub fn gate_request_used(&self, request_hash: String) -> bool { LookupMap::<String, AccountId>::new(StorageKey::GateRequests).contains_key(&request_hash) }
+    pub fn gate_burned(&self) -> U { U(raw_u128(K_GATE_BURNED, 0)) }
+    pub fn gate_price(&self) -> U { U(raw_u128(K_GATE_PRICE, GATE_PRICE_DEFAULT)) }
+    /// Owner: the gate price, 20-5,000 silk (rev 4 §2.13.4). Logged.
+    pub fn set_gate_price(&mut self, price: U) {
+        self.only_owner();
+        require!(price.0 >= 20 * UNIT && price.0 <= 5_000 * UNIT, ERR_GATE_PRICE);
+        set_raw_u128(K_GATE_PRICE, price.0);
+        event("gate_price", format!(r#"{{"price":"{}"}}"#, price.0));
+    }
+
     // ---------- stalls ----------
     fn stall_key(trader: &AccountId, investor: &AccountId) -> String { format!("{}:{}", trader, investor) }
     fn stall_accrue(&self, trader: &AccountId, pos: &mut StallPosition) {
@@ -655,6 +733,7 @@ impl Town {
             treasury_silk: s(self.treasury_silk), stake_pot: s(self.stake_pot), purse: s(self.purse), reserve: s(self.reserve),
             rate_7d_per_100: [s(rate(&self.works[0])), s(rate(&self.works[1])), s(rate(&self.works[2])), s(rate(&self.works[3]))],
             season_id: self.season_id.clone(), schedule_root: self.schedule_root.clone(), season_entrants: entrants, entry_fee: s(self.params.entry_fee), paused: self.paused,
+            gate_burned: s(raw_u128(K_GATE_BURNED, 0)), gates_paid: raw_u128(K_GATE_COUNT, 0) as u64,
         }
     }
     /// Every place silk can be outside account rows (for the conservation check: minted − burned = rows + this).
