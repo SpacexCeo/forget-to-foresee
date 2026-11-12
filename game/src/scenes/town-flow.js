@@ -23,6 +23,7 @@ const CSS = `
   border: 1px solid rgba(232, 214, 172, .28); text-shadow: 0 1px 2px rgba(0, 0, 0, .5); transition: opacity .4s ease; }
 .ftf-town-objective::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 9px; border-radius: 50%; background: #e9b44c; box-shadow: 0 0 8px #e9b44c; vertical-align: 1px; }
 .ftf-town-objective[hidden], .ftf-town-prompt[hidden] { display: none; }
+body:has(.d1-panel) .ftf-town-prompt, body:has(.d1-card) .ftf-town-prompt { visibility: hidden; } /* Day 1's panels own the screen */
 .ftf-town-prompt { position: fixed; left: 50%; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 12; pointer-events: auto;
   display: inline-flex; align-items: center; gap: 10px; max-width: calc(100vw - 156px); min-height: 48px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
   border: 1.5px solid #fbe6a6; background: rgba(217, 164, 65, .92); color: #1d1708; font: 600 17px/1.2 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif;
@@ -56,7 +57,7 @@ html[data-motion="reduce"] .ftf-town-cover .boot-sub, .ftf-town-cover.is-plain .
 .ftf-quest-talk dt { color: #b9b2a2; } .ftf-quest-talk dd { margin: 0; }
 .ftf-quest-talk .ftf-local { font-size: 12px; color: #b9b2a2; margin: 0 0 8px; }
 .ftf-quest-meta button { min-height: 32px; padding: 2px 10px; font-size: 13px; }
-@media (max-width: 700px) { .ftf-town-objective { font-size: 14px; max-width: calc(100% - 120px); } .ftf-town-prompt { font-size: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); } }
+@media (max-width: 700px) { .ftf-town-objective { font-size: 14px; max-width: calc(100% - 180px); } /* clear of the Controls button at the top right */ .ftf-town-profile, .ftf-quest-meta button { min-height: 40px; } .ftf-town-prompt { font-size: 16px; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-height: 440px) { .ftf-town-prompt { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); } }
 `;
 
