@@ -124,7 +124,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
         reel.hidden = true;
         outcomeResult = { ok: false, error: r.error };
         cue('ui_error');
-        info.replaceChildren(el('p', null, t('chest.err.' + (['off', 'rate', 'sold_out', 'no_guest', 'no_key', 'network'].includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
+        info.replaceChildren(el('p', null, t('chest.err.' + (['off', 'soon', 'rate', 'sold_out', 'no_guest', 'no_key', 'network'].includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
         closeBtn();
         return;
       }

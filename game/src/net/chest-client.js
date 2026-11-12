@@ -6,7 +6,7 @@
 // No relayer, no opening: nothing is ever invented here.
 export const CHEST_OUTCOMES = Object.freeze(['nft', 'item', 'silk', 'xp']);
 
-const REASON = Object.freeze({ need_guest: 'no_guest', not_your_key: 'no_key', not_configured: 'off', season_not_ready: 'off', daily_cap: 'rate', rate_limited: 'rate', sold_out: 'sold_out', network: 'network' });
+const REASON = Object.freeze({ need_guest: 'no_guest', not_your_key: 'no_key', not_configured: 'soon', season_not_ready: 'soon', daily_cap: 'rate', rate_limited: 'rate', sold_out: 'sold_out', network: 'network' });
 
 /** net/chest.js's answer → the reveal's opening: {index, outcome {kind, id, amount, rarity}, verification, tx, nft, proof}. Pure. */
 export function toOpening(r) {

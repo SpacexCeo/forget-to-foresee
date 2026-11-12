@@ -33,7 +33,7 @@ test('the bag keeps sealed chests across reloads and settles each once', () => {
 test('the adapter maps net/chest.js answers and reasons; no answer, no outcome', async () => {
   const fake = (r) => () => Promise.resolve({ openChest: async () => r });
   const c = (r) => createChestClient({ load: fake(r) });
-  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_your_key', 'no_key'], ['replayed', 'bad'], ['deck_mismatch', 'bad'], ['not_configured', 'off'], ['season_not_ready', 'off'], ['daily_cap', 'rate'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'bad']]) {
+  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_your_key', 'no_key'], ['replayed', 'bad'], ['deck_mismatch', 'bad'], ['not_configured', 'soon'], ['season_not_ready', 'soon'], ['daily_cap', 'rate'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'bad']]) {
     assert.deepEqual(await c({ ok: false, reason }).open(), { ok: false, error }, reason);
   }
   assert.deepEqual(await createChestClient({ load: () => Promise.reject(new Error('chunk')) }).open(), { ok: false, error: 'network' });
@@ -68,11 +68,11 @@ test('the reveal says why when the service is off, and the chest stays sealed', 
   assert.equal(outcomeView({ kind: 'nft' }, { t }).frame, 'mythic');
   assert.equal(outcomeView({ kind: 'item', id: 'x', rarity: 'rare' }, { t, items: [{ id: 'x', nameKey: 'item.x', icon: 'x.webp' }], base: '/b/' }).icon, '/b/assets/items/x.webp');
   let settled = 0;
-  const r = openChestReveal({ doc, t, chest: { id: 'c', tier: 'common', source: 'monster' }, client: createChestClient({ load: () => Promise.resolve({ openChest: async () => ({ ok: false, reason: 'not_configured' }) }) }), guest: 'g', items: [], onSettled: () => settled++ });
+  const r = openChestReveal({ doc, t, chest: { id: 'c', tier: 'common', source: 'monster' }, client: createChestClient({ load: () => Promise.resolve({ openChest: async () => ({ ok: false, reason: 'network' }) }) }), guest: 'g', items: [], onSettled: () => settled++ });
   await new Promise((res) => setTimeout(res, 20));
   r.close();
   const out = await r.result;
-  assert.deepEqual(out, { ok: false, error: 'off' }); assert.equal(settled, 0);
+  assert.deepEqual(out, { ok: false, error: 'network' }); assert.equal(settled, 0);
 });
 
 test('chest strings in five locales', () => {
