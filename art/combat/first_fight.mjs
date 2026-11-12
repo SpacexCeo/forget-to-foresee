@@ -60,26 +60,29 @@ const state = () => page.evaluate(() => {
   return { live: live.length, near: live[0] ? { pos: live[0].pos, d: Math.hypot(live[0].pos[0] - p[0], live[0].pos[2] - p[2]), state: live[0].state } : null, hp: mobs.hp, field: !!(f.town.casting && f.town.casting.field) };
 });
 
+// the game camera follows a chase path behind her towards the pack: rig.update is wrapped, so every frame the game
+// renders (with its UI) from this camera; a ray from the look point keeps it in front of walls
+await page.evaluate(async () => {
+  const f = window.__ftf, col = await import('/src/physics/collision.js'), orig = f.rig.update.bind(f.rig);
+  f.rig.update = (...a) => {
+    orig(...a);
+    const p = f.player.pos, home = f.town.mobs.brain.packs[0].home;
+    let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    const want = [p[0] - dx * 6.5, p[1] + 3.2, p[2] - dz * 6.5], look = [p[0] + dx * 2.0, p[1] + 0.8, p[2] + dz * 2.0];
+    const dir = [want[0] - look[0], want[1] - look[1], want[2] - look[2]], dl = Math.hypot(...dir);
+    const hit = col.rayCast(f.town.scene.world, look, dir, dl, col.MASK_PLAYER);
+    if (hit) { const k = Math.max(0.15, (hit.t - 0.4) / dl); for (let i = 0; i < 3; i++) want[i] = look[i] + dir[i] * k; }
+    const c = window.__cam || (window.__cam = { pos: want.slice(), look: look.slice() });
+    for (let i = 0; i < 3; i++) { c.pos[i] += (want[i] - c.pos[i]) * (hit ? 0.5 : 0.12); c.look[i] += (look[i] - c.look[i]) * 0.15; }
+    f.rig.camera.position.set(...c.pos); f.rig.camera.lookAt(...c.look); f.rig.camera.updateMatrixWorld(true);
+  };
+});
 // capture in the background
 let capturing = true, n = 0; const t0 = Date.now();
 const capture = (async () => {
   while (capturing) {
-    const d = await page.evaluate(async () => {                             // a chase camera behind her, towards the pack
-      const f = window.__ftf, p = f.player.pos, home = f.town.mobs.brain.packs[0].home;
-      let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-      const want = [p[0] - dx * 7.5, p[1] + 3.6, p[2] - dz * 7.5], look = [p[0] + dx * 2.5, p[1] + 0.7, p[2] + dz * 2.5];
-      const c = window.__cam || (window.__cam = { pos: want.slice(), look: look.slice() });
-      // collision: from the look point to the wanted spot; a wall (the gate passage) pulls the camera in front of it
-      window.__col ||= await import('/src/physics/collision.js');
-      const dir = [want[0] - look[0], want[1] - look[1], want[2] - look[2]], dl = Math.hypot(...dir);
-      const hit = window.__col.rayCast(f.town.scene.world, look, dir, dl, window.__col.MASK_PLAYER);
-      if (hit) { const k = Math.max(0.15, (hit.t - 0.4) / dl); for (let i = 0; i < 3; i++) want[i] = look[i] + dir[i] * k; }
-      for (let i = 0; i < 3; i++) { c.pos[i] += (want[i] - c.pos[i]) * (hit ? 0.6 : 0.25); c.look[i] += (look[i] - c.look[i]) * 0.3; }
-      const cam = f.rig.camera.clone(); cam.fov = 45; cam.near = 0.1; cam.aspect = f.renderer.domElement.width / f.renderer.domElement.height; cam.updateProjectionMatrix();
-      cam.position.set(...c.pos); cam.lookAt(...c.look); cam.updateMatrixWorld(true);
-      f.renderer.setRenderTarget(null); f.renderer.render(f.scene, cam); return f.renderer.domElement.toDataURL('image/jpeg', 0.85);
-    });
-    writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, Buffer.from(d.split(',')[1], 'base64'));
+    const b = await page.screenshot({ type: 'jpeg', quality: 80 });            // the game's own frame, UI included
+    writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, b);
   }
 })();
 
