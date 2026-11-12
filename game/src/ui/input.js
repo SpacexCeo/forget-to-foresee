@@ -88,6 +88,8 @@ export class Input {
     this.touchControls = false; // show touch-only controls (coarse pointer or a touch seen)
     this.runListeners = new Set();
     this.tapRun = new TapRun();
+    this.stickMove = null; // [right, forward] from the touch joystick; null when none
+    this.stickRun = false; // the joystick pushed far: run
     this.endFrame();
 
     window.addEventListener('keydown', (e) => {
@@ -191,7 +193,7 @@ export class Input {
   }
 
   /** Run flag from every source; `down('ShiftLeft', 'ShiftRight')` reports the same value. */
-  get running() { return runFlag({ shift: this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'), toggle: this.runToggle, burst: this.runBurst }); }
+  get running() { return runFlag({ shift: this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'), toggle: this.runToggle, burst: this.runBurst }) || !!this.stickRun; }
 
   /** The touch run button: sticky until tapped again. */
   setRunToggle(on) { on = !!on; if (on === this.runToggle) return; this.runToggle = on; this.emitRun(); }
@@ -226,7 +228,7 @@ export class Input {
   }
 
   /** Held keys; a Shift query also reports the touch run toggle / burst (same flag, see `running`). */
-  down(...codes) { return codes.some((code) => this.keys.has(code)) || ((this.runToggle || this.runBurst) && codes.some((code) => SHIFT.has(code))); }
+  down(...codes) { return codes.some((code) => this.keys.has(code)) || ((this.runToggle || this.runBurst || this.stickRun) && codes.some((code) => SHIFT.has(code))); }
   hit(code) { return this.pressed.has(code); }
 
   /** Movement as [right, forward], with unit diagonals and analog magnitude preserved. */
@@ -234,7 +236,9 @@ export class Input {
     const x = Number(this.down('KeyD')) - Number(this.down('KeyA'));
     const y = Number(this.down('KeyW')) - Number(this.down('KeyS'));
     const magnitude = Math.hypot(x, y);
-    return magnitude ? [x / magnitude, y / magnitude] : this.pad.move;
+    if (magnitude) return [x / magnitude, y / magnitude];
+    const st = this.stickMove; // the touch joystick (scenes/touch-sticks.js), analog
+    return st && (st[0] || st[1]) ? st : this.pad.move;
   }
 
   /** Call once at the end of every frame. */

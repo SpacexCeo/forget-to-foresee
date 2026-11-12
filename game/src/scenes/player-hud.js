@@ -1,0 +1,201 @@
+// The player HUD in the town (owner brief 12.11): a portrait frame at the top left (round gold-rimmed portrait, name,
+// level ring with XP, health with a damage trail), the quest tracker under it (the town objective, collapsible), a
+// silk wallet at the top right (coin, count that ticks up, floating +/- deltas, the sealed-chest badge) and one toast
+// stack. Dark green-black and gold, after docs/art/ui/profile-owner-ref.jpg. It only shows in the town phase; the
+// archipelago keeps its own trial/silk HUD (the judge path). The bottom-left corner stays free for the chat panel.
+
+const CSS = `
+.ph { --ph-bg: rgba(12, 20, 17, .86); --ph-line: rgba(201, 163, 90, .55); --ph-gold: #d8b46a; --ph-ink: #f1ead8; --ph-dim: #a9b3a8;
+  position: fixed; inset: 0; pointer-events: none; z-index: 14; font: 14px/1.25 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ph-ink); }
+.ph[hidden] { display: none; }
+.ph button { font: inherit; color: inherit; }
+.ph-frame { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px));
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; min-width: 230px; max-width: 290px; padding: 8px 14px 8px 8px;
+  background: var(--ph-bg); border: 1px solid var(--ph-line); border-radius: 40px 16px 16px 40px; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); pointer-events: auto; cursor: pointer; text-align: left; }
+.ph-frame:focus-visible { outline: 2px solid var(--ph-gold); outline-offset: 2px; }
+.ph-portrait { position: relative; width: 60px; height: 60px; border-radius: 50%; }
+.ph-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--ph-gold) calc(var(--p, 0) * 1turn), rgba(216, 180, 106, .18) 0); }
+.ph-portrait img { position: absolute; inset: 4px; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; background: #18241f; border: 2px solid #0c1411; }
+.ph-swap { position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+.ph-swap[hidden] { display: none; }
+@media (pointer: coarse) { .ph-swap { width: 40px; height: 40px; left: calc(2px + env(safe-area-inset-left, 0px)); top: calc(2px + env(safe-area-inset-top, 0px)); font-size: 18px; } }
+.ph-lvl { position: absolute; right: -4px; bottom: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center;
+  background: linear-gradient(#e6c47c, #b88d3f); color: #1a1408; font: 700 12px/1 system-ui, sans-serif; border: 2px solid #0c1411; }
+.ph-name { font: 600 16px/1.15 Georgia, "Libre Caslon Text", serif; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph-title { color: var(--ph-gold); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; margin-top: 2px; }
+.ph-xp { color: var(--ph-dim); font-size: 11px; margin-top: 2px; }
+.ph-hp { position: relative; height: 8px; margin-top: 6px; border-radius: 4px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.ph-hp > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.ph-hp .ph-trail { background: #f3d7a0; transition: width .6s ease .35s; }
+.ph-hp .ph-fill { background: linear-gradient(90deg, #4fb58a, #8fd6a2); transition: width .15s ease; }
+.ph-hp.ph-low .ph-fill { background: linear-gradient(90deg, #d4574c, #e8935a); }
+.ph-quest { position: absolute; top: calc(98px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); max-width: 290px; }
+.ph-wallet { position: absolute; top: calc(62px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+.ph-coin, .ph-chest { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 4px 14px 4px 6px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-radius: 20px; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); cursor: pointer; }
+.ph-coin i { width: 30px; height: 30px; flex: none; background: var(--ph-coin) center / 30px 30px no-repeat; }
+.ph-coin.ph-spin i { background-image: var(--ph-coin-spin); background-size: 240px 30px; background-position: 0 0; animation: ph-spin .5s steps(8) 2; }
+@keyframes ph-spin { to { background-position: -240px 0; } }
+.ph-coin b { font: 600 17px/1 Georgia, "Libre Caslon Text", serif; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+.ph-coin.ph-bump b { color: var(--ph-gold); }
+.ph-chest { padding: 4px 12px 4px 8px; font-weight: 700; color: var(--ph-gold); }
+.ph-chest[hidden] { display: none; }
+.ph-delta { position: absolute; right: 22px; top: 44px; font: 700 15px/1 system-ui, sans-serif; pointer-events: none; animation: ph-float 1.2s ease-out forwards; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+.ph-delta.ph-plus { color: #9be3a9; } .ph-delta.ph-minus { color: #f19a8a; }
+@keyframes ph-float { from { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(26px); } }
+.ph-toasts { position: absolute; top: calc(112px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 6px; align-items: flex-end; max-width: min(340px, 70vw); }
+.ph-toast { padding: 8px 14px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-left: 3px solid var(--ph-gold); border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); animation: ph-in .25s ease-out; }
+.ph-toast.ph-out { opacity: 0; transform: translateX(12px); transition: opacity .3s, transform .3s; }
+@keyframes ph-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+/* the town's own pieces, restyled to match while the HUD is on */
+body.ph-on .ftf-town-profile { display: none; }
+body.ph-on .ftf-town-objective { top: calc(98px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); max-width: min(290px, calc(100% - 28px));
+  background: rgba(12, 20, 17, .86); border: 1px solid rgba(201, 163, 90, .55); border-radius: 12px; pointer-events: auto; cursor: pointer; }
+body.ph-on.ph-quest-min .ftf-town-objective { max-width: 44px; overflow: hidden; white-space: nowrap; color: transparent; }
+body.ph-on .ftf-quest-meta button { background: rgba(12, 20, 17, .86); border-color: rgba(201, 163, 90, .55); text-shadow: none; }
+body.ph-on .ftf-quest-meta { top: calc(162px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); }
+body.ph-on #toast { display: none !important; }
+/* the skill bar (scenes/town-casting.js) in the same palette; its health line moves into the frame */
+body.ph-on .ftf-cast-bar { background: rgba(12, 20, 17, .82); border: 1px solid rgba(201, 163, 90, .55); box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
+body.ph-on .ftf-hp { display: none; }
+@media (max-width: 700px), (max-height: 500px) {
+  .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
+  .ph-portrait { width: 46px; height: 46px; } .ph-portrait img { inset: 3px; width: 40px; height: 40px; }
+  .ph-name { font-size: 14px; } .ph-title, .ph-xp { display: none; }
+  body.ph-on .ftf-town-objective { top: calc(108px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 60px); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: calc(100% - 60px); color: inherit; } /* on a phone a tap unfolds the one-line tracker */
+  body.ph-on .ftf-quest-meta { top: calc(152px + env(safe-area-inset-top, 0px)); }
+  .ph-wallet { top: calc(60px + env(safe-area-inset-top, 0px)); }
+  .ph-coin b { font-size: 15px; }
+  .ph-toasts { top: calc(110px + env(safe-area-inset-top, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .ph-delta, .ph-toast { animation: none; } .ph-hp > i { transition: none; } }
+`;
+
+/** Silk in hundredths → the shown text (two decimals, as the profile shows it). */
+export const formatSilk = (cents) => (Math.round(cents) / 100).toFixed(2);
+
+/** Pure: the frame model from the ledger level and health. */
+export function frameModel({ level, hp = 100, maxHp = 100 }) {
+  const p = level && level.need ? Math.max(0, Math.min(1, level.into / level.need)) : 0;
+  const h = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 1;
+  return { level: level ? level.level : 1, title: level ? level.title : 'newcomer', progress: p, hp: h, low: h < 0.3, xp: level ? `${level.into} / ${level.need} XP` : '' };
+}
+
+/** Pure: a wallet change → the floating delta ({text, sign}) or null when nothing changed. */
+export function walletDelta(prev, next) {
+  if (prev == null || next == null || prev === next) return null;
+  const d = next - prev;
+  return { text: (d > 0 ? '+' : '−') + formatSilk(Math.abs(d)), sign: d > 0 ? 'plus' : 'minus' };
+}
+
+/**
+ * @param {{doc?: Document, t: Function, ledger: object, chests?: object, base?: string, nickname?: () => string|null,
+ *   skin?: () => 'iris'|'elise', onProfile?: Function, onChests?: Function, reducedMotion?: () => boolean}} o
+ */
+export function createPlayerHud({ doc = document, t, ledger, chests = null, base = '/', nickname = () => null, skin = () => 'iris', onProfile = () => {}, onChests = null, onSkin = () => {}, canSwap = () => false, reducedMotion = () => false }) {
+  if (!(doc.getElementById && doc.getElementById('ph-style'))) { const st = doc.createElement('style'); st.id = 'ph-style'; st.textContent = CSS; doc.head.append(st); }
+  const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const root = el('div', 'ph'); root.hidden = true;
+
+  const frame = el('button', 'ph-frame'); frame.type = 'button';
+  const portrait = el('div', 'ph-portrait'); const ring = el('i', 'ph-ring'); const img = el('img'); img.alt = ''; const lvl = el('span', 'ph-lvl');
+  portrait.append(ring, img, lvl);
+  // the heroine switch (Iris <-> Elise) sits on the portrait's rim: its own button, not inside the frame button
+  const swap = el('button', 'ph-swap', '⇄'); swap.type = 'button'; swap.hidden = true;
+  swap.addEventListener('pointerdown', (e) => e.stopPropagation());
+  swap.addEventListener('click', (e) => { e.stopPropagation(); onSkin(); setTimeout(renderStatic, 60); });
+  const info = el('div'); const name = el('div', 'ph-name'); const title = el('div', 'ph-title'); const xp = el('div', 'ph-xp');
+  const hp = el('div', 'ph-hp'); hp.setAttribute('role', 'meter'); hp.setAttribute('aria-valuemin', '0'); hp.setAttribute('aria-valuemax', '100');
+  const trail = el('i', 'ph-trail'), fill = el('i', 'ph-fill'); hp.append(trail, fill);
+  info.append(name, title, xp, hp); frame.append(portrait, info);
+  frame.addEventListener('pointerdown', (e) => e.stopPropagation());
+  frame.addEventListener('click', () => onProfile());
+
+  const wallet = el('div', 'ph-wallet');
+  const coin = el('button', 'ph-coin'); coin.type = 'button';
+  // the coin (art/ui: silk_coin_96 at 2x) and its half-turn spin strip (8 frames of 96 px) played on a gain
+  const icon = el('i'); icon.setAttribute('aria-hidden', 'true');
+  coin.style.setProperty('--ph-coin', `url("${base}assets/ui/icons/silk_coin_96.webp")`);
+  coin.style.setProperty('--ph-coin-spin', `url("${base}assets/ui/icons/silk_coin_spin.webp")`);
+  const count = el('b');
+  coin.append(icon, count);
+  const chest = el('button', 'ph-chest'); chest.type = 'button'; chest.hidden = true;
+  wallet.append(coin, chest);
+  for (const b of [coin, chest]) { b.addEventListener('pointerdown', (e) => e.stopPropagation()); }
+  coin.addEventListener('click', () => onProfile());
+  chest.addEventListener('click', () => (onChests || onProfile)());
+
+  const toasts = el('div', 'ph-toasts'); toasts.setAttribute('aria-live', 'polite');
+  root.append(frame, swap, wallet, toasts);
+  doc.body.append(root);
+
+  // the quest tracker is the town's own objective line, moved under the frame by CSS; a tap folds it to a dot
+  const objective = () => doc.querySelector('.ftf-town-objective');
+  if (doc.addEventListener) doc.addEventListener('click', (e) => { const o = objective(); if (o && root.hidden === false && (e.target === o)) doc.body.classList.toggle('ph-quest-min'); }, true);
+
+  let shown = null, anim = null, lastSkin = '', lastName = null, visible = false;
+  function renderStatic() {
+    const lv = frameModel({ level: ledger.level });
+    ring.style.setProperty('--p', String(lv.progress)); lvl.textContent = String(lv.level);
+    title.textContent = t('profile.title.' + lv.title); xp.textContent = lv.xp;
+    const n = nickname() || t('menu.traveller'); if (n !== lastName) { name.textContent = n; lastName = n; }
+    const s = skin(); if (s !== lastSkin) { img.src = base + 'assets/cards/' + s + '.webp'; lastSkin = s; }
+    swap.hidden = !canSwap(); swap.setAttribute('aria-label', t('hud.skin')); swap.title = t('hud.skin');
+    frame.setAttribute('aria-label', `${n} · ${t('profile.button', { level: lv.level })}`);
+    const sealed = chests && chests.sealed ? chests.sealed().length : 0;
+    chest.hidden = !sealed; chest.textContent = sealed ? '▣ ' + sealed : ''; chest.setAttribute('aria-label', t('chest.badge', { n: sealed }));
+  }
+  function floatDelta(d) {
+    if (!d || reducedMotion()) return;
+    const f = el('span', 'ph-delta ph-' + d.sign, d.text); wallet.append(f); setTimeout(() => f.remove(), 1300);
+  }
+  function setCount(cents) {
+    count.textContent = formatSilk(cents); coin.setAttribute('aria-label', t('town.silk') + ' ' + formatSilk(cents));
+  }
+  function renderSilk() {
+    const target = ledger.silk;
+    if (shown == null) { shown = target; setCount(target); return; }
+    if (target === shown) return;
+    floatDelta(walletDelta(shown, target));
+    if (reducedMotion()) { shown = target; setCount(target); return; }
+    const from = shown, t0 = performance.now(), dur = 650;
+    coin.classList.add('ph-bump');
+    if (target > from) { coin.classList.remove('ph-spin'); void coin.offsetWidth; coin.classList.add('ph-spin'); setTimeout(() => coin.classList.remove('ph-spin'), 1050); }
+    if (anim) cancelAnimationFrame(anim);
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      setCount(from + (target - from) * e);
+      if (k < 1) anim = requestAnimationFrame(step); else { anim = null; coin.classList.remove('ph-bump'); }
+    };
+    shown = target; anim = requestAnimationFrame(step);
+  }
+  const unLedger = ledger.subscribe ? ledger.subscribe(() => { renderStatic(); renderSilk(); }) : null;
+  const unChests = chests && chests.subscribe ? chests.subscribe(renderStatic) : null;
+  renderStatic(); renderSilk();
+
+  let lastHp = -1;
+  return {
+    root,
+    /** Per frame: visible only in the town phase; health from the combat layer. */
+    update({ visible: v, hp: h = 100, maxHp = 100 } = {}) {
+      if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ph-on', v); if (v) renderStatic(); }
+      if (!v) return;
+      const m = frameModel({ level: ledger.level, hp: h, maxHp });
+      if (m.hp !== lastHp) {
+        lastHp = m.hp; const w = (m.hp * 100).toFixed(1) + '%';
+        fill.style.width = w; trail.style.width = w; hp.classList.toggle('ph-low', m.low); hp.setAttribute('aria-valuenow', String(Math.round(m.hp * 100)));
+        hp.setAttribute('aria-label', t('hud.health'));
+      }
+    },
+    /** One toast in the stack (newest at the bottom, at most three). */
+    toast(text, ms = 3200) {
+      const n = el('div', 'ph-toast', text); toasts.append(n);
+      while (toasts.children.length > 3) toasts.children[0].remove();
+      setTimeout(() => { n.classList.add('ph-out'); setTimeout(() => n.remove(), 320); }, ms);
+      return n;
+    },
+    refresh() { renderStatic(); renderSilk(); },
+    dispose() { if (unLedger) unLedger(); if (unChests) unChests(); root.remove(); doc.body.classList.remove('ph-on'); },
+  };
+}
