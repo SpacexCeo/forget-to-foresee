@@ -40,6 +40,9 @@ export function createVfx(scene, camera, renderer, options = {}) {
     decal: new ObjectPool(add(createDecal), 6),
     logogram: new ObjectPool(add(createLogogram), 3),
   };
+  // One of each pooled mesh exists from the start (hidden), so a warm-up can compile it before its first use
+  // (scenes/shell.js shows them for its prewarm compile; the logogram used to compile on the first Shell visit).
+  for (const pool of Object.values(pools)) { const o = pool.acquire(); if (o) pool.release(o); }
   // Fixed light pool sized for the best tier; lights beyond the tier's budget stay dark.
   const lights = [];
   for (let i = 0; i < 3; i++) { const l = createLight(); l.visible = false; root.add(l); lights.push({ l, busy: false }); }
@@ -335,5 +338,7 @@ export function createVfx(scene, camera, renderer, options = {}) {
     setReducedMotion: (on) => { reducedMotion = !!on; particles.shared.uCurlScale.value = on ? 0.5 : 1; },
     stats: () => ({ tier, effects: instances.size, ...particles.stats(), lights: lights.filter((s) => s.busy).length }),
     names: EFFECT_NAMES, hooks, pass, root,
+    /** The pooled meshes (hidden until used): a warm-up shows them for one compile call. */
+    warmables: () => Object.values(pools).flatMap((pl) => pl.all()),
   };
 }
