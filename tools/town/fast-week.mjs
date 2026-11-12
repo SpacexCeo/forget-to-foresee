@@ -6,7 +6,7 @@
 //   node tools/town/fast-week.mjs [seed=7]
 import { writeFileSync } from 'node:fs';
 import { TOWN_POLICY, TOWN_TARGET, townFee, PRICE_UNIT, MICRO } from '../../relayer/lib/town-traders.js';
-import { TRADERS, ITEMS } from '../../relayer/market/catalog.js';
+import { TRADERS, CATALOG as ITEMS } from '../../relayer/market/catalog.js';
 import { nextGapMs, DAY_MS } from '../../relayer/market/schedule.js';
 
 let seed = Number(process.argv[2] || 7);
@@ -39,6 +39,6 @@ for (let t = T0; t < T0 + DAYS * DAY_MS; t += STEP) {
   });
 }
 const out = { note: 'A model run of the town market (tools/town/fast-week.mjs, deterministic), not chain data.', step_min: 30, days: DAYS, price_unit_silk: PRICE_UNIT / MICRO,
-  items: ITEMS.map((i) => ({ id: i.id, base: i.base, maker: i.maker })), traders: TRADERS, events: EVENTS.map((e) => ({ t: e.at - T0, text: e.text })), frames };
+  items: ITEMS.map((i) => ({ id: i.id, base: i.base, maker: i.maker, kind: i.kind })), traders: TRADERS, events: EVENTS.map((e) => ({ t: e.at - T0, text: e.text })), frames };
 writeFileSync(new URL('../../game/public/town-week.json', import.meta.url), JSON.stringify(out));
 console.log(`week: ${trades} trades (${Math.round(trades / DAYS)}/day), ${Math.round(volume / MICRO)} silk traded, ${frames.length} frames`);

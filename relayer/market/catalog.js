@@ -14,7 +14,21 @@ export const ITEMS = Object.freeze([
   ['escort', 10, 'guard'], ['herbal_remedy', 8, 'elder'], ['wildflowers', 1, 'child_a'], ['river_stones', 1, 'child_b'],
   ['woven_silk', 20, 'iris'], ['salt', 2, 'salt'], ['charcoal', 3, 'ash'], ['moss_poultice', 6, 'moss'],
   ['amber_resin', 14, 'amber'], ['ice_block', 2, 'frost'], ['bronze_gear', 16, 'tinker'],
-].map(([id, base, maker]) => Object.freeze({ id, base, maker })));
+].map(([id, base, maker]) => Object.freeze({ id, base, maker, kind: 'good' })));
+
+/**
+ * Monster resources (owner, 12.11 evening): what the hillside creatures drop, also sold at the town's stalls for
+ * players who cannot farm them, and bought back from players (market/prices.js buybackOf). Scarcer than goods: each
+ * stall restocks `rate` an hour up to `cap` (its hunters' haul). Base prices (fifths of a silk) follow the silk a kill
+ * of that creature pays (game/src/game/expedition-config.js kill: 6 / 15 / 40 / 200 silk). The combat worker's drop
+ * table should use these ids; the first NEP-245 token ids (roadmap item 4) are these resources.
+ */
+export const RESOURCES = Object.freeze([
+  ['spider_silk_thread', 15, 'guard', 'skitter'], ['chitin_plate', 25, 'guard', 'skitter'],
+  ['veil_dust', 75, 'shrinekeeper', 'veilbell'], ['ash_ore', 200, 'ash', 'hulker'], ['crown_shard', 1000, 'shardkeeper', 'crownrift'],
+].map(([id, base, maker, from]) => Object.freeze({ id, base, maker, from, kind: 'resource', cap: 40, ref: 20, rate: 6, start: 20 })));
+/** Everything the stalls sell. */
+export const CATALOG = Object.freeze([...ITEMS, ...RESOURCES]);
 
 /** Traders: 13 townsfolk + 7 clan agents (the six clans and the tinkers, who sell the parts of the crafting bench). */
 export const TOWNSFOLK = Object.freeze(['guard', 'shardkeeper', 'scribe', 'innkeeper', 'baker', 'shrinekeeper', 'elder', 'musician', 'sweeper', 'lamplighter', 'courier', 'child_a', 'child_b']);

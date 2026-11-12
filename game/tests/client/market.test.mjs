@@ -6,7 +6,7 @@ import { normalizeStats, txUrl, tradeLine, fetchMarket } from '../../src/net/mar
 import { createMarketTicker } from '../../src/ui/market-ticker.js';
 import { createMarketScene, VISIT } from '../../src/play/market-scene.js';
 import { createPlayI18n } from '../../src/play/i18n.js';
-import { ITEMS, TRADERS } from '../../../relayer/market/catalog.js';
+import { CATALOG as ITEMS, TRADERS } from '../../../relayer/market/catalog.js';
 
 const HASH = '7Xy3tZ9rQd1mVbN4kLpW2sF8hJcGaE5uYoTiRe6wQzx';
 const row = (o = {}) => ({ at: 1, buyer: 'guard', seller: 'baker', item: 'bread', qty: 3, price: 4, hash: HASH, ...o });

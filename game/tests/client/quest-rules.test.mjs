@@ -11,6 +11,8 @@ import { EXPEDITION } from '../../src/game/expedition-config.js';
 
 const run = (s, a, now = 1000) => applyQuest(s, a, { now });
 
+const RICH = { spider_silk_thread: 99, chitin_plate: 99, crown_shard: 9 }; // monster resources (game/resources.js)
+
 test('data: the owner quests, the guide and the bounty; givers are existing townsfolk', () => {
   assert.deepEqual(Object.keys(QUESTS), ['q_welcome', 'q_spiders', 'q_part', 'q_boss', 'b_spiders']);
   assert.deepEqual(QUESTS.q_spiders.objective, { type: 'kill', mob: 'skitter', count: 10 });
@@ -49,9 +51,9 @@ test('transitions: locked → available → active → ready → done; illegal a
 
 test('the part quest takes a salvage part at T2, an inventory part at T1; turning in needs a part', () => {
   let s = replayQuests([{ action: { type: 'ACCEPT', questId: 'q_welcome' }, now: 1 }, { action: { type: 'GUIDE', step: 'talked' }, now: 2 }, { action: { type: 'GUIDE', step: 'moved' }, now: 3 }, { action: { type: 'TURN_IN', questId: 'q_welcome' }, now: 4 }, { action: { type: 'ACCEPT', questId: 'q_part' }, now: 5 }]).state;
-  assert.ok(run(s, { type: 'TURN_IN', questId: 'q_part' }).rejected === 'no_part');
-  assert.equal(run(s, { type: 'TURN_IN', questId: 'q_part', partId: 'part_gear', partSource: 'salvage' }).events[0].trust, 'T2');
-  const inv = run(s, { type: 'TURN_IN', questId: 'q_part', partId: 'part_gear', partSource: 'inventory' }).events[0];
+  assert.ok(run(s, { type: 'TURN_IN', questId: 'q_part', have: RICH }).rejected === 'no_part');
+  assert.equal(run(s, { type: 'TURN_IN', questId: 'q_part', have: RICH, partId: 'part_gear', partSource: 'salvage' }).events[0].trust, 'T2');
+  const inv = run(s, { type: 'TURN_IN', questId: 'q_part', have: RICH, partId: 'part_gear', partSource: 'inventory' }).events[0];
   assert.equal(inv.trust, 'T1'); assert.equal(inv.silkC, 80_000);
 });
 
@@ -60,11 +62,11 @@ test('bounty: repeatable after its cooldown, full rate three times a day, then 1
   const act = (a) => { const r = applyQuest(s, a, { now: t }); if (!r.rejected) s = r.state; return r; };
   act({ type: 'ACCEPT', questId: 'q_welcome' }); act({ type: 'GUIDE', step: 'talked' }); act({ type: 'GUIDE', step: 'moved' }); act({ type: 'TURN_IN', questId: 'q_welcome' });
   act({ type: 'ACCEPT', questId: 'q_spiders' }); let k = 0; const ten = () => { for (let i = 0; i < 10; i++) act({ type: 'KILL', mob: 'skitter', killId: 'b' + (k++) }); };
-  ten(); act({ type: 'TURN_IN', questId: 'q_spiders' });
+  ten(); act({ type: 'TURN_IN', questId: 'q_spiders', have: RICH });
   const pays = [];
   for (let i = 0; i < 5; i++) {
     assert.equal(act({ type: 'ACCEPT', questId: 'b_spiders' }).rejected, undefined, 'bounty ' + i);
-    ten(); pays.push(act({ type: 'TURN_IN', questId: 'b_spiders' }).events[0].silkC);
+    ten(); pays.push(act({ type: 'TURN_IN', questId: 'b_spiders', have: RICH }).events[0].silkC);
     assert.equal(questStatus(s, 'b_spiders', t), 'done'); assert.ok(act({ type: 'ACCEPT', questId: 'b_spiders' }).rejected, 'cooldown');
     t += 31 * 60e3;
   }
@@ -77,8 +79,8 @@ test('full run: welcome → spiders → part → boss; the log verifies and earn
   add({ type: 'ACCEPT', questId: 'q_welcome' }); add({ type: 'GUIDE', step: 'talked' }); add({ type: 'GUIDE', step: 'moved' }); add({ type: 'TURN_IN', questId: 'q_welcome' });
   add({ type: 'ACCEPT', questId: 'q_spiders' }); add({ type: 'ACCEPT', questId: 'q_part' });
   for (let i = 0; i < 10; i++) add({ type: 'KILL', mob: 'skitter', killId: 's' + i });
-  add({ type: 'TURN_IN', questId: 'q_spiders' }); add({ type: 'TURN_IN', questId: 'q_part', partId: 'part_gear', partSource: 'salvage' });
-  add({ type: 'ACCEPT', questId: 'q_boss' }); add({ type: 'KILL', mob: 'crownrift', killId: 'boss1' }); add({ type: 'TURN_IN', questId: 'q_boss' });
+  add({ type: 'TURN_IN', questId: 'q_spiders', have: RICH }); add({ type: 'TURN_IN', questId: 'q_part', have: RICH, partId: 'part_gear', partSource: 'salvage' });
+  add({ type: 'ACCEPT', questId: 'q_boss' }); add({ type: 'KILL', mob: 'crownrift', killId: 'boss1' }); add({ type: 'TURN_IN', questId: 'q_boss', have: RICH });
   const { state, events } = replayQuests(acts);
   assert.ok(['q_welcome', 'q_spiders', 'q_part', 'q_boss'].every((id) => questStatus(state, id) === 'done'));
   let log = []; for (const [i, e] of events.entries()) log = [...log, makeEntry(log, { t: 1000 + i, ...e })];
@@ -94,4 +96,13 @@ test('the rules are pure: no DOM, no three, no engine, no wool', () => {
     const src = readFileSync(new URL('../../src/game/' + f, import.meta.url), 'utf8').replace(/\/\/.*$/gm, '');
     assert.doesNotMatch(src, /document|window|from 'three'|engine\.js|room\.js|S\.silk|\bwool\b/, f);
   }
+});
+
+test('resources: a turn-in needs the quest\'s monster resources and logs what it consumed', () => {
+  let s = replayQuests([{ action: { type: 'ACCEPT', questId: 'q_welcome' }, now: 1 }, { action: { type: 'GUIDE', step: 'talked' }, now: 2 }, { action: { type: 'GUIDE', step: 'moved' }, now: 3 }, { action: { type: 'TURN_IN', questId: 'q_welcome' }, now: 4 }, { action: { type: 'ACCEPT', questId: 'q_spiders' }, now: 5 }]).state;
+  for (let i = 0; i < 10; i++) s = run(s, { type: 'KILL', mob: 'skitter', killId: 'r' + i }).state;
+  assert.equal(run(s, { type: 'TURN_IN', questId: 'q_spiders' }).rejected, 'needs');
+  assert.equal(run(s, { type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 4 } }).rejected, 'needs');
+  const ok = run(s, { type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 5 } });
+  assert.deepEqual(ok.events[0].data.consumed, { spider_silk_thread: 5 }); assert.equal(ok.events[0].silkC, 100_000);
 });

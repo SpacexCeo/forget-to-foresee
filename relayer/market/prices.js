@@ -15,6 +15,8 @@
 // 5. A trader whose silk falls below BANKRUPT_SILK closes its stall: it stops buying and makes goods at CLOSED_MAKES
 //    of its pace, selling its way back, until its purse is above REOPEN_SILK again (from sales, wages, or an
 //    investor's pledge into the stall: ftf-town invest_stall).
+// 6. Monster resources (market/catalog.js RESOURCES) follow the same rules with their own, scarcer shelf (ref, cap,
+//    rate per item), and a stall buys them back from players at BUYBACK of its selling price until its shelf is full.
 // Prices are in fifths of a silk (PRICE_UNIT in lib/town-traders.js): bread's base 3 = 0.6 silk.
 
 export const STOCK_CAP = 240;
@@ -34,27 +36,35 @@ export const CLOSED_MAKES = 0.5;
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
 /** The price of one unit and the trader's reason. */
-export function priceOf({ id, base }, stock, demand) {
-  const scarcity = Math.pow(STOCK_REF / Math.max(stock, 1), SCARCITY_POWER);
+export function priceOf({ id, base, ref = STOCK_REF, cap = STOCK_CAP }, stock, demand) {
+  const scarcity = Math.pow(ref / Math.max(stock, 1), SCARCITY_POWER);
   const pull = 1 + DEMAND_WEIGHT * (demand / DEMAND_REF - 1);
   const factor = clamp(scarcity * pull, PRICE_BAND[0], PRICE_BAND[1]);
   const price = Math.max(1, Math.round(base * factor));
-  return { price, reason: reasonFor(id, stock, demand, factor) };
+  return { price, reason: reasonFor(id, stock, demand, factor, ref, cap) };
 }
 
 /** How much a price draws or repels buyers: (base / price) ^ ELASTICITY. */
 export const choiceWeight = ({ base }, price) => Math.pow(base / Math.max(1, price), ELASTICITY);
 
 /** The trader's words for a price ("dear: only 3 iron left, demand rose"). */
-export function reasonFor(id, stock, demand, factor) {
+export function reasonFor(id, stock, demand, factor, ref = STOCK_REF, cap = STOCK_CAP) {
   const name = id.replace(/_/g, ' ');
   const parts = [];
-  if (stock <= STOCK_REF / 4) parts.push(`only ${stock} ${name} left`);
-  else if (stock >= STOCK_CAP * 0.85) parts.push(`${stock} ${name} on the shelf`);
+  if (stock <= ref / 4) parts.push(`only ${stock} ${name} left`);
+  else if (stock >= cap * 0.85) parts.push(`${stock} ${name} on the shelf`);
   if (demand >= DEMAND_REF * 1.5) parts.push('demand rose');
   else if (demand <= DEMAND_REF * 0.5) parts.push('few buyers');
   const mood = factor >= 1.15 ? 'dear' : factor <= 0.87 ? 'cheap' : 'fair';
   return parts.length ? `${mood}: ${parts.join(', ')}` : `${mood} price`;
+}
+
+/** What a stall pays a player for a monster resource: BUYBACK of its selling price, nothing once its shelf is full. */
+export const BUYBACK = 0.6;
+export function buybackOf(item, stock, demand) {
+  if (stock >= (item.cap ?? STOCK_CAP)) return { price: 0, reason: `not buying: ${stock} ${item.id.replace(/_/g, ' ')} on the shelf` };
+  const sell = priceOf(item, stock, demand);
+  return { price: Math.max(1, Math.floor(sell.price * BUYBACK)), reason: `buys at ${Math.round(BUYBACK * 100)} % of its price (${sell.reason})` };
 }
 
 /** Production since the last look: +RESTOCK_PER_HOUR an hour, up to STOCK_CAP. */

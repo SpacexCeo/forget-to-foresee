@@ -849,4 +849,9 @@ export default {
   "mk.i.amber_resin": "янтарная смола",
   "mk.i.ice_block": "глыба льда",
   "mk.i.bronze_gear": "бронзовая шестерня",
+  "mk.i.spider_silk_thread": "паучья нить",
+  "mk.i.chitin_plate": "хитиновая пластина",
+  "mk.i.veil_dust": "пыль вуали",
+  "mk.i.ash_ore": "пепельная руда",
+  "mk.i.crown_shard": "осколок короны",
 };
