@@ -66,7 +66,7 @@ await page.evaluate(async () => {
   const f = window.__ftf, col = await import('/src/physics/collision.js'), orig = f.rig.update.bind(f.rig);
   f.rig.update = (...a) => {
     orig(...a);
-    const p = f.player.pos, home = f.town.mobs.brain.packs[0].home;
+    const p = f.player.pos, home = window.__camTarget || f.town.mobs.brain.packs[0].home;
     let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     let want = [p[0] - dx * 6.5, p[1] + 3.2, p[2] - dz * 6.5], look = [p[0] + dx * 2.0, p[1] + 0.8, p[2] + dz * 2.0];
     if (p[2] - 1200 * 0 < 43 && p[2] > 20) { want = [p[0] + 1.5, p[1] + 2.0, 46.5]; look = [p[0], p[1] + 1.1, p[2]]; }   // in and just past the gate: a front view, she walks out towards us
@@ -108,10 +108,40 @@ for (let round = 0; round < 14 && (Date.now() - t0) < 28000; round++) {
   if (round % 2 === 0) { await page.keyboard.press('Space'); log.push('dash'); await wait(500); }
   else await wait(300);
 }
-await wait(2600);
+await wait(1500);
+// the chest: a moss critter below the gate drops one (the monster kill -> chest hook is not in yet): lance it, walk
+// onto the chest (picked up into the bag), open the inventory and the chest
+const critter = () => page.evaluate(() => {
+  const f = window.__ftf, M = f.town.monsters, p = f.player.pos; if (!M) return null;
+  const cs = M.critters.filter((c) => c.state !== 'dying' && c.state !== 'gone').map((c) => [c.root.position.x, c.root.position.y, c.root.position.z]);
+  cs.sort((a, b) => Math.hypot(a[0] - p[0], a[2] - p[2]) - Math.hypot(b[0] - p[0], b[2] - p[2]));
+  return { pos: cs[0] || null, chests: M.chests.map((c) => c.at), kills: M.kills };
+});
+for (let i = 0; i < 10 && (Date.now() - t0) < 52000; i++) {
+  const c = await critter(); if (!c) { log.push('no critters'); break; }
+  if (c.chests.length) { log.push('chest dropped'); break; }
+  if (!c.pos) { await wait(800); continue; }
+  await page.evaluate((p) => { window.__camTarget = p; }, c.pos);
+  const d = await page.evaluate((p) => Math.hypot(p[0] - window.__ftf.player.pos[0], p[2] - window.__ftf.player.pos[2]), c.pos);
+  if (d > 9) { await walkTo(c.pos, 8, 3000, true); continue; }
+  const ok = await page.evaluate((p) => { const c = window.__ftf.town.casting; return c.aimAt('lance', p) && c.release(); }, c.pos);
+  log.push(ok ? 'lance at a critter' : 'lance not ready'); await wait(1300);
+}
+await wait(900);
+const ch = await critter();
+if (ch && ch.chests.length) {
+  await page.evaluate((p) => { window.__camTarget = p; }, ch.chests[0]);
+  await walkTo(ch.chests[0], 0.6, 6000, false); log.push('walked onto the chest'); await wait(1800);
+  const bag = await page.evaluate(() => { const b = window.__ftf.town.chests; try { return b ? JSON.stringify(Object.keys(b)) + ':' + (typeof b.count === 'number' ? b.count : (b.sealed ? b.sealed().length : '?')) : null; } catch (e) { return String(e); } });
+  log.push('bag ' + bag);
+  for (const name of [/Profile/, /Inventory/, /^Open/]) {
+    const b = page.getByRole('button', { name }).or(page.getByRole('tab', { name })); if (await b.count()) { await b.first().click().catch(() => {}); log.push('clicked ' + name); await wait(1400); }
+  }
+  await wait(3500);
+}
 capturing = false; await capture;
 const secs = (Date.now() - t0) / 1000;
-const end = await page.evaluate(() => ({ kills: window.__kills, hp: window.__ftf.town.mobs.hp }));
+const end = await page.evaluate(() => ({ kills: window.__kills, hp: window.__ftf.town.mobs.hp, critterKills: window.__ftf.town.monsters ? window.__ftf.town.monsters.kills : null }));
 const res = { camInfo, frames: n, seconds: +secs.toFixed(1), fps: +(n / secs).toFixed(2), log, end, errors };
 writeFileSync(`${out}/report.json`, JSON.stringify(res, null, 1)); console.log(JSON.stringify(res));
 await browser.close();
