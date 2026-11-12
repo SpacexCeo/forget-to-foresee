@@ -20,7 +20,7 @@ test('C1: the "Try it" block has four rows of Do / You\'ll see / How to check, a
   for (const path of ['scripts/verify-all.sh', 'scripts/stats.mjs', 'tools/verify/verify.mjs', 'docs/STATS.md']) assert.ok(existsSync(new URL(path, ROOT)), path);
   assert.match(readme, /"leaf_count":15, "revealed_count":15|leaf_count":15/);
   const hints = section('Tracks');
-  assert.match(hints, /\| NEAR Intents \| Not used \|/); assert.match(hints, /\| NEP-245 multi-token \| Built, not deployed/);
+  assert.match(hints, /\| NEAR Intents \| Not used \|/); assert.match(hints, /\| NEP-245 multi-token \| Deployed on testnet/);
 });
 
 test('C12: window facts from a fixture repository; the README says 0 commits before 1 Nov', (t) => {
