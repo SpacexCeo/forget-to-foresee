@@ -528,6 +528,12 @@ export class AssetStreamer {
 
   log(msg) { this.events.push({ t: performance.now(), msg }); if (this.events.length > 8) this.events.shift(); }
 
+  /** Keeps every loaded asset resident while `on` (a short visit elsewhere, e.g. inside a Shell); off resets the clocks. */
+  hold(on) {
+    this.holding = !!on;
+    if (!on) for (const k of this.unwanted.keys()) this.unwanted.set(k, 0);
+  }
+
   update(dt, focus) {
     const cam = this.camera.position;
     for (const inst of this.instances) inst.updateLod(cam);
@@ -556,7 +562,8 @@ export class AssetStreamer {
       });
       const p = heroLast(name, pinnedPriority(assetPriority(ps), this.pins.get(name) ?? (this.viewPins.has(name) ? VIEW_PIN : null)));
       this.priority.set(name, p);
-      const u = p < 0 ? (this.unwanted.get(name) || 0) + this.interval : 0;
+      // held (Iris inside a Shell): what is shown now stays resident, so leaving rebuilds and re-fetches nothing
+      const u = p < 0 && !(this.holding && e.state === 'loaded') ? (this.unwanted.get(name) || 0) + this.interval : 0;
       this.unwanted.set(name, u);
       // A dropped download is retried a few times while the asset is still wanted (streaming.js shouldRetry).
       if (e.state === 'failed' && shouldRetry({ failures: e.failures, sinceFailure: (performance.now() - (e.failedAt || 0)) / 1000, priority: p })) { e.state = 'idle'; e.error = null; this.log('retrying ' + name); }

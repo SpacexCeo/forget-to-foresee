@@ -49,6 +49,8 @@ export class IrisAvatar {
     this.irisModel = null;
     this.irisReaction = null;
     this.attaching = null;
+    /** @type {(() => boolean)|null} while a held action (strike_charge) may stay: false ends it (play/mobs.js `charging`) */
+    this.holdWhile = null;
   }
 
   get attached() { return !!this.irisModel; }
@@ -118,16 +120,25 @@ export class IrisAvatar {
     const m = this.irisModel;
     const c = m && m.clips.find((x) => x.name === name);
     if (!c) return false;
+    const u0 = c.userData || {};
+    // A held wind-up (strike_charge) does not cut a strike that is still swinging, and a quick tap never shows it:
+    // it waits until the press is 0.12 s old and the move in flight has passed its impact (update() starts it).
+    if (u0.hold && !opts.now) { m.pendingHold = { name, t: 0 }; return true; }
+    m.pendingHold = null;
     const prev = m.combat ? m.combat.name : null;
     if (m.combat) m.combat.action.fadeOut(0.06);
     const a = m.mixer.clipAction(c); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.setEffectiveWeight(1); a.play();
     // sound and effect sync: the clip's moments (art/anim/iris_actions.py extras), sent as window events while it plays
     const u = c.userData || {};
     m.combat = { action: a, t: 0, dur: c.duration, name, impact: u.release_s ?? u.impact_s ?? null, step: u.step_s ?? null, foot: u.step_foot || 'L', hold: !!u.hold };
-    if (u.from && prev === u.from) m.combat.fadeIn = 0.03;     // the release of a held pose starts in that pose: no blend through the idle
+    // a step taken after the hit cuts the settle short (0.14 s back to the gait); a held pose eases in
+    if (name !== 'dash' && !u.hold) { m.combat.cancelAfter = (m.combat.impact ?? 0) + 0.2; m.combat.cancelSpeed = 1.0; }   // (a strike out of a run is still sliding to a stop: that is not a step)
+    if (name === 'dash') m.combat.cancelAfter = 0.3;
+    if (u.hold) m.combat.fadeIn = 0.14;
+    if (u.from && prev === u.from) m.combat.fadeIn = 0.03; else if (u.from) m.combat.fadeIn = 0.07;     // the release of a held pose starts in that pose: no blend through the idle
     emit('ftf:iris-action', { clip: name, phase: 'start', impact: m.combat.impact });
     // out of a run (a cast roots her at once): the heel-dig stop is blended over the first 0.2 s of the action clip
-    const sk = opts.skid && (m.speedNow || 0) > 2.2 && m.clips.find((x) => x.name === 'skid');
+    const sk = (opts.skid ?? (name !== 'dash' && !u.from)) && (m.speedNow || 0) > 2.2 && m.clips.find((x) => x.name === 'skid');
     if (m.skid) { m.skid.action.stop(); m.skid = null; }
     if (sk) {
       const sa = m.mixer.clipAction(sk); sa.reset(); sa.setLoop(THREE.LoopOnce, 1); sa.clampWhenFinished = true; sa.setEffectiveWeight(0); sa.play();
@@ -139,7 +150,11 @@ export class IrisAvatar {
   }
 
   /** Lets go of a held action clip (`strike_charge` put away without the super strike): it fades out to the idle. */
-  endAction() { const k = this.irisModel && this.irisModel.combat; if (k && k.hold) { k.ending = true; k.fadeOut = 0.2; k.dur = k.t + 0.2; } }
+  endAction() {
+    const m = this.irisModel; if (!m) return;
+    m.pendingHold = null;
+    const k = m.combat; if (k && k.hold && !k.ending) { k.ending = true; k.fadeOut = 0.2; k.dur = k.t + 0.2; }
+  }
 
   /**
    * A skill cast (scenes/town-casting.js): `cast_lance`, `cast_snare`. A slow wind-up, the release frame, an overshoot
@@ -203,11 +218,21 @@ export class IrisAvatar {
       }
       // a reaction with its own face (the wink) takes the face over from the always-on layer
       if (m.faceAction) m.faceAction.weight = m.react && hasFace(m.react.getClip()) ? 1 - m.reactW * (1 - move) : 1;
+      // A held pose lives only while its owner says the button is still down (`holdWhile`, set by the caller): a
+      // press whose strike was refused must never leave her coiled.
+      const held = (m.pendingHold || (m.combat && m.combat.hold && !m.combat.ending)) && this.holdWhile && !this.holdWhile();
+      if (held) this.endAction();
+      if (m.pendingHold) {
+        const ph = m.pendingHold, k = m.combat; ph.t += dt;
+        const free = !k || k.hold || k.t >= Math.min(k.dur - 0.12, (k.impact ?? 0) + 0.16);
+        if (ph.t >= 0.12 && free) this.combat(ph.name, { now: true, skid: false });
+      }
+      if (m.combat && m.combat.hold && !m.combat.ending && (m.combat.heldFor = (m.combat.heldFor || 0) + dt) > 8) this.endAction(); // a last guard
       if (m.combat) {                                    // a combat move over the gait, idle and reaction
         const k = m.combat, t0 = k.t; k.t += dt;
         if (k.impact != null && t0 < k.impact && k.t >= k.impact) emit('ftf:iris-action', { clip: k.name, phase: 'impact', impact: 0 });
         if (k.step != null && t0 < k.step && k.t >= k.step) emit('ftf:foot', { foot: k.foot, running: true, action: k.name });
-        if (k.cancelAfter != null && k.t > k.cancelAfter && speed > 0.4) { k.dur = Math.min(k.dur, k.t + 0.16); k.fadeOut = 0.16; k.cancelAfter = null; } // she walks out of the settle
+        if (k.cancelAfter != null && k.t > k.cancelAfter && speed > (k.cancelSpeed || 0.4)) { k.dur = Math.min(k.dur, k.t + 0.15); k.fadeOut = 0.15; k.cancelAfter = null; } // she walks out of the settle
         if (k.hold && !k.ending) k.t = Math.min(k.t, k.dur - (k.fadeOut || 0.1) - 0.01);   // a held pose (strike_charge) waits on its last frame
         const w = smoothstep01(k.t / (k.fadeIn || 0.05)) * smoothstep01((k.dur - k.t) / (k.fadeOut || 0.1));
         actionW = w;

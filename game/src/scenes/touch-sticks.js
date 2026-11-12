@@ -20,14 +20,14 @@ const CSS = `
 .ts-base.ts-live { opacity: 1; }
 .ts-knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f1d999, #b98a3c); box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
 .ts-base.ts-run .ts-knob { box-shadow: 0 0 0 4px rgba(155, 227, 169, .55), 0 4px 14px rgba(0, 0, 0, .45); }
-.ts-arc { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 210px; height: 210px; }
+.ts-arc { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 180px; height: 180px; }
 .ts-btn { position: absolute; width: 58px; height: 58px; border-radius: 50%; padding: 0; border: 2px solid rgba(201, 163, 90, .7); background: rgba(12, 20, 17, .78) center / 76% no-repeat;
   box-shadow: 0 6px 16px rgba(0, 0, 0, .4); pointer-events: auto; touch-action: none; overflow: hidden; color: inherit; font: inherit; }
 .ts-btn[hidden] { display: none; }
 .ts-btn.ts-main { width: 76px; height: 76px; right: 0; bottom: 0; border-width: 3px; }
 .ts-btn.ts-down { transform: scale(.93); border-color: #f3d7a0; }
 .ts-cd { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(rgba(0, 0, 0, .62) calc(var(--cd, 0) * 1turn), transparent 0); pointer-events: none; }
-.ts-btn.ts-use { right: 6px; bottom: 214px; width: 64px; height: 64px; background: rgba(216, 180, 106, .92); color: #1a1408; font-size: 15px; border-color: #f3d7a0; }
+.ts-btn.ts-use { right: 6px; bottom: 182px; width: 64px; height: 64px; background: rgba(216, 180, 106, .92); color: #1a1408; font-size: 15px; border-color: #f3d7a0; }
 .ts-btn.ts-use:not([hidden]) { animation: ts-pop .25s ease-out; }
 @keyframes ts-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 .ts-cancel { position: absolute; right: 230px; bottom: 120px; padding: 10px 14px; border-radius: 20px; background: rgba(160, 50, 40, .82); pointer-events: none; }
@@ -48,12 +48,15 @@ body.ts-touch .pl-context.ts-dismissed, body.ts-moving .pl-context { max-height:
 body.ts-touch .pl-context.ts-dismissed h3::after { content: " ▴"; color: #d8b46a; }
 body.ts-touch .pl-context.ts-dismissed .ts-ctx-x { display: none; }
 .ts-ctx-x { position: absolute; top: 4px; right: 4px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(201, 163, 90, .6); background: rgba(12, 20, 17, .9); color: #f3d7a0; font: 700 18px/1 system-ui, sans-serif; padding: 0; z-index: 1; }
+/* every tip, toast and card stays inside the screen on phones (owner 12.11: a tip was cut at the right edge) */
+body.ts-touch .d1-hint, body.ts-touch .d1-card, body.ts-touch .d1-panel, body.ts-touch .ph-toast, body.ts-touch .ftf-premise, body.ts-touch .ftf-quest-talk, body.ts-touch .ftf-town-objective, body.ts-touch .ftf-altar-timer {
+  max-width: calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important; box-sizing: border-box; overflow-wrap: anywhere; }
 body.ts-touch #toast { max-width: calc(100vw - 24px); box-sizing: border-box; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 body.ts-on .ftf-cast-bar, body.ts-on .ftf-run-toggle, body.ts-touch .ftf-scene-hint { display: none !important; }
 body.ts-on .d1-hint { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
-body.ts-on .ftf-town-prompt { bottom: calc(232px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
+body.ts-on .ftf-town-prompt { bottom: calc(272px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
 body.ts-on .ftf-photo-open { top: 40% !important; }
-@media (orientation: landscape) and (max-height: 500px) { .ts-arc { transform: scale(.86); transform-origin: 100% 100%; } .ts-btn.ts-use { bottom: 196px; } }
+@media (orientation: landscape) and (max-height: 500px) { .ts-arc { transform: scale(.86); transform-origin: 100% 100%; } .ts-btn.ts-use { bottom: 168px; } }
 @media (prefers-reduced-motion: reduce) { .ts-btn.ts-use:not([hidden]) { animation: none; } .ts-base { transition: none; } }
 `;
 
@@ -136,11 +139,11 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
     const cd = el('i', 'ts-cd'); b.append(cd); b.cd = cd; arc.append(b); return b;
   };
   // the arc: 98 px from the main button's centre, from straight up to straight left
-  const P = (deg) => { const r = 100, a = deg * Math.PI / 180; return [Math.round(38 - Math.cos(a) * r - 29), Math.round(38 + Math.sin(a) * r - 29)]; };
+  const P = (deg) => { const r = 82, a = deg * Math.PI / 180; return [Math.round(38 - Math.cos(a) * r - 29), Math.round(38 + Math.sin(a) * r - 29)]; };
   const strike = mk('strike', 'ts-main', 'strike', t('town.cast.strike'));
-  const lance = mk('lance', '', 'shard_burst', t('town.cast.lance'), P(95));
+  const lance = mk('lance', '', 'shard_burst', t('town.cast.lance'), P(90));
   const snare = mk('snare', '', 'mark', t('town.cast.snare'), P(135));
-  const dash = mk('dash', '', 'dash', t('town.cast.dash'), P(175));
+  const dash = mk('dash', '', 'dash', t('town.cast.dash'), P(180));
   const use = mk('use', 'ts-use', null, t('touch.use')); use.prepend(doc.createTextNode(t('touch.use')));
   const cancel = el('div', 'ts-cancel', t('touch.cancel')); cancel.hidden = true; arc.append(cancel);
   root.append(zone, arc); doc.body.append(root);

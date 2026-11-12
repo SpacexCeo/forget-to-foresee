@@ -33,6 +33,7 @@ import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVa
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { createPlayerHud } from './scenes/player-hud.js';
+import { createStamina, STAMINA } from './game/stamina.js';
 import { installTouchCopy } from './ui/touch-copy.js';
 import { createTouchControls } from './scenes/touch-sticks.js';
 import { logKeysFromStats } from './ui/loading.js';
@@ -56,6 +57,7 @@ import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
 import { createCompanion } from './scenes/companion.js';
+import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 
 /**
@@ -227,7 +229,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+let fogCards = null, doorGlow = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
@@ -252,6 +254,7 @@ function mountTownAudio() {
   Promise.all([import('./audio/audio.js'), import('./audio/town-audio.js')]).then(([a, t]) => { if (!townAudio && inTown) townAudio = t.createTownAudio({ createAudio: a.createAudio }); }).catch((e) => console.warn('[town] audio', e));
 }
 let playerHud = null, touchSticks = null;
+const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
@@ -370,6 +373,8 @@ if (townMode.town) {
     camForward: () => { const v = camera.getWorldDirection(_camFwd); return [v.x, v.z]; },
     casting: () => townCasting, mobs: () => townMobs, flow: () => townFlow, wish: wishVector });
   // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
+  // the doors that lead inside glow warm gold (scenes/door-glow.js: exactly the shops' doors, the list the walk-in uses)
+  if (!doorGlow) doorGlow = createDoorGlow({ scene, reducedMotion: () => lookdev.reducedMotion, daylight: () => lookdev.weather.state.sun * (1 - Math.min(1, (lookdev.look && lookdev.look.moonFill) || 0)) });
   townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, mobile: mobileDevice, reducedMotion: () => lookdev.reducedMotion,
     onCounter: (id) => townFlow.openSpot(id), street: { world: () => town.world, killY: TOWN_KILL_Y } });
   fogCards = createFogCards(scene, TOWN_ROUTE); // ground fog along the street and stairs (night, early morning)
@@ -425,7 +430,7 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
     onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
@@ -446,7 +451,7 @@ let touchAttackHeld = false;
 function attackPress(down) {
   if (!townMobs) return false;
   touchAttackHeld = !!down;
-  const r = down ? townMobs.attackDown(wishVector()) : townMobs.attackUp(wishVector());
+  const r = down ? townMobs.attackDown(strikeAimInput()) : townMobs.attackUp(strikeAimInput());
   interruptMove(STRIKE_ROOT); // a strike or a charge stops her run like a cast does
   return r;
 }
@@ -476,9 +481,15 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
-      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => !!(irisAvatar && irisAvatar.combat(n)), irisEnd: () => irisAvatar && irisAvatar.endAction(),
+      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; return !!(irisAvatar && irisAvatar.combat(n)); }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
       onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
+    // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are
+    // never refused (the first fight stays fair)
+    const rawDash = townMobs.dash.bind(townMobs), rawUp = townMobs.attackUp ? townMobs.attackUp.bind(townMobs) : null, rawStrike = townMobs.strike.bind(townMobs);
+    townMobs.dash = (d) => { if (stamina.winded || stamina.value < STAMINA.dash) { stamina.spend(STAMINA.dash); return false; } const ok = rawDash(d); if (ok) stamina.spend(STAMINA.dash); return ok; };
+    townMobs.strike = (a) => { const ok = rawStrike(a); if (ok) stamina.spend(Math.min(STAMINA.strike, stamina.value)); return ok; };
+    if (rawUp) townMobs.attackUp = (a) => { const r = rawUp(a); if (r) stamina.spend(Math.min(STAMINA.strike, stamina.value)); return r; };
   }).catch((e) => console.warn('[mobs]', e));
 }
 function returnToTown() {
@@ -673,7 +684,13 @@ async function enterWorld() {
 }
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
 
-window.addEventListener('resize', () => lookdev.setSize(window.innerWidth, window.innerHeight));
+// the drawing follows the canvas's box (#app: the dynamic viewport), on every way a phone can change it
+const fitView = () => { const [w, h] = lookdev.viewSize(); lookdev.setSize(w, h); };
+window.addEventListener('resize', fitView);
+window.addEventListener('orientationchange', () => setTimeout(fitView, 250));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitView);
+if (typeof ResizeObserver === 'function' && renderer.domElement.parentElement) new ResizeObserver(fitView).observe(renderer.domElement.parentElement);
+fitView();
 
 let toastTimer = 0;
 function toast(text) { if (playerHud && inTown) { playerHud.toast(text); return; } toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
@@ -689,8 +706,33 @@ function interruptMove(seconds = 0) {
   moveTarget = s.moveTarget; moveRun = s.moveRun; rootUntil = s.rootUntil;
   if (input.stopRun) input.stopRun(); // the touch run toggle and burst switch off: after the action she moves only on new input
 }
+/**
+ * A cast answers at once (owner 12.11: "skills must fire without lag"): the clip is started CAST_WINDUP s before its
+ * release frame (its slow wind-up is skipped, blended in over the fade), so the effect and the hits come no later
+ * than CAST_WINDUP after the click instead of the clip's ~0.4 s. Returns the seconds to the release.
+ */
+const CAST_WINDUP = 0.1;
+function quickRelease(c) {
+  const k = irisAvatar && irisAvatar.irisModel && irisAvatar.irisModel.combat;
+  const skip = Math.max(0, (c.release || 0) - CAST_WINDUP);
+  if (k && skip > 0) { k.action.time = skip; k.t = skip; }
+  return Math.min(c.release || 0, CAST_WINDUP);
+}
 /** The strike (F / 3 / its slot): it stops her run like a cast does. */
-function strikeNow() { if (townMobs && townMobs.strike()) interruptMove(STRIKE_ROOT); }
+// The strike's aim (play/mobs.js strikeAim): on a desktop the mouse cursor's point on the ground under her, even when
+// she stands still; the movement keys / stick otherwise. The soft-locked creature still wins inside mobs.js.
+const mouseAt = { x: 0, y: 0, ok: false };
+if (!coarse) addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { mouseAt.x = e.clientX; mouseAt.y = e.clientY; mouseAt.ok = true; } }, { passive: true });
+const _aimRay = new THREE.Raycaster(), _aimNdc = new THREE.Vector2(), _aimPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _aimHit = new THREE.Vector3();
+function cursorGround() {
+  if (coarse || !mouseAt.ok) return null;
+  const r = renderer.domElement.getBoundingClientRect();
+  _aimNdc.set(((mouseAt.x - r.left) / r.width) * 2 - 1, -((mouseAt.y - r.top) / r.height) * 2 + 1);
+  _aimRay.setFromCamera(_aimNdc, camera); _aimPlane.constant = -player.pos[1];
+  return _aimRay.ray.intersectPlane(_aimPlane, _aimHit) ? [_aimHit.x, _aimHit.y, _aimHit.z] : null;
+}
+const strikeAimInput = () => ({ cursor: cursorGround(), move: wishVector() });
+function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -791,8 +833,8 @@ function handleInput(dt) {
     if (townMobs && townCasting.field) { // the strike and the dash (play/mobs.js ACTIONS): F / 3 and Space / 4
       // F / 3: a tap strikes (the combo), held ≥ 0.4 s and let go it is the super strike (play/mobs.js attackDown/Up);
       // the stick / keys give the aim, else she strikes where she looks, and a creature within 3 m draws the blow
-      if (input.hit('KeyF') || input.hit('Digit3')) { townMobs.attackDown(wishVector()); interruptMove(STRIKE_ROOT); }
-      else if (townMobs.charging != null && !input.down('KeyF', 'Digit3') && !touchAttackHeld) { townMobs.attackUp(wishVector()); interruptMove(STRIKE_ROOT); }
+      if (input.hit('KeyF') || input.hit('Digit3')) { townMobs.attackDown(strikeAimInput()); interruptMove(STRIKE_ROOT); }
+      else if (townMobs.charging != null && !input.down('KeyF', 'Digit3') && !touchAttackHeld) { townMobs.attackUp(strikeAimInput()); interruptMove(STRIKE_ROOT); }
       if (input.hit('Space') || input.hit('Digit4')) townMobs.dash(wishVector());
     }
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
@@ -920,6 +962,9 @@ function frame() {
   physics.steps = f.steps; physics.substeps = 0;
   let moving = false;
   player.run = input.down('ShiftLeft', 'ShiftRight') || (moveTarget ? moveRun : coarse && !!(play && play.routeActive));
+  // outside the walls, a winded Iris walks until 20 % stamina is back (game/stamina.js)
+  const fieldOn = !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside);
+  if (fieldOn && !stamina.canRun()) player.run = false;
   if (inTown) groundInTown();
   const held = inTown && !townGrounded; // no ground yet: she does not fall
   for (let i = 0; live && !held && i < f.steps; i++) {
@@ -975,6 +1020,7 @@ function frame() {
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
+    if (doorGlow) doorGlow.update(dt, player.pos, !(townShops && townShops.inside));
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
     if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
     // Phones and the low tier (jury low-tier pass, 12.11): beyond the walls the inner blocks hide behind them; the gate,
@@ -1024,7 +1070,9 @@ function frame() {
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sticks: the town, and the archipelago in normal play; ?demo=judge keeps tap-to-move and its buttons (README path)
   if (touchSticks) touchSticks.update({ active: (!!(inTown && townFlow && townFlow.phase === 'town') || (!!play && !inTown && !judge)) && !document.querySelector('dialog[open], .gm, .pl-panel:not([hidden])') });
-  if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100 });
+  stamina.update(dt, { running: !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside && player.run && movingState) });
+  document.body.classList.toggle('st-winded', stamina.winded);
+  if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100, stamina });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
 

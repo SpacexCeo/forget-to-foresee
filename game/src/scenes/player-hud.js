@@ -7,10 +7,7 @@
 import { showPremise } from '../ui/premise.js';
 
 const ICON = (d) => `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e6c47c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>')}")`;
-const I_QUEST = ICON('<path d="M7 3h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h4"/>');
 const I_SKIP = ICON('<path d="M5 5l9 7-9 7zM17 5v14"/>');
-const I_ALTAR = ICON('<path d="M5 21h14M7 21v-9a5 5 0 0 1 10 0v9"/><circle cx="12" cy="11" r="2.2"/><path d="M12 3v2"/>');
-const I_PEOPLE = ICON('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 19"/>');
 
 const CSS = `
 .ph { --ph-bg: rgba(12, 20, 17, .86); --ph-line: rgba(201, 163, 90, .55); --ph-gold: #d8b46a; --ph-ink: #f1ead8; --ph-dim: #a9b3a8;
@@ -24,7 +21,7 @@ const CSS = `
 .ph-portrait { position: relative; width: 60px; height: 60px; border-radius: 50%; }
 .ph-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--ph-gold) calc(var(--p, 0) * 1turn), rgba(216, 180, 106, .18) 0); }
 .ph-portrait img { position: absolute; inset: 4px; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; background: #18241f; border: 2px solid #0c1411; }
-.ph-swap { position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+.ph-swap { background-image: var(--ph-i-swap) !important; background-position: center !important; background-size: 70% !important; background-repeat: no-repeat !important; font-size: 0 !important; position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
 .ph-swap[hidden] { display: none; }
 @media (pointer: coarse) { .ph-swap { width: 40px; height: 40px; left: calc(2px + env(safe-area-inset-left, 0px)); top: calc(2px + env(safe-area-inset-top, 0px)); font-size: 18px; } }
 .ph-lvl { position: absolute; right: -4px; bottom: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center;
@@ -32,11 +29,29 @@ const CSS = `
 .ph-name { font: 600 16px/1.15 Georgia, "Libre Caslon Text", serif; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ph-title { color: var(--ph-gold); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; margin-top: 2px; }
 .ph-xp { color: var(--ph-dim); font-size: 11px; margin-top: 2px; }
-.ph-hp { position: relative; height: 8px; margin-top: 6px; border-radius: 4px; background: rgba(255, 255, 255, .08); overflow: hidden; }
-.ph-hp > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
-.ph-hp .ph-trail { background: #f3d7a0; transition: width .6s ease .35s; }
-.ph-hp .ph-fill { background: linear-gradient(90deg, #4fb58a, #8fd6a2); transition: width .15s ease; }
-.ph-hp.ph-low .ph-fill { background: linear-gradient(90deg, #d4574c, #e8935a); }
+.ph-hp, .ph-st { position: relative; margin-top: 6px; border-radius: 7px; border: 1.5px solid #c9a35a; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .65), 0 0 0 1px #0c1411; overflow: hidden; }
+.ph-hp { height: 12px; background: #2a1412; }
+.ph-hp > i, .ph-st > i { position: absolute; left: 0; top: 0; bottom: 0; }
+.ph-hp .ph-trail { background: linear-gradient(180deg, #fff3d6, #f2b968); transition: width .7s ease .4s; }
+.ph-hp .ph-fill { background: linear-gradient(180deg, #ff7a66 0%, #d6303a 52%, #8f1420 100%); transition: width .15s ease; }
+.ph-hp .ph-fill::after, .ph-st .ph-sfill::after { content: ""; position: absolute; left: 2px; right: 2px; top: 1px; height: 40%; border-radius: 4px; background: linear-gradient(rgba(255, 255, 255, .42), rgba(255, 255, 255, 0)); }
+.ph-hp::before, .ph-st::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(0, 0, 0, .42) calc(10% - 1px) 10%); }
+.ph-hp.ph-heal .ph-fill { animation: ph-heal .7s ease-out; }
+@keyframes ph-heal { 0% { filter: none; box-shadow: none; } 30% { filter: brightness(1.35) hue-rotate(80deg); box-shadow: 0 0 10px #8fe39b; } 100% { filter: none; } }
+.ph-hp.ph-low .ph-fill { animation: ph-pulse 1s ease-in-out infinite; }
+@keyframes ph-pulse { 50% { filter: brightness(1.45); } }
+.ph-hp::after, .ph-st::after { content: attr(data-num); position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; font: 700 9px/1 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px #000; opacity: 0; transition: opacity .15s; }
+.ph-frame:hover .ph-hp::after, .ph-frame:hover .ph-st::after, .ph-frame.ph-nums .ph-hp::after, .ph-frame.ph-nums .ph-st::after { opacity: 1; }
+.ph-st { height: 8px; margin-top: 4px; background: #0f2624; max-height: 12px; transition: opacity .4s, max-height .4s, margin .4s; }
+.ph-st .ph-sfill { background: linear-gradient(180deg, #8ff3e4 0%, #2fb9aa 55%, #16756d 100%); transition: width .12s linear; }
+.ph-st.ph-hide { opacity: 0; max-height: 0; margin-top: 0; border-width: 0; }
+.ph-st.ph-winded .ph-sfill { background: repeating-linear-gradient(135deg, #4d6b68 0 4px, #33504d 4px 8px); }
+.ph-st.ph-flash { animation: ph-flash .35s ease-out 2; }
+@keyframes ph-flash { 50% { border-color: #ff8f7a; box-shadow: 0 0 8px #ff8f7a; } }
+.ph-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 9; background: radial-gradient(ellipse at center, transparent 55%, rgba(150, 10, 20, .38) 100%); opacity: 0; transition: opacity .4s; }
+.ph-vignette.ph-on { opacity: 1; animation: ph-vig 1.6s ease-in-out infinite; }
+@keyframes ph-vig { 50% { opacity: .55; } }
+body.st-winded .ts-btn[data-skill="dash"], body.st-winded .ftf-cast-slot[data-id="dash"] { filter: grayscale(1) brightness(.7); }
 .ph-quest { position: absolute; top: calc(98px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); max-width: 290px; }
 .ph-wallet { position: absolute; top: calc(62px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); display: flex; gap: 8px; align-items: center; pointer-events: auto; }
 .ph-coin, .ph-chest { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 4px 14px 4px 6px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-radius: 20px; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); cursor: pointer; }
@@ -56,7 +71,7 @@ const CSS = `
 @keyframes ph-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 /* the town's own pieces, restyled to match while the HUD is on */
 body.ph-on .ftf-town-profile { display: none; }
-body.ph-on .ftf-town-objective { top: calc(98px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); max-width: min(290px, calc(100% - 28px));
+body.ph-on .ftf-town-objective { top: calc(114px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); max-width: min(290px, calc(100% - 28px));
   background: rgba(12, 20, 17, .86); border: 1px solid rgba(201, 163, 90, .55); border-radius: 12px; pointer-events: auto; cursor: pointer; }
 body.ph-on.ph-quest-min .ftf-town-objective { max-width: 44px; overflow: hidden; white-space: nowrap; color: transparent; }
 body.ph-on .ftf-quest-meta button { background: rgba(12, 20, 17, .86); border-color: rgba(201, 163, 90, .55); text-shadow: none; }
@@ -67,22 +82,22 @@ body.ph-on .ftf-cast-bar { background: rgba(12, 20, 17, .82); border: 1px solid 
 body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
 body.ph-on .ftf-hp { display: none; }
 /* declutter (owner, 12.11): persistent labels become icons with a tooltip; one short line where text stays */
-.ph-help { width: 40px; height: 40px; border-radius: 50%; background: var(--ph-bg); border: 1px solid var(--ph-line); color: var(--ph-gold); font: 700 17px/1 Georgia, serif; cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
+.ph-help { width: 40px; height: 40px; border-radius: 50%; background: var(--ph-bg) var(--ph-i-help) center / 24px no-repeat; font-size: 0 !important; border: 1px solid var(--ph-line); color: var(--ph-gold); font: 700 17px/1 Georgia, serif; cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
 body.ph-on .ftf-town-objective { box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(340px, calc(100% - 28px)); padding-left: 38px; }
-body.ph-on .ftf-town-objective::before { content: ""; position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; border-radius: 0; box-shadow: none; background: ${I_QUEST} center / contain no-repeat; }
+body.ph-on .ftf-town-objective::before { content: ""; position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; border-radius: 0; box-shadow: none; background: var(--ph-i-quest) center / contain no-repeat; }
 body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: min(340px, calc(100% - 28px)); color: inherit; }
 body.ph-on .ftf-quest-meta button { width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 0; background: rgba(12, 20, 17, .86) ${I_SKIP} center / 20px no-repeat; }
-body.ph-on .ftf-quest-meta { top: calc(146px + env(safe-area-inset-top, 0px)); }
+body.ph-on .ftf-quest-meta { top: calc(162px + env(safe-area-inset-top, 0px)); }
 body.ph-on .ftf-scene-tools .ftf-btn-label, body.ph-on .ftf-scene-tools .ftf-scene-hint { display: none; }
 body.ph-on .ftf-scene-tools .ftf-btn { min-width: 40px; min-height: 40px; padding: 0 9px; }
 body.ph-on .ftf-chat-chip[data-n] span { display: none; }
-body.ph-on .ftf-chat-chip[data-n]::after { content: attr(data-n); padding-left: 24px; min-height: 20px; line-height: 20px; background: ${I_PEOPLE} left center / 20px no-repeat; }
-body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 12px !important; background-image: ${I_ALTAR} !important; background-repeat: no-repeat !important; background-position: 8px center !important; background-size: 18px !important; }
+body.ph-on .ftf-chat-chip[data-n]::after { content: attr(data-n); padding-left: 24px; min-height: 20px; line-height: 20px; background: var(--ph-i-players) left center / 20px no-repeat; }
+body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 12px !important; background-image: var(--ph-i-altar) !important; background-repeat: no-repeat !important; background-position: 8px center !important; background-size: 18px !important; }
 .ph-toast { max-width: min(320px, 70vw); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @media (max-width: 700px), (max-height: 500px) {
   .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
   .ph-portrait { width: 46px; height: 46px; } .ph-portrait img { inset: 3px; width: 40px; height: 40px; }
-  .ph-name, .ph-title, .ph-xp { display: none; } .ph-frame { padding-right: 12px; } .ph-hp { width: 64px; margin-top: 0; }
+  .ph-name, .ph-title, .ph-xp { display: none; } .ph-frame { padding-right: 12px; } .ph-hp, .ph-st { width: 70px; } .ph-hp { margin-top: 0; }
   body.ph-on .ftf-town-objective { top: calc(108px + env(safe-area-inset-top, 0px)); max-width: max(140px, 34vw); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: calc(100% - 28px); color: inherit; } /* on a phone a tap unfolds the one-line tracker */
   body.ph-on .ftf-quest-meta { top: calc(152px + env(safe-area-inset-top, 0px)); }
@@ -90,7 +105,7 @@ body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 
   .ph-coin b { font-size: 15px; }
   .ph-toasts { top: calc(110px + env(safe-area-inset-top, 0px)); }
 }
-@media (prefers-reduced-motion: reduce) { .ph-delta, .ph-toast { animation: none; } .ph-hp > i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .ph-delta, .ph-toast, .ph-hp .ph-fill, .ph-st, .ph-vignette { animation: none !important; } .ph-hp > i, .ph-st > i { transition: none; } }
 `;
 
 /** Silk in hundredths → the shown text (two decimals, as the profile shows it). */
@@ -115,6 +130,11 @@ export function walletDelta(prev, next) {
  *   skin?: () => 'iris'|'elise', onProfile?: Function, onChests?: Function, reducedMotion?: () => boolean}} o
  */
 export function createPlayerHud({ doc = document, t, ledger, chests = null, base = '/', nickname = () => null, skin = () => 'iris', onProfile = () => {}, onChests = null, onSkin = () => {}, canSwap = () => false, reducedMotion = () => false }) {
+  // the HUD glyphs (art/ui build_hud_icons.py: gold glyph, dark outline): one place, CSS custom properties
+  const glyph = (n) => `url("${base}assets/ui/icons/hud/${n}_glyph_48.webp")`;
+  if (doc.documentElement && doc.documentElement.style && doc.documentElement.style.setProperty) {
+    for (const [k, n] of [['quest', 'quest'], ['altar', 'altar'], ['players', 'players'], ['help', 'help'], ['swap', 'heroine_switch']]) doc.documentElement.style.setProperty('--ph-i-' + k, glyph(n));
+  }
   if (!(doc.getElementById && doc.getElementById('ph-style'))) { const st = doc.createElement('style'); st.id = 'ph-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ph'); root.hidden = true;
@@ -129,7 +149,14 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   const info = el('div'); const name = el('div', 'ph-name'); const title = el('div', 'ph-title'); const xp = el('div', 'ph-xp');
   const hp = el('div', 'ph-hp'); hp.setAttribute('role', 'meter'); hp.setAttribute('aria-valuemin', '0'); hp.setAttribute('aria-valuemax', '100');
   const trail = el('i', 'ph-trail'), fill = el('i', 'ph-fill'); hp.append(trail, fill);
-  info.append(name, title, xp, hp); frame.append(portrait, info);
+  const st = el('div', 'ph-st ph-hide'); st.setAttribute('role', 'meter'); st.setAttribute('aria-valuemin', '0'); st.setAttribute('aria-valuemax', '100');
+  const sfill = el('i', 'ph-sfill'); st.append(sfill);
+  info.append(name, title, xp, hp, st); frame.append(portrait, info);
+  // numbers on hover (CSS) or a long press on touch
+  let pressT = 0;
+  frame.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') pressT = setTimeout(() => { frame.classList.add('ph-nums'); setTimeout(() => frame.classList.remove('ph-nums'), 2500); }, 450); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) frame.addEventListener(ev, () => clearTimeout(pressT));
+  const vignette = el('div', 'ph-vignette'); vignette.setAttribute('aria-hidden', 'true');
   frame.addEventListener('pointerdown', (e) => e.stopPropagation());
   frame.addEventListener('click', () => onProfile());
 
@@ -152,7 +179,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   chest.addEventListener('click', () => (onChests || onProfile)());
 
   const toasts = el('div', 'ph-toasts'); toasts.setAttribute('aria-live', 'polite');
-  root.append(frame, swap, wallet, toasts);
+  root.append(vignette, frame, swap, wallet, toasts);
   doc.body.append(root);
 
   // the quest tracker is the town's own objective line, moved under the frame by CSS; a tap folds it to a dot
@@ -203,14 +230,32 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   return {
     root,
     /** Per frame: visible only in the town phase; health from the combat layer. */
-    update({ visible: v, hp: h = 100, maxHp = 100 } = {}) {
+    update({ visible: v, hp: h = 100, maxHp = 100, stamina = null } = {}) {
       if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ph-on', v); if (v) renderStatic(); }
-      if (!v) return;
+      if (!v) { vignette.classList.remove('ph-on'); return; }
       const m = frameModel({ level: ledger.level, hp: h, maxHp });
       if (m.hp !== lastHp) {
-        lastHp = m.hp; const w = (m.hp * 100).toFixed(1) + '%';
-        fill.style.width = w; trail.style.width = w; hp.classList.toggle('ph-low', m.low); hp.setAttribute('aria-valuenow', String(Math.round(m.hp * 100)));
-        hp.setAttribute('aria-label', t('hud.health'));
+        const healed = lastHp >= 0 && m.hp > lastHp + 0.001;
+        const w = (m.hp * 100).toFixed(1) + '%';
+        fill.style.width = w;
+        // the trail lags on damage; on a heal it jumps with the fill and the fill shimmers green
+        if (healed) { trail.style.transition = 'none'; trail.style.width = w; void trail.offsetWidth; trail.style.transition = ''; } else trail.style.width = w; // damage: the trail follows after its CSS delay
+        if (healed && !reducedMotion()) { hp.classList.remove('ph-heal'); void hp.offsetWidth; hp.classList.add('ph-heal'); }
+        lastHp = m.hp;
+        const lowNow = m.hp < 0.25;
+        hp.classList.toggle('ph-low', lowNow); vignette.classList.toggle('ph-on', lowNow && m.hp > 0);
+        hp.setAttribute('aria-valuenow', String(Math.round(m.hp * 100))); hp.setAttribute('aria-label', t('hud.health'));
+        hp.dataset.num = `${Math.round(h)} / ${maxHp}`;
+      }
+      if (stamina) {
+        const r = stamina.ratio, sw = (r * 100).toFixed(1) + '%';
+        if (sfill.style.width !== sw) sfill.style.width = sw;
+        // a full, idle bar steps aside after three seconds; any use brings it back
+        st.classList.toggle('ph-hide', r >= 0.999 && stamina.idle > 3 && !stamina.flash);
+        st.classList.toggle('ph-winded', stamina.winded);
+        if (stamina.flash > 0.9 && !st.classList.contains('ph-flash')) { st.classList.add('ph-flash'); setTimeout(() => st.classList.remove('ph-flash'), 750); }
+        st.dataset.num = `${Math.round(stamina.value)} / 100`;
+        st.setAttribute('aria-valuenow', String(Math.round(stamina.value))); st.setAttribute('aria-label', t('hud.stamina'));
       }
     },
     /** One toast in the stack (newest at the bottom, at most three). */

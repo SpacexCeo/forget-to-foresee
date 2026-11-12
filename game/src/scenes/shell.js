@@ -20,7 +20,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
 import { CollisionWorld } from '../physics/collision.js';
 import { PropInstance, fetchGltf } from '../render/assets.js';
-import { warmModel } from '../render/warmup.js';
+import { warmModel, prewarmHidden, renderHiddenOnce } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { drawLogogram } from '../play/logogram.js';
 import { REAL, GREY, layoutFor, shouldRespawn } from './shell-layout.js';
@@ -304,7 +304,7 @@ export function createShellScene({ scene, streamer }) {
   }
   applyLayout();
 
-  let active = false, shellNo = 1;
+  let active = false, shellNo = 1, prewarmed = false, prewarmTimer = null;
   let sign = null, drawStart = 0, answer = null, answerAt = -10;
   root.visible = false;
 
@@ -393,8 +393,31 @@ export function createShellScene({ scene, streamer }) {
     },
     deactivate() { active = false; root.visible = false; ink.visible = false; stage.exit(); },
     get ready() { return interior.isReal; },
-    /** Starts the Guests' download ahead of the first visit (the hall itself is pinned in the streamer). */
-    preload() { try { loadGuests(); } catch (e) { console.warn('[play] guests preload', e); } },
+    /**
+     * Ahead of the first visit: starts the Guests' download (the hall itself is pinned in the streamer), then, once the
+     * real hall and the Guests are in, warms everything the first frame inside would otherwise build: textures to the
+     * GPU and the programs compiled with the hall's own lights on (render/warmup.js prewarmHidden). Idempotent.
+     */
+    preload() {
+      try { loadGuests(); } catch (e) { console.warn('[play] guests preload', e); }
+      if (prewarmed || prewarmTimer) return;
+      const tick = () => {
+        prewarmTimer = null;
+        if (prewarmed) return;
+        if (active) { prewarmTimer = setTimeout(tick, 1000); return; } // already inside: the next visit is warm anyway
+        if (!interior.isReal || (MODEL_FILES.guest && !guestTemplate)) { prewarmTimer = setTimeout(tick, 500); return; }
+        applyLayout(); ensureGuests(); // the mist for the real hall, the Guests' clones: built now, not on entry
+        prewarmed = true;
+        prewarmHidden(root, { wholeScene: true }).then((ok) => {
+          // then one hidden frame from the arrival point toward the glass: geometry, the transmission target, exact programs
+          if (!active) { const L = layout(), o = SHELL_ORIGIN; renderHiddenOnce(root, [o[0] + L.spawn[0], o[1] + L.spawn[1] + 1.6, o[2] + L.spawn[2]], [o[0] + L.glass[0], o[1] + L.glass[1], o[2] + L.glass[2]]); }
+          api.prewarmed = ok;
+        });
+      };
+      prewarmTimer = setTimeout(tick, 0);
+    },
+    /** True once the hall was warmed ahead of the first visit (QA). */
+    prewarmed: false,
     /**
      * Resolves true once the real hall is shown, or false after `ms` (the greybox is then the fallback). The
      * flight's cover waits on this, so the first judged view of a Shell is the hall and not a grey room.
