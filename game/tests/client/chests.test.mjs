@@ -1,25 +1,15 @@
-// Loot chests (night plan 12.11): drop rules, the bag, the opening check (leaf + sorted-pair Merkle proof against the
-// root), the client's error mapping, the cast hit test, the reveal's honest failure path, five locales.
+// Loot chests (night plan 12.11): drop rules, the bag, the adapter over net/chest.js (its shapes and failure reasons;
+// the proof checks themselves are tests/client/chest.test.mjs), the cast hit test, the reveal's honest failure path,
+// five locales.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { installDom } from '../lib/mini-dom.mjs';
 import { rollDrop, chestTier, createChestBag, CHEST_KEY } from '../../src/game/chests.js';
-import { leafString, verifyOpening, rootFromProof, createChestClient } from '../../src/net/chest-client.js';
+import { createChestClient, toOpening } from '../../src/net/chest-client.js';
 import { memoryStorage } from '../../src/ui/storage.js';
 import { PLAY_MESSAGES } from '../../src/play/i18n.js';
 
-const sha = (b) => createHash('sha256').update(b).digest('hex');
-const pair = (a, b) => { const [x, y] = a <= b ? [a, b] : [b, a]; return sha(Buffer.concat([Buffer.from(x, 'hex'), Buffer.from(y, 'hex')])); };
-/** A small deck tree and the proof for one index (the same rules as the server). */
-function deck(outcomes) {
-  const leaves = outcomes.map((o, i) => sha(leafString(i, o)));
-  const levels = [leaves];
-  while (levels.at(-1).length > 1) { const l = levels.at(-1), n = []; for (let i = 0; i < l.length; i += 2) n.push(i + 1 < l.length ? pair(l[i], l[i + 1]) : l[i]); levels.push(n); }
-  const proofFor = (idx) => { const p = []; let i = idx; for (let k = 0; k < levels.length - 1; k++) { const l = levels[k], s = i ^ 1; if (s < l.length) p.push(l[s]); i >>= 1; } return p; };
-  return { root: levels.at(-1)[0], leaves, proofFor };
-}
-const OUT = [{ kind: 'item', id: 'gear_brass', rarity: 'common' }, { kind: 'silk', amount: 25, rarity: 'uncommon' }, { kind: 'nft', id: 'loot-1', rarity: 'legendary' }, { kind: 'xp', amount: 40, rarity: 'common' }, { kind: 'title', id: 'seeker', rarity: 'rare' }];
+const OUT = [{ kind: 'item', id: 'gear_brass', rarity: 'common' }];
 
 test('drops: the first beaten monster always drops, then about one in three; the box tier is weighted', () => {
   assert.equal(rollDrop(0.99, 0), true);
@@ -40,36 +30,22 @@ test('the bag keeps sealed chests across reloads and settles each once', () => {
   assert.ok(JSON.parse(storage.getItem(CHEST_KEY)).chests.length === 1);
 });
 
-test('an opening verifies only when the leaf and the proof reach the root (and the chain root, when read)', async () => {
-  const d = deck(OUT);
-  for (let i = 0; i < OUT.length; i++) {
-    const op = { index: i, outcome: OUT[i], leaf: d.leaves[i], proof: d.proofFor(i), root: d.root };
-    assert.equal(await rootFromProof(op.leaf, op.proof), d.root);
-    const v = await verifyOpening(op);
-    assert.deepEqual(v, { leafOk: true, proofOk: true, chainOk: null, verified: true });
-    assert.equal((await verifyOpening(op, d.root)).chainOk, true);
-    assert.equal((await verifyOpening(op, 'ff' + d.root.slice(2))).verified, false, 'another chain root');
+test('the adapter maps net/chest.js answers and reasons; no answer, no outcome', async () => {
+  const fake = (r) => () => Promise.resolve({ openChest: async () => r });
+  const c = (r) => createChestClient({ load: fake(r) });
+  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_configured', 'off'], ['season_not_ready', 'off'], ['daily_cap', 'rate'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'bad']]) {
+    assert.deepEqual(await c({ ok: false, reason }).open(), { ok: false, error }, reason);
   }
-  const op = { index: 2, outcome: { ...OUT[2], kind: 'item' }, leaf: d.leaves[2], proof: d.proofFor(2), root: d.root };
-  assert.equal((await verifyOpening(op)).verified, false, 'a changed outcome breaks the leaf');
-  assert.equal((await verifyOpening({ ...op, outcome: OUT[2], proof: d.proofFor(1) })).verified, false, 'a wrong proof');
-  assert.equal((await verifyOpening(null)).verified, false);
-});
-
-test('the client: no relayer, no opening; server errors map to honest reasons', async () => {
-  assert.deepEqual(await createChestClient({}).open({ guest: 'g', chestId: 'c' }), { ok: false, error: 'off' });
-  const fake = (status, body) => async () => ({ status, ok: status >= 200 && status < 300, json: async () => body });
-  const c = (s, b) => createChestClient({ relayer: 'https://r.example/', fetch: fake(s, b) });
-  assert.equal((await c(429, {}).open({ guest: 'g', chestId: 'c' })).error, 'rate');
-  assert.equal((await c(409, {}).open({ guest: 'g', chestId: 'c' })).error, 'sold_out');
-  assert.equal((await c(503, {}).open({ guest: 'g', chestId: 'c' })).error, 'off');
-  assert.equal((await c(200, { outcome: { kind: 'gold' } }).open({ guest: 'g', chestId: 'c' })).error, 'bad');
-  assert.equal((await c(200, { index: 1, outcome: OUT[1] }).open({ guest: '', chestId: 'c' })).error, 'no_guest');
-  const ok = await c(200, { index: 1, outcome: OUT[1], leaf: 'aa', proof: [], root: 'bb' }).open({ guest: 'g', chestId: 'c' });
-  assert.equal(ok.ok, true); assert.equal(ok.opening.index, 1);
-  let sent = null;
-  await createChestClient({ relayer: 'https://r.example', fetch: async (url, init) => { sent = { url, body: JSON.parse(init.body) }; return { status: 503, ok: false, json: async () => ({}) }; } }).open({ guest: 'g.testnet', chestId: 'c1' });
-  assert.deepEqual(sent, { url: 'https://r.example/api/chest/open', body: { guest: 'g.testnet', chestId: 'c1', source: 'monster' } });
+  assert.deepEqual(await createChestClient({ load: () => Promise.reject(new Error('chunk')) }).open(), { ok: false, error: 'network' });
+  assert.equal((await c({ ok: true, outcome: { kind: 'gold' } }).open()).error, 'bad');
+  const ans = { ok: true, index: 41, position: 7, outcome: { kind: 'nft', tier: 'rare', item: 'part_gauge', amount: 1 }, nft: { token_id: 's1-41', contract: 'chests.ftf-coordinator.testnet' },
+    tx_hash: 'TX', verified: true, check: { ok: true, leaf_ok: true, proof_ok: true, random_ok: true, nft_ok: true }, proof: { leaf: 'aa', proof: [], root: 'bb', random: 'cc' } };
+  const r = await c(ans).open();
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.opening.outcome, { kind: 'nft', id: 'part_gauge', amount: 1, rarity: 'rare' });
+  assert.deepEqual(r.opening.verification, { verified: true, leafOk: true, proofOk: true, randomOk: true, chainOk: true });
+  assert.deepEqual(r.opening.nft, { contract: 'chests.ftf-coordinator.testnet', tokenId: 's1-41' });
+  assert.equal(toOpening({ ...ans, verified: false, check: { proof_ok: true, random_ok: false } }).verification.verified, false);
 });
 
 test('cast hits: the lance along its line, the snare in its circle', async () => {
@@ -92,7 +68,7 @@ test('the reveal says why when the service is off, and the chest stays sealed', 
   assert.equal(outcomeView({ kind: 'nft' }, { t }).frame, 'mythic');
   assert.equal(outcomeView({ kind: 'item', id: 'x', rarity: 'rare' }, { t, items: [{ id: 'x', nameKey: 'item.x', icon: 'x.webp' }], base: '/b/' }).icon, '/b/assets/items/x.webp');
   let settled = 0;
-  const r = openChestReveal({ doc, t, chest: { id: 'c', tier: 'common', source: 'monster' }, client: createChestClient({}), guest: 'g', items: [], onSettled: () => settled++ });
+  const r = openChestReveal({ doc, t, chest: { id: 'c', tier: 'common', source: 'monster' }, client: createChestClient({ load: () => Promise.resolve({ openChest: async () => ({ ok: false, reason: 'not_configured' }) }) }), guest: 'g', items: [], onSettled: () => settled++ });
   await new Promise((res) => setTimeout(res, 20));
   r.close();
   const out = await r.result;
@@ -102,5 +78,6 @@ test('the reveal says why when the service is off, and the chest stays sealed', 
 test('chest strings in five locales', () => {
   const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('chest.'));
   assert.ok(keys.length >= 40);
+  assert.ok(PLAY_MESSAGES.en['chest.verified.full']);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc} ${k}`);
 });

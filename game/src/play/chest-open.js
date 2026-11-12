@@ -2,9 +2,9 @@
 // chest service (net/chest-client.js); while it answers, a reel of possible rewards spins; with the answer the reel
 // slows and lands on the real outcome, the reward card rises in its rarity frame (art: assets/cards/loot), a chime and
 // a short vibration play (audio/town-audio.js cue → haptics), and the card says whether the opening is verified: the
-// leaf and the Merkle proof recomputed in this browser against the committed root. Reduced motion: no reel, the card
+// leaf and the Merkle proof recomputed in this browser against the root committed on chain, and the draw's random
+// value against the on-chain seed (net/chest.js). Reduced motion: no reel, the card
 // fades in. No service, no outcome: the chest stays sealed and the panel says why.
-import { verifyOpening } from '../net/chest-client.js';
 import { cue } from '../audio/town-audio.js';
 
 const FRAME = Object.freeze({ common: 'common', uncommon: 'common', rare: 'rare', epic: 'epic', legendary: 'legendary', nft: 'mythic' });
@@ -54,7 +54,7 @@ export function outcomeView(outcome, { t, items = [], base = '/' }) {
   if (o.kind === 'silk') return { label: t('chest.out.silk', { n: o.amount || 0 }), icon: null, glyph: '◈', rarity, frame };
   if (o.kind === 'xp') return { label: t('chest.out.xp', { n: o.amount || 0 }), icon: null, glyph: '✦', rarity, frame };
   if (o.kind === 'title') return { label: t('chest.out.title', { title: t('wheel.title.' + o.id) }), icon: null, glyph: '❦', rarity, frame };
-  if (o.kind === 'nft') return { label: t('chest.out.nft'), icon: null, glyph: '✧', rarity, frame };
+  if (o.kind === 'nft') { const it = items.find((x) => x.id === o.id); return { label: it ? t('chest.out.nftOf', { item: t(it.nameKey) }) : t('chest.out.nft'), icon: it ? base + 'assets/items/' + (it.icon128 || it.icon) : null, glyph: it ? null : '✧', rarity, frame }; }
   return { label: '?', icon: null, glyph: '?', rarity, frame };
 }
 
@@ -77,10 +77,9 @@ export function reelTiles(items, rand, n = REEL.tiles) {
  * @param {object} o.client chest client @param {string|null} o.guest the Day-1 guest account
  * @param {Promise<object[]>|object[]} [o.items] manifest items @param {string} [o.base]
  * @param {(opening: object, verification: object) => void} [o.onSettled] pays the reward and settles the chest
- * @param {() => Promise<string|null>} [o.chainRoot] the root committed on chain (null when unknown)
  * @param {string} [o.explorer] @param {() => number} [o.rand]
  */
-export function openChestReveal({ doc = document, t, chest, client, guest, items = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', onSettled = () => {}, chainRoot = async () => null, explorer = 'https://testnet.nearblocks.io', rand = Math.random }) {
+export function openChestReveal({ doc = document, t, chest, client, guest, items = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', onSettled = () => {}, explorer = 'https://testnet.nearblocks.io', rand = Math.random }) {
   if (!(doc.getElementById && doc.getElementById('co-style'))) { const st = doc.createElement('style'); st.id = 'co-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const reduced = (() => { try { return doc.documentElement.dataset.motion === 'reduce' || (doc.defaultView && doc.defaultView.matchMedia && doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } })();
@@ -129,7 +128,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
         return;
       }
       const op = r.opening;
-      const verification = await verifyOpening(op, await chainRoot().catch(() => null)).catch(() => ({ verified: false, leafOk: false, proofOk: false, chainOk: null }));
+      const verification = op.verification || { verified: false, leafOk: false, proofOk: false, randomOk: false, chainOk: null };
       // land the reel on the outcome
       const land = () => new Promise((res) => {
         if (reduced) { res(); return; }
@@ -163,8 +162,10 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       // the verification line
       const ver = el('div', 'co-ver' + (verification.verified ? '' : ' co-no'));
       ver.append(el('b', null, t(verification.verified ? 'chest.verified' : 'chest.unverified')), doc.createTextNode(' '));
-      ver.append(doc.createTextNode(t(verification.chainOk === true ? 'chest.verified.chain' : verification.proofOk ? 'chest.verified.proof' : 'chest.verified.none', { index: op.index })));
-      const det = el('p', 'co-note'); det.append(el('code', null, `root ${String(op.root).slice(0, 18)}… · leaf ${String(op.leaf).slice(0, 18)}… · proof ${(op.proof || []).length}`));
+      ver.append(doc.createTextNode(t(verification.verified ? 'chest.verified.full' : verification.proofOk ? 'chest.verified.chain' : 'chest.verified.none', { index: op.index })));
+      const pf = op.proof || {};
+      const det = el('p', 'co-note'); det.append(el('code', null, `root ${String(pf.root || '').slice(0, 16)}… · leaf ${String(pf.leaf || '').slice(0, 16)}… · proof ${(pf.proof || []).length} · random ${String(pf.random || '').slice(0, 12)}…`));
+      det.append(el('br'), el('code', null, `node tools/verify-chest/verify.mjs --index ${op.index} --attest`));
       const links = el('p', 'co-note');
       if (op.tx) { const a = el('a', null, t('chest.viewTx')); a.href = `${explorer}/txns/${op.tx}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; links.append(a); }
       if (op.nft && op.nft.contract && op.nft.tokenId) { const a = el('a', null, t('chest.viewNft')); a.href = `${explorer}/nft-token/${op.nft.contract}/${op.nft.tokenId}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; if (links.childNodes.length) links.append(doc.createTextNode(' · ')); links.append(a); }

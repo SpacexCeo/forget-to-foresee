@@ -1191,6 +1191,8 @@ export default {
   'profile.trades.logEmptySub': "Closed trades will appear here.",
   'profile.trades.progress': "Round {done} of {total}",
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
+  'chest.out.nftOf': "Loot NFT · {item}",
+  'chest.verified.full': "Slot #{index}: the leaf and its Merkle proof reach the deck root on NEAR testnet, and the draw follows the on-chain seed.",
   'chest.title': "Open a chest",
   'chest.opening.common': "Opening a weathered chest",
   'chest.opening.rare': "Opening a tidewood chest",
@@ -1211,8 +1213,7 @@ export default {
   'chest.rar.nft': "NFT · 1 of 1,000",
   'chest.verified': "Verified ✓",
   'chest.unverified': "Not verified",
-  'chest.verified.chain': "Slot #{index}: the leaf and its Merkle proof match the deck root committed on NEAR testnet.",
-  'chest.verified.proof': "Slot #{index}: the leaf and its Merkle proof match the deck root (on-chain root not read).",
+  'chest.verified.chain': "Slot #{index}: the leaf and its Merkle proof reach the deck root on NEAR testnet; the draw's seed check did not pass.",
   'chest.verified.none': "The leaf or the proof does not match the deck root.",
   'chest.viewTx': "View the transaction",
   'chest.viewNft': "View the NFT",

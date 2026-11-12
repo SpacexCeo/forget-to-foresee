@@ -1189,6 +1189,8 @@ export default {
   'profile.trades.logEmptySub': "Закрытые сделки появятся здесь.",
   'profile.trades.progress': "Раунд {done} из {total}",
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
+  'chest.out.nftOf': "NFT из сундука · {item}",
+  'chest.verified.full': "Слот №{index}: лист и доказательство Меркла ведут к корню колоды в NEAR testnet, а жребий следует из семени в сети.",
   'chest.title': "Открыть сундук",
   'chest.opening.common': "Открываем потёртый сундук",
   'chest.opening.rare': "Открываем сундук из приливного дерева",
@@ -1209,8 +1211,7 @@ export default {
   'chest.rar.nft': "NFT · 1 из 1 000",
   'chest.verified': "Проверено ✓",
   'chest.unverified': "Не проверено",
-  'chest.verified.chain': "Слот №{index}: лист и его доказательство Меркла совпадают с корнем колоды, записанным в NEAR testnet.",
-  'chest.verified.proof': "Слот №{index}: лист и его доказательство Меркла совпадают с корнем колоды (корень в сети не прочитан).",
+  'chest.verified.chain': "Слот №{index}: лист и доказательство Меркла ведут к корню колоды в NEAR testnet; проверка семени жребия не прошла.",
   'chest.verified.none': "Лист или доказательство не совпадают с корнем колоды.",
   'chest.viewTx': "Открыть транзакцию",
   'chest.viewNft': "Открыть NFT",

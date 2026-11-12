@@ -13,10 +13,8 @@ import { holderSection } from './holder-panel.js';
 import { renderProfileView } from './profile-view.js';
 import { createChestBag } from '../game/chests.js';
 import { createChestClient } from '../net/chest-client.js';
-import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { cue } from '../audio/town-audio.js';
 
-const relayerUrl = () => { try { const e = import.meta.env && import.meta.env.VITE_FTF_RELAYER_URL; if (e) return e; } catch { /* none */ } return DAY1_DEPLOYMENT && DAY1_DEPLOYMENT.relayer; };
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
 const SEG_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#9775fa', '#da77f2', '#f783ac', '#ff922b', '#20c997'];
@@ -115,7 +113,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const items = manifest || loadManifest(base);
   const chain = onChain || readOnChain({ owner });
   const bag = chests || createChestBag({ storage });
-  const chestApi = chestClient || createChestClient({ relayer: relayerUrl() });
+  const chestApi = chestClient || createChestClient({ storage });
 
   const root = el('div', 'gm'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('menu.title'));
   const panel = el('div', 'gm-panel'); root.append(panel);
@@ -331,7 +329,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         if (o.kind === 'item' && o.id) { inv.add(o.id, 1, 'chest'); fresh.add(o.id); }
         if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
         if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
-        bag.settle(chest.id, { ...op, verified: !!v.verified, proofOk: !!v.proofOk, chainOk: v.chainOk });
+        bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!v.verified });
       } });
       r.result.then(() => { if (current === 'inventory') show('inventory'); });
     }).catch((e) => console.warn('[chest]', e));

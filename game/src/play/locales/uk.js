@@ -1189,6 +1189,8 @@ export default {
   'profile.trades.logEmptySub': "Закриті угоди з’являться тут.",
   'profile.trades.progress': "Раунд {done} з {total}",
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
+  'chest.out.nftOf': "NFT зі скрині · {item}",
+  'chest.verified.full': "Слот №{index}: лист і доказ Меркла ведуть до кореня колоди в NEAR testnet, а жереб випливає із зерна в мережі.",
   'chest.title': "Відкрити скриню",
   'chest.opening.common': "Відкриваємо потерту скриню",
   'chest.opening.rare': "Відкриваємо скриню з припливного дерева",
@@ -1209,8 +1211,7 @@ export default {
   'chest.rar.nft': "NFT · 1 з 1 000",
   'chest.verified': "Перевірено ✓",
   'chest.unverified': "Не перевірено",
-  'chest.verified.chain': "Слот №{index}: лист і його доказ Меркла збігаються з коренем колоди, записаним у NEAR testnet.",
-  'chest.verified.proof': "Слот №{index}: лист і його доказ Меркла збігаються з коренем колоди (корінь у мережі не прочитано).",
+  'chest.verified.chain': "Слот №{index}: лист і доказ Меркла ведуть до кореня колоди в NEAR testnet; перевірка зерна жереба не пройшла.",
   'chest.verified.none': "Лист або доказ не збігаються з коренем колоди.",
   'chest.viewTx': "Переглянути транзакцію",
   'chest.viewNft': "Переглянути NFT",

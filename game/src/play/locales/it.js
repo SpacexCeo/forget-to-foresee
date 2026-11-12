@@ -1190,6 +1190,8 @@ export default {
   'profile.trades.logEmptySub': "Le operazioni chiuse appariranno qui.",
   'profile.trades.progress': "Round {done} di {total}",
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
+  'chest.out.nftOf': "NFT dallo scrigno · {item}",
+  'chest.verified.full': "Posto n. {index}: la foglia e la prova di Merkle portano alla radice del mazzo su NEAR testnet, e l’estrazione segue il seme on-chain.",
   'chest.title': "Apri uno scrigno",
   'chest.opening.common': "Apertura di uno scrigno consunto",
   'chest.opening.rare': "Apertura di uno scrigno di legno di marea",
@@ -1210,8 +1212,7 @@ export default {
   'chest.rar.nft': "NFT · 1 su 1.000",
   'chest.verified': "Verificato ✓",
   'chest.unverified': "Non verificato",
-  'chest.verified.chain': "Posto n. {index}: la foglia e la sua prova di Merkle corrispondono alla radice del mazzo registrata su NEAR testnet.",
-  'chest.verified.proof': "Posto n. {index}: la foglia e la sua prova di Merkle corrispondono alla radice del mazzo (radice on-chain non letta).",
+  'chest.verified.chain': "Posto n. {index}: la foglia e la prova di Merkle portano alla radice del mazzo su NEAR testnet; il controllo del seme dell’estrazione non è riuscito.",
   'chest.verified.none': "La foglia o la prova non corrispondono alla radice del mazzo.",
   'chest.viewTx': "Vedi la transazione",
   'chest.viewNft': "Vedi l’NFT",

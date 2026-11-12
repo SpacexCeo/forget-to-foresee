@@ -1189,6 +1189,8 @@ export default {
   'profile.trades.logEmptySub': "已完成的交易将显示在这里。",
   'profile.trades.progress': "第 {done} / {total} 回合",
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
+  'chest.out.nftOf': "宝箱 NFT · {item}",
+  'chest.verified.full': "槽位 #{index}：叶子及其默克尔证明可推导出 NEAR 测试网上的卡组根，抽取结果符合链上种子。",
   'chest.title': "打开宝箱",
   'chest.opening.common': "正在打开风化宝箱",
   'chest.opening.rare': "正在打开潮木宝箱",
@@ -1209,8 +1211,7 @@ export default {
   'chest.rar.nft': "NFT · 1,000 份之一",
   'chest.verified': "已验证 ✓",
   'chest.unverified': "未验证",
-  'chest.verified.chain': "槽位 #{index}：叶子及其默克尔证明与写入 NEAR 测试网的卡组根一致。",
-  'chest.verified.proof': "槽位 #{index}：叶子及其默克尔证明与卡组根一致（未读取链上根）。",
+  'chest.verified.chain': "槽位 #{index}：叶子及其默克尔证明可推导出 NEAR 测试网上的卡组根；抽取种子校验未通过。",
   'chest.verified.none': "叶子或证明与卡组根不一致。",
   'chest.viewTx': "查看交易",
   'chest.viewNft': "查看 NFT",
