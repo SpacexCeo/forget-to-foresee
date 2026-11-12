@@ -1252,4 +1252,6 @@ export default {
   'menu.filter.part': "Parts",
   'menu.detail.shard': "A memory shard: {n} in your bag. Kept in this browser.",
   'menu.detail.part': "A mechanical part: {n} in your bag. Kept in this browser.",
+  'hub.busy.trial': "Ending the trial… one moment",
+  'hub.busy.flight': "Flying… one moment",
 };

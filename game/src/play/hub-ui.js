@@ -186,8 +186,19 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
   const arb = panelArbiterFor(root); // panels.js: the dock and the reading card give way to any open modal panel
   const host = el(doc, 'div', { class: 'wh-root hub-host' });
   const fade = el(doc, 'div', { class: 'hub-fade', 'aria-hidden': 'true' }, el(doc, 'span'));
+  // A press swallowed while a trial ends or a flight runs gets a short answer, so a slow machine never looks frozen
+  const busy = el(doc, 'div', { class: 'hub-busy', role: 'status', 'aria-live': 'polite' });
+  busy.style.cssText = 'position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;padding:8px 14px 8px 34px;border-radius:12px;background:rgba(10,14,16,.86);color:#f3ead8;font:600 14px/1.3 system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .2s ease';
+  const spin = el(doc, 'span', { 'aria-hidden': 'true' }); spin.style.cssText = 'position:absolute;left:12px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;border:2px solid rgba(233,180,76,.35);border-top-color:#e9b44c;animation:hub-spin .8s linear infinite';
+  const busyText = el(doc, 'span'); busy.append(spin, busyText);
+  if (!doc.getElementById('hub-spin-style')) { const st = doc.createElement('style'); st.id = 'hub-spin-style'; st.textContent = '@keyframes hub-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion: reduce){.hub-busy span{animation:none!important}}'; doc.head.append(st); }
+  let busyTimer = 0;
+  function busyNote(key) {
+    busyText.textContent = t(key); busy.style.opacity = '1';
+    clearTimeout(busyTimer); busyTimer = setTimeout(() => { busy.style.opacity = '0'; }, 1600);
+  }
   root.append(host);
-  doc.body.append(fade);
+  doc.body.append(fade, busy);
   let notice = null, noticeTimer = 0, signKey = '';
   // the glossary keeps its open state and the focused word across re-renders; collapsed by default on phones
   let glossOpen = null, glossFocus = 0;
@@ -478,7 +489,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       const obs = hub.obs;
       if (!obs) return false;
       // during a flight or a running operation F and T are swallowed, not queued (QA-002); T still stops automatic trials
-      if ((hub.transit || hub.busy) && (code === 'KeyF' || code === 'KeyT')) return true;
+      if ((hub.transit || hub.busy) && (code === 'KeyF' || code === 'KeyT')) { busyNote(code === 'KeyT' ? 'hub.busy.trial' : 'hub.busy.flight'); return true; }
       if (hub.card) {
         const m = /^Digit([1-3])$/.exec(code);
         if (m) { const b = host.querySelectorAll('.hub-card [data-choice]')[Number(m[1]) - 1]; if (b && !b.disabled) b.click(); return true; }
@@ -498,7 +509,7 @@ export function createHubUi({ root, ctx, hub, onFly, onRejected = () => {} }) {
       }
       return false;
     },
-    destroy() { offs.forEach((f) => f()); arb.release('hub-card'); doc.body.classList.remove('hub-dock-on', 'hub-in-shell'); host.remove(); fade.remove(); },
+    destroy() { offs.forEach((f) => f()); arb.release('hub-card'); doc.body.classList.remove('hub-dock-on', 'hub-in-shell'); host.remove(); fade.remove(); busy.remove(); clearTimeout(busyTimer); },
   };
 }
 

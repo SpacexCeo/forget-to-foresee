@@ -1250,4 +1250,6 @@ export default {
   'menu.filter.part': "零件",
   'menu.detail.shard': "一枚记忆碎片：背包中有 {n} 个。保存在此浏览器中。",
   'menu.detail.part': "一个机械零件：背包中有 {n} 个。保存在此浏览器中。",
+  'hub.busy.trial': "试炼正在结束……请稍候",
+  'hub.busy.flight': "飞行中……请稍候",
 };

@@ -174,6 +174,10 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     if (started && frame % 6 === 0) pump(_local);
     if (camera) { _m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _frustum.setFromProjectionMatrix(_m); }
     const isPhone = phone();
+    // Draw distance (jury low-tier pass, 12.11): 60 m on phones; with Iris beyond the walls the townsfolk sit behind
+    // them, so phones draw none and desktops only the nearest
+    const outside = _local[2] > 33.5 || Math.abs(_local[0]) > 53;
+    const reach = outside ? (isPhone ? 0 : 60) : (isPhone ? 60 : 170);
     for (let i = 0; i < people.length; i++) {
       const p = people[i], plan = p.plan;
       plan.step(dt, ctx);
@@ -199,7 +203,7 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
       p.root.rotation.y = plan.yaw;
       _sphere.center.set(p.root.position.x, p.root.position.y + 0.9, p.root.position.z); _sphere.radius = 1.4;
       const onScreen = !camera || _frustum.intersectsSphere(_sphere);
-      p.root.visible = onScreen && dist < (isPhone ? 110 : 170);
+      p.root.visible = onScreen && dist < reach;
       const stride = animStride(dist, { phone: isPhone, visible: p.root.visible });
       p.acc += dt;
       if (!stride || (frame + i) % stride !== 0) { if (!stride) p.acc = 0; continue; }
