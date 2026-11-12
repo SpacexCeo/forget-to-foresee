@@ -59,3 +59,11 @@ while Iris is outside the walls.
 Hot spots filed with the lead: townsfolk at 16k triangles each on the low tier and still drawn from outside the walls
 (distance cull or a lower LOD); +59 draw calls and +112k triangles when stepping outside (town blocks behind Iris stay
 in the frame); Iris at 23 meshes / 34k triangles on a phone.
+
+## After PR #66 (mobs, chests from kills, dragon client), 12.11 ~04:50 Kyiv
+
+- Full README judge path on current main (built locally, same code as the deploy): trial 1 silk 63 → pad E 53 → trial 2
+  silk 56 → trial 4 silk 72 → forget the Call → trial 6 toast "Minted on NEAR testnet", card `793f6c05e89839f2-7`. No
+  page errors, no 4xx. Every number in the README matched.
+- Live `?demo=judge&mode=walk`: 11 monsters loaded, all outside the walls; the nearest is 32 m from Iris at the spawn,
+  and the judge route goes up to the altar, away from the lower gate. Chest bag present. No console errors, no 4xx.
