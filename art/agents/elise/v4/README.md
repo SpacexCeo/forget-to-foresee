@@ -1,5 +1,7 @@
 # Elise v4 — the owner's generated model on her existing skeleton
 
+Status: **in the game** (`game/public/assets/models/agent_elise.glb`, `agent_elise_m.glb` are copies of `out/`). Reverting the swap commit restores v3 (`../v3/out/`).
+
 Two source files came from the owner. The second one is the base of v4.
 
 1. First file (one fused shell, 1.95 M triangles): `s08_clean.py` (clean, decimate, bake) and `s10_rig.py` (parts by
