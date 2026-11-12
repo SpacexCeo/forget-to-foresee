@@ -912,6 +912,8 @@ export default {
   "hire.result.net": "Разом",
   "hire.result.seed": "Сид (той самий сид — той самий підсумок)",
   "profile.button": "Профіль · рів. {level}",
+  "xp.gain": "+{n} досвіду",
+  "xp.levelUp": "Рівень {level}!",
   "profile.open": "Профіль та інвентар",
   "profile.title": "Профіль",
   "profile.heading": "Рівень {level} · {title}",

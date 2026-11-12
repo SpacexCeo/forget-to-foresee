@@ -912,6 +912,8 @@ export default {
   "hire.result.net": "Итого",
   "hire.result.seed": "Сид (тот же сид — тот же итог)",
   "profile.button": "Профиль · ур. {level}",
+  "xp.gain": "+{n} опыта",
+  "xp.levelUp": "Уровень {level}!",
   "profile.open": "Профиль и инвентарь",
   "profile.title": "Профиль",
   "profile.heading": "Уровень {level} · {title}",

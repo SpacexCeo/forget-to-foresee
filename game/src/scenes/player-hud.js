@@ -67,6 +67,8 @@ body.st-winded .ts-btn[data-skill="dash"], body.st-winded .ftf-cast-slot[data-id
 @keyframes ph-float { from { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(26px); } }
 .ph-toasts { position: absolute; top: calc(112px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 6px; align-items: flex-end; max-width: min(340px, 70vw); }
 .ph-toast { padding: 8px 14px; background: var(--ph-bg); border: 1px solid var(--ph-line); border-left: 3px solid var(--ph-gold); border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); animation: ph-in .25s ease-out; }
+.ph-lvl.ph-up { animation: ph-lvlup .9s ease-out; }
+@keyframes ph-lvlup { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 200, 96, .9); } 35% { transform: scale(1.45); box-shadow: 0 0 0 8px rgba(255, 200, 96, .35); } 100% { transform: scale(1); box-shadow: 0 0 0 14px rgba(255, 200, 96, 0); } }
 .ph-toast.ph-out { opacity: 0; transform: translateX(12px); transition: opacity .3s, transform .3s; }
 @keyframes ph-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 /* the town's own pieces, restyled to match while the HUD is on */
@@ -105,7 +107,7 @@ body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 
   .ph-coin b { font-size: 15px; }
   .ph-toasts { top: calc(110px + env(safe-area-inset-top, 0px)); }
 }
-@media (prefers-reduced-motion: reduce) { .ph-delta, .ph-toast, .ph-hp .ph-fill, .ph-st, .ph-vignette { animation: none !important; } .ph-hp > i, .ph-st > i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .ph-lvl.ph-up, .ph-delta, .ph-toast, .ph-hp .ph-fill, .ph-st, .ph-vignette { animation: none !important; } .ph-hp > i, .ph-st > i { transition: none; } }
 `;
 
 /** Silk in hundredths → the shown text (two decimals, as the profile shows it). */
@@ -186,10 +188,13 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   const objective = () => doc.querySelector('.ftf-town-objective');
   if (doc.addEventListener) doc.addEventListener('click', (e) => { const o = objective(); if (o && root.hidden === false && (e.target === o)) doc.body.classList.toggle('ph-quest-min'); }, true);
 
-  let shown = null, anim = null, lastSkin = '', lastName = null, visible = false;
+  let shown = null, anim = null, lastSkin = '', lastName = null, visible = false, lastLevel = 0;
   function renderStatic() {
     const lv = frameModel({ level: ledger.level });
-    ring.style.setProperty('--p', String(lv.progress)); lvl.textContent = String(lv.level);
+    ring.style.setProperty('--p', String(lv.progress));
+    // a level gained since the last render: the badge pulses once (the toast and the burst are play/kill-xp.js)
+    if (lastLevel && lv.level > lastLevel && !reducedMotion()) { lvl.classList.remove('ph-up'); void lvl.offsetWidth; lvl.classList.add('ph-up'); }
+    lastLevel = lv.level; lvl.textContent = String(lv.level);
     title.textContent = t('profile.title.' + lv.title); xp.textContent = lv.xp;
     const n = nickname() || t('menu.traveller'); if (n !== lastName) { name.textContent = n; lastName = n; }
     const s = skin(); if (s !== lastSkin) { img.src = base + 'assets/cards/' + s + '.webp'; lastSkin = s; }
