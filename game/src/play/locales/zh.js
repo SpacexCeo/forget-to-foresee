@@ -1157,6 +1157,7 @@ export default {
   'photo.save': "保存照片",
   'photo.saved': "已保存 ✓",
   'photo.exit': "退出",
+  'photo.hintTouch': "拖动环绕 · 双指缩放",
   'photo.hint': "拖动或方向键环绕 · 滚轮缩放 · P 或 Esc 退出",
   // ---- narrator subtitles (play/narrator.js) ----
   'narr.who': "旁白",

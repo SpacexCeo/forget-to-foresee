@@ -1159,6 +1159,7 @@ export default {
   'photo.save': "Save photo",
   'photo.saved': "Saved ✓",
   'photo.exit': "Exit",
+  'photo.hintTouch': "Drag to orbit · pinch to zoom",
   'photo.hint': "Drag or arrows to orbit · wheel to zoom · P or Esc to leave",
   // ---- narrator subtitles (play/narrator.js) ----
   'narr.who': "Narrator",

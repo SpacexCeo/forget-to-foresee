@@ -265,7 +265,7 @@ if (townMode.town) {
     const badgeChests = () => { const b = document.querySelector('.ftf-town-profile'); if (!b) return; const n = chestBag.sealed().length; if (n) b.dataset.chests = String(n); else delete b.dataset.chests; }; // generated content: read with the label
     chestBag.subscribe(badgeChests); badgeChests();
   }
-  if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
+  if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, coarse: mobileDevice, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
     const people = [];
     townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,

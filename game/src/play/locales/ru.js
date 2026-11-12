@@ -1157,6 +1157,7 @@ export default {
   'photo.save': "Сохранить фото",
   'photo.saved': "Сохранено ✓",
   'photo.exit': "Выйти",
+  'photo.hintTouch': "Тяните — облёт · щипок — зум",
   'photo.hint': "Тяните или стрелки — облёт · колесо — зум · P или Esc — выход",
   // ---- narrator subtitles (play/narrator.js) ----
   'narr.who': "Рассказчик",

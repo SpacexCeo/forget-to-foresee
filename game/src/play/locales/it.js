@@ -1158,6 +1158,7 @@ export default {
   'photo.save': "Salva foto",
   'photo.saved': "Salvata ✓",
   'photo.exit': "Esci",
+  'photo.hintTouch': "Trascina per orbitare · pizzica per lo zoom",
   'photo.hint': "Trascina o frecce per orbitare · rotella per lo zoom · P o Esc per uscire",
   // ---- narrator subtitles (play/narrator.js) ----
   'narr.who': "Narratore",

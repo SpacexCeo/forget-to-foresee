@@ -1157,6 +1157,7 @@ export default {
   'photo.save': "Зберегти фото",
   'photo.saved': "Збережено ✓",
   'photo.exit': "Вийти",
+  'photo.hintTouch': "Тягніть — обліт · щипок — зум",
   'photo.hint': "Тягніть або стрілки — обліт · колесо — зум · P або Esc — вихід",
   // ---- narrator subtitles (play/narrator.js) ----
   'narr.who': "Оповідач",
