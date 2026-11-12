@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
-import { cycleLook, KEYS as CYCLE_KEYS } from './render/daycycle.js';
+import { cycleLook, KEYS as CYCLE_KEYS, startPhase, weatherTimeline, WEATHER_FADE } from './render/daycycle.js';
 import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
@@ -801,8 +801,10 @@ let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progre
 // The town's day cycle (render/daycycle.js, owner 11.11): early morning → evening → night with mist and moon → early
 // morning, continuous every frame (the sky statistics of the five hours are read once, outside the frame loop, then
 // blended). Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
+// A session starts where the player's clock falls on the loop (?cycle=<s> pins it for QA) and gets its own weather
+// timeline (?wseed=<n> pins that).
 const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
-  ? { t: Number(params.get('cycle')) || 0, weather: null, ready: false } : null;
+  ? (() => { const t = params.has('cycle') ? Number(params.get('cycle')) || 0 : startPhase(); return { t, t0: t, weather: null, ready: false, timeline: weatherTimeline(params.has('wseed') ? Number(params.get('wseed')) | 0 : (Math.random() * 2 ** 31) | 0) }; })() : null;
 function prepareDayCycle() {
   if (!dayCycle || dayCycle.ready || lookdev.location !== 'town') return;
   lookdev.prepareCycle('town', CYCLE_KEYS.map((k) => k[0]));
@@ -813,10 +815,10 @@ function tickDayCycle(dt) {
   if (lookdev.location !== 'town') return;
   if (!dayCycle.ready) { setTimeout(prepareDayCycle, 0); return; }
   dayCycle.t += dt;
-  const c = cycleLook(dayCycle.t, (h) => lookFor('town', h));
+  const c = cycleLook(dayCycle.t, (h) => lookFor('town', h), dayCycle.timeline, dayCycle.t0);
   const S = lookdev.cycleStats;
   lookdev.applyLookLive(c.look, mixStats(S[c.a], S[c.b], c.k), clock.elapsedTime);
-  if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
+  if (c.weather !== dayCycle.weather) { lookdev.setWeather(c.weather, { seconds: dayCycle.weather == null ? 0.01 : WEATHER_FADE }); dayCycle.weather = c.weather; }
 }
 
 function frame() {
@@ -873,6 +875,7 @@ function frame() {
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   if (town && town.active) {
+    lookdev.setGround(player.pos[0], player.pos[1], player.pos[2]); // rain splashes fall around her
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
@@ -943,7 +946,7 @@ function frame() {
 
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
-  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier,
+  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
   get iris() { return irisAvatar; }, irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },

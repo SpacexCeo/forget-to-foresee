@@ -1,8 +1,12 @@
 // Weather and wind for both locations (docs/atmosphere.md).
 //
 //   clear      the calm default of the jury path
+//   haze       a pale veil: softer sun, the distance fades sooner
+//   fog        thick low cloud: the far town goes, damp ground, no shadows to speak of
 //   overcast   a grey lid: weak sun, soft shadows, brighter flat ambient, thicker cooler haze
-//   rain       light rain: streaks around the camera, wet darker ground with soft sky reflections, puddle sheen
+//   drizzle    light rain: thin streaks, the ground darkens and starts to shine
+//   rain       rain: dense streaks, splashes on the cobbles, wet sheen and puddle reflections, darker sky, misty distance
+//   storm      heavy rain and wind with distant flashes (lightning far off, no bolt geometry)
 //
 // Weather never touches a rule or a collider; it changes light, air and surfaces only. `?weather=` picks one at
 // start, `lookdev.setWeather(name)` eases to another over a few seconds (at once under reduced motion).
@@ -30,13 +34,19 @@ export const WIND_DIR = Object.freeze([0.83, -0.56]);
  *   wind       0..1 strength for everything that sways    exposure EV offset
  */
 export const WEATHER = Object.freeze({
-  clear: Object.freeze({ label: 'Clear', sun: 1, shadow: 1, ambient: 1, cover: null, overcast: 0, fog: 1, wet: 0, rain: 0, wind: 0.35, exposure: 0 }),
-  overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.6, cover: 0.97, overcast: 0.85, fog: 1.12, wet: 0, rain: 0, wind: 0.55, exposure: 0.05 }),
-  rain: Object.freeze({ label: 'Light rain', sun: 0.14, shadow: 0.45, ambient: 1.25, cover: 1, overcast: 1, fog: 1.35, wet: 1, rain: 1, wind: 0.8, exposure: 0.0 }),
+  clear: Object.freeze({ label: 'Clear', sun: 1, shadow: 1, ambient: 1, cover: null, overcast: 0, fog: 1, wet: 0, rain: 0, wind: 0.35, exposure: 0, flash: 0 }),
+  haze: Object.freeze({ label: 'Haze', sun: 0.72, shadow: 0.8, ambient: 1.15, cover: null, overcast: 0.25, fog: 1.7, wet: 0, rain: 0, wind: 0.3, exposure: 0.03, flash: 0 }),
+  fog: Object.freeze({ label: 'Fog', sun: 0.32, shadow: 0.5, ambient: 1.35, cover: 0.85, overcast: 0.6, fog: 3.4, wet: 0.25, rain: 0, wind: 0.15, exposure: 0.05, flash: 0 }),
+  overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.6, cover: 0.97, overcast: 0.85, fog: 1.12, wet: 0, rain: 0, wind: 0.55, exposure: 0.05, flash: 0 }),
+  drizzle: Object.freeze({ label: 'Light rain', sun: 0.18, shadow: 0.5, ambient: 1.3, cover: 0.97, overcast: 0.92, fog: 1.3, wet: 0.75, rain: 0.45, wind: 0.6, exposure: 0.02, flash: 0 }),
+  rain: Object.freeze({ label: 'Rain', sun: 0.12, shadow: 0.42, ambient: 1.2, cover: 1, overcast: 1, fog: 1.6, wet: 1, rain: 1, wind: 0.8, exposure: -0.08, flash: 0 }),
+  storm: Object.freeze({ label: 'Storm', sun: 0.07, shadow: 0.35, ambient: 1.05, cover: 1, overcast: 1, fog: 1.85, wet: 1, rain: 1.5, wind: 1, exposure: -0.18, flash: 1 }),
 });
 export const WEATHER_NAMES = Object.freeze(Object.keys(WEATHER));
 export const DEFAULT_WEATHER = 'clear';
-const NUMERIC = ['sun', 'shadow', 'ambient', 'overcast', 'fog', 'wet', 'rain', 'wind', 'exposure'];
+const NUMERIC = ['sun', 'shadow', 'ambient', 'overcast', 'fog', 'wet', 'rain', 'wind', 'exposure', 'flash'];
+/** Weathers that may not appear on the readable jury path (?demo=judge). */
+export const HEAVY_WEATHER = Object.freeze(['rain', 'storm']);
 
 /** A weather state between two presets (k 0..1). `cover` null means "the hour's own cloud cover". */
 export function mixWeather(a, b, k) {
@@ -338,7 +348,7 @@ export class Rain {
         uniform vec3 uColor; varying float vAlpha; varying vec2 vQ;
         void main() {
           float a = vAlpha * ( 1.0 - abs( vQ.x ) * 2.0 ) * smoothstep( 0.0, 0.25, vQ.y ) * ( 1.0 - smoothstep( 0.6, 1.0, vQ.y ) );
-          gl_FragColor = vec4( uColor * a * 0.42, 0.0 );
+          gl_FragColor = vec4( uColor * a * 0.55, 0.0 );
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
@@ -355,12 +365,85 @@ export class Rain {
 
   /** @param {number} amount 0..1 @param {boolean} still reduced motion */
   setAmount(amount, still = false) {
-    const n = Math.round(this.max * Math.min(1, Math.max(0, amount)) * (still ? 0.35 : 1));
+    const n = Math.round(Math.min(this.capacity, this.max * Math.min(1.5, Math.max(0, amount))) * (still ? 0.35 : 1));
     this.mesh.geometry.instanceCount = n;
     this.mesh.visible = n > 0;
-    this.material.uniforms.uAmount.value = Math.min(1, amount * 1.2);
+    this.material.uniforms.uAmount.value = Math.min(1.4, amount * 1.2);
     this.material.uniforms.uStill.value = still ? 1 : 0;
   }
+
+  setColor(color) { this.material.uniforms.uColor.value.copy(color); }
+
+  update(dt) { this.time += dt; this.material.uniforms.uTime.value = this.time; }
+
+  dispose() { this.mesh.geometry.dispose(); this.material.dispose(); }
+}
+
+/**
+ * Rain splashes on the ground around the camera: flat rings that open and fade, each reborn at a new spot every
+ * cycle (a hash of its cycle number), at the walking height the scene gives (`setGround`). One draw call, additive,
+ * depth-tested so walls and steps hide the ones behind them. None under reduced motion.
+ */
+export class Splashes {
+  /** @param {{capacity?: number, radius?: number}} o */
+  constructor({ capacity = 900, radius = 9 } = {}) {
+    this.capacity = capacity;
+    const quad = new THREE.InstancedBufferGeometry();
+    quad.setAttribute('position', new THREE.Float32BufferAttribute([-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1], 3));
+    quad.setIndex([0, 2, 1, 0, 3, 2]);
+    const seed = new Float32Array(capacity * 2), rnd = mulberry(11);
+    for (let i = 0; i < capacity; i++) { seed[i * 2] = rnd(); seed[i * 2 + 1] = 0.7 + rnd() * 0.6; }
+    quad.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 2));
+    quad.instanceCount = 0;
+    quad.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    this.material = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uAmount: { value: 0 }, uCenter: { value: new THREE.Vector3() }, uRadius: { value: radius }, uColor: { value: new THREE.Color(0.8, 0.85, 0.9) } },
+      vertexShader: /* glsl */`
+        uniform float uTime, uAmount, uRadius; uniform vec3 uCenter;
+        attribute vec2 aSeed;
+        varying vec2 vQ; varying float vK, vA;
+        float h1( float n ) { return fract( sin( n ) * 43758.5453 ); }
+        void main() {
+          float t = uTime * aSeed.y + aSeed.x * 7.0, cyc = floor( t ), k = fract( t );
+          float id = aSeed.x * 1000.0 + cyc * 13.17;
+          float a = h1( id ) * 6.2831853, r = sqrt( h1( id + 3.1 ) ) * uRadius;
+          vec3 c = uCenter + vec3( cos( a ) * r, 0.02, sin( a ) * r );
+          float size = mix( 0.03, 0.16, k ) * ( 0.7 + 0.6 * h1( id + 7.7 ) );
+          vQ = position.xz; vK = k;
+          vA = uAmount * ( 1.0 - smoothstep( uRadius * 0.6, uRadius, r ) ) * step( h1( id + 1.9 ), uAmount );
+          gl_Position = projectionMatrix * viewMatrix * vec4( c + vec3( position.x, 0.0, position.z ) * size, 1.0 );
+        }`,
+      fragmentShader: /* glsl */`
+        uniform vec3 uColor; varying vec2 vQ; varying float vK, vA;
+        void main() {
+          float d = length( vQ );
+          float ring = smoothstep( 0.6, 0.85, d ) * ( 1.0 - smoothstep( 0.85, 1.0, d ) );
+          float drop = ( 1.0 - smoothstep( 0.0, 0.35, d ) ) * ( 1.0 - smoothstep( 0.0, 0.25, vK ) );
+          float a = vA * ( ring * ( 1.0 - vK ) + drop ) ;
+          if ( a < 0.003 ) discard;
+          gl_FragColor = vec4( uColor * a * 0.6, 0.0 );
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    });
+    this.mesh = new THREE.Mesh(quad, this.material);
+    this.mesh.name = 'rain_splashes'; this.mesh.frustumCulled = false; this.mesh.renderOrder = 4; this.mesh.visible = false;
+    this.max = capacity; this.time = 0;
+  }
+
+  setMax(n) { this.max = Math.max(0, Math.min(this.capacity, n | 0)); }
+
+  /** @param {number} amount 0..1.5 (the rain share) @param {boolean} still reduced motion */
+  setAmount(amount, still = false) {
+    const a = still ? 0 : Math.min(1, Math.max(0, amount));
+    const n = Math.round(this.max * a);
+    this.mesh.geometry.instanceCount = n; this.mesh.visible = n > 0;
+    this.material.uniforms.uAmount.value = a;
+  }
+
+  /** Where the rings fall: the ground under the camera's subject (x, walking height, z). */
+  setGround(x, y, z) { this.material.uniforms.uCenter.value.set(x, y, z); }
 
   setColor(color) { this.material.uniforms.uColor.value.copy(color); }
 
@@ -381,14 +464,21 @@ export class WeatherSystem {
     this.state = mixWeather(this.from, this.to, 1);
     /** Wetness lags behind the rain: ground wets in seconds, dries slowly. */
     this.wet = this.state.wet;
+    /** Puddles as a share of wetness (0 on the cheap tiers: no mirror patches). */
+    this.puddles = 1;
+    /** Lightning: 0..1 brightness of the current flash, the seconds to the next one, a seeded random. */
+    this.flash = 0; this.flashT = -1; this.nextFlash = 4; this.rand = mulberry(97);
+    /** Called with the delay (s) of the thunder that follows a flash, for the sound layer. */
+    this.onThunder = null;
     this.dirty = true;
     this.apply(0);
   }
 
   /** @param {string} name @param {{immediate?: boolean}} [o] */
-  set(name, { immediate = false } = {}) {
+  set(name, { immediate = false, seconds } = {}) {
     if (!WEATHER[name]) return this.name;
     if (name === this.name && this.k >= 1) return name;
+    if (seconds > 0) this.seconds = seconds;
     this.from = { ...this.state, cover: weatherCoverSnapshot(this.state) };
     this.to = WEATHER[name]; this.name = name;
     this.k = immediate ? 1 : 0;
@@ -412,13 +502,33 @@ export class WeatherSystem {
     }
     const target = this.state.wet, rate = target > this.wet ? 0.25 : 0.04;
     if (this.wet !== target) { this.wet += Math.sign(target - this.wet) * Math.min(Math.abs(target - this.wet), rate * dt); this.dirty = true; }
+    this.lightning(dt);
     this.apply(motion);
+  }
+
+  /** Distant flashes while the storm share is up: a double pulse every 7–20 s, brighter the stormier. */
+  lightning(dt) {
+    const f = this.state.flash || 0;
+    if (f < 0.05) { if (this.flash) { this.flash = 0; this.dirty = true; } this.flashT = -1; return; }
+    if (this.flashT >= 0) {
+      this.flashT += dt;
+      const t = this.flashT, pulse = (c, w) => Math.max(0, 1 - Math.abs(t - c) / w);
+      this.flash = f * Math.min(1, pulse(0.05, 0.06) * 0.8 + pulse(0.22, 0.12));
+      this.dirty = true;
+      if (t > 0.4) { this.flashT = -1; this.flash = 0; }
+      return;
+    }
+    this.nextFlash -= dt;
+    if (this.nextFlash <= 0) {
+      this.flashT = 0; this.nextFlash = 7 + this.rand() * 13;
+      if (this.onThunder) this.onThunder(1.5 + this.rand() * 4);
+    }
   }
 
   apply(motion) {
     const W = WIND_UNIFORMS.ftfWind.value;
     W[2] = this.state.wind; W[3] += motion;
-    setWetness(this.wet, this.wet);
+    setWetness(this.wet, this.wet * this.puddles);
     WEATHER_UNIFORMS.ftfWeather.value[2] = W[3];
   }
 }
