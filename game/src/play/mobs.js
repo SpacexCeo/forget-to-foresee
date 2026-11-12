@@ -384,17 +384,29 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const ringGeo = new THREE.RingGeometry(0.75, 1, 40); ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.0, depthWrite: false });
   const fillGeo = new THREE.CircleGeometry(0.75, 40); fillGeo.rotateX(-Math.PI / 2);
-  const slashGeo = new THREE.RingGeometry(1.2, 2.0, 32, 1, -1.1, 2.2); slashGeo.rotateX(-Math.PI / 2);
-  const slash = new THREE.Mesh(slashGeo, new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-  slash.visible = false; slash.renderOrder = 3; group.add(slash); let slashT = 0;
+  // Hit sparks (owner 12.11: no ground arc; a light, simple effect where the blow lands): a small additive flash and a
+  // faint dust puff on the struck creature at fist height, gone in 0.2 s. Camera-facing sprites, nothing on the ground.
+  const sparkTex = (() => {
+    const doc2 = doc || (typeof document !== 'undefined' ? document : null); if (!doc2) return null;
+    const c = doc2.createElement('canvas'); c.width = c.height = 64; const g = c.getContext && c.getContext('2d'); if (!g) return null;
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,240,210,0.55)'); gr.addColorStop(1, 'rgba(255,220,170,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const sparks = [];
+  function hitSpark(m, big = false) {
+    const y = m.pos[1] + Math.min(1.1, 0.35 + m.T.radius * 0.9), dx = m.pos[0] - player.pos[0], dz = m.pos[2] - player.pos[2], l = Math.hypot(dx, dz) || 1;
+    const at = [m.pos[0] - dx / l * m.T.radius * 0.7, y, m.pos[2] - dz / l * m.T.radius * 0.7];   // the side facing her
+    for (const kind of ['flash', 'dust']) {
+      const mat = new THREE.SpriteMaterial({ map: sparkTex, color: kind === 'flash' ? 0xfff2d8 : 0xb9a58a, transparent: true, opacity: kind === 'flash' ? 0.9 : 0.35, depthWrite: false, blending: kind === 'flash' ? THREE.AdditiveBlending : THREE.NormalBlending });
+      const sp = new THREE.Sprite(mat); sp.position.set(at[0], at[1] - (kind === 'dust' ? 0.15 : 0), at[2]); sp.renderOrder = 4; group.add(sp);
+      sparks.push({ sp, kind, t: 0, dur: kind === 'flash' ? 0.14 : 0.2, s0: (kind === 'flash' ? 0.35 : 0.3) * (big ? 1.6 : 1), s1: (kind === 'flash' ? 0.7 : 0.75) * (big ? 1.6 : 1) });
+    }
+  }
   // the super strike: a ring that gathers under her while she charges, then a ground ring and a shock arc in her colour
   const SUPER_TINT = 0xffc36b;
   const chargeRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: SUPER_TINT, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   chargeRing.visible = false; chargeRing.renderOrder = 3; group.add(chargeRing);
-  const burst = { t: -1,
-    ring: new THREE.Mesh(new THREE.RingGeometry(0.82, 1.0, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: SUPER_TINT, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })),
-    arc: new THREE.Mesh(new THREE.RingGeometry(1.4, 2.6, 40, 1, -Math.PI / 4, Math.PI / 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xfff0d0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })) };
-  burst.ring.visible = burst.arc.visible = false; burst.ring.renderOrder = burst.arc.renderOrder = 3; group.add(burst.ring, burst.arc);
+
   /**
    * Turns her (the root only: player.heading; the avatar follows) for a strike, by strikeAim's order: the locked
    * creature, the cursor's ground point, the movement, her facing. `aim` is {cursor, move} or a bare move [x, z].
@@ -510,11 +522,12 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit(); number(e.mob, e.amount, e.crit); if (onFeedback) onFeedback('hit', e.mob, e);
+        v.fx.hit(); number(e.mob, e.amount, e.crit); if (!reduced()) hitSpark(e.mob, false); if (onFeedback) onFeedback('hit', e.mob, e);
         if (e.crit || e.mob.T.heavy) shake = Math.max(shake, e.crit ? 0.35 : 0.2);
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
+      else if (e.kind === 'super' && v && !reduced()) hitSpark(e.mob, true);   // the super's spark, a little bigger
       else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
@@ -555,8 +568,6 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       }
       act.twistDir = act.combo % 2 ? 1 : -1;
       act.twist = irisMove && irisMove('strike' + act.combo) ? 0 : 0.22;            // her own clip, else the procedural twist
-      slashT = 0.16; slash.visible = true; slash.position.set(player.pos[0], player.pos[1] + 0.95, player.pos[2]);
-      slash.rotation.set(act.combo === 3 ? 0 : 0.25 * act.twistDir, player.heading + Math.PI, 0); slash.scale.setScalar(act.combo === 3 ? 1.25 : 1);
       if (moveIris) moveIris([Math.sin(player.heading) * 0.25, Math.cos(player.heading) * 0.25]);           // a short step into the swing
       if (onFeedback) onFeedback(act.combo === 3 ? 'strike3' : 'strike');
       return true;
@@ -644,18 +655,15 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
           const S = act.superAt; act.superAt = null;
           const ev = []; brain.superStrike(player.pos, player.heading, S.amount, ev); handle(ev);
           shake = Math.max(shake, 0.55 + 0.35 * S.k);
-          burst.t = 0; burst.ring.visible = burst.arc.visible = true;
-          burst.ring.position.set(player.pos[0], player.pos[1] + 0.06, player.pos[2]);
-          burst.arc.position.set(player.pos[0], player.pos[1] + 0.9, player.pos[2]); burst.arc.rotation.set(0, player.heading + Math.PI, 0);
           if (moveIris) moveIris([Math.sin(player.heading) * 0.45, Math.cos(player.heading) * 0.45]);
           if (onFeedback) onFeedback('super', null, { hits: ev.filter((e) => e.kind === 'super').length, charge: S.k });
         }
       }
-      if (burst.t >= 0) {
-        burst.t += dt; const u = Math.min(1, burst.t / 0.45), e = 1 - (1 - u) * (1 - u);
-        burst.ring.scale.setScalar(0.4 + ACTIONS.super.reach * e); burst.ring.material.opacity = 0.9 * (1 - u);
-        burst.arc.scale.setScalar(0.9 + 1.1 * e); burst.arc.material.opacity = 0.95 * (1 - u);
-        if (u >= 1) { burst.t = -1; burst.ring.visible = burst.arc.visible = false; }
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const k = sparks[i]; k.t += dt; const u = Math.min(1, k.t / k.dur);
+        k.sp.scale.setScalar(k.s0 + (k.s1 - k.s0) * (1 - (1 - u) * (1 - u))); k.sp.material.opacity = (k.kind === 'flash' ? 0.9 : 0.35) * (1 - u);
+        if (k.kind === 'dust') k.sp.position.y += dt * 0.4;
+        if (u >= 1) { group.remove(k.sp); k.sp.material.dispose(); sparks.splice(i, 1); }
       }
       iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
       iris.calm += dt;
@@ -673,7 +681,6 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         if (!im.userData.flinched) { im.position.z = 0; im.rotation.z = 0; }
       }
       if (im && (act.twist > 0 || im.rotation.y)) { act.twist = Math.max(0, act.twist - dt); im.rotation.y = act.twist > 0 ? act.twistDir * Math.sin(Math.PI * act.twist / 0.22) * 0.7 : 0; }
-      if (slashT > 0) { slashT -= dt; slash.material.opacity = Math.max(0, slashT / 0.16) * 0.85; if (slashT <= 0) slash.visible = false; }
       if (camera && numbers.length) {
         const w = globalThis.innerWidth, h = globalThis.innerHeight, v3 = new THREE.Vector3();
         for (const n of numbers) {
