@@ -85,8 +85,8 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
 
     | Clip | Wind-up (0 – 0.38 s) | Release frame | After |
     |---|---|---|---|
-    | `cast_lance` (Frost Lance) | coils back onto the ball of the right foot, left knee up, left palm sighting the line, right hand cocked at the ribs | **0.42 s**: the left foot stomps down, a deep lunge, the right palm drives out, the left arm flung back | overshoot to 0.50 s, held key pose to 0.72 s, settle to 1.25 s |
-    | `cast_snare` (Storm Snare) | rises onto the ball of the left foot, right knee up, right hand open to the sky | **0.42 s**: the right foot comes down, the arm chops down at the mark | the same |
+    | `cast_lance` (Frost Lance) | coils back onto the ball of the right foot, left knee up, left palm sighting the line, right hand cocked at the ribs | **0.14 s** (owner 12.11: skills are instant; was 0.42 s): the left foot stomps down, a deep lunge, the right palm drives out, the left arm flung back | overshoot to 0.50 s, held key pose to 0.72 s, settle to 1.25 s |
+    | `cast_snare` (Storm Snare) | rises onto the ball of the left foot, right knee up, right hand open to the sky | **0.14 s** (owner 12.11: skills are instant; was 0.42 s): the right foot comes down, the arm chops down at the mark | the same |
 
     The strike combo and the dash are keyed the same way (step 3, 12.11) and replace Iris's first versions from
     `iris_combat.py` (which still builds Elise's): `strike1` / `strike2` (0.56 s, impact at 0.12 s: a coil, a step in

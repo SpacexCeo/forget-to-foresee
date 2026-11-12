@@ -51,6 +51,18 @@ class Mesh:
             m = bpy.data.materials.get('elise_' + k) or bpy.data.materials.new('elise_' + k); c = tuple((x / 255) ** 2.2 for x in MATS[k]) + (1,)
             m.diffuse_color = c; m.use_nodes = True; m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = c; me.materials.append(m)
         for p, k in zip(me.polygons, s.m): p.material_index = names.index(k); p.use_smooth = True
+        import bmesh
+        b = bmesh.new(); b.from_mesh(me); bmesh.ops.recalc_face_normals(b, faces=b.faces[:]); b.normal_update(); seen = set()
+        for f0 in b.faces:                               # every part looks away from the head (the game culls back faces)
+            if f0 in seen: continue
+            isl = {f0}; st = [f0]
+            while st:
+                for e_ in st.pop().edges:
+                    for g in e_.link_faces:
+                        if g not in isl: isl.add(g); st.append(g)
+            seen |= isl; cen = sum((f.calc_center_median() for f in isl), Vector()) / len(isl); ref = cen if all(e_.is_manifold for f in isl for e_ in f.edges) else Vector(C)
+            if sum(f.normal.dot(f.calc_center_median() - ref) * f.calc_area() for f in isl) < 0: bmesh.ops.reverse_faces(b, faces=list(isl))
+        b.to_mesh(me); b.free()
         me.update(); ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob); return ob
 
 
