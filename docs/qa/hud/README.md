@@ -19,3 +19,16 @@ Outside the lower gate (skill bar in the HUD palette, health in the frame) and o
 the judge HUD shows "Trial 1 of 17 · Silk 63" as before):
 
 ![](after-outside.jpg) ![](after-island.jpg)
+
+## Touch: twin sticks and the skill arc (iPhone 13, portrait and landscape)
+
+Left: a floating joystick (analog walk, run when pushed far); the rest of the screen drags the camera. Bottom right:
+the attack button with Frost Lance, Storm Snare and Dash on an arc (cooldown sweeps; the casts aim by dragging, a tap
+casts at the nearest monster in range); an action button appears above the arc when the town offers one. Checked in
+the built game: the stick walked Iris out of the lower gate, the arc appeared, a tap on Frost Lance cast it, no errors.
+The ⇄ button on the portrait switches Iris / Elise once Elise is unlocked. Controls → "Touch: use tap to move" switches
+back to the old scheme (stored). Desktop is unchanged; the archipelago (judge path) keeps tap-to-move and its buttons.
+
+| Portrait | Landscape |
+|---|---|
+| ![](touch-tp-town.jpg) ![](touch-tp-outside.jpg) | ![](touch-tl-town.jpg) ![](touch-tl-outside.jpg) |

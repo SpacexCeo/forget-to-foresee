@@ -16,6 +16,9 @@ const CSS = `
 .ph-portrait { position: relative; width: 60px; height: 60px; border-radius: 50%; }
 .ph-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--ph-gold) calc(var(--p, 0) * 1turn), rgba(216, 180, 106, .18) 0); }
 .ph-portrait img { position: absolute; inset: 4px; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; background: #18241f; border: 2px solid #0c1411; }
+.ph-swap { position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+.ph-swap[hidden] { display: none; }
+@media (pointer: coarse) { .ph-swap { width: 40px; height: 40px; left: calc(2px + env(safe-area-inset-left, 0px)); top: calc(2px + env(safe-area-inset-top, 0px)); font-size: 18px; } }
 .ph-lvl { position: absolute; right: -4px; bottom: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center;
   background: linear-gradient(#e6c47c, #b88d3f); color: #1a1408; font: 700 12px/1 system-ui, sans-serif; border: 2px solid #0c1411; }
 .ph-name { font: 600 16px/1.15 Georgia, "Libre Caslon Text", serif; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -55,7 +58,7 @@ body.ph-on #toast { display: none !important; }
 body.ph-on .ftf-cast-bar { background: rgba(12, 20, 17, .82); border: 1px solid rgba(201, 163, 90, .55); box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
 body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
 body.ph-on .ftf-hp { display: none; }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-height: 500px) {
   .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
   .ph-portrait { width: 46px; height: 46px; } .ph-portrait img { inset: 3px; width: 40px; height: 40px; }
   .ph-name { font-size: 14px; } .ph-title, .ph-xp { display: none; }
@@ -90,7 +93,7 @@ export function walletDelta(prev, next) {
  * @param {{doc?: Document, t: Function, ledger: object, chests?: object, base?: string, nickname?: () => string|null,
  *   skin?: () => 'iris'|'elise', onProfile?: Function, onChests?: Function, reducedMotion?: () => boolean}} o
  */
-export function createPlayerHud({ doc = document, t, ledger, chests = null, base = '/', nickname = () => null, skin = () => 'iris', onProfile = () => {}, onChests = null, reducedMotion = () => false }) {
+export function createPlayerHud({ doc = document, t, ledger, chests = null, base = '/', nickname = () => null, skin = () => 'iris', onProfile = () => {}, onChests = null, onSkin = () => {}, canSwap = () => false, reducedMotion = () => false }) {
   if (!(doc.getElementById && doc.getElementById('ph-style'))) { const st = doc.createElement('style'); st.id = 'ph-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ph'); root.hidden = true;
@@ -98,6 +101,10 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   const frame = el('button', 'ph-frame'); frame.type = 'button';
   const portrait = el('div', 'ph-portrait'); const ring = el('i', 'ph-ring'); const img = el('img'); img.alt = ''; const lvl = el('span', 'ph-lvl');
   portrait.append(ring, img, lvl);
+  // the heroine switch (Iris <-> Elise) sits on the portrait's rim: its own button, not inside the frame button
+  const swap = el('button', 'ph-swap', '⇄'); swap.type = 'button'; swap.hidden = true;
+  swap.addEventListener('pointerdown', (e) => e.stopPropagation());
+  swap.addEventListener('click', (e) => { e.stopPropagation(); onSkin(); setTimeout(renderStatic, 60); });
   const info = el('div'); const name = el('div', 'ph-name'); const title = el('div', 'ph-title'); const xp = el('div', 'ph-xp');
   const hp = el('div', 'ph-hp'); hp.setAttribute('role', 'meter'); hp.setAttribute('aria-valuemin', '0'); hp.setAttribute('aria-valuemax', '100');
   const trail = el('i', 'ph-trail'), fill = el('i', 'ph-fill'); hp.append(trail, fill);
@@ -120,7 +127,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   chest.addEventListener('click', () => (onChests || onProfile)());
 
   const toasts = el('div', 'ph-toasts'); toasts.setAttribute('aria-live', 'polite');
-  root.append(frame, wallet, toasts);
+  root.append(frame, swap, wallet, toasts);
   doc.body.append(root);
 
   // the quest tracker is the town's own objective line, moved under the frame by CSS; a tap folds it to a dot
@@ -134,6 +141,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     title.textContent = t('profile.title.' + lv.title); xp.textContent = lv.xp;
     const n = nickname() || t('menu.traveller'); if (n !== lastName) { name.textContent = n; lastName = n; }
     const s = skin(); if (s !== lastSkin) { img.src = base + 'assets/cards/' + s + '.webp'; lastSkin = s; }
+    swap.hidden = !canSwap(); swap.setAttribute('aria-label', t('hud.skin')); swap.title = t('hud.skin');
     frame.setAttribute('aria-label', `${n} · ${t('profile.button', { level: lv.level })}`);
     const sealed = chests && chests.sealed ? chests.sealed().length : 0;
     chest.hidden = !sealed; chest.textContent = sealed ? '▣ ' + sealed : ''; chest.setAttribute('aria-label', t('chest.badge', { n: sealed }));

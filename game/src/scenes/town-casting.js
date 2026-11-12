@@ -159,7 +159,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
 
   return {
     fx, elements: { root, bar, hint },
-    get field() { return state.field; }, get armed() { return state.armed; }, get casts() { return state.casts; },
+    get field() { return state.field; }, cooldownOf: (id) => (CASTS[id] ? Math.max(0, Math.min(1, state.cooldown[id] / CASTS[id].cooldown)) : 0), get armed() { return state.armed; }, get casts() { return state.casts; },
     get busy() { return fx.busy; },
     /** True from the click to shortly after the release frame: she winds up and lets go standing still (the caller holds her walk). */
     get casting() { return !!state.pending; },
