@@ -52,6 +52,7 @@ import { townToWorld, TOWN_SHOPS, shopDoorAt, TOWN_SPOTS, TOWN_ORIGIN as TOWN_OR
 import { createFogCards } from './render/fog-cards.js';
 import { createTownShops } from './scenes/town-shops.js';
 import { createTownProps } from './scenes/town-props.js';
+import { createSpotProps } from './scenes/town-spot-props.js';
 import { createBarks } from './scenes/barks.js';
 import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
@@ -229,7 +230,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, doorGlow = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
@@ -300,6 +301,8 @@ if (townMode.town) {
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
+  if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
   refreshCompanions();
   if (!townMonsters) {
     // chests: the hillside packs' kills drop them (play/mobs.js 'ftf:mob-killed'); the moss critters roam only when the
@@ -1024,6 +1027,7 @@ function frame() {
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (doorGlow) doorGlow.update(dt, player.pos, !(townShops && townShops.inside));
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
+    if (spotProps) spotProps.update(dt, lookdev.reducedMotion);
     if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
     // Phones and the low tier (jury low-tier pass, 12.11): beyond the walls the inner blocks hide behind them; the gate,
     // the temple on the hill and the terrain stay, so the view back at the castle keeps its silhouette
