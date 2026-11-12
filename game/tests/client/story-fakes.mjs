@@ -2,8 +2,9 @@
 export function memStorage() { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; }
 export function fakeDoc() {
   const el = (tag) => {
-    const e = { tagName: tag.toUpperCase(), children: [], style: {}, attrs: {}, hidden: false, textContent: '', className: '', parent: null, listeners: {},
+    const e = { tagName: tag.toUpperCase(), children: [], style: {}, attrs: {}, dataset: {}, hidden: false, textContent: '', className: '', parent: null, listeners: {},
       setAttribute(k, v) { this.attrs[k] = String(v); }, append(...cs) { for (const c of cs) { c.parent = this; this.children.push(c); } },
+      replaceChildren(...cs) { for (const c of this.children) c.parent = null; this.children = []; this.append(...cs); },
       remove() { if (this.parent) { this.parent.children = this.parent.children.filter((c) => c !== this); this.parent = null; } },
       addEventListener(t, f) { (this.listeners[t] ||= []).push(f); }, click() { for (const f of this.listeners.click || []) f({ stopPropagation() {} }); },
       querySelector(sel) { return all(this).find((c) => c.tagName === sel.toUpperCase()) || null; },

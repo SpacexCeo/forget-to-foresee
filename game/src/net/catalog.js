@@ -5,7 +5,7 @@
 // read and write positions, discoveries and drafts and never change a rules outcome.
 
 export const API_VERSION = 'v1';
-export const CATALOG_VERSION = '1.1.0';
+export const CATALOG_VERSION = '1.2.0'; // 1.2.0: the Expedition actions (kind 'expedition')
 
 const CLAN = { type: 'string', enum: ['salt', 'ash', 'moss', 'amber', 'frost'], description: 'Clan id (not Iris).' };
 const IDX4 = (what, names) => ({ type: 'integer', minimum: 0, maximum: 3, description: `${what}: ${names.map((n, i) => `${i} = ${n}`).join(', ')}.` });
@@ -18,6 +18,7 @@ export const INSPECT_TARGETS = ['scroll_table', 'shard_pedestal', 'anchor_zone:1
 
 /** Precondition ids → description. `mode: 'proximity'` ones are skipped when worldRules is 'free'. */
 export const PRECONDITIONS = {
+  scripted_actor: { description: 'Only a scripted actor (a session created with a scriptedKey from the server\'s public scripted registry) may hunt; humans fight in the town.' },
   role_controller: { description: 'Only the controller (the player guiding Iris) may run rules actions; helpers may only move, inspect, talk and enter or leave Shells.' },
   phase_intro: { description: 'The season is in phase "intro" (the owner key is not committed yet).' },
   not_in_transit: { description: 'The avatar is not walking (it has arrived at its last destination).' },
@@ -57,6 +58,8 @@ const rules = (o) => ({ kind: 'rules', status: 'implemented', roles: ['controlle
 const world = (o) => ({ kind: 'world', status: 'implemented', roles: ['controller', 'helper'], mutates: true, ...o });
 const exchange = (o) => ({ kind: 'exchange', status: 'implemented', roles: ['controller'], mutates: true, preconditions: ['role_controller'], costs: {}, ...o });
 const ECHO_IDS = ['salt', 'amber', 'frost'];
+const expedition = (o) => ({ kind: 'expedition', status: 'implemented', roles: ['controller'], mutates: true, preconditions: ['role_controller'], costs: {}, ...o });
+const QUEST_IDS = ['q_welcome', 'q_spiders', 'q_part', 'q_boss', 'b_spiders'];
 const planned = (o) => ({ status: 'planned', roles: ['controller'], mutates: true, preconditions: [], costs: {}, errors: { rules: [], world: [] }, params: { type: 'object' }, ...o });
 
 export const ACTIONS = [
@@ -204,6 +207,37 @@ export const ACTIONS = [
     type: 'advance_exchange_bar', summary: 'Publish the next bar of the drill (the agents act on it), or settle the drill after the last bar: every position closes at the last bid.',
     params: EMPTY, errors: { rules: [], world: [], exchange: ['phase'] },
   }),
+  /* ---------- the Expedition (kind 'expedition'): the citizens' quests by the same rules as the town (game/quest-rules.js);
+     its own silk ledger and hash-chained log beside the season, which it never touches (docs/plans/story §7) ---------- */
+  expedition({
+    type: 'expedition_start', summary: 'Start the Expedition in this session: the story state (arrival) and an empty expedition log. Town silk here is the session\'s own counter, never the season\'s silk.',
+    params: EMPTY, errors: { rules: [], world: [], expedition: ['already_started'] },
+  }),
+  expedition({
+    type: 'guide_step', summary: 'Report a step of the elder\'s starter guide (talked: heard the elder; moved: walked off). The town view sends the same steps; a session has no town to walk, so the step is declared.',
+    params: { type: 'object', required: ['step'], properties: { step: { type: 'string', enum: ['talked', 'moved'] } }, additionalProperties: false },
+    errors: { rules: [], world: [], expedition: ['not_started', 'step', 'phase'] },
+  }),
+  expedition({
+    type: 'quest_accept', summary: 'Accept a citizen quest (game/quests-data.js) that is available.',
+    params: { type: 'object', required: ['questId'], properties: { questId: { type: 'string', enum: QUEST_IDS } }, additionalProperties: false },
+    errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_available', 'giver_busy'] },
+  }),
+  expedition({
+    type: 'quest_turn_in', summary: 'Turn in a ready quest; the reward is minted by the rules (a second turn-in pays nothing). A spare part named here is trust T1 (it did not come from a salvage drop).',
+    params: { type: 'object', required: ['questId'], properties: { questId: { type: 'string', enum: QUEST_IDS }, partId: { type: 'string', pattern: '^part_[a-z_]{2,32}$' } }, additionalProperties: false },
+    errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_ready', 'no_part'] },
+  }),
+  expedition({
+    type: 'hunt', summary: 'Scripted actors only (a session created with a registered scriptedKey): an abstract hunt (game/hunt.js, an abstraction of the real combat, not a simulation) for an active kill quest; on a win its kills count at trust T2. Humans fight in the town.',
+    params: { type: 'object', required: ['questId'], properties: { questId: { type: 'string', enum: QUEST_IDS }, mob: { type: 'string', maxLength: 16 } }, additionalProperties: false },
+    preconditions: ['role_controller', 'scripted_actor'],
+    errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_active', 'bad_mob', 'lost'] },
+  }),
+  expedition({
+    type: 'pay_gate', summary: 'Pay the Gate-Loom fee (10,000 silk) from the session\'s town silk; the story moves on (onward), never home.',
+    params: EMPTY, errors: { rules: [], world: [], expedition: ['not_started', 'phase', 'no_silk'] },
+  }),
   planned({ type: 'cancel_order', kind: 'exchange', summary: 'Planned: there are no resting orders in Scope A (market orders fill at once), so there is nothing to cancel.' }),
 
   /* ---------- planned (not backed by rules yet; commands return 501) ---------- */
@@ -224,6 +258,6 @@ export function catalogDocument(rulesVersions = []) {
     preconditions: PRECONDITIONS,
     commonErrors: COMMON_ERRORS,
     enums: { slots: SLOT_NAMES, forms: FORM_NAMES, meanings: MEANING_NAMES, clans: ['iris', 'salt', 'ash', 'moss', 'amber', 'frost'], places: PLACES, inspectTargets: INSPECT_TARGETS },
-    actions: ACTIONS.map(({ engine, fixedArgs, ...a }) => ({ ...a, backedBy: a.status === 'planned' ? null : a.kind === 'rules' ? `engine.${engine}` : a.kind === 'exchange' ? 'exchange module (practice silk, no rules outcome)' : 'world layer (no rules outcome)' })),
+    actions: ACTIONS.map(({ engine, fixedArgs, ...a }) => ({ ...a, backedBy: a.status === 'planned' ? null : a.kind === 'rules' ? `engine.${engine}` : a.kind === 'exchange' ? 'exchange module (practice silk, no rules outcome)' : a.kind === 'expedition' ? 'expedition module (game/quest-rules.js, its own silk ledger, no season outcome)' : 'world layer (no rules outcome)' })),
   };
 }

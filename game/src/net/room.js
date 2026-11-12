@@ -28,6 +28,13 @@ const canon = (v) => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'objec
 
 import { startDrill, placeOrder, advanceBar, board, exchangeView, ECHO_IDS, RULES as EXCHANGE_RULES } from '../game/exchange.js';
 import { SNAPSHOT, SNAPSHOTS, DEFAULT_WINDOW } from './exchange-deployment.js';
+import { reduce as storyReduce, initialState as storyInitial } from '../game/expedition.js';
+import { applyQuest, initialQuests, questStatus } from '../game/quest-rules.js';
+import { QUESTS } from '../game/quests-data.js';
+import { createExpeditionLedger } from '../game/expedition-ledger.js';
+import { EXPEDITION } from '../game/expedition-config.js';
+import { resolveHunt, resolveHuntMob } from '../game/hunt.js';
+const EXPEDITION_TEXT = { already_started: 'The Expedition is already started in this session.', not_started: 'Start the Expedition first (expedition_start).', step: 'Unknown guide step.', phase: 'Not possible in this story phase.', quest: 'Unknown quest, or not a kill quest.', locked: 'This quest is still locked.', not_available: 'This quest is not available now.', cooldown: 'This bounty is on cooldown.', not_ready: 'This quest is not ready to turn in.', no_part: 'This quest needs a spare part.', not_active: 'Accept the quest first.', bad_mob: 'That creature is not this quest\'s target.', bad_count: 'Nothing left to hunt.', no_silk: 'Not enough town silk for the Gate-Loom fee.', giver_busy: 'This townsperson already gave you a quest; finish it first.', duplicate: 'This kill was already counted.' };
 const EXCHANGE_TEXT = { already_open: 'A drill is already open.', bad_snapshot: 'Unknown snapshot.', bad_window: 'That window is not inside the snapshot.', phase: 'No drill is open.', bad_echo: 'Unknown Echo.', no_silk: 'Not enough practice silk for that order and its fee.', no_position: 'You do not hold that many units (long only).', qty: 'Quantity must be 1 to 5.', too_many_orders: 'At most 3 orders per bar.' };
 /** Engine call for each rules action. Returns the engine's {ok, reason}. */
 const ENGINE_CALLS = {
@@ -67,7 +74,7 @@ export class Room {
    * @param {() => number} [o.clock] milliseconds; injectable for tests
    * @param {number} [o.seed] @param {string} [o.seedHex] @param {(n:number)=>Uint8Array} [o.randomBytes]  test sessions only
    */
-  constructor({ id, rules = DEFAULT_RULES, worldRules = 'proximity', timeScale = 1, clock = () => Date.now(), seed, seedHex, randomBytes, label = 'test session', exchangeWindow = null } = {}) {
+  constructor({ id, rules = DEFAULT_RULES, worldRules = 'proximity', timeScale = 1, clock = () => Date.now(), seed, seedHex, randomBytes, label = 'test session', exchangeWindow = null, actor = null } = {}) {
     if (!RULES_VERSIONS.includes(rules)) throw Object.assign(new Error(`unknown rules "${rules}"`), { code: 'unknown_rules' });
     if (!WORLD_RULES.includes(worldRules)) throw Object.assign(new Error(`unknown worldRules "${worldRules}"`), { code: 'invalid_params' });
     this.id = id;
@@ -105,6 +112,8 @@ export class Room {
     this.shardLog = new Map();
     this.exchangeWindow = exchangeWindow; // a fixed drill window (judge): client-supplied windows are ignored
     this.exchange = null; // Foresight Exchange drill (game/exchange.js): its own practice-silk ledger, never the season
+    this.actor = actor && actor.kind === 'scripted' ? { kind: 'scripted', account: actor.account } : { kind: 'human', account: null }; // set by the registry, never by a command
+    this.expedition = null; // the Expedition (game/quest-rules.js): story, quests, its own town silk and hash-chained log
     this.shardMeta = new Map();
     this.emit('season.created', 'all', { rules, worldRules, timeScale, merkleRoot: this.entropy.sealed ? state.root : null, entropyProtocol: this.entropy.protocol, entropyCommitment: this.entropy.commitment ?? null });
     this.emitFx(fx);
@@ -237,6 +246,7 @@ export class Room {
       if (pc.mode === 'proximity' && !proximity) continue;
       switch (id) {
         case 'role_controller': if (m.role !== 'controller') fail(id, 'not_controller'); break;
+        case 'scripted_actor': if (this.actor.kind !== 'scripted') fail(id, 'not_scripted'); break;
         case 'phase_intro': if (this.state.phase !== 'intro') fail(id, 'phase'); break;
         case 'not_in_transit': if (av.transit) fail(id, 'in_transit'); break;
         case 'on_island': if (av.zone !== 'island') fail(id, 'wrong_zone'); break;
@@ -331,8 +341,8 @@ export class Room {
       return finish(422, rejected(type, actionId, this.version, failed[0].reason, failed[0].source, failed), false, failed[0].reason);
     }
     if (type === 'start_season') this.sealSeason(args);
-    const res = def.kind === 'rules' ? this.runRules(def, args, m) : def.kind === 'exchange' ? this.runExchange(def, args) : this.runWorld(def, args, m);
-    if (!res.ok) return finish(422, rejected(type, actionId, this.version, res.reason, res.source, [{ id: res.source === 'rules' ? 'engine_guards' : res.source === 'exchange' ? 'exchange' : 'world', source: res.source, reason: res.reason, message: res.message || T.reasonText(res.reason) }]), false, res.reason);
+    const res = def.kind === 'rules' ? this.runRules(def, args, m) : def.kind === 'exchange' ? this.runExchange(def, args) : def.kind === 'expedition' ? this.runExpedition(def, args) : this.runWorld(def, args, m);
+    if (!res.ok) return finish(422, rejected(type, actionId, this.version, res.reason, res.source, [{ id: res.source === 'rules' ? 'engine_guards' : res.source === 'exchange' ? 'exchange' : res.source === 'expedition' ? 'expedition' : 'world', source: res.source, reason: res.reason, message: res.message || T.reasonText(res.reason) }]), false, res.reason);
     if (def.mutates !== false) this.version++;
     return finish(200, { ok: true, actionId, type, version: this.version, result: res.result || {} }, true);
   }
@@ -388,6 +398,81 @@ export class Room {
     this.deriveEvents(pre, digest(S), S);
     this.emitFx(fx);
     return { ok: true, result: { engine: def.engine, tick: S.tick, phase: S.phase } };
+  }
+
+  /**
+   * Expedition commands: the same rules modules as the town view (game/expedition.js, quest-rules.js); a session-local
+   * town silk counter and the hash-chained log; no ENGINE_CALLS, no season state. Hunts only for scripted actors.
+   */
+  runExpedition(def, args) {
+    const fail = (reason) => ({ ok: false, source: 'expedition', reason, message: EXPEDITION_TEXT[reason] || reason });
+    const now = this.clock();
+    if (def.type === 'expedition_start') {
+      if (this.expedition) return fail('already_started');
+      const town = { silk: 0, grant({ silk = 0 } = {}) { this.silk += Math.round(silk); }, spend({ silkC = 0 } = {}) { if (this.silk < silkC) return { ok: false, reason: 'no_silk' }; this.silk -= silkC; return { ok: true }; } };
+      const X = this.expedition = { story: storyInitial(), qs: initialQuests(), town, ledger: createExpeditionLedger({ storage: null, now: () => this.clock(), town }), hunts: 0 };
+      this.expeditionApply(storyReduce(X.story, { type: 'START', skipPrologue: true }, { now }), 'story');
+      return { ok: true, result: { phase: X.story.phase } };
+    }
+    const X = this.expedition;
+    if (!X) return fail('not_started');
+    const quest = (action) => { const r = applyQuest(X.qs, action, { now }); if (r.rejected) return fail(r.rejected); this.expeditionApply(r, 'quests'); return null; };
+    const silk = () => storyReduce(X.story, { type: 'SILK', balanceC: X.town.silk }, { now }); // the gate opens with the balance
+    if (def.type === 'guide_step') {
+      const r = storyReduce(X.story, { type: 'GUIDE_STEP', id: args.step }, { now });
+      if (r.rejected) return fail(r.rejected);
+      this.expeditionApply(r, 'story');
+      quest({ type: 'GUIDE', step: args.step }); // the quest side may have nothing left to do
+      if (questStatus(X.qs, 'q_welcome', now) === 'available') quest({ type: 'ACCEPT', questId: 'q_welcome' });
+      this.expeditionApply(silk(), 'story');
+      return { ok: true, result: { phase: X.story.phase, guide: { ...X.story.guide } } };
+    }
+    if (def.type === 'quest_accept') { const f = quest({ type: 'ACCEPT', questId: args.questId }); return f || { ok: true, result: { questId: args.questId, state: X.qs.quests[args.questId].state } }; }
+    if (def.type === 'quest_turn_in') {
+      const before = X.town.silk;
+      const f = quest({ type: 'TURN_IN', questId: args.questId, partId: args.partId || null, partSource: 'agent' }); if (f) return f;
+      if (args.questId === 'q_welcome') this.expeditionApply(storyReduce(X.story, { type: 'GUIDE_STEP', id: 'talked' }, { now }), 'story');
+      this.expeditionApply(silk(), 'story');
+      return { ok: true, result: { questId: args.questId, silkC: X.town.silk - before, balanceC: X.town.silk, phase: X.story.phase } };
+    }
+    if (def.type === 'hunt') {
+      const q = QUESTS[args.questId], st = X.qs.quests[args.questId];
+      if (!q || q.objective.type !== 'kill') return fail('quest');
+      if (!st || st.state !== 'active') return fail('not_active');
+      const mob = args.mob != null ? resolveHuntMob(args.mob) : q.objective.mob;
+      if (!mob || mob !== q.objective.mob) return fail('bad_mob');
+      const n = ++X.hunts, count = q.objective.count - st.progress;
+      const h = resolveHunt({ seed: `${this.actor.account}|${args.questId}|${st.attempt || 1}|${n}`, mob, count });
+      if (!h.ok) return fail(h.reason);
+      if (!h.won) return { ok: true, result: { won: false, kills: 0, seconds: h.seconds, damage: h.damage, note: 'the hunt failed; nothing counts' } };
+      for (let i = 0; i < h.kills; i++) { const f = quest({ type: 'KILL', mob, killId: `hunt:${n}:${i}`, hunt: true }); if (f) return f; }
+      this.expeditionApply(silk(), 'story');
+      return { ok: true, result: { won: true, kills: h.kills, seconds: h.seconds, damage: h.damage, state: X.qs.quests[args.questId].state } };
+    }
+    // pay_gate
+    const r = storyReduce(X.story, { type: 'PAY_GATE', balanceC: X.town.silk }, { now, feeC: EXPEDITION.PORTAL_FEE_C });
+    if (r.rejected) return fail(r.rejected);
+    this.expeditionApply(r, 'story');
+    this.expeditionApply(storyReduce(X.story, { type: 'TWIST_DONE' }, { now }), 'story');
+    return { ok: true, result: { phase: X.story.phase, balanceC: X.town.silk } };
+  }
+
+  /** A reducer result into the expedition: the new state, then each event through the ledger (log first, then silk). */
+  expeditionApply(r, which) {
+    const X = this.expedition;
+    if (!r || r.rejected) return;
+    if (which === 'story') X.story = r.state; else X.qs = r.state;
+    for (const e of r.events || []) X.ledger.append({ kind: e.kind, data: e.data || {}, silkC: e.silkC || 0, trust: e.trust || 'T2' });
+  }
+
+  /** The expedition as an agent sees it (no hidden state: everything here is in the log). */
+  expeditionView() {
+    const X = this.expedition;
+    if (!X) return null;
+    const log = X.ledger.log, now = this.clock();
+    return { phase: X.story.phase, actor: this.actor.kind, account: this.actor.account, balanceC: X.town.silk, feeC: EXPEDITION.PORTAL_FEE_C, guide: { ...X.story.guide },
+      quests: Object.fromEntries(Object.keys(QUESTS).map((id) => [id, { state: questStatus(X.qs, id, now), progress: (X.qs.quests[id] && X.qs.quests[id].progress) || 0 }])),
+      log: { length: log.length, head: log.length ? log[log.length - 1].hash : null, earnedC: X.ledger.earnedC } };
   }
 
   /** Foresight Exchange commands: the drill module only (no ENGINE_CALLS, no season state). */
@@ -575,6 +660,7 @@ export class Room {
       availableActions: this.availableActions(playerId, { onlyAvailable: true }),
     });
     obs.exchange = exchangeView(this.exchange, 'iris'); // public mids only (bars already published)
+    obs.expedition = this.expeditionView();
     return obs;
   }
 
@@ -584,6 +670,14 @@ export class Room {
     const visible = S.events.map((_, i) => (this.visibleProphecy(m, i) ? i : -1)).filter((i) => i >= 0);
     switch (def.type) {
       case 'start_exchange': return isC && !(this.exchange && this.exchange.phase === 'open') ? [{}] : [];
+      case 'expedition_start': return isC && !this.expedition ? [{}] : [];
+      case 'guide_step': return isC && this.expedition ? ['talked', 'moved'].filter((k) => !this.expedition.story.guide[k]).map((step) => ({ step })) : [];
+      case 'quest_accept': case 'quest_turn_in': case 'hunt': {
+        const X = this.expedition; if (!isC || !X) return [];
+        const want = def.type === 'quest_accept' ? 'available' : def.type === 'quest_turn_in' ? 'ready' : 'active', now = this.clock();
+        return Object.keys(QUESTS).filter((id) => questStatus(X.qs, id, now) === want && (def.type !== 'hunt' || QUESTS[id].objective.type === 'kill') && !(def.type === 'quest_turn_in' && QUESTS[id].objective.type === 'fetch')).map((questId) => ({ questId }));
+      }
+      case 'pay_gate': return isC && this.expedition && this.expedition.story.phase === 'gate_open' ? [{}] : [];
       case 'advance_exchange_bar': return isC && this.exchange && this.exchange.phase === 'open' ? [{}] : [];
       case 'place_order': {
         const d = this.exchange;

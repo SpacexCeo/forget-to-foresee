@@ -98,7 +98,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   // ---- the objective line (one goal, top centre)
   let active = true;
   const line = doc.createElement('div'); line.className = 'ftf-story-goal'; line.setAttribute('aria-live', 'polite');
-  line.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 58px);transform:translateX(-50%);z-index:9;pointer-events:none;max-width:calc(100vw - 32px);'
+  const narrow = (Number(win.innerWidth) || 1024) < 600; // the phone's top row holds the portrait and the silk pill
+  line.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + ' + (narrow ? 146 : 58) + 'px);transform:translateX(-50%);z-index:9;pointer-events:none;max-width:calc(100vw - 32px);'
     + 'padding:6px 14px;border-radius:999px;background:rgba(12,16,18,.62);color:#f3ead8;font:600 13px/1.3 system-ui,sans-serif;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
   doc.body.append(line);
   function renderObjective() {
@@ -158,7 +159,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
 
   // ---- kills (play/mobs.js window event): quest progress and kill silk
   let killN = 0;
-  const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return; questDo({ type: 'KILL', mob: d.type, killId: d.id ? d.id + ':' + (d.n ?? killN) : d.type + ':' + now() + ':' + killN }); killN++; };
+  const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return; questDo({ type: 'KILL', mob: d.type, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
   win.addEventListener('ftf:mob-killed', onKill);
 
   // ---- the guide's 'moved' step: walking a few metres from where she arrived
@@ -174,6 +175,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     storyDo({ type: 'TWIST_DONE' }); // the stipend; the title and the sealed chest below
     if (chests) chests.add({ tier: 'common', source: 'quest' });
     story = { ...story, titles: [...new Set([...(story.titles || []), 'gate_walker'])] }; changed();
+    try { win.dispatchEvent(new CustomEvent('ftf:story-onward', { detail: { paidAt: story.paidAt ?? null, logHead: ledger.log.length ? ledger.log[ledger.log.length - 1].hash : null } })); } catch { /* no CustomEvent: nothing listens */ }
     twisting = false;
     return true;
   }
