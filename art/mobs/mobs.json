@@ -1,0 +1,190 @@
+{
+ "skitter": {
+  "file": "mob_skitter.glb",
+  "phone": "mob_skitter_m.glb",
+  "role": "swarm",
+  "height_m": 0.42,
+  "length_m": 0.65,
+  "glow": "teal",
+  "tris": 1880,
+  "tris_m": 1030,
+  "clips": {
+   "idle": {
+    "frames": 60,
+    "seconds": 2.0,
+    "loop": true
+   },
+   "walk": {
+    "frames": 16,
+    "seconds": 0.533,
+    "loop": true
+   },
+   "run": {
+    "frames": 10,
+    "seconds": 0.333,
+    "loop": true
+   },
+   "attack": {
+    "frames": 24,
+    "seconds": 0.8,
+    "loop": false
+   },
+   "hit": {
+    "frames": 12,
+    "seconds": 0.4,
+    "loop": false
+   },
+   "death": {
+    "frames": 36,
+    "seconds": 1.2,
+    "loop": false
+   }
+  },
+  "speed_m_s": {
+   "walk": 0.91,
+   "run": 1.79
+  },
+  "note": ""
+ },
+ "hulker": {
+  "file": "mob_hulker.glb",
+  "phone": "mob_hulker_m.glb",
+  "role": "brute",
+  "height_m": 2.25,
+  "length_m": 1.7,
+  "glow": "amber",
+  "tris": 5116,
+  "tris_m": 2807,
+  "clips": {
+   "idle": {
+    "frames": 90,
+    "seconds": 3.0,
+    "loop": true
+   },
+   "walk": {
+    "frames": 36,
+    "seconds": 1.2,
+    "loop": true
+   },
+   "run": {
+    "frames": 24,
+    "seconds": 0.8,
+    "loop": true
+   },
+   "attack": {
+    "frames": 42,
+    "seconds": 1.4,
+    "loop": false
+   },
+   "hit": {
+    "frames": 14,
+    "seconds": 0.467,
+    "loop": false
+   },
+   "death": {
+    "frames": 60,
+    "seconds": 2.0,
+    "loop": false
+   }
+  },
+  "speed_m_s": {
+   "walk": 1.25,
+   "run": 2.65
+  },
+  "note": ""
+ },
+ "veilbell": {
+  "file": "mob_veilbell.glb",
+  "phone": "mob_veilbell_m.glb",
+  "role": "caster",
+  "height_m": 1.65,
+  "length_m": 0.95,
+  "glow": "teal",
+  "tris": 1478,
+  "tris_m": 812,
+  "clips": {
+   "idle": {
+    "frames": 75,
+    "seconds": 2.5,
+    "loop": true
+   },
+   "walk": {
+    "frames": 32,
+    "seconds": 1.067,
+    "loop": true
+   },
+   "run": {
+    "frames": 22,
+    "seconds": 0.733,
+    "loop": true
+   },
+   "attack": {
+    "frames": 45,
+    "seconds": 1.5,
+    "loop": false
+   },
+   "hit": {
+    "frames": 14,
+    "seconds": 0.467,
+    "loop": false
+   },
+   "death": {
+    "frames": 54,
+    "seconds": 1.8,
+    "loop": false
+   }
+  },
+  "speed_m_s": {
+   "walk": 1.01,
+   "run": 1.96
+  },
+  "note": "bone `seed` carries the charged seed: hidden (scale 0) except in attack, where it grows, holds and launches forward at 0.75 of the clip"
+ },
+ "crownrift": {
+  "file": "mob_crownrift.glb",
+  "phone": "mob_crownrift_m.glb",
+  "role": "elite",
+  "height_m": 2.8,
+  "length_m": 2.6,
+  "glow": "amber",
+  "tris": 4252,
+  "tris_m": 2338,
+  "clips": {
+   "idle": {
+    "frames": 90,
+    "seconds": 3.0,
+    "loop": true
+   },
+   "walk": {
+    "frames": 40,
+    "seconds": 1.333,
+    "loop": true
+   },
+   "run": {
+    "frames": 24,
+    "seconds": 0.8,
+    "loop": true
+   },
+   "attack": {
+    "frames": 48,
+    "seconds": 1.6,
+    "loop": false
+   },
+   "hit": {
+    "frames": 14,
+    "seconds": 0.467,
+    "loop": false
+   },
+   "death": {
+    "frames": 66,
+    "seconds": 2.2,
+    "loop": false
+   }
+  },
+  "speed_m_s": {
+   "walk": 1.59,
+   "run": 3.64
+  },
+  "note": ""
+ }
+}
