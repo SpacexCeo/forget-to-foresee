@@ -45,7 +45,7 @@ export function chunkFor(id) {
   // ui never imports play (rule 2): the leaf modules ui reads go with ui; the lazily opened replay screen, which pulls
   // the rules API (net/replay.js -> net/api.js), goes with play.
   if (UI_LEAVES.some((m) => p.includes(m))) return 'ui';
-  if (p.includes('/src/ui/replay-view.js')) return 'play';
+  if (p.includes('/src/ui/replay-view.js') || p.includes('/src/ui/endgame-pass.js')) return 'play'; // they import net/ modules
   if (p.includes('/src/play/') || p.includes('/src/net/') || p.includes('/src/ui/world-hud/')) return 'play';
   if (p.includes('/src/ui/') || p.includes('/src/game/')) return 'ui';
   return undefined;
