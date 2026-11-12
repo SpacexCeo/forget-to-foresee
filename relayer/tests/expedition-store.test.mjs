@@ -39,7 +39,7 @@ test('signed batches append in order; a retry is a no-op; a fork or a gap is ref
   const dir = tmp(); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const kp = await generateKeyPair(), now = T0 + 3600_000;
   const h = expeditionLogHandler({ env: { FTF_EXPEDITION_DIR: dir }, ownsKey: async (acc, pk) => pk === kp.publicKey, ipBucket: big(), guestBucket: big(), now: () => now });
-  const log = logOf([[T0, 'story_started'], [T0 + 1000, 'guide_step', { id: 'talked' }], [T0 + 2000, 'quest_accepted', { questId: 'q_welcome', attempt: 1 }], [T0 + 3000, 'quest_turned_in', { questId: 'q_welcome', attempt: 1 }, 40_000]]);
+  const log = logOf([[T0, 'story_started'], [T0 + 1000, 'guide_step', { id: 'talked' }], [T0 + 2000, 'quest_accepted', { questId: 'q_welcome', attempt: 1 }], [T0 + 3000, 'quest_turned_in', { questId: 'q_welcome', attempt: 1 }, 800]]);
   const a = await call(h, 'POST', await signed(kp, log.slice(0, 2), 0, now));
   assert.equal(a.status, 200); assert.equal(a.body.length, 2);
   assert.equal((await call(h, 'POST', await signed(kp, log.slice(0, 2), 0, now + 1))).body.replayed, true);
@@ -61,28 +61,28 @@ test('signed batches append in order; a retry is a no-op; a fork or a gap is ref
 
 test('rule bounds and kill plausibility: T2 kills, forged silk, a quest twice, kills too fast or too many, the future are refused', () => {
   const now = T0 + 86_400_000;
-  const k = (t, silk = 600, trust = 'T1', mob = 'skitter') => [t, 'kill_ticketed', { mob, killId: 'k' + t }, silk, trust];
+  const k = (t, silk = 12, trust = 'T1', mob = 'skitter') => [t, 'kill_ticketed', { mob, killId: 'k' + t }, silk, trust];
   const reason = (events) => (checkEntries(logOf(events), 0, now) || {}).reason || null;
   assert.equal(reason([k(T0), k(T0 + 1000)]), null);
-  assert.equal(reason([k(T0, 600, 'T2')]), 'kill_trust');
-  assert.equal(reason([k(T0, 601)]), 'kill_silk');
+  assert.equal(reason([k(T0, 12, 'T2')]), 'kill_trust');
+  assert.equal(reason([k(T0, 13)]), 'kill_silk');
   assert.equal(reason([k(T0), k(T0 + 500)]), 'kill_too_fast');
-  assert.equal(reason([k(T0, 20000, 'T1', 'crownrift'), k(T0 + 5000, 20000, 'T1', 'crownrift')]), 'kill_too_fast', 'the crown takes 13 s at least');
+  assert.equal(reason([k(T0, 400, 'T1', 'crownrift'), k(T0 + 5000, 400, 'T1', 'crownrift')]), 'kill_too_fast', 'the crown takes 13 s at least');
   assert.equal(reason(Array.from({ length: 41 }, (_, i) => k(T0 + i * 1000))), 'kill_window');
-  assert.equal(reason([[T0, 'quest_turned_in', { questId: 'q_spiders' }, 100_001]]), 'quest_silk');
-  assert.equal(reason([[T0, 'quest_turned_in', { questId: 'q_spiders' }, 100_000], [T0 + 1, 'quest_turned_in', { questId: 'q_spiders' }, 100_000]]), 'quest_twice');
-  assert.equal(reason([[T0, 'bounty_resolved', { questId: 'b_spiders' }, 30_000], [T0 + 60_000, 'bounty_resolved', { questId: 'b_spiders' }, 30_000]]), 'bounty_cooldown');
+  assert.equal(reason([[T0, 'quest_turned_in', { questId: 'q_spiders' }, 2_001]]), 'quest_silk');
+  assert.equal(reason([[T0, 'quest_turned_in', { questId: 'q_spiders' }, 2_000], [T0 + 1, 'quest_turned_in', { questId: 'q_spiders' }, 2_000]]), 'quest_twice');
+  assert.equal(reason([[T0, 'bounty_resolved', { questId: 'b_spiders' }, 600], [T0 + 60_000, 'bounty_resolved', { questId: 'b_spiders' }, 600]]), 'bounty_cooldown');
   assert.equal(reason([[T0, 'guide_step', { id: 'talked' }, 5]]), 'silk');
-  assert.equal(reason([[T0, 'stipend_granted', {}, 99_999]]), 'stipend');
+  assert.equal(reason([[T0, 'stipend_granted', {}, 999]]), 'stipend');
   assert.equal(reason([[now + 10 * 60_000, 'story_started']]), 'future');
 });
 
 test('end to end: a played log stored batch by batch makes the guest eligible for the pass; an altered stored line does not', async (t) => {
   const dir = tmp(); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const ev = [[T0, 'story_started']]; let t1 = T0 + 1000;
-  for (const [q, silk] of [['q_welcome', 40_000], ['q_spiders', 100_000], ['q_part', 80_000], ['q_boss', 300_000]]) { ev.push([t1, 'quest_accepted', { questId: q, attempt: 1 }]); ev.push([t1 + 1000, 'quest_turned_in', { questId: q, attempt: 1 }, silk]); t1 += 2000; }
-  for (let i = 0; i < 834; i++) { t1 += 8000; ev.push([t1, 'kill_ticketed', { mob: 'skitter', killId: 's#' + i }, 600, 'T1']); } // 5,004 silk, 37 kills per 5 min
-  ev.push([t1 + 1000, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]);
+  for (const [q, silk] of [['q_welcome', 800], ['q_spiders', 2_000], ['q_part', 1_600], ['q_boss', 6_000]]) { ev.push([t1, 'quest_accepted', { questId: q, attempt: 1 }]); ev.push([t1 + 1000, 'quest_turned_in', { questId: q, attempt: 1 }, silk]); t1 += 2000; }
+  for (let i = 0; i < 834; i++) { t1 += 8000; ev.push([t1, 'kill_ticketed', { mob: 'skitter', killId: 's#' + i }, 12, 'T1']); } // 100 silk (the T1 cap), 37 kills per 5 min
+  ev.push([t1 + 1000, 'portal_paid', { feeC: 20_000, demo: false }, -20_000]); // rev 4: 200 silk
   const log = logOf(ev), now = t1 + 60_000;
   for (let from = 0; from < log.length; from += 50) {
     const r = await appendBatch({ accountId: GUEST, fromSeq: from, entries: log.slice(from, from + 50) }, { dir, now });
@@ -90,7 +90,7 @@ test('end to end: a played log stored batch by batch makes the guest eligible fo
   }
   const eligible = createLogEligibility({ dir });
   const e = await eligible(GUEST);
-  assert.equal(e.eligible, true, JSON.stringify(e)); assert.equal(e.paid, true); assert.ok(e.earned >= 10_000);
+  assert.equal(e.eligible, true, JSON.stringify(e)); assert.equal(e.paid, true); assert.ok(e.earned >= 200);
   const file = join(dir, GUEST + '.jsonl'), lines = readFileSync(file, 'utf8').trim().split('\n');
   const tampered = JSON.parse(lines[5]); tampered.silkC = 999_999; lines[5] = JSON.stringify(tampered);
   (await import('node:fs')).writeFileSync(file, lines.join('\n') + '\n');

@@ -251,6 +251,23 @@ function refreshCompanions() {
   const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
   if (!tokenId) return;
   import('./net/companions.js').then((m) => m.readCompanions({ tokenId })).then((r) => { if (r && r.state === 'loaded') setCompanions(r.dragons.map((d) => d.kind)); }).catch(() => {});
+  claimDragon('welcome'); // every heroine gets one dragon (net/companion-claim.js); asked once, then remembered
+}
+// A dragon claim (relayer/api/companion/claim): one in flight per reason; a failed one is asked again after 30 s, up to
+// 5 times a page (the boss log may still be on its way up); a minted dragon is shown only once the chain read
+// confirms it (read again now and after finality).
+const dragonClaims = {};
+function claimDragon(reason, before = () => Promise.resolve()) {
+  const c = (dragonClaims[reason] ||= { busy: false, tries: 0 });
+  if (c.busy || c.tries >= 5) return;
+  c.busy = true; c.tries++;
+  const retry = () => setTimeout(() => { c.busy = false; claimDragon(reason, before); }, 30_000);
+  import('./net/companion-claim.js').then(async (m) => {
+    if (m.claimed(ctx.storage, reason)) return;
+    await before();
+    const r = await m.claimCompanion({ reason, storage: ctx.storage });
+    if (r.ok) { refreshCompanions(); setTimeout(refreshCompanions, 4000); } else if (r.reason !== 'need_guest') retry(); else c.busy = false;
+  }).catch(retry);
 } // chests from the monsters outside the walls (game/chests.js)
 const lastStepPos = [0, 0, 0];
 /** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
@@ -308,10 +325,13 @@ if (townMode.town) {
   // The Expedition (?story=1 only, docs/plans/story): the citizens' quests, the objective line and the Gate-Loom by the
   // spawn; loaded lazily so the default (judge) page carries none of it. Its spots join this list (same array).
   if (params.get('story') !== '0' && !townQuests) {
-    Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js')]).then(([qm, pm, im, bm, tee]) => {
+    Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js'), import('./net/town-gate.js'), import('./net/agent-ledger.js')]).then(([qm, pm, im, bm, tee, gm, al]) => {
       if (townQuests || !inTown) return;
       townQuests = qm.createTownQuests({ storage: ctx.storage, townLedger, i18n: ctx.i18n, folkAt, inventory: im.createInventory({ storage: ctx.storage }), chests: chestBag,
-        depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search });
+        depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search,
+        // the Gate-Loom on chain (rev 4): ftf-town gate_price / balance_of / gate_paid_of through the relayer, which credits the
+        // guest's verified log and calls pay_gate_for on the guest's signed request (relayer/api/town/gate.js)
+        gate: { read: () => { const g = al.guestFrom(ctx.storage); return g ? gm.readGate({ account: g.accountId }) : Promise.resolve({ ok: false, reason: 'need_guest' }); }, pay: () => gm.payGate({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }) } });
       const w = townToWorld(pm.PORTAL_TOWN);
       townPortal = pm.createTownPortal({ scene, position: w, facing: Math.PI / 2, i18n: ctx.i18n, read: () => townQuests.portalFacts(), onPay: () => townQuests.payGate(), reducedMotion: lookdev.reducedMotion, light: !(mobileDevice || lookdev.tier === 'low') });
       // the Shell monument (K2): the latest board snapshot and her own row from the local log
@@ -321,6 +341,12 @@ if (townMode.town) {
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
       import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
+      // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
+      import('./net/companion-claim.js').then((cm) => {
+        const ledger = townQuests && townQuests.ledger; if (!ledger) return;
+        const check = () => { if (cm.bossInLog(ledger.log) && !cm.claimed(ctx.storage, 'boss')) claimDragon('boss', () => (expeditionSync ? expeditionSync.flush() : Promise.resolve())); };
+        ledger.subscribe(check); check();
+      }).catch(() => {});
     }).catch((e) => console.warn('[story]', e));
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
@@ -360,7 +386,7 @@ if (townMode.town) {
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
   }
-  if (!marketTicker && params.get('town') === '1') { // the townsfolk market: a ticker of real testnet trades, chips and stall visits
+  if (!marketTicker && params.get('town') !== '0') { // ftf-town is live (12.11); ?town=0 hides it // the townsfolk market: a ticker of real testnet trades, chips and stall visits
     Promise.all([import('./net/market.js'), import('./ui/market-ticker.js'), import('./play/market-scene.js')]).then(([net, ui, sc]) => {
       if (marketTicker) return;
       const t = (k, a) => ctx.i18n.t(k, a);

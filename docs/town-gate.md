@@ -8,8 +8,9 @@ the guests contract and cannot sign to `ftf-town`. The relayer acts for the gues
 - **The source** is the guest's stored, hash-chained expedition log (`POST /api/expedition/log`, kept in
   `FTF_EXPEDITION_DIR`). It is verified with the shared rules' `verifyLog`: T2 income counts in full, T1 kill income
   up to its cap (5,000 game silk).
-- **The scale** maps the game's portal fee to the on-chain gate price: game fee 10,000 silk → `gate_price` (200 by
-  default), so ×0.02. For example, 11,000 verified game silk gives 220 silk on chain.
+- **The scale** maps the game's portal fee to the on-chain gate price: `income × gate_price / PORTAL_FEE_C`. Since story
+  rev 4 the game's own fee and rewards are already on the gate's scale (fee 200 silk, rewards × 0.02), so the factor is 1
+  while `gate_price` stays 200: 220 verified game silk gives 220 silk on chain. If the owner moves `gate_price`, the factor follows.
 - **What happens**:
   - The relayer registers the guest on `ftf-town` (`register`) if needed.
   - It credits the difference between that amount and what it credited before (`credit_silk`, reference
@@ -55,13 +56,27 @@ Errors:
 
 ## Server setup (owner)
 
-- `FTF_TOWN_COORD=<relayer account>` and `FTF_TOWN_COORD_KEY=<its function-call key for ftf-town.testnet, methods
-  register, credit_silk, pay_gate_for>` in `relayer/.env`, made on the server like the other keys.
-- `FTF_EXPEDITION_DIR` set (it already is, for the log store).
-- The owner adds that account to the coordinators: `set_coordinators(["ftf-coordinator.testnet", "<relayer
-  account>"])`.
+The coordinator is `gate.ftf-town.testnet`, a sub-account of ftf-town with no full-access key, only one
+function-call key on ftf-town (register, credit_silk, pay_gate_for). The key is made on the relayer's server and its
+secret never leaves it:
 
-Tests: `relayer/tests/town-gate.test.mjs` (5). They cover the scaling and a tampered log; that registration happens
+1. On the server, in `relayer/`: `node scripts/coord-key.mjs gate.ftf-town.testnet`. It writes
+   `data/coord-key.json` (mode 600, gitignored; run again, it keeps the key) and prints only the account, the public
+   key and the methods. `lib/town-gate.js` reads that file when `FTF_TOWN_COORD`/`FTF_TOWN_COORD_KEY` are not set,
+   so nothing goes into `.env`.
+2. The lead creates the account (signed by ftf-town) and adds the printed key:
+   ```
+   near account create-account fund-myself gate.ftf-town.testnet '0.5 NEAR' autogenerate-new-keypair save-to-legacy-keychain sign-as ftf-town.testnet network-config testnet sign-with-legacy-keychain send
+   near account add-key gate.ftf-town.testnet grant-function-call-access --allowance '1 NEAR' --contract-account-id ftf-town.testnet --function-names 'register, credit_silk, pay_gate_for' use-manually-provided-public-key <PUBLIC_KEY> network-config testnet sign-with-legacy-keychain send
+   ```
+   (The full-access key the first command generates stays in the lead's keychain; it can be deleted afterwards so
+   the account holds only the function-call key.)
+3. The owner adds it to the coordinators. `set_coordinators` replaces the whole list, so keep the existing ones:
+   `set_coordinators({"coordinators": ["ftf-coordinator.testnet", "gate.ftf-town.testnet"]})`.
+4. `FTF_EXPEDITION_DIR` set (it already is, for the log store). Restart the relayer; `GET /api/town/gate?account_id=…`
+   then answers `configured: true`.
+
+Tests: `relayer/tests/town-gate.test.mjs` (6). They cover the scaling and a tampered log; that registration happens
 once, only the difference is credited, the daily cap holds and the credit is idempotent; the rollback after a failed
 credit; that a signed request pays once with replays and second payments refused; and bad signature, someone
-else's key, a stale request and too little silk.
+else's key, a stale request and too little silk; and that the key file is read when the env has none.

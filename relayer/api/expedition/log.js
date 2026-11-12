@@ -49,8 +49,9 @@ export function expeditionLogHandler(opts = {}) {
     if (!dir) return json(res, 200, { stored: false, reason: 'storage_off' });
     const owns = opts.ownsKey ? await opts.ownsKey(v.accountId, v.publicKey) : await rpcOwnsKey(cfg, opts.fetch || globalThis.fetch, v.accountId, v.publicKey);
     if (!owns) return json(res, 403, { error: 'not_your_key' });
-    try { const r = await appendBatch(v, { dir, now }); return json(res, r.status, r.body); }
-    catch (e) { return json(res, 500, { error: 'store', message: String((e && e.message) || e).slice(0, 120) }); }
+    let r;
+    try { r = await appendBatch(v, { dir, now }); } catch (e) { return json(res, 500, { error: 'store', message: String((e && e.message) || e).slice(0, 120) }); }
+    return json(res, r.status, r.body);
   };
 }
 export default expeditionLogHandler();

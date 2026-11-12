@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { createInventory } from '../../src/game/inventory.js';
 
 const FOLK = { elder: [0, 0, 0], guard: [10, 0, 0], lamplighter: [20, 0, 0], shardkeeper: [30, 0, 0] };
-function rig({ search = '', silkC = 0 } = {}) {
+function rig({ search = '', silkC = 0, gate = null } = {}) {
   const storage = memStorage(), doc = fakeDoc(), win = new EventTarget();
   let t = 1_000_000; const now = () => (t += 1000);
   const townLedger = createTownLedger({ storage, now });
@@ -20,7 +20,7 @@ function rig({ search = '', silkC = 0 } = {}) {
   const departs = [], chests = [];
   const inventory = createInventory({ storage });
   const tq = createTownQuests({ storage, townLedger, i18n: fakeI18n(), folkAt: (k) => FOLK[k] || null, chests: { add: (c) => chests.push(c) }, inventory,
-    depart: async (o) => { departs.push(o); return true; }, search, doc, win, now });
+    depart: async (o) => { departs.push(o); return true; }, gate, search, doc, win, now });
   let kn = 0; const kill = (type) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type, pos: [0, 0, 0], elite: false, killId: 't:' + type + '#' + (++kn) } }));
   const killId = (id) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type: 'skitter', pos: [0, 0, 0], elite: false, killId: id } }));
   return { tq, townLedger, doc, departs, chests, kill, killId, storage, win, inventory };
@@ -87,8 +87,8 @@ test('kills: ten skitters from the window event finish the spiders, the turn-in 
   const before = r.townLedger.silk;
   r.tq.act('guard', 'turnin:q_spiders');
   assert.equal(r.inventory.count('spider_silk_thread'), dropped, 'the turn-in consumed five threads');
-  assert.equal(r.townLedger.silk - before, 100_000);
-  r.tq.act('guard', 'turnin:q_spiders'); assert.equal(r.townLedger.silk - before, 100_000);
+  assert.equal(r.townLedger.silk - before, 2_000);
+  r.tq.act('guard', 'turnin:q_spiders'); assert.equal(r.townLedger.silk - before, 2_000);
   assert.equal(r.tq.quests.quests.q_spiders.state, 'done');
   assert.equal(r.tq.ledger.verify().ok, true);
 });
@@ -115,55 +115,60 @@ test('talk panel: E opens it on a giver in reach, buttons act, walking off close
   assert.equal(r.tq.talking, false, 'walked off');
 });
 
-test('the twist: the fee is spent exactly once, the transition says the line, the story ends onward with the stipend', async () => {
-  const fee = EXPEDITION.PORTAL_FEE_C;
-  const r = rig({ silkC: fee + 5_000 });
-  finishGuide(r);
-  r.tq.update([8, 0, 0]);
-  assert.equal(r.tq.story.phase, 'gate_open');
-  const before = r.townLedger.silk;
+/** A fake ftf-town gate (rev 4: pay_gate on chain): balance and price in hundredths; pay burns once. */
+function fakeGate({ balanceC = 0, priceC = 20_000, reason = null } = {}) {
+  const g = { balanceC, priceC, paid: null, pays: 0,
+    async read() { return reason ? { ok: false, reason } : { ok: true, priceC: g.priceC, balanceC: g.balanceC, paid: g.paid }; },
+    async pay() { g.pays++; if (reason) return { ok: false, reason }; if (g.paid) return { ok: true, hash: 'tx-again', record: g.paid }; if (g.balanceC < g.priceC) return { ok: false, reason: 'no_silk' }; g.balanceC -= g.priceC; g.paid = { gate_id: 'loom' }; return { ok: true, hash: 'tx-1', record: g.paid }; } };
+  return g;
+}
+const settle = () => new Promise((r) => setTimeout(r, 0));
+
+test('the twist: the gate is paid on chain once (pay_gate), the log records the receipt, the story ends onward with the stipend', async () => {
+  const gate = fakeGate({ balanceC: 25_000 });
+  const r = rig({ silkC: 50_000, gate }); await settle();
+  finishGuide(r); await r.tq.refreshChain();
+  assert.equal(r.tq.story.phase, 'gate_open', 'the on-chain balance opened the gate');
+  assert.deepEqual(r.tq.portalFacts().blocker, null); assert.equal(r.tq.portalFacts().feeC, 20_000);
   assert.equal(await r.tq.payGate(), true);
+  assert.equal(gate.pays, 1); assert.equal(gate.balanceC, 5_000, 'the contract burned the price');
   assert.equal(r.departs.length, 1); assert.equal(r.departs[0].sub, 'story.twist.line');
-  assert.equal(r.tq.story.phase, 'onward');
-  assert.equal(r.townLedger.silk, before - fee + EXPEDITION.stipendC);
-  assert.ok(r.tq.story.titles.includes('gate_walker'));
-  assert.equal(r.chests.filter((c) => c.tier === 'common').length >= 1, true);
-  assert.equal(await r.tq.payGate(), false, 'never twice');
-  assert.equal(r.townLedger.silk, before - fee + EXPEDITION.stipendC);
-  const v = r.tq.ledger.verify(); assert.equal(v.ok, true);
-  assert.equal(r.tq.ledger.log.filter((e) => e.kind === 'portal_paid').length, 1);
+  assert.equal(r.tq.story.phase, 'onward'); assert.ok(r.tq.story.titles.includes('gate_walker'));
+  const paid = r.tq.ledger.log.filter((e) => e.kind === 'portal_paid');
+  assert.equal(paid.length, 1); assert.equal(paid[0].data.tx, 'tx-1'); assert.equal(paid[0].silkC, -20_000);
+  assert.equal(await r.tq.payGate(), false, 'never twice'); assert.equal(gate.pays, 1);
+  assert.equal(r.tq.ledger.verify().ok, true);
 });
 
-test('portal eligibility: the full fee once, covered by verified income; demo fees and unearned silk do not count; the onward event fires', async () => {
+test('portal eligibility: the full fee once, covered by verified income; unearned silk does not count; the onward event fires', async () => {
   const { portalEligibility, PORTAL_FEE_C } = await import('../../src/game/portal-eligibility.js');
-  const r = rig({ silkC: 0 });
+  const gate = fakeGate({ balanceC: PORTAL_FEE_C });
+  const r = rig({ silkC: PORTAL_FEE_C, gate }); await settle();
   let onward = null; r.win.addEventListener('ftf:story-onward', (e) => { onward = e.detail; });
-  finishGuide(r);
-  assert.deepEqual(portalEligibility(r.tq.ledger.log).reason, 'not_paid');
-  r.townLedger.grant({ silk: PORTAL_FEE_C }); r.tq.update([8, 0, 0]);
+  finishGuide(r); await r.tq.refreshChain();
+  assert.equal(portalEligibility(r.tq.ledger.log).reason, 'not_paid');
   assert.equal(await r.tq.payGate(), true);
   const e = portalEligibility(r.tq.ledger.log);
-  assert.equal(e.paid, true); assert.equal(e.eligible, false, 'granted silk is not in the log: unverified'); assert.equal(e.reason, 'income_unverified');
+  assert.equal(e.paid, true); assert.equal(e.eligible, false, 'silk not earned in the log is unverified'); assert.equal(e.reason, 'income_unverified');
   assert.match(onward.logHead, /^[0-9a-f]{64}$/);
   const { makeEntry } = await import('../../src/game/expedition-log.js');
   const log = []; const add = (kind, data, silkC, trust = 'T2') => log.push(makeEntry(log, { t: 1 + log.length, kind, data, silkC, trust }));
-  for (let i = 0; i < 20; i++) add('quest_turned_in', { questId: 'q_x' + i }, 50_000);
+  for (let i = 0; i < 20; i++) add('quest_turned_in', { questId: 'q_x' + i }, 1_000);
   add('portal_paid', { feeC: PORTAL_FEE_C, demo: false }, -PORTAL_FEE_C);
   assert.equal(portalEligibility(log).eligible, true);
-  const demo = []; demo.push(makeEntry(demo, { t: 1, kind: 'portal_paid', data: { feeC: 1000, demo: true }, silkC: -1000, trust: 'T2' }));
-  assert.equal(portalEligibility(demo).paid, false);
 });
 
-test('the twist: below the fee the gate stays shut; ?portalFee= is a marked demo fee', async () => {
-  const r = rig({ silkC: 10_000 });
-  finishGuide(r);
-  assert.equal(await r.tq.payGate(), false); assert.equal(r.departs.length, 0);
-  const d = rig({ search: '?story=1&portalFee=10', silkC: 2_000 });
-  assert.equal(d.tq.fee.demo, true);
-  finishGuide(d); d.tq.update([8, 0, 0]);
-  assert.equal(d.tq.story.phase, 'gate_open');
-  assert.equal(await d.tq.payGate(), true);
-  assert.equal(d.tq.ledger.log.find((e) => e.kind === 'portal_paid').data.demo, true);
+test('the gate stays shut without a guest account, off chain, below the price; a failed payment says why', async () => {
+  const none = rig({ gate: fakeGate({ reason: 'need_guest' }) }); await settle(); finishGuide(none); await none.tq.refreshChain();
+  assert.equal(none.tq.portalFacts().blocker, 'need_guest'); assert.equal(await none.tq.payGate(), false); assert.equal(none.departs.length, 0);
+  const off = rig({ gate: fakeGate({ reason: 'network' }) }); await settle(); await off.tq.refreshChain();
+  assert.equal(off.tq.portalFacts().blocker, 'network');
+  const poor = rig({ gate: fakeGate({ balanceC: 19_999 }) }); await settle(); finishGuide(poor); await poor.tq.refreshChain();
+  assert.equal(poor.tq.story.phase, 'gathering');
+  const g = fakeGate({ balanceC: 20_000 }); const race = rig({ gate: g }); await settle(); finishGuide(race); await race.tq.refreshChain();
+  g.balanceC = 0; // spent elsewhere between the read and the click
+  assert.equal(await race.tq.payGate(), false); assert.equal(race.tq.portalFacts().payError, 'no_silk'); assert.equal(race.tq.story.phase, 'gathering');
+  const nogate = rig(); await settle(); assert.equal(await nogate.tq.payGate(), false, 'no chain, no payment (no demo mode)');
 });
 
 test('story strings: every key the views use exists in all five play locales', async () => {

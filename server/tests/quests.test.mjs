@@ -28,10 +28,10 @@ test('a human session plays the guide and the welcome, may not hunt, and a secon
   p.cmd('guide_step', { step: 'talked' }); p.cmd('guide_step', { step: 'moved' });
   assert.equal(p.obs().expedition.quests.q_welcome.state, 'ready');
   const t1 = p.cmd('quest_turn_in', { questId: 'q_welcome' });
-  assert.equal(t1.status, 200); assert.equal(t1.body.result.silkC, 40_000);
+  assert.equal(t1.status, 200); assert.equal(t1.body.result.silkC, 800);
   const t2 = p.cmd('quest_turn_in', { questId: 'q_welcome' });
   assert.equal(t2.status, 422); assert.equal(t2.body.error.reason, 'not_ready');
-  assert.equal(p.obs().expedition.balanceC, 40_000);
+  assert.equal(p.obs().expedition.balanceC, 800);
   assert.equal(p.cmd('quest_accept', { questId: 'q_spiders' }).status, 200);
   const h = p.cmd('hunt', { questId: 'q_spiders' });
   assert.equal(h.status, 422); assert.equal(h.body.error.reason, 'not_scripted');
@@ -49,7 +49,7 @@ test('a scripted session hunts at T2: the chain completes, actionId replays, an 
   assert.equal(o.actor, 'scripted'); assert.equal(o.account, 'salt.arena.testnet');
   assert.equal(o.resources.spider_silk_thread, 6 - 5 + 6 - 4, 'two hunts of ten yield 6 threads each; the turn-ins consumed 5 and 4');
   assert.equal(o.quests.q_spiders.state, 'done'); assert.equal(o.quests.b_spiders.state === 'done' || o.quests.b_spiders.state === 'locked', true);
-  assert.equal(o.balanceC, 40_000 + 100_000 + 30_000 + 20 * 600, 'welcome + spiders + bounty + 20 hunted skitters (T2 kill silk)');
+  assert.equal(o.balanceC, 800 + 2_000 + 600 + 20 * 12, 'welcome + spiders + bounty + 20 hunted skitters (T2 kill silk)');
   const env = { actionId: 'replay-test-0001', expectedVersion: p.obs().version, type: 'quest_accept', args: { questId: 'q_part' } };
   const a = p.raw(env), b = p.raw(env);
   assert.equal(a.status, 200); assert.equal(b.body.replayed, true);

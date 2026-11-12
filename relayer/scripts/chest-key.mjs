@@ -3,6 +3,7 @@
 // public key, which the lead adds to the contract as a function-call-only key:
 //   node scripts/chest-key.mjs                 FTF_CHEST_KEY (open_chest on chests.<signer>, contracts/scripts/chest-deploy.sh)
 //   node scripts/chest-key.mjs FTF_SKIN_KEY    FTF_SKIN_KEY  (mint_skin on skins.<signer>, contracts/scripts/skin-deploy.sh)
+//   node scripts/chest-key.mjs FTF_COMPANION_KEY  (nft_mint on companions.<signer>, docs/companions.md)
 import { readFileSync, appendFileSync, existsSync } from 'node:fs';
 import { generateKeyPair, importSecretKey } from '../lib/near-tx.js';
 
