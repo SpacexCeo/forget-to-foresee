@@ -60,7 +60,7 @@ export function outcomeView(outcome, { t, items = [], base = '/' }) {
 
 /** The reel's filler tiles: a mix of the manifest's items and the other reward kinds (looks only; the landing tile is the outcome). */
 export function reelTiles(items, rand, n = REEL.tiles) {
-  const kinds = ['silk', 'xp', 'item', 'item', 'item', 'title'];
+  const kinds = ['silk', 'xp', 'item', 'item', 'item']; // the deck's kinds (docs/chests.md): no titles
   const out = [];
   for (let i = 0; i < n; i++) {
     const k = rand() < 0.04 ? 'nft' : kinds[Math.floor(rand() * kinds.length)];
@@ -101,10 +101,11 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
   function close() { root.remove(); resolveP(outcomeResult); }
   const closeBtn = () => { const b = el('button', 'co-btn', t('chest.close')); b.type = 'button'; b.addEventListener('click', close); btns.replaceChildren(b); b.focus && b.focus(); done = true; };
 
-  Promise.resolve(items).then((list) => {
+  // the reel never waits long for the manifest: after 1.5 s it spins with the reward kinds alone
+  Promise.race([Promise.resolve(items), new Promise((r) => setTimeout(() => r([]), 1500))]).then((list) => {
     const tiles = reelTiles(list, rand);
-    const tileEl = (o) => {
-      const v = outcomeView(o, { t, items: list, base });
+    const tileEl = (o, from = list) => {
+      const v = outcomeView(o, { t, items: from, base });
       const d = el('div', 'co-tile'); d.style.setProperty('--g', GLOW[v.frame === 'mythic' ? 'mythic' : v.rarity] || GLOW.common);
       if (v.icon) { const i = el('img'); i.src = v.icon; i.alt = ''; d.append(i); } else d.append(el('b', null, v.glyph));
       return d;
@@ -117,23 +118,25 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
     if (!reduced) tick(); else reel.hidden = true;
     info.replaceChildren(el('p', 'co-note', t('chest.asking')));
 
-    client.open({ guest, chestId: chest.id, source: chest.source }).then(async (r) => {
+    return client.open({ guest, chestId: chest.id, source: chest.source }).then(async (r) => {
       if (!r.ok) {
         spinning = false; if (raf && win.cancelAnimationFrame) win.cancelAnimationFrame(raf);
         reel.hidden = true;
         outcomeResult = { ok: false, error: r.error };
         cue('ui_error');
-        info.replaceChildren(el('p', null, t('chest.err.' + (['off', 'rate', 'sold_out', 'no_guest', 'network'].includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
+        info.replaceChildren(el('p', null, t('chest.err.' + (['off', 'rate', 'sold_out', 'no_guest', 'no_key', 'network'].includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
         closeBtn();
         return;
       }
       const op = r.opening;
+      // the landing tile and the card name the real item: wait a little more for the manifest here
+      const full = await Promise.race([Promise.resolve(items), new Promise((r) => setTimeout(() => r(list), 3000))]).catch(() => list);
       const verification = op.verification || { verified: false, leafOk: false, proofOk: false, randomOk: false, chainOk: null };
       // land the reel on the outcome
       const land = () => new Promise((res) => {
         if (reduced) { res(); return; }
         spinning = false; if (raf && win.cancelAnimationFrame) win.cancelAnimationFrame(raf);
-        const landing = tileEl(op.outcome);
+        const landing = tileEl(op.outcome, full);
         strip.replaceChild(landing, strip.children[REEL.land]);
         const target = -(REEL.land * REEL.tile + 50) + (rand() - 0.5) * 60;
         strip.style.transition = 'none'; strip.style.transform = `translateX(${x}px)`;
@@ -145,7 +148,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       });
       await land();
       // the card
-      const v = outcomeView(op.outcome, { t, items: list, base });
+      const v = outcomeView(op.outcome, { t, items: full, base });
       const glow = GLOW[v.frame === 'mythic' ? 'mythic' : v.rarity] || GLOW.common;
       const card = el('div', 'co-card'); card.style.setProperty('--g', glow);
       const g = el('div', 'co-glow'); g.style.setProperty('--g', glow);
@@ -159,7 +162,8 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       cue('gift_chime');
       outcomeResult = { ok: true, opening: op, verification };
       try { onSettled(op, verification); } catch (e) { console.warn('[chest] settle', e); }
-      // the verification line
+      // the verification line (a ?chestpreview fixture says so and links nothing)
+      if (op.preview) { info.replaceChildren(el('div', 'co-ver co-no', null)); info.firstChild.append(el('b', null, t('chest.preview'))); closeBtn(); return; }
       const ver = el('div', 'co-ver' + (verification.verified ? '' : ' co-no'));
       ver.append(el('b', null, t(verification.verified ? 'chest.verified' : 'chest.unverified')), doc.createTextNode(' '));
       ver.append(doc.createTextNode(t(verification.verified ? 'chest.verified.full' : verification.proofOk ? 'chest.verified.chain' : 'chest.verified.none', { index: op.index })));
@@ -172,6 +176,6 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       info.replaceChildren(ver, det, links);
       closeBtn();
     });
-  });
+  }).catch((e) => { console.warn('[chest] reveal', e); info.replaceChildren(el('p', null, t('chest.err.bad'))); closeBtn(); });
   return { root, result, close };
 }

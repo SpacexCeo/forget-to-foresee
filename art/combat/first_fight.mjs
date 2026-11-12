@@ -7,6 +7,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const out = process.argv[2], url = process.argv[3] || 'http://127.0.0.1:5199';
+const V3 = process.argv.includes('v3');      // v3: the pack's kill drops the chest, the open-case reveal (?chestpreview=1) ends it
 const [W, H] = (process.argv.find((a) => /^\d+x\d+$/.test(a)) || '1280x720').split('x').map(Number);
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'] });
@@ -14,7 +15,8 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 const errors = [], log = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris`);
+await page.addInitScript(() => { const st = document.createElement('style'); st.textContent = 'button.ftf-town-prompt[style*="left: 16px"],button.ftf-town-prompt[style*="left:16px"]{opacity:0!important}'; document.addEventListener('DOMContentLoaded', () => document.head.append(st)); });
+await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris${V3 ? '&chestpreview=1' : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
 await page.waitForFunction(() => window.__ftf.town.mobs, null, { timeout: 120000 });
 await page.evaluate(() => window.__ftf.town.mobs.ready);
@@ -70,6 +72,7 @@ await page.evaluate(async () => {
     let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     let want = [p[0] - dx * 6.5, p[1] + 3.2, p[2] - dz * 6.5], look = [p[0] + dx * 2.0, p[1] + 0.8, p[2] + dz * 2.0];
     if (p[2] - 1200 * 0 < 43 && p[2] > 20) { want = [p[0] + 1.5, p[1] + 2.0, 46.5]; look = [p[0], p[1] + 1.1, p[2]]; }   // in and just past the gate: a front view, she walks out towards us
+    if (window.__camHold) { want = window.__camHold.slice(); look = [p[0], p[1] + 0.9, p[2]]; }   // held: she walks into a still frame
     const dir = [want[0] - look[0], want[1] - look[1], want[2] - look[2]], dl = Math.hypot(...dir);
     const hit = col.rayCast(f.town.scene.world, look, dir, dl, col.MASK_PLAYER);
     if (hit) { const k = Math.max(0.15, (hit.t - 0.4) / dl); for (let i = 0; i < 3; i++) want[i] = look[i] + dir[i] * k; }
@@ -77,6 +80,14 @@ await page.evaluate(async () => {
     for (let i = 0; i < 3; i++) { c.pos[i] += (want[i] - c.pos[i]) * (hit ? 0.5 : 0.12); c.look[i] += (look[i] - c.look[i]) * 0.15; }
     f.rig.camera.position.set(...c.pos); f.rig.camera.lookAt(...c.look); f.rig.camera.updateMatrixWorld(true);
   };
+});
+// v3: chests dropped mid-fight get picked up as she runs to the next creature, before the camera sees them: the
+// drops are held until the pack is down and she has stepped back, then land where the creatures fell (the kill ->
+// drop hook itself is the game's)
+if (V3) await page.evaluate(() => {
+  const M = window.__ftf.town.monsters, d = M.drop.bind(M), q = window.__heldDrops = [];
+  M.drop = (pos, elite) => { if (q) q.push([pos, elite]); return true; };
+  window.__releaseDrops = () => { M.drop = d; q.forEach(([p, e], i) => setTimeout(() => d(p, e), i * 180)); return q.length; };
 });
 // capture in the background
 let capturing = true, n = 0; const t0 = Date.now();
@@ -109,6 +120,27 @@ for (let round = 0; round < 14 && (Date.now() - t0) < 28000; round++) {
   else await wait(300);
 }
 await wait(1500);
+if (V3) {
+  // the chest the pack's kill dropped (play/mobs.js 'ftf:mob-killed' -> town-monsters drop): walk onto it, then the
+  // labelled open-case preview (its button is clicked from script and kept off screen: the reel and the card show)
+  await page.evaluate(() => Promise.all([import('/src/play/chest-open.js'), import('/src/play/game-menu.js')]));
+  const away = await page.evaluate(() => {          // 5 m back from where the creatures fell, then the drops land
+    const q = window.__heldDrops, p = window.__ftf.player.pos; if (!q.length) return null;
+    const c = [0, 2].map((i) => q.reduce((a, [x]) => a + x[i], 0) / q.length); let dx = p[0] - c[0], dz = p[2] - c[1]; const l = Math.hypot(dx, dz) || 1;
+    if (l < 0.5) { dx = 1; dz = -1; } return [c[0] + dx / (l < 0.5 ? 1.41 : l) * 5.5, p[1], c[1] + dz / (l < 0.5 ? 1.41 : l) * 5.5];
+  });
+  if (away) await walkTo(away, 0.8, 4000, false);
+  log.push('stepped back, drops ' + await page.evaluate(() => window.__releaseDrops()));
+  const chests = () => page.evaluate(() => window.__ftf.town.monsters ? window.__ftf.town.monsters.chests.map((c) => c.at) : []);
+  let cs = []; for (let i = 0; i < 40 && !(cs = await chests()).length; i++) await wait(250);
+  log.push('chests ' + cs.length);
+  if (cs.length) {
+    await page.evaluate(() => { const c = window.__cam; if (c) window.__camHold = c.pos.slice(); });
+    await walkTo(cs[0], 0.6, 6000, false); log.push('walked onto the chest'); await wait(1500);
+    const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /preview/i.test(x.textContent)); if (!b) return false; b.click(); return true; });
+    log.push(ok ? 'reveal' : 'no preview button'); await wait(11000);
+  }
+} else {
 // the chest: a moss critter below the gate drops one (the monster kill -> chest hook is not in yet): lance it, walk
 // onto the chest (picked up into the bag), open the inventory and the chest
 const critter = () => page.evaluate(() => {
@@ -138,6 +170,7 @@ if (ch && ch.chests.length) {
     const b = page.getByRole('button', { name }).or(page.getByRole('tab', { name })); if (await b.count()) { await b.first().click().catch(() => {}); log.push('clicked ' + name); await wait(1400); }
   }
   await wait(3500);
+}
 }
 capturing = false; await capture;
 const secs = (Date.now() - t0) / 1000;

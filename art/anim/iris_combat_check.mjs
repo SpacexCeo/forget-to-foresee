@@ -4,14 +4,14 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const out = process.argv[2], url = process.argv[3] || 'http://127.0.0.1:5199';
+const out = process.argv[2], url = process.argv[3] || 'http://127.0.0.1:5199', hero = process.argv[4] || 'iris';
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'] });
 const page = await (await browser.newContext({ viewport: { width: 640, height: 720 }, deviceScaleFactor: 1 })).newPage();
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris&mobs=0`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=${hero}&mobs=0`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
 await page.evaluate(() => window.__ftf.player.teleport([-27, 1240, 62], 0.6)); await page.waitForTimeout(2500);  // the open casting field
 const shot = (az) => page.evaluate((az) => {
