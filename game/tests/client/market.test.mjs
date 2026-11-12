@@ -64,7 +64,7 @@ test('market ticker: hidden without a market; shows the count, the honest label 
   assert.equal(tk.el.hidden, false);
   const txt = textOf(tk.el);
   assert.ok(txt.includes('Town market · 20,001 trades today') || txt.includes('Town market · 20001 trades today'), txt);
-  assert.ok(txt.includes('AI townsfolk · automated trades on NEAR testnet'));
+  assert.ok(txt.includes('Scripted townsfolk · automated trades on NEAR testnet'));
   assert.ok(all(tk.el).some((e) => e.tag === 'a' && e.href === `https://testnet.nearblocks.io/txns/${HASH}` && e.rel === 'noopener'));
   assert.deepEqual(seen, []); // the first answer is history, not news
   const h2 = '8Xy3tZ9rQd1mVbN4kLpW2sF8hJcGaE5uYoTiRe6wQzx';

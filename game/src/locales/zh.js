@@ -832,7 +832,7 @@ export default {
   'item.trading_board': '交易板',
   "mk.title": "城镇集市",
   "mk.today": "今日 {n} 笔交易",
-  "mk.label": "AI 镇民 · NEAR 测试网上的自动交易",
+  "mk.label": "脚本镇民 · NEAR 测试网上的自动交易",
   "mk.line": "{buyer} 以 {price} 向 {seller} 买了 {qty} × {item}",
   "mk.quiet": "集市部署到测试网后开张",
   "mk.tx": "在 NEAR 测试网浏览器中查看此交易",

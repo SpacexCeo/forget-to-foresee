@@ -826,7 +826,7 @@ export default {
   'item.trading_board': 'Trading Board',
   "mk.title": "Town market",
   "mk.today": "{n, plural, one {# trade today} other {# trades today}}",
-  "mk.label": "AI townsfolk · automated trades on NEAR testnet",
+  "mk.label": "Scripted townsfolk · automated trades on NEAR testnet",
   "mk.line": "{buyer} bought {qty} × {item} from {seller} for {price}",
   "mk.quiet": "The market opens once it is deployed on testnet",
   "mk.tx": "Open this trade on the NEAR testnet explorer",

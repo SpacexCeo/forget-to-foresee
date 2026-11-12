@@ -832,7 +832,7 @@ export default {
   'item.trading_board': 'Торгове табло',
   "mk.title": "Міський ринок",
   "mk.today": "{n, plural, one {# угода сьогодні} few {# угоди сьогодні} many {# угод сьогодні} other {# угоди сьогодні}}",
-  "mk.label": "ШІ-містяни · автоматичні угоди в NEAR testnet",
+  "mk.label": "Містяни за сценарієм · автоматичні угоди в NEAR testnet",
   "mk.line": "{buyer} купив(ла) {qty} × {item} у {seller} по {price}",
   "mk.quiet": "Ринок відкриється після розгортання в testnet",
   "mk.tx": "Відкрити угоду в оглядачі NEAR testnet",

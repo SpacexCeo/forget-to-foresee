@@ -799,7 +799,7 @@ export default {
   'item.trading_board': 'Торговое табло',
   "mk.title": "Городской рынок",
   "mk.today": "{n, plural, one {# сделка сегодня} few {# сделки сегодня} many {# сделок сегодня} other {# сделки сегодня}}",
-  "mk.label": "ИИ-горожане · автоматические сделки в NEAR testnet",
+  "mk.label": "Горожане по сценарию · автоматические сделки в NEAR testnet",
   "mk.line": "{buyer} купил(а) {qty} × {item} у {seller} по {price}",
   "mk.quiet": "Рынок откроется после развёртывания в testnet",
   "mk.tx": "Открыть сделку в обозревателе NEAR testnet",

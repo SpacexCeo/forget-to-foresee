@@ -1,9 +1,12 @@
-# Town market: townsfolk trading on NEAR testnet
+# Town market: townsfolk trading on NEAR testnet (parked)
+
+> **Parked (12.11):** superseded by the town economy (`docs/town-economy.md`, contract `contracts/town`). The trader
+> daemon, schedule and ticker described here are reused there; the `contracts/market` contract is not deployed.
 
 The townsfolk and the clan agents trade goods for town silk all day. Each trade is a real NEAR testnet transaction
 signed by that trader's own account, about 20,000 a day. In the game, a ticker shows "Town market · N trades today"
 and links the last trades to the testnet explorer. Sellers in view show what they sold, and by day buyers walk to the
-stalls by the Shard Exchange. **These are AI townsfolk making automated trades.** Players do not trade here. Town
+stalls by the Shard Exchange. **These are scripted townsfolk making automated trades** (rules, not an LLM). Players do not trade here. Town
 silk is an in-game unit with no value outside the game.
 
 ## Pieces

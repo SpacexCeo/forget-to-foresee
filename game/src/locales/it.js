@@ -832,7 +832,7 @@ export default {
   'item.trading_board': 'Tabellone degli scambi',
   "mk.title": "Mercato cittadino",
   "mk.today": "{n, plural, one {# scambio oggi} other {# scambi oggi}}",
-  "mk.label": "Cittadini IA · scambi automatici su NEAR testnet",
+  "mk.label": "Cittadini scriptati · scambi automatici su NEAR testnet",
   "mk.line": "{buyer} ha comprato {qty} × {item} da {seller} a {price}",
   "mk.quiet": "Il mercato apre quando sarà pubblicato su testnet",
   "mk.tx": "Apri lo scambio nell’explorer di NEAR testnet",
