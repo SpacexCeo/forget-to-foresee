@@ -73,3 +73,26 @@ test('the elite does not stagger; the others flinch', () => {
   b.damage(e, 10, []); b.damage(s, 10, []);
   assert.notEqual(e.state, 'stagger'); assert.equal(s.state, 'stagger');
 });
+
+test('the strike hits the arc in front of her, not behind; the third hit knocks a light monster back', async () => {
+  const { ACTIONS } = await import('../../src/play/mobs.js');
+  const b = new MobBrain({ origin: O, seed: 4 });
+  const m = b.mobs.find((x) => x.type === 'skitter');
+  for (const o of b.mobs) if (o !== m) o.state = 'gone';            // alone, so only it can be hit
+  const from = [m.pos[0], m.pos[1], m.pos[2] - 1.2];
+  const ev = [];
+  assert.equal(b.strike(from, Math.PI, 14, false, ev), 0, 'facing away: a miss');
+  const z0 = m.pos[2];
+  assert.ok(b.strike(from, 0, 26, true, ev) >= 1);
+  assert.ok(m.pos[2] > z0, 'knocked back');
+  assert.equal(ACTIONS.strike.combo.length, 3); assert.ok(ACTIONS.dash.iframes > ACTIONS.dash.seconds);
+});
+
+test('balance: the first pack takes a new player about 20-30 s; the elite is a long fight', () => {
+  const first = PACKS[0], hp = MOB_TYPES[first.type].hp * first.count;
+  const casual = 12;                                   // damage per second of a new player who misses half the time
+  assert.ok(hp / casual >= 15 && hp / casual <= 35, `first pack ${hp / casual} s`);
+  const ownDps = MOB_TYPES.skitter.damage / MOB_TYPES.skitter.cooldown * first.count;
+  assert.ok(100 / ownDps > hp / casual * 0.5, 'she outlasts the first pack even standing still for a while');
+  assert.ok(MOB_TYPES.crownrift.hp / 35 > 20, 'the elite takes a skilled player more than 20 s');
+});

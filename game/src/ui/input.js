@@ -68,7 +68,7 @@ export function mountRunToggle(input, doc = globalThis.document) {
 }
 
 const WORLD_KEYS = new Set([
-  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'KeyQ', 'KeyK', 'F3',
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyR', 'KeyQ', 'KeyK', 'KeyF', 'Space', 'F3',   // F / Space: strike and dash outside the walls (play/mobs.js)
   'KeyI', 'KeyM', 'KeyV', 'KeyT', 'KeyH', 'KeyL', 'KeyG', 'KeyN', 'KeyO', 'KeyP', 'ShiftLeft', 'ShiftRight',
   ...Array.from({ length: 9 }, (_, i) => 'Digit' + (i + 1)),
   'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
@@ -99,6 +99,7 @@ export class Input {
       if (e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
       if (['Tab', 'Enter', 'Space'].includes(e.code)) this.device = 'keyboard';
       if (!WORLD_KEYS.has(e.code)) return;
+      if (e.code === 'Space' && e.target?.closest?.('button, a, summary, [role="button"], [tabindex]:not([tabindex="-1"])')) return; // Space still presses a focused control
       e.preventDefault();
       if (e.repeat && !this.keys.has(e.code)) return;
       this.device = 'keyboard';

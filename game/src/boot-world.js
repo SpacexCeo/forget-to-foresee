@@ -16,7 +16,7 @@ import { detectTier, tierForPreference } from './render/quality.js';
 import { cycleLook, KEYS as CYCLE_KEYS } from './render/daycycle.js';
 import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
-import { fixedSteps, rayCast, MASK_PLAYER } from './physics/collision.js';
+import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
 import { PHYSICS_DT, steerTo, clickStuck } from './physics/character.js';
 import { damp } from './physics/motion.js';
 import { Input } from './ui/input.js';
@@ -340,7 +340,9 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
-      onFeedback: (k) => cue(k === 'kill' ? 'memory_dissolve' : 'ui_error') });
+      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null),
+      moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
+      onFeedback: (k) => cue(k === 'kill' ? 'memory_dissolve' : k === 'dash' || k.startsWith('strike') ? 'vision_whoosh' : 'ui_error') });
   }).catch((e) => console.warn('[mobs]', e));
 }
 function returnToTown() {
@@ -630,6 +632,10 @@ function handleInput(dt) {
   if (townOn && townFlow && input.hit('KeyO')) townFlow.expandPill(); // O: the newest minimised panel
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
+    if (townMobs && townCasting.field) { // the strike and the dash (play/mobs.js ACTIONS): F / 3 and Space / 4
+      if (input.hit('KeyF') || input.hit('Digit3')) townMobs.strike();
+      if (input.hit('Space') || input.hit('Digit4')) townMobs.dash(wishVector());
+    }
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
   }
   if (playOn && (input.hit('KeyI') || pad.hit(PAD.inspect))) handleInspect();
@@ -805,6 +811,7 @@ function frame() {
     }
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
+  if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * 0.08; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
   streamer.update(dt, focus);
   warmup.update();
   updateIrisStandIn();

@@ -15,10 +15,10 @@ import { CASTS } from '../scenes/town-casting-fx.js';
 
 /** Per type: health, speeds (m/s, matched to the clips: art/mobs/mobs.json), ranges (m), attack timing. */
 export const MOB_TYPES = Object.freeze({
-  skitter: Object.freeze({ hp: 30, walk: 0.9, run: 1.8, radius: 0.35, aggro: 9, attack: 1.0, damage: 6, windup: 0.8, impact: 0.45, cooldown: 1.2, stagger: true }),
-  hulker: Object.freeze({ hp: 160, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 22, windup: 1.4, impact: 0.58, cooldown: 2.2, stagger: true }),
-  veilbell: Object.freeze({ hp: 60, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 12, windup: 1.5, impact: 0.75, cooldown: 2.6, stagger: true, ranged: true }),
-  crownrift: Object.freeze({ hp: 320, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 30, windup: 1.6, impact: 0.55, cooldown: 2.4, stagger: false, elite: true }),
+  skitter: Object.freeze({ hp: 55, walk: 0.9, run: 1.8, radius: 0.35, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
+  hulker: Object.freeze({ hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: true, heavy: true }),
+  veilbell: Object.freeze({ hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
+  crownrift: Object.freeze({ hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
 });
 
 /** Packs: type, count (phone count), home in town-local metres (x, z), respawn seconds after the last one fell. */
@@ -38,6 +38,12 @@ export const STAGGER_SECONDS = 0.45;
 export const SNARE_ROOT_SECONDS = 1.6;
 export const HIT_STOP_SECONDS = 0.07;
 export const CAST_DAMAGE = Object.freeze({ lance: 40, snare: 25 });
+/** Iris's own moves beyond the walls (the skill bar's strike and dash slots; ids for the UI). */
+export const ACTIONS = Object.freeze({
+  strike: Object.freeze({ keys: ['KeyF', 'Digit3'], cooldown: 0.32, combo: [14, 14, 26], reach: 2.1, arc: 1.05, window: 0.8 }),
+  dash: Object.freeze({ keys: ['Space', 'Digit4'], cooldown: 1.0, distance: 4.5, seconds: 0.2, iframes: 0.35 }),
+});
+export const REGEN = Object.freeze({ delay: 4, perSecond: 8 });   // her health comes back out of combat
 const LANCE_SPEED = 20;             // the fracture front of the Frost Lance (m/s): a monster far along the line is hit later
 const SNARE_DELAY = 0.35;           // the leash reaches the point, the ring snaps open
 
@@ -85,11 +91,30 @@ export class MobBrain {
   damage(m, amount, events, { root = 0 } = {}) {
     if (m.state === 'dead' || m.state === 'gone') return;
     m.hp -= amount; m.freeze = HIT_STOP_SECONDS; m.root = Math.max(m.root, root);
-    events.push({ kind: 'hit', mob: m, amount });
+    events.push({ kind: 'hit', mob: m, amount, crit: amount >= 26 });
     if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.t = 0; events.push({ kind: 'death', mob: m }); return; }
     if (m.state === 'idle') m.state = 'chase';                                   // a hit always draws it in
     if (m.T.stagger && m.state !== 'windup') { m.state = 'stagger'; m.t = 0; }
     else if (m.T.stagger && m.state === 'windup' && m.t < m.T.windup * m.T.impact * 0.6) { m.state = 'stagger'; m.t = 0; }   // interrupted early in the telegraph
+  }
+
+  /** Iris's strike: every living monster in the arc in front of her takes `amount` (the third hit knocks back). */
+  strike(from, heading, amount, knock, events) {
+    const A = ACTIONS.strike; let n = 0;
+    for (const m of this.mobs) {
+      if (m.state === 'dead' || m.state === 'gone') continue;
+      const dx = m.pos[0] - from[0], dz = m.pos[2] - from[2], d = Math.hypot(dx, dz);
+      if (d > A.reach + m.T.radius) continue;
+      let a = Math.atan2(dx, dz) - heading; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
+      if (Math.abs(a) > A.arc && d > m.T.radius + 0.3) continue;
+      this.damage(m, amount, events);
+      if (knock && !m.T.heavy && m.state !== 'dead' && d > 1e-3) {
+        const k = 0.7 / d, nx = m.pos[0] + dx * k, nz = m.pos[2] + dz * k;
+        if (this.outside([nx, 0, nz]) && Math.hypot(nx - m.pack.home[0], nz - m.pack.home[2]) < LEASH) { m.pos[0] = nx; m.pos[2] = nz; }
+      }
+      n++;
+    }
+    return n;
   }
 
   /** Iris's cast left her hands: queue its hits ({id, from, dir [x, z], point}). */
@@ -219,6 +244,8 @@ const CSS = `
 @keyframes ftf-hp-shake { 25% { transform: translateX(calc(-50% - 4px)); } 75% { transform: translateX(calc(-50% + 4px)); } }
 .ftf-hurt-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 4; box-shadow: inset 0 0 120px 30px rgba(200, 30, 20, .55); opacity: 0; transition: opacity .35s ease; }
 .ftf-hurt-vignette.on { opacity: 1; transition: none; }
+.ftf-dmg { position: fixed; left: 0; top: 0; z-index: 5; pointer-events: none; color: #fff7e6; font: 800 18px/1 system-ui, sans-serif; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.6); will-change: transform, opacity; }
+.ftf-dmg.crit { color: #ffd166; font-size: 24px; }
 @media (max-width: 700px) { .ftf-hp { bottom: calc(190px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { .ftf-hp.ftf-hurt { animation: none; } .ftf-hp > i { transition: none; } }
 `;
@@ -237,11 +264,14 @@ const CSS = `
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, variant = '', phone = false, reduced = () => false, onFeedback = null,
-  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7 }) {
+  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null }) {
   const brain = new MobBrain({ origin, phone, seed });
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
-  const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0 };
+  const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
+  const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1 };
+  let shake = 0;
+  const numbers = [];
   const shots = [];
   let disposed = false;
 
@@ -253,6 +283,9 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   }
   const ringGeo = new THREE.RingGeometry(0.75, 1, 40); ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.0, depthWrite: false });
+  const slashGeo = new THREE.RingGeometry(1.2, 2.0, 32, 1, -1.1, 2.2); slashGeo.rotateX(-Math.PI / 2);
+  const slash = new THREE.Mesh(slashGeo, new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  slash.visible = false; slash.renderOrder = 3; group.add(slash); let slashT = 0;
   const seedGeo = new THREE.IcosahedronGeometry(0.16, 1);
   const seedMat = new THREE.MeshBasicMaterial({ color: 0x9ff5ea });
 
@@ -295,8 +328,15 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     v.holder.position.set(m.pos[0], m.pos[1], m.pos[2]); v.holder.rotation.y = m.heading;
   }
 
-  function hurt(amount) {
-    if (!iris.alive) return;
+  function number(m, amount, crit) {
+    if (!doc || reduced() || !camera) return;
+    const el = doc.createElement('div'); el.className = 'ftf-dmg' + (crit ? ' crit' : ''); el.textContent = String(Math.round(amount)); doc.body.append(el);
+    numbers.push({ el, p: [m.pos[0] + (Math.random() - 0.5) * 0.4, m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]], t: 0 });
+  }
+
+  function hurt(amount, heavy = false) {
+    if (!iris.alive || iris.iframes > 0) return;
+    iris.calm = 0; if (heavy) shake = Math.max(shake, 0.6);
     iris.hp = Math.max(0, iris.hp - amount); iris.hurtT = 0.3;
     if (hpEl) { hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; hpEl.setAttribute('aria-valuenow', String(Math.round(iris.hp))); hpEl.classList.remove('ftf-hurt'); void hpEl.offsetWidth; hpEl.classList.add('ftf-hurt'); }
     if (vignette && !reduced()) { vignette.classList.add('on'); setTimeout(() => vignette.classList.remove('on'), 60); }
@@ -312,7 +352,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     for (const e of ev) {
       const v = views.get(e.mob);
       if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !e.mob.T.ranged; }
-      else if (e.kind === 'impact') { if (v) v.ring.visible = false; if (e.hit) hurt(e.mob.T.damage); }
+      else if (e.kind === 'impact') { if (v) v.ring.visible = false; if (e.hit) hurt(e.mob.T.damage, !!e.mob.T.heavy); }
       else if (e.kind === 'shot' && e.to && v) {
         const s = new THREE.Mesh(seedGeo, seedMat); const from = new THREE.Vector3(); v.model.getObjectByName('seed')?.getWorldPosition(from);
         if (!from.lengthSq()) from.set(e.mob.pos[0], e.mob.pos[1] + 1, e.mob.pos[2]);
@@ -321,7 +361,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit();
+        v.fx.hit(); number(e.mob, e.amount, e.crit);
+        if (e.crit || e.mob.T.heavy) shake = Math.max(shake, e.crit ? 0.35 : 0.2);
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
@@ -342,6 +383,31 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     get hp() { return iris.hp; },
     /** Iris's cast (scenes/town-casting.js onFire). */
     cast(c) { brain.cast(c); },
+    get shake() { return reduced() ? 0 : shake; },
+    get actions() { return { strikeCd: act.strikeCd, dashCd: act.dashCd, combo: act.combo, iframes: iris.iframes }; },
+    /** The strike (F / 3): a two-or-three-hit combo in front of her. Returns false while on cooldown or off the field. */
+    strike() {
+      if (!iris.alive || !iris.outside || act.strikeCd > 0 || act.dash) return false;
+      const A = ACTIONS.strike;
+      act.combo = act.comboT > 0 ? (act.combo % A.combo.length) + 1 : 1; act.comboT = A.window; act.strikeCd = A.cooldown;
+      const ev = []; brain.strike(player.pos, player.heading, A.combo[act.combo - 1], act.combo === A.combo.length, ev); handle(ev);
+      act.twist = 0.22; act.twistDir = act.combo % 2 ? 1 : -1;
+      slashT = 0.16; slash.visible = true; slash.position.set(player.pos[0], player.pos[1] + 0.95, player.pos[2]);
+      slash.rotation.set(act.combo === 3 ? 0 : 0.25 * act.twistDir, player.heading + Math.PI, 0); slash.scale.setScalar(act.combo === 3 ? 1.25 : 1);
+      if (moveIris) moveIris([Math.sin(player.heading) * 0.25, Math.cos(player.heading) * 0.25]);           // a short step into the swing
+      if (onFeedback) onFeedback(act.combo === 3 ? 'strike3' : 'strike');
+      return true;
+    },
+    /** The dash (Space / 4): a short burst along `dir` [x, z] (or her heading) with i-frames. */
+    dash(dir = null) {
+      if (!iris.alive || !iris.outside || act.dashCd > 0 || act.dash) return false;
+      const A = ACTIONS.dash; let d = dir && Math.hypot(dir[0], dir[1]) > 0.1 ? dir : [Math.sin(player.heading), Math.cos(player.heading)];
+      const l = Math.hypot(d[0], d[1]); d = [d[0] / l, d[1] / l];
+      act.dash = { dir: d, t: 0 }; act.dashCd = A.cooldown; iris.iframes = A.iframes;
+      player.heading = Math.atan2(d[0], d[1]);
+      if (onFeedback) onFeedback('dash');
+      return true;
+    },
     /**
      * @param {number} dt @param {boolean} active the town is shown and the player is in it (false: hidden, asleep)
      */
@@ -351,6 +417,27 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (hpEl) hpEl.hidden = !outside;
       if (!active) return;
       iris.pos = player.pos; iris.outside = outside;
+      act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
+      iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
+      iris.calm += dt;
+      if (iris.alive && iris.calm > REGEN.delay && iris.hp < IRIS_HP) { iris.hp = Math.min(IRIS_HP, iris.hp + REGEN.perSecond * dt); if (hpFill) hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; }
+      if (act.dash && moveIris) {
+        const A = ACTIONS.dash, k = Math.min(dt, A.seconds - act.dash.t); act.dash.t += dt;
+        if (k > 0) moveIris([act.dash.dir[0] * A.distance / A.seconds * k, act.dash.dir[1] * A.distance / A.seconds * k]);
+        if (act.dash.t >= A.seconds) act.dash = null;
+      } else if (act.dash) act.dash = null;
+      const im = irisModel();
+      if (im) { act.twist = Math.max(0, act.twist - dt); im.rotation.y = act.twist > 0 ? act.twistDir * Math.sin(Math.PI * act.twist / 0.22) * 0.7 : 0; }
+      if (slashT > 0) { slashT -= dt; slash.material.opacity = Math.max(0, slashT / 0.16) * 0.85; if (slashT <= 0) slash.visible = false; }
+      if (camera && numbers.length) {
+        const w = globalThis.innerWidth, h = globalThis.innerHeight, v3 = new THREE.Vector3();
+        for (const n of numbers) {
+          n.t += dt; v3.set(n.p[0], n.p[1] + n.t * 0.9, n.p[2]).project(camera);
+          n.el.style.transform = `translate(${((v3.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v3.y) / 2 * h).toFixed(1)}px) translate(-50%, -50%)`;
+          n.el.style.opacity = String(Math.max(0, 1 - n.t / 0.8)); if (n.t > 0.8 || v3.z > 1) n.el.remove();
+        }
+        for (let i = numbers.length - 1; i >= 0; i--) if (numbers[i].t > 0.8 || !numbers[i].el.isConnected) numbers.splice(i, 1);
+      }
       acc += dt;
       const stepDt = phone ? 1 / 20 : 0;                                              // phones think at 20 Hz
       if (acc < stepDt) return animate(dt);
@@ -362,6 +449,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       disposed = true; scene.remove(group);
       for (const v of views.values()) v.mixer.stopAllAction();
       if (hpEl) { hpEl.remove(); vignette.remove(); }
+      for (const n of numbers) n.el.remove();
     },
   };
 

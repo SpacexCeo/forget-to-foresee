@@ -28,6 +28,21 @@ const start = await page.evaluate(() => {
 await page.waitForTimeout(1500); await shot('1_arrive');
 await page.waitForFunction(() => window.__ftf.town.mobs.hp < 100, null, { timeout: 20000 }).catch(() => errors.push('Iris was never hit'));
 const hurt = await page.evaluate(() => window.__ftf.town.mobs.hp); await shot('2_hurt');
+// the strike combo on the nearest skitter (face it, F three times), then a dash (Space)
+const melee = await page.evaluate(async () => {
+  const f = window.__ftf, mobs = f.town.mobs, p = f.player.pos, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const live = mobs.brain.mobs.filter((m) => m.pack === mobs.brain.packs[0] && m.state !== 'dead' && m.state !== 'gone');
+  live.sort((a, b) => Math.hypot(a.pos[0] - p[0], a.pos[2] - p[2]) - Math.hypot(b.pos[0] - p[0], b.pos[2] - p[2]));
+  const t = live[0];
+  f.player.teleport([t.pos[0], t.pos[1] + 0.5, t.pos[2] - 1.2], 0); await wait(120);
+  const hp0 = t.hp; const res = { combos: [] };
+  for (let i = 0; i < 3; i++) { f.player.heading = Math.atan2(t.pos[0] - f.player.pos[0], t.pos[2] - f.player.pos[2]); res.combos.push(mobs.strike() ? mobs.actions.combo : 0); await wait(380); }
+  res.dealt = hp0 - t.hp;
+  const a = f.player.pos.slice(); res.dash = mobs.dash([1, 0]); res.iframes = mobs.actions.iframes; await wait(450);
+  res.dashed = Math.hypot(f.player.pos[0] - a[0], f.player.pos[2] - a[2]);
+  return res;
+});
+await shot('3_melee');
 // cast at the nearest living skitter until the pack is dead (or 20 casts)
 let casts = 0;
 for (let i = 0; i < 24; i++) {
@@ -43,11 +58,11 @@ for (let i = 0; i < 24; i++) {
   if (r.done) break;
   if (r.field === false) { errors.push('not on the casting field'); break; }
   casts++;
-  if (i === 1) { await page.waitForTimeout(250); await shot('3_cast'); }
+  if (i === 1) { await page.waitForTimeout(250); await shot('3b_cast'); }
   await page.waitForTimeout(1300);
 }
 await page.waitForTimeout(3500); await shot('4_after');
 const end = await page.evaluate(() => ({ kills: window.__kills, hp: window.__ftf.town.mobs.hp, states: window.__ftf.town.mobs.brain.mobs.filter((m) => m.pack === window.__ftf.town.mobs.brain.packs[0]).map((m) => m.state) }));
-const res = { phone, start, hurt, casts, end, errors, pass: errors.length === 0 && hurt < 100 && end.kills.length >= 1 && end.kills.every((k) => k.type && k.pos.length === 3) };
+const res = { phone, start, hurt, melee, casts, end, errors, pass: errors.length === 0 && hurt < 100 && melee.dealt > 0 && melee.combos.join() === '1,2,3' && melee.dashed > 3 && end.kills.length >= 1 && end.kills.every((k) => k.type && k.pos.length === 3) };
 writeFileSync(`${out}/report.json`, JSON.stringify(res, null, 1)); console.log(JSON.stringify(res));
 await browser.close();
