@@ -190,6 +190,7 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
     const f = [];
     if (hooks.leaveToMenu) f.push(btn('set.leave', () => { if (globalThis.confirm && globalThis.confirm(t('set.leaveConfirm'))) { dialog.close(); hooks.leaveToMenu(); } }, 'ftf-set-btn ftf-set-leave'));
     if (hooks.startOver && hooks.startOver.visible()) f.push(btn('set.startOver', () => { if (globalThis.confirm && globalThis.confirm(t('set.startOverConfirm'))) { dialog.close(); hooks.startOver.run(); } }));
+    if (hooks.endTournament && hooks.endTournament.visible()) f.push(btn('set.endTourney', () => { if (globalThis.confirm && globalThis.confirm(t('set.endTourneyConfirm'))) { dialog.close(); hooks.endTournament.run(); } }));
     if (hooks.returnToTown && hooks.returnToTown.visible()) f.push(btn('set.returnTown', () => { dialog.close(); hooks.returnToTown.run(); }));
     f.push(btn('set.resume', () => dialog.close(), 'ftf-set-btn ftf-set-primary'));
     foot.replaceChildren(...f);

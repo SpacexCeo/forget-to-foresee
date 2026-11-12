@@ -106,3 +106,55 @@ test('a monster does not wake for Iris on a ledge far above or below it', () => 
   iris.pos[1] = m.pos[1]; b.step(0.1, iris, flat);
   assert.equal(m.state, 'chase');
 });
+
+test('the super strike: a 90° cone 3 m deep, heavy hit-stop, light creatures thrown back, brutes stand; soft lock finds the nearest', async () => {
+  const { ACTIONS } = await import('../../src/play/mobs.js');
+  const b = new MobBrain({ origin: O, seed: 4 });
+  const m = b.mobs.find((x) => x.type === 'skitter');
+  for (const o of b.mobs) if (o !== m) o.state = 'gone';
+  const from = [m.pos[0], m.pos[1], m.pos[2] - 2.6], ev = [];
+  assert.equal(b.superStrike(from, Math.PI, 50, ev), 0, 'behind her: nothing');
+  assert.equal(b.superStrike([from[0] - 3, from[1], from[2]], 0, 50, ev), 0, 'outside the 45° half-cone');
+  const z0 = m.pos[2], hp0 = m.hp;
+  assert.equal(b.superStrike(from, 0, 30, ev), 1);
+  assert.ok(m.hp < hp0 && m.pos[2] > z0 + 1, 'damaged and thrown back');
+  assert.ok(m.freeze >= ACTIONS.super.freeze - 1e-9 || m.state === 'dead', 'a longer hit-stop');
+  assert.ok(ev.some((e) => e.kind === 'super'));
+  assert.equal(b.nearest(from, ACTIONS.lock), Math.hypot(m.pos[0] - from[0], m.pos[2] - from[2]) - m.T.radius < ACTIONS.lock ? m : null);
+  assert.equal(b.nearest([from[0] + 50, 0, from[2]], 3), null);
+  const h = new MobBrain({ origin: O, seed: 4 }), brute = h.mobs.find((x) => x.type === 'hulker');
+  const hz = brute.pos[2]; h.superStrike([brute.pos[0], 0, brute.pos[2] - 2], 0, 30, []); assert.equal(brute.pos[2], hz, 'a brute is not thrown');
+  assert.ok(ACTIONS.super.max > ACTIONS.strike.combo[2] && ACTIONS.super.hold < ACTIONS.super.full);
+});
+
+test('hold to super: a tap strikes the combo, a hold of 0.4 s or more releases the super strike with damage ramping to full at 1 s', async () => {
+  const THREE = await import('three');
+  const { createMobs, ACTIONS } = await import('../../src/play/mobs.js');
+  const mk = () => {
+    const calls = [], fb = [];
+    const player = { pos: [0, 0, 0], heading: 0 };
+    const M = createMobs({ THREE, scene: new THREE.Scene(), origin: O.slice(), player, load: () => Promise.reject(new Error('no models')), clone: (x) => x,
+      MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, irisMove: (n) => { calls.push(n); return true; }, irisEnd: () => calls.push('end'), onFeedback: (k, _m, e) => fb.push([k, e]) });
+    const sk = M.brain.mobs.find((x) => x.type === 'skitter');
+    for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
+    sk.state = 'idle'; player.pos = [sk.pos[0], sk.pos[1], sk.pos[2] - 1.5]; player.heading = Math.PI;   // looking away: the soft lock turns her
+    M.update(0.01, true);
+    return { M, calls, fb, sk, player };
+  };
+  { const { M, calls, player, sk } = mk();
+    assert.equal(M.attackDown(), true); assert.equal(calls.at(-1), 'strike_charge');
+    assert.ok(Math.abs(player.heading - Math.atan2(sk.pos[0] - player.pos[0], sk.pos[2] - player.pos[2])) < 1e-9, 'turned to the creature');
+    M.update(0.1, true); assert.equal(M.attackUp(), true); assert.equal(calls.at(-1), 'strike1', 'a tap is the combo'); }
+  { const { M, calls, fb, sk } = mk();
+    const hp0 = sk.hp; M.attackDown(); for (let i = 0; i < 12; i++) M.update(0.1, true);
+    assert.ok(M.charging >= 1);
+    M.attackUp(); assert.equal(calls.at(-1), 'strike_super');
+    M.update(0.05, true); assert.equal(sk.hp, hp0, 'not before the impact frame');
+    M.update(0.1, true); assert.ok(hp0 - sk.hp >= Math.min(hp0, ACTIONS.super.max) - 1e-6, 'full charge, full damage');
+    assert.ok(fb.some(([k, e]) => k === 'super' && e.charge === 1));
+    assert.ok(M.shake > 0.5, 'a strong shake');
+    M.update(0.5, true); assert.equal(M.attackDown(), true); assert.equal(calls.at(-1), 'strike1', 'while the super recharges a press is a plain strike'); }
+  { const { M, calls } = mk();
+    M.attackDown(); M.update(0.2, true); M.cancelAttack(); assert.equal(calls.at(-1), 'end'); assert.equal(M.charging, null);
+    M.attackDown(); M.update(0.5, true); M.dash([1, 0]); assert.ok(calls.includes('end') && calls.at(-1) === 'dash', 'a dash puts the charge away'); }
+});

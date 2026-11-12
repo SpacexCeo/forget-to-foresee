@@ -6,6 +6,9 @@
 Clips (60 keys a second, in place; each starts and ends in her idle pose):
   strike1/2    light palm strikes (right, then the mirror): a short coil, a step in, the palm driven out; impact 0.12 s
   strike3      the heavy finisher: both hands gathered high on her toes, a deep lunge, both palms out; impact 0.22 s
+  strike_charge / strike_super   the held super strike: a deep coil that keeps sinking for a second and is held,
+               then the release from that pose: the left foot drives out 0.7 m and the right palm goes through; impact 0.10 s
+  skid         0.2 s: the heel-dig stop out of a run, blended over the start of a cast that interrupts a run
   dash         low and forward at once, one leg driving and one trailing, arms swept back; the front foot catches her
                (these four replace the first versions made by iris_combat.py, which still builds Elise's)
   cast_lance   Frost Lance: she coils back onto the ball of the right foot, the left knee up and the left palm
@@ -68,6 +71,17 @@ def mix(a, b, k):
         else:       # rotations [(axis, deg)]: the same axes in both, angles blended (a missing list is no rotation)
             ra, rb = va or [(ax, 0.0) for ax, _ in vb], vb or [(ax, 0.0) for ax, _ in va]
             out[key] = [(ax, d0 * (1 - k) + d1 * k) for (ax, d0), (_, d1) in zip(ra, rb)]
+    return out
+
+
+def scaled(pose, legs):
+    """The pose with its steps, foot lifts and the hips' drop scaled by `legs` (a long gown: small steps under it)."""
+    out = dict(pose)
+    for k, v in pose.items():
+        if k.startswith('foot_'):
+            out[k] = {**v, 'at': [x * legs for x in v.get('at', [0, 0, 0])], 'pitch': v.get('pitch', 0.0) * legs, 'yaw': v.get('yaw', 0.0) * legs}
+        elif k == 'hips':
+            out[k] = [v[0] * legs, v[1] * legs, v[2] * legs]
     return out
 
 
@@ -248,11 +262,73 @@ def dash():
             (0.40, with_ease(step, 'smooth')), (0.52, with_ease(IDLE, 'out'))], 0.52
 
 
-CLIPS = {'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
+CHARGE = {
+    'hips': [-0.03, -0.15, -0.11],
+    'pelvis': [('y', -18)], 'spine': [('y', -12), ('x', 6)], 'chest': [('y', -16), ('x', 8)],
+    'neck': [('y', 18), ('x', -4)], 'head': [('y', 22), ('x', -8)],
+    'foot_R': {'at': [-0.03, 0, -0.12], 'yaw': 28}, 'knee_R': 10,
+    'foot_L': {'at': [0.02, 0, 0.20], 'pitch': 22},
+    'arm_R': {'at': [-0.04, -0.26, -0.20], 'elbow': [-0.6, 0.1, -1], 'fingers': [0.1, 0.2, 1], 'palm': [0.5, 0.6, 0.3]},
+    'arm_L': {'at': [-0.16, -0.05, 0.30], 'elbow': [0.5, -0.9, 0.1], 'fingers': [-0.3, 1, 0.2], 'palm': [-0.3, 0, 1]},
+    'fingers_R': 'grip', 'fingers_L': 'open',
+}
+
+
+def strike_charge():
+    """The held wind-up of the super strike: she sinks back onto the right leg, the body coiled away, the right hand
+    drawn back at the hip, the left hand guarding; the pose keeps sinking for a second and is then held by the game."""
+    deep = mix(IDLE, CHARGE, 1.0); deep['hips'] = [-0.035, -0.19, -0.13]; deep['chest'] = [('y', -20), ('x', 10)]
+    return [(0.0, IDLE), (0.20, with_ease(mix(IDLE, CHARGE, 0.92), 'out')), (1.0, with_ease(deep, 'linear'))], 1.0
+
+
+def strike_super():
+    """The release of the super strike, from the held pose: the left foot drives out, the whole body uncoils and the
+    right palm goes through; impact at 0.10 s, a long overshoot and a calm settle."""
+    deep = mix(IDLE, CHARGE, 1.0); deep['hips'] = [-0.035, -0.19, -0.13]; deep['chest'] = [('y', -20), ('x', 10)]
+    hit = {
+        'hips': [0.02, -0.21, 0.46],
+        'pelvis': [('y', 16)], 'spine': [('y', 10), ('x', 12)], 'chest': [('y', 18), ('x', 12)],
+        'neck': [('y', -16), ('x', 0)], 'head': [('y', -22), ('x', -16)],
+        'foot_L': {'at': [0.04, 0, 0.74], 'yaw': 6},
+        'foot_R': {'at': [0, 0, -0.10], 'pitch': 46, 'yaw': 14}, 'knee_R': 4,
+        'arm_R': {'at': [0.13, 0.05, 0.455], 'elbow': [-0.7, -0.5, 0], 'fingers': [0, 1, 0.3], 'palm': [0, -0.15, 1]},
+        'arm_L': {'at': [0.20, -0.08, -0.38], 'elbow': [0.6, 0.4, -0.5], 'fingers': [0.4, -0.2, -1], 'palm': [-1, 0, 0]},
+        'fingers_R': 'flat', 'fingers_L': 'loose_fist',
+    }
+    back = {
+        'hips': [0.0, -0.06, 0.16],
+        'spine': [('y', 3), ('x', 3)], 'chest': [('y', 5), ('x', 4)],
+        'foot_L': {'at': [0.0, 0.07, 0.30], 'pitch': 10}, 'foot_R': {'at': [0, 0, 0], 'pitch': 8},
+        'arm_R': {'at': [0.02, -0.34, 0.20], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [0.6, -0.4, -0.6]},
+        'arm_L': {'at': [0.10, -0.40, -0.10], 'elbow': [0.6, 0, -0.6], 'fingers': [0.1, -1, -0.2], 'palm': [-1, 0, 0]},
+    }
+    return [(0.0, deep), (0.10, with_ease(hit, ('pow', 1.7))), (0.19, with_ease(mix(deep, hit, 1.07), 'out')), (0.44, with_ease(mix(deep, hit, 0.96), 'smooth')),
+            (0.70, with_ease(back, 'smooth')), (0.98, with_ease(IDLE, 'out'))], 0.98
+
+
+def skid():
+    """The stop out of a run when a cast interrupts it (0.2 s, blended over the first moments of the cast): the left
+    heel digs in ahead, the hips sit back and low, the body leans against the motion, the arms open for balance.
+    It starts in the pose (the game fades it in from the run) and eases toward the stance."""
+    dig = {
+        'hips': [0.0, -0.13, -0.10],
+        'pelvis': [('x', -6)], 'spine': [('x', -7)], 'chest': [('x', -6), ('y', -6)], 'neck': [('x', 6)], 'head': [('x', 8)],
+        'foot_L': {'at': [0.02, 0, 0.36], 'pitch': -16, 'pivot': 'ball'}, 'foot_R': {'at': [-0.02, 0, -0.14], 'yaw': 16}, 'knee_R': 6,
+        'arm_R': {'at': [-0.20, -0.26, 0.18], 'elbow': [-1, -0.2, -0.3], 'fingers': [-0.3, -0.8, 0.5], 'palm': [0, -1, 0]},
+        'arm_L': {'at': [0.22, -0.22, 0.10], 'elbow': [1, -0.2, -0.4], 'fingers': [0.3, -0.8, 0.5], 'palm': [0, -1, 0]},
+        'fingers_R': 'open', 'fingers_L': 'open',
+    }
+    return [(0.0, dig), (0.07, with_ease(mix(IDLE, dig, 1.08), 'out')), (0.20, with_ease(mix(IDLE, dig, 0.6), 'smooth'))], 0.20
+
+
+CLIPS = {'skid': skid, 'strike_charge': strike_charge, 'strike_super': strike_super, 'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
 # step_s / step_foot: the moment a foot comes down hard (the game sends `ftf:foot` then; the impact goes out as `ftf:iris-action`)
 EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'L'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'R'},
           'strike1': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'L'}, 'strike2': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'R'},
-          'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'}}
+          'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'},
+          # hold: the game keeps the last frame until the release clip (or a cancel); from: the pose the clip starts in
+          'skid': {'step_s': 0.0, 'step_foot': 'L'},
+          'strike_charge': {'hold': True, 'full_s': 1.0}, 'strike_super': {'impact_s': 0.10, 'step_s': 0.10, 'step_foot': 'L', 'from': 'strike_charge'}}
 
 
 def sheet(rig, local, pel, path, fps, times=None, cols=5):
@@ -291,6 +367,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model', default=MODEL); ap.add_argument('--in', dest='src', default=SIDECAR); ap.add_argument('--out', default=SIDECAR)
     ap.add_argument('--only', default=''); ap.add_argument('--sheet', default='')
+    ap.add_argument('--legs', type=float, default=1.0, help='scale of the steps and of the hips\' drop (Elise: her gown hides the legs and must not be cut)')
+    ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
     a = ap.parse_args()
     rig = Rig(a.model)
     clips = read_clips(a.src, rig)
@@ -299,14 +377,25 @@ def main():
     ip = rig.index['pelvis']; pp = rig.parent[ip]
     base_pelvis = rig.rest_wp[pp] + qrot(rig.rest_wr[pp], idle['pelvis'][0]) if idle['pelvis'] is not None else rig.rest_wp[ip]
     chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
-    bones = chain + [n for n in rig.names if n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'toe', 'upperarm', 'forearm', 'hand', 'shoulder', 'thumb', 'index', 'fingers')]
+    bones = chain + [n for n in rig.names if n not in chain and (n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'toe', 'upperarm', 'forearm', 'hand', 'shoulder', 'thumb', 'index', 'fingers'))]
     new = {}
     for name, fn in CLIPS.items():
         if a.only and name not in a.only.split(','):
             continue
         keys, secs = fn()
+        if a.legs != 1.0:
+            keys = [(t, scaled(pose, a.legs)) for t, pose in keys]
         local, pel = keyed.build(rig, base_local, base_pelvis, keys, secs, fps=FPS)
-        local = chains.simulate(rig, local, pel, fps=FPS, loop=False)
+        if a.cloth:
+            from ftfanim import skirt
+            cr = skirt.ClothRig(a.cloth, rig)
+            local = skirt.bake(cr, local, pel, FPS, False, 0.0)
+            d, who = cr.distance(local, pel); ins, thr = cr.inside(local, pel)
+            print(name, 'gown min %.4f' % d.min(), who[int(d.argmin())], 'through', int(thr.sum()))
+            if d.min() < 0 or thr.any():
+                raise SystemExit(f'{name}: a leg cuts the gown')
+        else:
+            local = chains.simulate(rig, local, pel, fps=FPS, loop=False)
         slip = keyed.planted_slip(rig, local, pel, FPS, keys)
         print(name, len(local), 'frames', 'planted slip max %.4f m/s' % slip)
         if a.sheet:
