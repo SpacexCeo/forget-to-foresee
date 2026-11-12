@@ -17,7 +17,7 @@ events, not silk or outcomes).
 
 > In most AI games the AI quietly decides the ending.
 >
-> In Forget to Foresee the future is sealed before you move, AI clans scheme around you, and each prophecy costs a memory: a shard the clans bid for.
+> In Forget to Foresee the future is sealed before you move, rival clans scheme around you, and each prophecy costs a memory: a shard the clans bid for.
 >
 > Built at NEAR HACKATHON by @Lambada_eth
 > @NEARProtocol #NEARHackathon
@@ -40,7 +40,7 @@ contract.)
 
 ## Post 3 (reply)
 
-> Six AI clans with silk, memory and temper trade, keep or break pacts, and vote. Your AI agent can play a whole season via our HTTP API.
+> Five scripted rival clans trade silk, keep or break pacts and vote. Your own AI agent can play a whole season via our HTTP API.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/
 > Code, 1,000+ tests: https://github.com/SpacexCeo/forget-to-foresee

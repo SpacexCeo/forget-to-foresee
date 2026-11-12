@@ -1,11 +1,22 @@
 # Forget to Foresee
 
-A 3D strategy game where an AI clan agent, **Iris**, pays for prophecy with her own memories. Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
+A 3D strategy game where **Iris**, a doctor-linguist who came through the glass, pays for prophecy with her own memories (you guide her; she is a character, not an AI). Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
 
 - **Play it now (no install, desktop browser with WebGL 2):** https://spacexceo.github.io/forget-to-foresee/ (one entry: the full game, the Expedition included)
 - **Built at NEAR HACKATHON** (1–14 Nov 2026) by Lambada_eth. Tracks: **Games** (primary) and **NFTs** (memory shards); see [Tracks](#tracks).
 - **Licence:** MIT. **AI use:** see [Baseline, third-party code and AI disclosure](#baseline-third-party-code-and-ai-disclosure).
 - **Numbers** (test counts, build size) are generated, not typed: [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs --write`).
+
+## Try it: four checks
+
+Each row ends with something you can check yourself, without trusting the game window.
+
+| Do | You'll see | How to check it yourself |
+|---|---|---|
+| Open https://spacexceo.github.io/forget-to-foresee/ | The hill town, no wallet and no gas prompt (a NEAR guest account exists only if you take the free Day 1 mint) | `curl -sI https://spacexceo.github.io/forget-to-foresee/ \| head -1` prints a 200 status |
+| `bash scripts/verify-all.sh --skip-rust` | One table, one line per suite, exit 0 | The counts equal [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs`) |
+| Read the sealed season on chain (the `curl` under [Verify in 60 seconds](#no-gpu)) | `"leaf_count":15`, `"revealed_count":15`, `"ash_key_committed":true` | The public testnet RPC, no code of ours |
+| In the game: **Signs & Visions → What does this prove? → Copy proof**, save it as `proof.json`, run `node tools/verify/verify.mjs proof.json` | Every line `✓`, exit 0 | Change one digit of the leaf in `proof.json`: the same command prints `✗` and exits 1 |
 
 ## The problem
 
@@ -84,6 +95,20 @@ On a machine without a GPU (software rendering, about 5 fps) the walks take a fe
 
 Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **E** do the highlighted action, **T** end the trial, **M** memories, **V** signs and visions, **N** map, **H** help. Outside the town walls **Q** and **V** cast Iris's two skills. Gamepad and touch are supported.
 
+## What is AI, what is scripted
+
+| Who | What decides | How it is labelled |
+|---|---|---|
+| **Iris** | You. She is a doctor-linguist (the story's character), not an AI | — |
+| The five rival clans in a season | Scripted rules: deterministic heuristics with tempers, no model | Scripted |
+| The clans' strategy layer in the town economy (built, not live) | A model on NEAR AI Cloud picks bounded parameters when it answers; the rules engine makes every move | `LLM-chosen strategy (<model> via NEAR AI Cloud, attestation <id>)`, else `Scripted (model unavailable: <reason>)`; one function, `labelFor` in `relayer/lib/clan-strategy.js` |
+| Townsfolk speech, the trade advisor | NEAR AI Cloud confidential inference through the relayer; the browser re-checks the TEE signature before the answer replaces the scripted line | The checked answer, else the scripted line ([docs/tee.md](docs/tee.md)) |
+| Town traders, quest givers, the Guests' language, the season's signs | Scripted rules, no model (the sealed signs never contain model output) | Scripted |
+| The arena's NPC economy | Scripted | "scripted NPC activity, owner-run, testnet, public seeds" |
+| Your own agent | Whatever you run, over the [agent HTTP API](#agent-api) | — |
+
+Details: [docs/ai-use.md](docs/ai-use.md).
+
 ## Real vs mock
 
 | What | Status | Evidence |
@@ -113,7 +138,11 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 | Weekly tournament card | **UI simulation**, labelled "Simulation"; not part of the game loop | [docs/status.md](docs/status.md) |
 | Townsfolk, hired agents, level, profile | **Local**: scripted or learning agents, in-game town silk only | `game/src/game/town-economy.js` |
 | Art, audio, VFX | Own procedural work; exceptions: CMU motion-capture clips in a review build and the licensed music (Scott Buckley, Kevin MacLeod, CC-BY 4.0) | [docs/art/manifest.md](docs/art/manifest.md) |
-| Money | In-game silk only. No token sale, no payment, testnet only | — |
+| Money | In-game silk only. Nothing is sold and nothing is paid; testnet only | — |
+
+**Free to play, nothing to buy.** There is no purchase, no sale and no promised value anywhere in the game; everything runs on NEAR testnet.
+Silk is the game's one currency and has no value outside the game; testnet NEAR is free and worthless.
+Any later distribution of real value would happen only after a legal and security review and an explicit owner decision; nothing in this build promises one.
 
 The full feature table and every detail of the old README: [docs/status.md](docs/status.md).
 
@@ -123,6 +152,14 @@ The full feature table and every detail of the old README: [docs/status.md](docs
 2. **NEP-171 memory shards** (`memory-shard`): token metadata carries the season id, the memory's kind and weight, the trial it was forgotten, the auction result and the Merkle leaf of the sign its vision opened; the on-chain ink-ring SVG is byte-identical to the game's own.
 3. **NFT as account, Day 1** (`guests`, `character-nft`, `token-account`): a browser-made key becomes the full-access key of a guest sub-account that owns the player's Elise NFT; heroine tokens can have their own sub-account through which the owner acts (`act_as_token`). Status in the table above.
 4. **Invisible chain:** the normal game loop never shows a wallet, a seed phrase or a gas prompt.
+
+| Part | Where it runs |
+|---|---|
+| Season commitment, memory shards, agent cards, Day 1 guest accounts, agent track records, chests, the Gate (`pay_gate`) | NEAR testnet |
+| Anything on mainnet | Nothing: there is no mainnet deployment |
+| Townsfolk speech and the trade advisor (TEE) | NEAR AI Cloud confidential inference through the relayer; the scripted line stays when it does not answer ([What is AI, what is scripted](#what-is-ai-what-is-scripted)) |
+| Clan strategy layer (town economy) | NEAR AI Cloud once the town economy runs (not live: scripted until then) |
+| The 17-trial season rules, combat, the town, quests | Local, in your browser tab |
 
 Explicitly not proven: the browser runs the rules, so a modified client could change silk and outcomes; the commitment fixes what the Guests said, not what you did. See [docs/verify.md](docs/verify.md).
 
@@ -152,9 +189,23 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 - **games** ("Games With Real Economies"), the primary track: the economy *is* the game loop. Six clans (yours and five computer-run agents) trade words, silk, promises and memories; anchors pay out from a Gift split exactly between those who staked; forgotten memories are sold at auction; defection raises world tension until the Shells leave and everyone loses. The season's events are sealed before the first move, so neither we nor the clan agents can change what the Guests said once the root is shown; the rules themselves run locally in the browser ([How NEAR is used](#how-near-is-used)).
 - **nfts** ("NFTs That Do Something"), claimed for the memory shards only: a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result), the season's schedule root and, when its vision opened a sign (Iris's shard 7), that sign's Merkle leaf, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the recorded season's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. In the game, Profile → NFTs → Holder access reads the minted shards of the recorded season (token id, owner, explorer link); it reads only, never signs. Holding a shard (or the agent card, or a Day 1 Elise) unlocks a visible perk through *Holder access* (read-only check of any testnet account; cosmetic). Live seasons mint nothing and say so (see the real/mock table). Not claimed: a persistent, player-owned agent NFT; that is future work.
 
+| Track hint | In this project |
+|---|---|
+| Social or e-mail login | Not used. The Day 1 free mint makes a NEAR guest account from a key made in your browser (no wallet, no seed phrase); without the mint you play without an account |
+| Agent NPCs | Townsfolk speak through a model on NEAR AI Cloud (TEE; the browser re-checks the signature) when it answers; the five rival clans play by scripted rules; their strategy layer belongs to the town economy (not live). See [What is AI, what is scripted](#what-is-ai-what-is-scripted) |
+| NEAR Intents | Not used |
+| NEP-245 multi-token | Built, not deployed (`contracts/town-items`) |
+
 ## Baseline, third-party code and AI disclosure
 
 - All code was written **after 19.10.2026**, inside the hackathon window. There is no earlier code or template: the game, engine, server, contract and art pipeline were started for this hackathon.
+- **The window, from git alone** (`node scripts/window-facts.mjs`, written to [docs/window.md](docs/window.md); needs a full clone, `git fetch --unshallow --filter=blob:none`):
+
+  | Before the window | Inside the window |
+  |---|---|
+  | 0 commits before 1 Nov 2026 (`git rev-list --count --before=2026-11-01 HEAD`), 0 before 19 Oct | Every commit is dated 7 Nov 2026 or later; the first is the empty `pre-hackathon` root (the count and dates: [docs/window.md](docs/window.md)) |
+
+  The organizers' Q-001 counts the window from 19 Oct; the hackathon facts table says 1 Nov; the first commit here is 7 Nov 2026, so both readings give the same answer.
 - **Tags.** `pre-hackathon` exists and points to the empty root commit. `hackathon-submission` is created by the owner at the freeze on the commit that is submitted:
   ```bash
   git tag -a hackathon-submission -m "NEAR Hackathon submission" <commit-on-main>

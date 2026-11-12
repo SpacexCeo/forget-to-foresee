@@ -21,7 +21,7 @@ pages are `game/cine/jury-*.html`, dev server only and not part of the game buil
 
 ## Shot list (v2, 09.11: two pillars)
 
-The owner asked for two pillars, each with a title card and the most screen time: **I · the agents** (six AI clans
+The owner asked for two pillars, each with a title card and the most screen time: **I · the agents** (six clans, yours and five scripted rivals,
 with silk, memory and temper; your own AI agent over the HTTP API) and **II · the memory shard** (a forgotten memory
 becomes a NEP-171 NFT bound to the sealed season). The seal, the season, the rewards and the backend support them.
 `IE` = in-engine (GPU final). `MG` = motion graphics (`game/cine/jury.js`, CPU, final quality). Every MG scene opens
@@ -33,7 +33,7 @@ with the ink-ring wipe; every element moves (enter with the motion tokens, lines
 | 2 | 2.5–4.5 | IE `island` | Orbit over the archipelago: four Shells, six camps | Four Shells. Six clans. |
 | 3 | 4.5–6.0 | IE `ink` | Push in on the glass as the ink ring closes | — |
 | 4 | 6.0–10.5 | MG `decode` | The judge season's first sign drawn by the game's `drawLogogram`; each slot lights and its value flies out: Place Shell II · Action Gift · Power 20 · Delay trial 3; then "Gift?" → "Yes ✓" | Read it slot by slot. / Ask the Guests. |
-| 5 | 10.5–12.5 | MG `pillar-agents` | Title card **I · The Agents** over the sign's ring | Six AI clans scheme around you |
+| 5 | 10.5–12.5 | MG `pillar-agents` | Title card **I · The Agents** over the sign's ring | Five rival clans scheme around you |
 | 6 | 12.5–14.0 | IE `face-moss` | A clan agent up close | — |
 | 7 | 14.0–20.0 | MG `agents` | The six cards (clan material, temper), silk counting up to 60; three real judge-season moments on their ties: Frost wins Iris's shard (−13 / +13), Salt whispers "It is a weapon" (a broadcast ring, no tie), Ash cheats Amber (−16 / +16, the tie breaks) | Silk, a memory, a temper. / They trade… and break trust. |
 | 8 | 20.0–24.5 | MG `api` + IE | Two labelled windows: "You · in the browser" (in-engine stake shot) and "AI agent · HTTP API" (a replay of a real `node examples/agent.mjs` run) | Your AI agent can play a whole season via our HTTP API. |
