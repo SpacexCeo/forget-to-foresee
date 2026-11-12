@@ -209,8 +209,16 @@ export function shopFromData(s, index) {
   });
 }
 
-/** Town spots without a model of their own, in town-local metres: the notice board after the stairs, the mirror by the gate. */
+/** Town spots that have no model in the town files, in town-local metres: the notice board after the stairs, the mirror by the gate. */
 export const TOWN_SPOTS = Object.freeze({ board: Object.freeze([1.6, 2.5, 4.0]), mirror: Object.freeze([2.0, 0, 21.5]) });
+/**
+ * The objects that stand at those spots (scenes/town-spot-props.js builds them): just beyond the trigger, off the walking
+ * line, facing the path (heading: yaw of the object's front, +Z). A test keeps every prompt within reach of its object.
+ */
+export const SPOT_PROPS = Object.freeze({
+  board: Object.freeze({ position: Object.freeze([2.5, 2.5, 4.0]), heading: -Math.PI / 2 }),
+  mirror: Object.freeze({ position: Object.freeze([2.8, 0, 21.5]), heading: -Math.PI / 2 }),
+});
 
 /** The shops Iris can walk into (empty when the data has none). */
 export const TOWN_SHOPS = Object.freeze((TOWN_DATA.shops || []).map(shopFromData));
