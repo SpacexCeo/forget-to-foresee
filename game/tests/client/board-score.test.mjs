@@ -17,16 +17,16 @@ test('hand example: quests, T1 kills at a quarter, the portal; M from the classe
     [T0 + 6, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]]);
   const s = scoreAccount(log);
   // Q = 40 + 100 + 300 = 440; Sk = (400 + 400 silk) / 10 * 0.25 = 20; P = 200; classes quest+hunt → M 0.8
-  assert.deepEqual(s.parts, { Q: 440, Sk: 20, Wl: 0, V: 0, P: 200, M: 0.8 });
+  assert.deepEqual(s.parts, { Q: 440, Sk: 20, V: 0, P: 200, M: 0.8 });
   assert.equal(s.score, Math.round(0.8 * 660));
   assert.equal(s.quests, 3); assert.equal(s.killsT1, 2); assert.equal(s.reachedAt, T0 + 6);
 });
 
-test('hand example: all four classes (M 1.0), receipts capped at 50, wool capped at 1,000, T2 hunt at full value', () => {
+test('hand example: all four classes (M 1.0), receipts capped at 50, T2 hunt at full value; no wool term', () => {
   const log = logOf([turnIn(T0 + 1, 'q_welcome'), kill(T0 + 2, 50_000, 'T2')]);
   const s = scoreAccount(log, { extra: { receipts: ['a', 'b', 'c', 'd', 'e', 'f', 'a'], woolEarned: 5000, trades: 1 } });
-  assert.deepEqual(s.parts, { Q: 40, Sk: 50, Wl: 1000, V: 50, P: 0, M: 1 });
-  assert.equal(s.score, 1140);
+  assert.deepEqual(s.parts, { Q: 40, Sk: 50, V: 50, P: 0, M: 1 }); // a stray woolEarned is ignored
+  assert.equal(s.score, 140);
   assert.deepEqual(s.classes, ['quest', 'hunt', 'trade', 'verify']);
 });
 
@@ -41,7 +41,7 @@ test('a quest counts once, a T1 turn-in (a part not from salvage) does not count
   const log = logOf([turnIn(T0 + 1, 'q_welcome'), turnIn(T0 + 2, 'q_welcome'), turnIn(T0 + 3, 'q_part', 'T1'),
     [T0 + 4, 'portal_paid', { feeC: 1000, demo: true }, -1000], turnIn(T0 + 10 * DAY, 'q_boss')]);
   const s = scoreAccount(log, { window: { from: T0, to: T0 + DAY } });
-  assert.deepEqual(s.parts, { Q: 40, Sk: 0, Wl: 0, V: 0, P: 0, M: 0.7 });
+  assert.deepEqual(s.parts, { Q: 40, Sk: 0, V: 0, P: 0, M: 0.7 });
 });
 
 test('T0 never scores: an entry with any other trust level is ignored', () => {

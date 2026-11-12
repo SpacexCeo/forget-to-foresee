@@ -20,7 +20,8 @@ function rig({ search = '', silkC = 0 } = {}) {
   const tq = createTownQuests({ storage, townLedger, i18n: fakeI18n(), folkAt: (k) => FOLK[k] || null, chests: { add: (c) => chests.push(c) },
     depart: async (o) => { departs.push(o); return true; }, search, doc, win, now });
   const kill = (type) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type, pos: [0, 0, 0], elite: false } }));
-  return { tq, townLedger, doc, departs, chests, kill, storage };
+  const killId = (id) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type: 'skitter', pos: [0, 0, 0], elite: false, killId: id } }));
+  return { tq, townLedger, doc, departs, chests, kill, killId, storage };
 }
 function finishGuide(r) {
   r.tq.act('elder', 'guide:talked');
@@ -82,6 +83,14 @@ test('kills: ten skitters from the window event finish the spiders, the turn-in 
   r.tq.act('guard', 'turnin:q_spiders'); assert.equal(r.townLedger.silk - before, 100_000);
   assert.equal(r.tq.quests.quests.q_spiders.state, 'done');
   assert.equal(r.tq.ledger.verify().ok, true);
+});
+
+test('kills: the event\'s killId (play/mobs.js) is used, so the same kill never counts twice', () => {
+  const r = rig();
+  finishGuide(r); r.tq.act('guard', 'accept:q_spiders');
+  r.killId('sess:skitter_0#1'); r.killId('sess:skitter_0#1'); r.killId('sess:skitter_0#2');
+  assert.equal(r.tq.quests.quests.q_spiders.progress, 2);
+  assert.ok(r.tq.quests.kills.includes('sess:skitter_0#1'));
 });
 
 test('talk panel: E opens it on a giver in reach, buttons act, walking off closes it', () => {

@@ -14,7 +14,7 @@ const ROOT = 'ab'.repeat(32);
 const row = (rank, account, score, actor = 'human') => ({ rank, account, score, actor, parts: {}, flags: [] });
 const SNAP = { v: 1, boardSeason: 1, epoch: 3, createdAt: Date.UTC(2026, 10, 12, 18, 0), rules: 'r', root: ROOT,
   rows: [row(1, 'ann.testnet', 900), row(2, 'bo.testnet', 300), row(3, 'cy.testnet', 40), row(1, 'salt.arena.testnet', 1200, 'scripted'), row(2, 'amber.arena.testnet', 50, 'scripted')] };
-const LOCAL = { score: 120, parts: { Q: 140, Sk: 10, Wl: 0, V: 0, P: 0, M: 0.8 } };
+const LOCAL = { score: 120, parts: { Q: 140, Sk: 10, V: 0, P: 0, M: 0.8 } };
 const text = (n) => [n.textContent, ...n.children.map(text)].join(' ');
 
 test('tabs: the human tab never lists a scripted row and the scripted tab never a human; top ten in rank order', () => {

@@ -6,7 +6,7 @@ committing its root on NEAR testnet are owner steps (spec: `docs/plans/story/FTF
 A *board season* is not an engine season. The board ranks accounts by a score computed from each account's
 **expedition log** (`ftf-expedition-log/1`, `game/src/game/expedition-log.js`): a hash-chained list of rule-minted
 events (quests turned in, kills ticketed, bounties, the Gate-Loom fee). No term reads a balance, a transfer or a trade
-proceed, so moving silk or wool between accounts adds nothing.
+proceed, so moving silk between accounts adds nothing. There is one currency, silk (owner, 12.11); no term uses wool.
 
 ## The score (`game/src/game/board-score.js`)
 
@@ -14,12 +14,11 @@ proceed, so moving silk or wool between accounts adds nothing.
 |---|---|
 | Q (quests) | one-time points for a quest turned in at trust T2: welcome 40, spiders 100, spare part 80, crown 300; 30 per bounty, 3 after the third bounty of a UTC day |
 | Sk (hunting) | 1 point per 10 silk of kill income; T2 (scripted hunt) at full value, T1 (a real-time kill) at 0.25 and at most 200 points per UTC day |
-| Wl (wool) | 1 per wool earned from the purse or the Shell Reserve, at most 1,000 a season (0 until a tournament pays wool) |
 | V (receipts) | 10 per distinct on-chain quest receipt, at most 50 |
 | P (portal) | 200 once for paying the full 10,000 silk at the Gate-Loom (a `?portalFee=` demo fee never scores) |
 | M (variety) | 0.6 + 0.1 per class with at least one scored event among quest, hunt, trade, verify |
 
-`score = round(M × (Q + Sk + Wl + V + P))`. Ties go to the account that reached its final score first, then by
+`score = round(M × (Q + Sk + V + P))`. Ties go to the account that reached its final score first, then by
 account id. Entries with any trust other than T1/T2 never score. Humans and scripted accounts are ranked in separate
 lists; a scripted account never appears in the human list.
 
@@ -42,7 +41,7 @@ accounts are not scarce, so Board Season 1 carries no money and no promise.
 
 ## Snapshots and verification (`tools/leaderboard/`)
 
-Input: a directory of `<name>.json` files `{account, log, extra?}` (`extra`: `receipts`, `woolEarned`, `trades`,
+Input: a directory of `<name>.json` files `{account, log, extra?}` (`extra`: `receipts`, `trades`,
 `onChain`, read from chain) and an optional `registry.json` `{scripted: [...]}`. Logs that fail the hash chain are
 rejected.
 

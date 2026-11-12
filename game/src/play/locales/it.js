@@ -1530,7 +1530,7 @@ export default {
   "lb.you": "Tu: posizione {rank} su {n}, punteggio {score}",
   "lb.youLocal": "Tu: punteggio {score}",
   "lb.preview": "Anteprima locale, non in classifica",
-  "lb.parts": "Missioni {Q} · Caccia {Sk} · Lana {Wl} · Ricevute {V} · Portale {P} · ×{M}",
+  "lb.parts": "Missioni {Q} · Caccia {Sk} · Ricevute {V} · Portale {P} · ×{M}",
   "lb.differs": "Lo snapshot ti dà {snap}; il tuo registro locale dice {local}.",
   "lb.empty": "Nessuna riga in questo snapshot.",
   "lb.flagged": "segnalato",

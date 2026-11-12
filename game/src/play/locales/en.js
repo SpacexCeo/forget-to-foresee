@@ -1531,7 +1531,7 @@ export default {
   "lb.you": "You: rank {rank} of {n}, score {score}",
   "lb.youLocal": "You: score {score}",
   "lb.preview": "Local preview, not ranked",
-  "lb.parts": "Quests {Q} · Hunt {Sk} · Wool {Wl} · Receipts {V} · Portal {P} · ×{M}",
+  "lb.parts": "Quests {Q} · Hunt {Sk} · Receipts {V} · Portal {P} · ×{M}",
   "lb.differs": "The snapshot has {snap} for you; your local log says {local}.",
   "lb.empty": "No rows in this snapshot yet.",
   "lb.flagged": "flagged",

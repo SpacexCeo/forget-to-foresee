@@ -11,6 +11,6 @@ const { accounts, rejected } = loadAccounts(dir);
 const r = rankAccounts(accounts, { window });
 for (const actor of ['human', 'scripted']) {
   console.log(actor === 'human' ? 'Humans' : 'Scripted NPC');
-  for (const x of r[actor]) console.log(`  ${String(x.rank).padStart(3)}  ${String(x.score).padStart(6)}  ${x.account}  Q ${x.parts.Q}  Sk ${x.parts.Sk}  Wl ${x.parts.Wl}  V ${x.parts.V}  P ${x.parts.P}  M ${x.parts.M}`);
+  for (const x of r[actor]) console.log(`  ${String(x.rank).padStart(3)}  ${String(x.score).padStart(6)}  ${x.account}  Q ${x.parts.Q}  Sk ${x.parts.Sk}  V ${x.parts.V}  P ${x.parts.P}  M ${x.parts.M}`);
 }
 for (const x of rejected) console.log(`rejected ${x.account}: ${x.reason}${x.at != null ? ' at ' + x.at : ''}`);

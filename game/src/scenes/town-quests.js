@@ -159,7 +159,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
 
   // ---- kills (play/mobs.js window event): quest progress and kill silk
   let killN = 0;
-  const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return; questDo({ type: 'KILL', mob: d.type, killId: d.id ? d.id + ':' + (d.n ?? killN) : d.type + ':' + now() + ':' + killN }); killN++; };
+  const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return; questDo({ type: 'KILL', mob: d.type, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
   win.addEventListener('ftf:mob-killed', onKill);
 
   // ---- the guide's 'moved' step: walking a few metres from where she arrived

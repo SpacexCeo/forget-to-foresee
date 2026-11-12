@@ -15,7 +15,7 @@ const { snapshot, proofs } = buildSnapshot(accounts, { boardSeason: Number(opt.s
 mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'snapshot.json'), JSON.stringify(snapshot, null, 1) + '\n');
 writeFileSync(join(out, 'proofs.json'), JSON.stringify(proofs) + '\n');
-writeFileSync(join(out, 'rows.csv'), 'actor,rank,account,score,Q,Sk,Wl,V,P,M,quests,killsT1,receipts,flags\n'
-  + snapshot.rows.map((r) => [r.actor, r.rank, r.account, r.score, r.parts.Q, r.parts.Sk, r.parts.Wl, r.parts.V, r.parts.P, r.parts.M, r.quests, r.killsT1, r.receipts, r.flags.join(' ')].join(',')).join('\n') + '\n');
+writeFileSync(join(out, 'rows.csv'), 'actor,rank,account,score,Q,Sk,V,P,M,quests,killsT1,receipts,flags\n'
+  + snapshot.rows.map((r) => [r.actor, r.rank, r.account, r.score, r.parts.Q, r.parts.Sk, r.parts.V, r.parts.P, r.parts.M, r.quests, r.killsT1, r.receipts, r.flags.join(' ')].join(',')).join('\n') + '\n');
 console.log(`root ${snapshot.root}  rows ${snapshot.rows.length}  rejected ${rejected.length}  rules ${snapshot.rules.slice(0, 12)}`);
 for (const x of rejected) console.log(`rejected ${x.account}: ${x.reason}`);

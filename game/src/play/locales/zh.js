@@ -1529,7 +1529,7 @@ export default {
   "lb.you": "你：第 {rank} 名，共 {n} 名，得分 {score}",
   "lb.youLocal": "你：得分 {score}",
   "lb.preview": "本地预览，不计排名",
-  "lb.parts": "任务 {Q} · 狩猎 {Sk} · 羊毛 {Wl} · 回执 {V} · 传送门 {P} · ×{M}",
+  "lb.parts": "任务 {Q} · 狩猎 {Sk} · 回执 {V} · 传送门 {P} · ×{M}",
   "lb.differs": "快照中你的得分为 {snap}；你的本地日志为 {local}。",
   "lb.empty": "此快照中暂无记录。",
   "lb.flagged": "已标记",

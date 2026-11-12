@@ -71,7 +71,7 @@ export function renderBoardPanel({ doc, i18n, snapshot, local, account = null, t
         const you = el('div', 'margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(217,178,106,.12)'); you.className = 'ftf-board-you';
         you.append(el('b', 'display:block', t(y.key, y.args)));
         if (y.preview) you.append(el('span', 'display:block;font-size:12px;color:#d9b26a', t('lb.preview')));
-        const p = local.parts; you.append(el('span', 'display:block;font-size:12px;color:#b9c7c4', t('lb.parts', { Q: p.Q, Sk: p.Sk, Wl: p.Wl, V: p.V, P: p.P, M: p.M })));
+        const p = local.parts; you.append(el('span', 'display:block;font-size:12px;color:#b9c7c4', t('lb.parts', { Q: p.Q, Sk: p.Sk, V: p.V, P: p.P, M: p.M })));
         if (y.differs) you.append(el('span', 'display:block;font-size:12px;color:#ffc861', t('lb.differs', { snap: y.differs.snap, local: y.differs.local })));
         body.append(you);
       }
