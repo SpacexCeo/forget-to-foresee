@@ -59,3 +59,33 @@ The v1-state fixture test still passes. 53 unit tests in total. Deploy with the 
 Before the relayer can use it, the owner adds the relayer's account to the coordinators:
 `set_coordinators(["ftf-coordinator.testnet", "<relayer account>"])`. Coordinators can already register accounts and
 credit silk inside the daily ceiling, so this adds no new power beyond the gate.
+
+## v4: acting for players
+
+The same reason as v3, for the rest of a player's moves. v4 adds, for coordinators only, each taking the sha256 of
+the guest's signed request (`request_hash`):
+
+| Method | Same rules as | Returns |
+|---|---|---|
+| `pledge_for(account_id, asset, amount, tier, request_hash)` | `stake`, with no deposit (the deed fee is the spam brake); the deed is minted to the player | the deed id |
+| `claim_for(account_id, token_id, request_hash)` | `claim` | silk paid |
+| `unbond_for(account_id, token_id, request_hash)` | `begin_unbond` on an active deed, `finish_unbond` once its cooldown is over | silk paid (0 when it only began) |
+| `exit_early_for(account_id, token_id, request_hash)` | `exit_early` | silk paid |
+| `invest_stall_for(account_id, trader, amount, request_hash)` | `invest_stall` | — |
+| `claim_stall_for(account_id, trader, request_hash)` | `claim_stall` | silk paid |
+| `enter_tournament_for(account_id, season_id, request_hash)` | `enter_tournament` | — |
+
+Guards (`act_for`): a coordinator only; a 64-hex request hash, recorded once in a NEW collection
+`StorageKey::ActRequests` (`ERR_ACT_REQUEST`); at most `ACT_PER_ACCOUNT_DAY` = 40 moves a player a day (NEW collection
+`StorageKey::ActDaily`, one row per player, overwritten) and `ACT_ALL_DAY` = 20,000 for all players (raw keys
+`a:day`, `a:count`) (`ERR_ACT_CAP`); never for the town's own wallets (`ERR_ACT_FOR`). Each move logs `act_for`
+{account, by, request_hash} next to the move's own event. The silk moves only on the player's own row; the coordinator
+receives nothing. Views: `act_request_used(request_hash)`, `act_limits(account_id)` → (today, per day, all today, all
+per day).
+
+The public methods are now thin wrappers over inner functions that take the acting account, so their behaviour is
+unchanged (all 53 earlier tests pass as they were). The stored root and every stored struct are unchanged; the
+v1-state fixture test still passes. 61 unit tests in total. Deploy with `bash contracts/scripts/town-upgrade.sh` (no
+init call, no migration). The relayer's coordinator (`gate.ftf-town.testnet`, docs/town-gate.md) needs these methods
+on its function-call key: `register, credit_silk, pay_gate_for, pledge_for, claim_for, unbond_for, exit_early_for,
+invest_stall_for, claim_stall_for, enter_tournament_for`.

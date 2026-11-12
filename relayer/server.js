@@ -27,6 +27,7 @@ import wheelClaim from './api/wheel/claim.js';
 import marketStats from './api/market/stats.js';
 import marketResource from './api/market/resource.js';
 import townGate from './api/town/gate.js';
+import townAct from './api/town/act.js';
 import companionClaim from './api/companion/claim.js';
 import { marketDaemon } from './market/index.js';
 import passClaim from './api/pass/claim.js';
@@ -35,7 +36,7 @@ import passEligibility from './api/pass/eligibility.js';
 import { passService } from './lib/pass-service.js';
 
 const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/expedition/log': expeditionLog, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats,
-  '/api/market/resource': marketResource, '/api/town/gate': townGate, '/api/companion/claim': companionClaim,
+  '/api/market/resource': marketResource, '/api/town/gate': townGate, '/api/town/act': townAct, '/api/companion/claim': companionClaim,
   '/api/pass/claim': passClaim, '/api/pass/status': passStatus, '/api/pass/eligibility': passEligibility };
 if (!process.env.TRUST_PROXY) process.env.TRUST_PROXY = '0'; // direct exposure: do not trust X-Forwarded-For
 

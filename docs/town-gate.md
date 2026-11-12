@@ -57,7 +57,7 @@ Errors:
 ## Server setup (owner)
 
 The coordinator is `gate.ftf-town.testnet`, a sub-account of ftf-town with no full-access key, only one
-function-call key on ftf-town (register, credit_silk, pay_gate_for). The key is made on the relayer's server and its
+function-call key on ftf-town (register, credit_silk, pay_gate_for, and the v4 player moves of docs/town-act.md). The key is made on the relayer's server and its
 secret never leaves it:
 
 1. On the server, in `relayer/`: `node scripts/coord-key.mjs gate.ftf-town.testnet`. It writes
@@ -67,7 +67,7 @@ secret never leaves it:
 2. The lead creates the account (signed by ftf-town) and adds the printed key:
    ```
    near account create-account fund-myself gate.ftf-town.testnet '0.5 NEAR' autogenerate-new-keypair save-to-legacy-keychain sign-as ftf-town.testnet network-config testnet sign-with-legacy-keychain send
-   near account add-key gate.ftf-town.testnet grant-function-call-access --allowance '1 NEAR' --contract-account-id ftf-town.testnet --function-names 'register, credit_silk, pay_gate_for' use-manually-provided-public-key <PUBLIC_KEY> network-config testnet sign-with-legacy-keychain send
+   near account add-key gate.ftf-town.testnet grant-function-call-access --allowance '1 NEAR' --contract-account-id ftf-town.testnet --function-names 'register, credit_silk, pay_gate_for, pledge_for, claim_for, unbond_for, exit_early_for, invest_stall_for, claim_stall_for, enter_tournament_for' use-manually-provided-public-key <PUBLIC_KEY> network-config testnet sign-with-legacy-keychain send
    ```
    (The full-access key the first command generates stays in the lead's keychain; it can be deleted afterwards so
    the account holds only the function-call key.)

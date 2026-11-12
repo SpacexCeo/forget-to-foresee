@@ -315,7 +315,7 @@ export default {
   'tour.title': 'Weekly tournament',
   'tour.badge': 'Simulation',
   'tour.week': 'Week {week}, {year}',
-  'tour.desc': 'Same world, same rules, one accelerated season. No entry fee, no money, no prizes: the trophy is a badge.',
+  'tour.desc': 'A local practice season: same world, same rules, accelerated. No entry fee, no prizes; the trophy is a badge. The on-chain tournament with a silk purse is held at the town altar.',
   'tour.phase.upcoming': 'Opens soon',
   'tour.phase.open': 'Enrollment open',
   'tour.phase.running': 'Season running',
