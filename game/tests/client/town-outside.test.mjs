@@ -98,7 +98,7 @@ test('A cast leaves on the release frame of her cast clip: the clips carry it, t
   assert.match(cast, /onCastStart\(id, shot\)/); assert.match(cast, /if \(!p\.fired && p\.t >= p\.at\) fire\(p\)/);
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.match(boot, /irisAvatar\.cast\('cast_' \+ id\)/, 'the cast clip is cued at the start of a cast');
-  assert.match(boot, /townCasting\.casting\) return \[0, 0\]/, 'she stands still while she winds up and lets go');
+  assert.match(boot, /townCasting\.casting\)+ return \[0, 0\]/, 'she stands still while she winds up and lets go');
 });
 
 test('Foot contacts and the dash trail: a step is reported once per landing, the trail is short and off under reduced motion', async () => {
@@ -114,4 +114,15 @@ test('Foot contacts and the dash trail: a step is reported once per landing, the
   const av = readFileSync(new URL('../../src/play/iris-avatar.js', import.meta.url), 'utf8');
   assert.match(av, /if \(!reduced\) \{ m\.trail \|\|= new DashTrail/, 'no trail under reduced motion');
   assert.match(av, /emit\('ftf:iris-action', \{ clip: k\.name, phase: 'impact'/); assert.match(av, /emit\('ftf:foot'/);
+});
+
+test('The super strike: a held charge clip and a release that starts in the held pose', async () => {
+  const { readFileSync } = await import('node:fs');
+  const glb = readFileSync(new URL('../../public/assets/anim/iris.glb', import.meta.url));
+  const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8'));
+  const charge = json.animations.find((a) => a.name === 'strike_charge'), rel = json.animations.find((a) => a.name === 'strike_super');
+  assert.ok(charge && charge.extras.hold === true, 'strike_charge is held on its last frame');
+  assert.ok(rel && rel.extras.from === 'strike_charge' && rel.extras.impact_s <= 0.15, 'strike_super leaves the held pose and hits at once');
+  const av = readFileSync(new URL('../../src/play/iris-avatar.js', import.meta.url), 'utf8');
+  assert.match(av, /if \(k\.hold && !k\.ending\)/); assert.match(av, /endAction\(\)/);
 });

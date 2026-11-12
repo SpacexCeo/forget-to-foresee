@@ -10,6 +10,7 @@
 // (ui/loading.js townPlan: ?skip=town, or a deep link such as ?play=direct without ?town=1); the season starts
 // when Iris registers at the Tournament altar. ?town=altar spawns at the altar, ?town=flat uses a flat dev ground.
 import * as THREE from 'three';
+import { interruptLocomotion, canMove, STRIKE_ROOT } from './physics/interrupt.js';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
@@ -177,7 +178,8 @@ const openSettings = (tab) => {
       day1: () => loadDay1(ctx.storage),
       clearData: () => { try { for (const k of Object.keys(localStorage)) if (k.startsWith('ftf')) localStorage.removeItem(k); } catch { /* blocked storage */ } location.reload(); },
       returnToTown: { visible: () => !!(town && play && !inTown), run: () => returnToTown() },
-      startOver: { visible: () => !!play, run: () => startOver() },
+      endTournament: { visible: () => !!(play && !inTown), run: () => startOver() }, // the reload starts in town with a new season
+      startOver: { visible: () => !!(play && inTown), run: () => startOver() },
       leaveToMenu: openMainMenu,
       onOpen: clearWorldInput, onClose: clearWorldInput,
     } });
@@ -354,6 +356,8 @@ if (townMode.town) {
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
+    // the Tournament warning (owner 12.11); never on the judge link, whose flow stays as it was
+    confirmRegister: judge ? null : () => import('./ui/tourney-warn.js').then((m) => m.confirmTournament({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage })),
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
@@ -421,13 +425,13 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
     onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
     extra: [
-      { id: 'strike', key: 'F', icon: 'strike', label: 'town.cast.strike', available: () => !!townMobs, press: () => townMobs && townMobs.strike(), cooldown: () => (townMobs ? townMobs.actions.strikeCd / 0.32 : 0) },
+      { id: 'strike', key: 'F', icon: 'strike', label: 'town.cast.strike', available: () => !!townMobs, press: () => strikeNow(), cooldown: () => (townMobs ? townMobs.actions.strikeCd / 0.32 : 0) },
       { id: 'dash', key: 'Space', icon: 'dash', label: 'town.cast.dash', available: () => !!townMobs, press: () => townMobs && townMobs.dash(wishVector()), cooldown: () => (townMobs ? townMobs.actions.dashCd / 1.0 : 0) },
     ] });
   mountMobs();
@@ -668,6 +672,15 @@ function toast(text) { if (playerHud && inTown) { playerHud.toast(text); return;
 const PHYSICS_CARRY = 1.0; // seconds of a long frame that physics catches up on (fixedSteps carry)
 const stuck = { stuckTime: 0, lastDist: Infinity }; // click-to-move give-up state (character.js clickStuck)
 let moveTarget = null, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
+let rootUntil = 0; // a strike roots her until then (ms); the casts root her through town-casting's `casting`
+/** A cast or a strike interrupts locomotion: walk orders cancelled, she plants, rooted for `seconds` (physics/interrupt.js). */
+function interruptMove(seconds = 0) {
+  const s = interruptLocomotion({ moveTarget, moveRun, rootUntil }, { now: performance.now(), seconds, cancel: stopSteering, character: player });
+  moveTarget = s.moveTarget; moveRun = s.moveRun; rootUntil = s.rootUntil;
+  if (input.stopRun) input.stopRun(); // the touch run toggle and burst switch off: after the action she moves only on new input
+}
+/** The strike (F / 3 / its slot): it stops her run like a cast does. */
+function strikeNow() { if (townMobs && townMobs.strike()) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -766,7 +779,7 @@ function handleInput(dt) {
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     if (townMobs && townCasting.field) { // the strike and the dash (play/mobs.js ACTIONS): F / 3 and Space / 4
-      if (input.hit('KeyF') || input.hit('Digit3')) townMobs.strike();
+      if (input.hit('KeyF') || input.hit('Digit3')) strikeNow();
       if (input.hit('Space') || input.hit('Digit4')) townMobs.dash(wishVector());
     }
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
@@ -807,7 +820,7 @@ function handleInput(dt) {
 
 function wishVector() {
   if (inspecting || controls.dialog.open) return [0, 0];
-  if (townCasting && townCasting.casting) return [0, 0];      // she winds up and lets go standing still
+  if (!canMove({ rootUntil }, performance.now(), !!(townCasting && townCasting.casting))) return [0, 0]; // rooted: a cast's wind-up and release, a strike
   const [ax, ay] = input.moveAxes();
   if (ax || ay) {
     stopSteering();
@@ -996,7 +1009,8 @@ function frame() {
   void moving;
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
-  if (touchSticks) touchSticks.update({ active: !!(inTown && townFlow && townFlow.phase === 'town') && !document.querySelector('dialog[open], .gm') });
+  // the sticks: the town, and the archipelago in normal play; ?demo=judge keeps tap-to-move and its buttons (README path)
+  if (touchSticks) touchSticks.update({ active: (!!(inTown && townFlow && townFlow.phase === 'town') || (!!play && !inTown && !judge)) && !document.querySelector('dialog[open], .gm, .pl-panel:not([hidden])') });
   if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100 });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
@@ -1034,7 +1048,7 @@ window.__ftf = {
     get promptVisible() { return townFlow.promptVisible; }, get phase() { return townFlow.phase; }, get walkMs() { return townFlow.walkMs; },
     register: () => townFlow.register(), walkRoute: () => townFlow.walkRoute(), status: () => town.status(),
     get casting() { return townCasting; }, // the field beyond the walls (QA: aimAt, release)
-    get mobs() { return townMobs; }, // the monsters on the hillside (QA: brain, iris)
+    get mobs() { return townMobs; }, get rigYaw() { return rig.yaw; }, // QA: the camera orbit (touch multi-touch test) // the monsters on the hillside (QA: brain, iris)
     get shops() { return townShops; }, // walk-in shops (QA: enter('exchange'), leave())
     get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
     get barks() { return townBarks; }, // townsfolk lines (QA: current)

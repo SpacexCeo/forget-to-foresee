@@ -62,3 +62,14 @@ test('set.* strings: five locales, same placeholders; every key label exists', a
   for (const l of ['ru', 'uk', 'it', 'zh']) { const m = await load(l); for (const k of keys) { assert.ok(m[k], `${l} ${k}`); assert.equal(args(m[k]), args(en[k]), `${l} ${k}`); } }
   for (const l of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok((await import(`../../src/locales/${l}.js`)).default['settings.quality.medium'], l);
 });
+
+test('Tournament warning: skipped after "don\'t show again"; strings in five locales; the judge link never asks', async () => {
+  const { tourneyWarnSkipped, TOURNEY_WARN_KEY } = await import('../../src/ui/tourney-warn.js');
+  const st = mem(); assert.equal(tourneyWarnSkipped(st), false); st.setItem(TOURNEY_WARN_KEY, 'off'); assert.equal(tourneyWarnSkipped(st), true);
+  for (const l of ['en', 'ru', 'uk', 'it', 'zh']) { const m = (await import(`../../src/play/locales/${l}.js`)).default; for (const k of ['tw.title', 'tw.body', 'tw.enter', 'tw.stay', 'tw.dontShow', 'set.endTourney', 'set.endTourneyConfirm']) assert.ok(m[k], `${l} ${k}`); }
+  const { readFileSync } = await import('node:fs');
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /confirmRegister: judge \? null :/);
+  const flow = readFileSync(new URL('../../src/scenes/town-flow.js', import.meta.url), 'utf8');
+  assert.match(flow, /yes \? run\(\) : \(state\.registering = null, false\)/, '"Stay in town" frees the altar for a later Register');
+});
