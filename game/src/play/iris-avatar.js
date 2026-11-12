@@ -110,9 +110,11 @@ export class IrisAvatar {
   /**
    * A combat move outside the walls (play/mobs.js): `strike1`..`strike3`, `dash`, and the super strike: `strike_charge`
    * (held on its last frame until `combat('strike_super')` or `endAction()`). It plays once over everything else,
+   * `opts.skid`: when she is running, the 0.2 s heel-dig stop (`skid`) is blended over its start (use it for a
+   * move that roots her, as a cast does),
    * even while she moves, and hands back to the gait and idle as it ends. Returns false when the clip is missing.
    */
-  combat(name) {
+  combat(name, opts = {}) {
     const m = this.irisModel;
     const c = m && m.clips.find((x) => x.name === name);
     if (!c) return false;
@@ -124,6 +126,14 @@ export class IrisAvatar {
     m.combat = { action: a, t: 0, dur: c.duration, name, impact: u.release_s ?? u.impact_s ?? null, step: u.step_s ?? null, foot: u.step_foot || 'L', hold: !!u.hold };
     if (u.from && prev === u.from) m.combat.fadeIn = 0.03;     // the release of a held pose starts in that pose: no blend through the idle
     emit('ftf:iris-action', { clip: name, phase: 'start', impact: m.combat.impact });
+    // out of a run (a cast roots her at once): the heel-dig stop is blended over the first 0.2 s of the action clip
+    const sk = opts.skid && (m.speedNow || 0) > 2.2 && m.clips.find((x) => x.name === 'skid');
+    if (m.skid) { m.skid.action.stop(); m.skid = null; }
+    if (sk) {
+      const sa = m.mixer.clipAction(sk); sa.reset(); sa.setLoop(THREE.LoopOnce, 1); sa.clampWhenFinished = true; sa.setEffectiveWeight(0); sa.play();
+      m.skid = { action: sa, dur: sk.duration };
+      emit('ftf:foot', { foot: 'L', running: true, action: 'skid' });
+    }
     if (name === 'dash') m.dashTrail = true;                  // the trail starts on the next update (it needs the scene)
     return true;
   }
@@ -140,7 +150,7 @@ export class IrisAvatar {
   cast(name) {
     const m = this.irisModel;
     const c = m && m.clips.find((x) => x.name === name);
-    if (!c || !this.combat(name)) return null;
+    if (!c || !this.combat(name, { skid: true })) return null;
     const release = (c.userData && c.userData.release_s) || 0;
     Object.assign(m.combat, { fadeIn: 0.08, fadeOut: 0.22, cancelAfter: release + 0.24 });
     return { release, duration: c.duration };
@@ -156,6 +166,7 @@ export class IrisAvatar {
   update(dt, moving, avatarGroup, t, speed = 0, running = false, reduced = false, lookTarget = null) {
     const m = this.irisModel;
     if (!m) return;
+    m.speedNow = speed;
     let actionW = 0;                                   // weight of a full-body action clip (a cast, a strike, the dash)
     void running; // the blend follows the speed itself: the run clip appears above the walk speed
     if (moving) this.irisReaction = null;            // walking away cancels the reaction
@@ -200,7 +211,9 @@ export class IrisAvatar {
         if (k.hold && !k.ending) k.t = Math.min(k.t, k.dur - (k.fadeOut || 0.1) - 0.01);   // a held pose (strike_charge) waits on its last frame
         const w = smoothstep01(k.t / (k.fadeIn || 0.05)) * smoothstep01((k.dur - k.t) / (k.fadeOut || 0.1));
         actionW = w;
-        k.action.setEffectiveWeight(w);
+        const sk = m.skid ? smoothstep01(k.t / m.skid.dur) : 1;       // 0 = all skid, 1 = all action clip
+        k.action.setEffectiveWeight(w * (0.25 + 0.75 * sk));
+        if (m.skid) { m.skid.action.setEffectiveWeight(w * 0.75 * (1 - sk)); if (k.t >= m.skid.dur) { m.skid.action.stop(); m.skid = null; } }
         const keep = 1 - w;
         if (m.gait) { if (m.gait.walk) m.gait.walk.weight *= keep; if (m.gait.run) m.gait.run.weight *= keep; }
         if (m.idleAction) m.idleAction.weight *= keep;

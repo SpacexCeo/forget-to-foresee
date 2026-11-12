@@ -8,6 +8,7 @@ Clips (60 keys a second, in place; each starts and ends in her idle pose):
   strike3      the heavy finisher: both hands gathered high on her toes, a deep lunge, both palms out; impact 0.22 s
   strike_charge / strike_super   the held super strike: a deep coil that keeps sinking for a second and is held,
                then the release from that pose: the left foot drives out 0.7 m and the right palm goes through; impact 0.10 s
+  skid         0.2 s: the heel-dig stop out of a run, blended over the start of a cast that interrupts a run
   dash         low and forward at once, one leg driving and one trailing, arms swept back; the front foot catches her
                (these four replace the first versions made by iris_combat.py, which still builds Elise's)
   cast_lance   Frost Lance: she coils back onto the ball of the right foot, the left knee up and the left palm
@@ -305,12 +306,28 @@ def strike_super():
             (0.70, with_ease(back, 'smooth')), (0.98, with_ease(IDLE, 'out'))], 0.98
 
 
-CLIPS = {'strike_charge': strike_charge, 'strike_super': strike_super, 'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
+def skid():
+    """The stop out of a run when a cast interrupts it (0.2 s, blended over the first moments of the cast): the left
+    heel digs in ahead, the hips sit back and low, the body leans against the motion, the arms open for balance.
+    It starts in the pose (the game fades it in from the run) and eases toward the stance."""
+    dig = {
+        'hips': [0.0, -0.13, -0.10],
+        'pelvis': [('x', -6)], 'spine': [('x', -7)], 'chest': [('x', -6), ('y', -6)], 'neck': [('x', 6)], 'head': [('x', 8)],
+        'foot_L': {'at': [0.02, 0, 0.36], 'pitch': -16, 'pivot': 'ball'}, 'foot_R': {'at': [-0.02, 0, -0.14], 'yaw': 16}, 'knee_R': 6,
+        'arm_R': {'at': [-0.20, -0.26, 0.18], 'elbow': [-1, -0.2, -0.3], 'fingers': [-0.3, -0.8, 0.5], 'palm': [0, -1, 0]},
+        'arm_L': {'at': [0.22, -0.22, 0.10], 'elbow': [1, -0.2, -0.4], 'fingers': [0.3, -0.8, 0.5], 'palm': [0, -1, 0]},
+        'fingers_R': 'open', 'fingers_L': 'open',
+    }
+    return [(0.0, dig), (0.07, with_ease(mix(IDLE, dig, 1.08), 'out')), (0.20, with_ease(mix(IDLE, dig, 0.6), 'smooth'))], 0.20
+
+
+CLIPS = {'skid': skid, 'strike_charge': strike_charge, 'strike_super': strike_super, 'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
 # step_s / step_foot: the moment a foot comes down hard (the game sends `ftf:foot` then; the impact goes out as `ftf:iris-action`)
 EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'L'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'R'},
           'strike1': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'L'}, 'strike2': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'R'},
           'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'},
           # hold: the game keeps the last frame until the release clip (or a cancel); from: the pose the clip starts in
+          'skid': {'step_s': 0.0, 'step_foot': 'L'},
           'strike_charge': {'hold': True, 'full_s': 1.0}, 'strike_super': {'impact_s': 0.10, 'step_s': 0.10, 'step_foot': 'L', 'from': 'strike_charge'}}
 
 
