@@ -13,6 +13,7 @@ import { fabricSheen } from '../render/fabric.js';
 import { ONE_SHOT_CLIPS, REACTION_SECONDS, resolveClip } from './behaviour.js';
 import { FADE, GaitLayer, FootPlant, findLookBones, applyLookTo, accelLean } from './gait.js';
 import { heroFromSearch } from '../render/asset-catalog.js';
+import { DashTrail } from '../render/dash-trail.js';
 import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace } from './anim-library.js';
 
 /**
@@ -38,6 +39,7 @@ export function toonify(model) {
   });
 }
 
+const emit = (type, detail) => { if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') window.dispatchEvent(new CustomEvent(type, { detail })); };
 const smoothstep01 = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
 
 export class IrisAvatar {
@@ -85,7 +87,7 @@ export class IrisAvatar {
       if (idle2Action) { idle2Action.play(); idle2Action.weight = 0; }
       const face = mixer && extra.length ? faceLayerClip(gltf.animations) : null;   // blinks and gaze under the body clips
       const faceAction = face ? mixer.clipAction(face).play() : null;
-      this.irisModel = { model, mixer, clips, idleAction, idle2Action, idleLoops: 0, idleK: 0, idleT: 0, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
+      this.irisModel = { model, mixer, clips, idleAction, idle2Action, idleLoops: 0, idleK: 0, idleT: 0, faceAction, gait: mixer ? Object.assign(new GaitLayer(mixer, clips), { onFoot: (foot, running) => emit('ftf:foot', { foot, running }) }) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { avatarGroup.userData.irisFailed = true; this.attaching = null; console.warn('[play] Iris model failed', e); } // attach() may try again
   }
 
@@ -101,7 +103,7 @@ export class IrisAvatar {
     await next.load(avatarGroup);              // hides what the group shows once the new model is ready
     if (this.hero !== hero) { if (next.irisModel) avatarGroup.remove(next.irisModel.model); return; }   // switched again meanwhile
     if (!next.irisModel) { this.hero = oldHero; if (old) old.model.visible = true; return; }          // download failed: keep her
-    if (old) { avatarGroup.remove(old.model); if (old.mixer) old.mixer.stopAllAction(); }
+    if (old) { avatarGroup.remove(old.model); if (old.mixer) old.mixer.stopAllAction(); if (old.trail) old.trail.dispose(); }
     this.irisModel = next.irisModel;
   }
 
@@ -115,7 +117,11 @@ export class IrisAvatar {
     if (!c) return false;
     if (m.combat) m.combat.action.fadeOut(0.06);
     const a = m.mixer.clipAction(c); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.setEffectiveWeight(1); a.play();
-    m.combat = { action: a, t: 0, dur: c.duration };
+    // sound and effect sync: the clip's moments (art/anim/iris_actions.py extras), sent as window events while it plays
+    const u = c.userData || {};
+    m.combat = { action: a, t: 0, dur: c.duration, name, impact: u.release_s ?? u.impact_s ?? null, step: u.step_s ?? null, foot: u.step_foot || 'L' };
+    emit('ftf:iris-action', { clip: name, phase: 'start', impact: m.combat.impact });
+    if (name === 'dash') m.dashTrail = true;                  // the trail starts on the next update (it needs the scene)
     return true;
   }
 
@@ -181,7 +187,9 @@ export class IrisAvatar {
       // a reaction with its own face (the wink) takes the face over from the always-on layer
       if (m.faceAction) m.faceAction.weight = m.react && hasFace(m.react.getClip()) ? 1 - m.reactW * (1 - move) : 1;
       if (m.combat) {                                    // a combat move over the gait, idle and reaction
-        const k = m.combat; k.t += dt;
+        const k = m.combat, t0 = k.t; k.t += dt;
+        if (k.impact != null && t0 < k.impact && k.t >= k.impact) emit('ftf:iris-action', { clip: k.name, phase: 'impact', impact: 0 });
+        if (k.step != null && t0 < k.step && k.t >= k.step) emit('ftf:foot', { foot: k.foot, running: true, action: k.name });
         if (k.cancelAfter != null && k.t > k.cancelAfter && speed > 0.4) { k.dur = Math.min(k.dur, k.t + 0.16); k.fadeOut = 0.16; k.cancelAfter = null; } // she walks out of the settle
         const w = smoothstep01(k.t / (k.fadeIn || 0.05)) * smoothstep01((k.dur - k.t) / (k.fadeOut || 0.1));
         actionW = w;
@@ -204,5 +212,11 @@ export class IrisAvatar {
     if (m.bones && avatarGroup) applyLookTo(m.bones, m.look, avatarGroup.position, avatarGroup.rotation.y, lookTarget, dt, reduced);
     // Planted feet while she stands: a pivot on the spot and the end of a stop become short steps (gait.js).
     if (m.plant && avatarGroup) m.plant.update(dt, avatarGroup, m.gait ? m.gait.move : 0, reduced, actionW);
+    // The dash leaves afterimages and a ribbon (render/dash-trail.js); built on her first dash, never under reduced motion.
+    if (m.dashTrail && avatarGroup && avatarGroup.parent) {
+      m.dashTrail = false;
+      if (!reduced) { m.trail ||= new DashTrail(avatarGroup.parent, m.model, { phone: getModelVariant() === '_m' }); m.trail.start(); }
+    }
+    if (m.trail && m.trail.active && avatarGroup) m.trail.update(dt, avatarGroup, reduced);
   }
 }

@@ -67,6 +67,8 @@ export function accelLean(state, speed, dt, reduced, gain = 0.03, max = 0.1) {
 const GAIT_RATE = 10;        // 1/s, easing of the gait weights (about 0.1 s start/stop transitions)
 const WALK_REF = 1.7, RUN_REF = 3.3; // m/s the walk / run clips were authored at
 
+/** True when a looping phase went from `a` to `b` (forward, less than a whole turn) past `mark`. */
+export const crossed = (a, b, mark) => (a <= b ? a < mark && mark <= b : mark > a || mark <= b);
 const START_PHASE = 0.22;    // a stride starts from rest at the passing pose, where the feet are closest to the idle stance
 
 /**
@@ -89,6 +91,10 @@ export class GaitLayer {
     // the ground speed each clip's stride was built for (side-car clips carry it; the model's own clips use the defaults)
     this.walkRef = (w.clip && w.clip.userData && w.clip.userData.speed) || WALK_REF;
     this.runRef = (r.clip && r.name === 'run' && r.clip.userData && r.clip.userData.speed) || RUN_REF;
+    // foot contacts (side-car clips carry the planted intervals as fractions of the stride): `onFoot(foot, running)` is
+    // called on the frame a foot lands, so steps can sound on the contact instead of on a distance timer
+    this.contact = { walk: (w.clip && w.clip.userData && w.clip.userData.contact) || null, run: (r.clip && r.clip.userData && r.clip.userData.contact) || null };
+    this.onFoot = null;
     this.weights = { walk: 0, run: 0 };
     this.move = 0;
     this.phase = START_PHASE;
@@ -110,7 +116,12 @@ export class GaitLayer {
     const walkT = this.walk ? this.walk.getClip().duration : 1, runT = this.run ? this.run.getClip().duration : walkT;
     const strideT = walkT + (runT - walkT) * k, ref = WALK_REF + (RUN_REF - WALK_REF) * k;
     const rate = this.run ? Math.min(1.6, Math.max(0.55, Math.max(speed, 0.6) / ref)) : Math.min(2.2, Math.max(0.55, Math.max(speed, 0.6) / WALK_REF));
+    const before = this.phase;
     if (sum > 1e-4) this.phase = (this.phase + (dt * rate) / strideT) % 1;
+    if (this.onFoot && this.move > 0.5) {
+      const ct = k > 0.5 ? this.contact.run || this.contact.walk : this.contact.walk || this.contact.run;
+      if (ct) for (const foot of ['L', 'R']) if (crossed(before, this.phase, ct[foot][0])) this.onFoot(foot, k > 0.5);
+    }
     if (this.walk) { this.walk.weight = this.weights.walk; this.walk.timeScale = 0; this.walk.time = this.phase * walkT; }
     if (this.run) { this.run.weight = this.weights.run; this.run.timeScale = 0; this.run.time = this.phase * runT; }
     return this.move;

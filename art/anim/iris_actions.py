@@ -249,8 +249,10 @@ def dash():
 
 
 CLIPS = {'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
-EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R'},
-          'strike1': {'impact_s': 0.12}, 'strike2': {'impact_s': 0.12}, 'strike3': {'impact_s': 0.22}}
+# step_s / step_foot: the moment a foot comes down hard (the game sends `ftf:foot` then; the impact goes out as `ftf:iris-action`)
+EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'L'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'R'},
+          'strike1': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'L'}, 'strike2': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'R'},
+          'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'}}
 
 
 def sheet(rig, local, pel, path, fps, times=None, cols=5):
