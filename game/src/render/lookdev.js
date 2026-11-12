@@ -237,9 +237,14 @@ export class LookDev {
     // Under a lid the haze is the lid's own grey, a little darker than the sky above it.
     this.baseFog = atm.fogColor.clone().lerp(_c2.copy(atm.zenith).multiplyScalar(0.85), P.fog.cool || 0).lerp(grey.multiplyScalar(0.8), lid * 0.75);
     if (P.moonFill) this.baseFog.lerp(_c2.setRGB(0.2, 0.25, 0.36), 0.6 * Math.min(1, P.moonFill)); // the ground mist catches the moon
+    // Weather haze is cool and a little darker than the sky's own horizon (owner 12.11: a flat beige milk): the veil
+    // reads as air, not as paint, and never out-shines what stands in it.
+    const wl = this.baseFog.r * 0.2126 + this.baseFog.g * 0.7152 + this.baseFog.b * 0.0722, cool = W.cool || 0;
+    this.baseFog.lerp(_c2.setRGB(wl * 0.80, wl * 0.89, wl * 1.02).multiplyScalar(1 - 0.16 * cool), cool * 0.85);
     this.scene.fog.color.copy(this.baseFog);
     this.scene.fog.near = P.fog.near / W.fog; this.scene.fog.far = Math.max(this.scene.fog.near + 20, P.fog.far / W.fog);
-    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density * W.fog, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: (P.fog.lobe ?? 1) * (1 - lid * 0.9) });
+    setFog({ baseY: this.fogBaseY, falloff: P.fog.falloff, density: P.fog.density * W.fog, aerial: P.fog.aerial, sunDir: this.sunDir, sunTint: atm.fogSunTint, sunPower: P.fog.sunPower, sunStrength: (P.fog.lobe ?? 1) * (1 - lid * 0.9) * (1 - 0.6 * cool),
+      near: [5, 60 / Math.sqrt(W.fog), 0.12], cap: 0.95, nearSaturation: W.vivid || 0 });
     this.sky.setWeather({ cover: weatherCover(W, P.cloudCover), overcast: lid, fogColor: this.baseFog });
     this.post.setRays(1 - lid);
     // Lamps and windows come up as daylight goes down.

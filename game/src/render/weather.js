@@ -32,19 +32,21 @@ export const WIND_DIR = Object.freeze([0.83, -0.56]);
  *   overcast   0..1 grey lid on the sky dome              fog      multiplier on haze density (the view shortens with it)
  *   wet        0..1 surface wetness                       rain     0..1 share of the tier's rain streaks
  *   wind       0..1 strength for everything that sways    exposure EV offset
+ *   cool       0..1 how far the haze turns cool grey      vivid    saturation given back to the near field
  */
 export const WEATHER = Object.freeze({
-  clear: Object.freeze({ label: 'Clear', sun: 1, shadow: 1, ambient: 1, cover: null, overcast: 0, fog: 1, wet: 0, rain: 0, wind: 0.35, exposure: 0, flash: 0 }),
-  haze: Object.freeze({ label: 'Haze', sun: 0.72, shadow: 0.8, ambient: 1.15, cover: null, overcast: 0.25, fog: 1.7, wet: 0, rain: 0, wind: 0.3, exposure: 0.03, flash: 0 }),
-  fog: Object.freeze({ label: 'Fog', sun: 0.32, shadow: 0.5, ambient: 1.35, cover: 0.85, overcast: 0.6, fog: 3.4, wet: 0.25, rain: 0, wind: 0.15, exposure: 0.05, flash: 0 }),
-  overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.6, cover: 0.97, overcast: 0.85, fog: 1.12, wet: 0, rain: 0, wind: 0.55, exposure: 0.05, flash: 0 }),
-  drizzle: Object.freeze({ label: 'Light rain', sun: 0.18, shadow: 0.5, ambient: 1.25, cover: 0.97, overcast: 0.92, fog: 1.3, wet: 0.75, rain: 0.45, wind: 0.6, exposure: -0.12, flash: 0 }),
-  rain: Object.freeze({ label: 'Rain', sun: 0.12, shadow: 0.42, ambient: 1.1, cover: 1, overcast: 1, fog: 1.6, wet: 1, rain: 1, wind: 0.8, exposure: -0.3, flash: 0 }),
-  storm: Object.freeze({ label: 'Storm', sun: 0.07, shadow: 0.35, ambient: 0.95, cover: 1, overcast: 1, fog: 1.85, wet: 1, rain: 1.5, wind: 1, exposure: -0.45, flash: 1 }),
+  clear: Object.freeze({ label: 'Clear', sun: 1, shadow: 1, ambient: 1, cover: null, overcast: 0, fog: 1, wet: 0, rain: 0, wind: 0.35, exposure: 0, flash: 0, cool: 0, vivid: 0 }),
+  haze: Object.freeze({ label: 'Haze', sun: 0.78, shadow: 0.8, ambient: 1.05, cover: null, overcast: 0.25, fog: 1.4, wet: 0, rain: 0, wind: 0.3, exposure: -0.05, flash: 0, cool: 0.55, vivid: 0.14 }),
+  fog: Object.freeze({ label: 'Fog', sun: 0.36, shadow: 0.5, ambient: 1.12, cover: 0.85, overcast: 0.6, fog: 2.3, wet: 0.25, rain: 0, wind: 0.15, exposure: -0.1, flash: 0, cool: 0.8, vivid: 0.2 }),
+  overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.3, cover: 0.97, overcast: 0.85, fog: 1.1, wet: 0, rain: 0, wind: 0.55, exposure: -0.02, flash: 0, cool: 0.5, vivid: 0.16 }),
+  drizzle: Object.freeze({ label: 'Light rain', sun: 0.18, shadow: 0.5, ambient: 1.15, cover: 0.97, overcast: 0.92, fog: 1.25, wet: 0.75, rain: 0.45, wind: 0.6, exposure: -0.12, flash: 0, cool: 0.6, vivid: 0.14 }),
+  rain: Object.freeze({ label: 'Rain', sun: 0.12, shadow: 0.42, ambient: 1.05, cover: 1, overcast: 1, fog: 1.5, wet: 1, rain: 1, wind: 0.8, exposure: -0.28, flash: 0, cool: 0.7, vivid: 0.14 }),
+  storm: Object.freeze({ label: 'Storm', sun: 0.07, shadow: 0.35, ambient: 0.95, cover: 1, overcast: 1, fog: 1.7, wet: 1, rain: 1.5, wind: 1, exposure: -0.42, flash: 1, cool: 0.75, vivid: 0.12 }),
 });
 export const WEATHER_NAMES = Object.freeze(Object.keys(WEATHER));
 export const DEFAULT_WEATHER = 'clear';
-const NUMERIC = ['sun', 'shadow', 'ambient', 'overcast', 'fog', 'wet', 'rain', 'wind', 'exposure', 'flash'];
+
+const NUMERIC = ['sun', 'shadow', 'ambient', 'overcast', 'fog', 'wet', 'rain', 'wind', 'exposure', 'flash', 'cool', 'vivid'];
 /** Weathers that may not appear on the readable jury path (?demo=judge). */
 export const HEAVY_WEATHER = Object.freeze(['rain', 'storm']);
 

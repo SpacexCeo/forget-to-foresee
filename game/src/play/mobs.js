@@ -351,7 +351,7 @@ const CSS = `
 .ftf-hp > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #e2584f, #f0a15a); transition: width .2s ease; }
 .ftf-hp.ftf-hurt { animation: ftf-hp-shake .25s; }
 @keyframes ftf-hp-shake { 25% { transform: translateX(calc(-50% - 4px)); } 75% { transform: translateX(calc(-50% + 4px)); } }
-.ftf-hurt-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 4; box-shadow: inset 0 0 120px 30px rgba(200, 30, 20, .55); opacity: 0; transition: opacity .35s ease; }
+.ftf-hurt-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 4; box-shadow: inset 0 0 90px 6px rgba(190, 40, 30, .26); opacity: 0; transition: opacity .3s ease; }
 .ftf-hurt-vignette.on { opacity: 1; transition: none; }
 .ftf-dmg { position: fixed; left: 0; top: 0; z-index: 5; pointer-events: none; color: #fff7e6; font: 900 22px/1 system-ui, sans-serif; -webkit-text-stroke: 1px rgba(20,10,0,.85); text-shadow: 0 2px 3px #000, 0 0 8px rgba(0,0,0,.7); will-change: transform, opacity; }
 .ftf-dmg.crit { color: #ffd166; font-size: 30px; }
