@@ -824,7 +824,7 @@ function tickDayCycle(dt) {
 
 function frame() {
   const rawDt = clock.getDelta();
-  const dt = Math.min(rawDt, 0.25); // render, camera and animation delta
+  const dt = Math.min(Math.max(rawDt, 0), 0.25); // render, camera and animation delta (never negative: a clock that steps back, e.g. a test clock, would poison the damping)
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
   // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
