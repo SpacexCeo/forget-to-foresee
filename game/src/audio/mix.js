@@ -3,8 +3,9 @@
 import { CAMPS, PLAZA_RADIUS, PLATEAU_RADIUS, BALCONY_CENTER, BALCONY } from '../scenes/layout.js';
 
 export const BUSES = Object.freeze(['master', 'music', 'sfx']);
-export const DEFAULT_VOLUMES = Object.freeze({ master: 0.8, music: 0.6, sfx: 0.85 });
-export const VOLUME_KEY = 'ftf.audio.v1';
+// Owner 12.11: effects quiet by default (placeholder SFX until the library set is picked), music carries the mood.
+export const DEFAULT_VOLUMES = Object.freeze({ master: 0.8, music: 0.7, sfx: 0.35 });
+export const VOLUME_KEY = 'ftf.audio.v2'; // v2: new defaults (12.11), older saved levels are not reused
 
 export const clamp01 = (v) => (Number.isFinite(+v) ? Math.min(1, Math.max(0, +v)) : 0);
 export const dbToGain = (d) => 10 ** (d / 20);

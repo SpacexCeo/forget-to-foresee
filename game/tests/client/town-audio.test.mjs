@@ -75,3 +75,31 @@ test('foot contacts from the locomotion (ftf:foot) take over from the distance p
   listeners['ftf:foot']({ detail: { surface: 'wood' } }); assert.equal(played.at(-1), 'step_wood');
   ta.dispose();
 });
+
+test('weather (ftf:weather): the rain bed by state, thunder after a storm flash, wet steps outdoors only', async () => {
+  const { createTownAudio, weatherSound } = await import('../../src/audio/town-audio.js');
+  assert.deepEqual(weatherSound('clear'), { bed: null, wet: false, level: 0 });
+  assert.equal(weatherSound('drizzle').bed, 'amb_rain_light');
+  assert.equal(weatherSound('rain').bed, 'amb_rain_heavy');
+  assert.equal(weatherSound('storm').bed, 'amb_rain_heavy');
+  for (const s of ['haze', 'fog', 'overcast', 'nonsense', undefined]) assert.equal(weatherSound(s).bed, null, String(s));
+  const played = []; const stopped = []; const listeners = {};
+  const win = { addEventListener: (k, f) => { listeners[k] = f; }, removeEventListener() {} };
+  const play = (n, o = {}) => { const h = { n, o, gains: [], stop: () => stopped.push(n), setGain: (g) => h.gains.push(g) }; played.push(h); return h; };
+  const ta = createTownAudio({ createAudio: () => ({ setZone() {}, play, unlock: () => Promise.resolve(), dispose() {} }), win, rand: () => 0.5 });
+  const weather = (detail) => listeners['ftf:weather']({ detail });
+  weather({ state: 'drizzle' });
+  assert.equal(played.at(-1).n, 'amb_rain_light'); assert.equal(played.at(-1).o.loop, true); assert.equal(played.at(-1).o.gain, 0, 'fades in');
+  assert.deepEqual(ta.weather, { bed: 'amb_rain_light', wet: true });
+  ta.footContact('stone'); assert.equal(played.at(-1).n, 'step_wet', 'rain outdoors: wet steps');
+  ta.footContact('wood'); assert.equal(played.at(-1).n, 'step_wood', 'indoors stays dry');
+  weather({ state: 'storm' });
+  assert.deepEqual(stopped, ['amb_rain_light'], 'the light bed fades out'); assert.equal(played.at(-1).n, 'amb_rain_heavy');
+  const n = played.length;
+  weather({ state: 'storm', thunder: 2.4 });
+  assert.equal(played.length, n + 1, 'same bed kept, one thunder'); assert.equal(played.at(-1).n, 'thunder_distant'); assert.equal(played.at(-1).o.delay, 2.4);
+  weather({ state: 'clear' });
+  assert.deepEqual(stopped, ['amb_rain_light', 'amb_rain_heavy']); assert.deepEqual(ta.weather, { bed: null, wet: false });
+  ta.footContact('stone'); assert.equal(played.at(-1).n, 'step_stone', 'dry again');
+  ta.dispose();
+});

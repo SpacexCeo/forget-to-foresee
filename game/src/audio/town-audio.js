@@ -22,6 +22,17 @@ export const MOB_SOUNDS = Object.freeze({
   crownrift: Object.freeze({ attack: 'mob_crownrift_blade', hurt: 'mob_hurt_big' }),
 });
 
+/**
+ * Weather sound (window event 'ftf:weather' {state, thunder?} from render/lookdev.js): the rain bed for a state and
+ * whether the streets are wet. drizzle = the light bed, rain = the heavy bed, storm = heavy + distant thunder (played
+ * `thunder` seconds after each flash). Pure, tested.
+ */
+export const WEATHER_BEDS = Object.freeze({ drizzle: 'amb_rain_light', rain: 'amb_rain_heavy', storm: 'amb_rain_heavy' });
+export function weatherSound(state) {
+  const bed = WEATHER_BEDS[state] || null;
+  return { bed, wet: !!bed, level: state === 'storm' ? 1 : state === 'rain' ? 0.85 : bed ? 0.7 : 0 };
+}
+
 /** The cue's name from an `ftf:sound` detail: a name, or {name, pos, gain}. */
 export const cueName = (d) => (d && typeof d === 'object' ? d.name : d);
 
@@ -65,6 +76,19 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
   let surface = 'stone', lastContact = -1e9;
   const now = () => (globalThis.performance ? performance.now() : Date.now());
   const onFoot = (e) => { const d = e.detail || {}; lastContact = now(); api.footContact(d.surface || surface, !!d.running); };
+  // Weather: one looping rain bed crossfaded on state changes; thunder after each storm flash; wet steps outdoors
+  let rain = null, wet = false;
+  const onWeather = (e) => {
+    const d = e.detail || {}, w = weatherSound(d.state);
+    wet = w.wet;
+    if ((rain?.bedName ?? null) !== w.bed) {
+      rain?.stop(3);
+      rain = w.bed ? audio.play(w.bed, { loop: true, gain: 0 }) : null;
+      if (rain) { rain.bedName = w.bed; rain.setGain?.(w.level, 3); }
+    } else if (rain) rain.setGain?.(w.level, 2);
+    if (d.state === 'storm' && Number.isFinite(d.thunder)) audio.play('thunder_distant', { delay: Math.max(0, d.thunder), gain: 0.8 + 0.2 * rand() });
+  };
+  win.addEventListener('ftf:weather', onWeather);
   win.addEventListener('ftf:foot', onFoot);
   win.addEventListener('ftf:sound', onCue);
   win.addEventListener('keydown', unlock, { once: true });
@@ -75,11 +99,13 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     step(dist, running, floor = 'stone') { surface = floor === true ? 'wood' : floor; if (now() - lastContact > 1000 && steps(dist, running)) this.footContact(surface, running); },
     /** One foot meets the ground (the locomotion's contact frame when it has one, else the distance pacing). */
     footContact(surface = 'stone', running = false) {
-      const s = surface === true ? 'wood' : STEP_SURFACES.includes(surface) ? surface : 'stone'; // true: the old "indoors" flag
+      let s = surface === true ? 'wood' : STEP_SURFACES.includes(surface) ? surface : 'stone'; // true: the old "indoors" flag
+      if (wet && s !== 'wood') s = 'wet'; // rain outdoors: wet steps (indoors stays dry)
       audio.play('step_' + s, { gain: (running ? 0.85 : 0.62) * (0.85 + 0.15 * rand()) });
     },
     setListener(camera, target) { if (audio.setListener) audio.setListener(camera, target); },
-    dispose() { win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
+    get weather() { return { bed: rain?.bedName ?? null, wet }; },
+    dispose() { rain?.stop(0.3); win.removeEventListener('ftf:weather', onWeather); win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
   };
   return api;
 }

@@ -182,6 +182,7 @@ if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings appl
 }
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, entering = null, season = null, entered = false;
+let mp = null, mpTried = false, mpShown = false; // the shared town (play/multiplayer.js), loaded once Iris is in
 // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
 const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
 
@@ -874,6 +875,15 @@ function frame() {
   }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
+  // the shared town (docs/multiplayer.md): others' avatars and the chat; never on the judge link, ?mp=0 turns it off
+  const mpOn = !!(town && town.active && entered);
+  if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
+  if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
+  else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
+    mpTried = true;
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+      .catch((e) => console.warn('[mp]', e));
+  }
   if (town && town.active) {
     lookdev.setGround(player.pos[0], player.pos[1], player.pos[2]); // rain splashes fall around her
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
