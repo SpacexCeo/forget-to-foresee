@@ -728,6 +728,7 @@ export default {
   'wheel.cap': "NFT, усього {n}",
   'wheel.left': "NFT · лишилося {n} з {cap}",
   'wheel.skin.reason.failed': "Мінт не пройшов; спробуйте ще раз.",
+  'wheel.skin.reason.recorded': "Приз підтверджено · мінт очікує: скін закріплено за вами, його буде випущено на ваш акаунт.",
   'wheel.kind.title': "Титул",
   'wheel.seg.skin_sheriffchenko': "Скін Шерифченка",
   'wheel.seg.chest': "Скриня",

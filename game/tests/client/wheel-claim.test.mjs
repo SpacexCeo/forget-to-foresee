@@ -154,7 +154,12 @@ test('claim client: the signed request the relayer checks; its error codes map t
   assert.equal(await reason(503, 'wheel_not_configured'), 'not_configured');
   for (const [st, e] of [[401, 'bad_signature'], [403, 'not_your_key'], [409, 'replayed'], [400, 'stale'], [502, 'tx_failed']]) assert.equal(await reason(st, e), 'failed', e);
   assert.equal(await reason(404, undefined), 'not_configured', 'an older relayer without the route');
+  const recorded = await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: async () => ({ ok: true, status: 202, json: async () => ({ status: 'recorded', claim_id: 'c-9' }) }) });
+  assert.deepEqual(recorded, { ok: false, reason: 'recorded', verified: false, left: null, claimId: 'c-9' }, 'recorded, mint pending: the prize stays pending, nothing faked');
+  assert.equal(await reason(502, 'rpc'), 'network');
+  const mp = await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: async () => ({ ok: true, status: 202, json: async () => ({ status: 'mint_pending', verified: true, recorded: true, contract: 'skins.ftf-coordinator.testnet', left: 100 }) }) });
+  assert.equal(mp.reason, 'recorded'); assert.equal(mp.verified, true); assert.equal(mp.left, 100);
   assert.equal((await claimWheelSkin({ storage: { getItem: () => null }, wheelId, seed, base: 'https://r', fetch: reply(500) })).reason, 'need_guest');
   assert.equal(await skinSupply({ fetch: async () => { throw new Error('offline'); }, rpcUrls: ['https://rpc'] }), null, 'no contract yet: the cap alone is shown');
-  for (const [n, m] of Object.entries({ en, ru, uk, it, zh })) for (const k of ['wheel.left', 'wheel.skin.reason.failed']) assert.ok(m[k], `${n} ${k}`);
+  for (const [n, m] of Object.entries({ en, ru, uk, it, zh })) for (const k of ['wheel.left', 'wheel.skin.reason.failed', 'wheel.skin.reason.recorded']) assert.ok(m[k], `${n} ${k}`);
 });

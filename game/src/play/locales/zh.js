@@ -728,6 +728,7 @@ export default {
   'wheel.cap': "NFT，共 {n} 个",
   'wheel.left': "NFT · 剩余 {n} / {cap}",
   'wheel.skin.reason.failed': "铸造未成功，请重试。",
+  'wheel.skin.reason.recorded': "奖品已验证 · 等待铸造：皮肤已为你保留，将铸造到你的账户。",
   'wheel.kind.title': "称号",
   'wheel.seg.skin_sheriffchenko': "Sheriffchenko 皮肤",
   'wheel.seg.chest': "宝箱",

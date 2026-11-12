@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = new Set(process.argv.slice(2));
-export const CONTRACTS = ['season-commit', 'memory-shard', 'agent-card', 'guests', 'character-nft', 'token-account', 'agent-ledger', 'loot-chest'];
+export const CONTRACTS = ['season-commit', 'memory-shard', 'agent-card', 'guests', 'character-nft', 'token-account', 'agent-ledger', 'loot-chest', 'skin-nft'];
 
 /** Parses `node --test` or `cargo test` output into {pass, fail}. */
 export function parseCounts(out) {
@@ -38,7 +38,7 @@ function dirSize(p) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const rows = [run('game', 'game', 'npm', ['test']), run('server', 'server', 'npm', ['test']), run('relayer', 'relayer', 'npm', ['test'])];
+  const rows = [run('game', 'game', 'npm', ['test']), run('server', 'server', 'npm', ['test']), run('relayer', 'relayer', 'npm', ['test']), run('presence', 'presence', 'npm', ['test'])];
   if (!args.has('--skip-rust')) for (const c of CONTRACTS) rows.push(run(`contract ${c}`, `contracts/${c}`, 'cargo', ['test', '--lib']));
   const dist = dirSize(join(ROOT, 'game/dist'));
   const sha = (() => { try { return execSync('git rev-parse --short HEAD', { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { return 'unknown'; } })();

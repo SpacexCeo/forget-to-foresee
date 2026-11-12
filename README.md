@@ -20,8 +20,8 @@ Six clans read round signs of four slots (Place, Action, Power, Delay), stake si
 
 ```bash
 git clone --depth 1 https://github.com/SpacexCeo/forget-to-foresee && cd forget-to-foresee
-bash scripts/verify-all.sh --skip-rust   # game, server and relayer tests; prints one table, exit 0 when all pass
-bash scripts/verify-all.sh               # the same plus the eight Rust contracts (Rust, pkg-config, OpenSSL headers)
+bash scripts/verify-all.sh --skip-rust   # game, server, relayer and presence tests; prints one table, exit 0 when all pass
+bash scripts/verify-all.sh               # the same plus the Rust contracts (Rust, pkg-config, OpenSSL headers)
 ```
 
 Each line of the table is one suite; the counts it prints are the ones recorded in [docs/STATS.md](docs/STATS.md). Node.js 20+ is enough for `--skip-rust`; missing prerequisites are reported in one line each.
@@ -43,7 +43,7 @@ curl -s https://rpc.testnet.near.org -H 'content-type: application/json' -d '{"j
 # expect: "leaf_count":15, "revealed_count":15, "ash_key_committed":true
 ```
 
-Check a NEAR AI Cloud TEE attestation live (no key, no account; Intel TDX quote, event log, GPU evidence):
+Check a NEAR AI Cloud TEE attestation live (Intel TDX quote, event log, GPU evidence; if the endpoint asks for an API key, set `NEARAI_API_KEY`, the tool sends it):
 
 ```bash
 node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct   # every line "ok", last line PASS
@@ -88,12 +88,14 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 | Agent card NFT (Iris's end-of-season state) | **Real on testnet**, coordinator-minted, owned by the owner's account | `agents.ftf-coordinator.testnet`, `contracts/agent-card/` |
 | Day 1 free mint (player-owned guest account + Elise NFT) | **Contracts deployed; the relayer is live** (a test guest was created and minted through it on 11 Nov). The hosted page calls it (its public URL is in `game/src/net/day1-deployment.js`; a `VITE_FTF_RELAYER_URL` build variable overrides it); limits: 200 new guests a day, 0.05 testnet NEAR each; checked live end to end again on 12 Nov | `contracts/guests/`, `relayer/`, `game/src/play/day1-mint.js` |
 | Agent track records (a hired agent's trades and PnL, re-computable by anyone) | **Deployed on testnet** (`ledger.ftf-coordinator.testnet`; checked end to end on 11 Nov with a test guest account: the game's recording code signed the record and re-verified it, and `node tools/verify-agent/verify.mjs ledgercheck-5.guests.ftf-coordinator.testnet baker 1` prints PASS): the player's guest account records a hire on the `agent-ledger` contract; the page shows "Verified" only after it re-computes the record read back from the chain; `node tools/verify-agent/verify.mjs` does the same | `contracts/agent-ledger/`, `game/src/game/track-record.js`, [docs/api/verify-agent.md](docs/api/verify-agent.md) |
-| TEE agents (townsfolk speech, trade advisor) | Built and tested with recorded fixtures; live once the relayer is redeployed with a NEAR AI Cloud key and credits. Signature checked in the browser and (decisions) on-chain by the ledger; attestation (Intel TDX chain, GPU evidence) checked by the relayer and by `node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct`, which passes live today. Scripted lines otherwise. | [docs/tee.md](docs/tee.md) |
+| TEE agents (townsfolk speech, trade advisor) | **Built, not live**: the client, the relayer routes and the verifier are tested with recorded fixtures, but the deployed relayer does not have the `/api/agent/*` routes yet (404, it waits for the redeploy in [docs/handoff/relayer-tee-deploy.md](docs/handoff/relayer-tee-deploy.md)) and the NEAR AI Cloud account has no credits (chat answers 402). The game uses its scripted lines. What does run live today: `node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct` checks the TEE attestation (Intel TDX chain, report data, RTMR replay, GPU evidence and vendor verdict) and prints PASS; the ledger's `record_tee_decision` checks a signature on chain (tested with a fixture signature, labelled as such). | [docs/tee.md](docs/tee.md) |
 | Loot chests from monsters | Contract live on testnet (`chests.ftf-coordinator.testnet`), deck of 10,000 with exactly 1,000 NFT committed on chain; the season seed and openings wait for the TEE seed and the relayer redeploy. In the game, chests drop, can be picked up and opened in the UI; until the relayer's `/api/chest/open` is deployed (404 today) a chest stays sealed and says so. `node tools/verify-chest/verify.mjs` checks the deck and every opening: today the three deck lines print `ok` and it ends `FAIL` on "season seed is fixed" until that seed is set. | [docs/chests.md](docs/chests.md) |
+| Wheel grand prize (Sheriffchenko skin NFT) | **Contract live, mint pending**: `skins.ftf-coordinator.testnet` (cap 100, one per account, 0 minted). The claim route re-checks the roll server-side; it is not on the deployed relayer yet (404) and its minter key is not set, so a winning spin shows "mint pending" in the game. Known limit: the roll is public, so a player can pick a winning spin within the allowed count (documented). | [docs/wheel-skin.md](docs/wheel-skin.md), `contracts/skin-nft/` |
+| Shared town and chat (rooms of 15) | **Built, dormant**: `presence/` (WebSocket rooms, server-side limits) and the client are tested, and a two-browser run on a local server showed the other player and the chat; the service is not deployed, so the hosted town stays single-player and shows no chat. `?bots=N` shows walkers labelled "AI" that run in the browser (no network). | [docs/multiplayer.md](docs/multiplayer.md) |
 | Combat outside the town walls | **Real, local**: 4 monster types, strike / dash / casts, health; in-game only, nothing on-chain | `game/src/play/mobs.js` |
 | Photo mode (**P**), townsfolk barks, narrator subtitles when films are off, shard history timeline on the card | **Real**, local presentation | `game/src/render/photo-mode.js`, `game/src/scenes/barks.js`, `game/src/play/narrator.js`, `game/src/ui/world-hud/shard-card.js` |
 | Dragon companion NFT | **Client real; one dragon minted on testnet** to a test guest's Elise token account (an agentic NFT that owns an NFT): `nacre-cy-8` on `companions.ftf-coordinator.testnet`, owner `elise-cy-8.heroine.ftf-coordinator.testnet`; visible in that guest's browser only | `game/src/net/companions.js` |
-| Wallet sign-in, on-chain escrow, player-owned agent NFT, multiplayer | **Not built** | — |
+| Wallet sign-in, on-chain escrow, player-owned agent NFT | **Not built** | — |
 | Agent HTTP API | **Real**: OpenAPI, idempotent commands, redacted observations, Merkle proofs, an example agent that plays a whole season; in-memory test sessions, no accounts | `server/`, [docs/api/](docs/api/README.md) |
 | Foresight Exchange (practice drill) | **Real rules, practice silk**: three Echoes follow a sealed snapshot of public reference rates; no prizes, no real money, not on NEAR | `game/src/game/exchange.js` |
 | Weekly tournament card | **UI simulation**, labelled "Simulation"; not part of the judged loop | [docs/status.md](docs/status.md) |
@@ -124,10 +126,12 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 |---|---|
 | `game/` | Vite + Three.js client, headless engine, play layer, UI, tests |
 | `server/` | agent HTTP API (`node:http`, no dependencies) |
-| `relayer/` | signs `guests.create_guest` server-side so no key ships to the browser |
-| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account`, `agent-ledger`, `loot-chest` (Rust, near-sdk 5.30) and deployment records |
+| `relayer/` | signs `guests.create_guest` server-side so no key ships to the browser; TEE agent, chest and wheel routes (`relayer/README.md`) |
+| `presence/` | the shared town's WebSocket service (rooms of 15, chat), no dependencies |
+| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account`, `agent-ledger`, `loot-chest`, `skin-nft` (Rust, near-sdk 5.30) and deployment records |
 | `scripts/` | `verify-all.sh` (every suite, one table) and `stats.mjs` (writes docs/STATS.md) |
 | `tools/verify/` | one-file proof verifiers (Node and Python) |
+| `tools/verify-tee/`, `tools/verify-chest/`, `tools/verify-agent/` | independent checks of TEE answers, chest openings and agent track records |
 | `prototype-2d/` | the frozen 2D reference prototype the engine is tested against |
 | `art/`, `docs/` | procedural art sources; specs, decisions, API, QA, submission package |
 

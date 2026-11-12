@@ -12,7 +12,7 @@ const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeo
 const bytes = (s) => new TextEncoder().encode(s);
 /** Relayer error codes (relayer /api/wheel/claim) -> the wheel's reasons; the rest read as a generic failure. */
 const REASON = { wheel_not_configured: 'not_configured', not_found: 'not_configured', sold_out: 'sold_out', already_owned: 'already_owned', rate_limited: 'rate', invalid_spin: 'invalid',
-  bad_signature: 'failed', not_your_key: 'failed', stale: 'failed', replayed: 'failed', tx_failed: 'failed' };
+  bad_signature: 'failed', not_your_key: 'failed', stale: 'failed', replayed: 'failed', tx_failed: 'failed', rpc: 'network' };
 /** The skin contract (contracts/skin-nft; views skin_info, skin_of). */
 export const SKIN_CONTRACT = 'skins.ftf-coordinator.testnet';
 export const skinContract = (dep = DAY1_DEPLOYMENT) => (dep && dep.skins) || SKIN_CONTRACT;
@@ -36,6 +36,8 @@ export async function claimWheelSkin({ storage, wheelId, seed, deployment = DAY1
     const r = await withTimeout(fetch(base + '/api/wheel/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, wheel_id: wheelId, seed, at, signature }) }), 60000);
     const ans = await r.json().catch(() => ({}));
+    // the relayer verified the win (every check passed) but cannot mint yet (no minter key): 202 {status: 'mint_pending', verified, recorded, contract, left}
+    if (!ans.token_id && (r.status === 202 || ans.pending === true || ans.status === 'pending' || ans.status === 'recorded' || ans.status === 'mint_pending')) return { ok: false, reason: 'recorded', verified: ans.verified === true, left: Number.isFinite(+ans.left) ? +ans.left : null, claimId: ans.claim_id || ans.id || null };
     if (!r.ok || !ans.token_id) return { ok: false, reason: r.status === 404 ? 'not_configured' : REASON[ans.error] || (r.status >= 500 ? 'network' : 'failed') };
     return { ok: true, tokenId: ans.token_id, txHash: ans.tx_hash || null, contract: ans.contract || skinContract(deployment), explorer: ans.tx_hash ? 'https://testnet.nearblocks.io/txns/' + ans.tx_hash : null };
   } catch { return { ok: false, reason: 'network' }; }
