@@ -3,7 +3,7 @@
     python3 art/combat/trailer.py [out.mp4] [--vertical out_vertical.mp4]
 
 Beats (docs/submission/video-recut-notes.md): the town and the title first, Elise, a shop, the fight beyond the walls,
-the brute and the elite, a chest, the Tournament's archipelago, the end card with "Built at NEAR HACKATHON" and the URL.
+the brute and the elite, a chest drop, the Tournament's archipelago, the open-case reveal, the end card with "Built at NEAR HACKATHON" and the URL.
 Captions say only what the clips show. Music: the game's own track (game/public/assets/audio/mus_calm.ogg).
 1280x720, 30 fps, H.264 + AAC. The vertical cut is 15 s, 720x1280 (centre crop), for X.
 """
@@ -19,6 +19,7 @@ SERIF = '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'
 SANS = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
 URL = 'spacexceo.github.io/forget-to-foresee'
 
+REVEAL = 22.5   # first_fight_v3.mp4: the open-case reel starts here (the chest preview, labelled "not on chain")
 # (clip, start s, length s, caption or None)
 SEGMENTS = [
     ('town_beauty.mp4', 0.0, 8.5, None),
@@ -28,10 +29,9 @@ SEGMENTS = [
     ('first_fight_v2.mp4', 8.5, 7.0, 'Real-time fights: strike combo, dash, casts'),
     ('elite_fight.mp4', 2.0, 4.0, 'Brutes telegraph their blows'),
     ('elite_fight.mp4', 18.0, 8.0, 'Elites are a real fight'),
-    ('first_fight_v2.mp4', 20.5, 2.0, 'Beaten creatures drop chests'),
-    ('first_fight_v2.mp4', 29.0, 2.5, 'Beaten creatures drop chests'),
-    ('first_fight_v2.mp4', 34.6, 1.5, 'Beaten creatures drop chests'),
+    ('first_fight_v3.mp4', 16.0, 3.0, 'Beaten creatures drop chests'),
     ('archipelago.mp4', 2.6, 9.0, 'Then the Tournament: the floating archipelago'),
+    ('first_fight_v3.mp4', REVEAL, 7.5, 'Open a chest: shards, items, NFTs (preview)'),
 ]
 END_SECONDS = 5.0
 

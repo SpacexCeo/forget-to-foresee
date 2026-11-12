@@ -81,6 +81,12 @@ await page.evaluate(async () => {
     f.rig.camera.position.set(...c.pos); f.rig.camera.lookAt(...c.look); f.rig.camera.updateMatrixWorld(true);
   };
 });
+// v3: a chest dropped right under her would be picked up mid-fight before the camera sees it; such a drop waits
+// until she has stepped away (the kill -> drop hook itself is the game's)
+if (V3) await page.evaluate(() => {
+  const M = window.__ftf.town.monsters, d = M.drop.bind(M);
+  M.drop = (pos, elite) => { const go = () => { const q = window.__ftf.player.pos; if (Math.hypot(q[0] - pos[0], q[2] - pos[2]) > 2.4) d(pos, elite); else setTimeout(go, 150); }; go(); return true; };
+});
 // capture in the background
 let capturing = true, n = 0; const t0 = Date.now();
 const capture = (async () => {
@@ -117,7 +123,7 @@ if (V3) {
   // labelled open-case preview (its button is clicked from script and kept off screen: the reel and the card show)
   await page.evaluate(() => Promise.all([import('/src/play/chest-open.js'), import('/src/play/game-menu.js')]));
   const chests = () => page.evaluate(() => window.__ftf.town.monsters ? window.__ftf.town.monsters.chests.map((c) => c.at) : []);
-  let cs = []; for (let i = 0; i < 20 && !(cs = await chests()).length; i++) await wait(250);
+  let cs = []; for (let i = 0; i < 40 && !(cs = await chests()).length; i++) await wait(250);
   log.push('chests ' + cs.length);
   if (cs.length) {
     await page.evaluate(() => { const c = window.__cam; if (c) window.__camHold = c.pos.slice(); });
