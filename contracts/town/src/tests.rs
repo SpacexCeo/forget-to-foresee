@@ -447,3 +447,57 @@ fn rules_match_the_shared_vectors() {
     }
     for c in v["pendings"].as_array().unwrap() { assert_eq!(pending_reward(n(&c["weight"]), n(&c["snapshot"]), n(&c["index"])), n(&c["pending"])); }
 }
+
+// ---------- v4: acting for players ----------
+fn guest(t: &mut Town, silk: u128) { ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(silk), "story".into()); }
+fn h(n: u32) -> String { format!("{:064x}", n) }
+#[test]
+fn a_coordinator_pledges_claims_and_unbonds_for_a_guest_on_the_guests_own_row() {
+    let mut t = town(); guest(&mut t, 500 * S);
+    ctx("coord.testnet", 0);
+    let id = t.pledge_for(acc("p0.testnet"), 0, U(100 * S), 0, h(1));
+    assert_eq!(t.get_deed(id.clone()).unwrap().0, acc("p0.testnet")); // the deed is the guest's
+    assert!(t.balance_of(acc("coord.testnet")).is_none()); // the coordinator holds nothing
+    assert!(t.act_request_used(h(1)));
+    trades(&mut t, 200, 1); day_close(&mut t, 1); trades(&mut t, 200, 2); day_close(&mut t, 2);
+    ctx("coord.testnet", 2);
+    let before = bal(&t, "p0.testnet").silk;
+    let got = t.claim_for(acc("p0.testnet"), id.clone(), h(2));
+    assert_eq!(bal(&t, "p0.testnet").silk, before + got.0);
+    assert_eq!(t.unbond_for(acc("p0.testnet"), id.clone(), h(3)).0, 0); // began
+    ctx("coord.testnet", 5);
+    let back = t.unbond_for(acc("p0.testnet"), id.clone(), h(4)); // finished
+    assert!(back.0 >= 100 * S); assert!(t.get_deed(id).is_none());
+    assert_eq!(t.act_limits(acc("p0.testnet")).0, 1);
+    conserved(&t);
+}
+#[test]
+fn a_coordinator_invests_claims_a_stall_and_enters_the_tournament_for_a_guest() {
+    let mut t = town(); guest(&mut t, 500 * S); open(&mut t, "s1");
+    ctx("coord.testnet", 0);
+    t.invest_stall_for(acc("p0.testnet"), acc("t1.testnet"), U(50 * S), h(10));
+    assert_eq!(t.stall_position(acc("t1.testnet"), acc("p0.testnet")).unwrap().0.amount, 50 * S);
+    t.claim_stall_for(acc("p0.testnet"), acc("t1.testnet"), h(11));
+    t.enter_tournament_for(acc("p0.testnet"), "s1".into(), h(12));
+    assert!(t.has_entered("s1".into(), acc("p0.testnet")));
+    conserved(&t);
+}
+#[test] #[should_panic(expected = "ERR_NOT_COORDINATOR")]
+fn only_coordinators_act_for_players() { let mut t = town(); guest(&mut t, 500 * S); ctx("p1.testnet", 0); t.pledge_for(acc("p0.testnet"), 0, U(10 * S), 0, h(1)); }
+#[test] #[should_panic(expected = "ERR_ACT_REQUEST")]
+fn a_signed_action_request_acts_once() { let mut t = town(); guest(&mut t, 500 * S); ctx("coord.testnet", 0); t.pledge_for(acc("p0.testnet"), 0, U(10 * S), 0, h(1)); t.pledge_for(acc("p0.testnet"), 0, U(10 * S), 0, h(1)); }
+#[test] #[should_panic(expected = "ERR_ACT_FOR")]
+fn the_coordinator_does_not_act_for_a_stall() { let mut t = town(); ctx("coord.testnet", 0); t.pledge_for(acc("t0.testnet"), 0, U(10 * S), 0, h(1)); }
+#[test] #[should_panic(expected = "ERR_REF")]
+fn an_action_needs_a_request_hash() { let mut t = town(); guest(&mut t, 500 * S); ctx("coord.testnet", 0); t.claim_stall_for(acc("p0.testnet"), acc("t1.testnet"), "x".into()); }
+#[test]
+fn actions_for_one_player_are_capped_per_day() {
+    let mut t = town(); guest(&mut t, 900 * S); ctx("coord.testnet", 0);
+    for i in 0..ACT_PER_ACCOUNT_DAY { t.invest_stall_for(acc("p0.testnet"), acc("t1.testnet"), U(S), h(100 + i)); }
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { t.invest_stall_for(acc("p0.testnet"), acc("t1.testnet"), U(S), h(999)); }));
+    assert!(r.is_err());
+    ctx("coord.testnet", 1); t.invest_stall_for(acc("p0.testnet"), acc("t1.testnet"), U(S), h(1000)); // a new day
+    assert_eq!(t.act_limits(acc("p0.testnet")).0, 1);
+}
+#[test] #[should_panic(expected = "ERR_LOCKED")]
+fn acting_for_a_player_keeps_the_rules() { let mut t = town(); guest(&mut t, 500 * S); ctx("coord.testnet", 0); let id = t.pledge_for(acc("p0.testnet"), 0, U(100 * S), 1, h(1)); t.unbond_for(acc("p0.testnet"), id, h(2)); }

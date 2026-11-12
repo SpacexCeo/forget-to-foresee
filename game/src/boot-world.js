@@ -319,7 +319,7 @@ if (townMode.town) {
   const spots = [
     ...TOWN_SHOPS.filter((s) => ['exchange', 'scribe', 'inn'].includes(s.id)).map((s) => ({ id: s.id, near: (pos) => { const d = shopDoorAt(pos); return !!d && d.id === s.id; } })),
     { id: 'board', near: spotAt(TOWN_SPOTS.board, 2.2) },
-    { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
+    // the mirror (look picker) is off for now (owner 12.11); its code and spot stay for later
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   // The Expedition (?story=1 only, docs/plans/story): the citizens' quests, the objective line and the Gate-Loom by the

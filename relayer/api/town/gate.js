@@ -7,7 +7,7 @@
 import { cors, createBucket, envConfig, clientIp, DEFAULTS } from '../../lib/core.js';
 import { createTxClient } from '../../lib/near-tx.js';
 import { createReplayGuard } from '../../lib/chest.js';
-import { townGateEnv, validateRequest, signatureValid, syncCredit, payGateFor, createCreditLedger } from '../../lib/town-gate.js';
+import { townGateEnv, validateRequest, signatureValid, syncCredit, payGateFor, createCreditLedger, queuedClient } from '../../lib/town-gate.js';
 import { jsonlLog } from '../../market/index.js';
 import { join } from 'node:path';
 
@@ -24,7 +24,7 @@ export function townGateHandler(opts = {}) {
   return async function handler(req, res) {
     const env = opts.env || process.env, cfg = envConfig(env), gcfg = townGateEnv(env);
     if (cors(req, res, cfg.origins)) return;
-    const client = opts.client || createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, fetch: opts.fetch || globalThis.fetch, timeoutMs: 30_000 });
+    const client = opts.client || queuedClient(createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, fetch: opts.fetch || globalThis.fetch, timeoutMs: 30_000 }));
     if (req.method === 'GET') {
       const acc = new URL(req.url, 'http://x').searchParams.get('account_id') || '';
       if (!/^[a-z0-9._-]{2,64}$/.test(acc)) return json(res, 400, { error: 'bad_account' });

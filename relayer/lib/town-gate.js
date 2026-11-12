@@ -23,6 +23,11 @@ import { b58decode, importSecretKey } from './near-tx.js';
 import { loadLog } from './pass-eligibility.js';
 import { verifyLog } from './expedition-rules/expedition-log.js';
 import { EXPEDITION } from './expedition-rules/expedition-config.js';
+import { createQueue } from './core.js';
+
+/** One send at a time with the coordinator key (its nonce is sequential): shared by the portal and the player moves. */
+export const coordQueue = createQueue();
+export const queuedClient = (client, queue = coordQueue) => ({ ...client, call: (o) => queue(() => client.call(o)) });
 
 export const GATE = Object.freeze({ maxSkewMs: 5 * 60 * 1000, guestDaySilk: 300, gas: 30_000_000_000_000n });
 const ACCOUNT_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0-9]+)*)*$/;
