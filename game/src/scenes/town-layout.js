@@ -156,7 +156,7 @@ export const SHOP_LIGHT = Object.freeze({
  * beams; the rig's sphere sweep against the room's own colliders keeps it out of the walls. `pitch` is the angle
  * above the horizontal at `dist` (the rig's zoom-tied pitch is cancelled); zoom is limited to minDist..maxDist.
  */
-export const SHOP_CAMERA = Object.freeze({ dist: 4.2, minDist: 2.4, maxDist: 6.5, pitch: 5 * Math.PI / 180, minPitch: -10 * Math.PI / 180 });
+export const SHOP_CAMERA = Object.freeze({ dist: 3.8, minDist: 2.4, maxDist: 6.5, pitch: 7 * Math.PI / 180, minPitch: -10 * Math.PI / 180, focusHeight: 0.45, yaw: 0.3 });
 
 /**
  * Seconds of the door transition: fade to dark and back (`reducedFade` under reduced motion: a plain short

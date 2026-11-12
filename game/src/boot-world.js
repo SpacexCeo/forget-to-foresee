@@ -317,7 +317,7 @@ if (townMode.town) {
   });
   mountCasting();
   // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
-  townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, reducedMotion: () => lookdev.reducedMotion,
+  townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, mobile: mobileDevice, reducedMotion: () => lookdev.reducedMotion,
     onCounter: (id) => townFlow.openSpot(id), street: { world: () => town.world, killY: TOWN_KILL_Y } });
   fogCards = createFogCards(scene, TOWN_ROUTE); // ground fog along the street and stairs (night, early morning)
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play

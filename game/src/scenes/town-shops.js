@@ -6,7 +6,8 @@
 // ambient light shows the bake (SHOP_LIGHT). The street is never shown half-loaded: the fade waits for the room.
 import * as THREE from 'three';
 import { CollisionWorld } from '../physics/collision.js';
-import { PropInstance } from '../render/assets.js';
+import { PropInstance, prefetchGltf } from '../render/assets.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { setFog } from '../render/fog.js';
 import { createSwingSet } from '../render/swing.js';
 import { cue } from '../audio/town-audio.js';
@@ -20,7 +21,7 @@ import { TOWN_SHOPS, SHOP_LIGHT, SHOP_CAMERA, SHOP_TRANSITION, shopZoneAt, shopP
  * @param {{world: object, killY: number, camera: object}} o.street what to restore when Iris leaves
  * @param {Document} [o.doc] @param {object[]} [o.shops]
  */
-export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, reducedMotion = () => false, onCounter = () => {}, street, doc = globalThis.document, shops = TOWN_SHOPS }) {
+export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, reducedMotion = () => false, onCounter = () => {}, street, mobile = false, doc = globalThis.document, shops = TOWN_SHOPS }) {
   const fade = doc.createElement('div');
   fade.style.cssText = 'position:fixed;inset:0;background:#05070a;opacity:0;pointer-events:none;z-index:30;transition:opacity .45s ease';
   doc.body.append(fade);
@@ -34,6 +35,31 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
   const rooms = new Map(); // id -> {world, inst}
   const swing = createSwingSet(); // the rooms' chandeliers and wall lanterns sway a little too
   const state = { phase: 'street', shop: null, zone: null, busy: false, saved: null };
+  // The shopkeepers behind the counters (Maren, Odo, Bram: the townsfolk keeper models, their own idle / talk clips)
+  const KEEPER_MODEL = Object.freeze({ exchange: 'townsfolk_shardkeeper', scribe: 'townsfolk_scribe', inn: 'townsfolk_innkeeper' });
+  const keepers = new Map(); // shop id -> {root, mixer, acts, playing}
+  let lastT = performance.now();
+  function placeKeeper(shop) {
+    if (keepers.has(shop.id) || !KEEPER_MODEL[shop.id]) return;
+    const k = { root: null, mixer: null, acts: {}, playing: null };
+    keepers.set(shop.id, k);
+    prefetchGltf(KEEPER_MODEL[shop.id] + (mobile ? '_m' : '')).then((r) => {
+      const g = r && r.gltf ? r.gltf : r;
+      if (!g || !g.scene) return;
+      const m = cloneSkinned(g.scene);
+      m.position.set(...shop.keeperStand.position); m.rotation.y = shop.keeperStand.heading;
+      m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+      scene.add(m); k.root = m;
+      k.mixer = new THREE.AnimationMixer(m);
+      for (const c of g.animations || []) k.acts[c.name] = k.mixer.clipAction(c);
+      keeperClip(k, 'idle');
+    }).catch((e) => console.warn('[shops] keeper', shop.id, e));
+  }
+  function keeperClip(k, name) {
+    const a = k.acts[name] || k.acts.idle; if (!a || k.playing === a) return;
+    if (k.playing) k.playing.fadeOut(0.3);
+    a.reset().fadeIn(0.3).play(); k.playing = a;
+  }
 
   function room(shop) {
     let r = rooms.get(shop.id);
@@ -66,6 +92,8 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     if (rig.reset) rig.reset();
     rig.minDist = SHOP_CAMERA.minDist; rig.maxDist = SHOP_CAMERA.maxDist; rig.minPitch = SHOP_CAMERA.minPitch; rig.dist = SHOP_CAMERA.dist;
     rig.pitchOffset = SHOP_CAMERA.pitch - (rig.pitchFor ? rig.pitchFor(rig.dist) : 0); // the rig's zoom-tied pitch is cancelled
+    rig.focusHeightOverride = SHOP_CAMERA.focusHeight; // the view stays under the chandeliers and beams
+    if (rig.rotate) rig.rotate(SHOP_CAMERA.yaw || 0); // a little off her back: the keeper behind the counter shows beside her
   }
 
   async function enter(shop) {
@@ -78,7 +106,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     const t0 = performance.now();
     while (!r.inst.real && performance.now() - t0 < SHOP_TRANSITION.wait * 1000) await wait(100);
     if (!r.inst.real) { streamer.pin(shop.piece, null); state.phase = 'street'; state.shop = null; state.busy = false; await fadeTo(false); render(); return false; }
-    state.saved = { dist: rig.dist, minDist: rig.minDist, maxDist: rig.maxDist, minPitch: rig.minPitch, pitchOffset: rig.pitchOffset };
+    state.saved = { focusHeightOverride: rig.focusHeightOverride ?? null, dist: rig.dist, minDist: rig.minDist, maxDist: rig.maxDist, minPitch: rig.minPitch, pitchOffset: rig.pitchOffset };
     player.world = r.world; rig.world = r.world; player.killY = shop.killY;
     player.teleport(shop.spawn.position.slice(), shop.spawn.heading);
     roomCamera();
@@ -99,7 +127,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     player.world = street.world(); rig.world = street.world(); player.killY = street.killY;
     player.teleport(shop.street.position.slice(), shop.street.heading);
     if (rig.reset) rig.reset();
-    if (state.saved) { const v = state.saved; rig.minDist = v.minDist; rig.maxDist = v.maxDist; rig.minPitch = v.minPitch; rig.dist = v.dist; rig.pitchOffset = v.pitchOffset; }
+    if (state.saved) { const v = state.saved; rig.minDist = v.minDist; rig.maxDist = v.maxDist; rig.minPitch = v.minPitch; rig.dist = v.dist; rig.pitchOffset = v.pitchOffset; rig.focusHeightOverride = v.focusHeightOverride; }
     lookdev.applyWeather(true); // the hour and the weather come back
     streamer.pin(shop.piece, null);
     state.phase = 'street'; state.shop = null; state.zone = null;
@@ -137,9 +165,13 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
       holdInterior();
       const r = rooms.get(state.shop.id);
       if (r && r.inst.real && !r.swung) { swing.set(state.shop.id, r.inst.real); r.swung = true; }
+      if (r && r.inst.real) placeKeeper(state.shop);
       swing.update(performance.now() / 1000, reducedMotion());
       const z = shopZoneAt(state.shop, player.pos);
       if (z !== state.zone) { state.zone = z; render(); }
+      const now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+      const k = keepers.get(state.shop.id);
+      if (k && k.mixer) { keeperClip(k, z === 'counter' ? 'talk' : 'idle'); k.mixer.update(reducedMotion() ? dt * 0.5 : dt); }
     },
     dispose() { fade.remove(); prompt.remove(); scene.remove(ambient); },
   };
