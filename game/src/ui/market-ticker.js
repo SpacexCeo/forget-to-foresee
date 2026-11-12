@@ -1,4 +1,4 @@
-// "Town market · N trades today" ticker (docs/market.md): a small pill in the town; a tap opens the last trades, each
+// "Town market · N trades today" ticker (docs/town-economy.md): a small pill in the town; a tap opens the last trades, each
 // linking to its transaction on the NEAR testnet explorer, under the honest label "Scripted townsfolk · automated trades on
 // NEAR testnet". Hidden when there is no market to show. Plain DOM, no play imports; the caller passes `t` (i18n),
 // the poll function (net/market.js fetchMarket), `line` (net/market.js tradeLine) and `onTrade` for trades it has not seen yet (the stall scene).

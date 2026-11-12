@@ -29,4 +29,6 @@ Other invariants tested:
 - A season's schedule root never changes, and deeds carry it.
 
 Gas: the measured host gas for `trade` is 0.61 Tgas, and the full estimate is 2.5–2.7 Tgas. Measuring it in a
-sandbox or on testnet is still open (acceptance 13).
+sandbox or on testnet is still open (acceptance 13): `node tools/town/sandbox-gas.mjs <near-sandbox> <town.wasm>`
+reports the burnt gas per trade, the NEAR it costs and the storage before/after (the worker's container could not
+run the sandbox binary).

@@ -1,6 +1,5 @@
-// The market daemon's wiring (docs/market.md): environment, key file, state file, JSONL log, and one shared daemon
-// for the process. Off unless FTF_TOWN=1 (ftf-town, lib/town-traders.js; dry run unless FTF_TOWN_SEND=1) or
-// FTF_MARKET=1 (the parked market contract). The trader keys live in data/market-keys.json on the relayer's server
+// The town traders' wiring (docs/town-economy.md): environment, key file, state file, JSONL log, and one shared daemon
+// for the process. Off unless FTF_TOWN=1 (ftf-town, lib/town-traders.js; a dry run unless FTF_TOWN_SEND=1). The trader keys live in data/market-keys.json on the relayer's server
 // (made there by scripts/market-keys.mjs, mode 600, never committed); this module never prints them.
 import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,8 +11,6 @@ import { TOWN_POLICY, townEnv } from '../lib/town-traders.js';
 import { TRADERS, traderAccount } from './catalog.js';
 
 export const marketEnv = (env = process.env) => ({
-  enabled: env.FTF_MARKET === '1',
-  contract: env.FTF_MARKET_CONTRACT || 'market.ftf-coordinator.testnet',
   keysFile: env.FTF_MARKET_KEYS || join(env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname, 'market-keys.json'),
   dataDir: env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname,
   target: Math.max(1, Math.min(100_000, Number(env.FTF_MARKET_TARGET) || DEFAULT_TARGET)),
@@ -47,15 +44,15 @@ let daemon = null;
 export function marketDaemon(env = process.env) {
   if (daemon) return daemon;
   const cfg = marketEnv(env), town = townEnv(env);
-  if (!cfg.enabled && !town.enabled) return null;
+  if (!town.enabled) return null;
   let traders = loadTraderKeys(cfg.keysFile);
   if (!traders.length && town.enabled && !town.send) traders = TRADERS.map((key) => ({ key, account: traderAccount(key), secretKey: null })); // a dry run needs no keys
   if (!traders.length) return null;
   daemon = createMarketDaemon({
-    ...(town.enabled ? { contractId: town.contract, target: town.target, policy: TOWN_POLICY, dryRun: !town.send } : { contractId: cfg.contract, target: cfg.target }),
+    contractId: town.contract, target: town.target, policy: TOWN_POLICY, dryRun: !town.send,
     traders, maxPerMinute: cfg.maxPerMinute, paused: cfg.paused,
     client: createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, timeoutMs: 30_000 }),
-    store: fileStore(join(cfg.dataDir, town.enabled ? 'town-state.json' : 'market-state.json')), log: jsonlLog(join(cfg.dataDir, town.enabled ? 'town-log' : 'market-log')),
+    store: fileStore(join(cfg.dataDir, 'town-state.json')), log: jsonlLog(join(cfg.dataDir, 'town-log')),
   });
   daemon.start().catch(() => {});
   return daemon;

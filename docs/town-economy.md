@@ -13,6 +13,7 @@ real prize. The 20 traders are scripted rules, not an LLM. Threat model: `docs/s
 | Shared rules | `contracts/town/src/rules.rs` ↔ `game/src/game/town-rules.js`, vectors in `contracts/town/tests/vectors.json` (`node tools/town/vectors.mjs`) | Both sides tested against the same file |
 | Trader loop | `relayer/lib/town-traders.js` on the relayer's market daemon (`relayer/market/daemon.js`) | Built and tested. Off unless `FTF_TOWN=1`, and a dry run unless `FTF_TOWN_SEND=1` |
 | Town Pulse | `game/public/pulse.html` (served as `/pulse.html`) | Reads `pulse()` from the chain. Until deployment it says "not deployed yet". `docs/qa/town/pulse-sample.jpg` is the page rendered with **sample numbers** (a QA mock, not chain data) |
+| In-game ticker | `game/src/net/market.js`, `ui/market-ticker.js`, `play/market-scene.js` ("Town market · N trades today", explorer links, sellers' chips, buyers visiting the stalls by day) | **Off by default**: only with `?town=1` until ftf-town is live |
 | Deploy | `contracts/scripts/town-deploy.sh` | For the lead, after the owner's yes |
 
 ## Contract surface
