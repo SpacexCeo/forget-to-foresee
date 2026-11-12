@@ -30,7 +30,13 @@ export function textureBytes(tex) {
   return Math.round((img.width || 1) * (img.height || 1) * 4 * 1.34);
 }
 
-let active = null;
+let active = null, forceCompile = 0;
+/**
+ * While a cutscene plays, a model that streams in is compiled before it attaches even without the parallel-compile
+ * extension (Safari, software GL): a synchronous compile at attach time, during the title, beats one on the frame of
+ * a cut. Counted like holdStreaming.
+ */
+export function forceWarmCompile(on) { forceCompile = Math.max(0, forceCompile + (on ? 1 : -1)); return forceCompile > 0; }
 /** The world's warm-up queue, shared with the play layer (agents, Guests): set once by boot-world.js. */
 export function setActiveWarmup(w) { active = w; }
 /** Warms a model that is about to join the scene; resolves at once when no queue is installed (tests, review page). */
@@ -112,7 +118,7 @@ export class GpuWarmup {
       if (job.textures.length) break; // out of budget: the rest next frame
       this.jobs.shift();
       this.stats.compiling++;
-      this.compile(job.root).then(() => { this.stats.compiling--; this.stats.warmed++; job.resolve(); });
+      this.compile(job.root, { force: forceCompile > 0 }).then(() => { this.stats.compiling--; this.stats.warmed++; job.resolve(); });
     }
   }
 }

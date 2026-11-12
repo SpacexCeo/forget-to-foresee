@@ -57,7 +57,7 @@ export function shotAt(tl, t) {
  * @param {object} [o.guests] optional Guests stage (Task O): `cue(moment, {force})`
  * @param {Window} [o.win]  @param {() => number} [o.wall] wall-clock milliseconds for the skip hold
  */
-export function createFilmPlayer({ camera, player, avatar, shell, agents, overlay, now, hooks = {}, narration = null, renderLine, texts = () => ({}), guests = null, win = globalThis.window, wall = () => (globalThis.performance ? globalThis.performance.now() : Date.now()), prewarm = null }) {
+export function createFilmPlayer({ camera, player, avatar, shell, agents, overlay, now, hooks = {}, narration = null, renderLine, texts = () => ({}), guests = null, win = globalThis.window, wall = () => (globalThis.performance ? globalThis.performance.now() : Date.now()), prewarm = null, prefetchView = null }) {
   let film = null, tl = null, t = 0, shotIndex = -1, pose = null, paused = false, resolveEnd = null;
   let pin = null, shellWasActive = false, shellActivated = 0, hold = null;
   const _look = new THREE.Vector3();
@@ -219,6 +219,18 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
       // and every texture and program in the scene is warmed (render/warmup.js warmScene).
       const inner = f.shots.find((s) => s.cam && s.cam.kind === 'interior');
       if (inner) { try { liveInterior(inner.cam.shell); } catch { /* the interior is optional */ } }
+      // and what each shot will show starts streaming now (it attaches warmed, during the title), not on the cut
+      if (prefetchView) {
+        const probe = camera.clone();
+        for (const s of f.shots) {
+          try {
+            const p = compileShotCamera(s.cam, { iris: liveIris, interior: liveInterior }, { frozen: true })(0.5);
+            probe.position.set(p.pos[0], p.pos[1], p.pos[2]); probe.up.set(0, 1, 0); probe.lookAt(p.look[0], p.look[1], p.look[2]);
+            probe.fov = p.fov; probe.updateProjectionMatrix(); probe.updateMatrixWorld(true);
+            prefetchView(probe);
+          } catch { /* a shot without a pose yet: it streams on the cut as before */ }
+        }
+      }
       if (prewarm) { try { prewarm(); } catch { /* warm-up is optional */ } }
       startShot(0);
       applyCamera();

@@ -183,6 +183,25 @@ export function hasModelFile(name) { return !!MODEL_FILES[name]; }
 /** fetchGltf shared per name: a model started early (Iris, QA-030) is not downloaded twice. Callers clone the scene. */
 export const prefetchGltf = createPrefetch((name) => fetchGltf(name));
 
+/** Priority of an asset a coming cutscene shot will show: below what is on screen now, above prefetch. */
+const VIEW_PIN = 50;
+let holds = 0;
+/**
+ * Holds every streamer's releases, evictions and light-to-full swaps while a cutscene plays (owner, 12.11: skips must
+ * be instant): the film's cuts show what the player camera did not, and a model released, evicted or swapped there
+ * would bring new materials, so new shader programs, into the frame after a cut. Loads and attaches carry on (new
+ * models are warmed before they attach). Counted: every hold(true) needs its hold(false).
+ */
+export function holdStreaming(on) {
+  holds = Math.max(0, holds + (on ? 1 : -1));
+  if (!holds) for (const s of streamers) s.viewPins.clear(); // the film's views are no longer wanted for their own sake
+  return holds > 0;
+}
+const streamers = new Set();
+/** Asks every streamer to load what `camera` would see (a cutscene's shot ahead of time); kept while streaming is held. */
+export function prefetchView(camera) { for (const s of streamers) s.prefetchView(camera); }
+export const streamingHeld = () => holds > 0;
+
 export class AssetLibrary {
   /**
    * @param {{available?:Record<string,number>, onTemplate?:(name:string, scene:THREE.Object3D)=>void}} o
@@ -482,6 +501,8 @@ export class AssetStreamer {
     this.warm = null;
     /** Assets wanted regardless of the camera (streaming.js JUDGE_PINS): name -> priority. */
     this.pins = new Map();
+    this.viewPins = new Set(); // assets a coming cutscene shot will show (prefetchView), wanted while streaming is held
+    streamers.add(this);
   }
 
   /** Keeps an asset wanted at `priority` whatever the camera sees (null removes the pin). */
@@ -492,6 +513,17 @@ export class AssetStreamer {
     if (!this.byAsset.has(instance.name)) this.byAsset.set(instance.name, []);
     this.byAsset.get(instance.name).push(instance);
     return instance;
+  }
+
+  /** Pins every asset with an instance inside `camera`'s frustum and load distance (see prefetchView). */
+  prefetchView(camera) {
+    camera.updateMatrixWorld();
+    const m = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    const fr = new THREE.Frustum().setFromProjectionMatrix(m), sp = new THREE.Sphere();
+    for (const [name, list] of this.byAsset) {
+      if (list.some((inst) => { sp.set(inst.center, inst.radius); return fr.intersectsSphere(sp) && camera.position.distanceTo(inst.center) - inst.radius <= (LOAD_DISTANCE[inst.def.kind] ?? 80); })) this.viewPins.add(name);
+    }
+    this.timer = 0;
   }
 
   log(msg) { this.events.push({ t: performance.now(), msg }); if (this.events.length > 8) this.events.shift(); }
@@ -522,7 +554,7 @@ export class AssetStreamer {
           bytes: this.library.bytesOf(name),
         });
       });
-      const p = heroLast(name, pinnedPriority(assetPriority(ps), this.pins.get(name)));
+      const p = heroLast(name, pinnedPriority(assetPriority(ps), this.pins.get(name) ?? (this.viewPins.has(name) ? VIEW_PIN : null)));
       this.priority.set(name, p);
       const u = p < 0 ? (this.unwanted.get(name) || 0) + this.interval : 0;
       this.unwanted.set(name, u);
@@ -545,6 +577,7 @@ export class AssetStreamer {
     const plan = planStreaming(rows, { maxConcurrent: this.maxConcurrent, releaseAfter: this.releaseAfter });
     for (const name of plan.load) this.startLoad(name);
     for (const name of plan.attach) this.attach(name);
+    if (holds > 0) return; // a cutscene plays: nothing leaves or swaps until it ends (holdStreaming)
     for (const name of plan.release) this.release(name);
     for (const name of this.lru.evict()) { this.library.dispose(name); this.log('evicted ' + name); }
     if (this.upgrade) {
