@@ -53,13 +53,15 @@ if (mode === 'replay') {
   await page.goto(`${url}/?demo=judge&mode=walk&day1=0&tex=full&mobs=0`);
   await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready, null, { timeout: 600000 });
   for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
-  await wait(2000);
+  await page.evaluate(async () => { const L = await import('/src/scenes/town-layout.js'); window.__ftf.player.teleport(L.TOWN_ALTAR_SPAWN.position.slice(), L.TOWN_ALTAR_SPAWN.heading); });
+  await wait(2500);
   log.push('register ' + await page.evaluate(() => window.__ftf.town.register()));
   await page.waitForFunction(() => window.__ftf.play && !window.__ftf.town.active, null, { timeout: 180000 }).catch(() => errors.push('never reached the archipelago'));
-  await wait(9000);                                     // the arrival cinematic
+  await page.getByText(/Trial 1 of \d+/).first().waitFor({ timeout: 90000 }).catch(() => log.push('no trial HUD'));
+  await wait(2500);                                     // the arrival cinematic settles
   log.push(await hud());
   for (let i = 0; i < 3; i++) { await tick(); log.push(await hud()); }
-  await page.keyboard.press('KeyM'); await wait(1500);
+  await page.keyboard.press('KeyM'); await wait(1500); await still('dbg_memories');
   const card = page.locator('*:has(> * button)').filter({ hasText: /Shells.{0,3} Call on the night of arrival/ }).last();
   const forget = card.getByRole('button', { name: /Forget it for a vision/ });
   if (await forget.count()) { await forget.first().scrollIntoViewIfNeeded(); await forget.first().click(); } else log.push('no forget button on the card');
