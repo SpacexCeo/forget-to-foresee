@@ -263,3 +263,41 @@ only on the server.
 **How to rebuild** (server `/root/w/elise4`, scripts from `art/agents/elise/v2/` copied to `s/`, plus `art/tools/compress-glb.sh`; `repo/` holds `art/` and the motion-capture takes): `bash s/all.sh 2.5` (all stages) or `FROM=b|c|d|clips`. Sources read: `/root/w/elise3/work` (pass-3 targets), `src.npz` (dump of pass 3's `agent_elise.blend` by `a0_dump.py`), `mh/` (MakeHuman `base.obj`, `default.mhskel`, `default_weights.mhw`, CC0, fetched from the makehumancommunity/makehuman repository).
 
 **Licence note**: the body is the MakeHuman base mesh (CC0); the head is still the Hunyuan3D-2mv shape (see above).
+
+## 12.11: arms and shoulders rebuilt (owner: "Elise's shoulders are broken")
+
+**Cause.** Not the weights and not missing twist bones: the v2 export's decimation had collapsed each bare arm (a
+straight smooth tube) into a fan of 17 triangles from two points, one in the armpit and one on the collar, straight
+down to the wrist ring. There was no shoulder and no arm surface, and nothing was weighted to `upperarm_L/R` (1.3 in
+total over the whole mesh). The shoulder pinched, the elbow could not bend, any roll of the arm wrung the fan. One
+armpit vertex per side also sat on the exporter's `neutral_bone` (no weights) and stayed behind when she moved.
+
+**Fix** (`art/agents/elise/v2/arm_fix.py`, wrapper `arm_fix.sh`: dequantize, rebuild, meshopt; no Blender, textures
+pass through). On the shipped files the fan and every other wrist-to-trunk triangle are removed and each arm is built
+again in the rest pose around her own joints: a rounded shoulder cap, upper arm, elbow, forearm ending inside the
+wrist wrap (12 vertices around, a ring every 2.8 cm; phone 8 and 5 cm), weights along shoulder, upper arm and
+forearm with smooth blends, the same tube 2.5 mm wider and turned inside out in the ink-outline primitive, the fan's
+own skin texel, morph targets zero. Stray arm weights on trunk vertices are cleared and the unweighted vertices take
+their neighbours' weights. The skeleton and the rest pose are unchanged.
+
+| | before | after |
+|---|---|---|
+| `agent_elise.glb` triangles (base + hull) | 49 130 | 51 000 |
+| `agent_elise_m.glb` | 23 042 | 23 866 (budget 24 000) |
+| weight on `upperarm_L` / `_R` (base primitive) | 1.3 / 2.0 | every arm vertex from the cap to the elbow |
+
+**Clips** (`clips.json`, `characters.elise.style`): `arm_twist` 0.25 takes the captured roll out of the upper arms
+(left arm +18 degrees inward in the idle, right -2; now +4.5 and -0.4); the stance follows Iris's standard (4 degree
+toe-out read from the foot's side axis, knees aligned with the feet, one track for standing and walking). The two
+stairs clips keep the captured feet and knees: with the level-ground stance the trailing leg cut the gown on the way
+down (the build's leg-vs-gown check failed on `stairs_down`). The gown is baked again for every clip and the check
+passes; strike1-3 and the dash are added by `iris_combat.py --legs 0.4 --cloth` as before.
+Rebuild: `python3 art/anim/build_clips.py --char elise --out raw.glb`, `python3 art/anim/iris_combat.py --model
+game/public/assets/models/agent_elise.glb --in raw.glb --out raw2.glb --legs 0.4 --cloth art/agents/elise/cloth_rig.npz`,
+`gltf-transform meshopt raw2.glb game/public/assets/anim/elise.glb`.
+
+**For a rebuild from Blender.** The v2 scenes are on the branch `archive/server-2026-11-12`, folder `blends/` (they
+predate the last exports). `d1_export.py` must keep the arms out of the decimation, or `arm_fix.sh` must run on its
+result. Not done: no corrective shapes for a fully raised arm (checked up to the wave: clean); the white shard at the
+slit by the left hip is older and untouched.
+

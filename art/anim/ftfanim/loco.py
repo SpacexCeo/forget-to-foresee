@@ -95,6 +95,7 @@ DEFAULT_STYLE = {
     'foot_yaw_keep': 0.2,
     'knee_align': 0.0,      # 0..1: the knee bends toward the foot's heading instead of the captured knee direction, and the
                             # thigh and shin are rolled so the knee faces the bend (no knock-knees, no twisted shins)
+    'arm_twist': None,      # 0..1: how much of the upper arms' captured roll about their own axis is kept (None: all of it)
     'swing_keep': 0.5,      # how much of the swing foot's captured sideways travel is kept around the track
     'knee_fwd': 0.0,        # m the leg IK's knee hint is moved forward of the FK knee: a leg near full extension
                             # otherwise flips its knee backward when the FK knee falls behind the hip-ankle line
@@ -133,6 +134,23 @@ def arms_down(wr, spec):
             q = continuous(wr[b]); mean = qnorm(q.mean(0))
             want = qmul(swing(qrot(mean, up), d), mean)
             wr[b] = qnorm(qmul(want, qpow(qmul(qinv(mean), q), keep)))
+
+
+def untwist_arms(rig, wr, keep):
+    """Takes the roll about its own axis out of each upper arm (all but `keep` of it), measured against the roll the
+    rest pose has when the shoulder carries the arm to the same direction. A captured arm keeps the actor's own
+    inward or outward roll; on a rig without twist bones that roll wrings the shoulder."""
+    for s in 'LR':
+        iu = rig.index[f'upperarm_{s}']; ip = rig.parent[iu]
+        q = wr[f'upperarm_{s}']
+        par = wr.get(rig.names[ip])
+        carried = qmul(qmul(par, qinv(rig.rest_wr[ip])[None]), rig.rest_wr[iu][None]) if par is not None else np.broadcast_to(rig.rest_wr[iu], q.shape)
+        d = qrot(q, Y)
+        ref = qnorm(qmul(swing(qrot(carried, Y), d), carried))
+        tw = qmul(q, qinv(ref))                                   # a turn about d
+        ang = 2 * np.arctan2(np.sum(tw[:, :3] * d, -1), tw[:, 3]); ang = (ang + np.pi) % (2 * np.pi) - np.pi
+        half = (ang * keep / 2)[:, None]
+        wr[f'upperarm_{s}'] = qnorm(qmul(np.concatenate([d * np.sin(half), np.cos(half)], -1), ref))
 
 
 def _scale_about_mean(q, s, wrap=True):
@@ -212,6 +230,8 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
         for s in 'LR':
             for b in (f'shoulder_{s}', f'upperarm_{s}', f'forearm_{s}', f'hand_{s}'):
                 wr[b] = qmul(r, wr[b])
+    if st.get('arm_twist') is not None:
+        untwist_arms(rig, wr, st['arm_twist'])
     hip[:, 1] = hip[:, 1].mean() + (hip[:, 1] - hip[:, 1].mean()) * st['bounce'] - st['hip_drop']
     hip[:, 0] *= st['sway']
     if st.get('step_lift', 1.0) != 1.0:      # a lower step: the ankles' height above their lowest point is scaled
@@ -523,6 +543,8 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
             for b in (f'upperarm_{s}', f'forearm_{s}', f'hand_{s}'):
                 wr[b] = qmul(r, wr[b])
     hip[:, 1] -= st['hip_drop']
+    if st.get('arm_twist') is not None:
+        untwist_arms(rig, wr, st['arm_twist'])
     if pre_layers:               # animator layers in world space (layers.py): a held pose, a weight shift
         pre_layers(rig, wr, hip, feet, n, fps)
         if st.get('posture_after'):          # a held pose from another take: bring its spine and head toward our posture
