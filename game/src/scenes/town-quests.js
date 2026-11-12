@@ -175,6 +175,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     storyDo({ type: 'TWIST_DONE' }); // the stipend; the title and the sealed chest below
     if (chests) chests.add({ tier: 'common', source: 'quest' });
     story = { ...story, titles: [...new Set([...(story.titles || []), 'gate_walker'])] }; changed();
+    try { win.dispatchEvent(new CustomEvent('ftf:story-onward', { detail: { paidAt: story.paidAt ?? null, logHead: ledger.log.length ? ledger.log[ledger.log.length - 1].hash : null } })); } catch { /* no CustomEvent: nothing listens */ }
     twisting = false;
     return true;
   }

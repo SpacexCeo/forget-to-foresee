@@ -21,7 +21,7 @@ function rig({ search = '', silkC = 0 } = {}) {
     depart: async (o) => { departs.push(o); return true; }, search, doc, win, now });
   const kill = (type) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type, pos: [0, 0, 0], elite: false } }));
   const killId = (id) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type: 'skitter', pos: [0, 0, 0], elite: false, killId: id } }));
-  return { tq, townLedger, doc, departs, chests, kill, killId, storage };
+  return { tq, townLedger, doc, departs, chests, kill, killId, storage, win };
 }
 function finishGuide(r) {
   r.tq.act('elder', 'guide:talked');
@@ -124,6 +124,26 @@ test('the twist: the fee is spent exactly once, the transition says the line, th
   assert.equal(r.townLedger.silk, before - fee + EXPEDITION.stipendC);
   const v = r.tq.ledger.verify(); assert.equal(v.ok, true);
   assert.equal(r.tq.ledger.log.filter((e) => e.kind === 'portal_paid').length, 1);
+});
+
+test('portal eligibility: the full fee once, covered by verified income; demo fees and unearned silk do not count; the onward event fires', async () => {
+  const { portalEligibility, PORTAL_FEE_C } = await import('../../src/game/portal-eligibility.js');
+  const r = rig({ silkC: 0 });
+  let onward = null; r.win.addEventListener('ftf:story-onward', (e) => { onward = e.detail; });
+  finishGuide(r);
+  assert.deepEqual(portalEligibility(r.tq.ledger.log).reason, 'not_paid');
+  r.townLedger.grant({ silk: PORTAL_FEE_C }); r.tq.update([8, 0, 0]);
+  assert.equal(await r.tq.payGate(), true);
+  const e = portalEligibility(r.tq.ledger.log);
+  assert.equal(e.paid, true); assert.equal(e.eligible, false, 'granted silk is not in the log: unverified'); assert.equal(e.reason, 'income_unverified');
+  assert.match(onward.logHead, /^[0-9a-f]{64}$/);
+  const { makeEntry } = await import('../../src/game/expedition-log.js');
+  const log = []; const add = (kind, data, silkC, trust = 'T2') => log.push(makeEntry(log, { t: 1 + log.length, kind, data, silkC, trust }));
+  for (let i = 0; i < 20; i++) add('quest_turned_in', { questId: 'q_x' + i }, 50_000);
+  add('portal_paid', { feeC: PORTAL_FEE_C, demo: false }, -PORTAL_FEE_C);
+  assert.equal(portalEligibility(log).eligible, true);
+  const demo = []; demo.push(makeEntry(demo, { t: 1, kind: 'portal_paid', data: { feeC: 1000, demo: true }, silkC: -1000, trust: 'T2' }));
+  assert.equal(portalEligibility(demo).paid, false);
 });
 
 test('the twist: below the fee the gate stays shut; ?portalFee= is a marked demo fee', async () => {
