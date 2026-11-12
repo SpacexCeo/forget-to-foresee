@@ -6,11 +6,11 @@ export const MONSTERS = Object.freeze({
   count: 4, // alive at once
   hp: 3,
   damage: Object.freeze({ lance: 2, snare: 1 }),
-  height: 0.62, // metres, the critter is scaled to this
+  height: 0.95, // metres, the critter is scaled to this (readable from the town camera)
   speed: 1.25, // m/s while hopping
   respawn: 18, // seconds after a critter is beaten
   // the field below the lower gate, town-local metres
-  area: Object.freeze({ x: [-15, 15], z: [46, 64] }),
+  area: Object.freeze({ x: [-14, 14], z: [44, 58] }),
   pickup: 1.7, // metres: walking this close to a chest picks it up
   hitPad: 0.45, // metres added to a cast's reach for the critter's body
 });

@@ -14,7 +14,7 @@ import { rollDrop, chestTier } from '../game/chests.js';
 import { cue } from '../audio/town-audio.js';
 export { MONSTERS, castHits, spawnPoint };
 
-const spriteMat = (tex, color, opacity = 1) => new THREE.SpriteMaterial({ map: tex, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
+const spriteMat = (tex, color, opacity = 1, additive = true) => new THREE.SpriteMaterial({ map: tex, color, transparent: true, opacity, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending });
 
 /**
  * @param {object} o
@@ -89,13 +89,14 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
     const tier = chestTier(rand());
     const ch = { tier, at: [at[0], at[1], at[2]], root: new THREE.Group(), t: 0, picked: 0, ready: false };
     ch.root.position.set(at[0], at[1], at[2]); ch.root.rotation.y = rand() * Math.PI * 2; group.add(ch.root);
-    const color = tier === 'legendary' ? 0xffc46b : tier === 'rare' ? 0x6fe3d2 : 0xe9e1c8;
-    ch.beam = new THREE.Sprite(spriteMat(beamTex, color, 0.75)); ch.beam.scale.set(0.9, 3.2, 1); ch.beam.position.y = 1.6; ch.root.add(ch.beam);
-    const ring = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const color = tier === 'legendary' ? 0xffb43c : tier === 'rare' ? 0x2fd0bd : 0xf0d9a0;
+    // normal blending: an additive beam vanishes against the bright sky over the cloud sea
+    ch.beam = new THREE.Sprite(spriteMat(beamTex, color, 0.85, false)); ch.beam.scale.set(1.1, 4.2, 1); ch.beam.position.y = 2.1; ch.root.add(ch.beam);
+    const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ch.root.add(ring); ch.ring = ring;
     chestModel(tier).then((g) => {
       if (!g || ch.picked) return;
-      const m = cloneSkinned(g.scene); m.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      const m = cloneSkinned(g.scene); m.scale.setScalar(1.4); m.traverse((o) => { if (o.isMesh) o.castShadow = true; }); // a little larger than life: read from the town camera
       ch.root.add(m); ch.model = m; ch.ready = true;
     });
     state.chests.push(ch);

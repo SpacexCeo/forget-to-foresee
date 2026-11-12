@@ -12,8 +12,8 @@ const GLOW = Object.freeze({ common: '#cfc6ad', uncommon: '#2fc4b2', rare: '#5fb
 export const REEL = Object.freeze({ tiles: 46, land: 40, tile: 108, seconds: 5.2 });
 
 const CSS = `
-.co { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 45%, rgba(20, 30, 28, .92), rgba(3, 6, 6, .96)); color: #e9e6dc; font: 15px/1.45 system-ui, sans-serif; }
-.co-box { width: min(760px, calc(100vw - 24px)); display: grid; gap: 16px; justify-items: center; text-align: center; }
+.co { position: fixed; inset: 0; z-index: 45; display: flex; overflow-y: auto; padding: 16px 0; background: radial-gradient(ellipse at 50% 45%, rgba(20, 30, 28, .92), rgba(3, 6, 6, .96)); color: #e9e6dc; font: 15px/1.45 system-ui, sans-serif; }
+.co-box { margin: auto; width: min(760px, calc(100vw - 24px)); display: grid; gap: 16px; justify-items: center; text-align: center; }
 .co-title { font: 600 13px/1.2 system-ui; letter-spacing: .18em; text-transform: uppercase; color: #d9b26a; }
 .co-reel { position: relative; width: 100%; height: 132px; overflow: hidden; border-radius: 14px; border: 1px solid rgba(214, 226, 214, .14); background: rgba(10, 16, 15, .8);
   mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
@@ -22,7 +22,7 @@ const CSS = `
 .co-tile img { width: 64px; height: 64px; object-fit: contain; }
 .co-tile b { font: 600 22px/1 "Cormorant Garamond", Georgia, serif; color: var(--g, #e9e6dc); }
 .co-mark { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 2px; transform: translateX(-1px); background: #d9b26a; box-shadow: 0 0 10px #d9b26a; }
-.co-card { position: relative; width: min(260px, 70vw); aspect-ratio: 2 / 3; opacity: 0; transform: translateY(24px) scale(.94); transition: opacity .5s ease, transform .6s cubic-bezier(.2, 1.4, .4, 1); }
+.co-card { position: relative; width: min(250px, 62vw, calc((100vh - 220px) * .6667)); min-width: 150px; aspect-ratio: 2 / 3; opacity: 0; transform: translateY(24px) scale(.94); transition: opacity .5s ease, transform .6s cubic-bezier(.2, 1.4, .4, 1); }
 .co-card.co-in { opacity: 1; transform: none; }
 .co-card .co-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .co-card .co-art { position: absolute; left: 16%; right: 16%; top: 18%; height: 42%; display: grid; place-items: center; border-radius: 10px; background: radial-gradient(circle, var(--g) 0%, transparent 70%); }
@@ -33,7 +33,7 @@ const CSS = `
 .co-glow { position: absolute; inset: -30%; background: radial-gradient(circle, var(--g) 0%, transparent 60%); opacity: .35; pointer-events: none; }
 .co-ver { font-size: 13px; max-width: 560px; } .co-ver b { color: #7fd18b; } .co-ver.co-no b { color: #ff8a7a; }
 .co-ver code { font: 12px ui-monospace, monospace; color: rgba(233,230,220,.75); word-break: break-all; }
-.co-ver a { color: #d9b26a; }
+.co a { color: #d9b26a; }
 .co-note { color: rgba(233, 230, 220, .62); font-size: 13px; max-width: 520px; }
 .co-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .co-btn { min-height: 44px; padding: 10px 22px; border-radius: 10px; border: 0; cursor: pointer; font: 700 15px/1 system-ui; color: #14201c; background: linear-gradient(135deg, #e6c27e, #c99a48); }
@@ -112,9 +112,9 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
     };
     tiles.forEach((o) => strip.append(tileEl(o)));
     // idle spin while the service answers
-    let x = 0, spinning = !reduced, raf = 0;
+    let x = -6 * REEL.tile, spinning = !reduced, raf = 0; // start with the strip already under the whole window
     const win = doc.defaultView || globalThis;
-    const tick = () => { if (!spinning) return; x -= 9; if (-x > (REEL.tiles - 12) * REEL.tile) x = 0; strip.style.transform = `translateX(${x}px)`; raf = win.requestAnimationFrame ? win.requestAnimationFrame(tick) : 0; };
+    const tick = () => { if (!spinning) return; x -= 9; if (-x > (REEL.tiles - 12) * REEL.tile) x = -6 * REEL.tile; strip.style.transform = `translateX(${x}px)`; raf = win.requestAnimationFrame ? win.requestAnimationFrame(tick) : 0; };
     if (!reduced) tick(); else reel.hidden = true;
     info.replaceChildren(el('p', 'co-note', t('chest.asking')));
 
@@ -155,6 +155,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
       const frame = el('img', 'co-frame'); frame.src = base + 'assets/cards/loot/frame_' + v.frame + '.webp'; frame.alt = '';
       card.append(g, art, frame, el('div', 'co-name', v.label), el('div', 'co-rar', t(op.outcome.kind === 'nft' ? 'chest.rar.nft' : 'rarity.' + (op.outcome.rarity || 'common'))));
       stage.replaceChildren(card);
+      reel.hidden = true; // the card takes the reel's place (short screens)
       setTimeout(() => card.classList.add('co-in'), 30);
       cue('gift_chime');
       outcomeResult = { ok: true, opening: op, verification };
