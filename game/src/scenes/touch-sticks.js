@@ -13,7 +13,7 @@ const RADIUS = 56; // px of thumb travel for a full push
 const RUN_AT = 0.86;
 
 const CSS = `
-.ts { position: fixed; inset: 0; pointer-events: none; z-index: 13; font: 600 13px/1 system-ui, sans-serif; color: #f1ead8; -webkit-user-select: none; user-select: none; }
+.ts { position: fixed; inset: 0; pointer-events: none; z-index: 3; /* under every HUD button: the stick zone never covers one */ font: 600 13px/1 system-ui, sans-serif; color: #f1ead8; -webkit-user-select: none; user-select: none; }
 .ts[hidden] { display: none; }
 .ts-zone { position: absolute; left: 0; bottom: 0; width: 46vw; height: 46vh; pointer-events: auto; touch-action: none; }
 .ts-base { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: radial-gradient(rgba(12, 20, 17, .35), rgba(12, 20, 17, .6)); border: 2px solid rgba(201, 163, 90, .55); opacity: .55; transition: opacity .15s; }
@@ -32,6 +32,9 @@ const CSS = `
 @keyframes ts-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 .ts-cancel { position: absolute; right: 230px; bottom: 120px; padding: 10px 14px; border-radius: 20px; background: rgba(160, 50, 40, .82); pointer-events: none; }
 .ts-cancel[hidden] { display: none; }
+/* iOS Safari: no long-press callout, text selection or page zoom may steal a finger while the stick is held */
+body.ts-touch, body.ts-touch canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+body.ts-touch canvas { touch-action: none; }
 body.ts-on .ftf-cast-bar, body.ts-on .ftf-run-toggle, body.ts-touch .ftf-scene-hint { display: none !important; }
 body.ts-on .d1-hint { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
 body.ts-on .ftf-town-prompt { bottom: calc(232px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
@@ -168,6 +171,11 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
   // dragging back over the left part of the screen cancels the cast (the red pill shows where)
   const overCancel = (e) => e.clientX < (globalThis.innerWidth || 800) * 0.42;
 
+  // Multi-touch on iOS Safari: page gestures (pinch zoom, double-tap zoom) would cancel the stick or the camera finger,
+  // so they are refused on the game's own surfaces; nothing is prevented document-wide for ordinary touches.
+  const noGesture = (e) => { if (doc.body.classList.contains('ts-touch')) e.preventDefault(); };
+  for (const ev of ['gesturestart', 'gesturechange']) doc.addEventListener(ev, noGesture, { passive: false });
+  for (const n of [zone, arc]) n.addEventListener('touchstart', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
   rest();
   let visible = false, touch = false;
   return {
