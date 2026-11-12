@@ -1,4 +1,4 @@
-// The loading ritual (src/ui/load-ritual.js, the reference teardown): the line rotation with the controls hint, the
+// The loading ritual (src/ui/load-ritual.js, a reference game teardown M4): the line rotation with the controls hint, the
 // warmth mapping, five languages with an English fallback, and no number or value claim in the lines.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
