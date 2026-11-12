@@ -11,7 +11,7 @@ import { TOWN_POLICY, townEnv } from '../lib/town-traders.js';
 import { TRADERS, traderAccount } from './catalog.js';
 import { createStrategyBook, runStrategyRound } from '../lib/clan-strategy.js';
 import { runClanRound } from '../lib/clan-actions.js';
-import { CLAN_WALLETS, clanAccount } from './catalog.js';
+import { CLAN_WALLETS, clanAccount, ITEMS } from './catalog.js';
 import { teeEnv } from '../lib/tee.js';
 
 export const marketEnv = (env = process.env) => ({
@@ -46,6 +46,8 @@ export const jsonlLog = (dir) => (entry) => {
 };
 
 let daemon = null;
+/** The stalls for the stats: each good's maker, stock, price (fifths of a silk) and whether its stall is closed. */
+const stallsOf = (st) => (st && st.stock ? ITEMS.map((i) => ({ item: i.id, maker: i.maker, stock: st.stock[i.id] ?? 0, price: st.prices[i.id] ?? i.base, closed: !!(st.closed && st.closed[i.maker]) })) : []);
 /** The process's daemon (started on first call when enabled and keys exist), or null. */
 export function marketDaemon(env = process.env) {
   if (daemon) return daemon;
@@ -82,6 +84,6 @@ export function marketDaemon(env = process.env) {
     setTimeout(clanRound, 60_000).unref?.(); setInterval(clanRound, Math.max(10, Number(env.FTF_CLAN_MINUTES) || 120) * 60_000).unref?.();
   }
   const inner = daemon;
-  daemon = { ...inner, stats: () => ({ ...inner.stats(), strategy: book.stats(), clan_actions: clanLast.map((e) => ({ clan: e.clan, account: e.account, at: e.at, action: e.action && e.action.method, ok: e.ok, hash: e.hash || null, dry: !!e.dry })) }) };
+  daemon = { ...inner, stats: () => ({ ...inner.stats(), stalls: stallsOf(inner.state()), strategy: book.stats(), clan_actions: clanLast.map((e) => ({ clan: e.clan, account: e.account, at: e.at, action: e.action && e.action.method, ok: e.ok, hash: e.hash || null, dry: !!e.dry })) }) };
   return daemon;
 }

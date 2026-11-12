@@ -92,7 +92,7 @@ export function createQueue() {
 /** Sets the CORS headers; true when the request was a preflight that is now answered. */
 export function cors(req, res, origins) {
   const o = allowOrigin(req.headers && req.headers.origin, origins);
-  if (o) { res.setHeader('Access-Control-Allow-Origin', o); res.setHeader('Vary', 'Origin'); res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); res.setHeader('Access-Control-Max-Age', '600'); }
+  if (o) { res.setHeader('Access-Control-Allow-Origin', o); res.setHeader('Vary', 'Origin'); res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Idempotency-Key'); res.setHeader('Access-Control-Max-Age', '600'); }
   if (req.method === 'OPTIONS') { res.statusCode = o ? 204 : 403; res.end(); return true; }
   return false;
 }

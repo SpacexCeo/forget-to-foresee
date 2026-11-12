@@ -12,5 +12,6 @@ export const DAY1_DEPLOYMENT = {
   "relayer": "https://159-195-130-113.sslip.io",
   "chests": "chests.ftf-coordinator.testnet",
   "skins": "skins.ftf-coordinator.testnet",
-  "presence": "wss://159-195-130-113.sslip.io/presence"
+  "presence": "wss://159-195-130-113.sslip.io/presence",
+  "town": "ftf-town.testnet"
 };

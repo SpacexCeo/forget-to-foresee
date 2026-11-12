@@ -50,6 +50,7 @@ pub const ERR_SEASON: &str = "ERR_SEASON: not the open season";
 pub const ERR_ENTERED: &str = "ERR_ENTERED: already entered this season";
 pub const ERR_SETTLED: &str = "ERR_SETTLED: the season is settled";
 pub const ERR_PAYOUT_CAP: &str = "ERR_PAYOUT_CAP: one payout is above the per-account cap";
+pub const ERR_NO_STALL: &str = "ERR_NO_STALL: that account has no stall";
 pub const ERR_PURSE: &str = "ERR_PURSE: the payouts exceed the purse plus the season's mint ceiling";
 pub const ERR_SEASON_ROOT: &str = "ERR_SEASON_ROOT: a season keeps the schedule root it was opened with";
 pub const ERR_PARAMS: &str = "ERR_PARAMS: a parameter is outside its bounds";
@@ -60,7 +61,7 @@ pub const WORKS: [&str; 4] = ["loom", "caravan", "archive", "observatory"];
 
 #[derive(BorshStorageKey)]
 #[near]
-enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum }
+enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions }
 
 /// One account's row: silk, entry credit (spendable only on tournament entry) and pledge totals.
 #[near(serializers = [borsh, json])]
@@ -74,6 +75,16 @@ pub struct Account {
     pub earned: u128,
     pub spent: u128,
 }
+
+/// A trader's stall: silk invested in it by players, and the fee share waiting for them (index per invested silk).
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Default)]
+pub struct Stall { pub invested: u128, pub index: u128, pub rewards: u128 }
+
+/// One investor's position in a stall.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Default)]
+pub struct StallPosition { pub amount: u128, pub snapshot: u128, pub pending: u128 }
 
 /// A sealed season: its schedule root, entrants and settlement.
 #[near(serializers = [borsh, json])]
@@ -134,7 +145,7 @@ pub struct Deed {
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Default)]
-pub struct Counters { pub trade: u64, pub entry: u64, pub settle: u64, pub stake: u64, pub claim: u64, pub unbond: u64, pub withdraw: u64, pub early_exit: u64, pub sweep: u64, pub distribute: u64, pub deed_transfer: u64 }
+pub struct Counters { pub trade: u64, pub entry: u64, pub settle: u64, pub invest: u64, pub stall_claim: u64, pub stake: u64, pub claim: u64, pub unbond: u64, pub withdraw: u64, pub early_exit: u64, pub sweep: u64, pub distribute: u64, pub deed_transfer: u64 }
 
 #[near(serializers = [json])]
 pub struct Pulse {
@@ -190,6 +201,10 @@ pub struct Town {
     schedule_root: String,
     seasons: LookupMap<String, Season>,
     entries: LookupMap<String, bool>,
+    stalls: LookupMap<AccountId, Stall>,
+    stall_positions: LookupMap<String, StallPosition>,
+    /// Silk waiting in all stalls for their investors.
+    stall_rewards: u128,
     counters: Counters,
 }
 
@@ -208,7 +223,7 @@ impl Town {
             activation: LookupMap::new(StorageKey::Activation), deeds: LookupMap::new(StorageKey::Deeds), deed_seq: 0,
             treasury_silk: 0, station_silk: 0, stake_pot: 0, purse: 0, reserve: 0, minted_silk: 0, burned_silk: 0, last_open_burned: 0, volume_silk: 0,
             credited_day: 0, credited_today: 0, last_sweep_day: 0, last_distribute_day: 0,
-            season_id: String::new(), schedule_root: String::new(), seasons: LookupMap::new(StorageKey::Seasons), entries: LookupMap::new(StorageKey::Entries), counters: Counters::default(),
+            season_id: String::new(), schedule_root: String::new(), seasons: LookupMap::new(StorageKey::Seasons), entries: LookupMap::new(StorageKey::Entries), stalls: LookupMap::new(StorageKey::Stalls), stall_positions: LookupMap::new(StorageKey::StallPositions), stall_rewards: 0, counters: Counters::default(),
         }
     }
 
@@ -279,7 +294,7 @@ impl Town {
         self.only_owner();
         require!(!self.genesis_done, ERR_GENESIS);
         self.genesis_done = true;
-        for t in &traders { self.register_one(t); let mut r = self.acc(t); r.silk += silk_each.0; self.put(t, r); }
+        for t in &traders { self.register_one(t); let mut r = self.acc(t); r.silk += silk_each.0; self.put(t, r); self.stalls.insert(t.clone(), Stall::default()); }
         self.minted_silk += silk_each.0 * traders.len() as u128;
         event("genesis", format!(r#"{{"traders":{},"silk_each":"{}"}}"#, traders.len(), silk_each.0));
     }
@@ -404,8 +419,68 @@ impl Town {
         let fee = trade_fee(&self.params, silk.0);
         a.silk -= silk.0; a.spent += silk.0; b.silk += silk.0 - fee; b.earned += silk.0 - fee;
         self.put(&me, a); self.put(&counterparty, b);
-        self.treasury_silk += fee; self.volume_silk += silk.0; self.counters.trade += 1;
+        // the seller's stall investors take their share of the fee (roadmap item 3); the rest goes to the treasury
+        let mut to_treasury = fee;
+        if let Some(stall) = self.stalls.get_mut(&counterparty) {
+            if stall.invested > 0 {
+                let share = stall_share(&self.params, fee);
+                stall.index += share * INDEX_SCALE / stall.invested; stall.rewards += share; to_treasury -= share;
+                self.stall_rewards += share;
+            }
+        }
+        self.treasury_silk += to_treasury; self.volume_silk += silk.0; self.counters.trade += 1;
         event("trade", format!(r#"{{"from":"{}","to":"{}","silk":"{}","fee":"{}","ref":"{}","n":{}}}"#, me, counterparty, silk.0, fee, reference.replace('"', ""), self.counters.trade));
+    }
+
+    // ---------- stalls ----------
+    fn stall_key(trader: &AccountId, investor: &AccountId) -> String { format!("{}:{}", trader, investor) }
+    fn stall_accrue(&self, trader: &AccountId, pos: &mut StallPosition) {
+        let idx = self.stalls.get(trader).map(|s| s.index).unwrap_or(0);
+        pos.pending += pos.amount * (idx - pos.snapshot) / INDEX_SCALE; pos.snapshot = idx;
+    }
+    /// Pledges silk into a trader's stall: the silk becomes the trader's working capital (a closed stall reopens once its
+    /// purse is back above the reopen line) and the investor earns a share of the fees on that stall's sales from now on.
+    /// A pledge, not a loan: the silk does not come back; the fee share does, for as long as the stall trades.
+    pub fn invest_stall(&mut self, trader: AccountId, amount: U) {
+        self.live();
+        let me = env::predecessor_account_id();
+        require!(me != trader, ERR_SELF);
+        require!(self.stalls.contains_key(&trader), ERR_NO_STALL);
+        require!(amount.0 >= self.params.min_trade, ERR_MIN_TRADE);
+        let mut row = self.acc(&me); require!(row.silk >= amount.0, ERR_FUNDS);
+        row.silk -= amount.0; row.spent += amount.0; self.put(&me, row);
+        let mut t = self.acc(&trader); t.silk += amount.0; t.earned += amount.0; self.put(&trader, t);
+        let key = Self::stall_key(&trader, &me);
+        let mut pos = self.stall_positions.get(&key).cloned().unwrap_or_default();
+        self.stall_accrue(&trader, &mut pos);
+        pos.amount += amount.0;
+        self.stall_positions.insert(key, pos);
+        self.stalls.get_mut(&trader).unwrap().invested += amount.0;
+        self.counters.invest += 1;
+        event("stall_invest", format!(r#"{{"investor":"{}","stall":"{}","silk":"{}"}}"#, me, trader, amount.0));
+    }
+    /// Pays an investor's fee share from a stall.
+    pub fn claim_stall(&mut self, trader: AccountId) -> U {
+        let me = env::predecessor_account_id();
+        let key = Self::stall_key(&trader, &me);
+        let mut pos = self.stall_positions.get(&key).cloned().unwrap_or_else(|| env::panic_str(ERR_NO_STALL));
+        self.stall_accrue(&trader, &mut pos);
+        let stall = self.stalls.get_mut(&trader).unwrap();
+        let p = pos.pending.min(stall.rewards);
+        stall.rewards -= p; pos.pending -= p;
+        self.stall_rewards -= p;
+        self.stall_positions.insert(key, pos);
+        let mut row = self.acc(&me); row.silk += p; row.earned += p; self.put(&me, row);
+        self.counters.stall_claim += 1;
+        event("stall_claim", format!(r#"{{"investor":"{}","stall":"{}","silk":"{}"}}"#, me, trader, p));
+        U(p)
+    }
+    pub fn stall_of(&self, trader: AccountId) -> Option<Stall> { self.stalls.get(&trader).cloned() }
+    pub fn stall_position(&self, trader: AccountId, investor: AccountId) -> Option<(StallPosition, U)> {
+        let pos = self.stall_positions.get(&Self::stall_key(&trader, &investor))?.clone();
+        let idx = self.stalls.get(&trader).map(|s| s.index).unwrap_or(0);
+        let claimable = pos.pending + pos.amount * (idx - pos.snapshot) / INDEX_SCALE;
+        Some((pos, U(claimable)))
     }
 
     // ---------- pledges ----------
@@ -584,7 +659,7 @@ impl Town {
     }
     /// Every place silk can be outside account rows (for the conservation check: minted − burned = rows + this).
     pub fn silk_held_outside_accounts(&self) -> U {
-        U(self.treasury_silk + self.station_silk + self.stake_pot + self.purse + self.reserve + self.works.iter().map(|w| w.rewards + w.principal + w.extra).sum::<u128>())
+        U(self.treasury_silk + self.station_silk + self.stall_rewards + self.stake_pot + self.purse + self.reserve + self.works.iter().map(|w| w.rewards + w.principal + w.extra).sum::<u128>())
     }
 
     // ---------- deed transfer rules ----------

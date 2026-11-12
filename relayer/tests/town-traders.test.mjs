@@ -79,3 +79,21 @@ test('town traders: the dry run never signs or sends; the send mode signs with t
   const raw = Buffer.from(live.calls.find((c) => c[0] === 'send_tx')[1].signed_tx_base64, 'base64').toString('latin1');
   assert.ok(raw.includes('trader-05.ftf-town.testnet') && raw.includes('ftf-town.testnet') && raw.includes('"counterparty":"' + traderAccount(e.seller) + '"') && raw.includes('"reference":"' + e.item + '"'));
 });
+
+test('price rules: scarce goods are dear, flooded goods cheap, the reason says why; closed stalls stop buying and making', async () => {
+  const P = await import('../market/prices.js');
+  const bread = { id: 'iron', base: 10 };
+  const scarce = P.priceOf(bread, 3, P.DEMAND_REF * 2), flood = P.priceOf(bread, P.STOCK_CAP, P.DEMAND_REF * 0.3), fair = P.priceOf(bread, P.STOCK_REF, P.DEMAND_REF);
+  assert.ok(scarce.price > fair.price && fair.price > flood.price);
+  assert.equal(scarce.reason, 'dear: only 3 iron left, demand rose');
+  assert.equal(flood.reason, 'cheap: 240 iron on the shelf, few buyers');
+  assert.equal(fair.reason, 'fair price');
+  assert.ok(scarce.price <= 20 && flood.price >= 5); // inside half to twice the base
+  assert.equal(P.stallClosed(30, false), true); assert.equal(P.stallClosed(100, true), true); assert.equal(P.stallClosed(130, true), false);
+  const st = TOWN_POLICY.init(TRADERS);
+  st.balances.guard = 10 * MICRO;
+  assert.equal(TOWN_POLICY.pick(st, 'guard', seeded(2), TRADERS), null);
+  assert.equal(st.closed.guard, true);
+  const t = TOWN_POLICY.pick(st, 'baker', seeded(2), TRADERS);
+  assert.ok(t && typeof t.reason === 'string' && Number.isInteger(t.stock));
+});

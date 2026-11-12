@@ -20,6 +20,10 @@ mitigation belongs to a later piece.
 | T12 | Metadata / storage griefing | Deed metadata is built from numbers and fixed words only; the staker attaches the deed's storage deposit (refunded on burn); `reference` ≤ 32 characters with quotes stripped | `a_partial_deposit_is_refused`, `a_function_call_key_can_pledge_without_a_deposit` (the town pays a deed's storage when no deposit comes; the burned deed fee is the spam brake) |
 | T13 | Admin changes the rules under players | `set_params` only within bounds (`Params::valid`), epoch length fixed after deploy, event with the parameter hash. "Only between seasons" is not built (no season settlement yet) | `params_are_bounded` |
 
+Stall investment: only trader stalls take investment (`only_trader_stalls_take_investment`); the investors' fee share
+is at most 80 % of a fee (bounded parameter), so a seller and its investor washing trades still pay the treasury's
+part and lose silk; investors are paid only from what their stall's sales earned (`investing_in_a_stall_reopens_it_and_shares_its_fees`).
+
 Other invariants tested:
 
 - Genesis runs once.

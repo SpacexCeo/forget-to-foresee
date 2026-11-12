@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Economy Lab · Forget to Foresee</title>
+<meta name="description" content="A week of the hill town's market in one minute: stock, demand and prices from the town's price rules.">
+<style>
+  :root { --bg: #101618; --card: #172022; --ink: #efe6d2; --dim: #a9a291; --gold: #e2b25a; --line: rgba(226,178,90,.28); --ok: #9fd49a; --bad: #f0a08a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #23302f 0%, var(--bg) 60%); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { margin: 0; font: 600 28px/1.2 Georgia, serif; }
+  .sub, .note { color: var(--dim); } .note { font-size: 13px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0; }
+  button { min-height: 36px; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(226,178,90,.6); background: rgba(226,178,90,.14); color: var(--ink); font: 14px system-ui, sans-serif; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .tile b { display: block; font: 600 22px/1.2 Georgia, serif; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--dim); font-size: 13px; }
+  canvas { width: 100%; height: 260px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--dim); margin-top: 6px; }
+  .legend i { display: inline-block; width: 12px; height: 3px; margin-right: 5px; vertical-align: middle; }
+  #event { min-height: 24px; color: var(--gold); margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 500; font-size: 13px; }
+  .shelf { display: inline-block; height: 8px; background: var(--gold); border-radius: 4px; vertical-align: middle; opacity: .8; }
+  .dear { color: var(--bad); } .cheap { color: var(--ok); }
+  a { color: var(--ink); text-decoration-color: var(--gold); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Economy Lab</h1>
+  <p class="sub">A week of the town market in one minute. Twenty scripted traders buy and sell at the prices the town's price rules give from stock and demand (<code>relayer/market/prices.js</code>). This is a <b>model run</b> (<code>tools/town/fast-week.mjs</code>), not chain data; the live counters are on <a href="pulse.html">Town Pulse</a>.</p>
+  <div class="bar"><button id="play" type="button">Pause</button><button id="restart" type="button">Restart</button><span class="note" id="clock"></span></div>
+  <div class="grid" id="tiles"></div>
+  <div id="event"></div>
+  <canvas id="chart" width="1000" height="260" aria-label="Prices of six goods over the week, as a share of their base price"></canvas>
+  <div class="legend" id="legend"></div>
+  <table><thead><tr><th>Goods</th><th>Stall</th><th>On the shelf</th><th>Price, silk</th><th>The trader says</th></tr></thead><tbody id="goods"></tbody></table>
+  <p class="note">Rules in one line each: every stall makes its goods hourly (faster when they sell dear, slower when cheap); price = base × (120 / stock)^0.4 × demand, between half and twice the base; buyers pick dear goods less and cheap ones more; a stall under 40 silk closes until it sells its way back above 120. Silk is the town's in-game currency, testnet, no value outside the game.</p>
+</main>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+  let data;
+  try { data = await (await fetch('town-week.json')).json(); } catch { $('clock').textContent = 'The model run could not be loaded.'; return; }
+  const SHOW = ['bread', 'salt', 'candles', 'ink', 'woven_silk', 'polished_shard'];
+  const COLORS = ['#e2b25a', '#9fd49a', '#8ec5ff', '#f0a08a', '#c9a0f0', '#d8d0bd'];
+  const idx = SHOW.map((id) => data.items.findIndex((i) => i.id === id));
+  $('legend').replaceChildren(...SHOW.map((id, k) => { const s = el('span'); const i = el('i'); i.style.background = COLORS[k]; s.append(i, id.replace(/_/g, ' ')); return s; }));
+  const N = data.frames.length, DURATION = 60_000;
+  let start = performance.now(), paused = false, pausedAt = 0, last = -1;
+  const ctx = $('chart').getContext('2d');
+  function draw(upto) {
+    const c = ctx.canvas, w = c.width, h = c.height, pad = 30;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(226,178,90,.25)'; ctx.fillStyle = '#a9a291'; ctx.font = '12px system-ui';
+    for (const [v, label] of [[0.5, '½ base'], [1, 'base'], [2, '2× base']]) { const y = h - pad - ((v - 0.5) / 1.5) * (h - 2 * pad); ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - 8, y); ctx.stroke(); ctx.fillText(label, 2, y - 3); }
+    for (let d = 1; d < data.days; d++) { const x = pad + (d / data.days) * (w - pad - 8); ctx.fillText('day ' + (d + 1), x + 3, h - 8); }
+    for (const e of data.events) { const x = pad + (e.t / (data.days * 86400000)) * (w - pad - 8); ctx.strokeStyle = 'rgba(240,160,138,.6)'; ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke(); }
+    idx.forEach((ix, k) => {
+      ctx.strokeStyle = COLORS[k]; ctx.lineWidth = 2; ctx.beginPath();
+      for (let f = 0; f <= upto; f++) {
+        const v = Math.max(0.5, Math.min(2, data.frames[f].price[ix] / data.items[ix].base));
+        const x = pad + (f / (N - 1)) * (w - pad - 8), y = h - pad - ((v - 0.5) / 1.5) * (h - 2 * pad);
+        f ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    });
+  }
+  function show(f) {
+    const fr = data.frames[f], minutes = fr.t / 60000, day = Math.floor(minutes / 1440) + 1, hh = String(Math.floor((minutes % 1440) / 60)).padStart(2, '0'), mm = String(Math.floor(minutes % 60)).padStart(2, '0');
+    $('clock').textContent = `Day ${day}, ${hh}:${mm} UTC · frame ${f + 1} of ${N}`;
+    const tile = (label, value) => { const t = el('div', null, 'tile'); t.append(el('b', value), el('span', label)); return t; };
+    $('tiles').replaceChildren(tile('trades so far', fr.trades.toLocaleString('en')), tile('silk traded', fr.volume.toLocaleString('en')), tile('fees to the town treasury', fr.fees.toFixed(1)),
+      tile('stalls closed', String(fr.closed.length)), tile('poorest · richest trader, silk', `${Math.min(...fr.purses)} · ${Math.max(...fr.purses)}`));
+    const ev = data.events.filter((e) => e.t <= fr.t && fr.t - e.t < 6 * 3600000).pop();
+    $('event').textContent = ev ? ev.text : '';
+    $('goods').replaceChildren(...data.items.map((it, i) => {
+      const tr = el('tr'); const shelf = el('td'); const bar = el('span', null, 'shelf'); bar.style.width = Math.min(120, fr.stock[i] / 2) + 'px'; shelf.append(bar, ' ' + fr.stock[i]);
+      const why = fr.why[i] || ''; const mood = why.startsWith('dear') ? 'dear' : why.startsWith('cheap') ? 'cheap' : '';
+      tr.append(el('td', it.id.replace(/_/g, ' ')), el('td', it.maker.replace(/_/g, ' ') + (fr.closed.includes(it.maker) ? ' (closed)' : '')), shelf, el('td', (fr.price[i] * data.price_unit_silk).toFixed(1)), el('td', why, mood));
+      return tr;
+    }));
+    draw(f);
+  }
+  function frame(now) {
+    if (!paused) {
+      const f = Math.min(N - 1, Math.floor(((now - start) / DURATION) * N));
+      if (f !== last) { last = f; show(f); }
+    }
+    requestAnimationFrame(frame);
+  }
+  $('play').onclick = () => { paused = !paused; $('play').textContent = paused ? 'Play' : 'Pause'; if (paused) pausedAt = performance.now(); else start += performance.now() - pausedAt; };
+  $('restart').onclick = () => { start = performance.now(); last = -1; if (paused) { paused = false; $('play').textContent = 'Pause'; } };
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
