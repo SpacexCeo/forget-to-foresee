@@ -55,6 +55,13 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
    our rig's own posture; `arms_down` hangs the arms along the body at a set clearance (no held-out elbows) while
    the take's small motion stays; `stance` puts the hips of a standing clip over the ankles at the rest height
    (an actor's own forward stance would slant the legs).
+   Iris (12.11): one stance for standing, walking and running: the same foot track for every clip (`track` 0.06:
+   ankles 5.5 cm from the midline, a 2–3 cm gap between the trainers), the same 4° toe-out read from the foot's
+   side axis (`foot_yaw: side`, stable through the run's back kick), swing feet kept near the track (`swing_keep`),
+   and `knee_align`: the knee bends toward the foot's heading and the thigh and shin are rolled so the kneecap
+   faces the bend. Before, the idle stood 11 cm wide with the toes out 15–19° and one knee turned 56°, while the
+   walk and the run tracked at 5–6 cm: the start of a run pulled the feet together. `?anim=v1` plays the clips as
+   they were (`assets/anim/iris_v1.glb`) until the owner approves the new ones.
 8. **Animator layers** (`layers.py`, listed per clip in `clips.json`): a held pose from another take (`pose`: the
    seated loop), a contrapposto weight shift (`shift`), an arm reach solved with two-bone IK toward a target in
    character space or relative to a bone (`reach`: register, salute), eased additive rotations (`rotate`: nod, look,

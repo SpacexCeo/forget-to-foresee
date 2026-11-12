@@ -788,14 +788,18 @@
   "iris": {
    "model": "game/public/assets/models/agent_iris.glb",
    "style": {
-    "track": 0.055,
+    "track": 0.06,
+    "foot_out": 4,
+    "foot_yaw": "side",
+    "knee_align": 0.7,
+    "swing_keep": 0.3,
     "arm_swing": 0.72,
     "arm_out": 2,
     "pelvis_rot": 1.1,
     "head_level": 0.6
    },
    "action_style": {
-    "track": 0.105,
+    "knee_align": 1.0,
     "arm_out": 0,
     "arms_down": {
      "out": 9,
@@ -817,7 +821,6 @@
     "walk": {},
     "run": {
      "style": {
-      "track": 0.045,
       "arm_swing": 0.9,
       "hands": "loose_fist",
       "lean": 3

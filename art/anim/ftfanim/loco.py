@@ -90,6 +90,12 @@ DEFAULT_STYLE = {
     'head_pitch': 0.0,      # degrees the head looks down (+) from the rest posture
     'hip_drop': 0.0,        # lowers (+) the hips, m
     'foot_out': None,       # toe-out angle of the planted foot, degrees; None keeps the take's
+    'foot_yaw': None,       # 'side': the foot's heading is read from its side axis (stable while the foot is pitched steeply
+                            # in a run's back kick) and set to foot_out exactly, keeping `foot_yaw_keep` of its variation
+    'foot_yaw_keep': 0.2,
+    'knee_align': 0.0,      # 0..1: the knee bends toward the foot's heading instead of the captured knee direction, and the
+                            # thigh and shin are rolled so the knee faces the bend (no knock-knees, no twisted shins)
+    'swing_keep': 0.5,      # how much of the swing foot's captured sideways travel is kept around the track
     'knee_fwd': 0.0,        # m the leg IK's knee hint is moved forward of the FK knee: a leg near full extension
                             # otherwise flips its knee backward when the FK knee falls behind the hip-ankle line
 }
@@ -232,6 +238,17 @@ def pts_x_offset(rig, s):
     return abs(rig.rest_wp[rig.index[f'toe_{s}'], 0]) - abs(rig.rest_wp[rig.index[f'foot_{s}'], 0])
 
 
+def foot_heading(rig, s, wf):
+    """Heading (yaw, radians; 0 = +Z, + toward +X) of a foot from its side axis: unlike the heel-to-ball direction it
+    stays defined while the foot is pitched steeply."""
+    pts = foot_points(rig, s)
+    i_f = rig.index[f'foot_{s}']
+    fwd = qrot(rig.rest_wr[i_f], pts['ball'] - pts['heel']); fwd[1] = 0
+    side_loc = qrot(qinv(rig.rest_wr[i_f]), np.cross(Y, fwd / np.linalg.norm(fwd)))
+    sd = qrot(wf, side_loc)
+    return np.arctan2(-sd[..., 2], sd[..., 0])
+
+
 def foot_points(rig, s):
     """Sole contact points (heel, ball, toe tip) in the foot bone's local space."""
     i_f, i_t = rig.index[f'foot_{s}'], rig.index[f'toe_{s}']
@@ -304,7 +321,14 @@ def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
         a = feet[s].copy()
         pts = foot_points(rig, s)
         wf = wr[f'foot_{s}']
-        if st.get('foot_out') is not None:
+        if st.get('foot_out') is not None and st.get('foot_yaw') == 'side':
+            yaw = foot_heading(rig, s, wf)
+            want = np.radians(st['foot_out']) * (1 if s == 'L' else -1)
+            dev = np.arctan2(np.sin(yaw - want), np.cos(yaw - want))
+            dev = np.clip((dev - dev.mean()) * st.get('foot_yaw_keep', 0.2), -0.14, 0.14)
+            wf = qnorm(qmul(yaw_quat(want + dev - yaw), wf))
+            wr[f'foot_{s}'] = wf
+        elif st.get('foot_out') is not None:
             fwd = qrot(wf, pts['ball'] - pts['heel']); yaw = np.arctan2(fwd[:, 0], fwd[:, 2])
             want = np.radians(st['foot_out']) * (1 if s == 'L' else -1)
             wf = qmul(yaw_quat((want - yaw) * 0.8), wf)
@@ -340,7 +364,7 @@ def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
                 lock[i] = [xz[0], -low_pt, xz[2]]
         if st.get('track') is not None and speed:
             # the swing foot passes on the same narrow track instead of swinging wide
-            a[:, 0] = st['track'] * (1 if s == 'L' else -1) + (a[:, 0] - a[:, 0].mean()) * 0.5
+            a[:, 0] = st['track'] * (1 if s == 'L' else -1) + (a[:, 0] - a[:, 0].mean()) * st.get('swing_keep', 0.5)
         a = a * (1 - wgt[:, None]) + lock * wgt[:, None]
         lowest = np.minimum(np.minimum(off['heel'][:, 1], off['ball'][:, 1]), off['tip'][:, 1])
         a[:, 1] = np.maximum(a[:, 1], -lowest + 0.002)
@@ -365,12 +389,32 @@ def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
         if st.get('knee_fwd'):
             fwd = qrot(qmul(wp_pel, qinv(rig.rest_wr[i_p])[None]), np.array([0, 0, 1.0])); fwd[:, 1] = 0
             knee_fk = knee_fk + st['knee_fwd'] * fwd / np.maximum(np.linalg.norm(fwd, axis=-1, keepdims=True), 1e-9)
+        ka = st.get('knee_align') or 0.0
+        if ka:
+            d = ank_target[s] - hj; nn = d / np.maximum(np.linalg.norm(d, axis=-1, keepdims=True), 1e-9)
+            unit_perp = lambda v: (lambda p: p / np.maximum(np.linalg.norm(p, axis=-1, keepdims=True), 1e-9))(v - nn * np.sum(v * nn, -1, keepdims=True))
+            yaw = foot_heading(rig, s, wr[f'foot_{s}'])
+            front = unit_perp(np.stack([np.sin(yaw), np.zeros(n), np.cos(yaw)], -1))
+            fk = unit_perp(knee_fk - hj)
+            fk = np.where(np.sum(fk * front, -1, keepdims=True) < -0.2, front, fk)      # a captured knee that points backward is not kept
+            bend = unit_perp(fk * (1 - ka) + front * ka)
+            knee_fk = hj + bend
         knee, tgt = two_bone_ik(hj, ank_target[s], l1[s], l2[s], knee_fk)
         s1 = swing(qrot(wr[f'thigh_{s}'], Y), knee - hj)
         wr[f'thigh_{s}'] = qnorm(qmul(s1, wr[f'thigh_{s}']))
         shin = qmul(s1, wr[f'shin_{s}'])
         s2 = swing(qrot(shin, Y), tgt - knee)
         wr[f'shin_{s}'] = qnorm(qmul(s2, shin))
+        if ka:      # roll each bone about its own axis so its front (the kneecap, the shin's ridge) faces the bend
+            for b in (f'thigh_{s}', f'shin_{s}'):
+                q = wr[b]; axis = qrot(q, Y)
+                f_loc = qrot(qinv(rig.rest_wr[rig.index[b]]), np.array([0, 0, 1.0]))
+                cur = qrot(q, f_loc); cur = cur - axis * np.sum(cur * axis, -1, keepdims=True)
+                want = bend - axis * np.sum(bend * axis, -1, keepdims=True)
+                cur /= np.maximum(np.linalg.norm(cur, axis=-1, keepdims=True), 1e-9); want /= np.maximum(np.linalg.norm(want, axis=-1, keepdims=True), 1e-9)
+                ang = np.arctan2(np.sum(np.cross(cur, want) * axis, -1), np.sum(cur * want, -1)) * ka
+                half = ang[:, None] / 2
+                wr[b] = qnorm(qmul(np.concatenate([axis * np.sin(half), np.cos(half)], -1), q))
         ank_target[s] = tgt
     # toes: stay on the ground while the heel peels off
     for s in 'LR':
