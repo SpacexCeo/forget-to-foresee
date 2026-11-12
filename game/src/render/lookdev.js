@@ -36,7 +36,7 @@ import { LAYER_OVERLAY } from './layers.js';
 import { SunShadows } from './shadows.js';
 import { BlobShadows } from './blobs.js';
 import { installGrade } from './grade.js';
-import { WeatherSystem, Rain, Splashes, installWetness, weatherCover, WEATHER, DEFAULT_WEATHER } from './weather.js';
+import { WeatherSystem, Splashes, installWetness, weatherCover, WEATHER, DEFAULT_WEATHER } from './weather.js';
 import { setEmissiveLevels } from './materials.js';
 
 /**
@@ -128,8 +128,9 @@ export class LookDev {
     scene.add(this.heroLight);
     this.blobs = new BlobShadows();
     scene.add(this.blobs.mesh);
-    this.rain = new Rain();
-    scene.add(this.rain.mesh);
+    // No falling streaks (owner 12.11: "no rain stripes across the screen, only the drops on the ground and the
+    // rest"): rain is the splashes and ripples on the ground, the wet sheen and puddles, the darker sky and haze.
+    this.rain = null;
     this.splashes = new Splashes();
     scene.add(this.splashes.mesh);
     this.weather.onThunder = (delay) => announceWeather(this.weather.name, delay);
@@ -246,11 +247,9 @@ export class LookDev {
     this.light.lamps = P.lamps + dim * 0.6; this.light.windows = P.windows + dim * 0.9;
     this.lanternScale = this.light.lamps;
     setEmissiveLevels(this.light);
-    this.rain.setAmount(W.rain, this.reducedMotion);
     this.splashes.setAmount(W.rain * Math.min(1, this.weather.wet * 1.5), this.reducedMotion);
     this.foliage.setWind(this.reducedMotion ? 0 : Math.min(2.4, W.wind / 0.35)); // the calm default is the grass as it always was
-    this.rain.setColor(_c.copy(atm.zenith).lerp(_white, 0.7).multiplyScalar(1.8 + this.light.lamps * 0.4));   // lit by the sky and, after dark, the lamps
-    this.splashes.setColor(_c);
+    this.splashes.setColor(_c.copy(atm.zenith).lerp(_white, 0.7).multiplyScalar(1.8 + this.light.lamps * 0.4));   // lit by the sky and, after dark, the lamps
     // Ambient light from the sky: the dome baked into a PMREM. The Blender-baked HDR (art/env/bake_env.py) is a clear
     // golden hour on the archipelago, so it serves only there and only while the sky is clear.
     const useHdr = this.cfg.envHdr && this.envHdr && this.envHdrPreset === this.envKey() && lid < 0.3;
@@ -416,7 +415,6 @@ export class LookDev {
     { const [w, h] = this.viewSize(); r.setSize(w, h, false); }
     this.shadows.configure(cfg); // a 0 shadow map turns the sun shadow off
     this.blobs.setStrength(cfg.blobs || 0);
-    this.rain.setMax(cfg.rain || 0); this.rain.setAmount(this.weather.state.rain, this.reducedMotion);
     // the cheap tiers and phones: fewer splashes, no mirror puddles (the ground still darkens and shines)
     const cheap = this.tier === 'low' || this.profile === 'phone';
     this.splashes.setMax(Math.round((cfg.rain || 0) / (cheap ? 16 : 10))); this.splashes.setAmount(this.weather.state.rain, this.reducedMotion);
@@ -461,7 +459,6 @@ export class LookDev {
     this.weather.update(dt, motion);
     if (this.weather.dirty || this.weather.changing) this.applyWeather(false);
     else if (!this.weatherSettled) { this.weatherSettled = true; if (this.envWeather !== this.weather.name) this.applyWeather(true); }
-    this.rain.update(motion);
     this.splashes.update(motion);
     tickFog(motion);
     this.time += motion;

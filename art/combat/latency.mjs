@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const out = process.argv[2], url = process.argv[3] || 'http://127.0.0.1:5199';
+const out = process.argv[2], url = process.argv[3] || 'http://127.0.0.1:5199', HERO = process.argv[4] || 'iris';
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'] });
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 })).newPage();
@@ -21,7 +21,7 @@ await page.addInitScript(() => {
   addEventListener('ftf:cast', mark((e) => 'cast:' + e.detail.phase));
   addEventListener('ftf:iris-action', mark((e) => e.detail.clip + ':' + e.detail.phase));
 });
-await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris&tod=evening&weather=clear`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=${HERO}&tod=evening&weather=clear`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.town.mobs && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.evaluate(() => window.__ftf.player.teleport([0, 1199, 50], 0)); await page.waitForTimeout(3000);

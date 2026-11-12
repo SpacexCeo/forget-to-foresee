@@ -286,3 +286,12 @@ test('storm: distant flashes with thunder after them; cheap tiers keep the wet s
   s.setAmount(1, true); assert.equal(s.mesh.visible, false, 'none under reduced motion');
   s.dispose();
 });
+
+test('rain has no falling streaks on any tier (owner 12.11): only splashes, wet sheen, puddles, sky and haze', async () => {
+  const { readFileSync } = await import('node:fs');
+  const ld = readFileSync(new URL('../../src/render/lookdev.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(ld, /new Rain\(/, 'no streak mesh is made');
+  assert.match(ld, /this\.rain = null;/);
+  assert.match(ld, /new Splashes\(\)/, 'the ground splashes stay');
+  for (const w of ['rain', 'storm']) assert.ok(WEATHER[w].wet === 1 && WEATHER[w].overcast === 1, `${w} still wets the ground under a dark lid`);
+});
