@@ -48,10 +48,13 @@ body.ts-touch .pl-context.ts-dismissed, body.ts-moving .pl-context { max-height:
 body.ts-touch .pl-context.ts-dismissed h3::after { content: " ▴"; color: #d8b46a; }
 body.ts-touch .pl-context.ts-dismissed .ts-ctx-x { display: none; }
 .ts-ctx-x { position: absolute; top: 4px; right: 4px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(201, 163, 90, .6); background: rgba(12, 20, 17, .9); color: #f3d7a0; font: 700 18px/1 system-ui, sans-serif; padding: 0; z-index: 1; }
+/* every tip, toast and card stays inside the screen on phones (owner 12.11: a tip was cut at the right edge) */
+body.ts-touch .d1-hint, body.ts-touch .d1-card, body.ts-touch .d1-panel, body.ts-touch .ph-toast, body.ts-touch .ftf-premise, body.ts-touch .ftf-quest-talk, body.ts-touch .ftf-town-objective, body.ts-touch .ftf-altar-timer {
+  max-width: calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important; box-sizing: border-box; overflow-wrap: anywhere; }
 body.ts-touch #toast { max-width: calc(100vw - 24px); box-sizing: border-box; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 body.ts-on .ftf-cast-bar, body.ts-on .ftf-run-toggle, body.ts-touch .ftf-scene-hint { display: none !important; }
 body.ts-on .d1-hint { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
-body.ts-on .ftf-town-prompt { bottom: calc(232px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
+body.ts-on .ftf-town-prompt { bottom: calc(272px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
 body.ts-on .ftf-photo-open { top: 40% !important; }
 @media (orientation: landscape) and (max-height: 500px) { .ts-arc { transform: scale(.86); transform-origin: 100% 100%; } .ts-btn.ts-use { bottom: 168px; } }
 @media (prefers-reduced-motion: reduce) { .ts-btn.ts-use:not([hidden]) { animation: none; } .ts-base { transition: none; } }

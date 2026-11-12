@@ -31,6 +31,11 @@ export function touchCopy(text) {
 export function installTouchCopy(i18n, isTouch) {
   if (!i18n || i18n.__touchCopy) return;
   const raw = i18n.t;
-  i18n.t = (key, args) => { const s = raw(key, args); return isTouch() ? touchCopy(s) : s; };
+  // touch: a written touch variant (`<key>.touch` in the locale) wins; otherwise the generic rewrite
+  i18n.t = (key, args) => {
+    if (!isTouch()) return raw(key, args);
+    if (typeof key === 'string' && !key.endsWith('.touch') && i18n.has && i18n.has(key + '.touch')) return raw(key + '.touch', args);
+    return touchCopy(raw(key, args));
+  };
   i18n.__touchCopy = true;
 }
