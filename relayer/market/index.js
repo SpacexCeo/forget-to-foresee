@@ -86,6 +86,6 @@ export function marketDaemon(env = process.env) {
     setTimeout(clanRound, 60_000).unref?.(); setInterval(clanRound, Math.max(10, Number(env.FTF_CLAN_MINUTES) || 120) * 60_000).unref?.();
   }
   const inner = daemon;
-  daemon = { ...inner, stats: () => ({ ...inner.stats(), stalls: stallsOf(inner.state()), strategy: book.stats(), clan_actions: clanLast.map((e) => ({ clan: e.clan, account: e.account, at: e.at, action: e.action && e.action.method, ok: e.ok, hash: e.hash || null, dry: !!e.dry })) }) };
+  daemon = { ...inner, stats: () => ({ ...inner.stats(), stalls: stallsOf(inner.state()), balances: Object.fromEntries(Object.entries((inner.state() || {}).balances || {}).map(([k, v]) => [k, String(v)])), strategy: book.stats(), clan_actions: clanLast.map((e) => ({ clan: e.clan, account: e.account, at: e.at, action: e.action && e.action.method, ok: e.ok, hash: e.hash || null, dry: !!e.dry })) }) };
   return daemon;
 }
