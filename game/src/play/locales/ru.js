@@ -1354,7 +1354,6 @@ export default {
   'menu.filter.all': "Все",
   'menu.filter.shard': "Осколки",
   'menu.filter.part': "Детали",
-  'menu.filter.resource': "Ресурсы",
   'menu.detail.shard': "Осколок памяти: в сумке {n}. Хранится в этом браузере.",
   'menu.detail.part': "Механическая деталь: в сумке {n}. Хранится в этом браузере.",
   'hub.busy.trial': "Испытание завершается… секунду",

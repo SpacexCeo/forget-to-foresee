@@ -83,7 +83,7 @@ test('resources: locale keys (item names, toast, bag lines) in all five language
   for (const L of ['en', 'ru', 'uk', 'it', 'zh']) {
     const play = (await import(`../../src/play/locales/${L}.js`)).default, site = (await import(`../../src/locales/${L}.js`)).default;
     for (const id of RESOURCE_IDS) { assert.ok(play['item.' + id], `${L} play item.${id}`); assert.ok(site['item.' + id], `${L} item.${id}`); }
-    for (const k of ['story.res.found', 'menu.detail.resource', 'menu.source.drop', 'menu.source.salvage', 'menu.filter.resource']) assert.ok(play[k], `${L} ${k}`);
+    for (const k of ['story.res.found', 'menu.detail.resource', 'menu.source.drop', 'menu.source.salvage']) assert.ok(play[k], `${L} ${k}`);
     assert.match(play['story.res.found'], /\{n\}/); assert.match(play['story.res.found'], /\{name\}/);
   }
 });

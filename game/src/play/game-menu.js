@@ -241,7 +241,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const kind = invFilter;
         const owned = kind === 'all' ? ownedAll : ownedAll.filter((x) => x.kind === kind);
         const chips = el('div', 'gm-chips');
-        for (const k of ['all', 'shard', 'part', 'resource']) { const b = btn(t('menu.filter.' + k), () => { invFilter = k; show('inventory'); }, 'gm-fchip'); b.setAttribute('aria-pressed', String(k === kind)); chips.append(b); }
+        for (const k of ['all', 'shard', 'part']) { const b = btn(t('menu.filter.' + k), () => { invFilter = k; show('inventory'); }, 'gm-fchip'); b.setAttribute('aria-pressed', String(k === kind)); chips.append(b); }
         const detail = el('div', 'gm-detail'); detail.hidden = true;
         const pick = (it) => {
           detail.hidden = false; const img = el('img'); img.src = base + 'assets/items/' + (it.icon || it.icon128); img.alt = '';
