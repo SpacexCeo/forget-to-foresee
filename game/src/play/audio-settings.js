@@ -1,7 +1,7 @@
 // Volume sliders (master / music / effects) for the scene settings dialog. The dialog itself belongs to
 // the UI shell (src/ui/scene-controls.js, Codex-owned), so this widget is appended to it from main.js
 // without editing that file; the labels are the `audio.*` keys of the play locales (src/play/locales).
-// Values persist through the audio runtime (localStorage 'ftf.audio.v1', docs/audio.md) even before the
+// Values persist through the audio runtime (localStorage 'ftf.audio.v2', docs/audio.md) even before the
 // audio module has loaded.
 import { loadVolumes, saveVolumes, BUSES } from '../audio/mix.js';
 import en from './locales/en.js';

@@ -262,7 +262,7 @@ const CSS = `
  * @param {(x: number, z: number) => number|null} [o.floor] the hillside's own surface (homes and spawns)
  * @param {string} [o.variant] '_m' on phones @param {boolean} [o.phone] fewer monsters, cheaper updates
  * @param {() => boolean} [o.reduced] reduced motion
- * @param {(kind: string) => void} [o.onFeedback] 'hurt' | 'down' | 'kill' (sound cues)
+ * @param {(kind: string, mob?: object, ev?: object) => void} [o.onFeedback] 'hurt' | 'down' | 'kill' | 'attack' | 'hit' | 'strike' | 'strike3' | 'dash' (sound cues; the mob for attack / hit / kill)
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
@@ -327,7 +327,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     model.scale.setScalar(m.T.scale || 1);                                          // the skitter is drawn a quarter larger: it reads at fight distance
     const fx = new MobFx(holder, { edge: glow[m.type], rim: m.T.rim ?? 0.3 });
     const ring = new THREE.Mesh(ringGeo, ringMat.clone()); ring.visible = false; ring.renderOrder = 2; group.add(ring);
-    const v = { model, holder, mixer, actions, fx, ring, current: null, oneShot: null };
+    // idle variety: each creature breathes at its own rate and phase, and now and then turns its head away a little
+    const v = { model, holder, mixer, actions, fx, ring, current: null, oneShot: null, idleRate: 0.82 + Math.random() * 0.36, idlePhase: Math.random(), look: Math.random() * 6, lookT: 0 };
     mixer.addEventListener('finished', (e) => { if (e.action === actions.death) { const ev = []; brain.fallen(m, ev); handle(ev); } if (e.action === v.oneShot) v.oneShot = null; });
     views.set(m, v); play(v, 'idle', 0);
     place(m, v);
@@ -336,6 +337,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   function play(v, name, fade = 0.2) {
     const a = v.actions[name]; if (!a || v.current === a) return;
     a.reset(); a.enabled = true; a.setEffectiveWeight(1); a.play();
+    if (name === 'idle') a.time = v.idlePhase * a.getClip().duration;           // packs do not breathe in step
     if (v.current) v.current.crossFadeTo(a, fade, false);
     v.current = a;
   }
@@ -367,7 +369,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   function handle(ev) {
     for (const e of ev) {
       const v = views.get(e.mob);
-      if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !e.mob.T.ranged; }
+      if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !e.mob.T.ranged; if (onFeedback) onFeedback('attack', e.mob); }
       else if (e.kind === 'impact') { if (v) v.ring.visible = false; if (e.hit) hurt(e.mob.T.damage, !!e.mob.T.heavy); }
       else if (e.kind === 'shot' && e.to && v) {
         const s = new THREE.Mesh(seedGeo, seedMat); const from = new THREE.Vector3(); v.model.getObjectByName('seed')?.getWorldPosition(from);
@@ -377,12 +379,12 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit(); number(e.mob, e.amount, e.crit);
+        v.fx.hit(); number(e.mob, e.amount, e.crit); if (onFeedback) onFeedback('hit', e.mob, e);
         if (e.crit || e.mob.T.heavy) shake = Math.max(shake, e.crit ? 0.35 : 0.2);
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
-      else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill'); }
+      else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
         if (win) win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: e.mob.type, pos: e.mob.pos.slice(), elite: !!e.mob.T.elite } }));
@@ -480,11 +482,16 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (m.freeze <= 0) {
         if (!v.oneShot && m.state !== 'dead' && m.state !== 'gone') play(v, m.speed > m.T.walk * 1.2 ? 'run' : m.speed > 0 ? 'walk' : 'idle');
         if (v.current && m.speed > 0) v.current.timeScale = m.speed / (m.speed > m.T.walk * 1.2 ? m.T.clip[1] : m.T.clip[0]);
-        else if (v.current) v.current.timeScale = 1;
+        else if (v.current) v.current.timeScale = v.current === v.actions.idle ? v.idleRate : 1;
         v.mixer.update(dt);
       }
       v.fx.update(dt);
       place(m, v);
+      // an idle creature glances aside every few seconds (a visual turn on top of the brain's heading)
+      if (m.state === 'idle' && !m.speed) {
+        v.look -= dt; if (v.look <= 0) { v.look = 3 + Math.random() * 5; v.lookDir = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.35); v.lookT = 0; }
+        if (v.lookDir) { v.lookT += dt; const k = Math.sin(Math.min(1, v.lookT / 1.8) * Math.PI); v.holder.rotation.y += v.lookDir * k * (reduced() ? 0 : 1); if (v.lookT >= 1.8) v.lookDir = 0; }
+      }
       if (v.ring.visible) {
         const k = Math.min(1, m.t / (m.T.windup * m.T.impact));
         v.ring.position.set(m.pos[0] + Math.sin(m.heading) * m.T.attack * 0.55, m.pos[1] + 0.06, m.pos[2] + Math.cos(m.heading) * m.T.attack * 0.55);

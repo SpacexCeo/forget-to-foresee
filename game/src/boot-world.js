@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
-import { cycleLook, KEYS as CYCLE_KEYS } from './render/daycycle.js';
+import { cycleLook, KEYS as CYCLE_KEYS, startPhase, weatherTimeline, WEATHER_FADE } from './render/daycycle.js';
 import { lookFor, mixStats } from './render/sky.js';
 import { CameraRig } from './render/camera-rig.js';
 import { fixedSteps, rayCast, moveCapsule, MASK_PLAYER } from './physics/collision.js';
@@ -51,7 +51,7 @@ import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
 import { createCompanion } from './scenes/companion.js';
-import { cue } from './audio/town-audio.js';
+import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -186,6 +186,7 @@ if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings appl
 }
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, entering = null, season = null, entered = false;
+let mp = null, mpTried = false, mpShown = false; // the shared town (play/multiplayer.js), loaded once Iris is in
 // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
 const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
 
@@ -387,8 +388,8 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
-    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); },
+    onCastStart: (id) => { cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
@@ -397,6 +398,22 @@ function mountCasting() {
       { id: 'dash', key: 'Space', icon: 'dash', label: 'town.cast.dash', available: () => !!townMobs, press: () => townMobs && townMobs.dash(wishVector()), cooldown: () => (townMobs ? townMobs.actions.dashCd / 1.0 : 0) },
     ] });
   mountMobs();
+}
+/**
+ * Combat sound (owner, 12.11): Iris's swings and the heavy finisher, impacts where they land, each monster type's
+ * attack and hurt sound from where it stands, the death dissolve, Iris getting hit. Through audio/town-audio.js.
+ */
+let heavyUntil = 0;
+function combatSound(k, mob, ev) {
+  const at = mob && mob.pos ? mob.pos : null, S = MOB_SOUNDS[mob && mob.type] || MOB_SOUNDS.skitter;
+  if (k === 'strike') cue('strike_swing');
+  else if (k === 'strike3') { cue('strike_swing'); heavyUntil = performance.now() + 350; }
+  else if (k === 'dash') cue('dash_whoosh');
+  else if (k === 'hit') { cueAt(performance.now() < heavyUntil || (ev && ev.crit) ? 'strike_heavy' : 'strike_impact', at); cueAt(S.hurt, at, 0.8); }
+  else if (k === 'attack') cueAt(S.attack, at);
+  else if (k === 'kill') cueAt('mob_death', at);
+  else if (k === 'hurt') cue('iris_hurt');
+  else if (k === 'down') cue('iris_down');
 }
 /** The monsters on the hillside (play/mobs.js): packs beyond the walls that Iris's two casts fight. */
 function mountMobs() {
@@ -414,7 +431,7 @@ function mountMobs() {
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => !!(irisAvatar && irisAvatar.combat(n)),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
-      onFeedback: (k) => cue(k === 'kill' ? 'memory_dissolve' : k === 'dash' || k.startsWith('strike') ? 'vision_whoosh' : 'ui_error') });
+      onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
   }).catch((e) => console.warn('[mobs]', e));
 }
 function returnToTown() {
@@ -800,8 +817,10 @@ let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progre
 // The town's day cycle (render/daycycle.js, owner 11.11): early morning → evening → night with mist and moon → early
 // morning, continuous every frame (the sky statistics of the five hours are read once, outside the frame loop, then
 // blended). Off on the jury path and when the URL fixes the hour or the weather; held under reduced motion.
+// A session starts where the player's clock falls on the loop (?cycle=<s> pins it for QA) and gets its own weather
+// timeline (?wseed=<n> pins that).
 const dayCycle = !judge && !params.has('tod') && !params.has('weather') && params.get('cycle') !== 'off'
-  ? { t: Number(params.get('cycle')) || 0, weather: null, ready: false } : null;
+  ? (() => { const t = params.has('cycle') ? Number(params.get('cycle')) || 0 : startPhase(); return { t, t0: t, weather: null, ready: false, timeline: weatherTimeline(params.has('wseed') ? Number(params.get('wseed')) | 0 : (Math.random() * 2 ** 31) | 0) }; })() : null;
 function prepareDayCycle() {
   if (!dayCycle || dayCycle.ready || lookdev.location !== 'town') return;
   lookdev.prepareCycle('town', CYCLE_KEYS.map((k) => k[0]));
@@ -812,10 +831,10 @@ function tickDayCycle(dt) {
   if (lookdev.location !== 'town') return;
   if (!dayCycle.ready) { setTimeout(prepareDayCycle, 0); return; }
   dayCycle.t += dt;
-  const c = cycleLook(dayCycle.t, (h) => lookFor('town', h));
+  const c = cycleLook(dayCycle.t, (h) => lookFor('town', h), dayCycle.timeline, dayCycle.t0);
   const S = lookdev.cycleStats;
   lookdev.applyLookLive(c.look, mixStats(S[c.a], S[c.b], c.k), clock.elapsedTime);
-  if (c.weather !== dayCycle.weather) { dayCycle.weather = c.weather; lookdev.setWeather(c.weather); }
+  if (c.weather !== dayCycle.weather) { lookdev.setWeather(c.weather, { seconds: dayCycle.weather == null ? 0.01 : WEATHER_FADE }); dayCycle.weather = c.weather; }
 }
 
 function frame() {
@@ -871,7 +890,17 @@ function frame() {
   }
   // Shell hover is visual only; reduced motion holds the Shells at their rest pose.
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
+  // the shared town (docs/multiplayer.md): others' avatars and the chat; never on the judge link, ?mp=0 turns it off
+  const mpOn = !!(town && town.active && entered);
+  if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
+  if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
+  else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
+    mpTried = true;
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+      .catch((e) => console.warn('[mp]', e));
+  }
   if (town && town.active) {
+    lookdev.setGround(player.pos[0], player.pos[1], player.pos[2]); // rain splashes fall around her
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
@@ -894,7 +923,10 @@ function frame() {
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
-      if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
+      if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets
+        const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
+        townAudio.step(d, !!player.run, townShops && townShops.inside ? 'wood' : (lz > 36 || Math.abs(lx) > 55) ? 'grass' : 'stone');
+      }
       lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
       townAudio.setListener(camera, avatar.position);
     }
@@ -941,7 +973,7 @@ function frame() {
 
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
-  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier,
+  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
   get iris() { return irisAvatar; }, irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },

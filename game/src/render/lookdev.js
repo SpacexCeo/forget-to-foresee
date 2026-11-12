@@ -10,7 +10,9 @@
 //   setQuality(tier), onQualityChange(fn), setReducedMotion(on), setPixelScale(s), setSize(w, h)
 //   setPreset(name)           time of day (sky.js TIME_PRESETS): sky, sun, fog, clouds, IBL, exposure
 //   setLocation(name)         'archipelago' | 'town': each has its own sun and air for the same hour (sky.js LOCATION_LOOKS)
-//   setWeather(name)          'clear' | 'overcast' | 'rain' (weather.js); eases in, at once under reduced motion
+//   setWeather(name, {seconds}) any WEATHER name (weather.js); eases in, at once under reduced motion; announces
+//                             window 'ftf:weather' {state} (and {state, thunder: delay} after each storm flash)
+//   setGround(x, y, z)        where rain splashes fall (the scene's walking height under the camera's subject)
 //   light                     { lamps, windows }: what street lamps and lit windows should give now (scenes read it)
 //   setHeroLight(pos, k)      the one strong local light (the Tournament altar's amber); null switches it off
 //   blobs.track(object)       a soft disc under a character's feet (blobs.js)
@@ -34,7 +36,7 @@ import { LAYER_OVERLAY } from './layers.js';
 import { SunShadows } from './shadows.js';
 import { BlobShadows } from './blobs.js';
 import { installGrade } from './grade.js';
-import { WeatherSystem, Rain, installWetness, weatherCover, WEATHER, DEFAULT_WEATHER } from './weather.js';
+import { WeatherSystem, Rain, Splashes, installWetness, weatherCover, WEATHER, DEFAULT_WEATHER } from './weather.js';
 import { setEmissiveLevels } from './materials.js';
 
 /**
@@ -52,7 +54,7 @@ export function browserProfile() {
   } catch { return 'desktop'; }
 }
 
-/** `?weather=clear|overcast|rain`: the weather at start (QA and previews; the jury path has none, so it is clear). */
+/** `?weather=clear|haze|fog|overcast|drizzle|rain|storm`: the weather at start (QA and previews; the jury path has none, so it is clear). */
 export function browserWeather() {
   try { const w = new URLSearchParams(location.search).get('weather'); return WEATHER[w] ? w : DEFAULT_WEATHER; } catch { return DEFAULT_WEATHER; }
 }
@@ -60,6 +62,12 @@ export function browserWeather() {
 const _c = new THREE.Color(), _c2 = new THREE.Color(), _white = new THREE.Color(1, 1, 1);
 /** Mean colour of what the sun hits in a street (plaster, cobbles, stone): the tint of the bounce light. */
 const _bounceAlbedo = new THREE.Color(0.62, 0.52, 0.42);
+
+/** Tells the page (the sound layer) the weather changed, or a storm flash will be followed by thunder in `thunder` s. */
+function announceWeather(state, thunder) {
+  if (typeof window === 'undefined' || typeof CustomEvent === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('ftf:weather', { detail: thunder == null ? { state } : { state, thunder } }));
+}
 
 export class LookDev {
   /**
@@ -122,6 +130,10 @@ export class LookDev {
     scene.add(this.blobs.mesh);
     this.rain = new Rain();
     scene.add(this.rain.mesh);
+    this.splashes = new Splashes();
+    scene.add(this.splashes.mesh);
+    this.weather.onThunder = (delay) => announceWeather(this.weather.name, delay);
+    setTimeout(() => announceWeather(this.weather.name), 0);
 
     this.clouds = new CloudSea({ level: cloudLevel });
     scene.add(this.clouds.group);
@@ -216,8 +228,9 @@ export class LookDev {
     const lid = W.overcast;
     this.sun.intensity = atm.sunIntensity * W.sun;
     this.sun.shadow.intensity = W.shadow; this.shadows.far.shadow.intensity = W.shadow;
-    this.renderer.toneMappingExposure = Math.pow(2, P.exposure + W.exposure);
-    this.hemi.intensity = (0.12 + 0.5 * P.bounce + 0.4 * (P.moonFill || 0)) * (1 + (W.ambient - 1) * 0.6);
+    const flash = this.reducedMotion ? 0 : this.weather.flash;           // a distant flash lifts the whole frame for a moment
+    this.renderer.toneMappingExposure = Math.pow(2, P.exposure + W.exposure + flash * 1.3);
+    this.hemi.intensity = (0.12 + 0.5 * P.bounce + 0.4 * (P.moonFill || 0)) * (1 + (W.ambient - 1) * 0.6) + flash * 1.5;
     // Haze: thicker and greyer under cloud, the sun's glow in it goes with the sun.
     const grey = _c.setScalar((atm.fogColor.r * 0.2126 + atm.fogColor.g * 0.7152 + atm.fogColor.b * 0.0722));
     // Under a lid the haze is the lid's own grey, a little darker than the sky above it.
@@ -234,8 +247,10 @@ export class LookDev {
     this.lanternScale = this.light.lamps;
     setEmissiveLevels(this.light);
     this.rain.setAmount(W.rain, this.reducedMotion);
+    this.splashes.setAmount(W.rain * Math.min(1, this.weather.wet * 1.5), this.reducedMotion);
     this.foliage.setWind(this.reducedMotion ? 0 : Math.min(2.4, W.wind / 0.35)); // the calm default is the grass as it always was
-    this.rain.setColor(_c.copy(atm.zenith).lerp(_white, 0.6).multiplyScalar(1.4));
+    this.rain.setColor(_c.copy(atm.zenith).lerp(_white, 0.7).multiplyScalar(1.8 + this.light.lamps * 0.4));   // lit by the sky and, after dark, the lamps
+    this.splashes.setColor(_c);
     // Ambient light from the sky: the dome baked into a PMREM. The Blender-baked HDR (art/env/bake_env.py) is a clear
     // golden hour on the archipelago, so it serves only there and only while the sky is clear.
     const useHdr = this.cfg.envHdr && this.envHdr && this.envHdrPreset === this.envKey() && lid < 0.3;
@@ -250,10 +265,15 @@ export class LookDev {
     this.weather.dirty = false;
   }
 
-  /** 'clear' | 'overcast' | 'rain'. Eases in over a few seconds; at once under reduced motion or with `immediate`. */
-  setWeather(name, { immediate = false } = {}) {
+  /** Where rain splashes fall: the walking height under the camera's subject. */
+  setGround(x, y, z) { this.splashes.setGround(x, y, z); }
+
+  /** Any WEATHER name. Eases in over a few seconds (or `seconds`); at once under reduced motion or with `immediate`. */
+  setWeather(name, { immediate = false, seconds } = {}) {
     if (!WEATHER[name]) return this.weather.name;
-    this.weather.set(name, { immediate: immediate || this.reducedMotion });
+    const changed = name !== this.weather.name;
+    this.weather.set(name, { immediate: immediate || this.reducedMotion, seconds });
+    if (changed) announceWeather(name);
     this.weatherSettled = false;
     this.applyWeather(this.weather.k >= 1);
     return name;
@@ -382,6 +402,10 @@ export class LookDev {
     this.shadows.configure(cfg); // a 0 shadow map turns the sun shadow off
     this.blobs.setStrength(cfg.blobs || 0);
     this.rain.setMax(cfg.rain || 0); this.rain.setAmount(this.weather.state.rain, this.reducedMotion);
+    // the cheap tiers and phones: fewer splashes, no mirror puddles (the ground still darkens and shines)
+    const cheap = this.tier === 'low' || this.profile === 'phone';
+    this.splashes.setMax(Math.round((cfg.rain || 0) / (cheap ? 12 : 6))); this.splashes.setAmount(this.weather.state.rain, this.reducedMotion);
+    this.weather.puddles = cheap ? 0 : 1; this.weather.dirty = true;
     this.heroLight.visible = !!cfg.pointLights;
     this.clouds.setLayers(cfg.cloudLayers);
     this.clouds.setSteps(cfg.cloudSteps);
@@ -422,6 +446,7 @@ export class LookDev {
     if (this.weather.dirty || this.weather.changing) this.applyWeather(false);
     else if (!this.weatherSettled) { this.weatherSettled = true; if (this.envWeather !== this.weather.name) this.applyWeather(true); }
     this.rain.update(motion);
+    this.splashes.update(motion);
     tickFog(motion);
     this.time += motion;
     this.animateLight(this.time);
