@@ -34,7 +34,6 @@ const result = {};
 for (const pi of [2, 3, 5]) {          // veilbell pair, hulker, crownrift elite
   const info = await page.evaluate((pi) => {
     const f = window.__ftf, b = f.town.mobs.brain, pack = b.packs[pi];
-    for (const m of b.mobs) if (m.pack !== pack && m.state !== 'gone') { m.state = 'gone'; }   // only this pack is awake for the test
     const p = [pack.home[0] + 6, pack.home[1] + 30, pack.home[2] + 2];
     f.player.teleport(p, Math.atan2(pack.home[0] - p[0], pack.home[2] - p[2]));
     f.town.mobs.iris.hp = 100;
@@ -75,6 +74,7 @@ for (const pi of [2, 3, 5]) {          // veilbell pair, hulker, crownrift elite
   r.kills = await page.evaluate((t) => window.__kills.filter((k) => k.type === t).length, info.type);
   r.irisDamage = await page.evaluate(() => { const s = window.__hits.reduce((a, b) => a + b, 0); window.__hits = []; return Math.round(s); });
   r.states = await page.evaluate((pi) => { const b = window.__ftf.town.mobs.brain; return b.mobs.filter((m) => m.pack === b.packs[pi]).map((m) => m.state); }, pi);
+  r.shots = await page.evaluate(() => window.__ftf.town.mobs.shotLog.splice(0));
   result[info.type] = r;
 }
 const res = { result, errors };

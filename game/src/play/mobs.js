@@ -272,7 +272,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1 };
   let shake = 0;
   const numbers = [];
-  const shots = [];
+  const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
   let disposed = false;
 
   if (doc && !doc.getElementById('ftf-mobs-style')) { const st = doc.createElement('style'); st.id = 'ftf-mobs-style'; st.textContent = CSS; doc.head.append(st); }
@@ -359,7 +359,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         if (!from.lengthSq()) from.set(e.mob.pos[0], e.mob.pos[1] + 1, e.mob.pos[2]);
         s.position.copy(from); group.add(s);
         const to = new THREE.Vector3(e.to[0], e.to[1] + 1.0, e.to[2]);
-        shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage });
+        shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
         v.fx.hit(); number(e.mob, e.amount, e.crit);
@@ -380,7 +380,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
 
   let acc = 0;
   return {
-    brain, ready, group, iris,
+    brain, ready, group, iris, shotLog,
     get hp() { return iris.hp; },
     /** Iris's cast (scenes/town-casting.js onFire). */
     cast(c) { brain.cast(c); },
@@ -479,8 +479,9 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     for (const s of shots) {
       s.life -= dt; s.s.position.addScaledVector(s.vel, dt);
       const p = s.s.position;
-      if (iris.alive && Math.hypot(p.x - player.pos[0], p.y - (player.pos[1] + 1.0), p.z - player.pos[2]) < 0.75) { hurt(s.damage); s.life = 0; }
-      if (s.life <= 0) group.remove(s.s);
+      const dIris = Math.hypot(p.x - player.pos[0], p.y - (player.pos[1] + 1.0), p.z - player.pos[2]); s.min = Math.min(s.min, dIris);
+      if (iris.alive && dIris < 0.75) { hurt(s.damage); s.life = 0; s.hit = true; }
+      if (s.life <= 0) { group.remove(s.s); shotLog.push({ ...s.log, min: +s.min.toFixed(2), hit: !!s.hit }); if (shotLog.length > 20) shotLog.shift(); }
     }
     for (let i = shots.length - 1; i >= 0; i--) if (shots[i].life <= 0) shots.splice(i, 1);
   }
