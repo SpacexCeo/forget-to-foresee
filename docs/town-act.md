@@ -9,7 +9,15 @@ a request and the relayer, a town coordinator, makes the move with the matching 
 `GET /api/town/act?account_id=<guest>` reads what the windows show from the chain:
 `{registered, silk, credit, staked, deeds: [{token_id, asset, principal, tier, state, locked_until_day,
 unbond_ready_day, claimable}], limits: {today, per_day, all_today, all_per_day}, day, season_id, entered, entry_fee,
-paused, configured, contract}`. Amounts are micro-silk strings (1 silk = 1,000,000). `asset` 0-3 = loom, caravan,
+paused, season: {id, entered, entrants, purse}, works: [loom, caravan, archive, observatory], pools (stake_pools),
+rate_7d_per_100, params: {lock_days, lock_mult_bps, cooldown_days, deed_fee, min_trade, entry_fee, early_exit_bps,
+stall_fee_bps}, configured, contract}`.
+
+`GET /api/town/act?account_id=<guest>&trader=<stall account>` is for one stall: `{trader, stall {invested, index,
+rewards}, position {amount, claimable} | null, trader_silk, open, close_below: 40, reopen_at: 120}`. A stall closes
+when its silk falls below 40 and reopens at 120 (`relayer/market/prices.js`); between the two it keeps its last state,
+so `open` is null there. Stall keepers: `traderAccount(key)` in `relayer/market/catalog.js`, e.g. guard =
+`trader-01`, shardkeeper = `trader-02`, shrinekeeper = `trader-06` (`.ftf-town.testnet`). Amounts are micro-silk strings (1 silk = 1,000,000). `asset` 0-3 = loom, caravan,
 archive, observatory. Deed `state` 0 = active, 1 = unbonding.
 
 `POST /api/town/act {account_id, public_key, at, action, args, signature}`, where the signature (ed25519, the guest

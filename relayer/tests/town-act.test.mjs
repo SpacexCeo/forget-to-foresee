@@ -5,7 +5,7 @@ import { requestHash } from '../lib/town-gate.js';
 import { makeEntry } from '../lib/expedition-rules/expedition-log.js';
 import { createReplayGuard } from '../lib/chest.js';
 import { generateKeyPair, importSecretKey, b58encode } from '../lib/near-tx.js';
-import { townActHandler, actState } from '../api/town/act.js';
+import { townActHandler, actState, stallState } from '../api/town/act.js';
 
 const M = 1_000_000n, NOW = Date.UTC(2026, 10, 13, 12), ACC = 'ann-1.guests.ftf-coordinator.testnet';
 function logOf(entries) { const log = []; for (const e of entries) log.push(makeEntry(log, e)); return log; }
@@ -95,10 +95,15 @@ test('act: GET reads the guest\'s row, deeds and limits; POST without a coordina
     if (m === 'get_deed') return [ACC, { asset: 2, principal: 5, tier: 0, state: 0, locked_until_day: 3, unbond_ready_day: 0 }, '9'];
     if (m === 'act_limits') return [2, 40, '10', '20000'];
     if (m === 'has_entered') return true;
+    if (m === 'stake_pools' || m === 'params') return null;
+    if (m === 'stall_of') return { invested: '50', index: '0', rewards: '3' };
+    if (m === 'stall_position') return [{ amount: 5, snapshot: 0, pending: 0 }, '2'];
     throw new Error(m);
   } };
   const s = await actState(client, 'ftf-town.testnet', ACC);
   assert.equal(s.silk, '7'); assert.equal(s.deeds[0].claimable, '9'); assert.equal(s.limits.today, 2); assert.equal(s.entered, true); assert.equal(s.season_id, 's1');
+  const st = await stallState({ view: async (c, m, a) => (m === 'balance_of' ? { silk: String(80n * M) } : client.view(c, m, a)) }, 'ftf-town.testnet', 'trader-01.ftf-town.testnet', ACC);
+  assert.equal(st.open, null); assert.equal(st.position.claimable, '2'); assert.equal(st.reopen_at, 120);
   const h = townActHandler({ env: { FTF_DATA_DIR: '/tmp/none-ftf' }, client });
   const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = b; } };
   await h({ method: 'POST', headers: {}, url: '/api/town/act', body: {} }, res);
