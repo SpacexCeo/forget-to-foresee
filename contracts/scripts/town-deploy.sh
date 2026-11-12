@@ -50,9 +50,9 @@ while read -r acc pub; do
     near account add-key "$acc" grant-function-call-access --allowance "${ALLOWANCE:-unlimited}" --contract-account-id "$TOWN" --function-names trade use-manually-provided-public-key "$pub" "${SIGN[@]}"
   fi
 done <<< "$LIST"
-echo "5/6 Genesis (700 wool + 1,000 silk per trader, pool 10,000 wool / 20,000 silk; micro-units)…"
-if [ "$(view "$TOWN" pulse '{}' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).pool_wool)}catch{process.stdout.write("0")}})')" != "0" ]; then echo "    done before"; else
-  call genesis '{"traders":['"$(IFS=,; echo "${ACCS[*]}")"'],"wool_each":"700000000","silk_each":"1000000000","pool_wool":"10000000000","pool_silk":"20000000000"}' 200.0
+echo "5/6 Genesis (1,000 silk per trader; micro-units)…"
+if [ "$(view "$TOWN" pulse '{}' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).minted_silk)}catch{process.stdout.write("0")}})')" != "0" ]; then echo "    done before"; else
+  call genesis '{"traders":['"$(IFS=,; echo "${ACCS[*]}")"'],"silk_each":"1000000000"}' 200.0
 fi
 echo "6/6 Game deployment file…"
 node "$ROOT/contracts/scripts/day1-write.mjs" town="$TOWN"

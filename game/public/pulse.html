@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Town Pulse · Forget to Foresee</title>
-<meta name="description" content="The hill town's economy, read live from its NEAR testnet contract: trades, the wool/silk pool, pledges to the town works.">
+<meta name="description" content="The hill town's economy, read live from its NEAR testnet contract: silk trades, pledges to the town works, the tournament purse.">
 <style>
   :root { --bg: #101618; --card: #172022; --ink: #efe6d2; --dim: #a9a291; --gold: #e2b25a; --line: rgba(226,178,90,.28); --ok: #9fd49a; }
   * { box-sizing: border-box; }
@@ -34,15 +34,15 @@
   <p class="sub">The hill town below the archipelago, read live from its contract on NEAR testnet. The mist hides most things; these numbers it does not.</p>
   <div>
     <span class="label">Scripted traders: 13 townsfolk and 7 clan agents, rules not an LLM</span>
-    <span class="label">Wool and silk: testnet game resources, no value outside the game</span>
+    <span class="label">Silk: the town's one in-game currency, testnet, no value outside the game</span>
     <span class="label">Rates are measured past fee flow, variable, can be zero</span>
   </div>
   <div id="state" class="state">Reading the town…</div>
   <section id="body" hidden>
     <div class="grid" id="tiles"></div>
     <h2>The town works</h2>
-    <table><thead><tr><th>Works</th><th>Wool pledged</th><th>Reward rate, last 7 days</th></tr></thead><tbody id="works"></tbody></table>
-    <p class="note">Rewards come only from the town's fees: 0.12 % of every market trade and a fifth of the pool's swap fee. Each day the treasury's silk buys wool in the pool: 65 % goes to the works (capped at 0.4 % of pledged weight a day), 10 % to the tournament purse, 10 % to the Shell Reserve, 15 % is burned. No wool is minted for pledges.</p>
+    <table><thead><tr><th>Works</th><th>Silk pledged</th><th>Reward rate, last 7 days</th></tr></thead><tbody id="works"></tbody></table>
+    <p class="note">Rewards come only from the town's fees: 0.12 % of every market trade goes to the treasury; each day 65 % of it goes to the works (capped at 0.4 % of pledged weight a day), 10 % to the tournament purse, 10 % to the Shell Reserve and 15 % is burned. The Shell Observatory also gets 15 % of every tournament entry. No silk is minted for pledges; a season's purse may add a mint bounded by its ceiling.</p>
     <h2>Last trades</h2>
     <table><thead><tr><th>When</th><th>Buyer</th><th>Seller</th><th>Goods</th><th>Silk</th><th>Tx</th></tr></thead><tbody id="trades"></tbody></table>
     <p class="note" id="foot"></p>
@@ -81,19 +81,19 @@
     }
     const v = p.value, c = v.counters;
     $('state').hidden = true; $('body').hidden = false;
-    const tx = c.trade + c.swap + c.lp + c.stake + c.claim + c.unbond + c.withdraw + c.early_exit + c.sweep + c.distribute + c.deed_transfer;
+    const tx = c.trade + c.entry + c.settle + c.stake + c.claim + c.unbond + c.withdraw + c.early_exit + c.sweep + c.distribute + c.deed_transfer;
     $('tiles').replaceChildren(
       tile('market trades (all time)', c.trade.toLocaleString('en')), tile('town transactions (all time)', tx.toLocaleString('en')),
-      tile('silk traded', micro(v.volume_silk, 0)), tile('wool pledged to the works', micro(v.tvl_staked, 0)),
-      tile('pool price, silk per wool', micro(v.pool_price, 3)), tile('pool depth (wool / silk)', `${micro(v.pool_wool, 0)} / ${micro(v.pool_silk, 0)}`),
-      tile('wool burned', micro(v.burned_wool, 1)), tile('wool minted (genesis + credits)', micro(v.minted_wool, 0)),
-      tile('treasury silk awaiting the sweep', micro(v.treasury_silk, 2)), tile('tournament purse · Shell Reserve', `${micro(v.purse, 1)} · ${micro(v.reserve, 1)}`),
+      tile('silk traded', micro(v.volume_silk, 0)), tile('silk pledged to the works', micro(v.tvl_staked, 0)),
+      tile('tournament purse', micro(v.purse, 1)), tile(`entrants this season · entry ${micro(v.entry_fee, 0)} silk`, String(v.season_entrants)),
+      tile('silk burned', micro(v.burned_silk, 1)), tile('silk minted (genesis, wages, purses)', micro(v.minted_silk, 0)),
+      tile('treasury silk awaiting the sweep', micro(v.treasury_silk, 2)), tile('Shell Reserve', micro(v.reserve, 1)),
       tile('accounts in the town', String(v.accounts)), tile('pledges · claims · deeds moved', `${c.stake} · ${c.claim} · ${c.deed_transfer}`),
     );
     const pools = await view('stake_pools');
     $('works').replaceChildren(...WORKS.map((w, i) => {
       const tr = el('tr'); const principal = pools.value ? pools.value[i].principal : '0';
-      tr.append(el('td', w), el('td', micro(principal, 0)), el('td', `${micro(v.rate_7d_per_100[i], 3)} wool per 100 pledged per day`));
+      tr.append(el('td', w), el('td', micro(principal, 0)), el('td', `${micro(v.rate_7d_per_100[i], 3)} silk per 100 pledged per day`));
       return tr;
     }));
     $('foot').replaceChildren('Contract: ', el('a', TOWN, { href: `${EXPLORER}/address/${TOWN}`, target: '_blank', rel: 'noopener' }),
