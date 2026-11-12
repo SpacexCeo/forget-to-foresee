@@ -35,7 +35,7 @@ pub const ERR_ASSET: &str = "ERR_ASSET: asset is 0-3 (loom, caravan, archive, ob
 pub const ERR_TIER: &str = "ERR_TIER: tier is 0-3";
 pub const ERR_CAP: &str = "ERR_CAP: the pledge cap for this account is reached";
 pub const ERR_CAP_RECEIVER: &str = "ERR_CAP_RECEIVER: the receiver would exceed its pledge cap";
-pub const ERR_DEPOSIT: &str = "ERR_DEPOSIT: attach a storage deposit for the deed";
+pub const ERR_DEPOSIT: &str = "ERR_DEPOSIT: attach no deposit or at least DEED_DEPOSIT for the deed";
 pub const ERR_NO_DEED: &str = "ERR_NO_DEED: no such deed";
 pub const ERR_NOT_DEED_OWNER: &str = "ERR_NOT_DEED_OWNER: only the deed's owner can do this";
 pub const ERR_STATE: &str = "ERR_STATE: the deed is not in the right state for this";
@@ -70,6 +70,9 @@ pub struct Account {
     pub credit: u128,
     pub staked: u128,
     pub staked_works: [u128; 4],
+    /// Silk received (trades, rewards, payouts) and spent (trades, entries, deed fees), for the per-wallet Pulse table.
+    pub earned: u128,
+    pub spent: u128,
 }
 
 /// A sealed season: its schedule root, entrants and settlement.
@@ -250,7 +253,7 @@ impl Town {
         let p = d.pending.min(self.works[d.asset as usize].rewards);
         self.works[d.asset as usize].rewards -= p;
         d.pending = 0;
-        let mut row = self.acc(owner); row.silk += p; self.put(owner, row);
+        let mut row = self.acc(owner); row.silk += p; row.earned += p; self.put(owner, row);
         p
     }
     fn deed_owner(&self, id: &TokenId) -> AccountId { self.tokens.owner_by_id.get(id).unwrap_or_else(|| env::panic_str(ERR_NO_DEED)) }
@@ -331,7 +334,7 @@ impl Town {
         let mut row = self.acc(&me);
         let from_credit = row.credit.min(fee);
         require!(row.silk >= fee - from_credit, ERR_FUNDS);
-        row.credit -= from_credit; row.silk -= fee - from_credit; self.put(&me, row);
+        row.credit -= from_credit; row.silk -= fee - from_credit; row.spent += fee; self.put(&me, row);
         let sp = split_entry(&self.params, fee);
         self.burned_silk += sp.burn;
         self.works[3].extra += sp.works; // shared at the next distribute, under the rate ceiling
@@ -357,7 +360,7 @@ impl Town {
         let mut total = 0u128;
         for (a, amt) in &payouts {
             require!(amt.0 <= cap_one, ERR_PAYOUT_CAP);
-            let mut r = self.acc(a); r.silk += amt.0; self.put(a, r);
+            let mut r = self.acc(a); r.silk += amt.0; r.earned += amt.0; self.put(a, r);
             total += amt.0;
         }
         require!(season.paid + total <= season.pot, ERR_PURSE);
@@ -399,27 +402,30 @@ impl Town {
         let mut b = self.acc(&counterparty);
         require!(a.silk >= silk.0, ERR_FUNDS);
         let fee = trade_fee(&self.params, silk.0);
-        a.silk -= silk.0; b.silk += silk.0 - fee;
+        a.silk -= silk.0; a.spent += silk.0; b.silk += silk.0 - fee; b.earned += silk.0 - fee;
         self.put(&me, a); self.put(&counterparty, b);
         self.treasury_silk += fee; self.volume_silk += silk.0; self.counters.trade += 1;
         event("trade", format!(r#"{{"from":"{}","to":"{}","silk":"{}","fee":"{}","ref":"{}","n":{}}}"#, me, counterparty, silk.0, fee, reference.replace('"', ""), self.counters.trade));
     }
 
     // ---------- pledges ----------
-    /// Pledges `amount` silk to works `asset` for lock `tier`; mints a deed to the caller. Attach DEED_DEPOSIT.
+    /// Pledges `amount` silk to works `asset` for lock `tier`; mints a deed to the caller. Attach DEED_DEPOSIT or nothing.
     #[payable]
     pub fn stake(&mut self, asset: u8, amount: U, tier: u8) -> TokenId {
         self.live();
         require!((asset as usize) < 4, ERR_ASSET); require!((tier as usize) < 4, ERR_TIER);
+        // A wallet may attach DEED_DEPOSIT for the deed's storage (refunded at burn). The town's own accounts pledge with
+        // function-call keys, which cannot attach NEAR: then the contract pays the storage and the burned deed fee is the
+        // spam brake. Anything between 0 and DEED_DEPOSIT is refused, so a deposit is either full or none.
         let deposit = env::attached_deposit().as_yoctonear();
-        require!(deposit >= DEED_DEPOSIT.as_yoctonear(), ERR_DEPOSIT);
+        require!(deposit == 0 || deposit >= DEED_DEPOSIT.as_yoctonear(), ERR_DEPOSIT);
         let me = env::predecessor_account_id();
         let fee = self.params.deed_fee;
         let mut row = self.acc(&me);
         require!(amount.0 > 0 && row.silk >= amount.0 + fee, ERR_FUNDS);
         let (cap, cap_asset) = self.cap();
         require!(row.staked + amount.0 <= cap && row.staked_works[asset as usize] + amount.0 <= cap_asset, ERR_CAP);
-        row.silk -= amount.0 + fee; row.staked += amount.0; row.staked_works[asset as usize] += amount.0;
+        row.silk -= amount.0 + fee; row.spent += fee; row.staked += amount.0; row.staked_works[asset as usize] += amount.0;
         self.put(&me, row);
         self.burned_silk += fee;
         let a = asset as usize;

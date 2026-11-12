@@ -42,7 +42,10 @@
     <div class="grid" id="tiles"></div>
     <h2>The town works</h2>
     <table><thead><tr><th>Works</th><th>Silk pledged</th><th>Reward rate, last 7 days</th></tr></thead><tbody id="works"></tbody></table>
-    <p class="note">Rewards come only from the town's fees: 0.12 % of every market trade goes to the treasury; each day 65 % of it goes to the works (capped at 0.4 % of pledged weight a day), 10 % to the tournament purse, 10 % to the Shell Reserve and 15 % is burned. The Shell Observatory also gets 15 % of every tournament entry. No silk is minted for pledges; a season's purse may add a mint bounded by its ceiling.</p>
+    <p class="note">Rewards come only from the town's fees: 0.12 % of every market trade goes to the treasury; each day 65 % of it goes to the works (capped at 0.15 % of pledged weight a day), 10 % to the tournament purse, 10 % to the Shell Reserve and 15 % is burned. The Shell Observatory also gets 15 % of every tournament entry. No silk is minted for pledges; a season's purse may add a mint bounded by its ceiling.</p>
+    <h2>The town's wallets</h2>
+    <table><thead><tr><th>Wallet</th><th>Who</th><th>Silk</th><th>Earned</th><th>Spent</th><th>Pledged</th></tr></thead><tbody id="wallets"></tbody></table>
+    <p class="note">Every trader and clan signs with its own testnet account, each key limited to the town's game methods and a daily budget.</p>
     <h2>Clan strategies</h2>
     <table><thead><tr><th>Clan</th><th>Chosen by</th><th>Strategy</th><th>When</th></tr></thead><tbody id="strategies"></tbody></table>
     <p class="note" id="stratnote">Each clan agent sets a few bounded strategy numbers once an hour; the rules engine makes every trade.</p>
@@ -58,6 +61,9 @@
   const RPCS = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
   const RELAYER = q.get('relayer') || 'https://159-195-130-113.sslip.io';
   const EXPLORER = 'https://testnet.nearblocks.io';
+  const TRADERS = ['guard', 'shardkeeper', 'scribe', 'innkeeper', 'baker', 'shrinekeeper', 'elder', 'musician', 'sweeper', 'lamplighter', 'courier', 'child_a', 'child_b', 'iris', 'salt', 'ash', 'moss', 'amber', 'frost', 'tinker'];
+  const WALLETS = [...TRADERS.map((k, i) => [`trader-${String(i + 1).padStart(2, '0')}.${TOWN}`, k.replace('_', ' ') + (i >= 13 ? ' (clan trader)' : '')]),
+    ...['salt', 'ash', 'moss', 'amber', 'frost', 'iris'].map((c) => [`clan-${c}.${TOWN}`, `${c} clan`])];
   const WORKS = ['Loom House', 'Caravan Guild', 'Archive & Translation Guild', 'Shell Observatory'];
   const $ = (id) => document.getElementById(id);
   const el = (tag, text, attrs) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (attrs) Object.assign(e, attrs); return e; };
@@ -101,6 +107,13 @@
     }));
     $('foot').replaceChildren('Contract: ', el('a', TOWN, { href: `${EXPLORER}/address/${TOWN}`, target: '_blank', rel: 'noopener' }),
       v.season_id ? ` · sealed season ${v.season_id}, root ` : '', v.season_id ? el('code', v.schedule_root) : '', v.paused ? ' · paused' : '', ` · epoch day ${v.day}`);
+    const bal = await view('balances_of', { account_ids: WALLETS.map((w) => w[0]) });
+    if (bal.value) $('wallets').replaceChildren(...WALLETS.map(([acc, who], i) => {
+      const row = bal.value[i] || {}; const tr = el('tr'); const td = el('td');
+      td.append(el('a', acc.split('.')[0], { href: `${EXPLORER}/address/${acc}`, target: '_blank', rel: 'noopener' }));
+      tr.append(td, el('td', who), el('td', micro(row.silk, 1)), el('td', micro(row.earned, 1)), el('td', micro(row.spent, 1)), el('td', micro(row.staked, 0)));
+      return tr;
+    }));
     try {
       const r = await fetch(RELAYER + '/api/market/stats'); const s = r.ok ? await r.json() : null;
       const strat = s && s.strategy;

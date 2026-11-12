@@ -21,7 +21,7 @@ const errText = (e) => String((e && e.rpc && JSON.stringify(e.rpc.data || e.rpc.
 export function createMarketDaemon({
   contractId, traders, client, store = null, log = () => {}, target = DEFAULT_TARGET, now = () => Date.now(),
   rand = Math.random, maxPerMinute = 60, paused = false, timers = { setTimeout, clearTimeout }, gas = TRADE_GAS,
-  policy = TOWN_POLICY, dryRun = false, strategyOf = null,
+  policy = TOWN_POLICY, dryRun = false, strategyOf = null, walletDayNear = Infinity, txNear = 0.0003, killed = () => false,
 }) {
   const keys = traders.map((t) => t.key).filter((k) => TRADERS.includes(k));
   const saved = (store && store.load()) || null;
@@ -31,7 +31,7 @@ export function createMarketDaemon({
   if (st.day !== utcDay(now())) { st.day = utcDay(now()); st.today = 0; st.failures = 0; }
   const signers = new Map(traders.map((t) => [t.key, { ...t, signer: null, nonce: null, low: false, lowUntil: 0 }]));
   const cap = createRateCap({ perMinute: maxPerMinute, now });
-  let block = null, chain = null, lastError = null, running = false, isPaused = !!paused, dirty = 0;
+  let block = null, chain = null, lastError = null, running = false, isPaused = !!paused, dirty = 0, wasKilled = false;
   const handles = new Map();
 
   const save = (force = false) => { if (!store) return; if (force || ++dirty >= 10) { dirty = 0; try { store.save({ balances: st.balances, prices: st.prices, recent: st.recent, day: st.day, today: st.today, failures: st.failures }); } catch { /* disk full: keep running */ } } };
@@ -85,10 +85,16 @@ export function createMarketDaemon({
     rollDay();
     const s = signers.get(key);
     if (!s || isPaused || (s.low && now() < s.lowUntil)) return null;
+    if (killed()) { wasKilled = true; return null; }
+    wasKilled = false;
+    if (s.spentDay !== st.day) { s.spentDay = st.day; s.spentNear = 0; }
+    if (s.spentNear + txNear > walletDayNear) { s.capped = true; return null; } // this wallet's daily budget is used up
+    s.capped = false;
     if (!cap.take()) return null;
     const t = policy.pick(st, key, rand, keys, strategyOf ? strategyOf(key) : null);
     if (!t || !signers.has(t.seller)) return null;
     const r = await send(s, t);
+    if (!r.dry && (r.ok || r.sent !== false)) s.spentNear += txNear;
     const entry = { at: now(), ...t, hash: r.hash, ok: r.ok, ...(r.dry ? { dry: true } : {}) };
     if (r.ok) {
       policy.apply(st, t); st.today++;
@@ -131,6 +137,7 @@ export function createMarketDaemon({
         enabled: true, dry_run: !!dryRun, paused: isPaused, contract: contractId, target, traders: keys.length, day: st.day, today: st.today, failures_today: st.failures,
         chain: chain && { day: chain.day, today: chain.today, total: chain.total, at: chain.at },
         low_funds: [...signers.values()].filter((s) => s.low).map((s) => s.key),
+        budget_capped: [...signers.values()].filter((s) => s.capped).map((s) => s.key), wallet_day_near: walletDayNear, killed: wasKilled || !!killed(),
         recent: st.recent.slice(0, RECENT), last_error: lastError,
       };
     },

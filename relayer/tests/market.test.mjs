@@ -15,7 +15,7 @@ test('catalog: 13 townsfolk + 7 clan agents, every item has a trader maker, acco
   assert.equal(new Set(ITEMS.map((i) => i.id)).size, ITEMS.length);
   for (const k of TRADERS) {
     const a = traderAccount(k);
-    assert.match(a, /^[a-z0-9-]+\.ftf-coordinator\.testnet$/); assert.ok(a.length <= 64);
+    assert.match(a, /^trader-\d{2}\.ftf-town\.testnet$/); assert.ok(a.length <= 64);
     assert.equal(traderKey(a), k);
   }
   assert.equal(traderKey('eve.testnet'), null);
@@ -88,22 +88,22 @@ test('daemon: signs a trade with the buyer\'s own key, increments its nonce loca
   const { client, calls, traders } = await fakeChain();
   let mem = null; const store = { load: () => mem, save: (o) => { mem = JSON.parse(JSON.stringify(o)); } };
   const logs = [];
-  const d = createMarketDaemon({ contractId: 'market.ftf-coordinator.testnet', traders, client, store, log: (e) => logs.push(e), rand: seeded(5), now: () => Date.UTC(2026, 10, 13, 12) });
+  const d = createMarketDaemon({ contractId: 'ftf-town.testnet', traders, client, store, log: (e) => logs.push(e), rand: seeded(5), now: () => Date.UTC(2026, 10, 13, 12) });
   await d.sync();
   const a = await d.tickOnce('guard'), b = await d.tickOnce('guard');
   assert.ok(a.ok && b.ok && a.buyer === 'guard');
   const tx = sentArgs(calls);
   assert.equal(tx.length, 2);
-  assert.ok(tx[0].includes('tf-guard.ftf-coordinator.testnet') && tx[0].includes('market.ftf-coordinator.testnet') && tx[0].includes('"counterparty":"' + traderAccount(a.seller) + '"'));
+  assert.ok(tx[0].includes('trader-01.ftf-town.testnet') && tx[0].includes('ftf-town.testnet') && tx[0].includes('"counterparty":"' + traderAccount(a.seller) + '"'));
   assert.equal(calls.filter((c) => c[0] === 'query' && c[1].request_type === 'view_access_key').length, 1); // nonce fetched once
   const s = d.stats();
   assert.equal(s.today, 2); assert.equal(s.recent.length, 2); assert.equal(s.recent[0].hash, b.hash); assert.equal(s.chain.total, 9);
   assert.equal(logs.length, 2);
   d.stop();
   assert.equal(mem.today, 2);
-  const again = createMarketDaemon({ contractId: 'market.ftf-coordinator.testnet', traders, client, store, rand: seeded(6), now: () => Date.UTC(2026, 10, 13, 13) });
+  const again = createMarketDaemon({ contractId: 'ftf-town.testnet', traders, client, store, rand: seeded(6), now: () => Date.UTC(2026, 10, 13, 13) });
   assert.equal(again.stats().today, 2); assert.equal(again.stats().recent.length, 2); // survives a restart
-  const tomorrow = createMarketDaemon({ contractId: 'market.ftf-coordinator.testnet', traders, client, store, rand: seeded(6), now: () => Date.UTC(2026, 10, 14, 1) });
+  const tomorrow = createMarketDaemon({ contractId: 'ftf-town.testnet', traders, client, store, rand: seeded(6), now: () => Date.UTC(2026, 10, 14, 1) });
   assert.equal(tomorrow.stats().today, 0);
 });
 
@@ -149,4 +149,20 @@ test('stats route: the daemon\'s stats, or the contract counters without it', as
   const j = JSON.parse(res.body);
   assert.equal(j.enabled, false); assert.equal(j.chain.total, 99); assert.deepEqual(j.recent, []);
   assert.ok(!/secret|ed25519:/i.test(res.body));
+});
+
+test('daemon: a wallet stops at its daily NEAR budget; the kill switch stops every wallet', async () => {
+  const { client, calls, traders } = await fakeChain();
+  let kill = false;
+  const d = createMarketDaemon({ contractId: 'ftf-town.testnet', traders, client, rand: seeded(8), now: () => Date.UTC(2026, 10, 13, 12), walletDayNear: 0.001, txNear: 0.0003, killed: () => kill });
+  await d.sync();
+  const sent = [];
+  for (let i = 0; i < 6; i++) sent.push(await d.tickOnce('guard'));
+  assert.equal(sent.filter(Boolean).length, 3); // 3 x 0.0003 fits in 0.001, the 4th would not
+  assert.deepEqual(d.stats().budget_capped, ['guard']);
+  kill = true;
+  const before = sentArgs(calls).length;
+  assert.equal(await d.tickOnce('baker'), null);
+  assert.equal(sentArgs(calls).length, before);
+  assert.equal(d.stats().killed, true);
 });
