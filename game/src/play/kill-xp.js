@@ -24,7 +24,7 @@ const BURST = 0.9;         // seconds the level-up burst lasts
  * @param {(text: string) => void} o.toast @param {() => boolean} [o.reduced] @param {() => boolean} [o.active]
  * @param {Window} [o.win] @param {Document} [o.doc]
  */
-export function createKillXp({ THREE, scene, camera, player, ledger, t, toast, reduced = () => false, active = () => true, win = globalThis.window, doc = globalThis.document }) {
+export function createKillXp({ THREE, scene, camera, player, ledger, t, toast, reduced = () => false, active = () => true, win = globalThis.window, doc = globalThis.document, floatNumber = null }) {
   if (doc && !doc.getElementById('ftf-xp-style')) { const s = doc.createElement('style'); s.id = 'ftf-xp-style'; s.textContent = CSS; doc.head.append(s); }
   const labels = [];
   const v3 = new THREE.Vector3();
@@ -58,7 +58,7 @@ export function createKillXp({ THREE, scene, camera, player, ledger, t, toast, r
   function credit(type, pos, elite) {
     if (!active()) return null;
     const r = ledger.killMob(type, elite);
-    label(t('xp.gain', { n: r.gained }), pos);
+    if (!(floatNumber && pos && floatNumber({ kind: 'xp', amount: r.gained, pos: [pos[0], pos[1] + 1.6, pos[2]] }))) label(t('xp.gain', { n: r.gained }), pos);
     if (r.levelUp) {
       toast(t('xp.levelUp', { level: r.levelUp }));
       cueAt('gift_chime', null, 0.55);

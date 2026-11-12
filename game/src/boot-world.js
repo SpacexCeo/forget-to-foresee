@@ -418,7 +418,7 @@ if (townMode.town) {
     }).catch((err) => console.warn('[stall]', err));
   }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
-  if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
+  if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown, floatNumber: numbersHook }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
   if (!touchSticks) touchSticks = createTouchControls({ input, t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, storage: ctx.storage, player,
     camForward: () => { const v = camera.getWorldDirection(_camFwd); return [v.x, v.z]; },
@@ -534,7 +534,7 @@ function mountMobs() {
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
-      onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
+      onFeedback: (k, mob, ev) => combatSound(k, mob, ev), floatNumber: numbersHook });
     // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are
     // never refused (the first fight stays fair)
     const rawDash = townMobs.dash.bind(townMobs), rawUp = townMobs.attackUp ? townMobs.attackUp.bind(townMobs) : null, rawStrike = townMobs.strike.bind(townMobs);
@@ -753,6 +753,21 @@ if (typeof ResizeObserver === 'function' && renderer.domElement.parentElement) n
 fitView();
 
 let toastTimer = 0;
+// Floating numbers (flag damageNumbers; ui/float-numbers.js): damage and crits from the mobs, XP from kills, silk gained
+// and spent from the town ledger. Off: the old per-module numbers stay exactly as they were.
+let floatNumbers = null, floatLoading = false, lastSilk = null;
+function numbersHook(ev) {
+  if (!featureFlags.on('damageNumbers')) return false;
+  if (floatNumbers) { floatNumbers.push(ev); return true; }
+  if (!floatLoading) { floatLoading = true; import('./ui/float-numbers.js').then((m) => { floatNumbers = m.createFloatNumbers({ camera, THREE, reduced: () => lookdev.reducedMotion, xpUnit: () => 'XP' }); }).catch(() => { floatLoading = false; }); }
+  return false; // the first number of a session shows the old way while the layer loads
+}
+townLedger.subscribe(() => {
+  const s = townLedger.silk; const prev = lastSilk; lastSilk = s;
+  if (prev == null || s === prev || !inTown || !featureFlags.on('damageNumbers')) return;
+  const p = player.pos; numbersHook({ kind: s > prev ? 'silk_gain' : 'silk_spend', amount: Math.abs(s - prev) / 100, pos: [p[0], p[1] + 2.0, p[2]] });
+});
+
 function mountEndgamePass() {
   endgamePass = 'loading';
   Promise.all([import('./net/pass-deployment.js'), import('./net/pass-client.js'), import('./ui/endgame-pass.js'), import('./audio/town-audio.js')]).then(([d, c, u, a]) => {
@@ -1166,6 +1181,7 @@ function frame() {
   stamina.update(dt, { running: !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside && player.run && movingState) });
   document.body.classList.toggle('st-winded', stamina.winded);
   if (killXp) killXp.update(dt);
+  if (floatNumbers) floatNumbers.update();
   if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100, stamina });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();

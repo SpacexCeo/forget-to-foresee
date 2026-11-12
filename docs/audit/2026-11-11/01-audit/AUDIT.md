@@ -219,7 +219,7 @@ MIT (`LICENSE`, copyright 2026 Lambada_eth). `README.md:218-229` lists libraries
 ## 5. Alignment with the existing plans
 
 - `FTF-HACKATHON-TZ.md` P1-A (hitch robustness, keyboard layout) is **done** (`collision.js:389`, `input.js:100`). P1-B (town quest) **done** per `README.md:117` and `tests/client/town-quest.test.mjs`. P1-C (shard card for every player) is implemented as an honest preview, not a real mint, which is the right call. P1-D (`agent-card`) **deployed**. P2-A (tournament) was replaced by the local Foresight Exchange drill (`README.md:120`), consistent with `FTF-AGENT-MARKET-PLAN.md`. P2-B (usage counters) not done; skip it.
-- `FTF-COMPETITOR-MAP.md`: the three named threats win on social login (Crownfall), merchant-as-contract (Lunearcy) and dynamic NFT gear (Afterlight). FTF's differentiators are visual quality, verifiable fairness, and the agent API. The gap to close cheaply is **an NFT that visibly does something** (QW-6) and **one invisible-chain moment for a brand-new player** (QW-2).
+- `FTF-COMPETITOR-MAP.md`: the three named threats win on social login (a rival entry), merchant-as-contract (Lunearcy) and dynamic NFT gear (Afterlight). FTF's differentiators are visual quality, verifiable fairness, and the agent API. The gap to close cheaply is **an NFT that visibly does something** (QW-6) and **one invisible-chain moment for a brand-new player** (QW-2).
 - Hackathon rules (`HACKATHON.md`): public repo + LICENSE ✓, README for machines (partly), X post with video (video is stale), `hackathon-submission` tag pending, hosted demo should stay up to 18 Nov (Pages is fine).
 
 ---

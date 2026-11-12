@@ -1,4 +1,4 @@
-// Remote feature flags (FEED FIRE teardown M8 / F0): the owner can switch a feature off (or on) during freeze night
+// Remote feature flags (a reference game teardown M8 / F0): the owner can switch a feature off (or on) during freeze night
 // without a code deploy, by editing the static /features.json next to the build. At boot the file is fetched with a
 // 3 s timeout and no cache; its values are merged over the built-in defaults below. A name the build does not define is
 // ignored (the file can only toggle what this build contains), and only real booleans count ("true" does not). Any

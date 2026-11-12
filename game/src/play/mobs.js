@@ -375,7 +375,7 @@ const CSS = `
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
-  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null, irisEnd = null }) {
+  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null, irisEnd = null, floatNumber = null }) {
   const brain = new MobBrain({ origin, phone, seed });
   // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
   // (the hillside's colliders are built when Iris first walks out of the gate, so a pack is settled as soon as its
@@ -513,6 +513,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   }
 
   function number(m, amount, crit) {
+    // the floating-numbers layer (flag damageNumbers, ui/float-numbers.js) takes the number when it is on
+    if (floatNumber && floatNumber({ kind: crit ? 'crit' : 'damage', amount, target: m, pos: [m.pos[0], m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]] })) return;
     if (!doc || reduced() || !camera) return;
     const el = doc.createElement('div'); el.className = 'ftf-dmg' + (crit ? ' crit' : ''); el.textContent = String(Math.round(amount)); doc.body.append(el);
     numbers.push({ el, p: [m.pos[0] + (Math.random() - 0.5) * 0.4, m.pos[1] + 0.6 + m.T.radius * 1.2, m.pos[2]], t: 0 });
