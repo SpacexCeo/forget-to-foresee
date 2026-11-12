@@ -1183,7 +1183,8 @@ window.__ftf = {
   scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
-  get iris() { return irisAvatar; }, irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },
+  get iris() { return irisAvatar; }, get storyProps() { return { portal: townPortal, board: townBoard }; },   // QA: the Gate-Loom and the Shell monument
+  irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },
   // The town on the ground (docs/town.md), null on the paths that skip it. register() is the code path of pressing E at
   // the altar (it resolves false when the prompt is not offered); walkRoute() steers Iris along the jury route (QA).
   town: town ? {

@@ -27,7 +27,7 @@ test('portal object: E in reach confirms first, pays only on the button, follows
   let facts = { phase: 'gathering', balanceC: 0, feeC: 1_000_000, demo: false }, paid = 0;
   const p = createTownPortal({ scene, position: [4, 0, 22.5], i18n: fakeI18n(), read: () => facts, onPay: () => { paid++; }, doc, reducedMotion: true });
   assert.equal(scene.children.includes(p.root), true);
-  assert.deepEqual(PORTAL_TOWN, [4, 0, 22.5]);
+  assert.deepEqual(PORTAL_TOWN, [6.4, 0, 23.4]);      // clear of the standing mirror
   p.update(0.016, 1);
   assert.equal(p.state, 'dormant');
   assert.equal(p.spot.near([5, 0, 23]), true);
