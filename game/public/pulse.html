@@ -50,7 +50,7 @@
     <table><thead><tr><th>Clan</th><th>Chosen by</th><th>Strategy</th><th>When</th></tr></thead><tbody id="strategies"></tbody></table>
     <p class="note" id="stratnote">Each clan agent sets a few bounded strategy numbers once an hour; the rules engine makes every trade.</p>
     <h2>The stalls</h2>
-    <table><thead><tr><th>Goods</th><th>Stall</th><th>On the shelf</th><th>Price, silk</th></tr></thead><tbody id="stalls"></tbody></table>
+    <table><thead><tr><th>Goods</th><th>Stall</th><th>On the shelf</th><th>Price, silk</th><th>Buys from players, silk</th></tr></thead><tbody id="stalls"></tbody></table>
     <p class="note">Prices follow stock and demand (relayer/market/prices.js): a good bought empty gets dearer, a flooded one cheaper. A stall that runs out of silk closes: it stops buying and making goods and sells off its shelf.</p>
     <h2>Last trades</h2>
     <table><thead><tr><th>When</th><th>Buyer</th><th>Seller</th><th>Goods</th><th>Silk</th><th>Why that price</th><th>Tx</th></tr></thead><tbody id="trades"></tbody></table>
@@ -129,8 +129,8 @@
         $('stratnote').textContent = `Today: ${strat.llm_today} decisions chosen by an LLM on NEAR AI Cloud, ${strat.scripted_today} scripted (when the model does not answer). The rules engine makes every trade either way.`;
       } else $('strategies').replaceChildren(Object.assign(el('tr'), { innerHTML: '<td colspan="4" class="note">No strategy decisions yet.</td>' }));
       const stalls = s && Array.isArray(s.stalls) ? s.stalls : [];
-      $('stalls').replaceChildren(...(stalls.length ? stalls.map((x) => { const tr = el('tr'); tr.append(el('td', String(x.item).replace(/_/g, ' ')), el('td', String(x.maker).replace(/_/g, ' ') + (x.closed ? ' (closed)' : '')), el('td', String(x.stock)), el('td', (Number(x.price) / 5).toFixed(1))); return tr; })
-        : [Object.assign(el('tr'), { innerHTML: '<td colspan="4" class="note">The stalls appear once the traders run.</td>' })]));
+      $('stalls').replaceChildren(...(stalls.length ? stalls.map((x) => { const tr = el('tr'); tr.append(el('td', String(x.item).replace(/_/g, ' ')), el('td', String(x.maker).replace(/_/g, ' ') + (x.closed ? ' (closed)' : '')), el('td', String(x.stock)), el('td', (Number(x.price) / 5).toFixed(1)), el('td', x.kind === 'resource' ? (x.buys_at ? (Number(x.buys_at) / 5).toFixed(1) : 'shelf full') : '—')); return tr; })
+        : [Object.assign(el('tr'), { innerHTML: '<td colspan="5" class="note">The stalls appear once the traders run.</td>' })]));
       const rows = (s && Array.isArray(s.recent) ? s.recent : []).slice(0, 12);
       $('trades').replaceChildren(...(rows.length ? rows.map((t) => {
         const tr = el('tr'); const when = new Date(t.at).toISOString().slice(11, 19) + ' UTC';

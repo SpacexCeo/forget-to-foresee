@@ -112,6 +112,14 @@ All the price rules live in one readable file, `relayer/market/prices.js`:
   fee (`stall_fee_bps` 5,000, owner-tunable) of every sale that stall makes, shared by invested silk, and collects
   it with `claim_stall(trader)`. It is a pledge, not a loan: the silk does not come back, only the fee share does.
   Views: `stall_of`, `stall_position`.
+- **Monster resources** (owner, 12.11 evening): spider silk thread and chitin plate (from the guard's stall), veil dust
+  (shrine-keeper), ash ore (Ash clan trader) and crown shard (shard-keeper) sit on the stalls next to the goods
+  (`relayer/market/catalog.js` `RESOURCES`), for players who cannot farm them. Base prices follow the silk a kill
+  pays: spider 6 → 3–5 silk, veilbell 15, hulker 40, crownrift 200. The shelves are scarcer (start 20, cap 40,
+  6 an hour), and the price rules are the same. A stall buys a resource back from a player at 60 % of its selling price
+  until its shelf is full (`buybackOf`; stats `stalls[].buys_at`, Pulse column "Buys from players"). Traders buy
+  resources from each other only now and then (weight × 0.3). Player sales and on-chain items come with NEP-245
+  (item 4), where these five are the first token ids.
 - **Fast mode (item 7)**: `node tools/town/fast-week.mjs` runs a week of the market through the real policy and price
   rules on the real day curve and writes `game/public/town-week.json`. The Economy Lab page (`/economy-lab.html`,
   linked from Town Pulse) plays it back in a minute: clock, trades, fees, closed stalls, a price chart of six goods,

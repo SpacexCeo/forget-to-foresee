@@ -11,7 +11,8 @@ import { TOWN_POLICY, townEnv } from '../lib/town-traders.js';
 import { TRADERS, traderAccount } from './catalog.js';
 import { createStrategyBook, runStrategyRound } from '../lib/clan-strategy.js';
 import { runClanRound } from '../lib/clan-actions.js';
-import { CLAN_WALLETS, clanAccount, ITEMS } from './catalog.js';
+import { CLAN_WALLETS, clanAccount, CATALOG as ITEMS } from './catalog.js';
+import { buybackOf } from './prices.js';
 import { teeEnv } from '../lib/tee.js';
 
 export const marketEnv = (env = process.env) => ({
@@ -47,7 +48,8 @@ export const jsonlLog = (dir) => (entry) => {
 
 let daemon = null;
 /** The stalls for the stats: each good's maker, stock, price (fifths of a silk) and whether its stall is closed. */
-const stallsOf = (st) => (st && st.stock ? ITEMS.map((i) => ({ item: i.id, maker: i.maker, stock: st.stock[i.id] ?? 0, price: st.prices[i.id] ?? i.base, closed: !!(st.closed && st.closed[i.maker]) })) : []);
+const stallsOf = (st) => (st && st.stock ? ITEMS.map((i) => ({ item: i.id, kind: i.kind, maker: i.maker, stock: st.stock[i.id] ?? 0, price: st.prices[i.id] ?? i.base, closed: !!(st.closed && st.closed[i.maker]),
+  ...(i.kind === 'resource' ? { buys_at: buybackOf(i, st.stock[i.id] ?? 0, (st.demand && st.demand[i.id]) || 0).price } : {}) })) : []);
 /** The process's daemon (started on first call when enabled and keys exist), or null. */
 export function marketDaemon(env = process.env) {
   if (daemon) return daemon;

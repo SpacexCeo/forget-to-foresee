@@ -882,4 +882,9 @@ export default {
   "mk.i.amber_resin": "resina d’ambra",
   "mk.i.ice_block": "blocco di ghiaccio",
   "mk.i.bronze_gear": "ingranaggio di bronzo",
+  "mk.i.spider_silk_thread": "filo di ragno",
+  "mk.i.chitin_plate": "placca di chitina",
+  "mk.i.veil_dust": "polvere di velo",
+  "mk.i.ash_ore": "minerale di cenere",
+  "mk.i.crown_shard": "frammento di corona",
 };
