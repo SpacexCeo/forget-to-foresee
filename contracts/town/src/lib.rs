@@ -1,17 +1,17 @@
 #![allow(deprecated)] // NEP-171 helpers of near-contract-standards use the legacy collections
 //! Forget to Foresee (NEAR testnet): the town economy (docs/town-economy.md, docs/security-town.md).
 //!
-//! One contract, all state atomic, no cross-contract calls on the core path:
-//! - **Balances**: wool (the tournament resource), silk (the market unit) and entry credit, as internal balances in
-//!   micro-units (1 wool = 1_000_000). No `ft_transfer`: wool moves by market operations and whole deeds only.
+//! One currency: **silk**, the town's in-game currency (a testnet game resource with no value outside the game),
+//! kept as internal balances in micro-units (1 silk = 1_000_000). No `ft_transfer`. One contract, all state atomic,
+//! no cross-contract calls on the core path:
 //! - **Market**: `trade` moves silk from the caller to a counterparty and takes a 0.12 % fee into the treasury. The 20
 //!   scripted trader accounts make ~20,000 of these a day; there is no per-trade storage.
-//! - **Pool**: a constant-product wool/silk AMM (0.30 % fee, 20 % of it to the stake pot), `min_out` on every swap and
-//!   a per-account daily swap cap (5 % of the input reserve).
-//! - **Works and deeds**: wool pledged to one of four town works for a lock tier becomes a deed (NEP-171, no
-//!   approvals) holding the whole position. Weight counts from the next epoch. Rewards come only from fees
-//!   (`sweep_fees` buys wool with treasury silk; `distribute` shares it), capped by a rate ceiling per unit of weight.
-//!   No wool is minted for stakers; principal is never slashed.
+//! - **Works and deeds**: silk pledged to one of four town works for a lock tier becomes a deed (NEP-171, no
+//!   approvals) holding the whole position. Weight counts from the next epoch. Rewards come only from the fees:
+//!   `sweep_fees` splits the treasury (stakers / tournament purse / reserve / burn) and `distribute` shares the stake
+//!   pot over the works, capped by a rate ceiling per unit of weight. Principal is never slashed.
+//! - **Tournament**: `enter_tournament` costs silk (part burned, part to the Shell Observatory's stakers, the rest to
+//!   the purse); `settle_season` pays ranks from the purse plus a mint bounded by a per-season ceiling.
 //! Every operation logs a NEP-297 event (`ftf_town`); `pulse` returns the town's counters.
 use near_contract_standards::non_fungible_token::core::{NonFungibleTokenCore, NonFungibleTokenResolver};
 use near_contract_standards::non_fungible_token::metadata::{NFTContractMetadata, NonFungibleTokenMetadataProvider, TokenMetadata, NFT_METADATA_SPEC};
@@ -31,9 +31,6 @@ pub const ERR_SELF: &str = "ERR_SELF: an account cannot trade with itself";
 pub const ERR_MIN_TRADE: &str = "ERR_MIN_TRADE: a trade moves at least the minimum silk";
 pub const ERR_FUNDS: &str = "ERR_FUNDS: not enough balance";
 pub const ERR_REF: &str = "ERR_REF: ref is 0-32 characters";
-pub const ERR_MIN_OUT: &str = "ERR_MIN_OUT: the output is below min_out";
-pub const ERR_SWAP_CAP: &str = "ERR_SWAP_CAP: the daily swap cap for this account is reached";
-pub const ERR_POOL: &str = "ERR_POOL: the pool is empty or the amounts are invalid";
 pub const ERR_ASSET: &str = "ERR_ASSET: asset is 0-3 (loom, caravan, archive, observatory)";
 pub const ERR_TIER: &str = "ERR_TIER: tier is 0-3";
 pub const ERR_CAP: &str = "ERR_CAP: the pledge cap for this account is reached";
@@ -48,7 +45,12 @@ pub const ERR_NO_EXIT_YET: &str = "ERR_NO_EXIT_YET: a deed that just changed han
 pub const ERR_ONCE_A_DAY: &str = "ERR_ONCE_A_DAY: already done this epoch";
 pub const ERR_NO_APPROVALS: &str = "ERR_NO_APPROVALS: deeds have no approvals";
 pub const ERR_GENESIS: &str = "ERR_GENESIS: genesis runs once, before anything else";
-pub const ERR_CREDIT_CAP: &str = "ERR_CREDIT_CAP: the coordinator's daily wool credit ceiling is reached";
+pub const ERR_CREDIT_CAP: &str = "ERR_CREDIT_CAP: the coordinator's daily silk credit ceiling is reached";
+pub const ERR_SEASON: &str = "ERR_SEASON: not the open season";
+pub const ERR_ENTERED: &str = "ERR_ENTERED: already entered this season";
+pub const ERR_SETTLED: &str = "ERR_SETTLED: the season is settled";
+pub const ERR_PAYOUT_CAP: &str = "ERR_PAYOUT_CAP: one payout is above the per-account cap";
+pub const ERR_PURSE: &str = "ERR_PURSE: the payouts exceed the purse plus the season's mint ceiling";
 pub const ERR_SEASON_ROOT: &str = "ERR_SEASON_ROOT: a season keeps the schedule root it was opened with";
 pub const ERR_PARAMS: &str = "ERR_PARAMS: a parameter is outside its bounds";
 
@@ -58,26 +60,33 @@ pub const WORKS: [&str; 4] = ["loom", "caravan", "archive", "observatory"];
 
 #[derive(BorshStorageKey)]
 #[near]
-enum StorageKey { Accounts, Deeds, Activation, Seasons, Nft, NftMeta, NftEnum }
+enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum }
 
-/// One account's row: balances, LP shares, today's swap use and pledge totals.
+/// One account's row: silk, entry credit (spendable only on tournament entry) and pledge totals.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Default)]
 pub struct Account {
-    pub wool: u128,
     pub silk: u128,
     pub credit: u128,
-    pub lp: u128,
-    pub swap_day: u32,
-    pub swap_wool_in: u128,
-    pub swap_silk_in: u128,
     pub staked: u128,
     pub staked_works: [u128; 4],
 }
 
+/// A sealed season: its schedule root, entrants and settlement.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Default)]
-pub struct Pool { pub wool: u128, pub silk: u128, pub shares: u128 }
+pub struct Season {
+    pub schedule_root: String,
+    pub entrants: u32,
+    /// Silk burned during the previous season (for the mint ceiling).
+    pub burn_prev: u128,
+    pub mint_cap: u128,
+    /// Purse + mint ceiling, fixed by the first settle call.
+    pub pot: u128,
+    pub paid: u128,
+    pub minted: u128,
+    pub settled: bool,
+}
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Default)]
@@ -90,9 +99,9 @@ pub struct Works {
     pub principal: u128,
     /// Reward per unit of weight, scaled by INDEX_SCALE.
     pub index: u128,
-    /// Wool credited to this works and not yet claimed.
+    /// Silk credited to this works and not yet claimed.
     pub rewards: u128,
-    /// Wool paid into this works on each of the last 7 epochs (newest first), for the displayed rate.
+    /// Silk paid into this works on each of the last 7 epochs (newest first), for the displayed rate.
     pub paid_7d: [u128; 7],
     pub weight_7d: [u128; 7],
 }
@@ -120,7 +129,7 @@ pub struct Deed {
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Default)]
-pub struct Counters { pub trade: u64, pub swap: u64, pub lp: u64, pub stake: u64, pub claim: u64, pub unbond: u64, pub withdraw: u64, pub early_exit: u64, pub sweep: u64, pub distribute: u64, pub deed_transfer: u64 }
+pub struct Counters { pub trade: u64, pub entry: u64, pub settle: u64, pub stake: u64, pub claim: u64, pub unbond: u64, pub withdraw: u64, pub early_exit: u64, pub sweep: u64, pub distribute: u64, pub deed_transfer: u64 }
 
 #[near(serializers = [json])]
 pub struct Pulse {
@@ -128,22 +137,19 @@ pub struct Pulse {
     pub counters: Counters,
     pub accounts: u32,
     pub volume_silk: String,
-    pub minted_wool: String,
-    pub burned_wool: String,
     pub minted_silk: String,
+    pub burned_silk: String,
     pub tvl_staked: String,
-    pub pool_wool: String,
-    pub pool_silk: String,
-    /// Silk per wool, micro-units (2_000_000 = 2.0).
-    pub pool_price: String,
     pub treasury_silk: String,
     pub stake_pot: String,
     pub purse: String,
     pub reserve: String,
-    /// Wool paid per 100 wool of weight per day over the last 7 epochs, micro-units, per works ("variable, can be zero").
+    /// Silk paid per 100 silk of weight per day over the last 7 epochs, micro-units, per works ("variable, can be zero").
     pub rate_7d_per_100: [String; 4],
     pub season_id: String,
     pub schedule_root: String,
+    pub season_entrants: u32,
+    pub entry_fee: String,
     pub paused: bool,
 }
 
@@ -157,7 +163,6 @@ pub struct Town {
     genesis_done: bool,
     accounts: LookupMap<AccountId, Account>,
     account_count: u32,
-    pool: Pool,
     works: [Works; 4],
     activation: LookupMap<(u8, u32), u128>,
     deeds: LookupMap<TokenId, Deed>,
@@ -168,9 +173,9 @@ pub struct Town {
     stake_pot: u128,
     purse: u128,
     reserve: u128,
-    minted_wool: u128,
-    burned_wool: u128,
     minted_silk: u128,
+    burned_silk: u128,
+    last_open_burned: u128,
     volume_silk: u128,
     credited_day: u32,
     credited_today: u128,
@@ -178,7 +183,8 @@ pub struct Town {
     last_distribute_day: u32,
     season_id: String,
     schedule_root: String,
-    seasons: LookupMap<String, String>,
+    seasons: LookupMap<String, Season>,
+    entries: LookupMap<String, bool>,
     counters: Counters,
 }
 
@@ -193,11 +199,11 @@ impl Town {
         Self {
             tokens: NonFungibleToken::new(StorageKey::Nft, env::current_account_id(), Some(StorageKey::NftMeta), Some(StorageKey::NftEnum), None::<StorageKey>),
             owner_id, coordinators, params, paused: false, genesis_done: false,
-            accounts: LookupMap::new(StorageKey::Accounts), account_count: 0, pool: Pool::default(), works: Default::default(),
+            accounts: LookupMap::new(StorageKey::Accounts), account_count: 0, works: Default::default(),
             activation: LookupMap::new(StorageKey::Activation), deeds: LookupMap::new(StorageKey::Deeds), deed_seq: 0,
-            treasury_silk: 0, station_silk: 0, stake_pot: 0, purse: 0, reserve: 0, minted_wool: 0, burned_wool: 0, minted_silk: 0, volume_silk: 0,
+            treasury_silk: 0, station_silk: 0, stake_pot: 0, purse: 0, reserve: 0, minted_silk: 0, burned_silk: 0, last_open_burned: 0, volume_silk: 0,
             credited_day: 0, credited_today: 0, last_sweep_day: 0, last_distribute_day: 0,
-            season_id: String::new(), schedule_root: String::new(), seasons: LookupMap::new(StorageKey::Seasons), counters: Counters::default(),
+            season_id: String::new(), schedule_root: String::new(), seasons: LookupMap::new(StorageKey::Seasons), entries: LookupMap::new(StorageKey::Entries), counters: Counters::default(),
         }
     }
 
@@ -242,7 +248,7 @@ impl Town {
         let p = d.pending.min(self.works[d.asset as usize].rewards);
         self.works[d.asset as usize].rewards -= p;
         d.pending = 0;
-        let mut row = self.acc(owner); row.wool += p; self.put(owner, row);
+        let mut row = self.acc(owner); row.silk += p; self.put(owner, row);
         p
     }
     fn deed_owner(&self, id: &TokenId) -> AccountId { self.tokens.owner_by_id.get(id).unwrap_or_else(|| env::panic_str(ERR_NO_DEED)) }
@@ -257,55 +263,118 @@ impl Town {
     }
     fn release_principal(&mut self, owner: &AccountId, d: &Deed, back: u128) {
         let mut row = self.acc(owner);
-        row.staked -= d.principal; row.staked_works[d.asset as usize] -= d.principal; row.wool += back;
+        row.staked -= d.principal; row.staked_works[d.asset as usize] -= d.principal; row.silk += back;
         self.put(owner, row);
         self.works[d.asset as usize].principal -= d.principal;
     }
 
     // ---------- setup ----------
-    /// Once: registers the trader accounts with their starting wool and silk and seeds the protocol-owned pool.
-    pub fn genesis(&mut self, traders: Vec<AccountId>, wool_each: U, silk_each: U, pool_wool: U, pool_silk: U) {
+    /// Once: registers the trader accounts with their starting silk.
+    pub fn genesis(&mut self, traders: Vec<AccountId>, silk_each: U) {
         self.only_owner();
-        require!(!self.genesis_done && self.pool.shares == 0, ERR_GENESIS);
+        require!(!self.genesis_done, ERR_GENESIS);
         self.genesis_done = true;
-        for t in &traders { self.register_one(t); let mut r = self.acc(t); r.wool += wool_each.0; r.silk += silk_each.0; self.put(t, r); }
-        let n = traders.len() as u128;
-        self.minted_wool += wool_each.0 * n + pool_wool.0;
-        self.minted_silk += silk_each.0 * n + pool_silk.0;
-        require!(pool_wool.0 > 0 && pool_silk.0 > 0, ERR_POOL);
-        self.pool = Pool { wool: pool_wool.0, silk: pool_silk.0, shares: isqrt(pool_wool.0 * pool_silk.0) };
-        let me = env::current_account_id(); self.register_one(&me);
-        let mut r = self.acc(&me); r.lp = self.pool.shares; self.put(&me, r);
-        event("genesis", format!(r#"{{"traders":{},"wool_each":"{}","silk_each":"{}","pool_wool":"{}","pool_silk":"{}"}}"#, n, wool_each.0, silk_each.0, pool_wool.0, pool_silk.0));
+        for t in &traders { self.register_one(t); let mut r = self.acc(t); r.silk += silk_each.0; self.put(t, r); }
+        self.minted_silk += silk_each.0 * traders.len() as u128;
+        event("genesis", format!(r#"{{"traders":{},"silk_each":"{}"}}"#, traders.len(), silk_each.0));
     }
     /// Registers accounts with empty balances (players, guests, new traders). The contract pays their row's storage.
     pub fn register(&mut self, accounts: Vec<AccountId>) { self.only_coordinator(); for a in &accounts { self.register_one(a); } }
-    /// Silk wages for the trader accounts (a game-design faucet, docs/town-economy.md).
-    pub fn credit_silk(&mut self, account_id: AccountId, amount: U) {
-        self.only_owner();
-        let mut r = self.acc(&account_id); r.silk += amount.0; self.put(&account_id, r);
-        self.minted_silk += amount.0;
-        event("silk_credit", format!(r#"{{"account":"{}","amount":"{}"}}"#, account_id, amount.0));
-    }
-    /// Wool for an account (descent settlement, corrections): only inside the coordinator's daily ceiling.
-    pub fn credit_wool(&mut self, account_id: AccountId, amount: U, reference: String) {
-        self.only_coordinator();
-        require!(reference.len() <= 64, ERR_REF);
+    fn credit_inner(&mut self, account_id: &AccountId, amount: u128) {
         let today = self.today();
         if self.credited_day != today { self.credited_day = today; self.credited_today = 0; }
-        require!(self.credited_today + amount.0 <= self.params.wool_credit_day_cap, ERR_CREDIT_CAP);
-        self.credited_today += amount.0;
-        let mut r = self.acc(&account_id); r.wool += amount.0; self.put(&account_id, r);
-        self.minted_wool += amount.0;
-        event("wool_credit", format!(r#"{{"account":"{}","amount":"{}","ref":"{}"}}"#, account_id, amount.0, reference.replace('"', "")));
+        require!(self.credited_today + amount <= self.params.credit_day_cap, ERR_CREDIT_CAP);
+        self.credited_today += amount;
+        self.minted_silk += amount;
+        let _ = account_id;
     }
-    /// Records the sealed season new deeds are opened under (its schedule root can never change once set).
-    pub fn set_season(&mut self, season_id: String, schedule_root: String) {
+    /// Silk for an account (trader wages, descent settlement, corrections): only inside the daily ceiling.
+    pub fn credit_silk(&mut self, account_id: AccountId, amount: U, reference: String) {
+        self.only_coordinator();
+        require!(reference.len() <= 64, ERR_REF);
+        self.credit_inner(&account_id, amount.0);
+        let mut r = self.acc(&account_id); r.silk += amount.0; self.put(&account_id, r);
+        event("silk_credit", format!(r#"{{"account":"{}","amount":"{}","ref":"{}"}}"#, account_id, amount.0, reference.replace('"', "")));
+    }
+    /// Entry credit for a new guest: spendable only on tournament entry (inside the same daily ceiling).
+    pub fn credit_entry(&mut self, account_id: AccountId, amount: U) {
+        self.only_coordinator();
+        self.credit_inner(&account_id, amount.0);
+        let mut r = self.acc(&account_id); r.credit += amount.0; self.put(&account_id, r);
+        event("entry_credit", format!(r#"{{"account":"{}","amount":"{}"}}"#, account_id, amount.0));
+    }
+    /// Opens the sealed season that new deeds and tournament entries belong to (its schedule root never changes).
+    pub fn open_season(&mut self, season_id: String, schedule_root: String) {
         self.only_coordinator();
         require!(season_id.len() <= 32 && schedule_root.len() <= 80 && !season_id.is_empty(), ERR_REF);
-        if let Some(r) = self.seasons.get(&season_id) { require!(*r == schedule_root, ERR_SEASON_ROOT); } else { self.seasons.insert(season_id.clone(), schedule_root.clone()); }
+        if let Some(r) = self.seasons.get(&season_id) { require!(r.schedule_root == schedule_root, ERR_SEASON_ROOT); } else {
+            let burn_prev = self.burned_silk - self.last_open_burned;
+            self.last_open_burned = self.burned_silk;
+            self.seasons.insert(season_id.clone(), Season { schedule_root: schedule_root.clone(), burn_prev, ..Default::default() });
+        }
         self.season_id = season_id.clone(); self.schedule_root = schedule_root.clone();
         event("season_open", format!(r#"{{"season_id":"{}","schedule_root":"{}"}}"#, season_id, schedule_root));
+    }
+    /// Pays the tournament entry fee in silk (entry credit first): part burned, part to the Shell Observatory's
+    /// stakers, the rest to the purse.
+    pub fn enter_tournament(&mut self, season_id: String) {
+        self.live();
+        require!(!self.season_id.is_empty() && season_id == self.season_id, ERR_SEASON);
+        let mut season = self.seasons.get(&season_id).cloned().unwrap();
+        require!(!season.settled, ERR_SETTLED);
+        let me = env::predecessor_account_id();
+        let key = format!("{}:{}", season_id, me);
+        require!(!self.entries.contains_key(&key), ERR_ENTERED);
+        let fee = self.params.entry_fee;
+        let mut row = self.acc(&me);
+        let from_credit = row.credit.min(fee);
+        require!(row.silk >= fee - from_credit, ERR_FUNDS);
+        row.credit -= from_credit; row.silk -= fee - from_credit; self.put(&me, row);
+        let sp = split_entry(&self.params, fee);
+        self.burned_silk += sp.burn;
+        self.add_to_works(3, sp.works);
+        self.purse += sp.purse;
+        season.entrants += 1; self.seasons.insert(season_id.clone(), season);
+        self.entries.insert(key, true);
+        self.counters.entry += 1;
+        event("entry", format!(r#"{{"account":"{}","season_id":"{}","fee":"{}","credit_used":"{}"}}"#, me, season_id, fee, from_credit));
+    }
+    /// Pays tournament ranks in silk (batches). The pot is the purse plus a mint bounded by the season's ceiling
+    /// (min(cap, floor + match·burned last season, per-entrant·entrants)); one payout is at most payout_cap of the pot.
+    /// `last` closes the season. The coordinator attests the ranks (`payouts_hash` of the full list is logged).
+    pub fn settle_season(&mut self, season_id: String, payouts: Vec<(AccountId, U)>, payouts_hash: String, last: bool) {
+        self.only_coordinator();
+        require!(payouts_hash.len() <= 80, ERR_REF);
+        let mut season = self.seasons.get(&season_id).cloned().unwrap_or_else(|| env::panic_str(ERR_SEASON));
+        require!(!season.settled, ERR_SETTLED);
+        if season.pot == 0 {
+            season.mint_cap = season_mint_cap(&self.params, season.burn_prev, season.entrants);
+            season.pot = self.purse + season.mint_cap;
+        }
+        let cap_one = season.pot * self.params.payout_cap_bps as u128 / BPS;
+        let mut total = 0u128;
+        for (a, amt) in &payouts {
+            require!(amt.0 <= cap_one, ERR_PAYOUT_CAP);
+            let mut r = self.acc(a); r.silk += amt.0; self.put(a, r);
+            total += amt.0;
+        }
+        require!(season.paid + total <= season.pot, ERR_PURSE);
+        let from_purse = total.min(self.purse);
+        self.purse -= from_purse;
+        let mint = total - from_purse;
+        require!(season.minted + mint <= season.mint_cap, ERR_PURSE);
+        season.minted += mint; self.minted_silk += mint;
+        season.paid += total;
+        if last { season.settled = true; }
+        self.seasons.insert(season_id.clone(), season);
+        self.counters.settle += 1;
+        event("season_settle", format!(r#"{{"season_id":"{}","payouts":{},"total":"{}","minted":"{}","hash":"{}","last":{}}}"#, season_id, payouts.len(), total, mint, payouts_hash.replace('"', ""), last));
+    }
+    /// Adds silk to a works' rewards (its stakers' share by weight), or to the purse when it has no earning weight.
+    fn add_to_works(&mut self, a: usize, amount: u128) {
+        if amount == 0 { return; }
+        self.roll(a);
+        if self.works[a].weight > 0 { let inc = amount * INDEX_SCALE / self.works[a].weight; self.works[a].index += inc; self.works[a].rewards += amount; } else { self.purse += amount; }
     }
     pub fn set_params(&mut self, params: Params) {
         self.only_owner();
@@ -334,65 +403,8 @@ impl Town {
         event("trade", format!(r#"{{"from":"{}","to":"{}","silk":"{}","fee":"{}","ref":"{}","n":{}}}"#, me, counterparty, silk.0, fee, reference.replace('"', ""), self.counters.trade));
     }
 
-    // ---------- pool ----------
-    fn swap_inner(&mut self, who: &AccountId, wool_in: bool, amount: u128, min_out: u128, capped: bool) -> u128 {
-        require!(self.pool.shares > 0 && amount > 0, ERR_POOL);
-        let today = self.today();
-        let mut row = self.acc(who);
-        if capped {
-            if row.swap_day != today { row.swap_day = today; row.swap_wool_in = 0; row.swap_silk_in = 0; }
-            let (used, reserve) = if wool_in { (row.swap_wool_in, self.pool.wool) } else { (row.swap_silk_in, self.pool.silk) };
-            require!(used + amount <= reserve * self.params.swap_cap_bps as u128 / BPS, ERR_SWAP_CAP);
-            if wool_in { row.swap_wool_in += amount } else { row.swap_silk_in += amount }
-        }
-        let (x, y) = if wool_in { (self.pool.wool, self.pool.silk) } else { (self.pool.silk, self.pool.wool) };
-        let q = swap_quote(&self.params, x, y, amount);
-        require!(q.out >= min_out && q.out > 0, ERR_MIN_OUT);
-        if wool_in {
-            require!(row.wool >= amount, ERR_FUNDS);
-            row.wool -= amount; row.silk += q.out;
-            self.pool.wool += amount - q.to_stakers; self.pool.silk -= q.out; self.stake_pot += q.to_stakers;
-        } else {
-            require!(row.silk >= amount, ERR_FUNDS);
-            row.silk -= amount; row.wool += q.out;
-            self.pool.silk += amount - q.to_stakers; self.pool.wool -= q.out; self.treasury_silk += q.to_stakers;
-        }
-        self.put(who, row);
-        q.out
-    }
-    pub fn swap_wool_for_silk(&mut self, amount: U, min_out: U) -> U {
-        self.live(); let me = env::predecessor_account_id();
-        let out = self.swap_inner(&me, true, amount.0, min_out.0, true); self.counters.swap += 1;
-        event("swap", format!(r#"{{"account":"{}","in":"{}","in_asset":"wool","out":"{}"}}"#, me, amount.0, out)); U(out)
-    }
-    pub fn swap_silk_for_wool(&mut self, amount: U, min_out: U) -> U {
-        self.live(); let me = env::predecessor_account_id();
-        let out = self.swap_inner(&me, false, amount.0, min_out.0, true); self.counters.swap += 1;
-        event("swap", format!(r#"{{"account":"{}","in":"{}","in_asset":"silk","out":"{}"}}"#, me, amount.0, out)); U(out)
-    }
-    pub fn add_liquidity(&mut self, wool_max: U, silk_max: U, min_shares: U) -> U {
-        self.live(); let me = env::predecessor_account_id();
-        require!(self.pool.shares > 0, ERR_POOL);
-        let (shares, w, s) = lp_add(&self.pool.wool, &self.pool.silk, self.pool.shares, wool_max.0, silk_max.0);
-        require!(shares > 0 && shares >= min_shares.0, ERR_MIN_OUT);
-        let mut row = self.acc(&me); require!(row.wool >= w && row.silk >= s, ERR_FUNDS);
-        row.wool -= w; row.silk -= s; row.lp += shares; self.put(&me, row);
-        self.pool.wool += w; self.pool.silk += s; self.pool.shares += shares; self.counters.lp += 1;
-        event("liquidity_add", format!(r#"{{"account":"{}","wool":"{}","silk":"{}","shares":"{}"}}"#, me, w, s, shares)); U(shares)
-    }
-    pub fn remove_liquidity(&mut self, shares: U, min_wool: U, min_silk: U) -> (U, U) {
-        self.live(); let me = env::predecessor_account_id();
-        let mut row = self.acc(&me); require!(shares.0 > 0 && row.lp >= shares.0, ERR_FUNDS);
-        let w = self.pool.wool * shares.0 / self.pool.shares; let s = self.pool.silk * shares.0 / self.pool.shares;
-        require!(w >= min_wool.0 && s >= min_silk.0, ERR_MIN_OUT);
-        require!(shares.0 < self.pool.shares, ERR_POOL); // the pool is never emptied
-        row.lp -= shares.0; row.wool += w; row.silk += s; self.put(&me, row);
-        self.pool.wool -= w; self.pool.silk -= s; self.pool.shares -= shares.0; self.counters.lp += 1;
-        event("liquidity_remove", format!(r#"{{"account":"{}","wool":"{}","silk":"{}","shares":"{}"}}"#, me, w, s, shares.0)); (U(w), U(s))
-    }
-
     // ---------- pledges ----------
-    /// Pledges `amount` wool to works `asset` for lock `tier`; mints a deed to the caller. Attach DEED_DEPOSIT.
+    /// Pledges `amount` silk to works `asset` for lock `tier`; mints a deed to the caller. Attach DEED_DEPOSIT.
     #[payable]
     pub fn stake(&mut self, asset: u8, amount: U, tier: u8) -> TokenId {
         self.live();
@@ -402,12 +414,12 @@ impl Town {
         let me = env::predecessor_account_id();
         let fee = self.params.deed_fee;
         let mut row = self.acc(&me);
-        require!(amount.0 > 0 && row.wool >= amount.0 + fee, ERR_FUNDS);
+        require!(amount.0 > 0 && row.silk >= amount.0 + fee, ERR_FUNDS);
         let (cap, cap_asset) = self.cap();
         require!(row.staked + amount.0 <= cap && row.staked_works[asset as usize] + amount.0 <= cap_asset, ERR_CAP);
-        row.wool -= amount.0 + fee; row.staked += amount.0; row.staked_works[asset as usize] += amount.0;
+        row.silk -= amount.0 + fee; row.staked += amount.0; row.staked_works[asset as usize] += amount.0;
         self.put(&me, row);
-        self.burned_wool += fee;
+        self.burned_silk += fee;
         let a = asset as usize;
         self.roll(a);
         let today = self.today();
@@ -424,7 +436,7 @@ impl Town {
         self.deeds.insert(id.clone(), d);
         let meta = TokenMetadata {
             title: Some(format!("Town deed: {} · tier {}", WORKS[a], tier)),
-            description: Some("A pledge of wool (a testnet game resource) to a town works. Live state: get_deed.".into()),
+            description: Some("A pledge of silk (the town's testnet game currency) to a town works. Live state: get_deed.".into()),
             extra: Some(format!(r#"{{"v":1,"kind":"town_deed","asset":"{}","principal":"{}","tier":{},"opened_day":{},"season_id":"{}","schedule_root":"{}"}}"#, WORKS[a], amount.0, tier, today, self.season_id, self.schedule_root)),
             media: None, media_hash: None, copies: None, issued_at: None, expires_at: None, starts_at: None, updated_at: None, reference: None, reference_hash: None,
         };
@@ -441,7 +453,7 @@ impl Town {
         self.accrue(&mut d);
         let p = self.pay_pending(&mut d, &me);
         self.deeds.insert(token_id.clone(), d); self.counters.claim += 1;
-        event("claim", format!(r#"{{"account":"{}","deed":"{}","wool":"{}"}}"#, me, token_id, p)); U(p)
+        event("claim", format!(r#"{{"account":"{}","deed":"{}","silk":"{}"}}"#, me, token_id, p)); U(p)
     }
     pub fn begin_unbond(&mut self, token_id: TokenId) {
         let me = env::predecessor_account_id();
@@ -483,9 +495,8 @@ impl Town {
         let p = self.pay_pending(&mut d, &me);
         let pen = d.principal * self.params.early_exit_bps as u128 / BPS;
         let burn = pen / 2; let share = pen - burn;
-        self.burned_wool += burn;
-        let a = d.asset as usize;
-        if self.works[a].weight > 0 { let inc = share * INDEX_SCALE / self.works[a].weight; self.works[a].index += inc; self.works[a].rewards += share; } else { self.purse += share; }
+        self.burned_silk += burn;
+        self.add_to_works(d.asset as usize, share);
         self.release_principal(&me, &d, d.principal - pen);
         let dep = self.burn_deed(&token_id, &me);
         if dep > 0 { Promise::new(me.clone()).transfer(NearToken::from_yoctonear(dep)).detach(); }
@@ -495,28 +506,21 @@ impl Town {
     }
 
     // ---------- fee flow ----------
-    /// Once per epoch, anyone: the treasury's silk buys wool in the pool (at most 1 % of the silk reserve, so the price
-    /// moves ~2 % at most; the rest waits), then 65 % goes to the stake pot, 10 % to the purse, 10 % to the reserve, 15 % burned.
+    /// Once per epoch, anyone: 12 % of the treasury's silk goes to the station bucket (P2); the rest splits 65 % to the
+    /// stake pot, 10 % to the tournament purse, 10 % to the Shell Reserve, 15 % burned.
     pub fn sweep_fees(&mut self) -> U {
         let today = self.today();
         require!(self.last_sweep_day < today || (self.last_sweep_day == 0 && self.counters.sweep == 0), ERR_ONCE_A_DAY);
         self.last_sweep_day = today;
         let station = self.treasury_silk * self.params.station_tax_bps as u128 / BPS;
-        self.station_silk += station; self.treasury_silk -= station;
-        let max_in = self.pool.silk * self.params.sweep_max_bps as u128 / BPS;
-        let silk_in = self.treasury_silk.min(max_in);
-        let mut bought = 0;
-        if silk_in > 0 && self.pool.shares > 0 {
-            let q = swap_quote(&self.params, self.pool.silk, self.pool.wool, silk_in);
-            self.treasury_silk -= silk_in;
-            self.pool.silk += silk_in - q.to_stakers; self.pool.wool -= q.out; self.treasury_silk += q.to_stakers;
-            bought = q.out;
-        }
-        let s = split_bought(&self.params, bought);
-        self.stake_pot += s.stakers; self.purse += s.purse; self.reserve += s.reserve; self.burned_wool += s.burn;
+        self.station_silk += station;
+        let swept = self.treasury_silk - station;
+        self.treasury_silk = 0;
+        let s = split_sweep(&self.params, swept);
+        self.stake_pot += s.stakers; self.purse += s.purse; self.reserve += s.reserve; self.burned_silk += s.burn;
         self.counters.sweep += 1;
-        event("sweep", format!(r#"{{"silk_in":"{}","wool":"{}","stakers":"{}","purse":"{}","reserve":"{}","burn":"{}"}}"#, silk_in, bought, s.stakers, s.purse, s.reserve, s.burn));
-        U(bought)
+        event("sweep", format!(r#"{{"silk":"{}","station":"{}","stakers":"{}","purse":"{}","reserve":"{}","burn":"{}"}}"#, swept, station, s.stakers, s.purse, s.reserve, s.burn));
+        U(swept)
     }
     /// Once per epoch, anyone: shares the stake pot over the works with earning weight (base shares renormalised),
     /// each capped at the rate ceiling per unit of weight; the excess goes to the purse.
@@ -544,11 +548,6 @@ impl Town {
     // ---------- views ----------
     pub fn balance_of(&self, account_id: AccountId) -> Option<Account> { self.accounts.get(&account_id).cloned() }
     pub fn balances_of(&self, account_ids: Vec<AccountId>) -> Vec<Option<Account>> { account_ids.iter().take(50).map(|a| self.accounts.get(a).cloned()).collect() }
-    pub fn pool_state(&self) -> Pool { self.pool.clone() }
-    pub fn quote_swap(&self, wool_in: bool, amount: U) -> U {
-        let (x, y) = if wool_in { (self.pool.wool, self.pool.silk) } else { (self.pool.silk, self.pool.wool) };
-        if x == 0 { return U(0); } U(swap_quote(&self.params, x, y, amount.0).out)
-    }
     pub fn stake_pools(&self) -> Vec<Works> { self.works.to_vec() }
     pub fn get_deed(&self, token_id: TokenId) -> Option<(AccountId, Deed, U)> {
         let owner = self.tokens.owner_by_id.get(&token_id)?;
@@ -559,23 +558,24 @@ impl Town {
         Some((owner, d, U(claimable)))
     }
     pub fn params(&self) -> Params { self.params.clone() }
+    pub fn season(&self, season_id: String) -> Option<Season> { self.seasons.get(&season_id).cloned() }
+    pub fn has_entered(&self, season_id: String, account_id: AccountId) -> bool { self.entries.contains_key(&format!("{}:{}", season_id, account_id)) }
     pub fn pulse(&self) -> Pulse {
         let rate = |w: &Works| { let paid: u128 = w.paid_7d.iter().sum(); let wt: u128 = w.weight_7d.iter().sum(); if wt == 0 { 0 } else { paid * 100 * 1_000_000 / wt } };
         let s = |v: u128| v.to_string();
+        let entrants = self.seasons.get(&self.season_id).map(|x| x.entrants).unwrap_or(0);
         Pulse {
             day: self.today(), counters: self.counters.clone(), accounts: self.account_count, volume_silk: s(self.volume_silk),
-            minted_wool: s(self.minted_wool), burned_wool: s(self.burned_wool), minted_silk: s(self.minted_silk), tvl_staked: s(self.tvl()),
-            pool_wool: s(self.pool.wool), pool_silk: s(self.pool.silk), pool_price: s(if self.pool.wool == 0 { 0 } else { self.pool.silk * 1_000_000 / self.pool.wool }),
+            minted_silk: s(self.minted_silk), burned_silk: s(self.burned_silk), tvl_staked: s(self.tvl()),
             treasury_silk: s(self.treasury_silk), stake_pot: s(self.stake_pot), purse: s(self.purse), reserve: s(self.reserve),
             rate_7d_per_100: [s(rate(&self.works[0])), s(rate(&self.works[1])), s(rate(&self.works[2])), s(rate(&self.works[3]))],
-            season_id: self.season_id.clone(), schedule_root: self.schedule_root.clone(), paused: self.paused,
+            season_id: self.season_id.clone(), schedule_root: self.schedule_root.clone(), season_entrants: entrants, entry_fee: s(self.params.entry_fee), paused: self.paused,
         }
     }
-    /// Sum of every place wool can be (for the conservation check): must equal minted - burned.
-    pub fn wool_held_outside_accounts(&self) -> U {
-        U(self.pool.wool + self.stake_pot + self.purse + self.reserve + self.works.iter().map(|w| w.rewards + w.principal).sum::<u128>())
+    /// Every place silk can be outside account rows (for the conservation check: minted − burned = rows + this).
+    pub fn silk_held_outside_accounts(&self) -> U {
+        U(self.treasury_silk + self.station_silk + self.stake_pot + self.purse + self.reserve + self.works.iter().map(|w| w.rewards + w.principal).sum::<u128>())
     }
-    pub fn silk_held_outside_accounts(&self) -> U { U(self.pool.silk + self.treasury_silk + self.station_silk) }
 
     // ---------- deed transfer rules ----------
     fn before_transfer(&mut self, from: &AccountId, to: &AccountId, token_id: &TokenId) {
