@@ -165,3 +165,11 @@ test('hub: a Shell glows gold only for signs that can still pay (QA-007)', async
   assert.ok(past.length > 0, 'the season has past signs to filter');
   s.dispose();
 });
+
+test('a T or F press swallowed during a trial end or a flight is answered (jury live run, 12.11)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/play/hub-ui.js', import.meta.url), 'utf8');
+  assert.match(src, /if \(\(hub\.transit \|\| hub\.busy\) && \(code === 'KeyF' \|\| code === 'KeyT'\)\) \{ busyNote\(code === 'KeyT' \? 'hub\.busy\.trial' : 'hub\.busy\.flight'\); return true; \}/);
+  const { PLAY_MESSAGES } = await import('../../src/play/i18n.js');
+  for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of ['hub.busy.trial', 'hub.busy.flight']) assert.ok(PLAY_MESSAGES[loc][k], `${loc} ${k}`);
+});
