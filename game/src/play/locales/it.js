@@ -677,7 +677,7 @@ export default {
   'holder.note': "Inserisci un account testnet. Se possiede un NFT di Forget to Foresee (frammento di memoria, carta agente o Elise), il gioco sblocca un titolo e una cornice del ritratto in questo browser. Nessun wallet, nessuna firma, nulla viene scritto on-chain.",
   'holder.account': "ID account testnet",
   'holder.check': "Verifica",
-  'holder.tryJudge': "Prova l'account della giuria",
+  'holder.tryJudge': "Prova l'account demo",
   'holder.active': "Attivo: {account} · {title}",
   'holder.invalid': "Non è un ID account NEAR.",
   'holder.none': "{account} non possiede NFT di Forget to Foresee, nulla è sbloccato.",

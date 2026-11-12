@@ -678,7 +678,7 @@ export default {
   'holder.note': "Enter any testnet account. If it holds a Forget to Foresee NFT (memory shard, agent card or Elise), the game unlocks a title and a portrait frame in this browser. No wallet, no signature, nothing is written on-chain.",
   'holder.account': "Testnet account id",
   'holder.check': "Check",
-  'holder.tryJudge': "Try the judge account",
+  'holder.tryJudge': "Try the demo account",
   'holder.active': "Active: {account} · {title}",
   'holder.invalid': "That is not a NEAR account id.",
   'holder.none': "{account} holds no Forget to Foresee NFT, so nothing is unlocked.",

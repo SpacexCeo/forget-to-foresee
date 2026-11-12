@@ -1,6 +1,8 @@
 // POST /api/chest/open {account_id, public_key, at, signature} -> {opening, outcome, leaf, proof, root, tx_hash, seed}
+// Batch: add {count: 1-10, request_id} (signed as "ftf-chest-open|<account>|<at>|<count>|<request id>") ->
+//   {requested, opened, cut, tx_hash, transactions: 1, openings: [{opening, outcome, leaf, proof, root}]}
 import { cors, createBucket, createQueue, envConfig, clientIp } from '../../lib/core.js';
-import { chestEnv, createReplayGuard, openChest, signatureValid, validateOpen } from '../../lib/chest.js';
+import { chestEnv, createReplayGuard, openChest, openChests, signatureValid, validateOpen } from '../../lib/chest.js';
 
 const bucket = createBucket({ capacity: 5, refillMs: 60 * 1000 });
 const queue = createQueue();
@@ -30,7 +32,9 @@ export function chestHandler(opts = {}) {
     if (!lim.ok) { res.setHeader('Retry-After', String(lim.retryAfterS)); return json(res, 429, { error: 'rate_limited' }); }
     if (!(opts.replay || replay).use(v.signature)) return json(res, 409, { error: 'replayed' });
     try {
-      const r = await openChest(v, { ...ccfg, rpcUrls: cfg.rpcUrls, fetch: opts.fetch || globalThis.fetch, queue });
+      const r = v.count != null
+        ? await openChests(v, { ...ccfg, rpcUrls: cfg.rpcUrls, fetch: opts.fetch || globalThis.fetch, queue }) // a batch: one transaction, up to 10 openings
+        : await openChest(v, { ...ccfg, rpcUrls: cfg.rpcUrls, fetch: opts.fetch || globalThis.fetch, queue });
       return json(res, r.status, r.body);
     } catch (e) { return json(res, 502, { error: 'rpc', message: String((e && e.message) || e).slice(0, 120) }); }
   };

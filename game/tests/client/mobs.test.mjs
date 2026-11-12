@@ -3,7 +3,7 @@
 // the kill, respawn; never leave the leash or cross into the town.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MobBrain, PACKS, MOB_TYPES, LEASH, CAST_DAMAGE, alongLine } from '../../src/play/mobs.js';
+import { MobBrain, PACKS, MOB_TYPES, LEASH, CAST_DAMAGE, alongLine, PURSUIT } from '../../src/play/mobs.js';
 import { onField } from '../../src/scenes/town-outside.js';
 
 const O = [0, 1200, 0];
@@ -282,4 +282,73 @@ test('quick cast: the lance flies toward the cursor; the snare lands on the curs
   const src = readFileSync(new URL('../../src/scenes/town-casting.js', import.meta.url), 'utf8');
   assert.match(src, /if \(quickOn\(\)\) \{/, 'Q / V go through quick cast when it is on');
   assert.match(src, /quick\.hidden = coarse/, 'hidden on touch');
+});
+
+// Provoked pursuit (owner 12.11: the boss could be harassed from range and never came): any damage from any distance
+// aggroes the creature on her at once; it closes in (the boss also answers from range) and resets only when she has
+// truly left for PURSUIT.lose seconds, then heals back.
+const clearLine = (a, b) => { for (let k = 0; k <= 20; k++) { const t = k / 20; if (!onField(...local([a[0] + (b[0] - a[0]) * t, 0, a[2] + (b[2] - a[2]) * t]))) return false; } return true; };
+function rangedSpot(m, d, minHome = 0) {
+  const home = m.pack.home;
+  for (let i = 0; i < 128; i++) {
+    const a = (i / 128) * Math.PI * 2, p = [m.pos[0] + Math.sin(a) * d, O[1], m.pos[2] + Math.cos(a) * d], dh = Math.hypot(p[0] - home[0], p[2] - home[2]);
+    if (dh >= minHome && dh < PURSUIT.radius - 4 && clearLine(m.pos, p)) return p;
+  }
+  return null;
+}
+const landed = (ev, m) => ev.some((e) => e.mob === m && ((e.kind === 'impact' && e.hit) || e.kind === 'shot'));
+
+test('any damage from max skill range aggroes every monster type on her within one tick, and it comes to fight', () => {
+  for (const type of Object.keys(MOB_TYPES)) {
+    const b = new MobBrain({ origin: O, seed: 4 });
+    const m = b.mobs.find((x) => x.type === type);
+    const at = rangedSpot(m, 16.5); assert.ok(at, type + ': a ranged spot');
+    const iris = { pos: at, alive: true, outside: true };
+    assert.equal(run(b, 1, iris).some((e) => e.mob === m && e.kind === 'attack'), false, type + ': 16.5 m away it has not noticed her');
+    const dir = [(m.pos[0] - at[0]) / 16.5, (m.pos[2] - at[2]) / 16.5];
+    b.cast({ id: 'snare', from: at, dir, point: [at[0] + dir[0] * 14, at[1], at[2] + dir[1] * 14] });   // the snare at its full range, its ring reaching the creature
+    let ev = [];
+    for (let k = 0; k < 40 && !ev.some((e) => e.kind === 'hit' && e.mob === m); k++) ev = b.step(1 / 30, iris, flat);
+    assert.ok(ev.some((e) => e.kind === 'hit' && e.mob === m), type + ': hit');
+    b.step(1 / 30, iris, flat);
+    assert.ok(m.provoked, type + ': provoked'); assert.ok(['chase', 'stagger'].includes(m.state), type + ': aggro at once, not ' + m.state);
+    ev = run(b, 14, iris);
+    assert.ok(landed(ev, m), type + ': it reached her (or shot at her) while she stood still');
+  }
+});
+
+test('no safe spot by the boss: from beyond its old leash it closes in and answers from range', () => {
+  const b = new MobBrain({ origin: O, seed: 6 });
+  const boss = b.mobs.find((x) => x.T.elite);
+  const at = rangedSpot(boss, 21, LEASH + MOB_TYPES.crownrift.attack + 1); assert.ok(at, 'a spot beyond the old leash');
+  const iris = { pos: at, alive: true, outside: true };
+  const ev0 = []; b.damage(boss, 25, ev0); assert.ok(boss.provoked);
+  const ev = run(b, 12, iris);
+  assert.ok(landed(ev, boss), 'the boss strikes or shoots her');
+  const d = Math.hypot(boss.pos[0] - at[0], boss.pos[2] - at[2]);
+  assert.ok(d < 21 - 3, 'it came closer: ' + d.toFixed(1));
+  // kiting from a fixed spot just out of melee: the crown bolt answers
+  const b2 = new MobBrain({ origin: O, seed: 6 }), boss2 = b2.mobs.find((x) => x.T.elite);
+  const at2 = rangedSpot(boss2, 10); const iris2 = { pos: at2, alive: true, outside: true };
+  b2.damage(boss2, 25, []); boss2.root = 99;                                       // held in a snare: it cannot close in
+  const ev2 = run(b2, 8, iris2);
+  assert.ok(ev2.some((e) => e.mob === boss2 && e.kind === 'shot' && e.damage === MOB_TYPES.crownrift.answer.damage), 'a ranged answer while held');
+});
+
+test('the leash reset: only after she truly leaves for PURSUIT.lose s; then it walks home and heals back', () => {
+  const b = new MobBrain({ origin: O, seed: 8 });
+  const m = b.mobs.find((x) => x.type === 'hulker');
+  const at = rangedSpot(m, 15); const iris = { pos: at, alive: true, outside: true };
+  b.damage(m, 60, []); run(b, 1, iris);
+  iris.outside = false;                                                            // she runs back into the town ...
+  run(b, PURSUIT.lose - 1, iris);
+  assert.ok(m.provoked, 'a short break does not reset it');
+  iris.outside = true; run(b, 0.5, iris); iris.outside = false;                    // ... out again for a moment: the count restarts
+  run(b, PURSUIT.lose - 1, iris);
+  assert.ok(m.provoked, 'still provoked');
+  run(b, 2, iris);
+  assert.equal(m.provoked, false, 'gone long enough: reset');
+  run(b, 30, iris);
+  assert.equal(m.hp, MOB_TYPES.hulker.hp, 'healed back');
+  assert.ok(Math.hypot(m.pos[0] - m.pack.home[0], m.pos[2] - m.pack.home[2]) <= LEASH + 1e-6, 'back inside its leash');
 });

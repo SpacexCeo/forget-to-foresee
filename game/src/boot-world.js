@@ -306,7 +306,7 @@ if (townMode.town) {
   ];
   // The Expedition (?story=1 only, docs/plans/story): the citizens' quests, the objective line and the Gate-Loom by the
   // spawn; loaded lazily so the default (judge) page carries none of it. Its spots join this list (same array).
-  if (params.get('story') === '1' && !townQuests) {
+  if (params.get('story') !== '0' && !townQuests) {
     Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js')]).then(([qm, pm, im, bm, tee]) => {
       if (townQuests || !inTown) return;
       townQuests = qm.createTownQuests({ storage: ctx.storage, townLedger, i18n: ctx.i18n, folkAt, inventory: im.createInventory({ storage: ctx.storage }), chests: chestBag,
@@ -330,7 +330,7 @@ if (townMode.town) {
     townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, critters: () => params.get('mobs') === '0', onPickup: () => toast(ctx.i18n.t('chest.found')) });
     window.addEventListener('ftf:mob-killed', (e) => { if (townMonsters && inTown && e.detail) townMonsters.drop(e.detail.pos, e.detail.elite); });
     // ?story=1 (story TZ Q2): salvage drops, the spare part's source: a part, a toast and a brass spark on a kill
-    if (params.get('story') === '1' && !salvageView) import('./scenes/salvage-view.js').then((m) => { salvageView = m.createSalvageView({ scene, storage: ctx.storage, toast, t: (k) => ctx.i18n.t(k), reduced: () => lookdev.reducedMotion }); }).catch((e) => console.warn('[salvage]', e));
+    if (params.get('story') !== '0' && !salvageView) import('./scenes/salvage-view.js').then((m) => { salvageView = m.createSalvageView({ scene, storage: ctx.storage, toast, t: (k) => ctx.i18n.t(k), reduced: () => lookdev.reducedMotion }); }).catch((e) => console.warn('[salvage]', e));
     // the profile button carries the number of sealed chests (a small gold badge), so a found chest is not forgotten
     const badgeChests = () => { const b = document.querySelector('.ftf-town-profile'); if (!b) return; const n = chestBag.sealed().length; if (n) b.dataset.chests = String(n); else delete b.dataset.chests; }; // generated content: read with the label
     chestBag.subscribe(badgeChests); badgeChests();
@@ -405,7 +405,7 @@ if (townMode.town) {
   // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story dispatches window
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
-  if (params.get('story') === '1' && !endgamePass) mountEndgamePass();
+  if (params.get('story') !== '0' && !endgamePass) mountEndgamePass();
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
@@ -709,7 +709,8 @@ async function startDay1() {
   await m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
-    { key: 'day1.hint.trailers', buttons: [{ key: 'day1.hint.watch', fn: async () => {
+    { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
+     { key: 'day1.hint.watch', fn: async () => {
       await m.playTrailer({ t, keys: ['day1.trailer.hero.1', 'day1.trailer.hero.2', 'day1.trailer.hero.3'], camera: orbit(0.004) });
       await m.playTrailer({ t, keys: ['day1.trailer.town.1', 'day1.trailer.town.2', 'day1.trailer.town.3'], camera: orbit(-0.004) });
       rig.dist = TOWN_CAMERA.dist;
