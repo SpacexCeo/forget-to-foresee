@@ -41,8 +41,9 @@ export function showPremise(doc, t, { params, reducedMotion = false, ms = PREMIS
   doc.body.append(el);
   if (p.animate) requestAnimationFrame(() => { el.style.opacity = '1'; });
   let timer = 0;
+  let watch = 0;
   const hide = () => {
-    clearTimeout(timer);
+    clearTimeout(timer); clearInterval(watch);
     doc.removeEventListener('keydown', hide, true);
     doc.removeEventListener('pointerdown', hide, true);
     if (p.animate) { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); } else el.remove();
@@ -50,5 +51,7 @@ export function showPremise(doc, t, { params, reducedMotion = false, ms = PREMIS
   timer = setTimeout(hide, ms);
   doc.addEventListener('keydown', hide, true);   // capture, passive: the key still reaches the game
   doc.addEventListener('pointerdown', hide, true);
+  // a Day-1 panel (welcome, name, cards) takes the screen: the premise steps aside at once (phone overlap, 12.11)
+  watch = setInterval(() => { if (doc.querySelector('.d1-panel, .d1-title, .d1-card')) hide(); }, 250);
   return el;
 }

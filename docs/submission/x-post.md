@@ -49,7 +49,7 @@ contract.)
 > @NearLegion @NearBuilders
 
 (278 characters. The browser plays its own local room; the HTTP API (`server/`, run locally) runs the same room module
-for agents. "1,000+ tests" = the sum of docs/STATS.md (1,003 on 12.11: game, API, relayer and eight contracts); regenerate with
+for agents. "1,000+ tests" = the sum of docs/STATS.md (1,025 on 12.11: game, API, relayer and eight contracts); regenerate with
 `node scripts/stats.mjs --write` and recount before posting.)
 
 Character counts: X counts each URL as 23 characters; recount after any edit.
