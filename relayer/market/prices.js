@@ -10,9 +10,11 @@
 //      scarcity = (STOCK_REF / max(stock, 1)) ^ SCARCITY_POWER     fewer units on the shelf → dearer
 //      demand   = 1 + DEMAND_WEIGHT × (demand / DEMAND_REF − 1)    more buyers than usual → dearer
 //    Flood the market (big stock) and the price falls; buy a stall empty and it rises.
-// 4. A trader whose silk falls below BANKRUPT_SILK closes its stall: it stops buying and making goods and only sells
-//    off what is left on its shelf, until its purse is back above REOPEN_SILK (from those sales, wages, or later an
-//    investor's pledge into the stall).
+// 4. Buyers answer prices: the chance of picking a good is weighted by (base / price) ^ ELASTICITY, so a dear good is
+//    bought less and a flooded, cheap one more. This is what clears gluts and lets empty shelves refill.
+// 5. A trader whose silk falls below BANKRUPT_SILK closes its stall: it stops buying and makes goods at CLOSED_MAKES
+//    of its pace, selling its way back, until its purse is above REOPEN_SILK again (from sales, wages, or an
+//    investor's pledge into the stall: ftf-town invest_stall).
 // Prices are in fifths of a silk (PRICE_UNIT in lib/town-traders.js): bread's base 3 = 0.6 silk.
 
 export const STOCK_CAP = 240;
@@ -26,6 +28,8 @@ export const DEMAND_HALF_LIFE_MIN = 45;
 export const PRICE_BAND = Object.freeze([0.5, 2]);
 export const BANKRUPT_SILK = 40;
 export const REOPEN_SILK = 120;
+export const ELASTICITY = 2;
+export const CLOSED_MAKES = 0.5;
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
@@ -37,6 +41,9 @@ export function priceOf({ id, base }, stock, demand) {
   const price = Math.max(1, Math.round(base * factor));
   return { price, reason: reasonFor(id, stock, demand, factor) };
 }
+
+/** How much a price draws or repels buyers: (base / price) ^ ELASTICITY. */
+export const choiceWeight = ({ base }, price) => Math.pow(base / Math.max(1, price), ELASTICITY);
 
 /** The trader's words for a price ("dear: only 3 iron left, demand rose"). */
 export function reasonFor(id, stock, demand, factor) {
