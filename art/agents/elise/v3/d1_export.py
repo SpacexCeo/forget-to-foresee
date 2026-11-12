@@ -14,7 +14,7 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.kdtree import KDTree
 from PIL import Image
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); import review
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); import review, face_art
 a = sys.argv[sys.argv.index('--') + 1:]; WD, NAME, MM, LOD = a[0], a[1], float(a[2]), float(a[3])
 ao = bpy.data.objects['elise_rig']; O = {o.name: o for o in bpy.data.objects if o.type == 'MESH'}
 sstep = lambda t: (lambda u: u * u * (3 - 2 * u))(np.clip(t, 0, 1))
@@ -61,6 +61,9 @@ CH, CO = np.array([44, 44, 54.0]), np.array([30, 52, 190.0]); HX0, HX1, HY0, HY1
 for y in range(HY0 - 40, HY1 + 40):
     t = float(sstep((HY1 - y) / (HY1 - HY0))); c = tuple(int(v) for v in CH + (CO - CH) * t)
     for x in range(HX0, HX1): px[x, y] = c
+EYE_BLOCK = {}                                         # closed eyes for the blink patches
+for k, (sd, sg) in enumerate((('L', 1), ('R', -1))):
+    ce = face_art.closed_eye(sg); atlas.paste(ce, (1660, 520 + 260 * k)); EYE_BLOCK[sd] = (1660, 520 + 260 * k, ce.size[0], ce.size[1])
 atlas.save(WD + '/elise_atlas.png')
 img = bpy.data.images.load(WD + '/elise_atlas.png'); img.pack()
 mat = bpy.data.materials.new('elise_toon'); mat.use_nodes = True; bs = mat.node_tree.nodes['Principled BSDF']; bs.inputs['Roughness'].default_value = 1.0; bs.inputs['Metallic'].default_value = 0.0
@@ -88,6 +91,32 @@ def flat(o, pick):
         for li in p.loop_indices: ul[li].uv = SWUV[pick(names[p.material_index] if names else '')]
 flat(pin, lambda n: n if n in SWUV else 'metal')
 for n in ('gown', 'stockings', 'shoes', 'ribbons', 'lacing'): flat(O['elise_' + n], lambda _, n=n: n)
+# ---------------- blink patches: a drawn closed eye on a small sheet over each eye, resting 6 mm behind the face skin;
+# the morph targets bring it 1 mm in front of the skin
+HW_, LO_, HI_, HIDE, SHOW = 0.031, 0.018, 0.022, 0.006, 0.0011
+bvh_b = BVHTree.FromPolygons([Vector(v) for v in vcol(body)], [tuple(p.vertices) for p in body.data.polygons])
+pv, pf, puv, pside = [], [], [], []
+for sd, sg in (('L', 1), ('R', -1)):
+    cx, cz = sg * (body['eye_dx'] + 0.0015), body['eye_z']; NXp, NZp = 8, 6; x0, y0, w_, h_ = EYE_BLOCK[sd]; base = len(pv)
+    for j in range(NZp + 1):
+        for i in range(NXp + 1):
+            fx, fz = i / NXp, j / NZp; x = cx - HW_ + 2 * HW_ * fx; z = cz - LO_ + (LO_ + HI_) * fz
+            hit = bvh_b.ray_cast(Vector((x, -0.5, z)), Vector((0, 1, 0)), 1.0)[0]; pv.append((x, (hit.y if hit else -0.09) + HIDE, z)); pside.append(1 if sd == 'L' else 2)
+            puv.append(((x0 + 3 + (w_ - 6) * fx) / T, 1 - (y0 + 3 + (h_ - 6) * (1 - fz)) / T))
+    pf += [(base + j * (NXp + 1) + i, base + j * (NXp + 1) + i + 1, base + (j + 1) * (NXp + 1) + i + 1, base + (j + 1) * (NXp + 1) + i) for j in range(NZp) for i in range(NXp)]
+fm = bpy.data.meshes.new('elise_face'); fm.from_pydata(pv, [], pf); fm.update(); fo = bpy.data.objects.new('elise_face', fm); bpy.context.scene.collection.objects.link(fo)
+ul = fm.uv_layers.new(name='UVMap').data
+for p in fm.polygons:
+    for li, v in zip(p.loop_indices, p.vertices): ul[li].uv = puv[v]
+    if p.normal.y > 0: pass
+b_ = bmesh.new(); b_.from_mesh(fm); bmesh.ops.recalc_face_normals(b_, faces=b_.faces[:]); b_.normal_update()
+if sum(f.normal.y for f in b_.faces) > 0: bmesh.ops.reverse_faces(b_, faces=b_.faces[:])
+b_.to_mesh(fm); b_.free()
+fo.vertex_groups.new(name='head').add(list(range(len(pv))), 1.0, 'REPLACE'); fo.parent = ao; fo.modifiers.new('rig', 'ARMATURE').object = ao
+O['elise_face'] = fo
+for n, o in O.items():
+    at = o.data.attributes.new('patch', 'INT', 'POINT')
+    if o is fo: at.data.foreach_set('value', np.array(pside, np.int32))
 for o in O.values(): o.data.materials.clear(); o.data.materials.append(mat)
 
 # ---------------- budget (triangles of the base mesh; the hull doubles them)
@@ -119,7 +148,7 @@ for label, ratio in (('hands', 0.34 * K), ('feet', 0.30 * K), ('skull', 0.30 * K
 left = int(BUD['elise_body'] * LOD) - tris(body); m_ = masks()['rest']; rest_t = sum(len(p.vertices) - 2 for p in body.data.polygons if all(m_[v] for v in p.vertices))
 region_decim(body, m_, float(np.clip((rest_t + left) / max(rest_t, 1), 0.3, 1.0)), 'rest')
 for n, o in O.items():
-    if o is not body: decim(o, int(BUD[n] * LOD))
+    if o is not body and n in BUD: decim(o, int(BUD[n] * LOD))
 print('triangles by piece (before, after):', {n.replace('elise_', ''): (before[n], tris(o)) for n, o in O.items()})
 # no part may collapse: every limb keeps a tube of triangles
 for part, least in (('upperarm_L', 60), ('upperarm_R', 60), ('forearm_L', 60), ('forearm_R', 60), ('hand_L', 300), ('hand_R', 300), ('neck', 30)):
@@ -135,7 +164,7 @@ if LOD >= 1:
     review.sheet(WD, VIEWS, 'd1.jpg')
 
 # ---------------- join; each face remembers its piece
-PID = {'elise_body': 0, 'elise_hair': 1, 'elise_gown': 2, 'elise_stockings': 3, 'elise_shoes': 4, 'elise_ribbons': 5, 'elise_lacing': 6, 'elise_pin': 8}
+PID = {'elise_body': 0, 'elise_hair': 1, 'elise_gown': 2, 'elise_stockings': 3, 'elise_shoes': 4, 'elise_ribbons': 5, 'elise_lacing': 6, 'elise_face': 7, 'elise_pin': 8}
 for n, o in O.items():
     at = o.data.attributes.new('layer', 'INT', 'FACE'); at.data.foreach_set('value', np.full(len(o.data.polygons), PID[n], np.int32))
     for p in o.data.polygons: p.use_smooth = True
@@ -143,7 +172,7 @@ bpy.ops.object.select_all(action='DESELECT')
 for o in O.values(): o.select_set(True)
 bpy.context.view_layer.objects.active = body; bpy.ops.object.join(); el = body; el.name = 'elise'; el.data.name = 'elise'; me = el.data
 bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.mesh.quads_convert_to_tris(); bpy.ops.object.mode_set(mode='OBJECT')
-for nm in [a_.name for a_ in me.attributes if a_.name in ('grid', 'is_head', 'is_socket', 'torso_w')]: me.attributes.remove(me.attributes[nm])
+for nm in [a_.name for a_ in me.attributes if a_.name in ('grid', 'is_head', 'is_socket', 'torso_w', 'cobalt')]: me.attributes.remove(me.attributes[nm])
 mo = bpy.data.materials.new('elise_outline'); mo.use_nodes = True; bs = mo.node_tree.nodes['Principled BSDF']; bs.inputs['Base Color'].default_value = (0.012, 0.012, 0.016, 1); bs.inputs['Roughness'].default_value = 1.0; mo.use_backface_culling = True
 me.materials.clear(); me.materials.append(mat); me.materials.append(mo)
 
@@ -162,15 +191,21 @@ for _ in range(2):
     s_ = np.zeros(n0); c_ = np.zeros(n0); np.add.at(s_, e[:, 0], ks[e[:, 1]]); np.add.at(c_, e[:, 0], 1); ks = 0.5 * ks + 0.5 * s_ / np.maximum(c_, 1)
 k = np.minimum(k, ks); off = no * (MM * 0.001 * k)[:, None]
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
-src_f = bm.faces[:]; src_v = bm.verts[:]; src_e = bm.edges[:]
+LL = bm.faces.layers.int['layer']; src_f = [f for f in bm.faces if f[LL] != 7]; src_v = list({v for f in src_f for v in f.verts}); src_e = list({e_ for f in src_f for e_ in f.edges})      # no hull on the blink patches
 geom = bmesh.ops.duplicate(bm, geom=src_v + src_e + src_f); vmap = geom['vert_map']; nf = [g for g in geom['geom'] if isinstance(g, bmesh.types.BMFace)]
 for v in src_v: vmap[v].co = (co[v.index] + off[v.index]).tolist()
 for f in nf: f.material_index = 1
 bmesh.ops.reverse_faces(bm, faces=nf); bm.to_mesh(me); bm.free(); me.validate(); me.update()
+# ---------------- morph targets
+nt = len(me.vertices); basis = vcol(el); pt = np.empty(nt, np.int32); me.attributes['patch'].data.foreach_get('value', pt)
+el.shape_key_add(name='Basis', from_mix=False)
+for mname, ids in (('blink', (1, 2)), ('blink_L', (1,)), ('blink_R', (2,))):
+    kb = el.shape_key_add(name=mname, from_mix=False); arr = basis.copy(); arr[np.isin(pt, ids), 1] -= HIDE + SHOW; kb.data.foreach_set('co', arr.ravel()); kb.value = 0.0
+me.attributes.remove(me.attributes['patch'])
 ntri = len(me.polygons); print('ELISE', NAME, 'tris', ntri, 'base', f0, 'hull', ntri - f0, 'verts', len(me.vertices), 'bones', len(ao.data.bones), 'materials', len(me.materials))
 for o in [o for o in bpy.data.objects if o.type == 'MESH' and o is not el]: bpy.data.objects.remove(o)
 bpy.ops.file.pack_all(); bpy.ops.wm.save_as_mainfile(filepath=f'{WD}/{NAME}.blend')
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); ao.select_set(True)
 bpy.ops.export_scene.gltf(filepath=f'{WD}/{NAME}_raw.glb', export_format='GLB', use_selection=True, export_animations=False, export_skins=True, export_yup=True,
-                          export_tangents=False, export_attributes=False, export_all_influences=False, export_def_bones=False, export_morph=False)
+                          export_tangents=False, export_attributes=False, export_all_influences=False, export_def_bones=False, export_morph=True, export_morph_normal=False, export_morph_tangent=False)
 print('WROTE', f'{WD}/{NAME}_raw.glb', os.path.getsize(f'{WD}/{NAME}_raw.glb'))

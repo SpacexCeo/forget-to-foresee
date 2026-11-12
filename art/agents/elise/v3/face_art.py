@@ -65,3 +65,25 @@ def draw(mid_x, eye_z, eye_dx, nose_tip, mouth_z):
     stroke(bez((mid_x - 0.0105, mouth_z + 0.0004), (mid_x, mouth_z - 0.0014), (mid_x + 0.0105, mouth_z + 0.0004)), 0.0006, 0.0006, (120, 62, 66, 255))
     stroke(bez((mid_x - 0.004, mouth_z - 0.0078), (mid_x, mouth_z - 0.0088), (mid_x + 0.004, mouth_z - 0.0078)), 0.0005, 0.0005, (196, 130, 126, 200))
     return art, (ax0, az1, S_)
+
+
+def closed_eye(sg, S_=6000.0, half_w=0.031, lo=0.018, hi=0.022):
+    """A closed eye for the blink patch (sg = +1: her left eye): skin, the lash line as one downward arc with its
+    wing, the lid's fold above. Returns the art; its frame is the eye's centre -half_w..+half_w by -lo..+hi metres."""
+    W, H = int(2 * half_w * S_), int((lo + hi) * S_); im = Image.new('RGB', (W, H), SKIN); dr = ImageDraw.Draw(im, 'RGBA')
+    toxy = lambda x, z: ((x + half_w) * S_, (hi - z) * S_)
+    def bez(p0, p1, p2, n=40):
+        t = np.linspace(0, 1, n)[:, None]; return (1 - t) ** 2 * np.array(p0) + 2 * t * (1 - t) * np.array(p1) + t ** 2 * np.array(p2)
+    def stroke(pts, w0, w1, col):
+        n = len(pts)
+        for i in range(n - 1):
+            w = (w0 + (w1 - w0) * i / (n - 1)) * S_; a, b = toxy(*pts[i]), toxy(*pts[i + 1]); dr.line([a, b], fill=col, width=max(1, int(round(w))))
+            dr.ellipse([a[0] - w / 2, a[1] - w / 2, a[0] + w / 2, a[1] + w / 2], fill=col)
+    EW = 0.0225; INK = (38, 30, 36, 255)
+    inner, outer = (-sg * EW, -0.0010), (sg * EW, 0.0022)
+    stroke(bez(inner, (sg * 0.001, -0.0105), outer), 0.0010, 0.0026, INK)
+    stroke(bez(outer, (sg * (EW + 0.004), 0.0040), (sg * (EW + 0.0075), 0.0058)), 0.0026, 0.0004, INK)
+    for k in (-0.5, 0.0, 0.5):                           # three short lashes under the line
+        p = bez(inner, (sg * 0.001, -0.0105), outer)[int(20 + 12 * k)]; stroke([p, (p[0] + sg * 0.0012 * (k + 0.3), p[1] - 0.0028)], 0.0008, 0.0003, INK)
+    stroke(bez((-sg * EW * 0.75, 0.0075), (0, 0.0115), (sg * EW * 0.85, 0.0090)), 0.0004, 0.0006, (150, 110, 110, 200))
+    return im

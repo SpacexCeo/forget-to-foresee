@@ -286,7 +286,7 @@ img = bpy.data.images.load(WD + '/face.png'); img.pack()
 mat = bpy.data.materials.new('elise_skin'); mat.use_nodes = True; nt = mat.node_tree; bs = nt.nodes['Principled BSDF']
 tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = img; nt.links.new(tn.outputs['Color'], bs.inputs['Base Color'])
 me.materials.append(mat)
-ob['eye_z'] = float(eye_z); ob['chin_z'] = float(CHIN); ob['top_z'] = float(TOP)
+ob['eye_dx'] = float(eye_dx); ob['eye_z'] = float(eye_z); ob['chin_z'] = float(CHIN); ob['top_z'] = float(TOP)
 bpy.ops.wm.save_as_mainfile(filepath=WD + '/body.blend')
 
 # ---------------- review sheets (the base layer exists only in these pictures)
