@@ -14,11 +14,11 @@ Times are Kyiv. Feature freeze Fri 13 Nov 16:00, hard freeze 20:00, deadline Sat
 ## B. Relayer server (one redeploy unblocks agents, chests, wheel prize, market)
 
 The deployed relayer at `159-195-130-113.sslip.io` is an old build (agents, chests, wheel claim, presence answer 404).
-Follow `docs/handoff/relayer-tee-deploy.md` step by step on your server:
+Done together with the lead (owner gives access; SSH from the cloud session is blocked, so either the Claude desktop app shares a folder via Remote Control, or you run the prepared commands). Steps from `docs/handoff/relayer-tee-deploy.md`:
 1. Pull `main`, rebuild and restart the relayer container (with the `ftf-relayer-data` volume).
 2. Generate the minter keys on the server (they never leave it): `node relayer/scripts/chest-key.mjs FTF_SKIN_KEY` (prints the public key). Send the lead the **public** key only; the lead adds it to `skins.ftf-coordinator.testnet`.
 3. After the key is added: `node relayer/scripts/mint-pending.mjs` mints any recorded Sheriffchenko wins.
-4. When the town economy is deployed (section C), the trader keys are generated the same way on the server (the worker's runbook will name the script) and `FTF_TOWN=1` turns the trader loop on.
+4. Town economy (after your yes in C): on the server `node relayer/scripts/market-keys.mjs > market-public.json`; the lead runs `TRADER_KEYS=market-public.json bash contracts/scripts/town-deploy.sh` (creates ftf-town.testnet, 20 traders at 0.3 NEAR, trade-only keys, genesis pool); then `FTF_TOWN=1 FTF_TOWN_SEND=1` on the relayer starts the traders. Daily `MODE=day`, top-up `MODE=topup` (docs/town-economy.md).
 
 ## C. Town economy (`ftf-town` contract): your yes is needed
 
@@ -33,7 +33,7 @@ The contract is built and tested (36 tests). Before the lead deploys it, answer:
 
 Answer the two open questions from the spec:
 - [ ] The leaderboard as a Shell monument on the square: OK?
-- [ ] What exactly the whitelist pass gives its holder (needed for the in-game text and the legal note).
+- [x] What the whitelist pass gives: a free NFT mint at the official launch (owner, 12 Nov).
 
 Mainnet (only you, real NEAR):
 - [ ] Decide by Fri 12:00 whether the endgame pass goes to mainnet. If yes: create/fund the mainnet account, run the testnet rehearsal first, then deploy `contracts/whitelist-pass` with the commands in `docs/launch/` (the art worker writes the exact runbook). If not ready by Fri 20:00, the game ships in testnet-pass mode with a clear label.
