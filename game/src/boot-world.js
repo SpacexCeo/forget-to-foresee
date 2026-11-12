@@ -28,6 +28,7 @@ import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
+import { createPlayerHud } from './scenes/player-hud.js';
 import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
 import { ASSETS, heroById } from './render/asset-catalog.js';
@@ -211,6 +212,7 @@ function mountTownAudio() {
   if (townAudio) return;
   Promise.all([import('./audio/audio.js'), import('./audio/town-audio.js')]).then(([a, t]) => { if (!townAudio && inTown) townAudio = t.createTownAudio({ createAudio: a.createAudio }); }).catch((e) => console.warn('[town] audio', e));
 }
+let playerHud = null;
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -316,6 +318,10 @@ if (townMode.town) {
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
   });
   mountCasting();
+  // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
+  if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
+    nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (loadDay1(ctx.storage).minted ? 'elise' : 'iris'),
+    onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
   // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
   townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, mobile: mobileDevice, reducedMotion: () => lookdev.reducedMotion,
     onCounter: (id) => townFlow.openSpot(id), street: { world: () => town.world, killY: TOWN_KILL_Y } });
@@ -500,7 +506,7 @@ function updateAltarTimer() {
   const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
   if (altarTimer.textContent !== text) altarTimer.textContent = text;
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
-  const minTop = innerWidth < 700 ? 150 : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
+  const minTop = innerWidth < 700 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
   altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
@@ -593,7 +599,7 @@ const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } 
 window.addEventListener('resize', () => lookdev.setSize(window.innerWidth, window.innerHeight));
 
 let toastTimer = 0;
-function toast(text) { toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
+function toast(text) { if (playerHud && inTown) { playerHud.toast(text); return; } toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
 
 // moveRun: phones have no Shift, so a tap far away (or a double tap) runs there
 const PHYSICS_CARRY = 1.0; // seconds of a long frame that physics catches up on (fixedSteps carry)
@@ -900,6 +906,7 @@ function frame() {
   void moving;
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
+  if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100 });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
 
