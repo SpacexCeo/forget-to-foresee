@@ -25,6 +25,11 @@ export const FOG_UNIFORMS = Object.freeze({
   ftfFogTint: { value: new Float32Array([1, 1, 1, 0]) },
   /** mist drift: time (s, frozen under reduced motion), amplitude (0..1 of the height density), spatial scale (1/m) */
   ftfFogDrift: { value: new Float32Array([0, 0.3, 0.045]) },
+  /** the near field stays readable (owner 12.11: "the whole frame is a flat milk"): the mist reaches its full density
+   *  only past `far` metres and keeps `floor` of it at `near`; `cap` is the most any surface is fogged */
+  ftfFogNear: { value: new Float32Array([5, 60, 0.12, 0.95]) },
+  /** x: saturation given back to the near field under weather haze (0 = none) */
+  ftfFogGrade: { value: new Float32Array([0, 0, 0, 0]) },
 });
 
 let installed = false;
@@ -48,7 +53,7 @@ export function installHeightFog(params = {}) {
 #endif`;
     THREE.ShaderChunk.fog_pars_fragment = `#ifdef USE_FOG
   uniform vec3 fogColor;
-  uniform vec4 ftfFogParams, ftfFogSun, ftfFogSunTint, ftfFogTint;
+  uniform vec4 ftfFogParams, ftfFogSun, ftfFogSunTint, ftfFogTint, ftfFogNear, ftfFogGrade;
   uniform vec3 ftfFogDrift;
   varying float vFogDepth;
   varying vec3 vFogWorldPos;
@@ -83,7 +88,8 @@ export function installHeightFog(params = {}) {
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
   #endif
-  float heightFog = 1.0 - exp( - ftfHeightFogDepth( cameraPosition, vFogWorldPos ) );
+  float ftfReach = smoothstep( ftfFogNear.x, ftfFogNear.y, vFogDepth );
+  float heightFog = ( 1.0 - exp( - ftfHeightFogDepth( cameraPosition, vFogWorldPos ) ) ) * mix( ftfFogNear.z, 1.0, ftfReach );
   vec3 ftfViewDir = normalize( vFogWorldPos - cameraPosition );
   float ftfMu = max( dot( ftfViewDir, ftfFogSun.xyz ), 0.0 );
   float ftfSun = pow( ftfMu, ftfFogSun.w ) * ftfFogSunTint.w;
@@ -94,7 +100,10 @@ export function installHeightFog(params = {}) {
   // Aerial perspective before the mix: far surfaces lose warmth and contrast (Rayleigh in-scatter).
   float ftfAir = fogFactor * ftfFogParams.w;
   gl_FragColor.rgb = mix( gl_FragColor.rgb, gl_FragColor.rgb * vec3( 0.92, 0.97, 1.05 ) + fogColor * 0.08, ftfAir );
-  gl_FragColor.rgb = mix( gl_FragColor.rgb, ftfFogColor, clamp( max( fogFactor, heightFog ), 0.0, 1.0 ) );
+  // weather haze takes colour out of everything: the near field gets some back, so she and the ground around her read
+  float ftfL = dot( gl_FragColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+  gl_FragColor.rgb = max( mix( vec3( ftfL ), gl_FragColor.rgb, 1.0 + ftfFogGrade.x * ( 1.0 - ftfReach ) ), 0.0 );
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, ftfFogColor, clamp( max( fogFactor, heightFog ), 0.0, ftfFogNear.w ) );
 #endif`;
   }
   setFog(params);
@@ -104,7 +113,7 @@ export function installHeightFog(params = {}) {
  * @param {{baseY?:number, falloff?:number, density?:number, aerial?:number, sunDir?:{x:number,y:number,z:number},
  *          sunTint?:number[]|THREE.Color, sunPower?:number, sunStrength?:number}} p
  */
-export function setFog({ baseY, falloff, density, aerial, sunDir, sunTint, sunPower, sunStrength } = {}) {
+export function setFog({ baseY, falloff, density, aerial, sunDir, sunTint, sunPower, sunStrength, near, cap, nearSaturation } = {}) {
   const P = FOG_UNIFORMS.ftfFogParams.value, S = FOG_UNIFORMS.ftfFogSun.value, T = FOG_UNIFORMS.ftfFogSunTint.value;
   if (baseY != null) P[0] = baseY;
   if (falloff != null) P[1] = falloff;
@@ -114,6 +123,10 @@ export function setFog({ baseY, falloff, density, aerial, sunDir, sunTint, sunPo
   if (sunPower != null) S[3] = sunPower;
   if (sunTint) { const c = sunTint.isColor ? [sunTint.r, sunTint.g, sunTint.b] : sunTint; T[0] = c[0]; T[1] = c[1]; T[2] = c[2]; }
   if (sunStrength != null) T[3] = sunStrength;
+  const N = FOG_UNIFORMS.ftfFogNear.value;
+  if (near) { N[0] = near[0]; N[1] = near[1]; N[2] = near[2]; }
+  if (cap != null) N[3] = cap;
+  if (nearSaturation != null) FOG_UNIFORMS.ftfFogGrade.value[0] = nearSaturation;
 }
 
 /** Runtime haze tint: hex colour and amount 0..1 (0 = the preset's own haze). */

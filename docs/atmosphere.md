@@ -98,3 +98,21 @@ relative cost of the tiers and that nothing regressed, not the frame rate a play
 | phone | low | isle plaza | 7.19 | 15.2 | 390×844 @ 1 |
 
 The phone layout is a 390×844 viewport at device pixel ratio 3 in the same headless browser (phone knob set, touch UI); its p95 is noisy there.
+
+## Weather colour grade (12.11, owner: "haze and fog by day are a flat washed-out beige")
+
+What was wrong: the height mist had its full density from the first metre (trees 10 to 15 m away were gone), the
+weather haze took the warm horizon colour and was brighter than the scene, and haze, fog and overcast raised the
+exposure and the ambient light, so the frame went to one milky tone.
+
+What changed (`render/fog.js`, `render/weather.js`, `render/lookdev.js`):
+- the mist reaches its full density only with distance (`ftfFogNear`: 12 % at 5 m, all of it past 60 m, sooner in
+  thicker weather) and no surface is fogged more than 95 %: depth stays, silhouettes stay;
+- each weather state has `cool` (how far its haze turns cool grey, a little darker than the horizon) and `vivid`
+  (saturation given back to the near field under the veil); the sun's warm lobe in the haze fades with `cool`;
+- haze, fog and overcast no longer lift the exposure (now -0.05, -0.10, -0.02 EV) and add less ambient; the fog
+  multipliers are 1.4 (haze) and 2.3 (fog), were 1.7 and 3.4.
+The grade itself (AgX, saturation, S-curve, split toning: `render/grade.js`) is unchanged and is the same on every
+tier. Check sheet (7 states x day, dusk, night, before and after, plus the phone tier):
+`docs/art/weather/weather_grade_before_after.jpg`, made by `art/tools/weather_sheet.mjs`.
+The red edge on the owner's screenshot is the hurt flash of `play/mobs.js`; it is now a thin, faint rim.
