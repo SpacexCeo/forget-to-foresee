@@ -357,7 +357,7 @@ function mountMobs() {
   const T = town;
   Promise.all([import('./play/mobs.js'), import('./render/mob-fx.js'), import('three/addons/utils/SkeletonUtils.js')]).then(([m, fx, su]) => {
     if (townMobs || town !== T) return;
-    const ground = (x, z, nearY) => { const hit = rayCast(T.world, [x, nearY + 6, z], [0, -1, 0], 20, MASK_PLAYER); return hit ? hit.point[1] : nearY; };
+    const ground = (x, z, nearY, range = 20) => { const hit = rayCast(T.world, [x, nearY + 6, z], [0, -1, 0], range, MASK_PLAYER); return hit ? hit.point[1] : nearY; }; // range: a long probe for spawns on the hillside
     const gate = [TOWN_ORIGIN_W[0], 0, TOWN_ORIGIN_W[2] + 42]; gate[1] = ground(gate[0], gate[2], TOWN_ORIGIN_W[1]) + 0.1;
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',

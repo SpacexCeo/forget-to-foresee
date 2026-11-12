@@ -152,7 +152,7 @@ export class MobBrain {
         const near = iris && iris.alive && dist2(iris.pos, pack.home) < 12;   // never under her nose
         if (pack.timer <= 0 && !near) {
           pack.timer = -1;
-          mine.forEach((m, k) => { const fresh = this.spawn(pack, k, mine.length); Object.assign(m, fresh, { id: m.id }); m.pos[1] = ground(m.pos[0], m.pos[2], pack.home[1]); ev.push({ kind: 'respawn', mob: m }); });
+          mine.forEach((m, k) => { const fresh = this.spawn(pack, k, mine.length); Object.assign(m, fresh, { id: m.id }); m.pos[1] = ground(m.pos[0], m.pos[2], pack.home[1] + 4, 30); ev.push({ kind: 'respawn', mob: m }); });
         }
       }
     }
@@ -164,7 +164,7 @@ export class MobBrain {
     if (m.freeze > 0) { m.freeze -= dt; return; }                                // hit-stop
     m.t += dt; m.cooldown = Math.max(0, m.cooldown - dt); m.root = Math.max(0, m.root - dt);
     const T = m.T, home = m.pack.home;
-    const sees = iris && iris.alive && iris.outside && dist2(iris.pos, m.pos) < T.aggro && dist2(iris.pos, home) < LEASH + T.attack;
+    const sees = iris && iris.alive && iris.outside && dist2(iris.pos, m.pos) < T.aggro && dist2(iris.pos, home) < LEASH + T.attack && Math.abs(iris.pos[1] - m.pos[1]) < 6;   // not through a cliff
     m.speed = 0;
     switch (m.state) {
       case 'dead':                                                                   // the view reports the end of the death clip
@@ -179,7 +179,7 @@ export class MobBrain {
         if (m.t >= hitAt && !m.struck) {
           m.struck = true;
           if (T.ranged) ev.push({ kind: 'shot', mob: m, to: iris ? iris.pos.slice() : null });
-          else ev.push({ kind: 'impact', mob: m, hit: !!(iris && iris.alive && dist2(iris.pos, m.pos) < T.attack + 0.6 && facing(m, iris.pos)) });
+          else ev.push({ kind: 'impact', mob: m, hit: !!(iris && iris.alive && dist2(iris.pos, m.pos) < T.attack + 0.6 && Math.abs(iris.pos[1] - m.pos[1]) < 2.5 && facing(m, iris.pos)) });
         }
         if (m.t >= T.windup) { m.state = 'recover'; m.t = 0; m.cooldown = T.cooldown; }
         return;
@@ -266,6 +266,10 @@ const CSS = `
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, variant = '', phone = false, reduced = () => false, onFeedback = null,
   respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null }) {
   const brain = new MobBrain({ origin, phone, seed });
+  // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
+  const settle = (p) => { p[1] = ground(p[0], p[2], origin[1] + 80, 260); };
+  for (const pack of brain.packs) settle(pack.home);
+  for (const m of brain.mobs) settle(m.pos);
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };

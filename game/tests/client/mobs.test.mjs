@@ -96,3 +96,13 @@ test('balance: the first pack takes a new player about 20-30 s; the elite is a l
   assert.ok(100 / ownDps > hp / casual * 0.5, 'she outlasts the first pack even standing still for a while');
   assert.ok(MOB_TYPES.crownrift.hp / 35 > 20, 'the elite takes a skilled player more than 20 s');
 });
+
+test('a monster does not wake for Iris on a ledge far above or below it', () => {
+  const b = new MobBrain({ origin: O, seed: 6 });
+  const m = b.mobs.find((x) => x.type === 'hulker');
+  const iris = { pos: [m.pos[0] + 3, m.pos[1] + 15, m.pos[2]], alive: true, outside: true };
+  b.step(0.1, iris, flat);
+  assert.notEqual(m.state, 'chase');
+  iris.pos[1] = m.pos[1]; b.step(0.1, iris, flat);
+  assert.equal(m.state, 'chase');
+});
