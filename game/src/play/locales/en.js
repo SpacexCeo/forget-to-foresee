@@ -1244,4 +1244,12 @@ export default {
   'companion.account': "Held by the heroine's own account {account}",
   'town.cast.strike': "Strike",
   'town.cast.dash': "Dash",
+  'menu.achOverall': "Overall progress",
+  'menu.unlocked': "Unlocked",
+  'menu.locked': "Locked",
+  'menu.filter.all': "All",
+  'menu.filter.shard': "Shards",
+  'menu.filter.part': "Parts",
+  'menu.detail.shard': "A memory shard: {n} in your bag. Kept in this browser.",
+  'menu.detail.part': "A mechanical part: {n} in your bag. Kept in this browser.",
 };

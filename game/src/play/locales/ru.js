@@ -1242,4 +1242,12 @@ export default {
   'companion.account': "Хранится на собственном аккаунте героини {account}",
   'town.cast.strike': "Удар",
   'town.cast.dash': "Рывок",
+  'menu.achOverall': "Общий прогресс",
+  'menu.unlocked': "Открыто",
+  'menu.locked': "Закрыто",
+  'menu.filter.all': "Все",
+  'menu.filter.shard': "Осколки",
+  'menu.filter.part': "Детали",
+  'menu.detail.shard': "Осколок памяти: в сумке {n}. Хранится в этом браузере.",
+  'menu.detail.part': "Механическая деталь: в сумке {n}. Хранится в этом браузере.",
 };

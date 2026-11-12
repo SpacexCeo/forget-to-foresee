@@ -1242,4 +1242,12 @@ export default {
   'companion.account': "由女主角自己的账户 {account} 持有",
   'town.cast.strike': "打击",
   'town.cast.dash': "冲刺",
+  'menu.achOverall': "总体进度",
+  'menu.unlocked': "已解锁",
+  'menu.locked': "未解锁",
+  'menu.filter.all': "全部",
+  'menu.filter.shard': "碎片",
+  'menu.filter.part': "零件",
+  'menu.detail.shard': "一枚记忆碎片：背包中有 {n} 个。保存在此浏览器中。",
+  'menu.detail.part': "一个机械零件：背包中有 {n} 个。保存在此浏览器中。",
 };

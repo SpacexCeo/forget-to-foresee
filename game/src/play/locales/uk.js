@@ -1242,4 +1242,12 @@ export default {
   'companion.account': "Зберігається на власному акаунті героїні {account}",
   'town.cast.strike': "Удар",
   'town.cast.dash': "Ривок",
+  'menu.achOverall': "Загальний поступ",
+  'menu.unlocked': "Відкрито",
+  'menu.locked': "Закрито",
+  'menu.filter.all': "Усі",
+  'menu.filter.shard': "Уламки",
+  'menu.filter.part': "Деталі",
+  'menu.detail.shard': "Уламок пам’яті: у сумці {n}. Зберігається в цьому браузері.",
+  'menu.detail.part': "Механічна деталь: у сумці {n}. Зберігається в цьому браузері.",
 };

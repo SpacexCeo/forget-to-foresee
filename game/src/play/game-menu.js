@@ -15,6 +15,15 @@ import { createChestBag } from '../game/chests.js';
 import { createChestClient } from '../net/chest-client.js';
 import { cue } from '../audio/town-audio.js';
 
+/** UI-004 tab icons (line art, currentColor). */
+const TAB_ICON = Object.freeze({
+  profile: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>',
+  achievements: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 4h8v5a4 4 0 0 1-8 0V4Zm0 2H5a3 3 0 0 0 3 4m8-4h3a3 3 0 0 1-3 4m-4 3v4m-4 3h8"/></svg>',
+  nfts: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M7 4h10l4 5-9 11L3 9l4-5Zm-4 5h18M9 9l3 11 3-11M7 4l2 5m8-5-2 5"/></svg>',
+  inventory: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm4 0V6a3 3 0 0 1 6 0v2"/></svg>',
+  agents: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9c.6-3.3 3-5 6-5s5.4 1.7 6 5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 15c1.7.6 2.7 2.2 3 5"/></svg>',
+  log: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 20v-6m5 6V9m5 11V5m5 15v-9"/></svg>',
+});
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
 const SEG_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#9775fa', '#da77f2', '#f783ac', '#ff922b', '#20c997'];
@@ -25,6 +34,23 @@ export function loadManifest(base = (import.meta.env && import.meta.env.BASE_URL
 }
 
 const CSS = `
+.gm-titlebox { flex: 1; display: grid; gap: 2px; } .gm-titlebox h2 { flex: none; }
+.gm-kicker { font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #d9b26a; }
+.gm-tab { flex-direction: column; justify-content: center; gap: 4px; min-width: 88px; padding: 8px 12px; }
+.gm-tab svg { display: block; }
+.gm-over { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; padding: 14px 16px; margin-bottom: 14px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); }
+.gm-over b { display: block; font-size: 15px; }
+.gm-big { font: 600 28px/1 "Cormorant Garamond", Georgia, serif; }
+.gm-bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(233, 230, 220, .1); overflow: hidden; } .gm-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #2fc4b2, #d9b26a); }
+.gm-state { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(233, 230, 220, .08); color: rgba(233, 230, 220, .65); } .gm-state.gm-on { background: rgba(127, 209, 139, .16); color: #7fd18b; }
+.gm-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.gm-fchip { min-height: 38px; padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .16); background: transparent; color: rgba(233, 230, 220, .75); font: 600 13px/1 system-ui; cursor: pointer; }
+.gm-fchip[aria-pressed="true"] { background: rgba(47, 196, 178, .16); border-color: rgba(47, 196, 178, .6); color: #2fc4b2; }
+.gm-card[role="button"] { cursor: pointer; } .gm-card[role="button"]:focus-visible { outline: 2px solid #d9b26a; outline-offset: 2px; }
+.gm-detail { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); }
+.gm-detail[hidden] { display: none; } .gm-detail img { width: 96px; height: 96px; object-fit: contain; } .gm-detail b { font: 600 20px/1.2 "Cormorant Garamond", Georgia, serif; margin-right: 8px; }
+.gm-rchip { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(217, 178, 106, .14); color: #d9b26a; }
+@media (max-width: 640px) { .gm-tab { min-width: 72px; padding: 6px 10px; font-size: 12px; } }
 .gm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e9e6dc; }
 .gm-panel { position: relative; width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); display: grid; grid-template-rows: auto auto 1fr; border-radius: 20px; overflow: hidden;
   background: rgba(13, 19, 18, .95); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(214, 226, 214, .12); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }
@@ -118,12 +144,14 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const root = el('div', 'gm'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('menu.title'));
   const panel = el('div', 'gm-panel'); root.append(panel);
   const xBtn = btn('×', () => close(), 'gm-x'); xBtn.setAttribute('aria-label', t('quest.close'));
-  const head = el('div', 'gm-head'); head.append(el('h2', null, t('menu.title')), xBtn);
+  // UI-004 header: the game's name over the open tab's title
+  const head = el('div', 'gm-head'); const titleBox = el('div', 'gm-titlebox'); const tabTitle = el('h2', null, t('menu.title'));
+  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox, xBtn);
   const tabs = el('div', 'gm-tabs'); tabs.setAttribute('role', 'tablist');
   const body = el('div', 'gm-body'); body.setAttribute('role', 'tabpanel');
   panel.append(head, tabs, body);
   const tabBtns = {};
-  for (const id of TABS) { const b = btn(t('menu.tab.' + id), () => show(id), 'gm-tab'); b.setAttribute('role', 'tab'); b.dataset.tab = id; tabBtns[id] = b; tabs.append(b); }
+  for (const id of TABS) { const b = btn('', () => show(id), 'gm-tab'); b.innerHTML = TAB_ICON[id] || ''; b.append(el('span', null, t('menu.tab.' + id))); b.setAttribute('role', 'tab'); b.dataset.tab = id; tabBtns[id] = b; tabs.append(b); }
   root.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === root) close(); });
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
@@ -139,14 +167,19 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       return items.then((list) => {
         const st = { ...ledger.stats, spins: wheel.history.length, distinctItems: inv.list(list).length, eliseMinted, level: ledger.level.level };
         const g = el('div', 'gm-grid');
-        for (const a of achievementsFor(st)) {
+        const all = achievementsFor(st), done = all.filter((a) => a.done).length;
+        // UI-004: overall progress first, then the medals with Unlocked / Locked
+        const over = el('div', 'gm-over'); const ob = el('div', 'gm-bar'); const of = el('i'); of.style.width = (100 * done / Math.max(1, all.length)).toFixed(1) + '%'; ob.append(of);
+        const ol = el('div'); ol.append(el('b', null, t('menu.achOverall')), el('small', 'gm-note', t('menu.achNote')));
+        over.append(ol, el('strong', 'gm-big', `${done} / ${all.length}`), ob);
+        for (const a of all) {
           const m = el('div', 'gm-medal'); m.dataset.done = String(a.done);
           const ring = el('div', 'gm-ring'); ring.style.setProperty('--p', String(a.progress)); ring.style.setProperty('--c', a.done ? '#d9b26a' : '#2fc4b2');
           ring.append(el('span', null, a.done ? '★' : Math.round(a.progress * 100) + '%'));
-          m.append(ring, el('b', null, t('ach.' + a.id)), el('small', 'gm-note', t('ach.' + a.id + '.desc', { goal: a.goal })));
+          m.append(ring, el('b', null, t('ach.' + a.id)), el('span', 'gm-state' + (a.done ? ' gm-on' : ''), t(a.done ? 'menu.unlocked' : 'menu.locked')), el('small', 'gm-note', t('ach.' + a.id + '.desc', { goal: a.goal })));
           g.append(m);
         }
-        return [el('p', 'gm-note', t('menu.achNote')), g];
+        return [over, g];
       });
     },
     nfts() {
@@ -203,10 +236,22 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     inventory() {
       return items.then((list) => {
         const g = el('div', 'gm-grid');
-        const owned = inv.list(list);
+        const ownedAll = inv.list(list);
+        // UI-004: filter chips (All / Shards / Parts) and a detail panel for the picked item
+        const kind = invFilter;
+        const owned = kind === 'all' ? ownedAll : ownedAll.filter((x) => x.kind === kind);
+        const chips = el('div', 'gm-chips');
+        for (const k of ['all', 'shard', 'part']) { const b = btn(t('menu.filter.' + k), () => { invFilter = k; show('inventory'); }, 'gm-fchip'); b.setAttribute('aria-pressed', String(k === kind)); chips.append(b); }
+        const detail = el('div', 'gm-detail'); detail.hidden = true;
+        const pick = (it) => {
+          detail.hidden = false; const img = el('img'); img.src = base + 'assets/items/' + (it.icon || it.icon128); img.alt = '';
+          const txt = el('div'); txt.append(el('b', null, t(it.nameKey)), el('span', 'gm-rchip', t('rarity.' + (it.rarity || 'common'))), el('p', 'gm-note', t('menu.detail.' + it.kind, { n: it.n })), el('p', 'gm-note', t('menu.source.' + (it.source || 'wheel'))));
+          detail.replaceChildren(img, txt);
+        };
         if (!owned.length) { const p = el('p', 'gm-note', t('menu.invEmpty')); p.style.gridColumn = '1 / -1'; g.append(p); }
         for (const it of owned) {
           const c = el('div', 'gm-card' + (it.id === inv.newest && fresh.has(it.id) ? ' gm-new' : '')); c.dataset.rarity = it.rarity || 'common';
+          c.tabIndex = 0; c.setAttribute('role', 'button'); c.addEventListener('click', () => pick(it)); c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(it); } });
           c.style.setProperty('--rc', RARITY_COLOR[it.rarity] || RARITY_COLOR.common); c.style.setProperty('--rb', (RARITY_COLOR[it.rarity] || '#eef0f6') + '33');
           const img = el('img'); img.src = base + 'assets/items/' + (it.icon128 || it.icon); img.alt = '';
           c.append(el('span', 'gm-count', '×' + it.n), img, el('b', null, t(it.nameKey)), el('small', null, t('rarity.' + (it.rarity || 'common')) + ' · ' + t('menu.source.' + (it.source || 'wheel'))));
@@ -214,7 +259,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         const sum = el('div', 'gm-row');
         sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + (ledger.silk / 100).toFixed(2)), btn(t('menu.openWheel'), () => show('wheel')));
-        return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), g];
+        return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), chips, g, detail];
       });
     },
     wheel() {
@@ -309,6 +354,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     },
   };
   const fresh = new Set();
+  let invFilter = 'all';
 
   /** Chests from monsters (game/chests.js): sealed ones open through the chest service (play/chest-open.js). */
   function chestSection(list) {
@@ -352,6 +398,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
 
   function show(id) {
     current = id;
+    tabTitle.textContent = t('menu.tab.' + (id === 'wheel' ? 'inventory' : id));
     for (const [k, b] of Object.entries(tabBtns)) b.setAttribute('aria-selected', String(k === id || (id === 'wheel' && k === 'inventory')));
     const r = views[id]();
     const put = (kids) => { if (current === id) body.replaceChildren(...kids.filter(Boolean)); };

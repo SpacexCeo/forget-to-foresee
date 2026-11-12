@@ -1243,4 +1243,12 @@ export default {
   'companion.account': "Custodito dall’account della protagonista {account}",
   'town.cast.strike': "Colpo",
   'town.cast.dash': "Scatto",
+  'menu.achOverall': "Progresso complessivo",
+  'menu.unlocked': "Sbloccato",
+  'menu.locked': "Bloccato",
+  'menu.filter.all': "Tutti",
+  'menu.filter.shard': "Frammenti",
+  'menu.filter.part': "Parti",
+  'menu.detail.shard': "Un frammento di memoria: {n} nella borsa. Conservato in questo browser.",
+  'menu.detail.part': "Un pezzo meccanico: {n} nella borsa. Conservato in questo browser.",
 };
