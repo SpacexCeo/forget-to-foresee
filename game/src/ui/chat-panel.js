@@ -1,6 +1,8 @@
 // The town chat (docs/multiplayer.md): a "N players here · Room k" chip bottom-left that opens a small collapsible
 // chat. Enter opens it and focuses the line; Enter sends; Escape leaves the line. A name opens Mute / Report. Plain
 // DOM, no play imports: the caller passes `t` and the presence client.
+import { isAction } from './keybinds.js';
+
 const CSS = `.ftf-chat { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 12;
   width: min(340px, calc(100vw - 24px)); font: 14px/1.4 system-ui, sans-serif; color: #f3ead6; pointer-events: none; }
 .ftf-chat > * { pointer-events: auto; }
@@ -47,7 +49,7 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   form.addEventListener('submit', (e) => { e.preventDefault(); presence.say(input.value); input.value = ''; });
   input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { input.blur(); if (phone) setOpen(false); } });
   const onKey = (e) => {
-    if (e.key !== 'Enter' || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!isAction(e.code, 'chat') || e.altKey || e.ctrlKey || e.metaKey) return;
     const a = doc.activeElement; if (a && a !== doc.body && a.tagName !== 'CANVAS') return; // another field or button has the key
     if (presence.status !== 'online') return;
     e.preventDefault(); setOpen(true); input.focus();

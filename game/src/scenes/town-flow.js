@@ -15,6 +15,7 @@ import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
 const DOORS = new Set(['exchange', 'scribe', 'inn']);
 import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createVeil } from '../ui/loading.js';
+import { actionKey } from '../ui/keybinds.js';
 
 const CSS = `
 .ftf-town { position: fixed; inset: 0; pointer-events: none; z-index: 9; font-family: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; }
@@ -154,7 +155,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       skipBtn.textContent = i18n.t('quest.skip'); skipBtn.hidden = !quest.active;
       renderTalk();
     }
-    cap.textContent = state.device === 'gamepad' ? 'A' : 'E';
+    cap.textContent = state.device === 'gamepad' ? 'A' : actionKey('interact');
     cap.hidden = state.device === 'touch';
     if (cover) { const sb = cover.querySelector('.boot-sub'); if (sb) sb.textContent = i18n.t('town.transition.title'); }
   }

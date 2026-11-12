@@ -134,6 +134,8 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     },
     get musicZone() { return musicZone; },
     get weather() { return { bed: rain?.bedName ?? null, wet }; },
+    /** The audio runtime itself (the settings popup's volume sliders). */
+    get audio() { return audio; },
     dispose() { rain?.stop(0.3); win.removeEventListener('ftf:weather', onWeather); win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
   };
   return api;
