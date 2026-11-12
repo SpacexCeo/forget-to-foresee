@@ -1,16 +1,16 @@
 // The trail of Iris's dash (owner, 12.11): afterimages of her own silhouette left along the path, and a short ribbon
-// streak in her colour behind the hips. Short and crisp: a ghost lives 0.32 s, the ribbon 0.28 s. Cheap: the ghosts
+// streak in her colour behind the hips. Short and crisp: a ghost lives 0.36 s, the ribbon 0.26 s. Cheap: the ghosts
 // are clones of her skinned model made once, drawn with one flat additive material and only while a dash fades
 // (phones get two instead of three); nothing runs between dashes. Not shown under reduced motion.
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
-export const DASH_TRAIL = Object.freeze({ color: 0x8f7bff, ghosts: 3, ghostsPhone: 2, spacing: 1.15, ghostLife: 0.32, ribbonLife: 0.26, ribbonPoints: 14, ribbonY: 0.92, ribbonHeight: 0.34 });
+export const DASH_TRAIL = Object.freeze({ color: 0x8f7bff, ghosts: 3, ghostsPhone: 2, spacing: 1.15, ghostLife: 0.36, ribbonLife: 0.26, ribbonPoints: 14, ribbonY: 0.92, ribbonHeight: 0.34 });
 
 /** How far along the dash (metres from its start) each of `n` ghosts is left: evenly, whatever the frame rate. */
 export function stampDistances(n, T = DASH_TRAIL) { return Array.from({ length: n }, (_, i) => (i + 0.6) * T.spacing); }
 /** A ghost's opacity `age` seconds after its stamp: a quick ease out to nothing. */
-export function ghostOpacity(age, life = DASH_TRAIL.ghostLife) { const k = 1 - Math.min(1, Math.max(0, age / life)); return 0.5 * k * k; }
+export function ghostOpacity(age, life = DASH_TRAIL.ghostLife) { const k = 1 - Math.min(1, Math.max(0, age / life)); return 0.6 * k * k; }
 
 export class DashTrail {
   /** @param {THREE.Object3D} parent the scene @param {THREE.Object3D} model her model (child of the avatar group) */
@@ -42,7 +42,7 @@ export class DashTrail {
     this.ribbon = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color: DASH_TRAIL.color, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     this.ribbon.frustumCulled = false; this.ribbon.visible = false; this.ribbon.renderOrder = 3;
     this.group.add(this.ribbon);
-    this.t = -1; this.next = 0; this.stamps = stampDistances(n); this.from = new THREE.Vector3(); this.at = new THREE.Vector3();
+    this.t = -1; this.next = 0; this.stamps = stampDistances(n); this.from = new THREE.Vector3(); this.at = new THREE.Vector3(); this.gone = new THREE.Vector3();
   }
 
   get active() { return this.t >= 0; }
@@ -66,10 +66,9 @@ export class DashTrail {
     if (this.fresh) { this.fresh = false; this.from.copy(avatarGroup.position); }
     this.t += dt;
     // a ghost every `spacing` metres of the burst, placed on the path itself (a slow frame still spreads them)
-    const gone = this.at.copy(avatarGroup.position).sub(this.from), far = gone.length();
+    const gone = this.gone.copy(avatarGroup.position).sub(this.from), far = gone.length();
     while (this.t < 0.3 && this.next < this.stamps.length && far >= this.stamps[this.next]) {
       this.stamp(this.ghosts[this.next], avatarGroup, this.at.copy(this.from).addScaledVector(gone, this.stamps[this.next] / far)); this.next++;
-      gone.copy(avatarGroup.position).sub(this.from);
     }
     let alive = this.t < 0.3 && this.next < this.stamps.length;
     for (const g of this.ghosts) {
@@ -85,7 +84,7 @@ export class DashTrail {
     const P = DASH_TRAIL.ribbonPoints, n = this.pts.length;
     if (n >= 2) {
       for (let i = 0; i < P; i++) {
-        const q = this.pts[Math.min(i, n - 1)], a = i < n ? 0.6 * Math.pow(1 - q.age / DASH_TRAIL.ribbonLife, 2) * Math.min(1, i / 1.5) : 0;
+        const q = this.pts[Math.min(i, n - 1)], a = i < n ? 0.8 * Math.pow(1 - q.age / DASH_TRAIL.ribbonLife, 2) * Math.min(1, i / 1.5) : 0;
         const h = DASH_TRAIL.ribbonHeight * (0.35 + 0.65 * (1 - q.age / DASH_TRAIL.ribbonLife));       // it thins as it fades
         this.pos.set([q.x, q.y + DASH_TRAIL.ribbonY - h / 2, q.z, q.x, q.y + DASH_TRAIL.ribbonY + h / 2, q.z], i * 6);
         this.col.set([1, 1, 1, a * 0.25, 1, 1, 1, a], i * 8);
