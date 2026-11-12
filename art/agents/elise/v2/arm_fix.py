@@ -6,8 +6,9 @@ from two points (one in the armpit, one on the collar) straight down to the wris
 arm surface at all, and nothing was weighted to the upper arm: the shoulder pinched, the elbow could not bend and
 any twist of the arm wrung the whole fan.
 
-Fix, on the shipped file (the Blender scene of v2 lived on a rented server that is gone): the fan is removed and each
-arm is built again in the rest pose around her own joints:
+Fix, on the shipped file (no Blender needed; the v2 scenes are archived on the branch archive/server-2026-11-12,
+folder blends/, and predate the last exports): the fan is removed and each arm is built again in the rest pose around
+her own joints:
   - a rounded shoulder (deltoid) over the shoulder joint, an upper arm, an elbow, a forearm with a soft swell, ending
     inside the wrist wrap; rings every `--ring` metres, `--segs` vertices around;
   - weights along shoulder -> upper arm -> forearm with smooth blends at the shoulder and the elbow (the cap follows
@@ -15,6 +16,8 @@ arm is built again in the rest pose around her own joints:
   - the same tube 2.5 mm wider with reversed faces in the ink-outline primitive;
   - flat skin colour (the fan's own texel), morph targets zero.
 Skeleton, rest pose, textures and every other vertex are untouched, so her clips and the baked gown stay valid.
+A rebuild from Blender (d1_export.py) must either keep the arms out of the decimation or run this script on its
+result: a straight smooth tube is exactly what a quadric collapse removes first.
 
     art/agents/elise/v2/arm_fix.sh <in.glb> <out.glb> [--ring 0.028 --segs 12]      (dequantize, this script, meshopt)
 """
