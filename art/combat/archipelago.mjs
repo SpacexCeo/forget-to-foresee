@@ -31,9 +31,9 @@ await page.evaluate((secs) => {
   const f = window.__ftf, orig = f.rig.update.bind(f.rig), t0 = performance.now(), ease = (u) => u * u * (3 - 2 * u);
   f.rig.update = (...a) => {
     orig(...a);
-    const u = ease(Math.min(1, (performance.now() - t0) / (secs * 1000))), ang = 2.35 + 1.9 * u, r = 62 - 14 * u, h = 30 - 12 * u;
-    f.rig.camera.position.set(Math.cos(ang) * r, h, Math.sin(ang) * r);
-    f.rig.camera.lookAt(Math.cos(ang + 2.6) * 8, 2 - 2 * u, Math.sin(ang + 2.6) * 8);
+    const u = ease(Math.min(1, (performance.now() - t0) / (secs * 1000))), ang = 2.1 + 1.5 * u, r = 74 - 30 * u, h = 36 - 24 * u;
+    f.rig.camera.position.set(Math.cos(ang) * r, h, Math.sin(ang) * r);      // a descending arc round the archipelago
+    f.rig.camera.lookAt(0, 3 - 2 * u, 0);                                      // always on the plaza at its heart
     f.rig.camera.fov = 50; f.rig.camera.far = Math.max(f.rig.camera.far, 900); f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
   };
 }, SWEEP);
