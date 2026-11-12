@@ -49,3 +49,12 @@ test('touch copy: bracketed keys vanish, key phrases become touch actions', () =
   installTouchCopy(i18n, () => touch); installTouchCopy(i18n, () => touch);
   assert.equal(i18n.t('a'), 'Map (N)'); touch = true; assert.equal(i18n.t('a'), 'Map');
 });
+
+test('touch copy: a written <key>.touch variant wins on touch', () => {
+  let touch = true; const msgs = { a: 'Press E here', 'a.touch': 'Tap Use here', b: 'Walk (G)' };
+  const i18n = { t: (k) => msgs[k], has: (k) => k in msgs };
+  installTouchCopy(i18n, () => touch);
+  assert.equal(i18n.t('a'), 'Tap Use here'); assert.equal(i18n.t('b'), 'Walk');
+  touch = false; assert.equal(i18n.t('a'), 'Press E here');
+  assert.ok(en['quest.obj.read.touch'].length < en['quest.obj.read'].length, 'the phone quest line is shorter');
+});

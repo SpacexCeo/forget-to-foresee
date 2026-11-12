@@ -684,7 +684,13 @@ async function enterWorld() {
 }
 const coarse = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
 
-window.addEventListener('resize', () => lookdev.setSize(window.innerWidth, window.innerHeight));
+// the drawing follows the canvas's box (#app: the dynamic viewport), on every way a phone can change it
+const fitView = () => { const [w, h] = lookdev.viewSize(); lookdev.setSize(w, h); };
+window.addEventListener('resize', fitView);
+window.addEventListener('orientationchange', () => setTimeout(fitView, 250));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitView);
+if (typeof ResizeObserver === 'function' && renderer.domElement.parentElement) new ResizeObserver(fitView).observe(renderer.domElement.parentElement);
+fitView();
 
 let toastTimer = 0;
 function toast(text) { if (playerHud && inTown) { playerHud.toast(text); return; } toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }

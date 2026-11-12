@@ -396,16 +396,24 @@ export class LookDev {
     this.applyPixelRatio();
   }
 
+  /** The drawing size: the canvas's container (#app, the dynamic viewport on phones), else the window. */
+  viewSize() {
+    const box = this.renderer.domElement && this.renderer.domElement.parentElement;
+    const w = (box && box.clientWidth) || window.innerWidth, h = (box && box.clientHeight) || window.innerHeight;
+    return [w, h];
+  }
+
   applyPixelRatio() {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.cfg.pixelRatioCap) * this.pixelScale);
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.post.setSize(window.innerWidth, window.innerHeight);
+    const [w, h] = this.viewSize();
+    this.renderer.setSize(w, h, false);
+    this.post.setSize(w, h);
   }
 
   applyTier() {
     const cfg = this.cfg, r = this.renderer;
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatioCap) * this.pixelScale);
-    r.setSize(window.innerWidth, window.innerHeight);
+    { const [w, h] = this.viewSize(); r.setSize(w, h, false); }
     this.shadows.configure(cfg); // a 0 shadow map turns the sun shadow off
     this.blobs.setStrength(cfg.blobs || 0);
     this.rain.setMax(cfg.rain || 0); this.rain.setAmount(this.weather.state.rain, this.reducedMotion);
@@ -426,8 +434,9 @@ export class LookDev {
   }
 
   setSize(w, h) {
+    if (!(w > 0 && h > 0)) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.renderer.setSize(w, h, false); // CSS keeps the canvas at 100 % of its box
     this.post.setSize(w, h);
   }
 
