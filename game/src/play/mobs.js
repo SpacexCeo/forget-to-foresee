@@ -535,6 +535,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     get charging() { return act.charge ? act.charge.t : null; },
     /** Which source turned the last strike: 'lock' | 'cursor' | 'move' | 'facing' (QA). */
     get aimedBy() { return lastAim; },
+    /** The lunge in progress ({t, left}) or null (QA). */
+    get lunging() { return act.lunge ? { t: act.lunge.t, left: act.lunge.left } : null; },
     /** The creature a strike would turn to now (the soft lock), or null. */
     get locked() { return iris.outside ? pickLock(brain.mobs, player.pos, camForward()) : null; },
     /** The strike (F / 3): a two-or-three-hit combo in front of her. Returns false while on cooldown or off the field.

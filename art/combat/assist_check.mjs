@@ -22,16 +22,19 @@ for (const input of ['key', 'touch']) for (const [deg, dist] of [[90, 3], [150, 
     const sk = b.mobs.find((x) => x.pack === pk && x.state !== 'dead' && x.state !== 'gone');
     if (!sk) return null;
     for (const o of b.mobs) if (o !== sk && o.state !== 'dead' && o.state !== 'gone') { o.pos[0] += 40; }   // the others far away
-    sk.hp = sk.T.hp; sk.state = 'idle'; sk.freeze = 999;                                                     // held still
-    const cam = f.rig.camera, v = cam.getWorldDirection(cam.position.clone()), h = Math.atan2(v.x, v.z) + (deg * Math.PI / 180);
-    const p = [sk.pos[0] - Math.sin(h) * dist, sk.pos[1] + 1, sk.pos[2] - Math.cos(h) * dist];
-    f.player.teleport(p, Math.atan2(v.x, v.z)); M.iris.hp = 100;                                            // she faces where the camera looks
+    // she stands on the flat ground just outside the gate, facing where the camera looks; the skitter is put beside
+    // or behind her at `deg` from that facing and `dist` m away, held still
+    f.player.teleport([0, 1199, 46], 0); M.iris.hp = 100;
+    const cam = f.rig.camera, v = cam.getWorldDirection(cam.position.clone()), h0 = Math.atan2(v.x, v.z), h = h0 + deg * Math.PI / 180;
+    f.player.heading = f.player.prevHeading = h0;
+    window.__place = () => { const p = f.player.pos; sk.pos[0] = p[0] + Math.sin(h) * dist; sk.pos[1] = p[1]; sk.pos[2] = p[2] + Math.cos(h) * dist; };
+    sk.hp = sk.T.hp; sk.state = 'idle'; sk.freeze = 999;
     window.__sk = sk; return { hp: sk.hp };
   }, { deg, dist });
   if (!setup) { results.push({ input, deg, dist, error: 'no skitter' }); continue; }
   await page.waitForTimeout(700);
   await page.mouse.move(1270, 10);                                                                           // the cursor parked far away
-  await page.evaluate(() => { window.__sk.freeze = 999; window.__h0 = window.__ftf.player.heading; });
+  await page.evaluate(() => { window.__place(); window.__sk.freeze = 999; window.__h0 = window.__ftf.player.heading; });
   if (input === 'key') await page.keyboard.press('KeyF');
   else await page.evaluate(() => { const b = document.querySelector('.ftf-cast-slot[data-id="strike"]'); const o = { bubbles: true, pointerId: 7, pointerType: 'touch' }; b.dispatchEvent(new PointerEvent('pointerdown', o)); setTimeout(() => b.dispatchEvent(new PointerEvent('pointerup', o)), 60); });
   await page.waitForTimeout(500);
