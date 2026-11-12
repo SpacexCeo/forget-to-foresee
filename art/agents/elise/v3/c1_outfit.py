@@ -45,6 +45,7 @@ def body_w(P, drop=()):
     idx = np.array([kd.find(tuple(p))[1] for p in P]); Wm = BW[idx].copy()
     for i, n in enumerate(GN):
         if n.startswith(tuple(drop)): Wm[:, i] = 0
+    lost = Wm.sum(1) < 1e-6; Wm[lost, GN.index('chest' if drop and 'shoulder' in drop else 'pelvis')] = 1.0      # a point whose whole weight was dropped must not be left unbound (it stood out as a black wedge)
     Wm /= np.maximum(Wm.sum(1, keepdims=True), 1e-9); return {n: Wm[:, i] for i, n in enumerate(GN)}
 def make_obj(name, V, F):
     m = bpy.data.meshes.new(name); m.from_pydata([tuple(map(float, v)) for v in V], [], [tuple(map(int, f)) for f in F]); m.update()
