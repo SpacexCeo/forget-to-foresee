@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|audit|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
 // --step 60: frame by frame: the page's clock and its animation frames are driven by this script (each frame is
 // exactly 1/60 s of game time and is saved), so the film is a true 60 fps whatever the renderer's speed is.
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
@@ -33,7 +33,7 @@ if (STEP) await page.addInitScript(() => {
   window.__manual = () => { vt = realNow(); manual = true; };
   window.__frame = (dt) => { vt += dt; const c = q; q = []; for (const f of c) { try { f(vt); } catch (e) { console.error(e); } } return c.length; };
 });
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -164,6 +164,45 @@ else if (scenario === 'strikes') {
     mark('strike then a step'); await tap(60); await wait(150); await go(900, false); await wait(900); res.push(await state('strike then a step'));
   }
   marks.push({ strikes: res });
+}
+else if (scenario === 'audit') {
+  // every action out of standing, walking and running, alone and crossed with another one; 2.6 s later the report
+  // says what is still on her (an action clip, a pending hold, a reaction, the cast's root), how far the chest and
+  // the model are turned off the root, and whether she can walk again. A row with `bad` is a stuck or twisted end.
+  await page.evaluate(() => { const mb = window.__ftf.town.mobs; if (mb && mb.iris) mb.iris.iframes = 1e9; });   // the packs must not kill the test
+  const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos, h = f.player.heading; const pt = [p[0] + Math.sin(h) * 9, 0, p[2] + Math.cos(h) * 9]; pt[1] = window.__ground(pt[0], pt[2]) ?? p[1]; f.town.casting.aimAt(id, pt); return f.town.casting.release(); }, id);
+  const F = { down: () => page.keyboard.down('KeyF'), up: () => page.keyboard.up('KeyF') };
+  const tap = async (ms = 60) => { await F.down(); await wait(ms); await F.up(); };
+  const ACTS = {
+    lance: () => aim('lance'), snare: () => aim('snare'), dash: () => page.keyboard.press('Space'), tap: () => tap(), 'two taps': async () => { await tap(); await wait(120); await tap(); },
+    hold: () => tap(800),
+    'charge, dash, let go': async () => { await F.down(); await wait(500); await page.keyboard.press('Space'); await wait(300); await F.up(); },
+    'charge, cast, let go': async () => { await F.down(); await wait(500); await aim('lance'); await wait(300); await F.up(); },
+    'cast then tap': async () => { await aim('lance'); await wait(100); await tap(); },
+    'cast then dash': async () => { await aim('snare'); await wait(150); await page.keyboard.press('Space'); },
+    'tap then cast': async () => { await tap(); await wait(80); await aim('lance'); },
+    'dash then cast': async () => { await page.keyboard.press('Space'); await wait(120); await aim('snare'); },
+    'dash then tap': async () => { await page.keyboard.press('Space'); await wait(100); await tap(); },
+  };
+  const state = () => page.evaluate(() => {
+    const f = window.__ftf, m = f.iris.irisModel, Q = m.model.quaternion.constructor;
+    const fwd = (n) => { const o = m.model.getObjectByName(n); if (!o) return 0; const v = m.model.position.clone().set(0, 0, 1).applyQuaternion(o.getWorldQuaternion(new Q())); return Math.atan2(v.x, v.z); };
+    const deg = (a) => +((((a * 180 / Math.PI) + 540) % 360) - 180).toFixed(1);
+    return { clip: m.combat ? m.combat.name : null, pending: m.pendingHold ? m.pendingHold.name : null, react: f.iris.irisReaction ? f.iris.irisReaction.clip : null,
+      casting: !!(f.town.casting && f.town.casting.casting), charging: f.town.mobs ? f.town.mobs.charging != null : false,
+      chest_vs_hips: deg(fwd('chest') - fwd('pelvis')), hips_vs_root: deg(fwd('pelvis') - f.player.heading), pos: [f.player.pos[0], f.player.pos[2]] };
+  });
+  const rows = [];
+  for (const start of ['idle', 'walk', 'run']) for (const [name, act] of Object.entries(ACTS)) {
+    await back(); await shot({ angle: 0.7, dist: 5.2, h: 0.9, up: 0.35 }); await wait(700);
+    if (start !== 'idle') await go(700, start === 'run');
+    mark(start + ': ' + name); await act(); await wait(2600);
+    const s = await state(); await go(500, false); const s2 = await state(); await wait(200);
+    const moved = Math.hypot(s2.pos[0] - s.pos[0], s2.pos[1] - s.pos[1]);
+    const bad = [s.clip && 'clip left: ' + s.clip, s.pending && 'pending hold', s.casting && 'cast root stuck', s.charging && 'still charging', Math.abs(s.chest_vs_hips) > 14 && 'chest twisted', Math.abs(s.hips_vs_root) > 20 && 'hips off the root', moved < 0.3 && 'cannot walk'].filter(Boolean);
+    rows.push({ start, action: name, clip: s.clip, react: s.react, chest_vs_hips: s.chest_vs_hips, hips_vs_root: s.hips_vs_root, moved: +moved.toFixed(2), bad });
+  }
+  marks.push({ audit: rows, bad: rows.filter((r) => r.bad.length) });
 }
 else if (scenario === 'shoulders') {
   // the shoulders and arms (Elise): close from the front and from behind while she stands, waves, walks and runs
