@@ -32,6 +32,7 @@ import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVa
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { createPlayerHud } from './scenes/player-hud.js';
+import { installTouchCopy } from './ui/touch-copy.js';
 import { createTouchControls } from './scenes/touch-sticks.js';
 import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
@@ -143,6 +144,7 @@ for (const s of shells) {
 }
 const rig = new CameraRig(camera, world);
 const input = new Input(renderer.domElement);
+installTouchCopy(ctx.i18n, () => !!input.touchControls); // on touch, no keyboard keys in any text (ui/touch-copy.js)
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
 // The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
@@ -557,11 +559,15 @@ function updateAltarTimer() {
   }
   const a = TOWN_ALTAR.position;
   _altarP.set(a[0], a[1] + 4.2, a[2]).project(camera);
-  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
+  // outside the walls the label would show through the gate wall: hidden there (the street and stairs see the altar)
+  const altarOccluded = !!(townMobs && townMobs.iris && townMobs.iris.outside);
+  const visible = !altarOccluded && _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
   altarTimer.hidden = !visible;
   if (!visible) return;
-  const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  if (altarTimer.textContent !== text) altarTimer.textContent = text;
+  // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
+  const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
+  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
@@ -872,7 +878,7 @@ function frame() {
   // FPS cap (settings popup): skip this display frame; the next one's delta carries the time
   if (gameSettings.fpsCap) { const nowMs = performance.now(); if (!frameDue(gameSettings.fpsCap, nowMs - lastRenderAt)) { requestAnimationFrame(frame); return; } lastRenderAt = nowMs; }
   const rawDt = clock.getDelta();
-  const dt = Math.min(rawDt, 0.25); // render, camera and animation delta
+  const dt = Math.min(Math.max(rawDt, 0), 0.25); // render, camera and animation delta (never negative: a clock that steps back, e.g. a test clock, would poison the damping)
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
   // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
@@ -959,6 +965,16 @@ function frame() {
       if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets
         const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
         townAudio.step(d, !!player.run, townShops && townShops.inside ? 'wood' : (lz > 36 || Math.abs(lx) > 55) ? 'grass' : 'stone');
+      }
+      { // the music bed by zone: the shops, beyond the walls, the streets (src/audio/music.js)
+        const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
+        townAudio.setMusicZone(townShops && townShops.inside ? 'interior' : (lz > 36 || Math.abs(lx) > 55) ? 'outside' : 'town');
+      }
+      { // Floating Cities lifts while monsters chase her; the crownrift elite engaged brings Legionnaire
+        let aggro = false, elite = false;
+        const mobs = townMobs && townMobs.brain ? townMobs.brain.mobs : null;
+        if (mobs) for (const m of mobs) { if (m.state === 'idle' || m.state === 'dead' || m.state === 'gone') continue; aggro = true; if (m.T && m.T.elite) elite = true; }
+        townAudio.setCombat({ aggro, elite });
       }
       lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
       townAudio.setListener(camera, avatar.position);
