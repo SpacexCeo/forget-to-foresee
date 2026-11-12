@@ -107,8 +107,8 @@ test('Foot contacts and the dash trail: a step is reported once per landing, the
   assert.ok(crossed(0.98, 0.03, 0.0) && crossed(0.98, 0.03, 0.02) && !crossed(0.98, 0.03, 0.5), 'across the loop point');
   let steps = 0; for (let i = 0, p = 0.1; i < 600; i++) { const q = (p + 0.0137) % 1; if (crossed(p, q, 0.0682)) steps++; p = q; }
   assert.equal(steps, Math.floor((0.1 + 600 * 0.0137 - 0.0682)) + 0, 'one landing per stride');
-  const { DASH_TRAIL, stampTimes, ghostOpacity } = await import('../../src/render/dash-trail.js');
-  assert.equal(stampTimes(DASH_TRAIL.ghostsPhone).length, 2); assert.ok(stampTimes(3).every((t) => t < 0.2), 'stamped inside the 0.2 s burst');
+  const { DASH_TRAIL, stampDistances, ghostOpacity } = await import('../../src/render/dash-trail.js');
+  assert.equal(stampDistances(DASH_TRAIL.ghostsPhone).length, 2); assert.ok(stampDistances(3).every((d) => d > 0.5 && d < 4.5), 'left along the 4.5 m burst');
   assert.ok(ghostOpacity(0) > 0.4 && ghostOpacity(DASH_TRAIL.ghostLife) === 0 && DASH_TRAIL.ghostLife <= 0.4 && DASH_TRAIL.ribbonLife <= 0.4, 'short and crisp');
   const { readFileSync } = await import('node:fs');
   const av = readFileSync(new URL('../../src/play/iris-avatar.js', import.meta.url), 'utf8');

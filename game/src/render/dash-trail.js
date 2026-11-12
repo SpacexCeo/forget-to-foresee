@@ -5,12 +5,12 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
-export const DASH_TRAIL = Object.freeze({ color: 0xb9a4ff, ghosts: 3, ghostsPhone: 2, stamps: [0.03, 0.09, 0.15], ghostLife: 0.32, ribbonLife: 0.28, ribbonPoints: 14, ribbonHeight: 0.85 });
+export const DASH_TRAIL = Object.freeze({ color: 0x8f7bff, ghosts: 3, ghostsPhone: 2, spacing: 1.15, ghostLife: 0.32, ribbonLife: 0.26, ribbonPoints: 14, ribbonY: 0.92, ribbonHeight: 0.34 });
 
-/** When a ghost is stamped during a dash of `seconds`, for `n` ghosts: spread over the burst. */
-export function stampTimes(n, T = DASH_TRAIL) { return T.stamps.slice(0, n); }
+/** How far along the dash (metres from its start) each of `n` ghosts is left: evenly, whatever the frame rate. */
+export function stampDistances(n, T = DASH_TRAIL) { return Array.from({ length: n }, (_, i) => (i + 0.6) * T.spacing); }
 /** A ghost's opacity `age` seconds after its stamp: a quick ease out to nothing. */
-export function ghostOpacity(age, life = DASH_TRAIL.ghostLife) { const k = 1 - Math.min(1, Math.max(0, age / life)); return 0.55 * k * k; }
+export function ghostOpacity(age, life = DASH_TRAIL.ghostLife) { const k = 1 - Math.min(1, Math.max(0, age / life)); return 0.5 * k * k; }
 
 export class DashTrail {
   /** @param {THREE.Object3D} parent the scene @param {THREE.Object3D} model her model (child of the avatar group) */
@@ -22,7 +22,7 @@ export class DashTrail {
     this.ghosts = [];
     for (let i = 0; i < n; i++) {
       const g = cloneSkinned(model);
-      const mat = new THREE.MeshBasicMaterial({ color: DASH_TRAIL.color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+      const mat = new THREE.MeshBasicMaterial({ color: DASH_TRAIL.color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.NormalBlending });
       const bones = [];
       g.traverse((o) => {
         if (o.isBone && this.live.has(o.name)) bones.push([o, this.live.get(o.name)]);
@@ -39,20 +39,21 @@ export class DashTrail {
     this.geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3)); this.geo.setAttribute('color', new THREE.BufferAttribute(this.col, 4));
     const idx = []; for (let i = 0; i < P - 1; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
     this.geo.setIndex(idx);
-    this.ribbon = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color: DASH_TRAIL.color, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    this.ribbon = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color: DASH_TRAIL.color, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     this.ribbon.frustumCulled = false; this.ribbon.visible = false; this.ribbon.renderOrder = 3;
     this.group.add(this.ribbon);
-    this.t = -1; this.next = 0; this.stamps = stampTimes(n);
+    this.t = -1; this.next = 0; this.stamps = stampDistances(n); this.from = new THREE.Vector3(); this.at = new THREE.Vector3();
   }
 
   get active() { return this.t >= 0; }
 
   /** A dash begins. */
-  start() { this.t = 0; this.next = 0; this.pts.length = 0; }
+  start() { this.t = 0; this.next = 0; this.pts.length = 0; this.fresh = true; }
 
-  stamp(g, avatarGroup) {
+  /** Leaves ghost `g` in her current pose at the world point `at` on the path. */
+  stamp(g, avatarGroup, at) {
     avatarGroup.updateMatrixWorld(true);
-    g.holder.matrix.copy(avatarGroup.matrixWorld); g.holder.matrixWorldNeedsUpdate = true;
+    g.holder.matrix.copy(avatarGroup.matrixWorld).setPosition(at); g.holder.matrixWorldNeedsUpdate = true;
     g.model.position.copy(this.model.position); g.model.quaternion.copy(this.model.quaternion); g.model.scale.copy(this.model.scale);
     for (const [b, src] of g.bones) { b.position.copy(src.position); b.quaternion.copy(src.quaternion); b.scale.copy(src.scale); }
     g.age = 0; g.holder.visible = true;
@@ -62,9 +63,15 @@ export class DashTrail {
   update(dt, avatarGroup, reduced = false) {
     if (this.t < 0) return;
     if (reduced) { this.stop(); return; }
+    if (this.fresh) { this.fresh = false; this.from.copy(avatarGroup.position); }
     this.t += dt;
-    while (this.next < this.stamps.length && this.t >= this.stamps[this.next]) this.stamp(this.ghosts[this.next++], avatarGroup);
-    let alive = this.next < this.stamps.length;
+    // a ghost every `spacing` metres of the burst, placed on the path itself (a slow frame still spreads them)
+    const gone = this.at.copy(avatarGroup.position).sub(this.from), far = gone.length();
+    while (this.t < 0.3 && this.next < this.stamps.length && far >= this.stamps[this.next]) {
+      this.stamp(this.ghosts[this.next], avatarGroup, this.at.copy(this.from).addScaledVector(gone, this.stamps[this.next] / far)); this.next++;
+      gone.copy(avatarGroup.position).sub(this.from);
+    }
+    let alive = this.t < 0.3 && this.next < this.stamps.length;
     for (const g of this.ghosts) {
       if (!g.holder.visible) continue;
       g.age += dt; g.mat.opacity = ghostOpacity(g.age);
@@ -79,8 +86,9 @@ export class DashTrail {
     if (n >= 2) {
       for (let i = 0; i < P; i++) {
         const q = this.pts[Math.min(i, n - 1)], a = i < n ? 0.6 * Math.pow(1 - q.age / DASH_TRAIL.ribbonLife, 2) * Math.min(1, i / 1.5) : 0;
-        this.pos.set([q.x, q.y + 0.45, q.z, q.x, q.y + 0.45 + DASH_TRAIL.ribbonHeight, q.z], i * 6);
-        this.col.set([1, 1, 1, a * 0.35, 1, 1, 1, a], i * 8);
+        const h = DASH_TRAIL.ribbonHeight * (0.35 + 0.65 * (1 - q.age / DASH_TRAIL.ribbonLife));       // it thins as it fades
+        this.pos.set([q.x, q.y + DASH_TRAIL.ribbonY - h / 2, q.z, q.x, q.y + DASH_TRAIL.ribbonY + h / 2, q.z], i * 6);
+        this.col.set([1, 1, 1, a * 0.25, 1, 1, 1, a], i * 8);
       }
       this.geo.attributes.position.needsUpdate = true; this.geo.attributes.color.needsUpdate = true;
       this.ribbon.visible = true; alive = true;
