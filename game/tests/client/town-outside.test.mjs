@@ -82,3 +82,21 @@ test('Return to town mounts the casting field again (leaveTown disposes it), and
   assert.match(cast, /lance: '<svg/); assert.match(cast, /snare: '<svg/);
   assert.deepEqual(Object.values(CAST_KEYS).sort(), ['lance', 'lance', 'snare', 'snare']);
 });
+
+test('A cast leaves on the release frame of her cast clip: the clips carry it, the field waits for it and holds her walk', async () => {
+  const { readFileSync } = await import('node:fs');
+  const glb = readFileSync(new URL('../../public/assets/anim/iris.glb', import.meta.url));
+  const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8'));
+  for (const id of Object.keys(CASTS)) {
+    const clip = json.animations.find((a) => a.name === 'cast_' + id);
+    assert.ok(clip, 'cast_' + id + ' is in iris.glb');
+    const times = json.accessors[clip.samplers[0].input];
+    assert.ok(clip.extras.release_s >= 0.3 && clip.extras.release_s <= 0.6, 'a slow build, then the release at about half a second');
+    assert.ok(times.max[0] > clip.extras.release_s + 0.5 && times.max[0] <= CASTS[id].cooldown + 0.3, 'an overshoot and a settle, no longer than the cooldown allows');
+  }
+  const cast = readFileSync(new URL('../../src/scenes/town-casting.js', import.meta.url), 'utf8');
+  assert.match(cast, /onCastStart\(id, shot\)/); assert.match(cast, /if \(!p\.fired && p\.t >= p\.at\) fire\(p\)/);
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /irisAvatar\.cast\('cast_' \+ id\)/, 'the cast clip is cued at the start of a cast');
+  assert.match(boot, /townCasting\.casting\) return \[0, 0\]/, 'she stands still while she winds up and lets go');
+});

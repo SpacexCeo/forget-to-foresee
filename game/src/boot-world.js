@@ -370,8 +370,11 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
-    onArm: (id) => cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'), // the build while she winds up
-    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); }, // her hand goes up with the cast
+    // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
+    // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
+    onCastStart: (id) => { cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
+    handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
     extra: [
@@ -751,6 +754,7 @@ function handleInput(dt) {
 
 function wishVector() {
   if (inspecting || controls.dialog.open) return [0, 0];
+  if (townCasting && townCasting.casting) return [0, 0];      // she winds up and lets go standing still
   const [ax, ay] = input.moveAxes();
   if (ax || ay) {
     stopSteering();

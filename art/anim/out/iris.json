@@ -5,7 +5,7 @@
   "seconds": 6.03,
   "slip_mean_m_s": 0.0,
   "slip_max_m_s": 0.0,
-  "hip_drop_max_m": 0.0066,
+  "hip_drop_max_m": 0.0074,
   "contacts": {
    "L": [
     [
@@ -27,7 +27,7 @@
   "seconds": 6.03,
   "slip_mean_m_s": 0.0,
   "slip_max_m_s": 0.0,
-  "hip_drop_max_m": 0.0114,
+  "hip_drop_max_m": 0.0137,
   "contacts": {
    "L": [
     [
@@ -45,15 +45,15 @@
  },
  "walk": {
   "take": "08_01",
-  "slip_mean_m_s": 0.0114,
-  "slip_max_m_s": 0.1109,
+  "slip_mean_m_s": 0.004,
+  "slip_max_m_s": 0.0368,
   "ball_min_y": 0.0381,
   "src_stride_m": 1.707,
   "src_T_s": 1.008,
   "src_speed": 1.693,
   "stride_scale": 0.996,
   "time_scale": 1.008,
-  "hip_drop_max_m": 0.0144,
+  "hip_drop_max_m": 0.0152,
   "contact": {
    "L": [
     0,
@@ -75,7 +75,7 @@
   "src_speed": 3.329,
   "stride_scale": 0.991,
   "time_scale": 1.0,
-  "hip_drop_max_m": 0.0039,
+  "hip_drop_max_m": 0.0037,
   "contact": {
    "L": [
     6,
@@ -93,7 +93,7 @@
   "seconds": 3.37,
   "slip_mean_m_s": 0.0,
   "slip_max_m_s": 0.0,
-  "hip_drop_max_m": 0.0019,
+  "hip_drop_max_m": 0.0024,
   "contacts": {
    "L": [
     [
@@ -115,7 +115,7 @@
   "seconds": 2.3,
   "slip_mean_m_s": 0.0,
   "slip_max_m_s": 0.0,
-  "hip_drop_max_m": 0.0328,
+  "hip_drop_max_m": 0.0305,
   "contacts": {
    "L": [
     [

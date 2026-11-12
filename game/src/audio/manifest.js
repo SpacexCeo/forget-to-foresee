@@ -109,15 +109,15 @@ export const AUDIO_MANIFEST = {
     "cast_charge_frost": {
       "file": "cast_charge_frost.ogg",
       "kind": "sfx",
-      "dur": 1.8439,
-      "samples": 88507,
+      "dur": 1.3715,
+      "samples": 65833,
       "channels": 2
     },
     "cast_charge_storm": {
       "file": "cast_charge_storm.ogg",
       "kind": "sfx",
-      "dur": 1.5655,
-      "samples": 75145,
+      "dur": 1.1526,
+      "samples": 55325,
       "channels": 2
     },
     "cast_release_frost_1": {

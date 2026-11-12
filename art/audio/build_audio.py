@@ -950,7 +950,7 @@ def dash_whoosh(r, i):
 
 @asset("cast_charge_frost", "sfx", target=(-22, "short"))
 def cast_charge_frost(r):
-    D = 0.9
+    D = 0.42  # the wind-up: the release frame comes 0.42 s after the click (claude/iris-anim)
     n = ns(D)
     t = taxis(n)
     rise = (t / D) ** 1.6
@@ -984,7 +984,7 @@ def cast_release_frost(r, i):
 
 @asset("cast_charge_storm", "sfx", target=(-22, "short"))
 def cast_charge_storm(r):
-    D = 0.9
+    D = 0.42  # the wind-up: the release frame comes 0.42 s after the click (claude/iris-anim)
     n = ns(D)
     t = taxis(n)
     rise = (t / D) ** 1.4

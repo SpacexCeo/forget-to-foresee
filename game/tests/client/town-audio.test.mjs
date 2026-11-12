@@ -63,3 +63,15 @@ test('positional cues, a volume jitter, and footsteps by surface', async () => {
   assert.ok(played[2][1].gain > played[1][1].gain, 'running steps are louder');
   ta.dispose();
 });
+
+test('foot contacts from the locomotion (ftf:foot) take over from the distance pacing', async () => {
+  const { createTownAudio } = await import('../../src/audio/town-audio.js');
+  const played = []; const listeners = {};
+  const win = { addEventListener: (k, f) => { listeners[k] = f; }, removeEventListener() {} };
+  const ta = createTownAudio({ createAudio: () => ({ setZone() {}, play: (n) => played.push(n), unlock: () => Promise.resolve(), dispose() {} }), win, rand: () => 0.5 });
+  ta.step(5, false, 'grass'); assert.deepEqual(played, ['step_grass'], 'no contacts yet: the pacing steps');
+  listeners['ftf:foot']({ detail: { running: false } }); assert.equal(played.at(-1), 'step_grass', 'the contact uses the current floor');
+  ta.step(5, false, 'stone'); assert.equal(played.length, 2, 'contacts arriving: the pacing stays quiet');
+  listeners['ftf:foot']({ detail: { surface: 'wood' } }); assert.equal(played.at(-1), 'step_wood');
+  ta.dispose();
+});

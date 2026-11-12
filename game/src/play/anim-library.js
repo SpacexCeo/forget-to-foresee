@@ -37,8 +37,10 @@ function loadFile(name, base) {
 }
 
 /** The side-car clips of a model ([] when it has none or the file fails: the model's own clips stay). */
-export function sidecarClips(asset, base = baseUrl()) {
-  const name = SIDECAR[asset];
+export function sidecarClips(asset, base = baseUrl(), search = typeof location !== 'undefined' ? location.search : '') {
+  let name = SIDECAR[asset];
+  // `?anim=v1`: Iris's clips as they were before the 12.11 animation pass, kept until the owner approves the new ones
+  if (name === 'iris' && new URLSearchParams(search).get('anim') === 'v1') name = 'iris_v1';
   if (!name) return Promise.resolve([]);
   return loadFile(name, base).then((g) => g.animations, (e) => { console.warn('[anim] side-car clips failed', name, e); return []; });
 }
