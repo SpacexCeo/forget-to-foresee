@@ -256,8 +256,31 @@ if (townMode.town) {
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   refreshCompanions();
-  if (!townMonsters) townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, onPickup: () => toast(ctx.i18n.t('chest.found')) }); // loaded on the first walk out of the gate
-  if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
+  if (!townMonsters) {
+    // chests: the hillside packs' kills drop them (play/mobs.js 'ftf:mob-killed'); the moss critters roam only when the
+    // packs are off (?mobs=0)
+    townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, critters: () => params.get('mobs') === '0', onPickup: () => toast(ctx.i18n.t('chest.found')) });
+    window.addEventListener('ftf:mob-killed', (e) => { if (townMonsters && inTown && e.detail) townMonsters.drop(e.detail.pos, e.detail.elite); });
+    // the profile button carries the number of sealed chests (a small gold badge), so a found chest is not forgotten
+    const badgeChests = () => { const b = document.querySelector('.ftf-town-profile'); if (!b) return; const n = chestBag.sealed().length; if (n) b.dataset.chests = String(n); else delete b.dataset.chests; }; // generated content: read with the label
+    chestBag.subscribe(badgeChests); badgeChests();
+    // ?chestpreview=1|nft|item|silk: a labelled preview of the open-case moment with a fixture outcome (for filming);
+    // it says "Preview — not on chain", links nothing and puts nothing in the bag
+    const pv = params.get('chestpreview');
+    if (pv) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ftf-town-prompt'; b.textContent = ctx.i18n.t('chest.previewButton');
+      b.style.cssText = 'position:fixed;left:16px;bottom:16px;transform:none;z-index:20';
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', () => Promise.all([import('./play/chest-open.js'), import('./play/game-menu.js')]).then(([m, gm]) => {
+        const FIX = { item: { kind: 'item', id: 'shard_violet_spire', amount: 1, rarity: 'rare' }, silk: { kind: 'silk', id: null, amount: 25, rarity: 'rare' } };
+        const outcome = FIX[pv] || { kind: 'nft', id: 'shard_amber_crown', amount: 1, rarity: 'legendary' };
+        const client = { available: true, open: () => new Promise((res) => setTimeout(() => res({ ok: true, opening: { index: 0, outcome, preview: true, verification: { verified: false } } }), 900)) };
+        m.openChestReveal({ t: (k, a) => ctx.i18n.t(k, a), chest: { id: 'preview', tier: outcome.kind === 'nft' ? 'legendary' : 'rare', source: 'preview' }, client, guest: 'preview', items: gm.loadManifest() });
+      }).catch((e) => console.warn('[chest] preview', e)));
+      document.body.append(b);
+    }
+  }
+  if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, coarse: mobileDevice, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
     const people = [];
     townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
@@ -467,8 +490,10 @@ function updateAltarTimer() {
   if (!visible) return;
   const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
   if (altarTimer.textContent !== text) altarTimer.textContent = text;
-  altarTimer.style.left = ((_altarP.x + 1) / 2 * innerWidth).toFixed(0) + 'px';
-  altarTimer.style.top = ((1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+  // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
+  const minTop = innerWidth < 700 ? 150 : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
+  altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
+  altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
 /**
@@ -675,7 +700,7 @@ function handleInput(dt) {
     if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
   }
   if (input.hit('KeyK') && (townOn || playOn)) toggleSkin(); // Day 1: Iris <-> Elise
-  if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
+  if (input.hit('KeyR') || pad.hit(PAD.reset)) { if (!(townShops && townShops.resetCamera())) rig.reset(); } // indoors: the room's camera
   cameraInput(dt, pad);
 
   if (!inspecting) {
