@@ -33,7 +33,7 @@ def colours(n):
 n, co, fv = arrays(); band = (co[:, 2] > 1.0) & (co[:, 2] < 1.2); dx = -0.5 * (co[band, 0].min() + co[band, 0].max()); co[:, 0] += dx
 me.vertices.foreach_set('co', co.ravel()); me.update(); col = colours(n); x, y, z = co.T; warm = col[:, 0] - col[:, 2] > 0.015; red = (col[:, 0] > 0.3) & (col[:, 0] > 1.8 * col[:, 1])
 dress = (col[:, 2] >= col[:, 0]) & (col.mean(1) < 0.3)
-thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.27) & (z > 0.70) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
+thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.22) & (z > 0.60) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
 e = np.concatenate([fv[:, [0, 1]], fv[:, [1, 2]], fv[:, [2, 0]]]); e = np.concatenate([e, e[:, ::-1]])
 leg = warm & ~arm & (z < 0.78) & (x > -0.03) & (x < 0.21) & (y < 0.06)
 for _ in range(3):                                     # the lacing drawn over the hip skin goes with the skin
@@ -62,7 +62,7 @@ n, co, fv = arrays(); col = colours(n); x, y, z = co.T; pfa = np.empty(len(me.po
 part = np.zeros(n, int)
 warm = col[:, 0] - col[:, 2] > 0.015; red = (col[:, 0] > 0.3) & (col[:, 0] > 1.8 * col[:, 1])
 dress = (col[:, 2] >= col[:, 0]) & (col.mean(1) < 0.3)
-thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.27) & (z > 0.70) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
+thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.22) & (z > 0.60) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
 print('parts: vertices %d, arms %d, leg and shoe faces cut %d, red %d, centred by %.4f, swatches %s' % (n, arm.sum(), len(cut), red.sum(), dx, {k: tuple(round(c, 3) for c in v) for k, v in SW.items()}))
 
 # ---------------- 11: weights by rule
@@ -83,7 +83,7 @@ w_neck = ss(1.42, 1.47, z) * (1 - w_head); w_chest = ss(1.16, 1.24, z) * (1 - w_
 w_arm = np.zeros(n)
 for sd in 'LR':                                       # the shoulder: the fused part above the arm cluster
     S = BH['upperarm_' + sd]; E = BH['forearm_' + sd]; d = (E - S) / np.linalg.norm(E - S); t = (co - S) @ d; dist = np.linalg.norm(co - S - np.clip(t, 0, None)[:, None] * d, axis=1)
-    wa = ss(-0.06, 0.03, t) * (1 - ss(0.035, 0.06, dist)) * ss(1.25, 1.33, z) * (rest & side(sd) & (z >= 1.2) & (z < 1.47)); w_arm += wa; W['upperarm_' + sd][rest] += wa[rest]
+    thr2 = 0.115 + (1.25 - z) * 0.2125; wa = np.maximum(ss(-0.06, 0.03, t) * (1 - ss(0.035, 0.06, dist)) * ss(1.25, 1.33, z), ss(thr2 - 0.015, thr2 + 0.02, np.abs(x)) * ss(1.36, 1.30, z)) * (rest & side(sd) & (z >= 1.2) & (z < 1.47)); w_arm += wa; W['upperarm_' + sd][rest] += wa[rest]
     wsh = (1 - wa) * ss(0.05, 0.11, np.abs(x)) * ss(1.30, 1.38, z) * 0.6 * (rest & side(sd) & (z < 1.47)); W['shoulder_' + sd][rest] += wsh[rest]; w_arm += wsh
 keep = 1 - w_arm
 # the skirt: 13 chains of 4 bones around the pelvis
@@ -119,9 +119,6 @@ print('skeleton: %d bones, order kept: %s' % (len(arm_d.bones), [b.name for b in
 
 # ---------------- 15: budget, outline hull, the game file
 bpy.context.view_layer.objects.active = el; bpy.ops.object.select_all(action='DESELECT'); el.select_set(True)
-now = len(me.polygons)
-if TRIS < now:
-    md = el.modifiers.new('dec', 'DECIMATE'); md.ratio = TRIS / now; md.use_collapse_triangulate = True; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
 me = el.data; el.name = 'elise'; me.name = 'elise'
 # the left leg, the stocking and the shoes of the v3 build, on the same bones, coloured by swatches of this texture
 with bpy.data.libraries.load(LEGS) as (src, dst): dst.objects = [o for o in src.objects if o in ('elise_body', 'elise_stockings', 'elise_shoes')]
@@ -146,6 +143,11 @@ for o in dst.objects: o.select_set(True)
 el.select_set(True); bpy.context.view_layer.objects.active = el; bpy.ops.object.join(); me = el.data
 for o in [o for o in bpy.data.objects if o not in (el, ao)]: bpy.data.objects.remove(o)
 print('leg, stocking and shoes added: %d triangles' % added)
+bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); bpy.context.view_layer.objects.active = el
+now = len(me.polygons)
+if TRIS < now:
+    md = el.modifiers.new('dec', 'DECIMATE'); md.ratio = TRIS / now; md.use_collapse_triangulate = True; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
+me = el.data
 for p in me.polygons: p.use_smooth = True
 mat = me.materials[0]; mat.name = 'elise_toon'; bs = next(x for x in mat.node_tree.nodes if x.type == 'BSDF_PRINCIPLED'); bs.inputs['Roughness'].default_value = 1.0; bs.inputs['Metallic'].default_value = 0.0; mat.use_backface_culling = False
 bpy.data.images['hero_base.png'].name = 'agent_elise_base'
