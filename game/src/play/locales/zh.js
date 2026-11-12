@@ -920,6 +920,8 @@ export default {
   "hire.result.net": "净额",
   "hire.result.seed": "种子（同一种子，同一结果）",
   "profile.button": "档案 · {level} 级",
+  "xp.gain": "+{n} 经验",
+  "xp.levelUp": "升到 {level} 级！",
   "profile.open": "档案与物品",
   "profile.title": "档案",
   "profile.heading": "{level} 级 · {title}",

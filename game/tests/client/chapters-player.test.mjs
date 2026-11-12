@@ -204,3 +204,15 @@ test('warmScene: forced compile without the parallel-compile extension, textures
   assert.deepEqual(calls, [['tex', true], ['compile', true]]);
   calls.length = 0; await w.compile(scene); assert.deepEqual(calls, [], 'an ordinary model warm-up still leaves it to the first draw');
 });
+
+test('streaming is held during a film: the shots’ views are prefetched and nothing leaves until it ends', async () => {
+  // render/assets.js pulls a Vite virtual module, so it is checked by source here and in the built page (skip probe)
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../../src/render/assets.js', import.meta.url), 'utf8');
+  assert.match(src, /export function holdStreaming\(on\) \{\n  holds = Math\.max\(0, holds \+ \(on \? 1 : -1\)\);/);
+  assert.match(src, /if \(!holds\) for \(const s of streamers\) s\.viewPins\.clear\(\);/, 'the film over, its views are no longer pinned');
+  assert.match(src, /if \(holds > 0\) return; \/\/ a cutscene plays/, 'releases, evictions and swaps wait while held');
+  assert.match(src, /this\.viewPins\.has\(name\) \? VIEW_PIN : null/, 'a coming shot’s assets are wanted');
+  const idx = fs.readFileSync(new URL('../../src/cinematic/chapters/index.js', import.meta.url), 'utf8');
+  assert.match(idx, /holdStreaming\(true\); forceWarmCompile\(true\);[^\n]*\n    let result;\n    try \{ result = await filmPlayer\.play\(film, \{ paused: stills \}\); \} finally \{ holdStreaming\(false\); forceWarmCompile\(false\); \}/);
+});
