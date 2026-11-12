@@ -5,11 +5,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyQuest, initialQuests, questStatus } from '../../src/game/quest-rules.js';
 import { EXPEDITION } from '../../src/game/expedition-config.js';
+import { rollDrops } from '../../src/game/resources.js';
 
 export function simulate({ killsPerMin = 4, mix = { skitter: 0.85, veilbell: 0.1, hulker: 0.05 }, minutes = 300 } = {}) {
   let s = initialQuests(); let silkC = 0; const bySource = { quests: 0, bounty: 0, kills: 0 }; const marks = {};
   const t0 = 3 * 24 * 3600e3; let t = t0, k = 0;
-  const act = (a) => { const r = applyQuest(s, a, { now: t }); if (r.rejected) return r; s = r.state;
+  const bag = {}; // monster resources from the kills (game/resources.js), spent at the turn-ins
+  const act = (a0) => { const a = a0.type === 'TURN_IN' ? { ...a0, have: bag } : a0; const r = applyQuest(s, a, { now: t }); if (r.rejected) return r; s = r.state;
+    if (a.type === 'KILL') for (const d of rollDrops(a.killId, a.mob)) bag[d.id] = (bag[d.id] || 0) + d.n;
+    for (const e of r.events) for (const [id, n] of Object.entries((e.data && e.data.consumed) || {})) bag[id] -= n;
     for (const e of r.events) if (e.silkC > 0) { silkC += e.silkC; bySource[e.kind === 'kill_ticketed' ? 'kills' : e.kind === 'bounty_resolved' ? 'bounty' : 'quests'] += e.silkC; }
     return r; };
   // the guide (two minutes), then the quests as they open
@@ -19,7 +23,7 @@ export function simulate({ killsPerMin = 4, mix = { skitter: 0.85, veilbell: 0.1
   for (let min = 2; min < minutes && silkC < EXPEDITION.PORTAL_FEE_C; min++) {
     t = t0 + min * 60e3;
     for (let i = 0; i < killsPerMin; i++) { const u = ((k * 0.618034) % 1); const mob = cum.find(([, c]) => u < c)[0]; act({ type: 'KILL', mob, killId: 'k' + (k++) }); }
-    if (min === 8) act({ type: 'TURN_IN', questId: 'q_part', partId: 'part_gear', partSource: 'salvage' }); // a part drops within 7 spider kills (Q2 pity)
+    if (min >= 8 && questStatus(s, 'q_part', t) === 'active') act({ type: 'TURN_IN', questId: 'q_part', partId: 'part_gear', partSource: 'salvage' }); // a part drops within 7 spider kills (Q2 pity)
     if (questStatus(s, 'q_spiders', t) === 'ready') { act({ type: 'TURN_IN', questId: 'q_spiders' }); act({ type: 'ACCEPT', questId: 'q_boss' }); }
     if (min === 25 && questStatus(s, 'q_boss', t) === 'active') act({ type: 'KILL', mob: 'crownrift', killId: 'boss' }); // the lookout, a long fight
     if (questStatus(s, 'q_boss', t) === 'ready') act({ type: 'TURN_IN', questId: 'q_boss' });

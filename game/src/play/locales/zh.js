@@ -1540,4 +1540,14 @@ export default {
   "lb.verify": "验证",
   "lb.footer": "规则和快照已提交到 NEAR 测试网。得分来自游戏日志。没有奖品。",
   "lb.close": "关闭",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "蛛丝线",
+  "res.chitin_plate": "甲壳板",
+  "res.veil_dust": "面纱之尘",
+  "res.ash_ore": "灰烬矿石",
+  "res.crown_shard": "王冠碎片",
+  "quest.needs.ask": "给我带来：{list}。",
+  "quest.needs.missing": "还不够。我还需要：{list}。",
+  "quest.needs.item": "{res}：{have}/{n}",
+  "quest.track.needs": "收集{res}：{n} / {count}",
 };

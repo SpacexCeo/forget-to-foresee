@@ -9,6 +9,7 @@ import { createTownLedger } from '../../src/game/town-economy.js';
 import { EXPEDITION } from '../../src/game/expedition-config.js';
 import { memStorage, fakeDoc, fakeI18n } from './story-fakes.mjs';
 import { readFileSync } from 'node:fs';
+import { createInventory } from '../../src/game/inventory.js';
 
 const FOLK = { elder: [0, 0, 0], guard: [10, 0, 0], lamplighter: [20, 0, 0], shardkeeper: [30, 0, 0] };
 function rig({ search = '', silkC = 0 } = {}) {
@@ -17,11 +18,12 @@ function rig({ search = '', silkC = 0 } = {}) {
   const townLedger = createTownLedger({ storage, now });
   if (silkC) townLedger.grant({ silk: silkC });
   const departs = [], chests = [];
-  const tq = createTownQuests({ storage, townLedger, i18n: fakeI18n(), folkAt: (k) => FOLK[k] || null, chests: { add: (c) => chests.push(c) },
+  const inventory = createInventory({ storage });
+  const tq = createTownQuests({ storage, townLedger, i18n: fakeI18n(), folkAt: (k) => FOLK[k] || null, chests: { add: (c) => chests.push(c) }, inventory,
     depart: async (o) => { departs.push(o); return true; }, search, doc, win, now });
-  const kill = (type) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type, pos: [0, 0, 0], elite: false } }));
+  let kn = 0; const kill = (type) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type, pos: [0, 0, 0], elite: false, killId: 't:' + type + '#' + (++kn) } }));
   const killId = (id) => win.dispatchEvent(Object.assign(new Event('ftf:mob-killed'), { detail: { type: 'skitter', pos: [0, 0, 0], elite: false, killId: id } }));
-  return { tq, townLedger, doc, departs, chests, kill, killId, storage, win };
+  return { tq, townLedger, doc, departs, chests, kill, killId, storage, win, inventory };
 }
 function finishGuide(r) {
   r.tq.act('elder', 'guide:talked');
@@ -39,7 +41,8 @@ test('talks: the elder guides, the guard is locked until the welcome, the lampli
   const q2 = applyQuest(applyQuest(applyQuest(q, { type: 'GUIDE', step: 'talked' }).state, { type: 'ACCEPT', questId: 'q_welcome' }).state, { type: 'GUIDE', step: 'moved' }).state;
   const done = applyQuest(q2, { type: 'TURN_IN', questId: 'q_welcome' }).state;
   const lamp = talkFor('lamplighter', s, done);
-  assert.deepEqual(lamp.lines, ['quest.part.offer', 'quest.part.step1', 'quest.part.step2', 'quest.part.step3']);
+  assert.deepEqual(lamp.lines, ['quest.part.offer', 'quest.part.step1', 'quest.part.step2', 'quest.part.step3', 'quest.needs.ask']);
+  assert.deepEqual(lamp.needs, { chitin_plate: 2 });
   assert.equal(talkFor('guard', s, done).choices[0].act, 'accept:q_spiders');
 });
 
@@ -76,9 +79,14 @@ test('kills: ten skitters from the window event finish the spiders, the turn-in 
   for (let i = 0; i < 10; i++) r.kill('skitter');
   r.kill('veilbell');
   assert.equal(r.tq.quests.quests.q_spiders.state, 'ready');
-  assert.equal(objective(r.tq.story, r.tq.quests, Date.now()).key, 'quest.track.ready');
+  assert.equal(objective(r.tq.story, r.tq.quests, Date.now(), {}).key, 'quest.track.needs', 'ready, but the threads are missing');
+  const dropped = r.inventory.count('spider_silk_thread'); // the kills rolled their drops (game/resources.js)
+  assert.ok(dropped > 0);
+  r.inventory.add('spider_silk_thread', 5, 'drop');
+  assert.equal(objective(r.tq.story, r.tq.quests, Date.now(), { spider_silk_thread: 5 }).key, 'quest.track.ready');
   const before = r.townLedger.silk;
   r.tq.act('guard', 'turnin:q_spiders');
+  assert.equal(r.inventory.count('spider_silk_thread'), dropped, 'the turn-in consumed five threads');
   assert.equal(r.townLedger.silk - before, 100_000);
   r.tq.act('guard', 'turnin:q_spiders'); assert.equal(r.townLedger.silk - before, 100_000);
   assert.equal(r.tq.quests.quests.q_spiders.state, 'done');

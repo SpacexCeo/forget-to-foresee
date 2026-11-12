@@ -1541,4 +1541,14 @@ export default {
   "lb.verify": "Verifica",
   "lb.footer": "Regole e snapshot sono registrati su NEAR testnet. Il punteggio viene dal registro di gioco. Nessun premio.",
   "lb.close": "Chiudi",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "filo di seta di ragno",
+  "res.chitin_plate": "placca di chitina",
+  "res.veil_dust": "polvere di velo",
+  "res.ash_ore": "minerale di cenere",
+  "res.crown_shard": "frammento di corona",
+  "quest.needs.ask": "Portami: {list}.",
+  "quest.needs.missing": "Non ancora. Mi serve ancora: {list}.",
+  "quest.needs.item": "{res}: {have} su {n}",
+  "quest.track.needs": "Raccogli {res}: {n} / {count}",
 };
