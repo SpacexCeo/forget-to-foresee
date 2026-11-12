@@ -13,6 +13,11 @@ key into a chat, a commit, a log or a screenshot.** Every block below is copy-pa
 
 ## 1. Find how the relayer runs now
 
+> **As found on 12.11:** no Docker, no Caddy. The relayer is the systemd unit `ftf-relayer` (checkout `/opt/ftf`), the proxy is
+> nginx (`/etc/nginx/sites-available/ftf-relayer`), presence is the unit `ftf-presence`. The relayer unit has `DynamicUser=yes`,
+> so its data lives in `/var/lib/ftf-relayer` (`FTF_DATA_DIR`, drop-in `ftf-relayer.service.d/data.conf`): run `market-keys.mjs`
+> and `mint-pending.mjs` with `FTF_DATA_DIR=/var/lib/ftf-relayer`. Steps 1–7 are done (`docs/decisions.md`, 12.11).
+
 ```bash
 ssh <owner server>
 docker ps --format '{{.Names}} {{.Image}} {{.Ports}}' | grep -i -E 'relayer|ftf'   # Docker?
@@ -65,7 +70,7 @@ node scripts/chest-key.mjs FTF_SKIN_KEY   # appends FTF_SKIN_KEY=… to .env (on
 
 ```bash
 cd <checkout>/relayer
-node scripts/market-keys.mjs > market-public.json   # 20 trade keys into data/market-keys.json (mode 600); prints ONLY accounts + public keys
+node scripts/market-keys.mjs > market-public.json   # 26 wallet keys (20 traders + 6 clans) into data/market-keys.json (mode 600); prints ONLY accounts + public keys
 # after the lead's town-deploy.sh (step 9): echo 'FTF_TOWN=1' >> .env (a dry run), restart (step 4);
 # FTF_TOWN_SEND=1 only after the owner's yes
 ```
@@ -159,7 +164,7 @@ cd <checkout>/relayer && node scripts/mint-pending.mjs --dry-run && node scripts
 ```bash
 OPENER_PUB=ed25519:<chest key from step 3> bash contracts/scripts/chest-deploy.sh    # open_chest-only key + add_opener
 MINTER_PUB=ed25519:<skin key from step 3> bash contracts/scripts/skin-deploy.sh      # deploys skins.<signer> (cap 100) + mint_skin-only key
-TRADER_KEYS=market-public.json bash contracts/scripts/town-deploy.sh              # ftf-town + 20 traders + trade keys + genesis (docs/town-economy.md)
+TRADER_KEYS=market-public.json TOWN_TOPUP=10 bash contracts/scripts/town-deploy.sh # ftf-town + 26 wallets (traders + clans) + game keys + genesis (docs/town-economy.md)
 node contracts/scripts/day1-write.mjs presence=wss://159-195-130-113.sslip.io/presence # the game connects to the shared town
 NEARAI_API_KEY=proxy-injected node tools/chest/seed.mjs --season s1                  # once NEAR AI credits exist; prints the fix_seed call
 # send the printed `near contract call-function … fix_seed …` line, then:

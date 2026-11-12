@@ -112,7 +112,20 @@ fn double_finish_unbond_fails() {
 #[test] #[should_panic(expected = "ERR_LOCKED")]
 fn locked_tiers_cannot_unbond_early() { let mut t = town(); let id = stake(&mut t, "t0.testnet", 0, 0, 100 * S, 1); ctx("t0.testnet", 4); t.begin_unbond(id); }
 #[test] #[should_panic(expected = "ERR_DEPOSIT")]
-fn a_deed_needs_its_storage_deposit() { let mut t = town(); ctx("t0.testnet", 0); t.stake(0, U(10 * S), 0); }
+fn a_partial_deposit_is_refused() { let mut t = town(); ctx_dep("t0.testnet", 0, NearToken::from_yoctonear(1)); t.stake(0, U(10 * S), 0); }
+#[test]
+fn a_function_call_key_can_pledge_without_a_deposit() {
+    let mut t = town(); ctx("t0.testnet", 0);
+    let id = t.stake(0, U(10 * S), 0);
+    assert_eq!(t.get_deed(id.clone()).unwrap().1.deposit, 0);
+    ctx("t0.testnet", 1); t.begin_unbond(id.clone()); ctx("t0.testnet", 3); assert_eq!(t.finish_unbond(id).0, 10 * S); // no refund to send
+    conserved(&t);
+}
+#[test]
+fn wallets_count_what_they_earn_and_spend() {
+    let mut t = town(); ctx("t0.testnet", 0); t.trade(acc("t1.testnet"), U(2 * S), "x".into());
+    assert_eq!((bal(&t, "t0.testnet").spent, bal(&t, "t1.testnet").earned), (2 * S, 2 * S - 2_400));
+}
 
 #[test]
 fn early_exit_takes_ten_percent_half_burned_half_to_the_other_stakers() {
@@ -190,8 +203,8 @@ fn rate_ceiling_sends_the_excess_to_the_purse() {
     t.stake_pot = 1_000 * S; t.minted_silk += 1_000 * S; // as if a big fee flow arrived (test only)
     let purse = t.purse;
     ctx("anyone.testnet", 1); t.distribute();
-    assert_eq!(t.works[0].rewards, 10 * S * 40 / 10_000); // 0.4 % of weight per epoch
-    assert_eq!(t.purse - purse, 1_000 * S - 40_000);
+    assert_eq!(t.works[0].rewards, 10 * S * 15 / 10_000); // 0.15 % of weight per epoch
+    assert_eq!(t.purse - purse, 1_000 * S - 15_000);
     conserved(&t);
 }
 
@@ -222,7 +235,7 @@ fn tournament_entry_costs_silk_and_splits_it() {
     assert_eq!(bal(&t, "t0.testnet").silk, 960 * S);
     assert_eq!(t.purse, 26 * S);
     ctx("anyone.testnet", 2); t.distribute(); // the Observatory's 15 % is shared at the next distribute, under the ceiling
-    assert_eq!(t.get_deed(obs.clone()).unwrap().2 .0, 400_000); // capped: 0.4 % of 100 weight
+    assert_eq!(t.get_deed(obs.clone()).unwrap().2 .0, 150_000); // capped: 0.15 % of 100 weight
     assert!(t.purse > 26 * S);
     ctx("coord.testnet", 2); t.register(vec![acc("p0.testnet")]); t.credit_entry(acc("p0.testnet"), U(40 * S));
     ctx("p0.testnet", 2); t.enter_tournament("s1".into()); // paid with the entry credit

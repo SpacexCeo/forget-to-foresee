@@ -202,7 +202,10 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
     wr = {k: qfilter(_resample_rot(wr[k], n), sigma * 0.6, True) for k in wr}
     hip[:, 0] -= hip[:, 0].mean(); mid_x = 0.5 * (feet['L'][:, 0].mean() + feet['R'][:, 0].mean())
     # --- stride scale: the stride must cover speed * T
-    k_stride = speed * T / L_src
+    # `glide` < 1 (Elise's magic step): the feet cover only that share of the ground she travels; the rest she
+    # floats over, so the legs can move slowly under a fast body. The clip's speed stays the body's speed.
+    foot_speed = speed * st.get('glide', 1.0)
+    k_stride = foot_speed * T / L_src
     hip_z_mean = hip[:, 2].mean()
     hip[:, 2] = (hip[:, 2] - hip_z_mean) * min(k_stride, 1.0)
     for s in 'LR':
@@ -237,12 +240,12 @@ def build_cycle(rt, f0, f1, frames, speed, style=None, fps=30, sigma=1.6, log=pr
     if st.get('step_lift', 1.0) != 1.0:      # a lower step: the ankles' height above their lowest point is scaled
         for s_ in 'LR':
             y0 = feet[s_][:, 1].min(); feet[s_][:, 1] = y0 + (feet[s_][:, 1] - y0) * st['step_lift']
-    contacts = detect_contacts(rig, wr, feet, speed, fps, True, single=True)
-    hip, ank_target, drop = plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, True, st)
+    contacts = detect_contacts(rig, wr, feet, foot_speed, fps, True, single=True)
+    hip, ank_target, drop = plant_and_solve(rig, wr, hip, feet, contacts, foot_speed, fps, True, st)
     fingers(rig, wr, n, st.get('hands', 'relaxed'), True)
     local, world = assemble(rig, wr, n)
     pel = pelvis_from_hips(rig, wr['pelvis'], hip)
-    slip, low = check_slip(rig, local, pel, contacts, speed, fps, True)
+    slip, low = check_slip(rig, local, pel, contacts, foot_speed, fps, True)
     # repeat the first frame at the end so the clip's last key equals its first
     local = np.concatenate([local, local[:1]]); pel = np.concatenate([pel, pel[:1]])
     contacts = {s: contacts[s][0] for s in 'LR'}

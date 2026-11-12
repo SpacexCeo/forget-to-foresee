@@ -21,13 +21,21 @@ export const TOWNSFOLK = Object.freeze(['guard', 'shardkeeper', 'scribe', 'innke
 export const CLAN_AGENTS = Object.freeze(['iris', 'salt', 'ash', 'moss', 'amber', 'frost', 'tinker']);
 export const TRADERS = Object.freeze([...TOWNSFOLK, ...CLAN_AGENTS]);
 
-/** Testnet account of a trader: tf-<key with - for _>.<parent>. */
-export const traderAccount = (key, parent = 'ftf-coordinator.testnet') => `tf-${key.replace(/_/g, '-')}.${parent}`;
+/** The town contract; every NPC has its own wallet under it (owner, 12.11). */
+export const TOWN_ACCOUNT = 'ftf-town.testnet';
+/** Testnet account of a trader: trader-01 … trader-20.<town>, in the order of TRADERS. */
+export const traderAccount = (key, parent = TOWN_ACCOUNT) => `trader-${String(TRADERS.indexOf(key) + 1).padStart(2, '0')}.${parent}`;
 /** The trader key of an account (null when it is not a trader's). */
 export function traderKey(account) {
-  const m = /^tf-([a-z0-9-]+)\./.exec(String(account || ''));
-  const k = m && m[1].replace(/-/g, '_');
-  return k && TRADERS.includes(k) ? k : null;
+  const m = /^trader-(\d{2})\./.exec(String(account || ''));
+  const k = m && TRADERS[Number(m[1]) - 1];
+  return k || null;
 }
+/** The clans' own wallets: they pledge to the works and enter tournaments (lib/clan-actions.js). */
+export const CLAN_WALLETS = Object.freeze(['salt', 'ash', 'moss', 'amber', 'frost', 'iris']);
+export const clanAccount = (clan, parent = TOWN_ACCOUNT) => `clan-${clan}.${parent}`;
+/** Contract methods each kind of wallet's function-call key may call. */
+export const TRADER_METHODS = Object.freeze(['trade']);
+export const CLAN_METHODS = Object.freeze(['trade', 'stake', 'claim', 'begin_unbond', 'finish_unbond', 'enter_tournament']);
 /** Starting town silk per trader. */
 export const START_BALANCE = 1000;
