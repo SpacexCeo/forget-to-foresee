@@ -49,7 +49,7 @@ const GLYPH = {
  *   chests?: object, mintSkin?: Function, cue?: Function, reduced?: boolean, bagTarget?: () => Element|null, onChange?: Function,
  *   raf?: Function, now?: () => number}} o
  */
-export function renderWheel({ doc = document, t, wheel, items = [], base = '/', inventory, ledger, chests = null, mintSkin = null, cue = () => {}, reduced = false, bagTarget = () => null, onChange = () => {}, raf = (f) => globalThis.requestAnimationFrame(f), now = () => performance.now() }) {
+export function renderWheel({ doc = document, t, wheel, items = [], base = '/', inventory, ledger, chests = null, mintSkin = null, cue = () => {}, reduced = false, bagTarget = () => null, onChange = () => {}, raf = (f) => globalThis.requestAnimationFrame(f), now = () => performance.now(), supply = null, retryMs = 60000 }) {
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const svg = (tag, attrs = {}) => { const e = doc.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -85,6 +85,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     else { const gl = svg('g', { transform: 'scale(1.35)' }); gl.innerHTML = GLYPH[s.kind] || GLYPH.part; icon.append(gl); }
     const label = svg('text', { x: 0, y: -86, 'text-anchor': 'middle', 'dominant-baseline': 'middle', class: 'wv-amt' });
     label.textContent = sectorLabel(s, t);
+    const ang = i * STEP; if (ang > 90 && ang < 270) label.setAttribute('transform', 'rotate(180 0 -86)'); // lower half: read upright, not upside down
     rot.append(icon, label);
     g.append(path, rot);
     spinner.append(g); sectors.push(g);
@@ -109,7 +110,10 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
   odds().forEach((o) => {
     const seg = SEGMENTS.find((s) => s.id === o.id);
     const tr = el('tr'); const sw = el('i', 'wv-swatch'); sw.style.background = RARITY_FRAME[seg.rarity];
-    const name = el('td'); name.append(sw, doc.createTextNode(' ' + t('wheel.seg.' + o.id) + (seg.grand ? ' · ' + t('wheel.cap', { n: SKIN_CAP }) : '')));
+    const name = el('td'); const label = doc.createTextNode(' ' + t('wheel.seg.' + o.id) + (seg.grand ? ' · ' + t('wheel.cap', { n: SKIN_CAP }) : ''));
+    name.append(sw, label);
+    // the live supply from the skin contract: "N of 100 left" (the cap alone until it answers)
+    if (seg.grand && supply && supply.then) supply.then((sp) => { if (sp) label.textContent = ' ' + t('wheel.seg.' + o.id) + ' · ' + t('wheel.left', { n: sp.left, cap: sp.cap }); }).catch(() => {});
     tr.append(name, el('td', null, (o.p * 100).toFixed(1) + ' %')); tb.append(tr);
   });
   side.append(status, row, seedP, card, el('h3', null, t('wheel.odds')), table, el('p', 'gm-note', t('wheel.rules')));
@@ -152,6 +156,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     setTimeout(() => { ghost.remove(); target.classList.add('wv-bump'); setTimeout(() => target.classList.remove('wv-bump'), 600); }, 750);
   }
 
+  let retryT = null;
   async function claim(seed, art = null) {
     const r = await claimPrize(wheel, seed, { inventory, ledger, chests, mintSkin });
     if (destroyed) return r;
@@ -161,8 +166,9 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
       const next = wheel.pending[0];
       if (next) showCard(next); else { card.hidden = true; }
     } else {
-      cue('ui_error');
+      if (r.reason !== 'recorded') cue('ui_error'); // a verified win waiting for the minter is not an error
       const p = wheel.pending.find((x) => x.seed === seed); if (p) showCard(p);
+      if (r.kind === 'skin' && retryMs > 0) { clearTimeout(retryT); retryT = setTimeout(() => { if (!destroyed) claim(seed); }, retryMs); } // periodic retry while open
     }
     refresh(); onChange(r);
     return r;
@@ -204,8 +210,11 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
 
   refresh();
   const waiting = wheel.pending[0];
-  if (waiting) { const i = SEGMENTS.findIndex((s) => s.id === waiting.segment); setAngle(landingAngle(0, Math.max(0, i), 0)); showCard(waiting); }
-  return { root, spin, claim, get angle() { return angle; }, destroy() { destroyed = true; } };
+  if (waiting) {
+    const i = SEGMENTS.findIndex((s) => s.id === waiting.segment); setAngle(landingAngle(0, Math.max(0, i), 0)); showCard(waiting);
+    if (waiting.status === 'minting' && retryMs > 0) retryT = setTimeout(() => { if (!destroyed) claim(waiting.seed); }, 1500); // back with a skin awaiting its mint: ask again
+  }
+  return { root, spin, claim, get angle() { return angle; }, destroy() { destroyed = true; clearTimeout(retryT); } };
 }
 
 export const WHEEL_CSS = `
@@ -227,6 +236,7 @@ export const WHEEL_CSS = `
 .wv-meta { font: 600 12px/1 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--wv-frame, #d9b26a); }
 .wv-r-mythic { background: radial-gradient(circle at 50% 0, rgba(255,215,106,.22), rgba(0,0,0,.4)); }
 .wv-claim { min-width: 140px; }
+.wv .gm-odds td:last-child { white-space: nowrap; text-align: right; }
 .wv-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
 .wv-fly { position: fixed; z-index: 99; pointer-events: none; transition: transform .7s cubic-bezier(.5,0,.75,0), opacity .7s ease-in; }
 .wv-bump { animation: wv-bump .5s ease; }

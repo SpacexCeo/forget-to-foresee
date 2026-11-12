@@ -35,6 +35,20 @@ const CSS = `
 /* iOS Safari: no long-press callout, text selection or page zoom may steal a finger while the stick is held */
 body.ts-touch, body.ts-touch canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 body.ts-touch canvas { touch-action: none; }
+/* phones: the archipelago's action list as a compact sheet (player report 12.11): right side above the bottom nav, never
+   over the stick, no keyboard numbers, a close button, collapsed while walking */
+body.ts-touch .pl-context { left: auto !important; right: calc(8px + env(safe-area-inset-right, 0px)) !important; width: min(300px, 64vw) !important; bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  max-height: 38vh; overflow-y: auto; transform: none !important; padding: 8px 10px !important; border-radius: 16px !important; }
+body.ts-touch .pl-context h3 { padding-right: 40px; font-size: 14px !important; margin: 2px 0 6px !important; }
+body.ts-touch .pl-context .pl-opt { min-height: 40px; padding: 6px 10px !important; font-size: 14px !important; }
+body.ts-touch .pl-context kbd, body.ts-touch .hub-host kbd { display: none !important; }
+/* inside a Shell on a phone: the reading panel on the right, scrollable, the left side free for the stick */
+body.ts-on .hub-dock { left: auto !important; right: calc(8px + env(safe-area-inset-right, 0px)) !important; width: min(340px, 66vw) !important; max-height: 46vh; overflow-y: auto; padding: 12px !important; }
+body.ts-touch .pl-context.ts-dismissed, body.ts-moving .pl-context { max-height: 48px; overflow: hidden; opacity: .8; }
+body.ts-touch .pl-context.ts-dismissed h3::after { content: " ▴"; color: #d8b46a; }
+body.ts-touch .pl-context.ts-dismissed .ts-ctx-x { display: none; }
+.ts-ctx-x { position: absolute; top: 4px; right: 4px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(201, 163, 90, .6); background: rgba(12, 20, 17, .9); color: #f3d7a0; font: 700 18px/1 system-ui, sans-serif; padding: 0; z-index: 1; }
+body.ts-touch #toast { max-width: calc(100vw - 24px); box-sizing: border-box; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 body.ts-on .ftf-cast-bar, body.ts-on .ftf-run-toggle, body.ts-touch .ftf-scene-hint { display: none !important; }
 body.ts-on .d1-hint { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
 body.ts-on .ftf-town-prompt { bottom: calc(232px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
@@ -176,6 +190,30 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
   const noGesture = (e) => { if (doc.body.classList.contains('ts-touch')) e.preventDefault(); };
   for (const ev of ['gesturestart', 'gesturechange']) doc.addEventListener(ev, noGesture, { passive: false });
   for (const n of [zone, arc]) n.addEventListener('touchstart', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  // the action list sheet (play/ui.js #pl-context): a close button or a tap outside folds it to its title until the spot
+  // changes (a tap on the title unfolds it), and it folds while the stick moves
+  let ctxTitle = '', dismissed = false;
+  const sheet = () => {
+    const c = doc.getElementById && doc.getElementById('pl-context');
+    doc.body.classList.toggle('ts-moving', !!(input.stickMove && (input.stickMove[0] || input.stickMove[1])));
+    if (!c) return;
+    const h = c.querySelector('h3'), title = h ? h.textContent : '';
+    if (title !== ctxTitle) { ctxTitle = title; dismissed = false; }
+    c.classList.toggle('ts-dismissed', dismissed);
+    if (!c.hidden && !c.querySelector('.ts-ctx-x')) {
+      const x = el('button', 'ts-ctx-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', t('quest.close'));
+      x.addEventListener('pointerdown', (e) => e.stopPropagation());
+      x.addEventListener('click', (e) => { e.stopPropagation(); dismissed = true; c.classList.add('ts-dismissed'); });
+      c.append(x);
+      // the folded sheet keeps its title: a tap on it unfolds the actions again
+      c.addEventListener('click', (e) => { if (dismissed && e.target && e.target.tagName === 'H3') { dismissed = false; c.classList.remove('ts-dismissed'); } });
+    }
+  };
+  doc.addEventListener('pointerdown', (e) => {
+    const c = doc.getElementById && doc.getElementById('pl-context');
+    if (!touch || !c || c.hidden || dismissed) return;
+    if (e.target && e.target.tagName === 'CANVAS') { dismissed = true; c.classList.add('ts-dismissed'); }
+  }, true);
   rest();
   let visible = false, touch = false;
   return {
@@ -186,6 +224,7 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
     update({ active = true } = {}) {
       touch = !!input.touchControls;
       doc.body.classList.toggle('ts-touch', touch);
+      if (touch) sheet();
       const v = touch && mode === 'sticks' && active;
       if (v !== visible) { visible = v; root.hidden = !v; doc.body.classList.toggle('ts-on', v); if (!v) endStick(); }
       if (!v) return;

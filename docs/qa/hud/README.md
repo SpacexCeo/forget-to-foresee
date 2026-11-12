@@ -49,3 +49,21 @@ back to the old scheme (stored). Desktop is unchanged; the archipelago (judge pa
 - Phones: the frame shows the portrait, level and health only; on touch the prompt pill is small (the Use button acts).
 - Placeholder icons are line glyphs in the HUD gold, to be replaced by the UI-003/UI-004 icon storyboards.
 - The archipelago (judge path) is untouched: "Trial N of 17 · Silk N" stays as the README says.
+
+## Archipelago on a phone (player report: menus cover the screen)
+
+The zone action list is a compact sheet on the right above the bottom nav (max 38% of the height, scrolls), with ✕;
+a tap on the world or ✕ folds it to its title until the spot changes (a tap on the title unfolds it); it folds while the
+stick moves; no keyboard numbers on touch (also inside a Shell); toasts wrap inside the viewport.
+
+![](phone-islw-pad.jpg) ![](phone-islh-pad.jpg)
+
+## Health and stamina (owner: "beautiful health points and stamina")
+
+In the portrait frame (desktop and phone; nothing over the sticks): a gold-rimmed health bar (red gradient, inner shine,
+ticks every 10 %, an amber damage trail that lags, a green shimmer on a heal, a pulse and a soft red vignette under
+25 %); under it a teal stamina bar that hides when full and idle for 3 s. Numbers on hover or a long press.
+Stamina (`game/stamina.js`): running outside the walls drains 7/s, a dash costs 25, a strike 4 (never refused); it refills
+30/s after 1 s of rest; at 0 Iris is winded: no dash (the dash icon greys, the bar flashes) and she walks until 20 %.
+
+![](hp-stamina-hpst-frame.jpg) ![](hp-stamina-hp-phone.jpg) ![](hp-stamina-hp-desktop.jpg)

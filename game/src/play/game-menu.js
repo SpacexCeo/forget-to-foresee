@@ -267,6 +267,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const view = renderWheel({ doc, t, wheel, items: list, base, inventory: inv, ledger, chests: bag, cue, reduced: reduced(doc),
           bagTarget: () => tabBtns.inventory || null,
           mintSkin: (p) => import('../net/wheel-skin.js').then((m) => m.claimWheelSkin({ storage, wheelId: wheel.id, seed: p.seed })),
+          supply: import('../net/wheel-skin.js').then((m) => m.skinSupply()).catch(() => null),
           onChange: (r) => { if (r && r.ok && (r.kind === 'part' || r.kind === 'shard') && inv.newest) fresh.add(inv.newest); } });
         wheelView = view;
         return [view.root];
@@ -352,6 +353,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     if (wheelView) { wheelView.destroy(); wheelView = null; }
     tabTitle.textContent = t('menu.tab.' + (id === 'wheel' ? 'inventory' : id));
     for (const [k, b] of Object.entries(tabBtns)) b.setAttribute('aria-selected', String(k === id || (id === 'wheel' && k === 'inventory')));
+    { const sel = tabBtns[id === 'wheel' ? 'inventory' : id]; try { if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch { /* old browsers */ } } // phones: the selected tab in view
     const r = views[id]();
     const put = (kids) => { if (current === id) body.replaceChildren(...kids.filter(Boolean)); };
     if (r && typeof r.then === 'function') { body.replaceChildren(el('p', 'gm-note', '…')); r.then(put); } else put(r);

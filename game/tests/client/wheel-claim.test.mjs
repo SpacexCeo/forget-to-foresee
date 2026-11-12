@@ -129,3 +129,37 @@ test('with a guest account the wheel id is bound to it (the relayer re-derives t
   const r = w.spin(MANIFEST); assert.equal(spinResult(r.seed, MANIFEST).index, r.index, 'anyone can recompute the roll');
   assert.equal(createWheel({ storage, account: 'ann-7.ftf-guests.testnet' }).id, w.id, 'stable');
 });
+
+test('claim client: the signed request the relayer checks; its error codes map to reasons; the supply view', async () => {
+  const { claimWheelSkin, claimText, skinSupply } = await import('../../src/net/wheel-skin.js');
+  const { generateKeyPair } = await import('../../src/net/near-tx.js');
+  const { wheelIdFor } = await import('../../src/game/wheel.js');
+  const kp = await generateKeyPair(); const acc = 'ann-1.guests.ftf-coordinator.testnet';
+  const storage = { getItem: () => JSON.stringify({ minted: true, guest: { account_id: acc }, playerKey: { secretKey: kp.secretKey } }) };
+  const wheelId = wheelIdFor(acc), seed = wheelId + '-3';
+  let sent = null;
+  const ok = await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', now: () => 1700000000000,
+    fetch: async (url, o) => { sent = { url, ...JSON.parse(o.body) }; return { ok: true, status: 200, json: async () => ({ token_id: 'sheriffchenko-1', tx_hash: 'H', contract: 'skins.ftf-coordinator.testnet' }) }; } });
+  assert.equal(sent.url, 'https://r/api/wheel/claim');
+  assert.deepEqual(Object.keys(sent).sort(), ['account_id', 'at', 'public_key', 'seed', 'signature', 'url', 'wheel_id']);
+  assert.equal(sent.wheel_id, wheelId); assert.equal(sent.seed, seed); assert.equal(sent.at, 1700000000000);
+  assert.equal(claimText(acc, wheelId, seed, 1), `ftf-wheel-claim|${acc}|${wheelId}|${seed}|1`);
+  assert.deepEqual(ok, { ok: true, tokenId: 'sheriffchenko-1', txHash: 'H', contract: 'skins.ftf-coordinator.testnet', explorer: 'https://testnet.nearblocks.io/txns/H' });
+  const reply = (status, error) => async () => ({ ok: false, status, json: async () => ({ error }) });
+  const reason = async (status, error) => (await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: reply(status, error) })).reason;
+  assert.equal(await reason(400, 'invalid_spin'), 'invalid');
+  assert.equal(await reason(409, 'already_owned'), 'already_owned');
+  assert.equal(await reason(410, 'sold_out'), 'sold_out');
+  assert.equal(await reason(429, 'rate_limited'), 'rate');
+  assert.equal(await reason(503, 'wheel_not_configured'), 'not_configured');
+  for (const [st, e] of [[401, 'bad_signature'], [403, 'not_your_key'], [409, 'replayed'], [400, 'stale'], [502, 'tx_failed']]) assert.equal(await reason(st, e), 'failed', e);
+  assert.equal(await reason(404, undefined), 'not_configured', 'an older relayer without the route');
+  const recorded = await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: async () => ({ ok: true, status: 202, json: async () => ({ status: 'recorded', claim_id: 'c-9' }) }) });
+  assert.deepEqual(recorded, { ok: false, reason: 'recorded', verified: false, left: null, claimId: 'c-9' }, 'recorded, mint pending: the prize stays pending, nothing faked');
+  assert.equal(await reason(502, 'rpc'), 'network');
+  const mp = await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: async () => ({ ok: true, status: 202, json: async () => ({ status: 'mint_pending', verified: true, recorded: true, contract: 'skins.ftf-coordinator.testnet', left: 100 }) }) });
+  assert.equal(mp.reason, 'recorded'); assert.equal(mp.verified, true); assert.equal(mp.left, 100);
+  assert.equal((await claimWheelSkin({ storage: { getItem: () => null }, wheelId, seed, base: 'https://r', fetch: reply(500) })).reason, 'need_guest');
+  assert.equal(await skinSupply({ fetch: async () => { throw new Error('offline'); }, rpcUrls: ['https://rpc'] }), null, 'no contract yet: the cap alone is shown');
+  for (const [n, m] of Object.entries({ en, ru, uk, it, zh })) for (const k of ['wheel.left', 'wheel.skin.reason.failed', 'wheel.skin.reason.recorded']) assert.ok(m[k], `${n} ${k}`);
+});

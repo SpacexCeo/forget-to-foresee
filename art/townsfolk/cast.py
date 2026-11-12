@@ -293,12 +293,12 @@ AGENTS = {
     ),
     "clan_moh": dict(
         sheet="C-001_03", role="Moss, the honest (clan agent)", name="Moss", agent=True, clan="moh",
-        idea="Hood-down green cloak with broad leaves and small mushrooms, a linen robe, short brown hair, a little cauldron.",
+        idea="Hood-down green cloak with broad leaves and small mushrooms, a linen robe, chestnut hair in a low bun, a little cauldron.",
         height=1.68,
         macros=dict(gender=0.0, age=0.42, muscle=0.35, weight=0.48, height=0.45, proportions=0.6, cupsize=0.5, firmness=0.5,
                     race=race(0.0, 0.1, 0.9)),
         detail={"mouth/mouth-angles-up": 0.5, "eyes/l-eye-scale-incr": 0.25, "eyes/r-eye-scale-incr": 0.25},
-        skin="warm", hair=("chestnut", "long_side"), brows=1.0,
+        skin="warm", hair=("chestnut", "bun_low"), brows=1.0,   # long_side hung a lock across the nose; short_messy read spiky
         costume=dict(base="robe", robe=("linen_c", "brown_c"), hem=0.05, sleeves="long", collar="wrap", under=("linen_c",),
                      underskirt=("linen_c", 0.05), belt=("brown_c", "copper"), shoes=("boots", "leather"),
                      mantles=(("moss_c", "moss_c", -0.12, "plain"),), cowl=("moss_c",),
