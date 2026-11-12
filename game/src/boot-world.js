@@ -178,7 +178,8 @@ const openSettings = (tab) => {
       day1: () => loadDay1(ctx.storage),
       clearData: () => { try { for (const k of Object.keys(localStorage)) if (k.startsWith('ftf')) localStorage.removeItem(k); } catch { /* blocked storage */ } location.reload(); },
       returnToTown: { visible: () => !!(town && play && !inTown), run: () => returnToTown() },
-      startOver: { visible: () => !!play, run: () => startOver() },
+      endTournament: { visible: () => !!(play && !inTown), run: () => startOver() }, // the reload starts in town with a new season
+      startOver: { visible: () => !!(play && inTown), run: () => startOver() },
       leaveToMenu: openMainMenu,
       onOpen: clearWorldInput, onClose: clearWorldInput,
     } });
@@ -355,6 +356,8 @@ if (townMode.town) {
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
     onRegister: () => { if (irisAvatar) irisAvatar.react('register', clock.elapsedTime); }, // she reaches for the ring
+    // the Tournament warning (owner 12.11); never on the judge link, whose flow stays as it was
+    confirmRegister: judge ? null : () => import('./ui/tourney-warn.js').then((m) => m.confirmTournament({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage })),
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.

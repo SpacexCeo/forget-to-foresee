@@ -79,8 +79,9 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => string[]} [o.islandLog] `loading.log.*` keys of what is loading right now (the cover's log)
  * @param {boolean} [o.coarse] a touch device: the prompt shows no key cap
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
+ * @param {() => Promise<boolean>} [o.confirmRegister] asked before the registration; false keeps Iris in town
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -492,7 +493,10 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   function register() {
     if (state.registering) return state.registering;
     if (state.phase !== 'town' || !town.ready || !inAltarRange(player.pos)) return Promise.resolve(false);
-    state.registering = run();
+    // confirmRegister (the Tournament warning, ui/tourney-warn.js): "Stay in town" leaves everything as it was
+    state.registering = confirmRegister
+      ? Promise.resolve().then(confirmRegister).catch(() => true).then((yes) => (yes ? run() : (state.registering = null, false)))
+      : run();
     return state.registering;
   }
 
