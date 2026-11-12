@@ -25,22 +25,25 @@ const reg = await page.evaluate(() => window.__ftf.town.register());
 log.push('register ' + reg);
 await page.waitForFunction(() => window.__ftf.play && !window.__ftf.town.active, null, { timeout: 120000 }).catch(() => errors.push('never reached the archipelago'));
 log.push('archipelago');
-await page.waitForTimeout(800);
-await page.addStyleTag({ content: 'body * { visibility: hidden !important; } canvas { visibility: visible !important; }' });   // a clean sweep
-await page.evaluate((secs) => {
-  const f = window.__ftf, orig = f.rig.update.bind(f.rig), t0 = performance.now(), ease = (u) => u * u * (3 - 2 * u);
-  f.rig.update = (...a) => {
-    orig(...a);
-    const u = ease(Math.min(1, (performance.now() - t0) / (secs * 1000))), ang = 2.1 + 1.5 * u, r = 74 - 30 * u, h = 36 - 24 * u;
-    f.rig.camera.position.set(Math.cos(ang) * r, h, Math.sin(ang) * r);      // a descending arc round the archipelago
-    f.rig.camera.lookAt(0, 3 - 2 * u, 0);                                      // always on the plaza at its heart
-    f.rig.camera.fov = 50; f.rig.camera.far = Math.max(f.rig.camera.far, 900); f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
-  };
-}, SWEEP);
-const ts = Date.now(); log.push({ sweepStartFrame: n });
-await page.waitForTimeout(SWEEP * 1000 + 400);
-capturing = false; await capture;
+await page.waitForTimeout(700);
+capturing = false; await capture;                       // the arrival's own cloud cinematic is skipped: wait it out unrecorded
+const coverEnd = n;
+await page.waitForTimeout(7000);
+// the sweep, rendered through a scripted camera straight into the canvas (the play layer's camera keeps running)
+const ts = Date.now(); log.push({ sweepStartFrame: n, coverEnd });
+await page.evaluate(() => { window.__sweep0 = performance.now(); });
+while (Date.now() - ts < SWEEP * 1000) {
+  const d = await page.evaluate((secs) => {
+    const f = window.__ftf, ease = (u) => u * u * (3 - 2 * u);
+    const u = ease(Math.min(1, (performance.now() - window.__sweep0) / (secs * 1000))), ang = 2.1 + 1.5 * u, r = 74 - 30 * u, h = 36 - 24 * u;
+    const cam = f.rig.camera.clone(); cam.fov = 50; cam.near = 0.5; cam.far = 1500; cam.aspect = f.renderer.domElement.width / f.renderer.domElement.height; cam.updateProjectionMatrix();
+    cam.position.set(Math.cos(ang) * r, h, Math.sin(ang) * r); cam.lookAt(0, 3 - 2 * u, 0); cam.updateMatrixWorld(true);
+    f.renderer.setRenderTarget(null); f.renderer.render(f.scene || f.world3d?.scene, cam); return f.renderer.domElement.toDataURL('image/jpeg', 0.88);
+  }, SWEEP);
+  writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, Buffer.from(d.split(',')[1], 'base64'));
+}
 const secs = (Date.now() - t0) / 1000;
-const res = { frames: n, seconds: +secs.toFixed(1), fps: +(n / secs).toFixed(2), sweepSeconds: +((Date.now() - ts) / 1000).toFixed(1), log, errors };
+const sweepSecs = (Date.now() - ts) / 1000, s0 = log.find((x) => typeof x === 'object').sweepStartFrame;
+const res = { frames: n, seconds: +secs.toFixed(1), coverEnd, sweepStart: s0, fpsA: +(s0 / ((ts - t0) / 1000 - 7)).toFixed(2), fpsB: +((n - s0) / sweepSecs).toFixed(2), log, errors };
 writeFileSync(`${out}/report.json`, JSON.stringify(res, null, 1)); console.log(JSON.stringify(res));
 await browser.close();
