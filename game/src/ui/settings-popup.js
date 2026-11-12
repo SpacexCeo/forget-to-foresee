@@ -111,6 +111,7 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
       const out = [el('h3', null, t('set.ctl.camera')),
         row('set.ctl.sens', range(settings.sensitivity, 0.4, 2, 0.05, (v) => v.toFixed(2) + '×', (v) => setS({ sensitivity: SETTINGS_OPTIONS.sensitivity.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)) }), t('set.ctl.sens'))),
         row('set.ctl.invert', toggle(settings.invertY, (v) => setS({ invertY: v }), t('set.ctl.invert')))];
+      if (!(touch && touch.available)) out.push(row('set.ctl.quick', toggle(loadSettings(storage).quickCast, (v) => setS({ quickCast: v }), t('set.ctl.quick')), 'set.ctl.quickNote'));
       const touch = hooks.touch && hooks.touch();
       if (touch && touch.available) out.push(row('set.ctl.touch', select([['sticks', t('set.ctl.sticks')], ['tap', t('set.ctl.tap')]], touch.mode, (v) => touch.setMode(v), t('set.ctl.touch'))));
       out.push(el('h3', null, t('set.ctl.keys')));
@@ -157,8 +158,7 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
         [`${k('lance')} / ${k('snare')}`, 'set.help.cast'], [k('photo'), 'set.help.photo'], [k('skin'), 'set.help.skin'], [k('chat'), 'set.help.chat'], ['Esc', 'set.help.menu']]) dl.append(el('dt', null, keys), el('dd', null, t(what)));
       return [el('h3', null, t('set.help.keyboard')), dl,
         el('h3', null, t('set.help.touchTitle')), el('p', null, t('set.help.touch')),
-        el('h3', null, t('set.help.guideTitle')), ...['town', 'shops', 'hunt', 'chests', 'tournament', 'nft'].map((x) => el('p', null, t('set.help.' + x))),
-        el('h3', null, t('set.help.judgeTitle')), el('p', null, t('set.help.judge'))];
+        el('h3', null, t('set.help.guideTitle')), ...['town', 'shops', 'hunt', 'chests', 'tournament', 'nft'].map((x) => el('p', null, t('set.help.' + x)))]; // one entry (owner 12.11): no separate jury path to describe
     },
     account() {
       const d = (hooks.day1 && hooks.day1()) || {};

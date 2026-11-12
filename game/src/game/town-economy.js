@@ -254,6 +254,17 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
       save();
       return { silk: st.silk, xp: st.xp };
     },
+    /**
+     * Spends town silk (hundredths) for a reason (the story's Gate-Loom fee, docs/plans/story): all or nothing, never
+     * below zero. Returns {ok, silk} or {ok: false, reason: 'no_silk' | 'bad_amount'}.
+     */
+    spend({ silkC = 0, reason = '' } = {}) {
+      const c = Math.round(Number(silkC));
+      if (!Number.isFinite(c) || c <= 0) return { ok: false, reason: 'bad_amount' };
+      if (st.silk < c) return { ok: false, reason: 'no_silk' };
+      st.silk -= c; save();
+      return { ok: true, silk: st.silk, reason };
+    },
     /** XP for a play action (XP keys); counted in the profile stats too. */
     addXp(kind, persist = true) {
       st.xp += XP[kind] || 0;

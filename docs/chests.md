@@ -60,3 +60,30 @@ CLI's job.
 - The seed is not fixed yet: `node tools/chest/seed.mjs` needs NEAR AI Cloud credits (chat answers 402 until then).
 - The relayer's opener key and the `/api/chest/open` route go live with the relayer redeploy
   (`docs/handoff/relayer-tee-deploy.md`).
+
+## Batch opening (owner, 12.11; relayer side built)
+
+`POST /api/chest/open` with `count` (1–10) and `request_id` opens up to `count` chests in **one transaction**: `count`
+`open_chest` FunctionCall actions to the chest contract, signed by the opener's function-call key. There is **no
+contract change**, and every opening still draws its own deck position, so each stays individually verifiable with
+`tools/verify-chest/verify.mjs`.
+
+- **Signature**: the player signs `ftf-chest-open|<account>|<at>|<count>|<request id>`. A request without `count`
+  works as before.
+- **Limits**: the batch is cut to the account's daily allowance (30 a day, counted from `openings_of` for today), to
+  what is left of the deck, and to 10. The answer says `cut: "daily_cap"` when it was cut.
+- **All or nothing**: the actions run in one receipt, so if the transaction fails nothing has landed. It is retried
+  once with the same count.
+- **Journal**: a request id that was answered is answered again from the journal and never re-sent.
+- **Read-back**: the openings come from the chain's `chest_opened` events (only the last action has a return
+  value), each with its outcome, leaf and Merkle proof.
+- **Honest count**: `/api/health` → `chests` reports `transactions`, `openings` and `batches` separately (one batch
+  is one transaction with N openings).
+- **Gas**: 28 Tgas per action (10 × 28 = 280 of the 300 Tgas limit). The real use must be measured with the test
+  below.
+- **Verify on testnet first.** Run on the relayer server with the opener key:
+  `node relayer/scripts/chest-batch-test.mjs <guest account> 2 --send`. It sends one transaction with 2 `open_chest`
+  actions and prints the hash, the gas burnt and both openings. If the network refuses a multi-action
+  function-call-key transaction, the batch falls back to N single transactions: one line in `openChests`.
+- **Not built yet**: the client's "Open 1 / 5 / all", the reveal sequence and the summary grid (game UI). The answer
+  format for it is in `relayer/api/chest/open.js`.

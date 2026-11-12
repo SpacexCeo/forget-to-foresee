@@ -1,0 +1,147 @@
+// The town traders' daemon (docs/town-economy.md): runs inside the relayer, 24/7. Every trader has its own loop: wait an
+// exponential gap (schedule.js), pick a trade (behaviour.js), sign it with that trader's own trade-only key and send
+// it to the town contract (ftf-town). Each trader signs only its own transactions, so nonces never collide; the nonce and a
+// recent block hash are cached, so a trade costs one RPC call. A global cap limits sends per minute, a pause stops
+// sending without stopping the process, the state (balances, prices, today's count, the last trades) is saved to a
+// file and reloaded after a restart, and every trade or failure is appended to a JSONL log.
+import { b58encode, findFailure, importSecretKey, serializeFunctionCallTx, sha256, signedTxBytes } from '../lib/near-tx.js';
+import { TRADERS, traderKey } from './catalog.js';
+import { TOWN_POLICY } from '../lib/town-traders.js';
+
+import { DEFAULT_TARGET, createRateCap, nextGapMs, utcDay } from './schedule.js';
+
+export const RECENT = 30;
+export const TRADE_GAS = 10_000_000_000_000n; // 10 Tgas prepaid; ~2.2 Tgas is burnt, the rest is refunded
+export const LOW_FUNDS_YOCTO = 50_000_000_000_000_000_000_000n; // 0.05 NEAR
+const SYNC_MS = 10 * 60_000, HASH_MS = 5 * 60_000, LOW_RETRY_MS = 10 * 60_000, PAUSE_POLL_MS = 30_000;
+const b64 = (bytes) => Buffer.from(bytes).toString('base64');
+const errText = (e) => String((e && e.rpc && JSON.stringify(e.rpc.data || e.rpc.cause || e.rpc)) || (e && e.message) || e).slice(0, 300);
+
+/** Default rand: Math.random (the daemon is not meant to be reproducible; tests pass their own). */
+export function createMarketDaemon({
+  contractId, traders, client, store = null, log = () => {}, target = DEFAULT_TARGET, now = () => Date.now(),
+  rand = Math.random, maxPerMinute = 60, paused = false, timers = { setTimeout, clearTimeout }, gas = TRADE_GAS,
+  policy = TOWN_POLICY, dryRun = false, strategyOf = null, walletDayNear = Infinity, txNear = 0.0003, killed = () => false,
+}) {
+  const keys = traders.map((t) => t.key).filter((k) => TRADERS.includes(k));
+  const saved = (store && store.load()) || null;
+  const st = {
+    ...policy.init(keys), recent: [], day: utcDay(now()), today: 0, failures: 0, ...(saved || {}),
+  };
+  if (st.day !== utcDay(now())) { st.day = utcDay(now()); st.today = 0; st.failures = 0; }
+  const signers = new Map(traders.map((t) => [t.key, { ...t, signer: null, nonce: null, low: false, lowUntil: 0 }]));
+  const cap = createRateCap({ perMinute: maxPerMinute, now });
+  let block = null, chain = null, lastError = null, running = false, isPaused = !!paused, dirty = 0, wasKilled = false;
+  const handles = new Map();
+
+  const save = (force = false) => { if (!store) return; if (force || ++dirty >= 10) { dirty = 0; try { store.save({ balances: st.balances, prices: st.prices, recent: st.recent, day: st.day, today: st.today, failures: st.failures }); } catch { /* disk full: keep running */ } } };
+  const rollDay = () => { const d = utcDay(now()); if (d !== st.day) { st.day = d; st.today = 0; st.failures = 0; } };
+
+  async function blockHash() {
+    if (!block || now() - block.at > HASH_MS) block = { hash: (await client.rpc('block', { finality: 'final' })).header.hash, at: now() };
+    return block.hash;
+  }
+
+  /** Reads balances, prices and the contract's counters; marks traders whose NEAR is low. */
+  async function sync() {
+    try {
+      const stats = await policy.sync(client, contractId, st, (k) => signers.get(k) && signers.get(k).account);
+      chain = { ...stats, at: now() };
+    } catch (e) { lastError = 'sync: ' + errText(e); }
+    if (dryRun) return;
+    for (const s of signers.values()) {
+      try {
+        const a = await client.rpc('query', { request_type: 'view_account', finality: 'final', account_id: s.account });
+        s.low = BigInt(a.amount) < LOW_FUNDS_YOCTO;
+      } catch { /* keep the last answer */ }
+    }
+  }
+
+  /** Signs and sends one trade for trader `s`. Resolves {ok, hash, failure, retry}. */
+  async function send(s, t) {
+    if (dryRun) return { ok: true, hash: null, dry: true }; // dry run: nothing is signed or sent
+    if (!s.signer) s.signer = await importSecretKey(s.secretKey);
+    if (s.nonce === null) s.nonce = BigInt((await client.rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: s.account, public_key: s.signer.publicKey })).nonce);
+    const nonce = s.nonce + 1n;
+    const tx = serializeFunctionCallTx({ signerId: s.account, publicKey: s.signer.publicKey, nonce, receiverId: contractId, blockHash: await blockHash(), methodName: 'trade', args: policy.args(t, (k) => signers.get(k).account), gas, deposit: 0n });
+    const hash = await sha256(tx);
+    const sig = await s.signer.sign(hash);
+    try {
+      s.nonce = nonce;
+      const out = await client.rpc('send_tx', { signed_tx_base64: b64(signedTxBytes(tx, sig)), wait_until: 'EXECUTED_OPTIMISTIC' });
+      const failure = findFailure(out);
+      return { ok: !failure, hash: b58encode(hash), failure };
+    } catch (e) {
+      const text = errText(e);
+      if (/InvalidNonce|nonce/i.test(text)) s.nonce = null;
+      if (/Expired|InvalidChain/i.test(text)) block = null;
+      if (/NotEnoughBalance|LackBalance|NotEnoughAllowance/i.test(text)) s.low = true;
+      return { ok: false, hash: b58encode(hash), failure: text, sent: !/INVALID_TRANSACTION|InvalidTxError/i.test(text) };
+    }
+  }
+
+  /** One trade attempt by trader `key` now. Resolves the logged entry (or null when it skipped). */
+  async function tickOnce(key) {
+    rollDay();
+    const s = signers.get(key);
+    if (!s || isPaused || (s.low && now() < s.lowUntil)) return null;
+    if (killed()) { wasKilled = true; return null; }
+    wasKilled = false;
+    if (s.spentDay !== st.day) { s.spentDay = st.day; s.spentNear = 0; }
+    if (s.spentNear + txNear > walletDayNear) { s.capped = true; return null; } // this wallet's daily budget is used up
+    s.capped = false;
+    if (!cap.take()) return null;
+    st.now = now();
+    const t = policy.pick(st, key, rand, keys, strategyOf ? strategyOf(key) : null);
+    if (!t || !signers.has(t.seller)) return null;
+    const r = await send(s, t);
+    if (!r.dry && (r.ok || r.sent !== false)) s.spentNear += txNear;
+    const entry = { at: now(), ...t, hash: r.hash, ok: r.ok, ...(r.dry ? { dry: true } : {}) };
+    if (r.ok) {
+      policy.apply(st, t); st.today++;
+      if (strategyOf && strategyOf(key)) entry.strategy = true;
+      st.recent.unshift({ at: entry.at, ...policy.row(t), hash: r.hash });
+      st.recent.length = Math.min(st.recent.length, RECENT);
+      s.low = false;
+    } else {
+      st.failures++; lastError = `${key}: ${String(r.failure).slice(0, 200)}`; entry.failure = r.failure;
+      if (policy.refetch.test(String(r.failure))) await sync();
+      if (s.low) s.lowUntil = now() + LOW_RETRY_MS;
+    }
+    log(entry); save();
+    return entry;
+  }
+
+  function loop(key) {
+    if (!running) return;
+    const delay = isPaused ? PAUSE_POLL_MS : nextGapMs(now(), rand, { target, traders: keys.length });
+    handles.set(key, timers.setTimeout(async () => {
+      try { await tickOnce(key); } catch (e) { lastError = `${key}: ${errText(e)}`; }
+      loop(key);
+    }, delay));
+  }
+
+  return {
+    tickOnce, sync,
+    async start() {
+      if (running) return; running = true;
+      await sync();
+      for (const k of keys) if (signers.has(k)) loop(k);
+      const syncLoop = () => { if (running) handles.set('_sync', timers.setTimeout(async () => { await sync(); save(true); syncLoop(); }, SYNC_MS)); };
+      syncLoop();
+    },
+    stop() { running = false; for (const h of handles.values()) timers.clearTimeout(h); handles.clear(); save(true); },
+    pause(on = true) { isPaused = !!on; },
+    stats() {
+      rollDay();
+      return {
+        enabled: true, dry_run: !!dryRun, paused: isPaused, contract: contractId, target, traders: keys.length, day: st.day, today: st.today, failures_today: st.failures,
+        chain: chain && { day: chain.day, today: chain.today, total: chain.total, at: chain.at },
+        low_funds: [...signers.values()].filter((s) => s.low).map((s) => s.key),
+        budget_capped: [...signers.values()].filter((s) => s.capped).map((s) => s.key), wallet_day_near: walletDayNear, killed: wasKilled || !!killed(),
+        recent: st.recent.slice(0, RECENT), last_error: lastError,
+      };
+    },
+    state: () => st,
+  };
+}

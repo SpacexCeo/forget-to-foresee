@@ -3,7 +3,7 @@
 // the kill, respawn; never leave the leash or cross into the town.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MobBrain, PACKS, MOB_TYPES, LEASH, CAST_DAMAGE, alongLine } from '../../src/play/mobs.js';
+import { MobBrain, PACKS, MOB_TYPES, LEASH, CAST_DAMAGE, alongLine, PURSUIT } from '../../src/play/mobs.js';
 import { onField } from '../../src/scenes/town-outside.js';
 
 const O = [0, 1200, 0];
@@ -179,7 +179,7 @@ test('in the view: no creature near → the cursor turns her even standing still
     MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, irisMove: (n) => { calls.push(n); return true; }, irisEnd: () => calls.push('end') });
   const sk = M.brain.mobs.find((x) => x.type === 'skitter');
   for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
-  player.pos = [sk.pos[0] - 8, sk.pos[1], sk.pos[2]]; M.update(0.01, true);
+  player.pos = [sk.pos[0] - 9, sk.pos[1], sk.pos[2]]; M.update(0.01, true);
   assert.equal(M.locked, null);
   M.strike({ cursor: [player.pos[0], 0, player.pos[2] - 4], move: [1, 0] });
   assert.equal(M.aimedBy, 'cursor'); assert.ok(Math.abs(Math.abs(player.heading) - Math.PI) < 1e-9, 'turned to the cursor (−z)');
@@ -202,22 +202,153 @@ test('combat feel: every melee blow warns at least 0.4 s ahead; every strike hit
   assert.ok(Math.abs(m.pos[2] - z0 - HIT_SHOVE) < 1e-6, 'a light shove on an ordinary hit');
 });
 
-test('strike direction v2: a creature in the 140° cone in front of the camera within 6 m, else the cursor, else the movement while moving, else the camera forward', async () => {
+test('strike direction v3: on a PC every strike assists onto a creature within 8 m in ANY direction (ahead preferred), else cursor, movement, camera', async () => {
   const { strikeAim, pickLock, ACTIONS } = await import('../../src/play/mobs.js');
-  assert.equal(ACTIONS.lock, 6); assert.ok(Math.abs(ACTIONS.lockCone - 140 * Math.PI / 180) < 1e-9);
-  const from = [0, 0, 0], T = { radius: 0.4 };
-  const ahead = { pos: [0, 0, 4], T, state: 'idle' }, behind = { pos: [0, 0, -2], T, state: 'idle' }, far = { pos: [0, 0, 7.5], T, state: 'idle' }, side = { pos: [2, 0, 1.2], T, state: 'idle' };
-  const fwd = [0, 1];
-  assert.equal(pickLock([behind, ahead], from, fwd), ahead, 'the one behind the camera is skipped though nearer');
-  assert.equal(pickLock([far], from, fwd), null, 'beyond 6 m');
-  assert.equal(pickLock([side], from, fwd), side, 'inside the 140° cone (59° off)');
-  assert.equal(pickLock([{ pos: [3, 0, -1.5], T, state: 'idle' }], from, fwd), null, 'outside the cone');
-  assert.equal(pickLock([{ ...ahead, state: 'dead' }], from, fwd), null);
-  assert.equal(pickLock([{ pos: [0.2, 0, -0.5], T, state: 'idle' }], from, fwd)?.pos[2], -0.5, 'one right on top of her counts from any side');
+  assert.equal(ACTIONS.lock, 8);
+  const from = [0, 0, 0], T = { radius: 0.4 }, fwd = [0, 1];
+  const mk = (x, z, state = 'idle') => ({ pos: [x, 0, z], T, state });
+  assert.ok(pickLock([mk(3, 0)], from, fwd), 'beside her at 90° (3 m): locked');
+  assert.ok(pickLock([mk(Math.sin(150 * Math.PI / 180) * 6, Math.cos(150 * Math.PI / 180) * 6)], from, fwd), 'behind-beside at 150° (6 m): locked');
+  assert.ok(pickLock([mk(0, -7.5)], from, fwd), 'straight behind, within 8 m: locked');
+  assert.equal(pickLock([mk(0, 9)], from, fwd), null, 'beyond 8 m');
+  assert.equal(pickLock([mk(0, 3, 'dead')], from, fwd), null);
+  const ahead = mk(0, 4), behind = mk(0, -3.6);
+  assert.equal(pickLock([behind, ahead], from, fwd), ahead, 'ahead preferred when barely farther');
+  assert.equal(pickLock([mk(0, -1.5), mk(0, 6)], from, fwd).pos[2], -1.5, 'a much nearer one behind still wins');
   const cam = [1, 0];
-  assert.equal(strikeAim({ from, heading: 2, lock: ahead, cursor: [5, 0, 0], move: [0, -1], camera: cam }).by, 'lock');
+  assert.equal(strikeAim({ from, heading: 2, lock: ahead, cursor: [5, 0, 0], move: [0, -1], camera: cam }).by, 'lock', 'the lock beats the cursor');
   assert.equal(strikeAim({ from, heading: 2, cursor: [5, 0, 0], move: [0, -1], camera: cam }).by, 'cursor');
-  assert.equal(strikeAim({ from, heading: 2, move: [0, -1], camera: cam }).by, 'move', 'moving: her movement');
-  const c = strikeAim({ from, heading: 2, move: [0, 0], camera: cam }); assert.equal(c.by, 'camera'); assert.ok(Math.abs(c.heading - Math.PI / 2) < 1e-9, 'standing, no creature: where the camera looks');
-  assert.equal(strikeAim({ from, heading: 2 }).by, 'facing');
+  assert.equal(strikeAim({ from, heading: 2, move: [0, -1], camera: cam }).by, 'move');
+  assert.equal(strikeAim({ from, heading: 2, camera: cam }).by, 'camera');
+});
+
+test('the view: a strike at a creature 3 or 6 m beside or behind her turns the whole root at once, closes in and lands the hit', async () => {
+  const THREE = await import('three');
+  const { createMobs } = await import('../../src/play/mobs.js');
+  for (const [deg, dist] of [[90, 3], [150, 3], [90, 6], [150, 6]]) {
+    const player = { pos: [0, 0, 0], heading: 0, prevHeading: 0, vel: [2, 0] };
+    const M = createMobs({ THREE, scene: new THREE.Scene(), origin: O.slice(), player, load: () => Promise.reject(new Error('no models')), clone: (x) => x,
+      MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, irisMove: () => true, moveIris: (d) => { player.pos[0] += d[0]; player.pos[2] += d[1]; } });
+    const sk = M.brain.mobs.find((x) => x.type === 'skitter');
+    for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
+    sk.state = 'idle'; sk.freeze = 99;                                                // it holds still for the check
+    const a = deg * Math.PI / 180;
+    player.pos = [sk.pos[0] - Math.sin(a) * dist, sk.pos[1], sk.pos[2] - Math.cos(a) * dist];
+    M.update(0.01, true);
+    const hp0 = sk.hp;
+    assert.equal(M.strike({ cursor: [player.pos[0] + 5, 0, player.pos[2] - 5] }), true);
+    const want = Math.atan2(sk.pos[0] - player.pos[0], sk.pos[2] - player.pos[2]);
+    assert.ok(Math.abs(Math.atan2(Math.sin(player.heading - want), Math.cos(player.heading - want))) < 10 * Math.PI / 180, `${deg}°/${dist} m: facing the creature`);
+    assert.equal(player.prevHeading, player.heading, 'no interpolation from the old facing'); assert.deepEqual(player.vel, [0, 0], 'no momentum to turn her back');
+    for (let i = 0; i < 20; i++) M.update(1 / 60, true);
+    assert.ok(sk.hp < hp0, `${deg}°/${dist} m: the creature took the hit`);
+    assert.equal(M.aimedBy, 'lock');
+  }
+});
+
+test('strike VFX: no ground arc or ring at all (owner); a light spark and dust on the struck creature, gone in 0.2 s', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/play/mobs.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /slashGeo|const slash\b|burst\.ring|burst\.arc/, 'the strike arc and the super ground ring are gone');
+  const THREE = await import('three');
+  const { createMobs } = await import('../../src/play/mobs.js');
+  const player = { pos: [0, 0, 0], heading: 0 };
+  const M = createMobs({ THREE, scene: new THREE.Scene(), origin: O.slice(), player, load: () => Promise.reject(new Error('no models')), clone: (x) => x,
+    MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, irisMove: () => true });
+  const sk = M.brain.mobs.find((x) => x.type === 'skitter');
+  for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
+  player.pos = [sk.pos[0], sk.pos[1], sk.pos[2] - 1.2]; M.update(0.01, true);
+  const before = M.group.children.length;
+  // no view is attached without models, so the spark path is exercised through the brain events only: the group gains nothing on the ground
+  M.strike(); M.update(0.25, true);
+  assert.ok(M.group.children.every((c) => !(c.geometry && c.geometry.type === 'RingGeometry' && c.visible && c.material.color && c.material.color.getHex() === 0xdff6ff)), 'no white arc');
+  assert.ok(M.group.children.length <= before + 1);
+});
+
+test('quick cast: the lance flies toward the cursor; the snare lands on the cursor in range, else at full range along it; settings default on', async () => {
+  const { quickCastPoint } = await import('../../src/scenes/town-casting.js');
+  const { CASTS } = await import('../../src/scenes/town-casting-fx.js');
+  const { SETTINGS_DEFAULTS, cleanSettings } = await import('../../src/ui/settings-store.js');
+  const from = [0, 1200, 0];
+  const near = quickCastPoint(CASTS.snare, from, [3, 1200, 4]);
+  assert.deepEqual(near.map((x) => +x.toFixed(6)), [3, 1200, 4], 'in range: on the cursor');
+  const far = quickCastPoint(CASTS.snare, from, [30, 1200, 40]);
+  assert.ok(Math.abs(Math.hypot(far[0], far[2]) - CASTS.snare.range) < 1e-9, 'out of range: clamped to the range');
+  assert.ok(Math.abs(far[0] / far[2] - 0.75) < 1e-9, 'along the cursor direction');
+  const line = quickCastPoint(CASTS.lance, from, [0, 1200, -5]); assert.ok(line[2] < 0 && Math.abs(line[0]) < 1e-9, 'the lance toward the cursor');
+  const none = quickCastPoint(CASTS.lance, from, null, Math.PI / 2); assert.ok(Math.abs(none[0] - CASTS.lance.range * 0.6) < 1e-9, 'no cursor: her facing at 60 %');
+  assert.equal(SETTINGS_DEFAULTS.quickCast, true); assert.equal(cleanSettings({ quickCast: false }).quickCast, false);
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/scenes/town-casting.js', import.meta.url), 'utf8');
+  assert.match(src, /if \(quickOn\(\)\) \{/, 'Q / V go through quick cast when it is on');
+  assert.match(src, /quick\.hidden = coarse/, 'hidden on touch');
+});
+
+// Provoked pursuit (owner 12.11: the boss could be harassed from range and never came): any damage from any distance
+// aggroes the creature on her at once; it closes in (the boss also answers from range) and resets only when she has
+// truly left for PURSUIT.lose seconds, then heals back.
+const clearLine = (a, b) => { for (let k = 0; k <= 20; k++) { const t = k / 20; if (!onField(...local([a[0] + (b[0] - a[0]) * t, 0, a[2] + (b[2] - a[2]) * t]))) return false; } return true; };
+function rangedSpot(m, d, minHome = 0) {
+  const home = m.pack.home;
+  for (let i = 0; i < 128; i++) {
+    const a = (i / 128) * Math.PI * 2, p = [m.pos[0] + Math.sin(a) * d, O[1], m.pos[2] + Math.cos(a) * d], dh = Math.hypot(p[0] - home[0], p[2] - home[2]);
+    if (dh >= minHome && dh < PURSUIT.radius - 4 && clearLine(m.pos, p)) return p;
+  }
+  return null;
+}
+const landed = (ev, m) => ev.some((e) => e.mob === m && ((e.kind === 'impact' && e.hit) || e.kind === 'shot'));
+
+test('any damage from max skill range aggroes every monster type on her within one tick, and it comes to fight', () => {
+  for (const type of Object.keys(MOB_TYPES)) {
+    const b = new MobBrain({ origin: O, seed: 4 });
+    const m = b.mobs.find((x) => x.type === type);
+    const at = rangedSpot(m, 16.5); assert.ok(at, type + ': a ranged spot');
+    const iris = { pos: at, alive: true, outside: true };
+    assert.equal(run(b, 1, iris).some((e) => e.mob === m && e.kind === 'attack'), false, type + ': 16.5 m away it has not noticed her');
+    const dir = [(m.pos[0] - at[0]) / 16.5, (m.pos[2] - at[2]) / 16.5];
+    b.cast({ id: 'snare', from: at, dir, point: [at[0] + dir[0] * 14, at[1], at[2] + dir[1] * 14] });   // the snare at its full range, its ring reaching the creature
+    let ev = [];
+    for (let k = 0; k < 40 && !ev.some((e) => e.kind === 'hit' && e.mob === m); k++) ev = b.step(1 / 30, iris, flat);
+    assert.ok(ev.some((e) => e.kind === 'hit' && e.mob === m), type + ': hit');
+    b.step(1 / 30, iris, flat);
+    assert.ok(m.provoked, type + ': provoked'); assert.ok(['chase', 'stagger'].includes(m.state), type + ': aggro at once, not ' + m.state);
+    ev = run(b, 14, iris);
+    assert.ok(landed(ev, m), type + ': it reached her (or shot at her) while she stood still');
+  }
+});
+
+test('no safe spot by the boss: from beyond its old leash it closes in and answers from range', () => {
+  const b = new MobBrain({ origin: O, seed: 6 });
+  const boss = b.mobs.find((x) => x.T.elite);
+  const at = rangedSpot(boss, 21, LEASH + MOB_TYPES.crownrift.attack + 1); assert.ok(at, 'a spot beyond the old leash');
+  const iris = { pos: at, alive: true, outside: true };
+  const ev0 = []; b.damage(boss, 25, ev0); assert.ok(boss.provoked);
+  const ev = run(b, 12, iris);
+  assert.ok(landed(ev, boss), 'the boss strikes or shoots her');
+  const d = Math.hypot(boss.pos[0] - at[0], boss.pos[2] - at[2]);
+  assert.ok(d < 21 - 3, 'it came closer: ' + d.toFixed(1));
+  // kiting from a fixed spot just out of melee: the crown bolt answers
+  const b2 = new MobBrain({ origin: O, seed: 6 }), boss2 = b2.mobs.find((x) => x.T.elite);
+  const at2 = rangedSpot(boss2, 10); const iris2 = { pos: at2, alive: true, outside: true };
+  b2.damage(boss2, 25, []); boss2.root = 99;                                       // held in a snare: it cannot close in
+  const ev2 = run(b2, 8, iris2);
+  assert.ok(ev2.some((e) => e.mob === boss2 && e.kind === 'shot' && e.damage === MOB_TYPES.crownrift.answer.damage), 'a ranged answer while held');
+});
+
+test('the leash reset: only after she truly leaves for PURSUIT.lose s; then it walks home and heals back', () => {
+  const b = new MobBrain({ origin: O, seed: 8 });
+  const m = b.mobs.find((x) => x.type === 'hulker');
+  const at = rangedSpot(m, 15); const iris = { pos: at, alive: true, outside: true };
+  b.damage(m, 60, []); run(b, 1, iris);
+  iris.outside = false;                                                            // she runs back into the town ...
+  run(b, PURSUIT.lose - 1, iris);
+  assert.ok(m.provoked, 'a short break does not reset it');
+  iris.outside = true; run(b, 0.5, iris); iris.outside = false;                    // ... out again for a moment: the count restarts
+  run(b, PURSUIT.lose - 1, iris);
+  assert.ok(m.provoked, 'still provoked');
+  run(b, 2, iris);
+  assert.equal(m.provoked, false, 'gone long enough: reset');
+  run(b, 30, iris);
+  assert.equal(m.hp, MOB_TYPES.hulker.hp, 'healed back');
+  assert.ok(Math.hypot(m.pos[0] - m.pack.home[0], m.pos[2] - m.pack.home[2]) <= LEASH + 1e-6, 'back inside its leash');
 });

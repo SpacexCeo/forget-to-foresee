@@ -1,0 +1,27 @@
+{
+  "_doc": "Wallet id vectors for the whitelist pass: read by relayer/tests/pass.test.mjs (lib/pass.js checkWallet) and by game/tests/client/endgame-pass.test.mjs (net/pass-client.js), so the browser and the server agree.",
+  "forbidden": ["pass.owner.near", "minter.owner.near"],
+  "cases": [
+    { "id": "ann.near", "network": "mainnet", "valid": true },
+    { "id": "a1-b_c.d.near", "network": "mainnet", "valid": true },
+    { "id": "near", "network": "mainnet", "valid": true },
+    { "id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "network": "mainnet", "valid": true },
+    { "id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "network": "testnet", "valid": true },
+    { "id": "Ann.near", "network": "mainnet", "valid": false },
+    { "id": "ANN.NEAR", "network": "mainnet", "valid": false },
+    { "id": "a", "network": "mainnet", "valid": false },
+    { "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.near", "network": "mainnet", "valid": false },
+    { "id": "ann.near.", "network": "mainnet", "valid": false },
+    { "id": ".ann.near", "network": "mainnet", "valid": false },
+    { "id": "ann..near", "network": "mainnet", "valid": false },
+    { "id": "ann-.near", "network": "mainnet", "valid": false },
+    { "id": "ann near", "network": "mainnet", "valid": false },
+    { "id": "ann.testnet", "network": "mainnet", "valid": false },
+    { "id": "ann.testnet", "network": "testnet", "valid": true },
+    { "id": "ann.near", "network": "testnet", "valid": false },
+    { "id": "0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef", "network": "mainnet", "valid": false },
+    { "id": "pass.owner.near", "network": "mainnet", "valid": false },
+    { "id": "minter.owner.near", "network": "mainnet", "valid": false },
+    { "id": "", "network": "mainnet", "valid": false }
+  ]
+}

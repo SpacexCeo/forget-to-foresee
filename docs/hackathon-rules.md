@@ -16,7 +16,7 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
 - Our own plan: code freeze 13.11 20:00 Kyiv; 14.11 is buffer and submission (`docs/spec.md` §0).
 
 ## Required
-- [x] A working prototype, not a pitch (Q-012). Live: https://spacexceo.github.io/forget-to-foresee/?demo=judge
+- [x] A working prototype, not a pitch (Q-012). Live: https://spacexceo.github.io/forget-to-foresee/ (one entry: the whole game; `?demo=judge` is an alias)
   (HTTP 200 on 09.11; the season runs locally in the browser tab, see README "The season lives in this browser tab").
 - [x] Public repository + LICENSE (MIT) (Q-013–014). https://github.com/SpacexCeo/forget-to-foresee
 - [x] README written for a machine reader as well as a human: what the product is, the problem, "do X, see Y"

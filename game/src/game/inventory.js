@@ -20,6 +20,13 @@ export function createInventory({ storage = null, now = () => Date.now() } = {})
       for (const fn of [...listeners]) fn(id);
       return cur.n;
     },
+    /** Removes `n` of an item if there are that many (a quest turn-in consumes resources); true when taken. */
+    take(id, n = 1) {
+      const cur = st.items[id]; if (!cur || cur.n < n || !(n > 0)) return false;
+      cur.n -= n; if (cur.n === 0) delete st.items[id]; save();
+      for (const fn of [...listeners]) fn(id);
+      return true;
+    },
     /** [{id, n, source, first}] for the manifest's items the player owns, rarest first. */
     list(manifest = []) {
       const rank = (r) => -RARITIES.indexOf(r || 'common');

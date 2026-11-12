@@ -313,6 +313,7 @@ components:
         label: { type: string, maxLength: 64 }
         seed: { type: integer, minimum: 0, maximum: 4294967295, description: 'Test servers only (legacy modes). Marked clientChoseSeed.' }
         seedHex: { type: string, pattern: '^[0-9a-f]{32}$', description: 'Test servers only (v3). Marked clientChoseSeed.' }
+        scriptedKey: { type: string, minLength: 16, maxLength: 128, description: 'A key from the server scripted registry (the arena accounts): the session is scripted (may hunt; ranked as Scripted NPC). An unknown key is 403.' }
     Joined:
       type: object
       properties:
@@ -403,6 +404,7 @@ components:
         you: { type: object, description: 'playerId, role, zone, shell, position [x,y,z], walking {to, arriveAt} or null, place' }
         members: { type: array, items: { type: object } }
         season: { type: object, description: 'seasonId, rules, merkleRoot, leafCount, commitments, entropy (seed protocol ftf-seed/1: commitment, nonce, beacon, sealed; roomEntropy and seedHex once phase is end; see docs/verify.md), tick, ticks, phase (intro|play|vote|end), tension, outcome, votes. Under the protocol seasonId, merkleRoot and the commitments are null until start_season seals the season.' }
+        expedition: { type: object, nullable: true, description: 'null until expedition_start. phase, actor (human|scripted), account, balanceC (town silk in hundredths, the session counter), feeC, guide, quests {id: {state, progress}}, log {length, head, earnedC}. Never the season silk.' }
         scroll: { type: array, items: { type: object } }
         chronicle: { type: array, items: { type: object } }
         proofs: { type: array, items: { type: object } }

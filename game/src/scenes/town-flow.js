@@ -148,7 +148,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   function renderText() {
     objective.textContent = i18n.t(state.ready ? (state.resume ? 'town.objective.resume' : quest ? quest.objective : 'town.objective') : 'town.loading');
-    promptText.textContent = spotNear && !talkNpc ? i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
+    promptText.textContent = spotNear && !talkNpc ? spotNear.prompt ? spotNear.prompt() : i18n.t(onDoor && DOORS.has(spotNear.id) ? 'town.shop.enter.' + spotNear.id : 'spot.' + spotNear.id) : talkNpc ? i18n.t('quest.talk', { name: i18n.t((talkKind === 'quest' ? 'quest.name.' : 'folk.name.') + talkNpc) }) : i18n.t(state.resume ? 'town.altar.resume' : 'town.altar.prompt');
     if (onProfile && ledger) { const lv = ledger.level; profileBtn.textContent = i18n.t('profile.button', { level: lv.level }); }
     if (quest) {
       meta.hidden = !(state.ready && (quest.active || quest.purse > 0));
@@ -163,7 +163,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   function renderVisibility() {
     const on = state.phase === 'town';
     root.hidden = !on;
-    const talking = !!((quest && quest.talk) || folkTalk || spotPanel);
+    const talking = !!((quest && quest.talk) || folkTalk || spotPanel || (spotNear && spotNear.busy && spotNear.busy()));
     prompt.hidden = !(on && state.ready && (talkNpc || spotNear || state.near) && !talking);
     talkEl.hidden = !(on && talking);
     pills.setVisible(on);
@@ -470,7 +470,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (npc !== talkNpc || kind !== talkKind) { talkNpc = npc; talkKind = kind; renderText(); renderVisibility(); }
     if (quest && quest.talk) { const p = npcAt(quest.talk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) quest.close(); }
     if (folkTalk && !remote) { const p = folkAt(folkTalk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) closeFolk(); }
-    pillClock += dt; if (pillClock > 0.5) { pillClock = 0; pills.refresh(); }
+    pillClock += dt; if (pillClock > 0.5) { pillClock = 0; pills.refresh(); if (spotNear && spotNear.prompt) renderText(); } // a spot's own line can change (the story portal's balance)
     const talking = !!((quest && quest.talk) || folkTalk || spotPanel);
     if (near !== state.near || prompt.hidden === (ready && (near || !!talkNpc || !!spotNear) && !talking)) { state.near = near; renderVisibility(); }
   }
@@ -479,6 +479,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   function interact() {
     if ((quest && quest.talk) || folkTalk || spotPanel) return Promise.resolve(false); // the talk's own buttons answer
     if (spotNear && !talkNpc) {
+      if (spotNear.onInteract) { spotNear.onInteract(); renderVisibility(); return Promise.resolve(false); } // a spot with its own panel (the story's portal and citizens)
       if (spotNear.id === 'mirror') { if (onMirror) onMirror(); return Promise.resolve(false); }
       if (spotNear.id === 'wheel') { if (onWheel) onWheel(); return Promise.resolve(false); }
       if (onDoor && DOORS.has(spotNear.id) && onDoor(spotNear.id)) return Promise.resolve(false); // walk into the shop (scenes/town-shops.js)
@@ -500,7 +501,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     return state.registering;
   }
 
-  async function run() {
+  async function run(opts = {}) {
     const reduced = !!reducedMotion();
     state.phase = 'transition'; state.route = null;
     if (quest) quest.close();
@@ -508,7 +509,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     renderVisibility();
     // The cover is the loading screen itself (ui/loading.js createVeil): the same dark screen, its line following the
     // archipelago's real first-view progress, its log what is loading now, the subtitle "The Tournament begins".
-    const veil = createVeil(doc, { sub: i18n.t('town.transition.title'), t: (k) => i18n.t(k) });
+    const veil = createVeil(doc, { sub: opts.sub || i18n.t('town.transition.title'), t: (k) => i18n.t(k) });
     cover = veil ? veil.el : doc.createElement('div');
     cover.classList.add('ftf-town-cover'); if (reduced) cover.classList.add('is-plain');
     cover.setAttribute('role', 'status');
@@ -579,6 +580,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     /** The shop counter (scenes/town-shops.js): opens the panel the door used to open. */
     openSpot(id) { if (spotPanel || folkTalk) closeOpen(); remote = true; spotPanel = id; renderTalk(); renderVisibility(); const b = talkEl.querySelector('button:not([disabled]):not(.ftf-panel-min)'); if (b && b.focus) b.focus(); },
     get questActive() { return !!(quest && quest.active); }, interact, register, walkRoute, cancelRoute, routeWish,
+    /** The same transition to the archipelago from anywhere in town (the story's Gate-Loom, scenes/town-portal.js), with its own cover line. */
+    depart(opts = {}) { if (state.registering || state.phase !== 'town') return state.registering || Promise.resolve(false); state.registering = run(opts); return state.registering; },
     get phase() { return state.phase; },
     /** Input and physics are held: the registration sequence is running. */
     get busy() { return state.phase === 'transition'; },
