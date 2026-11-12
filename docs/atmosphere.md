@@ -47,7 +47,7 @@ Archipelago:
 | Shadows | two cascades from one sun (a near one that follows Iris, a far one over the whole play area, redrawn only when it moves), texel-snapped, blended in the shader, fading out at the far edge; a rotated-disc soft filter; blob shadows under characters in the shade and on phones |
 | Sun, sky, ambient | a light preset per location (the town gets a sun that reaches the main street), morning / midday / golden hour / dusk for both, lamps and lit windows taking over at dusk, an amber light on the altar, ambient from the same sky |
 | Fog and grade | fog settings per location (valley haze under the town, lighter distance fog, sky-coloured aerial perspective on the far islands), the grade moved into the tone mapping so every tier and phone shares it, richer colour |
-| Weather and wind | clear / overcast / light rain, one shared wind uniform for banners, trees and smoke, `?weather=` and `?tod=` switches |
+| Weather and wind | clear / haze / fog / overcast / drizzle / rain / storm (distant flashes), rain streaks and splashes, wet sheen and puddle reflections (not on cheap tiers), one shared wind uniform for banners, trees and smoke; a seeded weather timeline per session in the town (`render/daycycle.js`), window event `ftf:weather` {state} / {state, thunder}; `?weather=`, `?tod=`, `?cycle=<s>`, `?wseed=<n>` switches |
 | Tiers and numbers | frame time per tier on desktop and the phone layout |
 
 ## 3. Second pass, 11.11 (branch `claude/lighting-v2`)
