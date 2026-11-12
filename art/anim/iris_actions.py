@@ -4,10 +4,11 @@
     python3 art/anim/iris_actions.py --only cast_lance --sheet /tmp/lance.png    # a stick-figure sheet of one clip (needs Pillow)
 
 Clips (60 keys a second, in place; each starts and ends in her idle pose):
-  strike1/2    light palm strikes (right, then the mirror): a short coil, a step in, the palm driven out; impact 0.12 s
-  strike3      the heavy finisher: both hands gathered high on her toes, a deep lunge, both palms out; impact 0.22 s
-  strike_charge / strike_super   the held super strike: a deep coil that keeps sinking for a second and is held,
-               then the release from that pose: the left foot drives out 0.7 m and the right palm goes through; impact 0.10 s
+  strike1/2    boxing (owner 12.11): the jab (lead left fist, impact 0.10 s) and the cross (rear right, 0.12 s), from
+               the guard and back to it
+  strike3      boxing: the lead hook; impact 0.15 s (strike1 the jab 0.10 s, strike2 the cross 0.12 s)
+  strike_charge / strike_super   the held super strike: a boxer's load that keeps sinking for a second and is held,
+               then the release from that pose: the left foot drives out 0.7 m and an uppercut comes up; impact 0.10 s
   skid         0.2 s: the heel-dig stop out of a run, blended over the start of a cast that interrupts a run
   dash         low and forward at once, one leg driving and one trailing, arms swept back; the front foot catches her
                (these four replace the first versions made by iris_combat.py, which still builds Elise's)
@@ -175,67 +176,68 @@ def mirror(pose):
     return out
 
 
-def strike(side):
-    """A light palm strike with the right hand (the left one mirrored): a short coil, a step in with the other foot
-    and the palm driven out from the hip, the other hand pulled back to guard; impact at 0.12 s (the game chains the
-    next one from 0.32 s)."""
-    coil = {
-        'hips': [-0.01, -0.03, -0.03],
-        'pelvis': [('y', -8)], 'spine': [('y', -6)], 'chest': [('y', -12), ('x', 3)],
-        'neck': [('y', 8)], 'head': [('y', 10)],
-        'foot_R': {'at': [0, 0, 0], 'pitch': 6},
-        'arm_R': {'at': [-0.05, -0.20, -0.06], 'elbow': [-0.5, -0.2, -1], 'fingers': [0, 0.5, 1], 'palm': [0.3, -0.2, 1]},
-        'arm_L': {'at': [-0.10, -0.06, 0.30], 'elbow': [0.6, -0.8, 0], 'fingers': [0, 1, 0.3], 'palm': [-0.4, 0, 1]},
-        'fingers_R': 'open', 'fingers_L': 'open',
-    }
-    hit = {
-        'hips': [0.01, -0.08, 0.15],
-        'pelvis': [('y', 10)], 'spine': [('y', 6), ('x', 5)], 'chest': [('y', 14), ('x', 7)],
-        'neck': [('y', -10)], 'head': [('y', -12), ('x', -6)],
-        'foot_L': {'at': [0.03, 0, 0.26], 'yaw': 4},
-        'foot_R': {'at': [0, 0, -0.04], 'pitch': 30, 'yaw': 8},
-        'arm_R': {'at': [0.10, 0.02, 0.455], 'elbow': [-0.7, -0.5, 0], 'fingers': [0, 1, 0.35], 'palm': [0, -0.2, 1]},
-        'arm_L': {'at': [0.05, -0.19, -0.15], 'elbow': [0.12, -0.35, -1], 'fingers': [0, 0.3, 1], 'palm': [-1, 0, 0.2]},
-        'fingers_R': 'flat', 'fingers_L': 'loose_fist',
-    }
-    keys = [(0.0, IDLE), (0.07, with_ease(coil, 'out')), (0.12, with_ease(hit, ('pow', 1.5))), (0.18, with_ease(mix(coil, hit, 1.06), 'out')),
-            (0.30, with_ease(mix(coil, hit, 0.95), 'smooth')), (0.56, with_ease(IDLE, 'smooth'))]
-    if side == 'L':
-        keys = [(t, with_ease(mirror({k: v for k, v in p.items() if k != 'ease'}), p.get('ease'))) for t, p in keys]
-    return keys, 0.56
+FIST = (88, 86, 44)
+# The boxer's guard (orthodox: left side forward): chin tucked, fists at the jaw, elbows in, rear heel raised.
+GUARD = {
+    'hips': [0.0, -0.05, 0.02],
+    'pelvis': [('y', -12)], 'spine': [('y', -5)], 'chest': [('y', -8), ('x', 6)],
+    'neck': [('y', 10)], 'head': [('y', 12), ('x', 4)],
+    'foot_L': {'at': [0.01, 0, 0.18]},
+    'foot_R': {'at': [-0.03, 0, -0.12], 'pitch': 14, 'yaw': 26},
+    'arm_L': {'at': [-0.10, 0.06, 0.24], 'elbow': [0.3, -1, 0], 'fingers': [-0.1, 1, 0.25], 'palm': [-1, 0, 0.1]},
+    'arm_R': {'at': [0.08, 0.07, 0.14], 'elbow': [-0.3, -1, -0.1], 'fingers': [0.1, 1, 0.2], 'palm': [1, 0, 0.1]},
+    'fingers_L': FIST, 'fingers_R': FIST,
+}
 
 
-def finisher():
-    """The heavy third hit: she rises on her toes with both hands gathered high behind the right shoulder, then drops
-    into a deep lunge and drives both palms out; impact at 0.22 s."""
-    up = {
-        'hips': [-0.02, 0.04, -0.06],
-        'pelvis': [('y', -10)], 'spine': [('y', -8), ('x', -5)], 'chest': [('y', -14), ('x', -8)],
-        'neck': [('y', 12)], 'head': [('y', 14), ('x', 4)],
-        'foot_R': {'at': [0, 0, 0], 'pitch': 24}, 'foot_L': {'at': [-0.02, 0.10, 0.02], 'pitch': 30},
-        'arm_R': {'at': [-0.10, 0.20, -0.14], 'elbow': [-1, 0.2, -0.6], 'fingers': [0.2, 0.6, 1], 'palm': [0.6, -0.2, 0.8]},
-        'arm_L': {'at': [-0.22, 0.16, 0.10], 'elbow': [0.4, -0.7, 0.4], 'fingers': [-0.6, 0.6, 0.4], 'palm': [-0.6, -0.2, 0.8]},
-        'fingers_R': 'open', 'fingers_L': 'open',
-    }
-    hit = {
-        'hips': [0.0, -0.19, 0.30],
-        'pelvis': [('y', 6)], 'spine': [('y', 3), ('x', 12)], 'chest': [('y', 5), ('x', 14)],
-        'neck': [('y', -4)], 'head': [('y', -6), ('x', -16)],
-        'foot_L': {'at': [0.03, 0, 0.56], 'yaw': 5},
-        'foot_R': {'at': [0, 0, -0.16], 'pitch': 40, 'yaw': 10},
-        'arm_R': {'at': [0.09, 0.03, 0.455], 'elbow': [-0.8, -0.4, 0], 'fingers': [-0.15, 1, 0.3], 'palm': [0, -0.2, 1]},
-        'arm_L': {'at': [-0.09, 0.03, 0.455], 'elbow': [0.8, -0.4, 0], 'fingers': [0.15, 1, 0.3], 'palm': [0, -0.2, 1]},
-        'fingers_R': 'flat', 'fingers_L': 'flat',
-    }
-    back = {
-        'hips': [0.0, -0.05, 0.12],
-        'spine': [('x', 3)], 'chest': [('x', 4)],
-        'foot_L': {'at': [0.0, 0.06, 0.24], 'pitch': 10}, 'foot_R': {'at': [0, 0, 0], 'pitch': 8},
-        'arm_R': {'at': [0.02, -0.34, 0.18], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [0.6, -0.4, -0.6]},
-        'arm_L': {'at': [-0.02, -0.34, 0.18], 'elbow': [0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [-0.6, -0.4, -0.6]},
-    }
-    return [(0.0, IDLE), (0.09, with_ease(mix(IDLE, up, 0.85), 'out')), (0.17, with_ease(up, 'linear')), (0.22, with_ease(hit, ('pow', 1.6))),
-            (0.30, with_ease(mix(up, hit, 1.06), 'out')), (0.46, with_ease(mix(up, hit, 0.96), 'smooth')), (0.66, with_ease(back, 'smooth')), (0.88, with_ease(IDLE, 'out'))], 0.88
+def jab():
+    """Boxing, 1: the jab. From the guard the lead (left) fist goes straight out with a short step of the lead foot,
+    the lead shoulder behind it, the rear fist stays at the jaw; it snaps back to the guard. Impact at 0.10 s."""
+    hit = mix(GUARD, {
+        'hips': [0.0, -0.06, 0.09],
+        'pelvis': [('y', -16)], 'spine': [('y', -6)], 'chest': [('y', -12), ('x', 7)],
+        'neck': [('y', 14)], 'head': [('y', 16), ('x', 4)],
+        'foot_L': {'at': [0.01, 0, 0.30]},
+        'arm_L': {'at': [-0.07, 0.04, 0.47], 'elbow': [0.4, -0.8, 0], 'fingers': [0, 0, 1], 'palm': [0, -1, 0]},
+    }, 1.0)
+    return [(0.0, IDLE), (0.05, with_ease(mix(IDLE, GUARD, 0.9), 'out')), (0.10, with_ease(hit, ('pow', 1.5))), (0.15, with_ease(mix(GUARD, hit, 1.05), 'out')),
+            (0.26, with_ease(GUARD, 'smooth')), (0.40, with_ease(GUARD, 'linear')), (0.60, with_ease(IDLE, 'smooth'))], 0.60
+
+
+def cross():
+    """Boxing, 2: the cross. The rear (right) fist goes straight through as the rear foot pivots on its ball and the
+    hips and shoulders turn into it; the lead fist comes back to the chin. Impact at 0.12 s."""
+    hit = mix(GUARD, {
+        'hips': [0.02, -0.08, 0.14],
+        'pelvis': [('y', 14)], 'spine': [('y', 6)], 'chest': [('y', 14), ('x', 8)],
+        'neck': [('y', -14)], 'head': [('y', -16), ('x', 4)],
+        'foot_L': {'at': [0.01, 0, 0.26]},
+        'foot_R': {'at': [-0.02, 0, -0.06], 'pitch': 44, 'yaw': -4},
+        'arm_R': {'at': [0.10, 0.03, 0.47], 'elbow': [-0.4, -0.8, 0], 'fingers': [0, 0, 1], 'palm': [0, -1, 0]},
+        'arm_L': {'at': [-0.10, 0.08, 0.13], 'elbow': [0.3, -1, -0.1], 'fingers': [-0.1, 1, 0.2], 'palm': [-1, 0, 0.1]},
+    }, 1.0)
+    return [(0.0, IDLE), (0.06, with_ease(mix(IDLE, GUARD, 0.95), 'out')), (0.12, with_ease(hit, ('pow', 1.5))), (0.18, with_ease(mix(GUARD, hit, 1.05), 'out')),
+            (0.30, with_ease(GUARD, 'smooth')), (0.42, with_ease(GUARD, 'linear')), (0.62, with_ease(IDLE, 'smooth'))], 0.62
+
+
+def hook():
+    """Boxing, 3: the lead hook. A short load to her left, then the lead foot, hips and shoulders whip to the right
+    and the left arm, bent square and level, comes round with them. Impact at 0.15 s; back to the guard, then down."""
+    load = mix(GUARD, {
+        'hips': [0.02, -0.07, 0.03],
+        'pelvis': [('y', 2)], 'spine': [('y', 2)], 'chest': [('y', 4), ('x', 6)], 'neck': [('y', -4)], 'head': [('y', -4), ('x', 4)],
+        'arm_L': {'at': [0.03, 0.02, 0.15], 'elbow': [1, -0.2, -0.4], 'fingers': [-0.6, 0.3, 0.7], 'palm': [-0.3, 0, -1]},
+    }, 1.0)
+    hit = mix(GUARD, {
+        'hips': [-0.02, -0.08, 0.07],
+        'pelvis': [('y', -26)], 'spine': [('y', -9)], 'chest': [('y', -15), ('x', 6)],
+        'neck': [('y', 22)], 'head': [('y', 24), ('x', 4)],
+        'foot_L': {'at': [0.01, 0, 0.20], 'pitch': 24, 'yaw': -26},
+        'foot_R': {'at': [-0.03, 0, -0.12], 'pitch': 6, 'yaw': 26},
+        'arm_L': {'at': [-0.21, 0.04, 0.24], 'elbow': [1, 0.05, 0.1], 'fingers': [-1, 0, 0.15], 'palm': [0, 0, -1]},
+    }, 1.0)
+    return [(0.0, IDLE), (0.05, with_ease(mix(IDLE, GUARD, 0.85), 'out')), (0.10, with_ease(load, 'out')), (0.15, with_ease(hit, ('pow', 1.6))),
+            (0.22, with_ease(mix(load, hit, 1.07), 'out')), (0.36, with_ease(mix(GUARD, hit, 0.5), 'smooth')), (0.52, with_ease(GUARD, 'smooth')), (0.84, with_ease(IDLE, 'smooth'))], 0.84
 
 
 def dash():
@@ -264,48 +266,46 @@ def dash():
             (0.40, with_ease(step, 'smooth')), (0.52, with_ease(IDLE, 'out'))], 0.52
 
 
-CHARGE = {
-    'hips': [-0.03, -0.15, -0.11],
-    'pelvis': [('y', -18)], 'spine': [('y', -12), ('x', 6)], 'chest': [('y', -16), ('x', 8)],
+# The boxer's load for the big punch: sunk on the rear leg, the body coiled to the right and bent, the rear fist low
+# by the hip, the lead fist still at the chin, eyes on the target.
+CHARGE = mix(GUARD, {
+    'hips': [-0.02, -0.19, -0.07],
+    'pelvis': [('y', -20)], 'spine': [('y', -10), ('x', 6)], 'chest': [('y', -14), ('x', 12)],
     'neck': [('y', 18), ('x', -4)], 'head': [('y', 22), ('x', -8)],
-    'foot_R': {'at': [-0.03, 0, -0.12], 'yaw': 28}, 'knee_R': 10,
-    'foot_L': {'at': [0.02, 0, 0.20], 'pitch': 22},
-    'arm_R': {'at': [-0.04, -0.26, -0.20], 'elbow': [-0.6, 0.1, -1], 'fingers': [0.1, 0.2, 1], 'palm': [0.5, 0.6, 0.3]},
-    'arm_L': {'at': [-0.16, -0.05, 0.30], 'elbow': [0.5, -0.9, 0.1], 'fingers': [-0.3, 1, 0.2], 'palm': [-0.3, 0, 1]},
-    'fingers_R': 'grip', 'fingers_L': 'open',
-}
+    'foot_R': {'at': [-0.03, 0, -0.13], 'yaw': 28, 'pitch': 8}, 'knee_R': 10,
+    'foot_L': {'at': [0.02, 0, 0.20], 'pitch': 16},
+    'arm_R': {'at': [0.04, -0.33, 0.02], 'elbow': [-0.5, 0.1, -1], 'fingers': [0, 0.25, 1], 'palm': [1, 0, 0]},
+}, 1.0)
+
+
+def _deep():
+    deep = dict(CHARGE); deep['hips'] = [-0.025, -0.22, -0.09]; deep['chest'] = [('y', -17), ('x', 14)]
+    return deep
 
 
 def strike_charge():
-    """The held wind-up of the super strike: she sinks back onto the right leg, the body coiled away, the right hand
-    drawn back at the hip, the left hand guarding; the pose keeps sinking for a second and is then held by the game."""
-    deep = mix(IDLE, CHARGE, 1.0); deep['hips'] = [-0.035, -0.19, -0.13]; deep['chest'] = [('y', -20), ('x', 10)]
-    return [(0.0, IDLE), (0.20, with_ease(mix(IDLE, CHARGE, 0.92), 'out')), (1.0, with_ease(deep, 'linear'))], 1.0
+    """The held wind-up of the super strike: a boxer loading the uppercut; the pose keeps sinking for a second and is
+    then held by the game."""
+    return [(0.0, IDLE), (0.20, with_ease(mix(IDLE, CHARGE, 0.92), 'out')), (1.0, with_ease(_deep(), 'linear'))], 1.0
 
 
 def strike_super():
-    """The release of the super strike, from the held pose: the left foot drives out, the whole body uncoils and the
-    right palm goes through; impact at 0.10 s, a long overshoot and a calm settle."""
-    deep = mix(IDLE, CHARGE, 1.0); deep['hips'] = [-0.035, -0.19, -0.13]; deep['chest'] = [('y', -20), ('x', 10)]
-    hit = {
-        'hips': [0.02, -0.21, 0.46],
-        'pelvis': [('y', 16)], 'spine': [('y', 10), ('x', 12)], 'chest': [('y', 18), ('x', 12)],
-        'neck': [('y', -16), ('x', 0)], 'head': [('y', -22), ('x', -16)],
-        'foot_L': {'at': [0.04, 0, 0.74], 'yaw': 6},
-        'foot_R': {'at': [0, 0, -0.10], 'pitch': 46, 'yaw': 14}, 'knee_R': 4,
-        'arm_R': {'at': [0.13, 0.05, 0.455], 'elbow': [-0.7, -0.5, 0], 'fingers': [0, 1, 0.3], 'palm': [0, -0.15, 1]},
-        'arm_L': {'at': [0.20, -0.08, -0.38], 'elbow': [0.6, 0.4, -0.5], 'fingers': [0.4, -0.2, -1], 'palm': [-1, 0, 0]},
-        'fingers_R': 'flat', 'fingers_L': 'loose_fist',
-    }
-    back = {
-        'hips': [0.0, -0.06, 0.16],
-        'spine': [('y', 3), ('x', 3)], 'chest': [('y', 5), ('x', 4)],
-        'foot_L': {'at': [0.0, 0.07, 0.30], 'pitch': 10}, 'foot_R': {'at': [0, 0, 0], 'pitch': 8},
-        'arm_R': {'at': [0.02, -0.34, 0.20], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [0.6, -0.4, -0.6]},
-        'arm_L': {'at': [0.10, -0.40, -0.10], 'elbow': [0.6, 0, -0.6], 'fingers': [0.1, -1, -0.2], 'palm': [-1, 0, 0]},
-    }
-    return [(0.0, deep), (0.10, with_ease(hit, ('pow', 1.7))), (0.19, with_ease(mix(deep, hit, 1.07), 'out')), (0.44, with_ease(mix(deep, hit, 0.96), 'smooth')),
-            (0.70, with_ease(back, 'smooth')), (0.98, with_ease(IDLE, 'out'))], 0.98
+    """The release of the super strike, from the held pose: an uppercut. The lead foot drives out, the legs and hips
+    come up under the rear fist, which rises through the target; impact at 0.10 s, a long follow-through, the guard,
+    then down."""
+    deep = _deep()
+    hit = mix(GUARD, {
+        'hips': [0.02, 0.0, 0.44],
+        'pelvis': [('y', 16)], 'spine': [('y', 8), ('x', -3)], 'chest': [('y', 16), ('x', -7)],
+        'neck': [('y', -14)], 'head': [('y', -18), ('x', 8)],
+        'foot_L': {'at': [0.04, 0, 0.72], 'yaw': 6},
+        'foot_R': {'at': [0, 0, -0.08], 'pitch': 50, 'yaw': 10}, 'knee_R': 4,
+        'arm_R': {'at': [0.10, 0.21, 0.35], 'elbow': [-0.2, -1, 0.2], 'fingers': [0, 1, 0.15], 'palm': [0, 0, -1]},
+        'arm_L': {'at': [-0.07, 0.04, 0.11], 'elbow': [0.4, -1, -0.2], 'fingers': [-0.1, 1, 0.2], 'palm': [-1, 0, 0.1]},
+    }, 1.0)
+    back = mix(GUARD, {'hips': [0.0, -0.06, 0.16], 'foot_L': {'at': [0.0, 0.0, 0.34]}, 'foot_R': {'at': [0, 0, 0.02], 'pitch': 14, 'yaw': 20}}, 1.0)
+    return [(0.0, deep), (0.10, with_ease(hit, ('pow', 1.7))), (0.19, with_ease(mix(deep, hit, 1.06), 'out')), (0.42, with_ease(mix(deep, hit, 0.95), 'smooth')),
+            (0.68, with_ease(back, 'smooth')), (1.0, with_ease(IDLE, 'smooth'))], 1.0
 
 
 def skid():
@@ -323,11 +323,11 @@ def skid():
     return [(0.0, dig), (0.07, with_ease(mix(IDLE, dig, 1.08), 'out')), (0.20, with_ease(mix(IDLE, dig, 0.6), 'smooth'))], 0.20
 
 
-CLIPS = {'skid': skid, 'strike_charge': strike_charge, 'strike_super': strike_super, 'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
+CLIPS = {'skid': skid, 'strike_charge': strike_charge, 'strike_super': strike_super, 'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': jab, 'strike2': cross, 'strike3': hook, 'dash': dash}
 # step_s / step_foot: the moment a foot comes down hard (the game sends `ftf:foot` then; the impact goes out as `ftf:iris-action`)
 EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'L'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'R'},
-          'strike1': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'L'}, 'strike2': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'R'},
-          'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'},
+          'strike1': {'impact_s': 0.10, 'step_s': 0.10, 'step_foot': 'L'}, 'strike2': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'R'},
+          'strike3': {'impact_s': 0.15, 'step_s': 0.15, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'},
           # hold: the game keeps the last frame until the release clip (or a cancel); from: the pose the clip starts in
           'skid': {'step_s': 0.0, 'step_foot': 'L'},
           'strike_charge': {'hold': True, 'full_s': 1.0}, 'strike_super': {'impact_s': 0.10, 'step_s': 0.10, 'step_foot': 'L', 'from': 'strike_charge'}}

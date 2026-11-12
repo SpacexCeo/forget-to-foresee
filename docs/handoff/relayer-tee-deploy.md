@@ -13,6 +13,11 @@ key into a chat, a commit, a log or a screenshot.** Every block below is copy-pa
 
 ## 1. Find how the relayer runs now
 
+> **As found on 12.11:** no Docker, no Caddy. The relayer is the systemd unit `ftf-relayer` (checkout `/opt/ftf`), the proxy is
+> nginx (`/etc/nginx/sites-available/ftf-relayer`), presence is the unit `ftf-presence`. The relayer unit has `DynamicUser=yes`,
+> so its data lives in `/var/lib/ftf-relayer` (`FTF_DATA_DIR`, drop-in `ftf-relayer.service.d/data.conf`): run `market-keys.mjs`
+> and `mint-pending.mjs` with `FTF_DATA_DIR=/var/lib/ftf-relayer`. Steps 1–7 are done (`docs/decisions.md`, 12.11).
+
 ```bash
 ssh <owner server>
 docker ps --format '{{.Names}} {{.Image}} {{.Ports}}' | grep -i -E 'relayer|ftf'   # Docker?
