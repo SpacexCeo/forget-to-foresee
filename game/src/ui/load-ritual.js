@@ -1,4 +1,4 @@
-// The loading screen as a quiet ritual (FEED FIRE teardown M4 / F2, flag `loadRitual`; reimplemented in our misty voice).
+// The loading screen as a quiet ritual (a reference game teardown M4 / F2, flag `loadRitual`; reimplemented in our misty voice).
 // On top of the existing loading screen (#boot, ui/loading.js): the central hub warms from dormant to lit with the
 // progress (--boot-p), the bar reads as the way in, and one Iris-voice line turns every 4 s with a controls hint. No
 // counter is shown: the Register count does not exist yet, and a number is never invented. Reduced motion: no glow pulse,
