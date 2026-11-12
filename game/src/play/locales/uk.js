@@ -1354,6 +1354,7 @@ export default {
   'menu.filter.all': "Усі",
   'menu.filter.shard': "Уламки",
   'menu.filter.part': "Деталі",
+  'menu.filter.resource': "Ресурси",
   'menu.detail.shard': "Уламок пам’яті: у сумці {n}. Зберігається в цьому браузері.",
   'menu.detail.part': "Механічна деталь: у сумці {n}. Зберігається в цьому браузері.",
   'hub.busy.trial': "Випробування завершується… секунду",
