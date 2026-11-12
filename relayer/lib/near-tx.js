@@ -46,6 +46,16 @@ export function serializeFunctionCallTx(t) {
     .str(t.methodName).vec(args).u64(t.gas).u128(t.deposit)
     .done();
 }
+/**
+ * Serializes a Transaction with several FunctionCall actions to one receiver (a batch; a function-call key may sign
+ * it when every action has zero deposit and a permitted method). All actions run in one receipt: all or nothing.
+ * @param {{signerId, publicKey, nonce, receiverId, blockHash, calls: {methodName: string, args: object, gas: bigint|number, deposit?: bigint|number}[]}} t
+ */
+export function serializeMultiCallTx(t) {
+  const w = new W().str(t.signerId).bytes(publicKeyBytes(t.publicKey)).u64(t.nonce).str(t.receiverId).bytes(b58decode(t.blockHash)).u32(t.calls.length);
+  for (const c of t.calls) w.u8(2).str(c.methodName).vec(new TextEncoder().encode(JSON.stringify(c.args || {}))).u64(c.gas).u128(c.deposit || 0n);
+  return w.done();
+}
 /** SignedTransaction = transaction bytes + signature (type 0 + 64 bytes). */
 export const signedTxBytes = (txBytes, sig) => new W().bytes(txBytes).u8(0).bytes(sig).done();
 
@@ -106,6 +116,17 @@ export function createTxClient({ rpcUrls, fetch = globalThis.fetch, timeoutMs = 
      * Signs and sends one FunctionCall with `key` ({publicKey, sign}) as `signerId`; waits for the final outcome.
      * Resolves {ok, hash, outcome, failure}: ok only when the transaction and all its receipts succeeded.
      */
+    /** Like call(), with several FunctionCall actions in one transaction (see serializeMultiCallTx). */
+    async callMany({ key, signerId, receiverId, calls }) {
+      const ak = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: signerId, public_key: key.publicKey });
+      const block = await rpc('block', { finality: 'final' });
+      const tx = serializeMultiCallTx({ signerId, publicKey: key.publicKey, nonce: BigInt(ak.nonce) + 1n, receiverId, blockHash: block.header.hash, calls });
+      const hash = await sha256(tx);
+      const sig = await key.sign(hash);
+      const outcome = await rpc('send_tx', { signed_tx_base64: b64(signedTxBytes(tx, sig)), wait_until: 'FINAL' });
+      const failure = findFailure(outcome);
+      return { ok: !failure, hash: b58encode(hash), outcome, failure };
+    },
     async call({ key, signerId, receiverId, methodName, args, gas = 200_000_000_000_000n, deposit = 0n }) {
       const ak = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: signerId, public_key: key.publicKey });
       const block = await rpc('block', { finality: 'final' });
