@@ -46,7 +46,7 @@ export function createMarketTicker({ doc = globalThis.document, t, line, poll, o
     text.textContent = `${t('mk.title')} · ${t('mk.today', { n: data.today })}`;
     list.replaceChildren(...data.recent.slice(0, 5).map((r) => {
       const li = el('li', fresh.has(r.hash) ? 'new' : '');
-      if (r.url) { const a = el('a', '', line(r)); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; a.title = t('mk.tx'); li.append(a); } else li.textContent = line(r);
+      if (r.url) { const a = el('a', '', line(r)); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; a.title = r.reason ? `${r.reason} · ${t('mk.tx')}` : t('mk.tx'); li.append(a); } else { li.textContent = line(r); if (r.reason) li.title = r.reason; }
       return li;
     }));
   }

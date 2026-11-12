@@ -14,7 +14,7 @@ export function normalizeStats(j) {
   if (!j || typeof j !== 'object') return { live: false, today: null, recent: [] };
   const today = Number.isFinite(j.today) ? j.today : (j.chain && Number.isFinite(j.chain.today) ? j.chain.today : null);
   const recent = (Array.isArray(j.recent) ? j.recent : []).filter((r) => r && KEYS.test(r.buyer) && KEYS.test(r.seller) && KEYS.test(r.item) && Number.isInteger(r.qty) && Number.isInteger(r.price))
-    .slice(0, 10).map((r) => ({ buyer: r.buyer, seller: r.seller, item: r.item, qty: r.qty, price: r.price, silk: Number.isInteger(r.silk) && r.silk > 0 ? r.silk : null, at: Number(r.at) || 0, hash: HASH.test(r.hash || '') ? r.hash : null, url: txUrl(r.hash) }));
+    .slice(0, 10).map((r) => ({ buyer: r.buyer, seller: r.seller, item: r.item, qty: r.qty, price: r.price, silk: Number.isInteger(r.silk) && r.silk > 0 ? r.silk : null, reason: typeof r.reason === 'string' ? r.reason.replace(/[^a-z0-9 ,:'-]/gi, '').slice(0, 80) : null, at: Number(r.at) || 0, hash: HASH.test(r.hash || '') ? r.hash : null, url: txUrl(r.hash) }));
   return { live: !!j.enabled && !j.paused, today, recent };
 }
 
