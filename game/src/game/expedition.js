@@ -52,7 +52,7 @@ export function reduce(state, action, ctx = {}) {
       if (s.phase !== 'gate_open') return rejected(s, 'phase');
       if ((Number(a.balanceC) || 0) < feeC) return rejected(s, 'no_silk');
       const n = clone(s); n.phase = 'twist'; n.paidAt = ctx.now ?? null;
-      return { state: n, events: [{ kind: 'portal_paid', data: { feeC, demo: !!ctx.demoFee }, silkC: -feeC }] };
+      return { state: n, events: [{ kind: 'portal_paid', data: { feeC, demo: !!ctx.demoFee, ...(a.tx ? { tx: String(a.tx) } : {}) }, silkC: -feeC }] }; // tx: the pay_gate receipt (rev 4)
     }
     case 'TWIST_DONE': {
       if (s.phase !== 'twist') return rejected(s, 'phase');

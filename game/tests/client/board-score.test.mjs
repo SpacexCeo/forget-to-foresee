@@ -13,7 +13,7 @@ const kill = (t, silkC, trust = 'T1') => [t, 'kill_ticketed', { mob: 'skitter', 
 const bounty = (t) => [t, 'bounty_resolved', { questId: 'b_spiders' }, 30_000];
 
 test('hand example: quests, T1 kills at a quarter, the portal; M from the classes', () => {
-  const log = logOf([turnIn(T0 + 1, 'q_welcome'), turnIn(T0 + 2, 'q_spiders'), turnIn(T0 + 3, 'q_boss'), kill(T0 + 4, 40_000), kill(T0 + 5, 40_000),
+  const log = logOf([turnIn(T0 + 1, 'q_welcome'), turnIn(T0 + 2, 'q_spiders'), turnIn(T0 + 3, 'q_boss'), kill(T0 + 4, 800), kill(T0 + 5, 800),
     [T0 + 6, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]]);
   const s = scoreAccount(log);
   // Q = 40 + 100 + 300 = 440; Sk = (400 + 400 silk) / 10 * 0.25 = 20; P = 200; classes quest+hunt → M 0.8
@@ -23,7 +23,7 @@ test('hand example: quests, T1 kills at a quarter, the portal; M from the classe
 });
 
 test('hand example: all four classes (M 1.0), receipts capped at 50, T2 hunt at full value; no wool term', () => {
-  const log = logOf([turnIn(T0 + 1, 'q_welcome'), kill(T0 + 2, 50_000, 'T2')]);
+  const log = logOf([turnIn(T0 + 1, 'q_welcome'), kill(T0 + 2, 1000, 'T2')]);
   const s = scoreAccount(log, { extra: { receipts: ['a', 'b', 'c', 'd', 'e', 'f', 'a'], woolEarned: 5000, trades: 1 } });
   assert.deepEqual(s.parts, { Q: 40, Sk: 50, V: 50, P: 0, M: 1 }); // a stray woolEarned is ignored
   assert.equal(s.score, 140);
@@ -31,8 +31,8 @@ test('hand example: all four classes (M 1.0), receipts capped at 50, T2 hunt at 
 });
 
 test('caps: T1 kills at most 200 points per UTC day; bounties 30 for the first three a day, 3 after', () => {
-  const big = logOf(Array.from({ length: 50 }, (_, i) => kill(T0 + i, 100_000)).concat([kill(T0 + DAY + 1, 100_000)]));
-  assert.equal(scoreAccount(big).parts.Sk, 200 + 25); // day 1 capped at 200; day 2: 1000 silk / 10 * 0.25
+  const big = logOf(Array.from({ length: 50 }, (_, i) => kill(T0 + i, 2000)).concat([kill(T0 + DAY + 1, 2000)]));
+  assert.equal(scoreAccount(big).parts.Sk, 200 + 25); // day 1 capped at 200; day 2: 20 silk / 0.2 * 0.25
   const b = logOf([bounty(T0 + 1), bounty(T0 + 2), bounty(T0 + 3), bounty(T0 + 4), bounty(T0 + 5), bounty(T0 + DAY + 1)]);
   assert.equal(scoreAccount(b).parts.Q, 30 * 3 + 3 * 2 + 30);
 });
@@ -51,10 +51,10 @@ test('T0 never scores: an entry with any other trust level is ignored', () => {
 
 // ---- golden fixtures: three humans, two scripted, one cheater
 function fixtures() {
-  const ann = { account: 'ann.guests.ftf-coordinator.testnet', log: logOf([turnIn(T0 + 10, 'q_welcome'), turnIn(T0 + 20, 'q_spiders'), turnIn(T0 + 30, 'q_boss'), kill(T0 + 40, 60_000), [T0 + 50, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]]), extra: { receipts: ['r1'] } };
+  const ann = { account: 'ann.guests.ftf-coordinator.testnet', log: logOf([turnIn(T0 + 10, 'q_welcome'), turnIn(T0 + 20, 'q_spiders'), turnIn(T0 + 30, 'q_boss'), kill(T0 + 40, 1200), [T0 + 50, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]]), extra: { receipts: ['r1'] } };
   const bo = { account: 'bo.guests.ftf-coordinator.testnet', log: logOf([turnIn(T0 + 11, 'q_welcome'), turnIn(T0 + 21, 'q_spiders'), bounty(T0 + 31), bounty(T0 + 41)]) };
-  const cy = { account: 'cy.guests.ftf-coordinator.testnet', log: logOf([turnIn(T0 + 12, 'q_welcome'), kill(T0 + 22, 20_000)]) };
-  const s1 = { account: 'salt.arena.testnet', log: logOf([turnIn(T0 + 13, 'q_welcome'), turnIn(T0 + 23, 'q_spiders'), turnIn(T0 + 33, 'q_boss'), kill(T0 + 43, 500_000, 'T2'), [T0 + 53, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]]) };
+  const cy = { account: 'cy.guests.ftf-coordinator.testnet', log: logOf([turnIn(T0 + 12, 'q_welcome'), kill(T0 + 22, 400)]) };
+  const s1 = { account: 'salt.arena.testnet', log: logOf([turnIn(T0 + 13, 'q_welcome'), turnIn(T0 + 23, 'q_spiders'), turnIn(T0 + 33, 'q_boss'), kill(T0 + 43, 10000, 'T2'), [T0 + 53, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]]) };
   const s2 = { account: 'amber.arena.testnet', log: logOf([turnIn(T0 + 14, 'q_welcome')]) };
   const cheat = { account: 'mallory.guests.ftf-coordinator.testnet', log: logOf([turnIn(T0 + 15, 'q_welcome'), turnIn(T0 + 25, 'q_spiders')]) };
   cheat.log[1] = { ...cheat.log[1], data: { questId: 'q_boss' } }; // edited after the fact: the hash chain breaks
@@ -72,7 +72,7 @@ test('golden fixtures: fixed ranks, the cheater rejected, scripted accounts neve
   assert.equal(snapshot.root, GOLDEN_ROOT);
   snapshot.rows.forEach((row, i) => assert.equal(verifyProof(leafHash(1, 0, row), proofs[i].proof, snapshot.root), true));
 });
-const GOLDEN_ROOT = '4fe2e01c7d0c409bb78c1f63c73a1c6d35db451d21326f08059a797896db64ac';
+const GOLDEN_ROOT = '1afca6d9037255340317f7b3db5f6842b61cd39f7179a62dafb9f6237ed8173a';
 
 test('verifier: the honest snapshot passes; an edited row, a wrong root or other rules fail', () => {
   const { accounts } = fixtures();
@@ -91,7 +91,7 @@ test('split accounts: splitting one account\'s events over two never raises the 
     const evs = [], quests = ['q_welcome', 'q_spiders', 'q_boss'].filter(() => rnd() < 0.5); // each quest at most once (the rules)
     for (const q of quests) evs.push(turnIn(0, q));
     const n = Math.floor(rnd() * 14);
-    for (let i = 0; i < n; i++) { const k = rnd(); evs.push(k < 0.4 ? kill(0, 10_000 + Math.floor(rnd() * 400_000)) : k < 0.7 ? kill(0, 20_000, 'T2') : bounty(0)); }
+    for (let i = 0; i < n; i++) { const k = rnd(); evs.push(k < 0.4 ? kill(0, 200 + Math.floor(rnd() * 8_000)) : k < 0.7 ? kill(0, 400, 'T2') : bounty(0)); }
     if (rnd() < 0.3) evs.push([0, 'portal_paid', { feeC: 1_000_000, demo: false }, -1_000_000]);
     evs.forEach((e, i) => { e[0] = T0 + i * 1000; });
     const whole = scoreAccount(logOf(evs));
@@ -106,9 +106,9 @@ test('split accounts: splitting one account\'s events over two never raises the 
 });
 
 test('flags: a fixed-interval script and identical sequences are flagged; a human-paced log is not', () => {
-  const bot = logOf(Array.from({ length: 12 }, (_, i) => kill(T0 + i * 5000, 10_000)));
-  const twin = logOf(Array.from({ length: 12 }, (_, i) => kill(T0 + 7 + i * 5000 + (i % 3) * 900, 10_000)));
-  const human = logOf([turnIn(T0 + 1000, 'q_welcome'), kill(T0 + 9000, 10_000), kill(T0 + 31000, 10_000), turnIn(T0 + 95000, 'q_spiders')]);
+  const bot = logOf(Array.from({ length: 12 }, (_, i) => kill(T0 + i * 5000, 200)));
+  const twin = logOf(Array.from({ length: 12 }, (_, i) => kill(T0 + 7 + i * 5000 + (i % 3) * 900, 200)));
+  const human = logOf([turnIn(T0 + 1000, 'q_welcome'), kill(T0 + 9000, 200), kill(T0 + 31000, 200), turnIn(T0 + 95000, 'q_spiders')]);
   const f = flagsFor([{ account: 'bot', log: bot }, { account: 'twin', log: twin }, { account: 'h', log: human }]);
   assert.ok(f.get('bot').includes('fixed_interval')); assert.ok(f.get('bot').includes('same_sequence')); assert.ok(f.get('twin').includes('same_sequence'));
   assert.deepEqual(f.get('h'), []);

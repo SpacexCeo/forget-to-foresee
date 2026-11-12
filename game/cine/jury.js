@@ -265,7 +265,7 @@ function pillar(numeral, title, sub) { return { duration: 2.0, build() {
     rl.style.transform = `scaleX(${ease.out(P(t, 0.35, 0.6)).toFixed(4)})`; rl.style.opacity = (1 - ease.in(P(t, 1.75, 0.2))).toFixed(3);
   };
 } }; }
-SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Six AI clans scheme around you');
+SCENES['pillar-agents'] = pillar('I', 'The Agents', 'Five rival clans scheme around you'); // C11: the clans are scripted; Iris is a doctor-linguist, not an AI
 SCENES['pillar-nft'] = pillar('II', 'The Memory Shard', 'Your agent pays for prophecy with a memory');
 
 // 9 · Split screen: the browser (an in-engine shot composited into the hole) and an AI agent over the HTTP API (5.0 s).

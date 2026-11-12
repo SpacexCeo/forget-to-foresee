@@ -1555,10 +1555,10 @@ export default {
   "story.talk.notYet": "Not yet.",
   "story.talk.quiet": "The road is quiet for now.",
   "story.guide.hello": "You came through the glass, child. The mist remembers where you came from, not how to go back.",
-  "story.guide.fee": "The Gate-Loom weighs a debt in silk. Ten thousand silk, paid in full, and it will open for you.",
+  "story.guide.fee": "The Gate-Loom weighs a debt in silk. Two hundred silk, paid in full, and it will open for you.",
   "story.guide.how": "Help the town. Hunt on the grey slope. Silk comes to those who finish what they begin.",
   "story.guide.go": "Start with the guard at the lower gate. He knows what crawls up the hill at dusk.",
-  "story.guide.again": "Ten thousand. Count it as you walk. The Loom does not hurry, and neither should you.",
+  "story.guide.again": "Two hundred. Count it as you walk. The Loom does not hurry, and neither should you.",
   "story.guide.ask.where": "Where am I?",
   "story.guide.ask.silk": "How do I earn silk?",
   "story.guide.ask.ok": "I understand.",
@@ -1666,4 +1666,10 @@ export default {
   "chest.batch.claim": "Claim all",
   "chest.batch.skip": "Tap anywhere to skip to the end.",
   "chest.batch.skipBtn": "Skip",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "The Gate-Loom answers only to a NEAR account. Claim your free account first.",
+  "story.portal.offline": "The Gate-Loom is silent: NEAR testnet cannot be reached right now.",
+  "story.portal.paying": "The Loom is weighing your silk on NEAR testnet…",
+  "story.portal.noSilk": "The Loom found less than {fee} silk in your account on chain.",
+  "story.portal.failed": "The Loom did not take the silk. Try again in a moment.",
 };

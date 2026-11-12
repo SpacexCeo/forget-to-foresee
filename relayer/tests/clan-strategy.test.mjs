@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseStrategy, scriptedStrategy, decideStrategy, clanState, createStrategyBook, runStrategyRound, strategyRequest, llmLabel, SCRIPTED_LABEL } from '../lib/clan-strategy.js';
+import { parseStrategy, scriptedStrategy, decideStrategy, clanState, createStrategyBook, runStrategyRound, strategyRequest, llmLabel, SCRIPTED_LABEL, labelFor } from '../lib/clan-strategy.js';
 import { TOWN_POLICY } from '../lib/town-traders.js';
 import { TRADERS, CLAN_AGENTS, ITEMS } from '../market/catalog.js';
 
@@ -27,11 +27,11 @@ test('strategy: LLM when NEAR AI answers (truthful label, audit fields); scripte
   const ok = async () => ({ status: 200, body: { text: '{"risk":1.2,"buy":"staples","favour":"baker","reason":"cold days ahead"}', tee: { model: 'Qwen/Qwen3-VL-30B-A3B-Instruct', chat_id: 'chatcmpl-1', verified: true, request_hash: 'aa', response_hash: 'bb', signature_check: { signature_ok: true } } } });
   const r = await decideStrategy(state, { apiKey: 'proxy-injected', chat: ok, now: () => 5 });
   assert.equal(r.source, 'llm');
-  assert.equal(r.label, 'LLM-chosen strategy (Qwen/Qwen3-VL-30B-A3B-Instruct via NEAR AI Cloud), moves by the rules engine');
+  assert.equal(r.label, 'LLM-chosen strategy (Qwen/Qwen3-VL-30B-A3B-Instruct via NEAR AI Cloud, attestation chatcmpl-1), moves by the rules engine');
   assert.deepEqual(r.params, { risk: 1.2, buy: 'staples', favour: 'baker', reason: 'cold days ahead' });
   assert.ok(r.chat_id && r.prompt_hash.length === 64 && r.response.includes('staples') && r.verified);
   const no = await decideStrategy(state, { apiKey: '' });
-  assert.deepEqual([no.source, no.label, no.fallback_reason, no.model], ['scripted', SCRIPTED_LABEL, 'no_key', null]);
+  assert.deepEqual([no.source, no.label, no.fallback_reason, no.model], ['scripted', 'Scripted (model unavailable: no_key)', 'no_key', null]);
   const pay = await decideStrategy(state, { apiKey: 'k', chat: async () => ({ status: 502, body: { error: 'tee_upstream', upstream_status: 402 } }) });
   assert.deepEqual([pay.source, pay.fallback_reason], ['scripted', 'upstream_402']);
   const junk = await decideStrategy(state, { apiKey: 'k', chat: async () => ({ status: 200, body: { text: 'I think buy bread', tee: { model: 'm' } } }) });
@@ -43,7 +43,7 @@ test('strategy: LLM when NEAR AI answers (truthful label, audit fields); scripte
 test('strategy book: a round asks every clan, journals each decision and reports the LLM share', async () => {
   const logs = []; const book = createStrategyBook({ log: (r) => logs.push(r) });
   let n = 0;
-  const chat = async () => (++n % 2 ? { status: 200, body: { text: '{"risk":1,"buy":"balanced"}', tee: { model: 'm', chat_id: 'c' + n } } } : { status: 502, body: { error: 'tee_upstream', upstream_status: 402 } });
+  const chat = async () => (++n % 2 ? { status: 200, body: { text: '{"risk":1,"buy":"balanced"}', tee: { model: 'm', chat_id: 'c' + n, verified: true } } } : { status: 502, body: { error: 'tee_upstream', upstream_status: 402 } });
   await runStrategyRound({ book, st: st0(), opts: { apiKey: 'k', chat } });
   assert.equal(logs.length, CLAN_AGENTS.length);
   const s = book.stats();
@@ -66,4 +66,12 @@ test('strategy: the rules engine follows it (staples vs dear goods, risk scales 
   const fav = (() => { const st = st0(), rand = seeded(9); let b = 0; for (let i = 0; i < 2_000; i++) { const t = TOWN_POLICY.pick(st, 'salt', rand, TRADERS, { risk: 1, buy: 'balanced', favour: 'scribe' }); if (t && t.seller === 'scribe') b++; } return b / 2_000; })();
   assert.ok(fav > 0.1, String(fav));
   assert.ok(ITEMS.length === 25);
+});
+
+test('labelFor (C11): an LLM label needs an attestation id; the fallback names its reason; scripted labels never say AI or LLM', async () => {
+  assert.throws(() => labelFor({ source: 'llm', model: 'm' }), /attestation/);
+  assert.equal(labelFor({ source: 'llm', model: 'm', attestationId: 'chat-9' }), 'LLM-chosen strategy (m via NEAR AI Cloud, attestation chat-9), moves by the rules engine');
+  for (const reason of [null, 'no_key', 'upstream_402', 'unparseable', 'unattested']) assert.ok(!/\bAI\b|LLM/.test(labelFor({ source: 'scripted', reason })), String(reason));
+  const unsigned = await decideStrategy(clanState('frost', st0()), { apiKey: 'k', chat: async () => ({ status: 200, body: { text: '{"risk":1,"buy":"staples","favour":null,"reason":"x"}', tee: { model: 'm', chat_id: 'c', verified: false } } }) });
+  assert.deepEqual([unsigned.source, unsigned.fallback_reason, unsigned.label], ['scripted', 'unattested', 'Scripted (model unavailable: unattested)']);
 });

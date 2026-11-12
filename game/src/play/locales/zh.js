@@ -1553,10 +1553,10 @@ export default {
   "story.talk.notYet": "还没有。",
   "story.talk.quiet": "路上暂时很安静。",
   "story.guide.hello": "孩子，你是穿过玻璃来的。迷雾记得你从哪里来，却不记得怎么回去。",
-  "story.guide.fee": "织门以丝绸衡量债务。一万丝绸，全数付清，它就会为你打开。",
+  "story.guide.fee": "织门以丝绸衡量债务。两百丝绸，全数付清，它就会为你打开。",
   "story.guide.how": "帮助小镇。在灰坡上狩猎。丝绸属于有始有终的人。",
   "story.guide.go": "先去找下门的守卫。他知道黄昏时有什么爬上山来。",
-  "story.guide.again": "一万。边走边数。织门从不着急，你也不必。",
+  "story.guide.again": "两百。边走边数。织门从不着急，你也不必。",
   "story.guide.ask.where": "我在哪里？",
   "story.guide.ask.silk": "怎样赚取丝绸？",
   "story.guide.ask.ok": "我明白了。",
@@ -1664,4 +1664,10 @@ export default {
   "chest.batch.claim": "全部领取",
   "chest.batch.skip": "点击任意位置跳到结尾。",
   "chest.batch.skipBtn": "跳过",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "织门只回应 NEAR 账户。请先领取你的免费账户。",
+  "story.portal.offline": "织门沉默：现在无法连接 NEAR 测试网。",
+  "story.portal.paying": "织门正在 NEAR 测试网上称量你的丝绸……",
+  "story.portal.noSilk": "织门发现你链上账户中的丝绸少于 {fee}。",
+  "story.portal.failed": "织门没有收下丝绸。请稍后再试。",
 };

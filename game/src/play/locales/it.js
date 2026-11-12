@@ -1554,10 +1554,10 @@ export default {
   "story.talk.notYet": "Non ancora.",
   "story.talk.quiet": "Per ora la strada è tranquilla.",
   "story.guide.hello": "Sei passata attraverso il vetro, bambina. La nebbia ricorda da dove vieni, non come tornarci.",
-  "story.guide.fee": "Il Telaio-Porta pesa un debito in seta. Diecimila sete, pagate per intero, e si aprirà per te.",
+  "story.guide.fee": "Il Telaio-Porta pesa un debito in seta. Duecento sete, pagate per intero, e si aprirà per te.",
   "story.guide.how": "Aiuta il paese. Caccia sul pendio grigio. La seta arriva a chi finisce ciò che comincia.",
   "story.guide.go": "Comincia dalla guardia alla porta bassa. Sa cosa striscia su per la collina al crepuscolo.",
-  "story.guide.again": "Diecimila. Contale mentre cammini. Il Telaio non ha fretta, e nemmeno tu dovresti.",
+  "story.guide.again": "Duecento. Contale mentre cammini. Il Telaio non ha fretta, e nemmeno tu dovresti.",
   "story.guide.ask.where": "Dove sono?",
   "story.guide.ask.silk": "Come guadagno la seta?",
   "story.guide.ask.ok": "Ho capito.",
@@ -1665,4 +1665,10 @@ export default {
   "chest.batch.claim": "Prendi tutto",
   "chest.batch.skip": "Tocca ovunque per saltare alla fine.",
   "chest.batch.skipBtn": "Salta",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "Il Telaio-Porta risponde solo a un account NEAR. Prima ottieni il tuo account gratuito.",
+  "story.portal.offline": "Il Telaio tace: NEAR testnet ora non è raggiungibile.",
+  "story.portal.paying": "Il Telaio pesa la tua seta su NEAR testnet…",
+  "story.portal.noSilk": "Il Telaio ha trovato meno di {fee} sete nel tuo account sulla catena.",
+  "story.portal.failed": "Il Telaio non ha preso la seta. Riprova tra un momento.",
 };

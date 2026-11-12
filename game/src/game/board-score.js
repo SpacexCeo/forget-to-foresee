@@ -9,7 +9,7 @@ export const BOARD = Object.freeze({
   version: 1,
   quest: Object.freeze({ q_welcome: 40, q_spiders: 100, q_part: 80, q_boss: 300 }),
   bounty: 30, bountyFullPerDay: 3, bountyAfter: 3,
-  silkPerPointC: 1000, // 1 point per 10 silk of kill income (the log counts hundredths)
+  silkPerPointC: 20, // 1 point per 0.2 silk of kill income (rev 4: kill rewards × 0.02, so the points stay as before)
   t1Factor: 0.25, t1DayCap: 200,
   receiptPoints: 10, receiptCap: 50, portal: 200,
   classes: Object.freeze(['quest', 'hunt', 'trade', 'verify']),

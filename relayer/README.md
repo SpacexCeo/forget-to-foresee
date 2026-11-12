@@ -73,6 +73,8 @@ batch is a no-op; a fork or a gap is refused (409). `GET /api/expedition/log?gue
 and head. Without `FTF_EXPEDITION_DIR` nothing is stored and the answer says `storage_off`. The pass
 (`lib/pass-eligibility.js`) reads the same files. Code: `lib/expedition-store.js`, `api/expedition/log.js`.
 
+The portal's on-chain credits and `pay_gate_for` are `api/town/gate.js` (docs/town-gate.md); they read these logs.
+
 ## Test
 
 ```bash
