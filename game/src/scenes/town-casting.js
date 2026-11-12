@@ -12,6 +12,20 @@ import { TOWN_ORIGIN } from './town-layout.js';
 import { onField } from './town-outside.js';
 import { CASTS, createCastEffects } from './town-casting-fx.js';
 import { actionKey, onBindings, KEY_ACTIONS } from '../ui/keybinds.js';
+import { loadSettings, saveSettings } from '../ui/settings-store.js';
+
+/**
+ * Quick cast (owner 12.11, desktop): where a key press casts at once, with no aim preview. A line skill flies toward
+ * the cursor's ground point; an area skill lands on it when it is in range, else at the skill's range along the
+ * cursor's direction. A cursor on her own feet (or none) gives her facing at 60 % of the range. Pure.
+ * @param {{range:number, minRange?:number}} cast @param {number[]} from @param {number[]|null} cursor world point
+ */
+export function quickCastPoint(cast, from, cursor, heading = 0) {
+  let dx = cursor ? cursor[0] - from[0] : 0, dz = cursor ? cursor[2] - from[2] : 0, d = Math.hypot(dx, dz);
+  if (!cursor || d < Math.max(cast.minRange || 0, 0.6)) { dx = Math.sin(heading); dz = Math.cos(heading); d = 1; const r = cast.range * 0.6; return [from[0] + dx * r, cursor ? cursor[1] : from[1], from[2] + dz * r]; }
+  const r = Math.min(d, cast.range);
+  return [from[0] + dx / d * r, cursor[1], from[2] + dz / d * r];
+}
 
 /** Seconds Iris stays rooted after the release frame of a cast (the overshoot and the held key pose); then a step cancels the settle. */
 export const CAST_ROOT_AFTER = 0.24;
@@ -41,6 +55,10 @@ const CSS = `
 .ftf-cast-slot .ftf-cast-cd { position: absolute; left: 0; bottom: 0; height: 100%; background: rgba(0,0,0,0.55); pointer-events: none; }
 .ftf-cast-hint { color: #f3efe6; font: 400 13px/1.3 inherit; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
 .ftf-cast-hint[hidden] { display: none; }
+
+.ftf-cast-quick { pointer-events: auto; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: 4px; font: 600 10px/1.1 system-ui, sans-serif; color: rgba(255,248,230,0.85); cursor: pointer; max-width: 48px; text-align: center; text-shadow: 0 1px 2px #000; }
+.ftf-cast-quick input { width: 16px; height: 16px; margin: 0; accent-color: #d9a441; cursor: pointer; }
+.ftf-cast-quick[hidden] { display: none; }
 @media (max-width: 700px) { .ftf-cast { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); } .ftf-cast-slot { width: 56px; height: 56px; } }
 @media (prefers-reduced-motion: reduce) { .ftf-cast-slot { transition: none; } .ftf-cast-slot:hover, .ftf-cast-slot:active { transform: none; } }
 `;
@@ -57,7 +75,7 @@ const CSS = `
  * @param {(c: {id: string, from: number[], dir: number[], point: number[]}) => void} [o.onFire] where it goes (play/mobs.js: the hits)
  * @param {Document} [o.doc]
  */
-export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCastStart = null, onCast = null, onFire = null, handPos = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
+export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, storage = null, onCastStart = null, onCast = null, onFire = null, handPos = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
   const fx = createCastEffects(scene);
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
@@ -91,6 +109,14 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     bar.append(b);
     return { ...x, button: b, cd, name, cap };
   });
+  // the quick-cast checkbox on the bar itself (desktop only; the same setting as the settings popup's)
+  const quick = doc.createElement('label'); quick.className = 'ftf-cast-quick'; quick.hidden = coarse;
+  const quickBox = doc.createElement('input'); quickBox.type = 'checkbox'; quickBox.checked = !!loadSettings(storage).quickCast;
+  const quickText = doc.createElement('span'); quick.append(quickBox, quickText);
+  quick.addEventListener('pointerdown', (e) => e.stopPropagation());
+  quickBox.addEventListener('change', () => { saveSettings(storage, { ...loadSettings(storage), quickCast: quickBox.checked }); quickBox.blur(); });
+  bar.append(quick);
+  const quickOn = () => !coarse && !!loadSettings(storage).quickCast;
   root.append(hint, bar);
   doc.body.append(root);
 
@@ -101,6 +127,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     for (const [id] of SLOTS) { const key = actionKey(id), n = i18n.t('town.cast.' + id); slots[id].cap.textContent = key; slots[id].name.textContent = n; slots[id].button.title = coarse ? n : `${n} (${key})`; }
     for (const x of extras) { const key = KEY_ACTIONS.some((a) => a.id === x.id) ? actionKey(x.id) : x.key, n = i18n.t(x.label); x.cap.textContent = key; x.name.textContent = n; x.button.title = coarse ? n : `${n} (${key})`; }
     hint.textContent = i18n.t(coarse ? 'town.cast.hint.touch' : 'town.cast.hint');
+    quickText.textContent = i18n.t('town.cast.quick'); quick.title = i18n.t('town.cast.quickTip'); quickBox.checked = !!loadSettings(storage).quickCast;
   }
   const unsubscribe = typeof i18n.subscribe === 'function' ? i18n.subscribe(renderText) : null;
   const unbind = onBindings(renderText);
@@ -177,6 +204,12 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
       if (code === 'Escape') { if (state.armed) { setArmed(null); return true; } return false; }
       const id = CAST_KEYS[code];
       if (!id || !state.field) return false;
+      if (quickOn()) {                                  // quick cast: at once toward the cursor, no aim preview
+        const cur = state.pointer ? pick(state.pointer[0], state.pointer[1]) : null;
+        setArmed(id); state.aim = null;
+        if (!release(quickCastPoint(CASTS[id], player.pos, cur, player.heading))) setArmed(null);
+        return true;
+      }
       toggle(id);
       return true;
     },

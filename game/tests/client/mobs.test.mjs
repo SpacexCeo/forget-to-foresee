@@ -264,3 +264,22 @@ test('strike VFX: no ground arc or ring at all (owner); a light spark and dust o
   assert.ok(M.group.children.every((c) => !(c.geometry && c.geometry.type === 'RingGeometry' && c.visible && c.material.color && c.material.color.getHex() === 0xdff6ff)), 'no white arc');
   assert.ok(M.group.children.length <= before + 1);
 });
+
+test('quick cast: the lance flies toward the cursor; the snare lands on the cursor in range, else at full range along it; settings default on', async () => {
+  const { quickCastPoint } = await import('../../src/scenes/town-casting.js');
+  const { CASTS } = await import('../../src/scenes/town-casting-fx.js');
+  const { SETTINGS_DEFAULTS, cleanSettings } = await import('../../src/ui/settings-store.js');
+  const from = [0, 1200, 0];
+  const near = quickCastPoint(CASTS.snare, from, [3, 1200, 4]);
+  assert.deepEqual(near.map((x) => +x.toFixed(6)), [3, 1200, 4], 'in range: on the cursor');
+  const far = quickCastPoint(CASTS.snare, from, [30, 1200, 40]);
+  assert.ok(Math.abs(Math.hypot(far[0], far[2]) - CASTS.snare.range) < 1e-9, 'out of range: clamped to the range');
+  assert.ok(Math.abs(far[0] / far[2] - 0.75) < 1e-9, 'along the cursor direction');
+  const line = quickCastPoint(CASTS.lance, from, [0, 1200, -5]); assert.ok(line[2] < 0 && Math.abs(line[0]) < 1e-9, 'the lance toward the cursor');
+  const none = quickCastPoint(CASTS.lance, from, null, Math.PI / 2); assert.ok(Math.abs(none[0] - CASTS.lance.range * 0.6) < 1e-9, 'no cursor: her facing at 60 %');
+  assert.equal(SETTINGS_DEFAULTS.quickCast, true); assert.equal(cleanSettings({ quickCast: false }).quickCast, false);
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/scenes/town-casting.js', import.meta.url), 'utf8');
+  assert.match(src, /if \(quickOn\(\)\) \{/, 'Q / V go through quick cast when it is on');
+  assert.match(src, /quick\.hidden = coarse/, 'hidden on touch');
+});
