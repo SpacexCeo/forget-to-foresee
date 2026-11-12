@@ -48,6 +48,7 @@ import { createBarks } from './scenes/barks.js';
 import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
+import { createCompanion } from './scenes/companion.js';
 import { cue } from './audio/town-audio.js';
 
 /**
@@ -163,7 +164,7 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -184,7 +185,23 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
 let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
-const chestBag = createChestBag({ storage: ctx.storage }); // chests from the monsters outside the walls (game/chests.js)
+const chestBag = createChestBag({ storage: ctx.storage });
+// Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
+// her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
+const companions = [];
+let companionKinds = '';
+function setCompanions(kinds) {
+  const key = kinds.join(','); if (key === companionKinds) return; companionKinds = key;
+  for (const c of companions.splice(0)) c.dispose();
+  kinds.slice(0, 2).forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice })));
+}
+function refreshCompanions() {
+  const qa = params.get('companion');
+  if (qa && ['nacre', 'rill', 'cinder'].includes(qa)) { setCompanions([qa]); return; }
+  const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
+  if (!tokenId) return;
+  import('./net/companions.js').then((m) => m.readCompanions({ tokenId })).then((r) => { if (r && r.state === 'loaded') setCompanions(r.dragons.map((d) => d.kind)); }).catch(() => {});
+} // chests from the monsters outside the walls (game/chests.js)
 const lastStepPos = [0, 0, 0];
 /** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
 function mountTownAudio() {
@@ -235,6 +252,7 @@ if (townMode.town) {
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  refreshCompanions();
   if (!townMonsters) townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, onPickup: () => toast(ctx.i18n.t('chest.found')) }); // loaded on the first walk out of the gate
   if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
@@ -491,6 +509,7 @@ async function startDay1() {
   const t = (k, a) => ctx.i18n.t(k, a);
   const m = await import('./play/day1.js');
   await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
+  refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   await m.runHints({ t, steps: [
     { key: 'day1.hint.skin' },
@@ -701,6 +720,7 @@ function groundInTown() {
   if (y != null) player.teleport([player.pos[0], y, player.pos[2]], player.heading);
   townGrounded = true;
 }
+const companionHero = { position: new THREE.Vector3(), heading: 0, speed: 0 }; // reused per frame
 const townFrame = { playerPos: player.pos, reducedMotion: false, lamps: 1, camera, light: { sun: null, daylight: 1, pixelsPerMetre: 900 } }, flowFrame = { device: 'keyboard' }; // reused: no per-frame objects
 
 let movingState = false, animSpeed = 0, lean = 0, firstFrameDone = false, progressTimer = 0;
@@ -802,6 +822,7 @@ function frame() {
   streamer.update(dt, focus);
   warmup.update();
   updateIrisStandIn();
+  if (companions.length) { companionHero.position.copy(avatar.position); companionHero.heading = avatar.rotation.y; companionHero.speed = player.speed; for (const c of companions) c.update(dt, companionHero, lookdev.reducedMotion); }
   lookdev.update(dt, focus, rig.actualDist);
   // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
   // still), smoothed per frame rather than toggled per physics step: at high frame rates many frames run
@@ -853,6 +874,7 @@ window.__ftf = {
     get barks() { return townBarks; }, // townsfolk lines (QA: current)
     get photo() { return photo; }, // photo mode (QA: toggle, setFilter, requestCapture)
     get monsters() { return townMonsters; }, chests: chestBag, // monsters outside the walls and the chest bag (QA)
+    companions, // dragon companions in flight (QA)
   } : null,
 };
 requestAnimationFrame(frame);

@@ -1233,4 +1233,8 @@ export default {
   'chest.opened': "Opened",
   'chest.found': "Chest found! Open it in Inventory (menu).",
   'menu.source.chest': "chest",
+  // ---- dragon companions (net/companions.js) ----
+  'companion.heading': "Owned by Elise",
+  'companion.owned': "Owned by Elise · Agentic NFT · NEAR testnet",
+  'companion.account': "Held by the heroine's own account {account}",
 };

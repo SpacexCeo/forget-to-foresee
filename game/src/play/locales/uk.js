@@ -1231,4 +1231,8 @@ export default {
   'chest.opened': "Відкрита",
   'chest.found': "Знайдено скриню! Відкрий її в Інвентарі (меню).",
   'menu.source.chest': "скриня",
+  // ---- dragon companions (net/companions.js) ----
+  'companion.heading': "Належать Елізі",
+  'companion.owned': "Належить Елізі · агентний NFT · NEAR testnet",
+  'companion.account': "Зберігається на власному акаунті героїні {account}",
 };

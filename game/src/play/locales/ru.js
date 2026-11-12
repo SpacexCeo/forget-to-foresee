@@ -1231,4 +1231,8 @@ export default {
   'chest.opened': "Открыт",
   'chest.found': "Найден сундук! Открой его в Инвентаре (меню).",
   'menu.source.chest': "сундук",
+  // ---- dragon companions (net/companions.js) ----
+  'companion.heading': "Принадлежат Элизе",
+  'companion.owned': "Принадлежит Элизе · агентный NFT · NEAR testnet",
+  'companion.account': "Хранится на собственном аккаунте героини {account}",
 };

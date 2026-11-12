@@ -1232,4 +1232,8 @@ export default {
   'chest.opened': "Aperto",
   'chest.found': "Scrigno trovato! Aprilo nell’Inventario (menu).",
   'menu.source.chest': "scrigno",
+  // ---- dragon companions (net/companions.js) ----
+  'companion.heading': "Di proprietà di Elise",
+  'companion.owned': "Di proprietà di Elise · NFT agentico · NEAR testnet",
+  'companion.account': "Custodito dall’account della protagonista {account}",
 };

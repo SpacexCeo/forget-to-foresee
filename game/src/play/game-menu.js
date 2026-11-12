@@ -106,7 +106,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null }) {
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -169,7 +169,23 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         box.append(g);
       });
-      return [box, holderSection({ doc, t, storage, owner })];
+      // dragons owned by the heroine token's account (docs/companion-nft-plan.md), only when the chain read confirms them
+      const drag = el('div');
+      if (heroineToken) {
+        (companionsRead || import('../net/companions.js').then((m) => m.readCompanions({ tokenId: heroineToken }))).then((r) => {
+          if (!r || r.state !== 'loaded' || !r.dragons.length) return;
+          const g2 = el('div', 'gm-grid'); g2.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
+          for (const d of r.dragons) {
+            const c = el('div', 'gm-nft');
+            c.append(el('b', null, d.title), el('br'), el('span', 'gm-chip gm-near', t('companion.owned')));
+            const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = d.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
+            c.append(el('p', 'gm-note', t('companion.account', { account: r.account })));
+            g2.append(c);
+          }
+          drag.replaceChildren(el('h3', null, t('companion.heading')), g2);
+        }).catch(() => {});
+      }
+      return [box, drag, holderSection({ doc, t, storage, owner })];
     },
     inventory() {
       return items.then((list) => {
