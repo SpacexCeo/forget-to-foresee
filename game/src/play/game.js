@@ -36,6 +36,7 @@ import { panelArbiterFor } from './panels.js';
 import { CLAN_ORDER } from './behaviour.js';
 import { setGreyboxLabels } from '../render/greybox.js';
 import { attachChapters } from '../cinematic/chapters/index.js';
+import { chapterFor } from './chapters.js';
 import { attachNarrator } from './narrator.js';
 
 // Optional modules written by other agents: present → used, absent → silently skipped.
@@ -206,7 +207,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   });
 
   // VFX (src/vfx, createVfx(scene, camera, renderer, opts)) and audio (src/audio, createAudio()).
-  let audio = null;
+  let audio = null, audioMod = null, chapterMarked = false;
   loadModule(VFX_MODULES).then((m) => {
     if (!m || !m.createVfx) return;
     const vfx = m.createVfx(scene, camera, renderer, { tier: vfxTierFor(lookdev), reducedMotion: lookdev.reducedMotion });
@@ -215,6 +216,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   }).catch((e) => console.warn('[play] vfx unavailable', e));
   loadModule(AUDIO_MODULES).then((m) => {
     if (!m || !m.createAudio) return;
+    audioMod = m;
     audio = m.createAudio();
     hooks.attachAudio(audio);
     presentation.attachAudio(audio); // one hum per Shell, footsteps and zones from the frame loop
@@ -318,6 +320,11 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     if (audio) {
       try {
         audio.setTension(o.season.tension);
+        // Licensed beds (src/audio/music.js): Legionnaire for the final trials, Frozen Star for the outcome; the
+        // ordinary trials keep the stems. The town plays Frozen Star once more when Iris returns after the outcome.
+        const chapter = chapterFor(o);
+        if (audio.setMusic && audioMod.archipelagoMusic) audio.setMusic(audioMod.archipelagoMusic(chapter), 3);
+        if (chapter === 'ending' && !chapterMarked && audioMod.markChapterDone) { chapterMarked = true; audioMod.markChapterDone(); }
         // The Guest "speaks" the strokes of the sign it draws while Iris stands inside.
         const sk = vis && state.zone === 'shell' ? vis.forms.join() + vis.dots : '';
         if (sk && sk !== lastStrokes) audio.speakStrokes([0, 1, 2, 3].map((k) => ['arc', 'spike', 'loop', 'drop'][vis.forms[(vis.dots + k) % 4]]));
