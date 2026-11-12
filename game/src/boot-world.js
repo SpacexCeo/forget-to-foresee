@@ -912,6 +912,10 @@ function frame() {
         const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
         townAudio.step(d, !!player.run, townShops && townShops.inside ? 'wood' : (lz > 36 || Math.abs(lx) > 55) ? 'grass' : 'stone');
       }
+      { // the music bed by zone: the shops, beyond the walls, the streets (src/audio/music.js)
+        const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
+        townAudio.setMusicZone(townShops && townShops.inside ? 'interior' : (lz > 36 || Math.abs(lx) > 55) ? 'outside' : 'town');
+      }
       lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
       townAudio.setListener(camera, avatar.position);
     }

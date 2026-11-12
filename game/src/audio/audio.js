@@ -1,7 +1,9 @@
 // WebAudio runtime: buses (master/music/sfx, persisted), ducking under the Guest voice and stingers,
-// HRTF panning for 3D sources, zone ambience beds and the tension-keyed music stems.
+// HRTF panning for 3D sources, zone ambience beds, the tension-keyed music stems and the licensed music beds
+// (setMusic: one looping track crossfaded by zone/weather, src/audio/music.js), which dip briefly under sound effects.
 // Nothing touches WebAudio until unlock() (call it from a user gesture). See docs/audio.md.
 import { AUDIO_MANIFEST } from './manifest.js';
+import { MUSIC_MANIFEST } from './music-manifest.js';
 import { createSafeStorage } from '../ui/storage.js';
 import { loadVolumes, saveVolumes, sanitizeVolumes, sliderGain, dbToGain, tensionMix, zoneMix, ZONES as ZONES_WITH_HUM, resolveSound, guestPlan, listenerPose, BUSES } from './mix.js';
 
@@ -14,9 +16,15 @@ const defaultBase = () => {
 const DUCK_KINDS = new Set(['voice', 'sting']);
 const VARY_KINDS = new Set(['sfx', 'step', 'ui']);
 const DUCK = { music: dbToGain(-9), amb: dbToGain(-6) };
+const SFX_DIP = dbToGain(-4); // music under a strike, a hit or a cast: a short dip so the effect reads
+
+/** The generated sound manifest plus the licensed music beds (two generators, one lookup). */
+export function withMusic(m, music = MUSIC_MANIFEST) {
+  return { ...m, sounds: { ...m.sounds, ...(music?.sounds || {}) } };
+}
 
 export function createAudio(opts = {}) {
-  const manifest = opts.manifest || AUDIO_MANIFEST;
+  const manifest = opts.manifest || withMusic(AUDIO_MANIFEST);
   const base = opts.base || defaultBase();
   const storage = opts.storage || createSafeStorage();
   const AC = opts.AudioContextClass || globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -30,6 +38,7 @@ export function createAudio(opts = {}) {
   const lastVariant = new Map();
   let duckCount = 0;
   let zone = null, bed = null, wind = null, tension = 0, music = null, musicStarting = false;
+  let musicBed = null, wantBed = null; // the licensed bed playing {name, h} and the one asked for
   const pendingLoops = [];
   let hums = [];                   // one positional amb_shell_hum per Shell (setShellHums)
 
@@ -38,9 +47,9 @@ export function createAudio(opts = {}) {
 
   function buildGraph() {
     const g = () => ctx.createGain();
-    const n = { master: g(), music: g(), sfx: g(), musicDuck: g(), ambDuck: g(), amb: g(), limiter: ctx.createDynamicsCompressor() };
+    const n = { master: g(), music: g(), sfx: g(), musicDuck: g(), musicDip: g(), ambDuck: g(), amb: g(), limiter: ctx.createDynamicsCompressor() };
     try { n.limiter.threshold.value = -3; n.limiter.ratio.value = 12; n.limiter.attack.value = 0.003; n.limiter.release.value = 0.15; } catch { /* optional */ }
-    n.musicDuck.connect(n.music); n.music.connect(n.master);
+    n.musicDuck.connect(n.musicDip); n.musicDip.connect(n.music); n.music.connect(n.master);
     n.amb.connect(n.ambDuck); n.ambDuck.connect(n.sfx); n.sfx.connect(n.master);
     n.master.connect(n.limiter); n.limiter.connect(ctx.destination);
     for (const b of BUSES) n[b].gain.value = sliderGain(vols[b]);
@@ -70,6 +79,13 @@ export function createAudio(opts = {}) {
     const d = duckCount > 0;
     ramp(nodes.musicDuck.gain, d ? DUCK.music : 1, d ? 0.05 : 0.4);
     ramp(nodes.ambDuck.gain, d ? DUCK.amb : 1, d ? 0.05 : 0.4);
+  }
+
+  /** A short dip of the music under one sound effect (retriggers cleanly: the newest effect sets the release). */
+  function dipMusic() {
+    const p = nodes?.musicDip?.gain; if (!p) return;
+    const t = now();
+    try { p.cancelScheduledValues(t); p.setTargetAtTime(SFX_DIP, t, 0.02); p.setTargetAtTime(1, t + 0.25, 0.4); } catch { /* optional */ }
   }
 
   const setPannerPos = (pn, p) => {
@@ -137,6 +153,7 @@ export function createAudio(opts = {}) {
       src.connect(out);
       src.onended = finish;
       if (ducks) { handle._ducked = true; duck(true); }
+      if (meta.kind === 'sfx' && o.dip !== false) dipMusic();
       src.start(ctx.currentTime + Math.max(0, (o.delay ?? 0) - late));
     });
     active.add(handle);
@@ -177,7 +194,16 @@ export function createAudio(opts = {}) {
   function applyTension() {
     if (!music) return;
     const m = tensionMix(tension);
-    for (const k of Object.keys(m)) ramp(music[k].gain.gain, m[k], 1.2);
+    for (const k of Object.keys(m)) ramp(music[k].gain.gain, musicBed ? 0 : m[k], 1.2); // a licensed bed replaces the stems
+  }
+
+  /** Crossfades to the wanted licensed bed (or out of it, back to the stems when they run). */
+  function applyBed(fade) {
+    if (!ctx || (musicBed?.name ?? null) === wantBed) return;
+    musicBed?.h.stop(fade);
+    musicBed = wantBed ? { name: wantBed, h: play(wantBed, { loop: true, gain: 0 }) } : null;
+    musicBed?.h.setGain(1, fade / 3);
+    applyTension();
   }
 
   let onVis = null;
@@ -195,6 +221,7 @@ export function createAudio(opts = {}) {
         for (const nm of ['ui_click', 'ui_hover', 'ui_confirm', 'amb_wind']) load(nm);
         for (const e of pendingLoops.splice(0)) { const inner = play(e.nameOrGroup, { ...e.o, pos: e.h.pos, gain: e.h.gain }); e.h.inner = inner; }
         applyZone();
+        applyBed(1.5);
         if (opts.music !== false) startMusic();
       }
       try { await ctx.resume?.(); } catch { /* ignore */ }
@@ -204,6 +231,8 @@ export function createAudio(opts = {}) {
     /** Schedule the Guest voice along a logogram: strokes = ['arc', ...] or [{stroke, dur}]. */
     speakStrokes(strokes, o = {}) { return guestPlan(manifest, strokes).map((s) => play(s.name, { ...o, rate: s.rate, delay: (o.delay ?? 0) + s.at })); },
     setTension(t) { tension = Math.min(100, Math.max(0, +t || 0)); if (ctx && !music) startMusic(); applyTension(); },
+    /** The licensed music bed (a manifest name, or null for none); crossfades over `fade` s, queued until unlock. */
+    setMusic(name, fade = 2.5) { wantBed = name && manifest.sounds[name] ? name : null; applyBed(fade); },
     setZone(z) { const m = zoneMix(z); if (zone && zoneMix(zone).zone === m.zone) return; zone = m.zone; applyZone(); },
     /**
      * One positional Shell hum per position ([x, y, z] of each Shell). Loops queue until unlock(); their
@@ -241,7 +270,7 @@ export function createAudio(opts = {}) {
       return Promise.all(all.map(load));
     },
     get context() { return ctx; },
-    get state() { return { unlocked: !!ctx, zone, tension, active: active.size, ducked: duckCount > 0, music: !!music, bed: bed?.name ?? null, hums: hums.length }; },
+    get state() { return { unlocked: !!ctx, zone, tension, active: active.size, ducked: duckCount > 0, music: !!music, musicBed: musicBed?.name ?? null, bed: bed?.name ?? null, hums: hums.length }; },
     _nodes: () => nodes, _music: () => music,
     dispose() {
       disposed = true;
@@ -249,7 +278,7 @@ export function createAudio(opts = {}) {
       if (music) for (const m of Object.values(music)) { try { m.src.stop(); } catch { /* ok */ } }
       if (onVis) document.removeEventListener('visibilitychange', onVis);
       try { ctx?.close(); } catch { /* ok */ }
-      ctx = null; nodes = null; music = null;
+      ctx = null; nodes = null; music = null; musicBed = null;
     },
   };
   return api;
