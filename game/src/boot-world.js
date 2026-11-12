@@ -232,6 +232,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/market.md)
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
@@ -335,6 +336,15 @@ if (townMode.town) {
     townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
+  }
+  if (!marketTicker && params.get('market') !== '0') { // the townsfolk market: a ticker of real testnet trades, chips and stall visits
+    Promise.all([import('./net/market.js'), import('./ui/market-ticker.js'), import('./play/market-scene.js')]).then(([net, ui, sc]) => {
+      if (marketTicker) return;
+      const t = (k, a) => ctx.i18n.t(k, a);
+      marketScene = sc.createMarketScene({ camera, t, folk: () => town.townsfolk, folkPos, hired: () => townLedger.hires().map((h) => h.npc),
+        isDay: () => !['night', 'twilight'].includes(lookdev.look && lookdev.look.name) });
+      marketTicker = ui.createMarketTicker({ t, line: (r) => net.tradeLine(t, r), poll: () => net.fetchMarket(), onTrade: (r) => marketScene.onTrade(r) });
+    }).catch((e) => console.warn('[town] market', e));
   }
   mountTownAudio();
   import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
@@ -525,6 +535,8 @@ async function leaveTown() {
   if (townCasting) { townCasting.dispose(); townCasting = null; }
   if (townMobs) { townMobs.dispose(); townMobs = null; }
   if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
+  if (marketTicker) marketTicker.show(false);
+  if (marketScene) marketScene.update(player.pos, false);
   if (photo) { photo.toggle(false); photo.setAvailable(false); }
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
   player.world = world; rig.world = world;
@@ -1039,6 +1051,11 @@ function frame() {
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (marketScene) {
+      const free = !(photo && photo.on) && !day1Open() && entered && !(townShops && townShops.inside) && !introOn;
+      marketScene.update(player.pos, free && !townFlow.talking);
+      marketTicker.show(free);
+    }
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets

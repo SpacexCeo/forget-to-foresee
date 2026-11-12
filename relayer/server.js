@@ -1,5 +1,5 @@
 // Standalone relayer: plain Node http serving the same handlers as the serverless entry points in api/.
-// node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, ALLOWED_ORIGIN, PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
+// node server.js   (env: FTF_GUEST_KEY, NEARAI_API_KEY, FTF_MARKET=1, ALLOWED_ORIGIN, PORT=8787, HOST=0.0.0.0, TRUST_PROXY=1 behind a reverse proxy)
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 
@@ -23,8 +23,10 @@ import agentSay from './api/agent/say.js';
 import agentDecide from './api/agent/decide.js';
 import chestOpen from './api/chest/open.js';
 import wheelClaim from './api/wheel/claim.js';
+import marketStats from './api/market/stats.js';
+import { marketDaemon } from './market/index.js';
 
-const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/wheel/claim': wheelClaim };
+const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats };
 if (!process.env.TRUST_PROXY) process.env.TRUST_PROXY = '0'; // direct exposure: do not trust X-Forwarded-For
 
 export function createServer() {
@@ -38,5 +40,8 @@ export function createServer() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT) || 8787, host = process.env.HOST || '0.0.0.0';
-  createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'}, TEE ${process.env.NEARAI_API_KEY ? 'set' : 'NOT set'}, chests ${process.env.FTF_CHEST_KEY ? 'set' : 'NOT set'}, skins ${process.env.FTF_SKIN_KEY ? 'set' : 'NOT set'})`));
+  const market = marketDaemon();
+  createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'}, TEE ${process.env.NEARAI_API_KEY ? 'set' : 'NOT set'}, chests ${process.env.FTF_CHEST_KEY ? 'set' : 'NOT set'}, skins ${process.env.FTF_SKIN_KEY ? 'set' : 'NOT set'}, market ${market ? market.stats().traders + ' traders' : 'off'})`));
+  const bye = () => { if (market) market.stop(); process.exit(0); };
+  process.on('SIGTERM', bye); process.on('SIGINT', bye);
 }
