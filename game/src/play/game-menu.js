@@ -4,7 +4,8 @@
 // NFTs tab lists only what a testnet read confirms right now (play/profile.js readOnChain), everything else is
 // labelled local. Items come from the items manifest (game/public/assets/items/manifest.json).
 import { readOnChain } from './profile.js';
-import { createWheel, SEGMENTS, odds } from '../game/wheel.js';
+import { createWheel } from '../game/wheel.js';
+import { renderWheel, WHEEL_CSS } from './wheel-view.js';
 import { createInventory, RARITIES } from '../game/inventory.js';
 import { achievementsFor } from '../game/achievements.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
@@ -26,7 +27,6 @@ const TAB_ICON = Object.freeze({
 });
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
-const SEG_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#9775fa', '#da77f2', '#f783ac', '#ff922b', '#20c997'];
 let manifestP = null;
 /** The items manifest (cached). */
 export function loadManifest(base = (import.meta.env && import.meta.env.BASE_URL) || '/', fetch = globalThis.fetch) {
@@ -131,7 +131,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
 export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null }) {
-  if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS; doc.head.append(st); }
+  if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
   const wheel = createWheel({ storage, earnedFrom: () => Math.max(0, ledger.level.level - 1) + (ledger.stats.trialsVerified || 0) });
@@ -156,7 +156,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
   let current = null;
-  function close() { root.remove(); }
+  function close() { if (wheelView) wheelView.destroy(); root.remove(); }
 
   const views = {
     profile() {
@@ -264,62 +264,12 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     },
     wheel() {
       return items.then((list) => {
-        const wrap = el('div', 'gm-wheelwrap');
-        const wbox = el('div', 'gm-wheel');
-        const svg = svgEl(doc, 'svg'); svg.setAttribute('viewBox', '-110 -110 220 220'); svg.setAttribute('aria-hidden', 'true');
-        const spinner = svgEl(doc, 'g'); spinner.setAttribute('class', 'gm-spinner');
-        const n = SEGMENTS.length, step = 360 / n;
-        SEGMENTS.forEach((s, i) => {
-          const a0 = (i * step - 90 - step / 2) * Math.PI / 180, a1 = ((i + 1) * step - 90 - step / 2) * Math.PI / 180;
-          const p = svgEl(doc, 'path');
-          p.setAttribute('d', `M0 0L${(100 * Math.cos(a0)).toFixed(2)} ${(100 * Math.sin(a0)).toFixed(2)}A100 100 0 0 1 ${(100 * Math.cos(a1)).toFixed(2)} ${(100 * Math.sin(a1)).toFixed(2)}Z`);
-          p.setAttribute('fill', SEG_COLORS[i % SEG_COLORS.length]); p.setAttribute('stroke', '#fff'); p.setAttribute('stroke-width', '1.5');
-          const tx = svgEl(doc, 'text'); const am = (i * step - 90) * Math.PI / 180;
-          tx.setAttribute('x', (66 * Math.cos(am)).toFixed(1)); tx.setAttribute('y', (66 * Math.sin(am)).toFixed(1)); tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('dominant-baseline', 'middle');
-          tx.setAttribute('font-size', '9'); tx.setAttribute('font-weight', '800'); tx.setAttribute('fill', '#fff'); tx.setAttribute('transform', `rotate(${i * step} ${(66 * Math.cos(am)).toFixed(1)} ${(66 * Math.sin(am)).toFixed(1)})`);
-          tx.textContent = t('wheel.seg.' + s.id);
-          spinner.append(p, tx);
-        });
-        const rim = svgEl(doc, 'circle'); rim.setAttribute('r', '103'); rim.setAttribute('fill', 'none'); rim.setAttribute('stroke', '#f2c14e'); rim.setAttribute('stroke-width', '7');
-        svg.append(spinner, rim);
-        for (let i = 0; i < 24; i++) { const b = svgEl(doc, 'circle'); const a = i * 15 * Math.PI / 180; b.setAttribute('cx', (103 * Math.cos(a)).toFixed(1)); b.setAttribute('cy', (103 * Math.sin(a)).toFixed(1)); b.setAttribute('r', '2.6'); b.setAttribute('fill', i % 2 ? '#fff8d6' : '#fff'); svg.append(b); }
-        const hub = svgEl(doc, 'circle'); hub.setAttribute('r', '16'); hub.setAttribute('fill', '#fff'); hub.setAttribute('stroke', '#f2a516'); hub.setAttribute('stroke-width', '4'); svg.append(hub);
-        wbox.append(svg, el('div', 'gm-pointer'));
-        const side = el('div');
-        const av = wheel.available;
-        const status = el('p', 'gm-note', t('wheel.available', { n: av.total }) + (av.free ? ' · ' + t('wheel.freeToday') : ''));
-        const seedP = el('p', 'gm-note', t('wheel.seed', { seed: wheel.nextSeed }));
-        const prize = el('div'); prize.setAttribute('aria-live', 'polite');
-        let angle = 0;
-        const go = btn(t('wheel.spin'), () => {
-          const r = wheel.spin(list);
-          if (!r) return;
-          go.disabled = true;
-          // land the pointer on the segment: the segment i sits at i·step from the top
-          const turns = reduced(doc) ? 0 : 5;
-          angle = angle - (angle % 360) + turns * 360 + (360 - r.index * step);
-          spinner.style.transform = `rotate(${angle}deg)`;
-          if (turns) { let at = 0; for (let k = 0; k < 18; k++) { at += 60 + k * k * 9; setTimeout(() => cue('bid_tick'), at); } } // ticks slowing with the wheel
-          const finish = () => {
-            cue('gift_chime');
-            if (r.item) inv.add(r.item.id, 1, 'wheel');
-            if (r.segment.kind === 'silk') ledger.grant({ silk: r.segment.amount });
-            if (r.segment.kind === 'xp') ledger.grant({ xp: r.segment.amount });
-            fresh.add(r.item ? r.item.id : '');
-            prize.replaceChildren(el('div', 'gm-prize', t('wheel.won', { prize: r.item ? t(r.item.nameKey) : r.title ? t('wheel.title.' + r.title) : t('wheel.seg.' + r.segment.id) })), el('p', 'gm-note', t('wheel.seedWas', { seed: r.seed })));
-            if (!reduced(doc)) { const cf = el('div', 'gm-confetti'); for (let i = 0; i < 28; i++) { const c = el('i'); c.style.background = SEG_COLORS[i % SEG_COLORS.length]; c.style.setProperty('--dx', `${Math.round((Math.random() - 0.5) * 360)}px`); c.style.setProperty('--dy', `${Math.round((Math.random() - 0.7) * 300)}px`); cf.append(c); } wbox.append(cf); setTimeout(() => cf.remove(), 1300); }
-            const a2 = wheel.available; status.textContent = t('wheel.available', { n: a2.total }) + (a2.free ? ' · ' + t('wheel.freeToday') : '');
-            seedP.textContent = t('wheel.seed', { seed: wheel.nextSeed }); go.disabled = a2.total <= 0;
-          };
-          if (turns) setTimeout(finish, 4300); else finish();
-        });
-        go.disabled = av.total <= 0;
-        const table = el('table', 'gm-odds'); const tb = el('tbody'); table.append(tb);
-        odds().forEach((o) => { const tr = el('tr'); tr.append(el('td', null, t('wheel.seg.' + o.id)), el('td', null, (o.p * 100).toFixed(1) + ' %')); tb.append(tr); });
-        side.append(status, el('div', 'gm-row'), seedP, prize, el('h3', null, t('wheel.odds')), table, el('p', 'gm-note', t('wheel.rules')));
-        side.children[1].append(go, btn(t('menu.tab.inventory'), () => show('inventory'), 'gm-btn gm-ghost'));
-        wrap.append(wbox, side);
-        return [wrap];
+        const view = renderWheel({ doc, t, wheel, items: list, base, inventory: inv, ledger, chests: bag, cue, reduced: reduced(doc),
+          bagTarget: () => tabBtns.inventory || null,
+          mintSkin: (p) => import('../net/wheel-skin.js').then((m) => m.claimWheelSkin({ storage, wheelId: wheel.id, seed: p.seed })),
+          onChange: (r) => { if (r && r.ok && (r.kind === 'part' || r.kind === 'shard') && inv.newest) fresh.add(inv.newest); } });
+        wheelView = view;
+        return [view.root];
       });
     },
     agents() {
@@ -354,6 +304,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     },
   };
   const fresh = new Set();
+  let wheelView = null; // the open wheel screen (stopped when the tab changes or the menu closes)
   let invFilter = 'all';
 
   /** Chests from monsters (game/chests.js): sealed ones open through the chest service (play/chest-open.js). */
@@ -398,6 +349,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
 
   function show(id) {
     current = id;
+    if (wheelView) { wheelView.destroy(); wheelView = null; }
     tabTitle.textContent = t('menu.tab.' + (id === 'wheel' ? 'inventory' : id));
     for (const [k, b] of Object.entries(tabBtns)) b.setAttribute('aria-selected', String(k === id || (id === 'wheel' && k === 'inventory')));
     const r = views[id]();

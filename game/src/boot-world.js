@@ -845,7 +845,7 @@ function tickDayCycle(dt) {
 
 function frame() {
   const rawDt = clock.getDelta();
-  const dt = Math.min(rawDt, 0.25); // render, camera and animation delta
+  const dt = Math.min(Math.max(rawDt, 0), 0.25); // render, camera and animation delta (never negative: a clock that steps back, e.g. a test clock, would poison the damping)
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();
   const live = handleInput(dt) !== false;
   // device-aware goal copy (Task I request 15): touch / gamepad / keyboard words follow the last input device
@@ -932,6 +932,16 @@ function frame() {
       if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets
         const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
         townAudio.step(d, !!player.run, townShops && townShops.inside ? 'wood' : (lz > 36 || Math.abs(lx) > 55) ? 'grass' : 'stone');
+      }
+      { // the music bed by zone: the shops, beyond the walls, the streets (src/audio/music.js)
+        const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
+        townAudio.setMusicZone(townShops && townShops.inside ? 'interior' : (lz > 36 || Math.abs(lx) > 55) ? 'outside' : 'town');
+      }
+      { // Floating Cities lifts while monsters chase her; the crownrift elite engaged brings Legionnaire
+        let aggro = false, elite = false;
+        const mobs = townMobs && townMobs.brain ? townMobs.brain.mobs : null;
+        if (mobs) for (const m of mobs) { if (m.state === 'idle' || m.state === 'dead' || m.state === 'gone') continue; aggro = true; if (m.T && m.T.elite) elite = true; }
+        townAudio.setCombat({ aggro, elite });
       }
       lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
       townAudio.setListener(camera, avatar.position);
