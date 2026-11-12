@@ -7,7 +7,7 @@
 // rules are node-tested. `createMobs` is the view: loads mob_*.glb (phone `_m` variants), drives the clips, the
 // ground following, the telegraph rings, the Veilbell's seed, Iris's health and the hit feedback.
 //
-// Events: `ftf:mob-killed` on window, detail {type, pos: [x, y, z] world, elite} when a monster has fallen (its death
+// Events: `ftf:mob-killed` on window, detail {type, pos: [x, y, z] world, elite, killId} when a monster has fallen (its death
 // clip has played and the dissolve starts) - the loot code turns it into a chest. `ftf:iris-down` when her health
 // runs out (she is carried back to the gate with full health).
 import { onField } from '../scenes/town-outside.js';
@@ -39,6 +39,8 @@ export const STAGGER_SECONDS = 0.45;
 export const SNARE_ROOT_SECONDS = 1.6;
 export const HIT_STOP_SECONDS = 0.07;
 /** The shortest warning a melee blow gives (windup × impact, s): its ground ring shows at least this long. */
+/** This page's session (the kill ids of one visit never repeat the last visit's). */
+const SESSION = Date.now().toString(36);
 export const TELEGRAPH_MIN = 0.4;
 /** Every strike hit shoves a light creature this far (m); the third hit of the combo throws it 0.7 m. */
 export const HIT_SHOVE = 0.18;
@@ -516,7 +518,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
-        if (win) win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: e.mob.type, pos: e.mob.pos.slice(), elite: !!e.mob.T.elite } }));
+        if (win) { e.mob.lives = (e.mob.lives || 0) + 1; win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: e.mob.type, pos: e.mob.pos.slice(), elite: !!e.mob.T.elite, killId: `${SESSION}:${e.mob.id}#${e.mob.lives}` } })); }   // killId: stable per creature and life (salvage, quests)
       }
       else if (e.kind === 'respawn' && v) {                                          // a fresh view: the dissolved one is thrown away
         group.remove(v.holder); group.remove(v.ring); views.delete(e.mob); attach(e.mob);

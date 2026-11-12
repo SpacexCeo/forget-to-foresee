@@ -231,6 +231,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
+let salvageView = null; // story TZ Q2 (?story=1)
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
 let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/town-economy.md; ?town=1 until ftf-town is live)
 const chestBag = createChestBag({ storage: ctx.storage });
@@ -311,6 +312,8 @@ if (townMode.town) {
     // packs are off (?mobs=0)
     townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, critters: () => params.get('mobs') === '0', onPickup: () => toast(ctx.i18n.t('chest.found')) });
     window.addEventListener('ftf:mob-killed', (e) => { if (townMonsters && inTown && e.detail) townMonsters.drop(e.detail.pos, e.detail.elite); });
+    // ?story=1 (story TZ Q2): salvage drops, the spare part's source: a part, a toast and a brass spark on a kill
+    if (params.get('story') === '1' && !salvageView) import('./scenes/salvage-view.js').then((m) => { salvageView = m.createSalvageView({ scene, storage: ctx.storage, toast, t: (k) => ctx.i18n.t(k), reduced: () => lookdev.reducedMotion }); }).catch((e) => console.warn('[salvage]', e));
     // the profile button carries the number of sealed chests (a small gold badge), so a found chest is not forgotten
     const badgeChests = () => { const b = document.querySelector('.ftf-town-profile'); if (!b) return; const n = chestBag.sealed().length; if (n) b.dataset.chests = String(n); else delete b.dataset.chests; }; // generated content: read with the label
     chestBag.subscribe(badgeChests); badgeChests();
@@ -1039,6 +1042,7 @@ function frame() {
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (doorGlow) doorGlow.update(dt, player.pos, !(townShops && townShops.inside));
+    if (salvageView) salvageView.update(dt);
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
     if (spotProps) spotProps.update(dt, lookdev.reducedMotion);
     if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
