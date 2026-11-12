@@ -918,30 +918,30 @@
     },
     "idle_look": {},
     "walk": {
-     "speed": 1.4,
+     "speed": 1.7,
      "frames": 38,
      "style": {
       "arm_swing": 0.3,
-      "step_lift": 0.45,
-      "glide": 0.55,
+      "step_lift": 0.6,
+      "glide": 0.58,
       "bounce": 0.6
      },
-     "note": "the magic step (owner 12.11: elegant, fewer steps, she floats a little as in slow motion): one stride in 1.27 s (was 0.63), the feet cover 55 % of the ground she travels"
+     "note": "the magic step (owner 12.11: elegant, fewer steps, she floats a little as in slow motion): one wide stride (1.25 m) in 1.27 s while she travels 2.2 m: the legs move slowly and wide, the body fast, not as physics would have it. The clip is built for the game's real walking speed (1.7 m/s): at 1.4 the game sped it up and mixed it with the run, which read as jerky"
     },
     "run": {
      "use": "walk",
-     "speed": 2.4,
-     "frames": 30,
+     "speed": 3.3,
+     "frames": 32,
      "fps": 120,
      "style": {
       "track": 0.045,
-      "arm_swing": 0.38,
-      "lean": 5,
-      "step_lift": 0.55,
-      "glide": 0.42,
-      "bounce": 0.6
+      "arm_swing": 0.42,
+      "lean": 6,
+      "step_lift": 0.8,
+      "glide": 0.455,
+      "bounce": 0.7
      },
-     "note": "the magic step, faster: one stride a second (was 0.43 s), the feet cover 42 % of the ground; the gown stays floor-length (sheets 08, 09)"
+     "note": "the magic step, running: one wide stride (1.6 m) in 1.07 s while she travels 3.5 m, built for the game's real running speed (3.3 m/s); the gown stays floor-length (sheets 08, 09)"
     },
     "register": {},
     "greet": {
