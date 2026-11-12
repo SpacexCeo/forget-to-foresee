@@ -28,6 +28,10 @@ test('wiring: door enters, counter opens the panel, day cycle and casts pause in
   assert.match(boot, /onCounter: \(id\) => townFlow\.openSpot\(id\)/);
   assert.match(boot, /!\(townShops && townShops\.inside\)\) tickDayCycle/);
   assert.match(boot, /!\(townShops && townShops\.inside\)\); \/\/ no casts indoors/);
+  // R indoors keeps the room's camera: a plain rig reset would lift it to the street distance, above the walls
+  assert.match(boot, /if \(!\(townShops && townShops\.resetCamera\(\)\)\) rig\.reset\(\);/);
+  const shops = readFileSync(new URL('../../src/scenes/town-shops.js', import.meta.url), 'utf8');
+  assert.match(shops, /resetCamera\(\) \{ if \(state\.phase === 'inside' && !state\.busy\) \{ roomCamera\(\); return true; \} return false; \}/);
 });
 
 test('swing: tilts with the wind, bounded, still under reduced motion', () => {

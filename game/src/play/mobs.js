@@ -13,12 +13,13 @@
 import { onField } from '../scenes/town-outside.js';
 import { CASTS } from '../scenes/town-casting-fx.js';
 
-/** Per type: health, speeds (m/s, matched to the clips: art/mobs/mobs.json), ranges (m), attack timing. */
+/** Per type: health, speeds (m/s), the ground speed each clip's stride was built for (`clip` [walk, run], from
+ * art/mobs/mobs.json: the clip is time-scaled to the actual speed so the feet do not slide), ranges (m), attack timing. */
 export const MOB_TYPES = Object.freeze({
-  skitter: Object.freeze({ scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
-  hulker: Object.freeze({ hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: true, heavy: true }),
-  veilbell: Object.freeze({ hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
-  crownrift: Object.freeze({ hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
+  skitter: Object.freeze({ clip: [0.83, 1.63], scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
+  hulker: Object.freeze({ clip: [1.01, 2.14], hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: false, heavy: true }),   // a brute powers through light hits
+  veilbell: Object.freeze({ clip: [0.84, 1.64], hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
+  crownrift: Object.freeze({ clip: [1.2, 2.76], hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
 });
 
 /** Packs: type, count (phone count), home in town-local metres (x, z), respawn seconds after the last one fell. */
@@ -164,7 +165,7 @@ export class MobBrain {
     if (m.freeze > 0) { m.freeze -= dt; return; }                                // hit-stop
     m.t += dt; m.cooldown = Math.max(0, m.cooldown - dt); m.root = Math.max(0, m.root - dt);
     const T = m.T, home = m.pack.home;
-    const sees = iris && iris.alive && iris.outside && dist2(iris.pos, m.pos) < T.aggro && dist2(iris.pos, home) < LEASH + T.attack;
+    const sees = iris && iris.alive && iris.outside && dist2(iris.pos, m.pos) < T.aggro && dist2(iris.pos, home) < LEASH + T.attack && Math.abs(iris.pos[1] - m.pos[1]) < 6;   // not through a cliff
     m.speed = 0;
     switch (m.state) {
       case 'dead':                                                                   // the view reports the end of the death clip
@@ -179,7 +180,7 @@ export class MobBrain {
         if (m.t >= hitAt && !m.struck) {
           m.struck = true;
           if (T.ranged) ev.push({ kind: 'shot', mob: m, to: iris ? iris.pos.slice() : null });
-          else ev.push({ kind: 'impact', mob: m, hit: !!(iris && iris.alive && dist2(iris.pos, m.pos) < T.attack + 0.6 && facing(m, iris.pos)) });
+          else ev.push({ kind: 'impact', mob: m, hit: !!(iris && iris.alive && dist2(iris.pos, m.pos) < T.attack + 0.6 && Math.abs(iris.pos[1] - m.pos[1]) < 2.5 && facing(m, iris.pos)) });
         }
         if (m.t >= T.windup) { m.state = 'recover'; m.t = 0; m.cooldown = T.cooldown; }
         return;
@@ -257,22 +258,36 @@ const CSS = `
  * @param {(name: string) => Promise<{gltf}>} o.load glTF by model name (render/assets.js prefetchGltf)
  * @param {(o: THREE.Object3D) => THREE.Object3D} o.clone SkeletonUtils.clone
  * @param {class} o.MobFx render/mob-fx.js @param {object} o.glow MOB_GLOW
- * @param {(x: number, z: number, nearY: number) => number} o.ground ground height under a world point
+ * @param {(x: number, z: number, nearY: number) => number} o.ground ground height under a world point (near a height)
+ * @param {(x: number, z: number) => number|null} [o.floor] the hillside's own surface (homes and spawns)
  * @param {string} [o.variant] '_m' on phones @param {boolean} [o.phone] fewer monsters, cheaper updates
  * @param {() => boolean} [o.reduced] reduced motion
  * @param {(kind: string) => void} [o.onFeedback] 'hurt' | 'down' | 'kill' (sound cues)
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
-export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, variant = '', phone = false, reduced = () => false, onFeedback = null,
+export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
   respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null }) {
   const brain = new MobBrain({ origin, phone, seed });
+  // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
+  // (the hillside's colliders are built when Iris first walks out of the gate, so a pack is settled as soon as its
+  // ground answers, not only at mount)
+  const unsettled = new Set(brain.packs);
+  function settlePacks() {
+    if (!floor) { unsettled.clear(); return; }
+    for (const pack of [...unsettled]) {
+      const y = floor(pack.home[0], pack.home[2]); if (y == null) continue;
+      pack.home[1] = y; unsettled.delete(pack);
+      for (const m of brain.mobs) if (m.pack === pack) { const my = floor(m.pos[0], m.pos[2]); m.pos[1] = my == null ? y : my; }
+    }
+  }
+  settlePacks();
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
   const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1 };
   let shake = 0;
   const numbers = [];
-  const shots = [];
+  const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
   let disposed = false;
 
   if (doc && !doc.getElementById('ftf-mobs-style')) { const st = doc.createElement('style'); st.id = 'ftf-mobs-style'; st.textContent = CSS; doc.head.append(st); }
@@ -359,7 +374,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         if (!from.lengthSq()) from.set(e.mob.pos[0], e.mob.pos[1] + 1, e.mob.pos[2]);
         s.position.copy(from); group.add(s);
         const to = new THREE.Vector3(e.to[0], e.to[1] + 1.0, e.to[2]);
-        shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage });
+        shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
         v.fx.hit(); number(e.mob, e.amount, e.crit);
@@ -380,7 +395,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
 
   let acc = 0;
   return {
-    brain, ready, group, iris,
+    brain, ready, group, iris, shotLog,
     get hp() { return iris.hp; },
     /** Iris's cast (scenes/town-casting.js onFire). */
     cast(c) { brain.cast(c); },
@@ -420,6 +435,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (hpEl) hpEl.hidden = !outside;
       if (!active) return;
       iris.pos = player.pos; iris.outside = outside;
+      if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
       iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
       iris.calm += dt;
@@ -463,7 +479,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (!v.holder.visible) continue;
       if (m.freeze <= 0) {
         if (!v.oneShot && m.state !== 'dead' && m.state !== 'gone') play(v, m.speed > m.T.walk * 1.2 ? 'run' : m.speed > 0 ? 'walk' : 'idle');
-        if (v.current && m.speed > 0) v.current.timeScale = m.speed / (m.speed > m.T.walk * 1.2 ? m.T.run : m.T.walk);
+        if (v.current && m.speed > 0) v.current.timeScale = m.speed / (m.speed > m.T.walk * 1.2 ? m.T.clip[1] : m.T.clip[0]);
         else if (v.current) v.current.timeScale = 1;
         v.mixer.update(dt);
       }
@@ -476,11 +492,16 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         v.ring.material.opacity = 0.25 + 0.5 * k;
       }
     }
+    const chest = new THREE.Vector3(player.pos[0], player.pos[1] + 1.0, player.pos[2]), want = new THREE.Vector3();
     for (const s of shots) {
-      s.life -= dt; s.s.position.addScaledVector(s.vel, dt);
+      s.life -= dt;
+      want.copy(chest).sub(s.s.position).normalize().multiplyScalar(9);        // the seed bends towards her chest (up to ~70 deg/s): a dodge sideways still beats it
+      const k = Math.min(1, dt * 1.2); s.vel.lerp(want, k).setLength(9);
+      s.s.position.addScaledVector(s.vel, dt);
       const p = s.s.position;
-      if (iris.alive && Math.hypot(p.x - player.pos[0], p.y - (player.pos[1] + 1.0), p.z - player.pos[2]) < 0.75) { hurt(s.damage); s.life = 0; }
-      if (s.life <= 0) group.remove(s.s);
+      const dIris = Math.hypot(p.x - player.pos[0], p.y - (player.pos[1] + 1.0), p.z - player.pos[2]); s.min = Math.min(s.min, dIris);
+      if (iris.alive && dIris < 0.75) { hurt(s.damage); s.life = 0; s.hit = true; }
+      if (s.life <= 0) { group.remove(s.s); shotLog.push({ ...s.log, min: +s.min.toFixed(2), hit: !!s.hit }); if (shotLog.length > 20) shotLog.shift(); }
     }
     for (let i = shots.length - 1; i >= 0; i--) if (shots[i].life <= 0) shots.splice(i, 1);
   }
