@@ -49,7 +49,7 @@ const GLYPH = {
  *   chests?: object, mintSkin?: Function, cue?: Function, reduced?: boolean, bagTarget?: () => Element|null, onChange?: Function,
  *   raf?: Function, now?: () => number}} o
  */
-export function renderWheel({ doc = document, t, wheel, items = [], base = '/', inventory, ledger, chests = null, mintSkin = null, cue = () => {}, reduced = false, bagTarget = () => null, onChange = () => {}, raf = (f) => globalThis.requestAnimationFrame(f), now = () => performance.now() }) {
+export function renderWheel({ doc = document, t, wheel, items = [], base = '/', inventory, ledger, chests = null, mintSkin = null, cue = () => {}, reduced = false, bagTarget = () => null, onChange = () => {}, raf = (f) => globalThis.requestAnimationFrame(f), now = () => performance.now(), supply = null }) {
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const svg = (tag, attrs = {}) => { const e = doc.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -109,7 +109,10 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
   odds().forEach((o) => {
     const seg = SEGMENTS.find((s) => s.id === o.id);
     const tr = el('tr'); const sw = el('i', 'wv-swatch'); sw.style.background = RARITY_FRAME[seg.rarity];
-    const name = el('td'); name.append(sw, doc.createTextNode(' ' + t('wheel.seg.' + o.id) + (seg.grand ? ' · ' + t('wheel.cap', { n: SKIN_CAP }) : '')));
+    const name = el('td'); const label = doc.createTextNode(' ' + t('wheel.seg.' + o.id) + (seg.grand ? ' · ' + t('wheel.cap', { n: SKIN_CAP }) : ''));
+    name.append(sw, label);
+    // the live supply from the skin contract: "N of 100 left" (the cap alone until it answers)
+    if (seg.grand && supply && supply.then) supply.then((sp) => { if (sp) label.textContent = ' ' + t('wheel.seg.' + o.id) + ' · ' + t('wheel.left', { n: sp.left, cap: sp.cap }); }).catch(() => {});
     tr.append(name, el('td', null, (o.p * 100).toFixed(1) + ' %')); tb.append(tr);
   });
   side.append(status, row, seedP, card, el('h3', null, t('wheel.odds')), table, el('p', 'gm-note', t('wheel.rules')));

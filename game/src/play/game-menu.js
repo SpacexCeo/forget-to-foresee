@@ -267,6 +267,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const view = renderWheel({ doc, t, wheel, items: list, base, inventory: inv, ledger, chests: bag, cue, reduced: reduced(doc),
           bagTarget: () => tabBtns.inventory || null,
           mintSkin: (p) => import('../net/wheel-skin.js').then((m) => m.claimWheelSkin({ storage, wheelId: wheel.id, seed: p.seed })),
+          supply: import('../net/wheel-skin.js').then((m) => m.skinSupply()).catch(() => null),
           onChange: (r) => { if (r && r.ok && (r.kind === 'part' || r.kind === 'shard') && inv.newest) fresh.add(inv.newest); } });
         wheelView = view;
         return [view.root];

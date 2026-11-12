@@ -726,6 +726,8 @@ export default {
   'wheel.rarity.uncommon': "Non comune",
   'wheel.rarity.common': "Comune",
   'wheel.cap': "NFT, {n} in tutto",
+  'wheel.left': "NFT · ne restano {n} su {cap}",
+  'wheel.skin.reason.failed': "Il mint non è andato a buon fine; riprova.",
   'wheel.kind.title': "Titolo",
   'wheel.seg.skin_sheriffchenko': "Skin Sheriffchenko",
   'wheel.seg.chest': "Forziere",
