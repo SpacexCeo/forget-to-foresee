@@ -42,6 +42,7 @@ def main():
     a = ap.parse_args()
     cfg = json.load(open(os.path.join(HERE, 'clips.json')))
     ch = cfg['characters'][a.char]
+    chains.use_character(ch)
     rig = Rig(os.path.join(REPO, ch['model']))
     only = [x for x in a.only.split(',') if x]
     cloth = skirt.ClothRig(os.path.join(REPO, ch['cloth']['rig']), rig) if ch.get('cloth') else None
@@ -105,6 +106,7 @@ def main():
             if not cloth:               # with a cloth bake every chain bone comes from the bake instead
                 sim = chains.simulate(rig, body, r['pelvis'][:len(body)], fps=spec.get('fps', 30) if spec['kind'] == 'cycle' else 30, loop=loop, air_speed=spec.get('speed', 0))
                 r['local'] = np.concatenate([sim, sim[:1]]) if loop else sim
+                print(name, 'chain lag max (deg):', {k: round(v, 1) for k, v in chains.LAG.items()})
             chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
         if cloth:
             fps_c = spec.get('fps', 30) if spec['kind'] == 'cycle' else 30

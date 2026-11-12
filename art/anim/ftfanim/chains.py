@@ -15,6 +15,23 @@ PARAMS = {
 }
 
 
+OVERRIDE = {}      # chain prefix -> params of the character being built (clips.json: characters.<id>.chain_params)
+LAG = {}           # chain name -> the largest angle (degrees) a bone trailed its held direction in the last simulate()
+
+
+def use_character(char_spec):
+    """Per-character chain params: a firm bun must not swing like a loose ponytail."""
+    OVERRIDE.clear()
+    OVERRIDE.update({k: tuple(v) for k, v in (char_spec or {}).get('chain_params', {}).items()})
+
+
+def params_for(name):
+    for key in (re.sub(r'_[A-Z]$', '', name), name.split('_')[0]):
+        if key in OVERRIDE:
+            return OVERRIDE[key]
+    return PARAMS.get(re.sub(r'_[A-Z]$', '', name), PARAMS.get(name.split('_')[0], PARAMS['default']))
+
+
 def chain_bones(rig):
     """[(chain name, [bone indices root→tip])] for bones named <chain>_<n>."""
     groups = {}
@@ -34,7 +51,8 @@ def simulate(rig, local, pelvis, fps=30, loop=True, air_speed=0.0, sub=4, warm=3
     dt = 1.0 / (fps * sub)
     air = np.array([0.0, 0.0, -air_speed])
     for name, bones in chain_bones(rig):
-        om, zeta, air_k, _ = PARAMS.get(re.sub(r'_[A-Z]$', '', name), PARAMS.get(name.split('_')[0], PARAMS['default']))
+        om, zeta, air_k, _ = params_for(name)
+        lag = 0.0
         om *= scale
         par = rig.parent[bones[0]]
         # tail length of each bone: distance to the next bone's head, the last one reuses the previous length
@@ -74,10 +92,13 @@ def simulate(rig, local, pelvis, fps=30, loop=True, air_speed=0.0, sub=4, warm=3
                         r_w = qnorm(qmul(s, r_t))
                         if st == sub - 1 and ps == passes - 1:
                             res[f, k] = qmul(qinv(r), r_w)
+                            c_ = float(np.dot(qrot(r_t, Y), (p[k] - head) / lens[k]))
+                            lag = max(lag, float(np.degrees(np.arccos(np.clip(c_, -1.0, 1.0)))))
                         # the next bone hangs from this one's simulated transform; its rest_t is relative to this bone's head
                         r, h = r_w, head
         for k, b in enumerate(bones):
             out[:, b] = qnorm(res[:, k])
+        LAG[name] = lag
     return out
 
 
