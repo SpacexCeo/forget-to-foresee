@@ -62,6 +62,8 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
    faces the bend. Before, the idle stood 11 cm wide with the toes out 15–19° and one knee turned 56°, while the
    walk and the run tracked at 5–6 cm: the start of a run pulled the feet together. `?anim=v1` plays the clips as
    they were (`assets/anim/iris_v1.glb`) until the owner approves the new ones.
+   `arm_twist` (Elise, 12.11): how much of the captured roll of the upper arms about their own axis is kept; a rig
+   without twist bones shows that roll as a wrung shoulder.
 8. **Animator layers** (`layers.py`, listed per clip in `clips.json`): a held pose from another take (`pose`: the
    seated loop), a contrapposto weight shift (`shift`), an arm reach solved with two-bone IK toward a target in
    character space or relative to a bone (`reach`: register, salute), eased additive rotations (`rotate`: nod, look,
