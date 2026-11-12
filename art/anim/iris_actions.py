@@ -193,7 +193,7 @@ def strike(side):
         'foot_L': {'at': [0.03, 0, 0.26], 'yaw': 4},
         'foot_R': {'at': [0, 0, -0.04], 'pitch': 30, 'yaw': 8},
         'arm_R': {'at': [0.10, 0.02, 0.455], 'elbow': [-0.7, -0.5, 0], 'fingers': [0, 1, 0.35], 'palm': [0, -0.2, 1]},
-        'arm_L': {'at': [0.02, -0.22, -0.10], 'elbow': [0.5, -0.1, -1], 'fingers': [0, 0.3, 1], 'palm': [-1, 0, 0.2]},
+        'arm_L': {'at': [0.05, -0.19, -0.15], 'elbow': [0.12, -0.35, -1], 'fingers': [0, 0.3, 1], 'palm': [-1, 0, 0.2]},
         'fingers_R': 'flat', 'fingers_L': 'loose_fist',
     }
     keys = [(0.0, IDLE), (0.07, with_ease(coil, 'out')), (0.12, with_ease(hit, ('pow', 1.5))), (0.18, with_ease(mix(coil, hit, 1.06), 'out')),
