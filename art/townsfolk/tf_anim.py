@@ -28,6 +28,10 @@ def bake(rig, key, entry, scale, log=print):
         A.WALK_FRAMES = frames
         A.CLIPS["walk"] = (frames, True, A.WALK_SPEED)
         clips = ["idle", "walk", "talk", "think", "gesture_offer", "understand"]
+        if entry.get("agent"):                        # clan agents: the full agent contract (game/src/play/agents.js)
+            clips = ["idle", "walk", "run", "talk", "think", "gesture_offer", "celebrate", "defeat", "understand"]
+            A.RUN_SPEED = 3.0 / scale
+            A.CLIPS["run"] = (A.RUN_FRAMES, True, A.RUN_SPEED)
         if entry["height"] < 1.45:                    # children run
             clips.append("run")
             A.RUN_SPEED = 2.6 / scale

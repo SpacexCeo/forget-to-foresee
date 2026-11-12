@@ -136,7 +136,7 @@ def _lantern(tb, x, y, name):
         tb.box("stone", (x, y - 0.12, 0.55), (0.26, 0.05, 0.26), (0.2, 0.19, 0.18))
         tb.box("lamp", (x, y - 0.33, 0.55), (0.2, 0.34, 0.2), (1, 1, 1))
         tb.box("stone", (x, y - 0.52, 0.55), (0.24, 0.05, 0.24), (0.2, 0.19, 0.18))
-    tb.socket(name, (x, y - 0.33, 0.55))
+    tb.socket(name, (x, y - 0.48, 1.35))  # the light stands off the plaster (no white disc on the wall)
 
 
 def _roof(tb, length, span, pitch, col, plaster, rr, ring_window=False, frame_col=TIMBER, dormer=False, over_e=0.55, over_g=0.42):
@@ -200,7 +200,7 @@ def _roof(tb, length, span, pitch, col, plaster, rr, ring_window=False, frame_co
     return rise
 
 
-def shop_sign(tb, x, y, icon):
+def shop_sign(tb, x, y, icon, light=True):
     """A hanging sign on an iron bracket: a round board with an icon in relief, no text."""
     tb.beam("stone", (x, y, 0.0), (x, y, 1.15), 0.06, 0.06, (0.16, 0.15, 0.15))
     tb.beam("stone", (x, y - 0.5, 0.05), (x, y - 0.04, 0.6), 0.04, 0.04, (0.16, 0.15, 0.15))
@@ -226,7 +226,8 @@ def shop_sign(tb, x, y, icon):
                     tb.poly("altar_metal", [(-0.16, 0.02, z), (-0.11, -0.22, z), (0.11, -0.22, z), (0.16, 0.02, z)], (1, 1, 1))
                     tb.ring("altar_metal", (0.2, -0.08, z), 0.09, 0.055, 0.02, 10, (1, 1, 1))
                     tb.box("glass_lit", (0.0, 0.16, z + 0.006), (0.05, 0.16, 0.01), skip="z")
-    tb.socket(f"socket_lamp_shop_{icon}", (x, y - 0.4, 0.9))
+    if light:  # one warm light per door: a house with a door lantern lights its sign with that
+        tb.socket(f"socket_lamp_shop_{icon}", (x, y - 0.4, 1.5))  # off the plaster, as the lantern
 
 
 def bench(tb, x, z, y, rot=0.0):
@@ -310,7 +311,7 @@ def house(tb, w, d, kind, seed, lamp_name=None, roof=None, plaster=None, shop=No
                         opens.append((cxw, 1.3))
                         _window(tb, cxw, 1.0, 1.0, 1.25, rr, shutter=shut, lit=rr.random() < 0.3, flowers=rr.random() < 0.5)
                     if shop:
-                        shop_sign(tb, -1.25, 3.05, shop)
+                        shop_sign(tb, -1.25, 3.05, shop, light=not ("lantern" in rc["extras"] and lamp_name))
                     if "lantern" in rc["extras"] and lamp_name:
                         _lantern(tb, door_x + (1.1 if door_x < 0 else -1.1), 2.75, lamp_name)
                 else:

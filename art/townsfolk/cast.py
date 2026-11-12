@@ -22,6 +22,12 @@ PALETTE = {
     "leather": (0.16, 0.085, 0.04), "leather_dark": (0.07, 0.04, 0.025), "leather_tan": (0.33, 0.19, 0.09),
     "amber": (0.80, 0.42, 0.05), "bronze": (0.35, 0.22, 0.09), "pearl": (0.70, 0.68, 0.66),
     "shell_white": (0.78, 0.74, 0.66), "wood": (0.20, 0.12, 0.06), "iron": (0.10, 0.10, 0.11),
+    # clan agents (C-001 swatches, linear)
+    "ivory": (0.66, 0.62, 0.49), "quartz": (0.80, 0.81, 0.79), "brass": (0.42, 0.30, 0.10), "soot": (0.034, 0.033, 0.037),
+    "ashwrap": (0.16, 0.145, 0.12), "charred": (0.033, 0.022, 0.014), "ember": (0.31, 0.085, 0.032),
+    "moss_c": (0.09, 0.15, 0.049), "linen_c": (0.56, 0.47, 0.29), "brown_c": (0.19, 0.125, 0.065), "copper": (0.36, 0.14, 0.05),
+    "coat": (0.36, 0.10, 0.037), "amber_c": (0.64, 0.35, 0.08), "leather_d": (0.10, 0.053, 0.027),
+    "ice": (0.64, 0.74, 0.78), "bluegrey": (0.27, 0.41, 0.51), "slate_c": (0.04, 0.056, 0.078), "silver": (0.56, 0.65, 0.70),
 }
 
 SKIN = {            # base tone (linear RGB), blush strength
@@ -251,3 +257,80 @@ CAST = {
 
 ORDER = ("shardkeeper", "scribe", "innkeeper", "baker", "sweeper", "lamplighter", "guard", "elder", "child_a", "child_b",
          "musician", "courier", "shrinekeeper")
+
+# ---------------------------------------------------------------- clan agents (C-001 refresh, owner 12.11)
+# Built with the townsfolk pipeline, exported as agent_<clan>.glb (the full agent clip contract, `agent=True`).
+AGENTS = {
+    "clan_sol": dict(
+        sheet="C-001_01", role="Salt, the liar (clan agent)", name="Salt", agent=True, clan="sol",
+        idea="Pale tiered robe with scalloped hems, a deep hood and a veil, milky quartz on the shoulders, a brass balance.",
+        height=1.74,
+        macros=dict(gender=0.0, age=0.5, muscle=0.35, weight=0.42, height=0.55, proportions=0.6, cupsize=0.45, firmness=0.5,
+                    race=race(0.0, 0.2, 0.8)),
+        detail={"eyes/l-eye-scale-incr": 0.2, "eyes/r-eye-scale-incr": 0.2},
+        skin="fair", hair=("sand", "bun_low"), brows=0.9,
+        costume=dict(base="robe", robe=("ivory", "brass"), hem=0.04, sleeves="wide", collar="wrap", under=("ivory",),
+                     underskirt=("ivory", 0.04), belt=("ivory", "brass"), shoes=("slippers", "leather_tan"),
+                     mantles=(("ivory", "brass", -0.02, "scallop"), ("ivory", "brass", 0.16, "scallop")),
+                     hat=("hood", "ivory", "brass"), veil_col=("ivory", "brass"),
+                     extras=("veil", "quartz_shoulders", "balance", "pouch")),
+        style=style(lean=-1, chin=-2, swing=0.6, sway=0.9, bounce=0.7, cloth=1.2, walk=1.05, cycle=34),
+    ),
+    "clan_pepel": dict(
+        sheet="C-001_02", role="Ash, the paranoid (clan agent)", name="Ash", agent=True, clan="pepel",
+        idea="Layered soot robe, low hood and mouth wrap, a collar of charred stakes and a stake shield on the forearm.",
+        height=1.78,
+        macros=dict(gender=0.0, age=0.5, muscle=0.5, weight=0.45, height=0.62, proportions=0.6, cupsize=0.4, firmness=0.5,
+                    race=race(0.1, 0.2, 0.7)),
+        detail={"eyebrows/eyebrows-angle-down": 0.3},
+        skin="olive", hair=("black", "bun_low"), brows=1.1,
+        costume=dict(base="robe", robe=("soot", "ember"), hem=0.04, sleeves="long", collar="wrap", under=("charred",),
+                     underskirt=("soot", 0.04), belt=("charred", "ember"), shoes=("boots", "leather_dark"),
+                     mantles=(("soot", "ember", 0.10, "plain"),),
+                     hat=("hood", "soot", "ember"), mouthwrap_col=("ashwrap", "ember"),
+                     extras=("mouthwrap", "stake_collar", "stake_shield")),
+        style=style(lean=3, hunch=2, protract=2, chin=-1, swing=0.7, sway=0.7, bounce=0.8, walk=1.15, cycle=30),
+    ),
+    "clan_moh": dict(
+        sheet="C-001_03", role="Moss, the honest (clan agent)", name="Moss", agent=True, clan="moh",
+        idea="Hood-down green cloak with broad leaves and small mushrooms, a linen robe, short brown hair, a little cauldron.",
+        height=1.68,
+        macros=dict(gender=0.0, age=0.42, muscle=0.35, weight=0.48, height=0.45, proportions=0.6, cupsize=0.5, firmness=0.5,
+                    race=race(0.0, 0.1, 0.9)),
+        detail={"mouth/mouth-angles-up": 0.5, "eyes/l-eye-scale-incr": 0.25, "eyes/r-eye-scale-incr": 0.25},
+        skin="warm", hair=("chestnut", "long_side"), brows=1.0,
+        costume=dict(base="robe", robe=("linen_c", "brown_c"), hem=0.05, sleeves="long", collar="wrap", under=("linen_c",),
+                     underskirt=("linen_c", 0.05), belt=("brown_c", "copper"), shoes=("boots", "leather"),
+                     mantles=(("moss_c", "moss_c", -0.12, "plain"),), cowl=("moss_c",),
+                     extras=("leaves_shoulders", "cauldron")),
+        style=style(lean=0, chin=-1, swing=1.0, sway=1.0, bounce=1.0, walk=1.2, cycle=30),
+    ),
+    "clan_yantar": dict(
+        sheet="C-001_04", role="Amber, the greedy (clan agent)", name="Amber", agent=True, clan="yantar",
+        idea="Terracotta long merchant coat with an ochre lining, a flat-brimmed hat, a brass-bound strongbox on the back, keys.",
+        height=1.76,
+        macros=dict(gender=1.0, age=0.5, muscle=0.45, weight=0.4, height=0.6, proportions=0.6, cupsize=0.5, firmness=0.5,
+                    race=race(0.15, 0.1, 0.75)),
+        detail={"mouth/mouth-angles-up": 0.2, "chin/chin-prominent-incr": 0.2},
+        skin="tan", hair=("dark_brown", "short_messy"), brows=1.0,
+        costume=dict(base="robe", robe=("coat", "amber_c"), hem=0.10, sleeves="long", collar="stand", under=("amber_c",),
+                     underskirt=("coat", 0.10), belt=("leather_d", "brass"), shoes=("boots", "leather_d"),
+                     hat=("felt", "coat", "amber_c"), extras=("strongbox", "keys", "pouch")),
+        style=style(lean=2, protract=1, chin=1, swing=1.1, sway=0.9, bounce=0.9, walk=1.3, cycle=28),
+    ),
+    "clan_iney": dict(
+        sheet="C-001_05", role="Frost, the scholar (clan agent)", name="Frost", agent=True, clan="iney",
+        idea="Pointed pale hood, an icicle-hemmed mantle, a blue-grey robe, a monocle, an armillary staff and a slate tablet.",
+        height=1.72,
+        macros=dict(gender=0.0, age=0.55, muscle=0.3, weight=0.4, height=0.5, proportions=0.6, cupsize=0.45, firmness=0.5,
+                    race=race(0.0, 0.35, 0.65)),
+        detail={"eyes/l-eye-scale-incr": 0.2, "eyes/r-eye-scale-incr": 0.2, "nose/nose-scale-vert-incr": 0.2},
+        skin="fair", hair=("white", "bun_low"), brows=0.8,
+        costume=dict(base="robe", robe=("bluegrey", "ice"), hem=0.04, sleeves="long", collar="wrap", under=("ice",),
+                     underskirt=("bluegrey", 0.04), belt=("slate_c", "silver"), shoes=("slippers", "slate_c"),
+                     mantles=(("ice", "silver", 0.18, "icicle"),), hat=("hood_point", "ice", "silver"),
+                     extras=("monocle", "armillary_staff", "slate_tablet")),
+        style=style(lean=-1, chin=-2, swing=0.6, sway=0.8, bounce=0.6, cloth=1.1, walk=1.05, cycle=34),
+    ),
+}
+CAST.update(AGENTS)
