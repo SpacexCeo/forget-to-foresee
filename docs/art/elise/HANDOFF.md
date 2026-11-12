@@ -328,8 +328,8 @@ What is different from v2, by design:
 - The whole body is never decimated in one pass (that is how the arms were lost): hands, skull under the hair and the
   rest are reduced separately, and the counts are checked.
 
-Numbers (12.11, commit of the swap): `agent_elise.glb` 44 292 triangles (22 242 base incl. 192 of the blink patches,
-22 050 hull), 339 908 bytes; `agent_elise_m.glb` 23 960 triangles, 210 348 bytes (1024 atlas); 90 bones, the names
+Numbers (12.11): `agent_elise.glb` 44 292 triangles (22 242 base incl. 192 of the blink patches,
+22 050 hull), 338 140 bytes; `agent_elise_m.glb` 23 876 triangles, 209 132 bytes (1024 atlas); 90 bones, the names
 and rest pose of the core bones unchanged, the skirt chains re-seated on the new gown; 3 morph targets (`blink`,
 `blink_L`, `blink_R`: drawn closed eyes on sheets that rest 6 mm behind the skin) and the model's own `idle` with a
 blink track; `anim/elise.glb` 829 088 bytes, 19 clips. Every clip passes the leg-vs-gown check with the gown baked
@@ -342,6 +342,14 @@ wants skills instant; Iris's casts were moved to 0.14 s too) and `strike1..3` wi
 In the game (GPU server, real town, 60 fps): `docs/art/elise/v3/elise_v3_before_after.mp4` (v2 left, v3 right:
 idle, walk, run, strikes, cast from the front, the side and behind, then a close-up with a wave) and
 `e_ingame_frames.jpg`; no page errors. `npm test` 876 pass; the built page loads (`smoke-built.mjs`).
+
+Fixed after the first film (seen on the card render): the gown over the hips followed the thighs and tore open at
+the right hip in the idle; it now rides the pelvis only, and her right leg is removed up to the hip. The card
+`assets/cards/elise_model.webp` / `assets/nft/elise_model.webp` stays the v2 render (owner 12.11: "keep the old card").
+
+Second fix from the frame-by-frame pass: gown points at the armholes whose whole weight was on dropped arm bones
+were left unbound and stood out as a black wedge at her side (worst in the wave); they now fall back to the chest,
+and the bodice no longer follows the shoulder bones (`v3/f_wave_check.jpg`).
 
 Left for later: talk and expression morphs (only the blink is in); no folds on the bodice; the hair has no drawn
 highlight band; the body mesh has 3 open edges at the patched face pockets (hidden under the fringe and the lips).
