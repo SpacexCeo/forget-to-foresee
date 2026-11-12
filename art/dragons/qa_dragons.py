@@ -10,7 +10,7 @@ from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 OUT, SRCS = argv[0], argv[1:]
-POSES = [("glide", 10, "front"), ("fly", 3, "front"), ("idle", 22, "side"), ("flip", 9, "side")]
+POSES = [("glide", 10, "front"), ("fly", 3, "q"), ("idle", 22, "side"), ("glide", 0, "top"), ("flip", 14, "side"), ("perch", 20, "q"), ("cheer", 12, "front"), ("land", 12, "side")]
 tiles = []
 for src in SRCS:
     for clip, frame, view in POSES:
@@ -43,9 +43,9 @@ for src in SRCS:
         sc.collection.objects.link(sun)
         cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
         sc.collection.objects.link(cam)
-        cam.location = (0, -2.2, 0.35) if view == "front" else (2.0, -0.9, 0.5)
+        cam.location = {"front": (0, -2.0, 0.3), "side": (2.0, -0.25, 0.25), "q": (1.3, -1.6, 0.6), "top": (0.0, 0.05, 2.4)}[view]
         cam.rotation_euler = (Vector((0, 0, 0.03)) - cam.location).to_track_quat("-Z", "Y").to_euler()
-        cam.data.lens = 50
+        cam.data.lens = 85
         sc.camera = cam
         path = OUT + f".{len(tiles)}.png"
         sc.render.filepath = path
