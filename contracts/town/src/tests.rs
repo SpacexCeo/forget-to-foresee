@@ -342,13 +342,30 @@ fn long_random_run_conserves_everything() {
     conserved(&t);
 }
 
+#[test]
+fn investing_in_a_stall_reopens_it_and_shares_its_fees() {
+    let mut t = town();
+    ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(200 * S), "w".into());
+    ctx("p0.testnet", 0); t.invest_stall(acc("t1.testnet"), U(100 * S));
+    assert_eq!(bal(&t, "t1.testnet").silk, 1_100 * S); // working capital for the stall
+    let tre = t.treasury_silk;
+    for _ in 0..10 { ctx("t0.testnet", 0); t.trade(acc("t1.testnet"), U(10 * S), "bread".into()); } // 100 silk of t1's sales -> 0.12 fee
+    assert_eq!(t.treasury_silk - tre, 60_000); // half of the fee to the treasury
+    assert_eq!(t.stall_position(acc("t1.testnet"), acc("p0.testnet")).unwrap().1 .0, 60_000); // half to the investor
+    ctx("t1.testnet", 0); t.trade(acc("t0.testnet"), U(10 * S), "x".into()); // t1 buying is not t1's stall selling
+    ctx("p0.testnet", 1); assert_eq!(t.claim_stall(acc("t1.testnet")).0, 60_000);
+    conserved(&t);
+}
+#[test] #[should_panic(expected = "ERR_NO_STALL")]
+fn only_trader_stalls_take_investment() { let mut t = town(); ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(10 * S), "w".into()); ctx("p0.testnet", 0); t.invest_stall(acc("p1.testnet"), U(S)); }
+
 /// contracts/town/tests/vectors.json (written by tools/town/vectors.mjs from the JS rules) must match rules.rs.
 #[test]
 fn rules_match_the_shared_vectors() {
     let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(include_str!("../tests/vectors.json")).unwrap();
     let n = |x: &near_sdk::serde_json::Value| -> u128 { x.as_str().unwrap().parse().unwrap() };
     let p = Params::default();
-    for c in v["fees"].as_array().unwrap() { assert_eq!(trade_fee(&p, n(&c["silk"])), n(&c["fee"])); }
+    for c in v["fees"].as_array().unwrap() { assert_eq!(trade_fee(&p, n(&c["silk"])), n(&c["fee"])); assert_eq!(stall_share(&p, n(&c["fee"])), n(&c["stall"])); }
     for c in v["caps"].as_array().unwrap() { assert_eq!(stake_cap(&p, n(&c["tvl"])), n(&c["cap"])); }
     for c in v["sweeps"].as_array().unwrap() {
         let s = split_sweep(&p, n(&c["silk"]));

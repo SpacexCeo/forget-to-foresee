@@ -3,13 +3,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { DEFAULT_PARAMS as P, tradeFee, stakeCap, splitSweep, splitEntry, seasonMintCap, planDistribution, pendingReward, fmt, UNIT } from '../../src/game/town-rules.js';
+import { DEFAULT_PARAMS as P, tradeFee, stallShare, stakeCap, splitSweep, splitEntry, seasonMintCap, planDistribution, pendingReward, fmt, UNIT } from '../../src/game/town-rules.js';
 
 const V = JSON.parse(readFileSync(new URL('../../../contracts/town/tests/vectors.json', import.meta.url), 'utf8'));
 const s = (v) => v.toString();
 
 test('town rules: every shared vector matches (the contract checks the same file)', () => {
-  for (const c of V.fees) assert.equal(s(tradeFee(P, c.silk)), c.fee);
+  for (const c of V.fees) { assert.equal(s(tradeFee(P, c.silk)), c.fee); assert.equal(s(stallShare(P, c.fee)), c.stall); }
   for (const c of V.caps) assert.equal(s(stakeCap(P, c.tvl)), c.cap);
   for (const c of V.sweeps) { const r = splitSweep(P, c.silk); assert.deepEqual([r.stakers, r.purse, r.reserve, r.burn].map(s), [c.stakers, c.purse, c.reserve, c.burn]); }
   for (const c of V.entries) { const r = splitEntry(P, c.fee); assert.deepEqual([r.burn, r.works, r.purse].map(s), [c.burn, c.works, c.purse]); }

@@ -3,11 +3,11 @@
 // must produce the same numbers (rules.rs), and game/tests/client/town-rules.test.mjs checks the file is current.
 //   node tools/town/vectors.mjs [--check]
 import { readFileSync, writeFileSync } from 'node:fs';
-import { DEFAULT_PARAMS as P, tradeFee, stakeCap, splitSweep, splitEntry, seasonMintCap, planDistribution, pendingReward, UNIT } from '../../game/src/game/town-rules.js';
+import { DEFAULT_PARAMS as P, tradeFee, stallShare, stakeCap, splitSweep, splitEntry, seasonMintCap, planDistribution, pendingReward, UNIT } from '../../game/src/game/town-rules.js';
 
 const s = (v) => v.toString();
 const U = UNIT;
-const fees = [U / 2n, 2n * U, 1_234_567n, 999n * U].map((v) => ({ silk: s(v), fee: s(tradeFee(P, v)) }));
+const fees = [U / 2n, 2n * U, 1_234_567n, 999n * U].map((v) => ({ silk: s(v), fee: s(tradeFee(P, v)), stall: s(stallShare(P, tradeFee(P, v))) }));
 const caps = [0n, 16_000n * U, 40_000n * U, 159_999n * U, 1_000_000n * U].map((v) => ({ tvl: s(v), cap: s(stakeCap(P, v)) }));
 const sweeps = [0n, 1n, 41n * U + 3n, 999_999n].map((v) => { const r = splitSweep(P, v); return { silk: s(v), stakers: s(r.stakers), purse: s(r.purse), reserve: s(r.reserve), burn: s(r.burn) }; });
 const entries = [40n * U, 7n, 33n * U + 1n].map((v) => { const r = splitEntry(P, v); return { fee: s(v), burn: s(r.burn), works: s(r.works), purse: s(r.purse) }; });
