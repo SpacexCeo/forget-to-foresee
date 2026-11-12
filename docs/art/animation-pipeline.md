@@ -180,3 +180,14 @@ the registration, the wink), every townsperson and a phone run through the keybo
 renderer (works on software WebGL; results in `docs/art/qa/anim/chars-v2/ingame/`). `ingame-gpu.mjs` is the real-time pass on
 a GPU browser: foot speeds in the game for Iris and the walkers, bursts of side stills for start, stop and turns, the
 wink and the registration on the wall clock, look-at angles and the frame cost (`.../ingame-gpu/`).
+
+## Final in-game pass (12.11, both heroines, current main)
+
+`art/anim/iris_film.mjs <out> final [--hero elise]` plays everything in one take (idle, walk, run, stop, turns, the
+boxing combo, the held super, both casts, a cast out of a run, the dash, a strike out of a run) and reports numbers:
+one-frame jumps of the head, hands and feet, the planted foot's slide, cast start to release, strike start to impact
+and impact to the first damage. Result: no page errors; casts release 0.10 s after the click; no visible pops (the
+reported jumps are the lunge, the dash and the turn to the target, checked frame by frame); Iris's planted foot holds
+(median slide 0 walking, 0.23 m/s running). One defect found and fixed: the blow (damage, number, spark) fired on
+the press, 0.08 to 0.13 s before the fist arrived; `play/mobs.js` now queues it for the clip's impact time
+(`irisMove` answers with it), so impact to damage is 0. Film: `docs/art/iris_anim/heroines_final_pass_before_after.mp4`.
