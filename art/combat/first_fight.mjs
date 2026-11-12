@@ -22,7 +22,7 @@ await page.evaluate(() => { window.__kills = []; window.addEventListener('ftf:mo
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.waitForTimeout(1500);
 // just inside the lower gate, facing out
-await page.evaluate(() => { const f = window.__ftf; f.player.teleport([0, 1203, 29], 0); });
+await page.evaluate(() => { const f = window.__ftf; f.player.teleport([0, 1203, 29], 0); f.rig.yaw += Math.PI; });  // the camera behind her, looking out of town
 await page.waitForTimeout(2500);
 
 const L = (x, z) => [x, 1200, z];          // town-local -> world (the town origin is [0, 1200, 0])
