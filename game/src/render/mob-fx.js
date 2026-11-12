@@ -67,7 +67,7 @@ export class MobFx {
    * @param {{edge?: number, recoil?: number, rim?: number}} o edge glow colour of the dissolve (and of the silhouette rim);
    *   recoil distance of a hit (m); rim strength (a thin glow on the silhouette so small monsters read from the camera)
    */
-  constructor(model, { edge = 0xffb060, recoil = 0.06, rim = 0.3 } = {}) {
+  constructor(model, { edge = 0xffb060, recoil = 0.1, rim = 0.3 } = {}) {
     this.model = model; this.recoil = recoil;
     this.u = { dissolve: { value: 0 }, edge: { value: new THREE.Color(edge) }, flash: { value: 0 }, rim: { value: rim }, span: { value: new THREE.Vector2(0, 1) } };
     const box = new THREE.Box3().setFromObject(model);
@@ -100,6 +100,11 @@ export class MobFx {
     const mat = new THREE.PointsMaterial({ color: this.u.edge.value, size: 0.07 + h * 0.02, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
     this.embers = new THREE.Points(geo, mat); this.embers.frustumCulled = false; this.embers.userData.vel = vel;
     this.model.add(this.embers);
+    // the death puff: a soft ring of dust in its colour that bursts out along the ground in half a second
+    const pg = new THREE.RingGeometry(0.55, 1, 36); pg.rotateX(-Math.PI / 2);
+    this.puff = new THREE.Mesh(pg, new THREE.MeshBasicMaterial({ color: this.u.edge.value, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.puff.position.y = y0 + 0.05; this.puff.scale.setScalar(r); this.puff.renderOrder = 3; this.puff.userData.r = r;
+    this.model.add(this.puff);
   }
 
   update(dt) {
@@ -118,6 +123,11 @@ export class MobFx {
       const k = Math.min(1, this.dieT / DISSOLVE_SECONDS);
       this.u.dissolve.value = k;
       this.inner.position.y = this.innerBase.y - SINK * k * k;
+      if (this.puff) {
+        const pu = Math.min(1, this.dieT / 0.5), e = 1 - (1 - pu) * (1 - pu);
+        this.puff.scale.setScalar(this.puff.userData.r * (1 + 2.2 * e)); this.puff.material.opacity = 0.7 * (1 - pu);
+        this.puff.visible = pu < 1;
+      }
       if (this.embers) {
         const p = this.embers.geometry.attributes.position, v = this.embers.userData.vel;
         for (let i = 0; i < p.array.length; i++) p.array[i] += v[i] * dt;
@@ -129,6 +139,7 @@ export class MobFx {
 
   /** Frees the embers (the cloned materials go with the model when the combat code drops it). */
   dispose() {
+    if (this.puff) { this.puff.parent?.remove(this.puff); this.puff.geometry.dispose(); this.puff.material.dispose(); this.puff = null; }
     if (!this.embers) return;
     this.embers.parent?.remove(this.embers); this.embers.geometry.dispose(); this.embers.material.dispose(); this.embers = null;
   }
