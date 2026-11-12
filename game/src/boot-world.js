@@ -211,7 +211,7 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -1211,7 +1211,8 @@ window.__ftf = {
   scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
-  get iris() { return irisAvatar; }, irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },
+  get iris() { return irisAvatar; }, get storyProps() { return { portal: townPortal, board: townBoard }; },   // QA: the Gate-Loom and the Shell monument
+  irisReact: (clip) => { if (irisAvatar) irisAvatar.react(clip, clock.elapsedTime); },
   // The town on the ground (docs/town.md), null on the paths that skip it. register() is the code path of pressing E at
   // the altar (it resolves false when the prompt is not offered); walkRoute() steers Iris along the jury route (QA).
   town: town ? {
