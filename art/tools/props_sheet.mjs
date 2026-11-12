@@ -31,8 +31,8 @@ const shoot = async (name, yaw, dist, h, look) => {
   }, [name, yaw, dist, h, look]);
   if (!ok) return; await page.waitForTimeout(1300); cells.push((await page.screenshot({ type: 'jpeg', quality: 90 })).toString('base64'));
 };
-await shoot('story_portal', 0, 6.5, 1.5, 'dormant'); await shoot('story_portal', 0.6, 6.5, 1.5, 'dormant');
-await shoot('story_portal', 0, 6.5, 1.5, 'ready'); await shoot('story_portal', 0, 6.5, 1.5, 'spent');
+await shoot('story_portal', 0.6, 6.0, 1.5, 'dormant'); await shoot('story_portal', 0.35, 4.2, 1.6, 'dormant');
+await shoot('story_portal', 0.6, 6.0, 1.5, 'ready'); await shoot('story_portal', 0.6, 6.0, 1.5, 'spent');
 await shoot('story_shell_board', 0, 4.2, 1.0); await shoot('story_shell_board', 0.8, 4.2, 1.0); await shoot('story_shell_board', -0.9, 3.0, 1.1);
 const sheet = await page.evaluate(async (cells) => {
   const c = document.createElement('canvas'); c.width = 400 * cells.length; c.height = 300; const g = c.getContext('2d');
