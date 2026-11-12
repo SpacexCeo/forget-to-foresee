@@ -19,19 +19,22 @@ export const townFee = (silk) => Math.floor((silk * FEE_BPS) / 10_000);
 export const TOWN_POLICY = Object.freeze({
   init: (keys) => ({ balances: Object.fromEntries(keys.map((k) => [k, START_BALANCE * MICRO])), prices: Object.fromEntries(ITEMS.map((i) => [i.id, i.base])) }),
   /** Buyer `key` picks a good made by someone else (staples often, dear goods rarely), at a mean-reverting price. */
-  pick(st, key, rand, keys) {
+  pick(st, key, rand, keys, strat = null) {
     const balance = st.balances[key] ?? 0;
     const options = ITEMS.filter((i) => i.maker !== key && keys.includes(i.maker));
     if (!options.length || balance < MIN_TRADE) return null;
     // quiet stalls draw buyers: a seller with less silk than the start is picked more often (keeps the town solvent)
     const S0 = START_BALANCE * MICRO;
-    const w = options.map((i) => ((STAPLES[i.id] || 1) / Math.sqrt(i.base)) * Math.max(0.2, Math.min(5, (S0 / Math.max(1, st.balances[i.maker] ?? S0)) ** 1.5)));
+    // a clan's strategy (lib/clan-strategy.js, bounded) only reweights the same choice: staples or dear goods, a favoured stall
+    const style = (i) => (!strat ? 1 : strat.buy === 'staples' ? (STAPLES[i.id] ? 1.8 : 0.7) : strat.buy === 'dear' ? Math.sqrt(i.base) / 2 : 1) * (strat && strat.favour === i.maker ? 2.5 : 1);
+    const w = options.map((i) => ((STAPLES[i.id] || 1) / Math.sqrt(i.base)) * Math.max(0.2, Math.min(5, (S0 / Math.max(1, st.balances[i.maker] ?? S0)) ** 1.5)) * style(i));
     let r = rand() * w.reduce((a, b) => a + b, 0), k = 0;
     while (k < options.length - 1 && r >= w[k]) { r -= w[k]; k++; }
     const item = options[k];
     const price = nextPrice({ prices: st.prices, balances: Object.fromEntries(Object.entries(st.balances).map(([a, v]) => [a, v / MICRO])) }, item, item.maker, rand);
     // a richer buyer buys more at once, a poorer one less: silk flows back toward the middle
-    const qty = 1 + Math.floor(rand() * 3.5 * Math.min(3, balance / (START_BALANCE * MICRO)));
+    const risk = strat ? Math.max(0.5, Math.min(1.5, Number(strat.risk) || 1)) : 1;
+    const qty = 1 + Math.floor(rand() * 3.5 * risk * Math.min(3, balance / (START_BALANCE * MICRO)));
     const silk = Math.max(MIN_TRADE, qty * price * PRICE_UNIT);
     if (silk > balance) return null;
     return { buyer: key, seller: item.maker, item: item.id, qty, price, silk };

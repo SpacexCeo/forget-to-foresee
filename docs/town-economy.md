@@ -66,6 +66,44 @@ How to read it:
 - To bring the rate near the spec's ~0.1 %/day: lower `rate_ceiling_bps` (40 → 15) or the stakers' share of the
   sweep. That is a parameter choice for the owner (`set_params`).
 
+## Settling a season (coordinator, dry run)
+
+`node tools/town/settle.mjs --season <id> --results results.json` reads the season and the purse from the contract.
+`results.json` is the season's results, best first, or with scores. The tool plans the payouts with `planPayouts`
+(`town-rules.js`, tested):
+
+- 30 % of the pot is split equally among all entrants.
+- 70 % goes over the top 60 % with weight k^-0.6.
+- Each account gets at most 4 % of the pot, with one pass that redistributes the capped excess.
+
+It prints the payout-list hash and the `settle_season` batches (the last one closes the season) for the lead to send.
+It never signs. With few entrants the 4 % cap leaves most of the pot in the purse, and that silk carries over to the
+next season.
+
+## Clan strategies (LLM layer with a scripted fallback)
+
+`relayer/lib/clan-strategy.js`, owner's request. Once an hour (`FTF_STRATEGY_MINUTES`, default 60; `FTF_STRATEGY=0`
+turns it off), each of the 7 clan agents sends its own state to a model on NEAR AI Cloud through the relayer's TEE
+path (`lib/tee.js`). The state is its silk, its rank among the traders, its goods' prices and the last trades. The
+model answers with three bounded numbers:
+
+- `risk` 0.5–1.5, which scales how much the clan buys per trade;
+- `buy`: staples, dear goods or balanced;
+- `favour`: a stall to buy from more often.
+
+The rules engine (`TOWN_POLICY`) still makes every move. The parameters only reweight its normal choice, so trades
+stay ordinary `trade` calls.
+
+- **Fallback**: with no key, a 402 (the account has no credits today), a timeout or unparseable JSON, the clan uses
+  its scripted strategy: a richer clan buys bolder, a poorer one buys staples.
+- **Labels, per decision**: "LLM-chosen strategy (model via NEAR AI Cloud), moves by the rules engine" or "Scripted
+  strategy (rules engine)", plus the reason for the fallback.
+- **Audit**: every decision goes to `relayer/data/clan-decisions/market-<day>.jsonl`. The record holds the state,
+  the prompt hash, the model, the chat id, the exact response, the request/response hashes and the TEE signature
+  check. `/api/market/stats` → `strategy` gives the latest decision per clan and today's LLM vs scripted counts, and
+  the Town Pulse page shows them.
+- **Cost**: 7 calls an hour, about 170 short calls a day, inside the TEE path's daily cap (`FTF_TEE_DAILY_CAP`).
+
 ## Cost
 
 Measured host gas per `trade` is 0.61 Tgas (unit VM). Adding the protocol fees (0.31 + 0.89 Tgas) and the contract

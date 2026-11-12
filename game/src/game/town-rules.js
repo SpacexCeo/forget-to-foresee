@@ -58,3 +58,27 @@ export function fmt(micro, digits = 2) {
   const whole = a / UNIT, frac = (a % UNIT).toString().padStart(6, '0').slice(0, digits).replace(/0+$/, '');
   return (neg ? '-' : '') + whole.toString() + (frac ? '.' + frac : '');
 }
+
+/**
+ * Tournament payouts in silk (spec §3 "Purse payout", one currency): 30 % of the pot split equally among all
+ * entrants, 70 % over the top 60 % by rank with weight k^-0.6, each account capped at payout_cap of the pot, one
+ * redistribution pass of the capped excess over the uncapped accounts. Deterministic: `ranked` is the final order
+ * (best first). Returns [{account, amount}] with every amount ≤ cap and the total ≤ pot.
+ */
+export function planPayouts(p, pot, ranked) {
+  pot = b(pot); const n = ranked.length;
+  if (!n || pot === 0n) return [];
+  const cap = (pot * b(p.payout_cap_bps)) / BPS;
+  const floorEach = (pot * 30n) / 100n / b(n);
+  const paidN = Math.max(1, Math.ceil(n * 0.6));
+  const W = 1_000_000n;
+  const w = Array.from({ length: paidN }, (_, k) => BigInt(Math.round(Number(W) * Math.pow(k + 1, -0.6))));
+  const wSum = w.reduce((a, x) => a + x, 0n), rankPot = (pot * 70n) / 100n;
+  let amounts = ranked.map((_, k) => floorEach + (k < paidN ? (rankPot * w[k]) / wSum : 0n));
+  let excess = 0n;
+  amounts = amounts.map((a) => { if (a > cap) { excess += a - cap; return cap; } return a; });
+  const open = amounts.map((a, k) => (a < cap ? k : -1)).filter((k) => k >= 0);
+  const base = open.reduce((s, k) => s + amounts[k], 0n);
+  if (excess > 0n && base > 0n) for (const k of open) amounts[k] = min(cap, amounts[k] + (excess * amounts[k]) / base);
+  return ranked.map((account, k) => ({ account, amount: amounts[k] })).filter((x) => x.amount > 0n);
+}
