@@ -48,7 +48,7 @@ contract.)
 > What would you forget to see the future?
 > @NearLegion @NearBuilders
 
-(276 characters. The browser plays its own local room; the HTTP API (`server/`, run locally) runs the same room module
+(278 characters. The browser plays its own local room; the HTTP API (`server/`, run locally) runs the same room module
 for agents. "1,000+ tests" = the sum of docs/STATS.md (1,003 on 12.11: game, API, relayer and eight contracts); regenerate with
 `node scripts/stats.mjs --write` and recount before posting.)
 
