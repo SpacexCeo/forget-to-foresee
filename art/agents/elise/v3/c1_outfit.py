@@ -195,7 +195,7 @@ for v in nv:
 bm.to_mesh(gown.data); bm.free(); outward(gown)
 gm = gown.data; gco = np.array([v.co[:] for v in gm.vertices]); gcd = np.empty(len(gm.vertices) * 3); gm.attributes['grid'].data.foreach_get('vector', gcd); gcd = gcd.reshape(-1, 3)
 gcol = np.clip(np.round(gcd[:, 0]).astype(int), 0, NU); grow = np.clip(np.round(gcd[:, 1]).astype(int), 0, NR)
-GWs = Z.grid_weights(); Wg = body_w(gco, drop=('upperarm', 'forearm', 'hand', 'thumb', 'index', 'fingers', 'shin', 'foot', 'toe'))
+GWs = Z.grid_weights(); Wg = body_w(gco, drop=('shoulder', 'upperarm', 'forearm', 'hand', 'thumb', 'index', 'fingers', 'shin', 'foot', 'toe'))
 sk = grow >= NB_; js = np.clip(grow - NB_, 0, NV); up = ramp(gco[:, 2], 0.825, 0.875)
 for sd in 'LR': Wg['pelvis'] = Wg['pelvis'] + Wg['thigh_' + sd]; Wg['thigh_' + sd] = Wg['thigh_' + sd] * 0      # the gown over the hips rides the pelvis only: following a thigh tore it open at the hip when the leg moved
 for n in list(Wg): Wg[n] = np.where(sk, 0.0, Wg[n])
