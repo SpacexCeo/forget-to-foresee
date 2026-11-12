@@ -8,11 +8,28 @@ from .quat import qinv, qmul, qnorm, qrot, swing
 
 Y = np.array([0.0, 1.0, 0.0])
 
-# chain prefix: (natural frequency rad/s, damping ratio, air coupling, gravity sag gain)
+# chain prefix: (natural frequency rad/s, damping ratio, air coupling, gravity sag gain[, share of the swing kept])
 PARAMS = {
     'hair': (16.0, 0.55, 0.05, 0.0), 'tail': (9.5, 0.32, 0.10, 0.0), 'scarf': (8.0, 0.35, 0.16, 0.0),
     'cloak': (7.0, 0.5, 0.14, 0.0), 'skirt': (9.0, 0.5, 0.10, 0.0), 'hood': (14.0, 0.6, 0.03, 0.0), 'default': (10.0, 0.5, 0.08, 0.0),
 }
+
+
+OVERRIDE = {}      # chain prefix -> params of the character being built (clips.json: characters.<id>.chain_params)
+LAG = {}           # chain name -> the largest angle (degrees) a bone trailed its held direction in the last simulate()
+
+
+def use_character(char_spec):
+    """Per-character chain params: a firm bun must not swing like a loose ponytail."""
+    OVERRIDE.clear()
+    OVERRIDE.update({k: tuple(v) for k, v in (char_spec or {}).get('chain_params', {}).items()})
+
+
+def params_for(name):
+    for key in (re.sub(r'_[A-Z]$', '', name), name.split('_')[0]):
+        if key in OVERRIDE:
+            return OVERRIDE[key]
+    return PARAMS.get(re.sub(r'_[A-Z]$', '', name), PARAMS.get(name.split('_')[0], PARAMS['default']))
 
 
 def chain_bones(rig):
@@ -34,7 +51,9 @@ def simulate(rig, local, pelvis, fps=30, loop=True, air_speed=0.0, sub=4, warm=3
     dt = 1.0 / (fps * sub)
     air = np.array([0.0, 0.0, -air_speed])
     for name, bones in chain_bones(rig):
-        om, zeta, air_k, _ = PARAMS.get(re.sub(r'_[A-Z]$', '', name), PARAMS.get(name.split('_')[0], PARAMS['default']))
+        prm = params_for(name); om, zeta, air_k = prm[0], prm[1], prm[2]
+        keep = prm[4] if len(prm) > 4 else 1.0      # the share of the swing that is kept (a firm bun: well under 1)
+        lag = 0.0
         om *= scale
         par = rig.parent[bones[0]]
         # tail length of each bone: distance to the next bone's head, the last one reuses the previous length
@@ -74,10 +93,17 @@ def simulate(rig, local, pelvis, fps=30, loop=True, air_speed=0.0, sub=4, warm=3
                         r_w = qnorm(qmul(s, r_t))
                         if st == sub - 1 and ps == passes - 1:
                             res[f, k] = qmul(qinv(r), r_w)
+                            c_ = float(np.dot(qrot(r_t, Y), (p[k] - head) / lens[k]))
+                            lag = max(lag, float(np.degrees(np.arccos(np.clip(c_, -1.0, 1.0)))))
                         # the next bone hangs from this one's simulated transform; its rest_t is relative to this bone's head
                         r, h = r_w, head
         for k, b in enumerate(bones):
-            out[:, b] = qnorm(res[:, k])
+            q_ = qnorm(res[:, k])
+            if keep < 1.0:
+                h_ = np.repeat(rig.rest_r[b][None], F, 0); h_ = h_ * np.sign(np.sum(h_ * q_, 1, keepdims=True) + 1e-12)
+                q_ = qnorm(h_ * (1 - keep) + q_ * keep)
+            out[:, b] = q_
+        LAG[name] = lag * keep
     return out
 
 
