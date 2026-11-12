@@ -15,6 +15,18 @@ Games that advertise "AI agents" and "on-chain economies" often hide two lies: t
 
 Six clans read round signs of four slots (Place, Action, Power, Delay), stake silk on where a Gift will land, trade, trust, betray, and must assemble one message before trial 13. You guide Iris; the other five clans are computer-run agents. To see the future early she can **forget a memory forever**; the forgotten memory is auctioned as a **shard** and, on the judge path, is a NEP-171 NFT bound to the sealed season.
 
+## The game loop
+
+Only what runs today, or behind the flag named in brackets.
+
+| Every | The player |
+|---|---|
+| **30 seconds** | Walks the hill town, talks to a townsperson (**E**), hires one as an agent; outside the walls fights the monster packs (strike, dash, the **Q** / **V** casts) for XP and dropped chests. In a season: reads a sign, anchors a guess at a Shell pad, ends the trial (**T**). [`?story=1`] Each kill also counts toward the active citizen quest and earns town silk. |
+| **5 minutes** | Collects a hired agent's result, spins the wheel by the Inn, plays a Foresight Exchange drill (practice silk, no prizes), plays a few trials and decides whether to forget a memory for a vision. [`?story=1`] Turns in a citizen quest (the guard's ten stone spiders, the lamplighter's spare part, the crown on the lookout, the repeatable bounty); the objective line always shows one next goal. |
+| **Session** | Plays one 17-trial season at the Tournament altar, checks the revealed signs against the root committed on NEAR testnet, and on the judge path sees the forgotten memory as a NEP-171 shard. [`?story=1`] The Expedition: gather 10,000 town silk (about 1.5 to 2 hours by the pacing test), pay it at the Gate-Loom beside the arrival point, and the Loom sends Iris onward to the archipelago, not home; the Shell monument shows the board (a local preview until a snapshot is published, [docs/leaderboard.md](docs/leaderboard.md)). |
+
+Not in the loop yet: the town market and pledges to the town works (built, not deployed; see the table below), the shared town (built, dormant), the weekly tournament card (a labelled simulation). One currency: silk, in-game, testnet, no value outside the game.
+
 <a id="no-gpu"></a>
 ## Verify in 60 seconds (no GPU, no browser)
 

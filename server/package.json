@@ -9,6 +9,6 @@
   },
   "scripts": {
     "start": "node src/main.js",
-    "test": "node --test tests/room.test.mjs tests/http.test.mjs tests/security.test.mjs tests/equivalence.test.mjs tests/demo.test.mjs tests/world.test.mjs tests/exchange.test.mjs"
+    "test": "node --test tests/room.test.mjs tests/http.test.mjs tests/security.test.mjs tests/equivalence.test.mjs tests/demo.test.mjs tests/world.test.mjs tests/exchange.test.mjs tests/quests.test.mjs"
   }
 }
