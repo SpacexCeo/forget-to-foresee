@@ -1197,6 +1197,7 @@ export default {
   'chest.preview': "Anteprima — non on-chain",
   'chest.previewButton': "Apertura scrigno (anteprima)",
   'chest.err.no_key': "In questo browser manca la tua chiave del Giorno 1.",
+  'chest.err.soon': "Gli scrigni si apriranno quando il seme casuale della stagione sarà fissato su NEAR testnet.",
   'chest.title': "Apri uno scrigno",
   'chest.opening.common': "Apertura di uno scrigno consunto",
   'chest.opening.rare': "Apertura di uno scrigno di legno di marea",

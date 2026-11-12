@@ -1198,6 +1198,7 @@ export default {
   'chest.preview': "Preview — not on chain",
   'chest.previewButton': "Chest reveal (preview)",
   'chest.err.no_key': "Your Day 1 key is missing in this browser.",
+  'chest.err.soon': "Chest openings start once the season's random seed is fixed on NEAR testnet.",
   'chest.title': "Open a chest",
   'chest.opening.common': "Opening a weathered chest",
   'chest.opening.rare': "Opening a tidewood chest",
