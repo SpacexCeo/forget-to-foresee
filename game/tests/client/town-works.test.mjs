@@ -96,3 +96,63 @@ test('works copy: five locales, translated, the agreed words only', () => {
   assert.doesNotMatch(en, /\b(invest\w*|APY|APR|profit|dividend|returns?|yield|interest)\b/i);
   assert.match(PLAY_MESSAGES.en['works.rate'], /variable, can be zero/);
 });
+
+const tick = () => new Promise((r) => setTimeout(r, 0));
+const dom = () => { const { doc } = installDom(); doc.getElementById = doc.getElementById || (() => null); doc.addEventListener = doc.addEventListener || (() => {}); doc.removeEventListener = doc.removeEventListener || (() => {}); return doc; };
+
+test('stall panel: "Pledge to this stall" shows open/closed and the share, pledges via invest_stall to the quoted stall', async () => {
+  const doc = dom();
+  const { createStallPanel } = await import('../../src/ui/stall-panel.js');
+  const t = (k, a) => createPlayI18n('en').t(k, a);
+  const quote = async (side, item, qty) => ({ ok: true, side, item, qty, silk: '2000000', stall: 'stall-guard.ftf-town.testnet', town: 'ftf-town.testnet', items: 'items.testnet', reference: `buy:${item}:${qty}`, dryRun: false });
+  const client = { quote, guest: () => ({ accountId: 'ann.testnet' }), trade: async () => ({ state: 'error' }) };
+  const calls = [];
+  let st = { ok: true, exists: true, open: false, invested: '40000000', mine: '10000000', share: 25, claimable: '1500000', reopenLine: '50000000' };
+  const town = { guest: () => ({ accountId: 'ann.testnet' }), stall: async (tr) => { calls.push(['stall', tr]); return st; }, act: async (a, args) => { calls.push([a, args]); return { ok: true, hash: null }; } };
+  const p = createStallPanel({ t, client, town, doc });
+  p.open('guard');
+  for (let i = 0; i < 6; i++) await tick();
+  const back = doc.querySelector('.sp-back');
+  assert.ok(back, 'the pledge section');
+  assert.ok(back.textContent.includes('Pledge to this stall'));
+  assert.ok(back.textContent.includes('reopens once its purse is back above 50 silk'));
+  assert.ok(back.textContent.includes('25.00% of this stall'));
+  assert.doesNotMatch(back.textContent, /invest/i, 'never "invest" in the UI');
+  assert.deepEqual(calls[0], ['stall', 'stall-guard.ftf-town.testnet']);
+  const btn = (s) => back.querySelectorAll('button').find((b) => b.textContent === s);
+  btn('Pledge').click(); for (let i = 0; i < 4; i++) await tick();
+  assert.deepEqual(calls.find((c) => c[0] === 'invest_stall'), ['invest_stall', { trader: 'stall-guard.ftf-town.testnet', amount: '10000000' }]);
+  btn('Claim reward share').click(); for (let i = 0; i < 4; i++) await tick();
+  assert.deepEqual(calls.find((c) => c[0] === 'claim_stall'), ['claim_stall', { trader: 'stall-guard.ftf-town.testnet' }]);
+  p.close();
+  st = { ok: false, reason: 'not_available' };
+  p.open('guard'); for (let i = 0; i < 6; i++) await tick();
+  assert.equal(doc.querySelector('.sp-back').querySelectorAll('button').length, 0, 'no pledge button without the endpoint');
+});
+
+test('tournament entry: the season, its silk purse and the fee split; Enter sends enter_tournament; entered shows no button', async () => {
+  const doc = dom();
+  const { createTournamentEntry } = await import('../../src/ui/town-works-panel.js');
+  const t = (k, a) => createPlayI18n('en').t(k, a);
+  const calls = []; let me = readMe(ME);
+  const client = { me: async () => ({ ok: true, me }), act: async (a, args) => { calls.push([a, args]); me = { ...me, season: { ...me.season, entered: true } }; return { ok: true, hash: null }; } };
+  const p = createTournamentEntry({ t, client, doc });
+  await p.open();
+  const box = () => doc.querySelector('.tw');
+  assert.ok(box().textContent.includes('the purse is 90 silk'));
+  assert.ok(box().textContent.includes('20% is burned'));
+  const enter = box().querySelectorAll('button').find((b) => b.textContent === 'Enter for 40 silk');
+  enter.click(); for (let i = 0; i < 4; i++) await tick();
+  assert.deepEqual(calls[0], ['enter_tournament', { season_id: 's3' }]);
+  assert.ok(box().textContent.includes('You are entered in season s3.'));
+  assert.equal(box().querySelectorAll('button').filter((b) => /^Enter/.test(b.textContent)).length, 0);
+});
+
+test('stall pledge, tournament and lobby copy: five locales, no invest/APY/profit; the lobby card points to the altar', async () => {
+  const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => k.startsWith('stall.back.') || k.startsWith('tourn.'));
+  assert.equal(keys.length, 17);
+  for (const lang of ['ru', 'uk', 'it', 'zh']) for (const k of keys) { assert.ok(PLAY_MESSAGES[lang][k], `${lang}:${k}`); assert.notEqual(PLAY_MESSAGES[lang][k], PLAY_MESSAGES.en[k]); }
+  assert.doesNotMatch(keys.map((k) => PLAY_MESSAGES.en[k]).join(' '), /\b(invest\w*|APY|APR|profit|dividend|returns?|yield|interest)\b/i);
+  const { MESSAGES } = await import('../../src/locales/index.js');
+  assert.match(MESSAGES.en['tour.desc'], /practice season/); assert.match(MESSAGES.en['tour.desc'], /town altar/);
+});

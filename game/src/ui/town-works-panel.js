@@ -126,3 +126,58 @@ export function createTownWorksPanel({ t, storage = null, client = null, doc = g
   function close() { if (!root) return; root.remove(); root = null; box = null; state = null; if (doc.removeEventListener) doc.removeEventListener('keydown', onKey, true); }
   return { open, close, get isOpen() { return !!root; } };
 }
+
+/**
+ * The on-chain tournament entry at the altar (ftf-town enter_tournament through the relayer): the open season, its
+ * silk purse, the entry fee and where it goes, Enter. Same honesty rules as the works panel.
+ * @param {{t: Function, storage?: object, client?: object, doc?: Document}} o
+ */
+export function createTournamentEntry({ t, storage = null, client = null, doc = globalThis.document }) {
+  const api = client || createTownAct({ storage });
+  createTownWorksPanel({ t, client: api, doc }); // installs the shared style once
+  const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  let root = null, box = null;
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  async function render(msg = '', hash = null) {
+    if (!box) return;
+    const kids = [el('h3', null, t('tourn.title'))];
+    const tags = el('div', 'tw-tags'); tags.append(el('span', null, t('works.testnet'))); kids.push(tags);
+    const r = await api.me();
+    if (!box) return;
+    if (!r.ok) kids.push(el('p', null, t('works.err.' + r.reason)));
+    else {
+      const { season, params, silk } = r.me;
+      if (!season.id) kids.push(el('p', null, t('works.err.season')));
+      else {
+        kids.push(el('p', null, t('tourn.purse', { silk: silkOf(season.purse), n: season.entrants, id: season.id })));
+        kids.push(el('p', 'tw-note', t('tourn.fee', { fee: silkOf(params.entryFee) })));
+        kids.push(el('p', 'tw-note', t('works.balance', { silk: silkOf(silk) })));
+        if (season.entered) kids.push(el('p', null, t('tourn.entered', { id: season.id })));
+        else {
+          const go = el('button', 'act', t('tourn.enter', { fee: silkOf(params.entryFee) })); go.type = 'button'; go.disabled = r.me.paused;
+          go.addEventListener('click', async () => {
+            go.disabled = true; st.textContent = t('works.sending');
+            const a = await api.act('enter_tournament', { season_id: season.id });
+            render(a.ok ? t('tourn.done') : t('works.err.' + a.reason), a.ok ? a.hash : null);
+          });
+          kids.push(el('div', 'tw-ctl')); kids[kids.length - 1].append(go);
+        }
+      }
+    }
+    const st = el('div', 'tw-state'); st.setAttribute('aria-live', 'polite'); st.textContent = msg;
+    if (hash) { const a = el('a', null, ' ' + t('works.viewTx')); a.href = EXPLORER + hash; a.target = '_blank'; a.rel = 'noopener noreferrer'; st.append(a); }
+    const foot = el('div', 'tw-foot'); const x = el('button', 'ghost', t('quest.close')); x.type = 'button'; x.addEventListener('click', close);
+    foot.append(el('span', null, t('tourn.note')), x);
+    box.replaceChildren(...kids, st, foot);
+  }
+  async function open() {
+    close();
+    root = el('div', 'tw-wrap'); box = el('div', 'tw'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', t('tourn.title'));
+    box.append(el('p', 'tw-note', '…')); root.append(box);
+    root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });
+    doc.body.append(root); if (doc.addEventListener) doc.addEventListener('keydown', onKey, true);
+    await render();
+  }
+  function close() { if (!root) return; root.remove(); root = null; box = null; if (doc.removeEventListener) doc.removeEventListener('keydown', onKey, true); }
+  return { open, close, get isOpen() { return !!root; } };
+}

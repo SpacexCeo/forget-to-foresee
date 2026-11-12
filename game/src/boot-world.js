@@ -279,7 +279,7 @@ let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
-let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false;
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -438,14 +438,18 @@ if (townMode.town) {
   // The monster-resource stalls (ui/stall-panel.js): a stall keeper's card dispatches 'ftf:stall-open' {npc}
   if (!stallMounted) { stallMounted = true; let panel = null; window.addEventListener('ftf:stall-open', (e) => {
     const npc = e && e.detail && e.detail.npc; if (!npc) return;
-    Promise.all([import('./net/stall-client.js'), import('./ui/stall-panel.js')]).then(([c, u]) => {
-      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }) });
+    Promise.all([import('./net/stall-client.js'), import('./ui/stall-panel.js'), import('./net/town-act.js')]).then(([c, u, w]) => {
+      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }), town: w.createTownAct({ storage: ctx.storage }) });
       panel.open(npc);
     }).catch((err) => console.warn('[stall]', err));
   }); }
   // The town works on chain (ui/town-works-panel.js): the Exchange counter dispatches 'ftf:town-works-open'
   if (!worksMounted) { worksMounted = true; let panel = null; window.addEventListener('ftf:town-works-open', () => {
     import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTownWorksPanel({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage }); panel.open(); }).catch((err) => console.warn('[works]', err));
+  }); }
+  // The on-chain tournament entry: tapping the altar label dispatches 'ftf:tournament-open'
+  if (!tournMounted) { tournMounted = true; let panel = null; window.addEventListener('ftf:tournament-open', () => {
+    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
   }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown, floatNumber: numbersHook }); }).catch((e) => console.warn('[town] kill xp', e));
@@ -667,8 +671,9 @@ const _altarP = new THREE.Vector3();
 function updateAltarTimer() {
   if (!town || !inTown) { if (altarTimer) altarTimer.hidden = true; return; }
   if (!altarTimer) {
-    altarTimer = document.createElement('div'); altarTimer.className = 'ftf-altar-timer'; altarTimer.setAttribute('aria-hidden', 'true');
-    altarTimer.style.cssText = 'position:fixed;left:0;top:0;z-index:6;pointer-events:none;transform:translate(-50%,-100%);padding:6px 12px;border-radius:14px;background:rgba(20,14,40,.78);border:1px solid rgba(255,210,122,.7);color:#fff7e6;font:600 13px/1.25 system-ui,sans-serif;text-align:center;white-space:nowrap';
+    altarTimer = document.createElement('button'); altarTimer.type = 'button'; altarTimer.className = 'ftf-altar-timer'; altarTimer.setAttribute('aria-label', ctx.i18n.t('tourn.title'));
+    altarTimer.addEventListener('click', (e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('ftf:tournament-open')); }); // the on-chain entry (ui/town-works-panel.js)
+    altarTimer.style.cssText = 'position:fixed;left:0;top:0;z-index:6;pointer-events:auto;cursor:pointer;transform:translate(-50%,-100%);padding:6px 12px;border-radius:14px;background:rgba(20,14,40,.78);border:1px solid rgba(255,210,122,.7);color:#fff7e6;font:600 13px/1.25 system-ui,sans-serif;text-align:center;white-space:nowrap';
     document.body.append(altarTimer);
   }
   const a = TOWN_ALTAR.position;
