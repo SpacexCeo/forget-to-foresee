@@ -1192,6 +1192,7 @@ export default {
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
   'chest.out.nftOf': "NFT dallo scrigno · {item}",
   'chest.verified.full': "Posto n. {index}: la foglia e la prova di Merkle portano alla radice del mazzo su NEAR testnet, e l’estrazione segue il seme on-chain.",
+  'chest.lootHeading': "NFT dagli scrigni",
   'chest.title': "Apri uno scrigno",
   'chest.opening.common': "Apertura di uno scrigno consunto",
   'chest.opening.rare': "Apertura di uno scrigno di legno di marea",

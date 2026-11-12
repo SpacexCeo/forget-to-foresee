@@ -1191,6 +1191,7 @@ export default {
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
   'chest.out.nftOf': "NFT зі скрині · {item}",
   'chest.verified.full': "Слот №{index}: лист і доказ Меркла ведуть до кореня колоди в NEAR testnet, а жереб випливає із зерна в мережі.",
+  'chest.lootHeading': "NFT зі скринь",
   'chest.title': "Відкрити скриню",
   'chest.opening.common': "Відкриваємо потерту скриню",
   'chest.opening.rare': "Відкриваємо скриню з припливного дерева",

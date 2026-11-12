@@ -1191,6 +1191,7 @@ export default {
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
   'chest.out.nftOf': "NFT из сундука · {item}",
   'chest.verified.full': "Слот №{index}: лист и доказательство Меркла ведут к корню колоды в NEAR testnet, а жребий следует из семени в сети.",
+  'chest.lootHeading': "NFT из сундуков",
   'chest.title': "Открыть сундук",
   'chest.opening.common': "Открываем потёртый сундук",
   'chest.opening.rare': "Открываем сундук из приливного дерева",

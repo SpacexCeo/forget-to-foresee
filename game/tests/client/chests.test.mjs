@@ -81,3 +81,20 @@ test('chest strings in five locales', () => {
   assert.ok(PLAY_MESSAGES.en['chest.verified.full']);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc} ${k}`);
 });
+
+test('loot NFTs are read from the chests contract for the guest account; no guest, no read', async () => {
+  const { readLootNfts } = await import('../../src/net/chest-client.js');
+  assert.deepEqual(await readLootNfts({ owner: null }), { state: 'none' });
+  const fetch = async (url, init) => {
+    const body = JSON.parse(init.body);
+    assert.equal(body.params.account_id, 'chests.ftf-coordinator.testnet');
+    const args = JSON.parse(Buffer.from(body.params.args_base64, 'base64').toString());
+    assert.equal(args.account_id, 'cy-8.guests.ftf-coordinator.testnet');
+    const value = [{ token_id: 's1-41', owner_id: args.account_id, metadata: { title: 'Loot NFT #41', extra: '{"item":"part_gauge"}' } }];
+    return { ok: true, status: 200, json: async () => ({ jsonrpc: '2.0', id: body.id, result: { result: [...Buffer.from(JSON.stringify(value))], block_height: 1, block_hash: 'h' } }) };
+  };
+  const r = await readLootNfts({ owner: 'cy-8.guests.ftf-coordinator.testnet', rpcUrls: ['https://rpc.example'], fetch });
+  assert.equal(r.state, 'loaded');
+  assert.deepEqual(r.items[0], { tokenId: 's1-41', title: 'Loot NFT #41', item: 'part_gauge', href: 'https://testnet.nearblocks.io/nft-token/chests.ftf-coordinator.testnet/s1-41' });
+  assert.equal((await readLootNfts({ owner: 'x', rpcUrls: ['https://rpc.example'], fetch: async () => { throw new Error('down'); } })).state, 'offline');
+});

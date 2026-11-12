@@ -183,7 +183,22 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           drag.replaceChildren(el('h3', null, t('companion.heading')), g2);
         }).catch(() => {});
       }
-      return [box, drag, holderSection({ doc, t, storage, owner })];
+      // loot NFTs from chests (chests.ftf-coordinator.testnet), only what the chain read confirms for this guest
+      const loot = el('div');
+      if (owner) {
+        import('../net/chest-client.js').then((m) => m.readLootNfts({ owner })).then((r) => {
+          if (!r || r.state !== 'loaded' || !r.items.length) return;
+          const g3 = el('div', 'gm-grid'); g3.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
+          for (const it of r.items) {
+            const c = el('div', 'gm-nft');
+            c.append(el('b', null, it.title), el('br'), el('span', 'gm-chip gm-near', 'NEAR testnet'));
+            const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = it.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
+            g3.append(c);
+          }
+          loot.replaceChildren(el('h3', null, t('chest.lootHeading')), g3);
+        }).catch(() => {});
+      }
+      return [box, drag, loot, holderSection({ doc, t, storage, owner })];
     },
     inventory() {
       return items.then((list) => {

@@ -1193,6 +1193,7 @@ export default {
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
   'chest.out.nftOf': "Loot NFT · {item}",
   'chest.verified.full': "Slot #{index}: the leaf and its Merkle proof reach the deck root on NEAR testnet, and the draw follows the on-chain seed.",
+  'chest.lootHeading': "Loot NFTs from chests",
   'chest.title': "Open a chest",
   'chest.opening.common': "Opening a weathered chest",
   'chest.opening.rare': "Opening a tidewood chest",

@@ -36,3 +36,20 @@ export function createChestClient({ storage = null, load = () => import('./chest
     },
   };
 }
+
+/**
+ * Loot NFTs the guest account holds on the chests contract (read-only): {state: 'loaded', items: [{tokenId, title, item, href}]} |
+ * {state: 'none'} | {state: 'offline'}.
+ * @param {{owner?: string|null, deployment?: object, rpcUrls?: string[], fetch?: Function}} o
+ */
+export async function readLootNfts({ owner = null, deployment = null, rpcUrls = null, fetch = globalThis.fetch, explorer = 'https://testnet.nearblocks.io' } = {}) {
+  const [{ createNearClient }, { DAY1_DEPLOYMENT }, { NEAR_DEPLOYMENT }] = await Promise.all([import('./near.js'), import('./day1-deployment.js'), import('./near-deployment.js')]);
+  const dep = deployment || DAY1_DEPLOYMENT;
+  if (!owner || !dep || !dep.chests) return { state: 'none' };
+  try {
+    const near = createNearClient({ contractId: dep.chests, rpcUrls: rpcUrls || NEAR_DEPLOYMENT.rpcUrls, fetch, timeoutMs: 10000 });
+    const r = await near.view('nft_tokens_for_owner', { account_id: owner, from_index: '0', limit: 20 });
+    const list = Array.isArray(r.value) ? r.value : [];
+    return { state: 'loaded', items: list.map((tk) => { let item = null; try { item = JSON.parse((tk.metadata && tk.metadata.extra) || '{}').item || null; } catch { /* plain */ } return { tokenId: tk.token_id, title: (tk.metadata && tk.metadata.title) || tk.token_id, item, href: `${explorer}/nft-token/${dep.chests}/${tk.token_id}` }; }) };
+  } catch { return { state: 'offline' }; }
+}

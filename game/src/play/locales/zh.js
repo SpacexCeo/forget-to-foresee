@@ -1191,6 +1191,7 @@ export default {
   // ---- loot chests (game/chests.js, play/chest-open.js) ----
   'chest.out.nftOf': "宝箱 NFT · {item}",
   'chest.verified.full': "槽位 #{index}：叶子及其默克尔证明可推导出 NEAR 测试网上的卡组根，抽取结果符合链上种子。",
+  'chest.lootHeading': "来自宝箱的 NFT",
   'chest.title': "打开宝箱",
   'chest.opening.common': "正在打开风化宝箱",
   'chest.opening.rare': "正在打开潮木宝箱",
