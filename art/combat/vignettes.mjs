@@ -34,16 +34,16 @@ async function walkTo(p, near = 0.6, maxMs = 5000) {
 
 if (mode === 'elise') {
   await page.addStyleTag({ content: 'body * { visibility: hidden !important; } canvas { visibility: visible !important; }' });
-  await page.evaluate(() => window.__ftf.player.teleport([0, 1203, 18], Math.PI));
+  await page.evaluate(() => window.__ftf.player.teleport([-7, 1203, 25], 2.4));     // the quiet west side of the square, the lamps behind
   await wait(3000);
   log.push(await page.evaluate(() => { let tris = 0, toon = false; window.__ftf.iris.irisModel.model.traverse((o) => { if (o.isMesh) { tris += (o.geometry.index ? o.geometry.index.count : 0) / 3; if (o.material.type === 'MeshToonMaterial') toon = true; } }); return { hero: window.__ftf.iris.hero.id, tris, toon }; }));
   await page.evaluate(() => {
     const f = window.__ftf, orig = f.rig.update.bind(f.rig), t0 = performance.now();
     f.rig.update = (...a) => {
       orig(...a);
-      const t = (performance.now() - t0) / 1000, p = f.player.pos, a0 = f.player.heading + 0.5 + t * 0.62, r = 2.7 - 0.25 * Math.min(1, t / 7);
+      const t = (performance.now() - t0) / 1000, p = f.player.pos, a0 = f.player.heading + 0.5 + t * 0.62, r = 2.0 - 0.2 * Math.min(1, t / 7);
       f.rig.camera.position.set(p[0] + Math.sin(a0) * r, p[1] + 1.35 - 0.15 * Math.min(1, t / 7), p[2] + Math.cos(a0) * r);
-      f.rig.camera.lookAt(p[0], p[1] + 1.15, p[2]); f.rig.camera.fov = 36; f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
+      f.rig.camera.lookAt(p[0], p[1] + 1.2, p[2]); f.rig.camera.fov = 34; f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
     };
   });
   const cap = capture(); await wait(7200); capturing = false; await cap;
@@ -72,7 +72,8 @@ if (mode === 'elise') {
   // inside: the camera behind and above her, she walks to the counter
   const target = await page.evaluate(() => { const f = window.__ftf, p = f.player.pos; const s = f.town.shops; return { p: p.slice() }; });
   const counter = [2000, 1200, -2];
-  await page.evaluate(({ p, c }) => { const dx = c[0] - p[0], dz = c[2] - p[2], l = Math.hypot(dx, dz) || 1; window.__shopCam = { pos: [p[0] - dx / l * 2.6 + dz / l * 1.2, p[1] + 2.1, p[2] - dz / l * 2.6 - dx / l * 1.2], look: [c[0], p[1] + 1.2, c[2]] }; }, { p: target.p, c: counter });
+  // the room is 9 x 11 m around the shop origin [2000, 1200, 0], the door at +z: a corner view from inside the door
+  await page.evaluate(() => { window.__shopCam = { pos: [2002.6, 1202.4, 4.8], look: [1999.6, 1201.0, -2.2] }; });
   await walkTo(counter, 1.6, 5000); log.push('at the counter');
   await wait(2500);
   capturing = false; await cap;
