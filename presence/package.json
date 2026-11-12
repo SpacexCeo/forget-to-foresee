@@ -1,0 +1,8 @@
+{
+  "name": "ftf-presence",
+  "private": true,
+  "type": "module",
+  "description": "Forget to Foresee presence: the shared sky town (rooms of 15) and its chat over WebSocket",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js", "test": "node --test --test-concurrency=2 tests/*.test.mjs" }
+}
