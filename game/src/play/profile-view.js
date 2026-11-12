@@ -137,7 +137,7 @@ export function renderProfileView({ doc, t, ledger, base, nickname = null, elise
   if (nickname) info.append(el('div', 'pv-name', nickname));
   const xp = el('div', 'pv-xp'); xp.append(el('span', null, t('profile.progressTo', { level: m.level + 1 })), el('span', null, t('profile.xpOf', { into: m.into, need: m.need })));
   const bar = el('div', 'pv-bar'); const fill = el('i'); bar.style.setProperty('--p', String(m.progress)); bar.append(fill);
-  bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(m.need)); bar.setAttribute('aria-valuenow', String(m.into));
+  bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', t('profile.progressTo', { level: m.level + 1 })); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(m.need)); bar.setAttribute('aria-valuenow', String(m.into));
   info.append(xp, bar, el('p', 'pv-muted', t('profile.titlesNote')));
   if (holder && holder.title) info.append(el('span', 'pv-chip', t('holder.title.' + holder.title)));
   if (titles.length) info.append(el('p', 'pv-muted', t('menu.titles', { list: titles.map((x) => t('wheel.title.' + x)).join(', ') })));
