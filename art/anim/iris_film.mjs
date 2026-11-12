@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|audit|shoulders|show> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|audit|shoulders|show|final> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
 // --step 60: frame by frame: the page's clock and its animation frames are driven by this script (each frame is
 // exactly 1/60 s of game time and is saved), so the film is a true 60 fps whatever the renderer's speed is.
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
@@ -33,7 +33,7 @@ if (STEP) await page.addInitScript(() => {
   window.__manual = () => { vt = realNow(); manual = true; };
   window.__frame = (dt) => { vt += dt; const c = q; q = []; for (const f of c) { try { f(vt); } catch (e) { console.error(e); } } return c.length; };
 });
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit', 'show'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit', 'show', 'final'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -231,6 +231,63 @@ else if (scenario === 'show') {
   await back(); await shot({ angle: 0.25, dist: 1.5, h: 1.52, up: 0.05 }); await wait(2400);
   mark('face idle'); await wait(3000);
   mark('face wave'); await page.evaluate(() => window.__ftf.irisReact('greet')); await wait(2800);
+}
+else if (scenario === 'final') {
+  // the final pass: everything she does in one take, with numbers. Each frame the head, hands and feet are sampled in
+  // her own frame; a pop is a one-frame jump of the head or a foot that the frames around it do not explain. The
+  // report also holds every cast (start to release), every strike (clip start to impact, impact to the first damage
+  // on a creature) and the planted foot's slide while she walks and runs.
+  await page.evaluate(() => {
+    const f = window.__ftf; if (f.town.mobs && f.town.mobs.iris) f.town.mobs.iris.iframes = 1e9;
+    const S = (window.__S = { rows: [], ev: [] }), V = f.rig.camera.position.constructor, names = ['head', 'hand_L', 'hand_R', 'foot_L', 'foot_R'];
+    for (const n of ['ftf:cast', 'ftf:iris-action', 'ftf:foot']) window.addEventListener(n, (e) => S.ev.push({ n, t: performance.now(), ...e.detail }));
+    const hp = () => (f.town.mobs && f.town.mobs.brain ? f.town.mobs.brain.mobs.reduce((a, m) => a + Math.max(0, m.hp || 0), 0) : 0); let last = hp();
+    const orig = f.rig.update.bind(f.rig);
+    f.rig.update = (...a) => {
+      orig(...a); const m = f.iris.irisModel; if (!m) return;
+      const p = f.player.renderPos ? f.player.renderPos(1) : f.player.pos, h = f.player.heading, c = Math.cos(-h), sn = Math.sin(-h), row = [performance.now()];
+      for (const n of names) { const o = m.model.getObjectByName(n); const w = o ? o.getWorldPosition(new V()) : new V(); const dx = w.x - p[0], dz = w.z - p[2]; row.push(dx * c + dz * sn, w.y - p[1], -dx * sn + dz * c, w.x, w.z); }
+      row.push(m.combat ? m.combat.name : '', Math.hypot(f.player.vel ? f.player.vel[0] : 0, f.player.vel ? f.player.vel[1] : 0)); S.rows.push(row);
+      const now = hp(); if (now < last - 0.5) S.ev.push({ n: 'damage', t: performance.now(), amount: +(last - now).toFixed(1) }); last = now;
+    };
+  });
+  const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos, h = f.player.heading; const pt = [p[0] + Math.sin(h) * 9, 0, p[2] + Math.cos(h) * 9]; pt[1] = window.__ground(pt[0], pt[2]) ?? p[1]; f.town.casting.aimAt(id, pt); return f.town.casting.release(); }, id);
+  await back(); await shot({ angle: 0.55, dist: 5.0, h: 0.9, up: 0.3 }); await wait(2000);
+  mark('idle'); await wait(1500);
+  mark('walk'); await go(2600, false);
+  mark('run'); await go(2400, true);
+  mark('stop'); await wait(1400);
+  mark('turn left, walk'); await go(1500, false, [0, -1]);
+  mark('turn back, run'); await go(1500, true, [-1, 0]);
+  mark('stop 2'); await wait(1200);
+  await shot({ angle: 1.2, dist: 4.6 });
+  mark('combo'); for (let i = 0; i < 3; i++) { await page.keyboard.press('KeyF'); await wait(430); }
+  await wait(1300);
+  mark('super'); await page.keyboard.down('KeyF'); await wait(900); await page.keyboard.up('KeyF'); await wait(1900);
+  mark('lance'); await aim('lance'); await wait(2000);
+  mark('snare'); await aim('snare'); await wait(2200);
+  mark('run, cast'); await go(900, true); await aim('lance'); await wait(1800);
+  mark('dash'); await page.keyboard.press('Space'); await wait(1400);
+  mark('run, strike'); await go(800, true); await page.keyboard.press('KeyF'); await wait(1500);
+  const S = await page.evaluate(() => window.__S);
+  const R = S.rows, at = (t) => { let k = 0; for (const m of marks) if (m.frame !== undefined && m.t * 1000 <= t - R[0][0] + marks[0].t * 1000) k = m.name; return k; };
+  const part = { head: 1, hand_L: 6, hand_R: 11, foot_L: 16, foot_R: 21 }, pops = [];
+  for (const [n, o] of Object.entries(part)) for (let i = 2; i < R.length - 2; i++) {
+    const d = (a, b) => Math.hypot(R[a][o] - R[b][o], R[a][o + 1] - R[b][o + 1], R[a][o + 2] - R[b][o + 2]);
+    const jump = d(i, i - 1), around = Math.max(d(i - 1, i - 2), d(i + 1, i), d(i + 2, i + 1));
+    if (jump > (n.startsWith('hand') ? 0.12 : 0.05) && jump > 2.5 * around + 0.02) pops.push({ part: n, t: +((R[i][0] - R[0][0]) / 1000).toFixed(2), jump_m: +jump.toFixed(3), around_m: +around.toFixed(3), clip: R[i][26], during: at(R[i][0]) });
+  }
+  // the planted foot's slide over the ground: the lower foot's world speed while she walks, then runs
+  const slide = {};
+  for (const [name, from, to] of [['walk', 'walk', 'run'], ['run', 'run', 'stop']]) {
+    const t0 = marks.find((m) => m.name === from).t * 1000 + 700, t1 = marks.find((m) => m.name === to).t * 1000 - 100, base = R[0][0] - marks[0].t * 1000 + 0; const v = [];
+    for (let i = 1; i < R.length; i++) { const t = R[i][0] - base; if (t < t0 || t > t1) continue; const o = R[i][17] <= R[i][22] ? 16 : 21; if (Math.min(R[i][17], R[i][22]) > 0.14) continue; v.push(Math.hypot(R[i][o + 3] - R[i - 1][o + 3], R[i][o + 4] - R[i - 1][o + 4]) * STEP); }
+    v.sort((a, b) => a - b); slide[name] = { samples: v.length, median_m_s: +(v[v.length >> 1] || 0).toFixed(2), p90_m_s: +(v[Math.floor(v.length * 0.9)] || 0).toFixed(2) };
+  }
+  const ev = S.ev, casts = [], strikes = [];
+  for (const e of ev) if (e.n === 'ftf:cast' && e.phase === 'release') { const st = [...ev].reverse().find((x) => x.n === 'ftf:cast' && x.phase === 'start' && x.t <= e.t && x.id === e.id); casts.push({ id: e.id, start_to_release_s: st ? +((e.t - st.t) / 1000).toFixed(3) : null }); }
+  for (const e of ev) if (e.n === 'ftf:iris-action' && e.phase === 'impact') { const st = [...ev].reverse().find((x) => x.n === 'ftf:iris-action' && x.phase === 'start' && x.t <= e.t && x.clip === e.clip); const dm = ev.find((x) => x.n === 'damage' && x.t >= e.t - 250 && x.t <= e.t + 600); strikes.push({ clip: e.clip, start_to_impact_s: st ? +((e.t - st.t) / 1000).toFixed(3) : null, impact_to_damage_s: dm ? +((dm.t - e.t) / 1000).toFixed(3) : null }); }
+  marks.push({ final: { pops, slide, casts, strikes } });
 }
 capturing = false; await capture;
 const seconds = STEP ? n / STEP : (Date.now() - t0) / 1000;
