@@ -8,7 +8,7 @@ from .quat import qinv, qmul, qnorm, qrot, swing
 
 Y = np.array([0.0, 1.0, 0.0])
 
-# chain prefix: (natural frequency rad/s, damping ratio, air coupling, gravity sag gain)
+# chain prefix: (natural frequency rad/s, damping ratio, air coupling, gravity sag gain[, share of the swing kept])
 PARAMS = {
     'hair': (16.0, 0.55, 0.05, 0.0), 'tail': (9.5, 0.32, 0.10, 0.0), 'scarf': (8.0, 0.35, 0.16, 0.0),
     'cloak': (7.0, 0.5, 0.14, 0.0), 'skirt': (9.0, 0.5, 0.10, 0.0), 'hood': (14.0, 0.6, 0.03, 0.0), 'default': (10.0, 0.5, 0.08, 0.0),
@@ -51,7 +51,8 @@ def simulate(rig, local, pelvis, fps=30, loop=True, air_speed=0.0, sub=4, warm=3
     dt = 1.0 / (fps * sub)
     air = np.array([0.0, 0.0, -air_speed])
     for name, bones in chain_bones(rig):
-        om, zeta, air_k, _ = params_for(name)
+        prm = params_for(name); om, zeta, air_k = prm[0], prm[1], prm[2]
+        keep = prm[4] if len(prm) > 4 else 1.0      # the share of the swing that is kept (a firm bun: well under 1)
         lag = 0.0
         om *= scale
         par = rig.parent[bones[0]]
@@ -97,8 +98,12 @@ def simulate(rig, local, pelvis, fps=30, loop=True, air_speed=0.0, sub=4, warm=3
                         # the next bone hangs from this one's simulated transform; its rest_t is relative to this bone's head
                         r, h = r_w, head
         for k, b in enumerate(bones):
-            out[:, b] = qnorm(res[:, k])
-        LAG[name] = lag
+            q_ = qnorm(res[:, k])
+            if keep < 1.0:
+                h_ = np.repeat(rig.rest_r[b][None], F, 0); h_ = h_ * np.sign(np.sum(h_ * q_, 1, keepdims=True) + 1e-12)
+                q_ = qnorm(h_ * (1 - keep) + q_ * keep)
+            out[:, b] = q_
+        LAG[name] = lag * keep
     return out
 
 
