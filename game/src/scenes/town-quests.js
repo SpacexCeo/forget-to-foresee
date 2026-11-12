@@ -98,7 +98,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   // ---- the objective line (one goal, top centre)
   let active = true;
   const line = doc.createElement('div'); line.className = 'ftf-story-goal'; line.setAttribute('aria-live', 'polite');
-  line.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 58px);transform:translateX(-50%);z-index:9;pointer-events:none;max-width:calc(100vw - 32px);'
+  const narrow = (Number(win.innerWidth) || 1024) < 600; // the phone's top row holds the portrait and the silk pill
+  line.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + ' + (narrow ? 146 : 58) + 'px);transform:translateX(-50%);z-index:9;pointer-events:none;max-width:calc(100vw - 32px);'
     + 'padding:6px 14px;border-radius:999px;background:rgba(12,16,18,.62);color:#f3ead8;font:600 13px/1.3 system-ui,sans-serif;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
   doc.body.append(line);
   function renderObjective() {

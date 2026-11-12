@@ -52,7 +52,7 @@ export function renderBoardPanel({ doc, i18n, snapshot, local, account = null, t
     body.replaceChildren();
     if (which === 'scripted') body.append(el('p', 'margin:0 0 8px;color:#b9c7c4;font-size:12px', t('lb.scriptedNote')));
     const rows = tabRows(snapshot, which);
-    if (!rows.length) body.append(el('p', 'margin:6px 0;color:#b9c7c4', t(snapshot ? 'lb.empty' : 'lb.preview')));
+    if (!rows.length && (snapshot || !local || which === 'scripted')) body.append(el('p', 'margin:6px 0;color:#b9c7c4', t(snapshot ? 'lb.empty' : 'lb.preview'))); // the local preview is labelled once, in her row
     else {
       const list = el('ol', 'list-style:none;margin:0;padding:0'); list.className = 'ftf-board-rows';
       for (const r of rows) {
