@@ -1196,6 +1196,7 @@ export default {
   'chest.preview': "预览——不在链上",
   'chest.previewButton': "开宝箱（预览）",
   'chest.err.no_key': "此浏览器中缺少你的第一天密钥。",
+  'chest.err.soon': "本季随机种子在 NEAR 测试网上确定后，宝箱即可开启。",
   'chest.title': "打开宝箱",
   'chest.opening.common': "正在打开风化宝箱",
   'chest.opening.rare': "正在打开潮木宝箱",

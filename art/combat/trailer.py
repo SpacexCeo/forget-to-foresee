@@ -1,6 +1,6 @@
 """The 60 s trailer draft from the game's own captures (docs/art/combat/*.mp4), with ffmpeg.
 
-    python3 art/combat/trailer.py [out.mp4] [--vertical out_vertical.mp4]
+    python3 art/combat/trailer.py [out.mp4] [--v2] [--vertical out_vertical.mp4]
 
 Beats (docs/submission/video-recut-notes.md): the town and the title first, Elise, a shop, the fight beyond the walls,
 the brute and the elite, a chest drop, the Tournament's archipelago, the open-case reveal, the end card with "Built at NEAR HACKATHON" and the URL.
@@ -19,6 +19,7 @@ SERIF = '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'
 SANS = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
 URL = 'spacexceo.github.io/forget-to-foresee'
 
+SHARD, SHARD_CROP, SHARD_CARD = 1.0, '760:428:460:20', 40.6   # onchain_shard.mp4: the 'Minted on NEAR testnet' toast; the shard #7 card in Memories
 REVEAL = 27.5   # first_fight_v3.mp4: the open-case reel starts here (the chest preview, labelled "not on chain")
 # (clip, start s, length s, caption or None)
 SEGMENTS = [
@@ -35,6 +36,25 @@ SEGMENTS = [
 ]
 END_SECONDS = 5.0
 
+# v2 for the jury: the same story plus a moonlit square and the on-chain beats (art/combat/onchain.mjs, read-only:
+# the shard minted on NEAR testnet, the replay's root checked against ftf-seasons.testnet, holder access).
+# An optional 5th field crops the clip (w:h:x:y in its 1280x720 frame) so the UI text reads.
+SEGMENTS_V2 = [
+    ('town_beauty.mp4', 0.0, 8.0, None),
+    ('night_square.mp4', 1.5, 4.0, 'Day and night in the town'),
+    ('elise_orbit.mp4', 0.6, 4.0, 'Elise, the Day 1 heroine'),
+    ('shop_interior.mp4', 2.2, 4.0, 'Walk-in shops'),
+    ('first_fight_v2.mp4', 8.5, 6.0, 'Real-time fights: strike combo, dash, casts'),
+    ('elite_fight.mp4', 18.0, 6.0, 'Elites are a real fight'),
+    ('first_fight_v3.mp4', 21.6, 3.4, 'Beaten creatures drop chests'),
+    ('first_fight_v3.mp4', REVEAL, 6.5, 'Open a chest: shards, items, NFTs (preview)'),
+    ('archipelago.mp4', 2.6, 6.5, 'Then the Tournament: the floating archipelago'),
+    ('onchain_shard.mp4', SHARD, 2.0, 'A forgotten memory becomes an NFT on NEAR testnet', SHARD_CROP),
+    ('onchain_shard.mp4', SHARD_CARD, 3.5, 'A forgotten memory becomes an NFT on NEAR testnet', '700:394:590:215'),
+    ('onchain_replay.mp4', 0.6, 3.5, 'Every season is sealed: the replay matches the root on NEAR', '782:440:250:110'),
+    ('onchain_holder.mp4', 4.7, 3.5, 'Holding the NFT unlocks a title (read-only check)', '880:495:150:215'),
+]
+
 
 def esc(t):
     return t.replace('\\', '\\\\').replace(':', '\\:').replace("'", "’")
@@ -49,18 +69,18 @@ def caption_filter(text, size=34, y='h-110'):
             f"box=1:boxcolor=black@0.45:boxborderw=14:alpha='if(lt(t,0.25),t/0.25,1)'")
 
 
-def build(out):
+def build(out, segments=SEGMENTS):
     tmp = tempfile.mkdtemp(prefix='trailer_')
     parts = []
-    for i, (clip, ss, length, cap) in enumerate(SEGMENTS):
-        vf = ['scale=1280:720:force_original_aspect_ratio=increase', 'crop=1280:720', 'fps=30', 'setsar=1']
+    for i, (clip, ss, length, cap, *crop) in enumerate(segments):
+        vf = ([f'crop={crop[0]}'] if crop else []) + ['scale=1280:720:force_original_aspect_ratio=increase', 'crop=1280:720', 'fps=30', 'setsar=1']
         if i == 0:   # the title over the town
             vf.append(f"drawtext=fontfile={SERIF}:text='Forget to Foresee':fontsize=86:fontcolor=white:x=(w-text_w)/2:y=h*0.36:"
                       f"shadowcolor=black@0.6:shadowx=2:shadowy=2:alpha='if(lt(t,0.6),0,if(lt(t,1.4),(t-0.6)/0.8,if(lt(t,6.0),1,max(0,1-(t-6.0)/0.8))))'")
             vf.append(f"drawtext=fontfile={SANS}:text='{esc('Pay for prophecy with your memories.')}':fontsize=34:fontcolor=white:x=(w-text_w)/2:y=h*0.36+110:"
                       f"shadowcolor=black@0.6:shadowx=2:shadowy=2:alpha='if(lt(t,1.2),0,if(lt(t,2.0),(t-1.2)/0.8,if(lt(t,6.0),1,max(0,1-(t-6.0)/0.8))))'")
         elif cap:
-            vf.append(caption_filter(cap))
+            vf.append(caption_filter(cap, y='36' if crop else 'h-110'))   # over a cropped UI shot the caption sits on top
         p = os.path.join(tmp, f'p{i:02d}.mp4'); parts.append(p)
         run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', str(ss), '-t', str(length), '-i', os.path.join(C, clip), '-an', '-vf', ','.join(vf),
              '-c:v', 'libx264', '-preset', 'slow', '-crf', '25', '-pix_fmt', 'yuv420p', p])
@@ -74,7 +94,7 @@ def build(out):
     open(lst, 'w').write(''.join(f"file '{p}'\n" for p in parts))
     silent = os.path.join(tmp, 'video.mp4')
     run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', silent])
-    dur = sum(s[2] for s in SEGMENTS) + END_SECONDS
+    dur = sum(s[2] for s in segments) + END_SECONDS
     run(['ffmpeg', '-y', '-loglevel', 'error', '-i', silent, '-i', MUSIC, '-filter_complex',
          f"[1:a]atrim=0:{dur},afade=t=in:st=0:d=1.5,afade=t=out:st={dur - 3}:d=3,volume=0.9[a]", '-map', '0:v', '-map', '[a]',
          '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', out])
@@ -120,7 +140,11 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     out = a[0] if a and not a[0].startswith('--') else os.path.join(ROOT, 'docs/submission/trailer_draft.mp4')
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    d = build(out)
+    if '--v2' in a:
+        out = os.path.join(ROOT, 'docs/submission/trailer_v2.mp4') if out.endswith('trailer_draft.mp4') else out
+        d = build(out, SEGMENTS_V2)
+    else:
+        d = build(out)
     print('trailer', out, '%.1f s' % d)
     if '--vertical' in a:
         v = a[a.index('--vertical') + 1]
