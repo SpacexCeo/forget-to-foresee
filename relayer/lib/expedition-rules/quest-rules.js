@@ -81,7 +81,7 @@ export function applyQuest(state, a = {}, ctx = {}) {
       if (silk > 0) {
         if (n.killDay.day !== dayOf(now)) n.killDay = { day: dayOf(now), c: 0 };
         n.killDay.c += silk;
-        ev.push({ kind: 'kill_ticketed', data: { mob: a.mob, killId: a.killId }, silkC: silk, trust: 'T1' });
+        ev.push({ kind: 'kill_ticketed', data: { mob: a.mob, killId: a.killId }, silkC: silk, trust: a.hunt ? 'T2' : 'T1' }); // a scripted hunt (game/hunt.js) is T2
       }
       for (const id of Object.keys(QUESTS)) {
         const def = QUESTS[id], q = get(n, id);

@@ -10,7 +10,7 @@ test('catalog lists the exchange actions; HTTP place_order, 409, replay and 422 
   const { app, req } = await startHttp();
   t.after(() => app.close());
   const cat = (await req('GET', '/v1/actions')).body;
-  assert.equal(cat.catalogVersion, '1.1.0');
+  assert.equal(cat.catalogVersion, '1.2.0');
   const kinds = Object.fromEntries(cat.actions.map((a) => [a.type, a.kind + ':' + a.status]));
   assert.equal(kinds.start_exchange, 'exchange:implemented');
   assert.equal(kinds.place_order, 'exchange:implemented');

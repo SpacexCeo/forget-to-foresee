@@ -20,6 +20,7 @@ export const CREATE_SCHEMA = {
     label: { type: 'string', maxLength: 64 },
     seed: { type: 'integer', minimum: 0, maximum: 4294967295, description: 'Test sessions only (legacy modes): fixes the season. Marked clientChoseSeed in the observation.' },
     seedHex: { type: 'string', pattern: '^[0-9a-f]{32}$', description: 'Test sessions only (v3): 128-bit seed. Marked clientChoseSeed.' },
+    scriptedKey: { type: 'string', minLength: 16, maxLength: 128, description: 'A scripted actor\'s key from the server\'s scripted registry (the arena accounts). Marks the session scripted: it may hunt, and its expedition log is ranked in the Scripted NPC list, never the human one.' },
   },
   additionalProperties: false,
 };
@@ -35,8 +36,9 @@ export class SessionRegistry {
    * @param {boolean} [o.allowClientSeed]   dev/test servers only
    * @param {() => ((n:number) => Uint8Array)} [o.seasonRandomBytes]  test harness only: deterministic commitments
    */
-  constructor({ clock = () => Date.now(), maxSessions = 200, maxTimeScale = 1000, idleMs = 2 * 3600 * 1000, allowClientSeed = true, seasonRandomBytes = null } = {}) {
+  constructor({ clock = () => Date.now(), maxSessions = 200, maxTimeScale = 1000, idleMs = 2 * 3600 * 1000, allowClientSeed = true, seasonRandomBytes = null, scripted = {} } = {}) {
     Object.assign(this, { clock, maxSessions, maxTimeScale, idleMs, allowClientSeed, seasonRandomBytes });
+    this.scripted = new Map(Object.entries(scripted || {}).map(([key, account]) => [sha256('scripted:' + key), String(account)])); // key -> account, stored hashed
     this.sessions = new Map(); // id -> {room, tokens: Map(hash -> playerId), inviteHash}
   }
 
@@ -47,12 +49,14 @@ export class SessionRegistry {
     if (!RULES_VERSIONS.includes(rules)) return fail(400, 'unknown_rules', `rules must be one of ${RULES_VERSIONS.join(', ')}`);
     if ((opts.seed != null || opts.seedHex != null) && !this.allowClientSeed) return fail(403, 'forbidden', 'this server does not accept client-chosen seeds');
     if (opts.timeScale != null && opts.timeScale > this.maxTimeScale) return fail(400, 'invalid_params', `timeScale must be <= ${this.maxTimeScale} on this server`);
+    const actor = opts.scriptedKey != null ? this.scripted.get(sha256('scripted:' + opts.scriptedKey)) : null;
+    if (opts.scriptedKey != null && !actor) return fail(403, 'forbidden', 'unknown scriptedKey: not in this server\'s scripted registry');
     this.sweep();
     if (this.sessions.size >= this.maxSessions) return fail(503, 'capacity', 'too many sessions; try later');
     const id = 's-' + hex(8);
     let room;
     try {
-      room = new Room({ id, rules, worldRules: opts.worldRules || 'proximity', timeScale: opts.timeScale || 1, clock: this.clock, seed: opts.seed, seedHex: opts.seedHex, randomBytes: this.seasonRandomBytes ? this.seasonRandomBytes() : undefined, label: opts.label || 'test session' });
+      room = new Room({ id, rules, worldRules: opts.worldRules || 'proximity', timeScale: opts.timeScale || 1, clock: this.clock, seed: opts.seed, seedHex: opts.seedHex, randomBytes: this.seasonRandomBytes ? this.seasonRandomBytes() : undefined, label: opts.label || 'test session', actor: actor ? { kind: 'scripted', account: actor } : null });
     } catch (e) { return fail(400, e.code || 'invalid_params', e.message); }
     const invite = hex(8);
     const entry = { room, tokens: new Map(), inviteHash: sha256('invite:' + invite) };
