@@ -45,6 +45,7 @@ import { createTownScene, CORE_GLOW } from './scenes/town.js';
 import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
+import { features as featureFlags } from './features.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
@@ -1190,6 +1191,7 @@ function frame() {
 
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
+  get features() { return featureFlags; },
   scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
