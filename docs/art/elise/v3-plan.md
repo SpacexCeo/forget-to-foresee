@@ -37,3 +37,9 @@ everything from scratch with the mistakes in mind".
 | **C** | **Review** | **dressed sheet + 60 fps film from the real game (idle, walk, run, strike, cast)** | `npm test`, built-page smoke |
 
 The shipped model stays in the game until the owner approves stage C.
+
+## Clips for v3 (lead, 12.11, from the combat latency probe)
+
+Her casts showed `greet` and her `strike1` hit at 213 ms (Iris: 143 ms). In v3 she gets Iris's keyed actions from
+`art/anim/iris_actions.py`: `cast_lance`, `cast_snare`, `strike1..3`, `strike_charge`, `strike_super`, with the steps
+scaled under the gown (`--legs`) and the gown baked over them; the dash stays from `iris_combat.py`.
