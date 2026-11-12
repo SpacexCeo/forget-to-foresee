@@ -33,6 +33,7 @@ import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVa
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { createPlayerHud } from './scenes/player-hud.js';
+import { createPanelCollapse } from './scenes/panel-collapse.js';
 import { createStamina, STAMINA } from './game/stamina.js';
 import { installTouchCopy } from './ui/touch-copy.js';
 import { createTouchControls } from './scenes/touch-sticks.js';
@@ -253,7 +254,7 @@ function mountTownAudio() {
   if (townAudio) return;
   Promise.all([import('./audio/audio.js'), import('./audio/town-audio.js')]).then(([a, t]) => { if (!townAudio && inTown) townAudio = t.createTownAudio({ createAudio: a.createAudio }); }).catch((e) => console.warn('[town] audio', e));
 }
-let playerHud = null, touchSticks = null;
+let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null;
@@ -371,7 +372,7 @@ if (townMode.town) {
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
   if (!touchSticks) touchSticks = createTouchControls({ input, t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, storage: ctx.storage, player,
     camForward: () => { const v = camera.getWorldDirection(_camFwd); return [v.x, v.z]; },
-    casting: () => townCasting, mobs: () => townMobs, flow: () => townFlow, wish: wishVector });
+    casting: () => townCasting, mobs: () => townMobs, flow: () => townFlow, wish: wishVector, attack: (down) => attackPress(down) });
   // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
   // the doors that lead inside glow warm gold (scenes/door-glow.js: exactly the shops' doors, the list the walk-in uses)
   if (!doorGlow) doorGlow = createDoorGlow({ scene, reducedMotion: () => lookdev.reducedMotion, daylight: () => lookdev.weather.state.sun * (1 - Math.min(1, (lookdev.look && lookdev.look.moonFill) || 0)) });
@@ -1069,6 +1070,7 @@ function frame() {
   if (play && !inTown) play.update(dt, { focus, moving: movingState, speed, running: player.run && movingState });
   else if (irisAvatar) irisAvatar.update(dt, movingState, avatar, clock.elapsedTime, speed, player.run && movingState, lookdev.reducedMotion, null); // the town: her gait before the season
   // the sticks: the town, and the archipelago in normal play; ?demo=judge keeps tap-to-move and its buttons (README path)
+  if (play && !inTown) { if (!panelCollapse) panelCollapse = createPanelCollapse({ t: (k, a) => ctx.i18n.t(k, a) }); panelCollapse.update(); } // the inside-Shell panel folds
   if (touchSticks) touchSticks.update({ active: (!!(inTown && townFlow && townFlow.phase === 'town') || (!!play && !inTown && !judge)) && !document.querySelector('dialog[open], .gm, .pl-panel:not([hidden])') });
   stamina.update(dt, { running: !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside && player.run && movingState) });
   document.body.classList.toggle('st-winded', stamina.winded);

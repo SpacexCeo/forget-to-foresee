@@ -669,6 +669,8 @@ export default {
   'town.silk': "丝绸",
   'chest.badge': "{n} 个密封宝箱",
   'hud.health': "生命",
+  'hud.panel.collapse': "收起面板",
+  'hud.panel.expand': "展开面板",
   'hud.stamina': "体力",
   'holder.heading': "持有者权限（NEAR 测试网，只读）",
   'holder.note': "输入任意测试网账户。如果它持有 Forget to Foresee 的 NFT（记忆碎片、代理卡或 Elise），游戏会在此浏览器中解锁一个称号和头像边框。无需钱包，无需签名，不会写入链上。",
