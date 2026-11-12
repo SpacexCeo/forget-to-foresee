@@ -39,6 +39,7 @@ for (const pi of [2, 3, 5]) {          // veilbell pair, hulker, crownrift elite
     f.town.mobs.iris.hp = 100;
     return { type: pack.type, home: pack.home };
   }, pi);
+  await page.waitForTimeout(1500);                      // she lands from the drop before the clock starts
   const T0 = Date.now(); const r = { type: info.type };
   // wake and strike: up to 9 s, Iris standing still (a short dash-out if her health gets low)
   await page.waitForFunction((t) => (window.__seen[t + ':impact'] || 0) + (window.__seen[t + ':shot'] || 0) > 0, info.type, { timeout: 9000 }).catch(() => {});

@@ -16,7 +16,7 @@ import { CASTS } from '../scenes/town-casting-fx.js';
 /** Per type: health, speeds (m/s, matched to the clips: art/mobs/mobs.json), ranges (m), attack timing. */
 export const MOB_TYPES = Object.freeze({
   skitter: Object.freeze({ scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
-  hulker: Object.freeze({ hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: true, heavy: true }),
+  hulker: Object.freeze({ hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: false, heavy: true }),   // a brute powers through light hits
   veilbell: Object.freeze({ hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
   crownrift: Object.freeze({ hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
 });
@@ -476,8 +476,12 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         v.ring.material.opacity = 0.25 + 0.5 * k;
       }
     }
+    const chest = new THREE.Vector3(player.pos[0], player.pos[1] + 1.0, player.pos[2]), want = new THREE.Vector3();
     for (const s of shots) {
-      s.life -= dt; s.s.position.addScaledVector(s.vel, dt);
+      s.life -= dt;
+      want.copy(chest).sub(s.s.position).normalize().multiplyScalar(9);        // the seed bends towards her chest (up to ~70 deg/s): a dodge sideways still beats it
+      const k = Math.min(1, dt * 1.2); s.vel.lerp(want, k).setLength(9);
+      s.s.position.addScaledVector(s.vel, dt);
       const p = s.s.position;
       const dIris = Math.hypot(p.x - player.pos[0], p.y - (player.pos[1] + 1.0), p.z - player.pos[2]); s.min = Math.min(s.min, dIris);
       if (iris.alive && dIris < 0.75) { hurt(s.damage); s.life = 0; s.hit = true; }
