@@ -12,9 +12,9 @@ import { memoryStorage } from '../../src/ui/storage.js';
 
 const go = (s, a, ctx) => reduce(s, a, ctx);
 
-test('the fee is 10,000 town silk (1,000,000 hundredths); the flag defaults off; a demo fee is labelled', () => {
+test('the fee is 10,000 town silk (1,000,000 hundredths); the Expedition is on by default (one entry), ?story=0 off; a demo fee is labelled', () => {
   assert.equal(EXPEDITION.PORTAL_FEE_C, 1_000_000); assert.equal(EXPEDITION.currency, 'silk');
-  assert.equal(storyOn(''), false); assert.equal(storyOn('?story=1'), true); assert.equal(storyOn('?demo=judge'), false);
+  assert.equal(storyOn(''), true); assert.equal(storyOn('?story=1'), true); assert.equal(storyOn('?demo=judge'), true); assert.equal(storyOn('?story=0'), false);
   assert.deepEqual(portalFee(''), { feeC: 1_000_000, demo: false });
   assert.deepEqual(portalFee('?portalFee=500'), { feeC: 50_000, demo: true });
 });

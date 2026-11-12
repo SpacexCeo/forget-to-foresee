@@ -2,7 +2,7 @@
 
 A 3D strategy game where an AI clan agent, **Iris**, pays for prophecy with her own memories. Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
 
-- **Play it now (no install, desktop browser with WebGL 2):** https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk
+- **Play it now (no install, desktop browser with WebGL 2):** https://spacexceo.github.io/forget-to-foresee/ (one entry: the full game, the Expedition included)
 - **Built at NEAR HACKATHON** (1–14 Nov 2026) by Lambada_eth. Tracks: **Games** (primary) and **NFTs** (memory shards); see [Tracks](#tracks).
 - **Licence:** MIT. **AI use:** see [Baseline, third-party code and AI disclosure](#baseline-third-party-code-and-ai-disclosure).
 - **Numbers** (test counts, build size) are generated, not typed: [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs --write`).
@@ -13,17 +13,17 @@ Games that advertise "AI agents" and "on-chain economies" often hide two lies: t
 
 ## What you do in the game (30 seconds)
 
-Six clans read round signs of four slots (Place, Action, Power, Delay), stake silk on where a Gift will land, trade, trust, betray, and must assemble one message before trial 13. You guide Iris; the other five clans are computer-run agents. To see the future early she can **forget a memory forever**; the forgotten memory is auctioned as a **shard** and, on the judge path, is a NEP-171 NFT bound to the sealed season.
+Six clans read round signs of four slots (Place, Action, Power, Delay), stake silk on where a Gift will land, trade, trust, betray, and must assemble one message before trial 13. You guide Iris; the other five clans are computer-run agents. To see the future early she can **forget a memory forever**; the forgotten memory is auctioned as a **shard** and, for the recorded season on testnet, is a NEP-171 NFT bound to the sealed season.
 
 ## The game loop
 
-Only what runs today, or behind the flag named in brackets.
+Only what runs today. [Expedition] marks the story layer, on by default (`?story=0` switches it off).
 
 | Every | The player |
 |---|---|
-| **30 seconds** | Walks the hill town, talks to a townsperson (**E**), hires one as an agent; outside the walls fights the monster packs (strike, dash, the **Q** / **V** casts) for XP and dropped chests. In a season: reads a sign, anchors a guess at a Shell pad, ends the trial (**T**). [`?story=1`] Each kill also counts toward the active citizen quest and earns town silk. |
-| **5 minutes** | Collects a hired agent's result, spins the wheel by the Inn, plays a Foresight Exchange drill (practice silk, no prizes), plays a few trials and decides whether to forget a memory for a vision. [`?story=1`] Turns in a citizen quest (the guard's ten stone spiders, the lamplighter's spare part, the crown on the lookout, the repeatable bounty); the objective line always shows one next goal. |
-| **Session** | Plays one 17-trial season at the Tournament altar, checks the revealed signs against the root committed on NEAR testnet, and on the judge path sees the forgotten memory as a NEP-171 shard. [`?story=1`] The Expedition: gather 10,000 town silk (about 1.5 to 2 hours by the pacing test), pay it at the Gate-Loom beside the arrival point, and the Loom sends Iris onward to the archipelago, not home; the Shell monument shows the board (a local preview until a snapshot is published, [docs/leaderboard.md](docs/leaderboard.md)). |
+| **30 seconds** | Walks the hill town, talks to a townsperson (**E**), hires one as an agent; outside the walls fights the monster packs (strike, dash, the **Q** / **V** casts) for XP and dropped chests. In a season: reads a sign, anchors a guess at a Shell pad, ends the trial (**T**). [Expedition] Each kill also counts toward the active citizen quest and earns town silk. |
+| **5 minutes** | Collects a hired agent's result, spins the wheel by the Inn, plays a Foresight Exchange drill (practice silk, no prizes), plays a few trials and decides whether to forget a memory for a vision. [Expedition] Turns in a citizen quest (the guard's ten stone spiders, the lamplighter's spare part, the crown on the lookout, the repeatable bounty); the objective line always shows one next goal. |
+| **Session** | Plays one 17-trial season at the Tournament altar, checks the revealed signs against the root committed on NEAR testnet, and sees the forgotten memory become a shard (a NEP-171 token for the recorded season on testnet). [Expedition] The Expedition: gather 10,000 town silk (about 1.5 to 2 hours by the pacing test), pay it at the Gate-Loom beside the arrival point, and the Loom sends Iris onward to the archipelago, not home; the Shell monument shows the board (a local preview until a snapshot is published, [docs/leaderboard.md](docs/leaderboard.md)). |
 
 Not in the loop yet: the town market and pledges to the town works (built, not deployed; see the table below), the weekly tournament card (a labelled simulation). One currency: silk, in-game, testnet, no value outside the game.
 
@@ -63,24 +63,22 @@ node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct   # ever
 
 One-file proof verifiers (they import nothing from the game): `node tools/verify/verify.mjs proof.json` or `python3 tools/verify/verify.py proof.json` (copy `proof.json` from **Signs & Visions → What does this prove? → Copy proof**). Exit 0 and every line `✓` means the leaf and the Merkle path match. Details: [docs/verify.md](docs/verify.md).
 
-## Judge path (about 5 minutes)
+## How to see it (about 90 seconds)
 
-Open https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk (fixed judge season `793f6c05e89839f2`, Novice mode). The game starts in the town.
+There is one entry: the link above opens the full game (`?story=0` switches the Expedition off; the old `?demo=judge` link opens the same game).
 
 | # | Do | See |
 |---|---|---|
-| 1 | Walk Iris up the main street stairs to the altar (WASD or click the ground; Shift runs). Press **E** at the altar. | HUD chip "Walk to the Tournament altar", then a short cover and the floating archipelago. Top left: **Trial 1 of 17**, **Silk 63**. Quest: *Test Iris’s guess at Shell I’s pad*. |
-| 2 | Press **G** (Iris walks to the pad of Shell I; hold **Shift** to run). When she stops at the pad press **E** once (the highlighted option is *Anchor here for trial 3*). | Silk **53**. Quest: *End trial 1*. |
-| 3 | Press **T** twice (the second press confirms). | **Trial 2 of 17**, silk **56**. Quest: *Watch trial 3 come true*. |
-| 4 | Press **T** twice, then **T** twice again. | **Trial 4 of 17**. Quest: *The Price of Memory*. Press **V** for Signs & Visions: revealed signs show "Verified ✓" (the event matched the root committed before you arrived). |
-| 5 | **While the HUD still reads Trial 4**, press **M** and click **Forget it for a vision** on *The Shells' Call on the night of arrival* (weight 2). Confirm with **Forget this memory**. | A dialog states what changes, what Iris gains and that it cannot be undone. Signs & Visions shows new cards marked *vision*. |
-| 6 | Press **T** (twice each time) until trial 6. | A toast **Minted on NEAR testnet** and, in Memories, the card **Shard #7 · call**: token `793f6c05e89839f2-7`, owner `lambada_eth.testnet`, "Bound to the sealed season · leaf #3", **View on nearblocks**. |
+| 1 | Wait for the town. | Iris at her arrival point; the objective line at the top reads "Speak with the elder · 100 / 10,000 silk". Beside her stand the **Gate-Loom** (right) and the **Shell monument** (left). |
+| 2 | Walk to the elder and press **E**; then walk a few metres and talk again. | The starter guide: the Gate-Loom wants 10,000 silk; the guard at the lower gate gives the first quest. |
+| 3 | Outside the walls, fight the stone spiders (strike / dash, **Q** / **V** casts). | Kills count toward the guard's quest and drop resources (spider silk thread); the quest asks for them at the turn-in. |
+| 4 | At the Shell monument press **E**. | The board: Humans and Scripted NPC tabs, your score from your own play log ("Local preview, not ranked" until a snapshot is published). |
+| 5 | Walk up the main street stairs to the Tournament altar and press **E**. | The floating archipelago and **Trial 1 of 17**. Press **V**: revealed signs are checked against the root fixed before trial 1. Press **M** to forget a memory for a vision (in a fresh season its shard is an honest "Unminted shard preview"). |
 
-If you forget a different memory, or later than trial 4, the game shows an honest **Unminted shard preview** for Iris's shard: any playthrough that diverges from the recorded one gets no token. Two shortcuts that do not depend on timing:
+The recorded season on NEAR testnet (`793f6c05e89839f2`) is evidence you can check without playing it again:
 
-- On `?demo=judge`, Memories has a button **Open the judge playthrough's on-chain shard (#7)**: it reads `ftf-shards.testnet` and shows the real token card, labelled "From the recorded judge playthrough: minted by the coordinator, not by your session".
-- **The NFT does something (holder access):** open **Profile** (top right) → **NFTs** → *Holder access* → **Try the judge account**. The page reads `nft_tokens_for_owner` on `ftf-shards.testnet`, `agents.ftf-coordinator.testnet` and `heroine.ftf-coordinator.testnet` for `lambada_eth.testnet`, lists the tokens with nearblocks links and unlocks "Unlocked: Shard keeper"; the **Profile** tab then shows the *Shard keeper* title and an ink-ring frame on the portrait. Any testnet account id works; an account that holds nothing unlocks nothing. Read-only and cosmetic: no wallet, no signature, kept in this browser.
-- The **replay link** of the recorded judge playthrough replays it command by command in your browser and checks its Merkle root against `ftf-seasons.testnet`: [open the judge replay](https://spacexceo.github.io/forget-to-foresee/?replay=r1.eyJzIjoiY2MxNjFkMzA4ZmFhNjc1MzlhZjQ0MjA1YjU2YjZkNGYiLCJyIjoidjMiLCJjIjpbWyJzdGFydF9zZWFzb24iLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbInNhY3JpZmljZV9tZW1vcnkiLHsibWVtb3J5SWQiOjJ9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJjYXN0X3ZvdGUiLHsiYWNjZXB0Ijp0cnVlfV1dfQ) (generated by `node game/scripts/judge-replay-link.mjs`).
+- **The NFT does something (holder access):** open **Profile** (top right) → **NFTs** → *Holder access* → **Try the demo account**. The page reads `nft_tokens_for_owner` on `ftf-shards.testnet`, `agents.ftf-coordinator.testnet` and `heroine.ftf-coordinator.testnet` for `lambada_eth.testnet`, lists the tokens with nearblocks links and unlocks "Unlocked: Shard keeper"; the **Profile** tab then shows the *Shard keeper* title and an ink-ring frame on the portrait. Any testnet account id works; an account that holds nothing unlocks nothing. Read-only and cosmetic: no wallet, no signature, kept in this browser.
+- The **replay link** of the recorded season replays it command by command in your browser and checks its Merkle root against `ftf-seasons.testnet`: [open the replay](https://spacexceo.github.io/forget-to-foresee/?replay=r1.eyJzIjoiY2MxNjFkMzA4ZmFhNjc1MzlhZjQ0MjA1YjU2YjZkNGYiLCJyIjoidjMiLCJjIjpbWyJzdGFydF9zZWFzb24iLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbInNhY3JpZmljZV9tZW1vcnkiLHsibWVtb3J5SWQiOjJ9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJlbmRfdGljayIse31dLFsiZW5kX3RpY2siLHt9XSxbImVuZF90aWNrIix7fV0sWyJjYXN0X3ZvdGUiLHsiYWNjZXB0Ijp0cnVlfV1dfQ) (generated by `node game/scripts/judge-replay-link.mjs`). Its memory shard is token `793f6c05e89839f2-7` on `ftf-shards.testnet`.
 
 On a machine without a GPU (software rendering, about 5 fps) the walks take a few minutes and keys pressed while Iris is still walking or a trial is still ending do nothing; wait for her to stop and for the trial counter to change.
 
@@ -92,9 +90,9 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 |---|---|---|
 | Game rules, 17-trial season | **Real, local**: runs in your browser tab with a headless engine; nothing about silk, stakes or outcomes is on-chain | `game/src/game/engine.js` |
 | Clan agents (5 computer clans) | **Scripted, real rules**: deterministic heuristics with tempers, not an LLM; in-game silk only | `game/src/play/` |
-| Season commitment | **Real**: SHA-256 Merkle root fixed before trial 1, each reveal checked in the browser; for the judge season the root and all 15 leaves are on NEAR testnet and verified by the contract | `ftf-seasons.testnet`, `contracts/season-commit/` |
-| Live (non-judge) seasons | Commitment is local only; not registered on-chain | [docs/verify.md](docs/verify.md) |
-| Memory-shard NFTs | **Real on testnet** for the judge season: 3 NEP-171 tokens minted by the coordinator script, not by your session, held by `lambada_eth.testnet`; the game reads them | `ftf-shards.testnet`, `contracts/memory-shard/` |
+| Season commitment | **Real**: SHA-256 Merkle root fixed before trial 1, each reveal checked in the browser; for the recorded season `793f6c05e89839f2` the root and all 15 leaves are on NEAR testnet and verified by the contract | `ftf-seasons.testnet`, `contracts/season-commit/` |
+| Fresh seasons (every new game) | Commitment is local only; not registered on-chain | [docs/verify.md](docs/verify.md) |
+| Memory-shard NFTs | **Real on testnet** for the recorded season: 3 NEP-171 tokens minted by the coordinator script, not by your session, held by `lambada_eth.testnet`; the game reads them | `ftf-shards.testnet`, `contracts/memory-shard/` |
 | Holder access (NFT-gated perk) | **Real, read-only**: the game reads which Forget to Foresee NFTs any testnet account holds and unlocks a cosmetic title and portrait frame in this browser; not a wallet login, nothing signed or written | `game/src/net/holder.js`, `game/src/play/holder-panel.js` |
 | Shards in other playthroughs | **Preview only**, labelled "Unminted shard preview" | `game/src/ui/world-hud/shard-card-model.js` |
 | Agent card NFT (Iris's end-of-season state) | **Real on testnet**, coordinator-minted, owned by the owner's account | `agents.ftf-coordinator.testnet`, `contracts/agent-card/` |
@@ -111,7 +109,7 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 | Wallet sign-in, on-chain escrow, player-owned agent NFT | **Not built** | — |
 | Agent HTTP API | **Real**: OpenAPI, idempotent commands, redacted observations, Merkle proofs, an example agent that plays a whole season; in-memory test sessions, no accounts | `server/`, [docs/api/](docs/api/README.md) |
 | Foresight Exchange (practice drill) | **Real rules, practice silk**: three Echoes follow a sealed snapshot of public reference rates; no prizes, no real money, not on NEAR | `game/src/game/exchange.js` |
-| Weekly tournament card | **UI simulation**, labelled "Simulation"; not part of the judged loop | [docs/status.md](docs/status.md) |
+| Weekly tournament card | **UI simulation**, labelled "Simulation"; not part of the game loop | [docs/status.md](docs/status.md) |
 | Townsfolk, hired agents, level, profile | **Local**: scripted or learning agents, in-game town silk only | `game/src/game/town-economy.js` |
 | Art, audio, VFX | Own procedural work; exceptions: CMU motion-capture clips in a review build and the licensed music (Scott Buckley, Kevin MacLeod, CC-BY 4.0) | [docs/art/manifest.md](docs/art/manifest.md) |
 | Money | In-game silk only. No token sale, no payment, testnet only | — |
@@ -131,7 +129,7 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 
 - Node.js 20+ (`.nvmrc`: 22). Rust only for the contracts: the toolchain is pinned in `contracts/*/rust-toolchain.toml`; `cargo test --lib` also needs `pkg-config` and OpenSSL headers (`apt-get install pkg-config libssl-dev`).
 - Use `git clone --depth 1`: the full history is large because of videos.
-- `cd game && npm run build` writes the production build (size in [docs/STATS.md](docs/STATS.md), mostly compressed 3D models). The first load of the judge page streams a large part of it; on a machine without a GPU the page runs at a low frame rate and says so, and every step above still completes. Without WebGL 2 the page explains it and links the paths that need no GPU.
+- `cd game && npm run build` writes the production build (size in [docs/STATS.md](docs/STATS.md), mostly compressed 3D models). The first load of the game streams a large part of it; on a machine without a GPU the page runs at a low frame rate and says so, and every step above still completes. Without WebGL 2 the page explains it and links the paths that need no GPU.
 
 ## Repository map
 
@@ -151,7 +149,7 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 ## Tracks
 
 - **games** ("Games With Real Economies"), the primary track: the economy *is* the game loop. Six clans (yours and five computer-run agents) trade words, silk, promises and memories; anchors pay out from a Gift split exactly between those who staked; forgotten memories are sold at auction; defection raises world tension until the Shells leave and everyone loses. The season's events are sealed before the first move, so neither we nor the clan agents can change what the Guests said once the root is shown; the rules themselves run locally in the browser ([How NEAR is used](#how-near-is-used)).
-- **nfts** ("NFTs That Do Something"), claimed for the memory shards only: a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result), the season's schedule root and, when its vision opened a sign (Iris's shard 7), that sign's Merkle leaf, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the judge playthrough's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. In the game, the judge path shows the minted shards as NFT cards in the Memories panel (on-chain SVG, token id, owner, biography, leaf binding, explorer link) and a "Minted on NEAR testnet" toast when Frost buys Iris's shard; it reads only, never signs. Holding a shard (or the agent card, or a Day 1 Elise) unlocks a visible perk through *Holder access* (read-only check of any testnet account; cosmetic). Live seasons mint nothing and say so (see the real/mock table). Not claimed: a persistent, player-owned agent NFT; that is future work.
+- **nfts** ("NFTs That Do Something"), claimed for the memory shards only: a forgotten memory becomes a memory shard, a NEP-171 NFT whose metadata carries its biography (the season, the memory's kind and weight, the trial it was forgotten, the auction result), the season's schedule root and, when its vision opened a sign (Iris's shard 7), that sign's Merkle leaf, so the token is bound to the sealed season. The contract `memory-shard` runs on testnet as `ftf-shards.testnet` with the recorded season's 3 shards minted by the coordinator script; the on-chain ink-ring SVG is byte-identical to the game's. In the game, Profile → NFTs → Holder access reads the minted shards of the recorded season (token id, owner, explorer link); it reads only, never signs. Holding a shard (or the agent card, or a Day 1 Elise) unlocks a visible perk through *Holder access* (read-only check of any testnet account; cosmetic). Live seasons mint nothing and say so (see the real/mock table). Not claimed: a persistent, player-owned agent NFT; that is future work.
 
 ## Baseline, third-party code and AI disclosure
 

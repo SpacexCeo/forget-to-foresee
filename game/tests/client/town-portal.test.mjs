@@ -47,8 +47,8 @@ test('portal object: E in reach confirms first, pays only on the button, follows
   p.dispose(); assert.equal(scene.children.includes(p.root), false);
 });
 
-test('portal: the default page never loads it (boot-world imports it lazily behind ?story=1)', async () => {
+test('portal: boot-world imports it lazily with the Expedition (on by default), never with ?story=0', async () => {
   const src = (await import('node:fs')).readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /^import .*town-(portal|quests)/m);
-  assert.match(src, /params\.get\('story'\) === '1'[^\n]*\n[^\n]*import\('\.\/scenes\/town-quests\.js'\)/);
+  assert.match(src, /params\.get\('story'\) !== '0'[^\n]*\n[^\n]*import\('\.\/scenes\/town-quests\.js'\)/);
 });

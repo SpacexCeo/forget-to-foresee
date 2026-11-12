@@ -158,8 +158,7 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
         [`${k('lance')} / ${k('snare')}`, 'set.help.cast'], [k('photo'), 'set.help.photo'], [k('skin'), 'set.help.skin'], [k('chat'), 'set.help.chat'], ['Esc', 'set.help.menu']]) dl.append(el('dt', null, keys), el('dd', null, t(what)));
       return [el('h3', null, t('set.help.keyboard')), dl,
         el('h3', null, t('set.help.touchTitle')), el('p', null, t('set.help.touch')),
-        el('h3', null, t('set.help.guideTitle')), ...['town', 'shops', 'hunt', 'chests', 'tournament', 'nft'].map((x) => el('p', null, t('set.help.' + x))),
-        el('h3', null, t('set.help.judgeTitle')), el('p', null, t('set.help.judge'))];
+        el('h3', null, t('set.help.guideTitle')), ...['town', 'shops', 'hunt', 'chests', 'tournament', 'nft'].map((x) => el('p', null, t('set.help.' + x)))]; // one entry (owner 12.11): no separate jury path to describe
     },
     account() {
       const d = (hooks.day1 && hooks.day1()) || {};

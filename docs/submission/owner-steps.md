@@ -47,8 +47,8 @@ the whole work. The README already links this URL. Re-tag only if something must
 
 ### 2. Check the published build
 The Pages workflow runs on every push to `main` (Settings → Pages → Source: GitHub Actions is already on).
-Open https://spacexceo.github.io/forget-to-foresee/?demo=judge (the judge link) once, then walk the README table on
-`?demo=judge&mode=walk`: it must reach "Verified ✓" at trial 3 and, below it, "Verified on NEAR testnet ✓". Check that
+Open https://spacexceo.github.io/forget-to-foresee/ (one entry: the whole game) once, then walk the README table "How to see it": the town with the
+objective line, the Gate-Loom and the Shell monument, then the altar and "Verified ✓" in Signs & Visions. Check that
 the page opens in English (add `&lang=en` if your browser is set to another language). Keep the site up until at least
 18.11, ideally 25.11.
 
@@ -61,7 +61,7 @@ it without re-rendering.
 ### 3b. Repository settings (GitHub → the repo → About ⚙, 2 minutes; audit QW-4)
 - **Description:** `Strategy game where an AI clan agent pays for prophecy with her own memories. Seasons are sealed on NEAR testnet before play; forgotten memories become NEP-171 shards. Built at NEAR HACKATHON.`
   (the current one says "NFT agents", which the README contradicts: Iris is game state, not a token).
-- **Website:** `https://spacexceo.github.io/forget-to-foresee/?demo=judge&mode=walk`
+- **Website:** `https://spacexceo.github.io/forget-to-foresee/`
 - **Topics:** `near`, `near-protocol`, `nft`, `nep-171`, `game`, `threejs`, `ai-agents`, `merkle-tree`, `nearhackathon`
 - Check the link preview after the next Pages deploy: the page already has `og:` / `twitter:` tags and `og.jpg`.
 

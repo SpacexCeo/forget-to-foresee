@@ -42,7 +42,7 @@ contract.)
 
 > Six AI clans with silk, memory and temper trade, keep or break pacts, and vote. Your AI agent can play a whole season via our HTTP API.
 >
-> Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
+> Play: https://spacexceo.github.io/forget-to-foresee/
 > Code, 1,000+ tests: https://github.com/SpacexCeo/forget-to-foresee
 >
 > What would you forget to see the future?
@@ -65,6 +65,6 @@ no claims, so it can go in a later reply; it does not replace the jury video in 
 ## Checklist before posting (owner)
 - [ ] The video is attached to post 1 (not only a link), and its captions match the README (`owner-steps.md` §3).
 - [ ] "built at NEAR HACKATHON", @NEARProtocol and #NEARHackathon are in post 1.
-- [ ] The live link opens and reaches "Verified ✓" (re-run the README judge path once on the day).
+- [ ] The live link opens and reaches "Verified ✓" (walk the README "How to see it" table once on the day).
 - [ ] Open the explorer link in post 2 in a browser once (the bot check blocks scripted fetches).
 - [ ] Paste the post URL into `apply-form.md` → `demoUrl`.
