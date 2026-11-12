@@ -111,6 +111,7 @@ export default {
   'settings.quality': 'Quality',
   'settings.quality.auto': 'Auto',
   'settings.quality.high': 'High',
+  'settings.quality.medium': "Medium",
   'settings.quality.low': 'Low',
   'settings.note': 'Settings are stored on this device only.',
   'settings.hudMode': 'Interface',

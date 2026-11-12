@@ -105,6 +105,8 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     },
     setListener(camera, target) { if (audio.setListener) audio.setListener(camera, target); },
     get weather() { return { bed: rain?.bedName ?? null, wet }; },
+    /** The audio runtime itself (the settings popup's volume sliders). */
+    get audio() { return audio; },
     dispose() { rain?.stop(0.3); win.removeEventListener('ftf:weather', onWeather); win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
   };
   return api;

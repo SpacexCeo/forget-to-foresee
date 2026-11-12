@@ -100,6 +100,19 @@ export function governorFloor(detected, profile = 'desktop') {
 }
 
 /** One step cheaper, or null at the bottom. */
+/**
+ * The settings popup's graphics switches on top of a tier (ui/settings-store.js renderOverrides): shadows off clears
+ * both shadow maps, bloom off clears the bloom, weather off stops the rain particles. Only switches that are off change
+ * anything; a tier never gains what it does not have.
+ */
+export function applyOverrides(cfg, o = {}) {
+  const out = { ...cfg };
+  if (o.shadows === false) { out.shadowMap = 0; out.shadowFarMap = 0; out.cascades = Math.min(1, out.cascades || 0); }
+  if (o.bloom === false) { out.bloom = false; out.bloomMips = 0; }
+  if (o.weather === false) out.rain = 0;
+  return out;
+}
+
 export const lowerTier = (t) => (t === 'ultra' ? 'high' : t === 'high' ? 'low' : null);
 
 /**
@@ -109,6 +122,7 @@ export const lowerTier = (t) => (t === 'ultra' ? 'high' : t === 'high' ? 'low' :
  */
 export function tierForPreference(pref, detected = 'ultra') {
   if (pref === 'low') return 'low';
+  if (pref === 'medium') return 'high';
   if (pref === 'high') return detected === 'low' ? 'high' : 'ultra';
   return isTier(detected) ? detected : 'ultra';
 }

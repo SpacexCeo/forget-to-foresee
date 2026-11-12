@@ -20,7 +20,7 @@
 //   update(dt, focus, camDist), render(), stats(), trackOccluder(spec)
 // setReducedMotion() freezes the clouds, wind, Shell hover and grain (spec 1/3: reduced motion never blocks input).
 import * as THREE from 'three';
-import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor, governorFloor } from './quality.js';
+import { qualityFor, isTier, isProfile, detectProfile, GOVERNORS, TierGovernor, governorFloor, applyOverrides } from './quality.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { SkyDome, TIME_PRESETS, LOCATION_LOOKS, lookFor } from './sky.js';
 /** Seconds between re-bakes of the sky's ambient light while the day cycle moves the sun. */
@@ -79,7 +79,7 @@ export class LookDev {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
     this.profile = isProfile(profile) ? profile : 'desktop';
     this.tier = isTier(tier) ? tier : 'ultra';
-    this.cfg = qualityFor(this.tier, this.profile);
+    this.overrides = {}; this.cfg = qualityFor(this.tier, this.profile);
     this.pixelScale = 1; // the governor's render-resolution step (phones), on top of the tier's pixel ratio cap
     this.reducedMotion = reducedMotion;
     this.listeners = new Set();
@@ -371,13 +371,20 @@ export class LookDev {
   /** Settings hook: 'ultra' | 'high' | 'low'. Rebuilds the post stack, shadows, foliage density. */
   setQuality(tier) {
     if (!isTier(tier) || tier === this.tier) return this.tier;
-    this.tier = tier; this.cfg = qualityFor(tier, this.profile);
+    this.tier = tier; this.cfg = applyOverrides(qualityFor(tier, this.profile), this.overrides);
     this.applyTier();
     for (const fn of this.listeners) fn(tier);
     return tier;
   }
 
   onQualityChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
+
+  /** Settings popup switches (render/quality.js applyOverrides): shadows / bloom / weather off on top of the tier. */
+  setOverrides(o = {}) {
+    this.overrides = { ...o };
+    this.cfg = applyOverrides(qualityFor(this.tier, this.profile), this.overrides);
+    this.applyTier();
+  }
 
   setReducedMotion(on) { this.reducedMotion = !!on; this.applyWeather(false); }
 
