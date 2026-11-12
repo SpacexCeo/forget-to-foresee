@@ -134,8 +134,10 @@ def _catmull(pts, step=1.0):
 
 
 def _clearing_y():
-    # the casting field is banked up a little: a shelf on the slope, an easy walk from the road
-    return {name: raw_h(cx, cz) + (2.2 if name == "casting_field" else 0.0) for name, cx, cz, _r, _b in CLEARINGS}
+    # the casting field is banked up a little: a shelf on the slope, an easy walk from the road; the lookout a
+    # little too, so the road (held to ROAD_GRADE) arrives level with its paving instead of 0.4 m above it
+    lift = {"casting_field": 2.2, "lookout": 0.6}
+    return {name: raw_h(cx, cz) + lift.get(name, 0.0) for name, cx, cz, _r, _b in CLEARINGS}
 
 
 def _with_clearings(x, z, cy):
@@ -245,10 +247,24 @@ class Hill:
         return any(math.hypot(x - cx, z - cz) < r + margin for _n, cx, cz, r, _b in CLEARINGS)
 
 
-def fade(c, y, z):
-    """Vertex colour sinking into the cloud sea (the old skirt's fade near the seam, later further out)."""
+_HILL = None   # set by build(): fade() keeps the road, the clearings and what stands on them in full colour
+
+
+def floor_keep(x, z):
+    """1 on the road and the clearings (and a few metres around), 0 out on the open slope."""
+    if _HILL is None or x is None:
+        return 0.0
+    k = 1.0 - smooth(ROAD_HALF + 1.0, ROAD_HALF + 7.0, _HILL.road_dist(x, z))
+    for _n, cx, cz, r, b in CLEARINGS:
+        k = max(k, 1.0 - smooth(r + 1.0, r + b + 5.0, math.hypot(x - cx, z - cz)))
+    return k
+
+
+def fade(c, y, z, x=None):
+    """Vertex colour sinking into the cloud sea (the old skirt's fade near the seam, later further out). The road
+    and the clearings never fade: the lookout at -20 m read as a flat white disc (monster play-test 12.11)."""
     f0 = 4.0 + 8.0 * smooth(0.0, 10.0, z - Z0)
-    f = max(0.0, min(1.0, (-y - f0) / 26.0))
+    f = max(0.0, min(1.0, (-y - f0) / 26.0)) * (1.0 - floor_keep(x, z))
     return mix(c, MIST, f)
 
 
@@ -269,7 +285,7 @@ def _ground(tb, hill):
             dr, dp = hill.road_dist(x, z), hill.path_dist(x, z)
             c = mix(c, EARTH, 0.75 * (1.0 - smooth(ROAD_HALF - 0.4, ROAD_HALF + 1.6, dr)))
             c = mix(c, tint(EARTH, 1.08), 0.9 * (1.0 - smooth(PATH_HALF - 0.2, PATH_HALF + 1.2, dp)))
-            row.append(fade(tint(c, k), y, z))
+            row.append(fade(tint(c, k), y, z, x))
         cols.append(row)
     for i in range(len(xs) - 1):
         for j in range(len(zs) - 1):
@@ -301,9 +317,11 @@ def _road(tb, hill):
             px, pz = x + nx * half * t, z + nz * half * t
             crown = 0.03 * (1.0 - abs(t))
             k = (0.8 if abs(t) > 0.9 else 0.94) + 0.14 * vnoise(px, pz, 5.0, 72)
-            row.append(((px, ys[i] + lift + crown, pz), fade(tint(COBBLE, k), ys[i], pz)))
+            row.append(((px, ys[i] + lift + crown, pz), fade(tint(COBBLE, k), ys[i], pz, px)))
         rows.append(row)
-    for r0, r1 in zip(rows, rows[1:]):
+    for (r0, r1), (p0, p1) in zip(zip(rows, rows[1:]), zip(line, line[1:])):
+        if math.dist(p0, LOOKOUT) < 4.9 and math.dist(p1, LOOKOUT) < 4.9:
+            continue    # the road ends at the lookout's kerb: the paving takes over
         for k in range(3):
             # counter-clockwise from above: travel runs r0 -> r1, k grows to the right
             quad = [r0[k + 1], r0[k], r1[k], r1[k + 1]]
@@ -317,24 +335,24 @@ def _tree(tb, hill, x, z, rr, kind):
     if kind == "pine":
         h = rr.uniform(6.5, 9.5)
         r = h * 0.22
-        tb.cyl("timber", (x, y, z), 0.26, 0.12, h * 0.45, 7, fade(tint(TIMBER, 0.7), y, z), cap_top=False)
+        tb.cyl("timber", (x, y, z), 0.26, 0.12, h * 0.45, 7, fade(tint(TIMBER, 0.7), y, z, x), cap_top=False)
         base = tint(PINE, rr.uniform(0.9, 1.1))
         for k in range(4):
             t = k / 3.0
             tb.blob("foliage", (x + rr.uniform(-0.15, 0.15), y + h * (0.36 + 0.5 * t), z + rr.uniform(-0.15, 0.15)), r * (1.0 - 0.62 * t),
-                    fade(tint(base, 0.92 + 0.12 * t), y, z), seed=rr.randrange(1 << 30), squash=1.25, sub=2)
+                    fade(tint(base, 0.92 + 0.12 * t), y, z, x), seed=rr.randrange(1 << 30), squash=1.25, sub=2)
     else:
         h = rr.uniform(4.8, 7.2)
         r = h * rr.uniform(0.36, 0.44)
         lean = rr.uniform(-0.3, 0.3)
-        tb.cyl("timber", (x, y, z), 0.34, 0.2, h * 0.5, 8, fade(tint(TIMBER, 0.8), y, z), cap_top=False)
-        tb.cyl("timber", (x, y + h * 0.5, z), 0.2, 0.1, h * 0.3, 6, fade(tint(TIMBER, 0.8), y, z), cap_top=False)
+        tb.cyl("timber", (x, y, z), 0.34, 0.2, h * 0.5, 8, fade(tint(TIMBER, 0.8), y, z, x), cap_top=False)
+        tb.cyl("timber", (x, y + h * 0.5, z), 0.2, 0.1, h * 0.3, 6, fade(tint(TIMBER, 0.8), y, z, x), cap_top=False)
         base = rr.choice(CROWNS)
         for i in range(5):
             a = rr.uniform(0, math.tau)
             rad = rr.uniform(0.0, r * 0.55) if i else 0.0
             tb.blob("foliage", (x + lean + math.cos(a) * rad, y + h * rr.uniform(0.62, 0.92), z + math.sin(a) * rad), r * rr.uniform(0.55, 0.8),
-                    fade(tint(base, rr.uniform(0.85, 1.1)), y, z), seed=rr.randrange(1 << 30), sub=2)
+                    fade(tint(base, rr.uniform(0.85, 1.1)), y, z, x), seed=rr.randrange(1 << 30), sub=2)
     tb.col_cyl((x, y, z), 0.38, 3.0, 6)
 
 
@@ -345,13 +363,13 @@ def _shrub(tb, hill, x, z, rr):
     for _i in range(rr.choice((2, 3))):
         ox, oz = rr.uniform(-0.6, 0.6) * r, rr.uniform(-0.6, 0.6) * r
         rb = r * rr.uniform(0.6, 1.0)
-        tb.blob("foliage", (x + ox, hill.ground(x + ox, z + oz) + rb * 0.45, z + oz), rb, fade(tint(base, rr.uniform(0.8, 1.05)), y, z),
+        tb.blob("foliage", (x + ox, hill.ground(x + ox, z + oz) + rb * 0.45, z + oz), rb, fade(tint(base, rr.uniform(0.8, 1.05)), y, z, x),
                 seed=rr.randrange(1 << 30), squash=0.72, sub=1)
 
 
 def _rock(tb, hill, x, z, rr, r):
     y = hill.ground(x, z)
-    c = fade(tint(ROCK, rr.uniform(0.62, 0.9)), y, z)
+    c = fade(tint(ROCK, rr.uniform(0.62, 0.9)), y, z, x)
     sub = 2 if r > 1.2 else 1
     tb.blob("rock", (x, y + r * 0.22, z), r, c, seed=rr.randrange(1 << 30), squash=rr.uniform(0.55, 0.8), sub=sub, col_var=0.07, jitter=0.24)
     if r > 0.9:
@@ -373,7 +391,7 @@ def _blade(tb, mat, base, tip, half, c0, c1, a):
 def _tuft(tb, hill, x, z, rr, tall):
     y = hill.ground(x, z) - 0.03
     base = mix((0.60, 0.80, 0.40), (0.86, 0.84, 0.42), rr.random() * (0.8 if tall else 0.45))
-    c0, c1 = fade(tint(base, 0.62), y, z), fade(tint(base, 1.12), y, z)
+    c0, c1 = fade(tint(base, 0.62), y, z, x), fade(tint(base, 1.12), y, z, x)
     for _i in range(rr.choice((5, 6, 7))):
         a = rr.uniform(0, math.tau)
         hgt = rr.uniform(0.32, 0.6) * (1.6 if tall else 1.0)
@@ -387,13 +405,13 @@ def _flower(tb, hill, x, z, rr, petal):
     y = hill.ground(x, z) - 0.02
     hgt = rr.uniform(0.28, 0.55)
     lx, lz = rr.uniform(-0.06, 0.06), rr.uniform(-0.06, 0.06)
-    stem = fade((0.36, 0.52, 0.22), y, z)
+    stem = fade((0.36, 0.52, 0.22), y, z, x)
     _blade(tb, "foliage", (x, y, z), (x + lx, y + hgt, z + lz), 0.022, stem, stem, rr.uniform(0, math.tau))
     # the head: a small flat-topped diamond of six petals around a warm heart
     r = rr.uniform(0.055, 0.09)
     top = (x + lx, y + hgt + 0.02, z + lz)
-    c = fade(tint(petal, rr.uniform(0.9, 1.08)), y, z)
-    heart = fade((0.98, 0.78, 0.2), y, z)
+    c = fade(tint(petal, rr.uniform(0.9, 1.08)), y, z, x)
+    heart = fade((0.98, 0.78, 0.2), y, z, x)
     a0 = rr.uniform(0, math.tau)
     ring = [(top[0] + math.cos(a0 + math.tau * k / 6) * r, top[1] + 0.035 + rr.uniform(-0.01, 0.01), top[2] - math.sin(a0 + math.tau * k / 6) * r) for k in range(6)]
     for k in range(6):
@@ -462,6 +480,8 @@ def _flora(tb, hill):
             continue
         near = max(1.0 - smooth(3.0, 14.0, hill.road_dist(x, z)), 1.0 - smooth(3.0, 16.0, math.hypot(x, z - Z0)))
         dens = 0.16 + 0.5 * near + 0.5 * smooth(0.45, 0.7, vnoise(x, z, 9.0, 82))
+        if on_lookout(x, z):
+            continue
         if hill.in_clearing(x, z, -2.0):
             dens *= 0.35
         if rr.random() < dens * (1.0 - 0.6 * smooth(70.0, 110.0, z)):
@@ -476,11 +496,161 @@ def _flora(tb, hill):
         petal = rr.choice(PETALS)
         for _k in range(rr.randint(5, 14)):
             x, z = gx + rr.gauss(0, 2.0), gz + rr.gauss(0, 2.0)
-            if hill.road_dist(x, z) < ROAD_HALF + 0.5 or hill.path_dist(x, z) < PATH_HALF + 0.3 or z < Z0 + 0.8 or hill.slope(x, z) > 0.7:
+            if hill.road_dist(x, z) < ROAD_HALF + 0.5 or hill.path_dist(x, z) < PATH_HALF + 0.3 or z < Z0 + 0.8 or hill.slope(x, z) > 0.7 or on_lookout(x, z):
                 continue
             _flower(tb, hill, x, z, rr, petal)
             flowers += 1
     return {"trees": len(trees), "rocks": rocks, "shrubs": shrubs, "tufts": tufts, "flowers": flowers}
+
+
+# ---------------------------------------------------------------- the lookout
+
+LOOKOUT = (13.0, 103.0)
+FLAG = (0.74, 0.71, 0.66)        # the paving: the town's warm grey limestone, a shade darker than the wall caps
+WALL = (0.66, 0.63, 0.58)        # town_terrain.WALL_STONE
+CAP = (0.88, 0.86, 0.82)         # town_terrain.STONE_CAP
+PARAPET_ARC = (-5.0, 170.0)      # degrees, x = cos, z = sin: the cloud side; the road and the uphill side stay open
+
+
+def _face(tb, mat, pts, col, out=None):
+    """A polygon wound so its normal points `out` (default up)."""
+    (ax, ay, az), (bx, by, bz), (cx, cy, cz) = pts[0], pts[1], pts[2]
+    n = ((by - ay) * (cz - az) - (bz - az) * (cy - ay), (bz - az) * (cx - ax) - (bx - ax) * (cz - az),
+         (bx - ax) * (cy - ay) - (by - ay) * (cx - ax))
+    o = out or (0.0, 1.0, 0.0)
+    if n[0] * o[0] + n[1] * o[1] + n[2] * o[2] < 0:
+        pts = list(reversed(pts))
+    tb.poly(mat, pts, col, uv=[(p[0], -p[2]) if abs(o[1]) > 0.5 else (p[0] + p[2], p[1]) for p in pts])
+
+
+def _prism(tb, mat, ring, y0, y1, col, col_side=None):
+    """A slab: the closed outline `ring` [(x, z)] from y0 to y1 (top and sides; it sits on the ground)."""
+    mx = sum(p[0] for p in ring) / len(ring)
+    mz = sum(p[1] for p in ring) / len(ring)
+    _face(tb, mat, [(x, y1, z) for x, z in ring], col)
+    for (xa, za), (xb, zb) in zip(ring, ring[1:] + ring[:1]):
+        ox, oz = (xa + xb) / 2 - mx, (za + zb) / 2 - mz
+        _face(tb, mat, [(xa, y0, za), (xb, y0, zb), (xb, y1, zb), (xa, y1, za)], col_side or tint(col, 0.82), (ox, 0.0, oz))
+
+
+def _sector(tb, cx, cz, r0, r1, a0, a1, y0, y1, col):
+    """An annular flagstone (an arc slab) as a strip of quads: the builder fans a polygon from its first corner, which
+    folds over on a concave outline."""
+    steps = max(2, int((a1 - a0) * r1 / 0.45))
+    angs = [a0 + (a1 - a0) * t / steps for t in range(steps + 1)]
+    side = tint(col, 0.82)
+    for b0, b1 in zip(angs, angs[1:]):
+        q = [(cx + math.cos(b) * r, cz + math.sin(b) * r) for b, r in ((b0, r0), (b1, r0), (b1, r1), (b0, r1))]
+        _face(tb, "stone", [(x, y1, z) for x, z in q], col)
+        for (xa, za), (xb, zb), (ox, oz) in (((q[2][0], q[2][1]), (q[3][0], q[3][1]), (math.cos((b0 + b1) / 2), math.sin((b0 + b1) / 2))),
+                                             ((q[0][0], q[0][1]), (q[1][0], q[1][1]), (-math.cos((b0 + b1) / 2), -math.sin((b0 + b1) / 2)))):
+            _face(tb, "stone", [(xa, y0, za), (xb, y0, zb), (xb, y1, zb), (xa, y1, za)], side, (ox, 0.0, oz))
+    for b, sgn in ((a0, -1.0), (a1, 1.0)):
+        tx, tz = -math.sin(b) * sgn, math.cos(b) * sgn
+        pa, pb = (cx + math.cos(b) * r0, cz + math.sin(b) * r0), (cx + math.cos(b) * r1, cz + math.sin(b) * r1)
+        _face(tb, "stone", [(pa[0], y0, pa[1]), (pb[0], y0, pb[1]), (pb[0], y1, pb[1]), (pa[0], y1, pa[1])], side, (tx, 0.0, tz))
+
+
+def _block(tb, mat, cx, cz, y0, a, w, d, h, col, solid=True, tilt=0.0):
+    """A dressed block standing on y0, its width along the tangent of angle `a` (radians)."""
+    tx, tz = -math.sin(a), math.cos(a)   # tangent
+    nx, nz = math.cos(a), math.sin(a)    # outward
+    ring = []
+    for u, v in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+        ring.append((cx + tx * w / 2 * u + nx * d / 2 * v, cz + tz * w / 2 * u + nz * d / 2 * v))
+    _prism(tb, mat, ring, y0, y0 + h + tilt, col)
+    if solid:
+        tb.col_cyl((cx, y0 - 0.2, cz), max(w, d) * 0.55, h + 0.2, 6)
+
+
+def _lookout(tb, hill):
+    """The paved lookout where the road ends above the cloud sea: flagstones in three rings around a round
+    centre stone with the round sign, a kerb, a low parapet on the cloud side (two blocks fallen out of it), a
+    stone bench against the slope and a weathered waymarker. Walkable: the slabs stand 3 cm proud of the level
+    clearing (the client walks on the ground mesh); the parapet, bench and marker carry colliders."""
+    cx, cz = LOOKOUT
+    y = hill.h(cx, cz)
+    rr = random.Random(103)
+    top = y + 0.035
+
+    def stone(base, lo=0.88, hi=1.1):
+        return tint(base, rr.uniform(lo, hi))
+    # the centre stone with the round sign (a ring and four short strokes set in darker stone)
+    n = 14
+    _prism(tb, "stone", [(cx + math.cos(math.tau * i / n) * 1.05, cz + math.sin(math.tau * i / n) * 1.05) for i in range(n)],
+           y - 0.08, top + 0.01, stone(FLAG, 1.0, 1.06))
+    for i in range(20):
+        a0, a1 = math.tau * i / 20, math.tau * (i + 1) / 20
+        ring = [(cx + math.cos(a) * r, cz + math.sin(a) * r) for a, r in ((a0, 0.55), (a1, 0.55), (a1, 0.68), (a0, 0.68))]
+        _prism(tb, "stone", ring, top, top + 0.016, tint(WALL, 0.62))
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        tx, tz = -math.sin(a), math.cos(a)
+        px, pz = cx + math.cos(a) * 0.86, cz + math.sin(a) * 0.86
+        ring = [(px + tx * u * 0.05 + math.cos(a) * v * 0.1, pz + tz * u * 0.05 + math.sin(a) * v * 0.1) for u, v in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+        _prism(tb, "stone", ring, top, top + 0.016, tint(WALL, 0.62))
+    # three rings of flagstones with joints between them
+    for r0, r1, count in ((1.12, 2.45, 9), (2.5, 3.75, 14), (3.8, 4.95, 19)):
+        off = rr.uniform(0, math.tau)
+        cuts = sorted(off + math.tau * (i + rr.uniform(-0.18, 0.18)) / count for i in range(count))
+        for i in range(count):
+            a0, a1 = cuts[i], cuts[(i + 1) % count] + (math.tau if i == count - 1 else 0.0)
+            g = 0.035 / r0
+            # never under the ground: where the road comes in the floor still rises a few centimetres
+            hmax = max(hill.h(cx + math.cos(a) * r, cz + math.sin(a) * r) for a in (a0, (a0 + a1) / 2, a1) for r in (r0, r1))
+            _sector(tb, cx, cz, r0 + 0.025, r1 - 0.025, a0 + g, a1 - g, y - 0.08, max(top, hmax + 0.03) + rr.uniform(-0.008, 0.01), stone(FLAG))
+    # the kerb, open where the road comes in
+    entry = min(hill.road, key=lambda q: abs(math.dist(q, LOOKOUT) - 5.2))
+    a_in = math.atan2(entry[1] - cz, entry[0] - cx)
+    for i in range(28):
+        a = math.tau * (i + 0.5) / 28
+        if abs((a - a_in + math.pi) % math.tau - math.pi) < math.radians(17):
+            continue
+        _block(tb, "stone", cx + math.cos(a) * 5.17, cz + math.sin(a) * 5.17, y - 0.1, a, 1.1, 0.36, 0.26, stone(WALL, 0.85, 1.0), solid=False)
+    # the parapet on the cloud side: blocks with cap stones, two gaps where blocks have fallen out
+    a_lo, a_hi = (math.radians(d) for d in PARAPET_ARC)
+    r_p = 5.62
+    count = int((a_hi - a_lo) * r_p / 0.95)
+    gaps = {count // 3, count // 3 + 1, (2 * count) // 3 + 2}
+    for i in range(count):
+        a = a_lo + (a_hi - a_lo) * (i + 0.5) / count
+        px, pz = cx + math.cos(a) * r_p, cz + math.sin(a) * r_p
+        gy = min(hill.h(px, pz), y) - 0.25
+        if i in gaps:
+            _block(tb, "stone", px, pz, gy, a, 0.9, 0.46, y - gy + 0.22, stone(WALL, 0.75, 0.9))   # the broken stump
+            continue
+        h = y - gy + 0.62 + rr.uniform(-0.03, 0.03)
+        _block(tb, "stone", px, pz, gy, a, 0.92, 0.46, h, stone(WALL, 0.82, 1.02))
+        _block(tb, "stone", px, pz, gy + h, a, 0.97, 0.56, 0.11, stone(CAP, 0.9, 1.0), solid=False)
+    # the fallen blocks, tipped on the grass beyond the parapet
+    for i in sorted(gaps)[::2]:
+        a = a_lo + (a_hi - a_lo) * (i + 0.5) / count + 0.04
+        px, pz = cx + math.cos(a) * (r_p + 1.2), cz + math.sin(a) * (r_p + 1.2)
+        _block(tb, "stone", px, pz, hill.h(px, pz) - 0.1, a + 0.7, 0.9, 0.5, 0.42, stone(WALL, 0.72, 0.85), solid=False)
+    # a stone bench against the slope, facing the clouds
+    ab = math.radians(248)
+    bx, bz = cx + math.cos(ab) * 4.35, cz + math.sin(ab) * 4.35
+    for u in (-0.62, 0.62):
+        px, pz = bx - math.sin(ab) * u, bz + math.cos(ab) * u
+        _block(tb, "stone", px, pz, top, ab, 0.24, 0.42, 0.4, stone(WALL, 0.8, 0.9), solid=False)
+    _block(tb, "stone", bx, bz, top + 0.4, ab, 1.7, 0.5, 0.09, stone(CAP, 0.92, 1.0))
+    # a weathered waymarker beside the road's end, the round sign worn into its face
+    am = math.radians(205)
+    mx, mz = cx + math.cos(am) * 4.45, cz + math.sin(am) * 4.45
+    _block(tb, "stone", mx, mz, top, am, 0.42, 0.34, 1.25, stone(WALL, 0.78, 0.86))
+    _block(tb, "stone", mx, mz, top + 1.25, am, 0.34, 0.27, 0.12, stone(WALL, 0.72, 0.8), solid=False)
+    fx, fz = mx - math.cos(am) * 0.172, mz - math.sin(am) * 0.172   # inner face, toward the paving
+    for i in range(12):
+        a0, a1 = math.tau * i / 12, math.tau * (i + 1) / 12
+        tx, tz = -math.sin(am), math.cos(am)
+        def P(a, r):
+            return (fx + tx * math.cos(a) * r, top + 0.9 + math.sin(a) * r, fz + tz * math.cos(a) * r)
+        _face(tb, "stone", [P(a0, 0.1), P(a1, 0.1), P(a1, 0.14), P(a0, 0.14)], tint(WALL, 0.55), (-math.cos(am), 0.0, -math.sin(am)))
+    return {"lookout_y": round(y, 2), "parapet_blocks": count - len(gaps)}
+
+
+def on_lookout(x, z, margin=0.0):
+    return math.hypot(x - LOOKOUT[0], z - LOOKOUT[1]) < 6.2 + margin
 
 
 def report(hill):
@@ -509,10 +679,13 @@ def report(hill):
 
 def build(tb):
     """Emits the hillside into the builder's current piece and returns counts and the slope report."""
+    global _HILL
     hill = Hill()
+    _HILL = hill
     _ground(tb, hill)
     _road(tb, hill)
     info = _flora(tb, hill)
+    info.update(_lookout(tb, hill))
     info["slopes"] = report(hill)
     return info
 

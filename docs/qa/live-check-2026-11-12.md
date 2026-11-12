@@ -41,3 +41,29 @@ Premise and goal chip shown at 23 s; trial 1 silk 63; at the pad, once Iris stop
 scripted run fell out of step after trial 1 and forgot no memory; the full path to the "Minted on NEAR testnet" toast and
 card `793f6c05e89839f2-7` passed in the earlier run tonight (table above). A judge with a GPU is not affected; on a
 software renderer, wait for the trial counter to change before pressing T again.
+
+## Phone low tier with CPU throttling (12.11 ~04:30 Kyiv, current main built locally)
+
+Pixel 7 emulation (412×839, pixel ratio 1, tier `low`), CDP CPU throttling 4×, software GL. The fps value is bounded by
+the software renderer (~7 fps even unthrottled here), so read the draw calls and triangles, which a real phone GPU pays.
+
+| Where | fps | p95 ms | draw calls | triangles rendered |
+|---|---:|---:|---:|---:|
+| Town street at the spawn | 7.3 | 250 | 107 | 298k |
+| Outside the lower gate, 12–15 m from the first skitter pack (11 monsters alive) | 6.3 | 250 | 166 | 410k |
+
+Biggest visible groups outside the gate (triangles before frustum culling, meshes): town terrain 70k (9); Iris 34k (23);
+town blocks gate / square / mid 34k / 33k / 32k; temple 27k; every townsperson 16k in one mesh, and they stay visible
+while Iris is outside the walls.
+
+Hot spots filed with the lead: townsfolk at 16k triangles each on the low tier and still drawn from outside the walls
+(distance cull or a lower LOD); +59 draw calls and +112k triangles when stepping outside (town blocks behind Iris stay
+in the frame); Iris at 23 meshes / 34k triangles on a phone.
+
+## After PR #66 (mobs, chests from kills, dragon client), 12.11 ~04:50 Kyiv
+
+- Full README judge path on current main (built locally, same code as the deploy): trial 1 silk 63 → pad E 53 → trial 2
+  silk 56 → trial 4 silk 72 → forget the Call → trial 6 toast "Minted on NEAR testnet", card `793f6c05e89839f2-7`. No
+  page errors, no 4xx. Every number in the README matched.
+- Live `?demo=judge&mode=walk`: 11 monsters loaded, all outside the walls; the nearest is 32 m from Iris at the spawn,
+  and the judge route goes up to the altar, away from the lower gate. Chest bag present. No console errors, no 4xx.

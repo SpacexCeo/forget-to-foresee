@@ -2,7 +2,7 @@
 // in from the lower gate towards the altar stairs while the camera dollies slowly across the square. No HUD: the
 // HUD is hidden; the frames are the game's own post-processed render through a scripted camera (rig.update is
 // wrapped). Frames f_0000.jpg.. (ffmpeg interpolates them to 30 fps).
-//   node art/combat/town_beauty.mjs <out dir> [url] [WxH] [seconds]
+//   node art/combat/town_beauty.mjs <out dir> [url] [WxH] [seconds] [tod=dusk|night|...]
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -16,7 +16,7 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris&mobs=0&tod=dusk`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris&mobs=0&tod=${(process.argv.find((a) => a.startsWith('tod=')) || 'tod=dusk').slice(4)}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: 'body * { visibility: hidden !important; } canvas { visibility: visible !important; }' });   // no HUD in the beauty shot
