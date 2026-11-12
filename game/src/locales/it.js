@@ -321,7 +321,7 @@ export default {
   'tour.title': 'Torneo settimanale',
   'tour.badge': 'Simulazione',
   'tour.week': 'Settimana {week}, {year}',
-  'tour.desc': 'Stesso mondo, stesse regole, una stagione accelerata. Nessuna quota, niente denaro, nessun premio: il trofeo è un distintivo.',
+  'tour.desc': 'Una stagione di allenamento locale: stesso mondo, stesse regole, accelerata. Nessuna quota, nessun premio; il trofeo è un distintivo. Il torneo on chain con un montepremi in silk si tiene all’altare della città.',
   'tour.phase.upcoming': 'Apre a breve',
   'tour.phase.open': 'Iscrizioni aperte',
   'tour.phase.running': 'Stagione in corso',
