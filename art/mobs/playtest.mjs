@@ -47,6 +47,7 @@ for (const pi of [2, 3, 5]) {          // veilbell pair, hulker, crownrift elite
   await page.waitForTimeout(900);
   const mobPos = await page.evaluate((pi) => { const b = window.__ftf.town.mobs.brain; const m = b.mobs.find((x) => x.pack === b.packs[pi] && x.state !== 'gone' && x.state !== 'dead'); return m ? m.pos.slice() : b.packs[pi].home; }, pi);
   await shotCam(info.type + '_1_attack', mobPos);
+  r.where = await page.evaluate((pi) => { const f = window.__ftf, b = f.town.mobs.brain; const m = b.mobs.find((x) => x.pack === b.packs[pi]); const v = [...f.town.mobs.group.children].filter((c) => c.type === 'Group').map((c) => [c.position.x, c.position.y, c.position.z].map((x) => +x.toFixed(1))); return { mob: m.pos.map((x) => +x.toFixed(1)), state: m.state, iris: f.player.pos.map((x) => +x.toFixed(1)), holders: v.slice(0, 20) }; }, pi);
   // fight: lance + snare + strikes until the pack is dead (max 40 s)
   let casts = 0;
   while (Date.now() - T0 < 50000) {
