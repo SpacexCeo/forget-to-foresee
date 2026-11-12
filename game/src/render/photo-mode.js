@@ -29,8 +29,9 @@ const CAMERA_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden=
  * @param {object} [o.rig] the camera rig (limits widened while shooting, restored after)
  * @param {(on: boolean) => void} [o.onChange] @param {Document} [o.doc]
  * @param {(blob: Blob, name: string) => void} [o.save] defaults to a download link
+ * @param {boolean} [o.coarse] a touch screen: the hint speaks of drag and pinch
  */
-export function createPhotoMode({ canvas, i18n, rig = null, onChange = () => {}, doc = globalThis.document, save = null }) {
+export function createPhotoMode({ canvas, i18n, rig = null, onChange = () => {}, doc = globalThis.document, save = null, coarse = false }) {
   const t = (k) => i18n.t(k);
   /** hidden + display: the inline display below would otherwise beat the hidden attribute */
   const showEl = (e, on, display) => { e.hidden = !on; e.style.display = on ? display : 'none'; };
@@ -52,7 +53,7 @@ export function createPhotoMode({ canvas, i18n, rig = null, onChange = () => {},
   const filterBtns = PHOTO_FILTERS.map((f, i) => { const b = btn('ftf-photo-filter', t('photo.filter.' + f.id), () => setFilter(i)); b.style.cssText = pill; b.dataset.filter = f.id; return b; });
   const shot = btn('ftf-photo-save', t('photo.save'), () => requestCapture()); shot.style.cssText = pill + ';background:#e9b44c;color:#14201c;border-color:#e9b44c;font-weight:600';
   const exit = btn('ftf-photo-exit', t('photo.exit'), () => toggle(false)); exit.style.cssText = pill;
-  const hint = doc.createElement('span'); hint.className = 'ftf-photo-hint'; hint.textContent = t('photo.hint'); hint.style.cssText = 'flex-basis:100%;text-align:center;opacity:.7;font-size:12px';
+  const hint = doc.createElement('span'); hint.className = 'ftf-photo-hint'; hint.textContent = t(coarse ? 'photo.hintTouch' : 'photo.hint'); hint.style.cssText = 'flex-basis:100%;text-align:center;opacity:.7;font-size:12px';
   bar.append(...filterBtns, shot, exit, hint);
   doc.body.append(bar);
   showEl(bar, false, 'flex');

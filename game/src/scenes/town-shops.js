@@ -61,6 +61,13 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     ambient.visible = true;
   }
 
+  /** Behind Iris first, then the room's close, level camera (the rig's reset restores the street defaults). */
+  function roomCamera() {
+    if (rig.reset) rig.reset();
+    rig.minDist = SHOP_CAMERA.minDist; rig.maxDist = SHOP_CAMERA.maxDist; rig.minPitch = SHOP_CAMERA.minPitch; rig.dist = SHOP_CAMERA.dist;
+    rig.pitchOffset = SHOP_CAMERA.pitch - (rig.pitchFor ? rig.pitchFor(rig.dist) : 0); // the rig's zoom-tied pitch is cancelled
+  }
+
   async function enter(shop) {
     if (state.busy || state.phase !== 'street') return false;
     state.busy = true; state.phase = 'entering'; state.shop = shop; render();
@@ -74,9 +81,7 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     state.saved = { dist: rig.dist, minDist: rig.minDist, maxDist: rig.maxDist, minPitch: rig.minPitch, pitchOffset: rig.pitchOffset };
     player.world = r.world; rig.world = r.world; player.killY = shop.killY;
     player.teleport(shop.spawn.position.slice(), shop.spawn.heading);
-    if (rig.reset) rig.reset(); // behind Iris first, then the room's close, level camera (reset restores defaults)
-    rig.minDist = SHOP_CAMERA.minDist; rig.maxDist = SHOP_CAMERA.maxDist; rig.minPitch = SHOP_CAMERA.minPitch; rig.dist = SHOP_CAMERA.dist;
-    rig.pitchOffset = SHOP_CAMERA.pitch - (rig.pitchFor ? rig.pitchFor(rig.dist) : 0); // the rig's zoom-tied pitch is cancelled
+    roomCamera();
     holdInterior();
     state.phase = 'inside'; state.zone = null;
     await fadeTo(false);
@@ -124,6 +129,8 @@ export function createTownShops({ scene, streamer, player, rig, lookdev, i18n, r
     get shop() { return state.shop; },
     enter: (id) => { const s = shops.find((x) => x.id === id); return s ? enter(s) : Promise.resolve(false); },
     leave, interact,
+    /** R indoors: the room's camera again (a plain rig reset would lift it to the street distance, above the walls). */
+    resetCamera() { if (state.phase === 'inside' && !state.busy) { roomCamera(); return true; } return false; },
     /** Per frame: the zone under Iris and, indoors, the light held off (the day cycle and weather pause). */
     update() {
       if (state.phase !== 'inside') return;

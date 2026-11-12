@@ -20,9 +20,11 @@ const spriteMat = (tex, color, opacity = 1, additive = true) => new THREE.Sprite
  * @param {object} o
  * @param {THREE.Scene} o.scene @param {object} o.town (groundAt) @param {object} o.player (pos)
  * @param {object} o.bag the chest bag (game/chests.js) @param {(chest: object) => void} [o.onPickup]
+ * @param {() => boolean} [o.critters] the moss critters roam only while this holds (the hillside packs, play/mobs.js,
+ *   take over when they run: their kills drop chests through drop())
  * @param {boolean} [o.mobile] @param {string} [o.base] @param {() => number} [o.rand]
  */
-export function createTownMonsters({ scene, town, player, bag, onPickup = () => {}, mobile = false, base = (import.meta.env && import.meta.env.BASE_URL) || '/', rand = Math.random }) {
+export function createTownMonsters({ scene, town, player, bag, onPickup = () => {}, critters = () => true, mobile = false, base = (import.meta.env && import.meta.env.BASE_URL) || '/', rand = Math.random }) {
   const group = new THREE.Group(); group.name = 'town_monsters'; scene.add(group);
   const state = { loading: null, proto: null, clips: [], scale: 1, critters: [], chests: [], shots: [], kills: 0, puffs: [], t: 0 };
   const loader = new THREE.TextureLoader();
@@ -32,9 +34,10 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
   const W = (x, z) => [x + TOWN_ORIGIN[0], 0, z + TOWN_ORIGIN[2]];
   const ground = (wx, wz, fallback) => { const y = town.groundAt ? town.groundAt(wx, wz) : null; return y == null ? fallback : y; };
 
+  function textures() { if (!sparkleTex) { sparkleTex = tex('loot_sparkle.png'); beamTex = tex('loot_beam.png'); ringTex = tex('loot_ring.png'); } }
   function load() {
     if (state.loading) return state.loading;
-    sparkleTex = tex('loot_sparkle.png'); beamTex = tex('loot_beam.png'); ringTex = tex('loot_ring.png');
+    textures();
     state.loading = fetchGltfUrl(base + 'assets/models/fauna_moss_critter.glb').then((g) => {
       state.proto = g.scene; state.clips = g.animations || [];
       const box = new THREE.Box3().setFromObject(g.scene); const h = box.max.y - box.min.y || 1;
@@ -129,12 +132,26 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
       if (!state.proto || !shot || !shot.point) return;
       state.shots.push({ id, from: shot.from, point: shot.point, at: state.t + (id === 'snare' ? 0.32 : 0.2) });
     },
+    /** A monster of the hillside packs fell (play/mobs.js 'ftf:mob-killed'): maybe a chest; an elite always drops one. */
+    drop(pos, elite = false) {
+      if (!pos) return false;
+      textures();
+      const n = state.kills++;
+      if (!(elite || rollDrop(rand(), n))) return false;
+      const at = [pos[0], ground(pos[0], pos[2], pos[1]), pos[2]];
+      setTimeout(() => puff(at), 200); setTimeout(() => dropChest(at), 450);
+      return true;
+    },
     /** Per frame. */
     update(dt, reducedMotion = false) {
       state.t += dt;
       const lx = player.pos[0] - TOWN_ORIGIN[0], lz = player.pos[2] - TOWN_ORIGIN[2];
-      if (!state.loading && onField(lx, lz)) load();
-      if (!state.proto) return;
+      if (!state.loading && onField(lx, lz) && critters()) load();
+      if (state.proto) this.critterStep(dt);
+      this.chestStep(dt, reducedMotion);
+    },
+    /** The moss critters and the casts that land on them. */
+    critterStep(dt) {
       // casts landing
       const due = state.shots.filter((x) => x.at <= state.t);
       state.shots = state.shots.filter((x) => x.at > state.t);
@@ -184,14 +201,15 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
         }
         p.y = ground(p.x, p.z, p.y - state.lift) + state.lift;
       }
-      // puffs
+    },
+    /** Puffs and the chests on the ground: a soft pulse; walking onto one picks it up. */
+    chestStep(dt, reducedMotion) {
       for (const f of state.puffs) {
         f.t += dt;
         for (const q of f.parts) { q.s.position.x += q.v[0] * dt; q.s.position.y += q.v[1] * dt; q.s.position.z += q.v[2] * dt; q.v[1] -= 2.4 * dt; q.s.material.opacity = Math.max(0, 1 - f.t / 0.9); }
         if (f.t > 0.9) for (const q of f.parts) { group.remove(q.s); q.s.material.dispose(); }
       }
       state.puffs = state.puffs.filter((f) => f.t <= 0.9);
-      // chests: a soft pulse; walking onto one picks it up
       for (const ch of state.chests) {
         ch.t += dt;
         const pulse = reducedMotion ? 0.7 : 0.6 + 0.25 * Math.sin(ch.t * 2.4);
