@@ -9,30 +9,31 @@ Times are Kyiv. Feature freeze Fri 13 Nov 16:00, hard freeze 20:00, deadline Sat
 2. **Faucet top-ups** (10 NEAR per new account; rate limited, best from different networks or days). On your PC with near-cli:
    `near account create-account sponsor-by-faucet-service ftf-fund-5.testnet autogenerate-new-keypair save-to-legacy-keychain network-config testnet create`
    then send the balance to `ftf-coordinator.testnet` (keep 0.1 NEAR on the fund account).
-3. **NEAR AI Cloud credits**: the account answers 402 "No spending limit configured". Set a spending limit / add credits in the NEAR AI Cloud dashboard. Until then the TEE agents and the AI clan strategy stay off (the game says so).
+3. [x] **NEAR AI Cloud**: the key on the server works (TEE agents answer `verified: true`, verifier PASS).
+4. **Gas for the traders**: the coordinator holds about 2.5 NEAR and `ftf-town.testnet` about 8 free; the 26 wallets have 0.3 each (about one day at full pace). Elliot's 500 NEAR, or manual top-ups on near-faucet.io per wallet, keep them running.
 
-## B. Relayer server (one redeploy unblocks agents, chests, wheel prize, market)
+## B. Relayer server: done (12 Nov, your local session + the lead)
 
-The deployed relayer at `159-195-130-113.sslip.io` is an old build (agents, chests, wheel claim, presence answer 404).
-Done together with the lead (owner gives access; SSH from the cloud session is blocked, so either the Claude desktop app shares a folder via Remote Control, or you run the prepared commands). Steps from `docs/handoff/relayer-tee-deploy.md`:
-1. Pull `main`, rebuild and restart the relayer container (with the `ftf-relayer-data` volume).
-2. Generate the minter keys on the server (they never leave it): `node relayer/scripts/chest-key.mjs FTF_SKIN_KEY` (prints the public key). Send the lead the **public** key only; the lead adds it to `skins.ftf-coordinator.testnet`.
-3. After the key is added: `node relayer/scripts/mint-pending.mjs` mints any recorded Sheriffchenko wins.
-4. Town economy (after your yes in C): on the server `node relayer/scripts/market-keys.mjs > market-public.json`; the lead runs `TRADER_KEYS=market-public.json bash contracts/scripts/town-deploy.sh` (creates ftf-town.testnet, 20 traders at 0.3 NEAR, trade-only keys, genesis pool); then `FTF_TOWN=1 FTF_TOWN_SEND=1` on the relayer starts the traders. Daily `MODE=day`, top-up `MODE=topup` (docs/town-economy.md).
+- [x] Relayer redeployed (systemd + nginx), TEE agents, chests (seed fixed, verifier PASS), skin minter key, presence (the game joins the shared town).
+- [x] `ftf-town.testnet` deployed: 26 wallets with game-only keys, genesis 1,000 silk each. `items.ftf-town.testnet` (NEP-245) deployed with the five monster resources.
+- [ ] **Start the traders**: on the server add `FTF_TOWN=1` to `.env`, restart, send the lead the start line (`market 20 traders`), `/api/market/stats` and the first journal lines (dry run). Then `FTF_TOWN_SEND=1` only after the lead's OK.
+- [ ] **Sheriffchenko wins**: on the server `node scripts/mint-pending.mjs --dry-run`, then without `--dry-run`.
+- [ ] **Batch chest check**: on the server `cd relayer && node scripts/chest-batch-test.mjs <guest with chests left today> 2` (prints), then with `--send` (one tx, two openings); send the lead the output.
+- [ ] **Item minting**: make a minter key for `items.ftf-town.testnet` on the server (same pattern as the chest key), set `FTF_ITEMS_MINTER` + `FTF_ITEMS_KEY` in `.env`, send the lead the public key; the lead adds it as a minter.
 
 ## C. Town economy (`ftf-town` contract): your yes is needed
 
 The contract is built and tested (36 tests). Before the lead deploys it, answer:
-- [ ] Scope P0 and the cut line Fri 14:00 approved?
+- [x] Scope P0 approved; the contract is deployed (12 Nov).
 - [x] One currency, silk (owner): no wool, no wool/silk pool; rewards are a share of the silk fees.
 - [ ] Words in the game: "pledge / reward share" (recommended) or "stake"?
 - [x] (no wool) silk pledges move only as whole deeds.
-- [ ] Deploy `ftf-town` on testnet and fund 20 trader accounts (about 6 to 7 testnet NEAR per day): yes / no.
+- [x] `ftf-town` deployed with 26 wallets (12 Nov).
 
 ## D. Story, quests, endgame pass (spec rev 2)
 
 Answer the two open questions from the spec:
-- [ ] The leaderboard as a Shell monument on the square: OK?
+- [ ] The leaderboard as a Shell monument on the square (built, opposite the portal): OK?
 - [x] What the whitelist pass gives: a free NFT mint at the official launch (owner, 12 Nov).
 
 Mainnet (only you, real NEAR):
