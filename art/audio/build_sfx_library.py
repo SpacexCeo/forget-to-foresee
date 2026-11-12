@@ -66,14 +66,15 @@ SOURCES = {
     "qubodup_fantozzi": dict(title="Fantozzi's Footsteps (Grass/Sand & Stone)", author="Fantozzi, qubodup",
                              licence="CC0", page="https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
                              files=["Fantozzi-footsteps.7z"]),
-    "congus_footsteps": dict(title="Footsteps on different surfaces", author="congusbongus", licence="CC-BY 3.0",
+    "congus_footsteps": dict(title="Footsteps on different surfaces", author="congusbongus", licence="CC-BY 3.0 (gravel: CC0)",
                              page="https://opengameart.org/content/footsteps-on-different-surfaces",
                              files=["footsteps_0.zip"],
                              attribution={
                                  "wood": "derived from footstep-wood.wav by swuing (freesound.org/s/38876)",
                                  "grass": "derived from footstep-grass.wav by swuing (freesound.org/s/38874)",
                                  "boots": "derived from footstep-concrete.wav by swuing (freesound.org/s/38873)",
-                                 "gravel": "derived from the Gravel Footsteps pack by Ali_6868 (freesound.org/people/Ali_6868/packs/21608)",
+                                 "water": "derived from Water Footsteps by EminYILDIRIM (freesound.org/s/608663) and footstep-concrete.wav by swuing (freesound.org/s/38873)",
+                                 "gravel": "CC0: derived from the Gravel Footsteps pack by Ali_6868 (freesound.org/people/Ali_6868/packs/21608)",
                              }),
     "starninjas_sword": dict(title="20 Sword Sound Effects (Attacks and Clashes)", author="StarNinjas", licence="CC0",
                              page="https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes",
@@ -106,6 +107,23 @@ SOURCES = {
     "female_groans": dict(title="Female hurt grunts & groans", author="(OpenGameArt upload)", licence="CC0",
                           page="https://opengameart.org/content/female-hurt-grunts-groans",
                           files=["female_hurt_grunts_groans_1.ogg"]),
+    # weather (driven by the window event ftf:weather {state})
+    "kresiek_rain": dict(title="Amb rain loop 1 and 2", author="kresiek-the-furry", licence="CC0",
+                         page="https://opengameart.org/content/amb-rain-loop-1",
+                         files=["amb_rain_loop_1.wav", "amb_rain2.flac"]),
+    "ylmir_rain": dict(title="Rain (loopable)", author="ylmir", licence="CC0",
+                       page="https://opengameart.org/content/rain-loopable", files=["Rain%20OGG.zip"]),
+    "ovemelaa_rain": dict(title="Rain ambient (not loopable)", author="Ove Melaa", licence="CC0",
+                          page="https://opengameart.org/content/rain-ambient-not-loopable-2-versions-available",
+                          files=["Ove%20Melaa%20-%20Rainy%20%28NOT%20loopable%29%20Long%20Version.ogg"]),
+    "wuxiascrub_rain": dict(title="Rain, long thunder", author="wuxiascrub", licence="CC0",
+                            page="https://opengameart.org/content/rain-long-thunder", files=["rain-thunder.ogg"]),
+    "jerimee_thunder": dict(title="Thunder", author="jerimee", licence="CC-BY 3.0",
+                            page="https://opengameart.org/content/thunder", files=["thunder-seq.wav", "thunderclap.ogg"]),
+    "quendel_thunder": dict(title="Thunder & lightning ambience (field recording)", author="Gregor Quendel",
+                            licence="CC-BY 4.0",
+                            page="https://opengameart.org/content/thunder-lightning-ambience-field-recording",
+                            files=["gregor_quendel_-_free_thunder_ambience_-_mp3.mp3"]),
 }
 
 VOICE = "RPG Voice Starter Pack"
@@ -138,10 +156,32 @@ CATEGORIES = [
     ]),
     ("step_grass", "Footsteps: grass and dirt outside the walls (walk, then run)", -27, "steps", [
         ("Grass, congusbongus/swuing (CC-BY 3.0)", {"step": [S("congus_footsteps", f"{FT}/grass/{i}.ogg") for i in range(6)]}),
-        ("Gravel/dirt, congusbongus/Ali_6868 (CC-BY 3.0)", {"step": [S("congus_footsteps", f"{FT}/gravel/{i}.ogg")
+        ("Gravel/dirt, congusbongus/Ali_6868 (CC0)", {"step": [S("congus_footsteps", f"{FT}/gravel/{i}.ogg")
                                                                     for i in (0, 3, 5, 6, 7, 9)]}),
         ("Fantozzi sand (CC0)", {"step": [S("qubodup_fantozzi", f"*/ogg/Fantozzi-Sand{s}.ogg") for s in
                                           ("L1", "R1", "L2", "R2", "L3", "R3")]}),
+    ]),
+    ("step_wet", "Footsteps: wet street in the rain (walk, then run)", -26, "steps", [
+        ("Water steps, congusbongus/EminYILDIRIM (CC-BY 3.0)", {"step": [S("congus_footsteps", f"{FT}/water/{i}.ogg") for i in range(5)]}),
+        ("rubberduck wet steps (CC0)", {"step": [S("rubberduck_100v2", f"sfx100v2_footstep_wet_0{i}.ogg") for i in (1, 2, 3)]}),
+        ("Fantozzi stone + rubberduck wet layer (CC0)", {"step": [[S("qubodup_fantozzi", f"*/ogg/Fantozzi-Stone{s}.ogg"),
+                                                                   S("rubberduck_100v2", f"sfx100v2_footstep_wet_0{1 + i % 3}.ogg", gain=2)]
+                                                                  for i, s in enumerate(("L1", "R1", "L2", "R2"))]}),
+    ]),
+    ("rain_light", "Rain ambience: light (loop bed, 7 s excerpt)", -32, "ambience", [
+        ("kresiek-the-furry rain loop 1 (CC0)", {"bed": [S("kresiek_rain", "amb_rain_loop_1.wav", start=10, len=7, fade=0.8)]}),
+        ("ylmir soft rain (CC0)", {"bed": [S("ylmir_rain", "*4.ogg", start=5, len=7, fade=0.8)]}),
+        ("Ove Melaa rainy (CC0)", {"bed": [S("ovemelaa_rain", "*Long Version.ogg", start=30, len=7, fade=0.8)]}),
+    ]),
+    ("rain_heavy", "Rain ambience: heavy / storm (loop bed, 7 s excerpt)", -26, "ambience", [
+        ("ylmir heavy rain (CC0)", {"bed": [S("ylmir_rain", "*2.ogg", start=5, len=7, fade=0.8)]}),
+        ("kresiek-the-furry rain loop 2 (CC0)", {"bed": [S("kresiek_rain", "amb_rain2.flac", start=60, len=7, fade=0.8)]}),
+        ("wuxiascrub rain with thunder (CC0)", {"bed": [S("wuxiascrub_rain", "rain-thunder.ogg", start=2, len=7, fade=0.8)]}),
+    ]),
+    ("thunder", "Distant thunder (one-shot under the storm)", -24, "single1", [
+        ("jerimee thunder sequence (CC-BY 3.0)", {"hit": [S("jerimee_thunder", "thunder-seq.wav", peak=5.0, fade=1.2, lp=2500)]}),
+        ("Gregor Quendel field recording (CC-BY 4.0)", {"hit": [S("quendel_thunder", "*.mp3", peak=5.0, fade=1.2, lp=2500)]}),
+        ("rubberduck thunder (CC0)", {"hit": [S("rubberduck_100v2", "sfx100v2_thunder_01.ogg", fade=1.0)]}),
     ]),
     ("strike_swing", "Iris strikes: swing whooshes (3-hit combo)", -20, "combo_swing", [
         ("artisticdude swishes (CC0)", {"swing": [S("artisticdude_swish", f"swishes/swish-{i}.wav") for i in (3, 7, 9, 4)]}),
@@ -341,12 +381,23 @@ def clean(s):
         x = x[int(s["start"] * SR):]
     if "len" in s:
         x = x[: int(s["len"] * SR)]
+    if "peak" in s:  # the loudest window of this length (a thunder roll inside a long recording)
+        w = int(s["peak"] * SR)
+        cs = np.concatenate([[0.0], np.cumsum(x ** 2)])
+        env = cs[4800:] - cs[:-4800]  # 0.1 s moving energy
+        c = int(np.argmax(env)) + 2400
+        a0 = max(0, min(len(x) - w, c - w // 3))
+        x = x[a0: a0 + w]
+    if "lp" in s:  # distance: highs roll off
+        x = signal.sosfilt(signal.butter(2, s["lp"], "lowpass", fs=SR, output="sos"), x)
     # gentle high-pass: rumble and DC out
     x = signal.sosfilt(signal.butter(2, 40, "highpass", fs=SR, output="sos"), x)
     if s.get("env") == "rise":  # a charge swells into the release
         t = np.linspace(0, 1, len(x))
         x = x * (0.25 + 0.75 * t ** 1.6)
     fi, fo = int(0.002 * SR), int(min(0.04, len(x) / SR * 0.2) * SR)
+    if "fade" in s:  # ambience/rolls: long fades
+        fi = fo = int(min(s["fade"], len(x) / SR / 3) * SR)
     x[:fi] *= np.linspace(0, 1, fi)
     if fo > 0:
         x[-fo:] *= np.linspace(1, 0, fo) ** 2
@@ -408,7 +459,9 @@ def place(track, y, at):
 def pattern(kind, snd, ref_swing):
     """Lays out one alternative; snd is {slot: [mastered arrays]}. Returns a mono array."""
     tr = np.zeros(1)
-    if kind == "steps":
+    if kind == "ambience":
+        tr = place(tr, snd["bed"][0], 0.0)
+    elif kind == "steps":
         st = snd["step"]
         t = 0.0
         for i in range(8):  # walk: ~1.9 steps/s
@@ -433,9 +486,9 @@ def pattern(kind, snd, ref_swing):
                 tr = place(tr, ref_swing[i % len(ref_swing)] * 0.7, t + dt)
                 tr = place(tr, im[(i + rep) % len(im)], t + dt + 0.09)
             t += 1.7
-    elif kind in ("single2", "single3"):
+    elif kind in ("single1", "single2", "single3"):
         h = snd["hit"]
-        for i in range(2 if kind == "single2" else 3):
+        for i in range(int(kind[-1])):
             tr = place(tr, h[i % len(h)], i * 1.3)
     elif kind == "cast":
         for rep in range(2):
@@ -509,7 +562,8 @@ def write_md(path, rows, credits, total):
          "How the demo is laid out: a two-note rising chime starts each category; then each alternative is announced "
          "by short beeps (one beep = A, two = B, three = C) and played in a small game-like pattern "
          "(walk then run for footsteps, a 3-hit combo for strikes, charge then release for casts, "
-         "attack/hurt/hurt/death for mobs).", "",
+         "attack/hurt/hurt/death for mobs, a 7 s excerpt for rain beds). Rain beds will be made seamless "
+         "(crossfaded loop) when wired; weather sounds follow the window event `ftf:weather` {state}.", "",
          "Every candidate is trimmed, high-passed at 40 Hz, given short fades, loudness-matched within its category "
          "and limited to -1 dBTP. After the picks, the chosen files are mastered the same way into "
          "`game/public/assets/audio/` and credited in `docs/art/manifest.md` and the README.", "",
