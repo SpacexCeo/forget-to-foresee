@@ -1,6 +1,8 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+// --step 60: frame by frame: the page's clock and its animation frames are driven by this script (each frame is
+// exactly 1/60 s of game time and is saved), so the film is a true 60 fps whatever the renderer's speed is.
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
 //   ffmpeg -framerate <fps> -i <out>/f_%04d.jpg -c:v libx264 -pix_fmt yuv420p -crf 20 out.mp4
 // Scenarios: loco (stand, walk, run, stop: a front tracking shot, then the same from the side), cast (Frost Lance,
@@ -13,6 +15,7 @@ const out = process.argv[2], scenario = process.argv[3] || 'loco';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const url = arg('url', 'http://127.0.0.1:4173'), extra = arg('query', '');
 const hero = arg('hero', 'iris');
+const STEP = Number(arg('step', 0));      // frames per second of game time in frame-by-frame mode (0: real time)
 const [W, H] = arg('size', '1280x720').split('x').map(Number);
 mkdirSync(out, { recursive: true });
 const gpu = ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
@@ -21,11 +24,22 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
+if (STEP) await page.addInitScript(() => {
+  // the game's clock (performance.now) and its frame callbacks under the script's control once __manual() is called
+  const realRAF = window.requestAnimationFrame.bind(window), realNow = performance.now.bind(performance);
+  let manual = false, vt = 0, q = [], id = 0;
+  performance.now = () => (manual ? vt : realNow());
+  window.requestAnimationFrame = (cb) => { if (!manual) return realRAF(cb); q.push(cb); return ++id; };
+  window.__manual = () => { vt = realNow(); manual = true; };
+  window.__frame = (dt) => { vt += dt; const c = q; q = []; for (const f of c) { try { f(vt); } catch (e) { console.error(e); } } return c.length; };
+});
 await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${scenario === 'combat' || scenario === 'dash' ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
-const wait = (ms) => page.waitForTimeout(ms);
+let n = 0, stepping = false, gameMs = 0;
+const frame = async () => { await page.evaluate((dt) => window.__frame(dt), 1000 / STEP); gameMs += 1000 / STEP; const b = await page.screenshot({ type: 'jpeg', quality: 90 }); writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, b); };
+const wait = async (ms) => { if (!stepping) return page.waitForTimeout(ms); for (let i = 0, k = Math.round(ms * STEP / 1000); i < k; i++) await frame(); };
 await wait(1500);
 // the casting field: a level clearing (town-local centre -27, 62); she stands at its west end facing east (+X)
 const start = await page.evaluate(async () => {
@@ -58,8 +72,9 @@ const shot = (s) => page.evaluate((s) => { Object.assign(window.__shot, s); }, s
 const held = new Set();
 async function keys(want) { for (const k of [...held]) if (!want.has(k)) { await page.keyboard.up(k); held.delete(k); } for (const k of want) if (!held.has(k)) { await page.keyboard.down(k); held.add(k); } }
 async function go(ms, run, dir = [1, 0]) {
-  const t = Date.now();
-  while (Date.now() - t < ms) {
+  const clock = () => (stepping ? gameMs : Date.now());
+  const t = clock();
+  while (clock() - t < ms) {
     const r = await page.evaluate((d) => { const { fwd, right } = window.__ftf.rig.groundAxes(); return { ay: d[0] * fwd.x + d[1] * fwd.y, ax: d[0] * right.x + d[1] * right.y }; }, dir);
     const want = new Set(run ? ['ShiftLeft'] : []);
     if (r.ay > 0.38) want.add('KeyW'); if (r.ay < -0.38) want.add('KeyS'); if (r.ax > 0.38) want.add('KeyD'); if (r.ax < -0.38) want.add('KeyA');
@@ -67,10 +82,11 @@ async function go(ms, run, dir = [1, 0]) {
   }
   await keys(new Set());
 }
-let capturing = true, n = 0; const marks = [];
+let capturing = !STEP; const marks = [];
+if (STEP) { await page.evaluate(() => window.__manual()); stepping = true; }
 const t0 = Date.now();
 const capture = (async () => { while (capturing) { const b = await page.screenshot({ type: 'jpeg', quality: 88 }); writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, b); } })();
-const mark = (name) => marks.push({ name, t: +((Date.now() - t0) / 1000).toFixed(2), frame: n });
+const mark = (name) => marks.push({ name, t: +((stepping ? gameMs : Date.now() - t0) / 1000).toFixed(2), frame: n });
 const back = () => page.evaluate((s) => { window.__ftf.player.teleport([s[0], s[1] + 0.1, s[2]], Math.PI / 2); }, start);
 
 if (scenario === 'loco') {
@@ -112,6 +128,17 @@ else if (scenario === 'dash') {
   }
   marks.push({ events: await page.evaluate(() => Object.fromEntries(Object.entries(window.__ev).map(([k, v]) => [k, { n: v.length, first: v.slice(0, 6) }]))) });
 }
+else if (scenario === 'skid') {
+  // a cast out of a full run: the heel-dig stop blended into the wind-up, from the side and from the front
+  const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos; const pt = [p[0] + 9, window.__ground(p[0] + 9, p[2]) ?? p[1], p[2]]; f.town.casting.aimAt(id, pt); return f.town.casting.release(); }, id);
+  for (const [name, s] of [['side', { angle: Math.PI / 2, dist: 5.2, h: 0.9, up: 0.2 }], ['front34', { angle: 0.5, dist: 5.0, h: 0.9, up: 0.3 }]]) {
+    for (const id of ['lance', 'snare']) {
+      await back(); await shot(s); await wait(1800);
+      mark(name + ' run'); await go(1300, true);
+      mark(name + ' ' + id + ' out of the run'); await aim(id); await wait(2300);
+    }
+  }
+}
 else if (scenario === 'shoulders') {
   // the shoulders and arms (Elise): close from the front and from behind while she stands, waves, walks and runs
   for (const [name, s] of [['front', { angle: 0.25, dist: 2.3, h: 1.25, up: 0.1 }], ['back', { angle: Math.PI - 0.3, dist: 2.3, h: 1.25, up: 0.15 }], ['full', { angle: 0.3, dist: 4.6, h: 0.9, up: 0.25 }]]) {
@@ -124,7 +151,7 @@ else if (scenario === 'shoulders') {
   }
 }
 capturing = false; await capture;
-const seconds = (Date.now() - t0) / 1000;
+const seconds = STEP ? n / STEP : (Date.now() - t0) / 1000;
 writeFileSync(`${out}/report.json`, JSON.stringify({ scenario, query: extra, frames: n, seconds: +seconds.toFixed(2), fps: +(n / seconds).toFixed(2), marks, errors: errors.slice(0, 10) }, null, 1));
 console.log(JSON.stringify({ frames: n, seconds, fps: n / seconds, errors: errors.slice(0, 5) }));
 await browser.close();
