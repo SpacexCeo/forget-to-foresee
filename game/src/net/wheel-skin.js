@@ -38,6 +38,7 @@ export async function claimWheelSkin({ storage, wheelId, seed, deployment = DAY1
     const ans = await r.json().catch(() => ({}));
     // the relayer verified the win (every check passed) but cannot mint yet (no minter key): 202 {status: 'mint_pending', verified, recorded, contract, left}
     if (!ans.token_id && (r.status === 202 || ans.pending === true || ans.status === 'pending' || ans.status === 'recorded' || ans.status === 'mint_pending')) return { ok: false, reason: 'recorded', verified: ans.verified === true, left: Number.isFinite(+ans.left) ? +ans.left : null, claimId: ans.claim_id || ans.id || null };
+    if (ans.error === 'already_owned') return { ok: false, reason: 'already_owned', tokenId: ans.token_id || null }; // a retry after the mint: the existing token
     if (!r.ok || !ans.token_id) return { ok: false, reason: r.status === 404 ? 'not_configured' : REASON[ans.error] || (r.status >= 500 ? 'network' : 'failed') };
     return { ok: true, tokenId: ans.token_id, txHash: ans.tx_hash || null, contract: ans.contract || skinContract(deployment), explorer: ans.tx_hash ? 'https://testnet.nearblocks.io/txns/' + ans.tx_hash : null };
   } catch { return { ok: false, reason: 'network' }; }
