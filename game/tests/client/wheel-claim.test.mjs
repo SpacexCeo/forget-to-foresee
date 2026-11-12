@@ -149,6 +149,8 @@ test('claim client: the signed request the relayer checks; its error codes map t
   const reason = async (status, error) => (await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: reply(status, error) })).reason;
   assert.equal(await reason(400, 'invalid_spin'), 'invalid');
   assert.equal(await reason(409, 'already_owned'), 'already_owned');
+  const owned = await claimWheelSkin({ storage, wheelId, seed, base: 'https://r', fetch: async () => ({ ok: false, status: 409, json: async () => ({ error: 'already_owned', token_id: 'sheriffchenko-4' }) }) });
+  assert.deepEqual(owned, { ok: false, reason: 'already_owned', tokenId: 'sheriffchenko-4' }, 'a retry after the mint carries the token id');
   assert.equal(await reason(410, 'sold_out'), 'sold_out');
   assert.equal(await reason(429, 'rate_limited'), 'rate');
   assert.equal(await reason(503, 'wheel_not_configured'), 'not_configured');

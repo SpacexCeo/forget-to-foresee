@@ -6,6 +6,7 @@
 // profile, ?films=reset forgets the films seen in this season, ?film=<chapter> plays one film right away on a season advanced to that chapter (still frames for
 // docs/chapters.md use it with &stills=1).
 import { filmsEnabled } from './films-enabled.js';
+import { warmScene } from '../../render/warmup.js';
 import { createChapterDirector, chapterFor, CHAPTER_IDS, SHOT_SECONDS, TITLE_SECONDS, CARD_SECONDS } from '../../play/chapters.js';
 import { renderMsg, resolvePlayArg } from '../../play/i18n.js';
 import { resolveLineArgs } from '../../play/chapters.js';
@@ -55,6 +56,7 @@ export function attachChapters({ session, hub, ui, worldHud, map, ctx, lookdev, 
     renderLine,
     texts: (f) => ({ chapter: i18n.t('chapter.ui.chapter', { n: f.numeral }), title: renderLine(f.title), matters: i18n.t('chapter.ui.matters'), hold: i18n.t('chapter.ui.hold'), skip: i18n.t('chapter.ui.skip') }),
     win: doc.defaultView || globalThis,
+    prewarm: () => warmScene(), // every texture and program up front: a cut never compiles (render/warmup.js)
   });
   const chronicle = createChronicleMenu({
     root: uiRoot, ctx, rows: () => director.rows(), onReplay: (id) => api.replay(id),
