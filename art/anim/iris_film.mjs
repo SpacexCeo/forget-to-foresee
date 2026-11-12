@@ -31,7 +31,7 @@ const start = await page.evaluate(async () => {
   const f = window.__ftf, col = await import('/src/physics/collision.js');
   const ground = (x, z) => { let y = 1300; for (let i = 0; i < 8; i++) { const h = col.rayCast(f.town.scene.world, [x, y, z], [0, -1, 0], 500, col.MASK_PLAYER); if (!h) return null; if (h.normal[1] > 0.7) return h.point[1]; y = h.point[1] - 0.05; } return null; };
   window.__ground = ground;
-  const x = -36, z = 62, y = ground(x, z);
+  const x = -35, z = 59.5, y = ground(x, z);
   f.player.teleport([x, y + 0.1, z], Math.PI / 2);
   return [x, y, z];
 });
