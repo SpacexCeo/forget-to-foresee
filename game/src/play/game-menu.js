@@ -11,8 +11,12 @@ import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
 import { loadHolder } from '../net/holder.js';
 import { holderSection } from './holder-panel.js';
 import { renderProfileView } from './profile-view.js';
+import { createChestBag } from '../game/chests.js';
+import { createChestClient } from '../net/chest-client.js';
+import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { cue } from '../audio/town-audio.js';
 
+const relayerUrl = () => { try { const e = import.meta.env && import.meta.env.VITE_FTF_RELAYER_URL; if (e) return e; } catch { /* none */ } return DAY1_DEPLOYMENT && DAY1_DEPLOYMENT.relayer; };
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
 const SEG_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#9775fa', '#da77f2', '#f783ac', '#ff922b', '#20c997'];
@@ -102,7 +106,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null }) {
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -110,6 +114,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const inv = createInventory({ storage });
   const items = manifest || loadManifest(base);
   const chain = onChain || readOnChain({ owner });
+  const bag = chests || createChestBag({ storage });
+  const chestApi = chestClient || createChestClient({ relayer: relayerUrl() });
 
   const root = el('div', 'gm'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('menu.title'));
   const panel = el('div', 'gm-panel'); root.append(panel);
@@ -163,7 +169,23 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         box.append(g);
       });
-      return [box, holderSection({ doc, t, storage, owner })];
+      // dragons owned by the heroine token's account (docs/companion-nft-plan.md), only when the chain read confirms them
+      const drag = el('div');
+      if (heroineToken) {
+        (companionsRead || import('../net/companions.js').then((m) => m.readCompanions({ tokenId: heroineToken }))).then((r) => {
+          if (!r || r.state !== 'loaded' || !r.dragons.length) return;
+          const g2 = el('div', 'gm-grid'); g2.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';
+          for (const d of r.dragons) {
+            const c = el('div', 'gm-nft');
+            c.append(el('b', null, d.title), el('br'), el('span', 'gm-chip gm-near', t('companion.owned')));
+            const a = el('a', 'gm-chip', t('menu.viewToken')); a.href = d.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; c.append(a);
+            c.append(el('p', 'gm-note', t('companion.account', { account: r.account })));
+            g2.append(c);
+          }
+          drag.replaceChildren(el('h3', null, t('companion.heading')), g2);
+        }).catch(() => {});
+      }
+      return [box, drag, holderSection({ doc, t, storage, owner })];
     },
     inventory() {
       return items.then((list) => {
@@ -179,7 +201,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         }
         const sum = el('div', 'gm-row');
         sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + (ledger.silk / 100).toFixed(2)), btn(t('menu.openWheel'), () => show('wheel')));
-        return [el('p', 'gm-note', t('inv.offchain.note')), sum, g];
+        return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), g];
       });
     },
     wheel() {
@@ -275,6 +297,46 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   };
   const fresh = new Set();
 
+  /** Chests from monsters (game/chests.js): sealed ones open through the chest service (play/chest-open.js). */
+  function chestSection(list) {
+    const all = bag.list();
+    const box = el('section', 'gm-chests');
+    box.append(el('h3', null, t('chest.heading', { n: bag.sealed().length })));
+    if (!all.length) { box.append(el('p', 'gm-note', t('chest.none'))); return box; }
+    const g = el('div', 'gm-grid');
+    for (const c of all.slice(0, 24)) {
+      const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
+      card.style.setProperty('--rc', RARITY_COLOR[c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'uncommon' : 'common']);
+      card.append(el('b', null, t('chest.tier.' + c.tier)));
+      if (c.state === 'sealed') {
+        card.append(el('small', null, t('chest.sealed')));
+        const b = btn(t('chest.open'), () => openOne(c, list), 'gm-btn'); b.style.marginTop = '8px'; b.style.minHeight = '40px'; b.style.padding = '8px 14px';
+        b.disabled = !chestApi.available || !owner;
+        card.append(b);
+        if (!owner) card.append(el('small', null, t('chest.needGuest')));
+        else if (!chestApi.available) card.append(el('small', null, t('chest.err.off')));
+      } else {
+        const o = c.opening && c.opening.outcome;
+        card.append(el('small', null, o ? t('chest.got.' + o.kind) : t('chest.opened')), el('small', null, c.opening && c.opening.verified ? t('chest.verified') : t('chest.unverified')));
+      }
+      g.append(card);
+    }
+    box.append(g);
+    return box;
+  }
+  function openOne(chest, list) {
+    import('./chest-open.js').then((m) => {
+      const r = m.openChestReveal({ doc, t, chest, client: chestApi, guest: owner, items: list, base, onSettled: (op, v) => {
+        const o = op.outcome;
+        if (o.kind === 'item' && o.id) { inv.add(o.id, 1, 'chest'); fresh.add(o.id); }
+        if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
+        if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
+        bag.settle(chest.id, { ...op, verified: !!v.verified, proofOk: !!v.proofOk, chainOk: v.chainOk });
+      } });
+      r.result.then(() => { if (current === 'inventory') show('inventory'); });
+    }).catch((e) => console.warn('[chest]', e));
+  }
+
   function show(id) {
     current = id;
     for (const [k, b] of Object.entries(tabBtns)) b.setAttribute('aria-selected', String(k === id || (id === 'wheel' && k === 'inventory')));
@@ -284,5 +346,5 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   }
   show(TABS.includes(tab) || tab === 'wheel' ? tab : 'profile');
   tabBtns[TABS.includes(tab) ? tab : 'profile'].focus();
-  return { root, close, show, get tab() { return current; }, wheel, inventory: inv };
+  return { root, close, show, get tab() { return current; }, wheel, inventory: inv, chests: bag };
 }
