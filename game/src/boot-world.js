@@ -260,8 +260,8 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
-let townQuests = null, townPortal = null, townBoard = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
-let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null;
+let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -318,6 +318,8 @@ if (townMode.town) {
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
         load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
+      // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
+      import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
     }).catch((e) => console.warn('[story]', e));
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
@@ -406,6 +408,14 @@ if (townMode.town) {
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
   if (params.get('story') !== '0' && !endgamePass) mountEndgamePass();
+  // The monster-resource stalls (ui/stall-panel.js): a stall keeper's card dispatches 'ftf:stall-open' {npc}
+  if (!stallMounted) { stallMounted = true; let panel = null; window.addEventListener('ftf:stall-open', (e) => {
+    const npc = e && e.detail && e.detail.npc; if (!npc) return;
+    Promise.all([import('./net/stall-client.js'), import('./ui/stall-panel.js')]).then(([c, u]) => {
+      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }) });
+      panel.open(npc);
+    }).catch((err) => console.warn('[stall]', err));
+  }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
@@ -521,7 +531,7 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
-      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; return !!(irisAvatar && irisAvatar.combat(n)); }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
+      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
       onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
     // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are

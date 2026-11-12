@@ -393,7 +393,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
-  const act = { lunge: null, strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0 };
+  const act = { lunge: null, strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0, blows: [] };
   let shake = 0;
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
@@ -586,12 +586,13 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       const A = ACTIONS.strike;
       act.combo = act.comboT > 0 ? (act.combo % A.combo.length) + 1 : 1; act.comboT = A.window; act.strikeCd = A.cooldown;
       const amount = A.combo[act.combo - 1], knock = act.combo === A.combo.length;
-      // a locked creature out of reach: she closes in (a short lunge) and the blow lands as she arrives
-      if (!lungeTo(f.lock, A.reach * 0.8, () => { const ev = []; brain.strike(player.pos, player.heading, amount, knock, ev); handle(ev); })) {
-        const ev = []; brain.strike(player.pos, player.heading, amount, knock, ev); handle(ev);
-      }
+      const blow = () => { const ev = []; brain.strike(player.pos, player.heading, amount, knock, ev); handle(ev); };
       act.twistDir = act.combo % 2 ? 1 : -1;
-      act.twist = irisMove && irisMove('strike' + act.combo) ? 0 : 0.22;            // her own clip, else the procedural twist
+      const clip = irisMove ? irisMove('strike' + act.combo) : false;               // her own clip (it answers with its impact time), else the procedural twist
+      act.twist = clip !== false && clip != null ? 0 : 0.22;
+      // a locked creature out of reach: she closes in (a short lunge) and the blow lands as she arrives. In reach the
+      // blow (damage, number, spark) lands on the frame her fist does, not on the press
+      if (!lungeTo(f.lock, A.reach * 0.8, blow)) { if (typeof clip === 'number' && clip > 0) act.blows.push({ t: clip, fn: blow }); else blow(); }
       if (moveIris) moveIris([Math.sin(player.heading) * 0.25, Math.cos(player.heading) * 0.25]);           // a short step into the swing
       if (onFeedback) onFeedback(act.combo === 3 ? 'strike3' : 'strike');
       return true;
@@ -650,6 +651,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       iris.pos = player.pos; iris.outside = outside;
       if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
+      for (const b of act.blows) b.t -= dt;
+      while (act.blows.length && act.blows[0].t <= 0) act.blows.shift().fn();          // strikes land with the fist
       act.superCd = Math.max(0, act.superCd - dt);
       if (act.lunge) {
         const L = act.lunge, stepLen = Math.min(L.left, L.rate * dt);
