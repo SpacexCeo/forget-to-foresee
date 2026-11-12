@@ -42,3 +42,30 @@ sessions for it. "Wool" in the source notes reads as **silk**: silk is the one i
 - **Crafting** (later) uses the same resources.
 - Who: combat worker = the resource drop table per creature (generalising `game/game/salvage.js`); story worker = quests that ask for
   resources and pay silk; economy worker = resources in the town market (stalls buy and sell them; on chain as NEP-245 items, item 4).
+
+## Batch chest opening (owner, 12 Nov evening): design
+
+- **Player side:** the bag shows "Open 1 / Open 5 / Open all (≤ 10)". One request, then a reveal sequence: the cards flip one by one
+  (0.4 s each, tap to skip to the end), then a summary grid sorted by rarity, with "Claim all".
+- **Chain side, no contract change:** the deployed `loot-chest` contract keeps `open_chest`; the relayer sends **one transaction with
+  up to 10 `open_chest` FunctionCall actions** to `chests.ftf-coordinator.testnet`, signed by the opener key (a function-call key may
+  carry several FunctionCall actions to its receiver with zero deposit [VERIFY on testnet with 2 actions first]). Each action draws the
+  next deck position, so every opening stays individually verifiable (`tools/verify-chest/verify.mjs`).
+- **Limits:** the contract's daily cap (30 per day) and the relayer's per-guest bucket still apply; a batch that would cross the cap is
+  cut to what is left and says so.
+- **Failure:** if one action fails, the transaction reverts as a whole; the relayer retries once with the remaining count, never
+  re-sends a confirmed one (journal by request id), and the client shows only openings read back from the chain.
+- **Honest count:** one batch = one transaction with N receipts; Town Pulse and the stats count openings and transactions separately.
+- **Who:** the economy/relayer worker (it owns the chest relayer path), after the resource market.
+
+## Crafting as an NFT merge (owner question, 12 Nov evening): design
+
+- **Yes: a craft is a merge.** The inputs are burned and one new NFT is minted, atomically, by a small `forge` contract.
+- **Inputs:** monster resources (NEP-245 on `items.ftf-town.testnet`) and, for higher recipes, NFTs (loot NFTs from chests, memory
+  shards). **Output:** a NEP-171 item NFT whose metadata lists its recipe and the burned inputs (token ids, transaction).
+- **Flow:** the player calls `mt_batch_transfer_call` (resources) or `nft_transfer_call` (an NFT) to the forge with the recipe id; the
+  forge checks the recipe, burns the inputs, mints the output; a wrong or short input is refunded by the standard resolve step.
+- **Recipes on chain** (readable view `recipes()`), e.g. 5 spider silk thread + 2 chitin plate = a silk-woven cloak; 3 common loot
+  NFTs of one tier = 1 of the next tier (the merge); crown shard + a memory shard = a relic with both provenances.
+- **Why it matters for the NFT track:** an NFT that records what it was made from, verifiable from the chain alone.
+- **When:** after the freeze, or before it only if the resource route and the items contract are live and green.

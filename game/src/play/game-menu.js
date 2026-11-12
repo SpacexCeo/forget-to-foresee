@@ -328,7 +328,13 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         else if (!chestApi.available) card.append(el('small', null, t('chest.err.off')));
       } else {
         const o = c.opening && c.opening.outcome;
-        card.append(el('small', null, o ? t('chest.got.' + o.kind) : t('chest.opened')), el('small', null, c.opening && c.opening.verified ? t('chest.verified') : t('chest.unverified')));
+        const ok = c.opening && c.opening.verified, tx = c.opening && c.opening.tx;
+        const mark = el('small', null);
+        if (ok && tx && /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(String(tx))) { // the opening's own transaction on the explorer (owner, 12.11)
+          const a = el('a', null, t('chest.verified')); a.href = `https://testnet.nearblocks.io/txns/${tx}`; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t('chest.viewTx');
+          mark.append(a);
+        } else mark.textContent = ok ? t('chest.verified') : t('chest.unverified');
+        card.append(el('small', null, o ? t('chest.got.' + o.kind) : t('chest.opened')), mark);
       }
       g.append(card);
     }
