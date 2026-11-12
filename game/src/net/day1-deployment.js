@@ -10,5 +10,6 @@ export const DAY1_DEPLOYMENT = {
   "agents": "agents.ftf-coordinator.testnet",
   "ledger": "ledger.ftf-coordinator.testnet",
   "relayer": "https://159-195-130-113.sslip.io",
-  "chests": "chests.ftf-coordinator.testnet"
+  "chests": "chests.ftf-coordinator.testnet",
+  "skins": "skins.ftf-coordinator.testnet"
 };

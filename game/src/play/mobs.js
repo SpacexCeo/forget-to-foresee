@@ -43,6 +43,10 @@ export const CAST_DAMAGE = Object.freeze({ lance: 40, snare: 25 });
 export const ACTIONS = Object.freeze({
   strike: Object.freeze({ keys: ['KeyF', 'Digit3'], cooldown: 0.32, combo: [14, 14, 26], reach: 2.1, arc: 1.05, window: 0.8 }),
   dash: Object.freeze({ keys: ['Space', 'Digit4'], cooldown: 1.0, distance: 4.5, seconds: 0.2, iframes: 0.35 }),
+  // hold the strike for the super strike (owner 12.11): held ≥ hold s it fires on release; damage ramps to full at
+  // `full` s of charge; a frontal cone `reach` m, half-angle `arc`; knockback for light creatures; its own cooldown
+  super: Object.freeze({ hold: 0.4, full: 1.0, min: 34, max: 80, reach: 3.0, arc: Math.PI / 4, knock: 1.6, impact: 0.1, cooldown: 1.2, freeze: 0.16 }),
+  lock: 3.0,                       // soft lock: a strike turns to the nearest living creature this close
 });
 export const REGEN = Object.freeze({ delay: 4, perSecond: 8 });   // her health comes back out of combat
 const LANCE_SPEED = 20;             // the fracture front of the Frost Lance (m/s): a monster far along the line is hit later
@@ -116,6 +120,38 @@ export class MobBrain {
       n++;
     }
     return n;
+  }
+
+  /** The super strike: a cone in front of her, `amount` to everything in it, a long hit-stop, light creatures thrown back. */
+  superStrike(from, heading, amount, events) {
+    const A = ACTIONS.super; let n = 0;
+    for (const m of this.mobs) {
+      if (m.state === 'dead' || m.state === 'gone') continue;
+      const dx = m.pos[0] - from[0], dz = m.pos[2] - from[2], d = Math.hypot(dx, dz);
+      if (d > A.reach + m.T.radius) continue;
+      let a = Math.atan2(dx, dz) - heading; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
+      if (Math.abs(a) > A.arc && d > m.T.radius + 0.3) continue;
+      this.damage(m, amount, events);
+      events.push({ kind: 'super', mob: m });
+      if (m.state !== 'dead') m.freeze = A.freeze;
+      if (!m.T.heavy && m.state !== 'dead' && d > 1e-3) {
+        const k = A.knock / d, nx = m.pos[0] + dx * k, nz = m.pos[2] + dz * k;
+        if (this.outside([nx, 0, nz]) && Math.hypot(nx - m.pack.home[0], nz - m.pack.home[2]) < LEASH) { m.pos[0] = nx; m.pos[2] = nz; }
+      }
+      n++;
+    }
+    return n;
+  }
+
+  /** The nearest living creature within `range` m of `from` (the strike's soft lock), or null. */
+  nearest(from, range) {
+    let best = null, bd = range;
+    for (const m of this.mobs) {
+      if (m.state === 'dead' || m.state === 'gone') continue;
+      const d = Math.hypot(m.pos[0] - from[0], m.pos[2] - from[2]) - m.T.radius;
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best;
   }
 
   /** Iris's cast left her hands: queue its hits ({id, from, dir [x, z], point}). */
@@ -266,7 +302,7 @@ const CSS = `
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
-  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null }) {
+  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null, irisEnd = null }) {
   const brain = new MobBrain({ origin, phone, seed });
   // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
   // (the hillside's colliders are built when Iris first walks out of the gate, so a pack is settled as soon as its
@@ -284,7 +320,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
-  const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1 };
+  const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null };
   let shake = 0;
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
@@ -301,6 +337,20 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const slashGeo = new THREE.RingGeometry(1.2, 2.0, 32, 1, -1.1, 2.2); slashGeo.rotateX(-Math.PI / 2);
   const slash = new THREE.Mesh(slashGeo, new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   slash.visible = false; slash.renderOrder = 3; group.add(slash); let slashT = 0;
+  // the super strike: a ring that gathers under her while she charges, then a ground ring and a shock arc in her colour
+  const SUPER_TINT = 0xffc36b;
+  const chargeRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: SUPER_TINT, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  chargeRing.visible = false; chargeRing.renderOrder = 3; group.add(chargeRing);
+  const burst = { t: -1,
+    ring: new THREE.Mesh(new THREE.RingGeometry(0.82, 1.0, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: SUPER_TINT, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })),
+    arc: new THREE.Mesh(new THREE.RingGeometry(1.4, 2.6, 40, 1, -Math.PI / 4, Math.PI / 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xfff0d0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })) };
+  burst.ring.visible = burst.arc.visible = false; burst.ring.renderOrder = burst.arc.renderOrder = 3; group.add(burst.ring, burst.arc);
+  /** Turns her for a strike: toward the nearest creature within ACTIONS.lock m, else along `aim` [x, z], else as she is. */
+  function face(aim) {
+    const m = brain.nearest(player.pos, ACTIONS.lock);
+    if (m) player.heading = Math.atan2(m.pos[0] - player.pos[0], m.pos[2] - player.pos[2]);
+    else if (aim && Math.hypot(aim[0], aim[1]) > 0.1) player.heading = Math.atan2(aim[0], aim[1]);
+  }
   const seedGeo = new THREE.IcosahedronGeometry(0.16, 1);
   const seedMat = new THREE.MeshBasicMaterial({ color: 0x9ff5ea });
 
@@ -403,9 +453,12 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     cast(c) { brain.cast(c); },
     get shake() { return reduced() ? 0 : shake; },
     get actions() { return { strikeCd: act.strikeCd, dashCd: act.dashCd, combo: act.combo, iframes: iris.iframes }; },
-    /** The strike (F / 3): a two-or-three-hit combo in front of her. Returns false while on cooldown or off the field. */
-    strike() {
+    get charging() { return act.charge ? act.charge.t : null; },
+    /** The strike (F / 3): a two-or-three-hit combo in front of her. Returns false while on cooldown or off the field.
+     *  @param {number[]|null} [aim] [x, z] the stick / mouse aim, else where she looks; a creature within 3 m wins (soft lock) */
+    strike(aim = null) {
       if (!iris.alive || !iris.outside || act.strikeCd > 0 || act.dash) return false;
+      face(aim);
       const A = ACTIONS.strike;
       act.combo = act.comboT > 0 ? (act.combo % A.combo.length) + 1 : 1; act.comboT = A.window; act.strikeCd = A.cooldown;
       const ev = []; brain.strike(player.pos, player.heading, A.combo[act.combo - 1], act.combo === A.combo.length, ev); handle(ev);
@@ -417,9 +470,40 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (onFeedback) onFeedback(act.combo === 3 ? 'strike3' : 'strike');
       return true;
     },
+    /**
+     * The attack button went down (F / 3 held, or the touch attack button): she starts gathering the super strike
+     * (`strike_charge`, held on its last frame). Let go with attackUp(): held ≥ 0.4 s it is the super strike, shorter
+     * a normal combo strike. Returns false when no attack can start (off the field, dashing, dead).
+     */
+    attackDown(aim = null) {
+      if (!iris.alive || !iris.outside || act.dash || act.charge) return false;
+      if (act.superCd > 0 || act.superAt) return this.strike(aim);              // the super is recharging: a plain strike
+      act.charge = { t: 0 }; face(aim);
+      if (irisMove) irisMove('strike_charge');
+      if (onFeedback) onFeedback('charge');
+      return true;
+    },
+    /** The attack button came up: the super strike (charged ≥ 0.4 s) or a normal strike. */
+    attackUp(aim = null) {
+      const c = act.charge; if (!c) return false;
+      act.charge = null; chargeRing.visible = false;
+      if (!iris.alive || !iris.outside) { if (irisEnd) irisEnd(); return false; }
+      const A = ACTIONS.super;
+      if (c.t < A.hold) return this.strike(aim);                                  // a tap: the combo (its clip replaces the held pose)
+      face(aim);
+      const k = Math.min(1, (c.t - A.hold) / (A.full - A.hold));
+      act.superAt = { t: 0, amount: A.min + (A.max - A.min) * k, k };
+      act.superCd = A.cooldown; act.strikeCd = 0.45;
+      if (irisMove) irisMove('strike_super');
+      if (onFeedback) onFeedback('super_release', null, { charge: k });
+      return true;
+    },
+    /** Put the gathered strike away without striking (she was hit hard, left the field, a menu opened). */
+    cancelAttack() { if (!act.charge) return; act.charge = null; chargeRing.visible = false; if (irisEnd) irisEnd(); },
     /** The dash (Space / 4): a short burst along `dir` [x, z] (or her heading) with i-frames. */
     dash(dir = null) {
       if (!iris.alive || !iris.outside || act.dashCd > 0 || act.dash) return false;
+      if (act.charge) { act.charge = null; chargeRing.visible = false; if (irisEnd) irisEnd(); }
       const A = ACTIONS.dash; let d = dir && Math.hypot(dir[0], dir[1]) > 0.1 ? dir : [Math.sin(player.heading), Math.cos(player.heading)];
       const l = Math.hypot(d[0], d[1]); d = [d[0] / l, d[1] / l];
       act.dash = { dir: d, t: 0 }; act.dashCd = A.cooldown; iris.iframes = A.iframes;
@@ -439,6 +523,36 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       iris.pos = player.pos; iris.outside = outside;
       if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
+      act.superCd = Math.max(0, act.superCd - dt);
+      if (act.charge) {
+        if (!iris.alive || !outside) this.cancelAttack();
+        else {
+          act.charge.t += dt;
+          const k = Math.min(1, act.charge.t / ACTIONS.super.full), ready = act.charge.t >= ACTIONS.super.hold;
+          chargeRing.visible = true; chargeRing.position.set(player.pos[0], player.pos[1] + 0.05, player.pos[2]);
+          chargeRing.scale.setScalar(0.6 + 0.5 * k + (reduced() ? 0 : 0.04 * Math.sin(act.charge.t * 18)));
+          chargeRing.material.opacity = (ready ? 0.55 : 0.25) * (0.5 + 0.5 * k);
+        }
+      }
+      if (act.superAt) {
+        act.superAt.t += dt;
+        if (act.superAt.t >= ACTIONS.super.impact) {                             // the clip's impact frame (0.10 s)
+          const S = act.superAt; act.superAt = null;
+          const ev = []; brain.superStrike(player.pos, player.heading, S.amount, ev); handle(ev);
+          shake = Math.max(shake, 0.55 + 0.35 * S.k);
+          burst.t = 0; burst.ring.visible = burst.arc.visible = true;
+          burst.ring.position.set(player.pos[0], player.pos[1] + 0.06, player.pos[2]);
+          burst.arc.position.set(player.pos[0], player.pos[1] + 0.9, player.pos[2]); burst.arc.rotation.set(0, player.heading + Math.PI, 0);
+          if (moveIris) moveIris([Math.sin(player.heading) * 0.45, Math.cos(player.heading) * 0.45]);
+          if (onFeedback) onFeedback('super', null, { hits: ev.filter((e) => e.kind === 'super').length, charge: S.k });
+        }
+      }
+      if (burst.t >= 0) {
+        burst.t += dt; const u = Math.min(1, burst.t / 0.45), e = 1 - (1 - u) * (1 - u);
+        burst.ring.scale.setScalar(0.4 + ACTIONS.super.reach * e); burst.ring.material.opacity = 0.9 * (1 - u);
+        burst.arc.scale.setScalar(0.9 + 1.1 * e); burst.arc.material.opacity = 0.95 * (1 - u);
+        if (u >= 1) { burst.t = -1; burst.ring.visible = burst.arc.visible = false; }
+      }
       iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
       iris.calm += dt;
       if (iris.alive && iris.calm > REGEN.delay && iris.hp < IRIS_HP) { iris.hp = Math.min(IRIS_HP, iris.hp + REGEN.perSecond * dt); if (hpFill) hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; }

@@ -57,6 +57,12 @@ Townsfolk speech and a trader's buy/sell/hold come from a model that runs inside
   `FTF_TEE_NRAS=0` to skip the GPU vendor's online attestation check, `NEARAI_BASE_URL`.
 - Details and the verification chain: `docs/tee.md`.
 
+## Wheel grand prize (Sheriffchenko skin)
+
+`POST /api/wheel/claim` `{ account_id, public_key, wheel_id, seed, at, signature }` → `{ token_id, tx_hash }`: the
+relayer re-derives the wheel id and the roll, bounds the spin number and mints on `skins.ftf-coordinator.testnet`
+(cap 100, one per account) with `FTF_SKIN_KEY`. Details: `docs/wheel-skin.md`.
+
 ## Test
 
 ```bash

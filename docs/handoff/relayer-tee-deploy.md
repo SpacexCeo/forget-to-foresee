@@ -55,7 +55,11 @@ cd <checkout>/relayer
 node scripts/chest-key.mjs      # appends FTF_CHEST_KEY=… to .env (once) and prints ONLY the public key ed25519:…
 ```
 
-Keep the printed public key for step 7.
+Keep the printed public key for step 8. Then the wheel's skin minter key (the Sheriffchenko NFT, `docs/wheel-skin.md`):
+
+```bash
+node scripts/chest-key.mjs FTF_SKIN_KEY   # appends FTF_SKIN_KEY=… to .env (once) and prints ONLY its public key
+```
 
 ## 4. Restart the relayer
 
@@ -67,12 +71,12 @@ Keep the printed public key for step 7.
   ```bash
   cd <checkout>/relayer
   docker build -t ftf-relayer . && docker rm -f <old name>
-  docker run -d --name <old name> --restart unless-stopped --env-file .env -e TRUST_PROXY=1 -p 127.0.0.1:8787:8787 ftf-relayer
+  docker run -d --name <old name> --restart unless-stopped --env-file .env -e TRUST_PROXY=1 -v ftf-relayer-data:/app/data -p 127.0.0.1:8787:8787 ftf-relayer
   ```
   (keep the old `-p` mapping if the proxy reached it another way).
 
 The start line (`docker logs <name> | tail -1`, `journalctl -u <service> -n 5`) reads
-`relayer on http://… (key set, TEE set, chests set)`.
+`relayer on http://… (key set, TEE set, chests set, skins set)`.
 
 ## 5. Start the presence service (port 8788, localhost only)
 
@@ -108,10 +112,11 @@ proxy_read_timeout 120s;`, then `sudo nginx -t && sudo systemctl reload nginx`.
 
 ```bash
 H=https://159-195-130-113.sslip.io
-curl -s $H/api/health            # "configured": true, "tee": {"configured": true,…}, "chests": {"configured": true,…}
+curl -s $H/api/health            # "configured": true, "tee": {…true…}, "chests": {…true…}, "wheel": {…true…}
 curl -s $H/presence/health       # {"ok":true,…,"roomSize":15}
 curl -s -o /dev/null -w '%{http_code}\n' -X POST $H/api/create-guest -H 'Content-Type: application/json' -d '{"public_key":"nope"}'   # 400: mint route alive
 curl -s -o /dev/null -w '%{http_code}\n' -X POST $H/api/chest/open -H 'Content-Type: application/json' -d '{}'                         # 400: chest route alive
+curl -s -o /dev/null -w '%{http_code}\n' -X POST $H/api/wheel/claim -H 'Content-Type: application/json' -d '{}'                        # 400: wheel route alive
 curl -s -X POST $H/api/agent/say -H 'Content-Type: application/json' \
   -d '{"npc":"baker","question":"Good morning!","facts":"The bakery sells bread for silk.","lang":"en"}' > answer.json
 node -e 'const j=require("./answer.json");console.log(j.text || j.error, "| verified:", j.tee && j.tee.verified)'
@@ -123,15 +128,24 @@ tee_not_configured` means the key did not reach the process (steps 3–4).
 
 ## 8. Report to the lead
 
-1. the chest-opener **public** key from step 3;
+1. the chest-opener and skin-minter **public** keys from step 3;
 2. the two health JSONs from step 7 (they never contain keys);
 3. the `say` line and the verifier's last line (or the 402);
 4. which proxy you edited.
 
+Wheel wins that arrived before the skin key existed are kept in `relayer/data/wheel-claims.jsonl` (Docker: the
+`ftf-relayer-data` volume). Once `FTF_SKIN_KEY` is in `.env` and the lead has added its public key (step 9), mint them:
+
+```bash
+cd <checkout>/relayer && node scripts/mint-pending.mjs --dry-run && node scripts/mint-pending.mjs
+# Docker: docker exec <relayer container> node scripts/mint-pending.mjs
+```
+
 ## 9. The lead then runs (in the lead's container, with the testnet keys)
 
 ```bash
-OPENER_PUB=ed25519:<public key from step 3> bash contracts/scripts/chest-deploy.sh   # open_chest-only key + add_opener
+OPENER_PUB=ed25519:<chest key from step 3> bash contracts/scripts/chest-deploy.sh    # open_chest-only key + add_opener
+MINTER_PUB=ed25519:<skin key from step 3> bash contracts/scripts/skin-deploy.sh      # deploys skins.<signer> (cap 100) + mint_skin-only key
 node contracts/scripts/day1-write.mjs presence=wss://159-195-130-113.sslip.io/presence # the game connects to the shared town
 NEARAI_API_KEY=proxy-injected node tools/chest/seed.mjs --season s1                  # once NEAR AI credits exist; prints the fix_seed call
 # send the printed `near contract call-function … fix_seed …` line, then:
@@ -143,6 +157,6 @@ and commits `game/src/net/day1-deployment.js`.
 ## Rollback
 
 - Relayer: `git checkout <previous commit>` in the checkout and restart; or remove the `NEARAI_API_KEY` /
-  `FTF_CHEST_KEY` line and restart — those routes then answer `503` and the game keeps its scripted lines and sealed
+  `FTF_CHEST_KEY` / `FTF_SKIN_KEY` line and restart — those routes then answer `503` and the game keeps its scripted lines and sealed
   chests.
 - Presence: `docker rm -f ftf-presence` and remove the `/presence` route; the game falls back to single-player.

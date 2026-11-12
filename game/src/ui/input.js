@@ -159,6 +159,10 @@ export class Input {
     // Touch (phones/tablets): tap = walk there (the click path above), one-finger drag = orbit the camera,
     // two-finger pinch = zoom. Pointer events give every finger its own pointerId.
     if (target.style) target.style.touchAction = 'none';
+    // iOS Safari: a second finger (pinch, or the camera finger while the stick is held) must not turn into page zoom
+    const multi = (e) => { if (e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault(); };
+    target.addEventListener('touchstart', multi, { passive: false });
+    target.addEventListener('touchmove', multi, { passive: false });
     const touches = this.touches = new Map();
     let pinch = 0;
     target.addEventListener('pointerdown', (e) => {
@@ -199,6 +203,8 @@ export class Input {
 
   /** The touch run button: sticky until tapped again. */
   setRunToggle(on) { on = !!on; if (on === this.runToggle) return; this.runToggle = on; this.emitRun(); }
+  /** A cast or a strike interrupts the run: the toggle and the double-tap burst switch off (boot-world interruptMove). */
+  stopRun() { const was = this.runToggle || this.runBurst; this.runToggle = false; this.runBurst = false; this.tapRun?.reset(); if (was) this.emitRun(); }
   setTouchControls(on) { on = !!on; if (on === this.touchControls) return; this.touchControls = on; this.emitRun(); }
   onRunChange(fn) { this.runListeners.add(fn); return () => this.runListeners.delete(fn); }
   emitRun() { for (const fn of this.runListeners) fn(this.running, this); }
