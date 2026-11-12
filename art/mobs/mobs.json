@@ -1,5 +1,6 @@
 {
  "skitter": {
+  "display": "stone spider",
   "file": "mob_skitter.glb",
   "phone": "mob_skitter_m.glb",
   "role": "swarm",
@@ -47,6 +48,7 @@
   "note": ""
  },
  "hulker": {
+  "display": "hulker",
   "file": "mob_hulker.glb",
   "phone": "mob_hulker_m.glb",
   "role": "brute",
@@ -94,6 +96,7 @@
   "note": ""
  },
  "veilbell": {
+  "display": "veilbell",
   "file": "mob_veilbell.glb",
   "phone": "mob_veilbell_m.glb",
   "role": "caster",
@@ -141,6 +144,7 @@
   "note": "bone `seed` carries the charged seed: hidden (scale 0) except in attack, where it grows, holds and launches forward at 0.75 of the clip"
  },
  "crownrift": {
+  "display": "crownrift",
   "file": "mob_crownrift.glb",
   "phone": "mob_crownrift_m.glb",
   "role": "elite",

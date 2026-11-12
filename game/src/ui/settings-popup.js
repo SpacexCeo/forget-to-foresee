@@ -111,6 +111,7 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
       const out = [el('h3', null, t('set.ctl.camera')),
         row('set.ctl.sens', range(settings.sensitivity, 0.4, 2, 0.05, (v) => v.toFixed(2) + '×', (v) => setS({ sensitivity: SETTINGS_OPTIONS.sensitivity.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)) }), t('set.ctl.sens'))),
         row('set.ctl.invert', toggle(settings.invertY, (v) => setS({ invertY: v }), t('set.ctl.invert')))];
+      if (!(touch && touch.available)) out.push(row('set.ctl.quick', toggle(loadSettings(storage).quickCast, (v) => setS({ quickCast: v }), t('set.ctl.quick')), 'set.ctl.quickNote'));
       const touch = hooks.touch && hooks.touch();
       if (touch && touch.available) out.push(row('set.ctl.touch', select([['sticks', t('set.ctl.sticks')], ['tap', t('set.ctl.tap')]], touch.mode, (v) => touch.setMode(v), t('set.ctl.touch'))));
       out.push(el('h3', null, t('set.ctl.keys')));
