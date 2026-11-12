@@ -19,7 +19,7 @@ SERIF = '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf'
 SANS = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
 URL = 'spacexceo.github.io/forget-to-foresee'
 
-REVEAL = 22.5   # first_fight_v3.mp4: the open-case reel starts here (the chest preview, labelled "not on chain")
+REVEAL = 27.5   # first_fight_v3.mp4: the open-case reel starts here (the chest preview, labelled "not on chain")
 # (clip, start s, length s, caption or None)
 SEGMENTS = [
     ('town_beauty.mp4', 0.0, 8.5, None),
@@ -29,9 +29,9 @@ SEGMENTS = [
     ('first_fight_v2.mp4', 8.5, 7.0, 'Real-time fights: strike combo, dash, casts'),
     ('elite_fight.mp4', 2.0, 4.0, 'Brutes telegraph their blows'),
     ('elite_fight.mp4', 18.0, 8.0, 'Elites are a real fight'),
-    ('first_fight_v3.mp4', 16.0, 3.0, 'Beaten creatures drop chests'),
-    ('archipelago.mp4', 2.6, 9.0, 'Then the Tournament: the floating archipelago'),
-    ('first_fight_v3.mp4', REVEAL, 7.5, 'Open a chest: shards, items, NFTs (preview)'),
+    ('first_fight_v3.mp4', 21.6, 3.4, 'Beaten creatures drop chests'),
+    ('archipelago.mp4', 2.6, 7.5, 'Then the Tournament: the floating archipelago'),
+    ('first_fight_v3.mp4', REVEAL, 7.0, 'Open a chest: shards, items, NFTs (preview)'),
 ]
 END_SECONDS = 5.0
 
