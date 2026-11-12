@@ -1,11 +1,12 @@
 """Elise v4, steps 09-11 and 15: parts, bones, weights and the game file.
 
 The cleaned hero copy (s08_clean.py) is one fused shell. It is tagged by colour and place (arms, hands, ribbon tails,
-head and hair, torso, skirt, the leg in the slit, the shoes), the leg and the shoe toes are split from the dress so
-they can move on their own, and everything is bound to her existing skeleton (../v3/skeleton.json, 90 bones), so
+head and hair, torso, skirt, the leg in the slit, the shoes). The leg and the shoes of the shell are only a front
+skin welded to the skirt, so they are cut out and replaced by the full left leg, stocking and shoes of the v3 build
+(same bones, coloured from this model's texture). Everything is bound to her existing skeleton (../v3/skeleton.json, 90 bones), so
 every clip of hers plays on it unchanged. Weights are rules, not heat: ramps along the spine, the arm and the leg,
 the skirt spread over its 13 chains by angle and height; nothing is smoothed across parts.
-    blender -b hero.blend -P s10_rig.py -- <work dir> <name> <base triangles> [outline mm 2.2]
+    blender -b hero.blend -P s10_rig.py -- <work dir> <name> <base triangles> [outline mm 2.2] [v3 dressed.blend]
 Writes <name>.blend and <name>_raw.glb (toon material + inverted hull outline).
 """
 import bpy, bmesh, sys, os, json, math
@@ -13,6 +14,7 @@ import numpy as np
 from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 a = sys.argv[sys.argv.index('--') + 1:]; WD, NAME, TRIS = a[0], a[1], int(a[2]); MM = float(a[3]) if len(a) > 3 else 2.2
+LEGS = a[4] if len(a) > 4 else '/root/w/elise6/dressed.blend'      # the v3 build (../v3/all.sh): her left leg, stocking and shoes come from it
 SK = json.load(open(os.path.join(HERE, '..', 'v3', 'skeleton.json'))); BH = {k: np.array(v['head']) for k, v in SK.items()}; BT = {k: np.array(v['tail']) for k, v in SK.items()}
 ss = lambda a_, b_, x: (lambda t: t * t * (3 - 2 * t))(np.clip((x - a_) / (b_ - a_), 0, 1))
 el = bpy.data.objects['elise_hero']; me = el.data
@@ -30,11 +32,12 @@ def colours(n):
 # ---------------- 09: centre on the arms, then the parts
 n, co, fv = arrays(); band = (co[:, 2] > 1.0) & (co[:, 2] < 1.2); dx = -0.5 * (co[band, 0].min() + co[band, 0].max()); co[:, 0] += dx
 me.vertices.foreach_set('co', co.ravel()); me.update(); col = colours(n); x, y, z = co.T; warm = col[:, 0] - col[:, 2] > 0.015; red = (col[:, 0] > 0.3) & (col[:, 0] > 1.8 * col[:, 1])
-thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.27) & (z > 0.70) & (np.abs(x) > thr)
+dress = (col[:, 2] >= col[:, 0]) & (col.mean(1) < 0.3)
+thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.27) & (z > 0.70) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
 e = np.concatenate([fv[:, [0, 1]], fv[:, [1, 2]], fv[:, [2, 0]]]); e = np.concatenate([e, e[:, ::-1]])
-leg = warm & ~arm & (z < 0.95) & (x > -0.03) & (x < 0.21) & (y < 0.06)
+leg = warm & ~arm & (z < 0.78) & (x > -0.03) & (x < 0.21) & (y < 0.06)
 for _ in range(3):                                     # the lacing drawn over the hip skin goes with the skin
-    s_ = np.zeros(n); c_ = np.zeros(n); np.add.at(s_, e[:, 0], leg[e[:, 1]]); np.add.at(c_, e[:, 0], 1); leg |= (~arm) & (z < 0.95) & (z > 0.60) & (s_ / np.maximum(c_, 1) >= 0.5)
+    s_ = np.zeros(n); c_ = np.zeros(n); np.add.at(s_, e[:, 0], leg[e[:, 1]]); np.add.at(c_, e[:, 0], 1); leg |= (~arm) & (z < 0.78) & (z > 0.60) & (s_ / np.maximum(c_, 1) >= 0.5)
 ref = co[leg & (z > 0.60) & (z < 0.655)][:, :2]         # the stocking's lace band: dark, but on the leg's column
 if len(ref):
     cand = np.nonzero(~leg & ~arm & (z > 0.65) & (z < 0.77) & (x > -0.03) & (y < 0.06))[0]
@@ -43,20 +46,24 @@ if len(ref):
 FL = BH['foot_L']; FR = BH['foot_R']
 shoe_l = ~arm & (z < 0.095) & (np.abs(x - FL[0]) < 0.05) & (y > -0.23) & (y < 0.06) & ((y < -0.125) | (z < 0.03) | leg)
 shoe_r = ~arm & (z < 0.07) & (np.abs(x + 0.065) < 0.05) & (y < -0.125)
+for _ in range(2):                                     # a clean edge: lone vertices follow their neighbours
+    s_ = np.zeros(n); c_ = np.zeros(n); np.add.at(s_, e[:, 0], leg[e[:, 1]]); np.add.at(c_, e[:, 0], 1); fr_ = s_ / np.maximum(c_, 1); leg = (leg & (fr_ > 0.34)) | (~arm & (z < 0.78) & (fr_ > 0.66))
+def swatch(mask):                                      # a texel of this model's texture with the mask's median colour
+    ids = np.nonzero(mask)[0]; i = ids[np.argmin(np.linalg.norm(col[ids] - np.median(col[ids], 0), axis=1))]; lv = np.empty(len(me.loops), np.int32); me.loops.foreach_get('vertex_index', lv)
+    li = int(np.nonzero(lv == i)[0][0]); return tuple(me.uv_layers[0].data[li].uv)
+SW = {'skin': swatch(warm & ~arm & (col.mean(1) > 0.6) & (z > 0.80) & (z < 0.95) & (x > 0)), 'stocking': swatch(leg & (z > 0.25) & (z < 0.6) & warm), 'dark': swatch(~warm & (col.mean(1) < 0.12) & (z < 0.2))}
 part_v = np.zeros(n, int); part_v[leg | shoe_l] = 1; part_v[shoe_r] = 2
 pf = np.array([np.bincount(part_v[f], minlength=3).argmax() if (part_v[f] > 0).sum() >= 2 else 0 for f in fv])
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table(); L = bm.faces.layers.int.new('part')
 for f in bm.faces: f[L] = int(pf[f.index])
-for k in (1, 2):
-    fs = [f for f in bm.faces if f[L] == k]
-    if fs: bmesh.ops.split(bm, geom=fs)
+cut = [f for f in bm.faces if f[L] > 0]; bmesh.ops.delete(bm, geom=cut, context='FACES')
 bm.to_mesh(me); bm.free(); me.update()
 n, co, fv = arrays(); col = colours(n); x, y, z = co.T; pfa = np.empty(len(me.polygons), np.int32); me.attributes['part'].data.foreach_get('value', pfa)
-part = np.zeros(n, int); part[fv[pfa == 0].ravel()] = 0
-for k in (1, 2): part[fv[pfa == k].ravel()] = k
+part = np.zeros(n, int)
 warm = col[:, 0] - col[:, 2] > 0.015; red = (col[:, 0] > 0.3) & (col[:, 0] > 1.8 * col[:, 1])
-thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (part == 0) & (z < 1.27) & (z > 0.70) & (np.abs(x) > thr)
-print('parts: vertices %d, arms %d, leg and left shoe %d, right shoe toe %d, red %d, centred by %.4f' % (n, arm.sum(), (part == 1).sum(), (part == 2).sum(), red.sum(), dx))
+dress = (col[:, 2] >= col[:, 0]) & (col.mean(1) < 0.3)
+thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.27) & (z > 0.70) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
+print('parts: vertices %d, arms %d, leg and shoe faces cut %d, red %d, centred by %.4f, swatches %s' % (n, arm.sum(), len(cut), red.sum(), dx, {k: tuple(round(c, 3) for c in v) for k, v in SW.items()}))
 
 # ---------------- 11: weights by rule
 W = {k: np.zeros(n) for k in SK}
@@ -76,7 +83,7 @@ w_neck = ss(1.42, 1.47, z) * (1 - w_head); w_chest = ss(1.16, 1.24, z) * (1 - w_
 w_arm = np.zeros(n)
 for sd in 'LR':                                       # the shoulder: the fused part above the arm cluster
     S = BH['upperarm_' + sd]; E = BH['forearm_' + sd]; d = (E - S) / np.linalg.norm(E - S); t = (co - S) @ d; dist = np.linalg.norm(co - S - np.clip(t, 0, None)[:, None] * d, axis=1)
-    wa = ss(-0.06, 0.03, t) * (1 - ss(0.035, 0.06, dist)) * (rest & side(sd) & (z >= 1.2) & (z < 1.47)); w_arm += wa; W['upperarm_' + sd][rest] += wa[rest]
+    wa = ss(-0.06, 0.03, t) * (1 - ss(0.035, 0.06, dist)) * ss(1.25, 1.33, z) * (rest & side(sd) & (z >= 1.2) & (z < 1.47)); w_arm += wa; W['upperarm_' + sd][rest] += wa[rest]
     wsh = (1 - wa) * ss(0.05, 0.11, np.abs(x)) * ss(1.30, 1.38, z) * 0.6 * (rest & side(sd) & (z < 1.47)); W['shoulder_' + sd][rest] += wsh[rest]; w_arm += wsh
 keep = 1 - w_arm
 # the skirt: 13 chains of 4 bones around the pelvis
@@ -92,10 +99,6 @@ for c in range(NC):
     for j in range(4): W['skirt_%02d_%d' % (c, j)][skirt] = (w_sk * wc[c] * wj[j])[skirt]
 for nm, w in (('pelvis', w_pel * (1 - w_sk)), ('spine', w_spine), ('chest', w_chest * keep), ('neck', w_neck * keep), ('head', w_head)): W[nm][rest] += w[rest]
 W['chest'][rest] += ((w_spine * 0 + (1 - w_pel - w_spine - w_chest - w_neck - w_head)) * 0)[rest]
-# the leg in the slit and the shoes
-lg = part == 1; kz = BH['shin_L'][2]; az = BH['foot_L'][2]; u_h = ss(0.95, 0.80, z); u_k = ss(kz + 0.04, kz - 0.04, z); u_a = ss(az + 0.01, az - 0.03, z); u_t = ss(-0.105, -0.135, y) * (z < 0.08)
-W['pelvis'][lg] = (1 - u_h)[lg]; W['thigh_L'][lg] = (u_h * (1 - u_k))[lg]; W['shin_L'][lg] = (u_k * (1 - u_a))[lg]; W['foot_L'][lg] = (u_k * u_a * (1 - u_t))[lg]; W['toe_L'][lg] = (u_k * u_a * u_t)[lg]
-W['foot_R'][part == 2] = 1.0
 tot = sum(W.values()); bad = tot < 1e-4; W['pelvis'][bad] = 1.0; tot = sum(W.values())
 for k in W: W[k] = W[k] / tot
 print('weights: unbound vertices fixed %d; bones used %d of %d' % (bad.sum(), sum(1 for k in W if W[k].max() > 0.01), len(W)))
@@ -120,6 +123,29 @@ now = len(me.polygons)
 if TRIS < now:
     md = el.modifiers.new('dec', 'DECIMATE'); md.ratio = TRIS / now; md.use_collapse_triangulate = True; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
 me = el.data; el.name = 'elise'; me.name = 'elise'
+# the left leg, the stocking and the shoes of the v3 build, on the same bones, coloured by swatches of this texture
+with bpy.data.libraries.load(LEGS) as (src, dst): dst.objects = [o for o in src.objects if o in ('elise_body', 'elise_stockings', 'elise_shoes')]
+uvn = me.uv_layers[0].name; added = 0
+for o in dst.objects:
+    bpy.context.scene.collection.objects.link(o); o.parent = None; d_ = o.data; bm = bmesh.new(); bm.from_mesh(d_)
+    if o.name.startswith('elise_body'): drop = [f for f in bm.faces if not all(v.co.x > 0.005 and 0.60 < v.co.z < 0.86 for v in f.verts)]
+    elif o.name.startswith('elise_stockings'): drop = [f for f in bm.faces if not all(v.co.x > 0.005 for v in f.verts)]
+    else: drop = []
+    bmesh.ops.delete(bm, geom=drop, context='FACES'); bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.to_mesh(d_); bm.free()
+    for l in list(d_.uv_layers): d_.uv_layers.remove(l)
+    ul = d_.uv_layers.new(name=uvn); kind = 'skin' if o.name.startswith('elise_body') else 'stocking' if o.name.startswith('elise_stockings') else 'dark'
+    for p in d_.polygons:
+        k_ = 'dark' if kind == 'stocking' and min(d_.vertices[v].co.z for v in p.vertices) > 0.625 else kind
+        for li in p.loop_indices: ul.data[li].uv = SW[k_]
+        p.use_smooth = True
+    for a_ in [a_.name for a_ in d_.attributes if a_.name in ('torso_w', 'is_head', 'is_socket', 'grid', 'sharp_face')]: d_.attributes.remove(d_.attributes[a_])
+    for md in list(o.modifiers): o.modifiers.remove(md)
+    d_.materials.clear(); d_.materials.append(me.materials[0]); added += len(d_.polygons)
+bpy.ops.object.select_all(action='DESELECT')
+for o in dst.objects: o.select_set(True)
+el.select_set(True); bpy.context.view_layer.objects.active = el; bpy.ops.object.join(); me = el.data
+for o in [o for o in bpy.data.objects if o not in (el, ao)]: bpy.data.objects.remove(o)
+print('leg, stocking and shoes added: %d triangles' % added)
 for p in me.polygons: p.use_smooth = True
 mat = me.materials[0]; mat.name = 'elise_toon'; bs = next(x for x in mat.node_tree.nodes if x.type == 'BSDF_PRINCIPLED'); bs.inputs['Roughness'].default_value = 1.0; bs.inputs['Metallic'].default_value = 0.0; mat.use_backface_culling = False
 bpy.data.images['hero_base.png'].name = 'agent_elise_base'
@@ -132,7 +158,7 @@ for v in list(vmap):
     if v.index < n0 and vmap[v].index != v.index: vmap[v].co = (co[v.index] + no[v.index] * MM * 0.001 * k[v.index]).tolist()
 for f in nf: f.material_index = 1
 bmesh.ops.reverse_faces(bm, faces=nf); bm.to_mesh(me); bm.free(); me.validate(); me.update()
-if 'part' in me.attributes: me.attributes.remove(me.attributes['part'])
+for a_ in [a_.name for a_ in me.attributes if a_.name in ('part', 'torso_w', 'is_head', 'is_socket', 'grid', 'sharp_face')]: me.attributes.remove(me.attributes[a_])
 print('ELISE', NAME, 'tris', len(me.polygons), 'base', f0, 'verts', len(me.vertices), 'bones', len(arm_d.bones))
 bpy.ops.file.pack_all(); bpy.ops.wm.save_as_mainfile(filepath=f'{WD}/{NAME}.blend')
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); ao.select_set(True)
