@@ -394,6 +394,27 @@ fn traders_do_not_pay_the_gate() { let mut t = town(); ctx("t0.testnet", 1); t.p
 #[test] #[should_panic(expected = "ERR_FUNDS")]
 fn the_gate_needs_own_silk_not_entry_credit() { let mut t = town(); ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_entry(acc("p0.testnet"), U(400 * S)); ctx("p0.testnet", 1); t.pay_gate("portal-1".into()); }
 #[test]
+fn a_coordinator_pays_the_gate_for_a_guest_once_per_signed_request() {
+    let mut t = town();
+    ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(300 * S), "story".into());
+    let h = "ab".repeat(32);
+    let r = t.pay_gate_for(acc("p0.testnet"), "portal-1".into(), h.clone());
+    assert_eq!(r.price.0, 200 * S); assert_eq!(bal(&t, "p0.testnet").silk, 100 * S);
+    assert!(t.gate_request_used(h.clone()) && t.gate_paid_for(acc("p0.testnet"), "portal-1".into()));
+    assert!(get_logs().last().unwrap().contains(&format!(r#""by":"coord.testnet","request_hash":"{}""#, h)));
+    conserved(&t);
+}
+#[test] #[should_panic(expected = "ERR_NOT_COORDINATOR")]
+fn only_coordinators_pay_for_others() { let mut t = town(); ctx("p0.testnet", 0); t.pay_gate_for(acc("t0.testnet"), "g".into(), "ab".repeat(32)); }
+#[test] #[should_panic(expected = "ERR_GATE_REQUEST")]
+fn a_signed_request_pays_once() {
+    let mut t = town(); ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet"), acc("p1.testnet")]); t.credit_silk(acc("p0.testnet"), U(300 * S), "s".into()); t.credit_silk(acc("p1.testnet"), U(300 * S), "s".into());
+    t.pay_gate_for(acc("p0.testnet"), "g".into(), "cd".repeat(32)); t.pay_gate_for(acc("p1.testnet"), "g".into(), "cd".repeat(32));
+}
+#[test] #[should_panic(expected = "ERR_SCRIPTED")]
+fn the_relayer_cannot_pay_for_a_trader() { let mut t = town(); ctx("coord.testnet", 0); t.pay_gate_for(acc("t0.testnet"), "g".into(), "ef".repeat(32)); }
+
+#[test]
 fn the_gate_price_is_owner_set_and_bounded() {
     let mut t = town(); t.set_gate_price(U(250 * S)); assert_eq!(t.gate_price().0, 250 * S);
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { let mut t2 = town(); t2.set_gate_price(U(10 * S)); }));

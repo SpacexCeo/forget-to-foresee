@@ -26,6 +26,7 @@ import expeditionLog from './api/expedition/log.js';
 import wheelClaim from './api/wheel/claim.js';
 import marketStats from './api/market/stats.js';
 import marketResource from './api/market/resource.js';
+import townGate from './api/town/gate.js';
 import { marketDaemon } from './market/index.js';
 import passClaim from './api/pass/claim.js';
 import passStatus from './api/pass/status.js';
