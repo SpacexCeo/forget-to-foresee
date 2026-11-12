@@ -6,6 +6,8 @@
 Clips (60 keys a second, in place; each starts and ends in her idle pose):
   strike1/2    light palm strikes (right, then the mirror): a short coil, a step in, the palm driven out; impact 0.12 s
   strike3      the heavy finisher: both hands gathered high on her toes, a deep lunge, both palms out; impact 0.22 s
+  strike_charge / strike_super   the held super strike: a deep coil that keeps sinking for a second and is held,
+               then the release from that pose: the left foot drives out 0.7 m and the right palm goes through; impact 0.10 s
   dash         low and forward at once, one leg driving and one trailing, arms swept back; the front foot catches her
                (these four replace the first versions made by iris_combat.py, which still builds Elise's)
   cast_lance   Frost Lance: she coils back onto the ball of the right foot, the left knee up and the left palm
@@ -248,11 +250,57 @@ def dash():
             (0.40, with_ease(step, 'smooth')), (0.52, with_ease(IDLE, 'out'))], 0.52
 
 
-CLIPS = {'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
+CHARGE = {
+    'hips': [-0.03, -0.15, -0.11],
+    'pelvis': [('y', -18)], 'spine': [('y', -12), ('x', 6)], 'chest': [('y', -16), ('x', 8)],
+    'neck': [('y', 18), ('x', -4)], 'head': [('y', 22), ('x', -8)],
+    'foot_R': {'at': [-0.03, 0, -0.12], 'yaw': 28}, 'knee_R': 10,
+    'foot_L': {'at': [0.02, 0, 0.20], 'pitch': 22},
+    'arm_R': {'at': [-0.04, -0.26, -0.20], 'elbow': [-0.6, 0.1, -1], 'fingers': [0.1, 0.2, 1], 'palm': [0.5, 0.6, 0.3]},
+    'arm_L': {'at': [-0.16, -0.05, 0.30], 'elbow': [0.5, -0.9, 0.1], 'fingers': [-0.3, 1, 0.2], 'palm': [-0.3, 0, 1]},
+    'fingers_R': 'grip', 'fingers_L': 'open',
+}
+
+
+def strike_charge():
+    """The held wind-up of the super strike: she sinks back onto the right leg, the body coiled away, the right hand
+    drawn back at the hip, the left hand guarding; the pose keeps sinking for a second and is then held by the game."""
+    deep = mix(IDLE, CHARGE, 1.0); deep['hips'] = [-0.035, -0.19, -0.13]; deep['chest'] = [('y', -20), ('x', 10)]
+    return [(0.0, IDLE), (0.20, with_ease(mix(IDLE, CHARGE, 0.92), 'out')), (1.0, with_ease(deep, 'linear'))], 1.0
+
+
+def strike_super():
+    """The release of the super strike, from the held pose: the left foot drives out, the whole body uncoils and the
+    right palm goes through; impact at 0.10 s, a long overshoot and a calm settle."""
+    deep = mix(IDLE, CHARGE, 1.0); deep['hips'] = [-0.035, -0.19, -0.13]; deep['chest'] = [('y', -20), ('x', 10)]
+    hit = {
+        'hips': [0.02, -0.21, 0.46],
+        'pelvis': [('y', 16)], 'spine': [('y', 10), ('x', 12)], 'chest': [('y', 18), ('x', 12)],
+        'neck': [('y', -16), ('x', 0)], 'head': [('y', -22), ('x', -16)],
+        'foot_L': {'at': [0.04, 0, 0.74], 'yaw': 6},
+        'foot_R': {'at': [0, 0, -0.10], 'pitch': 46, 'yaw': 14}, 'knee_R': 4,
+        'arm_R': {'at': [0.13, 0.05, 0.455], 'elbow': [-0.7, -0.5, 0], 'fingers': [0, 1, 0.3], 'palm': [0, -0.15, 1]},
+        'arm_L': {'at': [0.20, -0.08, -0.38], 'elbow': [0.6, 0.4, -0.5], 'fingers': [0.4, -0.2, -1], 'palm': [-1, 0, 0]},
+        'fingers_R': 'flat', 'fingers_L': 'loose_fist',
+    }
+    back = {
+        'hips': [0.0, -0.06, 0.16],
+        'spine': [('y', 3), ('x', 3)], 'chest': [('y', 5), ('x', 4)],
+        'foot_L': {'at': [0.0, 0.07, 0.30], 'pitch': 10}, 'foot_R': {'at': [0, 0, 0], 'pitch': 8},
+        'arm_R': {'at': [0.02, -0.34, 0.20], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [0.6, -0.4, -0.6]},
+        'arm_L': {'at': [0.10, -0.40, -0.10], 'elbow': [0.6, 0, -0.6], 'fingers': [0.1, -1, -0.2], 'palm': [-1, 0, 0]},
+    }
+    return [(0.0, deep), (0.10, with_ease(hit, ('pow', 1.7))), (0.19, with_ease(mix(deep, hit, 1.07), 'out')), (0.44, with_ease(mix(deep, hit, 0.96), 'smooth')),
+            (0.70, with_ease(back, 'smooth')), (0.98, with_ease(IDLE, 'out'))], 0.98
+
+
+CLIPS = {'strike_charge': strike_charge, 'strike_super': strike_super, 'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
 # step_s / step_foot: the moment a foot comes down hard (the game sends `ftf:foot` then; the impact goes out as `ftf:iris-action`)
 EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'L'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R', 'step_s': RELEASE_S, 'step_foot': 'R'},
           'strike1': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'L'}, 'strike2': {'impact_s': 0.12, 'step_s': 0.12, 'step_foot': 'R'},
-          'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'}}
+          'strike3': {'impact_s': 0.22, 'step_s': 0.22, 'step_foot': 'L'}, 'dash': {'step_s': 0.28, 'step_foot': 'L'},
+          # hold: the game keeps the last frame until the release clip (or a cancel); from: the pose the clip starts in
+          'strike_charge': {'hold': True, 'full_s': 1.0}, 'strike_super': {'impact_s': 0.10, 'step_s': 0.10, 'step_foot': 'L', 'from': 'strike_charge'}}
 
 
 def sheet(rig, local, pel, path, fps, times=None, cols=5):

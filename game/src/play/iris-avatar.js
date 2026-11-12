@@ -108,22 +108,28 @@ export class IrisAvatar {
   }
 
   /**
-   * A combat move outside the walls (play/mobs.js): `strike1`..`strike3`, `dash`. It plays once over everything else,
+   * A combat move outside the walls (play/mobs.js): `strike1`..`strike3`, `dash`, and the super strike: `strike_charge`
+   * (held on its last frame until `combat('strike_super')` or `endAction()`). It plays once over everything else,
    * even while she moves, and hands back to the gait and idle as it ends. Returns false when the clip is missing.
    */
   combat(name) {
     const m = this.irisModel;
     const c = m && m.clips.find((x) => x.name === name);
     if (!c) return false;
+    const prev = m.combat ? m.combat.name : null;
     if (m.combat) m.combat.action.fadeOut(0.06);
     const a = m.mixer.clipAction(c); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.setEffectiveWeight(1); a.play();
     // sound and effect sync: the clip's moments (art/anim/iris_actions.py extras), sent as window events while it plays
     const u = c.userData || {};
-    m.combat = { action: a, t: 0, dur: c.duration, name, impact: u.release_s ?? u.impact_s ?? null, step: u.step_s ?? null, foot: u.step_foot || 'L' };
+    m.combat = { action: a, t: 0, dur: c.duration, name, impact: u.release_s ?? u.impact_s ?? null, step: u.step_s ?? null, foot: u.step_foot || 'L', hold: !!u.hold };
+    if (u.from && prev === u.from) m.combat.fadeIn = 0.03;     // the release of a held pose starts in that pose: no blend through the idle
     emit('ftf:iris-action', { clip: name, phase: 'start', impact: m.combat.impact });
     if (name === 'dash') m.dashTrail = true;                  // the trail starts on the next update (it needs the scene)
     return true;
   }
+
+  /** Lets go of a held action clip (`strike_charge` put away without the super strike): it fades out to the idle. */
+  endAction() { const k = this.irisModel && this.irisModel.combat; if (k && k.hold) { k.ending = true; k.fadeOut = 0.2; k.dur = k.t + 0.2; } }
 
   /**
    * A skill cast (scenes/town-casting.js): `cast_lance`, `cast_snare`. A slow wind-up, the release frame, an overshoot
@@ -191,6 +197,7 @@ export class IrisAvatar {
         if (k.impact != null && t0 < k.impact && k.t >= k.impact) emit('ftf:iris-action', { clip: k.name, phase: 'impact', impact: 0 });
         if (k.step != null && t0 < k.step && k.t >= k.step) emit('ftf:foot', { foot: k.foot, running: true, action: k.name });
         if (k.cancelAfter != null && k.t > k.cancelAfter && speed > 0.4) { k.dur = Math.min(k.dur, k.t + 0.16); k.fadeOut = 0.16; k.cancelAfter = null; } // she walks out of the settle
+        if (k.hold && !k.ending) k.t = Math.min(k.t, k.dur - (k.fadeOut || 0.1) - 0.01);   // a held pose (strike_charge) waits on its last frame
         const w = smoothstep01(k.t / (k.fadeIn || 0.05)) * smoothstep01((k.dur - k.t) / (k.fadeOut || 0.1));
         actionW = w;
         k.action.setEffectiveWeight(w);
