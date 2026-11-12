@@ -32,3 +32,13 @@ sessions for it. "Wool" in the source notes reads as **silk**: silk is the one i
 - 9: the story worker, after the leaderboard.
 - 4: the economy worker after the bundle.
 - 5, 8: later, owner's call.
+
+## Owner addition (12 Nov evening): quests, monster resources, the resource market, crafting
+
+- **Quests pay silk** for every completed quest (town silk, the one currency).
+- **Monsters drop resources** besides chests (e.g. spider silk thread, chitin, ash dust, frost shard); quests ask for them.
+- **A resource market**: a player who cannot farm a resource buys it from the town's stalls (the scripted traders stock and sell
+  resources at stock/demand prices) or from other players later.
+- **Crafting** (later) uses the same resources.
+- Who: combat worker = the resource drop table per creature (generalising `game/game/salvage.js`); story worker = quests that ask for
+  resources and pay silk; economy worker = resources in the town market (stalls buy and sell them; on chain as NEP-245 items, item 4).
