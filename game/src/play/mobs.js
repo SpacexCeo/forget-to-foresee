@@ -152,7 +152,7 @@ export class MobBrain {
         const near = iris && iris.alive && dist2(iris.pos, pack.home) < 12;   // never under her nose
         if (pack.timer <= 0 && !near) {
           pack.timer = -1;
-          mine.forEach((m, k) => { const fresh = this.spawn(pack, k, mine.length); Object.assign(m, fresh, { id: m.id }); m.pos[1] = ground(m.pos[0], m.pos[2], pack.home[1] + 4, 30); ev.push({ kind: 'respawn', mob: m }); });
+          mine.forEach((m, k) => { const fresh = this.spawn(pack, k, mine.length); Object.assign(m, fresh, { id: m.id }); m.pos[1] = ground(m.pos[0], m.pos[2], pack.home[1]); ev.push({ kind: 'respawn', mob: m }); });
         }
       }
     }
@@ -257,17 +257,18 @@ const CSS = `
  * @param {(name: string) => Promise<{gltf}>} o.load glTF by model name (render/assets.js prefetchGltf)
  * @param {(o: THREE.Object3D) => THREE.Object3D} o.clone SkeletonUtils.clone
  * @param {class} o.MobFx render/mob-fx.js @param {object} o.glow MOB_GLOW
- * @param {(x: number, z: number, nearY: number) => number} o.ground ground height under a world point
+ * @param {(x: number, z: number, nearY: number) => number} o.ground ground height under a world point (near a height)
+ * @param {(x: number, z: number) => number|null} [o.floor] the hillside's own surface (homes and spawns)
  * @param {string} [o.variant] '_m' on phones @param {boolean} [o.phone] fewer monsters, cheaper updates
  * @param {() => boolean} [o.reduced] reduced motion
  * @param {(kind: string) => void} [o.onFeedback] 'hurt' | 'down' | 'kill' (sound cues)
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
-export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, variant = '', phone = false, reduced = () => false, onFeedback = null,
+export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
   respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null }) {
   const brain = new MobBrain({ origin, phone, seed });
   // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
-  const settle = (p) => { p[1] = ground(p[0], p[2], origin[1] + 80, 260); };
+  const settle = (p) => { const y = floor ? floor(p[0], p[2]) : null; p[1] = y == null ? ground(p[0], p[2], p[1]) : y; };
   for (const pack of brain.packs) settle(pack.home);
   for (const m of brain.mobs) settle(m.pos);
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);

@@ -357,10 +357,13 @@ function mountMobs() {
   const T = town;
   Promise.all([import('./play/mobs.js'), import('./render/mob-fx.js'), import('three/addons/utils/SkeletonUtils.js')]).then(([m, fx, su]) => {
     if (townMobs || town !== T) return;
-    const ground = (x, z, nearY, range = 20) => { const hit = rayCast(T.world, [x, nearY + 6, z], [0, -1, 0], range, MASK_PLAYER); return hit ? hit.point[1] : nearY; }; // range: a long probe for spawns on the hillside
+    const ground = (x, z, nearY) => { const hit = rayCast(T.world, [x, nearY + 6, z], [0, -1, 0], 20, MASK_PLAYER); return hit ? hit.point[1] : nearY; };
+    // the hillside's own surface under a point: probed from below the cloud sea upwards (from above, tree crowns and the
+    // town's high colliders answer first)
+    const floor = (x, z) => { const hit = rayCast(T.world, [x, TOWN_ORIGIN_W[1] - 140, z], [0, 1, 0], 260, MASK_PLAYER); return hit ? hit.point[1] : null; };
     const gate = [TOWN_ORIGIN_W[0], 0, TOWN_ORIGIN_W[2] + 42]; gate[1] = ground(gate[0], gate[2], TOWN_ORIGIN_W[1]) + 0.1;
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
-      MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
+      MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => !!(irisAvatar && irisAvatar.combat(n)),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },

@@ -34,7 +34,7 @@ const result = {};
 for (const pi of [2, 3, 5]) {          // veilbell pair, hulker, crownrift elite
   const info = await page.evaluate((pi) => {
     const f = window.__ftf, b = f.town.mobs.brain, pack = b.packs[pi];
-    const p = [pack.home[0] + 6, pack.home[1] + 3, pack.home[2] + 2];          // the home sits on the real ground
+    const p = [pack.home[0] + 5, pack.home[1] + 1.5, pack.home[2] + 1.5];       // the home sits on the real ground
     f.player.teleport(p, Math.atan2(pack.home[0] - p[0], pack.home[2] - p[2]));
     f.town.mobs.iris.hp = 100;
     return { type: pack.type, home: pack.home };
