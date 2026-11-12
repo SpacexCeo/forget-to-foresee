@@ -149,9 +149,9 @@ def skin_shader(b, land):
     pos = geo.outputs["Position"]
     base = (0.46, 0.27, 0.18)        # sun-kissed tan (owner 09.11)
     var = b.noise(38.0, 6.0, pos)
-    col = b.mix(b.math("MULTIPLY", var.outputs["Fac"], 0.12), base, (0.49, 0.27, 0.18))      # clean skin (owner 12.11): the tone barely varies
+    col = b.mix(b.math("MULTIPLY", var.outputs["Fac"], 0.35), base, (0.49, 0.27, 0.18))
     warm = b.noise(9.0, 3.0, pos)
-    col = b.mix(b.math("MULTIPLY", warm.outputs["Fac"], 0.10), col, (0.43, 0.26, 0.18))
+    col = b.mix(b.math("MULTIPLY", warm.outputs["Fac"], 0.25), col, (0.43, 0.26, 0.18))
     for c in land["cheeks"]:
         col = b.mix(b.math("MULTIPLY", b.blob(pos, c, 0.032, 1.6), 0.38), col, (0.52, 0.23, 0.17))
     col = b.mix(b.math("MULTIPLY", b.blob(pos, land["nose"], 0.020, 1.4), 0.25), col, (0.50, 0.23, 0.17))
@@ -160,9 +160,9 @@ def skin_shader(b, land):
     # soft contour (the face was one tone): shade under the cheekbones, at the temples and under the jaw,
     # a little light down the bridge of the nose and on the forehead
     for (E, r, sx) in land["eyes"]:
-        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.030, E[1] + 0.020, E[2] - 0.062), 0.034, 1.3), 0.16), col, (0.33, 0.17, 0.11))
-        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.042, E[1] + 0.030, E[2] + 0.020), 0.030, 1.3), 0.12), col, (0.36, 0.19, 0.12))
-        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] - sx * 0.010, E[1] - 0.006, E[2] + 0.004), 0.016, 1.2), 0.12), col, (0.36, 0.18, 0.13))   # the eye socket's inner corner
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.030, E[1] + 0.020, E[2] - 0.062), 0.034, 1.3), 0.30), col, (0.33, 0.17, 0.11))
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] + sx * 0.042, E[1] + 0.030, E[2] + 0.020), 0.030, 1.3), 0.22), col, (0.36, 0.19, 0.12))
+        col = b.mix(b.math("MULTIPLY", b.blob(pos, (E[0] - sx * 0.010, E[1] - 0.006, E[2] + 0.004), 0.016, 1.2), 0.22), col, (0.36, 0.18, 0.13))   # the eye socket's inner corner
     ex, ey, ez = land["eyes"][0][0]
     col = b.mix(b.math("MULTIPLY", b.blob(pos, (0.0, ey + 0.035, ez - 0.135), 0.060, 1.2), 0.30), col, (0.34, 0.18, 0.12))   # under the jaw
     col = b.mix(b.math("MULTIPLY", b.blob(pos, (0.0, ey - 0.030, ez - 0.012), 0.014, 1.5), 0.20), col, (0.56, 0.35, 0.25))   # nose bridge
@@ -177,7 +177,8 @@ def skin_shader(b, land):
     pores = b.noise(1600.0, 2.0, pos)
     rough = b.math("ADD", 0.48, b.math("MULTIPLY", pores.outputs["Fac"], 0.12))
     rough = b.math("SUBTRACT", rough, b.math("MULTIPLY", b.math("POWER", lips, 2.0), 0.12))   # a soft gloss on the lips
-    height = b.math("MULTIPLY", pores.outputs["Fac"], 0.05)       # smooth skin: no pore grain in the normal map, no mole
+    mole = b.blob(pos, land["mole"], 0.0021, 0.7)
+    height = b.math("ADD", b.math("MULTIPLY", pores.outputs["Fac"], 0.25), b.math("MULTIPLY", mole, 0.6))
     return col, rough, 0.0, height, None
 
 
@@ -199,16 +200,16 @@ def _smooth_band(b, x, half, soft):
 
 def makeup(b, pos, col, land, lips):
     """Groomed brows (full head, a soft arch peaking at two thirds, a tapered tail, fine hair strokes),
-    an upper lash line with a short wing, a soft lid shadow and defined lips."""
+    an upper lash line with a short wing, a soft lid shadow, defined lips and a beauty mark."""
     for (E, r, sx) in land["eyes"]:
         x, y, z, d = _local(b, pos, E, sx)
         # brows: t = 0 at the head (above the inner corner) .. 1 at the tail
         t = b.math("DIVIDE", b.math("ADD", x, 0.017), 0.052)
         tc = b.math("MINIMUM", b.math("MAXIMUM", t, 0.0), 1.0)
-        rise = b.math("MULTIPLY", b.math("SINE", b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.66), 1.0), math.pi / 2)), 0.0075)      # a soft arch
+        rise = b.math("MULTIPLY", b.math("SINE", b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.66), 1.0), math.pi / 2)), 0.0110)
         fall = b.math("MULTIPLY", b.math("POWER", b.math("DIVIDE", b.math("MAXIMUM", b.math("SUBTRACT", tc, 0.66), 0.0), 0.34), 1.5), 0.0120)
-        zc = b.math("SUBTRACT", b.math("ADD", 0.0180, rise), fall)       # a little higher over the eye: an open look, not a frown
-        half = b.math("ADD", 0.0010, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.5), 0.0024))      # slimmer brows
+        zc = b.math("SUBTRACT", b.math("ADD", 0.0165, rise), fall)
+        half = b.math("ADD", 0.0010, b.math("MULTIPLY", b.math("POWER", b.math("SUBTRACT", 1.0, tc), 0.5), 0.0033))
         band = _smooth_band(b, b.math("SUBTRACT", z, zc), half, 0.0011)
         inside = b.math("MULTIPLY", b.math("GREATER_THAN", t, -0.02), b.math("LESS_THAN", t, 1.02))
         ombre = b.math("ADD", 0.30, b.math("MULTIPLY", b.math("MINIMUM", b.math("DIVIDE", tc, 0.28), 1.0), 0.70))
@@ -218,7 +219,7 @@ def makeup(b, pos, col, land, lips):
         b.l(b.math("MULTIPLY", b.math("ADD", z, b.math("MULTIPLY", x, 0.2)), 60.0), sv.inputs["Y"])
         hairs = b.n("ShaderNodeTexNoise", in_Scale=1.0, in_Detail=2.0, in_Roughness=0.5)
         b.l(sv.outputs[0], hairs.inputs["Vector"])
-        strokes = b.math("ADD", 1.0, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 0.5))      # even brows, not speckled
+        strokes = b.math("ADD", 1.0, b.math("MULTIPLY", b.math("SUBTRACT", hairs.outputs["Fac"], 0.5), 1.2))
         m = b.math("MINIMUM", b.math("MULTIPLY", b.math("MULTIPLY", b.math("MULTIPLY", band, inside), ombre), strokes), 0.95)
         col = b.mix(m, col, (0.060, 0.033, 0.020))
         # lid shadow: a soft mauve-brown wash between the lash line and the crease
@@ -247,7 +248,9 @@ def makeup(b, pos, col, land, lips):
     col = b.mix(b.math("MULTIPLY", core, 0.78), col, (0.325, 0.118, 0.102))          # muted rose, deeper than the skin
     edge = b.math("MULTIPLY", b.math("GREATER_THAN", lips, 0.30), b.math("LESS_THAN", lips, 0.55))
     col = b.mix(b.math("MULTIPLY", edge, 0.22), col, (0.26, 0.08, 0.075))           # the lip line
-    # no beauty mark (owner 12.11: clean faces, "no dots")
+    # beauty mark: small, round, deep brown with a soft edge (her left cheek, above the mouth corner)
+    mole = b.blob(pos, land["mole"], 0.0021, 0.7)
+    col = b.mix(b.math("MINIMUM", b.math("MULTIPLY", mole, 1.6), 0.95), col, (0.035, 0.018, 0.012))
     return col
 
 

@@ -25,7 +25,7 @@ cp out/agent_elise.glb $R/game/public/assets/models/agent_elise.glb; cp out/agen
 ( cd $R && { [ -d art/anim/src/data ] || python3 art/anim/fetch_mocap.py; } &&
   python3 art/anim/build_clips.py --char elise --bake --out $W/clips1.glb &&
   python3 art/anim/iris_combat.py --model game/public/assets/models/agent_elise.glb --in $W/clips1.glb --out $W/clips2.glb --legs 0.4 --cloth art/agents/elise/cloth_rig.npz &&
-  python3 art/anim/iris_actions.py --model game/public/assets/models/agent_elise.glb --in $W/clips2.glb --out $W/clips3.glb --only cast_lance,cast_snare,strike1,strike2,strike3,strike_charge,strike_super --legs 0.2 --cloth art/agents/elise/cloth_rig.npz ) > clips.log 2>&1 || { echo CLIPS_FAIL >> clips.log; echo DONE >> clips.log; exit 1; }
+  python3 art/anim/iris_actions.py --model game/public/assets/models/agent_elise.glb --in $W/clips2.glb --out $W/clips3.glb --only cast_lance,cast_snare,strike1,strike2,strike3,strike_charge,strike_super --release 0.14 --legs 0.2 --cloth art/agents/elise/cloth_rig.npz ) > clips.log 2>&1 || { echo CLIPS_FAIL >> clips.log; echo DONE >> clips.log; exit 1; }
 gltf-transform meshopt clips3.glb out/elise.glb >> clips.log 2>&1
 cp out/elise.glb $R/game/public/assets/anim/elise.glb; cp $R/art/anim/out/elise_cloth.npz out/elise_cloth.npz; cp $R/art/anim/out/elise.json out/elise.json
 ls -la out >> clips.log; echo DONE >> clips.log
