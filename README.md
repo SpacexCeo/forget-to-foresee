@@ -43,6 +43,12 @@ curl -s https://rpc.testnet.near.org -H 'content-type: application/json' -d '{"j
 # expect: "leaf_count":15, "revealed_count":15, "ash_key_committed":true
 ```
 
+Check a NEAR AI Cloud TEE attestation live (no key, no account; Intel TDX quote, event log, GPU evidence):
+
+```bash
+node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct   # every line "ok", last line PASS
+```
+
 One-file proof verifiers (they import nothing from the game): `node tools/verify/verify.mjs proof.json` or `python3 tools/verify/verify.py proof.json` (copy `proof.json` from **Signs & Visions → What does this prove? → Copy proof**). Exit 0 and every line `✓` means the leaf and the Merkle path match. Details: [docs/verify.md](docs/verify.md).
 
 ## Judge path (about 5 minutes)
@@ -80,6 +86,7 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 | Agent card NFT (Iris's end-of-season state) | **Real on testnet**, coordinator-minted, owned by the owner's account | `agents.ftf-coordinator.testnet`, `contracts/agent-card/` |
 | Day 1 free mint (player-owned guest account + Elise NFT) | **Contracts deployed; the relayer is live** (a test guest was created and minted through it on 11 Nov). The hosted page calls it (its public URL is in `game/src/net/day1-deployment.js`; a `VITE_FTF_RELAYER_URL` build variable overrides it); limits: 200 new guests a day, 0.05 testnet NEAR each | `contracts/guests/`, `relayer/`, `game/src/play/day1-mint.js` |
 | Agent track records (a hired agent's trades and PnL, re-computable by anyone) | **Deployed on testnet** (`ledger.ftf-coordinator.testnet`; checked end to end on 11 Nov with a test guest account: the game's recording code signed the record and re-verified it, and `node tools/verify-agent/verify.mjs ledgercheck-5.guests.ftf-coordinator.testnet baker 1` prints PASS): the player's guest account records a hire on the `agent-ledger` contract; the page shows "Verified" only after it re-computes the record read back from the chain; `node tools/verify-agent/verify.mjs` does the same | `contracts/agent-ledger/`, `game/src/game/track-record.js`, [docs/api/verify-agent.md](docs/api/verify-agent.md) |
+| TEE agents (townsfolk speech, trade advisor) | Built and tested with recorded fixtures; live once the relayer is redeployed with a NEAR AI Cloud key and credits. Signature checked in the browser and (decisions) on-chain by the ledger; attestation (Intel TDX chain, GPU evidence) checked by the relayer and by `node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct`, which passes live today. Scripted lines otherwise. | [docs/tee.md](docs/tee.md) |
 | Wallet sign-in, on-chain escrow, player-owned agent NFT, multiplayer | **Not built** | — |
 | Agent HTTP API | **Real**: OpenAPI, idempotent commands, redacted observations, Merkle proofs, an example agent that plays a whole season; in-memory test sessions, no accounts | `server/`, [docs/api/](docs/api/README.md) |
 | Foresight Exchange (practice drill) | **Real rules, practice silk**: three Echoes follow a sealed snapshot of public reference rates; no prizes, no real money, not on NEAR | `game/src/game/exchange.js` |

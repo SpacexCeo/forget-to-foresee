@@ -16,7 +16,8 @@ async function readBody(req) {
 const bucket = createBucket({ capacity: 6, refillMs: 20 * 1000 });
 const cache = createAttestationCache();
 let daily = null;
-export const teeStats = () => ({ used_today: daily ? daily.used : 0 });
+let inflight = 0; // answers being produced right now by this instance (cost and upstream load stay bounded)
+export const teeStats = () => ({ used_today: daily ? daily.used : 0, in_flight: inflight });
 
 /** Builds a handler. `kind` is 'say' or 'decide'. Options are for tests (fetch, env, attest). */
 export function teeHandler(kind, opts = {}) {
@@ -30,8 +31,11 @@ export function teeHandler(kind, opts = {}) {
     if (!tcfg.apiKey) return json(res, 503, { error: 'tee_not_configured' });
     const lim = (opts.bucket || bucket).take(clientIp(req, (opts.env || process.env).TRUST_PROXY !== '0'));
     if (!lim.ok) { res.setHeader('Retry-After', String(lim.retryAfterS)); return json(res, 429, { error: 'rate_limited' }); }
+    const maxInflight = Number((opts.env || process.env).FTF_TEE_MAX_INFLIGHT) > 0 ? Number((opts.env || process.env).FTF_TEE_MAX_INFLIGHT) : 8;
+    if (inflight >= maxInflight) { res.setHeader('Retry-After', '5'); return json(res, 503, { error: 'tee_busy' }); }
     if (!(opts.daily || daily).take()) return json(res, 429, { error: 'daily_cap' });
     const reqObj = kind === 'say' ? sayRequest(v, tcfg.model) : decideRequest(v, tcfg.model);
+    inflight++;
     try {
       const r = await teeChat(reqObj, { apiKey: tcfg.apiKey, base: tcfg.base, nras: tcfg.nras, cache: opts.cache || cache, fetch: opts.fetch || globalThis.fetch, attest: opts.attest || null });
       if (r.status !== 200 || kind === 'say') return json(res, r.status, r.body);
@@ -40,6 +44,6 @@ export function teeHandler(kind, opts = {}) {
       return json(res, 200, { decision: { action: d.action, reason: d.reason, parsed: d.parsed, npc: v.npc, echo: v.echo, bars: v.bars.length, decision_hash: hash }, text: r.body.text, tee: r.body.tee });
     } catch (e) {
       return json(res, 502, { error: 'tee', message: String((e && e.message) || e).slice(0, 120) });
-    }
+    } finally { inflight--; }
   };
 }

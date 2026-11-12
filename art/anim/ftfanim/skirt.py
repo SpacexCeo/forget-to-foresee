@@ -236,8 +236,9 @@ def stairs(rig, local, pelvis, slope, lift=0.04):
     return rig.to_local(wr)
 
 
-# per chain kind: bending stiffness, pull back to the rest shape, air drag (1/s), collision margin
-STRIPS = {'ribbon': dict(bend=0.03, hold=0.0, drag=0.9, margin=0.006), 'hair': dict(bend=0.6, hold=0.5, drag=0.8, margin=0.004)}
+# per chain kind: bending stiffness, pull back to the rest shape, air drag (1/s), collision margin. The face strands
+# are held firmly (the root half pinned, the tips at a quarter of the hold): softer, they swung across her face in the walk
+STRIPS = {'ribbon': dict(bend=0.03, hold=0.0, drag=0.9, margin=0.006), 'hair': dict(bend=0.9, hold=1.5, drag=0.8, margin=0.004)}
 
 
 def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
@@ -273,6 +274,9 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
     # firmly along the two slit edges (a bound edge: it must not slide off the left thigh and uncover the right knee)
     edge = np.minimum(np.arange(C), C - 1 - np.arange(C)) / 4.0; hold = (0.04 + 0.2 * np.clip(1 - edge, 0, 1) ** 2)[None, :] * np.ones((R, 1)); hold = hold.ravel(); hold[:C] = 1.0
     ca, cb, r0, r1 = colliders(0); nm = [c[6] for c in cr.caps if c[5] == 0]
+    # the feet keep 1.5 cm more air than the legs: at the legs' 2 cm the heel of the longer v2 foot, lifted behind on
+    # the way down the stairs, ends in the back panel (a wider margin on the thighs drags the front slit edge off them)
+    foot = np.array([n_.startswith('foot_') for n_ in nm]); r0 = r0 + 0.015 * foot; r1 = r1 + 0.015 * foot
     x = cloth.simulate(rest, cloth.grid_constraints(X0), carried(rig.index['pelvis'], rest), hold, (ca, cb, r0, r1), fps, wind=wind, drag=1.2, margin=0.02)
     x = qrot(qinv(qy)[:, None], x)
 
@@ -294,7 +298,7 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
             continue
         o = STRIPS[kind]; seg = 4; pts = [rig.rest_wp[b] for b in bones] + [cr.tails[rig.names[bones[-1]]]]
         P = np.array([pts[k] + (pts[k + 1] - pts[k]) * s / seg for k in range(len(bones)) for s in range(seg)] + [pts[-1]])
-        hold = np.full(len(P), o['hold']) * np.linspace(1, 0.15, len(P)) ** 2; hold[0] = 1.0
+        hold = np.full(len(P), o['hold']) * np.linspace(1, 0.6 if kind == 'hair' else 0.15, len(P)) ** 2; hold[0] = 1.0
         x = cloth.simulate(P, cloth.chain_constraints(P, o['bend']), carried(rig.parent[bones[0]], P), hold, body, fps, wind=wind, drag=o['drag'], margin=o['margin'], iters=8)
         y = clip_frames(qrot(qinv(qy)[:, None], x)); y[:, 0] = wp[:, bones[0]]
         fit_chain(rig, out, pelvis[:F], bones, y[:, ::seg])

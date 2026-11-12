@@ -58,6 +58,11 @@ node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct   # is t
 node tools/verify-tee/verify.mjs answer.json                              # a saved relayer answer (the game's panel copies it)
 ```
 
+On-chain check of the ledger's signature test (2026-11-11, redeployed `ledger.ftf-coordinator.testnet`): a fixture
+decision signed by a test key was accepted (tx `CXwygVCaDuowUCLU5NtMZcgB2wkKfB5Bb9LJtMFZo4A2`) and the same decision
+with another signing address was rejected with `ERR_TEE_SIG` (tx `WMLuf9cSmJVDsnyZzvUWNTAGf8V3abQjnuMCHessNhc`).
+The test record's model reads `fixture-test-key-not-a-tee`.
+
 Recorded run of the first command (2026-11-11, live): every check ok, including the GPU vendor verdict, 8 Hopper
 GPUs, PASS.
 
@@ -69,3 +74,27 @@ GPUs, PASS.
   but it could choose not to forward one. Moving the relayer itself into a TEE (Shade Agent) is a later step.
 - A trader's TEE decision is advisory. The hired traders' trades stay the deterministic, re-computable policy
   (`docs/agent-track-record-plan.md`), so the recorded track records keep verifying by replay.
+
+## Next step (plan only, not built): the relayer itself as a Shade Agent
+
+Today the model runs in a TEE, but the relayer that builds the prompt and forwards the answer is an ordinary server.
+It cannot forge an answer, yet it could drop one or send a prompt other than the published code. A Shade Agent
+closes that gap (docs: https://docs.near.org/ai/shade-agents/getting-started/introduction).
+
+1. **Package.** Build `relayer/` as a reproducible Docker image (pinned base image by digest, `npm test` in the build);
+   publish it with its sha256 digest.
+2. **Run in a TEE.** Deploy that image to a dstack-based confidential VM host (needs an account there, owner action).
+   The VM's TDX quote measures the compose file, so the image digest is attested exactly like NEAR AI Cloud's here.
+3. **Agent contract on NEAR testnet** (`tee-agent.ftf-coordinator.testnet`): the owner approves one image codehash;
+   the agent calls `register_agent(quote, collateral, checksum, tcb_info)` and the contract verifies the quote and that
+   its compose hash pins the approved codehash, then stores the agent's account. Only a registered agent may call
+   `request_signature` (chain signatures) or, for us, write TEE decisions to the ledger.
+4. **Ledger change.** `record_tee_decision` gains a variant callable only by the registered agent account, so a record
+   proves both ends ran attested code: the relayer (by registration) and the model (by the NEAR AI Cloud signature).
+5. **Keys.** The NEAR AI Cloud key and the mint key move into the TEE's sealed environment; the operator no longer
+   holds them in a plain `.env`.
+6. **Verifier.** `tools/verify-tee` adds: read the approved codehash from the agent contract, check the registered
+   agent matches, and rebuild the image locally to compare digests.
+
+Cost and risk: one extra deploy target and an approval flow for every relayer release; the game keeps working through
+the current relayer as a fallback. Needs from the owner: an account with the confidential VM host.

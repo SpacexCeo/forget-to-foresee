@@ -90,6 +90,8 @@ DEFAULT_STYLE = {
     'head_pitch': 0.0,      # degrees the head looks down (+) from the rest posture
     'hip_drop': 0.0,        # lowers (+) the hips, m
     'foot_out': None,       # toe-out angle of the planted foot, degrees; None keeps the take's
+    'knee_fwd': 0.0,        # m the leg IK's knee hint is moved forward of the FK knee: a leg near full extension
+                            # otherwise flips its knee backward when the FK knee falls behind the hip-ankle line
 }
 
 
@@ -360,6 +362,9 @@ def plant_and_solve(rig, wr, hip, feet, contacts, speed, fps, cyclic, st):
     for s in 'LR':
         hj = hip + qrot(wp_pel, hip_local[s])
         knee_fk = hj + qrot(wr[f'thigh_{s}'], Y) * l1[s]
+        if st.get('knee_fwd'):
+            fwd = qrot(qmul(wp_pel, qinv(rig.rest_wr[i_p])[None]), np.array([0, 0, 1.0])); fwd[:, 1] = 0
+            knee_fk = knee_fk + st['knee_fwd'] * fwd / np.maximum(np.linalg.norm(fwd, axis=-1, keepdims=True), 1e-9)
         knee, tgt = two_bone_ik(hj, ank_target[s], l1[s], l2[s], knee_fk)
         s1 = swing(qrot(wr[f'thigh_{s}'], Y), knee - hj)
         wr[f'thigh_{s}'] = qnorm(qmul(s1, wr[f'thigh_{s}']))

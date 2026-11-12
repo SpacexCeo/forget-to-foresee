@@ -39,7 +39,9 @@ export function toonify(model) {
 }
 
 export class IrisAvatar {
-  constructor() {
+  /** @param {object} hero the heroine she wears (asset-catalog.js HEROES); `setHero` swaps it later */
+  constructor(hero = heroFromSearch()) {
+    this.hero = hero;
     this.irisModel = null;
     this.irisReaction = null;
     this.attaching = null;
@@ -49,15 +51,15 @@ export class IrisAvatar {
 
   /** Adds her model to the avatar group when the build has it; safe to call again (one attach per avatar). */
   attach(avatarGroup) {
-    if (!MODEL_FILES[irisModelFile()] || this.irisModel) return Promise.resolve();
+    if (!MODEL_FILES[irisModelFile(MODEL_FILES, getModelVariant(), this.hero)] || this.irisModel) return Promise.resolve();
     return (this.attaching ||= this.load(avatarGroup));
   }
 
   async load(avatarGroup) {
     try {
-      const { gltf } = await prefetchGltf(irisModelFile()); // started by boot-world.js before the camps (QA-030)
+      const hero = this.hero;
+      const { gltf } = await prefetchGltf(irisModelFile(MODEL_FILES, getModelVariant(), hero)); // started by boot-world.js before the camps (QA-030)
       const model = cloneSkinned(gltf.scene);
-      const hero = heroFromSearch();
       const toon = hero.toon && MODEL_FILES[hero.model];
       if (toon) toonify(model); else upgradeAssetMaterials('agent_iris', model);
       // 11.11 (target sheet): shaded hair. The strand atlas is lit like any other material; the locks stay
@@ -65,6 +67,7 @@ export class IrisAvatar {
       if (!toon) { tuneHairCards(model); fabricSheen(model); } // owner 09.11: a soft sheen on the knit
       model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) o.castShadow = !o.userData.outline; });
       await warmModel(model);
+      if (hero !== this.hero) return;          // the player switched heroine while this one was loading
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
       // Motion-capture clips from the side-car file replace the model's own clips of the same name (anim-library.js).
@@ -82,6 +85,22 @@ export class IrisAvatar {
       const faceAction = face ? mixer.clipAction(face).play() : null;
       this.irisModel = { model, mixer, clips, idleAction, idle2Action, idleLoops: 0, idleK: 0, idleT: 0, faceAction, gait: mixer ? new GaitLayer(mixer, clips) : null, plant: extra.length ? new FootPlant(model) : null, bones: findLookBones(model), look: { yaw: 0, pitch: 0, w: 0 }, lean: { speed: 0, pitch: 0 } };
     } catch (e) { avatarGroup.userData.irisFailed = true; this.attaching = null; console.warn('[play] Iris model failed', e); } // attach() may try again
+  }
+
+  /**
+   * Swaps the heroine she wears (the Day 1 skin: Iris <-> Elise), each with her own model, clips and shading. The
+   * current model stays on screen until the next one is loaded and warmed.
+   */
+  async setHero(avatarGroup, hero) {
+    if (!hero || hero.id === this.hero.id || !MODEL_FILES[irisModelFile(MODEL_FILES, getModelVariant(), hero)]) return;
+    const old = this.irisModel, oldHero = this.hero;
+    this.hero = hero; this.irisReaction = null;
+    const next = new IrisAvatar(hero);
+    await next.load(avatarGroup);              // hides what the group shows once the new model is ready
+    if (this.hero !== hero) { if (next.irisModel) avatarGroup.remove(next.irisModel.model); return; }   // switched again meanwhile
+    if (!next.irisModel) { this.hero = oldHero; if (old) old.model.visible = true; return; }          // download failed: keep her
+    if (old) { avatarGroup.remove(old.model); if (old.mixer) old.mixer.stopAllAction(); }
+    this.irisModel = next.irisModel;
   }
 
   /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */

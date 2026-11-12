@@ -47,7 +47,10 @@ export function chooseBark(o, n = 0) {
   return c[((n % c.length) + c.length) % c.length];
 }
 
-const HEIGHT = new Map(TOWNSFOLK.map((p) => [p.key, p.height]));
+// Built on first use: TOWNSFOLK lives in the play chunk, which imports this (client-core) chunk, so reading it at
+// module level would be a TDZ error at boot.
+let HEIGHT = null;
+const heightOf = (key) => (HEIGHT || (HEIGHT = new Map(TOWNSFOLK.map((p) => [p.key, p.height])))).get(key);
 
 /**
  * @param {object} o
@@ -109,7 +112,7 @@ export function createBarks({ camera, i18n, people, hour = () => 'day', rain = (
         if (best) { start(best, t); pos = best.pos; }
       }
       if (!current || !pos) return;
-      v.set(pos[0], pos[1] + (HEIGHT.get(current.key) || 1.7) + 0.35, pos[2]).project(camera);
+      v.set(pos[0], pos[1] + (heightOf(current.key) || 1.7) + 0.35, pos[2]).project(camera);
       if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { el.style.opacity = '0'; return; } // behind the camera or off screen
       const w = (globalThis.innerWidth || 1280), h = (globalThis.innerHeight || 720);
       el.style.left = ((v.x + 1) / 2 * w).toFixed(1) + 'px';
