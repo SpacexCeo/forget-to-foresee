@@ -190,3 +190,14 @@ test('in the view: no creature near → the cursor turns her even standing still
   // a tap while the strike recovers: the coil is ended, never left on
   M.attackDown(); M.attackUp(); assert.equal(calls.at(-1), 'end');
 });
+
+test('combat feel: every melee blow warns at least 0.4 s ahead; every strike hit shoves a light creature, the third throws it', async () => {
+  const { TELEGRAPH_MIN, HIT_SHOVE } = await import('../../src/play/mobs.js');
+  for (const [name, T] of Object.entries(MOB_TYPES)) if (!T.ranged) assert.ok(T.windup * T.impact >= TELEGRAPH_MIN, `${name} warns ${(T.windup * T.impact).toFixed(2)} s`);
+  const b = new MobBrain({ origin: O, seed: 4 });
+  const m = b.mobs.find((x) => x.type === 'skitter');
+  for (const o of b.mobs) if (o !== m) o.state = 'gone';
+  const from = [m.pos[0], m.pos[1], m.pos[2] - 1.2], z0 = m.pos[2];
+  b.strike(from, 0, 5, false, []);
+  assert.ok(Math.abs(m.pos[2] - z0 - HIT_SHOVE) < 1e-6, 'a light shove on an ordinary hit');
+});
