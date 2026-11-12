@@ -181,10 +181,12 @@ test('instant skips (owner, 12.11): the interior and every program are made read
   const overlay = { show() {}, hide() {}, setSubtitle() {}, setSkipText() {}, setHintText() {}, showSkip() {}, showHint() {}, update() {} };
   const log = [];
   const shell = { active: false, origin: [0, 300, 0], root: new THREE.Object3D(), activate(n) { this.active = true; log.push('activate:' + n); }, deactivate() { this.active = false; log.push('deactivate'); }, spawn: () => ({ pos: [0, 300, 4.5] }), setSign() {} };
-  const fp = createFilmPlayer({ camera: new THREE.PerspectiveCamera(40, 1.6, 0.1, 1000), player: { pos: [0, 0, 0], heading: 0 }, avatar: new THREE.Object3D(), shell, agents: null, overlay, now: () => 0, renderLine: () => 'line', win, prewarm: () => log.push('prewarm') });
+  const fp = createFilmPlayer({ camera: new THREE.PerspectiveCamera(40, 1.6, 0.1, 1000), player: { pos: [0, 0, 0], heading: 0 }, avatar: new THREE.Object3D(), shell, agents: null, overlay, now: () => 0, renderLine: () => 'line', win, prewarm: () => log.push(shell.root.visible === false ? 'prewarm:hidden' : 'prewarm') });
   const done = fp.play(film);
-  assert.deepEqual(log.slice(0, 2), [log[0], 'prewarm']); assert.match(log[0], /^activate:/, 'the interior is switched on before the warm-up');
-  assert.equal(log.filter((x) => x === 'prewarm').length, 1);
+  assert.match(log[0], /^activate:/, 'the interior is switched on first');
+  assert.deepEqual(log.slice(1, 3), ['prewarm:hidden', 'prewarm'], 'then warmed without its lights (how the film ends) and with them (the film)');
+  assert.equal(shell.root.visible !== false, true, 'the interior shown again after the hidden warm-up');
+  const n = log.length; fp.update(1.6); assert.deepEqual(log.slice(n, n + 2), ['prewarm:hidden', 'prewarm'], 'repeated while the film plays (models streaming in)');
   for (let i = 0; i < film.shots.length + 1 && fp.playing; i++) fp.next();
   assert.equal(log.filter((x) => x.startsWith('activate')).length, 1, 'no cut activates anything again');
   fp.skip(); await done;
