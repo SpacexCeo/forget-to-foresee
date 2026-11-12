@@ -10,13 +10,37 @@ scripted rules, not an LLM. Threat model: `docs/security-town.md`.
 
 | Piece | Where | State |
 |---|---|---|
-| Contract | `contracts/town` → `ftf-town.testnet` | Built, 39 unit tests. **Not deployed** |
+| Contract | `contracts/town` → `ftf-town.testnet` | Built, 41 unit tests. **Not deployed** |
 | Shared rules | `contracts/town/src/rules.rs` ↔ `game/src/game/town-rules.js`, vectors in `contracts/town/tests/vectors.json` (`node tools/town/vectors.mjs`) | Both sides are tested against the same file |
 | Trader loop | `relayer/lib/town-traders.js` on the relayer's daemon (`relayer/market/daemon.js`) | Built and tested. Off unless `FTF_TOWN=1`; a dry run unless `FTF_TOWN_SEND=1` |
 | Town Pulse | `game/public/pulse.html` (`/pulse.html`) | Reads `pulse()` from the chain. Until the deployment it says "not deployed yet". `docs/qa/town/pulse-sample.jpg` is the page rendered with **sample numbers** (a QA mock, not chain data) |
 | In-game ticker | `game/src/net/market.js`, `ui/market-ticker.js`, `play/market-scene.js` ("Town market · N trades today", explorer links, sellers' chips, buyers visiting the stalls by day) | **Off by default**: only with `?town=1` until ftf-town is live |
 | Model | `tools/town/sim.mjs` (the traders' real policy and the contract's integer rules, day by day) | Numbers below |
 | Deploy | `contracts/scripts/town-deploy.sh` | For the lead, after the owner's yes |
+
+## Wallets
+
+Every NPC signs from its own testnet account under the town contract (owner, 12.11), so the activity is many wallets,
+not one address:
+
+| Wallets | Accounts | Key may call |
+|---|---|---|
+| 20 traders | `trader-01` … `trader-20.ftf-town.testnet`: the 13 townsfolk, then the 7 clan traders (order of `relayer/market/catalog.js` `TRADERS`) | `trade` |
+| 6 clans | `clan-salt`, `clan-ash`, `clan-moss`, `clan-amber`, `clan-frost`, `clan-iris.ftf-town.testnet` | `trade`, `stake`, `claim`, `begin_unbond`, `finish_unbond`, `enter_tournament` |
+
+- **Keys** are made on the relayer's server (`node relayer/scripts/market-keys.mjs`). Only the public keys leave it.
+- **Budget per wallet**: the key's allowance (`ALLOWANCE`, default 2 NEAR) and the daemon's daily cap
+  (`FTF_WALLET_DAY_NEAR`, default 0.5 NEAR, counted at `FTF_TX_NEAR` = 0.0003 per transaction). A capped wallet sits
+  out until the next UTC day, and `/api/market/stats` lists it in `budget_capped`.
+- **One kill switch**: `FTF_TOWN_KILL=1`, or a file `relayer/data/KILL`, stops every wallet on the next tick. The
+  contract's `set_paused` stops the town itself.
+- **Clan wallets** (`relayer/lib/clan-actions.js`, every `FTF_CLAN_MINUTES`, default 120) take one action per round
+  from their own account: claim a ripe reward, enter the open season's tournament, or pledge up to 30 % × risk of
+  their silk to their works (Salt → Caravan Guild, Frost → Shell Observatory, Iris and Moss → Archive, Ash and Amber
+  → Loom House). The clan's strategy (below) sets the risk; the rules make the move. Function-call keys cannot
+  attach NEAR, so the contract pays a deed's storage when no deposit comes with the pledge.
+- **Town Pulse** lists all 26 wallets with explorer links: silk, earned, spent, pledged (the contract keeps
+  `earned`/`spent` per account).
 
 ## Contract surface
 
@@ -27,12 +51,12 @@ All amounts are in micro-units (1 silk = 1,000,000).
 | `new(owner_id, coordinators, params?)` | deploy | Bounded parameters (`Params::valid`) |
 | `genesis(traders, silk_each)` | owner, once | Registers the traders and gives each its starting silk (1,000) |
 | `trade(counterparty, silk, reference)` | a trader's trade-only key | Moves silk from the caller to the counterparty and sends 0.12 % to the treasury. Minimum 0.5 silk, no self trades, both sides registered |
-| `stake(asset, amount, tier)` | account, attach 0.01 NEAR | Pledges silk to one of 4 works (loom, caravan, archive, observatory) for a tier: flex, 5, 10 or 20 days, weight ×1.00/1.15/1.30/1.50. Burns the 0.5-silk deed fee and mints a deed (NEP-171) |
+| `stake(asset, amount, tier)` | account; attach 0.01 NEAR or nothing (the town pays the storage) | Pledges silk to one of 4 works (loom, caravan, archive, observatory) for a tier: flex, 5, 10 or 20 days, weight ×1.00/1.15/1.30/1.50. Burns the 0.5-silk deed fee and mints a deed (NEP-171) |
 | `claim(deed)` | deed owner | Pays the pending reward |
 | `begin_unbond(deed)` → `finish_unbond(deed)` | deed owner | After the lock, a 2-day cooldown without rewards, then principal + pending come back. The deed is burned and its deposit refunded |
 | `exit_early(deed)` | deed owner | Takes 10 % of principal: half burned, half to the works' other stakers. Blocked for a day after the deed changes hands |
 | `sweep_fees()` | anyone, once an epoch | Sends 12 % of the treasury to the station bucket (P2). Splits the rest: 65 % stake pot, 10 % tournament purse, 10 % Shell Reserve, 15 % burned |
-| `distribute()` | anyone, once an epoch | Splits the stake pot over the works with earning weight (base shares 35/25/25/15, renormalised), plus each works' own stream (the Observatory's share of entries). Each works is capped at 0.4 % of its weight a day; the excess goes to the purse |
+| `distribute()` | anyone, once an epoch | Splits the stake pot over the works with earning weight (base shares 35/25/25/15, renormalised), plus each works' own stream (the Observatory's share of entries). Each works is capped at 0.15 % of its weight a day (owner-tunable); the excess goes to the purse |
 | `open_season(season_id, schedule_root)` | coordinator | Opens the sealed season that new deeds and entries belong to. Its root never changes. Records the silk burned in the previous season |
 | `enter_tournament(season_id)` | account | Costs 40 silk (entry credit is used first): 20 % burned, 15 % to the Shell Observatory's stakers, 65 % to the purse. One entry per account and season |
 | `settle_season(season_id, payouts, payouts_hash, last)` | coordinator | Pays ranks in silk, in batches. The pot is the purse plus a mint bounded by min(12,000, 1,000 + 0.8 × last season's burn, 24 × entrants). One payout is at most 4 % of the pot. `last` closes the season. The coordinator attests the ranks, and the hash of the full list is logged |
@@ -51,9 +75,9 @@ pledge 600 silk each, players pledge 30 % of what they win, and 7.5 % of joined 
 
 | Players | Tx/day (mean, min) | Fees/day | To stakers/day | Staker rate after day 10 | Silk pledged at day 30 | Purse paid/day | Silk minted for purses (30 d) | Silk burned (30 d) |
 |---|---|---|---|---|---|---|---|---|
-| 50 | 22,010 (22,003) | 46 silk | 19 silk | **0.40 %/day (the ceiling binds)** | 6,000 | 200 | 2,424 | 991 |
-| 200 | 22,032 (22,006) | 46 silk | 23 silk | 0.36 %/day | 10,300 | 674 | 7,682 | 3,263 |
-| 1,000 | 22,151 (22,020) | 46 silk | 28 silk | 0.23 %/day | 27,400 | 2,578 | 15,978 | 15,503 |
+| 50 | 22,010 (22,003) | 46 silk | 7 silk | 0.15 %/day (the ceiling binds) | 6,100 | 212 | 2,424 | 991 |
+| 200 | 22,032 (22,006) | 46 silk | 10 silk | 0.15 %/day (the ceiling binds) | 10,400 | 688 | 7,682 | 3,263 |
+| 1,000 | 22,151 (22,020) | 46 silk | 17 silk | 0.14 %/day | 27,500 | 2,589 | 15,978 | 15,503 |
 
 How to read it:
 
@@ -61,10 +85,9 @@ How to read it:
   daily sweep/distribute add a few dozen.
 - The mean trade is 1.75 silk. Trader balances stay between 560 and 1,560. The fees take ~46 silk a day out of
   their 20,000, which `credit_silk` wages can replace.
-- In silk the pledged total is smaller than in the spec's wool model, so the fee-funded rate is higher and the
-  0.4 %/day ceiling binds in a small town. The excess goes to the tournament purse.
-- To bring the rate near the spec's ~0.1 %/day: lower `rate_ceiling_bps` (40 → 15) or the stakers' share of the
-  sweep. That is a parameter choice for the owner (`set_params`).
+- **The rate ceiling is owner-tunable.** The default `rate_ceiling_bps` is 15 (0.15 % of pledged weight a day,
+  ≈ 55 % annualised-equivalent), set by the owner on 12.11; change it with `set_params`. In silk the pledged total is
+  small, so the fee-funded rate reaches the ceiling, and the excess goes to the tournament purse.
 
 ## Settling a season (coordinator, dry run)
 
