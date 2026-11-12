@@ -43,7 +43,7 @@ for i in np.nonzero((tw > 0.5) & (bc[:, 2] > 0.86) & (bc[:, 2] < 1.475))[0]:
     p, gi_, d = kdg.find(tuple(bc[i]))
     if d < 0.03 and kdl.find(p)[2] > 0.035: hid[i] = True                 # under the cloth and well away from any of its edges
 hid |= (legw > 0.5) & (bc[:, 2] < 0.652)                                  # under the stockings
-hid |= (legw > 0.5) & (bc[:, 0] < -0.01) & (bc[:, 2] < 0.80) & (wsum(body, ('thigh_R', 'shin_R', 'foot_R', 'toe_R')) > 0.5) & (bc[:, 2] > 0.14)   # her right leg is always inside the gown
+hid |= (wsum(body, ('thigh_R', 'shin_R', 'foot_R', 'toe_R')) > 0.5) & (bc[:, 2] < 0.95) & (bc[:, 2] > 0.14)   # her right leg is always inside the gown
 del_faces(body, hid, 'body under the bodice, the stockings and the gown')
 sc = vcol(stock); del_faces(stock, ((wsum(stock, ('toe',)) > 0.6) & (sc[:, 2] < 0.05)) | ((sc[:, 0] < -0.01) & (sc[:, 2] > 0.14)), 'stocking toes inside the shoes; the right stocking inside the gown')
 

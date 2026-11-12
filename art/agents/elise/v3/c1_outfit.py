@@ -197,7 +197,7 @@ gm = gown.data; gco = np.array([v.co[:] for v in gm.vertices]); gcd = np.empty(l
 gcol = np.clip(np.round(gcd[:, 0]).astype(int), 0, NU); grow = np.clip(np.round(gcd[:, 1]).astype(int), 0, NR)
 GWs = Z.grid_weights(); Wg = body_w(gco, drop=('upperarm', 'forearm', 'hand', 'thumb', 'index', 'fingers', 'shin', 'foot', 'toe'))
 sk = grow >= NB_; js = np.clip(grow - NB_, 0, NV); up = ramp(gco[:, 2], 0.825, 0.875)
-for sd in 'LR': Wg['pelvis'] = Wg['pelvis'] + Wg['thigh_' + sd] * (1 - up); Wg['thigh_' + sd] = Wg['thigh_' + sd] * up
+for sd in 'LR': Wg['pelvis'] = Wg['pelvis'] + Wg['thigh_' + sd]; Wg['thigh_' + sd] = Wg['thigh_' + sd] * 0      # the gown over the hips rides the pelvis only: following a thigh tore it open at the hip when the leg moved
 for n in list(Wg): Wg[n] = np.where(sk, 0.0, Wg[n])
 for n, w in GWs.items(): Wg[n] = np.where(sk, w[js, gcol], 0.0)
 set_weights(gown, Wg)
