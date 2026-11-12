@@ -72,6 +72,7 @@ await page.evaluate(async () => {
     let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     let want = [p[0] - dx * 6.5, p[1] + 3.2, p[2] - dz * 6.5], look = [p[0] + dx * 2.0, p[1] + 0.8, p[2] + dz * 2.0];
     if (p[2] - 1200 * 0 < 43 && p[2] > 20) { want = [p[0] + 1.5, p[1] + 2.0, 46.5]; look = [p[0], p[1] + 1.1, p[2]]; }   // in and just past the gate: a front view, she walks out towards us
+    if (window.__camHold) { want = window.__camHold.slice(); look = [p[0], p[1] + 0.9, p[2]]; }   // held: she walks into a still frame
     const dir = [want[0] - look[0], want[1] - look[1], want[2] - look[2]], dl = Math.hypot(...dir);
     const hit = col.rayCast(f.town.scene.world, look, dir, dl, col.MASK_PLAYER);
     if (hit) { const k = Math.max(0.15, (hit.t - 0.4) / dl); for (let i = 0; i < 3; i++) want[i] = look[i] + dir[i] * k; }
@@ -119,7 +120,7 @@ if (V3) {
   let cs = []; for (let i = 0; i < 20 && !(cs = await chests()).length; i++) await wait(250);
   log.push('chests ' + cs.length);
   if (cs.length) {
-    await page.evaluate((p) => { window.__camTarget = p; }, cs[0]);
+    await page.evaluate(() => { const c = window.__cam; if (c) window.__camHold = c.pos.slice(); });
     await walkTo(cs[0], 0.6, 6000, false); log.push('walked onto the chest'); await wait(1500);
     const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /preview/i.test(x.textContent)); if (!b) return false; b.click(); return true; });
     log.push(ok ? 'reveal' : 'no preview button'); await wait(11000);
