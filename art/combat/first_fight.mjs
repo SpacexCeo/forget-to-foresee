@@ -68,7 +68,8 @@ await page.evaluate(async () => {
     orig(...a);
     const p = f.player.pos, home = f.town.mobs.brain.packs[0].home;
     let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-    const want = [p[0] - dx * 6.5, p[1] + 3.2, p[2] - dz * 6.5], look = [p[0] + dx * 2.0, p[1] + 0.8, p[2] + dz * 2.0];
+    let want = [p[0] - dx * 6.5, p[1] + 3.2, p[2] - dz * 6.5], look = [p[0] + dx * 2.0, p[1] + 0.8, p[2] + dz * 2.0];
+    if (p[2] - 1200 * 0 < 43 && p[2] > 20) { want = [p[0] + 1.5, p[1] + 2.0, 46.5]; look = [p[0], p[1] + 1.1, p[2]]; }   // in and just past the gate: a front view, she walks out towards us
     const dir = [want[0] - look[0], want[1] - look[1], want[2] - look[2]], dl = Math.hypot(...dir);
     const hit = col.rayCast(f.town.scene.world, look, dir, dl, col.MASK_PLAYER);
     if (hit) { const k = Math.max(0.15, (hit.t - 0.4) / dl); for (let i = 0; i < 3; i++) want[i] = look[i] + dir[i] * k; }
