@@ -170,12 +170,20 @@ def fix_primitive(g, rig, prim, names, ibm, ring, segs, outline, log):
         a, r, l1, l2 = arm_param(Pw, S, E, Wr)
         ta = a[idx]; tr = r[idx]
         fan = (ta.max(1) - ta.min(1) > 0.10) & (tr.max(1) < 0.085) & (np.sign(Pw[idx][:, :, 0].mean(1)) == sg)
-        assert 8 <= fan.sum() <= 40, ('the collapsed arm was not found as expected', sd, int(fan.sum()))
+        # ... and every other triangle that bridges the wrist and the trunk (one corner moves with the forearm or the
+        # hand, another with the chest, neck, spine or shoulder): pieces of the same collapsed tube
+        lower = sum(Wd[:n0, names.index(n)] for n in names if n.endswith('_' + sd) and n.split('_')[0] in ('forearm', 'hand', 'thumb', 'index', 'fingers', 'prop')) > 0.5
+        trunk = sum(Wd[:n0, names.index(n)] for n in ('chest', 'neck', 'spine', 'head', 'pelvis', 'shoulder_L', 'shoulder_R')) > 0.5
+        old = (idx < n0).all(1)
+        io = np.where(old[:, None], idx, 0)
+        bridge = old & lower[io].any(1) & trunk[io].any(1)
+        fan |= bridge
+        assert 8 <= fan.sum() <= 80, ('the collapsed arm was not found as expected', sd, int(fan.sum()))
         # skin texel: the middle of the fan's largest triangle
         T = Pw[idx[fan]]; area = np.linalg.norm(np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0]), axis=1)
         uv = UV[idx[fan][area.argmax()]].mean(0)
         # the wrist: the fan's lower vertices
-        low = np.unique(idx[fan]); low = low[a[low] > 0.3]
+        low = np.unique(idx[fan]); low = low[low < n0]; low = low[a[low] > 0.3]
         Wc = Pw[low].mean(0)
         Wc = E + (Wc - E) * (1 + 0.012 / np.linalg.norm(Wc - E))            # ends a little inside the wrap
         V, Nn, Tn, Aa, l1, l2 = build_arm(S, E, Wc, sd, ring, segs, grow=0.0025 if outline else 0.0)
@@ -195,7 +203,23 @@ def fix_primitive(g, rig, prim, names, ibm, ring, segs, outline, log):
         Nl = Nn @ np.linalg.inv(M[:3, :3]).T; N = np.vstack([N, Nl / np.linalg.norm(Nl, axis=1, keepdims=True)])
         UV = np.vstack([UV, np.repeat(uv[None], len(V), 0)]); Wd = np.vstack([Wd, new])
         targets = [np.vstack([tg, np.zeros((len(V), 3))]) for tg in targets]
-        stats[sd] = {'fan_triangles_removed': int(fan.sum()), 'vertices': len(V), 'triangles': len(Tn), 'wrist': [round(float(x), 3) for x in Wc]}
+        stats[sd] = {'fan_triangles_removed': int(fan.sum()), 'bridges': int(bridge.sum()), 'vertices': len(V), 'triangles': len(Tn), 'wrist': [round(float(x), 3) for x in Wc]}
+    # trunk vertices (the dress at the armpit, the collar) must not follow an arm: a stray upper-arm or forearm weight
+    # there pulled a spike of cloth out with every raised arm
+    arm_cols = [names.index(n) for n in names if n.split('_')[0] in ('upperarm', 'forearm', 'hand', 'thumb', 'index', 'fingers', 'prop', 'ribbon')]
+    trunk_w = sum(Wd[:n0, names.index(n)] for n in ('chest', 'neck', 'spine', 'head', 'pelvis', 'shoulder_L', 'shoulder_R'))
+    stray = (trunk_w > Wd[:n0][:, arm_cols].sum(1)) & (Wd[:n0][:, arm_cols].sum(1) > 0)
+    Wd[:n0][np.ix_(stray, arm_cols)] = 0; Wd[:n0][stray] /= Wd[:n0][stray].sum(1, keepdims=True)
+    stats['stray_arm_weights_cleared'] = int(stray.sum())
+    # vertices the old file had left on the exporter's `neutral_bone` (no weights at all: they stayed behind when she
+    # moved, one in each armpit): they take the weights of their neighbours
+    if 'neutral_bone' in names:
+        kn = names.index('neutral_bone'); lost = np.nonzero(Wd[:, kn] > 0.5)[0]
+        for i in lost:
+            nbr = np.unique(idx[(idx == i).any(1)]); nbr = nbr[Wd[nbr, kn] < 0.5]
+            near = nbr if len(nbr) else np.argsort(np.linalg.norm(Pw - Pw[i], axis=1))[1:6]
+            Wd[i] = Wd[near].mean(0); Wd[i, kn] = 0; Wd[i] /= Wd[i].sum()
+        stats['unweighted_vertices_bound'] = int(len(lost))
     # --- write the primitive again: four strongest joints per vertex
     order = np.argsort(-Wd, 1)[:, :4]; w4 = np.take_along_axis(Wd, order, 1); w4[w4 < 1e-4] = 0; order[w4 == 0] = 0
     w4 /= w4.sum(1, keepdims=True)
