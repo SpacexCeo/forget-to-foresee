@@ -55,6 +55,14 @@ pub const ERR_GATE_PAID: &str = "ERR_GATE_PAID: this account has already paid th
 pub const ERR_SCRIPTED: &str = "ERR_SCRIPTED: the town's own wallets do not pay the gate";
 pub const ERR_GATE_REQUEST: &str = "ERR_GATE_REQUEST: this signed request was already used";
 pub const ERR_GATE_PRICE: &str = "ERR_GATE_PRICE: the gate price is 20-5,000 silk";
+pub const ERR_ACT_REQUEST: &str = "ERR_ACT_REQUEST: this signed request was already used";
+pub const ERR_ACT_CAP: &str = "ERR_ACT_CAP: the daily limit of actions taken for players is reached";
+pub const ERR_ACT_FOR: &str = "ERR_ACT_FOR: the coordinator does not act for the town's own wallets";
+/** v4: actions a coordinator may take for one player per day, and for all players per day. */
+pub const ACT_PER_ACCOUNT_DAY: u32 = 40;
+pub const ACT_ALL_DAY: u128 = 20_000;
+const K_ACT_DAY: &[u8] = b"a:day";
+const K_ACT_COUNT: &[u8] = b"a:count";
 /** Default portal price (rev 4): 200 silk, burned. */
 pub const GATE_PRICE_DEFAULT: u128 = 200 * UNIT;
 // Upgrade v2 (pay_gate) keeps the deployed state untouched: its numbers live under their own raw storage keys and its
@@ -75,7 +83,7 @@ pub const WORKS: [&str; 4] = ["loom", "caravan", "archive", "observatory"];
 #[derive(BorshStorageKey)]
 #[near]
 // New variants go at the END only: a variant's index is its storage prefix (state-compatible upgrades, docs/town-upgrades.md).
-enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions, Gates, GateOf, GateRequests }
+enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions, Gates, GateOf, GateRequests, ActRequests, ActDaily }
 
 /// One account's row: silk, entry credit (spendable only on tournament entry) and pledge totals.
 #[near(serializers = [borsh, json])]
@@ -359,12 +367,13 @@ impl Town {
     }
     /// Pays the tournament entry fee in silk (entry credit first): part burned, part to the Shell Observatory's
     /// stakers, the rest to the purse.
-    pub fn enter_tournament(&mut self, season_id: String) {
+    pub fn enter_tournament(&mut self, season_id: String) { self.enter_tournament_inner(env::predecessor_account_id(), season_id) }
+    fn enter_tournament_inner(&mut self, me: AccountId, season_id: String) {
         self.live();
         require!(!self.season_id.is_empty() && season_id == self.season_id, ERR_SEASON);
         let mut season = self.seasons.get(&season_id).cloned().unwrap();
         require!(!season.settled, ERR_SETTLED);
-        let me = env::predecessor_account_id();
+        
         let key = format!("{}:{}", season_id, me);
         require!(!self.entries.contains_key(&key), ERR_ENTERED);
         let fee = self.params.entry_fee;
@@ -510,6 +519,77 @@ impl Town {
         event("gate_price", format!(r#"{{"price":"{}"}}"#, price.0));
     }
 
+    // ---------- acting for players (upgrade v4) ----------
+    // A guest's browser key is a function-call key of the guests contract and cannot sign here, so the relayer (a
+    // coordinator) acts for the guest after checking the guest's own signed request, exactly as pay_gate_for does. Each
+    // method takes the request's sha256 (`request_hash`), recorded once (ActRequests) so a request never acts twice, and
+    // counts against a per-player and an all-players daily limit. The silk always moves on the player's own row and a
+    // deed is minted to the player; the coordinator never receives anything. The town's own wallets are refused.
+    fn act_for(&mut self, account_id: &AccountId, request_hash: &str) {
+        self.only_coordinator();
+        require!(request_hash.len() == 64 && request_hash.bytes().all(|b| b.is_ascii_hexdigit()), ERR_REF);
+        let suffix = format!(".{}", env::current_account_id());
+        require!(!self.stalls.contains_key(account_id) && !account_id.as_str().ends_with(&suffix), ERR_ACT_FOR);
+        let mut used: LookupMap<String, AccountId> = LookupMap::new(StorageKey::ActRequests);
+        require!(!used.contains_key(request_hash), ERR_ACT_REQUEST);
+        used.insert(request_hash.to_string(), account_id.clone()); used.flush();
+        let day = self.today() as u128;
+        let all = if raw_u128(K_ACT_DAY, u128::MAX) == day { raw_u128(K_ACT_COUNT, 0) } else { 0 };
+        require!(all < ACT_ALL_DAY, ERR_ACT_CAP);
+        set_raw_u128(K_ACT_DAY, day); set_raw_u128(K_ACT_COUNT, all + 1);
+        let mut daily: LookupMap<AccountId, (u64, u32)> = LookupMap::new(StorageKey::ActDaily);
+        let (d, n) = daily.get(account_id).copied().unwrap_or((0, 0));
+        let n = if d == day as u64 { n } else { 0 };
+        require!(n < ACT_PER_ACCOUNT_DAY, ERR_ACT_CAP);
+        daily.insert(account_id.clone(), (day as u64, n + 1)); daily.flush();
+        event("act_for", format!(r#"{{"account":"{}","by":"{}","request_hash":"{}"}}"#, account_id, env::predecessor_account_id(), request_hash));
+    }
+    /// v4: stake (pledge) for a player: same rules as `stake` with no deposit (the deed fee is the spam brake).
+    pub fn pledge_for(&mut self, account_id: AccountId, asset: u8, amount: U, tier: u8, request_hash: String) -> TokenId {
+        self.act_for(&account_id, &request_hash);
+        self.stake_inner(account_id, 0, asset, amount, tier)
+    }
+    /// v4: claim a deed's rewards for its owner.
+    pub fn claim_for(&mut self, account_id: AccountId, token_id: TokenId, request_hash: String) -> U {
+        self.act_for(&account_id, &request_hash);
+        self.claim_inner(account_id, token_id)
+    }
+    /// v4: unbond a deed for its owner: begins the cooldown on an active deed, finishes it on a deed whose cooldown is
+    /// over (returns the silk paid out then; 0 when it only began).
+    pub fn unbond_for(&mut self, account_id: AccountId, token_id: TokenId, request_hash: String) -> U {
+        self.act_for(&account_id, &request_hash);
+        let state = self.deeds.get(&token_id).map(|d| d.state).unwrap_or_else(|| env::panic_str(ERR_NO_DEED));
+        if state == 0 { self.begin_unbond_inner(account_id, token_id); U(0) } else { self.finish_unbond_inner(account_id, token_id) }
+    }
+    /// v4: leave an active deed now for its owner (the early-exit penalty applies).
+    pub fn exit_early_for(&mut self, account_id: AccountId, token_id: TokenId, request_hash: String) -> U {
+        self.act_for(&account_id, &request_hash);
+        self.exit_early_inner(account_id, token_id)
+    }
+    /// v4: pledge silk into a trader's stall for a player.
+    pub fn invest_stall_for(&mut self, account_id: AccountId, trader: AccountId, amount: U, request_hash: String) {
+        self.act_for(&account_id, &request_hash);
+        self.invest_stall_inner(account_id, trader, amount)
+    }
+    /// v4: pay a player's fee share from a stall.
+    pub fn claim_stall_for(&mut self, account_id: AccountId, trader: AccountId, request_hash: String) -> U {
+        self.act_for(&account_id, &request_hash);
+        self.claim_stall_inner(account_id, trader)
+    }
+    /// v4: enter the open season's tournament for a player (entry credit first).
+    pub fn enter_tournament_for(&mut self, account_id: AccountId, season_id: String, request_hash: String) {
+        self.act_for(&account_id, &request_hash);
+        self.enter_tournament_inner(account_id, season_id)
+    }
+    pub fn act_request_used(&self, request_hash: String) -> bool { LookupMap::<String, AccountId>::new(StorageKey::ActRequests).contains_key(&request_hash) }
+    /// v4: actions taken for this player today and for all players today, with the limits.
+    pub fn act_limits(&self, account_id: AccountId) -> (u32, u32, U, U) {
+        let day = self.today();
+        let (d, n) = LookupMap::<AccountId, (u64, u32)>::new(StorageKey::ActDaily).get(&account_id).copied().unwrap_or((0, 0));
+        let all = if raw_u128(K_ACT_DAY, u128::MAX) == day as u128 { raw_u128(K_ACT_COUNT, 0) } else { 0 };
+        (if d == day as u64 { n } else { 0 }, ACT_PER_ACCOUNT_DAY, U(all), U(ACT_ALL_DAY))
+    }
+
     // ---------- stalls ----------
     fn stall_key(trader: &AccountId, investor: &AccountId) -> String { format!("{}:{}", trader, investor) }
     fn stall_accrue(&self, trader: &AccountId, pos: &mut StallPosition) {
@@ -519,9 +599,10 @@ impl Town {
     /// Pledges silk into a trader's stall: the silk becomes the trader's working capital (a closed stall reopens once its
     /// purse is back above the reopen line) and the investor earns a share of the fees on that stall's sales from now on.
     /// A pledge, not a loan: the silk does not come back; the fee share does, for as long as the stall trades.
-    pub fn invest_stall(&mut self, trader: AccountId, amount: U) {
+    pub fn invest_stall(&mut self, trader: AccountId, amount: U) { self.invest_stall_inner(env::predecessor_account_id(), trader, amount) }
+    fn invest_stall_inner(&mut self, me: AccountId, trader: AccountId, amount: U) {
         self.live();
-        let me = env::predecessor_account_id();
+        
         require!(me != trader, ERR_SELF);
         require!(self.stalls.contains_key(&trader), ERR_NO_STALL);
         require!(amount.0 >= self.params.min_trade, ERR_MIN_TRADE);
@@ -538,8 +619,9 @@ impl Town {
         event("stall_invest", format!(r#"{{"investor":"{}","stall":"{}","silk":"{}"}}"#, me, trader, amount.0));
     }
     /// Pays an investor's fee share from a stall.
-    pub fn claim_stall(&mut self, trader: AccountId) -> U {
-        let me = env::predecessor_account_id();
+    pub fn claim_stall(&mut self, trader: AccountId) -> U { self.claim_stall_inner(env::predecessor_account_id(), trader) }
+    fn claim_stall_inner(&mut self, me: AccountId, trader: AccountId) -> U {
+        
         let key = Self::stall_key(&trader, &me);
         let mut pos = self.stall_positions.get(&key).cloned().unwrap_or_else(|| env::panic_str(ERR_NO_STALL));
         self.stall_accrue(&trader, &mut pos);
@@ -565,14 +647,15 @@ impl Town {
     /// Pledges `amount` silk to works `asset` for lock `tier`; mints a deed to the caller. Attach DEED_DEPOSIT or nothing.
     #[payable]
     pub fn stake(&mut self, asset: u8, amount: U, tier: u8) -> TokenId {
+        self.stake_inner(env::predecessor_account_id(), env::attached_deposit().as_yoctonear(), asset, amount, tier)
+    }
+    fn stake_inner(&mut self, me: AccountId, deposit: u128, asset: u8, amount: U, tier: u8) -> TokenId {
         self.live();
         require!((asset as usize) < 4, ERR_ASSET); require!((tier as usize) < 4, ERR_TIER);
         // A wallet may attach DEED_DEPOSIT for the deed's storage (refunded at burn). The town's own accounts pledge with
         // function-call keys, which cannot attach NEAR: then the contract pays the storage and the burned deed fee is the
         // spam brake. Anything between 0 and DEED_DEPOSIT is refused, so a deposit is either full or none.
-        let deposit = env::attached_deposit().as_yoctonear();
         require!(deposit == 0 || deposit >= DEED_DEPOSIT.as_yoctonear(), ERR_DEPOSIT);
-        let me = env::predecessor_account_id();
         let fee = self.params.deed_fee;
         let mut row = self.acc(&me);
         require!(amount.0 > 0 && row.silk >= amount.0 + fee, ERR_FUNDS);
@@ -607,8 +690,9 @@ impl Town {
         event("stake", format!(r#"{{"account":"{}","deed":"{}","asset":"{}","principal":"{}","tier":{},"fee":"{}"}}"#, me, id, WORKS[a], amount.0, tier, fee));
         id
     }
-    pub fn claim(&mut self, token_id: TokenId) -> U {
-        let me = env::predecessor_account_id();
+    pub fn claim(&mut self, token_id: TokenId) -> U { self.claim_inner(env::predecessor_account_id(), token_id) }
+    fn claim_inner(&mut self, me: AccountId, token_id: TokenId) -> U {
+        
         require!(self.deed_owner(&token_id) == me, ERR_NOT_DEED_OWNER);
         let mut d = self.deeds.get(&token_id).cloned().unwrap();
         self.accrue(&mut d);
@@ -616,8 +700,9 @@ impl Town {
         self.deeds.insert(token_id.clone(), d); self.counters.claim += 1;
         event("claim", format!(r#"{{"account":"{}","deed":"{}","silk":"{}"}}"#, me, token_id, p)); U(p)
     }
-    pub fn begin_unbond(&mut self, token_id: TokenId) {
-        let me = env::predecessor_account_id();
+    pub fn begin_unbond(&mut self, token_id: TokenId) { self.begin_unbond_inner(env::predecessor_account_id(), token_id) }
+    fn begin_unbond_inner(&mut self, me: AccountId, token_id: TokenId) {
+        
         require!(self.deed_owner(&token_id) == me, ERR_NOT_DEED_OWNER);
         let mut d = self.deeds.get(&token_id).cloned().unwrap();
         require!(d.state == 0, ERR_STATE);
@@ -630,8 +715,9 @@ impl Town {
         event("unbond_begin", format!(r#"{{"account":"{}","deed":"{}","ready_day":{}}}"#, me, token_id, d.unbond_ready_day));
     }
     /// After the cooldown: principal and pending back to the owner, the deed burned, its storage deposit refunded.
-    pub fn finish_unbond(&mut self, token_id: TokenId) -> U {
-        let me = env::predecessor_account_id();
+    pub fn finish_unbond(&mut self, token_id: TokenId) -> U { self.finish_unbond_inner(env::predecessor_account_id(), token_id) }
+    fn finish_unbond_inner(&mut self, me: AccountId, token_id: TokenId) -> U {
+        
         require!(self.deed_owner(&token_id) == me, ERR_NOT_DEED_OWNER);
         let mut d = self.deeds.get(&token_id).cloned().unwrap();
         require!(d.state == 1, ERR_STATE);
@@ -645,8 +731,9 @@ impl Town {
         U(d.principal + p)
     }
     /// Leaves an active deed now: 10 % of principal is taken (half burned, half to the works' other stakers).
-    pub fn exit_early(&mut self, token_id: TokenId) -> U {
-        let me = env::predecessor_account_id();
+    pub fn exit_early(&mut self, token_id: TokenId) -> U { self.exit_early_inner(env::predecessor_account_id(), token_id) }
+    fn exit_early_inner(&mut self, me: AccountId, token_id: TokenId) -> U {
+        
         require!(self.deed_owner(&token_id) == me, ERR_NOT_DEED_OWNER);
         let mut d = self.deeds.get(&token_id).cloned().unwrap();
         require!(d.state == 0, ERR_STATE);
