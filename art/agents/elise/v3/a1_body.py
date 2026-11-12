@@ -304,22 +304,5 @@ bm.to_mesh(me); bm.free()
 os.makedirs(WD + '/r', exist_ok=True); hzc = 0.5 * (CHIN + TOP)
 VIEWS = [[('front', [0, 0, 0.88, 1.9, 0, 0], 560, 1000), ('three quarter', [0, 0, 0.88, 1.9, 35, 5], 560, 1000), ('side', [0, 0, 0.88, 1.9, 90, 0], 560, 1000), ('back', [0, 0, 0.88, 1.9, 180, 0], 560, 1000)],
          [('face', [0, 0, hzc, 0.30, 0, 0], 746, 746), ('face three quarter', [0, 0, hzc, 0.30, 35, 0], 746, 746), ('face side', [0, 0, hzc, 0.30, 90, 0], 748, 746)]]
-from PIL import Image
-def sheet(name, shaded=True):
-    """Flat colours with a soft form shade (the flat render times the brightness of a studio render of the same view)."""
-    rows = []
-    for row in VIEWS:
-        out = []
-        for n, v, w, h in row:
-            f = WD + '/r/_%s.png' % n
-            for o in list(bpy.data.objects):
-                if o.name == 'shotcam': bpy.data.objects.remove(o)
-            cam = rend.setup(True, bg=(0.86, 0.86, 0.88)); rend.shot(cam, f, v, w, h); flat = np.asarray(Image.open(f).convert('RGB'), float)
-            if shaded:
-                bpy.data.objects.remove(cam); cam = rend.setup(False, bg=(0.86, 0.86, 0.88)); bpy.context.scene.display.shading.show_cavity = False
-                rend.shot(cam, f, v, w, h); g_ = np.asarray(Image.open(f).convert('L'), float) / 205.0
-                flat = flat * (0.62 + 0.38 * np.clip(g_, 0, 1) ** 1.5)[:, :, None]
-            Image.fromarray(flat.clip(0, 255).astype(np.uint8)).save(f); out.append((n, f))
-        rows.append(out)
-    rend.montage(rows, WD + '/r/' + name, bg=(219, 219, 224))
-sheet('a1.jpg')
+import review
+review.sheet(WD, VIEWS, 'a1.jpg')
