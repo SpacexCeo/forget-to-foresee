@@ -321,7 +321,7 @@ export default {
   'tour.title': '每周锦标赛',
   'tour.badge': '模拟',
   'tour.week': '{year} 年第 {week} 周',
-  'tour.desc': '同一个世界，同样的规则，一个加速赛季。无报名费，不涉及金钱，没有奖品：奖杯只是一枚徽章。',
+  'tour.desc': '本地练习赛季：同一个世界、同样的规则，加速进行。无报名费，没有奖品；奖杯只是一枚徽章。带 silk 奖池的链上锦标赛在城镇祭坛举行。',
   'tour.phase.upcoming': '即将开放',
   'tour.phase.open': '报名开放中',
   'tour.phase.running': '赛季进行中',
