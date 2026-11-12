@@ -272,6 +272,8 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   }
 
   function enterShell(n) {
+    // the island stays resident while Iris is inside (render/assets.js hold): leaving rebuilds and re-fetches nothing
+    if (world3d.streamer && world3d.streamer.hold) world3d.streamer.hold(true);
     shell.activate(n);
     state.zone = 'shell';
     state.entering = { start: state.now };
@@ -292,6 +294,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
   };
   function exitShell(position) {
     shell.deactivate();
+    if (world3d.streamer && world3d.streamer.hold) world3d.streamer.hold(false);
     state.zone = 'island'; state.entering = null;
     player.world = world3d.world; rig.world = world3d.world;
     teleport(position || session.obs.you.position, null);

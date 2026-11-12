@@ -5,6 +5,7 @@
 // renderer.compileAsync (KHR_parallel_shader_compile: the driver compiles off the main thread), and only then
 // does the caller attach the model. The greybox stands in a moment longer; the frame never stalls.
 import { takeFrameBatch } from './streaming.js';
+import { WebGLRenderTarget } from 'three';
 
 /** Unique textures referenced by the materials under `root`. */
 export function collectTextures(root) {
@@ -42,6 +43,31 @@ export function warmModel(root) { return active ? active.warm(root) : Promise.re
  * instead of one per cut). Resolves at once when no queue is installed.
  */
 export function warmScene() { return active ? active.warmAll() : Promise.resolve(); }
+
+/**
+ * Warms a part of the scene that is hidden now but will be shown later WITH ITS OWN LIGHTS (the Shell hall): its
+ * textures go to the GPU at once and its programs are compiled while `root` is momentarily visible, so the scene's
+ * light count matches what the first visit will draw (three keys programs by the number of lights). `root` is hidden
+ * again before this returns; nothing is drawn. Resolves when the programs are ready (or after the timeout).
+ * `wholeScene`: compile every visible object of the scene with those lights on (what is still drawn around the hall,
+ * e.g. the archipelago behind its walls, needs the same light count, or it recompiles on the first visit too).
+ */
+export function prewarmHidden(root, { wholeScene = false } = {}) {
+  if (!active || !root) return Promise.resolve(false);
+  const r = active.renderer;
+  for (const tex of collectTextures(root)) { try { r.initTexture(tex); } catch { /* the first draw uploads it */ } }
+  const was = root.visible;
+  root.visible = true;
+  let done;
+  try {
+    const parallel = r.compileAsync && r.extensions && r.extensions.has('KHR_parallel_shader_compile');
+    // without parallel compile the programs are built here, once, instead of in the first frame inside
+    const what = wholeScene ? active.scene : root;
+    if (parallel) done = active.compile(what);
+    else { const prev = r.getRenderTarget(); try { r.setRenderTarget(active.target() || null); r.compile(what, active.camera, active.scene); } finally { r.setRenderTarget(prev); } }
+  } catch (e) { console.warn('[warmup] prewarm failed', e); } finally { root.visible = was; }
+  return Promise.resolve(done).then(() => true);
+}
 
 export class GpuWarmup {
   /**
@@ -114,5 +140,30 @@ export class GpuWarmup {
       this.stats.compiling++;
       this.compile(job.root).then(() => { this.stats.compiling--; this.stats.warmed++; job.resolve(); });
     }
+  }
+}
+
+/**
+ * One offscreen frame of the scene from a viewpoint inside a hidden part (the Shell hall), with `root` shown for that
+ * frame only: geometry buffers are uploaded, programs compiled for the exact draw, and the transmission target the
+ * Guests' skin needs is allocated now instead of on the first visit. The game camera is moved for the frame and put
+ * back; the frame goes into a 1×1 target and is never shown. Synchronous; call it once, outside a visit.
+ */
+export function renderHiddenOnce(root, eye, target) {
+  if (!active || !root) return false;
+  const r = active.renderer, cam = active.camera, scene = active.scene;
+  const pos = cam.position.clone(), quat = cam.quaternion.clone(), was = root.visible, prev = r.getRenderTarget();
+  const rt = new WebGLRenderTarget(1, 1);
+  try {
+    root.visible = true;
+    cam.position.set(eye[0], eye[1], eye[2]); cam.lookAt(target[0], target[1], target[2]); cam.updateMatrixWorld(true);
+    r.setRenderTarget(rt);
+    r.render(scene, cam);
+    return true;
+  } catch (e) { console.warn('[warmup] hidden render failed', e); return false; } finally {
+    root.visible = was;
+    cam.position.copy(pos); cam.quaternion.copy(quat); cam.updateMatrixWorld(true);
+    r.setRenderTarget(prev);
+    rt.dispose();
   }
 }
