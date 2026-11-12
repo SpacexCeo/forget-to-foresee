@@ -1623,4 +1623,12 @@ export default {
   "quest.needs.missing": "还不够。我还需要：{list}。",
   "quest.needs.item": "{res}：{have}/{n}",
   "quest.track.needs": "收集{res}：{n} / {count}",
+  "chest.batch.title": "正在打开 {n} 个宝箱",
+  "chest.batch.open": "打开 {n} 个",
+  "chest.batch.all": "全部打开（{n}）",
+  "chest.batch.summary": "{n} 个宝箱在 NEAR 测试网上用一笔交易打开。",
+  "chest.batch.cut": "今日上限使本批次停在 {n} 个；其余宝箱保持密封。",
+  "chest.batch.claim": "全部领取",
+  "chest.batch.skip": "点击任意位置跳到结尾。",
+  "chest.batch.skipBtn": "跳过",
 };
