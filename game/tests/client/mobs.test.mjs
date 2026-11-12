@@ -158,3 +158,35 @@ test('hold to super: a tap strikes the combo, a hold of 0.4 s or more releases t
     M.attackDown(); M.update(0.2, true); M.cancelAttack(); assert.equal(calls.at(-1), 'end'); assert.equal(M.charging, null);
     M.attackDown(); M.update(0.5, true); M.dash([1, 0]); assert.ok(calls.includes('end') && calls.at(-1) === 'dash', 'a dash puts the charge away'); }
 });
+
+test('strike direction: the locked creature, else the cursor on the ground, else the movement, else her facing', async () => {
+  const { strikeAim } = await import('../../src/play/mobs.js');
+  const from = [0, 0, 0], h = 1.0, lock = { pos: [0, 0, 5] }, cursor = [5, 0, 0], move = [-1, 0];
+  assert.deepEqual(strikeAim({ from, heading: h, lock, cursor, move }), { heading: 0, by: 'lock' });
+  const c = strikeAim({ from, heading: h, cursor, move }); assert.equal(c.by, 'cursor'); assert.ok(Math.abs(c.heading - Math.PI / 2) < 1e-9);
+  assert.equal(strikeAim({ from, heading: h, cursor: [5, 0], move }).by, 'cursor', 'an [x, z] cursor works too');
+  assert.equal(strikeAim({ from, heading: h, cursor: [0.1, 0, 0.1], move }).by, 'move', 'a cursor on her own feet gives no direction');
+  const m = strikeAim({ from, heading: h, move }); assert.equal(m.by, 'move'); assert.ok(Math.abs(m.heading + Math.PI / 2) < 1e-9);
+  assert.deepEqual(strikeAim({ from, heading: h, move: [0.01, 0] }), { heading: h, by: 'facing' });
+  assert.deepEqual(strikeAim({ from, heading: h }), { heading: h, by: 'facing' });
+});
+
+test('in the view: no creature near → the cursor turns her even standing still; a creature within 3 m wins; a tap on cooldown puts the coil away', async () => {
+  const THREE = await import('three');
+  const { createMobs } = await import('../../src/play/mobs.js');
+  const calls = [], player = { pos: [0, 0, 0], heading: 0 };
+  const M = createMobs({ THREE, scene: new THREE.Scene(), origin: O.slice(), player, load: () => Promise.reject(new Error('no models')), clone: (x) => x,
+    MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, irisMove: (n) => { calls.push(n); return true; }, irisEnd: () => calls.push('end') });
+  const sk = M.brain.mobs.find((x) => x.type === 'skitter');
+  for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
+  player.pos = [sk.pos[0] - 8, sk.pos[1], sk.pos[2]]; M.update(0.01, true);
+  assert.equal(M.locked, null);
+  M.strike({ cursor: [player.pos[0], 0, player.pos[2] - 4], move: [1, 0] });
+  assert.equal(M.aimedBy, 'cursor'); assert.ok(Math.abs(Math.abs(player.heading) - Math.PI) < 1e-9, 'turned to the cursor (−z)');
+  player.pos = [sk.pos[0] - 1.5, sk.pos[1], sk.pos[2]]; M.update(0.5, true);
+  assert.equal(M.locked, sk);
+  M.strike({ cursor: [player.pos[0], 0, player.pos[2] - 4] }); assert.equal(M.aimedBy, 'lock');
+  assert.ok(Math.abs(player.heading - Math.atan2(sk.pos[0] - player.pos[0], sk.pos[2] - player.pos[2])) < 1e-6, 'turned to the creature');
+  // a tap while the strike recovers: the coil is ended, never left on
+  M.attackDown(); M.attackUp(); assert.equal(calls.at(-1), 'end');
+});
