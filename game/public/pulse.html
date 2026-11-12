@@ -43,6 +43,9 @@
     <h2>The town works</h2>
     <table><thead><tr><th>Works</th><th>Silk pledged</th><th>Reward rate, last 7 days</th></tr></thead><tbody id="works"></tbody></table>
     <p class="note">Rewards come only from the town's fees: 0.12 % of every market trade goes to the treasury; each day 65 % of it goes to the works (capped at 0.4 % of pledged weight a day), 10 % to the tournament purse, 10 % to the Shell Reserve and 15 % is burned. The Shell Observatory also gets 15 % of every tournament entry. No silk is minted for pledges; a season's purse may add a mint bounded by its ceiling.</p>
+    <h2>Clan strategies</h2>
+    <table><thead><tr><th>Clan</th><th>Chosen by</th><th>Strategy</th><th>When</th></tr></thead><tbody id="strategies"></tbody></table>
+    <p class="note" id="stratnote">Each clan agent sets a few bounded strategy numbers once an hour; the rules engine makes every trade.</p>
     <h2>Last trades</h2>
     <table><thead><tr><th>When</th><th>Buyer</th><th>Seller</th><th>Goods</th><th>Silk</th><th>Tx</th></tr></thead><tbody id="trades"></tbody></table>
     <p class="note" id="foot"></p>
@@ -100,6 +103,15 @@
       v.season_id ? ` · sealed season ${v.season_id}, root ` : '', v.season_id ? el('code', v.schedule_root) : '', v.paused ? ' · paused' : '', ` · epoch day ${v.day}`);
     try {
       const r = await fetch(RELAYER + '/api/market/stats'); const s = r.ok ? await r.json() : null;
+      const strat = s && s.strategy;
+      if (strat && Array.isArray(strat.clans) && strat.clans.length) {
+        $('strategies').replaceChildren(...strat.clans.map((c) => {
+          const tr = el('tr'); const p = c.params || {};
+          tr.append(el('td', String(c.clan)), el('td', String(c.label || c.source)), el('td', `buy ${p.buy || '—'}, risk ${p.risk ?? '—'}${p.favour ? ', favours ' + p.favour : ''}`), el('td', new Date(c.at).toISOString().slice(11, 16) + ' UTC'));
+          return tr;
+        }));
+        $('stratnote').textContent = `Today: ${strat.llm_today} decisions chosen by an LLM on NEAR AI Cloud, ${strat.scripted_today} scripted (when the model does not answer). The rules engine makes every trade either way.`;
+      } else $('strategies').replaceChildren(Object.assign(el('tr'), { innerHTML: '<td colspan="4" class="note">No strategy decisions yet.</td>' }));
       const rows = (s && Array.isArray(s.recent) ? s.recent : []).slice(0, 12);
       $('trades').replaceChildren(...(rows.length ? rows.map((t) => {
         const tr = el('tr'); const when = new Date(t.at).toISOString().slice(11, 19) + ' UTC';
