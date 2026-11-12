@@ -725,6 +725,8 @@ export default {
   'wheel.rarity.uncommon': "Необычный",
   'wheel.rarity.common': "Обычный",
   'wheel.cap': "NFT, всего {n}",
+  'wheel.left': "NFT · осталось {n} из {cap}",
+  'wheel.skin.reason.failed': "Минт не прошёл; попробуйте ещё раз.",
   'wheel.kind.title': "Титул",
   'wheel.seg.skin_sheriffchenko': "Скин Шерифченко",
   'wheel.seg.chest': "Сундук",

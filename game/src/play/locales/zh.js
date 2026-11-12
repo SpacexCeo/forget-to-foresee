@@ -725,6 +725,8 @@ export default {
   'wheel.rarity.uncommon': "优秀",
   'wheel.rarity.common': "普通",
   'wheel.cap': "NFT，共 {n} 个",
+  'wheel.left': "NFT · 剩余 {n} / {cap}",
+  'wheel.skin.reason.failed': "铸造未成功，请重试。",
   'wheel.kind.title': "称号",
   'wheel.seg.skin_sheriffchenko': "Sheriffchenko 皮肤",
   'wheel.seg.chest': "宝箱",
