@@ -251,6 +251,23 @@ function refreshCompanions() {
   const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
   if (!tokenId) return;
   import('./net/companions.js').then((m) => m.readCompanions({ tokenId })).then((r) => { if (r && r.state === 'loaded') setCompanions(r.dragons.map((d) => d.kind)); }).catch(() => {});
+  claimDragon('welcome'); // every heroine gets one dragon (net/companion-claim.js); asked once, then remembered
+}
+// A dragon claim (relayer/api/companion/claim): one in flight per reason; a failed one is asked again after 30 s, up to
+// 5 times a page (the boss log may still be on its way up); a minted dragon is shown only once the chain read
+// confirms it (read again now and after finality).
+const dragonClaims = {};
+function claimDragon(reason, before = () => Promise.resolve()) {
+  const c = (dragonClaims[reason] ||= { busy: false, tries: 0 });
+  if (c.busy || c.tries >= 5) return;
+  c.busy = true; c.tries++;
+  const retry = () => setTimeout(() => { c.busy = false; claimDragon(reason, before); }, 30_000);
+  import('./net/companion-claim.js').then(async (m) => {
+    if (m.claimed(ctx.storage, reason)) return;
+    await before();
+    const r = await m.claimCompanion({ reason, storage: ctx.storage });
+    if (r.ok) { refreshCompanions(); setTimeout(refreshCompanions, 4000); } else if (r.reason !== 'need_guest') retry(); else c.busy = false;
+  }).catch(retry);
 } // chests from the monsters outside the walls (game/chests.js)
 const lastStepPos = [0, 0, 0];
 /** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
@@ -324,6 +341,12 @@ if (townMode.town) {
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
       import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
+      // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
+      import('./net/companion-claim.js').then((cm) => {
+        const ledger = townQuests && townQuests.ledger; if (!ledger) return;
+        const check = () => { if (cm.bossInLog(ledger.log) && !cm.claimed(ctx.storage, 'boss')) claimDragon('boss', () => (expeditionSync ? expeditionSync.flush() : Promise.resolve())); };
+        ledger.subscribe(check); check();
+      }).catch(() => {});
     }).catch((e) => console.warn('[story]', e));
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
