@@ -89,8 +89,8 @@ test('monument: E opens the panel with her local score, loads the snapshot once,
   b.dispose(); assert.equal(scene.children.includes(b.root), false);
 });
 
-test('the flag: the default page never loads the board (lazy import behind ?story=1)', () => {
+test('the flag: the board loads lazily with the Expedition (on by default), never with ?story=0', () => {
   const src = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /^import .*town-board/m);
-  assert.match(src, /params\.get\('story'\) === '1'[^\n]*\n[^\n]*import\('\.\/scenes\/town-board\.js'\)/);
+  assert.match(src, /params\.get\('story'\) !== '0'[^\n]*\n[^\n]*import\('\.\/scenes\/town-board\.js'\)/);
 });

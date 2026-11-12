@@ -676,7 +676,7 @@ export default {
   'holder.note': "Введіть будь-який акаунт testnet. Якщо він має NFT Forget to Foresee (уламок пам'яті, картку агента чи Елізу), гра відкриє титул і рамку портрета в цьому браузері. Без гаманця, без підпису, у блокчейн нічого не пишеться.",
   'holder.account': "ID акаунта testnet",
   'holder.check': "Перевірити",
-  'holder.tryJudge': "Акаунт для журі",
+  'holder.tryJudge': "Демо-акаунт",
   'holder.active': "Активно: {account} · {title}",
   'holder.invalid': "Це не ID акаунта NEAR.",
   'holder.none': "У {account} немає NFT Forget to Foresee, нічого не відкрито.",

@@ -20,5 +20,5 @@ export function portalFee(search = '') {
   return Number.isFinite(n) && n > 0 ? { feeC: n * 100, demo: true } : { feeC: EXPEDITION.PORTAL_FEE_C, demo: false };
 }
 
-/** Story mode is on only with ?story=1 (default OFF: the judge link is unchanged). */
-export const storyOn = (search = '') => { try { return new URLSearchParams(search).get('story') === '1'; } catch { return false; } };
+/** The Expedition is on by default (one entry, owner 12.11); ?story=0 switches it off. */
+export const storyOn = (search = '') => { try { return new URLSearchParams(search).get('story') !== '0'; } catch { return true; } };
