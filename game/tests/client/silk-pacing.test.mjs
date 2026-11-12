@@ -1,6 +1,6 @@
 // Pacing of the Gate-Loom fee (TZ §3.6): an idealised focused player (about 4 kills a minute, mostly spiders, the
 // quests turned in as they become possible, the bounty when its cooldown allows) under the real rules. Targets:
-// 10,000 silk in 90-150 minutes, no single source above 60 % of it. If this fails, change EXPEDITION, not the test.
+// the Gate-Loom fee (200 silk since rev 4; rewards scale with it) in 90-150 minutes, no single source above 60 % of it. If this fails, change EXPEDITION, not the test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyQuest, initialQuests, questStatus } from '../../src/game/quest-rules.js';
@@ -29,15 +29,15 @@ export function simulate({ killsPerMin = 4, mix = { skitter: 0.85, veilbell: 0.1
     if (questStatus(s, 'q_boss', t) === 'ready') act({ type: 'TURN_IN', questId: 'q_boss' });
     if (questStatus(s, 'b_spiders', t) === 'available') act({ type: 'ACCEPT', questId: 'b_spiders' });
     if (questStatus(s, 'b_spiders', t) === 'ready') act({ type: 'TURN_IN', questId: 'b_spiders' });
-    if (!marks.half && silkC >= 500_000) marks.half = min;
+    if (!marks.half && silkC >= EXPEDITION.PORTAL_FEE_C / 2) marks.half = min;
     if (!marks.full && silkC >= EXPEDITION.PORTAL_FEE_C) marks.full = min;
   }
   return { marks, silkC, share: Object.fromEntries(Object.entries(bySource).map(([k2, v]) => [k2, +(v / silkC).toFixed(3)])) };
 }
 
-test('10,000 town silk takes 90-150 minutes of focused play; no source above 60 %', () => {
+test('the Gate-Loom fee (200 town silk) takes 90-150 minutes of focused play; no source above 60 %', () => {
   const r = simulate();
-  console.log(`pacing: 5,000 silk at ${r.marks.half} min, 10,000 at ${r.marks.full} min; shares ${JSON.stringify(r.share)}`);
-  assert.ok(r.marks.full >= 90 && r.marks.full <= 150, 'minutes to 10,000: ' + r.marks.full);
+  console.log(`pacing: half the fee at ${r.marks.half} min, the fee (${EXPEDITION.PORTAL_FEE_C / 100} silk) at ${r.marks.full} min; shares ${JSON.stringify(r.share)}`);
+  assert.ok(r.marks.full >= 90 && r.marks.full <= 150, 'minutes to the fee: ' + r.marks.full);
   for (const [k, v] of Object.entries(r.share)) assert.ok(v <= 0.6, `${k} ${v}`);
 });

@@ -34,7 +34,7 @@ test('transitions: locked → available → active → ready → done; illegal a
   r = run(s, { type: 'GUIDE', step: 'moved' }); s = r.state;
   assert.equal(questStatus(s, 'q_welcome'), 'ready'); assert.equal(r.events.at(-1).kind, 'quest_ready');
   r = run(s, { type: 'TURN_IN', questId: 'q_welcome' }); s = r.state;
-  assert.deepEqual(r.events.map((e) => [e.kind, e.silkC, e.trust]), [['quest_turned_in', 40_000, 'T2']]);
+  assert.deepEqual(r.events.map((e) => [e.kind, e.silkC, e.trust]), [['quest_turned_in', 800, 'T2']]);
   assert.ok(run(s, { type: 'TURN_IN', questId: 'q_welcome' }).rejected, 'paid once');
   assert.equal(questStatus(s, 'q_spiders'), 'available'); assert.equal(questStatus(s, 'q_boss'), 'locked', 'boss locked before spiders');
   // a kill before accepting does not count; one giver at a time
@@ -54,7 +54,7 @@ test('the part quest takes a salvage part at T2, an inventory part at T1; turnin
   assert.ok(run(s, { type: 'TURN_IN', questId: 'q_part', have: RICH }).rejected === 'no_part');
   assert.equal(run(s, { type: 'TURN_IN', questId: 'q_part', have: RICH, partId: 'part_gear', partSource: 'salvage' }).events[0].trust, 'T2');
   const inv = run(s, { type: 'TURN_IN', questId: 'q_part', have: RICH, partId: 'part_gear', partSource: 'inventory' }).events[0];
-  assert.equal(inv.trust, 'T1'); assert.equal(inv.silkC, 80_000);
+  assert.equal(inv.trust, 'T1'); assert.equal(inv.silkC, 1_600);
 });
 
 test('bounty: repeatable after its cooldown, full rate three times a day, then 10 %', () => {
@@ -70,8 +70,8 @@ test('bounty: repeatable after its cooldown, full rate three times a day, then 1
     assert.equal(questStatus(s, 'b_spiders', t), 'done'); assert.ok(act({ type: 'ACCEPT', questId: 'b_spiders' }).rejected, 'cooldown');
     t += 31 * 60e3;
   }
-  assert.deepEqual(pays, [30_000, 30_000, 30_000, 3_000, 3_000]);
-  t += 24 * H; assert.equal(rewardSilk(s, 'b_spiders', t), 300, 'a new day, full rate again');
+  assert.deepEqual(pays, [600, 600, 600, 100, 100]); // 6 silk, then round(0.6) = 1
+  t += 24 * H; assert.equal(rewardSilk(s, 'b_spiders', t), 6, 'a new day, full rate again');
 });
 
 test('full run: welcome → spiders → part → boss; the log verifies and earned-verified equals the rules', () => {
@@ -85,7 +85,7 @@ test('full run: welcome → spiders → part → boss; the log verifies and earn
   assert.ok(['q_welcome', 'q_spiders', 'q_part', 'q_boss'].every((id) => questStatus(state, id) === 'done'));
   let log = []; for (const [i, e] of events.entries()) log = [...log, makeEntry(log, { t: 1000 + i, ...e })];
   const v = verifyLog(log, { killVerifyCapC: EXPEDITION.killVerifyCapC });
-  const quests = (400 + 1000 + 800 + 3000) * 100, kills = 10 * EXPEDITION.kill.skitter + EXPEDITION.kill.crownrift;
+  const quests = (8 + 20 + 16 + 60) * 100, kills = 10 * EXPEDITION.kill.skitter + EXPEDITION.kill.crownrift;
   assert.equal(v.ok, true); assert.equal(v.earned, quests + kills); assert.equal(v.earnedVerified, quests + kills);
   assert.deepEqual(replayQuests(acts).state, state, 'replay gives the same state');
   assert.equal(events.find((e) => e.data.questId === 'q_boss' && e.kind === 'quest_turned_in').data.chest, 'rare');
@@ -104,5 +104,5 @@ test('resources: a turn-in needs the quest\'s monster resources and logs what it
   assert.equal(run(s, { type: 'TURN_IN', questId: 'q_spiders' }).rejected, 'needs');
   assert.equal(run(s, { type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 4 } }).rejected, 'needs');
   const ok = run(s, { type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 5 } });
-  assert.deepEqual(ok.events[0].data.consumed, { spider_silk_thread: 5 }); assert.equal(ok.events[0].silkC, 100_000);
+  assert.deepEqual(ok.events[0].data.consumed, { spider_silk_thread: 5 }); assert.equal(ok.events[0].silkC, 2_000);
 });

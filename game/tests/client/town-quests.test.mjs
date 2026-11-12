@@ -87,8 +87,8 @@ test('kills: ten skitters from the window event finish the spiders, the turn-in 
   const before = r.townLedger.silk;
   r.tq.act('guard', 'turnin:q_spiders');
   assert.equal(r.inventory.count('spider_silk_thread'), dropped, 'the turn-in consumed five threads');
-  assert.equal(r.townLedger.silk - before, 100_000);
-  r.tq.act('guard', 'turnin:q_spiders'); assert.equal(r.townLedger.silk - before, 100_000);
+  assert.equal(r.townLedger.silk - before, 2_000);
+  r.tq.act('guard', 'turnin:q_spiders'); assert.equal(r.townLedger.silk - before, 2_000);
   assert.equal(r.tq.quests.quests.q_spiders.state, 'done');
   assert.equal(r.tq.ledger.verify().ok, true);
 });
