@@ -533,8 +533,10 @@ function updateAltarTimer() {
   const visible = !altarOccluded && _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
   altarTimer.hidden = !visible;
   if (!visible) return;
-  const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  if (altarTimer.textContent !== text) altarTimer.textContent = text;
+  // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
+  const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
+  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
