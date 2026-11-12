@@ -12,6 +12,8 @@ import { TOWN_ORIGIN } from './town-layout.js';
 import { onField } from './town-outside.js';
 import { CASTS, createCastEffects } from './town-casting-fx.js';
 
+/** Seconds Iris stays rooted after the release frame of a cast (the overshoot and the held key pose); then a step cancels the settle. */
+export const CAST_ROOT_AFTER = 0.24;
 export const CAST_KEYS = Object.freeze({ KeyQ: 'lance', Digit1: 'lance', KeyV: 'snare', Digit2: 'snare' });
 const SLOTS = [['lance', 'Q'], ['snare', 'V']];
 /** UI-003 full-art icons (assets/ui/icons): the lance a burst of shards, the snare the targeting mark. */
@@ -46,11 +48,15 @@ const CSS = `
  * @param {object} o
  * @param {THREE.Scene} o.scene @param {THREE.Camera} o.camera @param {object} o.town scenes/town.js handle
  * @param {object} o.player CharacterController @param {object} o.i18n @param {boolean} [o.coarse] touch device
- * @param {(id: string, shot: {from: number[], point: number[], dir: number[]}) => void} [o.onCast] a cast left Iris's hands (her one-shot clip, the critters' hit test)
+ * @param {(id: string, shot: {from: number[], point: number[], dir: number[]}) => (number|void)} [o.onCastStart] the cast begins
+ *   (her wind-up clip starts). It may return the seconds until the release frame of that clip: the cast's effect, `onCast`
+ *   and `onFire` then wait for it, and she stands still until `CAST_ROOT_AFTER` s past it. Nothing returned: it leaves at once.
+ * @param {(id: string, shot: {from: number[], point: number[], dir: number[]}) => void} [o.onCast] a cast left Iris's hands, on the release frame (the sound, the critters' hit test)
+ * @param {() => (number[]|null)} [o.handPos] world position of her casting hand on the release frame (the snare's leash starts there)
  * @param {(c: {id: string, from: number[], dir: number[], point: number[]}) => void} [o.onFire] where it goes (play/mobs.js: the hits)
  * @param {Document} [o.doc]
  */
-export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, onFire = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
+export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCastStart = null, onCast = null, onFire = null, handPos = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
   const fx = createCastEffects(scene);
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
@@ -83,7 +89,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
   root.append(hint, bar);
   doc.body.append(root);
 
-  const state = { field: false, armed: null, cooldown: { lance: 0, snare: 0 }, aim: null, casts: 0, pointer: null, t: 0 };
+  const state = { field: false, armed: null, cooldown: { lance: 0, snare: 0 }, aim: null, casts: 0, pointer: null, t: 0, pending: null };
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
 
   function renderText() {
@@ -122,7 +128,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
 
   function release(point) {
     const id = state.armed, cast = CASTS[id];
-    if (!id || state.cooldown[id] > 0) return false;
+    if (!id || state.cooldown[id] > 0 || state.pending) return false;
     const from = player.pos;
     const target = point || (state.aim && state.aim.point);
     if (!target) return false;
@@ -130,19 +136,35 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     if (d < Math.max(cast.minRange, 0.3)) return false;
     const aim = fx.aim.show(cast, from, target, state.t, groundY);
     player.heading = Math.atan2(aim.dir[0], aim.dir[1]); player.prevHeading = player.heading; // she turns to the cast
-    const hand = [from[0] + aim.dir[0] * 0.35, from[1] + 1.35, from[2] + aim.dir[1] * 0.35];
-    fx.fire(id, { from: [from[0], from[1], from[2]], hand, dir: aim.dir, point: aim.point, groundY });
     state.cooldown[id] = cast.cooldown; state.casts++;
     setArmed(null);
-    if (onCast) onCast(id, { from: [from[0], from[1], from[2]], point: aim.point, dir: aim.dir }); // the critters take the hit (scenes/town-monsters.js)
-    if (onFire) onFire({ id, from: [from[0], from[1], from[2]], dir: aim.dir.slice(), point: aim.point.slice() });
+    const shot = { from: [from[0], from[1], from[2]], point: aim.point.slice(), dir: aim.dir.slice() };
+    const wait = onCastStart ? Number(onCastStart(id, shot)) || 0 : 0;      // her wind-up: the cast leaves on its release frame
+    doc.defaultView && doc.defaultView.dispatchEvent && doc.defaultView.dispatchEvent(new CustomEvent('ftf:cast', { detail: { id, phase: 'start', release: wait } }));
+    state.pending = { id, shot, t: 0, at: wait, fired: false };
+    if (wait <= 0) fire(state.pending);
     return true;
+  }
+
+  /** The release frame: the effect, the sound and the hits. */
+  function fire(p) {
+    p.fired = true;
+    const { id, shot } = p, from = player.pos;
+    const hand = (handPos && handPos()) || [from[0] + shot.dir[0] * 0.35, from[1] + 1.35, from[2] + shot.dir[1] * 0.35];
+    fx.fire(id, { from: [from[0], from[1], from[2]], hand, dir: shot.dir, point: shot.point, groundY });
+    doc.defaultView && doc.defaultView.dispatchEvent && doc.defaultView.dispatchEvent(new CustomEvent('ftf:cast', { detail: { id, phase: 'release', release: 0 } }));
+    if (onCast) onCast(id, shot); // the critters take the hit (scenes/town-monsters.js)
+    if (onFire) onFire({ id, from: shot.from.slice(), dir: shot.dir.slice(), point: shot.point.slice() });
   }
 
   return {
     fx, elements: { root, bar, hint },
     get field() { return state.field; }, get armed() { return state.armed; }, get casts() { return state.casts; },
     get busy() { return fx.busy; },
+    /** True from the click to shortly after the release frame: she winds up and lets go standing still (the caller holds her walk). */
+    get casting() { return !!state.pending; },
+    /** The cast in progress: {id, t, at (seconds to the release frame), fired}, or null. */
+    get pending() { return state.pending; },
 
     /** A world key (KeyQ, KeyV, Digit1, Digit2, Escape). Returns true when the field used it. */
     handleKey(code) {
@@ -172,6 +194,11 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
 
     update(dt, t, reducedMotion, visible = true) {
       state.t = t;
+      if (state.pending) {
+        const p = state.pending; p.t += dt;
+        if (!p.fired && p.t >= p.at) fire(p);
+        if (p.fired && p.t >= p.at + (p.at > 0 ? CAST_ROOT_AFTER : 0)) state.pending = null;
+      }
       const lx = player.pos[0] - TOWN_ORIGIN[0], lz = player.pos[2] - TOWN_ORIGIN[2];
       const field = visible && onField(lx, lz);
       if (field !== state.field) { state.field = field; root.hidden = !field; if (!field) setArmed(null); }
