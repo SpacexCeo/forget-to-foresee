@@ -268,9 +268,18 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null }) {
   const brain = new MobBrain({ origin, phone, seed });
   // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
-  const settle = (p) => { const y = floor ? floor(p[0], p[2]) : null; p[1] = y == null ? ground(p[0], p[2], p[1]) : y; };
-  for (const pack of brain.packs) settle(pack.home);
-  for (const m of brain.mobs) settle(m.pos);
+  // (the hillside's colliders are built when Iris first walks out of the gate, so a pack is settled as soon as its
+  // ground answers, not only at mount)
+  const unsettled = new Set(brain.packs);
+  function settlePacks() {
+    if (!floor) { unsettled.clear(); return; }
+    for (const pack of [...unsettled]) {
+      const y = floor(pack.home[0], pack.home[2]); if (y == null) continue;
+      pack.home[1] = y; unsettled.delete(pack);
+      for (const m of brain.mobs) if (m.pack === pack) { const my = floor(m.pos[0], m.pos[2]); m.pos[1] = my == null ? y : my; }
+    }
+  }
+  settlePacks();
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
@@ -425,6 +434,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (hpEl) hpEl.hidden = !outside;
       if (!active) return;
       iris.pos = player.pos; iris.outside = outside;
+      if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
       iris.iframes = Math.max(0, iris.iframes - dt); shake = Math.max(0, shake - dt * 2.5);
       iris.calm += dt;
