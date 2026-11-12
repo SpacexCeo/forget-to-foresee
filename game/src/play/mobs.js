@@ -212,13 +212,14 @@ function facing(m, p) {
 /* ------------------------------------------------------------------ the view */
 
 const CSS = `
-.ftf-hp { position: absolute; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(240px, 50vw); height: 10px; border-radius: 6px; background: rgba(10,12,16,.6); box-shadow: 0 0 0 1px rgba(255,255,255,.18); overflow: hidden; z-index: 6; pointer-events: none; }
+.ftf-hp { position: absolute; left: 50%; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(240px, 50vw); height: 10px; border-radius: 6px; background: rgba(10,12,16,.6); box-shadow: 0 0 0 1px rgba(255,255,255,.18); overflow: hidden; z-index: 6; pointer-events: none; }
 .ftf-hp[hidden] { display: none; }
 .ftf-hp > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #e2584f, #f0a15a); transition: width .2s ease; }
 .ftf-hp.ftf-hurt { animation: ftf-hp-shake .25s; }
 @keyframes ftf-hp-shake { 25% { transform: translateX(calc(-50% - 4px)); } 75% { transform: translateX(calc(-50% + 4px)); } }
 .ftf-hurt-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 4; box-shadow: inset 0 0 120px 30px rgba(200, 30, 20, .55); opacity: 0; transition: opacity .35s ease; }
 .ftf-hurt-vignette.on { opacity: 1; transition: none; }
+@media (max-width: 700px) { .ftf-hp { bottom: calc(190px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { .ftf-hp.ftf-hurt { animation: none; } .ftf-hp > i { transition: none; } }
 `;
 
