@@ -45,9 +45,10 @@ const CSS = `
  * @param {THREE.Scene} o.scene @param {THREE.Camera} o.camera @param {object} o.town scenes/town.js handle
  * @param {object} o.player CharacterController @param {object} o.i18n @param {boolean} [o.coarse] touch device
  * @param {(id: string) => void} [o.onCast] a cast left Iris's hands (her one-shot clip)
+ * @param {(c: {id: string, from: number[], dir: number[], point: number[]}) => void} [o.onFire] where it goes (play/mobs.js: the hits)
  * @param {Document} [o.doc]
  */
-export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, doc = globalThis.document }) {
+export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, onFire = null, doc = globalThis.document }) {
   const fx = createCastEffects(scene);
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
@@ -118,6 +119,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     state.cooldown[id] = cast.cooldown; state.casts++;
     setArmed(null);
     if (onCast) onCast(id);
+    if (onFire) onFire({ id, from: [from[0], from[1], from[2]], dir: aim.dir.slice(), point: aim.point.slice() });
     return true;
   }
 

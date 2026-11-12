@@ -191,7 +191,7 @@ function mountTownAudio() {
   if (townAudio) return;
   Promise.all([import('./audio/audio.js'), import('./audio/town-audio.js')]).then(([a, t]) => { if (!townAudio && inTown) townAudio = t.createTownAudio({ createAudio: a.createAudio }); }).catch((e) => console.warn('[town] audio', e));
 }
-let town = null, townFlow = null, townCasting = null, inTown = false, townGrounded = false, irisAvatar = null;
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -325,7 +325,23 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
-    onCast: (id) => { cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+    onCast: (id) => { cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); }, // her hand goes up with the cast
+    onFire: (c) => { if (townMobs) townMobs.cast(c); } });
+  mountMobs();
+}
+/** The monsters on the hillside (play/mobs.js): packs beyond the walls that Iris's two casts fight. */
+function mountMobs() {
+  if (townMobs || !town || params.get('mobs') === '0') return;
+  const T = town;
+  Promise.all([import('./play/mobs.js'), import('./render/mob-fx.js'), import('three/addons/utils/SkeletonUtils.js')]).then(([m, fx, su]) => {
+    if (townMobs || town !== T) return;
+    const ground = (x, z, nearY) => { const hit = rayCast(T.world, [x, nearY + 6, z], [0, -1, 0], 20, MASK_PLAYER); return hit ? hit.point[1] : nearY; };
+    const gate = [TOWN_ORIGIN_W[0], 0, TOWN_ORIGIN_W[2] + 42]; gate[1] = ground(gate[0], gate[2], TOWN_ORIGIN_W[1]) + 0.1;
+    townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
+      MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
+      phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
+      onFeedback: (k) => cue(k === 'kill' ? 'memory_dissolve' : 'ui_error') });
+  }).catch((e) => console.warn('[mobs]', e));
 }
 function returnToTown() {
   if (!town || !townFlow || inTown || !play) return;
@@ -352,6 +368,7 @@ async function leaveTown() {
   clearWorldInput();
   town.setActive(false);
   if (townCasting) { townCasting.dispose(); townCasting = null; }
+  if (townMobs) { townMobs.dispose(); townMobs = null; }
   if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
   if (photo) { photo.toggle(false); photo.setAvailable(false); }
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
@@ -773,6 +790,7 @@ function frame() {
     town.update(clock.elapsedTime, dt, townFrame);
     if (fogCards) fogCards.update(clock.elapsedTime, camera, (lookdev.look.mistCards || 0) + lookdev.weather.state.rain * 0.3, scene.fog.color, { reducedMotion: lookdev.reducedMotion, enabled: lookdev.tier !== 'low' });
     if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy && !(townShops && townShops.inside)); // no casts indoors
+    if (townMobs) townMobs.update(dt, entered && !(townShops && townShops.inside));
     lookdev.setHeroLight(town.altar.core || town.altar.focus, town.altar.glow / CORE_GLOW.awake); // the altar's amber is the strongest local light
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
@@ -836,6 +854,7 @@ window.__ftf = {
     get promptVisible() { return townFlow.promptVisible; }, get phase() { return townFlow.phase; }, get walkMs() { return townFlow.walkMs; },
     register: () => townFlow.register(), walkRoute: () => townFlow.walkRoute(), status: () => town.status(),
     get casting() { return townCasting; }, // the field beyond the walls (QA: aimAt, release)
+    get mobs() { return townMobs; }, // the monsters on the hillside (QA: brain, iris)
     get shops() { return townShops; }, // walk-in shops (QA: enter('exchange'), leave())
     get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
     get barks() { return townBarks; }, // townsfolk lines (QA: current)
