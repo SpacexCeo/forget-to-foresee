@@ -38,3 +38,24 @@ that the new views answer.
 
 **Not in v2** (rev 4 lists them; they would need more state): the per-account story caps, `story_day_cap` and
 `story_locked` silk. They can come in v3 under new keys the same way.
+
+## v3: paying the gate for a guest
+
+The guests' browser keys are function-call keys of the guests contract, so they cannot sign `pay_gate` here. v3
+adds:
+
+- **`pay_gate_for(account_id, gate_id, request_hash)`**, for coordinators only (the relayer's coordinator account).
+  It is called after the relayer has checked the guest's own signed portal request. The burn, the once-per-gate rule
+  and the refusal for the town's wallets are the same as `pay_gate`. The event `gate_paid` adds `by` and
+  `request_hash`.
+- **Replay safety.** `request_hash` (the sha256 of the signed request, 64 hex characters) goes into a NEW collection,
+  `StorageKey::GateRequests`, appended at the end, and a used hash is refused (`ERR_GATE_REQUEST`). View:
+  `gate_request_used`.
+
+The stored root and every stored struct, including v2's `GateRecord`, are unchanged, so v2's records read as before.
+The v1-state fixture test still passes. 53 unit tests in total. Deploy with the same script:
+`bash contracts/scripts/town-upgrade.sh` (no init call, no migration).
+
+Before the relayer can use it, the owner adds the relayer's account to the coordinators:
+`set_coordinators(["ftf-coordinator.testnet", "<relayer account>"])`. Coordinators can already register accounts and
+credit silk inside the daily ceiling, so this adds no new power beyond the gate.
