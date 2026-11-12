@@ -216,6 +216,10 @@ export class FootPlant {
     const stand = reduced ? 0 : smooth(1 - move * 1.6) * (1 - free);
     this.weight = stand;
     // the body's real speed over the ground: the game stops and taps faster than the gait's weight can follow
+    if (this.last && Math.hypot(group.position.x - this.last.x, group.position.z - this.last.z) > 1.5) { // a teleport (respawn, a door): the feet come along
+      for (const l of this.legs) l.active = l.stepping = false;
+      this.last.copy(group.position); this.yaw = heading; this.recent = 0;
+    }
     if (this.last && dt > 1e-4) this.speed = Math.hypot(group.position.x - this.last.x, group.position.z - this.last.z) / dt;
     (this.last ||= new THREE.Vector3()).copy(group.position);
     const going = Math.min(1 - stand, clamp(this.speed / 1.2, 0, 1));   // 0 = standing (a tap is not a walk), 1 = really moving
