@@ -69,12 +69,13 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   let lastLen = -1, lastSys = null;
   function render() {
     const on = presence.status === 'online';
-    chip.dataset.on = on ? '1' : '0';
-    chip.querySelector('span').textContent = on ? t('mp.chip', { n: presence.count, room: presence.room }) : presence.status === 'connecting' ? t('mp.connecting') : t('mp.offline');
+    const demo = presence.status === 'demo';
+    chip.dataset.on = on || demo ? '1' : '0';
+    chip.querySelector('span').textContent = on ? t('mp.chip', { n: presence.count, room: presence.room }) : demo ? t('mp.demo', { n: presence.count - 1 }) : presence.status === 'connecting' ? t('mp.connecting') : t('mp.offline');
     input.disabled = send.disabled = !on;
     if (!open) return;
     const sys = presence.sys;
-    if (presence.chat.length === lastLen && sys === lastSys) return;
+    if (presence.chat.length === lastLen && sys === lastSys && log.childElementCount) return;
     lastLen = presence.chat.length; lastSys = sys;
     const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
     log.replaceChildren(...presence.chat.map((m) => {
@@ -85,7 +86,7 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
       return li;
     }));
     if (sys && ['muted', 'slow_down', 'filtered', 'reported', 'full', 'kicked'].includes(sys.key)) log.append(el('li', 'sys', t('mp.sys.' + sys.key, { s: sys.s || 0 })));
-    if (!presence.chat.length && !sys) log.append(el('li', 'sys', on ? t('mp.empty') : t('mp.offlineLine')));
+    if (!presence.chat.length && !sys) log.append(el('li', 'sys', on ? t('mp.empty') : demo ? t('mp.demoLine') : t('mp.offlineLine')));
     if (atBottom) log.scrollTop = log.scrollHeight;
   }
   render();

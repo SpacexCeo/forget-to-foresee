@@ -1273,4 +1273,6 @@ export default {
   'mp.sys.reported': "Thanks, reported.",
   'mp.sys.full': "Every room is full right now; you are playing alone.",
   'mp.sys.kicked': "Disconnected from the shared town.",
+  'mp.demo': "{n, plural, one {# demo walker} other {# demo walkers}} · simulated in this browser",
+  'mp.demoLine': "These walkers are simulated in your browser (?bots). Nobody else is here and nothing is sent.",
 };
