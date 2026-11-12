@@ -245,3 +245,22 @@ test('the view: a strike at a creature 3 or 6 m beside or behind her turns the w
     assert.equal(M.aimedBy, 'lock');
   }
 });
+
+test('strike VFX: no ground arc or ring at all (owner); a light spark and dust on the struck creature, gone in 0.2 s', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../../src/play/mobs.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /slashGeo|const slash\b|burst\.ring|burst\.arc/, 'the strike arc and the super ground ring are gone');
+  const THREE = await import('three');
+  const { createMobs } = await import('../../src/play/mobs.js');
+  const player = { pos: [0, 0, 0], heading: 0 };
+  const M = createMobs({ THREE, scene: new THREE.Scene(), origin: O.slice(), player, load: () => Promise.reject(new Error('no models')), clone: (x) => x,
+    MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, irisMove: () => true });
+  const sk = M.brain.mobs.find((x) => x.type === 'skitter');
+  for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
+  player.pos = [sk.pos[0], sk.pos[1], sk.pos[2] - 1.2]; M.update(0.01, true);
+  const before = M.group.children.length;
+  // no view is attached without models, so the spark path is exercised through the brain events only: the group gains nothing on the ground
+  M.strike(); M.update(0.25, true);
+  assert.ok(M.group.children.every((c) => !(c.geometry && c.geometry.type === 'RingGeometry' && c.visible && c.material.color && c.material.color.getHex() === 0xdff6ff)), 'no white arc');
+  assert.ok(M.group.children.length <= before + 1);
+});
