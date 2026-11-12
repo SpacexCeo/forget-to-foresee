@@ -25,6 +25,11 @@ await page.evaluate(async () => {
   let y = 1300; for (let i = 0; i < 8; i++) { const h = col.rayCast(f.town.scene.world, [-35, y, 59.5], [0, -1, 0], 500, col.MASK_PLAYER); if (!h) break; if (h.normal[1] > 0.7) { y = h.point[1]; break; } y = h.point[1] - 0.05; }
   f.player.teleport([-35, y + 0.1, 59.5], Math.PI / 2);
 });
+// the camera: behind her and low, looking across the field to the horizon (the game's own rig, then placed)
+await page.evaluate(() => {
+  const f = window.__ftf, orig = f.rig.update.bind(f.rig);
+  f.rig.update = (...a) => { orig(...a); const p = f.player.renderPos ? f.player.renderPos(1) : f.player.pos, cam = f.rig.camera; cam.position.set(p[0] - 5.2, p[1] + 1.9, p[2] + 1.6); cam.lookAt(p[0] + 30, p[1] + 2.2, p[2] - 4); cam.updateMatrixWorld(true); };
+});
 await page.waitForTimeout(2500);
 const cells = [];
 for (const hour of hours) for (const st of STATES) {
