@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { MODEL_FILES } from 'virtual:model-list';
-import { fetchGltf } from '../render/assets.js';
+import { fetchGltf, getModelVariant } from '../render/assets.js';
 import { warmModel } from '../render/warmup.js';
 import { upgradeAssetMaterials } from '../render/materials.js';
 import { CAMPS, PLATEAU_RADIUS } from '../scenes/layout.js';
@@ -148,7 +148,8 @@ class Agent {
     if (!MODEL_FILES[this.asset]) { this.state = 'missing'; return; }
     this.state = 'loading';
     try {
-      const { gltf } = await fetchGltf(this.asset);
+      const v = getModelVariant(); // phones and the low tier take agent_<clan>_m.glb when the build ships it
+      const { gltf } = await fetchGltf(v && MODEL_FILES[this.asset + v] ? this.asset + v : this.asset);
       const model = cloneSkinned(gltf.scene);
       upgradeAssetMaterials(this.asset, model);
       model.traverse((o) => {
