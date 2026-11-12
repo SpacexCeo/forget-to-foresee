@@ -1,4 +1,4 @@
-// Remote feature flags (src/features.js, FEED FIRE teardown M8): defaults off, a remote file merges only known names
+// Remote feature flags (src/features.js, a reference game teardown M8): defaults off, a remote file merges only known names
 // with real booleans, failures (offline, timeout, bad JSON, HTTP error) keep the defaults, the source is reported.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

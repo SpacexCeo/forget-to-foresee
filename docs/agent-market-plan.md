@@ -18,7 +18,7 @@ Efte proposed a trading game on real market values, paid only in in-game currenc
 
 **Recommended scope before code freeze (13 Nov 2026 20:00 Kyiv):** ship **Scope A (Judge Echo)** only after **P0 and P1-C** from the TZ are green (P1-A ideally too). Treat Scope A as the TZ's leftover timed challenge (**replace P2-A "Predict three events"**, do not build both). If P0 or P1-C are still open at **13 Nov 14:00 Kyiv**, **cut the Exchange entirely** from the submission build and leave this document as post-hackathon work.
 
-**Why this gate exists.** The TZ is explicit: do not start a second game, do not rewrite `game/src/game/engine.js`, do not host the agent API, and do not spend freeze week on P3. Crownfall already shows a finishable 3D loop. A broken Shell or a missing shard card loses the hackathon faster than a missing market.
+**Why this gate exists.** The TZ is explicit: do not start a second game, do not rewrite `game/src/game/engine.js`, do not host the agent API, and do not spend freeze week on P3. a rival entry already shows a finishable 3D loop. A broken Shell or a missing shard card loses the hackathon faster than a missing market.
 
 **Hard rules for any Exchange work:**
 
@@ -42,7 +42,7 @@ Do not frame it as a bank, a DEX, or a brokerage. It is a **Foresight Exchange**
 
 ### Why it helps Games / NFTs judging
 
-- **Fun, still Arrival.** A 90-second drill at a real counter is a verb judges can see, not a mermaid-market clone of Lunearcy or Crownfall.
+- **Fun, still Arrival.** A 90-second drill at a real counter is a verb judges can see, not a mermaid-market clone of Lunearcy or a rival entry.
 - **Agents, visibly.** The five AI clans already act inside `startTick`. Here they stand on a shared board and place the same `place_order` action a human places. That is closer to "NPCs with wallets" in *spirit* (in-game purses, no NEAR wallets) than a silent autopilot.
 - **Real usage, honestly.** A local, shareable result (seed, snapshot hash, scores) is usage without a fake weekly tournament. The existing lobby card is still a labeled simulation (`game/src/ui/tournament.js`).
 - **NFT, only if true.** Scope A mints nothing. Scope B may coordinator-mint a badge or commit a result root on testnet, with the same honesty rules as shards (`ftf-shards.testnet`) and the undeployed `agent-card`.
@@ -142,7 +142,7 @@ Build only after the submission is out.
 
 ### 5.2 Price source
 
-**Provider for the frozen snapshot (Scope A):** [Frankfurter](https://www.frankfurter.app/) (`https://api.frankfurter.app`), a free, no-key wrapper around European Central Bank reference rates. License and attribution must be copied into the snapshot file and the README. This is FX, not a crypto casino, which keeps the "not a trading bot" read cleaner than CoinGecko.
+**Provider for the frozen snapshot (Scope A):** [Frankfurter] (`https://api.frankfurter.app`), a free, no-key wrapper around European Central Bank reference rates. License and attribution must be copied into the snapshot file and the README. This is FX, not a crypto casino, which keeps the "not a trading bot" read cleaner than CoinGecko.
 
 **Snapshot file:** `game/public/data/exchange-snapshot-v1.json` (and a copy under `game/src/game/exchange/` if the public path is awkward for Node tests).
 
@@ -334,7 +334,7 @@ Register new game tests in `game/package.json` `"test"` (it is an explicit list)
 
 | Risk | Mitigation |
 |---|---|
-| Scope creep vs Crownfall / P0 quality | Gate in §0 and the 13 Nov 14:00 / 16:00 cut line. Overlay-only fallback. |
+| Scope creep vs a rival entry / P0 quality | Gate in §0 and the 13 Nov 14:00 / 16:00 cut line. Overlay-only fallback. |
 | Looks like a trading venue or unlicensed investment | FX historical rates, practice silk, disclaimer, Arrival tone, no cash-out, no live book. |
 | Legal / trust: "real market values" | Every screen: no real money, not financial advice, historical reference rates. No solicitation to trade those pairs outside the game. |
 | Feed outage | Scope A never hits the network in play. Scope B falls back to snapshot. |

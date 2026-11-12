@@ -1,4 +1,4 @@
-// Floating numbers, the pure part (src/ui/float-numbers-core.js, FEED FIRE teardown M5): the merge window, the growth
+// Floating numbers, the pure part (src/ui/float-numbers-core.js, a reference game teardown M5): the merge window, the growth
 // cap, crits, the curve with and without reduced motion, the pool limit and the texts.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
