@@ -38,8 +38,17 @@ front of the server, for example Cloudflare (free plan proxies WebSockets) on a 
 name — an owner option. Also not stopped: one person with many IPs joining several rooms; players saying unkind things
 the filter does not know (mute and report exist for that).
 
+## Seeing it without friends
+
+- `?bots=3` (1–14) in the game, with no presence service configured: demo walkers simulated in your browser walk
+  the jury route; the chip says "3 demo walkers · simulated in this browser" and nothing is sent anywhere. With a
+  service configured the real room wins and `?bots` does nothing.
+- Against a local or test server, real sockets: `PER_IP=20 node presence/server.js` then
+  `node presence/tools/bots.mjs --url ws://127.0.0.1:8788/presence --count 3`. The script refuses the live host and any
+  host other than localhost unless named with `--test-host`.
+
 ## Status
 
 Built and tested (`cd presence && npm test`; the game's `tests/client/presence.test.mjs`; a two-browser run against a
 local server showed the other player's avatar with its tag and the chat line). Live only once the owner's executor
-deploys it (`docs/handoff/presence-deploy.md`) and its URL is in `game/src/net/day1-deployment.js` (`presence`).
+deploys it (`docs/handoff/relayer-tee-deploy.md`, steps 5–6) and its URL is in `game/src/net/day1-deployment.js` (`presence`).
