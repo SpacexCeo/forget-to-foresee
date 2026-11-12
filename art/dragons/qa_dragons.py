@@ -10,7 +10,7 @@ from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 OUT, SRCS = argv[0], argv[1:]
-POSES = [("glide", 10, "front"), ("fly", 3, "front"), ("idle", 22, "side"), ("flip", 9, "side")]
+POSES = [("glide", 10, "front"), ("fly", 3, "q"), ("idle", 22, "side"), ("glide", 0, "top"), ("flip", 14, "side"), ("perch", 20, "q"), ("cheer", 12, "front"), ("land", 12, "side")]
 tiles = []
 for src in SRCS:
     for clip, frame, view in POSES:
@@ -18,6 +18,13 @@ for src in SRCS:
         sc = bpy.context.scene
         bpy.ops.import_scene.gltf(filepath=src)
         arm = [o for o in bpy.data.objects if o.type == "ARMATURE"][0]
+        for o in [o for o in bpy.data.objects if o.type == "MESH"]:      # the outline hull needs back-face culling: not in this renderer
+            idx = [i for i, m in enumerate(o.data.materials) if m and m.name.startswith("M_Dragon_Outline")]
+            if idx:
+                import bmesh
+                bm = bmesh.new(); bm.from_mesh(o.data)
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index in idx], context="FACES")
+                bm.to_mesh(o.data); bm.free()
         act = next(a for a in bpy.data.actions if a.name.startswith(clip))
         arm.animation_data_create()
         arm.animation_data.action = act
@@ -43,9 +50,9 @@ for src in SRCS:
         sc.collection.objects.link(sun)
         cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
         sc.collection.objects.link(cam)
-        cam.location = (0, -2.2, 0.35) if view == "front" else (2.0, -0.9, 0.5)
-        cam.rotation_euler = (Vector((0, 0, 0.03)) - cam.location).to_track_quat("-Z", "Y").to_euler()
-        cam.data.lens = 50
+        cam.location = {"front": (0, -1.5, 0.22), "side": (1.5, -0.2, 0.2), "q": (0.95, -1.15, 0.45), "top": (0.0, 0.04, 1.9)}[view]
+        cam.rotation_euler = (Vector((0, 0.02, 0.02)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+        cam.data.lens = 85
         sc.camera = cam
         path = OUT + f".{len(tiles)}.png"
         sc.render.filepath = path

@@ -373,6 +373,8 @@ def main():
     ap.add_argument('--legs', type=float, default=1.0, help='scale of the steps and of the hips\' drop (Elise: her gown hides the legs and must not be cut)')
     ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
     a = ap.parse_args()
+    cfg_ = json.load(open(os.path.join(HERE, 'clips.json')))['characters']      # the character's own chain params (a firm bun)
+    chains.use_character(next((v for v in cfg_.values() if os.path.basename(v.get('model', '')) == os.path.basename(a.model)), None))
     globals()['RELEASE_S'] = a.release
     for k_ in ('cast_lance', 'cast_snare'): EXTRAS[k_]['release_s'] = EXTRAS[k_]['step_s'] = a.release
     rig = Rig(a.model)
@@ -401,6 +403,7 @@ def main():
                 raise SystemExit(f'{name}: a leg cuts the gown')
         else:
             local = chains.simulate(rig, local, pel, fps=FPS, loop=False)
+            print(name, 'chain lag max (deg):', {k: round(v, 1) for k, v in chains.LAG.items()})
         slip = keyed.planted_slip(rig, local, pel, FPS, keys)
         print(name, len(local), 'frames', 'planted slip max %.4f m/s' % slip)
         if a.sheet:
