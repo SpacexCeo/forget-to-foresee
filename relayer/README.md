@@ -73,12 +73,7 @@ batch is a no-op; a fork or a gap is refused (409). `GET /api/expedition/log?gue
 and head. Without `FTF_EXPEDITION_DIR` nothing is stored and the answer says `storage_off`. The pass
 (`lib/pass-eligibility.js`) reads the same files. Code: `lib/expedition-store.js`, `api/expedition/log.js`.
 
-**Story credits on chain (rev 4).** With `FTF_STORY_CREDIT=1`, `FTF_TOWN_COORDINATOR` (a coordinator of `ftf-town`)
-and `FTF_TOWN_COORDINATOR_KEY` (its key, only in the server's `.env`), every stored positive story entry (quest,
-bounty, kill ticket, stipend) is credited with `credit_silk(account, micro-silk, "story:<kind>:<seq>")`, in log order,
-capped at 100 silk per account a UTC day, 230 in total and 6,000 a day for all accounts; what a cap holds back waits
-(FIFO). State per guest: `<guest>.credit.json` next to the log. The player pays the Gate-Loom with their own
-`pay_gate` call (the browser signs it with the guest key). Code: `lib/story-credit.js`.
+The portal's on-chain credits and `pay_gate_for` are `api/town/gate.js` (docs/town-gate.md); they read these logs.
 
 ## Test
 

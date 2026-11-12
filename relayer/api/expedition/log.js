@@ -6,8 +6,6 @@
 import { cors, createBucket, envConfig, clientIp } from '../../lib/core.js';
 import { createTxClient } from '../../lib/near-tx.js';
 import { STORE, validateLogBatch, logSignatureValid, appendBatch, logStatus } from '../../lib/expedition-store.js';
-import { creditEnv, creditStory, coordinatorSender } from '../../lib/story-credit.js';
-import { loadLog } from '../../lib/pass-eligibility.js';
 
 const ipBucket = createBucket({ capacity: 30, refillMs: 2 * 1000 });
 const guestBucket = createBucket({ capacity: 20, refillMs: 3 * 1000 });
@@ -53,12 +51,6 @@ export function expeditionLogHandler(opts = {}) {
     if (!owns) return json(res, 403, { error: 'not_your_key' });
     let r;
     try { r = await appendBatch(v, { dir, now }); } catch (e) { return json(res, 500, { error: 'store', message: String((e && e.message) || e).slice(0, 120) }); }
-    // story credits on chain (rev 4): the stored, checked entries become credit_silk calls by the coordinator, capped
-    if (r.status === 200 && r.body.stored) {
-      const ccfg = creditEnv(env), send = opts.sendCredits || (ccfg.on ? coordinatorSender(ccfg, { rpcUrls: cfg.rpcUrls, fetch: opts.fetch || globalThis.fetch }) : null);
-      if (send) { try { r.body.credit = await creditStory({ dir, guest: v.accountId, log: loadLog(dir, v.accountId) || [], now, send }); } catch (e) { r.body.credit = { credited: 0, error: 'credit_failed' }; } }
-      else r.body.credit = { credited: 0, error: 'credits_off' };
-    }
     return json(res, r.status, r.body);
   };
 }

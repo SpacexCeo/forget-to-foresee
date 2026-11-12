@@ -4,7 +4,7 @@
 //
 //  1. CREDIT. The silk a guest earned in the game is its stored, hash-chained expedition log (lib/expedition-store.js,
 //     verified with the shared rules' verifyLog: T2 income in full, T1 kill income up to its cap). Scaled to the
-//     on-chain gate (game fee 10,000 → gate price, 200 by default: ×0.02), that is what the guest may hold on
+//     on-chain gate (× gate_price / the game's fee; 1 since rev 4 put the game on the gate's scale), that is what the guest may hold on
 //     ftf-town. The relayer registers the guest and credits the difference with credit_silk, within a daily cap per
 //     guest and the contract's own ceiling, idempotently: a per-guest ledger records what was credited, written
 //     before the call and rolled back if the call fails.

@@ -79,7 +79,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   // The Gate-Loom is paid on chain (rev 4): its price and the player's silk are ftf-town's gate_price and balance_of,
   // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
   let chain = { ok: false, reason: gate ? 'loading' : 'not_configured', priceC: EXPEDITION.PORTAL_FEE_C, balanceC: 0, paid: null }, lastRead = -Infinity, reading = false, payError = null;
-  const feeC = () => (chain.ok ? chain.priceC : EXPEDITION.PORTAL_FEE_C), balanceC = () => (chain.ok ? chain.balanceC : 0);
+  const feeC = () => (chain.ok ? chain.priceC : EXPEDITION.PORTAL_FEE_C);
+  // what the guest can pay with: the on-chain silk, or the verified income of the log, which the relayer credits before it pays
+  const balanceC = () => (chain.ok ? Math.max(chain.balanceC, ledger ? ledger.earnedVerifiedC : 0) : 0);
   const fee = { get feeC() { return feeC(); }, demo: false };
   async function refreshChain() {
     if (!gate || reading) return chain; reading = true; lastRead = now();

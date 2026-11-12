@@ -8,8 +8,8 @@ import { generateKeyPair, importSecretKey, b58encode } from '../lib/near-tx.js';
 const M = 1_000_000n, PRICE = 200n * M;
 const NOW = Date.UTC(2026, 10, 13, 12);
 function logOf(entries) { const log = []; for (const e of entries) log.push(makeEntry(log, e)); return log; }
-// 6,000 game silk of T2 quest income and 8,000 of T1 kills (cap 5,000): verified 11,000 game silk -> 220 silk on chain
-const LOG = logOf([{ t: 1, kind: 'quest_turned_in', silkC: 600_000, trust: 'T2' }, { t: 2, kind: 'kill_ticketed', silkC: 800_000, trust: 'T1' }]);
+// rev 4 scale (story rewards × 0.02, game fee 200): 120 silk of T2 quest income and 160 of T1 kills (cap 100): verified 220 -> 220 silk on chain
+const LOG = logOf([{ t: 1, kind: 'quest_turned_in', silkC: 12_000, trust: 'T2' }, { t: 2, kind: 'kill_ticketed', silkC: 16_000, trust: 'T1' }]);
 
 function chain({ silk = 0n, registered = false } = {}) {
   const calls = [], st = { silk, registered, paid: new Set(), used: new Set() };
@@ -37,7 +37,7 @@ const deps = (c, extra = {}) => ({ client: c.client, cfg: { town: 'ftf-town.test
 
 test('gate: what a guest may hold is its verified income scaled to the gate (10,000 game silk -> 200 on chain)', () => {
   assert.equal(creditableMicro(LOG, PRICE), 220n * M);
-  const broken = LOG.map((e) => ({ ...e })); broken[1].silkC = 900_000;
+  const broken = LOG.map((e) => ({ ...e })); broken[1].silkC = 18_000;
   assert.equal(creditableMicro(broken, PRICE), null); // a tampered log credits nothing
   assert.equal(creditableMicro([], PRICE), null);
 });
@@ -84,7 +84,7 @@ test('gate: bad signature, someone else\'s key, stale request or too little silk
   assert.equal((await payGateFor({ ...v, signature: v.signature.slice(0, -2) + '11' }, deps(chain()))).status, 401);
   assert.equal((await payGateFor({ ...v, accountId: 'eve.testnet', message: gateMessage('eve.testnet', 'portal-1', NOW) }, deps(chain()))).status, 401);
   assert.equal(validateRequest({ account_id: 'ann.testnet', public_key: v.publicKey, at: NOW - 10 * 60_000, gate_id: 'g', signature: 'x' }, NOW, { gate: true }).error, 'stale');
-  const poor = await payGateFor(await signed(), deps(chain(), { loadLog: () => logOf([{ t: 1, kind: 'quest_turned_in', silkC: 100_000, trust: 'T2' }]) }));
+  const poor = await payGateFor(await signed(), deps(chain(), { loadLog: () => logOf([{ t: 1, kind: 'quest_turned_in', silkC: 2_000, trust: 'T2' }]) }));
   assert.equal(poor.status, 402); assert.equal(poor.body.error, 'not_enough_silk');
 });
 

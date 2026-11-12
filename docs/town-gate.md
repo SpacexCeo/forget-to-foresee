@@ -8,8 +8,9 @@ the guests contract and cannot sign to `ftf-town`. The relayer acts for the gues
 - **The source** is the guest's stored, hash-chained expedition log (`POST /api/expedition/log`, kept in
   `FTF_EXPEDITION_DIR`). It is verified with the shared rules' `verifyLog`: T2 income counts in full, T1 kill income
   up to its cap (5,000 game silk).
-- **The scale** maps the game's portal fee to the on-chain gate price: game fee 10,000 silk → `gate_price` (200 by
-  default), so ×0.02. For example, 11,000 verified game silk gives 220 silk on chain.
+- **The scale** maps the game's portal fee to the on-chain gate price: `income × gate_price / PORTAL_FEE_C`. Since story
+  rev 4 the game's own fee and rewards are already on the gate's scale (fee 200 silk, rewards × 0.02), so the factor is 1
+  while `gate_price` stays 200: 220 verified game silk gives 220 silk on chain. If the owner moves `gate_price`, the factor follows.
 - **What happens**:
   - The relayer registers the guest on `ftf-town` (`register`) if needed.
   - It credits the difference between that amount and what it credited before (`credit_silk`, reference
