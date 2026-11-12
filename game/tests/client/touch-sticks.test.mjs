@@ -32,3 +32,20 @@ test('mode persists, joysticks by default; input reads the stick', () => {
   const src = readFileSync(new URL('../../src/ui/input.js', import.meta.url), 'utf8');
   assert.match(src, /this\.stickMove/); assert.match(src, /this\.stickRun/);
 });
+
+// Touch-aware copy (src/ui/touch-copy.js): no keyboard keys on touch.
+import { touchCopy, installTouchCopy } from '../../src/ui/touch-copy.js';
+import en from '../../src/play/locales/en.js';
+test('touch copy: bracketed keys vanish, key phrases become touch actions', () => {
+  assert.equal(touchCopy('Walk there (G)'), 'Walk there');
+  assert.equal(touchCopy('End tick 3 (T)'), 'End tick 3');
+  assert.equal(touchCopy(en['day1.hint.skin']), 'Switch your heroine between Iris and Elise any time: tap ⇄ on your portrait.');
+  assert.equal(touchCopy(en['board.2']), 'Walk up to anyone and tap Use to talk; any townsperson can be hired as your agent.');
+  assert.equal(touchCopy(en['board.6']), 'Tap Use at the Tournament altar to begin the season. The Controls button opens the menu.');
+  assert.equal(touchCopy(en['map.hint']), 'Tap a place to walk there. Tap ✕ to close the map.');
+  assert.equal(touchCopy(en['town.cast.hint']), 'Release to cast · drag to the left to cancel');
+  assert.equal(touchCopy('Карта (N)'), 'Карта');
+  let touch = false; const i18n = { t: (k) => ({ a: 'Map (N)' })[k] };
+  installTouchCopy(i18n, () => touch); installTouchCopy(i18n, () => touch);
+  assert.equal(i18n.t('a'), 'Map (N)'); touch = true; assert.equal(i18n.t('a'), 'Map');
+});

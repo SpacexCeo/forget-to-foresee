@@ -70,8 +70,9 @@ export function createChatPanel({ doc = globalThis.document, t, presence, phone 
   function render() {
     const on = presence.status === 'online';
     const demo = presence.status === 'demo';
-    chip.dataset.on = on || demo ? '1' : '0';
+    chip.dataset.on = on || demo ? '1' : '0'; chip.dataset.n = String(on || demo ? presence.count : 0); // the HUD's compact chip: people icon + number
     chip.querySelector('span').textContent = on ? t('mp.chip', { n: presence.count, room: presence.room }) : demo ? t('mp.demo', { n: presence.count - 1 }) : presence.status === 'connecting' ? t('mp.connecting') : t('mp.offline');
+    chip.title = chip.querySelector('span').textContent; chip.setAttribute('aria-label', chip.title); // the compact chip hides the line
     input.disabled = send.disabled = !on;
     if (!open) return;
     const sys = presence.sys;
