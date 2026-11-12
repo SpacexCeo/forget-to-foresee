@@ -490,7 +490,7 @@ function updateAltarTimer() {
   }
   const a = TOWN_ALTAR.position;
   _altarP.set(a[0], a[1] + 4.2, a[2]).project(camera);
-  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1;
+  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
   altarTimer.hidden = !visible;
   if (!visible) return;
   const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
@@ -507,6 +507,8 @@ function updateAltarTimer() {
  * reduced motion never show it. Remembered in this browser. Resolves when it is over.
  */
 const INTRO_KEY = 'ftf.intro.v1';
+/** A Day-1 panel (welcome, name, cards, claim) is on screen: the street's talk prompts and barks wait. */
+const day1Open = () => !!document.querySelector('.d1-panel, .d1-card');
 let introOn = false; // the intro flight is on screen (the barks wait)
 function introFly(ms = 6500) {
   let seen = false; try { seen = !!(ctx.storage && ctx.storage.getItem(INTRO_KEY)); } catch { /* none */ }
@@ -551,6 +553,8 @@ function flyIn(ms) {
 }
 async function startDay1() {
   if (!day1On()) return;
+  // never over the loading screen: when the intro flight is skipped this runs before the cover lifts (phone pass, 12.11)
+  for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
   const m = await import('./play/day1.js');
   await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
@@ -867,7 +871,7 @@ function frame() {
       for (const inst of streamer.instances) if (inst.real && (inst.name === 'town_block_mid' || inst.name === 'town_block_square')) inst.real.visible = !out;
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
-    if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
