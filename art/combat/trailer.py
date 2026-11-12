@@ -1,6 +1,6 @@
 """The 60 s trailer draft from the game's own captures (docs/art/combat/*.mp4), with ffmpeg.
 
-    python3 art/combat/trailer.py [out.mp4] [--v2] [--vertical out_vertical.mp4]
+    python3 art/combat/trailer.py [out.mp4] [--v2 | --v3] [--vertical out_vertical.mp4]
 
 Beats (docs/submission/video-recut-notes.md): the town and the title first, Elise, a shop, the fight beyond the walls,
 the brute and the elite, a chest drop, the Tournament's archipelago, the open-case reveal, the end card with "Built at NEAR HACKATHON" and the URL.
@@ -54,6 +54,14 @@ SEGMENTS_V2 = [
     ('onchain_replay.mp4', 0.6, 3.5, 'Every season is sealed: the replay matches the root on NEAR', '782:440:250:110'),
     ('onchain_holder.mp4', 4.7, 3.5, 'Holding the NFT unlocks a title (read-only check)', '880:495:150:215'),
 ]
+
+# v3: v2 with the dragon companion after Elise (art/combat/dragon.mjs; Nacre is read from the chain for an existing
+# Day 1 heroine token, then the NFTs tab card "Owned by Elise · Agentic NFT · NEAR testnet").
+_i = next(i for i, x in enumerate(SEGMENTS_V2) if x[0] == 'elise_orbit.mp4') + 1
+SEGMENTS_V3 = SEGMENTS_V2[:_i] + [
+    ('dragon_elise.mp4', 0.5, 6.0, "Elise's dragon companion"),
+    ('dragon_elise.mp4', 10.4, 2.3, 'An agentic NFT she owns on NEAR testnet', '580:326:180:282'),
+] + SEGMENTS_V2[_i:]
 
 
 def esc(t):
@@ -140,7 +148,10 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     out = a[0] if a and not a[0].startswith('--') else os.path.join(ROOT, 'docs/submission/trailer_draft.mp4')
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    if '--v2' in a:
+    if '--v3' in a:
+        out = os.path.join(ROOT, 'docs/submission/trailer_v3.mp4') if out.endswith('trailer_draft.mp4') else out
+        d = build(out, SEGMENTS_V3)
+    elif '--v2' in a:
         out = os.path.join(ROOT, 'docs/submission/trailer_v2.mp4') if out.endswith('trailer_draft.mp4') else out
         d = build(out, SEGMENTS_V2)
     else:
