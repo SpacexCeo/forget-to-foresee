@@ -335,6 +335,7 @@ html[data-motion="reduce"] .ftf-root *, html[data-motion="reduce"] .ftf-root *::
 .ftf-scene-tools { position: absolute; top: 12px; right: 12px; }
 .ftf-scene-tools .ftf-btn { pointer-events: auto; min-height: 44px; padding: .35em .65em; font-size: .85rem; }
 .ftf-scene-hint { color: var(--ftf-mist); font: .75rem var(--ftf-mono); }
+@media (pointer: coarse) { .ftf-scene-hint { display: none; } } /* no keyboard hint on touch screens */
 .ftf-scene-controls .ftf-dialog { pointer-events: auto; }
 .ftf-scene-cue {
   position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);

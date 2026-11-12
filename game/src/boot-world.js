@@ -264,6 +264,21 @@ if (townMode.town) {
     // the profile button carries the number of sealed chests (a small gold badge), so a found chest is not forgotten
     const badgeChests = () => { const b = document.querySelector('.ftf-town-profile'); if (!b) return; const n = chestBag.sealed().length; if (n) b.dataset.chests = String(n); else delete b.dataset.chests; }; // generated content: read with the label
     chestBag.subscribe(badgeChests); badgeChests();
+    // ?chestpreview=1|nft|item|silk: a labelled preview of the open-case moment with a fixture outcome (for filming);
+    // it says "Preview — not on chain", links nothing and puts nothing in the bag
+    const pv = params.get('chestpreview');
+    if (pv) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ftf-town-prompt'; b.textContent = ctx.i18n.t('chest.previewButton');
+      b.style.cssText = 'position:fixed;left:16px;bottom:16px;transform:none;z-index:20';
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', () => Promise.all([import('./play/chest-open.js'), import('./play/game-menu.js')]).then(([m, gm]) => {
+        const FIX = { item: { kind: 'item', id: 'shard_violet_spire', amount: 1, rarity: 'rare' }, silk: { kind: 'silk', id: null, amount: 25, rarity: 'rare' } };
+        const outcome = FIX[pv] || { kind: 'nft', id: 'shard_amber_crown', amount: 1, rarity: 'legendary' };
+        const client = { available: true, open: () => new Promise((res) => setTimeout(() => res({ ok: true, opening: { index: 0, outcome, preview: true, verification: { verified: false } } }), 900)) };
+        m.openChestReveal({ t: (k, a) => ctx.i18n.t(k, a), chest: { id: 'preview', tier: outcome.kind === 'nft' ? 'legendary' : 'rare', source: 'preview' }, client, guest: 'preview', items: gm.loadManifest() });
+      }).catch((e) => console.warn('[chest] preview', e)));
+      document.body.append(b);
+    }
   }
   if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, coarse: mobileDevice, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
@@ -302,7 +317,7 @@ if (townMode.town) {
   });
   mountCasting();
   // Walk-in shops (scenes/town-shops.js): the door fades into the streamed interior; the counter opens the door's panel.
-  townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, reducedMotion: () => lookdev.reducedMotion,
+  townShops = createTownShops({ scene, streamer, player, rig, lookdev, i18n: ctx.i18n, mobile: mobileDevice, reducedMotion: () => lookdev.reducedMotion,
     onCounter: (id) => townFlow.openSpot(id), street: { world: () => town.world, killY: TOWN_KILL_Y } });
   fogCards = createFogCards(scene, TOWN_ROUTE); // ground fog along the street and stairs (night, early morning)
   // Iris wears her model and walks with her gait before the season exists; the same avatar goes on to the play
@@ -356,7 +371,12 @@ function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); }, // her hand goes up with the cast
-    onFire: (c) => { if (townMobs) townMobs.cast(c); } });
+    onFire: (c) => { if (townMobs) townMobs.cast(c); },
+    // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
+    extra: [
+      { id: 'strike', key: 'F', icon: 'strike', label: 'town.cast.strike', available: () => !!townMobs, press: () => townMobs && townMobs.strike(), cooldown: () => (townMobs ? townMobs.actions.strikeCd / 0.32 : 0) },
+      { id: 'dash', key: 'Space', icon: 'dash', label: 'town.cast.dash', available: () => !!townMobs, press: () => townMobs && townMobs.dash(wishVector()), cooldown: () => (townMobs ? townMobs.actions.dashCd / 1.0 : 0) },
+    ] });
   mountMobs();
 }
 /** The monsters on the hillside (play/mobs.js): packs beyond the walls that Iris's two casts fight. */
@@ -475,8 +495,10 @@ function updateAltarTimer() {
   if (!visible) return;
   const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
   if (altarTimer.textContent !== text) altarTimer.textContent = text;
-  altarTimer.style.left = ((_altarP.x + 1) / 2 * innerWidth).toFixed(0) + 'px';
-  altarTimer.style.top = ((1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
+  // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
+  const minTop = innerWidth < 700 ? 150 : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
+  altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
+  altarTimer.style.top = Math.max(minTop, (1 - _altarP.y) / 2 * innerHeight).toFixed(0) + 'px';
 }
 
 /**

@@ -1,6 +1,9 @@
 """Iris's combat clips for the field outside the walls, keyed by hand on her own rig and added to her side-car file.
 
     python3 art/anim/iris_combat.py            # reads and rewrites game/public/assets/anim/iris.glb
+    python3 art/anim/iris_combat.py --model game/public/assets/models/agent_elise.glb --in <uncompressed elise clips>
+        --out <file> --legs 0.4                # Elise: her gown hides the legs, so the leg keys are scaled down
+                                               # (the compressed game file is made from --out by compress-glb.sh)
 
 Clips (30 fps, in place, one-shots that start and end in her idle pose so a combo chains cleanly):
   strike1  light: right palm strike, the body turns into it, the left hand guards        0.50 s, impact at 0.20 s
@@ -156,23 +159,57 @@ def dash():
     return [(0.0, IDLE), (0.07, low), (0.24, low), (0.36, IDLE)], 0.36
 
 
+def scaled(keys, legs):
+    """The keys with every leg rotation (thigh, shin, foot) and the pelvis drop scaled by `legs`."""
+    out = []
+    for t, pose in keys:
+        q = {}
+        for b, v in pose.items():
+            if b.split('_')[0] in ('thigh', 'shin', 'foot'):
+                q[b] = [(ax, deg * legs) for ax, deg in v]
+            elif b == '_move':
+                q[b] = [v[0], v[1] * legs, v[2] * (0.5 + 0.5 * legs)]
+            else:
+                q[b] = v
+        out.append((t, q))
+    return out
+
+
 def main():
-    rig = Rig(MODEL)
-    clips = read_clips(SIDECAR, rig)
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--model', default=MODEL); ap.add_argument('--in', dest='src', default=SIDECAR); ap.add_argument('--out', default=SIDECAR)
+    ap.add_argument('--legs', type=float, default=1.0)
+    ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
+    a = ap.parse_args()
+    rig = Rig(a.model)
+    clips = read_clips(a.src, rig)
     idle = clips['idle']
     base_local = idle['local'][0]
     base_pelvis = idle['pelvis'][0] if idle['pelvis'] is not None else rig.rest_t[rig.index['pelvis']]
     bones = [n for n in rig.names if n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'upperarm', 'forearm', 'hand', 'shoulder')]
+    if a.cloth:
+        bones += [n for n in rig.names if n.split('_')[0] in ('skirt', 'hair', 'ribbon')]
     new = {}
     for name, (keys, secs) in {'strike1': strike('R'), 'strike2': strike('L'), 'strike3': finisher(), 'dash': dash()}.items():
-        local, pel = build(rig, base_local, base_pelvis, keys, secs)
+        local, pel = build(rig, base_local, base_pelvis, scaled(keys, a.legs) if a.legs != 1.0 else keys, secs)
+        if a.cloth:
+            from ftfanim import skirt
+            cr = skirt.ClothRig(a.cloth, rig)
+            lpos = np.repeat(rig.rest_t[None], len(local), 0); lpos[:, rig.index['pelvis']] = pel
+            pw = rig.fk(local, None, lpos)[1][:, rig.index['pelvis']]
+            local = skirt.bake(cr, local, pw, FPS, False, 0.0)
+            d, who = cr.distance(local, pw); ins, thr = cr.inside(local, pw)
+            print(name, 'gown min %.4f' % d.min(), who[int(d.argmin())], 'through', int(thr.sum()))
+            if d.min() < 0 or thr.any():
+                raise SystemExit(f'{name}: a leg cuts the gown')
         new[name] = {'name': name, 'local': local, 'pelvis': pel, 'bones': bones, 'fps': FPS,
                      'extras': {'loop': False, 'source': 'keyed by hand (art/anim/iris_combat.py)', 'impact_s': {'strike1': 0.2, 'strike2': 0.2, 'strike3': 0.38}.get(name)}}
         print(name, local.shape[0], 'frames')
     keep = [c for n, c in clips.items() if n not in new]
-    b = open(SIDECAR, 'rb').read(); root_extras = json.loads(b[20:20 + struct.unpack_from('<I', b, 12)[0]]).get('extras')
-    write_clips_glb(SIDECAR, rig, keep + list(new.values()), fps=FPS, extras=root_extras)
-    print('wrote', SIDECAR, [c['name'] for c in keep + list(new.values())])
+    b = open(a.src, 'rb').read(); root_extras = json.loads(b[20:20 + struct.unpack_from('<I', b, 12)[0]]).get('extras')
+    write_clips_glb(a.out, rig, keep + list(new.values()), fps=FPS, extras=root_extras)
+    print('wrote', a.out, [c['name'] for c in keep + list(new.values())])
 
 
 if __name__ == '__main__':

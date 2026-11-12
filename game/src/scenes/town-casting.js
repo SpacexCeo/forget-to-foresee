@@ -14,6 +14,8 @@ import { CASTS, createCastEffects } from './town-casting-fx.js';
 
 export const CAST_KEYS = Object.freeze({ KeyQ: 'lance', Digit1: 'lance', KeyV: 'snare', Digit2: 'snare' });
 const SLOTS = [['lance', 'Q'], ['snare', 'V']];
+/** UI-003 full-art icons (assets/ui/icons): the lance a burst of shards, the snare the targeting mark. */
+const ICON_ART = Object.freeze({ lance: 'shard_burst', snare: 'mark' });
 
 // Placeholder full-art icons (until the UI-003 skill icons land): a frost lance and a storm snare.
 const ICONS = {
@@ -27,7 +29,7 @@ const CSS = `
 .ftf-cast-bar { display: flex; gap: 10px; padding: 6px; border-radius: 18px; background: rgba(12, 14, 20, 0.55); backdrop-filter: blur(6px); }
 .ftf-cast-slot { pointer-events: auto; position: relative; overflow: hidden; width: 64px; height: 64px; padding: 0; border-radius: 14px; border: 2px solid rgba(255,255,255,0.25);
   background: #111; cursor: pointer; transition: transform .12s ease, border-color .12s ease; }
-.ftf-cast-slot svg { display: block; width: 100%; height: 100%; }
+.ftf-cast-slot svg, .ftf-cast-slot img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .ftf-cast-slot:hover { transform: translateY(-2px); }
 .ftf-cast-slot:active { transform: scale(.95); }
 .ftf-cast-slot kbd { position: absolute; left: 3px; bottom: 3px; min-width: 18px; padding: 1px 5px; border-radius: 5px; background: rgba(8, 10, 14, 0.82); color: #f3efe6; font: 700 12px/1.3 system-ui, sans-serif; text-align: center; }
@@ -48,7 +50,7 @@ const CSS = `
  * @param {(c: {id: string, from: number[], dir: number[], point: number[]}) => void} [o.onFire] where it goes (play/mobs.js: the hits)
  * @param {Document} [o.doc]
  */
-export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, onFire = null, doc = globalThis.document }) {
+export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, onFire = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
   const fx = createCastEffects(scene);
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
@@ -59,12 +61,25 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     const b = doc.createElement('button'); b.type = 'button'; b.className = 'ftf-cast-slot'; b.dataset.id = id; b.setAttribute('aria-pressed', 'false');
     const cap = doc.createElement('kbd'); cap.textContent = key; cap.hidden = coarse;
     const art = doc.createElement('span'); art.innerHTML = ICONS[id];
+    if (ICON_ART[id]) { art.innerHTML = ''; const img = doc.createElement('img'); img.src = base + 'assets/ui/icons/' + ICON_ART[id] + '.webp'; img.alt = ''; img.onerror = () => { art.innerHTML = ICONS[id]; }; art.append(img); } // UI-003 art, the SVG if it fails
     const name = doc.createElement('span'); name.className = 'ftf-cast-name'; const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd';
     b.append(art.firstChild, cd, cap, name);
     b.addEventListener('click', (e) => { e.stopPropagation(); toggle(id); });
     slots[id] = { button: b, name, cd };
     bar.append(b);
   }
+  // extra slots after the casts (the strike and the dash of play/mobs.js): {id, key, icon, label, press(), cooldown() 0..1}
+  const extras = extra.map((x) => {
+    const b = doc.createElement('button'); b.type = 'button'; b.className = 'ftf-cast-slot'; b.dataset.id = x.id;
+    const img = doc.createElement('img'); img.src = base + 'assets/ui/icons/' + x.icon + '.webp'; img.alt = '';
+    const cap = doc.createElement('kbd'); cap.textContent = x.key; cap.hidden = coarse;
+    const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd'; const name = doc.createElement('span'); name.className = 'ftf-cast-name';
+    b.append(img, cd, cap, name);
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => { e.stopPropagation(); b.blur(); x.press(); });
+    bar.append(b);
+    return { ...x, button: b, cd, name };
+  });
   root.append(hint, bar);
   doc.body.append(root);
 
@@ -73,6 +88,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
 
   function renderText() {
     for (const [id, key] of SLOTS) { const n = i18n.t('town.cast.' + id); slots[id].name.textContent = n; slots[id].button.title = coarse ? n : `${n} (${key})`; }
+    for (const x of extras) { const n = i18n.t(x.label); x.name.textContent = n; x.button.title = coarse ? n : `${n} (${x.key})`; }
     hint.textContent = i18n.t(coarse ? 'town.cast.hint.touch' : 'town.cast.hint');
   }
   const unsubscribe = typeof i18n.subscribe === 'function' ? i18n.subscribe(renderText) : null;
@@ -163,6 +179,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
         state.cooldown[id] = Math.max(0, state.cooldown[id] - dt);
         slots[id].cd.style.width = (100 * state.cooldown[id] / CASTS[id].cooldown).toFixed(1) + '%';
       }
+      for (const x of extras) { const k = x.cooldown ? Math.max(0, Math.min(1, x.cooldown())) : 0; x.cd.style.width = (100 * k).toFixed(1) + '%'; x.button.hidden = x.available ? !x.available() : false; }
       if (state.armed) {
         const target = state.fixedAim || (state.pointer && pick(state.pointer[0], state.pointer[1]));
         if (target) state.aim = fx.aim.show(CASTS[state.armed], player.pos, target, t, groundY);

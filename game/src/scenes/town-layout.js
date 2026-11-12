@@ -60,8 +60,12 @@ export const TOWN_ROUTE_LENGTH = routeLength(TOWN_DATA.route);
  */
 export const TOWN_KILL_Y = TOWN_ORIGIN[1] + Math.min(TOWN_DATA.killY, OUTSIDE_KILL_Y);
 
-/** Height fog base in the town: mist pools below the hill (render/fog.js; the archipelago uses its cloud level). */
-export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 20;
+/**
+ * Height fog base in the town: mist pools below the hill (render/fog.js; the archipelago uses its cloud level). Below
+ * the lookout (the hillside's lowest walkable place, 20 m under the streets): at -20 it stood in the thickest fog
+ * and read as a flat white disc (monster play-test, 12.11).
+ */
+export const TOWN_FOG_BASE_Y = TOWN_ORIGIN[1] - 26;
 /** The cloud sea moves here while Iris is in the town: a sea of mist around the hill, below every walkable level. */
 export const TOWN_MIST_LEVEL = TOWN_ORIGIN[1] - 32;
 
@@ -156,7 +160,7 @@ export const SHOP_LIGHT = Object.freeze({
  * beams; the rig's sphere sweep against the room's own colliders keeps it out of the walls. `pitch` is the angle
  * above the horizontal at `dist` (the rig's zoom-tied pitch is cancelled); zoom is limited to minDist..maxDist.
  */
-export const SHOP_CAMERA = Object.freeze({ dist: 4.2, minDist: 2.4, maxDist: 6.5, pitch: 5 * Math.PI / 180, minPitch: -10 * Math.PI / 180 });
+export const SHOP_CAMERA = Object.freeze({ dist: 3.8, minDist: 2.4, maxDist: 6.5, pitch: 7 * Math.PI / 180, minPitch: -10 * Math.PI / 180, focusHeight: 0.45, yaw: 0.3 });
 
 /**
  * Seconds of the door transition: fade to dark and back (`reducedFade` under reduced motion: a plain short

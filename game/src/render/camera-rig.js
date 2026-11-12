@@ -38,6 +38,7 @@ export class CameraRig {
     this.actualDist = this.dist;
     this.inspect = null;                         // {center: Vector3, radius, yaw, pitch, dist}
     this.lastSweep = 1;
+    this.focusHeightOverride = null;             // metres above the focus; rooms keep the view under the ceiling props (scenes/town-shops.js)
     this.pitchOverride = null;                   // radians; dev/cinematic shots only (null = zoom-tied pitch)
   }
 
@@ -149,7 +150,7 @@ export class CameraRig {
       const la = this._tmp.set(vel ? vel[0] : 0, 0, vel ? vel[1] : 0).multiplyScalar(this.lookAheadTime * (1 - 0.6 * this.zoomT(this.dist)));
       if (la.lengthSq() > this.lookAheadMax * this.lookAheadMax) la.setLength(this.lookAheadMax);
       this.lookAhead.lerp(la, 1 - Math.exp(-dt * 3));
-      center = sf.clone().add(this.lookAhead).add(new THREE.Vector3(0, this.focusHeightFor(this.dist), 0));
+      center = sf.clone().add(this.lookAhead).add(new THREE.Vector3(0, this.focusHeightOverride ?? this.focusHeightFor(this.dist), 0));
       yaw = this.yaw; dist = this.dist; pitch = this.pitchOverride ?? THREE.MathUtils.clamp(this.pitchFor(dist) + this.pitchOffset, this.minPitch, 75 * DEG);
       const fov = this.fovFor(dist);
       if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
