@@ -44,8 +44,36 @@ The traders' current keys can call only `ftf-town`. Before a stall can mint a re
 give each trader wallet a second function-call key for `items.ftf-town.testnet` (method `mint`) or let the
 coordinator mint.
 
+## Buying and selling resources (relayer desk, dry run by default)
+
+`relayer/lib/resource-desk.js` and `/api/market/resource`. The relayer never holds a player's key:
+
+1. **Quote.** `GET /api/market/resource?side=buy|sell&item=<id>&qty=<n>` answers:
+   - the price in silk (the town's price rules on the stall's current shelf, `priceOf` / `buybackOf`),
+   - the trader's reason,
+   - the stall's wallet,
+   - for a buy, the exact `reference` the payment must carry.
+2. **Buy.**
+   - The player calls `ftf-town` `trade({counterparty: <stall>, silk, reference: "buy:<item>:<qty>"})` with its own
+     key.
+   - It then POSTs `{side: "buy", item, qty, account_id, tx_hash}`.
+   - The desk fetches that transaction from the chain and checks it: final and successful, one call, signed by
+     `account_id`, sent to `ftf-town`, method `trade`, the right stall and reference, at least the quote minus 10 %.
+   - The minter then mints the items to the player here.
+3. **Sell.**
+   - The player calls `mt_transfer({receiver_id: <stall>, token_id: <item>, amount})` on this contract.
+   - It then POSTs `{side: "sell", …}`.
+   - After the same checks, the stall pays the buy-back price with its own trade key (`trade` with reference
+     `sell:<item>`).
+4. **Journal.** Every transaction hash settles once. Replays answer 409, and a payment that failed to settle frees
+   its hash for a retry. Requests are logged to `relayer/data/resource-desk.jsonl`. The stall's shelf in the
+   daemon's state follows each deal.
+5. **Dry run** unless `FTF_TOWN_SEND=1`: the desk verifies and answers the plan, and nothing is minted or paid.
+   Minting needs `FTF_ITEMS_MINTER` / `FTF_ITEMS_KEY` (an account the owner has made a minter) on the server.
+
+Tests: `relayer/tests/resource-desk.test.mjs` (5) cover quotes, a dry-run buy with the shelf update and the replay
+refused, every refusal reason, a sell paid by the stall's key with a retry after a failure, and the quote route.
+
 ## Not built yet
 
-- The relayer route that sells a resource to a player (the player pays silk on `ftf-town`, the stall mints the item
-  here) and buys one back. The prices for both exist: `relayer/market/prices.js` `priceOf` / `buybackOf`.
-- The game's inventory reading `mt_batch_balance_of`.
+- The game's buy/sell buttons and inventory (`mt_batch_balance_of`) for the desk: game UI, other workers.
