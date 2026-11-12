@@ -1108,7 +1108,7 @@ export default {
   'bark.rain.2': "Under the eaves, friend, under the eaves!",
   'bark.hired.1': "Your coin is working — I'm off to the Exchange.",
   'bark.hired.2': "Still trading for you. Check the board!",
-  'bark.role.guard': "The gate is quiet. I like it that way.",
+  'bark.role.guard': "Moss critters keep raiding the field past the lower gate. Chase them off!",
   'bark.role.baker': "Fresh loaves at the oven, still warm!",
   'bark.role.lamplighter': "Every lamp lit, every corner seen.",
   'bark.role.musician': "Stay a while — the next tune is for you.",

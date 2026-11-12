@@ -1107,7 +1107,7 @@ export default {
   'bark.rain.2': "Sotto la grondaia, amica, sotto la grondaia!",
   'bark.hired.1': "La tua moneta lavora: vado alla Borsa.",
   'bark.hired.2': "Sto ancora negoziando per te. Guarda la bacheca!",
-  'bark.role.guard': "La porta è tranquilla. Mi piace così.",
+  'bark.role.guard': "Le creature del muschio razziano il campo oltre la porta bassa. Scacciale!",
   'bark.role.baker': "Pane fresco dal forno, ancora caldo!",
   'bark.role.lamplighter': "Ogni lampada accesa, ogni angolo visto.",
   'bark.role.musician': "Resta un po’: la prossima melodia è per te.",

@@ -1106,7 +1106,7 @@ export default {
   'bark.rain.2': "到屋檐下来，朋友，到屋檐下来！",
   'bark.hired.1': "你的钱正在运作——我去交易所了。",
   'bark.hired.2': "还在为你交易。去看看告示板！",
-  'bark.role.guard': "城门很安静。我喜欢这样。",
+  'bark.role.guard': "苔藓小兽又在下城门外的田野里捣乱了。把它们赶走吧！",
   'bark.role.baker': "刚出炉的面包，还热着呢！",
   'bark.role.lamplighter': "每盏灯都点亮了，每个角落都看得见。",
   'bark.role.musician': "留一会儿吧——下一首曲子是给你的。",
