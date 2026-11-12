@@ -4,7 +4,7 @@ Source: https://nearhackathon.com/HACKATHON.md (re-read before submitting; it ca
 08.11.2026: the dates, fields and limits below match that version. Every item below is either **done**, an
 **owner action** (needs the owner's account, wallet or confirmation), or **blocked**; the checklist in
 `docs/handoff/agent-reports/submission.md` tracks the state per date. The current submission package is
-`docs/submission/` (order of the owner's remaining steps: `docs/submission/owner-steps.md`). State below: 09.11.2026.
+`docs/submission/` (order of the owner's remaining steps: `docs/submission/owner-steps.md`). State below: 12.11.2026 (live checks and the owner's remaining steps: `docs/handoff/submission-status.md`).
 
 ## Dates (UTC, with Kyiv = UTC+2)
 - There is no sign-up before the hackathon: the final submission is the only registration.

@@ -20,7 +20,7 @@ Six clans read round signs of four slots (Place, Action, Power, Delay), stake si
 
 ```bash
 git clone --depth 1 https://github.com/SpacexCeo/forget-to-foresee && cd forget-to-foresee
-bash scripts/verify-all.sh --skip-rust   # game, server and relayer tests; prints one table, exit 0 when all pass
+bash scripts/verify-all.sh --skip-rust   # game, server, relayer and presence tests; prints one table, exit 0 when all pass
 bash scripts/verify-all.sh               # the same plus the Rust contracts (Rust, pkg-config, OpenSSL headers)
 ```
 
