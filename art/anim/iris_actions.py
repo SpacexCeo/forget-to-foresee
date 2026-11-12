@@ -73,6 +73,17 @@ def mix(a, b, k):
     return out
 
 
+def scaled(pose, legs):
+    """The pose with its steps, foot lifts and the hips' drop scaled by `legs` (a long gown: small steps under it)."""
+    out = dict(pose)
+    for k, v in pose.items():
+        if k.startswith('foot_'):
+            out[k] = {**v, 'at': [x * legs for x in v.get('at', [0, 0, 0])], 'pitch': v.get('pitch', 0.0) * legs, 'yaw': v.get('yaw', 0.0) * legs}
+        elif k == 'hips':
+            out[k] = [v[0] * legs, v[1] * legs, v[2] * legs]
+    return out
+
+
 def with_ease(pose, e):
     p = dict(pose); p['ease'] = e
     return p
@@ -339,6 +350,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model', default=MODEL); ap.add_argument('--in', dest='src', default=SIDECAR); ap.add_argument('--out', default=SIDECAR)
     ap.add_argument('--only', default=''); ap.add_argument('--sheet', default='')
+    ap.add_argument('--legs', type=float, default=1.0, help='scale of the steps and of the hips\' drop (Elise: her gown hides the legs and must not be cut)')
+    ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
     a = ap.parse_args()
     rig = Rig(a.model)
     clips = read_clips(a.src, rig)
@@ -347,14 +360,25 @@ def main():
     ip = rig.index['pelvis']; pp = rig.parent[ip]
     base_pelvis = rig.rest_wp[pp] + qrot(rig.rest_wr[pp], idle['pelvis'][0]) if idle['pelvis'] is not None else rig.rest_wp[ip]
     chain = [rig.names[i] for _, bs in chains.chain_bones(rig) for i in bs]
-    bones = chain + [n for n in rig.names if n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'toe', 'upperarm', 'forearm', 'hand', 'shoulder', 'thumb', 'index', 'fingers')]
+    bones = chain + [n for n in rig.names if n not in chain and (n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'toe', 'upperarm', 'forearm', 'hand', 'shoulder', 'thumb', 'index', 'fingers'))]
     new = {}
     for name, fn in CLIPS.items():
         if a.only and name not in a.only.split(','):
             continue
         keys, secs = fn()
+        if a.legs != 1.0:
+            keys = [(t, scaled(pose, a.legs)) for t, pose in keys]
         local, pel = keyed.build(rig, base_local, base_pelvis, keys, secs, fps=FPS)
-        local = chains.simulate(rig, local, pel, fps=FPS, loop=False)
+        if a.cloth:
+            from ftfanim import skirt
+            cr = skirt.ClothRig(a.cloth, rig)
+            local = skirt.bake(cr, local, pel, FPS, False, 0.0)
+            d, who = cr.distance(local, pel); ins, thr = cr.inside(local, pel)
+            print(name, 'gown min %.4f' % d.min(), who[int(d.argmin())], 'through', int(thr.sum()))
+            if d.min() < 0 or thr.any():
+                raise SystemExit(f'{name}: a leg cuts the gown')
+        else:
+            local = chains.simulate(rig, local, pel, fps=FPS, loop=False)
         slip = keyed.planted_slip(rig, local, pel, FPS, keys)
         print(name, len(local), 'frames', 'planted slip max %.4f m/s' % slip)
         if a.sheet:
