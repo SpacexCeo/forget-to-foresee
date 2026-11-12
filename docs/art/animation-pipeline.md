@@ -95,6 +95,17 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
     0.06 s, one leg driving and one trailing, arms swept back, the front foot catches her at 0.28 s). The game
     applies a strike's damage on the key press, as before; the clips' impacts sit as early as the poses allow.
 
+    The super strike (owner 12.11: hold for a super hit) is two clips: `strike_charge` (1.0 s: into a deep coil within
+    0.2 s, then it keeps sinking; `extras.hold`: the game holds its last frame) and `strike_super` (0.98 s, starts in
+    the held pose, impact at 0.10 s, overshoot to 0.19 s, held to 0.44 s, settle). In the game:
+    `IrisAvatar.combat('strike_charge')` on press, `combat('strike_super')` on release (no blend through the idle),
+    `endAction()` to put the charge away. The hold input and the damage are not wired yet (play/mobs.js).
+
+    `skid` (0.2 s) is the stop out of a run: when a cast starts while she moves faster than 2.2 m/s, the heel-dig
+    pose is blended over the first 0.2 s of the cast clip (`IrisAvatar.cast` does it itself; any other rooted move can
+    ask for it with `combat(name, { skid: true })`); `ftf:foot` `{action: 'skid'}` is sent for the scrape. The cast's
+    release time does not move.
+
     The release time is in the clip (`extras.release_s`). In the game (`scenes/town-casting.js`) a click starts the
     clip (`onCastStart` → `IrisAvatar.cast`), the cast's effect, sound and hits fire on the release frame
     (`onCast`, `onFire`), and she stands still from the click to 0.24 s after the release (`CAST_ROOT_AFTER`);
