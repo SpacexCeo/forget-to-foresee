@@ -132,7 +132,7 @@ export class IrisAvatar {
     const u = c.userData || {};
     m.combat = { action: a, t: 0, dur: c.duration, name, impact: u.release_s ?? u.impact_s ?? null, step: u.step_s ?? null, foot: u.step_foot || 'L', hold: !!u.hold };
     // a step taken after the hit cuts the settle short (0.14 s back to the gait); a held pose eases in
-    if (name !== 'dash' && !u.hold) m.combat.cancelAfter = (m.combat.impact ?? 0) + 0.14;
+    if (name !== 'dash' && !u.hold) { m.combat.cancelAfter = (m.combat.impact ?? 0) + 0.2; m.combat.cancelSpeed = 1.0; }   // (a strike out of a run is still sliding to a stop: that is not a step)
     if (name === 'dash') m.combat.cancelAfter = 0.3;
     if (u.hold) m.combat.fadeIn = 0.14;
     if (u.from && prev === u.from) m.combat.fadeIn = 0.03; else if (u.from) m.combat.fadeIn = 0.07;     // the release of a held pose starts in that pose: no blend through the idle
@@ -232,7 +232,7 @@ export class IrisAvatar {
         const k = m.combat, t0 = k.t; k.t += dt;
         if (k.impact != null && t0 < k.impact && k.t >= k.impact) emit('ftf:iris-action', { clip: k.name, phase: 'impact', impact: 0 });
         if (k.step != null && t0 < k.step && k.t >= k.step) emit('ftf:foot', { foot: k.foot, running: true, action: k.name });
-        if (k.cancelAfter != null && k.t > k.cancelAfter && speed > 0.4) { k.dur = Math.min(k.dur, k.t + 0.16); k.fadeOut = 0.16; k.cancelAfter = null; } // she walks out of the settle
+        if (k.cancelAfter != null && k.t > k.cancelAfter && speed > (k.cancelSpeed || 0.4)) { k.dur = Math.min(k.dur, k.t + 0.15); k.fadeOut = 0.15; k.cancelAfter = null; } // she walks out of the settle
         if (k.hold && !k.ending) k.t = Math.min(k.t, k.dur - (k.fadeOut || 0.1) - 0.01);   // a held pose (strike_charge) waits on its last frame
         const w = smoothstep01(k.t / (k.fadeIn || 0.05)) * smoothstep01((k.dur - k.t) / (k.fadeOut || 0.1));
         actionW = w;
