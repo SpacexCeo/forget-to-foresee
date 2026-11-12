@@ -28,3 +28,18 @@ test('town rules: splits lose nothing, wash trading has negative EV', () => {
   assert.ok(share < 1 && Math.abs(share - 0.572) < 1e-9);
   assert.equal(fmt(2_400n, 4), '0.0024'); assert.equal(fmt(2n * UNIT), '2');
 });
+
+test('town rules: tournament payouts: floor for all, rank-weighted top 60 %, 4 % cap, never above the pot', async () => {
+  const { planPayouts } = await import('../../src/game/town-rules.js');
+  const ranked = Array.from({ length: 50 }, (_, i) => `p${i}.testnet`);
+  const pot = 2_000n * UNIT;
+  const out = planPayouts(P, pot, ranked);
+  const total = out.reduce((a, x) => a + x.amount, 0n), cap = (pot * 400n) / 10_000n;
+  assert.equal(out.length, 50);
+  assert.ok(total <= pot && total > (pot * 95n) / 100n, String(total));
+  assert.ok(out.every((x) => x.amount <= cap));
+  assert.ok(out[0].amount >= out[10].amount && out[10].amount > out[40].amount);
+  assert.ok(out[45].amount >= (pot * 30n) / 100n / 50n && out[45].amount < out[29].amount); // below the paid group: the floor (+ its share of the capped excess)
+  assert.deepEqual(planPayouts(P, 0n, ranked), []);
+  assert.deepEqual(planPayouts(P, pot, ['solo.testnet']).map((x) => x.amount), [cap]); // one entrant: capped at 4 %
+});
