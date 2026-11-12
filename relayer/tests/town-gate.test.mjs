@@ -87,3 +87,18 @@ test('gate: bad signature, someone else\'s key, stale request or too little silk
   const poor = await payGateFor(await signed(), deps(chain(), { loadLog: () => logOf([{ t: 1, kind: 'quest_turned_in', silkC: 100_000, trust: 'T2' }]) }));
   assert.equal(poor.status, 402); assert.equal(poor.body.error, 'not_enough_silk');
 });
+
+test('the coordinator key comes from data/coord-key.json when the env has none, and the env wins', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { townGateEnv } = await import('../lib/town-gate.js');
+  const dir = mkdtempSync(join(tmpdir(), 'coord-'));
+  writeFileSync(join(dir, 'coord-key.json'), JSON.stringify({ account: 'gate.ftf-town.testnet', secretKey: 'ed25519:abc' }));
+  const a = townGateEnv({ FTF_DATA_DIR: dir });
+  assert.equal(a.coord, 'gate.ftf-town.testnet'); assert.equal(a.coordKey, 'ed25519:abc');
+  const b = townGateEnv({ FTF_DATA_DIR: dir, FTF_TOWN_COORD: 'x.testnet', FTF_TOWN_COORD_KEY: 'ed25519:zzz' });
+  assert.equal(b.coord, 'x.testnet'); assert.equal(b.coordKey, 'ed25519:zzz');
+  const c = townGateEnv({ FTF_DATA_DIR: join(dir, 'none') });
+  assert.equal(c.coord, ''); assert.equal(c.coordKey, '');
+});

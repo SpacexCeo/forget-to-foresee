@@ -55,13 +55,27 @@ Errors:
 
 ## Server setup (owner)
 
-- `FTF_TOWN_COORD=<relayer account>` and `FTF_TOWN_COORD_KEY=<its function-call key for ftf-town.testnet, methods
-  register, credit_silk, pay_gate_for>` in `relayer/.env`, made on the server like the other keys.
-- `FTF_EXPEDITION_DIR` set (it already is, for the log store).
-- The owner adds that account to the coordinators: `set_coordinators(["ftf-coordinator.testnet", "<relayer
-  account>"])`.
+The coordinator is `gate.ftf-town.testnet`, a sub-account of ftf-town with no full-access key, only one
+function-call key on ftf-town (register, credit_silk, pay_gate_for). The key is made on the relayer's server and its
+secret never leaves it:
 
-Tests: `relayer/tests/town-gate.test.mjs` (5). They cover the scaling and a tampered log; that registration happens
+1. On the server, in `relayer/`: `node scripts/coord-key.mjs gate.ftf-town.testnet`. It writes
+   `data/coord-key.json` (mode 600, gitignored; run again, it keeps the key) and prints only the account, the public
+   key and the methods. `lib/town-gate.js` reads that file when `FTF_TOWN_COORD`/`FTF_TOWN_COORD_KEY` are not set,
+   so nothing goes into `.env`.
+2. The lead creates the account (signed by ftf-town) and adds the printed key:
+   ```
+   near account create-account fund-myself gate.ftf-town.testnet '0.5 NEAR' autogenerate-new-keypair save-to-legacy-keychain sign-as ftf-town.testnet network-config testnet sign-with-legacy-keychain send
+   near account add-key gate.ftf-town.testnet grant-function-call-access --allowance '1 NEAR' --contract-account-id ftf-town.testnet --function-names 'register, credit_silk, pay_gate_for' use-manually-provided-public-key <PUBLIC_KEY> network-config testnet sign-with-legacy-keychain send
+   ```
+   (The full-access key the first command generates stays in the lead's keychain; it can be deleted afterwards so
+   the account holds only the function-call key.)
+3. The owner adds it to the coordinators. `set_coordinators` replaces the whole list, so keep the existing ones:
+   `set_coordinators({"coordinators": ["ftf-coordinator.testnet", "gate.ftf-town.testnet"]})`.
+4. `FTF_EXPEDITION_DIR` set (it already is, for the log store). Restart the relayer; `GET /api/town/gate?account_id=…`
+   then answers `configured: true`.
+
+Tests: `relayer/tests/town-gate.test.mjs` (6). They cover the scaling and a tampered log; that registration happens
 once, only the difference is credited, the daily cap holds and the credit is idempotent; the rollback after a failed
 credit; that a signed request pays once with replays and second payments refused; and bad signature, someone
-else's key, a stale request and too little silk.
+else's key, a stale request and too little silk; and that the key file is read when the env has none.

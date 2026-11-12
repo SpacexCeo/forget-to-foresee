@@ -19,6 +19,7 @@ Times are Kyiv. Feature freeze Fri 13 Nov 16:00, hard freeze 20:00, deadline Sat
 - [ ] **Start the traders**: on the server add `FTF_TOWN=1` to `.env`, restart, send the lead the start line (`market 20 traders`), `/api/market/stats` and the first journal lines (dry run). Then `FTF_TOWN_SEND=1` only after the lead's OK.
 - [ ] **Sheriffchenko wins**: on the server `node scripts/mint-pending.mjs --dry-run`, then without `--dry-run`.
 - [ ] **Batch chest check**: on the server `cd relayer && node scripts/chest-batch-test.mjs <guest with chests left today> 2` (prints), then with `--send` (one tx, two openings); send the lead the output.
+- [ ] **Portal coordinator key** (the guest path to the portal): on the server, after pulling `main`, in `relayer/`: `node scripts/coord-key.mjs gate.ftf-town.testnet` (prints only the public key). Send the lead the public key; the lead adds it to `gate.ftf-town.testnet` (account created, already a coordinator of `ftf-town`). Then set `FTF_EXPEDITION_DIR` (e.g. `/var/lib/ftf-relayer/expedition`) and restart; `GET /api/town/gate?account_id=x` should say `configured: true`.
 - [ ] **Item minting**: make a minter key for `items.ftf-town.testnet` on the server (same pattern as the chest key), set `FTF_ITEMS_MINTER` + `FTF_ITEMS_KEY` in `.env`, send the lead the public key; the lead adds it as a minter.
 
 ## C. Town economy (`ftf-town` contract): your yes is needed
