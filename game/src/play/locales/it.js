@@ -1272,4 +1272,6 @@ export default {
   'mp.sys.reported': "Grazie, segnalato.",
   'mp.sys.full': "Tutte le stanze sono piene; giochi da sola.",
   'mp.sys.kicked': "Disconnessa dal paese condiviso.",
+  'mp.demo': "{n, plural, one {# passante demo} other {# passanti demo}} · simulati nel browser",
+  'mp.demoLine': "Questi passanti sono simulati nel tuo browser (?bots). Non c’è nessun altro e non viene inviato nulla.",
 };

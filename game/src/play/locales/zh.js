@@ -1271,4 +1271,6 @@ export default {
   'mp.sys.reported': "谢谢，已举报。",
   'mp.sys.full': "所有房间都已满；你在单独游玩。",
   'mp.sys.kicked': "已与共享小镇断开连接。",
+  'mp.demo': "{n, plural, other {# 名演示行人}} · 在本浏览器中模拟",
+  'mp.demoLine': "这些行人在你的浏览器中模拟（?bots）。这里没有其他人，也不会发送任何内容。",
 };

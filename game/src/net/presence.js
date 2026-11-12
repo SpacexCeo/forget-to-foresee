@@ -3,6 +3,7 @@
 // (extrapolated at most 250 ms when a snapshot is late), and the room's chat. No three.js here: play/remote-players.js
 // draws, ui/chat-panel.js shows the chat. Offline is a normal state: the game stays single-player and says so.
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
+import { botAt, BOT_NAMES } from './bot-walk.js';
 
 const envUrl = () => { try { return import.meta.env && import.meta.env.VITE_FTF_PRESENCE_URL; } catch { return undefined; } };
 /** wss URL of the presence service, or '' (then the town is single-player). */
@@ -128,5 +129,23 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     isMuted: (nameOf) => muted.has(nameOf),
     report(pid) { send({ t: 'report', id: pid }); },
     stop() { stopped = true; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
+  };
+}
+
+/**
+ * ?bots=N without a presence service: N demo walkers simulated in this browser (no network). Same interface as
+ * createPresence; status 'demo', so the chip says they are simulated and the chat line stays disabled.
+ */
+export function createDemoPresence({ count = 3, now = () => performance.now(), onChange = () => {} } = {}) {
+  const n = Math.max(1, Math.min(14, count | 0));
+  const players = new Map(Array.from({ length: n }, (_, k) => [k + 1, { id: k + 1, name: 'demo' + BOT_NAMES[k], skin: k % 2 ? 'elise' : 'iris', buf: [] }]));
+  const t0 = now();
+  queueMicrotask(() => { try { onChange(); } catch { /* UI */ } });
+  return {
+    status: 'demo', room: 0, max: 15, id: 0, sys: null, players, chat: [],
+    get count() { return n + 1; },
+    update() {},
+    positions() { const t = (now() - t0) / 1000; return [...players.values()].map((pl, k) => { const s = botAt(k, t); const s2 = botAt(k, t - 0.1); return { id: pl.id, name: pl.name, skin: pl.skin, p: s.p, h: s.h, a: s.a, speed: Math.hypot(s.p[0] - s2.p[0], s.p[2] - s2.p[2]) / 0.1 }; }); },
+    say() {}, mute() {}, unmute() {}, isMuted: () => false, report() {}, stop() {},
   };
 }
