@@ -75,15 +75,17 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     slots[id] = { button: b, name, cd, cap };
     bar.append(b);
   }
-  // extra slots after the casts (the strike and the dash of play/mobs.js): {id, key, icon, label, press(), cooldown() 0..1}
+  // extra slots after the casts (the strike and the dash of play/mobs.js): {id, key, icon, label, press(), cooldown() 0..1};
+  // a slot with down() / up() is pressed and held (the strike: hold for the super strike) instead of clicked
   const extras = extra.map((x) => {
     const b = doc.createElement('button'); b.type = 'button'; b.className = 'ftf-cast-slot'; b.dataset.id = x.id;
     const img = doc.createElement('img'); img.src = base + 'assets/ui/icons/' + x.icon + '.webp'; img.alt = '';
     const cap = doc.createElement('kbd'); cap.textContent = x.key; cap.hidden = coarse;
     const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd'; const name = doc.createElement('span'); name.className = 'ftf-cast-name';
     b.append(img, cd, cap, name);
-    b.addEventListener('pointerdown', (e) => e.stopPropagation());
-    b.addEventListener('click', (e) => { e.stopPropagation(); b.blur(); x.press(); });
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (x.down) { b.setPointerCapture?.(e.pointerId); x.down(); } });
+    if (x.up) for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(t, (e) => { e.stopPropagation(); x.up(); });
+    b.addEventListener('click', (e) => { e.stopPropagation(); b.blur(); if (!x.down) x.press(); });   // a slot with down/up is held, not clicked
     bar.append(b);
     return { ...x, button: b, cd, name, cap };
   });
