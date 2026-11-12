@@ -7,6 +7,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const out = process.argv[2], url = process.argv[3] || 'http://127.0.0.1:5199';
+const V3 = process.argv.includes('v3');      // v3: the pack's kill drops the chest, the open-case reveal (?chestpreview=1) ends it
 const [W, H] = (process.argv.find((a) => /^\d+x\d+$/.test(a)) || '1280x720').split('x').map(Number);
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'] });
@@ -14,7 +15,8 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 const errors = [], log = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris`);
+await page.addInitScript(() => { const st = document.createElement('style'); st.textContent = 'button.ftf-town-prompt[style*="left: 16px"],button.ftf-town-prompt[style*="left:16px"]{opacity:0!important}'; document.addEventListener('DOMContentLoaded', () => document.head.append(st)); });
+await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris${V3 ? '&chestpreview=1' : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
 await page.waitForFunction(() => window.__ftf.town.mobs, null, { timeout: 120000 });
 await page.evaluate(() => window.__ftf.town.mobs.ready);
@@ -109,6 +111,20 @@ for (let round = 0; round < 14 && (Date.now() - t0) < 28000; round++) {
   else await wait(300);
 }
 await wait(1500);
+if (V3) {
+  // the chest the pack's kill dropped (play/mobs.js 'ftf:mob-killed' -> town-monsters drop): walk onto it, then the
+  // labelled open-case preview (its button is clicked from script and kept off screen: the reel and the card show)
+  await page.evaluate(() => Promise.all([import('/src/play/chest-open.js'), import('/src/play/game-menu.js')]));
+  const chests = () => page.evaluate(() => window.__ftf.town.monsters ? window.__ftf.town.monsters.chests.map((c) => c.at) : []);
+  let cs = []; for (let i = 0; i < 20 && !(cs = await chests()).length; i++) await wait(250);
+  log.push('chests ' + cs.length);
+  if (cs.length) {
+    await page.evaluate((p) => { window.__camTarget = p; }, cs[0]);
+    await walkTo(cs[0], 0.6, 6000, false); log.push('walked onto the chest'); await wait(1500);
+    const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /preview/i.test(x.textContent)); if (!b) return false; b.click(); return true; });
+    log.push(ok ? 'reveal' : 'no preview button'); await wait(11000);
+  }
+} else {
 // the chest: a moss critter below the gate drops one (the monster kill -> chest hook is not in yet): lance it, walk
 // onto the chest (picked up into the bag), open the inventory and the chest
 const critter = () => page.evaluate(() => {
@@ -138,6 +154,7 @@ if (ch && ch.chests.length) {
     const b = page.getByRole('button', { name }).or(page.getByRole('tab', { name })); if (await b.count()) { await b.first().click().catch(() => {}); log.push('clicked ' + name); await wait(1400); }
   }
   await wait(3500);
+}
 }
 capturing = false; await capture;
 const secs = (Date.now() - t0) / 1000;
