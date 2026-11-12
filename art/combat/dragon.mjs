@@ -37,10 +37,13 @@ await page.evaluate((secs) => {
     if (window.__freeCam) return;
     const t = Math.min(1, (performance.now() - t0) / (secs * 1000)), u = t * t * (3 - 2 * t), p = f.player.pos;
     const d = drag ? [drag.position.x, drag.position.y, drag.position.z] : [p[0], p[1] + 1.6, p[2]];
-    const m = [(p[0] + d[0]) / 2, (p[1] + 1.2 + d[1]) / 2, (p[2] + d[2]) / 2];
-    const a0 = f.player.heading + 0.2 + 0.9 * u, r = 4.4 - 0.8 * u;
-    f.rig.camera.position.set(m[0] + Math.sin(a0) * r, m[1] + 0.5 - 0.2 * u, m[2] + Math.cos(a0) * r);
-    f.rig.camera.lookAt(m[0], m[1], m[2]); f.rig.camera.fov = 42; f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
+    const m = [(p[0] + d[0]) / 2, (p[1] + 1.25 + d[1]) / 2, (p[2] + d[2]) / 2];
+    // the camera stands off the line from her to the dragon, on her front side, so both read at a similar size
+    let vx = d[0] - p[0], vz = d[2] - p[2]; const vl = Math.hypot(vx, vz) || 1; vx /= vl; vz /= vl;
+    let px = -vz, pz = vx; if (px * Math.sin(f.player.heading) + pz * Math.cos(f.player.heading) < 0) { px = -px; pz = -pz; }
+    const sw = -0.45 + 0.9 * u, cx = px * Math.cos(sw) - pz * Math.sin(sw), cz = px * Math.sin(sw) + pz * Math.cos(sw), r = Math.max(2.6, vl * 0.9 + 1.6) - 0.4 * u;
+    f.rig.camera.position.set(m[0] + cx * r, m[1] + 0.25, m[2] + cz * r);
+    f.rig.camera.lookAt(m[0], m[1], m[2]); f.rig.camera.fov = 40; f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
   };
 }, SECS);
 let capturing = true, n = 0; const t0 = Date.now();
