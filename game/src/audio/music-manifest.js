@@ -2,6 +2,19 @@
 // docs/art/manifest.md and the README). Do not edit by hand.
 export const MUSIC_MANIFEST = {
   "sounds": {
+    "mus_town": {
+      "file": "mus_town.ogg",
+      "kind": "music",
+      "dur": 337.8143,
+      "samples": 16215085,
+      "channels": 2,
+      "loop": true,
+      "title": "Hiraeth",
+      "artist": "Scott Buckley",
+      "licence": "CC-BY 4.0",
+      "source": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/06/sb_hiraeth.mp3",
+      "credit": "\"Hiraeth\" by Scott Buckley, released under CC-BY 4.0 (www.scottbuckley.com.au)"
+    },
     "mus_interior": {
       "file": "mus_interior.ogg",
       "kind": "music",
@@ -15,31 +28,44 @@ export const MUSIC_MANIFEST = {
       "source": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/07/sb_tearsinrain.mp3",
       "credit": "\"Tears in Rain\" by Scott Buckley, released under CC-BY 4.0 (www.scottbuckley.com.au)"
     },
-    "mus_town_moonlight": {
-      "file": "mus_town_moonlight.ogg",
+    "mus_outside": {
+      "file": "mus_outside.ogg",
       "kind": "music",
-      "dur": 242.6085,
-      "samples": 11645207,
+      "dur": 175.5555,
+      "samples": 8426666,
       "channels": 2,
       "loop": true,
-      "title": "Moonlight",
-      "artist": "Scott Buckley",
-      "licence": "CC-BY 4.0",
-      "source": "https://www.scottbuckley.com.au/library/wp-content/uploads/2022/07/Moonlight.mp3",
-      "credit": "\"Moonlight\" by Scott Buckley, released under CC-BY 4.0 (www.scottbuckley.com.au)"
-    },
-    "mus_town_dreams": {
-      "file": "mus_town_dreams.ogg",
-      "kind": "music",
-      "dur": 397.252,
-      "samples": 19068096,
-      "channels": 2,
-      "loop": true,
-      "title": "Dreams Become Real",
+      "title": "Floating Cities",
       "artist": "Kevin MacLeod",
       "licence": "CC-BY 4.0",
-      "source": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dreams%20Become%20Real.mp3",
-      "credit": "\"Dreams Become Real\" Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/)"
+      "source": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Floating%20Cities.mp3",
+      "credit": "\"Floating Cities\" Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/)"
+    },
+    "mus_boss": {
+      "file": "mus_boss.ogg",
+      "kind": "music",
+      "dur": 176.7355,
+      "samples": 8483303,
+      "channels": 2,
+      "loop": true,
+      "title": "Legionnaire",
+      "artist": "Scott Buckley",
+      "licence": "CC-BY 4.0",
+      "source": "https://www.scottbuckley.com.au/library/wp-content/uploads/2022/04/sb_legionnaire2022.mp3",
+      "credit": "\"Legionnaire\" by Scott Buckley, released under CC-BY 4.0 (www.scottbuckley.com.au)"
+    },
+    "mus_chapter_done": {
+      "file": "mus_chapter_done.ogg",
+      "kind": "music",
+      "dur": 212.4681,
+      "samples": 10198469,
+      "channels": 2,
+      "loop": true,
+      "title": "Frozen Star",
+      "artist": "Kevin MacLeod",
+      "licence": "CC-BY 4.0",
+      "source": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Frozen%20Star.mp3",
+      "credit": "\"Frozen Star\" Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0 (http://creativecommons.org/licenses/by/4.0/)"
     }
   }
 };

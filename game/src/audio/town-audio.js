@@ -1,10 +1,11 @@
 // Sound in the town (feature 4; effects synthesized by art/audio/build_audio.py): the wind bed and the licensed music
-// beds by zone and weather (src/audio/music.js: the town theme in the streets, "Tears in Rain" in the shops), footsteps (stone in the streets, wood in the shops), and cues that other modules send as a
+// beds (src/audio/music.js: Hiraeth in the streets, Tears in Rain in the shops, Floating Cities beyond the walls,
+// Legionnaire against the elite, Frozen Star after a passed chapter), footsteps (stone in the streets, wood in the shops), and cues that other modules send as a
 // window event `ftf:sound` with the sound or group name (the wheel's ticks and prize, the shop door, the casts, the
 // free mint). It starts on the first key or tap (browsers allow sound only after a gesture) and follows the volume
 // settings shared with the archipelago (src/audio/mix.js). The archipelago's play layer has its own audio; this one
 // is disposed when Iris leaves the town and made again when she comes back.
-import { musicFor, MUSIC_XFADE } from './music.js';
+import { musicFor, MUSIC_XFADE, AGGRO_LIFT, BOSS_HOLD, takeChapterDone } from './music.js';
 
 export const STEP_EVERY = Object.freeze({ walk: 0.62, run: 0.9 });
 /** Cue names the game sends; anything else is ignored. */
@@ -60,7 +61,7 @@ export function stepper() {
 /**
  * @param {{createAudio: Function, win?: Window}} o
  */
-export function createTownAudio({ createAudio, win = globalThis, rand = Math.random }) {
+export function createTownAudio({ createAudio, win = globalThis, rand = Math.random, store = globalThis.sessionStorage, clock = () => (globalThis.performance ? performance.now() : Date.now()) / 1000 }) {
   const audio = createAudio({ music: false }); // the licensed beds replace the synthesized stems here
   audio.setZone('plaza');
   const steps = stepper();
@@ -80,7 +81,16 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
   const onFoot = (e) => { const d = e.detail || {}; lastContact = now(); api.footContact(d.surface || surface, !!d.running); };
   // Weather: one looping rain bed crossfaded on state changes; thunder after each storm flash; wet steps outdoors
   let rain = null, wet = false, weatherState = 'clear', musicZone = 'town';
-  const applyMusic = () => { if (audio.setMusic) audio.setMusic(musicFor({ zone: musicZone, weather: weatherState }), MUSIC_XFADE); };
+  let bossUntil = -1, aggro = false, lastBed;
+  const chapterLeft = takeChapterDone(store); // just back from a passed chapter: Frozen Star first
+  const chapterUntil = chapterLeft ? clock() + chapterLeft : -1;
+  const applyMusic = () => {
+    if (!audio.setMusic) return;
+    const t = clock();
+    const bed = musicFor({ zone: musicZone, weather: weatherState, boss: t < bossUntil, chapterDone: t < chapterUntil });
+    if (bed !== lastBed) { lastBed = bed; audio.setMusic(bed, MUSIC_XFADE); }
+    if (audio.setMusicLevel) audio.setMusicLevel(aggro && musicZone === 'outside' && t >= bossUntil ? AGGRO_LIFT : 1);
+  };
   const onWeather = (e) => {
     const d = e.detail || {}, w = weatherSound(d.state);
     wet = w.wet;
@@ -111,6 +121,17 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     setListener(camera, target) { if (audio.setListener) audio.setListener(camera, target); },
     /** Per frame (cheap when unchanged): 'town' | 'interior' | 'outside'; the bed crossfades when it changes. */
     setMusicZone(z) { if (z !== musicZone) { musicZone = z; applyMusic(); } },
+    /**
+     * Per frame from the monsters: `aggro` some monster chases her, `elite` the crownrift is engaged (its bed holds
+     * BOSS_HOLD s after it lets go). Also lets timed beds (Frozen Star after a chapter) run out.
+     */
+    setCombat({ aggro: a = false, elite = false } = {}) {
+      const t = clock();
+      if (elite) bossUntil = t + BOSS_HOLD;
+      const was = aggro; aggro = !!a;
+      const bed = musicFor({ zone: musicZone, weather: weatherState, boss: t < bossUntil, chapterDone: t < chapterUntil });
+      if (bed !== lastBed || was !== aggro) applyMusic();
+    },
     get musicZone() { return musicZone; },
     get weather() { return { bed: rain?.bedName ?? null, wet }; },
     dispose() { rain?.stop(0.3); win.removeEventListener('ftf:weather', onWeather); win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },

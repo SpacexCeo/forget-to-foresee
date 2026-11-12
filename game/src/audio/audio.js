@@ -4,6 +4,7 @@
 // Nothing touches WebAudio until unlock() (call it from a user gesture). See docs/audio.md.
 import { AUDIO_MANIFEST } from './manifest.js';
 import { MUSIC_MANIFEST } from './music-manifest.js';
+export { archipelagoMusic, markChapterDone } from './music.js'; // for the archipelago, which loads this module lazily
 import { createSafeStorage } from '../ui/storage.js';
 import { loadVolumes, saveVolumes, sanitizeVolumes, sliderGain, dbToGain, tensionMix, zoneMix, ZONES as ZONES_WITH_HUM, resolveSound, guestPlan, listenerPose, BUSES } from './mix.js';
 
@@ -38,7 +39,11 @@ export function createAudio(opts = {}) {
   const lastVariant = new Map();
   let duckCount = 0;
   let zone = null, bed = null, wind = null, tension = 0, music = null, musicStarting = false;
-  let musicBed = null, wantBed = null; // the licensed bed playing {name, h} and the one asked for
+  let musicBed = null, wantBed = null, musicLevel = 1; // the licensed bed playing {name, h}, the one asked for, its level
+  // Beds stream through two <audio> elements (a 5-minute piece decoded whole would take ~65 MB); both are primed in
+  // the unlock gesture so later crossfades may start them (iOS), and they alternate so two beds can overlap.
+  const El = opts.MediaElement === undefined ? globalThis.Audio : opts.MediaElement;
+  let streams = null, nextStream = 0;
   const pendingLoops = [];
   let hums = [];                   // one positional amb_shell_hum per Shell (setShellHums)
 
@@ -197,12 +202,51 @@ export function createAudio(opts = {}) {
     for (const k of Object.keys(m)) ramp(music[k].gain.gain, musicBed ? 0 : m[k], 1.2); // a licensed bed replaces the stems
   }
 
+  function primeStreams() {
+    if (streams || !El || !ctx.createMediaElementSource) return;
+    try {
+      streams = [0, 1].map(() => {
+        const el = new El(); el.crossOrigin = 'anonymous'; el.loop = true; el.preload = 'auto';
+        const out = ctx.createGain(); out.gain.value = 0;
+        const src = ctx.createMediaElementSource(el); src.connect(out); out.connect(nodes.musicDuck);
+        try { const p = el.play(); if (p && p.catch) p.catch(() => {}); el.pause(); } catch { /* primed or not, carry on */ }
+        return { el, out, owner: null };
+      });
+    } catch { streams = null; }
+  }
+
+  /** A looping bed streamed from its file (falls back to a decoded buffer without media elements, e.g. in Node). */
+  function streamBed(name) {
+    const meta = manifest.sounds[name];
+    if (!streams) return play(name, { loop: true, gain: 0 });
+    const s = streams[nextStream]; nextStream = 1 - nextStream;
+    const h = { name, stopped: false };
+    s.owner = h;
+    clearTimeout(s.timer);
+    ramp(s.out.gain, 0, 0.01);
+    s.el.src = base + meta.file;
+    try { s.el.currentTime = 0; } catch { /* not loaded yet */ }
+    try { const p = s.el.play(); if (p && p.catch) p.catch(() => {}); } catch { /* autoplay refused */ }
+    Object.assign(h, {
+      get playing() { return !h.stopped; },
+      setGain(g, tc = 0.1) { if (s.owner === h) ramp(s.out.gain, g, tc); },
+      stop(fade = 0.05) {
+        if (h.stopped) return; h.stopped = true;
+        if (s.owner !== h) return;
+        ramp(s.out.gain, 0, fade / 3);
+        s.timer = setTimeout(() => { if (s.owner === h) { try { s.el.pause(); } catch { /* ok */ } s.owner = null; } }, fade * 1000 + 100);
+      },
+      ended: Promise.resolve(),
+    });
+    return h;
+  }
+
   /** Crossfades to the wanted licensed bed (or out of it, back to the stems when they run). */
   function applyBed(fade) {
     if (!ctx || (musicBed?.name ?? null) === wantBed) return;
     musicBed?.h.stop(fade);
-    musicBed = wantBed ? { name: wantBed, h: play(wantBed, { loop: true, gain: 0 }) } : null;
-    musicBed?.h.setGain(1, fade / 3);
+    musicBed = wantBed ? { name: wantBed, h: streamBed(wantBed) } : null;
+    musicBed?.h.setGain(musicLevel, fade / 3);
     applyTension();
   }
 
@@ -221,6 +265,7 @@ export function createAudio(opts = {}) {
         for (const nm of ['ui_click', 'ui_hover', 'ui_confirm', 'amb_wind']) load(nm);
         for (const e of pendingLoops.splice(0)) { const inner = play(e.nameOrGroup, { ...e.o, pos: e.h.pos, gain: e.h.gain }); e.h.inner = inner; }
         applyZone();
+        primeStreams();
         applyBed(1.5);
         if (opts.music !== false) startMusic();
       }
@@ -233,6 +278,8 @@ export function createAudio(opts = {}) {
     setTension(t) { tension = Math.min(100, Math.max(0, +t || 0)); if (ctx && !music) startMusic(); applyTension(); },
     /** The licensed music bed (a manifest name, or null for none); crossfades over `fade` s, queued until unlock. */
     setMusic(name, fade = 2.5) { wantBed = name && manifest.sounds[name] ? name : null; applyBed(fade); },
+    /** The bed's level (1 normal; a little above while monsters chase her), eased over `tc` s. */
+    setMusicLevel(l, tc = 1.5) { musicLevel = Math.max(0, +l || 0); musicBed?.h.setGain(musicLevel, tc); },
     setZone(z) { const m = zoneMix(z); if (zone && zoneMix(zone).zone === m.zone) return; zone = m.zone; applyZone(); },
     /**
      * One positional Shell hum per position ([x, y, z] of each Shell). Loops queue until unlock(); their
@@ -278,7 +325,8 @@ export function createAudio(opts = {}) {
       if (music) for (const m of Object.values(music)) { try { m.src.stop(); } catch { /* ok */ } }
       if (onVis) document.removeEventListener('visibilitychange', onVis);
       try { ctx?.close(); } catch { /* ok */ }
-      ctx = null; nodes = null; music = null; musicBed = null;
+      if (streams) for (const s of streams) { clearTimeout(s.timer); try { s.el.pause(); s.el.removeAttribute('src'); } catch { /* ok */ } }
+      ctx = null; nodes = null; music = null; musicBed = null; streams = null;
     },
   };
   return api;

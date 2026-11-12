@@ -916,6 +916,12 @@ function frame() {
         const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
         townAudio.setMusicZone(townShops && townShops.inside ? 'interior' : (lz > 36 || Math.abs(lx) > 55) ? 'outside' : 'town');
       }
+      { // Floating Cities lifts while monsters chase her; the crownrift elite engaged brings Legionnaire
+        let aggro = false, elite = false;
+        const mobs = townMobs && townMobs.brain ? townMobs.brain.mobs : null;
+        if (mobs) for (const m of mobs) { if (m.state === 'idle' || m.state === 'dead' || m.state === 'gone') continue; aggro = true; if (m.T && m.T.elite) elite = true; }
+        townAudio.setCombat({ aggro, elite });
+      }
       lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
       townAudio.setListener(camera, avatar.position);
     }

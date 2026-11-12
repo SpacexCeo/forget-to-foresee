@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { musicFor, MUSIC_BEDS, TOWN_THEME } from '../../src/audio/music.js';
+import { musicFor, archipelagoMusic, MUSIC_BEDS, markChapterDone, takeChapterDone, CHAPTER_DONE_SECONDS } from '../../src/audio/music.js';
 import { MUSIC_MANIFEST } from '../../src/audio/music-manifest.js';
 import { createAudio } from '../../src/audio/audio.js';
 import { createTownAudio } from '../../src/audio/town-audio.js';
@@ -12,19 +12,24 @@ import { memoryStorage } from '../../src/ui/storage.js';
 
 const root = (p) => fileURLToPath(new URL('../../../' + p, import.meta.url));
 
-test('beds by zone and weather: the town theme outdoors, "Tears in Rain" in the shops', () => {
-  assert.ok(['mus_town_moonlight', 'mus_town_dreams'].includes(TOWN_THEME));
-  assert.equal(musicFor({ zone: 'town' }), TOWN_THEME);
+test('beds: Hiraeth, Tears in Rain in the shops, Floating Cities outside, Legionnaire for the elite and the finale', () => {
+  assert.equal(musicFor({ zone: 'town' }), 'mus_town');
   assert.equal(musicFor({ zone: 'interior' }), 'mus_interior');
-  assert.equal(musicFor({ zone: 'interior', weather: 'storm' }), 'mus_interior', 'interiors keep their bed in the rain');
-  assert.equal(musicFor({ zone: 'outside' }), TOWN_THEME, 'no combat pick yet: the town theme beyond the walls');
-  assert.equal(musicFor({ zone: 'archipelago' }), null, 'no archipelago pick yet: the old stems');
-  assert.equal(musicFor({ zone: 'town', weather: 'rain' }), TOWN_THEME, 'no rain pick yet');
-  const beds = { ...MUSIC_BEDS, rain: 'r', outside: 'c', archipelago: 'a' };
-  assert.equal(musicFor({ zone: 'town', weather: 'drizzle' }, beds), 'r');
-  assert.equal(musicFor({ zone: 'outside', weather: 'fog' }, beds), 'c');
-  assert.equal(musicFor({ zone: 'archipelago', weather: 'storm' }, beds), 'r');
+  assert.equal(musicFor({ zone: 'interior', weather: 'storm', boss: true }), 'mus_interior', 'the shops keep their bed');
+  assert.equal(musicFor({ zone: 'outside' }), 'mus_outside');
+  assert.equal(musicFor({ zone: 'outside', boss: true }), 'mus_boss');
+  assert.equal(musicFor({ zone: 'town', weather: 'rain' }), 'mus_town', 'no rain bed: the zone bed under the rain ambience');
+  assert.equal(musicFor({ zone: 'town', chapterDone: true }), 'mus_chapter_done');
+  assert.equal(musicFor({ zone: 'outside', chapterDone: true, boss: true }), 'mus_boss', 'the fight wins');
+  assert.equal(musicFor({ zone: 'town', weather: 'drizzle' }, { ...MUSIC_BEDS, rain: 'r' }), 'r');
+  assert.equal(archipelagoMusic('trust'), null, 'ordinary trials keep the stems');
+  assert.equal(archipelagoMusic('vote'), 'mus_boss');
+  assert.equal(archipelagoMusic('ending'), 'mus_chapter_done');
   for (const n of Object.values(MUSIC_BEDS).filter(Boolean)) assert.ok(MUSIC_MANIFEST.sounds[n], n + ' ships');
+  const store = new Map(); const ss = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
+  assert.equal(takeChapterDone(ss, 1000), 0);
+  markChapterDone(ss, 1000); assert.equal(takeChapterDone(ss, 5000), CHAPTER_DONE_SECONDS); assert.equal(takeChapterDone(ss, 6000), 0, 'consumed');
+  markChapterDone(ss, 0); assert.equal(takeChapterDone(ss, 3600e3), 0, 'too old');
 });
 
 test('every music bed ships as a looping stereo file and is credited (CC-BY 4.0)', () => {
@@ -60,8 +65,8 @@ test('engine: a bed asked before unlock starts on unlock, crossfades, silences t
   assert.equal(a.state.musicBed, 'mus_interior');
   a.setTension(50); await flush();
   assert.ok(Object.values(a._music()).every((m) => m.gain.gain.value === 0), 'stems silent under a licensed bed');
-  a.setMusic(TOWN_THEME); await flush();
-  assert.equal(a.state.musicBed, TOWN_THEME);
+  a.setMusic('mus_town'); await flush();
+  assert.equal(a.state.musicBed, 'mus_town');
   assert.ok(FakeCtx.last.sources.some((s) => s.stopped && s.loop), 'the old bed stopped (after its fade)');
   a.setMusic('no_such_track'); assert.equal(a.state.musicBed, null, 'unknown names: no bed');
   a.play('strike_impact'); await flush();
@@ -70,15 +75,43 @@ test('engine: a bed asked before unlock starts on unlock, crossfades, silences t
   a.dispose();
 });
 
-test('town audio: no synth stems, the bed follows the zone and the weather', () => {
-  const calls = []; let opts = null; const listeners = {};
+test('town audio: no synth stems; the bed follows zone, the elite, aggro and a passed chapter', () => {
+  const calls = []; const levels = []; let opts = null; const listeners = {}; let t = 0;
   const win = { addEventListener: (k, f) => { listeners[k] = f; }, removeEventListener() {} };
-  const ta = createTownAudio({ createAudio: (o) => { opts = o; return { setZone() {}, play: () => ({ stop() {}, setGain() {} }), setMusic: (n, f) => calls.push([n, f]), unlock: () => Promise.resolve(), dispose() {} }; }, win, rand: () => 0.5 });
+  const fake = (o) => { opts = o; return { setZone() {}, play: () => ({ stop() {}, setGain() {} }), setMusic: (n, f) => calls.push([n, f]), setMusicLevel: (l) => levels.push(l), unlock: () => Promise.resolve(), dispose() {} }; };
+  const ta = createTownAudio({ createAudio: fake, win, rand: () => 0.5, store: null, clock: () => t });
   assert.equal(opts.music, false);
-  assert.equal(calls.at(-1)[0], TOWN_THEME);
+  assert.equal(calls.at(-1)[0], 'mus_town');
   ta.setMusicZone('interior'); assert.equal(calls.at(-1)[0], 'mus_interior'); assert.ok(calls.at(-1)[1] > 1, 'a crossfade, not a cut');
-  const n = calls.length; ta.setMusicZone('interior'); assert.equal(calls.length, n, 'per-frame calls are free when unchanged');
-  ta.setMusicZone('outside'); assert.equal(calls.at(-1)[0], TOWN_THEME);
-  listeners['ftf:weather']({ detail: { state: 'rain' } }); assert.equal(calls.at(-1)[0], TOWN_THEME, 'no rain bed picked yet');
+  const n = calls.length; ta.setMusicZone('interior'); ta.setCombat({}); assert.equal(calls.length, n, 'per-frame calls are free when unchanged');
+  ta.setMusicZone('outside'); assert.equal(calls.at(-1)[0], 'mus_outside');
+  ta.setCombat({ aggro: true }); assert.ok(levels.at(-1) > 1, 'a lift while monsters chase her');
+  ta.setCombat({ aggro: true, elite: true }); assert.equal(calls.at(-1)[0], 'mus_boss');
+  t = 2; ta.setCombat({ aggro: false }); assert.equal(calls.at(-1)[0], 'mus_boss', 'holds a moment after the elite lets go');
+  t = 10; ta.setCombat({}); assert.equal(calls.at(-1)[0], 'mus_outside'); assert.equal(levels.at(-1), 1);
+  listeners['ftf:weather']({ detail: { state: 'rain' } }); assert.equal(calls.at(-1)[0], 'mus_outside', 'no rain bed picked yet');
   ta.dispose();
+  const store = new Map([['ftf.music.chapterDone', String(Date.now())]]);
+  const ss = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
+  calls.length = 0; t = 0;
+  const tb = createTownAudio({ createAudio: fake, win, rand: () => 0.5, store: ss, clock: () => t });
+  assert.equal(calls.at(-1)[0], 'mus_chapter_done', 'back from a passed chapter: Frozen Star first');
+  t = CHAPTER_DONE_SECONDS + 1; tb.setCombat({}); assert.equal(calls.at(-1)[0], 'mus_town', 'then Hiraeth');
+  tb.dispose();
+});
+
+test('engine: beds stream through two primed media elements that alternate on a crossfade', async () => {
+  class El { constructor() { El.all.push(this); this.plays = 0; } play() { this.plays++; this.paused = false; return Promise.resolve(); } pause() { this.paused = true; } removeAttribute() {} }
+  El.all = [];
+  class Ctx extends FakeCtx { createMediaElementSource(el) { const n = new Node(); n.el = el; return n; } }
+  const a = createAudio({ AudioContextClass: Ctx, fetch: fakeFetch, storage: memoryStorage(), base: '/x/', MediaElement: El, music: false });
+  a.setMusic('mus_town');
+  await a.unlock(); await flush();
+  assert.equal(El.all.length, 2, 'two elements, primed in the gesture');
+  assert.equal(El.all[0].src, '/x/mus_town.ogg'); assert.equal(El.all[0].loop, true);
+  a.setMusic('mus_interior');
+  assert.equal(El.all[1].src, '/x/mus_interior.ogg', 'the next bed takes the other element (both play during the fade)');
+  assert.equal(a.state.musicBed, 'mus_interior');
+  a.setMusicLevel(1.25);
+  a.dispose();
 });

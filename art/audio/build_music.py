@@ -28,13 +28,15 @@ OUT = ROOT / "game/public/assets/audio"
 MANIFEST = ROOT / "game/src/audio/music-manifest.js"
 LOOP_XFADE = 6.0
 TARGET_LUFS = -20.0
-BITRATE = "64k"
+BITRATE = "96k"
 
-# name -> source; the owner's picks (12.11). The town theme is one of the two mus_town_* (src/audio/music.js).
+# name -> source; the owner's picks (12.11), whole pieces looped (game/src/audio/music.js says where each plays)
 PICKS = {
-    "mus_interior": sb("Tears in Rain", "2019/07/sb_tearsinrain.mp3"),
-    "mus_town_moonlight": sb("Moonlight", "2022/07/Moonlight.mp3"),
-    "mus_town_dreams": km("Dreams Become Real"),
+    "mus_town": sb("Hiraeth", "2020/06/sb_hiraeth.mp3"),                     # the streets inside the walls
+    "mus_interior": sb("Tears in Rain", "2019/07/sb_tearsinrain.mp3"),        # the shops
+    "mus_outside": km("Floating Cities"),                                     # beyond the walls, the hunt
+    "mus_boss": sb("Legionnaire", "2022/04/sb_legionnaire2022.mp3"),          # the elite fight, the season finale
+    "mus_chapter_done": km("Frozen Star"),                                    # after a chapter (season) is passed
 }
 
 
