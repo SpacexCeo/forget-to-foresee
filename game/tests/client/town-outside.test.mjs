@@ -91,7 +91,7 @@ test('A cast leaves on the release frame of her cast clip: the clips carry it, t
     const clip = json.animations.find((a) => a.name === 'cast_' + id);
     assert.ok(clip, 'cast_' + id + ' is in iris.glb');
     const times = json.accessors[clip.samplers[0].input];
-    assert.ok(clip.extras.release_s >= 0.3 && clip.extras.release_s <= 0.6, 'a slow build, then the release at about half a second');
+    assert.ok(clip.extras.release_s > 0.05 && clip.extras.release_s <= 0.15, 'skills are instant: a flick of anticipation, the release within 0.15 s');
     assert.ok(times.max[0] > clip.extras.release_s + 0.5 && times.max[0] <= CASTS[id].cooldown + 0.3, 'an overshoot and a settle, no longer than the cooldown allows');
   }
   const cast = readFileSync(new URL('../../src/scenes/town-casting.js', import.meta.url), 'utf8');

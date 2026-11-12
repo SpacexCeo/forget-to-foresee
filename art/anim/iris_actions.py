@@ -41,7 +41,7 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 MODEL = os.path.join(REPO, 'game/public/assets/models/agent_iris.glb')
 SIDECAR = os.path.join(REPO, 'game/public/assets/anim/iris.glb')
 FPS = 60
-RELEASE_S = 0.42
+RELEASE_S = 0.42          # Iris; `--release 0.14` gives the instant cast (Elise v3)
 IDLE = {}
 
 
@@ -118,9 +118,10 @@ def cast_lance():
         'arm_R': {'at': [0.02, -0.34, 0.20], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [0.6, -0.4, -0.6]},
         'arm_L': {'at': [0.10, -0.40, -0.10], 'elbow': [0.6, 0, -0.6], 'fingers': [0.1, -1, -0.2], 'palm': [-1, 0, 0]},
     }
-    return [(0.0, IDLE), (0.13, with_ease(mix(IDLE, coil, 0.86), 'out')), (0.38, with_ease(coil, 'linear')),
-            (RELEASE_S, with_ease(hit, ('pow', 1.6))), (0.50, with_ease(mix(coil, hit, 1.07), 'out')), (0.72, with_ease(mix(coil, hit, 0.97), 'smooth')),
-            (0.96, with_ease(back, 'smooth')), (1.25, with_ease(IDLE, 'out'))], 1.25
+    R = RELEASE_S; k = 1.0 if R > 0.3 else 0.72        # a short anticipation travels less
+    return [(0.0, IDLE), (R * 0.31, with_ease(mix(IDLE, coil, 0.86 * k), 'out')), (R - 0.04, with_ease(mix(IDLE, coil, k), 'linear')),
+            (R, with_ease(hit, ('pow', 1.6))), (R + 0.08, with_ease(mix(coil, hit, 1.07), 'out')), (R + 0.30, with_ease(mix(coil, hit, 0.97), 'smooth')),
+            (R + 0.54, with_ease(back, 'smooth')), (R + 0.83, with_ease(IDLE, 'out'))], R + 0.83
 
 
 def cast_snare():
@@ -151,9 +152,10 @@ def cast_snare():
         'arm_R': {'at': [0.03, -0.36, 0.16], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.9, 0.4], 'palm': [0.6, -0.3, -0.6]},
         'arm_L': {'at': [0.12, -0.40, -0.08], 'elbow': [0.6, 0, -0.6], 'fingers': [0.1, -1, -0.2], 'palm': [-1, 0, 0]},
     }
-    return [(0.0, IDLE), (0.15, with_ease(mix(IDLE, rise, 0.88), 'out')), (0.38, with_ease(rise, 'linear')),
-            (RELEASE_S, with_ease(hit, ('pow', 1.6))), (0.50, with_ease(mix(rise, hit, 1.06), 'out')), (0.72, with_ease(mix(rise, hit, 0.97), 'smooth')),
-            (0.96, with_ease(back, 'smooth')), (1.25, with_ease(IDLE, 'out'))], 1.25
+    R = RELEASE_S; k = 1.0 if R > 0.3 else 0.72
+    return [(0.0, IDLE), (R * 0.36, with_ease(mix(IDLE, rise, 0.88 * k), 'out')), (R - 0.04, with_ease(mix(IDLE, rise, k), 'linear')),
+            (R, with_ease(hit, ('pow', 1.6))), (R + 0.08, with_ease(mix(rise, hit, 1.06), 'out')), (R + 0.30, with_ease(mix(rise, hit, 0.97), 'smooth')),
+            (R + 0.54, with_ease(back, 'smooth')), (R + 0.83, with_ease(IDLE, 'out'))], R + 0.83
 
 
 def mirror(pose):
@@ -367,9 +369,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model', default=MODEL); ap.add_argument('--in', dest='src', default=SIDECAR); ap.add_argument('--out', default=SIDECAR)
     ap.add_argument('--only', default=''); ap.add_argument('--sheet', default='')
+    ap.add_argument('--release', type=float, default=RELEASE_S, help='the casts\' release time, s (0.14: an instant cast)')
     ap.add_argument('--legs', type=float, default=1.0, help='scale of the steps and of the hips\' drop (Elise: her gown hides the legs and must not be cut)')
     ap.add_argument('--cloth', default='', help='a cloth rig (.npz): bake the gown, ribbons and strands over the new clips and check the legs against it')
     a = ap.parse_args()
+    globals()['RELEASE_S'] = a.release
+    for k_ in ('cast_lance', 'cast_snare'): EXTRAS[k_]['release_s'] = EXTRAS[k_]['step_s'] = a.release
     rig = Rig(a.model)
     clips = read_clips(a.src, rig)
     idle = clips['idle']
@@ -400,7 +405,7 @@ def main():
         print(name, len(local), 'frames', 'planted slip max %.4f m/s' % slip)
         if a.sheet:
             sheet(rig, local, pel, a.sheet.replace('.png', f'_{name}.png'), FPS,
-                  times=[0, 0.13, 0.38, 0.40, RELEASE_S, 0.50, 0.72, 0.84, 0.96, 1.10] if name.startswith('cast_') else {'dash': [0, 0.03, 0.06, 0.13, 0.20, 0.24, 0.28, 0.34, 0.40, 0.52], 'strike3': [0, 0.09, 0.17, 0.20, 0.22, 0.30, 0.46, 0.56, 0.66, 0.88]}.get(name, [0, 0.04, 0.07, 0.10, 0.12, 0.18, 0.30, 0.40, 0.50, 0.56]))
+                  times=[0, RELEASE_S * 0.31, RELEASE_S - 0.04, RELEASE_S - 0.02, RELEASE_S, RELEASE_S + 0.08, RELEASE_S + 0.30, RELEASE_S + 0.42, RELEASE_S + 0.54, RELEASE_S + 0.68] if name.startswith('cast_') else {'dash': [0, 0.03, 0.06, 0.13, 0.20, 0.24, 0.28, 0.34, 0.40, 0.52], 'strike3': [0, 0.09, 0.17, 0.20, 0.22, 0.30, 0.46, 0.56, 0.66, 0.88]}.get(name, [0, 0.04, 0.07, 0.10, 0.12, 0.18, 0.30, 0.40, 0.50, 0.56]))
         new[name] = {'name': name, 'local': local, 'pelvis': rig.pelvis_local(pel), 'bones': bones, 'fps': FPS,
                      'extras': {'loop': False, 'source': 'keyed by hand (art/anim/iris_actions.py)', **EXTRAS.get(name, {})}}
     if a.sheet:

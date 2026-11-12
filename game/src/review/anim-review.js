@@ -5,7 +5,7 @@
 //   ?a=agent_iris[&aclips=/assets/anim/x.glb][&art=v1|v2]   left character (clips from the model, or a side-car file)
 //   &b=agent_iris&bclips=...&brt=...                        optional second character (rows: a on top, b below)
 //   &scenario=loco|walk|run|idle|turn|clip:<name>           what the characters do (see SCENARIOS)
-//   &views=side,front                                       camera columns (side, front, front0, feetfront, back, top, feet, game)
+//   &views=side,front                                       camera columns (side, front, front0, feetfront, back, top, feet, game, face, face34, faceside)
 //   &aclips=townsfolk                                       the shared townsfolk clips retargeted onto the model
 //   &body=elder&walkclip=elder_walk&walk=clip               townsfolk body type, the clip that drives the gait, move at the clip's speed
 //   &zoom=1.6&hscale=0.8&plant=0&once=1&walk=1.3            closer camera, lower aim, no planted-feet layer, one-shot, walk speed
@@ -58,6 +58,9 @@ const VIEW = {
   feetfront: { dir: [0, 0.12, 1], dist: 1.9, fov: 30, h: 0.3 },
   arms: { dir: [0.55, 0.1, 1], dist: 1.7, fov: 30, h: 1.2 },
   armsback: { dir: [-0.5, 0.15, -1], dist: 1.7, fov: 30, h: 1.2 },
+  face: { dir: [0, 0.02, 1], dist: 0.85, fov: 24, h: 1.6 },
+  face34: { dir: [0.7, 0.04, 1], dist: 0.85, fov: 24, h: 1.6 },
+  faceside: { dir: [1, 0.02, 0.05], dist: 0.85, fov: 24, h: 1.6 },
   top: { dir: [0.001, 1, 0.001], dist: 6, fov: 30, h: 0.2 },
   feet: { dir: [1, 0.1, 0.25], dist: 2.0, fov: 30, h: 0.25 },
   game: { dir: [-0.25, 0.42, -1], dist: 5.6, fov: 42, h: 1.2 }, // roughly the third-person game camera behind her

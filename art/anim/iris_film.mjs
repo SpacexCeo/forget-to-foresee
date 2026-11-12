@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|audit|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|strikes|audit|shoulders|show> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
 // --step 60: frame by frame: the page's clock and its animation frames are driven by this script (each frame is
 // exactly 1/60 s of game time and is saved), so the film is a true 60 fps whatever the renderer's speed is.
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
@@ -33,7 +33,7 @@ if (STEP) await page.addInitScript(() => {
   window.__manual = () => { vt = realNow(); manual = true; };
   window.__frame = (dt) => { vt += dt; const c = q; q = []; for (const f of c) { try { f(vt); } catch (e) { console.error(e); } } return c.length; };
 });
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit', 'show'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -214,6 +214,23 @@ else if (scenario === 'shoulders') {
     mark(name + ' run'); await go(1800, true);
     mark(name + ' stop'); await wait(1500);
   }
+}
+else if (scenario === 'show') {
+  // a character review: idle, walk, run, the strike combo and a cast, from the front, the side and behind, then a close-up
+  const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos; f.town.casting.aimAt(id, [p[0] + 9, window.__ground(p[0] + 9, p[2]) ?? p[1], p[2]]); return f.town.casting.release(); }, id);
+  for (const [name, s] of [['front', { angle: 0.3, dist: 4.6, h: 0.9, up: 0.25 }], ['side', { angle: Math.PI / 2, dist: 4.6, h: 0.9, up: 0.15 }], ['back', { angle: Math.PI - 0.45, dist: 4.4, h: 0.9, up: 0.3 }]]) {
+    await back(); await shot(s); await wait(2200);
+    mark(name + ' idle'); await wait(2000);
+    mark(name + ' walk'); await go(2400, false);
+    mark(name + ' run'); await go(2000, true);
+    mark(name + ' stop'); await wait(1400);
+    mark(name + ' strikes'); for (let i = 0; i < 3; i++) { await page.keyboard.press('KeyF'); await wait(420); }
+    await wait(1300);
+    mark(name + ' cast'); await aim('lance'); await wait(2400);
+  }
+  await back(); await shot({ angle: 0.25, dist: 1.5, h: 1.52, up: 0.05 }); await wait(2400);
+  mark('face idle'); await wait(3000);
+  mark('face wave'); await page.evaluate(() => window.__ftf.irisReact('greet')); await wait(2800);
 }
 capturing = false; await capture;
 const seconds = STEP ? n / STEP : (Date.now() - t0) / 1000;
