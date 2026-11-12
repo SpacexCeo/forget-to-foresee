@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { MobFx, mobMaterial, HIT_SECONDS, DISSOLVE_SECONDS, MOB_GLOW } from '../../src/render/mob-fx.js';
 
 test('the flash and dissolve patch hooks into the standard material shader', () => {
-  const u = { dissolve: { value: 0 }, edge: { value: new THREE.Color(1, 0.6, 0.3) }, flash: { value: 0 } };
+  const u = { dissolve: { value: 0 }, edge: { value: new THREE.Color(1, 0.6, 0.3) }, flash: { value: 0 }, rim: { value: 0.3 } };
   const m = mobMaterial(new THREE.MeshStandardMaterial(), u);
   const shader = { uniforms: {}, vertexShader: THREE.ShaderLib.standard.vertexShader, fragmentShader: THREE.ShaderLib.standard.fragmentShader };
   m.onBeforeCompile(shader, null);

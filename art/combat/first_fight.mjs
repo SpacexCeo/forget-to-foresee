@@ -64,12 +64,17 @@ const state = () => page.evaluate(() => {
 let capturing = true, n = 0; const t0 = Date.now();
 const capture = (async () => {
   while (capturing) {
-    const d = await page.evaluate(() => {                                   // a chase camera behind her, towards the pack
+    const d = await page.evaluate(async () => {                             // a chase camera behind her, towards the pack
       const f = window.__ftf, p = f.player.pos, home = f.town.mobs.brain.packs[0].home;
       let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
       const want = [p[0] - dx * 7.5, p[1] + 3.6, p[2] - dz * 7.5], look = [p[0] + dx * 2.5, p[1] + 0.7, p[2] + dz * 2.5];
       const c = window.__cam || (window.__cam = { pos: want.slice(), look: look.slice() });
-      for (let i = 0; i < 3; i++) { c.pos[i] += (want[i] - c.pos[i]) * 0.25; c.look[i] += (look[i] - c.look[i]) * 0.3; }
+      // collision: from the look point to the wanted spot; a wall (the gate passage) pulls the camera in front of it
+      window.__col ||= await import('/src/physics/collision.js');
+      const dir = [want[0] - look[0], want[1] - look[1], want[2] - look[2]], dl = Math.hypot(...dir);
+      const hit = window.__col.rayCast(f.town.scene.world, look, dir, dl, window.__col.MASK_PLAYER);
+      if (hit) { const k = Math.max(0.15, (hit.t - 0.4) / dl); for (let i = 0; i < 3; i++) want[i] = look[i] + dir[i] * k; }
+      for (let i = 0; i < 3; i++) { c.pos[i] += (want[i] - c.pos[i]) * (hit ? 0.6 : 0.25); c.look[i] += (look[i] - c.look[i]) * 0.3; }
       const cam = f.rig.camera.clone(); cam.fov = 45; cam.near = 0.1; cam.aspect = f.renderer.domElement.width / f.renderer.domElement.height; cam.updateProjectionMatrix();
       cam.position.set(...c.pos); cam.lookAt(...c.look); cam.updateMatrixWorld(true);
       f.renderer.setRenderTarget(null); f.renderer.render(f.scene, cam); return f.renderer.domElement.toDataURL('image/jpeg', 0.85);
@@ -80,7 +85,10 @@ const capture = (async () => {
 
 const wait = (ms) => page.waitForTimeout(ms);
 await walkTo(L(0, 42), 1.5, 6000, false); log.push('walk out');
-await walkTo(L(-7, 50), 1.5, 5000, true); log.push('towards the pack'); await wait(600);
+await walkTo(L(-7, 50), 1.5, 5000, true); log.push('towards the pack');
+// let the pack reach her and land a few hits first (the health bar and the hurt flash show), then fight back
+const t1 = Date.now(); while (Date.now() - t1 < 4500 && (await state()).hp > 88) await wait(200);
+log.push('hit by the pack: hp ' + Math.round((await state()).hp));
 for (let round = 0; round < 14 && (Date.now() - t0) < 28000; round++) {
   const s = await state();
   if (!s.live) { log.push('pack dead'); break; }

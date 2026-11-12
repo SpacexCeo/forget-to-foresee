@@ -19,6 +19,7 @@ const NOISE = /* glsl */`
   uniform float uDissolve;
   uniform vec3 uEdge;
   uniform float uFlash;
+  uniform float uRim;
   varying vec3 vMobWorld;
   float mobHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   float mobNoise(vec3 x) {
@@ -34,7 +35,7 @@ export function mobMaterial(mat, u) {
   const prev = m.onBeforeCompile;
   m.onBeforeCompile = (shader, renderer) => {
     if (prev) prev(shader, renderer);
-    shader.uniforms.uDissolve = u.dissolve; shader.uniforms.uEdge = u.edge; shader.uniforms.uFlash = u.flash;
+    shader.uniforms.uDissolve = u.dissolve; shader.uniforms.uEdge = u.edge; shader.uniforms.uFlash = u.flash; shader.uniforms.uRim = u.rim;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vMobWorld;')
       .replace('#include <project_vertex>', '#include <project_vertex>\n  vMobWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -45,7 +46,8 @@ export function mobMaterial(mat, u) {
   if (uDissolve > 0.0 && mobN < uDissolve * 1.08 - 0.04) discard;`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
   float mobBand = uDissolve > 0.0 ? 1.0 - smoothstep(0.0, 0.07, mobN - (uDissolve * 1.08 - 0.04)) : 0.0;
-  totalEmissiveRadiance += uEdge * (3.0 * mobBand) + vec3(uFlash * 1.6);`);
+  float mobRim = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0);       // a thin glow on the silhouette
+  totalEmissiveRadiance += uEdge * (3.0 * mobBand + uRim * mobRim) + vec3(uFlash * 1.6);`);
   };
   const prevKey = m.customProgramCacheKey.bind(m);
   m.customProgramCacheKey = () => prevKey() + '-ftf-mob';
@@ -55,11 +57,12 @@ export function mobMaterial(mat, u) {
 export class MobFx {
   /**
    * @param {THREE.Object3D} model the spawned monster (its own clone)
-   * @param {{edge?: number, recoil?: number}} o edge glow colour of the dissolve; recoil distance of a hit (m)
+   * @param {{edge?: number, recoil?: number, rim?: number}} o edge glow colour of the dissolve (and of the silhouette rim);
+   *   recoil distance of a hit (m); rim strength (a thin glow on the silhouette so small monsters read from the camera)
    */
-  constructor(model, { edge = 0xffb060, recoil = 0.06 } = {}) {
+  constructor(model, { edge = 0xffb060, recoil = 0.06, rim = 0.3 } = {}) {
     this.model = model; this.recoil = recoil;
-    this.u = { dissolve: { value: 0 }, edge: { value: new THREE.Color(edge) }, flash: { value: 0 } };
+    this.u = { dissolve: { value: 0 }, edge: { value: new THREE.Color(edge) }, flash: { value: 0 }, rim: { value: rim } };
     this.hitT = 0; this.dieT = -1; this.done = false;
     this.inner = model.children[0] || model;          // the recoil moves the inner node: the combat code owns the root
     this.innerBase = this.inner.position.clone();

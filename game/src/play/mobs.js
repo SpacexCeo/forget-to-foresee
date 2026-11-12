@@ -15,7 +15,7 @@ import { CASTS } from '../scenes/town-casting-fx.js';
 
 /** Per type: health, speeds (m/s, matched to the clips: art/mobs/mobs.json), ranges (m), attack timing. */
 export const MOB_TYPES = Object.freeze({
-  skitter: Object.freeze({ hp: 55, walk: 0.9, run: 1.8, radius: 0.35, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
+  skitter: Object.freeze({ scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
   hulker: Object.freeze({ hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: true, heavy: true }),
   veilbell: Object.freeze({ hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
   crownrift: Object.freeze({ hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
@@ -309,7 +309,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (n === 'attack' || n === 'hit' || n === 'death') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
       actions[n] = a;
     }
-    const fx = new MobFx(holder, { edge: glow[m.type] });
+    model.scale.setScalar(m.T.scale || 1);                                          // the skitter is drawn a quarter larger: it reads at fight distance
+    const fx = new MobFx(holder, { edge: glow[m.type], rim: m.T.rim ?? 0.3 });
     const ring = new THREE.Mesh(ringGeo, ringMat.clone()); ring.visible = false; ring.renderOrder = 2; group.add(ring);
     const v = { model, holder, mixer, actions, fx, ring, current: null, oneShot: null };
     mixer.addEventListener('finished', (e) => { if (e.action === actions.death) { const ev = []; brain.fallen(m, ev); handle(ev); } if (e.action === v.oneShot) v.oneShot = null; });
