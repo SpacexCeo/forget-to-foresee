@@ -35,7 +35,24 @@ const screenOf = (p) => page.evaluate((p) => {
   return [(w.x + 1) / 2 * innerWidth, (1 - w.y) / 2 * innerHeight, w.z];
 }, p);
 const groundAt = (p) => page.evaluate((p) => { const f = window.__ftf; return [p[0], f.player.pos[1], p[2]]; }, p);
-async function walkTo(p) { const g = await groundAt(p); const s = await screenOf(g); if (s[2] < 1) await page.mouse.click(s[0], s[1]); }
+// steering with the keyboard relative to the game camera (WASD, Shift to run): holds keys until she is within `near`
+const held = new Set();
+async function keys(want) { for (const k of [...held]) if (!want.has(k)) { await page.keyboard.up(k); held.delete(k); } for (const k of want) if (!held.has(k)) { await page.keyboard.down(k); held.add(k); } }
+async function walkTo(p, near = 1.2, maxMs = 6000, run = true) {
+  const t = Date.now();
+  while (Date.now() - t < maxMs) {
+    const r = await page.evaluate((p) => {
+      const f = window.__ftf, q = f.player.pos, dx = p[0] - q[0], dz = p[2] - q[2], d = Math.hypot(dx, dz);
+      const { fwd, right } = f.rig.groundAxes(); const ux = dx / (d || 1), uz = dz / (d || 1);
+      return { d, ay: ux * fwd.x + uz * fwd.y, ax: ux * right.x + uz * right.y };
+    }, p);
+    if (r.d < near) break;
+    const want = new Set(run ? ['ShiftLeft'] : []);
+    if (r.ay > 0.38) want.add('KeyW'); if (r.ay < -0.38) want.add('KeyS'); if (r.ax > 0.38) want.add('KeyD'); if (r.ax < -0.38) want.add('KeyA');
+    await keys(want); await page.waitForTimeout(90);
+  }
+  await keys(new Set());
+}
 const state = () => page.evaluate(() => {
   const f = window.__ftf, mobs = f.town.mobs, p = f.player.pos, pack = mobs.brain.packs[0];
   const live = mobs.brain.mobs.filter((m) => m.pack === pack && m.state !== 'dead' && m.state !== 'gone');
@@ -47,22 +64,31 @@ const state = () => page.evaluate(() => {
 let capturing = true, n = 0; const t0 = Date.now();
 const capture = (async () => {
   while (capturing) {
-    const b = await page.screenshot({ type: 'jpeg', quality: 80 });
-    writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, b);
+    const d = await page.evaluate(() => {                                   // a chase camera behind her, towards the pack
+      const f = window.__ftf, p = f.player.pos, home = f.town.mobs.brain.packs[0].home;
+      let dx = home[0] - p[0], dz = home[2] - p[2]; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+      const want = [p[0] - dx * 7.5, p[1] + 3.6, p[2] - dz * 7.5], look = [p[0] + dx * 2.5, p[1] + 0.7, p[2] + dz * 2.5];
+      const c = window.__cam || (window.__cam = { pos: want.slice(), look: look.slice() });
+      for (let i = 0; i < 3; i++) { c.pos[i] += (want[i] - c.pos[i]) * 0.25; c.look[i] += (look[i] - c.look[i]) * 0.3; }
+      const cam = f.rig.camera.clone(); cam.fov = 45; cam.near = 0.1; cam.aspect = f.renderer.domElement.width / f.renderer.domElement.height; cam.updateProjectionMatrix();
+      cam.position.set(...c.pos); cam.lookAt(...c.look); cam.updateMatrixWorld(true);
+      f.renderer.setRenderTarget(null); f.renderer.render(f.scene, cam); return f.renderer.domElement.toDataURL('image/jpeg', 0.85);
+    });
+    writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, Buffer.from(d.split(',')[1], 'base64'));
   }
 })();
 
 const wait = (ms) => page.waitForTimeout(ms);
-await walkTo(L(0, 44)); log.push('walk out'); await wait(4200);
-await walkTo(L(-8, 50)); log.push('towards the pack'); await wait(2500);
+await walkTo(L(0, 42), 1.5, 6000, false); log.push('walk out');
+await walkTo(L(-7, 50), 1.5, 5000, true); log.push('towards the pack'); await wait(600);
 for (let round = 0; round < 14 && (Date.now() - t0) < 28000; round++) {
   const s = await state();
   if (!s.live) { log.push('pack dead'); break; }
   if (s.near.d > 2.0) {
     if (s.field && s.near.d < 11 && round % 3 === 1) {                       // Frost Lance at range
-      await page.keyboard.press('KeyQ'); const sc = await screenOf(s.near.pos); await page.mouse.click(sc[0], sc[1]); log.push('lance'); await wait(900); continue;
+      const ok = await page.evaluate((p) => { const c = window.__ftf.town.casting; return c.aimAt('lance', p) && c.release(); }, s.near.pos); log.push(ok ? 'lance' : 'lance-miss'); await wait(900); continue;
     }
-    await walkTo(s.near.pos); await wait(700); continue;
+    await walkTo(s.near.pos, 1.6, 1500, true); continue;
   }
   await page.evaluate((p) => { const f = window.__ftf; f.player.heading = Math.atan2(p[0] - f.player.pos[0], p[2] - f.player.pos[2]); }, s.near.pos);
   for (let k = 0; k < 3; k++) { await page.keyboard.press('KeyF'); await wait(360); }
