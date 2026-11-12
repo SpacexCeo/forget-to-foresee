@@ -35,8 +35,17 @@ const report = await page.evaluate(async (phone) => {
   return res;
 }, phone);
 const shots = [];
-for (const clip of ['idle', 'walk', 'attack', 'death']) {
+await page.evaluate(async () => {
+  const { MobFx, MOB_GLOW } = await import('/src/render/mob-fx.js');
+  for (const mb of window.__mobs) mb.fx = new MobFx(mb.m, { edge: MOB_GLOW[mb.n] });
+});
+for (const clip of ['idle', 'walk', 'attack', 'death', 'hit_flash', 'dissolve']) {
   const d = await page.evaluate((clip) => {
+    for (const mb of window.__mobs) {
+      mb.fx.u.flash.value = clip === 'hit_flash' ? 1 : 0;
+      mb.fx.u.dissolve.value = clip === 'dissolve' ? 0.5 : 0;
+    }
+    if (clip === 'hit_flash' || clip === 'dissolve') clip = clip === 'dissolve' ? 'death' : 'hit';
     const f = window.__ftf, p = f.player;
     for (const mb of window.__mobs) {
       mb.mixer.stopAllAction();
