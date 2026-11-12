@@ -1631,4 +1631,10 @@ export default {
   "chest.batch.claim": "Забрать всё",
   "chest.batch.skip": "Нажмите в любом месте, чтобы пропустить.",
   "chest.batch.skipBtn": "Пропустить",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "Ткацкие Врата отвечают только аккаунту NEAR. Сначала получи свой бесплатный аккаунт.",
+  "story.portal.offline": "Врата молчат: NEAR testnet сейчас недоступен.",
+  "story.portal.paying": "Врата взвешивают твой шёлк в NEAR testnet…",
+  "story.portal.noSilk": "Врата нашли в твоём аккаунте в сети меньше {fee} шёлка.",
+  "story.portal.failed": "Врата не приняли шёлк. Попробуй ещё раз чуть позже.",
 };

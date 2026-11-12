@@ -8,7 +8,7 @@ import { reduce, initialState, storyStep, STORY_KEY } from '../game/expedition.j
 import { applyQuest, initialQuests, questStatus, QUESTS_KEY } from '../game/quest-rules.js';
 import { QUESTS } from '../game/quests-data.js';
 import { createExpeditionLedger } from '../game/expedition-ledger.js';
-import { portalFee } from '../game/expedition-config.js';
+import { EXPEDITION } from '../game/expedition-config.js';
 import { rollDrops, missingFor, RESOURCE_IDS } from '../game/resources.js';
 
 /** Which quest a giver talks about now (pure): the first of theirs that is not done, else the last. */
@@ -74,9 +74,19 @@ const load = (storage, key, fresh) => { try { const v = JSON.parse((storage && s
  * @param {(opts: {sub: string}) => Promise} [o.depart] the town's transition to the archipelago (town-flow depart)
  * @param {string} [o.search] @param {Document} [o.doc] @param {Window} [o.win] @param {() => number} [o.now]
  */
-export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
+export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
   const t = (k, a) => i18n.t(k, a);
-  const fee = portalFee(search);
+  // The Gate-Loom is paid on chain (rev 4): its price and the player's silk are ftf-town's gate_price and balance_of,
+  // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
+  let chain = { ok: false, reason: gate ? 'loading' : 'not_configured', priceC: EXPEDITION.PORTAL_FEE_C, balanceC: 0, paid: null }, lastRead = -Infinity, reading = false, payError = null;
+  const feeC = () => (chain.ok ? chain.priceC : EXPEDITION.PORTAL_FEE_C), balanceC = () => (chain.ok ? chain.balanceC : 0);
+  const fee = { get feeC() { return feeC(); }, demo: false };
+  async function refreshChain() {
+    if (!gate || reading) return chain; reading = true; lastRead = now();
+    try { const c = await gate.read(); chain = c && c.ok ? c : { ...chain, ok: false, reason: (c && c.reason) || 'network' }; } catch { chain = { ...chain, ok: false, reason: 'network' }; }
+    reading = false; gateFromBalance(); changed(); return chain;
+  }
+  function gateFromBalance() { if (story.phase === 'gathering' || story.phase === 'gate_open') { const r = reduce(story, { type: 'SILK', balanceC: balanceC() }, { feeC: feeC() }); if (r.state.phase !== story.phase) story = r.state; } }
   let story = load(storage, STORY_KEY, initialState);
   let qs = load(storage, QUESTS_KEY, initialQuests);
   const ledger = createExpeditionLedger({ storage, now, town: townLedger });
@@ -94,7 +104,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     }
     return true;
   }
-  function storyDo(action) { const r = reduce(story, action, { now: now(), feeC: fee.feeC, demoFee: fee.demo }); if (r.rejected) return r; story = r.state; apply(r.events); changed(); return r; }
+  function storyDo(action) { const r = reduce(story, action, { now: now(), feeC: feeC(), demoFee: false }); if (r.rejected) return r; story = r.state; apply(r.events); changed(); return r; }
   function questDo(action) { const r = applyQuest(qs, action, { now: now() }); if (r.rejected) return r; qs = r.state; apply(r.events); changed(); return r; }
 
   // ---- the objective line (one goal, top centre)
@@ -106,8 +116,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   doc.body.append(line);
   function renderObjective() {
     const o = objective(story, qs, now(), have());
-    const silk = Math.floor(townLedger.silk / 100).toLocaleString('en-US'), goal = Math.round(fee.feeC / 100).toLocaleString('en-US');
-    line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) + (fee.demo ? ' · ' + t('story.portal.demo') : '') : '';
+    const silk = Math.floor(balanceC() / 100).toLocaleString('en-US'), goal = Math.round(feeC() / 100).toLocaleString('en-US'); // on-chain silk (ftf-town)
+    line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
     line.hidden = !active || !o || story.phase === 'onward';
   }
 
@@ -175,9 +185,14 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   // ---- the Gate-Loom and the twist
   let twisting = false;
   async function payGate() {
-    const r = storyDo({ type: 'PAY_GATE', balanceC: townLedger.silk });
-    if (r.rejected) return false;
-    twisting = true;
+    if (!gate || twisting || story.phase === 'twist' || story.phase === 'onward') return false; // paid once: no second call to the chain
+    twisting = true; payError = null;
+    let p; try { p = await gate.pay(); } catch { p = { ok: false, reason: 'network' }; }
+    if (!p || !p.ok) { twisting = false; payError = (p && p.reason) || 'network'; await refreshChain(); return false; }
+    // paid on chain (or already paid): the log records it once, with the receipt
+    storyDo({ type: 'SILK', balanceC: Math.max(balanceC(), feeC()) });
+    const r = storyDo({ type: 'PAY_GATE', balanceC: Math.max(balanceC(), feeC()), tx: p.hash || null });
+    if (r.rejected) { twisting = false; payError = r.rejected; return false; }
     if (depart) { try { await depart({ sub: t('story.twist.line') }); } catch { /* the transition logs its own failure */ } }
     storyDo({ type: 'TWIST_DONE' }); // the stipend; the title and the sealed chest below
     if (chests) chests.add({ tier: 'common', source: 'quest' });
@@ -188,19 +203,21 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   }
 
   if (story.phase === 'off') storyDo({ type: 'START', skipPrologue: true }); // the prologue (P4) is optional: arrival
+  if (gate) refreshChain();
   renderObjective();
   return {
     spots,
     get story() { return story; }, get quests() { return qs; }, get ledger() { return ledger; }, get fee() { return fee; },
     get talking() { return !!panel; }, get twisting() { return twisting; },
     /** Live facts for the portal. */
-    portalFacts: () => ({ phase: story.phase, balanceC: townLedger.silk, feeC: fee.feeC, demo: fee.demo }),
+    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting }),
+    refreshChain, get chain() { return chain; },
     payGate,
     /** Per frame: the guide's movement step, the gate opening with the balance, a talk closing when she walks off. */
     update(pos) {
       if (pos && !start) start = [pos[0], pos[2]];
       if (pos && start && !story.guide.moved && Math.hypot(pos[0] - start[0], pos[2] - start[1]) > 6) { storyDo({ type: 'GUIDE_STEP', id: 'moved' }); questDo({ type: 'GUIDE', step: 'moved' }); }
-      if (story.phase === 'gathering' || story.phase === 'gate_open') { const before = story.phase; const r = reduce(story, { type: 'SILK', balanceC: townLedger.silk }, { feeC: fee.feeC }); if (r.state.phase !== before) { story = r.state; changed(); } }
+      if (gate && now() - lastRead > 20_000) refreshChain(); // the on-chain balance grows with the relayer's story credits
       if (panel && panelGiver && pos) { const p = folkAt(panelGiver); if (p && Math.hypot(p[0] - pos[0], p[2] - pos[2]) > 4.5) closeTalk(); }
     },
     act, openTalk, closeTalk,

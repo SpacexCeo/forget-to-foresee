@@ -1632,4 +1632,10 @@ export default {
   "chest.batch.claim": "Prendi tutto",
   "chest.batch.skip": "Tocca ovunque per saltare alla fine.",
   "chest.batch.skipBtn": "Salta",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "Il Telaio-Porta risponde solo a un account NEAR. Prima ottieni il tuo account gratuito.",
+  "story.portal.offline": "Il Telaio tace: NEAR testnet ora non è raggiungibile.",
+  "story.portal.paying": "Il Telaio pesa la tua seta su NEAR testnet…",
+  "story.portal.noSilk": "Il Telaio ha trovato meno di {fee} sete nel tuo account sulla catena.",
+  "story.portal.failed": "Il Telaio non ha preso la seta. Riprova tra un momento.",
 };

@@ -1633,4 +1633,10 @@ export default {
   "chest.batch.claim": "Claim all",
   "chest.batch.skip": "Tap anywhere to skip to the end.",
   "chest.batch.skipBtn": "Skip",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "The Gate-Loom answers only to a NEAR account. Claim your free account first.",
+  "story.portal.offline": "The Gate-Loom is silent: NEAR testnet cannot be reached right now.",
+  "story.portal.paying": "The Loom is weighing your silk on NEAR testnet…",
+  "story.portal.noSilk": "The Loom found less than {fee} silk in your account on chain.",
+  "story.portal.failed": "The Loom did not take the silk. Try again in a moment.",
 };

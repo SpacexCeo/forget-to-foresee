@@ -10,15 +10,19 @@ export const PORTAL_TOWN = Object.freeze([4, 0, 22.5]);
 export const PORTAL_REACH = 3;
 
 /** The portal's state from the story phase and the balance (pure). */
-export function portalState({ on = false, phase = 'off', balanceC = 0, feeC = 1_000_000 } = {}) {
+export function portalState({ on = false, phase = 'off', balanceC = 0, feeC = 20_000 } = {}) {
   if (!on || phase === 'off') return 'off';
   if (phase === 'twist' || phase === 'onward') return 'spent';
   return balanceC >= feeC ? 'ready' : 'dormant';
 }
 
 /** The prompt line for a state: {key, args} (locale keys story.portal.*). */
-export function portalPrompt(state, { balanceC = 0, feeC = 1_000_000, demo = false } = {}) {
+export function portalPrompt(state, { balanceC = 0, feeC = 20_000, demo = false, blocker = null, payError = null, paying = false } = {}) {
   const fee = Math.round(feeC / 100).toLocaleString('en-US'), held = Math.floor(balanceC / 100).toLocaleString('en-US');
+  if (state !== 'spent' && paying) return { key: 'story.portal.paying', args: {} };
+  if (state !== 'spent' && blocker === 'need_guest') return { key: 'story.portal.needGuest', args: {} };
+  if (state !== 'spent' && blocker && blocker !== 'loading') return { key: 'story.portal.offline', args: {} };
+  if (state !== 'spent' && payError) return { key: payError === 'no_silk' ? 'story.portal.noSilk' : 'story.portal.failed', args: { fee, n: held } };
   if (state === 'ready') return { key: demo ? 'story.portal.payDemo' : 'story.portal.pay', args: { fee } };
   if (state === 'spent') return { key: 'story.portal.quiet', args: {} };
   return { key: demo ? 'story.portal.wantsDemo' : 'story.portal.wants', args: { fee, n: held } };
@@ -91,7 +95,7 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     id: 'portal',
     near: (pos) => { const at = root.position; return state !== 'off' && Math.hypot(pos[0] - at.x, pos[2] - at.z) <= PORTAL_REACH && Math.abs(pos[1] - at.y) < 3; }, // grounded later by the caller
     prompt: () => { const f = facts(); const p = portalPrompt(state, f); return t(p.key, p.args); },
-    onInteract: () => { if (state === 'ready') confirm(); return true; },
+    onInteract: () => { const f = facts(); if (state === 'ready' && !f.blocker && !f.paying) confirm(); return true; }, // pays on chain (pay_gate) after the confirmation
   };
 
   return {

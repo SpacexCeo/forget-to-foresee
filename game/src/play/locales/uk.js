@@ -1631,4 +1631,10 @@ export default {
   "chest.batch.claim": "Забрати все",
   "chest.batch.skip": "Натисніть будь-де, щоб пропустити.",
   "chest.batch.skipBtn": "Пропустити",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "Ткацька Брама відповідає лише акаунту NEAR. Спершу отримай свій безкоштовний акаунт.",
+  "story.portal.offline": "Брама мовчить: NEAR testnet зараз недоступний.",
+  "story.portal.paying": "Брама зважує твій шовк у NEAR testnet…",
+  "story.portal.noSilk": "Брама знайшла у твоєму акаунті в мережі менше {fee} шовку.",
+  "story.portal.failed": "Брама не прийняла шовк. Спробуй ще раз трохи згодом.",
 };

@@ -1631,4 +1631,10 @@ export default {
   "chest.batch.claim": "全部领取",
   "chest.batch.skip": "点击任意位置跳到结尾。",
   "chest.batch.skipBtn": "跳过",
+  // ---- the Gate-Loom on chain (rev 4: pay_gate on ftf-town) ----
+  "story.portal.needGuest": "织门只回应 NEAR 账户。请先领取你的免费账户。",
+  "story.portal.offline": "织门沉默：现在无法连接 NEAR 测试网。",
+  "story.portal.paying": "织门正在 NEAR 测试网上称量你的丝绸……",
+  "story.portal.noSilk": "织门发现你链上账户中的丝绸少于 {fee}。",
+  "story.portal.failed": "织门没有收下丝绸。请稍后再试。",
 };
