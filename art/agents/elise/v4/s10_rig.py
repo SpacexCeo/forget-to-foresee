@@ -33,7 +33,7 @@ def colours(n):
 n, co, fv = arrays(); band = (co[:, 2] > 1.0) & (co[:, 2] < 1.2); dx = -0.5 * (co[band, 0].min() + co[band, 0].max()); co[:, 0] += dx
 me.vertices.foreach_set('co', co.ravel()); me.update(); col = colours(n); x, y, z = co.T; warm = col[:, 0] - col[:, 2] > 0.015; red = (col[:, 0] > 0.3) & (col[:, 0] > 1.8 * col[:, 1])
 dress = (col[:, 2] >= col[:, 0]) & (col.mean(1) < 0.3)
-thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.22) & (z > 0.60) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
+thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.22) & (z > 0.60) & (np.abs(x) > thr) & ~(dress & ((np.abs(x) < thr + 0.03) | (z > 0.97)))
 e = np.concatenate([fv[:, [0, 1]], fv[:, [1, 2]], fv[:, [2, 0]]]); e = np.concatenate([e, e[:, ::-1]])
 leg = warm & ~arm & (z < 0.78) & (x > -0.03) & (x < 0.21) & (y < 0.06)
 for _ in range(3):                                     # the lacing drawn over the hip skin goes with the skin
@@ -44,8 +44,8 @@ if len(ref):
     for i in cand:
         if np.min(np.hypot(ref[:, 0] - x[i], ref[:, 1] - y[i])) < 0.012: leg[i] = True
 FL = BH['foot_L']; FR = BH['foot_R']
-shoe_l = ~arm & (z < 0.095) & (np.abs(x - FL[0]) < 0.05) & (y > -0.23) & (y < 0.06) & ((y < -0.125) | (z < 0.03) | leg)
-shoe_r = ~arm & (z < 0.07) & (np.abs(x + 0.065) < 0.05) & (y < -0.125)
+shoe_l = ~arm & (z < 0.095) & (np.abs(x - FL[0]) < 0.05) & (y > -0.23) & (y < 0.06) & (((y < -0.17) & (z < 0.06)) | (z < 0.028) | leg)
+shoe_r = ~arm & (np.abs(x + 0.065) < 0.05) & (y > -0.23) & (y < 0.06) & (((y < -0.17) & (z < 0.06)) | (z < 0.028))
 for _ in range(2):                                     # a clean edge: lone vertices follow their neighbours
     s_ = np.zeros(n); c_ = np.zeros(n); np.add.at(s_, e[:, 0], leg[e[:, 1]]); np.add.at(c_, e[:, 0], 1); fr_ = s_ / np.maximum(c_, 1); leg = (leg & (fr_ > 0.34)) | (~arm & (z < 0.78) & (fr_ > 0.66))
 def swatch(mask):                                      # a texel of this model's texture with the mask's median colour
@@ -62,7 +62,7 @@ n, co, fv = arrays(); col = colours(n); x, y, z = co.T; pfa = np.empty(len(me.po
 part = np.zeros(n, int)
 warm = col[:, 0] - col[:, 2] > 0.015; red = (col[:, 0] > 0.3) & (col[:, 0] > 1.8 * col[:, 1])
 dress = (col[:, 2] >= col[:, 0]) & (col.mean(1) < 0.3)
-thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.22) & (z > 0.60) & (np.abs(x) > thr) & ~(dress & (np.abs(x) < thr + 0.03) & (z < 1.0))
+thr = 0.115 + (1.25 - np.clip(z, 0.72, 1.27)) * 0.2125; arm = (z < 1.22) & (z > 0.60) & (np.abs(x) > thr) & ~(dress & ((np.abs(x) < thr + 0.03) | (z > 0.97)))
 print('parts: vertices %d, arms %d, leg and shoe faces cut %d, red %d, centred by %.4f, swatches %s' % (n, arm.sum(), len(cut), red.sum(), dx, {k: tuple(round(c, 3) for c in v) for k, v in SW.items()}))
 
 # ---------------- 11: weights by rule
@@ -75,7 +75,7 @@ for sd in 'LR':
     body_m = m & ~tails
     W['upperarm_' + sd][body_m] = (1 - u_e)[body_m]; W['forearm_' + sd][body_m] = (u_e * (1 - u_w))[body_m]; W['hand_' + sd][body_m] = (u_w * (1 - u_f))[body_m]
     W['fingers_' + sd][body_m] = (u_w * u_f * (1 - u_i))[body_m]; W['index_' + sd][body_m] = (u_w * u_f * u_i)[body_m]
-    u_r = ss(0.85, 0.81, z); W['ribbon_%s_0' % sd][tails] = (1 - u_r)[tails]; W['ribbon_%s_1' % sd][tails] = u_r[tails]
+    u_r = 0.6 * ss(0.90, 0.78, z); W['hand_' + sd][tails] = (1 - u_r)[tails]; W['ribbon_%s_0' % sd][tails] = u_r[tails]      # short tails: mostly with the hand, the tips sway
 # the rest of the body: spine ramps, head by height and by distance from the neck's axis
 rest = (part == 0) & ~arm; r_neck = np.hypot(x, y - 0.01)
 w_head = np.where(z > 1.455, np.maximum(ss(1.47, 1.51, z), ss(0.06, 0.075, r_neck)), 0.0); w_head = np.where((z > 1.49) & (y < -0.03), 1.0, w_head)
@@ -83,7 +83,7 @@ w_neck = ss(1.42, 1.47, z) * (1 - w_head); w_chest = ss(1.16, 1.24, z) * (1 - w_
 w_arm = np.zeros(n)
 for sd in 'LR':                                       # the shoulder: the fused part above the arm cluster
     S = BH['upperarm_' + sd]; E = BH['forearm_' + sd]; d = (E - S) / np.linalg.norm(E - S); t = (co - S) @ d; dist = np.linalg.norm(co - S - np.clip(t, 0, None)[:, None] * d, axis=1)
-    thr2 = 0.115 + (1.25 - z) * 0.2125; wa = np.maximum(ss(-0.06, 0.03, t) * (1 - ss(0.035, 0.06, dist)) * ss(1.25, 1.33, z), ss(thr2 - 0.015, thr2 + 0.02, np.abs(x)) * ss(1.36, 1.30, z)) * (rest & side(sd) & (z >= 1.2) & (z < 1.47)); w_arm += wa; W['upperarm_' + sd][rest] += wa[rest]
+    thr2 = 0.115 + (1.25 - z) * 0.2125; wa = np.maximum(ss(-0.06, 0.03, t) * (1 - ss(0.035, 0.06, dist)) * ss(1.25, 1.33, z), ss(thr2 - 0.015, thr2 + 0.02, np.abs(x)) * ss(1.36, 1.30, z)) * (rest & ~dress & side(sd) & (z >= 1.2) & (z < 1.47)); w_arm += wa; W['upperarm_' + sd][rest] += wa[rest]
     wsh = (1 - wa) * ss(0.05, 0.11, np.abs(x)) * ss(1.30, 1.38, z) * 0.6 * (rest & side(sd) & (z < 1.47)); W['shoulder_' + sd][rest] += wsh[rest]; w_arm += wsh
 keep = 1 - w_arm
 # the skirt: 13 chains of 4 bones around the pelvis
