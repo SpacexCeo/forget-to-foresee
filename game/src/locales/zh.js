@@ -117,6 +117,7 @@ export default {
   'settings.quality': '画质',
   'settings.quality.auto': '自动',
   'settings.quality.high': '高',
+  'settings.quality.medium': "中",
   'settings.quality.low': '低',
   'settings.note': '设置仅保存在本设备上。',
   'settings.hudMode': '界面',

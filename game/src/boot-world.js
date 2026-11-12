@@ -24,12 +24,16 @@ import { Input } from './ui/input.js';
 import { PAD } from './ui/gamepad.js';
 import { navigateGamepadMenu } from './ui/gamepad-menu.js';
 import { mountSceneControls } from './ui/scene-controls.js';
+import { setBindings, loadBindings } from './ui/keybinds.js';
+import { loadSettings, renderOverrides, lookFactors, frameDue } from './ui/settings-store.js';
+import { loadVolumes, saveVolumes } from './audio/mix.js';
 import './ui/styles.css';
 import { DevHud } from './ui/dev-hud.js';
 import { configureTextureSupport, setModelVariant, setModelOverrides, getModelVariant, hasModelFile, prefetchGltf } from './render/assets.js';
 import { irisStandInVisible, liteFirstPolicy, JUDGE_PINS } from './render/streaming.js';
 import { GpuWarmup, setActiveWarmup } from './render/warmup.js';
 import { createPlayerHud } from './scenes/player-hud.js';
+import { installTouchCopy } from './ui/touch-copy.js';
 import { createTouchControls } from './scenes/touch-sticks.js';
 import { logKeysFromStats } from './ui/loading.js';
 import { CAMPS, SPAWN, KILL_Y } from './scenes/layout.js';
@@ -141,6 +145,7 @@ for (const s of shells) {
 }
 const rig = new CameraRig(camera, world);
 const input = new Input(renderer.domElement);
+installTouchCopy(ctx.i18n, () => !!input.touchControls); // on touch, no keyboard keys in any text (ui/touch-copy.js)
 const hud = new DevHud(document.getElementById('hud'));
 const promptEl = document.getElementById('prompt');
 // The lobby (title, language, settings, the Foresight Exchange) opens only from the pause menu now: the game starts in
@@ -154,7 +159,35 @@ const openMainMenu = () => {
     menuLobby = ui.mountLobby(host, { ctx, flow, onEnter: () => { if (menuLobby) { menuLobby.destroy(); menuLobby = null; host.remove(); } } });
   }).catch((e) => console.warn('[menu] lobby', e));
 };
-const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu,
+// In-game settings (ui/settings-popup.js, owner 12.11): Esc and the gear open a popup over the running town; the old
+// controls dialog with its "Main menu" button stays only on the judge link (its behaviour is frozen).
+setBindings(loadBindings(ctx.storage));
+let gameSettings = params.get('demo') === 'judge' ? loadSettings(null) : loadSettings(ctx.storage), lookK = lookFactors(gameSettings), settingsPopup = null, lastRenderAt = 0;
+const applyGameSettings = (st) => {
+  gameSettings = st; lookK = lookFactors(st);
+  if (typeof lookdev !== 'undefined' && lookdev) { lookdev.setOverrides(renderOverrides(st)); lookdev.setPixelScale(st.resScale); }
+};
+const openSettings = (tab) => {
+  if (settingsPopup) { settingsPopup.open(tab); return; }
+  import('./ui/settings-popup.js').then((m) => {
+    settingsPopup ||= m.createSettingsPopup({ t: (k, a) => ctx.i18n.t(k, a), i18n: ctx.i18n, prefs: ctx.prefs, storage: ctx.storage, hooks: {
+      onSettings: applyGameSettings,
+      audio: () => (play && play.hooks && play.hooks.audio) || (townAudio && townAudio.audio) || null,
+      volumes: () => loadVolumes(ctx.storage), saveVolume: (bus, v) => saveVolumes(ctx.storage, { ...loadVolumes(ctx.storage), [bus]: v }),
+      touch: () => ({ available: !!(input.touchControls && touchSticks), mode: touchSticks ? touchSticks.mode : 'tap', setMode: (md) => touchSticks && touchSticks.setMode(md) }),
+      day1: () => loadDay1(ctx.storage),
+      clearData: () => { try { for (const k of Object.keys(localStorage)) if (k.startsWith('ftf')) localStorage.removeItem(k); } catch { /* blocked storage */ } location.reload(); },
+      returnToTown: { visible: () => !!(town && play && !inTown), run: () => returnToTown() },
+      startOver: { visible: () => !!play, run: () => startOver() },
+      leaveToMenu: openMainMenu,
+      onOpen: clearWorldInput, onClose: clearWorldInput,
+    } });
+    settingsPopup.open(tab);
+  }).catch((e) => { console.warn('[settings]', e); controls.open(); });
+};
+const openMenu = () => (judge ? controls.open() : openSettings());
+if (params.get('demo') !== 'judge' && (gameSettings.resScale < 1 || !gameSettings.shadows || !gameSettings.bloom || !gameSettings.weather)) applyGameSettings(gameSettings);
+const controls = mountSceneControls(document.getElementById('scene-controls'), { onContext: handleInspect, onTransition: clearWorldInput, onMainMenu: openMainMenu, onOpenSettings: params.get('demo') === 'judge' ? null : () => openSettings(),
   extra: [
     { label: 'Return to town (your season is kept: register at the altar to go back)', visible: () => !!(town && play && !inTown), onClick: () => returnToTown() },
     { label: 'Touch: use tap to move instead of the joysticks', visible: () => !!(input.touchControls && touchSticks && touchSticks.mode === 'sticks'), onClick: () => touchSticks.setMode('tap') },
@@ -487,7 +520,7 @@ function startSeason() {
       judge, // ?demo=judge: the shard card opens by itself after the trial-6 auction (hackathon spec P1-C)
       worldHud: params.get('hud') !== 'old', // ?hud=old: the greybox overlay (fallback)
       hub: params.get('mode') !== 'walk', // ?mode=walk: walking play without the Shell hub
-      onSettings: () => controls.open(),
+      onSettings: () => openMenu(),
       iris: irisAvatar, // the town already attached her model (null on the paths that skip the town)
     } });
     window.__ftf.play = play;
@@ -527,11 +560,15 @@ function updateAltarTimer() {
   }
   const a = TOWN_ALTAR.position;
   _altarP.set(a[0], a[1] + 4.2, a[2]).project(camera);
-  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
+  // outside the walls the label would show through the gate wall: hidden there (the street and stairs see the altar)
+  const altarOccluded = !!(townMobs && townMobs.iris && townMobs.iris.outside);
+  const visible = !altarOccluded && _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
   altarTimer.hidden = !visible;
   if (!visible) return;
-  const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  if (altarTimer.textContent !== text) altarTimer.textContent = text;
+  // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
+  const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
+  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
   altarTimer.style.left = Math.max(half + 8, Math.min(innerWidth - half - 8, (_altarP.x + 1) / 2 * innerWidth)).toFixed(0) + 'px';
@@ -701,8 +738,8 @@ function cameraInput(dt, pad) {
   const rot = Number(input.down('ArrowLeft')) - Number(input.down('ArrowRight')) - lookX;
   const tilt = Number(input.down('ArrowUp')) - Number(input.down('ArrowDown')) + lookY;
   const lookDt = Math.min(dt, 0.05);
-  if (rot || input.dragX) rig.rotate(rot * lookDt * 1.8 - input.dragX * 0.005);
-  if (tilt || input.dragY) rig.tilt(tilt * lookDt * 1.35 + input.dragY * 0.005);
+  if (rot || input.dragX) rig.rotate(rot * lookDt * 1.8 - input.dragX * lookK.x); // sensitivity and invert Y: the settings popup
+  if (tilt || input.dragY) rig.tilt(tilt * lookDt * 1.35 + input.dragY * lookK.y);
   if (input.wheel) rig.zoom(Math.pow(1.12, input.wheel));
   if (input.down('Equal', 'NumpadAdd') || pad.down(PAD.zoomIn)) rig.zoom(Math.pow(0.5, lookDt));
   if (input.down('Minus', 'NumpadSubtract') || pad.down(PAD.zoomOut)) rig.zoom(Math.pow(2, lookDt));
@@ -723,14 +760,14 @@ function handleInput(dt) {
     cameraInput(dt, pad);
     return false;
   }
-  if (pad.hit(PAD.menu)) { controls.open(); return false; }
+  if (pad.hit(PAD.menu)) { openMenu(); return false; }
   if (input.hit('Escape') || pad.hit(PAD.cancel)) {
     if (townOn && townCasting && townCasting.handleKey('Escape')) return false; // put the armed cast away
     if (townOn && townFlow && townFlow.closePanel()) return false; // close the open talk panel
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
-    else controls.open();
+    else openMenu();
     return false;
   }
   if (townShops && townShops.busy) return false; // the shop door's fade holds Iris
@@ -848,6 +885,8 @@ function tickDayCycle(dt) {
 }
 
 function frame() {
+  // FPS cap (settings popup): skip this display frame; the next one's delta carries the time
+  if (gameSettings.fpsCap) { const nowMs = performance.now(); if (!frameDue(gameSettings.fpsCap, nowMs - lastRenderAt)) { requestAnimationFrame(frame); return; } lastRenderAt = nowMs; }
   const rawDt = clock.getDelta();
   const dt = Math.min(Math.max(rawDt, 0), 0.25); // render, camera and animation delta (never negative: a clock that steps back, e.g. a test clock, would poison the damping)
   frameTimes.push(dt * 1000); if (frameTimes.length > 240) frameTimes.shift();

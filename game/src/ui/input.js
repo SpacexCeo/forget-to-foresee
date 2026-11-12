@@ -3,6 +3,7 @@
 // run toggle button (docs/mobile.md). All three run sources feed one flag, `input.running`, which is
 // also what `down('ShiftLeft', 'ShiftRight')` reports, so the gameplay loop needs no touch branch.
 import { GamepadInput, readGamepads } from './gamepad.js';
+import { remapKey } from './keybinds.js';
 
 const SHIFT = new Set(['ShiftLeft', 'ShiftRight']);
 
@@ -100,15 +101,16 @@ export class Input {
       }
       if (e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
       if (['Tab', 'Enter', 'Space'].includes(e.code)) this.device = 'keyboard';
-      if (!WORLD_KEYS.has(e.code)) return;
+      const code = remapKey(e.code); // the player's bindings (ui/keybinds.js): the game sees the action's default code
+      if (!code || !WORLD_KEYS.has(code)) return;
       if (e.code === 'Space' && e.target?.closest?.('button, a, summary, [role="button"], [tabindex]:not([tabindex="-1"])')) return; // Space still presses a focused control
       e.preventDefault();
-      if (e.repeat && !this.keys.has(e.code)) return;
+      if (e.repeat && !this.keys.has(code)) return;
       this.device = 'keyboard';
-      if (!this.keys.has(e.code)) this.pressed.add(e.code);
-      this.keys.add(e.code);
+      if (!this.keys.has(code)) this.pressed.add(code);
+      this.keys.add(code);
     });
-    window.addEventListener('keyup', (e) => this.keys.delete(e.code));
+    window.addEventListener('keyup', (e) => { const code = remapKey(e.code); if (code) this.keys.delete(code); });
     window.addEventListener('blur', () => { this.suspended = true; this.clear(); });
     window.addEventListener('focus', () => { this.suspended = false; });
     document.addEventListener('visibilitychange', () => this.clear());

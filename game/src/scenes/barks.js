@@ -8,10 +8,10 @@ import { TOWNSFOLK } from '../play/townsfolk-plan.js';
 export const BARK = Object.freeze({
   radius: 6, // metres: Iris passing this close starts a bark
   height: 2.5, // metres of vertical difference still counted as passing (stairs, the gate ramp)
-  show: 3.5, // seconds a bubble stays up
+  show: 2.6, // seconds a bubble stays up (declutter pass: shorter)
   fade: 0.35, // seconds of fade in and out
   cooldown: 20, // seconds before the same person speaks again
-  gap: 4, // seconds between any two barks
+  gap: 6, // seconds between any two barks (declutter pass: fewer)
 });
 
 /** People with a line of their own (the rest share the general lines). child_a / child_b share 'child'. */
@@ -63,7 +63,7 @@ const heightOf = (key) => (HEIGHT || (HEIGHT = new Map(TOWNSFOLK.map((p) => [p.k
 export function createBarks({ camera, i18n, people, hour = () => 'day', rain = () => 0, hired = () => [], doc = globalThis.document, now = () => performance.now() / 1000 }) {
   const el = doc.createElement('div');
   el.className = 'ftf-bark'; el.hidden = true; el.setAttribute('aria-live', 'polite');
-  el.style.cssText = 'position:fixed;left:0;top:0;z-index:11;pointer-events:none;max-width:min(260px,70vw);padding:6px 11px;border-radius:12px;'
+  el.style.cssText = 'position:fixed;left:0;top:0;z-index:11;pointer-events:none;max-width:min(220px,60vw);padding:6px 11px;border-radius:12px;'
     + 'background:rgba(16,22,24,.82);color:#f3ead8;font:14px/1.35 system-ui,sans-serif;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.35);'
     + 'transform:translate(-50%,-100%);opacity:0;transition:opacity .35s ease';
   const who = doc.createElement('b'); who.style.cssText = 'display:block;font-size:11px;letter-spacing:.04em;color:#e9b44c;font-weight:600';

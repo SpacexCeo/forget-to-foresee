@@ -884,6 +884,11 @@
    "model": "game/public/assets/models/agent_elise.glb",
    "style": {
     "track": 0.05,
+    "foot_out": 4,
+    "foot_yaw": "side",
+    "knee_align": 0.7,
+    "swing_keep": 0.3,
+    "arm_twist": 0.25,
     "arm_swing": 0.5,
     "arm_out": 7,
     "pelvis_rot": 1.0,
@@ -892,7 +897,7 @@
     "knee_fwd": 0.3
    },
    "action_style": {
-    "track": 0.09,
+    "knee_align": 1.0,
     "arm_out": 0,
     "arms_down": {
      "out": 15,
@@ -912,7 +917,15 @@
      "use": "idle_shift"
     },
     "idle_look": {},
-    "walk": {"speed": 1.4, "frames": 19, "style": {"arm_swing": 0.36, "step_lift": 0.5}, "note": "the owner asked for a gliding walk: a shorter step at a quicker pace (stride 0.89 m, was 1.26)"},
+    "walk": {
+     "speed": 1.4,
+     "frames": 19,
+     "style": {
+      "arm_swing": 0.36,
+      "step_lift": 0.5
+     },
+     "note": "the owner asked for a gliding walk: a shorter step at a quicker pace (stride 0.89 m, was 1.26)"
+    },
     "run": {
      "use": "walk",
      "speed": 2.4,
@@ -920,7 +933,9 @@
      "fps": 120,
      "style": {
       "track": 0.045,
-      "arm_swing": 0.45, "lean": 3, "step_lift": 0.6
+      "arm_swing": 0.45,
+      "lean": 3,
+      "step_lift": 0.6
      },
      "note": "a fast walk: the gown stays floor-length (sheets 08, 09)"
     },
@@ -930,8 +945,24 @@
     },
     "turn_l": {},
     "turn_r": {},
-    "stairs_up": {},
-    "stairs_down": {}
+    "stairs_up": {
+     "style": {
+      "knee_align": 0,
+      "foot_yaw": null,
+      "foot_out": null,
+      "swing_keep": 0.5
+     },
+     "note": "the steps keep the captured feet and knees: with the level-ground stance (toe-out, aligned knees) the trailing leg cut the gown on the way down"
+    },
+    "stairs_down": {
+     "style": {
+      "knee_align": 0,
+      "foot_yaw": null,
+      "foot_out": null,
+      "swing_keep": 0.5
+     },
+     "note": "the steps keep the captured feet and knees: with the level-ground stance (toe-out, aligned knees) the trailing leg cut the gown on the way down"
+    }
    },
    "cloth": {
     "rig": "art/agents/elise/cloth_rig.npz",

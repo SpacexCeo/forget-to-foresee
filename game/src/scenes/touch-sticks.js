@@ -34,7 +34,7 @@ const CSS = `
 .ts-cancel[hidden] { display: none; }
 body.ts-on .ftf-cast-bar, body.ts-on .ftf-run-toggle, body.ts-touch .ftf-scene-hint { display: none !important; }
 body.ts-on .d1-hint { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
-body.ts-on .ftf-town-prompt { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+body.ts-on .ftf-town-prompt { bottom: calc(232px + env(safe-area-inset-bottom, 0px)); font-size: 14px !important; padding: 6px 14px !important; min-height: 36px; max-width: 60vw; } /* the Use button acts; the pill only names it */
 body.ts-on .ftf-photo-open { top: 40% !important; }
 @media (orientation: landscape) and (max-height: 500px) { .ts-arc { transform: scale(.86); transform-origin: 100% 100%; } .ts-btn.ts-use { bottom: 196px; } }
 @media (prefers-reduced-motion: reduce) { .ts-btn.ts-use:not([hidden]) { animation: none; } .ts-base { transition: none; } }

@@ -117,6 +117,7 @@ export default {
   'settings.quality': 'Якість',
   'settings.quality.auto': 'Авто',
   'settings.quality.high': 'Висока',
+  'settings.quality.medium': "Середня",
   'settings.quality.low': 'Низька',
   'settings.note': 'Налаштування зберігаються лише на цьому пристрої.',
   'settings.hudMode': 'Інтерфейс',

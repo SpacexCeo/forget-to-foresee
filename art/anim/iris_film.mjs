@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash> [--url http://127.0.0.1:4173] [--query anim=v1] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
 //   ffmpeg -framerate <fps> -i <out>/f_%04d.jpg -c:v libx264 -pix_fmt yuv420p -crf 20 out.mp4
 // Scenarios: loco (stand, walk, run, stop: a front tracking shot, then the same from the side), cast (Frost Lance,
@@ -12,6 +12,7 @@ const { chromium } = require('playwright');
 const out = process.argv[2], scenario = process.argv[3] || 'loco';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const url = arg('url', 'http://127.0.0.1:4173'), extra = arg('query', '');
+const hero = arg('hero', 'iris');
 const [W, H] = arg('size', '1280x720').split('x').map(Number);
 mkdirSync(out, { recursive: true });
 const gpu = ['--use-angle=vulkan', '--use-vulkan=native', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
@@ -20,7 +21,7 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=iris&cycle=off${scenario === 'combat' || scenario === 'dash' ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${scenario === 'combat' || scenario === 'dash' ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -110,6 +111,17 @@ else if (scenario === 'dash') {
     mark('dash 2'); await page.keyboard.down('ShiftLeft'); await page.keyboard.down('KeyW'); await page.keyboard.press('Space'); await wait(250); await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(1300);
   }
   marks.push({ events: await page.evaluate(() => Object.fromEntries(Object.entries(window.__ev).map(([k, v]) => [k, { n: v.length, first: v.slice(0, 6) }]))) });
+}
+else if (scenario === 'shoulders') {
+  // the shoulders and arms (Elise): close from the front and from behind while she stands, waves, walks and runs
+  for (const [name, s] of [['front', { angle: 0.25, dist: 2.3, h: 1.25, up: 0.1 }], ['back', { angle: Math.PI - 0.3, dist: 2.3, h: 1.25, up: 0.15 }], ['full', { angle: 0.3, dist: 4.6, h: 0.9, up: 0.25 }]]) {
+    await back(); await shot(s); await wait(2200);
+    mark(name + ' idle'); await wait(1500);
+    mark(name + ' wave'); await page.evaluate(() => window.__ftf.irisReact('greet')); await wait(2600);
+    mark(name + ' walk'); await go(2200, false);
+    mark(name + ' run'); await go(1800, true);
+    mark(name + ' stop'); await wait(1500);
+  }
 }
 capturing = false; await capture;
 const seconds = (Date.now() - t0) / 1000;

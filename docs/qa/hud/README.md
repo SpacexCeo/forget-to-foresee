@@ -32,3 +32,20 @@ back to the old scheme (stored). Desktop is unchanged; the archipelago (judge pa
 | Portrait | Landscape |
 |---|---|
 | ![](touch-tp-town.jpg) ![](touch-tp-outside.jpg) | ![](touch-tl-town.jpg) ![](touch-tl-outside.jpg) |
+
+## Declutter pass (owner: "too many captions on screen")
+
+| | Before | After |
+|---|---|---|
+| Desktop | ![](declutter-before-desktop.jpg) | ![](declutter-after-desktop.jpg) |
+| Phone | ![](declutter-before-phone.jpg) | ![](declutter-after-phone.jpg) |
+
+- Quest tracker: a quest icon and one short line (ellipsis); tap unfolds the full text. Phones: at most a third of the width.
+- Tournament pill: an altar icon and "Open now"; the full line is the tooltip. Hidden outside the walls.
+- Controls: icon only (no "Controls", no "Esc"). Skip the town quest: a skip icon (the label stays for screen readers).
+- Players chip (chat): people icon and the number; the full line is the tooltip and the accessible name.
+- Premise card: shown once per browser, then behind the "?" button next to the wallet.
+- Toasts: 2.4 s, at most two lines. Townsfolk barks: 2.6 s, narrower, fewer.
+- Phones: the frame shows the portrait, level and health only; on touch the prompt pill is small (the Use button acts).
+- Placeholder icons are line glyphs in the HUD gold, to be replaced by the UI-003/UI-004 icon storyboards.
+- The archipelago (judge path) is untouched: "Trial N of 17 · Silk N" stays as the README says.
