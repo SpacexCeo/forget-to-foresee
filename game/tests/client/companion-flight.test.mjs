@@ -1,7 +1,7 @@
-// The dragon companion never flies through the heroine: a keep-out cylinder around her (scenes/companion.js).
+// The dragon companion never flies through the heroine: a keep-out cylinder around her (scenes/companion-rules.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { keepClear, COMPANION } from '../../src/scenes/companion.js';
+import { keepClear, COMPANION } from '../../src/scenes/companion-rules.js';
 
 test('a point inside the cylinder is pushed to its wall, keeping its side and height', () => {
   const hero = { x: 10, y: 2, z: -4 };

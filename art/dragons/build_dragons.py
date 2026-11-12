@@ -295,8 +295,6 @@ def build_head(B, S, P, yh, seg):
                 return mix(iris, (0.02, 0.02, 0.02), smooth(0.55, 0.30, k) * 0.6)
             return (0.03, 0.025, 0.03)
         ball(B, (sx * hr * 0.62, ey, ez), er, ecol, {"head": 1.0}, mat="eye", u=12, v=9)
-        # a brow over the eye
-        cone(B, (sx * hr * 0.55, ey + hr * 0.34, ez + er * 0.98), (sx * hr * 0.78, ey - hr * 0.50, ez + er * 0.80), hr * 0.12, mix(top, (0, 0, 0), 0.12), {"head": 1.0}, seg=4)
     # nostrils
     for sx in (-1, 1):
         ball(B, (sx * hr * 0.16 * wide, y1 + hr * 0.14, zn - hr * 0.05), hr * 0.045, lambda p, d: (0.04, 0.03, 0.03), {"head": 1.0}, u=5, v=4)
