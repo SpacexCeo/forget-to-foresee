@@ -84,8 +84,12 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
   // stand it on the plinth: the widest whorl down, the mouth turned up toward the visitor
   const box = new THREE.Box3().setFromBufferAttribute(shellGeo.attributes.position);
   shell.rotation.z = -end.th + Math.PI * 0.62; shell.position.set(0, 0.64 + (box.max.y - box.min.y) * 0.5, 0); shell.rotation.y = 0.35;
-  const halo = own(new THREE.MeshBasicMaterial({ color: 0x7fdccf, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
-  const pool = new THREE.Mesh(own(new THREE.CircleGeometry(1.9, 28)), halo); pool.rotation.x = -Math.PI / 2; pool.position.y = 0.03;
+  // a soft pool of light on the cobbles: a radial falloff, never a flat disc
+  const halo = own(new THREE.ShaderMaterial({ uniforms: { uColor: { value: new THREE.Color(0x7fdccf) }, uOpacity: { value: 0.2 } },
+    vertexShader: /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */`uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; void main() { float r = length(vUv * 2.0 - 1.0); gl_FragColor = vec4(uColor, uOpacity * pow(max(1.0 - r, 0.0), 2.0)); }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
+  const pool = new THREE.Mesh(own(new THREE.PlaneGeometry(4.4, 4.4)), halo); pool.rotation.x = -Math.PI / 2; pool.position.y = 0.03;
   root.add(plinth, drum, band, shell, pool);
   scene.add(root);
 
@@ -120,7 +124,7 @@ export function createTownBoard({ scene, position, facing = 0, i18n, log = () =>
     /** Per frame: a panel closes when she walks off; the seam breathes. */
     update(pos, time = 0) {
       const k = 0.5 + 0.5 * Math.sin(time * 1.1);          // a gentle pulse: the mouth, its lip and the band breathe together
-      seamMat.color.setHSL(0.47, 0.6, 0.6 + 0.1 * k); glowMat.opacity = 0.6 + 0.3 * k; halo.opacity = 0.1 + 0.08 * k; bandMat.emissiveIntensity = 0.8 + 0.5 * k; nacre.emissiveIntensity = 0.3 + 0.12 * k;
+      seamMat.color.setHSL(0.47, 0.6, 0.6 + 0.1 * k); glowMat.opacity = 0.6 + 0.3 * k; halo.uniforms.uOpacity.value = 0.16 + 0.1 * k; bandMat.emissiveIntensity = 0.8 + 0.5 * k; nacre.emissiveIntensity = 0.3 + 0.12 * k;
       if (panel && pos) { const at = root.position; if (Math.hypot(pos[0] - at.x, pos[2] - at.z) > BOARD_REACH + 2) close(); }
     },
     setActive(on) { root.visible = !!on; if (!on) close(); },

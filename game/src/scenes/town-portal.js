@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 
 /** Town-local metres beside the spawn, to Iris's right in the first frame (the spawn is (0, 0, 25), she faces -z). */
-export const PORTAL_TOWN = Object.freeze([6.4, 0, 23.4]);      // clear of the standing mirror at (2.8, 0, 21.5)
+export const PORTAL_TOWN = Object.freeze([4.4, 0, 24.8]);      // clear of the standing mirror at (2.8, 0, 21.5) and of the stall posts further right
 export const PORTAL_REACH = 3;
 
 /** The portal's state from the story phase and the balance (pure). */
