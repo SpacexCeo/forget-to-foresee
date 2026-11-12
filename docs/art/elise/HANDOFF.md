@@ -345,7 +345,7 @@ idle, walk, run, strikes, cast from the front, the side and behind, then a close
 
 Fixed after the first film (seen on the card render): the gown over the hips followed the thighs and tore open at
 the right hip in the idle; it now rides the pelvis only, and her right leg is removed up to the hip. The card
-`assets/cards/elise_model.webp` / `assets/nft/elise_model.webp` is rendered again from v3 (`v2/card.py`).
+`assets/cards/elise_model.webp` / `assets/nft/elise_model.webp` stays the v2 render (owner 12.11: "keep the old card").
 
 Left for later: talk and expression morphs (only the blink is in); no folds on the bodice; the hair has no drawn
 highlight band; the body mesh has 3 open edges at the patched face pockets (hidden under the fringe and the lips).
