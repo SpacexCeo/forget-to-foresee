@@ -36,3 +36,30 @@ test('intro fly-through: once per browser, skippable, never on the jury path, ?s
   const { PLAY_MESSAGES } = await import('../../src/play/i18n.js');
   for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok(PLAY_MESSAGES[loc]['intro.skip'], loc);
 });
+
+test('combat and footstep sounds (owner, 12.11): every cue has its synthesized variations in the manifest', async () => {
+  const { TOWN_CUES, MOB_SOUNDS, STEP_SURFACES, cueName } = await import('../../src/audio/town-audio.js');
+  const { AUDIO_MANIFEST } = await import('../../src/audio/manifest.js');
+  const has = (n) => !!(AUDIO_MANIFEST.sounds[n] || AUDIO_MANIFEST.groups[n]);
+  for (const c of TOWN_CUES) assert.ok(has(c), c);
+  for (const t of Object.values(MOB_SOUNDS)) { assert.ok(has(t.attack), t.attack); assert.ok(has(t.hurt), t.hurt); }
+  for (const s of STEP_SURFACES) assert.ok((AUDIO_MANIFEST.groups['step_' + s] || []).length >= 6, 'six ' + s + ' steps');
+  for (const g of ['strike_swing', 'strike_impact', 'mob_skitter_attack', 'iris_hurt']) assert.ok(AUDIO_MANIFEST.groups[g].length >= 3, g + ' varies');
+  assert.equal(cueName('ui_click'), 'ui_click'); assert.equal(cueName({ name: 'mob_death', pos: [1, 2, 3] }), 'mob_death');
+});
+
+test('positional cues, a volume jitter, and footsteps by surface', async () => {
+  const { createTownAudio, cueAt } = await import('../../src/audio/town-audio.js');
+  const played = [];
+  const listeners = {};
+  const win = { addEventListener: (k, f) => { listeners[k] = f; }, removeEventListener() {}, dispatchEvent: (e) => { if (listeners[e.type]) listeners[e.type](e); return true; } };
+  globalThis.CustomEvent = globalThis.CustomEvent || class { constructor(type, o) { this.type = type; this.detail = o && o.detail; } };
+  const ta = createTownAudio({ createAudio: () => ({ setZone() {}, play: (n, o) => played.push([n, o]), unlock: () => Promise.resolve(), dispose() {} }), win, rand: () => 0.5 });
+  cueAt('mob_hulker_slam', [1, 2, 3], 1, win);
+  assert.equal(played[0][0], 'mob_hulker_slam'); assert.deepEqual(played[0][1].pos, [1, 2, 3]); assert.ok(played[0][1].gain > 0.85 && played[0][1].gain <= 1);
+  cueAt('not_a_cue', null, 1, win); assert.equal(played.length, 1, 'unknown cues are ignored');
+  ta.footContact('grass', false); ta.footContact('wood', true); ta.footContact(true); ta.footContact('lava');
+  assert.deepEqual(played.slice(1).map((p) => p[0]), ['step_grass', 'step_wood', 'step_wood', 'step_stone']);
+  assert.ok(played[2][1].gain > played[1][1].gain, 'running steps are louder');
+  ta.dispose();
+});

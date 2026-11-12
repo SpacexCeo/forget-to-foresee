@@ -11,6 +11,13 @@ export const PATTERNS = Object.freeze({
   vision_whoosh: Object.freeze([[25], 0.45, 90]),
   storm_crack: Object.freeze([[40, 30, 25], 0.8, 180]),
   ui_error: Object.freeze([[50, 40, 50], 0.5, 120]),
+  strike_impact: Object.freeze([[14], 0.35, 45]),
+  strike_heavy: Object.freeze([[35, 20, 25], 0.8, 140]),
+  iris_hurt: Object.freeze([[45], 0.7, 110]),
+  iris_down: Object.freeze([[60, 40, 80], 1.0, 200]),
+  cast_release_frost: Object.freeze([[22], 0.45, 70]),
+  cast_release_storm: Object.freeze([[30, 25, 20], 0.7, 150]),
+  mob_hulker_slam: Object.freeze([[25], 0.5, 90]),
 });
 
 /** Whether haptics are on for this browser. */
@@ -38,7 +45,7 @@ export function createHaptics({ win = globalThis, nav = globalThis.navigator, st
     } catch { /* no gamepads */ }
     return did;
   }
-  const onCue = (e) => pulse(e.detail);
+  const onCue = (e) => pulse(e.detail && typeof e.detail === 'object' ? e.detail.name : e.detail);
   if (win && win.addEventListener) win.addEventListener('ftf:sound', onCue);
   return { pulse, dispose() { if (win && win.removeEventListener) win.removeEventListener('ftf:sound', onCue); } };
 }
