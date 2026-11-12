@@ -22,6 +22,7 @@ import health from './api/health.js';
 import agentSay from './api/agent/say.js';
 import agentDecide from './api/agent/decide.js';
 import chestOpen from './api/chest/open.js';
+import expeditionLog from './api/expedition/log.js';
 import wheelClaim from './api/wheel/claim.js';
 import marketStats from './api/market/stats.js';
 import marketResource from './api/market/resource.js';
@@ -31,7 +32,7 @@ import passStatus from './api/pass/status.js';
 import passEligibility from './api/pass/eligibility.js';
 import { passService } from './lib/pass-service.js';
 
-const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats,
+const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/expedition/log': expeditionLog, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats,
   '/api/pass/claim': passClaim, '/api/pass/status': passStatus, '/api/pass/eligibility': passEligibility };
 if (!process.env.TRUST_PROXY) process.env.TRUST_PROXY = '0'; // direct exposure: do not trust X-Forwarded-For
 

@@ -26,7 +26,7 @@ fn town() -> Town {
 /// minted − burned = everything held (acceptance 1, in silk).
 fn conserved(t: &Town) {
     let rows: u128 = ACCS.iter().filter_map(|a| t.balance_of(acc(a))).map(|r| r.silk + r.credit).sum();
-    assert_eq!(t.minted_silk - t.burned_silk, rows + t.silk_held_outside_accounts().0, "silk conservation");
+    assert_eq!(t.minted_silk - t.burned_silk - t.gate_burned().0, rows + t.silk_held_outside_accounts().0, "silk conservation");
 }
 fn bal(t: &Town, a: &str) -> Account { t.balance_of(acc(a)).unwrap() }
 fn trades(t: &mut Town, n: usize, day: u64) {
@@ -358,6 +358,47 @@ fn investing_in_a_stall_reopens_it_and_shares_its_fees() {
 }
 #[test] #[should_panic(expected = "ERR_NO_STALL")]
 fn only_trader_stalls_take_investment() { let mut t = town(); ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(10 * S), "w".into()); ctx("p0.testnet", 0); t.invest_stall(acc("p1.testnet"), U(S)); }
+
+#[test]
+fn the_deployed_state_still_deserialises_after_the_gate_upgrade() {
+    // tests/state-v1.hex: the root state written by the deployed version (commit d8d6720) after genesis, a trade and a pledge
+    let hex = include_str!("../tests/state-v1.hex").trim();
+    let bytes: Vec<u8> = (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap()).collect();
+    ctx("owner.testnet", 0);
+    let old: Town = near_sdk::borsh::from_slice(&bytes).expect("v1 state reads with v2 code");
+    assert_eq!((old.counters.trade, old.counters.stake, old.account_count), (1, 1, 4));
+    assert_eq!(near_sdk::borsh::to_vec(&old).unwrap(), bytes); // and writes back byte for byte
+    assert_eq!(old.gate_price().0, 200 * S); // the new keys start at their defaults
+}
+#[test]
+fn the_gate_burns_its_price_once_from_own_silk_outside_the_mint_match() {
+    let mut t = town();
+    ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(250 * S), "story".into()); t.credit_entry(acc("p0.testnet"), U(40 * S));
+    open(&mut t, "s1");
+    let burned = t.burned_silk;
+    ctx("p0.testnet", 1);
+    let r = t.pay_gate("portal-1".into());
+    assert_eq!((r.price.0, r.season_id.as_str()), (200 * S, "s1"));
+    assert_eq!(bal(&t, "p0.testnet").silk, 50 * S); assert_eq!(bal(&t, "p0.testnet").credit, 40 * S); // credit untouched
+    assert_eq!(t.gate_burned().0, 200 * S); assert_eq!(t.burned_silk, burned); // not in the mint-match
+    assert_eq!(t.gate_paid_of(acc("p0.testnet")).unwrap().gate_id, "portal-1");
+    assert!(t.gate_paid_for(acc("p0.testnet"), "portal-1".into()) && !t.gate_paid_for(acc("p0.testnet"), "portal-2".into()));
+    assert!(get_logs().last().unwrap().contains(r#""event":"gate_paid","data":[{"account":"p0.testnet","gate_id":"portal-1","price":"200000000","season_id":"s1"}]"#));
+    assert_eq!(t.pulse().gates_paid, 1);
+    conserved(&t);
+}
+#[test] #[should_panic(expected = "ERR_GATE_PAID")]
+fn the_gate_is_paid_once() { let mut t = town(); ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_silk(acc("p0.testnet"), U(500 * S), "s".into()); ctx("p0.testnet", 1); t.pay_gate("portal-1".into()); t.pay_gate("portal-1".into()); }
+#[test] #[should_panic(expected = "ERR_SCRIPTED")]
+fn traders_do_not_pay_the_gate() { let mut t = town(); ctx("t0.testnet", 1); t.pay_gate("portal-1".into()); }
+#[test] #[should_panic(expected = "ERR_FUNDS")]
+fn the_gate_needs_own_silk_not_entry_credit() { let mut t = town(); ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet")]); t.credit_entry(acc("p0.testnet"), U(400 * S)); ctx("p0.testnet", 1); t.pay_gate("portal-1".into()); }
+#[test]
+fn the_gate_price_is_owner_set_and_bounded() {
+    let mut t = town(); t.set_gate_price(U(250 * S)); assert_eq!(t.gate_price().0, 250 * S);
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { let mut t2 = town(); t2.set_gate_price(U(10 * S)); }));
+    assert!(r.is_err());
+}
 
 /// contracts/town/tests/vectors.json (written by tools/town/vectors.mjs from the JS rules) must match rules.rs.
 #[test]
