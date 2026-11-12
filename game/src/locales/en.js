@@ -876,4 +876,9 @@ export default {
   "mk.i.amber_resin": "amber resin",
   "mk.i.ice_block": "ice block",
   "mk.i.bronze_gear": "bronze gear",
+  "mk.i.spider_silk_thread": "spider silk thread",
+  "mk.i.chitin_plate": "chitin plate",
+  "mk.i.veil_dust": "veil dust",
+  "mk.i.ash_ore": "ash ore",
+  "mk.i.crown_shard": "crown shard",
 };
