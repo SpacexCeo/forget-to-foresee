@@ -45,10 +45,10 @@ def smooth(a, b, x):
 SPECIES = {
     # length and span in metres; fractions of the unit body (snout y=-0.5, tail tip y=+0.5)
     "nacre": dict(length=0.58, span=0.96, body="#E6DDCA", belly="#B9C9C5", membrane="#F1DCE8", edge="#D79CCB", accent="#B77FB4",
-                  eye="#6B4A5E", hr=0.046, head_len=0.14, neck=(-0.365, 0.085), ys=-0.235, yp=0.03, girth=0.052, yt=0.42,
+                  eye="#7A4E78", hr=0.054, head_len=0.135, neck=(-0.365, 0.085), ys=-0.235, yp=0.03, girth=0.052, yt=0.42,
                   legs=0.95, wing="leaf", tail="split", extra="frills", flat=False),
     "rill": dict(length=0.64, span=0.84, body="#287D83", belly="#9ACAC0", membrane="#9ACAC0", edge="#E6DDCA", accent="#E6DDCA",
-                 eye="#E9A21F", hr=0.060, head_len=0.17, neck=(-0.335, 0.075), ys=-0.215, yp=0.07, girth=0.070, yt=0.38,
+                 eye="#E9A21F", hr=0.070, head_len=0.165, neck=(-0.335, 0.075), ys=-0.215, yp=0.07, girth=0.070, yt=0.38,
                  legs=1.0, wing="fin", tail="fan", extra="fins", flat=False),
     "cinder": dict(length=0.46, span=0.72, body="#704733", belly="#E6CE9E", membrane="#E6CE9E", edge="#B57A4E", accent="#E0932F",
                    eye="#C9781E", hr=0.098, head_len=0.25, neck=(-0.255, 0.06), ys=-0.165, yp=0.15, girth=0.122, yt=0.40,
@@ -266,8 +266,8 @@ def build_head(B, S, P, yh, seg):
     top, bel = srgb(S["body"]), srgb(S["belly"])
     wide = 1.28 if S["extra"] == "horns" else 1.0
     U = [0.0, 0.12, 0.30, 0.50, 0.68, 0.84, 0.95, 1.0]
-    F = [0.45, 0.85, 1.0, 0.96, 0.64 * wide, 0.50 * wide, 0.40 * wide, 0.16]
-    G = [0.40, 0.78, 0.92, 0.86, 0.54, 0.40, 0.32, 0.12]
+    F = [0.45, 0.86, 1.0, 0.97, 0.68 * wide, 0.56 * wide, 0.46 * wide, 0.22]
+    G = [0.40, 0.80, 0.95, 0.90, 0.58, 0.45, 0.37, 0.18]
     Z = [0.0, 0.0, 0.05, 0.05, -0.12, -0.20, -0.24, -0.26]
     y0 = yn + hr * 0.75; y1 = -0.5
     rings = [(0.0, y0 + (y1 - y0) * u, zn + hr * 0.12 + Z[k] * hr, hr * F[k], hr * G[k], {"head": 1.0}) for k, u in enumerate(U)]
@@ -281,22 +281,22 @@ def build_head(B, S, P, yh, seg):
     loft(B, rings, seg, col, sub=2)
     # eyes: a big iris, a pupil, a highlight
     iris = srgb(S["eye"])
-    ey = y0 + (y1 - y0) * 0.50; ez = zn + hr * 0.36; er = hr * (0.27 if S["extra"] == "horns" else 0.31)
+    ey = y0 + (y1 - y0) * 0.44; ez = zn + hr * 0.34; er = hr * (0.34 if S["extra"] == "horns" else 0.40)
     for sx in (-1, 1):
-        ax = Vector((sx * 0.86, -0.42, 0.28)).normalized(); hl = Vector((sx * 0.55, -0.55, 0.62)).normalized()
+        ax = Vector((sx * 0.80, -0.55, 0.22)).normalized(); hl = Vector((sx * 0.50, -0.60, 0.62)).normalized()
 
         def ecol(p, d, ax=ax, hl=hl):
             k = d.dot(ax)
-            if d.dot(hl) > 0.95:
+            if d.dot(hl) > 0.93:
                 return (1, 1, 1)
-            if k > 0.80:
+            if k > 0.84:
                 return (0.01, 0.01, 0.015)
-            if k > 0.30:
+            if k > 0.18:
                 return mix(iris, (0.02, 0.02, 0.02), smooth(0.55, 0.30, k) * 0.6)
             return (0.03, 0.025, 0.03)
-        ball(B, (sx * hr * 0.70, ey, ez), er, ecol, {"head": 1.0}, mat="eye", u=12, v=9)
+        ball(B, (sx * hr * 0.62, ey, ez), er, ecol, {"head": 1.0}, mat="eye", u=12, v=9)
         # a brow over the eye
-        cone(B, (sx * hr * 0.62, ey + hr * 0.30, ez + er * 0.9), (sx * hr * 0.80, ey - hr * 0.42, ez + er * 0.62), hr * 0.13, mix(top, (0, 0, 0), 0.12), {"head": 1.0}, seg=4)
+        cone(B, (sx * hr * 0.55, ey + hr * 0.34, ez + er * 0.98), (sx * hr * 0.78, ey - hr * 0.50, ez + er * 0.80), hr * 0.12, mix(top, (0, 0, 0), 0.12), {"head": 1.0}, seg=4)
     # nostrils
     for sx in (-1, 1):
         ball(B, (sx * hr * 0.16 * wide, y1 + hr * 0.14, zn - hr * 0.05), hr * 0.045, lambda p, d: (0.04, 0.03, 0.03), {"head": 1.0}, u=5, v=4)
@@ -567,14 +567,14 @@ def pose(name, u, S):
     root +x nose down; neck and head +x nose up; tail +x tip up, z yaw; legs +x forward."""
     ph = TAU * u
     R = {}
-    hover = dict(pitch=-0.62, neck=0.34, head=0.26, amp=0.62, mean=0.12, beats=4, bob=0.016, tail=-0.11, fl=(-0.15, 0.55), hl=(0.35, 0.5))
+    hover = dict(pitch=-0.62, neck=-0.30, head=-0.24, amp=0.62, mean=0.12, beats=4, bob=0.016, tail=-0.11, fl=(-0.15, 0.55), hl=(0.35, 0.5))
     table = {
         "idle": hover,
-        "follow": dict(pitch=-0.20, neck=0.14, head=0.06, amp=0.60, mean=0.10, beats=2, bob=0.012, tail=-0.03, fl=(-0.55, 0.9), hl=(-0.75, 0.7)),
-        "fly": dict(pitch=-0.06, neck=0.06, head=0.0, amp=0.82, mean=0.06, beats=2, bob=0.012, tail=0.0, fl=(-0.7, 1.0), hl=(-0.95, 0.6)),
+        "follow": dict(pitch=-0.20, neck=-0.10, head=-0.06, amp=0.60, mean=0.10, beats=2, bob=0.012, tail=-0.03, fl=(-0.55, 0.9), hl=(-0.75, 0.7)),
+        "fly": dict(pitch=-0.06, neck=0.04, head=0.0, amp=0.82, mean=0.06, beats=2, bob=0.012, tail=0.0, fl=(-0.7, 1.0), hl=(-0.95, 0.6)),
         "glide": dict(pitch=0.04, neck=0.02, head=-0.04, amp=0.0, mean=0.20, beats=1, bob=0.005, tail=0.01, fl=(-0.8, 1.1), hl=(-1.05, 0.55)),
     }
-    perch = dict(pitch=-0.52, neck=0.30, head=0.18)
+    perch = dict(pitch=-0.52, neck=-0.26, head=-0.20)
     if name in table or name in ("flip", "cheer"):
         T = table.get(name, table["follow"])
         beat = ph * T["beats"]
@@ -715,7 +715,7 @@ def build(did, lite=False):
     ob = bpy.data.objects.new(f"dragon_{did}", me)
     bpy.context.scene.collection.objects.link(ob)
     mats = [mat("M_Dragon_Body", rough=0.55 if S["flat"] else 0.42, sheen=0.3), mat("M_Dragon_Membrane", rough=0.5, double=True, sheen=0.4),
-            mat("M_Dragon_Accent", rough=0.3, emit=True, strength=1.4), mat("M_Dragon_Eye", rough=0.08)]
+            mat("M_Dragon_Accent", rough=0.3, emit=True, strength=0.45), mat("M_Dragon_Eye", rough=0.08)]
     for m in mats:
         me.materials.append(m)
     ca = me.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
