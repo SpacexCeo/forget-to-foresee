@@ -1,28 +1,13 @@
-// The town market daemon (docs/market.md): runs inside the relayer, 24/7. Every trader has its own loop: wait an
+// The town traders' daemon (docs/town-economy.md): runs inside the relayer, 24/7. Every trader has its own loop: wait an
 // exponential gap (schedule.js), pick a trade (behaviour.js), sign it with that trader's own trade-only key and send
-// it to the market contract. Each trader signs only its own transactions, so nonces never collide; the nonce and a
+// it to the town contract (ftf-town). Each trader signs only its own transactions, so nonces never collide; the nonce and a
 // recent block hash are cached, so a trade costs one RPC call. A global cap limits sends per minute, a pause stops
 // sending without stopping the process, the state (balances, prices, today's count, the last trades) is saved to a
 // file and reloaded after a restart, and every trade or failure is appended to a JSONL log.
 import { b58encode, findFailure, importSecretKey, serializeFunctionCallTx, sha256, signedTxBytes } from '../lib/near-tx.js';
 import { TRADERS, traderKey } from './catalog.js';
-import { applyTrade, initialState, pickTrade } from './behaviour.js';
+import { TOWN_POLICY } from '../lib/town-traders.js';
 
-/** The market contract's policy (contracts/market): goods at prices; a town policy lives in lib/town-traders.js. */
-export const MARKET_POLICY = Object.freeze({
-  init: (keys) => initialState(keys),
-  pick: pickTrade,
-  apply: applyTrade,
-  args: (t, accountOf) => ({ to: accountOf(t.seller), item: t.item, qty: t.qty, price: t.price }),
-  async sync(client, contractId, st) {
-    const [bal, items, stats] = await Promise.all([client.view(contractId, 'balances'), client.view(contractId, 'items'), client.view(contractId, 'stats')]);
-    for (const [acc, v] of bal || []) { const k = traderKey(acc); if (k && k in st.balances) st.balances[k] = Number(v); }
-    for (const it of items || []) st.prices[it.id] = it.last;
-    return stats;
-  },
-  row: (t) => ({ buyer: t.buyer, seller: t.seller, item: t.item, qty: t.qty, price: t.price }),
-  refetch: /ERR_FUNDS|ERR_PRICE/,
-});
 import { DEFAULT_TARGET, createRateCap, nextGapMs, utcDay } from './schedule.js';
 
 export const RECENT = 30;
@@ -36,7 +21,7 @@ const errText = (e) => String((e && e.rpc && JSON.stringify(e.rpc.data || e.rpc.
 export function createMarketDaemon({
   contractId, traders, client, store = null, log = () => {}, target = DEFAULT_TARGET, now = () => Date.now(),
   rand = Math.random, maxPerMinute = 60, paused = false, timers = { setTimeout, clearTimeout }, gas = TRADE_GAS,
-  policy = MARKET_POLICY, dryRun = false,
+  policy = TOWN_POLICY, dryRun = false,
 }) {
   const keys = traders.map((t) => t.key).filter((k) => TRADERS.includes(k));
   const saved = (store && store.load()) || null;

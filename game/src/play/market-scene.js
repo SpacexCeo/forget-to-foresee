@@ -1,4 +1,4 @@
-// The town market made visible (docs/market.md): when the ticker sees a new trade (net/market.js), the townsperson who
+// The town market made visible (docs/town-economy.md): when the ticker sees a new trade (net/market.js), the townsperson who
 // sold it shows a small chip over the head ("bread × 3 · 9 silk") while Iris is near, and by day the buyer walks to
 // the stalls by the Shard Exchange for a while (townsfolk.sendToTrade, the same trade loop a hired agent runs), then
 // home. Hired agents are left alone; at most two market visitors at a time. Pure DOM + projection; no game rule.

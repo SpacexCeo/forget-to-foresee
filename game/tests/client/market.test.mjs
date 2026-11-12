@@ -1,4 +1,4 @@
-// The town market in the game (docs/market.md): the stats parser, explorer links, localized trade lines, the ticker
+// The town market in the game (docs/town-economy.md): the stats parser, explorer links, localized trade lines, the ticker
 // (hidden without a market, count + label + links, new trades reported once) and the stall scene's visits.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

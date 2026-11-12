@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Makes the market traders' keys on THIS server (docs/market.md): one ed25519 key per trader in data/market-keys.json
+// Makes the market traders' keys on THIS server (docs/town-economy.md): one ed25519 key per trader in data/market-keys.json
 // (mode 600, never committed; existing keys are kept) and prints ONLY the accounts and public keys, as the JSON that
-// contracts/scripts/market-deploy.sh reads (TRADER_KEYS=<file>):
+// contracts/scripts/town-deploy.sh reads (TRADER_KEYS=<file>):
 //   node scripts/market-keys.mjs [parent=ftf-coordinator.testnet] > market-public.json
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';

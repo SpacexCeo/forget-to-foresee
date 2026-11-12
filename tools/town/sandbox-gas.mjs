@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Measures what one market trade costs, on a local NEAR sandbox node (no testnet, no keys, no tokens): deploys
-// contracts/market, registers two traders, gives one a trade-only function-call key (as on the relayer's server) and
+// Measures what one town trade costs, on a local NEAR sandbox node (no testnet, no keys, no tokens): deploys
+// contracts/town, runs genesis with two traders, gives one a trade-only function-call key (as on the relayer's server) and
 // sends trades with it. Prints gas burnt per trade, the NEAR it costs at a given gas price, how much of the key's
 // allowance a trade uses, and whether the contract's storage grew.
-//   node tools/market/sandbox-gas.mjs <near-sandbox binary> <market.wasm> [trades=30] [gasPriceYocto=100000000]
+//   node tools/town/sandbox-gas.mjs <near-sandbox binary> <town.wasm> [trades=30] [gasPriceYocto=100000000]
 // The binary: https://s3-us-west-1.amazonaws.com/build.nearprotocol.com/nearcore/Linux-x86_64/<version>/near-sandbox.tar.gz
 import { spawn, execFileSync } from 'node:child_process';
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
@@ -11,10 +11,9 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { b58decode, b58encode } from '../../relayer/lib/near-tx.js';
-import { ITEMS } from '../../relayer/market/catalog.js';
 
 const [bin, wasmPath, nArg, priceArg] = process.argv.slice(2);
-if (!bin || !wasmPath) { console.error('usage: sandbox-gas.mjs <near-sandbox> <market.wasm> [trades] [gasPrice]'); process.exit(2); }
+if (!bin || !wasmPath) { console.error('usage: sandbox-gas.mjs <near-sandbox> <town.wasm> [trades] [gasPrice]'); process.exit(2); }
 const TRADES = Number(nArg || 30), GAS_PRICE = BigInt(priceArg || 100000000);
 const PORT = 3030 + Math.floor(Math.random() * 500);
 const home = mkdtempSync(join(tmpdir(), 'ftf-sbx-'));
@@ -87,16 +86,15 @@ async function main() {
     const root = { id: vk.account_id, key: keyFrom(vk.secret_key || vk.private_key) };
     const NEAR = 10n ** 24n;
     const mk = async (name, near) => { const key = freshKey(); const id = `${name}.${root.id}`; await send(root.id, root.key, id, [A.create, A.transfer(near * NEAR), A.fullKey(key.pub)]); return { id, key }; };
-    const market = await mk('market', 10n), a = await mk('tf-baker', 5n), b = await mk('tf-guard', 5n);
+    const market = await mk('town', 10n), a = await mk('tf-baker', 5n), b = await mk('tf-guard', 5n);
     const code = readFileSync(wasmPath);
-    await send(market.id, market.key, market.id, [A.deploy(code), A.call('new', { owner_id: market.id, items: ITEMS.map(({ id, base }) => ({ id, base })) }, 100n * 10n ** 12n)]);
-    await send(market.id, market.key, market.id, [A.call('add_traders', { traders: [a.id, b.id], balance: 100000 })]);
+    await send(market.id, market.key, market.id, [A.deploy(code), A.call('new', { owner_id: market.id, coordinators: [], params: null }, 100n * 10n ** 12n)]);
+    await send(market.id, market.key, market.id, [A.call('genesis', { traders: [a.id, b.id], wool_each: '700000000', silk_each: '100000000000', pool_wool: '10000000000', pool_silk: '20000000000' }, 100n * 10n ** 12n)]);
     const tradeKeyA = freshKey(), tradeKeyB = freshKey(), ALLOW = NEAR;
     await send(a.id, a.key, a.id, [A.fnKey(tradeKeyA.pub, ALLOW, market.id, ['trade'])]);
     await send(b.id, b.key, b.id, [A.fnKey(tradeKeyB.pub, ALLOW, market.id, ['trade'])]);
     const gas = BigInt(process.env.TRADE_GAS || 10) * 10n ** 12n;
-    const it = ITEMS[0];
-    const trade = (who, key, to) => send(who.id, key, market.id, [A.call('trade', { to: to.id, item: it.id, qty: 3, price: it.base }, gas)]);
+    const trade = (who, key, to) => send(who.id, key, market.id, [A.call('trade', { counterparty: to.id, silk: '2000000', reference: 'bread' }, gas)]);
     await trade(a, tradeKeyA, b); await trade(b, tradeKeyB, a); // first writes
     const s0 = (await account(market.id)).storage_usage, aBal0 = BigInt((await account(a.id)).amount), allow0 = BigInt((await view(a.id, tradeKeyA.text)).permission.FunctionCall.allowance);
     const g = [], t = [];

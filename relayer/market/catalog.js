@@ -1,6 +1,6 @@
-// The town market's cast and goods (docs/market.md). Pure data, shared by the relayer's daemon, the deploy script and
-// the game's ticker. Base prices are in town silk (the town economy's in-game unit, game/src/game/town-economy.js);
-// the contract accepts half to twice the base. Trader keys are the townsfolk of game/src/play/townsfolk-plan.js and
+// The town traders' cast and goods (docs/town-economy.md). Pure data, shared by the relayer's daemon, the deploy script and
+// the game's ticker. Base prices are in fifths of a silk (lib/town-traders.js
+// PRICE_UNIT), drifting mean-reverting between half and twice the base. Trader keys are the townsfolk of game/src/play/townsfolk-plan.js and
 // the clans of game/src/net/shard-nft.js.
 
 /** Goods: id, base price, who makes and sells it. */

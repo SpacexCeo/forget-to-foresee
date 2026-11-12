@@ -232,7 +232,7 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
-let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/market.md)
+let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/town-economy.md; ?town=1 until ftf-town is live)
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
@@ -337,7 +337,7 @@ if (townMode.town) {
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
   }
-  if (!marketTicker && params.get('market') !== '0') { // the townsfolk market: a ticker of real testnet trades, chips and stall visits
+  if (!marketTicker && params.get('town') === '1') { // the townsfolk market: a ticker of real testnet trades, chips and stall visits
     Promise.all([import('./net/market.js'), import('./ui/market-ticker.js'), import('./play/market-scene.js')]).then(([net, ui, sc]) => {
       if (marketTicker) return;
       const t = (k, a) => ctx.i18n.t(k, a);
