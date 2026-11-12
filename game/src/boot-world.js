@@ -261,7 +261,7 @@ let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
 let townQuests = null, townPortal = null, townBoard = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
-let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null;
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -406,6 +406,14 @@ if (townMode.town) {
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
   if (params.get('story') !== '0' && !endgamePass) mountEndgamePass();
+  // The monster-resource stalls (ui/stall-panel.js): a stall keeper's card dispatches 'ftf:stall-open' {npc}
+  if (!stallMounted) { stallMounted = true; let panel = null; window.addEventListener('ftf:stall-open', (e) => {
+    const npc = e && e.detail && e.detail.npc; if (!npc) return;
+    Promise.all([import('./net/stall-client.js'), import('./ui/stall-panel.js')]).then(([c, u]) => {
+      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }) });
+      panel.open(npc);
+    }).catch((err) => console.warn('[stall]', err));
+  }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
