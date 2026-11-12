@@ -1,0 +1,321 @@
+{
+ "idle": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0058,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  },
+  "gown_min_m": 0.0069,
+  "gown_min_at": [
+   22,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "idle2": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0121,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  },
+  "gown_min_m": 0.0065,
+  "gown_min_at": [
+   69,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "idle_look": {
+  "take": "82_08",
+  "frames": 181,
+  "seconds": 6.03,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0016,
+  "contacts": {
+   "L": [
+    [
+     0,
+     181
+    ]
+   ],
+   "R": [
+    [
+     0,
+     181
+    ]
+   ]
+  },
+  "gown_min_m": 0.0069,
+  "gown_min_at": [
+   70,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "walk": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0045,
+  "slip_max_m_s": 0.0287,
+  "ball_min_y": 0.0226,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.537,
+  "time_scale": 1.592,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    0,
+    18
+   ],
+   "R": [
+    19,
+    18
+   ]
+  },
+  "gown_min_m": 0.0061,
+  "gown_min_at": [
+   33,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "run": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0038,
+  "slip_max_m_s": 0.032,
+  "ball_min_y": 0.0226,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.63,
+  "time_scale": 2.327,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    1,
+    27
+   ],
+   "R": [
+    26,
+    27
+   ]
+  },
+  "gown_min_m": 0.0065,
+  "gown_min_at": [
+   16,
+   "shin_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "register": {
+  "take": "82_08",
+  "frames": 101,
+  "seconds": 3.37,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0006,
+  "contacts": {
+   "L": [
+    [
+     0,
+     101
+    ]
+   ],
+   "R": [
+    [
+     0,
+     101
+    ]
+   ]
+  },
+  "gown_min_m": 0.0071,
+  "gown_min_at": [
+   70,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "greet": {
+  "take": "141_16",
+  "frames": 69,
+  "seconds": 2.3,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.027,
+  "contacts": {
+   "L": [
+    [
+     0,
+     69
+    ]
+   ],
+   "R": [
+    [
+     0,
+     69
+    ]
+   ]
+  },
+  "gown_min_m": 0.0063,
+  "gown_min_at": [
+   42,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "turn_l": {
+  "take": "82_08",
+  "frames": 51,
+  "seconds": 1.7,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0006,
+  "contacts": {
+   "L": [
+    [
+     0,
+     51
+    ]
+   ],
+   "R": [
+    [
+     0,
+     51
+    ]
+   ]
+  },
+  "gown_min_m": 0.0062,
+  "gown_min_at": [
+   43,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "turn_r": {
+  "take": "82_08",
+  "frames": 51,
+  "seconds": 1.7,
+  "slip_mean_m_s": 0.0,
+  "slip_max_m_s": 0.0,
+  "hip_drop_max_m": 0.0006,
+  "contacts": {
+   "L": [
+    [
+     0,
+     51
+    ]
+   ],
+   "R": [
+    [
+     0,
+     51
+    ]
+   ]
+  },
+  "gown_min_m": 0.006,
+  "gown_min_at": [
+   37,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "stairs_up": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0022,
+  "slip_max_m_s": 0.0787,
+  "ball_min_y": 0.0226,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.347,
+  "time_scale": 0.917,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    5,
+    24
+   ],
+   "R": [
+    39,
+    18
+   ]
+  },
+  "gown_min_m": 0.0061,
+  "gown_min_at": [
+   4,
+   "thigh_L"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ },
+ "stairs_down": {
+  "take": "08_01",
+  "slip_mean_m_s": 0.0022,
+  "slip_max_m_s": 0.0787,
+  "ball_min_y": 0.0226,
+  "src_stride_m": 1.651,
+  "src_T_s": 1.008,
+  "src_speed": 1.637,
+  "stride_scale": 0.347,
+  "time_scale": 0.917,
+  "hip_drop_max_m": 0.0,
+  "contact": {
+   "L": [
+    5,
+    24
+   ],
+   "R": [
+    39,
+    18
+   ]
+  },
+  "gown_min_m": 0.0061,
+  "gown_min_at": [
+   30,
+   "foot_R"
+  ],
+  "gown_knee_in_slit_frames": 0,
+  "gown_leg_through_cloth_frames": 0
+ }
+}
