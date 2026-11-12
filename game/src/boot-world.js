@@ -358,9 +358,9 @@ function mountMobs() {
   Promise.all([import('./play/mobs.js'), import('./render/mob-fx.js'), import('three/addons/utils/SkeletonUtils.js')]).then(([m, fx, su]) => {
     if (townMobs || town !== T) return;
     const ground = (x, z, nearY) => { const hit = rayCast(T.world, [x, nearY + 6, z], [0, -1, 0], 20, MASK_PLAYER); return hit ? hit.point[1] : nearY; };
-    // the hillside's own surface under a point: probed from below the cloud sea upwards (from above, tree crowns and the
-    // town's high colliders answer first)
-    const floor = (x, z) => { const hit = rayCast(T.world, [x, TOWN_ORIGIN_W[1] - 140, z], [0, 1, 0], 260, MASK_PLAYER); return hit ? hit.point[1] : null; };
+    // the hillside's own surface under a point (homes and spawns): the first walkable surface from high above (the
+    // homes sit in clearings, so no tree crown answers first); art/mobs/probe_homes.mjs lists them
+    const floor = (x, z) => { let y = TOWN_ORIGIN_W[1] + 120; for (let i = 0; i < 6; i++) { const h = rayCast(T.world, [x, y, z], [0, -1, 0], 400, MASK_PLAYER); if (!h) return null; if (h.normal[1] > 0.7) return h.point[1]; y = h.point[1] - 0.05; } return null; };
     const gate = [TOWN_ORIGIN_W[0], 0, TOWN_ORIGIN_W[2] + 42]; gate[1] = ground(gate[0], gate[2], TOWN_ORIGIN_W[1]) + 0.1;
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
