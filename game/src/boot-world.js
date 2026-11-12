@@ -243,7 +243,8 @@ let companionKinds = '';
 function setCompanions(kinds) {
   const key = kinds.join(','); if (key === companionKinds) return; companionKinds = key;
   for (const c of companions.splice(0)) c.dispose();
-  kinds.slice(0, 2).forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice })));
+  const perchAfter = Number(params.get('perch')) || undefined; // QA: ?perch=<seconds> lands the dragon sooner
+  kinds.slice(0, 2).forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice, perchAfter })));
 }
 function refreshCompanions() {
   const qa = params.get('companion');

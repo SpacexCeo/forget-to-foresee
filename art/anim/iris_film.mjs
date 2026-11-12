@@ -33,7 +33,7 @@ if (STEP) await page.addInitScript(() => {
   window.__manual = () => { vt = realNow(); manual = true; };
   window.__frame = (dt) => { vt += dt; const c = q; q = []; for (const f of c) { try { f(vt); } catch (e) { console.error(e); } } return c.length; };
 });
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit', 'show', 'final'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=${hero}&cycle=off${['combat', 'dash', 'strikes', 'audit', 'show', 'final', 'dragon'].includes(scenario) ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -231,6 +231,22 @@ else if (scenario === 'show') {
   await back(); await shot({ angle: 0.25, dist: 1.5, h: 1.52, up: 0.05 }); await wait(2400);
   mark('face idle'); await wait(3000);
   mark('face wave'); await page.evaluate(() => window.__ftf.irisReact('greet')); await wait(2800);
+}
+else if (scenario === 'dragon') {
+  // the dragon companion (--query companion=<kind>&perch=3): hover, follow, glide, a flourish on the finisher and the
+  // cast, then it lands and sits while she rests, and takes off when she walks on
+  const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos; f.town.casting.aimAt(id, [p[0] + 9, window.__ground(p[0] + 9, p[2]) ?? p[1], p[2]]); return f.town.casting.release(); }, id);
+  await back(); await shot({ angle: 0.55, dist: 4.4, h: 1.5, up: 0.2 }); await wait(2200);
+  mark('hover'); await wait(2600);
+  mark('walk'); await go(2600, false);
+  mark('run'); await go(2600, true);
+  mark('stop'); await wait(1500);
+  mark('strikes'); for (let i = 0; i < 3; i++) { await page.keyboard.press('KeyF'); await wait(420); }
+  await wait(1600);
+  mark('cast'); await aim('lance'); await wait(2600);
+  await shot({ angle: 0.9, dist: 3.4, h: 1.0, up: 0.1 });
+  mark('rest'); await wait(7500);
+  mark('take off'); await go(2200, false); await wait(800);
 }
 else if (scenario === 'final') {
   // the final pass: everything she does in one take, with numbers. Each frame the head, hands and feet are sampled in

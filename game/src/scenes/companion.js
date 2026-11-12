@@ -13,9 +13,9 @@ export { COMPANION, keepClear };
 const ONE_SHOT = ['flip', 'cheer', 'land'];
 
 /**
- * @param {{scene: THREE.Scene, kind: string, slot?: number, mobile?: boolean, base?: string}} o
+ * @param {{scene: THREE.Scene, kind: string, slot?: number, mobile?: boolean, perchAfter?: number, base?: string}} o
  */
-export function createCompanion({ scene, kind, slot = 0, mobile = false, base = (import.meta.env && import.meta.env.BASE_URL) || '/' }) {
+export function createCompanion({ scene, kind, slot = 0, mobile = false, perchAfter = COMPANION.perchAfter, base = (import.meta.env && import.meta.env.BASE_URL) || '/' }) {
   const root = new THREE.Group(); root.name = 'companion_' + kind; root.visible = false; scene.add(root);
   const st = { mixer: null, acts: {}, playing: null, shot: null, pos: null, vel: new THREE.Vector3(), t: 0, still: 0, flipAt: 5 + Math.random() * 4, ready: false, mode: 'fly', cheerAt: 0, bank: 0, lastYaw: 0 };
   const side = slot % 2 ? -1 : 1, back = COMPANION.back + Math.floor(slot / 2) * 0.8;
@@ -60,7 +60,7 @@ export function createCompanion({ scene, kind, slot = 0, mobile = false, base = 
       st.t += dt;
       const h = hero.heading, moving = hero.speed > 0.4;
       if (moving) { st.still = 0; if (st.mode !== 'fly') { st.mode = 'fly'; st.shot = null; play('fly', 0.2); } } else st.still += dt;
-      if (!moving && st.mode === 'fly' && st.still > COMPANION.perchAfter && st.acts.perch && !st.shot) st.mode = 'descend';
+      if (!moving && st.mode === 'fly' && st.still > perchAfter && st.acts.perch && !st.shot) st.mode = 'descend';
       const sitting = st.mode !== 'fly';
       // over her shoulder (the other one for the second dragon), a little behind; sitting: on the ground at her side
       const sd = sitting ? COMPANION.perchSide : COMPANION.side, bk = sitting ? -0.35 : back;
