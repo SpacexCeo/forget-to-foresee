@@ -13,12 +13,13 @@
 import { onField } from '../scenes/town-outside.js';
 import { CASTS } from '../scenes/town-casting-fx.js';
 
-/** Per type: health, speeds (m/s, matched to the clips: art/mobs/mobs.json), ranges (m), attack timing. */
+/** Per type: health, speeds (m/s), the ground speed each clip's stride was built for (`clip` [walk, run], from
+ * art/mobs/mobs.json: the clip is time-scaled to the actual speed so the feet do not slide), ranges (m), attack timing. */
 export const MOB_TYPES = Object.freeze({
-  skitter: Object.freeze({ scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
-  hulker: Object.freeze({ hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: false, heavy: true }),   // a brute powers through light hits
-  veilbell: Object.freeze({ hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
-  crownrift: Object.freeze({ hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
+  skitter: Object.freeze({ clip: [0.83, 1.63], scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
+  hulker: Object.freeze({ clip: [1.01, 2.14], hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: false, heavy: true }),   // a brute powers through light hits
+  veilbell: Object.freeze({ clip: [0.84, 1.64], hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
+  crownrift: Object.freeze({ clip: [1.2, 2.76], hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
 });
 
 /** Packs: type, count (phone count), home in town-local metres (x, z), respawn seconds after the last one fell. */
@@ -478,7 +479,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (!v.holder.visible) continue;
       if (m.freeze <= 0) {
         if (!v.oneShot && m.state !== 'dead' && m.state !== 'gone') play(v, m.speed > m.T.walk * 1.2 ? 'run' : m.speed > 0 ? 'walk' : 'idle');
-        if (v.current && m.speed > 0) v.current.timeScale = m.speed / (m.speed > m.T.walk * 1.2 ? m.T.run : m.T.walk);
+        if (v.current && m.speed > 0) v.current.timeScale = m.speed / (m.speed > m.T.walk * 1.2 ? m.T.clip[1] : m.T.clip[0]);
         else if (v.current) v.current.timeScale = 1;
         v.mixer.update(dt);
       }

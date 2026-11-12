@@ -164,6 +164,24 @@ def finish(mb, name, mats, col, arm, tags):
     return mb.finish(name, mats, col, arm=arm, bone_tags={t: [t] for t in tags}, power=8.0, max_infl=1)
 
 
+def stride(t, duty=0.6):
+    """A keyed leg cycle instead of a sine: t in [0, 1). Stance (0..duty): the planted foot travels evenly from front
+    (+1) to back (-1) under the moving body; swing (duty..1): it is picked up, carried forward fast with an eased
+    start and a soft set-down (anticipation and settle), lifted highest early in the swing. Returns (sw, up)."""
+    t %= 1.0
+    if t < duty:
+        return 1.0 - 2.0 * t / duty, 0.0
+    s = (t - duty) / (1.0 - duty)
+    e = s * s * (3 - 2 * s)
+    return -1.0 + 2.0 * e, math.sin(math.pi * min(1.0, s * 1.15)) ** 0.8
+
+
+def bob(u, steps, lag=0.08):
+    """Body height through a cycle: lowest just after each foot takes the weight (`lag` of a step later), up again
+    over the passing pose. 0..1."""
+    return 0.5 - 0.5 * math.cos(TAU * (u * steps - lag))
+
+
 def lift_axis(d):
     """Rotation axis that raises a horizontal limb pointing along d (positive angle = tip up)."""
     d = Vector((d[0], d[1], 0)).normalized()
@@ -221,16 +239,14 @@ def build_skitter(col):
     group = {("L", 0): 0, ("R", 1): 0, ("L", 2): 0, ("R", 0): 1, ("L", 1): 1, ("R", 2): 1}     # tripods
     dirs = {(s, i): Vector(f) - Vector(h) for s, i, h, k, f in legs}
 
-    def gait(u, amp, lift, bob):
+    def gait(u, amp, lift, bob_h):
         P = {}
         for key in LEGS:
-            ph = TAU * u + (math.pi if group[key] else 0.0)
-            sw = math.sin(ph)                        # +1 foot forward
-            up = max(0.0, math.cos(ph)) ** 1.5       # lifted while it swings forward
+            sw, up = stride(u + (0.5 if group[key] else 0.0) + 0.03 * key[1], 0.55)   # each tripod in turn, a ripple along the body
             q = Q(Z, amp * sw * (1 if key[0] == "R" else -1)) @ Q(lift_axis(dirs[key]), lift * up)
             P[f"leg{key[0]}{key[1]}_a"] = (q, None, None)
             P[f"leg{key[0]}{key[1]}_b"] = (Q(lift_axis(dirs[key]), -0.6 * lift * up), None, None)
-        P["body"] = (Q(Y, 2.0 * math.sin(2 * TAU * u)), (0, 0, bob * abs(math.sin(TAU * u))), None)
+        P["body"] = (Q(Y, 2.0 * math.sin(2 * TAU * u - 0.5)), (0, 0, bob_h * (1 - globals()["bob"](u, 2))), None)
         return P
 
     def idle(u, t):
@@ -265,7 +281,7 @@ def build_skitter(col):
     clips = {"idle": (60, idle), "walk": (16, lambda u, t: gait(u, 24, 30, 0.012)), "run": (10, lambda u, t: gait(u, 30, 38, 0.02)),
              "attack": (24, attack), "hit": (12, hit), "death": (36, death)}
     reach = (Vector(legs[0][4]) - Vector(legs[0][2])).length
-    speeds = {"walk": 2 * reach * math.sin(math.radians(24)) / (16 / FPS / 2), "run": 2 * reach * math.sin(math.radians(30)) / (10 / FPS / 2)}
+    speeds = {"walk": 2 * reach * math.sin(math.radians(24)) / (16 / FPS * 0.55), "run": 2 * reach * math.sin(math.radians(30)) / (10 / FPS * 0.55)}
     return dict(objs=[arm, body], arm=arm, clips=clips, speeds=speeds, role="swarm", height=0.42, length=0.65, glow="teal")
 
 
@@ -314,16 +330,15 @@ def build_hulker(col):
     def gait(u, amp, lift, bob):
         P = {}
         for s, sx in (("L", 1), ("R", -1)):
-            ph = TAU * u + (0 if s == "L" else math.pi)
-            sw, up = math.sin(ph), max(0.0, math.cos(ph))
+            sw, up = stride(u + (0 if s == "L" else 0.5), 0.62)
             P[f"arm{s}_a"] = (Q(X, -amp * sw) @ Q(Y, 4 * sx * up), None, None)
             P[f"arm{s}_b"] = (Q(X, lift * up), None, None)
-            ph2 = ph + math.pi                             # the leg of the other side moves with this arm
-            sw2, up2 = math.sin(ph2), max(0.0, math.cos(ph2))
+            sw2, up2 = stride(u + (0.5 if s == "L" else 0.0) + 0.06, 0.62)   # the leg of the other side follows this arm a beat later
             P[f"leg{s}_a"] = (Q(X, -0.8 * amp * sw2 - 0.6 * lift * up2), None, None)
             P[f"leg{s}_b"] = (Q(X, 1.0 * lift * up2), None, None)
-        P["pelvis"] = (Q(Y, 3 * math.sin(TAU * u)), (0, 0, bob * math.cos(2 * TAU * u)), None)
-        P["chest"] = (Q(Z, 5 * math.sin(TAU * u)), None, None)
+        P["pelvis"] = (Q(Y, 3 * math.sin(TAU * u)), (0, 0, -bob * globals()["bob"](u, 2, 0.1)), None)       # the weight drops onto each knuckle
+        P["chest"] = (Q(Z, 5 * math.sin(TAU * u - 0.6)) @ Q(X, 3 * globals()["bob"](u, 2, 0.18)), None, None)  # the shoulders roll a little after the hips
+        P["head"] = (Q(X, -2.5 * globals()["bob"](u, 2, 0.26)), None, None)
         return P
 
     def idle(u, t):
@@ -357,7 +372,7 @@ def build_hulker(col):
     clips = {"idle": (90, idle), "walk": (36, lambda u, t: gait(u, 22, 35, 0.04)), "run": (24, lambda u, t: gait(u, 32, 50, 0.07)),
              "attack": (42, attack), "hit": (14, hit), "death": (60, death)}
     reach = 1.0
-    speeds = {"walk": 2 * reach * math.sin(math.radians(22)) / (36 / FPS / 2), "run": 2 * reach * math.sin(math.radians(32)) / (24 / FPS / 2)}
+    speeds = {"walk": 2 * reach * math.sin(math.radians(22)) / (36 / FPS * 0.62), "run": 2 * reach * math.sin(math.radians(32)) / (24 / FPS * 0.62)}
     return dict(objs=[arm, body], arm=arm, clips=clips, speeds=speeds, role="brute", height=2.25, length=1.7, glow="amber")
 
 
@@ -455,12 +470,11 @@ def build_veilbell(col):
     def gait(u, amp, lift, bob):
         P = tendrils(u * 2, 10, -8)
         for s in ("L", "R"):
-            ph = TAU * u + (0 if s == "L" else math.pi)
-            sw, up = math.sin(ph), max(0.0, math.cos(ph))
+            sw, up = stride(u + (0 if s == "L" else 0.5), 0.6)
             P[f"leg{s}_a"] = (Q(X, -amp * sw - lift * up), None, None)
             P[f"leg{s}_b"] = (Q(X, 1.4 * lift * up), None, None)
-        P["body"] = (Q(Y, 4 * math.sin(TAU * u)), (0, 0, bob * math.cos(2 * TAU * u)), None)
-        P["bell"] = (Q(X, 5) @ Q(Y, -3 * math.sin(TAU * u)), None, None)
+        P["body"] = (Q(Y, 4 * math.sin(TAU * u)), (0, 0, -bob * globals()["bob"](u, 2, 0.08)), None)
+        P["bell"] = (Q(X, 5 + 3 * globals()["bob"](u, 2, 0.22)) @ Q(Y, -3 * math.sin(TAU * u - 0.7)), None, None)   # the heavy bell nods after each step
         P["seed"] = (QI, None, SEED0)
         return P
 
@@ -500,7 +514,7 @@ def build_veilbell(col):
     clips = {"idle": (75, idle), "walk": (32, lambda u, t: gait(u, 22, 22, 0.03)), "run": (22, lambda u, t: gait(u, 30, 30, 0.05)),
              "attack": (45, attack), "hit": (14, hit), "death": (54, death)}
     reach = 0.72
-    speeds = {"walk": 2 * reach * math.sin(math.radians(22)) / (32 / FPS / 2), "run": 2 * reach * math.sin(math.radians(30)) / (22 / FPS / 2)}
+    speeds = {"walk": 2 * reach * math.sin(math.radians(22)) / (32 / FPS * 0.6), "run": 2 * reach * math.sin(math.radians(30)) / (22 / FPS * 0.6)}
     return dict(objs=[arm, body], arm=arm, clips=clips, speeds=speeds, role="caster", height=1.65, length=0.95, glow="teal",
                 note="bone `seed` carries the charged seed: hidden (scale 0) except in attack, where it grows, holds and launches forward at 0.75 of the clip")
 
@@ -549,7 +563,7 @@ def build_crownrift(col):
                 mb.gem(b, Vector((sx, 0, 0.3)), 0.2, 0.09, sides=7, mat=1, tag=n)                                # knee joint
                 mb.gem(b + Vector((sx * 0.07, 0, 0.0)), Vector((sx, 0, 0)), 0.06, 0.05, sides=6, mat=3, tag=n)    # amber weak point
             if part == "b":
-                shell(mb, a, b, 0.075, 3, 3, n, seed=hash(n) % 37, size=1.1, arc=(-60, 120))
+                shell(mb, a, b, 0.07, 2, 2, n, seed=hash(n) % 37, size=0.8, jitter=0.1, arc=(-30, 90))
                 mb.gem(b, Vector((sx, 0, 0.2)), 0.13, 0.065, sides=6, mat=1, tag=n)                               # ankle joint
             tags.append(n)
         mb.gem(Vector(B[f"leg{s}{i}_c"][1]) + Vector((0, 0, 0.06)), Vector((0, 0, -1)), 0.16, 0.035, sides=5, mat=2, tag=f"leg{s}{i}_c")
@@ -564,8 +578,7 @@ def build_crownrift(col):
         P = {}
         for s, i, sx in LEG:
             diag = (s == "L") == (i == 0)
-            ph = TAU * u + (0 if diag else math.pi)
-            sw, up = math.sin(ph), max(0.0, math.cos(ph))
+            sw, up = stride(u + (0 if diag else 0.5) + (0.04 if i else 0.0), 0.66)
             P[f"leg{s}{i}_a"] = (Q(X, -amp * sw) @ Q(Y, sx * 10 * up), None, None)
             P[f"leg{s}{i}_b"] = (Q(Y, -sx * lift * up), None, None)
         return P
@@ -580,8 +593,9 @@ def build_crownrift(col):
 
     def gait(u, amp, lift, bob):
         P = legs(u, amp, lift)
-        P["body"] = (Q(Y, 2.5 * math.sin(TAU * u)), (0, 0, bob * math.cos(2 * TAU * u)), None)
-        P["neck"] = (Q(X, 3 * math.sin(2 * TAU * u)), None, None)
+        P["body"] = (Q(Y, 2.5 * math.sin(TAU * u)), (0, 0, -bob * globals()["bob"](u, 2, 0.1)), None)
+        P["neck"] = (Q(X, 3 * globals()["bob"](u, 2, 0.22)), None, None)
+        P["crown"] = (Q(X, -2 * globals()["bob"](u, 2, 0.3)), None, None)
         for s, sx in (("L", 1), ("R", -1)):
             P[f"blade{s}_a"] = (Q(X, 6 * math.sin(TAU * u + (0 if s == "L" else math.pi))), None, None)
         return P
@@ -616,7 +630,7 @@ def build_crownrift(col):
     clips = {"idle": (90, idle), "walk": (40, lambda u, t: gait(u, 20, 28, 0.04)), "run": (24, lambda u, t: gait(u, 28, 40, 0.07)),
              "attack": (48, attack), "hit": (14, hit), "death": (66, death)}
     reach = 1.55
-    speeds = {"walk": 2 * reach * math.sin(math.radians(20)) / (40 / FPS / 2), "run": 2 * reach * math.sin(math.radians(28)) / (24 / FPS / 2)}
+    speeds = {"walk": 2 * reach * math.sin(math.radians(20)) / (40 / FPS * 0.66), "run": 2 * reach * math.sin(math.radians(28)) / (24 / FPS * 0.66)}
     return dict(objs=[arm, body], arm=arm, clips=clips, speeds=speeds, role="elite", height=2.8, length=2.6, glow="amber")
 
 
