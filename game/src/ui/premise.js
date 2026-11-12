@@ -27,7 +27,8 @@ export function showPremise(doc, t, { params, reducedMotion = false, ms = PREMIS
   const el = doc.createElement('div');
   el.className = 'ftf-premise';
   el.setAttribute('role', 'status');
-  el.style.cssText = 'position:fixed;left:50%;bottom:5%;transform:translateX(-50%);z-index:40;max-width:min(92vw,640px);'
+  const narrow = ((doc.defaultView && doc.defaultView.innerWidth) || 1280) < 700; // phones: below the HUD, clear of talk bubbles
+  el.style.cssText = 'position:fixed;left:4vw;right:4vw;margin:0 auto;width:fit-content;' + (narrow ? 'top:15%;' : 'bottom:5%;') + 'z-index:40;max-width:640px;'
     + 'padding:14px 22px;border-radius:12px;background:rgba(10,14,16,.78);color:#f3efe6;text-align:center;pointer-events:none;'
     + 'font:15px/1.35 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35);'
     + (p.animate ? 'opacity:0;transition:opacity .5s ease;' : '');
