@@ -26,6 +26,10 @@ const CSS = `
 .ts-btn[hidden] { display: none; }
 .ts-btn.ts-main { width: 76px; height: 76px; right: 0; bottom: 0; border-width: 3px; }
 .ts-btn.ts-down { transform: scale(.93); border-color: #f3d7a0; }
+.ts-charge { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; opacity: 0; background: conic-gradient(#ffd27a calc(var(--ch, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%); mask: radial-gradient(circle, transparent 62%, #000 64%); }
+.ts-btn.ts-charging .ts-charge { opacity: 1; }
+.ts-btn.ts-charged { box-shadow: 0 0 18px #ffd27a, 0 6px 16px rgba(0, 0, 0, .4); }
+.ts-btn.ts-main { overflow: visible; }
 .ts-cd { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(rgba(0, 0, 0, .62) calc(var(--cd, 0) * 1turn), transparent 0); pointer-events: none; }
 .ts-btn.ts-use { right: 6px; bottom: 182px; width: 64px; height: 64px; background: rgba(216, 180, 106, .92); color: #1a1408; font-size: 15px; border-color: #f3d7a0; }
 .ts-btn.ts-use:not([hidden]) { animation: ts-pop .25s ease-out; }
@@ -100,7 +104,7 @@ export function quickTarget(pos, heading, mobs, range, ahead = 8) {
  * @param {{doc?: Document, input: object, t: Function, base?: string, storage?: object, camForward?: () => number[], player: object,
  *   casting: () => object|null, mobs: () => object|null, flow: () => object|null, wish: () => number[], ranges?: object}} o
  */
-export function createTouchControls({ doc = document, input, t, base = '/', storage = null, camForward = null, player, casting, mobs, flow, wish = () => [0, 0], ranges = { lance: 13, snare: 14 } }) {
+export function createTouchControls({ doc = document, input, t, base = '/', storage = null, camForward = null, player, casting, mobs, flow, attack = null, wish = () => [0, 0], ranges = { lance: 13, snare: 14 } }) {
   if (!(doc.getElementById && doc.getElementById('ts-style'))) { const st = doc.createElement('style'); st.id = 'ts-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ts'); root.hidden = true;
@@ -150,7 +154,12 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
 
   const press = (b) => { b.classList.add('ts-down'); setTimeout(() => b.classList.remove('ts-down'), 140); };
   for (const b of [strike, dash, use]) b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
-  strike.addEventListener('pointerup', () => { const m = mobs(); if (m) { m.strike(); press(strike); } });
+  // hold to charge the super strike (boot-world attackPress: down on press, up on release); the ring shows the charge
+  const ring = el('i', 'ts-charge'); strike.append(ring);
+  let held = null;
+  strike.addEventListener('pointerdown', (e) => { if (held != null) return; held = e.pointerId; if (strike.setPointerCapture) try { strike.setPointerCapture(e.pointerId); } catch { /* synthetic */ } if (attack) attack(true); else { const m = mobs(); if (m) m.strike(); } strike.classList.add('ts-down'); });
+  const letGo = (e) => { if (held == null || (e && e.pointerId !== held)) return; held = null; strike.classList.remove('ts-down'); if (attack) attack(false); };
+  strike.addEventListener('pointerup', letGo); strike.addEventListener('pointercancel', letGo); strike.addEventListener('lostpointercapture', letGo);
   dash.addEventListener('pointerup', () => { const m = mobs(); if (m) { m.dash(wish()); press(dash); } });
   use.addEventListener('pointerup', () => { const f = flow(); if (f && f.interact) { f.interact(); press(use); } });
 
@@ -234,6 +243,7 @@ export function createTouchControls({ doc = document, input, t, base = '/', stor
       const c = casting(), m = mobs(), f = flow();
       const field = !!(c && c.field);
       strike.hidden = dash.hidden = !(m && field); lance.hidden = snare.hidden = !field;
+      { const ch = m && m.charging != null ? Math.min(1, m.charging / 0.4) : 0; strike.classList.toggle('ts-charging', ch > 0); strike.classList.toggle('ts-charged', ch >= 1); ring.style.setProperty('--ch', ch.toFixed(3)); }
       if (m && m.actions) { strike.cd.style.setProperty('--cd', String(Math.max(0, Math.min(1, m.actions.strikeCd / 0.32)))); dash.cd.style.setProperty('--cd', String(Math.max(0, Math.min(1, m.actions.dashCd / 1.0)))); }
       if (c && c.cooldownOf) { lance.cd.style.setProperty('--cd', String(c.cooldownOf('lance'))); snare.cd.style.setProperty('--cd', String(c.cooldownOf('snare'))); }
       use.hidden = !(f && f.promptVisible);
