@@ -663,6 +663,7 @@ export default {
   'town.silk': "Silk",
   'chest.badge': "{n, plural, one {# sealed chest} other {# sealed chests}}",
   'hud.health': "Health",
+  'hud.stamina': "Stamina",
   'holder.heading': "Holder access (NEAR testnet, read-only)",
   'holder.note': "Enter any testnet account. If it holds a Forget to Foresee NFT (memory shard, agent card or Elise), the game unlocks a title and a portrait frame in this browser. No wallet, no signature, nothing is written on-chain.",
   'holder.account': "Testnet account id",
