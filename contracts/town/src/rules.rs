@@ -107,16 +107,16 @@ pub fn season_mint_cap(p: &Params, burn_prev: u128, entrants: u32) -> u128 {
 #[derive(Debug, PartialEq)]
 pub struct Plan { pub pots: [u128; 4], pub overflow: u128 }
 
-/// The stake pot over the works with earning weight: base shares renormalised, each capped at rate_ceiling·weight;
-/// the capped excess overflows to the purse, the division remainder stays in the pot.
-pub fn plan_distribution(p: &Params, pot: u128, weights: &[u128; 4]) -> Plan {
+/// The stake pot over the works with earning weight: base shares renormalised plus each works' own extra stream
+/// (the Observatory's share of entry fees), each capped at rate_ceiling·weight; the capped excess (and the extra of a
+/// works without weight) overflows to the purse, the division remainder stays in the pot.
+pub fn plan_distribution(p: &Params, pot: u128, weights: &[u128; 4], extras: &[u128; 4]) -> Plan {
     let total_bps: u128 = (0..4).filter(|&a| weights[a] > 0).map(|a| p.works_bps[a] as u128).sum();
     let mut pots = [0u128; 4];
     let mut overflow = 0;
-    if total_bps == 0 { return Plan { pots, overflow }; }
     for a in 0..4 {
-        if weights[a] == 0 { continue; }
-        let share = pot * p.works_bps[a] as u128 / total_bps;
+        if weights[a] == 0 { overflow += extras[a]; continue; }
+        let share = pot * p.works_bps[a] as u128 / total_bps + extras[a];
         let ceiling = weights[a] * p.rate_ceiling_bps as u128 / BPS;
         pots[a] = share.min(ceiling);
         overflow += share - pots[a];

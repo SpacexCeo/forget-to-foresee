@@ -221,9 +221,11 @@ fn tournament_entry_costs_silk_and_splits_it() {
     ctx("t0.testnet", 1); t.enter_tournament("s1".into());
     assert_eq!(bal(&t, "t0.testnet").silk, 960 * S);
     assert_eq!(t.purse, 26 * S);
-    assert_eq!(t.get_deed(obs).unwrap().2 .0, 6 * S); // 15 % to the Shell Observatory's stakers
-    ctx("coord.testnet", 1); t.register(vec![acc("p0.testnet")]); t.credit_entry(acc("p0.testnet"), U(40 * S));
-    ctx("p0.testnet", 1); t.enter_tournament("s1".into()); // paid with the entry credit
+    ctx("anyone.testnet", 2); t.distribute(); // the Observatory's 15 % is shared at the next distribute, under the ceiling
+    assert_eq!(t.get_deed(obs.clone()).unwrap().2 .0, 400_000); // capped: 0.4 % of 100 weight
+    assert!(t.purse > 26 * S);
+    ctx("coord.testnet", 2); t.register(vec![acc("p0.testnet")]); t.credit_entry(acc("p0.testnet"), U(40 * S));
+    ctx("p0.testnet", 2); t.enter_tournament("s1".into()); // paid with the entry credit
     assert_eq!(bal(&t, "p0.testnet").credit, 0);
     assert_eq!(t.season("s1".into()).unwrap().entrants, 2);
     conserved(&t);
@@ -237,20 +239,20 @@ fn settle_pays_from_the_purse_then_mints_inside_the_ceiling() {
     let mut t = town();
     open(&mut t, "s1");
     for a in &ACCS[..4] { ctx(a, 1); t.enter_tournament("s1".into()); }
-    let purse = t.purse; // 4 x (26 + 6: the Observatory has no stakers, so its share joins the purse)
-    assert_eq!(purse, 128 * S);
-    // ceiling = min(12,000, 1,000 + 0.8 x 0 burned last season, 24 x 4 entrants) = 96 -> pot 224, one payout <= 4 % = 8.96
+    let purse = t.purse; // 4 x 26 (the Observatory's 4 x 6 waits for the next distribute)
+    assert_eq!(purse, 104 * S);
+    // ceiling = min(12,000, 1,000 + 0.8 x 0 burned last season, 24 x 4 entrants) = 96 -> pot 200, one payout <= 4 % = 8
     ctx("coord.testnet", 2);
     let minted = t.minted_silk;
     t.settle_season("s1".into(), vec![(acc("t0.testnet"), U(8 * S)), (acc("t1.testnet"), U(8 * S))], "h1".into(), false);
     assert_eq!(t.purse, purse - 16 * S);
     assert_eq!(t.minted_silk, minted);
     let s = t.season("s1".into()).unwrap();
-    assert_eq!((s.mint_cap, s.pot), (96 * S, 224 * S));
-    let many: Vec<(AccountId, U)> = (0..16).map(|i| (acc(ACCS[i % 4]), U(8 * S))).collect(); // 128 more: 112 from the purse, 16 minted
+    assert_eq!((s.mint_cap, s.pot), (96 * S, 200 * S));
+    let many: Vec<(AccountId, U)> = (0..12).map(|i| (acc(ACCS[i % 4]), U(8 * S))).collect(); // 96 more: 88 from the purse, 8 minted
     t.settle_season("s1".into(), many, "h2".into(), true);
     assert_eq!(t.purse, 0);
-    assert_eq!(t.minted_silk - minted, 16 * S);
+    assert_eq!(t.minted_silk - minted, 8 * S);
     assert!(t.season("s1".into()).unwrap().settled);
     conserved(&t);
 }
@@ -346,7 +348,8 @@ fn rules_match_the_shared_vectors() {
     for c in v["mint_caps"].as_array().unwrap() { assert_eq!(season_mint_cap(&p, n(&c["burn_prev"]), c["entrants"].as_u64().unwrap() as u32), n(&c["cap"])); }
     for c in v["plans"].as_array().unwrap() {
         let w: Vec<u128> = c["weights"].as_array().unwrap().iter().map(n).collect();
-        let r = plan_distribution(&p, n(&c["pot"]), &[w[0], w[1], w[2], w[3]]);
+        let x: Vec<u128> = c["extras"].as_array().unwrap().iter().map(n).collect();
+        let r = plan_distribution(&p, n(&c["pot"]), &[w[0], w[1], w[2], w[3]], &[x[0], x[1], x[2], x[3]]);
         let pots: Vec<u128> = c["pots"].as_array().unwrap().iter().map(n).collect();
         assert_eq!((r.pots.to_vec(), r.overflow), (pots, n(&c["overflow"])), "plan {}", c);
     }

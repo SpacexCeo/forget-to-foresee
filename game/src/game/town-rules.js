@@ -37,15 +37,14 @@ export function splitEntry(p, fee) {
 }
 /** The silk a season may mint for its purse: min(cap, floor + match·burned last season, per-entrant·entrants). */
 export const seasonMintCap = (p, burnPrev, entrants) => min(min(b(p.season_mint_cap), b(p.mint_floor) + (b(burnPrev) * b(p.mint_burn_match_bps)) / BPS), b(p.mint_per_entrant) * b(entrants));
-/** The stake pot over works with weight: renormalised base shares, capped at rate_ceiling·weight; the excess overflows. */
-export function planDistribution(p, pot, weights) {
-  pot = b(pot); const w = weights.map(b);
+/** The stake pot over works with weight plus each works' extra stream, capped at rate_ceiling·weight; the excess overflows. */
+export function planDistribution(p, pot, weights, extras = [0n, 0n, 0n, 0n]) {
+  pot = b(pot); const w = weights.map(b), x = extras.map(b);
   const total = [0, 1, 2, 3].filter((a) => w[a] > 0n).reduce((s, a) => s + b(p.works_bps[a]), 0n);
   const pots = [0n, 0n, 0n, 0n]; let overflow = 0n;
-  if (total === 0n) return { pots, overflow };
   for (let a = 0; a < 4; a++) {
-    if (w[a] === 0n) continue;
-    const share = (pot * b(p.works_bps[a])) / total, ceiling = (w[a] * b(p.rate_ceiling_bps)) / BPS;
+    if (w[a] === 0n) { overflow += x[a]; continue; }
+    const share = (pot * b(p.works_bps[a])) / total + x[a], ceiling = (w[a] * b(p.rate_ceiling_bps)) / BPS;
     pots[a] = min(share, ceiling); overflow += share - pots[a];
   }
   return { pots, overflow };

@@ -99,6 +99,8 @@ pub struct Works {
     pub principal: u128,
     /// Reward per unit of weight, scaled by INDEX_SCALE.
     pub index: u128,
+    /// The works' own stream waiting for the next distribute (the Observatory's share of entry fees).
+    pub extra: u128,
     /// Silk credited to this works and not yet claimed.
     pub rewards: u128,
     /// Silk paid into this works on each of the last 7 epochs (newest first), for the displayed rate.
@@ -332,7 +334,7 @@ impl Town {
         row.credit -= from_credit; row.silk -= fee - from_credit; self.put(&me, row);
         let sp = split_entry(&self.params, fee);
         self.burned_silk += sp.burn;
-        self.add_to_works(3, sp.works);
+        self.works[3].extra += sp.works; // shared at the next distribute, under the rate ceiling
         self.purse += sp.purse;
         season.entrants += 1; self.seasons.insert(season_id.clone(), season);
         self.entries.insert(key, true);
@@ -530,15 +532,17 @@ impl Town {
         self.last_distribute_day = today;
         for a in 0..4 { self.roll(a); }
         let weights: [u128; 4] = [self.works[0].weight, self.works[1].weight, self.works[2].weight, self.works[3].weight];
-        let plan = plan_distribution(&self.params, self.stake_pot, &weights);
+        let extras: [u128; 4] = [self.works[0].extra, self.works[1].extra, self.works[2].extra, self.works[3].extra];
+        let plan = plan_distribution(&self.params, self.stake_pot, &weights, &extras);
+        let extra_total: u128 = extras.iter().sum();
         let mut paid = 0;
         for a in 0..4 {
             let w = &mut self.works[a];
             w.paid_7d.rotate_right(1); w.weight_7d.rotate_right(1);
-            w.paid_7d[0] = plan.pots[a]; w.weight_7d[0] = w.weight;
+            w.paid_7d[0] = plan.pots[a]; w.weight_7d[0] = w.weight; w.extra = 0;
             if plan.pots[a] > 0 { w.index += plan.pots[a] * INDEX_SCALE / w.weight; w.rewards += plan.pots[a]; paid += plan.pots[a]; }
         }
-        self.stake_pot -= paid + plan.overflow;
+        self.stake_pot = self.stake_pot + extra_total - paid - plan.overflow;
         self.purse += plan.overflow;
         self.counters.distribute += 1;
         event("distribute", format!(r#"{{"pots":["{}","{}","{}","{}"],"overflow":"{}","kept":"{}"}}"#, plan.pots[0], plan.pots[1], plan.pots[2], plan.pots[3], plan.overflow, self.stake_pot));
@@ -574,7 +578,7 @@ impl Town {
     }
     /// Every place silk can be outside account rows (for the conservation check: minted − burned = rows + this).
     pub fn silk_held_outside_accounts(&self) -> U {
-        U(self.treasury_silk + self.station_silk + self.stake_pot + self.purse + self.reserve + self.works.iter().map(|w| w.rewards + w.principal).sum::<u128>())
+        U(self.treasury_silk + self.station_silk + self.stake_pot + self.purse + self.reserve + self.works.iter().map(|w| w.rewards + w.principal + w.extra).sum::<u128>())
     }
 
     // ---------- deed transfer rules ----------

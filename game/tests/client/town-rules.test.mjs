@@ -14,7 +14,7 @@ test('town rules: every shared vector matches (the contract checks the same file
   for (const c of V.sweeps) { const r = splitSweep(P, c.silk); assert.deepEqual([r.stakers, r.purse, r.reserve, r.burn].map(s), [c.stakers, c.purse, c.reserve, c.burn]); }
   for (const c of V.entries) { const r = splitEntry(P, c.fee); assert.deepEqual([r.burn, r.works, r.purse].map(s), [c.burn, c.works, c.purse]); }
   for (const c of V.mint_caps) assert.equal(s(seasonMintCap(P, c.burn_prev, c.entrants)), c.cap);
-  for (const c of V.plans) { const r = planDistribution(P, c.pot, c.weights); assert.deepEqual([...r.pots.map(s), s(r.overflow)], [...c.pots, c.overflow]); }
+  for (const c of V.plans) { const r = planDistribution(P, c.pot, c.weights, c.extras); assert.deepEqual([...r.pots.map(s), s(r.overflow)], [...c.pots, c.overflow]); }
   for (const c of V.pendings) assert.equal(s(pendingReward(c.weight, c.snapshot, c.index)), c.pending);
 });
 
