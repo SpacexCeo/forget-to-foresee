@@ -85,7 +85,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     const cap = doc.createElement('kbd'); cap.textContent = x.key; cap.hidden = coarse;
     const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd'; const name = doc.createElement('span'); name.className = 'ftf-cast-name';
     b.append(img, cd, cap, name);
-    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (x.down) { b.setPointerCapture?.(e.pointerId); x.down(); } });
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (x.down) { try { b.setPointerCapture(e.pointerId); } catch { /* a pointer the browser no longer tracks: hold without capture */ } x.down(); } });
     if (x.up) for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(t, (e) => { e.stopPropagation(); x.up(); });
     b.addEventListener('click', (e) => { e.stopPropagation(); b.blur(); if (!x.down) x.press(); });   // a slot with down/up is held, not clicked
     bar.append(b);
