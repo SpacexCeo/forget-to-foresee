@@ -33,3 +33,11 @@ Town screen, game menu, NFTs tab: no violations after the XP-bar label fix (one 
 ## Not covered
 
 Firefox and Safari (only Chromium is installed here); a real phone GPU; screen-reader walkthrough.
+
+## Final run, 12.11 ~03:50 Kyiv (live, after the premise deploy)
+
+Premise and goal chip shown at 23 s; trial 1 silk 63; at the pad, once Iris stopped, E gave silk 53; no page errors, no
+4xx. On software GL the end of a trial can take over a minute after T (keys pressed meanwhile are ignored), so the
+scripted run fell out of step after trial 1 and forgot no memory; the full path to the "Minted on NEAR testnet" toast and
+card `793f6c05e89839f2-7` passed in the earlier run tonight (table above). A judge with a GPU is not affected; on a
+software renderer, wait for the trial counter to change before pressing T again.
