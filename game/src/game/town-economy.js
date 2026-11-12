@@ -38,6 +38,17 @@ export const FOLK_TEMPERAMENT = Object.freeze({
 export const XP = Object.freeze({ signRead: 5, trialVerified: 20, memoryForgotten: 15, questStep: 10, hireFinished: 8 });
 export const TITLES = Object.freeze(['newcomer', 'listener', 'reader', 'signwright', 'seer', 'foreseer']);
 
+/**
+ * XP per monster felled beyond the walls (play/mobs.js 'ftf:mob-killed'; the moss critters of scenes/town-monsters.js
+ * when the packs are off). Tuned on the packs of play/mobs.js: the first fight (4 skitters, 3 on a phone) plus the
+ * one-time FIRST_KILL_XP reaches level 2 (100 XP); about 15 minutes of hunting (~4 kills a minute, mostly skitters,
+ * the terrace veilbells and the hulker as they come back) reaches level 5 (1000 XP).
+ */
+export const MOB_XP = Object.freeze({ skitter: 20, veilbell: 40, hulker: 90, crownrift: 250, critter: 15 });
+export const FIRST_KILL_XP = 40;
+/** XP a kill is worth: the type's value (unknown types count as a skitter; an elite at least the crownrift's). */
+export const xpForKill = (type, elite = false) => Math.max(MOB_XP[type] ?? MOB_XP.skitter, elite ? MOB_XP.crownrift : 0);
+
 /** Deterministic uniform numbers in [0, 1) from a seed string (sha256-derived mulberry32). */
 export function seededRandom(seed) {
   let a = parseInt(sha256('ftf-town:' + seed).slice(0, 8), 16) >>> 0;
@@ -152,7 +163,7 @@ export function levelOf(xp) {
   return { level: n + 1, xp, into: xp - lo, need: hi - lo, title: TITLES[Math.min(n, TITLES.length - 1)] };
 }
 
-const fresh = () => ({ v: 1, silk: START_SILK * 100, xp: 0, hires: {}, counter: 0, agents: {}, log: [], equity: [START_SILK * 100], stats: { signsRead: 0, trialsVerified: 0, memoriesForgotten: 0, agentsHired: 0, questSteps: 0, net: 0, rounds: 0, wins: 0 }, results: [] });
+const fresh = () => ({ v: 1, silk: START_SILK * 100, xp: 0, hires: {}, counter: 0, agents: {}, log: [], equity: [START_SILK * 100], stats: { signsRead: 0, trialsVerified: 0, memoriesForgotten: 0, agentsHired: 0, questSteps: 0, net: 0, rounds: 0, wins: 0, mobsKilled: 0 }, results: [] });
 
 /**
  * The town ledger, persisted under ftf.town.v1. `now` is injectable for tests.
@@ -249,6 +260,18 @@ export function createTownLedger({ storage = null, now = () => Date.now() } = {}
       const statKey = { signRead: 'signsRead', trialVerified: 'trialsVerified', memoryForgotten: 'memoriesForgotten', questStep: 'questSteps' }[kind];
       if (statKey) st.stats[statKey]++;
       if (persist) save();
+    },
+    /**
+     * A monster fell: its XP (plus FIRST_KILL_XP the very first time), counted in the stats, saved.
+     * Returns {gained, level, levelUp}: levelUp is the new level number when this kill crossed a threshold, else 0.
+     */
+    killMob(type, elite = false) {
+      const before = levelOf(st.xp).level;
+      const gained = xpForKill(type, elite) + (st.stats.mobsKilled ? 0 : FIRST_KILL_XP);
+      st.xp += gained; st.stats.mobsKilled++;
+      save();
+      const after = levelOf(st.xp).level;
+      return { gained, level: after, levelUp: after > before ? after : 0 };
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   };

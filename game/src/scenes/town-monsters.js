@@ -120,6 +120,8 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
       c.state = 'dying'; c.vanish = 0; if (c.hide) play(c, 'hide');
       state.kills++;
       const at = [p.x, ground(p.x, p.z, p.y - state.lift), p.z];
+      // the kill earns XP like a hillside monster's (play/kill-xp.js); the packs' own event would drop a second chest
+      try { if (globalThis.window && typeof CustomEvent === 'function') globalThis.window.dispatchEvent(new CustomEvent('ftf:critter-killed', { detail: { pos: at.slice() } })); } catch { /* no DOM */ }
       setTimeout(() => puff(at), 380);
       if (rollDrop(rand(), state.kills - 1)) setTimeout(() => dropChest(at), 520);
       setTimeout(() => { group.remove(c.root); state.critters = state.critters.filter((x) => x !== c); }, 900);

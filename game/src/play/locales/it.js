@@ -921,6 +921,8 @@ export default {
   "hire.result.net": "Netto",
   "hire.result.seed": "Seme (stesso seme, stesso risultato)",
   "profile.button": "Profilo · Liv {level}",
+  "xp.gain": "+{n} esperienza",
+  "xp.levelUp": "Livello {level}!",
   "profile.open": "Profilo e inventario",
   "profile.title": "Profilo",
   "profile.heading": "Livello {level} · {title}",

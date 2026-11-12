@@ -256,7 +256,7 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
-let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null;
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -368,6 +368,8 @@ if (townMode.town) {
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const d = loadDay1(ctx.storage); return !!(d.minted || d.claimed || d.skin === 'elise'); },
     onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
+  // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
+  if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
   if (!touchSticks) touchSticks = createTouchControls({ input, t: (k, a) => ctx.i18n.t(k, a), base: import.meta.env.BASE_URL, storage: ctx.storage, player,
     camForward: () => { const v = camera.getWorldDirection(_camFwd); return [v.x, v.z]; },
@@ -1072,6 +1074,7 @@ function frame() {
   if (touchSticks) touchSticks.update({ active: (!!(inTown && townFlow && townFlow.phase === 'town') || (!!play && !inTown && !judge)) && !document.querySelector('dialog[open], .gm, .pl-panel:not([hidden])') });
   stamina.update(dt, { running: !!(inTown && townMobs && townMobs.iris && townMobs.iris.outside && player.run && movingState) });
   document.body.classList.toggle('st-winded', stamina.winded);
+  if (killXp) killXp.update(dt);
   if (playerHud) playerHud.update({ visible: !!(inTown && townFlow && townFlow.phase === 'town'), hp: townMobs ? townMobs.hp : 100, maxHp: 100, stamina });
   if (townFlow && !townFlow.registered) { flowFrame.device = input.device === 'gamepad' ? 'gamepad' : 'keyboard'; townFlow.update(dt, flowFrame); }
   updateAltarTimer();
