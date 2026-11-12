@@ -48,6 +48,23 @@ export const ACTIONS = Object.freeze({
   super: Object.freeze({ hold: 0.4, full: 1.0, min: 34, max: 80, reach: 3.0, arc: Math.PI / 4, knock: 1.6, impact: 0.1, cooldown: 1.2, freeze: 0.16 }),
   lock: 3.0,                       // soft lock: a strike turns to the nearest living creature this close
 });
+/**
+ * Where a strike goes (owner 12.11): 1) the creature in the soft lock (the nearest living one within ACTIONS.lock m),
+ * 2) on a desktop the mouse cursor's point on the ground, even standing still, 3) the stick / keys movement, 4) where
+ * she already looks. Returns the heading (radians, atan2(x, z)) and which source won. Pure.
+ * @param {{from: number[], heading: number, lock?: {pos: number[]}|null, cursor?: number[]|null, move?: number[]|null}} o
+ *   cursor: a world point [x, y, z] (or [x, z]) on the ground; move: a direction [x, z]
+ */
+export function strikeAim({ from, heading, lock = null, cursor = null, move = null }) {
+  if (lock && lock.pos) return { heading: Math.atan2(lock.pos[0] - from[0], lock.pos[2] - from[2]), by: 'lock' };
+  if (cursor) {
+    const cx = cursor[0], cz = cursor.length > 2 ? cursor[2] : cursor[1], dx = cx - from[0], dz = cz - from[2];
+    if (Math.hypot(dx, dz) > 0.25) return { heading: Math.atan2(dx, dz), by: 'cursor' };
+  }
+  if (move && Math.hypot(move[0], move[1]) > 0.1) return { heading: Math.atan2(move[0], move[1]), by: 'move' };
+  return { heading, by: 'facing' };
+}
+
 export const REGEN = Object.freeze({ delay: 4, perSecond: 8 });   // her health comes back out of combat
 const LANCE_SPEED = 20;             // the fracture front of the Frost Lance (m/s): a monster far along the line is hit later
 const SNARE_DELAY = 0.35;           // the leash reaches the point, the ring snaps open
@@ -345,12 +362,20 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     ring: new THREE.Mesh(new THREE.RingGeometry(0.82, 1.0, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: SUPER_TINT, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })),
     arc: new THREE.Mesh(new THREE.RingGeometry(1.4, 2.6, 40, 1, -Math.PI / 4, Math.PI / 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xfff0d0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })) };
   burst.ring.visible = burst.arc.visible = false; burst.ring.renderOrder = burst.arc.renderOrder = 3; group.add(burst.ring, burst.arc);
-  /** Turns her for a strike: toward the nearest creature within ACTIONS.lock m, else along `aim` [x, z], else as she is. */
+  /**
+   * Turns her (the root only: player.heading; the avatar follows) for a strike, by strikeAim's order: the locked
+   * creature, the cursor's ground point, the movement, her facing. `aim` is {cursor, move} or a bare move [x, z].
+   */
   function face(aim) {
-    const m = brain.nearest(player.pos, ACTIONS.lock);
-    if (m) player.heading = Math.atan2(m.pos[0] - player.pos[0], m.pos[2] - player.pos[2]);
-    else if (aim && Math.hypot(aim[0], aim[1]) > 0.1) player.heading = Math.atan2(aim[0], aim[1]);
+    const a = Array.isArray(aim) ? { move: aim } : (aim || {});
+    const r = strikeAim({ from: player.pos, heading: player.heading, lock: brain.nearest(player.pos, ACTIONS.lock), cursor: a.cursor || null, move: a.move || null });
+    player.heading = r.heading; lastAim = r.by;
+    return r;
   }
+  let lastAim = 'facing';
+  // the soft lock made visible: a small ring under the creature a strike would turn to
+  const lockRing = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe2a8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  lockRing.visible = false; lockRing.renderOrder = 3; group.add(lockRing);
   const seedGeo = new THREE.IcosahedronGeometry(0.16, 1);
   const seedMat = new THREE.MeshBasicMaterial({ color: 0x9ff5ea });
 
@@ -454,6 +479,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     get shake() { return reduced() ? 0 : shake; },
     get actions() { return { strikeCd: act.strikeCd, dashCd: act.dashCd, combo: act.combo, iframes: iris.iframes }; },
     get charging() { return act.charge ? act.charge.t : null; },
+    /** Which source turned the last strike: 'lock' | 'cursor' | 'move' | 'facing' (QA). */
+    get aimedBy() { return lastAim; },
+    /** The creature a strike would turn to now (the soft lock), or null. */
+    get locked() { return iris.outside ? brain.nearest(player.pos, ACTIONS.lock) : null; },
     /** The strike (F / 3): a two-or-three-hit combo in front of her. Returns false while on cooldown or off the field.
      *  @param {number[]|null} [aim] [x, z] the stick / mouse aim, else where she looks; a creature within 3 m wins (soft lock) */
     strike(aim = null) {
@@ -489,7 +518,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       act.charge = null; chargeRing.visible = false;
       if (!iris.alive || !iris.outside) { if (irisEnd) irisEnd(); return false; }
       const A = ACTIONS.super;
-      if (c.t < A.hold) return this.strike(aim);                                  // a tap: the combo (its clip replaces the held pose)
+      if (c.t < A.hold) { const ok = this.strike(aim); if (!ok && irisEnd) irisEnd(); return ok; }   // a tap: the combo (its clip replaces the held pose); on cooldown the coiled pose is put away
       face(aim);
       const k = Math.min(1, (c.t - A.hold) / (A.full - A.hold));
       act.superAt = { t: 0, amount: A.min + (A.max - A.min) * k, k };
@@ -524,6 +553,11 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
       act.superCd = Math.max(0, act.superCd - dt);
+      {
+        const L = outside && iris.alive ? brain.nearest(player.pos, ACTIONS.lock) : null;
+        lockRing.visible = !!L;
+        if (L) { lockRing.position.set(L.pos[0], L.pos[1] + 0.05, L.pos[2]); lockRing.scale.setScalar(0.8 + L.T.radius * 1.4); lockRing.material.opacity = 0.45 + (reduced() ? 0 : 0.15 * Math.sin(performance.now() / 160)); }
+      }
       if (act.charge) {
         if (!iris.alive || !outside) this.cancelAttack();
         else {
