@@ -28,3 +28,21 @@ test('pass eligibility: only plain account ids name a log file', () => {
   for (const bad of ['../etc/passwd', 'a/b', '', 'A.guests', 'x'.repeat(65)]) assert.equal(loadLog(dir, bad), null, bad);
   assert.equal(loadLog(dir, G).length, 2);
 });
+
+test('pass eligibility: the real shared rules (expedition-rules) on a real hash-chained log', async () => {
+  const { makeEntry } = await import('../lib/expedition-rules/expedition-log.js');
+  const log = [];
+  const add = (o) => log.push(makeEntry(log, o));
+  add({ t: 1, kind: 'story_started' });
+  add({ t: 2, kind: 'quest_turned_in', silkC: 1_100_000, trust: 'T2' });
+  const d = mkdtempSync(join(tmpdir(), 'ftf-exp-real-'));
+  const write = () => writeFileSync(join(d, G + '.jsonl'), log.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  write();
+  const el = createLogEligibility({ dir: d });   // the default: the real rules, loaded lazily
+  assert.deepEqual(await el(G), { eligible: false, paid: false, earned: 11000, needed: 10000, reason: 'not_paid' });
+  add({ t: 3, kind: 'portal_paid', silkC: -1_000_000, trust: 'T2', data: { feeC: 1_000_000 } });
+  write();
+  assert.deepEqual(await el(G), { eligible: true, paid: true, earned: 11000, needed: 10000, reason: null });
+  log[1] = { ...log[1], silkC: 9_000_000 }; write();   // a tampered entry breaks the chain
+  assert.equal((await el(G)).reason, 'log_invalid');
+});
