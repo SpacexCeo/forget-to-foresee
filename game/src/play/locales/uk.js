@@ -676,7 +676,7 @@ export default {
   'holder.note': "Введіть будь-який акаунт testnet. Якщо він має NFT Forget to Foresee (уламок пам'яті, картку агента чи Елізу), гра відкриє титул і рамку портрета в цьому браузері. Без гаманця, без підпису, у блокчейн нічого не пишеться.",
   'holder.account': "ID акаунта testnet",
   'holder.check': "Перевірити",
-  'holder.tryJudge': "Акаунт для журі",
+  'holder.tryJudge': "Демо-акаунт",
   'holder.active': "Активно: {account} · {title}",
   'holder.invalid': "Це не ID акаунта NEAR.",
   'holder.none': "У {account} немає NFT Forget to Foresee, нічого не відкрито.",
@@ -1582,4 +1582,14 @@ export default {
   "lb.verify": "Перевірити",
   "lb.footer": "Правила і знімок зафіксовано в NEAR testnet. Очки рахуються за журналом гри. Призів немає.",
   "lb.close": "Закрити",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "павуча шовкова нитка",
+  "res.chitin_plate": "хітинова пластина",
+  "res.veil_dust": "пил вуалі",
+  "res.ash_ore": "попеляста руда",
+  "res.crown_shard": "уламок корони",
+  "quest.needs.ask": "Принеси мені: {list}.",
+  "quest.needs.missing": "Ще ні. Мені ще потрібно: {list}.",
+  "quest.needs.item": "{res}: {have} з {n}",
+  "quest.track.needs": "Збери: {res} {n} / {count}",
 };

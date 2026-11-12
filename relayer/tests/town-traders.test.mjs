@@ -97,3 +97,18 @@ test('price rules: scarce goods are dear, flooded goods cheap, the reason says w
   const t = TOWN_POLICY.pick(st, 'baker', seeded(2), TRADERS);
   assert.ok(t && typeof t.reason === 'string' && Number.isInteger(t.stock));
 });
+
+test('monster resources: scarcer shelves, priced by the same rules, bought back from players until the shelf is full', async () => {
+  const P = await import('../market/prices.js');
+  const { RESOURCES, CATALOG } = await import('../market/catalog.js');
+  assert.deepEqual(RESOURCES.map((r) => r.id), ['spider_silk_thread', 'chitin_plate', 'veil_dust', 'ash_ore', 'crown_shard']);
+  assert.ok(RESOURCES.every((r) => TRADERS.includes(r.maker) && r.kind === 'resource') && CATALOG.length === 30);
+  const crown = RESOURCES[4];
+  assert.ok(P.priceOf(crown, 2, P.DEMAND_REF).price > P.priceOf(crown, 40, P.DEMAND_REF).price);
+  assert.equal(P.priceOf(crown, 3, 0).reason, 'fair: only 3 crown shard left, few buyers'); // scarce but nobody buying: the two pulls cancel
+  const b = P.buybackOf(crown, 10, P.DEMAND_REF);
+  assert.equal(b.price, Math.floor(P.priceOf(crown, 10, P.DEMAND_REF).price * 0.6));
+  assert.equal(P.buybackOf(crown, 40, 0).price, 0);
+  const st = TOWN_POLICY.init(TRADERS);
+  assert.equal(st.stock.crown_shard, 20);
+});

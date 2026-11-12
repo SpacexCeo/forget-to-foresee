@@ -59,7 +59,7 @@ test('salvage (Q2): spiders 30 % with a guarantee on the 7th, deterministic, tab
   assert.ok(salvageRoll(d, { killId: 'next', mob: 'crownrift', day: '2026-11-13' }).partId, 'a new day opens again');
 });
 
-test('salvage view (?story=1 only): seven spider kills put a part in the inventory with the toast; flag off creates nothing', async () => {
+test('salvage view (on with the Expedition, off with ?story=0): seven spider kills put a part in the inventory with the toast; flag off creates nothing', async () => {
   const { createSalvageView, SALVAGE_KEY } = await import('../../src/scenes/salvage-view.js');
   const { createInventory } = await import('../../src/game/inventory.js');
   const mem = new Map(), storage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
@@ -72,7 +72,7 @@ test('salvage view (?story=1 only): seven spider kills put a part in the invento
   win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: 'skitter', pos: [0, 0, 0] } }));   // no killId: ignored
   v.dispose();
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(boot, /if \(params\.get\('story'\) === '1' && !salvageView\) import\('\.\/scenes\/salvage-view\.js'\)/, 'only behind ?story=1');
+  assert.match(boot, /if \(params\.get\('story'\) !== '0' && !salvageView\) import\('\.\/scenes\/salvage-view\.js'\)/, 'off with ?story=0 (one entry: on by default)');
   const mobs = readFileSync(new URL('../../src/play/mobs.js', import.meta.url), 'utf8');
   assert.match(mobs, /killId: `\$\{SESSION\}:\$\{e\.mob\.id\}#\$\{e\.mob\.lives\}`/, 'a stable kill id per creature and life');
 });

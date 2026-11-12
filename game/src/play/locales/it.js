@@ -677,7 +677,7 @@ export default {
   'holder.note': "Inserisci un account testnet. Se possiede un NFT di Forget to Foresee (frammento di memoria, carta agente o Elise), il gioco sblocca un titolo e una cornice del ritratto in questo browser. Nessun wallet, nessuna firma, nulla viene scritto on-chain.",
   'holder.account': "ID account testnet",
   'holder.check': "Verifica",
-  'holder.tryJudge': "Prova l'account della giuria",
+  'holder.tryJudge': "Prova l'account demo",
   'holder.active': "Attivo: {account} · {title}",
   'holder.invalid': "Non è un ID account NEAR.",
   'holder.none': "{account} non possiede NFT di Forget to Foresee, nulla è sbloccato.",
@@ -1583,4 +1583,14 @@ export default {
   "lb.verify": "Verifica",
   "lb.footer": "Regole e snapshot sono registrati su NEAR testnet. Il punteggio viene dal registro di gioco. Nessun premio.",
   "lb.close": "Chiudi",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "filo di seta di ragno",
+  "res.chitin_plate": "placca di chitina",
+  "res.veil_dust": "polvere di velo",
+  "res.ash_ore": "minerale di cenere",
+  "res.crown_shard": "frammento di corona",
+  "quest.needs.ask": "Portami: {list}.",
+  "quest.needs.missing": "Non ancora. Mi serve ancora: {list}.",
+  "quest.needs.item": "{res}: {have} su {n}",
+  "quest.track.needs": "Raccogli {res}: {n} / {count}",
 };

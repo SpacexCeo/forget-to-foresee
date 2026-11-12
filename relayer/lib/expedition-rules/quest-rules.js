@@ -100,12 +100,14 @@ export function applyQuest(state, a = {}, ctx = {}) {
         if (q.state !== 'active' && q.state !== 'ready') return rejected(s, 'not_ready');
         if (!a.partId) return rejected(s, 'no_part');
       } else if (q.state !== 'ready') return rejected(s, 'not_ready');
+      const needs = def.needs || {}; // monster resources, consumed by the caller after the turn-in (counts in a.have)
+      if (Object.entries(needs).some(([id, n]) => (Number(a.have && a.have[id]) || 0) < n)) return rejected(s, 'needs');
       const n = copy(s); n.seq++;
       const silk = rewardSilk(n, a.questId, now);
       if (def.repeat) { if (n.bountyDay.day !== dayOf(now)) n.bountyDay = { day: dayOf(now), n: 0 }; n.bountyDay.n++; }
       n.quests[a.questId] = { ...q, state: 'done', doneAt: now };
       const trust = def.objective.type === 'fetch' && a.partSource !== 'salvage' ? 'T1' : 'T2';
-      return { state: n, events: [{ kind: def.repeat ? 'bounty_resolved' : 'quest_turned_in', data: { questId: a.questId, attempt: q.attempt, partId: a.partId || null, xp: def.reward.xp, chest: def.reward.chest || null }, silkC: silk * 100, trust }] };
+      return { state: n, events: [{ kind: def.repeat ? 'bounty_resolved' : 'quest_turned_in', data: { questId: a.questId, attempt: q.attempt, partId: a.partId || null, xp: def.reward.xp, chest: def.reward.chest || null, ...(def.needs ? { consumed: { ...def.needs } } : {}) }, silkC: silk * 100, trust }] };
     }
     case 'ABANDON': {
       const q = get(s, a.questId);

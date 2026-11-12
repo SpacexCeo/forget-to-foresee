@@ -34,14 +34,14 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 >
 > How NEAR fits in: the 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root and crisis key are committed, and all 15 events were revealed and proof-checked on-chain (the contract recomputes each leaf). This proves the events were fixed before play and match the root; the rules run in the browser, so silk and outcomes are not on-chain.
 >
-> NFTs: memory-shard (NEP-171, live as ftf-shards.testnet) turns a forgotten memory into an NFT whose metadata is its biography (which memory, the trial it was forgotten, the buyer) plus the Merkle leaf of the sign it opened, binding it to the sealed season. Its ink-ring art is drawn on-chain, byte-identical to the game's. The judge season's 3 shards are minted by our coordinator and shown in-game as NFT cards; holding one unlocks an in-game perk. Live minting and a player-owned agent NFT are future work. No token, no payments.
+> NFTs: memory-shard (NEP-171, live as ftf-shards.testnet) turns a forgotten memory into an NFT whose metadata is its biography (which memory, the trial it was forgotten, the buyer) plus the Merkle leaf of the sign it opened, binding it to the sealed season. Its ink-ring art is drawn on-chain, byte-identical to the game's. The recorded season's 3 shards are minted by our coordinator and read in-game; holding one unlocks an in-game perk. Live minting and a player-owned agent NFT are future work. No token, no payments.
 >
-> MIT; 1,000+ tests; a 5-minute judge path.
+> MIT; 1,000+ tests; one link opens the whole game.
 >
-> Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
+> Play: https://spacexceo.github.io/forget-to-foresee/
 
 Character count of the quoted text (without the `> ` prefixes, newlines included): 1,993. Updated 09.11, 11.11 (tests, holder perk),
-(readiness audit): exact scope (the season runs locally; testnet records and shard NFTs for the judge season; live
+(readiness audit): exact scope (the season runs locally; testnet records and shard NFTs for the recorded season; live
 minting and a player-owned agent NFT are future work), what the commitment proves and what it does not, test counts
 from `npm test` on 09.11. Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
@@ -52,9 +52,9 @@ from `npm test` on 09.11. Re-count before sending:
   debts, shard auctions and the tension threshold all run inside one 17-trial season among six agent clans. Judged
   on the game loop, not a token: we have no token.
 - **`nfts`** (NFTs That Do Something) — **claimed** (owner, 09.11). The design is "an NFT whose biography is the currency",
-  and the NEP-171 contract `contracts/memory-shard` runs on testnet as `ftf-shards.testnet` (21 tests, 3 judge
-  shards minted by the coordinator script). On the judge path the Memories panel shows each minted shard as an NFT
-  card read from the chain, and a "Minted on NEAR testnet" toast marks the trial-6 sale. Claimed for the memory
+  and the NEP-171 contract `contracts/memory-shard` runs on testnet as `ftf-shards.testnet` (21 tests, 3 shards of
+  the recorded season minted by the coordinator script). In the game, Profile → NFTs → Holder access reads them from
+  the chain. Claimed for the memory
   shards only: Iris is not an NFT, live seasons mint nothing, and a player-owned agent NFT is future work.
 - Not claimed: `social` (we have no shared budget / DAO), `agents` (our agents do not pay for anything in NEAR),
   `open` (only as a fallback instead of `nfts`).

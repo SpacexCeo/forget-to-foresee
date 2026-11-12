@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { resolveHunt, HUNT_MOBS, resolveHuntMob } from '../../src/game/hunt.js';
 import { makeEntry } from '../../src/game/expedition-log.js';
 import { receiptArgs, contractCheck } from '../../../tools/quest-receipt/lib.mjs';
+import { rollDrops, huntYield, missingFor, DROPS, RESOURCE_IDS } from '../../src/game/resources.js';
+import { QUESTS } from '../../src/game/quests-data.js';
 
 test('hunt table: hp, damage and cooldown equal play/mobs.js MOB_TYPES', () => {
   const src = readFileSync(new URL('../../src/play/mobs.js', import.meta.url), 'utf8');
@@ -46,4 +48,15 @@ test('receipt: record_track arguments for a turn-in pass the contract checks; a 
   assert.equal(contractCheck({ ...a, params_hash: 'xyz' }), 'ERR_HASH');
   assert.equal(contractCheck({ ...a, bar_to: a.bar_from }), 'ERR_BARS');
   assert.throws(() => receiptArgs(log, 0), /not a quest turn-in/);
+});
+
+test('resources: drops are deterministic in the killId, the crown always drops its shard, every quest need is droppable and every quest pays silk', () => {
+  assert.deepEqual(rollDrops('s:skitter_0#1', 'skitter'), rollDrops('s:skitter_0#1', 'skitter'));
+  let threads = 0; for (let i = 0; i < 1000; i++) threads += rollDrops('k' + i, 'skitter').filter((d) => d.id === 'spider_silk_thread').length;
+  assert.ok(threads > 540 && threads < 660, 'about 60 %: ' + threads);
+  assert.deepEqual(rollDrops('boss#1', 'crownrift'), [{ id: 'crown_shard', n: 1 }]);
+  assert.deepEqual(huntYield('skitter', 10), [{ id: 'spider_silk_thread', n: 6 }, { id: 'chitin_plate', n: 3 }]);
+  const droppable = new Set(Object.values(DROPS).flatMap((t) => Object.keys(t)));
+  for (const q of Object.values(QUESTS)) { assert.ok(q.reward.silk > 0, q.id + ' pays silk'); for (const id of Object.keys(q.needs || {})) { assert.ok(RESOURCE_IDS.includes(id) && droppable.has(id), id); } }
+  assert.deepEqual(missingFor({ chitin_plate: 2 }, { chitin_plate: 1 }), [{ id: 'chitin_plate', need: 2, have: 1 }]);
 });

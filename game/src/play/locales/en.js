@@ -678,7 +678,7 @@ export default {
   'holder.note': "Enter any testnet account. If it holds a Forget to Foresee NFT (memory shard, agent card or Elise), the game unlocks a title and a portrait frame in this browser. No wallet, no signature, nothing is written on-chain.",
   'holder.account': "Testnet account id",
   'holder.check': "Check",
-  'holder.tryJudge': "Try the judge account",
+  'holder.tryJudge': "Try the demo account",
   'holder.active': "Active: {account} · {title}",
   'holder.invalid': "That is not a NEAR account id.",
   'holder.none': "{account} holds no Forget to Foresee NFT, so nothing is unlocked.",
@@ -1584,4 +1584,14 @@ export default {
   "lb.verify": "Verify",
   "lb.footer": "Rules and snapshot are committed on NEAR testnet. The score comes from the play log. No prizes.",
   "lb.close": "Close",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "spider silk thread",
+  "res.chitin_plate": "chitin plate",
+  "res.veil_dust": "veil dust",
+  "res.ash_ore": "ash ore",
+  "res.crown_shard": "crown shard",
+  "quest.needs.ask": "Bring me: {list}.",
+  "quest.needs.missing": "Not yet. I still need: {list}.",
+  "quest.needs.item": "{res} {have}/{n}",
+  "quest.track.needs": "Gather {res}: {n} / {count}",
 };

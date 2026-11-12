@@ -882,4 +882,9 @@ export default {
   "mk.i.amber_resin": "琥珀树脂",
   "mk.i.ice_block": "冰块",
   "mk.i.bronze_gear": "青铜齿轮",
+  "mk.i.spider_silk_thread": "蛛丝",
+  "mk.i.chitin_plate": "甲壳板",
+  "mk.i.veil_dust": "面纱尘",
+  "mk.i.ash_ore": "灰矿",
+  "mk.i.crown_shard": "王冠碎片",
 };

@@ -3,7 +3,7 @@
 // `trade({counterparty, silk, reference})` call: the buyer pays the maker of a good in silk, 0.12 % of it goes to the
 // town treasury and, through the daily sweep, funds the works' rewards. Scripted rules, not an LLM.
 // DRY RUN BY DEFAULT: nothing is signed or sent unless FTF_TOWN_SEND=1; keys only on the relayer's server.
-import { ITEMS, START_BALANCE, traderKey } from '../market/catalog.js';
+import { CATALOG as ITEMS, START_BALANCE, traderKey } from '../market/catalog.js';
 import { priceOf, nextDemand, stallClosed, choiceWeight, STOCK_START, STOCK_CAP, RESTOCK_PER_HOUR, CLOSED_MAKES } from '../market/prices.js';
 
 export const TOWN_TARGET = 22_000; // attempts a day: ~1,100 per trader (the spec's margin over 20,000); a stock-out skips an attempt
@@ -14,6 +14,8 @@ export const FEE_BPS = 12;
 export const PRICE_UNIT = MICRO / 5;
 const STAPLES = { bread: 2.5, stew: 1.6, cider: 1.4, candles: 1.6, lamp_oil: 1.4, salt: 1.3, charcoal: 1.2, ice_block: 1 };
 
+/** Traders buy monster resources from each other only now and then: the stalls hold them mostly for players. */
+export const RESOURCE_PULL = 0.3;
 export const townFee = (silk) => Math.floor((silk * FEE_BPS) / 10_000);
 
 /** Production and demand decay since the last look (the daemon sets st.now; a simulation advances 4 s a pick). */
@@ -24,17 +26,18 @@ function tick(st) {
   const minutes = (now - st.at) / 60_000;
   if (minutes <= 0) return;
   st.at = now;
-  const makerOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.maker])), baseOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.base]));
+  const byId = Object.fromEntries(ITEMS.map((i) => [i.id, i])), makerOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.maker])), baseOf = Object.fromEntries(ITEMS.map((i) => [i.id, i.base]));
   for (const id of Object.keys(st.stock)) {
     // supply answers price (a good selling dear is made faster, up to 2x; a cheap one slower), a poor stall works
     // harder (up to 3x), a closed stall at CLOSED_MAKES of its pace; fractional production carries over
     const maker = makerOf[id];
     const ratio = Math.max(0.5, Math.min(2, (st.prices[id] ?? baseOf[id]) / baseOf[id]));
     const need = Math.max(1, Math.min(3, (START_BALANCE * MICRO) / Math.max(1, st.balances[maker] ?? 1)));
-    const rate = RESTOCK_PER_HOUR * ratio * need * (st.closed && st.closed[maker] ? CLOSED_MAKES : 1);
+    const rate = (byId[id].rate ?? RESTOCK_PER_HOUR) * ratio * need * (st.closed && st.closed[maker] ? CLOSED_MAKES : 1);
     const made = (st.prod[id] ?? 0) + (minutes / 60) * rate;
     const whole = Math.floor(made); st.prod[id] = made - whole;
-    if (st.stock[id] < STOCK_CAP) st.stock[id] = Math.min(STOCK_CAP, st.stock[id] + whole); // a flood above the cap stays until it sells
+    const cap = byId[id].cap ?? STOCK_CAP;
+    if (st.stock[id] < cap) st.stock[id] = Math.min(cap, st.stock[id] + whole); // a flood above the cap stays until it sells
     st.demand[id] = nextDemand(st.demand[id] ?? 0, minutes);
   }
 }
@@ -48,7 +51,7 @@ function closedNow(st, key) {
 export const TOWN_POLICY = Object.freeze({
   init: (keys) => ({
     balances: Object.fromEntries(keys.map((k) => [k, START_BALANCE * MICRO])), prices: Object.fromEntries(ITEMS.map((i) => [i.id, i.base])),
-    stock: Object.fromEntries(ITEMS.map((i) => [i.id, STOCK_START])), demand: Object.fromEntries(ITEMS.map((i) => [i.id, 0])), closed: {}, at: null, prod: {},
+    stock: Object.fromEntries(ITEMS.map((i) => [i.id, i.start ?? STOCK_START])), demand: Object.fromEntries(ITEMS.map((i) => [i.id, 0])), closed: {}, at: null, prod: {},
   }),
   /**
    * Buyer `key` picks a good made by someone else (staples often, dear goods rarely) from an open stall with stock,
@@ -66,7 +69,7 @@ export const TOWN_POLICY = Object.freeze({
     const style = (i) => (!strat ? 1 : strat.buy === 'staples' ? (STAPLES[i.id] ? 1.8 : 0.7) : strat.buy === 'dear' ? Math.sqrt(i.base) / 2 : 1) * (strat && strat.favour === i.maker ? 2.5 : 1);
     // price elasticity (market/prices.js choiceWeight): a dear good is bought less, a cheap one more — the loop that
     // lets flooded goods clear and empties shelves refill
-    const w = options.map((i) => ((STAPLES[i.id] || 1) / Math.sqrt(i.base)) * Math.max(0.2, Math.min(5, (S0 / Math.max(1, st.balances[i.maker] ?? S0)) ** 1.5)) * style(i)
+    const w = options.map((i) => ((STAPLES[i.id] || 1) / Math.sqrt(i.base)) * (i.kind === 'resource' ? RESOURCE_PULL : 1) * Math.max(0.2, Math.min(5, (S0 / Math.max(1, st.balances[i.maker] ?? S0)) ** 1.5)) * style(i)
       * choiceWeight(i, priceOf(i, st.stock[i.id] ?? 0, st.demand[i.id] ?? 0).price));
     let r = rand() * w.reduce((a, b) => a + b, 0), k = 0;
     while (k < options.length - 1 && r >= w[k]) { r -= w[k]; k++; }

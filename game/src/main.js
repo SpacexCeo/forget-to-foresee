@@ -10,6 +10,7 @@
 // archipelago, ?town=1 (or =altar, =flat) forces the town on a deep link (townPlan in ui/loading.js).
 // Self-hosted fonts (no third-party font requests: Google Fonts is unreachable in some regions). CJK text uses the
 // system serif (Songti SC, SimSun, Noto Serif CJK) through the CSS fallbacks.
+import './entry-url.js'; // first: ?demo=judge is an alias of the default (one entry, owner 12.11)
 import '@fontsource/cormorant-garamond/300.css';
 import '@fontsource/cormorant-garamond/400.css';
 import '@fontsource/cormorant-garamond/400-italic.css';
