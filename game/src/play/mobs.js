@@ -50,12 +50,13 @@ export const ACTIONS = Object.freeze({
   // hold the strike for the super strike (owner 12.11): held ≥ hold s it fires on release; damage ramps to full at
   // `full` s of charge; a frontal cone `reach` m, half-angle `arc`; knockback for light creatures; its own cooldown
   super: Object.freeze({ hold: 0.4, full: 1.0, min: 34, max: 80, reach: 3.0, arc: Math.PI / 4, knock: 1.6, impact: 0.1, cooldown: 1.2, freeze: 0.16 }),
-  lock: 6.0,                       // soft lock: the nearest living creature this close (m) ...
-  lockCone: 140 * Math.PI / 180,   // ... inside this cone in front of the camera
+  lock: 8.0,                       // soft lock: the nearest living creature this close (m), in any direction ...
+  lockFront: 0.35,                 // ... creatures behind her count this much farther (ahead preferred, never ignored)
+  lunge: 0.14,                     // s: a locked creature out of reach is closed in on before the hit lands
 });
 /**
  * Where a strike goes (owner 12.11: "either the monster or the camera direction"): 1) the creature in the soft lock
- * (the nearest living one within ACTIONS.lock m inside ACTIONS.lockCone in front of the camera), 2) on a desktop the
+ * (the nearest living one within ACTIONS.lock m in any direction, the ones ahead preferred), 2) on a desktop the
  * mouse cursor's point on the ground, even standing still, 3) while she moves, the stick / keys movement, 4) the
  * camera's forward direction on the ground (on a phone with no creature near: where the camera looks), 5) her facing
  * (no camera given). Returns the heading (radians, atan2(x, z)) and which source won. Pure.
@@ -77,18 +78,18 @@ export function strikeAim({ from, heading, lock = null, cursor = null, move = nu
  * The soft lock: the nearest living creature within `range` m of `from` whose bearing lies inside `cone` (radians,
  * full angle) around the camera's ground direction `fwd` [x, z] (any bearing without one). Pure over `mobs`.
  */
-export function pickLock(mobs, from, fwd, range = ACTIONS.lock, cone = ACTIONS.lockCone) {
+export function pickLock(mobs, from, fwd, range = ACTIONS.lock, front = ACTIONS.lockFront) {
   const fl = fwd ? Math.hypot(fwd[0], fwd[1]) : 0;
-  let best = null, bd = range;
+  let best = null, bs = Infinity;
   for (const m of mobs) {
     if (m.state === 'dead' || m.state === 'gone') continue;
-    const dx = m.pos[0] - from[0], dz = m.pos[2] - from[2], dist = Math.hypot(dx, dz), d = dist - m.T.radius;
-    if (d >= bd) continue;
-    if (fl > 1e-3 && dist > m.T.radius + 0.4) {          // right on top of her: any side
-      const c = (dx * fwd[0] + dz * fwd[1]) / (dist * fl);
-      if (c < Math.cos(cone / 2)) continue;
-    }
-    bd = d; best = m;
+    const dx = m.pos[0] - from[0], dz = m.pos[2] - from[2], dist = Math.hypot(dx, dz), d = Math.max(0, dist - m.T.radius);
+    if (d > range) continue;
+    // in any direction: one ahead (of the camera, else of her) wins over one behind at the same distance, but a
+    // creature beside or behind her is never left out (owner 12.11: on a PC every strike assists onto a monster)
+    const c = fl > 1e-3 && dist > 1e-3 ? (dx * fwd[0] + dz * fwd[1]) / (dist * fl) : 1;
+    const score = d * (1 + front * (1 - c));
+    if (score < bs) { bs = score; best = m; }
   }
   return best;
 }
@@ -366,7 +367,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
-  const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0 };
+  const act = { lunge: null, strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0 };
   let shake = 0;
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
@@ -399,11 +400,27 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   function face(aim) {
     const a = Array.isArray(aim) ? { move: aim } : (aim || {});
     const cam = a.camera || camForward();
-    const r = strikeAim({ from: player.pos, heading: player.heading, lock: pickLock(brain.mobs, player.pos, cam), cursor: a.cursor || null, move: a.move || null, camera: cam });
-    player.heading = r.heading; lastAim = r.by;
+    const lockOf = pickLock(brain.mobs, player.pos, cam || [Math.sin(player.heading), Math.cos(player.heading)]);
+    const r = strikeAim({ from: player.pos, heading: player.heading, lock: lockOf, cursor: a.cursor || null, move: a.move || null, camera: cam });
+    // the whole root turns this frame: no interpolation from the old facing, no momentum turning her back
+    player.heading = r.heading; player.prevHeading = r.heading; lastAim = r.by;
+    if (player.vel) player.vel = [0, 0];
+    r.lock = r.by === 'lock' ? lockOf : null;
     return r;
   }
   let lastAim = 'facing';
+  /**
+   * Closes in on `mob` until it is `keep` m (plus its radius) away, over ACTIONS.lunge s, then calls `then`. Returns
+   * false (and does nothing) when it is already that close. Collision-aware through moveIris.
+   */
+  function lungeTo(mob, keep, then) {
+    if (!mob || !moveIris) return false;
+    const dx = mob.pos[0] - player.pos[0], dz = mob.pos[2] - player.pos[2], d = Math.hypot(dx, dz), go = d - (keep + mob.T.radius);
+    if (go <= 0.05) return false;
+    act.lunge = { t: 0, dir: [dx / d, dz / d], left: Math.min(go, 7.5), rate: Math.min(go, 7.5) / ACTIONS.lunge, then, mob };
+    iris.iframes = Math.max(iris.iframes, ACTIONS.lunge);
+    return true;
+  }
   const _cf = new THREE.Vector3();
   /** The camera's forward direction on the ground [x, z] (null without a camera). */
   function camForward() { if (!camera) return null; camera.getWorldDirection(_cf); const l = Math.hypot(_cf.x, _cf.z); return l > 1e-3 ? [_cf.x / l, _cf.z / l] : null; }
@@ -524,10 +541,14 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
      *  @param {number[]|null} [aim] [x, z] the stick / mouse aim, else where she looks; a creature within 3 m wins (soft lock) */
     strike(aim = null) {
       if (!iris.alive || !iris.outside || act.strikeCd > 0 || act.dash) return false;
-      face(aim);
+      const f = face(aim);
       const A = ACTIONS.strike;
       act.combo = act.comboT > 0 ? (act.combo % A.combo.length) + 1 : 1; act.comboT = A.window; act.strikeCd = A.cooldown;
-      const ev = []; brain.strike(player.pos, player.heading, A.combo[act.combo - 1], act.combo === A.combo.length, ev); handle(ev);
+      const amount = A.combo[act.combo - 1], knock = act.combo === A.combo.length;
+      // a locked creature out of reach: she closes in (a short lunge) and the blow lands as she arrives
+      if (!lungeTo(f.lock, A.reach * 0.8, () => { const ev = []; brain.strike(player.pos, player.heading, amount, knock, ev); handle(ev); })) {
+        const ev = []; brain.strike(player.pos, player.heading, amount, knock, ev); handle(ev);
+      }
       act.twistDir = act.combo % 2 ? 1 : -1;
       act.twist = irisMove && irisMove('strike' + act.combo) ? 0 : 0.22;            // her own clip, else the procedural twist
       slashT = 0.16; slash.visible = true; slash.position.set(player.pos[0], player.pos[1] + 0.95, player.pos[2]);
@@ -556,9 +577,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (!iris.alive || !iris.outside) { if (irisEnd) irisEnd(); return false; }
       const A = ACTIONS.super;
       if (c.t < A.hold) { const ok = this.strike(aim); if (!ok && irisEnd) irisEnd(); return ok; }   // a tap: the combo (its clip replaces the held pose); on cooldown the coiled pose is put away
-      face(aim);
+      const f = face(aim);
       const k = Math.min(1, (c.t - A.hold) / (A.full - A.hold));
       act.superAt = { t: 0, amount: A.min + (A.max - A.min) * k, k };
+      if (f.lock) lungeTo(f.lock, A.reach * 0.7, null);                          // closes in on the locked creature within its 0.10 s
       act.superCd = A.cooldown; act.strikeCd = 0.45;
       if (irisMove) irisMove('strike_super');
       if (onFeedback) onFeedback('super_release', null, { charge: k });
@@ -590,6 +612,13 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
       act.superCd = Math.max(0, act.superCd - dt);
+      if (act.lunge) {
+        const L = act.lunge, stepLen = Math.min(L.left, L.rate * dt);
+        if (stepLen > 0 && moveIris) moveIris([L.dir[0] * stepLen, L.dir[1] * stepLen]);
+        L.left -= stepLen; L.t += dt;
+        player.heading = player.prevHeading = Math.atan2(L.mob.pos[0] - player.pos[0], L.mob.pos[2] - player.pos[2]);
+        if (L.left <= 1e-3 || L.t >= ACTIONS.lunge + 0.1) { act.lunge = null; if (L.then) L.then(); }
+      }
       {
         const L = outside && iris.alive ? pickLock(brain.mobs, player.pos, camForward()) : null;
         lockRing.visible = !!L;
@@ -607,7 +636,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       }
       if (act.superAt) {
         act.superAt.t += dt;
-        if (act.superAt.t >= ACTIONS.super.impact) {                             // the clip's impact frame (0.10 s)
+        if (act.superAt.t >= ACTIONS.super.impact && !act.lunge) {                // the clip's impact frame (0.10 s), once she has closed in
           const S = act.superAt; act.superAt = null;
           const ev = []; brain.superStrike(player.pos, player.heading, S.amount, ev); handle(ev);
           shake = Math.max(shake, 0.55 + 0.35 * S.k);
