@@ -33,7 +33,7 @@ test('the bag keeps sealed chests across reloads and settles each once', () => {
 test('the adapter maps net/chest.js answers and reasons; no answer, no outcome', async () => {
   const fake = (r) => () => Promise.resolve({ openChest: async () => r });
   const c = (r) => createChestClient({ load: fake(r) });
-  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_configured', 'off'], ['season_not_ready', 'off'], ['daily_cap', 'rate'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'bad']]) {
+  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_your_key', 'no_key'], ['replayed', 'bad'], ['deck_mismatch', 'bad'], ['not_configured', 'off'], ['season_not_ready', 'off'], ['daily_cap', 'rate'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'bad']]) {
     assert.deepEqual(await c({ ok: false, reason }).open(), { ok: false, error }, reason);
   }
   assert.deepEqual(await createChestClient({ load: () => Promise.reject(new Error('chunk')) }).open(), { ok: false, error: 'network' });

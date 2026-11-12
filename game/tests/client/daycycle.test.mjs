@@ -32,11 +32,13 @@ test('continuous: no jump between consecutive 1/60 s frames anywhere in the loop
   }
 });
 
-test('night: moonlight key, stars, mist, lamps and windows carry the streets', () => {
+test('night: a cool moonlit key, stars, mist, lamps in warm pools', () => {
   const n = town('night');
   assert.ok(n.sunCool > 0.5 && n.stars === 1 && n.disc < 0.05);
   assert.ok(n.fog.density > town('dawn').fog.density * 1.5, 'ground mist');
-  assert.ok(n.lamps >= 1.8 && n.windows >= 2.5, 'readable by lamplight');
+  // cool and moonlit (owner 12.11): a blue-silver moon key and a moonlit fill; the lamps light warm pools, not the town
+  assert.ok(n.sunCool >= 1 && n.moonFill >= 1 && n.sunIntensity >= 0.8, 'the moon is the key light');
+  assert.ok(n.lamps >= 1.1 && n.lamps < 1.6 && n.windows >= 2, 'lamps and windows in warm pools');
   assert.ok(TIME_PRESETS.night && TIME_PRESETS.dawn && TIME_PRESETS.twilight && TIME_PRESETS.evening);
 });
 

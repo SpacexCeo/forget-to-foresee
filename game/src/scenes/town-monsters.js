@@ -29,12 +29,12 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
   const state = { loading: null, proto: null, clips: [], scale: 1, critters: [], chests: [], shots: [], kills: 0, puffs: [], t: 0 };
   const loader = new THREE.TextureLoader();
   const tex = (name) => { const t = loader.load(base + 'assets/vfx/loot/' + name); t.colorSpace = THREE.SRGBColorSpace; return t; };
-  let sparkleTex = null, beamTex = null, ringTex = null;
+  let sparkleTex = null, beamTex = null, ringTex = null, glowTex = null;
   const chestModels = new Map(); // tier -> Promise<gltf>
   const W = (x, z) => [x + TOWN_ORIGIN[0], 0, z + TOWN_ORIGIN[2]];
   const ground = (wx, wz, fallback) => { const y = town.groundAt ? town.groundAt(wx, wz) : null; return y == null ? fallback : y; };
 
-  function textures() { if (!sparkleTex) { sparkleTex = tex('loot_sparkle.png'); beamTex = tex('loot_beam.png'); ringTex = tex('loot_ring.png'); } }
+  function textures() { if (!sparkleTex) { sparkleTex = tex('loot_sparkle.png'); beamTex = tex('loot_beam.png'); ringTex = tex('loot_ring.png'); glowTex = tex('loot_glow.png'); } }
   function load() {
     if (state.loading) return state.loading;
     textures();
@@ -95,6 +95,9 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
     const color = tier === 'legendary' ? 0xffb43c : tier === 'rare' ? 0x2fd0bd : 0xf0d9a0;
     // normal blending: an additive beam vanishes against the bright sky over the cloud sea
     ch.beam = new THREE.Sprite(spriteMat(beamTex, color, 0.85, false)); ch.beam.scale.set(1.1, 4.2, 1); ch.beam.position.y = 2.1; ch.root.add(ch.beam);
+    // an additive core inside the beam and a soft halo at its foot: readable at fight distance over the bright haze
+    ch.core = new THREE.Sprite(spriteMat(beamTex, 0xffffff, 0.9, true)); ch.core.scale.set(0.45, 5.2, 1); ch.core.position.y = 2.6; ch.root.add(ch.core);
+    ch.halo = new THREE.Sprite(spriteMat(glowTex, color, 0.8, true)); ch.halo.scale.set(2.6, 2.6, 1); ch.halo.position.y = 0.6; ch.root.add(ch.halo);
     const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ch.root.add(ring); ch.ring = ring;
     chestModel(tier).then((g) => {
@@ -214,6 +217,7 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
         ch.t += dt;
         const pulse = reducedMotion ? 0.7 : 0.6 + 0.25 * Math.sin(ch.t * 2.4);
         ch.beam.material.opacity = ch.picked ? Math.max(0, 0.75 - ch.picked * 2) : pulse;
+        ch.core.material.opacity = ch.picked ? 0 : Math.min(1, pulse + 0.2); ch.halo.material.opacity = ch.picked ? 0 : pulse;
         if (ch.picked) {
           ch.picked += dt;
           const k = Math.min(1, ch.picked / 0.45);
