@@ -20,6 +20,7 @@ import { upgradeAssetMaterials } from '../render/materials.js';
 import { tuneHairCards } from '../render/hair-cards.js';
 import { fabricSheen } from '../render/fabric.js';
 import { resolveClip } from '../play/behaviour.js';
+import { toonify } from '../play/iris-avatar.js';
 import { GaitLayer, FootPlant } from '../play/gait.js';
 import { mergeClips, faceLayerClip, townsfolkClips } from '../play/anim-library.js';
 import * as gaitModule from '../play/gait.js';
@@ -55,6 +56,8 @@ const VIEW = {
   back: { dir: [-0.3, 0.22, -1], dist: 4.6, fov: 30, h: 1.0 },
   front0: { dir: [0, 0.08, 1], dist: 3.9, fov: 30, h: 0.95 },
   feetfront: { dir: [0, 0.12, 1], dist: 1.9, fov: 30, h: 0.3 },
+  arms: { dir: [0.55, 0.1, 1], dist: 1.7, fov: 30, h: 1.2 },
+  armsback: { dir: [-0.5, 0.15, -1], dist: 1.7, fov: 30, h: 1.2 },
   top: { dir: [0.001, 1, 0.001], dist: 6, fov: 30, h: 0.2 },
   feet: { dir: [1, 0.1, 0.25], dist: 2.0, fov: 30, h: 0.25 },
   game: { dir: [-0.25, 0.42, -1], dist: 5.6, fov: 42, h: 1.2 }, // roughly the third-person game camera behind her
@@ -89,7 +92,7 @@ class Subject {
   async load(scene) {
     const { gltf } = await fetchGltf(this.name);
     const model = cloneSkinned(gltf.scene);
-    upgradeAssetMaterials(this.name, model);
+    if (/^agent_elise/.test(this.name)) toonify(model); else upgradeAssetMaterials(this.name, model);   // Elise is cel shaded in the game
     if (this.name === 'agent_iris') { tuneHairCards(model); fabricSheen(model); }
     model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
     this.model = model; this.root.add(model); scene.add(this.root);

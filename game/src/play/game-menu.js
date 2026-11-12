@@ -134,7 +134,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
-  const wheel = createWheel({ storage, earnedFrom: () => Math.max(0, ledger.level.level - 1) + (ledger.stats.trialsVerified || 0) });
+  const wheel = createWheel({ storage, account: owner, earnedFrom: () => Math.max(0, ledger.level.level - 1) + (ledger.stats.trialsVerified || 0) });
   const inv = createInventory({ storage });
   const items = manifest || loadManifest(base);
   const chain = onChain || readOnChain({ owner });
