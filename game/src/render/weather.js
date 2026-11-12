@@ -38,9 +38,9 @@ export const WEATHER = Object.freeze({
   haze: Object.freeze({ label: 'Haze', sun: 0.72, shadow: 0.8, ambient: 1.15, cover: null, overcast: 0.25, fog: 1.7, wet: 0, rain: 0, wind: 0.3, exposure: 0.03, flash: 0 }),
   fog: Object.freeze({ label: 'Fog', sun: 0.32, shadow: 0.5, ambient: 1.35, cover: 0.85, overcast: 0.6, fog: 3.4, wet: 0.25, rain: 0, wind: 0.15, exposure: 0.05, flash: 0 }),
   overcast: Object.freeze({ label: 'Overcast', sun: 0.22, shadow: 0.55, ambient: 1.6, cover: 0.97, overcast: 0.85, fog: 1.12, wet: 0, rain: 0, wind: 0.55, exposure: 0.05, flash: 0 }),
-  drizzle: Object.freeze({ label: 'Light rain', sun: 0.18, shadow: 0.5, ambient: 1.3, cover: 0.97, overcast: 0.92, fog: 1.3, wet: 0.75, rain: 0.45, wind: 0.6, exposure: 0.02, flash: 0 }),
-  rain: Object.freeze({ label: 'Rain', sun: 0.12, shadow: 0.42, ambient: 1.2, cover: 1, overcast: 1, fog: 1.6, wet: 1, rain: 1, wind: 0.8, exposure: -0.08, flash: 0 }),
-  storm: Object.freeze({ label: 'Storm', sun: 0.07, shadow: 0.35, ambient: 1.05, cover: 1, overcast: 1, fog: 1.85, wet: 1, rain: 1.5, wind: 1, exposure: -0.18, flash: 1 }),
+  drizzle: Object.freeze({ label: 'Light rain', sun: 0.18, shadow: 0.5, ambient: 1.25, cover: 0.97, overcast: 0.92, fog: 1.3, wet: 0.75, rain: 0.45, wind: 0.6, exposure: -0.12, flash: 0 }),
+  rain: Object.freeze({ label: 'Rain', sun: 0.12, shadow: 0.42, ambient: 1.1, cover: 1, overcast: 1, fog: 1.6, wet: 1, rain: 1, wind: 0.8, exposure: -0.3, flash: 0 }),
+  storm: Object.freeze({ label: 'Storm', sun: 0.07, shadow: 0.35, ambient: 0.95, cover: 1, overcast: 1, fog: 1.85, wet: 1, rain: 1.5, wind: 1, exposure: -0.45, flash: 1 }),
 });
 export const WEATHER_NAMES = Object.freeze(Object.keys(WEATHER));
 export const DEFAULT_WEATHER = 'clear';
@@ -334,9 +334,9 @@ export class Rain {
           p = mod( p - cameraPosition + 0.5 * uBox, uBox ) - 0.5 * uBox + cameraPosition;
           vec3 dir = normalize( fall );
           vec3 side = normalize( cross( dir, cameraPosition - p ) );
-          float len = mix( 0.7, 0.14, uStill ) * aSeed.w;
+          float len = mix( 1.0, 0.14, uStill ) * aSeed.w;
           // Never thinner than about a pixel: far streaks would flicker in and out otherwise.
-          float width = max( 0.012, distance( cameraPosition, p ) * 0.0011 );
+          float width = max( 0.018, distance( cameraPosition, p ) * 0.0022 );
           vec3 wp = p - dir * position.y * len + side * position.x * width;
           vec4 mv = viewMatrix * vec4( wp, 1.0 );
           float d = - mv.z;
@@ -348,7 +348,7 @@ export class Rain {
         uniform vec3 uColor; varying float vAlpha; varying vec2 vQ;
         void main() {
           float a = vAlpha * ( 1.0 - abs( vQ.x ) * 2.0 ) * smoothstep( 0.0, 0.25, vQ.y ) * ( 1.0 - smoothstep( 0.6, 1.0, vQ.y ) );
-          gl_FragColor = vec4( uColor * a * 0.55, 0.0 );
+          gl_FragColor = vec4( uColor * a * 1.1, 0.0 );
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
@@ -408,7 +408,7 @@ export class Splashes {
           float id = aSeed.x * 1000.0 + cyc * 13.17;
           float a = h1( id ) * 6.2831853, r = sqrt( h1( id + 3.1 ) ) * uRadius;
           vec3 c = uCenter + vec3( cos( a ) * r, 0.02, sin( a ) * r );
-          float size = mix( 0.03, 0.16, k ) * ( 0.7 + 0.6 * h1( id + 7.7 ) );
+          float size = mix( 0.05, 0.3, k ) * ( 0.7 + 0.6 * h1( id + 7.7 ) );
           vQ = position.xz; vK = k;
           vA = uAmount * ( 1.0 - smoothstep( uRadius * 0.6, uRadius, r ) ) * step( h1( id + 1.9 ), uAmount );
           gl_Position = projectionMatrix * viewMatrix * vec4( c + vec3( position.x, 0.0, position.z ) * size, 1.0 );
@@ -421,7 +421,7 @@ export class Splashes {
           float drop = ( 1.0 - smoothstep( 0.0, 0.35, d ) ) * ( 1.0 - smoothstep( 0.0, 0.25, vK ) );
           float a = vA * ( ring * ( 1.0 - vK ) + drop ) ;
           if ( a < 0.003 ) discard;
-          gl_FragColor = vec4( uColor * a * 0.6, 0.0 );
+          gl_FragColor = vec4( uColor * a * 1.2, 0.0 );
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,

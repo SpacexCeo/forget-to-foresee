@@ -49,7 +49,7 @@ if (mode === 'rain') {
 } else {
   for (const tod of ['dusk', 'night']) {
     await open(tod);
-    await page.evaluate(() => { const f = window.__ftf; f.rig.update = ((orig) => (...a) => { orig(...a); f.rig.camera.position.set(-1.5, 1204.6, 37); f.rig.camera.lookAt(0, 1204, 20); f.rig.camera.updateMatrixWorld(true); })(f.rig.update.bind(f.rig)); });
+    await page.evaluate(() => { const f = window.__ftf; f.rig.update = ((orig) => (...a) => { orig(...a); f.rig.camera.position.set(1.2, 1204.7, 31.5); f.rig.camera.lookAt(0.3, 1204.3, 18); f.rig.camera.updateMatrixWorld(true); })(f.rig.update.bind(f.rig)); });
     for (const w of ['clear', 'haze', 'fog', 'drizzle', 'rain', 'storm']) {
       await page.evaluate((w) => window.__ftf.lookdev.setWeather(w, { immediate: true }), w);
       await wait(w === 'storm' ? 200 : 1800);

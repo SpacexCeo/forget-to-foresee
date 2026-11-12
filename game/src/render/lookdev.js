@@ -249,7 +249,7 @@ export class LookDev {
     this.rain.setAmount(W.rain, this.reducedMotion);
     this.splashes.setAmount(W.rain * Math.min(1, this.weather.wet * 1.5), this.reducedMotion);
     this.foliage.setWind(this.reducedMotion ? 0 : Math.min(2.4, W.wind / 0.35)); // the calm default is the grass as it always was
-    this.rain.setColor(_c.copy(atm.zenith).lerp(_white, 0.6).multiplyScalar(1.4));
+    this.rain.setColor(_c.copy(atm.zenith).lerp(_white, 0.7).multiplyScalar(1.8 + this.light.lamps * 0.4));   // lit by the sky and, after dark, the lamps
     this.splashes.setColor(_c);
     // Ambient light from the sky: the dome baked into a PMREM. The Blender-baked HDR (art/env/bake_env.py) is a clear
     // golden hour on the archipelago, so it serves only there and only while the sky is clear.
