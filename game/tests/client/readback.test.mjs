@@ -59,7 +59,10 @@ test('Controls: the dialog is shown before the world transition runs, and waits 
   const open = src.slice(src.indexOf('function open()'), src.indexOf("dialog.addEventListener('close'"));
   assert.ok(open.indexOf('dialog.showModal()') >= 0 && open.indexOf('dialog.showModal()') < open.indexOf('onTransition()'), 'showModal comes first');
   assert.ok(!/await|requestAnimationFrame|renderer|lookdev/.test(open), 'open() touches neither the renderer nor a frame');
-  assert.match(code(read('boot-world.js')), /onSettings: \(\) => controls\.open\(\)/);
+  assert.match(code(read('boot-world.js')), /onSettings: \(\) => (controls\.open|openMenu)\(\)/);
+  // the in-game settings popup (ui/settings-popup.js) also shows itself before it clears the world's input
+  const pop = code(read('ui/settings-popup.js')), po = pop.slice(pop.indexOf('    open(which)'));
+  assert.ok(po.indexOf('showModal()') >= 0 && po.indexOf('showModal()') < po.indexOf('hooks.onOpen'), 'the popup shows first');
   const clear = code(read('boot-world.js'));
   const body = clear.slice(clear.indexOf('function clearWorldInput()'), clear.indexOf('}', clear.indexOf('function clearWorldInput()')));
   assert.ok(!/render|readPixels/.test(body), 'the transition only clears input');

@@ -11,11 +11,12 @@ import { rayCast, MASK_PLAYER } from '../physics/collision.js';
 import { TOWN_ORIGIN } from './town-layout.js';
 import { onField } from './town-outside.js';
 import { CASTS, createCastEffects } from './town-casting-fx.js';
+import { actionKey, onBindings, KEY_ACTIONS } from '../ui/keybinds.js';
 
 /** Seconds Iris stays rooted after the release frame of a cast (the overshoot and the held key pose); then a step cancels the settle. */
 export const CAST_ROOT_AFTER = 0.24;
 export const CAST_KEYS = Object.freeze({ KeyQ: 'lance', Digit1: 'lance', KeyV: 'snare', Digit2: 'snare' });
-const SLOTS = [['lance', 'Q'], ['snare', 'V']];
+const SLOTS = [['lance', 'Q'], ['snare', 'V']]; // the label follows the live binding (ui/keybinds.js)
 /** UI-003 full-art icons (assets/ui/icons): the lance a burst of shards, the snare the targeting mark. */
 const ICON_ART = Object.freeze({ lance: 'shard_burst', snare: 'mark' });
 
@@ -71,7 +72,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     const name = doc.createElement('span'); name.className = 'ftf-cast-name'; const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd';
     b.append(art.firstChild, cd, cap, name);
     b.addEventListener('click', (e) => { e.stopPropagation(); toggle(id); });
-    slots[id] = { button: b, name, cd };
+    slots[id] = { button: b, name, cd, cap };
     bar.append(b);
   }
   // extra slots after the casts (the strike and the dash of play/mobs.js): {id, key, icon, label, press(), cooldown() 0..1}
@@ -84,7 +85,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.addEventListener('click', (e) => { e.stopPropagation(); b.blur(); x.press(); });
     bar.append(b);
-    return { ...x, button: b, cd, name };
+    return { ...x, button: b, cd, name, cap };
   });
   root.append(hint, bar);
   doc.body.append(root);
@@ -93,11 +94,12 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
 
   function renderText() {
-    for (const [id, key] of SLOTS) { const n = i18n.t('town.cast.' + id); slots[id].name.textContent = n; slots[id].button.title = coarse ? n : `${n} (${key})`; }
-    for (const x of extras) { const n = i18n.t(x.label); x.name.textContent = n; x.button.title = coarse ? n : `${n} (${x.key})`; }
+    for (const [id] of SLOTS) { const key = actionKey(id), n = i18n.t('town.cast.' + id); slots[id].cap.textContent = key; slots[id].name.textContent = n; slots[id].button.title = coarse ? n : `${n} (${key})`; }
+    for (const x of extras) { const key = KEY_ACTIONS.some((a) => a.id === x.id) ? actionKey(x.id) : x.key, n = i18n.t(x.label); x.cap.textContent = key; x.name.textContent = n; x.button.title = coarse ? n : `${n} (${key})`; }
     hint.textContent = i18n.t(coarse ? 'town.cast.hint.touch' : 'town.cast.hint');
   }
   const unsubscribe = typeof i18n.subscribe === 'function' ? i18n.subscribe(renderText) : null;
+  const unbind = onBindings(renderText);
   renderText();
 
   /** Ground height under a world point near `nearY` (the hillside, the road), else `nearY`. */

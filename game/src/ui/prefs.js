@@ -14,7 +14,7 @@ export const PREF_DEFAULTS = Object.freeze({
 export const PREF_OPTIONS = Object.freeze({
   motion: ['system', 'reduce', 'full'],
   subtitleSize: ['s', 'm', 'l'],
-  quality: ['auto', 'high', 'low'],
+  quality: ['auto', 'low', 'medium', 'high'],
   locale: ['en', 'uk', 'ru', 'it', 'zh'],
   hudMode: ['simple', 'novice', 'pro'],
   hudScale: ['s', 'm', 'l', 'xl'],

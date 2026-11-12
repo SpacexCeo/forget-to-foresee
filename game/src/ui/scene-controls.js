@@ -23,10 +23,11 @@ export function controlsReference(device) {
 }
 
 /** Presentation only. World actions remain with the scene owner. */
-export function mountSceneControls(root, { onContext, onTransition, onMainMenu = null, extra = [] }) {
+export function mountSceneControls(root, { onContext, onTransition, onMainMenu = null, onOpenSettings = null, extra = [] }) {
   const extras = extra.map((x) => ({ ...x, el: actionButton({ label: x.label, symbol: 'arrow', onClick: () => { dialog.close(); x.onClick(); } }) }));
   const hint = h('span', { class: 'ftf-scene-hint', attrs: { 'aria-hidden': 'true' }, text: 'Esc' });
-  const opener = actionButton({ label: 'Controls', symbol: 'settings', attrs: { 'aria-haspopup': 'dialog' }, onClick: open });
+  // with onOpenSettings the button is the gear of the in-game settings popup (ui/settings-popup.js); else this dialog
+  const opener = actionButton({ label: onOpenSettings ? 'Settings' : 'Controls', symbol: 'settings', attrs: { 'aria-haspopup': 'dialog' }, onClick: () => (onOpenSettings ? onOpenSettings() : open()) });
   opener.append(hint);
   const source = h('p', { class: 'ftf-overline', text: 'Keyboard & mouse' });
   const bindings = h('div', {});

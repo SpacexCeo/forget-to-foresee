@@ -4,6 +4,14 @@
 // stack. Dark green-black and gold, after docs/art/ui/profile-owner-ref.jpg. It only shows in the town phase; the
 // archipelago keeps its own trial/silk HUD (the judge path). The bottom-left corner stays free for the chat panel.
 
+import { showPremise } from '../ui/premise.js';
+
+const ICON = (d) => `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e6c47c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>')}")`;
+const I_QUEST = ICON('<path d="M7 3h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h4"/>');
+const I_SKIP = ICON('<path d="M5 5l9 7-9 7zM17 5v14"/>');
+const I_ALTAR = ICON('<path d="M5 21h14M7 21v-9a5 5 0 0 1 10 0v9"/><circle cx="12" cy="11" r="2.2"/><path d="M12 3v2"/>');
+const I_PEOPLE = ICON('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 19"/>');
+
 const CSS = `
 .ph { --ph-bg: rgba(12, 20, 17, .86); --ph-line: rgba(201, 163, 90, .55); --ph-gold: #d8b46a; --ph-ink: #f1ead8; --ph-dim: #a9b3a8;
   position: fixed; inset: 0; pointer-events: none; z-index: 14; font: 14px/1.25 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ph-ink); }
@@ -58,12 +66,25 @@ body.ph-on #toast { display: none !important; }
 body.ph-on .ftf-cast-bar { background: rgba(12, 20, 17, .82); border: 1px solid rgba(201, 163, 90, .55); box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
 body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
 body.ph-on .ftf-hp { display: none; }
+/* declutter (owner, 12.11): persistent labels become icons with a tooltip; one short line where text stays */
+.ph-help { width: 40px; height: 40px; border-radius: 50%; background: var(--ph-bg); border: 1px solid var(--ph-line); color: var(--ph-gold); font: 700 17px/1 Georgia, serif; cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
+body.ph-on .ftf-town-objective { box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(340px, calc(100% - 28px)); padding-left: 38px; }
+body.ph-on .ftf-town-objective::before { content: ""; position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; border-radius: 0; box-shadow: none; background: ${I_QUEST} center / contain no-repeat; }
+body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: min(340px, calc(100% - 28px)); color: inherit; }
+body.ph-on .ftf-quest-meta button { width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 0; background: rgba(12, 20, 17, .86) ${I_SKIP} center / 20px no-repeat; }
+body.ph-on .ftf-quest-meta { top: calc(146px + env(safe-area-inset-top, 0px)); }
+body.ph-on .ftf-scene-tools .ftf-btn-label, body.ph-on .ftf-scene-tools .ftf-scene-hint { display: none; }
+body.ph-on .ftf-scene-tools .ftf-btn { min-width: 40px; min-height: 40px; padding: 0 9px; }
+body.ph-on .ftf-chat-chip[data-n] span { display: none; }
+body.ph-on .ftf-chat-chip[data-n]::after { content: attr(data-n); padding-left: 24px; min-height: 20px; line-height: 20px; background: ${I_PEOPLE} left center / 20px no-repeat; }
+body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 12px !important; background-image: ${I_ALTAR} !important; background-repeat: no-repeat !important; background-position: 8px center !important; background-size: 18px !important; }
+.ph-toast { max-width: min(320px, 70vw); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @media (max-width: 700px), (max-height: 500px) {
   .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
   .ph-portrait { width: 46px; height: 46px; } .ph-portrait img { inset: 3px; width: 40px; height: 40px; }
-  .ph-name { font-size: 14px; } .ph-title, .ph-xp { display: none; }
-  body.ph-on .ftf-town-objective { top: calc(108px + env(safe-area-inset-top, 0px)); max-width: calc(100% - 60px); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: calc(100% - 60px); color: inherit; } /* on a phone a tap unfolds the one-line tracker */
+  .ph-name, .ph-title, .ph-xp { display: none; } .ph-frame { padding-right: 12px; } .ph-hp { width: 64px; margin-top: 0; }
+  body.ph-on .ftf-town-objective { top: calc(108px + env(safe-area-inset-top, 0px)); max-width: max(140px, 34vw); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: calc(100% - 28px); color: inherit; } /* on a phone a tap unfolds the one-line tracker */
   body.ph-on .ftf-quest-meta { top: calc(152px + env(safe-area-inset-top, 0px)); }
   .ph-wallet { top: calc(60px + env(safe-area-inset-top, 0px)); }
   .ph-coin b { font-size: 15px; }
@@ -121,7 +142,11 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   const count = el('b');
   coin.append(icon, count);
   const chest = el('button', 'ph-chest'); chest.type = 'button'; chest.hidden = true;
-  wallet.append(coin, chest);
+  // "?" tray: the premise card again (shown once per browser on its own; ui/premise.js)
+  const help = el('button', 'ph-help', '?'); help.type = 'button';
+  help.addEventListener('pointerdown', (e) => e.stopPropagation());
+  help.addEventListener('click', () => { showPremise(doc, t, { force: true, reducedMotion: reducedMotion() }); });
+  wallet.append(help, coin, chest);
   for (const b of [coin, chest]) { b.addEventListener('pointerdown', (e) => e.stopPropagation()); }
   coin.addEventListener('click', () => onProfile());
   chest.addEventListener('click', () => (onChests || onProfile)());
@@ -189,7 +214,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
       }
     },
     /** One toast in the stack (newest at the bottom, at most three). */
-    toast(text, ms = 3200) {
+    toast(text, ms = 2400) {
       const n = el('div', 'ph-toast', text); toasts.append(n);
       while (toasts.children.length > 3) toasts.children[0].remove();
       setTimeout(() => { n.classList.add('ph-out'); setTimeout(() => n.remove(), 320); }, ms);
