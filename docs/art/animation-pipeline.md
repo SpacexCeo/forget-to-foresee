@@ -86,6 +86,13 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
     | `cast_lance` (Frost Lance) | coils back onto the ball of the right foot, left knee up, left palm sighting the line, right hand cocked at the ribs | **0.42 s**: the left foot stomps down, a deep lunge, the right palm drives out, the left arm flung back | overshoot to 0.50 s, held key pose to 0.72 s, settle to 1.25 s |
     | `cast_snare` (Storm Snare) | rises onto the ball of the left foot, right knee up, right hand open to the sky | **0.42 s**: the right foot comes down, the arm chops down at the mark | the same |
 
+    The strike combo and the dash are keyed the same way (step 3, 12.11) and replace Iris's first versions from
+    `iris_combat.py` (which still builds Elise's): `strike1` / `strike2` (0.56 s, impact at 0.12 s: a coil, a step in
+    with the opposite foot, the palm driven out, the other hand pulled back), `strike3` (0.88 s, impact at 0.22 s:
+    both hands gathered high on her toes, a deep lunge, both palms out), `dash` (0.52 s: low and forward within
+    0.06 s, one leg driving and one trailing, arms swept back, the front foot catches her at 0.28 s). The game
+    applies a strike's damage on the key press, as before; the clips' impacts sit as early as the poses allow.
+
     The release time is in the clip (`extras.release_s`). In the game (`scenes/town-casting.js`) a click starts the
     clip (`onCastStart` → `IrisAvatar.cast`), the cast's effect, sound and hits fire on the release frame
     (`onCast`, `onFire`), and she stands still from the click to 0.24 s after the release (`CAST_ROOT_AFTER`);

@@ -4,6 +4,10 @@
     python3 art/anim/iris_actions.py --only cast_lance --sheet /tmp/lance.png    # a stick-figure sheet of one clip (needs Pillow)
 
 Clips (60 keys a second, in place; each starts and ends in her idle pose):
+  strike1/2    light palm strikes (right, then the mirror): a short coil, a step in, the palm driven out; impact 0.12 s
+  strike3      the heavy finisher: both hands gathered high on her toes, a deep lunge, both palms out; impact 0.22 s
+  dash         low and forward at once, one leg driving and one trailing, arms swept back; the front foot catches her
+               (these four replace the first versions made by iris_combat.py, which still builds Elise's)
   cast_lance   Frost Lance: she coils back onto the ball of the right foot, the left knee up and the left palm
                sighting the line; then the left foot stomps down and the right palm drives the lance out low.
   cast_snare   Storm Snare: she rises onto the ball of the left foot, the right knee up and the right hand open to
@@ -138,8 +142,115 @@ def cast_snare():
             (0.96, with_ease(back, 'smooth')), (1.25, with_ease(IDLE, 'out'))], 1.25
 
 
-CLIPS = {'cast_lance': cast_lance, 'cast_snare': cast_snare}
-EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R'}}
+def mirror(pose):
+    """The pose with left and right swapped."""
+    out = {}
+    for key, v in pose.items():
+        k2 = key[:-2] + ('_R' if key.endswith('_L') else '_L') if key.endswith(('_L', '_R')) else key
+        if key == 'hips':
+            v = [-v[0], v[1], v[2]]
+        elif key.startswith('arm_'):
+            v = {k: [-x[0], x[1], x[2]] for k, x in v.items()}
+        elif key.startswith('foot_'):
+            v = {k: ([-x[0], x[1], x[2]] if k == 'at' else x) for k, x in v.items()}
+        elif isinstance(v, list) and v and isinstance(v[0], tuple):
+            v = [(ax, -d if ax in 'yz' else d) for ax, d in v]
+        out[k2] = v
+    return out
+
+
+def strike(side):
+    """A light palm strike with the right hand (the left one mirrored): a short coil, a step in with the other foot
+    and the palm driven out from the hip, the other hand pulled back to guard; impact at 0.12 s (the game chains the
+    next one from 0.32 s)."""
+    coil = {
+        'hips': [-0.01, -0.03, -0.03],
+        'pelvis': [('y', -8)], 'spine': [('y', -6)], 'chest': [('y', -12), ('x', 3)],
+        'neck': [('y', 8)], 'head': [('y', 10)],
+        'foot_R': {'at': [0, 0, 0], 'pitch': 6},
+        'arm_R': {'at': [-0.05, -0.20, -0.06], 'elbow': [-0.5, -0.2, -1], 'fingers': [0, 0.5, 1], 'palm': [0.3, -0.2, 1]},
+        'arm_L': {'at': [-0.10, -0.06, 0.30], 'elbow': [0.6, -0.8, 0], 'fingers': [0, 1, 0.3], 'palm': [-0.4, 0, 1]},
+        'fingers_R': 'open', 'fingers_L': 'open',
+    }
+    hit = {
+        'hips': [0.01, -0.08, 0.15],
+        'pelvis': [('y', 10)], 'spine': [('y', 6), ('x', 5)], 'chest': [('y', 14), ('x', 7)],
+        'neck': [('y', -10)], 'head': [('y', -12), ('x', -6)],
+        'foot_L': {'at': [0.03, 0, 0.26], 'yaw': 4},
+        'foot_R': {'at': [0, 0, -0.04], 'pitch': 30, 'yaw': 8},
+        'arm_R': {'at': [0.10, 0.02, 0.455], 'elbow': [-0.7, -0.5, 0], 'fingers': [0, 1, 0.35], 'palm': [0, -0.2, 1]},
+        'arm_L': {'at': [0.02, -0.22, -0.10], 'elbow': [0.5, -0.1, -1], 'fingers': [0, 0.3, 1], 'palm': [-1, 0, 0.2]},
+        'fingers_R': 'flat', 'fingers_L': 'loose_fist',
+    }
+    keys = [(0.0, IDLE), (0.07, with_ease(coil, 'out')), (0.12, with_ease(hit, ('pow', 1.5))), (0.18, with_ease(mix(coil, hit, 1.06), 'out')),
+            (0.30, with_ease(mix(coil, hit, 0.95), 'smooth')), (0.56, with_ease(IDLE, 'smooth'))]
+    if side == 'L':
+        keys = [(t, with_ease(mirror({k: v for k, v in p.items() if k != 'ease'}), p.get('ease'))) for t, p in keys]
+    return keys, 0.56
+
+
+def finisher():
+    """The heavy third hit: she rises on her toes with both hands gathered high behind the right shoulder, then drops
+    into a deep lunge and drives both palms out; impact at 0.22 s."""
+    up = {
+        'hips': [-0.02, 0.04, -0.06],
+        'pelvis': [('y', -10)], 'spine': [('y', -8), ('x', -5)], 'chest': [('y', -14), ('x', -8)],
+        'neck': [('y', 12)], 'head': [('y', 14), ('x', 4)],
+        'foot_R': {'at': [0, 0, 0], 'pitch': 24}, 'foot_L': {'at': [-0.02, 0.10, 0.02], 'pitch': 30},
+        'arm_R': {'at': [-0.10, 0.20, -0.14], 'elbow': [-1, 0.2, -0.6], 'fingers': [0.2, 0.6, 1], 'palm': [0.6, -0.2, 0.8]},
+        'arm_L': {'at': [-0.22, 0.16, 0.10], 'elbow': [0.4, -0.7, 0.4], 'fingers': [-0.6, 0.6, 0.4], 'palm': [-0.6, -0.2, 0.8]},
+        'fingers_R': 'open', 'fingers_L': 'open',
+    }
+    hit = {
+        'hips': [0.0, -0.19, 0.30],
+        'pelvis': [('y', 6)], 'spine': [('y', 3), ('x', 12)], 'chest': [('y', 5), ('x', 14)],
+        'neck': [('y', -4)], 'head': [('y', -6), ('x', -16)],
+        'foot_L': {'at': [0.03, 0, 0.56], 'yaw': 5},
+        'foot_R': {'at': [0, 0, -0.16], 'pitch': 40, 'yaw': 10},
+        'arm_R': {'at': [0.09, 0.03, 0.455], 'elbow': [-0.8, -0.4, 0], 'fingers': [-0.15, 1, 0.3], 'palm': [0, -0.2, 1]},
+        'arm_L': {'at': [-0.09, 0.03, 0.455], 'elbow': [0.8, -0.4, 0], 'fingers': [0.15, 1, 0.3], 'palm': [0, -0.2, 1]},
+        'fingers_R': 'flat', 'fingers_L': 'flat',
+    }
+    back = {
+        'hips': [0.0, -0.05, 0.12],
+        'spine': [('x', 3)], 'chest': [('x', 4)],
+        'foot_L': {'at': [0.0, 0.06, 0.24], 'pitch': 10}, 'foot_R': {'at': [0, 0, 0], 'pitch': 8},
+        'arm_R': {'at': [0.02, -0.34, 0.18], 'elbow': [-0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [0.6, -0.4, -0.6]},
+        'arm_L': {'at': [-0.02, -0.34, 0.18], 'elbow': [0.6, -0.2, -0.5], 'fingers': [0, -0.8, 0.6], 'palm': [-0.6, -0.4, -0.6]},
+    }
+    return [(0.0, IDLE), (0.09, with_ease(mix(IDLE, up, 0.85), 'out')), (0.17, with_ease(up, 'linear')), (0.22, with_ease(hit, ('pow', 1.6))),
+            (0.30, with_ease(mix(up, hit, 1.06), 'out')), (0.46, with_ease(mix(up, hit, 0.96), 'smooth')), (0.66, with_ease(back, 'smooth')), (0.88, with_ease(IDLE, 'out'))], 0.88
+
+
+def dash():
+    """The dash (the game carries her 4.5 m in 0.2 s): she drops low and forward at once, one leg driving, the other
+    trailing, both arms swept back; then the front foot catches her and she rises."""
+    low = {
+        'hips': [0.0, -0.24, 0.10],
+        'pelvis': [('x', 16)], 'spine': [('x', 12)], 'chest': [('x', 14), ('y', -6)],
+        'neck': [('x', -16)], 'head': [('x', -20)],
+        'foot_L': {'at': [0.02, 0.05, 0.40], 'pitch': -8}, 'knee_L': 2,
+        'foot_R': {'at': [0, 0.30, -0.52], 'pitch': 62},
+        'arm_R': {'at': [-0.12, -0.27, -0.36], 'elbow': [-0.6, 0.3, -0.6], 'fingers': [0, -0.55, -1], 'palm': [1, 0, 0]},
+        'arm_L': {'at': [0.14, -0.24, -0.38], 'elbow': [0.6, 0.3, -0.6], 'fingers': [0, -0.5, -1], 'palm': [-1, 0, 0]},
+        'fingers_R': 'flat', 'fingers_L': 'flat',
+    }
+    glide = mix(IDLE, low, 1.05); glide['foot_R'] = {'at': [0, 0.34, -0.60], 'pitch': 68}
+    land = {
+        'hips': [0.0, -0.14, 0.16],
+        'pelvis': [('x', 4)], 'spine': [('x', 6)], 'chest': [('x', 8)], 'head': [('x', -8)],
+        'foot_L': {'at': [0.02, 0, 0.36]}, 'foot_R': {'at': [0, 0.02, -0.20], 'pitch': 34},
+        'arm_R': {'at': [-0.06, -0.30, 0.10], 'elbow': [-0.7, 0, -0.6], 'fingers': [0, -0.7, 0.7], 'palm': [1, 0, 0]},
+        'arm_L': {'at': [0.14, -0.26, -0.16], 'elbow': [0.7, 0, -0.6], 'fingers': [0, -0.9, -0.3], 'palm': [-1, 0, 0]},
+    }
+    step = {'hips': [0.0, -0.04, 0.08], 'foot_L': {'at': [0.0, 0.05, 0.16], 'pitch': 8}, 'foot_R': {'at': [0, 0, 0], 'pitch': 6}}
+    return [(0.0, IDLE), (0.06, with_ease(low, 'out')), (0.20, with_ease(glide, 'linear')), (0.28, with_ease(land, 'out')),
+            (0.40, with_ease(step, 'smooth')), (0.52, with_ease(IDLE, 'out'))], 0.52
+
+
+CLIPS = {'cast_lance': cast_lance, 'cast_snare': cast_snare, 'strike1': lambda: strike('R'), 'strike2': lambda: strike('L'), 'strike3': finisher, 'dash': dash}
+EXTRAS = {'cast_lance': {'release_s': RELEASE_S, 'hand': 'R'}, 'cast_snare': {'release_s': RELEASE_S, 'hand': 'R'},
+          'strike1': {'impact_s': 0.12}, 'strike2': {'impact_s': 0.12}, 'strike3': {'impact_s': 0.22}}
 
 
 def sheet(rig, local, pel, path, fps, times=None, cols=5):
@@ -197,8 +308,8 @@ def main():
         slip = keyed.planted_slip(rig, local, pel, FPS, keys)
         print(name, len(local), 'frames', 'planted slip max %.4f m/s' % slip)
         if a.sheet:
-            sheet(rig, local, pel, a.sheet if len(CLIPS) == 1 or a.only else a.sheet.replace('.png', f'_{name}.png'), FPS,
-                  times=[0, 0.13, 0.38, 0.40, RELEASE_S, 0.50, 0.72, 0.84, 0.96, 1.10] if name.startswith('cast_') else None)
+            sheet(rig, local, pel, a.sheet.replace('.png', f'_{name}.png'), FPS,
+                  times=[0, 0.13, 0.38, 0.40, RELEASE_S, 0.50, 0.72, 0.84, 0.96, 1.10] if name.startswith('cast_') else {'dash': [0, 0.03, 0.06, 0.13, 0.20, 0.24, 0.28, 0.34, 0.40, 0.52], 'strike3': [0, 0.09, 0.17, 0.20, 0.22, 0.30, 0.46, 0.56, 0.66, 0.88]}.get(name, [0, 0.04, 0.07, 0.10, 0.12, 0.18, 0.30, 0.40, 0.50, 0.56]))
         new[name] = {'name': name, 'local': local, 'pelvis': rig.pelvis_local(pel), 'bones': bones, 'fps': FPS,
                      'extras': {'loop': False, 'source': 'keyed by hand (art/anim/iris_actions.py)', **EXTRAS.get(name, {})}}
     if a.sheet:
