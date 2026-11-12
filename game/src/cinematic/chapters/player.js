@@ -23,6 +23,8 @@ export function timeline(film) {
   return { shots, titleEnd: TITLE_SECONDS, cardStart: t, end: t + CARD_SECONDS };
 }
 
+/** Seconds between the film's warm-ups of both light states (see warmStates). */
+export const WARM_EVERY = 1.5;
 /** A press shorter than this is a tap: it cuts to the next shot instead of starting the skip hold. */
 export const TAP_MAX_MS = 350;
 /** Film time (s) at which the tap/hold hint first appears, once the title has settled. */
@@ -124,6 +126,24 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
     if ('speed' in player) player.speed = 0;
     avatar.position.set(pin.pos[0], pin.pos[1], pin.pos[2]);
     avatar.rotation.y = pin.heading;
+  }
+
+  /**
+   * The Shell interior's five point lights change every lit program's key. Programs are keyed at the moment of the
+   * compile call, so the world is warmed once with the interior hidden (the state the film ends in) and once with it
+   * shown (the film): neither a cut nor the end of the film compiles. Repeated every WARM_EVERY s while a film plays,
+   * so models that stream in meanwhile get both variants too (RTX 5090 measurement, 12.11: the end compiled 53-76
+   * programs, a 150 ms frame, when only the lit variant existed).
+   */
+  let warmT = 0;
+  function warmStates() {
+    if (!prewarm) return;
+    if (shellActivated && shell.root) {
+      const v = shell.root.visible; shell.root.visible = false;
+      try { prewarm(); } catch { /* optional */ } finally { shell.root.visible = v; }
+    }
+    try { prewarm(); } catch { /* optional */ }
+    warmT = 0;
   }
 
   function finish(skipped) {
@@ -231,7 +251,7 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
           } catch { /* a shot without a pose yet: it streams on the cut as before */ }
         }
       }
-      if (prewarm) { try { prewarm(); } catch { /* warm-up is optional */ } }
+      warmStates();
       startShot(0);
       applyCamera();
       if (!startPaused) overlay.showHint(HINT_AT, 1.8); // teach the tap and the hold once per film (not in captured stills)
@@ -242,6 +262,7 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
     update(dt) {
       if (!film) return;
       if (!paused) t += dt;
+      warmT += dt; if (warmT >= WARM_EVERY) warmStates();
       const i = shotAt(tl, t);
       if (i !== shotIndex) startShot(i);
       pinIris();
