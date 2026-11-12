@@ -201,3 +201,23 @@ test('combat feel: every melee blow warns at least 0.4 s ahead; every strike hit
   b.strike(from, 0, 5, false, []);
   assert.ok(Math.abs(m.pos[2] - z0 - HIT_SHOVE) < 1e-6, 'a light shove on an ordinary hit');
 });
+
+test('strike direction v2: a creature in the 140° cone in front of the camera within 6 m, else the cursor, else the movement while moving, else the camera forward', async () => {
+  const { strikeAim, pickLock, ACTIONS } = await import('../../src/play/mobs.js');
+  assert.equal(ACTIONS.lock, 6); assert.ok(Math.abs(ACTIONS.lockCone - 140 * Math.PI / 180) < 1e-9);
+  const from = [0, 0, 0], T = { radius: 0.4 };
+  const ahead = { pos: [0, 0, 4], T, state: 'idle' }, behind = { pos: [0, 0, -2], T, state: 'idle' }, far = { pos: [0, 0, 7.5], T, state: 'idle' }, side = { pos: [2, 0, 1.2], T, state: 'idle' };
+  const fwd = [0, 1];
+  assert.equal(pickLock([behind, ahead], from, fwd), ahead, 'the one behind the camera is skipped though nearer');
+  assert.equal(pickLock([far], from, fwd), null, 'beyond 6 m');
+  assert.equal(pickLock([side], from, fwd), side, 'inside the 140° cone (59° off)');
+  assert.equal(pickLock([{ pos: [3, 0, -1.5], T, state: 'idle' }], from, fwd), null, 'outside the cone');
+  assert.equal(pickLock([{ ...ahead, state: 'dead' }], from, fwd), null);
+  assert.equal(pickLock([{ pos: [0.2, 0, -0.5], T, state: 'idle' }], from, fwd)?.pos[2], -0.5, 'one right on top of her counts from any side');
+  const cam = [1, 0];
+  assert.equal(strikeAim({ from, heading: 2, lock: ahead, cursor: [5, 0, 0], move: [0, -1], camera: cam }).by, 'lock');
+  assert.equal(strikeAim({ from, heading: 2, cursor: [5, 0, 0], move: [0, -1], camera: cam }).by, 'cursor');
+  assert.equal(strikeAim({ from, heading: 2, move: [0, -1], camera: cam }).by, 'move', 'moving: her movement');
+  const c = strikeAim({ from, heading: 2, move: [0, 0], camera: cam }); assert.equal(c.by, 'camera'); assert.ok(Math.abs(c.heading - Math.PI / 2) < 1e-9, 'standing, no creature: where the camera looks');
+  assert.equal(strikeAim({ from, heading: 2 }).by, 'facing');
+});

@@ -1,5 +1,6 @@
 // Weather clips from the real game (GPU server), HUD hidden, the game's own post-processed frames:
 //   node art/weather/rain.mjs rain  <out dir> [url]   15 s: the square at dusk, clear, then rain comes in
+//   node art/weather/rain.mjs walk  <out dir> [url]   15 s in rain at dusk with the game's own camera: Iris walks, the camera turns
 //   node art/weather/rain.mjs still <out dir> [url]   stills of every weather at dusk and at night (fog, storm flash...)
 // Frames f_0000.jpg.. (rain) or <weather>_<hour>.jpg (still) + report.json.
 import { createRequire } from 'node:module';
@@ -23,7 +24,22 @@ async function open(tod) {
   await page.evaluate(() => window.__ftf.player.teleport([0.6, 1203, 30.5], Math.PI));
   await wait(3000);
 }
-if (mode === 'rain') {
+if (mode === 'walk') {
+  await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris&mobs=0&tod=dusk&weather=rain`);
+  await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
+  for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
+  await page.addStyleTag({ content: 'body * { visibility: hidden !important; } canvas { visibility: visible !important; }' });
+  await page.evaluate(() => window.__ftf.player.teleport([0.6, 1203, 30.5], Math.PI));
+  await wait(4000);
+  let n = 0, capturing = true; const t0 = Date.now();
+  const cap = (async () => { while (capturing) writeFileSync(`${out}/f_${String(n++).padStart(4, '0')}.jpg`, await page.screenshot({ type: 'jpeg', quality: 88 })); })();
+  await page.keyboard.down('KeyW'); await wait(5000); await page.keyboard.up('KeyW');
+  for (let i = 0; i < 40; i++) { await page.evaluate(() => { window.__ftf.rig.yaw += 0.045; }); await wait(100); }   // the camera turns around her
+  await page.keyboard.down('KeyW'); await wait(4000); await page.keyboard.up('KeyW'); await wait(1500);
+  capturing = false; await cap;
+  const secs = (Date.now() - t0) / 1000;
+  writeFileSync(`${out}/report.json`, JSON.stringify({ frames: n, seconds: +secs.toFixed(1), fps: +(n / secs).toFixed(2), errors }, null, 1));
+} else if (mode === 'rain') {
   await open('dusk');
   // a slow dolly over the square, Iris walking up it; the rain comes in two seconds in
   await page.evaluate(() => {
