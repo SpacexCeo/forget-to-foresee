@@ -22,16 +22,20 @@ import health from './api/health.js';
 import agentSay from './api/agent/say.js';
 import agentDecide from './api/agent/decide.js';
 import chestOpen from './api/chest/open.js';
+import expeditionLog from './api/expedition/log.js';
 import wheelClaim from './api/wheel/claim.js';
 import marketStats from './api/market/stats.js';
 import marketResource from './api/market/resource.js';
+import townGate from './api/town/gate.js';
+import companionClaim from './api/companion/claim.js';
 import { marketDaemon } from './market/index.js';
 import passClaim from './api/pass/claim.js';
 import passStatus from './api/pass/status.js';
 import passEligibility from './api/pass/eligibility.js';
 import { passService } from './lib/pass-service.js';
 
-const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats,
+const routes = { '/api/create-guest': createGuest, '/api/health': health, '/api/agent/say': agentSay, '/api/agent/decide': agentDecide, '/api/chest/open': chestOpen, '/api/expedition/log': expeditionLog, '/api/wheel/claim': wheelClaim, '/api/market/stats': marketStats,
+  '/api/market/resource': marketResource, '/api/town/gate': townGate, '/api/companion/claim': companionClaim,
   '/api/pass/claim': passClaim, '/api/pass/status': passStatus, '/api/pass/eligibility': passEligibility };
 if (!process.env.TRUST_PROXY) process.env.TRUST_PROXY = '0'; // direct exposure: do not trust X-Forwarded-For
 
@@ -49,7 +53,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const market = marketDaemon();
   // the pass queue worker: every 10 s (the kill switch is read on every attempt, so a STOP file halts sending within 10 s)
   if (process.env.FTF_PASS_KEY) setInterval(() => { passService().work().catch(() => {}); }, 10_000).unref();
-  createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'}, TEE ${process.env.NEARAI_API_KEY ? 'set' : 'NOT set'}, chests ${process.env.FTF_CHEST_KEY ? 'set' : 'NOT set'}, skins ${process.env.FTF_SKIN_KEY ? 'set' : 'NOT set'}, market ${market ? market.stats().traders + ' traders' : 'off'}, pass ${process.env.FTF_PASS_KEY ? 'set' : 'dry-run'} ${process.env.FTF_PASS_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'})`));
+  createServer().listen(port, host, () => console.log(`relayer on http://${host}:${port} (key ${process.env.FTF_GUEST_KEY ? 'set' : 'NOT set'}, TEE ${process.env.NEARAI_API_KEY ? 'set' : 'NOT set'}, chests ${process.env.FTF_CHEST_KEY ? 'set' : 'NOT set'}, skins ${process.env.FTF_SKIN_KEY ? 'set' : 'NOT set'}, dragons ${process.env.FTF_COMPANION_KEY ? 'set' : 'NOT set'}, market ${market ? market.stats().traders + ' traders' : 'off'}, pass ${process.env.FTF_PASS_KEY ? 'set' : 'dry-run'} ${process.env.FTF_PASS_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'})`));
   const bye = () => { if (market) market.stop(); process.exit(0); };
   process.on('SIGTERM', bye); process.on('SIGINT', bye);
 }

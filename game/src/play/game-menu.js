@@ -127,13 +127,15 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
 
 /**
  * Opens the menu. Returns {root, close, show(tab)}.
- * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, exportKey?: Function|null,
+ * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now() }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now() }) {
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
+  let owner = ownerIn; // becomes the new guest's account once the free account is made from the chest bag
+  let guestBusy = false, guestErr = null;
   const wheel = createWheel({ storage, account: owner, now, earnedFrom: () => Math.max(0, ledger.level.level - 1) + (ledger.stats.trialsVerified || 0) });
   const inv = createInventory({ storage });
   const items = manifest || loadManifest(base);
@@ -314,6 +316,16 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     const box = el('section', 'gm-chests');
     box.append(el('h3', null, t('chest.heading', { n: bag.sealed().length })));
     if (!all.length) { box.append(el('p', 'gm-note', t('chest.none'))); return box; }
+    const sealedNow = bag.sealed();
+    if (!owner && sealedNow.length) box.append(guestBanner()); // one line for the whole grid, not one per card (owner, 12.11)
+    if (sealedNow.length >= 2 && owner && chestApi.available && chestApi.openMany) { // batch opening (owner, 12.11): one transaction for up to 10
+      const row = el('div', 'gm-row'); row.style.display = 'flex'; row.style.gap = '8px'; row.style.flexWrap = 'wrap'; row.style.margin = '6px 0 10px';
+      const five = Math.min(5, sealedNow.length), most = Math.min(10, sealedNow.length);
+      for (const [label, k] of [[t('chest.batch.open', { n: five }), five], ...(most > five ? [[t('chest.batch.all', { n: most }), most]] : [])]) {
+        const b = btn(label, () => openMany(k, list), 'gm-btn'); b.style.minHeight = '40px'; b.style.padding = '8px 14px'; row.append(b);
+      }
+      box.append(row);
+    }
     const g = el('div', 'gm-grid');
     for (const c of all.slice(0, 24)) {
       const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
@@ -324,8 +336,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const b = btn(t('chest.open'), () => openOne(c, list), 'gm-btn'); b.style.marginTop = '8px'; b.style.minHeight = '40px'; b.style.padding = '8px 14px';
         b.disabled = !chestApi.available || !owner;
         card.append(b);
-        if (!owner) card.append(el('small', null, t('chest.needGuest')));
-        else if (!chestApi.available) card.append(el('small', null, t('chest.err.off')));
+        if (owner && !chestApi.available) card.append(el('small', null, t('chest.err.off')));
       } else {
         const o = c.opening && c.opening.outcome;
         const ok = c.opening && c.opening.verified, tx = c.opening && c.opening.tx;
@@ -341,15 +352,45 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     box.append(g);
     return box;
   }
+  /** One opening's reward into this browser's ledger and inventory, and the chest marked opened. */
+  function settleChest(chest, op, verified) {
+    const o = op.outcome;
+    if (o.kind === 'item' && o.id) { inv.add(o.id, 1, 'chest'); fresh.add(o.id); }
+    if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
+    if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
+    bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!verified });
+  }
+  /** No guest yet: one line and the Day-1 free account button (the same mint the arrival runs, play/day1-mint.js). */
+  function guestBanner() {
+    const wrap = el('div', 'gm-guest'); wrap.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;padding:10px 12px;border:1px solid rgba(217,178,106,.45);border-radius:10px;background:rgba(217,178,106,.08)';
+    const line = el('p', 'gm-note', t('chest.guest.line')); line.style.margin = '0'; line.style.flex = '1 1 220px';
+    wrap.append(line);
+    if (!createGuest) return wrap;
+    const b = btn(t(guestBusy ? 'chest.guest.making' : 'chest.guest.create'), async () => {
+      if (guestBusy) return;
+      guestBusy = true; guestErr = null; b.disabled = true; b.textContent = t('chest.guest.making');
+      let r = null;
+      try { r = await createGuest(); } catch (e) { r = { error: (e && e.message) || 'error' }; }
+      guestBusy = false;
+      if (r && r.account) owner = r.account; else guestErr = (r && r.error) || 'failed';
+      if (current === 'inventory') show('inventory');
+    }, 'gm-btn');
+    b.style.minHeight = '40px'; b.style.padding = '8px 14px'; b.disabled = guestBusy;
+    wrap.append(b);
+    if (guestErr) { const e = el('small', null, t(guestErr === 'not_configured' ? 'chest.guest.off' : 'chest.guest.failed')); e.style.flexBasis = '100%'; e.setAttribute('role', 'status'); wrap.append(e); }
+    return wrap;
+  }
   function openOne(chest, list) {
     import('./chest-open.js').then((m) => {
-      const r = m.openChestReveal({ doc, t, chest, client: chestApi, guest: owner, items: list, base, onSettled: (op, v) => {
-        const o = op.outcome;
-        if (o.kind === 'item' && o.id) { inv.add(o.id, 1, 'chest'); fresh.add(o.id); }
-        if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
-        if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
-        bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!v.verified });
-      } });
+      const r = m.openChestReveal({ doc, t, chest, client: chestApi, guest: owner, items: list, base, onSettled: (op, v) => settleChest(chest, op, v.verified) });
+      r.result.then(() => { if (current === 'inventory') show('inventory'); });
+    }).catch((e) => console.warn('[chest]', e));
+  }
+  /** Several sealed chests at once: one relayer transaction, a flip-by-flip reveal and a summary (play/chest-batch.js). */
+  function openMany(count, list) {
+    import('./chest-batch.js').then((m) => {
+      const r = m.openChestBatch({ doc, t, client: chestApi, chests: bag.sealed().slice(0, count), count, items: list, base,
+        onSettled: (chest, op) => settleChest(chest, op, op.verification && op.verification.verified) });
       r.result.then(() => { if (current === 'inventory') show('inventory'); });
     }).catch((e) => console.warn('[chest]', e));
   }

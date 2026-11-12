@@ -12,10 +12,10 @@ import { memoryStorage } from '../../src/ui/storage.js';
 
 const go = (s, a, ctx) => reduce(s, a, ctx);
 
-test('the fee is 10,000 town silk (1,000,000 hundredths); the Expedition is on by default (one entry), ?story=0 off; a demo fee is labelled', () => {
-  assert.equal(EXPEDITION.PORTAL_FEE_C, 1_000_000); assert.equal(EXPEDITION.currency, 'silk');
+test('the fee is 200 town silk (20,000 hundredths, rev 4: paid on chain by pay_gate); the Expedition is on by default (one entry), ?story=0 off; a demo fee is labelled', () => {
+  assert.equal(EXPEDITION.PORTAL_FEE_C, 20_000); assert.equal(EXPEDITION.currency, 'silk');
   assert.equal(storyOn(''), true); assert.equal(storyOn('?story=1'), true); assert.equal(storyOn('?demo=judge'), true); assert.equal(storyOn('?story=0'), false);
-  assert.deepEqual(portalFee(''), { feeC: 1_000_000, demo: false });
+  assert.deepEqual(portalFee(''), { feeC: 20_000, demo: false });
   assert.deepEqual(portalFee('?portalFee=500'), { feeC: 50_000, demo: true });
 });
 
@@ -35,14 +35,14 @@ test('state machine: every legal transition, every illegal one rejected without 
   for (const id of ['moved', 'struck']) r = go(r.state, { type: 'GUIDE_STEP', id });
   assert.equal(r.state.phase, 'guide');
   r = go(r.state, { type: 'GUIDE_STEP', id: 'dashed' }); assert.equal(r.state.phase, 'gathering', 'all four steps open it too');
-  assert.equal(go(r.state, { type: 'SILK', balanceC: 999_999 }).state.phase, 'gathering');
+  assert.equal(go(r.state, { type: 'SILK', balanceC: 19_999 }).state.phase, 'gathering');
   assert.ok(go(r.state, { type: 'PAY_GATE', balanceC: 2e6 }).rejected, 'the gate is not open yet');
-  r = go(r.state, { type: 'SILK', balanceC: 1_000_000 }); assert.equal(r.state.phase, 'gate_open'); assert.equal(storyStep(r.state), 'story.step.portal');
+  r = go(r.state, { type: 'SILK', balanceC: 20_000 }); assert.equal(r.state.phase, 'gate_open'); assert.equal(storyStep(r.state), 'story.step.portal');
   assert.equal(go(r.state, { type: 'SILK', balanceC: 10 }).state.phase, 'gathering', 'silk spent elsewhere closes it again');
   assert.ok(go(r.state, { type: 'PAY_GATE', balanceC: 10 }).rejected);
-  const paid = go(r.state, { type: 'PAY_GATE', balanceC: 1_000_000 }, { now: 5 });
+  const paid = go(r.state, { type: 'PAY_GATE', balanceC: 20_000 }, { now: 5 });
   assert.equal(paid.state.phase, 'twist'); assert.equal(paid.state.paidAt, 5);
-  assert.deepEqual(paid.events, [{ kind: 'portal_paid', data: { feeC: 1_000_000, demo: false }, silkC: -1_000_000 }]);
+  assert.deepEqual(paid.events, [{ kind: 'portal_paid', data: { feeC: 20_000, demo: false }, silkC: -20_000 }]);
   assert.ok(go(paid.state, { type: 'PAY_GATE', balanceC: 2e6 }).rejected, 'never paid twice');
   const on = go(paid.state, { type: 'TWIST_DONE' }); assert.equal(on.state.phase, 'onward'); assert.equal(on.events[0].silkC, EXPEDITION.stipendC);
   assert.equal(go(on.state, { type: 'PASS_SHOWN' }).state.passShown, true);

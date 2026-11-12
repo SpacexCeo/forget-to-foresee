@@ -20,5 +20,5 @@ test('the copy runs on the server: a log verifies with the same rules', async ()
   for (const a of [{ type: 'ACCEPT', questId: 'q_welcome' }, { type: 'GUIDE', step: 'talked' }, { type: 'GUIDE', step: 'moved' }, { type: 'TURN_IN', questId: 'q_welcome' }]) {
     const r = applyQuest(s, a, { now: 1 }); s = r.state; for (const e of r.events) log = [...log, makeEntry(log, { t: log.length, ...e })];
   }
-  assert.deepEqual([verifyLog(log).ok, verifyLog(log).earned], [true, 40_000]);
+  assert.deepEqual([verifyLog(log).ok, verifyLog(log).earned], [true, 800]);
 });

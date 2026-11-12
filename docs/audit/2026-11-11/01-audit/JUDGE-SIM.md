@@ -115,7 +115,7 @@ Persona: crypto-literate judge on a MacBook with a normal GPU, looking at 40 pro
 - **Fun:** 7/10 as a single run. The decision "forget a memory for a vision" is compelling; the 17-trial season is long for a judge, and the judge path ends the interesting part by trial 6. Hired townsfolk agents and the Foresight Exchange drill are bonus depth that a 5-minute judge will not reach.
 - **Honesty:** 9/10. "Unminted shard preview" and the real/mock table are best-in-class. One slip: the GitHub description.
 - **Overclaims vs reality:** none in the app. In the GitHub description ("NFT agents"). The video (Shell interior, dark) does not show what the judge opens first (bright town).
-- **Competitor lens** (`FTF-COMPETITOR-MAP.md`): Crownfall wins on social login and a live economy; Lunearcy on the "merchant is a contract" literalism; Afterlight on a dynamic NFT. FTF wins on visual polish, verifiability and agent API. To be "unbeatable" it needs one **NFT that visibly does something** and one **invisible-chain moment for a new player** (free mint).
+- **Competitor lens** (`FTF-COMPETITOR-MAP.md`): a rival entry wins on social login and a live economy; Lunearcy on the "merchant is a contract" literalism; Afterlight on a dynamic NFT. FTF wins on visual polish, verifiability and agent API. To be "unbeatable" it needs one **NFT that visibly does something** and one **invisible-chain moment for a new player** (free mint).
 
 ### B.3 What would move the score most, in order
 

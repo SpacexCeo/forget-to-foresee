@@ -152,8 +152,8 @@ about judging beyond HACKATHON.md.
   thesis 24, **nfts 21**, social 18, memecoins 16.
 - Tracks per project: 98 projects claim one track, 89 two, 66 three, 49 four or more (two projects claim nine).
 - 39 projects claim `games` or `nfts`; 7 claim both (e.g. "Afterlight", "DeepSea Hunter", "NEARlyHuman - AI NPC NFT",
-  "SCOGÉ Universe", "VillageBill", "Bazaar Sovereign", "Meridian"). Single-track `games` entries include "Grind
-  District", "Nearverse", "Pump Rider", "Q-day", "TokenGo", "TreasureHunt". Several games entries pair with
+  "SCOGÉ Universe", "VillageBill", "Bazaar Sovereign", "a rival entry"). Single-track `games` entries include "Grind
+  District", "Nearverse", "Pump Rider", "Q-day", "a rival entry", "TreasureHunt". Several games entries pair with
   `agents`/`swarms` ("Lantern Caravan", "Agent Undercover", "DiveMarket", "Overclock"), i.e. agent-NPC games are a
   visible cluster. Names only; no content was reviewed.
 

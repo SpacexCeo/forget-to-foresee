@@ -55,6 +55,17 @@ export function scriptedStrategy(state) {
 
 export const llmLabel = (model) => `LLM-chosen strategy (${model} via NEAR AI Cloud), moves by the rules engine`;
 export const SCRIPTED_LABEL = 'Scripted strategy (rules engine)';
+/**
+ * The one label of a clan decision (C11, docs/ai-use.md): "LLM-chosen" only with the TEE attestation id (the signed
+ * chat id), else "Scripted (model unavailable: <reason>)". A scripted label never says AI or LLM.
+ */
+export function labelFor({ source, model = null, attestationId = null, reason = null } = {}) {
+  if (source === 'llm') {
+    if (!attestationId) throw new Error('an LLM label needs an attestation id');
+    return `LLM-chosen strategy (${model} via NEAR AI Cloud, attestation ${attestationId}), moves by the rules engine`;
+  }
+  return reason ? `Scripted (model unavailable: ${reason})` : SCRIPTED_LABEL;
+}
 
 /**
  * One decision for a clan: the model's bounded parameters when it answers, else the scripted ones.
@@ -70,15 +81,15 @@ export async function decideStrategy(state, { apiKey = '', model = TEE_DEFAULTS.
     try { r = await chat(req, { apiKey, ...(base ? { base } : {}), ...(fetch ? { fetch } : {}), timeoutMs: 20_000 }); } catch (e) { r = { status: 502, body: { error: String(e.message || e).slice(0, 60) } }; }
     if (r && r.status === 200 && r.body && r.body.tee) {
       const params = parseStrategy(r.body.text, state.clan);
-      if (params) {
-        const t = r.body.tee;
-        return { ...rec, source: 'llm', label: llmLabel(t.model || model), model: t.model || model, chat_id: t.chat_id, verified: !!t.verified,
+      const t = r.body.tee;
+      if (params && t.chat_id && t.verified) {
+        return { ...rec, source: 'llm', label: labelFor({ source: 'llm', model: t.model || model, attestationId: t.chat_id }), model: t.model || model, chat_id: t.chat_id, verified: !!t.verified,
           response: r.body.text, response_hash: t.response_hash, request_hash: t.request_hash, signature_check: t.signature_check, params };
       }
-      why = 'unparseable';
+      why = !params ? 'unparseable' : 'unattested'; // no verified TEE signature: never labelled LLM
     } else why = (r && r.body && (r.body.upstream_status ? 'upstream_' + r.body.upstream_status : r.body.error)) || 'no_answer';
   }
-  return { ...rec, source: 'scripted', label: SCRIPTED_LABEL, model: null, fallback_reason: why, params: scriptedStrategy(state) };
+  return { ...rec, source: 'scripted', label: labelFor({ source: 'scripted', reason: why }), model: null, fallback_reason: why, params: scriptedStrategy(state) };
 }
 
 /** Holds the current strategy per clan, journals decisions and reports the AI-chosen vs scripted share. */

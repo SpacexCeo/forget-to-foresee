@@ -63,6 +63,18 @@ Townsfolk speech and a trader's buy/sell/hold come from a model that runs inside
 relayer re-derives the wheel id and the roll, bounds the spin number and mints on `skins.ftf-coordinator.testnet`
 (cap 100, one per account) with `FTF_SKIN_KEY`. Details: `docs/wheel-skin.md`.
 
+## Expedition logs (story TZ Q4)
+
+`POST /api/expedition/log` stores a guest's expedition log for the whitelist pass: signed batches (the Day 1 guest key,
+an access key of the account, checked on testnet) of up to 50 hash-chained entries, appended to
+`FTF_EXPEDITION_DIR/<guest>.jsonl` after the hash chain, rule bounds on every silk delta and kill plausibility checks
+(minimum time between kills, at most 40 kills per 5 minutes and 1,200 a day; T1, plausibility, not proof). A retried
+batch is a no-op; a fork or a gap is refused (409). `GET /api/expedition/log?guest=<account>` returns the stored length
+and head. Without `FTF_EXPEDITION_DIR` nothing is stored and the answer says `storage_off`. The pass
+(`lib/pass-eligibility.js`) reads the same files. Code: `lib/expedition-store.js`, `api/expedition/log.js`.
+
+The portal's on-chain credits and `pay_gate_for` are `api/town/gate.js` (docs/town-gate.md); they read these logs.
+
 ## Test
 
 ```bash

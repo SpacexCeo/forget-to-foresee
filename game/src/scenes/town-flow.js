@@ -11,6 +11,9 @@ import { matchIntent, replyFor } from '../game/intents.js';
 import { guideAnim, GUIDE_ANIM_PAGES } from './guide-anim.js';
 import { createPillStack, pillKey, parsePillKey } from './panel-pills.js';
 
+/** Townsfolk who keep a monster-resource stall (net/stall-client.js STALLS; a test checks them): their card opens it. The
+ * ash-ore stall belongs to the Ash clan agent, who has no townsperson's card yet. */
+export const STALL_KEEPERS = Object.freeze(['guard', 'shrinekeeper', 'shardkeeper']);
 /** Town spots that are shop doors: with walk-in shops (onDoor) E goes inside instead of opening the panel here. */
 const DOORS = new Set(['exchange', 'scribe', 'inn']);
 import { PLAY_MESSAGES } from '../play/i18n.js';
@@ -202,6 +205,8 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     const b = (key, fn, primary = false, disabled = false) => { const x = el('button', null, T(key)); x.type = 'button'; x.disabled = disabled; if (!primary) x.style.background = 'rgba(233,180,76,.14)', x.style.color = '#f3ead6'; x.addEventListener('click', () => { x.blur(); fn(); }); return x; };
     const kids = [el('h3', null, T('folk.name.' + npc))];
     const row = el('div', 'ftf-quest-choices');
+    // a stall keeper's card opens the resource stall (ui/stall-panel.js, window 'ftf:stall-open')
+    const stallBtn = () => b('stall.open', () => { try { globalThis.dispatchEvent(new CustomEvent('ftf:stall-open', { detail: { npc } })); } catch { /* no DOM */ } });
     const h = ledger.hireOf(npc);
     if (folkTalk.view === 'guide') {
       // the shrinekeeper is the guide (owner, 11.11): what the tutorial screens used to say, as four short talks
@@ -209,6 +214,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       const anim = guideAnim(doc, pg + 1); if (anim) kids.push(anim);
       kids.push(el('p', null, T('guide.' + (pg + 1))));
       if (pg < last) row.append(b('quest.next', () => { folkTalk.page++; renderFolk(); }, true));
+      if (STALL_KEEPERS.includes(npc)) row.append(stallBtn());
       row.append(b('quest.close', closeFolk, pg === last));
       kids.push(row);
       setTalk(...kids);
@@ -241,7 +247,9 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
       kids.push(dl);
       const why = ledger.canHire(npc);
       if (why) kids.push(el('p', 'ftf-local', T('hire.why.' + why)));
-      row.append(b('hire.hire', () => { const r = ledger.hire(npc); if (r.ok && onHireChange) onHireChange(npc, true); renderText(); renderVisibility(); }, true, !!why), b('quest.close', closeFolk));
+      row.append(b('hire.hire', () => { const r = ledger.hire(npc); if (r.ok && onHireChange) onHireChange(npc, true); renderText(); renderVisibility(); }, true, !!why));
+      if (STALL_KEEPERS.includes(npc)) row.append(stallBtn());
+      row.append(b('quest.close', closeFolk));
     }
     // scripted dialogue (game/intents.js): type a question, the townsperson answers from a script and its real state
     const form = el('form'); form.style.cssText = 'display:flex;gap:6px;margin:4px 0 8px';
