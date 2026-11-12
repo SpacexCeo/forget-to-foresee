@@ -183,12 +183,12 @@ test('instant skips (owner, 12.11): the interior and every program are made read
   const shell = { active: false, origin: [0, 300, 0], root: new THREE.Object3D(), activate(n) { this.active = true; log.push('activate:' + n); }, deactivate() { this.active = false; log.push('deactivate'); }, spawn: () => ({ pos: [0, 300, 4.5] }), setSign() {} };
   const fp = createFilmPlayer({ camera: new THREE.PerspectiveCamera(40, 1.6, 0.1, 1000), player: { pos: [0, 0, 0], heading: 0 }, avatar: new THREE.Object3D(), shell, agents: null, overlay, now: () => 0, renderLine: () => 'line', win, prewarm: () => log.push('prewarm') });
   const done = fp.play(film);
-  assert.deepEqual(log.slice(0, 2), [log[0], 'prewarm']); assert.match(log[0], /^activate:/, 'the interior is switched on before the warm-up');
-  assert.equal(log.filter((x) => x === 'prewarm').length, 1);
+  assert.deepEqual(log.slice(0, 3), ['prewarm', log[1], 'prewarm'], 'warmed without the interior lights, then with them'); assert.match(log[1], /^activate:/);
+  assert.equal(log.filter((x) => x === 'prewarm').length, 2);
   for (let i = 0; i < film.shots.length + 1 && fp.playing; i++) fp.next();
   assert.equal(log.filter((x) => x.startsWith('activate')).length, 1, 'no cut activates anything again');
   fp.skip(); await done;
-  assert.equal(log.at(-1), 'deactivate', 'the Shell interior is put away after the film');
+  assert.deepEqual(log.slice(-2), ['deactivate', 'prewarm'], 'the Shell interior is put away after the film, and the world warmed again in its own lights');
   s.dispose();
 });
 

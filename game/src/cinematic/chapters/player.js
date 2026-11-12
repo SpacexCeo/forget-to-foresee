@@ -133,7 +133,7 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
     film = null; tl = null; pose = null; shotIndex = -1; hold = null;
     setNameplates(true);
     pinIris(); pin = null;
-    if (shellActivated && !shellWasActive) { try { shell.deactivate(); } catch { /* ok */ } }
+    if (shellActivated && !shellWasActive) { try { shell.deactivate(); } catch { /* ok */ } if (prewarm) { try { prewarm(); } catch { /* optional */ } } } // models that streamed in meanwhile, in the lights the world is back to
     shellActivated = 0;
     overlay.hide();
     if (skipped && narration) { try { narration.cancel(); } catch { /* ok */ } }
@@ -218,6 +218,9 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
       // interior of an interior shot is switched on at the start (it sits far from the plaza, out of the other shots),
       // and every texture and program in the scene is warmed (render/warmup.js warmScene).
       const inner = f.shots.find((s) => s.cam && s.cam.kind === 'interior');
+      // the interior's point lights change every lit program: warm the world without them first (the state the film
+      // ends in), then with them (the film), so neither the cuts nor the end compile (GPU measurement, 12.11)
+      if (inner && prewarm && !shell.active) { try { prewarm(); } catch { /* warm-up is optional */ } }
       if (inner) { try { liveInterior(inner.cam.shell); } catch { /* the interior is optional */ } }
       // and what each shot will show starts streaming now (it attaches warmed, during the title), not on the cut
       if (prefetchView) {
