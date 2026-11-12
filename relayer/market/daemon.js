@@ -7,6 +7,22 @@
 import { b58encode, findFailure, importSecretKey, serializeFunctionCallTx, sha256, signedTxBytes } from '../lib/near-tx.js';
 import { TRADERS, traderKey } from './catalog.js';
 import { applyTrade, initialState, pickTrade } from './behaviour.js';
+
+/** The market contract's policy (contracts/market): goods at prices; a town policy lives in lib/town-traders.js. */
+export const MARKET_POLICY = Object.freeze({
+  init: (keys) => initialState(keys),
+  pick: pickTrade,
+  apply: applyTrade,
+  args: (t, accountOf) => ({ to: accountOf(t.seller), item: t.item, qty: t.qty, price: t.price }),
+  async sync(client, contractId, st) {
+    const [bal, items, stats] = await Promise.all([client.view(contractId, 'balances'), client.view(contractId, 'items'), client.view(contractId, 'stats')]);
+    for (const [acc, v] of bal || []) { const k = traderKey(acc); if (k && k in st.balances) st.balances[k] = Number(v); }
+    for (const it of items || []) st.prices[it.id] = it.last;
+    return stats;
+  },
+  row: (t) => ({ buyer: t.buyer, seller: t.seller, item: t.item, qty: t.qty, price: t.price }),
+  refetch: /ERR_FUNDS|ERR_PRICE/,
+});
 import { DEFAULT_TARGET, createRateCap, nextGapMs, utcDay } from './schedule.js';
 
 export const RECENT = 30;
@@ -20,11 +36,12 @@ const errText = (e) => String((e && e.rpc && JSON.stringify(e.rpc.data || e.rpc.
 export function createMarketDaemon({
   contractId, traders, client, store = null, log = () => {}, target = DEFAULT_TARGET, now = () => Date.now(),
   rand = Math.random, maxPerMinute = 60, paused = false, timers = { setTimeout, clearTimeout }, gas = TRADE_GAS,
+  policy = MARKET_POLICY, dryRun = false,
 }) {
   const keys = traders.map((t) => t.key).filter((k) => TRADERS.includes(k));
   const saved = (store && store.load()) || null;
   const st = {
-    ...initialState(keys), recent: [], day: utcDay(now()), today: 0, failures: 0, ...(saved || {}),
+    ...policy.init(keys), recent: [], day: utcDay(now()), today: 0, failures: 0, ...(saved || {}),
   };
   if (st.day !== utcDay(now())) { st.day = utcDay(now()); st.today = 0; st.failures = 0; }
   const signers = new Map(traders.map((t) => [t.key, { ...t, signer: null, nonce: null, low: false, lowUntil: 0 }]));
@@ -43,11 +60,10 @@ export function createMarketDaemon({
   /** Reads balances, prices and the contract's counters; marks traders whose NEAR is low. */
   async function sync() {
     try {
-      const [bal, items, stats] = await Promise.all([client.view(contractId, 'balances'), client.view(contractId, 'items'), client.view(contractId, 'stats')]);
-      for (const [acc, v] of bal || []) { const k = traderKey(acc); if (k && k in st.balances) st.balances[k] = Number(v); }
-      for (const it of items || []) st.prices[it.id] = it.last;
+      const stats = await policy.sync(client, contractId, st, (k) => signers.get(k) && signers.get(k).account);
       chain = { ...stats, at: now() };
     } catch (e) { lastError = 'sync: ' + errText(e); }
+    if (dryRun) return;
     for (const s of signers.values()) {
       try {
         const a = await client.rpc('query', { request_type: 'view_account', finality: 'final', account_id: s.account });
@@ -58,10 +74,11 @@ export function createMarketDaemon({
 
   /** Signs and sends one trade for trader `s`. Resolves {ok, hash, failure, retry}. */
   async function send(s, t) {
+    if (dryRun) return { ok: true, hash: null, dry: true }; // dry run: nothing is signed or sent
     if (!s.signer) s.signer = await importSecretKey(s.secretKey);
     if (s.nonce === null) s.nonce = BigInt((await client.rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: s.account, public_key: s.signer.publicKey })).nonce);
     const nonce = s.nonce + 1n;
-    const tx = serializeFunctionCallTx({ signerId: s.account, publicKey: s.signer.publicKey, nonce, receiverId: contractId, blockHash: await blockHash(), methodName: 'trade', args: { to: signers.get(t.seller).account, item: t.item, qty: t.qty, price: t.price }, gas, deposit: 0n });
+    const tx = serializeFunctionCallTx({ signerId: s.account, publicKey: s.signer.publicKey, nonce, receiverId: contractId, blockHash: await blockHash(), methodName: 'trade', args: policy.args(t, (k) => signers.get(k).account), gas, deposit: 0n });
     const hash = await sha256(tx);
     const sig = await s.signer.sign(hash);
     try {
@@ -84,18 +101,18 @@ export function createMarketDaemon({
     const s = signers.get(key);
     if (!s || isPaused || (s.low && now() < s.lowUntil)) return null;
     if (!cap.take()) return null;
-    const t = pickTrade(st, key, rand, keys);
+    const t = policy.pick(st, key, rand, keys);
     if (!t || !signers.has(t.seller)) return null;
     const r = await send(s, t);
-    const entry = { at: now(), ...t, hash: r.hash, ok: r.ok };
+    const entry = { at: now(), ...t, hash: r.hash, ok: r.ok, ...(r.dry ? { dry: true } : {}) };
     if (r.ok) {
-      applyTrade(st, t); st.today++;
-      st.recent.unshift({ at: entry.at, buyer: t.buyer, seller: t.seller, item: t.item, qty: t.qty, price: t.price, hash: r.hash });
+      policy.apply(st, t); st.today++;
+      st.recent.unshift({ at: entry.at, ...policy.row(t), hash: r.hash });
       st.recent.length = Math.min(st.recent.length, RECENT);
       s.low = false;
     } else {
       st.failures++; lastError = `${key}: ${String(r.failure).slice(0, 200)}`; entry.failure = r.failure;
-      if (/ERR_FUNDS|ERR_PRICE/.test(String(r.failure))) await sync();
+      if (policy.refetch.test(String(r.failure))) await sync();
       if (s.low) s.lowUntil = now() + LOW_RETRY_MS;
     }
     log(entry); save();
@@ -125,7 +142,7 @@ export function createMarketDaemon({
     stats() {
       rollDay();
       return {
-        enabled: true, paused: isPaused, contract: contractId, target, traders: keys.length, day: st.day, today: st.today, failures_today: st.failures,
+        enabled: true, dry_run: !!dryRun, paused: isPaused, contract: contractId, target, traders: keys.length, day: st.day, today: st.today, failures_today: st.failures,
         chain: chain && { day: chain.day, today: chain.today, total: chain.total, at: chain.at },
         low_funds: [...signers.values()].filter((s) => s.low).map((s) => s.key),
         recent: st.recent.slice(0, RECENT), last_error: lastError,

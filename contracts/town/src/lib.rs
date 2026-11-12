@@ -543,6 +543,7 @@ impl Town {
 
     // ---------- views ----------
     pub fn balance_of(&self, account_id: AccountId) -> Option<Account> { self.accounts.get(&account_id).cloned() }
+    pub fn balances_of(&self, account_ids: Vec<AccountId>) -> Vec<Option<Account>> { account_ids.iter().take(50).map(|a| self.accounts.get(a).cloned()).collect() }
     pub fn pool_state(&self) -> Pool { self.pool.clone() }
     pub fn quote_swap(&self, wool_in: bool, amount: U) -> U {
         let (x, y) = if wool_in { (self.pool.wool, self.pool.silk) } else { (self.pool.silk, self.pool.wool) };
