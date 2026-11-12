@@ -41,9 +41,9 @@ if (mode === 'elise') {
     const f = window.__ftf, orig = f.rig.update.bind(f.rig), t0 = performance.now();
     f.rig.update = (...a) => {
       orig(...a);
-      const t = (performance.now() - t0) / 1000, p = f.player.pos, a0 = f.player.heading + 0.5 + t * 0.62, r = 2.0 - 0.2 * Math.min(1, t / 7);
-      f.rig.camera.position.set(p[0] + Math.sin(a0) * r, p[1] + 1.35 - 0.15 * Math.min(1, t / 7), p[2] + Math.cos(a0) * r);
-      f.rig.camera.lookAt(p[0], p[1] + 1.2, p[2]); f.rig.camera.fov = 34; f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
+      const t = (performance.now() - t0) / 1000, p = f.player.pos, a0 = f.player.heading + 0.5 + t * 0.62, r = 2.4 - 0.2 * Math.min(1, t / 7);
+      f.rig.camera.position.set(p[0] + Math.sin(a0) * r, p[1] + 1.5 - 0.1 * Math.min(1, t / 7), p[2] + Math.cos(a0) * r);
+      f.rig.camera.lookAt(p[0], p[1] + 1.12, p[2]); f.rig.camera.fov = 40;   // head to knees in frame f.rig.camera.updateProjectionMatrix(); f.rig.camera.updateMatrixWorld(true);
     };
   });
   const cap = capture(); await wait(7200); capturing = false; await cap;
