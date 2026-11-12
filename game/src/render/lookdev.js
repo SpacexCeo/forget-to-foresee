@@ -411,7 +411,7 @@ export class LookDev {
     this.rain.setMax(cfg.rain || 0); this.rain.setAmount(this.weather.state.rain, this.reducedMotion);
     // the cheap tiers and phones: fewer splashes, no mirror puddles (the ground still darkens and shines)
     const cheap = this.tier === 'low' || this.profile === 'phone';
-    this.splashes.setMax(Math.round((cfg.rain || 0) / (cheap ? 12 : 6))); this.splashes.setAmount(this.weather.state.rain, this.reducedMotion);
+    this.splashes.setMax(Math.round((cfg.rain || 0) / (cheap ? 16 : 10))); this.splashes.setAmount(this.weather.state.rain, this.reducedMotion);
     this.weather.puddles = cheap ? 0 : 1; this.weather.dirty = true;
     this.heroLight.visible = !!cfg.pointLights;
     this.clouds.setLayers(cfg.cloudLayers);
