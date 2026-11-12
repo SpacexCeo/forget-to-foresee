@@ -209,10 +209,11 @@ export class FootPlant {
   }
 
   /** @param {THREE.Object3D} group the avatar group (position = the ground point, rotation.y = the game's heading) */
-  update(dt, group, move, reduced = false) {
+  update(dt, group, move, reduced = false, free = 0) {
     if (!this.ok) return;
     const heading = group.rotation.y;
-    const stand = reduced ? 0 : smooth(1 - move * 1.6);
+    // `free` (0..1): a full-body action clip (a cast, a strike) owns the legs: the feet are not held and she turns to it at once
+    const stand = reduced ? 0 : smooth(1 - move * 1.6) * (1 - free);
     this.weight = stand;
     // the body's real speed over the ground: the game stops and taps faster than the gait's weight can follow
     if (this.last && dt > 1e-4) this.speed = Math.hypot(group.position.x - this.last.x, group.position.z - this.last.z) / dt;
@@ -242,7 +243,7 @@ export class FootPlant {
     }
     if (this.yaw === null) this.yaw = heading;
     const diff = wrapPi(heading - this.yaw);
-    const rate = TURN_RATE + going * 12, ease = 10 + going * 20;
+    const rate = TURN_RATE + Math.max(going, free) * 12, ease = 10 + Math.max(going, free) * 20;
     this.yaw += clamp(diff * (1 - Math.exp(-ease * dt)), -rate * dt, rate * dt);
     if (stand < 1e-3 && Math.abs(wrapPi(heading - this.yaw)) < 0.02) this.yaw = heading;
     this.model.rotation.y = this.baseYaw + wrapPi(this.yaw - heading);

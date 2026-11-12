@@ -38,6 +38,8 @@ export function toonify(model) {
   });
 }
 
+const smoothstep01 = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+
 export class IrisAvatar {
   /** @param {object} hero the heroine she wears (asset-catalog.js HEROES); `setHero` swaps it later */
   constructor(hero = heroFromSearch()) {
@@ -117,6 +119,21 @@ export class IrisAvatar {
     return true;
   }
 
+  /**
+   * A skill cast (scenes/town-casting.js): `cast_lance`, `cast_snare`. A slow wind-up, the release frame, an overshoot
+   * and a settle, played over everything else; she stands still for it (the caller holds her walk until shortly after
+   * the release), and a step after that cuts the settle short. Returns the clip's timing in seconds, or null when the
+   * clip is missing (`?anim=v1`, `?anim=classic`): `release` is when the cast leaves her hand.
+   */
+  cast(name) {
+    const m = this.irisModel;
+    const c = m && m.clips.find((x) => x.name === name);
+    if (!c || !this.combat(name)) return null;
+    const release = (c.userData && c.userData.release_s) || 0;
+    Object.assign(m.combat, { fadeIn: 0.08, fadeOut: 0.22, cancelAfter: release + 0.24 });
+    return { release, duration: c.duration };
+  }
+
   /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */
   react(clip, now = 0) { this.irisReaction = { clip, until: now + (REACTION_SECONDS[clip] || 3) }; }
 
@@ -127,6 +144,7 @@ export class IrisAvatar {
   update(dt, moving, avatarGroup, t, speed = 0, running = false, reduced = false, lookTarget = null) {
     const m = this.irisModel;
     if (!m) return;
+    let actionW = 0;                                   // weight of a full-body action clip (a cast, a strike, the dash)
     void running; // the blend follows the speed itself: the run clip appears above the walk speed
     if (moving) this.irisReaction = null;            // walking away cancels the reaction
     if (m.mixer) {
@@ -164,7 +182,9 @@ export class IrisAvatar {
       if (m.faceAction) m.faceAction.weight = m.react && hasFace(m.react.getClip()) ? 1 - m.reactW * (1 - move) : 1;
       if (m.combat) {                                    // a combat move over the gait, idle and reaction
         const k = m.combat; k.t += dt;
-        const w = Math.min(1, k.t / 0.05) * Math.min(1, Math.max(0, (k.dur - k.t) / 0.1));
+        if (k.cancelAfter != null && k.t > k.cancelAfter && speed > 0.4) { k.dur = Math.min(k.dur, k.t + 0.16); k.fadeOut = 0.16; k.cancelAfter = null; } // she walks out of the settle
+        const w = smoothstep01(k.t / (k.fadeIn || 0.05)) * smoothstep01((k.dur - k.t) / (k.fadeOut || 0.1));
+        actionW = w;
         k.action.setEffectiveWeight(w);
         const keep = 1 - w;
         if (m.gait) { if (m.gait.walk) m.gait.walk.weight *= keep; if (m.gait.run) m.gait.run.weight *= keep; }
@@ -183,6 +203,6 @@ export class IrisAvatar {
     // Look-at: the clan Iris is talking to (world.dialogue), else the look fades out.
     if (m.bones && avatarGroup) applyLookTo(m.bones, m.look, avatarGroup.position, avatarGroup.rotation.y, lookTarget, dt, reduced);
     // Planted feet while she stands: a pivot on the spot and the end of a stop become short steps (gait.js).
-    if (m.plant && avatarGroup) m.plant.update(dt, avatarGroup, m.gait ? m.gait.move : 0, reduced);
+    if (m.plant && avatarGroup) m.plant.update(dt, avatarGroup, m.gait ? m.gait.move : 0, reduced, actionW);
   }
 }
