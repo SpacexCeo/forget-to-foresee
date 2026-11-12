@@ -3,6 +3,7 @@
 // Buy and Sell. States: quote -> signing -> settling -> done | error. Honest labels: NEAR testnet, scripted traders;
 // while the relayer's desk is in dry run the buttons stay off and say why (nothing would be minted or paid back).
 import { stallItems, silkText, canTrade, MAX_QTY } from '../net/stall-client.js';
+import { toMicro, silkOf, STALL_TRADER } from '../net/town-act.js';
 
 const CSS = `
 .sp-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
@@ -31,10 +32,10 @@ const CSS = `
  * @param {{t: Function, client: object, doc?: Document}} o
  * @returns {{open(npc: string): void, close(): void, readonly isOpen: boolean}}
  */
-export function createStallPanel({ t, client, doc = globalThis.document }) {
+export function createStallPanel({ t, client, town = null, doc = globalThis.document }) {
   if (!doc.getElementById('sp-style')) { const s = doc.createElement('style'); s.id = 'sp-style'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  let root = null, npc = null;
+  let root = null, npc = null, trader = null, back = null;
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
 
   function row(item) {
@@ -85,6 +86,35 @@ export function createStallPanel({ t, client, doc = globalThis.document }) {
     return r;
   }
 
+  /** Pledge to this stall (ftf-town invest_stall through the relayer, net/town-act.js): open or closed, the player's share. */
+  async function backSection() {
+    if (!town || !back || !trader) return;
+    const box = back; const st = await town.stall(trader);
+    if (back !== box) return;
+    const kids = [el('h4', 'sp-name', t('stall.back.heading'))];
+    if (!st.ok) { kids.push(el('div', 'sp-why', t('works.err.' + st.reason))); box.replaceChildren(...kids); return; }
+    kids.push(el('div', 'sp-why', st.open === true ? t('stall.back.open') : st.open === false ? t('stall.back.closed', { line: st.reopenAt }) : t('stall.back.between', { low: st.closeBelow, high: st.reopenAt })), el('div', 'sp-why', t('stall.back.lead')));
+    kids.push(el('div', 'sp-why', st.mine !== '0' ? t('stall.back.mine', { silk: silkOf(st.mine), share: st.share.toFixed(2), claim: silkOf(st.claimable) }) : t('stall.back.none')));
+    const ctl = el('div', 'sp-ctl'); const amt = el('input'); amt.type = 'number'; amt.min = '1'; amt.value = '10'; amt.setAttribute('aria-label', t('works.amount'));
+    const state = el('div', 'sp-state'); state.setAttribute('aria-live', 'polite');
+    const act = async (action, args, done) => {
+      for (const b of box.querySelectorAll('button')) b.disabled = true;
+      state.textContent = t('works.sending');
+      const r = await town.act(action, args);
+      await backSection();
+      const s2 = back && back.querySelector('.sp-state'); if (!s2) return;
+      s2.textContent = r.ok ? t(done) : t('works.err.' + r.reason);
+      if (r.ok && r.hash) { const a = el('a', null, ' ' + t('works.viewTx')); a.href = 'https://testnet.nearblocks.io/txns/' + r.hash; a.target = '_blank'; a.rel = 'noopener noreferrer'; s2.append(a); }
+    };
+    const go = el('button', null, t('stall.back.go')); go.type = 'button';
+    go.addEventListener('click', () => { const amount = toMicro(amt.value); if (!amount) { state.textContent = t('works.err.bad_args'); return; } act('invest_stall', { trader, amount }, 'stall.back.done'); });
+    const cl = el('button', 'ghost', t('stall.back.claim')); cl.type = 'button'; cl.disabled = !(BigInt(st.claimable || '0') > 0n);
+    cl.addEventListener('click', () => act('claim_stall', { trader }, 'stall.back.claimed'));
+    go.disabled = !town.guest();
+    ctl.append(amt, go, cl); kids.push(ctl, state);
+    box.replaceChildren(...kids);
+  }
+
   function open(who) {
     close();
     npc = who;
@@ -96,12 +126,14 @@ export function createStallPanel({ t, client, doc = globalThis.document }) {
     const tags = el('div', 'sp-tags'); const dry = el('span', 'dry', t('stall.dry')); dry.hidden = true;
     tags.append(el('span', null, t('stall.testnet')), el('span', null, t('stall.scripted')), dry);
     box.append(h, tags, ...items.map(row));
+    trader = STALL_TRADER[who] || null;
+    if (town && trader) { back = el('div', 'sp-row sp-back'); box.append(back); backSection(); }
     const foot = el('div', 'sp-foot'); const note = el('span', null, t('stall.note')); const x = el('button', 'ghost', t('quest.close')); x.type = 'button'; x.addEventListener('click', close);
     foot.append(note, x); box.append(foot);
     root.append(box); root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });
     doc.body.append(root); doc.addEventListener('keydown', onKey, true);
     setTimeout(() => { try { x.focus(); } catch { /* */ } }, 0);
   }
-  function close() { if (!root) return; root.remove(); root = null; npc = null; doc.removeEventListener('keydown', onKey, true); }
+  function close() { if (!root) return; root.remove(); root = null; npc = null; trader = null; back = null; doc.removeEventListener('keydown', onKey, true); }
   return { open, close, get isOpen() { return !!root; }, get npc() { return npc; } };
 }
