@@ -10,7 +10,7 @@ scripted rules, not an LLM. Threat model: `docs/security-town.md`.
 
 | Piece | Where | State |
 |---|---|---|
-| Contract | `contracts/town` → `ftf-town.testnet` | Built, 41 unit tests. **Not deployed** |
+| Contract | `contracts/town` → `ftf-town.testnet` | Built, 43 unit tests. **Not deployed** |
 | Shared rules | `contracts/town/src/rules.rs` ↔ `game/src/game/town-rules.js`, vectors in `contracts/town/tests/vectors.json` (`node tools/town/vectors.mjs`) | Both sides are tested against the same file |
 | Trader loop | `relayer/lib/town-traders.js` on the relayer's daemon (`relayer/market/daemon.js`) | Built and tested. Off unless `FTF_TOWN=1`; a dry run unless `FTF_TOWN_SEND=1` |
 | Town Pulse | `game/public/pulse.html` (`/pulse.html`) | Reads `pulse()` from the chain. Until the deployment it says "not deployed yet". `docs/qa/town/pulse-sample.jpg` is the page rendered with **sample numbers** (a QA mock, not chain data) |
@@ -88,6 +88,31 @@ How to read it:
 - **The rate ceiling is owner-tunable.** The default `rate_ceiling_bps` is 15 (0.15 % of pledged weight a day,
   ≈ 55 % annualised-equivalent), set by the owner on 12.11; change it with `set_params`. In silk the pledged total is
   small, so the fee-funded rate reaches the ceiling, and the excess goes to the tournament purse.
+
+## Inventories, prices and closed stalls (roadmap items 1, 2, 3 part, 6)
+
+All the price rules live in one readable file, `relayer/market/prices.js`:
+
+- **Inventory.** Each trader keeps a shelf of the goods it makes: it starts with 120 units of each, makes 80 an hour,
+  and holds at most 240. Every sale takes units off the shelf, and a good with an empty shelf cannot be bought.
+- **Price** = base × scarcity × demand, kept between half and twice the base. Scarcity is (120 / stock)^0.4, and
+  demand compares the units bought lately (a moving average with a 45-minute half-life) with the usual pace. Buy a
+  stall empty and its goods get dearer; flood the market and they get cheaper.
+- **The trader's reason** travels with each trade, for example "dear: only 3 salt left, demand rose" or "cheap: 240
+  river stones on the shelf, few buyers". It appears in `/api/market/stats`, as the in-game ticker's tooltip, and in
+  the Pulse "Why that price" column.
+- **Bankruptcy.** A trader under 40 silk closes its stall: it stops buying and making goods and only sells off its
+  shelf. It reopens above 120 silk.
+- **Investing in a stall** (item 3): `invest_stall(trader, silk)` on the contract. Any registered player pledges silk
+  into a trader's stall. The silk becomes the trader's working capital, so a closed stall reopens once its purse is
+  back above the line; the relayer reads the new balance at its next sync. From then on the investor earns half the
+  fee (`stall_fee_bps` 5,000, owner-tunable) of every sale that stall makes, shared by invested silk, and collects
+  it with `claim_stall(trader)`. It is a pledge, not a loan: the silk does not come back, only the fee share does.
+  Views: `stall_of`, `stall_position`.
+- In the model, stock-outs and closed stalls skip about 9 % of attempts, so the daemon aims for 24,000 attempts a day
+  to land ~22,000 trades (30-day run, 200 players: 21,800 trades a day, mean 2.3 silk).
+- Inventories and prices live in the relayer's state, not on chain yet. The chain records every trade's silk and
+  goods (`reference`). On-chain items are roadmap item 4 (NEP-245).
 
 ## Settling a season (coordinator, dry run)
 

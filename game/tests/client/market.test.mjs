@@ -28,6 +28,7 @@ test('market: stats are normalised, bad rows dropped, explorer links only for re
   assert.equal(s.live, true); assert.equal(s.today, 1234); assert.equal(s.recent.length, 2);
   assert.equal(s.recent[0].url, `https://testnet.nearblocks.io/txns/${HASH}`); assert.equal(s.recent[1].url, null);
   assert.equal(normalizeStats({ enabled: false, chain: { today: 9 } }).today, 9);
+  assert.equal(normalizeStats({ today: 1, recent: [row({ reason: 'dear: only 3 iron left, demand rose<script>' })] }).recent[0].reason, 'dear: only 3 iron left, demand rosescript');
   assert.deepEqual(normalizeStats(null), { live: false, today: null, recent: [] });
   assert.equal(txUrl('javascript:alert(1)'), null);
 });

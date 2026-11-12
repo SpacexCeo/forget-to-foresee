@@ -91,6 +91,7 @@ export function createMarketDaemon({
     if (s.spentNear + txNear > walletDayNear) { s.capped = true; return null; } // this wallet's daily budget is used up
     s.capped = false;
     if (!cap.take()) return null;
+    st.now = now();
     const t = policy.pick(st, key, rand, keys, strategyOf ? strategyOf(key) : null);
     if (!t || !signers.has(t.seller)) return null;
     const r = await send(s, t);

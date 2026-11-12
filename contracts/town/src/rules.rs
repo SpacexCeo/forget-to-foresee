@@ -41,6 +41,8 @@ pub struct Params {
     pub mint_burn_match_bps: u32,
     pub mint_per_entrant: u128,
     pub payout_cap_bps: u32,
+    /// Share of a trade's fee paid to the investors of the seller's stall (when it has any); the rest goes to the treasury.
+    pub stall_fee_bps: u32,
 }
 
 impl Default for Params {
@@ -52,7 +54,7 @@ impl Default for Params {
             cooldown_days: 2, early_exit_bps: 1_000, deed_fee: UNIT / 2, cap_total: 8_000 * UNIT, cap_floor: 800 * UNIT, cap_share_bps: 500,
             cap_asset: 3_000 * UNIT, credit_day_cap: 4_000 * UNIT,
             entry_fee: 40 * UNIT, entry_burn_bps: 2_000, entry_works_bps: 1_500,
-            season_mint_cap: 12_000 * UNIT, mint_floor: 1_000 * UNIT, mint_burn_match_bps: 8_000, mint_per_entrant: 24 * UNIT, payout_cap_bps: 400,
+            season_mint_cap: 12_000 * UNIT, mint_floor: 1_000 * UNIT, mint_burn_match_bps: 8_000, mint_per_entrant: 24 * UNIT, payout_cap_bps: 400, stall_fee_bps: 5_000,
         }
     }
 }
@@ -69,11 +71,14 @@ impl Params {
             && self.cap_floor <= self.cap_total && self.cap_asset <= self.cap_total && self.cap_share_bps <= 10_000 && self.credit_day_cap <= 100_000 * UNIT
             && self.entry_fee <= 1_000 * UNIT && self.entry_burn_bps + self.entry_works_bps <= 10_000
             && self.season_mint_cap <= 100_000 * UNIT && self.mint_floor <= self.season_mint_cap && self.mint_burn_match_bps <= 10_000
-            && self.mint_per_entrant <= 1_000 * UNIT && (1..=10_000).contains(&self.payout_cap_bps)
+            && self.mint_per_entrant <= 1_000 * UNIT && (1..=10_000).contains(&self.payout_cap_bps) && self.stall_fee_bps <= 8_000
     }
 }
 
 pub fn trade_fee(p: &Params, silk: u128) -> u128 { silk * p.trade_fee_bps as u128 / BPS }
+
+/// The part of a trade fee that goes to the seller's stall investors (only when the stall has investors).
+pub fn stall_share(p: &Params, fee: u128) -> u128 { fee * p.stall_fee_bps as u128 / BPS }
 
 /// Per-account pledge cap: min(cap_total, max(cap_floor, cap_share·TVL)).
 pub fn stake_cap(p: &Params, tvl: u128) -> u128 { p.cap_total.min(p.cap_floor.max(tvl * p.cap_share_bps as u128 / BPS)) }

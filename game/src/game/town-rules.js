@@ -16,12 +16,14 @@ export const DEFAULT_PARAMS = Object.freeze({
   cooldown_days: 2, early_exit_bps: 1_000, deed_fee: UNIT / 2n, cap_total: 8_000n * UNIT, cap_floor: 800n * UNIT, cap_share_bps: 500,
   cap_asset: 3_000n * UNIT, credit_day_cap: 4_000n * UNIT,
   entry_fee: 40n * UNIT, entry_burn_bps: 2_000, entry_works_bps: 1_500,
-  season_mint_cap: 12_000n * UNIT, mint_floor: 1_000n * UNIT, mint_burn_match_bps: 8_000, mint_per_entrant: 24n * UNIT, payout_cap_bps: 400,
+  season_mint_cap: 12_000n * UNIT, mint_floor: 1_000n * UNIT, mint_burn_match_bps: 8_000, mint_per_entrant: 24n * UNIT, payout_cap_bps: 400, stall_fee_bps: 5_000,
 });
 const b = (v) => BigInt(v);
 const min = (x, y) => (x < y ? x : y), max = (x, y) => (x > y ? x : y);
 
 export const tradeFee = (p, silk) => (b(silk) * b(p.trade_fee_bps)) / BPS;
+/** The part of a trade fee that goes to the seller's stall investors (when the stall has any). */
+export const stallShare = (p, fee) => (b(fee) * b(p.stall_fee_bps)) / BPS;
 export const stakeCap = (p, tvl) => min(b(p.cap_total), max(b(p.cap_floor), (b(tvl) * b(p.cap_share_bps)) / BPS));
 /** The swept treasury silk: stakers / purse / reserve / burn (the rounding remainder is burned). */
 export function splitSweep(p, silk) {
