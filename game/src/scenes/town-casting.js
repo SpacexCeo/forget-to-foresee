@@ -62,7 +62,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
   const hint = doc.createElement('div'); hint.className = 'ftf-cast-hint'; hint.hidden = true; hint.setAttribute('role', 'status');
-  const bar = doc.createElement('div'); bar.className = 'ftf-cast-bar';
+  const bar = doc.createElement('div'); bar.className = 'ftf-cast-bar'; bar.style.touchAction = 'none';   // no double-tap zoom or scroll delay on the slots
   const slots = {};
   for (const [id, key] of SLOTS) {
     const b = doc.createElement('button'); b.type = 'button'; b.className = 'ftf-cast-slot'; b.dataset.id = id; b.setAttribute('aria-pressed', 'false');
@@ -71,7 +71,9 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     if (ICON_ART[id]) { art.innerHTML = ''; const img = doc.createElement('img'); img.src = base + 'assets/ui/icons/' + ICON_ART[id] + '.webp'; img.alt = ''; img.onerror = () => { art.innerHTML = ICONS[id]; }; art.append(img); } // UI-003 art, the SVG if it fails
     const name = doc.createElement('span'); name.className = 'ftf-cast-name'; const cd = doc.createElement('span'); cd.className = 'ftf-cast-cd';
     b.append(art.firstChild, cd, cap, name);
-    b.addEventListener('click', (e) => { e.stopPropagation(); toggle(id); });
+    // arms on pointerdown (the same frame, no wait for the click after the finger lifts); a keyboard click still works
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); b.dataset.downArmed = '1'; toggle(id); });
+    b.addEventListener('click', (e) => { e.stopPropagation(); if (b.dataset.downArmed) { delete b.dataset.downArmed; return; } toggle(id); });
     slots[id] = { button: b, name, cd, cap };
     bar.append(b);
   }

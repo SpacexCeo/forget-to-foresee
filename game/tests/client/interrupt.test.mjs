@@ -21,10 +21,10 @@ test('a cast/strike cancels the click target, the route and the run, plants her 
 test('the world loop wires it: casts and strikes interrupt, the dash does not; the touch run latch switches off', () => {
   const src = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.match(src, /onCastStart: \(id\) => \{ interruptMove\(0\);/);
-  assert.match(src, /function strikeNow\(\) \{ if \(townMobs && townMobs\.strike\(\)\) interruptMove\(STRIKE_ROOT\); \}/);
+  assert.match(src, /function strikeNow\(\) \{ if \(townMobs && townMobs\.strike\(strikeAimInput\(\)\)\) interruptMove\(STRIKE_ROOT\); \}/);
   // F / 3 go through the hold-to-super path (attackDown / attackUp); both interrupt the run
-  assert.match(src, /input\.hit\('KeyF'\) \|\| input\.hit\('Digit3'\)\) \{ townMobs\.attackDown\(wishVector\(\)\); interruptMove\(STRIKE_ROOT\); \}/);
-  assert.match(src, /townMobs\.attackUp\(wishVector\(\)\); interruptMove\(STRIKE_ROOT\);/);
+  assert.match(src, /input\.hit\('KeyF'\) \|\| input\.hit\('Digit3'\)\) \{ townMobs\.attackDown\(strikeAimInput\(\)\); interruptMove\(STRIKE_ROOT\); \}/);
+  assert.match(src, /townMobs\.attackUp\(strikeAimInput\(\)\); interruptMove\(STRIKE_ROOT\);/);
   assert.match(src, /press: \(\) => strikeNow\(\)/);
   assert.doesNotMatch(src, /dash\([^)]*\)[^;\n]*interruptMove/, 'the dash stays a movement action');
   assert.match(src, /if \(!canMove\(\{ rootUntil \}, performance\.now\(\), !!\(townCasting && townCasting\.casting\)\)\) return \[0, 0\];/);

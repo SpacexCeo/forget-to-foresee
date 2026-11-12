@@ -1,0 +1,36 @@
+{
+ "fps": 60,
+ "cast": {
+  "input": "in:pointer",
+  "first": {
+   "ms": 8,
+   "frames": 1
+  },
+  "hit": {
+   "ms": 90.7,
+   "frames": 6
+  }
+ },
+ "strike": {
+  "input": "in:KeyF",
+  "first": {
+   "ms": 19.5,
+   "frames": 2
+  },
+  "hit": {
+   "ms": 136.2,
+   "frames": 9
+  }
+ },
+ "dash": {
+  "first": {
+   "ms": 17.6,
+   "frames": 1
+  },
+  "clip": {
+   "ms": 10.1,
+   "frames": 1
+  }
+ },
+ "errors": []
+}

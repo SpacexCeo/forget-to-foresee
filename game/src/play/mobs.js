@@ -16,7 +16,7 @@ import { CASTS } from '../scenes/town-casting-fx.js';
 /** Per type: health, speeds (m/s), the ground speed each clip's stride was built for (`clip` [walk, run], from
  * art/mobs/mobs.json: the clip is time-scaled to the actual speed so the feet do not slide), ranges (m), attack timing. */
 export const MOB_TYPES = Object.freeze({
-  skitter: Object.freeze({ clip: [0.83, 1.63], scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.45, cooldown: 1.6, stagger: true }),
+  skitter: Object.freeze({ clip: [0.83, 1.63], scale: 1.25, rim: 0.9, hp: 55, walk: 0.9, run: 1.8, radius: 0.42, aggro: 9, attack: 1.0, damage: 3, windup: 0.8, impact: 0.55, cooldown: 1.6, stagger: true }),
   hulker: Object.freeze({ clip: [1.01, 2.14], hp: 380, walk: 1.25, run: 2.6, radius: 0.9, aggro: 11, attack: 2.4, damage: 18, windup: 1.4, impact: 0.58, cooldown: 2.4, stagger: false, heavy: true }),   // a brute powers through light hits
   veilbell: Object.freeze({ clip: [0.84, 1.64], hp: 120, walk: 1.0, run: 1.9, radius: 0.5, aggro: 14, attack: 9.0, damage: 10, windup: 1.5, impact: 0.75, cooldown: 2.8, stagger: true, ranged: true }),
   crownrift: Object.freeze({ clip: [1.2, 2.76], hp: 900, walk: 1.6, run: 3.4, radius: 1.3, aggro: 13, attack: 3.0, damage: 26, windup: 1.6, impact: 0.55, cooldown: 2.2, stagger: false, elite: true, heavy: true }),
@@ -38,6 +38,10 @@ export const IRIS_HP = 100;
 export const STAGGER_SECONDS = 0.45;
 export const SNARE_ROOT_SECONDS = 1.6;
 export const HIT_STOP_SECONDS = 0.07;
+/** The shortest warning a melee blow gives (windup × impact, s): its ground ring shows at least this long. */
+export const TELEGRAPH_MIN = 0.4;
+/** Every strike hit shoves a light creature this far (m); the third hit of the combo throws it 0.7 m. */
+export const HIT_SHOVE = 0.18;
 export const CAST_DAMAGE = Object.freeze({ lance: 40, snare: 25 });
 /** Iris's own moves beyond the walls (the skill bar's strike and dash slots; ids for the UI). */
 export const ACTIONS = Object.freeze({
@@ -48,6 +52,23 @@ export const ACTIONS = Object.freeze({
   super: Object.freeze({ hold: 0.4, full: 1.0, min: 34, max: 80, reach: 3.0, arc: Math.PI / 4, knock: 1.6, impact: 0.1, cooldown: 1.2, freeze: 0.16 }),
   lock: 3.0,                       // soft lock: a strike turns to the nearest living creature this close
 });
+/**
+ * Where a strike goes (owner 12.11): 1) the creature in the soft lock (the nearest living one within ACTIONS.lock m),
+ * 2) on a desktop the mouse cursor's point on the ground, even standing still, 3) the stick / keys movement, 4) where
+ * she already looks. Returns the heading (radians, atan2(x, z)) and which source won. Pure.
+ * @param {{from: number[], heading: number, lock?: {pos: number[]}|null, cursor?: number[]|null, move?: number[]|null}} o
+ *   cursor: a world point [x, y, z] (or [x, z]) on the ground; move: a direction [x, z]
+ */
+export function strikeAim({ from, heading, lock = null, cursor = null, move = null }) {
+  if (lock && lock.pos) return { heading: Math.atan2(lock.pos[0] - from[0], lock.pos[2] - from[2]), by: 'lock' };
+  if (cursor) {
+    const cx = cursor[0], cz = cursor.length > 2 ? cursor[2] : cursor[1], dx = cx - from[0], dz = cz - from[2];
+    if (Math.hypot(dx, dz) > 0.25) return { heading: Math.atan2(dx, dz), by: 'cursor' };
+  }
+  if (move && Math.hypot(move[0], move[1]) > 0.1) return { heading: Math.atan2(move[0], move[1]), by: 'move' };
+  return { heading, by: 'facing' };
+}
+
 export const REGEN = Object.freeze({ delay: 4, perSecond: 8 });   // her health comes back out of combat
 const LANCE_SPEED = 20;             // the fracture front of the Frost Lance (m/s): a monster far along the line is hit later
 const SNARE_DELAY = 0.35;           // the leash reaches the point, the ring snaps open
@@ -113,8 +134,8 @@ export class MobBrain {
       let a = Math.atan2(dx, dz) - heading; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
       if (Math.abs(a) > A.arc && d > m.T.radius + 0.3) continue;
       this.damage(m, amount, events);
-      if (knock && !m.T.heavy && m.state !== 'dead' && d > 1e-3) {
-        const k = 0.7 / d, nx = m.pos[0] + dx * k, nz = m.pos[2] + dz * k;
+      if (!m.T.heavy && m.state !== 'dead' && d > 1e-3) {
+        const k = (knock ? 0.7 : HIT_SHOVE) / d, nx = m.pos[0] + dx * k, nz = m.pos[2] + dz * k;
         if (this.outside([nx, 0, nz]) && Math.hypot(nx - m.pack.home[0], nz - m.pack.home[2]) < LEASH) { m.pos[0] = nx; m.pos[2] = nz; }
       }
       n++;
@@ -281,8 +302,9 @@ const CSS = `
 @keyframes ftf-hp-shake { 25% { transform: translateX(calc(-50% - 4px)); } 75% { transform: translateX(calc(-50% + 4px)); } }
 .ftf-hurt-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 4; box-shadow: inset 0 0 120px 30px rgba(200, 30, 20, .55); opacity: 0; transition: opacity .35s ease; }
 .ftf-hurt-vignette.on { opacity: 1; transition: none; }
-.ftf-dmg { position: fixed; left: 0; top: 0; z-index: 5; pointer-events: none; color: #fff7e6; font: 800 18px/1 system-ui, sans-serif; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.6); will-change: transform, opacity; }
-.ftf-dmg.crit { color: #ffd166; font-size: 24px; }
+.ftf-dmg { position: fixed; left: 0; top: 0; z-index: 5; pointer-events: none; color: #fff7e6; font: 900 22px/1 system-ui, sans-serif; -webkit-text-stroke: 1px rgba(20,10,0,.85); text-shadow: 0 2px 3px #000, 0 0 8px rgba(0,0,0,.7); will-change: transform, opacity; }
+.ftf-dmg.crit { color: #ffd166; font-size: 30px; }
+@media (max-width: 700px) { .ftf-dmg { font-size: 19px; } .ftf-dmg.crit { font-size: 25px; } }
 @media (max-width: 700px) { .ftf-hp { bottom: calc(190px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { .ftf-hp.ftf-hurt { animation: none; } .ftf-hp > i { transition: none; } }
 `;
@@ -320,7 +342,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
   const iris = { pos: player.pos, alive: true, outside: false, hp: IRIS_HP, hurtT: 0, calm: 0, iframes: 0 };
-  const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null };
+  const act = { strikeCd: 0, combo: 0, comboT: 0, dashCd: 0, dash: null, twist: 0, twistDir: 1, charge: null, superCd: 0, superAt: null, flinch: 0, flinchMax: 1, flinchAmp: 0 };
   let shake = 0;
   const numbers = [];
   const shots = [], shotLog = [];   // shotLog: the last seeds (QA: where from, where to, closest pass)
@@ -334,6 +356,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   }
   const ringGeo = new THREE.RingGeometry(0.75, 1, 40); ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.0, depthWrite: false });
+  const fillGeo = new THREE.CircleGeometry(0.75, 40); fillGeo.rotateX(-Math.PI / 2);
   const slashGeo = new THREE.RingGeometry(1.2, 2.0, 32, 1, -1.1, 2.2); slashGeo.rotateX(-Math.PI / 2);
   const slash = new THREE.Mesh(slashGeo, new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   slash.visible = false; slash.renderOrder = 3; group.add(slash); let slashT = 0;
@@ -345,12 +368,20 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     ring: new THREE.Mesh(new THREE.RingGeometry(0.82, 1.0, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: SUPER_TINT, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })),
     arc: new THREE.Mesh(new THREE.RingGeometry(1.4, 2.6, 40, 1, -Math.PI / 4, Math.PI / 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xfff0d0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })) };
   burst.ring.visible = burst.arc.visible = false; burst.ring.renderOrder = burst.arc.renderOrder = 3; group.add(burst.ring, burst.arc);
-  /** Turns her for a strike: toward the nearest creature within ACTIONS.lock m, else along `aim` [x, z], else as she is. */
+  /**
+   * Turns her (the root only: player.heading; the avatar follows) for a strike, by strikeAim's order: the locked
+   * creature, the cursor's ground point, the movement, her facing. `aim` is {cursor, move} or a bare move [x, z].
+   */
   function face(aim) {
-    const m = brain.nearest(player.pos, ACTIONS.lock);
-    if (m) player.heading = Math.atan2(m.pos[0] - player.pos[0], m.pos[2] - player.pos[2]);
-    else if (aim && Math.hypot(aim[0], aim[1]) > 0.1) player.heading = Math.atan2(aim[0], aim[1]);
+    const a = Array.isArray(aim) ? { move: aim } : (aim || {});
+    const r = strikeAim({ from: player.pos, heading: player.heading, lock: brain.nearest(player.pos, ACTIONS.lock), cursor: a.cursor || null, move: a.move || null });
+    player.heading = r.heading; lastAim = r.by;
+    return r;
   }
+  let lastAim = 'facing';
+  // the soft lock made visible: a small ring under the creature a strike would turn to
+  const lockRing = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe2a8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  lockRing.visible = false; lockRing.renderOrder = 3; group.add(lockRing);
   const seedGeo = new THREE.IcosahedronGeometry(0.16, 1);
   const seedMat = new THREE.MeshBasicMaterial({ color: 0x9ff5ea });
 
@@ -377,6 +408,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     model.scale.setScalar(m.T.scale || 1);                                          // the skitter is drawn a quarter larger: it reads at fight distance
     const fx = new MobFx(holder, { edge: glow[m.type], rim: m.T.rim ?? 0.3 });
     const ring = new THREE.Mesh(ringGeo, ringMat.clone()); ring.visible = false; ring.renderOrder = 2; group.add(ring);
+    // the warning fills in from the middle as the blow comes: full disc = the hit
+    const fill = new THREE.Mesh(fillGeo, ringMat.clone()); fill.renderOrder = 2; ring.add(fill);
     // idle variety: each creature breathes at its own rate and phase, and now and then turns its head away a little
     const v = { model, holder, mixer, actions, fx, ring, current: null, oneShot: null, idleRate: 0.82 + Math.random() * 0.36, idlePhase: Math.random(), look: Math.random() * 6, lookT: 0 };
     mixer.addEventListener('finished', (e) => { if (e.action === actions.death) { const ev = []; brain.fallen(m, ev); handle(ev); } if (e.action === v.oneShot) v.oneShot = null; });
@@ -407,7 +440,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     iris.calm = 0; if (heavy) shake = Math.max(shake, 0.6);
     iris.hp = Math.max(0, iris.hp - amount); iris.hurtT = 0.3;
     if (hpEl) { hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; hpEl.setAttribute('aria-valuenow', String(Math.round(iris.hp))); hpEl.classList.remove('ftf-hurt'); void hpEl.offsetWidth; hpEl.classList.add('ftf-hurt'); }
-    if (vignette && !reduced()) { vignette.classList.add('on'); setTimeout(() => vignette.classList.remove('on'), 60); }
+    if (vignette && !reduced()) { vignette.classList.add('on'); setTimeout(() => vignette.classList.remove('on'), heavy ? 220 : 140); }
+    act.flinch = heavy ? 0.3 : 0.22; act.flinchMax = act.flinch; act.flinchAmp = heavy ? 0.16 : 0.09;   // she rocks back a step
     if (onFeedback) onFeedback('hurt');
     if (iris.hp <= 0) {
       iris.alive = false; if (onFeedback) onFeedback('down');
@@ -454,6 +488,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
     get shake() { return reduced() ? 0 : shake; },
     get actions() { return { strikeCd: act.strikeCd, dashCd: act.dashCd, combo: act.combo, iframes: iris.iframes }; },
     get charging() { return act.charge ? act.charge.t : null; },
+    /** Which source turned the last strike: 'lock' | 'cursor' | 'move' | 'facing' (QA). */
+    get aimedBy() { return lastAim; },
+    /** The creature a strike would turn to now (the soft lock), or null. */
+    get locked() { return iris.outside ? brain.nearest(player.pos, ACTIONS.lock) : null; },
     /** The strike (F / 3): a two-or-three-hit combo in front of her. Returns false while on cooldown or off the field.
      *  @param {number[]|null} [aim] [x, z] the stick / mouse aim, else where she looks; a creature within 3 m wins (soft lock) */
     strike(aim = null) {
@@ -489,7 +527,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       act.charge = null; chargeRing.visible = false;
       if (!iris.alive || !iris.outside) { if (irisEnd) irisEnd(); return false; }
       const A = ACTIONS.super;
-      if (c.t < A.hold) return this.strike(aim);                                  // a tap: the combo (its clip replaces the held pose)
+      if (c.t < A.hold) { const ok = this.strike(aim); if (!ok && irisEnd) irisEnd(); return ok; }   // a tap: the combo (its clip replaces the held pose); on cooldown the coiled pose is put away
       face(aim);
       const k = Math.min(1, (c.t - A.hold) / (A.full - A.hold));
       act.superAt = { t: 0, amount: A.min + (A.max - A.min) * k, k };
@@ -524,6 +562,11 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (unsettled.size) settlePacks();
       act.strikeCd = Math.max(0, act.strikeCd - dt); act.dashCd = Math.max(0, act.dashCd - dt); act.comboT = Math.max(0, act.comboT - dt);
       act.superCd = Math.max(0, act.superCd - dt);
+      {
+        const L = outside && iris.alive ? brain.nearest(player.pos, ACTIONS.lock) : null;
+        lockRing.visible = !!L;
+        if (L) { lockRing.position.set(L.pos[0], L.pos[1] + 0.05, L.pos[2]); lockRing.scale.setScalar(0.8 + L.T.radius * 1.4); lockRing.material.opacity = 0.45 + (reduced() ? 0 : 0.15 * Math.sin(performance.now() / 160)); }
+      }
       if (act.charge) {
         if (!iris.alive || !outside) this.cancelAttack();
         else {
@@ -562,16 +605,23 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         if (act.dash.t >= A.seconds) act.dash = null;
       } else if (act.dash) act.dash = null;
       const im = irisModel();
+      if (im && (act.flinch > 0 || im.userData.flinched)) {                     // the hurt flinch: back and a little aside, then home
+        act.flinch = Math.max(0, act.flinch - dt);
+        const u = act.flinch > 0 ? Math.sin(Math.PI * (1 - act.flinch / act.flinchMax)) * (reduced() ? 0.3 : 1) : 0;
+        im.position.z = -act.flinchAmp * u; im.rotation.z = 0.12 * u * (act.twistDir || 1); im.userData.flinched = act.flinch > 0;
+        if (!im.userData.flinched) { im.position.z = 0; im.rotation.z = 0; }
+      }
       if (im && (act.twist > 0 || im.rotation.y)) { act.twist = Math.max(0, act.twist - dt); im.rotation.y = act.twist > 0 ? act.twistDir * Math.sin(Math.PI * act.twist / 0.22) * 0.7 : 0; }
       if (slashT > 0) { slashT -= dt; slash.material.opacity = Math.max(0, slashT / 0.16) * 0.85; if (slashT <= 0) slash.visible = false; }
       if (camera && numbers.length) {
         const w = globalThis.innerWidth, h = globalThis.innerHeight, v3 = new THREE.Vector3();
         for (const n of numbers) {
           n.t += dt; v3.set(n.p[0], n.p[1] + n.t * 0.9, n.p[2]).project(camera);
-          n.el.style.transform = `translate(${((v3.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v3.y) / 2 * h).toFixed(1)}px) translate(-50%, -50%)`;
-          n.el.style.opacity = String(Math.max(0, 1 - n.t / 0.8)); if (n.t > 0.8 || v3.z > 1) n.el.remove();
+          const pop = n.t < 0.12 ? 1.45 - 0.45 * (n.t / 0.12) : 1;             // a pop, then it rises and fades
+          n.el.style.transform = `translate(${((v3.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v3.y) / 2 * h).toFixed(1)}px) translate(-50%, -50%) scale(${pop.toFixed(3)})`;
+          n.el.style.opacity = String(Math.max(0, Math.min(1, (0.9 - n.t) / 0.35))); if (n.t > 0.9 || v3.z > 1) n.el.remove();
         }
-        for (let i = numbers.length - 1; i >= 0; i--) if (numbers[i].t > 0.8 || !numbers[i].el.isConnected) numbers.splice(i, 1);
+        for (let i = numbers.length - 1; i >= 0; i--) if (numbers[i].t > 0.9 || !numbers[i].el.isConnected) numbers.splice(i, 1);
       }
       acc += dt;
       const stepDt = phone ? 1 / 20 : 0;                                              // phones think at 20 Hz
@@ -609,8 +659,10 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       if (v.ring.visible) {
         const k = Math.min(1, m.t / (m.T.windup * m.T.impact));
         v.ring.position.set(m.pos[0] + Math.sin(m.heading) * m.T.attack * 0.55, m.pos[1] + 0.06, m.pos[2] + Math.cos(m.heading) * m.T.attack * 0.55);
-        v.ring.scale.setScalar(m.T.attack * 0.6 * (reduced() ? 1 : 0.6 + 0.4 * k));
-        v.ring.material.opacity = 0.25 + 0.5 * k;
+        v.ring.scale.setScalar(m.T.attack * 0.6);
+        const last = k > 0.82 && !reduced() ? 0.25 * Math.sin((k - 0.82) / 0.18 * Math.PI * 3) : 0;   // the last beat flickers
+        v.ring.material.opacity = Math.min(1, 0.5 + 0.4 * k + last);
+        const fl = v.ring.children[0]; fl.scale.setScalar(Math.max(0.02, k)); fl.material.opacity = 0.16 + 0.3 * k;
       }
     }
     const chest = new THREE.Vector3(player.pos[0], player.pos[1] + 1.0, player.pos[2]), want = new THREE.Vector3();
