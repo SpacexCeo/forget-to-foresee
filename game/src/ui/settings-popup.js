@@ -4,6 +4,7 @@
 // passes `t`, the prefs and the hooks into the world.
 import { KEY_ACTIONS, bindings, setBindings, defaultBindings, conflicts, keyLabel, isReserved, actionKey } from './keybinds.js';
 import { loadSettings, saveSettings, SETTINGS_OPTIONS } from './settings-store.js';
+import { controlsDiagram } from './keyboard-map.js';
 
 export const TABS = Object.freeze(['graphics', 'controls', 'audio', 'language', 'help', 'account']);
 const LOCALES = [['en', 'English'], ['ru', 'Русский'], ['uk', 'Українська'], ['it', 'Italiano'], ['zh', '中文']];
@@ -111,8 +112,8 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
       const out = [el('h3', null, t('set.ctl.camera')),
         row('set.ctl.sens', range(settings.sensitivity, 0.4, 2, 0.05, (v) => v.toFixed(2) + '×', (v) => setS({ sensitivity: SETTINGS_OPTIONS.sensitivity.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)) }), t('set.ctl.sens'))),
         row('set.ctl.invert', toggle(settings.invertY, (v) => setS({ invertY: v }), t('set.ctl.invert')))];
+      const touch = hooks.touch && hooks.touch();                                   // (read before any use: the pane threw and showed empty)
       if (!(touch && touch.available)) out.push(row('set.ctl.quick', toggle(loadSettings(storage).quickCast, (v) => setS({ quickCast: v }), t('set.ctl.quick')), 'set.ctl.quickNote'));
-      const touch = hooks.touch && hooks.touch();
       if (touch && touch.available) out.push(row('set.ctl.touch', select([['sticks', t('set.ctl.sticks')], ['tap', t('set.ctl.tap')]], touch.mode, (v) => touch.setMode(v), t('set.ctl.touch'))));
       out.push(el('h3', null, t('set.ctl.keys')));
       const b = bindings(), clash = conflicts(b);
@@ -130,6 +131,7 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
       const dl = el('dl');
       for (const [k, v] of [['A / ✕', 'set.pad.interact'], ['B / ○', 'set.pad.back'], ['Menu', 'set.pad.menu'], ['L', 'set.pad.move'], ['R', 'set.pad.look'], ['LB / RB', 'set.pad.zoom'], ['R3', 'set.pad.reset']]) dl.append(el('dt', null, k), el('dd', null, t(v)));
       out.push(dl);
+      out.push(el('h3', null, t(touch && touch.available ? 'set.kbd.touchTitle' : 'set.kbd.title')), controlsDiagram({ doc, b, t, touch: !!(touch && touch.available) }));   // the drawn keyboard (or touch layout), lit from the current bindings
       return out;
     },
     audio() {
