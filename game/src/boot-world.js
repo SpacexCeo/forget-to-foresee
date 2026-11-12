@@ -649,7 +649,7 @@ function handleInput(dt) {
     if (pad.hit(PAD.interact)) { play.handleKey('KeyE'); if (play.ui.panel) return false; }
   }
   if (input.hit('KeyK') && (townOn || playOn)) toggleSkin(); // Day 1: Iris <-> Elise
-  if (input.hit('KeyR') || pad.hit(PAD.reset)) rig.reset();
+  if (input.hit('KeyR') || pad.hit(PAD.reset)) { if (!(townShops && townShops.resetCamera())) rig.reset(); } // indoors: the room's camera
   cameraInput(dt, pad);
 
   if (!inspecting) {
