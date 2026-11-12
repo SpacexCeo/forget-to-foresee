@@ -76,5 +76,7 @@ or a `STOP` file in `FTF_PASS_DIR` halts sending (claims keep queueing).
 
 `/api/health` reports `pass: {network, contract, configured, enabled}` and never the key.
 
-**Eligibility source.** The story module's replayed-log check is wired with `setPassEligibility(fn)`
-(`relayer/lib/pass-service.js`). Until it is wired, nobody is eligible (honest default).
+**Eligibility source.** `relayer/lib/pass-eligibility.js`: the guest's log from `FTF_EXPEDITION_DIR/<guest>.jsonl`,
+its chain verified with `expedition-rules/expedition-log.js` `verifyLog`, then `expedition-rules/portal-eligibility.js`
+`portalEligibility` (exactly one `portal_paid` of 10,000 silk, covered by verified income before it). Without
+`FTF_EXPEDITION_DIR`, without a stored log, or without the rules modules, nobody is eligible (honest default).

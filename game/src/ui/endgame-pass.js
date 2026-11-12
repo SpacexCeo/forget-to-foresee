@@ -1,4 +1,4 @@
-// The endgame cliffhanger and the whitelist pass modal (story TZ §11.1, §11.4). At the story's peak, for a player the
+// The endgame cliffhanger and the whitelist pass modal (story TZ §11.1, §11.4). After the story's twist ('ftf:story-onward'), for a player the
 // relayer says is eligible (10,000 silk paid at the Gate-Loom), the screen cuts to black, holds, and a modal offers a
 // free whitelist pass to a NEAR wallet: one text field, no wallet connection, no signature request, no seed phrase.
 //

@@ -1,8 +1,10 @@
 // The one pass claim service of this process (api/pass/*.js share it): config from the environment, the store in
-// FTF_PASS_DIR, and the eligibility source. Until the story module is wired (setPassEligibility), nobody is eligible.
+// FTF_PASS_DIR, and the eligibility source: the guest's stored expedition log in FTF_EXPEDITION_DIR replayed with the
+// shared rules (lib/pass-eligibility.js). Without a log directory, nobody is eligible.
 import { createPassService, notYetEligible, passEnv } from './pass.js';
+import { createLogEligibility } from './pass-eligibility.js';
 
-let eligibility = notYetEligible;
+let eligibility = process.env.FTF_EXPEDITION_DIR ? createLogEligibility({ dir: process.env.FTF_EXPEDITION_DIR }) : notYetEligible;
 let service = null;
 /** Wires the replayed-log eligibility (story module): (guest) => Promise<{eligible, paid, earned, needed}>. */
 export function setPassEligibility(fn) { eligibility = fn; service = null; }

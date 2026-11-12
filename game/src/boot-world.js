@@ -402,8 +402,8 @@ if (townMode.town) {
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const d = loadDay1(ctx.storage); return !!(d.minted || d.claimed || d.skin === 'elise'); },
     onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
-  // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story's peak dispatches
-  // window 'ftf:story-peak'; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
+  // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story dispatches window
+  // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
   // 'ftf:pass-open' reopens the modal (HUD / help entry points).
   if (params.get('story') === '1' && !endgamePass) mountEndgamePass();
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
@@ -751,13 +751,15 @@ function mountEndgamePass() {
     if (!endgamePass) return;   // network: null — dormant, nothing exists
     window.__ftf.pass = endgamePass;
     window.addEventListener('ftf:pass-open', () => endgamePass.open());
-    window.addEventListener('ftf:story-peak', async () => {
+    const onPeak = async () => {
       if (endgamePass.isOpen || (!demo && endgamePass.shown)) return;    // once per account (the demo replays); reopened from the HUD
       if (demo) { endgamePass.cut(); return; }
       const e = await client.eligibility();                            // the relayer replays the log; the client never decides
       if (e && e.eligible) endgamePass.cut();
-    });
-    if (demo) setTimeout(() => window.dispatchEvent(new CustomEvent('ftf:story-peak')), 4000);
+    };
+    // the story module fires 'ftf:story-onward' once after the twist (the Loom does not open toward home)
+    window.addEventListener('ftf:story-onward', onPeak);
+    if (demo) setTimeout(() => window.dispatchEvent(new CustomEvent('ftf:story-onward', { detail: { demo: true } })), 4000);
   }).catch((e) => { endgamePass = null; console.warn('[pass]', e); });
 }
 
