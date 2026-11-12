@@ -25,6 +25,7 @@
   .note { color: var(--dim); font-size: 13px; }
   .state { padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--line); color: var(--dim); }
   code { font: 12px ui-monospace, monospace; overflow-wrap: anywhere; }
+  .warn { color: #f0a08a; }
   .live::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); margin-right: 6px; }
 </style>
 </head>
@@ -43,8 +44,12 @@
     <h2>The town works</h2>
     <table><thead><tr><th>Works</th><th>Silk pledged</th><th>Reward rate, last 7 days</th></tr></thead><tbody id="works"></tbody></table>
     <p class="note">Rewards come only from the town's fees: 0.12 % of every market trade goes to the treasury; each day 65 % of it goes to the works (capped at 0.15 % of pledged weight a day), 10 % to the tournament purse, 10 % to the Shell Reserve and 15 % is burned. The Shell Observatory also gets 15 % of every tournament entry. No silk is minted for pledges; a season's purse may add a mint bounded by its ceiling.</p>
+    <h2>Rules in force</h2>
+    <table><tbody id="rules"></tbody></table>
+    <p class="note">Read with <code>view <span class="town"></span> params {}</code> and <code>gate_price {}</code>; the owner changes them only with <code>set_params</code> / <code>set_gate_price</code>, each logged as an event.</p>
     <h2>The town's wallets</h2>
-    <table><thead><tr><th>Wallet</th><th>Who</th><th>Silk</th><th>Earned</th><th>Spent</th><th>Pledged</th></tr></thead><tbody id="wallets"></tbody></table>
+    <p id="mismatch" class="state" hidden></p>
+    <table><thead><tr><th>Wallet</th><th>Who</th><th>Silk (chain)</th><th>Relayer says</th><th>Earned</th><th>Spent</th><th>Pledged</th></tr></thead><tbody id="wallets"></tbody></table>
     <p class="note">Every trader and clan signs with its own testnet account, each key limited to the town's game methods and a daily budget.</p>
     <h2>Clan strategies</h2>
     <table><thead><tr><th>Clan</th><th>Chosen by</th><th>Strategy</th><th>When</th></tr></thead><tbody id="strategies"></tbody></table>
@@ -52,9 +57,22 @@
     <h2>The stalls</h2>
     <table><thead><tr><th>Goods</th><th>Stall</th><th>On the shelf</th><th>Price, silk</th><th>Buys from players, silk</th></tr></thead><tbody id="stalls"></tbody></table>
     <p class="note">Prices follow stock and demand (relayer/market/prices.js): a good bought empty gets dearer, a flooded one cheaper. A stall that runs out of silk closes: it stops buying and making goods and sells off its shelf.</p>
+    <h2>Hall of Pledges</h2>
+    <table><thead><tr><th>Stall</th><th>Silk pledged into it by players</th><th>Waiting for its investors</th></tr></thead><tbody id="pledges"></tbody></table>
+    <p class="note">From <code>stall_of {trader}</code> on chain: players who pledged silk into a stall (<code>invest_stall</code>) keep it trading and share its fees. The investors' names are in the contract's <code>stall_invest</code> events.</p>
+    <h2>Latest events, confirmed on chain</h2>
+    <table><thead><tr><th>Event</th><th>What the chain logged</th><th>Tx</th></tr></thead><tbody id="events"></tbody></table>
+    <p class="note">The relayer only names the latest transaction hashes; this page fetches each transaction from a NEAR RPC node (<code>tx {hash, sender}</code>) and shows the NEP-297 events the contract logged in it.</p>
     <h2>Last trades</h2>
     <table><thead><tr><th>When</th><th>Buyer</th><th>Seller</th><th>Goods</th><th>Silk</th><th>Why that price</th><th>Tx</th></tr></thead><tbody id="trades"></tbody></table>
     <p class="note" id="foot"></p>
+    <h2>What this page does not show</h2>
+    <ul class="note">
+      <li>Accounts are not people: the 20 trader and 6 clan wallets are the town's scripted traders (rules, not an LLM), run by the owner on testnet.</li>
+      <li>Silk is an in-game testnet currency with no value outside the game; rates are past fee flow, variable, can be zero.</li>
+      <li>Players' own inventories and story progress (not on this contract), and anything the relayer says that the chain does not confirm: such numbers are marked.</li>
+    </ul>
+    <p class="note" id="calls"></p>
   </section>
 </main>
 <script>
@@ -71,28 +89,55 @@
   const $ = (id) => document.getElementById(id);
   const el = (tag, text, attrs) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (attrs) Object.assign(e, attrs); return e; };
   const micro = (s, d = 2) => { const v = BigInt(s || '0'), w = v / 1000000n, f = (v % 1000000n).toString().padStart(6, '0').slice(0, d).replace(/0+$/, ''); return w.toLocaleString('en') + (f ? '.' + f : ''); };
-  async function view(method, args = {}) {
+  const CACHE_MS = 60_000, HOST_MS = 6_000;
+  const cacheGet = (k) => { try { const c = JSON.parse(sessionStorage.getItem('pulse:' + k) || 'null'); return c && Date.now() - c.at < CACHE_MS ? c.v : null; } catch { return null; } };
+  const cachePut = (k, v) => { try { sessionStorage.setItem('pulse:' + k, JSON.stringify({ at: Date.now(), v })); } catch { /* private mode */ } };
+  /** One JSON-RPC call: each host gets 6 s, then the next; answers are cached 60 s in this tab; a failure is {error}, never an old number. */
+  async function rpc(method, params) {
+    const key = method + JSON.stringify(params), hit = cacheGet(key);
+    if (hit) return hit;
     for (const url of RPCS) {
       try {
-        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'query', params: { request_type: 'call_function', finality: 'final', account_id: TOWN, method_name: method, args_base64: btoa(JSON.stringify(args)) } }) });
+        const ac = new AbortController(), timer = setTimeout(() => ac.abort(), HOST_MS);
+        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: ac.signal });
+        clearTimeout(timer);
         const j = await r.json();
-        if (j.error) return { error: (j.error.cause && j.error.cause.name) || 'error' };
-        return { value: JSON.parse(new TextDecoder().decode(Uint8Array.from(j.result.result))) };
-      } catch { /* next RPC */ }
+        const out = j.error ? { error: (j.error.cause && j.error.cause.name) || 'error' } : { value: j.result };
+        if (!j.error) cachePut(key, out);
+        return out;
+      } catch { /* next host */ }
     }
     return { error: 'unreachable' };
   }
+  async function view(method, args = {}) {
+    const r = await rpc('query', { request_type: 'call_function', finality: 'final', account_id: TOWN, method_name: method, args_base64: btoa(JSON.stringify(args)) });
+    if (r.error) return r;
+    try { return { value: JSON.parse(new TextDecoder().decode(Uint8Array.from(r.value.result))) }; } catch { return { error: 'bad_answer' }; }
+  }
+  let lastGood = null;
   function tile(label, value) { const t = el('div', null, { className: 'tile' }); t.append(el('b', value), el('span', label)); return t; }
   async function refresh() {
     const p = await view('pulse');
     if (p.error) {
       $('state').textContent = p.error === 'UNKNOWN_ACCOUNT' || p.error === 'NO_CONTRACT_CODE' || p.error === 'CodeDoesNotExist'
         ? `The town contract (${TOWN}) is not deployed on testnet yet. This page fills in by itself once it is.`
-        : 'The testnet RPC did not answer; retrying.';
+        : `Unavailable: the testnet RPC did not answer${lastGood ? ` (last good read ${lastGood})` : ''}. No numbers are shown until it does.`;
       $('state').hidden = false; $('body').hidden = true; return;
     }
     const v = p.value, c = v.counters;
+    lastGood = new Date().toISOString().slice(11, 19) + ' UTC';
     $('state').hidden = true; $('body').hidden = false;
+    document.querySelectorAll('.town').forEach((x) => { x.textContent = TOWN; });
+    // rules in force, straight from the contract
+    const [prm, gp] = await Promise.all([view('params'), view('gate_price')]);
+    const rule = (k, val) => { const tr = el('tr'); tr.append(el('td', k), el('td', val)); return tr; };
+    const pct = (bps) => (Number(bps) / 100).toLocaleString('en') + ' %';
+    $('rules').replaceChildren(...(prm.value ? [
+      rule('Market fee on every trade', pct(prm.value.trade_fee_bps)), rule('Sweep: stakers · purse · reserve · burn', [prm.value.tithe_stakers_bps, prm.value.tithe_purse_bps, prm.value.tithe_reserve_bps, prm.value.tithe_burn_bps].map(pct).join(' · ')),
+      rule('Rate ceiling per day', pct(prm.value.rate_ceiling_bps)), rule('Tournament entry', micro(prm.value.entry_fee, 0) + ' silk'),
+      rule('Pledge cap per account', micro(prm.value.cap_floor, 0) + '–' + micro(prm.value.cap_total, 0) + ' silk'), rule('Season mint ceiling', micro(prm.value.season_mint_cap, 0) + ' silk'),
+      rule('Share of a stall sale to its investors', pct(prm.value.stall_fee_bps)), rule('Portal gate price (burned)', gp.value ? micro(gp.value, 0) + ' silk' : 'not on this contract version'),
+    ] : [rule('Rules', 'unavailable')]));
     const tx = c.trade + c.entry + c.settle + c.stake + c.claim + c.unbond + c.withdraw + c.early_exit + c.sweep + c.distribute + c.deed_transfer;
     $('tiles').replaceChildren(
       tile('market trades (all time)', c.trade.toLocaleString('en')), tile('town transactions (all time)', tx.toLocaleString('en')),
@@ -114,9 +159,16 @@
     if (bal.value) $('wallets').replaceChildren(...WALLETS.map(([acc, who], i) => {
       const row = bal.value[i] || {}; const tr = el('tr'); const td = el('td');
       td.append(el('a', acc.split('.')[0], { href: `${EXPLORER}/address/${acc}`, target: '_blank', rel: 'noopener' }));
-      tr.append(td, el('td', who), el('td', micro(row.silk, 1)), el('td', micro(row.earned, 1)), el('td', micro(row.spent, 1)), el('td', micro(row.staked, 0)));
+      const said = el('td', '—'); said.dataset.wallet = String(i);
+      tr.append(td, el('td', who), el('td', micro(row.silk, 1)), said, el('td', micro(row.earned, 1)), el('td', micro(row.spent, 1)), el('td', micro(row.staked, 0)));
       return tr;
     }));
+    // Hall of Pledges: silk players pledged into each stall (stall_of, on chain)
+    const st = await Promise.all(TRADERS.map((k, i) => view('stall_of', { trader: WALLETS[i][0] })));
+    const pledged = st.map((x, i) => ({ who: WALLETS[i][1], s: x.value })).filter((x) => x.s && BigInt(x.s.invested || '0') > 0n).sort((a, b) => (BigInt(b.s.invested) > BigInt(a.s.invested) ? 1 : -1));
+    $('pledges').replaceChildren(...(pledged.length ? pledged.map((x) => { const tr = el('tr'); tr.append(el('td', x.who), el('td', micro(String(x.s.invested), 1)), el('td', micro(String(x.s.rewards), 2))); return tr; })
+      : [Object.assign(el('tr'), { innerHTML: '<td colspan="3" class="note">No stall has been pledged into yet.</td>' })]));
+    $('calls').textContent = `Every number above comes from these calls to ${TOWN}: pulse {}, params {}, gate_price {}, stake_pools {}, balances_of {account_ids}, stall_of {trader}; events from tx {hash, sender}. Cached 60 s in this tab; nothing is stored elsewhere.`;
     try {
       const r = await fetch(RELAYER + '/api/market/stats'); const s = r.ok ? await r.json() : null;
       const strat = s && s.strategy;
@@ -128,6 +180,30 @@
         }));
         $('stratnote').textContent = `Today: ${strat.llm_today} decisions chosen by an LLM on NEAR AI Cloud, ${strat.scripted_today} scripted (when the model does not answer). The rules engine makes every trade either way.`;
       } else $('strategies').replaceChildren(Object.assign(el('tr'), { innerHTML: '<td colspan="4" class="note">No strategy decisions yet.</td>' }));
+      // the relayer's own view of each trader's silk, shown beside the chain's: a mismatch is flagged, never hidden
+      let off = 0;
+      if (s && s.balances && bal.value) TRADERS.forEach((k, i) => {
+        const cell = document.querySelector(`td[data-wallet="${i}"]`); if (!cell || s.balances[k] == null) return;
+        const said = BigInt(s.balances[k]), chain = BigInt((bal.value[i] && bal.value[i].silk) || '0');
+        const diff = said > chain ? said - chain : chain - said;
+        const bad = diff > 1_000_000n && diff * 50n > chain; // more than 1 silk and 2 %
+        cell.textContent = micro(String(said), 1) + (bad ? ' ⚠' : ''); if (bad) { cell.className = 'warn'; off++; }
+      });
+      $('mismatch').hidden = !off;
+      $('mismatch').textContent = off ? `Warning: for ${off} trader wallet(s) the relayer's figure differs from the chain's by more than 2 %. The chain's number is the true one.` : '';
+      // latest events: hashes named by the relayer, content fetched from the chain
+      const named = (s && Array.isArray(s.recent) ? s.recent : []).filter((t) => /^[1-9A-HJ-NP-Za-km-z]{40,50}$/.test(t.hash || '')).slice(0, 8);
+      const evRows = [];
+      for (const t of named) {
+        const sender = WALLETS[TRADERS.indexOf(t.buyer)] ? WALLETS[TRADERS.indexOf(t.buyer)][0] : null;
+        const r2 = sender ? await rpc('tx', { tx_hash: t.hash, sender_account_id: sender, wait_until: 'FINAL' }) : { error: 'unknown_sender' };
+        const logs = r2.value ? (r2.value.receipts_outcome || []).flatMap((o) => o.outcome.logs || []).filter((l) => l.startsWith('EVENT_JSON:')).map((l) => { try { return JSON.parse(l.slice(11)); } catch { return null; } }).filter((j) => j && j.standard === 'ftf_town') : [];
+        const tr = el('tr'); const td = el('td'); td.append(el('a', t.hash.slice(0, 8) + '…', { href: `${EXPLORER}/txns/${t.hash}`, target: '_blank', rel: 'noopener' }));
+        if (logs.length) for (const j of logs) { const d = (j.data && j.data[0]) || {}; tr.append(el('td', j.event + ' ✓'), el('td', d.from ? `${d.from.split('.')[0]} → ${String(d.to || '').split('.')[0]}: ${micro(d.silk, 2)} silk (fee ${micro(d.fee, 4)}), ${d.ref || ''}` : JSON.stringify(d).slice(0, 120)), td); }
+        else tr.append(el('td', 'not confirmed ✗', { className: 'warn' }), el('td', r2.error ? 'the RPC did not return this transaction' : 'no town event in it'), td);
+        evRows.push(tr);
+      }
+      $('events').replaceChildren(...(evRows.length ? evRows : [Object.assign(el('tr'), { innerHTML: '<td colspan="3" class="note">No recent transactions named yet.</td>' })]));
       const stalls = s && Array.isArray(s.stalls) ? s.stalls : [];
       $('stalls').replaceChildren(...(stalls.length ? stalls.map((x) => { const tr = el('tr'); tr.append(el('td', String(x.item).replace(/_/g, ' ')), el('td', String(x.maker).replace(/_/g, ' ') + (x.closed ? ' (closed)' : '')), el('td', String(x.stock)), el('td', (Number(x.price) / 5).toFixed(1)), el('td', x.kind === 'resource' ? (x.buys_at ? (Number(x.buys_at) / 5).toFixed(1) : 'shelf full') : '—')); return tr; })
         : [Object.assign(el('tr'), { innerHTML: '<td colspan="5" class="note">The stalls appear once the traders run.</td>' })]));
@@ -141,7 +217,7 @@
       }) : [Object.assign(el('tr'), { innerHTML: '<td colspan="7" class="note">The traders’ feed is not running yet.</td>' })]));
     } catch { /* the relayer is optional: the counters above come from the chain */ }
   }
-  refresh(); setInterval(refresh, 30000);
+  refresh(); setInterval(refresh, 60000); // never faster than the 60 s cache
 })();
 </script>
 </body>
