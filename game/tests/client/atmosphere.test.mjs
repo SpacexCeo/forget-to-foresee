@@ -111,7 +111,7 @@ test('grade: richer colour, cool shadows and warm highlights, neutral greys stay
 });
 
 test('weather presets: clear is the calm default; overcast and rain dim the sun, soften shadows, thicken the haze', () => {
-  assert.deepEqual(WEATHER_NAMES, ['clear', 'overcast', 'rain']);
+  assert.deepEqual(WEATHER_NAMES, ['clear', 'haze', 'fog', 'overcast', 'drizzle', 'rain', 'storm']);
   assert.equal(DEFAULT_WEATHER, 'clear');
   const { clear, overcast, rain } = WEATHER;
   assert.equal(clear.sun, 1); assert.equal(clear.wet, 0); assert.equal(clear.rain, 0); assert.equal(clear.overcast, 0); assert.equal(clear.fog, 1);
@@ -267,4 +267,22 @@ test('wind weights without an authored attribute: only what is recognisably a ba
   const f = windWeights(pos, idx, 'foliage');
   assert.equal(f[P.findIndex((p) => p[1] === 4.5)], 1, 'a tall crown leans, rooted at the bottom'); assert.equal(f[P.findIndex((p) => p[1] === 1.6)], 0);
   assert.ok(f[P.findIndex((p) => p[0] === 10 && p[1] === 0.34)] <= WIND_SHAPE.smallFoliage + 1e-6, 'a small plant only shivers');
+});
+
+test('storm: distant flashes with thunder after them; cheap tiers keep the wet sheen but no mirror puddles; splashes follow the rain', async () => {
+  const { Splashes } = await import('../../src/render/weather.js');
+  const w = new WeatherSystem({ name: 'storm' });
+  const thunder = []; w.onThunder = (d) => thunder.push(d);
+  let peak = 0;
+  for (let i = 0; i < 60 * 30; i++) { w.update(1 / 60); peak = Math.max(peak, w.flash); }
+  assert.ok(peak > 0.5, 'a flash lights the frame'); assert.ok(thunder.length >= 1 && thunder.every((d) => d >= 1.5 && d <= 5.5), 'thunder follows');
+  assert.equal(w.flash, w.flashT < 0 ? 0 : w.flash);
+  w.set('clear', { immediate: true }); w.update(0.5); assert.equal(w.flash, 0, 'no flashes once it clears');
+  const r = new WeatherSystem({ name: 'rain' }); r.puddles = 0; r.update(0.1);
+  assert.ok(WEATHER_UNIFORMS.ftfWeather.value[0] > 0.9 && WEATHER_UNIFORMS.ftfWeather.value[1] === 0);
+  const s = new Splashes({ capacity: 100 }); s.setMax(80);
+  s.setAmount(0); assert.equal(s.mesh.visible, false);
+  s.setAmount(1); assert.equal(s.mesh.geometry.instanceCount, 80);
+  s.setAmount(1, true); assert.equal(s.mesh.visible, false, 'none under reduced motion');
+  s.dispose();
 });

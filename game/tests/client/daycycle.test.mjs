@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cycleAt, cycleLook, mixLooks, lerpAngle, KEYS, DAY_CYCLE_LENGTH, RAIN_WINDOW } from '../../src/render/daycycle.js';
+import { cycleAt, cycleLook, mixLooks, lerpAngle, KEYS, DAY_CYCLE_LENGTH, weatherTimeline, weatherAt, startPhase, WEATHER_FADE } from '../../src/render/daycycle.js';
+import { WEATHER, HEAVY_WEATHER } from '../../src/render/weather.js';
 import { lookFor, mixStats, skyStats, TIME_PRESETS } from '../../src/render/sky.js';
 
 const town = (h) => lookFor('town', h);
@@ -42,14 +43,47 @@ test('night: a cool moonlit key, stars, mist, lamps in warm pools', () => {
   assert.ok(TIME_PRESETS.night && TIME_PRESETS.dawn && TIME_PRESETS.twilight && TIME_PRESETS.evening);
 });
 
-test('rain visits the evening and night of every second loop only', () => {
-  for (let s = 0; s < DAY_CYCLE_LENGTH; s += 5) assert.equal(cycleAt(s).weather, 'clear');
-  const L = DAY_CYCLE_LENGTH;
-  assert.equal(cycleAt(L + RAIN_WINDOW.overcast + 1).weather, 'overcast');
-  assert.equal(cycleAt(L + RAIN_WINDOW.rain + 1).weather, 'rain');
-  assert.equal(cycleAt(L + RAIN_WINDOW.clear + 1).weather, 'clear');
-  const at = cycleAt(L + RAIN_WINDOW.overcast + 1);
-  assert.notEqual(at.a, 'dawn', 'never in the early morning');
+test('each session has its own weather timeline: calm spells, fog fronts, rain fronts, a rare storm', () => {
+  const N = 400; let rainSoon = 0, storms = 0, fronts = 0;
+  for (let seed = 1; seed <= N; seed++) {
+    const tl = weatherTimeline(seed);
+    assert.equal(tl[0][0], 0); assert.ok(['clear', 'haze'].includes(tl[0][1]), 'a session opens calm');
+    for (let i = 1; i < tl.length; i++) {
+      assert.ok(tl[i][0] - tl[i - 1][0] >= WEATHER_FADE * 2, `every state outlasts its ease (seed ${seed})`);
+      assert.ok(WEATHER[tl[i][1]], tl[i][1]);
+    }
+    if (tl.some(([t, w]) => (w === 'rain' || w === 'storm' || w === 'drizzle') && t <= 600)) rainSoon++;
+    for (const [, w] of tl) { if (w === 'storm') storms++; if (w === 'rain' || w === 'storm') fronts++; }
+    assert.equal(weatherAt(tl, 0), tl[0][1]); assert.equal(weatherAt(tl, tl[2][0] + 1), tl[2][1]);
+    assert.equal(JSON.stringify(weatherTimeline(seed)), JSON.stringify(tl), 'seeded');
+  }
+  assert.ok(rainSoon / N > 0.4 && rainSoon / N < 0.7, `rain within ten minutes in about half the sessions (${rainSoon}/${N})`);
+  assert.ok(storms > 0 && storms / fronts < 0.3, `storms are rare (${storms}/${fronts})`);
+  assert.equal(weatherAt(null, 99), 'clear');
+  // rain stops cleanly: every rain or storm is followed by drizzle, then a calm spell
+  const tl = weatherTimeline(7);
+  for (let i = 0; i < tl.length - 2; i++) if (tl[i][1] === 'rain' || tl[i][1] === 'storm') { assert.equal(tl[i + 1][1], 'drizzle'); assert.ok(['clear', 'haze'].includes(tl[i + 2][1])); }
+});
+
+test('the session starts where the local clock falls on the loop, with a little chance', () => {
+  const at = (h, r = 0.5) => cycleAt(startPhase(new Date(2026, 10, 12, h, 0), () => r));
+  assert.equal(at(7).a, 'dawn'); assert.equal(at(16).a, 'evening');
+  assert.ok(['night', 'twilight'].includes(at(23).a) && ['night', 'twilight'].includes(at(2).a), 'late hours are night');
+  assert.ok(['dusk', 'evening', 'twilight'].includes(at(19).a));
+  assert.notEqual(startPhase(new Date(2026, 10, 12, 12), () => 0), startPhase(new Date(2026, 10, 12, 12), () => 1), 'two sessions at noon differ');
+  for (let h = 0; h < 24; h += 0.25) { const s = startPhase(new Date(2026, 10, 12, Math.floor(h), (h % 1) * 60), Math.random); assert.ok(s >= 0 && s < DAY_CYCLE_LENGTH); }
+  // the weather clock counts from the session start, the hour clock from the loop start
+  const tl = weatherTimeline(3), t0 = 300;
+  assert.equal(cycleAt(t0, tl, t0).weather, tl[0][1]);
+  assert.equal(cycleAt(t0 + tl[1][0] + 1, tl, t0).weather, tl[1][1]);
+});
+
+test('the jury path keeps a fixed readable look; QA can pin the hour, the weather, the clock and the seed', async () => {
+  const { readFileSync } = await import('node:fs');
+  const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
+  assert.match(boot, /const dayCycle = !judge && !params\.has\('tod'\) && !params\.has\('weather'\)/);
+  assert.match(boot, /params\.has\('wseed'\)/); assert.match(boot, /startPhase\(\)/);
+  assert.deepEqual([...HEAVY_WEATHER], ['rain', 'storm']);
 });
 
 test('mixLooks blends numbers, the fog and the azimuth the short way; absent disc means 1', () => {
