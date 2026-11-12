@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash|skid|shoulders> [--url http://127.0.0.1:4173] [--query anim=v1] [--hero elise] [--size 1280x720] [--gpu]
 // --step 60: frame by frame: the page's clock and its animation frames are driven by this script (each frame is
 // exactly 1/60 s of game time and is saved), so the film is a true 60 fps whatever the renderer's speed is.
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
@@ -127,6 +127,17 @@ else if (scenario === 'dash') {
     mark('dash 2'); await page.keyboard.down('ShiftLeft'); await page.keyboard.down('KeyW'); await page.keyboard.press('Space'); await wait(250); await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(1300);
   }
   marks.push({ events: await page.evaluate(() => Object.fromEntries(Object.entries(window.__ev).map(([k, v]) => [k, { n: v.length, first: v.slice(0, 6) }]))) });
+}
+else if (scenario === 'skid') {
+  // a cast out of a full run: the heel-dig stop blended into the wind-up, from the side and from the front
+  const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos; const pt = [p[0] + 9, window.__ground(p[0] + 9, p[2]) ?? p[1], p[2]]; f.town.casting.aimAt(id, pt); return f.town.casting.release(); }, id);
+  for (const [name, s] of [['side', { angle: Math.PI / 2, dist: 5.2, h: 0.9, up: 0.2 }], ['front34', { angle: 0.5, dist: 5.0, h: 0.9, up: 0.3 }]]) {
+    for (const id of ['lance', 'snare']) {
+      await back(); await shot(s); await wait(1800);
+      mark(name + ' run'); await go(1300, true);
+      mark(name + ' ' + id + ' out of the run'); await aim(id); await wait(2300);
+    }
+  }
 }
 else if (scenario === 'shoulders') {
   // the shoulders and arms (Elise): close from the front and from behind while she stands, waves, walks and runs
