@@ -85,5 +85,12 @@ contract change**, and every opening still draws its own deck position, so each 
   `node relayer/scripts/chest-batch-test.mjs <guest account> 2 --send`. It sends one transaction with 2 `open_chest`
   actions and prints the hash, the gas burnt and both openings. If the network refuses a multi-action
   function-call-key transaction, the batch falls back to N single transactions: one line in `openChests`.
-- **Not built yet**: the client's "Open 1 / 5 / all", the reveal sequence and the summary grid (game UI). The answer
-  format for it is in `relayer/api/chest/open.js`.
+- **Client** (`game/src/net/chest.js` `openChests`, `net/chest-client.js` `openMany`, `play/chest-batch.js`):
+  - The bag shows "Open 5" and "Open all (≤ 10)" once two or more chests are sealed; "Open" on a card still opens
+    one.
+  - Each opening settles its own sealed chest the moment the answer arrives, so closing early loses nothing.
+  - The cards flip one by one (0.4 s each, a tap skips; reduced motion goes straight to the summary). The summary
+    grid is sorted by rarity, each card's "Verified ✓" links to the transaction, and "Claim all" closes.
+  - Every opening is read back with `get_opening` and checked in the browser like a single one.
+  - A relayer without batches is detected (an error, or a single-opening answer), and the chests are then opened
+    one by one.
