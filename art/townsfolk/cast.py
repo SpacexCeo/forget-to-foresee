@@ -298,7 +298,7 @@ AGENTS = {
         macros=dict(gender=0.0, age=0.42, muscle=0.35, weight=0.48, height=0.45, proportions=0.6, cupsize=0.5, firmness=0.5,
                     race=race(0.0, 0.1, 0.9)),
         detail={"mouth/mouth-angles-up": 0.5, "eyes/l-eye-scale-incr": 0.25, "eyes/r-eye-scale-incr": 0.25},
-        skin="warm", hair=("chestnut", "long_side"), brows=1.0,
+        skin="warm", hair=("chestnut", "short_messy"), brows=1.0,   # long_side hung a lock across the nose
         costume=dict(base="robe", robe=("linen_c", "brown_c"), hem=0.05, sleeves="long", collar="wrap", under=("linen_c",),
                      underskirt=("linen_c", 0.05), belt=("brown_c", "copper"), shoes=("boots", "leather"),
                      mantles=(("moss_c", "moss_c", -0.12, "plain"),), cowl=("moss_c",),

@@ -3,6 +3,8 @@
 // wheel id from the account, re-rolls the seed, checks the spin number is one the account could have reached, checks
 // the request is signed by a key of that account, and only then mints the skin (contracts/skin-nft: cap, one each).
 import { createHash } from 'node:crypto';
+import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { b58decode, createTxClient, importSecretKey } from './near-tx.js';
 
 /** Segment ids and weights in wheel order (game/src/game/wheel.js SEGMENTS). */
@@ -67,15 +69,29 @@ export async function checkClaim(b, now = Date.now(), maxSkewMs = WHEEL_DEFAULTS
   return { ok: true, accountId: b.account_id, publicKey: b.public_key, seed: b.seed, n, signature: b.signature };
 }
 
-/** Mints the skin for a checked claim. {status, body}. */
-export async function mintSkin({ accountId, publicKey, seed }, { secretKey, skins = WHEEL_DEFAULTS.skins, rpcUrls, fetch = globalThis.fetch, queue = (fn) => fn() }) {
-  if (!secretKey) return { status: 503, body: { error: 'wheel_not_configured' } };
+/**
+ * Pending claims (the minter key is not on this server yet): one JSON line per verified win in `dir`/wheel-claims.jsonl,
+ * so `node scripts/mint-pending.mjs` can mint them once FTF_SKIN_KEY exists. The browser keeps the prize pending too.
+ */
+export function createClaimLog(dir) {
+  return {
+    record(c) { try { mkdirSync(dir, { recursive: true }); appendFileSync(join(dir, 'wheel-claims.jsonl'), JSON.stringify(c) + '\n', { mode: 0o600 }); return true; } catch { return false; } },
+    list() { try { return readFileSync(join(dir, 'wheel-claims.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } },
+  };
+}
+
+/** Mints the skin for a checked claim. {status, body}. Without a minter key: 202 {status: 'mint_pending'} after every check. */
+export async function mintSkin({ accountId, publicKey, seed, n }, { secretKey, skins = WHEEL_DEFAULTS.skins, rpcUrls, fetch = globalThis.fetch, queue = (fn) => fn(), log = null, now = Date.now, skipKeyCheck = false }) {
   const client = createTxClient({ rpcUrls, fetch });
-  try { await client.rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: accountId, public_key: publicKey }); } catch { return { status: 403, body: { error: 'not_your_key' } }; }
+  if (!skipKeyCheck) try { await client.rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: accountId, public_key: publicKey }); } catch { return { status: 403, body: { error: 'not_your_key' } }; }
   const owned = await client.view(skins, 'skin_of', { account_id: accountId });
   if (owned) return { status: 409, body: { error: 'already_owned', token_id: owned } };
   const info = await client.view(skins, 'skin_info', {});
   if (info && info.left <= 0) return { status: 410, body: { error: 'sold_out' } };
+  if (!secretKey) {
+    const recorded = log ? log.record({ account_id: accountId, seed, n, at: new Date(now()).toISOString(), contract: skins }) : false;
+    return { status: 202, body: { status: 'mint_pending', verified: true, recorded, contract: skins, left: info ? info.left : null } };
+  }
   const key = await importSecretKey(secretKey);
   const send = () => client.call({ key, signerId: skins, receiverId: skins, methodName: 'mint_skin', args: { receiver_id: accountId, claim: seed }, gas: 50_000_000_000_000n });
   let r;
@@ -86,4 +102,4 @@ export async function mintSkin({ accountId, publicKey, seed }, { secretKey, skin
   return { status: 200, body: { token_id: token ? token.token_id : null, tx_hash: r.hash, contract: skins } };
 }
 
-export const wheelEnv = (env = process.env) => ({ secretKey: env.FTF_SKIN_KEY || '', skins: env.FTF_SKINS_CONTRACT || WHEEL_DEFAULTS.skins });
+export const wheelEnv = (env = process.env) => ({ secretKey: env.FTF_SKIN_KEY || '', skins: env.FTF_SKINS_CONTRACT || WHEEL_DEFAULTS.skins, dataDir: env.FTF_DATA_DIR || new URL('../data', import.meta.url).pathname });

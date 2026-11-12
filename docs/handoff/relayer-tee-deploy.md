@@ -71,7 +71,7 @@ node scripts/chest-key.mjs FTF_SKIN_KEY   # appends FTF_SKIN_KEY=… to .env (on
   ```bash
   cd <checkout>/relayer
   docker build -t ftf-relayer . && docker rm -f <old name>
-  docker run -d --name <old name> --restart unless-stopped --env-file .env -e TRUST_PROXY=1 -p 127.0.0.1:8787:8787 ftf-relayer
+  docker run -d --name <old name> --restart unless-stopped --env-file .env -e TRUST_PROXY=1 -v ftf-relayer-data:/app/data -p 127.0.0.1:8787:8787 ftf-relayer
   ```
   (keep the old `-p` mapping if the proxy reached it another way).
 
@@ -132,6 +132,14 @@ tee_not_configured` means the key did not reach the process (steps 3–4).
 2. the two health JSONs from step 7 (they never contain keys);
 3. the `say` line and the verifier's last line (or the 402);
 4. which proxy you edited.
+
+Wheel wins that arrived before the skin key existed are kept in `relayer/data/wheel-claims.jsonl` (Docker: the
+`ftf-relayer-data` volume). Once `FTF_SKIN_KEY` is in `.env` and the lead has added its public key (step 9), mint them:
+
+```bash
+cd <checkout>/relayer && node scripts/mint-pending.mjs --dry-run && node scripts/mint-pending.mjs
+# Docker: docker exec <relayer container> node scripts/mint-pending.mjs
+```
 
 ## 9. The lead then runs (in the lead's container, with the testnet keys)
 

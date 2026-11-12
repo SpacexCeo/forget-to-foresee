@@ -23,7 +23,9 @@ The roll is deterministic and public, so the relayer re-checks it instead of tru
 
 Answers: `200 {token_id, tx_hash}`; `400 invalid_spin` / `401 bad_signature`; `403 not_your_key`;
 `409 already_owned` / `replayed`; `410 sold_out`; `429 rate_limited` (3 at once per IP, then one per 5 min);
-`503 wheel_not_configured`.
+and, while the minter key is not on the server yet, `202 {status: 'mint_pending', verified: true, recorded}`: every
+check above has passed, the win is written to `relayer/data/wheel-claims.jsonl`, and the game keeps the prize as
+"mint pending" (and retries). `node relayer/scripts/mint-pending.mjs` mints the recorded wins once the key exists.
 
 ## Honest limits
 
