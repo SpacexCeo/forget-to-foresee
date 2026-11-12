@@ -61,6 +61,17 @@ Keep the printed public key for step 8. Then the wheel's skin minter key (the Sh
 node scripts/chest-key.mjs FTF_SKIN_KEY   # appends FTF_SKIN_KEY=… to .env (once) and prints ONLY its public key
 ```
 
+### 3b. Town market keys (`docs/market.md`)
+
+```bash
+cd <checkout>/relayer
+node scripts/market-keys.mjs > market-public.json   # 20 trade keys into data/market-keys.json (mode 600); prints ONLY accounts + public keys
+# only after the lead confirms step 9 (market deployed): echo 'FTF_MARKET=1' >> .env, then restart (step 4)
+```
+
+Send `market-public.json` to the lead (it has no secrets). Docker: the keys are in the
+`ftf-relayer-data` volume, so run the script inside the container (`docker exec <relayer> node scripts/market-keys.mjs`).
+
 ## 4. Restart the relayer
 
 - **systemd / plain Node:** `sudo systemctl restart <service>` (or stop the old `node server.js` and start it the same
@@ -76,7 +87,7 @@ node scripts/chest-key.mjs FTF_SKIN_KEY   # appends FTF_SKIN_KEY=… to .env (on
   (keep the old `-p` mapping if the proxy reached it another way).
 
 The start line (`docker logs <name> | tail -1`, `journalctl -u <service> -n 5`) reads
-`relayer on http://… (key set, TEE set, chests set, skins set)`.
+`relayer on http://… (key set, TEE set, chests set, skins set, market 20 traders)` (`market off` until `FTF_MARKET=1`).
 
 ## 5. Start the presence service (port 8788, localhost only)
 
@@ -131,7 +142,8 @@ tee_not_configured` means the key did not reach the process (steps 3–4).
 1. the chest-opener and skin-minter **public** keys from step 3;
 2. the two health JSONs from step 7 (they never contain keys);
 3. the `say` line and the verifier's last line (or the 402);
-4. which proxy you edited.
+4. which proxy you edited;
+5. `market-public.json` from step 3b.
 
 Wheel wins that arrived before the skin key existed are kept in `relayer/data/wheel-claims.jsonl` (Docker: the
 `ftf-relayer-data` volume). Once `FTF_SKIN_KEY` is in `.env` and the lead has added its public key (step 9), mint them:
@@ -146,6 +158,7 @@ cd <checkout>/relayer && node scripts/mint-pending.mjs --dry-run && node scripts
 ```bash
 OPENER_PUB=ed25519:<chest key from step 3> bash contracts/scripts/chest-deploy.sh    # open_chest-only key + add_opener
 MINTER_PUB=ed25519:<skin key from step 3> bash contracts/scripts/skin-deploy.sh      # deploys skins.<signer> (cap 100) + mint_skin-only key
+TRADER_KEYS=market-public.json bash contracts/scripts/market-deploy.sh            # market + 20 traders + trade keys (docs/market.md)
 node contracts/scripts/day1-write.mjs presence=wss://159-195-130-113.sslip.io/presence # the game connects to the shared town
 NEARAI_API_KEY=proxy-injected node tools/chest/seed.mjs --season s1                  # once NEAR AI credits exist; prints the fix_seed call
 # send the printed `near contract call-function … fix_seed …` line, then:
