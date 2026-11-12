@@ -451,7 +451,7 @@ let touchAttackHeld = false;
 function attackPress(down) {
   if (!townMobs) return false;
   touchAttackHeld = !!down;
-  const r = down ? townMobs.attackDown(wishVector()) : townMobs.attackUp(wishVector());
+  const r = down ? townMobs.attackDown(strikeAimInput()) : townMobs.attackUp(strikeAimInput());
   interruptMove(STRIKE_ROOT); // a strike or a charge stops her run like a cast does
   return r;
 }
@@ -701,7 +701,20 @@ function interruptMove(seconds = 0) {
   if (input.stopRun) input.stopRun(); // the touch run toggle and burst switch off: after the action she moves only on new input
 }
 /** The strike (F / 3 / its slot): it stops her run like a cast does. */
-function strikeNow() { if (townMobs && townMobs.strike()) interruptMove(STRIKE_ROOT); }
+// The strike's aim (play/mobs.js strikeAim): on a desktop the mouse cursor's point on the ground under her, even when
+// she stands still; the movement keys / stick otherwise. The soft-locked creature still wins inside mobs.js.
+const mouseAt = { x: 0, y: 0, ok: false };
+if (!coarse) addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { mouseAt.x = e.clientX; mouseAt.y = e.clientY; mouseAt.ok = true; } }, { passive: true });
+const _aimRay = new THREE.Raycaster(), _aimNdc = new THREE.Vector2(), _aimPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _aimHit = new THREE.Vector3();
+function cursorGround() {
+  if (coarse || !mouseAt.ok) return null;
+  const r = renderer.domElement.getBoundingClientRect();
+  _aimNdc.set(((mouseAt.x - r.left) / r.width) * 2 - 1, -((mouseAt.y - r.top) / r.height) * 2 + 1);
+  _aimRay.setFromCamera(_aimNdc, camera); _aimPlane.constant = -player.pos[1];
+  return _aimRay.ray.intersectPlane(_aimPlane, _aimHit) ? [_aimHit.x, _aimHit.y, _aimHit.z] : null;
+}
+const strikeAimInput = () => ({ cursor: cursorGround(), move: wishVector() });
+function strikeNow() { if (townMobs && townMobs.strike(strikeAimInput())) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -802,8 +815,8 @@ function handleInput(dt) {
     if (townMobs && townCasting.field) { // the strike and the dash (play/mobs.js ACTIONS): F / 3 and Space / 4
       // F / 3: a tap strikes (the combo), held ≥ 0.4 s and let go it is the super strike (play/mobs.js attackDown/Up);
       // the stick / keys give the aim, else she strikes where she looks, and a creature within 3 m draws the blow
-      if (input.hit('KeyF') || input.hit('Digit3')) { townMobs.attackDown(wishVector()); interruptMove(STRIKE_ROOT); }
-      else if (townMobs.charging != null && !input.down('KeyF', 'Digit3') && !touchAttackHeld) { townMobs.attackUp(wishVector()); interruptMove(STRIKE_ROOT); }
+      if (input.hit('KeyF') || input.hit('Digit3')) { townMobs.attackDown(strikeAimInput()); interruptMove(STRIKE_ROOT); }
+      else if (townMobs.charging != null && !input.down('KeyF', 'Digit3') && !touchAttackHeld) { townMobs.attackUp(strikeAimInput()); interruptMove(STRIKE_ROOT); }
       if (input.hit('Space') || input.hit('Digit4')) townMobs.dash(wishVector());
     }
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
