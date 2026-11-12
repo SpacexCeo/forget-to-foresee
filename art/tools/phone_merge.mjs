@@ -45,7 +45,7 @@ const groups = new Map();
 for (const n of root.listNodes()) {
   const m = n.getMesh(), s = n.getSkin(); if (!m || !s || /_col(?:[._]?\d+)?$/.test(n.getName())) continue;
   for (const p of m.listPrimitives()) {
-    if (p.listTargets().length || p.getMode() !== 4) continue;
+    if (p.getMode() !== 4) continue;
     const k = root.listMaterials().indexOf(p.getMaterial());
     (groups.get(k) || groups.set(k, []).get(k)).push({ n, m, p, s });
   }
@@ -61,7 +61,12 @@ for (const items of groups.values()) {
   if (extra.size) { console.warn('skip (extra attributes)', [...extra], names); continue; }
   const wm = items.map((it) => it.n.getWorldMatrix());
   if (!wm.every((x) => sameMat(x, wm[0]))) { console.warn('skip (node transforms differ)', names); continue; }
-  const target = items.map((it) => it.s).sort((a, b) => b.listJoints().length - a.listJoints().length)[0];
+  // a primitive with morph targets (the face) may take in the others with zero deltas: it stays in its own mesh, on
+  // its own node and skin, so the face tracks ("<node>.morphTargetInfluences") still drive it
+  const morphed = items.filter((it) => it.p.listTargets().length);
+  if (morphed.length > 1) { console.warn('skip (several morphed primitives)', names); continue; }
+  if (morphed.length) items.sort((a, b) => b.p.listTargets().length - a.p.listTargets().length);
+  const target = morphed.length ? morphed[0].s : items.map((it) => it.s).sort((a, b) => b.listJoints().length - a.listJoints().length)[0];
   const tj = target.listJoints();
   // each mesh may sit in its own (quantized) vertex space, folded into its inverse bind matrices: the vertices move
   // into the target's space by D = IBM_target^-1 * IBM_item, which must be the same for every joint
@@ -100,6 +105,23 @@ for (const items of groups.values()) {
   const first = items[0], prim = doc.createPrimitive().setMaterial(first.p.getMaterial());
   for (const s of sems) prim.setAttribute(s, doc.createAccessor().setType(SIZE[s] === 2 ? 'VEC2' : SIZE[s] === 3 ? 'VEC3' : 'VEC4').setArray(arr[s]).setBuffer(buffer));
   prim.setIndices(doc.createAccessor().setType('SCALAR').setArray(nv < 65536 ? Uint16Array.from(idx) : idx).setBuffer(buffer));
+  if (morphed.length) {
+    const c0 = first.p.getAttribute('POSITION').getCount();
+    for (const t of first.p.listTargets()) {
+      const nt = doc.createPrimitiveTarget(t.getName());
+      for (const s of t.listSemantics()) {
+        const a = t.getAttribute(s), k = a.getElementSize(), out = new Float32Array(nv * k);
+        for (let i = 0; i < c0; i++) { a.getElement(i, el); for (let j = 0; j < k; j++) out[i * k + j] = el[j]; }
+        nt.setAttribute(s, doc.createAccessor().setType(a.getType()).setArray(out).setBuffer(buffer));
+      }
+      prim.addTarget(nt);
+    }
+    for (const it of items) it.m.removePrimitive(it.p);
+    first.m.addPrimitive(prim);
+    for (const it of items.slice(1)) if (!it.m.listPrimitives().length) it.n.setMesh(null);
+    merged.push(names.length + ' -> ' + first.n.getName() + ' (morphed)');
+    continue;
+  }
   const mesh = doc.createMesh(first.m.getName()).addPrimitive(prim);
   for (const it of items) it.m.removePrimitive(it.p);
   first.n.setMesh(mesh).setSkin(target);

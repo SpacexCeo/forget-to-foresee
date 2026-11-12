@@ -72,9 +72,13 @@ if (mode === 'replay') {
   await wait(600); await page.keyboard.press('KeyT'); await wait(500); await page.keyboard.press('KeyT'); mark('end trial 5');
   await page.getByText(/Minted on NEAR testnet/).first().waitFor({ timeout: 30000 }).then(() => mark('toast')).catch(() => log.push('no toast'));
   await wait(2500); log.push(await hud());
-  await page.keyboard.press('KeyM'); await wait(1500); mark('memories');
-  const nft = page.getByText(/793f6c05e89839f2-7/).first();
-  if (await nft.count()) { await nft.scrollIntoViewIfNeeded().catch(() => {}); mark('shard card'); } else log.push('no shard card');
+  // the toast's own "Open card", then the card in Memories (M only if the panel is not already open)
+  if (await click(/^Open card$/)) { mark('open card'); await wait(4000); await still('shard_open'); await page.keyboard.press('Escape'); await wait(800); }
+  const shardsOpen = async () => (await page.getByText(/Memory shards on NEAR/).count()) && (await page.getByText(/Memory shards on NEAR/).first().isVisible());
+  if (!(await shardsOpen())) { await page.keyboard.press('KeyM'); await wait(1200); }
+  mark('memories ' + (await shardsOpen()));
+  const nft = page.getByText(/Shard #7/).last();
+  if (await nft.count()) { await nft.scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {}); mark('shard card'); } else log.push('no shard card');
   await wait(4500); await still('shard_card');
 }
 capturing = false; if (loop) await loop;
