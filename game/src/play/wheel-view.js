@@ -174,7 +174,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     const g = sectors[r.index]; if (g) { g.classList.add('wv-win'); setTimeout(() => g.classList.remove('wv-win'), 2400); }
     cue(r.segment.grand ? 'ui_confirm' : 'gift_chime');
     const p = wheel.pending.find((x) => x.seed === r.seed);
-    if (p) showCard(p);
+    if (p) { showCard(p); try { card.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' }); } catch { /* old browsers */ } } // phones: the card sits below the wheel
     refresh();
   }
 
