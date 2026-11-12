@@ -13,5 +13,6 @@ export const DAY1_DEPLOYMENT = {
   "chests": "chests.ftf-coordinator.testnet",
   "skins": "skins.ftf-coordinator.testnet",
   "presence": "wss://159-195-130-113.sslip.io/presence",
-  "town": "ftf-town.testnet"
+  "town": "ftf-town.testnet",
+  "items": "items.ftf-town.testnet"
 };
