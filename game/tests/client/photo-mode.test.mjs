@@ -20,7 +20,7 @@ test('three looks besides the natural one', () => {
 });
 
 test('labels in all five locales', () => {
-  const keys = ['photo.open', 'photo.title', 'photo.save', 'photo.saved', 'photo.exit', 'photo.hint', ...PHOTO_FILTERS.map((f) => 'photo.filter.' + f.id)];
+  const keys = ['photo.open', 'photo.title', 'photo.save', 'photo.saved', 'photo.exit', 'photo.hint', 'photo.hintTouch', ...PHOTO_FILTERS.map((f) => 'photo.filter.' + f.id)];
   for (const [n, m] of Object.entries({ en, ru, uk, it, zh })) for (const k of keys) assert.ok(typeof m[k] === 'string' && m[k], `${n} ${k}`);
 });
 

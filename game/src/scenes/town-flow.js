@@ -51,6 +51,7 @@ html[data-motion="reduce"] .ftf-town-cover .boot-sub, .ftf-town-cover.is-plain .
 .ftf-quest-choices button:focus-visible, .ftf-quest-meta button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .ftf-quest-meta { position: absolute; top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(18px + env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: center; color: #f3ead6; font: 14px system-ui, sans-serif; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); pointer-events: auto; }
 .ftf-town-profile { position: absolute; top: calc(62px + env(safe-area-inset-top, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); min-height: 36px; padding: 4px 12px; border-radius: 18px; border: 1px solid rgba(233, 180, 76, .6); background: rgba(14, 18, 20, .82); color: #f3ead6; font: 500 14px system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+.ftf-town-profile[data-chests]::after { content: attr(data-chests); display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 8px; padding: 0 5px; border-radius: 9px; background: #e9b44c; color: #14201c; font: 700 11px/1 system-ui, sans-serif; vertical-align: 1px; } /* sealed chests waiting in the bag */
 .ftf-quest-talk dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 8px; font-size: 14px; }
 .ftf-quest-talk dt { color: #b9b2a2; } .ftf-quest-talk dd { margin: 0; }
 .ftf-quest-talk .ftf-local { font-size: 12px; color: #b9b2a2; margin: 0 0 8px; }
