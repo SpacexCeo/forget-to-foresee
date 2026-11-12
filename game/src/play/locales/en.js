@@ -1672,4 +1672,17 @@ export default {
   "story.portal.paying": "The Loom is weighing your silk on NEAR testnet…",
   "story.portal.noSilk": "The Loom found less than {fee} silk in your account on chain.",
   "story.portal.failed": "The Loom did not take the silk. Try again in a moment.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Quests",
+  "quest.log.button": "Quest log (J)",
+  "quest.log.close": "Close",
+  "quest.log.empty": "No quests yet. Look for a gold ! over a townsperson.",
+  "quest.log.active": "Active",
+  "quest.log.ready": "Ready to turn in",
+  "quest.log.available": "On offer",
+  "quest.log.reward": "Reward: {silk} silk",
+  "quest.log.where": "{giver}, {m} m away",
+  "quest.log.progress": "Progress {n} / {count}",
+  "quest.track.offer": "{giver} has a quest for you",
+  "quest.track.near": "{m} m",
 };

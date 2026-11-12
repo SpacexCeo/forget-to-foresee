@@ -278,7 +278,7 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
-let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
+let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -325,7 +325,7 @@ if (townMode.town) {
   // The Expedition (?story=1 only, docs/plans/story): the citizens' quests, the objective line and the Gate-Loom by the
   // spawn; loaded lazily so the default (judge) page carries none of it. Its spots join this list (same array).
   if (params.get('story') !== '0' && !townQuests) {
-    Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js'), import('./net/town-gate.js'), import('./net/agent-ledger.js')]).then(([qm, pm, im, bm, tee, gm, al]) => {
+    Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js'), import('./net/town-gate.js'), import('./net/agent-ledger.js'), import('./scenes/quest-markers.js')]).then(([qm, pm, im, bm, tee, gm, al, mm]) => {
       if (townQuests || !inTown) return;
       townQuests = qm.createTownQuests({ storage: ctx.storage, townLedger, i18n: ctx.i18n, folkAt, inventory: im.createInventory({ storage: ctx.storage }), chests: chestBag,
         depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search,
@@ -339,6 +339,7 @@ if (townMode.town) {
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
         load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
+      questMarkers = mm.createQuestMarkers({ scene, markers: () => townQuests.markers(), folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
       import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
       // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
@@ -586,6 +587,7 @@ function returnToTown() {
   if (townQuests) townQuests.setActive(true);
   if (townPortal) townPortal.setActive(true);
   if (townBoard) townBoard.setActive(true);
+  if (questMarkers) questMarkers.setActive(true);
   townFlow.reenter();
 }
 /** Start over: a new local season (the judge link rebuilds the same fixed season). */
@@ -606,6 +608,7 @@ async function leaveTown() {
   if (townQuests) townQuests.setActive(false); // ?story=1: the objective line and the Gate-Loom wait in the town
   if (townPortal) townPortal.setActive(false);
   if (townBoard) townBoard.setActive(false);
+  if (questMarkers) questMarkers.setActive(false);
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
   player.teleport(SPAWN.slice(), islandStart.heading);
@@ -1157,6 +1160,7 @@ function frame() {
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townQuests) townQuests.update(player.pos);
+    if (questMarkers) questMarkers.update(clock.elapsedTime);
     if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
     if (townBoard) { if (!townBoard.grounded) { const g = town.groundAt(townBoard.root.position.x, townBoard.root.position.z); if (g != null) { townBoard.root.position.y = g; townBoard.grounded = true; } } townBoard.update(player.pos, clock.elapsedTime); }
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);

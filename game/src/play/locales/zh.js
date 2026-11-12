@@ -1670,4 +1670,17 @@ export default {
   "story.portal.paying": "织门正在 NEAR 测试网上称量你的丝绸……",
   "story.portal.noSilk": "织门发现你链上账户中的丝绸少于 {fee}。",
   "story.portal.failed": "织门没有收下丝绸。请稍后再试。",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "任务",
+  "quest.log.button": "任务日志（J）",
+  "quest.log.close": "关闭",
+  "quest.log.empty": "还没有任务。找找居民头上的金色 ！。",
+  "quest.log.active": "进行中",
+  "quest.log.ready": "可以交付",
+  "quest.log.available": "可接取",
+  "quest.log.reward": "奖励：{silk} 丝绸",
+  "quest.log.where": "{giver}，{m} 米外",
+  "quest.log.progress": "进度 {n} / {count}",
+  "quest.track.offer": "{giver}有任务给你",
+  "quest.track.near": "{m} 米",
 };

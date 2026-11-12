@@ -1670,4 +1670,17 @@ export default {
   "story.portal.paying": "Врата взвешивают твой шёлк в NEAR testnet…",
   "story.portal.noSilk": "Врата нашли в твоём аккаунте в сети меньше {fee} шёлка.",
   "story.portal.failed": "Врата не приняли шёлк. Попробуй ещё раз чуть позже.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Квесты",
+  "quest.log.button": "Журнал квестов (J)",
+  "quest.log.close": "Закрыть",
+  "quest.log.empty": "Квестов пока нет. Ищи золотой ! над жителем.",
+  "quest.log.active": "Активный",
+  "quest.log.ready": "Можно сдать",
+  "quest.log.available": "Предлагают",
+  "quest.log.reward": "Награда: {silk} шёлка",
+  "quest.log.where": "{giver}, {m} м",
+  "quest.log.progress": "Прогресс {n} / {count}",
+  "quest.track.offer": "У тебя есть квест: {giver}",
+  "quest.track.near": "{m} м",
 };

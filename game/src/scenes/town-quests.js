@@ -51,17 +51,49 @@ export function talkFor(giver, story, qs, { now = 0, hasPart = false, have = {} 
 
 /** The objective line (pure): the active quest's tracker, else the story step. {key, args} or null. */
 export function objective(story, qs, now = 0, have = {}) {
+  // a quest to turn in first, then the active one, then a giver with an offer, then the story's step
   for (const id of ['q_boss', 'q_spiders', 'q_part', 'b_spiders', 'q_welcome']) {
-    const st = questStatus(qs, id, now), q = qs.quests[id];
-    if (st === 'ready') { const miss = missingFor(QUESTS[id].needs, have); if (miss.length) return { key: 'quest.track.needs', args: { id: miss[0].id, n: miss[0].have, count: miss[0].need } }; return { key: 'quest.track.ready', args: { giver: QUESTS[id].giver } }; }
+    const st = questStatus(qs, id, now), q = qs.quests[id], giver = QUESTS[id].giver;
+    if (st === 'ready') { const miss = missingFor(QUESTS[id].needs, have); if (miss.length) return { key: 'quest.track.needs', args: { id: miss[0].id, n: miss[0].have, count: miss[0].need } }; return { key: 'quest.track.ready', args: { giver }, giver }; }
     if (st === 'active') {
       const ob = QUESTS[id].objective;
-      if (ob.type === 'kill') return { key: 'quest.track.' + (ob.mob === 'crownrift' ? 'boss' : 'spiders'), args: { n: q.progress, count: ob.count } };
-      if (ob.type === 'fetch') return { key: 'quest.track.part', args: {} };
-      if (ob.type === 'guide') return { key: 'quest.track.welcome', args: {} };
+      if (ob.type === 'kill') {
+        if (q.progress >= ob.count) continue;
+        return { key: 'quest.track.' + (ob.mob === 'crownrift' ? 'boss' : 'spiders'), args: { n: q.progress, count: ob.count } };
+      }
+      if (ob.type === 'fetch') { const miss = missingFor(QUESTS[id].needs, have); return miss.length ? { key: 'quest.track.needs', args: { id: miss[0].id, n: miss[0].have, count: miss[0].need } } : { key: 'quest.track.part', args: {} }; }
+      if (ob.type === 'guide') return { key: 'quest.track.welcome', args: {}, giver: 'elder' };
     }
   }
+  if (!(story.guide && story.guide.talked) && questStatus(qs, 'q_welcome', now) === 'available') return { key: 'story.step.talk', args: {}, giver: 'elder' };
+  for (const id of ['q_spiders', 'q_part', 'q_boss', 'b_spiders']) if (questStatus(qs, id, now) === 'available') return { key: 'quest.track.offer', args: { giver: QUESTS[id].giver }, giver: QUESTS[id].giver };
   const k = storyStep(story); return k ? { key: k, args: {} } : null;
+}
+
+/** The marker over a giver (pure): '?' when a quest of theirs can be turned in, '!' when one is on offer, else null. */
+export function markerFor(giver, story, qs, now = 0, have = {}) {
+  let offer = false;
+  for (const id of Object.keys(QUESTS)) {
+    if (QUESTS[id].giver !== giver) continue;
+    const st = questStatus(qs, id, now), q = QUESTS[id];
+    if (st === 'ready' && !missingFor(q.needs, have).length) return '?';
+    if (st === 'active' && q.objective.type === 'guide' && story.guide && story.guide.moved) return '?';
+    if (st === 'available' && !(id === 'q_welcome' && story.guide && story.guide.talked)) offer = true;
+  }
+  return offer ? '!' : null;
+}
+
+/** The quest log (pure): active and ready quests first, then the offers; progress, needs (with what she holds), reward. */
+export function questLog(story, qs, now = 0, have = {}) {
+  const rows = [];
+  for (const id of Object.keys(QUESTS)) {
+    const st = questStatus(qs, id, now); if (!['active', 'ready', 'available'].includes(st)) continue;
+    const q = QUESTS[id], cur = qs.quests[id] || {};
+    rows.push({ id, giver: q.giver, title: q.title, status: st, progress: q.objective.type === 'kill' ? (cur.progress || 0) : null, count: q.objective.type === 'kill' ? q.objective.count : null,
+      needs: Object.entries(q.needs || {}).map(([res, need]) => ({ id: res, need, have: Math.min(need, Math.max(0, Number(have[res]) || 0)) })), rewardSilk: q.reward.silk });
+  }
+  const rank = { ready: 0, active: 1, available: 2 };
+  return rows.sort((a, b) => rank[a.status] - rank[b.status]);
 }
 
 const load = (storage, key, fresh) => { try { const v = JSON.parse((storage && storage.getItem(key)) || 'null'); return v && v.v === 1 ? v : fresh(); } catch { return fresh(); } };
@@ -119,9 +151,59 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   function renderObjective() {
     const o = objective(story, qs, now(), have());
     const silk = Math.floor(balanceC() / 100).toLocaleString('en-US'), goal = Math.round(feeC() / 100).toLocaleString('en-US'); // on-chain silk (ftf-town)
-    line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
+    const near = o && o.giver ? distanceTo(o.giver) : null;
+    line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + (near != null ? ' · ' + t('quest.track.near', { m: near }) : '') + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
     line.hidden = !active || !o || story.phase === 'onward';
   }
+
+  // ---- where she is (update) and how far a giver stands
+  let herPos = null;
+  const distanceTo = (giver) => { const p = folkAt(giver); return p && herPos ? Math.round(Math.hypot(p[0] - herPos[0], p[2] - herPos[2])) : null; };
+
+  // ---- the quest log (J, or the button in the HUD tray): active, ready and offered quests at a glance
+  let logPanel = null, logT = -Infinity, lineT = -Infinity;
+  function closeLog() { if (logPanel) { logPanel.remove(); logPanel = null; } }
+  function renderLog() {
+    const rows = questLog(story, qs, now(), have());
+    const p = doc.createElement('div'); p.className = 'ftf-quest-log'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', t('quest.log.title'));
+    p.style.cssText = 'position:fixed;right:calc(env(safe-area-inset-right,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 96px);z-index:70;width:min(340px,calc(100vw - 32px));max-height:min(64vh,520px);overflow:auto;'
+      + 'padding:12px 14px;border-radius:14px;background:rgba(12,16,18,.92);border:1px solid rgba(217,178,106,.45);color:#f3ead8;font:14px/1.4 system-ui,sans-serif';
+    const head = doc.createElement('div'); head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px';
+    const h = doc.createElement('b'); h.textContent = t('quest.log.title'); h.style.cssText = 'color:#d9b26a;font-size:13px;letter-spacing:.06em;text-transform:uppercase';
+    const x = doc.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', t('quest.log.close'));
+    x.style.cssText = 'min-width:44px;min-height:44px;border-radius:10px;border:1px solid rgba(243,234,216,.3);background:transparent;color:inherit;font:600 16px system-ui;cursor:pointer';
+    x.addEventListener('click', (e) => { e.stopPropagation(); closeLog(); });
+    head.append(h, x); p.append(head);
+    if (!rows.length) { const e = doc.createElement('p'); e.textContent = t('quest.log.empty'); e.style.margin = '4px 0'; p.append(e); }
+    for (const r of rows) {
+      const item = doc.createElement('div'); item.className = 'ftf-quest-row'; item.dataset.quest = r.id; item.style.cssText = 'padding:8px 0;border-top:1px solid rgba(243,234,216,.1)';
+      const title = doc.createElement('b'); title.textContent = (r.status === 'ready' ? '? ' : r.status === 'available' ? '! ' : '') + t(r.title); title.style.cssText = 'display:block;color:' + (r.status === 'active' ? '#f3ead8' : '#ffc861');
+      const meta = doc.createElement('span'); const d = distanceTo(r.giver);
+      meta.textContent = t('quest.log.' + r.status) + ' · ' + (d != null ? t('quest.log.where', { giver: t('folk.name.' + r.giver), m: d }) : t('folk.name.' + r.giver)) + ' · ' + t('quest.log.reward', { silk: r.rewardSilk });
+      meta.style.cssText = 'display:block;font-size:12px;color:#b9c7c4';
+      item.append(title, meta);
+      const bits = [];
+      if (r.count != null) bits.push(t('quest.log.progress', { n: r.progress, count: r.count }));
+      for (const n of r.needs) bits.push(t('quest.needs.item', { res: t('res.' + n.id), have: n.have, n: n.need }));
+      if (bits.length) { const b = doc.createElement('span'); b.className = 'ftf-quest-needs'; b.textContent = bits.join(' · '); b.style.cssText = 'display:block;font-size:13px;margin-top:2px'; item.append(b); }
+      p.append(item);
+    }
+    return p;
+  }
+  function openLog() { closeLog(); logPanel = renderLog(); doc.body.append(logPanel); }
+  function toggleLog() { if (logPanel) closeLog(); else openLog(); }
+  const onKey = (e) => {
+    const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.code === 'KeyJ' || e.key === 'j' || e.key === 'J') { toggleLog(); }
+    else if (e.key === 'Escape' && logPanel) closeLog();
+  };
+  win.addEventListener('keydown', onKey);
+  const logBtn = doc.createElement('button'); logBtn.type = 'button'; logBtn.className = 'ftf-quest-log-btn'; logBtn.textContent = '!';
+  logBtn.setAttribute('aria-label', t('quest.log.button')); logBtn.title = t('quest.log.button');
+  logBtn.style.cssText = 'min-width:44px;min-height:44px;border-radius:999px;border:1px solid rgba(217,178,106,.6);background:rgba(12,16,18,.7);color:#ffc861;font:700 18px system-ui;cursor:pointer';
+  logBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  logBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLog(); });
+  { const tray = doc.querySelector && doc.querySelector('.ph-wallet'); if (tray && tray.prepend) tray.prepend(logBtn); else { logBtn.style.position = 'fixed'; logBtn.style.right = 'calc(env(safe-area-inset-right,0px) + 12px)'; logBtn.style.top = 'calc(env(safe-area-inset-top,0px) + 50px)'; logBtn.style.zIndex = '30'; doc.body.append(logBtn); } }
 
   // ---- the talk panel for the four givers
   let panel = null, panelGiver = null;
@@ -205,6 +287,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   }
 
   if (story.phase === 'off') storyDo({ type: 'START', skipPrologue: true }); // the prologue (P4) is optional: arrival
+  if (qs.since == null) questDo({ type: 'BEGIN' }); // the guide's grace period: the guard's quest opens even if the elder is skipped
   if (gate) refreshChain();
   renderObjective();
   return {
@@ -217,6 +300,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     payGate,
     /** Per frame: the guide's movement step, the gate opening with the balance, a talk closing when she walks off. */
     update(pos) {
+      if (pos) { herPos = pos; if (now() - lineT > 1000) { lineT = now(); renderObjective(); } } // the distance to the next giver
+      if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];
       if (pos && start && !story.guide.moved && Math.hypot(pos[0] - start[0], pos[2] - start[1]) > 6) { storyDo({ type: 'GUIDE_STEP', id: 'moved' }); questDo({ type: 'GUIDE', step: 'moved' }); }
       if (gate && now() - lastRead > 20_000) refreshChain(); // the on-chain balance grows with the relayer's story credits
@@ -224,9 +309,12 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     },
     act, openTalk, closeTalk,
     /** Leaving the town hides the objective line and any talk; the story state lives on (the twist runs across it). */
-    setActive(on) { active = !!on; if (!active) closeTalk(); renderObjective(); },
+    setActive(on) { active = !!on; if (!active) { closeTalk(); closeLog(); } logBtn.hidden = !active; renderObjective(); },
     subscribe(f) { listeners.add(f); return () => listeners.delete(f); },
-    dispose() { closeTalk(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); },
+    /** Markers over the givers: [{giver, sym: '!'|'?'}] for scenes/quest-markers.js. */
+    markers: () => ['elder', 'guard', 'lamplighter', 'shardkeeper'].map((giver) => ({ giver, sym: markerFor(giver, story, qs, now(), have()) })).filter((m) => m.sym),
+    openLog, closeLog, toggleLog, get logOpen() { return !!logPanel; },
+    dispose() { closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
   };
 }
 

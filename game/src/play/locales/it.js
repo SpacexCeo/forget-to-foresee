@@ -1671,4 +1671,17 @@ export default {
   "story.portal.paying": "Il Telaio pesa la tua seta su NEAR testnet…",
   "story.portal.noSilk": "Il Telaio ha trovato meno di {fee} sete nel tuo account sulla catena.",
   "story.portal.failed": "Il Telaio non ha preso la seta. Riprova tra un momento.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Missioni",
+  "quest.log.button": "Registro missioni (J)",
+  "quest.log.close": "Chiudi",
+  "quest.log.empty": "Ancora nessuna missione. Cerca un ! dorato sopra un abitante.",
+  "quest.log.active": "Attiva",
+  "quest.log.ready": "Da consegnare",
+  "quest.log.available": "Offerta",
+  "quest.log.reward": "Ricompensa: {silk} sete",
+  "quest.log.where": "{giver}, a {m} m",
+  "quest.log.progress": "Avanzamento {n} / {count}",
+  "quest.track.offer": "{giver} ha una missione per te",
+  "quest.track.near": "a {m} m",
 };
