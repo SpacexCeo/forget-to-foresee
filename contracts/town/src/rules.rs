@@ -48,7 +48,7 @@ impl Default for Params {
         Params {
             epoch_secs: 86_400, trade_fee_bps: 12, min_trade: UNIT / 2, station_tax_bps: 1_200,
             tithe_stakers_bps: 6_500, tithe_purse_bps: 1_000, tithe_reserve_bps: 1_000, tithe_burn_bps: 1_500,
-            rate_ceiling_bps: 40, lock_days: [0, 5, 10, 20], lock_mult_bps: [10_000, 11_500, 13_000, 15_000], works_bps: [3_500, 2_500, 2_500, 1_500],
+            rate_ceiling_bps: 15, lock_days: [0, 5, 10, 20], lock_mult_bps: [10_000, 11_500, 13_000, 15_000], works_bps: [3_500, 2_500, 2_500, 1_500],
             cooldown_days: 2, early_exit_bps: 1_000, deed_fee: UNIT / 2, cap_total: 8_000 * UNIT, cap_floor: 800 * UNIT, cap_share_bps: 500,
             cap_asset: 3_000 * UNIT, credit_day_cap: 4_000 * UNIT,
             entry_fee: 40 * UNIT, entry_burn_bps: 2_000, entry_works_bps: 1_500,

@@ -34,7 +34,7 @@ test('town policy: a simulated day of ~22,000 trades: min 0.5 silk, mean ~2 silk
 
 test('town policy: the call is trade({counterparty, silk, reference})', () => {
   const t = { buyer: 'guard', seller: 'baker', item: 'bread', qty: 2, price: 3, silk: 600_000 };
-  assert.deepEqual(TOWN_POLICY.args(t, (k) => traderAccount(k)), { counterparty: 'tf-baker.ftf-coordinator.testnet', silk: '600000', reference: 'bread' });
+  assert.deepEqual(TOWN_POLICY.args(t, (k) => traderAccount(k)), { counterparty: 'trader-05.ftf-town.testnet', silk: '600000', reference: 'bread' });
 });
 
 test('town env: off by default; on, it is a dry run unless FTF_TOWN_SEND=1', () => {
@@ -77,5 +77,5 @@ test('town traders: the dry run never signs or sends; the send mode signs with t
   const e = await l.tickOnce('baker');
   assert.ok(e.ok);
   const raw = Buffer.from(live.calls.find((c) => c[0] === 'send_tx')[1].signed_tx_base64, 'base64').toString('latin1');
-  assert.ok(raw.includes('tf-baker.ftf-coordinator.testnet') && raw.includes('ftf-town.testnet') && raw.includes('"counterparty":"' + traderAccount(e.seller) + '"') && raw.includes('"reference":"' + e.item + '"'));
+  assert.ok(raw.includes('trader-05.ftf-town.testnet') && raw.includes('ftf-town.testnet') && raw.includes('"counterparty":"' + traderAccount(e.seller) + '"') && raw.includes('"reference":"' + e.item + '"'));
 });

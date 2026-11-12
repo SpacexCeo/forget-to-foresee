@@ -1,7 +1,7 @@
 // The town traders' wiring (docs/town-economy.md): environment, key file, state file, JSONL log, and one shared daemon
 // for the process. Off unless FTF_TOWN=1 (ftf-town, lib/town-traders.js; a dry run unless FTF_TOWN_SEND=1). The trader keys live in data/market-keys.json on the relayer's server
 // (made there by scripts/market-keys.mjs, mode 600, never committed); this module never prints them.
-import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTxClient } from '../lib/near-tx.js';
 import { DEFAULTS } from '../lib/core.js';
@@ -10,6 +10,8 @@ import { DEFAULT_TARGET } from './schedule.js';
 import { TOWN_POLICY, townEnv } from '../lib/town-traders.js';
 import { TRADERS, traderAccount } from './catalog.js';
 import { createStrategyBook, runStrategyRound } from '../lib/clan-strategy.js';
+import { runClanRound } from '../lib/clan-actions.js';
+import { CLAN_WALLETS, clanAccount } from './catalog.js';
 import { teeEnv } from '../lib/tee.js';
 
 export const marketEnv = (env = process.env) => ({
@@ -18,14 +20,16 @@ export const marketEnv = (env = process.env) => ({
   target: Math.max(1, Math.min(100_000, Number(env.FTF_MARKET_TARGET) || DEFAULT_TARGET)),
   maxPerMinute: Math.max(1, Math.min(600, Number(env.FTF_MARKET_MAX_PER_MIN) || 60)),
   paused: env.FTF_MARKET_PAUSED === '1',
+  walletDayNear: Math.max(0.01, Number(env.FTF_WALLET_DAY_NEAR) || 0.5),
+  txNear: Math.max(0.00001, Number(env.FTF_TX_NEAR) || 0.0003),
   rpcUrls: (env.FTF_MARKET_RPC || env.NEAR_RPC || '').split(',').map((s) => s.trim()).filter(Boolean),
 });
 
-/** [{key, account, secretKey}] from the key file, or [] when it is missing or malformed. */
-export function loadTraderKeys(path) {
+/** [{key, account, secretKey}] from the key file (`traders` or `clans`), or [] when it is missing or malformed. */
+export function loadTraderKeys(path, kind = 'traders') {
   try {
     const j = JSON.parse(readFileSync(path, 'utf8'));
-    return (j.traders || []).filter((t) => t && typeof t.key === 'string' && typeof t.account === 'string' && /^ed25519:/.test(t.secretKey || ''));
+    return (j[kind] || []).filter((t) => t && typeof t.key === 'string' && typeof t.account === 'string' && /^ed25519:/.test(t.secretKey || ''));
   } catch { return []; }
 }
 
@@ -55,6 +59,9 @@ export function marketDaemon(env = process.env) {
     strategyOf: env.FTF_STRATEGY === '0' ? null : (k) => book.get(k),
     contractId: town.contract, target: town.target, policy: TOWN_POLICY, dryRun: !town.send,
     traders, maxPerMinute: cfg.maxPerMinute, paused: cfg.paused,
+    // per-wallet budget (estimated NEAR of gas a day) and one global kill switch: FTF_TOWN_KILL=1 or a file data/KILL
+    walletDayNear: cfg.walletDayNear, txNear: cfg.txNear,
+    killed: () => env.FTF_TOWN_KILL === '1' || existsSync(join(cfg.dataDir, 'KILL')),
     client: createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, timeoutMs: 30_000 }),
     store: fileStore(join(cfg.dataDir, 'town-state.json')), log: jsonlLog(join(cfg.dataDir, 'town-log')),
   });
@@ -65,7 +72,16 @@ export function marketDaemon(env = process.env) {
     const round = () => runStrategyRound({ book, st: daemon.state(), opts: { apiKey: tee.apiKey, model: tee.model, base: tee.base } }).catch(() => {});
     setTimeout(round, 5_000).unref?.(); setInterval(round, every).unref?.();
   }
+  // the clans' own wallets: pledge, enter the tournament, claim (every FTF_CLAN_MINUTES, default 120); dry unless FTF_TOWN_SEND=1
+  let clanLast = [];
+  let clanWallets = loadTraderKeys(cfg.keysFile, 'clans');
+  if (!clanWallets.length && !town.send) clanWallets = CLAN_WALLETS.map((key) => ({ key, account: clanAccount(key), secretKey: null }));
+  if (clanWallets.length && env.FTF_CLANS !== '0') {
+    const client = createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, timeoutMs: 30_000 });
+    const clanRound = async () => { if (env.FTF_TOWN_KILL === '1' || existsSync(join(cfg.dataDir, 'KILL'))) return; clanLast = await runClanRound({ client, town: town.contract, wallets: clanWallets, strategyOf: (k) => book.get(k), send: town.send, log: jsonlLog(join(cfg.dataDir, 'clan-actions')) }).catch(() => clanLast); };
+    setTimeout(clanRound, 60_000).unref?.(); setInterval(clanRound, Math.max(10, Number(env.FTF_CLAN_MINUTES) || 120) * 60_000).unref?.();
+  }
   const inner = daemon;
-  daemon = { ...inner, stats: () => ({ ...inner.stats(), strategy: book.stats() }) };
+  daemon = { ...inner, stats: () => ({ ...inner.stats(), strategy: book.stats(), clan_actions: clanLast.map((e) => ({ clan: e.clan, account: e.account, at: e.at, action: e.action && e.action.method, ok: e.ok, hash: e.hash || null, dry: !!e.dry })) }) };
   return daemon;
 }

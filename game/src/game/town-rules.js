@@ -12,7 +12,7 @@ export const WORKS = Object.freeze(['loom', 'caravan', 'archive', 'observatory']
 export const DEFAULT_PARAMS = Object.freeze({
   epoch_secs: 86_400, trade_fee_bps: 12, min_trade: UNIT / 2n, station_tax_bps: 1_200,
   tithe_stakers_bps: 6_500, tithe_purse_bps: 1_000, tithe_reserve_bps: 1_000, tithe_burn_bps: 1_500,
-  rate_ceiling_bps: 40, lock_days: [0, 5, 10, 20], lock_mult_bps: [10_000, 11_500, 13_000, 15_000], works_bps: [3_500, 2_500, 2_500, 1_500],
+  rate_ceiling_bps: 15, lock_days: [0, 5, 10, 20], lock_mult_bps: [10_000, 11_500, 13_000, 15_000], works_bps: [3_500, 2_500, 2_500, 1_500],
   cooldown_days: 2, early_exit_bps: 1_000, deed_fee: UNIT / 2n, cap_total: 8_000n * UNIT, cap_floor: 800n * UNIT, cap_share_bps: 500,
   cap_asset: 3_000n * UNIT, credit_day_cap: 4_000n * UNIT,
   entry_fee: 40n * UNIT, entry_burn_bps: 2_000, entry_works_bps: 1_500,
