@@ -18,13 +18,18 @@ const copy = (s) => ({ ...s, quests: { ...s.quests }, kills: s.kills.slice(), gu
 const rejected = (state, reason) => ({ state, events: [], rejected: reason });
 
 /** A quest's status now: locked | available | active | ready | done (cooldowns and prerequisites applied). */
+/** The elder's guide never blocks play (owner, 12.11): the welcome counts as met for the quests after it once the player
+ * has made a kill or WELCOME_GRACE_MS after the start (BEGIN), even if the elder was skipped. */
+export const WELCOME_GRACE_MS = 3 * 60_000;
+const welcomeWaived = (s, now) => (s.kills && s.kills.length > 0) || (s.since != null && now - s.since >= WELCOME_GRACE_MS);
+
 export function questStatus(s, id, now = 0) {
   const def = QUESTS[id]; if (!def) return null;
   const q = get(s, id);
   if (q.state === 'active' || q.state === 'ready') return q.state;
   if (q.state === 'done' && !def.repeat) return 'done';
   if (q.state === 'done' && def.repeat && now - q.doneAt < def.repeat.minutes * 60e3) return 'done';
-  return def.requires.every((r) => get(s, r).state === 'done') ? 'available' : 'locked';
+  return def.requires.every((r) => get(s, r).state === 'done' || (r === 'q_welcome' && welcomeWaived(s, now))) ? 'available' : 'locked';
 }
 
 /** Silk (hundredths) a kill pays: the table, at 25 % beyond the day's soft cap. */
@@ -50,6 +55,10 @@ export function rewardSilk(s, id, now) {
 export function applyQuest(state, a = {}, ctx = {}) {
   const s = state || initialQuests(); const now = ctx.now || 0;
   switch (a.type) {
+    case 'BEGIN': { // the start of play (the town view sends it once): the guide's grace period counts from here
+      if (s.since != null) return rejected(s, 'begun');
+      return { state: { ...copy(s), since: now }, events: [] };
+    }
     case 'GUIDE': { // the starter guide's steps feed q_welcome (talked to the elder, moved)
       if (!['talked', 'moved'].includes(a.step)) return rejected(s, 'step');
       const n = copy(s); n.guide[a.step] = true; n.seq++;

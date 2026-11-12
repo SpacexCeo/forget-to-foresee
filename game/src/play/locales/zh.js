@@ -1747,4 +1747,17 @@ export default {
   'works.err.daily': "已达到今日操作上限，明天再来。",
   'works.err.not_registered': "你的账户还未进入城镇：先去城墙外赚些 silk。",
   'stall.back.between': "摊位处于两条线之间：低于 {low} silk 时关闭，达到 {high} 时重新开张。",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "任务",
+  "quest.log.button": "任务日志（J）",
+  "quest.log.close": "关闭",
+  "quest.log.empty": "还没有任务。找找居民头上的金色 ！。",
+  "quest.log.active": "进行中",
+  "quest.log.ready": "可以交付",
+  "quest.log.available": "可接取",
+  "quest.log.reward": "奖励：{silk} 丝绸",
+  "quest.log.where": "{giver}，{m} 米外",
+  "quest.log.progress": "进度 {n} / {count}",
+  "quest.track.offer": "{giver}有任务给你",
+  "quest.track.near": "{m} 米",
 };
