@@ -168,3 +168,39 @@ test('film player: quick taps click through every shot and the card; a long hold
   fp3.skip(); await done3;
   s.dispose();
 });
+
+test('instant skips (owner, 12.11): the interior and every program are made ready at the start, a cut loads nothing', async () => {
+  const THREE = await import('three');
+  const { createFilmPlayer } = await import('../../src/cinematic/chapters/player.js');
+  const s = new PlaySession({ transport: createLocalTransport({ seedHex: JUDGE }) });
+  await s.start();
+  // a film with an interior shot, whichever chapter has one
+  const film = CHAPTER_IDS.map((id) => buildFilm(id, { obs: s.obs })).find((f) => f && f.shots.some((x) => x.cam.kind === 'interior'));
+  assert.ok(film, 'some chapter has an interior shot');
+  const win = { addEventListener() {}, removeEventListener() {} };
+  const overlay = { show() {}, hide() {}, setSubtitle() {}, setSkipText() {}, setHintText() {}, showSkip() {}, showHint() {}, update() {} };
+  const log = [];
+  const shell = { active: false, origin: [0, 300, 0], root: new THREE.Object3D(), activate(n) { this.active = true; log.push('activate:' + n); }, deactivate() { this.active = false; log.push('deactivate'); }, spawn: () => ({ pos: [0, 300, 4.5] }), setSign() {} };
+  const fp = createFilmPlayer({ camera: new THREE.PerspectiveCamera(40, 1.6, 0.1, 1000), player: { pos: [0, 0, 0], heading: 0 }, avatar: new THREE.Object3D(), shell, agents: null, overlay, now: () => 0, renderLine: () => 'line', win, prewarm: () => log.push('prewarm') });
+  const done = fp.play(film);
+  assert.deepEqual(log.slice(0, 2), [log[0], 'prewarm']); assert.match(log[0], /^activate:/, 'the interior is switched on before the warm-up');
+  assert.equal(log.filter((x) => x === 'prewarm').length, 1);
+  for (let i = 0; i < film.shots.length + 1 && fp.playing; i++) fp.next();
+  assert.equal(log.filter((x) => x.startsWith('activate')).length, 1, 'no cut activates anything again');
+  fp.skip(); await done;
+  assert.equal(log.at(-1), 'deactivate', 'the Shell interior is put away after the film');
+  s.dispose();
+});
+
+test('warmScene: forced compile without the parallel-compile extension, textures uploaded', async () => {
+  const THREE = await import('three');
+  const { GpuWarmup } = await import('../../src/render/warmup.js');
+  const scene = new THREE.Scene(); const tex = new THREE.Texture({ width: 4, height: 4 });
+  scene.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial({ map: tex })));
+  const calls = [];
+  const renderer = { extensions: { has: () => false }, compileAsync: () => Promise.resolve(), compile: (root) => calls.push(['compile', root === scene]), initTexture: (t) => calls.push(['tex', t === tex]), getRenderTarget: () => null, setRenderTarget() {} };
+  const w = new GpuWarmup({ renderer, camera: new THREE.PerspectiveCamera(), scene });
+  await w.warmAll();
+  assert.deepEqual(calls, [['tex', true], ['compile', true]]);
+  calls.length = 0; await w.compile(scene); assert.deepEqual(calls, [], 'an ordinary model warm-up still leaves it to the first draw');
+});
