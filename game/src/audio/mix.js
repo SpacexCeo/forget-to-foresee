@@ -37,6 +37,9 @@ export function tensionBand(t) {
   const m = tensionMix(t); return STEMS.reduce((a, b) => (m[b] > m[a] ? b : a), 'calm');
 }
 
+/** Wind loudness relative to the first mix (owner 12.11: half as loud). */
+export const WIND_SCALE = 0.5;
+
 /** Zone -> camp bed and wind level. Camp ids follow layout.js (iris, sol, pepel, moh, yantar, iney). */
 const CAMP_IDS = CAMPS.map((c) => c.id);
 export const ZONES = Object.freeze(['plaza', 'balcony', 'bridge', 'shell', ...CAMP_IDS]);
@@ -46,10 +49,11 @@ export function zoneMix(zone) {
   if (z === 'island' || z === 'scroll') z = 'plaza';
   // Owner 09.11: no constant low drone anywhere (wind and music stay). The Shell hum loops and the 82 Hz
   // inside-the-Shell bed were both steady drones, so `hum` is 0 and the Shell has no bed.
-  if (CAMP_IDS.includes(z)) return { zone: z, bed: 'amb_camp_' + z, wind: 0.55, hum: 0 };
+  // Owner 12.11: the wind at half its earlier level everywhere (WIND_SCALE).
+  if (CAMP_IDS.includes(z)) return { zone: z, bed: 'amb_camp_' + z, wind: 0.55 * WIND_SCALE, hum: 0 };
   if (z === 'shell') return { zone: z, bed: null, wind: 0, hum: 0 };
-  if (z === 'balcony' || z === 'bridge') return { zone: z, bed: null, wind: 1.0, hum: 0 };
-  return { zone: 'plaza', bed: null, wind: 0.7, hum: 0 };
+  if (z === 'balcony' || z === 'bridge') return { zone: z, bed: null, wind: 1.0 * WIND_SCALE, hum: 0 };
+  return { zone: 'plaza', bed: null, wind: 0.7 * WIND_SCALE, hum: 0 };
 }
 
 /** Zone of a ground position [x, y, z] on the island (use 'shell' yourself when inside a Shell). */
