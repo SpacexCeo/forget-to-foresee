@@ -21,7 +21,7 @@ const errText = (e) => String((e && e.rpc && JSON.stringify(e.rpc.data || e.rpc.
 export function createMarketDaemon({
   contractId, traders, client, store = null, log = () => {}, target = DEFAULT_TARGET, now = () => Date.now(),
   rand = Math.random, maxPerMinute = 60, paused = false, timers = { setTimeout, clearTimeout }, gas = TRADE_GAS,
-  policy = TOWN_POLICY, dryRun = false,
+  policy = TOWN_POLICY, dryRun = false, strategyOf = null,
 }) {
   const keys = traders.map((t) => t.key).filter((k) => TRADERS.includes(k));
   const saved = (store && store.load()) || null;
@@ -86,12 +86,13 @@ export function createMarketDaemon({
     const s = signers.get(key);
     if (!s || isPaused || (s.low && now() < s.lowUntil)) return null;
     if (!cap.take()) return null;
-    const t = policy.pick(st, key, rand, keys);
+    const t = policy.pick(st, key, rand, keys, strategyOf ? strategyOf(key) : null);
     if (!t || !signers.has(t.seller)) return null;
     const r = await send(s, t);
     const entry = { at: now(), ...t, hash: r.hash, ok: r.ok, ...(r.dry ? { dry: true } : {}) };
     if (r.ok) {
       policy.apply(st, t); st.today++;
+      if (strategyOf && strategyOf(key)) entry.strategy = true;
       st.recent.unshift({ at: entry.at, ...policy.row(t), hash: r.hash });
       st.recent.length = Math.min(st.recent.length, RECENT);
       s.low = false;
