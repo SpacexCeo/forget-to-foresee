@@ -75,8 +75,9 @@ test('kill XP view: the window events credit the ledger; a level up toasts once 
   const ledger = createTownLedger();
   const toasts = [];
   const sounds = [];
-  const prevWin = globalThis.window;
-  globalThis.window = { dispatchEvent: (e) => { sounds.push(e.detail); return true; } };
+  // audio cues go to globalThis (the window in a browser): catch them there
+  const prevDispatch = globalThis.dispatchEvent;
+  globalThis.dispatchEvent = (e) => { sounds.push(e.detail); return true; };
   globalThis.CustomEvent ||= class { constructor(type, o) { this.type = type; this.detail = o && o.detail; } };
   let active = true;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera();
@@ -95,5 +96,5 @@ test('kill XP view: the window events credit the ledger; a level up toasts once 
     k.update(0.5); k.update(1.0);
     k.dispose();
     assert.equal((win.handlers['ftf:mob-killed'] || []).length, 0);
-  } finally { globalThis.window = prevWin; }
+  } finally { if (prevDispatch) globalThis.dispatchEvent = prevDispatch; else delete globalThis.dispatchEvent; }
 });
