@@ -49,6 +49,10 @@ body.ph-on.ph-quest-min .ftf-town-objective { max-width: 44px; overflow: hidden;
 body.ph-on .ftf-quest-meta button { background: rgba(12, 20, 17, .86); border-color: rgba(201, 163, 90, .55); text-shadow: none; }
 body.ph-on .ftf-quest-meta { top: calc(162px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); }
 body.ph-on #toast { display: none !important; }
+/* the skill bar (scenes/town-casting.js) in the same palette; its health line moves into the frame */
+body.ph-on .ftf-cast-bar { background: rgba(12, 20, 17, .82); border: 1px solid rgba(201, 163, 90, .55); box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
+body.ph-on .ftf-hp { display: none; }
 @media (max-width: 700px) {
   .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
   .ph-portrait { width: 46px; height: 46px; } .ph-portrait img { inset: 3px; width: 40px; height: 40px; }

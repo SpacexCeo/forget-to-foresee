@@ -14,3 +14,8 @@ the town objective as a quest tracker under it (tap to fold; one line on phones,
 top right with a coin (SVG placeholder until `assets/ui/icons/silk_coin.webp` lands), a count that ticks up, floating
 +/- deltas and the sealed-chest badge; one toast stack under the wallet. Town only: the archipelago keeps its trial/silk
 HUD (judge path unchanged). The bottom-left corner stays free for the chat panel.
+
+Outside the lower gate (skill bar in the HUD palette, health in the frame) and on the archipelago (player HUD hidden;
+the judge HUD shows "Trial 1 of 17 · Silk 63" as before):
+
+![](after-outside.jpg) ![](after-island.jpg)
