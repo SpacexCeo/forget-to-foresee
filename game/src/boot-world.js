@@ -231,7 +231,9 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
+let salvageView = null; // story TZ Q2 (?story=1)
 let fogCards = null, doorGlow = null, townShops = null, townProps = null, spotProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+let marketTicker = null, marketScene = null; // the townsfolk market on NEAR testnet (docs/town-economy.md; ?town=1 until ftf-town is live)
 const chestBag = createChestBag({ storage: ctx.storage });
 // Dragon companions (docs/companion-nft-plan.md): only the dragons the heroine token's account holds on chain fly with
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
@@ -258,6 +260,7 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
+let townQuests = null, townPortal = null, townBoard = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -301,6 +304,22 @@ if (townMode.town) {
     { id: 'mirror', near: spotAt(TOWN_SPOTS.mirror, 1.6) },
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
+  // The Expedition (?story=1 only, docs/plans/story): the citizens' quests, the objective line and the Gate-Loom by the
+  // spawn; loaded lazily so the default (judge) page carries none of it. Its spots join this list (same array).
+  if (params.get('story') === '1' && !townQuests) {
+    Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js')]).then(([qm, pm, im, bm, tee]) => {
+      if (townQuests || !inTown) return;
+      townQuests = qm.createTownQuests({ storage: ctx.storage, townLedger, i18n: ctx.i18n, folkAt, inventory: im.createInventory({ storage: ctx.storage }), chests: chestBag,
+        depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search });
+      const w = townToWorld(pm.PORTAL_TOWN);
+      townPortal = pm.createTownPortal({ scene, position: w, facing: Math.PI / 2, i18n: ctx.i18n, read: () => townQuests.portalFacts(), onPay: () => townQuests.payGate(), reducedMotion: lookdev.reducedMotion, light: !(mobileDevice || lookdev.tier === 'low') });
+      // the Shell monument (K2): the latest board snapshot and her own row from the local log
+      const relayer = (() => { try { return tee.relayerUrl(); } catch { return null; } })();
+      townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
+        load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
+      spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
+    }).catch((e) => console.warn('[story]', e));
+  }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
@@ -310,6 +329,8 @@ if (townMode.town) {
     // packs are off (?mobs=0)
     townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, critters: () => params.get('mobs') === '0', onPickup: () => toast(ctx.i18n.t('chest.found')) });
     window.addEventListener('ftf:mob-killed', (e) => { if (townMonsters && inTown && e.detail) townMonsters.drop(e.detail.pos, e.detail.elite); });
+    // ?story=1 (story TZ Q2): salvage drops, the spare part's source: a part, a toast and a brass spark on a kill
+    if (params.get('story') === '1' && !salvageView) import('./scenes/salvage-view.js').then((m) => { salvageView = m.createSalvageView({ scene, storage: ctx.storage, toast, t: (k) => ctx.i18n.t(k), reduced: () => lookdev.reducedMotion }); }).catch((e) => console.warn('[salvage]', e));
     // the profile button carries the number of sealed chests (a small gold badge), so a found chest is not forgotten
     const badgeChests = () => { const b = document.querySelector('.ftf-town-profile'); if (!b) return; const n = chestBag.sealed().length; if (n) b.dataset.chests = String(n); else delete b.dataset.chests; }; // generated content: read with the label
     chestBag.subscribe(badgeChests); badgeChests();
@@ -335,6 +356,15 @@ if (townMode.town) {
     townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
+  }
+  if (!marketTicker && params.get('town') === '1') { // the townsfolk market: a ticker of real testnet trades, chips and stall visits
+    Promise.all([import('./net/market.js'), import('./ui/market-ticker.js'), import('./play/market-scene.js')]).then(([net, ui, sc]) => {
+      if (marketTicker) return;
+      const t = (k, a) => ctx.i18n.t(k, a);
+      marketScene = sc.createMarketScene({ camera, t, folk: () => town.townsfolk, folkPos, hired: () => townLedger.hires().map((h) => h.npc),
+        isDay: () => !['night', 'twilight'].includes(lookdev.look && lookdev.look.name) });
+      marketTicker = ui.createMarketTicker({ t, line: (r) => net.tradeLine(t, r), poll: () => net.fetchMarket(), onTrade: (r) => marketScene.onTrade(r) });
+    }).catch((e) => console.warn('[town] market', e));
   }
   mountTownAudio();
   import('./audio/haptics.js').then((m) => m.createHaptics({ storage: ctx.storage, reduced: () => lookdev.reducedMotion })).catch(() => {}); // feature 6: the same cues as a short pulse
@@ -437,7 +467,7 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 /** Outside the walls (docs/town.md): skillshots on the hillside beyond the lower gate; the first two skill-bar slots. */
 function mountCasting() {
   if (townCasting || !town) return;
-  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
+  townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice, storage: ctx.storage,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
     onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
@@ -516,6 +546,9 @@ function returnToTown() {
   lookdev.setAtmosphereFloor(TOWN_ATMOSPHERE);
   mountCasting(); // leaveTown disposed it: without this the two skills were gone after Return to town
   mountTownAudio();
+  if (townQuests) townQuests.setActive(true);
+  if (townPortal) townPortal.setActive(true);
+  if (townBoard) townBoard.setActive(true);
   townFlow.reenter();
 }
 /** Start over: a new local season (the judge link rebuilds the same fixed season). */
@@ -529,8 +562,13 @@ async function leaveTown() {
   if (townCasting) { townCasting.dispose(); townCasting = null; }
   if (townMobs) { townMobs.dispose(); townMobs = null; }
   if (townBarks) townBarks.update(player.pos, false); // no bubble left over the archipelago
+  if (marketTicker) marketTicker.show(false);
+  if (marketScene) marketScene.update(player.pos, false);
   if (photo) { photo.toggle(false); photo.setAvailable(false); }
   if (townAudio) { townAudio.dispose(); townAudio = null; } // the archipelago's play layer has its own audio
+  if (townQuests) townQuests.setActive(false); // ?story=1: the objective line and the Gate-Loom wait in the town
+  if (townPortal) townPortal.setActive(false);
+  if (townBoard) townBoard.setActive(false);
   player.world = world; rig.world = world;
   player.killY = KILL_Y;
   player.teleport(SPAWN.slice(), islandStart.heading);
@@ -1054,6 +1092,7 @@ function frame() {
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (doorGlow) doorGlow.update(dt, player.pos, !(townShops && townShops.inside));
+    if (salvageView) salvageView.update(dt);
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
     if (spotProps) spotProps.update(dt, lookdev.reducedMotion);
     if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
@@ -1065,7 +1104,15 @@ function frame() {
       for (const inst of streamer.instances) if (inst.real && (inst.name === 'town_block_mid' || inst.name === 'town_block_square')) inst.real.visible = !out;
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
+    if (townQuests) townQuests.update(player.pos);
+    if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
+    if (townBoard) { if (!townBoard.grounded) { const g = town.groundAt(townBoard.root.position.x, townBoard.root.position.z); if (g != null) { townBoard.root.position.y = g; townBoard.grounded = true; } } townBoard.update(player.pos, clock.elapsedTime); }
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
+    if (marketScene) {
+      const free = !(photo && photo.on) && !day1Open() && entered && !(townShops && townShops.inside) && !introOn;
+      marketScene.update(player.pos, free && !townFlow.talking);
+      marketTicker.show(free);
+    }
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
       if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets

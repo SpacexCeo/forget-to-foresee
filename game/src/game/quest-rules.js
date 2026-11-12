@@ -1,0 +1,126 @@
+// The citizens' quests as pure rules (TZ §6.3): locked → available → active → ready → done (a repeatable goes back to
+// available after its cooldown and bumps its attempt). applyQuest(state, action, ctx) → {state, events[], rejected?};
+// events are expedition-log entries ({kind, data, silkC, trust}); rewards are paid exactly once per (questId, attempt),
+// kills count only after acceptance and once per killId. Kill silk (EXPEDITION.kill) is T1 with a daily soft cap.
+// No DOM, no three, no engine. Pure.
+import { QUESTS } from './quests-data.js';
+import { EXPEDITION } from './expedition-config.js';
+
+export const QUESTS_KEY = 'ftf.quests.v1';
+const DAY = 24 * 3600 * 1000;
+const dayOf = (ms) => Math.floor((ms || 0) / DAY); // UTC days
+
+export const initialQuests = () => ({ v: 1, seq: 0, quests: {}, kills: [], guide: { talked: false, moved: false }, killDay: { day: -1, c: 0 }, bountyDay: { day: -1, n: 0 } });
+
+const q0 = () => ({ state: 'locked', progress: 0, attempt: 0, acceptedSeq: -1, doneAt: null });
+const get = (s, id) => s.quests[id] || q0();
+const copy = (s) => ({ ...s, quests: { ...s.quests }, kills: s.kills.slice(), guide: { ...s.guide }, killDay: { ...s.killDay }, bountyDay: { ...s.bountyDay } });
+const rejected = (state, reason) => ({ state, events: [], rejected: reason });
+
+/** A quest's status now: locked | available | active | ready | done (cooldowns and prerequisites applied). */
+export function questStatus(s, id, now = 0) {
+  const def = QUESTS[id]; if (!def) return null;
+  const q = get(s, id);
+  if (q.state === 'active' || q.state === 'ready') return q.state;
+  if (q.state === 'done' && !def.repeat) return 'done';
+  if (q.state === 'done' && def.repeat && now - q.doneAt < def.repeat.minutes * 60e3) return 'done';
+  return def.requires.every((r) => get(s, r).state === 'done') ? 'available' : 'locked';
+}
+
+/** Silk (hundredths) a kill pays: the table, at 25 % beyond the day's soft cap. */
+export function killSilk(s, mob, now) {
+  const base = EXPEDITION.kill[mob] || 0;
+  const used = s.killDay.day === dayOf(now) ? s.killDay.c : 0;
+  return used >= EXPEDITION.killDaySoftC ? Math.round(base * EXPEDITION.killAfterSoftFactor) : base;
+}
+
+/** The silk (whole) a turn-in pays: the reward, the bounty at its reduced rate after the day's full turn-ins. */
+export function rewardSilk(s, id, now) {
+  const def = QUESTS[id];
+  if (!def.repeat) return def.reward.silk;
+  const n = s.bountyDay.day === dayOf(now) ? s.bountyDay.n : 0;
+  return n < def.repeat.fullPerDay ? def.reward.silk : Math.round(def.reward.silk * def.repeat.afterFullFactor);
+}
+
+/**
+ * @param {object} state @param {{type: string, questId?: string, mob?: string, killId?: string, partId?: string,
+ *   partSource?: 'salvage'|'inventory', step?: string}} a
+ * @param {{now?: number}} [ctx]
+ */
+export function applyQuest(state, a = {}, ctx = {}) {
+  const s = state || initialQuests(); const now = ctx.now || 0;
+  switch (a.type) {
+    case 'GUIDE': { // the starter guide's steps feed q_welcome (talked to the elder, moved)
+      if (!['talked', 'moved'].includes(a.step)) return rejected(s, 'step');
+      const n = copy(s); n.guide[a.step] = true; n.seq++;
+      const ev = [];
+      const w = get(n, 'q_welcome');
+      if (w.state === 'active' && n.guide.talked && n.guide.moved) { n.quests.q_welcome = { ...w, state: 'ready' }; ev.push({ kind: 'quest_ready', data: { questId: 'q_welcome' }, silkC: 0, trust: 'T2' }); }
+      return { state: n, events: ev };
+    }
+    case 'ACCEPT': {
+      const def = QUESTS[a.questId]; if (!def) return rejected(s, 'quest');
+      if (questStatus(s, a.questId, now) !== 'available') return rejected(s, 'not_available');
+      if (Object.keys(QUESTS).some((id) => QUESTS[id].giver === def.giver && id !== a.questId && ['active', 'ready'].includes(get(s, id).state))) return rejected(s, 'giver_busy');
+      const n = copy(s); n.seq++;
+      const prev = get(n, a.questId);
+      const q = { state: 'active', progress: 0, attempt: prev.attempt + 1, acceptedSeq: n.seq, doneAt: prev.doneAt };
+      if (def.objective.type === 'guide' && def.objective.steps.every((k) => n.guide[k])) q.state = 'ready';
+      n.quests[a.questId] = q;
+      const ev = [{ kind: 'quest_accepted', data: { questId: a.questId, attempt: q.attempt }, silkC: 0, trust: 'T2' }];
+      if (q.state === 'ready') ev.push({ kind: 'quest_ready', data: { questId: a.questId }, silkC: 0, trust: 'T2' });
+      return { state: n, events: ev };
+    }
+    case 'KILL': {
+      if (!a.mob || !a.killId) return rejected(s, 'kill');
+      if (s.kills.includes(a.killId)) return rejected(s, 'duplicate');
+      const n = copy(s); n.seq++;
+      n.kills = [...n.kills, a.killId].slice(-500);
+      const ev = [];
+      const silk = killSilk(n, a.mob, now);
+      if (silk > 0) {
+        if (n.killDay.day !== dayOf(now)) n.killDay = { day: dayOf(now), c: 0 };
+        n.killDay.c += silk;
+        ev.push({ kind: 'kill_ticketed', data: { mob: a.mob, killId: a.killId }, silkC: silk, trust: a.hunt ? 'T2' : 'T1' }); // a scripted hunt (game/hunt.js) is T2
+      }
+      for (const id of Object.keys(QUESTS)) {
+        const def = QUESTS[id], q = get(n, id);
+        if (def.objective.type !== 'kill' || def.objective.mob !== a.mob || q.state !== 'active') continue;
+        const p = q.progress + 1;
+        n.quests[id] = { ...q, progress: p, state: p >= def.objective.count ? 'ready' : 'active' };
+        ev.push({ kind: 'quest_progress', data: { questId: id, progress: p }, silkC: 0, trust: 'T2' });
+        if (p >= def.objective.count) ev.push({ kind: 'quest_ready', data: { questId: id }, silkC: 0, trust: 'T2' });
+      }
+      return { state: n, events: ev };
+    }
+    case 'TURN_IN': {
+      const def = QUESTS[a.questId]; if (!def) return rejected(s, 'quest');
+      const q = get(s, a.questId);
+      if (def.objective.type === 'fetch') {
+        if (q.state !== 'active' && q.state !== 'ready') return rejected(s, 'not_ready');
+        if (!a.partId) return rejected(s, 'no_part');
+      } else if (q.state !== 'ready') return rejected(s, 'not_ready');
+      const n = copy(s); n.seq++;
+      const silk = rewardSilk(n, a.questId, now);
+      if (def.repeat) { if (n.bountyDay.day !== dayOf(now)) n.bountyDay = { day: dayOf(now), n: 0 }; n.bountyDay.n++; }
+      n.quests[a.questId] = { ...q, state: 'done', doneAt: now };
+      const trust = def.objective.type === 'fetch' && a.partSource !== 'salvage' ? 'T1' : 'T2';
+      return { state: n, events: [{ kind: def.repeat ? 'bounty_resolved' : 'quest_turned_in', data: { questId: a.questId, attempt: q.attempt, partId: a.partId || null, xp: def.reward.xp, chest: def.reward.chest || null }, silkC: silk * 100, trust }] };
+    }
+    case 'ABANDON': {
+      const q = get(s, a.questId);
+      if (!QUESTS[a.questId] || q.state !== 'active') return rejected(s, 'not_active');
+      const n = copy(s); n.seq++;
+      n.quests[a.questId] = { ...q, state: q.doneAt ? 'done' : 'locked', progress: 0 };
+      return { state: n, events: [{ kind: 'quest_abandoned', data: { questId: a.questId }, silkC: 0, trust: 'T2' }] };
+    }
+    default: return rejected(s, 'action');
+  }
+}
+
+/** Replays a list of actions (with their times) from the start: the same state the view holds. */
+export function replayQuests(actions) {
+  let s = initialQuests(); const events = [];
+  for (const { action, now } of actions) { const r = applyQuest(s, action, { now }); if (!r.rejected) { s = r.state; events.push(...r.events); } }
+  return { state: s, events };
+}
