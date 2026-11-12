@@ -4,7 +4,7 @@
 export const EXPEDITION = Object.freeze({
   currency: 'silk',                        // town silk; never the engine's S.silk, never wool
   PORTAL_FEE_C: 1_000_000,                 // 10,000 silk (the Gate-Loom); ?portalFee=N is a visible demo fee that never counts
-  kill: Object.freeze({ skitter: 1000, veilbell: 2500, hulker: 6000, crownrift: 20000 }), // 10, 25, 60, 200 silk per kill ('skitter' reads "spider")
+  kill: Object.freeze({ skitter: 600, veilbell: 1500, hulker: 4000, crownrift: 20000 }), // 6, 15, 40, 200 silk per kill ('skitter' reads "spider"); tuned by silk-pacing.test.mjs (TZ: 10, 25, 60, 200 gave 74 min)
   killDaySoftC: 600_000,                   // 6,000 silk a day from kills at the full rate; beyond it 25 %
   killAfterSoftFactor: 0.25,
   bounty: Object.freeze({ perDayFull: 3, afterFullFactor: 0.1, cooldownMin: 30 }),
