@@ -1412,4 +1412,11 @@ export default {
   'set.startOverConfirm': "开始新赛季？当前赛季将丢失。",
   'set.returnTown': "返回小镇",
   'set.resume': "继续",
+  'tw.title': "进入锦标赛",
+  'tw.body': "锦标赛至少持续 3 分钟。你可以随时通过 设置 → 结束锦标赛 返回小镇（赛季将重新开始）。",
+  'tw.enter': "进入锦标赛",
+  'tw.stay': "留在小镇",
+  'tw.dontShow': "不再显示",
+  'set.endTourney': "结束锦标赛并返回小镇",
+  'set.endTourneyConfirm': "结束锦标赛并返回小镇？本赛季将丢失，下一个赛季重新开始。",
 };

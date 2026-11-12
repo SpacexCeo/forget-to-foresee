@@ -1413,4 +1413,11 @@ export default {
   'set.startOverConfirm': "Iniziare una nuova stagione? Quella attuale va persa.",
   'set.returnTown': "Torna in paese",
   'set.resume': "Riprendi",
+  'tw.title': "Entrare nel Torneo",
+  'tw.body': "Il Torneo dura almeno 3 minuti. Puoi tornare in paese quando vuoi da Impostazioni → Termina il Torneo (la stagione ricomincia da capo).",
+  'tw.enter': "Entra nel Torneo",
+  'tw.stay': "Resta in paese",
+  'tw.dontShow': "Non mostrarlo più",
+  'set.endTourney': "Termina il Torneo e torna in paese",
+  'set.endTourneyConfirm': "Terminare il Torneo e tornare in paese? Questa stagione va persa; la prossima ricomincia da capo.",
 };

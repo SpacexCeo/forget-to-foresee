@@ -301,3 +301,9 @@ predate the last exports). `d1_export.py` must keep the arms out of the decimati
 result. Not done: no corrective shapes for a fully raised arm (checked up to the wave: clean); the white shard at the
 slit by the left hip is older and untouched.
 
+**Super strike (12.11).** `strike_charge` and `strike_super` for her come from the same keys as Iris's
+(`art/anim/iris_actions.py --model game/public/assets/models/agent_elise.glb --in raw2.glb --out raw3.glb --only
+strike_charge,strike_super --legs 0.27 --cloth art/agents/elise/cloth_rig.npz`, then `gltf-transform meshopt`): the
+steps and the hips' drop are scaled to 0.27 under the gown (at 0.4 the release lunge cut the cloth by 1 cm; the
+script stops when a leg cuts it), the gown is baked over both. Clip file 713 444 bytes, 17 clips.
+
