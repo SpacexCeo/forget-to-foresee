@@ -50,7 +50,7 @@ const CSS = `
  * @param {(c: {id: string, from: number[], dir: number[], point: number[]}) => void} [o.onFire] where it goes (play/mobs.js: the hits)
  * @param {Document} [o.doc]
  */
-export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, onFire = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
+export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, onFire = null, onArm = null, extra = [], base = (import.meta.env && import.meta.env.BASE_URL) || '/', doc = globalThis.document }) {
   const fx = createCastEffects(scene);
   if (!doc.getElementById('ftf-cast-style')) { const st = doc.createElement('style'); st.id = 'ftf-cast-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-cast'; root.hidden = true;
@@ -110,6 +110,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
   }
 
   function setArmed(id) {
+    if (id && id !== state.armed && onArm) onArm(id); // the cast's build starts as she raises it (audio: the charge)
     state.armed = id;
     for (const [s] of SLOTS) slots[s].button.setAttribute('aria-pressed', String(s === id));
     hint.hidden = !id;

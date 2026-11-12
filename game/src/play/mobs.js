@@ -262,7 +262,7 @@ const CSS = `
  * @param {(x: number, z: number) => number|null} [o.floor] the hillside's own surface (homes and spawns)
  * @param {string} [o.variant] '_m' on phones @param {boolean} [o.phone] fewer monsters, cheaper updates
  * @param {() => boolean} [o.reduced] reduced motion
- * @param {(kind: string) => void} [o.onFeedback] 'hurt' | 'down' | 'kill' (sound cues)
+ * @param {(kind: string, mob?: object, ev?: object) => void} [o.onFeedback] 'hurt' | 'down' | 'kill' | 'attack' | 'hit' | 'strike' | 'strike3' | 'dash' (sound cues; the mob for attack / hit / kill)
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
@@ -367,7 +367,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   function handle(ev) {
     for (const e of ev) {
       const v = views.get(e.mob);
-      if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !e.mob.T.ranged; }
+      if (e.kind === 'attack' && v) { if (v.actions.attack) { play(v, 'attack', 0.1); v.oneShot = v.actions.attack; } v.ring.visible = !e.mob.T.ranged; if (onFeedback) onFeedback('attack', e.mob); }
       else if (e.kind === 'impact') { if (v) v.ring.visible = false; if (e.hit) hurt(e.mob.T.damage, !!e.mob.T.heavy); }
       else if (e.kind === 'shot' && e.to && v) {
         const s = new THREE.Mesh(seedGeo, seedMat); const from = new THREE.Vector3(); v.model.getObjectByName('seed')?.getWorldPosition(from);
@@ -377,12 +377,12 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         shots.push({ s, vel: to.clone().sub(from).normalize().multiplyScalar(9), life: 2.2, damage: e.mob.T.damage, min: 99, log: { from: from.toArray().map((x) => +x.toFixed(2)), to: to.toArray().map((x) => +x.toFixed(2)) } });
       }
       else if (e.kind === 'hit' && v) {
-        v.fx.hit(); number(e.mob, e.amount, e.crit);
+        v.fx.hit(); number(e.mob, e.amount, e.crit); if (onFeedback) onFeedback('hit', e.mob, e);
         if (e.crit || e.mob.T.heavy) shake = Math.max(shake, e.crit ? 0.35 : 0.2);
         if (e.mob.state === 'stagger' && v.actions.hit) { play(v, 'hit', 0.06); v.oneShot = v.actions.hit; }
         v.ring.visible = v.ring.visible && e.mob.state === 'windup';
       }
-      else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill'); }
+      else if (e.kind === 'death' && v) { v.ring.visible = false; play(v, 'death', 0.1); if (onFeedback) onFeedback('kill', e.mob); }
       else if (e.kind === 'killed') {
         if (v) v.fx.die();
         if (win) win.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: e.mob.type, pos: e.mob.pos.slice(), elite: !!e.mob.T.elite } }));

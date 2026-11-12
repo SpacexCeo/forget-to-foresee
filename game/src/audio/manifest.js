@@ -106,6 +106,69 @@ export const AUDIO_MANIFEST = {
       "samples": 7680,
       "channels": 1
     },
+    "cast_charge_frost": {
+      "file": "cast_charge_frost.ogg",
+      "kind": "sfx",
+      "dur": 1.8439,
+      "samples": 88507,
+      "channels": 2
+    },
+    "cast_charge_storm": {
+      "file": "cast_charge_storm.ogg",
+      "kind": "sfx",
+      "dur": 1.5655,
+      "samples": 75145,
+      "channels": 2
+    },
+    "cast_release_frost_1": {
+      "file": "cast_release_frost_1.ogg",
+      "kind": "sfx",
+      "dur": 1.4899,
+      "samples": 71514,
+      "channels": 2
+    },
+    "cast_release_frost_2": {
+      "file": "cast_release_frost_2.ogg",
+      "kind": "sfx",
+      "dur": 1.5343,
+      "samples": 73648,
+      "channels": 2
+    },
+    "cast_release_storm_1": {
+      "file": "cast_release_storm_1.ogg",
+      "kind": "sfx",
+      "dur": 3.0411,
+      "samples": 145973,
+      "channels": 2
+    },
+    "cast_release_storm_2": {
+      "file": "cast_release_storm_2.ogg",
+      "kind": "sfx",
+      "dur": 3.0355,
+      "samples": 145703,
+      "channels": 2
+    },
+    "dash_whoosh_1": {
+      "file": "dash_whoosh_1.ogg",
+      "kind": "sfx",
+      "dur": 0.42,
+      "samples": 20160,
+      "channels": 2
+    },
+    "dash_whoosh_2": {
+      "file": "dash_whoosh_2.ogg",
+      "kind": "sfx",
+      "dur": 0.42,
+      "samples": 20160,
+      "channels": 2
+    },
+    "dash_whoosh_3": {
+      "file": "dash_whoosh_3.ogg",
+      "kind": "sfx",
+      "dur": 0.42,
+      "samples": 20160,
+      "channels": 2
+    },
     "gift_chime": {
       "file": "gift_chime.ogg",
       "kind": "sfx",
@@ -227,12 +290,173 @@ export const AUDIO_MANIFEST = {
       "stroke": "spike",
       "strokeDur": 1.2
     },
+    "iris_down": {
+      "file": "iris_down.ogg",
+      "kind": "sfx",
+      "dur": 1.6382,
+      "samples": 78633,
+      "channels": 2
+    },
+    "iris_hurt_1": {
+      "file": "iris_hurt_1.ogg",
+      "kind": "sfx",
+      "dur": 0.3857,
+      "samples": 18513,
+      "channels": 2
+    },
+    "iris_hurt_2": {
+      "file": "iris_hurt_2.ogg",
+      "kind": "sfx",
+      "dur": 0.3859,
+      "samples": 18521,
+      "channels": 2
+    },
+    "iris_hurt_3": {
+      "file": "iris_hurt_3.ogg",
+      "kind": "sfx",
+      "dur": 0.3853,
+      "samples": 18496,
+      "channels": 2
+    },
     "memory_dissolve": {
       "file": "memory_dissolve.ogg",
       "kind": "sfx",
       "dur": 7.0,
       "samples": 336000,
       "channels": 2
+    },
+    "mob_crownrift_blade_1": {
+      "file": "mob_crownrift_blade_1.ogg",
+      "kind": "sfx",
+      "dur": 1.2795,
+      "samples": 61414,
+      "channels": 2,
+      "ref": 6
+    },
+    "mob_crownrift_blade_2": {
+      "file": "mob_crownrift_blade_2.ogg",
+      "kind": "sfx",
+      "dur": 1.3352,
+      "samples": 64089,
+      "channels": 2,
+      "ref": 6
+    },
+    "mob_death_1": {
+      "file": "mob_death_1.ogg",
+      "kind": "sfx",
+      "dur": 2.5355,
+      "samples": 121704,
+      "channels": 2,
+      "ref": 5
+    },
+    "mob_death_2": {
+      "file": "mob_death_2.ogg",
+      "kind": "sfx",
+      "dur": 2.5178,
+      "samples": 120856,
+      "channels": 2,
+      "ref": 5
+    },
+    "mob_hulker_slam_1": {
+      "file": "mob_hulker_slam_1.ogg",
+      "kind": "sfx",
+      "dur": 1.8128,
+      "samples": 87012,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 0.9
+    },
+    "mob_hulker_slam_2": {
+      "file": "mob_hulker_slam_2.ogg",
+      "kind": "sfx",
+      "dur": 1.9087,
+      "samples": 91619,
+      "channels": 2,
+      "ref": 6,
+      "rolloff": 0.9
+    },
+    "mob_hurt_big_1": {
+      "file": "mob_hurt_big_1.ogg",
+      "kind": "sfx",
+      "dur": 0.5,
+      "samples": 24000,
+      "channels": 1,
+      "ref": 6
+    },
+    "mob_hurt_big_2": {
+      "file": "mob_hurt_big_2.ogg",
+      "kind": "sfx",
+      "dur": 0.5,
+      "samples": 24000,
+      "channels": 1,
+      "ref": 6
+    },
+    "mob_hurt_small_1": {
+      "file": "mob_hurt_small_1.ogg",
+      "kind": "sfx",
+      "dur": 0.28,
+      "samples": 13440,
+      "channels": 1,
+      "ref": 4
+    },
+    "mob_hurt_small_2": {
+      "file": "mob_hurt_small_2.ogg",
+      "kind": "sfx",
+      "dur": 0.28,
+      "samples": 13440,
+      "channels": 1,
+      "ref": 4
+    },
+    "mob_hurt_small_3": {
+      "file": "mob_hurt_small_3.ogg",
+      "kind": "sfx",
+      "dur": 0.28,
+      "samples": 13440,
+      "channels": 1,
+      "ref": 4
+    },
+    "mob_skitter_attack_1": {
+      "file": "mob_skitter_attack_1.ogg",
+      "kind": "sfx",
+      "dur": 0.417,
+      "samples": 20016,
+      "channels": 1,
+      "ref": 4,
+      "rolloff": 1.2
+    },
+    "mob_skitter_attack_2": {
+      "file": "mob_skitter_attack_2.ogg",
+      "kind": "sfx",
+      "dur": 0.417,
+      "samples": 20017,
+      "channels": 1,
+      "ref": 4,
+      "rolloff": 1.2
+    },
+    "mob_skitter_attack_3": {
+      "file": "mob_skitter_attack_3.ogg",
+      "kind": "sfx",
+      "dur": 0.418,
+      "samples": 20062,
+      "channels": 1,
+      "ref": 4,
+      "rolloff": 1.2
+    },
+    "mob_veilbell_seed_1": {
+      "file": "mob_veilbell_seed_1.ogg",
+      "kind": "sfx",
+      "dur": 2.3697,
+      "samples": 113748,
+      "channels": 2,
+      "ref": 5
+    },
+    "mob_veilbell_seed_2": {
+      "file": "mob_veilbell_seed_2.ogg",
+      "kind": "sfx",
+      "dur": 2.3225,
+      "samples": 111478,
+      "channels": 2,
+      "ref": 5
     },
     "mus_calm": {
       "file": "mus_calm.ogg",
@@ -295,29 +519,43 @@ export const AUDIO_MANIFEST = {
     "step_grass_1": {
       "file": "step_grass_1.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.2883,
+      "samples": 13836,
       "channels": 1
     },
     "step_grass_2": {
       "file": "step_grass_2.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.2893,
+      "samples": 13886,
       "channels": 1
     },
     "step_grass_3": {
       "file": "step_grass_3.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.2906,
+      "samples": 13949,
       "channels": 1
     },
     "step_grass_4": {
       "file": "step_grass_4.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.3063,
+      "samples": 14704,
+      "channels": 1
+    },
+    "step_grass_5": {
+      "file": "step_grass_5.ogg",
+      "kind": "step",
+      "dur": 0.2861,
+      "samples": 13732,
+      "channels": 1
+    },
+    "step_grass_6": {
+      "file": "step_grass_6.ogg",
+      "kind": "step",
+      "dur": 0.3062,
+      "samples": 14699,
       "channels": 1
     },
     "step_metal_1": {
@@ -351,57 +589,85 @@ export const AUDIO_MANIFEST = {
     "step_stone_1": {
       "file": "step_stone_1.ogg",
       "kind": "step",
-      "dur": 0.3,
-      "samples": 14400,
+      "dur": 0.2537,
+      "samples": 12179,
       "channels": 1
     },
     "step_stone_2": {
       "file": "step_stone_2.ogg",
       "kind": "step",
-      "dur": 0.3,
-      "samples": 14400,
+      "dur": 0.2596,
+      "samples": 12459,
       "channels": 1
     },
     "step_stone_3": {
       "file": "step_stone_3.ogg",
       "kind": "step",
-      "dur": 0.3,
-      "samples": 14400,
+      "dur": 0.2359,
+      "samples": 11321,
       "channels": 1
     },
     "step_stone_4": {
       "file": "step_stone_4.ogg",
       "kind": "step",
-      "dur": 0.3,
-      "samples": 14400,
+      "dur": 0.2237,
+      "samples": 10736,
+      "channels": 1
+    },
+    "step_stone_5": {
+      "file": "step_stone_5.ogg",
+      "kind": "step",
+      "dur": 0.2411,
+      "samples": 11575,
+      "channels": 1
+    },
+    "step_stone_6": {
+      "file": "step_stone_6.ogg",
+      "kind": "step",
+      "dur": 0.251,
+      "samples": 12049,
       "channels": 1
     },
     "step_wood_1": {
       "file": "step_wood_1.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.3171,
+      "samples": 15223,
       "channels": 1
     },
     "step_wood_2": {
       "file": "step_wood_2.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.3059,
+      "samples": 14683,
       "channels": 1
     },
     "step_wood_3": {
       "file": "step_wood_3.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.3127,
+      "samples": 15011,
       "channels": 1
     },
     "step_wood_4": {
       "file": "step_wood_4.ogg",
       "kind": "step",
-      "dur": 0.32,
-      "samples": 15360,
+      "dur": 0.3046,
+      "samples": 14623,
+      "channels": 1
+    },
+    "step_wood_5": {
+      "file": "step_wood_5.ogg",
+      "kind": "step",
+      "dur": 0.2992,
+      "samples": 14361,
+      "channels": 1
+    },
+    "step_wood_6": {
+      "file": "step_wood_6.ogg",
+      "kind": "step",
+      "dur": 0.3094,
+      "samples": 14852,
       "channels": 1
     },
     "sting_gone": {
@@ -432,6 +698,76 @@ export const AUDIO_MANIFEST = {
       "samples": 312000,
       "channels": 2,
       "ref": 12
+    },
+    "strike_heavy_1": {
+      "file": "strike_heavy_1.ogg",
+      "kind": "sfx",
+      "dur": 1.17,
+      "samples": 56160,
+      "channels": 2
+    },
+    "strike_heavy_2": {
+      "file": "strike_heavy_2.ogg",
+      "kind": "sfx",
+      "dur": 1.17,
+      "samples": 56160,
+      "channels": 2
+    },
+    "strike_impact_1": {
+      "file": "strike_impact_1.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 2
+    },
+    "strike_impact_2": {
+      "file": "strike_impact_2.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 2
+    },
+    "strike_impact_3": {
+      "file": "strike_impact_3.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 2
+    },
+    "strike_impact_4": {
+      "file": "strike_impact_4.ogg",
+      "kind": "sfx",
+      "dur": 0.45,
+      "samples": 21600,
+      "channels": 2
+    },
+    "strike_swing_1": {
+      "file": "strike_swing_1.ogg",
+      "kind": "sfx",
+      "dur": 0.34,
+      "samples": 16320,
+      "channels": 2
+    },
+    "strike_swing_2": {
+      "file": "strike_swing_2.ogg",
+      "kind": "sfx",
+      "dur": 0.34,
+      "samples": 16320,
+      "channels": 2
+    },
+    "strike_swing_3": {
+      "file": "strike_swing_3.ogg",
+      "kind": "sfx",
+      "dur": 0.34,
+      "samples": 16320,
+      "channels": 2
+    },
+    "strike_swing_4": {
+      "file": "strike_swing_4.ogg",
+      "kind": "sfx",
+      "dur": 0.34,
+      "samples": 16320,
+      "channels": 2
     },
     "ui_click": {
       "file": "ui_click.ogg",
@@ -506,6 +842,54 @@ export const AUDIO_MANIFEST = {
       "bid_tick_2",
       "bid_tick_3"
     ],
+    "cast_release_frost": [
+      "cast_release_frost_1",
+      "cast_release_frost_2"
+    ],
+    "cast_release_storm": [
+      "cast_release_storm_1",
+      "cast_release_storm_2"
+    ],
+    "dash_whoosh": [
+      "dash_whoosh_1",
+      "dash_whoosh_2",
+      "dash_whoosh_3"
+    ],
+    "iris_hurt": [
+      "iris_hurt_1",
+      "iris_hurt_2",
+      "iris_hurt_3"
+    ],
+    "mob_crownrift_blade": [
+      "mob_crownrift_blade_1",
+      "mob_crownrift_blade_2"
+    ],
+    "mob_death": [
+      "mob_death_1",
+      "mob_death_2"
+    ],
+    "mob_hulker_slam": [
+      "mob_hulker_slam_1",
+      "mob_hulker_slam_2"
+    ],
+    "mob_hurt_big": [
+      "mob_hurt_big_1",
+      "mob_hurt_big_2"
+    ],
+    "mob_hurt_small": [
+      "mob_hurt_small_1",
+      "mob_hurt_small_2",
+      "mob_hurt_small_3"
+    ],
+    "mob_skitter_attack": [
+      "mob_skitter_attack_1",
+      "mob_skitter_attack_2",
+      "mob_skitter_attack_3"
+    ],
+    "mob_veilbell_seed": [
+      "mob_veilbell_seed_1",
+      "mob_veilbell_seed_2"
+    ],
     "step_glass": [
       "step_glass_1",
       "step_glass_2",
@@ -516,7 +900,9 @@ export const AUDIO_MANIFEST = {
       "step_grass_1",
       "step_grass_2",
       "step_grass_3",
-      "step_grass_4"
+      "step_grass_4",
+      "step_grass_5",
+      "step_grass_6"
     ],
     "step_metal": [
       "step_metal_1",
@@ -528,13 +914,33 @@ export const AUDIO_MANIFEST = {
       "step_stone_1",
       "step_stone_2",
       "step_stone_3",
-      "step_stone_4"
+      "step_stone_4",
+      "step_stone_5",
+      "step_stone_6"
     ],
     "step_wood": [
       "step_wood_1",
       "step_wood_2",
       "step_wood_3",
-      "step_wood_4"
+      "step_wood_4",
+      "step_wood_5",
+      "step_wood_6"
+    ],
+    "strike_heavy": [
+      "strike_heavy_1",
+      "strike_heavy_2"
+    ],
+    "strike_impact": [
+      "strike_impact_1",
+      "strike_impact_2",
+      "strike_impact_3",
+      "strike_impact_4"
+    ],
+    "strike_swing": [
+      "strike_swing_1",
+      "strike_swing_2",
+      "strike_swing_3",
+      "strike_swing_4"
     ],
     "vote_stone": [
       "vote_stone_1",

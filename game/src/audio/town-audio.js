@@ -6,11 +6,33 @@
 // is disposed when Iris leaves the town and made again when she comes back.
 export const STEP_EVERY = Object.freeze({ walk: 0.62, run: 0.9 });
 /** Cue names the game sends; anything else is ignored. */
-export const TOWN_CUES = Object.freeze(['ui_click', 'ui_confirm', 'ui_notify', 'ui_error', 'bid_tick', 'gift_chime', 'vision_whoosh', 'storm_crack', 'memory_dissolve']);
+export const TOWN_CUES = Object.freeze(['ui_click', 'ui_confirm', 'ui_notify', 'ui_error', 'bid_tick', 'gift_chime', 'vision_whoosh', 'storm_crack', 'memory_dissolve',
+  // combat (owner, 12.11): Iris's strikes and dash, the casts' build and release, the monsters by type, Iris hit
+  'strike_swing', 'strike_impact', 'strike_heavy', 'dash_whoosh',
+  'cast_charge_frost', 'cast_release_frost', 'cast_charge_storm', 'cast_release_storm',
+  'mob_skitter_attack', 'mob_hulker_slam', 'mob_veilbell_seed', 'mob_crownrift_blade', 'mob_hurt_small', 'mob_hurt_big', 'mob_death',
+  'iris_hurt', 'iris_down']);
+/** Footstep surfaces (six soft variations each). */
+export const STEP_SURFACES = Object.freeze(['stone', 'wood', 'grass']);
+/** The monsters' sounds by type (play/mobs.js types): attack / telegraph, hurt, death. */
+export const MOB_SOUNDS = Object.freeze({
+  skitter: Object.freeze({ attack: 'mob_skitter_attack', hurt: 'mob_hurt_small' }),
+  veilbell: Object.freeze({ attack: 'mob_veilbell_seed', hurt: 'mob_hurt_small' }),
+  hulker: Object.freeze({ attack: 'mob_hulker_slam', hurt: 'mob_hurt_big' }),
+  crownrift: Object.freeze({ attack: 'mob_crownrift_blade', hurt: 'mob_hurt_big' }),
+});
+
+/** The cue's name from an `ftf:sound` detail: a name, or {name, pos, gain}. */
+export const cueName = (d) => (d && typeof d === 'object' ? d.name : d);
 
 /** Sends a sound cue from anywhere (no import of the audio engine needed). */
 export function cue(name, win = globalThis) {
   try { if (win && win.dispatchEvent && typeof CustomEvent === 'function') win.dispatchEvent(new CustomEvent('ftf:sound', { detail: name })); } catch { /* no DOM */ }
+}
+
+/** A cue placed in the world (the monsters, an impact): heard from where it happens. */
+export function cueAt(name, pos, gain = 1, win = globalThis) {
+  try { if (win && win.dispatchEvent && typeof CustomEvent === 'function') win.dispatchEvent(new CustomEvent('ftf:sound', { detail: { name, pos: pos ? [pos[0], pos[1], pos[2]] : null, gain } })); } catch { /* no DOM */ }
 }
 
 /**
@@ -25,11 +47,18 @@ export function stepper() {
 /**
  * @param {{createAudio: Function, win?: Window}} o
  */
-export function createTownAudio({ createAudio, win = globalThis }) {
+export function createTownAudio({ createAudio, win = globalThis, rand = Math.random }) {
   const audio = createAudio();
   audio.setZone('plaza');
   const steps = stepper();
-  const onCue = (e) => { if (TOWN_CUES.includes(e.detail)) audio.play(e.detail); };
+  // a small volume jitter on top of the engine's pitch variation: no two strikes or steps sound the same
+  const onCue = (e) => {
+    const d = e.detail, name = cueName(d);
+    if (!TOWN_CUES.includes(name)) return;
+    const o = { gain: ((d && d.gain) || 1) * (0.86 + 0.14 * rand()) };
+    if (d && d.pos) o.pos = d.pos;
+    audio.play(name, o);
+  };
   const unlock = () => { audio.unlock().catch(() => {}); };
   win.addEventListener('ftf:sound', onCue);
   win.addEventListener('keydown', unlock, { once: true });
@@ -37,7 +66,12 @@ export function createTownAudio({ createAudio, win = globalThis }) {
   return {
     audio,
     /** Per frame: Iris walked `dist` metres; indoors the floor is wood. */
-    step(dist, running, indoors = false) { if (steps(dist, running)) audio.play(indoors ? 'step_wood' : 'step_stone', { gain: running ? 0.9 : 0.7 }); },
+    step(dist, running, surface = 'stone') { if (steps(dist, running)) this.footContact(surface, running); },
+    /** One foot meets the ground (the locomotion's contact frame when it has one, else the distance pacing). */
+    footContact(surface = 'stone', running = false) {
+      const s = surface === true ? 'wood' : STEP_SURFACES.includes(surface) ? surface : 'stone'; // true: the old "indoors" flag
+      audio.play('step_' + s, { gain: (running ? 0.85 : 0.62) * (0.85 + 0.15 * rand()) });
+    },
     setListener(camera, target) { if (audio.setListener) audio.setListener(camera, target); },
     dispose() { win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
   };

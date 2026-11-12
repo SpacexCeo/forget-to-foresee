@@ -482,38 +482,50 @@ def heel_toe(r, heel, toe, gap):
     return buf
 
 
-@variants("step_stone", 4, "step", target=(-24, "short"))
+# Footsteps v2 (owner, 12.11: soft and natural): six variations per surface, a soft heel, a lighter toe, little
+# grit; the client adds a small pitch / volume jitter per step (game/src/audio/town-audio.js).
+def soft_heel(r, f_hi, f_lo, decay, scuff_lo, scuff_hi, scuff_amt, dur=0.2):
+    n = ns(dur)
+    t = taxis(n)
+    th = membrane(dur, f_hi, f_lo, 0.006, decay, r, 0.35, 900)
+    e = np.minimum(t / 0.004, 1) * np.exp(-t / 0.03)
+    sc = bandpass(noise(n, r), scuff_lo, scuff_hi) * e * scuff_amt
+    return th + sc
+
+
+@variants("step_stone", 6, "step", target=(-27, "short"))
 def step_stone(r, i):
     def hit(a):
-        n = ns(0.15)
-        t = taxis(n)
-        th = membrane(0.15, r.uniform(120, 160), 70, 0.008, 0.025, r, 0.7, 1100)
-        grit = highpass(noise(n, r), 2500) * np.exp(-t / 0.018) * 0.3
-        return (th + grit) * a
-    return fades(heel_toe(r, hit(1), hit(0.8), r.uniform(0.03, 0.05))[:ns(0.3)])
+        y = soft_heel(r, r.uniform(105, 135), 62, r.uniform(0.018, 0.026), 1400, 5200, 0.28)
+        n = len(y)
+        grit = np.zeros(n)
+        for tt in poisson_times(r, 120, 0.05):
+            grit[ns(tt)] += r.uniform(-1, 1) * 0.5
+        return (y + highpass(grit, 3500) * np.exp(-taxis(n) / 0.03)) * a
+    return fades(lowpass(heel_toe(r, hit(1), hit(0.7), r.uniform(0.045, 0.07)), 7000)[:ns(0.32)])
 
 
-@variants("step_wood", 4, "step", target=(-24, "short"))
+@variants("step_wood", 6, "step", target=(-26, "short"))
 def step_wood(r, i):
-    def hit():
-        k = strike(0.25, r.uniform(150, 210), WOOD_RATIOS, [1, 0.6, 0.35, 0.2], [0.07, 0.04, 0.02, 0.012], r, click=0.5, click_lp=3500)
-        return k + membrane(0.25, 110, 60, 0.01, 0.04, r, 0.3, 600) * 0.5
-    return fades(heel_toe(r, hit(), hit(), r.uniform(0.035, 0.055))[:ns(0.32)])
+    def hit(a):
+        k = strike(0.22, r.uniform(135, 185), WOOD_RATIOS, [1, 0.45, 0.22, 0.1], [0.05, 0.03, 0.016, 0.01], r, click=0.25, click_lp=2800)
+        return (k * 0.8 + membrane(0.22, 105, 58, 0.01, 0.035, r, 0.2, 500) * 0.6) * a
+    return fades(heel_toe(r, hit(1), hit(0.6), r.uniform(0.05, 0.075))[:ns(0.34)])
 
 
-@variants("step_grass", 4, "step", target=(-26, "short"))
+@variants("step_grass", 6, "step", target=(-28, "short"))
 def step_grass(r, i):
-    def hit():
-        n = ns(0.18)
+    def hit(a):
+        n = ns(0.2)
         t = taxis(n)
-        e = np.minimum(t / 0.006, 1) * np.exp(-t / 0.05)
-        rust = bandpass(noise(n, r), 900, 6500) * e
+        e = np.minimum(t / 0.008, 1) * np.exp(-t / 0.055)
+        rust = bandpass(noise(n, r), 700, 4800) * e
         cr = np.zeros(n)
-        for tt in poisson_times(r, 260, 0.1):
+        for tt in poisson_times(r, 180, 0.11):
             cr[ns(tt)] += r.uniform(-1, 1)
-        cr = highpass(cr, 2500) * np.exp(-t / 0.05)
-        return rust * 0.6 + cr * 0.5 + lowpass(noise(n, r), 280) * np.exp(-t / 0.03) * 0.5
-    return fades(heel_toe(r, hit(), hit(), r.uniform(0.05, 0.08))[:ns(0.32)])
+        cr = bandpass(cr, 2200, 7000) * np.exp(-t / 0.06)
+        return (rust * 0.55 + cr * 0.3 + lowpass(noise(n, r), 220) * np.exp(-t / 0.035) * 0.45) * a
+    return fades(heel_toe(r, hit(1), hit(0.65), r.uniform(0.05, 0.08))[:ns(0.34)])
 
 
 @variants("step_glass", 4, "step", target=(-24, "short"))
@@ -863,6 +875,284 @@ def mus_crisis(r):
 
 
 # =============================================================================================
+# Combat (owner, 12.11): Iris's strikes and dash, the two casts (a build while she winds up, a strong release), the
+# hillside monsters by type, Iris getting hit. Layered (transient + body + tail), varied, never clipping.
+# =============================================================================================
+
+def sweep_noise(r, D, f0, f1, f2, t_peak, width=0.45, rise=2.0, fall=0.09, stereo=True, colour="pink"):
+    """A whoosh: band-limited noise whose centre glides f0 -> f1 (at t_peak) -> f2, swelling into the peak."""
+    n = ns(D)
+    t = taxis(n)
+    w = pink(n, r, 2 if stereo else 1) if colour == "pink" else noise(n, r, 2 if stereo else 1)
+    a = np.clip(t / t_peak, 0, 1)
+    b = np.clip((t - t_peak) / max(1e-3, D - t_peak), 0, 1)
+    cf = np.where(t < t_peak, f0 * (f1 / f0) ** a, f1 * (f2 / f1) ** b)
+
+    def shape(f, tt):
+        c = ctrl_at(cf, tt)
+        return np.exp(-0.5 * (np.log(np.maximum(f, 20) / c) / width) ** 2)
+    y = stft_shape(w, shape)
+    e = np.where(t < t_peak, (t / t_peak) ** rise, np.exp(-(t - t_peak) / fall))
+    return fades(y * e, 0.0005, min(0.08, D * 0.3))
+
+
+@variants("strike_swing", 4, "sfx", target=(-21, "short"))
+def strike_swing(r, i):
+    D = 0.34
+    y = sweep_noise(r, D, r.uniform(350, 500), r.uniform(1800, 2600), r.uniform(700, 1000), r.uniform(0.09, 0.12), 0.4)
+    t = taxis(ns(D))
+    p = np.linspace(-0.5, 0.5, ns(D)) * (1 if i % 2 else -1)
+    return fades(np.stack([y[0] * (1 - p) * 0.8, y[1] * (1 + p) * 0.8]), 0.002, 0.04)
+
+
+def impact(r, size=1.0, dur=0.45):
+    """transient (a bright click) + body (a pitch-dropping thump and a mid punch) + tail (a short crunch, a little room)."""
+    n = ns(dur)
+    t = taxis(n)
+    click = highpass(noise(n, r), 2800) * np.exp(-t / 0.0025) * 0.9
+    thump = membrane(dur, r.uniform(150, 190) / size ** 0.5, 48 / size ** 0.3, 0.02 * size, 0.07 * size, r, 0.25, 700) * 1.1
+    punch = bandpass(noise(n, r), 280, 1300) * np.minimum(t / 0.002, 1) * np.exp(-t / (0.045 * size)) * 0.8
+    crunch = np.zeros(n)
+    for tt in poisson_times(r, 260, 0.06 * size):
+        crunch[min(n - 1, ns(0.008 + tt))] += r.uniform(-1, 1)
+    crunch = bandpass(crunch, 900, 4500) * np.exp(-t / (0.06 * size)) * 0.5
+    y = soft_clip(click + thump + punch + crunch, 1.4)
+    st = to_stereo(y)
+    return fades(reverb(st, make_ir(0.5 * size, rng=r, bright=0.6), wet=0.18, dry=1.0)[:, :n], 0.0005, 0.05)
+
+
+@variants("strike_impact", 4, "sfx", target=(-17, "short"))
+def strike_impact(r, i):
+    return fades(impact(r, 1.0, 0.45), 0.0005, 0.08)
+
+
+@variants("strike_heavy", 2, "sfx", target=(-15, "short"))
+def strike_heavy(r, i):
+    D = 0.95
+    y = impact(r, 1.9, D)
+    n = ns(D)
+    t = taxis(n)
+    sub = np.sin(phase_of(36 + 70 * np.exp(-t / 0.05))) * np.exp(-t / 0.22) * 0.8
+    pre = sweep_noise(r, 0.22, 300, 2200, 1200, 0.18, 0.4, rise=2.5, fall=0.03)
+    out = np.zeros((2, n + ns(0.22)))
+    place(out, pre * 0.7, 0)
+    place(out, y + to_stereo(sub), ns(0.2))
+    return fades(soft_clip(out, 1.2), 0.002, 0.15)
+
+
+@variants("dash_whoosh", 3, "sfx", target=(-21, "short"))
+def dash_whoosh(r, i):
+    D = 0.42
+    y = sweep_noise(r, D, r.uniform(2600, 3400), r.uniform(1400, 1800), r.uniform(320, 420), 0.07, 0.55, rise=1.5, fall=0.12, colour="white")
+    p = np.linspace(0.7, -0.7, ns(D)) * (1 if i % 2 else -1)
+    return fades(np.stack([y[0] * (1 - p), y[1] * (1 + p)]) * 0.7, 0.001, 0.05)
+
+
+@asset("cast_charge_frost", "sfx", target=(-22, "short"))
+def cast_charge_frost(r):
+    D = 0.9
+    n = ns(D)
+    t = taxis(n)
+    rise = (t / D) ** 1.6
+    y = np.zeros(n)
+    for k, ratio in enumerate(GLASS_RATIOS[:4]):
+        f = 1150 * ratio * (1 + 0.45 * rise)
+        y += np.sin(phase_of(f)) * (0.5 ** k) * (0.6 + 0.4 * np.sin(2 * np.pi * (9 + 5 * rise) * t + k))
+    air = highpass(noise(n, r), 5000) * 0.25
+    tw = np.zeros(n)
+    for tt in poisson_times(r, 40, D, weight=(taxis(n) / D) ** 2):
+        tw[ns(tt)] += r.uniform(-1, 1)
+    tw = bandpass(tw, 4000, 11000) * 0.8
+    y = (y * 0.3 + air + tw) * rise
+    st = reverb(to_stereo(y), make_ir(1.2, rng=r, bright=1.4), wet=0.35)
+    return fades(st, 0.02, 0.01)
+
+
+@variants("cast_release_frost", 2, "sfx", target=(-16, "short"))
+def cast_release_frost(r, i):
+    D = 1.1
+    n = ns(D)
+    t = taxis(n)
+    crack = highpass(noise(n, r), 3000) * np.exp(-t / 0.004) * 1.2
+    shard = strike(D, r.uniform(2400, 3200), GLASS_RATIOS, [1, 0.7, 0.45, 0.3, 0.2], [0.35, 0.2, 0.12, 0.08, 0.05], r, click=0.8, click_lp=12000) * 0.6
+    sizzle = highpass(noise(n, r), 6000) * np.minimum(t / 0.01, 1) * np.exp(-t / 0.3) * 0.35
+    body = membrane(D, 160, 60, 0.02, 0.08, r, 0.3, 1200) * 0.6
+    whoosh = sweep_noise(r, D, 4200, 1600, 500, 0.05, 0.5, rise=1.2, fall=0.25)
+    y = fades(to_stereo(crack + shard + sizzle + body) + whoosh * 0.8, 0.0005, 0.12)
+    return fades(reverb(y, make_ir(1.4, rng=r, bright=1.3), wet=0.3), 0.0005, 0.2)
+
+
+@asset("cast_charge_storm", "sfx", target=(-22, "short"))
+def cast_charge_storm(r):
+    D = 0.9
+    n = ns(D)
+    t = taxis(n)
+    rise = (t / D) ** 1.4
+    hum = wavetable(110, n, cutoff=2500, rng=r) * 0.4 + wavetable(165, n, cutoff=1800, rng=r) * 0.2
+    hum *= 0.6 + 0.4 * np.sin(2 * np.pi * (14 + 30 * rise) * t)
+    zaps = np.zeros(n)
+    for tt in poisson_times(r, 60, D, weight=(taxis(n) / D) ** 1.5):
+        k = ns(tt)
+        L = min(n - k, ns(r.uniform(0.004, 0.015)))
+        zaps[k:k + L] += noise(L, r) * r.uniform(0.4, 1.0)
+    zaps = bandpass(zaps, 1500, 9000)
+    y = (hum * 0.5 + zaps * 0.8) * rise
+    return fades(reverb(to_stereo(y), make_ir(0.8, rng=r), wet=0.25), 0.02, 0.01)
+
+
+@variants("cast_release_storm", 2, "sfx", target=(-15, "short"))
+def cast_release_storm(r, i):
+    D = 1.6
+    n = ns(D)
+    t = taxis(n)
+    snap = np.zeros(n)
+    for k in range(r.integers(3, 6)):
+        at = ns(r.uniform(0, 0.03))
+        L = ns(r.uniform(0.003, 0.012))
+        snap[at:at + L] += noise(L, r) * r.uniform(0.6, 1.2)
+    snap = highpass(snap, 1200) * 1.3
+    rumble = lowpass(brown(n, r), 180) * np.minimum(t / 0.03, 1) * np.exp(-t / 0.5) * 3.0
+    buzz = wavetable(95, n, cutoff=3000, rng=r) * np.exp(-t / 0.18) * 0.35
+    crackle = np.zeros(n)
+    for tt in poisson_times(r, 80, 0.5):
+        crackle[ns(0.02 + tt)] += r.uniform(-1, 1)
+    crackle = bandpass(crackle, 2000, 9000) * np.exp(-t / 0.25) * 0.7
+    y = fades(soft_clip(snap + rumble + buzz + crackle, 1.3), 0.0005, 0.2)
+    return fades(reverb(to_stereo(y), make_ir(1.8, rng=r, bright=0.8), wet=0.3), 0.0005, 0.3)
+
+
+@variants("mob_skitter_attack", 3, "sfx", target=(-22, "short"), ref=4, rolloff=1.2)
+def mob_skitter_attack(r, i):
+    D = 0.45
+    n = ns(D)
+    t = taxis(n)
+    ch = np.zeros(n)
+    rate = r.uniform(28, 40)
+    k = 0.0
+    while k < 0.32:
+        a = ns(k)
+        L = ns(0.004)
+        ch[a:a + L] += noise(L, r) * (1 - k / 0.4)
+        k += 1 / rate * r.uniform(0.8, 1.2)
+    ch = bandpass(ch, 2200, 6500)
+    sq = np.sin(phase_of(1500 + 600 * np.sin(2 * np.pi * 18 * t) - 900 * t)) * np.exp(-((t - 0.25) / 0.06) ** 2) * 0.25
+    return fades(ch + sq, 0.001, 0.05)
+
+
+@variants("mob_hulker_slam", 2, "sfx", target=(-15, "short"), ref=6, rolloff=0.9)
+def mob_hulker_slam(r, i):
+    D = 1.2
+    n = ns(D)
+    t = taxis(n)
+    thump = membrane(D, 90, 32, 0.06, 0.28, r, 0.4, 400) * 1.4
+    crunch = np.zeros(n)
+    for tt in poisson_times(r, 200, 0.18):
+        crunch[ns(0.005 + tt)] += r.uniform(-1, 1)
+    crunch = bandpass(crunch, 600, 3500) * np.exp(-t / 0.15) * 0.6
+    debris = np.zeros(n)
+    for tt in poisson_times(r, 25, 0.8):
+        debris[ns(0.1 + tt) % n] += r.uniform(-0.5, 0.5)
+    debris = bandpass(debris, 1500, 5000) * np.exp(-t / 0.5) * 0.5
+    y = fades(soft_clip(thump + crunch + debris, 1.5), 0.0005, 0.15)
+    return fades(reverb(to_stereo(y), make_ir(1.2, rng=r, bright=0.5), wet=0.25), 0.0005, 0.2)
+
+
+@variants("mob_veilbell_seed", 2, "sfx", target=(-19, "short"), ref=5)
+def mob_veilbell_seed(r, i):
+    D = 1.4
+    bell = strike(D, r.uniform(820, 980), BELL_RATIOS, [0.4, 1, 0.5, 0.35, 0.3, 0.2, 0.15], [0.5, 0.6, 0.35, 0.3, 0.25, 0.18, 0.12], r, click=0.3, click_lp=6000)
+    whoosh = sweep_noise(r, D, 400, 1800, 3000, 0.12, 0.5, rise=1.5, fall=0.18)
+    return fades(reverb(to_stereo(bell * 0.7) + whoosh * 0.4, make_ir(1.6, rng=r, bright=1.2), wet=0.35), 0.001, 0.25)
+
+
+@variants("mob_crownrift_blade", 2, "sfx", target=(-17, "short"), ref=6)
+def mob_crownrift_blade(r, i):
+    D = 0.8
+    sw = sweep_noise(r, D, 300, 2400, 900, 0.14, 0.38, rise=2.2, fall=0.08) * 0.9
+    ring = strike(D, r.uniform(1200, 1600), PLATE_RATIOS, [1, 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15], [0.3, 0.25, 0.2, 0.15, 0.12, 0.1, 0.08, 0.06, 0.05], r, jitter=0.01)
+    y = np.zeros((2, ns(D)))
+    place(y, sw, 0)
+    place(y, to_stereo(ring * 0.25), ns(0.12))
+    y = fades(y, 0.001, 0.12)
+    return fades(reverb(y, make_ir(1.0, rng=r), wet=0.2), 0.001, 0.15)
+
+
+@variants("mob_hurt_small", 3, "sfx", target=(-21, "short"), ref=4)
+def mob_hurt_small(r, i):
+    D = 0.28
+    n = ns(D)
+    t = taxis(n)
+    f = r.uniform(950, 1250) * np.exp(-t / 0.12) + 380
+    ch = np.sin(phase_of(f) + 2.5 * np.sin(phase_of(f * 1.5))) * np.minimum(t / 0.004, 1) * np.exp(-t / 0.07) * 0.45
+    tap = impact(r, 0.6, D)[0] * 0.6
+    return fades(ch + tap, 0.0005, 0.04)
+
+
+@variants("mob_hurt_big", 2, "sfx", target=(-18, "short"), ref=6)
+def mob_hurt_big(r, i):
+    D = 0.5
+    n = ns(D)
+    t = taxis(n)
+    src = wavetable(r.uniform(75, 95), n, cutoff=2400, rng=r)
+    g = resonator(src, 420, 5) + resonator(src, 900, 6) * 0.6
+    g *= np.minimum(t / 0.02, 1) * np.exp(-t / 0.14) * 0.6
+    tap = impact(r, 1.3, D)[0] * 0.7
+    return fades(soft_clip(g + tap, 1.3), 0.0005, 0.06)
+
+
+@variants("mob_death", 2, "sfx", target=(-19, "short"), ref=5)
+def mob_death(r, i):
+    D = 1.6
+    n = ns(D)
+    t = taxis(n)
+    sp = np.zeros(n)
+    for tt in poisson_times(r, 70, 1.2, weight=np.exp(-taxis(n) / 0.6)):
+        sp[ns(tt)] += r.uniform(-1, 1)
+    sp = bandpass(sp, 3000, 11000)
+    shimmer = np.zeros(n)
+    for k in range(5):
+        f = r.uniform(1400, 3200) * (1 + 0.4 * t / D)
+        shimmer += np.sin(phase_of(f)) * np.exp(-t / r.uniform(0.3, 0.7)) * 0.12
+    whoosh = sweep_noise(r, D, 600, 2600, 5000, 0.25, 0.6, rise=1.3, fall=0.5, stereo=False)
+    y = fades(sp * 0.6 + shimmer + (whoosh[0] if whoosh.ndim == 2 else whoosh) * 0.5, 0.001, 0.2)
+    return fades(reverb(to_stereo(y), make_ir(1.8, rng=r, bright=1.3), wet=0.4), 0.002, 0.3)
+
+
+def hurt_voice(r, D, f0, breath=0.6, voiced=0.25):
+    """A short exhaled 'uh': breath and a little voice through vowel formants (700 / 1150 / 2600 Hz)."""
+    n = ns(D)
+    t = taxis(n)
+    e = np.minimum(t / 0.012, 1) * np.exp(-t / (D * 0.35))
+    br = noise(n, r)
+    v = wavetable(f0, n, cutoff=4000, freq_track=1 - 0.15 * t / D, rng=r)
+    src = br * breath + v * voiced
+    y = resonator(src, 700, 6) + resonator(src, 1150, 7) * 0.7 + resonator(src, 2600, 8) * 0.35
+    return y * e
+
+
+@variants("iris_hurt", 3, "sfx", target=(-16, "short"))
+def iris_hurt(r, i):
+    D = 0.42
+    thud = membrane(D, 140, 60, 0.012, 0.05, r, 0.35, 900) * 0.8
+    voice = hurt_voice(r, 0.3, r.uniform(210, 250))
+    y = np.zeros(ns(D))
+    place(y, thud, 0)
+    place(y, voice * 0.9, ns(0.015))
+    return fades(soft_clip(to_stereo(y), 1.2), 0.0005, 0.06)
+
+
+@asset("iris_down", "sfx", target=(-15, "short"))
+def iris_down(r):
+    D = 1.3
+    thud = membrane(D, 110, 40, 0.03, 0.18, r, 0.4, 600)
+    voice = hurt_voice(r, 0.55, 200, breath=0.7, voiced=0.3)
+    y = np.zeros(ns(D))
+    place(y, thud, ns(0.2))
+    place(y, voice, 0)
+    return fades(reverb(to_stereo(soft_clip(y, 1.2)), make_ir(1.0, rng=r), wet=0.2), 0.0005, 0.3)
+
+
+# =============================================================================================
 # Render + encode + manifest
 # =============================================================================================
 
@@ -873,8 +1163,20 @@ def render(name):
     tdb, mode = spec["target"]
     y = normalize(y, tdb, mode)
     if not spec["loop"]:
+        y = trim_tail(y)
         y = fades(y, 0.0005, 0.01)
     return y
+
+
+def trim_tail(y, floor_db=-60.0, keep=0.03):
+    """Cut the silent end of a one-shot (reverb tails below `floor_db` re peak): smaller files, exact durations."""
+    m = np.abs(y).max(axis=0) if y.ndim == 2 else np.abs(y)
+    pk = m.max()
+    if pk <= 0:
+        return y
+    idx = np.nonzero(m > pk * 10 ** (floor_db / 20))[0]
+    end = min(m.shape[0], (idx[-1] if len(idx) else m.shape[0] - 1) + ns(keep))
+    return y[..., :end]
 
 
 def encode(y, out_path, br):
