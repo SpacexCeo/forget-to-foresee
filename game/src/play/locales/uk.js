@@ -1592,4 +1592,12 @@ export default {
   "quest.needs.missing": "Ще ні. Мені ще потрібно: {list}.",
   "quest.needs.item": "{res}: {have} з {n}",
   "quest.track.needs": "Збери: {res} {n} / {count}",
+  "chest.batch.title": "{n, plural, one {Відкриваємо # скриню} few {Відкриваємо # скрині} many {Відкриваємо # скринь} other {Відкриваємо # скрині}}",
+  "chest.batch.open": "Відкрити {n}",
+  "chest.batch.all": "Відкрити всі ({n})",
+  "chest.batch.summary": "{n, plural, one {# скриню відкрито однією транзакцією в NEAR testnet.} few {# скрині відкрито однією транзакцією в NEAR testnet.} many {# скринь відкрито однією транзакцією в NEAR testnet.} other {# скрині відкрито однією транзакцією в NEAR testnet.}}",
+  "chest.batch.cut": "Денний ліміт зупинив пакет на {n}; решта скринь лишається запечатаною.",
+  "chest.batch.claim": "Забрати все",
+  "chest.batch.skip": "Натисніть будь-де, щоб пропустити.",
+  "chest.batch.skipBtn": "Пропустити",
 };

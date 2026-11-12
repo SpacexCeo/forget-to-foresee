@@ -1594,4 +1594,12 @@ export default {
   "quest.needs.missing": "Not yet. I still need: {list}.",
   "quest.needs.item": "{res} {have}/{n}",
   "quest.track.needs": "Gather {res}: {n} / {count}",
+  "chest.batch.title": "{n, plural, one {Opening # chest} other {Opening # chests}}",
+  "chest.batch.open": "Open {n}",
+  "chest.batch.all": "Open all ({n})",
+  "chest.batch.summary": "{n, plural, one {# chest opened in one transaction on NEAR testnet.} other {# chests opened in one transaction on NEAR testnet.}}",
+  "chest.batch.cut": "Today's limit stopped the batch at {n}; the other chests stay sealed.",
+  "chest.batch.claim": "Claim all",
+  "chest.batch.skip": "Tap anywhere to skip to the end.",
+  "chest.batch.skipBtn": "Skip",
 };

@@ -34,6 +34,16 @@ export function createChestClient({ storage = null, load = () => import('./chest
       if (!r.outcome || !CHEST_OUTCOMES.includes(r.outcome.kind)) return { ok: false, error: 'bad' };
       return { ok: true, opening: toOpening(r) };
     },
+    /** Up to 10 at once (one relayer transaction): {ok: true, openings: [opening], cut, batch, tx} | {ok: false, error}. */
+    async openMany(count) {
+      let m; try { m = await load(); } catch { return { ok: false, error: 'network' }; }
+      if (!m.openChests) return { ok: false, error: 'off' };
+      let r; try { r = await m.openChests({ storage, count }); } catch { return { ok: false, error: 'network' }; }
+      if (!r || !r.ok) return { ok: false, error: REASON[r && r.reason] || 'bad' };
+      const openings = (r.openings || []).filter((x) => x && x.outcome && CHEST_OUTCOMES.includes(x.outcome.kind)).map(toOpening);
+      if (!openings.length) return { ok: false, error: 'bad' };
+      return { ok: true, openings, cut: r.cut || null, batch: !!r.batch, tx: r.tx_hash || null };
+    },
   };
 }
 

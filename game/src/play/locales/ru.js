@@ -1592,4 +1592,12 @@ export default {
   "quest.needs.missing": "Пока нет. Мне ещё нужно: {list}.",
   "quest.needs.item": "{res} {have}/{n}",
   "quest.track.needs": "Собери: {res} {n} / {count}",
+  "chest.batch.title": "{n, plural, one {Открываем # сундук} few {Открываем # сундука} many {Открываем # сундуков} other {Открываем # сундука}}",
+  "chest.batch.open": "Открыть {n}",
+  "chest.batch.all": "Открыть все ({n})",
+  "chest.batch.summary": "{n, plural, one {# сундук открыт одной транзакцией в NEAR testnet.} few {# сундука открыты одной транзакцией в NEAR testnet.} many {# сундуков открыто одной транзакцией в NEAR testnet.} other {# сундука открыто одной транзакцией в NEAR testnet.}}",
+  "chest.batch.cut": "Дневной лимит остановил пакет на {n}; остальные сундуки остаются запечатанными.",
+  "chest.batch.claim": "Забрать всё",
+  "chest.batch.skip": "Нажмите в любом месте, чтобы пропустить.",
+  "chest.batch.skipBtn": "Пропустить",
 };
