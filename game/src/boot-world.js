@@ -709,7 +709,8 @@ async function startDay1() {
   await m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
-    { key: 'day1.hint.trailers', buttons: [{ key: 'day1.hint.watch', fn: async () => {
+    { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
+     { key: 'day1.hint.watch', fn: async () => {
       await m.playTrailer({ t, keys: ['day1.trailer.hero.1', 'day1.trailer.hero.2', 'day1.trailer.hero.3'], camera: orbit(0.004) });
       await m.playTrailer({ t, keys: ['day1.trailer.town.1', 'day1.trailer.town.2', 'day1.trailer.town.3'], camera: orbit(-0.004) });
       rig.dist = TOWN_CAMERA.dist;
