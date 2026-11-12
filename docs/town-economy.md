@@ -170,10 +170,10 @@ stay ordinary `trade` calls.
 
 ## Cost
 
-Measured host gas per `trade` is 0.61 Tgas (unit VM). Adding the protocol fees (0.31 + 0.89 Tgas) and the contract
-load gives **≈ 2.5–2.7 Tgas per trade [VERIFY on testnet]**. That is ≈ 0.00026 NEAR at the current gas price of 1e8,
-or ≈ 5.7 NEAR a day for 22,000 trades. `node tools/town/sandbox-gas.mjs <near-sandbox> <town.wasm>` measures it on
-a local node.
+Measured on testnet (12.11, the traders live): one `trade` burnt **3.06 Tgas** (lead's check, tx `WFVddMNV…`, a
+`trade` event). At the gas price of 1e8 that is ≈ 0.000306 NEAR a trade, or **≈ 6.7 NEAR a day** for 22,000 trades,
+across the 26 wallets (the earlier unit-VM estimate was 2.5–2.7 Tgas). Each wallet's NEAR budget and the kill switch
+cap it (`relayer/market/daemon.js`).
 
 ## Running it (owner-gated)
 

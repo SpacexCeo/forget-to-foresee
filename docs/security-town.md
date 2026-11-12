@@ -30,7 +30,5 @@ Other invariants tested:
 - A paused town refuses trades, pledges and entries (claims and unbonding still work).
 - A season's schedule root never changes, and deeds carry it.
 
-Gas: the measured host gas for `trade` is 0.61 Tgas, and the full estimate is 2.5–2.7 Tgas. Measuring it in a
-sandbox or on testnet is still open (acceptance 13): `node tools/town/sandbox-gas.mjs <near-sandbox> <town.wasm>`
-reports the burnt gas per trade, the NEAR it costs and the storage before/after (the worker's container could not
-run the sandbox binary).
+Gas: measured on testnet, one `trade` burns 3.06 Tgas (≈ 0.000306 NEAR at 1e8; ≈ 6.7 NEAR a day at 22,000 trades;
+the lead's check of tx `WFVddMNV…` on 12.11). Acceptance 13 is met on testnet.
