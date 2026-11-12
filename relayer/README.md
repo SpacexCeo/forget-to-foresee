@@ -68,3 +68,11 @@ relayer re-derives the wheel id and the roll, bounds the spin number and mints o
 ```bash
 cd relayer && npm test
 ```
+
+## Whitelist pass claim (story TZ §11.3)
+
+`POST /api/pass/claim`, `GET /api/pass/status`, `GET /api/pass/eligibility` — see
+[`docs/pass-claim-api.md`](../docs/pass-claim-api.md). Testnet and **dry-run by default**: without `FTF_PASS_KEY` a
+claim is fully checked and answered `503 not_configured`; nothing signs unless `FTF_PASS_ENABLED=1`. The minter key is
+a function-call key limited to `mint_pass` on the pass contract. Tests: `relayer/tests/pass.test.mjs` (mock RPC,
+in-memory keys).
