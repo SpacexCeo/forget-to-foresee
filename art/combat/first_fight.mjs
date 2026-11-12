@@ -124,7 +124,13 @@ if (V3) {
   // the chest the pack's kill dropped (play/mobs.js 'ftf:mob-killed' -> town-monsters drop): walk onto it, then the
   // labelled open-case preview (its button is clicked from script and kept off screen: the reel and the card show)
   await page.evaluate(() => Promise.all([import('/src/play/chest-open.js'), import('/src/play/game-menu.js')]));
-  await walkTo(L(-4, 46), 1.0, 2500, false); log.push('stepped back, drops ' + await page.evaluate(() => window.__releaseDrops()));
+  const away = await page.evaluate(() => {          // 5 m back from where the creatures fell, then the drops land
+    const q = window.__heldDrops, p = window.__ftf.player.pos; if (!q.length) return null;
+    const c = [0, 2].map((i) => q.reduce((a, [x]) => a + x[i], 0) / q.length); let dx = p[0] - c[0], dz = p[2] - c[1]; const l = Math.hypot(dx, dz) || 1;
+    if (l < 0.5) { dx = 1; dz = -1; } return [c[0] + dx / (l < 0.5 ? 1.41 : l) * 5.5, p[1], c[1] + dz / (l < 0.5 ? 1.41 : l) * 5.5];
+  });
+  if (away) await walkTo(away, 0.8, 4000, false);
+  log.push('stepped back, drops ' + await page.evaluate(() => window.__releaseDrops()));
   const chests = () => page.evaluate(() => window.__ftf.town.monsters ? window.__ftf.town.monsters.chests.map((c) => c.at) : []);
   let cs = []; for (let i = 0; i < 40 && !(cs = await chests()).length; i++) await wait(250);
   log.push('chests ' + cs.length);
