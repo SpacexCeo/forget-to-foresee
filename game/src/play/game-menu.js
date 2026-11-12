@@ -314,6 +314,15 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     const box = el('section', 'gm-chests');
     box.append(el('h3', null, t('chest.heading', { n: bag.sealed().length })));
     if (!all.length) { box.append(el('p', 'gm-note', t('chest.none'))); return box; }
+    const sealedNow = bag.sealed();
+    if (sealedNow.length >= 2 && owner && chestApi.available && chestApi.openMany) { // batch opening (owner, 12.11): one transaction for up to 10
+      const row = el('div', 'gm-row'); row.style.display = 'flex'; row.style.gap = '8px'; row.style.flexWrap = 'wrap'; row.style.margin = '6px 0 10px';
+      const five = Math.min(5, sealedNow.length), most = Math.min(10, sealedNow.length);
+      for (const [label, k] of [[t('chest.batch.open', { n: five }), five], ...(most > five ? [[t('chest.batch.all', { n: most }), most]] : [])]) {
+        const b = btn(label, () => openMany(k, list), 'gm-btn'); b.style.minHeight = '40px'; b.style.padding = '8px 14px'; row.append(b);
+      }
+      box.append(row);
+    }
     const g = el('div', 'gm-grid');
     for (const c of all.slice(0, 24)) {
       const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
@@ -341,15 +350,25 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     box.append(g);
     return box;
   }
+  /** One opening's reward into this browser's ledger and inventory, and the chest marked opened. */
+  function settleChest(chest, op, verified) {
+    const o = op.outcome;
+    if (o.kind === 'item' && o.id) { inv.add(o.id, 1, 'chest'); fresh.add(o.id); }
+    if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
+    if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
+    bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!verified });
+  }
   function openOne(chest, list) {
     import('./chest-open.js').then((m) => {
-      const r = m.openChestReveal({ doc, t, chest, client: chestApi, guest: owner, items: list, base, onSettled: (op, v) => {
-        const o = op.outcome;
-        if (o.kind === 'item' && o.id) { inv.add(o.id, 1, 'chest'); fresh.add(o.id); }
-        if (o.kind === 'silk') ledger.grant({ silk: (o.amount || 0) * 100 }); // the service counts whole silk, the ledger cents
-        if (o.kind === 'xp') ledger.grant({ xp: o.amount || 0 });
-        bag.settle(chest.id, { index: op.index, outcome: o, tx: op.tx, nft: op.nft, verified: !!v.verified });
-      } });
+      const r = m.openChestReveal({ doc, t, chest, client: chestApi, guest: owner, items: list, base, onSettled: (op, v) => settleChest(chest, op, v.verified) });
+      r.result.then(() => { if (current === 'inventory') show('inventory'); });
+    }).catch((e) => console.warn('[chest]', e));
+  }
+  /** Several sealed chests at once: one relayer transaction, a flip-by-flip reveal and a summary (play/chest-batch.js). */
+  function openMany(count, list) {
+    import('./chest-batch.js').then((m) => {
+      const r = m.openChestBatch({ doc, t, client: chestApi, chests: bag.sealed().slice(0, count), count, items: list, base,
+        onSettled: (chest, op) => settleChest(chest, op, op.verification && op.verification.verified) });
       r.result.then(() => { if (current === 'inventory') show('inventory'); });
     }).catch((e) => console.warn('[chest]', e));
   }

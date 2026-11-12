@@ -1624,4 +1624,12 @@ export default {
   "quest.needs.missing": "Non ancora. Mi serve ancora: {list}.",
   "quest.needs.item": "{res}: {have} su {n}",
   "quest.track.needs": "Raccogli {res}: {n} / {count}",
+  "chest.batch.title": "{n, plural, one {Apro # forziere} other {Apro # forzieri}}",
+  "chest.batch.open": "Apri {n}",
+  "chest.batch.all": "Apri tutti ({n})",
+  "chest.batch.summary": "{n, plural, one {# forziere aperto con una sola transazione su NEAR testnet.} other {# forzieri aperti con una sola transazione su NEAR testnet.}}",
+  "chest.batch.cut": "Il limite di oggi ha fermato il gruppo a {n}; gli altri forzieri restano sigillati.",
+  "chest.batch.claim": "Prendi tutto",
+  "chest.batch.skip": "Tocca ovunque per saltare alla fine.",
+  "chest.batch.skipBtn": "Salta",
 };
