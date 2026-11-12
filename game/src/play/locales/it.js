@@ -1241,4 +1241,6 @@ export default {
   'companion.heading': "Di proprietà di Elise",
   'companion.owned': "Di proprietà di Elise · NFT agentico · NEAR testnet",
   'companion.account': "Custodito dall’account della protagonista {account}",
+  'town.cast.strike': "Colpo",
+  'town.cast.dash': "Scatto",
 };

@@ -1240,4 +1240,6 @@ export default {
   'companion.heading': "Належать Елізі",
   'companion.owned': "Належить Елізі · агентний NFT · NEAR testnet",
   'companion.account': "Зберігається на власному акаунті героїні {account}",
+  'town.cast.strike': "Удар",
+  'town.cast.dash': "Ривок",
 };

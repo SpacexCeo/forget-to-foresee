@@ -1240,4 +1240,6 @@ export default {
   'companion.heading': "归伊莉丝所有",
   'companion.owned': "归伊莉丝所有 · 代理型 NFT · NEAR 测试网",
   'companion.account': "由女主角自己的账户 {account} 持有",
+  'town.cast.strike': "打击",
+  'town.cast.dash': "冲刺",
 };

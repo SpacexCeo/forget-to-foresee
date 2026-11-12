@@ -371,7 +371,12 @@ function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); }, // her hand goes up with the cast
-    onFire: (c) => { if (townMobs) townMobs.cast(c); } });
+    onFire: (c) => { if (townMobs) townMobs.cast(c); },
+    // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
+    extra: [
+      { id: 'strike', key: 'F', icon: 'strike', label: 'town.cast.strike', available: () => !!townMobs, press: () => townMobs && townMobs.strike(), cooldown: () => (townMobs ? townMobs.actions.strikeCd / 0.32 : 0) },
+      { id: 'dash', key: 'Space', icon: 'dash', label: 'town.cast.dash', available: () => !!townMobs, press: () => townMobs && townMobs.dash(wishVector()), cooldown: () => (townMobs ? townMobs.actions.dashCd / 1.0 : 0) },
+    ] });
   mountMobs();
 }
 /** The monsters on the hillside (play/mobs.js): packs beyond the walls that Iris's two casts fight. */
