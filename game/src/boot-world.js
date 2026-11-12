@@ -46,6 +46,8 @@ import { createTownShops } from './scenes/town-shops.js';
 import { createTownProps } from './scenes/town-props.js';
 import { createBarks } from './scenes/barks.js';
 import { createPhotoMode } from './render/photo-mode.js';
+import { createTownMonsters } from './scenes/town-monsters.js';
+import { createChestBag } from './game/chests.js';
 import { cue } from './audio/town-audio.js';
 
 /**
@@ -161,7 +163,7 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, owner: (d1.guest || {}).account_id || null, nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -181,7 +183,8 @@ const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./pla
 
 // ---- the town on the ground (docs/town.md): play starts here; the season starts at the Tournament altar ----
 const townMode = townPlan({ skip: params.get('skip'), town: params.get('town'), play: params.get('play'), cinematic: params.get('cinematic'), view: params.get('view'), film: params.get('film') });
-let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null;
+let fogCards = null, townShops = null, townProps = null, townAudio = null, townBarks = null, photo = null, townMonsters = null;
+const chestBag = createChestBag({ storage: ctx.storage }); // chests from the monsters outside the walls (game/chests.js)
 const lastStepPos = [0, 0, 0];
 /** The town's sound (audio/town-audio.js): made when the town starts and again after Return to town. */
 function mountTownAudio() {
@@ -232,6 +235,7 @@ if (townMode.town) {
     { id: 'wheel', near: (pos) => !!townProps && townProps.nearWheel(pos) }, // the wheel prop by the Inn (scenes/town-props.js)
   ];
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
+  if (!townMonsters) townMonsters = createTownMonsters({ scene, town, player, bag: chestBag, mobile: mobileDevice, onPickup: () => toast(ctx.i18n.t('chest.found')) }); // loaded on the first walk out of the gate
   if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
     const people = [];
@@ -322,7 +326,7 @@ const ISLAND_FIRST_VIEW = ASSETS.filter((a) => a.kind !== 'interior').map((a) =>
 function mountCasting() {
   if (townCasting || !town) return;
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
-    onCast: (id) => { cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
+    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); if (irisAvatar) irisAvatar.react('greet', clock.elapsedTime); } }); // her hand goes up with the cast
 }
 function returnToTown() {
   if (!town || !townFlow || inTown || !play) return;
@@ -784,6 +788,7 @@ function frame() {
     if (dayCycle && !lookdev.reducedMotion && !(townShops && townShops.inside)) tickDayCycle(dt);
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
+    if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
@@ -847,6 +852,7 @@ window.__ftf = {
     get props() { return townProps; }, // trading board and wheel (QA: boardAt, wheelAt)
     get barks() { return townBarks; }, // townsfolk lines (QA: current)
     get photo() { return photo; }, // photo mode (QA: toggle, setFilter, requestCapture)
+    get monsters() { return townMonsters; }, chests: chestBag, // monsters outside the walls and the chest bag (QA)
   } : null,
 };
 requestAnimationFrame(frame);

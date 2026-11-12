@@ -44,7 +44,7 @@ const CSS = `
  * @param {object} o
  * @param {THREE.Scene} o.scene @param {THREE.Camera} o.camera @param {object} o.town scenes/town.js handle
  * @param {object} o.player CharacterController @param {object} o.i18n @param {boolean} [o.coarse] touch device
- * @param {(id: string) => void} [o.onCast] a cast left Iris's hands (her one-shot clip)
+ * @param {(id: string, shot: {from: number[], point: number[], dir: number[]}) => void} [o.onCast] a cast left Iris's hands (her one-shot clip, the monsters' hit test)
  * @param {Document} [o.doc]
  */
 export function createTownCasting({ scene, camera, town, player, i18n, coarse = false, onCast = null, doc = globalThis.document }) {
@@ -117,7 +117,7 @@ export function createTownCasting({ scene, camera, town, player, i18n, coarse = 
     fx.fire(id, { from: [from[0], from[1], from[2]], hand, dir: aim.dir, point: aim.point, groundY });
     state.cooldown[id] = cast.cooldown; state.casts++;
     setArmed(null);
-    if (onCast) onCast(id);
+    if (onCast) onCast(id, { from: [from[0], from[1], from[2]], point: aim.point, dir: aim.dir }); // the monsters take the hit (scenes/town-monsters.js)
     return true;
   }
 
