@@ -49,7 +49,7 @@ import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
 import { createCompanion } from './scenes/companion.js';
-import { cue } from './audio/town-audio.js';
+import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -373,8 +373,8 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
-    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'storm_crack' : 'vision_whoosh'); },
+    onCastStart: (id) => { cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
@@ -383,6 +383,22 @@ function mountCasting() {
       { id: 'dash', key: 'Space', icon: 'dash', label: 'town.cast.dash', available: () => !!townMobs, press: () => townMobs && townMobs.dash(wishVector()), cooldown: () => (townMobs ? townMobs.actions.dashCd / 1.0 : 0) },
     ] });
   mountMobs();
+}
+/**
+ * Combat sound (owner, 12.11): Iris's swings and the heavy finisher, impacts where they land, each monster type's
+ * attack and hurt sound from where it stands, the death dissolve, Iris getting hit. Through audio/town-audio.js.
+ */
+let heavyUntil = 0;
+function combatSound(k, mob, ev) {
+  const at = mob && mob.pos ? mob.pos : null, S = MOB_SOUNDS[mob && mob.type] || MOB_SOUNDS.skitter;
+  if (k === 'strike') cue('strike_swing');
+  else if (k === 'strike3') { cue('strike_swing'); heavyUntil = performance.now() + 350; }
+  else if (k === 'dash') cue('dash_whoosh');
+  else if (k === 'hit') { cueAt(performance.now() < heavyUntil || (ev && ev.crit) ? 'strike_heavy' : 'strike_impact', at); cueAt(S.hurt, at, 0.8); }
+  else if (k === 'attack') cueAt(S.attack, at);
+  else if (k === 'kill') cueAt('mob_death', at);
+  else if (k === 'hurt') cue('iris_hurt');
+  else if (k === 'down') cue('iris_down');
 }
 /** The monsters on the hillside (play/mobs.js): packs beyond the walls that Iris's two casts fight. */
 function mountMobs() {
@@ -400,7 +416,7 @@ function mountMobs() {
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => !!(irisAvatar && irisAvatar.combat(n)),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
-      onFeedback: (k) => cue(k === 'kill' ? 'memory_dissolve' : k === 'dash' || k.startsWith('strike') ? 'vision_whoosh' : 'ui_error') });
+      onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
   }).catch((e) => console.warn('[mobs]', e));
 }
 function returnToTown() {
@@ -889,7 +905,10 @@ function frame() {
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && !day1Open() && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
       const d = Math.hypot(player.pos[0] - lastStepPos[0], player.pos[2] - lastStepPos[2]);
-      if (d < 3) townAudio.step(d, !!player.run, !!(townShops && townShops.inside));
+      if (d < 3) { // the floor under her: wood in the shops, grass beyond the walls, stone in the streets
+        const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
+        townAudio.step(d, !!player.run, townShops && townShops.inside ? 'wood' : (lz > 36 || Math.abs(lx) > 55) ? 'grass' : 'stone');
+      }
       lastStepPos[0] = player.pos[0]; lastStepPos[1] = player.pos[1]; lastStepPos[2] = player.pos[2];
       townAudio.setListener(camera, avatar.position);
     }
