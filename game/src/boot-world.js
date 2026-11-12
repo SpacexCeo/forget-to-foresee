@@ -430,7 +430,7 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? quickRelease(c) : 0; },
     onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
@@ -699,6 +699,18 @@ function interruptMove(seconds = 0) {
   const s = interruptLocomotion({ moveTarget, moveRun, rootUntil }, { now: performance.now(), seconds, cancel: stopSteering, character: player });
   moveTarget = s.moveTarget; moveRun = s.moveRun; rootUntil = s.rootUntil;
   if (input.stopRun) input.stopRun(); // the touch run toggle and burst switch off: after the action she moves only on new input
+}
+/**
+ * A cast answers at once (owner 12.11: "skills must fire without lag"): the clip is started CAST_WINDUP s before its
+ * release frame (its slow wind-up is skipped, blended in over the fade), so the effect and the hits come no later
+ * than CAST_WINDUP after the click instead of the clip's ~0.4 s. Returns the seconds to the release.
+ */
+const CAST_WINDUP = 0.1;
+function quickRelease(c) {
+  const k = irisAvatar && irisAvatar.irisModel && irisAvatar.irisModel.combat;
+  const skip = Math.max(0, (c.release || 0) - CAST_WINDUP);
+  if (k && skip > 0) { k.action.time = skip; k.t = skip; }
+  return Math.min(c.release || 0, CAST_WINDUP);
 }
 /** The strike (F / 3 / its slot): it stops her run like a cast does. */
 // The strike's aim (play/mobs.js strikeAim): on a desktop the mouse cursor's point on the ground under her, even when
