@@ -106,6 +106,14 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
     ask for it with `combat(name, { skid: true })`); `ftf:foot` `{action: 'skid'}` is sent for the scrape. The cast's
     release time does not move.
 
+    Clean ends (owner 12.11: "after the strikes she was left twisted"): every action clip ends in the idle's first
+    frame; a held wind-up lives only while its owner says the button is down (`IrisAvatar.holdWhile`, set from
+    `play/mobs.js charging`), starts 0.12 s after the press and never cuts a strike that has not hit yet, so a tap
+    shows no wind-up and a refused strike cannot leave her coiled (on main two fast taps left `strike_charge` on
+    her for good, the chest 39 degrees off the hips); a step after the hit (faster than 1 m/s, 0.2 s past the impact)
+    hands back to the gait in 0.15 s. `art/anim/iris_film.mjs <out> strikes` runs the checks and writes the state
+    after each into its report.
+
     The release time is in the clip (`extras.release_s`). In the game (`scenes/town-casting.js`) a click starts the
     clip (`onCastStart` → `IrisAvatar.cast`), the cast's effect, sound and hits fire on the release frame
     (`onCast`, `onFire`), and she stands still from the click to 0.24 s after the release (`CAST_ROOT_AFTER`);

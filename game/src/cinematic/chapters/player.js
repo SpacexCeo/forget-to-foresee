@@ -57,7 +57,7 @@ export function shotAt(tl, t) {
  * @param {object} [o.guests] optional Guests stage (Task O): `cue(moment, {force})`
  * @param {Window} [o.win]  @param {() => number} [o.wall] wall-clock milliseconds for the skip hold
  */
-export function createFilmPlayer({ camera, player, avatar, shell, agents, overlay, now, hooks = {}, narration = null, renderLine, texts = () => ({}), guests = null, win = globalThis.window, wall = () => (globalThis.performance ? globalThis.performance.now() : Date.now()) }) {
+export function createFilmPlayer({ camera, player, avatar, shell, agents, overlay, now, hooks = {}, narration = null, renderLine, texts = () => ({}), guests = null, win = globalThis.window, wall = () => (globalThis.performance ? globalThis.performance.now() : Date.now()), prewarm = null }) {
   let film = null, tl = null, t = 0, shotIndex = -1, pose = null, paused = false, resolveEnd = null;
   let pin = null, shellWasActive = false, shellActivated = 0, hold = null;
   const _look = new THREE.Vector3();
@@ -214,6 +214,12 @@ export function createFilmPlayer({ camera, player, avatar, shell, agents, overla
       overlay.show({ eyebrowText: tx.chapter || '', titleText: tx.title || '', cardEyebrow: tx.matters || '', cardText: renderLine(f.card), shots: f.shots.length });
       attachInput();
       setNameplates(false);
+      // Skips must be instant (owner, 12.11): everything the film will show is made ready now, not on a cut. The Shell
+      // interior of an interior shot is switched on at the start (it sits far from the plaza, out of the other shots),
+      // and every texture and program in the scene is warmed (render/warmup.js warmScene).
+      const inner = f.shots.find((s) => s.cam && s.cam.kind === 'interior');
+      if (inner) { try { liveInterior(inner.cam.shell); } catch { /* the interior is optional */ } }
+      if (prewarm) { try { prewarm(); } catch { /* warm-up is optional */ } }
       startShot(0);
       applyCamera();
       if (!startPaused) overlay.showHint(HINT_AT, 1.8); // teach the tap and the hold once per film (not in captured stills)

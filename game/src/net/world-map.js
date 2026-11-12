@@ -51,7 +51,12 @@ export const SHELL_GLASS = Object.freeze([0, 0, -4.5]);
 const RING = 4.2; // plaza walking ring: clear of the Scroll's centre piece and the anchors
 
 /** Proximity radii (meters, ground distance) for world preconditions. */
-export const NEAR = Object.freeze({ camp: PLATEAU_RADIUS - 0.5, anchorZone: ANCHOR_ZONE_RADIUS + 0.6, scroll: 4.8, shardPedestal: 3.0, glass: 3.5 });
+// camp and anchorZone read layout.js lazily: in the production build the review page's chunks import each other in a
+// circle, and a top-level read of PLATEAU_RADIUS there threw "Cannot access before initialization" (review.html).
+export const NEAR = Object.freeze({
+  get camp() { return PLATEAU_RADIUS - 0.5; }, get anchorZone() { return ANCHOR_ZONE_RADIUS + 0.6; },
+  scroll: 4.8, shardPedestal: 3.0, glass: 3.5,
+});
 
 /* ---------- named places ---------- */
 
