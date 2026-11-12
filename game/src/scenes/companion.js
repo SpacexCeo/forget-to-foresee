@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { fetchGltfUrl } from '../render/assets.js';
 
-export const COMPANION = Object.freeze({ height: 1.95, side: 0.95, back: 0.7, stiffness: 3.2, scale: 1 });
+export const COMPANION = Object.freeze({ height: 1.85, side: 1.15, back: -0.25, stiffness: 3.2, scale: 1 }); // beside her shoulder, a touch ahead: in frame from the follow camera
 
 /**
  * @param {{scene: THREE.Scene, kind: string, slot?: number, mobile?: boolean, base?: string}} o
