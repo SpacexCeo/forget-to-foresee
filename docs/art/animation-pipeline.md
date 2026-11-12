@@ -55,6 +55,13 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
    our rig's own posture; `arms_down` hangs the arms along the body at a set clearance (no held-out elbows) while
    the take's small motion stays; `stance` puts the hips of a standing clip over the ankles at the rest height
    (an actor's own forward stance would slant the legs).
+   Iris (12.11): one stance for standing, walking and running: the same foot track for every clip (`track` 0.06:
+   ankles 5.5 cm from the midline, a 2–3 cm gap between the trainers), the same 4° toe-out read from the foot's
+   side axis (`foot_yaw: side`, stable through the run's back kick), swing feet kept near the track (`swing_keep`),
+   and `knee_align`: the knee bends toward the foot's heading and the thigh and shin are rolled so the kneecap
+   faces the bend. Before, the idle stood 11 cm wide with the toes out 15–19° and one knee turned 56°, while the
+   walk and the run tracked at 5–6 cm: the start of a run pulled the feet together. `?anim=v1` plays the clips as
+   they were (`assets/anim/iris_v1.glb`) until the owner approves the new ones.
 8. **Animator layers** (`layers.py`, listed per clip in `clips.json`): a held pose from another take (`pose`: the
    seated loop), a contrapposto weight shift (`shift`), an arm reach solved with two-bone IK toward a target in
    character space or relative to a bone (`reach`: register, salute), eased additive rotations (`rotate`: nod, look,
@@ -66,8 +73,29 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
     120: the engine interpolates joint angles linearly, and a fast planted foot wanders between sparse keys). Each animation's `extras`
     carry `take`, `speed`, `loop`, `pelvis_y`.
 
+11. **Keyed action clips** (`keyed.py`, Iris: `art/anim/iris_actions.py`): casts are not captured, they are posed.
+    A clip is a list of keys on top of the idle's first frame; a key gives the hips' offset, world-axis turns of
+    the spine chain, where each foot is (placed on the ground and solved with IK; the heel can rise with the toes
+    flat), where each wrist is relative to the shoulder in the chest's frame (IK; it travels on an arc), where the
+    fingers and the palm face, and how the key is approached (`out`, `linear`, `pow`, `spring`, …). Each bone down a
+    chain runs a little late (overlapping action); the hair chains are simulated over the result. 60 keys a second.
+    `--sheet <png>` draws a stick-figure sheet (front and side) for posing without a renderer.
+
+    | Clip | Wind-up (0 – 0.38 s) | Release frame | After |
+    |---|---|---|---|
+    | `cast_lance` (Frost Lance) | coils back onto the ball of the right foot, left knee up, left palm sighting the line, right hand cocked at the ribs | **0.42 s**: the left foot stomps down, a deep lunge, the right palm drives out, the left arm flung back | overshoot to 0.50 s, held key pose to 0.72 s, settle to 1.25 s |
+    | `cast_snare` (Storm Snare) | rises onto the ball of the left foot, right knee up, right hand open to the sky | **0.42 s**: the right foot comes down, the arm chops down at the mark | the same |
+
+    The release time is in the clip (`extras.release_s`). In the game (`scenes/town-casting.js`) a click starts the
+    clip (`onCastStart` → `IrisAvatar.cast`), the cast's effect, sound and hits fire on the release frame
+    (`onCast`, `onFire`), and she stands still from the click to 0.24 s after the release (`CAST_ROOT_AFTER`);
+    a step after that cuts the settle short. `window` gets `ftf:cast` events `{id, phase: 'start' | 'release',
+    release}` for sounds and effects that want to follow the wind-up. The planted-feet layer and the on-the-spot turn
+    rate yield to an action clip (`FootPlant.update(..., free)`), so she turns to the aim within the wind-up.
+
 Build: `python3 art/anim/fetch_mocap.py`, then `python3 art/anim/build_clips.py --char iris` and `--char townsfolk`;
-the numbers of every clip go to `art/anim/out/<character>.json`. A model rebuild that keeps the bone names and the
+the numbers of every clip go to `art/anim/out/<character>.json`. Iris: then `python3 art/anim/iris_combat.py` and
+`python3 art/anim/iris_actions.py` (each adds its clips to `iris.glb` and keeps the rest). A model rebuild that keeps the bone names and the
 rest pose needs nothing; otherwise run the build again (it reads the rest pose from the model).
 
 Picking takes without a browser: `take_info.py` (time line of hip height, hand heights, foot speeds),

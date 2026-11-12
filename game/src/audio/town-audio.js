@@ -60,19 +60,26 @@ export function createTownAudio({ createAudio, win = globalThis, rand = Math.ran
     audio.play(name, o);
   };
   const unlock = () => { audio.unlock().catch(() => {}); };
+  // Foot contacts from the locomotion (window event 'ftf:foot' {running?, surface?} on each contact frame): while they
+  // arrive the distance pacing below stays quiet, so a step is heard exactly when a foot lands
+  let surface = 'stone', lastContact = -1e9;
+  const now = () => (globalThis.performance ? performance.now() : Date.now());
+  const onFoot = (e) => { const d = e.detail || {}; lastContact = now(); api.footContact(d.surface || surface, !!d.running); };
+  win.addEventListener('ftf:foot', onFoot);
   win.addEventListener('ftf:sound', onCue);
   win.addEventListener('keydown', unlock, { once: true });
   win.addEventListener('pointerdown', unlock, { once: true });
-  return {
+  const api = {
     audio,
     /** Per frame: Iris walked `dist` metres; indoors the floor is wood. */
-    step(dist, running, surface = 'stone') { if (steps(dist, running)) this.footContact(surface, running); },
+    step(dist, running, floor = 'stone') { surface = floor === true ? 'wood' : floor; if (now() - lastContact > 1000 && steps(dist, running)) this.footContact(surface, running); },
     /** One foot meets the ground (the locomotion's contact frame when it has one, else the distance pacing). */
     footContact(surface = 'stone', running = false) {
       const s = surface === true ? 'wood' : STEP_SURFACES.includes(surface) ? surface : 'stone'; // true: the old "indoors" flag
       audio.play('step_' + s, { gain: (running ? 0.85 : 0.62) * (0.85 + 0.15 * rand()) });
     },
     setListener(camera, target) { if (audio.setListener) audio.setListener(camera, target); },
-    dispose() { win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
+    dispose() { win.removeEventListener('ftf:foot', onFoot); win.removeEventListener('ftf:sound', onCue); win.removeEventListener('keydown', unlock); win.removeEventListener('pointerdown', unlock); audio.dispose(); },
   };
+  return api;
 }
