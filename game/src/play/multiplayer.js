@@ -18,7 +18,7 @@ export function createMultiplayer({ scene, t, storage = null, name = '', skin = 
   // ?bots=N with no service: demo walkers simulated here (never sent anywhere); with a service the real room wins
   const presence = url ? createPresence({ url, name, skin, storage, onChange: () => panel && panel.render() }) : createDemoPresence({ count: bots, onChange: () => panel && panel.render() });
   panel = createChatPanel({ t, presence, phone });
-  const remote = createRemotePlayers({ scene, phone });
+  const remote = createRemotePlayers({ scene, phone, aiLabel: t('mp.ai') });
   const local = [0, 0, 0], from = [0, 0, 0];
   let since = 0;
   return {

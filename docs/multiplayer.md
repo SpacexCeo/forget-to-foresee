@@ -40,8 +40,9 @@ the filter does not know (mute and report exist for that).
 
 ## Seeing it without friends
 
-- `?bots=3` (1–14) in the game, with no presence service configured: demo walkers simulated in your browser walk
-  the jury route; the chip says "3 demo walkers · simulated in this browser" and nothing is sent anywhere. With a
+- `?bots=3` (1–14) in the game, with no presence service configured: AI walkers run in your browser and walk the
+  jury route; each name tag carries an "AI" badge and the chip reads "3 here · 3 AI", so they are never presented as
+  real people; nothing is sent anywhere. (They follow a fixed path; "AI" marks them as non-human players.) With a
   service configured the real room wins and `?bots` does nothing.
 - Against a local or test server, real sockets: `PER_IP=20 node presence/server.js` then
   `node presence/tools/bots.mjs --url ws://127.0.0.1:8788/presence --count 3`. The script refuses the live host and any

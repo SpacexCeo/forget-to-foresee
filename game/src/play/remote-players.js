@@ -18,14 +18,22 @@ function modelFileFor(skin) {
   return MODEL_FILES[file] ? file : null;
 }
 
-function nameTag(text) {
+/** A name tag; `badge` (the localized "AI") is drawn as a small teal pill after the name. */
+function nameTag(text, badge = '') {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
   const g = c.getContext('2d');
-  g.font = '600 30px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const w = Math.min(248, g.measureText(text).width + 28);
-  g.fillStyle = 'rgba(16,22,24,.72)'; g.beginPath(); g.roundRect((256 - w) / 2, 10, w, 44, 12); g.fill();
+  g.textBaseline = 'middle';
+  g.font = '700 20px system-ui, sans-serif'; const bw = badge ? g.measureText(badge).width + 14 : 0;
+  g.font = '600 30px system-ui, sans-serif'; const nw = g.measureText(text).width;
+  const w = Math.min(248, nw + 28 + (badge ? bw + 8 : 0)), x0 = (256 - w) / 2;
+  g.fillStyle = 'rgba(16,22,24,.72)'; g.beginPath(); g.roundRect(x0, 10, w, 44, 12); g.fill();
   g.strokeStyle = 'rgba(233,180,76,.7)'; g.lineWidth = 2; g.stroke();
-  g.fillStyle = '#f3ead6'; g.fillText(text, 128, 33);
+  g.fillStyle = '#f3ead6'; g.textAlign = 'left'; g.fillText(text, x0 + 14, 33);
+  if (badge) {
+    const bx = x0 + 14 + nw + 8;
+    g.fillStyle = 'rgba(95,180,170,.9)'; g.beginPath(); g.roundRect(bx, 20, bw, 26, 8); g.fill();
+    g.fillStyle = '#0f1a1a'; g.font = '700 20px system-ui, sans-serif'; g.fillText(badge, bx + 7, 34);
+  }
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
   s.scale.set(1.6, 0.4, 1); s.position.y = 2.15; s.renderOrder = 10;
@@ -33,10 +41,10 @@ function nameTag(text) {
 }
 
 /**
- * @param {{scene: THREE.Scene, phone?: boolean}} o
+ * @param {{scene: THREE.Scene, phone?: boolean, aiLabel?: string}} o  aiLabel: the localized badge for AI walkers
  * @returns {{update(dt: number, list: object[], from: number[], reducedMotion?: boolean): void, clear(): void, count(): number}}
  */
-export function createRemotePlayers({ scene, phone = false }) {
+export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
   const sources = new Map(); // skin -> Promise<{gltf, toon}> | value
   const avatars = new Map(); // id -> {group, model, mixer, acts, tag, skin, name}
   const max = phone ? REMOTE.maxDrawnPhone : REMOTE.maxDrawnDesktop;
@@ -53,7 +61,7 @@ export function createRemotePlayers({ scene, phone = false }) {
   function build(r) {
     const src = source(r.skin);
     const group = new THREE.Group(); group.name = 'remote_' + r.id;
-    const a = { group, model: null, mixer: null, acts: null, tag: nameTag(r.name), skin: r.skin, name: r.name, w: { idle: 1, walk: 0, run: 0 } };
+    const a = { group, model: null, mixer: null, acts: null, tag: nameTag(r.name, r.ai ? aiLabel : ''), skin: r.skin, name: r.name, w: { idle: 1, walk: 0, run: 0 } };
     group.add(a.tag);
     scene.add(group);
     if (src) attach(a, src);
