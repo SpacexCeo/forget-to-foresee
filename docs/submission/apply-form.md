@@ -36,11 +36,11 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 >
 > NFTs: memory-shard (NEP-171, live as ftf-shards.testnet) turns a forgotten memory into an NFT whose metadata is its biography (which memory, the trial it was forgotten, the buyer) plus the Merkle leaf of the sign it opened, binding it to the sealed season. Its ink-ring art is drawn on-chain, byte-identical to the game's. The judge season's 3 shards are minted by our coordinator and shown in-game as NFT cards; holding one unlocks an in-game perk. Live minting and a player-owned agent NFT are future work. No token, no payments.
 >
-> MIT; 900+ tests; a 5-minute judge path.
+> MIT; 1,000+ tests; a 5-minute judge path.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/?demo=judge
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,991. Updated 09.11, 11.11 (tests, holder perk),
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,993. Updated 09.11, 11.11 (tests, holder perk),
 (readiness audit): exact scope (the season runs locally; testnet records and shard NFTs for the judge season; live
 minting and a player-owned agent NFT are future work), what the commitment proves and what it does not, test counts
 from `npm test` on 09.11. Re-count before sending:

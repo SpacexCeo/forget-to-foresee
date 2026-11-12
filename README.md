@@ -21,7 +21,7 @@ Six clans read round signs of four slots (Place, Action, Power, Delay), stake si
 ```bash
 git clone --depth 1 https://github.com/SpacexCeo/forget-to-foresee && cd forget-to-foresee
 bash scripts/verify-all.sh --skip-rust   # game, server and relayer tests; prints one table, exit 0 when all pass
-bash scripts/verify-all.sh               # the same plus the six Rust contracts (Rust, pkg-config, OpenSSL headers)
+bash scripts/verify-all.sh               # the same plus the eight Rust contracts (Rust, pkg-config, OpenSSL headers)
 ```
 
 Each line of the table is one suite; the counts it prints are the ones recorded in [docs/STATS.md](docs/STATS.md). Node.js 20+ is enough for `--skip-rust`; missing prerequisites are reported in one line each.
@@ -122,7 +122,7 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 | `game/` | Vite + Three.js client, headless engine, play layer, UI, tests |
 | `server/` | agent HTTP API (`node:http`, no dependencies) |
 | `relayer/` | signs `guests.create_guest` server-side so no key ships to the browser |
-| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account`, `agent-ledger` (Rust, near-sdk 5.30) and deployment records |
+| `contracts/` | `season-commit`, `memory-shard`, `agent-card`, `guests`, `character-nft`, `token-account`, `agent-ledger`, `loot-chest` (Rust, near-sdk 5.30) and deployment records |
 | `scripts/` | `verify-all.sh` (every suite, one table) and `stats.mjs` (writes docs/STATS.md) |
 | `tools/verify/` | one-file proof verifiers (Node and Python) |
 | `prototype-2d/` | the frozen 2D reference prototype the engine is tested against |
