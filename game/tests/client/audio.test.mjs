@@ -51,6 +51,8 @@ test('zones: camp beds, Shell interior, zoneAt from layout positions', () => {
   assert.equal(zoneMix('shell').bed, null, 'no drone bed inside the Shell (owner 09.11)');
   for (const z of ['plaza', 'balcony', 'bridge', 'shell', 'sol', 'iney']) assert.equal(zoneMix(z).hum, 0, z + ': no Shell hum (owner 09.11)');
   assert.equal(zoneMix('nonsense').zone, 'plaza');
+  assert.equal(zoneMix('plaza').wind, 0.35, 'wind at half its first level (owner 12.11)');
+  assert.equal(zoneMix('bridge').wind, 0.5);
   for (const c of CAMPS) assert.equal(zoneAt(c.position), c.id);
   assert.equal(zoneAt([0, 0, 0]), 'plaza');
   assert.equal(zoneAt(SPAWN), 'balcony');
