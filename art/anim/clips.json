@@ -884,6 +884,11 @@
    "model": "game/public/assets/models/agent_elise.glb",
    "style": {
     "track": 0.05,
+    "foot_out": 4,
+    "foot_yaw": "side",
+    "knee_align": 0.7,
+    "swing_keep": 0.3,
+    "arm_twist": 0.25,
     "arm_swing": 0.5,
     "arm_out": 7,
     "pelvis_rot": 1.0,
@@ -892,7 +897,7 @@
     "knee_fwd": 0.3
    },
    "action_style": {
-    "track": 0.09,
+    "knee_align": 1.0,
     "arm_out": 0,
     "arms_down": {
      "out": 15,
