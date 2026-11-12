@@ -297,7 +297,8 @@ def hat(ctx, e):
                 v.co.z += 0.11 * u ** 2
                 v.co.y += 0.05 * u ** 2
                 v.co.x *= 1.0 - 0.45 * u ** 2
-        C.set_attr(o, "trim", lambda i, p: 1.0 if p.y < hc.y - hr[1] * 0.35 else 0.0)
+        # trim only along the face opening (the front rim), not over the whole front half
+        C.set_attr(o, "trim", lambda i, p: 1.0 if p.y < hc.y - hr[1] * 0.92 else 0.0)
         ctx.add(o, col, tcol, rule="head")
         return 9.0
     if kind in ("headscarf", "kerchief"):
@@ -826,8 +827,10 @@ def props(ctx, e):
         if nm in ex:
             region = [i for i, p in enumerate(ctx.co) if ctx.dom[i] in HEAD and p.y < hc.y - 0.015
                       and L.mouth.z - (0.075 if nm == "veil" else 0.055) < p.z < L.eye.z - 0.018]
-            o = ctx.head_shell(nm, region, 0.011, 0.003, relax=4)
-            C.set_attr(o, "trim", lambda i, p: 1.0 if p.z > L.eye.z - 0.03 else 0.0)
+            # stands well off the lips and teeth (they showed through as dark smudges), one plain colour
+            o = ctx.head_shell(nm, region, 0.019, 0.003, relax=8)
+            C.set_attr(o, "trim", lambda i, p: 0.0)
+            o["nocover"] = 1
             ctx.add(o, *r_cols(e, nm), rule="head")
     if "quartz_shoulders" in ex:                      # Salt: milky quartz clusters on both shoulders
         b = bmesh.new()

@@ -46,7 +46,8 @@ export function appendNoGpuLinks(doc, root) {
 /** A one-line note at the top of the page that fades after `ms`. */
 export function showSoftwareNote(doc, ms = 12000) {
   const n = doc.createElement('div'); n.className = 'ftf-swnote'; n.setAttribute('role', 'status'); n.textContent = SOFTWARE_TEXT;
-  n.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:50;padding:6px 12px;border-radius:8px;background:rgba(10,14,16,.82);color:#f3efe6;font:13px/1.3 system-ui,sans-serif;pointer-events:none';
+  const narrow = ((doc.defaultView && doc.defaultView.innerWidth) || 1280) < 700; // phones: at the bottom, clear of the HUD
+  n.style.cssText = 'position:fixed;left:4vw;right:4vw;margin:0 auto;width:fit-content;max-width:640px;text-align:center;' + (narrow ? 'bottom:10px;' : 'top:10px;') + 'z-index:50;padding:6px 12px;border-radius:8px;background:rgba(10,14,16,.82);color:#f3efe6;font:13px/1.3 system-ui,sans-serif;pointer-events:none';
   doc.body.append(n);
   setTimeout(() => n.remove(), ms);
   return n;

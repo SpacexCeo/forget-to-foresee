@@ -165,7 +165,7 @@ def altar(tb):
             tb.cyl("altar_stone", (0, 0.14, 0), 0.36, 0.2, 0.72, 4, STONE, cap_top=True, phase=math.pi / 4, col_top=STONE_WARM)
             tb.box("altar_eye", (0, 0.5, -0.215), (0.05, 0.34, 0.03), skip="Z")
             tb.col_cyl((0, 0, 0), 0.34, 0.9, 6)
-        tb.socket(f"socket_lamp_altar_{k}", (x * 0.94, 0.55, z * 0.94))
+        tb.socket(f"socket_lamp_altar_{k}", (x * 0.94, 1.25, z * 0.94))  # high enough not to burn the paving
     tb.socket("altar_focus", (0, cy, 0))
     tb.socket("altar_stand", (0, top, radii[-1] - 0.62))
     tb.socket("socket_lamp_altar_core", (0, cy, 0.6))

@@ -32,3 +32,4 @@ tools/near-social/out/
 
 # Town raw exports (compressed files ship in game/public/assets/models/town/)
 art/town/out/
+art/mobs/out/
