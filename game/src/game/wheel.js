@@ -5,6 +5,7 @@
 // rarest, the NFT skin "Sheriffchenko" (minted on testnet to the player's guest account through the relayer). A spin's
 // prize waits as a pending result (persisted, survives a reload) until the player claims it. Pure apart from storage.
 import { seededRandom } from './town-economy.js';
+import { sha256 } from './crypto.js';
 
 export const WHEEL_KEY = 'ftf.wheel.v1';
 /** Segments in wheel order: kind, what, weight (the weights are the odds; they sum to 100). */
@@ -27,6 +28,12 @@ export const SEGMENTS = Object.freeze([
 /** The grand prize's token supply (hard cap on the contract; shown in the odds table). */
 export const SKIN_CAP = 100;
 export const TITLES = Object.freeze(['wanderer', 'lamplit', 'starreader']);
+
+/**
+ * The wheel id bound to a guest account: the relayer re-derives it (and the roll from the shown seed) before minting
+ * the grand prize, so a browser cannot pick an id that wins.
+ */
+export const wheelIdFor = (accountId) => sha256('ftf-wheel:' + accountId).slice(0, 8);
 
 /** Probability of each segment (sums to 1). */
 export const odds = () => { const tot = SEGMENTS.reduce((s, x) => s + x.weight, 0); return SEGMENTS.map((x) => ({ id: x.id, p: x.weight / tot })); };
@@ -56,11 +63,12 @@ export function spinResult(seed, items = []) {
  * @param {{storage?: object, now?: () => number, earnedFrom?: () => number, random?: () => number}} o
  *   earnedFrom: spins earned so far by play (levels gained + verified trials), from the town ledger
  */
-export function createWheel({ storage = null, now = () => Date.now(), earnedFrom = () => 0, random = Math.random } = {}) {
+export function createWheel({ storage = null, now = () => Date.now(), earnedFrom = () => 0, random = Math.random, account = null } = {}) {
   let st = null;
   try { st = JSON.parse((storage && storage.getItem(WHEEL_KEY)) || 'null'); } catch { st = null; }
   if (!st || st.v !== 1) st = { v: 1, id: Math.floor(random() * 0xffffffff).toString(16).padStart(8, '0'), spins: 0, freeDay: null, earnedUsed: 0, titles: [], history: [] };
   if (!Array.isArray(st.pending)) st.pending = []; // results waiting for Claim (added 12.11; older saves have none)
+  if (account && st.account !== account) { st.account = account; st.id = wheelIdFor(account); } // seeds bound to the guest account
   const save = () => { try { if (storage) storage.setItem(WHEEL_KEY, JSON.stringify(st)); } catch { /* memory only */ } };
   const freeAvailable = () => st.freeDay !== dayOf(now());
   const earnedLeft = () => Math.max(0, earnedFrom() - st.earnedUsed);

@@ -118,3 +118,14 @@ test('screen: sectors show icons and amounts; spin lands on the result; claim em
   assert.equal(v2.root.querySelector('.wv-card').hidden, false, 'the unclaimed result is back after a reload');
   if (!r.segment.grand) { await v.claim(r.seed); assert.equal(card.hidden, true); assert.equal(w.pending.length, 0); assert.ok(cues.includes('gift_chime')); }
 });
+
+test('with a guest account the wheel id is bound to it (the relayer re-derives the roll from the seed)', async () => {
+  const { wheelIdFor, spinResult } = await import('../../src/game/wheel.js');
+  const storage = memoryStorage();
+  const w0 = createWheel({ storage, random: () => 0.1 }); const local = w0.id;
+  const w = createWheel({ storage, account: 'ann-7.ftf-guests.testnet' });
+  assert.equal(w.id, wheelIdFor('ann-7.ftf-guests.testnet')); assert.notEqual(w.id, local);
+  assert.match(w.nextSeed, new RegExp('^' + w.id + '-'));
+  const r = w.spin(MANIFEST); assert.equal(spinResult(r.seed, MANIFEST).index, r.index, 'anyone can recompute the roll');
+  assert.equal(createWheel({ storage, account: 'ann-7.ftf-guests.testnet' }).id, w.id, 'stable');
+});
