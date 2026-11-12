@@ -531,7 +531,7 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
-      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; return !!(irisAvatar && irisAvatar.combat(n)); }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
+      camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
       onFeedback: (k, mob, ev) => combatSound(k, mob, ev) });
     // stamina (game/stamina.js): a dash costs a chunk and is refused when she is winded; strikes cost a little but are
