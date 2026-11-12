@@ -146,10 +146,14 @@ export async function runHints({ doc = document, t, steps }) {
     if (s.when && !s.when()) continue;
     await new Promise((resolve) => {
       const box = el(doc, 'div', 'd1-hint'); box.setAttribute('role', 'status');
+      let gone = false, timer = 0;
+      const next = () => { if (gone) return; gone = true; clearTimeout(timer); box.remove(); resolve(); };
       box.addEventListener('pointerdown', (e) => e.stopPropagation());
       box.append(el(doc, 'p', null, t(s.key)));
-      for (const b of s.buttons || []) box.append(btn(doc, t(b.key), async () => { box.remove(); await b.fn(); resolve(); }));
-      box.append(btn(doc, t('day1.hint.next'), () => { box.remove(); resolve(); }, !!(s.buttons && s.buttons.length)));
+      for (const b of s.buttons || []) box.append(btn(doc, t(b.key), async () => { gone = true; clearTimeout(timer); box.remove(); await b.fn(); resolve(); }));
+      box.append(btn(doc, t('day1.hint.next'), next, !!(s.buttons && s.buttons.length)));
+      // a plain tip also goes with a tap anywhere on it, or by itself after 12 s (owner 12.11: a tip could not be closed)
+      if (!(s.buttons && s.buttons.length)) { box.addEventListener('click', next); timer = setTimeout(next, 12000); }
       doc.body.append(box);
     });
   }

@@ -662,7 +662,7 @@ async function startDay1() {
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   await m.runHints({ t, steps: [
-    { key: 'day1.hint.skin' + (input.touchControls ? '.touch' : '') }, // touch: points at the ⇄ button on the portrait
+    ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
     { key: 'day1.hint.trailers', buttons: [{ key: 'day1.hint.watch', fn: async () => {
       await m.playTrailer({ t, keys: ['day1.trailer.hero.1', 'day1.trailer.hero.2', 'day1.trailer.hero.3'], camera: orbit(0.004) });
