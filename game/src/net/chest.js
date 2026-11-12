@@ -85,5 +85,49 @@ export async function openChest({ storage, deployment = DAY1_DEPLOYMENT, base = 
   } catch { return { ok: false, reason: 'network' }; }
 }
 
+/**
+ * Opens up to `count` chests (1-10) in ONE relayer request: the relayer sends one transaction of `open_chest`
+ * actions (docs/chests.md "Batch opening"). Each opening is read back from the chain (get_opening) and checked here
+ * like a single one. When the relayer has no batch (an older relayer), it opens them one by one instead.
+ * ok: {ok: true, openings: [openChest's ok shape], tx_hash, cut, batch} | fail: {ok: false, reason}
+ */
+export async function openChests({ storage, count, deployment = DAY1_DEPLOYMENT, base = relayerUrl(deployment), fetch = globalThis.fetch, rpcUrls = NEAR_DEPLOYMENT.rpcUrls, now = Date.now, rand = Math.random } = {}) {
+  const n = Math.max(1, Math.min(10, Math.floor(Number(count) || 1)));
+  const one = async () => {
+    const out = [];
+    for (let i = 0; i < n; i++) { const r = await openChest({ storage, deployment, base, fetch, rpcUrls, now }); if (!r.ok) { if (!out.length) return r; break; } out.push(r); }
+    return { ok: true, openings: out, tx_hash: out.length ? out[out.length - 1].tx_hash : null, cut: out.length < n ? 'stopped' : null, batch: false };
+  };
+  if (n === 1) return one();
+  const g = guestFrom(storage);
+  if (!g) return { ok: false, reason: 'need_guest' };
+  if (!base || !chestContract(deployment)) return { ok: false, reason: 'not_configured' };
+  try {
+    const key = await importSecretKey(g.secretKey);
+    const at = now();
+    const requestId = 'b' + at.toString(36) + Math.floor(rand() * 1e9).toString(36);
+    const signature = b58encode(await key.sign(bytes(`ftf-chest-open|${g.accountId}|${at}|${n}|${requestId}`)));
+    const r = await withTimeout(fetch(base + '/api/chest/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, signature, count: n, request_id: requestId }) }), 90000);
+    const ans = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (ans.error === 'bad_count' || ans.error === 'bad_signature' || ans.error === 'batch_off') return one(); // a relayer without batches
+      return { ok: false, reason: ans.error === 'chest_not_configured' ? 'not_configured' : ans.error || 'network', tx_hash: ans.tx_hash || null };
+    }
+    if (!Array.isArray(ans.openings)) return ans.opening ? one() : { ok: false, reason: 'network' };
+    const client = createTxClient({ rpcUrls, fetch });
+    const contract = chestContract(deployment);
+    const info = await client.view(contract, 'season_info', {});
+    const openings = [];
+    for (const x of ans.openings) {
+      const full = await client.view(contract, 'get_opening', { index: x.opening.index }).catch(() => null) || x.opening;
+      const a = { season: ans.season, opening: full, outcome: x.outcome, leaf: x.leaf, proof: x.proof };
+      const check = await checkOpening(a, info).catch(() => ({ ok: false }));
+      openings.push({ ok: true, index: full.index, position: full.position, outcome: x.outcome, nft: full.nft ? { token_id: full.token_id, contract } : null,
+        tx_hash: ans.tx_hash, explorer: explorer(ans.tx_hash), verified: !!check.ok, check, proof: { leaf: x.leaf, proof: x.proof, root: x.root, random: full.random, block_random: full.block_random, seed: info && info.seed ? info.seed.seed : null } });
+    }
+    return { ok: true, openings, tx_hash: ans.tx_hash, cut: ans.cut || null, batch: true };
+  } catch { return { ok: false, reason: 'network' }; }
+}
+
 /** The command anyone runs to check one opening and the whole season so far. */
 export const verifyCommand = (index) => `node tools/verify-chest/verify.mjs --index ${index} --attest`;
