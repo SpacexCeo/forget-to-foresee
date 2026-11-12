@@ -100,6 +100,18 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
     release}` for sounds and effects that want to follow the wind-up. The planted-feet layer and the on-the-spot turn
     rate yield to an action clip (`FootPlant.update(..., free)`), so she turns to the aim within the wind-up.
 
+    Sync events on `window` (for sounds and effects; all sent by `play/iris-avatar.js` and `play/gait.js`):
+    `ftf:foot` `{foot: 'L' | 'R', running, action?}` on the frame a foot lands: every contact of the walk and the
+    run (from the clips' own contact intervals and the shared stride phase), and the hard step of an action clip
+    (`extras.step_s`: the stomp of a cast, the step of a strike, the dash's landing at 0.28 s);
+    `ftf:iris-action` `{clip, phase: 'start' | 'impact'}` for every action clip (impact = `release_s` or `impact_s`);
+    `ftf:cast` `{id, phase: 'start' | 'release'}` from the casting field.
+
+    The dash leaves a trail (`render/dash-trail.js`): three afterimages of her own silhouette (two on the phone
+    model) left every 1.15 m of the path in her pose of that moment, and a thin ribbon behind the hips, in her
+    violet; a ghost fades in 0.36 s, the ribbon in 0.26 s. The ghosts are clones of her model made on her first
+    dash and drawn only while a trail fades. Not shown under reduced motion.
+
 Build: `python3 art/anim/fetch_mocap.py`, then `python3 art/anim/build_clips.py --char iris` and `--char townsfolk`;
 the numbers of every clip go to `art/anim/out/<character>.json`. Iris: then `python3 art/anim/iris_combat.py` and
 `python3 art/anim/iris_actions.py` (each adds its clips to `iris.glb` and keeps the rest). A model rebuild that keeps the bone names and the
