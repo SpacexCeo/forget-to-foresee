@@ -10,6 +10,7 @@
 // (ui/loading.js townPlan: ?skip=town, or a deep link such as ?play=direct without ?town=1); the season starts
 // when Iris registers at the Tournament altar. ?town=altar spawns at the altar, ?town=flat uses a flat dev ground.
 import * as THREE from 'three';
+import { interruptLocomotion, canMove, STRIKE_ROOT } from './physics/interrupt.js';
 import { createIslandScene } from './scenes/island.js';
 import { LookDev } from './render/lookdev.js';
 import { detectTier, tierForPreference } from './render/quality.js';
@@ -388,13 +389,13 @@ function mountCasting() {
   townCasting = createTownCasting({ scene, camera, town, player, i18n: ctx.i18n, coarse: mobileDevice,
     // her cast clip (art/anim/iris_actions.py): a wind-up, then the release frame on which the cast leaves her hand; the
     // effect, the sound and the hits wait for that frame. Without the clip (?anim=v1) her hand goes up and it leaves at once.
-    onCastStart: (id) => { cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
+    onCastStart: (id) => { interruptMove(0); cue(id === 'snare' ? 'cast_charge_storm' : 'cast_charge_frost'); /* the build through the wind-up */ const c = irisAvatar && irisAvatar.cast('cast_' + id); if (!c && irisAvatar) irisAvatar.react('greet', clock.elapsedTime); return c ? c.release : 0; },
     onCast: (id, shot) => { if (townMonsters) townMonsters.cast(id, shot); cue(id === 'snare' ? 'cast_release_storm' : 'cast_release_frost'); }, // on the release frame
     handPos: () => { const m = irisAvatar && irisAvatar.irisModel, h = m && m.model.getObjectByName('hand_R'); if (!h) return null; const v = h.getWorldPosition(new THREE.Vector3()); return [v.x, v.y, v.z]; },
     onFire: (c) => { if (townMobs) townMobs.cast(c); },
     // UI-003 strike and dash slots for the hillside fight (play/mobs.js ACTIONS: F / 3, Space / 4)
     extra: [
-      { id: 'strike', key: 'F', icon: 'strike', label: 'town.cast.strike', available: () => !!townMobs, press: () => townMobs && townMobs.strike(), cooldown: () => (townMobs ? townMobs.actions.strikeCd / 0.32 : 0) },
+      { id: 'strike', key: 'F', icon: 'strike', label: 'town.cast.strike', available: () => !!townMobs, press: () => strikeNow(), cooldown: () => (townMobs ? townMobs.actions.strikeCd / 0.32 : 0) },
       { id: 'dash', key: 'Space', icon: 'dash', label: 'town.cast.dash', available: () => !!townMobs, press: () => townMobs && townMobs.dash(wishVector()), cooldown: () => (townMobs ? townMobs.actions.dashCd / 1.0 : 0) },
     ] });
   mountMobs();
@@ -631,6 +632,15 @@ function toast(text) { if (playerHud && inTown) { playerHud.toast(text); return;
 const PHYSICS_CARRY = 1.0; // seconds of a long frame that physics catches up on (fixedSteps carry)
 const stuck = { stuckTime: 0, lastDist: Infinity }; // click-to-move give-up state (character.js clickStuck)
 let moveTarget = null, moveRun = false, lastTap = { t: 0, x: 0, y: 0 };
+let rootUntil = 0; // a strike roots her until then (ms); the casts root her through town-casting's `casting`
+/** A cast or a strike interrupts locomotion: walk orders cancelled, she plants, rooted for `seconds` (physics/interrupt.js). */
+function interruptMove(seconds = 0) {
+  const s = interruptLocomotion({ moveTarget, moveRun, rootUntil }, { now: performance.now(), seconds, cancel: stopSteering, character: player });
+  moveTarget = s.moveTarget; moveRun = s.moveRun; rootUntil = s.rootUntil;
+  if (input.stopRun) input.stopRun(); // the touch run toggle and burst switch off: after the action she moves only on new input
+}
+/** The strike (F / 3 / its slot): it stops her run like a cast does. */
+function strikeNow() { if (townMobs && townMobs.strike()) interruptMove(STRIKE_ROOT); }
 let inspecting = null;
 let accumulator = 0;
 const raycaster = new THREE.Raycaster();
@@ -729,7 +739,7 @@ function handleInput(dt) {
   if (townOn && townCasting) { // beyond the walls: Q/1 and V/2 arm the casts (scenes/town-casting.js)
     for (const k in CAST_KEYS) if (input.hit(k)) townCasting.handleKey(k);
     if (townMobs && townCasting.field) { // the strike and the dash (play/mobs.js ACTIONS): F / 3 and Space / 4
-      if (input.hit('KeyF') || input.hit('Digit3')) townMobs.strike();
+      if (input.hit('KeyF') || input.hit('Digit3')) strikeNow();
       if (input.hit('Space') || input.hit('Digit4')) townMobs.dash(wishVector());
     }
     townCasting.setPointer(input.hover ? input.hover.x : null, input.hover ? input.hover.y : null);
@@ -770,7 +780,7 @@ function handleInput(dt) {
 
 function wishVector() {
   if (inspecting || controls.dialog.open) return [0, 0];
-  if (townCasting && townCasting.casting) return [0, 0];      // she winds up and lets go standing still
+  if (!canMove({ rootUntil }, performance.now(), !!(townCasting && townCasting.casting))) return [0, 0]; // rooted: a cast's wind-up and release, a strike
   const [ax, ay] = input.moveAxes();
   if (ax || ay) {
     stopSteering();

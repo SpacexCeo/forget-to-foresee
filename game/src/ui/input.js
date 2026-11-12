@@ -197,6 +197,8 @@ export class Input {
 
   /** The touch run button: sticky until tapped again. */
   setRunToggle(on) { on = !!on; if (on === this.runToggle) return; this.runToggle = on; this.emitRun(); }
+  /** A cast or a strike interrupts the run: the toggle and the double-tap burst switch off (boot-world interruptMove). */
+  stopRun() { const was = this.runToggle || this.runBurst; this.runToggle = false; this.runBurst = false; this.tapRun?.reset(); if (was) this.emitRun(); }
   setTouchControls(on) { on = !!on; if (on === this.touchControls) return; this.touchControls = on; this.emitRun(); }
   onRunChange(fn) { this.runListeners.add(fn); return () => this.runListeners.delete(fn); }
   emitRun() { for (const fn of this.runListeners) fn(this.running, this); }

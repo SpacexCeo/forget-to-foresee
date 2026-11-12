@@ -98,7 +98,7 @@ test('A cast leaves on the release frame of her cast clip: the clips carry it, t
   assert.match(cast, /onCastStart\(id, shot\)/); assert.match(cast, /if \(!p\.fired && p\.t >= p\.at\) fire\(p\)/);
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.match(boot, /irisAvatar\.cast\('cast_' \+ id\)/, 'the cast clip is cued at the start of a cast');
-  assert.match(boot, /townCasting\.casting\) return \[0, 0\]/, 'she stands still while she winds up and lets go');
+  assert.match(boot, /townCasting\.casting\)+ return \[0, 0\]/, 'she stands still while she winds up and lets go');
 });
 
 test('Foot contacts and the dash trail: a step is reported once per landing, the trail is short and off under reduced motion', async () => {
