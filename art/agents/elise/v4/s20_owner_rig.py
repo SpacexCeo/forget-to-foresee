@@ -69,10 +69,12 @@ LACE = ~BODY & ~DRESS & ~red & (z < 1.12) & (z > 0.5) & (np.abs(x) < 0.2)       
 armw = sum(get(p + s_) for s_ in 'LR' for p in ('upperarm_', 'forearm_', 'hand_', 'index_', 'fingers_', 'thumb_')); arm = armw > 0.5
 print('pieces: %d; body %d vertices, dress %d, lacing %d, red %d, arm %d' % (len(ids), BODY.sum(), DRESS.sum(), LACE.sum(), red.sum(), arm.sum()))
 # the hidden right leg would cut the narrow skirt in a stride: it goes, the shoe stays (as in the v3 build)
-bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
+bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); OI = bm.verts.layers.int.new('orig')
+for v in bm.verts: v[OI] = v.index
 gone = BODY & (x < -0.004) & (z > 0.15) & (z < 0.90) & ~arm
 drop = [f for f in bm.faces if all(gone[v.index] for v in f.verts)]; keepv = np.ones(n, bool)
-bmesh.ops.delete(bm, geom=drop, context='FACES'); alive = np.array([v.index for v in bm.verts]); bm.to_mesh(me); bm.free(); me.update()
+bmesh.ops.delete(bm, geom=drop, context='FACES'); bm.to_mesh(me); bm.free(); me.update()
+alive = np.empty(len(me.vertices), np.int32); me.attributes['orig'].data.foreach_get('value', alive); me.attributes.remove(me.attributes['orig'])
 W0 = {k_: v_[alive] for k_, v_ in W0.items()}; BODY, DRESS, LACE = BODY[alive], DRESS[alive], LACE[alive]
 n, co, fv = arrays(); col = colours(n); x, y, z = co.T; lum = col.mean(1); get = lambda k: W0.get(k, np.zeros(n))
 red = (col[:, 0] > 0.25) & (col[:, 0] > 1.8 * col[:, 1])
