@@ -859,6 +859,13 @@ function frame() {
     if (townShops) townShops.update(); // indoors: the baked light, the counter and door zones
     if (townProps) townProps.update(dt, lookdev.reducedMotion);
     if (townMonsters && !(townShops && townShops.inside)) townMonsters.update(dt, lookdev.reducedMotion);
+    // Phones and the low tier (jury low-tier pass, 12.11): beyond the walls the inner blocks hide behind them; the gate,
+    // the temple on the hill and the terrain stay, so the view back at the castle keeps its silhouette
+    if (mobileDevice || lookdev.tier === 'low') {
+      const lx = player.pos[0] - TOWN_ORIGIN_W[0], lz = player.pos[2] - TOWN_ORIGIN_W[2];
+      const out = lz > 36 || Math.abs(lx) > 55;
+      for (const inst of streamer.instances) if (inst.real && (inst.name === 'town_block_mid' || inst.name === 'town_block_square')) inst.real.visible = !out;
+    }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townBarks) townBarks.update(player.pos, !(photo && photo.on) && entered && !townFlow.busy && !townFlow.talking && !(townShops && townShops.inside) && !introOn);
     if (townAudio) { // footsteps from the distance actually walked; the listener follows the camera
