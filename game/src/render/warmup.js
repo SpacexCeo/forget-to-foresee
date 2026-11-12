@@ -35,6 +35,13 @@ let active = null;
 export function setActiveWarmup(w) { active = w; }
 /** Warms a model that is about to join the scene; resolves at once when no queue is installed (tests, review page). */
 export function warmModel(root) { return active ? active.warm(root) : Promise.resolve(); }
+/**
+ * Warms everything in the scene now (owner, 12.11: skipping through a cutscene must be instant): every texture on the
+ * GPU and every program compiled, including objects the camera has not looked at yet, so a cut to a new view draws
+ * without a stall. Off the main thread where the driver allows it, else at once (one slower frame at the film's start
+ * instead of one per cut). Resolves at once when no queue is installed.
+ */
+export function warmScene() { return active ? active.warmAll() : Promise.resolve(); }
 
 export class GpuWarmup {
   /**
@@ -60,11 +67,24 @@ export class GpuWarmup {
     });
   }
 
-  /** Programs for `root` as it will be drawn inside the scene; never rejects, never waits longer than the timeout. */
-  compile(root) {
+  /** Uploads every texture under the scene and compiles every visible object's program (see warmScene). */
+  warmAll() {
+    for (const tex of collectTextures(this.scene)) { try { this.renderer.initTexture(tex); } catch { /* lost context etc. */ } }
+    return this.compile(this.scene, { force: true });
+  }
+
+  /**
+   * Programs for `root` as it will be drawn inside the scene; never rejects, never waits longer than the timeout.
+   * `force`: without the parallel-compile extension, compile synchronously now rather than leave it to the first draw.
+   */
+  compile(root, { force = false } = {}) {
     const r = this.renderer;
-    // Without KHR_parallel_shader_compile a compile blocks wherever it runs: leave it to the first draw as before.
-    if (!r.compileAsync || !(r.extensions && r.extensions.has('KHR_parallel_shader_compile'))) return Promise.resolve();
+    // Without KHR_parallel_shader_compile a compile blocks wherever it runs: leave it to the first draw as before
+    // (or, forced, do it now: a planned pause beats a stall later).
+    if (!r.compileAsync || !(r.extensions && r.extensions.has('KHR_parallel_shader_compile'))) {
+      if (force && r.compile) { const prev = r.getRenderTarget(); try { r.setRenderTarget(this.target() || null); r.compile(root, this.camera, this.scene); } catch (e) { console.warn('[warmup] compile failed', e); } finally { r.setRenderTarget(prev); } }
+      return Promise.resolve();
+    }
     const prev = r.getRenderTarget();
     let done;
     try {

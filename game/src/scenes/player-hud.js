@@ -7,10 +7,7 @@
 import { showPremise } from '../ui/premise.js';
 
 const ICON = (d) => `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e6c47c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>')}")`;
-const I_QUEST = ICON('<path d="M7 3h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h4"/>');
 const I_SKIP = ICON('<path d="M5 5l9 7-9 7zM17 5v14"/>');
-const I_ALTAR = ICON('<path d="M5 21h14M7 21v-9a5 5 0 0 1 10 0v9"/><circle cx="12" cy="11" r="2.2"/><path d="M12 3v2"/>');
-const I_PEOPLE = ICON('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 19"/>');
 
 const CSS = `
 .ph { --ph-bg: rgba(12, 20, 17, .86); --ph-line: rgba(201, 163, 90, .55); --ph-gold: #d8b46a; --ph-ink: #f1ead8; --ph-dim: #a9b3a8;
@@ -24,7 +21,7 @@ const CSS = `
 .ph-portrait { position: relative; width: 60px; height: 60px; border-radius: 50%; }
 .ph-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--ph-gold) calc(var(--p, 0) * 1turn), rgba(216, 180, 106, .18) 0); }
 .ph-portrait img { position: absolute; inset: 4px; width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; background: #18241f; border: 2px solid #0c1411; }
-.ph-swap { position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+.ph-swap { background-image: var(--ph-i-swap) !important; background-position: center !important; background-size: 70% !important; background-repeat: no-repeat !important; font-size: 0 !important; position: absolute; left: calc(6px + env(safe-area-inset-left, 0px)); top: calc(4px + env(safe-area-inset-top, 0px)); z-index: 1; width: 28px; height: 28px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: #0c1411; border: 2px solid #d8b46a; color: #f3d7a0; font: 700 14px/1 system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
 .ph-swap[hidden] { display: none; }
 @media (pointer: coarse) { .ph-swap { width: 40px; height: 40px; left: calc(2px + env(safe-area-inset-left, 0px)); top: calc(2px + env(safe-area-inset-top, 0px)); font-size: 18px; } }
 .ph-lvl { position: absolute; right: -4px; bottom: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center;
@@ -85,17 +82,17 @@ body.ph-on .ftf-cast-bar { background: rgba(12, 20, 17, .82); border: 1px solid 
 body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
 body.ph-on .ftf-hp { display: none; }
 /* declutter (owner, 12.11): persistent labels become icons with a tooltip; one short line where text stays */
-.ph-help { width: 40px; height: 40px; border-radius: 50%; background: var(--ph-bg); border: 1px solid var(--ph-line); color: var(--ph-gold); font: 700 17px/1 Georgia, serif; cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
+.ph-help { width: 40px; height: 40px; border-radius: 50%; background: var(--ph-bg) var(--ph-i-help) center / 24px no-repeat; font-size: 0 !important; border: 1px solid var(--ph-line); color: var(--ph-gold); font: 700 17px/1 Georgia, serif; cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
 body.ph-on .ftf-town-objective { box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(340px, calc(100% - 28px)); padding-left: 38px; }
-body.ph-on .ftf-town-objective::before { content: ""; position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; border-radius: 0; box-shadow: none; background: ${I_QUEST} center / contain no-repeat; }
+body.ph-on .ftf-town-objective::before { content: ""; position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; border-radius: 0; box-shadow: none; background: var(--ph-i-quest) center / contain no-repeat; }
 body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: min(340px, calc(100% - 28px)); color: inherit; }
 body.ph-on .ftf-quest-meta button { width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 0; background: rgba(12, 20, 17, .86) ${I_SKIP} center / 20px no-repeat; }
 body.ph-on .ftf-quest-meta { top: calc(162px + env(safe-area-inset-top, 0px)); }
 body.ph-on .ftf-scene-tools .ftf-btn-label, body.ph-on .ftf-scene-tools .ftf-scene-hint { display: none; }
 body.ph-on .ftf-scene-tools .ftf-btn { min-width: 40px; min-height: 40px; padding: 0 9px; }
 body.ph-on .ftf-chat-chip[data-n] span { display: none; }
-body.ph-on .ftf-chat-chip[data-n]::after { content: attr(data-n); padding-left: 24px; min-height: 20px; line-height: 20px; background: ${I_PEOPLE} left center / 20px no-repeat; }
-body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 12px !important; background-image: ${I_ALTAR} !important; background-repeat: no-repeat !important; background-position: 8px center !important; background-size: 18px !important; }
+body.ph-on .ftf-chat-chip[data-n]::after { content: attr(data-n); padding-left: 24px; min-height: 20px; line-height: 20px; background: var(--ph-i-players) left center / 20px no-repeat; }
+body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 12px !important; background-image: var(--ph-i-altar) !important; background-repeat: no-repeat !important; background-position: 8px center !important; background-size: 18px !important; }
 .ph-toast { max-width: min(320px, 70vw); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @media (max-width: 700px), (max-height: 500px) {
   .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
@@ -133,6 +130,11 @@ export function walletDelta(prev, next) {
  *   skin?: () => 'iris'|'elise', onProfile?: Function, onChests?: Function, reducedMotion?: () => boolean}} o
  */
 export function createPlayerHud({ doc = document, t, ledger, chests = null, base = '/', nickname = () => null, skin = () => 'iris', onProfile = () => {}, onChests = null, onSkin = () => {}, canSwap = () => false, reducedMotion = () => false }) {
+  // the HUD glyphs (art/ui build_hud_icons.py: gold glyph, dark outline): one place, CSS custom properties
+  const glyph = (n) => `url("${base}assets/ui/icons/hud/${n}_glyph_48.webp")`;
+  if (doc.documentElement && doc.documentElement.style && doc.documentElement.style.setProperty) {
+    for (const [k, n] of [['quest', 'quest'], ['altar', 'altar'], ['players', 'players'], ['help', 'help'], ['swap', 'heroine_switch']]) doc.documentElement.style.setProperty('--ph-i-' + k, glyph(n));
+  }
   if (!(doc.getElementById && doc.getElementById('ph-style'))) { const st = doc.createElement('style'); st.id = 'ph-style'; st.textContent = CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ph'); root.hidden = true;

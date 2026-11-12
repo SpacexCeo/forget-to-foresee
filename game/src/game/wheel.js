@@ -124,7 +124,7 @@ export async function claimPrize(wheel, seed, { inventory = null, ledger = null,
     let r = null;
     try { r = mintSkin ? await mintSkin(p) : { ok: false, reason: 'not_configured' }; } catch { r = { ok: false, reason: 'network' }; }
     if (r && r.ok) { wheel.settle(seed, { tokenId: r.tokenId || null, txHash: r.txHash || null }); return { ok: true, kind: 'skin', tokenId: r.tokenId || null }; }
-    if (r && r.reason === 'already_owned') { wheel.settle(seed, { reason: 'already_owned' }); return { ok: false, kind: 'skin', reason: 'already_owned' }; }
+    if (r && r.reason === 'already_owned') { wheel.settle(seed, { reason: 'already_owned', tokenId: r.tokenId || null }); return { ok: false, kind: 'skin', reason: 'already_owned', tokenId: r.tokenId || null }; }
     wheel.minting(seed, { reason: (r && r.reason) || 'network' });
     return { ok: false, kind: 'skin', reason: (r && r.reason) || 'network' };
   }
