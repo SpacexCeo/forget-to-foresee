@@ -66,6 +66,20 @@ How to read it:
 - To bring the rate near the spec's ~0.1 %/day: lower `rate_ceiling_bps` (40 → 15) or the stakers' share of the
   sweep. That is a parameter choice for the owner (`set_params`).
 
+## Settling a season (coordinator, dry run)
+
+`node tools/town/settle.mjs --season <id> --results results.json` reads the season and the purse from the contract.
+`results.json` is the season's results, best first, or with scores. The tool plans the payouts with `planPayouts`
+(`town-rules.js`, tested):
+
+- 30 % of the pot is split equally among all entrants.
+- 70 % goes over the top 60 % with weight k^-0.6.
+- Each account gets at most 4 % of the pot, with one pass that redistributes the capped excess.
+
+It prints the payout-list hash and the `settle_season` batches (the last one closes the season) for the lead to send.
+It never signs. With few entrants the 4 % cap leaves most of the pot in the purse, and that silk carries over to the
+next season.
+
 ## Clan strategies (LLM layer with a scripted fallback)
 
 `relayer/lib/clan-strategy.js`, owner's request. Once an hour (`FTF_STRATEGY_MINUTES`, default 60; `FTF_STRATEGY=0`
