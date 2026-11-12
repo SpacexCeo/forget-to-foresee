@@ -64,8 +64,22 @@ test('handler: mints for a real win; already owned, sold out, not your key, not 
   assert.equal((await call(h({ fetch: rpc({ guestKey: kp.publicKey, failure: 'ERR_SOLD_OUT: x' }) }), await body(w.acc, kp, `${w.id}-${w.n}`))).body.error, 'sold_out');
   const other = await generateKeyPair();
   assert.equal((await call(h({ fetch: rpc({ guestKey: kp.publicKey }) }), await body(w.acc, other, `${w.id}-${w.n}`))).body.error, 'not_your_key');
-  assert.equal((await call(wheelHandler({ env: {}, now: () => NOW }), await body(w.acc, kp, `${w.id}-${w.n}`))).body.error, 'wheel_not_configured');
+  // no minter key yet: every check still runs, the win is recorded, the answer says the mint is pending
+  const rec = []; const log = { record: (c) => { rec.push(c); return true; } };
+  const pend = await call(wheelHandler({ env: { FTF_RPC_URLS: 'http://rpc.test', TRUST_PROXY: '0' }, now: () => NOW, fetch: rpc({ guestKey: kp.publicKey }), log, bucket: createBucket({ capacity: 9 }), replay: createReplayGuard() }), await body(w.acc, kp, `${w.id}-${w.n}`));
+  assert.equal(pend.status, 202); assert.deepEqual([pend.body.status, pend.body.verified, pend.body.recorded], ['mint_pending', true, true]);
+  assert.equal(rec[0].account_id, w.acc); assert.equal(rec[0].seed, `${w.id}-${w.n}`);
+  const pendOwned = await call(wheelHandler({ env: { FTF_RPC_URLS: 'http://rpc.test', TRUST_PROXY: '0' }, now: () => NOW, fetch: rpc({ guestKey: kp.publicKey, owned: 'sheriffchenko-1' }), log, bucket: createBucket({ capacity: 9 }), replay: createReplayGuard() }), await body(w.acc, kp, `${w.id}-${w.n}`));
+  assert.equal(pendOwned.body.error, 'already_owned', 'checks come before the pending answer');
   const g = createReplayGuard(), once = await body(w.acc, kp, `${w.id}-${w.n}`);
   await call(h({ fetch: rpc({ guestKey: kp.publicKey }), replay: g }), once);
   assert.equal((await call(h({ fetch: rpc({ guestKey: kp.publicKey }), replay: g }), once)).body.error, 'replayed');
+});
+
+test('claim log: records lines and reads them back', async () => {
+  const { createClaimLog } = await import('../lib/wheel.js');
+  const { mkdtempSync } = await import('node:fs'); const { tmpdir } = await import('node:os'); const { join } = await import('node:path');
+  const log = createClaimLog(join(mkdtempSync(join(tmpdir(), 'ftf-wheel-')), 'data'));
+  assert.equal(log.record({ account_id: 'a.testnet', seed: 'abcd0123-3' }), true); log.record({ account_id: 'b.testnet', seed: 'abcd0124-1' });
+  assert.deepEqual(log.list().map((c) => c.account_id), ['a.testnet', 'b.testnet']);
 });
