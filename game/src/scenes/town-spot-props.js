@@ -57,7 +57,8 @@ export function buildNoticeBoard() {
 export function createSpotProps({ scene, town, near = () => false }) {
   const group = new THREE.Group(); group.name = 'town_spot_props'; scene.add(group);
   const items = [];
-  for (const [id, build] of [['mirror', buildMirror], ['board', buildNoticeBoard]]) {
+  // the mirror is off for now (owner 12.11): only the notice board stands; buildMirror is kept for later
+  for (const [id, build] of [['board', buildNoticeBoard]]) {
     const spec = SPOT_PROPS[id], obj = build(), w = townToWorld(spec.position);
     obj.position.set(w[0], w[1], w[2]); obj.rotation.y = spec.heading;
     group.add(obj); items.push({ id, obj, w, grounded: false, glow: 0 });

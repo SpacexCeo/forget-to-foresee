@@ -18,7 +18,9 @@ test('the mirror and the notice board stand within 1.5 m of their prompts, at th
     assert.ok(Math.abs(spot[1] - prop.position[1]) <= 1, `${id}: object on another level`);
   }
   const props = src('scenes/town-spot-props.js');
-  for (const id of Object.keys(TOWN_SPOTS)) assert.match(props, new RegExp(`\\['${id}', build`), `${id} is built`);
+  // the mirror is off for now (owner 12.11): its spot data stays, only the board is built
+  for (const id of Object.keys(TOWN_SPOTS).filter((k) => k !== 'mirror')) assert.match(props, new RegExp(`\\['${id}', build`), `${id} is built`);
+  assert.doesNotMatch(src('boot-world.js'), /id: 'mirror'/, 'no mirror prompt while it is off');
 });
 
 test('every town spot in boot-world.js maps to an object: shop doors, the wheel prop, the spot props', () => {
