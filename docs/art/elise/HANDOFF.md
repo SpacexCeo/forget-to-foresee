@@ -351,5 +351,13 @@ Second fix from the frame-by-frame pass: gown points at the armholes whose whole
 were left unbound and stood out as a black wedge at her side (worst in the wave); they now fall back to the chest,
 and the bodice no longer follows the shoulder bones (`v3/f_wave_check.jpg`).
 
+**Magic step and boxing (owner, 12.11).** Walk and run are the "magic step": wide slow strides while she moves fast
+(loco style `glide`: the feet cover only part of the ground she travels). Walk: one 1.25 m stride in 1.27 s at
+1.7 m/s; run: one 1.4 m stride in 1.07 s at 3.3 m/s (1.6 m cut the gown). The clips are built for the game's real
+speeds: at the old 1.4 / 2.4 m/s the game sped them up and mixed walk with run, which read as jerky. `strike1..3`
+are a jab, a cross and a lead hook from a guard (impacts 0.10 / 0.12 / 0.15 s), `strike_charge` a boxer's load,
+`strike_super` an uppercut; the same keys as Iris's (`art/anim/iris_actions.py`). Films: `v3/elise_magic_step.mp4`,
+`v3/elise_boxing_before_after.mp4`, `docs/art/iris_anim/iris_boxing_before_after.mp4`.
+
 Left for later: talk and expression morphs (only the blink is in); no folds on the bodice; the hair has no drawn
 highlight band; the body mesh has 3 open edges at the patched face pockets (hidden under the fringe and the lips).
