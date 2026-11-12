@@ -17,10 +17,12 @@ test('the streamer holds loaded assets while Iris is inside a Shell, and release
 
 test('the hall is prewarmed with its lights on, the whole scene compiled, and one hidden frame rendered inside', () => {
   const shell = src('scenes/shell.js');
-  assert.match(shell, /prewarmHidden\(root, \{ wholeScene: true \}\)/);
+  assert.match(shell, /prewarmHidden\(root, \{ wholeScene: true, also: /);
+  assert.match(src('play/game.js'), /shell\.warmAlso = \(\) => vfx\.warmables\(\)/, 'the pooled VFX (the glass logogram) compile with the hall');
+  assert.match(src('vfx/index.js'), /for \(const pool of Object\.values\(pools\)\) \{ const o = pool\.acquire\(\); if \(o\) pool\.release\(o\); \}/);
   assert.match(shell, /renderHiddenOnce\(root,/);
   const warm = src('render/warmup.js');
   const pre = warm.slice(warm.indexOf('export function prewarmHidden'), warm.indexOf('export function renderHiddenOnce'));
   assert.ok(pre.indexOf('root.visible = true') < pre.indexOf('active.compile(what)'), 'visible (lights counted) before compiling');
-  assert.match(pre, /finally \{ root\.visible = was; \}/, 'hidden again whatever happens');
+  assert.match(pre, /finally \{ root\.visible = was; also\.forEach/, 'hidden again whatever happens');
 });

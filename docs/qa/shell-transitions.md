@@ -36,13 +36,16 @@ a 50 ms budget). The GPU-independent work per transition is what a seamless swap
 |---|---|---|---|---|---|
 | First enter, before | 34 | 9 | 11 | 0 | 0 |
 | First enter, after | **1** | **1** | **1** | 0 | 0 |
+| First enter, after the VFX pools are warmed too | **0** | **0** | **0** | 0 | 0 |
 | First exit, before / after | 0 / 0 | 0 / 0 | 3 / 3 | 0 / 0 | 0 / 0 |
 | Second enter, before / after | 0 / 0 | 1 / 1 | 1 / 1 | 0 / 0 | 0 / 0 |
 | Second exit, before / after | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 
 `?tier=low&tex=m` after the change: first enter 1 program, 8 textures and 10 geometries (the low tier keeps the
 Guests on plain alpha, so part of the set differs), every later transition 0 programs and 0 fetches. The one program,
-texture and geometry left on the first enter are the logogram VFX created when the Guest starts drawing.
+texture and geometry that were left on the first enter were the glass logogram VFX, created by its pool on first use;
+`vfx/index.js` now creates one of each pooled mesh up front and `scenes/shell.js` compiles them with the hall
+(`shell.warmAlso`, set by `play/game.js`), which brings the first enter to zero.
 (`camp_iris_m.glb` was fetched during one run's first enter: island streaming that happened to finish then, not the
 Shell.)
 

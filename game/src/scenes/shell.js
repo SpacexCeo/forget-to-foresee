@@ -304,7 +304,7 @@ export function createShellScene({ scene, streamer }) {
   }
   applyLayout();
 
-  let active = false, shellNo = 1, prewarmed = false, prewarmTimer = null;
+  let active = false, shellNo = 1, prewarmed = false, prewarmTimer = null, vfxWaits = 0;
   let sign = null, drawStart = 0, answer = null, answerAt = -10;
   root.visible = false;
 
@@ -406,9 +406,10 @@ export function createShellScene({ scene, streamer }) {
         if (prewarmed) return;
         if (active) { prewarmTimer = setTimeout(tick, 1000); return; } // already inside: the next visit is warm anyway
         if (!interior.isReal || (MODEL_FILES.guest && !guestTemplate)) { prewarmTimer = setTimeout(tick, 500); return; }
+        if (!api.warmAlso && ++vfxWaits < 20) { prewarmTimer = setTimeout(tick, 500); return; } // the VFX module loads on its own; wait up to 10 s
         applyLayout(); ensureGuests(); // the mist for the real hall, the Guests' clones: built now, not on entry
         prewarmed = true;
-        prewarmHidden(root, { wholeScene: true }).then((ok) => {
+        prewarmHidden(root, { wholeScene: true, also: api.warmAlso ? api.warmAlso() : [] }).then((ok) => {
           // then one hidden frame from the arrival point toward the glass: geometry, the transmission target, exact programs
           if (!active) { const L = layout(), o = SHELL_ORIGIN; renderHiddenOnce(root, [o[0] + L.spawn[0], o[1] + L.spawn[1] + 1.6, o[2] + L.spawn[2]], [o[0] + L.glass[0], o[1] + L.glass[1], o[2] + L.glass[2]]); }
           api.prewarmed = ok;
@@ -418,6 +419,8 @@ export function createShellScene({ scene, streamer }) {
     },
     /** True once the hall was warmed ahead of the first visit (QA). */
     prewarmed: false,
+    /** Other hidden objects drawn inside a Shell to compile with the hall (play/game.js: the VFX pools). */
+    warmAlso: null,
     /**
      * Resolves true once the real hall is shown, or false after `ms` (the greybox is then the fallback). The
      * flight's cover waits on this, so the first judged view of a Shell is the hall and not a grey room.
