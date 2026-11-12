@@ -236,7 +236,7 @@ else if (scenario === 'dragon') {
   // the dragon companion (--query companion=<kind>&perch=3): hover, follow, glide, a flourish on the finisher and the
   // cast, then it lands and sits while she rests, and takes off when she walks on
   const aim = (id) => page.evaluate((id) => { const f = window.__ftf, p = f.player.pos; f.town.casting.aimAt(id, [p[0] + 9, window.__ground(p[0] + 9, p[2]) ?? p[1], p[2]]); return f.town.casting.release(); }, id);
-  await back(); await shot({ angle: 0.55, dist: 4.4, h: 1.5, up: 0.2 }); await wait(2200);
+  await back(); await shot({ angle: 0.5, dist: 6.4, h: 1.15, up: 0.22 }); await wait(2200);
   mark('hover'); await wait(2600);
   mark('walk'); await go(2600, false);
   mark('run'); await go(2600, true);
@@ -244,7 +244,7 @@ else if (scenario === 'dragon') {
   mark('strikes'); for (let i = 0; i < 3; i++) { await page.keyboard.press('KeyF'); await wait(420); }
   await wait(1600);
   mark('cast'); await aim('lance'); await wait(2600);
-  await shot({ angle: 0.9, dist: 3.4, h: 1.0, up: 0.1 });
+  await shot({ angle: 0.9, dist: 4.6, h: 0.75, up: 0.2 });
   mark('rest'); await wait(7500);
   mark('take off'); await go(2200, false); await wait(800);
 }
