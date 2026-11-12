@@ -386,7 +386,7 @@ if (townMode.town) {
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
   }
-  if (!marketTicker && params.get('town') === '1') { // the townsfolk market: a ticker of real testnet trades, chips and stall visits
+  if (!marketTicker && params.get('town') !== '0') { // ftf-town is live (12.11); ?town=0 hides it // the townsfolk market: a ticker of real testnet trades, chips and stall visits
     Promise.all([import('./net/market.js'), import('./ui/market-ticker.js'), import('./play/market-scene.js')]).then(([net, ui, sc]) => {
       if (marketTicker) return;
       const t = (k, a) => ctx.i18n.t(k, a);
