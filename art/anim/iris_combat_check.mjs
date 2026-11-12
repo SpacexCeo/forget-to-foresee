@@ -11,8 +11,9 @@ const page = await (await browser.newContext({ viewport: { width: 640, height: 7
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&tex=full&hero=iris&mobs=0`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 600000 });
+await page.evaluate(() => window.__ftf.player.teleport([-27, 1240, 62], 0.6)); await page.waitForTimeout(2500);  // the open casting field
 const shot = (az) => page.evaluate((az) => {
   const f = window.__ftf, p = f.player, a = p.heading + az, at = [p.pos[0], p.pos[1] + 0.95, p.pos[2]];
   const cam = f.rig.camera.clone(); cam.fov = 30; cam.near = 0.05; cam.aspect = f.renderer.domElement.width / f.renderer.domElement.height; cam.updateProjectionMatrix();
