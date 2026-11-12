@@ -90,46 +90,6 @@
   "rarity": "legendary"
  },
  {
-  "id": "res_silk_thread",
-  "kind": "resource",
-  "rarity": "common"
- },
- {
-  "id": "res_chitin_plate",
-  "kind": "resource",
-  "rarity": "uncommon"
- },
- {
-  "id": "res_veil_dust",
-  "kind": "resource",
-  "rarity": "common"
- },
- {
-  "id": "res_bell_glass",
-  "kind": "resource",
-  "rarity": "uncommon"
- },
- {
-  "id": "res_ash_ore",
-  "kind": "resource",
-  "rarity": "common"
- },
- {
-  "id": "res_ember_core",
-  "kind": "resource",
-  "rarity": "rare"
- },
- {
-  "id": "res_crown_shard",
-  "kind": "resource",
-  "rarity": "rare"
- },
- {
-  "id": "res_rift_heart",
-  "kind": "resource",
-  "rarity": "legendary"
- },
- {
   "id": "prop_wheel_of_fortune",
   "kind": "prop",
   "rarity": null

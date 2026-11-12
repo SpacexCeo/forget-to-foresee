@@ -719,144 +719,6 @@ def build_board(P, lite=False):
 
 # ------------------------------------------------------------------ catalogue
 
-# ------------------------------------------------------------------ monster resources (owner 12.11 evening)
-
-
-def rock_points(rnd, n, r, squash=(1.0, 1.0, 0.75), z0=0.0):
-    """Random points on a lumpy ellipsoid: the hull reads as a broken chunk of stone."""
-    pts = []
-    for _ in range(n):
-        u, v = rnd.uniform(-1, 1), rnd.uniform(0, TAU)
-        k = math.sqrt(1 - u * u) * r * rnd.uniform(0.78, 1.0)
-        pts.append(Vector((math.cos(v) * k * squash[0], math.sin(v) * k * squash[1], z0 + (u + 1) * r * squash[2] * rnd.uniform(0.85, 1.0))))
-    return pts
-
-
-def build_resource(item_id, P):
-    rnd = random.Random(sum(map(ord, item_id)))
-    silk = mat("silk", "#EEE6D2", 0.0, 0.32, coat=0.5)
-    if item_id == "res_silk_thread":
-        # a skein of spider silk wound on a small bone spindle, one loose strand
-        ball = prim("sphere", "skein", silk, u=24, v=14, r=0.07)
-        ball.scale = (1.0, 1.0, 0.9)
-        bands = []
-        for i in range(7):
-            b = prim("torus", "wind%d" % i, silk, R=0.068, r=0.0055, U=40, V=6)
-            place(b, (0, 0, 0), (rnd.uniform(0, 180), rnd.uniform(0, 180), rnd.uniform(0, 180)))
-            bands.append(b)
-        bone = place(prim("cyl", "spindle", P["ivory"], seg=12, r=0.011, h=0.21, r2=0.007), (0, 0, 0), (0, 70, 20))
-        strand = [(0.06 + 0.02 * t, 0.0, -0.03 - 0.07 * t + 0.02 * math.sin(t * 6)) for t in [i / 8 for i in range(9)]]
-        loose = curve_strokes("strand", [[(x, z) for x, _, z in strand]], 0.0035, silk, res=4)
-        root = join([ball, bone, loose] + bands, item_id)
-        place(root, (0, 0, 0.08))
-    elif item_id == "res_chitin_plate":
-        # three overlapping curved plates of stone-grey chitin with the spider's teal seam glow
-        shell = mat("chitin", "#3A4247", 0.2, 0.22, coat=0.9)
-        seam = mat("chitin_seam", "#2FB8A8", 0.0, 0.3, emit="#24D0BC", emit_strength=4.0)
-        parts = []
-        for i, (dx, dz, s) in enumerate(((0, 0, 1.0), (0.02, 0.07, 0.86), (0.035, 0.13, 0.7))):
-            pl = prim("sphere", "plate%d" % i, shell, u=24, v=12, r=0.1 * s)
-            pl.scale = (1.0, 0.62, 0.24)
-            place(pl, (dx, 0.01 * i, dz), (-12, 0, 0))
-            rim = prim("torus", "seam%d" % i, seam, R=0.096 * s, r=0.0035, U=32, V=5, sx=1.0)
-            rim.scale = (1.0, 0.62, 1.0)
-            place(rim, (dx, 0.01 * i, dz), (-12, 0, 0))
-            parts += [pl, rim]
-        root = join(parts, item_id)
-        place(root, (0, 0, 0.03), (-60, 0, 0))
-    elif item_id == "res_veil_dust":
-        # a stoppered glass vial of shimmering veil dust (teal to lilac), a brass cap
-        glass = mat("vial_glass", "#DCEFF0", 0.0, 0.04, alpha=0.32)
-        dust = mat("veil_dust", "#4FA8D0", 0.0, 0.5, emit="#6A7CFF", emit_strength=0.9)
-        body = place(prim("cyl", "vial", glass, seg=24, r=0.042, h=0.15), (0, 0, 0.075))
-        neck = place(prim("cyl", "neck", glass, seg=20, r=0.022, h=0.03), (0, 0, 0.165))
-        fill = place(prim("cyl", "dust", dust, seg=20, r=0.036, h=0.095), (0, 0, 0.0525))
-        heap = place(prim("sphere", "heap", dust, u=16, v=8, r=0.036), (0, 0, 0.1))
-        heap.scale = (1, 1, 0.3)
-        cap = place(prim("cyl", "cap", P["brass"], seg=20, r=0.027, h=0.028), (0, 0, 0.192))
-        bead = place(prim("sphere", "bead", P["brass"], u=12, v=6, r=0.012), (0, 0, 0.212))
-        bevel(cap, 0.003, 1)
-        root = join([body, neck, fill, heap, cap, bead], item_id)
-    elif item_id == "res_bell_glass":
-        # a curved shard broken from a veilbell's glass dome, pale teal with a glowing rim
-        g = mat("bell_glass", "#9FDCD6", 0.0, 0.05, emit="#5FE0D0", emit_strength=0.4, alpha=0.6)
-        lip = mat("bell_lip", "#5FD8C8", 0.0, 0.3, emit="#3FE0C8", emit_strength=1.5)
-        bm = bmesh.new()
-        U, V, R, th = 10, 6, 0.12, 0.008
-        outer, inner = [], []
-        for i in range(U + 1):
-            a = D(-40) + D(80) * i / U
-            ro, ri = [], []
-            for j in range(V + 1):
-                b = D(12) + D(62) * j / V
-                jag = 1.0 - 0.18 * ((i * 7 + j * 3) % 4 == 0) * (j == V)
-                rr = R * (0.55 + 0.45 * math.sin(b)) * jag
-                z = R * 1.2 * (1 - math.cos(b)) * 0.8
-                d = Vector((math.cos(a), math.sin(a), 0))
-                ro.append(bm.verts.new(d * rr + Vector((0, 0, z))))
-                ri.append(bm.verts.new(d * (rr - th) + Vector((0, 0, z))))
-            outer.append(ro)
-            inner.append(ri)
-        for i in range(U):
-            for j in range(V):
-                bm.faces.new((outer[i][j], outer[i + 1][j], outer[i + 1][j + 1], outer[i][j + 1]))
-                bm.faces.new((inner[i][j + 1], inner[i + 1][j + 1], inner[i + 1][j], inner[i][j]))
-        shard = new_obj("shard", bm, g, smooth=True)
-        edge = prim("torus", "lip", lip, R=R * 0.55, r=0.0035, U=20, V=5, a0=D(-40), a1=D(40))
-        place(edge, (0, 0, R * 1.2 * (1 - math.cos(D(12))) * 0.8))
-        root = join([shard, edge], item_id)
-        place(root, (0.04, 0, 0.0), (0, -70, 90))
-    elif item_id == "res_ash_ore":
-        # a chunk of dark ash rock with glowing amber veins breaking through
-        rock = mat("ash_rock", "#3B3633", 0.05, 0.85)
-        vein = mat("ash_vein", "#E8641A", 0.0, 0.4, emit="#FF5A10", emit_strength=1.6)
-        body = hull("ore", rock_points(rnd, 40, 0.1), rock)
-        bevel(body, 0.004, 1, 30)
-        veins = []
-        for i in range(5):
-            a, z = rnd.uniform(0, TAU), rnd.uniform(0.03, 0.12)
-            c = Vector((math.cos(a) * 0.085, math.sin(a) * 0.085, z))
-            veins.append(hull("vein%d" % i, [c + Vector((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-1, 1))) * 0.016 for _ in range(7)], vein))
-        root = join([body] + veins, item_id)
-    elif item_id == "res_ember_core":
-        # the hulker's ember heart: a faceted glowing core held by two iron bands
-        core = mat("ember", "#E8501A", 0.0, 0.3, emit="#FF4A08", emit_strength=1.8)
-        shell = mat("ember_crust", "#5A2A14", 0.1, 0.7)
-        ball = place(prim("ico", "core", core, smooth=False, r=0.07, sub=1), (0, 0, 0.09))
-        crust = [place(hull("crust%d" % i, rock_points(rnd, 10, 0.03), shell), (math.cos(TAU * i / 5) * 0.06, math.sin(TAU * i / 5) * 0.06, 0.06 + 0.04 * (i % 2))) for i in range(5)]
-        bands = [place(prim("torus", "band%d" % i, P["iron"], R=0.078, r=0.008, U=32, V=6), (0, 0, 0.09), rot) for i, rot in enumerate(((90, 0, 0), (90, 0, 90)))]
-        for b in bands:
-            bevel(b, 0.0, 1)
-        root = join([ball] + crust + bands, item_id)
-    elif item_id == "res_crown_shard":
-        # a tooth of the crownrift's crown: a golden-amber crystal on a broken brass socket
-        body = mat("crown_crystal", "#E09A28", 0.0, 0.08, emit="#FF9A18", emit_strength=0.35, alpha=0.82)
-        pts = [Vector((0, 0, 0))] + [Vector(p) for p in ring_pts(5, 0.045, 0.05)] + [Vector(p) for p in ring_pts(5, 0.035, 0.2, D(30))] + [Vector((0.01, 0, 0.3))]
-        crystal = hull("crown", pts, body)
-        socket = place(prim("cyl", "socket", P["brass"], seg=10, r=0.06, h=0.04, r2=0.05), (0, 0, 0.02))
-        bevel(socket, 0.004, 1)
-        teeth = [place(prim("cyl", "t%d" % i, P["brass"], seg=4, r=0.012, h=0.035, r2=0.0), (math.cos(TAU * i / 6) * 0.055, math.sin(TAU * i / 6) * 0.055, 0.055)) for i in range(6)]
-        root = join([crystal, socket] + teeth, item_id)
-    elif item_id == "res_rift_heart":
-        # a dark violet heart-gem with a light trapped inside it, rarest of all
-        body = mat("rift_body", "#2A1450", 0.0, 0.05, emit="#5A20C0", emit_strength=0.6, alpha=0.78)
-        glow = mat("rift_glow", "#E8D0FF", 0.0, 0.3, emit="#B070FF", emit_strength=9.0)
-        pts = [Vector((0, 0, 0))]
-        for i, (z, r) in enumerate(((0.06, 0.06), (0.13, 0.085), (0.18, 0.07))):
-            pts += [Vector(p) for p in ring_pts(8, r, z, D(22.5 * i), 1.0, 0.7)]
-        pts += [Vector((0.035, 0, 0.21)), Vector((-0.035, 0, 0.21))]
-        gem = hull("heart", pts, body)
-        inner = place(prim("ico", "spark", glow, smooth=False, r=0.028, sub=1), (0, 0, 0.12))
-        root = join([gem, inner], item_id)
-    return [root]
-
-
-RESOURCE_RARITY = {
-    "res_silk_thread": "common", "res_chitin_plate": "uncommon", "res_veil_dust": "common", "res_bell_glass": "uncommon",
-    "res_ash_ore": "common", "res_ember_core": "rare", "res_crown_shard": "rare", "res_rift_heart": "legendary",
-}
-
-
 PART_RARITY = {
     "part_gear": "common", "part_spring_coil": "common", "part_chain_link": "common", "part_rivet_plate": "common",
     "part_spindle": "uncommon", "part_crank": "uncommon", "part_valve": "uncommon",
@@ -871,8 +733,6 @@ def catalogue():
         out.append(dict(id=k, kind="shard", rarity=RARITY[tone]["rarity"]))
     for k, r in PART_RARITY.items():
         out.append(dict(id=k, kind="part", rarity=r))
-    for k, r in RESOURCE_RARITY.items():
-        out.append(dict(id=k, kind="resource", rarity=r))
     out.append(dict(id="prop_wheel_of_fortune", kind="prop", rarity=None))
     out.append(dict(id="trading_board", kind="prop", rarity=None))
     return out
@@ -993,8 +853,6 @@ def main():
                 objs = build_shard(iid)
             elif it["kind"] == "part":
                 objs = build_part(iid, P)
-            elif it["kind"] == "resource":
-                objs = build_resource(iid, P)
             else:
                 objs = PROPS[iid](P, lite)
             n = tris(objs)

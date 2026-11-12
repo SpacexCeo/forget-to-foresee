@@ -30,7 +30,7 @@ const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rar
 let manifestP = null;
 /** The items manifest (cached). */
 export function loadManifest(base = (import.meta.env && import.meta.env.BASE_URL) || '/', fetch = globalThis.fetch) {
-  return (manifestP ||= fetch(base + 'assets/items/manifest.json').then((r) => r.json()).then((m) => (m.items || []).filter((i) => i.kind === 'shard' || i.kind === 'part' || i.kind === 'resource')).catch(() => []));
+  return (manifestP ||= fetch(base + 'assets/items/manifest.json').then((r) => r.json()).then((m) => (m.items || []).filter((i) => i.kind === 'shard' || i.kind === 'part')).catch(() => []));
 }
 
 const CSS = `
