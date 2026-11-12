@@ -334,9 +334,9 @@ export class Rain {
           p = mod( p - cameraPosition + 0.5 * uBox, uBox ) - 0.5 * uBox + cameraPosition;
           vec3 dir = normalize( fall );
           vec3 side = normalize( cross( dir, cameraPosition - p ) );
-          float len = mix( 0.75, 0.14, uStill ) * aSeed.w;
+          float len = mix( 0.45, 0.12, uStill ) * aSeed.w;
           // Never thinner than about a pixel: far streaks would flicker in and out otherwise.
-          float width = max( 0.012, distance( cameraPosition, p ) * 0.0014 );
+          float width = max( 0.007, distance( cameraPosition, p ) * 0.0009 );
           vec3 wp = p - dir * position.y * len + side * position.x * width;
           vec4 mv = viewMatrix * vec4( wp, 1.0 );
           float d = - mv.z;
@@ -348,7 +348,7 @@ export class Rain {
         uniform vec3 uColor; varying float vAlpha; varying vec2 vQ;
         void main() {
           float a = vAlpha * ( 1.0 - abs( vQ.x ) * 2.0 ) * smoothstep( 0.0, 0.25, vQ.y ) * ( 1.0 - smoothstep( 0.6, 1.0, vQ.y ) );
-          gl_FragColor = vec4( uColor * a * 0.22, 1.0 );   // additive is SRC_ALPHA, ONE: alpha 1 adds the colour
+          gl_FragColor = vec4( uColor * a * 0.13, 1.0 );   // additive is SRC_ALPHA, ONE: alpha 1 adds the colour
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
@@ -380,8 +380,9 @@ export class Rain {
 }
 
 /**
- * Rain splashes on the ground around the camera: flat rings that open and fade, each reborn at a new spot every
- * cycle (a hash of its cycle number), at the walking height the scene gives (`setGround`). One draw call, additive,
+ * Rain splashes on the ground around the camera: small faint rings that open and fade, each reborn at a new world
+ * spot every cycle (a hash of its cycle number on a world-anchored tile), at the walking height the scene gives
+ * (`setGround`). One draw call, additive,
  * depth-tested so walls and steps hide the ones behind them. None under reduced motion.
  */
 export class Splashes {
@@ -406,9 +407,14 @@ export class Splashes {
         void main() {
           float t = uTime * aSeed.y + aSeed.x * 7.0, cyc = floor( t ), k = fract( t );
           float id = aSeed.x * 1000.0 + cyc * 13.17;
-          float a = h1( id ) * 6.2831853, r = sqrt( h1( id + 3.1 ) ) * uRadius;
-          vec3 c = uCenter + vec3( cos( a ) * r, 0.02, sin( a ) * r );
-          float size = mix( 0.03, 0.17, k ) * ( 0.7 + 0.6 * h1( id + 7.7 ) );
+          // a fixed world spot for this cycle, on a tile 2 x radius wide wrapped around her: walking never drags a
+          // splash along, a ring stays where the drop hit until it fades and the next one lands elsewhere
+          float S = 2.0 * uRadius;
+          vec2 w = vec2( h1( id ), h1( id + 3.1 ) ) * S;
+          w = mod( w - uCenter.xz + uRadius, S ) - uRadius + uCenter.xz;
+          float r = distance( w, uCenter.xz );
+          vec3 c = vec3( w.x, uCenter.y + 0.02, w.y );
+          float size = mix( 0.02, 0.11, k ) * ( 0.7 + 0.6 * h1( id + 7.7 ) );
           vQ = position.xz; vK = k;
           vA = uAmount * ( 1.0 - smoothstep( uRadius * 0.6, uRadius, r ) ) * step( h1( id + 1.9 ), uAmount );
           gl_Position = projectionMatrix * viewMatrix * vec4( c + vec3( position.x, 0.0, position.z ) * size, 1.0 );
@@ -421,7 +427,7 @@ export class Splashes {
           float drop = ( 1.0 - smoothstep( 0.0, 0.35, d ) ) * ( 1.0 - smoothstep( 0.0, 0.25, vK ) );
           float a = vA * ( ring * ( 1.0 - vK ) + drop ) ;
           if ( a < 0.003 ) discard;
-          gl_FragColor = vec4( uColor * a * 0.28, 1.0 );
+          gl_FragColor = vec4( uColor * a * 0.15, 1.0 );
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
@@ -528,7 +534,7 @@ export class WeatherSystem {
   apply(motion) {
     const W = WIND_UNIFORMS.ftfWind.value;
     W[2] = this.state.wind; W[3] += motion;
-    setWetness(this.wet, this.wet * this.puddles);
+    setWetness(this.wet, this.wet * this.puddles * 0.55);   // puddles stay a quiet sheen (owner: less noticeable)
     WEATHER_UNIFORMS.ftfWeather.value[2] = W[3];
   }
 }
