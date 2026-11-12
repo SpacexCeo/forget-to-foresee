@@ -727,6 +727,7 @@ export default {
   'wheel.cap': "NFT, всего {n}",
   'wheel.left': "NFT · осталось {n} из {cap}",
   'wheel.skin.reason.failed': "Минт не прошёл; попробуйте ещё раз.",
+  'wheel.skin.reason.recorded': "Выигрыш записан релейером; токен будет выпущен на ваш аккаунт, как только включат минтер.",
   'wheel.kind.title': "Титул",
   'wheel.seg.skin_sheriffchenko': "Скин Шерифченко",
   'wheel.seg.chest': "Сундук",
