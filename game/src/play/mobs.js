@@ -264,7 +264,7 @@ const CSS = `
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, variant = '', phone = false, reduced = () => false, onFeedback = null,
-  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null }) {
+  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null }) {
   const brain = new MobBrain({ origin, phone, seed });
   const group = new THREE.Group(); group.name = 'mobs'; scene.add(group);
   const views = new Map(), templates = {};
@@ -391,7 +391,8 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       const A = ACTIONS.strike;
       act.combo = act.comboT > 0 ? (act.combo % A.combo.length) + 1 : 1; act.comboT = A.window; act.strikeCd = A.cooldown;
       const ev = []; brain.strike(player.pos, player.heading, A.combo[act.combo - 1], act.combo === A.combo.length, ev); handle(ev);
-      act.twist = 0.22; act.twistDir = act.combo % 2 ? 1 : -1;
+      act.twistDir = act.combo % 2 ? 1 : -1;
+      act.twist = irisMove && irisMove('strike' + act.combo) ? 0 : 0.22;            // her own clip, else the procedural twist
       slashT = 0.16; slash.visible = true; slash.position.set(player.pos[0], player.pos[1] + 0.95, player.pos[2]);
       slash.rotation.set(act.combo === 3 ? 0 : 0.25 * act.twistDir, player.heading + Math.PI, 0); slash.scale.setScalar(act.combo === 3 ? 1.25 : 1);
       if (moveIris) moveIris([Math.sin(player.heading) * 0.25, Math.cos(player.heading) * 0.25]);           // a short step into the swing
@@ -404,6 +405,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
       const A = ACTIONS.dash; let d = dir && Math.hypot(dir[0], dir[1]) > 0.1 ? dir : [Math.sin(player.heading), Math.cos(player.heading)];
       const l = Math.hypot(d[0], d[1]); d = [d[0] / l, d[1] / l];
       act.dash = { dir: d, t: 0 }; act.dashCd = A.cooldown; iris.iframes = A.iframes;
+      if (irisMove) irisMove('dash');
       player.heading = Math.atan2(d[0], d[1]);
       if (onFeedback) onFeedback('dash');
       return true;
@@ -427,7 +429,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
         if (act.dash.t >= A.seconds) act.dash = null;
       } else if (act.dash) act.dash = null;
       const im = irisModel();
-      if (im) { act.twist = Math.max(0, act.twist - dt); im.rotation.y = act.twist > 0 ? act.twistDir * Math.sin(Math.PI * act.twist / 0.22) * 0.7 : 0; }
+      if (im && (act.twist > 0 || im.rotation.y)) { act.twist = Math.max(0, act.twist - dt); im.rotation.y = act.twist > 0 ? act.twistDir * Math.sin(Math.PI * act.twist / 0.22) * 0.7 : 0; }
       if (slashT > 0) { slashT -= dt; slash.material.opacity = Math.max(0, slashT / 0.16) * 0.85; if (slashT <= 0) slash.visible = false; }
       if (camera && numbers.length) {
         const w = globalThis.innerWidth, h = globalThis.innerHeight, v3 = new THREE.Vector3();

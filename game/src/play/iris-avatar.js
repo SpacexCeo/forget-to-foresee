@@ -103,6 +103,20 @@ export class IrisAvatar {
     this.irisModel = next.irisModel;
   }
 
+  /**
+   * A combat move outside the walls (play/mobs.js): `strike1`..`strike3`, `dash`. It plays once over everything else,
+   * even while she moves, and hands back to the gait and idle as it ends. Returns false when the clip is missing.
+   */
+  combat(name) {
+    const m = this.irisModel;
+    const c = m && m.clips.find((x) => x.name === name);
+    if (!c) return false;
+    if (m.combat) m.combat.action.fadeOut(0.06);
+    const a = m.mixer.clipAction(c); a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.setEffectiveWeight(1); a.play();
+    m.combat = { action: a, t: 0, dur: c.duration };
+    return true;
+  }
+
   /** A short one-shot on Iris (e.g. `understand`: the wink when she has understood a Guest's sign). */
   react(clip, now = 0) { this.irisReaction = { clip, until: now + (REACTION_SECONDS[clip] || 3) }; }
 
@@ -148,6 +162,17 @@ export class IrisAvatar {
       }
       // a reaction with its own face (the wink) takes the face over from the always-on layer
       if (m.faceAction) m.faceAction.weight = m.react && hasFace(m.react.getClip()) ? 1 - m.reactW * (1 - move) : 1;
+      if (m.combat) {                                    // a combat move over the gait, idle and reaction
+        const k = m.combat; k.t += dt;
+        const w = Math.min(1, k.t / 0.05) * Math.min(1, Math.max(0, (k.dur - k.t) / 0.1));
+        k.action.setEffectiveWeight(w);
+        const keep = 1 - w;
+        if (m.gait) { if (m.gait.walk) m.gait.walk.weight *= keep; if (m.gait.run) m.gait.run.weight *= keep; }
+        if (m.idleAction) m.idleAction.weight *= keep;
+        if (m.idle2Action) m.idle2Action.weight *= keep;
+        if (m.react) m.react.setEffectiveWeight(m.react.getEffectiveWeight() * keep);
+        if (k.t >= k.dur) { k.action.stop(); m.combat = null; }
+      }
       m.mixer.update(dt);
     } else {
       m.model.position.y = moving ? Math.abs(Math.sin(t * 9)) * 0.05 : Math.sin(t * 1.6) * 0.01;
