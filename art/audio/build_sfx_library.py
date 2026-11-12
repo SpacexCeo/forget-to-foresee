@@ -17,7 +17,9 @@ What this script does:
 Nothing here is wired into the game: the owner picks per category first. Requires numpy, scipy, py7zr and ffmpeg
 with libopus.
 
-Usage: python3 art/audio/build_sfx_library.py [--demo docs/audio/demo_v2.ogg]
+Usage: python3 art/audio/build_sfx_library.py [--demo docs/audio/demo_v2.ogg] [--only id,id] [--title ...]
+  demo_v3 (weather only): --demo docs/audio/demo_v3.ogg --only step_wet,rain_light,rain_heavy,thunder
+                          --title "Sound pass v3: weather candidates (owner review)"
 """
 import argparse
 import os
@@ -178,10 +180,14 @@ CATEGORIES = [
         ("kresiek-the-furry rain loop 2 (CC0)", {"bed": [S("kresiek_rain", "amb_rain2.flac", start=60, len=7, fade=0.8)]}),
         ("wuxiascrub rain with thunder (CC0)", {"bed": [S("wuxiascrub_rain", "rain-thunder.ogg", start=2, len=7, fade=0.8)]}),
     ]),
-    ("thunder", "Distant thunder (one-shot under the storm)", -24, "single1", [
-        ("jerimee thunder sequence (CC-BY 3.0)", {"hit": [S("jerimee_thunder", "thunder-seq.wav", peak=5.0, fade=1.2, lp=2500)]}),
-        ("Gregor Quendel field recording (CC-BY 4.0)", {"hit": [S("quendel_thunder", "*.mp3", peak=5.0, fade=1.2, lp=2500)]}),
-        ("rubberduck thunder (CC0)", {"hit": [S("rubberduck_100v2", "sfx100v2_thunder_01.ogg", fade=1.0)]}),
+    ("thunder", "Distant thunder: three rolls per set (one-shots under the storm)", -24, "rolls", [
+        ("jerimee thunder sequence (CC-BY 3.0)", {"hit": [S("jerimee_thunder", "thunder-seq.wav", peak=5.0, rank=r, fade=1.2, lp=2500)
+                                                          for r in range(3)]}),
+        ("Gregor Quendel field recording (CC-BY 4.0)", {"hit": [S("quendel_thunder", "*.mp3", peak=5.0, rank=r, fade=1.2, lp=2500)
+                                                                for r in range(3)]}),
+        ("rubberduck + wuxiascrub thunder (CC0)", {"hit": [S("rubberduck_100v2", "sfx100v2_thunder_01.ogg", fade=1.0)]
+                                                   + [S("wuxiascrub_rain", "rain-thunder.ogg", peak=5.0, rank=r, fade=1.2, lp=2500)
+                                                      for r in range(2)]}),
     ]),
     ("strike_swing", "Iris strikes: swing whooshes (3-hit combo)", -20, "combo_swing", [
         ("artisticdude swishes (CC0)", {"swing": [S("artisticdude_swish", f"swishes/swish-{i}.wav") for i in (3, 7, 9, 4)]}),
@@ -385,6 +391,9 @@ def clean(s):
         w = int(s["peak"] * SR)
         cs = np.concatenate([[0.0], np.cumsum(x ** 2)])
         env = cs[4800:] - cs[:-4800]  # 0.1 s moving energy
+        for _ in range(s.get("rank", 0)):  # n-th loudest roll: blank out the louder ones first
+            c = int(np.argmax(env))
+            env[max(0, c - w): c + w] = 0
         c = int(np.argmax(env)) + 2400
         a0 = max(0, min(len(x) - w, c - w // 3))
         x = x[a0: a0 + w]
@@ -486,6 +495,9 @@ def pattern(kind, snd, ref_swing):
                 tr = place(tr, ref_swing[i % len(ref_swing)] * 0.7, t + dt)
                 tr = place(tr, im[(i + rep) % len(im)], t + dt + 0.09)
             t += 1.7
+    elif kind == "rolls":
+        for i, h in enumerate(snd["hit"]):
+            tr = place(tr, h, i * 5.8)
     elif kind in ("single1", "single2", "single3"):
         h = snd["hit"]
         for i in range(int(kind[-1])):
@@ -510,11 +522,11 @@ def pattern(kind, snd, ref_swing):
     return tr
 
 
-def build_demo(out_ogg, out_md):
+def build_demo(out_ogg, out_md, only=None, doc_title="Sound pass v2: library candidates (owner review)"):
     track = gap(0.4)
     rows, credits = [], {}
     ref_swing = None
-    for cid, title, target, kind, alts in CATEGORIES:
+    for cid, title, target, kind, alts in [c for c in CATEGORIES if not only or c[0] in only]:
         cat_t = len(track) / SR
         # category chime: two rising notes
         track = np.concatenate([track, tone(660, 0.12), gap(0.04), tone(990, 0.18), gap(0.6)])
@@ -547,17 +559,17 @@ def build_demo(out_ogg, out_md):
         wavfile.write(wav, SR, track.astype(np.float32))
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", "96k",
                         "-vbr", "on", "-compression_level", "10", "-map_metadata", "-1", str(out_ogg)], check=True)
-    write_md(out_md, rows, credits, len(track) / SR)
+    write_md(out_md, rows, credits, len(track) / SR, doc_title, out_ogg.name)
 
 
 def mmss(t):
     return f"{int(t // 60)}:{t % 60:04.1f}"
 
 
-def write_md(path, rows, credits, total):
-    L = ["# Sound pass v2: library candidates (owner review)", "",
+def write_md(path, rows, credits, total, doc_title, ogg_name):
+    L = [f"# {doc_title}", "",
          "Recorded/produced SFX from licensed libraries, replacing the synthesized set that was not approved.",
-         "Listen to [`demo_v2.ogg`](demo_v2.ogg) and pick one alternative per category (for example: "
+         f"Listen to [`{ogg_name}`]({ogg_name}) and pick one alternative per category (for example: "
          "`step_stone B, step_wood A, ...`). Nothing is wired into the game until the picks are in.", "",
          "How the demo is laid out: a two-note rising chime starts each category; then each alternative is announced "
          "by short beeps (one beep = A, two = B, three = C) and played in a small game-like pattern "
@@ -589,9 +601,12 @@ def write_md(path, rows, credits, total):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--demo", default=str(ROOT / "docs/audio/demo_v2.ogg"))
+    ap.add_argument("--only", default="", help="comma-separated category ids (default: all)")
+    ap.add_argument("--title", default="Sound pass v2: library candidates (owner review)")
     a = ap.parse_args()
     fetch()
-    build_demo(Path(a.demo), Path(a.demo).with_suffix(".md"))
+    only = set(filter(None, a.only.split(",")))
+    build_demo(Path(a.demo), Path(a.demo).with_suffix(".md"), only, a.title)
 
 
 if __name__ == "__main__":
