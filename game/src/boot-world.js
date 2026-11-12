@@ -260,7 +260,7 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
-let townQuests = null, townPortal = null, townBoard = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
+let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -318,6 +318,8 @@ if (townMode.town) {
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
         load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
+      // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
+      import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
     }).catch((e) => console.warn('[story]', e));
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
