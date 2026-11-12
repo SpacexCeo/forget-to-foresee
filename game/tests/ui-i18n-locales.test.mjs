@@ -24,6 +24,7 @@ const SAME_AS_EN = new Set([
   'hub.card.offer.body', // pure placeholder: '{offer}'
   'profile.xpOf', // numbers and the unit: '{into} / {need} XP'
   'chest.out.xp', // a number and the unit: '{n} XP'
+  'mp.ai', // the AI badge: the owner asked for 'AI' in zh too (12.11)
   'app.title.line1', 'app.title.line2', 'app.title.full', 'lang.en', 'lang.ru', 'lang.uk', 'lang.it', 'lang.zh',
   'lang.short.en', 'lang.short.ru', 'lang.short.uk', 'lang.short.it', 'lang.short.zh',
   'shell.0', 'shell.1', 'shell.2', 'shell.3', 'tut.readLine', 'wh.raw', 'wh.trial.wordsValue', 'wh.sign.reading',
