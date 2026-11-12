@@ -1749,4 +1749,17 @@ export default {
   'works.err.daily': "That is today's limit of moves. Come back tomorrow.",
   'works.err.not_registered': "Your account is not in the town yet: earn some silk beyond the walls first.",
   'stall.back.between': "The stall is between its lines: it closes below {low} silk and reopens at {high}.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Quests",
+  "quest.log.button": "Quest log (J)",
+  "quest.log.close": "Close",
+  "quest.log.empty": "No quests yet. Look for a gold ! over a townsperson.",
+  "quest.log.active": "Active",
+  "quest.log.ready": "Ready to turn in",
+  "quest.log.available": "On offer",
+  "quest.log.reward": "Reward: {silk} silk",
+  "quest.log.where": "{giver}, {m} m away",
+  "quest.log.progress": "Progress {n} / {count}",
+  "quest.track.offer": "{giver} has a quest for you",
+  "quest.track.near": "{m} m",
 };

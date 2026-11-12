@@ -1747,4 +1747,17 @@ export default {
   'works.err.daily': "Это дневной лимит ходов. Возвращайтесь завтра.",
   'works.err.not_registered': "Вашего аккаунта ещё нет в городе: сначала заработайте немного silk за стенами.",
   'stall.back.between': "Лавка между порогами: закрывается ниже {low} silk и открывается снова при {high}.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Квесты",
+  "quest.log.button": "Журнал квестов (J)",
+  "quest.log.close": "Закрыть",
+  "quest.log.empty": "Квестов пока нет. Ищи золотой ! над жителем.",
+  "quest.log.active": "Активный",
+  "quest.log.ready": "Можно сдать",
+  "quest.log.available": "Предлагают",
+  "quest.log.reward": "Награда: {silk} шёлка",
+  "quest.log.where": "{giver}, {m} м",
+  "quest.log.progress": "Прогресс {n} / {count}",
+  "quest.track.offer": "У тебя есть квест: {giver}",
+  "quest.track.near": "{m} м",
 };

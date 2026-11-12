@@ -1747,4 +1747,17 @@ export default {
   'works.err.daily': "Це денний ліміт ходів. Повертайтеся завтра.",
   'works.err.not_registered': "Вашого акаунта ще немає в місті: спершу заробіть трохи silk за стінами.",
   'stall.back.between': "Крамниця між порогами: зачиняється нижче {low} silk і відкривається знову при {high}.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Квести",
+  "quest.log.button": "Журнал квестів (J)",
+  "quest.log.close": "Закрити",
+  "quest.log.empty": "Квестів поки немає. Шукай золотий ! над мешканцем.",
+  "quest.log.active": "Активний",
+  "quest.log.ready": "Можна здати",
+  "quest.log.available": "Пропонують",
+  "quest.log.reward": "Нагорода: {silk} шовку",
+  "quest.log.where": "{giver}, {m} м",
+  "quest.log.progress": "Прогрес {n} / {count}",
+  "quest.track.offer": "Для тебе є квест: {giver}",
+  "quest.track.near": "{m} м",
 };

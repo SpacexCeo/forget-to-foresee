@@ -1748,4 +1748,17 @@ export default {
   'works.err.daily': "Hai raggiunto il limite di mosse di oggi. Torna domani.",
   'works.err.not_registered': "Il tuo account non è ancora in città: guadagna prima un po’ di silk oltre le mura.",
   'stall.back.between': "La bancarella è tra le soglie: chiude sotto {low} silk e riapre a {high}.",
+  // ---- quest markers and the quest log (owner 12.11: quests visible) ----
+  "quest.log.title": "Missioni",
+  "quest.log.button": "Registro missioni (J)",
+  "quest.log.close": "Chiudi",
+  "quest.log.empty": "Ancora nessuna missione. Cerca un ! dorato sopra un abitante.",
+  "quest.log.active": "Attiva",
+  "quest.log.ready": "Da consegnare",
+  "quest.log.available": "Offerta",
+  "quest.log.reward": "Ricompensa: {silk} sete",
+  "quest.log.where": "{giver}, a {m} m",
+  "quest.log.progress": "Avanzamento {n} / {count}",
+  "quest.track.offer": "{giver} ha una missione per te",
+  "quest.track.near": "a {m} m",
 };
