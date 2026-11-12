@@ -11,17 +11,16 @@ When a player has earned 10,000 town silk through play and paid it at the Gate-L
 signature, no seed phrase. The game's relayer checks the Gate payment by replaying the player's expedition log, then
 mints the pass from a contract with every limit written on chain.
 
-## What the pass gives (utility; the owner confirms the exact list before launch)
+## What the pass gives (owner decision, 12.11)
 
-A place on the Forget to Foresee allowlist for (1) early access to the next testnet season and board season, and
-(2) the project's next mint or access list, **if and when** one exists. **No monetary value, resale value, airdrop,
-token or return is promised.**
+**A free NFT mint at the official Forget to Foresee launch**, for whoever holds the pass at that time. Nothing else is
+promised: **no monetary value, resale value, airdrop, token or return.**
 
 ## Rights follow the token holder
 
-The pass is **transferable**: its holder can send it with any NEAR wallet. Whoever **holds** a pass when the allowlist
-is read (at a snapshot block the owner announces in advance) has the spot. **One allowlist spot per wallet, however
-many passes it holds.** Board rank, score and any Season 3 distribution belong to the **play account** and its bound
+The pass is **transferable**: its holder can send it with any NEAR wallet. Whoever **holds** a pass when the launch mint
+opens (at a snapshot block the owner announces in advance) has the free mint. **One free mint per holder wallet,
+however many passes it holds.** Board rank, score and any Season 3 distribution belong to the **play account** and its bound
 payout wallet, never to a pass holder: buying a pass buys no leaderboard position and no payout. We never list, price,
 promote or help resell passes.
 
@@ -55,8 +54,8 @@ claim; none makes it zero.
 | Claim-rate abuse | per-IP and per-guest limits on the claim endpoint; suspicious claims can be held | as above |
 | Flooding with fresh unfunded wallets | optional setting: implicit accounts must already exist (off by default) | farmers can fund wallets cheaply |
 | Draining the budget | four layers: the minter key's hard gas allowance (one method), the contract balance and reserve, the on-chain caps, a server daily cap no higher than the contract's; kill switch (`FTF_PASS_ENABLED=0`, a `STOP` file, contract `pause`) | a stolen minter key mints at most up to these limits |
-| Bulk holders gaining outsized influence | one allowlist spot per holder wallet; the utility list is fixed in advance | none by design |
-| A holder who is not the player collects perks | by design perks follow the holder; rank and payouts stay with the play account | a buyer enjoys a spot the seller earned (the owner's transferability decision) |
+| Bulk holders gaining outsized influence | one free launch mint per holder wallet; the utility is fixed in advance | none by design |
+| A holder who is not the player collects the free mint | by design the right follows the holder; rank and payouts stay with the play account | a buyer gets the free mint the seller earned (the owner's transferability decision) |
 | Approval phishing | no approvals at all | users can still be tricked into sending a pass by hand |
 | A resale price becomes an expectation | no price, resale or value in any copy; we never list or promote resale; flagged for counsel | a market can form regardless of what we say |
 

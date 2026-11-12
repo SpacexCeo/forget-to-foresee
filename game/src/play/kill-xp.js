@@ -3,7 +3,7 @@
 // Listens on window for 'ftf:mob-killed' {type, pos, elite} (play/mobs.js, the hillside packs) and
 // 'ftf:critter-killed' {pos} (scenes/town-monsters.js, the moss critters when the packs are off), credits the town
 // ledger (game/town-economy.js killMob: per-type XP, a one-time first-kill bonus, saved with the economy state) and
-// shows it: a gold "+N XP" rising from the kill, and on a level up a short gold burst around the heroine, a quiet chime
+// shows it: a gold "+N XP" rising from the kill, and on a level up a light ring of gold sparks rising round the heroine, a quiet chime
 // and one toast. The portrait's level badge and XP ring follow the ledger by themselves (scenes/player-hud.js).
 // Local and visual: no engine, no chain; the judge path never fires these events.
 import { cueAt } from '../audio/town-audio.js';
@@ -15,7 +15,7 @@ const CSS = `
 `;
 const RISE = 1.1;          // metres a label climbs
 const LIFE = 1.3;          // seconds a label lives
-const BURST = 1.2;         // seconds the level-up burst lasts
+const BURST = 0.9;         // seconds the level-up burst lasts
 
 /**
  * @param {object} o
@@ -28,14 +28,25 @@ export function createKillXp({ THREE, scene, camera, player, ledger, t, toast, r
   if (doc && !doc.getElementById('ftf-xp-style')) { const s = doc.createElement('style'); s.id = 'ftf-xp-style'; s.textContent = CSS; doc.head.append(s); }
   const labels = [];
   const v3 = new THREE.Vector3();
-  // the burst: two gold rings that widen on the ground and a soft column, reused
+  // the burst (owner 12.11: light, nothing that hides her): a thin ring of gold sparks rising round her and a short,
+  // mostly transparent glow at her feet; reused
   const burst = new THREE.Group(); burst.name = 'levelup_burst'; burst.visible = false; scene.add(burst);
-  const gold = (o) => new THREE.MeshBasicMaterial({ color: 0xffc860, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-  const ringGeo = new THREE.RingGeometry(0.82, 1.0, 48); ringGeo.rotateX(-Math.PI / 2);
-  const rings = [new THREE.Mesh(ringGeo, gold(0.9)), new THREE.Mesh(ringGeo, gold(0.6))];
-  const colGeo = new THREE.CylinderGeometry(0.55, 0.75, 2.4, 24, 1, true); colGeo.translate(0, 1.2, 0);
-  const column = new THREE.Mesh(colGeo, gold(0.28));
-  for (const m of [...rings, column]) { m.renderOrder = 5; burst.add(m); }
+  const N = 28, sz = 32, px = new Uint8Array(sz * sz * 4);
+  for (let y = 0; y < sz; y++) for (let x = 0; x < sz; x++) {   // a soft round dot, no canvas needed
+    const d = Math.hypot(x - sz / 2 + 0.5, y - sz / 2 + 0.5) / (sz / 2), a = Math.max(0, 1 - d) ** 2, i = (y * sz + x) * 4;
+    px[i] = 255; px[i + 1] = 214; px[i + 2] = 130; px[i + 3] = Math.round(255 * a);
+  }
+  const dot = new THREE.DataTexture(px, sz, sz, THREE.RGBAFormat); dot.needsUpdate = true;
+  const sparkGeo = new THREE.BufferGeometry();
+  const base = new Float32Array(N * 3), pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; base[i * 3] = Math.cos(a); base[i * 3 + 1] = (i % 4) * 0.08; base[i * 3 + 2] = Math.sin(a); }
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const sparkMat = new THREE.PointsMaterial({ map: dot, size: 0.09, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+  const sparks = new THREE.Points(sparkGeo, sparkMat); sparks.frustumCulled = false;
+  const glowGeo = new THREE.PlaneGeometry(1.4, 1.4); glowGeo.rotateX(-Math.PI / 2);
+  const glowMat = new THREE.MeshBasicMaterial({ map: dot, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  for (const m of [sparks, glow]) { m.renderOrder = 5; burst.add(m); }
   let burstT = -1;
 
   function label(text, pos, big = false) {
@@ -77,17 +88,18 @@ export function createKillXp({ THREE, scene, camera, player, ledger, t, toast, r
         burstT += dt;
         const k = burstT / BURST;
         burst.position.set(player.pos[0], player.pos[1] + 0.03, player.pos[2]);
-        rings[0].scale.setScalar(0.4 + 1.6 * k); rings[0].material.opacity = 0.9 * (1 - k);
-        const k2 = Math.max(0, k - 0.18) / 0.82;
-        rings[1].scale.setScalar(0.3 + 1.2 * k2); rings[1].material.opacity = 0.6 * (1 - k2);
-        column.scale.set(1 + 0.3 * k, 0.6 + 0.6 * Math.sin(Math.min(1, k * 1.4) * Math.PI / 2), 1 + 0.3 * k); column.material.opacity = 0.28 * Math.sin(Math.PI * Math.min(1, k));
+        const r = 0.45 + 0.25 * k, rise = 1.7 * k, fade = Math.sin(Math.PI * Math.min(1, k));
+        for (let i = 0; i < N; i++) { pos[i * 3] = base[i * 3] * r; pos[i * 3 + 1] = base[i * 3 + 1] + rise + 0.05 * Math.sin(i * 1.7 + k * 9); pos[i * 3 + 2] = base[i * 3 + 2] * r; }
+        sparkGeo.attributes.position.needsUpdate = true;
+        sparkMat.opacity = 0.85 * fade;
+        glowMat.opacity = 0.3 * Math.max(0, 1 - k * 1.6);
         if (k >= 1) { burstT = -1; burst.visible = false; }
       }
     },
     dispose() {
       if (win && win.removeEventListener) { win.removeEventListener('ftf:mob-killed', onMob); win.removeEventListener('ftf:critter-killed', onCritter); }
       for (const n of labels) n.el.remove();
-      scene.remove(burst); ringGeo.dispose(); colGeo.dispose(); for (const m of [...rings, column]) m.material.dispose();
+      scene.remove(burst); sparkGeo.dispose(); glowGeo.dispose(); sparkMat.dispose(); glowMat.dispose(); dot.dispose();
     },
   };
 }

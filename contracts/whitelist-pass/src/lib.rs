@@ -145,7 +145,7 @@ impl Contract {
         let id: TokenId = n.to_string();
         let meta = TokenMetadata {
             title: Some(format!("FTF Whitelist Pass #{}", n)),
-            description: Some("A free place on the Forget to Foresee allowlist: early access to the next testnet and board season and to a future access list, if one exists. No monetary value is promised. Whoever holds the pass holds the spot.".to_string()),
+            description: Some("Gives its holder a free NFT mint at the official Forget to Foresee launch. The right follows whoever holds the pass at that time. No monetary value is promised.".to_string()),
             media: None, media_hash: None, copies: None, issued_at: Some(env::block_timestamp_ms().to_string()),
             expires_at: None, starts_at: None, updated_at: None,
             extra: Some(format!("{{\"board_season\":1,\"claim\":\"{}\"}}", claim_id)), reference: None, reference_hash: None,

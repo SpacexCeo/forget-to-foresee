@@ -2,7 +2,8 @@
 
 The Forget to Foresee whitelist pass: a free, **transferable** NEP-171 token (with NEP-177 metadata and NEP-181
 enumeration) that the game's relayer mints to a player's NEAR wallet after it has verified, from the replayed
-expedition log, that the player paid **10,000 town silk at the Gate-Loom**. Plain-language description, the utility,
+expedition log, that the player paid **10,000 town silk at the Gate-Loom**. **The pass gives its holder a free NFT
+mint at the official launch**; the right follows whoever holds the pass then. Plain-language description, the utility,
 and the threat model: [`docs/whitelist-pass.md`](../../docs/whitelist-pass.md). Owner runbook (deploy, keys,
 checks): [`docs/mainnet-pass-runbook.md`](../../docs/mainnet-pass-runbook.md). **Status: built, not deployed.**
 
@@ -24,6 +25,6 @@ node scripts/deploy-args.mjs --network testnet --contract pass.you.testnet --own
                                        # PRINTS the owner's commands; signs and sends nothing
 ```
 
-Measured in the unit tests (mocked VM): one `mint_pass` adds **1042 bytes** of storage (about 0.0104 NEAR at 1e19
+Measured in the unit tests (mocked VM): one `mint_pass` adds **990 bytes** of storage (about 0.0099 NEAR at 1e19
 yoctoNEAR per byte); a transfer changes storage by **0 bytes** net. To be measured again on the testnet rehearsal
 (story TZ §11.5).
