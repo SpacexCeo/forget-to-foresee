@@ -49,15 +49,17 @@ export function warmScene() { return active ? active.warmAll() : Promise.resolve
  * textures go to the GPU at once and its programs are compiled while `root` is momentarily visible, so the scene's
  * light count matches what the first visit will draw (three keys programs by the number of lights). `root` is hidden
  * again before this returns; nothing is drawn. Resolves when the programs are ready (or after the timeout).
+ * `also`: other hidden objects to compile in the same call (shown for it, hidden again).
  * `wholeScene`: compile every visible object of the scene with those lights on (what is still drawn around the hall,
  * e.g. the archipelago behind its walls, needs the same light count, or it recompiles on the first visit too).
  */
-export function prewarmHidden(root, { wholeScene = false } = {}) {
+export function prewarmHidden(root, { wholeScene = false, also = [] } = {}) {
   if (!active || !root) return Promise.resolve(false);
   const r = active.renderer;
   for (const tex of collectTextures(root)) { try { r.initTexture(tex); } catch { /* the first draw uploads it */ } }
-  const was = root.visible;
+  const was = root.visible, alsoWas = also.map((o) => o.visible);
   root.visible = true;
+  for (const o of also) o.visible = true; // e.g. pooled VFX meshes that are hidden until their first use
   let done;
   try {
     const parallel = r.compileAsync && r.extensions && r.extensions.has('KHR_parallel_shader_compile');
@@ -65,7 +67,7 @@ export function prewarmHidden(root, { wholeScene = false } = {}) {
     const what = wholeScene ? active.scene : root;
     if (parallel) done = active.compile(what);
     else { const prev = r.getRenderTarget(); try { r.setRenderTarget(active.target() || null); r.compile(what, active.camera, active.scene); } finally { r.setRenderTarget(prev); } }
-  } catch (e) { console.warn('[warmup] prewarm failed', e); } finally { root.visible = was; }
+  } catch (e) { console.warn('[warmup] prewarm failed', e); } finally { root.visible = was; also.forEach((o, i) => { o.visible = alsoWas[i]; }); }
   return Promise.resolve(done).then(() => true);
 }
 

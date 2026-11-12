@@ -213,6 +213,7 @@ export async function startPlay({ scene, camera, renderer, world3d, rig, player,
     const vfx = m.createVfx(scene, camera, renderer, { tier: vfxTierFor(lookdev), reducedMotion: lookdev.reducedMotion });
     hooks.attachVfx(vfx);
     presentation.attachVfx(vfx); // composer, tier, mists, crack pulse, tension, glass sign
+    if (vfx.warmables) shell.warmAlso = () => vfx.warmables(); // the glass logogram compiles with the hall, not on entry
   }).catch((e) => console.warn('[play] vfx unavailable', e));
   loadModule(AUDIO_MODULES).then((m) => {
     if (!m || !m.createAudio) return;
