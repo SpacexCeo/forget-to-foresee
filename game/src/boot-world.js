@@ -528,7 +528,9 @@ function updateAltarTimer() {
   }
   const a = TOWN_ALTAR.position;
   _altarP.set(a[0], a[1] + 4.2, a[2]).project(camera);
-  const visible = _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
+  // outside the walls the label would show through the gate wall: hidden there (the street and stairs see the altar)
+  const altarOccluded = !!(townMobs && townMobs.iris && townMobs.iris.outside);
+  const visible = !altarOccluded && _altarP.z < 1 && Math.abs(_altarP.x) < 1.1 && Math.abs(_altarP.y) < 1.1 && !document.querySelector('.d1-panel, .d1-card'); // Day 1's panels own the screen
   altarTimer.hidden = !visible;
   if (!visible) return;
   const text = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
