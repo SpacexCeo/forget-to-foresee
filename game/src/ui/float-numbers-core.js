@@ -1,4 +1,4 @@
-// Floating numbers, the pure part (FEED FIRE teardown M5 / F1; reimplemented from the behaviour, in our quiet palette).
+// Floating numbers, the pure part (a reference game teardown M5 / F1; reimplemented from the behaviour, in our quiet palette).
 // Kinds: damage, crit (a finisher too), silk_gain, silk_spend, xp. Hits on the same target within MERGE_MS merge into
 // one number that grows a little; crits pop larger and live longer. Reduced motion: no pop, no jitter, a plain fade.
 

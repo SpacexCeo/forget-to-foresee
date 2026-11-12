@@ -12,7 +12,7 @@ Lore canon used throughout: Iris is a doctor-linguist from another planet, year 
 
 **The idea.** **Silk is the only fungible thing in the town.** Players earn silk in the weekly tournament (the entry is 40 silk; payouts are silk) and can **pledge** it to four town works (Loom House, Caravan Guild, Archive & Translation Guild, Shell Observatory). A pledge is a **deed NFT (NEP-171)** carrying principal, lock tier and the sealed season it was opened in. The works pay a **variable share of the town's own fees**: the 0.12% fee on every market trade made by the 20 trader accounts and by players, in silk, routed to stakers by rule. **Nothing is minted to pay stakers.** Silk is minted in three bounded places only: the season purse (`min(12,000, 1,000 + 0.8 × last season's burn, 24 × entrants)`), entry credit for new guests (40 each), and coordinator wages/corrections (`credit_silk`), the last two inside one daily ceiling of 4,000. Merchants and the market price **goods** in silk by stock and demand (band 0.5× to 2× base); there is no second token, no pool, no exchange rate.
 
-**Why it stands out in Games and NFTs.** The top Games rivals show *an NPC economy that runs* (Hearthmarket ~34.8k tx, TokenGo ~21.9k). FTF adds what none of them show in the scorecard: a position NFT whose provenance is bound to a sealed season, a published fee-flow model and a simulation the judge can rerun (Economy Lab), prices with a stated reason ("dear: only 3 salt left"), and an honest "what is scripted" label. The staking layer itself adds only ~170 tx/day (0.7%); **the ~22,000 tx/day come from the traders' genuine market trades** (owner decision of 12 Nov), and the pledge layer is what gives those trades a visible purpose: their fees are the reward pool.
+**Why it stands out in Games and NFTs.** The top Games rivals show *an NPC economy that runs* (a rival entry ~34.8k tx, a rival entry ~21.9k). FTF adds what none of them show in the scorecard: a position NFT whose provenance is bound to a sealed season, a published fee-flow model and a simulation the judge can rerun (Economy Lab), prices with a stated reason ("dear: only 3 salt left"), and an honest "what is scripted" label. The staking layer itself adds only ~170 tx/day (0.7%); **the ~22,000 tx/day come from the traders' genuine market trades** (owner decision of 12 Nov), and the pledge layer is what gives those trades a visible purpose: their fees are the reward pool.
 
 **Key numbers (base case: 200 humans, 20 trader accounts, 30 days, 8 seeds; silk-only model, conservation checked to 1e-11):**
 
@@ -59,9 +59,9 @@ Accounts on testnet today: `ftf-seasons.testnet`, `ftf-shards.testnet`, owner/co
 
 ## 2. Design
 
-### 2.1 Three separated layers, one currency (Cambria idea, adapted)
+### 2.1 Three separated layers, one currency (a reference design idea, adapted)
 
-Cambria keeps fuel, earnings and ownership apart; mixing them is what makes a game feel like a casino. FTF keeps the separation without a second fungible token:
+a reference design keeps fuel, earnings and ownership apart; mixing them is what makes a game feel like a casino. FTF keeps the separation without a second fungible token:
 
 | Layer | FTF name | Role | Behaviour |
 |---|---|---|---|
@@ -121,7 +121,7 @@ Safeguards written into the rules, not into a promise:
 
 Slashing: **no principal is slashed.** Real risks: (a) the variable rate falls when trade volume drops or when the pot is shared with a bigger TVL (fee 0.06% → 0.143%/day; a whale without caps → 0.064%); (b) early exit costs 10% of principal; (c) the stall pledge (`invest_stall`) is *not* returned. A "Storm" day (an Observatory works pays nothing on a sealed storm leaf; verifiable against `season-commit`) is a P2 idea; it risks only that day's reward.
 
-### 2.4 Treasury and fee flow (Cambria's "Crown Treasury" idea, in silk)
+### 2.4 Treasury and fee flow (a reference design's "Crown Treasury" idea, in silk)
 
 ```
 every market trade (silk) ──fee 0.12%──► Town Treasury (silk)           [stall investors first: 50% of that stall's fee, claim_stall]
@@ -158,7 +158,7 @@ Rejected options: a **constant-product pool** needs two fungible legs; with one 
 
 **One deed per pledge** (`stake` mints, `finish_unbond` burns). Token id `deed-<season_id>-<n>`; `extra` (all on-chain, rendered SVG like `shard_svg`) carries `kind: "town_deed"`, `asset`, `principal` (silk, micro-units), `tier`, `opened_day`, `locked_until_day`, `season_id`, `schedule_root`, `state` (`active|unbonding`), `unbond_ready_day`, `pending`. `season_id` and `schedule_root` tie the deed to the sealed season, exactly as shards are tied. Optional **catalyst shard** (P2): `nft_transfer_call` of one `ftf-shards` token locks it inside the deed for +10% weight (capped, never decisive).
 
-**Transfer semantics (Outlive's "sell the business"):** `nft_transfer` moves the **whole position**: principal, remaining lock, unbonding clock and accrued rewards. No partial transfer. Built rules (`main`): allowed in `active` and `unbonding`; **`exit_early` is blocked for a day after the deed changes hands**; **approvals (NEP-178) are rejected**, as in `ftf-shards`; a marketplace, if any (P2), is an escrow contract using `nft_transfer_call` that passes an `expected_state_hash`; the receiver's per-account cap is checked at transfer [VERIFY in `lib.rs`: `ERR_CAP_RECEIVER`-style check].
+**Transfer semantics (a rival entry's "sell the business"):** `nft_transfer` moves the **whole position**: principal, remaining lock, unbonding clock and accrued rewards. No partial transfer. Built rules (`main`): allowed in `active` and `unbonding`; **`exit_early` is blocked for a day after the deed changes hands**; **approvals (NEP-178) are rejected**, as in `ftf-shards`; a marketplace, if any (P2), is an escrow contract using `nft_transfer_call` that passes an `expected_state_hash`; the receiver's per-account cap is checked at transfer [VERIFY in `lib.rs`: `ERR_CAP_RECEIVER`-style check].
 
 **Threat model:**
 
@@ -176,7 +176,7 @@ Rejected options: a **constant-product pool** needs two fungible legs; with one 
 | T10 | Coordinator abuse: `credit_silk`, `credit_entry`, `settle_season` are trusted calls | on-chain per-season mint ceiling computed by the contract; 4% per-account payout cap; daily credit ceiling (lower it, §2.2); every payout batch logged with `payouts_hash`; testnet key only; TEE/multisig later | over-mint panics |
 | T11 | Key leakage of 20 trader keys on the relayer | function-call keys restricted to `trade` with a small allowance; per-wallet daily NEAR cap; kill switch; rotation script | key scope test |
 | T12 | Metadata/SVG griefing or storage drain | fixed-length SVG built from numbers, never from user strings; town pays storage only when none is attached (watch the drain) | fuzz |
-| T13 | Admin changing the rules under players | `set_params` bounded by `Params::valid`, event + parameter hash; **no timelock and takes effect immediately**: change only between seasons by policy, and log it on the Pulse page | param bounds test; **gap**: see Saboteur teardown C6 |
+| T13 | Admin changing the rules under players | `set_params` bounded by `Params::valid`, event + parameter hash; **no timelock and takes effect immediately**: change only between seasons by policy, and log it on the Pulse page | param bounds test; **gap**: see the reference project teardown C6 |
 | T14 | Story-credit abuse: forged or botted story progress, or a stolen coordinator key crediting `story:` silk | `story_day_cap`, per-account lifetime cap ≈ 1.1 × P + stipend, per-account day cap 0.5 × P, relayer replay of the signed log (Story TZ Q4/E2), min account age, `guests` daily cap; every credit logged with its `reference` | cap test, replay test (§2.13.5) |
 
 ### 2.7 Shell Descent: Attention, Greed and World Tension (P2, not built; modelled in silk)
@@ -196,7 +196,7 @@ Expected net value per run (formulas; fuel in silk): g=0 → 2.76 at every T; g=
 The 20 trader accounts (13 townsfolk, 7 clan traders) are the owner's decision; the design gives them an economic job:
 - Townsfolk trade silk for goods at posted prices (the volume that pays the fee); each trade is one `trade` call, the price carries its reason.
 - Clan wallets **hold pledges** (600 silk each in the model; `clan-actions.js` pledges up to 30% × risk), enter the tournament and claim; their **strategy** (risk/buy/favour) may come from the LLM layer, always labelled; **moves are made by the rules engine** in both cases.
-- Honest label (the Hearthmarket lesson): README and UI say which parts are scripted. At ~22k tx/day, log a daily Merkle root plus a sample to `agent-ledger`, not each trade.
+- Honest label (the a rival entry lesson): README and UI say which parts are scripted. At ~22k tx/day, log a daily Merkle root plus a sample to `agent-ledger`, not each trade.
 - Silk faucet: **none by default.** The traders are endowed once with 1,000 silk each and pay fees out of it; this is a **designed budget**, not organic demand, and the docs must say so. Over 90 days the 47.7 silk/day fee drain takes the mean purse from ~790 to ~690, no stall closes. `credit_silk` wages are the lever if that ever changes (L2).
 
 ### 2.10 Seasons and the sealed commit
@@ -428,7 +428,7 @@ Reading them:
 - The pledge/economy layer is **~170 tx/day (0.7%)**. Do not claim that the pledge layer "generates 20k"; claim that the town's economy runs 20k real trades a day and the pledge layer gives them meaning.
 - "Genuine": a trade moves silk between two balances and pays a fee; there is no no-op ping. The health check is the explorer count and the Town Pulse page.
 - **Cost** (`docs/town-economy.md`): ≈ 2.5-2.7 Tgas per trade [VERIFY on testnet] ≈ 0.00026 NEAR; **≈ 5.7 NEAR/day** for 22,000 trades. Funding the trader accounts is an owner-gated action.
-- **Cumulative vs rivals**: the scorecard's counts are cumulative (Hearthmarket ~34.8k, TokenGo ~21.9k, Crownfall ~3k). At 22k/day FTF passes Hearthmarket's total in about 1.5 days of running. Judging starts 16 Nov (00:00 UTC): keep the market running through judging.
+- **Cumulative vs rivals**: the scorecard's counts are cumulative (a rival entry ~34.8k, a rival entry ~21.9k, a rival entry ~3k). At 22k/day FTF passes a rival entry's total in about 1.5 days of running. Judging starts 16 Nov (00:00 UTC): keep the market running through judging.
 
 ### 5.4 Scenarios
 
@@ -515,27 +515,27 @@ Reading:
 
 ## 6. Borrowed mechanics
 
-Sources: Cambria notes (collected 12 Nov 2026 from the project's docs, blog and X) and `FTF-Competitor-Scorecard.md`. Cambria URLs: docs https://docs.cambria.gg/ · $RSGP https://docs.cambria.gg/l2-the-state/usdrsgp · Energy/Credits/Silver https://docs.cambria.gg/l0-economic-engine/silver-credits-and-energy · Crown Treasury https://docs.cambria.gg/l2-the-state/crown-treasury · Royal Favor https://docs.cambria.gg/l2-the-state/royal-favor · testnet and launch https://docs.cambria.gg/genesis-misc/testnet-and-early-access · token blog (22 Jul 2026) https://blog.cambria.gg/rsgp-is-coming/ · Season 3 results (25 Dec 2025) https://blog.cambria.gg/season-3-results/ · Gold Rush S3 rewards https://cambria-1.gitbook.io/goldrush-s3/overview/rewards · site https://beta.cambria.gg/ · X https://x.com/playcambria. Some Cambria facts in the notes are marked unconfirmed there; nothing below depends on them.
+Reference design URLs: removed (external sources are not named in this repository).
 
 | Mechanic | Source | How FTF adapts it | Deliberately NOT copied | Priority |
 |---|---|---|---|---|
-| Treasury funded by fees, shared with stakers | Cambria Crown Treasury | `sweep_fees`: 0.12% trade fee in silk → 65% to the works' pots (ceiling 0.15%/day), 10% purse, 10% Reserve, 15% burn (§2.4). The only source of staker rewards | USDC treasury, fee on cash-out, a tradeable ownership token | **P0 (built)** |
-| Prize pool funded by season spend | Cambria seasons (Season 3 results; Gold Rush S3 rewards) | Tournament purse = capped mint + 65% of entry fees + tithe share + overflow of the ceiling + Reserve leftover; public on the Pulse page | Real-money pool, payout to token holders | **P0 (built, not deployed)** |
-| Burning fuel (Energy burns while in the world) | Cambria Energy | **Attention** meter burns per descent; 10 free/day, rest costs silk (60% burned) | Buying fuel with USDC | **P2** |
-| Extract alive to bank loot | Cambria cash-in on return | **Descent**: cargo reserved at the gate, banked only on return alive | Cash-in to USDC; full-loot PvP | **P2** |
-| Greed scale raises reward and loss | Cambria Greed | **Greed tied to World Tension** `S.H`: `p_fail = p0 + k·g·T/100` | Cambria's loss numbers | **P2** |
-| Partial loss: cargo all, artifacts partly, savings never | Cambria Genesis docs | Cargo lost; **pledged silk, deeds, shards never lost** | Gear loss; "full-loot" wording | **P2** |
-| Three separated layers | Cambria Energy/Credits/Silver/$RSGP | Attention meter / Silk / Deeds and shards (§2.1), **one fungible currency** | Linking any layer to USDC or an external token; a second fungible token | **P0 (design)** |
-| Territorial/station deeds with taxes | Cambria City Deeds | Six clan station deeds receiving the 12% bucket; social layer | Taxes on movement; selling deeds for money; the tax as income | **P2** |
-| Licence NFT for limits and access | Cambria Charter | Charter: stake cap ×1.5, Attention 14/day; no yield multiplier | Royal Favor token path | **P2** |
-| Short seasons (~10 days) | Cambria Season 3 | 5-day accelerated seasons; the purse closes per season | Waiting for a persistent world | **P0 (built)** |
-| Staking with treasury share | Cambria $RSGP staking | Silk pledge with lock tiers (1.00-1.50); rewards from fees only | A token launched before the game; 48% insider allocation; any token launch | **P0 (built)**, token **never** pre-review |
-| Autonomous NPC village with own accounts, honest "AI vs script" | Hearthmarket (https://github.com/nguyenkhangph/hearthmarket · https://hearthmarket.space) | 20 trader accounts with own keys; trades fund the works; scripted/AI split labelled; decision logs | Real-world weather or gold price feeds | **P0 (built)** |
-| City Pulse, Economy Lab, Judges' pass | TokenGo (https://github.com/ebenbaruk/TokenGo · https://tokengo-production-195c.up.railway.app) | **Town Pulse** reads `pulse()`; **Economy Lab** replays a week of the real price rules; `?demo=judge` exists | GPS walking; selling AI-compute loot | **P0 (built)** |
-| AI lords with own wallets, season throne, no-wallet login | Crownfall (https://github.com/neromtoobad/crownfall) | Clan wallets hold pledges and station deeds (P2); **Season Throne** = clan with the most silk earned at settle (P2); guests play without a wallet | Eight memecoins as the economy | **P2** |
-| Mainnet with deleted keys, SECURITY_REVIEW.md, escrowed player market | Trezo (https://github.com/TeevincsCrypt/Trezo · https://playtrezo.xyz) | `docs/security-town.md` from the §2.6 threat model (exists on `main`); escrow marketplace for deeds via `nft_transfer_call` (P2) | Mainnet and Intents before review | **P0 doc**, **P2** escrow |
-| NFT as an entity with a vault | Incorpr (https://github.com/mrnetwork0001/Incorpr [search-match, ownership unconfirmed]) | The deed *is* the position: principal, lock, pending, season provenance all inside the token | Chain signatures, USDC customers | **P0 (built)** |
-| Transfer semantics of a running business | Outlive (https://github.com/itsolaph/outlive · https://itsolaph.github.io/outlive/) | Whole-position transfer with written states, post-transfer cooldown (§2.6) | Selling API keys/workers | **P0 (built)**, escrow P2 |
+| Treasury funded by fees, shared with stakers | a reference design Crown Treasury | `sweep_fees`: 0.12% trade fee in silk → 65% to the works' pots (ceiling 0.15%/day), 10% purse, 10% Reserve, 15% burn (§2.4). The only source of staker rewards | USDC treasury, fee on cash-out, a tradeable ownership token | **P0 (built)** |
+| Prize pool funded by season spend | a reference design seasons (Season 3 results; Gold Rush S3 rewards) | Tournament purse = capped mint + 65% of entry fees + tithe share + overflow of the ceiling + Reserve leftover; public on the Pulse page | Real-money pool, payout to token holders | **P0 (built, not deployed)** |
+| Burning fuel (Energy burns while in the world) | a reference design Energy | **Attention** meter burns per descent; 10 free/day, rest costs silk (60% burned) | Buying fuel with USDC | **P2** |
+| Extract alive to bank loot | a reference design cash-in on return | **Descent**: cargo reserved at the gate, banked only on return alive | Cash-in to USDC; full-loot PvP | **P2** |
+| Greed scale raises reward and loss | a reference design Greed | **Greed tied to World Tension** `S.H`: `p_fail = p0 + k·g·T/100` | a reference design's loss numbers | **P2** |
+| Partial loss: cargo all, artifacts partly, savings never | a reference design Genesis docs | Cargo lost; **pledged silk, deeds, shards never lost** | Gear loss; "full-loot" wording | **P2** |
+| Three separated layers | a reference design Energy/Credits/Silver/$RSGP | Attention meter / Silk / Deeds and shards (§2.1), **one fungible currency** | Linking any layer to USDC or an external token; a second fungible token | **P0 (design)** |
+| Territorial/station deeds with taxes | a reference design City Deeds | Six clan station deeds receiving the 12% bucket; social layer | Taxes on movement; selling deeds for money; the tax as income | **P2** |
+| Licence NFT for limits and access | a reference design Charter | Charter: stake cap ×1.5, Attention 14/day; no yield multiplier | Royal Favor token path | **P2** |
+| Short seasons (~10 days) | a reference design Season 3 | 5-day accelerated seasons; the purse closes per season | Waiting for a persistent world | **P0 (built)** |
+| Staking with treasury share | a reference design $RSGP staking | Silk pledge with lock tiers (1.00-1.50); rewards from fees only | A token launched before the game; 48% insider allocation; any token launch | **P0 (built)**, token **never** pre-review |
+| Autonomous NPC village with own accounts, honest "AI vs script" | a rival entry  | 20 trader accounts with own keys; trades fund the works; scripted/AI split labelled; decision logs | Real-world weather or gold price feeds | **P0 (built)** |
+| City Pulse, Economy Lab, Judges' pass | a rival entry  | **Town Pulse** reads `pulse()`; **Economy Lab** replays a week of the real price rules; `?demo=judge` exists | GPS walking; selling AI-compute loot | **P0 (built)** |
+| AI lords with own wallets, season throne, no-wallet login | a rival entry  | Clan wallets hold pledges and station deeds (P2); **Season Throne** = clan with the most silk earned at settle (P2); guests play without a wallet | Eight memecoins as the economy | **P2** |
+| Mainnet with deleted keys, SECURITY_REVIEW.md, escrowed player market | a rival entry  | `docs/security-town.md` from the §2.6 threat model (exists on `main`); escrow marketplace for deeds via `nft_transfer_call` (P2) | Mainnet and Intents before review | **P0 doc**, **P2** escrow |
+| NFT as an entity with a vault | a rival entry  | The deed *is* the position: principal, lock, pending, season provenance all inside the token | Chain signatures, USDC customers | **P0 (built)** |
+| Transfer semantics of a running business | a rival entry  | Whole-position transfer with written states, post-transfer cooldown (§2.6) | Selling API keys/workers | **P0 (built)**, escrow P2 |
 | No-wallet play; shop NFTs paying holders | Ashes of the Ninth Heaven (https://github.com/merajali98-dev/ashes-of-the-ninth-heaven [search-match]) | Guests and clan wallets pledge through the relayer under restricted function-call keys; deeds receive fee streams | NEP-245 everything | **P1** |
 
 ---
@@ -580,14 +580,14 @@ Events (NEP-297 `ftf_town`): trade, entry, season open/settle, credits, **gate_p
 
 | Rival (from the scorecard) | What they show | What FTF adds on top |
 |---|---|---|
-| **Hearthmarket** (Games #1; ~34.8k tx, five NPC accounts at 3-8k each, NEP-141/171/245) | A running NPC village economy | Same live-NPC proof, plus a **position NFT bound to a sealed season**, a rate **derived from published fee flow** with a rerunnable Economy Lab, **a reason on every price**, **one currency and no token**, and explicit scripted/LLM labels per decision. 20-23k tx/day means FTF overtakes their cumulative count in ~1.5 days |
-| **TokenGo** (Games #2; ~21.9k tx, Economy Lab, City Pulse, judge pass) | Dashboards and a judge shortcut | Town Pulse + Economy Lab exist on purpose; FTF's difference is an **NFT layer with transfer semantics and a written threat model**, not only counters |
-| **Crownfall** (AI lords, ~3k tx, no-wallet login) | Walkable 3D + AI rivals | Seven clan wallets with real pledges (LLM strategy, rules-made moves); no memecoin; guests play without a wallet |
-| **Trezo** (mainnet, SECURITY_REVIEW.md, 16 tx) | Security discipline, tiny usage | We match the discipline (threat model, caps, bounded admin) at testnet scale and add real volume; **no mainnet before review** |
-| **Incorpr / Outlive** (NFTs #1/#2) | NFTs that *are* something | A deed that is a live position: season provenance, lifecycle states, whole-position transfer, cooldown |
+| **a rival entry** (Games #1; ~34.8k tx, five NPC accounts at 3-8k each, NEP-141/171/245) | A running NPC village economy | Same live-NPC proof, plus a **position NFT bound to a sealed season**, a rate **derived from published fee flow** with a rerunnable Economy Lab, **a reason on every price**, **one currency and no token**, and explicit scripted/LLM labels per decision. 20-23k tx/day means FTF overtakes their cumulative count in ~1.5 days |
+| **a rival entry** (Games #2; ~21.9k tx, Economy Lab, City Pulse, judge pass) | Dashboards and a judge shortcut | Town Pulse + Economy Lab exist on purpose; FTF's difference is an **NFT layer with transfer semantics and a written threat model**, not only counters |
+| **a rival entry** (AI lords, ~3k tx, no-wallet login) | Walkable 3D + AI rivals | Seven clan wallets with real pledges (LLM strategy, rules-made moves); no memecoin; guests play without a wallet |
+| **a rival entry** (mainnet, SECURITY_REVIEW.md, 16 tx) | Security discipline, tiny usage | We match the discipline (threat model, caps, bounded admin) at testnet scale and add real volume; **no mainnet before review** |
+| **a rival entry / a rival entry** (NFTs #1/#2) | NFTs that *are* something | A deed that is a live position: season provenance, lifecycle states, whole-position transfer, cooldown |
 | **Ashes** (no-wallet play, shop NFTs paying holders) | Frictionless entry | Guest pledging without a wallet; deeds that receive fee streams |
 
-Effect on the scorecard criteria, honestly: this mostly attacks **Impact** and **Sustainability** and the **Games track-fit**: a verifiable running economy with a sink/source model and a threat model. If it is live, documented and verifiable in the explorer, I would expect Games track-fit near 0.8 and Impact up by roughly half a point to a point; if it ships half-built or labelled dishonestly, it costs more than it earns. It does not close the gap to Hearthmarket on Technical (tests, CI) or to mainnet entrants.
+Effect on the scorecard criteria, honestly: this mostly attacks **Impact** and **Sustainability** and the **Games track-fit**: a verifiable running economy with a sink/source model and a threat model. If it is live, documented and verifiable in the explorer, I would expect Games track-fit near 0.8 and Impact up by roughly half a point to a point; if it ships half-built or labelled dishonestly, it costs more than it earns. It does not close the gap to a rival entry on Technical (tests, CI) or to mainnet entrants.
 
 ---
 

@@ -53,6 +53,7 @@ pub const ERR_PAYOUT_CAP: &str = "ERR_PAYOUT_CAP: one payout is above the per-ac
 pub const ERR_NO_STALL: &str = "ERR_NO_STALL: that account has no stall";
 pub const ERR_GATE_PAID: &str = "ERR_GATE_PAID: this account has already paid this gate";
 pub const ERR_SCRIPTED: &str = "ERR_SCRIPTED: the town's own wallets do not pay the gate";
+pub const ERR_GATE_REQUEST: &str = "ERR_GATE_REQUEST: this signed request was already used";
 pub const ERR_GATE_PRICE: &str = "ERR_GATE_PRICE: the gate price is 20-5,000 silk";
 /** Default portal price (rev 4): 200 silk, burned. */
 pub const GATE_PRICE_DEFAULT: u128 = 200 * UNIT;
@@ -74,7 +75,7 @@ pub const WORKS: [&str; 4] = ["loom", "caravan", "archive", "observatory"];
 #[derive(BorshStorageKey)]
 #[near]
 // New variants go at the END only: a variant's index is its storage prefix (state-compatible upgrades, docs/town-upgrades.md).
-enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions, Gates, GateOf }
+enum StorageKey { Accounts, Deeds, Activation, Seasons, Entries, Nft, NftMeta, NftEnum, Stalls, StallPositions, Gates, GateOf, GateRequests }
 
 /// One account's row: silk, entry credit (spendable only on tournament entry) and pledge totals.
 #[near(serializers = [borsh, json])]
@@ -458,9 +459,24 @@ impl Town {
     /// account and gate. The town's own wallets (stalls, clan wallets) cannot pay. The burn is counted in `gate_burned`,
     /// apart from `burned_silk`, so it does not raise the next season's mint ceiling.
     pub fn pay_gate(&mut self, gate_id: String) -> GateRecord {
+        let me = env::predecessor_account_id();
+        self.gate_inner(me, gate_id, None)
+    }
+    /// v3: pays the portal FOR a guest whose browser key cannot sign to this contract (it is a function-call key of the
+    /// guests contract). Only a coordinator (the relayer) may call it, after checking the guest's own signed portal
+    /// request; `request_hash` (sha256 of that request) is recorded so the same request can never pay twice. Same burn,
+    /// once-per-gate rule and event as pay_gate, with `by` and `request_hash` added.
+    pub fn pay_gate_for(&mut self, account_id: AccountId, gate_id: String, request_hash: String) -> GateRecord {
+        self.only_coordinator();
+        require!(request_hash.len() == 64 && request_hash.bytes().all(|b| b.is_ascii_hexdigit()), ERR_REF);
+        let mut used: LookupMap<String, AccountId> = LookupMap::new(StorageKey::GateRequests);
+        require!(!used.contains_key(&request_hash), ERR_GATE_REQUEST);
+        used.insert(request_hash.clone(), account_id.clone()); used.flush();
+        self.gate_inner(account_id, gate_id, Some(request_hash))
+    }
+    fn gate_inner(&mut self, me: AccountId, gate_id: String, request_hash: Option<String>) -> GateRecord {
         self.live();
         require!(!gate_id.is_empty() && gate_id.len() <= 32 && gate_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-'), ERR_REF);
-        let me = env::predecessor_account_id();
         let suffix = format!(".{}", env::current_account_id());
         require!(!self.stalls.contains_key(&me) && !me.as_str().ends_with(&suffix), ERR_SCRIPTED);
         let mut book: LookupMap<String, GateRecord> = LookupMap::new(StorageKey::Gates);
@@ -476,12 +492,14 @@ impl Town {
         book.insert(key, rec.clone()); book.flush();
         let mut latest: LookupMap<AccountId, GateRecord> = LookupMap::new(StorageKey::GateOf);
         latest.insert(me.clone(), rec.clone()); latest.flush();
-        event("gate_paid", format!(r#"{{"account":"{}","gate_id":"{}","price":"{}","season_id":"{}"}}"#, me, gate_id, price, self.season_id));
+        let extra = request_hash.map(|h| format!(r#","by":"{}","request_hash":"{}""#, env::predecessor_account_id(), h)).unwrap_or_default();
+        event("gate_paid", format!(r#"{{"account":"{}","gate_id":"{}","price":"{}","season_id":"{}"{}}}"#, me, gate_id, price, self.season_id, extra));
         rec
     }
     /// The account's latest paid gate (the relayer reads this for the whitelist pass and the story's eligibility).
     pub fn gate_paid_of(&self, account_id: AccountId) -> Option<GateRecord> { LookupMap::<AccountId, GateRecord>::new(StorageKey::GateOf).get(&account_id).cloned() }
     pub fn gate_paid_for(&self, account_id: AccountId, gate_id: String) -> bool { LookupMap::<String, GateRecord>::new(StorageKey::Gates).contains_key(&format!("{}:{}", account_id, gate_id)) }
+    pub fn gate_request_used(&self, request_hash: String) -> bool { LookupMap::<String, AccountId>::new(StorageKey::GateRequests).contains_key(&request_hash) }
     pub fn gate_burned(&self) -> U { U(raw_u128(K_GATE_BURNED, 0)) }
     pub fn gate_price(&self) -> U { U(raw_u128(K_GATE_PRICE, GATE_PRICE_DEFAULT)) }
     /// Owner: the gate price, 20-5,000 silk (rev 4 §2.13.4). Logged.
