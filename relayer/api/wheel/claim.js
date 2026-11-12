@@ -1,6 +1,7 @@
-// POST /api/wheel/claim {account_id, public_key, wheel_id, seed, at, signature} -> {token_id, tx_hash} (the Sheriffchenko skin)
+// POST /api/wheel/claim {account_id, public_key, wheel_id, seed, at, signature} -> 200 {token_id, tx_hash} (the Sheriffchenko skin),
+// or 202 {status: 'mint_pending', verified: true} while the minter key is not on this server (the win is recorded)
 import { cors, createBucket, createQueue, envConfig, clientIp } from '../../lib/core.js';
-import { checkClaim, mintSkin, wheelEnv } from '../../lib/wheel.js';
+import { checkClaim, mintSkin, wheelEnv, createClaimLog } from '../../lib/wheel.js';
 import { createReplayGuard } from '../../lib/chest.js';
 
 const bucket = createBucket({ capacity: 3, refillMs: 5 * 60 * 1000 });
@@ -22,11 +23,10 @@ export function wheelHandler(opts = {}) {
     if (req.method !== 'POST') return json(res, 405, { error: 'method' });
     const v = await checkClaim(await readBody(req), opts.now ? opts.now() : Date.now());
     if (!v.ok) return json(res, v.error === 'bad_signature' ? 401 : 400, { error: v.error });
-    if (!wcfg.secretKey) return json(res, 503, { error: 'wheel_not_configured' });
     const lim = (opts.bucket || bucket).take(clientIp(req, env.TRUST_PROXY !== '0'));
     if (!lim.ok) { res.setHeader('Retry-After', String(lim.retryAfterS)); return json(res, 429, { error: 'rate_limited' }); }
     if (!(opts.replay || replay).use(v.signature)) return json(res, 409, { error: 'replayed' });
-    try { const r = await mintSkin(v, { ...wcfg, rpcUrls: cfg.rpcUrls, fetch: opts.fetch || globalThis.fetch, queue }); return json(res, r.status, r.body); }
+    try { const r = await mintSkin(v, { ...wcfg, rpcUrls: cfg.rpcUrls, fetch: opts.fetch || globalThis.fetch, queue, log: opts.log || createClaimLog(wcfg.dataDir), now: opts.now || Date.now }); return json(res, r.status, r.body); }
     catch (e) { return json(res, 502, { error: 'rpc', message: String((e && e.message) || e).slice(0, 120) }); }
   };
 }
