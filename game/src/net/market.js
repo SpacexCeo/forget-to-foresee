@@ -1,4 +1,4 @@
-// The town market, the browser side (docs/market.md): reads the relayer's /api/market/stats (today's trade count and
+// The town market, the browser side (docs/town-economy.md): reads the relayer's /api/market/stats (today's trade count and
 // the last trades with their testnet transaction hashes) for the ticker. No keys, no signing: the trades are made by
 // the relayer's daemon, each signed by that townsperson's own key. Pure apart from fetch.
 import { relayerUrl } from './tee-agent.js';

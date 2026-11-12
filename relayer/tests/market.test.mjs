@@ -76,7 +76,7 @@ async function fakeChain({ fail = null } = {}) {
       }
       throw new Error('unexpected ' + method);
     },
-    async view(c, m) { return m === 'balances' ? TRADERS.map((k) => [traderAccount(k), START_BALANCE]) : m === 'items' ? ITEMS.map((i) => ({ id: i.id, base: i.base, last: i.base })) : { day: 1, today: 5, total: 9 }; },
+    async view(c, m, a) { return m === 'balances_of' ? a.account_ids.map(() => ({ wool: '0', silk: String(START_BALANCE * 1_000_000) })) : { day: 1, counters: { trade: 9 } }; },
   };
   const traders = [];
   for (const key of TRADERS) traders.push({ key, account: traderAccount(key), secretKey: (await generateKeyPair()).secretKey });
@@ -94,10 +94,10 @@ test('daemon: signs a trade with the buyer\'s own key, increments its nonce loca
   assert.ok(a.ok && b.ok && a.buyer === 'guard');
   const tx = sentArgs(calls);
   assert.equal(tx.length, 2);
-  assert.ok(tx[0].includes('tf-guard.ftf-coordinator.testnet') && tx[0].includes('market.ftf-coordinator.testnet') && tx[0].includes('"to":"' + traderAccount(a.seller) + '"'));
+  assert.ok(tx[0].includes('tf-guard.ftf-coordinator.testnet') && tx[0].includes('market.ftf-coordinator.testnet') && tx[0].includes('"counterparty":"' + traderAccount(a.seller) + '"'));
   assert.equal(calls.filter((c) => c[0] === 'query' && c[1].request_type === 'view_access_key').length, 1); // nonce fetched once
   const s = d.stats();
-  assert.equal(s.today, 2); assert.equal(s.recent.length, 2); assert.equal(s.recent[0].hash, b.hash); assert.equal(s.chain.today, 5);
+  assert.equal(s.today, 2); assert.equal(s.recent.length, 2); assert.equal(s.recent[0].hash, b.hash); assert.equal(s.chain.total, 9);
   assert.equal(logs.length, 2);
   d.stop();
   assert.equal(mem.today, 2);
@@ -144,9 +144,9 @@ test('stats route: the daemon\'s stats, or the contract counters without it', as
   await marketStatsHandler({ daemon: { stats: () => ({ enabled: true, today: 7, recent: [] }) }, env: {} })(req, res);
   assert.equal(res.statusCode, 200); assert.equal(JSON.parse(res.body).today, 7);
   res = fakeRes();
-  const fetch = async () => ({ json: async () => ({ result: { result: [...Buffer.from(JSON.stringify({ day: 3, today: 11, total: 99 }))] } }) });
+  const fetch = async () => ({ json: async () => ({ result: { result: [...Buffer.from(JSON.stringify({ day: 3, counters: { trade: 99 } }))] } }) });
   await marketStatsHandler({ daemon: null, env: {}, fetch, now: () => 1 })(req, res);
   const j = JSON.parse(res.body);
-  assert.equal(j.enabled, false); assert.equal(j.today, 11); assert.deepEqual(j.recent, []);
+  assert.equal(j.enabled, false); assert.equal(j.chain.total, 99); assert.deepEqual(j.recent, []);
   assert.ok(!/secret|ed25519:/i.test(res.body));
 });
