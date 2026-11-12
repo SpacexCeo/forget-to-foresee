@@ -1,6 +1,6 @@
 // Iris's animation filmed in the real game (the town's casting field beyond the walls), for before/after clips:
 // the game's own renderer, clips, gait blend, planted feet and cast flow; only the camera is placed by this script.
-//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat> [--url http://127.0.0.1:4173] [--query anim=v1] [--size 1280x720] [--gpu]
+//   node art/anim/iris_film.mjs <out dir> <loco|cast|combat|dash> [--url http://127.0.0.1:4173] [--query anim=v1] [--size 1280x720] [--gpu]
 // Writes <out>/f_0000.jpg.. and <out>/report.json (frames, seconds, fps); make the video with
 //   ffmpeg -framerate <fps> -i <out>/f_%04d.jpg -c:v libx264 -pix_fmt yuv420p -crf 20 out.mp4
 // Scenarios: loco (stand, walk, run, stop: a front tracking shot, then the same from the side), cast (Frost Lance,
@@ -20,7 +20,7 @@ const page = await (await browser.newContext({ viewport: { width: W, height: H }
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 300)));
-await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=iris&cycle=off${scenario === 'combat' ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
+await page.goto(`${url}/?play=direct&town=1&day1=0&quest=0&tex=full&hero=iris&cycle=off${scenario === 'combat' || scenario === 'dash' ? '' : '&mobs=0'}${extra ? '&' + extra : ''}`);
 await page.waitForFunction(() => window.__ftf && window.__ftf.town && window.__ftf.town.ready && window.__ftf.iris && window.__ftf.iris.irisModel, null, { timeout: 900000 });
 for (const name of ['Skip', 'Skip the town quest']) { const b = page.getByRole('button', { name, exact: true }); if (await b.count()) await b.first().click().catch(() => {}); }
 await page.addStyleTag({ content: '#ui, .hub-host, .wh-host, .pl-badge, .ftf-town-prompt, .ftf-cast-hint { display: none !important; }' });
@@ -98,6 +98,18 @@ if (scenario === 'loco') {
     mark('dash'); await page.keyboard.press('Space'); await wait(1500);
     await back(); await wait(600);
   }
+}
+else if (scenario === 'dash') {
+  // the dash and its trail, from the side and from behind; the sync events are counted for the report
+  await page.evaluate(() => { window.__ev = {}; for (const n of ['ftf:foot', 'ftf:iris-action', 'ftf:cast']) window.addEventListener(n, (e) => { (window.__ev[n] ||= []).push({ ...e.detail, t: Math.round(performance.now()) }); }); });
+  for (const s of [{ angle: Math.PI / 2, dist: 7.5, h: 0.9, up: 0.4 }, { angle: 0.5, dist: 6.5, h: 0.9, up: 0.6 }]) {
+    await back(); await shot(s); await wait(2000);
+    mark('walk'); await go(1500, false);
+    mark('dash 1'); await page.keyboard.press('Space'); await wait(1300);
+    mark('run'); await go(900, true);
+    mark('dash 2'); await page.keyboard.down('ShiftLeft'); await page.keyboard.down('KeyW'); await page.keyboard.press('Space'); await wait(250); await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(1300);
+  }
+  marks.push({ events: await page.evaluate(() => Object.fromEntries(Object.entries(window.__ev).map(([k, v]) => [k, { n: v.length, first: v.slice(0, 6) }]))) });
 }
 capturing = false; await capture;
 const seconds = (Date.now() - t0) / 1000;

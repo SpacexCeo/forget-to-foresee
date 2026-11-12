@@ -86,12 +86,31 @@ exactly the takes `clips.json` names (into `art/anim/src/`, git-ignored).
     | `cast_lance` (Frost Lance) | coils back onto the ball of the right foot, left knee up, left palm sighting the line, right hand cocked at the ribs | **0.42 s**: the left foot stomps down, a deep lunge, the right palm drives out, the left arm flung back | overshoot to 0.50 s, held key pose to 0.72 s, settle to 1.25 s |
     | `cast_snare` (Storm Snare) | rises onto the ball of the left foot, right knee up, right hand open to the sky | **0.42 s**: the right foot comes down, the arm chops down at the mark | the same |
 
+    The strike combo and the dash are keyed the same way (step 3, 12.11) and replace Iris's first versions from
+    `iris_combat.py` (which still builds Elise's): `strike1` / `strike2` (0.56 s, impact at 0.12 s: a coil, a step in
+    with the opposite foot, the palm driven out, the other hand pulled back), `strike3` (0.88 s, impact at 0.22 s:
+    both hands gathered high on her toes, a deep lunge, both palms out), `dash` (0.52 s: low and forward within
+    0.06 s, one leg driving and one trailing, arms swept back, the front foot catches her at 0.28 s). The game
+    applies a strike's damage on the key press, as before; the clips' impacts sit as early as the poses allow.
+
     The release time is in the clip (`extras.release_s`). In the game (`scenes/town-casting.js`) a click starts the
     clip (`onCastStart` → `IrisAvatar.cast`), the cast's effect, sound and hits fire on the release frame
     (`onCast`, `onFire`), and she stands still from the click to 0.24 s after the release (`CAST_ROOT_AFTER`);
     a step after that cuts the settle short. `window` gets `ftf:cast` events `{id, phase: 'start' | 'release',
     release}` for sounds and effects that want to follow the wind-up. The planted-feet layer and the on-the-spot turn
     rate yield to an action clip (`FootPlant.update(..., free)`), so she turns to the aim within the wind-up.
+
+    Sync events on `window` (for sounds and effects; all sent by `play/iris-avatar.js` and `play/gait.js`):
+    `ftf:foot` `{foot: 'L' | 'R', running, action?}` on the frame a foot lands: every contact of the walk and the
+    run (from the clips' own contact intervals and the shared stride phase), and the hard step of an action clip
+    (`extras.step_s`: the stomp of a cast, the step of a strike, the dash's landing at 0.28 s);
+    `ftf:iris-action` `{clip, phase: 'start' | 'impact'}` for every action clip (impact = `release_s` or `impact_s`);
+    `ftf:cast` `{id, phase: 'start' | 'release'}` from the casting field.
+
+    The dash leaves a trail (`render/dash-trail.js`): three afterimages of her own silhouette (two on the phone
+    model) left every 1.15 m of the path in her pose of that moment, and a thin ribbon behind the hips, in her
+    violet; a ghost fades in 0.36 s, the ribbon in 0.26 s. The ghosts are clones of her model made on her first
+    dash and drawn only while a trail fades. Not shown under reduced motion.
 
 Build: `python3 art/anim/fetch_mocap.py`, then `python3 art/anim/build_clips.py --char iris` and `--char townsfolk`;
 the numbers of every clip go to `art/anim/out/<character>.json`. Iris: then `python3 art/anim/iris_combat.py` and
