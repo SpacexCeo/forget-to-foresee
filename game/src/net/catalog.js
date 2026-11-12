@@ -226,10 +226,10 @@ export const ACTIONS = [
   expedition({
     type: 'quest_turn_in', summary: 'Turn in a ready quest; the reward is minted by the rules (a second turn-in pays nothing). A spare part named here is trust T1 (it did not come from a salvage drop).',
     params: { type: 'object', required: ['questId'], properties: { questId: { type: 'string', enum: QUEST_IDS }, partId: { type: 'string', pattern: '^part_[a-z_]{2,32}$' } }, additionalProperties: false },
-    errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_ready', 'no_part'] },
+    errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_ready', 'no_part', 'needs'] },
   }),
   expedition({
-    type: 'hunt', summary: 'Scripted actors only (a session created with a registered scriptedKey): an abstract hunt (game/hunt.js, an abstraction of the real combat, not a simulation) for an active kill quest; on a win its kills count at trust T2. Humans fight in the town.',
+    type: 'hunt', summary: 'Scripted actors only (a session created with a registered scriptedKey): an abstract hunt (game/hunt.js, an abstraction of the real combat, not a simulation) for an active kill quest; on a win its kills count at trust T2 and yield the expected monster resources (game/resources.js). Humans fight in the town.',
     params: { type: 'object', required: ['questId'], properties: { questId: { type: 'string', enum: QUEST_IDS }, mob: { type: 'string', maxLength: 16 } }, additionalProperties: false },
     preconditions: ['role_controller', 'scripted_actor'],
     errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_active', 'bad_mob', 'lost'] },

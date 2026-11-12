@@ -34,7 +34,8 @@ import { QUESTS } from '../game/quests-data.js';
 import { createExpeditionLedger } from '../game/expedition-ledger.js';
 import { EXPEDITION } from '../game/expedition-config.js';
 import { resolveHunt, resolveHuntMob } from '../game/hunt.js';
-const EXPEDITION_TEXT = { already_started: 'The Expedition is already started in this session.', not_started: 'Start the Expedition first (expedition_start).', step: 'Unknown guide step.', phase: 'Not possible in this story phase.', quest: 'Unknown quest, or not a kill quest.', locked: 'This quest is still locked.', not_available: 'This quest is not available now.', cooldown: 'This bounty is on cooldown.', not_ready: 'This quest is not ready to turn in.', no_part: 'This quest needs a spare part.', not_active: 'Accept the quest first.', bad_mob: 'That creature is not this quest\'s target.', bad_count: 'Nothing left to hunt.', no_silk: 'Not enough town silk for the Gate-Loom fee.', giver_busy: 'This townsperson already gave you a quest; finish it first.', duplicate: 'This kill was already counted.' };
+import { huntYield } from '../game/resources.js';
+const EXPEDITION_TEXT = { already_started: 'The Expedition is already started in this session.', not_started: 'Start the Expedition first (expedition_start).', step: 'Unknown guide step.', phase: 'Not possible in this story phase.', quest: 'Unknown quest, or not a kill quest.', locked: 'This quest is still locked.', not_available: 'This quest is not available now.', cooldown: 'This bounty is on cooldown.', not_ready: 'This quest is not ready to turn in.', no_part: 'This quest needs a spare part.', not_active: 'Accept the quest first.', bad_mob: 'That creature is not this quest\'s target.', bad_count: 'Nothing left to hunt.', no_silk: 'Not enough town silk for the Gate-Loom fee.', needs: 'This quest needs monster resources you do not have (see expedition.resources).', giver_busy: 'This townsperson already gave you a quest; finish it first.', duplicate: 'This kill was already counted.' };
 const EXCHANGE_TEXT = { already_open: 'A drill is already open.', bad_snapshot: 'Unknown snapshot.', bad_window: 'That window is not inside the snapshot.', phase: 'No drill is open.', bad_echo: 'Unknown Echo.', no_silk: 'Not enough practice silk for that order and its fee.', no_position: 'You do not hold that many units (long only).', qty: 'Quantity must be 1 to 5.', too_many_orders: 'At most 3 orders per bar.' };
 /** Engine call for each rules action. Returns the engine's {ok, reason}. */
 const ENGINE_CALLS = {
@@ -410,7 +411,7 @@ export class Room {
     if (def.type === 'expedition_start') {
       if (this.expedition) return fail('already_started');
       const town = { silk: 0, grant({ silk = 0 } = {}) { this.silk += Math.round(silk); }, spend({ silkC = 0 } = {}) { if (this.silk < silkC) return { ok: false, reason: 'no_silk' }; this.silk -= silkC; return { ok: true }; } };
-      const X = this.expedition = { story: storyInitial(), qs: initialQuests(), town, ledger: createExpeditionLedger({ storage: null, now: () => this.clock(), town }), hunts: 0 };
+      const X = this.expedition = { story: storyInitial(), qs: initialQuests(), town, ledger: createExpeditionLedger({ storage: null, now: () => this.clock(), town }), hunts: 0, res: {} };
       this.expeditionApply(storyReduce(X.story, { type: 'START', skipPrologue: true }, { now }), 'story');
       return { ok: true, result: { phase: X.story.phase } };
     }
@@ -430,7 +431,8 @@ export class Room {
     if (def.type === 'quest_accept') { const f = quest({ type: 'ACCEPT', questId: args.questId }); return f || { ok: true, result: { questId: args.questId, state: X.qs.quests[args.questId].state } }; }
     if (def.type === 'quest_turn_in') {
       const before = X.town.silk;
-      const f = quest({ type: 'TURN_IN', questId: args.questId, partId: args.partId || null, partSource: 'agent' }); if (f) return f;
+      const f = quest({ type: 'TURN_IN', questId: args.questId, partId: args.partId || null, partSource: 'agent', have: { ...X.res } }); if (f) return f;
+      for (const [id, n] of Object.entries(QUESTS[args.questId].needs || {})) X.res[id] -= n; // the monster resources are consumed
       if (args.questId === 'q_welcome') this.expeditionApply(storyReduce(X.story, { type: 'GUIDE_STEP', id: 'talked' }, { now }), 'story');
       this.expeditionApply(silk(), 'story');
       return { ok: true, result: { questId: args.questId, silkC: X.town.silk - before, balanceC: X.town.silk, phase: X.story.phase } };
@@ -446,8 +448,9 @@ export class Room {
       if (!h.ok) return fail(h.reason);
       if (!h.won) return { ok: true, result: { won: false, kills: 0, seconds: h.seconds, damage: h.damage, note: 'the hunt failed; nothing counts' } };
       for (let i = 0; i < h.kills; i++) { const f = quest({ type: 'KILL', mob, killId: `hunt:${n}:${i}`, hunt: true }); if (f) return f; }
+      const loot = huntYield(mob, h.kills); for (const d of loot) X.res[d.id] = (X.res[d.id] || 0) + d.n; // the expected drops of the hunted kills
       this.expeditionApply(silk(), 'story');
-      return { ok: true, result: { won: true, kills: h.kills, seconds: h.seconds, damage: h.damage, state: X.qs.quests[args.questId].state } };
+      return { ok: true, result: { won: true, kills: h.kills, seconds: h.seconds, damage: h.damage, loot, state: X.qs.quests[args.questId].state } };
     }
     // pay_gate
     const r = storyReduce(X.story, { type: 'PAY_GATE', balanceC: X.town.silk }, { now, feeC: EXPEDITION.PORTAL_FEE_C });
@@ -470,7 +473,7 @@ export class Room {
     const X = this.expedition;
     if (!X) return null;
     const log = X.ledger.log, now = this.clock();
-    return { phase: X.story.phase, actor: this.actor.kind, account: this.actor.account, balanceC: X.town.silk, feeC: EXPEDITION.PORTAL_FEE_C, guide: { ...X.story.guide },
+    return { phase: X.story.phase, actor: this.actor.kind, account: this.actor.account, balanceC: X.town.silk, feeC: EXPEDITION.PORTAL_FEE_C, guide: { ...X.story.guide }, resources: { ...X.res },
       quests: Object.fromEntries(Object.keys(QUESTS).map((id) => [id, { state: questStatus(X.qs, id, now), progress: (X.qs.quests[id] && X.qs.quests[id].progress) || 0 }])),
       log: { length: log.length, head: log.length ? log[log.length - 1].hash : null, earnedC: X.ledger.earnedC } };
   }

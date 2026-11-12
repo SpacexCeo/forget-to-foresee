@@ -9,6 +9,7 @@ import { applyQuest, initialQuests, questStatus, QUESTS_KEY } from '../game/ques
 import { QUESTS } from '../game/quests-data.js';
 import { createExpeditionLedger } from '../game/expedition-ledger.js';
 import { portalFee } from '../game/expedition-config.js';
+import { rollDrops, missingFor, RESOURCE_IDS } from '../game/resources.js';
 
 /** Which quest a giver talks about now (pure): the first of theirs that is not done, else the last. */
 export function giverQuest(qs, giver, now = 0) {
@@ -21,7 +22,7 @@ export function giverQuest(qs, giver, now = 0) {
  * The talk for a giver (pure): {lines: [key...], args, choices: [{key, act}]}; act is applied by the view.
  * @param {string} giver @param {object} story @param {object} qs @param {{now?: number, hasPart?: boolean}} [o]
  */
-export function talkFor(giver, story, qs, { now = 0, hasPart = false } = {}) {
+export function talkFor(giver, story, qs, { now = 0, hasPart = false, have = {} } = {}) {
   const close = { key: 'story.talk.bye', act: 'close' };
   if (giver === 'elder') {
     const w = questStatus(qs, 'q_welcome', now);
@@ -36,22 +37,23 @@ export function talkFor(giver, story, qs, { now = 0, hasPart = false } = {}) {
     case 'available': {
       const lines = ['quest.' + short + '.offer']; if (g.id === 'q_boss') lines.push('quest.boss.warn');
       if (g.id === 'q_part') lines.push(...q.steps);
-      return { lines, choices: [{ key: 'quest.' + short + '.yes', act: 'accept:' + g.id }, { key: 'story.talk.notYet', act: 'close' }] };
+      if (q.needs) lines.push('quest.needs.ask');
+      return { lines, needs: q.needs || null, choices: [{ key: 'quest.' + short + '.yes', act: 'accept:' + g.id }, { key: 'story.talk.notYet', act: 'close' }] };
     }
     case 'active': {
-      if (q.objective.type === 'fetch') return { lines: ['quest.part.accept'], choices: [...(hasPart ? [{ key: 'quest.part.have', act: 'turnin:q_part' }] : []), { key: 'quest.part.again', act: 'line:steps' }, close] };
+      if (q.objective.type === 'fetch') { const miss = missingFor(q.needs, have); return { lines: ['quest.part.accept', ...(miss.length ? ['quest.needs.missing'] : [])], needs: miss.length ? q.needs : null, choices: [...(hasPart && !miss.length ? [{ key: 'quest.part.have', act: 'turnin:q_part' }] : []), { key: 'quest.part.again', act: 'line:steps' }, close] }; }
       return { lines: ['quest.' + short + '.progress'], args: { n: done ? done.progress : 0, count: q.objective.count }, choices: [close] };
     }
-    case 'ready': return { lines: ['quest.' + short + '.ready'], choices: [{ key: 'quest.' + short + '.report', act: 'turnin:' + g.id }] };
+    case 'ready': { const miss = missingFor(q.needs, have); if (miss.length) return { lines: ['quest.needs.missing'], needs: q.needs, choices: [close] }; return { lines: ['quest.' + short + '.ready'], choices: [{ key: 'quest.' + short + '.report', act: 'turnin:' + g.id }] }; }
     default: return { lines: ['quest.' + short + '.thanks'], choices: [close] };
   }
 }
 
 /** The objective line (pure): the active quest's tracker, else the story step. {key, args} or null. */
-export function objective(story, qs, now = 0) {
+export function objective(story, qs, now = 0, have = {}) {
   for (const id of ['q_boss', 'q_spiders', 'q_part', 'b_spiders', 'q_welcome']) {
     const st = questStatus(qs, id, now), q = qs.quests[id];
-    if (st === 'ready') return { key: 'quest.track.ready', args: { giver: QUESTS[id].giver } };
+    if (st === 'ready') { const miss = missingFor(QUESTS[id].needs, have); if (miss.length) return { key: 'quest.track.needs', args: { id: miss[0].id, n: miss[0].have, count: miss[0].need } }; return { key: 'quest.track.ready', args: { giver: QUESTS[id].giver } }; }
     if (st === 'active') {
       const ob = QUESTS[id].objective;
       if (ob.type === 'kill') return { key: 'quest.track.' + (ob.mob === 'crownrift' ? 'boss' : 'spiders'), args: { n: q.progress, count: ob.count } };
@@ -72,7 +74,7 @@ const load = (storage, key, fresh) => { try { const v = JSON.parse((storage && s
  * @param {(opts: {sub: string}) => Promise} [o.depart] the town's transition to the archipelago (town-flow depart)
  * @param {string} [o.search] @param {Document} [o.doc] @param {Window} [o.win] @param {() => number} [o.now]
  */
-export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
+export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
   const t = (k, a) => i18n.t(k, a);
   const fee = portalFee(search);
   let story = load(storage, STORY_KEY, initialState);
@@ -103,9 +105,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     + 'padding:6px 14px;border-radius:999px;background:rgba(12,16,18,.62);color:#f3ead8;font:600 13px/1.3 system-ui,sans-serif;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
   doc.body.append(line);
   function renderObjective() {
-    const o = objective(story, qs, now());
+    const o = objective(story, qs, now(), have());
     const silk = Math.floor(townLedger.silk / 100).toLocaleString('en-US'), goal = Math.round(fee.feeC / 100).toLocaleString('en-US');
-    line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '' }) + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) + (fee.demo ? ' · ' + t('story.portal.demo') : '') : '';
+    line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) + (fee.demo ? ' · ' + t('story.portal.demo') : '') : '';
     line.hidden = !active || !o || story.phase === 'onward';
   }
 
@@ -113,17 +115,19 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   let panel = null, panelGiver = null;
   function closeTalk() { if (panel) { panel.remove(); panel = null; panelGiver = null; } }
   const hasPart = () => !!(inventory && firstPart());
+  const have = () => { const o = {}; if (inventory && inventory.count) for (const id of RESOURCE_IDS) o[id] = inventory.count(id); return o; };
   function firstPart() { try { const all = inventory.list ? inventory.list(PART_IDS.map((id) => ({ id, kind: 'part' }))) : []; return all.length ? all[0].id : null; } catch { return null; } }
   function openTalk(giver, extraLines = null) {
     closeTalk(); panelGiver = giver;
-    const tk = talkFor(giver, story, qs, { now: now(), hasPart: hasPart() });
+    const h = have(); const tk = talkFor(giver, story, qs, { now: now(), hasPart: hasPart(), have: h });
+    const needsText = tk.needs ? Object.entries(tk.needs).map(([id, n]) => t('quest.needs.item', { n, have: h[id] || 0, res: t('res.' + id) })).join(', ') : '';
     const lines = extraLines || tk.lines;
     panel = doc.createElement('div'); panel.className = 'ftf-story-talk'; panel.setAttribute('role', 'dialog');
     panel.style.cssText = 'position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translateX(-50%);z-index:30;width:min(460px,calc(100vw - 32px));'
       + 'padding:14px 16px;border-radius:14px;background:rgba(12,16,18,.92);border:1px solid rgba(217,178,106,.45);color:#f3ead8;font:15px/1.45 system-ui,sans-serif';
     const who = doc.createElement('b'); who.textContent = t('folk.name.' + giver); who.style.cssText = 'display:block;color:#d9b26a;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px';
     panel.append(who);
-    for (const k of lines) { const p = doc.createElement('p'); p.textContent = t(k, tk.args || {}); p.style.margin = '0 0 8px'; panel.append(p); }
+    for (const k of lines) { const p = doc.createElement('p'); p.textContent = t(k, { ...(tk.args || {}), list: needsText }); p.style.margin = '0 0 8px'; panel.append(p); }
     const row = doc.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:4px';
     for (const c of tk.choices) {
       const b = doc.createElement('button'); b.type = 'button'; b.textContent = t(c.key);
@@ -142,7 +146,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     if (verb === 'accept') { questDo({ type: 'ACCEPT', questId: arg }); openTalk(giver, [arg === 'q_part' ? 'quest.part.accept' : arg === 'q_boss' ? 'quest.boss.accept' : arg === 'b_spiders' ? 'quest.bounty.accept' : 'quest.spiders.accept']); return; }
     if (verb === 'turnin') {
       const part = arg === 'q_part' ? firstPart() : null;
-      const r = questDo({ type: 'TURN_IN', questId: arg, partId: part, partSource: 'inventory' });
+      const r = questDo({ type: 'TURN_IN', questId: arg, partId: part, partSource: 'inventory', have: have() });
+      if (!r.rejected && inventory && inventory.take) { for (const [id, n] of Object.entries(QUESTS[arg].needs || {})) inventory.take(id, n); if (part) inventory.take(part, 1); renderObjective(); }
       if (arg === 'q_welcome' && !r.rejected) storyDo({ type: 'GUIDE_STEP', id: 'talked' }); // the elder's second talk: free play
       closeTalk(); return;
     }
@@ -159,7 +164,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
 
   // ---- kills (play/mobs.js window event): quest progress and kill silk
   let killN = 0;
-  const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return; questDo({ type: 'KILL', mob: d.type, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
+  const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return;
+    if (storyDrops && inventory && typeof d.killId === 'string') for (const x of rollDrops(d.killId, d.type)) inventory.add(x.id, x.n, 'drop'); // until the combat stream's drops land
+    questDo({ type: 'KILL', mob: d.type, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
   win.addEventListener('ftf:mob-killed', onKill);
 
   // ---- the guide's 'moved' step: walking a few metres from where she arrived

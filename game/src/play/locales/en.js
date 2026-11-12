@@ -1584,4 +1584,14 @@ export default {
   "lb.verify": "Verify",
   "lb.footer": "Rules and snapshot are committed on NEAR testnet. The score comes from the play log. No prizes.",
   "lb.close": "Close",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "spider silk thread",
+  "res.chitin_plate": "chitin plate",
+  "res.veil_dust": "veil dust",
+  "res.ash_ore": "ash ore",
+  "res.crown_shard": "crown shard",
+  "quest.needs.ask": "Bring me: {list}.",
+  "quest.needs.missing": "Not yet. I still need: {list}.",
+  "quest.needs.item": "{res} {have}/{n}",
+  "quest.track.needs": "Gather {res}: {n} / {count}",
 };

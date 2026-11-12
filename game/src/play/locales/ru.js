@@ -1582,4 +1582,14 @@ export default {
   "lb.verify": "Проверить",
   "lb.footer": "Правила и снимок зафиксированы в NEAR testnet. Очки считаются по журналу игры. Призов нет.",
   "lb.close": "Закрыть",
+  // ---- monster resources the quests ask for (?story=1) ----
+  "res.spider_silk_thread": "паучья шёлковая нить",
+  "res.chitin_plate": "хитиновая пластина",
+  "res.veil_dust": "пыль вуали",
+  "res.ash_ore": "пепельная руда",
+  "res.crown_shard": "осколок короны",
+  "quest.needs.ask": "Принеси мне: {list}.",
+  "quest.needs.missing": "Пока нет. Мне ещё нужно: {list}.",
+  "quest.needs.item": "{res} {have}/{n}",
+  "quest.track.needs": "Собери: {res} {n} / {count}",
 };
