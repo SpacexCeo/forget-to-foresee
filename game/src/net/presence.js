@@ -133,19 +133,19 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
 }
 
 /**
- * ?bots=N without a presence service: N demo walkers simulated in this browser (no network). Same interface as
- * createPresence; status 'demo', so the chip says they are simulated and the chat line stays disabled.
+ * ?bots=N without a presence service: N AI walkers run in this browser (no network). Same interface as
+ * createPresence; status 'demo': each carries an AI badge, the chip counts them as AI and the chat line stays disabled.
  */
 export function createDemoPresence({ count = 3, now = () => performance.now(), onChange = () => {} } = {}) {
   const n = Math.max(1, Math.min(14, count | 0));
-  const players = new Map(Array.from({ length: n }, (_, k) => [k + 1, { id: k + 1, name: 'demo' + BOT_NAMES[k], skin: k % 2 ? 'elise' : 'iris', buf: [] }]));
+  const players = new Map(Array.from({ length: n }, (_, k) => [k + 1, { id: k + 1, name: BOT_NAMES[k], skin: k % 2 ? 'elise' : 'iris', ai: true, buf: [] }]));
   const t0 = now();
   queueMicrotask(() => { try { onChange(); } catch { /* UI */ } });
   return {
     status: 'demo', room: 0, max: 15, id: 0, sys: null, players, chat: [],
     get count() { return n + 1; },
     update() {},
-    positions() { const t = (now() - t0) / 1000; return [...players.values()].map((pl, k) => { const s = botAt(k, t); const s2 = botAt(k, t - 0.1); return { id: pl.id, name: pl.name, skin: pl.skin, p: s.p, h: s.h, a: s.a, speed: Math.hypot(s.p[0] - s2.p[0], s.p[2] - s2.p[2]) / 0.1 }; }); },
+    positions() { const t = (now() - t0) / 1000; return [...players.values()].map((pl, k) => { const s = botAt(k, t); const s2 = botAt(k, t - 0.1); return { id: pl.id, name: pl.name, skin: pl.skin, ai: true, p: s.p, h: s.h, a: s.a, speed: Math.hypot(s.p[0] - s2.p[0], s.p[2] - s2.p[2]) / 0.1 }; }); },
     say() {}, mute() {}, unmute() {}, isMuted: () => false, report() {}, stop() {},
   };
 }

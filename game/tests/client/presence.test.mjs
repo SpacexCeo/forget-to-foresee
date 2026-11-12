@@ -82,5 +82,5 @@ test('demo walkers: on the jury route, walking and pausing; ?bots never touches 
   let t = 0; const d = createDemoPresence({ count: 3, now: () => t });
   assert.equal(d.status, 'demo'); assert.equal(d.count, 4);
   t = 2000; const ps = d.positions(); assert.equal(ps.length, 3); assert.ok(ps[0].speed > 1 && ps[0].speed < 2.5);
-  assert.equal(new Set(ps.map((p) => p.name)).size, 3);
+  assert.equal(new Set(ps.map((p) => p.name)).size, 3); assert.ok(ps.every((p) => p.ai === true), 'every demo walker is marked AI');
 });
