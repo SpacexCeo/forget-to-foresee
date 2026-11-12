@@ -347,5 +347,9 @@ Fixed after the first film (seen on the card render): the gown over the hips fol
 the right hip in the idle; it now rides the pelvis only, and her right leg is removed up to the hip. The card
 `assets/cards/elise_model.webp` / `assets/nft/elise_model.webp` stays the v2 render (owner 12.11: "keep the old card").
 
+Second fix from the frame-by-frame pass: gown points at the armholes whose whole weight was on dropped arm bones
+were left unbound and stood out as a black wedge at her side (worst in the wave); they now fall back to the chest,
+and the bodice no longer follows the shoulder bones (`v3/f_wave_check.jpg`).
+
 Left for later: talk and expression morphs (only the blink is in); no folds on the bodice; the hair has no drawn
 highlight band; the body mesh has 3 open edges at the patched face pockets (hidden under the fringe and the lips).
