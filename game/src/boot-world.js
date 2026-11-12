@@ -258,7 +258,7 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
-let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null;
+let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
 if (townMode.town) {
@@ -372,6 +372,10 @@ if (townMode.town) {
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const d = loadDay1(ctx.storage); return !!(d.minted || d.claimed || d.skin === 'elise'); },
     onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
+  // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story's peak dispatches
+  // window 'ftf:story-peak'; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
+  // 'ftf:pass-open' reopens the modal (HUD / help entry points).
+  if (params.get('story') === '1' && !endgamePass) mountEndgamePass();
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
@@ -699,6 +703,26 @@ if (typeof ResizeObserver === 'function' && renderer.domElement.parentElement) n
 fitView();
 
 let toastTimer = 0;
+function mountEndgamePass() {
+  endgamePass = 'loading';
+  Promise.all([import('./net/pass-deployment.js'), import('./net/pass-client.js'), import('./ui/endgame-pass.js'), import('./audio/town-audio.js')]).then(([d, c, u, a]) => {
+    const demo = params.get('passDemo') === '1';
+    const client = c.createPassClient({ storage: ctx.storage });
+    endgamePass = u.createEndgamePass({ t: (k, x) => ctx.i18n.t(k, x), client, deployment: d.PASS_DEPLOYMENT, storage: ctx.storage, demo,
+      reducedMotion: () => lookdev.reducedMotion, sound: () => a.cueAt('vision_whoosh', null, 0.5) });
+    if (!endgamePass) return;   // network: null — dormant, nothing exists
+    window.__ftf.pass = endgamePass;
+    window.addEventListener('ftf:pass-open', () => endgamePass.open());
+    window.addEventListener('ftf:story-peak', async () => {
+      if (endgamePass.isOpen || (!demo && endgamePass.shown)) return;    // once per account (the demo replays); reopened from the HUD
+      if (demo) { endgamePass.cut(); return; }
+      const e = await client.eligibility();                            // the relayer replays the log; the client never decides
+      if (e && e.eligible) endgamePass.cut();
+    });
+    if (demo) setTimeout(() => window.dispatchEvent(new CustomEvent('ftf:story-peak')), 4000);
+  }).catch((e) => { endgamePass = null; console.warn('[pass]', e); });
+}
+
 function toast(text) { if (playerHud && inTown) { playerHud.toast(text); return; } toastEl.textContent = text; toastEl.hidden = false; toastTimer = 3; }
 
 // moveRun: phones have no Shift, so a tap far away (or a double tap) runs there
