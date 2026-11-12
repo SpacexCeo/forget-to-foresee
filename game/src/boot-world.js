@@ -439,17 +439,17 @@ if (townMode.town) {
   if (!stallMounted) { stallMounted = true; let panel = null; window.addEventListener('ftf:stall-open', (e) => {
     const npc = e && e.detail && e.detail.npc; if (!npc) return;
     Promise.all([import('./net/stall-client.js'), import('./ui/stall-panel.js'), import('./net/town-act.js')]).then(([c, u, w]) => {
-      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }), town: w.createTownAct({ storage: ctx.storage }) });
+      if (!panel) panel = u.createStallPanel({ t: (k, a) => ctx.i18n.t(k, a), client: c.createStallClient({ storage: ctx.storage }), town: w.createTownAct({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }) });
       panel.open(npc);
     }).catch((err) => console.warn('[stall]', err));
   }); }
   // The town works on chain (ui/town-works-panel.js): the Exchange counter dispatches 'ftf:town-works-open'
   if (!worksMounted) { worksMounted = true; let panel = null; window.addEventListener('ftf:town-works-open', () => {
-    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTownWorksPanel({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage }); panel.open(); }).catch((err) => console.warn('[works]', err));
+    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTownWorksPanel({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[works]', err));
   }); }
   // The on-chain tournament entry: tapping the altar label dispatches 'ftf:tournament-open'
   if (!tournMounted) { tournMounted = true; let panel = null; window.addEventListener('ftf:tournament-open', () => {
-    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
+    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
   }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown, floatNumber: numbersHook }); }).catch((e) => console.warn('[town] kill xp', e));

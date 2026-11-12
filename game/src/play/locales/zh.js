@@ -1743,4 +1743,8 @@ export default {
   'tourn.entered': "你已报名第 {id} 赛季。",
   'tourn.done': "报名成功，记录已上链。",
   'tourn.note': "silk 是城镇在测试网上的游戏货币，不是钱。",
+  'works.limit': "今日操作：{n} / {max}。",
+  'works.err.daily': "已达到今日操作上限，明天再来。",
+  'works.err.not_registered': "你的账户还未进入城镇：先去城墙外赚些 silk。",
+  'stall.back.between': "摊位处于两条线之间：低于 {low} silk 时关闭，达到 {high} 时重新开张。",
 };

@@ -33,8 +33,8 @@ const CSS = `
  * @param {{t: Function, storage?: object, client?: object, doc?: Document}} o
  * @returns {{open(): Promise<void>, close(): void, readonly isOpen: boolean}}
  */
-export function createTownWorksPanel({ t, storage = null, client = null, doc = globalThis.document }) {
-  const api = client || createTownAct({ storage });
+export function createTownWorksPanel({ t, storage = null, client = null, flush = null, doc = globalThis.document }) {
+  const api = client || createTownAct({ storage, flush });
   if (!(doc.getElementById && doc.getElementById('tw-style'))) { const s = doc.createElement('style'); s.id = 'tw-style'; s.textContent = CSS; (doc.head || doc.body).append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const button = (text, fn, cls) => { const b = el('button', cls || null, text); b.type = 'button'; b.addEventListener('click', fn); return b; };
@@ -69,7 +69,7 @@ export function createTownWorksPanel({ t, storage = null, client = null, doc = g
     const go = button(t('works.pledge'), () => {
       const amount = toMicro(amt.value);
       if (!amount) { say('works.err.bad_args'); return; }
-      run('stake', { asset: i, amount, tier: Number(tier.value) || 0 }, 'works.done.stake');
+      run('pledge', { asset: i, amount, tier: Number(tier.value) || 0 }, 'works.done.stake');
     }, 'act');
     go.disabled = me.paused;
     ctl.append(amt, tier, go); r.append(ctl);
@@ -84,8 +84,8 @@ export function createTownWorksPanel({ t, storage = null, client = null, doc = g
     r.append(head, el('div', 'tw-note', why));
     const ctl = el('div', 'tw-ctl');
     const c = button(t('works.claim'), () => run('claim', { token_id: d.id }, 'works.done.claim'), 'act'); c.disabled = !can.claim;
-    if (d.state === 'active') { const u = button(t('works.beginUnbond'), () => run('begin_unbond', { token_id: d.id }, 'works.done.begin_unbond'), 'act ghost'); u.disabled = !can.begin_unbond; ctl.append(c, u); }
-    else { const f = button(t('works.finishUnbond'), () => run('finish_unbond', { token_id: d.id }, 'works.done.finish_unbond'), 'act'); f.disabled = !can.finish_unbond; ctl.append(f); }
+    if (d.state === 'active') { const u = button(t('works.beginUnbond'), () => run('unbond', { token_id: d.id }, 'works.done.begin_unbond'), 'act ghost'); u.disabled = !can.begin_unbond; ctl.append(c, u); }
+    else { const f = button(t('works.finishUnbond'), () => run('unbond', { token_id: d.id }, 'works.done.finish_unbond'), 'act'); f.disabled = !can.finish_unbond; ctl.append(f); }
     r.append(ctl);
     return r;
   }
@@ -102,6 +102,7 @@ export function createTownWorksPanel({ t, storage = null, client = null, doc = g
     else {
       const me = r.me;
       kids.push(el('p', null, t('works.balance', { silk: silkOf(me.silk) })));
+      if (me.limits.perDay) kids.push(el('p', 'tw-note', t('works.limit', { n: me.limits.today, max: me.limits.perDay })));
       if (me.paused) kids.push(el('p', 'tw-note', t('works.err.paused')));
       kids.push(el('h4', null, t('works.heading')), ...me.works.map((w, i) => worksRow(w, i, me)));
       kids.push(el('p', 'tw-note', t('works.feeNote', { fee: silkOf(me.params.deedFee), cool: me.params.cooldown })));
@@ -132,8 +133,8 @@ export function createTownWorksPanel({ t, storage = null, client = null, doc = g
  * silk purse, the entry fee and where it goes, Enter. Same honesty rules as the works panel.
  * @param {{t: Function, storage?: object, client?: object, doc?: Document}} o
  */
-export function createTournamentEntry({ t, storage = null, client = null, doc = globalThis.document }) {
-  const api = client || createTownAct({ storage });
+export function createTournamentEntry({ t, storage = null, client = null, flush = null, doc = globalThis.document }) {
+  const api = client || createTownAct({ storage, flush });
   createTownWorksPanel({ t, client: api, doc }); // installs the shared style once
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   let root = null, box = null;

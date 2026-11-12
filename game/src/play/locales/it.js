@@ -1744,4 +1744,8 @@ export default {
   'tourn.entered': "Sei iscritto alla stagione {id}.",
   'tourn.done': "Iscritto. La tua iscrizione è on chain.",
   'tourn.note': "Il silk è la valuta di gioco della città su testnet, non denaro.",
+  'works.limit': "Mosse oggi: {n} su {max}.",
+  'works.err.daily': "Hai raggiunto il limite di mosse di oggi. Torna domani.",
+  'works.err.not_registered': "Il tuo account non è ancora in città: guadagna prima un po’ di silk oltre le mura.",
+  'stall.back.between': "La bancarella è tra le soglie: chiude sotto {low} silk e riapre a {high}.",
 };

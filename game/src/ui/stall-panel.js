@@ -3,7 +3,7 @@
 // Buy and Sell. States: quote -> signing -> settling -> done | error. Honest labels: NEAR testnet, scripted traders;
 // while the relayer's desk is in dry run the buttons stay off and say why (nothing would be minted or paid back).
 import { stallItems, silkText, canTrade, MAX_QTY } from '../net/stall-client.js';
-import { toMicro, silkOf } from '../net/town-act.js';
+import { toMicro, silkOf, STALL_TRADER } from '../net/town-act.js';
 
 const CSS = `
 .sp-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
@@ -55,7 +55,6 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
       const k = n();
       const [b, s] = await Promise.all([client.quote('buy', item, k), client.quote('sell', item, k)]);
       quotes = { buy: b, sell: s };
-      const acct = (b.ok && b.stall) || (s.ok && s.stall); if (acct && !trader) { trader = acct; backSection(); }
       price.textContent = t('stall.price', { buy: b.ok ? silkText(b.silk) : '—', sell: s.ok ? silkText(s.silk) : '—', n: k });
       why.textContent = b.reason || s.reason || (b.error ? t('stall.err.' + (b.error === 'not_configured' ? 'closed' : 'offline')) : '');
       const g = client.guest();
@@ -94,7 +93,7 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
     if (back !== box) return;
     const kids = [el('h4', 'sp-name', t('stall.back.heading'))];
     if (!st.ok) { kids.push(el('div', 'sp-why', t('works.err.' + st.reason))); box.replaceChildren(...kids); return; }
-    kids.push(el('div', 'sp-why', st.open ? t('stall.back.open') : t('stall.back.closed', { line: silkOf(st.reopenLine) })), el('div', 'sp-why', t('stall.back.lead')));
+    kids.push(el('div', 'sp-why', st.open === true ? t('stall.back.open') : st.open === false ? t('stall.back.closed', { line: st.reopenAt }) : t('stall.back.between', { low: st.closeBelow, high: st.reopenAt })), el('div', 'sp-why', t('stall.back.lead')));
     kids.push(el('div', 'sp-why', st.mine !== '0' ? t('stall.back.mine', { silk: silkOf(st.mine), share: st.share.toFixed(2), claim: silkOf(st.claimable) }) : t('stall.back.none')));
     const ctl = el('div', 'sp-ctl'); const amt = el('input'); amt.type = 'number'; amt.min = '1'; amt.value = '10'; amt.setAttribute('aria-label', t('works.amount'));
     const state = el('div', 'sp-state'); state.setAttribute('aria-live', 'polite');
@@ -127,7 +126,8 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
     const tags = el('div', 'sp-tags'); const dry = el('span', 'dry', t('stall.dry')); dry.hidden = true;
     tags.append(el('span', null, t('stall.testnet')), el('span', null, t('stall.scripted')), dry);
     box.append(h, tags, ...items.map(row));
-    if (town) { back = el('div', 'sp-row sp-back'); box.append(back); }
+    trader = STALL_TRADER[who] || null;
+    if (town && trader) { back = el('div', 'sp-row sp-back'); box.append(back); backSection(); }
     const foot = el('div', 'sp-foot'); const note = el('span', null, t('stall.note')); const x = el('button', 'ghost', t('quest.close')); x.type = 'button'; x.addEventListener('click', close);
     foot.append(note, x); box.append(foot);
     root.append(box); root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });

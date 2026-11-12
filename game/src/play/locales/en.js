@@ -1745,4 +1745,8 @@ export default {
   'tourn.entered': "You are entered in season {id}.",
   'tourn.done': "Entered. Your entry is on chain.",
   'tourn.note': "Silk is the town's testnet game currency, not money.",
+  'works.limit': "Moves today: {n} of {max}.",
+  'works.err.daily': "That is today's limit of moves. Come back tomorrow.",
+  'works.err.not_registered': "Your account is not in the town yet: earn some silk beyond the walls first.",
+  'stall.back.between': "The stall is between its lines: it closes below {low} silk and reopens at {high}.",
 };
