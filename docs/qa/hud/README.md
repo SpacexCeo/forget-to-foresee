@@ -49,3 +49,11 @@ back to the old scheme (stored). Desktop is unchanged; the archipelago (judge pa
 - Phones: the frame shows the portrait, level and health only; on touch the prompt pill is small (the Use button acts).
 - Placeholder icons are line glyphs in the HUD gold, to be replaced by the UI-003/UI-004 icon storyboards.
 - The archipelago (judge path) is untouched: "Trial N of 17 · Silk N" stays as the README says.
+
+## Archipelago on a phone (player report: menus cover the screen)
+
+The zone action list is a compact sheet on the right above the bottom nav (max 38% of the height, scrolls), with ✕;
+a tap on the world or ✕ folds it to its title until the spot changes (a tap on the title unfolds it); it folds while the
+stick moves; no keyboard numbers on touch (also inside a Shell); toasts wrap inside the viewport.
+
+![](phone-islw-pad.jpg) ![](phone-islh-pad.jpg)
