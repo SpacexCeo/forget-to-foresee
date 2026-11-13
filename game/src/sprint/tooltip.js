@@ -1,7 +1,7 @@
 // One tooltip component for the whole game (sprint plan 3.2, 8.3): #ftf-tooltip on body, role=tooltip, aria-describedby
 // on the anchor; 250 ms hover delay, immediate on keyboard focus; hides on blur, Esc, scroll and pointerleave; max
 // width 320 x --u; text only (never innerHTML); flips to stay inside the viewport (8 px margin); touch: first tap shows,
-// second tap activates.
+// second tap activates; a tap anywhere else or Esc closes it.
 export const DELAY_MS = 250;
 const MARGIN = 8;
 let el = null, current = null, timer = 0;
@@ -13,8 +13,17 @@ function node(doc) {
     + 'background:var(--ftf-panel-solid,#0e1018);border:1px solid var(--ftf-border,#3a3f55);border-radius:var(--radius,10px);color:var(--ftf-text,#eef0f6);'
     + 'font:var(--fs-sm,14px)/1.35 var(--font-ui,system-ui,sans-serif);box-shadow:var(--shadow,0 8px 32px rgba(0,0,0,.55));pointer-events:none;overflow-wrap:anywhere';
   doc.body.append(el);
+  if (!doc.__ftfTtWired && doc.addEventListener) {
+    doc.__ftfTtWired = true;
+    // closes on a tap anywhere but its anchor, and on Esc (owner rule 13.11)
+    doc.addEventListener('pointerdown', onDocDown, true);
+    doc.addEventListener('keydown', onDocKey, true);
+  }
   return el;
 }
+/** Exported for tests: a pointerdown anywhere except on the anchor hides the open tooltip. */
+export function onDocDown(e) { if (current && !(current === e.target || (current.contains && current.contains(e.target)))) hide(null); }
+export function onDocKey(e) { if (e.key === 'Escape' && current) hide(null); }
 
 /** Pure: where the box goes so it stays inside the viewport (prefers above the anchor, flips below). */
 export function placeTooltip(anchor, box, view) {

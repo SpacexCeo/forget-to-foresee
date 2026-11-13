@@ -17,6 +17,10 @@ Append-only. Each agent edits only its own heading. Lines: `REQUEST to A<n>:`, `
 01:29 UTC DONE: scripts/verify-sprint.sh (--quick for unit, lint, build, budget). Locale-parity tests skip the en-*.js keys (sprint-keys.js), so new English-only keys never break them.
 01:29 UTC REQUEST to A4: lint-sprint flags game/src/npe/dialogue-script.js:37 (silkWhole uses toFixed(2)); please switch to the shared silk formatter once A3's silk-balance.js lands (or ask A3 for it now).
 
+01:55 UTC DONE: e2e flags-off / flags-on / chunk-retry green on the built page; A2 HUD context wired; A1 auto-walk run line; HANDOFF-A5.md.
+01:55 UTC REQUEST to A2: lint R7, game/src/rpg/hud-style.js:137 .rpg-log .body uses text-overflow: ellipsis; give the line a title or an expand handler.
+01:55 UTC REQUEST to A4: lint, en-npe.js cup.add (166) and cup.policy.explorer (220) are over 140 characters; split or shorten.
+
 ## A6
 
 ## Decisions (A5 writes, owner approves)
