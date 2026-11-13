@@ -60,7 +60,8 @@ for nm, h, t, p in B:
     if p: b.parent = arm.edit_bones[p]
 bpy.ops.object.mode_set(mode='OBJECT'); el.parent = ao; md = el.modifiers.new('rig', 'ARMATURE'); md.object = ao
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); bpy.context.view_layer.objects.active = el
-bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.to_mesh(me); bm.free()
+# the source is a triangle soup (every UV seam splits the vertices): weld it, or neither the decimation nor new UVs hold
+bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.triangulate(bm, faces=bm.faces[:]); v0 = len(bm.verts); bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=2e-5); print('welded: %d -> %d vertices' % (v0, len(bm.verts))); bm.to_mesh(me); bm.free(); me.update()
 now = len(me.polygons)
 # The source UVs are thousands of tiny islands: decimating across them scatters wrong texels over the face. So the
 # low mesh gets UVs of its own and its colour is baked from the untouched source mesh.
