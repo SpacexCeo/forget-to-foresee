@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-13",
+  "firstLoad": 12036,
+  "total": 1129043,
+  "chunks": {
+    "audio": 6424,
+    "boot": 8350,
+    "boot-world": 18213,
+    "cinematic": 20834,
+    "client-core": 162986,
+    "features": 675,
+    "haptics": 768,
+    "hudPreview": 918,
+    "locales": 265849,
+    "main": 2612,
+    "modulepreload-polyfill": 399,
+    "play": 237140,
+    "review": 3960,
+    "three": 280266,
+    "ui": 96937,
+    "uiPreview": 854,
+    "vfx": 1959
+  }
+}
