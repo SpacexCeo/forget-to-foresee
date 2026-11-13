@@ -1155,7 +1155,7 @@ const EN = {
   "pass.rpc": "NEAR is not answering right now. Your claim is saved.",
   "pass.err.invalid": "That does not look like a NEAR account id.",
   "pass.err.missing": "That account does not exist on NEAR yet. Create it in your wallet, then try again.",
-  "pass.err.eligible": "Pay the Gate-Loom (10,000 silk) first. You have earned {earned} so far.",
+  "pass.err.eligible": "Pay the Gate-Loom ({fee} silk) first. You have earned {earned} so far.",
   "pass.err.taken": "A pass was already claimed for that wallet.",
   "pass.err.signature": "We could not verify this browser’s account.",
   "pass.err.rate": "Too many tries. Please wait {n} minutes.",

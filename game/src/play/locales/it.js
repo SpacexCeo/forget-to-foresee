@@ -1146,7 +1146,7 @@ export default {
   "pass.rpc": "NEAR non risponde in questo momento. La tua richiesta è salvata.",
   "pass.err.invalid": "Non sembra un id account NEAR.",
   "pass.err.missing": "Questo account non esiste ancora su NEAR. Crealo nel wallet, poi riprova.",
-  "pass.err.eligible": "Prima paga il Telaio-Portale (10.000 seta). Finora hai guadagnato {earned}.",
+  "pass.err.eligible": "Prima paga il Telaio-Portale ({fee} seta). Finora hai guadagnato {earned}.",
   "pass.err.taken": "Per questo wallet è già stato riscattato un pass.",
   "pass.err.signature": "Non abbiamo potuto verificare l’account di questo browser.",
   "pass.err.rate": "Troppi tentativi. Attendi {n} minuti.",

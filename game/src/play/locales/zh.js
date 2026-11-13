@@ -1145,7 +1145,7 @@ export default {
   "pass.rpc": "NEAR 暂时没有响应。你的申请已保存。",
   "pass.err.invalid": "这看起来不像 NEAR 账户 id。",
   "pass.err.missing": "该账户在 NEAR 上还不存在。请先在钱包中创建，再试一次。",
-  "pass.err.eligible": "请先支付织门（10,000 丝）。目前已赚取 {earned}。",
+  "pass.err.eligible": "请先支付织门（{fee} 丝）。目前已赚取 {earned}。",
   "pass.err.taken": "该钱包已经领取过通行证。",
   "pass.err.signature": "无法验证此浏览器的账户。",
   "pass.err.rate": "尝试次数过多。请等待 {n} 分钟。",

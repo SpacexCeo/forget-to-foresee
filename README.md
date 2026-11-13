@@ -76,7 +76,7 @@ Only what runs today. [Expedition] marks the story layer, on by default (`?story
 |---|---|
 | **30 seconds** | Walks the hill town, talks to a townsperson (**E**), hires one as an agent; outside the walls fights the monster packs (strike, dash, the **Q** / **V** casts) for XP and dropped chests. In a season: reads a sign, anchors a guess at a Shell pad, ends the trial (**T**). [Expedition] Each kill also counts toward the active citizen quest and earns town silk. |
 | **5 minutes** | Collects a hired agent's result, spins the wheel by the Inn, plays a Foresight Exchange drill (practice silk, no prizes), plays a few trials and decides whether to forget a memory for a vision. [Expedition] Turns in a citizen quest (the guard's ten stone spiders, the lamplighter's spare part, the crown on the lookout, the repeatable bounty); the objective line always shows one next goal. |
-| **Session** | Plays one 17-trial season at the Tournament altar, checks the revealed signs against the root committed on NEAR testnet, and sees the forgotten memory become a shard (a NEP-171 token for the recorded season on testnet). [Expedition] The Expedition: gather 10,000 town silk (about 1.5 to 2 hours by the pacing test), pay it at the Gate-Loom beside the arrival point, and the Loom sends Iris onward to the archipelago, not home; the Shell monument shows the board (a local preview until a snapshot is published, [docs/leaderboard.md](docs/leaderboard.md)). |
+| **Session** | Plays one 17-trial season at the Tournament altar, checks the revealed signs against the root committed on NEAR testnet, and sees the forgotten memory become a shard (a NEP-171 token for the recorded season on testnet). [Expedition] The Expedition: gather 200 town silk (the Gate-Loom fee, `gate_price` on `ftf-town.testnet`; about 1.5 to 2 hours by the pacing test), pay it at the Gate-Loom beside the arrival point, and the Loom sends Iris onward to the archipelago, not home; the Shell monument shows the board (a local preview until a snapshot is published, [docs/leaderboard.md](docs/leaderboard.md)). |
 
 Not in the loop yet: the weekly tournament card (a labelled simulation). The player market and pledges to the town works are deployed but new, with few player moves on chain so far (see the table below). One currency: silk, in-game, testnet, no value outside the game.
 
@@ -134,7 +134,7 @@ There is one entry: the link above opens the full game (`?story=0` switches the 
 
 | # | Do | See |
 |---|---|---|
-| 1 | Wait for the town. | Iris at her arrival point; the objective line at the top reads "Speak with the elder · 100 / 10,000 silk". Beside her stand the **Gate-Loom** (right) and the **Shell monument** (left). |
+| 1 | Wait for the town. | Iris at her arrival point; the objective line at the top reads "Speak with the elder · <your silk> / 200 silk". Beside her stand the **Gate-Loom** (right) and the **Shell monument** (left). |
 | 2 | Walk to the elder and press **E**; then walk a few metres and talk again. | The starter guide: the Gate-Loom wants 200 silk; the guard at the lower gate gives the first quest. |
 | 3 | Outside the walls, fight the stone spiders (strike / dash, **Q** / **V** casts). | Kills count toward the guard's quest and drop resources (spider silk thread); the quest asks for them at the turn-in. |
 | 4 | At the Shell monument press **E**. | The board: Humans and Scripted NPC tabs, your score from your own play log ("Local preview, not ranked" until a snapshot is published). |

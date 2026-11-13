@@ -1,6 +1,6 @@
 // The whitelist pass claim (story TZ §11.3; contract: contracts/whitelist-pass; API: docs/pass-claim-api.md).
 //
-// A player who paid 10,000 town silk at the Gate-Loom asks for a free pass to a NEAR wallet. The relayer checks, in
+// A player who paid the Gate-Loom fee (200 town silk, expedition-config PORTAL_FEE_C = ftf-town gate_price) asks for a free pass to a NEAR wallet. The relayer checks, in
 // this order (each step is its own function, tested): the wallet id's syntax; that a named wallet exists on the pass
 // network; that the claim is signed by a key of the player's Day 1 guest account (testnet); one claim per guest and
 // one per wallet (server index, then the contract's is_claimed / has_minted); eligibility from the replayed
@@ -16,8 +16,9 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { b58decode, b58encode, createTxClient, findFailure, importSecretKey, serializeFunctionCallTx, sha256, signedTxBytes } from './near-tx.js';
 import { createBucket, DEFAULTS } from './core.js';
+import { EXPEDITION } from './expedition-rules/expedition-config.js';
 
-export const PORTAL_FEE_SILK = 10_000;
+export const PORTAL_FEE_SILK = EXPEDITION.PORTAL_FEE_C / 100; // whole silk (200)
 export const BOARD_SEASON = 1;
 export const RPC = Object.freeze({
   // [VERIFY current public RPC limits and sunset notices before mainnet] two endpoints each, the client fails over
