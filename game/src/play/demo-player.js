@@ -4,24 +4,26 @@
 // remote player, with a "demo" badge on its name tag, and tapping it opens the same player card, which says
 // plainly that it is a scripted demo player and keeps its trades as practice trades on this device.
 import { createRemotePlayers } from './remote-players.js';
-import { createDemoWalker } from './demo-walker.js';
+import { createDemoWalker, fromPathGraph } from './demo-walker.js';
 
 export const DEMO_ID = 'demo-sheriffchenko';
 
 /**
  * @param {{scene: object, t: Function, origin: number[], groundAt?: (x: number, z: number, y: number) => number|null, phone?: boolean, rand?: Function}} o
  */
-export function createDemoPlayer({ scene, t, origin, groundAt = null, phone = false, rand = Math.random }) {
-  const walker = createDemoWalker({ rand });
+export function createDemoPlayer({ scene, t, origin, groundAt = null, phone = false, rand = Math.random, paths = null }) {
+  // the shared town path graph when it is there (play/town-paths.js, owner: every walker only on paths), else the routes
+  const shared = fromPathGraph(paths);
+  const walker = shared ? createDemoWalker({ rand, graph: shared }) : createDemoWalker({ rand });
   const remote = createRemotePlayers({ scene, phone, aiLabel: t('pc.demoBadge') });
   const rec = { id: DEMO_ID, name: t('pc.demoName'), skin: 'sheriffchenko', ai: true, demo: true, lv: 6, silkC: 1240, p: [0, 0, 0], h: 0, speed: 0 };
   return {
-    rec,
+    rec, usesSharedPaths: !!shared,
     /** Per frame while the town is shown; `from` is Iris's world position (for the draw distance). */
     update(dt, from, reducedMotion = false) {
       walker.step(reducedMotion ? 0 : dt);
       const x = walker.x + origin[0], z = walker.z + origin[2];
-      const g = groundAt ? groundAt(x, z, walker.y + origin[1] + 1.5) : null;
+      const g = groundAt ? groundAt(x, z, walker.y + origin[1] + 0.5) : null; // the ground from just above the feet, never from the sky
       rec.p = [x, g != null && Math.abs(g - (walker.y + origin[1])) < 1.2 ? g : walker.y + origin[1], z];
       rec.h = walker.yaw; rec.speed = walker.speed;
       remote.update(dt, [rec], from, reducedMotion);
