@@ -835,6 +835,7 @@ export default {
   'hud.panel.collapse': "Свернуть панель",
   'hud.panel.expand': "Развернуть панель",
   'hud.stamina': "Выносливость",
+  'tracker.hide': "Скрыть трекер квестов", 'journal.showTracker': "Показывать трекер квестов",
   'holder.heading': "Доступ держателя (NEAR testnet, только чтение)",
   'holder.note': "Введите любой аккаунт testnet. Если у него есть NFT Forget to Foresee (осколок памяти, карта агента или Элиза), игра откроет титул и рамку портрета в этом браузере. Без кошелька, без подписи, в блокчейн ничего не пишется.",
   'holder.account': "ID аккаунта testnet",

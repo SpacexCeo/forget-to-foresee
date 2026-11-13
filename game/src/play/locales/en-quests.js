@@ -3,7 +3,7 @@
 // when the active locale has no such key.
 export default {
   'journal.title': 'Journal',
-  'journal.close': 'Close',
+  'journal.close': 'Close', 'journal.showTracker': 'Show the quest tracker',
   'journal.tab.story': 'Story', 'journal.tab.side': 'Side', 'journal.tab.daily': 'Daily', 'journal.tab.tournament': 'Tournament', 'journal.tab.done': 'Done',
   'journal.search': 'Search quests',
   'journal.lvGiver': 'Lv {level} · {giver}',
@@ -31,7 +31,7 @@ export default {
   'tracker.ready': 'Ready: turn in to {giver}',
   'tracker.walk': 'Walk there',
   'tracker.more': 'Show more', 'tracker.less': 'Show less',
-  'tracker.collapse': 'Collapse', 'tracker.expand': 'Expand',
+  'tracker.collapse': 'Collapse', 'tracker.expand': 'Expand', 'tracker.hide': 'Hide the quest tracker',
   'tracker.town': 'Town errand',
   'tracker.none': 'No quest tracked. Press J to open your Journal.',
   'autowalk.label': 'Walking to {target} · {m} m · press W A S D to stop',

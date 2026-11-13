@@ -22,7 +22,28 @@ const CSS = `
 .ft-flash{animation:ft-flash 1.2s}@keyframes ft-flash{0%,60%{background:rgba(92,207,138,.25)}100%{background:transparent}}
 @media (max-width:599px){.ft{top:calc(env(safe-area-inset-top,0px) + 112px);right:12px;left:12px;width:auto;max-height:40vh}.ft.ft-short .ft-rest{display:none}}
 html[data-motion=reduce] .ft-flash{animation:none}
+.ft-close{font-size:12px;line-height:1}
+.ft.ft-compact{background:none;border:0;box-shadow:none;padding:0;max-height:none;overflow:visible;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.5);width:min(260px,calc(100vw - 24px))}
+.ft.ft-compact .ft-head{position:absolute;right:0;top:0;opacity:0;transition:opacity .15s}.ft.ft-compact:hover .ft-head,.ft.ft-compact:focus-within .ft-head{opacity:1}
+.ft.ft-compact .ft-head span,.ft.ft-compact .ft-key,.ft.ft-compact .ft-collapse{display:none}
+.ft.ft-compact .ft-road,.ft.ft-compact .ft-rest,.ft.ft-compact .ft-obj,.ft.ft-compact .ft-more,.ft.ft-compact .ft-none,.ft.ft-compact .ft-walk,.ft.ft-compact .ft-expand,.ft.ft-compact .ft-guide-hide{display:none}
+.ft.ft-compact .ft-q{border:0;padding:0 24px 0 0}.ft.ft-compact .ft-q~.ft-q{display:none}
+.ft.ft-compact .ft-title,.ft.ft-compact .ft-q.compact .ft-title{color:#fff;font-weight:600}
+.ft.ft-compact .ft-ib{background:rgba(10,14,16,.5);border:0;min-width:22px;min-height:22px}
+.ft.ft-compact .ft-showmore{background:none;border:0;padding:0;min-height:0;font-size:12px;text-decoration:underline;color:rgba(240,242,240,.75)}
 `;
+
+/** The tracker's saved choices (ftf.tracker.v1): collapsed, hidden (the × hides it entirely; the Journal brings it back)
+ * and compact (null: decided by the window size). Pure over a storage; a broken store gives the defaults. */
+export function loadTrackerPref(storage) {
+  const d = { collapsed: false, hidden: false, compact: null };
+  try { const r = JSON.parse((storage && storage.getItem('ftf.tracker.v1')) || '{}'); return { ...d, ...(r && typeof r === 'object' ? r : {}) }; } catch { return d; }
+}
+export function saveTrackerPref(storage, pref) { try { if (storage) storage.setItem('ftf.tracker.v1', JSON.stringify(pref)); return true; } catch { return false; } }
+/** Small windows (narrower than 1100 px or lower than 720 px) start with the compact tracker: the active quest line only. */
+export const startsCompact = (w, h) => w < 1100 || h < 720;
+/** Compact now? The player's own choice wins; otherwise the window size decides. Pure. */
+export const isCompact = (pref, w, h) => (pref.compact === true || pref.compact === false ? pref.compact : startsCompact(w, h));
 
 /**
  * @param {object} o
@@ -31,13 +52,17 @@ html[data-motion=reduce] .ft-flash{animation:none}
  * @param {(id: string|null) => void} o.onOpen opens the journal (at a quest) @param {(view: object) => void} o.onWalk
  * @param {object} [o.storage] keeps the collapsed state (ftf.tracker.v1)
  */
-export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onHideGuide = () => {}, storage = null }) {
+export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onHideGuide = () => {}, storage = null, win = null }) {
   if (!doc.getElementById || !doc.getElementById('ft-css')) { const st = doc.createElement('style'); st.id = 'ft-css'; st.textContent = CSS; (doc.head || doc.body).append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  let pref = { collapsed: false }; try { pref = { ...pref, ...JSON.parse((storage && storage.getItem('ftf.tracker.v1')) || '{}') }; } catch { /* defaults */ }
-  const save = () => { try { if (storage) storage.setItem('ftf.tracker.v1', JSON.stringify(pref)); } catch { /* memory only */ } };
+  const pref = loadTrackerPref(storage);
+  const save = () => saveTrackerPref(storage, pref);
+  const view = win || doc.defaultView || globalThis.window || null;
+  const compactNow = () => isCompact(pref, view && view.innerWidth ? view.innerWidth : 1920, view && view.innerHeight ? view.innerHeight : 1080);
+  let outerHidden = false;   // the scene hides it (the Journal is open, the town is not active)
+  const apply = () => { root.hidden = outerHidden || !!pref.hidden; };
   const root = el('div', 'ft'); root.setAttribute('role', 'region'); root.setAttribute('aria-label', say('tracker.title'));
-  doc.body.append(root);
+  doc.body.append(root); apply();
   let expanded = null, short = true, lastKey = '';
 
   function block(v, pinned) {
@@ -61,15 +86,18 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
 
   function render(force = false) {
     const d = data(); if (!d) return;
-    const key = JSON.stringify([d.tracked.map((v) => [v.id, v.status, v.objectives.map((o) => o.count)]), d.road, d.errand, d.guide || null, pref.collapsed, expanded, short]);
+    const compact = compactNow();
+    const key = JSON.stringify([d.tracked.map((v) => [v.id, v.status, v.objectives.map((o) => o.count)]), d.road, d.errand, d.guide || null, pref.collapsed, expanded, short, compact]);
     if (!force && key === lastKey) return; lastKey = key;
     root.replaceChildren();
-    root.classList.toggle('ft-short', short);
+    root.classList.toggle('ft-short', short); root.classList.toggle('ft-compact', compact);
     const head = el('div', 'ft-head'); head.append(el('span', null, say('tracker.title')), el('small', 'ft-key', '[J]'));
     const col = el('button', 'ft-ib ft-collapse', pref.collapsed ? '+' : '–'); col.type = 'button'; col.title = say(pref.collapsed ? 'tracker.expand' : 'tracker.collapse');
     col.addEventListener('click', () => { pref.collapsed = !pref.collapsed; save(); render(true); });
-    head.append(col); root.append(head);
-    if (pref.collapsed) return;
+    const hide = el('button', 'ft-ib ft-close', '×'); hide.type = 'button'; hide.title = say('tracker.hide'); hide.setAttribute('aria-label', say('tracker.hide'));
+    hide.addEventListener('click', () => { pref.hidden = true; save(); apply(); });   // gone entirely; the Journal's checkbox brings it back
+    head.append(col, hide); root.append(head);
+    if (pref.collapsed && !compact) return;
     const gate = Math.floor(d.road.gateC / 100), fee = Math.round(d.road.feeC / 100);
     const road = el('button', 'ft-road'); road.type = 'button';
     road.append(el('small', null, say('tracker.road')), el('b', null, say('tracker.roadValue', { gate, fee })));
@@ -88,7 +116,11 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     }
     if (d.errand) { const e = el('div', 'ft-q compact'); e.append(el('div', 'ft-title', say('tracker.town')), el('div', 'ft-obj', d.errand)); rest.append(e); }
     root.append(rest);
-    if (rest.children.length) {
+    if (compact) {   // the active line only; "Show more" opens the full tracker (and remembers it)
+      const more = el('button', 'ft-ib ft-showmore', say('tracker.more')); more.type = 'button';
+      more.addEventListener('click', () => { pref.compact = false; save(); render(true); });
+      root.append(more);
+    } else if (rest.children.length) {
       const more = el('button', 'ft-ib ft-showmore', say(short ? 'tracker.more' : 'tracker.less')); more.type = 'button';
       more.addEventListener('click', () => { short = !short; render(true); });
       root.append(more);
@@ -97,7 +129,10 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
   return {
     root, refresh: render,
     flash(id) { const b = root.querySelector && root.querySelector(`[data-quest="${id}"]`); if (b) { b.classList.remove('ft-flash'); void b.offsetWidth; b.classList.add('ft-flash'); } },
-    setHidden(h) { root.hidden = !!h; },
+    setHidden(h) { outerHidden = !!h; apply(); },
+    /** The player's choice (the × and the Journal's "Show the quest tracker"): persisted in ftf.tracker.v1. */
+    get shown() { return !pref.hidden; },
+    setShown(on) { pref.hidden = !on; save(); apply(); if (on) render(true); },
     dispose() { root.remove(); },
   };
 }

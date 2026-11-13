@@ -82,6 +82,29 @@ test('tracker: Road Home from the gate number, the pinned quest with counters, t
   assert.doesNotMatch(doc.getElementById('ft-css').textContent, /white-space\s*:\s*nowrap/);
 });
 
+test('tracker preference: the × hides it entirely and is kept; the Journal checkbox brings it back; small windows start compact', async () => {
+  const { loadTrackerPref, saveTrackerPref, startsCompact, isCompact } = await import('../../src/quests/tracker-ui.js');
+  const store = new Map(), storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  assert.deepEqual(loadTrackerPref(storage), { collapsed: false, hidden: false, compact: null });
+  assert.deepEqual(loadTrackerPref({ getItem: () => { throw new Error('blocked'); } }), { collapsed: false, hidden: false, compact: null }, 'a blocked store gives the defaults');
+  assert.equal(saveTrackerPref({ setItem: () => { throw new Error('full'); } }, {}), false, 'a full store does not throw');
+  store.set('ftf.tracker.v1', '{not json'); assert.equal(loadTrackerPref(storage).hidden, false);
+  assert.equal(startsCompact(1920, 1080), false); assert.equal(startsCompact(1099, 900), true); assert.equal(startsCompact(1366, 719), true);
+  assert.equal(isCompact({ compact: null }, 830, 630), true); assert.equal(isCompact({ compact: false }, 830, 630), false, 'the player opened it: stays open');
+  assert.equal(isCompact({ compact: true }, 1920, 1080), true);
+  store.clear();
+  const doc = makeDoc(); const s = spidersActive();
+  const tr = createTrackerUI({ doc, say, giverName: gname, storage, win: { innerWidth: 1920, innerHeight: 1080 }, data: () => ({ tracked: [questView('q_spiders', { qs: s, now: T0, tracked: ['q_spiders'] })], road: { gateC: 0, feeC: 20_000 }, errand: null }), onOpen: () => {}, onWalk: () => {} });
+  tr.refresh(true); assert.equal(tr.shown, true); assert.equal(tr.root.hidden, false);
+  tr.root.querySelector('.ft-close').click();
+  assert.equal(tr.root.hidden, true); assert.equal(tr.shown, false); assert.equal(JSON.parse(store.get('ftf.tracker.v1')).hidden, true);
+  tr.setHidden(false); assert.equal(tr.root.hidden, true, 'the scene showing it again does not undo the player\'s ×');
+  tr.setShown(true); assert.equal(tr.root.hidden, false); assert.equal(JSON.parse(store.get('ftf.tracker.v1')).hidden, false);
+  const small = createTrackerUI({ doc, say, giverName: gname, storage: null, win: { innerWidth: 830, innerHeight: 630 }, data: () => ({ tracked: [questView('q_spiders', { qs: s, now: T0, tracked: ['q_spiders'] })], road: { gateC: 0, feeC: 20_000 }, errand: null }), onOpen: () => {}, onWalk: () => {} });
+  small.refresh(true); assert.ok(small.root.classList.contains('ft-compact'), 'a small window starts compact');
+  small.root.querySelector('.ft-showmore').click(); assert.equal(small.root.classList.contains('ft-compact'), false, '"Show more" opens the full tracker');
+});
+
 test('planner: around a box, none when the target is blocked or too far; the stop point', () => {
   const box = (x, z) => x >= 4 && x <= 6 && z >= -3 && z <= 3;
   const p = planPath([0, 0], [10, 0], { blocked: box });
