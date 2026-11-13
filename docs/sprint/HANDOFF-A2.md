@@ -14,7 +14,7 @@ Branch `claude/elise-v2` (the lead merges to `main`). Every claim below has a te
 | Float numbers of 5.13 (taken, heal, miss, crit "34!", "+3 silk", XP merge) | `ui/float-numbers-core.js`, `ui/float-numbers.js` | `tests/client/float-numbers.test.mjs` |
 | English strings | `play/locales/en-hud.js` (fallback in `rpg/hud-text.js` until the seam merges it into `en.js`) | jargon and literal-price scan in `hud.test.mjs` |
 
-E2E (`node game/tests/e2e/rpg-hud.mjs <out> <dev server url>`, GPU server, 13 Nov): E1 rectangles ±2 px and no overlap with the tracker slot; E2 slot 2 lance spends mana and cools down, slot 1 strikes; E3 level-up banner, log, max HP; E4 tree learn and slot 5; E5 respec; C panel stat point; E7 low-HP vignette; E9 phone 5 slots ≥ 44 px, no overlap. All green.
+E2E (`node game/tests/e2e/rpg-hud.mjs <out> <dev server url>`, GPU server, 13 Nov): E1 rectangles ±2 px and no overlap with the tracker slot; E2 slot 2 lance spends mana and cools down, slot 1 strikes; E3 level-up banner, log, max HP; E4 tree learn and slot 5; E5 respec; C panel stat point; E6 Strike rebound to G strikes in the field and is stored; E7 low-HP vignette; E9 phone 5 slots ≥ 44 px, no overlap. All green.
 
 ## Wiring (A5)
 
@@ -39,5 +39,5 @@ if (flags.rpgHud) import('./rpg/index.js').then((m) => { rpg = m.mount({ ledger:
 - Voice and Clear Diction do not yet raise the fight's own damage numbers: that needs the `mob.hit` bus emit (A5) to add the bonus. Insight's mark is applied to Echo and Babel only.
 - Max HP above 100 works through scaling: the fight still counts 0..100, read as the share of her max HP, and each hit is applied in real HP through the defences.
 - The phone hotbar shows slots 1 to 5; there is no swipe-up drawer for 6 to 9. The phone log is hidden under 480 px wide (the town market ticker sits where the one-line ticker would go).
-- No buff icons art (text squares with the seconds left); no E6 (rebind Strike to G and press G in the world) and E8 (silk chip equals the portal prompt) e2e yet; E10 reduced motion is CSS only.
+- No buff icons art (text squares with the seconds left); no E8 (silk chip equals the portal prompt: waits for A3's silkView) e2e yet; E10 reduced motion is CSS only.
 - Overlaps with widgets owned by others: the market ticker and the online-count chip over the log (desktop) and slot 1 (phone); the settings gear over the minimap's edge.
