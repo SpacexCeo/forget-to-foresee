@@ -6,6 +6,27 @@ A 3D strategy game where **Iris**, a doctor-linguist who came through the glass,
 - **Built at NEAR HACKATHON** (1–14 Nov 2026) by Lambada_eth. Tracks: **Games** (primary) and **NFTs** (memory shards); see [Tracks](#tracks).
 - **Licence:** MIT. **AI use:** see [Baseline, third-party code and AI disclosure](#baseline-third-party-code-and-ai-disclosure).
 - **Numbers** (test counts, build size) are generated, not typed: [docs/STATS.md](docs/STATS.md) (`node scripts/stats.mjs --write`).
+- **CI:** [![tests](https://github.com/SpacexCeo/forget-to-foresee/actions/workflows/tests.yml/badge.svg)](https://github.com/SpacexCeo/forget-to-foresee/actions/workflows/tests.yml) [![contracts](https://github.com/SpacexCeo/forget-to-foresee/actions/workflows/contracts.yml/badge.svg)](https://github.com/SpacexCeo/forget-to-foresee/actions/workflows/contracts.yml) [![pages](https://github.com/SpacexCeo/forget-to-foresee/actions/workflows/pages.yml/badge.svg)](https://github.com/SpacexCeo/forget-to-foresee/actions/workflows/pages.yml) · **Security:** [SECURITY.md](SECURITY.md) · **For reviewing agents:** [AGENTS.md](AGENTS.md)
+
+## Live on NEAR testnet right now
+
+A town of 20 merchants, each a NEAR account with its own key, trades on chain all day; nobody presses a button.
+Prices follow stock and recent demand by rules in one file ([`relayer/market/prices.js`](relayer/market/prices.js)),
+every trade carries its reason, and a model on NEAR AI Cloud sets each clan's bounded strategy about once an hour.
+
+| What | Number | Check it yourself |
+|---|---|---|
+| Testnet transactions on 13 Nov 2026 (UTC), counted from the public indexer | see [docs/proof/tx-2026-11-13.md](docs/proof/tx-2026-11-13.md) | `node tools/count/count.mjs --day 2026-11-13` (no keys; recounts every transaction by receiver, method and signer) |
+| Trades sent today and the latest hashes | `today`, `recent[].hash` in [`/api/market/stats`](https://159-195-130-113.sslip.io/api/market/stats) | open any hash at `https://testnet.nearblocks.io/txns/<hash>`; Town Pulse: [pulse.html](https://spacexceo.github.io/forget-to-foresee/pulse.html) |
+| A week of the economy in a minute | [economy-lab.html](https://spacexceo.github.io/forget-to-foresee/economy-lab.html) | `node tools/town/fast-week.mjs` |
+
+Accounts: the town contract [ftf-town.testnet](https://testnet.nearblocks.io/address/ftf-town.testnet); the traders
+[01](https://testnet.nearblocks.io/address/trader-01.ftf-town.testnet) · [02](https://testnet.nearblocks.io/address/trader-02.ftf-town.testnet) · [03](https://testnet.nearblocks.io/address/trader-03.ftf-town.testnet) · [04](https://testnet.nearblocks.io/address/trader-04.ftf-town.testnet) · [05](https://testnet.nearblocks.io/address/trader-05.ftf-town.testnet) · [06](https://testnet.nearblocks.io/address/trader-06.ftf-town.testnet) · [07](https://testnet.nearblocks.io/address/trader-07.ftf-town.testnet) · [08](https://testnet.nearblocks.io/address/trader-08.ftf-town.testnet) · [09](https://testnet.nearblocks.io/address/trader-09.ftf-town.testnet) · [10](https://testnet.nearblocks.io/address/trader-10.ftf-town.testnet) · [11](https://testnet.nearblocks.io/address/trader-11.ftf-town.testnet) · [12](https://testnet.nearblocks.io/address/trader-12.ftf-town.testnet) · [13](https://testnet.nearblocks.io/address/trader-13.ftf-town.testnet) · [14](https://testnet.nearblocks.io/address/trader-14.ftf-town.testnet) · [15](https://testnet.nearblocks.io/address/trader-15.ftf-town.testnet) · [16](https://testnet.nearblocks.io/address/trader-16.ftf-town.testnet) · [17](https://testnet.nearblocks.io/address/trader-17.ftf-town.testnet) · [18](https://testnet.nearblocks.io/address/trader-18.ftf-town.testnet) · [19](https://testnet.nearblocks.io/address/trader-19.ftf-town.testnet) · [20](https://testnet.nearblocks.io/address/trader-20.ftf-town.testnet) (`trader-NN.ftf-town.testnet`);
+items [items.ftf-town.testnet](https://testnet.nearblocks.io/address/items.ftf-town.testnet) (NEP-245);
+players' accounts and NFTs [guests](https://testnet.nearblocks.io/address/guests.ftf-coordinator.testnet) · [heroine](https://testnet.nearblocks.io/address/heroine.ftf-coordinator.testnet) · [companions](https://testnet.nearblocks.io/address/companions.ftf-coordinator.testnet) · [chests](https://testnet.nearblocks.io/address/chests.ftf-coordinator.testnet) (`*.ftf-coordinator.testnet`);
+the sealed season [ftf-seasons.testnet](https://testnet.nearblocks.io/address/ftf-seasons.testnet) and its shards [ftf-shards.testnet](https://testnet.nearblocks.io/address/ftf-shards.testnet).
+The trades are scripted NPC activity run by the owner on testnet, not player volume; what players do on chain is listed
+per contract in the same proof file.
 
 ## Judge path: do X, see Y (90 seconds)
 
@@ -57,7 +78,7 @@ Only what runs today. [Expedition] marks the story layer, on by default (`?story
 | **5 minutes** | Collects a hired agent's result, spins the wheel by the Inn, plays a Foresight Exchange drill (practice silk, no prizes), plays a few trials and decides whether to forget a memory for a vision. [Expedition] Turns in a citizen quest (the guard's ten stone spiders, the lamplighter's spare part, the crown on the lookout, the repeatable bounty); the objective line always shows one next goal. |
 | **Session** | Plays one 17-trial season at the Tournament altar, checks the revealed signs against the root committed on NEAR testnet, and sees the forgotten memory become a shard (a NEP-171 token for the recorded season on testnet). [Expedition] The Expedition: gather 10,000 town silk (about 1.5 to 2 hours by the pacing test), pay it at the Gate-Loom beside the arrival point, and the Loom sends Iris onward to the archipelago, not home; the Shell monument shows the board (a local preview until a snapshot is published, [docs/leaderboard.md](docs/leaderboard.md)). |
 
-Not in the loop yet: the town market and pledges to the town works (built, not deployed; see the table below), the weekly tournament card (a labelled simulation). One currency: silk, in-game, testnet, no value outside the game.
+Not in the loop yet: the weekly tournament card (a labelled simulation). The player market and pledges to the town works are deployed but new, with few player moves on chain so far (see the table below). One currency: silk, in-game, testnet, no value outside the game.
 
 <a id="no-gpu"></a>
 ## Verify in 60 seconds (no GPU, no browser)
@@ -91,6 +112,18 @@ Check a NEAR AI Cloud TEE attestation live (Intel TDX quote, event log, GPU evid
 
 ```bash
 node tools/verify-tee/verify.mjs --model Qwen/Qwen3-VL-30B-A3B-Instruct   # every line "ok", last line PASS
+```
+
+The last online check asks NVIDIA's GPU attestation service for its verdict. Some networks get `403 Forbidden` from
+that service (we saw it on 13 Nov); the line then prints `FAIL`. Add `--no-gpu` to skip only that line (it prints
+`SKIP`; the GPU evidence nonce is still checked).
+
+Recount the town's on-chain activity from the public NearBlocks indexer (no keys, signs nothing; a full day takes
+about 15 minutes of paging, and the indexer may answer 429 for a while):
+
+```bash
+node tools/count/count.mjs --hours 1          # successful and failed transactions by contract, method and signing account
+node tools/count/count.mjs --day 2026-11-13   # one UTC day; the recorded result is docs/proof/tx-2026-11-13.md
 ```
 
 One-file proof verifiers (they import nothing from the game): `node tools/verify/verify.mjs proof.json` or `python3 tools/verify/verify.py proof.json` (copy `proof.json` from **Signs & Visions → What does this prove? → Copy proof**). Exit 0 and every line `✓` means the leaf and the Merkle path match. Details: [docs/verify.md](docs/verify.md).
@@ -156,14 +189,14 @@ play-money games, the new-player intro and prologue, agents in the tournament. T
 | Loot chests from monsters | **Live on testnet**: `chests.ftf-coordinator.testnet`, deck of 10,000 with exactly 1,000 NFT committed on chain; the season seed is fixed (TEE-attested) and the relayer opens chests one transaction each (health on 13.11: 36 openings, 0 errors). `node tools/verify-chest/verify.mjs` checks the deck and every opening. | [docs/chests.md](docs/chests.md) |
 | Wheel grand prize (Sheriffchenko skin NFT) | **Contract live, mint pending**: `skins.ftf-coordinator.testnet` (cap 100, one per account, 0 minted as of 13.11). The claim route re-checks the roll server-side; the route is on the deployed relayer (12.11) with its minter key on the server, but that key is not yet added to the contract, so a winning spin shows "mint pending" in the game. Known limit: the roll is public, so a player can pick a winning spin within the allowed count (documented). | [docs/wheel-skin.md](docs/wheel-skin.md), `contracts/skin-nft/` |
 | Shared town and chat (rooms of 15) | **Real**: `presence/` (WebSocket rooms, server-side limits) runs on the owner's server behind the relayer's domain (`wss://159-195-130-113.sslip.io/presence`, `/presence/health` answers); the game joins it from `day1-deployment.js`. |
-| Sign in / Create account (NEAR, EVM, Solana wallets) | **Built, on** (flag `accountLogin`, the relayer routes deployed 13 Nov): the panel (NEAR wallets through HOT's NEAR Connect: HOT, Meteor, Intear, MyNearWallet and more), the wallet signatures (NEAR NEP-413, EVM personal_sign, Solana signMessage) and the relayer's `/api/auth/nonce` and `/api/auth/link` are tested (signature checks, replay, expiry, guest → login keeps the account, conflict prompt), but the flag is off and the relayer routes are not deployed yet, so the hosted game plays as a guest only. Email / Google: not built. | [docs/account-login.md](docs/account-login.md) |
-| Town economy (scripted traders, ~22,000 testnet transactions a day; pledges to the town works as deeds; tournament entry and purse) | **Real on testnet, traders live**: `ftf-town.testnet` is deployed with 26 NPC wallets (20 traders, 6 clans) holding game-methods-only keys, genesis silk, and the on-chain portal (`pay_gate`, `pay_gate_for`, 200 silk); the scripted trader loop sends from the relayer (measured 3.06 Tgas a trade, about 6.7 NEAR a day). **Players' own pledges, claims, stall pledges and tournament entry through the relayer (contract v4 `*_for`, `/api/town/act`): built and tested, not deployed yet** (`docs/town-act.md`). Independent count from the public indexer: `node tools/count/count.mjs --day YYYY-MM-DD` (13 Nov, 09:50–10:50 UTC: 1,523 successful, 0 failed) and on Town Pulse (`/pulse.html`). |
+| Sign in / Create account (NEAR, EVM, Solana wallets) | **Live** (flag `accountLogin` on in `game/public/features.json`; the relayer's `/api/auth/nonce` answers since 13 Nov): the panel (NEAR wallets through HOT's NEAR Connect: HOT, Meteor, Intear, MyNearWallet and more), the wallet signatures (NEAR NEP-413, EVM personal_sign, Solana signMessage) and the relayer's `/api/auth/nonce` and `/api/auth/link` are tested (signature checks, replay, expiry, guest → login keeps the account, conflict prompt). Playing without signing in stays the default. Email / Google: not built. | [docs/account-login.md](docs/account-login.md) |
+| Town economy (scripted traders, target 24,000 testnet trades a day; pledges to the town works as deeds; tournament entry and purse) | **Real on testnet, traders live**: `ftf-town.testnet` is deployed with 26 NPC wallets (20 traders, 6 clans) holding game-methods-only keys, genesis silk, and the on-chain portal (`pay_gate`, `pay_gate_for`, 200 silk); the scripted trader loop sends from the relayer (measured 3.06 Tgas a trade, about 7 NEAR a day at this rate). The relayer reported 18,568 trades sent on 13 Nov by about 19:10 UTC (`today` in `/api/market/stats`). **Players' own pledges, claims, stall pledges and tournament entry through the relayer: contract v4 `*_for` deployed 12 Nov, relayer route `/api/town/act`; few player moves on chain so far** (`docs/town-act.md`). Independent count from the public indexer: `node tools/count/count.mjs --day YYYY-MM-DD` ([docs/proof/](docs/proof/)) and on Town Pulse (`/pulse.html`). | [docs/proof/tx-2026-11-13.md](docs/proof/tx-2026-11-13.md) |
 | Town items as NEP-245 multi-tokens (monster resources first) | **Deployed on testnet, nothing minted yet**: `items.ftf-town.testnet` (NEP-245 core, metadata, events; no approvals; minters only) with the five monster resources registered, supply 0 on 13.11; the minters are the trader wallets. |
 | Combat outside the town walls | **Real, local**: 4 monster types, strike / dash / casts, health; in-game only, nothing on-chain | `game/src/play/mobs.js` |
 | Photo mode (**P**), townsfolk barks, narrator subtitles when films are off, shard history timeline on the card | **Real**, local presentation | `game/src/render/photo-mode.js`, `game/src/scenes/barks.js`, `game/src/play/narrator.js`, `game/src/ui/world-hud/shard-card.js` |
 | Dragon companion NFT | **Live on testnet**: `companions.ftf-coordinator.testnet` (6 dragons minted on 13.11), each owned by a heroine token's own account (an NFT that owns an NFT), e.g. `nacre-cy-8` owned by `elise-cy-8.heroine.ftf-coordinator.testnet`; one at the Day 1 mint, a second after the first boss, checked against the stored log (`docs/companions.md`) | `game/src/net/companions.js`, `game/src/net/companion-claim.js`, `relayer/lib/companion.js` |
 | First pet: "prove you are real" | **Built, waits for the relayer redeploy** (13.11): after the player's first settled tournament the Hatchkeeper opens; the player picks which of their heroine NFTs owns the dragon and it is minted to that token's account; one pet per guest; before that the pet slot shows locked | `game/src/scenes/hatchkeeper.js`, `game/src/net/pet.js`, `relayer/api/companion/claim.js` |
-| Player market (players trade items for silk) | **Contracts deployed on testnet** (13.11): `ftf-town.testnet` v5 (`trade_for`), `items.ftf-town.testnet` v2 (`coordinator_transfer`), the coordinator key includes `trade_for`; chain-only settlement (items move, then silk; moved back if the silk call fails). Goes live once the relayer holds the items-minter key; until then the window says "Not live yet" | `game/src/market/`, `relayer/api/market/p2p.js`, [docs/market.md](docs/market.md) |
+| Player market (players trade items for silk) | **Contracts deployed on testnet** (13.11): `ftf-town.testnet` v5 (`trade_for`), `items.ftf-town.testnet` v2 (`coordinator_transfer`), the coordinator key includes `trade_for`; chain-only settlement (items move, then silk; moved back if the silk call fails). **Live since 13.11 evening**: the relayer holds the items key (a function-call key for `coordinator_transfer` only) and `/api/market/p2p/book?item=spider_silk_thread` answers `"live": true`; no item has been minted yet (supply 0 on 13.11), so the book is empty until players sell monster resources | `game/src/market/`, `relayer/api/market/p2p.js`, [docs/market.md](docs/market.md) |
 | Level-5 boss fight, the Glass Shoal | **Built, off on the live page** (flag `glassShoal`): the quest, the Loomblade, the dragon ride, a three-phase boss, the mirror-flat arena look with a live scene panel. Preview: `?ff=glassShoal&shoal=reach_stone&render=1`, the look alone on `shoal.html?ff=glassShoal&render=1`. Placeholder models for the sword, the great dragon and the boss | `game/src/scenes/glass-shoal.js`, `game/src/render/shoal-look.js`, [docs/plans/boss/](docs/plans/boss/) |
 | Characters | **Real**: Elise v5 (both legs on her own joints, 17 baked clips, a cloth dress), Iris, the Sheriffchenko skin; the five quest givers with clips baked per character; townsfolk walk a shared path graph, keep clear of props and never pass through each other | `game/public/assets/models/`, `game/src/play/town-paths.js` |
 | Kill log | **Real, local + verified log**: every kill is recorded; a "defeat N" quest counts kills from the last 30 min before accepting, and a held drop (the crown shard) completes its quest | `game/src/game/quest-rules.js` |
@@ -198,6 +231,21 @@ The full feature table and every detail of the old README: [docs/status.md](docs
 
 Explicitly not proven: the browser runs the rules, so a modified client could change silk and outcomes; the commitment fixes what the Guests said, not what you did. See [docs/verify.md](docs/verify.md).
 
+## After the hackathon
+
+What exists today decides what can move to mainnet; nothing below is promised to players.
+
+| Piece | Mainnet-ready? | What is missing |
+|---|---|---|
+| Season commitment, memory shards, agent cards (`season-commit`, `memory-shard`, `agent-card`) | Closest: CI-tested on every change (`contracts.yml`); no method can change a committed root (`ERR_SEASON_EXISTS`) | An external review; deploy with the full-access keys deleted after setup |
+| Whitelist pass (`contracts/whitelist-pass`) | Written for mainnet: an owner runbook rehearses it on testnet first ([docs/mainnet-pass-runbook.md](docs/mainnet-pass-runbook.md)) | The owner's mainnet accounts and the testnet rehearsal; not deployed anywhere yet |
+| Town economy (`town`, `town-items`) and the relayer | Testnet only | Measured cost is 3.06 Tgas a trade, about 7 NEAR a day at today's 20,000+ trades; on mainnet that is real money, so the trader rate would drop to what play needs. The market key's `coordinator_transfer` should check the buyer's signature on chain ([SECURITY.md](SECURITY.md), limit 2) |
+| Relayer and presence | One VPS behind an `sslip.io` host name, keys in its environment | A real domain, a second host, keys split per service, monitoring of balances (`node tools/count/runway.mjs` today) |
+| The game itself | Static page on GitHub Pages; no server needed to play | The rules run in the browser tab, so ranked play with value would need server- or chain-side checks of the run ([docs/verify.md](docs/verify.md)) |
+
+The code is MIT, every suite runs in CI, and decisions are logged in [docs/decisions.md](docs/decisions.md), so the
+project can be picked up without its authors.
+
 ## Prerequisites
 
 - Node.js 20+ (`.nvmrc`: 22). Rust only for the contracts: the toolchain is pinned in `contracts/*/rust-toolchain.toml`; `cargo test --lib` also needs `pkg-config` and OpenSSL headers (`apt-get install pkg-config libssl-dev`).
@@ -226,7 +274,7 @@ Explicitly not proven: the browser runs the rules, so a modified client could ch
 
 | Track hint | In this project |
 |---|---|
-| Social or e-mail login | Not used. The Day 1 free mint makes a NEAR guest account from a key made in your browser (no wallet, no seed phrase); without the mint you play without an account |
+| Social or e-mail login | E-mail and Google: not built. Wallet sign-in (NEAR, EVM, Solana) is live but optional. The Day 1 free mint makes a NEAR guest account from a key made in your browser (no wallet, no seed phrase); without the mint you play without an account |
 | Agent NPCs | Townsfolk speak through a model on NEAR AI Cloud (TEE; the browser re-checks the signature) when it answers; the five rival clans play by scripted rules; their strategy layer in the town economy is chosen by a model on NEAR AI Cloud (live). See [What is AI, what is scripted](#what-is-ai-what-is-scripted) |
 | NEAR Intents | Not used |
 | NEP-245 multi-token | Deployed on testnet (`items.ftf-town.testnet`) |
