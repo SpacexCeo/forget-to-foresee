@@ -40,7 +40,7 @@ test('markers: ! over a giver with an offer, ? when a quest can be turned in (ne
 
 test('quest log: ready first, then active, then offers; progress, needs with what she holds, silk rewards', () => {
   const story = { ...initialState(), phase: 'gathering', guide: { talked: true, moved: true } };
-  let s = act(initialQuests(), { type: 'KILL', mob: 'skitter', killId: 'a' }, 1);
+  let s = act(initialQuests(), { type: 'KILL', mob: 'veilbell', killId: 'a' }, 1);
   s = act(s, { type: 'ACCEPT', questId: 'q_spiders' }, 2);
   for (let i = 0; i < 3; i++) s = act(s, { type: 'KILL', mob: 'skitter', killId: 'b' + i }, 3 + i);
   const rows = questLog(story, s, 10, { spider_silk_thread: 3, chitin_plate: 0 });

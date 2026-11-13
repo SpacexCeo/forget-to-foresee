@@ -37,10 +37,10 @@ test('transitions: locked → available → active → ready → done; illegal a
   assert.deepEqual(r.events.map((e) => [e.kind, e.silkC, e.trust]), [['quest_turned_in', 800, 'T2']]);
   assert.ok(run(s, { type: 'TURN_IN', questId: 'q_welcome' }).rejected, 'paid once');
   assert.equal(questStatus(s, 'q_spiders'), 'available'); assert.equal(questStatus(s, 'q_boss'), 'locked', 'boss locked before spiders');
-  // a kill before accepting does not count; one giver at a time
+  // a kill made shortly before accepting counts (owner 13.11, the kill log); one giver at a time
   s = run(s, { type: 'KILL', mob: 'skitter', killId: 'k0' }).state;
   r = run(s, { type: 'ACCEPT', questId: 'q_spiders' }); s = r.state;
-  assert.equal(s.quests.q_spiders.progress, 0);
+  assert.equal(s.quests.q_spiders.progress, 1);
   r = run(s, { type: 'ABANDON', questId: 'q_spiders' }); assert.equal(questStatus(r.state, 'q_spiders'), 'available'); assert.equal(r.events[0].kind, 'quest_abandoned');
   assert.ok(run(s, { type: 'ABANDON', questId: 'q_part' }).rejected);
   for (let i = 1; i <= 10; i++) { r = run(s, { type: 'KILL', mob: 'skitter', killId: 'k' + i }); s = r.state; }

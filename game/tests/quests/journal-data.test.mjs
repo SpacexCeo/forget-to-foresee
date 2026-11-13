@@ -38,7 +38,7 @@ test('statusOf: locked, level gate, available, active, ready, completed, cooldow
 test('progressOf: talk, reach, kill, deliver, part and event objectives', () => {
   let s = act(initialQuests(), { type: 'ACCEPT', questId: 'q_welcome' }); s = act(s, { type: 'GUIDE', step: 'talked' });
   assert.deepEqual(progressOf('q_welcome', s).map((o) => [o.id, o.count, o.of, o.done]), [['talk', 1, 1, true], ['walk', 0, 1, false]]);
-  s = act(s, { type: 'KILL', mob: 'skitter', killId: 'k0' }); s = act(s, { type: 'ACCEPT', questId: 'q_spiders' });
+  s = act(s, { type: 'KILL', mob: 'veilbell', killId: 'k0' }); s = act(s, { type: 'ACCEPT', questId: 'q_spiders' });
   for (let i = 1; i <= 3; i++) s = act(s, { type: 'KILL', mob: 'skitter', killId: 'k' + i });
   assert.deepEqual(progressOf('q_spiders', s, { have: { spider_silk_thread: 2 } }).map((o) => [o.id, o.count, o.of]), [['kill', 3, 10], ['deliver', 2, 5]]);
   assert.deepEqual(progressOf('q_part', s, { have: { part: 1, chitin_plate: 5 } }).map((o) => [o.count, o.of, o.done]), [[1, 1, true], [2, 2, true]]);

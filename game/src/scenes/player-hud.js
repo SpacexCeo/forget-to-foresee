@@ -90,7 +90,7 @@ body.ph-on .ftf-cast-slot { border-color: rgba(201, 163, 90, .45); }
 body.ph-on .ftf-hp { display: none; }
 /* declutter (owner, 12.11): persistent labels become icons with a tooltip; one short line where text stays */
 .ph-help { width: 40px; height: 40px; border-radius: 50%; background: var(--ph-bg) var(--ph-i-help) center / 24px no-repeat; font-size: 0 !important; border: 1px solid var(--ph-line); color: var(--ph-gold); font: 700 17px/1 Georgia, serif; cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); }
-body.ph-on .ftf-town-objective { box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(340px, calc(100% - 28px)); padding-left: 38px; }
+body.ph-on .ftf-town-objective { box-sizing: border-box; white-space: normal; overflow: visible; text-overflow: clip; border-radius: 14px; max-width: min(340px, calc(100% - 28px)); padding-left: 38px; } /* the next step is never cut (owner 13.11) */
 body.ph-on .ftf-town-objective::before { content: ""; position: absolute; left: 10px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; border-radius: 0; box-shadow: none; background: var(--ph-i-quest) center / contain no-repeat; }
 body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: min(340px, calc(100% - 28px)); color: inherit; }
 body.ph-on .ftf-quest-meta button { width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 0; background: rgba(12, 20, 17, .86) ${I_SKIP} center / 20px no-repeat; }
@@ -105,7 +105,7 @@ body.ph-on .ftf-altar-timer { padding: 4px 10px 4px 32px !important; font-size: 
   .ph-frame { min-width: 0; max-width: 200px; gap: 8px; padding: 5px 10px 5px 5px; }
   .ph-portrait { width: 46px; height: 46px; } .ph-portrait img { inset: 3px; width: 40px; height: 40px; }
   .ph-name, .ph-title, .ph-xp { display: none; } .ph-frame { padding-right: 12px; } .ph-hp, .ph-st { width: 70px; } .ph-hp { margin-top: 0; }
-  body.ph-on .ftf-town-objective { top: calc(108px + env(safe-area-inset-top, 0px)); max-width: max(140px, 34vw); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.ph-on .ftf-town-objective { top: calc(108px + env(safe-area-inset-top, 0px)); max-width: max(160px, 44vw); font-size: 13px; white-space: normal; overflow: visible; text-overflow: clip; border-radius: 12px; }
   body.ph-on.ph-quest-min .ftf-town-objective { white-space: normal; max-width: calc(100% - 28px); color: inherit; } /* on a phone a tap unfolds the one-line tracker */
   body.ph-on .ftf-quest-meta { top: calc(152px + env(safe-area-inset-top, 0px)); }
   .ph-wallet { top: calc(60px + env(safe-area-inset-top, 0px)); }
