@@ -455,9 +455,12 @@ if (townMode.town) {
     import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTownWorksPanel({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[works]', err));
   }); }
   // The on-chain tournament entry: tapping the altar label dispatches 'ftf:tournament-open'
-  if (!tournMounted) { tournMounted = true; let panel = null; window.addEventListener('ftf:tournament-open', () => {
-    import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
-  }); }
+  // (flag agentTournament: the Season Cup card first, with the Agent badge, Add an agent and the exhibition; play/season-cup.js)
+  if (!tournMounted) { tournMounted = true; let panel = null, cupCard = null; const openEntry = () => import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTournamentEntry({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[tournament]', err));
+    window.addEventListener('ftf:tournament-open', () => {
+      if (!featureFlags.on('agentTournament')) { openEntry(); return; }
+      import('./play/season-cup.js').then((u) => { if (!cupCard) cupCard = u.createSeasonCup({ t: (k, a) => ctx.i18n.t(k, a), onEnterChain: openEntry }); cupCard.open(); }).catch((err) => { console.warn('[cup]', err); openEntry(); });
+    }); }
   // XP for monsters felled beyond the walls (play/kill-xp.js): "+N XP" over the kill, the level-up burst, chime and toast
   if (!killXp) import('./play/kill-xp.js').then((m) => { if (!killXp) killXp = m.createKillXp({ THREE, scene, camera, player, ledger: townLedger, t: (k, a) => ctx.i18n.t(k, a), toast, reduced: () => lookdev.reducedMotion, active: () => inTown, floatNumber: numbersHook }); }).catch((e) => console.warn('[town] kill xp', e));
   // Twin-stick touch controls (scenes/touch-sticks.js): left stick, camera drag on the right, the skill arc
