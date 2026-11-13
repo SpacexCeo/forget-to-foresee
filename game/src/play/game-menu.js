@@ -109,8 +109,8 @@ const CSS = `
 .gm-chests h4 { margin: 0; font: 600 14px/1.2 system-ui; color: rgba(233, 230, 220, .8); }
 .gm-hist-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 16px 0 6px; }
 .gm-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.gm-hist li { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; padding: 4px 10px 4px 4px; border-radius: 10px; background: rgba(233, 230, 220, .03); border-left: 3px solid var(--rc); }
-.gm-hist-ico { width: 32px; height: 32px; display: grid; place-items: center; font: 600 18px/1 "Cormorant Garamond", Georgia, serif; color: var(--rc); }
+.gm-hist li { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; padding: 4px 10px 4px 4px; border-radius: 10px; background: rgba(233, 230, 220, .03); }
+.gm-hist-ico { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 60%, transparent); font: 600 18px/1 "Cormorant Garamond", Georgia, serif; color: var(--rc); }
 .gm-hist-ico img { width: 30px; height: 30px; object-fit: contain; }
 .gm-hist-txt { min-width: 0; } .gm-hist-txt b { font: 600 13px/1.3 system-ui; margin-right: 6px; } .gm-hist-txt small { display: block; color: rgba(233, 230, 220, .5); font-size: 11px; }
 .gm-hist-rar { font: 700 10px/1 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--rc); }
