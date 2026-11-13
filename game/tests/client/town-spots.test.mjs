@@ -6,7 +6,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TOWN_SHOPS, TOWN_SPOTS, shopDoorAt, townToWorld, TOWN_SPAWN } from '../../src/scenes/town-layout.js';
 import { GUIDE_PAGES } from '../../src/scenes/town-flow.js';
-import { SPRINT_KEYS } from '../../src/play/locales/sprint-keys.js';
 import { PLAY_MESSAGES } from '../../src/play/i18n.js';
 
 test('the three shops have doors Iris can stand at; the mirror is a few steps from the spawn', () => {
