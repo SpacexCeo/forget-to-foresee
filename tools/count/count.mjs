@@ -8,6 +8,7 @@
 //   node tools/count/count.mjs --from 2026-11-13T00:00Z --to 2026-11-14T00:00Z
 //   node tools/count/count.mjs --hours 24 --json     # the last 24 hours, machine-readable
 // Spot-check any hash on https://testnet.nearblocks.io/txns/<hash> or with the RPC `tx` method.
+import { pathToFileURL } from 'node:url';
 
 export const INDEXER = 'https://api-testnet.nearblocks.io/v3';
 export const EXPLORER = 'https://testnet.nearblocks.io';
@@ -131,7 +132,7 @@ export function render(r) {
   ].join('\n');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const opts = parseArgs(process.argv.slice(2));
   count(opts).then(async (r) => {
     if (opts.write) {
