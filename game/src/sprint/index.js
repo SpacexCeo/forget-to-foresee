@@ -7,6 +7,7 @@ import * as tooltip from './tooltip.js';
 import * as silk from './silk-view.js';
 import { MODULES } from './registry.js';
 import { seedFromQuery, applyDemoSeed } from './demo-seed.js';
+import { installWindowRouter } from './window-router.js';
 
 /**
  * @param {object} ctx the game context (boot-world.js) plus `flags` ({on(name)})
@@ -20,6 +21,7 @@ export function mountSprint(ctx = {}, { modules = MODULES, search = (globalThis.
   const seed = seedFromQuery(search); if (seed) applyDemoSeed(seed);
   const flags = ctx.flags && typeof ctx.flags.on === 'function' ? ctx.flags : { on: () => false };
   const live = []; let disposed = false;
+  const offRouter = installWindowRouter({ win: globalThis.window || globalThis, openSettings: ctx.openSettings || null });
   const ready = (async () => {
     const mounted = [];
     for (const m of modules) {
@@ -45,7 +47,7 @@ export function mountSprint(ctx = {}, { modules = MODULES, search = (globalThis.
   const api = {
     ready,
     update(dt) { for (const { id, h } of live) { if (typeof h.update === 'function') { try { h.update(dt); } catch (e) { if (globalThis.console) globalThis.console.warn('[sprint]', id, e); } } } },
-    dispose() { disposed = true; if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf); for (const { h } of live.splice(0)) { try { h.dispose && h.dispose(); } catch { /* best effort */ } } },
+    dispose() { disposed = true; offRouter(); if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf); for (const { h } of live.splice(0)) { try { h.dispose && h.dispose(); } catch { /* best effort */ } } },
   };
   return api;
 }
