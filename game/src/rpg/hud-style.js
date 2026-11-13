@@ -141,4 +141,9 @@ html[data-motion="reduce"] .rpg-banner[data-show="1"], .rpg[data-reduced="1"] .r
   .rpg-tray[data-open="1"] button { display: flex; }
   .rpg-castbar { left: 50%; transform: translateX(-50%); top: auto; bottom: 72px; width: 240px; }
 }
+@media (max-width: 479px) {
+  .rpg-frame { width: 256px; } .rpg-hp, .rpg-mana { width: 168px; }
+  .rpg-map { width: 92px; height: 92px; border-width: 2px; } .rpg-map .n { font-size: 10px; }
+  .rpg-silk { top: 112px; }
+}
 `;

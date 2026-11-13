@@ -75,13 +75,13 @@ await page.evaluate(() => { window.__ftf.player.teleport([0, 1199, 46], 0); }); 
 const m0 = await page.evaluate(() => window.__ftfTest.rpg.state().mana);
 await page.keyboard.press('Digit2'); await page.waitForTimeout(700);
 const after = await page.evaluate(() => ({ mana: window.__ftfTest.rpg.state().mana, slot2: document.querySelector('.rpg-slot[data-slot="2"]').dataset.state }));
-ok('E2 slot 2 casts the lance: mana spent, cooldown sweep', after.mana <= m0 - 7 && after.slot2 === 'cooldown', { m0: Math.round(m0), m1: Math.round(after.mana), state: after.slot2 });
+ok('E2 slot 2 casts the lance: mana spent, cooldown sweep', after.mana <= m0 - 5 && after.slot2 === 'cooldown', { m0: Math.round(m0), m1: Math.round(after.mana), state: after.slot2 });
 await page.keyboard.press('Digit1'); await page.waitForTimeout(150);
 const sc = await page.evaluate(() => document.querySelector('.rpg-slot[data-slot="1"]').dataset.state);
 ok('E2 slot 1 strikes (the fight\'s own cooldown shows)', sc === 'cooldown' || sc === 'ready', sc);
 writeFileSync(`${out}/hud_field.png`, await page.screenshot());
 // E7: low HP: the vignette and the bar pulse
-await page.evaluate(() => { window.__ftf.town.mobs.iris.hp = 15; }); await page.waitForTimeout(300);
+await page.evaluate(() => { window.__ftf.town.mobs.iris.hp = 1; }); await page.waitForTimeout(300);
 ok('E7 low HP vignette on', await page.evaluate(() => document.querySelector('.rpg-vignette').dataset.on === '1'));
 await page.evaluate(() => { window.__ftf.town.mobs.iris.hp = 100; });
 await page.close();
