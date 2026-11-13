@@ -18,8 +18,10 @@ const CSS = `
 .fj-x{width:44px;height:44px;border-radius:10px;border:1px solid #3a3f55;background:rgba(255,255,255,.06);font-size:20px}
 .fj-body{display:grid;grid-template-columns:384px 1fr;min-height:0}
 .fj-rail{border-right:1px solid #3a3f55;display:flex;flex-direction:column;min-height:0}
-.fj-tabs{display:grid;grid-template-columns:repeat(5,1fr);height:48px;border-bottom:1px solid #3a3f55}
-.fj-tab{border:0;background:transparent;font-weight:700;font-size:13px;position:relative;padding:0 2px}
+.fj-tabs{display:flex;height:48px;border-bottom:1px solid var(--ftf-line,#3a3f55);overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent)}
+.fj-tabs::-webkit-scrollbar{display:none}
+.fj-more-wrap{position:relative;margin-left:auto}.fj-more-menu{position:absolute;right:0;bottom:calc(100% + 6px);padding:6px;border:1px solid var(--ftf-line,#3a3f55);border-radius:10px;background:var(--ftf-panel-solid,#101f1a);box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:2}.fj-more-menu[hidden]{display:none}
+.fj-tab{flex:0 0 auto;border:0;background:transparent;font-weight:700;font-size:13px;position:relative;padding:0 14px;white-space:nowrap}   /* full labels; the row scrolls with an edge fade (no "Dor…") */
 .fj-tab[aria-selected=true]{box-shadow:inset 0 -3px 0 #f6c860;color:#f6c860}
 .fj-badge{display:inline-block;min-width:16px;height:16px;border-radius:8px;background:#f6c860;color:#1b1608;font-size:12px;line-height:16px;margin-left:4px}
 .fj-reset{margin:6px 0 2px;color:#aab1c5;font-size:13px;white-space:normal}.fj-search{margin:8px 12px;height:40px;border-radius:10px;border:1px solid #3a3f55;background:rgba(255,255,255,.06);color:#eef0f6;padding:0 12px;font:14px system-ui}
@@ -163,10 +165,15 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     const tb = el('button', 'fj-btn fj-track', say(v.tracked ? 'journal.untrack' : 'journal.track')); tb.type = 'button';
     tb.addEventListener('click', () => { const r = onTrack(v.id); if (!r.ok) { tb.title = say('journal.trackFull'); tb.disabled = true; } else render(); });
     foot.append(wb, tb);
+    // Abandon lives in a "⋯" menu (design review 13.11): no destructive button next to Walk and Track
+    const more = el('div', 'fj-more-wrap'), mb = el('button', 'fj-btn fj-more', '⋯'), menu = el('div', 'fj-more-menu'); mb.type = 'button'; menu.hidden = true;
+    mb.setAttribute('aria-haspopup', 'true'); mb.setAttribute('aria-expanded', 'false'); mb.setAttribute('aria-label', say('journal.more')); mb.title = say('journal.more');
+    mb.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; mb.setAttribute('aria-expanded', String(!menu.hidden)); });
     const ab = el('button', 'fj-btn danger fj-abandon', say('journal.abandon')); ab.type = 'button';
     if (!v.canAbandon) { ab.disabled = true; ab.title = v.category === 'story' ? say('journal.abandonStory') : ''; }
     ab.addEventListener('click', () => { onAbandon(v.id); render(); });
-    foot.append(ab);
+    menu.append(ab); more.append(mb, menu);
+    foot.append(more);
     d.append(foot);
     return d;
   }

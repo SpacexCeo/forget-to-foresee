@@ -4,10 +4,13 @@
 //   - EVM: EIP-191 personal_sign, secp256k1 recovery to the 0x address (the key type intents.near accepts for EVM).
 //   - Solana: ed25519 over the UTF-8 message bytes, the public key is the base58 address (the Solana signMessage form).
 //   - NEAR: NEP-413 signMessage (borsh payload, sha256, ed25519) with a full-access key of the named account.
+//   - Passkey: a WebAuthn assertion (ECDSA P-256) whose challenge is sha256(message), from an allowed origin with its
+//     rpId hash and the user-present flag; the P-256 public key is pinned to the credential id on its first link.
 // Replay: every message carries a one-time nonce the relayer issued (10 min TTL, deleted on first use) and an expiry.
 // Guarding the guest: linking an existing guest account also needs the same message signed by that account's
 // full-access key (the browser's Day-1 key), checked on chain, so nobody can link someone else's account.
-import { createPublicKey, randomBytes, verify as edVerify, createHash } from 'node:crypto';
+import { createPublicKey, randomBytes, verify as edVerify, createHash, verify as cryptoVerify } from 'node:crypto';
+import { allowOrigin } from './core.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { recoverPersonal } from './tee-crypto.js';
@@ -20,7 +23,7 @@ export const AUTH = Object.freeze({
   resolveTtlMs: 5 * 60 * 1000,
   maxNonces: 20_000,
 });
-export const LOGIN_KINDS = Object.freeze(['near', 'evm', 'sol']);
+export const LOGIN_KINDS = Object.freeze(['near', 'evm', 'sol', 'passkey']);
 
 /**
  * The one message every login signs. Built from fields on both sides (never parsed back), so the relayer verifies
@@ -66,6 +69,7 @@ const nonceBytes = (hex) => Buffer.from(hex, 'hex');
 export function identityOf(kind, address) {
   if (kind === 'evm') return /^0x[0-9a-fA-F]{40}$/.test(address) ? 'evm:' + address.toLowerCase() : null;
   if (kind === 'sol') return edPub(address) ? 'sol:' + address : null;
+  if (kind === 'passkey') return typeof address === 'string' && /^[A-Za-z0-9_-]{16,512}$/.test(address) ? 'passkey:' + address : null;
   if (kind === 'near') return /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(address) && address.length >= 2 && address.length <= 64 ? 'near:' + address : null;
   return null;
 }
@@ -75,9 +79,13 @@ export function identityOf(kind, address) {
  * account; an implicit account (64 hex) must equal hex(publicKey).
  * @returns {Promise<{ok: boolean, identity?: string, error?: string}>}
  */
-export async function verifyLogin(login, message, nonceHex, { accessKey } = {}) {
+export async function verifyLogin(login, message, nonceHex, { accessKey, origins, pinnedKey = null } = {}) {
   const id = login && identityOf(login.kind, login.address);
   if (!id) return { ok: false, error: 'bad_login' };
+  if (login.kind === 'passkey') { // the key pinned at the first link wins; a new credential brings its own
+    const v = verifyPasskey(login.signature, message, pinnedKey || login.publicKey, { origins });
+    return v.ok ? { ok: true, identity: id, passkeyKey: pinnedKey ? null : login.publicKey } : v;
+  }
   const sig = sigBytes(login.signature);
   if (!sig) return { ok: false, error: 'bad_signature' };
   if (login.kind === 'evm') {
@@ -103,6 +111,35 @@ export async function verifyGuest(account, message, { accessKey } = {}) {
   if (!accessKey) return { ok: false, error: 'no_rpc' };
   const ak = await accessKey(account.account_id, account.public_key).catch(() => null);
   return ak && ak.permission === 'FullAccess' ? { ok: true } : { ok: false, error: 'not_account_key' };
+}
+
+// ---- passkeys (WebAuthn) -------------------------------------------------------------------------------------------
+const b64url = (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64any = (s) => Buffer.from(String(s).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+/** A P-256 SPKI public key (base64 or base64url DER, as PublicKeyCredential.getPublicKey() gives it), or null. */
+export function passkeyKey(text) {
+  try { const k = createPublicKey({ key: unb64any(text), format: 'der', type: 'spki' }); return k.asymmetricKeyType === 'ec' && k.asymmetricKeyDetails && k.asymmetricKeyDetails.namedCurve === 'prime256v1' ? k : null; } catch { return null; }
+}
+/**
+ * Checks a WebAuthn assertion over `message`. `signature` is JSON {authenticatorData, clientDataJSON, signature}
+ * (base64url). The challenge must be sha256(message), the origin allowed, the rpId hash that origin's host, UP set.
+ */
+export function verifyPasskey(signature, message, publicKeyText, { origins } = {}) {
+  const key = passkeyKey(publicKeyText);
+  if (!key) return { ok: false, error: 'bad_public_key' };
+  let a; try { a = JSON.parse(signature); } catch { return { ok: false, error: 'bad_signature' }; }
+  if (!a || typeof a.authenticatorData !== 'string' || typeof a.clientDataJSON !== 'string' || typeof a.signature !== 'string') return { ok: false, error: 'bad_signature' };
+  const authData = unb64any(a.authenticatorData), cdj = unb64any(a.clientDataJSON);
+  let cd; try { cd = JSON.parse(cdj.toString('utf8')); } catch { return { ok: false, error: 'bad_signature' }; }
+  if (cd.type !== 'webauthn.get') return { ok: false, error: 'bad_signature' };
+  if (cd.challenge !== b64url(createHash('sha256').update(message, 'utf8').digest())) return { ok: false, error: 'bad_challenge' };
+  if (!allowOrigin(cd.origin, origins)) return { ok: false, error: 'bad_origin' };
+  if (authData.length < 37) return { ok: false, error: 'bad_signature' };
+  if (!authData.subarray(0, 32).equals(createHash('sha256').update(new URL(cd.origin).hostname).digest())) return { ok: false, error: 'bad_rp' };
+  if (!(authData[32] & 1)) return { ok: false, error: 'not_user_present' };
+  const signed = Buffer.concat([authData, createHash('sha256').update(cdj).digest()]);
+  let ok = false; try { ok = cryptoVerify('sha256', signed, { key, dsaEncoding: 'der' }, unb64any(a.signature)); } catch { ok = false; }
+  return ok ? { ok: true } : { ok: false, error: 'bad_signature' };
 }
 
 // ---- nonces ---------------------------------------------------------------------------------------------------------
@@ -158,7 +195,7 @@ export const identityFile = (env = process.env) => join(env.FTF_DATA_DIR || new 
  *   200 {status:'existing', account_id, guest_key}   this login already has an account (another device): use it
  *   409 {status:'conflict', existing, current, resolve}   both exist: the player chooses; nothing is dropped
  */
-export function createLinker({ store, nonces, accessKey, now = () => Date.now(), rand = (n) => randomBytes(n) }) {
+export function createLinker({ store, nonces, accessKey, origins, now = () => Date.now(), rand = (n) => randomBytes(n) }) {
   const pending = new Map(); // resolve token -> {identity, existing, current, guestKey, exp}
   return async function link(body) {
     if (!body || typeof body !== 'object') return { status: 400, body: { error: 'bad_body' } };
@@ -183,7 +220,9 @@ export function createLinker({ store, nonces, accessKey, now = () => Date.now(),
     if (body.expires !== expires) return { status: 401, body: { error: 'expiry_mismatch' } };
     const account = body.account && typeof body.account === 'object' ? body.account : null;
     const message = loginMessage({ kind: body.kind, address: String(body.address || ''), account: account ? account.account_id : null, deviceKey: body.device_key || null, nonce: body.nonce, expires });
-    const v = await verifyLogin({ kind: body.kind, address: String(body.address || ''), publicKey: body.public_key, signature: body.signature }, message, body.nonce, { accessKey });
+    const known = identityOf(body.kind, String(body.address || ''));
+    const pinnedKey = known && body.kind === 'passkey' ? ((store.get(known) || {}).passkey_key || null) : null;
+    const v = await verifyLogin({ kind: body.kind, address: String(body.address || ''), publicKey: body.public_key, signature: body.signature }, message, body.nonce, { accessKey, origins, pinnedKey });
     if (!v.ok) return { status: 401, body: { error: v.error } };
     if (account) {
       const g = await verifyGuest(account, message, { accessKey });
@@ -193,7 +232,7 @@ export function createLinker({ store, nonces, accessKey, now = () => Date.now(),
     const stamp = new Date(now()).toISOString();
     if (!cur && !account) return { status: 200, body: { status: 'new' } };
     if (!cur) {
-      store.set(v.identity, { account: account.account_id, guest_key: account.guest_key || account.public_key, kind: body.kind, address: body.address, linked_at: stamp, history: [] });
+      store.set(v.identity, { account: account.account_id, guest_key: account.guest_key || account.public_key, kind: body.kind, address: body.address, linked_at: stamp, history: [], ...(v.passkeyKey ? { passkey_key: v.passkeyKey } : {}) });
       return { status: 200, body: { status: 'linked', account_id: account.account_id } };
     }
     if (!account || account.account_id === cur.account) return { status: 200, body: { status: 'existing', account_id: cur.account, guest_key: cur.guest_key || null } };

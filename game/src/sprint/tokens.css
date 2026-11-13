@@ -1,13 +1,17 @@
 /* Design tokens (sprint plan 3.3). Values are final; sizes are at the 1920 x 1080 reference and scale with --u. */
 :root {
   --u: calc(min(100vw, 100vh * 1.7778) / 1920);
-  --ftf-panel: rgba(14, 16, 24, 0.90);
-  --ftf-panel-solid: #0e1018;
-  --ftf-border: #3a3f55;
-  --ftf-gold: #f6c860;
-  --ftf-gold-dim: #b8964a;
-  --ftf-text: #eef0f6;
-  --ftf-muted: #aab1c5;
+  /* the brief (design review 13.11): green-black panels, thin gold lines, a nacre teal accent */
+  --ftf-panel: rgba(14, 20, 18, 0.92);
+  --ftf-panel-solid: #101f1a;
+  --ftf-border: rgba(197, 164, 105, 0.40);
+  --ftf-line: rgba(197, 164, 105, 0.40);
+  --ftf-gold: #c5a469;
+  --ftf-gold-bright: #dcc08a;
+  --ftf-gold-dim: #8e7a50;
+  --ftf-accent: #b9c9c5;
+  --ftf-text: #eef0ea;
+  --ftf-muted: #aab6b0;
   --ftf-ok: #5ccf8a;
   --ftf-warn: #f0b24a;
   --ftf-danger: #ff6b62;

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Try to Cheat</title>
+<style>
+:root{--bg:#f6f3ec;--fg:#1d1c19;--muted:#5d5a52;--line:#d8d2c4;--card:#fffdf8;--ok:#2f6b3a;--acc:#6b4a1f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161a;--fg:#e9e6df;--muted:#a7a397;--line:#33363d;--card:#1b1e23;--ok:#7cc48a;--acc:#d9b47a}}
+:root[data-theme="dark"]{--bg:#14161a;--fg:#e9e6df;--muted:#a7a397;--line:#33363d;--card:#1b1e23;--ok:#7cc48a;--acc:#d9b47a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:24px 16px 48px}h1{font-size:26px;margin:0 0 6px}h2{font-size:18px;margin:0 0 8px}
+p{margin:0 0 10px}.muted{color:var(--muted)}a{color:var(--acc)}code{font:13px ui-monospace,monospace;overflow-wrap:anywhere}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:14px 0}
+dl{display:grid;grid-template-columns:minmax(90px,140px) 1fr;gap:6px 12px;margin:0}dt{color:var(--muted)}dd{margin:0;min-width:0}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ok)}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:13px ui-monospace,monospace}
+@media (max-width:560px){dl{grid-template-columns:1fr}dt{margin-top:6px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Try to cheat Forget to Foresee</h1>
+<p class="muted">Six attacks a player could try, the guard that refuses each one, the error you get back and the test that proves it. NEAR testnet only; nothing here has real-world value. Source: <a href="https://github.com/SpacexCeo/forget-to-foresee">github.com/SpacexCeo/forget-to-foresee</a>.</p>
+<p class="muted">No rejected transaction is linked yet: we have not attempted these attacks live on testnet. Each card ends with a command the owner can run to produce one. No keys are in the repository.</p>
+
+<section>
+<h2>1. Replay a signed request <span class="tag">refused twice</span></h2>
+<dl>
+<dt>Attack</dt><dd>Send the same signed town move (pledge, claim, gate payment) again, so it runs twice.</dd>
+<dt>Guard</dt><dd>The relayer keeps used request hashes and also asks the chain (<code>act_request_used</code>, <code>gate_request_used</code>); the contract stores each hash once and panics on a second use, even if the relayer were bypassed.</dd>
+<dt>Error</dt><dd>Relayer <code>409 {"error":"replayed"}</code> (<code>relayer/lib/town-act.js</code>, <code>relayer/lib/town-gate.js</code>). Contract <code>ERR_ACT_REQUEST</code> / <code>ERR_GATE_REQUEST</code>: "this signed request was already used" (<code>contracts/town/src/lib.rs</code>).</dd>
+<dt>Test</dt><dd><code>relayer/tests/town-gate.test.mjs</code>: "a signed request credits, then pays the gate for the guest once; replays and second payments are refused"; <code>relayer/tests/p2p.test.mjs</code>: "signed requests only, each used once".</dd>
+<dt>Owner can run</dt><dd><code>POST /api/town/act</code> twice with the same body from a test guest; the second answer is 409.</dd>
+</dl>
+</section>
+
+<section>
+<h2>2. Claim a chest twice, or roll again <span class="tag">bounded</span></h2>
+<dl>
+<dt>Attack</dt><dd>Repeat an opening request, or open chests until a good roll comes.</dd>
+<dt>Guard</dt><dd>A chest is never rolled: each opening takes the next position of a 10,000-card deck whose root and seed are fixed on chain before the first opening, so repeating cannot pick a card. A repeated batch <code>request_id</code> never re-sends. The contract allows 30 openings per account per day, and the request must be fresh and signed by a key on the account.</dd>
+<dt>Error</dt><dd><code>429 daily_cap</code> / contract <code>ERR_DAILY</code>; <code>stale</code>, <code>bad_signature</code>, <code>403</code> for a key not on the account (<code>relayer/lib/chest.js</code>, <code>contracts/loot-chest/src/lib.rs</code>).</dd>
+<dt>Test</dt><dd><code>relayer/tests/chest-batch.test.mjs</code>: "a repeated request never re-sends"; <code>relayer/tests/chest.test.mjs</code>: "a full season visits every position once"; <code>node tools/verify-chest/verify.mjs</code> re-checks every opening.</dd>
+<dt>Owner can run</dt><dd>31 openings for one test guest in a day; the 31st transaction fails with <code>ERR_DAILY</code>.</dd>
+</dl>
+</section>
+
+<section>
+<h2>3. Forge a quest receipt <span class="tag">refused</span></h2>
+<dl>
+<dt>Attack</dt><dd>Claim the boss dragon, or silk, with a made-up expedition log ("I killed the boss").</dd>
+<dt>Guard</dt><dd>The expedition log is a signed, hash-chained list that the relayer stores; a fork or a gap is refused, and each entry is checked against the rules (tier, silk, a quest done twice, kills too fast or too many, times in the future). The boss dragon is minted only if the stored, verified log has the boss down.</dd>
+<dt>Error</dt><dd><code>fork</code>, <code>gap</code>, <code>log_invalid</code>, <code>implausible</code> (<code>relayer/lib/expedition-store.js</code>); <code>409 boss_not_down</code> (<code>relayer/lib/companion.js</code>).</dd>
+<dt>Test</dt><dd><code>relayer/tests/expedition-store.test.mjs</code>: "a fork or a gap is refused" and "T2 kills, forged silk, a quest twice, kills too fast or too many, the future are refused"; <code>relayer/tests/companion.test.mjs</code>: "boss needs the boss down in the stored log".</dd>
+<dt>Owner can run</dt><dd><code>POST /api/companion/claim</code> with <code>reason: "boss"</code> from a fresh test guest; the answer is 409 <code>boss_not_down</code>.</dd>
+</dl>
+</section>
+
+<section>
+<h2>4. Take the free mint twice <span class="tag">refused</span></h2>
+<dl>
+<dt>Attack</dt><dd>Ask for a second guest account and Elise with the same key, or start two at once.</dd>
+<dt>Guard</dt><dd>The <code>guests</code> contract keeps one guest per public key and a pending marker while one is created; 200 new guests a day for everyone.</dd>
+<dt>Error</dt><dd><code>ERR_EXISTS</code>: "this key already has a guest with Elise"; <code>ERR_PENDING</code>; relayer <code>429 daily_cap</code> (<code>contracts/guests/src/lib.rs</code>, <code>relayer/lib/core.js</code>). The relayer answers a repeat idempotently with the existing guest.</dd>
+<dt>Test</dt><dd><code>contracts/guests</code> unit tests <code>one_guest_per_key</code>, <code>a_key_in_flight_cannot_start_twice</code>; <code>relayer/tests/core.test.mjs</code>: "idempotent; honest failures; cap".</dd>
+<dt>Owner can run</dt><dd>Call <code>create_guest</code> on <code>guests.ftf-coordinator.testnet</code> with an already-used key; it fails with <code>ERR_EXISTS</code>. A new key per browser is the known limit.</dd>
+</dl>
+</section>
+
+<section>
+<h2>5. Buy above (or below) the price band <span class="tag">refused</span></h2>
+<dl>
+<dt>Attack</dt><dd>List or buy an item far from its fair price, to move silk between your own accounts.</dd>
+<dt>Guard</dt><dd>The player market's shared rules (game and relayer) reject any unit price outside the item's band.</dd>
+<dt>Error</dt><dd><code>outside_band</code> with the band's min and max (<code>relayer/lib/market-rules.js</code>).</dd>
+<dt>Test</dt><dd><code>relayer/tests/p2p.test.mjs</code>: "2 % fee rounded up, the band, minimum total, limits, self trade, the daily cap".</dd>
+<dt>Owner can run</dt><dd>Not on chain yet: the player market settles on chain only after town v5 / items v2 are deployed.</dd>
+</dl>
+</section>
+
+<section>
+<h2>6. Trade with yourself <span class="tag">refused</span></h2>
+<dl>
+<dt>Attack</dt><dd>Buy your own listing to fake volume or a price.</dd>
+<dt>Guard</dt><dd>The buyer may not be the listing's seller.</dd>
+<dt>Error</dt><dd><code>409 self_trade</code> (<code>relayer/lib/market-rules.js</code>, <code>relayer/lib/p2p.js</code>).</dd>
+<dt>Test</dt><dd><code>relayer/tests/p2p.test.mjs</code> (same test as above).</dd>
+<dt>Owner can run</dt><dd>Same as 5: on chain after the v5 / v2 deploy.</dd>
+</dl>
+</section>
+
+<section>
+<h2>Run the tests yourself</h2>
+<pre>git clone https://github.com/SpacexCeo/forget-to-foresee
+cd forget-to-foresee/relayer && npm test
+cd ../contracts/guests && cargo test</pre>
+</section>
+</main>
+</body>
+</html>

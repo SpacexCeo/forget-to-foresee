@@ -4,17 +4,17 @@
 // the poll function (net/market.js fetchMarket), `line` (net/market.js tradeLine) and `onTrade` for trades it has not seen yet (the stall scene).
 
 const CSS = `.ftf-mk { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 11;
-  max-width: min(360px, calc(100% - 24px)); font: 13px/1.35 system-ui, sans-serif; color: #f3ead6; }
+  max-width: min(360px, calc(100% - 24px)); font: 13px/1.35 var(--font-ui, system-ui, sans-serif); color: var(--ftf-text, #eef0ea); }
 .ftf-mk[hidden] { display: none; }
-.ftf-mk > button { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 5px 12px; border-radius: 16px; border: 1px solid rgba(233,180,76,.45);
-  background: rgba(16,22,24,.82); color: inherit; font: inherit; cursor: pointer; }
-.ftf-mk .dot { width: 7px; height: 7px; border-radius: 50%; background: #9fd49a; box-shadow: 0 0 6px #9fd49a; }
+.ftf-mk > button { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 5px 12px; border-radius: 16px; border: 1px solid var(--ftf-line, rgba(197,164,105,.4));
+  background: var(--ftf-panel, rgba(14,20,18,.92)); color: inherit; font: inherit; cursor: pointer; }
+.ftf-mk .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ftf-accent, #b9c9c5); box-shadow: 0 0 6px var(--ftf-accent, #b9c9c5); }
 .ftf-mk .dot.off { background: #8a8577; box-shadow: none; }
-.ftf-mk .box { margin-top: 6px; padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(233,180,76,.45); background: rgba(16,22,24,.88); }
+.ftf-mk .box { margin-top: 6px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--ftf-line, rgba(197,164,105,.4)); background: var(--ftf-panel-solid, #101f1a); }
 .ftf-mk .box[hidden] { display: none; }
-.ftf-mk .lbl { margin: 0 0 6px; color: #b9b2a2; font-size: 12px; }
+.ftf-mk .lbl { margin: 0 0 6px; color: var(--ftf-muted, #aab6b0); font-size: 12px; }
 .ftf-mk ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.ftf-mk a { color: #f3ead6; text-decoration: underline; text-decoration-color: rgba(233,180,76,.6); text-underline-offset: 2px; }
+.ftf-mk a { color: var(--ftf-text, #eef0ea); text-decoration: underline; text-decoration-color: var(--ftf-line, rgba(197,164,105,.4)); text-underline-offset: 2px; }
 .ftf-mk .new { animation: ftf-mk-in .5s ease-out; }
 @keyframes ftf-mk-in { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .ftf-mk .new { animation: none; } }`;

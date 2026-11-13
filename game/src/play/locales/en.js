@@ -6,6 +6,7 @@ import hud from './en-hud.js';
 import market from './en-market.js';
 import npe from './en-npe.js';
 import tips from './en-tips.js';
+import judge from './en-judge.js';
 import video from './en-video.js';
 import account from './en-account.js';
 const EN = {
@@ -612,6 +613,7 @@ const EN = {
   "day1.skin.sheriffchenko": "Sheriffchenko",
   "day1.altar.timer": "Next Tournament round",
   "day1.altar.open": "Open now",
+  "day1.altar.short": "Tournament altar · open",
   "day1.trailer.hero.1": "She remembers waking on the balcony, and nothing before it.",
   "day1.trailer.hero.2": "Every sign she reads costs her a little of what she was.",
   "day1.trailer.hero.3": "Today she chooses what to keep, and what to forget to foresee.",
@@ -826,8 +828,8 @@ const EN = {
   'town.setupFailed': "The setup did not go through. Nothing was spent. Try again in a moment.",
   'town.silk': "Silk",
   'silk.waiting': "+{n} waiting",
-  'silk.offline': "Offline",
-  'silk.device': "This device",
+  'silk.offline': "Playing locally",
+  'silk.device': "Playing locally",
   'silk.checking': "Checking…",
   'silk.syncing': "Syncing…",
   'silk.sync': "Sync",
@@ -1958,4 +1960,4 @@ const EN = {
   "quest.track.near": "{m} m",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
-export default Object.assign(EN, quests, hud, market, npe, tips, video, account);
+export default Object.assign(EN, quests, hud, market, npe, tips, video, account, judge);

@@ -92,6 +92,12 @@ export function openAccountPanel({ doc = document, t, makeLogin, wallets = null,
   // the wallet rows: discovery is local and fast; nothing loads from the network until a tap
   const loadWallets = () => (wallets ? Promise.resolve(wallets) : import('../net/wallets.js'));
   const add = (label, onTap) => { const b = el('button', 'acct-btn', label); b.type = 'button'; b.addEventListener('click', onTap); rows.append(b); return b; };
+  const pkWin = doc.defaultView || globalThis.window;
+  const pkOk = wallets ? !!(wallets.passkeySupported && wallets.passkeySupported(pkWin)) : !!(pkWin && pkWin.PublicKeyCredential);
+  if (pkOk) { // passkeys first: the "email-like" login, nothing to install
+    add(t('acct.passkey'), () => loadWallets().then((w) => run(w.passkeyProvider({ mode: 'get', storage: globalThis.localStorage }))));
+    add(t('acct.passkey.new'), () => loadWallets().then((w) => run(w.passkeyProvider({ mode: 'create', storage: globalThis.localStorage }))));
+  }
   add(t('acct.near'), () => { say(t('acct.busy')); loadWallets().then(async (w) => run(w.bestNearProvider ? await w.bestNearProvider() : w.nearProvider())); });
   add(t('acct.near.testnet'), () => loadWallets().then((w) => run(w.nearProvider())));
   const evmBtn = add(t('acct.evm.any'), () => loadWallets().then(async (w) => { const list = await w.discoverEvm(); if (!list.length) { say(t('acct.none.evm')); return; } run(w.evmProvider(list[0])); }));

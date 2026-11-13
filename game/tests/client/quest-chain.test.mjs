@@ -56,3 +56,36 @@ test('a repeat on offer shows its progress from 0, not the last run', () => {
   const row = questLog({ guide: {} }, s, Date.now() + 3 * 86_400_000, {}).find((r) => r.id === 'b_spiders');
   if (row) assert.equal(row.progress, 0);
 });
+
+test('progress already held counts (owner 13.11): the crown shard in the bag completes "defeat the Crownrift"', () => {
+  let s = initialQuests(); const t = Date.now() - 3_600_000;
+  const go = (a) => { const r = applyQuest(s, a, { now: t }); assert.ok(!r.rejected, JSON.stringify(a) + ': ' + (r.reason || r.rejected)); s = r.state; return r; };
+  for (const a of [{ type: 'BEGIN' }, { type: 'ACCEPT', questId: 'q_welcome' }, { type: 'GUIDE', step: 'moved' }, { type: 'GUIDE', step: 'talked' }, { type: 'TURN_IN', questId: 'q_welcome' },
+    { type: 'ACCEPT', questId: 'q_spiders' }]) go(a);
+  for (let i = 0; i < 10; i++) go({ type: 'KILL', mob: 'skitter', killId: 'k' + i });
+  go({ type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 5 } });
+  // 1) the shard was dropped before the quest: accepting completes the objective at once
+  const held = { crown_shard: 1 };
+  const r = go({ type: 'ACCEPT', questId: 'q_boss', have: held });
+  assert.equal(questStatus(s, 'q_boss', t), 'ready'); assert.ok(r.events.some((e) => e.kind === 'quest_ready'));
+  const story = { guide: { talked: true, moved: true } };
+  assert.equal(markerFor('shardkeeper', story, s, t, held), '?', 'return to the Shardkeeper');
+  assert.equal(talkFor('shardkeeper', story, s, { now: t, have: held }).choices[0].act, 'turnin:q_boss');
+  go({ type: 'TURN_IN', questId: 'q_boss', have: held });
+  assert.equal(questStatus(s, 'q_boss', t), 'done');
+});
+
+test('progress already held: a shard picked up after accepting completes it on the next check, and a turn-in with it is accepted', () => {
+  let s = initialQuests(); const t = Date.now() - 3_600_000;
+  const go = (a) => { const r = applyQuest(s, a, { now: t }); assert.ok(!r.rejected, JSON.stringify(a) + ': ' + (r.reason || r.rejected)); s = r.state; return r; };
+  for (const a of [{ type: 'BEGIN' }, { type: 'ACCEPT', questId: 'q_welcome' }, { type: 'GUIDE', step: 'moved' }, { type: 'GUIDE', step: 'talked' }, { type: 'TURN_IN', questId: 'q_welcome' }, { type: 'ACCEPT', questId: 'q_spiders' }]) go(a);
+  for (let i = 0; i < 10; i++) go({ type: 'KILL', mob: 'skitter', killId: 'k' + i });
+  go({ type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 5 } });
+  go({ type: 'ACCEPT', questId: 'q_boss', have: {} });
+  assert.equal(questStatus(s, 'q_boss', t), 'active');
+  assert.ok(applyQuest(s, { type: 'HELD', have: {} }, { now: t }).rejected, 'nothing held: nothing changes');
+  const s0 = s;
+  go({ type: 'HELD', have: { crown_shard: 1 } }); assert.equal(questStatus(s, 'q_boss', t), 'ready');
+  s = s0; go({ type: 'TURN_IN', questId: 'q_boss', have: { crown_shard: 1 } }); assert.equal(questStatus(s, 'q_boss', t), 'done', 'a turn-in while active with the proof is accepted');
+  assert.ok(applyQuest(s0, { type: 'TURN_IN', questId: 'q_boss', have: {} }, { now: t }).rejected, 'without the proof it is not');
+});

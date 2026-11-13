@@ -65,6 +65,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
+import { expectOnboarding, blocksWindows } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -470,6 +471,7 @@ if (townMode.town) {
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
+  if (!window.__ftfJudgePath && /[?&]judge=1(&|$)/.test(location.search)) window.__ftfJudgePath = import('./ui/judge-path.js').then((m) => import('./sprint/first-seen.js').then((f) => m.mountJudgePath({ t: (k, a) => ctx.i18n.t(k, a), touch: f.isTouch(document) }))).catch(() => null); // ?judge=1: the 90-second guided route (docs: README Judge path)
   if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
@@ -713,6 +715,7 @@ const day1On = () => {
   if (q === '1') return true;
   return !judge && !loadDay1(ctx.storage).claimed;
 };
+if (day1On()) expectOnboarding('name');   // the Day-1 name comes first: the intro and the card wait for it (ui/onboarding-queue.js)
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 // The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
 // declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.
@@ -749,7 +752,7 @@ function updateAltarTimer() {
   if (!visible) return;
   // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
   const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  const text = playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
   if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
@@ -812,12 +815,12 @@ async function startDay1() {
   // never over the loading screen: when the intro flight is skipped this runs before the cover lifts (phone pass, 12.11)
   for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
-  const m = await import('./play/day1.js');
-  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null });
+  const [m, q] = await Promise.all([import('./play/day1.js'), import('./ui/onboarding-queue.js')]);   // one onboarding queue: name -> intro -> guide
+  await q.runOnboarding('name', () => m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null }));
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
-  if (!input.touchControls) await m.runHints({ t, steps: [
+  if (!input.touchControls) await q.runOnboarding('guide', () => m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
     { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
@@ -827,7 +830,7 @@ async function startDay1() {
       rig.dist = TOWN_CAMERA.dist;
     } }] },
     { key: 'day1.hint.tournament' },
-  ] });
+  ] }));
 }
 
 /** The player enters the world (the lobby's first contact, or at once on the direct path): the town, else the season. */
@@ -1019,7 +1022,7 @@ function handleInput(dt) {
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
-    else openMenu();
+    else if (!blocksWindows()) openMenu();   // no menu on top of a first-time overlay (its own Esc / Skip handles it)
     return false;
   }
   if (townShops && townShops.busy) return false; // the shop door's fade holds Iris

@@ -18,6 +18,7 @@ import { createChestBag } from '../game/chests.js';
 import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
 import { cue } from '../audio/town-audio.js';
+import { formatSilkC } from '../net/silk-core.js';
 
 /** UI-004 tab icons (line art, currentColor). */
 const TAB_ICON = Object.freeze({
@@ -276,7 +277,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
           g.append(c);
         }
         const sum = el('div', 'gm-row');
-        sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + (ledger.silk / 100).toFixed(2)), btn(t('menu.openWheel'), () => show('wheel')));
+        sum.append(el('span', 'gm-chip', t('inv.townSilk') + ': ' + formatSilkC(ledger.silk)), btn(t('menu.openWheel'), () => show('wheel')));
         return [el('p', 'gm-note', t('inv.offchain.note')), sum, chestSection(list), chips, g, detail];
       });
     },
