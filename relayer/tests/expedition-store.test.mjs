@@ -72,6 +72,9 @@ test('rule bounds and kill plausibility: T2 kills, forged silk, a quest twice, k
   assert.equal(reason([[T0, 'quest_turned_in', { questId: 'q_spiders' }, 2_001]]), 'quest_silk');
   assert.equal(reason([[T0, 'quest_turned_in', { questId: 'q_spiders' }, 2_000], [T0 + 1, 'quest_turned_in', { questId: 'q_spiders' }, 2_000]]), 'quest_twice');
   assert.equal(reason([[T0, 'bounty_resolved', { questId: 'b_spiders' }, 600], [T0 + 60_000, 'bounty_resolved', { questId: 'b_spiders' }, 600]]), 'bounty_cooldown');
+  assert.equal(reason([[T0, 'bounty_resolved', { questId: 'b_spiders' }, 600], [T0 + 60_000, 'bounty_resolved', { questId: 'd_deal' }, 400]]), null, 'each repeatable has its own clock');
+  assert.equal(reason([[T0, 'bounty_resolved', { questId: 'd_deal' }, 400], [T0 + 3600_000, 'bounty_resolved', { questId: 'd_deal' }, 400]]), 'bounty_cooldown', 'a daily: once per UTC day');
+  assert.equal(reason([[T0, 'quest_turned_in', { questId: 's_chest' }, 300]]), null, 'a journal side quest');
   assert.equal(reason([[T0, 'guide_step', { id: 'talked' }, 5]]), 'silk');
   assert.equal(reason([[T0, 'stipend_granted', {}, 999]]), 'stipend');
   assert.equal(reason([[now + 10 * 60_000, 'story_started']]), 'future');

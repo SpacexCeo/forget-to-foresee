@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const FILES = ['crypto', 'expedition-config', 'expedition-log', 'expedition', 'quests-data', 'quest-rules', 'portal-eligibility'];
+const FILES = ['crypto', 'expedition-config', 'expedition-log', 'expedition', 'quests-data', 'quest-rules', 'portal-eligibility', 'journal-data'];
 test('relayer/lib/expedition-rules is a byte-identical copy of the game rules', () => {
   for (const f of FILES) {
     const game = readFileSync(new URL(`../../game/src/game/${f}.js`, import.meta.url), 'utf8');

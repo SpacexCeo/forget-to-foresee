@@ -57,6 +57,7 @@ test('resources: drops are deterministic in the killId, the crown always drops i
   assert.deepEqual(rollDrops('boss#1', 'crownrift'), [{ id: 'crown_shard', n: 1 }]);
   assert.deepEqual(huntYield('skitter', 10), [{ id: 'spider_silk_thread', n: 6 }, { id: 'chitin_plate', n: 3 }]);
   const droppable = new Set(Object.values(DROPS).flatMap((t) => Object.keys(t)));
-  for (const q of Object.values(QUESTS)) { assert.ok(q.reward.silk > 0, q.id + ' pays silk'); for (const id of Object.keys(q.needs || {})) { assert.ok(RESOURCE_IDS.includes(id) && droppable.has(id), id); } }
+  // story and daily quests pay silk; a few side and tournament quests pay XP or a title (sprint §4.5)
+  for (const q of Object.values(QUESTS)) { if (!q.auto || q.repeat) assert.ok(q.reward.silk > 0, q.id + ' pays silk'); for (const id of Object.keys(q.needs || {})) { assert.ok(RESOURCE_IDS.includes(id) && droppable.has(id), id); } }
   assert.deepEqual(missingFor({ chitin_plate: 2 }, { chitin_plate: 1 }), [{ id: 'chitin_plate', need: 2, have: 1 }]);
 });

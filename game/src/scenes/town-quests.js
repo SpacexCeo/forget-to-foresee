@@ -11,6 +11,19 @@ import { createExpeditionLedger } from '../game/expedition-ledger.js';
 import { EXPEDITION } from '../game/expedition-config.js';
 import { rollDrops, missingFor, RESOURCE_IDS } from '../game/resources.js';
 import { silkView, subscribeSilk, refreshSilk, formatSilkC } from '../net/silk-core.js';
+import { features } from '../features.js';
+import { createSay, giverName as nameOf } from '../quests/say.js';
+import { journalModel, questView, toggleTrack, MAX_TRACKED } from '../quests/journal-model.js';
+import { createJournalUI } from '../quests/journal-ui.js';
+import { createTrackerUI } from '../quests/tracker-ui.js';
+import { createAutoWalk, setAutoWalker } from '../sprint/auto-walk.js';
+import { GIVER_NAMES } from '../game/journal-data.js';
+
+/** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
+export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
+  if (features.on(name)) return true;
+  try { return (new URLSearchParams(search).get('ff') || '').split(',').includes(name); } catch { return false; }
+}
 
 /** Which quest a giver talks about now (pure): the first of theirs that is not done, else the last. */
 export function giverQuest(qs, giver, now = 0) {
@@ -75,7 +88,7 @@ export function objective(story, qs, now = 0, have = {}) {
 export function markerFor(giver, story, qs, now = 0, have = {}) {
   let offer = false;
   for (const id of Object.keys(QUESTS)) {
-    if (QUESTS[id].giver !== giver) continue;
+    if (QUESTS[id].giver !== giver || QUESTS[id].auto) continue; // auto quests (side/daily/tournament) need no talk
     const st = questStatus(qs, id, now), q = QUESTS[id];
     if (st === 'ready' && !missingFor(q.needs, have).length) return '?';
     if (st === 'active' && q.objective.type === 'guide' && story.guide && story.guide.moved) return '?';
@@ -107,7 +120,7 @@ const load = (storage, key, fresh) => { try { const v = JSON.parse((storage && s
  * @param {(opts: {sub: string}) => Promise} [o.depart] the town's transition to the archipelago (town-flow depart)
  * @param {string} [o.search] @param {Document} [o.doc] @param {Window} [o.win] @param {() => number} [o.now]
  */
-export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
+export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, walkDriver = null, toWorld = null, level = () => 1, flags = flagOn, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
   const t = (k, a) => i18n.t(k, a);
   // The Gate-Loom is paid on chain (rev 4): its price and the player's silk are ftf-town's gate_price and balance_of,
   // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
@@ -156,7 +169,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     const silk = formatSilkC(heldC()), goal = formatSilkC(feeC()); // the one silk number: recorded on NEAR (ftf-town)
     const near = o && o.giver ? distanceTo(o.giver) : null;
     line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + (near != null ? ' · ' + t('quest.track.near', { m: near }) : '') + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
-    line.hidden = !active || !o || story.phase === 'onward';
+    line.hidden = !active || !o || story.phase === 'onward' || useTracker; // the tracker replaces this pill (sprint §4.8)
   }
 
   // ---- where she is (update) and how far a giver stands
@@ -194,7 +207,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     return p;
   }
   function openLog() { closeLog(); logPanel = renderLog(); doc.body.append(logPanel); }
-  function toggleLog() { if (logPanel) closeLog(); else openLog(); }
+  function toggleLog() { if (journal) { if (journal.isOpen) journal.close(); else journal.open(); return; } if (logPanel) closeLog(); else openLog(); }
   const onKey = (e) => {
     const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.code === 'KeyJ' || e.key === 'j' || e.key === 'J') { toggleLog(); }
@@ -212,7 +225,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   let panel = null, panelGiver = null;
   function closeTalk() { if (panel) { panel.remove(); panel = null; panelGiver = null; } }
   const hasPart = () => !!(inventory && firstPart());
-  const have = () => { const o = {}; if (inventory && inventory.count) for (const id of RESOURCE_IDS) o[id] = inventory.count(id); return o; };
+  const have = () => { const o = {}; if (inventory && inventory.count) { for (const id of RESOURCE_IDS) o[id] = inventory.count(id); o.part = PART_IDS.reduce((x, id) => x + inventory.count(id), 0); } return o; };
   function firstPart() { try { const all = inventory.list ? inventory.list(PART_IDS.map((id) => ({ id, kind: 'part' }))) : []; return all.length ? all[0].id : null; } catch { return null; } }
   function openTalk(giver, extraLines = null) {
     closeTalk(); panelGiver = giver;
@@ -289,6 +302,44 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     return true;
   }
 
+  // ---- the quest journal, the tracker and auto-walk (sprint §4.7-4.10; flags questJournal, questTracker, autoWalk)
+  const say = createSay(i18n), gname = (k) => nameOf(say, k, GIVER_NAMES);
+  const useJournal = flags('questJournal'), useTracker = flags('questTracker'), useWalk = flags('autoWalk') && !!walkDriver;
+  let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
+  const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
+  const lvl = () => { try { return Math.max(1, Number(level()) || 1); } catch { return 1; } };
+  const jModel = (q2 = '') => journalModel({ qs, now: now(), have: have(), level: lvl(), tracked, search: q2, giverName: gname });
+  const walker = useWalk ? createAutoWalk({ driver: walkDriver, say, toast: (m) => { try { win.dispatchEvent(new CustomEvent('ftf:toast', { detail: { text: m } })); } catch { /* none */ } }, doc,
+    emit: (n, pl) => { try { win.dispatchEvent(new CustomEvent('ftf:' + n, { detail: pl })); } catch { /* none */ } } }) : null;
+  if (walker) setAutoWalker(walker);
+  function walkTo(v) {
+    if (!walker || !v) return false;
+    if (v.walk.kind === 'area' && toWorld) { const w = toWorld([v.walk.pos[0], 0, v.walk.pos[1]]); return !!walker.autoWalkTo({ pos: [w[0], w[2]], stopRadius: 3, label: v.walk.label, questId: v.id }); }
+    const giver = v.walk.giver, p = folkAt(giver); if (!p) return false;
+    return !!walker.autoWalkTo({ pos: [p[0], p[2]], stopRadius: 2.2, label: gname(giver), questId: v.id, follow: () => { const q2 = folkAt(giver); return q2 ? [q2[0], q2[2]] : null; } });
+  }
+  const journal = useJournal ? createJournalUI({ doc, win, say, model: jModel, giverName: gname, now,
+    onWalk: (v) => walkTo(v),
+    onTrack: (id) => { const r = toggleTrack(tracked, id); if (r.ok) { tracked = r.tracked; saveTracked(); if (tracker) tracker.refresh(true); } return r; },
+    onAbandon: (id) => { questDo({ type: 'ABANDON', questId: id }); },
+    onOpen: () => { if (tracker) tracker.setHidden(true); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } } }) : null;
+  const townObjective = () => (doc.querySelector ? doc.querySelector('.ftf-town-objective') : null);
+  let lastErrand = null;
+  const errand = () => { const e = townObjective(); const txt = e && !e.hidden ? (e.textContent || '').trim() : ''; return txt || null; };
+  const tracker = useTracker ? createTrackerUI({ doc, say, giverName: gname, storage,
+    data: () => ({ tracked: tracked.map((id) => questView(id, { qs, now: now(), have: have(), level: lvl(), tracked })).filter(Boolean), road: { gateC: balanceC(), feeC: feeC() }, errand: errand() }),
+    onOpen: (id) => { if (journal) journal.open(null, id); }, onWalk: (v) => walkTo(v) }) : null;
+  if (useTracker && doc.body && doc.body.classList) { doc.body.classList.add('ftf-tracker-on'); if (!doc.getElementById || !doc.getElementById('ft-hide-pill')) { const st = doc.createElement('style'); st.id = 'ft-hide-pill'; st.textContent = 'body.ftf-tracker-on .ftf-town-objective{display:none!important}'; (doc.head || doc.body).append(st); } }
+  function autoTrack() { // newly accepted quests are tracked while fewer than three are
+    for (const id of Object.keys(QUESTS)) { const st = questStatus(qs, id, now()); if ((st === 'active' || st === 'ready') && !tracked.includes(id) && tracked.length < MAX_TRACKED && !QUESTS[id].auto) { tracked = [...tracked, id]; saveTracked(); } }
+    tracked = tracked.filter((id) => { const st = questStatus(qs, id, now()); return st === 'active' || st === 'ready'; });
+  }
+  function errandWatch() { // the innkeeper's sign: the town errand moving past "read" completes s_sign
+    const txt = errand(), readTxt = i18n.t('quest.obj.read');
+    if (lastErrand === readTxt && txt !== readTxt) questDo({ type: 'EVENT', event: 'read' });
+    lastErrand = txt;
+  }
+
   if (story.phase === 'off') storyDo({ type: 'START', skipPrologue: true }); // the prologue (P4) is optional: arrival
   if (qs.since == null) questDo({ type: 'BEGIN' }); // the guide's grace period: the guard's quest opens even if the elder is skipped
   if (gate) refreshChain();
@@ -304,6 +355,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     payGate,
     /** Per frame: the guide's movement step, the gate opening with the balance, a talk closing when she walks off. */
     update(pos) {
+      if (walker) walker.update();
+      if (tracker || journal) { autoTrack(); errandWatch(); if (tracker) tracker.refresh(); }
       if (pos) { herPos = pos; if (now() - lineT > 1000) { lineT = now(); renderObjective(); } } // the distance to the next giver
       if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];
@@ -313,12 +366,13 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     },
     act, openTalk, closeTalk,
     /** Leaving the town hides the objective line and any talk; the story state lives on (the twist runs across it). */
-    setActive(on) { active = !!on; if (!active) { closeTalk(); closeLog(); } logBtn.hidden = !active; renderObjective(); },
+    setActive(on) { active = !!on; if (!active) { closeTalk(); closeLog(); if (journal) journal.close(); if (walker) walker.cancel('replaced'); } if (tracker) tracker.setHidden(!active); logBtn.hidden = !active; renderObjective(); },
     subscribe(f) { listeners.add(f); return () => listeners.delete(f); },
     /** Markers over the givers: [{giver, sym: '!'|'?'}] for scenes/quest-markers.js. */
     markers: () => ['elder', 'guard', 'lamplighter', 'shardkeeper'].map((giver) => ({ giver, sym: markerFor(giver, story, qs, now(), have()) })).filter((m) => m.sym),
-    openLog, closeLog, toggleLog, get logOpen() { return !!logPanel; },
-    dispose() { unSilk(); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
+    openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
+    get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
+    dispose() { unSilk(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
   };
 }
 
