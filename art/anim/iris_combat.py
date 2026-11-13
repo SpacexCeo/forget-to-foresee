@@ -190,20 +190,23 @@ def main():
     bones = [n for n in rig.names if n in ('pelvis', 'spine', 'chest', 'neck', 'head') or n.split('_')[0] in ('thigh', 'shin', 'foot', 'upperarm', 'forearm', 'hand', 'shoulder')]
     if a.cloth:
         bones += [n for n in rig.names if n.split('_')[0] in ('skirt', 'hair', 'ribbon')]
-    new = {}
+    new = {}; made = {}; baked = {}
     for name, (keys, secs) in {'strike1': strike('R'), 'strike2': strike('L'), 'strike3': finisher(), 'dash': dash()}.items():
         local, pel = build(rig, base_local, base_pelvis, scaled(keys, a.legs) if a.legs != 1.0 else keys, secs)
+        lpos = np.repeat(rig.rest_t[None], len(local), 0); lpos[:, rig.index['pelvis']] = pel
+        made[name] = (local, pel, rig.fk(local, None, lpos)[1][:, rig.index['pelvis']])
+    if a.cloth:      # the cloth of the four clips at once
+        from ftfanim import skirt
+        cfg_ = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'clips.json')))['characters']
+        skirt.use_character(next((v for v in cfg_.values() if os.path.basename(v.get('model', '')) == os.path.basename(a.model)), None))
+        cr = skirt.ClothRig(a.cloth, rig)
+        baked = skirt.bake_many(cr, [(name, local, pw, FPS, False, 0.0, None) for name, (local, pel, pw) in made.items()])
+    for name, (local, pel, pw) in made.items():
         if a.cloth:
-            from ftfanim import skirt
-            cfg_ = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'clips.json')))['characters']
-            skirt.use_character(next((v for v in cfg_.values() if os.path.basename(v.get('model', '')) == os.path.basename(a.model)), None))
-            cr = skirt.ClothRig(a.cloth, rig)
-            lpos = np.repeat(rig.rest_t[None], len(local), 0); lpos[:, rig.index['pelvis']] = pel
-            pw = rig.fk(local, None, lpos)[1][:, rig.index['pelvis']]
-            local = skirt.bake(cr, local, pw, FPS, False, 0.0)
+            local = baked[name]
             d, who = cr.distance(local, pw); ins, thr = cr.inside(local, pw)
             print(name, 'gown min %.4f' % d.min(), who[int(d.argmin())], 'through', int(thr.sum()))
-            if d.min() < 0 or thr.any():
+            if (d.min() < 0 or thr.any()) and not os.environ.get('FTF_ALLOW_FAIL'):      # (the switch: write anyway, to film what failed)
                 raise SystemExit(f'{name}: a leg cuts the gown')
         new[name] = {'name': name, 'local': local, 'pelvis': pel, 'bones': bones, 'fps': FPS,
                      'extras': {'loop': False, 'source': 'keyed by hand (art/anim/iris_combat.py)', 'impact_s': {'strike1': 0.2, 'strike2': 0.2, 'strike3': 0.38}.get(name)}}

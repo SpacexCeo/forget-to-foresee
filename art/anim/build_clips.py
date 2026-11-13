@@ -40,17 +40,17 @@ def main():
     ap.add_argument('--out', default='')
     ap.add_argument('--bake', action='store_true', help='simulate the cloth again (characters with a cloth rig) and store it; otherwise the stored bake is used')
     a = ap.parse_args()
-    cfg = json.load(open(os.path.join(HERE, 'clips.json')))
+    cfg = json.load(open(os.environ.get('FTF_CLIPS') or os.path.join(HERE, 'clips.json')))      # FTF_CLIPS, FTF_BAKE: a trial config and bake file (tuning a clip without touching the stored ones)
     ch = cfg['characters'][a.char]
     chains.use_character(ch)
     skirt.use_character(ch)
     rig = Rig(os.path.join(REPO, ch['model']))
     only = [x for x in a.only.split(',') if x]
     cloth = skirt.ClothRig(os.path.join(REPO, ch['cloth']['rig']), rig) if ch.get('cloth') else None
-    bake_path = os.path.join(REPO, ch['cloth']['bake']) if cloth else None
+    bake_path = (os.environ.get('FTF_BAKE') or os.path.join(REPO, ch['cloth']['bake'])) if cloth else None
     baked = dict(np.load(bake_path)) if cloth and os.path.exists(bake_path) else {}
     failed = []
-    takes, clips, report, built = {}, [], {}, {}
+    takes, clips, report, built, todo = {}, [], {}, {}, []
 
     def take_rt(take):
         if take not in takes:
@@ -101,6 +101,12 @@ def main():
         built[name] = r
         if only and name not in only:
             continue
+        todo.append((name, spec, r, loop, take, rt))
+    fresh = {}
+    if cloth and a.bake:        # the cloth of every clip at once (a process each): a clip's cloth depends only on its own body motion
+        fresh = skirt.bake_many(cloth, [(name, r['local'], r['pelvis'], spec.get('fps', 30) if spec['kind'] == 'cycle' else 30, loop, spec.get('speed', 0),
+                                         np.array(spec['sim']['yaw'], float) if spec.get('sim') else None) for name, spec, r, loop, take, rt in todo], log=bool(os.environ.get('FTF_LOG')))
+    for name, spec, r, loop, take, rt in todo:
         body = r['local'][:-1] if loop else r['local']
         chain = []
         if ch.get('chains', True):
@@ -115,7 +121,7 @@ def main():
             sig = float(np.abs(key).sum() + np.abs(rig.rest_wp).sum() + np.abs(cloth.grid).sum())      # the bake belongs to exactly this body motion, skeleton and gown
             cb = [i for i, b in enumerate(rig.names) if b in chain]
             if a.bake:
-                r['local'] = skirt.bake(cloth, r['local'], r['pelvis'], fps_c, loop, spec.get('speed', 0), np.array(spec['sim']['yaw'], float) if spec.get('sim') else None, log=print if os.environ.get('FTF_LOG') else None)
+                r['local'] = fresh[name]
                 baked[name + '/q'] = r['local'][:, cb].astype(np.float32); baked[name + '/sig'] = np.array(sig); baked['bones'] = np.array([rig.names[i] for i in cb])
             else:
                 if name + '/q' not in baked or abs(float(baked[name + '/sig']) - sig) > 1e-6 * max(sig, 1) or [str(x) for x in baked['bones']] != [rig.names[i] for i in cb]:
@@ -130,6 +136,7 @@ def main():
                     failed.append(name)
         bones = chain + [b for b in rig.names if b in rt.mapped or b.startswith(('toe_', 'thumb_', 'index_', 'fingers_'))]
         extras = {'take': 'CMU ' + take, 'speed': spec.get('speed', 0), 'loop': loop, 'pelvis_y': round(float(np.mean(r['pelvis'][:, 1])), 3)}
+        extras.update(ch.get('extras', {}))      # per-character facts the game reads (e.g. `scale`: leg length over the shared reference's)
         for k in ('seat', 'note'):
             if k in spec:
                 extras[k] = spec[k]
@@ -143,7 +150,9 @@ def main():
         np.savez_compressed(bake_path, **baked); print('wrote', bake_path)
     if os.environ.get('FTF_DUMP'):      # debugging: the final local rotations of every clip
         np.savez_compressed(os.environ['FTF_DUMP'], names=np.array(rig.names), rest_r=rig.rest_r, pelvis_rest=rig.rest_wp[rig.index['pelvis']], pelvis_rest_wr=rig.rest_wr[rig.index['pelvis']], **{k: v for c in clips for k, v in ((c['name'] + '/local', c['local']), (c['name'] + '/pelvis', built[c['name']]['pelvis']))})
-    if failed:      # a leg capsule cuts the gown (or the enclosed leg left it): nothing is written
+    if failed and os.environ.get('FTF_ALLOW_FAIL'):      # debugging: write the clips anyway, to film what failed
+        print('LEG-VS-GOWN CHECK FAILED (written anyway, FTF_ALLOW_FAIL): ' + ', '.join(failed))
+    elif failed:      # a leg capsule cuts the gown (or the enclosed leg left it): nothing is written
         raise SystemExit('LEG-VS-GOWN CHECK FAILED: ' + ', '.join(failed))
     out = a.out or os.path.join(REPO, 'game/public/assets/anim', ch.get('out', a.char) + '.glb')
     os.makedirs(os.path.dirname(out), exist_ok=True)

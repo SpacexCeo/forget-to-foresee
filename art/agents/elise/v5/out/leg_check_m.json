@@ -1,0 +1,177 @@
+{
+ "model": "agent_elise_m_raw.glb",
+ "tolerance_mm": 2.0,
+ "rest_baseline_max_mm": 0.0,
+ "clips": {
+  "idle": {
+   "frames": 182,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 44.4,
+   "shoe_at_frame": 144
+  },
+  "idle2": {
+   "frames": 182,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 45.9,
+   "shoe_at_frame": 154
+  },
+  "idle_look": {
+   "frames": 182,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 47.0,
+   "shoe_at_frame": 134
+  },
+  "walk": {
+   "frames": 57,
+   "leg_through_mm": 4.4,
+   "at_frame": 54,
+   "bone": "thigh_L",
+   "frames_over_tol": 6,
+   "points_over_tol_max": 1,
+   "shoe_through_hem_mm": 33.8,
+   "shoe_at_frame": 1
+  },
+  "run": {
+   "frames": 81,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 35.8,
+   "shoe_at_frame": 76
+  },
+  "register": {
+   "frames": 101,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 41.0,
+   "shoe_at_frame": 7
+  },
+  "greet": {
+   "frames": 69,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 33.5,
+   "shoe_at_frame": 43
+  },
+  "turn_l": {
+   "frames": 51,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 22.5,
+   "shoe_at_frame": 14
+  },
+  "turn_r": {
+   "frames": 51,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 36.4,
+   "shoe_at_frame": 6
+  },
+  "dash": {
+   "frames": 12,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 0.0,
+   "shoe_at_frame": 0
+  },
+  "strike_charge": {
+   "frames": 61,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 32.7,
+   "shoe_at_frame": 1
+  },
+  "strike_super": {
+   "frames": 61,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 42.8,
+   "shoe_at_frame": 19
+  },
+  "cast_lance": {
+   "frames": 59,
+   "leg_through_mm": 1.0,
+   "at_frame": 13,
+   "bone": "thigh_L",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 37.1,
+   "shoe_at_frame": 36
+  },
+  "cast_snare": {
+   "frames": 59,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 39.1,
+   "shoe_at_frame": 32
+  },
+  "strike1": {
+   "frames": 37,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 38.6,
+   "shoe_at_frame": 33
+  },
+  "strike2": {
+   "frames": 38,
+   "leg_through_mm": 0.0,
+   "at_frame": 0,
+   "bone": "",
+   "frames_over_tol": 0,
+   "points_over_tol_max": 0,
+   "shoe_through_hem_mm": 49.0,
+   "shoe_at_frame": 21
+  },
+  "strike3": {
+   "frames": 51,
+   "leg_through_mm": 55.7,
+   "at_frame": 9,
+   "bone": "pelvis",
+   "frames_over_tol": 1,
+   "points_over_tol_max": 1,
+   "shoe_through_hem_mm": 42.4,
+   "shoe_at_frame": 44
+  }
+ }
+}

@@ -479,15 +479,16 @@ HAND_POSES = {            # degrees of curl: (fingers, index, thumb)
 }
 
 
-def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, local_out=None):
-    """Finger bones: a held curl (HAND_POSES name or per-side dict) with a small breathing motion. Returns
-    {bone: [n, 4] local rotations} for assemble() via `wr_or_local['__local']`."""
+def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, local_out=None, periods=1):
+    """Finger bones: a held curl (HAND_POSES name or per-side dict) with a small breathing motion (`periods` of it
+    over the clip, the two hands out of step). Returns {bone: [n, 4] local rotations} for assemble() via
+    `wr_or_local['__local']`."""
     loc = wr_or_local.setdefault('__local', {})
     u = np.arange(n) / n
     for s, side in (('L', 1), ('R', -1)):
         p = pose[s] if isinstance(pose, dict) else pose
         cf, ci, ct = HAND_POSES[p] if isinstance(p, str) else p
-        w = np.sin(2 * np.pi * (u + (0.25 if side > 0 else 0.75))) * (swing_amp if cyclic else 0.0)
+        w = np.sin(2 * np.pi * (u * (periods if side > 0 else max(periods - 1, 1)) + (0.25 if side > 0 else 0.75))) * (swing_amp if cyclic else 0.0)
         i_h = rig.index[f'hand_{s}']
         for bone, axis, ang in ((f'fingers_{s}', (0, 0, -1.0), side * (cf + w)), (f'index_{s}', (0, 0, -1.0), side * (ci + 0.7 * w)),
                                 (f'thumb_{s}', (0, 1.0, 0), -side * (ct + 0.4 * w))):
@@ -554,6 +555,12 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
             recenter(rig, wr, {**st, 'posture': st['posture_after']})
     if feet_mode == 'planted':
         contacts = {s: [(0, n)] for s in 'LR'}
+        own_stance = bool(st.get('stance')) and st['stance'].get('feet') == 'rest'
+        if own_stance:           # the character's own stance: both ankles exactly where the model's rest pose has them, in every standing
+            # clip (a body modelled with its legs apart keeps them so; a one-shot blends into an idle and back without a foot moving)
+            mid_r = 0.5 * (rig.rest_wp[rig.index['foot_L']] + rig.rest_wp[rig.index['foot_R']]); mid_r[1] = 0
+            for s in 'LR':
+                feet[s] = np.broadcast_to(rig.rest_wp[rig.index[f'foot_{s}']] - mid_r, (n, 3)).copy()
         if st.get('stance'):     # stand over the feet: the hips' mean place relative to the ankles and to the rest height
             mid = 0.5 * (feet['L'].mean(0) + feet['R'].mean(0))
             hip[:, 0] += mid[0] - hip[:, 0].mean()
@@ -565,11 +572,12 @@ def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma
         for s in 'LR':   # a planted idle foot is flat: keep only its mean heading
             wf = wr[f'foot_{s}']; pts = foot_points(rig, s)
             fwd = qrot(wf, pts['ball'] - pts['heel']).mean(0)
-            wr[f'foot_{s}'] = np.broadcast_to(qmul(yaw_quat(np.arctan2(fwd[0], fwd[2])), rig.rest_wr[rig.index[f'foot_{s}']]), (n, 4)).copy()
+            wr[f'foot_{s}'] = np.broadcast_to(rig.rest_wr[rig.index[f'foot_{s}']] if own_stance else qmul(yaw_quat(np.arctan2(fwd[0], fwd[2])), rig.rest_wr[rig.index[f'foot_{s}']]), (n, 4)).copy()
     else:
         contacts = detect_contacts(rig, wr, feet, 0.0, fps, cyc)
     hip, ank, drop = plant_and_solve(rig, wr, hip, feet, contacts, 0.0, fps, cyc, st)
-    fingers(rig, wr, n, st.get('hands', 'relaxed'), False)
+    life = st.get('finger_life')        # [degrees, seconds]: the fingers curl and open a little all through a standing clip (hands that are alive)
+    fingers(rig, wr, n, st.get('hands', 'relaxed'), bool(life), swing_amp=life[0] if life else 0.0, periods=max(1, int(round(n / fps / life[1]))) if life else 1)
     local, world = assemble(rig, wr, n)
     pel = pelvis_from_hips(rig, wr['pelvis'], hip)
     slip, low = check_slip(rig, local, pel, contacts, 0.0, fps, cyc)

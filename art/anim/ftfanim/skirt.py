@@ -42,8 +42,11 @@ def mat_q(m):
 #   enclosed: False when the leg the gown encloses is not there (no knee-inside-the-gown check);
 #   max_deg: the largest angle a chain segment may leave its carried rest direction; resolve_margin: the
 #   clearance the skinned gown keeps from the leg capsules after that (the legs always win over the limits);
-#   foot_grow: extra clearance the feet keep over the legs' (a long hem over a lifted heel).
-DEFAULTS = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0, foot_grow=0.015)
+#   foot_grow: extra clearance the feet keep over the legs' (a long hem over a lifted heel);
+#   wind: the share of her travelling speed the cloth feels as a head wind (a heavy fabric: well under 1);
+#   leash_deg: in the simulation itself, the angle off its hang beyond which cloth is drawn back (a hem that no leg
+#   is pushing does not fly up in a lunge). Unlike max_deg it cannot pull cloth into a leg: the collisions come after it.
+DEFAULTS = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0, foot_grow=0.015, wind=1.0, leash_deg=None)
 TUNE = dict(DEFAULTS)
 
 
@@ -96,14 +99,26 @@ class ClothRig:
         self.tails = {str(n): p.astype(float) for n, p in zip(d['tail_names'], d['tail_pos'])}
         # How the body carries the gown's own shape. A wide gown hangs from the hips alone; a close dress (Elise v5)
         # is carried by the legs too, and the rig file then holds a weight per grid point over `skin_names`.
-        self.skin_b = np.array([rig.index[str(n)] for n in d['skin_names']]) if 'skin' in d.files else np.array([rig.index['pelvis']])
+        self.skin_b = np.array([rig.index[str(n).rstrip('^')] for n in d['skin_names']]) if 'skin' in d.files else np.array([rig.index['pelvis']])
+        # a name ending in ^ is that bone upright: its place and heading without its tilt (hanging cloth does not
+        # swing out with tilted hips like a bell: it hangs down from them)
+        self.skin_up = np.array([str(n).endswith('^') for n in d['skin_names']]) if 'skin' in d.files else np.array([False])
         self.skin_w = d['skin'].astype(float).reshape(-1, len(self.skin_b)) if 'skin' in d.files else np.ones((self.grid[..., 0].size, 1))
         self.node_skin = self.skin_w.reshape(R, C, -1)[self.rows][:, self.cols].transpose(1, 0, 2)                     # [chains, nodes, bones]
+        # where a close dress lies on the body it is skin, not cloth (1 skin .. 0 cloth): those points ride the body
+        self.tight = d['tight'].astype(float) if 'tight' in d.files else np.zeros((R, C))
+        # how deep the real cloth folds in under the grid (the grid is the dress's outer envelope): the legs keep that
+        # much further from the grid there
+        self.inset = d['inset'].astype(float) if 'inset' in d.files else np.zeros((R, C))
+        self.slack = d['slack'].astype(float) if 'slack' in d.files else np.ones(R)      # per row: the real cloth's length over the grid's
 
     def carried(self, wr, wp, pts, w):
         """Rest points `pts` [P, 3] carried by the body over the pose [F, ...], weighted by `w` [P, bones] over
         `skin_b` (linear blend skinning of a rest shape): [F, P, 3]."""
         M, t = self.bone_xf(wr, wp, self.skin_b)
+        for k in np.nonzero(self.skin_up)[0]:
+            b = self.skin_b[k]; q = qmul(wr[:, b], qinv(self.rig.rest_wr[b])[None])              # the bone's turn since rest: only its part about the vertical is kept
+            tw = np.stack([np.zeros(len(q)), q[:, 1], np.zeros(len(q)), q[:, 3]], -1); M[:, k] = qmat(qnorm(tw)); t[:, k] = wp[:, b] - M[:, k] @ self.rig.rest_wp[b]
         return np.einsum('fkpi,pk->fpi', np.einsum('fkij,pj->fkpi', M, pts) + t[:, :, None], w)
 
     # ---- pose
@@ -170,21 +185,45 @@ class ClothRig:
         a = P[:, :-1, :-1]; b = P[:, :-1, 1:]; c = P[:, 1:, :-1]; d = P[:, 1:, 1:]; F = len(P)
         return np.concatenate([x.reshape(F, -1, 3) for x in (P, (a + b) / 2, (c + d) / 2, (a + c) / 2, (b + d) / 2, (a + d) / 2, (b + c) / 2)], 1)
 
+    def rest_sd(self):
+        """Signed distance of every surface sample to every leg capsule in the rest pose [capsules, S]. A close dress
+        lies on the body where it is tight (Elise v5: on the hips and the top of the thighs), nearer than any
+        clearance and sometimes inside a capsule that is rounder than the leg: the pose is charged only with what it
+        adds to that."""
+        if not hasattr(self, '_rest_sd'):
+            rig = self.rig; wr, wp = rig.rest_wr[None], rig.rest_wp[None]; S = self.samples(self.grid[None])[0]; out = []
+            for name, a, b, r0, r1 in self.capsules(wr, wp):
+                ab = b[0] - a[0]; t = np.clip((S - a[0]) @ ab / (ab @ ab), 0, 1)
+                out.append(np.linalg.norm(S - (a[0] + t[:, None] * ab), axis=-1) - (r0 + (r1 - r0) * t))
+            self._rest_sd = np.array(out)
+            # where the dress is skin (it rides the body's own bones, with the body's own weights) it cannot be
+            # checked against a capsule: a capsule turns with one bone, the skin and the dress on it with a blend
+            # of two. Those samples are left to the check on the mesh itself (art/agents/elise/v5/leg_check.py).
+            self._cloth = self.samples(np.repeat(self.tight[None, :, :, None], 3, -1))[0][:, 0] < 0.5
+            self._inset = self.samples(np.repeat(self.inset[None, :, :, None], 3, -1))[0][:, 0]
+        return self._rest_sd
+
     def distance(self, local, pelvis, margin=0.0, push=False):
-        """Per frame, the smallest signed distance from a leg capsule to the gown surface [F] and the capsule's name;
-        with `push`, also the displacement that would clear every grid vertex by `margin` [F, V, 3]."""
-        rig = self.rig; F = len(local)
+        """Per frame, the smallest signed distance from a leg capsule to the gown surface [F] and the capsule's name
+        (where the gown already touches or dips into a capsule at rest, the distance is measured from that rest
+        depth); with `push`, also the displacement that would clear every grid vertex by `margin` (or by its rest
+        clearance where that is smaller) [F, V, 3], and the largest shortfall of that clearance per frame [F]."""
+        rig = self.rig; F = len(local); sd0 = self.rest_sd()
         dmin = np.full(F, 9.0); who = np.zeros(F, int); disp = np.zeros((F,) + self.grid.reshape(-1, 3).shape) if push else None
-        V = disp.shape[1] if push else 0
+        V = disp.shape[1] if push else 0; short = np.zeros(F)
         for f0 in range(0, F, 32):
             sl = slice(f0, min(F, f0 + 32))
             wr, wp = rig.fk(local[sl], pelvis[sl]); P = self.skin(wr, wp); S = self.samples(P)
             for ci, (name, a, b, r0, r1) in enumerate(self.capsules(wr, wp)):
                 ab = (b - a)[:, None]; t = np.clip(np.sum((S - a[:, None]) * ab, -1) / np.sum(ab * ab, -1), 0, 1)
-                v = S - (a[:, None] + t[..., None] * ab); dist = np.linalg.norm(v, axis=-1); sd = dist - (r0 + (r1 - r0) * t)
-                m = sd.min(1) + (TUNE['foot_peek'] if name.startswith('foot_') else 0.0); better = m < dmin[sl]; dmin[sl] = np.where(better, m, dmin[sl]); who[sl] = np.where(better, ci, who[sl])
+                # the cloth itself lies `inset` under the grid; its distance is charged from its own rest depth
+                v = S - (a[:, None] + t[..., None] * ab); dist = np.linalg.norm(v, axis=-1); r0c = sd0[ci] - self._inset; sd = dist - (r0 + (r1 - r0) * t) - self._inset[None] - np.minimum(r0c, 0)[None]
+                sd = np.where(self._cloth[None], sd, 9.0)
+                m = sd.min(1) + (TUNE['foot_peek'] if name.startswith(('foot_', 'toe_')) else 0.0); better = m < dmin[sl]; dmin[sl] = np.where(better, m, dmin[sl]); who[sl] = np.where(better, ci, who[sl])
                 if push:
-                    pen = np.maximum(margin - sd, 0)[..., None] * v / np.maximum(dist, 1e-9)[..., None]       # [f, S, 3]
+                    want = np.minimum(margin, np.maximum(r0c, 0))[None]                                       # the clearance asked of each sample
+                    short[sl] = np.maximum(short[sl], (want - sd).max(1))
+                    pen = np.maximum(want - sd, 0)[..., None] * v / np.maximum(dist, 1e-9)[..., None]       # [f, S, 3]
                     R, C = self.grid.shape[:2]; g = lambda x, r_, c_: x.reshape(len(x), r_, c_, 3)
                     acc = g(pen[:, :V], R, C).copy(); o = V
                     for (r_, c_), parts in (((R - 1, C - 1), ((0, 0), (0, 1))), ((R - 1, C - 1), ((1, 0), (1, 1))), ((R - 1, C - 1), ((0, 0), (1, 0))),
@@ -196,7 +235,7 @@ class ClothRig:
                     acc = acc.reshape(len(acc), V, 3); big = np.linalg.norm(acc, axis=-1) > np.linalg.norm(disp[sl], axis=-1)
                     disp[sl] = np.where(big[..., None], acc, disp[sl])
         names = [c[0] for c in self.capsules(*rig.fk(local[:1], pelvis[:1]))]
-        return (dmin, [names[i] for i in who], disp) if push else (dmin, [names[i] for i in who])
+        return (dmin, [names[i] for i in who], disp, short) if push else (dmin, [names[i] for i in who])
 
     def resolve(self, local, pelvis, N, margin=0.008, iters=40, loop=False, log=None):
         """Fits the gown bones to node positions N, then moves the nodes until the skinned gown clears every leg
@@ -205,12 +244,12 @@ class ClothRig:
         N = N.copy(); best = (-9.0, None)
         for it in range(0 if os.environ.get('FTF_NORESOLVE') else iters):
             self.fit(local, pelvis, N)
-            dmin, _, disp = self.distance(local, pelvis, margin, push=True)
+            dmin, _, disp, short = self.distance(local, pelvis, margin, push=True)
             if log:
-                log('  resolve %2d: min %.4f, frames under margin %d' % (it, dmin.min(), int((dmin < margin * 0.75).sum())))
-            if dmin.min() > best[0]:
-                best = (float(dmin.min()), N.copy())
-            if dmin.min() >= margin * 0.75:
+                log('  resolve %2d: min %.4f, largest shortfall %.4f, frames short %d' % (it, dmin.min(), short.max(), int((short > margin * 0.25).sum())))
+            if -short.max() > best[0]:
+                best = (float(-short.max()), N.copy())
+            if short.max() <= margin * 0.25:
                 break
             dl = np.linalg.norm(disp, axis=-1, keepdims=True); disp = disp * np.minimum(1.0, 0.03 / np.maximum(dl, 1e-9))      # no more than 3 cm a pass
             w = np.linalg.norm(disp, axis=-1)                                                # [F, V]
@@ -303,9 +342,9 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
     ang = np.radians(np.interp(tsec, yaw[:, 0], yaw[:, 1])) if (yaw is not None and not loop) else np.zeros(n); qy = axis_angle(np.array([0, 1.0, 0]), ang)
     wr, wp = rig.fk(local[:F], pelvis[:F])
 
-    def over_sim(x):
-        """A per-frame shape over the simulated frames: eased in from its rest, root yaw applied."""
-        return qrot(qy[:, None], x[0][None] * (1 - e) + x[idx] * e)
+    def over_sim(x, pts):
+        """A shape of the clip's frames [F, P, 3] over the simulated frames, eased in from its rest `pts`, root yaw applied."""
+        return qrot(qy[:, None], pts[None] * (1 - e) + x[idx] * e)
     def carried(bone, pts):
         """Rest points carried by a bone over the simulated frames [n, P, 3], eased in from rest, root yaw applied."""
         M, t = cr.bone_xf(wr, wp, np.array([bone])); x = np.einsum('fij,pj->fpi', M[:, 0], pts) + t[:, 0][:, None]
@@ -315,7 +354,7 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
         cs = [c for c in cr.caps if c[5] in cset]
         a = np.stack([carried(c[0], c[1][None])[:, 0] for c in cs], 1); b = np.stack([carried(c[0], c[2][None])[:, 0] for c in cs], 1)
         return a, b, np.array([c[3] for c in cs]) + grow, np.array([c[4] for c in cs]) + grow
-    wind = np.zeros((n, 3)); wind[:, 2] = -speed
+    wind = np.zeros((n, 3)); wind[:, 2] = -speed * TUNE['wind']
     out = local[:F].copy()
     # ---- gown: every row, every second column of the grid
     step = 2; X0 = cr.grid[:, ::step]; R, C = X0.shape[:2]; rest = X0.reshape(-1, 3)
@@ -323,11 +362,19 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
     # pinned along the hips; the rest is drawn back to the gown's own shape, softly (it settles, sheet 09), and more
     # firmly along the two slit edges (a bound edge: it must not slide off the left thigh and uncover the right knee)
     edge = np.minimum(np.arange(C), C - 1 - np.arange(C)) / 4.0; hold = (TUNE['hold'] + 0.2 * np.clip(1 - edge, 0, 1) ** 2)[None, :] * np.ones((R, 1)); hold = hold.ravel(); hold[:C] = 1.0
+    tight = cr.tight[:, ::step].ravel(); hold = hold + 2.0 * tight ** 2; hold[tight > 0.8] = 1.0          # where the dress is skin it rides the body
     ca, cb, r0, r1 = colliders((0, 2)); nm = [c[6] for c in cr.caps if c[5] in (0, 2)]
     # the feet keep a little more air than the legs: at the legs' own clearance the heel, lifted behind on the way
     # down the stairs, ends in the back panel (a wider margin on the thighs drags the front slit edge off them)
-    foot = np.array([n_.startswith('foot_') for n_ in nm]); r0 = r0 + TUNE['foot_grow'] * foot; r1 = r1 + TUNE['foot_grow'] * foot
-    x = cloth.simulate(rest, cloth.grid_constraints(X0), over_sim(cr.carried(wr, wp, rest, wskin)), hold, (ca, cb, r0, r1), fps, wind=wind, drag=TUNE['drag'], margin=TUNE['margin'])
+    foot = np.array([n_.startswith(('foot_', 'toe_')) for n_ in nm]); r0 = r0 + TUNE['foot_grow'] * foot; r1 = r1 + TUNE['foot_grow'] * foot
+    # a close dress lies on the body where it is tight: a particle never has to keep more air than it has at rest
+    ab = cb[0] - ca[0]; t0 = np.clip(np.einsum('pkj,kj->pk', rest[:, None] - ca[0][None], ab) / np.sum(ab * ab, -1)[None], 0, 1)
+    d_rest = np.linalg.norm(rest[:, None] - (ca[0][None] + t0[..., None] * ab[None]), axis=-1) - (r0 + (r1 - r0) * t0)            # [P, K]
+    marg = np.minimum(TUNE['margin'] + cr.inset[:, ::step].ravel()[:, None], d_rest - 0.0005)      # (the folds lie under the grid: the legs keep that much further from it)
+    leash = None
+    if TUNE['leash_deg'] is not None:      # the cloth's length down from the hips, times the sine of the angle
+        leash = 0.03 + np.sin(np.radians(TUNE['leash_deg'])) * np.concatenate([np.zeros((1, C)), np.cumsum(np.linalg.norm(np.diff(X0, axis=0), axis=-1), 0)]).ravel()
+    x = cloth.simulate(rest, cloth.grid_constraints(X0, slack=cr.slack), over_sim(cr.carried(wr, wp, rest, wskin), rest), hold, (ca, cb, r0, r1), fps, wind=wind, drag=TUNE['drag'], margin=marg, leash=leash)
     x = qrot(qinv(qy)[:, None], x)
 
     def clip_frames(x):
@@ -362,3 +409,25 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
 def chains_of(rig):
     from .chains import chain_bones
     return chain_bones(rig)
+
+
+_JOB = {}
+
+
+def _bake_job(job):
+    name, local, pelvis, fps, loop, speed, yaw = job
+    return bake(_JOB['cr'], local, pelvis, fps, loop, speed, yaw, log=(lambda s: print(name + ':' + s, flush=True)) if _JOB['log'] else None)
+
+
+def bake_many(cr, jobs, log=False):
+    """Bakes the cloth of several clips at once, one process each (a clip's cloth depends on nothing but its own body
+    motion). jobs: [(name, local, pelvis, fps, loop, speed, yaw)]; returns {name: local with the chain bones baked}.
+    FTF_JOBS limits the processes (1: one after another, in this process)."""
+    import multiprocessing as mp
+    import os
+    n = min(len(jobs), int(os.environ.get('FTF_JOBS', os.cpu_count() or 1)))
+    _JOB.update(cr=cr, log=log)
+    if n <= 1:
+        return {j[0]: _bake_job(j) for j in jobs}
+    with mp.get_context('fork').Pool(n) as pool:          # forked: the rig, the cloth rig and the tuning are inherited
+        return dict(zip([j[0] for j in jobs], pool.map(_bake_job, jobs, chunksize=1)))
