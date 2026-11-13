@@ -31,7 +31,7 @@ html[data-motion=reduce] .ft-flash{animation:none}
  * @param {(id: string|null) => void} o.onOpen opens the journal (at a quest) @param {(view: object) => void} o.onWalk
  * @param {object} [o.storage] keeps the collapsed state (ftf.tracker.v1)
  */
-export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, storage = null }) {
+export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onHideGuide = () => {}, storage = null }) {
   if (!doc.getElementById || !doc.getElementById('ft-css')) { const st = doc.createElement('style'); st.id = 'ft-css'; st.textContent = CSS; (doc.head || doc.body).append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   let pref = { collapsed: false }; try { pref = { ...pref, ...JSON.parse((storage && storage.getItem('ftf.tracker.v1')) || '{}') }; } catch { /* defaults */ }
@@ -61,7 +61,7 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, sto
 
   function render(force = false) {
     const d = data(); if (!d) return;
-    const key = JSON.stringify([d.tracked.map((v) => [v.id, v.status, v.objectives.map((o) => o.count)]), d.road, d.errand, pref.collapsed, expanded, short]);
+    const key = JSON.stringify([d.tracked.map((v) => [v.id, v.status, v.objectives.map((o) => o.count)]), d.road, d.errand, d.guide || null, pref.collapsed, expanded, short]);
     if (!force && key === lastKey) return; lastKey = key;
     root.replaceChildren();
     root.classList.toggle('ft-short', short);
@@ -80,6 +80,12 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, sto
     const rest = el('div', 'ft-rest');
     if (!d.tracked.length) root.append(el('div', 'ft-none', say('tracker.none')));
     d.tracked.forEach((v, n) => (n === 0 ? root : rest).append(block(v, n === 0)));
+    if (d.guide) { // the starter guide's active step (sprint §4.11)
+      const g = el('div', 'ft-q ft-guide'); g.dataset.step = d.guide.id;
+      const gh = el('div', 'ft-qh'); gh.append(el('span', 'ft-title', say('guide.title', { n: d.guide.n, total: d.guide.total })));
+      const hx = el('button', 'ft-ib ft-guide-hide', '✕'); hx.type = 'button'; hx.title = say('guide.hide'); hx.setAttribute('aria-label', say('guide.hide')); hx.addEventListener('click', () => onHideGuide());
+      gh.append(hx); g.append(gh, el('div', 'ft-obj', d.guide.text)); root.append(g);
+    }
     if (d.errand) { const e = el('div', 'ft-q compact'); e.append(el('div', 'ft-title', say('tracker.town')), el('div', 'ft-obj', d.errand)); rest.append(e); }
     root.append(rest);
     if (rest.children.length) {

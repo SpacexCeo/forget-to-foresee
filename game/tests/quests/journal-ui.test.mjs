@@ -109,3 +109,13 @@ test('auto-walk: started, arrives at 2.2 m, cancelled by input, by a new walk, b
   t = 1000; w.update(); t = 8000; w.update();
   assert.deepEqual(events.at(-1), ['autowalk.cancelled', 'blocked']);
 });
+
+test('auto-walk: a movement key wins over the 2 s re-plan toward a walking giver', () => {
+  let pos = [0, 0, 0], route = null, ended = null, t = 0; const events = [];
+  const driver = { setRoute: (pts) => { route = pts; ended = null; }, cancel: () => { if (route) ended = 'cancel'; route = null; }, active: () => !!route, ended: () => ended, pos: () => pos };
+  const w = createAutoWalk({ driver, doc: makeDoc(), say, emit: (n, p) => events.push([n, p.reason || null]), now: () => t });
+  w.autoWalkTo({ pos: [30, 0], label: 'Elder', follow: () => [31, 0] });
+  route = null; ended = 'cancel'; t = 2500; w.update(); // W pressed in a slow frame, then the re-plan is due
+  assert.deepEqual(events.at(-1), ['autowalk.cancelled', 'input']);
+  assert.equal(route, null, 'the route stays dropped');
+});

@@ -5,6 +5,7 @@ import EN from '../play/locales/en-quests.js';
 export const fill = (s, args = {}) => String(s).replace(/\{(\w+)\}/g, (m, k) => (args[k] != null ? String(args[k]) : m));
 export function createSay(i18n = null) {
   return (key, args = {}) => {
+    if (EN[key] != null && (!i18n || !i18n.locale || i18n.locale === 'en')) return fill(EN[key], args); // the sprint's English copy wins in English
     if (i18n && typeof i18n.t === 'function') { const v = i18n.t(key, args); if (v && v !== key && v !== '…' && v !== '...') return v; } // the play i18n shows '…' for a missing key
     return EN[key] != null ? fill(EN[key], args) : key;
   };

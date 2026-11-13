@@ -53,3 +53,21 @@ export async function payGate({ storage, base = relayerUrl(), fetch = globalThis
     return { ok: false, reason: REASON[b.error] || (r.status >= 500 ? 'tx_failed' : 'network'), hash: b.tx_hash || null };
   } catch { return { ok: false, reason: 'network' }; }
 }
+
+/** "ftf-town-credit|<account>|<at>": the relayer credits the guest's verified income on chain (no payment). */
+export const creditMessage = (accountId, at) => `ftf-town-credit|${accountId}|${at}`;
+/** Moves the guest's verified silk on chain (sprint §4.12 "Press E to sync"): {ok, creditedC?} | {ok: false, reason}. */
+export async function syncGate({ storage, base = relayerUrl(), fetch = globalThis.fetch, now = () => Date.now(), flush = null }) {
+  const g = guestFrom(storage);
+  if (!g) return { ok: false, reason: 'need_guest' };
+  if (!base) return { ok: false, reason: 'not_configured' };
+  try {
+    if (flush) { try { await flush(); } catch { /* the relayer answers with what it has */ } }
+    const key = await importSecretKey(g.secretKey), at = now();
+    const signature = b58encode(await key.sign(new TextEncoder().encode(creditMessage(g.accountId, at))));
+    const r = await fetch(base.replace(/\/$/, '') + '/api/town/gate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: g.accountId, public_key: key.publicKey, at, signature, credit_only: true }) });
+    let b = {}; try { b = await r.json(); } catch { /* empty */ }
+    if (r.status === 200) return { ok: true, creditedC: toHundredths(b.credited_now || 0) };
+    return { ok: false, reason: REASON[b.error] || (r.status >= 500 ? 'tx_failed' : 'network') };
+  } catch { return { ok: false, reason: 'network' }; }
+}

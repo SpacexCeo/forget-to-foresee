@@ -176,9 +176,10 @@ test('story strings: every key the views use exists in all five play locales', a
     + readFileSync(new URL('../../src/game/quests-data.js', import.meta.url), 'utf8') + readFileSync(new URL('../../src/game/expedition.js', import.meta.url), 'utf8');
   const keys = new Set(src.match(/'(story|quest)\.[a-z0-9.]+[a-z0-9]'/gi).map((k) => k.slice(1, -1)).filter((k) => !/\.$/.test(k)));
   for (const short of ['spiders', 'part', 'boss', 'bounty']) for (const s of ['offer', 'yes', 'report', 'ready', 'thanks']) keys.add(`quest.${short}.${s}`);
+  const enQuests = (await import('../../src/play/locales/en-quests.js')).default; // the sprint's English copy: the fallback in every locale (sprint rule 1)
   for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) {
     const dict = (await import(`../../src/play/locales/${loc}.js`)).default;
-    const missing = [...keys].filter((k) => !(k in dict) && !['quest.track.', 'story.portal.'].includes(k));
+    const missing = [...keys].filter((k) => !(k in dict) && !(k in enQuests) && !['quest.track.', 'story.portal.'].includes(k));
     assert.deepEqual(missing, [], loc);
   }
 });

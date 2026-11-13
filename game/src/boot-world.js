@@ -334,16 +334,16 @@ if (townMode.town) {
   if (params.get('story') !== '0' && !townQuests) {
     Promise.all([import('./scenes/town-quests.js'), import('./scenes/town-portal.js'), import('./game/inventory.js'), import('./scenes/town-board.js'), import('./net/tee-agent.js'), import('./net/town-gate.js'), import('./net/agent-ledger.js'), import('./scenes/quest-markers.js')]).then(([qm, pm, im, bm, tee, gm, al, mm]) => {
       if (townQuests || !inTown) return;
-      townQuests = qm.createTownQuests({ storage: ctx.storage, townLedger, i18n: ctx.i18n, folkAt, inventory: im.createInventory({ storage: ctx.storage }), chests: chestBag,
+      townQuests = qm.createTownQuests({ hudToast: (s) => toast(s), storage: ctx.storage, townLedger, i18n: ctx.i18n, folkAt, inventory: im.createInventory({ storage: ctx.storage }), chests: chestBag,
         depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search,
         // the Gate-Loom on chain (rev 4): ftf-town gate_price / balance_of / gate_paid_of through the relayer, which credits the
         // guest's verified log and calls pay_gate_for on the guest's signed request (relayer/api/town/gate.js)
         // the journal's auto-walk drives the town's own route steering (W A S D clears it); markers are town-local
         walkDriver: { setRoute: (pts) => townFlow && townFlow.walkTo(pts), cancel: () => townFlow && townFlow.cancelRoute(), active: () => !!(townFlow && townFlow.routeActive), ended: () => townFlow && townFlow.routeEnd, pos: () => player.pos },
-        toWorld: townToWorld, level: () => townLedger.level,
-        gate: { read: () => { const g = al.guestFrom(ctx.storage); return g ? gm.readGate({ account: g.accountId }) : Promise.resolve({ ok: false, reason: 'need_guest' }); }, pay: () => gm.payGate({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }) } });
+        toWorld: townToWorld, camera, portalAt: [pm.PORTAL_TOWN[0], pm.PORTAL_TOWN[2]], level: () => townLedger.level,
+        gate: { read: () => { const g = al.guestFrom(ctx.storage); return g ? gm.readGate({ account: g.accountId }) : Promise.resolve({ ok: false, reason: 'need_guest' }); }, pay: () => gm.payGate({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }), sync: () => gm.syncGate({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }) } });
       const w = townToWorld(pm.PORTAL_TOWN);
-      townPortal = pm.createTownPortal({ scene, position: w, facing: Math.PI / 2, i18n: ctx.i18n, read: () => townQuests.portalFacts(), onPay: () => townQuests.payGate(), reducedMotion: lookdev.reducedMotion, light: !(mobileDevice || lookdev.tier === 'low') });
+      townPortal = pm.createTownPortal({ scene, position: w, facing: Math.PI / 2, i18n: ctx.i18n, read: () => townQuests.portalFacts(), onPay: () => townQuests.payGate(), onSync: () => townQuests.syncGate(), reducedMotion: lookdev.reducedMotion, light: !(mobileDevice || lookdev.tier === 'low') });
       // the Shell monument (K2): the latest board snapshot and her own row from the local log
       const relayer = (() => { try { return tee.relayerUrl(); } catch { return null; } })();
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,

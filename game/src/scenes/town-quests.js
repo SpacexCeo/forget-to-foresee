@@ -18,6 +18,12 @@ import { createJournalUI } from '../quests/journal-ui.js';
 import { createTrackerUI } from '../quests/tracker-ui.js';
 import { createAutoWalk, setAutoWalker } from '../sprint/auto-walk.js';
 import { GIVER_NAMES } from '../game/journal-data.js';
+import { loadGuide, guideEvent, guideView, GUIDE_KEY } from '../quests/guide.js';
+import { questMarkers } from '../quests/markers-feed.js';
+import { createWaypoint } from '../quests/waypoint-ui.js';
+import { TOWN_ORIGIN } from './town-layout.js';
+import * as THREE from 'three';
+import { setMarkers } from '../sprint/markers.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -120,10 +126,11 @@ const load = (storage, key, fresh) => { try { const v = JSON.parse((storage && s
  * @param {(opts: {sub: string}) => Promise} [o.depart] the town's transition to the archipelago (town-flow depart)
  * @param {string} [o.search] @param {Document} [o.doc] @param {Window} [o.win] @param {() => number} [o.now]
  */
-export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, walkDriver = null, toWorld = null, level = () => 1, flags = flagOn, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
+export function createTownQuests({ hudToast = null, storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, walkDriver = null, toWorld = null, camera = null, portalAt = null, level = () => 1, flags = flagOn, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
   const t = (k, a) => i18n.t(k, a);
   // The Gate-Loom is paid on chain (rev 4): its price and the player's silk are ftf-town's gate_price and balance_of,
   // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
+  let syncing = false;
   let chain = { ok: false, reason: gate ? 'loading' : 'not_configured', priceC: EXPEDITION.PORTAL_FEE_C, balanceC: 0, paid: null }, lastRead = -Infinity, reading = false, payError = null;
   const feeC = () => (chain.ok ? chain.priceC : EXPEDITION.PORTAL_FEE_C);
   // The ONE silk number (net/silk-balance.js, sprint 6.2): shown = silk recorded on NEAR (the same number as the HUD chip);
@@ -170,6 +177,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     const near = o && o.giver ? distanceTo(o.giver) : null;
     line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + (near != null ? ' · ' + t('quest.track.near', { m: near }) : '') + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
     line.hidden = !active || !o || story.phase === 'onward' || useTracker; // the tracker replaces this pill (sprint §4.8)
+    if (!useTracker) line.title = line.textContent; // the flag-off fallback: the full text is always reachable
   }
 
   // ---- where she is (update) and how far a giver stands
@@ -228,6 +236,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   const have = () => { const o = {}; if (inventory && inventory.count) { for (const id of RESOURCE_IDS) o[id] = inventory.count(id); o.part = PART_IDS.reduce((x, id) => x + inventory.count(id), 0); } return o; };
   function firstPart() { try { const all = inventory.list ? inventory.list(PART_IDS.map((id) => ({ id, kind: 'part' }))) : []; return all.length ? all[0].id : null; } catch { return null; } }
   function openTalk(giver, extraLines = null) {
+    if (typeof feedGuide === 'function' && !extraLines) feedGuide('talked:' + giver);
     closeTalk(); panelGiver = giver;
     const h = have(); const tk = talkFor(giver, story, qs, { now: now(), hasPart: hasPart(), have: h });
     const needsText = tk.needs ? Object.entries(tk.needs).map(([id, n]) => t('quest.needs.item', { n, have: h[id] || 0, res: t('res.' + id) })).join(', ') : '';
@@ -304,12 +313,22 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
 
   // ---- the quest journal, the tracker and auto-walk (sprint §4.7-4.10; flags questJournal, questTracker, autoWalk)
   const say = createSay(i18n), gname = (k) => nameOf(say, k, GIVER_NAMES);
-  const useJournal = flags('questJournal'), useTracker = flags('questTracker'), useWalk = flags('autoWalk') && !!walkDriver;
+  const useJournal = flags('questJournal'), useTracker = flags('questTracker'), useWalk = flags('autoWalk') && !!walkDriver, useGuide = flags('starterGuide');
+  let guide = loadGuide(storage);
+  const notify = (text) => { if (hudToast) { hudToast(text); return; } try { win.dispatchEvent(new CustomEvent('ftf:toast', { detail: { text } })); } catch { /* none */ } }; // the HUD toast stack (boot-world toast)
+  function feedGuide(ev) {
+    if (!useGuide) return;
+    const r = guideEvent(guide, ev); if (!r.completed) return;
+    guide = r.state; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ }
+    try { win.dispatchEvent(new CustomEvent('ftf:guide.step', { detail: { id: r.completed, done: true } })); } catch { /* none */ }
+    if (r.reward) { townLedger.grant({ xp: r.reward }); notify(say('guide.done')); }
+    if (tracker) tracker.refresh(true);
+  }
   let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
   const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
   const lvl = () => { try { return Math.max(1, Number(level()) || 1); } catch { return 1; } };
   const jModel = (q2 = '') => journalModel({ qs, now: now(), have: have(), level: lvl(), tracked, search: q2, giverName: gname });
-  const walker = useWalk ? createAutoWalk({ driver: walkDriver, say, toast: (m) => { try { win.dispatchEvent(new CustomEvent('ftf:toast', { detail: { text: m } })); } catch { /* none */ } }, doc,
+  const walker = useWalk ? createAutoWalk({ driver: walkDriver, say, toast: notify, doc,
     emit: (n, pl) => { try { win.dispatchEvent(new CustomEvent('ftf:' + n, { detail: pl })); } catch { /* none */ } } }) : null;
   if (walker) setAutoWalker(walker);
   function walkTo(v) {
@@ -322,17 +341,39 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     onWalk: (v) => walkTo(v),
     onTrack: (id) => { const r = toggleTrack(tracked, id); if (r.ok) { tracked = r.tracked; saveTracked(); if (tracker) tracker.refresh(true); } return r; },
     onAbandon: (id) => { questDo({ type: 'ABANDON', questId: id }); },
-    onOpen: () => { if (tracker) tracker.setHidden(true); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } } }) : null;
+    onOpen: () => { if (tracker) tracker.setHidden(true); feedGuide('journal'); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } } }) : null;
   const townObjective = () => (doc.querySelector ? doc.querySelector('.ftf-town-objective') : null);
   let lastErrand = null;
   const errand = () => { const e = townObjective(); const txt = e && !e.hidden ? (e.textContent || '').trim() : ''; return txt || null; };
   const tracker = useTracker ? createTrackerUI({ doc, say, giverName: gname, storage,
-    data: () => ({ tracked: tracked.map((id) => questView(id, { qs, now: now(), have: have(), level: lvl(), tracked })).filter(Boolean), road: { gateC: balanceC(), feeC: feeC() }, errand: errand() }),
+    data: () => ({ tracked: tracked.map((id) => questView(id, { qs, now: now(), have: have(), level: lvl(), tracked })).filter(Boolean), road: { gateC: balanceC(), feeC: feeC() }, errand: errand(), guide: useGuide ? guideView(guide, Math.round(feeC() / 100)) : null }),
+    onHideGuide: () => { guide = { ...guide, hidden: true }; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ } tracker.refresh(true); },
     onOpen: (id) => { if (journal) journal.open(null, id); }, onWalk: (v) => walkTo(v) }) : null;
   if (useTracker && doc.body && doc.body.classList) { doc.body.classList.add('ftf-tracker-on'); if (!doc.getElementById || !doc.getElementById('ft-hide-pill')) { const st = doc.createElement('style'); st.id = 'ft-hide-pill'; st.textContent = 'body.ftf-tracker-on .ftf-town-objective{display:none!important}'; (doc.head || doc.body).append(st); } }
+  const onGuideKey = (e) => { const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return; if (e.code === 'KeyR') feedGuide('camera'); else if (e.code === 'KeyI') feedGuide('bag'); else if (e.code === 'KeyB') feedGuide('market'); };
+  const onDrag = (e) => { if (e && e.buttons && e.target && e.target.tagName === 'CANVAS') feedGuide('camera'); };
+  const onPortal = () => feedGuide('portal'), onHit = () => feedGuide('hit');
+  if (useGuide) { win.addEventListener('keydown', onGuideKey); win.addEventListener('pointermove', onDrag); win.addEventListener('ftf:portal-near', onPortal); win.addEventListener('ftf:mob-killed', onHit); win.addEventListener('ftf:mob-hit', onHit); }
   function autoTrack() { // newly accepted quests are tracked while fewer than three are
     for (const id of Object.keys(QUESTS)) { const st = questStatus(qs, id, now()); if ((st === 'active' || st === 'ready') && !tracked.includes(id) && tracked.length < MAX_TRACKED && !QUESTS[id].auto) { tracked = [...tracked, id]; saveTracked(); } }
-    tracked = tracked.filter((id) => { const st = questStatus(qs, id, now()); return st === 'active' || st === 'ready'; });
+    tracked = tracked.filter((id) => questStatus(qs, id, now()) !== 'done'); // a finished quest leaves the tracker; anything else the player pinned stays
+  }
+  // ---- the waypoint arrow to the pinned quest's target and the markers for the maps (sprint §4.9)
+  const v3 = new THREE.Vector3();
+  const targetOf = (v) => { if (!v) return null; if (v.walk.kind === 'area' && toWorld) return toWorld([v.walk.pos[0], 0, v.walk.pos[1]]); const p = folkAt(v.walk.giver); return p ? [p[0], p[1] + 1.6, p[2]] : null; };
+  const waypoint = useTracker && camera ? createWaypoint({ doc, win, view: { project: (p) => { v3.set(p[0], p[1], p[2]).project(camera); return { x: v3.x, y: v3.y, z: v3.z, behind: v3.z > 1 }; } },
+    target: () => { if (!tracked.length || !herPos) return null; const pos = targetOf(questView(tracked[0], { qs, now: now(), have: have(), level: lvl(), tracked })); return pos ? { pos, from: herPos } : null; },
+    hidden: () => !active || !!(journal && journal.isOpen) }) : null;
+  let lastMarkers = '', markersT = -Infinity;
+  function publishMarkers() {
+    const giverAt = (k) => { const p = folkAt(k); return p ? [p[0] - TOWN_ORIGIN[0], p[2] - TOWN_ORIGIN[2]] : null; };
+    const list = questMarkers({ qs, now: now(), have: have(), tracked, giverAt, portal: portalAt, giverName: gname });
+    const key = JSON.stringify(list.map((m) => [m.id, m.kind, m.pinned, Math.round(m.pos[0]), Math.round(m.pos[1])]));
+    if (key === lastMarkers) return list; lastMarkers = key;
+    globalThis.__ftfQuestMarkers = list;
+    setMarkers('quests', list); // the shared marker seam (sprint/markers.js): the minimap reads it
+    try { win.dispatchEvent(new CustomEvent('ftf:markers', { detail: { source: 'quests', list } })); } catch { /* none */ }
+    return list;
   }
   function errandWatch() { // the innkeeper's sign: the town errand moving past "read" completes s_sign
     const txt = errand(), readTxt = i18n.t('quest.obj.read');
@@ -340,6 +381,10 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     lastErrand = txt;
   }
 
+  if (!useTracker) { // flag off (sprint §4.8): the old pill wraps instead of cutting, shows its full text and opens the log
+    line.style.pointerEvents = 'auto'; line.style.whiteSpace = 'normal'; line.style.overflow = 'visible'; line.style.textOverflow = 'clip'; line.style.maxWidth = 'min(560px, 92vw)'; line.style.cursor = 'pointer';
+    line.addEventListener('click', (e) => { e.stopPropagation(); toggleLog(); });
+  }
   if (story.phase === 'off') storyDo({ type: 'START', skipPrologue: true }); // the prologue (P4) is optional: arrival
   if (qs.since == null) questDo({ type: 'BEGIN' }); // the guide's grace period: the guard's quest opens even if the elder is skipped
   if (gate) refreshChain();
@@ -350,17 +395,22 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     get story() { return story; }, get quests() { return qs; }, get ledger() { return ledger; }, get fee() { return fee; },
     get talking() { return !!panel; }, get twisting() { return twisting; },
     /** Live facts for the portal. */
-    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), heldC: heldC(), pendingC: silkView().pendingC, feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting }),
+    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), heldC: heldC(), onChainC: heldC(), totalC: balanceC(), pendingC: silkView().pendingC, feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting, syncing }),
+    /** E at the Gate-Loom when the verified silk would cover the fee: the relayer credits it on chain (credit only). */
+    async syncGate() { if (!gate || !gate.sync || syncing) return false; syncing = true; changed(); try { const r = await gate.sync(); payError = r && r.ok ? null : ((r && r.reason) || 'network'); } catch { payError = 'network'; } syncing = false; await refreshChain(); return !payError; },
     refreshChain, get chain() { return chain; },
     payGate,
     /** Per frame: the guide's movement step, the gate opening with the balance, a talk closing when she walks off. */
     update(pos) {
       if (walker) walker.update();
       if (tracker || journal) { autoTrack(); errandWatch(); if (tracker) tracker.refresh(); }
+      if (waypoint) waypoint.update();
+      if ((tracker || journal) && now() - markersT > 1000) { markersT = now(); publishMarkers(); }
       if (pos) { herPos = pos; if (now() - lineT > 1000) { lineT = now(); renderObjective(); } } // the distance to the next giver
       if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];
       if (pos && start && !story.guide.moved && Math.hypot(pos[0] - start[0], pos[2] - start[1]) > 6) { storyDo({ type: 'GUIDE_STEP', id: 'moved' }); questDo({ type: 'GUIDE', step: 'moved' }); }
+      if (pos && start && Math.hypot(pos[0] - start[0], pos[2] - start[1]) > 6) feedGuide('moved');
       if (gate && now() - lastRead > 20_000) refreshChain(); // the on-chain balance grows with the relayer's story credits
       if (panel && panelGiver && pos) { const p = folkAt(panelGiver); if (p && Math.hypot(p[0] - pos[0], p[2] - pos[2]) > 4.5) closeTalk(); }
     },
@@ -371,8 +421,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     /** Markers over the givers: [{giver, sym: '!'|'?'}] for scenes/quest-markers.js. */
     markers: () => ['elder', 'guard', 'lamplighter', 'shardkeeper'].map((giver) => ({ giver, sym: markerFor(giver, story, qs, now(), have()) })).filter((m) => m.sym),
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
+    get guide() { return guide; }, feedGuide, publishMarkers,
     get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
-    dispose() { unSilk(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
+    dispose() { unSilk(); setMarkers('quests', []); if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
   };
 }
 
