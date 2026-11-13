@@ -57,3 +57,13 @@ test('achievements derive from recorded stats', () => {
   assert.equal(by.elise.done, true); assert.equal(by.price.done, false);
   assert.equal(a.length, ACHIEVEMENTS.length);
 });
+
+test('wheel labels (sprint 6.8): play money on this device, the skin NFT very rare, the odds from SEGMENTS', async () => {
+  const en = (await import('../../src/play/locales/en.js')).default;
+  assert.equal(en['wheel.header'], 'Free daily spin · Prizes are play money and stay on this device');
+  assert.equal(en['wheel.skinNft'], 'Skin NFT (very rare)');
+  assert.match(en['wheel.none'], /The next free spin is in \{time\}\./);
+  assert.match(en['wheel.playSilk'], /cannot open the Gate-Loom/);
+  const { odds, SEGMENTS } = await import('../../src/game/wheel.js');
+  assert.equal(odds().length, SEGMENTS.length); assert.ok(Math.abs(odds().reduce((s, o) => s + o.p, 0) - 1) < 1e-9);
+});
