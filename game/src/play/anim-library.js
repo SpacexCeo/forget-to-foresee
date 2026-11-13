@@ -112,13 +112,16 @@ const retargeted = new Map();
  * @param {string[]} [o.names] only these clips (default: all of TOWNSFOLK_CLIPS)
  * @param {string|object} [o.body] 'adult' (default), 'elder', 'child', 'guard' or an object like BODY_STYLE's entries
  * @param {number} [o.armOut] degrees to hold the arms further from the body (bulky costumes), added to the body type's
+ * @param {boolean} [o.planted] the careful legs (default for the quest givers, key npc_*): the feet keep the character's own
+ *   stance, a foot that is down stays where it is (standing clips) or travels at exactly the clip's speed (walks), and
+ *   the knee keeps its bend plane through a straight leg
  * @param {string} [o.key] cache key: characters that share a skeleton (same asset) share the retargeted clips
  * @returns {Promise<THREE.AnimationClip[]>} [] when the file fails to load
  */
-export function townsfolkClips(model, { names = null, body = 'adult', armOut = 0, key = null, base = baseUrl(), file = 'townsfolk' } = {}) {
-  const k = key ? `${file}|${key}|${typeof body === 'string' ? body : JSON.stringify(body)}|${armOut}|${names ? names.join(',') : '*'}` : null;
+export function townsfolkClips(model, { names = null, body = 'adult', armOut = 0, key = null, base = baseUrl(), file = 'townsfolk', planted = /^npc_/.test(key || '') } = {}) {
+  const k = key ? `${file}|${key}|${typeof body === 'string' ? body : JSON.stringify(body)}|${armOut}|${names ? names.join(',') : '*'}|${planted ? 'p' : ''}` : null;
   if (k && retargeted.has(k)) return retargeted.get(k);
-  const p = loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
+  const p = loadFile(file, base).then((g) => retargetClips(g, model, { names, body, armOut, planted }), (e) => { console.warn('[anim] shared clips failed', file, e); return []; });
   if (k) retargeted.set(k, p);
   return p;
 }
@@ -153,8 +156,8 @@ const legLength = (rest) => ['L', 'R'].reduce((s, x) => s + rest.get(`thigh_${x}
  * scaled by the leg-length ratio, then both legs are solved again onto the scaled ankle positions, so the feet stay
  * planted on a child as on a tall adult.
  */
-export function retargetClips(gltf, model, { names = null, body = 'adult', armOut = 0 } = {}) {
-  const style = { ...BODY_STYLE.adult, ...(typeof body === 'string' ? BODY_STYLE[body] : body) };
+export function retargetClips(gltf, model, { names = null, body = 'adult', armOut = 0, planted = false } = {}) {
+  const style = { ...BODY_STYLE.adult, ...(typeof body === 'string' ? BODY_STYLE[body] : body), planted };
   style.armOut += armOut;
   gltf.scene.updateMatrixWorld(true);
   const refBones = []; gltf.scene.traverse((o) => { if (o !== gltf.scene) refBones.push(o); });
@@ -193,6 +196,7 @@ export function retargetClips(gltf, model, { names = null, body = 'adult', armOu
   return out;
 }
 
+const tgtPelX = (rest) => (rest.get('pelvis') ? rest.get('pelvis').wp.x : 0);
 function depth(rest, n) { let d = 0; for (let p = rest.get(n).parent; p; p = rest.get(p).parent) d++; return d; }
 
 const UPPER = /^(chest|neck|shoulder_[LR]|upperarm_[LR]|forearm_[LR]|hand_[LR]|thumb_[LR]|index_[LR]|fingers_[LR]|prop_[LR])$/;
@@ -208,7 +212,23 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
   }
   const F = times.length;
   const refOrder = [...ref.keys()].sort((a, b) => depth(ref, a) - depth(ref, b));
-  const keyed = order.filter((n) => tracks.has(n) && K.has(n));
+  // The careful hands: these bodies are bound with flat, spread fingers. A hand at rest is never flat: the fingers
+  // curl toward the palm (the long ones most, the thumb least) and are never quite still.
+  const curl = new Map();
+  if (style.planted) {
+    for (const side of ['L', 'R']) {
+      const hand = tgt.get(`hand_${side}`); if (!hand) continue;
+      const inward = new THREE.Vector3(-Math.sign(hand.wp.x - tgtPelX(tgt)) || 0, 0, 0);
+      for (const [name, deg, live] of [[`fingers_${side}`, 30, 4], [`index_${side}`, 20, 3], [`thumb_${side}`, 12, 2]]) {
+        const b = tgt.get(name); if (!b) continue;
+        const dir = Y.clone().applyQuaternion(b.wq).normalize(), palm = new THREE.Vector3(0, -1, 0).addScaledVector(inward, 0.35); palm.addScaledVector(dir, -palm.dot(dir));
+        if (palm.lengthSq() < 1e-6) continue;
+        const axis = dir.clone().cross(palm.normalize()).normalize().applyQuaternion(b.wq.clone().invert()); // in the bone's own frame
+        curl.set(name, { axis, rad: THREE.MathUtils.degToRad(deg), live: THREE.MathUtils.degToRad(live), phase: side === 'L' ? 0 : 1.7 });
+      }
+    }
+  }
+  const keyed = order.filter((n) => (tracks.has(n) && K.has(n)) || curl.has(n));
   const outQ = new Map(keyed.map((n) => [n, new Float32Array(F * 4)]));
   const outP = new Float32Array(F * 3);
   const rw = new Map(refOrder.map((n) => [n, new THREE.Quaternion()])), rp = new Map(refOrder.map((n) => [n, new THREE.Vector3()]));
@@ -218,8 +238,8 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
   const armRot = { L: new THREE.Quaternion().setFromAxisAngle(Z, THREE.MathUtils.degToRad(armOut)), R: new THREE.Quaternion().setFromAxisAngle(Z, -THREE.MathUtils.degToRad(armOut)) };
   const ankleRest = { ref: (ref.get('foot_L').wp.y + ref.get('foot_R').wp.y) / 2, tgt: (tgt.get('foot_L').wp.y + tgt.get('foot_R').wp.y) / 2 };
   let pelvisY = 0;
-  for (let f = 0; f < F; f++) {
-    // the reference's pose in model space
+  // the reference's pose in model space
+  const refPose = (f) => {
     for (const n of refOrder) {
       const r = ref.get(n), vals = tracks.get(n);
       if (vals) q.fromArray(vals, f * 4); else q.copy(r.q);
@@ -229,6 +249,40 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
         rp.get(n).copy(v).applyQuaternion(rw.get(r.parent)).add(rp.get(r.parent));
       } else { rw.get(n).copy(vals ? q : r.wq); rp.get(n).copy(r.wp); }
     }
+  };
+  // The careful legs: where each ankle goes, worked out for the whole clip first. The character keeps its own stance
+  // (the reference's foot travel is added to the character's rest foot, not its absolute position), and a foot that
+  // is down does not slide: it stays put in a standing clip and travels at exactly the clip's speed in a walk. When
+  // it lifts, the difference to the reference's path fades out over the swing.
+  let footPath = null;
+  if (style.planted) {
+    const speed = ((clip.userData && clip.userData.speed) || 0) * scale * stride, loop = !(clip.userData && clip.userData.loop === false), pin = clip.name !== 'sit';
+    footPath = legs.map(() => new Float32Array(F * 3));
+    for (let f = 0; f < F; f++) { refPose(f); legs.forEach((L, i) => { const r = rp.get(L.foot), r0 = ref.get(L.foot).wp, t0 = tgt.get(L.foot).wp; footPath[i].set([(r.x - r0.x) * scale + t0.x, (r.y - ankleRest.ref) * scale + ankleRest.tgt, (r.z - r0.z) * scale * stride + t0.z], f * 3); }); }
+    if (pin) footPath.forEach((P) => {
+      let lo = Infinity; for (let f = 0; f < F; f++) lo = Math.min(lo, P[f * 3 + 1]);
+      const down = (f) => P[f * 3 + 1] < lo + (speed > 0 ? 0.02 : 0.035) * scale;
+      // the direction the ground runs under a walking character: the way the planted foot travels in the reference
+      let dz = 0; for (let f = 1; f < F; f++) if (down(f) && down(f - 1)) dz += P[f * 3 + 2] - P[f * 3 - 1];
+      const sgn = dz < 0 ? -1 : 1;
+      let start = 0; if (loop) { for (let f = 0; f < F; f++) if (!down(f)) { start = f; break; } }
+      const N = loop ? F - 1 : F, raw = Float32Array.from(P); // a loop's last key repeats its first
+      let ax = raw[start * 3], az = raw[start * 3 + 2], t0 = times[start], wasDown = false, ox = 0, oz = 0, runLen = 1, runAt = 0, elapsed = 0;
+      for (let k = 0; k < N; k++) {
+        const f = (start + k) % N, prev = (start + k - 1 + N) % N; if (k > 0) elapsed += f > prev ? times[f] - times[prev] : 0;
+        if (down(f)) {
+          if (!wasDown) { ax = k === 0 ? raw[f * 3] : P[prev * 3]; az = k === 0 ? raw[f * 3 + 2] : P[prev * 3 + 2]; t0 = elapsed; wasDown = true; if (k > 0) { ax += raw[f * 3] - raw[prev * 3]; az += raw[f * 3 + 2] - raw[prev * 3 + 2]; } }
+          P[f * 3] = ax; P[f * 3 + 2] = az + sgn * speed * (elapsed - t0);
+        } else {
+          if (wasDown || k === 0) { ox = k === 0 ? 0 : P[prev * 3] - raw[prev * 3]; oz = k === 0 ? 0 : P[prev * 3 + 2] - raw[prev * 3 + 2]; wasDown = false; runAt = k; runLen = 1; while (runLen < N && !down((start + k + runLen) % N)) runLen++; }
+          const fade = 1 - Math.min(1, (k - runAt + 1) / Math.max(2, runLen * 0.6)); P[f * 3] = raw[f * 3] + ox * fade; P[f * 3 + 2] = raw[f * 3 + 2] + oz * fade;
+        }
+      }
+      if (loop) { P[N * 3] = P[0]; P[N * 3 + 1] = P[1]; P[N * 3 + 2] = P[2]; }
+    });
+  }
+  for (let f = 0; f < F; f++) {
+    refPose(f);
     // the model's pose: rotations carried over, pelvis travel scaled
     for (const n of order) {
       const t = tgt.get(n), pw = t.parent ? tw.get(t.parent) : ident;
@@ -242,10 +296,13 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
       else if (t.parent) tp.get(n).copy(t.t).applyQuaternion(pw).add(tp.get(t.parent));
       else tp.get(n).copy(t.wp);
     }
+    for (const [n, c] of curl) tw.get(n).multiply(s1.setFromAxisAngle(c.axis, c.rad + c.live * Math.sin((f / Math.max(1, F - 1)) * Math.PI * 2 + c.phase)));
     // the legs again, onto the reference's ankles at the model's scale
-    for (const L of legs) {
+    for (let li = 0; li < legs.length; li++) {
+      const L = legs[li];
       const hip = tp.get(L.thigh), want = v.copy(rp.get(L.foot)).multiplyScalar(scale);
       want.y = (rp.get(L.foot).y - ankleRest.ref) * scale + ankleRest.tgt; want.z *= stride;
+      if (footPath) want.fromArray(footPath[li], f * 3);
       const thighW = tw.get(L.thigh), shinW = tw.get(L.shin);
       const d = v2.copy(want).sub(hip); let dist = d.length();
       const reach = (L.l1 + L.l2) * 0.999; dist = Math.min(Math.max(dist, Math.abs(L.l1 - L.l2) + 1e-4), reach);
@@ -253,8 +310,19 @@ function retargetClip(clip, ref, tgt, order, K, legs, scale, style, pelvisParent
       const a = (L.l1 * L.l1 - L.l2 * L.l2 + dist * dist) / (2 * dist), h = Math.sqrt(Math.max(L.l1 * L.l1 - a * a, 0));
       const kneeFk = Y.clone().applyQuaternion(thighW).multiplyScalar(L.l1);          // relative to the hip
       const perp = kneeFk.clone().addScaledVector(dir, -kneeFk.dot(dir));
-      if (perp.lengthSq() < 1e-10) perp.set(0, 0, 1).addScaledVector(dir, -dir.z);
-      perp.normalize();
+      if (footPath) {
+        // A knee bends forward. A nearly straight leg has no bend plane of its own (the knee would swing round from
+        // one frame to the next), and a thigh that falls behind the hip-to-ankle line would bend it backward: the
+        // plane leans on the way the hips face, fully when the leg is straight, and never points behind them.
+        const fwd = Z.clone().applyQuaternion(s1.copy(tgtPel.wq).invert().premultiply(tw.get('pelvis'))); fwd.addScaledVector(dir, -fwd.dot(dir));
+        if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, 1).addScaledVector(dir, -dir.z); fwd.normalize();
+        const len = perp.length() / L.l1, w = Math.min(1, Math.max(0, (len - 0.04) / 0.2));
+        if (len > 1e-5) perp.normalize(); if (perp.dot(fwd) < 0) perp.addScaledVector(fwd, -perp.dot(fwd)); // sideways at most
+        perp.multiplyScalar(0.45 * w * w * (3 - 2 * w)).add(fwd).normalize(); // forward first; the thigh's own lean turns it by 24 degrees at most
+      } else {
+        if (perp.lengthSq() < 1e-10) perp.set(0, 0, 1).addScaledVector(dir, -dir.z);
+        perp.normalize();
+      }
       const knee = dir.clone().multiplyScalar(a).addScaledVector(perp, h);            // relative to the hip
       s1.setFromUnitVectors(Y.clone().applyQuaternion(thighW).normalize(), knee.clone().normalize());
       thighW.premultiply(s1); shinW.premultiply(s1);

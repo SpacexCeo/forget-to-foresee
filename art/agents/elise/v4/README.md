@@ -11,7 +11,7 @@ Two source files came from the owner. The second one is the base of v4.
    with weights. `s20_owner_rig.py` puts it on her 90 bones (`../v3/skeleton.json`):
    - kept from the file: mesh, UVs, texture, weights of the spine, shoulders, arms, hands, fingers, neck, head;
    - by rule: the dress below the hips on her 13 skirt chains, ribbon tails with the hand, legs and shoes on her
-     joints (the file's knee sits 8 cm too high); the hidden right leg is removed with its shoe.
+     joints (the file's knee sits 8 cm too high); both legs and both shoes are kept.
    - `out/agent_elise.glb`: 59 998 triangles with the outline hull, 2048 texture; `out/agent_elise_m.glb`: 23 800, 1024.
 
 Every clip of hers (magic step, boxing, casts, dash) plays on it unchanged: same bone names and rest pose.
@@ -27,7 +27,11 @@ dress, and the swing tuned for loose cloth threw the hem high. Now `s20_owner_ri
 - re-seats the 31 x 61 cloth grid on this dress (99% of the points found; mean radius 0.200 -> 0.143 m), moves the
   13 chains onto it and gives the dress the grid's own weights;
 - fits the leg capsules to the close dress (6 mm of air at rest);
-- removes the hidden right leg with its shoe; its thigh and shin no longer shape the dress.
+- keeps both legs and shoes. The right leg, which the close dress encloses, does not shape the cloth (as a collider
+  it tore the dress in a stride: 3.4 cm of shin through it in the walk); instead it is weighted to stay inside:
+  85% to the hips above the ankle, the shoe 60%. Standing, it is where the file put it; in a stride its shoe takes a
+  shorter step under the hem. (13.11, first version: the leg was removed, and from her left side she read as
+  one-legged; `docs/art/elise/v4/second_leg_before_after.jpg`, top two rows before, bottom two after.)
 
 `art/anim/clips.json` -> `characters.elise.cloth.tune` (read by `ftfanim/skirt.py`): drag 2.0 (was 1.2), pull back to
 the rest shape 0.10 (0.04), clearance 2.5 cm (2.0), 70% of the swing kept, every chain segment within 24 degrees of

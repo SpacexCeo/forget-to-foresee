@@ -18,3 +18,12 @@ test('outside the cylinder, above her head or exactly on her axis', () => {
   const p = keepClear({ x: 0, y: 1, z: 0 }, hero);
   assert.ok(Math.hypot(p.x, p.z) >= COMPANION.keepOut - 1e-9);
 });
+
+test('the ground light shrinks and dims as the dragon rises and goes out when it sits', async () => {
+  const { glowAt } = await import('../../src/scenes/companion-rules.js');
+  const low = glowAt(0.3), high = glowAt(2.0), top = glowAt(9);
+  assert.ok(low.radius > high.radius && high.radius >= top.radius && top.radius > 0);
+  assert.ok(low.opacity > high.opacity && top.opacity > 0);
+  assert.equal(glowAt(0.1, true).opacity, 0);
+  assert.ok(COMPANION.bobCalm < COMPANION.bob && COMPANION.motes.phone < COMPANION.motes.desktop);
+});
