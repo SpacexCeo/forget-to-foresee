@@ -654,6 +654,7 @@ function mountMobs() {
     townMobs = m.createMobs({ THREE, scene, origin: TOWN_ORIGIN_W.slice(), player, load: (n) => prefetchGltf(hasModelFile(n) ? n : n.replace(/_m$/, '')), clone: su.clone,
       MobFx: fx.MobFx, glow: fx.MOB_GLOW, ground, floor, variant: getModelVariant() && hasModelFile('mob_skitter' + getModelVariant()) ? getModelVariant() : '',
       phone: mobileDevice || lookdev.tier === 'low', reduced: () => lookdev.reducedMotion, respawn: gate,
+      immune: () => !!(glassShoal && glassShoal.owns && glassShoal.owns()), // no town-mob damage while she rides the dragon or fights at the Shoal
       camera, irisModel: () => (irisAvatar && irisAvatar.irisModel ? irisAvatar.irisModel.model : null), irisMove: (n) => { if (irisAvatar) irisAvatar.holdWhile = () => !!townMobs && townMobs.charging != null; if (!(irisAvatar && irisAvatar.combat(n))) return false; if (n === 'strike3' || n === 'strike_super') for (const d of companions) d.flourish(lookdev.reducedMotion); const c = irisAvatar.irisModel && irisAvatar.irisModel.combat; return c && c.name === n && c.impact != null ? c.impact : true; }, irisEnd: () => irisAvatar && irisAvatar.endAction(),
       moveIris: (d) => { const r = moveCapsule(T.world, player.pos, [d[0], -Math.hypot(d[0], d[1]) - 0.02, d[1]], { radius: player.radius, height: player.height, mask: MASK_PLAYER }); player.pos = r.pos; player.grounded = r.grounded; player.settled = null; },
       onFeedback: (k, mob, ev) => combatSound(k, mob, ev), floatNumber: numbersHook });

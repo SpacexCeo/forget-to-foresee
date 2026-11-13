@@ -352,3 +352,21 @@ test('the leash reset: only after she truly leaves for PURSUIT.lose s; then it w
   assert.equal(m.hp, MOB_TYPES.hulker.hp, 'healed back');
   assert.ok(Math.hypot(m.pos[0] - m.pack.home[0], m.pos[2] - m.pack.home[2]) <= LEASH + 1e-6, 'back inside its leash');
 });
+
+test('no town-mob damage while the dragon ride or the Glass Shoal owns her (owner 13.11: hurt in flight, respawned on the dragon)', async () => {
+  const THREE = await import('three');
+  const { createMobs } = await import('../../src/play/mobs.js');
+  const run = (immune) => {
+    const player = { pos: [0, 0, 0], heading: 0, teleport() {} };
+    const M = createMobs({ THREE, scene: new THREE.Scene(), origin: O.slice(), player, load: () => Promise.reject(new Error('no models')), clone: (x) => x,
+      MobFx: class {}, glow: {}, ground: flat, doc: null, win: null, immune: () => immune });
+    const sk = M.brain.mobs.find((x) => x.type === 'skitter');
+    for (const o of M.brain.mobs) if (o !== sk) o.state = 'gone';
+    const hp0 = M.hp;
+    for (let i = 0; i < 600; i++) { player.pos = [sk.pos[0] - 0.9, sk.pos[1], sk.pos[2]]; M.update(1 / 30, true); }
+    return { hp0, hp: M.hp };
+  };
+  const hit = run(false), safe = run(true);
+  assert.ok(hit.hp < hit.hp0, 'the skitter does bite when she is on foot');
+  assert.equal(safe.hp, safe.hp0, 'riding or fighting at the Shoal: no town-mob damage');
+});

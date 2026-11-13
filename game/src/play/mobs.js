@@ -376,7 +376,7 @@ const CSS = `
  * @param {number[]} [o.respawn] where Iris is carried when her health runs out (world)
  */
 export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, glow, ground, floor = null, variant = '', phone = false, reduced = () => false, onFeedback = null,
-  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null, irisEnd = null, floatNumber = null }) {
+  respawn = null, doc = globalThis.document, win = globalThis.window, seed = 7, camera = null, irisModel = () => null, moveIris = null, irisMove = null, irisEnd = null, floatNumber = null, immune = () => false }) {
   const brain = new MobBrain({ origin, phone, seed });
   // the hillside falls ~110 m below the town: every home and spawn is put on the real ground with a long probe
   // (the hillside's colliders are built when Iris first walks out of the gate, so a pack is settled as soon as its
@@ -522,7 +522,7 @@ export function createMobs({ THREE, scene, origin, player, load, clone, MobFx, g
   }
 
   function hurt(amount, heavy = false) {
-    if (!iris.alive || iris.iframes > 0) return;
+    if (!iris.alive || iris.iframes > 0 || immune()) return; // immune: the dragon ride and the Glass Shoal own her (owner 13.11)
     iris.calm = 0; if (heavy) shake = Math.max(shake, 0.6);
     iris.hp = Math.max(0, iris.hp - amount); iris.hurtT = 0.3;
     if (hpEl) { hpFill.style.width = (100 * iris.hp / IRIS_HP).toFixed(1) + '%'; hpEl.setAttribute('aria-valuenow', String(Math.round(iris.hp))); hpEl.classList.remove('ftf-hurt'); void hpEl.offsetWidth; hpEl.classList.add('ftf-hurt'); }

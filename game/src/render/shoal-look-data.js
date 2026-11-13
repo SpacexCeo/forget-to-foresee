@@ -25,7 +25,8 @@ const RANGE = Object.fromEntries(SHOAL_PARAMS.map((p) => [p.key, p]));
 
 /** Three original looks for the same place. "Low sun" is the default. */
 export const SHOAL_PRESETS = Object.freeze({
-  lowSun: Object.freeze({ fov: 48, exposure: 1.05, sunHeight: 7, sunBearing: 238, fog: 0.0065, mist: 0.55, rays: 0, bloom: 0.75, mirror: 0.82, roughness: 0.18, ripple: 0.35, lift: 0.012, gamma: 1.02, gain: 1.04, warmth: 0.62, saturation: 1.08 }),
+  // owner's pick (13.11, from the render panel): lower mirror and ripples, deeper shadows, a warmer split
+  lowSun: Object.freeze({ fov: 48, exposure: 1.05, sunHeight: 7, sunBearing: 238, fog: 0.0065, mist: 0.55, rays: 0, bloom: 0.75, mirror: 0.65, roughness: 0.25, ripple: 0.11, lift: -0.064, gamma: 0.66, gain: 1.02, warmth: 0.71, saturation: 0.93 }),
   pearlDawn: Object.freeze({ fov: 52, exposure: 1.15, sunHeight: 3.5, sunBearing: 95, fog: 0.011, mist: 0.85, rays: 0, bloom: 0.6, mirror: 0.9, roughness: 0.28, ripple: 0.2, lift: 0.03, gamma: 1.1, gain: 0.98, warmth: 0.32, saturation: 0.86 }),
   stormSilver: Object.freeze({ fov: 44, exposure: 0.85, sunHeight: 16, sunBearing: 300, fog: 0.016, mist: 0.4, rays: 0, bloom: 1.05, mirror: 0.7, roughness: 0.4, ripple: 0.7, lift: -0.01, gamma: 0.94, gain: 1.12, warmth: 0.18, saturation: 0.72 }),
 });
