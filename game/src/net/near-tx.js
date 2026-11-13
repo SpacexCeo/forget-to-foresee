@@ -56,6 +56,18 @@ export function serializeMultiCallTx(t) {
   for (const c of t.calls) w.u8(2).str(c.methodName).vec(new TextEncoder().encode(JSON.stringify(c.args || {}))).u64(c.gas).u128(c.deposit || 0n);
   return w.done();
 }
+/**
+ * Serializes a Transaction with one AddKey action: `newKey` becomes a full-access key of `signerId` (account login:
+ * the key a wallet signature derives on every device, docs/account-login.md).
+ * @param {{signerId: string, publicKey: string, nonce: bigint|number, blockHash: string, newKey: string}} t
+ */
+export function serializeAddKeyTx(t) {
+  return new W()
+    .str(t.signerId).bytes(publicKeyBytes(t.publicKey)).u64(t.nonce).str(t.signerId).bytes(b58decode(t.blockHash))
+    .u32(1).u8(5) // one action: AddKey (enum index 5)
+    .bytes(publicKeyBytes(t.newKey)).u64(0).u8(1) // AccessKey {nonce: 0, permission: FullAccess (enum index 1)}
+    .done();
+}
 /** SignedTransaction = transaction bytes + signature (type 0 + 64 bytes). */
 export const signedTxBytes = (txBytes, sig) => new W().bytes(txBytes).u8(0).bytes(sig).done();
 
@@ -165,6 +177,20 @@ export function createTxClient({ rpcUrls, fetch = globalThis.fetch, timeoutMs = 
           return { ok: !failure, hash: s.hash, outcome, failure };
         } catch (e) { return { ok: false, hash: s.hash, outcome: null, failure: String((e && e.message) || e).slice(0, 160) }; }
       }));
+    },
+    /** Adds `newKey` as a full-access key of `signerId`, signed by `key` (a full-access key of that account). */
+    async addKey({ key, signerId, newKey }) {
+      const ak = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: signerId, public_key: key.publicKey });
+      const block = await rpc('block', { finality: 'final' });
+      const tx = serializeAddKeyTx({ signerId, publicKey: key.publicKey, nonce: BigInt(ak.nonce) + 1n, blockHash: block.header.hash, newKey });
+      const hash = await sha256(tx);
+      const outcome = await rpc('send_tx', { signed_tx_base64: b64(signedTxBytes(tx, await key.sign(hash))), wait_until: 'FINAL' });
+      const failure = findFailure(outcome);
+      return { ok: !failure, hash: b58encode(hash), outcome, failure };
+    },
+    /** The access key's permission ('FullAccess' or {FunctionCall}) of `publicKey` on `accountId`, or null when absent. */
+    async accessKey(accountId, publicKey) {
+      try { const r = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: accountId, public_key: publicKey }); return r.permission; } catch { return null; }
     },
     async call({ key, signerId, receiverId, methodName, args, gas = 200_000_000_000_000n, deposit = 0n }) {
       const ak = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: signerId, public_key: key.publicKey });

@@ -68,3 +68,10 @@ test('names, validation, filter edge cases', () => {
   assert.equal(validate({ t: 's', p: [0, 0, 0], h: 0, a: '<script>' }).a, 'idle');
   assert.equal(filterChat('x'.repeat(141)), null); assert.equal(filterChat('‮ evil'), 'evil'); assert.equal(filterChat('t.me/x'), null);
 });
+
+test('hello may carry the player\'s NEAR account and shown level; others see them; bad values are dropped', async () => {
+  const { validate } = await import('../lib/hub.js');
+  assert.deepEqual(validate({ t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 }), { t: 'hello', name: 'a', skin: 'iris', account: 'ann-1.guests.ftf-coordinator.testnet', lv: 7 });
+  const bad = validate({ t: 'hello', name: 'a', account: 'Not An Account!', lv: 500 });
+  assert.equal(bad.account, null); assert.equal(bad.lv, null);
+});

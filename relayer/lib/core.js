@@ -60,6 +60,9 @@ export function createBucket({ capacity = 3, refillMs = 10 * 60 * 1000, now = ()
  * @param {{publicKey: string, nickname: string}} req
  * @param {{secretKey: string, guests?: string, signerId?: string, rpcUrls?: string[], fetch?: Function, queue?: Function}} o
  */
+/** The guests contract (or its key's gas allowance) cannot pay for another guest: the free fund is empty. */
+export const FUND_EMPTY = /LackBalanceForState|NotEnoughBalance|NotEnoughAllowance|InsufficientBalance/;
+
 export async function createGuest({ publicKey, nickname }, { secretKey, guests = DEFAULTS.guests, signerId = guests, rpcUrls = DEFAULTS.rpcUrls, fetch = globalThis.fetch, queue = (fn) => fn() } = {}) {
   if (!secretKey) return { status: 503, body: { error: 'not_configured' } };
   const client = createTxClient({ rpcUrls, fetch });
@@ -75,8 +78,11 @@ export async function createGuest({ publicKey, nickname }, { secretKey, guests =
   let r;
   try { r = await queue(send); } catch (e) {
     // two instances raced on the access-key nonce: once more with a fresh nonce
-    if (e && /InvalidNonce|nonce/i.test(JSON.stringify(e.rpc || e.message))) r = await queue(send); else throw e;
+    const why = JSON.stringify((e && (e.rpc || e.message)) || '');
+    if (FUND_EMPTY.test(why)) return { status: 503, body: { error: 'fund_empty' } };
+    if (e && /InvalidNonce|nonce/i.test(why)) r = await queue(send); else throw e;
   }
+  if (!r.ok && FUND_EMPTY.test(String(r.failure || ''))) return { status: 503, body: { error: 'fund_empty', tx_hash: r.hash } };
   if (!r.ok) return { status: 502, body: { error: 'tx_failed', tx_hash: r.hash, failure: r.failure } };
   const g = await client.view(guests, 'guest_of', { public_key: publicKey });
   if (!g || !g.minted) return { status: 502, body: { error: g ? 'not_minted' : 'no_guest', tx_hash: r.hash } };

@@ -2,7 +2,8 @@
 // rate limits. Pure logic over abstract clients ({send(text), close(code), buffered()}); server.js wires sockets.
 //
 // Protocol (JSON text frames, each <= 1 KB):
-//   client -> server  {t:'hello', v:1, name, skin}   {t:'s', p:[x,y,z], h, a}   {t:'chat', text}   {t:'report', id}   {t:'ping'}
+//   client -> server  {t:'hello', v:1, name, skin, account?, lv?}  (account: the player's NEAR account, so others can read its
+//                     public NFTs and silk on chain; lv: the level the player shows, 0-99, cosmetic)   {t:'s', p:[x,y,z], h, a}   {t:'chat', text}   {t:'report', id}   {t:'ping'}
 //   server -> client  {t:'welcome', id, room, max, players:[...]}   {t:'join', player}   {t:'leave', id}
 //                     {t:'snap', s:[[id,x,y,z,h,a],...]} (10 Hz, only players that moved)   {t:'chat', id, name, text, at}
 //                     {t:'sys', key, ...}   {t:'pong'}
@@ -41,11 +42,13 @@ const num = (x) => typeof x === 'number' && Number.isFinite(x);
 const clamp = (v, [a, b]) => Math.min(b, Math.max(a, v));
 const round = (v) => Math.round(v * 100) / 100;
 
+const ACCOUNT_RE = /^(?=.{2,64}$)[a-z0-9]+([-_][a-z0-9]+)*(\.[a-z0-9]+([-_][a-z0-9]+)*)*$/;
 /** Validates a parsed client message; returns it normalized or null. */
 export function validate(m) {
   if (!m || typeof m !== 'object' || Array.isArray(m) || typeof m.t !== 'string') return null;
   switch (m.t) {
-    case 'hello': return { t: 'hello', name: typeof m.name === 'string' ? m.name.slice(0, 40) : '', skin: SKINS.includes(m.skin) ? m.skin : 'iris' };
+    case 'hello': return { t: 'hello', name: typeof m.name === 'string' ? m.name.slice(0, 40) : '', skin: SKINS.includes(m.skin) ? m.skin : 'iris',
+      account: typeof m.account === 'string' && ACCOUNT_RE.test(m.account) ? m.account : null, lv: Number.isInteger(m.lv) && m.lv >= 0 && m.lv <= 99 ? m.lv : null };
     case 's': {
       if (!Array.isArray(m.p) || m.p.length !== 3 || !m.p.every(num) || !num(m.h)) return null;
       return { t: 's', p: m.p, h: ((m.h % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI), a: ANIMS.includes(m.a) ? m.a : 'idle' };
@@ -73,7 +76,7 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
     const text = JSON.stringify(obj);
     for (const pl of rooms.get(room).values()) if (pl !== except) { if (pl.client.buffered() > limits.maxBuffered) kick(pl, 'slow'); else pl.client.send(text); }
   };
-  const view = (pl) => ({ id: pl.id, name: pl.name, skin: pl.skin, p: pl.p, h: pl.h, a: pl.a });
+  const view = (pl) => ({ id: pl.id, name: pl.name, skin: pl.skin, p: pl.p, h: pl.h, a: pl.a, ...(pl.account ? { account: pl.account } : {}), ...(pl.lv != null ? { lv: pl.lv } : {}) });
 
   function roomFor() {
     for (const [n, r] of rooms) if (r.size < limits.roomSize) return n;
@@ -113,7 +116,7 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
         if (m.t !== 'hello') return kick(pl, 'hello_first');
         const room = roomFor();
         if (room == null) { client.send(JSON.stringify({ t: 'sys', key: 'full' })); client.close(1013); pl.gone = true; return; }
-        pl.id = nextId++; pl.room = room; pl.skin = m.skin; pl.name = uniqueName(room, cleanName(m.name, guestN++));
+        pl.id = nextId++; pl.room = room; pl.skin = m.skin; pl.account = m.account; pl.lv = m.lv; pl.name = uniqueName(room, cleanName(m.name, guestN++));
         const r = rooms.get(room);
         send(pl, { t: 'welcome', id: pl.id, room, max: limits.roomSize, players: [...r.values()].map(view) });
         r.set(pl.id, pl);
