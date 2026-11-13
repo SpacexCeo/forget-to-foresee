@@ -100,10 +100,10 @@ for sd in 'LR':                                        # ribbon tails: with the 
 d3 = np.load(V3RIG); G = d3['grid'].astype(float); Gb = np.stack([G[..., 0], -G[..., 2], G[..., 1]], -1); R_, C_ = Gb.shape[:2]
 th3 = np.arctan2(Gb[..., 1], Gb[..., 0]); h3 = Gb[..., 2]; r3 = np.hypot(Gb[..., 0], Gb[..., 1])
 dm = DRESS & (z < 0.92); thD = np.arctan2(y[dm], x[dm]); rD = np.hypot(x[dm], y[dm]); zD = z[dm]; rn = np.full((R_, C_), np.nan)
-for i in range(R_):
+for i in range(R_):                                    # the dress radius along each grid point's ray: its four nearest dress vertices
     for j in range(C_):
-        m = (np.abs(zD - h3[i, j]) < 0.022) & (np.abs((thD - th3[i, j] + np.pi) % (2 * np.pi) - np.pi) < 0.07)
-        if m.sum() >= 3: rn[i, j] = np.percentile(rD[m], 70)
+        dd = np.hypot(((thD - th3[i, j] + np.pi) % (2 * np.pi) - np.pi) * 0.17, zD - h3[i, j]); nn = np.argpartition(dd, 4)[:4]
+        if dd[nn].max() < 0.05: rn[i, j] = float(np.average(rD[nn], weights=1.0 / (dd[nn] + 0.004)))
 found = np.isfinite(rn).mean()
 for i in range(R_):
     ok = np.isfinite(rn[i])
@@ -118,12 +118,14 @@ for c in range(len(cols)):
         nm = 'skirt_%02d_%d' % (c, k_); SK[nm]['head'] = Gn[rows[k_], cols[c]].tolist(); SK[nm]['tail'] = Gn[rows[k_ + 1], cols[c]].tolist(); tails[nm] = g2(Gn[rows[k_ + 1], cols[c]])
 def seg_d(p_, a_, b_):
     ab = b_ - a_; t_ = np.clip(((p_ - a_) @ ab) / (ab @ ab), 0, 1); return np.linalg.norm(p_ - a_ - t_[:, None] * ab, axis=1), t_
-clear = {}
-for bn, p0, p1, rr, st in zip(d3['cap_bone'], d3['cap_p0'], d3['cap_p1'], d3['cap_r'], d3['cap_set']):
+clear = {}; cap_r = d3['cap_r'].astype(float).copy()   # the leg capsules of the wide gown are fitted to this close dress: 6 mm of air at rest
+for q_, (bn, p0, p1, st) in enumerate(zip(d3['cap_bone'], d3['cap_p0'], d3['cap_p1'], d3['cap_set'])):
     if int(st) == 0:
-        dd, tt = seg_d(g2(Gn).reshape(-1, 3), p0.astype(float), p1.astype(float)); clear[str(bn)] = min(clear.get(str(bn), 9), float((dd - (rr[0] + (rr[1] - rr[0]) * tt)).min()))
-print('cloth grid re-seated: %.0f%% of the points found on the dress; mean radius %.3f -> %.3f m; rest clearance to the leg capsules (m): %s' % (found * 100, r3.mean(), rn.mean(), {k_: round(v_, 4) for k_, v_ in clear.items()}))
-np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
+        dd, tt = seg_d(g2(Gn).reshape(-1, 3), p0.astype(float), p1.astype(float)); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
+        if c_ < 0.006: cap_r[q_] = np.maximum(cap_r[q_] - (0.006 - c_), 0.02); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
+        clear[str(bn) + '#%d' % q_] = (round(c_, 4), [round(float(v_), 3) for v_ in cap_r[q_]])
+print('cloth grid re-seated: %.0f%% of the points found on the dress; mean radius %.3f -> %.3f m; leg capsules (rest clearance m, radii): %s' % (found * 100, r3.mean(), rn.mean(), clear))
+np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'cap_r': cap_r, 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
 gwn = [str(v_) for v_ in d3['gw_names']]; gw = d3['gw'].reshape(-1, len(gwn)).astype(float); gp = Gn.reshape(-1, 3)
 skirt = (DRESS | LACE) & (z < float(h3.max()))
 for i in np.nonzero(skirt)[0]:
