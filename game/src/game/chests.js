@@ -9,6 +9,24 @@ export const DROP = Object.freeze({ first: true, chance: 0.36 });
 /** Box tiers by weight (the box only). */
 export const TIER_WEIGHTS = Object.freeze({ common: 80, rare: 17, legendary: 3 });
 
+/**
+ * Loot on the ground (sprint 6.5): the beam height and radius (m), colour, ground ring (m, 0 = none) and its pulse (s,
+ * 0 = static) per rarity. The colours are the rarity palette; the rarity name is always written next to them (R12).
+ * A common drop has no beam, only a 0.5 m sparkle.
+ */
+export const LOOT_FX = Object.freeze({
+  common: Object.freeze({ beam: 0, radius: 0, color: 0xb8b8b8, ring: 0, pulse: 0, sparkle: 0.5 }),
+  uncommon: Object.freeze({ beam: 3, radius: 0.18, color: 0x5ccf5c, ring: 0.9, pulse: 0, sparkle: 0 }),
+  rare: Object.freeze({ beam: 5, radius: 0.2, color: 0x4aa3ff, ring: 1.0, pulse: 1.6, sparkle: 0 }),
+  epic: Object.freeze({ beam: 7, radius: 0.22, color: 0xb06cff, ring: 1.1, pulse: 1.4, sparkle: 0 }),
+  legendary: Object.freeze({ beam: 10, radius: 0.26, color: 0xff9a2e, ring: 1.3, pulse: 1.2, sparkle: 0 }),
+  mythic: Object.freeze({ beam: 12, radius: 0.3, color: 0xff5c8a, ring: 1.5, pulse: 1.0, sparkle: 0 }),
+});
+/** At most this many beams at once (the oldest fade), none beyond this distance, and an uncollected chest goes to the bag after this. */
+export const LOOT = Object.freeze({ maxBeams: 12, cullM: 40, autoBagS: 30 });
+/** The ground look of a dropped box tier. Pure. */
+export const lootFxOf = (tier) => LOOT_FX[tier] || LOOT_FX.common;
+
 /** Whether the n-th kill (0-based) drops a chest, from one uniform roll in [0, 1). */
 export function rollDrop(roll, kills) {
   if (DROP.first && kills === 0) return true;

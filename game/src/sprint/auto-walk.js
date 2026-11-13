@@ -81,11 +81,12 @@ export function createAutoWalk({ driver, emit = () => {}, toast = () => {}, say 
     const p = driver.pos(), here = [p[0], p[2]], stop = stopPoint(here, w.to, w.stopRadius * 0.85);
     const path = planPath(here, stop, { blocked });
     if (!path) return false;
-    driver.setRoute(path.map(([x, z]) => [x, p[1], z]));
+    w.path = path.map(([x, z]) => [x, p[1], z]);
+    driver.setRoute(w.path);
     return true;
   }
   const api = {
-    get active() { return !!walk; }, get target() { return walk && walk.to.slice(); },
+    get active() { return !!walk; }, get target() { return walk && walk.to.slice(); }, /** The planned route ([x, y, z] world points) while walking. */ get path() { return walk && walk.path ? walk.path.map((q) => q.slice()) : null; },
     /** Walk to [x, z] (world). `follow` returns the target's current [x, z] (a walking giver). {cancel()} */
     autoWalkTo({ pos, stopRadius = 2.2, label: name = '', questId = null, follow = null, onArrive = null }) {
       if (walk) finish('cancelled', 'replaced');

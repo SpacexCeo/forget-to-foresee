@@ -37,3 +37,16 @@ export function guideView(g, fee) {
   const step = activeStep(g); if (!step || g.hidden) return null;
   return { n: g.done.length + 1, total: GUIDE_STEPS.length, id: step.id, text: step.text.replace('{fee}', String(fee)) };
 }
+
+/** Coach marks (sprint §4.11): steps 4, 6 and 7 point at their HUD button (the seam's first-seen bubble, once each). */
+export const GUIDE_COACH = Object.freeze({ journal: '#rpg-tray-journal, .ftf-quest-log-btn', loot: '#rpg-tray-bag', market: '#rpg-tray-market' });
+export const coachId = (stepId) => 'guide.' + stepId;
+/** Registers the three coach marks with sprint/first-seen.js: registerTip({id, trigger: null, anchor, title, body}). */
+export function registerGuideCoach(registerTip, title = (n, total) => `Guide ${n}/${total}`) {
+  for (const [id, anchor] of Object.entries(GUIDE_COACH)) {
+    const n = GUIDE_STEPS.findIndex((s) => s.id === id) + 1;
+    registerTip({ id: coachId(id), trigger: null, anchor, title: title(n, GUIDE_STEPS.length), body: GUIDE_STEPS[n - 1].text });
+  }
+}
+/** The coach mark to show for the guide's active step, or null. */
+export function coachFor(g) { const s = activeStep(g); return s && !g.hidden && GUIDE_COACH[s.id] ? coachId(s.id) : null; }

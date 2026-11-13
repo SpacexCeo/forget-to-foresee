@@ -43,3 +43,37 @@ export function createWaypoint({ doc, win = globalThis, view, target, hidden = (
     dispose() { arrow.remove(); },
   };
 }
+
+/**
+ * Pure: the ground-trail dots (sprint §4.9) from her position along the route, one every `gap` metres up to `reach`
+ * metres ahead: [[x, y, z], ...]. The first dot sits one gap ahead of her.
+ */
+export function trailDots(from, path, { gap = 2, reach = 40 } = {}) {
+  const out = []; if (!path || !path.length) return out;
+  let a = from, walked = 0, next = gap;
+  for (const b of path) {
+    const seg = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    while (seg > 0 && next <= walked + seg && next <= reach) { const t = (next - walked) / seg; out.push([a[0] + (b[0] - a[0]) * t, b[1], a[2] + (b[2] - a[2]) * t]); next += gap; }
+    walked += seg; a = b; if (next > reach) break;
+  }
+  return out;
+}
+
+/** The trail itself: instanced 0.18 m discs, additive gold at 55 % opacity, one draw call; shown only during auto-walk. */
+export function createTrail({ THREE, scene, max = 20 }) {
+  const geo = new THREE.CircleGeometry(0.18, 16); geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xf6c860, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.InstancedMesh(geo, mat, max); mesh.count = 0; mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.name = 'ftf-autowalk-trail';
+  scene.add(mesh);
+  const m = new THREE.Matrix4();
+  return {
+    mesh,
+    /** dots: [[x, y, z], ...] or null to hide. */
+    set(dots) {
+      const n = dots ? Math.min(dots.length, max) : 0;
+      for (let i = 0; i < n; i++) { m.makeTranslation(dots[i][0], dots[i][1] + 0.04, dots[i][2]); mesh.setMatrixAt(i, m); }
+      mesh.count = n; mesh.visible = n > 0; mesh.instanceMatrix.needsUpdate = true;
+    },
+    dispose() { scene.remove(mesh); geo.dispose(); mat.dispose(); },
+  };
+}

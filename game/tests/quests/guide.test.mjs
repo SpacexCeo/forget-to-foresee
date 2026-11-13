@@ -32,3 +32,16 @@ test('the view names the fee from its argument; hidden or finished shows nothing
   assert.match(tr.root.textContent, /Starter guide 1\/8/); assert.match(tr.root.textContent, /Move with W A S D\. Hold Shift to run\./);
   tr.root.querySelector('.ft-guide-hide').click(); assert.equal(hidden, 1);
 });
+
+test('coach marks: steps 4, 6, 7 register with the first-seen seam and show for the active step only', async () => {
+  const { registerGuideCoach, coachFor, GUIDE_COACH, initialGuide: init } = await import('../../src/quests/guide.js');
+  const tips = []; registerGuideCoach((t) => tips.push(t));
+  assert.deepEqual(tips.map((t) => t.id), ['guide.journal', 'guide.loot', 'guide.market']);
+  assert.deepEqual(tips.map((t) => t.title), ['Guide 4/8', 'Guide 6/8', 'Guide 7/8']);
+  assert.ok(tips.every((t) => t.trigger === null && t.anchor === GUIDE_COACH[t.id.slice(6)] && t.body.length > 10));
+  const g = init();
+  assert.equal(coachFor(g), null, 'step 1 (move) has no coach mark');
+  assert.equal(coachFor({ ...g, done: ['move', 'camera', 'talk'] }), 'guide.journal');
+  assert.equal(coachFor({ ...g, done: ['move', 'camera', 'talk'], hidden: true }), null, 'a hidden guide shows none');
+  assert.equal(coachFor({ ...g, done: ['move', 'camera', 'talk', 'journal', 'fight', 'loot'] }), 'guide.market');
+});

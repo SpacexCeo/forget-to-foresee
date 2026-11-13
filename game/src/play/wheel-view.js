@@ -110,20 +110,25 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
   odds().forEach((o) => {
     const seg = SEGMENTS.find((s) => s.id === o.id);
     const tr = el('tr'); const sw = el('i', 'wv-swatch'); sw.style.background = RARITY_FRAME[seg.rarity];
-    const name = el('td'); const label = doc.createTextNode(' ' + t('wheel.seg.' + o.id) + (seg.grand ? ' · ' + t('wheel.cap', { n: SKIN_CAP }) : ''));
+    const name = el('td'); const label = doc.createTextNode(' ' + (seg.grand ? t('wheel.skinNft') : t('wheel.seg.' + o.id)) + (seg.grand ? ' · ' + t('wheel.cap', { n: SKIN_CAP }) : ''));
     name.append(sw, label);
     // the live supply from the skin contract: "N of 100 left" (the cap alone until it answers)
-    if (seg.grand && supply && supply.then) supply.then((sp) => { if (sp) label.textContent = ' ' + t('wheel.seg.' + o.id) + ' · ' + t('wheel.left', { n: sp.left, cap: sp.cap }); }).catch(() => {});
+    if (seg.grand && supply && supply.then) supply.then((sp) => { if (sp) label.textContent = ' ' + t('wheel.skinNft') + ' · ' + t('wheel.left', { n: sp.left, cap: sp.cap }); }).catch(() => {});
     tr.append(name, el('td', null, (o.p * 100).toFixed(1) + ' %')); tb.append(tr);
   });
-  side.append(status, row, seedP, card, el('h3', null, t('wheel.odds')), table, el('p', 'gm-note', t('wheel.rules')));
+  // sprint 6.8: what the wheel is, before anything else; the odds come from SEGMENTS, so the table cannot drift
+  const odd = el('details', 'wv-odds'); odd.append(el('summary', null, t('wheel.seeOdds')), table);
+  side.append(el('p', 'wv-head', t('wheel.header')), status, row, seedP, card, el('h3', null, t('wheel.odds')), odd, el('p', 'gm-note', t('wheel.rules')));
   root.append(box, side);
 
   let angle = 0, spinning = false, destroyed = false;
   const setAngle = (a) => { angle = a; spinner.setAttribute('transform', `rotate(${a.toFixed(2)})`); };
   const refresh = () => {
     const av = wheel.available;
-    status.textContent = t('wheel.available', { n: av.total }) + (av.free ? ' · ' + t('wheel.freeToday') : '');
+    // no spins: when the next free one comes (local midnight, game/wheel.js dayOf), counted down each second
+    const d = new Date(Date.now()), next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime(), left = Math.max(0, Math.floor((next - d.getTime()) / 1000));
+    const hms = [Math.floor(left / 3600), Math.floor(left / 60) % 60, left % 60].map((x) => String(x).padStart(2, '0')).join(':');
+    status.textContent = av.total > 0 ? t('wheel.available', { n: av.total }) + (av.free ? ' · ' + t('wheel.freeToday') : '') : t('wheel.none', { time: hms });
     seedP.textContent = t('wheel.seed', { seed: wheel.nextSeed });
     go.disabled = spinning || av.total <= 0 || wheel.pending.length > 0; // claim first, then spin again
   };
@@ -140,7 +145,7 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     else { const s = svg('svg', { viewBox: '-16 -16 32 32', width: 72, height: 72, 'aria-hidden': 'true' }); s.innerHTML = GLYPH[seg.kind] || GLYPH.part; art.append(s); }
     const name = el('b', 'wv-name', nameOf(p, seg));
     const meta = el('span', 'wv-meta', t('wheel.rarity.' + seg.rarity) + (seg.kind === 'silk' || seg.kind === 'xp' ? ' · ' + sectorLabel(seg, t) : ''));
-    const note = el('p', 'gm-note', seg.grand ? t(p.status === 'minting' ? 'wheel.skin.pending' : 'wheel.skin.note', { reason: p.reason ? t('wheel.skin.reason.' + p.reason) : '' }) : t('wheel.seedWas', { seed: p.seed }));
+    const note = el('p', 'gm-note', seg.grand ? t(p.status === 'minting' ? 'wheel.skin.pending' : 'wheel.skin.note', { reason: p.reason ? t('wheel.skin.reason.' + p.reason) : '' }) : (seg.kind === 'silk' ? t('wheel.playSilk') + ' ' : '') + t('wheel.seedWas', { seed: p.seed }));
     const claimB = btn(t(seg.grand && p.status === 'minting' ? 'wheel.claimRetry' : 'wheel.claim'), (b) => { b.disabled = true; claim(p.seed, art).finally(() => { b.disabled = false; }); }, 'gm-btn wv-claim');
     card.append(art, name, meta, note, claimB);
   }
@@ -214,7 +219,9 @@ export function renderWheel({ doc = document, t, wheel, items = [], base = '/', 
     const i = SEGMENTS.findIndex((s) => s.id === waiting.segment); setAngle(landingAngle(0, Math.max(0, i), 0)); showCard(waiting);
     if (waiting.status === 'minting' && retryMs > 0) retryT = setTimeout(() => { if (!destroyed) claim(waiting.seed); }, 1500); // back with a skin awaiting its mint: ask again
   }
-  return { root, spin, claim, get angle() { return angle; }, destroy() { destroyed = true; clearTimeout(retryT); } };
+  const clock = setInterval(() => { if (destroyed) { clearInterval(clock); return; } if (wheel.available.total <= 0) refresh(); }, 1000); // the countdown to the next free spin; destroy() stops it
+  if (clock && clock.unref) clock.unref();
+  return { root, spin, claim, get angle() { return angle; }, destroy() { destroyed = true; clearTimeout(retryT); clearInterval(clock); } };
 }
 
 export const WHEEL_CSS = `
