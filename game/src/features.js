@@ -14,6 +14,11 @@ export const DEFAULT_FLAGS = Object.freeze({
   presenceChip: false,
   tuneOverlay: false,
   statusBanner: false,
+  // sprint 5h (docs/plans/sprint/FTF-5h-Six-Agent-Sprint.md 3.6): off until A5 turns them on in features.json
+  questJournal: false, questTracker: false, autoWalk: false, starterGuide: false,
+  rpgHud: false, skillTree: false, hotbar: false,
+  marketplace: false, lootFx: false, playGames: false, silkView: false,
+  newPlayerIntro: false, labPrologue: false, agentTournament: false, firstSeenTips: false,
 });
 export const FEATURES_TIMEOUT_MS = 3000;
 

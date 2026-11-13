@@ -46,6 +46,7 @@ import { createTownFlow } from './scenes/town-flow.js';
 import { createTownQuest, questPlan, QUEST_KEY } from './scenes/town-quest.js';
 import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
+import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
@@ -429,6 +430,7 @@ if (townMode.town) {
   });
   mountCasting();
   // The player HUD (ui/player-hud.js): portrait frame, level, health, the silk wallet and the toast stack, town only.
+  if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
     onSkin: () => toggleSkin(), canSwap: () => { const d = loadDay1(ctx.storage); return !!(d.minted || d.claimed || d.skin === 'elise'); },

@@ -1,7 +1,13 @@
 // English (base) strings of the 3D play layer: objectives, context options, panels, controls and
 // world-layer dialogue. Merged over src/locales/en.js at runtime (src/play/i18n.js); keys mirror
 // ru.js exactly (tests/client/play.test.mjs). ICU MessageFormat; typographic quotes “ ” ‘ ’.
-export default {
+import quests from './en-quests.js';
+import hud from './en-hud.js';
+import market from './en-market.js';
+import npe from './en-npe.js';
+import tips from './en-tips.js';
+import video from './en-video.js';
+const EN = {
   // ---- badge, help ----
   'play.badge': 'Local demo · the rules run in your browser through the same room as the agent API',
   'play.help.title': 'Controls',
@@ -1763,3 +1769,5 @@ export default {
   "quest.track.offer": "{giver} has a quest for you",
   "quest.track.near": "{m} m",
 };
+// sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
+export default Object.assign(EN, quests, hud, market, npe, tips, video);
