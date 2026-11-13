@@ -148,6 +148,21 @@ What the owner saw, and its cause:
 - Not done: clips are still retargeted at load, not baked per character offline (checklist 4). The check therefore
   runs the game's own loader and retarget, so it measures what is played.
 
+## 11. Result
+
+`check/after.json` (run: `node art/townsfolk/npc_check.mjs`, dev server up): every clip the givers play is within the
+limits on all five. Ankles within 3 cm of the model's own stance in the standing clips (were up to 18), knee bend
+plane turns 13 degrees a frame at most (were up to 128), a planted foot slides under 1 cm in every clip (were 5 cm a
+step, 20 cm in the wave), the legs' own skin stretches 3 cm at most while standing (the lamplighter's was 15 to 68).
+The fingers are no longer flat: a relaxed curl, long fingers most, with a slow small movement.
+
+Frames, before on the left and after on the right, side view: `givers_walk_before_after.jpg`,
+`givers_wave_before_after.jpg`, `givers_talk_before_after.jpg`; film `givers_before_after.mp4` (walk and wave).
+
+Still open: the clips are the shared townsfolk set (motion capture retargeted), not hand-made per character; the
+fingers are one bone per group (index, the other three, thumb), so they curl at the knuckle only; the guard stands
+with slightly bent knees; `play` (the violin) and `child_run` are measured but not judged for the givers.
+
 ## Sources
 
 Forum practice and tool documentation (links only):
