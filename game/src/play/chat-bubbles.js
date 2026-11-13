@@ -20,7 +20,10 @@ export function createBubbleQueue({ seconds = BUBBLE.seconds, maxChars = BUBBLE.
   };
 }
 
-/** New lines of a presence chat array since the last call: the speaker key is SELF for the player's own lines. */
+/**
+ * New lines of a presence chat array since the last call: the speaker key is SELF for the player's own lines. Only
+ * live speech becomes a bubble: the room's remembered lines (`old`) and the action feed (`act`) stay in the panel.
+ */
 export function chatFeed() {
   let seen = 0, lastRef = null;
   return (chat) => {
@@ -28,7 +31,7 @@ export function chatFeed() {
     // the presence keeps the last 60 lines and shifts the oldest: follow the last line we saw
     let start = 0;
     if (lastRef) { const i = chat.lastIndexOf(lastRef); start = i >= 0 ? i + 1 : Math.max(0, chat.length - 1); } else start = seen ? 0 : chat.length; // the first call only marks where we are
-    const out = chat.slice(start).map((c) => ({ key: c.mine ? SELF : c.id, text: c.text }));
+    const out = chat.slice(start).filter((c) => !c.old && !c.act).map((c) => ({ key: c.mine ? SELF : c.id, text: c.text }));
     if (chat.length) lastRef = chat[chat.length - 1];
     seen = 1;
     return out;

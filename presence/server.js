@@ -1,10 +1,12 @@
 // Presence service: the shared sky town for up to 15 players per room (docs/multiplayer.md). Plain Node, no deps.
-//   node server.js   (env: PER_IP (local tests only; default 3), PORT=8788, HOST=0.0.0.0, ALLOWED_ORIGIN (comma list; localhost always allowed), TRUST_PROXY=1 behind Caddy)
+//   node server.js   (env: PER_IP (local tests only; default 3), PORT=8788, HOST=0.0.0.0, ALLOWED_ORIGIN (comma list; localhost always allowed), TRUST_PROXY=1 behind Caddy,
+//                     PRESENCE_DATA_DIR: the folder of chat-history.json, the rooms' last lines and actions; unset keeps them in memory only)
 // GET /health -> counts only. WebSocket on /presence (or /).
 import http from 'node:http';
 import { createHash } from 'node:crypto';
 import { handshake, wrapSocket } from './lib/ws.js';
 import { createHub, LIMITS } from './lib/hub.js';
+import { createHistory } from './lib/history.js';
 
 export const NET = Object.freeze({ perIp: 3, newPerIpPerMin: 10, maxSockets: LIMITS.roomSize * LIMITS.maxRooms, maxPayload: 1024, pingMs: 15000 });
 const DEFAULT_ORIGINS = ['https://spacexceo.github.io'];
@@ -20,7 +22,8 @@ export function createPresence({ env = process.env, now = () => Date.now(), log 
   const net = Number(env.PER_IP) > 0 ? { ...base, perIp: Number(env.PER_IP), newPerIpPerMin: Math.max(base.newPerIpPerMin, 2 * Number(env.PER_IP)) } : base;
   const origins = env.ALLOWED_ORIGIN ? env.ALLOWED_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULT_ORIGINS;
   const trustProxy = env.TRUST_PROXY === '1';
-  const hub = createHub({ now, log });
+  const history = createHistory({ dir: env.PRESENCE_DATA_DIR || null, now, log });
+  const hub = createHub({ now, log, history });
   const perIp = new Map(), recent = new Map(); // ip hash -> open sockets / timestamps of new connections
   const sockets = new Set();
   const rejected = {};
@@ -65,12 +68,14 @@ export function createPresence({ env = process.env, now = () => Date.now(), log 
   const tick = setInterval(() => hub.tick(), 1000 / LIMITS.tickHz);
   const beat = setInterval(() => { for (const ws of sockets) ws.heartbeat(); for (const [k, v] of recent) if (!v.some((x) => now() - x < 60000)) recent.delete(k); }, net.pingMs);
   tick.unref(); beat.unref();
-  server.on('close', () => { clearInterval(tick); clearInterval(beat); });
-  return { server, hub, sockets };
+  server.on('close', () => { clearInterval(tick); clearInterval(beat); history.save(); });
+  return { server, hub, sockets, history };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT) || 8788, host = process.env.HOST || '0.0.0.0';
-  const { server } = createPresence();
+  const { server, history } = createPresence();
+  // a restart keeps the last lines: the pending write goes out before the process ends
+  for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { history.save(); process.exit(0); });
   server.listen(port, host, () => console.log(`presence on ${host}:${port}`));
 }

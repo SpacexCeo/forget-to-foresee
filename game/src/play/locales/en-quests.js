@@ -1,6 +1,9 @@
 // English strings for the quest journal, the tracker, auto-walk, the starter guide and the Gate-Loom (sprint §4).
 // The journal's quest copy lives in game/game/journal-data.js. Used through quests/say.js, which falls back to these
-// when the active locale has no such key.
+// when the active locale has no such key. The journal's quest copy is spread in as jq.<id>.* keys (journalTextKeys),
+// so the other locales translate it in their *-quests.js tables.
+import { journalTextKeys } from '../../game/journal-data.js';
+
 export default {
   'journal.title': 'Journal',
   'journal.close': 'Close', 'journal.showTracker': 'Show the quest tracker',
@@ -25,6 +28,8 @@ export default {
   'journal.empty.done': 'Nothing finished yet.', 'journal.empty.done.next': 'Completed quests are kept here.',
   'journal.empty.search': "No quest matches '{q}'.", 'journal.empty.search.next': 'Clear the search.',
   'journal.resetIn': 'Resets in {time}',
+  'journal.tier.common': 'Common', 'journal.tier.rare': 'Rare', 'journal.tier.legendary': 'Legendary',
+  'quest.marker.gate': 'Gate-Loom',
   'tracker.title': 'Quests',
   'tracker.road': 'Road home',
   'tracker.roadValue': '{gate} / {fee} silk',
@@ -52,7 +57,16 @@ export default {
   'story.portal.quiet': 'The Gate-Loom is quiet.',
   'guide.title': 'Starter guide {n}/{total}',
   'guide.hide': 'Hide the starter guide',
+  'guide.step.move': 'Move with W A S D. Hold Shift to run.',
+  'guide.step.camera': 'Press R to turn the camera.',
+  'guide.step.talk': 'Walk up to the Elder and press E.',
+  'guide.step.journal': 'Press J to open your Journal.',
+  'guide.step.fight': 'Find a stone spider. Press F to strike, Q to fire your Lance.',
+  'guide.step.loot': 'Walk over a chest to pick it up. Press I to open your bag.',
+  'guide.step.market': 'Press B to open the Market and sell a resource for silk.',
+  'guide.step.home': 'Collect {fee} silk on chain, then step into the Gate-Loom to go home.',
   'guide.done': 'Starter guide complete. The journal and the market are yours.',
   'quest.ready.toast': 'Quest ready: {title}. Turn it in to {giver}.',
   'quest.done.toast': 'Quest complete: {title}.',
+  ...journalTextKeys(),
 };

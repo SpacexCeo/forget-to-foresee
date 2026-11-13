@@ -120,7 +120,7 @@ export function createGlassShoal(o) {
 
   function loadArena() {
     if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
-      onWin: () => { if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
+      onWin: () => { try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'boss', v: 'shoal' } })); } catch { /* the room's action feed is optional */ } if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
       onDeath: () => event('death'), onHome: () => flyHome() }); return arena; });
     return arenaLoading;
   }

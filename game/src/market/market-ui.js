@@ -132,6 +132,7 @@ export function createMarketUi({ t, client, dice = null, storage = null, doc = g
       if (!r.ok) { state.replaceChildren(el('p', 'mk2-state err', errText(r))); return; }
       const ok = el('p', 'mk2-state', t('p2p.done.bought', { qty: r.fill.qty, item: name(l.item) }) + ' '); ok.append(...txLinks(r.fill));
       refreshSilk(true).catch(() => {});
+      try { globalThis.dispatchEvent(new CustomEvent('ftf:feat', { detail: { k: 'trade' } })); } catch { /* the shared town's action feed is optional */ }
       await buyTab(); body.append(ok);
     }
   }

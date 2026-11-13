@@ -31,7 +31,8 @@ test('pass view model: every relayer status maps to a state and a message; a has
   assert.equal(viewModel({ status: 'minted', tx_hash: 'not a hash!', token_id: '1' }).hash, null, 'a malformed hash is dropped');
   assert.equal(viewModel({ status: 'something new' }).state, 'error');
   assert.equal(viewModel(null).state, 'error');
-  assert.deepEqual(viewModel({ status: 'not_eligible', earned: 4200 }).args, { earned: '4,200' });
+  assert.deepEqual(viewModel({ status: 'not_eligible', earned: 4200 }).args, { earned: '4,200', fee: '200' });
+  assert.deepEqual(viewModel({ status: 'not_eligible', earned: 50, needed: 300 }).args, { earned: '50', fee: '300' });
   assert.deepEqual(viewModel({ status: 'rate_limited', retry_after_s: 125 }).args, { n: 3 });
 });
 
