@@ -652,6 +652,7 @@ export default {
   'menu.tab.nfts': "NFT",
   'menu.tab.inventory': "Инвентарь",
   'menu.tab.agents': "Агенты",
+  'menu.tab.town': "Город",
   'menu.tab.log': "Журнал и статистика",
   'menu.traveller': "Путник",
   'menu.localProfile': "Локальный профиль в этом браузере: без аккаунта и кошелька.",

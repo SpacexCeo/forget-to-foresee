@@ -15,6 +15,9 @@ const CSS = `.ftf-mk { position: fixed; left: calc(12px + env(safe-area-inset-le
 .ftf-mk .lbl { margin: 0 0 6px; color: var(--ftf-muted, #aab6b0); font-size: 12px; }
 .ftf-mk ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .ftf-mk a { color: var(--ftf-text, #eef0ea); text-decoration: underline; text-decoration-color: var(--ftf-line, rgba(197,164,105,.4)); text-underline-offset: 2px; }
+.ftf-mk .more { display: block; width: 100%; margin-top: 8px; min-height: 32px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--ftf-line, rgba(197,164,105,.4));
+  background: rgba(197,164,105,.12); color: var(--ftf-gold, #c5a469); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.ftf-mk .more[hidden] { display: none; }
 .ftf-mk .new { animation: ftf-mk-in .5s ease-out; }
 @keyframes ftf-mk-in { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .ftf-mk .new { animation: none; } }`;
@@ -23,7 +26,7 @@ const CSS = `.ftf-mk { position: fixed; left: calc(12px + env(safe-area-inset-le
  * @param {{doc?: Document, t: Function, line: (r: object) => string, poll: () => Promise<object|null>, onTrade?: Function, pollMs?: number, timers?: object}} o
  * @returns {{show(on: boolean): void, refresh(): Promise<void>, destroy(): void, el: HTMLElement, state(): object}}
  */
-export function createMarketTicker({ doc = globalThis.document, t, line, poll, onTrade = null, pollMs = 20_000, timers = globalThis }) {
+export function createMarketTicker({ doc = globalThis.document, t, line, poll, onTrade = null, onLedger = null, pollMs = 20_000, timers = globalThis }) {
   if (!doc.getElementById('ftf-mk-css')) { const s = doc.createElement('style'); s.id = 'ftf-mk-css'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const root = el('div', 'ftf-mk'); root.hidden = true;
@@ -34,7 +37,7 @@ export function createMarketTicker({ doc = globalThis.document, t, line, poll, o
   const lbl = el('p', 'lbl', t('mk.label')), list = el('ul');
   box.append(lbl, list); root.append(pill, box);
   doc.body.append(root);
-  let shown = false, data = null, timer = null;
+  let shown = false, data = null, timer = null, more = null;
   const seen = new Set();
 
   pill.addEventListener('click', () => { box.hidden = !box.hidden; pill.setAttribute('aria-expanded', String(!box.hidden)); });
@@ -49,6 +52,10 @@ export function createMarketTicker({ doc = globalThis.document, t, line, poll, o
       if (r.url) { const a = el('a', '', line(r)); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; a.title = r.reason ? `${r.reason} · ${t('mk.tx')}` : t('mk.tx'); li.append(a); } else { li.textContent = line(r); if (r.reason) li.title = r.reason; }
       return li;
     }));
+    // the Town Ledger (flag townLedger): `onLedger()` answers the opener, or null while the flag is off
+    const go = typeof onLedger === 'function' ? onLedger() : null;
+    if (go && !more) { more = el('button', 'more', t('led.open') + ' →'); more.type = 'button'; more.addEventListener('click', () => { const g = onLedger(); if (g) g(); }); box.append(more); }
+    if (more) more.hidden = !go;
   }
 
   async function refresh() {

@@ -7,9 +7,10 @@ import { createFeatures, mergeFlags, DEFAULT_FLAGS } from '../../src/features.js
 
 const ok = (body) => async () => ({ ok: true, json: async () => body });
 
-// The owner switched the sprint features and account sign-in on for the live page on 13 Nov (docs/decisions.md).
+// The owner switched the sprint features and account sign-in on for the live page on 13 Nov (docs/decisions.md); the
+// Town Ledger (townLedger) ships on with them (docs/plans/track-fit-gaps.md).
 const LIVE_ON = new Set(['questJournal', 'questTracker', 'autoWalk', 'starterGuide', 'rpgHud', 'skillTree', 'hotbar', 'marketplace', 'lootFx',
-  'playGames', 'silkView', 'newPlayerIntro', 'labPrologue', 'agentTournament', 'firstSeenTips', 'accountLogin']);
+  'playGames', 'silkView', 'newPlayerIntro', 'labPrologue', 'agentTournament', 'firstSeenTips', 'accountLogin', 'townLedger']);
 test('flags: every feature is off by default in code except the layer itself; the shipped file turns on only the live set', () => {
   for (const [k, v] of Object.entries(DEFAULT_FLAGS)) assert.equal(v, k === 'flags', k);
   const file = JSON.parse(readFileSync(new URL('../../public/features.json', import.meta.url), 'utf8'));

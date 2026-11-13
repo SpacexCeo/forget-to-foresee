@@ -662,6 +662,7 @@ const EN = {
   'menu.tab.nfts': "NFTs",
   'menu.tab.inventory': "Inventory",
   'menu.tab.agents': "Agents",
+  'menu.tab.town': "Town",
   'menu.tab.log': "Log & stats",
   'menu.traveller': "Traveller",
   'menu.localProfile': "Local profile in this browser: no account, no wallet.",

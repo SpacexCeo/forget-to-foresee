@@ -31,6 +31,9 @@ const TAB_ICON = Object.freeze({
   log: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 20v-6m5 6V9m5 11V5m5 15v-9"/></svg>',
 });
 export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'friends', 'agents', 'log']);
+/** The Town Ledger tab (flag townLedger; src/ui/town-ledger.js): second, after Profile, only when the flag is on. */
+export const TOWN_TAB = 'town';
+const TOWN_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 20h18M5 20v-8l4-3 4 3v8M13 20V8l3-3 3 3v12M8 15h2M16 11h0M16 15h0"/></svg>';
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
 let manifestP = null;
 /** The items manifest (cached). */
@@ -137,7 +140,9 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null, townLedger = false }) {
+  const tabList = townLedger ? [TABS[0], TOWN_TAB, ...TABS.slice(1)] : TABS;
+  let ledgerView = null; // the open Town Ledger (it polls the relayer while it is shown)
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -164,12 +169,12 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const body = el('div', 'gm-body'); body.setAttribute('role', 'tabpanel');
   panel.append(head, tabs, body);
   const tabBtns = {};
-  for (const id of TABS) { const b = btn('', () => show(id), 'gm-tab'); b.innerHTML = TAB_ICON[id] || ''; b.append(el('span', null, t('menu.tab.' + id))); b.setAttribute('role', 'tab'); b.dataset.tab = id; tabBtns[id] = b; tabs.append(b); }
+  for (const id of tabList) { const b = btn('', () => show(id), 'gm-tab'); b.innerHTML = TAB_ICON[id] || (id === TOWN_TAB ? TOWN_ICON : ''); b.append(el('span', null, t('menu.tab.' + id))); b.setAttribute('role', 'tab'); b.dataset.tab = id; tabBtns[id] = b; tabs.append(b); }
   root.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === root) close(); });
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
   let current = null;
-  function close() { if (wheelView) wheelView.destroy(); inv.dispose(); root.remove(); }
+  function close() { if (wheelView) wheelView.destroy(); if (ledgerView) ledgerView.destroy(); inv.dispose(); root.remove(); }
 
   const views = {
     profile() {
@@ -311,6 +316,13 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       }
       return [el('p', 'gm-note', t('menu.agentsNote')), ...out];
     },
+    town() { // the Town Ledger: live trades, reasons, the traders' own accounts, clan strategy (loaded on first open)
+      return Promise.all([import('../ui/town-ledger.js'), import('../net/town-ledger.js')]).then(([ui, net]) => {
+        if (current !== TOWN_TAB || root.isConnected === false) return []; // switched away or closed while it loaded
+        ledgerView = ui.mountTownLedger({ doc, t, poll: () => net.fetchLedger(), base, now });
+        return [ledgerView.root];
+      }).catch(() => [el('p', 'gm-note', t('led.offline'))]);
+    },
     friends() { // the friends list (play/friends.js): players added from their card, saved on this device
       const f = createFriends({ storage, me: owner || null });
       const list = f.list();
@@ -433,6 +445,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   function show(id) {
     current = id;
     if (wheelView) { wheelView.destroy(); wheelView = null; }
+    if (ledgerView) { ledgerView.destroy(); ledgerView = null; }
     tabTitle.textContent = t('menu.tab.' + (id === 'wheel' ? 'inventory' : id));
     for (const [k, b] of Object.entries(tabBtns)) b.setAttribute('aria-selected', String(k === id || (id === 'wheel' && k === 'inventory')));
     { const sel = tabBtns[id === 'wheel' ? 'inventory' : id]; try { if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch { /* old browsers */ } } // phones: the selected tab in view
@@ -440,7 +453,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
     const put = (kids) => { if (current === id) body.replaceChildren(...kids.filter(Boolean)); };
     if (r && typeof r.then === 'function') { body.replaceChildren(el('p', 'gm-note', '…')); r.then(put); } else put(r);
   }
-  show(TABS.includes(tab) || tab === 'wheel' ? tab : 'profile');
-  tabBtns[TABS.includes(tab) ? tab : 'profile'].focus();
+  show(tabList.includes(tab) || tab === 'wheel' ? tab : 'profile');
+  tabBtns[tabList.includes(tab) ? tab : 'profile'].focus();
   return { root, close, show, get tab() { return current; }, wheel, inventory: inv, chests: bag };
 }

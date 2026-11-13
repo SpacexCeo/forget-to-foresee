@@ -652,6 +652,7 @@ export default {
   'menu.tab.nfts': "NFT 收藏",
   'menu.tab.inventory': "背包",
   'menu.tab.agents': "代理",
+  'menu.tab.town': "城镇",
   'menu.tab.log': "日志与统计",
   'menu.traveller': "旅人",
   'menu.localProfile': "此浏览器中的本地资料：没有账户，没有钱包。",
