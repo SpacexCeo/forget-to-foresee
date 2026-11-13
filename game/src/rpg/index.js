@@ -14,6 +14,7 @@ import * as silkCore from '../net/silk-core.js';
 import { portalFee } from '../game/expedition-config.js';
 import { xpForKill } from '../game/town-economy.js';
 import { mobDisplayName } from '../game/mob-names.js';
+import { blocksWindows } from '../ui/onboarding-queue.js';
 
 export const RPG_KEY = 'ftf.rpg.v1';
 const WORLD_HP = 100;                           // the hillside fight counts Iris's health out of 100 (play/mobs.js IRIS_HP)
@@ -135,6 +136,7 @@ export function mount(ctx) {
     }
     if (!down) return;
     if (action === 'target') { e.preventDefault(); e.stopImmediatePropagation(); cycleTarget(); return; }
+    if ((WINDOWS.includes(action) || action === 'help') && blocksWindows()) { e.preventDefault(); e.stopImmediatePropagation(); return; }   // a first-time overlay runs
     if (WINDOWS.includes(action) && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); openWindow(action); return; }
     if (action === 'help') { e.preventDefault(); e.stopImmediatePropagation(); openWindow('help'); }
   };
@@ -148,6 +150,7 @@ export function mount(ctx) {
     const i = list.findIndex((m) => m.id === targetId); targetId = list[(i + 1) % list.length].id;
   }
   function openWindow(id) {
+    if (id !== 'menu' && blocksWindows()) return;                                   // a first-time overlay runs: windows wait
     if (id === 'menu') { if (ctx.openMenu) ctx.openMenu(); else { const e = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }); e.__rpg = true; win.dispatchEvent(e); } return; }
     if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); tree.toggle(); open.skills = tree.isOpen; }); return; }
     if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); sheet.toggle(); open.character = sheet.isOpen; }); return; }
@@ -196,6 +199,8 @@ export function mount(ctx) {
     if (targetId && !mobById(targetId)) targetId = null;
   };
   win.addEventListener('ftf:mob-killed', onKill);
+  const onCloseAll = () => { for (const w of [tree, sheet, cheat]) if (w && w.isOpen) w.close(); };
+  win.addEventListener('ftf:close-windows', onCloseAll);
 
   // ------------------------------------------------------------------ the API the tree, the sheet and e2e use
   const api = {
@@ -259,7 +264,7 @@ export function mount(ctx) {
       if (tree && tree.isOpen) tree.refresh(); if (sheet && sheet.isOpen) sheet.refresh();
     },
     dispose() {
-      win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill);
+      win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:close-windows', onCloseAll);
       if (offLedger) offLedger(); if (offHit) offHit(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
     },
   };

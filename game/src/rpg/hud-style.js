@@ -2,10 +2,6 @@
 // The design tokens are declared here with the plan's final values as fallbacks (A5's tokens.css overrides them).
 export const HUD_CSS = `
 .rpg { --u: calc(min(100vw, 100vh * 1.7778) / 1920);
-  --ftf-panel: rgba(14, 16, 24, .90); --ftf-panel-solid: #0e1018; --ftf-border: #3a3f55; --ftf-gold: #f6c860; --ftf-gold-dim: #b8964a;
-  --ftf-text: #eef0f6; --ftf-muted: #aab1c5; --ftf-ok: #5ccf8a; --ftf-warn: #f0b24a; --ftf-danger: #ff6b62; --ftf-info: #4aa3ff; --ftf-silk: #e8dcb4; --ftf-xp: #b06cff;
-  --hp: #d2493f; --hp-bg: #2a1210; --mana: #3f8fd2; --mana-bg: #0f1c2b; --xp: #b06cff; --xp-bg: #1d1230;
-  --font-ui: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif; --font-title: "Cormorant Garamond", Georgia, serif;
   position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: var(--font-ui); color: var(--ftf-text); }
 .rpg[hidden] { display: none; }
 .rpg * { box-sizing: border-box; }
@@ -15,10 +11,10 @@ export const HUD_CSS = `
 /* player frame 24,24 360×96 */
 .rpg-frame { left: calc(24 * var(--u)); top: calc(24 * var(--u)); width: calc(360 * var(--u)); height: calc(96 * var(--u)); pointer-events: auto; cursor: pointer; }
 .rpg-portrait { position: absolute; left: calc(12 * var(--u)); top: calc(12 * var(--u)); width: calc(72 * var(--u)); height: calc(72 * var(--u)); border-radius: 50%;
-  border: 2px solid var(--ftf-gold-dim); background: #1a1d28 50% 12% / cover no-repeat; }
+  border: 2px solid var(--ftf-gold-dim); background: #13241e 50% 12% / cover no-repeat; }
 .rpg-name { position: absolute; left: calc(96 * var(--u)); top: calc(10 * var(--u)); font-size: max(14px, calc(16 * var(--u))); font-weight: 700; }
 .rpg-lv { position: absolute; left: calc(160 * var(--u)); top: calc(12 * var(--u)); min-width: calc(36 * var(--u)); height: calc(18 * var(--u)); padding: 0 4px; border-radius: 4px;
-  font-size: max(11px, calc(12 * var(--u))); font-weight: 700; line-height: calc(18 * var(--u)); text-align: center; color: var(--ftf-gold); background: rgba(246,200,96,.15); }
+  font-size: max(11px, calc(12 * var(--u))); font-weight: 700; line-height: calc(18 * var(--u)); text-align: center; color: var(--ftf-gold); background: rgba(197,164,105,.15); }
 .rpg-bar { position: absolute; border: 1px solid rgba(0,0,0,.6); border-radius: 3px; overflow: hidden; }
 .rpg-bar i { position: absolute; inset: 0 auto 0 0; display: block; }
 .rpg-bar i.ghost { background: rgba(255,255,255,.75); transition: width .5s linear; }
@@ -40,7 +36,7 @@ export const HUD_CSS = `
 /* target 800,24 320×64 */
 .rpg-target { left: calc(800 * var(--u)); top: calc(24 * var(--u)); width: calc(320 * var(--u)); height: calc(64 * var(--u)); }
 .rpg-target[hidden] { display: none; }
-.rpg-target[data-elite="1"] { border: 2px solid var(--ftf-gold); box-shadow: 0 0 0 2px rgba(246,200,96,.25); }
+.rpg-target[data-elite="1"] { border: 2px solid var(--ftf-gold); box-shadow: 0 0 0 2px rgba(197,164,105,.25); }
 .rpg-target .tn { position: absolute; left: calc(12 * var(--u)); top: calc(8 * var(--u)); font-size: max(14px, calc(16 * var(--u))); font-weight: 700; }
 .rpg-target .tl { position: absolute; right: calc(12 * var(--u)); top: calc(10 * var(--u)); font-size: max(11px, calc(12 * var(--u))); color: var(--ftf-muted); }
 .rpg-target .rpg-bar { left: calc(12 * var(--u)); top: calc(40 * var(--u)); width: calc(296 * var(--u)); height: calc(14 * var(--u)); background: var(--hp-bg); }
@@ -86,7 +82,7 @@ export const HUD_CSS = `
 .rpg-log:hover, .rpg-log:focus-within { background: rgba(14,16,24,.92); }
 .rpg-log .tabs { display: flex; gap: 2px; padding: 2px; }
 .rpg-log .tabs button { height: max(24px, calc(24 * var(--u))); padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: max(12px, calc(13 * var(--u))); color: var(--ftf-muted); }
-.rpg-log .tabs button[aria-selected="true"] { background: rgba(246,200,96,.12); color: var(--ftf-text); box-shadow: inset 0 -2px 0 var(--ftf-gold); }
+.rpg-log .tabs button[aria-selected="true"] { background: rgba(197,164,105,.12); color: var(--ftf-text); box-shadow: inset 0 -2px 0 var(--ftf-gold); }
 .rpg-log .body { flex: 1; overflow-y: auto; padding: 4px 10px; font-size: max(13px, calc(14 * var(--u))); line-height: 1.45; }
 .rpg-log .body p { margin: 0 0 4px; }
 .rpg-log .body .sys { color: var(--ftf-muted); } .rpg-log .body .quest { color: var(--ftf-gold); } .rpg-log .body .err { color: var(--ftf-danger); } .rpg-log .body .xp { color: var(--ftf-xp); } .rpg-log .body .loot { color: var(--ftf-silk); }
@@ -113,7 +109,7 @@ export const HUD_CSS = `
 .rpg-banner { left: 50%; top: calc(160 * var(--u)); transform: translateX(-50%); font: 700 calc(28 * var(--u)) var(--font-title); font-size: max(22px, calc(28 * var(--u))); color: var(--ftf-gold); text-shadow: 0 2px 8px #000; opacity: 0; }
 .rpg-banner[data-show="1"] { animation: rpg-rise 1.2s var(--ease, cubic-bezier(.2,.8,.2,1)) forwards; }
 @keyframes rpg-rise { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -20px); } }
-.rpg-tip { position: fixed; z-index: 60; max-width: max(240px, calc(320 * var(--u))); padding: 10px 12px; background: var(--ftf-panel-solid, #0e1018); border: 1px solid var(--ftf-border); border-radius: 8px;
+.rpg-tip { position: fixed; z-index: 60; max-width: max(240px, calc(320 * var(--u))); padding: 10px 12px; background: var(--ftf-panel-solid, var(--ftf-panel-solid, #101f1a)); border: 1px solid var(--ftf-border); border-radius: 8px;
   color: var(--ftf-text); font: 14px/1.4 var(--font-ui, system-ui); pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,.55); }
 .rpg-tip b { display: block; font-size: 16px; margin-bottom: 2px; } .rpg-tip .m { color: var(--ftf-muted); } .rpg-tip .w { color: var(--ftf-warn); }
 /* the old HUD's frame, wallet and skill bar give way to this layer (its toasts stay) */

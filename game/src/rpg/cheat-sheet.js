@@ -27,10 +27,10 @@ export function createCheatSheet({ doc = globalThis.document, t, touch = () => f
   function paint() {
     const b = bindings(), cols = el('div'); cols.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 18px;';
     for (const g of cheatRows(b)) {
-      const sec = el('div'); sec.append(el('h3', null, t('set.grp.' + g.group))); sec.firstChild.style.cssText = 'margin:8px 0 4px;color:#f6c860;font-size:14px;letter-spacing:.06em;text-transform:uppercase;';
+      const sec = el('div'); sec.append(el('h3', null, t('set.grp.' + g.group))); sec.firstChild.style.cssText = 'margin:8px 0 4px;color:var(--ftf-gold, #c5a469);font-size:14px;letter-spacing:.06em;text-transform:uppercase;';
       for (const r of g.rows) {
         const row = el('div'); row.style.cssText = 'display:flex;justify-content:space-between;gap:10px;min-height:28px;align-items:center;font-size:14px;';
-        const cap = el('b', null, r.key); cap.style.cssText = 'min-width:44px;padding:2px 8px;border:1px solid #3a3f55;border-bottom-width:3px;border-radius:6px;text-align:center;font:700 13px ui-monospace,monospace;';
+        const cap = el('b', null, r.key); cap.style.cssText = 'min-width:44px;padding:2px 8px;border:1px solid var(--ftf-border, rgba(197,164,105,.4));border-bottom-width:3px;border-radius:6px;text-align:center;font:700 13px ui-monospace,monospace;';
         row.append(el('span', null, t(r.label)), cap); sec.append(row);
       }
       cols.append(sec);

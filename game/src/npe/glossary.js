@@ -15,7 +15,7 @@ export function entries(t, vars = {}, q = '') {
 }
 
 const CSS = `
-.npe-gl-wrap { position: fixed; inset: 0; z-index: 9970; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, .5); }
+.npe-gl-wrap { position: fixed; inset: 0; z-index: calc(var(--z-dialogue, 50) + 2); display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, .5); }
 .npe-gl { width: min(100%, 640px); max-height: min(560px, calc(100vh - 24px)); display: flex; flex-direction: column; box-sizing: border-box; padding: 18px; background: #0e1018; border: 1px solid #3a3f55; border-radius: 14px; color: #eef0f6; font: 15px/1.45 system-ui, sans-serif; }
 .npe-gl h2 { margin: 0 0 10px; font: 700 22px/1.2 Georgia, serif; color: #f6c860; }
 .npe-gl input { height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid #3a3f55; background: #070910; color: #eef0f6; font: 15px system-ui, sans-serif; }

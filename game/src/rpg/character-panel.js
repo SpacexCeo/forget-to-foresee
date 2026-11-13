@@ -20,7 +20,7 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   const head = el('header'), title = el('h2', null, t('char.title')), x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); head.append(title, x);
   const body = el('div'); body.style.cssText = 'display:grid;grid-template-columns:minmax(0,280px) 1fr;gap:20px;padding:16px;';
   const left = el('div'), right = el('div');
-  const portrait = el('div'); portrait.style.cssText = 'width:160px;height:160px;border-radius:50%;border:2px solid #b8964a;background:#1a1d28 center/cover;';
+  const portrait = el('div'); portrait.style.cssText = 'width:160px;height:160px;border-radius:50%;border:2px solid var(--ftf-gold-dim, #8e7a50);background:#13241e center/cover;';
   const nm = el('div', null, 'Iris'); nm.style.cssText = 'font-weight:700;font-size:20px;margin-top:10px;';
   const lvl = el('div', 'hint'), xpb = el('div'); xpb.style.cssText = 'position:relative;height:10px;margin-top:8px;border-radius:5px;background:#1d1230;overflow:hidden;';
   const xpf = el('i'); xpf.style.cssText = 'position:absolute;inset:0 auto 0 0;background:#b06cff;'; xpb.append(xpf);
@@ -28,12 +28,12 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   left.append(portrait, nm, lvl, xpb, xpt, pet);
   const statRows = {}; let sel = 0;
   for (const s of STATS) {
-    const r = el('div'); r.style.cssText = 'display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid #2a2e40;';
+    const r = el('div'); r.style.cssText = 'display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--ftf-border, rgba(197,164,105,.4));';
     const lab = el('span', null, t('char.stat.' + s)); lab.style.flex = '1'; lab.title = t('char.tip.' + s);
     const note = el('small', 'hint', t('char.tip.' + s)); note.style.cssText = 'display:block;font-size:12px;'; lab.append(note);
     const val = el('b'); const plus = el('button', 'btn', '+'); plus.type = 'button'; plus.style.cssText = 'min-height:28px;width:28px;padding:0;';
     plus.setAttribute('aria-label', t('char.add', { stat: t('char.stat.' + s) }));
-    plus.addEventListener('click', () => { if (api.spend(s).ok) { plus.style.boxShadow = '0 0 0 3px #f6c860'; setTimeout(() => { plus.style.boxShadow = ''; }, 150); } refresh(); });
+    plus.addEventListener('click', () => { if (api.spend(s).ok) { plus.style.boxShadow = '0 0 0 3px var(--ftf-gold, #c5a469)'; setTimeout(() => { plus.style.boxShadow = ''; }, 150); } refresh(); });
     r.append(lab, val, plus); statRows[s] = { r, val, plus }; right.append(r);
   }
   const derivedList = el('dl'); derivedList.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:14px 0 0;';

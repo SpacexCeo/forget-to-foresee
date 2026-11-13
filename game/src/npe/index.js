@@ -11,6 +11,7 @@ import { openRoadmapCard } from './roadmap-card.js';
 import { state as busState } from '../sprint/bus.js';
 import * as firstSeen from '../sprint/first-seen.js';
 import { registerTips } from './tips.js';
+import { runOnboarding } from '../ui/onboarding-queue.js';
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
 /** The game's t() with the English sprint strings as the fallback (the locale import lines are the integrator's). */
@@ -20,7 +21,7 @@ export const withNpe = (t) => (k, a) => { const r = t ? t(k, a) : k; return r ==
 export function titleCard({ doc, t, ms = 2500, reduced = () => false }) {
   installCss(doc);
   const wrap = doc.createElement('div'); wrap.className = 'npe-title';
-  wrap.style.cssText = 'position:fixed;inset:0;z-index:9990;background:#000;color:#eef0f6;display:grid;place-content:center;text-align:center;gap:14px;font:700 clamp(28px,5vw,64px)/1.1 Georgia,serif;letter-spacing:.08em';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:calc(var(--z-dialogue, 50) + 5);background:#000;color:#eef0f6;display:grid;place-content:center;text-align:center;gap:14px;font:700 clamp(28px,5vw,64px)/1.1 Georgia,serif;letter-spacing:.08em';
   const a = doc.createElement('div'); a.textContent = t('npe.title');
   const b = doc.createElement('div'); b.textContent = t('npe.year'); b.style.cssText = 'font:400 clamp(16px,2.2vw,26px)/1.3 system-ui,sans-serif;letter-spacing:0;color:#aab1c5';
   const hint = doc.createElement('div'); hint.textContent = t('npe.skipHint'); hint.style.cssText = 'position:fixed;right:24px;bottom:20px;font:500 14px system-ui,sans-serif;color:#aab1c5;letter-spacing:0';
@@ -57,7 +58,7 @@ export function runIntro(ctx) {
   const setActive = (on) => { try { busState.set('npe.active', on); } catch { /* */ } };
   const lock = (on) => { try { if (ctx.lockControls) ctx.lockControls(on); } catch { /* */ } };
 
-  const state = (async () => {
+  const state = runOnboarding('intro', async () => {                             // after the Day-1 name, never on top of it
     emit('npe.started', { step: 'prologue', ms: 0 }); lock(true); setActive(true); // no coach mark during the intro (first-seen reads npe.active)
     const subs = createSubtitles({ doc });
     // prologue: A6's lab scene, or the title card
@@ -96,7 +97,7 @@ export function runIntro(ctx) {
     emit('npe.completed', { step: 'done', ms: Date.now() - t0 });
     current = null;
     return s;
-  })();
+  }, { wait: !ctx.noQueueWait });
   return { state, skip: () => { if (current && current.skip) current.skip(); }, get phase() { return s.phase; } };
 }
 

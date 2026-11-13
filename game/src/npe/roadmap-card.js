@@ -6,7 +6,7 @@ export const ROWS = Object.freeze([
 ]);
 
 const CSS = `
-.npe-card-wrap { position: fixed; inset: 0; z-index: 9985; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, .5); }
+.npe-card-wrap { position: fixed; inset: 0; z-index: var(--z-dialogue, 50); display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, .5); }
 .npe-card { --uu: var(--u, calc(min(100vw, 100vh * 1.7778) / 1920)); width: min(100%, max(340px, calc(760 * var(--uu)))); max-height: calc(100vh - 24px); overflow: auto; box-sizing: border-box;
   padding: max(16px, calc(28 * var(--uu))); background: #0e1018; border: 1px solid #3a3f55; border-radius: 14px; color: #eef0f6; font: 15px/1.4 system-ui, sans-serif; }
 .npe-card h2 { margin: 0 0 10px; font: 700 max(20px, calc(30 * var(--uu)))/1.2 Georgia, serif; color: #f6c860; }

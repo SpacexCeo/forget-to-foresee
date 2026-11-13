@@ -228,8 +228,12 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   }
   function openLog() { closeLog(); logPanel = renderLog(); doc.body.append(logPanel); }
   function toggleLog() { if (journal) { if (journal.isOpen) journal.close(); else journal.open(); return; } if (logPanel) closeLog(); else openLog(); }
+  let onboarding = false;                                                          // ui/onboarding-queue.js: no window opens while a first-time overlay runs
+  const onOnboard = (e) => { onboarding = !!(e && e.detail && e.detail.active); };
+  const onCloseAll = () => { closeLog(); if (journal && journal.isOpen) journal.close(); };
+  win.addEventListener('ftf:onboarding', onOnboard); win.addEventListener('ftf:close-windows', onCloseAll);
   const onKey = (e) => {
-    const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || onboarding) return;
     if (e.code === 'KeyJ' || e.key === 'j' || e.key === 'J') { toggleLog(); }
     else if (e.key === 'Escape' && logPanel) closeLog();
   };
