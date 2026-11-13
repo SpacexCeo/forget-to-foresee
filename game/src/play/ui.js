@@ -52,7 +52,7 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
   let forgetAsk = null; // { id, purpose }: the memory waiting for "Forget this memory" / "Keep it" (forget-confirm.js)
   // Shard NFT cards (world-hud.js sets the source: the on-chain watcher). Rendered sections are kept per state so a
   // re-render on every observation does not restart the ink ring's drawing.
-  let shardSource = null, shardKey = '', shardNode = null, exchangeOpener = null, replaySource = null, profileOpener = null;
+  let shardSource = null, shardKey = '', shardNode = null, exchangeOpener = null, replaySource = null, profileOpener = null, returnTown = null;
   let nearSource = null; // () => the NEAR watcher's status (world-hud.js): the Biography's season record
   function shardSection(obs) {
     if (!shardSource) return null;
@@ -271,7 +271,9 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
           el('button', { class: 'pl-btn pl-primary', type: 'button', text: t('end.heir'), onclick: () => session.send('set_heir', { heir: true }) }),
           el('button', { class: 'pl-btn', type: 'button', text: t('end.keep'), onclick: () => session.send('set_heir', { heir: false }) }))
           : el('p', { class: 'pl-strong', text: '✓ ' + t(obs.season.heir ? 'end.heir' : 'end.keep') }),
-        obs.season.heir == null ? null : el('p', { text: t('goal.season_over.done') }));
+        obs.season.heir == null ? null : el('p', { text: t('goal.season_over.done') }),
+        // owner 14.11: a clear way home at the end of the Tournament (the town shows what she brought back)
+        returnTown ? el('div', { class: 'pl-row' }, el('button', { class: 'pl-btn' + (obs.season.heir == null ? '' : ' pl-primary'), type: 'button', 'data-return-town': '', text: t('end.returnTown'), onclick: () => { close(); returnTown(); } })) : null);
     }
   }
 
@@ -387,6 +389,15 @@ export function createPlayUi({ root, ctx, session, hud, handlers = {}, contextMi
     /** The season replay link (net/replay.js) for the Biography's Copy replay link: fn() -> url | null. */
     setReplaySource(fn) { replaySource = fn; if (panel === 'end') renderPanel(); },
     /** Profile and inventory (ui/profile.js): a button under the Memories panel. */
+    /** "Return to town" on the Biography (boot-world.js returnToTown): fn() or null when there is no town. */
+    setReturnTown(fn) { returnTown = fn || null; if (panel === 'end') renderPanel(); },
+    /** What the season gave her that the town ledger does not hold: the outcome and her minted shard NFTs. */
+    seasonFacts() {
+      const obs = session.obs; if (!obs || !obs.season) return null;
+      const shardsView = shardSource ? shardSource(obs) : null;
+      const bio = biographyModel({ obs, nearStatus: nearSource ? nearSource() : null, shards: shardsView });
+      return { over: obs.season.phase === 'end', outcome: bio.outcome, seasonId: bio.seasonId, shards: bio.shards.map((s) => ({ tokenId: s.tokenId, url: s.url || null })) };
+    },
     setProfileOpener(fn) { profileOpener = fn; if (panel === 'memory') renderPanel(); },
     setExchangeOpener(fn) { exchangeOpener = fn; if (panel === 'memory') renderPanel(); },
     /** The Biography's season record: fn() → the NEAR watcher's status (net/near.js). */
