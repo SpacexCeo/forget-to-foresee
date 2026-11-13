@@ -55,7 +55,8 @@ test('render overrides only remove what the tier has; the medium preference maps
 
 test('set.* strings: five locales, same placeholders; every key label exists', async () => {
   const load = async (l) => (await import(`../../src/play/locales/${l}.js`)).default;
-  const en = await load('en'); const keys = Object.keys(en).filter((k) => k.startsWith('set.'));
+  const en = await load('en'); const { SPRINT_KEYS } = await import('../../src/play/locales/sprint-keys.js');
+  const keys = Object.keys(en).filter((k) => k.startsWith('set.') && !SPRINT_KEYS.has(k)); // sprint seam keys fall back to English
   assert.ok(keys.length >= 100);
   const hud = (await import('../../src/play/locales/en-hud.js')).default;   // sprint keys: English in en-hud.js (other locales fall back)
   for (const a of KEY_ACTIONS) assert.ok(en[a.label] || hud[a.label], a.label);
