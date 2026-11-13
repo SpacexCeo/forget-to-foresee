@@ -981,7 +981,8 @@
      "keep": 0.7,
      "max_deg": 24,
      "resolve_margin": 0.01,
-     "enclosed": false
+     "enclosed": false,
+     "foot_peek": 0.035
     }
    }
   }

@@ -38,14 +38,15 @@ def mat_q(m):
 # Per-character gown tuning (clips.json: characters.<id>.cloth.tune). Defaults are the v3 gown's.
 #   drag, hold, margin: the simulation's air drag, pull back to the gown's own shape, and clearance from the legs;
 #   keep: the share of each node's swing away from the hips-carried rest shape that is kept (a narrow dress: under 1);
+#   foot_peek: how deep a shoe may show through the hem of a floor-length dress and still pass the check;
 #   enclosed: False when the leg the gown encloses is not there (no knee-inside-the-gown check);
 #   max_deg: the largest angle a chain segment may leave its hips-carried rest direction; resolve_margin: the
 #   clearance the skinned gown keeps from the leg capsules after that (the legs always win over the limits).
-TUNE = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True)
+TUNE = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0)
 
 
 def use_character(char_spec):
-    TUNE.update(dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True))
+    TUNE.update(dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0))
     TUNE.update(((char_spec or {}).get('cloth') or {}).get('tune', {}))
 
 
@@ -168,7 +169,7 @@ class ClothRig:
             for ci, (name, a, b, r0, r1) in enumerate(self.capsules(wr, wp)):
                 ab = (b - a)[:, None]; t = np.clip(np.sum((S - a[:, None]) * ab, -1) / np.sum(ab * ab, -1), 0, 1)
                 v = S - (a[:, None] + t[..., None] * ab); dist = np.linalg.norm(v, axis=-1); sd = dist - (r0 + (r1 - r0) * t)
-                m = sd.min(1); better = m < dmin[sl]; dmin[sl] = np.where(better, m, dmin[sl]); who[sl] = np.where(better, ci, who[sl])
+                m = sd.min(1) + (TUNE['foot_peek'] if name.startswith('foot_') else 0.0); better = m < dmin[sl]; dmin[sl] = np.where(better, m, dmin[sl]); who[sl] = np.where(better, ci, who[sl])
                 if push:
                     pen = np.maximum(margin - sd, 0)[..., None] * v / np.maximum(dist, 1e-9)[..., None]       # [f, S, 3]
                     R, C = self.grid.shape[:2]; g = lambda x, r_, c_: x.reshape(len(x), r_, c_, 3)
