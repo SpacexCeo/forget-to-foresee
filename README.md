@@ -1,6 +1,6 @@
 # Forget to Foresee
 
-A 3D strategy game where **Iris**, a doctor-linguist who came through the glass, pays for prophecy with her own memories (you guide her; she is a character, not an AI). Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
+A 3D strategy game where **Iris**, a doctor-linguist from another planet who came through the glass in the year 2048, pays for prophecy with her own memories (you guide her; she is a character, not an AI). Every prophecy of a season is written and **committed to NEAR testnet before the first move**, then revealed with a Merkle proof you can check yourself.
 
 - **Play it now (no install, desktop browser with WebGL 2):** https://spacexceo.github.io/forget-to-foresee/ (one entry: the full game, the Expedition included)
 - **Built at NEAR HACKATHON** (1–14 Nov 2026) by Lambada_eth. Tracks: **Games** (primary) and **NFTs** (memory shards); see [Tracks](#tracks).
