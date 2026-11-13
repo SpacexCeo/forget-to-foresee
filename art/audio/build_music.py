@@ -63,11 +63,11 @@ def seamless(x, xf):
     return y
 
 
-def encode(y, out):
+def encode(y, out, bitrate=BITRATE):
     with tempfile.TemporaryDirectory() as td:
         wav = Path(td) / "m.wav"
         wavfile.write(wav, SR, y.astype(np.float32))
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", BITRATE,
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", bitrate,
                         "-vbr", "on", "-compression_level", "10", "-application", "audio", "-map_metadata", "-1",
                         "-fflags", "+bitexact", "-flags:a", "+bitexact", str(out)], check=True)
 
@@ -92,7 +92,7 @@ def main():
         pk = np.max(np.abs(y))
         if pk > 10 ** (-1 / 20):
             y *= 10 ** (-1 / 20) / pk
-        encode(y, OUT / f"{name}.ogg")
+        encode(y, OUT / f"{name}.ogg", "80k" if len(y) / SR > 340 else BITRATE)   # long pieces stay under the 4.5 MB budget
         entries[name] = {"file": f"{name}.ogg", "kind": "music", "dur": round(len(y) / SR, 4), "samples": len(y),
                          "channels": 2, "loop": True, "title": src["title"], "artist": src["artist"],
                          "licence": src["licence"], "source": src["url"], "credit": src["credit"]}
