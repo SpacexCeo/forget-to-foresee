@@ -90,3 +90,36 @@ test('which town meshes and materials make the shell', () => {
   for (const n of ['M_Town_Plaster', 'M_Town_Roof', 'M_Town_Stone', 'M_Town_Timber']) assert.ok(isShellMaterial(n), n);
   for (const n of ['M_Town_Glass', 'M_Town_GlassLit', 'M_Town_Ground', 'M_Town_Water', 'M_Town_Lamp', 'M_Altar_Core', '', null]) assert.ok(!isShellMaterial(n), String(n));
 });
+
+test('the sweep\'s cheap reject never changes the result (random walls and booms against a brute-force sweep)', async () => {
+  const { sweepSphere, closestSegmentTriangle, closestPointTriangle } = await import('../../src/physics/collision.js');
+  let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+  const w = new CollisionWorld(), tris = [];
+  for (let i = 0; i < 400; i++) {
+    const c = [rnd() * 40 - 20, rnd() * 12, rnd() * 40 - 20], s = 0.3 + rnd() * 4;
+    const t = [0, 1, 2].flatMap(() => [c[0] + (rnd() - 0.5) * s, c[1] + (rnd() - 0.5) * s, c[2] + (rnd() - 0.5) * s]);
+    tris.push(t); w.addTriangles('t' + i, t, MASK_CAMERA);
+  }
+  const brute = (from, to, r) => {
+    const dir = [to[0] - from[0], to[1] - from[1], to[2] - from[2]]; let best = 1;
+    const at = (f) => [from[0] + dir[0] * f, from[1] + dir[1] * f, from[2] + dir[2] * f];
+    for (const t of tris) {
+      const a = t.slice(0, 3), b = t.slice(3, 6), c = t.slice(6, 9);
+      if (closestSegmentTriangle(from, at(best), a, b, c).d2 >= r * r) continue;
+      const p = closestPointTriangle(from, a, b, c);
+      if ((p[0] - from[0]) ** 2 + (p[1] - from[1]) ** 2 + (p[2] - from[2]) ** 2 < r * r) return 0;
+      let lo = 0, hi = best;
+      for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; if (closestSegmentTriangle(from, at(mid), a, b, c).d2 < r * r) hi = mid; else lo = mid; }
+      best = lo;
+    }
+    return best;
+  };
+  for (let i = 0; i < 300; i++) {
+    const from = [rnd() * 40 - 20, rnd() * 4, rnd() * 40 - 20];
+    const len = 2 + rnd() * 30, yaw = rnd() * Math.PI * 2, pitch = rnd() * 1.2;
+    const to = [from[0] + Math.sin(yaw) * Math.cos(pitch) * len, from[1] + Math.sin(pitch) * len, from[2] + Math.cos(yaw) * Math.cos(pitch) * len];
+    const got = sweepSphere(w, from, to, R, MASK_CAMERA), want = brute(from, to, R);
+    // The bisection's last bits depend on the order triangles are visited (cells vs insertion), not on the reject.
+    assert.ok(Math.abs(got - want) < 1e-4, `sweep ${i}: ${got} vs ${want}`);
+  }
+});
