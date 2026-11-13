@@ -8,6 +8,9 @@ import { WAKEUP, lineVars } from './dialogue-script.js';
 import { loadNpe, saveNpe, shouldRun, initial, reduce } from './flow.js';
 import { playDialogue, createSubtitles, installCss } from './dialogue-ui.js';
 import { openRoadmapCard } from './roadmap-card.js';
+import { state as busState } from '../sprint/bus.js';
+import * as firstSeen from '../sprint/first-seen.js';
+import { registerTips } from './tips.js';
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
 /** The game's t() with the English sprint strings as the fallback (the locale import lines are the integrator's). */
@@ -51,10 +54,11 @@ export function runIntro(ctx) {
     const prev = s.phase; s = reduce(s, e); saveNpe(ctx.storage, s.rec);
     if (s.phase !== prev) emit('npe.step', { step: s.phase, ms: Date.now() - t0 });
   };
+  const setActive = (on) => { try { busState.set('npe.active', on); } catch { /* */ } };
   const lock = (on) => { try { if (ctx.lockControls) ctx.lockControls(on); } catch { /* */ } };
 
   const state = (async () => {
-    emit('npe.started', { step: 'prologue', ms: 0 }); lock(true);
+    emit('npe.started', { step: 'prologue', ms: 0 }); lock(true); setActive(true); // no coach mark during the intro (first-seen reads npe.active)
     const subs = createSubtitles({ doc });
     // prologue: A6's lab scene, or the title card
     emit('prologue.started', { ms: Date.now() - t0 });
@@ -87,7 +91,7 @@ export function runIntro(ctx) {
     const card = openRoadmapCard({ doc, t, vars }); current = { skip: card.close };
     const pick = await card.result;
     step({ type: pick === 'start' ? 'start_card' : 'later' });
-    subs.dispose(); lock(false);
+    subs.dispose(); lock(false); setActive(false);
     step({ type: 'handoff_done' });
     emit('npe.completed', { step: 'done', ms: Date.now() - t0 });
     current = null;
@@ -99,10 +103,13 @@ export function runIntro(ctx) {
 /** The sprint module entry (registry: { id: 'newPlayerIntro', flag: 'newPlayerIntro', load: () => import('../npe/index.js') }). */
 export function mount(ctx) {
   const rec = loadNpe(ctx.storage);
-  const flag = ctx.flags ? (typeof ctx.flags.get === 'function' ? ctx.flags.get('newPlayerIntro') : ctx.flags.newPlayerIntro) : true;
+  const flag = ctx.flags ? (typeof ctx.flags.on === 'function' ? ctx.flags.on('newPlayerIntro') : typeof ctx.flags.get === 'function' ? ctx.flags.get('newPlayerIntro') : ctx.flags.newPlayerIntro) : true;
   const search = ctx.search != null ? ctx.search : (globalThis.location && globalThis.location.search) || '';
+  // the A4 first-seen tips (sprint 1.5), when the tips are on
+  const tipsOn = ctx.flags ? (typeof ctx.flags.on === 'function' ? ctx.flags.on('firstSeenTips') : typeof ctx.flags.get === 'function' ? ctx.flags.get('firstSeenTips') : !!ctx.flags.firstSeenTips) : false;
+  if (tipsOn) registerTips(firstSeen, lineVars(search));
   const run = shouldRun({ flag, search, rec }) ? runIntro({ ...ctx, search }) : null;
-  return { intro: run, dispose() { if (run) run.skip(); } };
+  return { intro: run, tips: tipsOn, dispose() { if (run) run.skip(); } };
 }
 
 /** Reopens "What waits for you" from the menu. */

@@ -128,21 +128,73 @@ export function createPrologue(ctx = {}) {
   }
 
   /** The wake-up over the live town: eyelids open on a blurred view that sharpens. Screen space only (4.5 s). */
+  /**
+   * The town camera for the wake-up, without touching the game's camera rig: for the length of the shot the scene's
+   * onBeforeRender puts the live camera low on the cobbles looking up, then blends it back to wherever the rig had
+   * it this frame. Everything is restored at the end. Needs ctx.scene, ctx.camera and ctx.player; null otherwise.
+   */
+  function wakeCamera() {
+    const { scene, camera, player } = ctx;
+    const pp = player && (player.pos || player.position);
+    if (!scene || !camera || !pp) return null;
+    const c = Array.isArray(pp) ? [pp[0], pp[1], pp[2]] : [pp.x, pp.y, pp.z];
+    const h = typeof player.heading === 'number' ? player.heading : 0;
+    const prev = scene.onBeforeRender, fov0 = camera.fov;
+    const eye = new THREE.Vector3(), look = new THREE.Vector3(), q = new THREE.Quaternion(), m = new THREE.Matrix4(), up = new THREE.Vector3(0, 1, 0);
+    // her own body would fill a camera lying where she stands: hidden while the view is hers
+    const hidden = [];
+    scene.traverse((o) => { if (o.isSkinnedMesh && o.visible && !hidden.includes(o)) { const w = o.skeleton && o.skeleton.bones[0] ? o.skeleton.bones[0].getWorldPosition(new THREE.Vector3()) : null; if (w && Math.hypot(w.x - c[0], w.z - c[2]) < 0.4) hidden.push(o); } });
+    let k = 0;
+    scene.onBeforeRender = function (...a) {
+      if (prev) prev.apply(this, a);
+      const w = 1 - ss(0.62, 0.97, k); // 1 = her eyes, 0 = the game's own framing
+      if (w <= 0) return;
+      const turn = h + 0.5 - ss(0.25, 0.7, k) * 1.0, rise = ss(0.5, 0.95, k);
+      eye.set(c[0], c[1] + 0.22 + rise * 1.2, c[2]);
+      // lying on her back: almost straight up at first, then across the faces as she lifts her head
+      const pitch = 1.25 - ss(0.3, 0.75, k) * 0.85;
+      look.set(eye.x + Math.sin(turn) * Math.cos(pitch), eye.y + Math.sin(pitch), eye.z + Math.cos(turn) * Math.cos(pitch));
+      m.lookAt(eye, look, up); q.setFromRotationMatrix(m);
+      camera.position.lerp(eye, w); camera.quaternion.slerp(q, w);
+      camera.fov = fov0 + (62 - fov0) * w; camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
+      for (const o of hidden) o.visible = w < 0.5;
+    };
+    return {
+      center: c, heading: h,
+      at(x) { k = x; },
+      end() { scene.onBeforeRender = prev; camera.fov = fov0; camera.updateProjectionMatrix(); for (const o of hidden) o.visible = true; },
+    };
+  }
+
+  /** The people stay around her through the first talk (controls are locked till then) and leave when the intro ends. */
+  function keepRing(ring) {
+    let raf = 0, last = performance.now(), offs = [];
+    const stop = () => { cancelAnimationFrame(raf); clearTimeout(timer); for (const off of offs) { try { if (typeof off === 'function') off(); } catch { /* */ } } ring.dispose(); };
+    const timer = setTimeout(stop, 120000);
+    const loop = (now) => { ring.update(Math.min(0.1, (now - last) / 1000)); last = now; raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    if (ctx.bus && ctx.bus.on) offs = ['npe.completed', 'npe.skipped'].map((n) => ctx.bus.on(n, stop));
+  }
+
   async function playWakeUp({ reduced = false } = {}) {
-    const dur = reduced ? 2.5 : 4.5, host = el('div', 'position:fixed;inset:0;z-index:9980;pointer-events:none;overflow:hidden'); host.className = 'ftf-wakeup';
+    let cam = null, ring = null;
+    try { cam = reduced ? null : wakeCamera(); } catch { cam = null; }
+    if (cam) { try { ring = (await import('./townsfolk-ring.js')).createTownsfolkRing({ scene: ctx.scene, center: cam.center, heading: cam.heading, mobile: phone }); } catch { ring = null; } }
+    const dur = reduced ? 2.5 : cam ? 7 : 4.5, host = el('div', 'position:fixed;inset:0;z-index:9980;pointer-events:none;overflow:hidden'); host.className = 'ftf-wakeup';
     const blur = el('div', 'position:absolute;inset:0;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(255,255,255,.18)');
     const top = el('div', 'position:absolute;left:-5%;right:-5%;top:0;height:52%;background:#000;border-radius:0 0 50% 50%/0 0 26% 26%'), bot = el('div', 'position:absolute;left:-5%;right:-5%;bottom:0;height:52%;background:#000;border-radius:50% 50% 0 0/26% 26% 0 0');
     host.append(blur, top, bot); document.body.append(host);
-    const t0 = performance.now(), fired = new Set();
+    const t0 = performance.now(), fired = new Set(); let last = t0;
     return new Promise((resolve) => {
       const step = () => {
-        const t = (performance.now() - t0) / 1000, k = t / dur;
+        const now = performance.now(), t = (now - t0) / 1000, k = t / dur; const dt = Math.min(0.1, (now - last) / 1000); last = now;
         for (const c of WAKE_CUES) if (!fired.has(c.id) && k * 9 >= c.t) { fired.add(c.id); emit('wakeup.cue', { ...c }); }
+        if (cam) cam.at(Math.min(1, k)); if (ring) ring.update(dt);
         // eyes: a first heavy blink, then they open
         const open = reduced ? ss(0, 0.6, k) : Math.max(ss(0.02, 0.2, k) * (1 - ss(0.22, 0.3, k)) * 0.45, ss(0.3, 0.62, k));
         top.style.height = bot.style.height = (52 * (1 - open)) + '%';
         const b = 14 * (1 - ss(0.25, 0.9, k)); blur.style.backdropFilter = blur.style.webkitBackdropFilter = `blur(${b.toFixed(1)}px)`; blur.style.background = `rgba(255,255,255,${(0.18 * (1 - ss(0.3, 0.9, k))).toFixed(3)})`;
-        if (k >= 1) { host.remove(); emit('wakeup.completed', { ms: Math.round(t * 1000) }); resolve('done'); return; }
+        if (k >= 1) { host.remove(); if (cam) cam.end(); if (ring) keepRing(ring); emit('wakeup.completed', { ms: Math.round(t * 1000) }); resolve('done'); return; }
         requestAnimationFrame(step);
       };
       requestAnimationFrame(step);

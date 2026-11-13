@@ -48,3 +48,15 @@ export function createTipQueue({ seen = new Set(), rules = QUEUE } = {}) {
     get showing() { return showing; }, get waiting() { return waiting.slice(); },
   };
 }
+
+/**
+ * The "?" handle for a panel header (sprint 7.8): a 24 x 24 button, "Show the tip again", that re-shows the panel's
+ * first-open tip even after it was seen. `show` is first-seen's showTip.
+ */
+export function reshowButton({ doc = globalThis.document, id, show }) {
+  const b = doc.createElement('button'); b.type = 'button'; b.className = 'ftf-tip-again'; b.textContent = '?';
+  const label = TIPS['tip.again'] || 'Show the tip again'; b.title = label; b.setAttribute('aria-label', label); b.dataset.tip = id;
+  b.style.cssText = 'width:24px;height:24px;min-width:24px;padding:0;border-radius:50%;border:1px solid #3a3f55;background:rgba(255,255,255,.06);color:#eef0f6;font:700 13px/22px system-ui,sans-serif;cursor:pointer;text-align:center';
+  b.addEventListener('click', (e) => { if (e && e.stopPropagation) e.stopPropagation(); show(id, { force: true }); });
+  return b;
+}

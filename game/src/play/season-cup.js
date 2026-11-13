@@ -7,6 +7,9 @@ import NPE from './locales/en-npe.js';
 import { createApi } from '../net/api.js';
 import { createTournament } from '../ui/tournament-cup.js';
 import { POLICIES, playScripted, runExhibition, seededBytes } from './agent-policies.js';
+import { emit as busEmit } from '../sprint/bus.js';
+import { showTip } from '../sprint/first-seen.js';
+import { reshowButton } from '../npe/tips.js';
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
 const CSS = `
@@ -38,7 +41,7 @@ const CSS = `
  */
 export function createSeasonCup({ doc = globalThis.document, t = null, bus = null, onEnterChain = null, seed = 5 } = {}) {
   const tx = (k, a) => { const r = t ? t(k, a) : k; return r === k && NPE[k] != null ? fmt(NPE[k], a) : r; };
-  const emit = (n, p) => { try { if (bus && bus.emit) bus.emit(n, p); } catch { /* */ } };
+  const emit = (n, p) => { try { if (bus && bus.emit) bus.emit(n, p); else busEmit(n, p); } catch { /* */ } }; // the sprint bus by default (tip.tournament fires on tournament.opened)
   if (!(doc.getElementById && doc.getElementById('cup-style'))) { const s = doc.createElement('style'); s.id = 'cup-style'; s.textContent = CSS; (doc.head || doc.body).append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const button = (text, fn, cls) => { const b = el('button', cls || null, text); b.type = 'button'; b.addEventListener('click', fn); return b; };
@@ -96,7 +99,7 @@ export function createSeasonCup({ doc = globalThis.document, t = null, bus = nul
   function render() {
     if (!box) return;
     const view = exhibition || cup.view(pageScore);
-    const head = el('div', 'head'); head.append(el('h2', null, exhibition ? tx('cup.exhibition.title') : tx('cup.title')), el('span', 'chip', tx('cup.status.' + view.season.status)));
+    const head = el('div', 'head'); head.append(el('h2', null, exhibition ? tx('cup.exhibition.title') : tx('cup.title')), el('span', 'chip', tx('cup.status.' + view.season.status)), reshowButton({ doc, id: 'tip.tournament', show: showTip }));
     const left = el('div'); left.append(list(view));
     if (exhibition) left.append(el('p', 'note', tx('cup.exhibition.note')));
     const side = el('div', 'side');
@@ -125,6 +128,7 @@ export function createSeasonCup({ doc = globalThis.document, t = null, bus = nul
     exhibition = null; render();
     emit('tournament.opened', { season: 's1', kind: 'human', account: null });
   }
+  try { const w = doc.defaultView || globalThis; if (w) { w.__ftfTest = w.__ftfTest || {}; (w.__ftfTest.panels ||= {}).tournament = { open, close, tip: 'tip.tournament', selector: '.cup' }; } } catch { /* */ } // the panels tip test (7.8)
   function close() { if (!root) return; root.remove(); root = null; box = null; if (doc.removeEventListener) doc.removeEventListener('keydown', onKey, true); }
   return { open, close, addAgent, runExhibition: runEx, get isOpen() { return !!root; } };
 }

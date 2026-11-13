@@ -76,3 +76,32 @@ test('glossary: every data-glossary key used in the sprint strings resolves to a
   for (const k of used) assert.ok(TERMS.includes(k), k);
   for (const id of TERMS) { assert.ok(NPE[`gloss.${id}.term`]); assert.ok(NPE[`gloss.${id}.text`]); }
 });
+
+test('first-seen wiring: the intro registers the A4 tips when tips are on, blocks them while it runs, the "?" re-shows', async () => {
+  const doc = dom();
+  const fs = await import('../../src/sprint/first-seen.js');
+  const bus = await import('../../src/sprint/bus.js');
+  const { reshowButton } = await import('../../src/npe/tips.js');
+  const { memoryStorage } = await import('../../src/ui/storage.js');
+  const storage = memoryStorage();
+  fs._reset(); fs._configure({ storage, doc, touch: false });
+  const { mount } = await import('../../src/npe/index.js');
+  const m = mount({ doc, storage, t: (k) => k, search: '?intro=0', flags: { on: (k) => k === 'firstSeenTips' } });
+  assert.equal(m.tips, true); assert.equal(m.intro, null);
+  bus.state.set('npe.active', true);
+  bus.emit('tournament.opened', {});
+  assert.equal(doc.querySelectorAll('.ftf-tip').length, 0, 'never during the intro');
+  bus.state.set('npe.active', false);
+  bus.emit('tournament.opened', {});
+  assert.ok(doc.querySelectorAll('.ftf-tip').length >= 1, 'shown once the intro is over');
+  doc.querySelectorAll('.ftf-tip button').find((b) => b.textContent === 'Got it').click();
+  assert.equal(doc.querySelectorAll('.ftf-tip').length, 0);
+  bus.emit('tournament.opened', {});
+  assert.equal(doc.querySelectorAll('.ftf-tip').length, 0, 'seen: not again on its own');
+  const q = reshowButton({ doc, id: 'tip.tournament', show: fs.showTip });
+  assert.equal(q.textContent, '?'); assert.equal(q.title, 'Show the tip again');
+  q.click();
+  assert.equal(doc.querySelectorAll('.ftf-tip').length, 1, 'the "?" re-shows a seen tip');
+  assert.ok(doc.querySelector('.ftf-tip').textContent.includes('Players and agents compete. Agents wear a badge.'));
+  fs._reset();
+});
