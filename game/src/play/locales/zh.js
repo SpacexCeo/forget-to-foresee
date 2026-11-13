@@ -1,6 +1,9 @@
 // Simplified Chinese strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/zh.js: 贝壳, 丝, 回合, 锚, 卷轴; clans 伊里斯, 盐, 灰, 苔, 琥珀, 霜.
+import quests from './zh-quests.js';
+import hud from './zh-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': '本地演示 · 规则在你的浏览器中运行，与代理 API 共用同一个房间',
   'play.help.title': '操作',
@@ -1959,4 +1962,5 @@ export default {
   "quest.log.progress": "进度 {n} / {count}",
   "quest.track.offer": "{giver}有任务给你",
   "quest.track.near": "{m} 米",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };
