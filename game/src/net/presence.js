@@ -56,7 +56,7 @@ export function changed(prev, s) {
  * @param {{url?: string, name?: string, skin?: 'iris'|'elise', storage?: Storage, WebSocketImpl?: typeof WebSocket, now?: () => number,
  *          onChange?: () => void, maxRetries?: number}} o
  */
-export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', storage = null, WebSocketImpl = globalThis.WebSocket, now = () => performance.now(), onChange = () => {}, maxRetries = 4 } = {}) {
+export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', account = null, lv = null, storage = null, WebSocketImpl = globalThis.WebSocket, now = () => performance.now(), onChange = () => {}, maxRetries = 4 } = {}) {
   const players = new Map(); // id -> {id, name, skin, buf: [{at,p,h,a}]}
   const chat = []; // {id, name, text, at, mine}
   let ws = null, id = 0, room = 0, max = 15, status = url && WebSocketImpl ? 'connecting' : 'offline', retries = 0, lastSent = null, lastSendAt = 0, stopped = false, timer = null, sys = null;
@@ -64,13 +64,14 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
   const saveMuted = () => { try { storage && storage.setItem(MUTE_KEY, JSON.stringify([...muted].slice(-200))); } catch { /* private mode */ } };
   const emit = () => { try { onChange(); } catch { /* UI errors stay in the UI */ } };
   const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
-  const add = (pl) => { players.set(pl.id, { id: pl.id, name: pl.name, skin: pl.skin, buf: [{ at: now(), p: pl.p, h: pl.h, a: pl.a }] }); };
+  const add = (pl) => { players.set(pl.id, { id: pl.id, name: pl.name, skin: pl.skin, account: pl.account || null, lv: pl.lv ?? null, buf: [{ at: now(), p: pl.p, h: pl.h, a: pl.a }] }); };
 
   function open() {
     if (stopped || !url || !WebSocketImpl) { status = 'offline'; emit(); return; }
     status = 'connecting'; emit();
     try { ws = new WebSocketImpl(url); } catch { return retry(); }
-    ws.onopen = () => { retries = 0; send({ t: 'hello', v: 1, name, skin }); };
+    // the account lets others read this player's public NFTs and silk on chain (the player card); lv is the shown level
+    ws.onopen = () => { retries = 0; send({ t: 'hello', v: 1, name, skin, ...(account ? { account } : {}), ...(Number.isInteger(lv) ? { lv } : {}) }); };
     ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } handle(m); };
     ws.onclose = () => { ws = null; players.clear(); if (status !== 'offline') retry(); };
     ws.onerror = () => {};
@@ -122,7 +123,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
       send({ t: 's', ...s }); lastSent = s; lastSendAt = t;
     },
     /** Where every other player is now (render time = now - DELAY_MS). */
-    positions() { const t = now() - DELAY_MS; return [...players.values()].map((pl) => ({ id: pl.id, name: pl.name, skin: pl.skin, ...sample(pl.buf, t) })); },
+    positions() { const t = now() - DELAY_MS; return [...players.values()].map((pl) => ({ id: pl.id, name: pl.name, skin: pl.skin, account: pl.account, lv: pl.lv, ...sample(pl.buf, t) })); },
     say(text) { const s = String(text || '').trim().slice(0, 140); if (s && status === 'online') send({ t: 'chat', text: s }); },
     mute(nameOf) { muted.add(nameOf); saveMuted(); for (let i = chat.length - 1; i >= 0; i--) if (chat[i].name === nameOf && !chat[i].mine) chat.splice(i, 1); emit(); },
     unmute(nameOf) { muted.delete(nameOf); saveMuted(); emit(); },

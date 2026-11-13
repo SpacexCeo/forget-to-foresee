@@ -233,6 +233,28 @@ if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings appl
 }
 const seedParam = judge ? JUDGE_SEED : params.get('seed') || '';
 let play = null, entering = null, season = null, entered = false;
+let demoPlayer = null, demoTried = false, demoShown = false, playerCard = null; // the demo player and the other-player card (Social track)
+/** Tap or click another player (or the demo player) in town: their card. A tap is a short press that barely moved. */
+function mountPlayerPicking() {
+  const el = renderer.domElement; let down = null;
+  // capture phase on window: the game's own input handlers on the canvas stop the event before a bubbling listener
+  // the tap is timed by the events' own timestamps: a slow frame must not turn a tap into a long press
+  window.addEventListener('pointerdown', (e) => { if (e.target === el) down = { x: e.clientX, y: e.clientY, t: e.timeStamp }; }, true);
+  window.addEventListener('pointerup', (e) => {
+    if (!down || e.timeStamp - down.t > 450 || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down = null; return; }
+    down = null;
+    const r = el.getBoundingClientRect(), ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    let rec = null;
+    try { rec = (mp && mp.pick && mp.pick(ray)) || (demoPlayer && demoPlayer.pick(ray)); } catch (err) { console.warn('[player pick]', err); }
+    if (!rec) return;
+    import('./play/player-card.js').then((m) => {
+      const d1 = loadDay1(ctx.storage);
+      if (!playerCard) playerCard = m.createPlayerCard({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, base: import.meta.env.BASE_URL, openMarket: () => window.dispatchEvent(new CustomEvent('ftf:market-open', { detail: { tab: 'buy' } })) });
+      playerCard.open(rec);
+    }).catch((err) => console.warn('[player card]', err));
+  }, true);
+}
 let mp = null, mpTried = false, mpShown = false; // the shared town (play/multiplayer.js), loaded once Iris is in
 // The play layer (room, engine, world HUD, hub, map) is its own chunk: not needed for the first frame.
 const loadPlayLayer = () => Promise.all([import('./play/game.js'), import('./play/audio-settings.js'), import('./play/all-ages.js')]);
@@ -1163,11 +1185,18 @@ function frame() {
   world3d.update(lookdev.reducedMotion ? 0 : clock.elapsedTime);
   // the shared town (docs/multiplayer.md): others' avatars and the chat; never on the judge link, ?mp=0 turns it off
   const mpOn = !!(town && town.active && entered);
+  // the demo player (play/demo-player.js) and the player card (play/player-card.js): loaded lazily once Iris is in town
+  if (mpOn && !demoTried && !judge && params.get('demo') !== '0') {
+    demoTried = true;
+    import('./play/demo-player.js').then((m) => { demoPlayer = m.createDemoPlayer({ scene, t: (k, a) => ctx.i18n.t(k, a), origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => (town && town.groundAt ? town.groundAt(x, z, y) : null), phone: mobileDevice }); if (window.__ftf) window.__ftf.demoPlayer = demoPlayer; }).catch((e) => console.warn('[demo player]', e));
+    mountPlayerPicking();
+  }
+  if (demoPlayer) { if (mpOn) demoPlayer.update(dt, player.pos, lookdev.reducedMotion); else if (demoShown) demoPlayer.hide(); demoShown = mpOn; }
   if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
   if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
-    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {
@@ -1274,7 +1303,7 @@ function frame() {
 // Expose a small debug handle for manual checks in the browser console and for measurements.
 window.__ftf = {
   get features() { return featureFlags; },
-  scene, world, streamer, warmup, player, rig, renderer, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
+  scene, world, streamer, warmup, player, rig, renderer, camera, lookdev, setQuality: (t) => lookdev.setQuality(t), setReducedMotion: (on) => lookdev.setReducedMotion(on), perf, detectedTier, dayCycle, // dayCycle: the loop clock, its start and the session's weather timeline (QA)
   get vfx() { return play ? play.hooks.vfx : null; }, get audio() { return play ? play.hooks.audio : null; },
   // QA (art/anim/ingame.mjs): Iris's avatar and a cue for one of her one-shot clips (e.g. 'understand', 'greet').
   get iris() { return irisAvatar; }, get storyProps() { return { portal: townPortal, board: townBoard }; },   // QA: the Gate-Loom and the Shell monument
