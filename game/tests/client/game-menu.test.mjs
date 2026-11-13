@@ -75,7 +75,8 @@ test('inventory chests: sealed on top with Open, opened as a read-only history w
   assert.ok(sec.textContent.includes(t('chest.history', { n: 2 })));
   assert.equal(sec.querySelectorAll('.gm-dust').length, 1, 'the 10 XP is dust');
   assert.equal(sec.querySelectorAll('a.gm-hist-ver').length, 2);
-  assert.equal(sec.querySelectorAll('.gm-hist img').length, 1, 'the gear shows its icon');
+  assert.equal(sec.querySelectorAll('.gm-hist img').length, 2, 'the gear its icon, the XP its painted pile');
+  assert.ok(sec.querySelector('.gm-card img').src.endsWith('icons/chest_rare_128.webp'), 'the sealed box is painted');
   const move = sec.querySelectorAll('button').find((b) => b.textContent === t('chest.archiveAll'));
   move.click(); await tick(); await tick();
   const sec2 = m.root.querySelector('.gm-chests');

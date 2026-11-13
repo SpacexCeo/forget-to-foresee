@@ -17,7 +17,7 @@ import { renderProfileView } from './profile-view.js';
 import { createChestBag } from '../game/chests.js';
 import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
-import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImage } from './chest-history.js';
+import { groupChests, loadArchive, archiveOpened, outcomeOf, verifyHref, nftImage, rewardArt, chestArt } from './chest-history.js';
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
 
@@ -407,7 +407,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       for (const c of sealedNow.slice(0, 24)) {
         const card = el('div', 'gm-card'); card.dataset.rarity = c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'rare' : 'common';
         card.style.setProperty('--rc', RARITY_COLOR[c.tier === 'legendary' ? 'legendary' : c.tier === 'rare' ? 'uncommon' : 'common']);
-        card.append(el('b', null, t('chest.tier.' + c.tier)), el('small', null, t('chest.sealed')));
+        const box = el('img'); box.src = base + 'assets/items/' + chestArt(c.tier); box.alt = '';
+        card.append(box, el('b', null, t('chest.tier.' + c.tier)), el('small', null, t('chest.sealed')));
         const b = btn(t('chest.open'), () => openOne(c, list), 'gm-btn'); b.style.marginTop = '8px'; b.style.minHeight = '40px'; b.style.padding = '8px 14px';
         b.disabled = !chestApi.available || !owner;
         card.append(b);
@@ -439,7 +440,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       const li = el('li'); li.style.setProperty('--rc', RARITY_COLOR[(o && o.rarity) || 'common'] || RARITY_COLOR.common);
       const it = o && o.id ? list.find((x) => x.id === o.id) : null;
       const ico = el('span', 'gm-hist-ico');
-      if (it) { const img = el('img'); img.src = base + 'assets/items/' + (it.icon128 || it.icon); img.alt = ''; ico.append(img); }
+      const art = rewardArt(o, 128) || (it ? it.icon128 || it.icon : null);
+      if (art) { const img = el('img'); img.src = base + 'assets/items/' + art; img.alt = ''; ico.append(img); }
       else ico.textContent = !o ? '·' : o.kind === 'silk' ? '◈' : o.kind === 'xp' ? '✦' : o.kind === 'title' ? '❦' : o.kind === 'nft' ? '✧' : '?';
       const what = !o ? t('chest.opened')
         : o.kind === 'item' ? (it ? t(it.nameKey) : o.id || '?')

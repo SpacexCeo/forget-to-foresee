@@ -91,6 +91,23 @@ export function nftItemAt(position) {
 /** The tier from a token title "Chest loot #63 (uncommon)". */
 const tierFromTitle = (title) => { const m = /\((legendary|rare|uncommon|common|epic)\)\s*$/.exec(String(title || '')); return m ? m[1] : null; };
 
+/** Painted NFT art (assets/items/icons/nft_<item>_256.webp) exists for every item in the NFT part of the deck. */
+export const nftArt = (id) => (id && NFT_DECK.some((t) => t.items.includes(id)) ? `icons/nft_${id}_256.webp` : null);
+/** The painted chest box of a tier (assets/items/icons/chest_<tier>_128.webp). */
+export const chestArt = (tier) => `icons/chest_${tier === 'legendary' || tier === 'rare' ? tier : 'common'}_128.webp`;
+const REWARD_ART = Object.freeze({ silk: [5, 10, 25], xp: [10, 25] });
+/**
+ * The picture of a reward outcome {kind, id, amount}, relative to assets/items/, or null: the NFT art, the painted silk
+ * and XP piles of the deck's amounts (the nearest smaller pile for other amounts), else null (the caller uses the item icon).
+ */
+export function rewardArt(o, size = 128) {
+  if (!o) return null;
+  if (o.kind === 'nft') { const a = nftArt(o.id || o.item); return a ? a.replace('_256', '_' + size) : null; }
+  const steps = REWARD_ART[o.kind]; if (!steps) return null;
+  const n = Number(o.amount) || 0, pick = [...steps].reverse().find((x) => n >= x) || steps[0];
+  return `icons/reward_${o.kind}_${pick}_${size}.webp`;
+}
+
 /**
  * The picture of a loot NFT {item?, tier?, position?, title?} from the item manifest list [{id, icon, icon128, rarity,
  * nameKey}]: {src (relative to assets/items/) or null, item id or null, nameKey or null, rarity, exact}. `exact` is
@@ -101,6 +118,8 @@ export function nftImage(nft, manifest = []) {
   const id = (nft && nft.item) || (at && at.item) || null;
   const rarity = (nft && nft.tier) || (at && at.tier) || tierFromTitle(nft && nft.title) || 'common';
   const m = id ? (manifest || []).find((x) => x && x.id === id) : null;
+  const art = nftArt(id);
+  if (art) return { src: art, item: id, nameKey: (m && m.nameKey) || 'item.' + id, rarity, exact: true };
   if (m) return { src: m.icon128 || m.icon || null, item: id, nameKey: m.nameKey || 'item.' + id, rarity, exact: !!(m.icon128 || m.icon) };
   return { src: null, item: id, nameKey: id ? 'item.' + id : null, rarity, exact: false };
 }

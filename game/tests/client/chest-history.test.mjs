@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { groupChests, loadArchive, saveArchive, archiveOpened, ARCHIVE_KEY, isDust, outcomeOf, verifyHref, nftItemAt, nftImage, NFT_DECK } from '../../src/play/chest-history.js';
+import { groupChests, loadArchive, saveArchive, archiveOpened, ARCHIVE_KEY, isDust, outcomeOf, verifyHref, nftItemAt, nftImage, NFT_DECK, nftArt, chestArt, rewardArt } from '../../src/play/chest-history.js';
+import { existsSync } from 'node:fs';
 import { NFT_TIERS, ITEMS } from '../../../relayer/lib/chest-deck.js';
 import { memoryStorage } from '../../src/ui/storage.js';
 import { PLAY_MESSAGES } from '../../src/play/i18n.js';
@@ -60,7 +61,7 @@ test('an NFT picture: the item icon from its deck position, else the rarity fram
   const manifest = JSON.parse(readFileSync(new URL('../../public/assets/items/manifest.json', import.meta.url), 'utf8')).items;
   const p = nftImage({ title: 'Chest loot #63 (uncommon)', tier: 'uncommon', position: 302 }, manifest);
   assert.equal(p.item, 'part_spindle'); assert.equal(p.rarity, 'uncommon'); assert.equal(p.exact, true);
-  assert.equal(p.src, 'icons/part_spindle_128.png'); assert.equal(p.nameKey, 'item.part_spindle');
+  assert.equal(p.src, 'icons/nft_part_spindle_256.webp'); assert.equal(p.nameKey, 'item.part_spindle');
   const q = nftImage({ title: 'Chest loot #9 (rare)' }, manifest);
   assert.deepEqual(q, { src: null, item: null, nameKey: null, rarity: 'rare', exact: false });
   // every NFT item has an icon in the manifest
@@ -70,4 +71,17 @@ test('an NFT picture: the item icon from its deck position, else the rarity fram
 test('the new chest lines exist in all five locales', () => {
   const keys = ['chest.noneSealed', 'chest.history', 'chest.archiveAll', 'chest.archiveAll.tip', 'chest.more', 'chest.archive', 'chest.dust', 'chest.dust.tip', 'chest.from', 'chest.verifyShort'];
   for (const loc of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc} ${k}`);
+});
+
+test('painted art: every NFT item, chest tier and deck silk/XP pile has its webp on disk', () => {
+  const at = (rel) => existsSync(new URL('../../public/assets/items/' + rel, import.meta.url));
+  for (const t of NFT_DECK) for (const id of t.items) { assert.ok(at(nftArt(id)), id); assert.ok(at(rewardArt({ kind: 'nft', id }, 128)), id + ' 128'); }
+  assert.equal(nftArt('shard_pearl_drop'), null, 'common items are never NFTs');
+  for (const tier of ['common', 'rare', 'legendary', 'odd']) assert.ok(at(chestArt(tier)), tier);
+  assert.equal(chestArt('odd'), 'icons/chest_common_128.webp');
+  for (const [kind, n] of [['silk', 5], ['silk', 10], ['silk', 25], ['xp', 10], ['xp', 25]]) for (const size of [128, 256]) assert.ok(at(rewardArt({ kind, amount: n }, size)), kind + n + '@' + size);
+  assert.equal(rewardArt({ kind: 'silk', amount: 12 }), 'icons/reward_silk_10_128.webp', 'nearest smaller pile');
+  assert.equal(rewardArt({ kind: 'xp', amount: 3 }), 'icons/reward_xp_10_128.webp', 'the smallest pile below the first step');
+  assert.equal(rewardArt({ kind: 'item', id: 'part_gear' }), null, 'items keep their own icon');
+  assert.equal(rewardArt(null), null);
 });
