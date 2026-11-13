@@ -303,7 +303,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   let killN = 0;
   const onKill = (e) => { const d = (e && e.detail) || {}; if (!d.type) return;
     if (storyDrops && inventory && typeof d.killId === 'string') for (const x of rollDrops(d.killId, d.type)) inventory.add(x.id, x.n, 'drop'); // until the combat stream's drops land
-    questDo({ type: 'KILL', mob: d.type, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
+    questDo({ type: 'KILL', mob: d.type, at: Array.isArray(d.pos) ? [d.pos[0] - TOWN_ORIGIN[0], d.pos[1] - TOWN_ORIGIN[1], d.pos[2] - TOWN_ORIGIN[2]] : null, killId: typeof d.killId === 'string' && d.killId ? d.killId : d.type + ':' + now() + ':' + killN }); /* play/mobs.js: stable per creature and life */ killN++; };
   win.addEventListener('ftf:mob-killed', onKill);
   win.addEventListener('ftf:journal-toggle', toggleLog); // the rpg HUD's J button, via sprint/window-router.js
 

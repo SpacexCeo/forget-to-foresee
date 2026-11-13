@@ -11,11 +11,17 @@ export const QUESTS_KEY = 'ftf.quests.v1';
 const DAY = 24 * 3600 * 1000;
 const dayOf = (ms) => Math.floor((ms || 0) / DAY); // UTC days
 
-export const initialQuests = () => ({ v: 1, seq: 0, quests: {}, kills: [], guide: { talked: false, moved: false }, killDay: { day: -1, c: 0 }, bountyDay: { day: -1, n: 0 } });
+export const initialQuests = () => ({ v: 1, seq: 0, quests: {}, kills: [], killLog: [], guide: { talked: false, moved: false }, killDay: { day: -1, c: 0 }, bountyDay: { day: -1, n: 0 } });
 
+/**
+ * Every kill is logged (owner 13.11): {mob, id, t, at, used}. A "defeat N" quest accepted soon after counts the kills
+ * of its mob made in the last KILL_WINDOW_MS that no quest has counted yet (each kill counts once).
+ */
+export const KILL_WINDOW_MS = 30 * 60_000;
+export const KILL_LOG_MAX = 300;
 const q0 = () => ({ state: 'locked', progress: 0, attempt: 0, acceptedSeq: -1, doneAt: null });
 const get = (s, id) => s.quests[id] || q0();
-const copy = (s) => ({ ...s, quests: { ...s.quests }, kills: s.kills.slice(), guide: { ...s.guide }, killDay: { ...s.killDay }, bountyDay: { ...s.bountyDay } });
+const copy = (s) => ({ ...s, quests: { ...s.quests }, kills: s.kills.slice(), killLog: (s.killLog || []).map((e) => ({ ...e })), guide: { ...s.guide }, killDay: { ...s.killDay }, bountyDay: { ...s.bountyDay } });
 const rejected = (state, reason) => ({ state, events: [], rejected: reason });
 
 /** A quest's status now: locked | available | active | ready | done (cooldowns and prerequisites applied). */
@@ -88,6 +94,11 @@ export function applyQuest(state, a = {}, ctx = {}) {
       const q = { state: 'active', progress: 0, attempt: prev.attempt + 1, acceptedSeq: n.seq, doneAt: prev.doneAt };
       if (def.objective.type === 'guide' && def.objective.steps.every((k) => n.guide[k])) q.state = 'ready';
       if (heldProof(def, a.have)) { q.progress = def.objective.count; q.state = 'ready'; } // the drop is already in the bag: the objective is done
+      else if (def.objective.type === 'kill') { // kills made shortly before accepting count (each once)
+        const recent = n.killLog.filter((e) => e.mob === def.objective.mob && !e.used && now - e.t <= (ctx.killWindowMs ?? KILL_WINDOW_MS) && e.t <= now).slice(-def.objective.count);
+        for (const e of recent) e.used = true;
+        q.progress = recent.length; if (q.progress >= def.objective.count) q.state = 'ready';
+      }
       n.quests[a.questId] = q;
       const ev = [{ kind: 'quest_accepted', data: { questId: a.questId, attempt: q.attempt }, silkC: 0, trust: 'T2' }];
       if (q.state === 'ready') ev.push({ kind: 'quest_ready', data: { questId: a.questId }, silkC: 0, trust: 'T2' });
@@ -98,6 +109,8 @@ export function applyQuest(state, a = {}, ctx = {}) {
       if (s.kills.includes(a.killId)) return rejected(s, 'duplicate');
       const n = copy(s); n.seq++;
       n.kills = [...n.kills, a.killId].slice(-500);
+      const entry = { mob: a.mob, id: a.killId, t: now, at: Array.isArray(a.at) ? a.at.slice(0, 3).map((v) => Math.round(v * 10) / 10) : null, used: false };
+      n.killLog = [...n.killLog, entry].slice(-KILL_LOG_MAX);
       const ev = [];
       const silk = killSilk(n, a.mob, now);
       if (silk > 0) {
@@ -109,7 +122,7 @@ export function applyQuest(state, a = {}, ctx = {}) {
         const def = QUESTS[id], q = get(n, id);
         if (def.objective.type !== 'kill' || def.objective.mob !== a.mob || q.state !== 'active') continue;
         const p = q.progress + 1;
-        n.quests[id] = { ...q, progress: p, state: p >= def.objective.count ? 'ready' : 'active' };
+        n.quests[id] = { ...q, progress: p, state: p >= def.objective.count ? 'ready' : 'active' }; entry.used = true;
         ev.push({ kind: 'quest_progress', data: { questId: id, progress: p }, silkC: 0, trust: 'T2' });
         if (p >= def.objective.count) ev.push({ kind: 'quest_ready', data: { questId: id }, silkC: 0, trust: 'T2' });
       }

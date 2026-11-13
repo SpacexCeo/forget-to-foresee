@@ -89,3 +89,24 @@ test('progress already held: a shard picked up after accepting completes it on t
   s = s0; go({ type: 'TURN_IN', questId: 'q_boss', have: { crown_shard: 1 } }); assert.equal(questStatus(s, 'q_boss', t), 'done', 'a turn-in while active with the proof is accepted');
   assert.ok(applyQuest(s0, { type: 'TURN_IN', questId: 'q_boss', have: {} }, { now: t }).rejected, 'without the proof it is not');
 });
+
+test('every kill is logged with mob, id, time and place; a "defeat N" quest counts the recent ones once', async () => {
+  const { KILL_WINDOW_MS } = await import('../../src/game/quest-rules.js');
+  let s = initialQuests(); const t0 = Date.now() - 3_600_000; let t = t0;
+  const go = (a) => { const r = applyQuest(s, a, { now: t }); assert.ok(!r.rejected, JSON.stringify(a) + ': ' + (r.reason || r.rejected)); s = r.state; return r; };
+  for (const a of [{ type: 'BEGIN' }, { type: 'ACCEPT', questId: 'q_welcome' }, { type: 'GUIDE', step: 'moved' }, { type: 'GUIDE', step: 'talked' }, { type: 'TURN_IN', questId: 'q_welcome' }]) go(a);
+  // an old kill (outside the window), then six recent ones, before the guard's quest is taken
+  t = t0 + 1000; go({ type: 'KILL', mob: 'skitter', killId: 'old', at: [-12, 0, 52] });
+  t += KILL_WINDOW_MS + 60_000; for (let i = 0; i < 6; i++) { t += 20_000; go({ type: 'KILL', mob: 'skitter', killId: 'k' + i, at: [-12 + i, 0, 52] }); }
+  assert.equal(s.killLog.length, 7); assert.deepEqual(Object.keys(s.killLog[1]).sort(), ['at', 'id', 'mob', 't', 'used']);
+  assert.deepEqual(s.killLog[1].at, [-12, 0, 52]);
+  go({ type: 'ACCEPT', questId: 'q_spiders' });
+  assert.equal(s.quests.q_spiders.progress, 6, 'the six recent kills count, not the old one');
+  for (let i = 0; i < 4; i++) { t += 20_000; go({ type: 'KILL', mob: 'skitter', killId: 'n' + i }); }
+  assert.equal(questStatus(s, 'q_spiders', t), 'ready');
+  go({ type: 'TURN_IN', questId: 'q_spiders', have: { spider_silk_thread: 5 } });
+  go({ type: 'ACCEPT', questId: 'b_spiders' });
+  assert.equal(s.quests.b_spiders.progress, 0, 'kills already counted for the guard do not count again for the bounty');
+  const r = applyQuest(s, { type: 'ACCEPT', questId: 'q_part' }, { now: t, killWindowMs: 1 });
+  assert.ok(!r.rejected, 'the window is configurable per call');
+});

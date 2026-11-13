@@ -16,7 +16,7 @@ import { GIVER_NAMES } from '../../src/game/journal-data.js';
 const T0 = 20_000 * 86_400_000 + 3600_000;
 const act = (s, a) => { const r = applyQuest(s, a, { now: T0 }); return r.rejected ? s : r.state; };
 const say = createSay(null), gname = (k) => GIVER_NAMES[k];
-function spidersActive() { let s = act(initialQuests(), { type: 'KILL', mob: 'skitter', killId: 'k0' }); s = act(s, { type: 'ACCEPT', questId: 'q_spiders' }); return s; }
+function spidersActive() { let s = act(initialQuests(), { type: 'KILL', mob: 'veilbell', killId: 'k0' }); s = act(s, { type: 'ACCEPT', questId: 'q_spiders' }); return s; }
 
 test('model: five tabs, ready/active/available/locked order, badges, Done tab, search, countdown, tracking limit', () => {
   const s = spidersActive();
