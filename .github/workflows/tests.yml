@@ -1,0 +1,50 @@
+# Runs every JavaScript test suite on every push and pull request, on Node.js 22 (.nvmrc, the same as pages.yml) and
+# Node.js 24 (current). No secrets, no deploy: read-only checks.
+# Suites: game (rules parity with prototype-2d, play layer, HUD, README checks), server (agent HTTP API),
+# relayer (signing, caps, TEE checks; offline fixtures), presence (WebSocket rooms), the independent tx counter
+# (recorded indexer pages, no network). The Rust contracts run in contracts.yml; the Pages build in pages.yml.
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: game/package-lock.json
+      - name: game (npm ci, npm test)
+        working-directory: game
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+      - name: server
+        working-directory: server
+        run: npm test
+      - name: relayer
+        working-directory: relayer
+        run: npm test
+      - name: presence
+        working-directory: presence
+        run: npm test
+      - name: transaction counter (recorded pages, no network)
+        run: node --test tools/count/count.test.mjs
