@@ -156,7 +156,7 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
   scene.add(root);
 
   let state = 'dormant', panel = null, forced = null;
-  const facts = () => read() || { phase: 'off', balanceC: 0, feeC: 1_000_000, demo: false };
+  const facts = () => read() || { phase: 'off', balanceC: 0, feeC: EXPEDITION.PORTAL_FEE_C, demo: false };
   function setLook(s) {
     if (s === state) return; state = s;
     const L = LOOK[s] || LOOK.dormant;
