@@ -280,7 +280,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     if (verb === 'close') { closeTalk(); return; }
     if (verb === 'line') { openTalk(giver, arg === 'steps' ? QUESTS.q_part.steps : [arg]); return; }
     if (verb === 'guide') { storyDo({ type: 'GUIDE_STEP', id: arg }); questDo({ type: 'GUIDE', step: arg }); if (questStatus(qs, 'q_welcome', now()) === 'available') questDo({ type: 'ACCEPT', questId: 'q_welcome' }); openTalk(giver, ['story.guide.go']); return; }
-    if (verb === 'accept') { questDo({ type: 'ACCEPT', questId: arg }); openTalk(giver, [arg === 'q_part' ? 'quest.part.accept' : arg === 'q_boss' ? 'quest.boss.accept' : arg === 'b_spiders' ? 'quest.bounty.accept' : 'quest.spiders.accept']); return; }
+    if (verb === 'accept') { questDo({ type: 'ACCEPT', questId: arg, have: have() }); openTalk(giver, [arg === 'q_part' ? 'quest.part.accept' : arg === 'q_boss' ? 'quest.boss.accept' : arg === 'b_spiders' ? 'quest.bounty.accept' : 'quest.spiders.accept']); return; }
     if (verb === 'turnin') {
       const part = arg === 'q_part' ? firstPart() : null;
       const r = questDo({ type: 'TURN_IN', questId: arg, partId: part, partSource: 'inventory', have: have() });
@@ -347,7 +347,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   // first-seen is loaded lazily: a static import from here would tie the play and sprint chunks into a cycle (TDZ at boot)
   let showTip = null;
   if (useGuide) import('../sprint/first-seen.js').then((fs) => { registerGuideCoach(fs.registerTip, (n, total) => say('guide.title', { n, total })); showTip = fs.showTip; }).catch(() => { /* no coach marks */ });
-  let coached = null; const bornAt = now();
+  let coached = null, heldT = 0; const bornAt = now();
   function coach() { const id = useGuide && active ? coachFor(guide) : null; if (id && showTip && id !== coached && now() - bornAt > 4000) { coached = id; showTip(id); } } // after the HUD has mounted
   let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
   const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
@@ -432,6 +432,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
       if (tracker || journal) { autoTrack(); errandWatch(); if (tracker) tracker.refresh(); }
       if (waypoint) waypoint.update();
       if ((tracker || journal) && now() - markersT > 1000) { markersT = now(); publishMarkers(); coach(); }
+      if (now() - heldT > 1000) { heldT = now(); if (Object.values(qs.quests).some((q) => q.state === 'active')) questDo({ type: 'HELD', have: have() }); } // a proof drop in the bag completes its kill objective
       if (pos) { herPos = pos; if (now() - lineT > 1000) { lineT = now(); renderObjective(); } } // the distance to the next giver
       if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];

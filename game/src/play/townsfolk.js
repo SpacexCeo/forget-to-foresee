@@ -16,6 +16,7 @@ import { upgradeAssetMaterials } from '../render/materials.js';
 import { TOWN_ORIGIN } from '../scenes/town-layout.js';
 import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
+const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
@@ -183,11 +184,16 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
       plan.step(dt, ctx);
       if (p.state !== 'loaded') continue;
       const dist = plan.near;
-      // the ground under the feet: the route's own height, corrected by the town's colliders when the person has moved
+      // the ground under the feet (owner 13.11: walk only on the paths): cast from just above the feet, never from the
+      // sky (a sky cast lands on wall tops); a step that leaves the ground or jumps more than MAX_STEP is refused: the
+      // side step is dropped and the walker stays on the path line; with no ground at all the last good height holds
       let y = plan.y;
-      if (groundAt && (Math.abs(plan.x - p.groundAtXZ[0]) + Math.abs(plan.z - p.groundAtXZ[1]) > 0.12 || p.groundY === null)) {
-        const g = groundAt(plan.x + TOWN_ORIGIN[0], plan.z + TOWN_ORIGIN[2], plan.y + TOWN_ORIGIN[1] + 1.2);
-        p.groundY = g !== null && Math.abs(g - TOWN_ORIGIN[1] - plan.y) < 1.3 ? g - TOWN_ORIGIN[1] : null;
+      if (groundAt && !plan.sit && (Math.abs(plan.x - p.groundAtXZ[0]) + Math.abs(plan.z - p.groundAtXZ[1]) > 0.12 || p.groundY === null)) {
+        const ref = p.groundY === null ? plan.y : p.groundY, tol = p.groundY === null ? 1.3 : MAX_STEP;
+        const cast = (gx, gz) => { const g = groundAt(gx + TOWN_ORIGIN[0], gz + TOWN_ORIGIN[2], ref + TOWN_ORIGIN[1] + 1.2); return g === null ? null : g - TOWN_ORIGIN[1]; };
+        let gy = cast(plan.x, plan.z);
+        if ((gy === null || Math.abs(gy - ref) > tol) && plan.px !== undefined && (plan.px !== plan.x || plan.pz !== plan.z)) { plan.side = 0; plan.x = plan.px; plan.z = plan.pz; gy = cast(plan.x, plan.z); }
+        if (gy !== null && Math.abs(gy - ref) <= tol) p.groundY = gy;
         p.groundAtXZ[0] = plan.x; p.groundAtXZ[1] = plan.z;
       }
       if (p.groundY !== null && !plan.sit) y = p.groundY;
