@@ -26,7 +26,7 @@ export const UI_LEAVES = ['/src/play/narration.js', '/src/net/exchange-deploymen
  * imports; none imports play or net. They go with client-core so it never imports play (rule 2): with them in play,
  * the review page booted client-core first and world-map.js threw a TDZ error on layout.js.
  */
-export const CORE_PLAY = ['/src/play/beacon-plan.js', '/src/play/guests-stage.js', '/src/play/townsfolk.js', '/src/play/townsfolk-plan.js',
+export const CORE_PLAY = ['/src/play/beacon-plan.js', '/src/play/guests-stage.js', '/src/play/townsfolk.js', '/src/play/townsfolk-plan.js', '/src/play/town-paths.js',
   '/src/play/gait.js', '/src/play/anim-library.js', '/src/play/behaviour.js',
   '/src/net/silk-core.js']; // the one silk number's pure half: the HUD and the portal (scenes) read it; it imports no play or net
 
