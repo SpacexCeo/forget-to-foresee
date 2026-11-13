@@ -22,7 +22,7 @@ test('spot, glossary, notice-board and guide strings exist in all five locales',
   const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => /^(spot|gloss|board|guide|mirror)\./.test(k) && !SPRINT_KEYS.has(k)); // sprint en-*.js keys fall back to English
   for (let i = 1; i <= GUIDE_PAGES; i++) assert.ok(keys.includes('guide.' + i));
   for (const id of ['exchange', 'scribe', 'inn', 'board', 'mirror']) assert.ok(keys.includes('spot.' + id), id);
-  for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
+  for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) if (!SPRINT_KEYS.has(k)) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`); // sprint seam keys fall back to English
 });
 
 test('wiring: quest talk first, then a spot, then a townsperson, then the altar; the shrinekeeper guides; the lobby is in the pause menu', () => {

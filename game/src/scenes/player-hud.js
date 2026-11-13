@@ -5,6 +5,7 @@
 // archipelago keeps its own trial/silk HUD (the judge path). The bottom-left corner stays free for the chat panel.
 
 import { showPremise } from '../ui/premise.js';
+import { silkView, subscribeSilk, syncSilkNow, formatSilkC } from '../net/silk-core.js';
 
 const ICON = (d) => `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e6c47c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>')}")`;
 const I_SKIP = ICON('<path d="M5 5l9 7-9 7zM17 5v14"/>');
@@ -60,6 +61,10 @@ body.st-winded .ts-btn[data-skill="dash"], body.st-winded .ftf-cast-slot[data-id
 @keyframes ph-spin { to { background-position: -240px 0; } }
 .ph-coin b { font: 600 17px/1 Georgia, "Libre Caslon Text", serif; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
 .ph-coin.ph-bump b { color: var(--ph-gold); }
+.ph-coin .ph-silk { display: grid; justify-items: end; line-height: 1; }
+.ph-coin .ph-sub { font: 600 11px/1.1 system-ui, sans-serif; color: #f2c46b; white-space: nowrap; }
+.ph-coin .ph-sub.ph-muted { color: rgba(243, 234, 216, .6); }
+.ph-sync { min-height: 28px; padding: 2px 9px; border-radius: 14px; border: 1px solid var(--ph-line); background: var(--ph-bg); color: #f2c46b; font: 600 12px/1 system-ui, sans-serif; cursor: pointer; }
 .ph-chest { padding: 4px 12px 4px 8px; font-weight: 700; color: var(--ph-gold); }
 .ph-chest[hidden] { display: none; }
 .ph-delta { position: absolute; right: 22px; top: 44px; font: 700 15px/1 system-ui, sans-serif; pointer-events: none; animation: ph-float 1.2s ease-out forwards; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
@@ -168,14 +173,20 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
   const icon = el('i'); icon.setAttribute('aria-hidden', 'true');
   coin.style.setProperty('--ph-coin', `url("${base}assets/ui/icons/silk_coin_96.webp")`);
   coin.style.setProperty('--ph-coin-spin', `url("${base}assets/ui/icons/silk_coin_spin.webp")`);
-  const count = el('b');
-  coin.append(icon, count);
+  // the ONE silk number (net/silk-core.js; sprint 6.2): line 1 is the silk recorded on NEAR, the number the portal and
+  // the tracker show; line 2 says what is waiting to be recorded, or that the network is not answering
+  const count = el('b'); const sub = el('small', 'ph-sub');
+  const silkBox = el('span', 'ph-silk'); silkBox.append(count, sub);
+  coin.append(icon, silkBox);
+  const sync = el('button', 'ph-sync'); sync.type = 'button'; sync.hidden = true;
+  sync.addEventListener('pointerdown', (e) => e.stopPropagation());
+  sync.addEventListener('click', () => { syncSilkNow().catch(() => {}); });
   const chest = el('button', 'ph-chest'); chest.type = 'button'; chest.hidden = true;
   // "?" tray: the premise card again (shown once per browser on its own; ui/premise.js)
   const help = el('button', 'ph-help', '?'); help.type = 'button';
   help.addEventListener('pointerdown', (e) => e.stopPropagation());
   help.addEventListener('click', () => { showPremise(doc, t, { force: true, reducedMotion: reducedMotion() }); });
-  wallet.append(help, coin, chest);
+  wallet.append(help, coin, sync, chest);
   for (const b of [coin, chest]) { b.addEventListener('pointerdown', (e) => e.stopPropagation()); }
   coin.addEventListener('click', () => onProfile());
   chest.addEventListener('click', () => (onChests || onProfile)());
@@ -208,13 +219,26 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     const f = el('span', 'ph-delta ph-' + d.sign, d.text); wallet.append(f); setTimeout(() => f.remove(), 1300);
   }
   function setCount(cents) {
-    count.textContent = formatSilk(cents); coin.setAttribute('aria-label', t('town.silk') + ' ' + formatSilk(cents));
+    count.textContent = formatSilkC(cents);
   }
+  let lastLocal = null;
   function renderSilk() {
-    const target = ledger.silk;
+    const v = silkView();
+    // the line under the number and the breakdown (the same words as the wallet card)
+    sub.className = 'ph-sub' + (v.stale || !v.chainOk ? ' ph-muted' : '');
+    sub.textContent = v.stale ? t('silk.offline') : !v.chainOk ? t('silk.checking') : v.syncing ? t('silk.syncing') : v.pendingC > 0 ? t('silk.waiting', { n: formatSilkC(v.pendingC) }) : '';
+    sub.hidden = !sub.textContent;
+    sync.hidden = !(v.chainOk && v.pendingC > 0 && !v.syncing); sync.textContent = t('silk.sync');
+    const tip = [t('silk.tip.gate', { n: formatSilkC(v.gateC) }), t('silk.tip.chain', { n: formatSilkC(v.onChainC) }),
+      ...(v.pendingC > 0 ? [t('silk.tip.pending', { n: formatSilkC(v.pendingC) })] : []), ...(v.playC > 0 ? [t('silk.tip.play', { n: formatSilkC(v.playC) })] : []),
+      t('silk.tip.total', { n: formatSilkC(v.totalC) }), t('silk.tip.fee', { n: formatSilkC(v.feeC) }), ...(v.pendingC > 0 ? [t('silk.tip.sync')] : [])];
+    coin.title = tip.join('\n'); coin.setAttribute('aria-label', t('town.silk') + ': ' + tip.join('. '));
+    // every gain floats by the coin at once (it may still be waiting or play silk); line 1 moves with the chain number
+    if (lastLocal != null && ledger.silk !== lastLocal) floatDelta(walletDelta(lastLocal, ledger.silk));
+    lastLocal = ledger.silk;
+    const target = v.gateC;
     if (shown == null) { shown = target; setCount(target); return; }
     if (target === shown) return;
-    floatDelta(walletDelta(shown, target));
     if (reducedMotion()) { shown = target; setCount(target); return; }
     const from = shown, t0 = performance.now(), dur = 650;
     coin.classList.add('ph-bump');
@@ -228,6 +252,7 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
     shown = target; anim = requestAnimationFrame(step);
   }
   const unLedger = ledger.subscribe ? ledger.subscribe(() => { renderStatic(); renderSilk(); }) : null;
+  const unSilk = subscribeSilk(() => renderSilk());
   const unChests = chests && chests.subscribe ? chests.subscribe(renderStatic) : null;
   renderStatic(); renderSilk();
 
@@ -271,6 +296,6 @@ export function createPlayerHud({ doc = document, t, ledger, chests = null, base
       return n;
     },
     refresh() { renderStatic(); renderSilk(); },
-    dispose() { if (unLedger) unLedger(); if (unChests) unChests(); root.remove(); doc.body.classList.remove('ph-on'); },
+    dispose() { unSilk(); if (unLedger) unLedger(); if (unChests) unChests(); root.remove(); doc.body.classList.remove('ph-on'); },
   };
 }

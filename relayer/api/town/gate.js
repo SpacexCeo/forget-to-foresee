@@ -1,5 +1,6 @@
 // The portal on chain for guests (lib/town-gate.js; docs/town-gate.md):
-//   GET  /api/town/gate?account_id=<guest>      -> {registered, silk, gate_price, gate (gate_paid_of), contract}
+//   GET  /api/town/gate?account_id=<guest>      -> {registered, silk, gate_price, gate (gate_paid_of), contract, creditable, credited, day_room}
+//        (creditable: µsilk the verified log allows, null without a log; credited: µsilk credited so far; day_room: today's room)
 //   POST /api/town/gate {account_id, public_key, at, gate_id, signature}   signature over "ftf-gate|<account>|<gate_id>|<at>"
 //        -> credits the guest's verified income, then ftf-town pay_gate_for -> {paid, tx_hash, request_hash, gate}
 //   POST /api/town/gate {account_id, public_key, at, signature, credit_only: true}   signature over "ftf-town-credit|<account>|<at>"
@@ -7,7 +8,8 @@
 import { cors, createBucket, envConfig, clientIp, DEFAULTS } from '../../lib/core.js';
 import { createTxClient } from '../../lib/near-tx.js';
 import { createReplayGuard } from '../../lib/chest.js';
-import { townGateEnv, validateRequest, signatureValid, syncCredit, payGateFor, createCreditLedger, queuedClient } from '../../lib/town-gate.js';
+import { townGateEnv, validateRequest, signatureValid, syncCredit, payGateFor, createCreditLedger, queuedClient, creditableMicro } from '../../lib/town-gate.js';
+import { loadLog } from '../../lib/pass-eligibility.js';
 import { jsonlLog } from '../../market/index.js';
 import { join } from 'node:path';
 
@@ -30,7 +32,13 @@ export function townGateHandler(opts = {}) {
       if (!/^[a-z0-9._-]{2,64}$/.test(acc)) return json(res, 400, { error: 'bad_account' });
       try {
         const [row, price, gate] = await Promise.all([client.view(gcfg.town, 'balance_of', { account_id: acc }), client.view(gcfg.town, 'gate_price', {}), client.view(gcfg.town, 'gate_paid_of', { account_id: acc })]);
-        return json(res, 200, { registered: !!row, silk: row ? String(row.silk) : '0', gate_price: String(price), gate, contract: gcfg.town, configured: !!(gcfg.coord && gcfg.coordKey && gcfg.logDir) });
+        // for the game's one silk number (sprint 6.2): what the verified log allows, what was credited, today's room
+        const creditable = gcfg.logDir ? creditableMicro((opts.loadLog || loadLog)(gcfg.logDir, acc), BigInt(price)) : null;
+        const rec = (opts.ledger || createCreditLedger(join(gcfg.dataDir, 'town-credits'))).get(acc);
+        const today = rec.day === Math.floor((opts.now ? opts.now() : Date.now()) / 86_400_000) ? BigInt(rec.today) : 0n;
+        const room = BigInt(gcfg.guestDaySilk) * 1_000_000n - today;
+        return json(res, 200, { registered: !!row, silk: row ? String(row.silk) : '0', gate_price: String(price), gate, contract: gcfg.town, configured: !!(gcfg.coord && gcfg.coordKey && gcfg.logDir),
+          creditable: creditable == null ? null : String(creditable), credited: String(rec.credited || '0'), day_room: String(room > 0n ? room : 0n) });
       } catch (e) { return json(res, 502, { error: 'rpc' }); }
     }
     if (req.method !== 'POST') return json(res, 405, { error: 'method' });

@@ -14,7 +14,7 @@ const run = (s, a, now = 1000) => applyQuest(s, a, { now });
 const RICH = { spider_silk_thread: 99, chitin_plate: 99, crown_shard: 9 }; // monster resources (game/resources.js)
 
 test('data: the owner quests, the guide and the bounty; givers are existing townsfolk', () => {
-  assert.deepEqual(Object.keys(QUESTS), ['q_welcome', 'q_spiders', 'q_part', 'q_boss', 'b_spiders']);
+  assert.deepEqual(Object.keys(QUESTS), ['q_welcome', 'q_spiders', 'q_part', 'q_boss', 'b_spiders', 's_sign', 's_chest', 's_trade', 's_wheel', 's_voice', 'd_gather', 'd_deal', 't_enter', 't_agent']); // + the journal's side, daily and tournament quests
   assert.deepEqual(QUESTS.q_spiders.objective, { type: 'kill', mob: 'skitter', count: 10 });
   assert.equal(QUESTS.q_boss.objective.mob, 'crownrift'); assert.deepEqual(QUESTS.q_boss.requires, ['q_spiders'], 'gated on practice, not level');
   assert.deepEqual(GIVERS, ['elder', 'guard', 'lamplighter', 'shardkeeper']);
