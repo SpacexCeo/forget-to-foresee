@@ -7,8 +7,7 @@ eyes), so nothing is welded and nothing has to be cut apart.
 Kept from the file: the mesh, the UVs, the texture, and its weights for the spine, shoulders, arms, hands, fingers,
 neck and head (bone names mapped onto hers). Replaced by rules: the dress below the hips (the cloth grid of the v3
 gown re-seated on this dress, her 13 skirt chains on it, the grid's weights; not the thighs), the ribbon tails (the hand, the tips sway), the legs and
-shoes (her joints: the file's knee sits 8 cm too high). The hidden right leg is removed with its shoe: it would cut the
-narrow skirt in a stride.
+shoes (her joints: the file's knee sits 8 cm too high). Both legs and shoes are kept; the cloth collides with both.
     blender -b -P s20_owner_rig.py -- <model.fbx> <texture.jpg> <work dir> <name> <base triangles> [outline mm 2.2]
 Writes <name>.blend, <name>_raw.glb (toon material + inverted hull outline) and cloth_rig.npz (the cloth grid on this dress).
 """
@@ -69,10 +68,10 @@ red = (col[:, 0] > 0.25) & (col[:, 0] > 1.8 * col[:, 1])
 LACE = ~BODY & ~DRESS & ~red & (z < 1.12) & (z > 0.5) & (np.abs(x) < 0.2)          # the lacing and its bow ride the dress
 armw = sum(get(p + s_) for s_ in 'LR' for p in ('upperarm_', 'forearm_', 'hand_', 'index_', 'fingers_', 'thumb_')); arm = armw > 0.5
 print('pieces: %d; body %d vertices, dress %d, lacing %d, red %d, arm %d' % (len(ids), BODY.sum(), DRESS.sum(), LACE.sum(), red.sum(), arm.sum()))
-# the hidden right leg would cut the narrow skirt in a stride: it goes, shoe included (a shoe alone showed in front of the hem in a run)
+# both legs and both shoes are kept; the cloth collides with both legs (below). The index layer keeps the weights aligned should faces ever be dropped here
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); OI = bm.verts.layers.int.new('orig')
 for v in bm.verts: v[OI] = v.index
-gone = BODY & (x < -0.004) & (z < 0.90) & ~arm
+gone = np.zeros(n, bool)                               # both legs stay (13.11: with the right one removed she read as one-legged from the side)
 drop = [f for f in bm.faces if all(gone[v.index] for v in f.verts)]; keepv = np.ones(n, bool)
 bmesh.ops.delete(bm, geom=drop, context='FACES'); bm.to_mesh(me); bm.free(); me.update()
 alive = np.empty(len(me.vertices), np.int32); me.attributes['orig'].data.foreach_get('value', alive); me.attributes.remove(me.attributes['orig'])
@@ -80,7 +79,7 @@ W0 = {k_: v_[alive] for k_, v_ in W0.items()}; BODY, DRESS, LACE = BODY[alive], 
 n, co, fv = arrays(); col = colours(n); x, y, z = co.T; lum = col.mean(1); get = lambda k: W0.get(k, np.zeros(n))
 red = (col[:, 0] > 0.25) & (col[:, 0] > 1.8 * col[:, 1])
 armw = sum(get(p + s_) for s_ in 'LR' for p in ('upperarm_', 'forearm_', 'hand_', 'index_', 'fingers_', 'thumb_')); arm = armw > 0.5
-print('right leg removed: %d faces; vertices now %d' % (len(drop), n))
+print('right leg kept: %d faces removed; vertices now %d' % (len(drop), n))
 
 # ---------------- weights
 W = {k: np.zeros(n) for k in SK}
@@ -125,7 +124,7 @@ for q_, (bn, p0, p1, st) in enumerate(zip(d3['cap_bone'], d3['cap_p0'], d3['cap_
         if c_ < 0.006: cap_r[q_] = np.maximum(cap_r[q_] - (0.006 - c_), 0.02); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
         clear[str(bn) + '#%d' % q_] = (round(c_, 4), [round(float(v_), 3) for v_ in cap_r[q_]])
 print('cloth grid re-seated: %.0f%% of the points found on the dress; mean radius %.3f -> %.3f m; leg capsules (rest clearance m, radii): %s' % (found * 100, r3.mean(), rn.mean(), clear))
-cap_set = d3['cap_set'].copy(); cap_set[np.isin(d3['cap_bone'], ['thigh_R', 'shin_R'])] = 9      # the right leg is not there (removed above the shoe): it shapes nothing; its shoe still kicks the hem
+cap_set = d3['cap_set'].copy()                         # both legs shape the dress and are checked against it
 np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'cap_r': cap_r, 'cap_set': cap_set, 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
 gwn = [str(v_) for v_ in d3['gw_names']]; gw = d3['gw'].reshape(-1, len(gwn)).astype(float); gp = Gn.reshape(-1, 3)
 skirt = (DRESS | LACE) & (z < float(h3.max()))
