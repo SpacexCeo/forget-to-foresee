@@ -5,6 +5,7 @@
 // No DOM, no three, no engine. Pure.
 import { QUESTS } from './quests-data.js';
 import { EXPEDITION } from './expedition-config.js';
+import { JOURNAL_BY_ID } from './journal-data.js';
 
 export const QUESTS_KEY = 'ftf.quests.v1';
 const DAY = 24 * 3600 * 1000;
@@ -28,7 +29,8 @@ export function questStatus(s, id, now = 0) {
   const q = get(s, id);
   if (q.state === 'active' || q.state === 'ready') return q.state;
   if (q.state === 'done' && !def.repeat) return 'done';
-  if (q.state === 'done' && def.repeat && now - q.doneAt < def.repeat.minutes * 60e3) return 'done';
+  if (q.state === 'done' && def.repeat && def.repeat.mode === 'daily' && dayOf(now) === dayOf(q.doneAt)) return 'done'; // back at 00:00 UTC
+  if (q.state === 'done' && def.repeat && def.repeat.minutes && now - q.doneAt < def.repeat.minutes * 60e3) return 'done';
   return def.requires.every((r) => get(s, r).state === 'done' || (r === 'q_welcome' && welcomeWaived(s, now))) ? 'available' : 'locked';
 }
 
@@ -44,6 +46,7 @@ export function rewardSilk(s, id, now) {
   const def = QUESTS[id];
   if (!def.repeat) return def.reward.silk;
   const n = s.bountyDay.day === dayOf(now) ? s.bountyDay.n : 0;
+  if (!def.repeat.fullPerDay) return def.reward.silk; // a daily: full pay once a day
   return n < def.repeat.fullPerDay ? def.reward.silk : Math.round(def.reward.silk * def.repeat.afterFullFactor);
 }
 
@@ -113,10 +116,29 @@ export function applyQuest(state, a = {}, ctx = {}) {
       if (Object.entries(needs).some(([id, n]) => (Number(a.have && a.have[id]) || 0) < n)) return rejected(s, 'needs');
       const n = copy(s); n.seq++;
       const silk = rewardSilk(n, a.questId, now);
-      if (def.repeat) { if (n.bountyDay.day !== dayOf(now)) n.bountyDay = { day: dayOf(now), n: 0 }; n.bountyDay.n++; }
+      if (def.repeat && def.repeat.fullPerDay) { if (n.bountyDay.day !== dayOf(now)) n.bountyDay = { day: dayOf(now), n: 0 }; n.bountyDay.n++; }
       n.quests[a.questId] = { ...q, state: 'done', doneAt: now };
       const trust = def.objective.type === 'fetch' && a.partSource !== 'salvage' ? 'T1' : 'T2';
       return { state: n, events: [{ kind: def.repeat ? 'bounty_resolved' : 'quest_turned_in', data: { questId: a.questId, attempt: q.attempt, partId: a.partId || null, xp: def.reward.xp, chest: def.reward.chest || null, ...(def.needs ? { consumed: { ...def.needs } } : {}) }, silkC: silk * 100, trust }] };
+    }
+    case 'EVENT': { // a counted event (chest opened, trade, wheel spin, skill, tournament entry, agent entry, resource, sign read)
+      const n0 = Math.max(1, Math.floor(Number(a.n) || 1)), n = copy(s); n.seq++; const ev = [];
+      for (const id of Object.keys(QUESTS)) {
+        const def = QUESTS[id]; if (def.objective.type !== 'event' || def.objective.event !== a.event) continue;
+        let q = get(n, id); const st = questStatus(n, id, now);
+        if (st === 'available' && def.auto) { q = { state: 'active', progress: 0, attempt: q.attempt + 1, acceptedSeq: n.seq, doneAt: q.doneAt }; ev.push({ kind: 'quest_accepted', data: { questId: id, attempt: q.attempt }, silkC: 0, trust: 'T2' }); }
+        else if (st !== 'active') continue;
+        const p = Math.min(def.objective.count, q.progress + n0);
+        q = { ...q, progress: p, state: p >= def.objective.count ? 'ready' : 'active' };
+        ev.push({ kind: 'quest_progress', data: { questId: id, progress: p }, silkC: 0, trust: 'T2' });
+        if (q.state === 'ready' && def.auto) { // completes by itself: paid once for this attempt
+          const silk = rewardSilk(n, id, now);
+          q = { ...q, state: 'done', doneAt: now };
+          ev.push({ kind: def.repeat ? 'bounty_resolved' : 'quest_turned_in', data: { questId: id, attempt: q.attempt, partId: null, xp: def.reward.xp, chest: null, ...(def.reward.title ? { title: def.reward.title } : {}) }, silkC: silk * 100, trust: 'T2' });
+        }
+        n.quests[id] = q;
+      }
+      return ev.length ? { state: n, events: ev } : rejected(s, 'no_quest');
     }
     case 'ABANDON': {
       const q = get(s, a.questId);
@@ -134,4 +156,42 @@ export function replayQuests(actions) {
   let s = initialQuests(); const events = [];
   for (const { action, now } of actions) { const r = applyQuest(s, action, { now }); if (!r.rejected) { s = r.state; events.push(...r.events); } }
   return { state: s, events };
+}
+
+/** The next daily reset (00:00 UTC) after `now`, in ms. */
+export const nextDailyReset = (now) => (dayOf(now) + 1) * DAY;
+
+/**
+ * A quest's journal status: locked | available | active | ready | completed | cooldown. Level gates show as locked
+ * with `reason: 'level'` (shown greyed, never hidden). {status, reason?, level?}
+ */
+export function statusOf(id, state, now = 0, { level = 1, levelOf = (x) => (JOURNAL_BY_ID[x] && JOURNAL_BY_ID[x].level) || 1 } = {}) {
+  const def = QUESTS[id]; if (!def) return { status: 'locked', reason: 'unknown' };
+  const st = questStatus(state, id, now), q = get(state, id);
+  if (st === 'done') return { status: def.repeat ? 'cooldown' : 'completed' };
+  if (def.repeat && q.state === 'done' && st === 'available' && level < levelOf(id)) return { status: 'locked', reason: 'level', level: levelOf(id) };
+  if ((st === 'available' || st === 'locked') && level < levelOf(id)) return { status: 'locked', reason: 'level', level: levelOf(id) };
+  return { status: st };
+}
+
+/**
+ * The journal's objective rows for a quest: [{id, text, done, count, of}] from its journal objectives and the rule
+ * state. `have`: resource and part counts the player holds ({spider_silk_thread: 3, part: 1}).
+ */
+export function progressOf(id, state, { have = {} } = {}) {
+  const j = JOURNAL_BY_ID[id]; if (!j) return [];
+  const q = get(state, id), finished = q.state === 'done', ready = finished || q.state === 'ready';
+  const guide = state.guide || {};
+  return j.objectives.map((o) => {
+    let count = 0;
+    if (finished) count = o.count;
+    else if (o.type === 'talk') count = guide.talked ? 1 : 0;
+    else if (o.type === 'reach') count = guide.moved ? 1 : 0;
+    else if (o.type === 'kill') count = ready ? o.count : q.progress || 0;
+    else if (o.type === 'deliver') count = Number(have[o.resource]) || 0;
+    else if (o.type === 'gather' && o.item === 'part') count = Number(have.part) || 0;
+    else count = q.progress || 0;
+    count = Math.min(o.count, Math.max(0, count));
+    return { id: o.id, text: o.text, type: o.type, done: count >= o.count, count, of: o.count };
+  });
 }
