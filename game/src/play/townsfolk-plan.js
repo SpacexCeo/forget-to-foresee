@@ -10,6 +10,7 @@
 import { TOWN_DATA } from '../scenes/town-data.js';
 import { seededRng } from './behaviour.js';
 import { townPaths, addTownLines, createPathGraph, nearestNode, pathBetween } from './town-paths.js';
+import { detour } from '../scenes/town-footprints.js';
 
 const P = TOWN_DATA.npc.points, R = TOWN_DATA.npc.routes, A = TOWN_DATA.npc.areas;
 const shop = (id) => TOWN_DATA.shops.find((s) => s.id === id);
@@ -19,6 +20,33 @@ export const LOOK_RADIUS = 6;
 /** Iris this close and in the way stops a walker (it waits and steps a little aside instead of walking through her). */
 export const YIELD_RADIUS = 1.3;
 export const SIDE_STEP = 0.45;
+/** Every body is 0.35 m round: two centres never come closer than this (owner 13.11). */
+export const BODY_RADIUS = 0.35, MIN_GAP = 0.6;
+/** How far ahead a walker looks for bodies, and how wide it leans round a standing one. */
+export const LOOK_AHEAD = 2.2, PASS_STEP = 0.75;
+/**
+ * The bodies a walker must keep clear of (pure): other townsfolk (ctx.others, a Map of plans), Iris (ctx.iris) and
+ * other heroines (ctx.bodies(): [[x, y, z], ...]). Same level only. `oncoming`: walking towards me; `iYield`: of two
+ * walkers meeting head-on the later key waits.
+ */
+/** The lean offset moves towards its target at most LEAN_SPEED m/s (pure). */
+export const LEAN_SPEED = 0.6;
+export function easeOffset(ox, oz, tx, tz, dt) {
+  const dx = tx - ox, dz = tz - oz, d = Math.hypot(dx, dz), m = LEAN_SPEED * dt;
+  return d <= m ? [tx, tz] : [ox + dx / d * m, oz + dz / d * m];
+}
+export function bodiesAround(me, ctx) {
+  const out = [], level = (y) => Math.abs(y - me.y) < 1.2;
+  if (ctx.others) for (const o of ctx.others.values()) {
+    if (o === me || !level(o.y)) continue;
+    const walking = o.speed > 0.05 || (o.current && o.current.walk && !o.yielding), od = o._p || { dx: 0, dz: 0 }, md = me._p;
+    const oncoming = walking && od.dx * md.dx + od.dz * md.dz < -0.3;
+    out.push({ x: o.x, z: o.z, walking, oncoming, iYield: oncoming && me.key > o.key, key: o.key });
+  }
+  if (ctx.iris && level(ctx.iris[1])) out.push({ x: ctx.iris[0], z: ctx.iris[2], walking: false, iris: true });
+  if (ctx.bodies) for (const b of ctx.bodies() || []) if (level(b[1])) out.push({ x: b[0], z: b[2], walking: false, iris: true });
+  return out;
+}
 
 /**
  * The cast: asset name, authored clip speeds (metres per second of the model's own walk and run clips) and
@@ -94,13 +122,34 @@ export function playLoop(area, seed, n = 10) {
   return pts;
 }
 
+/**
+ * Route data fixed against the town's colliders (owner 13.11: no walking through stalls, posts or rails; found by
+ * scripts/record-town-ground.mjs): the square round keeps 2.6 m inside the stalls along its east and west sides, and
+ * the lamplighter's diagonals across the mid terrace turn on the terrace street (0, 2.5, 9) instead of brushing the
+ * upper stairs' rails.
+ */
+export const SQUARE_ROUND = Object.freeze(R.npc_route_square_round.points.map((p) => Object.freeze([Math.sign(p[0]) * 8.4, p[1], p[2]])));
+const TERRACE_TURN = Object.freeze([0, 2.5, 9.0]);
+/** The lower lane west of the big stairs (the sound half of the exported lower stroll): joins the children's play spot. */
+const LOWER_LANE = Object.freeze([[-30, 0, 20], [-8, 0, 20], [-4.6, 0, 20.2]]);
+export function lampRoute() {
+  const pts = R.npc_route_lamplighter.points, out = [];
+  const foot = (p) => p[0] === 0 && p[1] === 2.5 && p[2] === 3.4, wide = (p) => p && p[1] === 2.5 && Math.abs(p[0]) > 5;
+  for (let i = 0; i < pts.length; i++) {
+    if (foot(pts[i]) && wide(pts[i - 1])) out.push(TERRACE_TURN.slice());
+    out.push(pts[i]);
+    if (foot(pts[i]) && wide(pts[i + 1])) out.push(TERRACE_TURN.slice());
+  }
+  return out;
+}
+
 function programs() {
   const post = (pt, steps) => ({ home: pt.position, heading: pt.heading, steps });
   // The keepers of the square stand in front of their doors, clear of the crates and stalls along the house walls.
   const ex = doorStand('exchange', 0, 2.3), sc = doorStand('scribe', 0, 2.3), inn = doorStand('inn');
   // The musician steps away from the post beside the exported point, toward the square.
   const mu = { position: add(P.npc_musician.position, fwd(P.npc_musician.heading), 1.0), heading: P.npc_musician.heading };
-  const sq = R.npc_route_square_round.points; // [NW, NE, SE, SW] corners of the walk round the square
+  const sq = SQUARE_ROUND; // [NW, NE, SE, SW] corners of the walk round the square
   const zS = sq[2][2], y = sq[0][1];
   // The two shopkeepers of the square meet at the chat points, talk, and walk back to their doors.
   const exOut = [ex.position, [sq[1][0], y, ex.position[2]], [sq[2][0], y, zS], [P.npc_chat_b.position[0], y, zS], P.npc_chat_b.position];
@@ -108,11 +157,11 @@ function programs() {
   const sweep = [];
   for (const [a, b] of chop([...R.npc_route_sweeper.points, R.npc_route_sweeper.points[0]], 7)) sweep.push({ walk: [a, b] }, stay(7, 'sweep'));
   const lamp = [];
-  { const pts = R.npc_route_lamplighter.points;
+  { const pts = lampRoute();
     for (let i = 0; i < pts.length; i++) { lamp.push({ walk: [pts[i], pts[(i + 1) % pts.length]] }); if (i % 2 === 0) lamp.push(stay(6, 'think')); } }
   const cr = R.npc_route_courier.points, rest = P.npc_courier_rest;
-  const courier = [{ walk: cr }, stay(9, 'idle_shift'), { walk: cr.slice().reverse() }, { walk: [cr[0], cr[1], [-1.5, cr[1][1], cr[1][2]], rest.position] },
-    stay(14, 'idle_shift', { heading: rest.heading }), { walk: [rest.position, [-1.5, cr[1][1], cr[1][2]], cr[1], cr[0]] }];
+  const courier = [{ walk: cr }, stay(9, 'idle_shift'), { walk: cr.slice().reverse() }, { walk: [cr[0], cr[1], [-1.5, cr[1][1], cr[1][2]], [-1.5, cr[1][1], 20.2], [-4.6, cr[1][1], 20.2], [-4.6, cr[1][1], rest.position[2]], rest.position] }, // round the end of the stairs' side wall
+    stay(14, 'idle_shift', { heading: rest.heading }), { walk: [rest.position, [-4.6, cr[1][1], rest.position[2]], [-4.6, cr[1][1], 20.2], [-1.5, cr[1][1], 20.2], [-1.5, cr[1][1], cr[1][2]], cr[1], cr[0]] }];
   const loop = playLoop(A.npc_children_play, 'tag');
   const half = Math.floor(loop.length / 2);
   const run = (from, to) => ({ walk: [...loop, ...loop].slice(from, to + 1), gait: 'run' });
@@ -135,15 +184,25 @@ function programs() {
   };
 }
 
-export const PROGRAMS = Object.freeze(programs());
+/** Every walk keeps clear of the placed props (scenes/town-footprints.js: the wheel, the boards, the Gate-Loom, the Hatchkeeper). */
+const clearOfProps = (progs) => { for (const prog of Object.values(progs)) for (const st of prog.steps || []) if (st.walk) st.walk = detour(st.walk); return progs; };
+export const PROGRAMS = Object.freeze(clearOfProps(programs()));
 
-/** The fixed town lines: the jury route Iris walks and the exported NPC routes (loops closed). The lower stroll is left
- * out: it crosses the foot of the big stairs (a 0.67 m step; nobody walks it). */
+/** Trade slots at the Exchange door: along the front away from the trading board (scenes/town-footprints.js). */
+const EX_SLOT = (slot) => -0.3 - (slot % 5) * 0.8;
+/** The fixed town lines: the jury route Iris walks and the exported NPC routes (loops closed). The lower stroll and the
+ * west loop are left out (nobody walks them: one crosses the foot of the big stairs, the other brushes a crate). */
 export function townLines() {
-  const lines = [TOWN_DATA.route];
-  for (const [name, r] of Object.entries(R)) if (name !== 'npc_route_stroll_lower') lines.push(/round|loop|sweeper/.test(name) ? [...r.points, r.points[0]] : r.points);
+  const lines = [detour(TOWN_DATA.route), LOWER_LANE];
+  for (const [name, r] of Object.entries(R)) {
+    if (name === 'npc_route_stroll_lower' || name === 'npc_route_west_loop') continue; // unused: across the stair foot / a crate
+    const pts = name === 'npc_route_square_round' ? SQUARE_ROUND : name === 'npc_route_lamplighter' ? lampRoute() : r.points;
+    lines.push(detour(/round|loop|sweeper/.test(name) ? [...pts, pts[0]] : pts));
+  }
   return lines;
 }
+/** Posts behind a counter leave round it first (town-local waypoints): the baker's stall stands between her and the square. */
+const POST_EXITS = Object.freeze({ baker: Object.freeze([Object.freeze([13.1, 4.5, -6.4])]) });
 /** Where a post's walker joins the paths: a seated post (the elder's bench) stands up in front of the seat first. */
 const standOf = (prog) => { const st = (prog.steps || []).find((x) => x.stay && x.sit); return st && prog.heading != null ? add(prog.home, fwd(prog.heading), 0.9) : prog.home; };
 // The path graph (play/town-paths.js): every program walk is an edge chain; each post, stand and the Exchange door
@@ -152,8 +211,12 @@ const standOf = (prog) => { const st = (prog.steps || []).find((x) => x.stay && 
   const walks = []; for (const prog of Object.values(PROGRAMS)) for (const st of prog.steps || []) if (st.walk) walks.push(st.walk);
   const base = createPathGraph([...townLines(), ...walks]), links = [];
   const join = (pt) => { const n = base.nodes[nearestNode(base, pt)]; if (Math.hypot(n[0] - pt[0], n[2] - pt[2]) > 0.05) links.push([pt.slice(), n.slice()]); };
-  for (const prog of Object.values(PROGRAMS)) join(standOf(prog)); // a seated post stands up first: the seat is not a path
-  for (let slot = 0; slot < 4; slot++) join(doorStand('exchange', -1.2 + slot * 0.9, 1.6).position);
+  for (const [k, prog] of Object.entries(PROGRAMS)) { // a seated post stands up first (the seat is not a path); a counter post walks round it
+    const exits = POST_EXITS[k];
+    if (exits) { const chain = [prog.home, ...exits]; for (let i = 0; i + 1 < chain.length; i++) links.push([chain[i].slice(), chain[i + 1].slice()]); join(exits[exits.length - 1]); }
+    else join(standOf(prog));
+  }
+  for (let slot = 0; slot < 4; slot++) join(doorStand('exchange', EX_SLOT(slot), 1.6).position);
   addTownLines([...townLines(), ...walks, ...links]);
 }
 
@@ -163,7 +226,7 @@ const standOf = (prog) => { const st = (prog.steps || []).find((x) => x.stay && 
  * stand at the door under the trading board.
  */
 export function tradePath(from, slot = 0) {
-  const ex = doorStand('exchange', -1.2 + slot * 0.9, 1.6);
+  const ex = doorStand('exchange', EX_SLOT(slot), 1.6);
   return { path: pathBetween(townPaths(), from, ex.position), heading: ex.heading }; // along the path graph only
 }
 
@@ -208,7 +271,7 @@ export class PersonPlan {
   constructor(def, program = PROGRAMS[def.key], seed = 'town') {
     this.def = def; this.key = def.key; this.program = program;
     this.rng = seededRng(seed + ':' + def.key);
-    this.x = program.home[0]; this.y = program.home[1]; this.z = program.home[2]; this.px = this.x; this.pz = this.z;
+    this.x = program.home[0]; this.y = program.home[1]; this.z = program.home[2]; this.px = this.x; this.pz = this.z; this.ox = 0; this.oz = 0;
     this.yaw = program.heading || 0; this.speed = 0; this.gait = 'walk'; this.clip = 'idle'; this.sit = 0;
     this.walkSpeed = def.walk; this.runSpeed = def.run || 0; // the renderer sets them to the loaded clips' own speeds
     this.index = -1; this.t = 0; this.until = 0; this.s = 0; this.len = 0; this.side = 0;
@@ -241,18 +304,39 @@ export class PersonPlan {
       const p = polyAt(st.walk, this.s, this._p);
       // slow into sharp corners and the end of the path, ease out of the start
       let v = top * Math.min(1, 0.35 + p.corner * 1.3, 0.3 + (this.len - this.s) * 1.5, 0.3 + this.t * 1.6);
-      // Iris in the way: wait and lean aside rather than walk through her
-      let ahead = 0;
-      if (iris && dIris < YIELD_RADIUS * 1.8) ahead = (iris[0] - this.x) * p.dx + (iris[2] - this.z) * p.dz;
-      this.yielding = dIris < YIELD_RADIUS && ahead > 0;
-      if (this.yielding) v = 0;
-      let sideWant = 0;
-      if (iris && dIris < YIELD_RADIUS * 1.8 && !run) sideWant = ((iris[0] - this.x) * p.dz - (iris[2] - this.z) * p.dx) > 0 ? -SIDE_STEP : SIDE_STEP;
+      // Bodies (owner 13.11: nobody walks through anybody): every other townsperson, Iris and other heroines are 0.35 m
+      // round. Someone ahead on the line: lean aside; a walker coming the other way: both keep to their own side and
+      // the one that yields (the later key) waits until the other has passed; a standing body: lean wider round it.
+      // Hard rule: a step that would bring two centres closer than MIN_GAP (and closer than they were) is not taken.
+      const bodies = bodiesAround(this, ctx);
+      let sideWant = 0, wait = false;
+      for (const b of bodies) {
+        const rx = b.x - this.x, rz = b.z - this.z, d = Math.hypot(rx, rz);
+        const ahead = rx * p.dx + rz * p.dz, across = rx * p.dz - rz * p.dx; // along my way / to my side (centre to centre)
+        if (ahead <= 0.05 || d > LOOK_AHEAD) continue;
+        const lean = b.iris ? SIDE_STEP : b.walking ? SIDE_STEP : PASS_STEP, away = b.oncoming ? -lean : (across > 0 ? -lean : lean); // head-on: both keep to the same hand
+        if (Math.abs(sideWant) < lean) sideWant = away;
+        const clear = Math.abs(across) >= MIN_GAP + 0.05; // already wide enough to pass
+        if (b.iris) { if (d < YIELD_RADIUS) wait = true; } // Iris: always wait for her (and lean a little)
+        else if (b.oncoming) { if (b.iYield && !clear && d < LOOK_AHEAD * 0.8) wait = true; } // the later key waits; the other passes once wide enough
+        else if (b.walking) { if (d < MIN_GAP + 0.35 && !clear) wait = true; } // the same way: keep a step behind
+        else if (!clear && d < MIN_GAP + 0.5) wait = true; // a standing body: lean round it first
+      }
+      this.yielding = wait;
+      if (wait) v = 0;
+      if (run || this.len - this.s < 1.5) sideWant = 0; // no lean while running, nor on the last 1.5 m: a walk ends on its own line
+      const side0 = this.side;
       this.side += (sideWant - this.side) * Math.min(1, dt * 2.5);
       const ds = Math.min(v * dt, this.len - this.s);
-      this.s += ds; this.speed = dt > 0 ? ds / dt : 0; this.gait = run ? 'run' : 'walk';
+      const s1 = this.s + ds, q = polyAt(st.walk, s1, { x: 0, y: 0, z: 0, dx: 0, dz: 1, corner: 0 });
+      const closer = (x1, z1) => bodies.some((b) => { const d1 = Math.hypot(b.x - x1, b.z - z1); return d1 < MIN_GAP && d1 < Math.hypot(b.x - this.x, b.z - this.z) - 1e-6; });
+      let off = easeOffset(this.ox, this.oz, q.dz * this.side, -q.dx * this.side, dt);
+      if (closer(q.x + off[0], q.z + off[1])) off = [this.ox, this.oz]; // the lean may not swing into someone: keep it, try the step alone
+      if (closer(q.x + off[0], q.z + off[1])) { this.side = side0; this.yielding = true; this.speed = 0; this.clip = 'idle'; return; }
+      this.s = s1; this.speed = dt > 0 ? ds / dt : 0; this.gait = run ? 'run' : 'walk';
       polyAt(st.walk, this.s, p);
-      this.x = p.x + p.dz * this.side; this.y = p.y; this.z = p.z - p.dx * this.side;
+      this.ox = off[0]; this.oz = off[1]; // the lean, eased (a corner turns the side direction: no jump)
+      this.x = p.x + this.ox; this.y = p.y; this.z = p.z + this.oz;
       this.px = p.x; this.pz = p.z; // the path itself (the side step leans off it; townsfolk.js pulls back when that leaves the ground)
       this.yaw = turnTo(this.yaw, Math.atan2(p.dx, p.dz), dt * (run ? 7 : 4.5));
       this.clip = 'idle'; this.sit = 0;
@@ -260,6 +344,7 @@ export class PersonPlan {
       return;
     }
     this.side += (0 - this.side) * Math.min(1, dt * 3);
+    if (this.ox || this.oz) { const off = easeOffset(this.ox, this.oz, 0, 0, dt); this.ox = off[0]; this.oz = off[1]; this.x = this.px + this.ox; this.z = this.pz + this.oz; } // standing: back onto the line
     let face = st.face || null;
     const heading = st.heading ?? this.program.heading;
     if (st.meet) {

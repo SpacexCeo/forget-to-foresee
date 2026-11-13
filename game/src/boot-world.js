@@ -1219,6 +1219,10 @@ function frame() {
     townFrame.playerPos = player.pos; townFrame.reducedMotion = lookdev.reducedMotion; townFrame.lamps = lookdev.light.lamps; // lamps follow the hour and the weather (docs/atmosphere.md)
     townFrame.light.sun = lookdev.sun.color; townFrame.light.daylight = lookdev.weather.state.sun; townFrame.light.pixelsPerMetre = renderer.domElement.height / (2 * Math.tan(camera.fov * Math.PI / 360));
     town.update(clock.elapsedTime, dt, townFrame);
+    if (town.townsfolk) { // walkers never overlap her: a townsperson closer than 0.6 m eases her out (owner 13.11); other heroines count as bodies
+      if (!town.townsfolk.bodiesSet) { town.townsfolk.bodiesSet = true; town.townsfolk.setBodies(() => { const out = mp && mp.bodies ? mp.bodies() : []; if (hatchkeeper) { const h = hatchkeeper.root.position; out.push([h.x - TOWN_ORIGIN_W[0], h.y - TOWN_ORIGIN_W[1], h.z - TOWN_ORIGIN_W[2]]); } return out; }); }
+      const push = town.townsfolk.irisPush; if (push[0] || push[1]) { player.pos[0] += push[0]; player.pos[2] += push[1]; }
+    }
     if (fogCards) fogCards.update(clock.elapsedTime, camera, (lookdev.look.mistCards || 0) + lookdev.weather.state.rain * 0.3, scene.fog.color, { reducedMotion: lookdev.reducedMotion, enabled: lookdev.tier !== 'low' });
     if (townCasting) townCasting.update(dt, clock.elapsedTime, lookdev.reducedMotion, entered && !townFlow.busy && !(townShops && townShops.inside)); // no casts indoors
     if (townMobs) townMobs.update(dt, entered && !(townShops && townShops.inside));
