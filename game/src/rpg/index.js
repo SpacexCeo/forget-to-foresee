@@ -119,7 +119,7 @@ export function mount(ctx) {
   const typing = (e) => { const el = e.target; return !!(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || ''))) || !!doc.querySelector('dialog[open]'); };
   const active = () => (ctx.active ? ctx.active() : true);
   const onKey = (e) => {
-    if (e.__rpg || !active() || typing(e) || (e.target && e.target.closest && e.target.closest('.rpg-modal'))) return;   // keys inside the tree or the sheet are theirs
+    if (e.__rpg || !active() || typing(e) || (e.target && e.target.closest && e.target.closest('.rpg-modal:not([hidden])'))) return;   // keys inside the tree or the sheet are theirs
     const action = actionOf(e.code) || FIXED_ALIASES[e.code] || null; if (!action) return;
     const down = e.type === 'keydown';
     const slot = /^hotbar(\d)$/.exec(action);

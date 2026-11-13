@@ -39,7 +39,7 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   body.append(left, right);
   const foot = el('footer'), leftPts = el('span', 'chip'); foot.append(leftPts);
   box.append(head, body, foot); doc.body.append(box);
-  const close = () => { box.hidden = true; };
+  const close = () => { box.hidden = true; if (box.contains(doc.activeElement)) doc.activeElement.blur(); };
   x.addEventListener('click', close);
   box.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
@@ -60,7 +60,7 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   }
   return {
     get isOpen() { return !box.hidden; },
-    toggle() { box.hidden = !box.hidden; if (!box.hidden) { refresh(); statRows[STATS[0]].plus.focus(); } },
+    toggle() { if (!box.hidden) return close(); box.hidden = false; if (!box.hidden) { refresh(); statRows[STATS[0]].plus.focus(); } },
     refresh, close, el: box, dispose() { box.remove(); },
   };
 }

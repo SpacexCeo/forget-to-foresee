@@ -88,7 +88,7 @@ export function createSkillTree({ doc = globalThis.document, t, api }) {
     }
     grid.append(col);
   }
-  const close = () => { box.hidden = true; };
+  const close = () => { box.hidden = true; if (box.contains(doc.activeElement)) doc.activeElement.blur(); };
   x.addEventListener('click', close);
   box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } });
   reset.addEventListener('click', () => {
@@ -106,7 +106,7 @@ export function createSkillTree({ doc = globalThis.document, t, api }) {
   }
   return {
     get isOpen() { return !box.hidden; },
-    toggle() { box.hidden = !box.hidden; if (!box.hidden) { refresh(); const f = grid.querySelector('.rpg-node'); if (f) f.focus(); } },
+    toggle() { if (!box.hidden) return close(); box.hidden = false; if (!box.hidden) { refresh(); const f = grid.querySelector('.rpg-node'); if (f) f.focus(); } },
     refresh, close, el: box,
     dispose() { box.remove(); },
   };
