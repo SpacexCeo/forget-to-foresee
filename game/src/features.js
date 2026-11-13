@@ -20,6 +20,7 @@ export const DEFAULT_FLAGS = Object.freeze({
   marketplace: false, lootFx: false, playGames: false, silkView: false,
   newPlayerIntro: false, labPrologue: false, agentTournament: false, firstSeenTips: false,
   accountLogin: false, // sign in / create account with a NEAR, EVM or Solana wallet (docs/account-login.md)
+  glassShoal: false, // the level-5 boss island (docs/plans/boss/glass-shoal-boss.md); ?ff=glassShoal previews it
 });
 export const FEATURES_TIMEOUT_MS = 3000;
 export const SPRINT_FLAGS = Object.freeze(['questJournal', 'questTracker', 'autoWalk', 'starterGuide', 'rpgHud', 'skillTree', 'hotbar', 'marketplace', 'lootFx', 'playGames', 'silkView', 'newPlayerIntro', 'labPrologue', 'agentTournament', 'firstSeenTips']);

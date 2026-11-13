@@ -70,6 +70,7 @@ export default defineConfig({
         vfx: resolve(ROOT, 'vfx.html'),
         uiPreview: resolve(ROOT, 'ui-preview.html'),
         hudPreview: resolve(ROOT, 'hud-preview.html'),
+        shoal: resolve(ROOT, 'shoal.html'),   // the Glass Shoal look preview (flag glassShoal)
       },
       output: {
         // Chunk plan for the first seconds (docs/first-seconds.md): the entry stays tiny; `ui` (lobby, onboarding,
