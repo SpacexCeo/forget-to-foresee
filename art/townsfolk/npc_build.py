@@ -60,13 +60,14 @@ for nm, h, t, p in B:
     if p: b.parent = arm.edit_bones[p]
 bpy.ops.object.mode_set(mode='OBJECT'); el.parent = ao; md = el.modifiers.new('rig', 'ARMATURE'); md.object = ao
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); bpy.context.view_layer.objects.active = el
+# the untouched source (welding it loses its UV seams): the colour is baked from this copy
+hi = el.copy(); hi.data = el.data.copy(); hi.name = 'source'; bpy.context.scene.collection.objects.link(hi); hi.parent = None
+for md in list(hi.modifiers): hi.modifiers.remove(md)
 # the source is a triangle soup (every UV seam splits the vertices): weld it, or neither the decimation nor new UVs hold
 bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.triangulate(bm, faces=bm.faces[:]); v0 = len(bm.verts); bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=2e-5); print('welded: %d -> %d vertices' % (v0, len(bm.verts))); bm.to_mesh(me); bm.free(); me.update()
 now = len(me.polygons)
 # The source UVs are thousands of tiny islands: decimating across them scatters wrong texels over the face. So the
 # low mesh gets UVs of its own and its colour is baked from the untouched source mesh.
-hi = el.copy(); hi.data = el.data.copy(); hi.name = 'source'; bpy.context.scene.collection.objects.link(hi); hi.parent = None
-for md in list(hi.modifiers): hi.modifiers.remove(md)
 if TRIS < now:
     d = el.modifiers.new('dec', 'DECIMATE'); d.ratio = TRIS / now; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
 me = el.data; el.name = 'base'; me.name = 'base'
