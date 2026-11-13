@@ -8,7 +8,7 @@ export const SPEAKERS = Object.freeze({
   lamplighter: { color: '#f0b24a' }, elder: { color: '#f6c860' }, iris: { color: '#f3e6c8', italic: true },
 });
 
-/** @type {ReadonlyArray<{id: string, speaker: string, key: string, camera?: string, award?: boolean}>} */
+/** @type {ReadonlyArray<{id: string, speaker: string, key: string, camera?: string}>} */
 export const WAKEUP = Object.freeze([
   { id: 'W1', speaker: 'townsfolk', key: 'npe.w1' },
   { id: 'W2', speaker: 'child', key: 'npe.w2' },
@@ -26,7 +26,7 @@ export const WAKEUP = Object.freeze([
   { id: 'W14', speaker: 'guard', key: 'npe.w14' },
   { id: 'W15', speaker: 'lamplighter', key: 'npe.w15' },
   { id: 'W16', speaker: 'weaver', key: 'npe.w16' },
-  { id: 'W17', speaker: 'elder', key: 'npe.w17', award: true },
+  { id: 'W17', speaker: 'elder', key: 'npe.w17' }, // the welcome itself is the story's TWIST_DONE stipend (one grant, A1)
   { id: 'W18', speaker: 'elder', key: 'npe.w18' },
   { id: 'W19', speaker: 'iris', key: 'npe.w19' },
 ]);

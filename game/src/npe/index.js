@@ -8,7 +8,6 @@ import { WAKEUP, lineVars } from './dialogue-script.js';
 import { loadNpe, saveNpe, shouldRun, initial, reduce } from './flow.js';
 import { playDialogue, createSubtitles, installCss } from './dialogue-ui.js';
 import { openRoadmapCard } from './roadmap-card.js';
-import { EXPEDITION } from '../game/expedition-config.js';
 
 const fmt = (s, a) => String(s).replace(/\{(\w+)\}/g, (m, k) => (a && a[k] != null ? String(a[k]) : m));
 /** The game's t() with the English sprint strings as the fallback (the locale import lines are the integrator's). */
@@ -44,14 +43,12 @@ export function runIntro(ctx) {
   const reduced = ctx.reduced || (() => false);
   const emit = (n, p) => { try { if (ctx.bus && ctx.bus.emit) ctx.bus.emit(n, p); } catch { /* telemetry never breaks the intro */ } };
   const vars = lineVars(ctx.search != null ? ctx.search : (globalThis.location && globalThis.location.search) || '');
-  const award = ctx.award || ((c) => { if (ctx.ledger && ctx.ledger.grant) ctx.ledger.grant({ silk: c }); });
   const pro = ctx.prologue || globalThis.__ftfPrologue || null;
   const t0 = Date.now();
   let s = reduce(initial(loadNpe(ctx.storage)), { type: 'start' });
   let current = null; // what Skip / Esc ends now
   const step = (e) => {
     const prev = s.phase; s = reduce(s, e); saveNpe(ctx.storage, s.rec);
-    if (s.award) { award(EXPEDITION.stipendC); if (ctx.toast) ctx.toast(t('npe.stipend', vars)); s = { ...s, award: false }; }
     if (s.phase !== prev) emit('npe.step', { step: s.phase, ms: Date.now() - t0 });
   };
   const lock = (on) => { try { if (ctx.lockControls) ctx.lockControls(on); } catch { /* */ } };
@@ -82,7 +79,7 @@ export function runIntro(ctx) {
     const d = playDialogue({ doc, lines, reduced, name: (sp) => t('npe.speaker.' + sp), hint: t('npe.hint'), count: (n, of) => t('npe.count', { n, of }), skipLabel: t('npe.skip'),
       portrait: ctx.portrait || ((sp) => (sp === 'iris' ? ((ctx.base || '/') + 'assets/cards/iris.webp') : null)),
       onLine: (i, l) => { if (l.camera && ctx.cameraCue) { try { ctx.cameraCue(l.camera); } catch { /* */ } } emit('npe.camera', { target: l.camera || null, line: l.id }); },
-      onDone: (i, l) => step({ type: 'line_done', last: i === lines.length - 1, award: !!l.award }) });
+      onDone: (i) => step({ type: 'line_done', last: i === lines.length - 1 }) });
     current = d;
     const end = await d.done;
     if (end === 'skipped') { step({ type: 'skip_all' }); emit('npe.skipped', { step: 'dialogue', ms: Date.now() - t0 }); if (ctx.toast) ctx.toast(t('npe.skipped')); }
