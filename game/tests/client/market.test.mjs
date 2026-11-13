@@ -76,18 +76,18 @@ test('market ticker: hidden without a market; shows the count, the honest label 
   tk.show(false); assert.equal(tk.el.hidden, true);
 });
 
-test('market scene: by day a townsperson buyer visits the stalls (two at most, hired ones never), then goes home', () => {
+test('market scene: by day a townsperson buyer visits the stalls (two at most, hired ones and quest givers never), then goes home', () => {
   const sent = [];
   const people = new Map(['guard', 'baker', 'scribe', 'elder', 'courier'].map((k) => [k, { def: { key: k, height: 1.7 }, state: 'loaded', root: { visible: true }, plan: { x: 0, y: 0, z: 0 } }]));
   const tf = { byKey: people, sendToTrade: (k, on) => sent.push([k, on]) };
   let time = 0, day = true;
   const camera = { matrixWorldInverse: { elements: new Array(16).fill(0) }, projectionMatrix: { elements: new Array(16).fill(0) } };
   const sc = createMarketScene({ camera, doc: fakeDoc(), t: (k) => k, folk: () => tf, folkPos: () => [0, 0, 0], hired: () => ['scribe'], isDay: () => day, now: () => time });
-  sc.onTrade(row({ buyer: 'guard' })); sc.onTrade(row({ buyer: 'scribe' })); sc.onTrade(row({ buyer: 'elder' })); sc.onTrade(row({ buyer: 'courier' }));
-  assert.deepEqual(sc.visits(), ['guard', 'elder']);
+  sc.onTrade(row({ buyer: 'guard' })); sc.onTrade(row({ buyer: 'scribe' })); sc.onTrade(row({ buyer: 'elder' })); sc.onTrade(row({ buyer: 'courier' })); sc.onTrade(row({ buyer: 'baker' }));
+  assert.deepEqual(sc.visits(), ['courier', 'baker'], 'the guard and the elder are quest givers: they hold their posts');
   time = VISIT.seconds + 1; sc.update([100, 0, 100]);
   assert.deepEqual(sc.visits(), []);
-  assert.deepEqual(sent, [['guard', true], ['elder', true], ['guard', false], ['elder', false]]);
+  assert.deepEqual(sent, [['courier', true], ['baker', true], ['courier', false], ['baker', false]]);
   day = false; sc.onTrade(row({ buyer: 'courier' }));
   assert.deepEqual(sc.visits(), []);
   sc.dispose();

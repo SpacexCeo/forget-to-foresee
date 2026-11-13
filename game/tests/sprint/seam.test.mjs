@@ -109,3 +109,13 @@ test('window router: journal and market go to their real windows, help to settin
   assert.ok(globalThis.__ftfTelemetry.some((e) => e.name === 'window.missing' && e.payload.id === 'map'));
   off(); win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'journal' } })); assert.equal(seen.length, 3, 'detached');
 });
+
+test('window router: the Bag (I) opens the game menu on its Inventory tab (owner: "Bag does not open")', async () => {
+  const { installWindowRouter } = await import('../../src/sprint/window-router.js');
+  const win = new EventTarget(); const seen = [];
+  win.addEventListener('ftf:menu-open', (e) => seen.push(e.detail));
+  const off = installWindowRouter({ win });
+  win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'bag' } }));
+  assert.deepEqual(seen, [{ id: 'bag', tab: 'inventory' }]);
+  off();
+});

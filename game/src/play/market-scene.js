@@ -1,8 +1,9 @@
 // The town market made visible (docs/town-economy.md): when the ticker sees a new trade (net/market.js), the townsperson who
 // sold it shows a small chip over the head ("bread × 3 · 9 silk") while Iris is near, and by day the buyer walks to
 // the stalls by the Shard Exchange for a while (townsfolk.sendToTrade, the same trade loop a hired agent runs), then
-// home. Hired agents are left alone; at most two market visitors at a time. Pure DOM + projection; no game rule.
+// home. Hired agents and quest givers are left alone; at most two market visitors at a time. Pure DOM + projection; no game rule.
 import * as THREE from 'three';
+import { QUEST_GIVERS } from './townsfolk-plan.js';
 
 export const CHIP = Object.freeze({ show: 4.5, radius: 22, height: 2.5 });
 export const VISIT = Object.freeze({ seconds: 75, max: 2 });
@@ -32,7 +33,7 @@ export function createMarketScene({ camera, folk, folkPos, hired, isDay, t, doc 
       if (folk() && folk().byKey.has(r.seller)) chips.push({ key: r.seller, text: `${t('mk.i.' + r.item)} × ${r.qty} · ${r.qty * r.price}`, t0: time });
       if (chips.length > 4) chips.splice(0, chips.length - 4);
       const tf = folk();
-      if (tf && isDay() && tf.byKey.has(r.buyer) && !visits.has(r.buyer) && visits.size < VISIT.max && !hired().includes(r.buyer)) {
+      if (tf && isDay() && tf.byKey.has(r.buyer) && !QUEST_GIVERS.has(r.buyer) && !visits.has(r.buyer) && visits.size < VISIT.max && !hired().includes(r.buyer)) { // quest givers hold their posts
         visits.set(r.buyer, time + VISIT.seconds); tf.sendToTrade(r.buyer, true);
       }
     },

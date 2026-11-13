@@ -18,7 +18,7 @@ import { FADE, findLookBones, applyLookTo } from './gait.js';
 import { townsfolkClips, mergeClips, faceLayerClip } from './anim-library.js';
 const MAX_STEP = 0.45; // the largest ground step a walker takes (play/town-paths.js MAX_STEP; no import: chunk order)
 import { MIN_GAP } from './townsfolk-plan.js';
-import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
+import { TOWNSFOLK, PROGRAMS, PersonPlan, tradeProgram, homeProgram, mayTrade, pickClip, animStride, LOOK_RADIUS } from './townsfolk-plan.js';
 
 const SIT_PELVIS_ABOVE = 0.10; // hip joint above the seat top when seated (m, scaled with the body)
 const SIT_PELVIS_Z = -0.07;    // hip joint along the 0.46 m deep seat (bench local, the sitter faces +Z; back rail at -0.26)
@@ -265,7 +265,8 @@ export function createTownsfolk({ scene, library, groundAt = null }) {
     const p = byKey.get(key);
     if (!p) return;
     const plan = p.plan;
-    if (on && !plan.trading) { plan.original = plan.original || plan.program; plan.trading = true; plan.program = tradeProgram(plan, [...byKey.values()].filter((x) => x.plan.trading).length - 1); plan.index = -1; plan.next(); }
+    const tradingNow = [...byKey.values()].filter((x) => x.plan.trading).length;
+    if (on && !plan.trading && mayTrade(key, tradingNow)) { plan.original = plan.original || plan.program; plan.trading = true; plan.program = tradeProgram(plan, tradingNow); plan.index = -1; plan.next(); }
     else if (!on && plan.trading) { plan.trading = false; plan.program = homeProgram(plan, plan.original); plan.index = -1; plan.next(); }
   }
 

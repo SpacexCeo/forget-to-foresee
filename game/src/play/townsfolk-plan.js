@@ -230,6 +230,14 @@ export function tradePath(from, slot = 0) {
   return { path: pathBetween(townPaths(), from, ex.position), heading: ex.heading }; // along the path graph only
 }
 
+/** At most this many townsfolk stand trading at the Exchange door at once (owner 13.11: "they all stand there and never leave"). */
+export const TRADE_MAX = 3;
+/**
+ * May `key` walk to the Exchange to trade now (pure)? Never a quest giver: it holds its post, so its marker and its talk stay
+ * where the player looks for them (a hired giver keeps its badge). Others only while fewer than TRADE_MAX are there.
+ */
+export const mayTrade = (key, tradingNow) => !QUEST_GIVERS.has(key) && tradingNow < TRADE_MAX;
+
 /** The temporary program of a hired agent: walk to the Exchange, trade at the door; `back` walks home and resumes. */
 export function tradeProgram(plan, slot = 0) {
   const { path, heading } = tradePath([plan.x, plan.y, plan.z], slot);

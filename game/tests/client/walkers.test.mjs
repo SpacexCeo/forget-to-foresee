@@ -44,3 +44,11 @@ test('the whole town for four minutes: nobody overlaps anybody', () => {
   }
   assert.deepEqual(bad, []);
 });
+
+test('quest givers never walk off to trade; at most TRADE_MAX townsfolk stand at the Exchange door (owner 13.11)', async () => {
+  const { mayTrade, TRADE_MAX, QUEST_GIVERS } = await import('../../src/play/townsfolk-plan.js');
+  for (const g of QUEST_GIVERS) assert.equal(mayTrade(g, 0), false, g + ' holds its post');
+  assert.equal(mayTrade('baker', 0), true);
+  assert.equal(mayTrade('baker', TRADE_MAX - 1), true);
+  assert.equal(mayTrade('baker', TRADE_MAX), false);
+});
