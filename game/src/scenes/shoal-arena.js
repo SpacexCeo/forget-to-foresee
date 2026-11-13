@@ -12,13 +12,13 @@ const CSS = `
 .sa-bar{height:10px;margin-top:4px;border-radius:5px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25);overflow:hidden;position:relative}.sa-bar b{display:block;height:100%;background:linear-gradient(90deg,#7fd8ff,#b48bff);transition:width .15s}
 .sa-bar i{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.7)}
 .sa-boss.sa-open b{background:linear-gradient(90deg,#ffd27a,#ff8a3a)}
-.sa-me{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);width:min(220px,40vw);z-index:14;color:#f3ead2;font:12px/1.2 system-ui,sans-serif;pointer-events:none}
+.sa-me{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 14px);width:min(220px,40vw);z-index:14;color:#f3ead2;font:12px/1.2 system-ui,sans-serif;pointer-events:none}
 .sa-me .sa-bar{height:8px;margin:2px 0 6px}.sa-hp b{background:#e05a5a!important}.sa-st b{background:#e8c860!important}.sa-mp b{background:#5a9ce0!important}
 .sa-skills{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;gap:8px;z-index:14}
 .sa-skill{position:relative;width:64px;height:64px;border-radius:14px;border:1px solid rgba(246,200,96,.7);background:rgba(18,14,8,.8);color:#f6e2a8;font:600 11px/1.1 system-ui,sans-serif;cursor:pointer;overflow:hidden;touch-action:none;padding:4px}
 .sa-skill kbd{position:absolute;left:4px;top:3px;font:600 10px system-ui;opacity:.75}.sa-skill s{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);text-decoration:none}
 .sa-msg{position:fixed;left:50%;top:32%;transform:translateX(-50%);z-index:15;color:#ffe6a6;font:700 22px system-ui,sans-serif;text-shadow:0 2px 6px #000;pointer-events:none;text-align:center;max-width:calc(100vw - 32px)}
-@media (max-width:599px){.sa-skill{width:58px;height:58px}}
+@media (max-width:899px){.sa-boss{left:auto;right:12px;transform:none;width:calc(58vw - 12px)}.sa-me{width:36vw}.sa-skill{width:58px;height:58px}}
 `;
 
 /**
@@ -279,6 +279,8 @@ export function createShoalArena(o) {
     pose(p) { p.pos.set(center.x + me3.x, center.y + me3.lift, center.z + me3.z); p.heading = me3.heading; p.speed = me3.speed; },
     /** Dev and tests: deal damage straight to the boss. */
     debugHit(n) { return damageBoss(n); },
+    /** Dev and tests: the boss falls and the chest opens (the reward runs as in a real win). */
+    debugWin() { B = { ...B, exposed: 0 }; damageBoss(1e9 / R.BOSS.armor); chestOpen = true; },
     dispose() { leave(); root.removeFromParent(); hud.remove(); },
   };
 }

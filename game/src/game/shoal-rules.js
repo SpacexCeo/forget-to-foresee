@@ -159,7 +159,7 @@ export const BOSS = f({
     f({ id: 3, above: 0.33, rotation: f(['lunge', 'slam', 'slam', 'sweep', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
   ]),
   attacks: f({
-    slam: f({ damage: 30, radius: 6.5, active: 0.25 }),       // a ring on the ground under her
+    slam: f({ damage: 24, radius: 6.5, active: 0.25 }),       // a ring on the ground under her
     sweep: f({ damage: 22, radius: 17, inner: 7, active: 0.35 }), // a wide ring around the body: step in or roll
     lunge: f({ damage: 38, width: 5, length: 34, active: 0.3 }), // a straight charge line at her
     adds: f({ damage: 0, active: 0.1 }),
@@ -178,7 +178,7 @@ export const checkpointHp = (phase, B = BOSS) => Math.round(B.phases[phase].abov
 
 /** A fresh boss (or one restored at a phase checkpoint). */
 export function freshBoss(phase = 0, B = BOSS) {
-  return { hp: checkpointHp(phase, B), phase, state: 'rest', t: 1.5, attack: null, target: null, idx: 0, exposed: 0, dead: false, adds: [], nextAddId: 1 };
+  return { hp: checkpointHp(phase, B), phase, state: 'rest', t: 3, attack: null, target: null, idx: 0, exposed: 0, dead: false, adds: [], nextAddId: 1 };
 }
 
 /** Pure: damage on the boss. The weak point (after a dodge) takes more; the closed crest less. */
