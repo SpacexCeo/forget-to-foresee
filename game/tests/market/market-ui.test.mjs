@@ -1,4 +1,4 @@
-// The Market window (src/market/market-ui.js; docs/market.md) against a fake client: the Demo chip, the buy confirm,
+// The Market window (src/market/market-ui.js; docs/market.md) against a fake client: NEAR testnet only, the buy confirm,
 // errors in plain words, cancel. The rules copy is checked in relayer/tests/p2p.test.mjs.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,19 +9,19 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 const NOW = Date.UTC(2026, 10, 13, 12);
 const listing = { id: 'lst_0000abcd', seller: 'maren-1.guests.ftf-coordinator.testnet', sellerKind: 'player', item: 'spider_silk_thread', qtyTotal: 10, qtyLeft: 10, unitPriceC: 320, createdAt: NOW - 12 * 60_000, status: 'active', fills: [] };
 
-function fakeClient() {
+function fakeClient(live = true) {
   const calls = [];
   return { calls, client: {
     account: () => 'tobias-2.guests.ftf-coordinator.testnet',
-    book: async () => ({ ok: true, listings: [listing], referenceUnitC: 300, band: { minC: 150, maxC: 600 }, settlement: 'demo' }),
-    mine: async () => ({ ok: true, listings: [{ ...listing, seller: 'tobias-2.guests.ftf-coordinator.testnet', qtyLeft: 6, status: 'partial' }], fills: [], demo: { silkC: 4000, items: { spider_silk_thread: 2 } }, settlement: 'demo' }),
+    book: async () => ({ ok: true, listings: [listing], referenceUnitC: 300, band: { minC: 150, maxC: 600 }, settlement: 'chain', live }),
+    mine: async () => ({ ok: true, listings: [{ ...listing, seller: 'tobias-2.guests.ftf-coordinator.testnet', qtyLeft: 6, status: 'partial' }], fills: [], settlement: 'chain', live }),
     buy: async (id, qty) => { calls.push(['buy', id, qty]); return { ok: true, fill: { qty, totalC: qty * 320, feeC: 7, txItems: null, txSilk: null }, listing }; },
     list: async (item, qty, unitC) => { calls.push(['list', item, qty, unitC]); return unitC > 600 ? { ok: false, error: 'outside_band', minC: 150, maxC: 600 } : { ok: true, listing }; },
     cancel: async (id) => { calls.push(['cancel', id]); return { ok: true, listing }; },
   } };
 }
 
-test('market window: the Demo chip, a confirmed buy, a plain error, cancel', async () => {
+test('market window: NEAR testnet only, a confirmed buy, a plain error, cancel', async () => {
   const { doc } = installDom();
   const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
   const { createMarketUi } = await import('../../src/market/market-ui.js');
@@ -29,7 +29,7 @@ test('market window: the Demo chip, a confirmed buy, a plain error, cancel', asy
   const ui = createMarketUi({ t, client, doc, now: () => NOW });
   ui.open('buy'); await tick(); await tick();
   const text = () => doc.body.textContent;
-  assert.match(text(), /Demo settlement: recorded by the game server, not yet on the blockchain/);
+  assert.match(text(), /NEAR testnet: every sale is recorded on the blockchain/); assert.doesNotMatch(text(), /[Dd]emo/);
   assert.match(text(), /Reference price 3 silk each/);
   assert.match(text(), /maren-1Player/); assert.match(text(), /12 min/); assert.match(text(), /32 silk/);
   [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Buy' && /mk2-act/.test(b.className)).click(); await tick();
@@ -40,7 +40,7 @@ test('market window: the Demo chip, a confirmed buy, a plain error, cancel', asy
   assert.match(text(), /Bought 1 spider silk thread\./);
   // sell: a price outside the band explains itself
   [...doc.body.querySelectorAll('.mk2-tabs button')][1].click(); await tick(); await tick();
-  assert.match(text(), /Allowed 1\.5 to 6 silk each/); assert.match(text(), /you have 2/);
+  assert.match(text(), /Allowed 1\.5 to 6 silk each/);
   const [qty, price] = doc.body.querySelectorAll('input'); qty.value = '2'; price.value = '7';
   [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'List for sale').click(); await tick(); await tick();
   assert.deepEqual(calls[1], ['list', 'spider_silk_thread', 2, 700]);
@@ -92,5 +92,18 @@ test('games tab: the legal frame first, once; the allowance; a roll moves play s
   assert.match(text(), /Checked: the seed gives \d+\./);
   ui.close(); ui.open('games'); await tick();
   assert.doesNotMatch(text(), /I understand/); // shown once
+  ui.close();
+});
+
+test('market window: not live yet says so plainly and disables buying and listing (no demo mode)', async () => {
+  const { doc } = installDom();
+  const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const { createMarketUi } = await import('../../src/market/market-ui.js');
+  const ui = createMarketUi({ t, client: fakeClient(false).client, doc, now: () => NOW });
+  ui.open('buy'); await tick(); await tick();
+  assert.match(doc.body.textContent, /Not live yet: the market opens once its trade contracts are deployed on NEAR testnet/);
+  assert.equal([...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Buy' && /mk2-act/.test(b.className)).disabled, true);
+  [...doc.body.querySelectorAll('.mk2-tabs button')][1].click(); await tick(); await tick();
+  assert.equal([...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'List for sale').disabled, true);
   ui.close();
 });
