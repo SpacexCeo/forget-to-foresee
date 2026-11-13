@@ -65,6 +65,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
+import { expectOnboarding } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -714,6 +715,7 @@ const day1On = () => {
   if (q === '1') return true;
   return !judge && !loadDay1(ctx.storage).claimed;
 };
+if (day1On()) expectOnboarding('name');   // the Day-1 name comes first: the intro and the card wait for it (ui/onboarding-queue.js)
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
 // The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
 // declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.
@@ -750,7 +752,7 @@ function updateAltarTimer() {
   if (!visible) return;
   // declutter: with the player HUD on, an altar icon (CSS) and the short state; the full line is the tooltip
   const full = ctx.i18n.t('day1.altar.timer') + ' · ' + ctx.i18n.t('day1.altar.open');
-  const text = playerHud ? ctx.i18n.t('day1.altar.open') : full;
+  const text = playerHud ? ctx.i18n.t('day1.altar.short') : full;   // says what is open (design review 13.11: a bare "Open now" told nothing)
   if (altarTimer.textContent !== text) { altarTimer.textContent = text; altarTimer.title = full; }
   // kept below the top-right chips (Controls, Profile) and inside the screen: on a phone the altar projects right under them
   const minTop = innerWidth < 700 || innerHeight < 500 ? (document.body.classList.contains('ph-on') ? 236 : 150) : 118, half = Math.min(altarTimer.offsetWidth / 2 || 110, innerWidth / 2 - 8);
@@ -813,12 +815,12 @@ async function startDay1() {
   // never over the loading screen: when the intro flight is skipped this runs before the cover lifts (phone pass, 12.11)
   for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
-  const m = await import('./play/day1.js');
-  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null });
+  const [m, q] = await Promise.all([import('./play/day1.js'), import('./ui/onboarding-queue.js')]);   // one onboarding queue: name -> intro -> guide
+  await q.runOnboarding('name', () => m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null }));
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
-  if (!input.touchControls) await m.runHints({ t, steps: [
+  if (!input.touchControls) await q.runOnboarding('guide', () => m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
     { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
@@ -828,7 +830,7 @@ async function startDay1() {
       rig.dist = TOWN_CAMERA.dist;
     } }] },
     { key: 'day1.hint.tournament' },
-  ] });
+  ] }));
 }
 
 /** The player enters the world (the lobby's first contact, or at once on the direct path): the town, else the season. */

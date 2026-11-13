@@ -40,7 +40,7 @@ export function createPrologue(ctx = {}) {
 
   async function playLabPrologue({ reduced = false } = {}) {
     if (live) return 'done';
-    const host = el('div', 'position:fixed;inset:0;z-index:9980;background:#000;overflow:hidden'); host.className = 'ftf-prologue';
+    const host = el('div', 'position:fixed;inset:0;z-index:calc(var(--z-dialogue, 50) + 4);background:#000;overflow:hidden'); host.className = 'ftf-prologue';
     const canvas = el('canvas', 'position:absolute;inset:0;width:100%;height:100%;display:block'); host.append(canvas);
     const white = el('div', 'position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none');
     const black = el('div', 'position:absolute;inset:0;background:#000;opacity:1;pointer-events:none');
@@ -180,7 +180,7 @@ export function createPrologue(ctx = {}) {
     let cam = null, ring = null;
     try { cam = reduced ? null : wakeCamera(); } catch { cam = null; }
     if (cam) { try { ring = (await import('./townsfolk-ring.js')).createTownsfolkRing({ scene: ctx.scene, center: cam.center, heading: cam.heading, mobile: phone }); } catch { ring = null; } }
-    const dur = reduced ? 2.5 : cam ? 7 : 4.5, host = el('div', 'position:fixed;inset:0;z-index:9980;pointer-events:none;overflow:hidden'); host.className = 'ftf-wakeup';
+    const dur = reduced ? 2.5 : cam ? 7 : 4.5, host = el('div', 'position:fixed;inset:0;z-index:calc(var(--z-dialogue, 50) + 4);pointer-events:none;overflow:hidden'); host.className = 'ftf-wakeup';
     const blur = el('div', 'position:absolute;inset:0;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(255,255,255,.18)');
     const top = el('div', 'position:absolute;left:-5%;right:-5%;top:0;height:52%;background:#000;border-radius:0 0 50% 50%/0 0 26% 26%'), bot = el('div', 'position:absolute;left:-5%;right:-5%;bottom:0;height:52%;background:#000;border-radius:50% 50% 0 0/26% 26% 0 0');
     host.append(blur, top, bot); document.body.append(host);

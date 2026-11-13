@@ -78,7 +78,7 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     road.addEventListener('click', () => onOpen(null));
     root.append(road);
     const rest = el('div', 'ft-rest');
-    if (!d.tracked.length) root.append(el('div', 'ft-none', say('tracker.none')));
+    if (!d.tracked.length && !d.guide) root.append(el('div', 'ft-none', say('tracker.none')));   // one next action: the guide step stands in for "No quest tracked"
     d.tracked.forEach((v, n) => (n === 0 ? root : rest).append(block(v, n === 0)));
     if (d.guide) { // the starter guide's active step (sprint §4.11)
       const g = el('div', 'ft-q ft-guide'); g.dataset.step = d.guide.id;

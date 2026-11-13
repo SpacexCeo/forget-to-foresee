@@ -16,7 +16,7 @@ export default {
   'journal.reward.silk': '+{n} silk', 'journal.reward.xp': '+{n} XP', 'journal.reward.chest': '{tier} chest', 'journal.reward.title': 'Title: {title}',
   'journal.walk': 'Walk to {giver}', 'journal.walkTurnIn': 'Walk to {giver} to turn in', 'journal.walkArea': 'Walk to the {area}',
   'journal.track': 'Track on HUD', 'journal.untrack': 'Untrack', 'journal.trackFull': 'You can track 3 quests. Untrack one first.',
-  'journal.abandon': 'Abandon', 'journal.abandonStory': 'Story quests cannot be abandoned.',
+  'journal.abandon': 'Abandon', 'journal.more': 'More actions', 'journal.abandonStory': 'Story quests cannot be abandoned.',
   'journal.keys': 'J close · T track · Enter walk',
   'journal.empty.story': 'No story quest right now.', 'journal.empty.story.next': 'Talk to townsfolk with a yellow ! above their head.',
   'journal.empty.side': 'No side quests yet.', 'journal.empty.side.next': 'Reach level 2 and explore the town.',
