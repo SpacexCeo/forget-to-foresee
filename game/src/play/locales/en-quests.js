@@ -50,6 +50,9 @@ export default {
   'story.portal.needGuest': 'Your player account is not ready yet. Wait a moment.',
   'story.portal.offline': 'The network is not answering. Your silk is safe. Try again soon.',
   'story.portal.quiet': 'The Gate-Loom is quiet.',
+  'guide.title': 'Starter guide {n}/{total}',
+  'guide.hide': 'Hide the starter guide',
+  'guide.done': 'Starter guide complete. The journal and the market are yours.',
   'quest.ready.toast': 'Quest ready: {title}. Turn it in to {giver}.',
   'quest.done.toast': 'Quest complete: {title}.',
 };

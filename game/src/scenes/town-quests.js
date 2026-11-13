@@ -17,6 +17,7 @@ import { createJournalUI } from '../quests/journal-ui.js';
 import { createTrackerUI } from '../quests/tracker-ui.js';
 import { createAutoWalk, setAutoWalker } from '../sprint/auto-walk.js';
 import { GIVER_NAMES } from '../game/journal-data.js';
+import { loadGuide, guideEvent, guideView, GUIDE_KEY } from '../quests/guide.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -226,6 +227,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   const have = () => { const o = {}; if (inventory && inventory.count) { for (const id of RESOURCE_IDS) o[id] = inventory.count(id); o.part = PART_IDS.reduce((x, id) => x + inventory.count(id), 0); } return o; };
   function firstPart() { try { const all = inventory.list ? inventory.list(PART_IDS.map((id) => ({ id, kind: 'part' }))) : []; return all.length ? all[0].id : null; } catch { return null; } }
   function openTalk(giver, extraLines = null) {
+    if (typeof feedGuide === 'function' && !extraLines) feedGuide('talked:' + giver);
     closeTalk(); panelGiver = giver;
     const h = have(); const tk = talkFor(giver, story, qs, { now: now(), hasPart: hasPart(), have: h });
     const needsText = tk.needs ? Object.entries(tk.needs).map(([id, n]) => t('quest.needs.item', { n, have: h[id] || 0, res: t('res.' + id) })).join(', ') : '';
@@ -302,7 +304,17 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
 
   // ---- the quest journal, the tracker and auto-walk (sprint §4.7-4.10; flags questJournal, questTracker, autoWalk)
   const say = createSay(i18n), gname = (k) => nameOf(say, k, GIVER_NAMES);
-  const useJournal = flags('questJournal'), useTracker = flags('questTracker'), useWalk = flags('autoWalk') && !!walkDriver;
+  const useJournal = flags('questJournal'), useTracker = flags('questTracker'), useWalk = flags('autoWalk') && !!walkDriver, useGuide = flags('starterGuide');
+  let guide = loadGuide(storage);
+  const notify = (text) => { try { win.dispatchEvent(new CustomEvent('ftf:toast', { detail: { text } })); } catch { /* none */ } };
+  function feedGuide(ev) {
+    if (!useGuide) return;
+    const r = guideEvent(guide, ev); if (!r.completed) return;
+    guide = r.state; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ }
+    try { win.dispatchEvent(new CustomEvent('ftf:guide.step', { detail: { id: r.completed, done: true } })); } catch { /* none */ }
+    if (r.reward) { townLedger.grant({ xp: r.reward }); notify(say('guide.done')); }
+    if (tracker) tracker.refresh(true);
+  }
   let tracked = []; try { tracked = (JSON.parse((storage && storage.getItem('ftf.tracked.v1')) || '[]') || []).filter((id) => QUESTS[id]).slice(0, MAX_TRACKED); } catch { tracked = []; }
   const saveTracked = () => { try { storage.setItem('ftf.tracked.v1', JSON.stringify(tracked)); } catch { /* memory only */ } };
   const lvl = () => { try { return Math.max(1, Number(level()) || 1); } catch { return 1; } };
@@ -320,14 +332,19 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     onWalk: (v) => walkTo(v),
     onTrack: (id) => { const r = toggleTrack(tracked, id); if (r.ok) { tracked = r.tracked; saveTracked(); if (tracker) tracker.refresh(true); } return r; },
     onAbandon: (id) => { questDo({ type: 'ABANDON', questId: id }); },
-    onOpen: () => { if (tracker) tracker.setHidden(true); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } } }) : null;
+    onOpen: () => { if (tracker) tracker.setHidden(true); feedGuide('journal'); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } } }) : null;
   const townObjective = () => (doc.querySelector ? doc.querySelector('.ftf-town-objective') : null);
   let lastErrand = null;
   const errand = () => { const e = townObjective(); const txt = e && !e.hidden ? (e.textContent || '').trim() : ''; return txt || null; };
   const tracker = useTracker ? createTrackerUI({ doc, say, giverName: gname, storage,
-    data: () => ({ tracked: tracked.map((id) => questView(id, { qs, now: now(), have: have(), level: lvl(), tracked })).filter(Boolean), road: { gateC: balanceC(), feeC: feeC() }, errand: errand() }),
+    data: () => ({ tracked: tracked.map((id) => questView(id, { qs, now: now(), have: have(), level: lvl(), tracked })).filter(Boolean), road: { gateC: balanceC(), feeC: feeC() }, errand: errand(), guide: useGuide ? guideView(guide, Math.round(feeC() / 100)) : null }),
+    onHideGuide: () => { guide = { ...guide, hidden: true }; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ } tracker.refresh(true); },
     onOpen: (id) => { if (journal) journal.open(null, id); }, onWalk: (v) => walkTo(v) }) : null;
   if (useTracker && doc.body && doc.body.classList) { doc.body.classList.add('ftf-tracker-on'); if (!doc.getElementById || !doc.getElementById('ft-hide-pill')) { const st = doc.createElement('style'); st.id = 'ft-hide-pill'; st.textContent = 'body.ftf-tracker-on .ftf-town-objective{display:none!important}'; (doc.head || doc.body).append(st); } }
+  const onGuideKey = (e) => { const tag = e && e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return; if (e.code === 'KeyR') feedGuide('camera'); else if (e.code === 'KeyI') feedGuide('bag'); else if (e.code === 'KeyB') feedGuide('market'); };
+  const onDrag = (e) => { if (e && e.buttons && e.target && e.target.tagName === 'CANVAS') feedGuide('camera'); };
+  const onPortal = () => feedGuide('portal'), onHit = () => feedGuide('hit');
+  if (useGuide) { win.addEventListener('keydown', onGuideKey); win.addEventListener('pointermove', onDrag); win.addEventListener('ftf:portal-near', onPortal); win.addEventListener('ftf:mob-killed', onHit); win.addEventListener('ftf:mob-hit', onHit); }
   function autoTrack() { // newly accepted quests are tracked while fewer than three are
     for (const id of Object.keys(QUESTS)) { const st = questStatus(qs, id, now()); if ((st === 'active' || st === 'ready') && !tracked.includes(id) && tracked.length < MAX_TRACKED && !QUESTS[id].auto) { tracked = [...tracked, id]; saveTracked(); } }
     tracked = tracked.filter((id) => { const st = questStatus(qs, id, now()); return st === 'active' || st === 'ready'; });
@@ -360,6 +377,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
       if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];
       if (pos && start && !story.guide.moved && Math.hypot(pos[0] - start[0], pos[2] - start[1]) > 6) { storyDo({ type: 'GUIDE_STEP', id: 'moved' }); questDo({ type: 'GUIDE', step: 'moved' }); }
+      if (pos && start && Math.hypot(pos[0] - start[0], pos[2] - start[1]) > 6) feedGuide('moved');
       if (gate && now() - lastRead > 20_000) refreshChain(); // the on-chain balance grows with the relayer's story credits
       if (panel && panelGiver && pos) { const p = folkAt(panelGiver); if (p && Math.hypot(p[0] - pos[0], p[2] - pos[2]) > 4.5) closeTalk(); }
     },
@@ -370,8 +388,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     /** Markers over the givers: [{giver, sym: '!'|'?'}] for scenes/quest-markers.js. */
     markers: () => ['elder', 'guard', 'lamplighter', 'shardkeeper'].map((giver) => ({ giver, sym: markerFor(giver, story, qs, now(), have()) })).filter((m) => m.sym),
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
+    get guide() { return guide; }, feedGuide,
     get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
-    dispose() { if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
+    dispose() { if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
   };
 }
 

@@ -184,9 +184,14 @@ export function createTownPortal({ scene, position, facing = 0, i18n, read, onPa
     if (pay.focus) pay.focus();
   }
 
+  let wasNear = false;
   const spot = {
     id: 'portal',
-    near: (pos) => { const at = root.position; return state !== 'off' && Math.hypot(pos[0] - at.x, pos[2] - at.z) <= PORTAL_REACH && Math.abs(pos[1] - at.y) < 3; }, // grounded later by the caller
+    near: (pos) => {
+      const at = root.position, n = state !== 'off' && Math.hypot(pos[0] - at.x, pos[2] - at.z) <= PORTAL_REACH && Math.abs(pos[1] - at.y) < 3; // grounded later by the caller
+      if (n && !wasNear) { const f = facts(); try { globalThis.dispatchEvent(new CustomEvent('ftf:portal-near', { detail: { feeC: f.feeC, onChainC: f.onChainC ?? f.balanceC } })); } catch { /* no CustomEvent */ } }
+      wasNear = n; return n;
+    },
     prompt: () => { const f = facts(); const p = portalPrompt(state, f); return t(p.key, p.args); },
     onInteract: () => {
       const f = facts();
