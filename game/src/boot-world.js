@@ -759,7 +759,8 @@ async function startDay1() {
   await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
-  await m.runHints({ t, steps: [
+  // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
+  if (!input.touchControls) await m.runHints({ t, steps: [
     ...(input.touchControls ? [] : [{ key: 'day1.hint.skin' }]), // not on phones (owner 12.11: the tip took the screen there)
     { key: 'day1.hint.quest', when: () => !!(townFlow && townFlow.questActive) },
     { key: 'day1.hint.trailers', when: () => !input.touchControls, buttons: [ // not on phones (owner 12.11)
