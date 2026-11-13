@@ -7,7 +7,7 @@ LOOP_XFADE seconds are crossfaded (equal power) with the first ones and the loop
 end flows into the start without a seam. Writes game/public/assets/audio/<name>.ogg (Opus, stereo) and
 game/src/audio/music-manifest.js (merged into the sound manifest by src/audio/audio.js).
 
-Usage: python3 art/audio/build_music.py
+Usage: python3 art/audio/build_music.py [name ...]   (names: rebuild only those beds; the others keep their manifest rows)
 """
 import json
 import re
@@ -37,6 +37,7 @@ PICKS = {
     "mus_outside": km("Floating Cities"),                                     # beyond the walls, the hunt
     "mus_boss": sb("Legionnaire", "2022/04/sb_legionnaire2022.mp3"),          # the elite fight, the season finale
     "mus_chapter_done": km("Frozen Star"),                                    # after a chapter (season) is passed
+    "mus_lab": sb("Computations in a Snowstorm", "2019/01/sb_computations.mp3"),  # the lab prologue (owner pick 13.11)
 }
 
 
@@ -72,8 +73,14 @@ def encode(y, out):
 
 
 def main():
+    only = set(sys.argv[1:])
     entries = {}
+    if only and MANIFEST.exists():   # keep the rows of the beds not rebuilt this time
+        old = json.loads(re.search(r"= (\{.*\});", MANIFEST.read_text(), re.S).group(1))["sounds"]
+        entries = {k: v for k, v in old.items() if k not in only}
     for name, src in PICKS.items():
+        if only and name not in only:
+            continue
         path = fetch(src)
         x = decode(path)
         # trim the silent head and tail so the loop has no gap
