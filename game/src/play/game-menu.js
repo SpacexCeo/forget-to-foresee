@@ -169,7 +169,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   doc.body.append(root);
   let current = null;
-  function close() { if (wheelView) wheelView.destroy(); root.remove(); }
+  function close() { if (wheelView) wheelView.destroy(); inv.dispose(); root.remove(); }
 
   const views = {
     profile() {

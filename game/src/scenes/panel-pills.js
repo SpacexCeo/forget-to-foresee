@@ -42,7 +42,7 @@ export function createPillStack({ doc = globalThis.document, storage = null, lab
         buttons.set(k, b); root.append(b);
       }
       const text = label(k);
-      if (b.textContent !== text) { b.textContent = text; b.setAttribute('aria-label', expandLabel(text)); }
+      if (b.textContent !== text) { b.textContent = text; b.title = text; b.setAttribute('aria-label', expandLabel(text)); }
     }
     root.hidden = !keys.length;
   }

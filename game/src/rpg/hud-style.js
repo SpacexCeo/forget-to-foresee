@@ -288,7 +288,7 @@ html.rpg-on { --rpg-k: max(calc(min(100vw, 100vh * 1.7778) / 1920), 0.72px); }  
   html.rpg-on .ftf-scene-tools { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(112px + env(safe-area-inset-top, 0px)); }   /* under the small radar */
   html.rpg-on .ftf-photo-open { top: calc(112px + env(safe-area-inset-top, 0px)) !important; right: calc(60px + env(safe-area-inset-right, 0px)) !important; }
 }
-@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) {
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (max-height: 500px) {
   html.rpg-on .ft { top: calc(80px + env(safe-area-inset-top, 0px)) !important; left: calc(14px + env(safe-area-inset-left, 0px)); right: auto; width: calc(100vw - 112px); max-height: max(96px, calc(100vh - 340px)); }
   html.rpg-on .ftf-scene-tools { display: none !important; }   /* the menu button under the radar opens the game menu with Settings */
   html.rpg-on .ftf-photo-open { top: calc(94px + env(safe-area-inset-top, 0px)) !important; right: calc(76px + env(safe-area-inset-right, 0px)) !important; width: 36px !important; height: 36px !important; transform: none !important; border-color: rgba(255,255,255,.35) !important; background: rgba(10,14,16,.55) !important; }
@@ -302,6 +302,31 @@ html.rpg-on { --rpg-k: max(calc(min(100vw, 100vh * 1.7778) / 1920), 0.72px); }  
   html.rpg-on .ftf-mk .box { position: absolute; left: 0; bottom: calc(100% + 8px); width: min(320px, calc(100vw - 28px)); }
   html.rpg-on .ts-arc .ts-btn:not(.ts-use) { display: none !important; }   /* the 2 x 2 skill grid is the touch hotbar (a touch is a held key) */
   html.rpg-on body:not(.ts-on) .ftf-town-prompt { bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
+}
+/* phone landscape (<= 500 px tall): the portrait layout, with the tracker under the player on the left (the joystick
+   zone there takes touches only where no HUD piece is), the Use pill above the 2 x 2 skills, and the heroine swap as a
+   small badge on the portrait */
+@media (max-width: 899px) and (max-height: 500px) and (orientation: landscape) {
+  html.rpg-on .ft { top: calc(78px + env(safe-area-inset-top, 0px)) !important; width: min(300px, 40vw); max-height: max(72px, calc(100vh - 232px)); }
+  html.rpg-on .ph-swap { left: calc(4px + env(safe-area-inset-left, 0px)) !important; top: calc(34px + env(safe-area-inset-top, 0px)) !important; width: 26px !important; height: 26px !important; border-width: 1px !important; z-index: 11; }
+  html.rpg-on .ts-btn.ts-use { bottom: 196px; }
+  html.rpg-on .ftf-chat { bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+/* minimised panels (scenes/panel-pills.js) under the rpg HUD: small thin text lines beside the radar, no pill boxes
+   (owner 13.11: the pills sat over the radar and the tracker) */
+html.rpg-on .ftf-pills { top: calc(var(--rpg-k) * 30) !important; right: calc(var(--rpg-k) * 196 + env(safe-area-inset-right, 0px)) !important; gap: 2px; }
+html.rpg-on .ftf-pill { min-height: 0; max-width: max(160px, calc(var(--rpg-k) * 240)); padding: 1px 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  font: 500 max(11px, calc(var(--rpg-k) * 13))/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; color: rgba(240,242,240,.88); text-align: right;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); }
+html.rpg-on .ftf-pill::before { content: "97 a0"; color: var(--ftf-gold-bright, #f0c75e); }   /* a small arrow: tap to open it again */
+html.rpg-on .ftf-pill:hover { transform: none; color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 899px) {
+  html.rpg-on .ftf-pills { top: calc(14px + env(safe-area-inset-top, 0px)) !important; right: calc(96px + env(safe-area-inset-right, 0px)) !important; }
+  html.rpg-on .ftf-pill { max-width: 140px; min-height: 22px; font-size: 12px; }
+}
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) {
+  html.rpg-on .ftf-pills { top: calc(140px + env(safe-area-inset-top, 0px)) !important; right: calc(12px + env(safe-area-inset-right, 0px)) !important; }
+  html.rpg-on .ftf-pill { max-width: 96px; }
 }
 /* reduced motion */
 html[data-motion="reduce"] .rpg *, .rpg[data-reduced="1"] * { animation: none !important; transition: none !important; }
@@ -339,8 +364,8 @@ html[data-motion="reduce"] .rpg-banner[data-show="1"], .rpg[data-reduced="1"] .r
 .rpg-pbar { display: none; }
 /* phone portrait (owner 13.11): the same transparent style. Top: the player, the compact tracker, the radar and one menu
    button under it. Bottom: the skills as a 2 x 2 grid on the right above a thin bar (the trade count, the silk, bag
-   and map) and the XP line along the very bottom. Landscape phones keep the rules above. */
-@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) {
+   and map) and the XP line along the very bottom. Landscape phones (<= 500 px tall) share it; their own changes follow. */
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (max-height: 500px) {
   .rpg { --ts: 0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-shadow: var(--ts); }
   .rpg .panel { background: none; border: 0; box-shadow: none; border-radius: 0; }
   .rpg-frame { left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 232px; height: 60px; }

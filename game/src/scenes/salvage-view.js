@@ -16,6 +16,7 @@ export function createSalvageView({ scene, storage, toast, t, win = globalThis.w
   let state = initialSalvage();
   try { const s = JSON.parse((storage && storage.getItem(SALVAGE_KEY)) || 'null'); if (s && typeof s.miss === 'number') state = s; } catch { /* fresh */ }
   const save = () => { try { if (storage) storage.setItem(SALVAGE_KEY, JSON.stringify(state)); } catch { /* memory only */ } };
+  const inventory = createInventory({ storage });   // one for the view's life (inventories hear each other's writes)
   const sparks = [];
   const geo = new THREE.OctahedronGeometry(0.09, 0);
   function spark(pos) {
@@ -28,7 +29,7 @@ export function createSalvageView({ scene, storage, toast, t, win = globalThis.w
     const r = salvageRoll(state, { killId: d.killId, mob: d.type });
     state = r.state; save();
     if (!r.partId) return;
-    createInventory({ storage }).add(r.partId, 1, 'salvage');
+    inventory.add(r.partId, 1, 'salvage');
     toast(t('story.salvage.found'));
     if (d.pos) spark(d.pos);
     if (onPart) onPart(r.partId);
@@ -43,6 +44,6 @@ export function createSalvageView({ scene, storage, toast, t, win = globalThis.w
         if (s.t >= 1) { scene.remove(s.m); s.m.material.dispose(); sparks.splice(i, 1); }
       }
     },
-    dispose() { if (win) win.removeEventListener('ftf:mob-killed', onKill); for (const s of sparks) { scene.remove(s.m); s.m.material.dispose(); } geo.dispose(); },
+    dispose() { if (win) win.removeEventListener('ftf:mob-killed', onKill); inventory.dispose(); for (const s of sparks) { scene.remove(s.m); s.m.material.dispose(); } geo.dispose(); },
   };
 }
