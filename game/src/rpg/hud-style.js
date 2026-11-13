@@ -125,7 +125,7 @@ html.rpg-on .ftf-mk { left: calc(min(100vw, 100vh * 1.7778) / 1920 * 24) !import
 @media (max-width: 899px) {
   html.rpg-on .ftf-chat { left: calc(12px + env(safe-area-inset-left, 0px)) !important; bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important; }
   html.rpg-on .ftf-mk { left: calc(92px + env(safe-area-inset-left, 0px)) !important; bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important; max-width: calc(100vw - 164px) !important; }
-  html.rpg-on .ftf-mk > button { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  html.rpg-on .ftf-mk > button { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }   /* the full text is its title (rpg/index.js syncs it) */
   .rpg-log { display: none !important; }
 }
 /* reduced motion */
@@ -144,7 +144,7 @@ html[data-motion="reduce"] .rpg-banner[data-show="1"], .rpg[data-reduced="1"] .r
   .rpg-map { left: auto; right: 12px; top: 12px; width: 140px; height: 140px; } .rpg-zoom, .rpg-coords { display: none; }
   .rpg-target { left: 50%; transform: translateX(-50%); top: 100px; width: 260px; }
   .rpg-target .rpg-bar { width: 236px; }
-  .rpg-log { left: 12px; top: auto; bottom: 72px; width: 60vw; height: 28px; } .rpg-log .tabs { display: none; } .rpg-log .body { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-top: 4px; }
+  .rpg-log { left: 12px; top: auto; bottom: 72px; width: 60vw; height: 28px; } .rpg-log .tabs { display: none; } .rpg-log .body { overflow: hidden; white-space: nowrap; padding-top: 4px; }
   .rpg-silk { left: auto; right: 12px; top: auto; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 44px; }
   .rpg-tray { left: auto; right: 12px; top: auto; bottom: 72px; width: 48px; height: 48px; flex-direction: column-reverse; }
   .rpg-tray button { flex: 0 0 48px; height: 48px; display: none; } .rpg-tray button.menu { display: flex; }

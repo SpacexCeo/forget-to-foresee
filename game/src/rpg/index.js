@@ -254,6 +254,7 @@ export function mount(ctx) {
         coords: ctx.player && map ? map.coords() : null, zoomMin: map && map.atMin, zoomMax: map && map.atMax,
       });
       if (map) map.draw(dt);
+      const mk = doc.querySelector('.ftf-mk > button'); if (mk) { const full = mk.textContent.trim(); if (mk.title !== full) mk.title = full; }   // R7: the cut ticker keeps its full text
       if (tree && tree.isOpen) tree.refresh(); if (sheet && sheet.isOpen) sheet.refresh();
     },
     dispose() {
