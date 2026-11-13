@@ -31,12 +31,15 @@ export const ASSETS = Object.freeze([
 /**
  * Playable heroines. `model` is the .glb in /assets/models/ (the phone variant adds `_m`), `sidecar` the clip
  * file in /assets/anim/. `toon`: cel-shaded materials, the ink outline is geometry inside the .glb.
+ * `retarget`: the model is of the shared agent rig with its own proportions and carries no clips: the `sidecar` clips
+ * are retargeted onto it at load (anim-library.js townsfolkClips). `gate: 'skin'`: the wheel's skin NFT (play/skins.js).
  * `gate: 'nft'` marks a heroine meant for holders; the gate itself is not wired yet. `?hero=<id>` picks her, else the
  * Day 1 skin the player chose (K, boot-world.js).
  */
 export const HEROES = Object.freeze([
   Object.freeze({ id: 'iris', label: 'Iris', model: 'agent_iris', sidecar: 'iris', toon: false, gate: null }),
   Object.freeze({ id: 'elise', label: 'Elise', model: 'agent_elise', sidecar: 'elise', toon: true, gate: 'nft' }),
+  Object.freeze({ id: 'sheriffchenko', label: 'Sheriffchenko', model: 'agent_sheriffchenko', sidecar: 'iris', retarget: true, toon: true, gate: 'skin' }),
 ]);
 
 /** A heroine by id (Iris when unknown). */

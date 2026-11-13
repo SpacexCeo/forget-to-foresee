@@ -8,6 +8,7 @@ import { MODEL_FILES } from 'virtual:model-list';
 import { prefetchGltf } from '../render/assets.js';
 import { heroById } from '../render/asset-catalog.js';
 import { toonify } from './iris-avatar.js';
+import { townsfolkClips } from './anim-library.js';
 import { resolveClip } from './behaviour.js';
 import { REMOTE, pickDrawn } from '../net/presence.js';
 
@@ -52,7 +53,7 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
   function source(skin) {
     if (!sources.has(skin)) {
       const file = modelFileFor(skin);
-      sources.set(skin, file ? prefetchGltf(file).then(({ gltf }) => { const v = { gltf, toon: heroById(skin).toon }; sources.set(skin, v); return v; }).catch(() => { sources.set(skin, null); return null; }) : null);
+      sources.set(skin, file ? prefetchGltf(file).then(({ gltf }) => { const v = { gltf, toon: heroById(skin).toon, hero: heroById(skin) }; sources.set(skin, v); return v; }).catch(() => { sources.set(skin, null); return null; }) : null);
     }
     const s = sources.get(skin);
     return s && !(s instanceof Promise) ? s : null;
@@ -73,12 +74,15 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
     if (src.toon) toonify(model);
     model.traverse((o) => { if (/_col(?:[._]?\d+)?$/.test(o.name)) o.visible = false; if (o.isMesh) { o.castShadow = false; o.frustumCulled = true; } });
     a.group.add(model); a.model = model;
-    const clips = src.gltf.animations || [];
-    if (clips.length) {
+    const play = (clips) => {
+      if (!clips.length || a.model !== model) return;
       a.mixer = new THREE.AnimationMixer(model);
       a.acts = {};
       for (const n of ['idle', 'walk', 'run']) { const c = resolveClip(clips, n).clip; if (c) { const act = a.mixer.clipAction(c); act.play(); act.setEffectiveWeight(n === 'idle' ? 1 : 0); a.acts[n] = act; } }
-    }
+    };
+    // a skin of the shared rig carries no clips: the heroine's set is retargeted onto it (once per skin, cached)
+    if (src.hero && src.hero.retarget) townsfolkClips(model, { file: src.hero.sidecar, key: src.hero.model, names: ['idle', 'walk', 'run'] }).then(play).catch(() => {});
+    else play(src.gltf.animations || []);
   }
 
   function update(dt, list, from, reducedMotion = false) {

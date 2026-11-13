@@ -14,7 +14,7 @@ import { ONE_SHOT_CLIPS, REACTION_SECONDS, resolveClip } from './behaviour.js';
 import { FADE, GaitLayer, FootPlant, findLookBones, applyLookTo, accelLean } from './gait.js';
 import { heroFromSearch } from '../render/asset-catalog.js';
 import { DashTrail } from '../render/dash-trail.js';
-import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace } from './anim-library.js';
+import { sidecarEnabled, sidecarClips, mergeClips, faceLayerClip, hasFace, townsfolkClips } from './anim-library.js';
 
 /**
  * The file Iris loads: `agent_iris_m` (1024 textures, lighter mesh) on phones and the low tier when the build
@@ -77,7 +77,8 @@ export class IrisAvatar {
       for (const ch of [...avatarGroup.children]) ch.visible = false;
       avatarGroup.add(model);
       // Motion-capture clips from the side-car file replace the model's own clips of the same name (anim-library.js).
-      const extra = sidecarEnabled() ? await sidecarClips(toon ? hero.model : 'agent_iris') : [];
+      // a skin of the shared rig (asset-catalog.js `retarget`) has no clips of its own: the side-car set is retargeted onto its proportions
+      const extra = hero.retarget ? await townsfolkClips(model, { file: hero.sidecar, key: hero.model }) : sidecarEnabled() ? await sidecarClips(toon ? hero.model : 'agent_iris') : [];
       const clips = mergeClips(gltf.animations, extra);
       const mixer = clips.length ? new THREE.AnimationMixer(model) : null;
       const idle = mixer ? resolveClip(clips, 'idle').clip : null;
