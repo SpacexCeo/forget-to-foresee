@@ -31,13 +31,14 @@ const CSS = `
 .d1-status.is-busy { background: linear-gradient(90deg, #fff7e6 30%, #ffd27a 50%, #fff7e6 70%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: d1-shimmer 1.4s linear infinite; }
 .d1-status a { color: #ffe08a; }
 .d1-note { font-size: 12px; color: rgba(255,247,230,.75); margin: 10px 0 0; }
-.d1-hint { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; padding: 14px 16px; border-radius: 18px; background: linear-gradient(160deg, rgba(40, 28, 70, .94), rgba(16, 40, 60, .94)); border: 2px solid rgba(255, 210, 122, .7); color: #fff7e6; font: 15px/1.45 system-ui, sans-serif; z-index: 70; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; animation: d1-pop .3s ease both; }
+.d1-hint { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; padding: 14px 16px; border-radius: 18px; background: linear-gradient(160deg, rgba(40, 28, 70, .94), rgba(16, 40, 60, .94)); border: 2px solid rgba(255, 210, 122, .7); color: #fff7e6; font: 15px/1.45 system-ui, sans-serif; z-index: 70; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; animation: d1-hint-pop .3s ease both; }
 .d1-hint p { margin: 0; flex: 1 1 240px; }
 .d1-hint .d1-btn { margin: 0; min-height: 40px; min-width: 0; font-size: 14px; }
 .d1-trailer { position: fixed; inset: 0; z-index: 85; display: grid; align-items: end; justify-items: center; padding-bottom: 12vh; background: linear-gradient(transparent 60%, rgba(0,0,0,.55)); }
 .d1-trailer p { margin: 0; max-width: min(720px, 90vw); text-align: center; font: italic 400 clamp(18px, 2.6vw, 28px)/1.35 Georgia, serif; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.8); animation: d1-in .6s ease both; }
 .d1-trailer button { position: fixed; right: 18px; bottom: 18px; }
 @keyframes d1-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes d1-hint-pop { from { opacity: 0; transform: translateX(-50%) scale(.85); } to { opacity: 1; transform: translateX(-50%); } } /* keeps the centring (the plain pop ended at transform:none and pushed the tip half off the right edge) */
 @keyframes d1-pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
 @keyframes d1-burst { 0% { opacity: 0; transform: scale(.2); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.6); } }
 @keyframes d1-holo { to { filter: hue-rotate(360deg); } }
