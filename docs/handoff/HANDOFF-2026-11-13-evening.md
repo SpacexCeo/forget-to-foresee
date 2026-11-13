@@ -32,13 +32,15 @@ Access (SSH, NEAR keys, GPU server) is NOT in the repo: the owner's private kit 
 - Docs for the owner: `docs/art/tripo-batch-1.md` (10 Tripo models, priority order, prompts; spires keep the single
   narrow blade shape), `docs/submission/video/storyboard-request.md` (paste into ChatGPT for a 12-frame storyboard).
 
-## 3. In flight at hand-over
+## 3. Transparent HUD: merged (d84d0d62), what is left
 
-- **Transparent minimal HUD** (owner's refs: no panels, thin bars, plain-text quests and log, radar as a dark disc,
-  5 line icons bottom-right `[I] [C] [M] [J] [O]`, silk with the old coin icon small, stamina back as a thin line).
-  Built by a background agent in a worktree; if its merge is in `main`, check it once more on the live page at
-  1920x1080, 1366x768, 920x904 and a phone; if not merged, the branch name is in the last commit message of this
-  handoff's merge or in `docs/decisions.md`.
+The transparent HUD is in `main` (desktop, phone portrait, tracker hide + journal toggle, stamina line, quiet
+interaction buttons; decision row 13.11 "Transparent HUD"). Verified: tests, boot plain + `?ff=all`, no HUD
+overlaps at 1920x1080, 1366x768, 1280x1024, 920x904, the talk picker in the new style. Left:
+- **Landscape phone (844x390):** overlaps (silk vs tracker, the touch arc vs tracker/silk); not redesigned yet.
+- **Portrait phone:** the guide line runs under the small camera button next to the menu button.
+- `tests/e2e/rpg-hud.mjs` still has the old dark-panel rectangles (not run): update it.
+- The tray's menu icon is labelled [Esc] (O is bound to "expand panel"); the owner's ref says [O]: ask him.
 
 ## 4. Next, in this order (owner-gated items marked)
 
