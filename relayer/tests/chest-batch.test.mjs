@@ -1,17 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openChests, openedEvents, leftToday, validateOpen, openMessage, deckOf, BATCH_ACTION_GAS, chestCounters } from '../lib/chest.js';
-import { generateKeyPair, serializeMultiCallTx, b58decode } from '../lib/near-tx.js';
+import { generateKeyPair } from '../lib/near-tx.js';
 
 const NOW = Date.UTC(2026, 10, 13, 12);
 const ev = (index, position, account = 'ann.testnet') => `EVENT_JSON:{"standard":"ftf_chest","version":"1.0.0","event":"chest_opened","data":[{"season":"s1","index":${index},"account_id":"${account}","position":${position},"nft":false}]}`;
 
-test('batch: the multi-action transaction carries N open_chest calls to the chest contract', async () => {
+test('batch: each opening is its own single-action transaction, sent in nonce order, all outcomes read back', async () => {
+  // a function-call access key may sign only ONE action per transaction (the cause of the failed batches, 13.11)
   const kp = await generateKeyPair();
-  const tx = serializeMultiCallTx({ signerId: 'chests.x.testnet', publicKey: kp.publicKey, nonce: 5n, receiverId: 'chests.x.testnet', blockHash: '11111111111111111111111111111111', calls: [1, 2].map(() => ({ methodName: 'open_chest', args: { account_id: 'ann.testnet' }, gas: BATCH_ACTION_GAS })) });
-  const raw = Buffer.from(tx).toString('latin1');
-  assert.equal(raw.split('open_chest').length - 1, 2);
-  assert.ok(10n * BATCH_ACTION_GAS <= 300_000_000_000_000n);
+  const { createTxClient, b58encode } = await import('../lib/near-tx.js');
+  const seen = [];
+  const fetch = async (url, init) => {
+    const b = JSON.parse(init.body); let result;
+    if (b.method === 'query') result = { nonce: 41 };
+    else if (b.method === 'block') result = { header: { hash: '11111111111111111111111111111111' } };
+    else if (b.method === 'send_tx') { const raw = Buffer.from(b.params.signed_tx_base64, 'base64'); seen.push({ wait: b.params.wait_until, raw }); result = { final_execution_status: 'INCLUDED' }; }
+    else if (b.method === 'tx') result = { status: { SuccessValue: '' }, transaction_outcome: { outcome: { gas_burnt: 1 } }, receipts_outcome: [{ outcome: { logs: [ev(seen.length, 7)] } }] };
+    return { ok: true, status: 200, json: async () => ({ jsonrpc: '2.0', id: b.id, result }) };
+  };
+  const key = await (await import('../lib/near-tx.js')).importSecretKey(kp.secretKey);
+  const rs = await createTxClient({ rpcUrls: ['https://rpc.example'], fetch }).callEach({ key, signerId: 'chests.x.testnet', receiverId: 'chests.x.testnet', calls: [1, 2, 3].map(() => ({ methodName: 'open_chest', args: { account_id: 'ann.testnet' }, gas: BATCH_ACTION_GAS })) });
+  assert.equal(rs.length, 3); assert.ok(rs.every((r) => r.ok && r.hash));
+  assert.equal(new Set(rs.map((r) => r.hash)).size, 3);
+  assert.equal(seen.length, 3); assert.ok(seen.every((x) => x.wait === 'INCLUDED'));
+  for (const x of seen) assert.equal(Buffer.from(x.raw).toString('latin1').split('open_chest').length - 1, 1); // one action each
+  // nonces 42, 43, 44: the u64 right after the signer's public key in each transaction
+  const nonces = seen.map((x) => { const r = x.raw; const sl = r.readUInt32LE(0); const off = 4 + sl + 1 + 32; return Number(r.readBigUInt64LE(off)); });
+  assert.deepEqual(nonces, [42, 43, 44]);
+  assert.ok(BATCH_ACTION_GAS <= 300_000_000_000_000n); void b58encode;
 });
 
 test('batch: requests sign their count and request id; openings come back from the chain events', () => {
@@ -27,7 +44,7 @@ test('batch: requests sign their count and request id; openings come back from t
   assert.equal(leftToday([{ at_ns: String(day) }, { at_ns: String(day - 86_400_000_000_000n) }], 30, day), 29);
 });
 
-test('batch: cut to the daily allowance, ONE transaction, openings with proofs, a repeated request never re-sends', async () => {
+test('batch: cut to the daily allowance, one transaction per opening, openings with proofs, a repeated request never re-sends', async () => {
   const season = 's1', root = deckOf(season).root;
   const kp = await generateKeyPair();
   const sent = [];
@@ -35,15 +52,29 @@ test('batch: cut to the daily allowance, ONE transaction, openings with proofs, 
   const client = {
     async rpc() { return {}; },
     async view(c, m) { return m === 'season_info' ? { root, seed: { seed: 'ab' }, season, size: 10_000, opened: 40, daily_cap: 30 } : used; },
-    async callMany(o) { sent.push(o); return { ok: true, hash: 'TX1', outcome: { receipts_outcome: [{ outcome: { logs: o.calls.map((_, i) => ev(40 + i, 100 + i)) } }] } }; },
+    async callEach(o) { sent.push(o); return o.calls.map((_, i) => ({ ok: true, hash: 'TX' + i, outcome: { receipts_outcome: [{ outcome: { logs: [ev(40 + i, 100 + i)] } }] } })); },
   };
   const t0 = chestCounters.transactions;
   const r = await openChests({ accountId: 'ann.testnet', publicKey: kp.publicKey, count: 10, requestId: 'req-aaaaaaaa' }, { secretKey: kp.secretKey, client, now: () => NOW });
   assert.equal(r.status, 200);
-  assert.deepEqual([r.body.requested, r.body.opened, r.body.cut, r.body.transactions], [10, 3, 'daily_cap', 1]);
+  assert.deepEqual([r.body.requested, r.body.opened, r.body.cut, r.body.transactions], [10, 3, 'daily_cap', 3]);
   assert.equal(sent.length, 1); assert.equal(sent[0].calls.length, 3);
+  assert.deepEqual(r.body.openings.map((o) => o.tx_hash), ['TX0', 'TX1', 'TX2']);
   assert.ok(r.body.openings.every((o) => o.leaf && o.proof && o.root === root && o.outcome));
   const again = await openChests({ accountId: 'ann.testnet', publicKey: kp.publicKey, count: 10, requestId: 'req-aaaaaaaa' }, { secretKey: kp.secretKey, client, now: () => NOW });
   assert.equal(again, r); assert.equal(sent.length, 1);
-  assert.equal(chestCounters.transactions - t0, 1);
+  assert.equal(chestCounters.transactions - t0, 3);
+});
+
+test('batch: a partial failure settles exactly the chests that opened; a total failure is a plain code', async () => {
+  const season = 's1', root = deckOf(season).root;
+  const kp = await generateKeyPair();
+  const info = { root, seed: { seed: 'ab' }, season, size: 10_000, opened: 40, daily_cap: 30 };
+  const mk = (fails) => ({ async rpc() { return {}; }, async view(c, m) { return m === 'season_info' ? info : []; },
+    async callEach(o) { return o.calls.map((_, i) => (fails(i) ? { ok: false, hash: 'F' + i, failure: 'Smart contract panicked: ERR_DAILY' } : { ok: true, hash: 'T' + i, outcome: { receipts_outcome: [{ outcome: { logs: [ev(50 + i, 200 + i)] } }] } })); } });
+  const part = await openChests({ accountId: 'ann.testnet', publicKey: kp.publicKey, count: 5, requestId: 'req-part0001' }, { secretKey: kp.secretKey, client: mk((i) => i >= 3), now: () => NOW });
+  assert.equal(part.status, 200); assert.equal(part.body.opened, 3); assert.equal(part.body.cut, 'failed_some');
+  const none = await openChests({ accountId: 'ann.testnet', publicKey: kp.publicKey, count: 5, requestId: 'req-none0001' }, { secretKey: kp.secretKey, client: mk(() => true), now: () => NOW });
+  assert.equal(none.status, 429); assert.equal(none.body.error, 'daily_cap');
+  assert.ok(chestCounters.errors.daily_cap >= 7);
 });

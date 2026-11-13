@@ -1,6 +1,7 @@
 // Town-first start (owner, 11.11): the town is the menu. Shop doors (Exchange, Scribe, Inn), the notice board and the
 // mirror are spots with prompts; the shrinekeeper guides as a talk; every string in five locales.
 import { test } from 'node:test';
+import { SPRINT_KEYS } from '../../src/play/locales/sprint-keys.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TOWN_SHOPS, TOWN_SPOTS, shopDoorAt, townToWorld, TOWN_SPAWN } from '../../src/scenes/town-layout.js';
@@ -18,7 +19,7 @@ test('the three shops have doors Iris can stand at; the mirror is a few steps fr
 });
 
 test('spot, glossary, notice-board and guide strings exist in all five locales', () => {
-  const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => /^(spot|gloss|board|guide|mirror)\./.test(k));
+  const keys = Object.keys(PLAY_MESSAGES.en).filter((k) => /^(spot|gloss|board|guide|mirror)\./.test(k) && !SPRINT_KEYS.has(k)); // sprint en-*.js keys fall back to English
   for (let i = 1; i <= GUIDE_PAGES; i++) assert.ok(keys.includes('guide.' + i));
   for (const id of ['exchange', 'scribe', 'inn', 'board', 'mirror']) assert.ok(keys.includes('spot.' + id), id);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);

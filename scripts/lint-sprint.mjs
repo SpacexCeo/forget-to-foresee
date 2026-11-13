@@ -33,7 +33,8 @@ const owned = [...SPRINT_DIRS.flatMap(files), ...LOCALE_SEAMS.filter((f) => exis
 for (const f of owned) {
   lines(f).forEach((l, i) => {
     // 2. the portal fee and other silk amounts come from config
-    if (/\b(10,000|10_000|20000|20_000)\b/.test(l)) flag(f, i, 'a literal fee; read it from expedition-config (portalFee) / {fee}');
+    const lf = l.replace(/\b\w*(?:Ms|ms|Sec|_ms)\s*:\s*[\d_]+/g, ''); // durations are not fees
+    if (/\b(10,000|10_000|20000|20_000)\b/.test(lf) && /silk|fee|price|gate|portal|cost/i.test(lf)) flag(f, i, 'a literal fee; read it from expedition-config (portalFee) / {fee}');
     if (/\b200\s*silk\b|\bsilk\s*200\b/i.test(l)) flag(f, i, 'a literal 200 silk; use {fee}');
     // 3. English only outside the ru/uk/zh locale files
     if (/[Ѐ-ӿ一-鿿]/.test(l)) flag(f, i, 'non-English letters in an English-only file');
@@ -46,7 +47,7 @@ for (const f of owned) {
 // 6. banned jargon in player strings (keys under curious.* may explain it)
 for (const f of LOCALE_SEAMS.filter((x) => existsSync(join(ROOT, x)))) {
   for (const [k, text, i] of strings(f)) {
-    if (k.startsWith('curious.')) continue;
+    if (k.startsWith('curious.') || k.startsWith('gloss.')) continue; // the glossary and "For the curious" explain the terms
     for (const re of JARGON) if (re.test(text)) { flag(f, i, `jargon "${text.match(re)[0]}" in ${k} (plain words, list 1.6)`); break; }
     if (f.endsWith('en-npe.js') && text.length > 140) flag(f, i, `${k} is ${text.length} characters (max 140)`);
   }
