@@ -29,7 +29,7 @@ import math
 
 import numpy as np
 
-from .loco import HAND_POSES, foot_heading, foot_points
+from .loco import HAND_POSES, foot_heading, foot_points, second_curl
 from .quat import axis_angle, qinv, qmul, qnorm, qrot, swing
 from .retarget import two_bone_ik
 
@@ -231,10 +231,15 @@ def build(rig, base_local, base_pelvis, keys, seconds, fps=30, overlap=OVERLAP, 
             a3, b3, u3 = _segment(keys, t - overlap.get('hand', 0.0) - 0.02)
             cf, ci, ct = _curl(a3, s) * (1 - u3) + _curl(b3, s) * u3
             i_h = idx[f'hand_{s}']
-            for bone, axis, ang in ((f'fingers_{s}', (0, 0, -1.0), sg * cf), (f'index_{s}', (0, 0, -1.0), sg * ci), (f'thumb_{s}', (0, 1.0, 0), -sg * ct)):
+            sc = second_curl                            # the second joint of each group folds the rest of the finger
+            for bone, axis, ang in ((f'fingers_{s}', (0, 0, -1.0), sg * cf), (f'index_{s}', (0, 0, -1.0), sg * ci), (f'thumb_{s}', (0, 1.0, 0), -sg * ct),
+                                    (f'fingers_1_{s}', (0, 0, -1.0), sg * float(sc(cf))), (f'index_1_{s}', (0, 0, -1.0), sg * float(sc(ci))),
+                                    (f'thumb_1_{s}', (0, 1.0, 0), -sg * float(sc(ct)) * 0.8)):
                 if bone in idx:
+                    parent = f'hand_{s}' if '_1_' not in bone else bone.replace('_1_', '_')
+                    i_p = idx.get(parent, i_h)
                     r = axis_angle(np.array(axis), math.radians(ang))
-                    wr[idx[bone]] = qnorm(qmul(wr[i_h], qmul(qinv(rig.rest_wr[i_h]), qmul(r, rig.rest_wr[idx[bone]]))))
+                    wr[idx[bone]] = qnorm(qmul(wr[i_p], qmul(qinv(rig.rest_wr[i_p]), qmul(r, rig.rest_wr[idx[bone]]))))
         # children of re-posed bones that were computed before their parent changed (prop bones, hair roots) follow now
         for i, n in enumerate(rig.names):
             p = rig.parent[i]
