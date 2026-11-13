@@ -68,7 +68,12 @@ export function runIntro(ctx) {
       if (pro && pro.playLabPrologue) {
         const off = ctx.bus && ctx.bus.on ? ctx.bus.on('prologue.cue', (c) => { if (c && c.text) subs.show(c.text, c.speaker || null, c.durMs || 0); }) : null;
         current = { skip: () => { if (pro.skip) pro.skip(); } };
-        const r = await pro.playLabPrologue({ subtitles: subs, reduced: reduced() });
+        // Esc (or the Skip button) skips the 3D prologue, and never reaches the game's menu meanwhile (R10)
+        const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation(); current.skip(); } };
+        installCss(doc); const skipBtn = doc.createElement('button'); skipBtn.type = 'button'; skipBtn.className = 'npe-skip'; skipBtn.textContent = t('npe.skip'); skipBtn.addEventListener('click', () => current.skip());
+        if (doc.addEventListener) doc.addEventListener('keydown', onEsc, true); if (doc.body) doc.body.append(skipBtn);
+        let r;
+        try { r = await pro.playLabPrologue({ subtitles: subs, reduced: reduced() }); } finally { if (doc.removeEventListener) doc.removeEventListener('keydown', onEsc, true); skipBtn.remove(); }
         if (off) off();
         how = r === 'skipped' ? 'skipped' : 'done';
       } else { current = titleCard({ doc, t, reduced }); how = await current.done; }
