@@ -20,13 +20,12 @@ export function shouldRun({ flag, search = '', rec }) {
 }
 
 /**
- * The state machine. State: {phase, line, rec, award} where `award` is true on the one transition that pays the
- * stipend (the caller pays and clears it). Events: start, prologue_done, prologue_skip, wakeup_done, line_done
+ * The state machine. State: {phase, line, rec, skipped}. Events: start, prologue_done, prologue_skip, wakeup_done, line_done
  * {last}, skip_all, start_card, later, handoff_done.
  */
-export function initial(rec) { return { phase: 'idle', line: 0, rec: { ...rec }, award: false, skipped: false }; }
+export function initial(rec) { return { phase: 'idle', line: 0, rec: { ...rec }, skipped: false }; }
 export function reduce(s, e) {
-  const n = { ...s, award: false };
+  const n = { ...s };
   switch (s.phase) {
     case 'idle': return e.type === 'start' ? { ...n, phase: 'prologue' } : s;
     case 'prologue':
@@ -37,10 +36,10 @@ export function reduce(s, e) {
       return s;
     case 'dialogue':
       if (e.type === 'line_done') {
-        if (!e.last) { const m = { ...n, line: s.line + 1 }; return e.award ? payOnce(m) : m; } // W17 pays the welcome
-        return payOnce({ ...n, phase: 'card' });
+        if (!e.last) return { ...n, line: s.line + 1 };
+        return { ...n, phase: 'card' };
       }
-      if (e.type === 'skip_all') return payOnce({ ...n, phase: 'card', skipped: true });
+      if (e.type === 'skip_all') return { ...n, phase: 'card', skipped: true };
       return s;
     case 'card':
       if (e.type === 'start_card') return { ...n, phase: 'handoff', rec: { ...n.rec, dialogueSeen: true, cardSeen: true } };
@@ -50,5 +49,4 @@ export function reduce(s, e) {
     default: return s;
   }
 }
-/** The stipend is paid at most once per profile (ftf.npe.v1.stipend), whether the dialogue ended or was skipped. */
-function payOnce(s) { return s.rec.stipend ? s : { ...s, award: true, rec: { ...s.rec, stipend: true } }; }
+// No silk here: the newcomer's welcome is the story's one stipend (TWIST_DONE, a verified expedition-log entry).

@@ -22,7 +22,7 @@ export default {
   'npe.w14': 'Stone spiders block the north road. Their thread is worth silk. Bring me ten and I will pay you.',
   'npe.w15': 'And find me a spare part for my lamp-loom. I will pay for that too.',
   'npe.w16': 'Sell what you find. Spider thread, plates, shards. Anyone in town will trade you silk for them.',
-  'npe.w17': "Take {stipend} silk to begin. It is the town's welcome. Then go: hunt, gather, trade, help us.",
+  'npe.w17': 'The town gives every newcomer a welcome. Ask me when you are settled. Now go: hunt, gather, trade, help us.',
   'npe.w18': 'When you hold {fee} silk, come back to the Gate-Loom. It will be waiting.',
   'npe.w19': '{fee} silk. All right. One thing at a time.',
   // crowd barks
@@ -44,7 +44,6 @@ export default {
   'npe.title': 'FORGET TO FORESEE',
   'npe.year': 'Year 2048.',
   'npe.skipped': 'Intro skipped. Replay it any time in Settings.',
-  'npe.stipend': '+{stipend} silk',
   'npe.replay': 'Replay intro',
   'npe.resetTips': 'Reset tips',
   // the "What waits for you" card (1.3)

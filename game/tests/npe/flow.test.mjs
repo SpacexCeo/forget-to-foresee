@@ -1,5 +1,5 @@
 // The intro flow (sprint 7.4, 7.11 tests 2, 3, 7, 8): every transition including skip at each state, ?intro=0/1,
-// flag off, the A6 module missing or failing (title-card fallback), the stipend paid exactly once, the card's seven
+// flag off, the A6 module missing or failing (title-card fallback), no silk granted by the intro (one stipend: the story's), the card's seven
 // rows, persistence round trip and reset; the dialogue box types at 40 cps and is instant under reduced motion.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,18 +20,18 @@ test('flow: shouldRun honours ?intro=0, ?intro=1, the flag and the saved state',
   assert.equal(shouldRun({ flag: true, search: '', rec: { ...fresh, dialogueSeen: true } }), false, 'second load: no intro');
 });
 
-test('flow: the reducer walks every state; skip works at each; the stipend is paid exactly once', () => {
+test('flow: the reducer walks every state; skip works at each; the intro never grants silk', () => {
   const walk = (events, rec = loadNpe(null)) => { let s = initial(rec); let paid = 0; for (const e of events) { s = reduce(s, e); if (s.award) paid++; } return { s, paid }; };
   const lines = Array.from({ length: 19 }, (_, i) => ({ type: 'line_done', last: i === 18, award: i === 16 }));
   let r = walk([{ type: 'start' }, { type: 'prologue_done' }, { type: 'wakeup_done' }, ...lines, { type: 'start_card' }, { type: 'handoff_done' }]);
-  assert.equal(r.s.phase, 'done'); assert.equal(r.paid, 1, 'W17 pays, the last line does not pay again');
-  assert.deepEqual([r.s.rec.prologueSeen, r.s.rec.dialogueSeen, r.s.rec.cardSeen, r.s.rec.stipend], [true, true, true, true]);
+  assert.equal(r.s.phase, 'done'); assert.equal(r.paid, 0, 'no silk: the welcome is TWIST_DONE');
+  assert.deepEqual([r.s.rec.prologueSeen, r.s.rec.dialogueSeen, r.s.rec.cardSeen, r.s.rec.stipend], [true, true, true, false]);
   r = walk([{ type: 'start' }, { type: 'prologue_skip' }, { type: 'wakeup_done' }, { type: 'skip_all' }, { type: 'later' }, { type: 'handoff_done' }]);
-  assert.equal(r.s.phase, 'done'); assert.equal(r.paid, 1, 'skipping still pays'); assert.equal(r.s.rec.cardSeen, false, 'Show me later'); assert.equal(r.s.skipped, true);
+  assert.equal(r.s.phase, 'done'); assert.equal(r.paid, 0, 'skipping grants nothing either'); assert.equal(r.s.rec.cardSeen, false, 'Show me later'); assert.equal(r.s.skipped, true);
   r = walk([{ type: 'start' }, { type: 'prologue_skip' }, { type: 'prologue_skip' }, { type: 'skip_all' }]);
   assert.equal(r.s.phase, 'card', 'Esc in the prologue and again in the wake-up reaches the dialogue, Skip all the card');
   r = walk([{ type: 'start' }, { type: 'prologue_done' }, { type: 'wakeup_done' }, { type: 'skip_all' }], { ...loadNpe(null), stipend: true });
-  assert.equal(r.paid, 0, 'a replay never pays twice');
+  assert.equal(r.paid, 0, 'a replay grants nothing');
   assert.equal(reduce(initial(loadNpe(null)), { type: 'skip_all' }).phase, 'idle', 'unknown events are ignored');
 });
 
@@ -82,7 +82,7 @@ test('roadmap card: exactly seven rows with the copy of 1.3, Start and Show me l
   assert.equal(await c2.result, 'later');
 });
 
-test('intro end to end (DOM): fallback without A6, 19 lines in order, the stipend once, the card, control back', async () => {
+test('intro end to end (DOM): fallback without A6, 19 lines in order, no silk granted, the card, control back', async () => {
   const doc = dom();
   const { runIntro } = await import('../../src/npe/index.js');
   const storage = memoryStorage(); const grants = []; const toasts = []; const events = []; const locks = [];
@@ -96,7 +96,7 @@ test('intro end to end (DOM): fallback without A6, 19 lines in order, the stipen
   assert.deepEqual(names.slice(0, 7), ['Townsfolk', 'Child', 'Guard', 'Lamplighter', 'Weaver', 'Elder', 'Iris']);
   await tick(2);
   assert.equal(doc.querySelectorAll('.npe-card li').length, 7, 'the card opens after W19');
-  assert.deepEqual(grants, [{ silk: 1000 }], 'ten silk, once'); assert.deepEqual(toasts, ['+10 silk']);
+  assert.deepEqual(grants, [], 'the intro grants no silk'); assert.deepEqual(toasts, []);
   doc.querySelectorAll('.npe-card button').find((b) => b.textContent === 'Start').click();
   const s = await run.state;
   assert.equal(s.phase, 'done'); assert.deepEqual(locks, [true, false]);
@@ -107,7 +107,7 @@ test('intro end to end (DOM): fallback without A6, 19 lines in order, the stipen
   assert.equal(mount({ ...ctx, flags: { newPlayerIntro: true } }).intro, null);
 });
 
-test('intro: a failing A6 module falls back to the title card; Skip all still pays once and says how to replay', async () => {
+test('intro: a failing A6 module falls back to the title card; Skip all says how to replay', async () => {
   const doc = dom();
   const { runIntro } = await import('../../src/npe/index.js');
   const storage = memoryStorage(); const grants = []; const toasts = [];
@@ -119,6 +119,6 @@ test('intro: a failing A6 module falls back to the title card; Skip all still pa
   assert.ok(doc.querySelector('.npe-box'), 'Esc on the title card reaches the dialogue');
   run.skip(); await tick(3);
   assert.equal(doc.querySelectorAll('.npe-card li').length, 7);
-  assert.deepEqual(grants, [{ silk: 1000 }]); assert.ok(toasts.includes(NPE['npe.skipped']));
+  assert.deepEqual(grants, []); assert.ok(toasts.includes(NPE['npe.skipped']));
   run.skip(); const s = await run.state; assert.equal(s.rec.cardSeen, false);
 });

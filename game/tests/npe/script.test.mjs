@@ -15,7 +15,7 @@ test('script: 19 lines W1..W19 with the speakers of 7.3; every key has text', ()
   assert.deepEqual(WAKEUP.map((l) => l.id), Array.from({ length: 19 }, (_, i) => 'W' + (i + 1)));
   assert.deepEqual(WAKEUP.map((l) => l.speaker), ['townsfolk', 'child', 'guard', 'lamplighter', 'weaver', 'elder', 'iris', 'elder', 'elder', 'elder', 'iris', 'elder', 'elder', 'guard', 'lamplighter', 'weaver', 'elder', 'elder', 'iris']);
   for (const l of WAKEUP) { assert.ok(NPE[l.key], l.key); assert.ok(SPEAKERS[l.speaker], l.speaker); assert.ok(NPE['npe.speaker.' + l.speaker]); }
-  assert.equal(WAKEUP.filter((l) => l.award).map((l) => l.id).join(), 'W17', 'the stipend is awarded at W17 only');
+  assert.equal(WAKEUP.filter((l) => l.award).length, 0, 'the intro grants no silk: the welcome is the story\'s one stipend (TWIST_DONE)');
 });
 
 test('script: every spoken line (dialogue, barks, quest givers) is at most 25 words and 140 characters once filled', () => {
@@ -31,7 +31,7 @@ test('script: no banned jargon in player text (curious.* allowed); no literal po
     assert.doesNotMatch(s, /\b(200|20000|20,000|10,000|10000)\b/, `${k}: use {fee}`);
     assert.doesNotMatch(s, /\bwool\b/i, k);
   }
-  assert.match(NPE['npe.w13'], /\{fee\} silk/); assert.match(NPE['npe.w18'], /\{fee\} silk/); assert.match(NPE['npe.w17'], /\{stipend\} silk/);
+  assert.match(NPE['npe.w13'], /\{fee\} silk/); assert.match(NPE['npe.w18'], /\{fee\} silk/); assert.doesNotMatch(NPE['npe.w17'], /\{stipend\}|silk/, 'W17 promises no silk now');
 });
 
 test('script: the premise of 7.1 is said (Guests and a gift, nobody speaks their tongue, elders at the Shell, a reward, the fee, hunt/gather/quests)', () => {

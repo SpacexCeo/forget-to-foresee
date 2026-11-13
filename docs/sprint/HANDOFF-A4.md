@@ -32,7 +32,7 @@ Run the example: `node server/src/main.js & node server/examples/agent-tournamen
 
 ## Open items
 
-- **Stipend:** W17 pays 10 silk once (`ftf.npe.v1.stipend`); the story also grants `stipendC` at `TWIST_DONE`. One stipend in total: waiting on A1's answer. Then either W17 replaces it (pass `ctx.award` = A1's verified grant), or W17 grants nothing.
+- **Stipend:** settled with A1. The intro grants no silk: W17 now says "The town gives every newcomer a welcome. Ask me when you are settled.", and the one stipend stays the story's TWIST_DONE (a verified expedition-log entry).
 - **Barks:** wired. The ten lines join the crowd rotation of `scenes/barks.js` (option `extra`) while `newPlayerIntro` is on. The timing stays that module's own (6 m, 2.6 s bubbles, 20 s per person), not the plan's 8 m / 3 s / 20–40 s.
 - **E2E E1–E7:** written as DOM tests only, because the e2e harness is not on `main` yet.
 - **"?" re-show handle and the panels test (7.8):** these belong to the first-seen component.
