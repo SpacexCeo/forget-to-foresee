@@ -1,0 +1,391 @@
+[
+ {
+  "name": "hud.mounted",
+  "t": 5897.799999999814,
+  "payload": {
+   "layout": "desktop"
+  }
+ },
+ {
+  "name": "npe.started",
+  "t": 5953.799999999814,
+  "payload": {
+   "step": "prologue",
+   "ms": 0
+  }
+ },
+ {
+  "name": "prologue.started",
+  "t": 5954.09999999986,
+  "payload": {
+   "ms": 0
+  }
+ },
+ {
+  "name": "sprint.mounted",
+  "t": 5954.799999999814,
+  "payload": {
+   "modules": [
+    "firstSeenTips",
+    "rpgHud",
+    "quests",
+    "market",
+    "lab",
+    "npe"
+   ]
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 7665.299999999814,
+  "payload": {
+   "id": "title",
+   "durMs": 2800
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 11905.799999999814,
+  "payload": {
+   "id": "year",
+   "t": 3,
+   "text": "2048. Dr. Iris's laboratory.",
+   "durMs": 3800
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 19444.899999999907,
+  "payload": {
+   "id": "check",
+   "t": 10.4,
+   "speaker": "Iris",
+   "text": "One more check on the signal...",
+   "durMs": 2800
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 23556.59999999986,
+  "payload": {
+   "id": "key_press",
+   "t": 14
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 23557.09999999986,
+  "payload": {
+   "id": "device_on",
+   "t": 15.8
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 32148.5,
+  "payload": {
+   "id": "oh_no",
+   "t": 24.3,
+   "speaker": "Iris",
+   "text": "Oh no...",
+   "durMs": 1400,
+   "voice": "voice_iris_oh_no"
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 36454.69999999995,
+  "payload": {
+   "id": "vortex_start",
+   "t": 26.5
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 38567.799999999814,
+  "payload": {
+   "id": "tunnel",
+   "t": 31
+  }
+ },
+ {
+  "name": "prologue.cue",
+  "t": 50998.5,
+  "payload": {
+   "id": "whiteout",
+   "t": 34.6
+  }
+ },
+ {
+  "name": "prologue.completed",
+  "t": 54131.69999999995,
+  "payload": {
+   "ms": 48178
+  }
+ },
+ {
+  "name": "npe.step",
+  "t": 54131.799999999814,
+  "payload": {
+   "step": "wakeup",
+   "ms": 48178
+  }
+ },
+ {
+  "name": "wakeup.cue",
+  "t": 54187.39999999991,
+  "payload": {
+   "id": "eyes_open",
+   "t": 0
+  }
+ },
+ {
+  "name": "wakeup.cue",
+  "t": 56637.299999999814,
+  "payload": {
+   "id": "crowd",
+   "t": 3
+  }
+ },
+ {
+  "name": "wakeup.cue",
+  "t": 63018.09999999986,
+  "payload": {
+   "id": "sit_up",
+   "t": 6
+  }
+ },
+ {
+  "name": "wakeup.completed",
+  "t": 63018.19999999995,
+  "payload": {
+   "ms": 8886
+  }
+ },
+ {
+  "name": "npe.step",
+  "t": 63018.39999999991,
+  "payload": {
+   "step": "dialogue",
+   "ms": 57065
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 63019,
+  "payload": {
+   "target": null,
+   "line": "W1"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 110135.19999999995,
+  "payload": {
+   "target": null,
+   "line": "W2"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 114719.59999999986,
+  "payload": {
+   "target": "gate_loom",
+   "line": "W3"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 130544.19999999995,
+  "payload": {
+   "target": "iris_badge",
+   "line": "W4"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 143812,
+  "payload": {
+   "target": null,
+   "line": "W5"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 155185.69999999995,
+  "payload": {
+   "target": "elder",
+   "line": "W6"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 177592.19999999995,
+  "payload": {
+   "target": null,
+   "line": "W7"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 211171.2999999998,
+  "payload": {
+   "target": null,
+   "line": "W8"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 216146.09999999986,
+  "payload": {
+   "target": "shell",
+   "line": "W9"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 252532.59999999986,
+  "payload": {
+   "target": null,
+   "line": "W10"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 259128.8999999999,
+  "payload": {
+   "target": null,
+   "line": "W11"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 262736.19999999995,
+  "payload": {
+   "target": "gate_loom",
+   "line": "W12"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 300531.3999999999,
+  "payload": {
+   "target": null,
+   "line": "W13"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 309983.5,
+  "payload": {
+   "target": null,
+   "line": "W14"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 353852.69999999995,
+  "payload": {
+   "target": null,
+   "line": "W15"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 356299.8999999999,
+  "payload": {
+   "target": null,
+   "line": "W16"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 361111.59999999986,
+  "payload": {
+   "target": null,
+   "line": "W17"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 405838.09999999986,
+  "payload": {
+   "target": null,
+   "line": "W18"
+  }
+ },
+ {
+  "name": "npe.camera",
+  "t": 415492,
+  "payload": {
+   "target": null,
+   "line": "W19"
+  }
+ },
+ {
+  "name": "npe.step",
+  "t": 445700.5,
+  "payload": {
+   "step": "card",
+   "ms": 439747
+  }
+ },
+ {
+  "name": "npe.step",
+  "t": 448093.09999999986,
+  "payload": {
+   "step": "handoff",
+   "ms": 442139
+  }
+ },
+ {
+  "name": "npe.step",
+  "t": 448093.19999999995,
+  "payload": {
+   "step": "done",
+   "ms": 442139
+  }
+ },
+ {
+  "name": "npe.completed",
+  "t": 448093.19999999995,
+  "payload": {
+   "step": "done",
+   "ms": 442139
+  }
+ },
+ {
+  "name": "xp.gained",
+  "t": 448101.59999999986,
+  "payload": {
+   "amount": 400,
+   "source": "kill",
+   "total": 400
+  }
+ },
+ {
+  "name": "level.up",
+  "t": 448102.2999999998,
+  "payload": {
+   "level": 2,
+   "skillPoints": 1,
+   "statPoints": 3
+  }
+ },
+ {
+  "name": "level.up",
+  "t": 448106,
+  "payload": {
+   "level": 3,
+   "skillPoints": 2,
+   "statPoints": 6
+  }
+ },
+ {
+  "name": "window.opened",
+  "t": 448111.3999999999,
+  "payload": {
+   "id": "market"
+  }
+ }
+]
