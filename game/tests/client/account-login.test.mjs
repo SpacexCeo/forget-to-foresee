@@ -217,3 +217,29 @@ test('the accountLogin flag is off by default; ?ff=accountLogin switches it on f
   assert.deepEqual(queryFlags('?ff=accountLogin'), { accountLogin: true });
   assert.ok(!SPRINT_FLAGS.includes('accountLogin'));
 });
+
+test('NEAR through NEAR Connect: the wallet signs NEP-413 twice; the relayer checks it with the account\'s full-access key', async () => {
+  const { nearConnectProvider, sigToBytes, bestNearProvider } = await import('../../src/net/wallets.js');
+  const { nep413Hash } = await import('../../../relayer/lib/auth.js');
+  const { importSecretKey } = await import('../../src/net/near-tx.js');
+  const chain = fakeChain(), rel = fakeRelayer(chain);
+  const nearKey = await generateKeyPair(), signer = await importSecretKey(nearKey.secretKey);
+  chain.keys.set('ann.testnet', new Set([nearKey.publicKey])); // the player's own NEAR account (a HOT or Meteor key)
+  const seen = [];
+  const wallet = { async signMessage({ message, recipient, nonce, network }) { seen.push({ recipient, network, n: nonce.length }); const sig = await signer.sign(nep413Hash(message, Buffer.from(nonce), recipient)); return { accountId: 'ann.testnet', publicKey: nearKey.publicKey, signature: Buffer.from(sig).toString('base64') }; } };
+  const provider = nearConnectProvider({ connector: async () => ({ connect: async () => wallet }) });
+  const b = browser(chain, 'ann'); await b.mint.mint('Ann');
+  const r = await loginFor(b, chain, rel).signIn(provider);
+  assert.equal(r.status, 'linked');
+  assert.deepEqual(seen.map((s) => [s.recipient, s.network, s.n]), [['forget-to-foresee', 'mainnet', 32], ['forget-to-foresee', 'mainnet', 32]]);
+  assert.ok(rel.store.get('near:ann.testnet'));
+  // the same NEAR account on a phone restores the same game account
+  const phone = browser(chain, 'phone');
+  assert.equal((await loginFor(phone, chain, rel).signIn(nearConnectProvider({ connector: async () => ({ connect: async () => wallet }) }))).account, 'ann0.guests.testnet');
+  // signatures in base64, base58 or hex decode the same
+  const raw = new Uint8Array(64).fill(9);
+  assert.deepEqual(sigToBytes(Buffer.from(raw).toString('base64')), raw);
+  assert.deepEqual(sigToBytes('0x' + Buffer.from(raw).toString('hex')), raw);
+  // NEAR Connect unreachable (CDN down): the panel falls back to MyNearWallet directly
+  assert.equal((await bestNearProvider({ connector: async () => { throw new Error('offline'); } })).id, 'mynearwallet');
+});

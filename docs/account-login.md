@@ -6,8 +6,14 @@ Behind the feature flag `accountLogin` (`game/public/features.json`, off). `?ff=
 
 - **Play as guest** is the first and largest button. A guest plays at once on the Day-1 guest NEAR testnet account
   stored in this browser, exactly as before; nothing waits on a wallet or the relayer.
-- **NEAR wallet (MyNearWallet)**, **EVM wallet (MetaMask and others)**, **Solana wallet (Phantom and others)**. Each
-  EIP-6963 EVM wallet and each injected Solana wallet the browser has gets its own row.
+- **NEAR wallet (HOT, Meteor, Intear, MyNearWallet…)** through HOT's NEAR Connect (`@hot-labs/near-connect@0.12.0`,
+  imported from esm.sh only when the row is tapped; its chooser lists HOT, Meteor, Intear, Ledger, MyNearWallet, OKX,
+  NEAR Mobile, Nightly, Hana, NEAR CLI). It runs on mainnet: HOT, MyNearWallet, OKX and Hana declare no testnet support,
+  and a NEP-413 signature is free and moves nothing; the game account stays the testnet guest. If NEAR Connect cannot
+  load, the row falls back to MyNearWallet directly.
+- **NEAR testnet account (MyNearWallet)**: MyNearWallet's NEP-413 popup on testnet, no library.
+- **EVM wallet (MetaMask and others)**, **Solana wallet (Phantom and others)**. Each EIP-6963 EVM wallet and each
+  injected Solana wallet the browser has gets its own row.
 - The panel opens from the game menu (header button) and from the Day-1 name step (a secondary button under
   Continue). It never opens by itself; Esc, the × or a tap outside closes it. Text: "Your account lives on NEAR
   testnet. Nothing here has real-world value."
@@ -27,7 +33,8 @@ The Day-1 guest account stays the on-chain identity. A login links to it.
    - EVM: EIP-191 `personal_sign`, checked by secp256k1 recovery to the 0x address;
    - Solana: `signMessage`, ed25519 over the UTF-8 bytes, the base58 address is the key;
    - NEAR: NEP-413 (`recipient: forget-to-foresee`, the nonce as the 32-byte NEP-413 nonce), and the key must be a
-     full-access key of the named account (RPC `view_access_key`; implicit accounts: hex(key) = account).
+     full-access key of the named account, checked on that account's own network (`*.testnet` on testnet, other names
+     on mainnet, `FTF_MAINNET_RPC` to override; implicit accounts: hex(key) = account).
    These are the key kinds intents.near accepts, so the same logins can later sign NEAR Intents.
 3. **Guest proof.** When the browser already has a guest, the guest's own full-access key signs the same message;
    the relayer checks the key on chain. Nobody can link someone else's account.

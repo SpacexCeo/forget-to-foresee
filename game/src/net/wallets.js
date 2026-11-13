@@ -1,8 +1,9 @@
 // Wallet providers for the account login (net/account-login.js), no libraries:
 //   - EVM: EIP-6963 discovery (every injected wallet announces itself), else window.ethereum; EIP-191 personal_sign.
 //   - Solana: the injected providers (Phantom, Solflare, Backpack, window.solana); signMessage (ed25519 over bytes).
-//   - NEAR: MyNearWallet's sign-message page in a popup, the same request @near-wallet-selector/my-near-wallet makes
-//     (NEP-413: message, nonce, recipient; the answer comes back by postMessage from the wallet's origin).
+//   - NEAR: HOT's NEAR Connect (HOT, Meteor, Intear, MyNearWallet, Nightly…), loaded from esm.sh at a pinned version
+//     only when the player taps the NEAR row; if it cannot load, MyNearWallet's sign-message popup directly (the same
+//     request @near-wallet-selector/my-near-wallet makes). Both answer NEP-413 (message, nonce, recipient).
 // A provider: {kind, id, name, connect() -> {address, publicKey?}, signMessage(text, nonceHex) -> signature text,
 // signDeviceKey() -> Uint8Array (>= 64 bytes)}. Nothing here runs until the player taps a wallet.
 import { DEVICE_KEY_TEXT, RECIPIENT, deviceKeyNonce, b58, b64, unb64, toHex, fromHex } from './account-login.js';
@@ -101,11 +102,67 @@ export function nearProvider({ sign = myNearWalletSign } = {}) {
       if (!first || !first.accountId || !first.signature) throw new Error('no_account');
       return { address: first.accountId, publicKey: first.publicKey };
     },
-    async signDeviceKey() { if (!first) throw new Error('not_connected'); return unb64(first.signature); },
+    async signDeviceKey() { if (!first) throw new Error('not_connected'); return sigToBytes(first.signature); },
     async signMessage(text, nonceHex) {
       const r = await sign({ message: text, nonce: fromHex(nonceHex) });
       if (!first || r.accountId !== first.accountId) throw new Error('account_changed');
       return r.signature;
     },
   };
+}
+
+export const NEAR_CONNECT_URL = 'https://esm.sh/@hot-labs/near-connect@0.12.0?target=es2022';
+let connectorP = null;
+/**
+ * One NearConnector for the page, loaded on first use. Mainnet: the login is the player's own NEAR account (HOT,
+ * MyNearWallet, OKX… declare no testnet support); signing a message is free and moves nothing. The game account stays
+ * the Day-1 guest on testnet; the relayer checks the signing key on the account's own network.
+ */
+export function nearConnector(load = () => import(/* @vite-ignore */ NEAR_CONNECT_URL)) {
+  return (connectorP ||= load().then((m) => new m.NearConnector({ network: 'mainnet', features: { signMessage: true }, footerBranding: null }))
+    .catch((e) => { connectorP = null; throw e; }));
+}
+
+/**
+ * The NEAR provider through NEAR Connect: the player picks HOT, Meteor, Intear, MyNearWallet… in its own chooser.
+ * connect() is the device-key signature (it names the account, as with MyNearWallet).
+ */
+export function nearConnectProvider({ connector = nearConnector } = {}) {
+  let wallet = null, first = null;
+  const sign = async (message, nonce) => wallet.signMessage({ message, recipient: RECIPIENT, nonce, network: 'mainnet' });
+  return {
+    kind: 'near', id: 'near-connect', name: 'NEAR Connect',
+    async connect() {
+      const c = await connector();
+      wallet = await c.connect();
+      first = await sign(DEVICE_KEY_TEXT, await deviceKeyNonce());
+      if (!first || !first.accountId || !first.signature) throw new Error('no_account');
+      return { address: first.accountId, publicKey: first.publicKey };
+    },
+    async signDeviceKey() { if (!first) throw new Error('not_connected'); return sigToBytes(first.signature); },
+    async signMessage(text, nonceHex) {
+      const r = await sign(text, fromHex(nonceHex));
+      if (!first || r.accountId !== first.accountId) throw new Error('account_changed');
+      return r.signature;
+    },
+  };
+}
+/** A NEP-413 signature as wallets return it (base64 by the standard; some give base58 or 0x-hex) -> bytes. */
+export function sigToBytes(s) {
+  if (s instanceof Uint8Array) return s;
+  if (/^0x[0-9a-f]+$/i.test(s)) return fromHex(s);
+  if (/^[1-9A-HJ-NP-Za-km-z]{80,90}$/.test(s)) return b58decodeBytes(s);
+  return unb64(s);
+}
+const B58A = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function b58decodeBytes(s) {
+  let n = 0n; for (const c of s) n = n * 58n + BigInt(B58A.indexOf(c));
+  const out = []; while (n > 0n) { out.unshift(Number(n % 256n)); n /= 256n; }
+  for (const c of s) { if (c !== '1') break; out.unshift(0); }
+  return Uint8Array.from(out);
+}
+
+/** The NEAR provider the panel uses: NEAR Connect, or MyNearWallet directly when NEAR Connect cannot load. */
+export async function bestNearProvider({ connector = nearConnector } = {}) {
+  try { await connector(); return nearConnectProvider({ connector }); } catch { return nearProvider(); }
 }

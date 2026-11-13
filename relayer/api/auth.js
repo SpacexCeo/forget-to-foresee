@@ -14,10 +14,13 @@ async function readBody(req) {
   try { return JSON.parse(s || '{}'); } catch { return null; }
 }
 
-/** RPC view_access_key -> {permission: 'FullAccess' | {FunctionCall}} or null. */
-export const accessKeyVia = (client) => async (account_id, public_key) => {
+export const MAINNET_RPC = ['https://free.rpc.fastnear.com', 'https://rpc.mainnet.near.org'];
+/** The network of a NEAR account id: *.testnet (and the guests) on testnet, every other named account on mainnet. */
+export const networkOf = (account_id) => (/.testnet$/.test(account_id) ? 'testnet' : 'mainnet');
+/** RPC view_access_key on the account's own network -> {permission: 'FullAccess' | {FunctionCall}} or null. */
+export const accessKeyVia = (client, mainnet = client) => async (account_id, public_key) => {
   try {
-    const r = await client.rpc('query', { request_type: 'view_access_key', finality: 'final', account_id, public_key });
+    const r = await (networkOf(account_id) === 'testnet' ? client : mainnet).rpc('query', { request_type: 'view_access_key', finality: 'final', account_id, public_key });
     return { permission: r.permission === 'FullAccess' ? 'FullAccess' : r.permission };
   } catch { return null; }
 };
@@ -42,7 +45,8 @@ export function authHandler(opts = {}) {
     if (!linker) {
       store = store || createIdentityStore(identityFile(env));
       const client = opts.client || createTxClient({ rpcUrls: cfg.rpcUrls.length ? cfg.rpcUrls : DEFAULTS.rpcUrls, fetch: opts.fetch || globalThis.fetch, timeoutMs: 20_000 });
-      linker = createLinker({ store, nonces, accessKey: opts.accessKey || accessKeyVia(client), now: opts.now });
+      const mainnet = opts.mainnetClient || createTxClient({ rpcUrls: env.FTF_MAINNET_RPC ? env.FTF_MAINNET_RPC.split(',').map((s) => s.trim()).filter(Boolean) : MAINNET_RPC, fetch: opts.fetch || globalThis.fetch, timeoutMs: 20_000 });
+      linker = createLinker({ store, nonces, accessKey: opts.accessKey || accessKeyVia(client, mainnet), now: opts.now });
     }
     try {
       const r = await linker(body);

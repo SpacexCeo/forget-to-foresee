@@ -191,3 +191,14 @@ test('the same guest linking again is idempotent', async () => {
 test('verifyGuest refuses a malformed account', async () => {
   assert.equal((await verifyGuest({ account_id: 'Bad Name', public_key: 'x', signature: 'y' }, 'm')).error, 'bad_account');
 });
+
+test('a NEAR login key is checked on the account\'s own network: *.testnet on testnet, other names on mainnet', async () => {
+  const { accessKeyVia, networkOf } = await import('../api/auth.js');
+  assert.equal(networkOf('ann.guests.testnet'), 'testnet');
+  assert.equal(networkOf('ann.near'), 'mainnet');
+  const hits = [];
+  const client = (net) => ({ rpc: async (m, p) => { hits.push([net, p.account_id]); return { permission: 'FullAccess' }; } });
+  const ak = accessKeyVia(client('testnet'), client('mainnet'));
+  await ak('ann.near', 'ed25519:x'); await ak('bob.testnet', 'ed25519:y');
+  assert.deepEqual(hits, [['mainnet', 'ann.near'], ['testnet', 'bob.testnet']]);
+});
