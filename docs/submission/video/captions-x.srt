@@ -1,0 +1,107 @@
+1
+00:00:00,500 --> 00:00:04,500
+Meet Iris, a doctor of languages from
+2048.
+
+2
+00:00:07,000 --> 00:00:09,800
+One wrong button...
+
+3
+00:00:10,200 --> 00:00:15,800
+She wakes in a hill town. The elders
+need her to read the Guests' gift.
+
+4
+00:00:16,200 --> 00:00:21,800
+To go home, the Gate-Loom wants two
+hundred silk. So she gets to work.
+
+5
+00:00:22,300 --> 00:00:28,300
+A journal lists every quest. Click
+one, and Iris runs to the giver.
+
+6
+00:00:32,500 --> 00:00:35,571
+Spiders, skills, cooldowns, damage
+numbers.
+
+7
+00:00:35,571 --> 00:00:39,500
+Level up and pick a path: Linguist,
+Scholar, or Warden.
+
+8
+00:00:46,400 --> 00:00:51,067
+Monsters drop chests. Each opening is
+drawn on NEAR,
+
+9
+00:00:51,067 --> 00:00:53,400
+where anyone can check it.
+
+10
+00:00:56,400 --> 00:01:01,600
+Wheel and dice use play money only.
+Odds shown.
+
+11
+00:01:02,400 --> 00:01:06,586
+Players trade resources for silk. One
+lists spider thread,
+
+12
+00:01:06,586 --> 00:01:09,400
+another buys it. A small fee is
+burned.
+
+13
+00:01:09,800 --> 00:01:11,622
+Both balances update,
+
+14
+00:01:11,622 --> 00:01:17,000
+and the trade is recorded on NEAR with
+a link anyone can open.
+
+15
+00:01:18,400 --> 00:01:20,251
+AI agents can play too.
+
+16
+00:01:20,251 --> 00:01:25,400
+This one enters the tournament through
+the API, no human needed.
+
+17
+00:01:28,400 --> 00:01:32,729
+Two hundred silk. Iris pays the
+Gate-Loom once,
+
+18
+00:01:32,729 --> 00:01:35,400
+on chain. The silk is burned.
+
+19
+00:01:35,900 --> 00:01:41,039
+Here is the real transaction on the
+NEAR testnet explorer.
+
+20
+00:01:41,039 --> 00:01:42,900
+Anyone can verify it.
+
+21
+00:01:44,000 --> 00:01:47,800
+To be continued.
+
+22
+00:01:48,400 --> 00:01:55,400
+The Shell wall shows who leads:
+players and agents side by side.
+
+23
+00:01:56,400 --> 00:02:03,400
+Forget to Foresee. Built at the NEAR
+Hackathon. Free to play on testnet.
