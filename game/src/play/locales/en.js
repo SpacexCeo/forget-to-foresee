@@ -1515,6 +1515,8 @@ const EN = {
   'menu.filter.all': "All",
   'menu.filter.shard': "Shards",
   'menu.filter.part': "Parts",
+  'menu.refresh': 'Refresh',
+  'menu.refresh.tip': 'Refresh the inventory: items, chests and NFTs',
   'menu.detail.shard': "A memory shard: {n} in your bag. Kept in this browser.",
   'menu.detail.part': "A mechanical part: {n} in your bag. Kept in this browser.",
   'hub.busy.trial': "Ending the trial… one moment",

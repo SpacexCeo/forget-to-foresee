@@ -1507,6 +1507,8 @@ export default {
   'menu.filter.all': "Усі",
   'menu.filter.shard': "Уламки",
   'menu.filter.part': "Деталі",
+  'menu.refresh': 'Оновити',
+  'menu.refresh.tip': 'Оновити інвентар: предмети, скрині та NFT',
   'menu.detail.shard': "Уламок пам’яті: у сумці {n}. Зберігається в цьому браузері.",
   'menu.detail.part': "Механічна деталь: у сумці {n}. Зберігається в цьому браузері.",
   'hub.busy.trial': "Випробування завершується… секунду",

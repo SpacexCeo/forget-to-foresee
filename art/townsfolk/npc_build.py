@@ -1,7 +1,7 @@
 """Quest givers from the owner's generated, pre-rigged models: one skinned mesh on a 78-bone humanoid skeleton each.
 They become townsfolk of the shared agent rig (same bone names as every other body, so the shared clip set
-game/public/assets/anim/townsfolk.glb retargets onto them at load): the 78 bones are merged into 31 of ours (twist and
-share bones into their limb, the three long fingers into one, the face into the head), the mesh is stood on the
+game/public/assets/anim/townsfolk.glb retargets onto them at load): the 78 bones are merged into 31 of ours (twist bones
+into their limb, the knee and elbow share bones split between the two segments, the three long fingers into one, the face into the head), the mesh is stood on the
 floor at the giver's height facing -Y, welded (it comes as a triangle soup) and decimated; UVs and texture are its own.
     blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles> [outline mm, 0 = none] [coat: largest leg share of cloth hanging off the legs, 0 = off]
 The texture is resized and compressed afterwards (art/tools/compress-glb.sh).
@@ -43,11 +43,19 @@ k = HEIGHT / (co[:, 2].max() - co[:, 2].min()); z0 = co[:, 2].min(); T = lambda 
 co = T(co); J = {b: T(p) for b, p in J.items()}
 W = {}
 gname = {g.index: canon(g.name) for g in el.vertex_groups}
+# A share bone at the knee or the elbow turns by half of the joint's angle: its weight is split between the two
+# segments (all of it on the lower one made the knee cap swing with the shin: a sharp break and stretched skin).
+SHARE = {'Knee': ('thigh', 'shin'), 'Elbow': ('upperarm', 'forearm')}
+def targets(src):
+    m = re.match(r'^([LR])_(Knee|Elbow)', src)
+    if m: return [(f'{b}_{m.group(1)}', 0.5) for b in SHARE[m.group(2)]]
+    return [(ours(src) or 'pelvis', 1.0)]
 for v in me.vertices:
     for g in v.groups:
-        W.setdefault(ours(gname[g.group]) or 'pelvis', np.zeros(n))[v.index] += g.weight
+        for to, share in targets(gname[g.group]): W.setdefault(to, np.zeros(n))[v.index] += g.weight * share
+sm = lambda a_, b_, x_: (lambda t_: t_ * t_ * (3 - 2 * t_))(np.clip((x_ - a_) / (b_ - a_), 0, 1)); kk = HEIGHT / 1.8
 if COAT > 0:      # a long coat welded to the body: cloth that hangs away from a leg follows it by `COAT` at most, the hips take the rest
-    sm = lambda a_, b_, x_: (lambda t_: t_ * t_ * (3 - 2 * t_))(np.clip((x_ - a_) / (b_ - a_), 0, 1)); kk = HEIGHT / 1.8; moved = 0.0
+    moved = 0.0
     for s_ in 'LR':
         cap = np.ones(n)
         for bone, a_, b_, r0, r1 in ((f'thigh_{s_}', J[f'{s_}_Thigh'], J[f'{s_}_Calf'], 0.105, 0.075), (f'shin_{s_}', J[f'{s_}_Calf'], J[f'{s_}_Foot'], 0.085, 0.085)):
@@ -55,19 +63,28 @@ if COAT > 0:      # a long coat welded to the body: cloth that hangs away from a
             c_ = 1 - (1 - COAT) * sm(0.01 * kk, 0.07 * kk, e_); w_ = W.get(bone)
             if w_ is None: continue
             give = w_ * (1 - c_); W[bone] = w_ - give; W.setdefault('pelvis', np.zeros(n)); W['pelvis'] = W['pelvis'] + give; moved += float(give.sum())
-    # the auto-rig also hung coat cloth on the arms that rest beside it: an arm keeps only what lies around its own bones
-    bled = 0.0; waist = J['Spine01'][2]
-    for s_ in 'LR':
-        segs = [(J[f'{s_}_Upperarm'], J[f'{s_}_Forearm']), (J[f'{s_}_Forearm'], J[f'{s_}_Hand']), (J[f'{s_}_Hand'], J[f'{s_}_Mid3'])]; d_ = np.full(n, 9.0)
-        for a_, b_ in segs:
-            ab = b_ - a_; t_ = np.clip(((co - a_) @ ab) / (ab @ ab), 0, 1); d_ = np.minimum(d_, np.linalg.norm(co - a_ - t_[:, None] * ab, axis=1))
-        c_ = 1 - sm(0.08 * kk, 0.13 * kk, d_)
-        for bone in (f'upperarm_{s_}', f'forearm_{s_}', f'hand_{s_}', f'thumb_{s_}', f'index_{s_}', f'fingers_{s_}'):
-            w_ = W.get(bone)
-            if w_ is None: continue
-            give = w_ * (1 - c_); W[bone] = w_ - give; bled += float(give.sum())
-            for to, m_ in (('pelvis', co[:, 2] < waist), ('chest', co[:, 2] >= waist)): W.setdefault(to, np.zeros(n)); W[to] = W[to] + give * m_
-    print('coat: leg weight moved to the hips, %.0f vertex-weights; arm weight taken off the cloth, %.0f' % (moved, bled))
+    print('coat: leg weight moved to the hips, %.0f vertex-weights' % moved)
+# The auto-rig hangs cloth and hip skin on the arms that rest beside them: an arm keeps only what lies around its own
+# bones. And a leg keeps to its own side: weight that crossed the centre line goes to the same bone of the other leg.
+bled = 0.0; waist = J['Spine01'][2]
+for s_ in 'LR':
+    segs = [(J[f'{s_}_Upperarm'], J[f'{s_}_Forearm']), (J[f'{s_}_Forearm'], J[f'{s_}_Hand']), (J[f'{s_}_Hand'], J[f'{s_}_Mid3'])]; d_ = np.full(n, 9.0)
+    for a_, b_ in segs:
+        ab = b_ - a_; t_ = np.clip(((co - a_) @ ab) / (ab @ ab), 0, 1); d_ = np.minimum(d_, np.linalg.norm(co - a_ - t_[:, None] * ab, axis=1))
+    c_ = 1 - sm(0.08 * kk, 0.13 * kk, d_)
+    for bone in (f'upperarm_{s_}', f'forearm_{s_}', f'hand_{s_}', f'thumb_{s_}', f'index_{s_}', f'fingers_{s_}'):
+        w_ = W.get(bone)
+        if w_ is None: continue
+        give = w_ * (1 - c_); W[bone] = w_ - give; bled += float(give.sum())
+        for to, m_ in (('pelvis', co[:, 2] < waist), ('chest', co[:, 2] >= waist)): W.setdefault(to, np.zeros(n)); W[to] = W[to] + give * m_
+crossed = 0.0
+for bone in ('thigh', 'shin', 'foot', 'toe'):
+    for s_, sg in (('L', 1), ('R', -1)):
+        o_ = 'R' if s_ == 'L' else 'L'; w_ = W.get(f'{bone}_{s_}')
+        if w_ is None or f'{bone}_{o_}' not in W: continue
+        side = np.sign(J[f'{s_}_Thigh'][0]) or sg; wrong = sm(0.01 * kk, 0.04 * kk, -co[:, 0] * side); give = w_ * wrong
+        W[f'{bone}_{s_}'] = w_ - give; W[f'{bone}_{o_}'] = W[f'{bone}_{o_}'] + give; crossed += float(give.sum())
+print('clean: arm weight taken off the cloth, %.0f vertex-weights; leg weight returned to its own side, %.0f' % (bled, crossed))
 tot = sum(W.values()); print('source: %d vertices, %d triangles, %d bones; unweighted vertices %d; scale %.3f' % (n, sum(len(p.vertices) - 2 for p in me.polygons), len(arm0.data.bones), int((tot < 1e-4).sum()), k))
 W.setdefault('pelvis', np.zeros(n))[tot < 1e-4] = 1.0; tot = sum(W.values())
 img = next((i for i in bpy.data.images if i.size[0] > 0), None)

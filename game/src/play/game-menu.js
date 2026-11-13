@@ -47,6 +47,8 @@ const CSS = `
 .gm-state { display: inline-block; padding: 2px 8px; border-radius: 8px; font: 600 11px/1.5 system-ui; background: rgba(233, 230, 220, .08); color: rgba(233, 230, 220, .65); } .gm-state.gm-on { background: rgba(127, 209, 139, .16); color: #7fd18b; }
 .gm-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .gm-fchip { min-height: 38px; padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(214, 226, 214, .16); background: transparent; color: rgba(233, 230, 220, .75); font: 600 13px/1 system-ui; cursor: pointer; }
+.gm-refresh { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.gm-refresh svg { transition: transform .5s ease; } .gm-refresh.gm-spin svg { transform: rotate(360deg); }
 .gm-fchip[aria-pressed="true"] { background: rgba(47, 196, 178, .16); border-color: rgba(47, 196, 178, .6); color: #2fc4b2; }
 .gm-card[role="button"] { cursor: pointer; } .gm-card[role="button"]:focus-visible { outline: 2px solid #d9b26a; outline-offset: 2px; }
 .gm-detail { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: #131c1b; border: 1px solid rgba(214, 226, 214, .12); }
@@ -141,7 +143,7 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const wheel = createWheel({ storage, account: owner, now, earnedFrom: () => Math.max(0, ledger.level.level - 1) + (ledger.stats.trialsVerified || 0) });
   const inv = createInventory({ storage });
   const items = manifest || loadManifest(base);
-  const chain = onChain || readOnChain({ owner });
+  let chain = onChain || readOnChain({ owner });
   const bag = chests || createChestBag({ storage });
   const chestApi = chestClient || createChestClient({ storage });
 
@@ -247,6 +249,11 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         const owned = kind === 'all' ? ownedAll : ownedAll.filter((x) => x.kind === kind);
         const chips = el('div', 'gm-chips');
         for (const k of ['all', 'shard', 'part']) { const b = btn(t('menu.filter.' + k), () => { invFilter = k; show('inventory'); }, 'gm-fchip'); b.setAttribute('aria-pressed', String(k === kind)); chips.append(b); }
+        // owner 13.11: refresh the bag in place (items and chests saved by the rest of the game, and the chain read)
+        const refresh = btn('', (b) => { b.disabled = true; b.classList.add('gm-spin'); refreshInventory(); show('inventory'); }, 'gm-fchip gm-refresh');
+        refresh.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>';
+        refresh.append(el('span', null, t('menu.refresh'))); refresh.title = t('menu.refresh.tip'); refresh.setAttribute('aria-label', t('menu.refresh.tip'));
+        chips.append(refresh);
         const detail = el('div', 'gm-detail'); detail.hidden = true;
         const pick = (it) => {
           detail.hidden = false; const img = el('img'); img.src = base + 'assets/items/' + (it.icon || it.icon128); img.alt = '';
@@ -312,6 +319,12 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const fresh = new Set();
   let wheelView = null; // the open wheel screen (stopped when the tab changes or the menu closes)
   let invFilter = 'all';
+  /** Re-reads the inventory and the chest bag from this browser, and asks the chain again for the NFTs. */
+  function refreshInventory() {
+    try { if (inv.reload) inv.reload(); } catch { /* keeps what it has */ }
+    try { if (bag.reload) bag.reload(); } catch { /* keeps what it has */ }
+    chain = readOnChain({ owner });
+  }
 
   /** Chests from monsters (game/chests.js): sealed ones open through the chest service (play/chest-open.js). */
   function chestSection(list) {

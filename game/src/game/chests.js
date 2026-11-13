@@ -51,12 +51,14 @@ const uid = () => {
  * @param {{storage?: object, now?: () => number}} [o]
  */
 export function createChestBag({ storage = null, now = () => Date.now() } = {}) {
-  let list = [];
-  try { const raw = storage && storage.getItem(CHEST_KEY); if (raw) list = (JSON.parse(raw).chests || []).filter((c) => c && c.id && CHEST_TIERS.includes(c.tier)); } catch { list = []; }
+  const read = () => { try { const raw = storage && storage.getItem(CHEST_KEY); return raw ? (JSON.parse(raw).chests || []).filter((c) => c && c.id && CHEST_TIERS.includes(c.tier)) : []; } catch { return []; } };
+  let list = read();
   const subs = new Set();
   const save = () => { try { if (storage) storage.setItem(CHEST_KEY, JSON.stringify({ v: 1, chests: list })); } catch { /* memory only */ } subs.forEach((f) => f()); };
   return {
     list: () => list.slice(),
+    /** Re-reads the saved chests (a fight elsewhere in the game may have dropped one since this bag was made). */
+    reload() { list = read(); for (const fn of [...subs]) { try { fn(); } catch { /* a listener's own problem */ } } },
     sealed: () => list.filter((c) => c.state === 'sealed'),
     opened: () => list.filter((c) => c.state === 'opened'),
     get: (id) => list.find((c) => c.id === id) || null,
