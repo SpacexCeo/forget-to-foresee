@@ -8,7 +8,7 @@ import { MODEL_FILES } from 'virtual:model-list';
 import { prefetchGltf } from '../render/assets.js';
 import { heroById } from '../render/asset-catalog.js';
 import { toonify } from './iris-avatar.js';
-import { townsfolkClips } from './anim-library.js';
+import { townsfolkClips, sidecarClips, mergeClips, sidecarEnabled } from './anim-library.js';
 import { resolveClip } from './behaviour.js';
 import { REMOTE, pickDrawn } from '../net/presence.js';
 
@@ -82,7 +82,13 @@ export function createRemotePlayers({ scene, phone = false, aiLabel = 'AI' }) {
     };
     // a skin of the shared rig carries no clips: the heroine's set is retargeted onto it (once per skin, cached)
     if (src.hero && src.hero.retarget) townsfolkClips(model, { file: src.hero.sidecar, key: src.hero.model, names: ['idle', 'walk', 'run'] }).then(play).catch(() => {});
-    else play(src.gltf.animations || []);
+    else {
+      // the heroine's side-car clips replace the model's own, as on the player's avatar: the model's own run still
+      // carries the loose ponytail (owner: "her hair bun bounces strangely"); its own clips play until they arrive
+      const own = src.gltf.animations || [];
+      play(own);
+      if (src.hero && sidecarEnabled()) sidecarClips(src.hero.model).then((extra) => { if (extra && extra.length && a.model === model) { if (a.mixer) a.mixer.stopAllAction(); play(mergeClips(own, extra)); } }).catch(() => {});
+    }
   }
 
   function update(dt, list, from, reducedMotion = false) {
