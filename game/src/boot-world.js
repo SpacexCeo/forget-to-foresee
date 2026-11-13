@@ -375,6 +375,13 @@ if (townMode.town) {
     return best;
   };
   const folkAt = (key) => { const p = town.townsfolk && town.townsfolk.byKey.get(key); return p ? folkPos(p) : null; };
+  // everyone Iris can talk to now, nearest first (the talk picker when several stand close: scenes/talk-picker.js)
+  const folkAround = (pos) => {
+    const tf = town.townsfolk; if (!tf) return [];
+    const out = [];
+    for (const p of tf.people) { if (p.state !== 'loaded' || !p.root.visible) continue; const q = folkPos(p); if (Math.abs(q[1] - pos[1]) > 2.5) continue; const d = Math.hypot(q[0] - pos[0], q[2] - pos[2]); if (d < TALK_RADIUS) out.push({ key: p.def.key, d }); }
+    return out.sort((a, b) => a.d - b.d);
+  };
   const badge = (key, on) => { if (town.townsfolk) { town.townsfolk.setBadge(key, on); town.townsfolk.sendToTrade(key, on); } };
   for (const h of townLedger.hires()) badge(h.npc, true);
   // Town spots (owner, 11.11: the town is the menu): the three shop doors, the notice board after the stairs, and a
@@ -499,7 +506,7 @@ if (townMode.town) {
   }).catch((e) => console.warn('[town] mirror', e));
   townFlow = createTownFlow({
     spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
-    ledger: townLedger, folkNear, folkAt, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; }, onWheel: () => openProfileFor(null, 'wheel'),
+    ledger: townLedger, folkNear, folkAt, folkAround, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; }, onWheel: () => openProfileFor(null, 'wheel'),
     quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),

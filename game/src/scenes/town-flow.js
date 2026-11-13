@@ -19,6 +19,7 @@ const DOORS = new Set(['exchange', 'scribe', 'inn']);
 import { PLAY_MESSAGES } from '../play/i18n.js';
 import { createVeil } from '../ui/loading.js';
 import { actionKey } from '../ui/keybinds.js';
+import { talkCandidates, pickCandidate, nextPick, giverOf } from './talk-picker.js';
 
 const CSS = `
 .ftf-town { position: fixed; inset: 0; pointer-events: none; z-index: 9; font-family: "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif; }
@@ -28,6 +29,10 @@ const CSS = `
 .ftf-town-objective::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 9px; border-radius: 50%; background: #e9b44c; box-shadow: 0 0 8px #e9b44c; vertical-align: 1px; }
 .ftf-town-objective[hidden], .ftf-town-prompt[hidden] { display: none; }
 body:has(.d1-panel) .ftf-town-prompt, body:has(.d1-card) .ftf-town-prompt { visibility: hidden; } /* Day 1's panels own the screen */
+.ftf-talk-pick { position: fixed; left: 50%; bottom: calc(190px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 12; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: calc(100vw - 156px); pointer-events: auto; }
+.ftf-talk-pick[hidden] { display: none; }
+.ftf-talk-pick button { min-height: 32px; padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(251, 230, 166, .55); background: rgba(16, 22, 24, .82); color: #f3ead8; font: 600 14px/1.2 system-ui, sans-serif; cursor: pointer; }
+.ftf-talk-pick button.on { background: rgba(217, 164, 65, .95); color: #1d1708; border-color: #fbe6a6; }
 .ftf-town-prompt { position: fixed; left: 50%; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 12; pointer-events: auto;
   display: inline-flex; align-items: center; gap: 10px; max-width: calc(100vw - 156px); min-height: 48px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
   border: 1.5px solid #fbe6a6; background: rgba(217, 164, 65, .92); color: #1d1708; font: 600 17px/1.2 "Libre Caslon Text", "WH Cyrillic", "Palatino Linotype", Palatino, Georgia, serif;
@@ -84,7 +89,7 @@ const sleep = (s) => new Promise((r) => setTimeout(r, s * 1000));
  * @param {() => void} [o.onRegister] the registration begins: Iris reaches for the altar ring (her `register` clip)
  * @param {() => Promise<boolean>} [o.confirmRegister] asked before the registration; false keeps Iris in town
  */
-export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null }) {
+export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = globalThis.document, leave, islandReady = () => true, islandProgress = () => 0, islandLog = () => [], coarse = false, onRegister = null, quest = null, npcAt = () => null, signSvg = null, ledger = null, folkNear = () => null, folkAt = () => null, onHireChange = null, onProfile = null, spots = [], onExchange = null, onMirror = null, folkList = [], onDoor = null, onWheel = null, confirmRegister = null, folkAround = () => [] }) {
   const i18n = ctx.i18n;
   if (!doc.getElementById('ftf-town-style')) { const st = doc.createElement('style'); st.id = 'ftf-town-style'; st.textContent = CSS; doc.head.append(st); }
   const root = doc.createElement('div'); root.className = 'ftf-town'; root.hidden = true;
@@ -102,6 +107,16 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
   root.append(objective, meta);
   doc.body.append(root, prompt, talkEl);
   let talkNpc = null, talkKind = null; // the townsperson the prompt offers a talk with ('quest' | 'folk')
+  // several people (or a door) in reach: a list of names above the prompt; a click or Tab picks, E talks (owner 13.11)
+  const pick = doc.createElement('div'); pick.className = 'ftf-talk-pick'; pick.hidden = true; pick.setAttribute('role', 'listbox');
+  pick.addEventListener('pointerdown', (e) => e.stopPropagation());
+  let cands = [], pickedId = null, pickSig = '';
+  doc.body.append(pick);
+  (doc.defaultView || globalThis).addEventListener('keydown', (e) => { // Tab: the next name in the list (only while it shows; never inside a text field); capture: before the game's keys
+    if (e.code !== 'Tab' || pick.hidden || !pick.isConnected) return;
+    const tag = e.target && e.target.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    e.preventDefault(); e.stopPropagation(); pickedId = nextPick(cands, pickedId); pickSig = ''; renderPick();
+  }, true);
   let spotNear = null, spotPanel = null; // a town spot in reach (shop door, notice board, mirror) and its open panel
   let folkTalk = null; // a hire talk with any townsperson (game/town-economy.js): {npc, view: 'card' | 'result', result}
   const profileBtn = doc.createElement('button'); profileBtn.type = 'button'; profileBtn.className = 'ftf-town-profile';
@@ -162,6 +177,22 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     cap.textContent = state.device === 'gamepad' ? 'A' : actionKey('interact');
     cap.hidden = state.device === 'touch';
     if (cover) { const sb = cover.querySelector('.boot-sub'); if (sb) sb.textContent = i18n.t('town.transition.title'); }
+  }
+  /** The names list: shown while two or more are in reach and no talk is open. */
+  function renderPick() {
+    const talking = !!((quest && quest.talk) || folkTalk || spotPanel);
+    const show = cands.length >= 2 && !talking && state.phase === 'town';
+    const sig = show ? cands.map((c) => c.id).join('|') + '#' + pickedId : '';
+    if (sig === pickSig) return; pickSig = sig;
+    pick.hidden = !show; pick.replaceChildren();
+    if (!show) return;
+    for (const c of cands) {
+      const b = doc.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option');
+      b.textContent = c.key ? i18n.t('folk.name.' + c.key) : (c.spot.prompt ? c.spot.prompt() : i18n.t(onDoor && DOORS.has(c.spot.id) ? 'town.shop.enter.' + c.spot.id : 'spot.' + c.spot.id));
+      b.className = c.id === pickedId ? 'on' : ''; b.setAttribute('aria-selected', String(c.id === pickedId));
+      b.addEventListener('click', () => { b.blur(); pickedId = c.id; pickSig = ''; update(0); interact(); });
+      pick.append(b);
+    }
   }
   function renderVisibility() {
     const on = state.phase === 'town';
@@ -470,10 +501,14 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     if (dev !== state.device || ready !== state.ready) { state.device = dev; state.ready = ready; renderText(); }
     // the quest's townsperson in reach comes first (the shrinekeeper stands beside the altar), then the altar
     const qNpc = quest && ready ? talkTarget(quest, player.pos, npcAt) : null;
-    const sp = !qNpc && ready ? spots.find((s) => s.near(player.pos)) || null : null;
+    cands = !qNpc && ready ? talkCandidates({ pos: player.pos, spots, folkAround, folkAt, folk: !!ledger }) : [];
+    const chosen = pickCandidate(cands, pickedId);
+    if (!chosen || !cands.some((c) => c.id === pickedId)) pickedId = chosen ? chosen.id : null;
+    const sp = chosen && chosen.kind === 'spot' ? chosen.spot : null;
     if (sp !== spotNear) { spotNear = sp; renderText(); renderVisibility(); }
     if (spotPanel && !sp && !remote) closeSpot(); // walked away from the door or the board
-    const fNpc = !qNpc && !sp && ledger && ready ? folkNear(player.pos) : null;
+    const fNpc = chosen && chosen.kind === 'folk' ? chosen.key : null;
+    renderPick();
     const npc = qNpc || fNpc, kind = qNpc ? 'quest' : fNpc ? 'folk' : null;
     if (npc !== talkNpc || kind !== talkKind) { talkNpc = npc; talkKind = kind; renderText(); renderVisibility(); }
     if (quest && quest.talk) { const p = npcAt(quest.talk.npc); if (p && Math.hypot(p[0] - player.pos[0], p[2] - player.pos[2]) > TALK_LEAVE) quest.close(); }
@@ -545,7 +580,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
     state.phase = 'done';
     cover.classList.remove('is-on');
     const gone = cover;
-    setTimeout(() => { ink.destroy(); gone.remove(); if (state.phase !== 'town') { root.remove(); prompt.remove(); talkEl.remove(); } }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
+    setTimeout(() => { ink.destroy(); gone.remove(); if (state.phase !== 'town') { root.remove(); prompt.remove(); talkEl.remove(); pick.remove(); } }, (reduced ? TOWN_TRANSITION.reducedFade : TOWN_TRANSITION.fade) * 1000 + 100);
     cover = null;
     return true;
   }
@@ -581,7 +616,7 @@ export function createTownFlow({ town, player, rig, reducedMotion, ctx, doc = gl
 
   /** Back from the archipelago (Return to town): the town UI again; the altar resumes the same season. */
   function reenter() {
-    doc.body.append(root, prompt, talkEl);
+    doc.body.append(root, prompt, talkEl, pick);
     state.phase = 'town'; state.resume = true; state.registering = null; state.lift = 0; state.focusK = 0; state.near = false;
     renderText(); renderVisibility();
   }

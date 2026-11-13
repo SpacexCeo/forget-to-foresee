@@ -25,10 +25,11 @@ test('spot, glossary, notice-board and guide strings exist in all five locales',
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) if (!SPRINT_KEYS.has(k)) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`); // sprint seam keys fall back to English
 });
 
-test('wiring: quest talk first, then a spot, then a townsperson, then the altar; the shrinekeeper guides; the lobby is in the pause menu', () => {
+test('wiring: quest talk first, then whoever is picked among the spots and townsfolk in reach (nearest by default), then the altar; the shrinekeeper guides; the lobby is in the pause menu', () => {
   const flow = readFileSync(new URL('../../src/scenes/town-flow.js', import.meta.url), 'utf8');
-  assert.match(flow, /const sp = !qNpc && ready \? spots\.find/);
-  assert.match(flow, /const fNpc = !qNpc && !sp && ledger && ready/);
+  assert.match(flow, /cands = !qNpc && ready \? talkCandidates\(/);
+  assert.match(flow, /const sp = chosen && chosen\.kind === 'spot'/);
+  assert.match(flow, /const fNpc = chosen && chosen\.kind === 'folk'/);
   assert.match(flow, /talkNpc === 'shrinekeeper' \? 'guide'/);
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
   assert.match(boot, /onMainMenu: openMainMenu/);
