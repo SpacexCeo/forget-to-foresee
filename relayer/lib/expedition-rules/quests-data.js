@@ -17,7 +17,7 @@ const BASE = Object.freeze({
     needs: Object.freeze({ chitin_plate: 2 }),
     reward: Object.freeze({ silk: 16, xp: 60, item: null }), repeat: null }),
   q_boss: Object.freeze({ id: 'q_boss', giver: 'shardkeeper', title: 'quest.boss.title', requires: ['q_spiders'],
-    objective: Object.freeze({ type: 'kill', mob: 'crownrift', count: 1 }),
+    objective: Object.freeze({ type: 'kill', mob: 'crownrift', count: 1, proof: 'crown_shard' }), // its drop proves the kill (owner 13.11)
     waypoint: Object.freeze({ kind: 'field', town: [12, 102], radius: 10, label: 'quest.boss.way' }),
     needs: Object.freeze({ crown_shard: 1 }),
     reward: Object.freeze({ silk: 60, xp: 250, chest: 'rare' }), repeat: null }),
