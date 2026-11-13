@@ -2,7 +2,7 @@
 // rate of the last seven days (variable, can be zero), the player's deeds, and Pledge / Claim / Begin unbond / Finish
 // unbond. Every action goes through the relayer (net/town-act.js); nothing here simulates a result: a relayer without
 // the endpoint shows "not available yet" and the buttons stay off. Words: pledge, reward share, rate. 390 px friendly.
-import { createTownAct, WORKS, toMicro, silkOf, deedActions } from '../net/town-act.js';
+import { createTownAct, WORKS, toMicro, silkOf, deedActions, STALL_TRADER } from '../net/town-act.js';
 import { artBox, deedCardPath } from '../market/art.js';
 import { syncSilkNow, refreshSilk } from '../net/silk-core.js';
 import { loadGoals, recordGoal, goalsView, shareView } from './town-goals.js';
@@ -70,6 +70,7 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
     const r = await api.act(action, args);
     busy = false;
     if (r.ok && (action === 'pledge' || action === 'claim')) recordGoal(storage, action);
+    if (r.ok && action === 'claim_stall') recordGoal(storage, 'claim');
     await render();
     if (r.ok) say(doneKey, null, r.hash); else say('works.err.' + r.reason);
   }
@@ -115,6 +116,24 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
     return r;
   }
 
+  /** The player's pledges to the three stalls (net/town-act.js stall()), each with its share and a Claim; [] when none. */
+  async function stallRows() {
+    if (typeof api.stall !== 'function') return [];
+    const all = await Promise.all(Object.entries(STALL_TRADER).map(async ([who, trader]) => [who, trader, await api.stall(trader).catch(() => null)]));
+    const rows = [];
+    for (const [who, trader, st] of all) {
+      if (!st || !st.ok || !st.mine || st.mine === '0') continue;
+      const r = el('div', 'tw-row');
+      const head = el('div', 'tw-head');
+      head.append(el('span', 'tw-name', t('works.stallOf', { name: t('mk.t.' + who) })), el('span', 'tw-num', st.open === false ? t('works.stallClosed') : t('works.stallOpen')));
+      r.append(head, el('div', 'tw-note', t('stall.back.mine', { silk: silkOf(st.mine), share: Number(st.share || 0).toFixed(2), claim: silkOf(st.claimable) })));
+      const ctl = el('div', 'tw-ctl');
+      const c = button(t('stall.back.claim'), () => run('claim_stall', { trader }, 'stall.back.claimed'), 'act'); c.disabled = BigInt(st.claimable || '0') <= 0n;
+      ctl.append(c); r.append(ctl); rows.push(r);
+    }
+    return rows;
+  }
+
   async function render() {
     if (!box) return;
     const keepState = state ? state.textContent : '';
@@ -150,6 +169,9 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
       kids.push(el('h4', null, t('works.deeds')));
       if (!me.deeds.length) kids.push(el('p', 'tw-note', t('works.noDeeds')));
       else kids.push(...me.deeds.map((d) => deedRow(d, me)));
+      const stalls = await stallRows();
+      if (!box) return;
+      if (stalls.length) kids.push(el('h4', null, t('works.stalls')), ...stalls);
     }
     state = el('div', 'tw-state'); state.setAttribute('aria-live', 'polite'); state.textContent = keepState;
     const foot = el('div', 'tw-foot'); const note = el('span', null, t('works.note'));

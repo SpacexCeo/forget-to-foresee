@@ -1971,6 +1971,10 @@ export default {
   'works.yours': "你的：{silk} silk（占此工坊 {pct}%）",
   'works.rateZero': "近 7 天尚无手续费分配：在城镇收到手续费之前，比率为零。",
   'works.myTx': "你的交易",
+  'works.stalls': "你对摊位的质押",
+  'works.stallOf': "摊位 · {name}",
+  'works.stallOpen': "营业中",
+  'works.stallClosed': "暂时关闭",
   'stall.back.between': "摊位处于两条线之间：低于 {low} silk 时关闭，达到 {high} 时重新开张。",
   // ---- quest markers and the quest log (owner 12.11: quests visible) ----
   "quest.log.title": "任务",

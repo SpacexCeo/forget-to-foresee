@@ -91,7 +91,7 @@ test('works window: how it works, the goals strip, your share and your part per 
 });
 
 test('goals and share copy: five locales, translated, never invest/APY/profit/returns', () => {
-  const keys = ['works.how.title', 'works.how.1', 'works.how.2', 'works.how.3', 'works.how.4', 'works.goals', 'works.goal.first_trade', 'works.goal.first_pledge', 'works.goal.streak', 'works.shareToday', 'works.waiting', 'works.shareNote', 'works.yours', 'works.rateZero', 'works.myTx'];
+  const keys = ['works.how.title', 'works.how.1', 'works.how.2', 'works.how.3', 'works.how.4', 'works.goals', 'works.goal.first_trade', 'works.goal.first_pledge', 'works.goal.streak', 'works.shareToday', 'works.waiting', 'works.shareNote', 'works.yours', 'works.rateZero', 'works.myTx', 'works.stalls', 'works.stallOf', 'works.stallOpen', 'works.stallClosed'];
   for (const k of keys) assert.ok(PLAY_MESSAGES.en[k], k);
   for (const lang of ['ru', 'uk', 'it', 'zh']) for (const k of keys) { assert.ok(PLAY_MESSAGES[lang][k], `${lang}:${k}`); assert.notEqual(PLAY_MESSAGES[lang][k], PLAY_MESSAGES.en[k], `${lang}:${k} translated`); }
   assert.doesNotMatch(keys.map((k) => PLAY_MESSAGES.en[k]).join(' '), /\b(invest\w*|APY|APR|profit|dividend|returns?|yield|interest)\b/i);
@@ -118,4 +118,25 @@ test('town ledger: "Take part" shows the same goals in every locale and opens th
     if (lang === 'en') assert.doesNotMatch(doc.querySelector('.tl-part').textContent, /\b(invest\w*|APY|APR|profit|dividend|returns?|yield|interest)\b/i);
     v.destroy();
   }
+});
+
+test('works window: the player\'s stall pledges with their share and a Claim that sends claim_stall and counts', async () => {
+  const { doc } = installDom();
+  const { createTownWorksPanel } = await import('../../src/ui/town-works-panel.js');
+  const i18n = createPlayI18n('en', { onMissing: (k) => { throw new Error('missing ' + k); } }); const t = (k, a) => i18n.t(k, a);
+  const me = readMe({ registered: true, pools: [], rate_7d_per_100: [], params: { lock_days: [0] }, deeds: [] });
+  const stalls = { 'trader-01.ftf-town.testnet': { ok: true, open: false, mine: '10000000', share: 25, claimable: '1500000' }, 'trader-02.ftf-town.testnet': { ok: true, open: true, mine: '0', share: 0, claimable: '0' }, 'trader-06.ftf-town.testnet': { ok: false, reason: 'not_available' } };
+  const calls = []; const s = store();
+  const client = { me: async () => ({ ok: true, me }), stall: async (tr) => stalls[tr], act: async (a, args) => { calls.push([a, args]); return { ok: true, hash: null }; } };
+  const p = createTownWorksPanel({ t, client, storage: s, doc });
+  await p.open();
+  const text = doc.querySelector('.tw').textContent;
+  assert.ok(text.includes('Your stall pledges')); assert.ok(text.includes('Stall · the guard')); assert.ok(text.includes('closed for now'));
+  assert.ok(text.includes('25.00%')); assert.ok(!text.includes('the shard-keeper'), 'no row where the player pledged nothing');
+  doc.querySelectorAll('button').find((b) => b.textContent === 'Claim reward share').click();
+  for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(calls[0], ['claim_stall', { trader: 'trader-01.ftf-town.testnet' }]); assert.equal(loadGoals(s).claim, 1);
+  p.close();
+  const none = createTownWorksPanel({ t, client: { ...client, stall: async () => ({ ok: true, mine: '0' }) }, doc }); await none.open();
+  assert.ok(!doc.querySelector('.tw').textContent.includes('Your stall pledges'), 'no heading without a stall pledge'); none.close();
 });

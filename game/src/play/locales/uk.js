@@ -1971,6 +1971,10 @@ export default {
   'works.yours': "Ваше: {silk} silk ({pct}% цієї майстерні)",
   'works.rateZero': "За 7 днів збори ще не ділилися: ставка нульова, поки до міста не прийдуть збори.",
   'works.myTx': "Ваші транзакції",
+  'works.stalls': "Ваші застави в крамниці",
+  'works.stallOf': "Крамниця · {name}",
+  'works.stallOpen': "відкрита",
+  'works.stallClosed': "поки зачинена",
   'stall.back.between': "Крамниця між порогами: зачиняється нижче {low} silk і відкривається знову при {high}.",
   // ---- quest markers and the quest log (owner 12.11: quests visible) ----
   "quest.log.title": "Квести",

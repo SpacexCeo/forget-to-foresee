@@ -1978,6 +1978,10 @@ const EN = {
   'works.yours': "Yours: {silk} silk ({pct}% of this works)",
   'works.rateZero': "No fees shared in the last 7 days yet: the rate is zero until town fees come in.",
   'works.myTx': "Your transactions",
+  'works.stalls': "Your stall pledges",
+  'works.stallOf': "Stall · {name}",
+  'works.stallOpen': "open",
+  'works.stallClosed': "closed for now",
   'stall.back.between': "The stall is between its lines: it closes below {low} silk and reopens at {high}.",
   // ---- quest markers and the quest log (owner 12.11: quests visible) ----
   "quest.log.title": "Quests",

@@ -1972,6 +1972,10 @@ export default {
   'works.yours': "Tuo: {silk} silk ({pct}% di quest'opera)",
   'works.rateZero': "Negli ultimi 7 giorni nessuna commissione divisa: il tasso è zero finché non arrivano commissioni.",
   'works.myTx': "Le tue transazioni",
+  'works.stalls': "I tuoi pegni alle bancarelle",
+  'works.stallOf': "Bancarella · {name}",
+  'works.stallOpen': "aperta",
+  'works.stallClosed': "chiusa per ora",
   'stall.back.between': "La bancarella è tra le soglie: chiude sotto {low} silk e riapre a {high}.",
   // ---- quest markers and the quest log (owner 12.11: quests visible) ----
   "quest.log.title": "Missioni",

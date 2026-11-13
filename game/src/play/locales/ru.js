@@ -1972,6 +1972,10 @@ export default {
   'works.yours': "Ваше: {silk} silk ({pct}% этой мастерской)",
   'works.rateZero': "За 7 дней сборы ещё не делились: ставка нулевая, пока в город не придут сборы.",
   'works.myTx': "Ваши транзакции",
+  'works.stalls': "Ваши залоги в лавки",
+  'works.stallOf': "Лавка · {name}",
+  'works.stallOpen': "открыта",
+  'works.stallClosed': "пока закрыта",
   'stall.back.between': "Лавка между порогами: закрывается ниже {low} silk и открывается снова при {high}.",
   // ---- quest markers and the quest log (owner 12.11: quests visible) ----
   "quest.log.title": "Квесты",
