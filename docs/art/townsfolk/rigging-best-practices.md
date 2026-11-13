@@ -104,6 +104,7 @@ sources are thin (they are mostly forum practice, not a standard) the note says 
 | 8 | planted foot | slides under 2 cm while down |
 | 9 | feet on the floor | sole within 2 cm of the floor while down, never below it |
 | 10 | quaternion tracks continuous; loops close | exact |
+| 12 | a character that fights has at least two bones per finger group, so a fist closes | measured on the fist pose |
 | 11 | looked at from the side at the game camera | film |
 
 ## 9. Diagnosis of the five quest givers (13.11)
@@ -162,6 +163,27 @@ Frames, before on the left and after on the right, side view: `givers_walk_befor
 Still open: the clips are the shared townsfolk set (motion capture retargeted), not hand-made per character; the
 fingers are one bone per group (index, the other three, thumb), so they curl at the knuckle only; the guard stands
 with slightly bent knees; `play` (the violin) and `child_run` are measured but not judged for the givers.
+
+## 12. Hands: why the fist does not close (13.11, owner's note)
+
+Every character in this game, heroines and townsfolk alike, has **one bone per finger group**: `hand_<side>` with
+`thumb_`, `index_` and `fingers_` (the other three fingers) under it. One bone means one joint: the fingers can only
+sweep at the knuckle, rigidly, with the mesh's own spread baked in.
+
+Measured in the live game (right hand, `fingers_R`, strikes outside the walls): the heroine's fight clips do close
+the hand — 42 degrees relaxed, 102 at the peak of every strike (Elise 35 to 94, the Sheriffchenko skin 69 to 125
+through the load-time retarget). So the clips and the retarget are right. But 90 degrees at the knuckle is only the
+first third of a fist: it stands the straight fingers up perpendicular to the palm. It reads as a claw, not a fist
+(`hands_fist_frames.jpg`, the frames labelled 102deg).
+
+With this rig a closed fist is not reachable: curling further swings the straight fingers through the palm, and the
+fingers cannot be brought together because their spread is in the bound mesh.
+
+The fix, and the general rule for a fighting character: **two bones per finger group** — the proximal segment at the
+knuckle and one more for the middle and tip, so the fingers fold into the palm. One extra bone per group (six per
+character) is enough at this distance, and it is backwards compatible: clips that do not mention the new bones leave
+them straight, so nothing that plays today changes. It needs the characters' models rebuilt (bones and weights only:
+no change to the mesh, the face, the texture or the rest pose), which for the heroines is the owner's call.
 
 ## Sources
 
