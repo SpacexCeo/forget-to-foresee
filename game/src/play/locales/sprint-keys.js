@@ -6,4 +6,6 @@ import market from './en-market.js';
 import npe from './en-npe.js';
 import tips from './en-tips.js';
 import video from './en-video.js';
-export const SPRINT_KEYS = new Set([quests, hud, market, npe, tips, video].flatMap((o) => Object.keys(o)));
+import account from './en-account.js';
+import judge from './en-judge.js';
+export const SPRINT_KEYS = new Set([quests, hud, market, npe, tips, video, account, judge].flatMap((o) => Object.keys(o)));

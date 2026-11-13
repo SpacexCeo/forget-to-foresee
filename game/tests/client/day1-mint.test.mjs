@@ -95,3 +95,28 @@ test('day1 mint: the deployment record carries the public relayer URL, so the ho
   const m = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine, relayer: 'https://relay.example' }, guestSecret: undefined, fetch: async () => { throw new Error('offline'); } });
   assert.equal(m.available, true);
 });
+
+test('an empty free fund or a used-up daily cap is "unavailable" with its reason (play as a local guest), not a retry', async () => {
+  for (const error of ['fund_empty', 'daily_cap']) {
+    const m = createDay1Mint({ storage: memoryStorage(), deployment: { guests: DEP.guests, heroine: DEP.heroine }, relayerUrl: 'https://relay.example', rpcUrls: ['https://r'],
+      fetch: async (url, init) => (url.includes('/api/') ? { ok: false, status: error === 'fund_empty' ? 503 : 429, json: async () => ({ error }) } : fakeRpc({ guestSeq: [null], calls: [] })(url, init)) });
+    await m.mint('Di');
+    assert.equal(m.phase, 'unavailable'); assert.equal(m.reason, error);
+  }
+  // the in-browser signer: the contract cannot pay for the account
+  const calls = [];
+  const rpc = fakeRpc({ guestSeq: [null], calls });
+  const { secretKey } = await generateKeyPair();
+  const m = createDay1Mint({ storage: memoryStorage(), deployment: DEP, relayerUrl: null, guestSecret: secretKey, rpcUrls: ['https://r'], fetch: async (url, init) => {
+    const b = JSON.parse(init.body);
+    if (b.method === 'send_tx' || b.method === 'broadcast_tx_commit') return { json: async () => ({ result: { status: { Failure: { ActionError: { kind: { LackBalanceForState: { account_id: DEP.guests } } } } }, receipts_outcome: [] } }) };
+    return rpc(url, init);
+  } });
+  await m.mint('Ed');
+  assert.equal(m.phase, 'unavailable'); assert.equal(m.reason, 'fund_empty');
+});
+
+test('the fund-empty and daily-cap copy exists in English and Russian', async () => {
+  const en = (await import('../../src/play/locales/en.js')).default; const ru = (await import('../../src/play/locales/ru.js')).default;
+  for (const k of ['day1.mint.fund_empty', 'day1.mint.daily_cap']) { assert.match(en[k], /local guest/); assert.ok(ru[k]); }
+});

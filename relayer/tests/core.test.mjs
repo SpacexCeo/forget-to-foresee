@@ -65,7 +65,7 @@ function fakeRpc(state) {
     else if (b.method === 'send_tx') {
       if (state.sendError) { const e = state.sendError; state.sendError = null; return { json: async () => ({ error: e }) }; }
       state.sent += 1; if (state.mintOnSend) state.guest = { account_id: 'ann-1.guests.x.testnet', token_id: 'elise-ann-1', nickname: 'ann', minted: true };
-      result = { status: state.fail ? { Failure: { ActionError: {} } } : { SuccessValue: '' }, receipts_outcome: [] };
+      result = { status: state.fail ? { Failure: state.failure || { ActionError: {} } } : { SuccessValue: '' }, receipts_outcome: [] };
     }
     return { json: async () => ({ result }) };
   };
@@ -93,6 +93,13 @@ test('create-guest: final + minted gives 200; idempotent; honest failures; cap; 
   // a nonce race: retried once
   const s6 = { calls: [], sent: 0, guest: null, stats: { today: 0, daily_cap: 200 }, mintOnSend: true, sendError: { name: 'HANDLER_ERROR', cause: { name: 'INVALID_TRANSACTION' }, data: { TxExecutionError: { InvalidTxError: { InvalidNonce: {} } } } } };
   assert.equal((await createGuest({ publicKey: PK, nickname: 'ann' }, { ...base, fetch: fakeRpc(s6), queue: createQueue() })).status, 200);
+  // the guests contract cannot fund another account, or the key's gas allowance is spent: "fund_empty", not a retry
+  const s7 = { calls: [], sent: 0, guest: null, stats: { today: 0, daily_cap: 200 }, fail: true, failure: { ActionError: { index: 0, kind: { LackBalanceForState: { account_id: 'guests.x.testnet', amount: '1' } } } } };
+  const r7 = await createGuest({ publicKey: PK, nickname: 'ann' }, { ...base, fetch: fakeRpc(s7) });
+  assert.equal(r7.status, 503); assert.equal(r7.body.error, 'fund_empty');
+  const s8 = { calls: [], sent: 0, guest: null, stats: { today: 0, daily_cap: 200 }, sendError: { name: 'HANDLER_ERROR', cause: { name: 'INVALID_TRANSACTION' }, data: { TxExecutionError: { InvalidTxError: { InvalidAccessKeyError: { NotEnoughAllowance: {} } } } } } };
+  const r8 = await createGuest({ publicKey: PK, nickname: 'ann' }, { ...base, fetch: fakeRpc(s8) });
+  assert.equal(r8.body.error, 'fund_empty');
   // not configured
   assert.equal((await createGuest({ publicKey: PK, nickname: 'ann' }, { rpcUrls: ['x'] })).status, 503);
 });

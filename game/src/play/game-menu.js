@@ -15,6 +15,7 @@ import { loadHolder } from '../net/holder.js';
 import { holderSection } from './holder-panel.js';
 import { renderProfileView } from './profile-view.js';
 import { createChestBag } from '../game/chests.js';
+import { createFriends } from './friends.js';
 import { createChestClient } from '../net/chest-client.js';
 import { cue } from '../audio/town-audio.js';
 import { formatSilkC } from '../net/silk-core.js';
@@ -26,9 +27,10 @@ const TAB_ICON = Object.freeze({
   nfts: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M7 4h10l4 5-9 11L3 9l4-5Zm-4 5h18M9 9l3 11 3-11M7 4l2 5m8-5-2 5"/></svg>',
   inventory: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M5 8h14l-1 12H6L5 8Zm4 0V6a3 3 0 0 1 6 0v2"/></svg>',
   agents: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9c.6-3.3 3-5 6-5s5.4 1.7 6 5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 15c1.7.6 2.7 2.2 3 5"/></svg>',
+  friends: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2c2.6.2 4.4 1.7 5 4.3"/></g></svg>',
   log: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 20v-6m5 6V9m5 11V5m5 15v-9"/></svg>',
 });
-export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'agents', 'log']);
+export const TABS = Object.freeze(['profile', 'achievements', 'nfts', 'inventory', 'friends', 'agents', 'log']);
 const RARITY_COLOR = Object.freeze({ common: '#b9bfc7', uncommon: '#2fc4b2', rare: '#8d5cf6', epic: '#e0479e', legendary: '#f2a516' });
 let manifestP = null;
 /** The items manifest (cached). */
@@ -135,7 +137,7 @@ function spark(doc, values, w = 220, h = 44, color = '#2fc4b2') {
  * @param {{doc?: Document, t: Function, ledger: object, storage?: object, tab?: string, owner?: string|null, createGuest?: (() => Promise<{account?: string, error?: string}>)|null, exportKey?: Function|null,
  *   nickname?: string|null, eliseMinted?: boolean, onChain?: Promise, base?: string, manifest?: Promise}} o
  */
-export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now() }) {
+export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 'profile', owner: ownerIn = null, createGuest = null, exportKey = null, nickname = null, eliseMinted = false, onChain = null, base = (import.meta.env && import.meta.env.BASE_URL) || '/', manifest = null, chests = null, chestClient = null, heroineToken = null, companionsRead = null, now = () => Date.now(), account = null }) {
   if (!(doc.getElementById && doc.getElementById('gm-style'))) { const st = doc.createElement('style'); st.id = 'gm-style'; st.textContent = CSS + WHEEL_CSS; doc.head.append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (text, fn, cls = 'gm-btn') => { const b = el('button', cls, text); b.type = 'button'; b.addEventListener('click', () => fn(b)); return b; };
@@ -153,7 +155,11 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
   const xBtn = btn('×', () => close(), 'gm-x'); xBtn.setAttribute('aria-label', t('quest.close'));
   // UI-004 header: the game's name over the open tab's title
   const head = el('div', 'gm-head'); const titleBox = el('div', 'gm-titlebox'); const tabTitle = el('h2', null, t('menu.title'));
-  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox, xBtn);
+  titleBox.append(el('span', 'gm-kicker', 'Forget to Foresee'), tabTitle); head.append(titleBox);
+  if (account) { // sign in / create account (flag accountLogin): opens its own panel over the menu
+    const a = btn(account.login ? t('acct.signed', { login: account.login }) : t('acct.open'), () => account.open(), 'gm-btn'); a.style.cssText = 'margin-left:auto;min-height:40px;padding:8px 14px'; a.dataset.acct = '1'; head.append(a);
+  }
+  head.append(xBtn);
   const tabs = el('div', 'gm-tabs'); tabs.setAttribute('role', 'tablist');
   const body = el('div', 'gm-body'); body.setAttribute('role', 'tabpanel');
   panel.append(head, tabs, body);
@@ -304,6 +310,18 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
         out.push(card);
       }
       return [el('p', 'gm-note', t('menu.agentsNote')), ...out];
+    },
+    friends() { // the friends list (play/friends.js): players added from their card, saved on this device
+      const f = createFriends({ storage, me: owner || null });
+      const list = f.list();
+      if (!list.length) return [el('p', 'gm-note', t('friends.empty'))];
+      const rows = list.map((p) => {
+        const r = el('div', 'gm-card');
+        r.append(el('b', null, p.name), el('small', null, p.demo ? t('friends.demo') : (p.account || '')));
+        r.append(btn(t('friends.remove'), () => { f.remove(p); show('friends'); }, 'gm-btn'));
+        return r;
+      });
+      return [el('p', 'gm-note', t('friends.note')), ...rows];
     },
     log() {
       const st = ledger.stats;
