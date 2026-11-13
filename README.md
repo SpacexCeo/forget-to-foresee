@@ -19,7 +19,7 @@ A 3D strategy game where **Iris**, a doctor-linguist who came through the glass,
 | 6 | Take the free Day 1 mint | A guest account of your own owning an Elise NFT, and a dragon owned by that NFT's account | [heroine.ftf-coordinator.testnet](https://testnet.nearblocks.io/address/heroine.ftf-coordinator.testnet), [companions.ftf-coordinator.testnet](https://testnet.nearblocks.io/address/companions.ftf-coordinator.testnet) |
 | 7 | Kill monsters outside the walls; open a chest if one drops | The chest's roll from the committed 10,000-card deck | [chests.ftf-coordinator.testnet](https://testnet.nearblocks.io/address/chests.ftf-coordinator.testnet), `node tools/verify-chest/verify.mjs` |
 
-Try to cheat it: [cheat.html](https://spacexceo.github.io/forget-to-foresee/cheat.html) (six attacks, the guard, the error and the test for each). What NEAR work exists and how to check each piece: [docs/near-built-1-14-nov.md](docs/near-built-1-14-nov.md). Pitch: [docs/pitch.md](docs/pitch.md).
+In the game: add `?judge=1` to the page URL for a skippable panel that walks these 7 steps (on a phone it waits behind a small chip). Try to cheat it: [cheat.html](https://spacexceo.github.io/forget-to-foresee/cheat.html) (six attacks, the guard, the error and the test for each). What NEAR work exists and how to check each piece: [docs/near-built-1-14-nov.md](docs/near-built-1-14-nov.md). Pitch: [docs/pitch.md](docs/pitch.md).
 
 ## Hackathon window and legal
 

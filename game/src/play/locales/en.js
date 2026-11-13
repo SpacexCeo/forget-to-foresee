@@ -6,6 +6,7 @@ import hud from './en-hud.js';
 import market from './en-market.js';
 import npe from './en-npe.js';
 import tips from './en-tips.js';
+import judge from './en-judge.js';
 import video from './en-video.js';
 import account from './en-account.js';
 const EN = {
@@ -1908,4 +1909,4 @@ const EN = {
   "quest.track.near": "{m} m",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
-export default Object.assign(EN, quests, hud, market, npe, tips, video, account);
+export default Object.assign(EN, quests, hud, market, npe, tips, video, account, judge);
