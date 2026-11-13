@@ -20,7 +20,7 @@ const CSS = `
 .fj-tab{border:0;background:transparent;font-weight:700;font-size:13px;position:relative;padding:0 2px}
 .fj-tab[aria-selected=true]{box-shadow:inset 0 -3px 0 #f6c860;color:#f6c860}
 .fj-badge{display:inline-block;min-width:16px;height:16px;border-radius:8px;background:#f6c860;color:#1b1608;font-size:12px;line-height:16px;margin-left:4px}
-.fj-search{margin:8px 12px;height:40px;border-radius:10px;border:1px solid #3a3f55;background:rgba(255,255,255,.06);color:#eef0f6;padding:0 12px;font:14px system-ui}
+.fj-reset{margin:6px 0 2px;color:#aab1c5;font-size:13px;white-space:normal}.fj-search{margin:8px 12px;height:40px;border-radius:10px;border:1px solid #3a3f55;background:rgba(255,255,255,.06);color:#eef0f6;padding:0 12px;font:14px system-ui}
 .fj-list{overflow:auto;flex:1;padding-bottom:8px}
 .fj-row{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;width:100%;min-height:64px;padding:8px 16px;border:0;border-left:3px solid transparent;background:transparent;text-align:left}
 .fj-row:hover{background:rgba(255,255,255,.08)}.fj-row[aria-selected=true]{border-left-color:#f6c860;background:rgba(246,200,96,.12)}
@@ -112,7 +112,9 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
       r.addEventListener('dblclick', () => walk(v));
       lst.append(r);
     }
-    rail.append(tabs, s, lst);
+    rail.append(tabs, s);
+    if (tab === 'daily' && list.length) { const rs = el('div', 'fj-reset', say('journal.resetIn', { time: countdown(m.resetAt - now()) })); rs.dataset.resetAt = String(m.resetAt); rail.append(rs); } // the daily countdown (00:00 UTC)
+    rail.append(lst);
     body.append(rail, detail(view, m));
     box.append(head, body);
   }
@@ -189,7 +191,7 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
         const box = el('div', 'fj' + (reduced() ? '' : ' fj-anim')); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', say('journal.title'));
         back.append(box); doc.body.append(back);
         win.addEventListener('keydown', onKey, true);
-        timer = setInterval(() => { const e = back && back.querySelector('.fj-empty-next'); if (e && tab === 'daily') render(); }, 1000); // the daily countdown
+        timer = setInterval(() => { if (tab !== 'daily' || !back) return; const rs = back.querySelector('.fj-reset'); if (rs) rs.textContent = say('journal.resetIn', { time: countdown(Number(rs.dataset.resetAt) - now()) }); else if (back.querySelector('.fj-empty-next')) render(); }, 1000); // the daily countdown, in place
         if (timer && timer.unref) timer.unref();
         onOpen(tab);
       }

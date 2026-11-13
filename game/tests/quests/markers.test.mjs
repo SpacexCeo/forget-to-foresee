@@ -46,3 +46,18 @@ test('the town feeds its quest markers into the shared seam (sprint/markers.js) 
   assert.equal(getMarkers().length, list.length, 'nothing in the feed is rejected by the seam');
   _reset();
 });
+
+test('ground trail: a dot every 2 m along the route for the next 40 m, in one instanced mesh', async () => {
+  const { trailDots, createTrail } = await import('../../src/quests/waypoint-ui.js');
+  const THREE = await import('three');
+  const dots = trailDots([0, 0, 0], [[10, 0, 0], [10, 0, 100]]);
+  assert.equal(dots.length, 20, '40 m / 2 m');
+  assert.deepEqual(dots[0], [2, 0, 0]); assert.deepEqual(dots[4], [10, 0, 0]); assert.deepEqual(dots[19], [10, 0, 30]);
+  assert.equal(trailDots([0, 0, 0], [[3, 0, 0]]).length, 1, 'a short route: only the dots that fit');
+  assert.deepEqual(trailDots([0, 0, 0], null), []);
+  const scene = new THREE.Scene(), t = createTrail({ THREE, scene });
+  t.set(dots); assert.equal(t.mesh.count, 20); assert.ok(t.mesh.visible); assert.equal(scene.children.length, 1, 'one draw call');
+  assert.equal(t.mesh.material.blending, THREE.AdditiveBlending); assert.equal(t.mesh.material.opacity, 0.55);
+  t.set(null); assert.equal(t.mesh.visible, false);
+  t.dispose(); assert.equal(scene.children.length, 0);
+});

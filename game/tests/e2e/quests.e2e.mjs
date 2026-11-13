@@ -102,3 +102,52 @@ test('E10: with the flags off the old pill wraps, keeps its full text and opens 
     }
   } finally { await g.close(); }
 });
+
+/** A saved quest log with the welcome done and the guard's spiders taken (built with the shared rules). */
+async function spidersSeed() {
+  const { applyQuest, initialQuests, QUESTS_KEY } = await import('../../src/game/quest-rules.js');
+  let s = initialQuests(); const t = Date.now() - 600_000;
+  for (const a of [{ type: 'BEGIN' }, { type: 'ACCEPT', questId: 'q_welcome' }, { type: 'GUIDE', step: 'moved' }, { type: 'GUIDE', step: 'talked' }, { type: 'TURN_IN', questId: 'q_welcome' }, { type: 'ACCEPT', questId: 'q_spiders' }]) {
+    const r = applyQuest(s, a, { now: t }); if (!r.rejected) s = r.state;
+  }
+  return { key: QUESTS_KEY, value: JSON.stringify(s) };
+}
+
+test('E6: an auto-walk that reaches 2.2 m of the giver fires autowalk.arrived', async () => {
+  const g = await openTown('?' + FLAGS);
+  try {
+    await g.page.evaluate(() => { window.__aw = []; for (const n of ['started', 'arrived', 'cancelled']) window.addEventListener('ftf:autowalk.' + n, (e) => window.__aw.push(n + ':' + ((e.detail && e.detail.reason) || ''))); });
+    await press(g, 'j');
+    await g.until(() => !!document.querySelector('.fj-row[data-quest="q_welcome"]'), 10000);
+    await g.click('.fj-row[data-quest="q_welcome"]'); await g.wait(200);
+    await g.click('.fj-row[data-quest="q_welcome"]');
+    await g.until(() => window.__aw.includes('started:'), 10000);
+    // the whole walk runs on its own (software rendering is slow: a generous timeout)
+    await g.until(() => window.__aw.some((e) => e.startsWith('arrived') || e.startsWith('cancelled')), 240000);
+    const ev = await g.page.evaluate(() => window.__aw);
+    assert.ok(ev.includes('arrived:'), 'autowalk.arrived: ' + ev);
+    assert.equal(await g.visible('.ftf-autowalk'), 0, 'the walk label is gone on arrival');
+  } finally { await g.close(); }
+});
+
+test('E7/E9: three spider kills show 3/10 in the tracker and the journal; the daily tab shows the countdown', async () => {
+  const seed = await spidersSeed();
+  const g = await openTown('?' + FLAGS);
+  try {
+    await g.page.evaluate((s) => localStorage.setItem(s.key, s.value), seed);
+    await g.page.reload({ waitUntil: 'domcontentloaded' });
+    await townReady(g);
+    await g.until(() => !!document.querySelector('.ft'), 60000);
+    for (let i = 0; i < 3; i++) await g.page.evaluate((n) => window.dispatchEvent(new CustomEvent('ftf:mob-killed', { detail: { type: 'skitter', killId: 'e2e-' + n } })), i);
+    await g.until(() => { const b = document.querySelector('.ft [data-quest="q_spiders"]'); return !!b && /3\/10/.test(b.textContent); }, 15000);
+    await press(g, 'j');
+    await g.until(() => !!document.querySelector('.fj-row[data-quest="q_spiders"]'), 10000);
+    await g.click('.fj-row[data-quest="q_spiders"]');
+    const [detail] = await g.text('.fj-detail');
+    assert.ok(detail.includes('3/10'), 'the journal agrees: ' + detail.slice(0, 160));
+    await g.click('.fj-tab[data-tab="daily"]');
+    await g.until(() => !!document.querySelector('.fj-reset, .fj-empty-next'), 5000);
+    const [reset] = await g.text('.fj-reset, .fj-empty-next');
+    assert.match(reset, /\d/, 'a countdown to 00:00 UTC: ' + reset);
+  } finally { await g.close(); }
+});

@@ -60,6 +60,7 @@ test('journal keys: 1-5 switch tabs, T tracks, Enter walks, J and Esc close; the
   win.key('Enter', 'Enter'); assert.equal(walks.length, 1); assert.equal(j.isOpen, false);
   j.open('daily'); assert.equal(j.tab, 'daily');
   win.key('Digit3'); assert.ok(doc.querySelector('.fj-list').textContent.length > 0);
+  const rs = doc.querySelector('.fj-reset'); assert.ok(rs && /^Resets in \S/.test(rs.textContent), 'the daily tab shows the countdown to 00:00 UTC: ' + (rs && rs.textContent));
   win.key('Escape', 'Escape'); assert.equal(j.isOpen, false);
   j.open(); win.key('KeyJ'); assert.equal(j.isOpen, false);
 });
