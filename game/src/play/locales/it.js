@@ -585,6 +585,8 @@ export default {
   "day1.mint.minted": "Coniato su NEAR testnet ✓",
   "day1.mint.failed": "Anteprima non coniata — tocca per riprovare",
   "day1.mint.unavailable": "Anteprima non coniata — il mint gratuito non è collegato in questa build",
+  "day1.mint.fund_empty": "Il fondo gratuito per ora è vuoto — gioca come ospite locale; i progressi restano in questo browser.",
+  "day1.mint.daily_cap": "I mint gratuiti di oggi sono finiti — gioca come ospite locale e conia domani.",
   "day1.mint.retry": "Riprova",
   "day1.mint.view": "Vedi il token",
   "day1.mint.account": "Il tuo account testnet",

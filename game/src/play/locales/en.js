@@ -592,6 +592,8 @@ const EN = {
   "day1.mint.minted": "Minted on NEAR testnet ✓",
   "day1.mint.failed": "Unminted preview — tap to retry",
   "day1.mint.unavailable": "Unminted preview — the free mint is not connected in this build",
+  "day1.mint.fund_empty": "The free fund is empty for now — play on as a local guest; your progress stays in this browser.",
+  "day1.mint.daily_cap": "Today's free mints are used up — play on as a local guest and mint tomorrow.",
   "day1.mint.retry": "Retry",
   "day1.mint.view": "View the token",
   "day1.mint.account": "Your testnet account",

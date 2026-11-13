@@ -9,6 +9,9 @@ import { DAY1_DEPLOYMENT } from '../net/day1-deployment.js';
 import { NEAR_DEPLOYMENT } from '../net/near-deployment.js';
 
 export const DAY1_KEY = 'ftf.day1.v1';
+/** The free fund cannot pay for another guest, or today's free mints are used up: a retry will not help now. */
+const CLOSED = new Set(['fund_empty', 'daily_cap']);
+const FUND_EMPTY = /LackBalanceForState|NotEnoughBalance|NotEnoughAllowance|InsufficientBalance/;
 const envGuestKey = () => { try { return import.meta.env && import.meta.env.VITE_FTF_GUEST_KEY; } catch { return undefined; } };
 const envRelayer = () => { try { return import.meta.env && import.meta.env.VITE_FTF_RELAYER_URL; } catch { return undefined; } };
 
@@ -48,12 +51,13 @@ export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, r
           const res = await fetch(relayer + '/api/create-guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ public_key: rec.playerKey.publicKey, nickname: rec.nickname || 'guest' }) });
           const body = await res.json().catch(() => ({}));
           if (body && body.tx_hash) { rec.txHash = body.tx_hash; st.txHash = body.tx_hash; save(); }
-          if (!res.ok) { set('failed', (body && body.error) || 'relayer_' + res.status); return api; }
+          const why = (body && body.error) || 'relayer_' + res.status;
+          if (!res.ok) { set(CLOSED.has(why) ? 'unavailable' : 'failed', why); return api; }
         } else {
           const key = await importSecretKey(guestSecret);
           const r = await client.call({ key, signerId: deployment.guestKeyAccount, receiverId: deployment.guests, methodName: 'create_guest', args: { public_key: rec.playerKey.publicKey, nickname: rec.nickname || 'guest' } });
           rec.txHash = r.hash; st.txHash = r.hash; save();
-          if (!r.ok) { set('failed', 'tx_failed'); return api; }
+          if (!r.ok) { if (FUND_EMPTY.test(String(r.failure || ''))) set('unavailable', 'fund_empty'); else set('failed', 'tx_failed'); return api; }
         }
       }
       set('checking');
@@ -62,6 +66,7 @@ export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, r
       rec.guest = g; rec.minted = true; save();
       set('minted');
     } catch (e) {
+      if (FUND_EMPTY.test(JSON.stringify((e && (e.rpc || e.message)) || ''))) { set('unavailable', 'fund_empty'); return api; }
       set('failed', (e && e.message ? e.message : 'error').slice(0, 80));
     }
     return api;
