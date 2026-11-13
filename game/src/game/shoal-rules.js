@@ -124,17 +124,21 @@ export function clampToArena(x, z, A = ARENA) {
 
 // ---------------------------------------------------------------- the heroine in the fight
 export const HERO = f({ hp: 100, stamina: 100, mana: 100, manaRegen: 6, staminaRegen: 18, dodgeCost: 25, dodgeTime: 0.45, dodgeSpeed: 15, speed: 6.5, hpPickup: 35, staminaPickup: 60, pickupRespawn: 22, pickupRadius: 1.6 });
-export const freshHero = () => ({ hp: HERO.hp, stamina: HERO.stamina, mana: HERO.mana, dodge: 0, iframes: 0, cds: {} });
+export const freshHero = () => ({ hp: HERO.hp, stamina: HERO.stamina, mana: HERO.mana, dodge: 0, iframes: 0, cds: {}, ult: 0 });
 
 /** Pure: can she dodge now (stamina, not mid-dodge)? */
 export const canDodge = (h) => h.dodge <= 0 && h.stamina >= HERO.dodgeCost;
 /** Pure: start a dodge: stamina spent, invulnerable for the roll. */
 export const startDodge = (h) => (canDodge(h) ? { ...h, stamina: h.stamina - HERO.dodgeCost, dodge: HERO.dodgeTime, iframes: HERO.dodgeTime } : h);
-/** Pure: the hero's timers and regeneration for dt. */
-export function heroTick(h, dt) {
+/**
+ * Pure: the hero's timers and regeneration for dt. `o.drain` (stamina per second) is what flight costs this step
+ * (flightStep); `o.air` is true while she is off the ground. Stamina refills only on the ground and not mid-dodge.
+ */
+export function heroTick(h, dt, o = {}) {
   const cds = {}; for (const k in h.cds) { const v = h.cds[k] - dt; if (v > 0) cds[k] = v; }
-  return { ...h, dodge: Math.max(0, h.dodge - dt), iframes: Math.max(0, h.iframes - dt), cds,
-    stamina: Math.min(HERO.stamina, h.stamina + (h.dodge > 0 ? 0 : HERO.staminaRegen * dt)), mana: Math.min(HERO.mana, h.mana + HERO.manaRegen * dt) };
+  const drain = Math.max(0, Number(o.drain) || 0);
+  const stamina = drain > 0 ? Math.max(0, h.stamina - drain * dt) : Math.min(HERO.stamina, h.stamina + (h.dodge > 0 || o.air ? 0 : HERO.staminaRegen * dt));
+  return { ...h, dodge: Math.max(0, h.dodge - dt), iframes: Math.max(0, h.iframes - dt), cds, stamina, mana: Math.min(HERO.mana, h.mana + HERO.manaRegen * dt) };
 }
 /** Pure: a hit on the hero. Ignored during the dodge's invulnerable frames. Returns {hero, taken, dodged}. */
 export function hitHero(h, amount) {
@@ -154,6 +158,85 @@ export function pickUp(h, kind) {
   return h;
 }
 
+// ---------------------------------------------------------------- Elise's flight
+/**
+ * Elise remembers her gift (glass-shoal-boss.md, "Elise's kit"): she takes off, hovers and flies. Air control is
+ * slower than running and carries momentum; the climb eases out under a soft ceiling. Flight drains stamina (hover
+ * slow, moving faster, climbing fastest); at zero she glides down and lands. Heights are metres above the mirror.
+ */
+export const FLIGHT = f({
+  ceiling: 6, softBand: 1.5,          // the climb fades over the last softBand metres under the ceiling
+  airSpeed: 4.6, accel: 2.6,          // run speed is HERO.speed (6.5); accel = how fast velocity follows the wish (1/s)
+  climb: 3.4, descend: 3.8, release: 1.4, takeoff: 0.45, // m/s up, m/s down, the slow sink when Lift is released; auto-climb seconds after take-off
+  glide: 1.6, glideSpeed: 3.2,        // stamina gone: the slow sink and the air speed while gliding down
+  minStamina: 15,                     // the stamina she needs to take off
+  drainHover: 4, drainMove: 6, drainClimb: 9, // stamina per second: always, at full air speed, at full climb
+  bank: 0.4, bankRate: 4,             // the gentle bank (radians) toward the turn and how fast it follows
+  doubleTap: 0.32,                    // seconds between two jump presses that take off
+});
+/** A fresh flight state: on the ground. mode = 'ground' | 'fly' | 'glide'. */
+export const freshFlight = () => ({ mode: 'ground', y: 0, vx: 0, vz: 0, vy: 0, bank: 0, up: 0 });
+export const airborne = (fl) => fl.mode !== 'ground';
+/** Pure: can she take off (on the ground, enough stamina)? */
+export const canTakeOff = (fl, h, F = FLIGHT) => fl.mode === 'ground' && h.stamina >= F.minStamina;
+/** Pure: take off from height `y` (a hop already under way keeps its height). Unchanged when she cannot. */
+export const takeOff = (fl, h, y = 0, F = FLIGHT) => (canTakeOff(fl, h, F) ? { ...fl, mode: 'fly', y: Math.max(0, y), vy: F.climb, up: F.takeoff } : fl);
+/** The `vert` of a released Lift button (touch): the slow sink. */
+export const releaseVert = (F = FLIGHT) => -F.release / F.descend;
+/** Pure: land at once (the Lift key pressed in the air): she glides down without stamina cost. */
+export const startGlide = (fl) => (fl.mode === 'fly' ? { ...fl, mode: 'glide' } : fl);
+
+/**
+ * Pure: one flight step. `wish` = [x, z] world direction, length 0..1 (the keys or the stick); `vert` = -1..1 (Space
+ * rises, the descend key or a released Lift sinks, 0 holds the height); `stamina` = what she has now.
+ * Returns {flight, drain, landed}: `drain` = stamina per second to charge (heroTick), `landed` true on touch-down.
+ */
+export function flightStep(fl, wish, vert, stamina, dt, F = FLIGHT) {
+  if (fl.mode === 'ground') return { flight: fl, drain: 0, landed: false };
+  const mode = fl.mode === 'fly' && stamina <= 0 ? 'glide' : fl.mode;
+  const wx = Number(wish && wish[0]) || 0, wz = Number(wish && wish[1]) || 0, wl = Math.hypot(wx, wz);
+  const k = wl > 1 ? 1 / wl : 1;
+  const speed = mode === 'glide' ? F.glideSpeed : F.airSpeed;
+  const a = Math.min(1, F.accel * dt);
+  const vx = fl.vx + (wx * k * speed - fl.vx) * a, vz = fl.vz + (wz * k * speed - fl.vz) * a;
+  const up = Math.max(0, fl.up - dt);
+  let v = Math.max(-1, Math.min(1, Number(vert) || 0));
+  if (fl.up > 0) v = Math.max(v, 1);
+  let vy;
+  if (mode === 'glide') vy = -F.glide;
+  else if (v > 0) vy = F.climb * v * Math.max(0, Math.min(1, (F.ceiling - fl.y) / F.softBand));
+  else vy = v * F.descend; // 0 holds the height; a released Lift passes releaseVert() for the slow sink
+  const y = Math.max(0, Math.min(F.ceiling, fl.y + vy * dt));
+  // the bank leans into the turn: the side of the wish relative to her velocity
+  const sp = Math.hypot(vx, vz);
+  const turn = sp > 0.2 && wl > 0.05 ? (vx * wz - vz * wx) / (sp * wl) : 0;
+  const bank = fl.bank + (-turn * F.bank - fl.bank) * Math.min(1, F.bankRate * dt);
+  if (y <= 0 && (vy < 0 || mode === 'glide') && up <= 0) return { flight: { ...freshFlight() }, drain: 0, landed: true };
+  const drain = mode === 'glide' ? 0 : F.drainHover + F.drainMove * Math.min(1, sp / F.airSpeed) + (vy > 0 ? F.drainClimb * vy / F.climb : 0);
+  return { flight: { mode, y, vx, vz, vy, bank, up }, drain, landed: false };
+}
+
+// ---------------------------------------------------------------- Elise's ultimate: Tempest of Embers
+/**
+ * The charge meter fills from damage dealt (after armour) and taken; full, one key releases ~3 s of a spiral of fire
+ * orbs and wind blades around her: `pulses` blows over `duration`, each hitting the boss (through the crest: it
+ * pierces the armour) and every add within `radius`. She is untouchable while it spins.
+ */
+export const ULT = f({ max: 100, perDealt: 0.028, perTaken: 0.45, duration: 3, rise: 2.2, pulses: 6, radius: 12, damage: 85, hitStop: 0.08, shake: 0.35 });
+/** Pure: the meter after dealing `dealt` and taking `taken` damage. */
+export const chargeUlt = (u, dealt = 0, taken = 0, U = ULT) => Math.min(U.max, (Number(u) || 0) + Math.max(0, dealt) * U.perDealt + Math.max(0, taken) * U.perTaken);
+export const ultReady = (h, U = ULT) => (h.ult || 0) >= U.max;
+/** Pure: release it: the meter empties, she is untouchable for its length. Unchanged when not full. */
+export const startUlt = (h, U = ULT) => (ultReady(h, U) ? { ...h, ult: 0, iframes: Math.max(h.iframes, U.duration) } : h);
+/** Pure: how many of its blows land between `t0` and `t1` seconds into it (blow i lands at (i + 0.5) of its slice). */
+export function ultPulses(t0, t1, U = ULT) {
+  const at = (i) => ((i + 0.5) / U.pulses) * U.duration;
+  let n = 0; for (let i = 0; i < U.pulses; i++) if (at(i) > t0 && at(i) <= t1) n++;
+  return n;
+}
+/** Pure: is a point within reach of the tempest around her ([x, z] both)? The boss counts by the edge of its body. */
+export const inTempest = (me, at, extra = 0, U = ULT) => Math.hypot(me[0] - at[0], me[1] - at[1]) <= U.radius + extra;
+
 // ---------------------------------------------------------------- the Hollow Tide
 /**
  * The boss's phases: from `above` of its HP down. Each phase has its attack rotation; the telegraph is the time the
@@ -171,12 +254,13 @@ export const BOSS = f({
     f({ id: 3, above: 0.33, rotation: f(['lunge', 'slam', 'slam', 'sweep', 'lunge']), telegraph: 0.9, rest: 0.95, adds: 2 }),
   ]),
   attacks: f({
-    slam: f({ damage: 24, radius: 6.5, active: 0.25 }),       // a ring on the ground under her
-    sweep: f({ damage: 22, radius: 17, inner: 7, active: 0.35 }), // a wide ring around the body: step in or roll
-    lunge: f({ damage: 38, width: 5, length: 34, active: 0.3 }), // a straight charge line at her
+    // `reach` = how high above the mirror the blow still lands (metres): flying over a sweep works, over a slam not
+    slam: f({ damage: 24, radius: 6.5, active: 0.25, reach: 9 }),          // a ring under her: a geyser column
+    sweep: f({ damage: 22, radius: 17, inner: 7, active: 0.35, reach: 2.6 }), // a wide ring around the body: step in, roll or rise
+    lunge: f({ damage: 38, width: 5, length: 34, active: 0.3, reach: 4 }),  // a straight charge line at her
     adds: f({ damage: 0, active: 0.1 }),
   }),
-  add: f({ hp: 120, damage: 10, speed: 3.6, reach: 1.6, cooldown: 1.6 }),
+  add: f({ hp: 120, damage: 10, speed: 3.6, reach: 1.6, cooldown: 1.6, jump: 2.2 }), // jump: the highest they can bite
 });
 
 /** Pure: the phase index (0, 1, 2) for an HP fraction. */
@@ -193,10 +277,13 @@ export function freshBoss(phase = 0, B = BOSS) {
   return { hp: checkpointHp(phase, B), phase, state: 'rest', t: 3, attack: null, target: null, idx: 0, exposed: 0, dead: false, adds: [], nextAddId: 1 };
 }
 
-/** Pure: damage on the boss. The weak point (after a dodge) takes more; the closed crest less. */
-export function hitBoss(b, amount, B = BOSS) {
+/**
+ * Pure: damage on the boss. The weak point (after a dodge) takes more; the closed crest less, unless the blow
+ * `pierce`s it (the ultimate), which then lands at full strength.
+ */
+export function hitBoss(b, amount, B = BOSS, o = {}) {
   if (b.dead || amount <= 0) return { boss: b, dealt: 0, phaseUp: false };
-  const dealt = Math.round(amount * (b.exposed > 0 ? B.exposedMult : B.armor));
+  const dealt = Math.round(amount * (b.exposed > 0 ? B.exposedMult : o.pierce ? 1 : B.armor));
   const hp = Math.max(0, b.hp - dealt);
   const phase = phaseFor(hp / B.hp, B);
   const phaseUp = phase > b.phase && hp > 0;
@@ -207,10 +294,14 @@ export function hitBoss(b, amount, B = BOSS) {
 /** Pure: she dodged through a blow: the crest opens. */
 export const exposeBoss = (b, B = BOSS) => (b.dead ? b : { ...b, exposed: B.exposedTime });
 
-/** Pure: is a point inside an attack's danger zone? `atk` carries its kind and geometry ({at, dir}). */
-export function inDanger(atk, px, pz, B = BOSS) {
+/**
+ * Pure: is a point inside an attack's danger zone? `atk` carries its kind and geometry ({at, dir}); `py` = her
+ * height above the mirror (flying above an attack's `reach` is safe).
+ */
+export function inDanger(atk, px, pz, B = BOSS, py = 0) {
   const A = B.attacks[atk.kind];
   if (!A) return false;
+  if (A.reach != null && py > A.reach) return false;
   const dx = px - atk.at[0], dz = pz - atk.at[1];
   if (atk.kind === 'slam') return Math.hypot(dx, dz) <= A.radius;
   if (atk.kind === 'sweep') { const d = Math.hypot(dx, dz); return d <= A.radius && d >= A.inner; }
@@ -259,13 +350,17 @@ export function bossStep(b, dt, player, B = BOSS) {
   return { boss: nb, events };
 }
 
-/** Pure: the adds walk at her and bite. Returns {adds, damage} (damage dealt to her this step). */
-export function addsStep(adds, dt, player, B = BOSS) {
+/**
+ * Pure: the adds walk at her and bite. Returns {adds, damage} (damage dealt to her this step). `py` = her height:
+ * above `add.jump` they circle under her and cannot bite.
+ */
+export function addsStep(adds, dt, player, B = BOSS, py = 0) {
   let damage = 0;
   const out = adds.map((a) => {
     const dx = player[0] - a.x, dz = player[1] - a.z, d = Math.hypot(dx, dz) || 1;
     let { x, z } = a; const cd = Math.max(0, a.cd - dt);
     if (d > B.add.reach) { const s = Math.min(d - B.add.reach, B.add.speed * dt); x += (dx / d) * s; z += (dz / d) * s; return { ...a, x, z, cd }; }
+    if (py > B.add.jump) return { ...a, cd };
     if (cd <= 0) { damage += B.add.damage; return { ...a, cd: B.add.cooldown }; }
     return { ...a, cd };
   });
@@ -278,6 +373,13 @@ export function hitAdds(adds, at, radius, amount, single = false) {
   const ids = new Set(hits.map((h) => h.i));
   const out = adds.map((a, i) => (ids.has(i) ? { ...a, hp: a.hp - amount } : a)).filter((a) => a.hp > 0);
   return { adds: out, hit: ids.size, killed: adds.length - out.length };
+}
+
+/** Pure: the touch aim (no cursor): the nearest add within `range` of her, else the boss. Returns [x, z]. */
+export function autoAim(me, adds, range = 16, A = ARENA) {
+  let best = null, bd = range;
+  for (const a of adds || []) { const d = Math.hypot(a.x - me[0], a.z - me[1]); if (d <= bd) { bd = d; best = [a.x, a.z]; } }
+  return best || [A.boss[0], A.boss[1]];
 }
 
 /** Pure: a death in the fight: the boss resets to its phase checkpoint, the adds go, she is back at the landing. */

@@ -35,6 +35,10 @@ const en = {
   'shoal.leave': 'Leave the Shoal',
   'shoal.skill.loom_combo': 'Loomblade Combo', 'shoal.skill.loom_heavy': 'Heavy Slash', 'shoal.skill.loom_dodge': 'Dodge Roll',
   'shoal.skill.ember_palms': 'Ember Palms', 'shoal.skill.gale_discs': 'Gale Discs', 'shoal.skill.hover': 'Hover',
+  'shoal.skill.lift': 'Lift', 'shoal.skill.tempest': 'Tempest of Embers', 'shoal.ult': 'Tempest',
+  'shoal.tired': 'Too tired to fly', 'shoal.tempest': 'Tempest of Embers!', 'shoal.ultReady': 'The Tempest is ready',
+  'shoal.flyHint': 'Space twice or L: fly · Space rises · Shift sinks · R: the Tempest when its meter is full',
+  'shoal.flyHintTouch': 'Hold Lift to fly; let go to sink',
 };
 const ru = {
   'shoal.quest': 'Зов Отмели',
@@ -71,6 +75,10 @@ const ru = {
   'shoal.leave': 'Покинуть Отмель',
   'shoal.skill.loom_combo': 'Серия клинка', 'shoal.skill.loom_heavy': 'Тяжёлый удар', 'shoal.skill.loom_dodge': 'Перекат',
   'shoal.skill.ember_palms': 'Огненные ладони', 'shoal.skill.gale_discs': 'Вихревые диски', 'shoal.skill.hover': 'Парение',
+  'shoal.skill.lift': 'Взлёт', 'shoal.skill.tempest': 'Буря углей', 'shoal.ult': 'Буря',
+  'shoal.tired': 'Слишком устала, чтобы лететь', 'shoal.tempest': 'Буря углей!', 'shoal.ultReady': 'Буря готова',
+  'shoal.flyHint': 'Пробел дважды или L: полёт · Пробел — вверх · Shift — вниз · R: Буря, когда шкала полна',
+  'shoal.flyHintTouch': 'Удерживайте «Взлёт», чтобы лететь; отпустите, чтобы снижаться',
 };
 const uk = {
   'shoal.quest': 'Поклик Мілини',
@@ -107,6 +115,10 @@ const uk = {
   'shoal.leave': 'Покинути Мілину',
   'shoal.skill.loom_combo': 'Серія клинка', 'shoal.skill.loom_heavy': 'Важкий удар', 'shoal.skill.loom_dodge': 'Перекид',
   'shoal.skill.ember_palms': 'Вогняні долоні', 'shoal.skill.gale_discs': 'Вихрові диски', 'shoal.skill.hover': 'Ширяння',
+  'shoal.skill.lift': 'Зліт', 'shoal.skill.tempest': 'Буря жарин', 'shoal.ult': 'Буря',
+  'shoal.tired': 'Надто втомилася, щоб летіти', 'shoal.tempest': 'Буря жарин!', 'shoal.ultReady': 'Буря готова',
+  'shoal.flyHint': 'Пробіл двічі або L: політ · Пробіл — вгору · Shift — вниз · R: Буря, коли шкала повна',
+  'shoal.flyHintTouch': 'Утримуйте «Зліт», щоб летіти; відпустіть, щоб знижуватися',
 };
 const it = {
   'shoal.quest': 'Il richiamo della Secca',
@@ -143,6 +155,10 @@ const it = {
   'shoal.leave': 'Lascia la Secca',
   'shoal.skill.loom_combo': 'Combo della Lama', 'shoal.skill.loom_heavy': 'Fendente pesante', 'shoal.skill.loom_dodge': 'Capriola',
   'shoal.skill.ember_palms': 'Palmi di Brace', 'shoal.skill.gale_discs': 'Dischi di Vento', 'shoal.skill.hover': 'Librarsi',
+  'shoal.skill.lift': 'Decollo', 'shoal.skill.tempest': 'Tempesta di Braci', 'shoal.ult': 'Tempesta',
+  'shoal.tired': 'Troppo stanca per volare', 'shoal.tempest': 'Tempesta di Braci!', 'shoal.ultReady': 'La Tempesta è pronta',
+  'shoal.flyHint': 'Spazio due volte o L: vola · Spazio sale · Shift scende · R: la Tempesta quando la barra è piena',
+  'shoal.flyHintTouch': 'Tieni premuto Decollo per volare; rilascia per scendere',
 };
 const zh = {
   'shoal.quest': '浅滩的呼唤',
@@ -179,6 +195,10 @@ const zh = {
   'shoal.leave': '离开浅滩',
   'shoal.skill.loom_combo': '织刃连击', 'shoal.skill.loom_heavy': '重斩', 'shoal.skill.loom_dodge': '翻滚',
   'shoal.skill.ember_palms': '余烬之掌', 'shoal.skill.gale_discs': '疾风之盘', 'shoal.skill.hover': '悬浮',
+  'shoal.skill.lift': '升空', 'shoal.skill.tempest': '余烬风暴', 'shoal.ult': '风暴',
+  'shoal.tired': '太累了，飞不动', 'shoal.tempest': '余烬风暴！', 'shoal.ultReady': '风暴已就绪',
+  'shoal.flyHint': '连按两次空格或 L：飞行 · 空格上升 · Shift 下降 · R：能量满时释放风暴',
+  'shoal.flyHintTouch': '按住"升空"飞行，松开则下降',
 };
 export const SHOAL_TEXT = Object.freeze({ en, ru, uk, it, zh });
 /** The text for a key in a locale (English when missing), with {name} arguments filled in. */

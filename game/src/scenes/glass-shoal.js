@@ -113,13 +113,13 @@ export function createGlassShoal(o) {
   // ---- state
   let mode = 'town';   // 'town' | 'landing' (the dragon descends) | 'ride' | 'arena' | 'home' (fade back)
   let ride = null, rideHud = null, skipBtn = null, landT = 0, arena = null, arenaLoading = null;
-  const pose = { pos: new THREE.Vector3(), heading: 0, speed: 0 };
+  const pose = { pos: new THREE.Vector3(), heading: 0, speed: 0, bank: 0, pitch: 0, bob: 0 };
   const savedRig = {};
   const rideBasis = () => { const O = stoneAt.clone().add(new THREE.Vector3(0, 6, 4)); const A = O.clone().add(new THREE.Vector3(0, -40, R.RIDE.length + 60)); return { O, A }; };
   const arenaCenter = () => rideBasis().A;
 
   function loadArena() {
-    if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
+    if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
       onWin: () => { if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
       onDeath: () => event('death'), onHome: () => flyHome() }); return arena; });
     return arenaLoading;
@@ -208,7 +208,7 @@ export function createGlassShoal(o) {
       dragon.root.position.set(x, y, z);
       dragon.root.rotation.set(0, 0, reduced() ? 0 : ride.bank);
       dragon.update(dt, reduced(), ride.bank, false);
-      pose.pos.copy(dragon.saddle()); pose.heading = 0; pose.speed = 0;
+      pose.pos.copy(dragon.saddle()); pose.heading = 0; pose.speed = 0; pose.bank = pose.pitch = pose.bob = 0;
       if (rideHud) rideHud.querySelector('b').style.width = Math.round(p * 100) + '%';
       if (ride.done) endRide();
     }
@@ -236,10 +236,12 @@ export function createGlassShoal(o) {
     },
     /** The heroine's pose while owned: position, heading, animation speed. */
     applyAvatar(avatar, focus) {
-      avatar.position.copy(pose.pos); avatar.rotation.set(0, pose.heading, 0);
-      focus.set(pose.pos.x, pose.pos.y + 1.1, pose.pos.z);
+      avatar.position.copy(pose.pos); avatar.rotation.set(pose.pitch || 0, pose.heading, pose.bank || 0); // flight: a lean forward and a bank into the turn
+      focus.set(pose.pos.x, pose.pos.y + 1.1 - (pose.bob || 0), pose.pos.z); // the hover bob moves her, not the camera
       return pose.speed;
     },
+    /** After the camera rig: the fight's screen shake (the ultimate). */
+    shakeCamera(camera, dt) { if (mode === 'arena' && arena && arena.shakeCamera) arena.shakeCamera(camera, dt); },
     skipRide: () => endRide(),
     get arena() { return arena; },
     /** Dev and tests: jump the quest to a step (?shoal=<step>), or boot straight onto the dragon (?shoal=ride) or

@@ -1351,6 +1351,7 @@ function frame() {
   }
   rig.update(dt, focus, lookdev.reducedMotion ? null : player.vel); // no camera look-ahead under reduced motion
   if (townMobs && townMobs.shake > 0) { const k = townMobs.shake * 0.08; camera.position.x += (Math.random() - 0.5) * k; camera.position.y += (Math.random() - 0.5) * k; } // heavy hits (off with reduced motion)
+  if (glassShoal && glassShoal.owns() && glassShoal.shakeCamera) glassShoal.shakeCamera(camera, dt); // the Shoal's ultimate (scaled down under reduced motion)
   streamer.update(dt, focus);
   warmup.update();
   updateIrisStandIn();
