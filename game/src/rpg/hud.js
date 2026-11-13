@@ -178,7 +178,7 @@ export function createHud(o) {
       xpTip = { lines: [v.xpNeed ? t('hud.xp.tip', { level: v.level, into: v.xpInto.toLocaleString('en-US'), need: v.xpNeed.toLocaleString('en-US') }) : t('hud.xp.cap', { level: v.level })] };
       // silk
       const st = silkChipText(v.silk, t);
-      l1.textContent = st.line1; l2.textContent = st.line2 || ''; l2.dataset.off = st.line2Kind === 'offline' ? '1' : '0'; sync.hidden = !st.showSync;
+      l1.textContent = st.line1; l2.textContent = st.line2 || ''; l2.dataset.off = st.line2Kind === 'local' ? '1' : '0'; sync.hidden = !st.showSync;
       silkTip = { lines: [...st.tooltip.map((x) => ({ text: x.text, bold: x.bold })), { text: st.link, cls: 'm' }] };
       silk.setAttribute('aria-label', st.tooltip.map((x) => x.text).join('. '));
       if (v.silkPop) { silk.dataset.pop = '0'; void silk.offsetWidth; silk.dataset.pop = '1'; }

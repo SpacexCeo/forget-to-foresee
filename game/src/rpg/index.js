@@ -55,6 +55,13 @@ export function mount(ctx) {
     onDropSkill: (i, id) => { bar = S.placeOnSlot(bar, i, id); save(); } });
   import('./minimap.js').then((m) => { map = m.createMinimap({ canvas: hud.canvas, markers: ctx.markers, mobs: mobsOf, player: ctx.player, origin: () => (ctx.townOrigin ? ctx.townOrigin() : (win.__ftf && win.__ftf.town && win.__ftf.town.origin) || [0, 0, 0]), reveal: () => !!(self.buffs.reveal && self.buffs.reveal.until > now()) }); }).catch(() => {});
   emit('hud.mounted', { layout: win.innerWidth < 900 ? 'phone' : 'desktop' });
+  // one identity (design review 13.11): the name the player gave on Day 1 (ftf.day1.v1), else "Traveller" (the base HUD's word)
+  let nameCache = null, nameAt = 0;
+  const playerName = () => {
+    if (nameCache && now() - nameAt < 1000) return nameCache;
+    let n = ''; try { n = (JSON.parse((storage && storage.getItem('ftf.day1.v1')) || '{}').nickname || '').trim(); } catch { n = ''; }
+    nameCache = n || t('menu.traveller'); nameAt = now(); return nameCache;
+  };
   const fail = (slot, v) => {
     flash[slot] = now() + 120;
     if (v.reason === 'mana') manaPulseUntil = now() + 400;
@@ -250,7 +257,7 @@ export function mount(ctx) {
       const sp = S.pointsLeft(L, rec), tp = statPointsLeft(L, rec);
       const skin = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris';
       hud.render({
-        portrait: (ctx.base || '/') + 'assets/cards/' + skin + '.webp', name: skin === 'elise' ? 'Elise' : 'Iris',
+        portrait: (ctx.base || '/') + 'assets/cards/' + skin + '.webp', name: playerName(),
         level: L, hp: self.hp, maxHP: stats.maxHP, mana: caster.mana, maxMana: stats.maxMana, manaPulse: manaPulseUntil > tnow,
         target: tg ? { name: mobDisplayName(tg.mob.type).replace(/^./, (c) => c.toUpperCase()), hp: tg.mob.hp, maxHp: tg.mob.T.hp, elite: !!tg.mob.T.elite } : null,
         buffs: Object.entries(self.buffs).map(([id, b]) => ({ id, name: id, left: (b.until - tnow) / 1000, debuff: false })),
