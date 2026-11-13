@@ -37,3 +37,18 @@ E2E: `FTF_E2E_URL=<built preview> node --test game/tests/e2e/quests.e2e.mjs`, 4/
 - No ground trail for auto-walk; the waypoint arrow and the label carry the direction.
 - The quest save key stays `ftf.quests.v1` (no v2 migration was needed).
 - Auto-walk plans straight lines when no collider grid is passed (the town physics slides Iris along walls).
+
+## After the sprint (13 Nov, owner tasks)
+
+| Piece | Files | Tests |
+|---|---|---|
+| The Hatchkeeper (pet seller) by the lower-lane stalls, three dragons looping, riddle panel; companions off (`COMPANIONS_ENABLED`), locked companion slot | `scenes/hatchkeeper.js`, `scenes/hatchkeeper-rules.js`, `scenes/companion-rules.js`, `ui/companion-slot.js` | `tests/client/hatchkeeper.test.mjs` |
+| Live quest chain fixed: journal auto quests no longer make a giver "busy"; no raw titles in the old log; errand "!" markers | `game/quest-rules.js` (shared), `scenes/town-quests.js` | `tests/client/quest-chain.test.mjs` |
+| Progress already held counts: a proof drop (crown shard) completes its kill objective on accept, on the HELD check and at turn-in; every kill is logged and kills from the last 30 min count on accept, once | `game/quest-rules.js`, `game/quests-data.js` (shared, relayer copies synced) | `quest-chain.test.mjs` |
+| Townsfolk walk only on the path graph: feet-up grounding, prop footprints with 0.5 m margins, collider clearance, 0.35 m bodies that never overlap (head-on, standing givers, other heroines, Iris eased out) | `play/town-paths.js`, `scenes/town-footprints.js`, `play/townsfolk-plan.js`, `play/townsfolk.js`, `scripts/record-town-ground.mjs`, `tests/fixtures/town-ground.json` | `tests/client/town-paths.test.mjs`, `tests/client/walkers.test.mjs` |
+| Day-1 clarity: the objective pill is never cut; giver portraits in the talk panel and the journal | `scenes/player-hud.js`, `quests/portraits.js` | `journal-ui.test.mjs` |
+| The first pet after the first finished tournament: claim to the chosen heroine (relayer reason `tournament`), owned pet flies, slot unlocks for that heroine | `net/pet.js`, `net/companion-claim.js`, `relayer/lib/companion.js` | `hatchkeeper.test.mjs`, `relayer/tests/companion.test.mjs` |
+
+Deploy note: the relayer needs this branch for the `tournament` claim (`FTF_TOWN_CONTRACT`, default `ftf-town.testnet`; `FTF_COMPANION_KEY` as before). Re-record the ground table (`FTF_E2E_URL=<built preview> node game/scripts/record-town-ground.mjs`) after moving routes or town pieces; `tests/fixtures/town-solid.json` lists any body contacts it finds.
+
+Open: the Hatchkeeper is an obstacle and anchor only as a body (not a graph node); the pet claim was tested with mocks, not against a settled testnet season.
