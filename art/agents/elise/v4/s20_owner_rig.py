@@ -139,9 +139,9 @@ for sd, sgn in (('L', 1), ('R', -1)):
     for k in upper: W[k][lg] = W[k][lg] * (1 - u_h[lg])
     W['thigh_' + sd][lg] = (u_h * (1 - u_k))[lg]; W['shin_' + sd][lg] = (u_h * u_k * (1 - u_a))[lg]; W['foot_' + sd][lg] = (u_h * u_k * u_a * (1 - u_t))[lg]; W['toe_' + sd][lg] = (u_h * u_k * u_a * u_t)[lg]
 # the right leg lives inside the close dress: above the ankle it hangs mostly from the hips (as the dress does), easing
-# to its own bones at the ankle, so a stride cannot push the knee or shin through the cloth; the shoe steps freely
-lgR = BODY & ~arm & (z < 0.97) & (x < 0); kzR = BH['shin_R'][2]; azR = BH['foot_R'][2]; hold = 0.85 * ss(azR + 0.05, kzR - 0.06, z) * lgR
-for k in ('thigh_R', 'shin_R'):
+# so a stride cannot push the knee or shin through the cloth or trail a bare shin behind the hem
+lgR = BODY & ~arm & (z < 0.97) & (x < 0); kzR = BH['shin_R'][2]; azR = BH['foot_R'][2]; hold = np.where(z > azR + 0.03, 0.85, 0.6) * lgR        # the shoe keeps 40% of its own step: it shows at the hem, never a bare shin trailing behind it
+for k in ('thigh_R', 'shin_R', 'foot_R', 'toe_R'):
     W['pelvis'] += W[k] * hold; W[k] = W[k] * (1 - hold)
 tot = sum(W.values()); bad = tot < 1e-4; W['pelvis'][bad & (z < 1.45)] = 1.0; W['head'][bad & (z >= 1.45)] = 1.0; tot = sum(W.values())
 for k in W: W[k] = W[k] / tot
