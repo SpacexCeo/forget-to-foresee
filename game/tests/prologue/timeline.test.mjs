@@ -20,7 +20,7 @@ test('the camera interpolates inside a shot; reduced motion has no shake, no rol
   const r = cameraAt(30.99, { reduced: true });
   assert.deepEqual([r.shake, r.roll], [0, 0]); assert.ok(r.fov <= 50);
   assert.equal(cameraAt(33).tunnel, true); assert.equal(cameraAt(33).pos, undefined);
-  const m = cameraAt(5.0); assert.ok(m.pos[2] < 5.2 && m.pos[2] > 3.2);
+  const m = cameraAt(5.0); assert.ok(m.pos[0] < 0.8 && m.pos[0] > 0.2 && m.fov < 42 && m.fov > 38);
 });
 
 test('Iris enters at 3 s, runs in, ends at the device; her path is continuous', () => {
