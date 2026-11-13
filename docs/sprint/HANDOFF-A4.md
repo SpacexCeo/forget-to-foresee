@@ -33,7 +33,7 @@ Run the example: `node server/src/main.js & node server/examples/agent-tournamen
 ## Open items
 
 - **Stipend:** W17 pays 10 silk once (`ftf.npe.v1.stipend`); the story also grants `stipendC` at `TWIST_DONE`. One stipend in total: waiting on A1's answer. Then either W17 replaces it (pass `ctx.award` = A1's verified grant), or W17 grants nothing.
-- **Barks:** the ten lines are in `en-npe.js` (`BARKS` in `dialogue-script.js`). They are not wired into `scenes/barks.js`: until `en-npe` is in the i18n table, a bark would show its key.
+- **Barks:** wired. The ten lines join the crowd rotation of `scenes/barks.js` (option `extra`) while `newPlayerIntro` is on. The timing stays that module's own (6 m, 2.6 s bubbles, 20 s per person), not the plan's 8 m / 3 s / 20–40 s.
 - **E2E E1–E7:** written as DOM tests only, because the e2e harness is not on `main` yet.
 - **"?" re-show handle and the panels test (7.8):** these belong to the first-seen component.
 - **Voice takes:** checked for length only; listen and re-record if needed (`docs/audio/voice.md`).
