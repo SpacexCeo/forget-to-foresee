@@ -7,7 +7,7 @@ eyes), so nothing is welded and nothing has to be cut apart.
 Kept from the file: the mesh, the UVs, the texture, and its weights for the spine, shoulders, arms, hands, fingers,
 neck and head (bone names mapped onto hers). Replaced by rules: the dress below the hips (the cloth grid of the v3
 gown re-seated on this dress, her 13 skirt chains on it, the grid's weights; not the thighs), the ribbon tails (the hand, the tips sway), the legs and
-shoes (her joints: the file's knee sits 8 cm too high). Both legs and shoes are kept; the cloth collides with both.
+shoes (her joints: the file's knee sits 8 cm too high). Both legs and shoes are kept; the right leg, which the close dress encloses, hangs mostly from the hips above the ankle so it stays inside the cloth.
     blender -b -P s20_owner_rig.py -- <model.fbx> <texture.jpg> <work dir> <name> <base triangles> [outline mm 2.2]
 Writes <name>.blend, <name>_raw.glb (toon material + inverted hull outline) and cloth_rig.npz (the cloth grid on this dress).
 """
@@ -68,7 +68,7 @@ red = (col[:, 0] > 0.25) & (col[:, 0] > 1.8 * col[:, 1])
 LACE = ~BODY & ~DRESS & ~red & (z < 1.12) & (z > 0.5) & (np.abs(x) < 0.2)          # the lacing and its bow ride the dress
 armw = sum(get(p + s_) for s_ in 'LR' for p in ('upperarm_', 'forearm_', 'hand_', 'index_', 'fingers_', 'thumb_')); arm = armw > 0.5
 print('pieces: %d; body %d vertices, dress %d, lacing %d, red %d, arm %d' % (len(ids), BODY.sum(), DRESS.sum(), LACE.sum(), red.sum(), arm.sum()))
-# both legs and both shoes are kept; the cloth collides with both legs (below). The index layer keeps the weights aligned should faces ever be dropped here
+# both legs and both shoes are kept; the right one is held inside the dress by its weights (below). The index layer keeps the weights aligned should faces ever be dropped here
 bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); OI = bm.verts.layers.int.new('orig')
 for v in bm.verts: v[OI] = v.index
 gone = np.zeros(n, bool)                               # both legs stay (13.11: with the right one removed she read as one-legged from the side)
@@ -124,7 +124,7 @@ for q_, (bn, p0, p1, st) in enumerate(zip(d3['cap_bone'], d3['cap_p0'], d3['cap_
         if c_ < 0.006: cap_r[q_] = np.maximum(cap_r[q_] - (0.006 - c_), 0.02); c_ = float((dd - (cap_r[q_, 0] + (cap_r[q_, 1] - cap_r[q_, 0]) * tt)).min())
         clear[str(bn) + '#%d' % q_] = (round(c_, 4), [round(float(v_), 3) for v_ in cap_r[q_]])
 print('cloth grid re-seated: %.0f%% of the points found on the dress; mean radius %.3f -> %.3f m; leg capsules (rest clearance m, radii): %s' % (found * 100, r3.mean(), rn.mean(), clear))
-cap_set = d3['cap_set'].copy()                         # both legs shape the dress and are checked against it
+cap_set = d3['cap_set'].copy(); cap_set[np.isin(d3['cap_bone'], ['thigh_R', 'shin_R'])] = 9      # the right leg does not shape the close dress (colliding with it tore the dress in a stride): the leg is kept inside by its weights instead (below)
 np.savez_compressed(WD + '/cloth_rig.npz', **{**{k_: d3[k_] for k_ in d3.files}, 'grid': g2(Gn), 'cap_r': cap_r, 'cap_set': cap_set, 'tail_names': np.array(list(tails)), 'tail_pos': np.array([tails[k_] for k_ in tails])})
 gwn = [str(v_) for v_ in d3['gw_names']]; gw = d3['gw'].reshape(-1, len(gwn)).astype(float); gp = Gn.reshape(-1, 3)
 skirt = (DRESS | LACE) & (z < float(h3.max()))
@@ -138,6 +138,11 @@ for sd, sgn in (('L', 1), ('R', -1)):
     kz = BH['shin_' + sd][2]; az = BH['foot_' + sd][2]; u_h = ss(0.97, 0.86, z) * ss(0.0, 0.035, x * sgn); u_k = ss(kz + 0.04, kz - 0.04, z); u_a = ss(az + 0.03, az - 0.02, z); u_t = ss(-0.10, -0.13, y) * (z < 0.08)
     for k in upper: W[k][lg] = W[k][lg] * (1 - u_h[lg])
     W['thigh_' + sd][lg] = (u_h * (1 - u_k))[lg]; W['shin_' + sd][lg] = (u_h * u_k * (1 - u_a))[lg]; W['foot_' + sd][lg] = (u_h * u_k * u_a * (1 - u_t))[lg]; W['toe_' + sd][lg] = (u_h * u_k * u_a * u_t)[lg]
+# the right leg lives inside the close dress: above the ankle it hangs mostly from the hips (as the dress does), easing
+# to its own bones at the ankle, so a stride cannot push the knee or shin through the cloth; the shoe steps freely
+lgR = BODY & ~arm & (z < 0.97) & (x < 0); kzR = BH['shin_R'][2]; azR = BH['foot_R'][2]; hold = 0.85 * ss(azR + 0.05, kzR - 0.06, z) * lgR
+for k in ('thigh_R', 'shin_R'):
+    W['pelvis'] += W[k] * hold; W[k] = W[k] * (1 - hold)
 tot = sum(W.values()); bad = tot < 1e-4; W['pelvis'][bad & (z < 1.45)] = 1.0; W['head'][bad & (z >= 1.45)] = 1.0; tot = sum(W.values())
 for k in W: W[k] = W[k] / tot
 print('weights: unbound vertices fixed %d; bones used %d of %d' % (bad.sum(), sum(1 for k in W if W[k].max() > 0.01), len(W)))
