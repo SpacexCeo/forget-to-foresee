@@ -23,14 +23,12 @@ const CSS = `
 @media (max-width:599px){.ft{top:calc(env(safe-area-inset-top,0px) + 112px);right:12px;left:12px;width:auto;max-height:40vh}.ft.ft-short .ft-rest{display:none}}
 html[data-motion=reduce] .ft-flash{animation:none}
 .ft-close{font-size:12px;line-height:1}
-.ft.ft-compact{background:none;border:0;box-shadow:none;padding:0;max-height:none;overflow:visible;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.5);width:min(260px,calc(100vw - 24px))}
-.ft.ft-compact .ft-head{position:absolute;right:0;top:0;opacity:0;transition:opacity .15s}.ft.ft-compact:hover .ft-head,.ft.ft-compact:focus-within .ft-head{opacity:1}
-.ft.ft-compact .ft-head span,.ft.ft-compact .ft-key,.ft.ft-compact .ft-collapse{display:none}
-.ft.ft-compact .ft-road,.ft.ft-compact .ft-rest,.ft.ft-compact .ft-obj,.ft.ft-compact .ft-more,.ft.ft-compact .ft-none,.ft.ft-compact .ft-walk,.ft.ft-compact .ft-expand,.ft.ft-compact .ft-guide-hide{display:none}
-.ft.ft-compact .ft-q{border:0;padding:0 24px 0 0}.ft.ft-compact .ft-q~.ft-q{display:none}
-.ft.ft-compact .ft-title,.ft.ft-compact .ft-q.compact .ft-title{color:#fff;font-weight:600}
-.ft.ft-compact .ft-ib{background:rgba(10,14,16,.5);border:0;min-width:22px;min-height:22px}
-.ft.ft-compact .ft-showmore{background:none;border:0;padding:0;min-height:0;font-size:12px;text-decoration:underline;color:rgba(240,242,240,.75)}
+.ft.ft-compact{background:none;border:0;box-shadow:none;padding:0;max-height:none;overflow:visible;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.5);width:min(300px,calc(100vw - 100px))}
+.ft-cline{display:flex;align-items:center;gap:2px;padding:2px 4px 2px 8px;border-radius:8px;background:rgba(10,14,16,.5);width:max-content;max-width:100%;box-sizing:border-box}
+.ft-croad{flex:1;display:flex;flex-wrap:wrap;column-gap:6px;align-items:baseline;border:0;background:none;padding:2px 0;text-align:left;font-weight:500}
+.ft-cic{color:#f0c75e;font-size:11px}.ft-croad b{color:#e8dcb4;font-weight:600}
+.ft-cobj{display:flex;gap:6px;margin:4px 0 0 8px;border:0;background:none;padding:0;color:rgba(240,242,240,.78);font-size:13px;text-align:left}
+.ft.ft-compact .ft-ib{border:0;background:none;min-width:24px;min-height:24px;padding:0 4px;color:rgba(240,242,240,.85)}
 `;
 
 /** The tracker's saved choices (ftf.tracker.v1): collapsed, hidden (the × hides it entirely; the Journal brings it back)
@@ -91,14 +89,28 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     if (!force && key === lastKey) return; lastKey = key;
     root.replaceChildren();
     root.classList.toggle('ft-short', short); root.classList.toggle('ft-compact', compact);
+    const gate = Math.floor(d.road.gateC / 100), fee = Math.round(d.road.feeC / 100);
+    if (compact) {   // two lines: the Road home, and the active quest (or the guide step, or the town errand)
+      const line = el('div', 'ft-cline'), road = el('button', 'ft-croad'); road.type = 'button';
+      road.append(el('span', 'ft-cic', '\u25C6'), el('span', null, say('tracker.road')), el('b', null, say('tracker.roadValue', { gate, fee })));
+      road.addEventListener('click', () => onOpen(null));
+      const more = el('button', 'ft-ib ft-showmore', '\u2304'); more.type = 'button'; more.title = say('tracker.more'); more.setAttribute('aria-label', say('tracker.more'));
+      more.addEventListener('click', () => { pref.compact = false; save(); render(true); });   // the full tracker, remembered
+      const hide = el('button', 'ft-ib ft-close', '\u00D7'); hide.type = 'button'; hide.title = say('tracker.hide'); hide.setAttribute('aria-label', say('tracker.hide'));
+      hide.addEventListener('click', () => { pref.hidden = true; save(); apply(); });
+      line.append(road, more, hide); root.append(line);
+      const q = d.tracked[0];
+      const text = q ? (q.status === 'ready' ? `${q.title} \u00B7 ${say('tracker.ready', { giver: giverName(q.turnIn) })}` : q.title) : d.guide ? d.guide.text : d.errand;
+      if (text) { const ob = el('button', 'ft-cobj'); ob.type = 'button'; ob.append(el('span', null, '\u25CE'), el('span', null, text)); ob.addEventListener('click', () => onOpen(q ? q.id : null)); root.append(ob); }
+      return;
+    }
     const head = el('div', 'ft-head'); head.append(el('span', null, say('tracker.title')), el('small', 'ft-key', '[J]'));
     const col = el('button', 'ft-ib ft-collapse', pref.collapsed ? '+' : '–'); col.type = 'button'; col.title = say(pref.collapsed ? 'tracker.expand' : 'tracker.collapse');
     col.addEventListener('click', () => { pref.collapsed = !pref.collapsed; save(); render(true); });
     const hide = el('button', 'ft-ib ft-close', '×'); hide.type = 'button'; hide.title = say('tracker.hide'); hide.setAttribute('aria-label', say('tracker.hide'));
     hide.addEventListener('click', () => { pref.hidden = true; save(); apply(); });   // gone entirely; the Journal's checkbox brings it back
     head.append(col, hide); root.append(head);
-    if (pref.collapsed && !compact) return;
-    const gate = Math.floor(d.road.gateC / 100), fee = Math.round(d.road.feeC / 100);
+    if (pref.collapsed) return;
     const road = el('button', 'ft-road'); road.type = 'button';
     road.append(el('small', null, say('tracker.road')), el('b', null, say('tracker.roadValue', { gate, fee })));
     const bar = el('div', 'ft-bar'); const i = el('i'); i.style.width = Math.min(100, Math.round(100 * d.road.gateC / Math.max(1, d.road.feeC))) + '%'; bar.append(i); road.append(bar);
@@ -116,11 +128,7 @@ export function createTrackerUI({ doc, say, giverName, data, onOpen, onWalk, onH
     }
     if (d.errand) { const e = el('div', 'ft-q compact'); e.append(el('div', 'ft-title', say('tracker.town')), el('div', 'ft-obj', d.errand)); rest.append(e); }
     root.append(rest);
-    if (compact) {   // the active line only; "Show more" opens the full tracker (and remembers it)
-      const more = el('button', 'ft-ib ft-showmore', say('tracker.more')); more.type = 'button';
-      more.addEventListener('click', () => { pref.compact = false; save(); render(true); });
-      root.append(more);
-    } else if (rest.children.length) {
+    if (rest.children.length) {
       const more = el('button', 'ft-ib ft-showmore', say(short ? 'tracker.more' : 'tracker.less')); more.type = 'button';
       more.addEventListener('click', () => { short = !short; render(true); });
       root.append(more);

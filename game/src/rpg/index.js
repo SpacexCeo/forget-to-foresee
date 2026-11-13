@@ -49,7 +49,7 @@ export function mount(ctx) {
   const refreshStats = () => { const before = stats; stats = S.statsOf(L, rec); if (stats.maxHP !== before.maxHP) self = { ...self, hp: Math.min(stats.maxHP, Math.round(self.hp * stats.maxHP / before.maxHP)), maxHP: stats.maxHP }; caster = { ...caster, mana: Math.min(caster.mana, stats.maxMana) }; };
 
   const hud = createHud({ doc, t, base: ctx.base || '/', reduced: () => !!(ctx.reduced && ctx.reduced()), keyOf: (a) => keyLabel(bindings()[a]),
-    onSlot: (i) => press(i, 'click'), onTray: (id) => openWindow(id), onSync: () => { if (ctx.silk && ctx.silk.syncSilkNow) ctx.silk.syncSilkNow(); else silkCore.syncSilkNow(); },
+    onSlot: (i) => press(i, 'click'), onSlotDown: (i) => press(i, 'key'), onSlotUp: (i) => press(i, 'key', true), onTray: (id) => openWindow(id), onSync: () => { if (ctx.silk && ctx.silk.syncSilkNow) ctx.silk.syncSilkNow(); else silkCore.syncSilkNow(); },
     onSilk: () => { if (ctx.ui && ctx.ui.openWallet) ctx.ui.openWallet(); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'wallet' } })); },
     onMap: () => openWindow('map'), onZoom: (d) => map && map.zoom(d), onFrame: () => openWindow('character'),
     onDropSkill: (i, id) => { bar = S.placeOnSlot(bar, i, id); save(); } });

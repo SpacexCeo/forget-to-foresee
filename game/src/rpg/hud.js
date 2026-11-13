@@ -98,7 +98,12 @@ export function createHud(o) {
     const b = el('button', 'rpg-slot'); b.type = 'button'; b.dataset.slot = String(i + 1);
     const ic = el('span', 'ic'), sw = el('span', 'sw'), cd = el('span', 'cd'), k = el('span', 'k');
     b.append(ic, sw, cd, k);
-    b.addEventListener('click', () => o.onSlot && o.onSlot(i));
+    // a touch is a held key (hold to charge, release to let go); the click that follows it is not a second press
+    let touchAt = 0;
+    b.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') return; e.stopPropagation(); touchAt = Date.now(); if (o.onSlotDown) o.onSlotDown(i); });
+    const lift = (e) => { if (e.pointerType !== 'touch' || !touchAt) return; if (o.onSlotUp) o.onSlotUp(i); };
+    b.addEventListener('pointerup', lift); b.addEventListener('pointercancel', lift);
+    b.addEventListener('click', () => { if (o.onSlotDown && Date.now() - touchAt < 1000) return; if (o.onSlot) o.onSlot(i); });
     b.addEventListener('dragover', (e) => { e.preventDefault(); });
     b.addEventListener('drop', (e) => { e.preventDefault(); const id = e.dataTransfer && e.dataTransfer.getData('text/x-ftf-skill'); if (id && o.onDropSkill) o.onDropSkill(i, id); });
     const s = { b, ic, sw, cd, k, id: undefined, view: null };
@@ -143,9 +148,11 @@ export function createHud(o) {
     attachTip(b, () => (b.disabled ? { title: t('hud.tray.' + it.id), lines: [b.dataset.why || t('hud.tray.notNow')] } : null));   // the label shows on hover; the tooltip only says why it is off
     trayBtn[it.id] = b; tray.append(b);
   }
+  // the phone portrait bar along the bottom (a backdrop only: the ticker, the silk, bag and map sit over it)
+  const pbar = el('div', 'rpg-pbar px'); pbar.setAttribute('aria-hidden', 'true');
   // banner
   const banner = el('div', 'rpg-banner px');
-  root.append(vignette, frame, buffs, target, map, zoom, coords, cbar.b, hotbar, xp.b, log, silk, tray, banner);
+  root.append(vignette, pbar, frame, buffs, target, map, zoom, coords, cbar.b, hotbar, xp.b, log, silk, tray, banner);
   doc.body.append(root, tip); doc.documentElement.classList.add('rpg-on');
   paintLog();
 

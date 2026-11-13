@@ -288,6 +288,21 @@ html.rpg-on { --rpg-k: max(calc(min(100vw, 100vh * 1.7778) / 1920), 0.72px); }  
   html.rpg-on .ftf-scene-tools { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(112px + env(safe-area-inset-top, 0px)); }   /* under the small radar */
   html.rpg-on .ftf-photo-open { top: calc(112px + env(safe-area-inset-top, 0px)) !important; right: calc(60px + env(safe-area-inset-right, 0px)) !important; }
 }
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) {
+  html.rpg-on .ft { top: calc(80px + env(safe-area-inset-top, 0px)) !important; left: calc(14px + env(safe-area-inset-left, 0px)); right: auto; width: calc(100vw - 112px); max-height: max(96px, calc(100vh - 340px)); }
+  html.rpg-on .ftf-scene-tools { display: none !important; }   /* the menu button under the radar opens the game menu with Settings */
+  html.rpg-on .ftf-photo-open { top: calc(94px + env(safe-area-inset-top, 0px)) !important; right: calc(76px + env(safe-area-inset-right, 0px)) !important; width: 36px !important; height: 36px !important; transform: none !important; border-color: rgba(255,255,255,.35) !important; background: rgba(10,14,16,.55) !important; }
+  html.rpg-on .ftf-chat { left: calc(14px + env(safe-area-inset-left, 0px)) !important; bottom: calc(50px + env(safe-area-inset-bottom, 0px)) !important; }
+  html.rpg-on .ftf-chat-chip { border-color: rgba(255,255,255,.3); background: rgba(10,14,16,.5); font-weight: 500; }
+  html.rpg-on .ftf-mk { left: calc(14px + env(safe-area-inset-left, 0px)) !important; bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important; max-width: calc(50% - 76px) !important; }
+  html.rpg-on .ftf-mk > button { min-height: 32px; padding: 0; border: 0; border-radius: 0; background: none; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+  html.rpg-on .ftf-mk .dot { display: none; }
+  html.rpg-on .ftf-mk .mk-text { font-size: 0; }
+  html.rpg-on .ftf-mk .mk-text::after { content: attr(data-n); font: 500 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; }   /* the count alone */
+  html.rpg-on .ftf-mk .box { position: absolute; left: 0; bottom: calc(100% + 8px); width: min(320px, calc(100vw - 28px)); }
+  html.rpg-on .ts-arc .ts-btn:not(.ts-use) { display: none !important; }   /* the 2 x 2 skill grid is the touch hotbar (a touch is a held key) */
+  html.rpg-on body:not(.ts-on) .ftf-town-prompt { bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
+}
 /* reduced motion */
 html[data-motion="reduce"] .rpg *, .rpg[data-reduced="1"] * { animation: none !important; transition: none !important; }
 html[data-motion="reduce"] .rpg-banner[data-show="1"], .rpg[data-reduced="1"] .rpg-banner[data-show="1"] { opacity: 1; }
@@ -320,5 +335,55 @@ html[data-motion="reduce"] .rpg-banner[data-show="1"], .rpg[data-reduced="1"] .r
   .rpg-map { width: 92px; height: 92px; border-width: 2px; } .rpg-map .n { font-size: 10px; } .rpg-map .loc { display: none; }
   .rpg-stam { width: 168px; }
   .rpg-log { display: none; }
+}
+.rpg-pbar { display: none; }
+/* phone portrait (owner 13.11): the same transparent style. Top: the player, the compact tracker, the radar and one menu
+   button under it. Bottom: the skills as a 2 x 2 grid on the right above a thin bar (the trade count, the silk, bag
+   and map) and the XP line along the very bottom. Landscape phones keep the rules above. */
+@media (max-width: 599px), (max-width: 899px) and (orientation: portrait) {
+  .rpg { --ts: 0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-shadow: var(--ts); }
+  .rpg .panel { background: none; border: 0; box-shadow: none; border-radius: 0; }
+  .rpg-frame { left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 232px; height: 60px; }
+  .rpg-portrait { left: 0; top: 0; width: 44px; height: 44px; border: 1.5px solid rgba(255,255,255,.7); box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .rpg-name { left: 58px; top: 2px; max-width: 110px; font: 600 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; color: #fff; }
+  .rpg-lv { left: auto; right: 0; top: 4px; min-width: 0; height: auto; padding: 0; border: 0; border-radius: 0; background: none; font-size: 12px; font-weight: 500; line-height: 1.2; color: rgba(240,242,240,.75); }
+  .rpg-hp, .rpg-mana, .rpg-stam { left: 58px; width: 112px; height: 3px; border: 0; border-radius: 2px; overflow: visible; background: rgba(0,0,0,.4); box-shadow: none; }
+  .rpg-hp { top: 27px; } .rpg-mana { top: 39px; } .rpg-stam { top: 51px; }
+  .rpg-hp::after, .rpg-mana::after { display: none; }
+  .rpg-bar i { border-radius: 2px; } .rpg-hp i.fill { background: #e2493e; } .rpg-mana i.fill { background: #4c8ee6; } .rpg-stam i.fill { background: #8fd694; }
+  .rpg-hp b, .rpg-mana b { inset: 50% auto auto calc(100% + 8px); transform: translateY(-50%); white-space: nowrap; font-size: 11px; font-weight: 500; color: rgba(240,242,240,.9); }
+  .rpg-map { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 72px; height: 72px; border: 1px solid rgba(255,255,255,.35); background: rgba(10,14,16,.5); box-shadow: none; }
+  .rpg-map .n { top: 1px; min-width: 0; height: auto; padding: 0; background: none; color: #fff; font: 600 10px/1.2 system-ui, sans-serif; }
+  .rpg-map .loc { display: none; }
+  /* one round menu button under the radar (it opens the tray grid: character, skills, journal, map, bag, market, menu) */
+  .rpg-tray { left: auto; right: calc(28px + env(safe-area-inset-right, 0px)); top: calc(92px + env(safe-area-inset-top, 0px)); bottom: auto; width: 40px; height: 40px; flex-direction: column; }
+  .rpg-tray button { flex: 0 0 40px; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; background: rgba(10,14,16,.55); box-shadow: none; }
+  .rpg-tray button svg { width: 22px; height: 22px; margin: 0; color: #fff; stroke-width: 1.5; }
+  .rpg-tray .k { display: none; }
+  .rpg-tray[data-open="1"] { width: 160px; grid-template-columns: repeat(3, 48px); }
+  .rpg-tray[data-open="1"] button { width: 48px; height: 48px; border-radius: 12px; }
+  /* bag and map sit in the bottom bar */
+  .rpg-tray:not([data-open="1"]) #rpg-tray-bag, .rpg-tray:not([data-open="1"]) #rpg-tray-map { display: flex; position: fixed; bottom: calc(2px + env(safe-area-inset-bottom, 0px)); width: 44px; height: 38px; border: 0; border-radius: 6px; background: none; }
+  .rpg-tray:not([data-open="1"]) #rpg-tray-bag { right: calc(66px + env(safe-area-inset-right, 0px)); top: auto; }
+  .rpg-tray:not([data-open="1"]) #rpg-tray-map { right: calc(12px + env(safe-area-inset-right, 0px)); top: auto; }
+  .rpg-pbar { display: block; left: 0; right: 0; top: auto; bottom: 0; height: calc(42px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, rgba(8,12,14,.72), rgba(8,12,14,.5)); border-top: 1px solid rgba(255,255,255,.08); }
+  .rpg-pbar::before, .rpg-pbar::after { content: ""; position: absolute; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); width: 1px; height: 22px; background: rgba(255,255,255,.22); }
+  .rpg-pbar::before { right: calc(116px + env(safe-area-inset-right, 0px)); } .rpg-pbar::after { right: calc(61px + env(safe-area-inset-right, 0px)); }
+  .rpg-xp { left: 14px; right: 14px; width: auto; bottom: calc(2px + env(safe-area-inset-bottom, 0px)); height: 2px; border: 0; border-radius: 2px; background: rgba(255,255,255,.12); }
+  .rpg-xp i.fill { background: #9d6cf0; } .rpg-xp .tick { display: none; }
+  .rpg-silk { left: calc(50% - 56px); right: auto; top: auto; bottom: calc(5px + env(safe-area-inset-bottom, 0px)); width: 112px; height: 34px; }
+  .rpg-silk .coin { left: 0; top: 9px; width: 16px; height: 16px; }
+  .rpg-silk .l1 { left: 22px; top: 1px; font-size: 15px; font-weight: 500; color: #fff; }
+  .rpg-silk .l2 { left: 22px; top: 20px; font-size: 9px; color: rgba(240,242,240,.7); }
+  .rpg-silk .sync { right: 0; top: 5px; width: 24px; height: 24px; border: 0; background: rgba(10,14,16,.5); }
+  /* the skills: a 2 x 2 grid of large touch targets above the bar on the right; no key numbers */
+  .rpg-hotbar { left: auto; right: calc(14px + env(safe-area-inset-right, 0px)); transform: none; top: auto; bottom: calc(56px + env(safe-area-inset-bottom, 0px)); width: auto; height: auto;
+    display: grid; grid-template-columns: repeat(2, 60px); gap: 10px; }
+  .rpg-slot { flex: none; width: 60px; height: 60px; border: 1px solid rgba(255,255,255,.3); border-radius: 12px; background: rgba(10,14,16,.5); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+  .rpg-slot .ic { width: 48px; height: 48px; border-radius: 9px; }
+  .rpg-slot .k { display: none; }
+  .rpg-castbar { bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
+  .rpg-target { top: calc(140px + env(safe-area-inset-top, 0px)); }
+  .rpg-buffs { left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(78px + env(safe-area-inset-top, 0px)); }
 }
 `;
