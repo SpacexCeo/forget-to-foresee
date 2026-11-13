@@ -41,7 +41,7 @@ export function mount(ctx) {
   let L = levelNow().level, stats = S.statsOf(L, rec);
   let caster = S.initialCaster(stats.maxMana), self = { hp: stats.maxHP, maxHP: stats.maxHP, buffs: {} };
   let lastWorldHp = null, flash = {}, pressed = {}, manaPulseUntil = 0, lastFailLog = 0, targetId = null, cast = null, open = {}, silkPop = false, lastGate = null;
-  let tree = null, sheet = null, map = null;
+  let tree = null, sheet = null, map = null, cheat = null;
   const fee = portalFee(win.location ? win.location.search : '').feeC;
   // the ONE silk number (A3's model, net/silk-core.js); the ledger only when no model is installed and none is given
   const silkView = () => (ctx.silk && ctx.silk.silkView ? ctx.silk.silkView() : silkCore.silkView ? silkCore.silkView() : ledgerSilkView(ctx.ledger, fee));
@@ -110,8 +110,10 @@ export function mount(ctx) {
     hud.log(t('hud.cast', { name: skillById(id).name }), 'sys');
   }
   // the game's casts: mana and cooldown are spent when the cast leaves her hands (plan 5.8)
+  let lastSkill = { id: 'strike', at: 0 };
   const onCastEvent = (e) => {
     const d = e.detail || {}; if (!BASE[d.id]) return;
+    if (d.phase === 'release') lastSkill = { id: d.id, at: now() };
     if (d.phase === 'start') cast = { id: d.id, name: BASE[d.id].name, t0: now(), dur: (d.release || 0) * 1000 };
     if (d.phase === 'release') { const r = S.cast({ ...caster, gcd: 0, ready: { ...caster.ready, [d.id]: 0 } }, rec, d.id, now()); if (r.ok) { caster = r.caster; emit('skill.cast', { id: d.id, slot: bar.indexOf(d.id) + 1, manaCost: r.manaCost, cooldownMs: r.cooldownMs }); } cast = null; }
   };
@@ -119,7 +121,7 @@ export function mount(ctx) {
 
   // ------------------------------------------------------------------ keys (capture: before the game's input sees them)
   const typing = (e) => { const el = e.target; return !!(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || ''))) || !!doc.querySelector('dialog[open]'); };
-  const active = () => (ctx.active ? ctx.active() : true);
+  const active = () => (ctx.active ? ctx.active() : !!(win.__ftf && win.__ftf.town && win.__ftf.town.active));   // the town phase only (not the archipelago)
   const onKey = (e) => {
     if (e.__rpg || !active() || typing(e) || (e.target && e.target.closest && e.target.closest('.rpg-modal:not([hidden])'))) return;   // keys inside the tree or the sheet are theirs
     const action = actionOf(e.code) || FIXED_ALIASES[e.code] || null; if (!action) return;
@@ -134,7 +136,7 @@ export function mount(ctx) {
     if (!down) return;
     if (action === 'target') { e.preventDefault(); e.stopImmediatePropagation(); cycleTarget(); return; }
     if (WINDOWS.includes(action) && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); openWindow(action); return; }
-    if (action === 'help') { e.preventDefault(); e.stopImmediatePropagation(); if (ctx.openSettings) ctx.openSettings('controls'); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'help' } })); }
+    if (action === 'help') { e.preventDefault(); e.stopImmediatePropagation(); openWindow('help'); }
   };
   win.addEventListener('keydown', onKey, true); win.addEventListener('keyup', onKey, true);
   const offBind = onBindings(() => { /* labels repaint every frame */ });
@@ -149,6 +151,13 @@ export function mount(ctx) {
     if (id === 'menu') { if (ctx.openMenu) ctx.openMenu(); else { const e = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }); e.__rpg = true; win.dispatchEvent(e); } return; }
     if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); tree.toggle(); open.skills = tree.isOpen; }); return; }
     if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); sheet.toggle(); open.character = sheet.isOpen; }); return; }
+    if (id === 'help') {                                                             // F1: the read-only cheat sheet (rebind lives in Settings -> Controls)
+      import('./cheat-sheet.js').then((m) => { cheat = cheat || m.createCheatSheet({ doc, t, touch: () => !!(ctx.keys && ctx.keys.touchControls),
+        onRebind: () => { if (ctx.openSettings) ctx.openSettings('controls'); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'settings', tab: 'controls' } })); },
+        onGlossary: () => import('../npe/glossary.js').then((g) => g.openGlossary({ doc, t: ctx.t })).catch(() => win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'glossary' } }))) });
+        cheat.toggle(); });
+      return;
+    }
     if (ctx.ui && ctx.ui.open) ctx.ui.open(id); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id } }));
   }
 
@@ -166,6 +175,18 @@ export function mount(ctx) {
     }
   };
   const offLedger = ctx.ledger && ctx.ledger.subscribe ? ctx.ledger.subscribe(onXp) : null;
+  // Voice (+2% skill damage per point) and Clear Diction (+10% Lance): the fight's own hit (bus 'mob.hit') gets its bonus
+  // as a follow-up hit through the brain's queue; the follow-ups are remembered so they never earn a bonus themselves
+  const bonusOut = [];
+  const onHit = (p) => {
+    if (!p || !p.id || !(p.dmg > 0)) return;
+    const k = bonusOut.findIndex((b) => b.id === p.id && b.amount === p.dmg); if (k >= 0) { bonusOut.splice(k, 1); return; }
+    const skill = now() - lastSkill.at < 1500 ? lastSkill.id : 'strike';
+    const extra = Math.round(p.dmg * (S.damageMult(L, rec, skill) - 1));
+    const M = mobsOf(), m = M && M.brain && M.brain.mobs.find((x) => x.id === p.id && x.state !== 'dead' && x.state !== 'gone');
+    if (extra > 0 && m) { bonusOut.push({ id: p.id, amount: extra }); if (bonusOut.length > 50) bonusOut.shift(); M.brain.pending.push({ at: 0.05, mob: m, amount: extra, root: 0 }); }
+  };
+  const offHit = ctx.bus && ctx.bus.on ? ctx.bus.on('mob.hit', onHit) : null;
   const onKill = (e) => {
     const d = e.detail || {}; if (!d.type) return;
     hud.log(t('hud.log.kill', { mob: mobDisplayName(d.type) }), 'sys');
@@ -188,7 +209,7 @@ export function mount(ctx) {
   if (win.location && /[?&]test=1\b/.test(win.location.search)) {
     win.__ftfTest = win.__ftfTest || {};
     win.__ftfTest.rpg = { grantXp: (n) => ctx.ledger && ctx.ledger.grant && ctx.ledger.grant({ xp: n }), setLevel: (n) => ctx.ledger && ctx.ledger.grant && ctx.ledger.grant({ xp: Math.max(0, 50 * (n - 1) * n - ctx.ledger.xp) }),
-      learn: (id) => api.learn(id), cast: (slot) => press(slot - 1, 'click'), state: () => ({ level: L, rec, bar, mana: caster.mana, hp: self.hp, maxHP: stats.maxHP, maxMana: stats.maxMana, lines: hud.lines }) };
+      learn: (id) => api.learn(id), spend: (stat) => api.spend(stat), cast: (slot) => press(slot - 1, 'click'), state: () => ({ level: L, rec, bar, mana: caster.mana, hp: self.hp, maxHP: stats.maxHP, maxMana: stats.maxMana, lines: hud.lines }) };
   }
 
   // ------------------------------------------------------------------ per frame
@@ -237,7 +258,7 @@ export function mount(ctx) {
     },
     dispose() {
       win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill);
-      if (offLedger) offLedger(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose();
+      if (offLedger) offLedger(); if (offHit) offHit(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
     },
   };
 }
