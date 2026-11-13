@@ -1,5 +1,8 @@
 // Russian: the second UI language of the 3D play layer. Keys mirror en.js exactly.
+import quests from './ru-quests.js';
+import hud from './ru-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': 'Локальное демо · правила работают в браузере через ту же комнату, что и API для агентов',
   'play.help.title': 'Управление',
@@ -1146,7 +1149,7 @@ export default {
   "pass.rpc": "NEAR сейчас не отвечает. Ваша заявка сохранена.",
   "pass.err.invalid": "Это не похоже на id аккаунта NEAR.",
   "pass.err.missing": "Такого аккаунта в NEAR пока нет. Создайте его в кошельке и попробуйте снова.",
-  "pass.err.eligible": "Сначала оплатите Ткацкие Врата (10 000 шёлка). Пока заработано: {earned}.",
+  "pass.err.eligible": "Сначала оплатите Ткацкие Врата ({fee} шёлка). Пока заработано: {earned}.",
   "pass.err.taken": "На этот кошелёк пропуск уже выдан.",
   "pass.err.signature": "Не удалось проверить аккаунт этого браузера.",
   "pass.err.rate": "Слишком много попыток. Подождите {n} мин.",
@@ -1599,6 +1602,14 @@ export default {
   'mp.demo': "{n} здесь · {n} ИИ",
   'mp.demoLine': "Эти прохожие — ИИ-горожане: живой комнаты сейчас нет.",
   'mp.ai': "ИИ",
+  'mp.act.level': "{name} достигает уровня {n}",
+  'mp.act.quest': "{name} завершает задание",
+  'mp.act.chest': "{name} открывает сундук",
+  'mp.act.chest.rare': "{name} открывает редкий сундук",
+  'mp.act.chest.legendary': "{name} открывает легендарный сундук",
+  'mp.act.boss.crownrift': "{name} побеждает Короноразлом",
+  'mp.act.boss.shoal': "{name} побеждает Полый Прилив на Стеклянной Отмели",
+  'mp.act.trade': "{name} покупает товар на рынке",
   'set.title': "Настройки",
   'set.close': "Закрыть",
   'set.tab.graphics': "Графика",
@@ -1988,4 +1999,5 @@ export default {
   "acct.nokey": "У этого аккаунта ещё нет ключа для этого кошелька. Откройте игру на устройстве, где вы впервые вошли, войдите там ещё раз и попробуйте снова.",
   "acct.error": "Вход не удался ({reason}). Можно продолжать играть как гость.",
   "acct.signed": "Вход: {login}",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

@@ -2,7 +2,7 @@
 
 The Forget to Foresee whitelist pass: a free, **transferable** NEP-171 token (with NEP-177 metadata and NEP-181
 enumeration) that the game's relayer mints to a player's NEAR wallet after it has verified, from the replayed
-expedition log, that the player paid **10,000 town silk at the Gate-Loom**. **The pass gives its holder a free NFT
+expedition log, that the player paid **the 200 town silk Gate-Loom fee**. **The pass gives its holder a free NFT
 mint at the official launch**; the right follows whoever holds the pass then. Plain-language description, the utility,
 and the threat model: [`docs/whitelist-pass.md`](../../docs/whitelist-pass.md). Owner runbook (deploy, keys,
 checks): [`docs/mainnet-pass-runbook.md`](../../docs/mainnet-pass-runbook.md). **Status: built, not deployed.**

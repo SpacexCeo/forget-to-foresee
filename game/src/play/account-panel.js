@@ -1,7 +1,8 @@
 // "Sign in / Create account" (docs/account-login.md), behind the `accountLogin` flag. Play as guest is the first and
 // largest button and costs nothing: it only closes the panel. The wallet rows load their code on tap, never before,
 // so a slow or missing wallet never holds up the game. Phones: nothing opens by itself; a tap outside, Esc or the ×
-// closes it. The flow itself is net/account-login.js; this file only draws it.
+// closes it; while a wallet is being asked only the × does, so a stray tap on the way back from the wallet never drops
+// a sign-in half way. The flow itself is net/account-login.js; this file only draws it.
 
 const CSS = `
 .acct, .acct * { box-sizing: border-box; }
@@ -14,6 +15,7 @@ const CSS = `
 .acct-row { display: grid; gap: 8px; margin: 10px 0; }
 .acct-btn { min-height: 46px; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(214, 226, 214, .22); background: #16211f; color: inherit; font: 600 15px/1.2 var(--font-ui, system-ui); text-align: left; cursor: pointer; }
 .acct-btn:disabled { opacity: .5; cursor: default; }
+.acct-go { display: block; width: 100%; text-align: center; border: 0; background: var(--ftf-gold, #c5a469); color: #1b1407; }
 .acct-status { min-height: 1.4em; margin: 8px 0 4px; font-size: 14px; }
 .acct-small { margin: 12px 0 0; color: rgba(233, 230, 220, .6); font-size: 12.5px; }
 `;
@@ -47,9 +49,9 @@ export function openAccountPanel({ doc = document, t, makeLogin, wallets = null,
     doc.removeEventListener('keydown', onKey, true); root.remove();
     settle(result); if (onDone) onDone(result);
   };
-  const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+  const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); if (!busy) close(); } };
   doc.addEventListener('keydown', onKey, true);
-  root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); }); // a tap outside the card
+  root.addEventListener('pointerdown', (e) => { if (e.target === root && !busy) close(); }); // a tap outside the card
   card.addEventListener('keydown', (e) => { if (e.key !== 'Escape') e.stopPropagation(); });
   x.addEventListener('click', () => close());
   guest.addEventListener('click', () => close({ status: 'guest' }));
@@ -58,9 +60,10 @@ export function openAccountPanel({ doc = document, t, makeLogin, wallets = null,
 
   /** A tap the browser needs before a wallet popup (NEAR web wallets); EVM and Solana extensions need none. */
   const gestureFor = (kind) => (step) => (kind !== 'near' || step === 'connect') ? Promise.resolve() : new Promise((resolve) => {
-    const b = el('button', 'acct-btn', t('acct.continue')); b.type = 'button';
-    b.addEventListener('click', () => { b.remove(); resolve(); }, { once: true });
+    const b = el('button', 'acct-btn acct-go', t('acct.continue')); b.type = 'button';
+    b.addEventListener('click', () => { b.remove(); say(t('acct.busy')); resolve(); }, { once: true });
     status.replaceChildren(b);
+    b.focus({ preventScroll: true });
   });
 
   async function run(provider) {

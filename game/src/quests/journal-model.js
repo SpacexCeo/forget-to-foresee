@@ -10,27 +10,34 @@ export const MAX_TRACKED = 3;
 const RANK = { ready: 0, active: 1, available: 2, locked: 3, cooldown: 4, completed: 5 };
 export const ICON = Object.freeze({ available: '!', ready: '?', active: '◆', completed: '✓', locked: '🔒', cooldown: '◷' });
 
-/** One quest's row and detail. */
-export function questView(id, { qs, now = 0, have = {}, level = 1, tracked = [] } = {}) {
+/** A text from the locale (`tr(key)`, e.g. quests/say.js) or the journal's English when the locale has none. */
+export const localText = (tr, key, en) => { if (!tr) return en; const v = tr(key); return v && v !== key ? v : en; };
+
+/** One quest's row and detail. `tr` (optional) localises the copy through the jq.<id>.* keys (journalTextKeys). */
+export function questView(id, { qs, now = 0, have = {}, level = 1, tracked = [], tr = null } = {}) {
   const j = JOURNAL_BY_ID[id]; if (!j) return null;
+  const T = (k, en) => localText(tr, 'jq.' + id + '.' + k, en);
   const st = statusOf(id, qs, now, { level });
-  const objectives = progressOf(id, qs, { have });
+  const objectives = progressOf(id, qs, { have }).map((o) => ({ ...o, text: T('obj.' + o.id, o.text) }));
   const next = objectives.find((o) => !o.done) || null;
   const area = j.markers.find((m) => m.kind === 'quest-area') || null;
   // where "Walk" goes: the giver to turn in, else the objective area while killing or gathering, else the giver
   const toArea = st.status === 'active' && area && next && ['kill', 'gather'].includes(next.type);
   return {
-    id, title: j.title, summary: j.summary, description: j.description, category: j.category, level: j.level, giver: j.giver, turnIn: j.turnIn,
+    id, title: T('title', j.title), summary: T('summary', j.summary), description: T('desc', j.description), category: j.category, level: j.level, giver: j.giver, turnIn: j.turnIn,
     status: st.status, lockedLevel: st.reason === 'level' ? st.level : null, icon: ICON[st.status] || '', sort: j.sort,
-    counter: next ? `${next.count}/${next.of}` : null, objectives, rewards: j.rewards, hints: j.hints, markers: j.markers,
+    counter: next ? `${next.count}/${next.of}` : null, objectives,
+    rewards: j.rewards.title ? { ...j.rewards, title: T('rewardTitle', j.rewards.title) } : j.rewards,
+    hints: j.hints.map((h, n) => ({ ...h, text: T('hint.' + n, h.text) })),
+    markers: j.markers.map((m) => ({ ...m, label: localText(tr, 'jq.marker.' + m.id, m.label) })),
     tracked: tracked.includes(id), canAbandon: j.category !== 'story' && st.status === 'active',
-    walk: toArea ? { kind: 'area', pos: area.pos, label: area.label } : { kind: 'giver', giver: st.status === 'ready' ? j.turnIn : j.giver },
+    walk: toArea ? { kind: 'area', pos: area.pos, label: localText(tr, 'jq.marker.' + area.id, area.label) } : { kind: 'giver', giver: st.status === 'ready' ? j.turnIn : j.giver },
   };
 }
 
 /** Every tab's rows (and the daily reset). Done holds completed and cooldown quests. */
-export function journalModel({ qs, now = 0, have = {}, level = 1, tracked = [], search = '', giverName = (k) => k } = {}) {
-  const views = JOURNAL.map((j) => questView(j.id, { qs, now, have, level, tracked }));
+export function journalModel({ qs, now = 0, have = {}, level = 1, tracked = [], search = '', giverName = (k) => k, tr = null } = {}) {
+  const views = JOURNAL.map((j) => questView(j.id, { qs, now, have, level, tracked, tr }));
   const q = String(search || '').trim().toLowerCase();
   const match = (v) => !q || v.title.toLowerCase().includes(q) || String(giverName(v.giver)).toLowerCase().includes(q);
   const tabs = {};

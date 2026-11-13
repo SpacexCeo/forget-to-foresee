@@ -22,7 +22,7 @@ on the pass network (`view_account`, two RPC endpoints, 5 s timeout; implicit ac
 `FTF_PASS_REQUIRE_FUNDED_IMPLICIT=1`); (3) the signature verifies and the key is an access key of the guest account
 (testnet `view_access_key`); (4) one claim per guest and per wallet: the server index, then the contract's
 `is_claimed(claim_id)` and `has_minted(wallet)`; a repeat returns the original result with `"replay": true`;
-(5) eligibility from the replayed expedition log (10,000 silk paid at the portal, story income only; wool is never an
+(5) eligibility from the replayed expedition log (the 200 silk Gate-Loom fee paid at the portal, story income only; wool is never an
 input); (6) per-IP bucket (3, then 1 per 10 minutes), per-guest one attempt per 10 minutes, optional captcha when
 `FTF_CAPTCHA_SECRET` is set; (7) budget: minter key allowance (must be a function-call key), the contract's available
 balance, `pass_info` (paused, caps; the server's daily cap is at most the contract's); (8) `mint_pass` signed by the
@@ -78,5 +78,5 @@ or a `STOP` file in `FTF_PASS_DIR` halts sending (claims keep queueing).
 
 **Eligibility source.** `relayer/lib/pass-eligibility.js`: the guest's log from `FTF_EXPEDITION_DIR/<guest>.jsonl`,
 its chain verified with `expedition-rules/expedition-log.js` `verifyLog`, then `expedition-rules/portal-eligibility.js`
-`portalEligibility` (exactly one `portal_paid` of 10,000 silk, covered by verified income before it). Without
+`portalEligibility` (exactly one `portal_paid` of the 200 silk fee, covered by verified income before it). Without
 `FTF_EXPEDITION_DIR`, without a stored log, or without the rules modules, nobody is eligible (honest default).

@@ -1,6 +1,9 @@
 // Ukrainian strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
+import quests from './uk-quests.js';
+import hud from './uk-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
   'play.help.title': 'Керування',
@@ -1145,7 +1148,7 @@ export default {
   "pass.rpc": "NEAR зараз не відповідає. Вашу заявку збережено.",
   "pass.err.invalid": "Це не схоже на id акаунта NEAR.",
   "pass.err.missing": "Такого акаунта в NEAR ще немає. Створіть його в гаманці й спробуйте знову.",
-  "pass.err.eligible": "Спершу оплатіть Ткацьку Браму (10 000 шовку). Поки зароблено: {earned}.",
+  "pass.err.eligible": "Спершу оплатіть Ткацьку Браму ({fee} шовку). Поки зароблено: {earned}.",
   "pass.err.taken": "На цей гаманець перепустку вже видано.",
   "pass.err.signature": "Не вдалося перевірити акаунт цього браузера.",
   "pass.err.rate": "Забагато спроб. Зачекайте {n} хв.",
@@ -1598,6 +1601,14 @@ export default {
   'mp.demo': "{n} тут · {n} ШІ",
   'mp.demoLine': "Ці перехожі — ШІ-містяни: живої кімнати зараз немає.",
   'mp.ai': "ШІ",
+  'mp.act.level': "{name} досягає рівня {n}",
+  'mp.act.quest': "{name} завершує завдання",
+  'mp.act.chest': "{name} відкриває скриню",
+  'mp.act.chest.rare': "{name} відкриває рідкісну скриню",
+  'mp.act.chest.legendary': "{name} відкриває легендарну скриню",
+  'mp.act.boss.crownrift': "{name} перемагає Коронорозлам",
+  'mp.act.boss.shoal': "{name} перемагає Порожній Приплив на Скляній Мілині",
+  'mp.act.trade': "{name} купує товар на ринку",
   'set.title': "Налаштування",
   'set.close': "Закрити",
   'set.tab.graphics': "Графіка",
@@ -1959,4 +1970,5 @@ export default {
   "quest.log.progress": "Прогрес {n} / {count}",
   "quest.track.offer": "Для тебе є квест: {giver}",
   "quest.track.near": "{m} м",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

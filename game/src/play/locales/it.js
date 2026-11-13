@@ -1,7 +1,10 @@
 // Italian strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/it.js: Conchiglia, seta, tick, ancora, Pergamena; clans Iris, Sale, Cenere,
 // Muschio, Ambra, Brina.
+import quests from './it-quests.js';
+import hud from './it-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': 'Demo locale · le regole girano nel tuo browser attraverso la stessa stanza dell’API degli agenti',
   'play.help.title': 'Comandi',
@@ -1146,7 +1149,7 @@ export default {
   "pass.rpc": "NEAR non risponde in questo momento. La tua richiesta è salvata.",
   "pass.err.invalid": "Non sembra un id account NEAR.",
   "pass.err.missing": "Questo account non esiste ancora su NEAR. Crealo nel wallet, poi riprova.",
-  "pass.err.eligible": "Prima paga il Telaio-Portale (10.000 seta). Finora hai guadagnato {earned}.",
+  "pass.err.eligible": "Prima paga il Telaio-Portale ({fee} seta). Finora hai guadagnato {earned}.",
   "pass.err.taken": "Per questo wallet è già stato riscattato un pass.",
   "pass.err.signature": "Non abbiamo potuto verificare l’account di questo browser.",
   "pass.err.rate": "Troppi tentativi. Attendi {n} minuti.",
@@ -1599,6 +1602,14 @@ export default {
   'mp.demo': "{n} qui · {n} IA",
   'mp.demoLine': "Questi passanti sono abitanti IA: ora non c’è una stanza dal vivo.",
   'mp.ai': "IA",
+  'mp.act.level': "{name} ha raggiunto il livello {n}",
+  'mp.act.quest': "{name} ha completato una missione",
+  'mp.act.chest': "{name} ha aperto un forziere",
+  'mp.act.chest.rare': "{name} ha aperto un forziere raro",
+  'mp.act.chest.legendary': "{name} ha aperto un forziere leggendario",
+  'mp.act.boss.crownrift': "{name} ha sconfitto la Crepa della Corona",
+  'mp.act.boss.shoal': "{name} ha sconfitto la Marea Cava alla Secca di Vetro",
+  'mp.act.trade': "{name} ha comprato merce al mercato",
   'set.title': "Impostazioni",
   'set.close': "Chiudi",
   'set.tab.graphics': "Grafica",
@@ -1960,4 +1971,5 @@ export default {
   "quest.log.progress": "Avanzamento {n} / {count}",
   "quest.track.offer": "{giver} ha una missione per te",
   "quest.track.near": "a {m} m",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

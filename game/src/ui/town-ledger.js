@@ -109,7 +109,6 @@ export function mountTownLedger({ doc = globalThis.document, t, poll, now = () =
     const live = el('span'); live.append(el('span', 'tl-dot' + (data.live ? '' : ' off')), doc.createTextNode(t(data.live ? 'led.live' : 'led.paused')));
     const contract = el('span'); contract.append(doc.createTextNode(t('led.contract') + ' '), link(accountUrl(data.contract), data.contract));
     meta.append(live, el('span', null, t('led.traders', { n: data.traders || TRADERS.length })), contract);
-    if (data.failures) meta.append(el('span', null, t('led.failed', { n: num(data.failures) })));
     top.append(meta);
     return top;
   }
