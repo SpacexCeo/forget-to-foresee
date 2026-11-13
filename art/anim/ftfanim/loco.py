@@ -479,9 +479,18 @@ HAND_POSES = {            # degrees of curl: (fingers, index, thumb)
 }
 
 
+def second_curl(deg):
+    """How far the second joint of a finger group folds when the knuckle is at `deg` (art/tools/hand_split.mjs put
+    it there). A hand only starts to fold past a slack knuckle, and a fist folds the rest of the finger into the
+    palm: 88 degrees at the knuckle closes to about 65 more here."""
+    return np.maximum(0.0, (np.asarray(deg, float) - 14.0)) * 0.9
+
+
 def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, local_out=None):
-    """Finger bones: a held curl (HAND_POSES name or per-side dict) with a small breathing motion. Returns
-    {bone: [n, 4] local rotations} for assemble() via `wr_or_local['__local']`."""
+    """Finger bones: a held curl (HAND_POSES name or per-side dict) with a small breathing motion. Each group's
+    second joint, where the model has one, folds the rest of the finger (second_curl): without it a hand can only
+    sweep at the knuckle and a fist reads as a claw. Returns {bone: [n, 4] local rotations} for assemble() via
+    `wr_or_local['__local']`."""
     loc = wr_or_local.setdefault('__local', {})
     u = np.arange(n) / n
     for s, side in (('L', 1), ('R', -1)):
@@ -490,11 +499,15 @@ def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, loc
         w = np.sin(2 * np.pi * (u + (0.25 if side > 0 else 0.75))) * (swing_amp if cyclic else 0.0)
         i_h = rig.index[f'hand_{s}']
         for bone, axis, ang in ((f'fingers_{s}', (0, 0, -1.0), side * (cf + w)), (f'index_{s}', (0, 0, -1.0), side * (ci + 0.7 * w)),
-                                (f'thumb_{s}', (0, 1.0, 0), -side * (ct + 0.4 * w))):
+                                (f'thumb_{s}', (0, 1.0, 0), -side * (ct + 0.4 * w)),
+                                (f'fingers_1_{s}', (0, 0, -1.0), side * second_curl(cf + w)), (f'index_1_{s}', (0, 0, -1.0), side * second_curl(ci + 0.7 * w)),
+                                (f'thumb_1_{s}', (0, 1.0, 0), -side * second_curl(ct + 0.4 * w) * 0.8)):
             if bone not in rig.index:
                 continue
+            parent = f'hand_{s}' if '_1_' not in bone else bone.replace('_1_', '_')
+            i_p = rig.index[parent] if parent in rig.index else i_h
             r = axis_angle(np.array(axis), np.radians(ang))
-            loc[bone] = qnorm(qmul(qinv(rig.rest_wr[i_h]), qmul(r, rig.rest_wr[rig.index[bone]])))
+            loc[bone] = qnorm(qmul(qinv(rig.rest_wr[i_p]), qmul(r, rig.rest_wr[rig.index[bone]])))
 
 
 def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma=1.2, keep_root=True, log=print, pre_layers=None, post_layers=None):
