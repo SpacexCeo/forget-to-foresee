@@ -34,3 +34,16 @@ test('voice: the placeholder files exist, are small and are documented', () => {
   for (const l of Object.values(VOICE_LINES)) { const p = new URL('../../public/' + l.file, import.meta.url); assert.ok(existsSync(p), l.file); assert.ok(statSync(p).size < 30_000, l.file); }
   assert.ok(existsSync(new URL('../../../docs/audio/voice.md', import.meta.url)));
 });
+
+test('the intro dialogue shows the painted portraits of the elder, the guard and the lamplighter; others keep their initial', async () => {
+  const { introPortrait, WAKEUP } = await import('../../src/npe/dialogue-script.js');
+  const { existsSync } = await import('node:fs');
+  for (const sp of ['elder', 'guard', 'lamplighter', 'iris']) {
+    const url = introPortrait(sp, '/');
+    assert.ok(url, sp);
+    assert.ok(existsSync(new URL('../../public' + url, import.meta.url)), url + ' ships');
+  }
+  assert.equal(introPortrait('townsfolk'), null);
+  assert.equal(introPortrait('elder', '/forget-to-foresee/'), '/forget-to-foresee/assets/ui/portraits/elder_256.webp');
+  assert.ok(WAKEUP.some((l) => l.speaker === 'elder'));
+});
