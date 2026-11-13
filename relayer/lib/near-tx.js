@@ -127,6 +127,32 @@ export function createTxClient({ rpcUrls, fetch = globalThis.fetch, timeoutMs = 
       const failure = findFailure(outcome);
       return { ok: !failure, hash: b58encode(hash), outcome, failure };
     },
+    /**
+     * Several FunctionCalls as SEPARATE single-action transactions (a function-call access key may sign only one
+     * action per transaction): each is sent once the one before is in a block (consecutive nonces, never out of
+     * order), then all final outcomes are read together. Resolves one {ok, hash, outcome, failure} per call, in order;
+     * a call that was refused or failed does not stop the others.
+     */
+    async callEach({ key, signerId, receiverId, calls }) {
+      const ak = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: signerId, public_key: key.publicKey });
+      const block = await rpc('block', { finality: 'final' });
+      const sent = [];
+      for (let i = 0; i < calls.length; i++) {
+        const c = calls[i];
+        const tx = serializeFunctionCallTx({ signerId, publicKey: key.publicKey, nonce: BigInt(ak.nonce) + 1n + BigInt(i), receiverId, blockHash: block.header.hash, methodName: c.methodName, args: c.args, gas: c.gas ?? 100_000_000_000_000n, deposit: c.deposit ?? 0n });
+        const hash = await sha256(tx);
+        const signed = b64(signedTxBytes(tx, await key.sign(hash)));
+        try { await rpc('send_tx', { signed_tx_base64: signed, wait_until: 'INCLUDED' }); sent.push({ hash: b58encode(hash), signed }); } catch (e) { sent.push({ hash: b58encode(hash), error: String((e && e.message) || e).slice(0, 160) }); }
+      }
+      return Promise.all(sent.map(async (s) => {
+        if (s.error) return { ok: false, hash: s.hash, outcome: null, failure: s.error };
+        try {
+          const outcome = await rpc('tx', { tx_hash: s.hash, sender_account_id: signerId, wait_until: 'FINAL' });
+          const failure = findFailure(outcome);
+          return { ok: !failure, hash: s.hash, outcome, failure };
+        } catch (e) { return { ok: false, hash: s.hash, outcome: null, failure: String((e && e.message) || e).slice(0, 160) }; }
+      }));
+    },
     async call({ key, signerId, receiverId, methodName, args, gas = 200_000_000_000_000n, deposit = 0n }) {
       const ak = await rpc('query', { request_type: 'view_access_key', finality: 'final', account_id: signerId, public_key: key.publicKey });
       const block = await rpc('block', { finality: 'final' });

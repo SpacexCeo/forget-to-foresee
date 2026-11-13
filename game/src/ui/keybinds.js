@@ -4,10 +4,18 @@
 
 /** Rebindable actions: id, default code, i18n label key. Esc (menu) is fixed so the player can always get back. */
 export const KEY_ACTIONS = Object.freeze([
-  ['forward', 'KeyW'], ['back', 'KeyS'], ['left', 'KeyA'], ['right', 'KeyD'], ['run', 'ShiftLeft'],
-  ['interact', 'KeyE'], ['strike', 'KeyF'], ['dash', 'Space'], ['lance', 'KeyQ'], ['snare', 'KeyV'],
-  ['photo', 'KeyP'], ['skin', 'KeyK'], ['chat', 'Enter'], ['camera', 'KeyR'], ['panel', 'KeyO'],
-].map(([id, code]) => Object.freeze({ id, code, label: 'set.key.' + id })));
+  ['forward', 'KeyW', 'move'], ['back', 'KeyS', 'move'], ['left', 'KeyA', 'move'], ['right', 'KeyD', 'move'], ['run', 'ShiftLeft', 'move'],
+  ['interact', 'KeyE', 'misc'], ['strike', 'KeyF', 'combat'], ['dash', 'Space', 'combat'], ['lance', 'KeyQ', 'combat'], ['snare', 'KeyV', 'combat'],
+  ['photo', 'KeyP', 'misc'], ['skin', 'KeyK', 'misc'], ['chat', 'Enter', 'misc'], ['camera', 'KeyR', 'misc'], ['panel', 'KeyO', 'misc'],
+  // sprint plan 3.5: the hotbar (slot 1 Strike, 2 Lance, 3 Snare, 4 Dash; learned skills fill 5 to 9), the windows, targeting, help
+  ...Array.from({ length: 9 }, (_, i) => ['hotbar' + (i + 1), 'Digit' + (i + 1), 'skills']),
+  ['journal', 'KeyJ', 'windows'], ['map', 'KeyM', 'windows'], ['skills', 'KeyN', 'windows'], ['character', 'KeyC', 'windows'], ['bag', 'KeyI', 'windows'],
+  ['market', 'KeyB', 'windows'], ['track', 'KeyT', 'windows'], ['target', 'KeyX', 'combat'], ['help', 'F1', 'misc'],
+].map(([id, code, group]) => Object.freeze({ id, code, group, label: 'set.key.' + id })));
+/** Groups of the rebind table, in order (sprint plan 5.11). */
+export const KEY_GROUPS = Object.freeze(['move', 'combat', 'skills', 'windows', 'misc']);
+/** Fixed alternates that are not rebindable: L opens the journal too, Tab cycles the target (plan 3.5). */
+export const FIXED_ALIASES = Object.freeze({ KeyL: 'journal', Tab: 'target' });
 export const FIXED_KEYS = Object.freeze({ menu: 'Escape' });
 export const KEYS_STORAGE = 'ftf.keys.v1';
 const DEFAULTS = Object.freeze(Object.fromEntries(KEY_ACTIONS.map((a) => [a.id, a.code])));
@@ -61,6 +69,24 @@ export const onBindings = (fn) => { subs.add(fn); return () => subs.delete(fn); 
 export const remapKey = (code) => (table.has(code) ? table.get(code) : code);
 /** Whether a physical key is the one bound to `action`. */
 export const isAction = (code, action) => current[action] === code;
+
+/** The action a key is bound to now (null when none): used by the rebind swap question. */
+export const actionOf = (code, b = current) => { const a = KEY_ACTIONS.find((x) => b[x.id] === code); return a ? a.id : null; };
+
+/**
+ * Rebind `action` to `code` (sprint plan 3.5 / 5.11): {ok, bindings, swapWith?, reason?}. A reserved key is refused
+ * ('reserved'); a key used by another action needs `swap: true`, then the other action takes this action's old key.
+ */
+export function rebind(b, action, code, { swap = false } = {}) {
+  if (!KEY_ACTIONS.some((a) => a.id === action)) return { ok: false, reason: 'action', bindings: b };
+  if (RESERVED.has(code) || code in FIXED_ALIASES) return { ok: false, reason: 'reserved', bindings: b };
+  const other = actionOf(code, b);
+  if (other === action) return { ok: true, bindings: b };
+  if (other && !swap) return { ok: false, reason: 'taken', swapWith: other, bindings: b };
+  const next = { ...b, [action]: code };
+  if (other) next[other] = b[action];
+  return { ok: true, bindings: next, swapped: other || null };
+}
 
 /** Short label for a key code: KeyE -> E, Digit1 -> 1, ShiftLeft -> Shift, ArrowUp -> ↑. */
 export function keyLabel(code) {

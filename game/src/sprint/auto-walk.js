@@ -100,6 +100,7 @@ export function createAutoWalk({ driver, emit = () => {}, toast = () => {}, say 
     update() {
       if (!walk) return;
       const t = now(), p = driver.pos();
+      if (!driver.active() && driver.ended && driver.ended() === 'cancel') { finish('cancelled', 'input'); return; } // a movement key first: a re-plan must not undo it
       if (walk.follow && t - walk.lastPlan > 2000) { const f = walk.follow(); if (f) walk.to = [f[0], f[1]]; walk.lastPlan = t; plan(walk); }
       const d = Math.hypot(walk.to[0] - p[0], walk.to[1] - p[2]);
       showLabel(say('autowalk.label', { target: walk.name, m: Math.round(d) }));

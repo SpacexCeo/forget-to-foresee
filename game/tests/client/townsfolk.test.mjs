@@ -12,12 +12,12 @@ test('townsfolk: thirteen people, unique assets, a program each, heights from th
   assert.equal(TOWNSFOLK.length, 13);
   assert.equal(new Set(TOWNSFOLK.map((p) => p.asset)).size, 13);
   for (const p of TOWNSFOLK) {
-    assert.match(p.asset, /^townsfolk_[a-z_]+$/);
+    assert.match(p.asset, /^(townsfolk|npc)_[a-z_]+$/);
     assert.ok(PROGRAMS[p.key] && PROGRAMS[p.key].steps.length > 0, p.key + ' has a program');
     assert.ok(p.height >= 1.2 && p.height <= 1.95 && p.walk > 0.5 && p.walk < 1.7);
   }
   const h = Object.fromEntries(TOWNSFOLK.map((p) => [p.key, p.height]));
-  assert.deepEqual([h.guard, h.child_b, h.elder, h.shrinekeeper], [1.92, 1.22, 1.65, 1.6]);
+  assert.deepEqual([h.guard, h.child_b, h.elder, h.shrinekeeper], [1.8, 1.22, 1.7, 1.6]);
   assert.equal(Object.keys(PROGRAMS).length, 13);
 });
 

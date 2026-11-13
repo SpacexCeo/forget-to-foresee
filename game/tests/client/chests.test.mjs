@@ -33,8 +33,17 @@ test('the bag keeps sealed chests across reloads and settles each once', () => {
 test('the adapter maps net/chest.js answers and reasons; no answer, no outcome', async () => {
   const fake = (r) => () => Promise.resolve({ openChest: async () => r });
   const c = (r) => createChestClient({ load: fake(r) });
-  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_your_key', 'no_key'], ['replayed', 'bad'], ['deck_mismatch', 'bad'], ['not_configured', 'soon'], ['season_not_ready', 'soon'], ['daily_cap', 'rate'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'bad']]) {
-    assert.deepEqual(await c({ ok: false, reason }).open(), { ok: false, error }, reason);
+  // every relayer code has its own plain message; only an unknown code is 'bad' (the 13.11 batch failure showed 'bad' for 'rpc')
+  for (const [reason, error] of [['need_guest', 'no_guest'], ['not_your_key', 'no_key'], ['replayed', 'replayed'], ['deck_mismatch', 'deck_mismatch'], ['not_configured', 'soon'], ['season_not_ready', 'soon'], ['daily_cap', 'daily'], ['rate_limited', 'rate'], ['sold_out', 'sold_out'], ['network', 'network'], ['tx_failed', 'tx_failed'],
+    ['rpc', 'network'], ['stale', 'stale'], ['no_opening', 'no_opening'], ['bad_count', 'request'], ['bad_request_id', 'request'], ['bad_signature', 'request'], ['something_new', 'bad']]) {
+    assert.deepEqual(await c({ ok: false, reason }).open(), { ok: false, error, code: reason }, reason);
+  }
+  { // every message key a panel can show exists in every play locale
+    const { CHEST_ERRORS } = await import('../../src/net/chest-client.js');
+    for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) {
+      const mod = await import(`../../src/play/locales/${lang}.js`); const dict = mod.default || Object.values(mod)[0];
+      for (const k of CHEST_ERRORS) assert.ok(typeof dict['chest.err.' + k] === 'string', lang + ' chest.err.' + k);
+    }
   }
   assert.deepEqual(await createChestClient({ load: () => Promise.reject(new Error('chunk')) }).open(), { ok: false, error: 'network' });
   assert.equal((await c({ ok: true, outcome: { kind: 'gold' } }).open()).error, 'bad');

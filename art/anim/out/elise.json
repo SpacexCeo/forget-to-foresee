@@ -20,9 +20,9 @@
     ]
    ]
   },
-  "gown_min_m": 0.0069,
+  "gown_min_m": 0.0087,
   "gown_min_at": [
-   22,
+   29,
    "thigh_L"
   ],
   "gown_knee_in_slit_frames": 0,
@@ -49,9 +49,9 @@
     ]
    ]
   },
-  "gown_min_m": 0.0065,
+  "gown_min_m": 0.0083,
   "gown_min_at": [
-   69,
+   29,
    "thigh_L"
   ],
   "gown_knee_in_slit_frames": 0,
@@ -78,7 +78,7 @@
     ]
    ]
   },
-  "gown_min_m": 0.0069,
+  "gown_min_m": 0.008,
   "gown_min_at": [
    70,
    "thigh_L"
@@ -88,58 +88,58 @@
  },
  "walk": {
   "take": "08_01",
-  "slip_mean_m_s": 0.0041,
+  "slip_mean_m_s": 0.0046,
   "slip_max_m_s": 0.0472,
   "ball_min_y": 0.0225,
   "src_stride_m": 1.651,
   "src_T_s": 1.008,
   "src_speed": 1.637,
-  "stride_scale": 0.757,
+  "stride_scale": 0.6,
   "time_scale": 0.796,
-  "hip_drop_max_m": 0.0003,
+  "hip_drop_max_m": 0.0,
   "contact": {
    "L": [
     75,
-    43
+    37
    ],
    "R": [
     36,
-    39
+    37
    ]
   },
-  "gown_min_m": 0.0061,
+  "gown_min_m": 0.0051,
   "gown_min_at": [
-   7,
-   "thigh_L"
+   8,
+   "foot_R"
   ],
   "gown_knee_in_slit_frames": 0,
   "gown_leg_through_cloth_frames": 0
  },
  "run": {
   "take": "08_01",
-  "slip_mean_m_s": 0.0043,
+  "slip_mean_m_s": 0.0046,
   "slip_max_m_s": 0.0518,
   "ball_min_y": 0.0225,
   "src_stride_m": 1.651,
   "src_T_s": 1.008,
   "src_speed": 1.637,
-  "stride_scale": 0.853,
+  "stride_scale": 0.704,
   "time_scale": 0.945,
-  "hip_drop_max_m": 0.004,
+  "hip_drop_max_m": 0.0,
   "contact": {
    "L": [
     126,
     72
    ],
    "R": [
-    61,
-    71
+    60,
+    64
    ]
   },
-  "gown_min_m": 0.006,
+  "gown_min_m": 0.0081,
   "gown_min_at": [
-   13,
-   "thigh_L"
+   78,
+   "foot_L"
   ],
   "gown_knee_in_slit_frames": 0,
   "gown_leg_through_cloth_frames": 0
@@ -165,7 +165,7 @@
     ]
    ]
   },
-  "gown_min_m": 0.0071,
+  "gown_min_m": 0.0083,
   "gown_min_at": [
    70,
    "thigh_L"
@@ -194,9 +194,9 @@
     ]
    ]
   },
-  "gown_min_m": 0.0063,
+  "gown_min_m": 0.0082,
   "gown_min_at": [
-   42,
+   16,
    "thigh_L"
   ],
   "gown_knee_in_slit_frames": 0,
@@ -223,9 +223,9 @@
     ]
    ]
   },
-  "gown_min_m": 0.0062,
+  "gown_min_m": 0.0089,
   "gown_min_at": [
-   43,
+   29,
    "thigh_L"
   ],
   "gown_knee_in_slit_frames": 0,
@@ -252,9 +252,9 @@
     ]
    ]
   },
-  "gown_min_m": 0.006,
+  "gown_min_m": 0.0075,
   "gown_min_at": [
-   37,
+   42,
    "thigh_L"
   ],
   "gown_knee_in_slit_frames": 0,
@@ -281,10 +281,10 @@
     18
    ]
   },
-  "gown_min_m": 0.0061,
+  "gown_min_m": 0.0054,
   "gown_min_at": [
-   4,
-   "thigh_L"
+   23,
+   "shin_L"
   ],
   "gown_knee_in_slit_frames": 0,
   "gown_leg_through_cloth_frames": 0
@@ -310,10 +310,10 @@
     18
    ]
   },
-  "gown_min_m": 0.0061,
+  "gown_min_m": 0.0058,
   "gown_min_at": [
-   30,
-   "foot_R"
+   21,
+   "shin_L"
   ],
   "gown_knee_in_slit_frames": 0,
   "gown_leg_through_cloth_frames": 0

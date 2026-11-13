@@ -11,12 +11,31 @@ Two source files came from the owner. The second one is the base of v4.
    with weights. `s20_owner_rig.py` puts it on her 90 bones (`../v3/skeleton.json`):
    - kept from the file: mesh, UVs, texture, weights of the spine, shoulders, arms, hands, fingers, neck, head;
    - by rule: the dress below the hips on her 13 skirt chains, ribbon tails with the hand, legs and shoes on her
-     joints (the file's knee sits 8 cm too high); the hidden right leg is removed above the shoe.
+     joints (the file's knee sits 8 cm too high); the hidden right leg is removed with its shoe.
    - `out/agent_elise.glb`: 59 998 triangles with the outline hull, 2048 texture; `out/agent_elise_m.glb`: 23 800, 1024.
 
 Every clip of hers (magic step, boxing, casts, dash) plays on it unchanged: same bone names and rest pose.
 Sheets: `docs/art/elise/v4/` (`owner_file_source.jpg`, `owner_file_ingame_frames.jpg`, `owner_file_ingame_closeups.jpg`).
 
-Open: no blink morph on the new face; the ribbon tails are stiff in a cast; the skirt's cloth bake was made for the
-wider v3 gown (no cut seen in the review film, not measured); the standalone FBX/crowd files of the first brief are
+## The skirt (13.11)
+
+How it moves: the dress below the hips is skinned to her 13 skirt chains (52 bones); their rotations are a cloth
+simulation baked into every clip (`art/anim/out/elise_cloth.npz`). No leg-bone weights on the dress, no runtime spring.
+
+The first swap reused the v3 gown's cloth grid and bake: a wider gown, so legs that cleared it cut the closer v4
+dress, and the swing tuned for loose cloth threw the hem high. Now `s20_owner_rig.py`:
+- re-seats the 31 x 61 cloth grid on this dress (99% of the points found; mean radius 0.200 -> 0.143 m), moves the
+  13 chains onto it and gives the dress the grid's own weights;
+- fits the leg capsules to the close dress (6 mm of air at rest);
+- removes the hidden right leg with its shoe; its thigh and shin no longer shape the dress.
+
+`art/anim/clips.json` -> `characters.elise.cloth.tune` (read by `ftfanim/skirt.py`): drag 2.0 (was 1.2), pull back to
+the rest shape 0.10 (0.04), clearance 2.5 cm (2.0), 70% of the swing kept, every chain segment within 24 degrees of
+its hips-carried rest (the leg capsules still win), a shoe may show 3.5 cm through the floor-length hem. Strides:
+walk glide 0.58 -> 0.46 (about 1.0 m), run 0.40 -> 0.33 (about 1.15 m); speeds and durations unchanged.
+
+Result (`art/anim/out/elise.json`): no leg capsule through the dress in any clip (smallest clearance 5 mm, walk),
+no knee through cloth. Film: `docs/art/elise/v4/skirt_before_after.mp4`, frames `skirt_after_frames.jpg`.
+
+Open: no blink morph on the new face; the ribbon tails are stiff in a cast; the standalone FBX/crowd files of the first brief are
 not exported.

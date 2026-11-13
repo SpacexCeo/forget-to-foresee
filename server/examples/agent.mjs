@@ -19,7 +19,7 @@ const PROXIMITY_PLACE = {
   near_anchor_zone: (a) => (a.shell ? 'anchor_zone:' + a.shell : null),
 };
 
-export async function playSeason({ url = 'http://127.0.0.1:8787', rules = 'v3', timeScale = 500, maxAnchors = 3, maxSteps = 600, log = () => {}, fetchImpl = fetch } = {}) {
+export async function playSeason({ url = 'http://127.0.0.1:8787', rules = 'v3', timeScale = 500, maxAnchors = 3, maxSteps = 600, log = () => {}, fetchImpl = fetch, name = 'example-agent', onSession = null } = {}) {
   const base = url.replace(/\/$/, '') + '/v1';
   let token = null, n = 0;
   const call = async (method, path, body) => {
@@ -29,11 +29,12 @@ export async function playSeason({ url = 'http://127.0.0.1:8787', rules = 'v3', 
       return { status: res.status, body: await res.json() };
     }
   };
-  const created = await call('POST', '/sessions', { rules, timeScale, name: 'example-agent' });
+  const created = await call('POST', '/sessions', { rules, timeScale, name });
   if (created.status !== 201) throw new Error('create failed: ' + JSON.stringify(created.body));
   token = created.body.token;
   const id = created.body.sessionId;
   log(`session ${id} (rules ${rules}, timeScale ${timeScale})`);
+  if (onSession) await onSession({ call, id, version: created.body.version }); // e.g. enter the Season Cup first (agent-tournament.mjs)
 
   const stats = { commands: 0, rejected: 0, conflicts: 0, moves: 0, anchors: 0, contributed: false, voted: false };
   const act = async (type, args = {}) => {
@@ -97,7 +98,7 @@ export async function playSeason({ url = 'http://127.0.0.1:8787', rules = 'v3', 
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-if (import.meta.url === `file://${process.argv[1]}` || (process.argv[1]?.endsWith('agent.mjs') && !process.argv[1]?.endsWith('exchange-agent.mjs'))) {
+if (import.meta.url === `file://${process.argv[1]}` || (process.argv[1]?.endsWith('/agent.mjs') || process.argv[1] === 'agent.mjs')) {
   const argv = process.argv.slice(2);
   const opt = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; };
   playSeason({ url: opt('url', 'http://127.0.0.1:8787'), rules: opt('rules', 'v3'), timeScale: Number(opt('time-scale', 500)), log: (s) => console.log(s) })

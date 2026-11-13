@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { createSay } from '../quests/say.js';
 import { EXPEDITION } from '../game/expedition-config.js';
+import { formatSilkC } from '../net/silk-core.js';
 
 /** Town-local metres beside the spawn, to Iris's right in the first frame (the spawn is (0, 0, 25), she faces -z). */
 export const PORTAL_TOWN = Object.freeze([4.4, 0, 24.8]);      // clear of the standing mirror at (2.8, 0, 21.5) and of the stall posts further right
@@ -23,12 +24,13 @@ export function portalState({ on = false, phase = 'off', balanceC = 0, onChainC 
 
 /**
  * The prompt line for a state (sprint §4.12): {key, args}. The fee always comes in as feeC (from config or gate_price),
- * never a literal. onChainC: silk on chain; totalC: everything that counts once synced (on chain + verified pending).
+ * never a literal. heldC/onChainC: the one silk number "you hold" (recorded on NEAR, the same as the HUD chip);
+ * totalC: everything that counts once synced (on chain + verified pending). Every number goes through formatSilkC.
  */
-export function portalPrompt(state, { balanceC = 0, onChainC = null, totalC = null, feeC = EXPEDITION.PORTAL_FEE_C, blocker = null, payError = null, paying = false, syncing = false } = {}) {
-  const whole = (c) => { const v = Math.floor(c / 100); return v.toLocaleString('en-US'); };
-  const chainC = onChainC ?? balanceC, allC = Math.max(totalC ?? balanceC, chainC);
-  const fee = Math.round(feeC / 100).toLocaleString('en-US'), gate = whole(chainC), total = whole(allC);
+export function portalPrompt(state, { balanceC = 0, heldC = null, onChainC = null, totalC = null, feeC = EXPEDITION.PORTAL_FEE_C, blocker = null, payError = null, paying = false, syncing = false } = {}) {
+  const whole = (c) => formatSilkC(Math.floor(c / 100) * 100);
+  const chainC = onChainC ?? heldC ?? balanceC, allC = Math.max(totalC ?? balanceC, chainC);
+  const fee = formatSilkC(feeC), gate = whole(chainC), total = whole(allC);
   if (state === 'spent') return { key: 'story.portal.quiet', args: {} };
   if (paying) return { key: 'story.portal.paying', args: {} };
   if (syncing) return { key: 'story.portal.syncing', args: {} };
@@ -36,8 +38,8 @@ export function portalPrompt(state, { balanceC = 0, onChainC = null, totalC = nu
   if (blocker && blocker !== 'loading') return { key: 'story.portal.offline', args: {} };
   if (payError) return { key: 'story.portal.failed', args: { fee } };
   if (state === 'ready') return { key: 'story.portal.pay', args: { fee } };
-  if (allC >= feeC) return { key: 'story.portal.syncable', args: { total, gate, fee } };
-  return { key: 'story.portal.wants', args: { fee, gate } };
+  if (allC >= feeC) return { key: 'story.portal.syncable', args: { total, gate, n: gate, fee } };
+  return { key: 'story.portal.wants', args: { fee, gate, n: gate } };
 }
 
 const LOOK = Object.freeze({

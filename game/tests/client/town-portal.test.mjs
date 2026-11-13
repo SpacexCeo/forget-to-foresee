@@ -16,8 +16,8 @@ test('portal state: off without the flag, dormant below the fee, ready at the fe
 
 test('portal prompt (sprint §4.12): every state; the fee comes in as an argument, never a literal', () => {
   const f = { feeC: 20_000 };
-  assert.deepEqual(portalPrompt('dormant', { ...f, onChainC: 3_800, totalC: 5_000 }), { key: 'story.portal.wants', args: { fee: '200', gate: '38' } });
-  assert.deepEqual(portalPrompt('dormant', { ...f, onChainC: 3_800, totalC: 21_000 }), { key: 'story.portal.syncable', args: { total: '210', gate: '38', fee: '200' } });
+  assert.deepEqual(portalPrompt('dormant', { ...f, onChainC: 3_800, totalC: 5_000 }), { key: 'story.portal.wants', args: { fee: '200', gate: '38', n: '38' } });
+  assert.deepEqual(portalPrompt('dormant', { ...f, onChainC: 3_800, totalC: 21_000 }), { key: 'story.portal.syncable', args: { total: '210', gate: '38', n: '38', fee: '200' } });
   assert.equal(portalPrompt('dormant', { ...f, syncing: true }).key, 'story.portal.syncing');
   assert.deepEqual(portalPrompt('ready', { ...f, onChainC: 20_000 }), { key: 'story.portal.pay', args: { fee: '200' } });
   assert.equal(portalPrompt('ready', { ...f, paying: true }).key, 'story.portal.paying');
@@ -27,6 +27,8 @@ test('portal prompt (sprint §4.12): every state; the fee comes in as an argumen
   assert.equal(portalPrompt('spent', f).key, 'story.portal.quiet');
   assert.deepEqual(portalPrompt('ready', { feeC: 25_000, onChainC: 25_000 }).args, { fee: '250' }, 'the owner can move gate_price: the copy follows');
   assert.equal(portalState({ on: true, phase: 'gate_open', balanceC: 30_000, onChainC: 10_000, feeC: 20_000 }), 'dormant', 'ready only when the silk on chain covers it');
+  assert.equal(portalPrompt('dormant', { balanceC: 6000, heldC: 3800, feeC: 20_000 }).args.gate, '38', '"you hold" is the silk on NEAR (the HUD chip), not the payable balance');
+  assert.equal(portalPrompt('dormant', { heldC: 123_456, feeC: 1_000_000 }).args.fee, '10,000', 'one formatter (net/silk-core.js formatSilkC)');
 });
 
 test('portal object: E in reach confirms first, pays only on the button, follows the story look and hides away', () => {

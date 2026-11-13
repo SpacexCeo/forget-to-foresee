@@ -35,3 +35,14 @@ test('waypoint: on screen over the target, off screen and behind on the edge cir
   t = { pos: [30, 0, 0], from: [0, 0, 0] }; hide = true; assert.equal(wp.update(), null);
   wp.dispose(); assert.equal(doc.querySelector('.ftf-waypoint'), null);
 });
+
+test('the town feeds its quest markers into the shared seam (sprint/markers.js) for the minimap', async () => {
+  const { getMarkers, setMarkers, _reset } = await import('../../src/sprint/markers.js');
+  const { questMarkers } = await import('../../src/quests/markers-feed.js');
+  _reset();
+  const list = questMarkers({ qs: initialQuests(), now: 0, have: {}, tracked: [], giverAt: () => [1, 2], portal: [5, 6], giverName: (k) => k });
+  setMarkers('quests', list);
+  assert.ok(getMarkers().length >= 1 && getMarkers().every((m) => m.pos.length === 2), 'the seam accepts every feed marker');
+  assert.equal(getMarkers().length, list.length, 'nothing in the feed is rejected by the seam');
+  _reset();
+});

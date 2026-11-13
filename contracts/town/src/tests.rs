@@ -26,7 +26,7 @@ fn town() -> Town {
 /// minted − burned = everything held (acceptance 1, in silk).
 fn conserved(t: &Town) {
     let rows: u128 = ACCS.iter().filter_map(|a| t.balance_of(acc(a))).map(|r| r.silk + r.credit).sum();
-    assert_eq!(t.minted_silk - t.burned_silk - t.gate_burned().0, rows + t.silk_held_outside_accounts().0, "silk conservation");
+    assert_eq!(t.minted_silk - t.burned_silk - t.gate_burned().0 - t.p2p_burned().0, rows + t.silk_held_outside_accounts().0, "silk conservation");
 }
 fn bal(t: &Town, a: &str) -> Account { t.balance_of(acc(a)).unwrap() }
 fn trades(t: &mut Town, n: usize, day: u64) {
@@ -501,3 +501,37 @@ fn actions_for_one_player_are_capped_per_day() {
 }
 #[test] #[should_panic(expected = "ERR_LOCKED")]
 fn acting_for_a_player_keeps_the_rules() { let mut t = town(); guest(&mut t, 500 * S); ctx("coord.testnet", 0); let id = t.pledge_for(acc("p0.testnet"), 0, U(100 * S), 1, h(1)); t.unbond_for(acc("p0.testnet"), id, h(2)); }
+
+// ---------- v5: the player market ----------
+fn two_guests(t: &mut Town) { ctx("coord.testnet", 0); t.register(vec![acc("p0.testnet"), acc("p1.testnet")]); t.credit_silk(acc("p0.testnet"), U(100 * S), "story".into()); }
+#[test]
+fn a_sale_moves_silk_from_buyer_to_seller_and_burns_the_fee_apart_from_the_season_burn() {
+    let mut t = town(); two_guests(&mut t);
+    let burned = t.burned_silk;
+    ctx("coord.testnet", 0); t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(1280 * S / 100), U(26 * S / 100), "p2p".into(), h(500));
+    assert_eq!(bal(&t, "p0.testnet").silk, 100 * S - 1280 * S / 100);
+    assert_eq!(bal(&t, "p1.testnet").silk, 1254 * S / 100);
+    assert_eq!(t.p2p_burned().0, 26 * S / 100); assert_eq!(t.burned_silk, burned); assert_eq!(t.p2p_trades().0, 1);
+    assert!(get_logs().last().unwrap().contains(r#""event":"p2p_trade""#));
+    assert_eq!(t.act_limits(acc("p0.testnet")).0, 1); // counted in the buyer's daily limit
+    conserved(&t);
+}
+#[test] #[should_panic(expected = "ERR_ACT_REQUEST")]
+fn a_sale_request_settles_once() { let mut t = town(); two_guests(&mut t); ctx("coord.testnet", 0); t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(S), U(0), "p2p".into(), h(501)); t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(S), U(0), "p2p".into(), h(501)); }
+#[test] #[should_panic(expected = "ERR_FUNDS")]
+fn a_sale_needs_the_buyers_silk() { let mut t = town(); two_guests(&mut t); ctx("coord.testnet", 0); t.trade_for(acc("p1.testnet"), acc("p0.testnet"), U(S), U(0), "p2p".into(), h(502)); }
+#[test] #[should_panic(expected = "ERR_UNKNOWN_ACCOUNT")]
+fn a_sale_needs_a_registered_seller() { let mut t = town(); two_guests(&mut t); ctx("coord.testnet", 0); t.trade_for(acc("p0.testnet"), acc("nobody.testnet"), U(S), U(0), "p2p".into(), h(503)); }
+#[test] #[should_panic(expected = "ERR_NOT_COORDINATOR")]
+fn only_coordinators_settle_sales() { let mut t = town(); two_guests(&mut t); ctx("p0.testnet", 0); t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(S), U(0), "p2p".into(), h(504)); }
+#[test] #[should_panic(expected = "ERR_P2P_FEE")]
+fn the_sale_fee_is_bounded() { let mut t = town(); two_guests(&mut t); ctx("coord.testnet", 0); t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(10 * S), U(2 * S), "p2p".into(), h(505)); }
+#[test] #[should_panic(expected = "ERR_ACT_FOR")]
+fn a_sale_never_pays_a_town_wallet() { let mut t = town(); two_guests(&mut t); ctx("coord.testnet", 0); t.trade_for(acc("p0.testnet"), acc("t0.testnet"), U(S), U(0), "p2p".into(), h(506)); }
+#[test]
+fn sales_count_in_the_daily_limit() {
+    let mut t = town(); two_guests(&mut t); ctx("coord.testnet", 0);
+    for i in 0..ACT_PER_ACCOUNT_DAY { ctx("coord.testnet", 0); t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(S), U(0), "p2p".into(), h(600 + i)); }
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { t.trade_for(acc("p0.testnet"), acc("p1.testnet"), U(S), U(0), "p2p".into(), h(999)); }));
+    assert!(r.is_err());
+}

@@ -29,27 +29,42 @@ test('numbers: a crit merged into a hit turns it into a crit; silk and XP never 
 
 test('numbers: the pool holds 24; the oldest goes first', () => {
   const live = [];
-  for (let i = 0; i < 30; i++) mergeOrAdd(live, { kind: 'xp', amount: i, pos: P }, i);
+  for (let i = 0; i < 30; i++) mergeOrAdd(live, { kind: 'damage', amount: i, pos: P }, i);
   assert.equal(live.length, POOL);
   assert.equal(live[0].amount, 6);
 });
 
 test('numbers: the curve pops, rises and fades; crits pop ~3x and jitter; reduced motion only fades', () => {
   const d0 = curve('damage', 0), d1 = curve('damage', 120), dEnd = curve('damage', KIND.damage.life);
-  assert.ok(Math.abs(d0.scale - 1.2) < 1e-9 && Math.abs(d1.scale - 1) < 1e-9);
+  assert.ok(Math.abs(d0.scale - KIND.damage.pop) < 1e-9 && Math.abs(d1.scale - 1) < 1e-9);
   assert.equal(dEnd.opacity, 0);
   assert.ok(curve('damage', 500).rise > 20);
   const c0 = curve('crit', 0);
-  assert.equal(c0.scale, 3); assert.equal(c0.jitter, 6); assert.equal(curve('crit', 400).jitter, 0);
+  assert.equal(c0.scale, 1); assert.ok(Math.abs(curve('crit', 80).scale - 1.4) < 1e-9); assert.ok(Math.abs(curve('crit', 160).scale - 1) < 1e-9, 'crit: 1.0 -> 1.4 -> 1.0 in 160 ms');
+  assert.equal(c0.jitter, 4); assert.equal(curve('crit', 400).jitter, 0);
+  assert.ok(curve('taken', 700).drift < 0, 'damage taken drifts left'); assert.equal(curve('taken', 700).rise, 30); assert.equal(curve('damage', 700).rise, 40);
   const r = curve('crit', 0, true);
   assert.deepEqual([r.scale, r.rise, r.jitter], [1, 0, 0]);
-  assert.ok(alive({ kind: 'crit', born: 0 }, 1500) && !alive({ kind: 'damage', born: 0 }, 700));
+  assert.ok(alive({ kind: 'crit', born: 0 }, 1000) && !alive({ kind: 'damage', born: 0 }, 700));
 });
 
 test('numbers: texts and sizes (silk two decimals with a sign, XP with its unit; other players smaller)', () => {
-  assert.equal(textOf('silk_gain', 3.5), '+3.50');
-  assert.equal(textOf('silk_spend', 10), '−10.00');
+  assert.equal(textOf('silk_gain', 3), '+3 silk'); assert.equal(textOf('silk_gain', 3.5), '+3.5 silk'); assert.equal(textOf('silk_gain', 1.25), '+1.25 silk');
+  assert.equal(textOf('silk_spend', 10), '−10 silk');
+  assert.equal(textOf('crit', 34.2), '34!'); assert.equal(textOf('taken', 7), '−7'); assert.equal(textOf('heal', 12), '+12'); assert.equal(textOf('miss', 0), 'Miss');
   assert.equal(textOf('xp', 20, 'XP'), '+20 XP');
   assert.equal(textOf('damage', 13.6), '14');
-  assert.equal(sizeOf({ kind: 'crit' }), 46); assert.equal(sizeOf({ kind: 'crit', other: true }), 28); assert.equal(sizeOf({ kind: 'damage', other: true }), 16);
+  assert.equal(sizeOf({ kind: 'crit' }), 26); assert.equal(sizeOf({ kind: 'damage' }), 18); assert.equal(sizeOf({ kind: 'taken' }), 20); assert.equal(sizeOf({ kind: 'xp' }), 14); assert.equal(sizeOf({ kind: 'miss' }), 14);
+  assert.equal(sizeOf({ kind: 'crit', other: true }), 20); assert.equal(sizeOf({ kind: 'damage', other: true }), 14);
+  assert.deepEqual([KIND.damage.color, KIND.crit.color, KIND.taken.color, KIND.heal.color, KIND.silk_gain.color, KIND.xp.color, KIND.miss.color], ['#ffffff', '#f6c860', '#ff6b62', '#5ccf8a', '#e8dcb4', '#b06cff', '#aab1c5']);
+});
+
+test('numbers (plan 5.13): XP merges within 400 ms into one growing number; later XP starts a new one', async () => {
+  const { XP_MERGE_MS } = await import('../../src/ui/float-numbers-core.js');
+  const live = [];
+  mergeOrAdd(live, { kind: 'xp', amount: 20, pos: P }, 0); mergeOrAdd(live, { kind: 'xp', amount: 40, pos: P }, 300);
+  assert.equal(live.length, 1); assert.equal(live[0].amount, 60);
+  mergeOrAdd(live, { kind: 'xp', amount: 15, pos: P }, 300 + XP_MERGE_MS + 1);
+  assert.equal(live.length, 2);
+  const r = curve('taken', 400, true); assert.equal(r.rise, 0); assert.equal(r.scale, 1);
 });

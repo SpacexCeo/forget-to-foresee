@@ -1,0 +1,155 @@
+1
+00:00:00,800 --> 00:00:05,200
+Meet Iris, a doctor of languages from
+the year twenty forty-eight.
+
+2
+00:00:08,400 --> 00:00:11,600
+One wrong button, and the world falls
+away.
+
+3
+00:00:12,200 --> 00:00:18,000
+She wakes in a hill town. The elders
+need her to read the Guests' gift.
+
+4
+00:00:18,400 --> 00:00:23,600
+To go home, the Gate-Loom wants two
+hundred silk. So she sets to work.
+
+5
+00:00:24,300 --> 00:00:27,644
+Her journal lists every quest like the
+best RPGs:
+
+6
+00:00:27,644 --> 00:00:30,100
+progress, who asked, and the reward.
+
+7
+00:00:30,600 --> 00:00:35,267
+Click a quest and Iris runs to the
+person who gave it.
+
+8
+00:00:35,267 --> 00:00:37,600
+Touch a key, and she stops.
+
+9
+00:00:38,400 --> 00:00:42,044
+Stone spiders block the road. Nine
+skills on the bar,
+
+10
+00:00:42,044 --> 00:00:45,000
+cooldowns you can read, damage you can
+see.
+
+11
+00:00:46,000 --> 00:00:52,800
+Every level earns points. Choose a
+path: Linguist, Scholar, or Warden.
+
+12
+00:00:56,400 --> 00:00:59,563
+Monsters drop chests. Rarer ones glow
+brighter.
+
+13
+00:00:59,563 --> 00:01:03,400
+Each opening is drawn on NEAR, where
+anyone can check it.
+
+14
+00:01:03,800 --> 00:01:09,800
+Odds are shown. Every item says if it
+is on NEAR or only on your device.
+
+15
+00:01:10,400 --> 00:01:16,400
+Feeling lucky? The wheel and dice use
+play money only, with the odds shown.
+
+16
+00:01:17,000 --> 00:01:21,400
+No real value, no cash out, just for
+fun.
+
+17
+00:01:22,400 --> 00:01:26,586
+Players trade resources for silk. One
+lists spider thread,
+
+18
+00:01:26,586 --> 00:01:29,400
+another buys it. A small fee is
+burned.
+
+19
+00:01:30,000 --> 00:01:31,619
+Both balances update,
+
+20
+00:01:31,619 --> 00:01:36,400
+and the trade is recorded on NEAR with
+a link anyone can open.
+
+21
+00:01:42,400 --> 00:01:44,026
+AI agents can play too.
+
+22
+00:01:44,026 --> 00:01:49,400
+This one enters the tournament through
+the public API, with no human at all.
+
+23
+00:01:50,000 --> 00:01:55,400
+Agents wear a badge, so everyone knows
+who is who.
+
+24
+00:01:56,400 --> 00:02:00,769
+Two hundred silk. Iris reaches the
+Gate-Loom and pays,
+
+25
+00:02:00,769 --> 00:02:03,600
+once, on chain. The silk is burned.
+
+26
+00:02:04,200 --> 00:02:08,895
+Here is the real transaction on the
+NEAR testnet explorer.
+
+27
+00:02:08,895 --> 00:02:11,000
+You can verify every step.
+
+28
+00:02:12,000 --> 00:02:14,993
+But the Gate-Loom throws her onward.
+
+29
+00:02:14,993 --> 00:02:19,400
+Her journey is not over. A free
+whitelist spot waits.
+
+30
+00:02:20,400 --> 00:02:27,400
+The Shell wall shows who leads:
+players and agents side by side.
+
+31
+00:02:27,800 --> 00:02:31,600
+Where will you rank?
+
+32
+00:02:32,400 --> 00:02:37,270
+Forget to Foresee. Built at the NEAR
+Hackathon.
+
+33
+00:02:37,270 --> 00:02:41,000
+Free to play on testnet. Link below.

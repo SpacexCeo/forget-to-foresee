@@ -23,21 +23,24 @@ export const SIDE_STEP = 0.45;
  * The cast: asset name, authored clip speeds (metres per second of the model's own walk and run clips) and
  * the standing height (docs/townsfolk.md). `walk` is also the speed the person moves at, so feet never slide.
  */
+/** The five quest givers wear their own models (art/townsfolk/npc_build.py: npc_<key>.glb on the shared rig); the rest keep townsfolk_<key>. */
+export const QUEST_GIVERS = new Set(['guard', 'innkeeper', 'elder', 'lamplighter', 'shardkeeper']);
+
 export const TOWNSFOLK = Object.freeze([
-  { key: 'guard', height: 1.92, walk: 1.30 },
+  { key: 'guard', height: 1.80, walk: 1.30 },
   { key: 'shardkeeper', height: 1.70, walk: 1.20 },
   { key: 'scribe', height: 1.76, walk: 1.20 },
-  { key: 'innkeeper', height: 1.78, walk: 1.15 },
+  { key: 'innkeeper', height: 1.65, walk: 1.15 },
   { key: 'baker', height: 1.72, walk: 1.15 },
   { key: 'shrinekeeper', height: 1.60, walk: 0.95 },
-  { key: 'elder', height: 1.65, walk: 0.65 },
+  { key: 'elder', height: 1.70, walk: 0.65 },
   { key: 'musician', height: 1.74, walk: 1.25 },
   { key: 'sweeper', height: 1.62, walk: 1.20 },
-  { key: 'lamplighter', height: 1.86, walk: 1.30 },
+  { key: 'lamplighter', height: 1.70, walk: 1.30 },
   { key: 'courier', height: 1.68, walk: 1.55 },
   { key: 'child_a', height: 1.32, walk: 1.10, run: 2.6 },
   { key: 'child_b', height: 1.22, walk: 1.20, run: 2.6 },
-].map((p) => Object.freeze({ ...p, asset: 'townsfolk_' + p.key })));
+].map((p) => Object.freeze({ ...p, asset: (QUEST_GIVERS.has(p.key) ? 'npc_' : 'townsfolk_') + p.key })));
 
 /** Clip fallbacks: the shared side-car set (docs/art/animation-pipeline.md) first, then the model's own clips. */
 export const CLIP_FALLBACK = Object.freeze({

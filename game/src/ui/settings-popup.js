@@ -2,7 +2,8 @@
 // Account. It never leaves the world; "Leave to main menu" is an explicit button with a confirm. Everything applies at
 // once and is stored on this device. Plain DOM, no play imports (a ui -> play static import is a boot cycle): the caller
 // passes `t`, the prefs and the hooks into the world.
-import { KEY_ACTIONS, bindings, setBindings, defaultBindings, conflicts, keyLabel, isReserved, actionKey } from './keybinds.js';
+import { KEY_ACTIONS, KEY_GROUPS, bindings, setBindings, defaultBindings, conflicts, keyLabel, actionKey, rebind } from './keybinds.js';
+import { hudT } from '../rpg/hud-text.js';
 import { loadSettings, saveSettings, SETTINGS_OPTIONS } from './settings-store.js';
 import { controlsDiagram } from './keyboard-map.js';
 
@@ -29,9 +30,15 @@ const CSS = `
 .ftf-set output { text-align: right; font-variant-numeric: tabular-nums; color: #d8cfbd; }
 .ftf-set button.ftf-set-btn, .ftf-set .ftf-set-key { min-height: 38px; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(233,180,76,.6); background: rgba(233,180,76,.12); color: #f3ead6; font: 15px system-ui, sans-serif; cursor: pointer; }
 .ftf-set button.ftf-set-primary { background: #e9b44c; color: #1b1407; border-color: #e9b44c; font-weight: 600; }
-.ftf-set .ftf-set-key { min-width: 92px; font-family: ui-monospace, monospace; }
-.ftf-set .ftf-set-key[data-conflict="1"] { border-color: #f0a08a; color: #f0a08a; }
-.ftf-set .ftf-set-key[data-wait="1"] { background: rgba(95,180,170,.25); border-color: #5fb4aa; }
+.ftf-set .ftf-set-key { min-width: 80px; }
+.ftf-set .ftf-set-bind { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.ftf-set .ftf-set-cap { min-width: 64px; padding: 6px 10px; border-radius: 6px; border: 1px solid #3a4a4b; border-bottom-width: 3px; background: #1b2526; color: #f3ead6; font: 700 14px ui-monospace, monospace; text-align: center; }
+.ftf-set .ftf-set-cap[data-conflict="1"] { border-color: #f0a08a; color: #f0a08a; }
+.ftf-set .ftf-set-cap[data-wait="1"] { border-color: #f0b24a; color: #f0b24a; font-family: system-ui, sans-serif; font-weight: 600; }
+.ftf-set .ftf-set-reset { width: 38px; min-height: 38px; border-radius: 8px; border: 1px solid #3a4a4b; background: transparent; color: #d8cfbd; font-size: 17px; cursor: pointer; }
+.ftf-set .ftf-set-reset:disabled { opacity: .35; cursor: not-allowed; }
+.ftf-set h4.ftf-set-grp { margin: 14px 0 2px; color: #e9b44c; font: 600 13px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.ftf-set .ftf-set-swap { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; margin: 2px 0 6px; border: 1px solid #f0b24a; border-radius: 8px; color: #f0b24a; }
 .ftf-set .ftf-set-toggle { justify-self: start; width: 52px; height: 30px; border-radius: 15px; border: 1px solid rgba(233,180,76,.6); background: #1c2426; position: relative; cursor: pointer; }
 .ftf-set .ftf-set-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #7d8a86; transition: left .15s; }
 .ftf-set .ftf-set-toggle[aria-checked="true"] { background: rgba(233,180,76,.3); }
@@ -58,12 +65,13 @@ const CSS = `
  * hooks: onSettings(s), audio(), touch() -> {available, mode, setMode(m)}, day1() -> record, clearData(),
  *        returnToTown: {visible(), run()}, startOver: {visible(), run()}, leaveToMenu(), onOpen(), onClose()
  */
-export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs, storage, hooks = {} }) {
+export function createSettingsPopup({ doc = globalThis.document, t: tGame, i18n, prefs, storage, hooks = {} }) {
+  const t = hudT(tGame);                                                          // the HUD strings fall back to English until merged
   if (!doc.getElementById('ftf-set-css')) { const s = doc.createElement('style'); s.id = 'ftf-set-css'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (key, fn, cls = 'ftf-set-btn') => { const b = el('button', cls, t(key)); b.type = 'button'; b.addEventListener('click', fn); return b; };
   let settings = loadSettings(storage);
-  let tab = 'graphics', waiting = null;
+  let tab = 'graphics', waiting = null, swapAsk = null, note = null;
   const dialog = el('dialog', 'ftf-set'); dialog.setAttribute('aria-labelledby', 'ftf-set-title');
   doc.body.append(dialog);
   // Esc closes from anywhere while open (a re-render can drop focus out of the dialog, where its own cancel never fires)
@@ -73,11 +81,21 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
   dialog.addEventListener('keydown', (e) => {
     if (!waiting) { if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); dialog.close(); } return; } // Esc closes, even without the browser's own cancel
     e.preventDefault(); e.stopPropagation();
-    if (e.code === 'Escape') { waiting = null; render(); return; }
-    if (isReserved(e.code)) return;
-    setBindings({ ...bindings(), [waiting]: e.code }, storage); waiting = null; render();
+    if (e.code === 'Escape') { waiting = null; note = null; render(); return; }
+    if (/^(Shift|Control|Alt|Meta)(Left|Right)$/.test(e.code) && waiting !== 'run') { if (e.code !== 'ShiftLeft' && e.code !== 'ShiftRight') return; }
+    applyRebind(waiting, e.code);
   }, true);
 
+  // one rebind (sprint plan 5.11): applied at once; a reserved key is refused; a taken key asks "Swap?"
+  function applyRebind(action, code, swap = false) {
+    const before = bindings()[action], r = rebind(bindings(), action, code, { swap });
+    if (r.ok) {
+      setBindings(r.bindings, storage); waiting = null; swapAsk = null; note = null;
+      if (before !== code) { const detail = { action, from: before, to: code }; if (hooks.bus) hooks.bus.emit('keybind.changed', detail); doc.defaultView && doc.defaultView.dispatchEvent && doc.defaultView.dispatchEvent(new CustomEvent('ftf:keybind', { detail })); }
+    } else if (r.reason === 'taken') { waiting = null; swapAsk = { action, code, other: r.swapWith }; note = null; }
+    else if (r.reason === 'reserved') { note = { action, key: 'set.rebind.reserved' }; }
+    render();
+  }
   const setS = (patch) => { settings = { ...settings, ...patch }; saveSettings(storage, settings); if (hooks.onSettings) hooks.onSettings(settings); };
   const row = (labelKey, control, noteKey) => { const r = el('div', 'ftf-set-row'); const l = el('span', null, t(labelKey)); if (noteKey) l.append(el('small', null, t(noteKey))); r.append(l, control); return r; };
   const select = (opts, value, onChange, label) => {
@@ -117,16 +135,30 @@ export function createSettingsPopup({ doc = globalThis.document, t, i18n, prefs,
       if (touch && touch.available) out.push(row('set.ctl.touch', select([['sticks', t('set.ctl.sticks')], ['tap', t('set.ctl.tap')]], touch.mode, (v) => touch.setMode(v), t('set.ctl.touch'))));
       out.push(el('h3', null, t('set.ctl.keys')));
       const b = bindings(), clash = conflicts(b);
-      for (const a of KEY_ACTIONS) {
-        const k = el('button', 'ftf-set-key', waiting === a.id ? t('set.ctl.press') : keyLabel(b[a.id])); k.type = 'button';
-        k.dataset.conflict = clash[b[a.id]] ? '1' : '0'; k.dataset.wait = waiting === a.id ? '1' : '0';
-        k.setAttribute('aria-label', t(a.label) + ': ' + keyLabel(b[a.id]));
-        k.addEventListener('click', () => { waiting = a.id; render(); const f = dialog.querySelector('.ftf-set-key[data-wait="1"]'); if (f) f.focus(); });
-        out.push(row(a.label, k));
+      for (const g of KEY_GROUPS) {                                                  // Movement / Combat / Skills (1 to 9) / Windows / Other
+        out.push(el('h4', 'ftf-set-grp', t('set.grp.' + g)));
+        for (const a of KEY_ACTIONS.filter((x) => x.group === g)) {
+          const wrap = el('div', 'ftf-set-bind');
+          const cap = el('span', 'ftf-set-cap', waiting === a.id ? t('set.rebind.press') : keyLabel(b[a.id]));
+          cap.dataset.conflict = clash[b[a.id]] ? '1' : '0'; cap.dataset.wait = waiting === a.id ? '1' : '0';
+          const k = el('button', 'ftf-set-key', t('set.rebind')); k.type = 'button'; k.dataset.action = a.id;
+          k.setAttribute('aria-label', t('set.rebind') + ': ' + t(a.label) + ' (' + keyLabel(b[a.id]) + ')');
+          k.addEventListener('click', () => { waiting = a.id; swapAsk = null; note = null; render(); const f = dialog.querySelector('.ftf-set-key[data-action="' + a.id + '"]'); if (f) f.focus(); });
+          const rs = el('button', 'ftf-set-reset', '↺'); rs.type = 'button'; rs.title = t('set.rebind.reset'); rs.setAttribute('aria-label', t('set.rebind.reset') + ': ' + t(a.label));
+          rs.disabled = b[a.id] === a.code; rs.addEventListener('click', () => applyRebind(a.id, a.code, true));
+          wrap.append(cap, k, rs);
+          out.push(row(a.label, wrap));
+          if (swapAsk && swapAsk.action === a.id) {
+            const q = el('div', 'ftf-set-swap'); q.setAttribute('role', 'alert');
+            q.append(el('span', null, t('set.rebind.swap', { key: keyLabel(swapAsk.code), action: t('set.key.' + swapAsk.other) })), btn('set.rebind.swapYes', () => applyRebind(a.id, swapAsk.code, true)), btn('set.rebind.cancel', () => { swapAsk = null; render(); }));
+            out.push(q);
+          }
+          if (note && note.action === a.id) out.push(el('p', 'ftf-set-warn', t(note.key)));
+        }
       }
-      out.push(row('set.key.menu', el('span', 'ftf-set-note', 'Esc')));
+      out.push(row('set.key.menu', el('span', 'ftf-set-cap', 'Esc')));
       if (Object.keys(clash).length) out.push(el('p', 'ftf-set-warn', t('set.ctl.conflict', { keys: Object.keys(clash).map(keyLabel).join(', ') })));
-      out.push(el('p', 'ftf-set-note', t('set.ctl.digits')), btn('set.ctl.reset', () => { setBindings(defaultBindings(), storage); render(); }));
+      out.push(el('p', 'ftf-set-note', t('set.ctl.digits')), btn('set.rebind.resetAll', () => { if (!globalThis.confirm || globalThis.confirm(t('set.rebind.resetAllConfirm'))) { setBindings(defaultBindings(), storage); swapAsk = null; waiting = null; render(); } }));
       out.push(el('h3', null, t('set.ctl.pad')));
       const dl = el('dl');
       for (const [k, v] of [['A / ✕', 'set.pad.interact'], ['B / ○', 'set.pad.back'], ['Menu', 'set.pad.menu'], ['L', 'set.pad.move'], ['R', 'set.pad.look'], ['LB / RB', 'set.pad.zoom'], ['R3', 'set.pad.reset']]) dl.append(el('dt', null, k), el('dd', null, t(v)));

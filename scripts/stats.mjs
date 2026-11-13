@@ -14,7 +14,8 @@ export const CONTRACTS = ['season-commit', 'memory-shard', 'agent-card', 'guests
 
 /** Parses `node --test` or `cargo test` output into {pass, fail}. */
 export function parseCounts(out) {
-  const node = { pass: /^# pass (\d+)/m.exec(out), fail: /^# fail (\d+)/m.exec(out) };
+  // TAP (`# pass N`) and the spec reporter Node 24 uses by default (`ℹ pass N`)
+  const node = { pass: /^(?:#|ℹ) pass (\d+)/m.exec(out), fail: /^(?:#|ℹ) fail (\d+)/m.exec(out) };
   if (node.pass) return { pass: +node.pass[1], fail: node.fail ? +node.fail[1] : 0 };
   let pass = 0, fail = 0, seen = false;
   for (const m of out.matchAll(/^test result: \w+\. (\d+) passed; (\d+) failed/gm)) { pass += +m[1]; fail += +m[2]; seen = true; }

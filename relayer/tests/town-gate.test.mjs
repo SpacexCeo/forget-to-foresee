@@ -102,3 +102,15 @@ test('the coordinator key comes from data/coord-key.json when the env has none, 
   const c = townGateEnv({ FTF_DATA_DIR: join(dir, 'none') });
   assert.equal(c.coord, ''); assert.equal(c.coordKey, '');
 });
+
+test('gate GET: the game reads creditable, credited and today\'s room for its one silk number', async () => {
+  const { townGateHandler } = await import('../api/town/gate.js');
+  const c = chain({ silk: 38n * M, registered: true });
+  const ledger = mem(); ledger.put('ann.testnet', { credited: String(38n * M), day: Math.floor(NOW / 86_400_000), today: String(38n * M) });
+  const h = townGateHandler({ env: { FTF_EXPEDITION_DIR: '/x', FTF_DATA_DIR: '/tmp/none-ftf' }, client: c.client, ledger, loadLog: () => LOG, now: () => NOW });
+  const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(b) { this.body = JSON.parse(b); } };
+  await h({ method: 'GET', headers: {}, url: '/api/town/gate?account_id=ann.testnet' }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.silk, String(38n * M)); assert.equal(res.body.creditable, String(220n * M)); assert.equal(res.body.credited, String(38n * M));
+  assert.equal(res.body.day_room, String((300n - 38n) * M));
+});

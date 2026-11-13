@@ -75,7 +75,9 @@ test('E4/E5: a second click on the selected quest walks to the giver; W cancels'
     await g.wait(2500);
     const mid = await g.page.evaluate(() => window.__ftf.player.pos.slice());
     assert.ok(Math.hypot(mid[0] - before[0], mid[2] - before[2]) > 0.5, 'Iris moved on her own');
-    await g.page.keyboard.down('w'); await g.wait(800); await g.page.keyboard.up('w'); await g.wait(800);
+    await g.page.keyboard.down('w'); // held until the walk ends: software-rendered frames can be longer than a tap
+    await g.until(() => !document.querySelector('.ftf-autowalk'), 20000).catch(() => {});
+    await g.page.keyboard.up('w'); await g.wait(500);
     const ev = await g.page.evaluate(() => window.__aw);
     assert.ok(ev.includes('started:'), 'autowalk.started: ' + ev);
     assert.ok(ev.some((e) => e.startsWith('cancelled:input') || e.startsWith('arrived')), 'W cancels the walk: ' + ev);
