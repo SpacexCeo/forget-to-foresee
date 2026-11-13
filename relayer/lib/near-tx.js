@@ -86,6 +86,17 @@ const b64 = (bytes) => { let s = ''; for (const b of bytes) s += String.fromChar
  * An RPC client: views, access-key nonce, final block hash, and send-and-wait for a FunctionCall.
  * @param {{rpcUrls: string[], fetch?: Function, timeoutMs?: number}} o
  */
+/**
+ * True for an RPC error that is about the endpoint, not the request: a rate limit (code -429, "Too Many Requests") or a
+ * deprecated/unavailable endpoint. The client then tries the next URL instead of failing the call (the same signed
+ * transaction is safe to send twice: its hash is its identity).
+ */
+export function endpointError(err) {
+  if (!err) return false;
+  const text = [err.message, err.name, err.data, err.cause && err.cause.name].map((x) => String(x == null ? '' : typeof x === 'object' ? JSON.stringify(x) : x)).join(' ');
+  return err.code === -429 || err.code === 429 || /too many requests|rate.?limit|deprecated|unavailable/i.test(text);
+}
+
 export function createTxClient({ rpcUrls, fetch = globalThis.fetch, timeoutMs = 60000 }) {
   let i = 0;
   async function rpc(method, params) {
@@ -97,7 +108,9 @@ export function createTxClient({ rpcUrls, fetch = globalThis.fetch, timeoutMs = 
         const timer = ac ? setTimeout(() => ac.abort(), timeoutMs) : null;
         const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 'ftf', method, params }), signal: ac ? ac.signal : undefined });
         if (timer) clearTimeout(timer);
+        if (res.status === 429 || res.status >= 500) { last = new Error('RPC HTTP ' + res.status); continue; } // rate limit or outage: next endpoint
         const j = await res.json();
+        if (j.error && endpointError(j.error)) { last = new Error('RPC endpoint refused: ' + String(j.error.message || j.error.code)); continue; }
         if (j.error) { const e = new Error((j.error.cause && j.error.cause.name) || j.error.message || 'RPC error'); e.rpc = j.error; throw e; }
         i = (i + k) % rpcUrls.length;
         return j.result;
