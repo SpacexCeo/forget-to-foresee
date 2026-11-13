@@ -18,6 +18,10 @@ import { createTrackerUI } from '../quests/tracker-ui.js';
 import { createAutoWalk, setAutoWalker } from '../sprint/auto-walk.js';
 import { GIVER_NAMES } from '../game/journal-data.js';
 import { loadGuide, guideEvent, guideView, GUIDE_KEY } from '../quests/guide.js';
+import { questMarkers } from '../quests/markers-feed.js';
+import { createWaypoint } from '../quests/waypoint-ui.js';
+import { TOWN_ORIGIN } from './town-layout.js';
+import * as THREE from 'three';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -120,7 +124,7 @@ const load = (storage, key, fresh) => { try { const v = JSON.parse((storage && s
  * @param {(opts: {sub: string}) => Promise} [o.depart] the town's transition to the archipelago (town-flow depart)
  * @param {string} [o.search] @param {Document} [o.doc] @param {Window} [o.win] @param {() => number} [o.now]
  */
-export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, walkDriver = null, toWorld = null, level = () => 1, flags = flagOn, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
+export function createTownQuests({ storage, townLedger, i18n, folkAt = () => null, inventory = null, chests = null, depart = null, gate = null, walkDriver = null, toWorld = null, camera = null, portalAt = null, level = () => 1, flags = flagOn, storyDrops = true, search = '', doc = globalThis.document, win = globalThis, now = () => Date.now() }) {
   const t = (k, a) => i18n.t(k, a);
   // The Gate-Loom is paid on chain (rev 4): its price and the player's silk are ftf-town's gate_price and balance_of,
   // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
@@ -347,7 +351,23 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   if (useGuide) { win.addEventListener('keydown', onGuideKey); win.addEventListener('pointermove', onDrag); win.addEventListener('ftf:portal-near', onPortal); win.addEventListener('ftf:mob-killed', onHit); win.addEventListener('ftf:mob-hit', onHit); }
   function autoTrack() { // newly accepted quests are tracked while fewer than three are
     for (const id of Object.keys(QUESTS)) { const st = questStatus(qs, id, now()); if ((st === 'active' || st === 'ready') && !tracked.includes(id) && tracked.length < MAX_TRACKED && !QUESTS[id].auto) { tracked = [...tracked, id]; saveTracked(); } }
-    tracked = tracked.filter((id) => { const st = questStatus(qs, id, now()); return st === 'active' || st === 'ready'; });
+    tracked = tracked.filter((id) => questStatus(qs, id, now()) !== 'done'); // a finished quest leaves the tracker; anything else the player pinned stays
+  }
+  // ---- the waypoint arrow to the pinned quest's target and the markers for the maps (sprint §4.9)
+  const v3 = new THREE.Vector3();
+  const targetOf = (v) => { if (!v) return null; if (v.walk.kind === 'area' && toWorld) return toWorld([v.walk.pos[0], 0, v.walk.pos[1]]); const p = folkAt(v.walk.giver); return p ? [p[0], p[1] + 1.6, p[2]] : null; };
+  const waypoint = useTracker && camera ? createWaypoint({ doc, win, view: { project: (p) => { v3.set(p[0], p[1], p[2]).project(camera); return { x: v3.x, y: v3.y, z: v3.z, behind: v3.z > 1 }; } },
+    target: () => { if (!tracked.length || !herPos) return null; const pos = targetOf(questView(tracked[0], { qs, now: now(), have: have(), level: lvl(), tracked })); return pos ? { pos, from: herPos } : null; },
+    hidden: () => !active || !!(journal && journal.isOpen) }) : null;
+  let lastMarkers = '', markersT = -Infinity;
+  function publishMarkers() {
+    const giverAt = (k) => { const p = folkAt(k); return p ? [p[0] - TOWN_ORIGIN[0], p[2] - TOWN_ORIGIN[2]] : null; };
+    const list = questMarkers({ qs, now: now(), have: have(), tracked, giverAt, portal: portalAt, giverName: gname });
+    const key = JSON.stringify(list.map((m) => [m.id, m.kind, m.pinned, Math.round(m.pos[0]), Math.round(m.pos[1])]));
+    if (key === lastMarkers) return list; lastMarkers = key;
+    globalThis.__ftfQuestMarkers = list;
+    try { win.dispatchEvent(new CustomEvent('ftf:markers', { detail: { source: 'quests', list } })); } catch { /* none */ }
+    return list;
   }
   function errandWatch() { // the innkeeper's sign: the town errand moving past "read" completes s_sign
     const txt = errand(), readTxt = i18n.t('quest.obj.read');
@@ -373,6 +393,8 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     update(pos) {
       if (walker) walker.update();
       if (tracker || journal) { autoTrack(); errandWatch(); if (tracker) tracker.refresh(); }
+      if (waypoint) waypoint.update();
+      if ((tracker || journal) && now() - markersT > 1000) { markersT = now(); publishMarkers(); }
       if (pos) { herPos = pos; if (now() - lineT > 1000) { lineT = now(); renderObjective(); } } // the distance to the next giver
       if (logPanel && now() - logT > 1000) { logT = now(); const fresh = renderLog(); logPanel.replaceWith ? logPanel.replaceWith(fresh) : (logPanel.remove(), doc.body.append(fresh)); logPanel = fresh; }
       if (pos && !start) start = [pos[0], pos[2]];
@@ -388,9 +410,9 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     /** Markers over the givers: [{giver, sym: '!'|'?'}] for scenes/quest-markers.js. */
     markers: () => ['elder', 'guard', 'lamplighter', 'shardkeeper'].map((giver) => ({ giver, sym: markerFor(giver, story, qs, now(), have()) })).filter((m) => m.sym),
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel || !!(journal && journal.isOpen); },
-    get guide() { return guide; }, feedGuide,
+    get guide() { return guide; }, feedGuide, publishMarkers,
     get journal() { return journal; }, get tracker() { return tracker; }, get walker() { return walker; }, walkTo, get tracked() { return tracked.slice(); },
-    dispose() { if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
+    dispose() { if (waypoint) waypoint.dispose(); if (journal) journal.close(); if (tracker) tracker.dispose(); if (walker) { walker.dispose(); setAutoWalker(null); } if (doc.body && doc.body.classList) doc.body.classList.remove('ftf-tracker-on'); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); win.removeEventListener('keydown', onGuideKey); win.removeEventListener('pointermove', onDrag); win.removeEventListener('ftf:portal-near', onPortal); win.removeEventListener('ftf:mob-killed', onHit); win.removeEventListener('ftf:mob-hit', onHit); },
   };
 }
 
