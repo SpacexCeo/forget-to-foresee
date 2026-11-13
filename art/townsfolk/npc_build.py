@@ -3,20 +3,32 @@ They become townsfolk of the shared agent rig (same bone names as every other bo
 game/public/assets/anim/townsfolk.glb retargets onto them at load): the 78 bones are merged into 31 of ours (twist and
 share bones into their limb, the three long fingers into one, the face into the head), the mesh is stood on the
 floor at the giver's height facing -Y, welded (it comes as a triangle soup) and decimated; UVs and texture are its own.
-    blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles>
+    blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles> [outline mm, 0 = none]
 The texture is resized and compressed afterwards (art/tools/compress-glb.sh).
 """
 import bpy, bmesh, sys, re, math
 import numpy as np
 from mathutils import Vector
-a = sys.argv[sys.argv.index('--') + 1:]; SRC, OUT, HEIGHT, TRIS = a[0], a[1], float(a[2]), int(a[3])
+a = sys.argv[sys.argv.index('--') + 1:]; SRC, OUT, HEIGHT, TRIS = a[0], a[1], float(a[2]), int(a[3]); OUTLINE = float(a[4]) if len(a) > 4 else 0.0
+
+def canon(name):
+    """A second naming scheme of generated rigs (65 bones, prefixed) in the names of the first."""
+    if ':' not in name: return name
+    n = name.split(':')[-1]; m = re.match(r'^(Left|Right)(.*)$', n)
+    if not m:
+        return {'Hips': 'Hip', 'Spine': 'Spine01', 'Spine1': 'Spine02', 'Spine2': 'Spine02b', 'Neck': 'NeckTwist01', 'Head': 'Head', 'HeadTop_End': 'FacialBone'}.get(n, n)
+    s, r = m.group(1)[0], m.group(2)
+    r = {'Shoulder': 'Clavicle', 'Arm': 'Upperarm', 'ForeArm': 'Forearm', 'Hand': 'Hand', 'UpLeg': 'Thigh', 'Leg': 'Calf', 'Foot': 'Foot', 'ToeBase': 'ToeBase', 'Toe_End': 'ToeBaseEnd'}.get(r, r)
+    r = re.sub(r'^Hand(Thumb|Index|Ring|Pinky)(\d)$', r'\1\2', r); r = re.sub(r'^HandMiddle(\d)$', r'Mid\1', r)
+    return f'{s}_{r}'
+
 
 def ours(name):
     """Source bone name -> shared rig bone name (None: dropped, its weight goes to the pelvis)."""
     m = re.match(r'^([LR])_(.*)$', name); s, n = (m.group(1), m.group(2)) if m else (None, name)
     if s is None:
         return {'Hip': 'pelvis', 'Pelvis': 'pelvis', 'Waist': 'pelvis', 'BoneRoot': 'pelvis', 'Spine01': 'spine', 'Spine02': 'chest',
-                'NeckTwist01': 'neck', 'NeckTwist02': 'neck', 'Head': 'head', 'FacialBone': 'head'}.get(n)
+                'Spine02b': 'chest', 'NeckTwist01': 'neck', 'NeckTwist02': 'neck', 'Head': 'head', 'FacialBone': 'head'}.get(n)
     if n == 'Eye': return 'head'
     for key, to in (('Clavicle', 'shoulder'), ('Upperarm', 'upperarm'), ('Forearm', 'forearm'), ('Elbow', 'forearm'), ('Hand', 'hand'), ('Thumb', 'thumb'), ('Index', 'index'),
                     ('Mid', 'fingers'), ('Ring', 'fingers'), ('Pinky', 'fingers'), ('Thigh', 'thigh'), ('Calf', 'shin'), ('Knee', 'shin'), ('Foot', 'foot'), ('ToeBase', 'toe')):
@@ -26,11 +38,11 @@ def ours(name):
 bpy.ops.wm.read_factory_settings(use_empty=True); bpy.ops.import_scene.gltf(filepath=SRC)
 arm0 = next(o for o in bpy.data.objects if o.type == 'ARMATURE'); el = max((o for o in bpy.data.objects if o.type == 'MESH'), key=lambda o: len(o.data.vertices)); me = el.data
 M = el.matrix_world; n = len(me.vertices); co = np.array([(M @ v.co)[:] for v in me.vertices]); A = arm0.matrix_world
-J = {b.name: np.array((A @ b.head_local)[:]) for b in arm0.data.bones}
+J = {canon(b.name): np.array((A @ b.head_local)[:]) for b in arm0.data.bones}
 k = HEIGHT / (co[:, 2].max() - co[:, 2].min()); z0 = co[:, 2].min(); T = lambda p: (np.asarray(p) - [0, 0, z0]) * k
 co = T(co); J = {b: T(p) for b, p in J.items()}
 W = {}
-gname = {g.index: g.name for g in el.vertex_groups}
+gname = {g.index: canon(g.name) for g in el.vertex_groups}
 for v in me.vertices:
     for g in v.groups:
         W.setdefault(ours(gname[g.group]) or 'pelvis', np.zeros(n))[v.index] += g.weight
@@ -81,6 +93,17 @@ mat = bpy.data.materials.new('M_townsfolk'); mat.use_nodes = True; bs = mat.node
 if img:
     tn = mat.node_tree.nodes.new('ShaderNodeTexImage'); tn.image = img; mat.node_tree.links.new(tn.outputs['Color'], bs.inputs['Base Color'])
 me.materials.clear(); me.materials.append(mat)
+if OUTLINE > 0:      # an ink outline for the cel-shaded heroes: an inverted hull, thinner on the head and the hands
+    mo = bpy.data.materials.new('outline'); mo.use_nodes = True; mo.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.012, 0.012, 0.016, 1); mo.use_backface_culling = True; me.materials.append(mo)
+    n0 = len(me.vertices); c0 = np.array([v.co[:] for v in me.vertices]); gi = {g.name: g.index for g in el.vertex_groups}; thin = np.ones(n0)
+    for v in me.vertices:
+        if sum(g.weight for g in v.groups if el.vertex_groups[g.group].name == 'head' or el.vertex_groups[g.group].name.startswith(('hand_', 'thumb_', 'index_', 'fingers_'))) > 0.5: thin[v.index] = 0.5
+    bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); bm.normal_update(); nrm = np.array([v.normal[:] for v in bm.verts])
+    geom = bmesh.ops.duplicate(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:]); vm = geom['vert_map']; nf = [g for g in geom['geom'] if isinstance(g, bmesh.types.BMFace)]
+    for v in list(vm):
+        if v.index < n0 and vm[v].index != v.index: vm[v].co = (c0[v.index] + nrm[v.index] * OUTLINE * 0.001 * thin[v.index]).tolist()
+    for f in nf: f.material_index = 1
+    bmesh.ops.reverse_faces(bm, faces=nf); bm.to_mesh(me); bm.free(); me.update()
 c2 = np.array([v.co[:] for v in me.vertices]); print('NPC', OUT.split('/')[-1], 'tris', len(me.polygons), 'verts', len(me.vertices), 'bones', len(arm.bones), 'height %.3f' % c2[:, 2].max(), 'width %.3f' % np.ptp(c2[:, 0]), 'texture', img.size[:] if img else None)
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); ao.select_set(True)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_animations=False, export_skins=True, export_yup=True, export_tangents=False, export_attributes=False, export_all_influences=False, export_def_bones=False, export_morph=False)
