@@ -19,8 +19,10 @@ import { logKeysFromStats } from './ui/loading.js';
 import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
 import { showPremise } from './ui/premise.js';
 import { features } from './features.js';
+import { retryImport, installPreloadGuard } from './sprint/retry-import.js';
 
 const params = new URLSearchParams(location.search);
+installPreloadGuard(window); // a stale chunk after a deploy: one guarded reload, never the broken-load screen (sprint 8.3)
 // remote feature flags (features.js): fetched at once, never waited for; ?debug=1 shows where they came from
 features.load().then(() => {
   // the loading ritual (flag loadRitual): only while the loading screen is still up
@@ -69,9 +71,9 @@ if (!gl.ok) {
 }
 if (gl.software) showSoftwareNote(document);
 
-const ctxP = import('./play/i18n.js').then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
+const ctxP = retryImport(() => import('./play/i18n.js')).then((m) => { chunksDone++; marks.ui = Math.round(performance.now() - t0); report(town ? 'Loading the town' : 'Loading the island'); return m.createPlayContext({ locale: params.get('lang') || undefined }); });
 let shellUi = null, worldP = null;
-const startWorld = (ctx) => (worldP ||= import('./boot-world.js').then((m) => {
+const startWorld = (ctx) => (worldP ||= retryImport(() => import('./boot-world.js')).then((m) => {
   worldP.then((w) => { worldHandle = w; }, () => {});
   chunksDone++; marks.world = Math.round(performance.now() - t0); report();
   return m.createWorld({ params, ctx, uiRoot, onProgress, lobbyOpen: () => !!shellUi, closeLobby: () => { if (shellUi) { shellUi.destroy(); shellUi = null; } },
@@ -119,7 +121,7 @@ ctxP.then(async (ctx) => {
   // ?replay=r1.…: replay a linked season and show its NEAR root check over whatever loads beneath (net/replay.js)
   if (params.has('replay')) import('./ui/replay-view.js').then((m) => m.openReplayView({ param: params.get('replay'), i18n: ctx.i18n })).catch((e) => console.warn('[replay]', e));
   if (plan.lobby) {
-    const ui = await import('./ui/index.js');
+    const ui = await retryImport(() => import('./ui/index.js'));
     // Leaving the lobby before the town has streamed in: the loading screen comes back with the town's real progress,
     // so the first thing the player sees is the finished street, never pieces popping in.
     const enter = async () => {
