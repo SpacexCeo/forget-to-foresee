@@ -319,6 +319,7 @@ function errandMarkers() { const k = townFlow && townFlow.questActive ? ERRAND_N
 let hatchkeeper = null, hatchLoading = false; // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let glassShoal = null, shoalLoading = false;
+let shoalArt = null, shoalArtLoading = false; // the Shoal's look for the fight (render/shoal-arena-look.js), loaded when the arena first opens
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
 let restoreCamera = () => {};
 const islandStart = { heading: player.heading };
@@ -1214,6 +1215,15 @@ function frame() {
   avatar.rotation.z = lean;
   focus.set(p[0], p[1] + 1.1, p[2]);
   if (glassShoal && inTown) glassShoal.update(dt, clock.elapsedTime);
+  const shoalArena = !!(glassShoal && glassShoal.mode === 'arena' && glassShoal.arena); // the fight: the Shoal look draws instead of lookdev
+  if (shoalArena && !shoalArt && !shoalArtLoading) {
+    shoalArtLoading = true;
+    import('./render/shoal-arena-look.js').then((m) => {
+      shoalArt = m.createArenaLook({ renderer, scene, camera, lookdev, arena: glassShoal.arena, tier: lookdev.tier, profile: mobileDevice ? 'phone' : 'desktop', reduced: () => lookdev.reducedMotion, search: location.search });
+      if (window.__ftf) window.__ftf.shoalArt = shoalArt;
+    }).catch((e) => { shoalArtLoading = false; console.warn('[shoal look]', e); });
+  }
+  if (shoalArt) shoalArt.sync(shoalArena);
   const shoalSpeed = glassShoal && glassShoal.owns() ? glassShoal.applyAvatar(avatar, focus) : null; // on the dragon or on the Shoal
   if (inTown && townFlow.focusK > 0) { // registering: the camera leaves Iris for the altar while its core flares
     const a = town.altar.focus, k = townFlow.focusK * townFlow.focusK * (3 - 2 * townFlow.focusK) * 0.7;
@@ -1311,7 +1321,7 @@ function frame() {
   warmup.update();
   updateIrisStandIn();
   if (companions.length) { companionHero.position.copy(avatar.position); companionHero.heading = avatar.rotation.y; companionHero.speed = player.speed; for (const c of companions) c.update(dt, companionHero, lookdev.reducedMotion); }
-  lookdev.update(dt, focus, rig.actualDist);
+  if (shoalArt && shoalArt.active) shoalArt.update(dt, focus); else lookdev.update(dt, focus, rig.actualDist);
   // Animation drives from the actual ground speed (after collisions: pushing into a wall is standing
   // still), smoothed per frame rather than toggled per physics step: at high frame rates many frames run
   // no 30 Hz step, and toggling walk/idle on those frames restarted the walk clip every other frame.
@@ -1341,7 +1351,7 @@ function frame() {
   if (toastTimer > 0 && (toastTimer -= dt) <= 0) toastEl.hidden = true;
 
   const drawn = sceneReady && (play || !(boot.lobbyOpen && boot.lobbyOpen())); // the lobby covers the canvas: no GPU work behind it
-  if (drawn) lookdev.render();
+  if (drawn) { if (shoalArt && shoalArt.active) shoalArt.render(); else lookdev.render(); }
   if (drawn && photo && photo.pending) photo.capture(); // the frame just drawn, before the buffer is cleared
   if (!firstFrameDone && (drawn || sceneReady)) { firstFrameDone = true; if (boot.onFirstFrame) boot.onFirstFrame(); }
   if (boot.onProgress && (progressTimer -= dt) <= 0) { progressTimer = 0.25; boot.onProgress(streamer.stats()); }
