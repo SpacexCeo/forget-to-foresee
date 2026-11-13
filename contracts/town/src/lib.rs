@@ -63,6 +63,10 @@ pub const ACT_PER_ACCOUNT_DAY: u32 = 40;
 pub const ACT_ALL_DAY: u128 = 20_000;
 const K_ACT_DAY: &[u8] = b"a:day";
 const K_ACT_COUNT: &[u8] = b"a:count";
+// v5 (player market): the sale fees it burns and its trade count, kept apart from burned_silk (which feeds the season mint)
+const K_P2P_BURNED: &[u8] = b"p:burned";
+const K_P2P_COUNT: &[u8] = b"p:count";
+pub const ERR_P2P_FEE: &str = "ERR_P2P_FEE: the sale fee is at most a tenth of the price";
 /** Default portal price (rev 4): 200 silk, burned. */
 pub const GATE_PRICE_DEFAULT: u128 = 200 * UNIT;
 // Upgrade v2 (pay_gate) keeps the deployed state untouched: its numbers live under their own raw storage keys and its
@@ -581,6 +585,31 @@ impl Town {
         self.act_for(&account_id, &request_hash);
         self.enter_tournament_inner(account_id, season_id)
     }
+    /// v5 (player market, sprint 6.4): settles a player-to-player sale for the buyer `account_id`: `silk` moves from the
+    /// buyer to the seller `counterparty`, minus `fee`, which is burned (counted in `p2p_burned`, apart from
+    /// `burned_silk`, so it never raises the season mint). A coordinator only, on the buyer's signed request
+    /// (`request_hash`, recorded once, counted in the buyer's daily limit like every move made for a player). Neither
+    /// side may be one of the town's own wallets.
+    pub fn trade_for(&mut self, account_id: AccountId, counterparty: AccountId, silk: U, fee: U, reference: String, request_hash: String) {
+        self.act_for(&account_id, &request_hash);
+        self.live();
+        require!(account_id != counterparty, ERR_SELF);
+        let suffix = format!(".{}", env::current_account_id());
+        require!(!self.stalls.contains_key(&counterparty) && !counterparty.as_str().ends_with(&suffix), ERR_ACT_FOR);
+        require!(silk.0 >= self.params.min_trade, ERR_MIN_TRADE);
+        require!(fee.0 <= silk.0 / 10, ERR_P2P_FEE);
+        require!(reference.len() <= 32, ERR_REF);
+        let mut seller = self.acc(&counterparty); // registered, or ERR_UNKNOWN_ACCOUNT
+        let mut buyer = self.acc(&account_id);
+        require!(buyer.silk >= silk.0, ERR_FUNDS);
+        buyer.silk -= silk.0; buyer.spent += silk.0; self.put(&account_id, buyer);
+        seller.silk += silk.0 - fee.0; seller.earned += silk.0 - fee.0; self.put(&counterparty, seller);
+        set_raw_u128(K_P2P_BURNED, raw_u128(K_P2P_BURNED, 0) + fee.0);
+        set_raw_u128(K_P2P_COUNT, raw_u128(K_P2P_COUNT, 0) + 1);
+        event("p2p_trade", format!(r#"{{"buyer":"{}","seller":"{}","silk":"{}","fee":"{}","ref":"{}","by":"{}","request_hash":"{}"}}"#, account_id, counterparty, silk.0, fee.0, reference.replace('"', ""), env::predecessor_account_id(), request_hash));
+    }
+    pub fn p2p_burned(&self) -> U { U(raw_u128(K_P2P_BURNED, 0)) }
+    pub fn p2p_trades(&self) -> U { U(raw_u128(K_P2P_COUNT, 0)) }
     pub fn act_request_used(&self, request_hash: String) -> bool { LookupMap::<String, AccountId>::new(StorageKey::ActRequests).contains_key(&request_hash) }
     /// v4: actions taken for this player today and for all players today, with the limits.
     pub fn act_limits(&self, account_id: AccountId) -> (u32, u32, U, U) {

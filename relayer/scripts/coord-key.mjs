@@ -16,4 +16,4 @@ const rec = old && old.account === account ? old : { account, secretKey: (await 
 mkdirSync(dirname(file), { recursive: true });
 writeFileSync(file, JSON.stringify(rec), { mode: 0o600 }); chmodSync(file, 0o600);
 const town = process.env.FTF_TOWN_CONTRACT || 'ftf-town.testnet';
-console.log(JSON.stringify({ account, public_key: (await importSecretKey(rec.secretKey)).publicKey, receiver: town, methods: ['register', 'credit_silk', 'pay_gate_for', 'pledge_for', 'claim_for', 'unbond_for', 'exit_early_for', 'invest_stall_for', 'claim_stall_for', 'enter_tournament_for'], kept: rec === old }, null, 1));
+console.log(JSON.stringify({ account, public_key: (await importSecretKey(rec.secretKey)).publicKey, receiver: town, methods: ['register', 'credit_silk', 'pay_gate_for', 'pledge_for', 'claim_for', 'unbond_for', 'exit_early_for', 'invest_stall_for', 'claim_stall_for', 'enter_tournament_for', 'trade_for'], kept: rec === old }, null, 1));
