@@ -2,14 +2,14 @@
 They become townsfolk of the shared agent rig (same bone names as every other body, so the shared clip set
 game/public/assets/anim/townsfolk.glb retargets onto them at load): the 78 bones are merged into 31 of ours (twist and
 share bones into their limb, the three long fingers into one, the face into the head), the mesh is stood on the
-floor at the giver's height facing -Y, decimated, and written with its own colour texture.
-    blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles>
+floor at the giver's height facing -Y, decimated, given UVs of its own, and its colour is baked from the source mesh.
+    blender -b -P npc_build.py -- <source.glb> <out_raw.glb> <height m> <triangles> [bake size 2048]
 The texture is resized and compressed afterwards (art/tools/compress-glb.sh).
 """
-import bpy, bmesh, sys, re
+import bpy, bmesh, sys, re, math
 import numpy as np
 from mathutils import Vector
-a = sys.argv[sys.argv.index('--') + 1:]; SRC, OUT, HEIGHT, TRIS = a[0], a[1], float(a[2]), int(a[3])
+a = sys.argv[sys.argv.index('--') + 1:]; SRC, OUT, HEIGHT, TRIS = a[0], a[1], float(a[2]), int(a[3]); BAKE = int(a[4]) if len(a) > 4 else 2048
 
 def ours(name):
     """Source bone name -> shared rig bone name (None: dropped, its weight goes to the pelvis)."""
@@ -62,31 +62,33 @@ bpy.ops.object.mode_set(mode='OBJECT'); el.parent = ao; md = el.modifiers.new('r
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); bpy.context.view_layer.objects.active = el
 bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.triangulate(bm, faces=bm.faces[:]); bm.to_mesh(me); bm.free()
 now = len(me.polygons)
-if TRIS < now:      # the head and the hands give up far less than the rest (a hard-decimated face falls apart): two pieces, two ratios
-    wk = np.clip(sum(W.get(k_, np.zeros(n)) for k_ in W if k_ == 'head' or k_.startswith(('hand_', 'thumb_', 'index_', 'fingers_'))) / tot, 0, 1)
-    fv = np.empty(now * 3, np.int32); me.polygons.foreach_get('vertices', fv); keep = wk[fv.reshape(-1, 3)].max(1) > 0.5; nk = int(keep.sum())
-    rh = min(1.0, 0.6 * TRIS / max(nk, 1)); rb = min(1.0, max(0.03, (TRIS - nk * rh) / max(now - nk, 1)))
-    for p_ in me.polygons: p_.select = bool(keep[p_.index])
-    for v_ in me.vertices: v_.select = False
-    for e_ in me.edges: e_.select = False
-    me.update()
-    bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_mode(type='FACE'); bpy.ops.mesh.separate(type='SELECTED'); bpy.ops.object.mode_set(mode='OBJECT')
-    parts = [o for o in bpy.context.scene.objects if o.type == 'MESH']
-    for o, r in ((el, rb), *[(o, rh) for o in parts if o is not el]):
-        bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
-        if r < 0.999:
-            d = o.modifiers.new('dec', 'DECIMATE'); d.ratio = r; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in parts: o.select_set(True)
-    bpy.context.view_layer.objects.active = el; bpy.ops.object.join()
-    bm = bmesh.new(); bm.from_mesh(el.data); bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5); bm.to_mesh(el.data); bm.free()
-    print('decimated: head and hands %d triangles x %.2f, the rest %d x %.2f' % (nk, rh, now - nk, rb))
+# The source UVs are thousands of tiny islands: decimating across them scatters wrong texels over the face. So the
+# low mesh gets UVs of its own and its colour is baked from the untouched source mesh.
+hi = el.copy(); hi.data = el.data.copy(); hi.name = 'source'; bpy.context.scene.collection.objects.link(hi); hi.parent = None
+for md in list(hi.modifiers): hi.modifiers.remove(md)
+if TRIS < now:
+    d = el.modifiers.new('dec', 'DECIMATE'); d.ratio = TRIS / now; bpy.ops.object.modifier_move_to_index(modifier='dec', index=0); bpy.ops.object.modifier_apply(modifier='dec')
 me = el.data; el.name = 'base'; me.name = 'base'
 for p in me.polygons: p.use_smooth = True
+for l in list(me.uv_layers): me.uv_layers.remove(l)
+bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.003); bpy.ops.object.mode_set(mode='OBJECT')
+sc = bpy.context.scene; sc.render.engine = 'CYCLES'; sc.cycles.samples = 4
+try:
+    pr = bpy.context.preferences.addons['cycles'].preferences; pr.compute_device_type = 'OPTIX'; pr.get_devices()
+    for d_ in pr.devices: d_.use = d_.type != 'CPU'
+    sc.cycles.device = 'GPU'
+except Exception as e_: print('GPU bake not available:', e_)
+for m_ in hi.data.materials:                            # the source's colour as emission: the bake carries the texture alone
+    nt = m_.node_tree; out = next(x for x in nt.nodes if x.type == 'OUTPUT_MATERIAL'); bsdf = next((x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED'), None)
+    if bsdf and bsdf.inputs['Base Color'].links:
+        em = nt.nodes.new('ShaderNodeEmission'); nt.links.new(bsdf.inputs['Base Color'].links[0].from_socket, em.inputs['Color']); nt.links.new(em.outputs[0], out.inputs['Surface'])
+baked = bpy.data.images.new('npc_base', BAKE, BAKE, alpha=False)
 mat = bpy.data.materials.new('M_townsfolk'); mat.use_nodes = True; bs = mat.node_tree.nodes['Principled BSDF']; bs.inputs['Roughness'].default_value = 0.85; bs.inputs['Metallic'].default_value = 0.0
-if img:
-    tn = mat.node_tree.nodes.new('ShaderNodeTexImage'); tn.image = img; mat.node_tree.links.new(tn.outputs['Color'], bs.inputs['Base Color'])
+tn = mat.node_tree.nodes.new('ShaderNodeTexImage'); tn.image = baked; mat.node_tree.nodes.active = tn
 me.materials.clear(); me.materials.append(mat)
+bpy.ops.object.select_all(action='DESELECT'); hi.select_set(True); el.select_set(True); bpy.context.view_layer.objects.active = el
+bpy.ops.object.bake(type='EMIT', use_selected_to_active=True, cage_extrusion=0.004 * HEIGHT, max_ray_distance=0.02 * HEIGHT, margin=6)
+baked.pack(); mat.node_tree.links.new(tn.outputs['Color'], bs.inputs['Base Color']); bpy.data.objects.remove(hi); img = baked
 c2 = np.array([v.co[:] for v in me.vertices]); print('NPC', OUT.split('/')[-1], 'tris', len(me.polygons), 'verts', len(me.vertices), 'bones', len(arm.bones), 'height %.3f' % c2[:, 2].max(), 'width %.3f' % np.ptp(c2[:, 0]), 'texture', img.size[:] if img else None)
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); ao.select_set(True)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_animations=False, export_skins=True, export_yup=True, export_tangents=False, export_attributes=False, export_all_influences=False, export_def_bones=False, export_morph=False)
