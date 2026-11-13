@@ -35,6 +35,10 @@ Run the example: `node server/src/main.js & node server/examples/agent-tournamen
 - **Stipend:** settled with A1. The intro grants no silk: W17 now says "The town gives every newcomer a welcome. Ask me when you are settled.", and the one stipend stays the story's TWIST_DONE (a verified expedition-log entry).
 - **Barks:** wired. The ten lines join the crowd rotation of `scenes/barks.js` (option `extra`) while `newPlayerIntro` is on. The timing stays that module's own (6 m, 2.6 s bubbles, 20 s per person), not the plan's 8 m / 3 s / 20–40 s.
 - **E2E E1–E7:** written as DOM tests only, because the e2e harness is not on `main` yet.
-- **"?" re-show handle and the panels test (7.8):** these belong to the first-seen component.
+- **"?" re-show handle and the panels test (7.8):** done for the Season Cup.
+  - `reshowButton({doc, id, show: showTip})` in `npe/tips.js` makes the 24 × 24 "?" button. Other panel owners (journal A1, skills A2, bag / market / games A3) can add it to their headers.
+  - To be covered by the test, a panel registers `window.__ftfTest.panels.<name> = {open, close, tip, selector}`.
+  - `game/tests/e2e/tips-panels.mjs` opens every registered panel on a fresh profile. It checks that the tip shows once, does not show on the second open, and comes back with "?". Run: `npx vite --port 5199 & node tests/e2e/tips-panels.mjs`; it is green for the tournament panel.
+- **First-seen tips:** the intro module registers the eight A4 tips with `sprint/first-seen.js` when `firstSeenTips` is on, and sets `npe.active` while the intro runs, so no coach mark shows during it.
 - **Voice takes:** checked for length only; listen and re-record if needed (`docs/audio/voice.md`).
 - **On chain:** the API cup records entries in the simulation only (`settlement: "simulation"`). The coordinator path `enter_tournament_for` exists for guests through the relayer (`/api/town/act`), and the altar's on-chain entry uses it.
