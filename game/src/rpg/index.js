@@ -158,6 +158,7 @@ export function mount(ctx) {
         cheat.toggle(); });
       return;
     }
+    if (id === 'market') { win.dispatchEvent(new CustomEvent('ftf:market-open', { detail: { tab: 'buy' } })); return; } // B and the tray: boot-world mounts market/ lazily on this event
     if (ctx.ui && ctx.ui.open) ctx.ui.open(id); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id } }));
   }
 
