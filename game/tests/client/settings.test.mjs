@@ -57,7 +57,8 @@ test('set.* strings: five locales, same placeholders; every key label exists', a
   const load = async (l) => (await import(`../../src/play/locales/${l}.js`)).default;
   const en = await load('en'); const keys = Object.keys(en).filter((k) => k.startsWith('set.'));
   assert.ok(keys.length >= 100);
-  for (const a of KEY_ACTIONS) assert.ok(en[a.label], a.label);
+  const hud = (await import('../../src/play/locales/en-hud.js')).default;   // sprint keys: English in en-hud.js (other locales fall back)
+  for (const a of KEY_ACTIONS) assert.ok(en[a.label] || hud[a.label], a.label);
   const args = (s) => [...new Set([...String(s).matchAll(/\{(\w+)[,}]/g)].map((m) => m[1]))].sort().join(',');
   for (const l of ['ru', 'uk', 'it', 'zh']) { const m = await load(l); for (const k of keys) { assert.ok(m[k], `${l} ${k}`); assert.equal(args(m[k]), args(en[k]), `${l} ${k}`); } }
   for (const l of ['en', 'ru', 'uk', 'it', 'zh']) assert.ok((await import(`../../src/locales/${l}.js`)).default['settings.quality.medium'], l);
