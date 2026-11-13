@@ -24,9 +24,11 @@ const CSS = `
 .gs-track small{display:block;color:#c9b27a;font-weight:400;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
 @keyframes gs-shimmer{from{background-position:120% 0}to{background-position:-120% 0}}
 @keyframes gs-breathe{0%,100%{box-shadow:0 0 6px rgba(246,200,96,.25)}50%{box-shadow:0 0 18px rgba(246,200,96,.65)}}
-.gs-prompt{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);transform:translateX(-50%);z-index:14;min-height:44px;padding:10px 16px;border-radius:22px;border:1px solid #f6c860;
- background:rgba(20,16,8,.85);color:#f6e2a8;font:600 15px/1.2 "Atkinson Hyperlegible",system-ui,sans-serif;cursor:pointer}
-.gs-prompt kbd{border:1px solid #c9b27a;border-radius:4px;padding:0 5px;margin-right:6px;font:inherit}
+.gs-prompt{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);transform:translateX(-50%);z-index:14;min-height:40px;padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
+ background:rgba(10,14,14,.55);color:#fff;font:500 15px/1.2 "Atkinson Hyperlegible",system-ui,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.6);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.gs-prompt:hover{background:rgba(10,14,14,.7);border-color:rgba(255,255,255,.55)}
+.gs-prompt kbd{border:1px solid rgba(255,255,255,.45);border-radius:4px;padding:0 6px;margin-right:8px;font:600 12px/18px ui-monospace,Consolas,monospace;color:#fff;background:none}
+body.ts-touch .gs-prompt kbd{display:none}@media (pointer:coarse){.gs-prompt kbd{display:none}}
 .gs-card{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(420px,calc(100vw - 32px));box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid #f6c860;
  background:rgba(18,14,8,.94);color:#f3ead2;font:15px/1.45 "Atkinson Hyperlegible",system-ui,sans-serif}
 .gs-card h3{margin:0 0 8px;color:#f6c860;font-size:18px}.gs-card .gs-row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}

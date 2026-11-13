@@ -16,6 +16,7 @@ const CSS = `
 .fj-head{display:flex;align-items:center;gap:16px;padding:0 24px;border-bottom:1px solid var(--ftf-border, rgba(197,164,105,.4))}
 .fj-head h2{margin:0;font:600 28px/1 "Cormorant Garamond",Georgia,serif;color:var(--ftf-gold, #c5a469);flex:1}
 .fj button{font:inherit;color:inherit;cursor:pointer}
+.fj-trk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ftf-muted, #aab6b0);cursor:pointer}.fj-trk input{width:18px;height:18px;accent-color:var(--ftf-gold, #c5a469);cursor:pointer}
 .fj-x{width:44px;height:44px;border-radius:10px;border:1px solid var(--ftf-border, rgba(197,164,105,.4));background:rgba(255,255,255,.06);font-size:20px}
 .fj-body{display:grid;grid-template-columns:384px 1fr;min-height:0}
 .fj-rail{border-right:1px solid var(--ftf-border, rgba(197,164,105,.4));display:flex;flex-direction:column;min-height:0}
@@ -66,7 +67,7 @@ html[data-motion=reduce] .fj.fj-anim{animation:none}
  * @param {(id: string) => void} [o.onAbandon] @param {(tab: string) => void} [o.onOpen] @param {(tab: string) => void} [o.onClose]
  * @param {() => number} [o.now] @param {() => boolean} [o.reduced]
  */
-export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTrack, onAbandon = () => {}, onOpen = () => {}, onClose = () => {}, now = () => Date.now(), reduced = () => false }) {
+export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTrack, onAbandon = () => {}, onOpen = () => {}, onClose = () => {}, now = () => Date.now(), reduced = () => false, trackerShown = null, onTrackerShown = () => {} }) {
   if (!doc.getElementById || !doc.getElementById('fj-css')) { const st = doc.createElement('style'); st.id = 'fj-css'; st.textContent = CSS; (doc.head || doc.body).append(st); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   let back = null, tab = 'story', selected = null, search = '', lastClick = { id: null, t: 0 }, timer = null;
@@ -88,7 +89,13 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     // header
     const head = el('div', 'fj-head'); const h = el('h2', null, say('journal.title'));
     const x = el('button', 'fj-x', '×'); x.type = 'button'; x.setAttribute('aria-label', say('journal.close')); x.addEventListener('click', close);
-    head.append(h, x);
+    head.append(h);
+    if (trackerShown) {   // the tracker's × hides it entirely; this brings it back (tracker-ui.js, ftf.tracker.v1)
+      const lab = el('label', 'fj-trk'), cb = el('input'); cb.type = 'checkbox'; cb.checked = !!trackerShown();
+      cb.addEventListener('change', () => onTrackerShown(cb.checked));
+      lab.append(cb, el('span', null, say('journal.showTracker'))); head.append(lab);
+    }
+    head.append(x);
     // rail
     const body = el('div', 'fj-body'), rail = el('div', 'fj-rail'), tabs = el('div', 'fj-tabs'); tabs.setAttribute('role', 'tablist');
     for (const [i, t] of TABS.entries()) {

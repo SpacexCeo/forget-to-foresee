@@ -42,7 +42,7 @@ export default {
   'hud.levelup.banner': 'Level {n}',
   'hud.levelup.log': 'You reached level {n}. You have {sp} skill point(s) and {tp} stat points.',
   'hud.target.level': 'Lv {n}', 'hud.target.elite': 'Elite',
-  'hud.map.coords': 'x {x} · z {z}', 'hud.map.zoomIn': 'Zoom in', 'hud.map.zoomOut': 'Zoom out', 'hud.map.limit': 'This is the limit.', 'hud.map.open': 'Open the big map (M)',
+  'hud.map.coords': 'x: {x}   z: {z}', 'hud.map.zone.town': 'Town', 'hud.map.zone.field': 'Meadow', 'hud.map.zoomIn': 'Zoom in', 'hud.map.zoomOut': 'Zoom out', 'hud.map.limit': 'This is the limit.', 'hud.map.open': 'Open the big map (M)',
   'hud.cast': 'Casting {name}',
 
   // skill tree (plan 5.9)

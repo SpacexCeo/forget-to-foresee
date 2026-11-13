@@ -369,11 +369,12 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     onWalk: (v) => walkTo(v),
     onTrack: (id) => { const r = toggleTrack(tracked, id); if (r.ok) { tracked = r.tracked; saveTracked(); if (tracker) tracker.refresh(true); } return r; },
     onAbandon: (id) => { questDo({ type: 'ABANDON', questId: id }); },
-    onOpen: () => { if (tracker) tracker.setHidden(true); feedGuide('journal'); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } } }) : null;
+    onOpen: () => { if (tracker) tracker.setHidden(true); feedGuide('journal'); }, onClose: () => { if (tracker) { tracker.setHidden(!active); tracker.refresh(true); } },
+    trackerShown: () => (tracker ? tracker.shown : true), onTrackerShown: (on) => { if (tracker) tracker.setShown(on); } }) : null;
   const townObjective = () => (doc.querySelector ? doc.querySelector('.ftf-town-objective') : null);
   let lastErrand = null;
   const errand = () => { const e = townObjective(); const txt = e && !e.hidden ? (e.textContent || '').trim() : ''; return txt || null; };
-  const tracker = useTracker ? createTrackerUI({ doc, say, giverName: gname, storage,
+  const tracker = useTracker ? createTrackerUI({ doc, win, say, giverName: gname, storage,
     data: () => ({ tracked: tracked.map((id) => questView(id, { qs, now: now(), have: have(), level: lvl(), tracked })).filter(Boolean), road: { gateC: balanceC(), feeC: feeC() }, errand: errand(), guide: useGuide ? guideView(guide, Math.round(feeC() / 100)) : null }),
     onHideGuide: () => { guide = { ...guide, hidden: true }; try { storage.setItem(GUIDE_KEY, JSON.stringify(guide)); } catch { /* memory only */ } tracker.refresh(true); },
     onOpen: (id) => { if (journal) journal.open(null, id); }, onWalk: (v) => walkTo(v) }) : null;

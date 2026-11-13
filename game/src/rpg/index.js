@@ -49,11 +49,12 @@ export function mount(ctx) {
   const refreshStats = () => { const before = stats; stats = S.statsOf(L, rec); if (stats.maxHP !== before.maxHP) self = { ...self, hp: Math.min(stats.maxHP, Math.round(self.hp * stats.maxHP / before.maxHP)), maxHP: stats.maxHP }; caster = { ...caster, mana: Math.min(caster.mana, stats.maxMana) }; };
 
   const hud = createHud({ doc, t, base: ctx.base || '/', reduced: () => !!(ctx.reduced && ctx.reduced()), keyOf: (a) => keyLabel(bindings()[a]),
-    onSlot: (i) => press(i, 'click'), onTray: (id) => openWindow(id), onSync: () => { if (ctx.silk && ctx.silk.syncSilkNow) ctx.silk.syncSilkNow(); else silkCore.syncSilkNow(); },
+    onSlot: (i) => press(i, 'click'), onSlotDown: (i) => press(i, 'key'), onSlotUp: (i) => press(i, 'key', true), onTray: (id) => openWindow(id), onSync: () => { if (ctx.silk && ctx.silk.syncSilkNow) ctx.silk.syncSilkNow(); else silkCore.syncSilkNow(); },
     onSilk: () => { if (ctx.ui && ctx.ui.openWallet) ctx.ui.openWallet(); else win.dispatchEvent(new CustomEvent('ftf:open-window', { detail: { id: 'wallet' } })); },
     onMap: () => openWindow('map'), onZoom: (d) => map && map.zoom(d), onFrame: () => openWindow('character'),
     onDropSkill: (i, id) => { bar = S.placeOnSlot(bar, i, id); save(); } });
-  import('./minimap.js').then((m) => { map = m.createMinimap({ canvas: hud.canvas, markers: ctx.markers, mobs: mobsOf, player: ctx.player, origin: () => (ctx.townOrigin ? ctx.townOrigin() : (win.__ftf && win.__ftf.town && win.__ftf.town.origin) || [0, 0, 0]), reveal: () => !!(self.buffs.reveal && self.buffs.reveal.until > now()) }); }).catch(() => {});
+  import('./minimap.js').then((m) => { map = m.createMinimap({ canvas: hud.canvas, markers: ctx.markers, mobs: mobsOf, player: ctx.player, origin: () => (ctx.townOrigin ? ctx.townOrigin() : (win.__ftf && win.__ftf.town && win.__ftf.town.origin) || [0, 0, 0]),
+    players: () => (win.__ftf && win.__ftf.mp && win.__ftf.mp.bodies ? win.__ftf.mp.bodies() : []), reveal: () => !!(self.buffs.reveal && self.buffs.reveal.until > now()) }); }).catch(() => {});
   emit('hud.mounted', { layout: win.innerWidth < 900 ? 'phone' : 'desktop' });
   // one identity (design review 13.11): the name the player gave on Day 1 (ftf.day1.v1), else "Traveller" (the base HUD's word)
   let nameCache = null, nameAt = 0;
@@ -268,15 +269,19 @@ export function mount(ctx) {
         buffs: Object.entries(self.buffs).map(([id, b]) => ({ id, name: id, left: (b.until - tnow) / 1000, debuff: false })),
         cast: cast && cast.dur > 300 ? { name: cast.name, p: Math.min(1, (tnow - cast.t0) / cast.dur) } : null,
         slots, xpInto: xi.into, xpNeed: xi.need, silk: sv, silkPop,
-        open: { skills: !!(tree && tree.isOpen), character: !!(sheet && sheet.isOpen) }, badges: { skills: sp > 0 && L >= 2, character: tp > 0 },
+        // the desktop tray has no Skills button (owner 13.11): the Character button carries its dot too
+        open: { skills: !!(tree && tree.isOpen), character: !!(sheet && sheet.isOpen) }, badges: { skills: sp > 0 && L >= 2, character: tp > 0 || (sp > 0 && L >= 2) },
         coords: ctx.player && map ? map.coords() : null, zoomMin: map && map.atMin, zoomMax: map && map.atMax,
+        zone: M && M.iris && M.iris.outside ? 'field' : 'town', stamina: ctx.stamina || null,
       });
       if (map) map.draw(dt);
       const mk = doc.querySelector('.ftf-mk > button'); if (mk) { const full = mk.textContent.trim(); if (mk.title !== full) mk.title = full; }   // R7: the cut ticker keeps its full text
+      const mkOn = !!(mk && !mk.parentElement.hidden); if (doc.documentElement.classList.contains('rpg-mk') !== mkOn) doc.documentElement.classList.toggle('rpg-mk', mkOn);   // the ticker is the Log panel's header row
       if (tree && tree.isOpen) tree.refresh(); if (sheet && sheet.isOpen) sheet.refresh();
     },
     dispose() {
       win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:close-windows', onCloseAll); doc.removeEventListener('pointerdown', onOutside, true);
+      doc.documentElement.classList.remove('rpg-mk');
       if (offLedger) offLedger(); if (offHit) offHit(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
     },
   };

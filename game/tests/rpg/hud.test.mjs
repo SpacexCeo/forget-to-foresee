@@ -78,3 +78,24 @@ test('F1 cheat sheet rows: every bindable action once, grouped, with its current
   assert.equal(rows.flatMap((g) => g.rows).length, KB.KEY_ACTIONS.length);
   assert.equal(rows.flatMap((g) => g.rows).find((r) => r.id === 'strike').key, 'G');
 });
+
+test('stamina bar: shown below full, while just spent or flashing; a full, rested bar fades', async () => {
+  const { staminaShown } = await import('../../src/rpg/hud.js');
+  const { createStamina, STAMINA } = await import('../../src/game/stamina.js');
+  assert.equal(staminaShown(null), false, 'no stamina model: no bar');
+  const s = createStamina();
+  s.update(2); s.update(2); assert.equal(staminaShown(s), false, 'full and idle for 4 s: hidden');
+  s.spend(STAMINA.dash); assert.equal(staminaShown(s), true, 'a dash: shown');
+  for (let i = 0; i < 40; i++) s.update(0.1);
+  assert.equal(s.ratio, 1); assert.equal(staminaShown(s), true, 'just refilled: still shown');
+  for (let i = 0; i < 40; i++) s.update(0.1);
+  assert.equal(staminaShown(s), false, 'rested 3 s at full: fades');
+  assert.equal(staminaShown({ ratio: 1, idle: 10, flash: 0.4 }), true, 'a refused action flashes it back');
+});
+
+test('minimap rim clamp: inside points stay, outside points sit on the rim', async () => {
+  const { clampToRim } = await import('../../src/rpg/minimap.js');
+  assert.deepEqual(clampToRim(110, 100, 200, 10), [110, 100, false]);
+  const [x, y, off] = clampToRim(300, 100, 200, 10);
+  assert.equal(off, true); assert.equal(Math.round(x), 190); assert.equal(y, 100);
+});
