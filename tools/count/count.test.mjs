@@ -58,3 +58,18 @@ test('windows: UTC day, hours', () => {
   assert.equal(parseArgs(['--hours', '24'], 1e12).from, 1e12 - 86400e3);
   assert.equal(summarize([], 0, 1).total, 0);
 });
+
+test('proof doc and runway rows from a summary', async () => {
+  const { proofMarkdown } = await import('./proof.mjs');
+  const { runwayRows, runwayMarkdown } = await import('./runway.mjs');
+  const r = await count({ from: FROM, to: TO, accounts: ['ftf-town.testnet', 'items.ftf-town.testnet'] }, fakeFetch([]));
+  const md = proofMarkdown(r, { now: TO + 1, runwayMd: 'RUNWAY' });
+  assert.match(md, /Final count/); assert.match(md, /\| Successful transactions \| \*\*5\*\* \|/); assert.match(md, /FAILED111/); assert.match(md, /How to verify/); assert.match(md, /RUNWAY/);
+  assert.match(proofMarkdown(r, { now: FROM + 5000 }), /Partial/);
+  assert.ok(Number(BigInt(r.feeBySigner['trader-20.ftf-town.testnet'])) > 0);
+  const rows = runwayRows({ 'trader-20.ftf-town.testnet': { amount: 10n ** 24n, storage: 0n } }, r, 3600e3);
+  const t20 = rows.find((x) => x.account === 'trader-20.ftf-town.testnet');
+  assert.ok(t20.daysLeft > 0 && t20.daysLeft < Infinity);
+  assert.equal(rows.find((x) => x.account === 'ftf-town.testnet').liquid, null);
+  assert.match(runwayMarkdown(rows, 3600e3), /unavailable/);
+});

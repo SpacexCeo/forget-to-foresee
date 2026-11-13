@@ -34,7 +34,8 @@ export function parseArgs(argv, now = Date.now()) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--json') o.json = true;
-    else if (a === '--day') o.day = argv[++i];
+    else if (a === '--day' || a === '--window') o.day = argv[++i];
+    else if (a === '--write') o.write = true;
     else if (a === '--from') o.from = argv[++i];
     else if (a === '--to') o.to = argv[++i];
     else if (a === '--hours') o.hours = Number(argv[++i]);
@@ -90,7 +91,7 @@ export function summarize(txs, from, to) {
   const seen = new Map();
   for (const t of txs) seen.set(t.transaction_hash, t);
   const r = { window: { from: new Date(from).toISOString(), to: new Date(to).toISOString() }, total: 0, ok: 0, failed: 0,
-    byReceiver: {}, bySigner: {}, byMethod: {}, failures: [], explorer: EXPLORER };
+    byReceiver: {}, bySigner: {}, byMethod: {}, failures: [], feeBySigner: {}, explorer: EXPLORER };
   for (const t of seen.values()) {
     const ok = !!(t.outcomes && t.outcomes.status);
     r.total++; ok ? r.ok++ : r.failed++;
@@ -98,6 +99,8 @@ export function summarize(txs, from, to) {
     bump(r.bySigner, t.signer_account_id, ok);
     const methods = (t.actions || []).map((a) => a.method || a.action);
     bump(r.byMethod, `${t.receiver_account_id}:${methods.join('+') || '?'}`, ok);
+    const fee = BigInt((t.outcomes_agg && t.outcomes_agg.transaction_fee) || 0);
+    r.feeBySigner[t.signer_account_id] = String(BigInt(r.feeBySigner[t.signer_account_id] || 0) + fee);
     if (!ok) r.failures.push({ hash: t.transaction_hash, signer: t.signer_account_id, receiver: t.receiver_account_id,
       method: methods.join('+'), url: `${EXPLORER}/txns/${t.transaction_hash}` });
   }
@@ -130,6 +133,11 @@ export function render(r) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const opts = parseArgs(process.argv.slice(2));
-  count(opts).then((r) => console.log(opts.json ? JSON.stringify(r, null, 2) : render(r)))
+  count(opts).then(async (r) => {
+    if (opts.write) {
+      const { writeProof } = await import('./proof.mjs');
+      console.log(`wrote ${await writeProof(r, opts)}`);
+    } else console.log(opts.json ? JSON.stringify(r, null, 2) : render(r));
+  })
     .catch((e) => { console.error(`count failed: ${e.message}`); process.exit(1); });
 }
