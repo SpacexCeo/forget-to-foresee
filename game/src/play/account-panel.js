@@ -4,6 +4,7 @@
 // closes it. The flow itself is net/account-login.js; this file only draws it.
 
 const CSS = `
+.acct, .acct * { box-sizing: border-box; }
 .acct { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e9e6dc; padding: 12px; }
 .acct-card { position: relative; width: min(440px, 100%); max-height: calc(100dvh - 24px); overflow: auto; padding: 20px 18px 16px; border-radius: 18px; background: #0f1716; border: 1px solid rgba(214, 226, 214, .16); box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
 .acct h2 { margin: 0 32px 12px 0; font: 600 22px/1.2 "Cormorant Garamond", Georgia, serif; }
