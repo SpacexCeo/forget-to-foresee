@@ -1486,6 +1486,16 @@ export default {
   'chest.found': "Найден сундук! Открой его в Инвентаре (меню).",
   'menu.source.chest': "сундук",
   // ---- dragon companions (net/companions.js) ----
+  // ---- the Hatchkeeper (pet seller, not open yet) and the locked companion slot ----
+  'hatch.title': "Хранитель гнёзд",
+  'hatch.sign': "Хранитель гнёзд · Компаньоны",
+  'hatch.prompt': "Поговорить с Хранителем гнёзд",
+  'hatch.line1': "Эти малыши не продаются. Их не купить ни за шёлк, ни за корону.",
+  'hatch.line2': "Они пойдут только за тем, кто докажет, что он настоящий. Не эхо, не маска, не сценарий, что бродит по городу ночами.",
+  'hatch.line3': "Покажи мне живую руку за своим ключом, и один из них выберет тебя.",
+  'hatch.status': "Пока недоступно. Хранитель гнёзд ещё прислушивается.",
+  'companion.slot': "Компаньон",
+  'companion.locked': "Компаньоны: закрыто. Хранитель гнёзд решает, кто готов.",
   'companion.heading': "Принадлежат Элизе",
   'companion.owned': "Принадлежит Элизе · агентный NFT · NEAR testnet",
   'companion.account': "Хранится на собственном аккаунте героини {account}",

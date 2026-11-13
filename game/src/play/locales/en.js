@@ -1494,6 +1494,16 @@ const EN = {
   'chest.found': "Chest found! Open it in Inventory (menu).",
   'menu.source.chest': "chest",
   // ---- dragon companions (net/companions.js) ----
+  // ---- the Hatchkeeper (pet seller, not open yet) and the locked companion slot ----
+  'hatch.title': "The Hatchkeeper",
+  'hatch.sign': "Hatchkeeper · Companions",
+  'hatch.prompt': "Talk to the Hatchkeeper",
+  'hatch.line1': "These little ones are not for sale. Silk cannot buy them, and neither can a crown.",
+  'hatch.line2': "They follow only one who proves they are real. Not an echo, not a mask, not a script that walks the town at night.",
+  'hatch.line3': "Show me a living hand behind your key, and one of them will choose you.",
+  'hatch.status': "Not available yet. The Hatchkeeper is still listening.",
+  'companion.slot': "Companion",
+  'companion.locked': "Companions: locked. The Hatchkeeper decides who is ready.",
   'companion.heading': "Owned by Elise",
   'companion.owned': "Owned by Elise · Agentic NFT · NEAR testnet",
   'companion.account': "Held by the heroine's own account {account}",
