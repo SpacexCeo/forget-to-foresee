@@ -27,7 +27,8 @@ export const UI_LEAVES = ['/src/play/narration.js', '/src/net/exchange-deploymen
  * the review page booted client-core first and world-map.js threw a TDZ error on layout.js.
  */
 export const CORE_PLAY = ['/src/play/beacon-plan.js', '/src/play/guests-stage.js', '/src/play/townsfolk.js', '/src/play/townsfolk-plan.js',
-  '/src/play/gait.js', '/src/play/anim-library.js', '/src/play/behaviour.js'];
+  '/src/play/gait.js', '/src/play/anim-library.js', '/src/play/behaviour.js',
+  '/src/net/silk-core.js']; // the one silk number's pure half: the HUD and the portal (scenes) read it; it imports no play or net
 
 /**
  * Name of the manual chunk a module belongs to, or undefined to let Rollup decide.

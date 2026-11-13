@@ -42,3 +42,22 @@ test('client-core modules never read a play/ or net/ import at module level', as
   }
   assert.deepEqual(bad, []);
 });
+
+// Sprint 13.11: scenes/player-hud.js imported net/silk-core.js, which the rules put in `play`; client-core then imported
+// play and the live bundle died with a TDZ error at boot. Rule: no static import from client-core lands in play.
+test('client-core never statically imports a module of the play chunk', async () => {
+  const { readdirSync } = await import('node:fs');
+  const { chunkFor } = await import('../../build/chunks.js');
+  const root = new URL('../../src/', import.meta.url);
+  const bad = [];
+  for (const dir of ['render', 'physics', 'scenes']) {
+    for (const f of readdirSync(new URL(dir + '/', root)).filter((n) => n.endsWith('.js'))) {
+      const src = readFileSync(new URL(`${dir}/${f}`, root), 'utf8');
+      for (const m of src.matchAll(/^import\s+(?:[^'"]+from\s+)?['"](\.\.?\/[^'"]+)['"]/gm)) {
+        const target = new URL(m[1], new URL(`${dir}/${f}`, root)).pathname.replace(/^.*\/src\//, '/repo/game/src/');
+        if (chunkFor(target) === 'play') bad.push(`${dir}/${f} -> ${m[1]}`);
+      }
+    }
+  }
+  assert.deepEqual(bad, []);
+});

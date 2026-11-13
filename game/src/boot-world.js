@@ -211,6 +211,9 @@ const JUDGE_SEED = 'cc161d308faa67539af44205b56b6d4f';
 // The town ledger (game/town-economy.js): town silk, hired townsfolk, XP and the profile; this browser only, never the season.
 const townLedger = createTownLedger({ storage: ctx.storage });
 ctx.townLedger = townLedger; // the Echo terminal's board shows the learning townsfolk agents
+// The ONE silk number (net/silk-balance.js, sprint 6.2): the HUD chip, the tracker, the portal and the windows read it.
+// It reads ftf-town through the relayer, keeps the last good number when offline and records waiting silk on Sync.
+import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ ledger: townLedger, storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); m.installSilkModel(model); model.refresh(true); }).catch((e) => console.warn('[silk]', e));
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
 const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
