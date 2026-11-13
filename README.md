@@ -109,6 +109,13 @@ Controls: **W A S D** / click to walk, **Shift** run, **G** walk to the goal, **
 
 Details: [docs/ai-use.md](docs/ai-use.md).
 
+## Sprint features (13 Nov, behind feature flags)
+
+Quest journal and auto-walk, RPG HUD with skills and a skill tree, the market and trade, chests and loot effects,
+play-money games, the new-player intro and prologue, agents in the tournament. They are merged behind flags in
+`game/public/features.json` and **off on the live page until the owner switches them on**; preview them with
+`?ff=all`. Checks: `bash scripts/verify-sprint.sh`. The 90-second path: [docs/how-to-see.md](docs/how-to-see.md).
+
 ## Real vs mock
 
 | What | Status | Evidence |

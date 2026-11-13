@@ -33,7 +33,7 @@ const owned = [...SPRINT_DIRS.flatMap(files), ...LOCALE_SEAMS.filter((f) => exis
 for (const f of owned) {
   lines(f).forEach((l, i) => {
     // 2. the portal fee and other silk amounts come from config
-    const lf = l.replace(/\b\w*(?:Ms|ms|Sec|_ms)\s*:\s*[\d_]+/g, ''); // durations are not fees
+    const lf = /bps|basis point/i.test(l) ? '' : l.replace(/\b\w*(?:Ms|ms|Sec|_ms)\s*:\s*[\d_]+/g, ''); // durations and basis points are not fees
     if (/\b(10,000|10_000|20000|20_000)\b/.test(lf) && /silk|fee|price|gate|portal|cost/i.test(lf)) flag(f, i, 'a literal fee; read it from expedition-config (portalFee) / {fee}');
     if (/\b200\s*silk\b|\bsilk\s*200\b/i.test(l)) flag(f, i, 'a literal 200 silk; use {fee}');
     // 3. English only outside the ru/uk/zh locale files
