@@ -65,11 +65,13 @@ test('act: a pledge credits the verified income first, then calls pledge_for for
   assert.equal(fresh.status, 409);
 });
 
-test('act: a claim needs no credit; an unregistered guest is told so; contract refusals map to reasons', async () => {
+test('act: a claim needs no credit; an unregistered guest is registered first; contract refusals map to reasons', async () => {
   const c = chain(); const r = await actFor(validateAct(await signed('claim', { token_id: 'deed-0-7' }), NOW), deps(c));
   assert.equal(r.status, 200); assert.deepEqual(c.calls.map((x) => x[0]), ['claim_for']);
-  const none = await actFor(validateAct(await signed('unbond', { token_id: 'deed-0-7' }), NOW), deps(chain({ registered: false })));
-  assert.equal(none.body.error, 'not_registered');
+  // an account not yet in the town is registered in the same request, then the move is made (live bug 13.11)
+  const fresh = chain({ registered: false });
+  const none = await actFor(validateAct(await signed('unbond', { token_id: 'deed-0-7' }), NOW), deps(fresh));
+  assert.equal(none.status, 200); assert.deepEqual(fresh.calls.map((x) => x[0]), ['register', 'unbond_for']); assert.equal(none.body.credit.registered_now, true);
   const locked = await actFor(validateAct(await signed('unbond', { token_id: 'deed-0-7' }), NOW), deps(chain({ fail: 'Smart contract panicked: ERR_LOCKED: the deed is still locked' })));
   assert.equal(locked.status, 409); assert.equal(locked.body.error, 'locked');
   const cap = await actFor(validateAct(await signed('claim', { token_id: 'deed-0-7' }), NOW), deps(chain({ fail: 'ERR_ACT_CAP: the daily limit' })));
