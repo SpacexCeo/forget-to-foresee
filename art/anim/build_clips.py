@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ftfanim import chains, layers, skirt        # noqa: E402
 from ftfanim.bvh import Bvh                      # noqa: E402
 from ftfanim.gltfio import write_clips_glb       # noqa: E402
-from ftfanim.loco import build_action, build_cycle, fingers             # noqa: E402
+from ftfanim.loco import build_action, build_cycle, fingers, replant    # noqa: E402
 from ftfanim.retarget import retarget            # noqa: E402
 from ftfanim.rig import Rig                      # noqa: E402
 
@@ -98,6 +98,8 @@ def main():
         loop = spec['kind'] == 'cycle' or bool(spec.get('loop'))
         if spec.get('ease') and 'idle' in built:      # a one-shot starts from and returns to the idle's first frame
             layers.ease_ends(r['local'], r['pelvis'], built['idle']['local'][0], built['idle']['pelvis'][0], spec['ease'][0], spec['ease'][1])
+            if spec.get('feet') == 'planted' and (style.get('stance') or {}).get('feet') == 'rest':      # the blend lets the feet wander: back onto the stance
+                r['local'], r['pelvis'] = replant(rig, r['local'], r['pelvis'], style)
         built[name] = r
         if only and name not in only:
             continue

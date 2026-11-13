@@ -498,6 +498,23 @@ def fingers(rig, wr_or_local, n, pose='relaxed', cyclic=True, swing_amp=5.0, loc
             loc[bone] = qnorm(qmul(qinv(rig.rest_wr[i_h]), qmul(r, rig.rest_wr[rig.index[bone]])))
 
 
+def replant(rig, local, pel, style=None, fps=30):
+    """A finished standing clip whose ends were blended into another pose (joint angles are blended there, so the feet
+    wander by a centimetre): both legs are solved again onto the model's own stance. Returns (local, pelvis)."""
+    st = dict(DEFAULT_STYLE); st.update(style or {})
+    n = len(local)
+    wr_all, wp_all = rig.fk(local, pel)
+    wr = {b: wr_all[:, i].copy() for i, b in enumerate(rig.names)}
+    hip = 0.5 * (wp_all[:, rig.index['thigh_L']] + wp_all[:, rig.index['thigh_R']])
+    mid_r = 0.5 * (rig.rest_wp[rig.index['foot_L']] + rig.rest_wp[rig.index['foot_R']]); mid_r[1] = 0
+    feet = {s: np.broadcast_to(rig.rest_wp[rig.index[f'foot_{s}']] - mid_r, (n, 3)).copy() for s in 'LR'}
+    for s in 'LR':
+        wr[f'foot_{s}'] = np.broadcast_to(rig.rest_wr[rig.index[f'foot_{s}']], (n, 4)).copy()
+    hip, ank, drop = plant_and_solve(rig, wr, hip, feet, {s: [(0, n)] for s in 'LR'}, 0.0, fps, False, st)
+    local2, world = assemble(rig, wr, n)
+    return local2, pelvis_from_hips(rig, wr['pelvis'], hip)
+
+
 def build_action(rt, f0, f1, style=None, fps=30, loop=0, feet_mode='auto', sigma=1.2, keep_root=True, log=print, pre_layers=None, post_layers=None):
     """An in-place action (idle, gesture, work loop) from source frames [f0, f1]: resampled to `fps`, turned to face
     +Z at its start, feet planted wherever they stand still. `loop` > 0 cross-fades that many frames of the end into

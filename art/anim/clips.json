@@ -1100,7 +1100,7 @@
     "idle_look": {},
     "walk": {
      "use": "walk_town",
-     "speed": 1.0
+     "speed": 0.95
     },
     "talk": {
      "style": {
@@ -1121,7 +1121,13 @@
     "wave": {},
     "nod": {},
     "salute": {},
-    "counter": {}
+    "counter": {
+     "style": {
+      "stance": {
+       "feet": "rest"
+      }
+     }
+    }
    }
   },
   "npc_elder": {
