@@ -21,6 +21,16 @@ test('the quest unlocks at level 5 and runs its steps in order', () => {
   assert.equal(R.questActive(s), false); assert.equal(R.trackerKey(s, 9), null);
 });
 
+test('dev jumps: a quest step, the ride or straight into the fight', () => {
+  const s = R.freshShoal();
+  const a = R.debugJump(s, 'arena'); assert.equal(a.jump, 'arena'); assert.equal(a.save.step, 'defeat'); assert.equal(a.save.blade, true);
+  assert.equal(R.questEvent(a.save, 'boss_down').step, 'return', 'a win in the jumped fight still completes the quest');
+  const r = R.debugJump(s, 'ride'); assert.equal(r.jump, 'ride'); assert.equal(R.questEvent(r.save, 'landed').step, 'defeat');
+  const st = R.debugJump(s, 'reach_stone'); assert.equal(st.jump, null); assert.equal(st.save.step, 'reach_stone');
+  assert.equal(R.debugJump(s, 'find_blade').save.blade, false);
+  assert.equal(R.debugJump(s, 'bogus').save, s, 'unknown: unchanged');
+});
+
 test('a stored save is read safely', () => {
   assert.deepEqual(R.readShoal('nonsense'), R.freshShoal());
   assert.deepEqual(R.readShoal({ v: 2 }), R.freshShoal());

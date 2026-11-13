@@ -241,8 +241,17 @@ export function createGlassShoal(o) {
     },
     skipRide: () => endRide(),
     get arena() { return arena; },
-    /** Dev and tests: jump the quest to a step (?shoal=<step>). */
-    debugStep(step) { if (R.QUEST_STEPS.includes(step)) { save = { ...save, step, blade: step !== 'find_blade' }; persist(); } },
+    /** Dev and tests: jump the quest to a step (?shoal=<step>), or boot straight onto the dragon (?shoal=ride) or
+     *  into the fight (?shoal=arena: the arena owns the heroine as after the ride). */
+    debugStep(step) {
+      const r = R.debugJump(save, step);
+      if (r.save !== save) { save = r.save; persist(); }
+      if (r.jump === 'ride') startRide();
+      else if (r.jump === 'arena' && mode === 'town') {
+        mode = 'arena-wait';
+        loadArena().then((a) => { mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; });
+      }
+    },
     dispose() { group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
   };
 }

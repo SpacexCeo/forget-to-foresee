@@ -50,6 +50,18 @@ export function questEvent(save, ev, level = UNLOCK_LEVEL) {
   }
 }
 
+/**
+ * Pure: a dev jump (`?ff=glassShoal&shoal=<param>`). A quest step jumps the save to it; 'ride' boots straight onto
+ * the dragon and 'arena' straight into the fight (the quest at its matching step, the blade held). Returns
+ * {save, jump}: `jump` is 'ride', 'arena' or null; an unknown param leaves the save unchanged (the same object).
+ */
+export function debugJump(save, param) {
+  if (param === 'arena') return { save: { ...save, step: 'defeat', blade: true }, jump: 'arena' };
+  if (param === 'ride') return { save: { ...save, step: 'ride', blade: true }, jump: 'ride' };
+  if (QUEST_STEPS.includes(param)) return { save: { ...save, step: param, blade: param !== 'find_blade' }, jump: null };
+  return { save, jump: null };
+}
+
 /** Pure: the tracker line's text key for a save (null when nothing to show). */
 export function trackerKey(save, level) {
   if (questOffered(save, level)) return 'shoal.track.offer';
