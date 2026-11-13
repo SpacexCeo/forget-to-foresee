@@ -1,6 +1,9 @@
 // Simplified Chinese strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/zh.js: 贝壳, 丝, 回合, 锚, 卷轴; clans 伊里斯, 盐, 灰, 苔, 琥珀, 霜.
+import quests from './zh-quests.js';
+import hud from './zh-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': '本地演示 · 规则在你的浏览器中运行，与代理 API 共用同一个房间',
   'play.help.title': '操作',
@@ -1145,7 +1148,7 @@ export default {
   "pass.rpc": "NEAR 暂时没有响应。你的申请已保存。",
   "pass.err.invalid": "这看起来不像 NEAR 账户 id。",
   "pass.err.missing": "该账户在 NEAR 上还不存在。请先在钱包中创建，再试一次。",
-  "pass.err.eligible": "请先支付织门（10,000 丝）。目前已赚取 {earned}。",
+  "pass.err.eligible": "请先支付织门（{fee} 丝）。目前已赚取 {earned}。",
   "pass.err.taken": "该钱包已经领取过通行证。",
   "pass.err.signature": "无法验证此浏览器的账户。",
   "pass.err.rate": "尝试次数过多。请等待 {n} 分钟。",
@@ -1602,6 +1605,14 @@ export default {
   'mp.demo': "此处 {n} 名 · {n} 名 AI",
   'mp.demoLine': "这些行人是 AI 镇民：目前没有在线房间。",
   'mp.ai': "AI",
+  'mp.act.level': "{name} 升到了 {n} 级",
+  'mp.act.quest': "{name} 完成了一个任务",
+  'mp.act.chest': "{name} 打开了一个宝箱",
+  'mp.act.chest.rare': "{name} 打开了一个稀有宝箱",
+  'mp.act.chest.legendary': "{name} 打开了一个传说宝箱",
+  'mp.act.boss.crownrift': "{name} 击败了王冠裂隙",
+  'mp.act.boss.shoal': "{name} 在玻璃浅滩击败了空潮",
+  'mp.act.trade': "{name} 在市场买了东西",
   'set.title': "设置",
   'set.close': "关闭",
   'set.tab.graphics': "画面",
@@ -1963,4 +1974,5 @@ export default {
   "quest.log.progress": "进度 {n} / {count}",
   "quest.track.offer": "{giver}有任务给你",
   "quest.track.near": "{m} 米",
+  ...quests, // last: the journal, the tracker and the starter guide (en-quests.js keys) replace older copies above
 };

@@ -75,6 +75,24 @@ export const JOURNAL = F([
 ]);
 export const JOURNAL_BY_ID = F(Object.fromEntries(JOURNAL.map((x) => [x.id, x])));
 
+/**
+ * The locale keys of the journal's player-facing copy, with the English text as the value (pure). Ids stay the keys, so
+ * saved state never holds text: jq.<id>.title, .summary, .desc, .obj.<objective>, .hint.<n>, .rewardTitle, and
+ * jq.marker.<marker> for the map areas. play/locales/en-quests.js spreads this; the other locales translate it.
+ */
+export function journalTextKeys(list = JOURNAL) {
+  const out = {};
+  for (const x of list) {
+    const p = 'jq.' + x.id + '.';
+    out[p + 'title'] = x.title; out[p + 'summary'] = x.summary; out[p + 'desc'] = x.description;
+    for (const o of x.objectives) out[p + 'obj.' + o.id] = o.text;
+    x.hints.forEach((h, n) => { out[p + 'hint.' + n] = h.text; });
+    if (x.rewards.title) out[p + 'rewardTitle'] = x.rewards.title;
+    for (const m of x.markers) out['jq.marker.' + m.id] = m.label;
+  }
+  return out;
+}
+
 /** Schema check (pure): [] when every quest is valid, else a list of problems. */
 export function validateJournal(list = JOURNAL) {
   const out = [], seen = new Set();

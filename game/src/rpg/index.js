@@ -164,6 +164,7 @@ export function mount(ctx) {
   const offWindows = [['skills', () => tree], ['character', () => sheet], ['help', () => cheat]].map(([id, w]) => registerWindow(id, { isOpen: () => !!(w() && w().isOpen), close: () => w() && w().close() }));
   function openWindow(id) {
     if (id !== 'menu' && blocksWindows()) return;                                   // a first-time overlay runs: windows wait
+    try { win.dispatchEvent(new CustomEvent('ftf:window-open', { detail: { id } })); } catch { /* no window */ } // the starter guide counts a window however it opened (key, tray, touch)
     if (id === 'menu') { if (ctx.openMenu) ctx.openMenu(); else { const e = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }); e.__rpg = true; win.dispatchEvent(e); } return; }
     if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); if (!tree.isOpen) claimWindow('skills'); tree.toggle(); open.skills = tree.isOpen; }); return; }
     if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); if (!sheet.isOpen) claimWindow('character'); sheet.toggle(); open.character = sheet.isOpen; }); return; }

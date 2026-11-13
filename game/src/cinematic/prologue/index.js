@@ -58,7 +58,7 @@ export function createPrologue(ctx = {}) {
     const lab = buildLab(); scene.add(lab.root);
     const disk = buildVortexDisk(); disk.mesh.position.set(DEVICE.x - 0.08, DEVICE.y, DEVICE.z); disk.mesh.rotation.y = -Math.PI / 2; scene.add(disk.mesh);
     const tunnel = buildTunnel({ phone }); tunnel.root.position.set(0, -300, 0); scene.add(tunnel.root);
-    const audio = createLabAudio({ reduced });
+    const audio = createLabAudio({ reduced, musicUrl: ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'assets/audio/mus_lab.ogg' });
     let iris = null; irisP.then((i) => { if (i && live) { iris = i; scene.add(i.model); i.model.visible = false; } });
     const timeline = createTimeline({ reduced, onCue: (c) => { audio.cue(c.id); emit('prologue.cue', c.card ? { id: c.id, durMs: c.durMs } : { ...c }); if (typeof ctx.onCue === 'function') ctx.onCue(c); } });
     live = { timeline };

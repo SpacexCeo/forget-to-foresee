@@ -525,7 +525,7 @@ if (townMode.town) {
   townFlow = createTownFlow({
     spots, onExchange, onMirror, folkList: TOWNSFOLK.map((p) => p.key),
     ledger: townLedger, folkNear, folkAt, folkAround, onHireChange: badge, onProfile: () => openProfileFor(quest), onDoor: (id) => { if (!townShops) return false; townShops.enter(id); return true; }, onWheel: () => openProfileFor(null, 'wheel'),
-    quest, npcAt: (key) => (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), signSvg: () => (signFn ? signFn(ctx.i18n) : null),
+    quest, npcAt: (key) => folkAt(key) || (PROGRAMS[key] ? townToWorld(PROGRAMS[key].home) : null), // where the person stands now (a hired baker works the stalls), else their home (owner 14.11: the errand to the baker never matched) signSvg: () => (signFn ? signFn(ctx.i18n) : null),
     town, player, rig, ctx, coarse: mobileDevice, reducedMotion: () => lookdev.reducedMotion, leave: leaveTown,
     islandProgress, islandLog: () => (inTown ? [] : logKeysFromStats(streamer.stats(), (a) => a.priority >= 100)),
     islandReady, // the cover stays until the archipelago's first view is loaded and warmed
@@ -1321,7 +1321,7 @@ function frame() {
   if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {
     mpTried = true;
-    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
+    import('./play/multiplayer.js').then((m) => { const d1 = loadDay1(ctx.storage); mp = m.createMultiplayer({ scene, camera, THREE, t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, me: (d1.guest || {}).account_id || null, ledger: townLedger, chests: chestBag, name: d1.nickname || '', account: (d1.guest && d1.minted && d1.guest.account_id) || null, lv: townLedger && townLedger.level ? Math.min(99, townLedger.level.level) : null, skin: irisAvatar && irisAvatar.hero ? irisAvatar.hero.id : 'iris', phone: mobileDevice, bots: Math.max(0, Math.min(14, Number(params.get('bots')) || 0)) }); mpShown = true; if (window.__ftf) window.__ftf.mp = mp; })
       .catch((e) => console.warn('[mp]', e));
   }
   if (town && town.active) {

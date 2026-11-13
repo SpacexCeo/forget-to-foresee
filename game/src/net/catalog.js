@@ -4,6 +4,8 @@
 // Rules outcomes always come from the engine (kind 'rules'); world actions (kind 'world') only
 // read and write positions, discoveries and drafts and never change a rules outcome.
 
+import { EXPEDITION } from '../game/expedition-config.js';
+
 export const API_VERSION = 'v1';
 export const CATALOG_VERSION = '1.2.0'; // 1.2.0: the Expedition actions (kind 'expedition')
 
@@ -235,7 +237,7 @@ export const ACTIONS = [
     errors: { rules: [], world: [], expedition: ['not_started', 'quest', 'not_active', 'bad_mob', 'lost'] },
   }),
   expedition({
-    type: 'pay_gate', summary: 'Pay the Gate-Loom fee (10,000 silk) from the session\'s town silk; the story moves on (onward), never home.',
+    type: 'pay_gate', summary: `Pay the Gate-Loom fee (${EXPEDITION.PORTAL_FEE_C / 100} silk, the ftf-town gate_price) from the session's town silk; the story moves on (onward), never home.`,
     params: EMPTY, errors: { rules: [], world: [], expedition: ['not_started', 'phase', 'no_silk'] },
   }),
   planned({ type: 'cancel_order', kind: 'exchange', summary: 'Planned: there are no resting orders in Scope A (market orders fill at once), so there is nothing to cancel.' }),

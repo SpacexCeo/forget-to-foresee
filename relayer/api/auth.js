@@ -31,6 +31,7 @@ export function authHandler(opts = {}) {
   let store = opts.store || null; // opened on the first request: the env (FTF_DATA_DIR) is final by then
   const bucket = opts.bucket || createBucket({ capacity: 20, refillMs: 60 * 1000 });
   let linker = opts.linker || null;
+  const log = opts.log || ((line) => console.log(line));
   return async function handler(req, res) {
     const cfg = envConfig(env);
     if (cors(req, res, cfg.origins)) return;
@@ -50,8 +51,10 @@ export function authHandler(opts = {}) {
     }
     try {
       const r = await linker(body);
+      log(`[auth] link ${String(body.resolve ? 'resolve' : body.kind).slice(0, 12)} -> ${r.status} ${r.body.status || r.body.error || ''}`); // public outcome only
       return json(res, r.status, r.body);
     } catch (e) {
+      log(`[auth] link rpc error: ${String((e && e.message) || e).slice(0, 120)}`);
       return json(res, 502, { error: 'rpc', message: String((e && e.message) || e).slice(0, 120) });
     }
   };

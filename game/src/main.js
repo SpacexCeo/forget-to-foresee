@@ -19,7 +19,7 @@ import { logKeysFromStats } from './ui/loading.js';
 import { detectWebGL, appendNoGpuLinks, showSoftwareNote, NO_GL_TEXT } from './ui/webgl-guard.js';
 import { showPremise } from './ui/premise.js';
 import { features } from './features.js';
-import { retryImport, installPreloadGuard } from './sprint/retry-import.js';
+import { retryImport, installPreloadGuard, bootFailure } from './sprint/retry-import.js';
 
 const params = new URLSearchParams(location.search);
 installPreloadGuard(window); // a stale chunk after a deploy: one guarded reload, never the broken-load screen (sprint 8.3)
@@ -161,4 +161,8 @@ ctxP.then(async (ctx) => {
   clearInterval(slowTimer);
   marks.done = Math.round(performance.now() - t0);
   window.__ftfBootMarks = marks;
-}).catch((e) => { console.error('[boot] failed', e); loading.fail('Something went wrong while loading. Reload the page.'); });
+}).catch((e) => {
+  console.error('[boot] failed', e);
+  if (bootFailure(e, { win: window }) === 'reload') return; // a stale chunk after a deploy: one guarded reload first
+  loading.fail('Something went wrong while loading. Reload the page.');
+});
