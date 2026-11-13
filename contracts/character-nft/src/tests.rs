@@ -93,3 +93,64 @@ fn companions_mint_to_a_heroine_token_account() {
     let t = c.nft_mint("dragon-1".into(), acc("elise-1.heroine.ftf-coordinator.testnet"), TokenMetadata { title: Some("Ember".into()), ..Default::default() });
     assert_eq!(t.owner_id, acc("elise-1.heroine.ftf-coordinator.testnet"));
 }
+
+// ---------- transfer edge cases (docs/nft-threat-model.md) ----------
+#[test]
+fn a_transfer_hands_the_token_account_to_the_new_owner() {
+    let mut c = heroine();
+    c.nft_mint("elise-1".into(), acc("ann.testnet"), meta());
+    c.activated.insert("elise-1".into(), true);
+    ctx("ann.testnet", 1);
+    c.nft_transfer(acc("bob.testnet"), "elise-1".into(), None, None);
+    assert_eq!(c.nft_token("elise-1".into()).unwrap().owner_id, acc("bob.testnet"));
+    ctx("bob.testnet", 0);
+    let _ = c.act_as_token("elise-1".into(), acc("companions.ftf-coordinator.testnet"), "nft_transfer".into(), Base64VecU8(vec![]), U128(1), 30);
+}
+
+#[test]
+#[should_panic(expected = "ERR_NOT_TOKEN_OWNER")]
+fn the_previous_owner_loses_the_token_account() {
+    let mut c = heroine();
+    c.nft_mint("elise-1".into(), acc("ann.testnet"), meta());
+    c.activated.insert("elise-1".into(), true);
+    ctx("ann.testnet", 1);
+    c.nft_transfer(acc("bob.testnet"), "elise-1".into(), None, None);
+    ctx("ann.testnet", 0);
+    let _ = c.act_as_token("elise-1".into(), acc("x.testnet"), "m".into(), Base64VecU8(vec![]), U128(0), 30);
+}
+
+#[test]
+#[should_panic(expected = "Approval extension is disabled")]
+fn a_stranger_cannot_transfer_a_heroine() {
+    let mut c = heroine();
+    c.nft_mint("elise-1".into(), acc("ann.testnet"), meta());
+    ctx("mallory.testnet", 1);
+    c.nft_transfer(acc("mallory.testnet"), "elise-1".into(), None, None);
+}
+
+#[test]
+#[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+fn a_transfer_needs_one_yocto() {
+    let mut c = heroine();
+    c.nft_mint("elise-1".into(), acc("ann.testnet"), meta());
+    ctx("ann.testnet", 0);
+    c.nft_transfer(acc("bob.testnet"), "elise-1".into(), None, None);
+}
+
+#[test]
+#[should_panic(expected = "token_id must be unique")]
+fn a_token_id_is_minted_once() {
+    let mut c = heroine();
+    ctx("guests.ftf-coordinator.testnet", 0);
+    c.nft_mint("elise-1".into(), acc("ann.testnet"), meta());
+    c.nft_mint("elise-1".into(), acc("mallory.testnet"), meta());
+}
+
+#[test]
+#[should_panic(expected = "Current and next owner must differ")]
+fn a_transfer_to_oneself_fails() {
+    let mut c = heroine();
+    c.nft_mint("elise-1".into(), acc("ann.testnet"), meta());
+    ctx("ann.testnet", 1);
+    c.nft_transfer(acc("ann.testnet"), "elise-1".into(), None, None);
+}

@@ -39,6 +39,13 @@
     <span class="label">Rates are measured past fee flow, variable, can be zero</span>
   </div>
   <div id="state" class="state">Reading the town…</div>
+  <section id="count">
+    <h2>Independent count (public indexer)</h2>
+    <p class="note" id="countstate">Counting today's transactions from the public indexer…</p>
+    <div class="grid" id="counttiles"></div>
+    <table><thead><tr><th>Contract : method</th><th>Successful</th><th>Failed</th></tr></thead><tbody id="countmethods"></tbody></table>
+    <p class="note" id="countnote"></p>
+  </section>
   <section id="body" hidden>
     <div class="grid" id="tiles"></div>
     <h2>The town works</h2>
@@ -217,6 +224,57 @@
       }) : [Object.assign(el('tr'), { innerHTML: '<td colspan="7" class="note">The traders’ feed is not running yet.</td>' })]));
     } catch { /* the relayer is optional: the counters above come from the chain */ }
   }
+  // Independent count: every transaction of the game's contracts since 00:00 UTC, walked page by page from the public
+  // NearBlocks indexer (the same source as tools/count/count.mjs). Read only; a failed page shows "unavailable".
+  const INDEXER = q.get('indexer') || 'https://api-testnet.nearblocks.io/v3';
+  const COUNTED = [TOWN, 'items.' + TOWN, 'gate.' + TOWN, ...['heroine', 'companions', 'guests', 'agents', 'ledger', 'chests', 'skins'].map((c) => c + '.ftf-coordinator.testnet')];
+  let counting = false;
+  async function indexerCount() {
+    if (counting) return; counting = true;
+    const now = Date.now(), dayStart = Math.floor(now / 86400e3) * 86400e3, hourAgo = now - 3600e3;
+    const seen = new Map(); let pages = 0;
+    try {
+      for (const acc of COUNTED) {
+        let next = null;
+        for (;;) {
+          const u = new URLSearchParams({ limit: '100', before_ts: String(BigInt(now) * 1000000n) }); if (next) u.set('next', next);
+          let j = null;
+          for (let i = 0; i < 4 && !j; i++) { try { const r = await fetch(`${INDEXER}/accounts/${acc}/txns?${u}`); if (r.ok) j = await r.json(); else await new Promise((ok) => setTimeout(ok, 1500 * (i + 1))); } catch { /* retry */ } }
+          if (!j) throw new Error('indexer');
+          pages++; let older = false;
+          for (const t of j.data || []) { if (Number(BigInt(t.block_timestamp) / 1000000n) < dayStart) older = true; else seen.set(t.transaction_hash, t); }
+          if (pages % 10 === 0) $('countstate').textContent = `Counting today's transactions from the public indexer… ${seen.size.toLocaleString('en')} so far`;
+          next = j.meta && j.meta.next_page; if (older || !next || !(j.data || []).length) break;
+        }
+      }
+    } catch {
+      $('countstate').textContent = 'Independent count unavailable: the public indexer did not answer. No numbers are shown until it does.';
+      $('counttiles').replaceChildren(); $('countmethods').replaceChildren(); counting = false; return;
+    }
+    let ok = 0, failed = 0, trades = 0, hour = 0; const signers = new Set(), methods = {}, fails = [];
+    for (const t of seen.values()) {
+      const good = !!(t.outcomes && t.outcomes.status); good ? ok++ : failed++; signers.add(t.signer_account_id);
+      const m = (t.actions || []).map((a) => a.method || a.action).join('+') || '?';
+      const k = `${t.receiver_account_id} : ${m}`; (methods[k] ||= [0, 0])[good ? 0 : 1]++;
+      if (good && t.receiver_account_id === TOWN && m === 'trade') trades++;
+      if (Number(BigInt(t.block_timestamp) / 1000000n) >= hourAgo) hour++;
+      if (!good && fails.length < 5) fails.push(t.transaction_hash);
+    }
+    const link = (text, href) => el('a', text, { href, target: '_blank', rel: 'noopener' });
+    const at = new Date(now).toISOString().slice(11, 16);
+    $('countstate').textContent = `Today (UTC), 00:00 to ${at}: counted from ${pages} indexer pages.`;
+    $('counttiles').replaceChildren(tile('successful transactions today', ok.toLocaleString('en')), tile('market trades today', trades.toLocaleString('en')),
+      tile('failed today', failed.toLocaleString('en')), tile('transactions in the last 60 min', hour.toLocaleString('en')), tile('distinct signing accounts today', String(signers.size)));
+    $('countmethods').replaceChildren(...Object.entries(methods).sort((a, b) => b[1][0] + b[1][1] - a[1][0] - a[1][1]).map(([k, v]) => {
+      const tr = el('tr'); const td = el('td'); const acc = k.split(' : ')[0]; td.append(link(acc, `${EXPLORER}/address/${acc}`), ' : ' + k.split(' : ')[1]);
+      tr.append(td, el('td', v[0].toLocaleString('en')), el('td', v[1].toLocaleString('en'))); return tr;
+    }));
+    $('countnote').replaceChildren(`Source: ${INDEXER}/accounts/<contract>/txns for ${COUNTED.length} contracts, de-duplicated by hash. Reproduce with `,
+      el('code', 'node tools/count/count.mjs --day ' + new Date(now).toISOString().slice(0, 10)), '. ',
+      ...(fails.length ? ['Failed: ', ...fails.flatMap((h) => [link(h.slice(0, 8) + '…', `${EXPLORER}/txns/${h}`), ' '])] : []));
+    counting = false;
+  }
+  indexerCount(); setInterval(indexerCount, 10 * 60e3);
   refresh(); setInterval(refresh, 60000); // never faster than the 60 s cache
 })();
 </script>

@@ -36,3 +36,38 @@ fn owner_replaces_media_on_minted_tokens() {
     assert_eq!(c.nft_token("sheriffchenko-1".into()).unwrap().metadata.unwrap().media.as_deref(), Some("https://example.org/sheriffchenko.png"));
     assert_eq!(c.skin_info().media.as_deref(), Some("https://example.org/sheriffchenko.png"));
 }
+
+// ---------- transfer edge cases (docs/nft-threat-model.md) ----------
+fn ctx1(who: &str) { testing_env!(VMContextBuilder::new().predecessor_account_id(who.parse().unwrap()).current_account_id("skins.x.testnet".parse().unwrap()).attached_deposit(NearToken::from_yoctonear(1)).account_balance(NearToken::from_near(50)).build()); }
+
+#[test]
+fn a_skin_moves_by_nft_transfer_and_the_one_mint_rule_stays_with_the_winner() {
+    let mut c = ready(100); ctx("skins.x.testnet");
+    c.mint_skin("ann.testnet".parse().unwrap(), "seed1".into());
+    ctx1("ann.testnet");
+    c.nft_transfer("bob.testnet".parse().unwrap(), "sheriffchenko-1".into(), None, None);
+    assert_eq!(c.nft_token("sheriffchenko-1".into()).unwrap().owner_id.as_str(), "bob.testnet");
+    // skin_of records who won the mint, not who holds it now: the winner still cannot be minted a second one
+    assert_eq!(c.skin_of("ann.testnet".parse().unwrap()), Some("sheriffchenko-1".into()));
+    assert_eq!(c.skin_info().minted, 1);
+}
+
+#[test]
+#[should_panic(expected = "ERR_OWNED")]
+fn giving_the_skin_away_does_not_unlock_a_second_mint() {
+    let mut c = ready(100); ctx("skins.x.testnet");
+    c.mint_skin("ann.testnet".parse().unwrap(), "seed1".into());
+    ctx1("ann.testnet");
+    c.nft_transfer("bob.testnet".parse().unwrap(), "sheriffchenko-1".into(), None, None);
+    ctx("skins.x.testnet");
+    c.mint_skin("ann.testnet".parse().unwrap(), "seed2".into());
+}
+
+#[test]
+#[should_panic(expected = "Approval extension is disabled")]
+fn a_stranger_cannot_take_a_skin() {
+    let mut c = ready(100); ctx("skins.x.testnet");
+    c.mint_skin("ann.testnet".parse().unwrap(), "seed1".into());
+    ctx1("mallory.testnet");
+    c.nft_transfer("mallory.testnet".parse().unwrap(), "sheriffchenko-1".into(), None, None);
+}

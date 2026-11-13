@@ -584,6 +584,8 @@ export default {
   "day1.mint.minted": "已在 NEAR 测试网铸造 ✓",
   "day1.mint.failed": "未铸造预览——点击重试",
   "day1.mint.unavailable": "未铸造预览——此版本未接入免费铸造",
+  "day1.mint.fund_empty": "免费基金暂时用完了——以本地访客身份继续游戏，进度保存在此浏览器中。",
+  "day1.mint.daily_cap": "今天的免费铸造已用完——以本地访客身份继续游戏，明天再铸造。",
   "day1.mint.retry": "重试",
   "day1.mint.view": "查看代币",
   "day1.mint.account": "你的测试网账户",

@@ -130,7 +130,7 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
       const l = mint.links; if (l) { const a = el(doc, 'a', null, t('day1.mint.view')); a.href = l.token; a.target = '_blank'; a.rel = 'noopener noreferrer'; status.append(a); }
     } else if (ph === 'failed') {
       const r = el(doc, 'button', 'd1-btn d1-ghost', t('day1.mint.failed')); r.type = 'button'; r.addEventListener('click', () => mint.retry()); status.append(r);
-    } else if (ph === 'unavailable') status.textContent = t('day1.mint.unavailable');
+    } else if (ph === 'unavailable') status.textContent = t(mint.reason === 'fund_empty' || mint.reason === 'daily_cap' ? 'day1.mint.' + mint.reason : 'day1.mint.unavailable');
     else status.textContent = t('day1.mint.' + (ph === 'idle' ? 'keygen' : ph));
   };
   const off = mint.subscribe(paint); paint();
