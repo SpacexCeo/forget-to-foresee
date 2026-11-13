@@ -243,10 +243,12 @@ export const inTempest = (me, at, extra = 0, U = ULT) => Math.hypot(me[0] - at[0
  * ring or line glows before the hit lands (readable: never under 0.8 s). `checkpoint` = the HP a death resets it to.
  */
 export const BOSS = f({
-  hp: 3000,
-  armor: 0.35,            // damage taken while the crest is closed
-  exposedMult: 2.0,       // damage taken while the weak point is open
-  exposedTime: 3.2,       // seconds the crest stays open after she dodges a blow
+  // tuned on the scripted run (tests/client/shoal-sim.mjs): an average Elise wins in about 3 minutes standing
+  // still, more with the walking and aiming of a real fight; a weak one dies a few times but gets there
+  hp: 10000,
+  armor: 0.2,             // damage taken while the crest is closed
+  exposedMult: 1.5,       // damage taken while the weak point is open
+  exposedTime: 2.0,       // seconds the crest stays open after she dodges a blow
   contact: 6.5,           // the body's radius on the plain
   phases: f([
     f({ id: 1, above: 1.0, rotation: f(['slam', 'slam', 'sweep']), telegraph: 1.4, rest: 1.6, adds: 0 }),
@@ -255,12 +257,12 @@ export const BOSS = f({
   ]),
   attacks: f({
     // `reach` = how high above the mirror the blow still lands (metres): flying over a sweep works, over a slam not
-    slam: f({ damage: 24, radius: 6.5, active: 0.25, reach: 9 }),          // a ring under her: a geyser column
-    sweep: f({ damage: 22, radius: 17, inner: 7, active: 0.35, reach: 2.6 }), // a wide ring around the body: step in, roll or rise
-    lunge: f({ damage: 38, width: 5, length: 34, active: 0.3, reach: 4 }),  // a straight charge line at her
+    slam: f({ damage: 20, radius: 6.5, active: 0.25, reach: 9 }),          // a ring under her: a geyser column
+    sweep: f({ damage: 18, radius: 17, inner: 7, active: 0.35, reach: 2.6 }), // a wide ring around the body: step in, roll or rise
+    lunge: f({ damage: 32, width: 5, length: 34, active: 0.3, reach: 4 }),  // a straight charge line at her
     adds: f({ damage: 0, active: 0.1 }),
   }),
-  add: f({ hp: 120, damage: 10, speed: 3.6, reach: 1.6, cooldown: 1.6, jump: 2.2 }), // jump: the highest they can bite
+  add: f({ hp: 120, damage: 8, speed: 3.6, reach: 1.6, cooldown: 1.6, jump: 2.2 }), // jump: the highest they can bite
 });
 
 /** Pure: the phase index (0, 1, 2) for an HP fraction. */

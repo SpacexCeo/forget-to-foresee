@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import * as R from '../../src/game/shoal-rules.js';
 import { shoalSkillsFor, shoalExtrasFor, SHOAL_SKILLS, comboStep } from '../../src/rpg/shoal-skills.js';
 import { SHOAL_TEXT } from '../../src/locales/shoal.js';
+import { simulateElise } from './shoal-sim.mjs';
 
 test('the quest unlocks at level 5 and runs its steps in order', () => {
   let s = R.freshShoal();
@@ -54,14 +55,14 @@ test('the ride stays inside its corridor and lasts 40 to 60 seconds', () => {
 test('boss phases follow HP and set their checkpoints', () => {
   assert.equal(R.phaseFor(1), 0); assert.equal(R.phaseFor(0.67), 0); assert.equal(R.phaseFor(0.66), 1);
   assert.equal(R.phaseFor(0.4), 1); assert.equal(R.phaseFor(0.33), 2); assert.equal(R.phaseFor(0), 2);
-  assert.equal(R.checkpointHp(0), R.BOSS.hp); assert.equal(R.checkpointHp(1), 1980); assert.equal(R.checkpointHp(2), 990);
-  assert.equal(R.freshBoss(1).hp, 1980);
+  assert.equal(R.checkpointHp(0), R.BOSS.hp); assert.equal(R.checkpointHp(1), Math.round(0.66 * R.BOSS.hp)); assert.equal(R.checkpointHp(2), Math.round(0.33 * R.BOSS.hp));
+  assert.equal(R.freshBoss(1).hp, R.checkpointHp(1));
 });
 
 test('the closed crest shrugs off blows; a dodge opens the weak point', () => {
   const b = R.freshBoss();
-  const closed = R.hitBoss(b, 100); assert.equal(closed.dealt, 35);
-  const open = R.hitBoss(R.exposeBoss(b), 100); assert.equal(open.dealt, 200);
+  const closed = R.hitBoss(b, 100); assert.equal(closed.dealt, Math.round(100 * R.BOSS.armor)); assert.ok(R.BOSS.armor < 1);
+  const open = R.hitBoss(R.exposeBoss(b), 100); assert.equal(open.dealt, Math.round(100 * R.BOSS.exposedMult)); assert.ok(R.BOSS.exposedMult > 1);
   assert.equal(R.hitBoss(b, 0).dealt, 0);
   // the weak point closes again with time
   let x = R.exposeBoss(b);
@@ -70,8 +71,8 @@ test('the closed crest shrugs off blows; a dodge opens the weak point', () => {
 });
 
 test('crossing a phase line rears the boss up and resets its rotation; death is final', () => {
-  let b = { ...R.freshBoss(), hp: 2000, idx: 3, exposed: 1 };
-  const r = R.hitBoss(b, 100); // 200 exposed -> 1800 (< 1980)
+  let b = { ...R.freshBoss(), hp: R.checkpointHp(1) + 20, idx: 3, exposed: 1 };
+  const r = R.hitBoss(b, 100); // exposed: well past the phase line
   assert.equal(r.phaseUp, true); assert.equal(r.boss.phase, 1); assert.equal(r.boss.idx, 0); assert.equal(r.boss.state, 'rest');
   b = { ...R.freshBoss(2), hp: 10 };
   const d = R.hitBoss(b, 100); assert.equal(d.boss.dead, true); assert.equal(d.phaseUp, false);
@@ -125,8 +126,8 @@ test('the hero: dodge spends stamina and grants invulnerable frames; skills cost
 });
 
 test('death returns her to the landing with the boss at its phase checkpoint', () => {
-  const r = R.respawnAfterDeath({ ...R.freshBoss(1), hp: 1200, adds: [{ id: 1 }] });
-  assert.equal(r.boss.hp, 1980); assert.equal(r.boss.phase, 1); assert.equal(r.boss.adds.length, 0);
+  const r = R.respawnAfterDeath({ ...R.freshBoss(1), hp: R.checkpointHp(2) + 50, adds: [{ id: 1 }] });
+  assert.equal(r.boss.hp, R.checkpointHp(1)); assert.equal(r.boss.phase, 1); assert.equal(r.boss.adds.length, 0);
   assert.deepEqual(r.at, [...R.ARENA.landing]); assert.equal(r.hero.hp, R.HERO.hp);
 });
 
@@ -226,6 +227,18 @@ test('touch aim: the nearest add in range, else the boss', () => {
   assert.deepEqual(R.autoAim([0, 20], []), [...R.ARENA.boss]);
   assert.deepEqual(R.autoAim([0, 20], [{ x: 30, z: 20 }, { x: 3, z: 22 }]), [3, 22]);
   assert.deepEqual(R.autoAim([0, 20], [{ x: 30, z: 20 }]), [...R.ARENA.boss], 'too far: the boss');
+});
+
+test('balance: a scripted average Elise beats the Hollow Tide in about 2.5 to 5 minutes', () => {
+  const runs = []; for (let s = 1; s <= 12; s++) runs.push(simulateElise(s));
+  assert.ok(runs.every((r) => r.won), 'every run wins');
+  const t = runs.map((r) => r.seconds).sort((a, b) => a - b), median = t[6];
+  // the scripted player stands still and never misses a pickup: a real fight adds walking, aiming and flying
+  assert.ok(median >= 150 && median <= 300, `median ${median} s`);
+  assert.ok(runs.reduce((a, r) => a + r.ults, 0) / runs.length >= 2, 'the Tempest comes up a few times a fight');
+  // a strong player is faster but still needs a while
+  const good = []; for (let s = 1; s <= 8; s++) good.push(simulateElise(s, { aim: 0.8, dodge: 0.7, evade: 0.2 }).seconds);
+  assert.ok(good.sort((a, b) => a - b)[4] >= 75, 'not a melt');
 });
 
 test('every Shoal text exists in all five locales', () => {
