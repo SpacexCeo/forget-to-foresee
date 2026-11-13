@@ -18,7 +18,7 @@ Mistakes afterwards go through https://nearhackathon.com/request-changes.
 | `nearAddress` | `TODO(owner)` | **mainnet** account for the payout (`something.near` or 64 hex). Created by the owner in any NEAR wallet; never invented |
 | `projectUrl` | `https://github.com/SpacexCeo/forget-to-foresee` | public |
 | `demoUrl` | `TODO(owner)` | the X post URL once published (`docs/submission/x-post.md`) |
-| `idea` | text below | 20–2000 characters; the draft is 1,987 characters, re-count after edits |
+| `idea` | text below | 20–2000 characters; the draft is 1,719 characters, re-count after edits |
 | `consent` | `true` | only after the owner has read: "I agree that the organizers may use these details to review our submission and contact us about this hackathon." |
 | `requestId` | generate once | `node -e 'console.log(crypto.randomUUID())'`; keep it for retries after 503 |
 
@@ -26,24 +26,26 @@ Do **not** send a `website` field (spam trap: any value rejects the submission) 
 
 ## `idea` (project description, 20–2000 characters)
 
-> Forget to Foresee is a 3D browser strategy game about the price of knowing the future, whose prophecies are fixed in advance and can be checked by anyone.
+> Forget to Foresee is a 3D browser game set in a hill town whose economy runs live on NEAR testnet.
 >
-> Problem: in most AI and on-chain games the AI quietly decides the ending and the chain is decoration.
+> Live economy: 20 trader accounts, each with its own key (trader-01 to trader-20.ftf-town.testnet), trade silk on the town contract ftf-town.testnet all day, over 18,000 trades a day; nobody presses a button. Prices follow stock and recent demand by rules in one file, and every trade carries a readable reason ("why this price"). Live stats: https://159-195-130-113.sslip.io/api/market/stats. The traders are scripted: about once an hour a model on NEAR AI Cloud sets each clan's bounded strategy, with an attestation id, and the rules engine makes every trade. Town items are NEP-245 multi-tokens (items.ftf-town.testnet). In the game, the Town Ledger window shows today's count, the latest trades with their reasons and explorer links, every trader's account and the clans' strategy calls; the Economy Lab plays a week of the market in a minute.
 >
-> Product: above a floating archipelago, alien Shells speak in round signs with four slots (place, action, power, delay). Six clans (you guide Iris; five are computer-run agents with silk, memory and temper) read the signs, stake silk on where a Gift will land, trade words, keep or break pacts, and must assemble one message before a crisis on trial 13 and a final vote. To see a sign early, Iris forgets a memory forever, and it goes to auction as a shard: she pays for prophecy with her own biography. The season runs locally in the browser; AI agents can play full seasons through our open HTTP API (run locally).
+> Sign-in: play as a guest at once, with no wallet popups (the browser makes a free testnet guest account), or sign in with a NEAR, EVM or Solana wallet or a passkey.
 >
-> How NEAR fits in: the 17-trial season is generated before the first move and committed to a SHA-256 Merkle root. Our Rust contract season-commit is live on NEAR testnet (ftf-seasons.testnet): the judge season's root and crisis key are committed, and all 15 events were revealed and proof-checked on-chain (the contract recomputes each leaf). This proves the events were fixed before play and match the root; the rules run in the browser, so silk and outcomes are not on-chain.
+> Story: Iris, a doctor-linguist from another planet, year 2048, came through the glass. She pays for prophecy with her own memories. Each season's prophecies are sealed before the first move: committed to a Merkle root on ftf-seasons.testnet and revealed with proofs anyone can check. A forgotten memory becomes a memory shard, a NEP-171 NFT (ftf-shards.testnet) bound to its sealed season.
 >
-> NFTs: memory-shard (NEP-171, live as ftf-shards.testnet) turns a forgotten memory into an NFT whose metadata is its biography (which memory, the trial it was forgotten, the buyer) plus the Merkle leaf of the sign it opened, binding it to the sealed season. Its ink-ring art is drawn on-chain, byte-identical to the game's. The recorded season's 3 shards are minted by our coordinator and read in-game; holding one unlocks an in-game perk. Live minting and a player-owned agent NFT are future work. No token, no payments.
->
-> MIT; 1,000+ tests; one link opens the whole game.
+> Honest scope: testnet only, free to play, nothing has money value; the trades are scripted NPC activity, not player volume. MIT, open source, CI on every push.
 >
 > Play: https://spacexceo.github.io/forget-to-foresee/
 
-Character count of the quoted text (without the `> ` prefixes, newlines included): 1,993. Updated 09.11, 11.11 (tests, holder perk),
-(readiness audit): exact scope (the season runs locally; testnet records and shard NFTs for the recorded season; live
-minting and a player-owned agent NFT are future work), what the commitment proves and what it does not, test counts
-from `npm test` on 09.11. Re-count before sending:
+Character count of the quoted text (without the `> ` prefixes, newlines included): 1,719. Rewritten 13.11 (jury review):
+leads with the live economy (20 trader accounts with their own keys on `ftf-town.testnet`, the readable price reasons,
+the Town Ledger window, the Economy Lab week), then sign-in, then the sealed seasons and memory shards. Every claim
+matches the README "Live on NEAR testnet right now" block and `docs/ai-use.md` (scripted traders; the clans' strategy
+layer asks NEAR AI Cloud about once an hour; the rules engine makes every trade). "Over 18,000 trades a day": the
+relayer reported 18,568 trades on 13 Nov by about 19:10 UTC; check `today` in `/api/market/stats` on the day of
+sending. NEP-245: the item contract is deployed; do not claim mints until `items.ftf-town.testnet` shows supply.
+Re-count before sending:
 `node -e 'console.log(require("fs").readFileSync(0,"utf8").trim().length)' < idea.txt`.
 
 ## Tracks: which ids and why
