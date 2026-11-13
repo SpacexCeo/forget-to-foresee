@@ -41,6 +41,10 @@ if [ $QUICK = 0 ]; then
   sm=$(cd game && timeout 400 node scripts/smoke-built.mjs "http://127.0.0.1:4179/?day1=0&quest=0" 300 2>&1); smok=$?
   if [ $smok -ne 0 ]; then pkill -f "vite preview --port 4179"; fail smoke "$(tail -2 <<<"$sm" | tr '\n' ' ')"; fi
   row smoke ok "$(tail -1 <<<"$sm")"
+  # the same with every sprint flag on: a TDZ between play and sprint chunks only shows when those chunks load
+  sm=$(cd game && timeout 400 node scripts/smoke-built.mjs "http://127.0.0.1:4179/?day1=0&quest=0&ff=all" 300 2>&1); smok=$?
+  if [ $smok -ne 0 ]; then pkill -f "vite preview --port 4179"; fail smoke-ff "$(tail -2 <<<"$sm" | tr '\n' ' ')"; fi
+  row smoke-ff ok "$(tail -1 <<<"$sm")"
   # 6 E2E (tools/e2e/sprint/run.mjs once it exists)
   if [ -f tools/e2e/sprint/run.mjs ]; then
     e=$(timeout 1500 node tools/e2e/sprint/run.mjs "http://127.0.0.1:4179/" 2>&1); eok=$?
