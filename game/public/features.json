@@ -22,6 +22,7 @@
     "newPlayerIntro": false,
     "labPrologue": false,
     "agentTournament": false,
-    "firstSeenTips": false
+    "firstSeenTips": false,
+    "accountLogin": false
   }
 }

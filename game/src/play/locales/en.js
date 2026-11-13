@@ -7,6 +7,7 @@ import market from './en-market.js';
 import npe from './en-npe.js';
 import tips from './en-tips.js';
 import video from './en-video.js';
+import account from './en-account.js';
 const EN = {
   // ---- badge, help ----
   'play.badge': 'Local demo · the rules run in your browser through the same room as the agent API',
@@ -1905,4 +1906,4 @@ const EN = {
   "quest.track.near": "{m} m",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
-export default Object.assign(EN, quests, hud, market, npe, tips, video);
+export default Object.assign(EN, quests, hud, market, npe, tips, video, account);

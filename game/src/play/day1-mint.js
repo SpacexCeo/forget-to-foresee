@@ -33,6 +33,7 @@ export function createDay1Mint({ storage = null, deployment = DAY1_DEPLOYMENT, r
   let running = null;
 
   async function run(nickname) {
+    if (rec.minted && rec.guest && rec.guest.account_id) { set('minted'); return api; } // restored by a login, or done before
     if (!available()) { set('unavailable', 'not_configured'); return api; }
     try {
       set('keygen');

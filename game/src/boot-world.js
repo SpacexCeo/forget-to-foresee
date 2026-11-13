@@ -219,7 +219,7 @@ import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ 
 // The player market (market/index.js; docs/market.md): loaded on the first 'ftf:market-open' {tab?}; the HUD's key and button send it.
 { let market = null; const openMarket = (e) => { if (market) return; window.removeEventListener('ftf:market-open', openMarket); import('./market/index.js').then((m) => { market = m.mount({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger }); market.open((e && e.detail && e.detail.tab) || 'buy'); }).catch((err) => console.warn('[market]', err)); }; window.addEventListener('ftf:market-open', openMarket); }
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, account: featureFlags.on('accountLogin') ? { open: () => openAccount(), login: d1.login ? `${d1.login.kind.toUpperCase()} ${String(d1.login.address).slice(0, 10)}…` : null } : null, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -679,6 +679,12 @@ function startSeason() {
 
 // ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
 const day1Mint = createDay1Mint({ storage: ctx.storage });
+// Sign in / create account (flag accountLogin, docs/account-login.md): panel, flow and wallets load on the first tap.
+const openAccount = (nickname = null) => import('./play/account-panel.js').then((m) => m.openAccountPanel({
+  t: (k, a) => ctx.i18n.t(k, a), nickname,
+  makeLogin: () => Promise.all([import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
+    .then(([a, n, d, nd]) => a.createAccountLogin({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), storage: ctx.storage })),
+}).done).catch((e) => { console.warn('[account]', e); return { status: 'guest' }; });
 const day1On = () => {
   const q = params.get('day1');
   if (q === '0') return false;
@@ -785,7 +791,7 @@ async function startDay1() {
   for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
   const m = await import('./play/day1.js');
-  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
+  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null });
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
