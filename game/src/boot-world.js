@@ -1205,13 +1205,18 @@ function frame() {
   // the demo player (play/demo-player.js) and the player card (play/player-card.js): loaded lazily once Iris is in town
   if (mpOn && !demoTried && !judge && params.get('demo') !== '0') {
     demoTried = true;
-    // the shared path graph (play/town-paths.js, A1) when the build has it: an empty glob until it lands, no import error
-    const pathMods = import.meta.glob('./play/town-paths.js');
-    const pathsP = pathMods['./play/town-paths.js'] ? pathMods['./play/town-paths.js']().then((pm) => (pm.townPaths ? pm.townPaths() : null)).catch(() => null) : Promise.resolve(null);
-    Promise.all([import('./play/demo-player.js'), pathsP]).then(([m, paths]) => { demoPlayer = m.createDemoPlayer({ scene, t: (k, a) => ctx.i18n.t(k, a), origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => (town && town.groundAt ? town.groundAt(x, z, y) : null), phone: mobileDevice, paths }); if (window.__ftf) window.__ftf.demoPlayer = demoPlayer; }).catch((e) => console.warn('[demo player]', e));
+    import('./play/demo-player.js').then((m) => { demoPlayer = m.createDemoPlayer({ scene, t: (k, a) => ctx.i18n.t(k, a), origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => (town && town.groundAt ? town.groundAt(x, z, y) : null), phone: mobileDevice }); if (window.__ftf) window.__ftf.demoPlayer = demoPlayer; }).catch((e) => console.warn('[demo player]', e));
     mountPlayerPicking();
   }
-  if (demoPlayer) { if (mpOn) demoPlayer.update(dt, player.pos, lookdev.reducedMotion); else if (demoShown) demoPlayer.hide(); demoShown = mpOn; }
+  if (demoPlayer) {
+    if (mpOn) {
+      const others = [player.pos]; const tf = town && town.townsfolk;
+      if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) others.push([p.plan.x + TOWN_ORIGIN_W[0], p.plan.y + TOWN_ORIGIN_W[1], p.plan.z + TOWN_ORIGIN_W[2]]);
+      if (mp && mp.presence) for (const r of mp.presence.positions()) if (r.p) others.push([r.p[0] + TOWN_ORIGIN_W[0], r.p[1] + TOWN_ORIGIN_W[1], r.p[2] + TOWN_ORIGIN_W[2]]);
+      demoPlayer.update(dt, player.pos, lookdev.reducedMotion, others);
+    } else if (demoShown) demoPlayer.hide();
+    demoShown = mpOn;
+  }
   if (mp && mpOn !== mpShown) { mpShown = mpOn; mp.setVisible(mpOn); }
   if (mp && mpOn) mp.update(dt, { pos: player.pos, heading: player.heading, speed: Math.hypot(player.vel[0], player.vel[1]), grounded: player.grounded !== false, reducedMotion: lookdev.reducedMotion });
   else if (!mpTried && mpOn && !judge && params.get('mp') !== '0') {

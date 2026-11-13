@@ -49,3 +49,17 @@ test('the shared town path graph (town-paths.js format) drives the walker the sa
   const w = createDemoWalker({ graph: g, rand });
   for (let i = 0; i < 6000; i++) { w.step(0.05); assert.ok(onSomeEdge([w.x, w.y, w.z], g) < 0.01); }
 });
+
+test('it never walks through anyone: someone ahead within reach stops it; blocked too long it turns back', () => {
+  const nodes = [[0, 0, 0], [10, 0, 0]], g = { nodes, edges: [[1], [0]] };
+  const w = createDemoWalker({ graph: g, start: 0, rand: () => 0.99 });
+  w.step(0.5); assert.ok(w.x > 0); // walking toward x = 10
+  const someone = [w.x + 1.0, 0, 0];
+  const x0 = w.x; for (let i = 0; i < 20; i++) w.step(0.1, [someone]);
+  assert.equal(w.x, x0, 'held its ground'); assert.equal(w.yielding, true);
+  for (let i = 0; i < 60; i++) w.step(0.1, [someone]); // past the give-up time it walks back the way it came
+  for (let i = 0; i < 10; i++) w.step(0.1, [someone]);
+  assert.ok(w.x < x0, 'turned back instead of pushing through');
+  const behind = createDemoWalker({ graph: g, start: 0, rand: () => 0.99 }); behind.step(0.5);
+  const bx = behind.x; behind.step(0.5, [[bx - 0.5, 0, 0]]); assert.ok(behind.x > bx, 'someone behind does not stop it');
+});
