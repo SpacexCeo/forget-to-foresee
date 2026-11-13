@@ -5,7 +5,7 @@
 // neighbouring route point, now and then stop to idle or look around. Town-local metres.
 import { TOWN_DATA } from '../scenes/town-data.js';
 
-export const DEMO_WALK = Object.freeze({ speed: 1.25, linkM: 1.6, stopChance: 0.35, stopS: [3, 8], clearPortalM: 4, clearDoorM: 2.2 });
+export const DEMO_WALK = Object.freeze({ speed: 1.25, linkM: 1.6, stopChance: 0.35, stopS: [3, 8], clearPortalM: 4, clearDoorM: 2.2, personalM: 1.2, giveUpS: 6 });
 const PORTAL = [4.4, 0, 24.8]; // scenes/town-portal.js PORTAL_TOWN (copied: this module must not import scenes three.js code)
 
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -54,10 +54,11 @@ export function fromPathGraph(g) {
 export function createDemoWalker({ graph = buildWalkGraph(), rand = Math.random, start = null } = {}) {
   const { nodes, edges } = graph;
   const usable = nodes.map((_, i) => i).filter((i) => edges[i].length);
-  let at = start != null ? start : usable[Math.floor(rand() * usable.length)] ?? 0, to = null, s = 0, len = 0, wait = 0, prev = -1;
-  const w = { x: nodes[at][0], y: nodes[at][1], z: nodes[at][2], yaw: 0, speed: 0, state: 'idle', at: () => at, to: () => to,
-    step(dt) {
-      w.speed = 0;
+  let at = start != null ? start : usable[Math.floor(rand() * usable.length)] ?? 0, to = null, s = 0, len = 0, wait = 0, prev = -1, blocked = 0;
+  const w = { x: nodes[at][0], y: nodes[at][1], z: nodes[at][2], yaw: 0, speed: 0, state: 'idle', yielding: false, at: () => at, to: () => to,
+    /** One step; `others` = positions [x, y, z] (town-local) of everyone else: it never walks through anyone. */
+    step(dt, others = []) {
+      w.speed = 0; w.yielding = false;
       if (to == null) {
         if (wait > 0) { wait -= dt; if (w.state === 'look') w.yaw += Math.sin(wait * 1.3) * dt * 0.9; return w; }
         const nb = edges[at].filter((n) => n !== prev);
@@ -67,6 +68,15 @@ export function createDemoWalker({ graph = buildWalkGraph(), rand = Math.random,
         w.state = 'walk';
       }
       const a = nodes[at], b = nodes[to];
+      // someone within arm's reach ahead: stop and wait for them (never through anyone); blocked too long: turn back
+      const dx = (b[0] - a[0]) / len, dz = (b[2] - a[2]) / len;
+      const ahead = others.some((o) => o && Math.abs(o[1] - w.y) < 1.5 && Math.hypot(o[0] - w.x, o[2] - w.z) < DEMO_WALK.personalM && ((o[0] - w.x) * dx + (o[2] - w.z) * dz) > 0);
+      if (ahead) {
+        w.yielding = true; w.state = 'idle'; blocked += dt;
+        if (blocked > DEMO_WALK.giveUpS) { const back = at; at = to; to = back; s = len - s; blocked = 0; } // walk back the way it came
+        return w;
+      }
+      blocked = 0; w.state = 'walk';
       const ds = Math.min(DEMO_WALK.speed * dt, len - s); s += ds; w.speed = dt > 0 ? ds / dt : 0;
       const k = s / len;
       w.x = a[0] + (b[0] - a[0]) * k; w.y = a[1] + (b[1] - a[1]) * k; w.z = a[2] + (b[2] - a[2]) * k;
