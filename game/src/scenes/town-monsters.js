@@ -10,7 +10,7 @@ import { fetchGltfUrl } from '../render/assets.js';
 import { TOWN_ORIGIN } from './town-layout.js';
 import { onField } from './town-outside.js';
 import { MONSTERS, castHits, spawnPoint } from './monster-rules.js';
-import { rollDrop, chestTier } from '../game/chests.js';
+import { rollDrop, chestTier, lootFxOf, LOOT } from '../game/chests.js';
 import { cue } from '../audio/town-audio.js';
 export { MONSTERS, castHits, spawnPoint };
 
@@ -92,14 +92,17 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
     const tier = chestTier(rand());
     const ch = { tier, at: [at[0], at[1], at[2]], root: new THREE.Group(), t: 0, picked: 0, ready: false };
     ch.root.position.set(at[0], at[1], at[2]); ch.root.rotation.y = rand() * Math.PI * 2; group.add(ch.root);
-    const color = tier === 'legendary' ? 0xffb43c : tier === 'rare' ? 0x2fd0bd : 0xf0d9a0;
+    // the rarity's look (game/chests.js LOOT_FX, sprint 6.5): beam height and colour, ground ring and its pulse
+    const fx = lootFxOf(tier), color = fx.color; ch.fx = fx;
     // normal blending: an additive beam vanishes against the bright sky over the cloud sea
-    ch.beam = new THREE.Sprite(spriteMat(beamTex, color, 0.85, false)); ch.beam.scale.set(1.1, 4.2, 1); ch.beam.position.y = 2.1; ch.root.add(ch.beam);
+    ch.beam = new THREE.Sprite(spriteMat(beamTex, color, 0.85, false)); ch.beam.scale.set(Math.max(0.6, fx.radius * 5.5), Math.max(0.01, fx.beam), 1); ch.beam.position.y = fx.beam / 2; ch.root.add(ch.beam);
     // an additive core inside the beam and a soft halo at its foot: readable at fight distance over the bright haze
-    ch.core = new THREE.Sprite(spriteMat(beamTex, 0xffffff, 0.9, true)); ch.core.scale.set(0.45, 5.2, 1); ch.core.position.y = 2.6; ch.root.add(ch.core);
-    ch.halo = new THREE.Sprite(spriteMat(glowTex, color, 0.8, true)); ch.halo.scale.set(2.6, 2.6, 1); ch.halo.position.y = 0.6; ch.root.add(ch.halo);
-    const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ch.root.add(ring); ch.ring = ring;
+    ch.core = new THREE.Sprite(spriteMat(beamTex, 0xffffff, 0.9, true)); ch.core.scale.set(Math.max(0.2, fx.radius * 2.2), Math.max(0.01, fx.beam * 1.1), 1); ch.core.position.y = fx.beam * 0.55; ch.root.add(ch.core);
+    ch.beam.visible = ch.core.visible = fx.beam > 0; // a common drop: no beam, only the sparkle
+    const halo = fx.beam > 0 ? 2.6 : fx.sparkle * 2;
+    ch.halo = new THREE.Sprite(spriteMat(glowTex, color, 0.8, true)); ch.halo.scale.set(halo, halo, 1); ch.halo.position.y = fx.beam > 0 ? 0.6 : 0.5; ch.root.add(ch.halo);
+    const ring = new THREE.Mesh(new THREE.PlaneGeometry(2 * Math.max(fx.ring, 0.01), 2 * Math.max(fx.ring, 0.01)), new THREE.MeshBasicMaterial({ map: ringTex, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ring.visible = fx.ring > 0; ch.root.add(ring); ch.ring = ring;
     chestModel(tier).then((g) => {
       if (!g || ch.picked) return;
       const m = cloneSkinned(g.scene); m.scale.setScalar(1.4); m.traverse((o) => { if (o.isMesh) o.castShadow = true; }); // a little larger than life: read from the town camera
@@ -215,9 +218,15 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
         if (f.t > 0.9) for (const q of f.parts) { group.remove(q.s); q.s.material.dispose(); }
       }
       state.puffs = state.puffs.filter((f) => f.t <= 0.9);
+      // at most LOOT.maxBeams beams (the newest), none beyond LOOT.cullM
+      const lit = new Set(state.chests.filter((c) => !c.picked).slice(-LOOT.maxBeams));
       for (const ch of state.chests) {
         ch.t += dt;
-        const pulse = reducedMotion ? 0.7 : 0.6 + 0.25 * Math.sin(ch.t * 2.4);
+        const fx = ch.fx || lootFxOf(ch.tier);
+        const far = Math.hypot(ch.at[0] - player.pos[0], ch.at[2] - player.pos[2]) > LOOT.cullM;
+        const beamOn = fx.beam > 0 && lit.has(ch) && !far;
+        ch.beam.visible = ch.core.visible = beamOn || !!ch.picked;
+        const pulse = reducedMotion || !fx.pulse ? 0.7 : 0.6 + 0.25 * Math.sin((ch.t * 2 * Math.PI) / fx.pulse);
         ch.beam.material.opacity = ch.picked ? Math.max(0, 0.75 - ch.picked * 2) : pulse;
         ch.core.material.opacity = ch.picked ? 0 : Math.min(1, pulse + 0.2); ch.halo.material.opacity = ch.picked ? 0 : pulse;
         if (ch.picked) {
@@ -226,7 +235,8 @@ export function createTownMonsters({ scene, town, player, bag, onPickup = () => 
           ch.root.position.y = ch.at[1] + k * 0.9; ch.root.scale.setScalar(Math.max(0.01, 1 - k));
           continue;
         }
-        if (Math.hypot(ch.at[0] - player.pos[0], ch.at[2] - player.pos[2]) <= MONSTERS.pickup && Math.abs(ch.at[1] - player.pos[1]) < 2) {
+        // walking onto it picks it up; an uncollected chest goes to the bag by itself after LOOT.autoBagS, so nothing is lost
+        if ((Math.hypot(ch.at[0] - player.pos[0], ch.at[2] - player.pos[2]) <= MONSTERS.pickup && Math.abs(ch.at[1] - player.pos[1]) < 2) || ch.t >= LOOT.autoBagS) {
           ch.picked = 0.0001;
           const c = bag.add({ tier: ch.tier, source: 'monster' });
           cue('gift_chime');

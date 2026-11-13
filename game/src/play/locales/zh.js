@@ -1433,7 +1433,7 @@ export default {
   'chest.opening.common': "正在打开风化宝箱",
   'chest.opening.rare': "正在打开潮木宝箱",
   'chest.opening.legendary': "正在打开珍珠母宝箱",
-  'chest.asking': "正在向宝箱服务请求本季卡组的下一个槽位…",
+  'chest.asking': "正在 NEAR 上开启，大约需要 10 秒。",
   'chest.err.off': "宝箱服务目前无法访问。",
   'chest.err.rate': "同时打开的宝箱太多：请一分钟后再试。",
   'chest.err.sold_out': "第 1 季的宝箱已全部开完：10,000 张卡组已用尽。",

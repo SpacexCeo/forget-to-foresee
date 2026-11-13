@@ -1441,7 +1441,7 @@ const EN = {
   'chest.opening.common': "Opening a weathered chest",
   'chest.opening.rare': "Opening a tidewood chest",
   'chest.opening.legendary': "Opening a nacre chest",
-  'chest.asking': "Asking the chest service for the next slot of the season deck…",
+  'chest.asking': "Opening on NEAR. This takes about 10 seconds.",
   'chest.err.off': "The chest service is not reachable right now.",
   'chest.err.rate': "Too many chests at once: try again in a minute.",
   'chest.err.sold_out': "Season 1 chests are all opened: the deck of 10,000 is used up.",

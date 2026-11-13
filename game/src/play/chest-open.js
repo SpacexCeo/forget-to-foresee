@@ -40,8 +40,19 @@ const CSS = `
 .co-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .co-btn { min-height: 44px; padding: 10px 22px; border-radius: 10px; border: 0; cursor: pointer; font: 700 15px/1 system-ui; color: #14201c; background: linear-gradient(135deg, #e6c27e, #c99a48); }
 .co-btn.co-ghost { color: #e9e6dc; background: transparent; border: 1px solid rgba(214, 226, 214, .22); }
-@media (prefers-reduced-motion: reduce) { .co-card { transition: opacity .2s linear; transform: none; } }
+.co-chest { position: relative; width: 120px; height: 96px; margin-top: 18px; }
+.co-chest .co-base { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; border-radius: 6px 6px 10px 10px; background: linear-gradient(180deg, #6b4a26, #3d2912); box-shadow: inset 0 0 0 3px #c99a48, 0 10px 24px rgba(0,0,0,.5); }
+.co-chest .co-lid { position: absolute; left: -4px; right: -4px; bottom: 56px; height: 34px; border-radius: 40px 40px 6px 6px; background: linear-gradient(180deg, #7d5730, #4a3218); box-shadow: inset 0 0 0 3px #c99a48; transform-origin: 50% 100%; transition: transform .4s cubic-bezier(.2,.9,.3,1.2); }
+.co-chest .co-lock { position: absolute; left: 50%; bottom: 40px; width: 16px; height: 18px; margin-left: -8px; border-radius: 3px; background: #e6c27e; }
+.co-chest .co-beam { position: absolute; left: 50%; bottom: 60px; width: 60px; height: 0; margin-left: -30px; background: linear-gradient(0deg, var(--g, #fff), transparent); opacity: 0; filter: blur(2px); transition: height .5s ease-out, opacity .5s ease-out; }
+.co-chest.co-shake { animation: co-shake .0833s linear infinite alternate; }
+@keyframes co-shake { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
+.co-chest.co-opened .co-lid { transform: rotateX(70deg) translateY(-6px); }
+.co-chest.co-opened .co-beam { height: 220px; opacity: .85; }
+.co-chest.co-fade { opacity: 0; transition: opacity .4s ease; }
+@media (prefers-reduced-motion: reduce) { .co-card { transition: opacity .2s linear; transform: none; } .co-chest { display: none; } }
 html[data-motion="reduce"] .co-card { transition: opacity .2s linear; transform: none; }
+html[data-motion="reduce"] .co-chest { display: none; }
 `;
 
 /** What one outcome shows: {label, icon|null, glyph|null, rarity, frame}. Pure. */
@@ -89,10 +100,14 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
   const box = el('div', 'co-box');
   const title = el('div', 'co-title', t('chest.opening.' + chest.tier));
   const reel = el('div', 'co-reel'); const strip = el('div', 'co-strip'); reel.append(strip, el('div', 'co-mark'));
+  // the sealed chest (sprint 6.5): it shakes while NEAR answers, then the lid swings open and a beam of the outcome's
+  // rarity colour bursts out before the reel lands (instant cut under reduced motion: the chest is not shown)
+  const chestEl = el('div', 'co-chest'); const beamEl = el('div', 'co-beam');
+  chestEl.append(beamEl, el('div', 'co-base'), el('div', 'co-lid'), el('div', 'co-lock')); chestEl.setAttribute('aria-hidden', 'true');
   const stage = el('div'); stage.style.position = 'relative';
   const info = el('div'); info.setAttribute('aria-live', 'polite');
   const btns = el('div', 'co-btns');
-  box.append(title, reel, stage, info, btns);
+  box.append(title, chestEl, reel, stage, info, btns);
   root.append(box);
   root.addEventListener('pointerdown', (e) => e.stopPropagation());
   root.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape' && done) close(); });
@@ -119,11 +134,12 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
     const tick = () => { if (!spinning) return; x -= 9; if (-x > (REEL.tiles - 12) * REEL.tile) x = -6 * REEL.tile; strip.style.transform = `translateX(${x}px)`; raf = win.requestAnimationFrame ? win.requestAnimationFrame(tick) : 0; };
     if (!reduced) tick(); else reel.hidden = true;
     info.replaceChildren(el('p', 'co-note', t('chest.asking')));
+    if (!reduced) chestEl.classList.add('co-shake'); else chestEl.hidden = true;
 
     return client.open({ guest, chestId: chest.id, source: chest.source }).then(async (r) => {
       if (!r.ok) {
         spinning = false; if (raf && win.cancelAnimationFrame) win.cancelAnimationFrame(raf);
-        reel.hidden = true;
+        reel.hidden = true; chestEl.classList.remove('co-shake'); // no answer, no opening: the chest stays shut
         outcomeResult = { ok: false, error: r.error };
         cue('ui_error');
         info.replaceChildren(el('p', null, t('chest.err.' + (ERR_KEYS.includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
@@ -148,6 +164,14 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
         let at = 0; for (let k = 0; k < 22; k++) { at += 50 + k * k * 8; if (at < REEL.seconds * 1000) setTimeout(() => cue('bid_tick'), at); }
         setTimeout(res, REEL.seconds * 1000 + 120);
       });
+      // the lid opens and the beam bursts (0.6-1.5 s), then the reel lands
+      if (!reduced) {
+        const v0 = outcomeView(op.outcome, { t, items: full, base });
+        beamEl.style.setProperty('--g', GLOW[v0.frame === 'mythic' ? 'mythic' : v0.rarity] || GLOW.common);
+        chestEl.classList.remove('co-shake'); chestEl.classList.add('co-opened'); cue('gift_chime');
+        await new Promise((res) => setTimeout(res, 900));
+        chestEl.classList.add('co-fade'); setTimeout(() => { chestEl.hidden = true; }, 400);
+      }
       await land();
       // the card
       const v = outcomeView(op.outcome, { t, items: full, base });

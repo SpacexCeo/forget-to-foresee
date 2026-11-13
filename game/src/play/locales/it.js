@@ -1434,7 +1434,7 @@ export default {
   'chest.opening.common': "Apertura di uno scrigno consunto",
   'chest.opening.rare': "Apertura di uno scrigno di legno di marea",
   'chest.opening.legendary': "Apertura di uno scrigno di madreperla",
-  'chest.asking': "Chiediamo al servizio il prossimo posto del mazzo della stagione…",
+  'chest.asking': "Apertura su NEAR. Ci vogliono circa 10 secondi.",
   'chest.err.off': "Il servizio degli scrigni non è raggiungibile ora.",
   'chest.err.rate': "Troppi scrigni insieme: riprova tra un minuto.",
   'chest.err.sold_out': "Gli scrigni della stagione 1 sono tutti aperti: il mazzo da 10.000 è esaurito.",

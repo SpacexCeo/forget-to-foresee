@@ -79,6 +79,9 @@ test('the reveal says why when the service is off, and the chest stays sealed', 
   let settled = 0;
   const r = openChestReveal({ doc, t, chest: { id: 'c', tier: 'common', source: 'monster' }, client: createChestClient({ load: () => Promise.resolve({ openChest: async () => ({ ok: false, reason: 'network' }) }) }), guest: 'g', items: [], onSettled: () => settled++ });
   await new Promise((res) => setTimeout(res, 20));
+  // the sealed chest beat (sprint 6.5): no answer, no opening: the chest stops shaking and never opens its lid
+  const chestEl = doc.body.querySelector('.co-chest');
+  assert.ok(chestEl); assert.doesNotMatch(chestEl.className, /co-opened|co-shake/);
   r.close();
   const out = await r.result;
   assert.deepEqual(out, { ok: false, error: 'network' }); assert.equal(settled, 0);
@@ -106,4 +109,13 @@ test('loot NFTs are read from the chests contract for the guest account; no gues
   assert.equal(r.state, 'loaded');
   assert.deepEqual(r.items[0], { tokenId: 's1-41', title: 'Loot NFT #41', item: 'part_gauge', href: 'https://testnet.nearblocks.io/nft-token/chests.ftf-coordinator.testnet/s1-41' });
   assert.equal((await readLootNfts({ owner: 'x', rpcUrls: ['https://rpc.example'], fetch: async () => { throw new Error('down'); } })).state, 'offline');
+});
+
+test('loot on the ground: the rarity palette, beam heights and limits of the sprint spec (6.5)', async () => {
+  const { LOOT_FX, LOOT, lootFxOf } = await import('../../src/game/chests.js');
+  assert.deepEqual(Object.fromEntries(Object.entries(LOOT_FX).map(([k, v]) => [k, [v.beam, v.color.toString(16), v.ring, v.pulse]])),
+    { common: [0, 'b8b8b8', 0, 0], uncommon: [3, '5ccf5c', 0.9, 0], rare: [5, '4aa3ff', 1, 1.6], epic: [7, 'b06cff', 1.1, 1.4], legendary: [10, 'ff9a2e', 1.3, 1.2], mythic: [12, 'ff5c8a', 1.5, 1] });
+  assert.equal(LOOT_FX.common.sparkle, 0.5);
+  assert.deepEqual([LOOT.maxBeams, LOOT.cullM, LOOT.autoBagS], [12, 40, 30]);
+  assert.equal(lootFxOf('nonsense'), LOOT_FX.common);
 });
