@@ -332,6 +332,9 @@ if (townMode.town) {
         depart: (o) => (townFlow ? townFlow.depart(o) : Promise.resolve(false)), search: location.search,
         // the Gate-Loom on chain (rev 4): ftf-town gate_price / balance_of / gate_paid_of through the relayer, which credits the
         // guest's verified log and calls pay_gate_for on the guest's signed request (relayer/api/town/gate.js)
+        // the journal's auto-walk drives the town's own route steering (W A S D clears it); markers are town-local
+        walkDriver: { setRoute: (pts) => townFlow && townFlow.walkTo(pts), cancel: () => townFlow && townFlow.cancelRoute(), active: () => !!(townFlow && townFlow.routeActive), ended: () => townFlow && townFlow.routeEnd, pos: () => player.pos },
+        toWorld: townToWorld, level: () => townLedger.level,
         gate: { read: () => { const g = al.guestFrom(ctx.storage); return g ? gm.readGate({ account: g.accountId }) : Promise.resolve({ ok: false, reason: 'need_guest' }); }, pay: () => gm.payGate({ storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }) } });
       const w = townToWorld(pm.PORTAL_TOWN);
       townPortal = pm.createTownPortal({ scene, position: w, facing: Math.PI / 2, i18n: ctx.i18n, read: () => townQuests.portalFacts(), onPay: () => townQuests.payGate(), reducedMotion: lookdev.reducedMotion, light: !(mobileDevice || lookdev.tier === 'low') });
