@@ -80,6 +80,13 @@ await page.keyboard.press('Digit1'); await page.waitForTimeout(150);
 const sc = await page.evaluate(() => document.querySelector('.rpg-slot[data-slot="1"]').dataset.state);
 ok('E2 slot 1 strikes (the fight\'s own cooldown shows)', sc === 'cooldown' || sc === 'ready', sc);
 writeFileSync(`${out}/hud_field.png`, await page.screenshot());
+// E6: rebind Strike to G (stored like the settings screen does), press G in the field: she strikes; the key persists
+await page.waitForTimeout(1200);
+await page.evaluate(async () => { const k = await import('/src/ui/keybinds.js'); k.setBindings({ ...k.bindings(), strike: 'KeyG' }, localStorage); });
+await page.keyboard.press('KeyG'); await page.waitForTimeout(120);
+const g = await page.evaluate(() => ({ cd: window.__ftf.town.mobs.actions.strikeCd, stored: JSON.parse(localStorage.getItem('ftf.keys.v1') || '{}').strike }));
+await page.evaluate(async () => { const k = await import('/src/ui/keybinds.js'); k.setBindings(k.defaultBindings(), localStorage); });
+ok('E6 Strike rebound to G: G strikes, the binding is stored', g.cd > 0 && g.stored === 'KeyG', g);
 // E7: low HP: the vignette and the bar pulse
 await page.evaluate(() => { window.__ftf.town.mobs.iris.hp = 1; }); await page.waitForTimeout(300);
 ok('E7 low HP vignette on', await page.evaluate(() => document.querySelector('.rpg-vignette').dataset.on === '1'));
