@@ -61,3 +61,31 @@ test('server: origin, per-IP cap, frame cap, join + chat, health', async () => {
     b.end();
   } finally { server.close(); }
 });
+
+test('server: PRESENCE_DATA_DIR keeps the room history across a restart; a newcomer reads it over the socket', async () => {
+  const { mkdtempSync, rmSync, existsSync } = await import('node:fs'); const { tmpdir } = await import('node:os'); const { join } = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'ftf-presence-srv-'));
+  const run = async (fn) => {
+    const { server, history } = createPresence({ env: { PRESENCE_DATA_DIR: dir }, log: () => {} });
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    try { await fn(server.address().port); } finally { history.save(); server.close(); server.closeAllConnections(); }
+  };
+  try {
+    await run(async (port) => {
+      const a = await connect(port); a.send(JSON.stringify({ t: 'hello', name: 'Ann' }));
+      assert.deepEqual(await a.next('hist'), { t: 'hist', chat: [], acts: [] });
+      a.send(JSON.stringify({ t: 'chat', text: 'still here tomorrow' })); await a.next('chat');
+      a.send(JSON.stringify({ t: 'act', k: 'level', v: 3 })); assert.equal((await a.next('act')).k, 'level');
+      a.end();
+    });
+    assert.ok(existsSync(join(dir, 'chat-history.json')));
+    await run(async (port) => {
+      const b = await connect(port); b.send(JSON.stringify({ t: 'hello', name: 'Bob' }));
+      const h = await b.next('hist');
+      assert.deepEqual(h.chat.map((m) => [m.name, m.text]), [['ann', 'still here tomorrow']]); assert.deepEqual(h.acts.map((m) => [m.name, m.k, m.v]), [['ann', 'level', 3]]);
+      const health = await (await fetch(`http://127.0.0.1:${port}/health`)).json();
+      assert.equal(health.historyFile, true); assert.equal(health.historyLines, 2);
+      b.end();
+    });
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

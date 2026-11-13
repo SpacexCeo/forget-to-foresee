@@ -2,23 +2,31 @@
 // chat. Positions travel in town coordinates (world minus TOWN_ORIGIN). boot-world.js creates it once Iris has
 // entered the town, never on the judge link; when the service is not reachable the town stays single-player and the
 // chip says so.
+// The action feed (owner 13.11: "I want to see my friend's actions"): a level gained, a quest handed in, a chest opened,
+// a boss beaten and a market trade are told to the room as compact whitelisted events (never text); the chat panel
+// lists them as grey lines and marks the ones of friends (play/friends.js).
 import { createPresence, createDemoPresence, presenceUrl, animFor } from '../net/presence.js';
 import { createRemotePlayers } from './remote-players.js';
 import { createChatPanel } from '../ui/chat-panel.js';
 import { createChatBubbles, chatFeed, SELF } from './chat-bubbles.js';
 import { TOWN_ORIGIN } from '../scenes/town-layout.js';
+import { createFriends } from './friends.js';
+import { watchFeats } from './feats.js';
 
 
 /**
- * @param {{scene: THREE.Scene, t: Function, storage?: Storage, name?: string, skin?: string, phone?: boolean, url?: string, bots?: number}} o
+ * @param {{scene: THREE.Scene, t: Function, storage?: Storage, name?: string, skin?: string, phone?: boolean, url?: string, bots?: number,
+ *          me?: string|null, ledger?: object, chests?: object}} o me: the account the friends list is saved for; ledger, chests: watched for the action feed
  * @returns {object|null} null when no presence URL is configured and no ?bots=N demo was asked for
  */
-export function createMultiplayer({ scene, camera = null, THREE = null, t, storage = null, name = '', skin = 'iris', account = null, lv = null, phone = false, url = presenceUrl(), bots = 0 }) {
+export function createMultiplayer({ scene, camera = null, THREE = null, t, storage = null, name = '', skin = 'iris', account = null, lv = null, phone = false, url = presenceUrl(), bots = 0, me = account, ledger = null, chests = null }) {
   if (!url && !bots) return null; // no service deployed: the town is single-player, as before
   let panel = null;
   // ?bots=N with no service: demo walkers simulated here (never sent anywhere); with a service the real room wins
   const presence = url ? createPresence({ url, name, skin, account, lv, storage, onChange: () => panel && panel.render() }) : createDemoPresence({ count: bots, onChange: () => panel && panel.render() });
-  panel = createChatPanel({ t, presence, phone });
+  const friends = storage ? createFriends({ storage, me }) : null;
+  panel = createChatPanel({ t, presence, phone, isFriend: (m) => !!friends && friends.has(m) });
+  const unwatch = url ? watchFeats({ act: (k, v) => presence.act(k, v), ledger, chests }) : () => {};
   const remote = createRemotePlayers({ scene, phone, aiLabel: t('mp.ai') });
   // chat lines over the speakers' heads (owner 13.11); only when the game passes its camera
   const bubbles = camera && THREE ? createChatBubbles({ camera, THREE }) : null, feed = chatFeed(), heads = new Map();
@@ -46,6 +54,6 @@ export function createMultiplayer({ scene, camera = null, THREE = null, t, stora
     /** The remote player under a ray (THREE.Raycaster), or null: {id, name, skin, account, lv, ai}. */
     pick: (raycaster) => remote.pick(raycaster),
     setVisible(on) { panel.el.hidden = !on; if (!on) { remote.update(0, [], from); if (bubbles) bubbles.clear(); } },
-    stop() { presence.stop(); remote.clear(); panel.destroy(); if (bubbles) bubbles.clear(); },
+    stop() { unwatch(); presence.stop(); remote.clear(); panel.destroy(); if (bubbles) bubbles.clear(); },
   };
 }

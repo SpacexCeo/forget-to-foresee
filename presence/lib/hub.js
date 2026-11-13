@@ -4,13 +4,19 @@
 // Protocol (JSON text frames, each <= 1 KB):
 //   client -> server  {t:'hello', v:1, name, skin, account?, lv?}  (account: the player's NEAR account, so others can read its
 //                     public NFTs and silk on chain; lv: the level the player shows, 0-99, cosmetic)   {t:'s', p:[x,y,z], h, a}   {t:'chat', text}   {t:'report', id}   {t:'ping'}
-//   server -> client  {t:'welcome', id, room, max, players:[...]}   {t:'join', player}   {t:'leave', id}
-//                     {t:'snap', s:[[id,x,y,z,h,a],...]} (10 Hz, only players that moved)   {t:'chat', id, name, text, at}
-//                     {t:'sys', key, ...}   {t:'pong'}
+//                     {t:'act', k, v?}  (a notable action: k is one of history.js ACT_KINDS, v its one checked value; never free text)
+//   server -> client  {t:'welcome', id, name, room, max, players:[...]}   {t:'join', player}   {t:'leave', id}
+//                     {t:'hist', chat:[{name, account?, text, at}], acts:[{name, account?, k, v?, at}]} (right after welcome: the room's
+//                     last lines and actions, oldest first)
+//                     {t:'snap', s:[[id,x,y,z,h,a],...]} (10 Hz, only players that moved)   {t:'chat', id, name, account?, text, at}
+//                     {t:'act', id, name, account?, k, v?, at}   {t:'sys', key, ...}   {t:'pong'}
+import { createHistory, ACT_KINDS } from './history.js';
+
 export const LIMITS = Object.freeze({
   roomSize: 15, maxRooms: 20, tickHz: 10,
   maxMsgPerSec: 30, maxStatePerSec: 20, chatEveryMs: 2000, chatMax: 140,
   spamStrikes: 4, spamWindowMs: 30000, muteMs: 120000, reportsToMute: 3,
+  actEveryMs: 3000, actPerMin: 10,
   idleMs: 60000, maxBuffered: 64 * 1024,
   bounds: { x: [-160, 160], y: [-40, 140], z: [-160, 160] },
   maxSpeed: 8, maxFall: 35, snapEveryMs: 3000,
@@ -54,6 +60,7 @@ export function validate(m) {
       return { t: 's', p: m.p, h: ((m.h % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI), a: ANIMS.includes(m.a) ? m.a : 'idle' };
     }
     case 'chat': return typeof m.text === 'string' && m.text.length <= 400 ? { t: 'chat', text: m.text } : null;
+    case 'act': return typeof m.k === 'string' && Object.hasOwn(ACT_KINDS, m.k) && ACT_KINDS[m.k](m.v ?? null) ? { t: 'act', k: m.k, v: m.v ?? null } : null;
     case 'report': return Number.isInteger(m.id) ? { t: 'report', id: m.id } : null;
     case 'ping': return { t: 'ping' };
     default: return null;
@@ -63,10 +70,10 @@ export function validate(m) {
 /** A per-second counter with a cap. */
 function meter(cap, now) { let sec = -1, n = 0; return () => { const s = Math.floor(now() / 1000); if (s !== sec) { sec = s; n = 0; } return ++n <= cap; }; }
 
-export function createHub({ now = () => Date.now(), log = () => {}, limits = LIMITS } = {}) {
+export function createHub({ now = () => Date.now(), log = () => {}, limits = LIMITS, history = createHistory({ now }) } = {}) {
   const rooms = new Map(); // room number -> Map(id -> player)
   let nextId = 1, guestN = 1;
-  const stats = { joined: 0, kicked: 0, chat: 0, chatDropped: 0 };
+  const stats = { joined: 0, kicked: 0, chat: 0, chatDropped: 0, acts: 0, actsDropped: 0 };
 
   const send = (pl, obj) => {
     if (pl.client.buffered() > limits.maxBuffered) { kick(pl, 'slow'); return; }
@@ -104,7 +111,7 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
   /** A new connection. Returns {onText(text), onClose()}. */
   function connect(client) {
     const pl = { client, id: 0, room: null, name: '', skin: 'iris', p: [0, 0, 0], h: 0, a: 'idle', at: now(), moved: false, gone: false,
-      msg: meter(limits.maxMsgPerSec, now), state: meter(limits.maxStatePerSec, now), lastChat: 0, strikes: [], mutedUntil: 0, reports: new Set(), lastSnap: 0, seen: now() };
+      msg: meter(limits.maxMsgPerSec, now), state: meter(limits.maxStatePerSec, now), lastChat: 0, lastAct: 0, acts: [], strikes: [], mutedUntil: 0, reports: new Set(), lastSnap: 0, seen: now() };
     function onText(text) {
       if (pl.gone) return;
       pl.seen = now();
@@ -118,7 +125,8 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
         if (room == null) { client.send(JSON.stringify({ t: 'sys', key: 'full' })); client.close(1013); pl.gone = true; return; }
         pl.id = nextId++; pl.room = room; pl.skin = m.skin; pl.account = m.account; pl.lv = m.lv; pl.name = uniqueName(room, cleanName(m.name, guestN++));
         const r = rooms.get(room);
-        send(pl, { t: 'welcome', id: pl.id, room, max: limits.roomSize, players: [...r.values()].map(view) });
+        send(pl, { t: 'welcome', id: pl.id, name: pl.name, room, max: limits.roomSize, players: [...r.values()].map(view) });
+        if (!pl.gone) send(pl, { t: 'hist', ...history.get(room) });
         r.set(pl.id, pl);
         broadcast(room, { t: 'join', player: view(pl) }, pl);
         stats.joined++;
@@ -127,6 +135,7 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
       if (m.t === 'hello') return; // already joined
       if (m.t === 's') { if (!pl.state()) return; return move(pl, m); }
       if (m.t === 'chat') return chat(pl, m.text);
+      if (m.t === 'act') return act(pl, m);
       if (m.t === 'report') return report(pl, m.id);
     }
     return { onText, onClose: () => leave(pl), player: pl };
@@ -163,7 +172,19 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
       return send(pl, { t: 'sys', key: text ? 'slow_down' : 'filtered' });
     }
     pl.lastChat = t; stats.chat++;
-    broadcast(pl.room, { t: 'chat', id: pl.id, name: pl.name, text, at: t });
+    const line = history.addChat(pl.room, { name: pl.name, account: pl.account, text, at: t }) || { name: pl.name, text, at: t };
+    broadcast(pl.room, { t: 'chat', id: pl.id, ...line });
+  }
+
+  /** A notable action (level up, quest, chest, boss, trade): relayed and remembered; too many are dropped in silence. */
+  function act(pl, m) {
+    const t = now();
+    pl.acts = pl.acts.filter((x) => t - x < 60000);
+    if (t < pl.mutedUntil || t - pl.lastAct < limits.actEveryMs || pl.acts.length >= limits.actPerMin) { stats.actsDropped++; return; }
+    const e = history.addAct(pl.room, { name: pl.name, account: pl.account, k: m.k, v: m.v, at: t });
+    if (!e) { stats.actsDropped++; return; }
+    pl.lastAct = t; pl.acts.push(t); stats.acts++;
+    broadcast(pl.room, { t: 'act', id: pl.id, ...e });
   }
 
   function report(pl, id) {
@@ -189,6 +210,6 @@ export function createHub({ now = () => Date.now(), log = () => {}, limits = LIM
 
   return {
     connect, tick,
-    stats: () => ({ ...stats, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0), byRoom: Object.fromEntries([...rooms].map(([n, r]) => [n, r.size])) }),
+    stats: () => ({ ...stats, ...history.stats(), rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0), byRoom: Object.fromEntries([...rooms].map(([n, r]) => [n, r.size])) }),
   };
 }
