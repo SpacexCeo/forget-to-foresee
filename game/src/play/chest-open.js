@@ -6,6 +6,8 @@
 // value against the on-chain seed (net/chest.js). Reduced motion: no reel, the card
 // fades in. No service, no outcome: the chest stays sealed and the panel says why.
 import { cue } from '../audio/town-audio.js';
+// the plain message keys (net/chest-client.js CHEST_ERRORS; kept here so this panel loads without the net code)
+const ERR_KEYS = ['off', 'soon', 'rate', 'daily', 'sold_out', 'no_guest', 'no_key', 'network', 'tx_failed', 'no_opening', 'stale', 'replayed', 'deck_mismatch', 'request'];
 
 const FRAME = Object.freeze({ common: 'common', uncommon: 'common', rare: 'rare', epic: 'epic', legendary: 'legendary', nft: 'mythic' });
 const GLOW = Object.freeze({ common: '#cfc6ad', uncommon: '#2fc4b2', rare: '#5fb6ff', epic: '#c77dff', legendary: '#ffc46b', mythic: '#ffe7a8' });
@@ -124,7 +126,7 @@ export function openChestReveal({ doc = document, t, chest, client, guest, items
         reel.hidden = true;
         outcomeResult = { ok: false, error: r.error };
         cue('ui_error');
-        info.replaceChildren(el('p', null, t('chest.err.' + (['off', 'soon', 'rate', 'sold_out', 'no_guest', 'no_key', 'network'].includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
+        info.replaceChildren(el('p', null, t('chest.err.' + (ERR_KEYS.includes(r.error) ? r.error : 'bad'))), el('p', 'co-note', t('chest.stillSealed')));
         closeBtn();
         return;
       }
