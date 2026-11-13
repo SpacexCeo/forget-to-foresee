@@ -65,7 +65,7 @@ import { createCompanion } from './scenes/companion.js';
 import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
-import { expectOnboarding } from './ui/onboarding-queue.js';
+import { expectOnboarding, blocksWindows } from './ui/onboarding-queue.js';
 
 /**
  * Builds the renderer, the island, the camera and the frame loop (the heavy chunk: three.js, scenes, render,
@@ -1022,7 +1022,7 @@ function handleInput(dt) {
     if (inspecting) leaveInspect();
     else if (playOn && play.handleKey('Escape')) clearWorldInput();
     else if (moveTarget || (playOn && play.routeActive) || (townOn && townFlow.routeActive)) stopSteering();
-    else openMenu();
+    else if (!blocksWindows()) openMenu();   // no menu on top of a first-time overlay (its own Esc / Skip handles it)
     return false;
   }
   if (townShops && townShops.busy) return false; // the shop door's fade holds Iris
