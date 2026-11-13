@@ -40,6 +40,14 @@
   <canvas id="chart" width="1000" height="260" aria-label="Prices of six goods over the week, as a share of their base price"></canvas>
   <div class="legend" id="legend"></div>
   <table><thead><tr><th>Goods</th><th>Stall</th><th>On the shelf</th><th>Price, silk</th><th>The trader says</th></tr></thead><tbody id="goods"></tbody></table>
+  <h2 style="margin:22px 0 4px;font:600 19px/1.2 Georgia,serif">Where you come in</h2>
+  <ul class="note" style="margin:4px 0 0 18px;padding:0;font-size:14px">
+    <li><b>Trade at a stall.</b> Sell the resources you take from monsters, or buy goods; the price and its reason are the same rules as above, and the trade settles on NEAR testnet.</li>
+    <li><b>Pledge silk to the town works</b> (the Exchange counter in town). Each pledge is a deed in your account; the town's fees are shared between the deeds each day. The rate is variable and can be zero; the window shows your share and three small goals.</li>
+    <li><b>Pledge to a stall.</b> Your silk becomes that trader's working capital and does not come back; a closed stall reopens once its purse is back above the line. You get a reward share of the fees on its sales for as long as it trades (variable, can be zero).</li>
+    <li><b>Enter the tournament</b> at the altar: of each entry 20% is burned, 15% goes to the Shell Observatory's deeds and 65% to the purse.</li>
+  </ul>
+  <p class="note"><a href="./">Play the game</a> · <a href="pulse.html">Town Pulse (live)</a> · testnet silk only, no real value.</p>
   <p class="note">Rules in one line each: every stall makes its goods hourly (faster when they sell dear, slower when cheap); price = base × (120 / stock)^0.4 × demand, between half and twice the base; buyers pick dear goods less and cheap ones more; a stall under 40 silk closes until it sells its way back above 120. Silk is the town's in-game currency, testnet, no value outside the game.</p>
 </main>
 <script>
