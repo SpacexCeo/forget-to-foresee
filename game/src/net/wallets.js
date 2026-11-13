@@ -157,8 +157,10 @@ export function nearConnectProvider({ connector = nearConnector } = {}) {
       const c = await connector();
       const nonce = await deviceKeyNonce();
       let signed = null;
-      if (typeof c.on === 'function') c.on('wallet:signInAndSignMessage', (e) => { if (!first) signed = signedOf(e && e.accounts && e.accounts[0]); });
-      wallet = await c.connect({ signMessageParams: { message: DEVICE_KEY_TEXT, recipient: RECIPIENT, nonce } });
+      const onSigned = (e) => { signed = signedOf(e && e.accounts && e.accounts[0]); };
+      if (typeof c.on === 'function') c.on('wallet:signInAndSignMessage', onSigned);
+      try { wallet = await c.connect({ signMessageParams: { message: DEVICE_KEY_TEXT, recipient: RECIPIENT, nonce } }); }
+      finally { if (typeof c.off === 'function') c.off('wallet:signInAndSignMessage', onSigned); }
       first = signed || await sign(DEVICE_KEY_TEXT, nonce);
       if (!first) throw new Error('no_account');
       return { address: first.accountId, publicKey: first.publicKey };
