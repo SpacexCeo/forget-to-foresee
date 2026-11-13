@@ -7,14 +7,24 @@ import { emit, on, state } from './bus.js';
 export const TIPS_KEY = 'ftf.tips.v1';
 const registry = new Map();
 const queue = [];
-let showing = null, store = null, docRef = null;
+let showing = null, store = null, docRef = null, touchOverride = null;
 
 const getStore = () => { if (store) return store; try { return globalThis.localStorage || null; } catch { return null; } };
 function load() { try { const v = JSON.parse(getStore().getItem(TIPS_KEY) || 'null'); return v && typeof v === 'object' ? { seen: v.seen || {}, off: !!v.off } : { seen: {}, off: false }; } catch { return { seen: {}, off: false }; } }
 function save(v) { try { getStore().setItem(TIPS_KEY, JSON.stringify(v)); } catch { /* not kept */ } }
 
 /** Tests and the sprint mount: use this storage and document. */
-export function _configure({ storage = null, doc = null } = {}) { store = storage; docRef = doc; }
+export function _configure({ storage = null, doc = null, touch = null } = {}) { store = storage; docRef = doc; touchOverride = touch; }
+
+/** Owner rule (13.11): on a phone nothing pops up on its own; tips show only from an explicit "?" tap (force). */
+export function isTouch(doc) {
+  if (touchOverride !== null) return !!touchOverride;
+  try {
+    if (doc && doc.body && doc.body.classList.contains('ts-touch')) return true;
+    const win = (doc && doc.defaultView) || globalThis;
+    return !!(win.matchMedia && win.matchMedia('(pointer: coarse)').matches);
+  } catch { return false; }
+}
 export function _reset() { registry.clear(); queue.length = 0; showing = null; }
 
 /** registerTip({id, trigger, anchor, title, body}): trigger = bus event name (fires the tip once) or null (manual). */
@@ -33,6 +43,8 @@ export function showTip(id, { force = false } = {}) {
   const tip = registry.get(id); if (!tip) return false;
   const v = load();
   if (!force && (v.off || v.seen[id])) return false;
+  const doc0 = docRef || globalThis.document;
+  if (!force && isTouch(doc0)) return false;
   if (showing) { if (showing.id !== id && !queue.includes(id)) queue.push(id); return true; }
   const doc = docRef || globalThis.document;
   if (!doc || !doc.body) return false;
@@ -41,7 +53,7 @@ export function showTip(id, { force = false } = {}) {
   return true;
 }
 
-function hideCurrent() { if (showing && showing.el) showing.el.remove(); showing = null; }
+function hideCurrent() { if (showing && showing.off) showing.off(); if (showing && showing.el) showing.el.remove(); showing = null; }
 function done(markSeen) {
   if (!showing) return;
   const id = showing.id;
@@ -69,8 +81,14 @@ function render(doc, tip) {
   const b = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 300, height: 120 };
   let left = (W - b.width) / 2, top = H - b.height - 120;
   if (a && a.getBoundingClientRect) { const r = a.getBoundingClientRect(); left = Math.max(16, Math.min(r.left, W - b.width - 16)); top = r.bottom + 10 + b.height > H - 16 ? Math.max(16, r.top - b.height - 10) : r.bottom + 10; }
+  left = Math.max(8, Math.min(left, W - b.width - 8)); top = Math.max(8, Math.min(top, H - b.height - 8));
   el.style.left = Math.round(left) + 'px'; el.style.top = Math.round(top) + 'px';
-  showing = { id: tip.id, el };
+  // closes on a tap anywhere outside it, or on Esc
+  const outside = (e) => { if (!el.contains(e.target)) done(true); };
+  const esc = (e) => { if (e.key === 'Escape') done(true); };
+  const off = () => { if (doc.removeEventListener) { doc.removeEventListener('pointerdown', outside, true); doc.removeEventListener('keydown', esc, true); } };
+  if (doc.addEventListener) { doc.addEventListener('pointerdown', outside, true); doc.addEventListener('keydown', esc, true); }
+  showing = { id: tip.id, el, off };
   emit('tip.shown', { id: tip.id });
 }
 
