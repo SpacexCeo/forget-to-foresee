@@ -36,7 +36,8 @@ body.ts-touch .gs-prompt kbd{display:none}@media (pointer:coarse){.gs-prompt kbd
 .gs-ride{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);z-index:14;text-align:center;color:#f3ead2;font:600 16px system-ui,sans-serif;text-shadow:0 1px 3px #000;pointer-events:none}
 .gs-ride small{display:block;font-weight:400;font-size:13px;opacity:.85}.gs-ride i{display:block;width:220px;height:5px;margin:6px auto 0;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}.gs-ride i b{display:block;height:100%;background:#f6c860}
 .gs-skip{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 24px);z-index:15}
-body.gs-owned .ph,body.gs-owned .ftf-town-objective,body.gs-owned .ftf-story-goal,body.gs-owned .ftf-cast,body.gs-owned .ftf-cast-bar,body.gs-owned .ftf-mk,body.gs-owned .ftf-chat,body.gs-owned .ft,body.gs-owned .ts-btn,body.gs-owned .ts-arc,body.gs-owned .ftf-town-prompt,body.gs-owned .ftf-scene-hint{display:none!important}
+body.gs-owned .ph,body.gs-owned .ftf-town-objective,body.gs-owned .ftf-story-goal,body.gs-owned .ftf-cast,body.gs-owned .ftf-cast-bar,body.gs-owned .ftf-mk,body.gs-owned .ftf-chat,body.gs-owned .ft,body.gs-owned .ts-btn,body.gs-owned .ts-arc,body.gs-owned .ftf-town-prompt,body.gs-owned .ftf-scene-hint,
+body.gs-owned .rpg,body.gs-owned .ftf-bark,body.gs-owned .ftf-altar-timer,body.gs-owned .ftf-run-toggle{display:none!important}
 html[data-motion=reduce] .gs-track{animation:none}
 @media (prefers-reduced-motion:reduce){.gs-track{animation:none}}
 `;
@@ -112,13 +113,13 @@ export function createGlassShoal(o) {
   // ---- state
   let mode = 'town';   // 'town' | 'landing' (the dragon descends) | 'ride' | 'arena' | 'home' (fade back)
   let ride = null, rideHud = null, skipBtn = null, landT = 0, arena = null, arenaLoading = null;
-  const pose = { pos: new THREE.Vector3(), heading: 0, speed: 0 };
+  const pose = { pos: new THREE.Vector3(), heading: 0, speed: 0, bank: 0, pitch: 0, bob: 0 };
   const savedRig = {};
   const rideBasis = () => { const O = stoneAt.clone().add(new THREE.Vector3(0, 6, 4)); const A = O.clone().add(new THREE.Vector3(0, -40, R.RIDE.length + 60)); return { O, A }; };
   const arenaCenter = () => rideBasis().A;
 
   function loadArena() {
-    if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
+    if (!arenaLoading) arenaLoading = import('./shoal-arena.js').then((m) => { arena = m.createShoalArena({ THREE, scene, camera: o.camera, center: arenaCenter(), say, toast, reduced, mobile, hero, clip, axes, rig,
       onWin: () => { if (event('boss_down') && ledger) { ledger.grant({ xp: R.REWARD.xp }); if (chests) try { chests.add({ tier: R.REWARD.chest, source: 'boss' }); } catch { /* the bag is optional */ } } },
       onDeath: () => event('death'), onHome: () => flyHome() }); return arena; });
     return arenaLoading;
@@ -207,7 +208,7 @@ export function createGlassShoal(o) {
       dragon.root.position.set(x, y, z);
       dragon.root.rotation.set(0, 0, reduced() ? 0 : ride.bank);
       dragon.update(dt, reduced(), ride.bank, false);
-      pose.pos.copy(dragon.saddle()); pose.heading = 0; pose.speed = 0;
+      pose.pos.copy(dragon.saddle()); pose.heading = 0; pose.speed = 0; pose.bank = pose.pitch = pose.bob = 0;
       if (rideHud) rideHud.querySelector('b').style.width = Math.round(p * 100) + '%';
       if (ride.done) endRide();
     }
@@ -235,14 +236,25 @@ export function createGlassShoal(o) {
     },
     /** The heroine's pose while owned: position, heading, animation speed. */
     applyAvatar(avatar, focus) {
-      avatar.position.copy(pose.pos); avatar.rotation.set(0, pose.heading, 0);
-      focus.set(pose.pos.x, pose.pos.y + 1.1, pose.pos.z);
+      avatar.position.copy(pose.pos); avatar.rotation.set(pose.pitch || 0, pose.heading, pose.bank || 0); // flight: a lean forward and a bank into the turn
+      focus.set(pose.pos.x, pose.pos.y + 1.1 - (pose.bob || 0), pose.pos.z); // the hover bob moves her, not the camera
       return pose.speed;
     },
+    /** After the camera rig: the fight's screen shake (the ultimate). */
+    shakeCamera(camera, dt) { if (mode === 'arena' && arena && arena.shakeCamera) arena.shakeCamera(camera, dt); },
     skipRide: () => endRide(),
     get arena() { return arena; },
-    /** Dev and tests: jump the quest to a step (?shoal=<step>). */
-    debugStep(step) { if (R.QUEST_STEPS.includes(step)) { save = { ...save, step, blade: step !== 'find_blade' }; persist(); } },
+    /** Dev and tests: jump the quest to a step (?shoal=<step>), or boot straight onto the dragon (?shoal=ride) or
+     *  into the fight (?shoal=arena: the arena owns the heroine as after the ride). */
+    debugStep(step) {
+      const r = R.debugJump(save, step);
+      if (r.save !== save) { save = r.save; persist(); }
+      if (r.jump === 'ride') startRide();
+      else if (r.jump === 'arena' && mode === 'town') {
+        mode = 'arena-wait';
+        loadArena().then((a) => { mode = 'arena'; a.enter(save); toast(say('shoal.landed')); }).catch((e) => { console.warn('[shoal] arena', e); mode = 'town'; });
+      }
+    },
     dispose() { group.removeFromParent(); dragon.root.removeFromParent(); track.remove(); prompt.remove(); closeCard(); if (arena) arena.dispose(); },
   };
 }

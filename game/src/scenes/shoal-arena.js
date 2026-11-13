@@ -3,8 +3,11 @@
 // Gameplay seat: geometry, spawn points, the fight. The rendering seat (A2) owns the look: `arena.look` exposes the
 // floor, the sun, the fog colour and the glowing parts so its reflector, sky and grade can replace these simple
 // materials without touching the rules. The rules are pure (game/shoal-rules.js); this file only runs and draws them.
+// Elise's kit ("Elise's kit" in the plan): casts aimed at the cursor (touch: the nearest foe), take-off and flight
+// with stamina, and the ultimate Tempest of Embers. Placeholder motion until Fable's clips land: hover = her idle
+// pose with a bob, a lean and a bank; the casts reuse the strike clips.
 import * as R from '../game/shoal-rules.js';
-import { shoalSkillsFor, comboStep } from '../rpg/shoal-skills.js';
+import { shoalSkillsFor, shoalExtrasFor, comboStep } from '../rpg/shoal-skills.js';
 import { hasModelFile, fetchGltf } from '../render/assets.js';
 
 const CSS = `
@@ -12,28 +15,41 @@ const CSS = `
 .sa-bar{height:10px;margin-top:4px;border-radius:5px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25);overflow:hidden;position:relative}.sa-bar b{display:block;height:100%;background:linear-gradient(90deg,#7fd8ff,#b48bff);transition:width .15s}
 .sa-bar i{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.7)}
 .sa-boss.sa-open b{background:linear-gradient(90deg,#ffd27a,#ff8a3a)}
-.sa-me{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 14px);width:min(220px,40vw);z-index:14;color:#f3ead2;font:12px/1.2 system-ui,sans-serif;pointer-events:none}
-.sa-me .sa-bar{height:8px;margin:2px 0 6px}.sa-hp b{background:#e05a5a!important}.sa-st b{background:#e8c860!important}.sa-mp b{background:#5a9ce0!important}
-.sa-skills{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;gap:8px;z-index:14}
-.sa-skill{position:relative;width:64px;height:64px;border-radius:14px;border:1px solid rgba(246,200,96,.7);background:rgba(18,14,8,.8);color:#f6e2a8;font:600 11px/1.1 system-ui,sans-serif;cursor:pointer;overflow:hidden;touch-action:none;padding:4px}
+.sa-me{position:fixed;left:calc(env(safe-area-inset-left,0px) + 16px);top:calc(env(safe-area-inset-top,0px) + 14px);width:min(220px,40vw);z-index:14;color:#f3ead2;font:12px/1.2 system-ui,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+.sa-me .sa-bar{height:8px;margin:2px 0 6px}.sa-hp b{background:#e05a5a!important}.sa-st b{background:#e8c860!important}.sa-mp b{background:#5a9ce0!important}.sa-ul b{background:linear-gradient(90deg,#ff8a3a,#c8f0ff)!important;transition:none}
+.sa-me.sa-ready .sa-ul{box-shadow:0 0 8px #ffb060}
+.sa-skills{position:fixed;right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:grid;grid-template-columns:repeat(3,64px);grid-auto-rows:64px;gap:8px;z-index:14}
+.sa-skill{position:relative;box-sizing:border-box;width:100%;height:100%;border-radius:14px;border:1px solid rgba(246,200,96,.7);background:rgba(18,14,8,.8);color:#f6e2a8;font:600 11px/1.1 system-ui,sans-serif;cursor:pointer;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;padding:4px}
+.sa-skill span{position:relative}
 .sa-skill kbd{position:absolute;left:4px;top:3px;font:600 10px system-ui;opacity:.75}.sa-skill s{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);text-decoration:none}
+.sa-skill u{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(255,138,58,.55),rgba(200,240,255,.25));text-decoration:none}
+.sa-skill.sa-ultb{grid-column:span 2;font-size:13px}
+.sa-skill.sa-ultb.sa-ready{border-color:#ffd27a;color:#fff;box-shadow:0 0 14px rgba(255,170,80,.85);animation:sa-pulse 1.2s ease-in-out infinite}
+.sa-skill.sa-on{border-color:#c8f0ff;color:#fff;background:rgba(40,70,90,.85)}
+.sa-skill.sa-down{transform:scale(.94)}
+@keyframes sa-pulse{50%{box-shadow:0 0 24px rgba(255,190,100,1)}}
+body.ts-touch .sa-skill kbd{display:none}@media (pointer:coarse){.sa-skill kbd{display:none}}
 .sa-msg{position:fixed;left:50%;top:32%;transform:translateX(-50%);z-index:15;color:#ffe6a6;font:700 22px system-ui,sans-serif;text-shadow:0 2px 6px #000;pointer-events:none;text-align:center;max-width:calc(100vw - 32px)}
-@media (max-width:899px){.sa-boss{left:auto;right:12px;transform:none;width:calc(58vw - 12px)}.sa-me{width:36vw}.sa-skill{width:58px;height:58px}}
+.sa-hint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:14;color:#f3ead2;font:500 13px/1.3 system-ui,sans-serif;text-shadow:0 1px 3px #000;pointer-events:none;text-align:center;max-width:calc(100vw - 260px);opacity:.9}
+@media (max-width:899px){.sa-boss{left:auto;right:12px;transform:none;width:calc(58vw - 12px)}.sa-me{width:36vw}.sa-skills{grid-template-columns:repeat(3,58px);grid-auto-rows:58px}.sa-hint{display:none}}
+@media (max-height:440px){.sa-skills{grid-template-columns:repeat(3,54px);grid-auto-rows:54px;gap:6px}.sa-msg{top:22%;font-size:18px}}
+@media (prefers-reduced-motion:reduce){.sa-skill.sa-ultb.sa-ready{animation:none}}
+html[data-motion=reduce] .sa-skill.sa-ultb.sa-ready{animation:none}
 `;
 
 /**
  * @param {object} o
  * @param {typeof import('three')} o.THREE @param {object} o.scene @param {object} o.center the arena's world centre (Vector3)
- * @param {(k: string, a?: object) => string} o.say @param {(s: string) => void} o.toast @param {() => boolean} o.reduced
+ * @param {object} [o.camera] the camera (the cursor aim) @param {(k: string, a?: object) => string} o.say
+ * @param {(s: string) => void} o.toast @param {() => boolean} o.reduced
  * @param {boolean} o.mobile @param {() => string} o.hero @param {(name: string) => void} o.clip @param {() => number[]} o.axes
  * @param {object} o.rig the camera rig (ground axes) @param {() => void} o.onWin @param {() => void} o.onDeath @param {() => void} o.onHome
  */
 export function createShoalArena(o) {
-  const { THREE, scene, center, say, toast, reduced, mobile, hero, clip, axes, rig, onWin, onDeath, onHome } = o;
+  const { THREE, scene, center, camera = null, say, reduced, mobile, hero, clip, axes, rig, onWin, onDeath, onHome } = o;
   const doc = globalThis.document;
   if (!doc.getElementById('sa-css')) { const st = doc.createElement('style'); st.id = 'sa-css'; st.textContent = CSS; doc.head.append(st); }
   const root = new THREE.Group(); root.name = 'glass-shoal'; root.position.copy(center); root.visible = false; scene.add(root);
-  const W = (x, z, y = 0) => new THREE.Vector3(x, y, z); // arena-local
 
   // ---- the scene graph (A2 restyles these through `look`)
   const look = {};
@@ -77,6 +93,17 @@ export function createShoalArena(o) {
   const shots = [];
   const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.5 }));
   chest.position.set(R.ARENA.chest[0], 0.45, R.ARENA.chest[1]); chest.visible = false; root.add(chest);
+  // projectiles and the Tempest's spiral share these
+  const orbGeo = new THREE.SphereGeometry(0.32, 10, 8), discGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.06, 20);
+  const fireMat = new THREE.MeshBasicMaterial({ color: 0xff8a3a }), windMat = new THREE.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0.8 });
+  const SPIRAL = 16;
+  const spiral = new THREE.Group(); spiral.visible = false; root.add(spiral);
+  const spiralBits = Array.from({ length: SPIRAL }, (_, i) => { const m = new THREE.Mesh(i % 2 ? discGeo : orbGeo, i % 2 ? windMat : fireMat); spiral.add(m); return m; });
+  const burst = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: 0xffb060, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+  burst.rotation.x = -Math.PI / 2; burst.position.y = 0.08; root.add(burst);
+  // the aim: a small ring on the mirror where her casts will fly (cursor or the nearest foe)
+  const aimMark = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.65, 32), new THREE.MeshBasicMaterial({ color: 0xffe6a6, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
+  aimMark.rotation.x = -Math.PI / 2; aimMark.position.y = 0.06; aimMark.visible = false; root.add(aimMark);
 
   // ---- HUD
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -84,49 +111,102 @@ export function createShoalArena(o) {
   const bossHud = el('div', 'sa-boss'); const bossName = el('div'); const bossBar = el('div', 'sa-bar'); const bossFill = el('b'); bossBar.append(bossFill);
   for (const p of R.BOSS.phases.slice(1)) { const i = el('i'); i.style.left = (p.above * 100) + '%'; bossBar.append(i); }
   bossHud.append(bossName, bossBar); hud.append(bossHud);
-  const me = el('div', 'sa-me'); const bars = {};
-  for (const [k, cls] of [['hp', 'sa-hp'], ['stamina', 'sa-st'], ['mana', 'sa-mp']]) { const lab = el('div', null, say('shoal.' + k)); const b = el('div', 'sa-bar ' + cls); const fill = el('b'); b.append(fill); me.append(lab, b); bars[k] = fill; }
+  const me = el('div', 'sa-me'); const bars = {}; const barRows = {};
+  for (const [k, cls] of [['hp', 'sa-hp'], ['stamina', 'sa-st'], ['mana', 'sa-mp'], ['ult', 'sa-ul']]) { const lab = el('div', null, say('shoal.' + k)); const b = el('div', 'sa-bar ' + cls); const fill = el('b'); b.append(fill); me.append(lab, b); bars[k] = fill; barRows[k] = [lab, b]; }
   hud.append(me);
   const skillsEl = el('div', 'sa-skills'); hud.append(skillsEl);
   const msg = el('div', 'sa-msg'); msg.hidden = true; hud.append(msg);
-  let msgT = 0;
+  const hint = el('div', 'sa-hint'); hint.hidden = true; hud.append(hint);
+  let msgT = 0, hintT = 0;
   const flash = (text, secs = 2.2) => { msg.textContent = text; msg.hidden = false; msgT = secs; };
-  let skillBtns = [];
+  let skillBtns = [], liftBtn = null, ultBtn = null;
   function buildSkills() {
-    skillsEl.textContent = ''; skillBtns = [];
+    skillsEl.textContent = ''; skillBtns = []; liftBtn = ultBtn = null;
+    const keyCap = (k) => (k === 'Space' ? '␣' : k);
+    // Elise: Lift and the Tempest on the top row (the Tempest twice as wide), her three casts under them
+    for (const s of shoalExtrasFor(hero())) {
+      const b = el('button', 'sa-skill' + (s.kind === 'ultimate' ? ' sa-ultb' : ' sa-liftb')); b.type = 'button'; b.dataset.skill = s.id;
+      b.setAttribute('aria-label', say('shoal.skill.' + s.id));
+      if (s.kind === 'ultimate') { b.append(el('u'), el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id))); ultBtn = b; b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); ult(); }); }
+      else {
+        b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id))); liftBtn = b;
+        // touch: hold to rise, let go to sink slowly; a mouse click toggles (take off / land)
+        b.addEventListener('pointerdown', (e) => {
+          e.preventDefault(); e.stopPropagation(); try { b.setPointerCapture(e.pointerId); } catch { /* old browsers */ }
+          if (e.pointerType === 'mouse') { toggleLift(); return; }
+          touchFlight = true; liftHeld = true; b.classList.add('sa-down'); if (!R.airborne(FL)) takeOffNow();
+        });
+        const up = () => { liftHeld = false; b.classList.remove('sa-down'); };
+        b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+      }
+      skillsEl.append(b);
+    }
     for (const s of shoalSkillsFor(hero())) {
       const b = el('button', 'sa-skill'); b.type = 'button'; b.dataset.skill = s.id;
-      b.append(el('kbd', null, s.key === 'Space' ? '␣' : s.key), el('span', null, say('shoal.skill.' + s.id)), el('s'));
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); use(s); });
+      b.append(el('kbd', null, keyCap(s.key)), el('span', null, say('shoal.skill.' + s.id)), el('s'));
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (e.pointerType !== 'mouse') touchAim = true; use(s); });
       skillsEl.append(b); skillBtns.push({ b, s });
     }
+    const eliseOn = hero() === 'elise';
+    for (const n of barRows.ult) n.hidden = !eliseOn;
   }
 
   // ---- fight state
   let H = R.freshHero(), B = R.freshBoss(), timers = {}, active = false, won = false, chestOpen = false;
+  let FL = R.freshFlight();
   const me3 = { x: R.ARENA.landing[0], z: R.ARENA.landing[1], heading: Math.PI, speed: 0, lift: 0, dodgeDir: [0, -1] };
-  let combo = 0, comboT = 0, heavyT = 0, deadT = 0, lastPhase = 0;
+  let combo = 0, comboT = 0, heavyT = 0, deadT = 0;
+  let kbVert = 0, liftHeld = false, touchFlight = false, landing = false, lastJump = -9, touchAim = false;
+  let ultT = 0, ultEl = 0, ultGrounded = false, stopT = 0, shakeT = 0, shakeAmp = 0, burstT = 0, wasReady = false;
+  let hover = null; // the mouse over the canvas (client px), from input()
+  const elise = () => hero() === 'elise';
 
   function enter(save) {
     root.visible = true; hud.hidden = false; active = true; buildSkills();
     won = save && (save.step === 'return' || save.step === 'done');
-    B = won ? { ...R.freshBoss(2), hp: 0, dead: true } : R.freshBoss(0); H = R.freshHero(); timers = {};
-    me3.x = R.ARENA.landing[0]; me3.z = R.ARENA.landing[1]; me3.heading = Math.PI; lastPhase = B.phase;
+    B = won ? { ...R.freshBoss(2), hp: 0, dead: true } : R.freshBoss(0); H = R.freshHero(); timers = {}; FL = R.freshFlight();
+    me3.x = R.ARENA.landing[0]; me3.z = R.ARENA.landing[1]; me3.heading = Math.PI; me3.lift = 0;
+    ultT = 0; stopT = 0; shakeT = 0; landing = false; spiral.visible = false;
     chest.visible = won; chestOpen = false; boss.visible = !won;
     bossName.textContent = say('shoal.boss') + ' · ' + say('shoal.phase', { n: B.phase + 1 });
+    if (elise() && !won) { hint.textContent = say(mobile ? 'shoal.flyHintTouch' : 'shoal.flyHint'); hint.hidden = false; hintT = 14; }
   }
-  function leave() { root.visible = false; hud.hidden = true; active = false; for (const s of shots) s.mesh.removeFromParent(); shots.length = 0; }
+  function leave() { root.visible = false; hud.hidden = true; active = false; for (const s of shots) s.mesh.removeFromParent(); shots.length = 0; spiral.visible = false; }
 
   const bossDist = () => Math.hypot(me3.x - R.ARENA.boss[0], me3.z - R.ARENA.boss[1]);
   const faceBoss = () => { if (bossDist() < 14) me3.heading = Math.atan2(R.ARENA.boss[0] - me3.x, R.ARENA.boss[1] - me3.z); };
-  const damageBoss = (amount) => {
-    const r = R.hitBoss(B, amount); B = r.boss;
+  const charge = (dealt, taken) => { H = { ...H, ult: R.chargeUlt(H.ult, dealt, taken) }; };
+  const damageBoss = (amount, opts = {}) => {
+    const r = R.hitBoss(B, amount, R.BOSS, opts); B = r.boss;
+    if (!opts.noCharge) charge(r.dealt, 0);
     if (r.phaseUp) { flash(say(B.phase === 1 ? 'shoal.phase2' : 'shoal.phase3')); }
     if (B.dead && !won) { won = true; boss.visible = false; chest.visible = true; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); B = { ...B, adds: [] }; flash(say('shoal.victory'), 3.5); onWin(); }
     return r.dealt;
   };
+  const hurt = (amount) => { const r = R.hitHero(H, amount); H = r.hero; if (r.taken) charge(0, r.taken); return r; };
+
+  // ---- aim: the cursor's point on the mirror (desktop), else the nearest foe (touch)
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
+  function screenAim(x, y) {
+    if (!camera || !globalThis.innerWidth) return null;
+    ndc.set((x / globalThis.innerWidth) * 2 - 1, -(y / globalThis.innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    plane.constant = -center.y;
+    if (!ray.ray.intersectPlane(plane, hitP)) { // above the horizon: straight ahead along the camera
+      const d = ray.ray.direction; const l = Math.hypot(d.x, d.z) || 1; return [me3.x + (d.x / l) * 30, me3.z + (d.z / l) * 30];
+    }
+    const lx = hitP.x - center.x, lz = hitP.z - center.z;
+    const d = Math.hypot(lx - me3.x, lz - me3.z);
+    if (d > 60) return [me3.x + ((lx - me3.x) / d) * 60, me3.z + ((lz - me3.z) / d) * 60];
+    return [lx, lz];
+  }
+  function aimPoint() {
+    if (!touchAim && hover) { const p = screenAim(hover.x, hover.y); if (p) return p; }
+    return R.autoAim([me3.x, me3.z], B.adds);
+  }
+
   function use(s) {
-    if (!active || deadT > 0) return;
+    if (!active || deadT > 0 || ultT > 0) return;
     if (won) { interact(); return; }
     if (s.kind === 'movement') {
       const h2 = R.startDodge(H); if (h2 === H) return; H = h2;
@@ -137,29 +217,35 @@ export function createShoalArena(o) {
       clip('dash'); return;
     }
     const h2 = R.useSkill(H, s); if (!h2) return; H = h2;
+    if (s.kind === 'ranged') {
+      const at = aimPoint(); me3.heading = Math.atan2(at[0] - me3.x, at[1] - me3.z);
+      if (s.id === 'ember_palms') { for (const side of [-1, 1]) shoot(s, side * 0.35, 0, at); clip('strike1'); }
+      else if (s.id === 'gale_discs') { for (let k = 0; k < s.count; k++) shoot(s, 0, (k - (s.count - 1) / 2) * s.spread, at); clip('strike2'); }
+      return;
+    }
     faceBoss();
     if (s.id === 'loom_combo') {
       combo = comboT > 0 ? combo + 1 : 1; comboT = 0.9;
       const i = comboStep(combo); clip('strike' + (i + 1));
       melee(s.range, s.damage[i]);
     } else if (s.id === 'loom_heavy') { heavyT = s.windup; clip('strike3'); }
-    else if (s.id === 'ember_palms') { for (const side of [-1, 1]) shoot(s, side * 0.35, 0); clip('strike1'); }
-    else if (s.id === 'gale_discs') { for (let k = 0; k < s.count; k++) shoot(s, 0, (k - (s.count - 1) / 2) * s.spread); clip('strike2'); }
   }
   function melee(range, dmg) {
     const fx = Math.sin(me3.heading), fz = Math.cos(me3.heading);
     const hx = me3.x + fx * range * 0.6, hz = me3.z + fz * range * 0.6;
     if (bossDist() <= R.BOSS.contact + range) damageBoss(dmg);
-    B = { ...B, adds: R.hitAdds(B.adds, [hx, hz], range, dmg).adds };
+    const h = R.hitAdds(B.adds, [hx, hz], range, dmg); B = { ...B, adds: h.adds }; if (h.hit) charge(dmg * h.hit * R.BOSS.armor, 0);
   }
-  const orbGeo = new THREE.SphereGeometry(0.32, 10, 8), discGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.06, 20);
-  const fireMat = new THREE.MeshBasicMaterial({ color: 0xff8a3a }), windMat = new THREE.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0.8 });
-  function shoot(s, offset, angle) {
+  function shoot(s, offset, angle, at) {
     const h = me3.heading + angle, dx = Math.sin(h), dz = Math.cos(h);
     const mesh = new THREE.Mesh(s.id === 'gale_discs' ? discGeo : orbGeo, s.id === 'gale_discs' ? windMat : fireMat);
-    const x = me3.x + Math.cos(me3.heading) * offset, z = me3.z - Math.sin(me3.heading) * offset;
-    mesh.position.set(x, 1.3 + me3.lift, z); root.add(mesh);
-    shots.push({ s, mesh, x, z, dx, dz, left: s.range, hitBoss: false, hit: new Set() });
+    const x = me3.x + Math.cos(me3.heading) * offset, z = me3.z - Math.sin(me3.heading) * offset, y = 1.3 + me3.lift;
+    // from the air the casts dip toward the mirror where she aims (the adds walk there); at the boss they stay level
+    const dist = Math.max(4, Math.hypot(at[0] - me3.x, at[1] - me3.z));
+    const atBoss = Math.hypot(at[0] - R.ARENA.boss[0], at[1] - R.ARENA.boss[1]) < R.BOSS.contact + 2;
+    const vy = atBoss ? 0 : ((1 - y) / dist) * s.speed;
+    mesh.position.set(x, y, z); root.add(mesh);
+    shots.push({ s, mesh, x, y, z, dx, dz, vy, left: s.range, hitBoss: false, hit: new Set() });
   }
   function interact() {
     if (!won) return false;
@@ -168,62 +254,119 @@ export function createShoalArena(o) {
     return false;
   }
 
+  // ---- Elise: flight and the Tempest
+  function takeOffNow() {
+    if (!elise() || deadT > 0 || ultT > 0 || R.airborne(FL)) return;
+    const f2 = R.takeOff(FL, H, me3.lift);
+    if (f2 === FL) { flash(say('shoal.tired'), 1.2); return; }
+    FL = f2; landing = false; H = { ...H, dodge: 0 }; // the hop turns into flight
+  }
+  function toggleLift() {
+    if (!elise()) return;
+    if (R.airborne(FL)) { if (FL.mode === 'fly') landing = true; }
+    else { touchFlight = false; takeOffNow(); }
+  }
+  function ult() {
+    if (!elise() || !active || won || deadT > 0 || ultT > 0) return;
+    const h2 = R.startUlt(H); if (h2 === H) return; H = h2;
+    ultT = R.ULT.duration; ultEl = 0; ultGrounded = !R.airborne(FL) || landing;
+    if (!R.airborne(FL)) FL = { ...R.freshFlight(), mode: 'fly', y: me3.lift };
+    landing = false; spiral.visible = true; clip('strike3'); flash(say('shoal.tempest'), 1.6);
+  }
+  function tempestPulse() {
+    if (!won && R.inTempest([me3.x, me3.z], R.ARENA.boss, R.BOSS.contact)) damageBoss(R.ULT.damage, { pierce: true, noCharge: true });
+    if (B.adds.length) B = { ...B, adds: R.hitAdds(B.adds, [me3.x, me3.z], R.ULT.radius, R.ULT.damage).adds };
+    const red = reduced();
+    stopT = red ? 0 : R.ULT.hitStop; shakeT = 0.22; shakeAmp = red ? 0 : R.ULT.shake; burstT = 0.35;
+  }
+
   function strikeLands(atk, damage) {
-    if (!R.inDanger(atk, me3.x, me3.z)) return;
-    const r = R.hitHero(H, damage); H = r.hero;
-    if (r.dodged) { B = R.exposeBoss(B); flash(say('shoal.weak'), 1.4); }
+    if (!R.inDanger(atk, me3.x, me3.z, R.BOSS, me3.lift)) return;
+    const real = H.dodge > 0; // a dodge's frames open the crest; the Tempest's do not
+    const r = hurt(damage);
+    if (r.dodged && real) { B = R.exposeBoss(B); flash(say('shoal.weak'), 1.4); }
   }
 
   function update(dt) {
     if (!active) return;
     if (msgT > 0 && (msgT -= dt) <= 0) msg.hidden = true;
-    H = R.heroTick(H, dt);
-    if (comboT > 0) comboT -= dt;
-    if (heavyT > 0 && (heavyT -= dt) <= 0) { const s = shoalSkillsFor('iris')[1]; melee(s.range, s.damage); }
-    if (deadT > 0) { if ((deadT -= dt) <= 0) { const r = R.respawnAfterDeath(B); B = r.boss; H = r.hero; me3.x = r.at[0]; me3.z = r.at[1]; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); } }
+    if (hintT > 0 && (hintT -= dt) <= 0) hint.hidden = true;
+    let sdt = dt; if (stopT > 0) { stopT -= dt; sdt = dt * 0.06; } // the Tempest's hit-stop
+    let drain = 0;
+    if (comboT > 0) comboT -= sdt;
+    if (heavyT > 0 && (heavyT -= sdt) <= 0) { const s = shoalSkillsFor('iris')[1]; melee(s.range, s.damage); }
+    if (deadT > 0) { if ((deadT -= dt) <= 0) { const r = R.respawnAfterDeath(B); B = r.boss; H = r.hero; FL = R.freshFlight(); me3.lift = 0; landing = false; me3.x = r.at[0]; me3.z = r.at[1]; for (const m of addMeshes.values()) m.removeFromParent(); addMeshes.clear(); } }
     else {
-      // movement
+      // movement: running on the mirror, or flying
       const ax = axes(); const { fwd, right } = rig.groundAxes();
       let wx = fwd.x * (ax[1] || 0) + right.x * (ax[0] || 0), wz = fwd.y * (ax[1] || 0) + right.y * (ax[0] || 0);
       const wl = Math.hypot(wx, wz);
+      if (wl > 1) { wx /= wl; wz /= wl; }
+      if (ultT > 0) { wx = 0; wz = 0; }
       if (H.dodge > 0) { wx = me3.dodgeDir[0] * R.HERO.dodgeSpeed; wz = me3.dodgeDir[1] * R.HERO.dodgeSpeed; }
-      else if (wl > 0) { const sp = R.HERO.speed * (heavyT > 0 ? 0.2 : 1) / Math.max(1, wl); wx *= sp; wz *= sp; me3.heading = Math.atan2(wx, wz); }
-      let nx = me3.x + wx * dt, nz = me3.z + wz * dt;
+      else if (R.airborne(FL)) {
+        const vert = ultT > 0 ? (FL.y < R.ULT.rise ? 1 : 0) : landing ? -1 : kbVert || (touchFlight ? (liftHeld ? 1 : R.releaseVert()) : 0);
+        const before = FL.mode;
+        const r = R.flightStep(FL, [wx, wz], vert, ultT > 0 ? R.HERO.stamina : H.stamina, sdt);
+        FL = r.flight; drain = ultT > 0 ? 0 : r.drain;
+        if (before === 'fly' && FL.mode === 'glide') flash(say('shoal.tired'), 1.4);
+        if (r.landed) { landing = false; touchFlight = false; }
+        wx = FL.vx; wz = FL.vz;
+        if (Math.hypot(wx, wz) > 0.4 && ultT <= 0) me3.heading = Math.atan2(wx, wz);
+      } else if (wl > 0) { const sp = R.HERO.speed * (heavyT > 0 ? 0.2 : 1); wx *= sp; wz *= sp; me3.heading = Math.atan2(wx, wz); }
+      let nx = me3.x + wx * sdt, nz = me3.z + wz * sdt;
       // the body blocks her
       const bd = Math.hypot(nx - R.ARENA.boss[0], nz - R.ARENA.boss[1]);
       if (!won && bd < R.BOSS.contact - 1.5) { const k = (R.BOSS.contact - 1.5) / (bd || 1); nx = R.ARENA.boss[0] + (nx - R.ARENA.boss[0]) * k; nz = R.ARENA.boss[1] + (nz - R.ARENA.boss[1]) * k; }
       [me3.x, me3.z] = R.clampToArena(nx, nz);
       me3.speed = Math.hypot(wx, wz);
-      const liftTo = hero() === 'elise' && H.dodge > 0 ? 2.4 : 0; me3.lift += (liftTo - me3.lift) * Math.min(1, dt * 10);
-      // pickups
-      timers = R.pickupsTick(timers, dt);
-      const p = R.pickupAt(timers, me3.x, me3.z); if (p) { H = R.pickUp(H, p.kind); timers = { ...timers, [p.id]: R.HERO.pickupRespawn }; }
+      if (R.airborne(FL)) me3.lift = FL.y;
+      else { const liftTo = elise() && H.dodge > 0 ? 2.4 : 0; me3.lift += (liftTo - me3.lift) * Math.min(1, sdt * 10); }
+      // pickups (orbs float a metre up: high flight passes over them)
+      timers = R.pickupsTick(timers, sdt);
+      const p = me3.lift < 2.2 ? R.pickupAt(timers, me3.x, me3.z) : null; if (p) { H = R.pickUp(H, p.kind); timers = { ...timers, [p.id]: R.HERO.pickupRespawn }; }
+      // the Tempest
+      if (ultT > 0) {
+        const t0 = ultEl; ultEl += sdt; ultT -= sdt;
+        for (let n = R.ultPulses(t0, ultEl); n > 0; n--) tempestPulse();
+        if (ultT <= 0) { spiral.visible = false; if (ultGrounded) landing = true; }
+      }
       // the boss
       if (!won) {
-        const r = R.bossStep(B, dt, [me3.x, me3.z]); B = r.boss;
+        const r = R.bossStep(B, sdt, [me3.x, me3.z]); B = r.boss;
         for (const e of r.events) if (e.type === 'strike') strikeLands(e.attack, e.damage);
-        const a = R.addsStep(B.adds, dt, [me3.x, me3.z]); B = { ...B, adds: a.adds };
-        if (a.damage) H = R.hitHero(H, a.damage).hero;
-        if (B.phase !== lastPhase) lastPhase = B.phase;
+        const a = R.addsStep(B.adds, sdt, [me3.x, me3.z], R.BOSS, me3.lift); B = { ...B, adds: a.adds };
+        if (a.damage) hurt(a.damage);
       }
-      if (H.hp <= 0 && deadT <= 0) { deadT = 2.2; flash(say('shoal.dead'), 2.2); onDeath(); }
+      if (H.hp <= 0 && deadT <= 0) { deadT = 2.2; ultT = 0; spiral.visible = false; flash(say('shoal.dead'), 2.2); onDeath(); }
     }
+    H = R.heroTick(H, sdt, { drain, air: R.airborne(FL) });
+    const ready = R.ultReady(H); if (ready && !wasReady && elise() && !won) flash(say('shoal.ultReady'), 1.6); wasReady = ready;
     // projectiles
     for (let i = shots.length - 1; i >= 0; i--) {
-      const sh = shots[i], step = sh.s.speed * dt;
-      sh.x += sh.dx * step; sh.z += sh.dz * step; sh.left -= step;
-      sh.mesh.position.x = sh.x; sh.mesh.position.z = sh.z; if (sh.s.id === 'gale_discs') sh.mesh.rotation.y += dt * 20;
+      const sh = shots[i], step = sh.s.speed * sdt;
+      sh.x += sh.dx * step; sh.z += sh.dz * step; sh.left -= step; sh.y = Math.max(0.6, sh.y + sh.vy * sdt);
+      sh.mesh.position.set(sh.x, sh.y, sh.z); if (sh.s.id === 'gale_discs') sh.mesh.rotation.y += sdt * 20;
       let spent = sh.left <= 0;
       if (!won && !sh.hitBoss && Math.hypot(sh.x - R.ARENA.boss[0], sh.z - R.ARENA.boss[1]) <= R.BOSS.contact * 0.6 + sh.s.radius) { damageBoss(sh.s.damage); sh.hitBoss = true; if (!sh.s.pierce) spent = true; }
-      if (B.adds.length) { const h = R.hitAdds(B.adds.filter((a) => !sh.hit.has(a.id)), [sh.x, sh.z], sh.s.radius, sh.s.damage, !sh.s.pierce); if (h.hit) { const before = new Map(B.adds.map((a) => [a.id, a])); const after = new Map(h.adds.map((a) => [a.id, a])); B = { ...B, adds: B.adds.map((a) => (sh.hit.has(a.id) ? a : after.get(a.id))).filter(Boolean) }; for (const id of before.keys()) if (!after.has(id) || after.get(id).hp !== before.get(id).hp) sh.hit.add(id); if (!sh.s.pierce) spent = true; } }
+      if (B.adds.length && sh.y < 3) {
+        const h = R.hitAdds(B.adds.filter((a) => !sh.hit.has(a.id)), [sh.x, sh.z], sh.s.radius, sh.s.damage, !sh.s.pierce);
+        if (h.hit) {
+          const before = new Map(B.adds.map((a) => [a.id, a])); const after = new Map(h.adds.map((a) => [a.id, a]));
+          B = { ...B, adds: B.adds.map((a) => (sh.hit.has(a.id) ? a : after.get(a.id))).filter(Boolean) };
+          for (const id of before.keys()) if (!after.has(id) || after.get(id).hp !== before.get(id).hp) sh.hit.add(id);
+          charge(sh.s.damage * h.hit * R.BOSS.armor, 0);
+          if (!sh.s.pierce) spent = true;
+        }
+      }
       if (spent) { sh.mesh.removeFromParent(); shots.splice(i, 1); }
     }
-    draw(dt);
+    draw(dt, sdt);
   }
 
   let tt = 0;
-  function draw(dt) {
-    tt += dt;
+  function draw(dt, sdt) {
+    tt += sdt;
     const red = reduced();
     // the serpent's arc: a hump that rises over the plain, its head toward her
     const rise = won ? 0 : 1, sway = red ? 0 : Math.sin(tt * 0.8) * 0.4;
@@ -250,35 +393,89 @@ export function createShoalArena(o) {
       live.add(a.id);
       let m = addMeshes.get(a.id);
       if (!m) { m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 0), addMat); root.add(m); addMeshes.set(a.id, m); }
-      m.position.set(a.x, 0.8 + (red ? 0 : Math.abs(Math.sin(tt * 6 + a.id)) * 0.3), a.z); if (!red) m.rotation.y += dt * 3;
+      m.position.set(a.x, 0.8 + (red ? 0 : Math.abs(Math.sin(tt * 6 + a.id)) * 0.3), a.z); if (!red) m.rotation.y += sdt * 3;
     }
     for (const [id, m] of addMeshes) if (!live.has(id)) { m.removeFromParent(); addMeshes.delete(id); }
     for (const [id, m] of orbs) { m.visible = !(id in timers); if (!red) m.position.y = 1 + Math.sin(tt * 2 + m.position.x) * 0.15; }
     if (chestOpen) chest.rotation.x = Math.max(-0.9, chest.rotation.x - dt * 2);
+    // the Tempest: orbs and blades spiral out from her, a ring bursts on the mirror at each blow
+    if (spiral.visible) {
+      spiral.position.set(me3.x, me3.lift, me3.z);
+      const spin = red ? 1.2 : 4;
+      spiralBits.forEach((m, i) => {
+        const ph = (ultEl * 0.9 + i / SPIRAL) % 1, a = (i / SPIRAL) * Math.PI * 2 + ultEl * spin + ph * 3;
+        const r = 1 + ph * (R.ULT.radius - 1);
+        m.position.set(Math.sin(a) * r, 1.2 + Math.sin(ph * Math.PI) * 1.4 - ph * me3.lift * 0.8, Math.cos(a) * r);
+        if (i % 2) m.rotation.y += sdt * 18;
+      });
+    }
+    if (burstT > 0) { burstT -= dt; const k = 1 - burstT / 0.35; const r = 1 + k * R.ULT.radius; burst.position.set(me3.x, 0.08, me3.z); burst.scale.set(r, r, r); burst.material.opacity = 0.7 * (1 - k); }
+    else burst.material.opacity = 0;
+    // the aim ring (desktop: the cursor; touch: the auto target), only while there is something to aim at
+    const showAim = elise() && !won && deadT <= 0 && (hover || touchAim);
+    aimMark.visible = !!showAim;
+    if (showAim) { const p = aimPoint(); aimMark.position.set(p[0], 0.06, p[1]); }
     // HUD
     bossHud.hidden = won;
     bossName.textContent = say('shoal.boss') + ' · ' + say('shoal.phase', { n: B.phase + 1 });
     bossFill.style.width = (100 * B.hp / R.BOSS.hp).toFixed(1) + '%';
-    bars.hp.style.width = H.hp + '%'; bars.stamina.style.width = H.stamina + '%'; bars.mana.style.width = H.mana + '%';
-    for (const { b, s } of skillBtns) { const cd = H.cds[s.id] || 0; b.querySelector('s').style.height = cd > 0 ? Math.min(100, (cd * 1000 / s.cooldownMs) * 100) + '%' : '0'; b.disabled = false; }
+    bars.hp.style.width = H.hp + '%'; bars.stamina.style.width = H.stamina + '%'; bars.mana.style.width = H.mana + '%'; bars.ult.style.width = (100 * (H.ult || 0) / R.ULT.max).toFixed(1) + '%';
+    const ready = R.ultReady(H);
+    me.classList.toggle('sa-ready', ready);
+    for (const { b, s } of skillBtns) { const cd = H.cds[s.id] || 0; b.querySelector('s').style.height = cd > 0 ? Math.min(100, (cd * 1000 / s.cooldownMs) * 100) + '%' : '0'; }
+    if (ultBtn) { ultBtn.classList.toggle('sa-ready', ready && ultT <= 0); ultBtn.querySelector('u').style.height = (ultT > 0 ? 100 * ultT / R.ULT.duration : 100 * (H.ult || 0) / R.ULT.max).toFixed(1) + '%'; }
+    if (liftBtn) liftBtn.classList.toggle('sa-on', R.airborne(FL));
   }
 
   return {
     root, look, spawns,
     enter, leave, update, interact,
-    get state() { return { hero: { ...H }, boss: { ...B, adds: B.adds.length }, won, chestOpen }; },
-    /** Keys while the fight owns her: F / 1 / a click = skill 1, Q / 2 = skill 2, Space / 4 = dodge, E = the chest / fly home. */
+    get state() { return { hero: { ...H }, boss: { ...B, adds: B.adds.length }, won, chestOpen, flight: { ...FL }, lift: me3.lift, pos: [me3.x, me3.z], heading: me3.heading, ultT, shots: shots.length }; },
+    /**
+     * Keys while the fight owns her: F / 1 / a click = skill 1, Q / 2 = skill 2, Space / 4 = dodge, E = the chest / fly
+     * home. Elise: Space twice or L takes off; in the air Space rises, Shift sinks, L lands; R / 3 = the Tempest.
+     */
     input(input) {
       const sk = shoalSkillsFor(hero());
-      if (input.hit('KeyF') || input.hit('Digit1') || (input.clicks && input.clicks.length)) use(sk[0]);
+      hover = input.touchControls ? null : input.hover;
+      if (input.touchControls) touchAim = true; else if (hover) touchAim = false;
+      const clicks = input.clicks && input.clicks.length ? input.clicks : null;
+      if (clicks && !input.touchControls) hover = { x: clicks[clicks.length - 1].x, y: clicks[clicks.length - 1].y };
+      if (input.hit('KeyF') || input.hit('Digit1') || clicks) use(sk[0]);
       if (input.hit('KeyQ') || input.hit('Digit2')) use(sk[1]);
-      if (input.hit('Space') || input.hit('Digit4')) use(sk[2]);
+      if (elise()) {
+        if (input.hit('Space')) {
+          if (!R.airborne(FL)) { if (tt - lastJump < R.FLIGHT.doubleTap) takeOffNow(); else use(sk[2]); }
+          lastJump = tt;
+        }
+        if (input.hit('Digit4')) use(sk[2]);
+        if (input.hit('KeyL')) toggleLift();
+        if (input.hit('KeyR') || input.hit('Digit3')) ult();
+        const keys = input.keys || new Set();
+        kbVert = input.down('Space') ? 1 : (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? -1 : 0;
+        if (kbVert) touchFlight = false;
+      } else if (input.hit('Space') || input.hit('Digit4')) use(sk[2]);
       if (input.hit('KeyE')) interact();
     },
-    /** The heroine's pose in world space. */
-    pose(p) { p.pos.set(center.x + me3.x, center.y + me3.lift, center.z + me3.z); p.heading = me3.heading; p.speed = me3.speed; },
+    /** The heroine's pose in world space: flying adds a bob (hover = her idle pose), a forward lean and a bank. */
+    pose(p) {
+      const air = R.airborne(FL);
+      const bob = air && !reduced() ? Math.sin(tt * 2.6) * 0.08 : 0;
+      p.pos.set(center.x + me3.x, center.y + me3.lift + bob, center.z + me3.z); p.heading = me3.heading;
+      p.speed = air ? 0 : me3.speed; p.bob = bob;
+      p.bank = air && !reduced() ? FL.bank : 0;
+      p.pitch = air ? Math.min(0.22, 0.22 * Math.hypot(FL.vx, FL.vz) / R.FLIGHT.airSpeed) : 0;
+    },
+    /** After the camera rig: the Tempest's screen shake (none under reduced motion). */
+    shakeCamera(cam, dt) {
+      if (shakeT <= 0 || shakeAmp <= 0) return;
+      shakeT -= dt; const k = shakeAmp * Math.max(0, shakeT / 0.22);
+      cam.position.x += (Math.random() - 0.5) * k; cam.position.y += (Math.random() - 0.5) * k; cam.position.z += (Math.random() - 0.5) * k;
+    },
     /** Dev and tests: deal damage straight to the boss. */
     debugHit(n) { return damageBoss(n); },
+    /** Dev and tests: fill the Tempest's meter. */
+    debugCharge() { H = { ...H, ult: R.ULT.max }; },
     /** Dev and tests: the boss falls and the chest opens (the reward runs as in a real win). */
     debugWin() { B = { ...B, exposed: 0 }; damageBoss(1e9 / R.BOSS.armor); chestOpen = true; },
     dispose() { leave(); root.removeFromParent(); hud.remove(); },
