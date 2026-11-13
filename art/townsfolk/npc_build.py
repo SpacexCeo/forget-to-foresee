@@ -89,7 +89,7 @@ tn = mat.node_tree.nodes.new('ShaderNodeTexImage'); tn.image = baked; mat.node_t
 me.materials.clear(); me.materials.append(mat)
 bpy.ops.object.select_all(action='DESELECT'); hi.select_set(True); el.select_set(True); bpy.context.view_layer.objects.active = el
 bpy.ops.object.bake(type='EMIT', use_selected_to_active=True, cage_extrusion=0.004 * HEIGHT, max_ray_distance=0.02 * HEIGHT, margin=6)
-baked.pack(); mat.node_tree.links.new(tn.outputs['Color'], bs.inputs['Base Color']); bpy.data.objects.remove(hi); img = baked
+baked.filepath_raw = OUT[:-4] + '_base.png'; baked.file_format = 'PNG'; baked.save(); baked.pack(); mat.node_tree.links.new(tn.outputs['Color'], bs.inputs['Base Color']); bpy.data.objects.remove(hi); img = baked
 c2 = np.array([v.co[:] for v in me.vertices]); print('NPC', OUT.split('/')[-1], 'tris', len(me.polygons), 'verts', len(me.vertices), 'bones', len(arm.bones), 'height %.3f' % c2[:, 2].max(), 'width %.3f' % np.ptp(c2[:, 0]), 'texture', img.size[:] if img else None)
 bpy.ops.object.select_all(action='DESELECT'); el.select_set(True); ao.select_set(True)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_animations=False, export_skins=True, export_yup=True, export_tangents=False, export_attributes=False, export_all_influences=False, export_def_bones=False, export_morph=False)
