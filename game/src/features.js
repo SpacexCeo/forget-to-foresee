@@ -21,6 +21,15 @@ export const DEFAULT_FLAGS = Object.freeze({
   newPlayerIntro: false, labPrologue: false, agentTournament: false, firstSeenTips: false,
 });
 export const FEATURES_TIMEOUT_MS = 3000;
+export const SPRINT_FLAGS = Object.freeze(['questJournal', 'questTracker', 'autoWalk', 'starterGuide', 'rpgHud', 'skillTree', 'hotbar', 'marketplace', 'lootFx', 'playGames', 'silkView', 'newPlayerIntro', 'labPrologue', 'agentTournament', 'firstSeenTips']);
+
+/** Pure: ?ff=all | ?ff=name,name (tests and previews): flags switched on for this page only; unknown names ignored. */
+export function queryFlags(search = '', defaults = DEFAULT_FLAGS) {
+  let q = null; try { q = new URLSearchParams(search).get('ff'); } catch { q = null; }
+  if (!q) return {};
+  const names = q === 'all' ? SPRINT_FLAGS : q.split(',').map((x) => x.trim());
+  return Object.fromEntries(names.filter((n) => n in defaults).map((n) => [n, true]));
+}
 
 /** Pure: defaults + a parsed remote object -> the merged flags (unknown names and non-booleans dropped). */
 export function mergeFlags(remote, defaults = DEFAULT_FLAGS) {
@@ -36,7 +45,8 @@ export function mergeFlags(remote, defaults = DEFAULT_FLAGS) {
  * @param {{url?: string, fetch?: Function, timeoutMs?: number, defaults?: object}} [o]
  */
 export function createFeatures({ url = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'features.json', fetch = globalThis.fetch, timeoutMs = FEATURES_TIMEOUT_MS, defaults = DEFAULT_FLAGS } = {}) {
-  let flags = { ...defaults }, source = 'default', loading = null;
+  const forced = queryFlags((globalThis.location && globalThis.location.search) || '', defaults); // ?ff= wins over the file
+  let flags = { ...defaults, ...forced }, source = 'default', loading = null;
   const listeners = new Set();
   return {
     get source() { return source; },
@@ -54,7 +64,7 @@ export function createFeatures({ url = ((import.meta.env && import.meta.env.BASE
           if (!r || !r.ok) return flags;
           const j = await r.json();
           if (!j || typeof j !== 'object') return flags;
-          flags = mergeFlags(j, defaults); source = 'remote';
+          flags = { ...mergeFlags(j, defaults), ...forced }; source = 'remote';
           for (const fn of [...listeners]) { try { fn(flags); } catch { /* a listener's own problem */ } }
         } catch { /* offline, timeout, bad JSON: the defaults hold */ } finally { clearTimeout(timer); }
         return flags;

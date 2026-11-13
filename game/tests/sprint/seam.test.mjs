@@ -88,3 +88,11 @@ test('demo seed: only with the query; never fakes on-chain silk', () => {
   assert.equal(SEEDS.video.level, 6); assert.equal(SEEDS.video.quests.active[0].count, 7);
   assert.ok(!JSON.stringify(SEEDS).includes('onChain'), 'the seed never sets on-chain silk');
 });
+
+test('flags: the 15 sprint flags default off; ?ff=all / ?ff=a,b switch them on for the page', async () => {
+  const { DEFAULT_FLAGS, SPRINT_FLAGS, queryFlags } = await import('../../src/features.js');
+  for (const f of SPRINT_FLAGS) assert.equal(DEFAULT_FLAGS[f], false, f);
+  assert.equal(Object.keys(queryFlags('?ff=all')).length, 15);
+  assert.deepEqual(queryFlags('?ff=questJournal,nope'), { questJournal: true });
+  assert.deepEqual(queryFlags(''), {});
+});
