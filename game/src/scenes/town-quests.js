@@ -25,6 +25,7 @@ import { TOWN_ORIGIN } from './town-layout.js';
 import * as THREE from 'three';
 import { setMarkers } from '../sprint/markers.js';
 import { artBox, resIconPath } from '../market/art.js';
+import { portraitPath } from '../quests/portraits.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -262,7 +263,9 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     panel.style.cssText = 'position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translateX(-50%);z-index:30;width:min(460px,calc(100vw - 32px));'
       + 'padding:14px 16px;border-radius:14px;background:rgba(12,16,18,.92);border:1px solid rgba(217,178,106,.45);color:#f3ead8;font:15px/1.45 system-ui,sans-serif';
     const who = doc.createElement('b'); who.textContent = t('folk.name.' + giver); who.style.cssText = 'display:block;color:#d9b26a;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px';
-    panel.append(who);
+    const head = doc.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:6px';
+    who.style.marginBottom = '0'; head.append(artBox(doc, portraitPath(giver), t('folk.name.' + giver), { size: 44, cls: 'ftf-art ftf-talk-portrait', radius: 22 }), who); // the giver's portrait (letter fallback)
+    panel.append(head);
     for (const k of lines) { const p = doc.createElement('p'); p.textContent = t(k, { ...(tk.args || {}), list: needsText }); p.style.margin = '0 0 8px'; panel.append(p); }
     if (needsList.length) panel.append(needsRow(needsList));
     const row = doc.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:4px';

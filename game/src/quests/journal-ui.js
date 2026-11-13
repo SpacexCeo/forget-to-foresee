@@ -7,6 +7,7 @@
 import { TABS, countdown } from './journal-model.js';
 import { JOURNAL_BY_ID } from '../game/journal-data.js';
 import { artBox, resIconPath } from '../market/art.js';
+import { portraitPath } from './portraits.js';
 
 const CSS = `
 .fj-back{position:fixed;inset:0;z-index:40;background:rgba(5,7,12,.55);display:flex;align-items:center;justify-content:center}
@@ -136,7 +137,8 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     const backBtn = el('button', 'fj-btn fj-back-btn', '←'); backBtn.type = 'button'; backBtn.addEventListener('click', () => { back.firstChild.classList.remove('show-detail'); });
     const chips = el('div', 'fj-chips');
     chips.append(el('span', 'fj-chip', say('journal.cat.' + v.category)), el('span', 'fj-chip', say('journal.lv', { level: v.level })));
-    const giver = el('span', 'fj-chip giver', say('journal.from', { giver: giverName(v.giver) })); chips.append(giver);
+    const giver = el('span', 'fj-chip giver', say('journal.from', { giver: giverName(v.giver) })); giver.style.display = 'inline-flex'; giver.style.alignItems = 'center'; giver.style.gap = '6px';
+    giver.prepend(artBox(doc, portraitPath(v.giver), giverName(v.giver), { size: 28, cls: 'ftf-art fj-portrait', radius: 14 })); chips.append(giver); // the giver's portrait (letter fallback)
     chips.append(el('span', 'fj-chip', v.lockedLevel ? say('journal.status.lockedLevel', { level: v.lockedLevel }) : say('journal.status.' + v.status)));
     d.append(backBtn, el('h3', null, v.title), chips, el('p', 'fj-sum', v.summary), el('p', 'fj-desc', v.description));
     d.append(el('div', 'fj-sec', say('journal.objectives')));
