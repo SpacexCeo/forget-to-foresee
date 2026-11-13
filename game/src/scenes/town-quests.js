@@ -173,6 +173,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     const near = o && o.giver ? distanceTo(o.giver) : null;
     line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + (near != null ? ' · ' + t('quest.track.near', { m: near }) : '') + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
     line.hidden = !active || !o || story.phase === 'onward' || useTracker; // the tracker replaces this pill (sprint §4.8)
+    if (!useTracker) line.title = line.textContent; // the flag-off fallback: the full text is always reachable
   }
 
   // ---- where she is (update) and how far a giver stands
@@ -375,6 +376,10 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     lastErrand = txt;
   }
 
+  if (!useTracker) { // flag off (sprint §4.8): the old pill wraps instead of cutting, shows its full text and opens the log
+    line.style.pointerEvents = 'auto'; line.style.whiteSpace = 'normal'; line.style.overflow = 'visible'; line.style.textOverflow = 'clip'; line.style.maxWidth = 'min(560px, 92vw)'; line.style.cursor = 'pointer';
+    line.addEventListener('click', (e) => { e.stopPropagation(); toggleLog(); });
+  }
   if (story.phase === 'off') storyDo({ type: 'START', skipPrologue: true }); // the prologue (P4) is optional: arrival
   if (qs.since == null) questDo({ type: 'BEGIN' }); // the guide's grace period: the guard's quest opens even if the elder is skipped
   if (gate) refreshChain();
