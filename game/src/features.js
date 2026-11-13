@@ -19,6 +19,7 @@ export const DEFAULT_FLAGS = Object.freeze({
   rpgHud: false, skillTree: false, hotbar: false,
   marketplace: false, lootFx: false, playGames: false, silkView: false,
   newPlayerIntro: false, labPrologue: false, agentTournament: false, firstSeenTips: false,
+  glassShoal: false, // the level-5 boss fight: quest, Loomblade, dragon ride, the Glass Shoal (docs/plans/boss/glass-shoal-boss.md)
   accountLogin: false, // sign in / create account with a NEAR, EVM or Solana wallet (docs/account-login.md)
 });
 export const FEATURES_TIMEOUT_MS = 3000;
