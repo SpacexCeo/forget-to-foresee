@@ -393,7 +393,7 @@ if (townMode.town) {
   if (!photo) photo = createPhotoMode({ canvas: renderer.domElement, i18n: ctx.i18n, rig, coarse: mobileDevice, onChange: (on) => { if (on) { stopSteering(); clearWorldInput(); } } }); // feature 9: P
   if (!townBarks) { // feature 7: a short line from the townsfolk Iris walks past (scenes/barks.js)
     const people = [];
-    townBarks = createBarks({ camera, i18n: ctx.i18n, hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
+    townBarks = createBarks({ camera, i18n: ctx.i18n, extra: () => (featureFlags.on('newPlayerIntro') ? NPE_BARKS : []), hour: () => lookdev.look && lookdev.look.name, rain: () => lookdev.weather.state.rain || 0,
       hired: () => townLedger.hires().map((h) => h.npc),
       people: () => { people.length = 0; const tf = town.townsfolk; if (tf) for (const p of tf.people) if (p.state === 'loaded' && p.root.visible) people.push({ key: p.def.key, pos: folkPos(p) }); return people; } });
   }
@@ -684,6 +684,8 @@ function toggleSkin() {
 }
 /** Above the altar: when the next Tournament round starts ("Open now" in this build: rounds are always open). */
 let altarTimer = null;
+/** The new-player intro's crowd lines (play/locales/en-npe.js, sprint 7.3), in the barks rotation when the intro is on. */
+const NPE_BARKS = Object.freeze(Array.from({ length: 10 }, (_, i) => `npe.bark.${i + 1}`));
 const _altarP = new THREE.Vector3();
 function updateAltarTimer() {
   if (!town || !inTown) { if (altarTimer) altarTimer.hidden = true; return; }

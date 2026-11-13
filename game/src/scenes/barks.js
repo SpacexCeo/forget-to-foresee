@@ -27,9 +27,10 @@ export function hourClass(name) {
 
 /**
  * The candidate lines for a person right now, most specific first. Pure.
- * @param {{key: string, hour?: string, rain?: number, hired?: boolean}} o
+ * @param {{key: string, hour?: string, rain?: number, hired?: boolean, extra?: string[]}} o `extra`: more crowd lines in the
+ *   rotation (the new-player intro's barks, sprint 7.3), never for a hired agent
  */
-export function barkCandidates({ key, hour = 'day', rain = 0, hired = false }) {
+export function barkCandidates({ key, hour = 'day', rain = 0, hired = false, extra = [] }) {
   if (hired) return ['bark.hired.1', 'bark.hired.2'];
   const out = [];
   if (rain > 0.35) out.push('bark.rain.1', 'bark.rain.2');
@@ -38,7 +39,8 @@ export function barkCandidates({ key, hour = 'day', rain = 0, hired = false }) {
   else if (h === 'dawn') out.push('bark.dawn.1', 'bark.dawn.2');
   const role = /^child_/.test(key) ? 'child' : key;
   if (ROLE_LINES.includes(role)) out.push('bark.role.' + role);
-  return out.length ? out : GENERAL.slice();
+  const base = out.length ? out : GENERAL.slice();
+  return extra && extra.length ? [...base, ...extra] : base;
 }
 
 /** One line from the candidates: the n-th time this person speaks walks through them, so repeats are rare. */
@@ -60,7 +62,7 @@ const heightOf = (key) => (HEIGHT || (HEIGHT = new Map(TOWNSFOLK.map((p) => [p.k
  * @param {() => Set<string>|string[]} [o.hired] keys of people working as hired agents
  * @param {Document} [o.doc] @param {() => number} [o.now] seconds
  */
-export function createBarks({ camera, i18n, people, hour = () => 'day', rain = () => 0, hired = () => [], doc = globalThis.document, now = () => performance.now() / 1000 }) {
+export function createBarks({ camera, i18n, people, hour = () => 'day', rain = () => 0, hired = () => [], extra = () => [], doc = globalThis.document, now = () => performance.now() / 1000 }) {
   const el = doc.createElement('div');
   el.className = 'ftf-bark'; el.hidden = true; el.setAttribute('aria-live', 'polite');
   el.style.cssText = 'position:fixed;left:0;top:0;z-index:11;pointer-events:none;max-width:min(220px,60vw);padding:6px 11px;border-radius:12px;'
@@ -78,7 +80,7 @@ export function createBarks({ camera, i18n, people, hour = () => 'day', rain = (
   function start(person, t) {
     const n = count.get(person.key) || 0;
     const hiredSet = hired(); const isHired = hiredSet && (hiredSet.has ? hiredSet.has(person.key) : hiredSet.includes(person.key));
-    const key = chooseBark({ key: person.key, hour: hour(), rain: rain(), hired: isHired }, n);
+    const key = chooseBark({ key: person.key, hour: hour(), rain: rain(), hired: isHired, extra: extra() }, n);
     count.set(person.key, n + 1); last.set(person.key, t); lastAny = t;
     who.textContent = i18n.t('folk.name.' + person.key);
     text.textContent = i18n.t(key);
