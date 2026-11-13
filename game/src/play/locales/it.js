@@ -653,6 +653,7 @@ export default {
   'menu.tab.nfts': "NFT",
   'menu.tab.inventory': "Inventario",
   'menu.tab.agents': "Agenti",
+  'menu.tab.town': "Città",
   'menu.tab.log': "Registro e statistiche",
   'menu.traveller': "Viaggiatore",
   'menu.localProfile': "Profilo locale in questo browser: nessun account, nessun portafoglio.",
