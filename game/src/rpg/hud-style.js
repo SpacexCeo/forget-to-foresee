@@ -12,8 +12,8 @@ export const HUD_CSS = `
 .rpg-frame { left: calc(24 * var(--u)); top: calc(24 * var(--u)); width: calc(360 * var(--u)); height: calc(96 * var(--u)); pointer-events: auto; cursor: pointer; }
 .rpg-portrait { position: absolute; left: calc(12 * var(--u)); top: calc(12 * var(--u)); width: calc(72 * var(--u)); height: calc(72 * var(--u)); border-radius: 50%;
   border: 2px solid var(--ftf-gold-dim); background: #13241e 50% 12% / cover no-repeat; }
-.rpg-name { position: absolute; left: calc(96 * var(--u)); top: calc(10 * var(--u)); font-size: max(14px, calc(16 * var(--u))); font-weight: 700; }
-.rpg-lv { position: absolute; left: calc(160 * var(--u)); top: calc(12 * var(--u)); min-width: calc(36 * var(--u)); height: calc(18 * var(--u)); padding: 0 4px; border-radius: 4px;
+.rpg-name { position: absolute; left: calc(96 * var(--u)); top: calc(10 * var(--u)); max-width: calc(190 * var(--u)); overflow: hidden; white-space: nowrap; font-size: max(14px, calc(16 * var(--u))); font-weight: 700; }   /* long names stop before the level chip (full name in the title) */
+.rpg-lv { position: absolute; right: calc(16 * var(--u)); top: calc(12 * var(--u)); min-width: calc(36 * var(--u)); height: calc(18 * var(--u)); padding: 0 4px; border-radius: 4px;
   font-size: max(11px, calc(12 * var(--u))); font-weight: 700; line-height: calc(18 * var(--u)); text-align: center; color: var(--ftf-gold); background: rgba(197,164,105,.15); }
 .rpg-bar { position: absolute; border: 1px solid rgba(0,0,0,.6); border-radius: 3px; overflow: hidden; }
 .rpg-bar i { position: absolute; inset: 0 auto 0 0; display: block; }
@@ -138,7 +138,7 @@ html[data-motion="reduce"] .rpg-banner[data-show="1"], .rpg[data-reduced="1"] .r
   .rpg { --u: 0.75px; }
   .rpg-frame { left: 12px; top: 12px; width: 280px; height: 80px; }
   .rpg-portrait { width: 56px; height: 56px; left: 10px; top: 12px; }
-  .rpg-name { left: 76px; top: 8px; font-size: 14px; } .rpg-lv { left: 136px; top: 9px; height: 18px; line-height: 18px; min-width: 34px; }
+  .rpg-name { left: 76px; top: 8px; font-size: 14px; max-width: 140px; } .rpg-lv { right: 12px; left: auto; top: 9px; height: 18px; line-height: 18px; min-width: 34px; }
   .rpg-hp { left: 76px; top: 32px; width: 192px; height: 16px; } .rpg-mana { left: 76px; top: 52px; width: 192px; height: 12px; }
   .rpg-hotbar { left: 50%; transform: translateX(-50%); top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: auto; height: 48px; gap: 6px; }
   .rpg-slot { flex: 0 0 48px; height: 48px; } .rpg-slot:nth-child(n+6) { display: none; } .rpg-slot .ic { width: 34px; height: 34px; }

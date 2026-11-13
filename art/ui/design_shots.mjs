@@ -27,6 +27,7 @@ for (const [dev, opts] of [['desk', { viewport: { width: 1920, height: 1080 } }]
     // finish the onboarding the way a player would: the name, then the card
     for (let i = 0; i < 6; i++) {
       const input = page.locator('.d1-panel input'); if (await input.count()) { await input.fill('Cy'); await page.locator('.d1-panel button[type=submit]').click().catch(() => {}); }
+      const card = page.locator('.d1-card:not(.is-flipped)'); if ((await card.count()) === 2) await card.first().click().catch(() => {});
       const start = page.locator('.npe-card button.primary'); if (await start.count()) await start.first().click().catch(() => {});
       const claim = page.locator('.d1-panel .d1-btn'); if (await claim.count()) await claim.first().click().catch(() => {});
       await page.keyboard.press('Escape'); await page.waitForTimeout(2000);
