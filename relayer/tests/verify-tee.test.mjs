@@ -5,10 +5,11 @@ import { spawnSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { hex, personalMessageHash, signHashForTest, sha256Hex } from '../lib/tee-crypto.js';
 
-const tool = new URL('../../tools/verify-tee/verify.mjs', import.meta.url).pathname;
-const report = new URL('./fixtures/attestation-report.json', import.meta.url).pathname;
+const tool = fileURLToPath(new URL('../../tools/verify-tee/verify.mjs', import.meta.url));
+const report = fileURLToPath(new URL('./fixtures/attestation-report.json', import.meta.url));
 const run = (...a) => spawnSync(process.execPath, [tool, ...a], { encoding: 'utf8' });
 
 test('attestation only, offline: PASS', () => {
