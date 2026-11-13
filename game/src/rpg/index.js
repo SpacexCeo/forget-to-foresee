@@ -218,7 +218,9 @@ export function mount(ctx) {
       if (xi.level !== L && !levelsGained(lastXp, ctx.ledger ? ctx.ledger.xp : 0).length) { L = xi.level; refreshStats(); }
       const sv = silkView(); silkPop = lastGate != null && sv.gateC > lastGate; lastGate = sv.gateC;
       const sp = S.pointsLeft(L, rec), tp = statPointsLeft(L, rec);
+      const skin = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris';
       hud.render({
+        portrait: (ctx.base || '/') + 'assets/cards/' + skin + '.webp', name: skin === 'elise' ? 'Elise' : 'Iris',
         level: L, hp: self.hp, maxHP: stats.maxHP, mana: caster.mana, maxMana: stats.maxMana, manaPulse: manaPulseUntil > tnow,
         target: tg ? { name: mobDisplayName(tg.mob.type).replace(/^./, (c) => c.toUpperCase()), hp: tg.mob.hp, maxHp: tg.mob.T.hp, elite: !!tg.mob.T.elite } : null,
         buffs: Object.entries(self.buffs).map(([id, b]) => ({ id, name: id, left: (b.until - tnow) / 1000, debuff: false })),

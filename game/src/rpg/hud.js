@@ -143,6 +143,7 @@ export function createHud(o) {
     render(v) {
       root.dataset.reduced = o.reduced && o.reduced() ? '1' : '0';
       lv.textContent = t('hud.level', { n: v.level });
+      if (v.name && name.textContent !== v.name) name.textContent = v.name;
       if (v.portrait && portrait.dataset.src !== v.portrait) { portrait.dataset.src = v.portrait; portrait.style.backgroundImage = `url(${v.portrait})`; }
       const hpPct = v.maxHP ? Math.max(0, Math.min(1, v.hp / v.maxHP)) : 0;
       hp.fill.style.width = (hpPct * 100).toFixed(1) + '%'; hp.txt.textContent = `${Math.ceil(v.hp)} / ${v.maxHP}`;
