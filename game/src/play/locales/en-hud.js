@@ -63,7 +63,8 @@ export default {
   'char.regenVal': '{n} per second', 'char.left': 'Stat points left: {n}', 'char.add': 'Add a point to {stat}',
 
   // silk chip (plan 5.12)
-  'silk.waiting': '+{n} waiting', 'silk.sync': 'Sync', 'silk.syncing': 'Syncing…', 'silk.offline': 'Offline',
+  'silk.device': 'Playing locally', 'silk.waiting': '+{n} waiting', 'silk.sync': 'Sync', 'silk.syncing': 'Syncing…',
+  'hud.name.default': 'Traveller',
   'silk.tip.gate': 'Silk that counts for the Gate-Loom: {n}', 'silk.tip.chain': 'Recorded on NEAR: {n}', 'silk.tip.pending': 'Waiting to be recorded: {n}',
   'silk.tip.play': 'Play silk (saved on this device only): {n}', 'silk.tip.total': 'All silk you hold: {n}', 'silk.tip.fee': 'Gate price: {n}',
   'silk.tip.help': 'Press Sync to record the waiting silk now. It also syncs by itself every minute.', 'silk.tip.what': 'What is silk?',

@@ -7,10 +7,13 @@ import { createFeatures, mergeFlags, DEFAULT_FLAGS } from '../../src/features.js
 
 const ok = (body) => async () => ({ ok: true, json: async () => body });
 
-test('flags: every feature is off by default except the layer itself; the shipped file agrees', () => {
+// The owner switched the sprint features and account sign-in on for the live page on 13 Nov (docs/decisions.md).
+const LIVE_ON = new Set(['questJournal', 'questTracker', 'autoWalk', 'starterGuide', 'rpgHud', 'skillTree', 'hotbar', 'marketplace', 'lootFx',
+  'playGames', 'silkView', 'newPlayerIntro', 'labPrologue', 'agentTournament', 'firstSeenTips', 'accountLogin']);
+test('flags: every feature is off by default in code except the layer itself; the shipped file turns on only the live set', () => {
   for (const [k, v] of Object.entries(DEFAULT_FLAGS)) assert.equal(v, k === 'flags', k);
   const file = JSON.parse(readFileSync(new URL('../../public/features.json', import.meta.url), 'utf8'));
-  for (const [k, v] of Object.entries(file.flags)) { assert.ok(k in DEFAULT_FLAGS, k); assert.equal(v, false, k); }
+  for (const [k, v] of Object.entries(file.flags)) { assert.ok(k in DEFAULT_FLAGS, k); assert.equal(v, LIVE_ON.has(k), k); }
 });
 
 test('flags: merge keeps only known names and real booleans ("true" is not true)', () => {

@@ -13,8 +13,12 @@
 
 **The demo player** (`game/src/play/demo-player.js`, `demo-walker.js`):
 - It is "Sheriffchenko (demo player)" in the Sheriffchenko skin, with a "demo" badge on its name tag.
-- It wanders the town at random, but only along the authored NPC routes, joined where they meet. It keeps clear of the
-  portal and the shop doors, so it never walks through a wall (tested over 20 simulated minutes).
+- It walks only on paths (owner rule): it uses the shared town path graph (`play/town-paths.js` `townPaths()` with the
+  townsfolk's walks added by `townsfolk-plan.js`), from one random waypoint to the next, with short idles and
+  look-arounds and no free roaming. It keeps clear of the portal and the shop doors. The ground is followed from just
+  above the feet.
+- It never walks through anyone. If Iris, a townsperson or another player stands within 1.2 m ahead, it stops and
+  waits. If it is blocked for more than 6 s, it walks back the way it came.
 - Its card says: "Demo player: a scripted townsperson so you can try trading, profiles and friends."
 - Its trade is a practice trade on this device. It accepts by script, nothing is moved and nothing is on chain, and
   the card says so.

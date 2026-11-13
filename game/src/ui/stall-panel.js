@@ -5,6 +5,7 @@
 import { stallItems, silkText, canTrade, MAX_QTY } from '../net/stall-client.js';
 import { toMicro, silkOf, STALL_TRADER } from '../net/town-act.js';
 import { artBox, resIconPath } from '../market/art.js';
+import { syncSilkNow, refreshSilk } from '../net/silk-core.js';
 
 const CSS = `
 .sp-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
@@ -34,9 +35,20 @@ const CSS = `
  * @returns {{open(npc: string): void, close(): void, readonly isOpen: boolean}}
  */
 export function createStallPanel({ t, client, town = null, doc = globalThis.document }) {
-  if (!doc.getElementById('sp-style')) { const s = doc.createElement('style'); s.id = 'sp-style'; s.textContent = CSS; doc.head.append(s); }
+  if (!(doc.getElementById && doc.getElementById('sp-style'))) { const s = doc.createElement('style'); s.id = 'sp-style'; s.textContent = CSS; doc.head.append(s); }
   const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   let root = null, npc = null, trader = null, back = null;
+  /** "Set it up": registers the player's town account through the relayer (the silk Sync, credit_only). */
+  function setupButton(state) {
+    const b = el('button', null, t('town.setup')); b.type = 'button';
+    b.addEventListener('click', async () => {
+      b.disabled = true; b.textContent = t('town.settingUp');
+      const r = await syncSilkNow().catch(() => ({ ok: false }));
+      state.textContent = r && r.ok ? t('town.setupDone') : t('town.setupFailed');
+      if (r && r.ok) refreshSilk(true).catch(() => {});
+    });
+    return b;
+  }
   const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
 
   function row(item) {
@@ -75,6 +87,9 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
         state.append(doc.createTextNode(t(res.settled ? (side === 'buy' ? 'stall.done.buy' : 'stall.done.sell') : 'stall.done.dry', { n: q.qty, item: t('res.' + item), silk: silkText(q.silk) }) + ' '));
         const link = res.url || res.playerUrl;
         if (link) { const a = el('a', null, t('stall.verified')); a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer'; state.append(a); }
+      } else if (res.error === 'not_registered') {
+        // the plain next step: set up the town account through the relayer (free, one tap), then try again
+        state.append(doc.createTextNode(t('stall.err.not_registered') + ' '), setupButton(state));
       } else {
         state.append(doc.createTextNode(t('stall.err.' + (['dry_run', 'no_guest', 'no_deal', 'sign_failed', 'tx_failed', 'offline'].includes(res.error) ? res.error : 'failed')) + ' '));
         if (res.playerUrl) { const a = el('a', null, t('stall.yourTx')); a.href = res.playerUrl; a.target = '_blank'; a.rel = 'noopener noreferrer'; state.append(a); }
@@ -133,9 +148,9 @@ export function createStallPanel({ t, client, town = null, doc = globalThis.docu
     const foot = el('div', 'sp-foot'); const note = el('span', null, t('stall.note')); const x = el('button', 'ghost', t('quest.close')); x.type = 'button'; x.addEventListener('click', close);
     foot.append(note, x); box.append(foot);
     root.append(box); root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });
-    doc.body.append(root); doc.addEventListener('keydown', onKey, true);
+    doc.body.append(root); if (doc.addEventListener) doc.addEventListener('keydown', onKey, true);
     setTimeout(() => { try { x.focus(); } catch { /* */ } }, 0);
   }
-  function close() { if (!root) return; root.remove(); root = null; npc = null; trader = null; back = null; doc.removeEventListener('keydown', onKey, true); }
+  function close() { if (!root) return; root.remove(); root = null; npc = null; trader = null; back = null; (doc.removeEventListener && doc.removeEventListener('keydown', onKey, true)); }
   return { open, close, get isOpen() { return !!root; }, get npc() { return npc; } };
 }

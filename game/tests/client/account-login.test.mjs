@@ -243,3 +243,68 @@ test('NEAR through NEAR Connect: the wallet signs NEP-413 twice; the relayer che
   // NEAR Connect unreachable (CDN down): the panel falls back to MyNearWallet directly
   assert.equal((await bestNearProvider({ connector: async () => { throw new Error('offline'); } })).id, 'mynearwallet');
 });
+
+// ---------- passkeys: the real provider (src/net/wallets.js) against a fake authenticator and the real linker ----------
+/** A synced passkey: one P-256 key and PRF secret shared by every "device" (as iCloud Keychain / Google Password Manager). */
+async function fakePasskey({ prf = true, origin = 'https://spacexceo.github.io' } = {}) {
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const spki = new Uint8Array(await crypto.subtle.exportKey('spki', kp.publicKey));
+  const rawId = crypto.getRandomValues(new Uint8Array(20)), secret = crypto.getRandomValues(new Uint8Array(32));
+  const sha = async (u8) => new Uint8Array(await crypto.subtle.digest('SHA-256', u8));
+  const der = (raw) => { const int = (b) => { let i = 0; while (i < b.length - 1 && b[i] === 0) i++; b = b.slice(i); return b[0] & 0x80 ? [0, ...b] : [...b]; }; const r = int(raw.slice(0, 32)), s = int(raw.slice(32)); return new Uint8Array([0x30, r.length + s.length + 4, 2, r.length, ...r, 2, s.length, ...s]); };
+  const u64 = (u8) => Buffer.from(u8).toString('base64url');
+  const ext = async () => (prf ? { prf: { results: { first: (await sha(new Uint8Array([...secret, 1]))).buffer } } } : {});
+  const creds = {
+    calls: [],
+    async create(o) { creds.calls.push('create'); return { rawId: rawId.buffer, response: { getPublicKey: () => spki.buffer }, getClientExtensionResults: () => ({}) }; },
+    async get(o) {
+      creds.calls.push('get');
+      const cdj = enc(JSON.stringify({ type: 'webauthn.get', challenge: u64(new Uint8Array(o.publicKey.challenge)), origin }));
+      const authData = new Uint8Array([...(await sha(enc(new URL(origin).hostname))), 0x05, 0, 0, 0, 1]);
+      const raw = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, kp.privateKey, new Uint8Array([...authData, ...(await sha(cdj))])));
+      const e = await ext();
+      return { rawId: rawId.buffer, response: { authenticatorData: authData.buffer, clientDataJSON: cdj.buffer, signature: der(raw).buffer }, getClientExtensionResults: () => e };
+    },
+  };
+  return creds;
+}
+
+test('passkey: create links the current guest; the same synced passkey on another device restores it via PRF', async () => {
+  const { passkeyProvider } = await import('../../src/net/wallets.js');
+  const chain = fakeChain(), rel = fakeRelayer(chain), creds = await fakePasskey();
+  const a = browser(chain, 'ann'); await a.mint.mint('Ann');
+  const r = await loginFor(a, chain, rel).signIn(passkeyProvider({ mode: 'create', creds, rpId: 'spacexceo.github.io', storage: a.storage }));
+  assert.equal(r.status, 'linked'); assert.equal(r.account, 'ann0.guests.testnet');
+  assert.equal(a.mint.record.login.kind, 'passkey');
+  const b = browser(chain, 'bo');
+  const r2 = await loginFor(b, chain, rel).signIn(passkeyProvider({ mode: 'get', creds, rpId: 'spacexceo.github.io', storage: b.storage }));
+  assert.deepEqual(r2, { status: 'restored', account: 'ann0.guests.testnet' });
+});
+
+test('passkey without PRF: works on this device; another device is told honestly it has no key yet', async () => {
+  const { passkeyProvider } = await import('../../src/net/wallets.js');
+  const chain = fakeChain(), rel = fakeRelayer(chain), creds = await fakePasskey({ prf: false });
+  const a = browser(chain, 'ann'); await a.mint.mint('Ann');
+  assert.equal((await loginFor(a, chain, rel).signIn(passkeyProvider({ mode: 'create', creds, rpId: 'spacexceo.github.io', storage: a.storage }))).status, 'linked');
+  const b = browser(chain, 'bo');
+  assert.equal((await loginFor(b, chain, rel).signIn(passkeyProvider({ mode: 'get', creds, rpId: 'spacexceo.github.io', storage: b.storage }))).status, 'no_device_key');
+});
+
+test('passkey from a foreign origin is refused by the relayer', async () => {
+  const { passkeyProvider } = await import('../../src/net/wallets.js');
+  const chain = fakeChain(), rel = fakeRelayer(chain), creds = await fakePasskey({ origin: 'https://evil.example' });
+  const a = browser(chain, 'ann'); await a.mint.mint('Ann');
+  const r = await loginFor(a, chain, rel).signIn(passkeyProvider({ mode: 'create', creds, rpId: 'evil.example', storage: a.storage }));
+  assert.deepEqual(r, { status: 'error', error: 'bad_origin' });
+});
+
+test('the panel offers passkeys first when the browser supports them', async () => {
+  const { doc } = installDom(); doc.addEventListener = () => {}; doc.removeEventListener = () => {};
+  const { openAccountPanel } = await import('../../src/play/account-panel.js');
+  const i18n = createPlayI18n('en');
+  const p = openAccountPanel({ doc, t: (k, a) => i18n.t(k, a), makeLogin: async () => null, wallets: { passkeySupported: () => true, discoverEvm: async () => [], discoverSolana: () => [] } });
+  const rows = [...p.el.querySelectorAll('.acct-row .acct-btn')].map((b) => b.textContent);
+  assert.equal(rows[0], 'Sign in with a passkey (Face ID, fingerprint, device PIN)'); assert.equal(rows[1], 'Create a passkey');
+  const q = openAccountPanel({ doc, t: (k, a) => i18n.t(k, a), makeLogin: async () => null, wallets: { passkeySupported: () => false, discoverEvm: async () => [], discoverSolana: () => [] } });
+  assert.ok(![...q.el.querySelectorAll('.acct-row .acct-btn')].some((b) => /passkey/.test(b.textContent)));
+});

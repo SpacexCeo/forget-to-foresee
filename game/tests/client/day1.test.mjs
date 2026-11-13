@@ -34,7 +34,7 @@ test('plan and wiring: first visit, not on ?demo=judge unless &day1=1, ?day1=0 s
 test('phones get no Day-1 tips at all, and the desktop tip keeps its centring while it pops in (owner 13.11)', async () => {
   const { readFileSync } = await import('node:fs');
   const boot = readFileSync(new URL('../../src/boot-world.js', import.meta.url), 'utf8');
-  assert.match(boot, /if \(!input\.touchControls\) await m\.runHints\(/);
+  assert.match(boot, /if \(!input\.touchControls\) await q\.runOnboarding\('guide', \(\) => m\.runHints\(/);   // through the one onboarding queue
   const css = readFileSync(new URL('../../src/play/day1.js', import.meta.url), 'utf8');
   assert.match(css, /\.d1-hint \{[^}]*animation: d1-hint-pop/);
   assert.match(css, /@keyframes d1-hint-pop \{ from \{[^}]*translateX\(-50%\)[^}]*\} to \{[^}]*translateX\(-50%\)/);

@@ -14,6 +14,7 @@ import * as silkCore from '../net/silk-core.js';
 import { portalFee } from '../game/expedition-config.js';
 import { xpForKill } from '../game/town-economy.js';
 import { mobDisplayName } from '../game/mob-names.js';
+import { blocksWindows } from '../ui/onboarding-queue.js';
 
 export const RPG_KEY = 'ftf.rpg.v1';
 const WORLD_HP = 100;                           // the hillside fight counts Iris's health out of 100 (play/mobs.js IRIS_HP)
@@ -54,6 +55,13 @@ export function mount(ctx) {
     onDropSkill: (i, id) => { bar = S.placeOnSlot(bar, i, id); save(); } });
   import('./minimap.js').then((m) => { map = m.createMinimap({ canvas: hud.canvas, markers: ctx.markers, mobs: mobsOf, player: ctx.player, origin: () => (ctx.townOrigin ? ctx.townOrigin() : (win.__ftf && win.__ftf.town && win.__ftf.town.origin) || [0, 0, 0]), reveal: () => !!(self.buffs.reveal && self.buffs.reveal.until > now()) }); }).catch(() => {});
   emit('hud.mounted', { layout: win.innerWidth < 900 ? 'phone' : 'desktop' });
+  // one identity (design review 13.11): the name the player gave on Day 1 (ftf.day1.v1), else "Traveller" (the base HUD's word)
+  let nameCache = null, nameAt = 0;
+  const playerName = () => {
+    if (nameCache && now() - nameAt < 1000) return nameCache;
+    let n = ''; try { n = (JSON.parse((storage && storage.getItem('ftf.day1.v1')) || '{}').nickname || '').trim(); } catch { n = ''; }
+    nameCache = n || t('menu.traveller'); nameAt = now(); return nameCache;
+  };
   const fail = (slot, v) => {
     flash[slot] = now() + 120;
     if (v.reason === 'mana') manaPulseUntil = now() + 400;
@@ -135,6 +143,7 @@ export function mount(ctx) {
     }
     if (!down) return;
     if (action === 'target') { e.preventDefault(); e.stopImmediatePropagation(); cycleTarget(); return; }
+    if ((WINDOWS.includes(action) || action === 'help') && blocksWindows()) { e.preventDefault(); e.stopImmediatePropagation(); return; }   // a first-time overlay runs
     if (WINDOWS.includes(action) && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); openWindow(action); return; }
     if (action === 'help') { e.preventDefault(); e.stopImmediatePropagation(); openWindow('help'); }
   };
@@ -148,6 +157,7 @@ export function mount(ctx) {
     const i = list.findIndex((m) => m.id === targetId); targetId = list[(i + 1) % list.length].id;
   }
   function openWindow(id) {
+    if (id !== 'menu' && blocksWindows()) return;                                   // a first-time overlay runs: windows wait
     if (id === 'menu') { if (ctx.openMenu) ctx.openMenu(); else { const e = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }); e.__rpg = true; win.dispatchEvent(e); } return; }
     if (id === 'skills') { import('./skill-tree-ui.js').then((m) => { tree = tree || m.createSkillTree({ doc, t, api }); tree.toggle(); open.skills = tree.isOpen; }); return; }
     if (id === 'character') { import('./character-panel.js').then((m) => { sheet = sheet || m.createCharacterPanel({ doc, t, api }); sheet.toggle(); open.character = sheet.isOpen; }); return; }
@@ -196,6 +206,11 @@ export function mount(ctx) {
     if (targetId && !mobById(targetId)) targetId = null;
   };
   win.addEventListener('ftf:mob-killed', onKill);
+  const onCloseAll = () => { for (const w of [tree, sheet, cheat]) if (w && w.isOpen) w.close(); };
+  win.addEventListener('ftf:close-windows', onCloseAll);
+  // a tap or click outside closes the open window (the tray and the frame toggle them themselves)
+  const onOutside = (e) => { const el = e.target; if (el && el.closest && !el.closest('.rpg-modal, .rpg-tray, .rpg-frame, .rpg-hotbar')) onCloseAll(); };
+  doc.addEventListener('pointerdown', onOutside, true);
 
   // ------------------------------------------------------------------ the API the tree, the sheet and e2e use
   const api = {
@@ -206,6 +221,8 @@ export function mount(ctx) {
     spend(stat) { const r = spendStat(L, rec, stat); if (!r.ok) return r; rec = r.rec; refreshStats(); save(); emit('stat.spent', { stat, value: rec.stats[stat] }); return r; },
     place(slot, id) { bar = S.placeOnSlot(bar, slot, id); save(); },
     get xp() { return levelNow(); },
+    get portrait() { const sk = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris'; return (ctx.base || '/') + 'assets/cards/' + sk + '.webp'; },
+    get name() { return playerName(); },
   };
   if (win.location && /[?&]test=1\b/.test(win.location.search)) {
     win.__ftfTest = win.__ftfTest || {};
@@ -245,7 +262,7 @@ export function mount(ctx) {
       const sp = S.pointsLeft(L, rec), tp = statPointsLeft(L, rec);
       const skin = (ctx.skin ? ctx.skin() : (win.__ftf && win.__ftf.iris && win.__ftf.iris.hero && win.__ftf.iris.hero.id)) || 'iris';
       hud.render({
-        portrait: (ctx.base || '/') + 'assets/cards/' + skin + '.webp', name: skin === 'elise' ? 'Elise' : 'Iris',
+        portrait: (ctx.base || '/') + 'assets/cards/' + skin + '.webp', name: playerName(),
         level: L, hp: self.hp, maxHP: stats.maxHP, mana: caster.mana, maxMana: stats.maxMana, manaPulse: manaPulseUntil > tnow,
         target: tg ? { name: mobDisplayName(tg.mob.type).replace(/^./, (c) => c.toUpperCase()), hp: tg.mob.hp, maxHp: tg.mob.T.hp, elite: !!tg.mob.T.elite } : null,
         buffs: Object.entries(self.buffs).map(([id, b]) => ({ id, name: id, left: (b.until - tnow) / 1000, debuff: false })),
@@ -259,7 +276,7 @@ export function mount(ctx) {
       if (tree && tree.isOpen) tree.refresh(); if (sheet && sheet.isOpen) sheet.refresh();
     },
     dispose() {
-      win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill);
+      win.removeEventListener('keydown', onKey, true); win.removeEventListener('keyup', onKey, true); win.removeEventListener('ftf:cast', onCastEvent); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('ftf:close-windows', onCloseAll); doc.removeEventListener('pointerdown', onOutside, true);
       if (offLedger) offLedger(); if (offHit) offHit(); offBind(); hud.dispose(); if (tree) tree.dispose(); if (sheet) sheet.dispose(); if (cheat) cheat.dispose();
     },
   };

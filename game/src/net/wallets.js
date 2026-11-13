@@ -166,3 +166,57 @@ function b58decodeBytes(s) {
 export async function bestNearProvider({ connector = nearConnector } = {}) {
   try { await connector(); return nearConnectProvider({ connector }); } catch { return nearProvider(); }
 }
+
+// ---- passkeys (WebAuthn): the "email-like" login, no provider secret, no extension -----------------------------
+// The passkey's P-256 key signs the login message (challenge = sha256(message)); the relayer pins the public key to the
+// credential id on the first link. Device key: the PRF extension's output for a fixed salt (the same on every device
+// the passkey syncs to); a browser without PRF gets a key kept in this browser only (another device then answers
+// "no device key", as for a non-deterministic wallet).
+const u64 = (u8) => b64(u8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const un64 = (s) => unb64(String(s).replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (String(s).length % 4)) % 4));
+const sha256 = async (u8) => new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', u8));
+export const PASSKEY_LOCAL = 'ftf.passkey.dev.';
+export const passkeySupported = (win = globalThis.window) => !!(win && win.PublicKeyCredential && win.navigator && win.navigator.credentials);
+
+/** mode 'create' makes a new passkey; mode 'get' uses one the browser or phone already has. */
+export function passkeyProvider({ mode = 'get', creds = globalThis.navigator && globalThis.navigator.credentials, rpId = globalThis.location && globalThis.location.hostname, storage = null, rand = (n) => globalThis.crypto.getRandomValues(new Uint8Array(n)) } = {}) {
+  let rawId = null, prf = null;
+  const salt = () => sha256(utf8('ftf-device-key-v1'));
+  const prfOf = (cred) => { const r = cred.getClientExtensionResults ? cred.getClientExtensionResults() : {}; const f = r && r.prf && r.prf.results && r.prf.results.first; return f ? new Uint8Array(f) : null; };
+  return {
+    kind: 'passkey', id: 'passkey-' + mode, name: 'Passkey',
+    async connect() {
+      const extensions = { prf: { eval: { first: await salt() } } };
+      if (mode === 'create') {
+        const cred = await creds.create({ publicKey: { challenge: rand(32), rp: { name: 'Forget to Foresee', id: rpId }, user: { id: rand(16), name: 'Forget to Foresee player', displayName: 'Forget to Foresee player' },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }], authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' }, extensions } });
+        if (!cred) throw new Error('no_passkey');
+        rawId = new Uint8Array(cred.rawId); prf = prfOf(cred);
+        const spki = cred.response && cred.response.getPublicKey && cred.response.getPublicKey();
+        if (!spki) throw new Error('no_public_key');
+        return { address: u64(rawId), publicKey: u64(new Uint8Array(spki)) };
+      }
+      const cred = await creds.get({ publicKey: { challenge: rand(32), rpId, userVerification: 'preferred', extensions } });
+      if (!cred) throw new Error('no_passkey');
+      rawId = new Uint8Array(cred.rawId); prf = prfOf(cred);
+      return { address: u64(rawId) };
+    },
+    async signDeviceKey() {
+      if (!prf && mode === 'create') { // many browsers give PRF only on an assertion: ask once with this credential
+        try { const c = await creds.get({ publicKey: { challenge: rand(32), rpId, allowCredentials: [{ type: 'public-key', id: rawId }], userVerification: 'preferred', extensions: { prf: { eval: { first: await salt() } } } } }); if (c) prf = prfOf(c); } catch { /* no PRF: a local key */ }
+      }
+      if (prf && prf.length >= 32) return new Uint8Array([...prf.slice(0, 32), ...(await sha256(prf))]);
+      const k = PASSKEY_LOCAL + u64(rawId);
+      try { const s = storage && storage.getItem(k); if (s) return un64(s); } catch { /* memory only */ }
+      const fresh = rand(64);
+      try { if (storage) storage.setItem(k, u64(fresh)); } catch { /* memory only */ }
+      return fresh;
+    },
+    async signMessage(text) {
+      const cred = await creds.get({ publicKey: { challenge: await sha256(utf8(text)), rpId, allowCredentials: [{ type: 'public-key', id: rawId }], userVerification: 'preferred' } });
+      if (!cred) throw new Error('no_passkey');
+      const r = cred.response;
+      return JSON.stringify({ authenticatorData: u64(new Uint8Array(r.authenticatorData)), clientDataJSON: u64(new Uint8Array(r.clientDataJSON)), signature: u64(new Uint8Array(r.signature)) });
+    },
+  };
+}

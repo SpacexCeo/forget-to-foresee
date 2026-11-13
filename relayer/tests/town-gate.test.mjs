@@ -114,3 +114,12 @@ test('gate GET: the game reads creditable, credited and today\'s room for its on
   assert.equal(res.body.silk, String(38n * M)); assert.equal(res.body.creditable, String(220n * M)); assert.equal(res.body.credited, String(38n * M));
   assert.equal(res.body.day_room, String((300n - 38n) * M));
 });
+
+test('gate: credit_only registers an account that is not in the town yet, even with no verified log (live bug 13.11)', async () => {
+  const c = chain({ registered: false });
+  const r = await syncCredit('ann.testnet', deps(c, { loadLog: () => null }));
+  assert.equal(r.status, 200); assert.equal(r.body.registered_now, true); assert.equal(r.body.reason, 'no_verified_log');
+  assert.deepEqual(c.calls.map((x) => x[0]), ['register']);
+  const again = await syncCredit('ann.testnet', deps(c, { loadLog: () => null }));
+  assert.equal(again.body.registered_now, false); assert.equal(c.calls.length, 1); // registered once
+});
