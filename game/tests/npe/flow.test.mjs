@@ -63,22 +63,22 @@ test('dialogue box: 40 cps typing, a click completes a line, reduced motion is i
   r.advance(); r.advance(); assert.equal(await r.done, 'finished');
 });
 
-test('roadmap card: exactly seven rows with the copy of 1.3, Start and Show me later', async () => {
+test('roadmap card (design review 13.11): three rows (Quests J, Trade B, the way home with the fee), one Start button', async () => {
   const doc = dom();
   const { openRoadmapCard, ROWS } = await import('../../src/npe/roadmap-card.js');
   const { withNpe } = await import('../../src/npe/index.js');
   const t = withNpe((k) => k);
-  assert.equal(ROWS.length, 7);
-  const c = openRoadmapCard({ doc, t, vars: { fee: '200', end: '15 November' } });
+  assert.deepEqual(ROWS.map((r) => [r.id, r.key]), [['quests', 'J'], ['trade', 'B'], ['home', null]]);
+  assert.ok(ROWS.every((r) => r.glyph.startsWith('<svg') && !/[\u{1F300}-\u{1FAFF}]/u.test(r.glyph)), 'line glyphs, no emoji');
+  const c = openRoadmapCard({ doc, t, vars: { fee: '200' } });
   const rows = doc.querySelectorAll('.npe-card li');
-  assert.equal(rows.length, 7);
-  assert.deepEqual(rows.map((r) => r.querySelector('b').textContent), ['Quests', 'Tournaments', 'Chests and loot', 'Trade', 'The leaderboard', 'Your NFT', 'Season 1 and the way home']);
-  assert.equal(rows[6].querySelector('.txt').textContent, 'Gather 200 silk, step into the Gate-Loom and go home. Season 1 ends on 15 November.');
-  assert.equal(rows[0].querySelector('.txt').textContent, 'Villagers need help. Finish quests for silk, XP and chests. Press J any time.');
-  doc.querySelectorAll('.npe-card button').find((b) => b.textContent === 'Start').click();
+  assert.equal(rows.length, 3);
+  assert.ok(rows[0].querySelector('b').textContent.startsWith('Quests')); assert.ok(rows[2].querySelector('b').textContent.startsWith('The way home'));
+  assert.equal(rows[2].querySelector('.txt').textContent, 'Gather 200 silk and step into the Gate-Loom to go home.');
+  const buttons = doc.querySelectorAll('.npe-card button'); assert.equal(buttons.length, 1); assert.equal(buttons[0].textContent, 'Start');
+  buttons[0].click();
   assert.equal(await c.result, 'start');
-  const c2 = openRoadmapCard({ doc, t, vars: {} });
-  doc.querySelectorAll('.npe-card button').find((b) => b.textContent === 'Show me later').click();
+  const c2 = openRoadmapCard({ doc, t, vars: {} }); c2.close();
   assert.equal(await c2.result, 'later');
 });
 
@@ -95,7 +95,7 @@ test('intro end to end (DOM): fallback without A6, 19 lines in order, no silk gr
   for (let i = 0; i < 19; i++) { names.push(doc.querySelector('.npe-name').textContent); doc.querySelector('.npe-box').click(); await tick(); }
   assert.deepEqual(names.slice(0, 7), ['Townsfolk', 'Child', 'Guard', 'Lamplighter', 'Weaver', 'Elder', 'Iris']);
   await tick(2);
-  assert.equal(doc.querySelectorAll('.npe-card li').length, 7, 'the card opens after W19');
+  assert.equal(doc.querySelectorAll('.npe-card li').length, 3, 'the card opens after W19');
   assert.deepEqual(grants, [], 'the intro grants no silk'); assert.deepEqual(toasts, []);
   doc.querySelectorAll('.npe-card button').find((b) => b.textContent === 'Start').click();
   const s = await run.state;
@@ -118,7 +118,7 @@ test('intro: a failing A6 module falls back to the title card; Skip all says how
   run.skip(); await tick(3);
   assert.ok(doc.querySelector('.npe-box'), 'Esc on the title card reaches the dialogue');
   run.skip(); await tick(3);
-  assert.equal(doc.querySelectorAll('.npe-card li').length, 7);
+  assert.equal(doc.querySelectorAll('.npe-card li').length, 3);
   assert.deepEqual(grants, []); assert.ok(toasts.includes(NPE['npe.skipped']));
   run.skip(); const s = await run.state; assert.equal(s.rec.cardSeen, false);
 });
