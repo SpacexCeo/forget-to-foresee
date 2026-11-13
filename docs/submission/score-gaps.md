@@ -25,6 +25,8 @@ each one. Scored on the published criteria: technical implementation, design, im
 | Technical | Visible running economy | 20 trader accounts with their own keys and ~18,000 trades a day, but the README top did not show it; the economy row quoted the 22,000/day target, not a measurement | README top: a live-numbers block with a link per trader account and to the independent count (`docs/proof/`) |
 | Technical | CI on every push | `pages` (game tests, `main` only, `game/**` paths) and `contracts` (path-filtered); relayer, server, presence and the count tool had no CI; no badge | `tests` workflow on every push and PR: game, server, relayer, presence, count tool, on Node 20 and 22; badges in the README |
 | Technical | Independent recount | `tools/count/count.mjs` existed, but on Windows it exited 0 and printed nothing (the main-module check compared a `file://` URL with a Windows path); same for `runway.mjs`, `verify-tee`, `stats.mjs` and the replay-link script | Fixed; the README's verify block lists the recount command next to the proof verifiers |
+| Technical | Live TEE check a stranger can run | `verify-tee --model …` printed `FAIL` on 13 Nov from a network that NVIDIA's GPU attestation service answers with 403; the README promised `PASS` | README explains the 403 and `--no-gpu` (only that line becomes `SKIP`; the run then prints `PASS`) |
+| Technical | Generated numbers match the suites | `docs/STATS.md` is from `5c2b4246` (relayer 114; the suite has 139 now) | Not regenerated here (heavy run); **lead**: `node scripts/stats.mjs --write` on Linux |
 | Technical | Tests that pass anywhere | Two relayer CLI tests failed on Windows (tool path from `URL.pathname`) | Fixed (relayer suite green on Windows and Linux) |
 | Impact | Honest AI section | README table correct; `docs/ai-use.md` still said the clan strategy layer was "built, not live" (live since 13 Nov, 21 of 21 decisions today from the model) | `docs/ai-use.md` matches the live relayer and links the live `strategy` field |
 | Impact / Technical | README claims match what runs | Sign-in row said the flag was off and the routes undeployed (both live); the loop section said the market was "built, not deployed" (the player market is live); the track-hint row said no login of any kind | Rows rewritten from the live relayer, `features.json` and the RPC |
@@ -43,7 +45,8 @@ each one. Scored on the published criteria: technical implementation, design, im
 - Post the X demo with the video, register in the catalog, send the form (one attempt).
 - Set the GitHub About text, website and topics (suggested text below).
 - Top up the trader wallets so the economy keeps trading through 14 Nov (see the handoff).
-- After 00:00 UTC 15 Nov: run the final count and commit it (`node tools/count/count.mjs --window 2026-11-14 --write`).
+- After 00:00 UTC 14 Nov: the final count of 13 Nov (`node tools/count/count.mjs --window 2026-11-13 --write`; the
+  README's live block links that file); after 00:00 UTC 15 Nov the same for 14 Nov.
 - Any mainnet deployment.
 
 Suggested GitHub About: "3D strategy game on NEAR testnet: prophecies sealed on chain before play, memory-shard NFTs,
