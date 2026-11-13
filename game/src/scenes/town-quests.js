@@ -10,6 +10,7 @@ import { QUESTS } from '../game/quests-data.js';
 import { createExpeditionLedger } from '../game/expedition-ledger.js';
 import { EXPEDITION } from '../game/expedition-config.js';
 import { rollDrops, missingFor, RESOURCE_IDS } from '../game/resources.js';
+import { silkView, subscribeSilk, refreshSilk, formatSilkC } from '../net/silk-core.js';
 
 /** Which quest a giver talks about now (pure): the first of theirs that is not done, else the last. */
 export function giverQuest(qs, giver, now = 0) {
@@ -112,13 +113,15 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   // paying is the guest's pay_gate (net/town-gate.js, injected as `gate`). Without a gate nothing can be paid.
   let chain = { ok: false, reason: gate ? 'loading' : 'not_configured', priceC: EXPEDITION.PORTAL_FEE_C, balanceC: 0, paid: null }, lastRead = -Infinity, reading = false, payError = null;
   const feeC = () => (chain.ok ? chain.priceC : EXPEDITION.PORTAL_FEE_C);
-  // what the guest can pay with: the on-chain silk, or the verified income of the log, which the relayer credits before it pays
-  const balanceC = () => (chain.ok ? Math.max(chain.balanceC, ledger ? ledger.earnedVerifiedC : 0) : 0);
+  // The ONE silk number (net/silk-balance.js, sprint 6.2): shown = silk recorded on NEAR (the same number as the HUD chip);
+  // payable = that plus the earned-and-checked silk the relayer records (credits) right before it pays.
+  const heldC = () => { const v = silkView(); return v.chainOk ? v.gateC : (chain.ok ? chain.balanceC : 0); };
+  const balanceC = () => { const v = silkView(); return v.chainOk ? v.gateC + v.pendingC : (chain.ok ? Math.max(chain.balanceC, ledger ? ledger.earnedVerifiedC : 0) : 0); };
   const fee = { get feeC() { return feeC(); }, demo: false };
   async function refreshChain() {
     if (!gate || reading) return chain; reading = true; lastRead = now();
     try { const c = await gate.read(); chain = c && c.ok ? c : { ...chain, ok: false, reason: (c && c.reason) || 'network' }; } catch { chain = { ...chain, ok: false, reason: 'network' }; }
-    reading = false; gateFromBalance(); changed(); return chain;
+    reading = false; refreshSilk(true).catch(() => {}); gateFromBalance(); changed(); return chain;
   }
   function gateFromBalance() { if (story.phase === 'gathering' || story.phase === 'gate_open') { const r = reduce(story, { type: 'SILK', balanceC: balanceC() }, { feeC: feeC() }); if (r.state.phase !== story.phase) story = r.state; } }
   let story = load(storage, STORY_KEY, initialState);
@@ -150,7 +153,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   doc.body.append(line);
   function renderObjective() {
     const o = objective(story, qs, now(), have());
-    const silk = Math.floor(balanceC() / 100).toLocaleString('en-US'), goal = Math.round(feeC() / 100).toLocaleString('en-US'); // on-chain silk (ftf-town)
+    const silk = formatSilkC(heldC()), goal = formatSilkC(feeC()); // the one silk number: recorded on NEAR (ftf-town)
     const near = o && o.giver ? distanceTo(o.giver) : null;
     line.textContent = o ? t(o.key, { ...o.args, giver: o.args && o.args.giver ? t('folk.name.' + o.args.giver) : '', res: o.args && o.args.id ? t('res.' + o.args.id) : '' }) + (near != null ? ' · ' + t('quest.track.near', { m: near }) : '') + ' · ' + t('story.goal.silk', { n: silk, fee: goal }) : '';
     line.hidden = !active || !o || story.phase === 'onward';
@@ -289,13 +292,14 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
   if (story.phase === 'off') storyDo({ type: 'START', skipPrologue: true }); // the prologue (P4) is optional: arrival
   if (qs.since == null) questDo({ type: 'BEGIN' }); // the guide's grace period: the guard's quest opens even if the elder is skipped
   if (gate) refreshChain();
+  const unSilk = subscribeSilk(() => { gateFromBalance(); renderObjective(); }); // the shared model moved: same number here as on the HUD
   renderObjective();
   return {
     spots,
     get story() { return story; }, get quests() { return qs; }, get ledger() { return ledger; }, get fee() { return fee; },
     get talking() { return !!panel; }, get twisting() { return twisting; },
     /** Live facts for the portal. */
-    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting }),
+    portalFacts: () => ({ phase: story.phase, balanceC: balanceC(), heldC: heldC(), pendingC: silkView().pendingC, feeC: feeC(), demo: false, blocker: chain.ok ? null : chain.reason, payError, paying: twisting }),
     refreshChain, get chain() { return chain; },
     payGate,
     /** Per frame: the guide's movement step, the gate opening with the balance, a talk closing when she walks off. */
@@ -314,7 +318,7 @@ export function createTownQuests({ storage, townLedger, i18n, folkAt = () => nul
     /** Markers over the givers: [{giver, sym: '!'|'?'}] for scenes/quest-markers.js. */
     markers: () => ['elder', 'guard', 'lamplighter', 'shardkeeper'].map((giver) => ({ giver, sym: markerFor(giver, story, qs, now(), have()) })).filter((m) => m.sym),
     openLog, closeLog, toggleLog, get logOpen() { return !!logPanel; },
-    dispose() { closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
+    dispose() { unSilk(); closeTalk(); closeLog(); logBtn.remove(); line.remove(); win.removeEventListener('ftf:mob-killed', onKill); win.removeEventListener('keydown', onKey); },
   };
 }
 

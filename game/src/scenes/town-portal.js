@@ -7,6 +7,7 @@
 // twist: the veil is gone, the stone is cold), off (story flag off: nothing is created). E in reach shows its
 // line through the town's prompt; in `ready` a confirmation says what happens before the fee is paid. Behind ?story=1.
 import * as THREE from 'three';
+import { formatSilkC } from '../net/silk-core.js';
 
 /** Town-local metres beside the spawn, to Iris's right in the first frame (the spawn is (0, 0, 25), she faces -z). */
 export const PORTAL_TOWN = Object.freeze([4.4, 0, 24.8]);      // clear of the standing mirror at (2.8, 0, 21.5) and of the stall posts further right
@@ -20,8 +21,9 @@ export function portalState({ on = false, phase = 'off', balanceC = 0, feeC = 20
 }
 
 /** The prompt line for a state: {key, args} (locale keys story.portal.*). */
-export function portalPrompt(state, { balanceC = 0, feeC = 20_000, demo = false, blocker = null, payError = null, paying = false } = {}) {
-  const fee = Math.round(feeC / 100).toLocaleString('en-US'), held = Math.floor(balanceC / 100).toLocaleString('en-US');
+export function portalPrompt(state, { balanceC = 0, heldC = null, feeC = 20_000, demo = false, blocker = null, payError = null, paying = false } = {}) {
+  // "you hold" is the one silk number (recorded on NEAR, the same as the HUD chip); balanceC may add the waiting silk
+  const fee = formatSilkC(feeC), held = formatSilkC(heldC == null ? balanceC : heldC);
   if (state !== 'spent' && paying) return { key: 'story.portal.paying', args: {} };
   if (state !== 'spent' && blocker === 'need_guest') return { key: 'story.portal.needGuest', args: {} };
   if (state !== 'spent' && blocker && blocker !== 'loading') return { key: 'story.portal.offline', args: {} };

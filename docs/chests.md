@@ -63,28 +63,33 @@ CLI's job.
 
 ## Batch opening (owner, 12.11; relayer side built)
 
-`POST /api/chest/open` with `count` (1–10) and `request_id` opens up to `count` chests in **one transaction**: `count`
-`open_chest` FunctionCall actions to the chest contract, signed by the opener's function-call key. There is **no
-contract change**, and every opening still draws its own deck position, so each stays individually verifiable with
-`tools/verify-chest/verify.mjs`.
+`POST /api/chest/open` with `count` (1–10) and `request_id` opens up to `count` chests, **one single-action
+transaction per chest**, sent together. There is **no contract change**, and every opening still draws its own deck
+position, so each one stays individually verifiable with `tools/verify-chest/verify.mjs`.
 
+- **Why not one transaction (13.11, the "Open all" failure).** The first design sent one transaction with N
+  `open_chest` actions. The opener key is a function-call access key, and NEAR lets such a key sign only a
+  single-action transaction, so the network refused every batch before it was sent. The relayer answered `rpc`, the
+  client had no message for that code, and players saw "The chest service failed". `/api/health` showed 0 batch
+  transactions. Now `callEach` (`relayer/lib/near-tx.js`) sends each transaction after the one before is included in a
+  block, so the nonces stay in order from one queue slot. It then reads every final outcome.
 - **Signature**: the player signs `ftf-chest-open|<account>|<at>|<count>|<request id>`. A request without `count`
   works as before.
 - **Limits**: the batch is cut to the account's daily allowance (30 a day, counted from `openings_of` for today), to
   what is left of the deck, and to 10. The answer says `cut: "daily_cap"` when it was cut.
-- **All or nothing**: the actions run in one receipt, so if the transaction fails nothing has landed. It is retried
-  once with the same count.
-- **Journal**: a request id that was answered is answered again from the journal and never re-sent.
-- **Read-back**: the openings come from the chain's `chest_opened` events (only the last action has a return
-  value), each with its outcome, leaf and Merkle proof.
-- **Honest count**: `/api/health` → `chests` reports `transactions`, `openings` and `batches` separately (one batch
-  is one transaction with N openings).
-- **Gas**: 28 Tgas per action (10 × 28 = 280 of the 300 Tgas limit). The real use must be measured with the test
-  below.
-- **Verify on testnet first.** Run on the relayer server with the opener key:
-  `node relayer/scripts/chest-batch-test.mjs <guest account> 2 --send`. It sends one transaction with 2 `open_chest`
-  actions and prints the hash, the gas burnt and both openings. If the network refuses a multi-action
-  function-call-key transaction, the batch falls back to N single transactions: one line in `openChests`.
+- **Partial success**: each chest is its own transaction. If some fail, the answer lists exactly the ones that opened
+  (`cut: "failed_some"`), and the client settles only those. If all fail, the answer is a plain code (`tx_failed`,
+  `daily_cap`, `sold_out`).
+- **Journal**: a request id that was answered is answered again from the journal, keyed by account and request id.
+  The journal is checked before the replay guard, so a retry after a lost answer is never refused or re-sent.
+- **Read-back**: the openings come from each transaction's `chest_opened` event, each with its own `tx_hash`,
+  outcome, leaf and Merkle proof.
+- **Honest count**: `/api/health` → `chests` reports `transactions`, `openings`, `batches` and `errors` by code (a
+  batch of N is N transactions).
+- **Gas**: 100 Tgas per transaction, the same as a single open; unused gas is refunded.
+- **Rate limit**: 20 requests a minute per IP, and a batch is one request.
+- **Errors**: every relayer code has its own plain message (`chest.err.<key>` in the five play locales;
+  `net/chest-client.js` `chestErrorKey`). Only an unknown code shows the generic line, and the real code is logged.
 - **Client** (`game/src/net/chest.js` `openChests`, `net/chest-client.js` `openMany`, `play/chest-batch.js`):
   - The bag shows "Open 5" and "Open all (≤ 10)" once two or more chests are sealed; "Open" on a card still opens
     one.

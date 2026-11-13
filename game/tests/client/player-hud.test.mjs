@@ -31,7 +31,14 @@ test('town only; the wallet follows the ledger; chest badge; three toasts at mos
   assert.equal(hud.root.hidden, true, 'hidden until the town phase');
   hud.update({ visible: true, hp: 40, maxHp: 100 });
   assert.equal(hud.root.hidden, false);
-  assert.match(hud.root.textContent, /100\.00/);
+  // the ONE silk number (net/silk-core.js): before the chain answers, 0 on NEAR and "Checking…" (never a guess)
+  assert.match(hud.root.textContent, /Checking…/);
+  const { installSilkModel, computeSilkView } = await import('../../src/net/silk-core.js');
+  installSilkModel({ view: () => computeSilkView({ localTotalC: 12864, onChainC: 3800, creditableC: 6000, chainOk: true }), subscribe: () => () => {}, syncNow: async () => ({ ok: true }), refresh: async () => {} });
+  assert.match(hud.root.querySelector('.ph-coin b').textContent, /^38$/); // the portal's number, not the 128.64 kept in this browser
+  assert.match(hud.root.textContent, /\+22 waiting/);
+  assert.match(hud.root.querySelector('.ph-coin').title, /Recorded on NEAR: 38[\s\S]*Waiting to be recorded: 22[\s\S]*Play silk \(saved on this device only\): 68\.64[\s\S]*All silk you hold: 128\.64/);
+  installSilkModel(null);
   assert.match(hud.root.textContent, /▣ 2/);
   sealed = 0; for (const f of subs) f();
   assert.doesNotMatch(hud.root.textContent, /▣/);
@@ -39,6 +46,6 @@ test('town only; the wallet follows the ledger; chest badge; three toasts at mos
   for (let i = 0; i < 5; i++) hud.toast('n' + i);
   assert.equal(hud.root.querySelectorAll('.ph-toast').length, 3);
   hud.update({ visible: false }); assert.equal(hud.root.hidden, true, 'the archipelago keeps its own HUD');
-  for (const loc of Object.keys(PLAY_MESSAGES)) for (const k of ['town.silk', 'chest.badge', 'hud.health']) assert.ok(PLAY_MESSAGES[loc][k], loc + ' ' + k);
+  for (const loc of Object.keys(PLAY_MESSAGES)) for (const k of ['town.silk', 'chest.badge', 'hud.health', 'silk.waiting', 'silk.offline', 'silk.checking', 'silk.sync', 'silk.tip.gate', 'silk.tip.chain', 'silk.tip.pending', 'silk.tip.play', 'silk.tip.total', 'silk.tip.fee']) assert.ok(PLAY_MESSAGES[loc][k], loc + ' ' + k);
   hud.dispose();
 });
