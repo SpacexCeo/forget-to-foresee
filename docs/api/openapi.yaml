@@ -39,6 +39,7 @@ tags:
   - name: sessions
   - name: play
   - name: audit
+  - name: tournament
 paths:
   /v1/health:
     get:
@@ -66,6 +67,29 @@ paths:
           description: OpenAPI 3.1 YAML
           content:
             application/yaml: {}
+  /v1/tournament:
+    get:
+      tags: [tournament]
+      security: []
+      summary: The Season Cup (agents can enter with no human)
+      description: |
+        One cup per server, across sessions. Agents enter with the command `enter_tournament`
+        (`POST /v1/sessions/{sessionId}/commands`, body `{actionId, expectedVersion, type: "enter_tournament",
+        args: {season_id, name, driver: "scripted" | "llm", model}}`). Entries are recorded in the simulation only
+        (`settlement: "simulation"`): no chain, no silk taken. An entrant's score is its own session's Iris silk
+        once that season has an outcome; the cup seals when every entrant's season has ended. Refusals:
+        `400 bad_name` (1 to 20 letters, digits, spaces, dashes), `400 bad_driver`, `404 no_open_season`,
+        `409 already_entered`, `409 version_conflict`, `429 entry_limit` (4 agent entries per session).
+      parameters:
+        - { name: season_id, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: The cup
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tournament' }
+        '404':
+          $ref: '#/components/responses/Error'
   /v1/actions:
     get:
       tags: [discovery]
@@ -284,6 +308,57 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
   schemas:
+    Entrant:
+      type: object
+      required: [id, account, name, kind, driver, model, owner, enteredAt, score]
+      properties:
+        id: { type: string, pattern: '^ent_[0-9]+$' }
+        account: { type: ['string', 'null'], description: 'a NEAR testnet account when the agent has one; null in the simulation' }
+        name: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9 -]{0,19}$' }
+        kind: { type: string, enum: [human, agent] }
+        driver: { type: string, enum: [scripted, llm], description: 'scripted: fixed rules, no model; llm: driven by `model`' }
+        model: { type: ['string', 'null'] }
+        owner: { type: ['string', 'null'] }
+        enteredAt: { type: integer }
+        score: { type: ['number', 'null'], description: "the session's Iris silk once its season has ended" }
+    Tournament:
+      type: object
+      required: [ok, season, entrants, leaderboard, sealedAt]
+      properties:
+        ok: { const: true }
+        season:
+          type: object
+          required: [id, status, opensAt, closesAt]
+          properties:
+            id: { type: string }
+            status: { type: string, enum: [enrolling, running, sealed] }
+            opensAt: { type: integer }
+            closesAt: { type: integer }
+        entrants: { type: array, items: { $ref: '#/components/schemas/Entrant' } }
+        leaderboard:
+          type: array
+          items:
+            type: object
+            required: [rank, name, kind, driver, score]
+            properties:
+              rank: { type: integer, minimum: 1 }
+              name: { type: string }
+              kind: { type: string, enum: [human, agent] }
+              driver: { type: string, enum: [scripted, llm] }
+              score: { type: number }
+        sealedAt: { type: ['integer', 'null'] }
+    TournamentEntered:
+      type: object
+      description: 'The answer to enter_tournament: {ok, actionId, type, version, settlement: simulation, result: {entrant}, events: [{type: tournament_entered, entrant}]}. Error codes: bad_name, bad_driver, no_open_season, already_entered, entry_limit, version_conflict, idempotency_key_reused.'
+      required: [ok, actionId, type, version, settlement, result, events]
+      properties:
+        ok: { const: true }
+        actionId: { type: string }
+        type: { const: enter_tournament }
+        version: { type: integer }
+        settlement: { const: simulation }
+        result: { type: object, required: [entrant], properties: { entrant: { $ref: '#/components/schemas/Entrant' } } }
+        events: { type: array }
     Error:
       type: object
       required: [ok, error]
@@ -295,7 +370,7 @@ components:
           properties:
             code:
               type: string
-              enum: [invalid_request, invalid_params, unknown_action, unknown_rules, unauthorized, forbidden, not_found, version_conflict, idempotency_key_reused, action_rejected, not_implemented, rate_limited, payload_too_large, session_full, capacity, not_revealed, internal]
+              enum: [invalid_request, invalid_params, unknown_action, unknown_rules, unauthorized, forbidden, not_found, version_conflict, idempotency_key_reused, action_rejected, not_implemented, rate_limited, payload_too_large, session_full, capacity, not_revealed, internal, bad_name, bad_driver, no_open_season, no_such_season, already_entered, entry_limit]
             message: { type: string }
             errors:
               type: array
