@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Glass Shoal · look preview</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #101f1a; color: #eef0ea; font: 14px/1.45 system-ui, sans-serif; }
+    #app, #app canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+    #gate { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; }
+    #gate[hidden] { display: none; }
+    #gate b { display: block; font: 600 28px Georgia, serif; color: #dcc08a; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="gate" hidden><div><b>The Glass Shoal</b>This preview is behind the flag <code>glassShoal</code>. Add <code>?ff=glassShoal</code> to the address.</div></div>
+  <script type="module" src="/src/shoal-preview.js"></script>
+</body>
+</html>
