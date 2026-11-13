@@ -62,6 +62,7 @@ import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
 import { createCompanion } from './scenes/companion.js';
+import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 
@@ -248,13 +249,15 @@ const chestBag = createChestBag({ storage: ctx.storage });
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
 const companions = [];
 let companionKinds = '';
-function setCompanions(kinds) {
+function setCompanions(all) {
+  const kinds = companionsToShow(all); // switched off for now (companion-rules.js COMPANIONS_ENABLED)
   const key = kinds.join(','); if (key === companionKinds) return; companionKinds = key;
   for (const c of companions.splice(0)) c.dispose();
   const perchAfter = Number(params.get('perch')) || undefined; // QA: ?perch=<seconds> lands the dragon sooner
-  kinds.slice(0, 2).forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice, perchAfter })));
+  kinds.forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice, perchAfter })));
 }
 function refreshCompanions() {
+  if (!COMPANIONS_ENABLED) { setCompanions([]); return; } // no reads, no claims, no dragon beside her
   const qa = params.get('companion');
   if (qa && ['nacre', 'rill', 'cinder'].includes(qa)) { setCompanions([qa]); return; }
   const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
@@ -287,6 +290,7 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
+let hatchkeeper = null, hatchLoading = false; // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
 let restoreCamera = () => {};
@@ -357,13 +361,14 @@ if (townMode.town) {
       // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
       import('./net/companion-claim.js').then((cm) => {
         const ledger = townQuests && townQuests.ledger; if (!ledger) return;
-        const check = () => { if (cm.bossInLog(ledger.log) && !cm.claimed(ctx.storage, 'boss')) claimDragon('boss', () => (expeditionSync ? expeditionSync.flush() : Promise.resolve())); };
+        const check = () => { if (COMPANIONS_ENABLED && cm.bossInLog(ledger.log) && !cm.claimed(ctx.storage, 'boss')) claimDragon('boss', () => (expeditionSync ? expeditionSync.flush() : Promise.resolve())); };
         ledger.subscribe(check); check();
       }).catch(() => {});
     }).catch((e) => console.warn('[story]', e));
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
+  if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
   refreshCompanions();
   if (!townMonsters) {
@@ -1196,6 +1201,7 @@ function frame() {
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townQuests) townQuests.update(player.pos);
+    if (hatchkeeper) hatchkeeper.update(dt, inTown ? player.pos : null);
     if (questMarkers) questMarkers.update(clock.elapsedTime);
     if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
     if (townBoard) { if (!townBoard.grounded) { const g = town.groundAt(townBoard.root.position.x, townBoard.root.position.z); if (g != null) { townBoard.root.position.y = g; townBoard.grounded = true; } } townBoard.update(player.pos, clock.elapsedTime); }

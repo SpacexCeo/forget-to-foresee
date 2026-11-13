@@ -1487,6 +1487,16 @@ export default {
   'chest.found': "Scrigno trovato! Aprilo nell’Inventario (menu).",
   'menu.source.chest': "scrigno",
   // ---- dragon companions (net/companions.js) ----
+  // ---- the Hatchkeeper and the locked companion slot ----
+  'hatch.title': "Il Custode dei Nidi",
+  'hatch.sign': "Custode dei Nidi · Compagni",
+  'hatch.prompt': "Parla con il Custode dei Nidi",
+  'hatch.line1': "Questi piccoli non sono in vendita. Non si comprano con la seta, e nemmeno con una corona.",
+  'hatch.line2': "Seguono solo chi dimostra di essere reale. Non un'eco, non una maschera, non un copione che vaga per la città di notte.",
+  'hatch.line3': "Mostrami una mano viva dietro la tua chiave, e uno di loro sceglierà te.",
+  'hatch.status': "Non ancora disponibile. Il Custode dei Nidi è ancora in ascolto.",
+  'companion.slot': "Compagno",
+  'companion.locked': "Compagni: bloccati. È il Custode dei Nidi a decidere chi è pronto.",
   'companion.heading': "Di proprietà di Elise",
   'companion.owned': "Di proprietà di Elise · NFT agentico · NEAR testnet",
   'companion.account': "Custodito dall’account della protagonista {account}",

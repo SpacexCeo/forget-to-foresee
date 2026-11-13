@@ -3,6 +3,8 @@
 // (docs/art/ui/profile-owner-ref.jpg, 12.11), thin borders, gold labels, rarity colour frames, 40 px+ targets; reduced motion = static (no spin animation, no confetti, no pop). Honest by construction: the
 // NFTs tab lists only what a testnet read confirms right now (play/profile.js readOnChain), everything else is
 // labelled local. Items come from the items manifest (game/public/assets/items/manifest.json).
+import { COMPANIONS_ENABLED } from '../scenes/companion-rules.js';
+import { lockedCompanionSlot } from '../ui/companion-slot.js';
 import { readOnChain } from './profile.js';
 import { createWheel } from '../game/wheel.js';
 import { renderWheel, WHEEL_CSS } from './wheel-view.js';
@@ -204,7 +206,8 @@ export function openGameMenu({ doc = document, t, ledger, storage = null, tab = 
       });
       // dragons owned by the heroine token's account (docs/companion-nft-plan.md), only when the chain read confirms them
       const drag = el('div');
-      if (heroineToken) {
+      if (!COMPANIONS_ENABLED) drag.replaceChildren(el('h3', null, t('companion.slot')), lockedCompanionSlot(doc, t)); // owner 13.11: locked for everyone
+      else if (heroineToken) {
         (companionsRead || import('../net/companions.js').then((m) => m.readCompanions({ tokenId: heroineToken }))).then((r) => {
           if (!r || r.state !== 'loaded' || !r.dragons.length) return;
           const g2 = el('div', 'gm-grid'); g2.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))';

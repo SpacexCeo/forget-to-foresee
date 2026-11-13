@@ -18,3 +18,12 @@ export function keepClear(pos, hero, radius = COMPANION.keepOut, top = 1.95) {
   pos.x = hero.x + (dx / d) * radius; pos.z = hero.z + (dz / d) * radius;
   return pos;
 }
+
+/**
+ * Owner 13.11: players cannot have pets yet. No dragon flies beside Iris or Elise for anyone, even with a companion
+ * token, and no dragon is claimed; the only dragons in the world circle the Hatchkeeper (scenes/hatchkeeper.js).
+ * The code stays: set this to true to bring the companions back.
+ */
+export const COMPANIONS_ENABLED = false;
+/** The dragon kinds that may fly beside the heroine now (pure): none while companions are switched off. */
+export const companionsToShow = (kinds, enabled = COMPANIONS_ENABLED) => (enabled && Array.isArray(kinds) ? kinds.slice(0, 2) : []);

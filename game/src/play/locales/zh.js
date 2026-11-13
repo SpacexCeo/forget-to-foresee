@@ -1486,6 +1486,16 @@ export default {
   'chest.found': "发现宝箱！在背包（菜单）中打开它。",
   'menu.source.chest': "宝箱",
   // ---- dragon companions (net/companions.js) ----
+  // ---- the Hatchkeeper and the locked companion slot ----
+  'hatch.title': "守巢人",
+  'hatch.sign': "守巢人 · 伙伴",
+  'hatch.prompt': "与守巢人交谈",
+  'hatch.line1': "这些小家伙不卖。丝绸买不到它们，王冠也不行。",
+  'hatch.line2': "它们只追随能证明自己是真实存在的人。不是回声，不是面具，也不是夜里在城中游荡的脚本。",
+  'hatch.line3': "让我看到你的钥匙背后有一只活生生的手，它们中的一只就会选择你。",
+  'hatch.status': "暂未开放。守巢人仍在倾听。",
+  'companion.slot': "伙伴",
+  'companion.locked': "伙伴：未解锁。由守巢人决定谁已准备好。",
   'companion.heading': "归伊莉丝所有",
   'companion.owned': "归伊莉丝所有 · 代理型 NFT · NEAR 测试网",
   'companion.account': "由女主角自己的账户 {account} 持有",
