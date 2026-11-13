@@ -598,6 +598,7 @@ export default {
   "day1.hint.tournament": "Турнир открыт. Спросите хранителя святилища, как он устроен, и запишитесь у алтаря.",
   "day1.skin.iris": "Ирис",
   "day1.skin.elise": "Элиза",
+  "day1.skin.sheriffchenko": "Шерифченко",
   "day1.altar.timer": "Следующий раунд Турнира",
   "day1.altar.open": "Открыт сейчас",
   "day1.trailer.hero.1": "Она помнит, как проснулась на балконе, и ничего до этого.",

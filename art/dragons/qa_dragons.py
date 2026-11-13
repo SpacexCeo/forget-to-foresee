@@ -50,7 +50,7 @@ for src in SRCS:
         sc.collection.objects.link(sun)
         cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
         sc.collection.objects.link(cam)
-        cam.location = {"front": (0, -1.5, 0.22), "side": (1.5, -0.2, 0.2), "q": (0.95, -1.15, 0.45), "top": (0.0, 0.04, 1.9)}[view]
+        cam.location = {"front": (0, -2.4, 0.3), "side": (2.4, -0.3, 0.3), "q": (1.5, -1.8, 0.7), "top": (0.0, 0.06, 3.0)}[view]
         cam.rotation_euler = (Vector((0, 0.02, 0.02)) - cam.location).to_track_quat("-Z", "Y").to_euler()
         cam.data.lens = 85
         sc.camera = cam

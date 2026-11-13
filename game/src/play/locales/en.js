@@ -606,6 +606,7 @@ const EN = {
   "day1.hint.tournament": "The Tournament is open. Ask the shrinekeeper how it works, then register at the altar.",
   "day1.skin.iris": "Iris",
   "day1.skin.elise": "Elise",
+  "day1.skin.sheriffchenko": "Sheriffchenko",
   "day1.altar.timer": "Next Tournament round",
   "day1.altar.open": "Open now",
   "day1.trailer.hero.1": "She remembers waking on the balcony, and nothing before it.",

@@ -48,6 +48,7 @@ import { createTownLedger } from './game/town-economy.js';
 import { features as featureFlags } from './features.js';
 import { mountSprint } from './sprint/index.js';
 import { createDay1Mint, loadDay1 } from './play/day1-mint.js';
+import { nextSkin } from './play/skins.js';
 import { TALK_RADIUS } from './scenes/town-quest.js';
 import { PROGRAMS, TOWNSFOLK } from './play/townsfolk-plan.js';
 import { createTownCasting, CAST_KEYS } from './scenes/town-casting.js';
@@ -441,7 +442,7 @@ if (townMode.town) {
   if (!window.__ftfSprint) window.__ftfSprint = mountSprint({ THREE, scene, camera, renderer, player, ledger: townLedger, town, chests: chestBag, t: (k, a) => ctx.i18n.t(k, a), toast: (s) => toast(s), reduced: () => lookdev.reducedMotion, storage: ctx.storage, keys: input, flags: featureFlags, i18n: ctx.i18n, active: () => inTown, mobs: () => townMobs, base: import.meta.env.BASE_URL, floatNumber: numbersHook, openSettings: (tab) => openSettings(tab), skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id) }); // sprint seam (src/sprint, docs/sprint/CTX.md)
   if (!playerHud) playerHud = createPlayerHud({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, chests: chestBag, base: import.meta.env.BASE_URL,
     nickname: () => loadDay1(ctx.storage).nickname || null, skin: () => (irisAvatar ? irisAvatar.hero.id : startHero.id),
-    onSkin: () => toggleSkin(), canSwap: () => { const d = loadDay1(ctx.storage); return !!(d.minted || d.claimed || d.skin === 'elise'); },
+    onSkin: () => toggleSkin(), canSwap: () => { const o = skinsOwned(); return !!(o.elise || o.sheriffchenko); },
     onProfile: () => openProfileFor(quest), reducedMotion: () => lookdev.reducedMotion });
   // The endgame whitelist pass (story TZ §11; ui/endgame-pass.js), behind ?story=1. The story dispatches window
   // 'ftf:story-onward' after the twist; the relayer decides eligibility. ?passDemo=1 shows the labelled simulation (no hash, no call).
@@ -676,8 +677,15 @@ const day1On = () => {
   return !judge && !loadDay1(ctx.storage).claimed;
 };
 // The skin is the heroine herself: Elise wears her own model, clips and cel shading (play/iris-avatar.js setHero).
+// The wheel's skin NFT is read from the chain for the guest account (play/skins.js), never assumed. A function
+// declaration with its state on itself: the HUD asks canSwap() while this module is still being evaluated.
+function skinsOwned() { const d = loadDay1(ctx.storage); return { elise: !!(d.minted || d.claimed || d.skin === 'elise'), sheriffchenko: skinsOwned.sheriff === true }; }
+Promise.all([import('./play/skins.js'), import('./net/wheel-skin.js'), import('./net/agent-ledger.js')]).then(([sk, ws, al]) => sk.ownsWheelSkin({ storage: ctx.storage, skinOf: ws.skinOf, guestFrom: al.guestFrom })).then((yes) => {
+  skinsOwned.sheriff = yes;
+  if (yes && !params.get('hero') && loadDay1(ctx.storage).skin === 'sheriffchenko' && irisAvatar) irisAvatar.setHero(avatar, heroById('sheriffchenko')).catch(() => {}); // the skin worn last time, once the chain confirms it
+}).catch(() => {});
 function toggleSkin() {
-  const next = (irisAvatar ? irisAvatar.hero.id : startHero.id) === 'iris' ? 'elise' : 'iris';
+  const next = nextSkin(irisAvatar ? irisAvatar.hero.id : startHero.id, skinsOwned());
   day1Mint.setRecord({ skin: next });
   if (irisAvatar) irisAvatar.setHero(avatar, heroById(next)).catch((e) => console.warn('[skin]', e));
   toast(ctx.i18n.t('day1.skin.' + next));
