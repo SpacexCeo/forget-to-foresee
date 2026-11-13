@@ -40,13 +40,15 @@ def mat_q(m):
 #   keep: the share of each node's swing away from the hips-carried rest shape that is kept (a narrow dress: under 1);
 #   foot_peek: how deep a shoe may show through the hem of a floor-length dress and still pass the check;
 #   enclosed: False when the leg the gown encloses is not there (no knee-inside-the-gown check);
-#   max_deg: the largest angle a chain segment may leave its hips-carried rest direction; resolve_margin: the
-#   clearance the skinned gown keeps from the leg capsules after that (the legs always win over the limits).
-TUNE = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0)
+#   max_deg: the largest angle a chain segment may leave its carried rest direction; resolve_margin: the
+#   clearance the skinned gown keeps from the leg capsules after that (the legs always win over the limits);
+#   foot_grow: extra clearance the feet keep over the legs' (a long hem over a lifted heel).
+DEFAULTS = dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0, foot_grow=0.015)
+TUNE = dict(DEFAULTS)
 
 
 def use_character(char_spec):
-    TUNE.update(dict(drag=1.2, hold=0.04, margin=0.02, keep=1.0, max_deg=None, resolve_margin=0.008, enclosed=True, foot_peek=0.0))
+    TUNE.update(DEFAULTS)
     TUNE.update(((char_spec or {}).get('cloth') or {}).get('tune', {}))
 
 
@@ -92,6 +94,17 @@ class ClothRig:
         self.caps = [(rig.index[str(b)], p0.astype(float), p1.astype(float), float(r[0]), float(r[1]), int(s), str(b))
                      for b, p0, p1, r, s in zip(d['cap_bone'], d['cap_p0'], d['cap_p1'], d['cap_r'], d['cap_set'])]
         self.tails = {str(n): p.astype(float) for n, p in zip(d['tail_names'], d['tail_pos'])}
+        # How the body carries the gown's own shape. A wide gown hangs from the hips alone; a close dress (Elise v5)
+        # is carried by the legs too, and the rig file then holds a weight per grid point over `skin_names`.
+        self.skin_b = np.array([rig.index[str(n)] for n in d['skin_names']]) if 'skin' in d.files else np.array([rig.index['pelvis']])
+        self.skin_w = d['skin'].astype(float).reshape(-1, len(self.skin_b)) if 'skin' in d.files else np.ones((self.grid[..., 0].size, 1))
+        self.node_skin = self.skin_w.reshape(R, C, -1)[self.rows][:, self.cols].transpose(1, 0, 2)                     # [chains, nodes, bones]
+
+    def carried(self, wr, wp, pts, w):
+        """Rest points `pts` [P, 3] carried by the body over the pose [F, ...], weighted by `w` [P, bones] over
+        `skin_b` (linear blend skinning of a rest shape): [F, P, 3]."""
+        M, t = self.bone_xf(wr, wp, self.skin_b)
+        return np.einsum('fkpi,pk->fpi', np.einsum('fkij,pj->fkpi', M, pts) + t[:, :, None], w)
 
     # ---- pose
     def bone_xf(self, wr, wp, bones):
@@ -109,11 +122,11 @@ class ClothRig:
             out += self.w[None, :, k, None] * (np.einsum('fvij,vj->fvi', M[:, inv[:, k]], rest) + t[:, inv[:, k]])
         return out.reshape(len(wr), *self.grid.shape)
 
-    def capsules(self, wr, wp, cset=0):
-        """[(name, a [F, 3], b [F, 3], r0, r1)] in the pose."""
+    def capsules(self, wr, wp, cset=(0,)):
+        """[(name, a [F, 3], b [F, 3], r0, r1)] in the pose, for the collider sets `cset`."""
         out = []
         for b, p0, p1, r0, r1, s, name in self.caps:
-            if s != cset:
+            if s not in (cset if isinstance(cset, tuple) else (cset,)):
                 continue
             M, t = self.bone_xf(wr, wp, np.array([b]))
             out.append((name, M[:, 0] @ p0 + t[:, 0], M[:, 0] @ p1 + t[:, 0], r0, r1))
@@ -290,27 +303,31 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
     ang = np.radians(np.interp(tsec, yaw[:, 0], yaw[:, 1])) if (yaw is not None and not loop) else np.zeros(n); qy = axis_angle(np.array([0, 1.0, 0]), ang)
     wr, wp = rig.fk(local[:F], pelvis[:F])
 
+    def over_sim(x):
+        """A per-frame shape over the simulated frames: eased in from its rest, root yaw applied."""
+        return qrot(qy[:, None], x[0][None] * (1 - e) + x[idx] * e)
     def carried(bone, pts):
         """Rest points carried by a bone over the simulated frames [n, P, 3], eased in from rest, root yaw applied."""
         M, t = cr.bone_xf(wr, wp, np.array([bone])); x = np.einsum('fij,pj->fpi', M[:, 0], pts) + t[:, 0][:, None]
         x = pts[None] * (1 - e) + x[idx] * e
         return qrot(qy[:, None], x)
     def colliders(cset, grow=0.0):
-        cs = [c for c in cr.caps if c[5] == cset]
+        cs = [c for c in cr.caps if c[5] in cset]
         a = np.stack([carried(c[0], c[1][None])[:, 0] for c in cs], 1); b = np.stack([carried(c[0], c[2][None])[:, 0] for c in cs], 1)
         return a, b, np.array([c[3] for c in cs]) + grow, np.array([c[4] for c in cs]) + grow
     wind = np.zeros((n, 3)); wind[:, 2] = -speed
     out = local[:F].copy()
     # ---- gown: every row, every second column of the grid
     step = 2; X0 = cr.grid[:, ::step]; R, C = X0.shape[:2]; rest = X0.reshape(-1, 3)
+    wskin = cr.skin_w.reshape(cr.grid.shape[0], cr.grid.shape[1], -1)[:, ::step].reshape(len(rest), -1)
     # pinned along the hips; the rest is drawn back to the gown's own shape, softly (it settles, sheet 09), and more
     # firmly along the two slit edges (a bound edge: it must not slide off the left thigh and uncover the right knee)
     edge = np.minimum(np.arange(C), C - 1 - np.arange(C)) / 4.0; hold = (TUNE['hold'] + 0.2 * np.clip(1 - edge, 0, 1) ** 2)[None, :] * np.ones((R, 1)); hold = hold.ravel(); hold[:C] = 1.0
-    ca, cb, r0, r1 = colliders(0); nm = [c[6] for c in cr.caps if c[5] == 0]
-    # the feet keep 1.5 cm more air than the legs: at the legs' 2 cm the heel of the longer v2 foot, lifted behind on
-    # the way down the stairs, ends in the back panel (a wider margin on the thighs drags the front slit edge off them)
-    foot = np.array([n_.startswith('foot_') for n_ in nm]); r0 = r0 + 0.015 * foot; r1 = r1 + 0.015 * foot
-    x = cloth.simulate(rest, cloth.grid_constraints(X0), carried(rig.index['pelvis'], rest), hold, (ca, cb, r0, r1), fps, wind=wind, drag=TUNE['drag'], margin=TUNE['margin'])
+    ca, cb, r0, r1 = colliders((0, 2)); nm = [c[6] for c in cr.caps if c[5] in (0, 2)]
+    # the feet keep a little more air than the legs: at the legs' own clearance the heel, lifted behind on the way
+    # down the stairs, ends in the back panel (a wider margin on the thighs drags the front slit edge off them)
+    foot = np.array([n_.startswith('foot_') for n_ in nm]); r0 = r0 + TUNE['foot_grow'] * foot; r1 = r1 + TUNE['foot_grow'] * foot
+    x = cloth.simulate(rest, cloth.grid_constraints(X0), over_sim(cr.carried(wr, wp, rest, wskin)), hold, (ca, cb, r0, r1), fps, wind=wind, drag=TUNE['drag'], margin=TUNE['margin'])
     x = qrot(qinv(qy)[:, None], x)
 
     def clip_frames(x):
@@ -323,11 +340,12 @@ def bake(cr, local, pelvis, fps, loop, speed=0.0, yaw=None, log=None):
     N = (g[:, :, c0] * (1 - fc) + g[:, :, c0 + 1] * fc).transpose(0, 2, 1, 3)                    # [F, chains, nodes, 3]
     N[:, :, 0] = cr.nodes(wr, wp)[:, :, 0]
     if TUNE['keep'] < 1.0 or TUNE['max_deg'] is not None:
-        Mp, tp = cr.bone_xf(wr, wp, np.array([rig.index['pelvis']])); N0 = np.einsum('fij,cnj->fcni', Mp[:, 0], cr.rest_nodes) + tp[:, 0][:, None, None]
+        sh = cr.rest_nodes.shape
+        N0 = cr.carried(wr, wp, cr.rest_nodes.reshape(-1, 3), cr.node_skin.reshape(-1, cr.node_skin.shape[-1])).reshape(len(wr), *sh)
         N0[:, :, 0] = N[:, :, 0]; N = tame(N, N0, TUNE['keep'], TUNE['max_deg'])
     cr.resolve(out, pelvis[:F], N, margin=TUNE['resolve_margin'], loop=loop, log=log)
     # ---- ribbon tails and face strands: one particle chain per bone chain, colliding with the body shapes
-    body = colliders(1)
+    body = colliders((1,))
     for name, bones in chains_of(rig):
         kind = name.split('_')[0]
         if kind not in STRIPS:
