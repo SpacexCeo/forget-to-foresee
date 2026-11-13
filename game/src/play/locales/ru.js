@@ -1,6 +1,8 @@
 // Russian: the second UI language of the 3D play layer. Keys mirror en.js exactly.
 import quests from './ru-quests.js';
+import hud from './ru-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': 'Локальное демо · правила работают в браузере через ту же комнату, что и API для агентов',
   'play.help.title': 'Управление',

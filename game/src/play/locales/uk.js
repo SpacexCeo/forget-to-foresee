@@ -1,7 +1,9 @@
 // Ukrainian strings of the 3D play layer; keys mirror en.js exactly (tests/ui-i18n-locales.test.mjs).
 // Same vocabulary as src/locales/uk.js: Мушля, шовк, тик, якір, Сувій; clans Ірис, Сіль, Попіл, Мох, Бурштин, Іній.
 import quests from './uk-quests.js';
+import hud from './uk-hud.js';
 export default {
+  ...hud, // first: the RPG HUD (en-hud.js keys); this file's own copies below win
   // ---- badge, help ----
   'play.badge': 'Локальне демо · правила працюють у вашому браузері через ту саму кімнату, що й API агентів',
   'play.help.title': 'Керування',

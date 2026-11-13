@@ -20,6 +20,8 @@ import RU from '../../src/play/locales/ru-quests.js';
 import UK from '../../src/play/locales/uk-quests.js';
 import IT from '../../src/play/locales/it-quests.js';
 import ZH from '../../src/play/locales/zh-quests.js';
+import EN_HUD from '../../src/play/locales/en-hud.js';
+import { hudT } from '../../src/rpg/hud-text.js';
 
 const T0 = 20_000 * 86_400_000 + 3600_000;
 const act = (s, a) => { const r = applyQuest(s, a, { now: T0 }); return r.rejected ? s : r.state; };
@@ -81,3 +83,17 @@ for (const loc of ['uk', 'ru']) {
     for (const en of KNOWN) assert.ok(!text.includes(en), `'${loc}' still shows English: ${en}`);
   });
 }
+
+const SAME = new Set(['hud.map.coords', 'hud.mana', 'hud.log.tab.chat', 'hud.tray.menu']); // the same word in some locales (Mana, Chat, Menu, Slot n)
+test('i18n: every en-hud key (the RPG HUD) exists in ru, uk, it and zh with the same placeholders, and hudT stops falling back to English', async () => {
+  for (const loc of ['ru', 'uk', 'it', 'zh']) {
+    const table = (await import(`../../src/play/locales/${loc}-hud.js`)).default;
+    assert.deepEqual(Object.keys(table).sort(), Object.keys(EN_HUD).sort(), loc + ' mirrors en-hud.js');
+    const i18n = createPlayI18n(loc), t = hudT((k, p) => i18n.t(k, p));
+    for (const [k, en] of Object.entries(EN_HUD)) {
+      assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k} reaches the play table`);
+      assert.deepEqual(holes(PLAY_MESSAGES[loc][k]), holes(en), `${loc}:${k} placeholders`);
+      if (!SAME.has(k) && !k.startsWith('set.kbd.hotbar')) assert.notEqual(t(k, {}), hudT(null)(k, {}), `${loc}:${k} is still English`);
+    }
+  }
+});
