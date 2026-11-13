@@ -71,3 +71,30 @@ fn transfer_call_returns_what_the_receiver_did_not_use() {
     assert_eq!(c.mt_balance_of(acc("ann.testnet"), "veil_dust".into()).0, 4);
     assert_eq!(c.mt_supply("veil_dust".into()).unwrap().0, 10);
 }
+
+// ---------- v2: the player market's settlement ----------
+fn h(n: u32) -> String { format!("{:064x}", n) }
+#[test]
+fn a_minter_moves_a_sale_between_players_once_per_request() {
+    let mut c = items();
+    ctx("owner.testnet"); c.mint(acc("ann.testnet"), "spider_silk_thread".into(), U128(10), None);
+    ctx("trader-01.ftf-town.testnet");
+    c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "spider_silk_thread".into(), U128(4), h(1));
+    assert_eq!(c.mt_balance_of(acc("ann.testnet"), "spider_silk_thread".into()).0, 6);
+    assert_eq!(c.mt_balance_of(acc("bob.testnet"), "spider_silk_thread".into()).0, 4);
+    assert!(c.request_used(h(1)));
+    assert!(get_logs().last().unwrap().contains(r#""event":"mt_transfer""#) && get_logs().last().unwrap().contains(r#""memo":"p2p""#));
+    assert_eq!(c.mt_supply("spider_silk_thread".into()).unwrap().0, 10); // a move, never a mint
+}
+#[test] #[should_panic(expected = "ERR_REQUEST")]
+fn a_market_request_moves_items_once() {
+    let mut c = items(); ctx("owner.testnet"); c.mint(acc("ann.testnet"), "ash_ore".into(), U128(5), None);
+    c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(1), h(2));
+    c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(1), h(2));
+}
+#[test] #[should_panic(expected = "ERR_NOT_MINTER")]
+fn strangers_cannot_move_other_players_items() { let mut c = items(); ctx("eve.testnet"); c.coordinator_transfer(acc("ann.testnet"), acc("eve.testnet"), "ash_ore".into(), U128(1), h(3)); }
+#[test] #[should_panic(expected = "ERR_FUNDS")]
+fn a_sale_needs_the_sellers_items() { let mut c = items(); ctx("owner.testnet"); c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(1), h(4)); }
+#[test] #[should_panic(expected = "ERR_REQUEST")]
+fn a_sale_needs_a_request_hash() { let mut c = items(); ctx("owner.testnet"); c.coordinator_transfer(acc("ann.testnet"), acc("bob.testnet"), "ash_ore".into(), U128(1), "x".into()); }
