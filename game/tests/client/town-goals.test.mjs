@@ -98,3 +98,24 @@ test('goals and share copy: five locales, translated, never invest/APY/profit/re
   assert.match(PLAY_MESSAGES.en['works.shareNote'], /can be zero/); assert.match(PLAY_MESSAGES.en['works.shareNote'], /no real value/);
   for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) for (const k of ['works.goal.streak', 'works.yours']) assert.match(PLAY_MESSAGES[lang][k], /\{(n|silk)\}/, `${lang}:${k} keeps its slots`);
 });
+
+test('town ledger: "Take part" shows the same goals in every locale and opens the Town works window', async () => {
+  const { normalizeLedger } = await import('../../src/net/town-ledger.js');
+  const { mountTownLedger } = await import('../../src/ui/town-ledger.js');
+  const stats = { enabled: true, contract: 'ftf-town.testnet', target: 24000, traders: 20, today: 5, recent: [] };
+  for (const lang of ['en', 'ru', 'uk', 'it', 'zh']) {
+    const { doc } = installDom();
+    const i18n = createPlayI18n(lang, { onMissing: (k) => { throw new Error(`missing ${lang}:${k}`); } });
+    const s = store(); recordGoal(s, 'pledge', Date.now());
+    const sent = []; const win = { dispatchEvent: (e) => sent.push(e.type) };
+    const v = mountTownLedger({ doc, t: (k, a) => i18n.t(k, a), poll: async () => normalizeLedger(stats), timers: { setTimeout: () => 1, clearTimeout: () => {} }, storage: s, win });
+    doc.body.append(v.root);
+    await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0));
+    const goals = doc.querySelectorAll('.tl-goal');
+    assert.equal(goals.length, 3, lang); assert.deepEqual(goals.map((g) => g.className.includes('done')), [false, true, false], lang);
+    assert.ok(goals[2].textContent.includes('1/3'), lang);
+    doc.querySelector('.tl-go').click(); assert.deepEqual(sent, ['ftf:town-works-open'], lang);
+    if (lang === 'en') assert.doesNotMatch(doc.querySelector('.tl-part').textContent, /\b(invest\w*|APY|APR|profit|dividend|returns?|yield|interest)\b/i);
+    v.destroy();
+  }
+});
