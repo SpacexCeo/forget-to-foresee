@@ -5,14 +5,14 @@
 
 const CSS = `
 .acct, .acct * { box-sizing: border-box; }
-.acct { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e9e6dc; padding: 12px; }
+.acct { position: fixed; inset: 0; z-index: calc(var(--z-dialogue, 50) + 3); display: grid; place-items: center; background: rgba(3, 7, 7, .62); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ftf-text, #eef0ea); padding: 12px; }
 .acct-card { position: relative; width: min(440px, 100%); max-height: calc(100dvh - 24px); overflow: auto; padding: 20px 18px 16px; border-radius: 18px; background: #0f1716; border: 1px solid rgba(214, 226, 214, .16); box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
 .acct h2 { margin: 0 32px 12px 0; font: 600 22px/1.2 "Cormorant Garamond", Georgia, serif; }
 .acct-x { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; font-size: 24px; cursor: pointer; }
-.acct-guest { display: block; width: 100%; min-height: 56px; margin: 0 0 6px; border: 0; border-radius: 14px; background: #d9b26a; color: #1b1407; font: 700 18px/1.2 system-ui; cursor: pointer; }
+.acct-guest { display: block; width: 100%; min-height: 56px; margin: 0 0 6px; border: 0; border-radius: 14px; background: var(--ftf-gold, #c5a469); color: #1b1407; font: 700 18px/1.2 var(--font-ui, system-ui); cursor: pointer; }
 .acct-note { margin: 0 0 14px; color: rgba(233, 230, 220, .75); font-size: 13.5px; }
 .acct-row { display: grid; gap: 8px; margin: 10px 0; }
-.acct-btn { min-height: 46px; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(214, 226, 214, .22); background: #16211f; color: inherit; font: 600 15px/1.2 system-ui; text-align: left; cursor: pointer; }
+.acct-btn { min-height: 46px; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(214, 226, 214, .22); background: #16211f; color: inherit; font: 600 15px/1.2 var(--font-ui, system-ui); text-align: left; cursor: pointer; }
 .acct-btn:disabled { opacity: .5; cursor: default; }
 .acct-status { min-height: 1.4em; margin: 8px 0 4px; font-size: 14px; }
 .acct-small { margin: 12px 0 0; color: rgba(233, 230, 220, .6); font-size: 12.5px; }
