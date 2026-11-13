@@ -68,3 +68,29 @@ test('market client: list, buy and cancel are signed over their own fields', asy
   assert.equal(marketMessage('a', 'buy', ['lst_1', 2, 'r'], 7), 'ftf-market|a|buy|lst_1,2,r|7');
   assert.deepEqual(await createMarketClient({ storage: { getItem: () => null }, base: 'https://r.example', fetch }).list('ash_ore', 1, 4000), { ok: false, error: 'need_guest' });
 });
+
+test('games tab: the legal frame first, once; the allowance; a roll moves play silk only and verifies', async () => {
+  const { doc } = installDom();
+  const i18n = createPlayI18n('en'); const t = (k, a) => i18n.t(k, a);
+  const { createMarketUi } = await import('../../src/market/market-ui.js');
+  const { createDice } = await import('../../src/market/dice.js');
+  const m = new Map(); const storage = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) };
+  let silk = 0; const ledger = { get silk() { return silk; }, grant: ({ silk: s }) => { silk += s; }, spend: ({ silkC }) => (silk >= silkC ? (silk -= silkC, { ok: true }) : { ok: false }) };
+  const dice = createDice({ storage, ledger, play: () => silk, wheelId: 'w-ui', now: () => NOW });
+  const ui = createMarketUi({ t, client: fakeClient().client, dice, storage, doc, now: () => NOW });
+  ui.open('games'); await tick();
+  const text = () => doc.body.textContent;
+  assert.match(text(), /It has no real value, cannot be bought, and cannot be cashed out or used to open the Gate-Loom/);
+  [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'I understand').click(); await tick();
+  assert.equal(silk, 2000); // the one-time play allowance
+  assert.match(text(), /Practice network\. No real money\. Entertainment only\./);
+  assert.match(text(), /Win 1\.92 play silk with a 50% chance\./);
+  assert.match(text(), /Under 10 · ×9\.60/); assert.match(text(), /Your play silk: 20/);
+  [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Roll').click(); await tick();
+  assert.match(text(), /You (win \+0\.92|lose −1) play silk/);
+  [...doc.body.querySelectorAll('button')].find((b) => b.textContent === 'Verify').click();
+  assert.match(text(), /Checked: the seed gives \d+\./);
+  ui.close(); ui.open('games'); await tick();
+  assert.doesNotMatch(text(), /I understand/); // shown once
+  ui.close();
+});
