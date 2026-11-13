@@ -82,7 +82,12 @@ export function runIntro(ctx) {
     emit(how === 'skipped' ? 'prologue.skipped' : 'prologue.completed', { ms: Date.now() - t0 });
     step({ type: how === 'skipped' ? 'prologue_skip' : 'prologue_done' });
     // wake-up shot
-    try { if (pro && pro.playWakeUp) await pro.playWakeUp({ reduced: reduced() }); } catch { /* the dialogue starts anyway */ }
+    if (pro && pro.playWakeUp) {                                                    // the wake-up shot: Esc skips it too
+      current = { skip: () => { if (pro.skip) pro.skip(); } };
+      const onEsc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation(); current.skip(); } };
+      if (doc.addEventListener) doc.addEventListener('keydown', onEsc, true);
+      try { await pro.playWakeUp({ reduced: reduced() }); } catch { /* the dialogue starts anyway */ } finally { if (doc.removeEventListener) doc.removeEventListener('keydown', onEsc, true); }
+    }
     step({ type: 'wakeup_done' });
     // the dialogue
     const lines = WAKEUP.map((l) => ({ ...l, text: t(l.key, vars) }));
