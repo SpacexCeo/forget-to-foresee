@@ -4,7 +4,7 @@
 // NEAR AI Cloud. Plain DOM, no play/scenes imports (a ui -> play static import is a boot cycle): the caller passes `t`
 // and the poll function (net/town-ledger.js fetchLedger) and mounts the returned root wherever it likes (the game
 // menu's Town tab). It polls only while its root is on the page.
-import { reasonText, traderCard, progressOf, agoOf, shortHash, silkOf, unitSilk, accountUrl, TRADERS } from '../net/town-ledger.js';
+import { reasonText, traderCard, progressOf, agoOf, shortHash, silkOf, unitSilk, accountUrl, TRADERS } from './town-ledger-data.js';
 
 const REPO = 'https://github.com/SpacexCeo/forget-to-foresee/blob/main/';
 const CSS = `.tl { display: grid; gap: 12px; color: var(--ftf-text, #eef0ea); font: 14px/1.45 var(--font-ui, system-ui, sans-serif); }
