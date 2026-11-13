@@ -9,6 +9,7 @@
 // Durations get a seeded jitter (the agents' IdleLife pattern), so a town looks the same on every machine.
 import { TOWN_DATA } from '../scenes/town-data.js';
 import { seededRng } from './behaviour.js';
+import { townPaths, addTownLines, createPathGraph, nearestNode, pathBetween } from './town-paths.js';
 
 const P = TOWN_DATA.npc.points, R = TOWN_DATA.npc.routes, A = TOWN_DATA.npc.areas;
 const shop = (id) => TOWN_DATA.shops.find((s) => s.id === id);
@@ -136,21 +137,34 @@ function programs() {
 
 export const PROGRAMS = Object.freeze(programs());
 
+/** The fixed town lines: the jury route Iris walks and the exported NPC routes (loops closed). The lower stroll is left
+ * out: it crosses the foot of the big stairs (a 0.67 m step; nobody walks it). */
+export function townLines() {
+  const lines = [TOWN_DATA.route];
+  for (const [name, r] of Object.entries(R)) if (name !== 'npc_route_stroll_lower') lines.push(/round|loop|sweeper/.test(name) ? [...r.points, r.points[0]] : r.points);
+  return lines;
+}
+/** Where a post's walker joins the paths: a seated post (the elder's bench) stands up in front of the seat first. */
+const standOf = (prog) => { const st = (prog.steps || []).find((x) => x.stay && x.sit); return st && prog.heading != null ? add(prog.home, fwd(prog.heading), 0.9) : prog.home; };
+// The path graph (play/town-paths.js): every program walk is an edge chain; each post, stand and the Exchange door
+// (all trade slots) joins the nearest node with a short connector, so trade and home walks stay on the graph.
+{
+  const walks = []; for (const prog of Object.values(PROGRAMS)) for (const st of prog.steps || []) if (st.walk) walks.push(st.walk);
+  const base = createPathGraph([...townLines(), ...walks]), links = [];
+  const join = (pt) => { const n = base.nodes[nearestNode(base, pt)]; if (Math.hypot(n[0] - pt[0], n[2] - pt[2]) > 0.05) links.push([pt.slice(), n.slice()]); };
+  for (const prog of Object.values(PROGRAMS)) join(standOf(prog)); // a seated post stands up first: the seat is not a path
+  for (let slot = 0; slot < 4; slot++) join(doorStand('exchange', -1.2 + slot * 0.9, 1.6).position);
+  addTownLines([...townLines(), ...walks, ...links]);
+}
+
 /**
  * Hired agents trade at the Shard Exchange (owner update, 11.11): the walk from where a townsperson stands to the
  * Exchange door, by the main street and across the square (town-local metres). Until the shop interior opens, they
  * stand at the door under the trading board.
  */
 export function tradePath(from, slot = 0) {
-  const route = TOWN_DATA.route, ex = doorStand('exchange', -1.2 + slot * 0.9, 1.6), sq = R.npc_route_square_round.points;
-  let near = 0, best = Infinity;
-  for (let i = 0; i < route.length; i++) { const d = Math.hypot(route[i][0] - from[0], route[i][2] - from[2]); if (d < best) { best = d; near = i; } }
-  const squareIn = route.findIndex((p) => p[2] < 0); // the first route point on the square
-  const path = [from.slice()];
-  if (near <= squareIn) for (let i = near; i <= squareIn; i++) path.push(route[i].slice());
-  else path.push(route[squareIn].slice());
-  path.push([sq[1][0], ex.position[1], ex.position[2]], ex.position.slice());
-  return { path, heading: ex.heading };
+  const ex = doorStand('exchange', -1.2 + slot * 0.9, 1.6);
+  return { path: pathBetween(townPaths(), from, ex.position), heading: ex.heading }; // along the path graph only
 }
 
 /** The temporary program of a hired agent: walk to the Exchange, trade at the door; `back` walks home and resumes. */
@@ -194,7 +208,7 @@ export class PersonPlan {
   constructor(def, program = PROGRAMS[def.key], seed = 'town') {
     this.def = def; this.key = def.key; this.program = program;
     this.rng = seededRng(seed + ':' + def.key);
-    this.x = program.home[0]; this.y = program.home[1]; this.z = program.home[2];
+    this.x = program.home[0]; this.y = program.home[1]; this.z = program.home[2]; this.px = this.x; this.pz = this.z;
     this.yaw = program.heading || 0; this.speed = 0; this.gait = 'walk'; this.clip = 'idle'; this.sit = 0;
     this.walkSpeed = def.walk; this.runSpeed = def.run || 0; // the renderer sets them to the loaded clips' own speeds
     this.index = -1; this.t = 0; this.until = 0; this.s = 0; this.len = 0; this.side = 0;
@@ -239,6 +253,7 @@ export class PersonPlan {
       this.s += ds; this.speed = dt > 0 ? ds / dt : 0; this.gait = run ? 'run' : 'walk';
       polyAt(st.walk, this.s, p);
       this.x = p.x + p.dz * this.side; this.y = p.y; this.z = p.z - p.dx * this.side;
+      this.px = p.x; this.pz = p.z; // the path itself (the side step leans off it; townsfolk.js pulls back when that leaves the ground)
       this.yaw = turnTo(this.yaw, Math.atan2(p.dx, p.dz), dt * (run ? 7 : 4.5));
       this.clip = 'idle'; this.sit = 0;
       if (this.s >= this.len - 1e-4) this.next();
