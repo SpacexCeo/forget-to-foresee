@@ -540,7 +540,10 @@ if (townMode.town) {
     }).catch((err) => console.warn('[stall]', err));
   }); }
   // The town works on chain (ui/town-works-panel.js): the Exchange counter dispatches 'ftf:town-works-open'
-  if (!worksMounted) { worksMounted = true; let panel = null; window.addEventListener('ftf:town-works-open', () => {
+  if (!worksMounted) { worksMounted = true; let panel = null;
+    // the works window's goals count trades from the market and the stalls (ui/town-goals.js; 'ftf:feat' k = trade)
+    import('./ui/town-goals.js').then((g) => g.watchTradeGoals({ storage: ctx.storage })).catch(() => {});
+    window.addEventListener('ftf:town-works-open', () => {
     import('./ui/town-works-panel.js').then((u) => { if (!panel) panel = u.createTownWorksPanel({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, flush: () => (expeditionSync ? expeditionSync.flush() : null) }); panel.open(); }).catch((err) => console.warn('[works]', err));
   }); }
   // The on-chain tournament entry: tapping the altar label dispatches 'ftf:tournament-open'

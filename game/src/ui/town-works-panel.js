@@ -5,8 +5,10 @@
 import { createTownAct, WORKS, toMicro, silkOf, deedActions } from '../net/town-act.js';
 import { artBox, deedCardPath } from '../market/art.js';
 import { syncSilkNow, refreshSilk } from '../net/silk-core.js';
+import { loadGoals, recordGoal, goalsView, shareView } from './town-goals.js';
 
 const EXPLORER = 'https://testnet.nearblocks.io/txns/';
+const ACCOUNT = 'https://testnet.nearblocks.io/address/';
 const CSS = `
 .tw-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, .45); }
 .tw { width: min(560px, 100%); max-height: calc(100vh - 24px); overflow: auto; box-sizing: border-box; background: #141a1c; color: #f3ead6; border: 1px solid rgba(233, 180, 76, .45); border-radius: 14px; padding: 16px; font: 14px/1.4 system-ui, sans-serif; box-shadow: 0 16px 40px rgba(0, 0, 0, .5); }
@@ -28,6 +30,19 @@ const CSS = `
 .tw .tw-state { min-height: 18px; font-size: 13px; margin-top: 8px; }
 .tw .tw-state a { color: #8fe0b0; }
 .tw .tw-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: #a99f8e; }
+.tw details.tw-how { margin: 6px 0 2px; border: 1px solid rgba(233, 180, 76, .22); border-radius: 10px; padding: 6px 10px; background: rgba(233, 180, 76, .05); }
+.tw details.tw-how summary { cursor: pointer; font-weight: 700; color: #e9cf95; min-height: 28px; display: flex; align-items: center; }
+.tw details.tw-how ol { margin: 4px 0 4px 18px; padding: 0; font-size: 13px; color: #d9cfbb; }
+.tw details.tw-how li { margin: 3px 0; }
+.tw .tw-goals { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 2px; }
+.tw .tw-goal { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 99px; font-size: 12px; border: 1px solid rgba(233, 180, 76, .3); color: #d9cfbb; }
+.tw .tw-goal::before { content: ''; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #c9b88f; box-sizing: border-box; }
+.tw .tw-goal.done { color: #f6d892; border-color: rgba(143, 224, 176, .55); background: rgba(143, 224, 176, .08); }
+.tw .tw-goal.done::before { background: #8fe0b0; border-color: #8fe0b0; }
+.tw .tw-share { margin: 8px 0 2px; padding: 8px 10px; border-radius: 10px; background: rgba(143, 224, 176, .07); border: 1px solid rgba(143, 224, 176, .25); }
+.tw .tw-share b { color: #8fe0b0; font-variant-numeric: tabular-nums; }
+.tw .tw-mine { font-size: 12px; color: #8fe0b0; }
+.tw .tw-foot a { color: #e9cf95; }
 @media (max-width: 420px) { .tw { padding: 12px 10px; font-size: 13px; } .tw h3 { font-size: 17px; } }
 `;
 
@@ -54,15 +69,19 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
     say('works.sending');
     const r = await api.act(action, args);
     busy = false;
+    if (r.ok && (action === 'pledge' || action === 'claim')) recordGoal(storage, action);
     await render();
     if (r.ok) say(doneKey, null, r.hash); else say('works.err.' + r.reason);
   }
 
+  let share = null;
   function worksRow(w, i, me) {
     const r = el('div', 'tw-row');
     const head = el('div', 'tw-head');
     head.append(el('span', 'tw-name', t('works.name.' + w.id)), el('span', 'tw-num', t('works.pledged', { silk: silkOf(w.principal) })));
-    r.append(head, el('div', 'tw-note', t('works.rate', { rate: silkOf(w.rate) })));
+    r.append(head, el('div', 'tw-note', w.rate === '0' ? t('works.rateZero') : t('works.rate', { rate: silkOf(w.rate) })));
+    const part = share && share.works[i];
+    if (part && part.mine !== '0') r.append(el('div', 'tw-mine', t('works.yours', { silk: silkOf(part.mine), pct: part.pct })));
     const ctl = el('div', 'tw-ctl');
     const amt = el('input'); amt.type = 'number'; amt.min = '1'; amt.step = '1'; amt.value = '10'; amt.inputMode = 'decimal'; amt.setAttribute('aria-label', t('works.amount'));
     const tier = el('select'); tier.setAttribute('aria-label', t('works.lock'));
@@ -102,6 +121,11 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
     const kids = [el('h3', null, t('works.title'))];
     const tags = el('div', 'tw-tags'); tags.append(el('span', null, t('works.testnet')), el('span', null, t('works.rateTag'))); kids.push(tags);
     kids.push(el('p', 'tw-note', t('works.lead')));
+    const how = el('details', 'tw-how'); how.append(el('summary', null, t('works.how.title')));
+    const ol = el('ol'); for (const k of [1, 2, 3, 4]) ol.append(el('li', null, t('works.how.' + k))); how.append(ol); kids.push(how);
+    const goals = el('div', 'tw-goals'); goals.setAttribute('aria-label', t('works.goals'));
+    for (const g of goalsView(loadGoals(storage))) { const c = el('span', 'tw-goal' + (g.done ? ' done' : ''), t('works.goal.' + g.id, { n: g.n, of: g.of })); goals.append(c); }
+    kids.push(goals);
     const r = await api.me();
     if (!box) return;
     if (!r.ok) kids.push(el('p', null, t('works.err.' + r.reason)));
@@ -111,7 +135,14 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
       kids.push(el('p', null, t('works.err.not_registered')), b, st);
     } else {
       const me = r.me;
+      share = shareView(me);
       kids.push(el('p', null, t('works.balance', { silk: silkOf(me.silk) })));
+      if (share.any || share.claimable !== '0') {
+        const sh = el('div', 'tw-share'); const b1 = el('b', null, silkOf(share.perDay)); const b2 = el('b', null, silkOf(share.claimable));
+        sh.append(el('span', null, t('works.shareToday') + ' '), b1, el('span', null, ' · ' + t('works.waiting') + ' '), b2);
+        sh.append(el('div', 'tw-note', t('works.shareNote')));
+        kids.push(sh);
+      }
       if (me.limits.perDay) kids.push(el('p', 'tw-note', t('works.limit', { n: me.limits.today, max: me.limits.perDay })));
       if (me.paused) kids.push(el('p', 'tw-note', t('works.err.paused')));
       kids.push(el('h4', null, t('works.heading')), ...me.works.map((w, i) => worksRow(w, i, me)));
@@ -121,7 +152,10 @@ export function createTownWorksPanel({ t, storage = null, client = null, flush =
       else kids.push(...me.deeds.map((d) => deedRow(d, me)));
     }
     state = el('div', 'tw-state'); state.setAttribute('aria-live', 'polite'); state.textContent = keepState;
-    const foot = el('div', 'tw-foot'); foot.append(el('span', null, t('works.note')), button(t('quest.close'), close, 'ghost'));
+    const foot = el('div', 'tw-foot'); const note = el('span', null, t('works.note'));
+    const g = api.guest && api.guest();
+    if (g && g.accountId) { const a = el('a', null, t('works.myTx')); a.href = ACCOUNT + encodeURIComponent(g.accountId); a.target = '_blank'; a.rel = 'noopener noreferrer'; note.append(' ', a); }
+    foot.append(note, button(t('quest.close'), close, 'ghost'));
     box.replaceChildren(...kids, state, foot);
   }
 
