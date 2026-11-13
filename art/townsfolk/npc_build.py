@@ -55,7 +55,19 @@ if COAT > 0:      # a long coat welded to the body: cloth that hangs away from a
             c_ = 1 - (1 - COAT) * sm(0.01 * kk, 0.07 * kk, e_); w_ = W.get(bone)
             if w_ is None: continue
             give = w_ * (1 - c_); W[bone] = w_ - give; W.setdefault('pelvis', np.zeros(n)); W['pelvis'] = W['pelvis'] + give; moved += float(give.sum())
-    print('coat: leg weight moved to the hips, %.0f vertex-weights' % moved)
+    # the auto-rig also hung coat cloth on the arms that rest beside it: an arm keeps only what lies around its own bones
+    bled = 0.0; waist = J['Spine01'][2]
+    for s_ in 'LR':
+        segs = [(J[f'{s_}_Upperarm'], J[f'{s_}_Forearm']), (J[f'{s_}_Forearm'], J[f'{s_}_Hand']), (J[f'{s_}_Hand'], J[f'{s_}_Mid3'])]; d_ = np.full(n, 9.0)
+        for a_, b_ in segs:
+            ab = b_ - a_; t_ = np.clip(((co - a_) @ ab) / (ab @ ab), 0, 1); d_ = np.minimum(d_, np.linalg.norm(co - a_ - t_[:, None] * ab, axis=1))
+        c_ = 1 - sm(0.08 * kk, 0.13 * kk, d_)
+        for bone in (f'upperarm_{s_}', f'forearm_{s_}', f'hand_{s_}', f'thumb_{s_}', f'index_{s_}', f'fingers_{s_}'):
+            w_ = W.get(bone)
+            if w_ is None: continue
+            give = w_ * (1 - c_); W[bone] = w_ - give; bled += float(give.sum())
+            for to, m_ in (('pelvis', co[:, 2] < waist), ('chest', co[:, 2] >= waist)): W.setdefault(to, np.zeros(n)); W[to] = W[to] + give * m_
+    print('coat: leg weight moved to the hips, %.0f vertex-weights; arm weight taken off the cloth, %.0f' % (moved, bled))
 tot = sum(W.values()); print('source: %d vertices, %d triangles, %d bones; unweighted vertices %d; scale %.3f' % (n, sum(len(p.vertices) - 2 for p in me.polygons), len(arm0.data.bones), int((tot < 1e-4).sum()), k))
 W.setdefault('pelvis', np.zeros(n))[tot < 1e-4] = 1.0; tot = sum(W.values())
 img = next((i for i in bpy.data.images if i.size[0] > 0), None)
