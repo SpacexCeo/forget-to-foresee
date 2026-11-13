@@ -5,6 +5,8 @@
 // select it; click it again, double-click or press Enter to walk there (the journal closes). Below 900 px the list and
 // the detail are two screens. DOM only; the model is journal-model.js.
 import { TABS, countdown } from './journal-model.js';
+import { JOURNAL_BY_ID } from '../game/journal-data.js';
+import { artBox, resIconPath } from '../market/art.js';
 
 const CSS = `
 .fj-back{position:fixed;inset:0;z-index:40;background:rgba(5,7,12,.55);display:flex;align-items:center;justify-content:center}
@@ -138,7 +140,9 @@ export function createJournalUI({ doc, win, say, model, giverName, onWalk, onTra
     d.append(el('div', 'fj-sec', say('journal.objectives')));
     for (const o of v.objectives) {
       const row = el('div', 'fj-obj' + (o.done ? ' done' : '')); row.dataset.obj = o.id;
-      row.append(el('span', 'fj-dot'), el('span', 'fj-otext', o.text), el('span', 'fj-ocnt', `${o.count}/${o.of}`));
+      const res = ((JOURNAL_BY_ID[v.id] || {}).objectives || []).find((x) => x.id === o.id)?.resource; // a delivery: A3's resource icon
+      row.append(res ? artBox(doc, resIconPath(res), o.text, { size: 20, cls: 'ftf-art fj-res' }) : el('span', 'fj-dot'), el('span', 'fj-otext', o.text), el('span', 'fj-ocnt', `${o.count}/${o.of}`));
+      if (res) row.dataset.res = res;
       if (o.type === 'kill' || o.type === 'gather' || o.of > 1) { const bar = el('span', 'fj-bar'); const i = el('i'); i.style.width = Math.round(100 * o.count / o.of) + '%'; bar.append(i); row.append(bar); }
       d.append(row);
     }

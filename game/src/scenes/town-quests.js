@@ -24,6 +24,7 @@ import { createWaypoint, createTrail, trailDots } from '../quests/waypoint-ui.js
 import { TOWN_ORIGIN } from './town-layout.js';
 import * as THREE from 'three';
 import { setMarkers } from '../sprint/markers.js';
+import { artBox, resIconPath } from '../market/art.js';
 
 /** A sprint flag: features.json (sprint §3.6), or ?ff=questJournal,questTracker,autoWalk for a local check. */
 export function flagOn(name, search = (globalThis.location && globalThis.location.search) || '') {
@@ -187,6 +188,16 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
   // ---- the quest log (J, or the button in the HUD tray): active, ready and offered quests at a glance
   let logPanel = null, logT = -Infinity, lineT = -Infinity;
   function closeLog() { if (logPanel) { logPanel.remove(); logPanel = null; } }
+  /** The resources a quest asks for: A3's icon (a letter when the image is missing), the name and have/need. */
+  function needsRow(list) {
+    const row = doc.createElement('span'); row.className = 'ftf-quest-needs'; row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;margin:4px 0 6px';
+    for (const n of list) {
+      const it = doc.createElement('span'); it.style.cssText = 'display:inline-flex;align-items:center;gap:6px'; it.dataset.res = n.id;
+      const label = t('res.' + n.id); const tx = doc.createElement('span'); tx.textContent = t('quest.needs.item', { res: label, have: n.have, n: n.need });
+      it.append(artBox(doc, resIconPath(n.id), label, { size: 24 }), tx); row.append(it);
+    }
+    return row;
+  }
   function renderLog() {
     const rows = questLog(story, qs, now(), have());
     const p = doc.createElement('div'); p.className = 'ftf-quest-log'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', t('quest.log.title'));
@@ -208,8 +219,8 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
       item.append(title, meta);
       const bits = [];
       if (r.count != null) bits.push(t('quest.log.progress', { n: r.progress, count: r.count }));
-      for (const n of r.needs) bits.push(t('quest.needs.item', { res: t('res.' + n.id), have: n.have, n: n.need }));
-      if (bits.length) { const b = doc.createElement('span'); b.className = 'ftf-quest-needs'; b.textContent = bits.join(' · '); b.style.cssText = 'display:block;font-size:13px;margin-top:2px'; item.append(b); }
+      if (bits.length) { const b = doc.createElement('span'); b.className = 'ftf-quest-progress'; b.textContent = bits.join(' · '); b.style.cssText = 'display:block;font-size:13px;margin-top:2px'; item.append(b); }
+      if (r.needs.length) item.append(needsRow(r.needs));
       p.append(item);
     }
     return p;
@@ -239,6 +250,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     if (typeof feedGuide === 'function' && !extraLines) feedGuide('talked:' + giver);
     closeTalk(); panelGiver = giver;
     const h = have(); const tk = talkFor(giver, story, qs, { now: now(), hasPart: hasPart(), have: h });
+    const needsList = tk.needs ? Object.entries(tk.needs).map(([id, n]) => ({ id, need: n, have: Math.min(n, h[id] || 0) })) : [];
     const needsText = tk.needs ? Object.entries(tk.needs).map(([id, n]) => t('quest.needs.item', { n, have: h[id] || 0, res: t('res.' + id) })).join(', ') : '';
     const lines = extraLines || tk.lines;
     panel = doc.createElement('div'); panel.className = 'ftf-story-talk'; panel.setAttribute('role', 'dialog');
@@ -247,6 +259,7 @@ export function createTownQuests({ scene = null, hudToast = null, storage, townL
     const who = doc.createElement('b'); who.textContent = t('folk.name.' + giver); who.style.cssText = 'display:block;color:#d9b26a;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px';
     panel.append(who);
     for (const k of lines) { const p = doc.createElement('p'); p.textContent = t(k, { ...(tk.args || {}), list: needsText }); p.style.margin = '0 0 8px'; panel.append(p); }
+    if (needsList.length) panel.append(needsRow(needsList));
     const row = doc.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:4px';
     for (const c of tk.choices) {
       const b = doc.createElement('button'); b.type = 'button'; b.textContent = t(c.key);
