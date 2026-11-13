@@ -13,8 +13,11 @@
 
 **The demo player** (`game/src/play/demo-player.js`, `demo-walker.js`):
 - It is "Sheriffchenko (demo player)" in the Sheriffchenko skin, with a "demo" badge on its name tag.
-- It wanders the town at random, but only along the authored NPC routes, joined where they meet. It keeps clear of the
-  portal and the shop doors, so it never walks through a wall (tested over 20 simulated minutes).
+- It walks only on paths (owner rule): from one random waypoint to the next, with short idles and look-arounds, and no
+  free roaming. It uses the shared town path graph (`play/town-paths.js` `townPaths()`, A1) as soon as the build has
+  it. Boot finds the file with an `import.meta.glob`, which stays empty until the file lands. Until then it uses the
+  authored NPC routes, joined where they meet. Either way it keeps clear of the portal and the shop doors (tested over
+  20 simulated minutes on both graph shapes). The ground is followed from just above the feet.
 - Its card says: "Demo player: a scripted townsperson so you can try trading, profiles and friends."
 - Its trade is a practice trade on this device. It accepts by script, nothing is moved and nothing is on chain, and
   the card says so.

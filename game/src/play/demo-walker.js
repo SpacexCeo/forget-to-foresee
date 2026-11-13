@@ -37,6 +37,19 @@ export function buildWalkGraph(routes = TOWN_DATA.npc.routes) {
   return { nodes, edges };
 }
 
+/**
+ * The shared town path graph (play/town-paths.js townPaths(): {nodes, edges: [[i, j]], adj: Map<i, [[j, len]]>}) as
+ * this walker's graph: nodes near the portal or a door dropped, neighbour lists from the edges. Null when empty.
+ */
+export function fromPathGraph(g) {
+  if (!g || !Array.isArray(g.nodes) || !g.nodes.length) return null;
+  const keep = g.nodes.map((p) => !forbidden(p)), map = new Map(), nodes = [], edges = [];
+  g.nodes.forEach((p, i) => { if (keep[i]) { map.set(i, nodes.length); nodes.push(p.slice()); edges.push([]); } });
+  const pairs = Array.isArray(g.edges) && g.edges.length ? g.edges : [...(g.adj || new Map()).entries()].flatMap(([a, l]) => l.map(([b]) => [a, b]));
+  for (const [a, b] of pairs) { if (!map.has(a) || !map.has(b)) continue; const x = map.get(a), y = map.get(b); if (x !== y && !edges[x].includes(y)) { edges[x].push(y); edges[y].push(x); } }
+  return edges.some((e) => e.length) ? { nodes, edges } : null;
+}
+
 /** The walker: step(dt) moves it; read x, y, z, yaw, speed, state ('walk' | 'idle' | 'look'). */
 export function createDemoWalker({ graph = buildWalkGraph(), rand = Math.random, start = null } = {}) {
   const { nodes, edges } = graph;

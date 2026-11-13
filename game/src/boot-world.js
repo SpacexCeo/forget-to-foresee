@@ -1205,7 +1205,10 @@ function frame() {
   // the demo player (play/demo-player.js) and the player card (play/player-card.js): loaded lazily once Iris is in town
   if (mpOn && !demoTried && !judge && params.get('demo') !== '0') {
     demoTried = true;
-    import('./play/demo-player.js').then((m) => { demoPlayer = m.createDemoPlayer({ scene, t: (k, a) => ctx.i18n.t(k, a), origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => (town && town.groundAt ? town.groundAt(x, z, y) : null), phone: mobileDevice }); if (window.__ftf) window.__ftf.demoPlayer = demoPlayer; }).catch((e) => console.warn('[demo player]', e));
+    // the shared path graph (play/town-paths.js, A1) when the build has it: an empty glob until it lands, no import error
+    const pathMods = import.meta.glob('./play/town-paths.js');
+    const pathsP = pathMods['./play/town-paths.js'] ? pathMods['./play/town-paths.js']().then((pm) => (pm.townPaths ? pm.townPaths() : null)).catch(() => null) : Promise.resolve(null);
+    Promise.all([import('./play/demo-player.js'), pathsP]).then(([m, paths]) => { demoPlayer = m.createDemoPlayer({ scene, t: (k, a) => ctx.i18n.t(k, a), origin: TOWN_ORIGIN_W, groundAt: (x, z, y) => (town && town.groundAt ? town.groundAt(x, z, y) : null), phone: mobileDevice, paths }); if (window.__ftf) window.__ftf.demoPlayer = demoPlayer; }).catch((e) => console.warn('[demo player]', e));
     mountPlayerPicking();
   }
   if (demoPlayer) { if (mpOn) demoPlayer.update(dt, player.pos, lookdev.reducedMotion); else if (demoShown) demoPlayer.hide(); demoShown = mpOn; }
