@@ -2,6 +2,8 @@
 // 10 times a second (only when it changed), the other players' snapshots buffered and interpolated 150 ms behind
 // (extrapolated at most 250 ms when a snapshot is late), and the room's chat. No three.js here: play/remote-players.js
 // draws, ui/chat-panel.js shows the chat. Offline is a normal state: the game stays single-player and says so.
+// The room remembers (presence/lib/history.js): on joining we get its last chat lines and the players' last notable
+// actions ("hist"); they sit in the same `chat` list marked `old`, so the panel shows them and no bubble pops up.
 import { DAY1_DEPLOYMENT } from './day1-deployment.js';
 import { botAt, BOT_NAMES } from './bot-walk.js';
 
@@ -11,6 +13,16 @@ export const presenceUrl = (dep = DAY1_DEPLOYMENT) => String(envUrl() || (dep &&
 
 export const SEND_HZ = 10, DELAY_MS = 150, EXTRAPOLATE_MS = 250;
 const MUTE_KEY = 'ftf.mp.muted.v1';
+/** The notable actions a player may tell the room (the server's whitelist, presence/lib/history.js ACT_KINDS): kind -> its value check. */
+export const ACTS = Object.freeze({
+  level: (v) => Number.isInteger(v) && v >= 2 && v <= 99,
+  quest: (v) => v == null,
+  chest: (v) => ['common', 'rare', 'legendary'].includes(v),
+  boss: (v) => ['crownrift', 'shoal'].includes(v),
+  trade: (v) => v == null,
+});
+export const ACT_EVERY_MS = 3200, ACT_QUEUE = 5, CHAT_KEEP = 90;
+const validAct = (k, v) => typeof k === 'string' && Object.hasOwn(ACTS, k) && ACTS[k](v ?? null);
 /** Drawing limits for the other players (play/remote-players.js). */
 export const REMOTE = Object.freeze({ maxDrawnPhone: 8, maxDrawnDesktop: 15, farM: 70, tagFarM: 25 });
 
@@ -58,12 +70,19 @@ export function changed(prev, s) {
  */
 export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', account = null, lv = null, storage = null, WebSocketImpl = globalThis.WebSocket, now = () => performance.now(), onChange = () => {}, maxRetries = 4 } = {}) {
   const players = new Map(); // id -> {id, name, skin, buf: [{at,p,h,a}]}
-  const chat = []; // {id, name, text, at, mine}
+  // chat lines {id, name, account, text, at, mine, old?} and actions {act: true, id, name, account, k, v, at, mine, old?}, oldest
+  // first; `at` is the server's clock (epoch ms); `old` marks what the room remembered from before we joined
+  const chat = [];
+  // canAct: this server knows 'act' (it sent 'hist'); an older one would disconnect us for an unknown message
+  let myName = '', lastActAt = -Infinity, idleKicked = false, canAct = false; const actQ = [];
   let ws = null, id = 0, room = 0, max = 15, status = url && WebSocketImpl ? 'connecting' : 'offline', retries = 0, lastSent = null, lastSendAt = 0, stopped = false, timer = null, sys = null;
   let muted = new Set(); try { muted = new Set(JSON.parse((storage && storage.getItem(MUTE_KEY)) || '[]')); } catch { /* fresh */ }
   const saveMuted = () => { try { storage && storage.setItem(MUTE_KEY, JSON.stringify([...muted].slice(-200))); } catch { /* private mode */ } };
   const emit = () => { try { onChange(); } catch { /* UI errors stay in the UI */ } };
   const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+  const isMine = (m) => (account && m.account ? m.account === account : !!myName && m.name === myName && !m.account === !account);
+  const keep = (e) => { chat.push(e); while (chat.length > CHAT_KEEP) chat.shift(); };
+  const pump = () => { if (actQ.length && status === 'online' && now() - lastActAt >= ACT_EVERY_MS) { lastActAt = now(); send({ t: 'act', ...actQ.shift() }); } };
   const add = (pl) => { players.set(pl.id, { id: pl.id, name: pl.name, skin: pl.skin, account: pl.account || null, lv: pl.lv ?? null, buf: [{ at: now(), p: pl.p, h: pl.h, a: pl.a }] }); };
 
   function open() {
@@ -84,7 +103,7 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
   }
   function handle(m) {
     const t = now();
-    if (m.t === 'welcome') { id = m.id; room = m.room; max = m.max; players.clear(); for (const p of m.players) add(p); status = 'online'; lastSent = null; emit(); }
+    if (m.t === 'welcome') { id = m.id; room = m.room; max = m.max; myName = typeof m.name === 'string' ? m.name : name; canAct = false; actQ.length = 0; players.clear(); for (const p of m.players) add(p); status = 'online'; lastSent = null; emit(); }
     else if (m.t === 'join') { add(m.player); emit(); }
     else if (m.t === 'leave') { players.delete(m.id); emit(); }
     else if (m.t === 'snap') {
@@ -95,14 +114,25 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
         while (pl.buf.length > 2 && pl.buf[1].at < t - 1000) pl.buf.shift();
         if (pl.buf.length > 20) pl.buf.shift();
       }
+    } else if (m.t === 'hist') {
+      // the room's memory replaces what we held (a reconnect brings the same lines again), oldest first by the server clock
+      const lines = (Array.isArray(m.chat) ? m.chat : []).filter((c) => c && typeof c.name === 'string' && typeof c.text === 'string').map((c) => ({ id: 0, name: c.name, account: c.account || null, text: c.text, at: c.at, old: true }));
+      const acts = (Array.isArray(m.acts) ? m.acts : []).filter((a) => a && typeof a.name === 'string' && validAct(a.k, a.v)).map((a) => ({ act: true, id: 0, name: a.name, account: a.account || null, k: a.k, v: a.v ?? null, at: a.at, old: true }));
+      chat.length = 0; canAct = true;
+      for (const e of [...lines, ...acts].sort((a, b) => a.at - b.at)) { e.mine = isMine(e); if (e.mine || !muted.has(e.name)) keep(e); }
+      emit();
     } else if (m.t === 'chat') {
       if (muted.has(m.name) && m.id !== id) return;
-      chat.push({ id: m.id, name: m.name, text: m.text, at: m.at, mine: m.id === id });
-      if (chat.length > 60) chat.shift();
+      keep({ id: m.id, name: m.name, account: m.account || null, text: m.text, at: m.at, mine: m.id === id });
+      emit();
+    } else if (m.t === 'act') {
+      if (!validAct(m.k, m.v) || (muted.has(m.name) && m.id !== id)) return;
+      keep({ act: true, id: m.id, name: m.name, account: m.account || null, k: m.k, v: m.v ?? null, at: m.at, mine: m.id === id });
       emit();
     } else if (m.t === 'sys') {
       sys = { key: m.key, s: m.s || 0, reason: m.reason || null, at: t };
-      if (m.key === 'full' || m.key === 'kicked') { status = 'offline'; stopped = m.key === 'kicked'; }
+      // an idle kick (the player was away from the town for a minute) is not final: update() joins again on her return
+      if (m.key === 'full' || m.key === 'kicked') { status = 'offline'; idleKicked = m.key === 'kicked' && m.reason === 'idle'; stopped = m.key === 'kicked' && !idleKicked; }
       emit();
     }
   }
@@ -115,7 +145,9 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     players, chat,
     /** Per frame: sends our state at most SEND_HZ when it changed. */
     update(state) {
+      if (idleKicked && status === 'offline' && !ws) { idleKicked = false; retries = 0; open(); return; }
       if (status !== 'online') return;
+      pump();
       const t = now();
       if (t - lastSendAt < 1000 / SEND_HZ) return;
       const s = { p: state.p.map((v) => Math.round(v * 100) / 100), h: Math.round(state.h * 1000) / 1000, a: state.a };
@@ -124,12 +156,20 @@ export function createPresence({ url = presenceUrl(), name = '', skin = 'iris', 
     },
     /** Where every other player is now (render time = now - DELAY_MS). */
     positions() { const t = now() - DELAY_MS; return [...players.values()].map((pl) => ({ id: pl.id, name: pl.name, skin: pl.skin, account: pl.account, lv: pl.lv, ...sample(pl.buf, t) })); },
+    /**
+     * Tells the room a notable action of ours (k of ACTS, v its one value): the feed line "ann opened a chest". Sent at
+     * most one per ACT_EVERY_MS (the server's limit), a few wait in a short queue; anything not whitelisted is dropped.
+     */
+    act(k, v = null) {
+      if (status !== 'online' || !canAct || !validAct(k, v) || actQ.length >= ACT_QUEUE) return false;
+      actQ.push(v == null ? { k } : { k, v }); pump(); return true;
+    },
     say(text) { const s = String(text || '').trim().slice(0, 140); if (s && status === 'online') send({ t: 'chat', text: s }); },
     mute(nameOf) { muted.add(nameOf); saveMuted(); for (let i = chat.length - 1; i >= 0; i--) if (chat[i].name === nameOf && !chat[i].mine) chat.splice(i, 1); emit(); },
     unmute(nameOf) { muted.delete(nameOf); saveMuted(); emit(); },
     isMuted: (nameOf) => muted.has(nameOf),
     report(pid) { send({ t: 'report', id: pid }); },
-    stop() { stopped = true; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
+    stop() { stopped = true; idleKicked = false; actQ.length = 0; status = 'offline'; clearTimeout(timer); if (ws) try { ws.close(); } catch { /* closed */ } ws = null; players.clear(); emit(); },
   };
 }
 
@@ -147,6 +187,6 @@ export function createDemoPresence({ count = 3, now = () => performance.now(), o
     get count() { return n + 1; },
     update() {},
     positions() { const t = (now() - t0) / 1000; return [...players.values()].map((pl, k) => { const s = botAt(k, t); const s2 = botAt(k, t - 0.1); return { id: pl.id, name: pl.name, skin: pl.skin, ai: true, p: s.p, h: s.h, a: s.a, speed: Math.hypot(s.p[0] - s2.p[0], s.p[2] - s2.p[2]) / 0.1 }; }); },
-    say() {}, mute() {}, unmute() {}, isMuted: () => false, report() {}, stop() {},
+    say() {}, act: () => false, mute() {}, unmute() {}, isMuted: () => false, report() {}, stop() {},
   };
 }
