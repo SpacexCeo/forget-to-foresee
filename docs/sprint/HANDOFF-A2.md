@@ -42,3 +42,31 @@ if (flags.rpgHud) import('./rpg/index.js').then((m) => { rpg = m.mount({ ledger:
 - No buff icons art (text squares with the seconds left); no E8 e2e yet (the chip now reads the same `net/silk-core.js` view as the other surfaces; the cross-surface equality check is left for A5's first-ten e2e); E10 reduced motion is CSS only.
 - The market ticker and the chat/online chip are moved by this layer's CSS while it is on (desktop: above the Log; phone: one row above the hotbar). The settings gear still touches the minimap's edge.
 - F1 opens a read-only cheat sheet (`rpg/cheat-sheet.js`); E8 checks the chip against `net/silk-core.js` `silkView()`. The e2e now runs on the seam's own mount (`?ff=rpgHud,hotbar,skillTree,damageNumbers&test=1`): 15/15 green on the GPU server, 13 Nov morning.
+
+## Glass Shoal arena look (13 Nov, flag `glassShoal`, off by default)
+
+Nothing on the default path: the look lives on its own page `game/shoal.html` (a Vite input), and the game's main page does not import it. Boot check on the built page (`FTF_BASE=/forget-to-foresee/`, software GL): `shoal.html` shows the gate without the flag and renders with `?ff=glassShoal` (desktop and `?profile=phone`), 0 page errors. The main page reaches town-ready with and without `?ff=glassShoal`, 0 page errors.
+
+**Done**
+- `game/src/render/shoal-look-data.js` (pure): 16 parameters with ranges, presets `lowSun` (default), `pearlDawn`, `stormSilver`; `clampParams`, `lookJson`; light direction and colour; quality per tier/profile; the grade curve and its 16³ LUT strip; `lookFromQuery`. Tests: `game/tests/render/shoal-look.test.mjs` (5).
+- `game/src/render/shoal-look.js`: `createShoalLook({renderer, scene, camera, tier, profile, params, reduced})`. It builds:
+  - the sky dome, with no sun disc (owner 13.11: "light, no sun"), only a broad glow toward the light;
+  - a hemisphere fill;
+  - CSM on desktop (3 cascades high, 4 ultra) and a single shadowed directional light on phones;
+  - FogExp2 and low mist sheets;
+  - the flat: a planar `Reflector` with a ripple normal, a roughness blur, a wet/dry mask and a broad sheen on desktop; on phones a `MeshPhysicalMaterial` with a PMREM sky reflection, so the scene is never rendered twice;
+  - the post chain: RenderPass → GodRaysPass (0 in every preset and skipped at 0) → bloom (HDR threshold 2.2, so only crystals glow) → OutputPass → LUT grade with vignette.
+  - API: `attach(obj)` (shadows plus CSM material setup), `crystal(hex, k)`, `update(dt, focus)`, `render()`, `setSize()`, `set(params)`, `dispose()`.
+- `game/src/render/shoal-panel.js`: the `?render=1` panel (sliders, presets, Copy JSON, Reset, fps/quality line; folds on Esc or a tap outside; starts folded on touch).
+- `game/src/shoal-preview.js`: the preview scene. Placeholder monoliths, spires, rocks and a capsule stand in for the real layout; camera drift; `?tier=`, `?profile=`, `?still=1`, `?shoalLook=`.
+- Still: `docs/art/shoal/nosun_lowSun_swiftshader.jpg` (software GL).
+
+**Half-done**
+- Tuned only under software GL. The look still needs a pass on a real GPU: exposure, haze amount, and the shoal colour against the rocks.
+- No fps numbers yet. Phone light tier is designed for ≥ 30 fps but not measured.
+- The "Light height / Light bearing" keys are still named `sunHeight` / `sunBearing` in the data and JSON.
+
+**Next**
+- GPU stills (desktop high, phone light, the three presets, the panel) and fps on the GPU server; retune exposure and haze there.
+- Agree spawn points and the layout with the Glass Shoal gameplay seat (branch `claude/glass-shoal`). Its scene should call `createShoalLook(...)`, then `attach()` on its meshes, `update(dt, player.position)` and `render()` each frame. The preview dressing is not meant to ship.
+- Hook the look into the level-5 boss island when the gameplay seat mounts it, behind the same flag.
