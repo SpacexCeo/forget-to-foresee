@@ -57,7 +57,7 @@ function btn(doc, text, fn, ghost = false) { const b = el(doc, 'button', 'd1-btn
  * @param {{doc?: Document, t: Function, mint: object, flyIn?: (ms: number) => void, reduced?: () => boolean, inventoryEl?: () => Element|null, nickname?: string}} o
  */
 let chimed = false;
-export async function runArrival({ doc = document, t, mint, flyIn = null, reduced = () => false, inventoryEl = () => null, nickname = '' }) {
+export async function runArrival({ doc = document, t, mint, flyIn = null, reduced = () => false, inventoryEl = () => null, nickname = '', signIn = null }) {
   ensureStyle(doc);
   const root = el(doc, 'div', 'd1'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', t('day1.welcome'));
   root.addEventListener('pointerdown', (e) => e.stopPropagation()); root.addEventListener('keydown', (e) => e.stopPropagation());
@@ -74,9 +74,20 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
     const input = el(doc, 'input'); input.maxLength = 24; input.placeholder = t('day1.name.ph'); input.value = nickname; input.setAttribute('aria-label', t('day1.name.q'));
     const ok = el(doc, 'button', 'd1-btn', t('day1.name.ok')); ok.type = 'submit';
     p.append(el(doc, 'h2', null, t('day1.name.q')), input, ok);
+    if (signIn) { // flag accountLogin: Continue stays the guest path; signing in is a choice, never a wait
+      const s = el(doc, 'button', 'd1-btn d1-ghost', t('acct.open')); s.type = 'button';
+      s.addEventListener('click', async () => { const r = await signIn(input.value.trim() || null); if (r && r.status === 'restored') resolve({ restored: true }); });
+      p.append(s);
+    }
     p.addEventListener('submit', (e) => { e.preventDefault(); resolve(input.value.trim() || 'Guest'); });
     root.replaceChildren(p); input.focus();
   });
+  if (name && name.restored) { // a returning player on a new device: the account and its Elise are already there
+    const back = mint.record.nickname || 'Guest';
+    mint.setRecord({ claimed: true, nickname: back });
+    root.remove();
+    return { name: back, restored: true };
+  }
   // 3. the burst
   const burst = el(doc, 'div', 'd1-burst'); doc.body.append(burst); setTimeout(() => burst.remove(), 1200);
   const gift = el(doc, 'div', 'd1-title'); gift.append(el(doc, 'h1', null, t('day1.gift')));
@@ -119,7 +130,7 @@ export async function runArrival({ doc = document, t, mint, flyIn = null, reduce
       const l = mint.links; if (l) { const a = el(doc, 'a', null, t('day1.mint.view')); a.href = l.token; a.target = '_blank'; a.rel = 'noopener noreferrer'; status.append(a); }
     } else if (ph === 'failed') {
       const r = el(doc, 'button', 'd1-btn d1-ghost', t('day1.mint.failed')); r.type = 'button'; r.addEventListener('click', () => mint.retry()); status.append(r);
-    } else if (ph === 'unavailable') status.textContent = t('day1.mint.unavailable');
+    } else if (ph === 'unavailable') status.textContent = t(mint.reason === 'fund_empty' || mint.reason === 'daily_cap' ? 'day1.mint.' + mint.reason : 'day1.mint.unavailable');
     else status.textContent = t('day1.mint.' + (ph === 'idle' ? 'keygen' : ph));
   };
   const off = mint.subscribe(paint); paint();

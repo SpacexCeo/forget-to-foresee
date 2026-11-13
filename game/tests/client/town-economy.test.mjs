@@ -120,7 +120,7 @@ test('rental, profile and inventory strings: five locales, the local label, the 
   assert.ok(keys.length >= 70);
   for (const loc of ['ru', 'uk', 'it', 'zh']) for (const k of keys) assert.ok(PLAY_MESSAGES[loc][k], `${loc}:${k}`);
   for (const p of TOWNSFOLK) assert.ok(PLAY_MESSAGES.en['folk.name.' + p.key], p.key);
-  assert.equal(PLAY_MESSAGES.en['hire.local'], 'Local — in-game currency only, no real money.');
+  assert.equal(PLAY_MESSAGES.en['hire.local'], 'Local — in-game currency only, no real money. The agent is a scripted learning program (Thompson sampling), not an AI model.');
   assert.match(PLAY_MESSAGES.en['hire.card.returnLine'], /98 %.*2 % guild fee.*learns/);
   assert.equal(PLAY_MESSAGES.en['hire.hire'], 'Hire me as your agent');
   assert.doesNotMatch(keys.map((k) => PLAY_MESSAGES.en[k]).join(' '), /\b(RTP|bet|jackpot|gamble|casino)\b/i);

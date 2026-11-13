@@ -144,8 +144,8 @@ class Subject {
     else {
       const move = this.gait.update(DT, speed);
       if (input.clip && (!this.one || this.one.getClip().name !== input.clip)) {
-        const c = resolveClip(this.clips, input.clip).clip;
-        if (c) { this.one = this.mixer.clipAction(c); this.one.reset().play(); if (Q.get('once')) { this.one.setLoop(THREE.LoopOnce, 1); this.one.clampWhenFinished = true; } }
+        const c0 = resolveClip(this.clips, input.clip).clip, c = c0 ? c0.clone() : null; // a copy: the gait layer drives its own walk and run actions by distance (frozen while standing)
+        if (c) { c.name = c0.name; this.one = this.mixer.clipAction(c); this.one.reset().play(); if (Q.get('once')) { this.one.setLoop(THREE.LoopOnce, 1); this.one.clampWhenFinished = true; } }
       }
       if (this.one) this.one.weight = 1 - move;
       if (this.idle) this.idle.weight = this.one ? 0 : 1 - move;

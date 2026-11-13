@@ -7,6 +7,7 @@ import market from './en-market.js';
 import npe from './en-npe.js';
 import tips from './en-tips.js';
 import video from './en-video.js';
+import account from './en-account.js';
 const EN = {
   // ---- badge, help ----
   'play.badge': 'Local demo · the rules run in your browser through the same room as the agent API',
@@ -592,6 +593,8 @@ const EN = {
   "day1.mint.minted": "Minted on NEAR testnet ✓",
   "day1.mint.failed": "Unminted preview — tap to retry",
   "day1.mint.unavailable": "Unminted preview — the free mint is not connected in this build",
+  "day1.mint.fund_empty": "The free fund is empty for now — play on as a local guest; your progress stays in this browser.",
+  "day1.mint.daily_cap": "Today's free mints are used up — play on as a local guest and mint tomorrow.",
   "day1.mint.retry": "Retry",
   "day1.mint.view": "View the token",
   "day1.mint.account": "Your testnet account",
@@ -855,7 +858,7 @@ const EN = {
   'menu.source.wheel': "wheel",
   'menu.source.quest': "quest",
   'menu.agentsEmpty': "No agents hired yet: talk to a townsperson or visit the Inn.",
-  'menu.agentsNote': "Learning agents, town silk only. The line is the running average return.",
+  'menu.agentsNote': "Learning agents: a small scripted program (Thompson sampling), not an AI model. Town silk only. The line is the running average return.",
   'menu.experience': "{n} rounds",
   'menu.lastNet': "last hire {net} · {n} hires",
   'wheel.spin': "Spin!",
@@ -1080,7 +1083,7 @@ const EN = {
   "hire.why.max": "Three agents are already working for you.",
   "hire.why.no_silk": "Not enough town silk.",
   "hire.why.unknown": "Not for hire.",
-  "hire.local": "Local — in-game currency only, no real money.",
+  "hire.local": "Local — in-game currency only, no real money. The agent is a scripted learning program (Thompson sampling), not an AI model.",
   "hire.working": "Still at it: about {s} s more.",
   "hire.back": "Back with your silk.",
   "hire.seeResult": "See the result",
@@ -1539,6 +1542,16 @@ const EN = {
   'chest.found': "Chest found! Open it in Inventory (menu).",
   'menu.source.chest': "chest",
   // ---- dragon companions (net/companions.js) ----
+  // ---- the Hatchkeeper (pet seller, not open yet) and the locked companion slot ----
+  'hatch.title': "The Hatchkeeper",
+  'hatch.sign': "Hatchkeeper · Companions",
+  'hatch.prompt': "Talk to the Hatchkeeper",
+  'hatch.line1': "These little ones are not for sale. Silk cannot buy them, and neither can a crown.",
+  'hatch.line2': "They follow only one who proves they are real. Not an echo, not a mask, not a script that walks the town at night.",
+  'hatch.line3': "Show me a living hand behind your key, and one of them will choose you.",
+  'hatch.status': "Not available yet. The Hatchkeeper is still listening.",
+  'companion.slot': "Companion",
+  'companion.locked': "Companions: locked. The Hatchkeeper decides who is ready.",
   'companion.heading': "Owned by Elise",
   'companion.owned': "Owned by Elise · Agentic NFT · NEAR testnet",
   'companion.account': "Held by the heroine's own account {account}",
@@ -1940,4 +1953,4 @@ const EN = {
   "quest.track.near": "{m} m",
 };
 // sprint 5h seams (A5): each area's English strings live in its own file; other locales fall back to English
-export default Object.assign(EN, quests, hud, market, npe, tips, video);
+export default Object.assign(EN, quests, hud, market, npe, tips, video, account);

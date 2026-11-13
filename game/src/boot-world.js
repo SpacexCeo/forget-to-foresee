@@ -62,6 +62,7 @@ import { createPhotoMode } from './render/photo-mode.js';
 import { createTownMonsters } from './scenes/town-monsters.js';
 import { createChestBag } from './game/chests.js';
 import { createCompanion } from './scenes/companion.js';
+import { COMPANIONS_ENABLED, companionsToShow } from './scenes/companion-rules.js';
 import { createDoorGlow } from './scenes/door-glow.js';
 import { cue, cueAt, MOB_SOUNDS } from './audio/town-audio.js';
 
@@ -218,7 +219,7 @@ import('./net/silk-balance.js').then((m) => { const model = m.createSilkModel({ 
 // The player market (market/index.js; docs/market.md): loaded on the first 'ftf:market-open' {tab?}; the HUD's key and button send it.
 { let market = null; const openMarket = (e) => { if (market) return; window.removeEventListener('ftf:market-open', openMarket); import('./market/index.js').then((m) => { market = m.mount({ t: (k, a) => ctx.i18n.t(k, a), storage: ctx.storage, ledger: townLedger }); market.open((e && e.detail && e.detail.tab) || 'buy'); }).catch((err) => console.warn('[market]', err)); }; window.addEventListener('ftf:market-open', openMarket); }
 // The game menu (play/game-menu.js): Profile, Achievements, NFTs, Inventory + wheel, Agents, Log / Stats.
-const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
+const openProfileFor = (quest = null, tab = 'profile') => import('./play/game-menu.js').then((m) => { const d1 = loadDay1(ctx.storage); return m.openGameMenu({ t: (k, a) => ctx.i18n.t(k, a), ledger: townLedger, storage: ctx.storage, tab, chests: chestBag, heroineToken: (d1.guest || {}).token_id || null, owner: (d1.guest || {}).account_id || null, createGuest: () => day1Mint.mint(loadDay1(ctx.storage).nickname || undefined).then((r) => (r.phase === 'minted' && r.record.guest ? { account: r.record.guest.account_id } : { error: r.reason || 'failed' })), nickname: d1.nickname || null, eliseMinted: !!d1.minted, account: featureFlags.on('accountLogin') ? { open: () => openAccount(), login: d1.login ? `${d1.login.kind.toUpperCase()} ${String(d1.login.address).slice(0, 10)}…` : null } : null, exportKey: d1.playerKey ? () => { const r = loadDay1(ctx.storage); return `account: ${(r.guest || {}).account_id || '(not created yet)'}\nsecret key: ${r.playerKey.secretKey}`; } : null }); }).catch((e) => console.warn('[menu]', e));
 const judge = params.get('demo') === 'judge';
 if (judge) ctx.prefs.set({ hudMode: 'novice' });
 if (ctx.prefs && !params.has('tier')) { // a Quality change in the settings applies at once; a fixed choice switches the governor off
@@ -270,13 +271,15 @@ const chestBag = createChestBag({ storage: ctx.storage });
 // her (net/companions.js); ?companion=<kind> shows one locally for QA, never labelled as owned.
 const companions = [];
 let companionKinds = '';
-function setCompanions(kinds) {
+function setCompanions(all) {
+  const kinds = companionsToShow(all); // switched off for now (companion-rules.js COMPANIONS_ENABLED)
   const key = kinds.join(','); if (key === companionKinds) return; companionKinds = key;
   for (const c of companions.splice(0)) c.dispose();
   const perchAfter = Number(params.get('perch')) || undefined; // QA: ?perch=<seconds> lands the dragon sooner
-  kinds.slice(0, 2).forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice, perchAfter })));
+  kinds.forEach((kind, slot) => companions.push(createCompanion({ scene, kind, slot, mobile: mobileDevice, perchAfter })));
 }
 function refreshCompanions() {
+  if (!COMPANIONS_ENABLED) { setCompanions([]); return; } // no reads, no claims, no dragon beside her
   const qa = params.get('companion');
   if (qa && ['nacre', 'rill', 'cinder'].includes(qa)) { setCompanions([qa]); return; }
   const tokenId = (loadDay1(ctx.storage).guest || {}).token_id;
@@ -309,6 +312,10 @@ function mountTownAudio() {
 let playerHud = null, touchSticks = null, panelCollapse = null;
 const stamina = createStamina();
 const _camFwd = new THREE.Vector3();
+/** The town errand's next townsperson (innkeeper, then baker, then shrinekeeper) gets a gold "!" too (owner 13.11). */
+const ERRAND_NPC = Object.freeze({ read: 'innkeeper', trade: 'baker', deliver: 'shrinekeeper' }); // scenes/town-quest.js QUEST_NPC
+function errandMarkers() { const k = townFlow && townFlow.questActive ? ERRAND_NPC[townFlow.questStep] : null; return k ? [{ giver: k, sym: '!' }] : []; }
+let hatchkeeper = null, hatchLoading = false; // the Hatchkeeper by the lower-lane stalls (scenes/hatchkeeper.js, live, owner 13.11)
 let townQuests = null, townPortal = null, townBoard = null, expeditionSync = null, questMarkers = null; // the Expedition (?story=1): scenes/town-quests.js, town-portal.js
 let town = null, townFlow = null, townCasting = null, townMobs = null, inTown = false, townGrounded = false, irisAvatar = null, killXp = null, endgamePass = null, stallMounted = false, worksMounted = false, tournMounted = false;
 let restoreCamera = () => {};
@@ -373,19 +380,20 @@ if (townMode.town) {
       townBoard = bm.createTownBoard({ scene, position: townToWorld(bm.BOARD_TOWN), facing: Math.PI / 2, i18n: ctx.i18n, log: () => townQuests.ledger.log,
         load: () => bm.loadSnapshot({ base: import.meta.env.BASE_URL, relayer }) });
       spots.push(...townQuests.spots, townPortal.spot, townBoard.spot);
-      questMarkers = mm.createQuestMarkers({ scene, markers: () => townQuests.markers(), folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
+      questMarkers = mm.createQuestMarkers({ scene, markers: () => [...townQuests.markers(), ...errandMarkers()], folkAt, reducedMotion: lookdev.reducedMotion }); // gold ! and ? over the givers
       // the log goes up to the relayer for the endgame pass (Q4): signed by the Day 1 guest key; quiet without a guest or relayer
       import('./net/expedition-sync.js').then((m) => { if (townQuests && !expeditionSync) expeditionSync = m.createExpeditionSync({ ledger: townQuests.ledger, storage: ctx.storage }); }).catch((e) => console.warn('[story] sync', e));
       // the first boss down (a crownrift kill in the log): the log goes up first, then the second dragon is claimed
       import('./net/companion-claim.js').then((cm) => {
         const ledger = townQuests && townQuests.ledger; if (!ledger) return;
-        const check = () => { if (cm.bossInLog(ledger.log) && !cm.claimed(ctx.storage, 'boss')) claimDragon('boss', () => (expeditionSync ? expeditionSync.flush() : Promise.resolve())); };
+        const check = () => { if (COMPANIONS_ENABLED && cm.bossInLog(ledger.log) && !cm.claimed(ctx.storage, 'boss')) claimDragon('boss', () => (expeditionSync ? expeditionSync.flush() : Promise.resolve())); };
         ledger.subscribe(check); check();
       }).catch(() => {});
     }).catch((e) => console.warn('[story]', e));
   }
   townProps = createTownProps({ scene, town, ledger: townLedger, i18n: ctx.i18n, mobile: mobileDevice });
   // the mirror and the notice board: the two spots the town files do not model get an object (owner 12.11)
+  if (!hatchLoading) { hatchLoading = true; import('./scenes/hatchkeeper.js').then((m) => { hatchkeeper = m.createHatchkeeper({ scene, t: (k, a) => ctx.i18n.t(k, a), groundAt: (x, z) => town.groundAt(x, z), mobile: mobileDevice, reduced: () => lookdev.reducedMotion }); spots.push(hatchkeeper.spot); }).catch((e) => console.warn('[hatchkeeper]', e)); }
   if (!spotProps) spotProps = createSpotProps({ scene, town, near: (id) => { const s = spots.find((x) => x.id === id); return !!(s && inTown && s.near(player.pos)); } });
   refreshCompanions();
   if (!townMonsters) {
@@ -693,6 +701,12 @@ function startSeason() {
 
 // ---- Day 1 (docs/day1-free-mint-plan.md): arrival, name, the free Elise mint, hints, story trailers, the skin ----
 const day1Mint = createDay1Mint({ storage: ctx.storage });
+// Sign in / create account (flag accountLogin, docs/account-login.md): panel, flow and wallets load on the first tap.
+const openAccount = (nickname = null) => import('./play/account-panel.js').then((m) => m.openAccountPanel({
+  t: (k, a) => ctx.i18n.t(k, a), nickname,
+  makeLogin: () => Promise.all([import('./net/account-login.js'), import('./net/near-tx.js'), import('./net/day1-deployment.js'), import('./net/near-deployment.js')])
+    .then(([a, n, d, nd]) => a.createAccountLogin({ relayer: d.DAY1_DEPLOYMENT.relayer, guests: d.DAY1_DEPLOYMENT.guests, mint: day1Mint, client: n.createTxClient({ rpcUrls: nd.NEAR_DEPLOYMENT.rpcUrls }), storage: ctx.storage })),
+}).done).catch((e) => { console.warn('[account]', e); return { status: 'guest' }; });
 const day1On = () => {
   const q = params.get('day1');
   if (q === '0') return false;
@@ -799,7 +813,7 @@ async function startDay1() {
   for (let i = 0; i < 1200 && !(window.__ftfBootMarks && window.__ftfBootMarks.done); i++) await new Promise((r) => setTimeout(r, 150));
   const t = (k, a) => ctx.i18n.t(k, a);
   const m = await import('./play/day1.js');
-  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '' });
+  await m.runArrival({ t, mint: day1Mint, flyIn, reduced: () => lookdev.reducedMotion, inventoryEl: () => document.querySelector('.ftf-town-profile'), nickname: loadDay1(ctx.storage).nickname || '', signIn: featureFlags.on('accountLogin') ? (nick) => openAccount(nick) : null });
   refreshCompanions(); // a fresh heroine may already hold a dragon
   const orbit = (base) => (p) => { rig.dist = TOWN_CAMERA.dist + 9 * Math.sin(Math.PI * p); rig.rotate(base); };
   // No Day-1 tips on phones at all (owner 13.11, asked many times): the tracker and the quest log carry the same lines there.
@@ -1225,6 +1239,7 @@ function frame() {
     }
     if (photo) photo.setAvailable(entered && !townFlow.busy && !introOn && !(townShops && townShops.busy));
     if (townQuests) townQuests.update(player.pos);
+    if (hatchkeeper) hatchkeeper.update(dt, inTown ? player.pos : null);
     if (questMarkers) questMarkers.update(clock.elapsedTime);
     if (townPortal) { if (!townPortal.grounded) { const g = town.groundAt(townPortal.root.position.x, townPortal.root.position.z); if (g != null) { townPortal.root.position.y = g; townPortal.grounded = true; } } townPortal.update(dt, clock.elapsedTime); }
     if (townBoard) { if (!townBoard.grounded) { const g = town.groundAt(townBoard.root.position.x, townBoard.root.position.z); if (g != null) { townBoard.root.position.y = g; townBoard.grounded = true; } } townBoard.update(player.pos, clock.elapsedTime); }

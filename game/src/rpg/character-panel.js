@@ -3,6 +3,7 @@
 import { NODE, BRANCHES } from './skills-data.js';
 import { STATS } from './progression.js';
 import { ensureModalCss } from './skill-tree-ui.js';
+import { lockedCompanionSlot } from '../ui/companion-slot.js';
 
 /** The branch with the most points spent ("" when none). Pure. */
 export function mainBranch(rec) {
@@ -23,7 +24,8 @@ export function createCharacterPanel({ doc = globalThis.document, t, api }) {
   const nm = el('div', null, 'Iris'); nm.style.cssText = 'font-weight:700;font-size:20px;margin-top:10px;';
   const lvl = el('div', 'hint'), xpb = el('div'); xpb.style.cssText = 'position:relative;height:10px;margin-top:8px;border-radius:5px;background:#1d1230;overflow:hidden;';
   const xpf = el('i'); xpf.style.cssText = 'position:absolute;inset:0 auto 0 0;background:#b06cff;'; xpb.append(xpf);
-  const xpt = el('div', 'hint'); left.append(portrait, nm, lvl, xpb, xpt);
+  const xpt = el('div', 'hint'); const pet = lockedCompanionSlot(doc, t); pet.style.marginTop = '14px'; // the companion slot: locked for now (owner 13.11)
+  left.append(portrait, nm, lvl, xpb, xpt, pet);
   const statRows = {}; let sel = 0;
   for (const s of STATS) {
     const r = el('div'); r.style.cssText = 'display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid #2a2e40;';

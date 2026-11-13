@@ -138,3 +138,41 @@ fn seed_once() { let mut c = ready(); ctx("owner.testnet", 5, 1); c.fix_seed(REQ
 #[test]
 #[should_panic(expected = "ERR_NOT_OWNER")]
 fn commit_owner_only() { ctx("ann.testnet", 1, 1); let mut c = Contract::new("owner.testnet".parse().unwrap(), "s1".into()); c.commit_deck(ROOT.into(), ROOT.into()); }
+
+// ---------- transfer edge cases (docs/nft-threat-model.md) ----------
+fn first_loot(c: &mut Contract) -> String {
+    for k in 0..30u32 {
+        ctx("relayer.testnet", (k + 2) as u8, 1);
+        if let Some(id) = c.open_chest("ann.testnet".parse().unwrap()).token_id { return id; }
+    }
+    // a fresh day keeps the daily cap out of the way
+    for k in 0..30u32 {
+        ctx("relayer.testnet", (k + 40) as u8, 2);
+        if let Some(id) = c.open_chest("ann.testnet".parse().unwrap()).token_id { return id; }
+    }
+    panic!("no loot NFT in 60 openings");
+}
+fn ctx1(who: &str) {
+    testing_env!(VMContextBuilder::new().predecessor_account_id(who.parse().unwrap()).current_account_id("chests.x.testnet".parse().unwrap())
+        .attached_deposit(NearToken::from_yoctonear(1)).account_balance(NearToken::from_near(100)).build());
+}
+
+#[test]
+fn chest_loot_moves_by_nft_transfer_and_the_opening_record_stays() {
+    let mut c = ready();
+    let id = first_loot(&mut c);
+    ctx1("ann.testnet");
+    c.nft_transfer("bob.testnet".parse().unwrap(), id.clone(), None, None);
+    assert_eq!(c.nft_token(id.clone()).unwrap().owner_id.as_str(), "bob.testnet");
+    let index: u32 = id.rsplit('-').next().unwrap().parse().unwrap();
+    assert_eq!(c.get_opening(index).unwrap().account_id.as_str(), "ann.testnet"); // provenance: who opened it
+}
+
+#[test]
+#[should_panic(expected = "Approval extension is disabled")]
+fn a_stranger_cannot_take_chest_loot() {
+    let mut c = ready();
+    let id = first_loot(&mut c);
+    ctx1("mallory.testnet");
+    c.nft_transfer("mallory.testnet".parse().unwrap(), id, None, None);
+}

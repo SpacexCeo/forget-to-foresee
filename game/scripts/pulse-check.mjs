@@ -24,11 +24,24 @@ const stats = { enabled: true, dry_run: false, recent: [{ at: Date.UTC(2026, 10,
   balances: Object.fromEntries(TRADERS.map((k, i) => [k, String(i === 3 ? chainSilk(i) + 100 * M : chainSilk(i))])), stalls: [], strategy: null };
 const txAnswer = { status: { SuccessValue: '' }, transaction: {}, receipts_outcome: [{ outcome: { logs: ['EVENT_JSON:{"standard":"ftf_town","version":"1.0.0","event":"trade","data":[{"from":"trader-01.ftf-town.testnet","to":"trader-05.ftf-town.testnet","silk":"1200000","fee":"1440","ref":"bread","n":12345}]}'] } }] };
 
+// The public indexer: three trades and one failed trade on the town today, one chest opened, one row from yesterday.
+const txRow = (hash, signer, receiver, method, ok, agoMs) => ({ transaction_hash: hash, signer_account_id: signer, receiver_account_id: receiver, actions: [{ action: 'FUNCTION_CALL', method }],
+  outcomes: { status: ok }, block_timestamp: String(BigInt(Date.now() - agoMs) * 1000000n) });
+function indexerPage(url) {
+  const acc = new URL(url).pathname.split('/')[3];
+  const sinceMidnight = Date.now() % 86400e3;
+  if (acc === 'ftf-town.testnet') return { data: [txRow('T1', 'trader-01.ftf-town.testnet', acc, 'trade', true, 1000), txRow('T2', 'trader-02.ftf-town.testnet', acc, 'trade', true, 2000),
+    txRow('T3', 'trader-01.ftf-town.testnet', acc, 'trade', true, 3000), txRow('TFAIL', 'trader-03.ftf-town.testnet', acc, 'trade', false, 4000), txRow('OLD', 'trader-04.ftf-town.testnet', acc, 'trade', true, sinceMidnight + 60e3)], meta: {} };
+  if (acc === 'chests.ftf-coordinator.testnet') return { data: [txRow('C1', 'chests.ftf-coordinator.testnet', acc, 'open_chest', true, 5000)], meta: {} };
+  return { data: [], meta: {} };
+}
+
 async function page(browser, failRpc) {
   const p = await browser.newPage();
   const errors = []; p.on('pageerror', (e) => errors.push(e.message));
   await p.route('https://test.rpc.fastnear.com/**', (r) => route(r, failRpc));
   await p.route('https://rpc.testnet.near.org/**', (r) => route(r, failRpc));
+  await p.route('https://api-testnet.nearblocks.io/v3/**', (r) => (failRpc ? r.fulfill({ status: 500, body: 'down' }) : r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(indexerPage(r.request().url())) })));
   await p.route('**/api/market/stats', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(stats) }));
   await p.goto(BASE + '/pulse.html?relayer=' + encodeURIComponent(BASE), { waitUntil: 'networkidle' });
   return { p, errors };
@@ -53,9 +66,17 @@ assert.ok(text.includes('0.12 %') && text.includes('200 silk'), 'rules in force 
 assert.ok(await ok.p.isVisible('#mismatch') && (await ok.p.textContent('#mismatch')).includes('1 trader wallet'), 'the mismatch warning names one wallet');
 assert.ok((await ok.p.textContent('#events')).includes('trade ✓'), 'events from the chain');
 assert.ok((await ok.p.textContent('#pledges')).includes('150'), 'Hall of Pledges from stall_of');
+await ok.p.waitForFunction(() => /Today \(UTC\)/.test(document.querySelector('#countstate').textContent), null, { timeout: 20000 });
+const counted = await ok.p.textContent('#count');
+assert.ok(/4successful transactions today/.test(counted) && /3market trades today/.test(counted) && /1failed today/.test(counted), 'independent count from the indexer: ' + counted);
+assert.ok(/4distinct signing accounts today/.test(counted), 'distinct signers');
+assert.ok((await ok.p.textContent('#countmethods')).includes('chests.ftf-coordinator.testnet : open_chest'), 'method mix');
+assert.ok(await ok.p.$('#countnote a[href="https://testnet.nearblocks.io/txns/TFAIL"]'), 'failure linked to the explorer');
 assert.deepEqual(ok.errors, []);
 const down = await page(browser, true);
 await down.p.waitForFunction(() => /Unavailable/.test(document.querySelector('#state').textContent), null, { timeout: 30000 });
 assert.ok(await down.p.isHidden('#body'), 'no numbers when the RPC fails');
+await down.p.waitForFunction(() => /unavailable/.test(document.querySelector('#countstate').textContent), null, { timeout: 30000 });
+assert.equal(await down.p.textContent('#counttiles'), '', 'no count when the indexer fails');
 await browser.close();
-console.log('pulse-check: OK (fixtures, mismatch warning, chain events, unavailable state)');
+console.log('pulse-check: OK (fixtures, mismatch warning, chain events, independent count, unavailable states)');
