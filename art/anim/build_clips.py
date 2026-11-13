@@ -43,6 +43,7 @@ def main():
     cfg = json.load(open(os.path.join(HERE, 'clips.json')))
     ch = cfg['characters'][a.char]
     chains.use_character(ch)
+    skirt.use_character(ch)
     rig = Rig(os.path.join(REPO, ch['model']))
     only = [x for x in a.only.split(',') if x]
     cloth = skirt.ClothRig(os.path.join(REPO, ch['cloth']['rig']), rig) if ch.get('cloth') else None

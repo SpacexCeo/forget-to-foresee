@@ -973,7 +973,15 @@
    },
    "cloth": {
     "rig": "art/agents/elise/cloth_rig.npz",
-    "bake": "art/anim/out/elise_cloth.npz"
+    "bake": "art/anim/out/elise_cloth.npz",
+    "tune": {
+     "drag": 2.0,
+     "hold": 0.1,
+     "margin": 0.025,
+     "keep": 0.7,
+     "max_deg": 24,
+     "resolve_margin": 0.01
+    }
    }
   }
  }

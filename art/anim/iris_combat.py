@@ -195,6 +195,8 @@ def main():
         local, pel = build(rig, base_local, base_pelvis, scaled(keys, a.legs) if a.legs != 1.0 else keys, secs)
         if a.cloth:
             from ftfanim import skirt
+            cfg_ = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'clips.json')))['characters']
+            skirt.use_character(next((v for v in cfg_.values() if os.path.basename(v.get('model', '')) == os.path.basename(a.model)), None))
             cr = skirt.ClothRig(a.cloth, rig)
             lpos = np.repeat(rig.rest_t[None], len(local), 0); lpos[:, rig.index['pelvis']] = pel
             pw = rig.fk(local, None, lpos)[1][:, rig.index['pelvis']]
